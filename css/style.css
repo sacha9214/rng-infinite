@@ -939,7 +939,10 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
   .react-btn .emote { width: 38px; height: 38px; }
   .react-bubble .emote { width: 60px; height: 60px; }
 }
-@media (prefers-reduced-motion: reduce) { .react-bubble { animation-duration: 1.2s; } }
+/* Animations réduites : la bulle apparaît en fondu, reste, puis s'efface, sans bouger. Le !important passe devant la
+   règle générale qui accélère toutes les animations (sinon la bulle finissait invisible dès son apparition). */
+@media (prefers-reduced-motion: reduce) { .react-bubble { animation: react-fade 2.6s linear forwards !important; } }
+@keyframes react-fade { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
 /* onglet Duel : parties en cours, boutique */
 .live-row { display: flex; align-items: center; gap: .7rem; padding: .55rem 0; border-top: 1px solid var(--outline); }
