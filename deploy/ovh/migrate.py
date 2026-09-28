@@ -11,6 +11,7 @@ et un échantillon. Relançable : chaque clé est remplacée à l'identique.
 import json
 import os
 import sys
+import time
 import urllib.request
 
 SRC_URL = os.environ['UPSTASH_URL'].rstrip('/')
@@ -19,15 +20,28 @@ DST_URL = os.environ.get('RELAY_URL', 'http://127.0.0.1:7379')
 DST_TOKEN = open(os.environ.get('RELAY_TOKEN_FILE', '/etc/rng-relay/token')).read().strip()
 
 
-def pipeline(url, token, commands):
-    req = urllib.request.Request(f'{url}/pipeline', data=json.dumps([[str(a) for a in c] for c in commands]).encode(),
-                                 headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=60) as res:
-        out = json.load(res)
-    for r in out:
-        if 'error' in r:
-            raise RuntimeError(r['error'])
-    return [r['result'] for r in out]
+def pipeline(url, token, commands, tries=400):
+    # Tenace : si Upstash refuse (quota dépassé, erreur passagère), on attend et on réessaie la même lecture —
+    # une partie des requêtes passe encore quand le quota est à la limite.
+    body = json.dumps([[str(a) for a in c] for c in commands]).encode()
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(f'{url}/pipeline', data=body,
+                                         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=60) as res:
+                out = json.load(res)
+            if isinstance(out, dict) and 'error' in out:
+                raise RuntimeError(out['error'])
+            for r in out:
+                if 'error' in r:
+                    raise RuntimeError(r['error'])
+            return [r['result'] for r in out]
+        except Exception as err:  # noqa: BLE001 — on réessaie tout
+            if attempt == tries - 1:
+                raise
+            wait = min(10, 1 + attempt * 0.5)
+            print(f'  (refusé : {str(err)[:60]}… nouvel essai dans {wait:.0f} s)', end='\r', flush=True)
+            time.sleep(wait)
 
 
 src = lambda cmds: pipeline(SRC_URL, SRC_TOKEN, cmds)
@@ -36,7 +50,7 @@ dst = lambda cmds: pipeline(DST_URL, DST_TOKEN, cmds)
 # 1. Toutes les clés (SCAN par paquets de 500).
 keys, cursor = [], '0'
 while True:
-    cursor, batch = src([['SCAN', cursor, 'COUNT', 500]])[0]
+    cursor, batch = src([['SCAN', cursor, 'COUNT', 1000]])[0]
     keys += batch
     if str(cursor) == '0':
         break
@@ -45,8 +59,8 @@ print(f'{len(keys)} clés à copier')
 
 # 2. Type et durée de vie, puis contenu, par paquets de 100 clés.
 copied = 0
-for i in range(0, len(keys), 100):
-    chunk = keys[i:i + 100]
+for i in range(0, len(keys), 200):
+    chunk = keys[i:i + 200]
     meta = src([c for k in chunk for c in (['TYPE', k], ['PTTL', k])])
     reads, kinds = [], []
     for j, k in enumerate(chunk):
@@ -81,21 +95,20 @@ for i in range(0, len(keys), 100):
         copied += 1
     if writes:
         dst(writes)
-    print(f'  {min(i + 100, len(keys))}/{len(keys)}', end='\r', flush=True)
+    print(f'  {min(i + 200, len(keys))}/{len(keys)} clés copiées' + ' ' * 30, flush=True)
 
-# 3. Contrôle : même nombre de clés et mêmes contenus sur un échantillon.
+# 3. Contrôle : même nombre de clés et mêmes contenus sur un échantillon (lectures groupées : peu de requêtes).
+READ = {'string': lambda k: ['GET', k], 'hash': lambda k: ['HGETALL', k], 'list': lambda k: ['LRANGE', k, 0, -1],
+        'set': lambda k: ['SMEMBERS', k], 'zset': lambda k: ['ZRANGE', k, 0, -1, 'WITHSCORES']}
 n_src, n_dst = src([['DBSIZE']])[0], dst([['DBSIZE']])[0]
-sample = keys[:: max(1, len(keys) // 50)]
-bad = 0
-for k in sample:
-    kind = src([['TYPE', k]])[0]
-    cmd = {'string': ['GET', k], 'hash': ['HGETALL', k], 'list': ['LRANGE', k, 0, -1], 'set': ['SMEMBERS', k],
-           'zset': ['ZRANGE', k, 0, -1, 'WITHSCORES']}.get(kind)
-    if not cmd:
-        continue
-    a, b = src([cmd])[0], dst([cmd])[0]
-    if (sorted(a) if isinstance(a, list) and kind in ('hash', 'set') else a) != (sorted(b) if isinstance(b, list) and kind in ('hash', 'set') else b):
-        bad += 1
-        print(f'  ÉCART sur {k}')
-print(f'\n{copied} clés copiées · Upstash {n_src} clés / VPS {n_dst} clés · échantillon de {len(sample)} : {bad} écart(s)')
+sample = keys[:: max(1, len(keys) // 40)]
+types = src([['TYPE', k] for k in sample])
+checks = [(k, t) for k, t in zip(sample, types) if t in READ]
+a_vals = src([READ[t](k) for k, t in checks]) if checks else []
+b_vals = dst([READ[t](k) for k, t in checks]) if checks else []
+norm = lambda t, v: sorted(v) if isinstance(v, list) and t in ('hash', 'set') else v
+bad = [k for (k, t), a, b in zip(checks, a_vals, b_vals) if norm(t, a) != norm(t, b)]
+for k in bad:
+    print(f'  ÉCART sur {k}')
+print(f'\n{copied} clés copiées · Upstash {n_src} clés / VPS {n_dst} clés · échantillon de {len(checks)} : {len(bad)} écart(s)')
 sys.exit(1 if bad else 0)
