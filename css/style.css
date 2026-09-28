@@ -1581,3 +1581,14 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 .side-diamond::before { animation: gold-sparkle 1.6s ease-in-out infinite; }
 .side-diamond::after { font-size: 1.1rem; animation: gem-glint 2.4s ease-in-out infinite; }
 @keyframes gem-glint { 0%, 70%, 100% { filter: none; transform: none; } 80% { filter: brightness(1.8) drop-shadow(0 0 6px #fff); transform: scale(1.2) rotate(-10deg); } }
+
+/* ================================================================== duels à 3 joueurs ou plus : plus léger (2026-09-28)
+   Avec 10 cartes animées (bots aux skins au hasard), les décors en boucle font saccader les petites machines :
+   on garde les cartes et leurs révélations, on coupe les animations de décor permanentes des cadres. */
+.room-stage.many .room-side[class*="side-"],
+.room-stage.many .room-side[class*="side-"]::before,
+.room-stage.many .room-side[class*="side-"]::after { animation: none; }
+.room-stage.many .side-embers { display: none; }
+.room-stage.many .num-card::after { animation: none; opacity: 0; }
+.room-stage.many .num-card.skin-vaporwave::before, .room-stage.many .num-card.skin-ocean { animation: none; }
+.room-stage.many .room-side { transition: box-shadow .3s ease, border-color .3s ease; }

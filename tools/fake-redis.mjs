@@ -85,6 +85,7 @@ export function fakeRedis() {
       db.set(k, l.slice(s, e + 1));
       return 'OK';
     },
+    LSET(k, i, v) { const l = list(k); const j = Number(i) < 0 ? l.length + Number(i) : Number(i); if (j < 0 || j >= l.length) throw new Error('ERR index out of range'); l[j] = v; return 'OK'; },
     LLEN: k => (db.has(k) ? db.get(k).length : 0),
     LRANGE(k, a, b) {
       const l = db.get(k) || [];

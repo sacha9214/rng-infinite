@@ -505,10 +505,13 @@ r = await roomPost(frank, 'create', { size: 2, public: false });
 assert.equal(r.body.players[0].skin, 'neon', 'le skin se voit en duel');
 const privateRoom = r.body.code;
 // Changer de skin dans Shop en pleine partie : la salle montre le nouveau, sans la quitter.
+// Le site le demande un sondage sur 4 (?fresh=1) ; ensuite tous les sondages le voient.
+const roomFresh = c => call(roomApi, { url: `/api/room?code=${c}&fresh=1` });
 await shop(frank, 'equip', 'classic');
-assert.equal((await roomGet(privateRoom)).body.players[0].skin, null, 'skin changé : vu dans la salle');
+assert.equal((await roomFresh(privateRoom)).body.players[0].skin, null, 'skin changé : vu dans la salle');
+assert.equal((await roomGet(privateRoom)).body.players[0].skin, null, 'et gardé pour les sondages suivants');
 await shop(frank, 'equip', 'neon');
-assert.equal((await roomGet(privateRoom)).body.players[0].skin, 'neon');
+assert.equal((await roomFresh(privateRoom)).body.players[0].skin, 'neon');
 assert.equal(r.body.public, false);
 
 // 16. « Live now » : les parties publiques actives, pas les privées ni les finies.

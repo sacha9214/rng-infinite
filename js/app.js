@@ -51,8 +51,8 @@
       const p = Store.player;
       return this.request('/api/title', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, title }) });
     },
-    room(code) {
-      return this.request(`/api/room?code=${encodeURIComponent(code)}&me=${Store.player.id}`);
+    room(code, fresh = false) {
+      return this.request(`/api/room?code=${encodeURIComponent(code)}&me=${Store.player.id}${fresh ? '&fresh=1' : ''}`);
     },
     roomAction(action, code, extra = {}) {
       const p = Store.player;
@@ -176,11 +176,16 @@
       r.ctx.fillRect(0, 0, r.w, r.h);
     }
 
+    let frames = 0;
     function frame() {
       timer = 0;
+      // Onglet caché : rien à dessiner, on repasse dans 1 s.
+      if (document.hidden) { if (rains.size) timer = setTimeout(frame, 1000); return; }
+      frames++;
       for (const [card, r] of rains) {
         if (!card.isConnected) { rains.delete(card); continue; }
-        if (card.clientWidth !== r.w || card.clientHeight !== r.h) setup(r, card);
+        // Taille relue 2 fois par seconde seulement (la lire à chaque image force le navigateur à recalculer la page).
+        if (!r.w || frames % 9 === 0) { if (card.clientWidth !== r.w || card.clientHeight !== r.h) setup(r, card); }
         const { ctx, size } = r;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
         ctx.fillRect(0, 0, r.w, r.h);
@@ -2133,12 +2138,14 @@
     pollRoom(Room.token);
   }
 
-  // Sondé toutes les 1,5 s (3 s pendant une révélation) tant que la partie n'est pas finie et que l'onglet est visible.
+  // Sondé tant que la partie n'est pas finie et que l'onglet est visible, au rythme de nextPollMs.
   async function pollRoom(token) {
     clearTimeout(Room.timer);
     const sent = Date.now();
     try {
-      applyRoom(await Online.room(Room.code), token, sent, Date.now());
+      // Un sondage sur 4 relit les skins équipés (changés dans Shop en pleine partie).
+      Room.polls = (Room.polls || 0) + 1;
+      applyRoom(await Online.room(Room.code, Room.polls % 4 === 0), token, sent, Date.now());
     } catch (err) {
       if (token !== Room.token || currentView !== 'room') return;
       if (err.status === 404) {
@@ -2163,8 +2170,21 @@
     // Partie finie : sondée plus lentement, seulement pour voir arriver la revanche.
     const d = Room.data;
     if (d && d.status === 'abandoned') return;
-    if (!d || d.status !== 'done') Room.timer = setTimeout(() => pollRoom(token), Room.anim ? 3000 : ROOM_POLL_MS);
-    else if (!d.next && d.players.some(p => p.me)) Room.timer = setTimeout(() => pollRoom(token), 3000);
+    if (!d || d.status !== 'done') Room.timer = setTimeout(() => pollRoom(token), nextPollMs(d));
+    else if (!d.next && d.players.some(p => p.me)) Room.timer = setTimeout(() => pollRoom(token), 4000);
+  }
+
+  // Rythme du sondage selon ce qui peut arriver : vite seulement quand une manche peut partir sans action de ma part
+  // (je suis prêt et j'attends les autres), sinon plus lentement — mes propres actions reçoivent l'état aussitôt.
+  function nextPollMs(d) {
+    if (Room.anim) return 3000;
+    if (!d || d.status !== 'playing') return 3000;
+    const me = d.players.find(p => p.me);
+    if (!me) return 2000; // spectateur
+    if (me.ready) return ROOM_POLL_MS;
+    // Pas prêt : la manche ne part qu'au départ automatique (heure connue) ; on sonde juste après.
+    const auto = d.autoAt ? d.autoAt - serverNow() : Infinity;
+    return Math.max(ROOM_POLL_MS, Math.min(4000, auto + 200));
   }
 
   function applyRoom(d, token, sent, got) {
@@ -2478,7 +2498,8 @@
         $(`#rm-${j}`).innerHTML = `${tierPill(x.a.tier)}<span class="ep-pill">0 XP</span>`;
         countUp($(`#rm-${j} .ep-pill`), 0, x.s, reducedMotion ? 0 : 700, v => `${fmt(v)} XP`);
         $(`#rb-${j}`).innerHTML = duelBadgesHTML(x.a, x.n);
-        FX.celebrate(x.a.tier, cards[j]);
+        // À 3 joueurs ou plus, les confettis seulement pour moi et le gagnant de la manche (10 salves = saccades).
+        if (sides.length <= 2 || d.players[j].me || r.winner === j) FX.celebrate(x.a.tier, cards[j]);
       });
     });
     at(clock + 1500, () => {

@@ -24,6 +24,7 @@ const LEAD_MS = 2500; // délai avant la révélation commune : tout le monde a 
 // Révélation complète d'une manche à l'écran (dernier chiffre + gagnant, voir roundLength dans app.js) : les tirages
 // n'apparaissent dans l'historique, le classement et les stats qu'après.
 const REVEAL_MS = 9700;
+const SEEN_EVERY_MS = 10000;
 const GAP_MS = 8000; // écart minimal entre deux manches, comme le délai entre deux tirages
 const AUTO_MS = 15000; // la manche part toute seule 15 s après le premier joueur prêt
 const ABANDON_MS = 30000; // plus aucun joueur sur la page depuis 30 s : la partie s'arrête (sans gagnant ni stats)
@@ -131,6 +132,8 @@ async function checkAbandoned(room, now = Date.now()) {
 // Un joueur de la salle vient de se manifester (sondage ou action).
 async function touchSeen(room, id, now = Date.now()) {
   if (!room.players.some(p => p.id === id && !p.bot)) return;
+  // Écrit au plus toutes les 10 s : largement assez pour la règle des 30 s, et 1 commande de moins par sondage.
+  if (now - (Number(room.h[`seen:${id}`]) || 0) < SEEN_EVERY_MS) return;
   await redis([['HSET', roomKey(room.code), `seen:${id}`, now]]);
   room.h[`seen:${id}`] = String(now);
 }
@@ -172,7 +175,9 @@ async function advance(room, now = Date.now()) {
     ...botReactions(room, round),
     ...(score(room).done ? [['ZREM', LIVE_KEY, room.code]] : []), // partie finie : sort de Live now tout de suite
     queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: duelWrites(room) }),
+    ['HSET', roomKey(room.code), 'due', round.revealAt + REVEAL_MS], // le sondage de la salle saura quand appliquer
   ]);
+  room.h.due = String(round.revealAt + REVEAL_MS);
   return room;
 }
 
@@ -217,12 +222,24 @@ function duelWrites(room) {
 }
 
 // État public, sans identifiant : `me` marque le joueur qui regarde. Partie finie : ses succès, pour annoncer les nouveaux.
+// Skin équipé en ce moment (changé dans Shop en pleine partie) : relu seulement quand le site le demande (?fresh=1,
+// un sondage sur 4) et recopié dans la liste des joueurs s'il a changé ; les autres sondages lisent cette liste.
+async function refreshSkins(room) {
+  const people = room.players.map((p, i) => [p, i]).filter(([p]) => !p.bot);
+  if (!people.length) return;
+  const [live] = await redis([['HMGET', 'skins', ...people.map(([p]) => p.id)]]);
+  const writes = [];
+  people.forEach(([p, i], j) => {
+    const skin = Shop.resolve(live[j]) || null;
+    if ((p.skin || null) === skin) return;
+    room.players[i] = { ...p, skin };
+    writes.push(['LSET', playersKey(room.code), i, JSON.stringify(room.players[i])]);
+  });
+  if (writes.length) await redis(writes);
+}
+
 async function view(room, me) {
   const sc = score(room);
-  // Skin équipé en ce moment (changé dans Shop en pleine partie : pris en compte, le site l'affiche entre deux manches).
-  const people = room.players.filter(p => !p.bot);
-  const live = people.length ? await redis([['HMGET', 'skins', ...people.map(p => p.id)]]).then(([v]) => v) : [];
-  const skinNow = new Map(people.map((p, i) => [p.id, Shop.resolve(live[i]) || null]));
   const k = room.rounds.length;
   const status = sc.done ? 'done' : room.h.ended === '1' ? 'abandoned' : !room.started ? 'lobby' : 'playing';
   const readyCount = humans(room).filter(p => readyFor(room, p) === k).length;
@@ -231,7 +248,7 @@ async function view(room, me) {
   return {
     code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room),
     players: room.players.map((p, i) => ({
-      name: p.name, title: p.title || null, skin: (p.bot ? p.skin : skinNow.get(p.id)) || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
+      name: p.name, title: p.title || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
       ready: status === 'playing' && !p.bot && readyFor(room, p) === k, wins: sc.wins[i], total: sc.totals[i],
     })),
     rounds: sc.list,
@@ -276,7 +293,9 @@ async function liveRooms(now = Date.now()) {
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
-  await flushDue();
+  // Le sondage des duels (toutes les quelques secondes, par joueur) est la requête la plus fréquente : il ne lit que la
+  // salle (4 commandes) et n'applique les tirages en attente que lorsque ceux de cette salle sont échus.
+  if (req.method !== 'GET') await flushDue();
   try {
     if (req.method === 'GET') {
       const params = new URL(req.url, 'http://localhost').searchParams;
@@ -285,10 +304,16 @@ module.exports = async (req, res) => {
       const me = isPlayerId(params.get('me')) ? params.get('me') : '';
       let room = isCode(code) ? await load(code) : null;
       if (!room) return send(res, 404, { error: 'No duel with this code' });
+      if (room.h.due && Date.now() >= Number(room.h.due)) {
+        await flushDue();
+        await redis([['HDEL', roomKey(room.code), 'due']]);
+        delete room.h.due;
+      }
       if (!(await checkAbandoned(room))) {
         if (me) await touchSeen(room, me);
         room = await advance(room);
       }
+      if (params.get('fresh')) await refreshSkins(room);
       return send(res, 200, await view(room, me));
     }
     if (req.method !== 'POST') return send(res, 405, { error: 'Use GET or POST' });
