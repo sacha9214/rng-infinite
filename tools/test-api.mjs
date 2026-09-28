@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 // Teste les fonctions /api sans Vercel ni Upstash ni Google : fetch est remplacé par un faux Redis en mémoire
 // et par de fausses clés Google.
 //   node tools/test-api.mjs
@@ -29,6 +30,7 @@ globalThis.fetch = async (url, opts) => {
   assert.equal(opts.headers.Authorization, 'Bearer test-token');
   calls++;
   const cmds = JSON.parse(opts.body);
+  if (process.env.RECORD_REDIS) fs.appendFileSync(process.env.RECORD_REDIS, JSON.stringify(cmds) + '\n'); // voir tools/relay-parity.mjs
   cmds.forEach(c => c.forEach(x => assert.equal(typeof x, 'string', 'toutes les valeurs partent en texte')));
   return { ok: true, json: async () => run(cmds) };
 };
