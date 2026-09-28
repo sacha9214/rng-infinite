@@ -14,8 +14,34 @@ import sys
 import time
 import urllib.request
 
-SRC_URL = os.environ['UPSTASH_URL'].rstrip('/')
-SRC_TOKEN = os.environ['UPSTASH_TOKEN']
+def pasted_env():
+    # Sans variables d'environnement : on colle le bloc « Copy Snippet » de Vercel (Storage → la base → Quickstart,
+    # onglet .env.local), puis une ligne vide. On y lit KV_REST_API_URL et KV_REST_API_TOKEN ; rien n'est réaffiché.
+    print('Colle le bloc copié dans Vercel (Copy Snippet), puis appuie 2 fois sur Entrée :')
+    found = {}
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if not line.strip():
+            if found:
+                break
+            continue
+        if '=' in line:
+            k, v = line.split('=', 1)
+            found[k.strip().removeprefix('export ')] = v.strip().strip('"').strip("'")
+    if 'KV_REST_API_URL' not in found or 'KV_REST_API_TOKEN' not in found:
+        sys.exit('KV_REST_API_URL ou KV_REST_API_TOKEN introuvable dans le bloc collé.')
+    return found['KV_REST_API_URL'], found['KV_REST_API_TOKEN']
+
+
+if os.environ.get('UPSTASH_URL') and os.environ.get('UPSTASH_TOKEN'):
+    SRC_URL, SRC_TOKEN = os.environ['UPSTASH_URL'], os.environ['UPSTASH_TOKEN']
+else:
+    SRC_URL, SRC_TOKEN = pasted_env()
+SRC_URL = SRC_URL.rstrip('/')
+print(f'Source : {SRC_URL.split("//")[-1].split(".")[0][:6]}… (Upstash), destination : ce serveur')
 DST_URL = os.environ.get('RELAY_URL', 'http://127.0.0.1:7379')
 DST_TOKEN = open(os.environ.get('RELAY_TOKEN_FILE', '/etc/rng-relay/token')).read().strip()
 
