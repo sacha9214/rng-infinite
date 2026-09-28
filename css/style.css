@@ -1896,3 +1896,102 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 .side-nixie { --deco-a: 'IN-14'; --deco-b: '170V'; }
 .skin-blocks .slot { font-size: .46em; margin: 0 .04em; }
 .skin-blocks .slot:not(.collapsed) { margin-right: .18em; }
+
+/* ================================================================== Dice / Circuit / Vaporwave, version détaillée (2026-09-28) */
+
+/* --- Dice : dés de casino en ivoire (arêtes arrondies, ombre interne, deux points discrets en coin),
+   tapis de feutre surpiqué dans un rebord en bois ; chaque dé roule à son propre rythme et se pose à son tour. */
+.num-card.skin-dice {
+  border: 4px solid #6b3410; border-radius: .9rem;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .025) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse 80% 90% at 50% 45%, #178a4a, #0e5a33 70%, #0a4427);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .06), inset 0 0 0 5px rgba(0, 0, 0, .12), inset 0 0 0 6px rgba(253, 230, 138, .22),
+    inset 0 0 26px rgba(0, 0, 0, .5), 0 5px 0 #4a230a, 0 12px 18px rgba(0, 0, 0, .45);
+}
+.skin-dice .slot {
+  color: #1f2937; border-radius: .26em;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(185, 28, 28, .55) 0 .045em, transparent .06em),
+    radial-gradient(circle at 82% 82%, rgba(185, 28, 28, .55) 0 .045em, transparent .06em),
+    radial-gradient(ellipse at 35% 25%, #ffffff, #f5f0e6 55%, #e3d9c6);
+  box-shadow: inset 0 -.06em .08em rgba(120, 100, 70, .35), inset 0 .05em .05em rgba(255, 255, 255, .9),
+    .06em .09em 0 #cbbfa8, .1em .14em 0 #a8997e, 0 .26em .3em rgba(0, 0, 0, .4);
+}
+.skin-dice .slot:nth-child(2) { animation-delay: -.07s; } .skin-dice .slot:nth-child(3) { animation-delay: -.15s; }
+.skin-dice .slot:nth-child(4) { animation-delay: -.04s; } .skin-dice .slot:nth-child(5) { animation-delay: -.19s; }
+.skin-dice .slot:nth-child(6) { animation-delay: -.11s; } .skin-dice .slot:nth-child(7) { animation-delay: -.02s; }
+.skin-dice .slot.spinning { animation-duration: .3s; }
+.skin-dice .slot.spinning:nth-child(2n) { animation-duration: .36s; animation-direction: reverse; }
+.skin-dice .slot.revealed { animation-delay: 0s; }
+.side-dice { --side-border: #6b3410; --side-glow: inset 0 0 0 2px rgba(253, 230, 138, .12), 0 0 0 1px rgba(107, 52, 16, .5);
+  --side-bg: repeating-linear-gradient(45deg, rgba(255, 255, 255, .02) 0 2px, transparent 2px 5px), radial-gradient(ellipse 90% 80% at 50% 40%, rgba(23, 138, 74, .32), rgba(10, 68, 39, .3));
+  --deco-a: '♠ ♥'; --deco-b: '♣ ♦'; --side-ink: #fde68a; }
+.side-dice::before, .side-dice::after { font-size: .8rem; letter-spacing: .2em; opacity: .55; }
+
+/* --- Circuit : carte électronique — fenêtre d'affichage en verre noir incrustée, pistes cuivrées, composants CMS,
+   une impulsion de courant qui court le long de la piste du bas. */
+.num-card.skin-circuit {
+  border: 2px solid #059669; border-radius: .4rem;
+  background:
+    /* composants CMS (petits rectangles) */
+    linear-gradient(#1f2937 0 0) 6% 22% / 10px 5px no-repeat, linear-gradient(#d6d3d1 0 0) 6% 22% / 3px 5px no-repeat,
+    linear-gradient(#1f2937 0 0) 94% 80% / 10px 5px no-repeat, linear-gradient(#d6d3d1 0 0) 94% 80% / 3px 5px no-repeat,
+    /* pastilles et pistes */
+    radial-gradient(circle at 4% 78%, #fbbf24 0 2px, #92400e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 96% 20%, #fbbf24 0 2px, #92400e 2.5px 3.5px, transparent 4px),
+    linear-gradient(90deg, transparent 4%, rgba(217, 119, 6, .55) 4% 96%, transparent 96%) 0 88% / 100% 2px no-repeat,
+    linear-gradient(90deg, transparent 4%, rgba(217, 119, 6, .45) 4% 96%, transparent 96%) 0 12% / 100% 2px no-repeat,
+    repeating-linear-gradient(0deg, rgba(16, 185, 129, .06) 0 1px, transparent 1px 10px),
+    repeating-linear-gradient(90deg, rgba(16, 185, 129, .06) 0 1px, transparent 1px 10px),
+    linear-gradient(135deg, #065f46, #064e3b 50%, #022c22);
+  box-shadow: 0 0 0 2px #022c22, 0 5px 0 #01241b, 0 10px 16px rgba(0, 0, 0, .45), 0 0 14px rgba(16, 185, 129, .25);
+}
+/* l'impulsion : un point lumineux qui file sur la piste du bas */
+.num-card.skin-circuit::before { content: ''; position: absolute; left: -10%; bottom: calc(12% - 3px); width: 18%; height: 6px; pointer-events: none;
+  background: radial-gradient(ellipse at 70% 50%, #fef08a, rgba(34, 211, 238, .8) 30%, transparent 70%); filter: blur(1px); animation: m2-current 2.4s linear infinite; }
+@keyframes m2-current { from { transform: translateX(0); } to { transform: translateX(650%); } }
+.skin-circuit .slot { position: relative; z-index: 1; margin: 0 .01em; padding: 0 .04em;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .78), rgba(2, 20, 15, .88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -1px 0 rgba(0, 0, 0, .6);
+  color: #a7f3d0; text-shadow: 0 0 3px #34d399, 0 0 9px rgba(16, 185, 129, .8); }
+.skin-circuit .slot:first-child { border-radius: .12em 0 0 .12em; } .skin-circuit .slot:last-child { border-radius: 0 .12em .12em 0; }
+.room-stage.many .num-card.skin-circuit::before { animation: none; opacity: 0; }
+
+/* --- Vaporwave : coucher de soleil outrun — soleil rayé jaune→rose posé sur l'horizon, étoiles, halo d'horizon,
+   grille néon ; chiffres chromés cernés de sombre pour rester lisibles sur le soleil. */
+.num-card.skin-vaporwave {
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fde7ff, transparent),
+    radial-gradient(1px 1px at 72% 14%, #fff, transparent), radial-gradient(1px 1px at 88% 30%, #e0f2fe, transparent),
+    /* soleil : disque en dégradé, coupé par des bandes horizontales de plus en plus épaisses vers le bas */
+    linear-gradient(180deg, transparent 0 34%, #2e1065 34% 35.5%, transparent 35.5% 40%, #3b0a5c 40% 42%, transparent 42% 46%, #4a0d52 46% 49%, transparent 49% 52%, #54104a 52% 56%, transparent 56%) 50% 0 / 38% 100% no-repeat,
+    radial-gradient(circle at 50% 58%, #fde047 0, #fb923c 16%, #f43f5e 30%, transparent 31%) 50% 0 / 38% 100% no-repeat,
+    /* halo d'horizon */
+    radial-gradient(ellipse 60% 12% at 50% 58%, rgba(244, 114, 182, .8), transparent 70%),
+    linear-gradient(180deg, transparent 0 58%, #14052b 58%),
+    linear-gradient(180deg, #1e0b3a 0%, #4c1d95 30%, #9d174d 52%, #db2777 58%);
+  border: 2px solid #f0abfc; border-radius: .4rem;
+  box-shadow: 0 0 0 2px #1e0b3a, 0 5px 0 #14052b, 0 0 18px rgba(236, 72, 153, .45), 0 0 34px rgba(34, 211, 238, .2);
+}
+.num-card.skin-vaporwave::before { height: 42%; background: repeating-linear-gradient(90deg, rgba(34, 211, 238, .8) 0 1px, transparent 1px 22px), repeating-linear-gradient(0deg, rgba(232, 121, 249, .75) 0 1px, transparent 1px 10px); }
+.skin-vaporwave .slot { filter: drop-shadow(0 0 1px #14052b) drop-shadow(1px 1px 0 #22d3ee) drop-shadow(1px 1px 0 #0e7490) drop-shadow(0 2px 3px rgba(20, 5, 43, .9)); }
+.side-vaporwave { --side-border: #e879f9; --side-glow: 0 0 16px rgba(232, 121, 249, .3);
+  --side-bg: repeating-linear-gradient(90deg, rgba(34, 211, 238, .16) 0 1px, transparent 1px 26px) 0 100% / 100% 34% no-repeat,
+    repeating-linear-gradient(0deg, rgba(232, 121, 249, .16) 0 1px, transparent 1px 12px) 0 100% / 100% 34% no-repeat,
+    radial-gradient(ellipse 70% 20% at 50% 66%, rgba(244, 114, 182, .28), transparent 70%),
+    linear-gradient(180deg, rgba(30, 11, 58, .35), rgba(157, 23, 77, .22) 66%, rgba(20, 5, 43, .35) 66%); }
+/* retouche : fenêtre Circuit d'un seul tenant ; soleil Vaporwave plus grand et plus doux derrière les chiffres */
+.skin-circuit .slot { margin: 0; padding: 0 .05em; box-shadow: none; border-radius: 0; }
+.skin-circuit .slot:first-child { border-radius: .14em 0 0 .14em; padding-left: .12em; box-shadow: inset 1px 0 0 rgba(255, 255, 255, .06); }
+.skin-circuit .slot:last-child { border-radius: 0 .14em .14em 0; padding-right: .12em; }
+.num-card.skin-vaporwave {
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fde7ff, transparent),
+    radial-gradient(1px 1px at 72% 14%, #fff, transparent), radial-gradient(1px 1px at 88% 30%, #e0f2fe, transparent),
+    linear-gradient(180deg, transparent 0 30%, rgba(46, 16, 101, .9) 30% 32%, transparent 32% 38%, rgba(59, 10, 92, .9) 38% 41%, transparent 41% 46%, rgba(74, 13, 82, .9) 46% 50%, transparent 50% 53%, rgba(84, 16, 74, .9) 53% 58%, transparent 58%) 50% 0 / 62% 100% no-repeat,
+    radial-gradient(circle at 50% 58%, rgba(253, 224, 71, .85) 0, rgba(251, 146, 60, .8) 18%, rgba(244, 63, 94, .75) 36%, transparent 37%) 50% 0 / 62% 100% no-repeat,
+    radial-gradient(ellipse 70% 12% at 50% 58%, rgba(244, 114, 182, .75), transparent 70%),
+    linear-gradient(180deg, transparent 0 58%, #14052b 58%),
+    linear-gradient(180deg, #1e0b3a 0%, #4c1d95 30%, #9d174d 52%, #db2777 58%);
+}
