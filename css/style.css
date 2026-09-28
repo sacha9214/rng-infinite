@@ -1392,3 +1392,192 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 /* Lien discret vers le dépôt GitHub, coin bas gauche. */
 .gh-corner { position: fixed; left: 14px; bottom: 14px; z-index: 40; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--outline); background: var(--surface); color: var(--prose-2); opacity: .75; box-shadow: 0 4px 12px rgba(0, 0, 0, .15); transition: opacity .2s, transform .2s, color .2s; }
 .gh-corner:hover, .gh-corner:focus-visible { opacity: 1; color: var(--prose); transform: translateY(-2px) rotate(-8deg); }
+
+/* ================================================================== 7 nouveaux skins (2026-09-28)
+   Pour chacun : la carte, les chiffres (.slot), le défilement (.spinning), la révélation (.revealed), le cadre de duel. */
+
+/* --- Candy : bonbon gélifié rose et menthe, rayures de sucre d'orge, chiffres qui rebondissent comme de la gelée */
+.num-card.skin-candy {
+  background: repeating-linear-gradient(-45deg, #ffe4f1 0 10px, #ffd0e6 10px 20px);
+  border: 3px solid #fff; border-radius: 1.1rem;
+  box-shadow: 0 0 0 3px #f472b6, 0 8px 16px rgba(236, 72, 153, .35), inset 0 -6px 10px rgba(236, 72, 153, .25), inset 0 6px 8px rgba(255, 255, 255, .8);
+}
+.skin-candy .slot {
+  font-family: 'Graduate', serif; font-weight: 400; color: #ec4899;
+  text-shadow: 0 .04em 0 #fff, 0 .08em 0 #be185d, 0 .12em .1em rgba(190, 24, 93, .4);
+  -webkit-text-stroke: .02em #fff;
+}
+.skin-candy .slot:nth-child(3n+2) { color: #14b8a6; text-shadow: 0 .04em 0 #fff, 0 .08em 0 #0f766e, 0 .12em .1em rgba(15, 118, 110, .4); }
+.skin-candy .slot:nth-child(3n) { color: #a855f7; text-shadow: 0 .04em 0 #fff, 0 .08em 0 #7e22ce, 0 .12em .1em rgba(126, 34, 206, .4); }
+.skin-candy .slot.spinning { opacity: 1; animation: jelly-wobble .22s ease-in-out infinite alternate; }
+@keyframes jelly-wobble { from { transform: scale(1.12, .88); } to { transform: scale(.9, 1.1) translateY(-.05em); } }
+.skin-candy .slot.revealed { animation: jelly-pop .7s cubic-bezier(.3, 1.8, .5, 1) backwards; }
+@keyframes jelly-pop { 0% { transform: scale(0); } 40% { transform: scale(1.35, .7); } 60% { transform: scale(.8, 1.25); } 80% { transform: scale(1.1, .92); } 100% { transform: none; } }
+.side-candy { --side-border: #f472b6; --side-glow: 0 0 0 3px rgba(255, 255, 255, .5), 0 6px 16px rgba(236, 72, 153, .25); --side-ink: #ec4899;
+  --side-bg: radial-gradient(circle at 15% 25%, rgba(244, 114, 182, .16) 0 4px, transparent 5px) 0 0 / 64px 64px, radial-gradient(circle at 70% 70%, rgba(45, 212, 191, .14) 0 3px, transparent 4px) 0 0 / 64px 64px, linear-gradient(180deg, rgba(255, 228, 241, .35), rgba(255, 208, 230, .2));
+  --deco-a: '🍭'; --deco-b: '🍬 🧁'; }
+.side-candy::before { font-size: 1.2rem; animation: candy-spin 3s linear infinite; }
+@keyframes candy-spin { to { transform: rotate(360deg); } }
+
+/* --- Ocean : fond marin, rayons de lumière, bulles qui montent, chiffres qui remontent à la surface */
+.num-card.skin-ocean {
+  background:
+    radial-gradient(circle at 12% 80%, rgba(255, 255, 255, .5) 0 2px, transparent 3px),
+    radial-gradient(circle at 30% 55%, rgba(255, 255, 255, .35) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 84% 70%, rgba(255, 255, 255, .45) 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 66% 30%, rgba(255, 255, 255, .3) 0 1.5px, transparent 2.5px),
+    linear-gradient(100deg, transparent 20%, rgba(186, 230, 253, .18) 26%, transparent 34%, transparent 58%, rgba(186, 230, 253, .14) 64%, transparent 72%),
+    linear-gradient(180deg, #0ea5e9 0%, #0369a1 40%, #082f49 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 200% 100%, 100% 100%;
+  border-color: #7dd3fc; box-shadow: 0 0 16px rgba(14, 165, 233, .45), inset 0 -10px 20px rgba(8, 47, 73, .7);
+  animation: ocean-drift 7s linear infinite;
+}
+@keyframes ocean-drift { 0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; } 100% { background-position: 0 -120px, 0 -90px, 0 -150px, 0 -70px, -200% 0, 0 0; } }
+.skin-ocean .slot { color: #f0f9ff; text-shadow: 0 0 6px rgba(125, 211, 252, .9), 0 .06em 0 #0c4a6e; }
+.skin-ocean .slot.spinning { opacity: .75; animation: ocean-sway .6s ease-in-out infinite alternate; }
+@keyframes ocean-sway { from { transform: translate(-.04em, .03em) rotate(-4deg); filter: blur(.4px); } to { transform: translate(.04em, -.03em) rotate(4deg); filter: blur(.4px); } }
+.skin-ocean .slot.revealed { animation: ocean-surface .7s cubic-bezier(.2, .9, .3, 1.2) backwards; }
+@keyframes ocean-surface { 0% { transform: translateY(.6em) scale(.7); opacity: 0; filter: blur(3px); } 70% { transform: translateY(-.08em); opacity: 1; filter: none; } 100% { transform: none; } }
+.side-ocean { --side-border: #38bdf8; --side-glow: 0 0 14px rgba(14, 165, 233, .35); --side-ink: #7dd3fc;
+  --side-bg: linear-gradient(100deg, transparent 25%, rgba(125, 211, 252, .12) 32%, transparent 40%), radial-gradient(120% 70% at 50% 110%, rgba(3, 105, 161, .35), transparent 70%), linear-gradient(180deg, rgba(14, 165, 233, .12), rgba(8, 47, 73, .18));
+  --deco-a: '🐠'; --deco-b: '🫧 🐚'; }
+.side-ocean::before { font-size: 1.2rem; animation: fish-swim 5s ease-in-out infinite; }
+@keyframes fish-swim { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(1.6rem, .3rem) scaleX(-1); } }
+
+/* --- Ice : cristal givré, reflets froids, chiffres qui gèlent en se révélant */
+.num-card.skin-ice {
+  background:
+    linear-gradient(125deg, transparent 30%, rgba(255, 255, 255, .22) 38%, transparent 44%),
+    radial-gradient(ellipse at 20% 0%, rgba(224, 242, 254, .45), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(125, 211, 252, .3), transparent 50%),
+    linear-gradient(160deg, #075985 0%, #0c4a6e 55%, #082f49 100%);
+  border: 2px solid #e0f2fe; border-radius: .6rem;
+  box-shadow: 0 0 0 1px #7dd3fc, 0 0 18px rgba(125, 211, 252, .55), inset 0 0 14px rgba(255, 255, 255, .8), inset 0 -8px 14px rgba(56, 189, 248, .35);
+}
+.skin-ice .slot {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 45%, #bae6fd 70%, #7dd3fc 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 1px 0 #fff) drop-shadow(0 0 5px rgba(56, 189, 248, .7));
+}
+.skin-ice .slot.spinning { opacity: .85; animation: ice-shiver .09s steps(2) infinite; }
+@keyframes ice-shiver { 50% { transform: translateX(.03em); filter: drop-shadow(0 0 8px #e0f2fe); } }
+.skin-ice .slot.revealed { animation: ice-freeze .65s ease-out backwards; }
+@keyframes ice-freeze { 0% { transform: scale(1.5); filter: drop-shadow(0 0 16px #fff) brightness(2) blur(2px); opacity: .3; } 45% { transform: scale(.95); filter: drop-shadow(0 0 10px #e0f2fe) brightness(1.4); opacity: 1; } 100% { transform: none; } }
+.side-ice { --side-border: #7dd3fc; --side-glow: 0 0 16px rgba(125, 211, 252, .35), inset 0 0 18px rgba(224, 242, 254, .25); --side-ink: #bae6fd; --side-ink-glow: 0 0 6px #e0f2fe;
+  --side-bg: linear-gradient(125deg, transparent 35%, rgba(255, 255, 255, .16) 42%, transparent 48%), radial-gradient(60% 40% at 0% 0%, rgba(224, 242, 254, .3), transparent), radial-gradient(60% 40% at 100% 100%, rgba(186, 230, 253, .25), transparent), linear-gradient(180deg, rgba(224, 242, 254, .14), rgba(125, 211, 252, .1));
+  --deco-a: '❄'; --deco-b: '❅ ❆'; }
+.side-ice::before, .side-ice::after { font-size: 1.1rem; animation: snow-turn 6s linear infinite; }
+@keyframes snow-turn { to { transform: rotate(360deg); } }
+
+/* --- Circuit : carte électronique verte, pistes cuivrées, chiffres qui s'allument par impulsion électrique */
+.num-card.skin-circuit {
+  background:
+    radial-gradient(circle at 8% 25%, #fbbf24 0 2px, #92400e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 92% 75%, #fbbf24 0 2px, #92400e 2.5px 3.5px, transparent 4px),
+    linear-gradient(90deg, transparent 0 8%, rgba(251, 191, 36, .45) 8% 9%, transparent 9%) 0 25% / 100% 2px no-repeat,
+    linear-gradient(90deg, transparent 91%, rgba(251, 191, 36, .45) 91% 92%, transparent 92%) 0 75% / 100% 2px no-repeat,
+    repeating-linear-gradient(0deg, rgba(34, 197, 94, .08) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(34, 197, 94, .08) 0 1px, transparent 1px 12px),
+    linear-gradient(135deg, #064e3b, #022c22);
+  border: 2px solid #10b981; border-radius: .35rem;
+  box-shadow: 0 0 0 2px #022c22, 0 0 14px rgba(16, 185, 129, .4);
+}
+.skin-circuit .slot { font-family: 'Share Tech Mono', monospace; font-weight: 400; color: #a7f3d0; text-shadow: 0 0 4px #34d399, 0 0 10px #10b981; }
+.skin-circuit .slot.spinning { opacity: .9; color: #6ee7b7; animation: circuit-flicker .12s steps(2) infinite; }
+@keyframes circuit-flicker { 50% { opacity: .35; text-shadow: none; } }
+.skin-circuit .slot.revealed { animation: circuit-zap .55s ease-out backwards; }
+@keyframes circuit-zap {
+  0% { color: #fff; text-shadow: 0 0 6px #fff, 0 0 18px #22d3ee, 0 0 30px #22d3ee; transform: skewX(-12deg) scale(1.2); }
+  20% { transform: skewX(10deg); } 35% { transform: skewX(-5deg); opacity: .6; } 50% { opacity: 1; }
+  100% { transform: none; }
+}
+.side-circuit { --side-border: #10b981; --side-glow: 0 0 12px rgba(16, 185, 129, .3); --side-ink: #34d399; --side-ink-glow: 0 0 6px #10b981;
+  --side-bg: linear-gradient(90deg, rgba(251, 191, 36, .25) 0 2px, transparent 2px) 18px 0 / 60px 100% no-repeat, linear-gradient(0deg, rgba(251, 191, 36, .22) 0 2px, transparent 2px) 0 30px / 100% 60px no-repeat, repeating-linear-gradient(0deg, rgba(16, 185, 129, .07) 0 1px, transparent 1px 14px), repeating-linear-gradient(90deg, rgba(16, 185, 129, .07) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(6, 78, 59, .25), rgba(2, 44, 34, .15));
+  --deco-a: '⚡'; --deco-b: '▣ ▢ ▣'; }
+.side-circuit::before { animation: zap-blink 1.7s steps(1) infinite; }
+@keyframes zap-blink { 0%, 60%, 70%, 100% { opacity: .9; } 65% { opacity: .1; } }
+.side-circuit::after { font-family: 'Share Tech Mono', monospace; font-size: .8rem; }
+
+/* --- Nixie : tubes de verre des années 50, filament orange, grille métallique */
+.num-card.skin-nixie { background: linear-gradient(180deg, #1c1917, #0c0a09); border: 3px solid #44403c; border-radius: .5rem; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 6px 14px rgba(0, 0, 0, .4); }
+.skin-nixie .slot {
+  font-size: .62em; width: 1.2em; height: 1.75em; margin: 0 .06em; display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Share Tech Mono', monospace; font-weight: 400; color: #ffb347;
+  text-shadow: 0 0 2px #fff4e0, 0 0 6px #ff8c1a, 0 0 14px #ff6a00, 0 0 24px rgba(255, 106, 0, .6);
+  border-radius: .55em .55em .2em .2em;
+  background:
+    radial-gradient(circle, rgba(120, 113, 108, .35) 0 .5px, transparent 1px) 0 0 / 4px 4px,
+    radial-gradient(ellipse at 50% 55%, rgba(255, 120, 20, .22), transparent 70%),
+    linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .18) 20%, transparent 35%, transparent 80%, rgba(255, 255, 255, .08));
+  box-shadow: inset 0 0 0 1px rgba(214, 211, 209, .25), inset 0 -.25em .3em rgba(0, 0, 0, .6), 0 .1em 0 #292524;
+}
+.skin-nixie .slot.spinning { opacity: 1; color: rgba(255, 179, 71, .5); animation: nixie-cycle .1s steps(2) infinite; }
+@keyframes nixie-cycle { 50% { text-shadow: 0 0 4px #ff8c1a; opacity: .6; } }
+.skin-nixie .slot.revealed { animation: nixie-warm .8s ease-out backwards; }
+@keyframes nixie-warm { 0% { color: #7c2d12; text-shadow: none; } 25% { color: #ffb347; text-shadow: 0 0 20px #ff6a00; } 35% { color: #9a3412; text-shadow: none; } 55% { color: #ffd199; text-shadow: 0 0 2px #fff, 0 0 12px #ff8c1a, 0 0 28px #ff6a00; } 100% {} }
+.skin-nixie .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.side-nixie { --side-border: #78716c; --side-glow: 0 0 14px rgba(255, 140, 26, .2); --side-ink: #ffb347; --side-ink-glow: 0 0 6px #ff6a00;
+  --side-bg: radial-gradient(80% 60% at 50% 50%, rgba(255, 106, 0, .1), transparent 70%), repeating-linear-gradient(90deg, rgba(120, 113, 108, .08) 0 2px, transparent 2px 7px), linear-gradient(180deg, rgba(41, 37, 36, .25), rgba(12, 10, 9, .2));
+  --deco-a: 'IN-14'; --deco-b: '170 V'; }
+.side-nixie::before, .side-nixie::after { font-family: 'Share Tech Mono', monospace; font-size: .75rem; animation: nixie-hum 2.6s ease-in-out infinite; }
+@keyframes nixie-hum { 50% { opacity: .45; } }
+
+/* --- Vaporwave : coucher de soleil rayé, grille en perspective qui défile, chiffres chromés rose-cyan */
+.num-card.skin-vaporwave {
+  background:
+    radial-gradient(ellipse 30% 22% at 50% 60%, rgba(253, 224, 71, .55), rgba(251, 113, 133, .35) 55%, transparent 75%),
+    linear-gradient(180deg, transparent 0 58%, #1e0b3a 58%),
+    linear-gradient(180deg, #2e1065 0%, #7e22ce 35%, #db2777 58%);
+  border: 2px solid #f0abfc; border-radius: .4rem;
+  box-shadow: 0 0 0 2px #1e0b3a, 0 0 18px rgba(236, 72, 153, .5), 0 0 34px rgba(34, 211, 238, .25);
+}
+.num-card.skin-vaporwave::before {
+  content: ''; position: absolute; left: -50%; right: -50%; bottom: 0; height: 42%; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(34, 211, 238, .7) 0 1px, transparent 1px 22px), repeating-linear-gradient(0deg, rgba(34, 211, 238, .7) 0 1px, transparent 1px 10px);
+  transform: perspective(90px) rotateX(55deg); transform-origin: 50% 100%;
+  animation: grid-run 1.2s linear infinite;
+}
+@keyframes grid-run { to { background-position: 0 0, 0 10px; } }
+.skin-vaporwave .slot {
+  position: relative; z-index: 1; font-family: 'Graduate', serif; font-weight: 400; font-style: italic;
+  background: linear-gradient(180deg, #fff 0%, #a5f3fc 45%, #f0abfc 55%, #db2777 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(.05em .05em 0 #22d3ee) drop-shadow(-.04em -.02em 0 #f472b6) drop-shadow(0 0 .08em #1e0b3a);
+}
+.skin-vaporwave .slot.spinning { opacity: 1; animation: vapor-glitch .16s steps(2) infinite; }
+@keyframes vapor-glitch { 50% { transform: translateX(-.05em) skewX(-10deg); filter: drop-shadow(.12em 0 0 #22d3ee) drop-shadow(-.12em 0 0 #f472b6); } }
+.skin-vaporwave .slot.revealed { animation: vapor-slide .6s cubic-bezier(.2, .9, .3, 1.1) backwards; }
+@keyframes vapor-slide { 0% { transform: translateX(-.8em) skewX(-25deg); opacity: 0; filter: drop-shadow(.3em 0 0 #22d3ee) drop-shadow(-.3em 0 0 #f472b6); } 70% { transform: skewX(6deg); opacity: 1; } 100% { transform: none; } }
+.side-vaporwave { --side-border: #e879f9; --side-glow: 0 0 16px rgba(232, 121, 249, .35); --side-ink: #f0abfc; --side-ink-glow: 0 0 6px #22d3ee;
+  --side-bg: radial-gradient(40% 30% at 50% 100%, rgba(253, 224, 71, .25), transparent 70%), linear-gradient(180deg, rgba(46, 16, 101, .25), rgba(219, 39, 119, .18) 70%, rgba(34, 211, 238, .12));
+  --deco-a: '🌴'; --deco-b: 'ＡＥＳＴＨＥＴＩＣ'; }
+.side-vaporwave::after { font-size: .6rem; letter-spacing: .05em; }
+
+/* --- Diamond : gemme taillée, facettes, éclats prismatiques qui scintillent (le plus cher) */
+.num-card.skin-diamond {
+  background:
+    conic-gradient(from 20deg at 30% 40%, rgba(255, 255, 255, .25), transparent 12%, rgba(165, 243, 252, .2) 25%, transparent 38%, rgba(233, 213, 255, .22) 55%, transparent 70%, rgba(255, 255, 255, .2) 85%, transparent),
+    conic-gradient(from 200deg at 75% 65%, rgba(255, 255, 255, .2), transparent 15%, rgba(254, 205, 211, .2) 35%, transparent 50%, rgba(186, 230, 253, .22) 70%, transparent),
+    linear-gradient(135deg, #0f172a, #1e293b 50%, #0f172a);
+  border: 2px solid transparent; border-radius: .7rem;
+  background-clip: padding-box;
+  box-shadow: 0 0 0 2px #e0f2fe, 0 0 0 4px rgba(186, 230, 253, .35), 0 0 22px rgba(165, 243, 252, .45), 0 0 44px rgba(233, 213, 255, .25);
+}
+.skin-diamond .slot {
+  background: linear-gradient(115deg, #fff 0%, #a5f3fc 18%, #fff 30%, #e9d5ff 44%, #fff 56%, #fecdd3 70%, #fff 82%, #bae6fd 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, .9)) drop-shadow(0 0 10px rgba(165, 243, 252, .6));
+  animation: prism-shift 3.5s linear infinite;
+}
+@keyframes prism-shift { to { background-position: 300% 0; } }
+.skin-diamond .slot.spinning { opacity: 1; animation: prism-shift .5s linear infinite, diamond-spin .3s linear infinite; }
+@keyframes diamond-spin { 0% { transform: perspective(200px) rotateY(0); } 100% { transform: perspective(200px) rotateY(360deg); } }
+.skin-diamond .slot.revealed { animation: diamond-flash .7s ease-out backwards, prism-shift 3.5s .7s linear infinite; }
+@keyframes diamond-flash { 0% { transform: scale(1.8) rotate(-20deg); filter: brightness(3) drop-shadow(0 0 20px #fff); opacity: 0; } 40% { transform: scale(.92) rotate(3deg); filter: brightness(1.8) drop-shadow(0 0 14px #a5f3fc); opacity: 1; } 100% { transform: none; } }
+.side-diamond { --side-border: #e0f2fe; --side-glow: 0 0 18px rgba(165, 243, 252, .35), 0 0 32px rgba(233, 213, 255, .2); --side-ink: #fff; --side-ink-glow: 0 0 6px #a5f3fc, 0 0 12px #e9d5ff;
+  --side-bg: conic-gradient(from 30deg at 20% 30%, rgba(165, 243, 252, .12), transparent 20%, rgba(233, 213, 255, .12) 45%, transparent 65%, rgba(254, 205, 211, .1) 85%, transparent), conic-gradient(from 210deg at 80% 75%, rgba(186, 230, 253, .12), transparent 25%, rgba(255, 255, 255, .1) 55%, transparent), linear-gradient(135deg, rgba(15, 23, 42, .2), rgba(30, 41, 59, .15));
+  --deco-a: '✦'; --deco-b: '💎'; }
+.side-diamond::before { animation: gold-sparkle 1.6s ease-in-out infinite; }
+.side-diamond::after { font-size: 1.1rem; animation: gem-glint 2.4s ease-in-out infinite; }
+@keyframes gem-glint { 0%, 70%, 100% { filter: none; transform: none; } 80% { filter: brightness(1.8) drop-shadow(0 0 6px #fff); transform: scale(1.2) rotate(-10deg); } }
