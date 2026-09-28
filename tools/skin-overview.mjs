@@ -14,7 +14,7 @@ const out = path.join(ROOT, 'skin-previews', process.argv.slice(2).length ? `ove
 fs.mkdirSync(path.dirname(out), { recursive: true });
 
 const browser = await firefox.launch();
-const page = await browser.newPage({ viewport: { width: 1500, height: 300 }, colorScheme: 'dark' });
+const page = await browser.newPage({ viewport: { width: 2100, height: 300 }, colorScheme: 'dark' });
 await page.route('**/api/**', r => r.fulfill({ status: 503, body: '{}' }));
 await page.goto('file://' + path.join(ROOT, 'index.html') + '#/about');
 await page.waitForTimeout(800);
@@ -26,8 +26,8 @@ const height = await page.evaluate(skins => {
   const cell = (html, t) => `<div class="frame" style="text-align:center"${t == null ? '' : ` data-t="${t}"`}>${html}</div>`;
   sheet.innerHTML = skins.map(skin => `<div style="display:flex;gap:8px;align-items:center">
       <b style="color:#fff;width:74px">${skin}</b>${cell(card(skin, ''))}
-      <span>spin</span>${[40, 120, 200].map(t => cell(card(skin, 'spinning'), t)).join('')}
-      <span>reveal</span>${[0, 120, 260, 500].map(t => cell(card(skin, 'revealed'), t)).join('')}
+      <span>spin</span>${[30, 70, 110].map(t => cell(card(skin, 'spinning'), t)).join('')}
+      <span>reveal</span>${[0, 60, 120, 200, 300, 450, 650].map(t => cell(card(skin, 'revealed'), t)).join('')}
       <div class="room-side side-${skin}" style="width:170px;padding:.5rem .3rem"><div class="room-name" style="font-size:.7rem;margin-bottom:.3rem">Player</div>${card(skin, '').replace('font-size:1.6rem', 'font-size:1.1rem')}</div>
     </div>`).join('');
   document.body.append(sheet);
@@ -36,7 +36,7 @@ const height = await page.evaluate(skins => {
   }
   return sheet.scrollHeight;
 }, skins);
-await page.setViewportSize({ width: 1500, height: height + 10 });
+await page.setViewportSize({ width: 2100, height: height + 10 });
 await page.waitForTimeout(300);
 await page.screenshot({ path: out, fullPage: true });
 console.log(out);

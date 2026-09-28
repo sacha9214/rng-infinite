@@ -1732,3 +1732,122 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 
 /* Dice : assez de hauteur pour que les dés qui roulent (diagonale plus haute que le côté) ne soient pas coupés. */
 .num-card.skin-dice { padding-top: .75rem; padding-bottom: .85rem; }
+
+/* ================================================================== mouvement v2 : sobre et « pro » (2026-09-28)
+   Une seule signature pour tous les skins : départ proche (≤ .3em), échelle ≤ 1.12, flou ≤ 1.5px, bref éclat de
+   lumière à l'impact puis arrêt net ; révélations 380-520 ms ; défilements fins comme un compteur mécanique.
+   Chaque skin garde son idée (matière), en plus retenu. Ces règles viennent après toutes les autres : elles priment. */
+:root { --ease-out: cubic-bezier(.22, 1, .36, 1); --ease-snap: cubic-bezier(.34, 1.36, .64, 1); --ease-in-out: cubic-bezier(.65, 0, .35, 1); }
+
+/* Classic (et base de tous) : le chiffre descend d'un cran, se pose avec une légère surimpulsion. */
+.slot.spinning { animation: m2-reel .11s linear infinite; }
+@keyframes m2-reel { 0% { transform: translateY(-.1em); filter: blur(.6px); opacity: .55; } 50% { transform: translateY(.1em); filter: blur(.35px); opacity: .7; } 100% { transform: translateY(-.1em); filter: blur(.6px); opacity: .55; } }
+.slot.revealed { animation: m2-lock .42s var(--ease-snap) backwards; }
+@keyframes m2-lock { 0% { transform: translateY(-.28em) scale(1.08); opacity: 0; filter: blur(1.2px) brightness(1.5); } 55% { transform: translateY(.03em); opacity: 1; filter: brightness(1.15); } 100% { transform: none; filter: none; } }
+
+/* Neon : un seul raté du tube, puis le néon s'allume et son halo s'épanouit. */
+.skin-neon .slot.spinning { animation: m2-neon-hum .16s steps(2) infinite; }
+@keyframes m2-neon-hum { 0% { opacity: .35; } 50% { opacity: .55; } }
+.skin-neon .slot.revealed { animation: m2-neon-on .5s linear backwards; }
+@keyframes m2-neon-on { 0% { opacity: 0; text-shadow: none; } 12% { opacity: .9; } 20% { opacity: .2; text-shadow: none; } 32% { opacity: 1; text-shadow: 0 0 2px #fff, 0 0 18px #ff4fd8, 0 0 40px #ff4fd8; } 100% {} }
+
+/* LCD : les segments éteints restent visibles, le chiffre s'affiche en 3 paliers de contraste (écran lent). */
+.skin-lcd .slot.revealed { animation: m2-lcd .3s steps(3, jump-start) backwards; }
+@keyframes m2-lcd { 0% { opacity: .2; } 100% { opacity: 1; } }
+
+/* Pixel : pas de flou (c'est du pixel) ; le chiffre tombe de 2 « pixels » en 4 images et rebondit d'un. */
+.skin-pixel .slot.spinning { animation: m2-pixel-tick .16s steps(2) infinite; }
+@keyframes m2-pixel-tick { 50% { transform: translateY(-.08em); } }
+.skin-pixel .slot.revealed { animation: m2-pixel-drop .36s steps(4) backwards; }
+@keyframes m2-pixel-drop { 0% { transform: translateY(-.3em); opacity: 0; } 50% { transform: translateY(.06em); opacity: 1; } 75% { transform: translateY(-.03em); } 100% { transform: none; } }
+
+/* Jersey : le numéro thermocollé est pressé sur le maillot (appui, puis relâche). */
+.skin-jersey .slot.spinning { animation: m2-cloth .3s var(--ease-in-out) infinite alternate; transform-origin: 50% 0; }
+@keyframes m2-cloth { from { transform: skewX(-4deg) scaleY(.97); opacity: .75; } to { transform: skewX(4deg) scaleY(1.01); opacity: .85; } }
+.skin-jersey .slot.revealed { animation: m2-press .45s var(--ease-snap) backwards; }
+@keyframes m2-press { 0% { transform: scale(1.12); opacity: 0; } 45% { transform: scale(.96); opacity: 1; } 100% { transform: none; } }
+
+/* Slots : le rouleau freine, dépasse d'un cheveu et revient (butée mécanique). */
+.skin-slots .slot.revealed { animation: m2-reel-stop .48s var(--ease-snap) backwards; }
+@keyframes m2-reel-stop { 0% { transform: translateY(-.3em); filter: blur(1.2px); } 60% { transform: translateY(.05em); filter: none; } 100% { transform: none; } }
+
+/* Scoreboard : les LED s'allument en balayage rapide, gauche → droite. */
+.skin-scoreboard .slot.revealed { animation: m2-led .32s steps(5) backwards; }
+@keyframes m2-led { from { clip-path: inset(0 100% 0 0); filter: brightness(1.8); } to { clip-path: inset(0); filter: none; } }
+
+/* Dice : le dé roule encore d'un quart de tour et se pose (un seul petit rebond). */
+.skin-dice .slot.spinning { animation: m2-dice-roll .26s linear infinite; }
+@keyframes m2-dice-roll { 0% { transform: rotate(0); } 25% { transform: rotate(90deg) translateY(-.04em); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) translateY(-.04em); } 100% { transform: rotate(360deg); } }
+.skin-dice .slot.revealed { animation: m2-dice-land .5s var(--ease-snap) backwards; }
+@keyframes m2-dice-land { 0% { transform: translateY(-.25em) rotate(-24deg); opacity: 0; } 55% { transform: translateY(.03em) rotate(3deg); opacity: 1; } 100% { transform: none; } }
+
+/* Chrome : un reflet de lumière balaie le métal au moment où le chiffre se fige. */
+.skin-chrome .slot.revealed { animation: m2-chrome-glint .5s var(--ease-out) backwards, chrome-sheen 4s .5s ease-in-out infinite; }
+@keyframes m2-chrome-glint { 0% { transform: translateY(-.2em); opacity: 0; background-position: 100% 0; } 40% { transform: none; opacity: 1; filter: brightness(1.5); } 100% { background-position: 0 0; filter: none; } }
+
+/* Gold : frappe de la pièce — petit écrasement et éclat doré bref. */
+.skin-gold .slot.spinning { animation: m2-coin .22s var(--ease-in-out) infinite alternate; }
+@keyframes m2-coin { from { transform: perspective(200px) rotateY(-35deg); filter: brightness(.85); } to { transform: perspective(200px) rotateY(35deg); filter: brightness(1.35); } }
+.skin-gold .slot.revealed { animation: m2-strike .46s var(--ease-snap) backwards; }
+@keyframes m2-strike { 0% { transform: scale(1.12); opacity: 0; } 35% { transform: scale(.97); opacity: 1; filter: brightness(1.9) drop-shadow(0 0 6px #ffe27a); } 100% { transform: none; } }
+
+/* Matrix : le chiffre se décrypte (éclat blanc) puis retombe au vert, sans grossir. */
+.skin-matrix .slot.revealed { animation: m2-decode .45s var(--ease-out) backwards; }
+@keyframes m2-decode { 0% { color: #fff; text-shadow: 0 0 10px #fff, 0 0 22px #00ff41; transform: scale(1.06); } 50% { color: #caffd5; } 100% { color: #00ff41; transform: none; } }
+
+/* Fire : la flamme monte vite du bas du chiffre (pas de temps mort), puis brûle. */
+.skin-fire .slot.spinning { transform-origin: 50% 100%; animation: m2-lick .18s var(--ease-in-out) infinite alternate, fire-flicker .5s linear infinite alternate; }
+@keyframes m2-lick { from { transform: scaleY(.96) skewX(-2deg); } to { transform: scaleY(1.05) skewX(2deg); filter: brightness(1.25); } }
+.skin-fire .slot.revealed { animation: m2-ignite .38s var(--ease-out) backwards, fire-flicker 1.1s .38s ease-in-out infinite alternate; }
+@keyframes m2-ignite { 0% { clip-path: inset(70% 0 0 0); filter: brightness(1.8); transform: translateY(.06em); } 100% { clip-path: inset(0); filter: none; transform: none; } }
+
+/* Galaxy : traînée d'étoile courte, puis le chiffre s'allume avec un halo. */
+.skin-galaxy .slot.revealed { animation: m2-star .48s var(--ease-out) backwards; }
+@keyframes m2-star { 0% { transform: translate(.25em, -.25em); opacity: 0; text-shadow: -.25em .25em 4px rgba(255, 255, 255, .8); } 55% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 18px #a78bfa; } 100% { transform: none; } }
+
+/* Rainbow : entrée nette, les couleurs défilent une fois vite puis reprennent leur rythme. */
+.skin-rainbow .slot.spinning { animation: rainbow-slide .6s linear infinite, m2-reel .11s linear infinite; }
+.skin-rainbow .slot.revealed { animation: m2-lock .42s var(--ease-snap) backwards, rainbow-slide 3s .42s linear infinite; }
+
+/* Candy : gelée — écrasement mesuré, deux rebonds amortis. */
+.skin-candy .slot.spinning { animation: m2-jelly .2s var(--ease-in-out) infinite alternate; }
+@keyframes m2-jelly { from { transform: scale(1.05, .95); } to { transform: scale(.96, 1.04); } }
+.skin-candy .slot.revealed { animation: m2-jelly-pop .52s var(--ease-out) backwards; }
+@keyframes m2-jelly-pop { 0% { transform: scale(.6); opacity: 0; } 35% { transform: scale(1.12, .9); opacity: 1; } 60% { transform: scale(.96, 1.05); } 80% { transform: scale(1.02, .98); } 100% { transform: none; } }
+
+/* Ocean : le chiffre remonte à la surface, la réfraction se stabilise. */
+.skin-ocean .slot.spinning { animation: m2-sway .5s var(--ease-in-out) infinite alternate; }
+@keyframes m2-sway { from { transform: translate(-.03em, .03em); filter: blur(.4px); opacity: .7; } to { transform: translate(.03em, -.03em); filter: blur(.3px); opacity: .85; } }
+.skin-ocean .slot.revealed { animation: m2-surface .5s var(--ease-out) backwards; }
+@keyframes m2-surface { 0% { transform: translateY(.28em); opacity: 0; filter: blur(1.5px); } 60% { transform: translateY(-.03em); opacity: 1; filter: none; } 100% { transform: none; } }
+
+/* Ice : le givre se forme — net, froid, un éclat bleu-blanc. */
+.skin-ice .slot.revealed { animation: m2-freeze .45s var(--ease-out) backwards; }
+@keyframes m2-freeze { 0% { transform: scale(1.08); opacity: 0; filter: blur(1.5px) brightness(1.6); } 45% { opacity: 1; filter: brightness(1.3) drop-shadow(0 0 6px #e0f2fe); } 100% { transform: none; } }
+
+/* Circuit : impulsion électrique brève (un seul décalage), éclat cyan. */
+.skin-circuit .slot.revealed { animation: m2-zap .4s var(--ease-out) backwards; }
+@keyframes m2-zap { 0% { opacity: 0; transform: translateX(-.04em); color: #fff; text-shadow: 0 0 8px #22d3ee, 0 0 18px #22d3ee; } 20% { opacity: 1; transform: translateX(.03em); } 35% { opacity: .5; } 50% { opacity: 1; transform: none; } 100% {} }
+
+/* Nixie : le filament chauffe — orange sombre, un scintillement, puis pleine lueur. */
+.skin-nixie .slot.revealed { animation: m2-warm .55s linear backwards; }
+@keyframes m2-warm { 0% { color: #7c2d12; text-shadow: none; } 30% { color: #ffb347; text-shadow: 0 0 14px #ff6a00; } 40% { color: #c2410c; text-shadow: 0 0 4px #ff6a00; } 70% { color: #ffd199; } 100% {} }
+
+/* Blocks : le bloc tombe en 4 images et se cale (style pixel, pas de flou). */
+.skin-blocks .slot.revealed { animation: m2-block .4s steps(4) backwards; }
+@keyframes m2-block { 0% { transform: translateY(-.5em); opacity: 0; } 50% { transform: translateY(.05em); opacity: 1; } 75% { transform: translateY(-.02em); } 100% { transform: none; } }
+
+/* Vaporwave : glissement court avec aberration chromatique qui se referme. */
+.skin-vaporwave .slot.spinning { animation: m2-glitch .14s steps(2) infinite; }
+@keyframes m2-glitch { 50% { transform: translateX(-.03em); filter: drop-shadow(.06em 0 0 #22d3ee) drop-shadow(-.06em 0 0 #f472b6); } }
+.skin-vaporwave .slot.revealed { animation: m2-vapor .46s var(--ease-out) backwards; }
+@keyframes m2-vapor { 0% { transform: translateX(-.3em) skewX(-10deg); opacity: 0; filter: drop-shadow(.15em 0 0 #22d3ee) drop-shadow(-.15em 0 0 #f472b6); } 60% { transform: skewX(2deg); opacity: 1; } 100% { transform: none; } }
+
+/* Diamond : la gemme capte la lumière — éclat bref et scintillement, sans tourner. */
+.skin-diamond .slot.spinning { animation: prism-shift .5s linear infinite, m2-facet .2s var(--ease-in-out) infinite alternate; }
+@keyframes m2-facet { from { transform: perspective(200px) rotateY(-25deg); filter: brightness(.9) drop-shadow(0 0 3px #fff); } to { transform: perspective(200px) rotateY(25deg); filter: brightness(1.3) drop-shadow(0 0 6px #a5f3fc); } }
+.skin-diamond .slot.revealed { animation: m2-sparkle .5s var(--ease-snap) backwards, prism-shift 3.5s .5s linear infinite; }
+@keyframes m2-sparkle { 0% { transform: scale(1.1); opacity: 0; } 35% { transform: scale(.98); opacity: 1; filter: brightness(2) drop-shadow(0 0 10px #fff); } 100% { transform: none; } }
+/* v2, retouche : défilement moins terne (les textes en dégradé perdaient trop à .55 d'opacité). */
+@keyframes m2-reel { 0% { transform: translateY(-.1em); filter: blur(.6px); opacity: .72; } 50% { transform: translateY(.1em); filter: blur(.35px); opacity: .88; } 100% { transform: translateY(-.1em); filter: blur(.6px); opacity: .72; } }
+@keyframes m2-neon-hum { 0% { opacity: .55; } 50% { opacity: .75; } }
