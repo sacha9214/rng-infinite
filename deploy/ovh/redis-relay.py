@@ -128,5 +128,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     ThreadingHTTPServer.daemon_threads = True
+    ThreadingHTTPServer.request_queue_size = 128
     print(f'Relais Redis sur http://{LISTEN[0]}:{LISTEN[1]} → Redis {REDIS[0]}:{REDIS[1]}', flush=True)
     ThreadingHTTPServer(LISTEN, Handler).serve_forever()

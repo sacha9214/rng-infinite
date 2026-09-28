@@ -9,8 +9,10 @@ const percentiles = require('../data/percentiles.json');
 const engine = createEngine(meta, percentiles);
 
 // Variables posées par l'intégration Upstash Redis de Vercel (noms KV_* ou UPSTASH_*).
-const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Base de données : notre Redis sur le VPS (RNG_REDIS_*, voir deploy/ovh) en priorité, sinon Upstash (variables de
+// l'intégration Vercel, gardées pour revenir en arrière en supprimant simplement les deux RNG_REDIS_*).
+const REDIS_URL = process.env.RNG_REDIS_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.RNG_REDIS_TOKEN || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
 // Exécute une liste de commandes Redis en un seul aller-retour (API REST d'Upstash).
 async function redis(commands) {
