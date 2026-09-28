@@ -2000,3 +2000,16 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
    On agrandit la case peinte sans changer l'espacement (padding compensé par une marge négative). */
 .skin-gold .slot, .skin-chrome .slot, .skin-diamond .slot, .skin-ice .slot, .skin-rainbow .slot, .skin-fire .slot { padding: 0 .06em; margin: 0 -.06em; }
 .skin-vaporwave .slot { width: .72em; padding: 0 .1em; margin: 0 -.1em; }
+/* Chiffres coupés en haut pendant l'affichage : chemin vertical plus court et un peu plus d'air dans la carte
+   (la carte coupe ce qui dépasse, overflow: hidden, pour garder ses reflets et décors à l'intérieur). */
+.num-card { padding-top: .7rem; padding-bottom: .7rem; }
+.num-card.sm { padding-top: .15rem; padding-bottom: .15rem; }
+@keyframes m2-reel { 0% { transform: translateY(-.06em); filter: blur(.6px); opacity: .72; } 50% { transform: translateY(.06em); filter: blur(.35px); opacity: .88; } 100% { transform: translateY(-.06em); filter: blur(.6px); opacity: .72; } }
+@keyframes m2-lock { 0% { transform: translateY(-.14em) scale(1.06); opacity: 0; filter: blur(1.2px) brightness(1.5); } 55% { transform: translateY(.02em); opacity: 1; filter: brightness(1.15); } 100% { transform: none; filter: none; } }
+@keyframes m2-reel-stop { 0% { transform: translateY(-.16em); filter: blur(1.2px); } 60% { transform: translateY(.03em); filter: none; } 100% { transform: none; } }
+@keyframes m2-pixel-drop { 0% { transform: translateY(-.16em); opacity: 0; } 50% { transform: translateY(.04em); opacity: 1; } 75% { transform: translateY(-.02em); } 100% { transform: none; } }
+@keyframes m2-dice-land { 0% { transform: translateY(-.14em) rotate(-24deg); opacity: 0; } 55% { transform: translateY(.02em) rotate(3deg); opacity: 1; } 100% { transform: none; } }
+@keyframes m2-chrome-glint { 0% { transform: translateY(-.12em); opacity: 0; background-position: 100% 0; } 40% { transform: none; opacity: 1; filter: brightness(1.5); } 100% { background-position: 0 0; filter: none; } }
+@keyframes m2-surface { 0% { transform: translateY(.14em); opacity: 0; filter: blur(1.5px); } 60% { transform: translateY(-.02em); opacity: 1; filter: none; } 100% { transform: none; } }
+@keyframes m2-star { 0% { transform: translate(.18em, -.14em); opacity: 0; text-shadow: -.2em .2em 4px rgba(255, 255, 255, .8); } 55% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 18px #a78bfa; } 100% { transform: none; } }
+@keyframes m2-block { 0% { transform: translateY(-.25em); opacity: 0; } 50% { transform: translateY(.04em); opacity: 1; } 75% { transform: translateY(-.02em); } 100% { transform: none; } }
