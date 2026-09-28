@@ -1641,3 +1641,94 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 .side-blocks::before { font-size: 1.2rem; transform-origin: 80% 80%; animation: pickaxe-swing 1.1s ease-in-out infinite; }
 @keyframes pickaxe-swing { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-35deg); } 55% { transform: rotate(8deg); } }
 .room-stage.many .skin-blocks .slot::after { display: none; }
+
+/* ================================================================== passe 3D et style sur tous les skins (2026-09-28)
+   Relief seulement quand la matière s'y prête : chiffres extrudés (couches d'ombre décalées d'1 px vers le bas-droite),
+   cartes épaisses (tranche visible), vraie perspective pour les dés et les blocs. LCD, Scoreboard, Matrix, Circuit et
+   Fire restent plats : ce sont des écrans ou de la lumière. */
+
+/* Décors texte des cadres de duel : en bas, pour ne jamais chevaucher le nom du joueur (en haut, au centre). */
+.room-side[class*="side-"]::before { top: auto; bottom: .5rem; left: .6rem; }
+.side-neon::before, .side-scoreboard::before, .side-nixie::before, .side-lcd::before, .side-circuit::after { font-size: .65rem; }
+.side-vaporwave::after { font-size: .5rem; }
+
+/* --- Neon : tubes de verre fixés sur un panneau (petites attaches), profondeur par l'ombre portée du halo */
+.num-card.skin-neon { box-shadow: 0 0 14px rgba(255, 79, 216, .55), inset 0 0 12px rgba(255, 79, 216, .25), 0 10px 18px -6px rgba(0, 0, 0, .6); }
+.skin-neon .slot { text-shadow: 0 0 2px #fff, 0 0 6px #fff, 0 0 12px #ff4fd8, 0 0 26px #ff4fd8, .06em .12em .1em rgba(255, 79, 216, .35); }
+
+/* --- Pixel : chiffres en voxels (extrusion en marches d'escalier) */
+.skin-pixel .slot { text-shadow: .06em .06em 0 #ff004d, .12em .12em 0 #b0003a, .18em .18em 0 #6b0023; }
+.num-card.skin-pixel { box-shadow: 4px 4px 0 #0e1a3a, 8px 8px 0 #000; }
+
+/* --- Jersey : numéro brodé en relief (fil blanc, bord noir, ombre de tissu), maillot en plis */
+.num-card.skin-jersey {
+  background: linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 18%, transparent 82%, rgba(0, 0, 0, .18)),
+    repeating-linear-gradient(90deg, #d7263d 0 14px, #b81d31 14px 28px);
+  box-shadow: inset 0 -8px 12px rgba(0, 0, 0, .25), 0 6px 0 #7f1422, 0 10px 16px rgba(0, 0, 0, .35);
+}
+.skin-jersey .slot { text-shadow: -2px -2px 0 #111, 2px -2px 0 #111, -2px 2px 0 #111, 2px 2px 0 #111, 3px 4px 0 #111, 4px 6px 4px rgba(0, 0, 0, .45); }
+
+/* --- Slots : machine épaisse (tranche dorée), rouleaux cylindriques plus marqués */
+.num-card.skin-slots { box-shadow: 0 0 0 2px #78350f, 0 7px 0 #92400e, 0 12px 18px rgba(0, 0, 0, .4), inset 0 2px 6px rgba(0, 0, 0, .4); }
+.skin-slots .slot { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35), inset 0 .45em .35em -.2em rgba(0, 0, 0, .45), inset 0 -.45em .35em -.2em rgba(0, 0, 0, .45), 0 .06em 0 rgba(255, 255, 255, .25); }
+
+/* --- Dice : dés en cubes avec tranche, tapis creusé */
+.num-card.skin-dice { box-shadow: 0 6px 0 #5b2c0b, 0 12px 18px rgba(0, 0, 0, .45), inset 0 0 22px rgba(0, 0, 0, .45); }
+.skin-dice .slot { box-shadow: .08em .12em 0 #9ca3af, .14em .18em 0 #6b7280, 0 .3em .35em rgba(0, 0, 0, .35); }
+
+/* --- Chrome : lettres de métal extrudées */
+.skin-chrome .slot { filter: drop-shadow(1px 1px 0 #4b5563) drop-shadow(1px 1px 0 #374151) drop-shadow(1px 2px 0 #1f2937) drop-shadow(0 4px 4px rgba(0, 0, 0, .5)); }
+.num-card.skin-chrome { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -2px 0 rgba(0, 0, 0, .4), 0 5px 0 #0b0f17, 0 10px 16px rgba(0, 0, 0, .45); }
+
+/* --- Gold : lingot épais, chiffres frappés en relief */
+.num-card.skin-gold { box-shadow: 0 0 14px rgba(212, 160, 23, .4), 0 5px 0 #7a5a00, 0 10px 16px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 226, 122, .35); }
+.skin-gold .slot { filter: drop-shadow(1px 1px 0 #a16207) drop-shadow(1px 1px 0 #854d0e) drop-shadow(1px 2px 0 #713f12) drop-shadow(0 4px 4px rgba(0, 0, 0, .5)); }
+
+/* --- Galaxy : défilement en vitesse lumière (traînées) au lieu d'un flou, étoiles en profondeur */
+.skin-galaxy .slot.spinning { opacity: 1; filter: none; animation: warp-streak .14s linear infinite; }
+@keyframes warp-streak {
+  0% { transform: scaleX(1.25) translateX(-.05em); text-shadow: -.25em 0 .06em rgba(196, 181, 253, .6), -.5em 0 .1em rgba(139, 92, 246, .35); }
+  100% { transform: scaleX(1.1) translateX(.05em); text-shadow: -.18em 0 .05em rgba(196, 181, 253, .5), -.4em 0 .1em rgba(139, 92, 246, .3); }
+}
+
+/* --- Rainbow : lettres extrudées sombres, pour que les couleurs ressortent */
+.skin-rainbow .slot { filter: drop-shadow(1px 1px 0 #3b0764) drop-shadow(1px 1px 0 #1e1b4b) drop-shadow(0 3px 4px rgba(0, 0, 0, .6)); }
+
+/* --- Candy : bonbons épais et brillants (reflet en haut de chaque chiffre) */
+.skin-candy .slot { position: relative; }
+.skin-candy .slot::after { content: ''; position: absolute; left: 22%; top: 16%; width: 30%; height: 14%; border-radius: 50%; background: rgba(255, 255, 255, .7); filter: blur(.5px); pointer-events: none; }
+.num-card.skin-candy { box-shadow: 0 0 0 3px #f472b6, 0 7px 0 #be185d, 0 12px 18px rgba(236, 72, 153, .35), inset 0 -6px 10px rgba(236, 72, 153, .25), inset 0 6px 8px rgba(255, 255, 255, .8); }
+
+/* --- Ocean : chiffres vus sous l'eau (légère réfraction bleutée en profondeur) */
+.skin-ocean .slot { text-shadow: 0 0 6px rgba(125, 211, 252, .9), 1px 2px 0 #0c4a6e, 2px 4px 0 rgba(8, 47, 73, .7), 0 8px 10px rgba(2, 20, 40, .6); }
+
+/* --- Ice : bloc de glace épais, chiffres taillés dans la glace */
+.num-card.skin-ice { box-shadow: 0 0 0 1px #7dd3fc, 0 6px 0 #0c4a6e, 0 0 18px rgba(125, 211, 252, .55), 0 12px 16px rgba(0, 0, 0, .35), inset 0 0 14px rgba(255, 255, 255, .5); }
+.skin-ice .slot { filter: drop-shadow(1px 1px 0 #7dd3fc) drop-shadow(1px 1px 0 #38bdf8) drop-shadow(0 0 5px rgba(56, 189, 248, .7)); }
+
+/* --- Blocks : vrais cubes (face du dessus en perspective) */
+.skin-blocks .slot::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: .28em; pointer-events: none;
+  background: linear-gradient(90deg, #bef264 0 25%, #a3e635 25% 50%, #bef264 50% 75%, #84cc16 75%);
+  transform: skewX(-45deg); transform-origin: 0 100%; box-shadow: inset 0 0 0 var(--px) rgba(40, 70, 10, .45); height: .36em; }
+/* face de droite, dans l'ombre */
+.skin-blocks .slot:not(.collapsed) { box-shadow: inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 rgba(0, 0, 0, .35), inset var(--px) var(--px) 0 rgba(255, 255, 255, .18), 0 0 0 var(--px) #2a1a0c, .18em -.09em 0 #5b3a1a, .18em -.09em 0 var(--px) #2a1a0c; margin-right: .22em; }
+.num-card.skin-blocks { padding-top: .85rem; }
+
+/* --- Nixie : socle épais et reflet de verre sur chaque tube */
+.num-card.skin-nixie { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8), 0 6px 0 #0c0a09, 0 12px 18px rgba(0, 0, 0, .5); }
+
+/* --- Vaporwave : lettres chromées extrudées vers le soleil */
+.skin-vaporwave .slot { filter: drop-shadow(1px 1px 0 #22d3ee) drop-shadow(1px 1px 0 #0e7490) drop-shadow(-.04em -.02em 0 #f472b6) drop-shadow(0 0 .08em #1e0b3a); }
+
+/* --- Diamond : gemme épaisse (tranche facettée) et chiffres qui brillent en relief */
+.num-card.skin-diamond { box-shadow: 0 0 0 2px #e0f2fe, 0 0 0 4px rgba(186, 230, 253, .35), 0 6px 0 #334155, 0 0 22px rgba(165, 243, 252, .45), 0 12px 20px rgba(0, 0, 0, .45); }
+.skin-diamond .slot { filter: drop-shadow(1px 1px 0 #93c5fd) drop-shadow(1px 1px 0 #6366f1) drop-shadow(0 0 3px rgba(255, 255, 255, .9)) drop-shadow(0 0 10px rgba(165, 243, 252, .6)); }
+
+/* Gold et Diamond : la pièce/gemme oscille sur elle-même au lieu de faire un tour complet (chiffres jamais à l'envers). */
+@keyframes gold-coin { 0% { transform: perspective(200px) rotateY(-55deg); filter: brightness(.8); } 50% { transform: perspective(200px) rotateY(0); filter: brightness(1.7); } 100% { transform: perspective(200px) rotateY(55deg); filter: brightness(.8); } }
+.skin-gold .slot.spinning { animation: gold-coin .26s ease-in-out infinite alternate; }
+@keyframes diamond-spin { 0% { transform: perspective(200px) rotateY(-50deg) scale(.95); } 100% { transform: perspective(200px) rotateY(50deg) scale(1.05); } }
+.skin-diamond .slot.spinning { animation: prism-shift .5s linear infinite, diamond-spin .22s ease-in-out infinite alternate; }
+
+/* Dice : assez de hauteur pour que les dés qui roulent (diagonale plus haute que le côté) ne soient pas coupés. */
+.num-card.skin-dice { padding-top: .75rem; padding-bottom: .85rem; }
