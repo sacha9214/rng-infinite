@@ -1995,3 +1995,8 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
     linear-gradient(180deg, transparent 0 58%, #14052b 58%),
     linear-gradient(180deg, #1e0b3a 0%, #4c1d95 30%, #9d174d 52%, #db2777 58%);
 }
+/* Chiffres colorés par un dégradé (background-clip: text) : le dégradé ne peint que la case du chiffre, donc tout ce
+   qui dépasse (italique, chiffres larges) devenait invisible — le 8 de Vaporwave s'affichait comme un 6.
+   On agrandit la case peinte sans changer l'espacement (padding compensé par une marge négative). */
+.skin-gold .slot, .skin-chrome .slot, .skin-diamond .slot, .skin-ice .slot, .skin-rainbow .slot, .skin-fire .slot { padding: 0 .06em; margin: 0 -.06em; }
+.skin-vaporwave .slot { width: .72em; padding: 0 .1em; margin: 0 -.1em; }
