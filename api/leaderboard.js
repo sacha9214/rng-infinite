@@ -1,9 +1,9 @@
 // GET /api/leaderboard?period=day|week|all|xp&me=<playerId>
-// Top 50 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
+// Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
 const { redis, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, cors, send, flushDue } = require('./_lib');
 
-const LIMIT = 50;
+const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
 const MIGRATED = 'lb:xp:migrated';
 const MIGRATION = '2'; // 1 : XP à vie ; 2 : + nombre de tirages à vie (count:all ne comptait que depuis le 2026-09-21)
