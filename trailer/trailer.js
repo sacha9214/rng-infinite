@@ -475,7 +475,7 @@
           <div class="pin" id="h-wall"><div class="ctr wall"></div></div>
           <div class="pin" id="h-group">
             <div class="pin hero-card" data-tier="mythic"><div class="ctr">
-              <div class="card-stage"><div class="rays"></div><div class="num-card lg neutral">${slotsHTML('??????')}</div><span class="slot-lever"></span></div>
+              <div class="card-stage"><div class="rays"></div><div class="num-card lg neutral">${slotsHTML('??????')}<span class="glint"></span></div><span class="slot-lever"></span></div>
             </div></div>
             <div class="pin" id="h-stamp"><div class="ctr stamp">MYTHIC</div></div>
             <div class="pin" id="h-meta" data-tier="mythic"><div class="ctr"><div class="result-meta big">${tierPill('mythic')}<span class="dot">•</span><span class="top" style="color:#eab308"></span></div></div></div>
@@ -495,6 +495,10 @@
       const pWall = $('#h-wall'), wall = $('.wall'), dim = $('.wall-dim');
       $('.result-meta .top').textContent = `Top ${Math.round(100 - a.percentile) || '<1'}%`;
       attachRain(card, 4);
+      const glint = card.querySelector('.glint');
+      // Entre deux changements de skin la carte avance très lentement et un reflet la traverse : sans cela l'image se
+      // figeait complètement une dizaine d'images, ce qui se lisait comme une saccade.
+      const creep = (t, from) => 1 + .035 * clamp((t - from) / .6);
 
       // Taille naturelle de la carte pour chaque skin : toutes occupent la même largeur à l'écran.
       const K = {}, NAT = {};
@@ -528,7 +532,7 @@
       const midCard = wrows[midR].children[midC].querySelector('.num-card');
       const mr = natRect(midCard, wall);
       const wallOff = mr.y + mr.h / 2 - wall.offsetHeight / 2; // la carte du centre est un peu au-dessus du centre de sa case
-      const wS0 = (NAT[lastSkin].w * K[lastSkin]) / mr.w, wS1 = (P ? 290 : 300) / mr.w;
+      const wS0 = (NAT[lastSkin].w * K[lastSkin] * creep(T_WALL, SWAPS[SWAPS.length - 1][0])) / mr.w, wS1 = (P ? 290 : 300) / mr.w;
 
       // Textes.
       const cA = put(claim(root, P ? 'Roll a|*number*' : 'Roll a *number*'), P ? 330 : 92, P ? 132 : 118);
@@ -603,6 +607,11 @@
         const next = SWAPS[li + 1];
         if (next) { const e = E.inCubic(prog(t, next[0] - .07, .07)); oy -= e * 120; op *= 1 - e * .85; }
         if (li >= 0) { const e = E.outBack(prog(t, SWAPS[li][0], .26), 2); oy += (1 - e) * 140; op *= clamp(.3 + prog(t, SWAPS[li][0], .07)); cs *= lerp(.9, 1, e); }
+        const held = li >= 0 ? SWAPS[li][0] : T_HERO_OUT + .5; // instant où la carte actuelle s'est posée
+        if (skins) cs *= creep(t, held);
+        const gp = skins ? prog(t, held + .1, .5) : 0;
+        glint.style.opacity = gp > 0 && gp < 1 ? '1' : '0';
+        glint.style.backgroundPosition = `${lerp(100, 0, E.inOutCubic(gp)).toFixed(2)}% 0`;
         place(pCard, 0, oy, cs);
         pCard.style.opacity = op.toFixed(3);
 
@@ -827,13 +836,25 @@
 
     // ================================================================ 3. le classement
     scene('lb', T_LB, T_OUTRO, root => {
-      const L = T_LB, T_FLIP = L + .6, T_CLIMB = L + .8, CLIMB = 1.5, T_TOP = T_CLIMB + CLIMB;
+      const L = T_LB, T_FLIP = L + .6, T_CLIMB = L + .8, CLIMB = 1.5;
       const NAMES = 'Nova Kairo Mochi Zeph Pixl Juno Tako Rune Lumen Orbit Vex Echo Finch Delta Quill Ember Onyx Sable Rift Halo Byte Comet Dusk Glitch Ivy Jinx Koi Lynx Mira Neko Opal Quark Rook Soda Tonic Umbra Volt Wisp Yuzu Zinc Axel Birch Clover'.split(' ');
       const NUMS = [314159, 999999, 271828, 262144, 65536, 100000, 531441, 111111, 123456, 987654, 5040, 500000, 101010, 322222, 200003, 979899, 443210, 167777, 133799, 799997,
         999933, 643216, 220011, 865431, 403403, 999176, 574475, 660606, 929928, 250249, 552522, 991099, 288200, 201612, 511951, 875435, 644467, 107750, 707057, 115020, 301219, 306021, 968427];
       const others = NUMS.map((n, i) => ({ name: NAMES[i], n, a: analysis(n) })).sort((x, y) => y.a.total - x.a.total);
       others.forEach(o => { o.lx = Math.log(o.a.total); });
       const before = analysis(8128), after = analysis(777777), X0 = Math.log(before.total), X1 = Math.log(after.total), XTOP = others[0].lx + .14; // XTOP : juste devant le 1er
+      // La montée est pilotée par le rang, pas par l'XP : les XP des autres joueurs sont très inégalement espacés, et une
+      // montée pilotée par l'XP s'arrêtait net dans les grands écarts (8 images figées en pleine course) avant de repartir.
+      const P0 = others.filter(o => o.a.total > before.total).length; // joueurs devant moi au départ
+      const rankAt = t => P0 * (1 - E.inOutCubic(prog(t, T_CLIMB, CLIMB))); // 0 = en tête
+      const T_TOP = T_CLIMB + CLIMB * (1 - Math.cbrt(1 / P0) / 2); // instant où je double le 1er (rang 0,5) : la ligne passe à l'or
+      // Mon XP se déduit du rang : au moment où je double le joueur i, j'ai exactement son XP.
+      const xpAt = p => {
+        if (p >= P0) return X0;
+        if (p < .5) return lerp(XTOP, others[0].lx, p / .5);
+        const k = Math.floor(p - .5), last = k + 1 >= P0;
+        return lerp(others[k].lx, last ? X0 : others[k + 1].lx, (p - .5 - k) / (last ? .5 : 1));
+      };
       const ROW = 50, VISIBLE = P ? 9 : 7, N = others.length;
       const rowHTML = (name, a, me) => `<div class="lb-row${me ? ' me' : ''}"><span class="lb-rank"></span><span class="lb-who"><span class="lb-name">${esc(name)}</span></span>
         <span class="num-card sm" data-tier="${a.tier}">${a.str}</span><span class="lb-ep mono">${fmt(a.total)} XP</span></div>`;
@@ -864,19 +885,17 @@
 
       return t => {
         const bin = E.outExpo(prog(t, L + .05, .6));
-        place(pBoard, B.x, B.y + (1 - bin) * 220, S);
+        place(pBoard, B.x, B.y + (1 - bin) * 220, S * (1 + .022 * prog(t, L, T_OUTRO - L))); // lente avancée : l'image ne se fige jamais
         pBoard.style.opacity = clamp(prog(t, L + .05, .25)).toFixed(3);
 
-        // XP de ma ligne : il monte (sur une échelle logarithmique), et mon rang est celui de cet XP à chaque instant.
-        const lx = lerp(X0, XTOP, E.inOutCubic(prog(t, T_CLIMB, CLIMB))) + (X1 - XTOP) * E.outCubic(prog(t, T_TOP, .55));
-        let p = 0;
-        const above = others.map(o => { const v = clamp((o.lx - lx) / .26 + .5); p += v; return v; });
+        // Mon rang descend de façon continue ; l'XP affiché suit (puis finit de grimper une fois en tête).
+        const p = rankAt(t), lx = xpAt(p) + (X1 - XTOP) * E.outCubic(prog(t, T_TOP, .6));
         const scroll = clamp(p - (VISIBLE - 3), 0, N + 1 - VISIBLE);
         list.style.transform = `translateY(${(-scroll * ROW).toFixed(2)}px)`;
         others.forEach((o, i) => {
-          const y = i + 1 - above[i];
-          rowsEl[i].style.transform = `translateY(${(y * ROW).toFixed(2)}px)`;
-          setText(ranks[i], rankText(i + 1 + (above[i] < .5 ? 1 : 0)));
+          const a = clamp(p - i); // 1 = encore devant moi, 0 = doublé : la ligne glisse alors d'un cran vers le bas
+          rowsEl[i].style.transform = `translateY(${((i + 1 - a * a * (3 - 2 * a)) * ROW).toFixed(2)}px)`;
+          setText(ranks[i], rankText(i + 1 + (a < .5 ? 1 : 0)));
         });
         const moving = Math.sin(Math.PI * prog(t, T_CLIMB, CLIMB)), land = kick(t, T_TOP, 8, 16), flipped = t >= T_FLIP, first = t >= T_TOP;
         me.style.transform = `translateY(${(p * ROW).toFixed(2)}px) scale(${(1 + .035 * moving + .05 * land).toFixed(4)})`;

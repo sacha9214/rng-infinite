@@ -6,6 +6,7 @@
 //   options : --fps 60  --from 0  --to 27  --crf 16  --out dossier  --browser chrome|firefox
 //   node tools/trailer-render.mjs h --sheet 0:27:0.5    → planche d'images (début:fin:pas, ou liste 1.2,4.4,…) pour juger le film
 //   node tools/trailer-render.mjs h --frame 4.4         → une image en taille réelle
+//   node tools/trailer-render.mjs --check a.mp4 [b.mp4] → contrôle de fluidité seul (il est fait d'office après chaque rendu)
 // Une fois : npm i --prefix tools/.deps playwright@1 (le Chrome du système suffit) ; ffmpeg doit être installé.
 import path from 'node:path';
 import fs from 'node:fs';
@@ -20,6 +21,41 @@ const pw = require('playwright');
 
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : def; };
+
+// Contrôle de fluidité. Chaque image est rendue à l'heure exacte, donc une saccade ne vient jamais de la machine : elle
+// vient d'une animation qui s'arrête net puis repart (une montée pilotée par une valeur mal répartie, une carte posée qui
+// ne bouge plus du tout…). On mesure combien chaque image diffère de la précédente et on signale les arrêts nets : au
+// moins 2 images quasi figées, précédées et suivies d'un mouvement franc. Une planche d'images ne montre pas ce défaut.
+const STILL = 0.15, MOVING = 1.5; // écart moyen de luminosité entre deux images (0 à 255)
+function motionCheck(file) {
+  const r = spawnSync('ffmpeg', ['-loglevel', 'error', '-i', file, '-vf',
+    'tblend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 27 });
+  if (r.status) throw new Error(`ffmpeg: ${r.stderr}`);
+  const t = [], v = [];
+  let at = null;
+  for (const line of r.stdout.split('\n')) {
+    let m = /pts_time:([\d.]+)/.exec(line);
+    if (m) { at = Number(m[1]); continue; }
+    m = /YAVG=([\d.]+)/.exec(line);
+    if (m && at !== null) { t.push(at); v.push(Number(m[1])); }
+  }
+  const stops = [];
+  for (let i = 0; i < v.length;) {
+    if (v[i] >= STILL) { i++; continue; }
+    let j = i;
+    while (j < v.length && v[j] < STILL) j++;
+    const before = Math.max(0, ...v.slice(Math.max(0, i - 4), i)), after = Math.max(0, ...v.slice(j, j + 4));
+    if (j - i >= 2 && before > MOVING && after > MOVING) stops.push(`${t[i].toFixed(2)}–${t[j - 1].toFixed(2)} s (${j - i} images figées)`);
+    i = j;
+  }
+  console.log(stops.length ? `⚠️  ${path.basename(file)} : ${stops.length} arrêt(s) net(s) en plein mouvement → ${stops.join(', ')}`
+    : `fluidité OK — ${path.basename(file)} : ${v.length} images, aucun arrêt net en plein mouvement`);
+  return stops.length === 0;
+}
+if (args[0] === '--check') {
+  const ok = args.slice(1).map(motionCheck).every(Boolean);
+  process.exit(ok ? 0 : 1);
+}
 const formats = args[0] === 'h' || args[0] === 'v' ? [args[0]] : ['h', 'v'];
 const OUT = path.resolve(opt('out', path.join(ROOT, 'trailer/out')));
 const sheet = opt('sheet', null), single = opt('frame', null), still = sheet !== null || single !== null;
@@ -94,6 +130,7 @@ for (const f of formats) {
     const [code] = await once(ff, 'close');
     if (code) process.exitCode = 1;
     console.log(`\r${file} — ${total} images à ${fps} img/s en ${Math.round((Date.now() - started) / 1000)} s`);
+    if (!code && !motionCheck(file)) process.exitCode = 1;
   }
   await ctx.close();
 }

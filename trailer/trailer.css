@@ -63,6 +63,9 @@ body::before { display: none; } /* vignette du site : le plan a la sienne */
 .skin-label { display: flex; align-items: center; gap: 26px; white-space: nowrap; font: 800 78px/1 var(--font-sans); letter-spacing: .02em; text-transform: uppercase; color: #fff; }
 .skin-label .pr { font: 700 38px/1 var(--font-mono); letter-spacing: 0; padding: 10px 20px; border-radius: 999px; border: 2px solid var(--ep-outline); background: var(--ep-surface); color: var(--ep-text); }
 .num-card:not(.skin-matrix) > .matrix-rain { display: none; }
+/* Reflet qui traverse la carte après chaque changement de skin. */
+.hero-card .glint { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .32) 50%, transparent 62%) 0 0 / 260% 100% no-repeat; }
 .hero-card .slot-lever { display: none; }
 .hero-card.is-slots .slot-lever { display: block; }
 
