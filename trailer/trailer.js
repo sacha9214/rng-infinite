@@ -3,7 +3,8 @@
  * L'aperçu (lecture dans le navigateur) et l'export (tools/trailer-render.mjs, image par image) passent par la même
  * fonction. Les animations CSS du site (défilement, révélation, cadres de duel…) sont en pause et calées sur t
  * (syncAnimations) : ce qu'on voit est le vrai rendu du jeu. Nombres, badges, XP et raretés sortent du moteur du jeu.
- *   ?format=v → 9:16 (1080×1920), sinon 16:9 (1920×1080)   ·   ?export → sans commandes   ·   ?t=12.5 → instant affiché
+ *   ?format=v → 9:16 (1080×1920), sinon 16:9 (1920×1080)   ·   ?cut=15 ou ?cut=6 → version courte
+ *   ?export → sans commandes   ·   ?t=12.5 → instant affiché
  */
 (function () {
   'use strict';
@@ -12,17 +13,35 @@
   const P = qs.get('format') === 'v';
   const W = P ? 1080 : 1920, H = P ? 1920 : 1080;
   const EXPORT = qs.has('export');
-  const FPS = 60, DURATION = 27;
+  const FPS = 60, DURATION = 30;
 
   // ------------------------------------------------------------------ instants clés (secondes)
-  const T_CLICK = 0.30, T_SPIN = 0.42;
-  const LOCK = [1.05, 1.40, 1.75, 2.20, 2.85, 4.15]; // chaque chiffre se fait attendre un peu plus que le précédent
+  // Le montage est calé sur une grille à 120 battements par minute : un temps = 0,5 s, une mesure = 2 s. Les temps forts
+  // (chiffre posé, changement de skin, changement de scène) tombent sur un temps, les moments clés (Mythic, mur des skins,
+  // duel, 1re place, logo) sur le premier temps d'une mesure. N'importe quelle musique à 120 BPM se pose dessus.
+  const T_CLICK = 0.5, T_SPIN = 0.62;
+  const LOCK = [1, 1.5, 2, 2.5, 3, 4]; // un chiffre par temps, puis un temps de silence avant le dernier
   const T_PEAK = LOCK[5];
-  const T_SPLIT = 4.85; // la carte se décale, les badges arrivent
-  const T_HERO_OUT = 7.60; // badges et XP sortent, la carte revient au centre pour les skins
-  const SWAPS = [[8.30, 'neon'], [8.80, 'slots'], [9.30, 'gold'], [9.75, 'matrix'], [10.15, 'fire'], [10.50, 'vaporwave'], [10.80, 'galaxy'],
-    [11.05, 'diamond'], [11.25, 'candy'], [11.35, 'blocks'], [11.45, 'dice'], [11.55, 'ice'], [11.65, 'rainbow']];
-  const T_WALL = 12.0, T_DUEL = 13.5, T_LB = 19.5, T_OUTRO = 23.0;
+  const T_SPLIT = 4.75; // la carte se décale, les badges arrivent
+  const T_HERO_OUT = 7.5; // badges et XP sortent, la carte revient au centre pour les skins
+  // Skins : sur les temps (4), puis deux fois plus vite (6), puis quatre fois plus vite (4), comme un roulement vers le mur.
+  const SWAPS = [[8, 'neon'], [8.5, 'slots'], [9, 'gold'], [9.5, 'matrix'], [10, 'fire'], [10.25, 'vaporwave'], [10.5, 'galaxy'], [10.75, 'diamond'],
+    [11, 'candy'], [11.25, 'blocks'], [11.5, 'dice'], [11.625, 'ice'], [11.75, 'pixel'], [11.875, 'rainbow']];
+  const T_WALL = 12, T_DUEL = 14, T_LB = 20, T_OUTRO = 24;
+  // Musique : à chaque mesure (ou presque), l'intensité (0 = silence tendu, 1 = pulsation, 2 = demi-rythme, 3 = rythme
+  // complet, 4 = accord final) et l'accord. La bande-son est fabriquée à partir de cette partition.
+  const SCORE = [[0, 1, 'G'], [2, 1, 'G'], [3, 0, 'G'], [4, 3, 'Em'], [6, 3, 'Em'], [8, 3, 'C'], [10, 3, 'C'], [12, 2, 'D'], [14, 3, 'G'], [16, 3, 'G'],
+    [18, 3, 'Em'], [20, 2, 'C'], [21, 3, 'C'], [22, 3, 'D'], [24, 1, 'Em'], [26, 4, 'G']];
+
+  // Versions courtes : elles gardent des passages du film complet (début et fin en secondes), tous coupés sur un temps.
+  const CUTS = { 15: [[2, 6], [10, 13.5], [16, 17.5], [21.5, 23], [25.5, 30]], 6: [[3, 5.5], [26, 29.5]] };
+  const CUT = CUTS[qs.get('cut')] ? qs.get('cut') : '';
+  const EDIT = CUT ? CUTS[CUT] : [[0, DURATION]];
+  const LENGTH = EDIT.reduce((x, [a, b]) => x + b - a, 0); // durée de la version affichée
+  // Instant du film complet pour un instant de la version affichée, et l'inverse (null si le passage n'est pas gardé).
+  const toSource = t => { for (const [a, b] of EDIT) { if (t < b - a) return a + t; t -= b - a; } return EDIT[EDIT.length - 1][1]; };
+  const toOutput = src => { let at = 0; for (const [a, b] of EDIT) { if (src >= a && src < b) return at + src - a; at += b - a; } return null; };
+  const JOINS = EDIT.slice(0, -1).map((r, i) => EDIT.slice(0, i + 1).reduce((x, [a, b]) => x + b - a, 0)); // instants des coupes
 
   // Sans "?export", la page est le lecteur : elle affiche le plan dans un cadre et pilote le temps.
   if (!EXPORT) { player(); return; }
@@ -264,12 +283,18 @@
   }
   const ring = (t0, x, y, w, h, color, o = {}) => FX.rings.push({ t0, x, y, w, h, color, dur: 1, from: .9, grow: 2.6, radius: 16 * PX, width: 3 * PX, alpha: 1, ...o });
   const flash = (t0, dur, kind, alpha, x = W / 2, y = H * .4) => FX.flashes.push({ t0, dur, kind, alpha, x, y });
-  const wipe = (tc, colors, dur = .56) => FX.wipes.push({ tc, colors, dur });
+  // Repères sonores : chaque scène note ses temps forts (chiffre posé, impact, changement de skin…). La bande-son est
+  // fabriquée à partir de cette liste par tools/trailer-audio.mjs : l'image et le son partagent les mêmes instants.
+  const cues = [];
+  const cue = (t, type, o = {}) => cues.push({ t: Math.round(t * 1000) / 1000, type, ...o });
+  // Cliquetis des rouleaux tant que des chiffres tournent (un toutes les 55 ms, comme le changement de chiffre à l'image).
+  const ticks = (from, to, o = {}) => { for (let t = from; t < to - .02; t += .055) cue(t, 'tick', o); };
+  const wipe = (tc, colors, dur = .56) => { FX.wipes.push({ tc, colors, dur }); cue(tc - dur / 2 + .06, 'wipe', { dur: dur - .1 }); };
   const streak = (t0, x, y, c, o = {}) => FX.streaks.push({ t0, x, y, c, dur: .75, len: W * 1.25, thick: 30, ...o });
 
   // Le site simule les confettis image par image (gravité, frottement) ; ici la même trajectoire en formule.
   const DRAG = -Math.log(.985) * 60, GRAV = .22 * 3600;
-  function drawFx(t) {
+  function drawFx(t, out = t) {
     const c = fxc, cam = view.cam;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, W, H);
@@ -340,6 +365,10 @@
         c.fillStyle = g;
       }
       c.fillRect(0, 0, W, H);
+    }
+    for (const j of JOINS) { // version courte : un bref éclat blanc adoucit chaque coupe
+      const p = (out - j) / .16;
+      if (p >= 0 && p < 1) { c.fillStyle = `rgba(255,255,255,${(.6 * (1 - p) * (1 - p)).toFixed(3)})`; c.fillRect(0, 0, W, H); }
     }
     // Volet : une grande bande inclinée traverse le cadre ; au milieu de sa course elle le couvre entièrement,
     // et c'est à cet instant que la scène change.
@@ -454,7 +483,7 @@
   const C = { indigo: hex('#6366f1'), pink: hex('#ec4899'), purple: hex('#a855f7'), cyan: hex('#22d3ee'), orange: hex('#f97316'), gold: hex('#f5b301'), violet: hex('#8b5cf6') };
   const SKIN_LIGHT = {
     classic: C.pink, neon: hex('#ff4fd8'), slots: hex('#ef4444'), gold: hex('#d4a017'), matrix: hex('#00ff41'), fire: hex('#f97316'), vaporwave: hex('#c026d3'),
-    galaxy: hex('#8b5cf6'), diamond: hex('#93c5fd'), candy: hex('#f9a8d4'), blocks: hex('#65a30d'), dice: hex('#16a34a'), ice: hex('#7dd3fc'), rainbow: hex('#a855f7'),
+    galaxy: hex('#8b5cf6'), diamond: hex('#93c5fd'), candy: hex('#f9a8d4'), blocks: hex('#65a30d'), dice: hex('#16a34a'), ice: hex('#7dd3fc'), pixel: hex('#29adff'), rainbow: hex('#a855f7'),
   };
 
   function buildScenes() {
@@ -466,7 +495,7 @@
       const MAX_W = P ? 900 : 1040, MAX_H = P ? 400 : 420;
       const SHOWN = P ? 3 : 4;
       const top = a.groups.slice(0, SHOWN); // les plus gros badges, du plus rare au moins rare (ordre final, de haut en bas)
-      const times = P ? [5.35, 5.88, 6.45] : [5.25, 5.62, 6.02, 6.45];
+      const times = P ? [5.5, 6, 6.5] : [5, 5.5, 6, 6.5]; // un badge par temps
       const tin = top.map((g, j) => times[SHOWN - 1 - j]); // le moins rare arrive en premier, chacun s'insère en haut
       const base = a.total - top.reduce((x, g) => x + g.badge.score, 0); // XP des badges non montrés
 
@@ -557,6 +586,17 @@
       for (let i = 0; i < 5; i++) impulse(LOCK[i], HC.x, HC.y, 26, .25);
       flash(tin[0], .7, 'mythic', .22, BX, BY);
       impulse(tin[0], BX, BY, 60, .5);
+      cue(T_CLICK, 'click');
+      ticks(T_SPIN, T_PEAK - .9);
+      for (let j = 1; j <= 8; j++) cue(T_PEAK - .9 + .9 * (1 - Math.sqrt(1 - j / 9)), 'tick', { last: j / 8 }); // le dernier rouleau ralentit
+      for (let i = 0; i < 5; i++) cue(LOCK[i], 'lock', { i });
+      cue(LOCK[4] + .1, 'riser', { dur: T_PEAK - LOCK[4] - .17 });
+      cue(T_PEAK, 'impact', { kind: 'mythic' });
+      cue(T_SPLIT, 'whoosh', { dur: .5, pan: P ? 0 : -.5 });
+      tin.forEach((t, j) => cue(t, 'badge', { i: SHOWN - 1 - j, of: SHOWN }));
+      cue(T_HERO_OUT, 'whoosh', { dur: .45, pan: P ? 0 : .5 });
+      SWAPS.forEach(([t], i) => cue(t, 'swap', { i, of: SWAPS.length }));
+      cue(T_WALL, 'wall');
 
       // Le dernier rouleau ralentit avant de s'arrêter et frôle le 7.
       const spinChar = (i, t) => {
@@ -686,13 +726,13 @@
         light(lp.x, lp.y, (P ? 1150 : 1250) * z, lc, la);
         if (peak && !skins) light(lp.x + (P ? 0 : 300), lp.y + (P ? 500 : 80), 900, C.cyan, .07 * (1 - out));
 
-        cA.at(t, -.9, 2.6); // déjà en place à t = 0 : la première image du film est une image composée
-        sA.at(t, -.7, 2.5);
+        cA.at(t, -.9, 2.75); // déjà en place à t = 0 : la première image du film est une image composée
+        sA.at(t, -.7, 2.65);
         cB.at(t, T_SPLIT + .35, T_HERO_OUT - .1);
         sB.at(t, T_SPLIT + .65, T_HERO_OUT - .15);
         cC.at(t, T_HERO_OUT + .3, T_WALL - .5);
-        cW.at(t, T_WALL + .34);
-        sW.at(t, T_WALL + .6);
+        cW.at(t, T_WALL + .25);
+        sW.at(t, T_WALL + .55);
       };
     });
 
@@ -741,8 +781,8 @@
 
     scene('duel', T_DUEL, T_LB, root => {
       const D = T_DUEL;
-      const LK = [.95, 1.20, 1.45, 1.70, 2.00, 2.40].map(x => D + x), T_REV = D + 2.52, T_WIN = D + 3.15, T_GRID = D + 4.5;
-      const GK = [.36, .44, .52, .60, .68, .78].map(x => T_GRID + x), G_REV = T_GRID + .86, G_WIN = T_GRID + 1.0;
+      const LK = [.75, 1, 1.25, 1.5, 1.75, 2].map(x => D + x), T_REV = D + 2.12, T_WIN = D + 2.5, T_GRID = D + 4;
+      const GK = [.375, .5, .625, .75, .875, 1].map(x => T_GRID + x), G_REV = T_GRID + 1.1, G_WIN = T_GRID + 1.25;
       const duo = [{ name: 'You', skin: 'fire', n: 123321, me: true }, { name: 'Kairo', skin: 'galaxy', n: 246810 }].map(p => ({ ...p, a: analysis(p.n) }));
       const ten = [['You', 'fire', 643216, true], ['Kairo', 'galaxy', 288200], ['Nova', 'neon', 201612], ['Mochi', 'candy', 115020], ['Zeph', 'matrix', 574475],
         ['Pixl', 'slots', 511951], ['Juno', 'vaporwave', 968427], ['Tako', 'gold', 707057], ['Rune', 'blocks', 306021], ['Lumen', 'rainbow', 250249]]
@@ -762,7 +802,7 @@
       const S2 = Array.from(duoEl.querySelectorAll('.dside')).map((w, i) => sideParts(w, duo[i], i));
       const S10 = Array.from(gridEl.querySelectorAll('.dside')).map((w, i) => sideParts(w, ten[i], i + 2));
       // Emotes du site (mascotte dé) : le gagnant fanfaronne, le perdant pleure.
-      const bubbles = [[w2, 'king', T_WIN + .18, w2 ? 91 : 9], [1 - w2, 'cry', T_WIN + .45, w2 ? 9 : 91], [w2, 'laugh', T_WIN + .75, w2 ? 9 : 91]].map(([side, id, t0, left]) => {
+      const bubbles = [[w2, 'king', T_WIN + .25, w2 ? 91 : 9], [1 - w2, 'cry', T_WIN + .5, w2 ? 9 : 91], [w2, 'laugh', T_WIN + .75, w2 ? 9 : 91]].map(([side, id, t0, left]) => {
         const b = el('span', 'react-bubble', `<img class="emote" src="../img/emotes/${id}.png" alt=""><small>${esc(duo[side].name)}</small>`, S2[side].wrap.querySelector('.react-layer'));
         b.style.left = `calc(${left}% - 38px)`; // sur les bords du cadre : le nombre reste lisible
         b.__t0 = { '*': t0 };
@@ -787,6 +827,17 @@
       impulse(T_WIN, cw.x, cw.y, 150, .8);
       impulse(D + .5, TWO.x, TWO.y, 90, .5);
       flash(D + .5, .3, 'white', .08);
+      cue(D + .5, 'slam');
+      ticks(D + .62, LK[5], { soft: 1 });
+      LK.forEach((t, i) => cue(t, 'lock', { i, soft: 1 }));
+      cue(T_REV, 'reveal');
+      cue(T_WIN, 'win');
+      bubbles.forEach((x, i) => cue(x.t0, 'bubble', { i }));
+      cue(T_GRID, 'whoosh', { dur: .35, pan: 0 });
+      ticks(T_GRID + .1, GK[5], { soft: 1 });
+      GK.forEach((t, i) => cue(t, 'lock', { i, soft: 1, grid: 1 }));
+      cue(G_REV, 'reveal', { small: 1 });
+      cue(G_WIN, 'win', { small: 1 });
 
       const c1a = put(claim(root, 'Duel your *friends*', 'hot'), P ? 270 : 64, P ? 98 : 112);
       const s1a = put(fade(root, 'sub', '<b>live</b> · everyone rolls at once'), P ? 392 : 192, P ? 34 : 38);
@@ -796,7 +847,7 @@
         // --- les deux cadres arrivent des bords et se font face
         const gout = E.inOutCubic(prog(t, T_GRID, .2));
         show(pTwo, gout < 1);
-        place(pTwo, TWO.x, TWO.y, S_TWO * lerp(1, .8, gout) * (1 + .03 * prog(t, D, 4.5))); // lente avancée de la caméra
+        place(pTwo, TWO.x, TWO.y, S_TWO * lerp(1, .8, gout) * (1 + .03 * prog(t, D, 4))); // lente avancée de la caméra
         pTwo.style.opacity = (1 - gout).toFixed(3);
         const sin = E.outExpo(prog(t, D + .04, .62)), bump = 1 + .03 * kick(t, D + .5, 10, 18), win = E.snap(prog(t, T_WIN, .45)), lose = prog(t, T_WIN, .4);
         S2.forEach((S, i) => {
@@ -836,7 +887,7 @@
 
     // ================================================================ 3. le classement
     scene('lb', T_LB, T_OUTRO, root => {
-      const L = T_LB, T_FLIP = L + .6, T_CLIMB = L + .8, CLIMB = 1.5;
+      const L = T_LB, T_FLIP = L + .5, T_CLIMB = L + .6, T_TOP = L + 2; // T_TOP : instant où je double le 1er, la ligne passe à l'or
       const NAMES = 'Nova Kairo Mochi Zeph Pixl Juno Tako Rune Lumen Orbit Vex Echo Finch Delta Quill Ember Onyx Sable Rift Halo Byte Comet Dusk Glitch Ivy Jinx Koi Lynx Mira Neko Opal Quark Rook Soda Tonic Umbra Volt Wisp Yuzu Zinc Axel Birch Clover'.split(' ');
       const NUMS = [314159, 999999, 271828, 262144, 65536, 100000, 531441, 111111, 123456, 987654, 5040, 500000, 101010, 322222, 200003, 979899, 443210, 167777, 133799, 799997,
         999933, 643216, 220011, 865431, 403403, 999176, 574475, 660606, 929928, 250249, 552522, 991099, 288200, 201612, 511951, 875435, 644467, 107750, 707057, 115020, 301219, 306021, 968427];
@@ -846,8 +897,8 @@
       // La montée est pilotée par le rang, pas par l'XP : les XP des autres joueurs sont très inégalement espacés, et une
       // montée pilotée par l'XP s'arrêtait net dans les grands écarts (8 images figées en pleine course) avant de repartir.
       const P0 = others.filter(o => o.a.total > before.total).length; // joueurs devant moi au départ
+      const CLIMB = (T_TOP - T_CLIMB) / (1 - Math.cbrt(1 / P0) / 2); // durée de la montée telle que le rang 0,5 soit atteint à T_TOP
       const rankAt = t => P0 * (1 - E.inOutCubic(prog(t, T_CLIMB, CLIMB))); // 0 = en tête
-      const T_TOP = T_CLIMB + CLIMB * (1 - Math.cbrt(1 / P0) / 2); // instant où je double le 1er (rang 0,5) : la ligne passe à l'or
       // Mon XP se déduit du rang : au moment où je double le joueur i, j'ai exactement son XP.
       const xpAt = p => {
         if (p >= P0) return X0;
@@ -878,6 +929,14 @@
       burst(T_TOP + .02, meFinal.x, meFinal.y, CONF.gold, 31, 2.4);
       flash(T_TOP, .8, 'gold', .34, meFinal.x, meFinal.y);
       impulse(T_TOP, meFinal.x, meFinal.y, 170, .9);
+      cue(L + .08, 'whoosh', { dur: .5, pan: P ? 0 : .4 });
+      cue(T_FLIP, 'pop');
+      // Un repère à chaque joueur doublé (rang k + 0,5), en inversant la courbe de la montée.
+      for (let k = P0 - 1; k >= 1; k--) {
+        const e = 1 - (k + .5) / P0, x = e < .5 ? Math.cbrt(e / 4) : 1 - Math.cbrt(2 * (1 - e)) / 2;
+        cue(T_CLIMB + CLIMB * x, 'pass', { k, of: P0 });
+      }
+      cue(T_TOP, 'impact', { kind: 'gold' });
 
       const c = put(claim(root, P ? 'Climb|the *ranks*' : 'Climb|the|*ranks*', `gold${P ? '' : ' left'}`), P ? 250 : 300, P ? 124 : 132);
       const s = put(fade(root, `sub${P ? '' : ' left'}`, 'daily · weekly · <b>all-time</b>'), P ? 520 : 740, P ? 34 : 32);
@@ -915,7 +974,7 @@
 
     // ================================================================ 4. le logo : RNG8, dont le 8 bascule en ∞
     scene('outro', T_OUTRO, DURATION + 1, root => {
-      const O = T_OUTRO, LETTERS = ['R', 'N', 'G'], LK = [O + .25, O + .38, O + .51], T_8 = O + .68, T_TURN = O + .86, T_DONE = O + 1.3, T_HIT = T_DONE - .12;
+      const O = T_OUTRO, LETTERS = ['R', 'N', 'G'], LK = [O + .5, O + .75, O + 1], T_8 = O + 1.25, T_TURN = O + 1.5, T_HIT = O + 2, T_DONE = T_HIT + .12;
       root.innerHTML = `
         <div class="pin" id="o-logo"><div class="ctr logo">${LETTERS.map(ch => `<span class="ll">${ch}</span>`).join('')}<span class="l8"><i class="eight">8</i><i class="inf">∞</i></span><div class="logo-shine">RNG∞</div></div></div>
         <div class="pin" id="o-cta"><div class="ctr"><div class="btn-roll cta">rng-infinite.com</div></div></div>`;
@@ -938,6 +997,12 @@
       flash(T_HIT, .2, 'white', .3);
       impulse(T_HIT, LG.x, LG.y, 220, 1);
       streak(T_HIT, LG.x, LG.y, C.purple);
+      ticks(O + .06, T_8, { soft: 1 });
+      LK.forEach((t, i) => cue(t, 'letter', { i }));
+      cue(T_8, 'letter', { i: 3 });
+      cue(T_TURN, 'whoosh', { dur: .3, pan: 0 });
+      cue(T_HIT, 'impact', { kind: 'logo' });
+      cue(T_HIT + .75, 'pop');
 
       const tag = put(claim(root, P ? 'What will|*yours* be?' : 'What will *yours* be?'), P ? 936 : 612, P ? 112 : 92);
       const sub = put(fade(root, 'sub', 'free · no download · <b>infinite rolls</b>'), P ? 1440 : 966, P ? 30 : 32);
@@ -965,10 +1030,10 @@
         shine.style.backgroundPosition = `${lerp(100, 0, sp < 1 ? sp : sp2).toFixed(2)}% 0`;
 
         tag.at(t, T_DONE + .12);
-        const ce = prog(t, T_DONE + .5, .5);
+        const ce = prog(t, T_HIT + .75, .5);
         fadeTo(pCta, clamp(ce * 3));
         place(pCta, CTA.x, CTA.y + (1 - E.outCubic(ce)) * 40, S_CTA * lerp(.8, 1, E.outBack(ce, 2)) * (1 + .012 * Math.sin((t - O) * 3.2)));
-        sub.at(t, T_DONE + .9);
+        sub.at(t, T_HIT + 1.25);
 
         const pulse = .5 + .5 * Math.sin((t - O) * 1.3);
         light(LG.x, LG.y, P ? 1150 : 1250, mix(C.pink, C.purple, pulse), .1 + .12 * prog(t, T_HIT, .4));
@@ -979,11 +1044,13 @@
     wipe(T_DUEL, ['#fb923c', '#f43f5e', '#e879f9']);
     wipe(T_LB, ['#fde68a', '#f59e0b', '#fb923c']);
     wipe(T_OUTRO, ['#f472b6', '#a855f7', '#22d3ee']);
+    SCORE.forEach(([t, level, chord]) => cue(t, 'music', { level, chord }));
   }
 
   // ------------------------------------------------------------------ une image
-  function seek(t) {
-    t = clamp(t, 0, DURATION);
+  function seek(out) {
+    out = clamp(out, 0, LENGTH);
+    const t = toSource(out); // instant du film complet
     view.lights.length = 0;
     view.cam = IDENT;
     view.dark = 0;
@@ -994,10 +1061,10 @@
     }
     bug.style.opacity = (.85 * (1 - prog(t, T_WALL, .2) + prog(t, T_DUEL, .2)) * (1 - prog(t, T_OUTRO - .3, .25))).toFixed(3);
     drawBg(t);
-    drawFx(t);
+    drawFx(t, out);
     drawRains(t);
     syncAnimations(t);
-    setText(tcEl, t.toFixed(2));
+    setText(tcEl, out.toFixed(2));
   }
 
   async function init() {
@@ -1011,7 +1078,20 @@
     seek(Number(qs.get('t')) || 0);
     // Pour l'export : window.__seek(t) dessine l'image t ; __trailer décrit le film et liste les nombres montrés.
     window.__seek = seek;
-    window.__trailer = { width: W, height: H, fps: FPS, duration: DURATION, numbers: Array.from(shownNumbers.keys()) };
+    // Repères de la version affichée : ceux des passages gardés, replacés sur sa ligne de temps. Pour une version courte,
+    // on ajoute un repère à chaque coupe et on rappelle l'état de la musique au début de chaque passage.
+    const list = [];
+    for (const c of cues) { const o = toOutput(c.t); if (o !== null) list.push({ ...c, t: Math.round(o * 1000) / 1000 }); }
+    if (CUT) {
+      let at = 0;
+      EDIT.forEach(([a, b], i) => {
+        const [, level, chord] = SCORE.filter(x => x[0] <= a).pop();
+        list.push({ t: at, type: 'music', level, chord });
+        if (i) list.push({ t: at, type: 'cut' });
+        at += b - a;
+      });
+    }
+    window.__trailer = { width: W, height: H, fps: FPS, duration: LENGTH, cut: CUT, numbers: Array.from(shownNumbers.keys()), cues: list.sort((a, b) => a.t - b.t) };
     // Pour le lecteur (page parente) : il envoie l'instant à afficher.
     addEventListener('message', e => { if (e.data && typeof e.data.rngSeek === 'number') seek(e.data.rngSeek); });
     if (parent !== window) parent.postMessage('rng-ready', '*');
@@ -1026,7 +1106,7 @@
     document.getElementById('stage').remove();
     const frame = document.createElement('iframe');
     frame.title = 'RNG∞ trailer';
-    frame.src = `${location.pathname}?export${P ? '&format=v' : ''}${qs.has('tc') ? '&tc' : ''}`;
+    frame.src = `${location.pathname}?export${P ? '&format=v' : ''}${CUT ? `&cut=${CUT}` : ''}${qs.has('tc') ? '&tc' : ''}`;
     Object.assign(frame.style, { position: 'absolute', width: `${W}px`, height: `${H}px`, border: '0', transformOrigin: '0 0', background: '#000' });
     document.getElementById('viewport').appendChild(frame);
     const hud = { play: document.getElementById('hud-play'), seek: document.getElementById('hud-seek'), time: document.getElementById('hud-time'), format: document.getElementById('hud-format') };
@@ -1038,25 +1118,25 @@
       frame.style.top = `${(innerHeight - HUD_H - H * s) / 2}px`;
     };
     const draw = () => {
-      if (ready) frame.contentWindow.postMessage({ rngSeek: Math.min(now, DURATION) }, '*');
+      if (ready) frame.contentWindow.postMessage({ rngSeek: Math.min(now, LENGTH) }, '*');
       hud.seek.value = now;
-      hud.time.textContent = `${Math.min(now, DURATION).toFixed(2)} / ${DURATION.toFixed(2)}`;
+      hud.time.textContent = `${Math.min(now, LENGTH).toFixed(2)} / ${LENGTH.toFixed(2)}`;
       hud.play.textContent = playing ? 'Pause' : 'Play';
     };
-    const go = t => { now = Math.min(DURATION, Math.max(0, t)); draw(); };
+    const go = t => { now = Math.min(LENGTH, Math.max(0, t)); draw(); };
     const loop = ts => {
       if (playing && ready) {
         now += Math.min(.1, (ts - last) / 1000);
-        if (now >= DURATION + 1.2) now = 0; // tient la dernière image un instant, puis reprend
+        if (now >= LENGTH + 1.2) now = 0; // tient la dernière image un instant, puis reprend
         draw();
       }
       last = ts;
       requestAnimationFrame(loop);
     };
-    hud.seek.max = DURATION;
+    hud.seek.max = LENGTH;
     hud.format.textContent = P ? '16:9' : '9:16';
-    hud.format.href = P ? '?' : '?format=v';
-    hud.play.addEventListener('click', () => { playing = !playing; if (now >= DURATION) now = 0; draw(); });
+    hud.format.href = `?${[P ? '' : 'format=v', CUT ? `cut=${CUT}` : ''].filter(Boolean).join('&')}`;
+    hud.play.addEventListener('click', () => { playing = !playing; if (now >= LENGTH) now = 0; draw(); });
     hud.seek.addEventListener('input', () => { playing = false; go(Number(hud.seek.value)); });
     addEventListener('keydown', e => {
       if (e.code === 'Space') { e.preventDefault(); hud.play.click(); }

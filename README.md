@@ -69,11 +69,21 @@ node tools/dev.mjs
 
 ## Trailer
 
-`trailer/` is a code-driven trailer (16:9 and 9:16, 27 s, 60 fps). One function of time draws every frame on top of the game's own styles and engine,
-so every number, badge, rarity and XP total on screen is real.
+`trailer/` is a code-driven trailer in 16:9 and 9:16 at 60 fps: a 30 s film, plus 15 s and 6 s cut-downs. One function of time draws
+every frame on top of the game's own styles and engine, so every number, badge, rarity and XP total on screen is real.
 
-- Watch it in a browser: serve the repo (`python3 -m http.server 8123`) and open `/trailer/` (add `?format=v` for 9:16)
-- Render the MP4 files (Playwright with the system Chrome, plus ffmpeg): `node tools/trailer-render.mjs` → `trailer/out/`
+- The edit sits on a 120 BPM grid (one beat = 0.5 s): digit locks, skin changes and scene changes land on beats, the key moments
+  on bar downbeats, so any 120 BPM track drops straight in
+- Watch it in a browser: serve the repo (`python3 -m http.server 8123`) and open `/trailer/` (`?format=v` for 9:16, `?cut=15` or
+  `?cut=6` for the cut-downs)
+- Quick render (Playwright with the system Chrome, plus ffmpeg): `node tools/trailer-render.mjs` → `trailer/out/`
+- Final render: `node tools/trailer-render.mjs --pro` (add `--cut 15` or `--cut 6`) adds real motion blur (16 sub-frames per
+  frame, averaged in linear light), a fine grain against banding in dark gradients, and the soundtrack, using 6 browsers in parallel
+- The soundtrack is synthesized by `tools/trailer-audio.mjs` from the cue list and the score the trailer exposes (every digit
+  lock, impact and skin change, plus one chord and intensity per bar), so sound and picture share the same timestamps; no
+  samples, no licensed music. `variants/` gets an effects-only mix (to lay another track under it), a silent copy and a light copy
+- Every render is checked for stutter: a frame-by-frame motion measure flags any moment where the picture freezes in the
+  middle of a movement
 
 ## Online leaderboard
 
