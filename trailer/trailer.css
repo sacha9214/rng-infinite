@@ -1,0 +1,129 @@
+/* RNG∞ — trailer : mise en page du plan (1920×1080 ou 1080×1920) par-dessus les styles du site (css/style.css).
+   Les cartes, badges, cadres de duel et lignes de classement sont ceux du site ; ici seulement le décor du film. */
+
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+body::before { display: none; } /* vignette du site : le plan a la sienne */
+#viewport { position: fixed; inset: 0; }
+#stage {
+  position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden;
+  background: var(--site-bg); color: var(--prose); font-family: var(--font-sans); font-size: 14px; line-height: normal;
+}
+/* Le temps est piloté par le script (trailer.js) : aucune animation ne tourne seule, aucune transition. */
+#stage *, #stage *::before, #stage *::after { transition: none !important; animation-play-state: paused !important; }
+
+.layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.scenes { z-index: 10; }
+.fx { z-index: 30; pointer-events: none; }
+.scene { position: absolute; inset: 0; overflow: hidden; }
+.cam { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+/* Un point du plan (placé par transform) ; .ctr centre son contenu dessus. */
+.pin { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+.ctr { position: absolute; left: 0; top: 0; width: max-content; transform: translate(-50%, -50%); }
+.top-ctr { position: absolute; left: 0; top: 0; width: max-content; transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------------ textes */
+.claim {
+  position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap;
+  font: 900 118px/1 var(--font-sans); letter-spacing: -.035em; text-transform: uppercase; color: #fff;
+}
+.claim .cl { display: block; }
+.claim .w { display: inline-block; overflow: hidden; vertical-align: top; padding: .1em .05em .08em; margin: -.1em -.05em -.08em; }
+.claim .wi { display: inline-block; }
+.claim .acc { background: linear-gradient(90deg, #f472b6, #c084fc 55%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.claim.gold .acc { background-image: linear-gradient(90deg, #fde68a, #f59e0b 60%, #fbbf24); }
+.claim.hot .acc { background-image: linear-gradient(90deg, #fb923c, #f43f5e 60%, #e879f9); }
+.claim.left { text-align: left; right: auto; }
+.sub {
+  position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap;
+  font: 700 38px/1.2 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .7);
+}
+.sub.left { text-align: left; right: auto; }
+.sub b { color: #fff; font-weight: 700; }
+.sub .chip { display: inline-block; padding: .35em 1em; border-radius: 999px; background: rgba(10, 8, 14, .82); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+
+/* Marque discrète pendant tout le film. */
+.bug { position: absolute; z-index: 20; left: 56px; right: 56px; top: 44px; display: flex; justify-content: space-between; align-items: baseline; pointer-events: none; }
+.bug b { font: 800 34px/1 var(--font-sans); letter-spacing: .08em; color: #fff; }
+.bug span { font: 700 22px/1 var(--font-mono); letter-spacing: .06em; color: rgba(255, 255, 255, .7); }
+.fmt-v .bug { top: 150px; left: 64px; right: 64px; }
+.tc { position: absolute; z-index: 40; left: 0; bottom: 0; padding: 10px 22px; font: 700 54px/1 var(--font-mono); color: #fff; background: rgba(0, 0, 0, .78); display: none; }
+.show-tc .tc { display: block; }
+
+/* ------------------------------------------------------------------ scène 1 : tirage, badges, skins */
+.stamp {
+  font: 900 150px/1 var(--font-sans); letter-spacing: .05em; white-space: nowrap; padding: 0 .1em;
+  background: linear-gradient(90deg, #fb7185, #e879f9 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 26px rgba(236, 72, 153, .55));
+}
+.result-meta.big { margin: 0; font-size: 1rem; }
+.hero-xp .ep-big { margin: 0; white-space: nowrap; }
+.bstack { position: absolute; left: -15.5rem; top: 0; width: 31rem; }
+.bslot { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 50% 0; }
+.bslot .badge-card { box-shadow: var(--t-glow, none), 0 10px 24px rgba(0, 0, 0, .35); }
+.skin-label { display: flex; align-items: center; gap: 26px; white-space: nowrap; font: 800 78px/1 var(--font-sans); letter-spacing: .02em; text-transform: uppercase; color: #fff; }
+.skin-label .pr { font: 700 38px/1 var(--font-mono); letter-spacing: 0; padding: 10px 20px; border-radius: 999px; border: 2px solid var(--ep-outline); background: var(--ep-surface); color: var(--ep-text); }
+.num-card:not(.skin-matrix) > .matrix-rain { display: none; }
+.hero-card .slot-lever { display: none; }
+.hero-card.is-slots .slot-lever { display: block; }
+
+.wall { display: flex; flex-direction: column; }
+.wrow { display: flex; }
+.wcell { flex: none; width: 210px; height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; }
+.wcell .num-card.md { font-size: 2rem; min-width: 0; }
+.wname { font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); white-space: nowrap; }
+.wall-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(10, 8, 14, .82), rgba(10, 8, 14, .3) 75%); opacity: 0; }
+
+/* ------------------------------------------------------------------ scène 2 : duel */
+.duo { position: relative; display: flex; align-items: center; gap: 24px; }
+.fmt-v .duo { flex-direction: column; gap: 18px; }
+.dside { position: relative; }
+.dside .room-side { width: 300px; }
+.fmt-v .dside .room-side { width: 380px; }
+/* Le soulèvement du gagnant et l'effacement des perdants sont animés par le script (pas de saut). */
+#stage .room-side.won { transform: none; }
+.dvs { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; flex: none;
+  font: 900 20px/1 var(--font-sans); letter-spacing: .04em; color: #fff; background: #0a0a0a;
+  border: 2px solid #f43f5e; box-shadow: 0 0 16px rgba(244, 63, 94, .6), inset 0 0 10px rgba(244, 63, 94, .35); }
+.dside .react-layer { overflow: visible; z-index: 3; }
+.g10 { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.g10 .room-stage.many { display: flex; gap: 12px; }
+.g10 .room-side { width: 200px; flex: none; }
+.fmt-v .g10 .room-side { width: 250px; }
+.fmt-v .g10 .room-meta { display: none; }
+.fmt-v .g10 .room-stage.many .num-card.md { font-size: 1.9rem; }
+.g10 .room-meta { margin: .5rem 0 0; }
+.g10 .pill-row { display: none; }
+
+/* ------------------------------------------------------------------ scène 3 : classement */
+.lbx { width: 520px; margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .5); }
+.fmt-v .lbx { width: 440px; }
+.lbx .lb-tabs button { padding: .7rem .2rem; }
+.lbx-view { position: relative; overflow: hidden; }
+.lbx-list { position: absolute; left: 0; top: 0; width: 100%; }
+.lbx-list .lb-row { position: absolute; left: 0; top: 0; width: 100%; height: 50px; padding: 0 1rem; grid-template-columns: 2.5rem 1fr auto 7.6rem; gap: .6rem; background: var(--surface); border-top: 1px solid var(--outline); }
+.fmt-v .lbx-list .lb-row { padding: 0 .7rem; grid-template-columns: 2.2rem 1fr auto 6.9rem; gap: .45rem; }
+.lbx-list .lb-row.me { z-index: 2; border-top-color: transparent; border-radius: .5rem;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--chart-accent) 26%, var(--surface)), color-mix(in srgb, var(--chart-accent) 12%, var(--surface))); }
+.lbx-list .lb-row.me.first { background: linear-gradient(90deg, #4a3706, #2a2110 70%); }
+.lbx-list .lb-ep { color: var(--prose-2); }
+.lbx-list .lb-row.me .lb-ep { color: var(--ep-text); font-weight: 700; }
+
+/* ------------------------------------------------------------------ scène 4 : logo */
+.logo { font: 800 300px/1 var(--font-sans); letter-spacing: .08em; color: #fff; white-space: nowrap; }
+.fmt-v .logo { font-size: 236px; }
+.logo .ll { display: inline-block; text-align: center; }
+.logo .l8 { position: relative; display: inline-block; text-align: center; }
+.logo .l8 i { font-style: normal; display: inline-block; }
+.logo .l8 .inf { position: absolute; left: 0; top: 0; width: 100%; -webkit-text-stroke: .028em #fff; }
+.logo-shine { position: absolute; left: 0; top: 0; white-space: nowrap; pointer-events: none;
+  background: linear-gradient(100deg, transparent 0 42%, #f9a8d4 46%, #c084fc 50%, #67e8f9 54%, transparent 58% 100%) 0 0 / 300% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cta.btn-roll { font-family: var(--font-mono); font-weight: 700; text-transform: none; letter-spacing: .01em; font-size: 2rem; padding: 1rem 2.6rem; border-radius: .6rem; white-space: nowrap; }
+
+/* ------------------------------------------------------------------ commandes de l'aperçu (absentes de l'export) */
+#hud { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; z-index: 100; display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  background: #0c0b10; border-top: 1px solid #2a2733; color: #c4c4c4; font: 600 13px/1 Inter, system-ui, sans-serif; }
+#hud button, #hud a { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #3a3644; background: #17151d; color: #f0f0f0; font: inherit; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
+#hud input[type=range] { flex: 1; accent-color: #c084fc; }
+#hud .time { font-family: 'Space Mono', ui-monospace, monospace; min-width: 104px; text-align: right; }
+.export #hud { display: none; }

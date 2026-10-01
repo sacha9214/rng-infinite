@@ -67,6 +67,14 @@ Run the site together with the API and an in-memory database (no account needed)
 node tools/dev.mjs
 ```
 
+## Trailer
+
+`trailer/` is a code-driven trailer (16:9 and 9:16, 27 s, 60 fps). One function of time draws every frame on top of the game's own styles and engine,
+so every number, badge, rarity and XP total on screen is real.
+
+- Watch it in a browser: serve the repo (`python3 -m http.server 8123`) and open `/trailer/` (add `?format=v` for 9:16)
+- Render the MP4 files (Playwright with the system Chrome, plus ffmpeg): `node tools/trailer-render.mjs` → `trailer/out/`
+
 ## Online leaderboard
 
 Hosted on Vercel, deployed on every push to `main`.

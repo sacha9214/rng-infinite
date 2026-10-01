@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>RNG∞ — Trailer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Press+Start+2P&family=Graduate&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <!-- Les styles du jeu : le trailer montre les vraies cartes, les vrais badges, les vrais cadres de duel. -->
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="trailer.css">
+</head>
+<body>
+  <div id="viewport"><div id="stage"></div></div>
+  <div id="hud">
+    <button id="hud-play" title="Space">Pause</button>
+    <input id="hud-seek" type="range" min="0" max="27" step="0.016667" value="0" aria-label="Time">
+    <span class="time" id="hud-time">0.00 / 27.00</span>
+    <a id="hud-format" href="?format=v">9:16</a>
+  </div>
+
+  <script src="../js/badge-meta.js"></script>
+  <script src="../js/percentiles.js"></script>
+  <script src="../js/engine.js"></script>
+  <script src="../js/shop.js"></script>
+  <script src="trailer.js"></script>
+</body>
+</html>
