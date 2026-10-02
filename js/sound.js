@@ -14,6 +14,7 @@
 (function (root) {
   'use strict';
 
+  if (!root.RNGSynth) return; // js/synth.js n'est pas arrivé : pas de Sound, le jeu reste muet
   const AC = root.AudioContext || root.webkitAudioContext;
   const RATE = 48000; // débit auquel les sons sont calculés, comme pour le trailer
   const LEVEL = .7;   // niveau général : le son le plus fort (un Mythic) culmine à −1 dB, sans limiteur
