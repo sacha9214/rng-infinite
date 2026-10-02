@@ -2086,3 +2086,50 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
     radial-gradient(circle at 82% 82%, rgba(185, 28, 28, .6) 0 .045em, transparent .06em),
     radial-gradient(ellipse at 35% 25%, #ffffff, #f4eee2 55%, #ddd1ba);
   outline: .02em solid rgba(255, 255, 255, .6); outline-offset: -.09em; }
+
+/* ================================================================== Blocks et Jersey, refaits pour donner envie (2026-10-02)
+   Blocks : un paysage en pixels (aube, soleil, nuages qui dérivent, collines), de gros cubes en relief avec leurs trois
+   faces, des chiffres en or gravés, un cadre en bois. */
+.num-card.skin-blocks {
+  border: 0; border-radius: 0; padding: 1.15rem 1.2rem .8rem; image-rendering: pixelated; overflow: hidden;
+  background:
+    linear-gradient(#fff 0 0) 0 22% / 26px 6px no-repeat, linear-gradient(#fff 0 0) 6px calc(22% - 6px) / 14px 6px no-repeat,
+    linear-gradient(#fff 0 0) 60% 10% / 22px 6px no-repeat, linear-gradient(#fff 0 0) calc(60% + 6px) calc(10% - 6px) / 10px 6px no-repeat,
+    linear-gradient(#fff3a0 0 0) 88% 14% / 18px 18px no-repeat, linear-gradient(#ffd84a 0 0) 88% 14% / 26px 26px no-repeat,
+    linear-gradient(135deg, transparent 50%, #3d8a35 50%) 0 100% / 34% 46% no-repeat, linear-gradient(225deg, transparent 50%, #2f7430 50%) 100% 100% / 42% 52% no-repeat,
+    linear-gradient(180deg, #2f6fd6 0%, #5aa6f2 38%, #ffd9a0 62%, #5fae3b 62%, #4c962e 72%, #7a4f2a 72%);
+  box-shadow: 0 0 0 3px #2a1a0c, 0 0 0 7px #b07a3c, 0 0 0 8px #d9a05b, 0 0 0 11px #6b4423, 0 0 0 14px #2a1a0c, 6px 20px 0 -2px rgba(0, 0, 0, .35);
+  margin: 14px; animation: blocks-sky 26s linear infinite;
+}
+@keyframes blocks-sky { to { background-position: 130% 22%, calc(130% + 6px) calc(22% - 6px), -40% 10%, calc(-40% + 6px) calc(10% - 6px), 88% 14%, 88% 14%, 0 100%, 100% 100%, 0 0; } }
+.skin-blocks .slot { font-size: .5em; --px: .06em; color: #ffe27a; text-shadow: .1em .1em 0 #5a3a00, -.06em 0 0 #fff8c9, 0 0 .5em rgba(255, 220, 90, .55); }
+.skin-blocks .slot:not(.collapsed) { margin: 0 .3em 0 .04em; filter: drop-shadow(0 .28em 0 rgba(0, 0, 0, .28));
+  box-shadow: inset 0 0 0 var(--px) rgba(0, 0, 0, .4), inset calc(-2 * var(--px)) calc(-2 * var(--px)) 0 rgba(0, 0, 0, .25), inset var(--px) var(--px) 0 rgba(255, 255, 255, .25),
+    0 0 0 var(--px) #1d1207, .12em -.06em 0 #6b4423, .24em -.12em 0 #5a3819, .24em -.12em 0 var(--px) #1d1207; }
+.skin-blocks .slot::before { height: .42em; filter: brightness(1.2) saturate(1.1); box-shadow: inset 0 0 0 var(--px) rgba(20, 50, 5, .5), 0 0 0 var(--px) #1d1207; }
+.room-stage.many .num-card.skin-blocks, .num-card.sm.skin-blocks { animation: none; margin: 4px; box-shadow: 0 0 0 2px #2a1a0c, 0 0 0 4px #b07a3c, 0 0 0 5px #2a1a0c; }
+@media (prefers-reduced-motion: reduce) { .num-card.skin-blocks { animation: none; } }
+
+/* Jersey : un vrai maillot — tissu en maille, rayures ton sur ton, col en V, coutures, manches à liseré, numéro
+   floqué blanc avec contour noir et ombre dorée, pli de lumière qui traverse. */
+.num-card.skin-jersey {
+  border: 0; border-radius: 1.1rem 1.1rem .5rem .5rem; padding: 1.25rem 2rem .7rem; overflow: hidden;
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .16) 47%, transparent 56%) 0 0 / 250% 100%,
+    radial-gradient(circle, rgba(0, 0, 0, .22) 0 .6px, transparent 1.1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, #0b1f4d 0 9%, #f5c518 9% 10.5%, transparent 10.5% 89.5%, #f5c518 89.5% 91%, #0b1f4d 91%),
+    repeating-linear-gradient(90deg, #d7263d 0 16px, #c01f34 16px 32px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .14), inset 0 -10px 14px rgba(0, 0, 0, .28), inset 0 10px 12px rgba(255, 255, 255, .1), 0 6px 0 #7d1220, 0 14px 22px rgba(0, 0, 0, .45);
+  outline: 2px dashed rgba(255, 255, 255, .45); outline-offset: -7px;
+  animation: jersey-sheen 5s ease-in-out infinite;
+}
+@keyframes jersey-sheen { 0%, 60% { background-position: 120% 0, 0 0, 0 0, 0 0; } 100% { background-position: -60% 0, 0 0, 0 0, 0 0; } }
+.num-card.skin-jersey::before { content: ''; position: absolute; left: 50%; top: -1px; width: 3.4rem; height: 1.15rem; transform: translateX(-50%);
+  background: linear-gradient(135deg, #0b1f4d 0 50%, transparent 50%) 0 0 / 50% 100% no-repeat, linear-gradient(225deg, #0b1f4d 0 50%, transparent 50%) 100% 0 / 50% 100% no-repeat;
+  filter: drop-shadow(0 2px 0 #f5c518) drop-shadow(0 3px 2px rgba(0, 0, 0, .4)); pointer-events: none; }
+.skin-jersey .slot { font-family: 'Graduate', serif; color: #fff; width: .78em;
+  text-shadow: -2px -2px 0 #0b1020, 2px -2px 0 #0b1020, -2px 2px 0 #0b1020, 2px 2px 0 #0b1020, 0 -2px 0 #0b1020, 0 2px 0 #0b1020, 4px 4px 0 #f5c518, 5px 7px 5px rgba(0, 0, 0, .5); }
+.room-stage.many .num-card.skin-jersey, .num-card.sm.skin-jersey { animation: none; padding: .3rem .9rem; outline: 0; }
+.num-card.sm.skin-jersey::before, .room-stage.many .num-card.skin-jersey::before { display: none; }
+@media (prefers-reduced-motion: reduce) { .num-card.skin-jersey { animation: none; } }
+.skin-blocks .slot::before { background-size: 100% 100%; background-color: #79c84d; background-repeat: no-repeat; }
