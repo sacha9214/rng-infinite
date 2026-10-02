@@ -9,7 +9,7 @@
 //                                                     instants réels, avec le son du jeu si --sound
 // Réglages : --n 777777 (le nombre tiré)  --skin fire  --theme dark|light  --speed normal|dramatic  --phone
 //            --view 1280x760 (taille de la fenêtre)  --crop (cadré sur la carte : 640 × 360 autour d'elle, deux fois plus fin)
-//            --reduced (« réduire les animations »)  --name essai  --out dossier  --site http://localhost:8124
+//            --owner (le tirage du créateur : sa signature en béryl rouge)  --reduced (« réduire les animations »)  --name essai  --out dossier  --site http://localhost:8124
 // Le nombre est fourni par l'outil : aucun tirage n'est demandé au serveur. Le haut-parleur de la machine ne sert pas.
 // Une fois : npm i --prefix tools/.deps playwright@1 (le Chrome du système suffit) ; ffmpeg doit être installé.
 import path from 'node:path';
@@ -85,7 +85,7 @@ await page.addInitScript(([saved, tagged]) => {
     requestAnimationFrame(loop);
   });
 }, [JSON.stringify({ version: 1, player: { id: 'a1b2c3d4e5f60718', secret: '00112233445566778899aabbccddeeff', name: 'Film' }, settings: { speed: SPEED, theme: THEME, sound: SOUND ? 'on' : 'off', achSeen: [], ...(SKIN ? { skin: SKIN } : {}) }, rolls: [] }), !VIDEO]);
-await page.route('**/api/roll', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ n: N, s: engine.scoreOf(N), t: Date.now(), bestToday: false, dayRank: null, achievements: [] }) }));
+await page.route('**/api/roll', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ n: N, s: engine.scoreOf(N), t: Date.now(), bestToday: false, dayRank: null, achievements: has('owner') ? ['owner'] : [] }) }));
 await page.goto(`${SITE}/`, { waitUntil: 'load' });
 await page.waitForTimeout(1500);
 

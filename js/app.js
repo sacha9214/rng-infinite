@@ -1224,7 +1224,8 @@
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     Sound.warm([['tier', { tier: a.tier }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
-    const skinFx = SkinFX.mount($('#card-stage'), card, Shop.resolve(Store.settings.skin));
+    // Le créateur du jeu (succès « owner », accordé par le serveur) a en plus sa signature en béryl rouge.
+    const skinFx = SkinFX.mount($('#card-stage'), card, Shop.resolve(Store.settings.skin), { owner: !!(ctx.online && Array.isArray(ctx.online.achievements) && ctx.online.achievements.includes('owner')) });
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);

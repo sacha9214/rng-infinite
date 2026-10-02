@@ -2,7 +2,8 @@
  * jouent une petite scène propre au skin (flammes et braises, saut dans l'hyperespace, arcs électriques…), en plus de
  * ses animations CSS. Deux canvas par tirage : un dans la carte, derrière les chiffres (la matière vivante du skin), un
  * autour d'elle, par-dessus (ce qui en jaillit).
- *   const fx = SkinFX.mount(scène, carte, 'fire')   → null si ce skin n'a pas de séquence
+ *   const fx = SkinFX.mount(scène, carte, 'fire', { owner })   → null si ce skin n'a pas de séquence (owner : la
+ *                                    signature en béryl rouge du créateur, jouée par-dessus, même sans skin)
  *   fx.lock(case, { ghost, last })   un chiffre se pose
  *   fx.build(ms)                     la tension monte avant le dernier chiffre
  *   fx.reveal(rareté)                la rareté se révèle : tout est dosé par POWER, d'un tirage raté à un Mythic
@@ -1014,12 +1015,109 @@
     };
   };
 
+  // ---------------------------------------------------------------- la signature du créateur
+  // ♛ Owner — réservée au créateur du jeu (succès « owner », vérifié par le serveur), jouée par-dessus son skin : du
+  // béryl rouge. Six cristaux hexagonaux poussent autour de la carte, un par chiffre ; une poussière de rubis flotte ;
+  // deux filets de lumière courent sur le cadre ; avant le dernier chiffre, des veines d'énergie relient les pointes ;
+  // à la révélation, la gemme s'ouvre : éventail de rayons, anneaux hexagonaux qui tournent, éclats, et une couronne.
+  const OWNER = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const DEEP = '#7f0f2c', RED = '#e11d48', ROSE = '#fb7185', PALE = '#ffe4e9', GOLD = '#f8c8a0';
+    const dust = particles(), shards = particles(), glints = timed(), hexes = timed(), emit = emitter();
+    // Six cristaux : trois de chaque côté, penchés vers l'extérieur, de tailles différentes.
+    const crystals = [-1, -1, -1, 1, 1, 1].map((side, i) => { const k = i % 3; return { x: cx + side * (card.w * .5 + 6 + k * 15), y: card.y + card.h + 8, len: card.h * (1.05 + .5 * ((k * 7 + 3) % 5) / 4), wid: 9 + ((k * 5 + i) % 4) * 2.5, lean: side * (.16 + k * .2), grow: 0, to: 0, glow: 0 }; });
+    const order = [2, 3, 1, 4, 0, 5];
+    let locked = 0, heat = 0, target = .35, p = 0, since = 0, revealed = false, spin = 0;
+    // Un prisme hexagonal vu de face : trois pans (sombre, moyen, clair), une pointe à facettes, un filet de lumière.
+    function prism(c, g) {
+      const L = c.len * g, W = c.wid * (.55 + .45 * g), tip = W * 1.25;
+      co.save();
+      co.translate(c.x, c.y);
+      co.rotate(c.lean);
+      const pane = (x0, x1, color, a) => { co.globalAlpha = a; co.fillStyle = color; co.beginPath(); co.moveTo(x0, 0); co.lineTo(x1, 0); co.lineTo(x1, -L + tip * Math.abs(x1) / W); co.lineTo(x0, -L + tip * Math.abs(x0) / W); co.closePath(); co.fill(); };
+      pane(-W, -W * .34, DEEP, .92); pane(-W * .34, W * .38, RED, .92); pane(W * .38, W, ROSE, .9);
+      co.globalAlpha = .95; co.fillStyle = PALE; co.beginPath(); co.moveTo(-W * .34, -L + tip * .34); co.lineTo(0, -L - tip * .28); co.lineTo(W * .38, -L + tip * .38); co.closePath(); co.fill(); // facette du sommet
+      co.fillStyle = ROSE; co.beginPath(); co.moveTo(-W, -L + tip); co.lineTo(0, -L - tip * .28); co.lineTo(-W * .34, -L + tip * .34); co.closePath(); co.fill();
+      co.fillStyle = '#fda4af'; co.beginPath(); co.moveTo(W, -L + tip); co.lineTo(0, -L - tip * .28); co.lineTo(W * .38, -L + tip * .38); co.closePath(); co.fill();
+      co.globalAlpha = .55 + .45 * c.glow; co.strokeStyle = '#ffffff'; co.lineWidth = 1; co.beginPath(); co.moveTo(W * .38, -2); co.lineTo(W * .38, -L + tip * .38); co.stroke(); // arête éclairée
+      co.restore();
+      return { x: c.x + Math.sin(c.lean) * (L + tip * .28), y: c.y - Math.cos(c.lean) * (L + tip * .28) };
+    }
+    const hexPath = (r, rot) => { co.beginPath(); for (let i = 0; i <= 6; i++) { const a = rot + (i * TAU) / 6; co.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * .62); } };
+    function crown(a, s) { // la couronne, au-dessus de la carte
+      co.save(); co.translate(cx, card.y - 26 - 10 * s); co.scale(s, s); co.globalAlpha = a;
+      const g = co.createLinearGradient(0, -16, 0, 12); g.addColorStop(0, PALE); g.addColorStop(.5, ROSE); g.addColorStop(1, RED);
+      co.fillStyle = g; co.strokeStyle = dark ? '#fff1f2' : DEEP; co.lineWidth = 1.2; co.lineJoin = 'round';
+      co.beginPath(); co.moveTo(-22, 10); co.lineTo(-24, -8); co.lineTo(-12, 1); co.lineTo(0, -16); co.lineTo(12, 1); co.lineTo(24, -8); co.lineTo(22, 10); co.closePath(); co.fill(); co.stroke();
+      co.fillStyle = GOLD; co.fillRect(-22, 10, 44, 4);
+      for (const [x, y] of [[-24, -8], [0, -16], [24, -8]]) { co.fillStyle = '#ffffff'; co.beginPath(); co.arc(x, y, 2.6, 0, TAU); co.fill(); }
+      co.restore();
+    }
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 3); since += dt; spin += dt * (.5 + heat);
+        // Dans la carte : une lueur de gemme qui respire, et un reflet lent.
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, RED, w * .5, h * 1.1, w * .5, .1 + .12 * heat + (revealed ? .12 * p : 0));
+        dot(ci, PALE, w * (((t * .22) % 1.5) * 1.3 - .3), h * .5, h * .35, .16, h * 1.3);
+        // Derrière tout : halo, puis l'éventail de rayons à la révélation.
+        co.globalCompositeOperation = add; co.lineCap = 'round';
+        dot(co, RED, cx, cy, card.w * (.7 + .15 * heat), (dark ? .13 : .07) * (.6 + heat));
+        if (revealed) { const open = outCubic(Math.min(1, since / .6)), fade = Math.max(0, 1 - since / (4 + 4 * p)); for (let i = 0; i < 14; i++) { const a = spin * .25 + (i * TAU) / 14, r = card.w * (.6 + .9 * p) * open * (i % 2 ? 1 : .72); tail(co, i % 2 ? ROSE : PALE, cx + Math.cos(a) * r, cy + Math.sin(a) * r * .62, cx + Math.cos(a) * card.w * .54, cy + Math.sin(a) * card.h * .78, i % 2 ? 9 : 5, fade * (dark ? .34 : .22)); } }
+        // Les cristaux, et leurs pointes reliées par des veines d'énergie quand la tension monte.
+        co.globalCompositeOperation = 'source-over';
+        const tips = [];
+        for (const c of crystals) { c.grow += (c.to - c.grow) * Math.min(1, dt * 7); c.glow = Math.max(0, c.glow - dt * 1.6); if (c.grow > .02) tips.push(prism(c, c.grow)); }
+        co.globalCompositeOperation = add;
+        if (heat > .75 && tips.length > 1) for (let i = 0; i < 2; i++) { const a = pick(tips), b = pick(tips); if (a !== b) bolt(co, a.x, a.y, b.x, b.y, 12, [RED, ROSE, dark ? '#ffffff' : RED], (heat - .75) * 1.6, .8); }
+        tips.forEach((tp, i) => dot(co, PALE, tp.x, tp.y, 5 + 5 * crystals[i].glow + 2 * Math.sin(t * 5 + i), .5 + .5 * crystals[i].glow));
+        // Deux filets de lumière sur le cadre, en sens contraires.
+        co.globalCompositeOperation = 'lighter';
+        for (let c2 = 0; c2 < 2; c2++) { const dir = c2 ? -1 : 1, head = dir * t * (.12 + .5 * heat) + c2 * .5; for (let i = 26; i >= 0; i--) { const pt = along(card, head - dir * i * .0045), a = 1 - i / 26; dot(co, c2 ? GOLD : ROSE, pt.x, pt.y, 2 + 3.5 * a, a * a * .6); } }
+        // Poussière de rubis : elle monte en spirale, plus vite quand ça chauffe.
+        co.globalCompositeOperation = add;
+        for (let n = emit((7 + 34 * heat) * q, dt); n > 0; n--) { const a = rnd(TAU), r = card.w * rnd(.5, .85); dust.add({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * .6 + 30, vx: -Math.sin(a) * 26 * (1 + heat), vy: -rnd(14, 46) * (1 + heat), max: rnd(1.4, 2.8), size: rnd(.9, 2.2), c: pick([ROSE, RED, PALE]), tw: rnd(TAU) }); }
+        dust.step(dt);
+        dust.each((d, k) => { const a = Math.sin(Math.PI * k) * (.55 + .45 * Math.sin(t * 11 + d.tw)); dot(co, d.c, d.x, d.y, d.size * 2.6, a * .9); dot(co, '#ffffff', d.x, d.y, d.size * .7, a); });
+        co.globalCompositeOperation = 'source-over';
+        shards.step(dt);
+        shards.each((d, k) => { co.save(); co.translate(d.x, d.y); co.rotate(d.rot + d.vr * d.life); co.globalAlpha = Math.min(1, (1 - k) * 2.4); co.fillStyle = d.c; SHAPES.gem(co, d, d.size); co.restore(); });
+        hexes.run(dt, (x, k) => { const e = outCubic(k); hexPath(card.w * (.4 + x.grow * e), spin * x.dir + x.rot); co.globalAlpha = (1 - k) * .28; co.strokeStyle = RED; co.lineWidth = 7 * x.width; co.stroke(); co.globalAlpha = 1 - k; co.strokeStyle = dark ? PALE : RED; co.lineWidth = 1.4 * x.width; co.stroke(); });
+        co.globalCompositeOperation = add;
+        glints.run(dt, (g, k) => { const a = 1 - outCubic(k), r = g.size * (.4 + outExpo(k)); dot(co, '#ffffff', g.x, g.y, r * .32, a); dot(co, PALE, g.x, g.y, r * 2.4, a * .95, 1.5); dot(co, PALE, g.x, g.y, 1.5, a * .95, r * 2.4); dot(co, ROSE, g.x, g.y, r, a * .5); });
+        co.globalCompositeOperation = 'source-over';
+        if (revealed) { const k = Math.min(1, since / .5), a = Math.min(1, since * 3) * Math.max(0, Math.min(1, (5 + 4 * p - since))); crown(a, .7 + .5 * outExpo(k) * (.6 + .4 * p)); if (since > .5 && since < 1.3) { co.globalCompositeOperation = add; dot(co, '#ffffff', cx - 30 + 60 * ((since - .5) / .8), card.y - 34, 9, .8 * Math.sin(Math.PI * (since - .5) / .8), 16); } }
+      },
+      lock(pos, o) {
+        if (o.ghost) return;
+        const c = crystals[order[Math.min(5, locked++)]];
+        c.to = 1; c.glow = 1;
+        if (o.last) { crystals.forEach(x => { x.to = 1.12; x.glow = 1; }); target = .35; hexes.add({ life: .8, grow: .5, width: 1, dir: 1, rot: 0 }); }
+        glints.add({ x: pos.x, y: pos.y - card.h * .22, size: card.h * (o.last ? .5 : .3), life: .55 });
+        for (let i = Math.round((o.last ? 16 : 6) * q); i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.2, 1.2), v = rnd(90, o.last ? 320 : 220); shards.add({ x: pos.x, y: pos.y - card.h * .25, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 640, drag: .7, max: rnd(.6, 1.1), size: rnd(2, 4), c: pick([RED, ROSE, PALE]), rot: rnd(TAU), vr: rnd(-6, 6) }); }
+        heat = Math.min(1.4, heat + .16);
+      },
+      build() { target = 1.3; },
+      reveal(tier) {
+        p = Math.max(.35, POWER[tier]); revealed = true; since = 0; heat = .7 + .8 * p; target = .3 + .3 * p; // le créateur a toujours droit à sa couronne
+        crystals.forEach(x => { x.to = 1.1 + .25 * p; x.glow = 1; });
+        for (let i = 0; i < 2 + Math.round(3 * p); i++) hexes.add({ delay: i * .13, life: 1.1, grow: .3 + .5 * i + p, width: 1 + p, dir: i % 2 ? -1 : 1, rot: i * .4 });
+        glints.add({ x: cx, y: cy, size: card.h * (.6 + .9 * p), life: .9 });
+        for (let i = burst(p, 120 * q, 10); i > 0; i--) { const from = along(card, rnd()), a = Math.atan2(from.y - cy, from.x - cx) + rnd(-.5, .5), v = rnd(100, 240 + 420 * p); shards.add({ x: from.x, y: from.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, g: 520, drag: .6, max: rnd(.9, 1.6 + p), size: rnd(2.5, 5 + 3 * p), c: pick([RED, ROSE, PALE, DEEP]), rot: rnd(TAU), vr: rnd(-7, 7) }); }
+        for (let i = Math.round(4 + 10 * p); i > 0; i--) { const pt = along(grown(card, 14), rnd()); glints.add({ delay: rnd(.1, 1.6), x: pt.x, y: pt.y, size: rnd(8, 20), life: .5 }); }
+      },
+    };
+  };
+  // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
+  const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
+
   // ---------------------------------------------------------------- montage sur une carte
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  function mount(stage, card, skin) {
+  function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
-      if (!make || !stage || !card || reduced()) return null;
+      if ((!make && !o.owner) || !stage || !card || reduced()) return null;
       const dpr = Math.min(2, root.devicePixelRatio || 1);
       const cw = card.offsetWidth, ch = card.offsetHeight, w = card.clientWidth, h = card.clientHeight;
       if (!cw || !ch) return null;
@@ -1044,7 +1142,7 @@
         ci, co, w, h, W, H, card: { x: mx, y: my, w: cw, h: ch, r: parseFloat(getComputedStyle(card).borderTopLeftRadius) || 10 },
         dark: document.documentElement.classList.contains('dark'), q: root.innerWidth < 720 ? .65 : 1,
       };
-      const scene = make(env);
+      const scene = o.owner ? both(make ? make(env) : null, OWNER(env)) : make(env);
       let t = 0, last = 0, raf = 0, stopped = false, restSince = Infinity, skip = false, owed = 0;
       const frame = now => {
         if (stopped || !outer.isConnected) return;
