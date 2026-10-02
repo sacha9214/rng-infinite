@@ -2151,3 +2151,35 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 
 /* Bouton de don : le pendant du bouton GitHub, en bas à droite. */
 .gh-corner.coffee-corner { left: auto; right: 14px; font-size: 1.05rem; line-height: 1; cursor: pointer; }
+
+/* ================================================================== le rubis du créateur (2026-10-02)
+   Réservé au compte Owner, à la place de son skin : une carte en verre grenat marbré, des chiffres taillés dans le rubis
+   (du rose pâle au bordeaux, avec un reflet qui glisse), comme les finitions Ruby des skins de CS. */
+.num-card.owner-ruby {
+  border: 2px solid #e11d48; border-radius: .8rem; color: #ff4d6d;
+  background:
+    radial-gradient(ellipse 60% 80% at 22% 20%, rgba(255, 77, 109, .35), transparent 60%),
+    radial-gradient(ellipse 50% 70% at 82% 85%, rgba(159, 18, 57, .65), transparent 62%),
+    radial-gradient(ellipse 40% 50% at 60% 30%, rgba(255, 180, 195, .14), transparent 60%),
+    linear-gradient(135deg, #2a0410, #4c0519 45%, #1c0209);
+  box-shadow: 0 0 0 1px rgba(255, 228, 233, .25) inset, 0 0 22px rgba(225, 29, 72, .6), 0 0 46px rgba(159, 18, 57, .35), 0 10px 20px rgba(0, 0, 0, .5), inset 0 10px 18px rgba(255, 120, 150, .14), inset 0 -12px 18px rgba(0, 0, 0, .45);
+}
+.owner-ruby .slot {
+  font-weight: 800; color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .85) 50%, transparent 60%), linear-gradient(165deg, #ffe4e9 0%, #ff8fa3 14%, #ff2d55 34%, #c1121f 56%, #7f0f2c 76%, #ff5c7a 100%);
+  background-size: 300% 100%, 100% 100%; background-position: 150% 0, 0 0;
+  filter: drop-shadow(0 1px 0 #3b0613) drop-shadow(0 0 6px rgba(255, 45, 85, .75)) drop-shadow(0 0 16px rgba(225, 29, 72, .45));
+  animation: ruby-shine 3.6s ease-in-out infinite; padding: 0 .05em; margin: 0 -.05em;
+}
+.owner-ruby .slot:nth-child(2n) { animation-delay: -.5s; }
+@keyframes ruby-shine { 0%, 55% { background-position: 150% 0, 0 0; } 100% { background-position: -150% 0, 0 0; } }
+.owner-ruby .slot.spinning { opacity: .8; animation: ruby-shine 3.6s ease-in-out infinite, m2-reel .11s linear infinite; }
+.owner-ruby .slot.ghost { opacity: .22; }
+.num-card.owner-ruby.neutral, .num-card.owner-ruby[data-tier] { --t-border: #e11d48; }
+@media (prefers-reduced-motion: reduce) { .owner-ruby .slot { animation: none; } }
+/* Rubis : fond plus sombre et chiffres plus clairs, pour qu'ils se lisent d'un coup d'œil. */
+.num-card.owner-ruby { background: radial-gradient(ellipse 60% 80% at 20% 15%, rgba(255, 77, 109, .2), transparent 60%), radial-gradient(ellipse 50% 70% at 85% 90%, rgba(159, 18, 57, .4), transparent 62%), linear-gradient(135deg, #17020a, #2b0410 50%, #0e0105); }
+.owner-ruby .slot { -webkit-text-stroke: .6px rgba(255, 214, 222, .7);
+  background-image: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .9) 50%, transparent 60%), linear-gradient(170deg, #fff0f3 0%, #ff9db0 16%, #ff3b63 40%, #e11d48 62%, #a30f33 82%, #ff6b8a 100%);
+  filter: drop-shadow(0 1px 0 #2b0410) drop-shadow(0 0 5px rgba(255, 45, 85, .8)) drop-shadow(0 0 14px rgba(225, 29, 72, .4)); }
+.owner-ruby .skin-fx-in { opacity: .45; }

@@ -1180,13 +1180,15 @@
     const padded = a.str.padStart(slotCount, '0');
     const lead = slotCount - a.str.length;
     const ascending = a.groups.slice().reverse();
+    // Le créateur du jeu (succès « owner », accordé par le serveur) : chiffres en rubis et signature en béryl rouge.
+    const owner = !!(ctx.online && Array.isArray(ctx.online.achievements) && ctx.online.achievements.includes('owner'));
 
     app.innerHTML = `
       <div class="vignette" id="r-vignette"></div>
       <div class="page">
         <section class="result" data-tier="${a.tier}">
           <div class="card-stage" id="card-stage"><div class="rays" aria-hidden="true"></div>
-          <div class="num-card lg neutral charging${skinClass(Store.settings.skin)}" id="num-card">
+          <div class="num-card lg neutral charging${owner ? ' owner-ruby' : skinClass(Store.settings.skin)}" id="num-card">
             ${Array.from({ length: slotCount }, () => '<span class="slot spinning">0</span>').join('')}
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
@@ -1224,8 +1226,7 @@
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     Sound.warm([['tier', { tier: a.tier }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
-    // Le créateur du jeu (succès « owner », accordé par le serveur) a en plus sa signature en béryl rouge.
-    const skinFx = SkinFX.mount($('#card-stage'), card, Shop.resolve(Store.settings.skin), { owner: !!(ctx.online && Array.isArray(ctx.online.achievements) && ctx.online.achievements.includes('owner')) });
+    const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);
@@ -2493,8 +2494,8 @@
       const a = r && !spinning ? analysis(r.n[j]) : null;
       const won = a && r.winner === j;
       const card = withLever(a
-        ? `<div class="num-card md${skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
-        : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
+        ? `<div class="num-card md${p.title === 'owner' ? ' owner-ruby' : skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
+        : `<div class="num-card md neutral${spinning ? ' charging' : ''}${p.title === 'owner' ? ' owner-ruby' : skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
           <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}</div>
@@ -2537,6 +2538,8 @@
     const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
+    // La signature du créateur se joue aussi en duel, sur sa carte (celui qui a équipé le titre Owner).
+    const ownerFx = late ? [] : d.players.map((p, j) => (p.title === 'owner' && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
@@ -2554,6 +2557,7 @@
         });
         sides.forEach((x, j) => replay($(`#rs-${j}`), 'thump'));
         revealed = k + 1;
+        ownerFx.forEach((fx, j) => { if (fx) fx.lock(slots[j][k], { ghost: k < slotCount - sides[j].a.str.length, last: k === slotCount - 1 }); });
         sfx('lock', { i: k, soft: 1 });
       });
     }
@@ -2561,6 +2565,7 @@
       clearInterval(spin);
       keepMine();
       sfx('reveal', size);
+      ownerFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
       sides.forEach((x, j) => {
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;
@@ -2587,7 +2592,7 @@
       if (Room.shown < Room.data.rounds.length) playRound(Room.shown);
     });
     // Animation coupée (on quitte le duel) : le tirage est gardé quand même, à l'heure où il aurait été révélé.
-    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); at(clock + 600, keepMine); } };
+    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); ownerFx.forEach(fx => { if (fx) fx.stop(); }); at(clock + 600, keepMine); } };
     drawRoom();
   }
 
