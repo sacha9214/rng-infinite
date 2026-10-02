@@ -645,9 +645,9 @@
   }
 
   // Dons facultatifs (« Buy me a coffee ») : PayPal, ou USDT / USDC sur le réseau Ethereum. Aucun avantage en jeu.
-  const TIP = { paypal: 'sacha9214.all@gmail.com', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
+  const TIP = { paypal: 'https://paypal.me/sacha9214', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
   function openCoffee() {
-    const pay = `https://www.paypal.com/donate/?business=${encodeURIComponent(TIP.paypal)}&currency_code=EUR&item_name=${encodeURIComponent('RNG∞ — buy me a coffee')}`;
+    const pay = TIP.paypal;
     openModal(`
       <h2>☕ Buy me a coffee</h2>
       <p class="panel-note" style="margin:-.3rem 0 1rem">RNG∞ is free and has no ads. If you enjoy it, you can chip in. It is entirely optional and gives nothing in the game: no coins, no skins, no luck.</p>
@@ -730,7 +730,7 @@
         <p class="field-error" id="set-name-error" hidden></p>
         <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.</span>
       </div>
-      ${Store.player.name ? `<div class="field"><label>Achievements</label><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">🏆 My profile, achievements & title</a></div>` : ''}
+      ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${googleAccountHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
