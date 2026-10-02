@@ -2013,3 +2013,19 @@ body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacit
 @keyframes m2-surface { 0% { transform: translateY(.14em); opacity: 0; filter: blur(1.5px); } 60% { transform: translateY(-.02em); opacity: 1; filter: none; } 100% { transform: none; } }
 @keyframes m2-star { 0% { transform: translate(.18em, -.14em); opacity: 0; text-shadow: -.2em .2em 4px rgba(255, 255, 255, .8); } 55% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 18px #a78bfa; } 100% { transform: none; } }
 @keyframes m2-block { 0% { transform: translateY(-.25em); opacity: 0; } 50% { transform: translateY(.04em); opacity: 1; } 75% { transform: translateY(-.02em); } 100% { transform: none; } }
+
+/* ================================================================== trailer (2026-10-02)
+   Bouton discret sur l'accueil, affiche cliquable sur la page d'explication, vidéo dans une fenêtre large. */
+.trailer-btn { margin-top: .5rem; color: var(--prose-3); }
+.trailer-btn:hover { color: var(--prose); }
+/* La fenêtre prend la largeur qui fait tenir la vidéo entière dans l'écran (pas de bandes noires, pas de défilement).
+   Hauteur laissée à la vidéo : l'écran, moins les marges du fond (2 × 4vh), moins l'habillage de la fenêtre (2,4 + 0,7 rem et ses bordures). */
+.modal.wide { --video-h: calc(92vh - 3.3rem); width: min(100%, 60rem, calc(var(--video-h) * 16 / 9 + 1.5rem)); padding: 2.4rem .7rem .7rem; }
+.modal.wide.tall { width: min(100%, calc(var(--video-h) * 9 / 16 + 1.5rem)); }
+.trailer-video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: .5rem; background: #000; outline: none; }
+.trailer-video.tall { aspect-ratio: 9 / 16; }
+.trailer-thumb { position: relative; display: block; width: 100%; margin: 1rem 0 1.4rem; padding: 0; border: 1px solid var(--outline); border-radius: .7rem; overflow: hidden; background: #000; cursor: pointer; }
+.trailer-thumb img { display: block; width: 100%; height: auto; transition: transform .35s var(--ease-out), filter .35s ease; }
+.trailer-thumb:hover img { transform: scale(1.02); filter: brightness(1.08); }
+.trailer-play { position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%); display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1rem; border-radius: 999px;
+  background: rgba(10, 10, 10, .78); border: 1px solid rgba(255, 255, 255, .25); color: #fff; font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }

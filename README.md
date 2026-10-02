@@ -72,6 +72,8 @@ node tools/dev.mjs
 `trailer/` is a code-driven trailer in 16:9 and 9:16 at 60 fps: a 30 s film, plus 15 s and 6 s cut-downs. One function of time draws
 every frame on top of the game's own styles and engine, so every number, badge, rarity and XP total on screen is real.
 
+- The 30 s film is on the site: **Watch the trailer** on the home page and on the How it works page opens it (`media/`, loaded
+  only on click; phones held upright get the 9:16 file)
 - The edit sits on a 120 BPM grid (one beat = 0.5 s): digit locks, skin changes and scene changes land on beats, the key moments
   on bar downbeats, so any 120 BPM track drops straight in
 - Watch it in a browser: serve the repo (`python3 -m http.server 8123`) and open `/trailer/` (`?format=v` for 9:16, `?cut=15` or

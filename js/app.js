@@ -627,6 +627,19 @@
     if (onMount) onMount(backdrop.querySelector('.modal'));
   }
 
+  // Trailer : la vidéo (33 Mo) ne se charge qu'au clic ; sur un téléphone tenu droit, c'est la version verticale.
+  const playIcon = () => '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>';
+  function openTrailer() {
+    const tall = window.matchMedia('(max-width: 720px) and (orientation: portrait)').matches, f = tall ? '9x16' : '16x9';
+    openModal(`<video class="trailer-video${tall ? ' tall' : ''}" src="media/trailer-${f}.mp4" poster="media/trailer-${f}.jpg" controls autoplay playsinline preload="auto"></video>`, m => {
+      m.classList.add('wide');
+      if (tall) m.classList.add('tall');
+      const video = m.querySelector('video');
+      video.focus(); // Espace = lecture / pause
+      video.play().catch(() => { /* lecture automatique refusée : les commandes restent là */ });
+    });
+  }
+
   function openRollModal(index) {
     const r = Store.rolls[index];
     if (!r) return;
@@ -797,6 +810,7 @@
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>Space</kbd>
           </p>
+          <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
@@ -2600,6 +2614,10 @@
       <div class="page prose">
         <h1 class="page-title">What is RNG∞?</h1>
         <p>A random number game with no daily limit. Each roll draws a number from 0 to 1,000,000. The number is checked against ${Engine.badges.length} patterns — palindromes, primes, repeated digits, meme numbers, sequences and more — and every badge it earns is worth XP (experience points).</p>
+        <button class="trailer-thumb" data-trailer aria-label="Watch the trailer">
+          <img src="media/trailer-16x9.jpg" alt="RNG∞ trailer: a Mythic roll, 777777" width="1280" height="720" loading="lazy">
+          <span class="trailer-play">${playIcon()} Watch the trailer · 30 s</span>
+        </button>
         <div class="steps">
           <div class="step"><span class="n">1</span><span><b>Roll</b> — hit Generate (or Space) as often as you like.</span></div>
           <div class="step"><span class="n">2</span><span><b>Discover</b> — see which badges your number earns.</span></div>
@@ -2668,6 +2686,7 @@
   document.addEventListener('click', e => {
     // Lien vers une page du site (profil d'un joueur…) dans une ligne cliquable : la navigation l'emporte.
     if (e.target.closest('a[href^="#/"]')) return;
+    if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
     const number = e.target.closest('[data-number]');
