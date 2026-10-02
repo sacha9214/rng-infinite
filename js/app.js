@@ -28,6 +28,8 @@
   const LABELS = new Map(Engine.badges.map(b => [b.id, b.label.toLowerCase()]));
   // Sons du tirage (js/sound.js). Fichier absent ou navigateur sans Web Audio : le jeu reste muet, et intact.
   const Sound = window.Sound || { play() {}, tick() {}, badge() {}, stop() {}, unlock() {}, enable() {}, warm() {}, LEAD: 900 };
+  // Séquences des skins pendant un tirage (js/skinfx.js) : absentes, la carte garde simplement ses animations CSS.
+  const SkinFX = window.SkinFX || { mount: () => null };
 
   // ---------------------------------------------------------------- serveur (classement en ligne, hébergé sur Vercel)
   // Sur Vercel l'API est sur le même domaine ; depuis GitHub Pages on appelle le déploiement Vercel.
@@ -1201,6 +1203,8 @@
     let late = false, lastFrom = 0;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     Sound.warm([['tier', { tier: a.tier }]]);
+    // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
+    const skinFx = SkinFX.mount($('#card-stage'), card, Shop.resolve(Store.settings.skin));
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);
@@ -1222,11 +1226,12 @@
       if (revealed === slotCount - 1) lastFrom = performance.now();
       // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
       sfx('lock', i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i });
+      if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
     step(REVEAL.digitStart, revealDigit(0), 1);
     for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), 1);
-    steps.push({ at: clock - Sound.LEAD, run: () => sfx('riser'), done: false }); // montée de tension, coupée juste avant le dernier chiffre
+    steps.push({ at: clock - Sound.LEAD, run: () => { sfx('riser'); if (skinFx) skinFx.build(Sound.LEAD); }, done: false }); // montée de tension, coupée juste avant le dernier chiffre
     step(0, quick => {
       clearInterval(spin);
       card.classList.remove('charging');
@@ -1263,6 +1268,7 @@
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier });
+      if (skinFx) skinFx.reveal(a.tier);
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = '<kbd>Space</kbd> to roll again · click a badge name for details';
@@ -1293,7 +1299,7 @@
     return {
       get finished() { return finished; },
       get canReroll() { return canReroll; },
-      cancel() { timers.forEach(clearTimeout); clearInterval(spin); finished = true; document.body.classList.remove('locked'); Sound.stop(); },
+      cancel() { timers.forEach(clearTimeout); clearInterval(spin); finished = true; document.body.classList.remove('locked'); Sound.stop(); if (skinFx) skinFx.stop(); },
     };
   }
 
