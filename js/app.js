@@ -644,6 +644,26 @@
     });
   }
 
+  // Dons facultatifs (« Buy me a coffee ») : PayPal, ou USDT / USDC sur le réseau Ethereum. Aucun avantage en jeu.
+  const TIP = { paypal: 'sacha9214.all@gmail.com', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
+  function openCoffee() {
+    const pay = `https://www.paypal.com/donate/?business=${encodeURIComponent(TIP.paypal)}&currency_code=EUR&item_name=${encodeURIComponent('RNG∞ — buy me a coffee')}`;
+    openModal(`
+      <h2>☕ Buy me a coffee</h2>
+      <p class="panel-note" style="margin:-.3rem 0 1rem">RNG∞ is free and has no ads. If you enjoy it, you can chip in. It is entirely optional and gives nothing in the game: no coins, no skins, no luck.</p>
+      <div class="field"><label>PayPal</label><a class="btn-roll small" href="${pay}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Donate with PayPal</a></div>
+      <div class="field"><label>Crypto — USDT or USDC, Ethereum network (ERC-20) only</label>
+        <div class="tip-wallet"><code id="tip-wallet">${TIP.wallet}</code><button class="btn" id="tip-copy">Copy</button></div>
+        <span class="panel-note">Send only USDT or USDC on Ethereum to this address. Anything sent on another network may be lost.</span></div>
+      <div class="actions"><button class="btn" id="tip-done">Close</button></div>`, m => {
+      m.querySelector('#tip-done').addEventListener('click', closeModal);
+      m.querySelector('#tip-copy').addEventListener('click', async e => {
+        try { await navigator.clipboard.writeText(TIP.wallet); e.target.textContent = 'Copied'; }
+        catch (err) { const r = document.createRange(); r.selectNodeContents(m.querySelector('#tip-wallet')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Select and copy the address'); }
+      });
+    });
+  }
+
   function openRollModal(index) {
     const r = Store.rolls[index];
     if (!r) return;
@@ -835,6 +855,7 @@
               <div class="chips">${recent.map(({ r, i }) => `<button class="num-card sm" data-tier="${Engine.cardTier(r[1])}" data-roll="${i}">${r[0]}</button>`).join('')}</div>
             </div>` : ''}
           <p class="credit">Based on <a href="https://www.rngdle.com" target="_blank" rel="noopener">rngdle.com</a>, without the daily limit</p>
+          <button class="btn ghost trailer-btn" data-coffee>☕ Buy me a coffee</button>
         </section>
       </div>`;
     $('#roll-btn').addEventListener('click', startRoll);
@@ -2737,6 +2758,7 @@
     // Lien vers une page du site (profil d'un joueur…) dans une ligne cliquable : la navigation l'emporte.
     if (e.target.closest('a[href^="#/"]')) return;
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
+    if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
     const number = e.target.closest('[data-number]');

@@ -2144,3 +2144,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .skin-blocks .slot::after { inset: 25% 25% 0 0; }
 .skin-blocks .slot.ghost { opacity: .28; }
 .skin-blocks .slot.collapsed { padding: 0; opacity: 0; filter: none; }
+
+/* Dons : l'adresse du portefeuille, entière et copiable. */
+.tip-wallet { display: flex; align-items: center; gap: .5rem; }
+.tip-wallet code { flex: 1; min-width: 0; padding: .5rem .6rem; border: 1px solid var(--outline); border-radius: .45rem; background: var(--surface-dim); font-family: var(--font-mono); font-size: .68rem; overflow-wrap: anywhere; user-select: all; }
