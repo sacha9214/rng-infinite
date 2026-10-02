@@ -37,7 +37,9 @@
     { id: 'diamond', name: 'Diamond', emoji: '💎', price: 3500, desc: 'Cut gemstone' },
   ];
   SKINS.sort((a, b) => a.price - b.price); // boutique rangée du moins cher au plus cher (tri stable)
-  const byId = new Map(SKINS.map(s => [s.id, s]));
+  // Skin du créateur : hors boutique, donné par le serveur au seul compte Owner (rubis et signature en béryl rouge).
+  const OWNER = { id: 'owner', name: 'Owner', emoji: '♛', price: 0, desc: 'Ruby, for the creator only', hidden: true };
+  const byId = new Map(SKINS.concat(OWNER).map(s => [s.id, s]));
   // Skins remplacés : qui avait l'ancien a le nouveau (Donut → Slots, 2026-09-23).
   const ALIASES = { donut: 'slots' };
   const resolve = id => (id && ALIASES[id]) || id;
@@ -46,7 +48,7 @@
   const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * num(st.duelWins);
   const balance = st => earned(st) - num(st.spent);
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, byId, resolve, earned, balance };
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

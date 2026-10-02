@@ -10,13 +10,15 @@ const ownedKey = id => `skins:${id}`;
 async function state(id) {
   const stats = await readStats(id);
   const [owned, skin] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id]]);
-  const mine = [...new Set((owned || []).map(Shop.resolve))].filter(s => s !== 'classic' && Shop.byId.has(s));
+  // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
+  const isOwner = Number(stats.owner) >= 1;
+  const mine = [...new Set((owned || []).map(Shop.resolve))].filter(s => s !== 'classic' && Shop.byId.has(s) && !Shop.byId.get(s).hidden);
   const equipped = Shop.resolve(skin);
   return {
     coins: Shop.balance(stats),
     earned: Shop.earned(stats),
-    owned: ['classic', ...mine],
-    skin: equipped && Shop.byId.has(equipped) ? equipped : 'classic',
+    owned: ['classic', ...mine, ...(isOwner ? ['owner'] : [])],
+    skin: equipped && Shop.byId.has(equipped) && (!Shop.byId.get(equipped).hidden || isOwner) ? equipped : 'classic',
   };
 }
 
@@ -53,6 +55,7 @@ module.exports = async (req, res) => {
       try {
         const st = await state(playerId);
         if (!st.owned.includes(skin.id)) {
+          if (skin.hidden) return send(res, 422, { error: 'This skin is not for sale' });
           if (st.coins < skin.price) return send(res, 422, { error: `Not enough coins: ${skin.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', skin.price],

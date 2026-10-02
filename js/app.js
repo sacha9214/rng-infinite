@@ -151,6 +151,7 @@
   const Shop = window.RNGShop;
   const skinClass = raw => {
     const id = Shop.resolve(raw);
+    if (id === 'owner') return ' owner-ruby'; // le rubis du créateur
     return id && id !== 'classic' && Shop.byId.has(id) ? ` skin-${id}` : '';
   };
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
@@ -1180,15 +1181,15 @@
     const padded = a.str.padStart(slotCount, '0');
     const lead = slotCount - a.str.length;
     const ascending = a.groups.slice().reverse();
-    // Le créateur du jeu (succès « owner », accordé par le serveur) : chiffres en rubis et signature en béryl rouge.
-    const owner = !!(ctx.online && Array.isArray(ctx.online.achievements) && ctx.online.achievements.includes('owner'));
+    // Skin Owner (réservé au créateur, équipé depuis la boutique) : chiffres en rubis et signature en béryl rouge.
+    const owner = Shop.resolve(Store.settings.skin) === 'owner';
 
     app.innerHTML = `
       <div class="vignette" id="r-vignette"></div>
       <div class="page">
         <section class="result" data-tier="${a.tier}">
           <div class="card-stage" id="card-stage"><div class="rays" aria-hidden="true"></div>
-          <div class="num-card lg neutral charging${owner ? ' owner-ruby' : skinClass(Store.settings.skin)}" id="num-card">
+          <div class="num-card lg neutral charging${skinClass(Store.settings.skin)}" id="num-card">
             ${Array.from({ length: slotCount }, () => '<span class="slot spinning">0</span>').join('')}
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
@@ -2091,7 +2092,8 @@
     }
     Store.setSetting('skin', state.skin);
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
-    grid.innerHTML = Shop.SKINS.map(k => {
+    // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS).map(k => {
       const owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       const button = equipped ? '<span class="skin-state">Equipped</span>'
         : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>`
@@ -2494,8 +2496,8 @@
       const a = r && !spinning ? analysis(r.n[j]) : null;
       const won = a && r.winner === j;
       const card = withLever(a
-        ? `<div class="num-card md${p.title === 'owner' ? ' owner-ruby' : skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
-        : `<div class="num-card md neutral${spinning ? ' charging' : ''}${p.title === 'owner' ? ' owner-ruby' : skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
+        ? `<div class="num-card md${skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
+        : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
           <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}</div>
@@ -2538,8 +2540,8 @@
     const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
-    // La signature du créateur se joue aussi en duel, sur sa carte (celui qui a équipé le titre Owner).
-    const ownerFx = late ? [] : d.players.map((p, j) => (p.title === 'owner' && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
+    // La signature du créateur se joue aussi en duel, sur sa carte (skin Owner équipé).
+    const ownerFx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
