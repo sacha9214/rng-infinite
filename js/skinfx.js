@@ -602,6 +602,94 @@
     rainbow: pieces({ cols: RAINBOW, shapes: ['star', 'drop', 'sprinkle'], size: [2.6, 5.2], g: 380, drag: 1, up: true, life: 1.4, glowc: '#f0abfc', ring: '#a855f7', drift: { rate: 9, from: 'top' } }),
   });
 
+  // ⛏️ Blocks — une mine en pixels, tout est carré et calé sur une grille : chaque chiffre est un bloc qu'on casse
+  // (éclats de terre, de pierre et d'herbe, poussière, orbes d'XP qui filent vers le compteur), le dernier fait trembler
+  // le sol, et la révélation ouvre un filon : le minerai dépend de la rareté, jusqu'aux feux d'artifice d'un Mythic.
+  SCENES.blocks = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const G = 3, snap = v => Math.round(v / G) * G; // la grille de pixels
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, xpY = card.y + card.h + 58; // le compteur d'XP est sous la carte
+    const chunks = particles(), dust = particles(), orbs = particles(), sparks = particles(), rings = timed(), fireworks = timed();
+    const emitDust = emitter(), emitFall = emitter();
+    const GROUND = [['#5fb043', '#3f8a2b'], ['#8a5a32', '#6b4423'], ['#8a5a32', '#6b4423'], ['#8d8d8d', '#6e6e6e']]; // [face, ombre]
+    const ORE = { common: ['#d8d8d8', '#9a9a9a'], uncommon: ['#4ade80', '#15803d'], rare: ['#38bdf8', '#0369a1'], epic: ['#c084fc', '#7e22ce'], anomaly: ['#fbbf24', '#b45309'], mythic: ['#5eead4', '#0f766e'] };
+    let shake = 0, energy = 0, target = .5, glowc = '#7ddc4f', flash = 0;
+    const chunk = (x, y, angle, speed, pal = pick(GROUND), size = pick([G, G, 2 * G, 2 * G, 3 * G])) => chunks.add({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, g: 900, drag: .5, max: rnd(.7, 1.5), size, pal });
+    const orb = (x, y, n) => { for (let i = 0; i < n; i++) orbs.add({ x: x + rnd(-10, 10), y: y + rnd(-8, 8), vx: rnd(-120, 120), vy: -rnd(40, 220), max: rnd(.8, 1.3), size: rnd(2.5, 4.5), ph: rnd(TAU) }); };
+    const square = (c, x, y, size, color) => { c.fillStyle = color; c.fillRect(snap(x - size / 2), snap(y - size / 2), size, size); };
+    return {
+      frame(t, dt) {
+        energy += (target - energy) * Math.min(1, dt * 3);
+        shake = Math.max(0, shake - dt * 3);
+        flash = Math.max(0, flash - dt * 2.2);
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, glowc, w / 2, h * .5, w * .5, flash * .55);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        dot(co, glowc, cx, cy, card.w * (.66 + .3 * flash), (dark ? .1 : .06) * energy + flash * .3);
+        co.globalCompositeOperation = 'source-over';
+        // Le sol tremble quand ça chauffe : de petits éclats tombent du dessous de la carte, de la poussière monte.
+        for (let n = emitFall((3 + 16 * energy * energy + 60 * shake) * q, dt); n > 0; n--) chunk(rnd(card.x, card.x + card.w), card.y + card.h + 2, Math.PI / 2 + rnd(-.4, .4), rnd(10, 70), pick(GROUND), G);
+        for (let n = emitDust((4 + 10 * energy) * q, dt); n > 0; n--) dust.add({ x: rnd(card.x, card.x + card.w), y: card.y + card.h * rnd(.2, 1), vx: rnd(-10, 10), vy: -rnd(8, 30), max: rnd(1, 2.2), size: pick([G, 2 * G]) });
+        dust.step(dt);
+        dust.each((p, k) => { co.globalAlpha = .3 * Math.sin(Math.PI * k); square(co, p.x, p.y, p.size, dark ? '#cfc7b8' : '#8a7f6c'); });
+        chunks.step(dt);
+        chunks.each((p, k) => {
+          co.globalAlpha = Math.min(1, (1 - k) * 3);
+          square(co, p.x, p.y, p.size, p.pal[1]);
+          co.fillStyle = p.pal[0];
+          co.fillRect(snap(p.x - p.size / 2), snap(p.y - p.size / 2), p.size, Math.max(G, p.size - G)); // dessus clair, dessous dans l'ombre
+        });
+        // Orbes d'XP : elles jaillissent, puis sont aspirées par le compteur d'XP sous la carte.
+        orbs.step(dt);
+        orbs.each((p, k) => {
+          const pull = clamp((k - .25) / .5) * 14 * dt;
+          p.vx += (cx - p.x) * pull * 6; p.vy += (xpY - p.y) * pull * 6;
+          p.vx *= 1 - Math.min(.5, pull); p.vy *= 1 - Math.min(.5, pull);
+          const a = Math.min(1, (1 - k) * 4), pulse = .5 + .5 * Math.sin(t * 14 + p.ph);
+          co.globalAlpha = a; square(co, p.x, p.y, p.size * 2, pulse > .5 ? '#d9f99d' : '#84cc16');
+          square(co, p.x, p.y, G, '#fefce8');
+        });
+        sparks.step(dt);
+        sparks.each((p, k) => { co.globalAlpha = (1 - k) * (.6 + .4 * Math.sin(t * 40 + p.ph)); square(co, p.x, p.y, p.size, k < .3 ? '#ffffff' : p.c); });
+        // Feux d'artifice en pixels : une fusée monte, puis une boule d'étincelles carrées.
+        fireworks.run(dt, (f, k) => {
+          if (k < .3) { co.globalAlpha = 1; square(co, f.x, lerp(card.y, f.y, outCubic(k / .3)), 2 * G, '#ffffff'); return; }
+          if (!f.done) { f.done = true; for (let i = Math.round(46 * q); i > 0; i--) { const a = rnd(TAU), v = rnd(60, 190); sparks.add({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 110, drag: 1.6, max: rnd(.7, 1.3), size: pick([G, 2 * G]), c: f.c, ph: rnd(TAU) }); } }
+        });
+        // Ondes de choc carrées, en escalier.
+        rings.run(dt, (r, k) => {
+          const g = snap(r.grow * outCubic(k) * 78), a = 1 - k;
+          co.globalAlpha = a; co.strokeStyle = r.c; co.lineWidth = G * (k < .5 ? 2 : 1);
+          co.strokeRect(snap(card.x - g), snap(card.y - g), snap(card.w + 2 * g), snap(card.h + 2 * g));
+          co.globalAlpha = a * .5; co.strokeStyle = '#ffffff'; co.lineWidth = G;
+          co.strokeRect(snap(card.x - g * .82), snap(card.y - g * .82), snap(card.w + 1.64 * g), snap(card.h + 1.64 * g));
+        });
+      },
+      lock(p, o) { // le bloc casse : éclats vers le haut, poussière, et des orbes d'XP
+        const top = p.y - card.h * .2;
+        for (let i = Math.round((o.ghost ? 4 : o.last ? 34 : 15) * q); i > 0; i--) chunk(p.x + rnd(-9, 9), top, -Math.PI / 2 + rnd(-1.2, 1.2), rnd(120, o.last ? 420 : 300));
+        for (let i = 0; i < 6; i++) dust.add({ x: p.x + rnd(-14, 14), y: p.y + rnd(-10, 10), vx: rnd(-40, 40), vy: -rnd(10, 50), max: rnd(.5, 1), size: 2 * G });
+        if (!o.ghost) orb(p.x, top, o.last ? 9 : 3);
+        flash = Math.max(flash, o.ghost ? .15 : o.last ? .9 : .4);
+        energy = Math.min(1.4, energy + (o.ghost ? .04 : .18));
+        if (o.last) { target = .35; shake = 1; rings.add({ life: .6, grow: .7, c: '#6cc24a' }); }
+      },
+      build() { target = 1.35; }, // le sol gronde avant le dernier chiffre
+      reveal(tier) {
+        const p = POWER[tier], ore = ORE[tier];
+        if (!p) { energy = .05; target = .2; for (let i = 0; i < 10; i++) chunk(rnd(card.x, card.x + card.w), card.y + card.h, Math.PI / 2, rnd(10, 50), GROUND[1], G); return; } // rien dans ce filon : un peu de terre retombe
+        glowc = ore[0];
+        for (let i = burst(p, 230 * q, 8); i > 0; i--) { const from = along(card, rnd()), a = Math.atan2(from.y - cy, from.x - cx) + rnd(-.6, .6) - .5; chunk(from.x, from.y, a, rnd(100, 260 + 460 * p), Math.random() < .25 + .55 * p ? ore : pick(GROUND), pick([G, 2 * G, 2 * G, 3 * G, 4 * G])); }
+        orb(cx, cy, burst(p, 60 * q, 3));
+        flash = .25 + 1.1 * p; energy = .8 + .8 * p; target = .35 + .3 * p; shake = p;
+        if (p >= .25) rings.add({ life: .8, grow: .5 + 1.6 * p, c: ore[0] });
+        if (p > .55) rings.add({ delay: .15, life: .9, grow: 1 + 2 * p, c: ore[0] });
+        const shots = p >= 1 ? 7 : p >= .8 ? 3 : p > .55 ? 1 : 0;
+        for (let i = 0; i < shots; i++) fireworks.add({ delay: .25 + i * .32, life: .8, x: rnd(card.x - 60, card.x + card.w + 60), y: card.y - rnd(40, 110), c: pick(['#f472b6', '#facc15', '#5eead4', '#a78bfa', '#fb923c']) });
+      },
+    };
+  };
+
   // ---------------------------------------------------------------- montage sur une carte
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function mount(stage, card, skin) {
