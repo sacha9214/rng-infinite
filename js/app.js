@@ -26,6 +26,8 @@
   const GROUP_COLORS = [['#93c5fd', '#2563eb'], ['#86efac', '#059669'], ['#fcd34d', '#d97706'], ['#f9a8d4', '#db2777']];
   const RIPPLE_FROM_CENTER = new Set(['MOUNTAIN', 'VALLEY']);
   const LABELS = new Map(Engine.badges.map(b => [b.id, b.label.toLowerCase()]));
+  // Sons du tirage (js/sound.js). Fichier absent ou navigateur sans Web Audio : le jeu reste muet, et intact.
+  const Sound = window.Sound || { play() {}, tick() {}, badge() {}, stop() {}, unlock() {}, enable() {}, warm() {}, LEAD: 900 };
 
   // ---------------------------------------------------------------- serveur (classement en ligne, hébergé sur Vercel)
   // Sur Vercel l'API est sur le même domaine ; depuis GitHub Pages on appelle le déploiement Vercel.
@@ -709,6 +711,7 @@
       ${Store.player.name ? `<div class="field"><label>Achievements</label><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">🏆 My profile, achievements & title</a></div>` : ''}
       ${googleAccountHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
+      <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
@@ -746,6 +749,7 @@
           group.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === btn));
           Store.setSetting(group.dataset.seg, btn.dataset.v);
           if (group.dataset.seg === 'theme') applyTheme();
+          if (group.dataset.seg === 'sound') applySound(true);
         });
       });
       m.querySelector('#set-done').addEventListener('click', closeModal);
@@ -1083,8 +1087,10 @@
     const buttons = Array.from(document.querySelectorAll('#roll-btn, #r-again'));
     buttons.forEach(b => { b.disabled = true; });
     let n, online = null;
+    const asked = Online.roll();
+    Sound.play('click'); // après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
     try {
-      online = await Online.roll();
+      online = await asked;
       n = online.n;
     } catch (err) {
       if (err.status === 409) {
@@ -1190,9 +1196,16 @@
     let clock = 0, revealed = 0, running = 0, finished = false, canReroll = false;
     const step = (delay, run, factor = k) => { clock += delay * factor; steps.push({ at: clock, run, done: false }); };
     const show = (el, cls) => { el.classList.remove('invisible'); if (cls && !reducedMotion) el.classList.add(cls); };
+    // Sons : une étape en retard (onglet endormi puis réveillé, tout tombe d'un coup) se joue sans le sien.
+    const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount);
+    let late = false, lastFrom = 0;
+    const sfx = (type, o) => { if (!late) Sound.play(type, o); };
+    Sound.warm([['tier', { tier: a.tier }]]);
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);
+      // Cliquetis des rouleaux ; sur le dernier, il devient de plus en plus grave et fort jusqu'au chiffre.
+      if (revealed < slotCount) Sound.tick(revealed === slotCount - 1 ? { last: Math.min(8, 1 + Math.floor((8 * (performance.now() - lastFrom)) / lastWait)) } : {});
     }, 55);
     requestAnimationFrame(() => vignette.classList.add('on'));
     // Menu verrouillé pendant la révélation : on ne peut pas aller voir le résultat ailleurs avant la fin.
@@ -1206,10 +1219,14 @@
       el.classList.add('revealed');
       if (i < lead) el.classList.add('ghost');
       revealed = i + 1;
+      if (revealed === slotCount - 1) lastFrom = performance.now();
+      // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
+      sfx('lock', i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
     step(REVEAL.digitStart, revealDigit(0), 1);
     for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), 1);
+    steps.push({ at: clock - Sound.LEAD, run: () => sfx('riser'), done: false }); // montée de tension, coupée juste avant le dernier chiffre
     step(0, quick => {
       clearInterval(spin);
       card.classList.remove('charging');
@@ -1227,6 +1244,7 @@
         const from = running;
         running += g.badge.score;
         countUp(ep, from, running, quick ? 0 : REVEAL.badgeEp * kb, v => `${fmt(v)} XP`);
+        if (!late) Sound.badge(i, ascending.length);
       }, kb);
     });
 
@@ -1244,6 +1262,7 @@
       replay(ep, 'glint');
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
+      sfx('tier', { tier: a.tier });
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = '<kbd>Space</kbd> to roll again · click a badge name for details';
@@ -1265,7 +1284,7 @@
       finished = true;
     });
 
-    const runStep = s => { if (!s.done) { s.done = true; s.run(false); } };
+    const runStep = s => { if (!s.done) { s.done = true; late = performance.now() - began - s.at > 250; s.run(false); } };
     $('#r-share').addEventListener('click', () => share(a));
     $('#r-again').addEventListener('click', () => startRoll(true));
 
@@ -1274,7 +1293,7 @@
     return {
       get finished() { return finished; },
       get canReroll() { return canReroll; },
-      cancel() { timers.forEach(clearTimeout); clearInterval(spin); finished = true; document.body.classList.remove('locked'); },
+      cancel() { timers.forEach(clearTimeout); clearInterval(spin); finished = true; document.body.classList.remove('locked'); Sound.stop(); },
     };
   }
 
@@ -2116,6 +2135,7 @@
   }
 
   function roomReady() {
+    Sound.unlock(); // la manche se révèlera plus tard, sans geste du joueur : le son s'ouvre maintenant
     const btn = $('#room-roll');
     if (btn && !btn.disabled) roomSend('ready', btn);
   }
@@ -2485,8 +2505,14 @@
 
     let revealed = 0;
     const timers = [];
+    // Sons, plus discrets qu'en solo (encore plus à trois joueurs ou plus). Manche rattrapée en retard (rechargement,
+    // onglet endormi) : tout tombe d'un coup, donc en silence.
+    const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
+    const sfx = (type, o) => { if (!late) Sound.play(type, o); };
+    const size = sides.length <= 2 ? {} : { small: 1 };
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
+      if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
     }, 55);
     const at = (ms, fn) => timers.push(setTimeout(fn, Math.max(0, r.revealAt - Room.offset + ms - Date.now())));
     let clock = REVEAL.digitStart;
@@ -2501,11 +2527,13 @@
         });
         sides.forEach((x, j) => replay($(`#rs-${j}`), 'thump'));
         revealed = k + 1;
+        sfx('lock', { i: k, soft: 1 });
       });
     }
     at(clock + 600, () => {
       clearInterval(spin);
       keepMine();
+      sfx('reveal', size);
       sides.forEach((x, j) => {
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;
@@ -2523,6 +2551,7 @@
         side.querySelector('.room-name').insertAdjacentHTML('afterbegin', '<span class="trophy-drop">🏆</span> ');
         shockwave(cards[r.winner], sides[r.winner].a.tier === 'common' || sides[r.winner].a.tier === 'trash' ? 'uncommon' : sides[r.winner].a.tier);
         d.players.forEach((p, j) => { if (j !== r.winner) $(`#rs-${j}`).classList.add('lost'); });
+        sfx('win', size);
       }
       Room.anim = null;
       Room.shown = i + 1;
@@ -2531,7 +2560,7 @@
       if (Room.shown < Room.data.rounds.length) playRound(Room.shown);
     });
     // Animation coupée (on quitte le duel) : le tirage est gardé quand même, à l'heure où il aurait été révélé.
-    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); at(clock + 600, keepMine); } };
+    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); at(clock + 600, keepMine); } };
     drawRoom();
   }
 
@@ -2679,6 +2708,21 @@
     applyTheme();
   }));
 
+  // Son des tirages : coupé ou remis depuis la barre du haut ou les réglages. L'ancienne valeur par défaut (false, jamais
+  // proposée au joueur) compte comme « activé ».
+  const soundOn = () => Store.settings.sound !== 'off';
+  function applySound(heard) {
+    const on = soundOn(), btn = $('#sound-btn');
+    Sound.enable(on);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.title = on ? 'Sound on' : 'Sound off';
+    if (on && heard) Sound.play('lock', { i: 3 }); // une note, pour entendre qu'il est remis
+  }
+  $('#sound-btn').addEventListener('click', () => {
+    Store.setSetting('sound', soundOn() ? 'off' : 'on');
+    applySound(true);
+  });
+
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
   Store.onChange(syncPlayer);
   $('#player-btn').addEventListener('click', openSettings);
@@ -2742,6 +2786,7 @@
   MatrixRain.watch(app);
   window.addEventListener('hashchange', route);
   applyTheme();
+  applySound();
   syncPlayer();
   route();
   syncHistory().catch(() => {});

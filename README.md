@@ -21,6 +21,10 @@ plus custom badges defined in `tools/source/custom.json` — currently **Drastix
 - **Bots**: play a duel against 1 to 9 bots right away, or fill empty seats with bots. They are always ready, get a random skin and react after each round. Bot games count your rolls as usual but not duel wins, rivalries or duel achievements, so they cannot be farmed
 - **Rivalries**: every profile shows duel wins, win rate, most played rivals and your head-to-head record
 - **Live duels** (Duel tab) for 2 to 10 players with a 5-character code: everyone rolls at the same time and all numbers are revealed together, digit by digit. Each round goes to the highest roll; win by being first to 1–10 round wins, or first to an XP total (25K to 1M). The host can start before the room is full, a round starts by itself 15 s after the first player is ready, live emote reactions (an original dice mascot that laughs, cries, rages, plays it cool, gasps or crowns itself) pop over the cards, and rematch is one click. Duel rolls are normal server rolls, so they stay in your history and can make the leaderboard
+- **Sound**: the reels tick while they spin, each digit lands on a note one step higher than the last, each badge rings, and the
+  rarity gets its own impact, from a dull thud for a Trash roll to the full chord of a Mythic; duels sound too, more quietly.
+  No audio files: the browser computes every sound with the same synthesizer as the trailer's soundtrack. The speaker in the top
+  bar, or Sound in Player & settings, turns it off
 - JSON export/import of the history, 3 badge reveal speeds, light/dark theme
 
 ## Faithful to the original game
@@ -67,6 +71,13 @@ Run the site together with the API and an in-memory database (no account needed)
 node tools/dev.mjs
 ```
 
+Check the roll sounds (with `tools/dev.mjs` running): real rolls in a muted browser, every sound logged against the reveal's
+timing, the audio output recorded, checked for clipping and compared with the trailer's mix:
+
+```bash
+node tools/sound-check.mjs
+```
+
 ## Trailer
 
 `trailer/` is a code-driven trailer in 16:9 and 9:16 at 60 fps: a 30 s film, plus 15 s and 6 s cut-downs. One function of time draws
@@ -83,7 +94,8 @@ every frame on top of the game's own styles and engine, so every number, badge, 
   frame, averaged in linear light), a fine grain against banding in dark gradients, and the soundtrack, using 6 browsers in parallel
 - The soundtrack is synthesized by `tools/trailer-audio.mjs` from the cue list and the score the trailer exposes (every digit
   lock, impact and skin change, plus one chord and intensity per bar), so sound and picture share the same timestamps; no
-  samples, no licensed music. `variants/` gets an effects-only mix (to lay another track under it), a silent copy and a light copy
+  samples, no licensed music. Its instruments live in `js/synth.js`, which the game also uses for its roll sounds (`js/sound.js`).
+  `variants/` gets an effects-only mix (to lay another track under it), a silent copy and a light copy
 - Every render is checked for stutter: a frame-by-frame motion measure flags any moment where the picture freezes in the
   middle of a movement
 

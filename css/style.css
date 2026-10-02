@@ -245,6 +245,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--prose-2);
 }
 .theme-switch button[aria-checked="true"] { background: var(--prose); color: var(--site-bg); }
+/* Son des tirages : haut-parleur avec ses ondes, ou barré quand il est coupé. */
+.sound-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(1.7rem + 2px);
+  height: calc(1.7rem + 2px);
+  border: 1px solid var(--outline);
+  border-radius: .4rem;
+  background: var(--surface);
+  color: var(--prose-2);
+}
+.sound-btn:hover { border-color: var(--outline-strong); }
+.sound-btn .off, .sound-btn[aria-pressed="false"] .on { display: none; }
+.sound-btn[aria-pressed="false"] { color: var(--prose-3); }
+.sound-btn[aria-pressed="false"] .off { display: inline; }
 .player-btn {
   display: inline-flex;
   align-items: center;
@@ -266,7 +282,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (max-width: 720px) {
   .nav a span { display: none; }
   .nav { margin-left: .2rem; }
-  .theme-switch { display: none; }
+  .theme-switch, .sound-btn { display: none; } /* pas la place : thème et son se règlent dans « Player & settings » */
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -452,7 +468,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .float-up { animation: floatup 1.8s ease-out both; }
 @keyframes floatup { 0% { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 .badge-group { display: flex; flex-direction: column; gap: .35rem; }
-body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacity: .45; }@media (prefers-reduced-motion: reduce) {
+body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacity: .45; }
+body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper le son reste possible pendant un tirage */
+@media (prefers-reduced-motion: reduce) {
   .num-card.charging, .num-card.reveal-pulse, .pop-in, .float-up { animation: none; }
   .vignette { transition: none; }
 }

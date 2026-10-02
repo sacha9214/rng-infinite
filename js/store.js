@@ -38,7 +38,8 @@
       version: 1,
       // secret : prouve au serveur que c'est bien ce navigateur qui tire sous cet identifiant.
       player: { id: uid(), secret: uid() + uid(), name: '' },
-      settings: { speed: 'normal', theme: 'system', sound: false },
+      // sound : 'on' ou 'off'. Les anciennes sauvegardes contiennent false (réglage jamais proposé) : il vaut 'on'.
+      settings: { speed: 'normal', theme: 'system', sound: 'on' },
       scoreVersion: null,
       rolls: [],
     };
