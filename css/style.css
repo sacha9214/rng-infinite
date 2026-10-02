@@ -2148,3 +2148,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* Dons : l'adresse du portefeuille, entière et copiable. */
 .tip-wallet { display: flex; align-items: center; gap: .5rem; }
 .tip-wallet code { flex: 1; min-width: 0; padding: .5rem .6rem; border: 1px solid var(--outline); border-radius: .45rem; background: var(--surface-dim); font-family: var(--font-mono); font-size: .68rem; overflow-wrap: anywhere; user-select: all; }
+
+/* Bouton de don : le pendant du bouton GitHub, en bas à droite. */
+.gh-corner.coffee-corner { left: auto; right: 14px; font-size: 1.05rem; line-height: 1; cursor: pointer; }

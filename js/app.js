@@ -855,7 +855,6 @@
               <div class="chips">${recent.map(({ r, i }) => `<button class="num-card sm" data-tier="${Engine.cardTier(r[1])}" data-roll="${i}">${r[0]}</button>`).join('')}</div>
             </div>` : ''}
           <p class="credit">Based on <a href="https://www.rngdle.com" target="_blank" rel="noopener">rngdle.com</a>, without the daily limit</p>
-          <button class="btn ghost trailer-btn" data-coffee>☕ Buy me a coffee</button>
         </section>
       </div>`;
     $('#roll-btn').addEventListener('click', startRoll);
