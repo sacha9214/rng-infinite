@@ -2183,3 +2183,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   background-image: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .9) 50%, transparent 60%), linear-gradient(170deg, #fff0f3 0%, #ff9db0 16%, #ff3b63 40%, #e11d48 62%, #a30f33 82%, #ff6b8a 100%);
   filter: drop-shadow(0 1px 0 #2b0410) drop-shadow(0 0 5px rgba(255, 45, 85, .8)) drop-shadow(0 0 14px rgba(225, 29, 72, .4)); }
 .owner-ruby .skin-fx-in { opacity: .45; }
+
+/* Duel : demande d'entrée en cours de partie, côté hôte. */
+.room-ask { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; margin-top: .7rem; padding: .5rem .7rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface-dim); font-size: .8rem; }

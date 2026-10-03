@@ -2153,14 +2153,14 @@
   }
 
   // Envoie une action (prêt, lancement) et applique aussitôt l'état renvoyé.
-  async function roomSend(action, btn) {
+  async function roomSend(action, btn, extra) {
     if (btn) btn.disabled = true;
     const token = Room.token, sent = Date.now();
     try {
-      applyRoom(await Online.roomAction(action, Room.code), token, sent, Date.now());
+      applyRoom(await Online.roomAction(action, Room.code, extra), token, sent, Date.now());
     } catch (err) {
       if (btn) btn.disabled = false;
-      roomError(err, () => roomSend(action));
+      roomError(err, () => roomSend(action, null, extra));
     }
   }
 
@@ -2380,8 +2380,11 @@
       return;
     }
 
+    const seats = `${d.players.length}|${!!me}`;
+    if (Room.view === 'playing' && Room.seats !== seats && !Room.anim) Room.view = null; // quelqu'un est entré en cours de partie
     if (Room.view !== 'playing') {
       Room.view = 'playing';
+      Room.seats = seats;
       body.innerHTML = `
         <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}</p>
         <div class="room-board" id="room-board"></div>
@@ -2438,7 +2441,7 @@
     } else if (Room.anim) {
       cta = `<p class="room-wait">Round ${Room.shown + 1}…</p>`;
     } else if (!me) {
-      cta = '<p class="room-wait">Watching live</p>';
+      cta = `<p class="room-wait">Watching live</p>${d.asked ? '<p class="panel-note">Request sent: waiting for the host…</p>' : d.canAsk ? '<button class="btn-roll small" id="room-ask">⚔️ Ask to join</button>' : ''}`;
       hint = `${readyCount} / ${people.length} ready${countdown}`;
     } else if (me.ready) {
       const missing = people.filter(p => !p.ready).map(p => p.name);
@@ -2448,7 +2451,11 @@
       cta = `<button class="btn-roll" id="room-roll">🎲 Roll round ${d.rounds.length + 1}</button>`;
       hint = `${readyCount && people.length > 1 ? `${readyCount} / ${people.length} ready${countdown} · ` : ''}press <kbd>Space</kbd>`;
     }
+    if (!finished && d.asks && d.asks.length) cta += d.asks.map(n => `<div class="room-ask"><span><b>${esc(n)}</b> wants to join</span><button class="btn-roll small" data-accept="${esc(n)}">Accept</button><button class="btn" data-decline="${esc(n)}">Decline</button></div>`).join('');
     if (setHTML($('#room-cta'), cta)) {
+      const askBtn = $('#room-ask');
+      if (askBtn) askBtn.addEventListener('click', () => (Store.player.name ? roomSend('ask', askBtn) : askName(() => roomSend('ask'))));
+      $('#room-cta').querySelectorAll('[data-accept], [data-decline]').forEach(b => b.addEventListener('click', () => roomSend(b.dataset.accept ? 'accept' : 'decline', b, { who: b.dataset.accept || b.dataset.decline })));
       const roll = $('#room-roll');
       if (roll) roll.addEventListener('click', roomReady);
       const rematchBtn = $('#room-rematch');
@@ -2466,7 +2473,7 @@
       <div class="room-round">
         <span class="rank">${i + 1}</span>
         ${r.winner === null ? '<span class="muted">tie at the top</span>' : `${numberCard(r, r.winner, i)}<span>🏆 ${esc(d.players[r.winner].name)} · ${compact(r.s[r.winner])} XP</span>`}
-        ${mine >= 0 && mine !== r.winner ? `<span class="room-round-mine">you: ${numberCard(r, mine, i)}</span>` : ''}
+        ${mine >= 0 && mine !== r.winner && r.n[mine] != null ? `<span class="room-round-mine">you: ${numberCard(r, mine, i)}</span>` : ''}
       </div>`).join('') : '<div class="empty">No round yet.</div>');
   }
 
@@ -2493,7 +2500,7 @@
   function stageHTML(r, spinning = false) {
     const d = Room.data;
     const sides = d.players.map((p, j) => {
-      const a = r && !spinning ? analysis(r.n[j]) : null;
+      const a = r && !spinning && r.n[j] != null ? analysis(r.n[j]) : null; // arrivé en cours de partie : pas de nombre pour les manches d'avant
       const won = a && r.winner === j;
       const card = withLever(a
         ? `<div class="num-card md${skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
@@ -2527,7 +2534,7 @@
     // ouvert sur History ne peut pas le montrer avant. Le serveur fait de même (queueReveal dans api/room.js).
     const mine = d.players.findIndex(p => p.me);
     const keepMine = () => {
-      if (mine < 0 || Store.rolls.some(x => x[0] === sides[mine].n && x[2] === r.t)) return;
+      if (mine < 0 || !sides[mine] || Store.rolls.some(x => x[0] === sides[mine].n && x[2] === r.t)) return;
       Collection.ensure();
       Store.addRoll(sides[mine].n, sides[mine].s, r.t);
       Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
@@ -2541,7 +2548,7 @@
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
     // La signature du créateur se joue aussi en duel, sur sa carte (skin Owner équipé).
-    const ownerFx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
+    const ownerFx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j] && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });

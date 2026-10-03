@@ -6,6 +6,8 @@
 // tous les joueurs. Une manche part quand tout le monde est prêt, ou 15 s après le premier joueur prêt : un absent ne
 // bloque pas la partie (son nombre est tiré quand même, comme celui des autres).
 // Pendant la partie, les joueurs peuvent envoyer des réactions (emoji) que tout le monde voit en direct.
+//   POST /api/room { action: 'ask' | 'accept' | 'decline', code, who? } : un spectateur demande à entrer dans une partie
+//        en cours ; l'hôte accepte (le joueur joue dès la manche suivante, avec son retard) ou refuse
 //   POST /api/room { action: 'create' | 'join' | 'start' | 'ready' | 'react' | 'rematch', code?, size?, mode?, target?, emoji?, playerId, secret, name }
 //   GET  /api/room?code=<code>&me=<playerId>   (sondé toutes les ~1,5 s par les joueurs et les spectateurs)
 //   GET  /api/room?live=1                      → parties publiques en cours ("Live now"), à regarder ou rejoindre
@@ -238,6 +240,13 @@ async function refreshSkins(room) {
   if (writes.length) await redis(writes);
 }
 
+// Demandes d'entrée en attente (champs "ask:<id>" du hash), les plus anciennes d'abord ; oubliées après 2 minutes.
+const ASK_MS = 120000;
+function asksOf(room, now = Date.now()) {
+  return Object.entries(room.h).filter(([k]) => k.startsWith('ask:')).map(([k, v]) => { const a = JSON.parse(v); return { id: k.slice(4), name: a.name, t: a.t }; })
+    .filter(a => now - a.t < ASK_MS && !room.players.some(p => p.id === a.id)).sort((a, b) => a.t - b.t);
+}
+
 async function view(room, me) {
   const sc = score(room);
   const k = room.rounds.length;
@@ -256,6 +265,10 @@ async function view(room, me) {
     // La manche part d'elle-même à autoAt (si quelqu'un est prêt), jamais avant nextAt (8 s après la précédente).
     autoAt: status === 'playing' && readyCount && readyCount < humans(room).length && first ? Number(first) + AUTO_MS : null,
     nextAt: last ? last.revealAt + GAP_MS : 0,
+    // Demandes d'entrée en cours de partie : l'hôte voit les noms, celui qui a demandé sait que c'est en attente.
+    asks: me && me === room.host ? asksOf(room).map(a => a.name) : undefined,
+    asked: me ? asksOf(room).some(a => a.id === me) : false,
+    canAsk: status === 'playing' && room.players.length < MAX_PLAYERS,
     next: room.h.next || null, // code de la revanche, une fois lancée
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
@@ -381,6 +394,44 @@ module.exports = async (req, res) => {
       const writes = [['RPUSH', playersKey(code), JSON.stringify(await seat(playerId, name))], ['HSET', roomKey(code), `seen:${playerId}`, Date.now()], ...touchLive(room)];
       if (Number(count) === room.size) writes.push(['HSET', roomKey(code), 'started', 1]); // complet : la partie commence
       await redis(writes);
+      return send(res, 200, await view(await load(code), playerId));
+    }
+
+    // Entrer dans une partie déjà commencée : le spectateur demande, l'hôte tranche. Accepté, il s'assoit à la suite des
+    // autres et joue dès la prochaine manche ; les manches déjà tirées n'ont pas de nombre pour lui (0 victoire, 0 XP).
+    if (body.action === 'ask') {
+      if (member) return send(res, 200, await view(room, playerId));
+      if (!room.started) return send(res, 422, { error: 'This duel has not started: join it instead' });
+      if (score(room).done) return send(res, 422, { error: 'This duel is over' });
+      if (room.players.length >= MAX_PLAYERS) return send(res, 422, { error: 'This duel is full' });
+      if (asksOf(room).length >= 5 && !room.h[`ask:${playerId}`]) return send(res, 429, { error: 'Too many requests for this duel, try again later' });
+      await redis([['HSET', roomKey(code), `ask:${playerId}`, JSON.stringify({ name, t: Date.now() })]]);
+      return send(res, 200, await view(await load(code), playerId));
+    }
+    if (body.action === 'accept' || body.action === 'decline') {
+      if (room.host !== playerId) return send(res, 422, { error: 'Only the host can answer' });
+      const ask = asksOf(room).find(a => a.name === String(body.who || ''));
+      if (!ask) return send(res, 404, { error: 'This request is gone' });
+      if (body.action === 'decline') {
+        await redis([['HDEL', roomKey(code), `ask:${ask.id}`]]);
+        return send(res, 200, await view(await load(code), playerId));
+      }
+      if (score(room).done) return send(res, 422, { error: 'This duel is over' });
+      // Une place à la fois, comme pour join : marqueur de membre, puis compteur borné.
+      const [isNew] = await redis([['HSETNX', roomKey(code), `m:${ask.id}`, 1]]);
+      if (Number(isNew) === 1) {
+        const [count] = await redis([['HINCRBY', roomKey(code), 'count', 1]]);
+        if (Number(count) > MAX_PLAYERS) {
+          await redis([['HINCRBY', roomKey(code), 'count', -1], ['HDEL', roomKey(code), `m:${ask.id}`, `ask:${ask.id}`]]);
+          return send(res, 422, { error: 'This duel is full' });
+        }
+        await redis([
+          ['RPUSH', playersKey(code), JSON.stringify(await seat(ask.id, ask.name))],
+          ['HSET', roomKey(code), `seen:${ask.id}`, Date.now(), 'size', Number(count)],
+          ['HDEL', roomKey(code), `ask:${ask.id}`],
+          ...touchLive(room),
+        ]);
+      }
       return send(res, 200, await view(await load(code), playerId));
     }
 
