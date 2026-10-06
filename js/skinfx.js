@@ -1170,6 +1170,9 @@
         build: guard(ms => scene.build(ms)),
         reveal: guard(tier => { scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0); }),
         stop() { stopped = true; cancelAnimationFrame(raf); },
+        // Arrête la scène et retire ses calques : indispensable quand la carte est rejouée au même endroit (manches
+        // d'un duel), sinon l'ancienne image reste affichée par-dessus la nouvelle.
+        destroy() { stopped = true; cancelAnimationFrame(raf); outer.remove(); inner.remove(); card.classList.remove('has-fx'); },
       };
     } catch (e) {
       return null;

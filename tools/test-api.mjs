@@ -319,6 +319,8 @@ assert.ok(r.body.players.every(p => 'title' in p));
 // Manche 1 : tant que tout le monde n'est pas prêt, rien ; le dernier prêt déclenche les 3 tirages ensemble.
 // (Ils viennent de tirer dans les tests précédents : on efface leur délai de 8 s.)
 [alice, bob, carol].forEach(p => db.delete(`cooldown:${p.playerId}`));
+// Comptes établis (20 tirages et plus) : sinon une victoire contre eux ne rapporte rien (anti-farm, testé en 25).
+[alice, bob, carol, dave].forEach(p => run([['HSET', `stats:${p.playerId}`, 'rolls', 60]]));
 const histA = (await call(history, { method: 'POST', body: aliceTab })).body.rolls.length;
 const countOf = async name => (await call(leaderboard, { url: '/api/leaderboard?period=all' })).body.entries.find(e => e.name === name).rolls;
 const countA = await countOf('Alice');
@@ -801,7 +803,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const w1 = { playerId: 'e1'.repeat(8), secret: 'f1'.repeat(16), name: 'Wone' }, w2 = { playerId: 'e2'.repeat(8), secret: 'f2'.repeat(16), name: 'Wtwo' };
   const poor = { playerId: 'e3'.repeat(8), secret: 'f3'.repeat(16), name: 'Poor' };
   for (const w of [w1, w2, poor]) assert.equal((await call(roll, { method: 'POST', body: w })).status, 200);
-  for (const w of [w1, w2]) run([['HINCRBY', `stats:${w.playerId}`, 'bonus', 2000]]);
+  assert.match((await roomPost(w1, 'create', { size: 2, stake: 100 })).body.error, /Stakes unlock after 30 rolls/, 'compte trop neuf pour miser');
+  for (const w of [w1, w2]) run([['HINCRBY', `stats:${w.playerId}`, 'bonus', 2000], ['HSET', `stats:${w.playerId}`, 'rolls', 50]]);
   clock += 9000; // délai entre deux tirages écoulé
   const c1 = await coinsOf(w1), c2 = await coinsOf(w2);
   assert.equal((await roomPost(poor, 'create', { size: 2, stake: 1000 })).status, 422, 'pas assez pour miser');
@@ -849,6 +852,134 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(net(w1) + net(w2), 4000 - 500);
   await later(12 * 3600000 + 1000, () => call(leaderboard, { url: '/api/leaderboard?period=day' }));
   assert.equal(net(w1) + net(w2), 4000, 'remboursé sans que personne ne rouvre la salle');
+}
+
+// ================================================================ 25. Anti-farm : victoires de duel sans enjeu
+// Tirages forcés : le 1er nombre de la file va au 1er joueur de la salle, etc. (0 = le plus gros tirage possible).
+{
+  const realRandomInt = crypto.randomInt;
+  const forced = [];
+  crypto.randomInt = (...args) => (forced.length && args[0] === 0 && args[1] === 1000001 ? forced.shift() : realRandomInt(...args));
+  const mk = (tag, name) => ({ playerId: tag.repeat(8), secret: tag.repeat(16), name });
+  const hero = mk('a7', 'Hero'), foe = mk('a8', 'Foe'), foe2 = mk('a9', 'Foetwo'), newbie = mk('b7', 'Newbie');
+  for (const who of [hero, foe, foe2, newbie]) assert.equal((await call(roll, { method: 'POST', body: who })).status, 200);
+  for (const who of [hero, foe, foe2]) run([['HSET', `stats:${who.playerId}`, 'rolls', 60]]);
+  clock += 9000;
+  const stat = (who, f) => Number(run([['HGET', `stats:${who.playerId}`, f]])[0].result) || 0;
+  const coins = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  // Un duel en 1 manche que `winner` gagne (premier de la salle = créateur) ; renvoie l'état après le bilan.
+  const duel = async (winner, loser) => {
+    r = await roomPost(winner, 'create', { size: 2, mode: 'rounds', target: 1, public: false });
+    const c = r.body.code;
+    await roomPost(loser, 'join', { code: c });
+    forced.push(0, 372368);
+    await later(11000, async () => { await roomPost(winner, 'ready', { code: c }); await roomPost(loser, 'ready', { code: c }); });
+    assert.equal(forced.length, 0, 'tirages forcés consommés');
+    r = await later(2500 + 9700, () => roomGet(c, winner));
+    assert.deepEqual([r.body.status, r.body.winner], ['done', 0]);
+    return r.body;
+  };
+  // 3 victoires par jour contre le même adversaire sont récompensées, la 4e ne l'est plus (mais compte au face-à-face).
+  const rolledCoins = async who => (await coins(who)) - 25 * Shop.rankedWins({ duelWins: stat(who, 'duelWins'), duelUnpaid: stat(who, 'duelUnpaid') });
+  for (let i = 1; i <= 3; i++) assert.equal((await duel(hero, foe)).reward, 'ok', `victoire ${i} récompensée`);
+  assert.deepEqual([stat(hero, 'duelWins'), stat(hero, 'duelUnpaid')], [3, 0]);
+  const base = await rolledCoins(hero);
+  let last = await duel(hero, foe);
+  assert.equal(last.reward, 'pair', '4e victoire du jour contre le même joueur : sans récompense');
+  assert.deepEqual([stat(hero, 'duelWins'), stat(hero, 'duelUnpaid')], [4, 1], 'elle compte quand même comme victoire');
+  assert.equal(Shop.rankedWins({ duelWins: 4, duelUnpaid: 1 }), 3);
+  assert.equal(await coins(hero), (await rolledCoins(hero)) + 75, 'pièces de victoire : 3 × 25, pas 4');
+  assert.equal(run([['HGET', `h2h:${hero.playerId}`, `w:${foe.playerId}`]])[0].result, '4', 'face-à-face complet');
+  assert.ok(base > 0);
+  // Un autre adversaire établi : de nouveau récompensé.
+  assert.equal((await duel(hero, foe2)).reward, 'ok');
+  // Compte adverse trop neuf (moins de 20 tirages) : rien à gagner. L'inverse (le nouveau bat un compte établi) paie.
+  assert.equal((await duel(hero, newbie)).reward, 'new');
+  assert.equal((await duel(newbie, foe2)).reward, 'ok');
+  // Plafond du jour : 10 victoires récompensées au total.
+  run([['HSET', `dw:${new Date(Date.now()).toISOString().slice(0, 10)}:${foe2.playerId}`, 'total', 10]]);
+  assert.equal((await duel(foe2, hero)).reward, 'day');
+  // Le lendemain, les compteurs repartent.
+  clock += 86400000;
+  assert.equal((await duel(hero, foe)).reward, 'ok', 'nouveau jour : de nouveau récompensé');
+  // Succès de duel : seules les victoires récompensées comptent (Gladiator = 10).
+  const Ach = require(path.join(ROOT, 'js/achievements.js'));
+  assert.ok(!Ach.unlocked({ duelWins: 12, duelUnpaid: 3 }).includes('gladiator'));
+  assert.ok(Ach.unlocked({ duelWins: 12, duelUnpaid: 2 }).includes('gladiator'));
+  crypto.randomInt = realRandomInt;
+}
+
+// ================================================================ 26. Boîte à suggestions et fréquentation
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const site = (who, action, extra = {}, headers = {}) => call(siteApi, { method: 'POST', body: { ...(who ? { playerId: who.playerId, secret: who.secret, name: who.name } : {}), action, ...extra }, headers });
+  const today = () => new Date(Date.now()).toISOString().slice(0, 10);
+  assert.equal((await call(siteApi, { url: '/api/site' })).status, 405);
+  // Suggestions : il faut être un joueur, écrire quelque chose, et pas plus de 5 par jour.
+  assert.equal((await site({ ...alice, secret: '9'.repeat(32) }, 'suggest', { text: 'Hello there' })).status, 403);
+  assert.equal((await site(alice, 'suggest', { text: 'hey' })).status, 422, 'trop court');
+  r = await site(alice, 'suggest', { text: '  Add a tournament mode\u0007 please!  \n\n\n\nWith brackets.', lang: 'fr' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.sent, r.body.owner, r.body.mine.length], [true, false, 1]);
+  assert.equal(r.body.mine[0].text, 'Add a tournament mode please!\n\nWith brackets.', 'nettoyé : caractères de contrôle et lignes vides en trop');
+  assert.deepEqual([r.body.mine[0].status, r.body.mine[0].reply], ['new', '']);
+  assert.ok(!JSON.stringify(r.body).includes(alice.playerId), 'aucun id');
+  clock += 1000;
+  const long = await site(alice, 'suggest', { text: 'x'.repeat(900) });
+  assert.equal(long.body.mine[0].text.length, 500, 'borné à 500 caractères');
+  for (let i = 0; i < 3; i++) { clock += 1000; assert.equal((await site(alice, 'suggest', { text: `idea number ${i}` })).status, 200); }
+  assert.equal((await site(alice, 'suggest', { text: 'one too many' })).status, 429, '5 par jour');
+  clock += 1000; // une seconde plus tard : la plus récente est sans ambiguïté celle-ci
+  assert.equal((await site(bobNow, 'suggest', { text: 'A dark red theme' })).status, 200);
+  assert.equal((await site(bobNow, 'mine')).body.mine.length, 1, 'chacun ne voit que les siennes');
+  // Réservé au créateur : un joueur normal n'a ni la boîte de réception ni la fréquentation.
+  for (const action of ['inbox', 'stats', 'mark', 'delete']) assert.equal((await site(alice, action, { id: 'a'.repeat(12) })).status, 403, action);
+  assert.equal((await site(alice, 'nope')).status, 400);
+  const boss = { playerId: '9'.repeat(16), secret: '7'.repeat(32), name: 'Boss' }; // compte Owner du test 14
+  assert.equal(run([['HGET', `stats:${boss.playerId}`, 'owner']])[0].result, '1');
+  r = await site(boss, 'inbox');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.total, 6);
+  assert.deepEqual(r.body.suggestions[0].name, 'Sacha', 'la plus récente d\'abord, avec le pseudo');
+  assert.ok(!JSON.stringify(r.body).includes(alice.playerId));
+  const first = r.body.suggestions.find(x => x.text.startsWith('Add a tournament'));
+  r = await site(boss, 'mark', { id: first.id, status: 'planned', reply: 'Good idea, coming soon!' });
+  assert.deepEqual([r.status, r.body.suggestions.find(x => x.id === first.id).status], [200, 'planned']);
+  const seen = (await site(alice, 'mine')).body.mine.find(x => x.id === first.id);
+  assert.deepEqual([seen.status, seen.reply], ['planned', 'Good idea, coming soon!'], 'le joueur voit le statut et la réponse');
+  assert.equal((await site(boss, 'mark', { id: first.id, status: 'hacked' })).body.suggestions.find(x => x.id === first.id).status, 'planned', 'statut inconnu ignoré');
+  r = await site(boss, 'delete', { id: first.id });
+  assert.equal(r.body.total, 5);
+  assert.ok(!(await site(alice, 'mine')).body.mine.some(x => x.id === first.id), 'supprimée aussi chez le joueur');
+  assert.equal((await site(boss, 'delete', { id: first.id })).status, 404);
+
+  // Fréquentation : compteurs anonymes du jour.
+  db.delete(`an:${today()}`);
+  const visit = (extra, headers = {}) => site(null, 'visit', extra, { 'x-forwarded-for': '203.0.113.9', ...headers });
+  assert.equal((await visit({ ref: 'www.Reddit.com', src: 'Discord', lang: 'fr', first: true, daily: true, mobile: true }, { 'x-vercel-ip-country': 'FR' })).status, 200);
+  await visit({ ref: 'reddit.com', daily: true }, { 'x-vercel-ip-country': 'FR' });
+  await visit({ ref: '', lang: 'en' }, { 'x-vercel-ip-country': 'US' });
+  await visit({ ref: '<script>alert(1)</script>', src: 'bad source!' });
+  const an = Object.fromEntries(run([['HGETALL', `an:${today()}`]])[0].result.reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, Number(arr[i + 1])]]), []));
+  assert.deepEqual([an.visits, an.uniq, an.new], [4, 2, 1]);
+  assert.deepEqual([an['ref:reddit.com'], an['ref:direct'], an['src:discord']], [2, 2, 1], 'origine normalisée ; origine invalide = direct');
+  assert.deepEqual([an['c:FR'], an['c:US'], an['c:ZZ'], an['d:mobile'], an['d:desktop'], an['l:fr'], an['l:en']], [2, 1, 1, 1, 3, 1, 3]);
+  assert.ok(!Object.keys(an).some(k => /script|bad/.test(k)), 'rien d\'inventé ne passe');
+  assert.ok(!JSON.stringify(an).includes('203.0.113'), 'aucune adresse IP stockée');
+  // Pas plus de 60 balises par adresse et par heure (large : tout un collège peut partager la même adresse).
+  for (let i = 0; i < 80; i++) await visit({ ref: 'spam.example' });
+  assert.equal(Number(run([['HGET', `an:${today()}`, 'visits']])[0].result), 60, 'balises en trop ignorées, pas les 60 premières');
+  // Un jour ne peut pas enfler : passé 400 champs, les origines inconnues vont dans « other ».
+  run([['HSET', `an:${today()}`, ...Array.from({ length: 400 }, (_, i) => [`ref:filler${i}.example`, 1]).flat()]]);
+  await site(null, 'visit', { ref: 'brand-new.example' }, { 'x-forwarded-for': '198.51.100.7' });
+  assert.equal(run([['HGET', `an:${today()}`, 'ref:brand-new.example']])[0].result, null);
+  assert.equal(run([['HGET', `an:${today()}`, 'ref:other']])[0].result, '1');
+  r = await site(boss, 'stats');
+  assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 200));
+  assert.equal(r.body.days.length, 30);
+  assert.equal(r.body.days[0].day, today());
+  assert.ok(r.body.days[0].visits >= 4 && r.body.week.refs.some(x => x.name === 'reddit.com' && x.count === 2));
+  assert.ok(r.body.week.countries.some(x => x.name === 'FR') && r.body.totals.named > 5);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

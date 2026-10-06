@@ -8,6 +8,8 @@
 
   const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
   const num = v => Number(v) || 0;
+  // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
+  const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
   const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + num(st[`t:${t}`]), 0);
 
   const LIST = [
@@ -27,8 +29,8 @@
     { id: 'hoarder', emoji: '🗄️', title: 'Hoarder', desc: 'Find 100 different badges', test: st => num(st.badges) >= 100 },
     { id: 'completionist', emoji: '🏛️', title: 'Completionist', desc: 'Find 150 different badges', test: st => num(st.badges) >= 150 },
     { id: 'daily', emoji: '👑', title: 'Daily King', desc: 'Hold the best roll of the day on the leaderboard', test: st => num(st.dayTop) >= 1 },
-    { id: 'duelist', emoji: '⚔️', title: 'Duelist', desc: 'Win a duel', test: st => num(st.duelWins) >= 1 },
-    { id: 'gladiator', emoji: '🛡️', title: 'Gladiator', desc: 'Win 10 duels', test: st => num(st.duelWins) >= 10 },
+    { id: 'duelist', emoji: '⚔️', title: 'Duelist', desc: 'Win a duel', test: st => ranked(st) >= 1 },
+    { id: 'gladiator', emoji: '🛡️', title: 'Gladiator', desc: 'Win 10 duels', test: st => ranked(st) >= 10 },
     { id: 'flawless', emoji: '💎', title: 'Flawless', desc: 'Win a rounds duel (first to 2 or more) without anyone else winning a round', test: st => num(st.flawless) >= 1 },
     { id: 'warlord', emoji: '🏰', title: 'Warlord', desc: 'Win a duel with 5 players or more', test: st => num(st.bigWin) >= 1 },
     { id: 'speedrunner', emoji: '⚡', title: 'Speedrunner', desc: 'Win an XP race duel', test: st => num(st.xpWin) >= 1 },

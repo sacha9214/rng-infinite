@@ -89,6 +89,11 @@
       const p = Store.player;
       return this.request('/api/quests', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, quest }) });
     },
+    // Boîte à suggestions et fréquentation (api/site.js) ; toujours en POST.
+    site(action, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/site', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, ...extra }) });
+    },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
     friends(action = 'list', name) {
       const p = Store.player;
@@ -465,7 +470,7 @@
     const lines = [`RNG∞ 🎲 ${a.str}`, '', `${TIER_EMOJI[a.tier]} ${a.tier.toUpperCase()}${rank ? ' • ' + cap(rank.toLowerCase()) : ''}`, ''];
     a.groups.slice(0, 3).forEach(g => lines.push(`${TIER_EMOJI[g.badge.tier]} ${g.badge.emoji} ${g.badge.label}`));
     if (a.groups.length > 3) lines.push(`+${a.groups.length - 3} more`);
-    lines.push('', `${fmt(a.total)} XP`, location.origin + location.pathname);
+    lines.push('', `${fmt(a.total)} XP`, `${location.origin + location.pathname}?ref=share`);
     return lines.join('\n');
   }
 
@@ -969,7 +974,7 @@
     }
   }
 
-  function askName(then, suggested = '', error = '') {
+  function askName(then, suggested = '', error = '', label = 'Save') {
     const offerGoogle = googleEnabled() && !Store.player.google;
     openModal(`
       <h2>Choose your player name</h2>
@@ -977,7 +982,7 @@
       <form id="name-form">
         <input class="input" id="name-input" maxlength="20" autocomplete="off" placeholder="Your name" value="${esc(suggested)}" style="width:100%">
         <p class="field-error" id="name-error"${error ? '' : ' hidden'}>${esc(error)}</p>
-        <div class="actions"><button class="btn-roll small" type="submit">Save & roll</button></div>
+        <div class="actions"><button class="btn-roll small" type="submit">${label}</button></div>
       </form>
       ${offerGoogle ? '<div class="or-google"><span class="panel-note">or sign in to keep your player on every device</span><div id="google-btn" class="google-btn"></div></div>' : ''}`, m => {
       const input = m.querySelector('#name-input');
@@ -1172,7 +1177,7 @@
   async function startRoll(force) {
     if (rollPending) return;
     if (session && !session.finished && force !== true && !session.canReroll) return;
-    if (!Store.player.name) { askName(() => startRoll(force)); return; }
+    if (!Store.player.name) { askName(() => startRoll(force), '', '', 'Save & roll'); return; }
     rollPending = true;
     const buttons = Array.from(document.querySelectorAll('#roll-btn, #r-again'));
     buttons.forEach(b => { b.disabled = true; });
@@ -1186,7 +1191,7 @@
       if (err.status === 409) {
         rollPending = false;
         buttons.forEach(b => { b.disabled = false; });
-        askName(() => startRoll(force), '', `"${Store.player.name}" is already taken by another player. Pick a new name.`);
+        askName(() => startRoll(force), '', `"${Store.player.name}" is already taken by another player. Pick a new name.`, 'Save & roll');
         return;
       }
       const wasGoogle = !!Store.player.google;
@@ -2109,7 +2114,7 @@
           <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
           ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
           <p class="panel-note setup-help">${p.stake
-            ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves.`
+            ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves. Needs 30 rolls on your account.`
             : 'Just for fun: nobody pays anything.'}</p>
         </div>`}
         <div class="setup-summary">
@@ -2346,6 +2351,159 @@
     });
   }
 
+  // ---------------------------------------------------------------- boîte à suggestions (bouton 💡)
+  const SUGG_STATUS = { new: 'Sent', seen: 'Read', planned: 'Planned', done: 'Added', declined: 'Not planned' };
+  const suggDate = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  function openIdeas() {
+    if (!Store.player.name) { askName(openIdeas); return; }
+    openModal(`
+      <h2>💡 Suggest an idea</h2>
+      <p class="panel-note" style="margin:-.3rem 0 .8rem">An idea, a bug, something missing? Your message goes straight to the creator of the game.</p>
+      <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your idea"></textarea>
+      <div class="idea-foot"><span class="panel-note mono" id="idea-count">0 / 500</span><button class="btn-roll small" id="idea-send">Send</button></div>
+      <div id="idea-mine"><div class="empty">Loading…</div></div>`, () => {
+      const text = $('#idea-text'), send = $('#idea-send');
+      const draw = state => {
+        const box = $('#idea-mine');
+        if (!box) return;
+        box.innerHTML = `
+          ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : ''}
+          ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
+            <div class="idea-row">
+              <div class="idea-head"><span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span></div>
+              <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+              ${x.reply ? `<p class="idea-reply"><b>Reply from the creator</b><span data-no-i18n>${esc(x.reply)}</span></p>` : ''}
+            </div>`).join('')}` : ''}`;
+      };
+      text.addEventListener('input', () => { $('#idea-count').textContent = `${text.value.length} / 500`; });
+      send.addEventListener('click', async () => {
+        if (text.value.trim().length < 5) { toast('Write a few words first'); return; }
+        send.disabled = true;
+        try {
+          const state = await Online.site('suggest', { text: text.value, lang: (window.RNGI18n && window.RNGI18n.lang) || 'en' });
+          text.value = '';
+          $('#idea-count').textContent = '0 / 500';
+          toast('Thanks! Your suggestion was sent', 2600, 'achv');
+          draw(state);
+        } catch (err) {
+          toast([422, 429].includes(err.status) ? err.message : 'Could not send your suggestion, try again');
+        }
+        send.disabled = false;
+      });
+      Online.site('mine').then(draw).catch(() => { const box = $('#idea-mine'); if (box) box.innerHTML = ''; });
+      text.focus();
+    });
+  }
+
+  // ---------------------------------------------------------------- page du créateur : fréquentation et suggestions reçues
+  // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
+  function renderOwner() {
+    currentView = 'owner';
+    app.innerHTML = `
+      <div class="page page-wide">
+        <h1 class="page-title" data-no-i18n>Owner</h1>
+        <div id="o-stats"><div class="empty">Loading…</div></div>
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>
+      </div>`;
+    const denied = err => `<div class="empty">${err.status === 403 ? 'This page is for the creator of the game.' : 'Unavailable right now.'}</div>`;
+    const bars = (title, list, label = x => x) => {
+      const max = Math.max(1, ...list.map(x => x.count));
+      return `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3></div>${list.length ? list.slice(0, 12).map(x => `
+        <div class="o-bar"><span class="o-name"${label(x.name) === x.name ? ' data-no-i18n' : ''}>${esc(label(x.name))}</span><span class="o-track"><span style="width:${(x.count / max) * 100}%"></span></span><span class="mono">${fmt(x.count)}</span></div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    };
+    Online.site('stats').then(st => {
+      const box = $('#o-stats');
+      if (currentView !== 'owner' || !box) return;
+      const today = st.days[0], week = st.days.slice(0, 7), sum = (list, k) => list.reduce((x, d) => x + d[k], 0);
+      box.innerHTML = `
+        <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC.</p>
+        <div class="tiles">
+          ${tile('Visits today', fmt(today.visits), `${fmt(today.uniq)} devices · ${fmt(today.fresh)} new`)}
+          ${tile('Visits, 7 days', fmt(sum(week, 'visits')), `${fmt(sum(week, 'fresh'))} new devices`)}
+          ${tile('Visits, 30 days', fmt(sum(st.days, 'visits')), `${fmt(sum(st.days, 'fresh'))} new devices`)}
+          ${tile('Players', fmt(st.totals.named), `${fmt(st.totals.ranked)} on the leaderboard`)}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('Where visitors come from · 30 days', st.month.refs, n => (n === 'direct' ? 'Direct (typed, bookmark, app)' : n))}
+          ${bars('Tagged links (?ref=…) · 30 days', st.month.sources, n => ({ share: 'share · a shared roll', duel: 'duel · a duel invite' }[n] || n))}
+          ${bars('Countries · 30 days', st.month.countries, n => (n === 'ZZ' ? 'Unknown' : n))}
+          ${bars('Device and language · 30 days', [...st.month.devices, ...st.month.langs])}
+        </div>
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Day by day</h3><span class="panel-note">players and rolls are kept 8 days</span></div>
+          <div class="o-table"><div class="o-tr head"><span>Day</span><span>Visits</span><span>Devices</span><span>New</span><span>Players</span><span>Rolls</span></div>
+          ${st.days.slice(0, 14).map(d => `<div class="o-tr"><span>${d.day}</span><span>${fmt(d.visits)}</span><span>${fmt(d.uniq)}</span><span>${fmt(d.fresh)}</span><span>${d.players ? fmt(d.players) : '–'}</span><span>${d.rolls ? fmt(d.rolls) : '–'}</span></div>`).join('')}</div>
+        </div>`;
+    }).catch(err => { if ($('#o-stats')) $('#o-stats').innerHTML = denied(err); });
+    const drawInbox = data => {
+      const box = $('#o-inbox');
+      if (currentView !== 'owner' || !box) return;
+      $('#o-count').textContent = `${data.total} received`;
+      box.innerHTML = data.suggestions.length ? data.suggestions.map(x => `
+        <div class="idea-row" data-id="${x.id}">
+          <div class="idea-head"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a><span class="panel-note">${suggDate(x.t)} · ${x.lang || '?'}</span>
+            <select class="input o-status" aria-label="Status">${Object.entries(SUGG_STATUS).map(([k, v]) => `<option value="${k}"${k === x.status ? ' selected' : ''}>${v}</option>`).join('')}</select>
+            <button class="btn ghost" data-o="delete">Delete</button></div>
+          <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+          <div class="o-reply"><input class="input" maxlength="300" placeholder="Reply shown to the player (optional)" value="${esc(x.reply)}"><button class="btn" data-o="reply">Save reply</button></div>
+        </div>`).join('') : '<div class="empty">No suggestion yet.</div>';
+    };
+    const act = (action, extra) => Online.site(action, extra).then(drawInbox).catch(err => toast(err.status === 403 ? 'Owner only' : 'Unavailable right now, try again'));
+    $('#o-inbox').addEventListener('change', e => { const row = e.target.closest('.idea-row'); if (row && e.target.matches('.o-status')) act('mark', { id: row.dataset.id, status: e.target.value }); });
+    $('#o-inbox').addEventListener('click', e => {
+      const btn = e.target.closest('[data-o]'), row = e.target.closest('.idea-row');
+      if (!btn || !row) return;
+      if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply saved'));
+    });
+    Online.site('inbox').then(drawInbox).catch(err => { if ($('#o-inbox')) $('#o-inbox').innerHTML = denied(err); });
+  }
+
+  // ---------------------------------------------------------------- accueil d'un nouveau joueur : 3 écrans
+  // Montré une fois, à la première visite (aucun tirage, pas de pseudo) ; rejouable depuis « How it works ».
+  function openIntro() {
+    const demo = analysis(123321);
+    const mini = (n, skin, tier = 'rare') => `<div class="num-card sm${skin ? skinClass(skin) : ''}" data-tier="${tier}">${slotsHTML(String(n))}</div>`;
+    const slides = [
+      { emoji: '🎲', title: 'Every number hides badges',
+        visual: `<div class="num-card md" data-tier="${demo.tier}">${slotsHTML(demo.str)}</div><div class="pill-row">${demo.groups.slice(0, 3).map(g => `<span class="badge-pill" data-tier="${g.badge.tier}">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join('')}</div><span class="ep-pill">${fmt(demo.total)} XP</span>`,
+        text: `Hit Generate to roll a number from 0 to 1,000,000. Each pattern in it is a badge worth XP: the rarer the badge, the more XP. There are ${Engine.badges.length} badges to collect.` },
+      { emoji: '⚔️', title: 'Duel your friends, live',
+        visual: `<div class="intro-vs">${mini(777420, 'fire', 'epic')}<b>VS</b>${mini(372368, 'ocean')}</div>`,
+        text: 'Create a duel, share the code, and everyone rolls at the same time. The highest roll wins the round. Nobody around? Play against bots.' },
+      { emoji: '🪙', title: 'Earn coins, unlock skins',
+        visual: `<div class="intro-vs">${mini(235, 'neon')}${mini(711, 'gold')}${mini(42, 'blocks')}</div>`,
+        text: 'Every roll earns coins. So do the daily quests and your duel wins. Spend them in the Shop on skins and cases that change how your number looks.' },
+    ];
+    let at = 0;
+    const done = () => { Store.setSetting('onboarded', true); };
+    openModal(`<div class="intro" id="intro"></div>`, () => {
+      const draw = () => {
+        const sl = slides[at], last = at === slides.length - 1;
+        $('#intro').innerHTML = `
+          <div class="intro-visual">${sl.visual}</div>
+          <h2>${sl.emoji} ${sl.title}</h2>
+          <p class="intro-text">${sl.text}</p>
+          <div class="intro-dots">${slides.map((_, i) => `<i class="${i === at ? 'on' : ''}"></i>`).join('')}</div>
+          <div class="intro-buttons">
+            ${last ? '' : '<button class="btn ghost" data-onboard-skip>Skip</button>'}
+            ${at ? '<button class="btn" data-intro-back>Back</button>' : ''}
+            <button class="btn-roll small" data-intro-next>${last ? '🎲 Roll my first number' : 'Next'}</button>
+          </div>`;
+      };
+      draw();
+      done(); // vu = on ne le remontre plus, même fermé par la croix
+      $('#intro').addEventListener('click', e => {
+        if (e.target.closest('[data-onboard-skip]')) return closeModal();
+        if (e.target.closest('[data-intro-back]')) { at--; return draw(); }
+        if (e.target.closest('[data-intro-next]')) {
+          if (at < slides.length - 1) { at++; return draw(); }
+          closeModal();
+          if (location.hash.replace(/^#\/?/, '')) location.hash = '#/';
+          setTimeout(startRoll, 60);
+        }
+      });
+    });
+  }
+
   // ---------------------------------------------------------------- amis
   let friendsTimer = 0;
   function renderFriends() {
@@ -2477,6 +2635,7 @@
     clearTimeout(Room.timer);
     if (Room.anim) Room.anim.cancel();
     Room.anim = null;
+    clearRoomFx();
     Room.token++;
   }
 
@@ -2661,7 +2820,7 @@
         ${wait ? `<p class="room-wait">${wait}</p>` : ''}`;
       if (setHTML($('#room-lobby'), html)) {
         const share = $('#room-share');
-        if (share) share.addEventListener('click', () => shareOrCopy(`⚔️ Live duel on RNG∞ (${d.size} players, ${goalText(d)}), code ${d.code}\n${location.origin + location.pathname + roomHref(d.code)}`, 'Duel invite'));
+        if (share) share.addEventListener('click', () => shareOrCopy(`⚔️ Live duel on RNG∞ (${d.size} players, ${goalText(d)}), code ${d.code}\n${location.origin + location.pathname}?ref=duel${roomHref(d.code)}`, 'Duel invite'));
         const join = $('#room-join');
         if (join) join.addEventListener('click', () => joinRoom(d.code));
         const start = $('#room-start');
@@ -2694,6 +2853,7 @@
     // Un joueur a changé de skin dans Shop : ses cartes changent entre deux manches, jamais pendant une révélation.
     if (!Room.anim && $('#room-stage') && Room.skinSig !== skinSig(d)) {
       const r = Room.shown ? d.rounds[Room.shown - 1] : null;
+      clearRoomFx();
       $('#room-stage').innerHTML = stageHTML(r);
       if (r && r.winner !== null) d.players.forEach((p, j) => { if (j !== r.winner) $(`#rs-${j}`).classList.add('lost'); });
       Room.skinSig = skinSig(d);
@@ -2730,7 +2890,10 @@
       const rematch = !me ? ''
         : d.next ? `<button class="btn-roll small" id="room-rematch">🔁 ${d.nextBy === me.name ? 'Back to the rematch' : `${esc(d.nextBy)} wants a rematch: play`}</button>`
         : '<button class="btn-roll small" id="room-rematch">🔁 Rematch</button>';
-      cta = `<div class="room-result">${banner}</div><div class="room-buttons">${rematch}<a class="btn" href="#/duel">New game</a></div>`;
+      // Victoire sans récompense (anti-farm) : on dit pourquoi au gagnant, pour qu'il ne croie pas à un bug.
+      const why = { pair: 'you already beat this opponent 3 times today', day: 'you reached the limit of 10 rewarded wins today', new: 'your opponent\'s account is too new (under 20 rolls)' }[d.reward];
+      const noReward = why && w !== null && d.players[w].me ? `<p class="panel-note room-noreward">No coins or achievements for this win: ${why}. It still counts in your head-to-head.</p>` : '';
+      cta = `<div class="room-result">${banner}</div>${noReward}<div class="room-buttons">${rematch}<a class="btn" href="#/duel">New game</a></div>`;
     } else if (Room.anim) {
       cta = `<p class="room-wait">Round ${Room.shown + 1}…</p>`;
     } else if (!me) {
@@ -2788,6 +2951,11 @@
   }
 
   const skinSig = d => d.players.map(p => p.skin || '').join('|');
+  // Retire les séquences de skin encore affichées dans la salle (manche précédente).
+  function clearRoomFx() {
+    (Room.fx || []).forEach(fx => { if (fx) fx.destroy(); });
+    Room.fx = [];
+  }
 
   // Scène : une carte par joueur. Sans manche : "??????" ; sinon la manche révélée, avec son gagnant.
   function stageHTML(r, spinning = false) {
@@ -2840,8 +3008,11 @@
     const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
-    // La signature du créateur se joue aussi en duel, sur sa carte (skin Owner équipé).
-    const ownerFx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j] && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
+    // La signature du créateur se joue aussi en duel, sur sa carte (skin Owner équipé). Celle de la manche d'avant est
+    // retirée d'abord : son calque vit hors de la scène (au-dessus des cartes) et resterait affiché, cristaux déjà
+    // sortis, par-dessus la nouvelle manche.
+    clearRoomFx();
+    const ownerFx = Room.fx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j] && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
@@ -2894,7 +3065,7 @@
       if (Room.shown < Room.data.rounds.length) playRound(Room.shown);
     });
     // Animation coupée (on quitte le duel) : le tirage est gardé quand même, à l'heure où il aurait été révélé.
-    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); ownerFx.forEach(fx => { if (fx) fx.stop(); }); at(clock + 600, keepMine); } };
+    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); clearRoomFx(); at(clock + 600, keepMine); } };
     drawRoom();
   }
 
@@ -3003,12 +3174,12 @@
         <p>Sign in with Google to keep your history, stats and badges on every device. You can also export them (JSON) from the player menu.</p>
         <p class="muted">Based on the daily game <a href="https://www.rngdle.com" target="_blank" rel="noopener">rngdle.com</a>: this version removes the daily limit and adds history, stats, Google sign-in and a leaderboard between friends.</p>
         <p class="muted"><a href="privacy.html">Privacy policy</a></p>
-        <p><a class="btn" href="#/">Go roll</a></p>
+        <p><a class="btn" href="#/">Go roll</a> <button class="btn ghost" data-intro>Replay the intro</button> <button class="btn ghost" data-idea>💡 Suggest an idea</button></p>
       </div>`;
   }
 
   // ---------------------------------------------------------------- navigation, thème, clavier
-  const ROUTES = { '': renderHome, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends };
+  const ROUTES = { '': renderHome, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -3067,6 +3238,8 @@
     if (e.target.closest('a[href^="#/"]')) return;
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
+    if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
+    if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
     const number = e.target.closest('[data-number]');
@@ -3126,4 +3299,32 @@
   syncPlayer();
   route();
   syncHistory().catch(() => {});
+
+  // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
+  const brandNew = !Store.rolls.length && !Store.player.name;
+  if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
+
+  // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.
+  // Envoyé : le site d'origine (pas l'adresse complète), ?ref= ou ?utm_source= s'il y en a, téléphone ou ordinateur,
+  // la langue, et deux drapeaux « première visite » / « première visite du jour » tenus sur l'appareil.
+  // Rien n'identifie le visiteur ; les navigateurs pilotés par un robot ne comptent pas.
+  try {
+    const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    if (!sessionStorage.getItem('rng-visit') && (!navigator.webdriver || local)) {
+      sessionStorage.setItem('rng-visit', '1');
+      const today = new Date().toISOString().slice(0, 10);
+      const first = brandNew && !localStorage.getItem('rng-first-visit');
+      const daily = localStorage.getItem('rng-last-visit') !== today;
+      if (!localStorage.getItem('rng-first-visit')) localStorage.setItem('rng-first-visit', today);
+      localStorage.setItem('rng-last-visit', today);
+      let ref = '';
+      try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* pas d'origine */ }
+      const q = new URLSearchParams(location.search);
+      Online.request('/api/site', { method: 'POST', body: JSON.stringify({
+        action: 'visit', ref, src: q.get('utm_source') || q.get('ref') || '', first, daily,
+        mobile: window.matchMedia('(max-width: 720px)').matches || /Mobi|Android/i.test(navigator.userAgent),
+        lang: (window.RNGI18n && window.RNGI18n.lang) || 'en',
+      }) }).catch(() => {});
+    }
+  } catch (e) { /* stockage bloqué : pas de balise */ }
 })();

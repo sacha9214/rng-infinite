@@ -2298,3 +2298,62 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .case-contents i { width: 12px; height: 5px; border-radius: 2px; background: var(--rar); }
 @media (max-width: 560px) { .case-cell { width: 6rem; min-height: 5.6rem; } }
 .case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }
+.room-noreward { max-width: 30rem; margin: .2rem auto .6rem; text-align: center; }
+
+/* ================================================================== suggestions, page Owner, accueil (2026-10-07) */
+.gh-corner.idea-corner { bottom: 60px; font-size: 1rem; }
+.idea-text { width: 100%; min-height: 6.5rem; resize: vertical; font: inherit; font-size: .9rem; line-height: 1.45; padding: .7rem .8rem; text-transform: none; letter-spacing: 0; text-align: left; }
+.idea-foot { display: flex; justify-content: space-between; align-items: center; margin: .5rem 0 .4rem; }
+.idea-row { padding: .7rem 0; border-top: 1px solid var(--outline); }
+.idea-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.idea-body { margin: .35rem 0 0; font-size: .86rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.idea-status { padding: .1rem .5rem; border-radius: 999px; font-size: .62rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--outline-mid); color: var(--prose-2); }
+.idea-status[data-status="seen"] { border-color: #3b82f6; color: #3b82f6; }
+.idea-status[data-status="planned"] { border-color: #a855f7; color: #a855f7; }
+.idea-status[data-status="done"] { border-color: var(--success); color: var(--success); }
+.idea-status[data-status="declined"] { opacity: .6; }
+.idea-reply { margin: .45rem 0 0; padding: .5rem .7rem; border-left: 3px solid var(--ep-outline); border-radius: 0 .4rem .4rem 0; background: var(--surface-dim); font-size: .82rem; }
+.idea-reply b { display: block; font-size: .64rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ep-text); margin-bottom: .15rem; }
+.o-bar { display: grid; grid-template-columns: minmax(0, 11rem) 1fr auto; align-items: center; gap: .6rem; padding: .28rem 0; font-size: .8rem; }
+.o-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-track { height: .45rem; border-radius: 999px; background: var(--surface-raised); overflow: hidden; }
+.o-track > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #a855f7); }
+.o-table { font-size: .78rem; font-family: var(--font-mono); overflow-x: auto; }
+.o-tr { display: grid; grid-template-columns: 7rem repeat(5, minmax(3.5rem, 1fr)); gap: .4rem; padding: .3rem 0; border-top: 1px solid var(--outline); text-align: right; }
+.o-tr span:first-child { text-align: left; }
+.o-tr.head { border-top: 0; font-family: inherit; font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); }
+.o-status { width: auto; padding: .25rem .4rem; font-size: .72rem; margin-left: auto; text-transform: none; letter-spacing: 0; }
+.o-reply { display: flex; gap: .4rem; margin-top: .5rem; }
+.o-reply .input { flex: 1; min-width: 0; font-size: .8rem; text-transform: none; letter-spacing: 0; text-align: left; }
+
+.intro { text-align: center; padding: .3rem .2rem 0; }
+.intro-visual { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; min-height: 9.5rem; margin: .4rem 0 1rem; padding: 1.1rem .8rem; border-radius: .8rem; background: radial-gradient(ellipse at 50% 0%, var(--surface-raised), var(--surface-dim)); border: 1px solid var(--outline); }
+.intro-vs { display: flex; align-items: center; justify-content: center; gap: .7rem; flex-wrap: wrap; }
+.intro-vs b { font-size: .8rem; letter-spacing: .1em; color: var(--prose-3); }
+.intro-vs .num-card.sm { font-size: 1.25rem; padding: .3rem .7rem; }
+.intro h2 { margin: 0 0 .5rem; }
+.intro-text { margin: 0 auto; max-width: 27rem; font-size: .9rem; line-height: 1.55; color: var(--prose-2); min-height: 5.6rem; }
+.intro-dots { display: flex; justify-content: center; gap: .4rem; margin: .9rem 0; }
+.intro-dots i { width: .45rem; height: .45rem; border-radius: 50%; background: var(--outline-strong); transition: width .25s var(--ease-out), background .25s; }
+.intro-dots i.on { width: 1.3rem; border-radius: 999px; background: var(--prose); }
+.intro-buttons { display: flex; justify-content: center; align-items: center; gap: .5rem; flex-wrap: wrap; }
+
+/* En-tête : 7 onglets, c'est large. On retire dans l'ordre ce qui se règle aussi dans « Player & settings »
+   (le thème), puis les libellés des onglets, pour que rien ne se chevauche entre 720 et 1180 px. */
+@media (max-width: 1180px) { .theme-switch { display: none; } .player-btn { max-width: 8rem; } }
+@media (max-width: 1020px) { .nav a span { display: none; } .nav { margin-left: .2rem; } }
+
+/* Téléphone : 7 onglets + langue + joueur doivent tenir sur 360 px de large ; en dessous, les onglets défilent
+   plutôt que de pousser la page de côté. */
+@media (max-width: 560px) {
+  .topbar { padding: .5rem .6rem; gap: .3rem; }
+  .topbar-left { flex: 1; gap: .3rem; }
+  .topbar-right { gap: .3rem; flex: none; }
+  .nav { margin-left: 0; gap: 0; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { padding: .42rem .34rem; flex: none; }
+  .player-btn { padding: 0 .5rem; }
+  .player-btn span { display: none; }
+  .lang-switch { gap: .05rem; }
+  .lang-switch button { padding: .3rem .12rem; }
+}

@@ -70,6 +70,22 @@ const stakeOf = room => Number(room.h.stake) || 0;
 const potOf = room => Object.entries(room.h).filter(([k]) => k.startsWith('paid:')).reduce((x, [, v]) => x + (Number(v) || 0), 0);
 const coinsOf = async id => Shop.balance(await readStats(id));
 
+// Anti-farm (comptes secondaires) : une victoire de duel ne donne ses récompenses (pièces, quête, succès de duel) que
+// si elle a un vrai enjeu. Le face-à-face et le nombre de victoires affichés, eux, comptent toujours.
+const WIN_PAIR_CAP = 3; // victoires récompensées par jour contre le même adversaire
+const WIN_DAY_CAP = 10; // victoires récompensées par jour, au total
+const MIN_ROLLS_OPPONENT = 20; // l'adversaire battu doit avoir un vrai compte (au moins 20 tirages)
+const MIN_ROLLS_STAKE = 30; // tirages nécessaires pour jouer un duel avec mise
+const winsKey = (day, id) => `dw:${day}:${id}`; // victoires du jour d'un joueur : champ "total" + un champ par adversaire
+// Refus d'une mise : pas assez de tirages (compte trop neuf) ou pas assez de pièces. null = accepté.
+async function stakeRefusal(id, stake) {
+  const stats = await readStats(id);
+  const rolls = Number(stats.rolls) || 0;
+  if (rolls < MIN_ROLLS_STAKE) return `Stakes unlock after ${MIN_ROLLS_STAKE} rolls (you have ${rolls})`;
+  if (Shop.balance(stats) < stake) return `Not enough coins for this stake (${stake})`;
+  return null;
+}
+
 // Une partie publique en cours reste dans "Live now" tant qu'elle bouge ; finie, elle en sort.
 const touchLive = (room, now = Date.now()) => (room.h.public === '1' ? [['ZADD', LIVE_KEY, now, room.code]] : []);
 
@@ -174,6 +190,7 @@ async function advance(room, now = Date.now()) {
   if (lock !== 'OK') return (await load(room.code)) || room;
   const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(() => crypto.randomInt(0, 1000001)) };
   room.rounds.push(round);
+  const outcome = await duelOutcome(room, now);
   // Tirages (et bilan du duel s'il se termine) appliqués seulement une fois la manche révélée : voir queueReveal.
   const rolls = room.players.map((p, i) => [p.id, round.n[i], round.t]).filter((x, i) => !room.players[i].bot);
   await redis([
@@ -184,10 +201,12 @@ async function advance(room, now = Date.now()) {
     ...touchLive(room, now),
     ...botReactions(room, round),
     ...(score(room).done ? [['ZREM', LIVE_KEY, room.code]] : []), // partie finie : sort de Live now tout de suite
-    queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: [...duelWrites(room), ...questWrites(room, now)],
+    queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: [...outcome.writes, ...questWrites(room, now, outcome.rewarded)],
       ...(score(room).done && stakeOf(room) ? { wager: { code: room.code, winner: score(room).winner === null ? null : room.players[score(room).winner].id } } : {}) }),
     ['HSET', roomKey(room.code), 'due', round.revealAt + REVEAL_MS], // le sondage de la salle saura quand appliquer
+    ...(outcome.reward ? [['HSET', roomKey(room.code), 'reward', outcome.reward]] : []),
   ]);
+  if (outcome.reward) room.h.reward = outcome.reward;
   room.h.due = String(round.revealAt + REVEAL_MS);
   return room;
 }
@@ -211,35 +230,50 @@ function botReactions(room, round) {
 // Partie avec des bots : rien (pas de victoire, de face-à-face ni de pièces de victoire à farmer).
 // Bilan d'un duel terminé (duels joués, victoires, face-à-face), à appliquer avec la révélation de la dernière manche.
 // Parties avec bots : rien (anti-farm).
-function duelWrites(room) {
+// Renvoie { writes, rewarded, reward } : reward = 'ok' si la victoire est récompensée, sinon la raison ('pair' : déjà
+// 3 victoires aujourd'hui contre ces adversaires, 'day' : 10 victoires récompensées aujourd'hui, 'new' : adversaires au
+// compte trop neuf) ; absent s'il n'y a pas de gagnant à récompenser (partie en cours, bots, égalité).
+async function duelOutcome(room, now = Date.now()) {
   const sc = score(room);
-  if (!sc.done || hasBots(room)) return [];
+  if (!sc.done || hasBots(room)) return { writes: [], rewarded: false, reward: null };
   const writes = room.players.map(p => ['HINCRBY', statsKey(p.id), 'duels', 1]);
-  if (sc.winner !== null) {
-    // Face-à-face : le gagnant bat chacun des autres (h2h:<id> → "w:<adversaire>" victoires, "l:<adversaire>" défaites).
-    const winnerId = room.players[sc.winner].id;
-    room.players.forEach((p, i) => {
-      if (i === sc.winner) return;
-      writes.push(['HINCRBY', `h2h:${winnerId}`, `w:${p.id}`, 1], ['HINCRBY', `h2h:${p.id}`, `l:${winnerId}`, 1]);
-    });
-    const w = statsKey(room.players[sc.winner].id);
-    writes.push(['HINCRBY', w, 'duelWins', 1]);
-    const alone = sc.wins.every((v, i) => i === sc.winner || v === 0);
-    if (room.mode !== 'xp' && room.target >= 2 && alone) writes.push(['HINCRBY', w, 'flawless', 1]);
-    if (room.players.length >= 5) writes.push(['HINCRBY', w, 'bigWin', 1]);
-    if (room.mode === 'xp') writes.push(['HINCRBY', w, 'xpWin', 1]);
+  if (sc.winner === null) return { writes, rewarded: false, reward: null };
+  const winner = room.players[sc.winner], others = room.players.filter((p, i) => i !== sc.winner);
+  const w = statsKey(winner.id), day = dayKey(now), wins = winsKey(day, winner.id);
+  // Face-à-face : le gagnant bat chacun des autres (h2h:<id> → "w:<adversaire>" victoires, "l:<adversaire>" défaites).
+  others.forEach(p => writes.push(['HINCRBY', `h2h:${winner.id}`, `w:${p.id}`, 1], ['HINCRBY', `h2h:${p.id}`, `l:${winner.id}`, 1]));
+  writes.push(['HINCRBY', w, 'duelWins', 1]);
+  const [flat] = await redis([['HGETALL', wins]]);
+  const today = {};
+  for (let i = 0; i < (flat || []).length; i += 2) today[flat[i]] = Number(flat[i + 1]) || 0;
+  const rolls = await Promise.all(others.map(async p => Number((await readStats(p.id)).rolls) || 0));
+  const real = others.filter((p, i) => rolls[i] >= MIN_ROLLS_OPPONENT);
+  const reward = (today.total || 0) >= WIN_DAY_CAP ? 'day'
+    : !real.length ? 'new'
+    : !real.some(p => (today[p.id] || 0) < WIN_PAIR_CAP) ? 'pair'
+    : 'ok';
+  others.forEach(p => writes.push(['HINCRBY', wins, p.id, 1]));
+  writes.push(['EXPIRE', wins, 2 * 86400]);
+  if (reward !== 'ok') {
+    writes.push(['HINCRBY', w, 'duelUnpaid', 1]); // victoire comptée, mais sans pièces ni succès (voir js/shop.js)
+    return { writes, rewarded: false, reward };
   }
-  return writes;
+  writes.push(['HINCRBY', wins, 'total', 1]);
+  const alone = sc.wins.every((v, i) => i === sc.winner || v === 0);
+  if (room.mode !== 'xp' && room.target >= 2 && alone) writes.push(['HINCRBY', w, 'flawless', 1]);
+  if (room.players.length >= 5) writes.push(['HINCRBY', w, 'bigWin', 1]);
+  if (room.mode === 'xp') writes.push(['HINCRBY', w, 'xpWin', 1]);
+  return { writes, rewarded: true, reward };
 }
 
 // Compteurs du jour pour les quêtes, à la fin d'un duel : « duel fini » pour chaque humain (bots compris dans la
 // partie), « duel gagné » seulement contre de vrais joueurs.
-function questWrites(room, now) {
+function questWrites(room, now, rewarded) {
   const sc = score(room);
   if (!sc.done) return [];
   const day = dayKey(now);
   const writes = humans(room).flatMap(p => [['HINCRBY', questKey(day, p.id), 'duels', 1], ['EXPIRE', questKey(day, p.id), QUEST_TTL]]);
-  if (sc.winner !== null && !hasBots(room)) writes.push(['HINCRBY', questKey(day, room.players[sc.winner].id), 'duelWins', 1]);
+  if (sc.winner !== null && rewarded) writes.push(['HINCRBY', questKey(day, room.players[sc.winner].id), 'duelWins', 1]);
   return writes;
 }
 
@@ -276,6 +310,7 @@ async function view(room, me) {
   const last = room.rounds[k - 1];
   return {
     code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room),
+    reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
       name: p.name, title: p.title || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
@@ -394,7 +429,8 @@ module.exports = async (req, res) => {
         for (let i = 0; i < bots; i++) players.push(makeBot(players.map(p => p.name)));
       }
       const r = bots ? { ...rules(body), isPublic: false, stake: 0 } : rules(body); // pas de mise contre des bots
-      if (r.stake && (await coinsOf(playerId)) < r.stake) return send(res, 422, { error: `Not enough coins for this stake (${r.stake})` });
+      const refused = r.stake ? await stakeRefusal(playerId, r.stake) : null;
+      if (refused) return send(res, 422, { error: refused });
       const code = await createRoom(r, players);
       if (!code) return send(res, 503, { error: 'Could not create a duel, try again' });
       return send(res, 200, await view(await load(code), playerId));
@@ -411,7 +447,8 @@ module.exports = async (req, res) => {
       if (member) return send(res, 200, await view(room, playerId));
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
       const stake = stakeOf(room);
-      if (stake && (await coinsOf(playerId)) < stake) return send(res, 422, { error: `Not enough coins for this stake (${stake})` });
+      const refused = stake ? await stakeRefusal(playerId, stake) : null;
+      if (refused) return send(res, 422, { error: refused });
       // Une place à la fois : le marqueur de membre évite les doublons, le compteur évite de dépasser la taille.
       const [isNew] = await redis([['HSETNX', roomKey(code), `m:${playerId}`, 1]]);
       if (Number(isNew) !== 1) return send(res, 200, await view((await load(code)) || room, playerId));

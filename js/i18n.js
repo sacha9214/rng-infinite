@@ -144,6 +144,25 @@
     '— hit Generate (or Space) as often as you like.': '— appuie sur Générer (ou Espace) autant que tu veux.', 'XP, so a badge earned by 1 number in 1,000 is worth about 100,000 XP. Related badges form a family (e.g. Pair → Two Pair → Three Pair); only the best badge of a family counts toward your total.': 'XP : un badge obtenu par 1 nombre sur 1 000 vaut donc environ 100 000 XP. Les badges proches forment une famille (ex. Pair → Two Pair → Three Pair) ; seul le meilleur badge d\'une famille compte dans ton total.',
     '100 × 1,000,001 ÷ (numbers that earn it)': '100 × 1 000 001 ÷ (nombres qui l\'obtiennent)', 'under 0.001% (1 in 100,000+)': 'moins de 0,001 % (1 sur 100 000 et plus)',
     'Common': 'Common', 'Legendary': 'Legendary',
+    'you already beat this opponent 3 times today': 'tu as déjà battu cet adversaire 3 fois aujourd\'hui', 'you reached the limit of 10 rewarded wins today': 'tu as atteint la limite de 10 victoires récompensées aujourd\'hui',
+    "your opponent's account is too new (under 20 rolls)": 'le compte de ton adversaire est trop récent (moins de 20 tirages)',
+    // suggestions
+    '💡 Suggest an idea': '💡 Proposer une idée', 'Suggest an idea': 'Proposer une idée', 'An idea, a bug, something missing? Your message goes straight to the creator of the game.': 'Une idée, un bug, un manque ? Ton message arrive directement au créateur du jeu.',
+    'Your idea…': 'Ton idée…', 'Your idea': 'Ton idée', 'Send': 'Envoyer', 'Your suggestions': 'Tes suggestions', 'Reply from the creator': 'Réponse du créateur', 'Sent': 'Envoyée', 'Read': 'Lue', 'Planned': 'Prévue', 'Added': 'Ajoutée', 'Not planned': 'Pas prévue',
+    'Write a few words first': 'Écris d\'abord quelques mots', 'Thanks! Your suggestion was sent': 'Merci ! Ta suggestion est envoyée', 'Could not send your suggestion, try again': 'Envoi impossible, réessaie', '📥 Inbox & visitors': '📥 Suggestions reçues et visiteurs',
+    // accueil des nouveaux joueurs
+    'Every number hides badges': 'Chaque nombre cache des badges', 'Duel your friends, live': 'Défie tes amis en direct', 'Earn coins, unlock skins': 'Gagne des pièces, débloque des skins',
+    'Create a duel, share the code, and everyone rolls at the same time. The highest roll wins the round. Nobody around? Play against bots.': 'Crée un duel, partage le code, et tout le monde tire en même temps. Le plus gros tirage gagne la manche. Personne en ligne ? Joue contre des bots.',
+    'Every roll earns coins. So do the daily quests and your duel wins. Spend them in the Shop on skins and cases that change how your number looks.': 'Chaque tirage rapporte des pièces. Les quêtes du jour et tes victoires en duel aussi. Dépense-les dans la Boutique en skins et en caisses qui changent l\'apparence de ton nombre.',
+    'Skip': 'Passer', 'Next': 'Suivant', 'Back': 'Retour', '🎲 Roll my first number': '🎲 Tirer mon premier nombre', 'Replay the intro': 'Revoir l\'intro',
+    // page du créateur
+    'Suggestions': 'Suggestions', 'Visits today': 'Visites aujourd\'hui', 'Visits, 7 days': 'Visites, 7 jours', 'Visits, 30 days': 'Visites, 30 jours', 'Players': 'Joueurs', 'Where visitors come from': 'D\'où viennent les visiteurs', '30 days': '30 jours',
+    'Tagged links (?ref=…)': 'Liens marqués (?ref=…)', 'Countries': 'Pays', 'Device and language': 'Appareil et langue', 'Day by day': 'Jour par jour', 'players and rolls are kept 8 days': 'joueurs et tirages gardés 8 jours',
+    'Day': 'Jour', 'Visits': 'Visites', 'Devices': 'Appareils', 'New': 'Nouveaux', 'Direct (typed, bookmark, app)': 'Direct (adresse tapée, favori, appli)', 'share': 'share', 'a shared roll': 'un tirage partagé', 'a duel invite': 'une invitation en duel',
+    'Unknown': 'Inconnu', 'Nothing yet.': 'Rien pour l\'instant.', 'No suggestion yet.': 'Aucune suggestion pour l\'instant.', 'Delete': 'Supprimer', 'Save reply': 'Enregistrer la réponse', 'Reply saved': 'Réponse enregistrée',
+    'Reply shown to the player (optional)': 'Réponse montrée au joueur (facultatif)', 'Status': 'Statut', 'This page is for the creator of the game.': 'Cette page est réservée au créateur du jeu.', 'Unavailable right now.': 'Indisponible pour le moment.',
+    'Unavailable right now, try again': 'Indisponible pour le moment, réessaie', 'Owner only': 'Réservé à l\'Owner', 'Delete this suggestion?': 'Supprimer cette suggestion ?',
+    'Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC.': 'Compteurs anonymes par jour, depuis le 6 oct. 2026 : pas de cookie, pas d\'adresse IP, rien sur l\'identité du visiteur. Une visite = le site ouvert dans un onglet. Jours en UTC.',
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
   };
@@ -186,7 +205,9 @@
     [/^([\d,]+) each$/, m => `${nb(m[1])} chacun`],
     [/^(.+)'s game$/, m => `Partie de ${m[1]}`], [/^(.+) wants a rematch: play$/, m => `${m[1]} veut une revanche : jouer`],
     [/^Start vs ([\d,]+) bots?$/, m => `Lancer contre ${m[1]} bot${s(m[1])}`], [/^Play vs ([\d,]+) bots?$/, m => `Jouer contre ${m[1]} bot${s(m[1])}`],
-    [/^Each player pays 🪙 ([\d,]+) when joining\. The winner takes the pot of 🪙 ([\d,]+)\. Refunded on a draw or if everyone leaves\.$/, m => `Chaque joueur paie 🪙 ${nb(m[1])} en entrant. Le gagnant prend le pot de 🪙 ${nb(m[2])}. Remboursé en cas d'égalité ou si tout le monde part.`],
+    [/^Each player pays 🪙 ([\d,]+) when joining\. The winner takes the pot of 🪙 ([\d,]+)\. Refunded on a draw or if everyone leaves\. Needs 30 rolls on your account\.$/, m => `Chaque joueur paie 🪙 ${nb(m[1])} en entrant. Le gagnant prend le pot de 🪙 ${nb(m[2])}. Remboursé en cas d'égalité ou si tout le monde part. Il faut 30 tirages sur ton compte.`],
+    [/^No coins or achievements for this win: (.+)\. It still counts in your head-to-head\.$/, m => `Pas de pièces ni de succès pour cette victoire : ${one(m[1])}. Elle compte quand même dans ton face-à-face.`],
+    [/^Stakes unlock after (\d+) rolls \(you have ([\d,]+)\)$/, m => `Les mises se débloquent après ${m[1]} tirages (tu en as ${nb(m[2])})`],
     [/^you already own it: 🪙 ([\d,]+) refunded$/, m => `tu l'as déjà : 🪙 ${nb(m[1])} remboursées`],
     [/^Open another$/, () => 'En ouvrir une autre'],
     [/^([\d,.]+) XP per roll$/, m => `${nb(m[1])} XP par tirage`], [/^(\d+)% of the collection$/, m => `${m[1]} % de la collection`],
@@ -211,6 +232,10 @@
     [/^bottom (\S+)%$/, m => `les ${m[1]} % les plus bas`], [/^top (\S+)%$/, m => `top ${m[1]} %`], [/^([\d.–]+)% of rolls$/, m => `${m[1].replace(/\./g, ',')} % des tirages`],
     [/^(Laugh|Cry|Angry|Cool|Shocked|King) \(press (\d)\)$/, m => `${{ Laugh: 'Rire', Cry: 'Pleurer', Angry: 'Colère', Cool: 'Cool', Shocked: 'Choqué', King: 'Roi' }[m[1]]} (touche ${m[2]})`],
     [/^Delete all ([\d,]+) rolls from this device\? Export first if you want to keep them\.$/, m => `Supprimer les ${nb(m[1])} tirages de cet appareil ? Exporte-les d'abord si tu veux les garder.`],
+    [/^You can send (\d+) suggestions a day: come back tomorrow$/, m => `Tu peux envoyer ${m[1]} suggestions par jour : reviens demain`],
+    [/^Hit Generate to roll a number from 0 to 1,000,000\. Each pattern in it is a badge worth XP: the rarer the badge, the more XP\. There are (\d+) badges to collect\.$/, m => `Appuie sur Générer pour tirer un nombre de 0 à 1 000 000. Chaque motif qu'il contient est un badge qui rapporte de l'XP : plus le badge est rare, plus il en donne. Il y a ${m[1]} badges à collectionner.`],
+    [/^([\d,]+) received$/, m => `${nb(m[1])} reçue${s(m[1])}`], [/^([\d,]+) devices$/, m => `${nb(m[1])} appareils`], [/^([\d,]+) new$/, m => `${nb(m[1])} nouveaux`],
+    [/^([\d,]+) new devices$/, m => `${nb(m[1])} nouveaux appareils`], [/^([\d,]+) on the leaderboard$/, m => `${nb(m[1])} au classement`],
     [/^Friends list full \((\d+)\)$/, m => `Liste d'amis pleine (${m[1]})`],
   ];
 

@@ -45,7 +45,10 @@
   const resolve = id => (id && ALIASES[id]) || id;
 
   const num = v => Number(v) || 0;
-  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * num(st.duelWins);
+  // Victoires de duel récompensées = toutes les victoires − celles sans enjeu (même adversaire trop souvent dans la
+  // journée, compte adverse trop neuf : champ "duelUnpaid", voir duelOutcome dans api/room.js).
+  const rankedWins = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
+  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * rankedWins(st);
   // Solde = pièces gagnées en jouant + pièces reçues (quêtes, bonus quotidien, pots de duel, remboursements : champ
   // "bonus") − pièces dépensées (skins, caisses, mises de duel : champ "spent").
   const balance = st => earned(st) + num(st.bonus) - num(st.spent);
@@ -86,7 +89,7 @@
   // Mises possibles pour un duel (0 = sans mise).
   const STAKES = [0, 50, 100, 250, 500, 1000];
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf };
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);
