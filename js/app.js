@@ -78,6 +78,22 @@
     liveRooms() {
       return this.request('/api/room?live=1');
     },
+    shopCase(id) {
+      const p = Store.player;
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id }) });
+    },
+    quests() {
+      return this.request(`/api/quests?me=${Store.player.id}`);
+    },
+    questAction(action, quest) {
+      const p = Store.player;
+      return this.request('/api/quests', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, quest }) });
+    },
+    // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
+    friends(action = 'list', name) {
+      const p = Store.player;
+      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name }) });
+    },
     claimName(name) {
       const p = Store.player;
       return this.request('/api/name', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name }) });
@@ -149,6 +165,7 @@
   // on annonce ceux que cet appareil n'a pas encore vus. Le titre d'un succès s'équipe depuis son profil.
   const Ach = window.RNGAchievements;
   const Shop = window.RNGShop;
+  const Quests = window.RNGQuests;
   const skinClass = raw => {
     const id = Shop.resolve(raw);
     if (id === 'owner') return ' owner-ruby'; // le rubis du créateur
@@ -838,6 +855,7 @@
             press <kbd>Space</kbd>
           </p>
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
+          <div id="quests-slot"></div>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
@@ -862,7 +880,56 @@
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
+    loadQuests($('#quests-slot'));
     $('#room-join-form').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#room-code').value); });
+  }
+
+  // ---------------------------------------------------------------- quêtes du jour et bonus quotidien (accueil)
+  // 3 quêtes par jour, les mêmes pour tous ; la progression et les récompenses viennent du serveur.
+  async function loadQuests(slot, state) {
+    if (!slot || !Store.player.name) return;
+    if (!state) {
+      try { state = await Online.quests(); } catch (err) { return; }
+      if (!slot.isConnected) return;
+    }
+    const left = Math.max(0, state.resetAt - Date.now());
+    const resetIn = left > 3600000 ? `${Math.floor(left / 3600000)} h` : `${Math.max(1, Math.ceil(left / 60000))} min`;
+    const d = state.daily;
+    slot.innerHTML = `
+      <div class="quests-card">
+        <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
+        <div class="quest daily${d.claimed ? ' done' : ''}">
+          <span class="quest-emoji">🔥</span>
+          <span class="quest-text"><b>Daily bonus</b><span class="panel-note">${d.streak ? `${plural(d.streak, 'day')} streak` : 'Start a streak'}${d.claimed ? ` · tomorrow: ${d.next} coins` : ''}</span></span>
+          ${d.claimed ? '<span class="quest-state">✓ Claimed</span>' : `<button class="btn-roll small" data-daily>+${d.reward} 🪙</button>`}
+        </div>
+        ${state.quests.map(q => {
+          const done = q.progress >= q.target;
+          return `
+          <div class="quest${q.claimed ? ' done' : ''}">
+            <span class="quest-emoji">${q.emoji}</span>
+            <span class="quest-text"><b>${esc(q.text)}</b>
+              <span class="quest-bar"><span style="width:${Math.min(100, (q.progress / q.target) * 100)}%"></span></span>
+              <span class="panel-note">${q.target >= 1000 ? `${compact(q.progress)} / ${compact(q.target)}` : `${q.progress} / ${q.target}`}</span></span>
+            ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
+          </div>`;
+        }).join('')}
+        <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
+      </div>`;
+    slot.onclick = async e => {
+      const btn = e.target.closest('[data-quest], [data-daily]');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      try {
+        const next = await Online.questAction(btn.dataset.quest ? 'claim' : 'daily', btn.dataset.quest);
+        toast(`🪙 +${next.gained} coins${btn.dataset.quest ? '' : ` · ${plural(next.daily.streak, 'day')} streak`}`, 2600, 'achv');
+        Sound.play('lock', { i: 5 });
+        loadQuests(slot, next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Quests unavailable right now, try again');
+      }
+    };
   }
 
   function featureCardHTML(i) {
@@ -1769,7 +1836,9 @@
     const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const caption = x => `${p.name} · ${fullDate(x.t)}`;
     const collectionState = { filter: 'all', q: '' };
-    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}`;
+    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
+    const addFriend = $('#p-friend');
+    if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
     if (me) noteAchievements(p.achievements);
     $('#p-body').innerHTML = `
       <p class="panel-note profile-sub">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</p>
@@ -1943,6 +2012,7 @@
   // l'heure de la révélation commune (horloges recalées sur celle du serveur). Ce sont des tirages normaux :
   // historique, XP et classement. Une manche part toute seule 15 s après le premier joueur prêt.
   const roomHref = code => `#/room/${code}`;
+  const stakeText = d => (d.stake ? ` · 🪙 stake ${fmt(d.stake)} each, pot ${fmt(d.pot)}` : '');
   const ROOM_POLL_MS = 1500;
   const ROOM_IDLE_MS = 10 * 60000; // sans aucun changement pendant 10 min, on arrête de sonder (quota de la base)
   const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
@@ -1965,6 +2035,7 @@
       wins: Math.min(10, Math.max(1, Number(d.wins) || 3)),
       xp: XP_TARGETS.includes(Number(d.xp)) ? Number(d.xp) : 50000,
       isPublic: d.isPublic !== false,
+      stake: Shop.STAKES.includes(Number(d.stake)) ? Number(d.stake) : 0,
     };
   }
 
@@ -2010,7 +2081,8 @@
           ? `<div class="field"><label>First to reach (XP)</label>${seg('xp', XP_TARGETS, p.xp, v => compact(v))}</div>`
           : `<div class="field"><label>Round wins needed</label>${seg('wins', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], p.wins)}</div>`}
         <div class="field"><label>Visibility</label>${seg('isPublic', ['true', 'false'], String(p.isPublic), v => (v === 'true' ? 'Public' : 'Private'))}</div>
-        <p class="panel-note">${p.size} players · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })} · ${p.isPublic ? 'listed in Live now' : 'code only'}</p>`;
+        <div class="field"><label>Stake (coins each, winner takes the pot)</label>${seg('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${v}` : 'None'))}</div>
+        <p class="panel-note">${p.size} players · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })} · ${p.isPublic ? 'listed in Live now' : 'code only'}${p.stake ? ` · 🪙 ${fmt(p.stake)} each, pot ${fmt(p.stake * p.size)}: paid on joining, refunded on a draw or if everyone leaves, no bots` : ''}</p>`;
       $('#d-bots').textContent = `🤖 Play vs ${plural(p.size - 1, 'bot')}`;
     };
     drawSetup();
@@ -2034,6 +2106,20 @@
       <div class="page page-wide">
         <h1 class="page-title">Shop</h1>
         <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
+          <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
+            const odds = Shop.caseOdds(c).map(o => `${Shop.byId.get(o.id).emoji} ${Shop.byId.get(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
+            return `
+            <div class="case-tile">
+              <div class="case-box" aria-hidden="true">${c.emoji}</div>
+              <div class="skin-name"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></div>
+              <span class="case-odds" data-tip="${esc(`<b>${c.name} odds</b><br>${odds}`)}">Odds ⓘ</span>
+              <button class="btn" data-case="${c.id}">🪙 ${fmt(c.price)}</button>
+            </div>`;
+          }).join('')}</div>
+          <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Half of the case price comes back. Coins only, no real money.</p>
+        </div>
+        <div class="panel stats-sep">
           <div class="panel-head"><h3 class="panel-title">Skins</h3><span class="coins mono" id="d-coins"></span></div>
           <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
           <div class="skin-grid" id="d-skins"></div>
@@ -2092,6 +2178,11 @@
     }
     Store.setSetting('skin', state.skin);
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
+    const cases = $('#d-cases');
+    if (cases) cases.onclick = e => {
+      const btn = e.target.closest('[data-case]');
+      if (btn && !btn.disabled) openCase(Shop.caseById.get(btn.dataset.case), state, btn);
+    };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
     grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS).map(k => {
       const owned = state.owned.includes(k.id), equipped = state.skin === k.id;
@@ -2123,6 +2214,128 @@
     };
   }
 
+  // Ouverture d'une caisse : le serveur tire le skin, le site fait défiler une bande de skins qui s'arrête dessus.
+  async function openCase(box, state, btn) {
+    if (state.coins < box.price) { toast(`${fmt(box.price - state.coins)} more coins needed for the ${box.name}`); return; }
+    btn.disabled = true;
+    let result;
+    try {
+      result = await Online.shopCase(box.id);
+    } catch (err) {
+      btn.disabled = false;
+      toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      return;
+    }
+    btn.disabled = false;
+    const pool = Shop.caseOdds(box);
+    const pick = () => { let u = Math.random(), acc = 0; for (const o of pool) { acc += o.p; if (u < acc) return o.id; } return pool[0].id; };
+    const WIN = 32, strip = Array.from({ length: 38 }, (_, i) => (i === WIN ? result.won : pick()));
+    const won = Shop.byId.get(result.won);
+    const cell = id => `<div class="case-cell"><div class="num-card sm${skinClass(id)}" data-tier="rare">${slotsHTML('777')}</div><span>${Shop.byId.get(id).emoji} ${esc(Shop.byId.get(id).name)}</span></div>`;
+    openModal(`
+      <h2>${box.emoji} ${esc(box.name)}</h2>
+      <div class="case-reel"><div class="case-marker"></div><div class="case-strip" id="case-strip">${strip.map(cell).join('')}</div></div>
+      <div class="case-result" id="case-result" hidden>
+        <div class="num-card md${skinClass(won.id)}" data-tier="${result.duplicate ? 'common' : 'epic'}">${slotsHTML('235711')}</div>
+        <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : 'new skin unlocked!'}</p>
+        <div class="room-buttons">
+          ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">Equip</button>`}
+          <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
+        </div>
+      </div>`, () => {
+      const el = $('#case-strip'), reel = el.parentElement;
+      const target = el.children[WIN];
+      // Arrêt sur le skin gagné, légèrement décalé du centre comme une vraie roue.
+      const shift = target.offsetLeft + target.offsetWidth / 2 - reel.clientWidth / 2 + (Math.random() - 0.5) * target.offsetWidth * 0.6;
+      const finish = () => {
+        target.classList.add('won');
+        $('#case-result').hidden = false;
+        Sound.play('lock', { i: result.duplicate ? 1 : 6 });
+        if (!result.duplicate) FX.celebrate('epic', target);
+        drawShop(result);
+      };
+      if (reducedMotion) { el.style.transform = `translateX(${-shift}px)`; finish(); }
+      else {
+        requestAnimationFrame(() => { el.style.transition = 'transform 4.2s cubic-bezier(.12, .7, .1, 1)'; el.style.transform = `translateX(${-shift}px)`; });
+        setTimeout(finish, 4300);
+      }
+      const equip = $('#case-equip');
+      if (equip) equip.addEventListener('click', async () => {
+        try { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); closeModal(); } catch (err) { toast('Shop unavailable right now, try again'); }
+      });
+      $('#case-again').addEventListener('click', () => { closeModal(); openCase(box, result, btn); });
+    });
+  }
+
+  // ---------------------------------------------------------------- amis
+  let friendsTimer = 0;
+  function renderFriends() {
+    currentView = 'friends';
+    app.innerHTML = `
+      <div class="page">
+        <h1 class="page-title">Friends</h1>
+        <p class="panel-note profile-sub">Add players by name to follow their progress and jump into their duels.</p>
+        <div class="panel">
+          <form class="duel-join" id="f-add">
+            <input class="input" id="f-name" maxlength="16" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name">
+            <button class="btn" type="submit">Add friend</button>
+          </form>
+        </div>
+        <div id="f-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
+    $('#f-body').addEventListener('click', e => {
+      const btn = e.target.closest('[data-fr]');
+      if (!btn) return;
+      if (btn.dataset.fr === 'remove' && !confirm(`Remove ${btn.dataset.name} from your friends?`)) return;
+      friendAction(btn.dataset.fr, btn.dataset.name);
+    });
+    drawFriends();
+  }
+  async function friendAction(action, name) {
+    if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
+    if (!name) { toast('Enter a player name'); return; }
+    try {
+      const state = await Online.friends(action, name);
+      if (state.note) toast(state.note);
+      if (action === 'add' && $('#f-name')) $('#f-name').value = '';
+      drawFriends(state);
+    } catch (err) {
+      toast([404, 422].includes(err.status) ? err.message : 'Friends unavailable right now, try again');
+    }
+  }
+  async function drawFriends(state) {
+    clearTimeout(friendsTimer);
+    const body = $('#f-body');
+    if (!body) return;
+    if (!Store.player.name) { body.innerHTML = '<div class="empty">Roll once (and pick a name) to add friends.</div>'; return; }
+    if (!state) {
+      try { state = await Online.friends(); } catch (err) { body.innerHTML = '<div class="empty">Friends unavailable right now.</div>'; return; }
+      if (currentView !== 'friends' || !$('#f-body')) return;
+    }
+    const btn = (action, name, label, cls = 'btn') => `<button class="${cls}" data-fr="${action}" data-name="${esc(name)}">${label}</button>`;
+    setHTML(body, `
+      ${state.incoming.length ? `
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Friend requests</h3></div>
+          ${state.incoming.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('accept', n, 'Accept', 'btn-roll small')}${btn('decline', n, 'Decline')}</span></div>`).join('')}
+        </div>` : ''}
+      <div class="panel stats-sep">
+        <div class="panel-head"><h3 class="panel-title">Your friends</h3><span class="panel-note">${state.friends.length} / ${state.max}</span></div>
+        ${state.friends.length ? state.friends.map(f => `
+          <div class="friend-row">
+            <span class="live-dot${f.room ? ' on' : ''}"></span>
+            <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
+              <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}</span></span>
+            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
+          </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
+      </div>
+      ${state.outgoing.length ? `
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Requests sent</h3></div>
+          ${state.outgoing.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('cancel', n, 'Cancel')}</span></div>`).join('')}
+        </div>` : ''}`);
+    if (!document.hidden) friendsTimer = setTimeout(() => { if (currentView === 'friends') drawFriends(); }, 15000);
+  }
+
   function roomError(err, retry) {
     if (err.status === 409) { askName(retry, '', `"${Store.player.name}" is already taken by another player. Pick a new name.`); return; }
     toast(err.status === 404 ? 'No duel with this code' : err.status === 422 ? err.message : 'Duel unavailable right now, try again');
@@ -2133,7 +2346,7 @@
     if (!Store.player.name) { askName(() => createRoom(bots)); return; }
     const p = duelPrefs();
     try {
-      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots });
+      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots, stake: bots ? 0 : p.stake });
       location.hash = roomHref(d.code);
     } catch (err) {
       roomError(err, () => createRoom(bots));
@@ -2358,7 +2571,7 @@
       const html = `
         <div class="eyebrow">Duel code</div>
         <div class="room-code mono">${esc(d.code)}</div>
-        <p class="panel-note">${d.size} players · ${goalText(d)} · each round goes to the highest roll</p>
+        <p class="panel-note">${d.size} players · ${goalText(d)} · each round goes to the highest roll${stakeText(d)}</p>
         <div class="pill-row room-seats">${seats}</div>
         <p class="panel-note">${d.players.length} / ${d.size} players</p>
         <div class="room-buttons">
@@ -2386,7 +2599,7 @@
       Room.view = 'playing';
       Room.seats = seats;
       body.innerHTML = `
-        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}</p>
+        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
         <div class="room-board" id="room-board"></div>
         <div class="room-arena">
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
@@ -2433,7 +2646,8 @@
     if (finished) {
       const w = d.winner;
       const how = w === null ? '' : d.mode === 'xp' ? ` with ${fmt(totals[w])} XP` : ` with ${plural(wins[w], 'round')}`;
-      const banner = w === null ? '🤝 Draw' : d.players[w].me ? `🏆 You win${how}` : `🏆 ${esc(d.players[w].name)} wins${how}`;
+      const pot = !d.stake ? '' : w === null ? ' · stakes refunded' : ` · 🪙 ${fmt(d.pot)} pot`;
+      const banner = (w === null ? '🤝 Draw' : d.players[w].me ? `🏆 You win${how}` : `🏆 ${esc(d.players[w].name)} wins${how}`) + pot;
       const rematch = !me ? ''
         : d.next ? `<button class="btn-roll small" id="room-rematch">🔁 ${d.nextBy === me.name ? 'Back to the rematch' : `${esc(d.nextBy)} wants a rematch: play`}</button>`
         : '<button class="btn-roll small" id="room-rematch">🔁 Rematch</button>';
@@ -2715,7 +2929,7 @@
   }
 
   // ---------------------------------------------------------------- navigation, thème, clavier
-  const ROUTES = { '': renderHome, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop };
+  const ROUTES = { '': renderHome, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -2723,6 +2937,7 @@
     clearTimeout(lbTimer);
     stopRoom();
     clearTimeout(hubTimer);
+    clearTimeout(friendsTimer);
     closeModal();
     tip.hidden = true;
     const [key, ...rest] = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');

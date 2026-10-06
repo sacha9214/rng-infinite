@@ -46,9 +46,37 @@
 
   const num = v => Number(v) || 0;
   const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * num(st.duelWins);
-  const balance = st => earned(st) - num(st.spent);
+  // Solde = pièces gagnées en jouant + pièces reçues (quêtes, bonus quotidien, pots de duel, remboursements : champ
+  // "bonus") − pièces dépensées (skins, caisses, mises de duel : champ "spent").
+  const balance = st => earned(st) + num(st.bonus) - num(st.spent);
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance };
+  // Caisses : un skin tiré au hasard par le serveur dans la liste de la caisse ; plus un skin est cher, plus il est rare
+  // (poids = 1 / prix). Déjà possédé : la moitié du prix de la caisse est rendue.
+  const CASES = [
+    { id: 'starter', name: 'Starter Case', emoji: '📦', price: 250, desc: 'A skin worth 200 to 800 coins', min: 200, max: 800 },
+    { id: 'premium', name: 'Premium Case', emoji: '🎁', price: 900, desc: 'A skin worth 800 to 5,000 coins', min: 800, max: 5000 },
+  ];
+  const caseById = new Map(CASES.map(c => [c.id, c]));
+  const casePool = c => SKINS.filter(s => s.price >= c.min && s.price <= c.max);
+  const DUPLICATE_REFUND = 0.5;
+  // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage.
+  function caseOdds(c) {
+    const pool = casePool(c);
+    const total = pool.reduce((x, s) => x + 1 / s.price, 0);
+    return pool.map(s => ({ id: s.id, p: 1 / s.price / total }));
+  }
+  // Tirage : u uniforme dans [0, 1) fourni par l'appelant (crypto côté serveur).
+  function drawCase(c, u) {
+    let acc = 0;
+    const odds = caseOdds(c);
+    for (const o of odds) { acc += o.p; if (u < acc) return o.id; }
+    return odds[odds.length - 1].id;
+  }
+
+  // Mises possibles pour un duel (0 = sans mise).
+  const STAKES = [0, 50, 100, 250, 500, 1000];
+
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

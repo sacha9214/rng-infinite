@@ -682,4 +682,173 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(after, xpFromHistory(frank), 'toujours égal à l\'historique');
 }
 
+// ================================================================ 21. Quêtes du jour et bonus quotidien
+{
+  const questsApi = require(path.join(ROOT, 'api/quests.js'));
+  const Quests = require(path.join(ROOT, 'js/quests.js'));
+  const quinn = { playerId: 'c1'.repeat(8), secret: 'd1'.repeat(16), name: 'Quinn' };
+  const qPost = (who, action, extra = {}) => call(questsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const qGet = who => call(questsApi, { url: `/api/quests?me=${who.playerId}` });
+  const coinsOf = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  const today = () => new Date(Date.now()).toISOString().slice(0, 10);
+
+  r = await call(roll, { method: 'POST', body: quinn });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['HGET', `q:${today()}:${quinn.playerId}`, 'rolls']])[0].result, '1', 'le tirage compte pour les quêtes du jour');
+  assert.equal(Number(run([['HGET', `q:${today()}:${quinn.playerId}`, 'xp']])[0].result), r.body.s);
+  r = await qGet(quinn);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.quests.length, 3, '3 quêtes par jour');
+  assert.deepEqual(r.body.quests.map(q => q.id), Quests.ofDay(today()).map(q => q.id), 'les mêmes pour tout le monde');
+  assert.deepEqual(new Set(Quests.ofDay(today()).map(q => q.group)), new Set(['rolls', 'rarity', 'duel']), 'une par groupe');
+  assert.ok(r.body.quests.every(q => !q.claimed));
+  assert.deepEqual([r.body.daily.claimed, r.body.daily.streak, r.body.daily.reward], [false, 0, 20]);
+  const first = r.body.quests[0];
+  // Pas finie : pas de récompense. Récompense d'une quête d'un autre jour : refusée.
+  if (first.progress < first.target) assert.equal((await qPost(quinn, 'claim', { quest: first.id })).status, 422, 'quête pas finie');
+  assert.equal((await qPost(quinn, 'claim', { quest: 'nope' })).status, 400);
+  assert.equal((await qPost({ ...quinn, secret: '9'.repeat(32) }, 'claim', { quest: first.id })).status, 403);
+  // Compteurs du jour remplis (comme après une grosse journée) : tout est réclamable, une seule fois.
+  run([['HSET', `q:${today()}:${quinn.playerId}`, 'rolls', 40, 'xp', 200000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1]]);
+  let before = await coinsOf(quinn);
+  r = await qPost(quinn, 'claim', { quest: first.id });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.gained, first.reward);
+  assert.equal(await coinsOf(quinn), before + first.reward, 'pièces créditées');
+  assert.equal((await qPost(quinn, 'claim', { quest: first.id })).status, 422, 'une seule fois');
+  assert.equal(await coinsOf(quinn), before + first.reward);
+  assert.ok((await qGet(quinn)).body.quests[0].claimed);
+  // Bonus quotidien : une fois par jour, la série monte de 10 pièces par jour, retombe si on saute un jour.
+  before = await coinsOf(quinn);
+  r = await qPost(quinn, 'daily');
+  assert.deepEqual([r.status, r.body.gained, r.body.daily.streak, r.body.daily.claimed], [200, 20, 1, true]);
+  assert.equal((await qPost(quinn, 'daily')).status, 422, 'déjà pris aujourd\'hui');
+  assert.equal(await coinsOf(quinn), before + 20);
+  clock += 86400000;
+  assert.deepEqual([(await qGet(quinn)).body.daily.streak, (await qGet(quinn)).body.daily.reward], [1, 30], 'le lendemain : série en cours, 30 à prendre');
+  r = await qPost(quinn, 'daily');
+  assert.deepEqual([r.body.gained, r.body.daily.streak], [30, 2]);
+  clock += 2 * 86400000;
+  assert.equal((await qGet(quinn)).body.daily.streak, 0, 'un jour sauté : série perdue');
+  r = await qPost(quinn, 'daily');
+  assert.deepEqual([r.body.gained, r.body.daily.streak], [20, 1]);
+  assert.equal(Quests.dailyReward(30), 80, 'plafond à 7 jours');
+
+  // ============================================================== 22. Caisses
+  const openCase = (who, id) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'case', case: id } });
+  assert.equal((await openCase(quinn, 'starter')).status, 422, 'pas assez de pièces');
+  assert.equal((await openCase(quinn, 'licorne')).status, 400);
+  run([['HINCRBY', `stats:${quinn.playerId}`, 'bonus', 100000]]);
+  const pool = Shop.casePool(Shop.caseById.get('starter')).map(k => k.id);
+  let dups = 0, news = 0;
+  for (let i = 0; i < 40; i++) {
+    before = await coinsOf(quinn);
+    r = await openCase(quinn, 'starter');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(pool.includes(r.body.won), 'un skin de la caisse');
+    assert.ok(r.body.owned.includes(r.body.won));
+    assert.equal(r.body.refund, r.body.duplicate ? 125 : 0, 'doublon : moitié rendue');
+    assert.equal(r.body.coins, before - 250 + r.body.refund);
+    r.body.duplicate ? dups++ : news++;
+  }
+  assert.ok(news >= 5 && news <= pool.length && dups >= 1, `des nouveaux (${news}) et des doublons (${dups})`);
+  r = await openCase(quinn, 'premium');
+  assert.ok(Shop.casePool(Shop.caseById.get('premium')).some(k => k.id === r.body.won));
+  // Chances : somme 1, le moins cher est le plus probable ; le tirage suit les chances.
+  for (const c of Shop.CASES) {
+    const odds = Shop.caseOdds(c);
+    assert.ok(Math.abs(odds.reduce((x, o) => x + o.p, 0) - 1) < 1e-9);
+    assert.equal(Shop.drawCase(c, 0), odds[0].id);
+    assert.equal(Shop.drawCase(c, 0.999999), odds[odds.length - 1].id);
+    assert.ok(!Shop.casePool(c).some(k => k.hidden), 'jamais le skin Owner');
+  }
+
+  // ============================================================== 23. Amis
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const fr = (who, action, name) => call(friendsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, name } });
+  assert.equal((await call(friendsApi, { url: '/api/friends' })).status, 405, 'jamais en GET (le secret ne va pas dans une adresse)');
+  assert.equal((await fr({ ...quinn, secret: '9'.repeat(32) }, 'list')).status, 403);
+  assert.equal((await fr(quinn, 'add', 'Personne Dutout')).status, 404);
+  assert.equal((await fr(quinn, 'add', 'Quinn')).status, 422, 'pas soi-même');
+  r = await fr(quinn, 'add', 'alice');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.friends.length, r.body.outgoing], [0, ['Alice']], 'demande envoyée (pseudo sans tenir compte des majuscules)');
+  r = await fr(alice, 'list');
+  assert.deepEqual([r.body.incoming, r.body.friends.length], [['Quinn'], 0]);
+  assert.ok(!JSON.stringify(r.body).includes(quinn.playerId), 'aucun id');
+  r = await fr(alice, 'accept', 'Quinn');
+  assert.deepEqual([r.body.friends.map(f => f.name), r.body.incoming], [['Quinn'], []]);
+  r = await fr(quinn, 'list');
+  assert.deepEqual([r.body.friends.map(f => f.name), r.body.outgoing], [['Alice'], []]);
+  assert.ok(r.body.friends[0].xp > 0 && r.body.friends[0].seen > 0, 'XP à vie et dernière activité de l\'ami');
+  assert.equal((await fr(quinn, 'add', 'Alice')).body.note, 'Already friends');
+  // Demandes croisées : la 2e accepte la 1re.
+  await fr(quinn, 'add', 'Carol');
+  r = await fr(carol, 'add', 'Quinn');
+  assert.ok(r.body.friends.some(f => f.name === 'Quinn') && r.body.incoming.length === 0, 'demandes croisées = amis');
+  // Refuser, annuler, retirer.
+  await fr(dave, 'add', 'Quinn');
+  assert.deepEqual((await fr(quinn, 'decline', 'Dave')).body.incoming, []);
+  assert.deepEqual((await fr(dave, 'list')).body.outgoing, []);
+  await fr(quinn, 'add', 'Dave');
+  assert.deepEqual((await fr(quinn, 'cancel', 'Dave')).body.outgoing, []);
+  assert.deepEqual((await fr(dave, 'list')).body.incoming, []);
+  r = await fr(quinn, 'remove', 'Alice');
+  assert.ok(!r.body.friends.some(f => f.name === 'Alice'));
+  assert.ok(!(await fr(alice, 'list')).body.friends.some(f => f.name === 'Quinn'), 'retiré des deux côtés');
+
+  // ============================================================== 24. Duels avec mise
+  const w1 = { playerId: 'e1'.repeat(8), secret: 'f1'.repeat(16), name: 'Wone' }, w2 = { playerId: 'e2'.repeat(8), secret: 'f2'.repeat(16), name: 'Wtwo' };
+  const poor = { playerId: 'e3'.repeat(8), secret: 'f3'.repeat(16), name: 'Poor' };
+  for (const w of [w1, w2, poor]) assert.equal((await call(roll, { method: 'POST', body: w })).status, 200);
+  for (const w of [w1, w2]) run([['HINCRBY', `stats:${w.playerId}`, 'bonus', 2000]]);
+  clock += 9000; // délai entre deux tirages écoulé
+  const c1 = await coinsOf(w1), c2 = await coinsOf(w2);
+  assert.equal((await roomPost(poor, 'create', { size: 2, stake: 1000 })).status, 422, 'pas assez pour miser');
+  assert.equal((await roomPost(w1, 'create', { size: 2, stake: 77 })).body.stake, 0, 'mise hors liste = pas de mise');
+  assert.equal((await roomPost(w1, 'create', { size: 3, stake: 100, bots: 2 })).body.stake, 0, 'jamais de mise contre des bots');
+  r = await roomPost(w1, 'create', { size: 2, stake: 100, mode: 'rounds', target: 1 });
+  assert.deepEqual([r.status, r.body.stake, r.body.pot], [200, 100, 100], JSON.stringify(r.body));
+  const staked = r.body.code;
+  assert.equal(await coinsOf(w1), c1 - 100, 'mise prélevée à la création');
+  assert.equal((await roomPost(poor, 'join', { code: staked })).status, 422, 'trop pauvre pour entrer');
+  assert.equal((await roomPost(w1, 'addBot', { code: staked })).status, 422, 'pas de bot dans une partie à mise');
+  r = await roomPost(w2, 'join', { code: staked });
+  assert.deepEqual([r.body.status, r.body.pot], ['playing', 200]);
+  assert.equal(await coinsOf(w2), c2 - 100, 'mise prélevée à l\'entrée');
+  assert.equal((await roomPost(poor, 'ask', { code: staked })).status, 422, 'personne n\'entre en cours de partie à mise');
+  let st = r.body;
+  while (st.status === 'playing') {
+    await later(11000, async () => { await roomPost(w1, 'ready', { code: staked }); st = (await roomPost(w2, 'ready', { code: staked })).body; });
+  }
+  assert.equal(st.status, 'done');
+  assert.equal(st.settled, null, 'pas réglé avant la révélation');
+  assert.deepEqual([await coinsOf(w1) < c1, await coinsOf(w2) < c2], [true, true], 'pot pas encore versé');
+  r = await later(2500 + 9700, () => roomGet(staked, w1));
+  const stakedWinner = [w1, w2][r.body.winner], stakedLoser = [w1, w2][1 - r.body.winner];
+  assert.equal(r.body.settled, 'paid');
+  assert.ok(!JSON.stringify(r.body).includes(w1.playerId) && !JSON.stringify(r.body).includes(w2.playerId), 'aucun id dans la salle');
+  // Chacun a aussi gagné des pièces avec ses tirages du duel : on compare hors tirages (bonus − spent).
+  const net = who => { const [b, s2] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent']]).map(x => Number(x.result) || 0); return b - s2; };
+  assert.equal(net(stakedWinner), 2000 + 100, 'le gagnant récupère sa mise et prend celle de l\'autre');
+  assert.equal(net(stakedLoser), 2000 - 100, 'le perdant perd sa mise');
+  assert.equal(net(w1) + net(w2), 4000, 'aucune pièce créée ni détruite');
+  await later(13 * 3600000, () => call(leaderboard, { url: '/api/leaderboard?period=day' }));
+  assert.equal(net(w1) + net(w2), 4000, 'le remboursement de secours ne paie pas une 2e fois');
+  // Partie désertée : chacun récupère sa mise.
+  r = await roomPost(w1, 'create', { size: 2, stake: 250 });
+  const ghost = r.body.code;
+  await roomPost(w2, 'join', { code: ghost });
+  assert.equal(net(w1) + net(w2), 4000 - 500);
+  r = await later(31000, () => roomGet(ghost));
+  assert.equal(r.body.status, 'abandoned');
+  assert.equal(net(w1) + net(w2), 4000, 'mises rendues');
+  assert.equal((await roomGet(ghost)).body.settled, 'refund');
+  // Salle oubliée (personne ne revient jamais) : remboursée par l'échéance de secours, 12 h plus tard.
+  await roomPost(w1, 'create', { size: 2, stake: 500 });
+  assert.equal(net(w1) + net(w2), 4000 - 500);
+  await later(12 * 3600000 + 1000, () => call(leaderboard, { url: '/api/leaderboard?period=day' }));
+  assert.equal(net(w1) + net(w2), 4000, 'remboursé sans que personne ne rouvre la salle');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

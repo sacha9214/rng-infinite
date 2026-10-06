@@ -1,7 +1,9 @@
 // GET  /api/shop?me=<playerId>                                   → pièces, skins possédés, skin équipé
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
+// POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin tiré par le serveur)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
 const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
+const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -39,6 +41,28 @@ module.exports = async (req, res) => {
     const skin = Shop.byId.get(String(body.skin || ''));
     if (!isPlayerId(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
+
+    // Caisse : le serveur tire un skin de la liste (les plus chers sont les plus rares). Déjà possédé : la moitié du
+    // prix est rendue. Même verrou que l'achat : deux clics rapides n'ouvrent pas deux caisses.
+    if (body.action === 'case') {
+      const box = Shop.caseById.get(String(body.case || ''));
+      if (!box) return send(res, 400, { error: 'Unknown case' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
+        const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
+        const duplicate = st.owned.includes(won);
+        const refund = duplicate ? Math.round(box.price * Shop.DUPLICATE_REFUND) : 0;
+        const writes = [['HINCRBY', statsKey(playerId), 'spent', box.price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1]];
+        if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
+        await redis(writes);
+        return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
     if (!skin) return send(res, 400, { error: 'Unknown skin' });
 
     if (body.action === 'equip') {

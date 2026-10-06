@@ -287,6 +287,32 @@ async function readStats(playerId) {
   return { ...stats, badges: Number(count) };
 }
 
+// ---------------------------------------------------------------- quêtes, pièces offertes, mises de duel
+// Compteurs du jour d'un joueur (voir js/quests.js), gardés 3 jours.
+const questKey = (day, playerId) => `q:${day}:${playerId}`;
+const QUEST_TTL = 3 * 86400;
+const SEEN_KEY = 'seen'; // dernière activité de chaque joueur (score = heure)
+
+// Mise d'un duel : chaque joueur l'a payée en entrant (stats.spent += mise, champ "paid:<id>" de la salle).
+// Règlement une seule fois par salle (HSETNX "settled") : le pot au gagnant, ou chacun remboursé (égalité, partie
+// désertée, salle oubliée). Appelé à la fin du duel, à l'abandon, et par une échéance de secours dans `pending`.
+async function settleWager(code, winnerId) {
+  const key = `room:${code}`;
+  const [flat] = await redis([['HGETALL', key]]);
+  const h = toObject(flat);
+  const paid = Object.entries(h).filter(([k]) => k.startsWith('paid:')).map(([k, v]) => [k.slice(5), Number(v) || 0]).filter(([, v]) => v > 0);
+  if (!paid.length) return null;
+  const [first] = await redis([['HSETNX', key, 'settled', winnerId || 'refund']]);
+  if (Number(first) !== 1) return null;
+  const pot = paid.reduce((x, [, v]) => x + v, 0);
+  if (winnerId && paid.some(([id]) => id === winnerId)) {
+    await redis([['HINCRBY', statsKey(winnerId), 'bonus', pot], ['HINCRBY', statsKey(winnerId), 'wagerWon', pot - (paid.find(([id]) => id === winnerId)[1])]]);
+    return { winner: winnerId, pot };
+  }
+  await redis(paid.map(([id, v]) => ['HINCRBY', statsKey(id), 'spent', -v]));
+  return { refunded: paid.length, pot };
+}
+
 // ---------------------------------------------------------------- enregistrement d'un tirage
 // Historique, compteurs, meilleurs tirages (jour, semaine, all-time) et stats des succès d'un joueur.
 // Appelé par /api/roll et par les duels. Lit puis écrit le meilleur score : le délai de 8 s entre deux tirages
@@ -307,6 +333,12 @@ async function recordRoll(playerId, n, t) {
     // XP à vie (classement « Lifetime XP ») : la somme de tous ses tirages.
     ['ZINCRBY', XP_LB, s, playerId],
     ['HINCRBY', statsKey(playerId), `t:${a.tier}`, 1],
+    // Compteurs du jour (quêtes) et dernière activité (liste d'amis).
+    ['HINCRBY', questKey(dayKey(t), playerId), 'rolls', 1],
+    ['HINCRBY', questKey(dayKey(t), playerId), 'xp', s],
+    ['HINCRBY', questKey(dayKey(t), playerId), `t:${a.tier}`, 1],
+    ['EXPIRE', questKey(dayKey(t), playerId), QUEST_TTL],
+    ['ZADD', SEEN_KEY, t, playerId],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
@@ -350,6 +382,7 @@ async function flushDue(now = Date.now()) {
       const entry = JSON.parse(member);
       for (const [id, n, t] of entry.rolls || []) await recordRoll(id, n, t);
       if (entry.w && entry.w.length) await redis(entry.w);
+      if (entry.wager) await settleWager(entry.wager.code, entry.wager.winner || null); // pot du duel, ou remboursement
     }
   } catch (err) {
     console.error('flushDue', err); // la requête en cours passe quand même ; la prochaine réessaiera
@@ -357,7 +390,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = {
-  queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals,
+  queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, markFresh,

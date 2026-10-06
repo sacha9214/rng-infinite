@@ -24,8 +24,10 @@ export function fakeRedis() {
     SET(k, v, ...opts) {
       if (opts.includes('NX') && alive(k)) return null;
       db.set(k, v);
-      const px = opts.indexOf('PX');
-      if (px >= 0) expires.set(k, Date.now() + Number(opts[px + 1])); else expires.delete(k);
+      const px = opts.indexOf('PX'), ex = opts.indexOf('EX');
+      if (px >= 0) expires.set(k, Date.now() + Number(opts[px + 1]));
+      else if (ex >= 0) expires.set(k, Date.now() + Number(opts[ex + 1]) * 1000);
+      else expires.delete(k);
       return 'OK';
     },
     GET: k => (alive(k) ? db.get(k) : null),
@@ -54,6 +56,7 @@ export function fakeRedis() {
     },
     SMEMBERS: k => (db.has(k) ? [...db.get(k)] : []),
     SCARD: k => (db.has(k) ? db.get(k).size : 0),
+    SREM: (k, ...members) => members.filter(m => db.has(k) && db.get(k).delete(m)).length,
     SISMEMBER: (k, m) => (db.has(k) && db.get(k).has(m) ? 1 : 0),
     ZINCRBY(k, by, m) { const z = zset(k), v = (z.get(m) || 0) + Number(by); z.set(m, v); return String(v); },
     ZADD(k, ...pairs) {

@@ -20,11 +20,19 @@ globalThis.fetch = (url, opts) => (url === 'http://fake-redis.local/pipeline'
   ? Promise.resolve({ ok: true, json: async () => memory.run(JSON.parse(opts.body)) })
   : realFetch(url, opts));
 
-const API = Object.fromEntries(['roll', 'leaderboard', 'auth', 'history', 'name', 'profile', 'room', 'title', 'shop'].map(name => [name, require(path.join(ROOT, `api/${name}.js`))]));
+const API = Object.fromEntries(['roll', 'leaderboard', 'auth', 'history', 'name', 'profile', 'room', 'title', 'shop', 'quests', 'friends'].map(name => [name, require(path.join(ROOT, `api/${name}.js`))]));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4' };
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
+  // Porte de service du serveur de dev (jamais en ligne : ce fichier n'est pas déployé) : exécute des commandes sur la
+  // fausse base, pour préparer un test (donner des pièces, remplir un compteur…).  POST /__dev/redis  [["CMD", …], …]
+  if (url.pathname === '/__dev/redis' && req.method === 'POST') {
+    let raw = '';
+    for await (const chunk of req) raw += chunk;
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify(memory.run(JSON.parse(raw))));
+  }
   if (url.pathname.startsWith('/api/')) {
     const handler = API[url.pathname.slice(5)];
     if (!handler) { res.statusCode = 404; return res.end('{"error":"Not found"}'); }

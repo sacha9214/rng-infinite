@@ -15,7 +15,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, Achievements, cors, send, flushDue } = require('./_lib');
+const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
@@ -61,8 +61,14 @@ function rules(body) {
   const target = mode === 'xp'
     ? (XP_TARGETS.includes(Number(body.target)) ? Number(body.target) : XP_TARGETS[1])
     : Math.min(MAX_WINS, Math.max(1, Math.round(Number(body.target) || 3)));
-  return { size, mode, target, isPublic: body.public !== false };
+  // Mise en pièces (0 = aucune) : chacun la paie en entrant, le gagnant prend le pot.
+  const stake = Shop.STAKES.includes(Number(body.stake)) ? Number(body.stake) : 0;
+  return { size, mode, target, stake, isPublic: body.public !== false };
 }
+const STAKE_REFUND_MS = 12 * 3600000; // filet : une salle à mise jamais réglée est remboursée au bout de 12 h
+const stakeOf = room => Number(room.h.stake) || 0;
+const potOf = room => Object.entries(room.h).filter(([k]) => k.startsWith('paid:')).reduce((x, [, v]) => x + (Number(v) || 0), 0);
+const coinsOf = async id => Shop.balance(await readStats(id));
 
 // Une partie publique en cours reste dans "Live now" tant qu'elle bouge ; finie, elle en sort.
 const touchLive = (room, now = Date.now()) => (room.h.public === '1' ? [['ZADD', LIVE_KEY, now, room.code]] : []);
@@ -128,6 +134,7 @@ async function checkAbandoned(room, now = Date.now()) {
   if (score(room).done || now - lastSeen(room) <= ABANDON_MS) return false;
   await redis([['HSET', roomKey(room.code), 'ended', 1], ['ZREM', LIVE_KEY, room.code]]);
   room.h.ended = '1';
+  if (stakeOf(room)) await settleWager(room.code, null); // partie désertée : chacun récupère sa mise
   return true;
 }
 
@@ -136,7 +143,8 @@ async function touchSeen(room, id, now = Date.now()) {
   if (!room.players.some(p => p.id === id && !p.bot)) return;
   // Écrit au plus toutes les 10 s : largement assez pour la règle des 30 s, et 1 commande de moins par sondage.
   if (now - (Number(room.h[`seen:${id}`]) || 0) < SEEN_EVERY_MS) return;
-  await redis([['HSET', roomKey(room.code), `seen:${id}`, now]]);
+  // "inroom" : le duel où se trouve le joueur, pour que ses amis puissent le rejoindre (s'efface seul 45 s après).
+  await redis([['HSET', roomKey(room.code), `seen:${id}`, now], ['SET', `inroom:${id}`, room.code, 'EX', 45]]);
   room.h[`seen:${id}`] = String(now);
 }
 
@@ -176,7 +184,8 @@ async function advance(room, now = Date.now()) {
     ...touchLive(room, now),
     ...botReactions(room, round),
     ...(score(room).done ? [['ZREM', LIVE_KEY, room.code]] : []), // partie finie : sort de Live now tout de suite
-    queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: duelWrites(room) }),
+    queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: [...duelWrites(room), ...questWrites(room, now)],
+      ...(score(room).done && stakeOf(room) ? { wager: { code: room.code, winner: score(room).winner === null ? null : room.players[score(room).winner].id } } : {}) }),
     ['HSET', roomKey(room.code), 'due', round.revealAt + REVEAL_MS], // le sondage de la salle saura quand appliquer
   ]);
   room.h.due = String(round.revealAt + REVEAL_MS);
@@ -223,6 +232,17 @@ function duelWrites(room) {
   return writes;
 }
 
+// Compteurs du jour pour les quêtes, à la fin d'un duel : « duel fini » pour chaque humain (bots compris dans la
+// partie), « duel gagné » seulement contre de vrais joueurs.
+function questWrites(room, now) {
+  const sc = score(room);
+  if (!sc.done) return [];
+  const day = dayKey(now);
+  const writes = humans(room).flatMap(p => [['HINCRBY', questKey(day, p.id), 'duels', 1], ['EXPIRE', questKey(day, p.id), QUEST_TTL]]);
+  if (sc.winner !== null && !hasBots(room)) writes.push(['HINCRBY', questKey(day, room.players[sc.winner].id), 'duelWins', 1]);
+  return writes;
+}
+
 // État public, sans identifiant : `me` marque le joueur qui regarde. Partie finie : ses succès, pour annoncer les nouveaux.
 // Skin équipé en ce moment (changé dans Shop en pleine partie) : relu seulement quand le site le demande (?fresh=1,
 // un sondage sur 4) et recopié dans la liste des joueurs s'il a changé ; les autres sondages lisent cette liste.
@@ -256,6 +276,7 @@ async function view(room, me) {
   const last = room.rounds[k - 1];
   return {
     code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room),
+    stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
       name: p.name, title: p.title || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
       ready: status === 'playing' && !p.bot && readyFor(room, p) === k, wins: sc.wins[i], total: sc.totals[i],
@@ -268,7 +289,7 @@ async function view(room, me) {
     // Demandes d'entrée en cours de partie : l'hôte voit les noms, celui qui a demandé sait que c'est en attente.
     asks: me && me === room.host ? asksOf(room).map(a => a.name) : undefined,
     asked: me ? asksOf(room).some(a => a.id === me) : false,
-    canAsk: status === 'playing' && room.players.length < MAX_PLAYERS,
+    canAsk: status === 'playing' && room.players.length < MAX_PLAYERS && !stakeOf(room),
     next: room.h.next || null, // code de la revanche, une fois lancée
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
@@ -320,6 +341,7 @@ module.exports = async (req, res) => {
       if (room.h.due && Date.now() >= Number(room.h.due)) {
         await flushDue();
         await redis([['HDEL', roomKey(room.code), 'due']]);
+        if (stakeOf(room)) room = (await load(code)) || room; // le pot vient d'être versé : relire l'état de la mise
         delete room.h.due;
       }
       if (!(await checkAbandoned(room))) {
@@ -348,13 +370,16 @@ module.exports = async (req, res) => {
         if (Number(created) !== 1) continue;
         const list = players || [await seat(playerId, name)];
         await redis([
-          ['HSET', roomKey(code), 'size', players ? list.length : r.size, 'mode', r.mode, 'target', r.target, 'created', Date.now(),
+          ['HSET', roomKey(code), 'size', players ? list.length : r.size, 'mode', r.mode, 'target', r.target, 'stake', r.stake || 0, 'created', Date.now(),
             'count', list.length, 'started', players ? 1 : 0, 'public', r.isPublic ? 1 : 0, ...list.flatMap(p => [`m:${p.id}`, 1]),
             ...list.filter(p => !p.bot).flatMap(p => [`seen:${p.id}`, Date.now()])],
           ['RPUSH', playersKey(code), ...list.map(p => JSON.stringify(p))],
           ['EXPIRE', roomKey(code), TTL],
           ['EXPIRE', playersKey(code), TTL],
           ...(r.isPublic ? [['ZADD', LIVE_KEY, Date.now(), code]] : []),
+          // Mise : chaque joueur déjà assis la paie (séquestre), et un remboursement de secours est programmé.
+          ...(r.stake ? list.flatMap(p => [['HINCRBY', statsKey(p.id), 'spent', r.stake], ['HSET', roomKey(code), `paid:${p.id}`, r.stake]]) : []),
+          ...(r.stake ? [queueReveal(Date.now() + STAKE_REFUND_MS, { wager: { code, winner: null } })] : []),
         ]);
         return code;
       }
@@ -368,7 +393,9 @@ module.exports = async (req, res) => {
         players = [await seat(playerId, name)];
         for (let i = 0; i < bots; i++) players.push(makeBot(players.map(p => p.name)));
       }
-      const code = await createRoom(bots ? { ...rules(body), isPublic: false } : rules(body), players);
+      const r = bots ? { ...rules(body), isPublic: false, stake: 0 } : rules(body); // pas de mise contre des bots
+      if (r.stake && (await coinsOf(playerId)) < r.stake) return send(res, 422, { error: `Not enough coins for this stake (${r.stake})` });
+      const code = await createRoom(r, players);
       if (!code) return send(res, 503, { error: 'Could not create a duel, try again' });
       return send(res, 200, await view(await load(code), playerId));
     }
@@ -383,6 +410,8 @@ module.exports = async (req, res) => {
     if (body.action === 'join') {
       if (member) return send(res, 200, await view(room, playerId));
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
+      const stake = stakeOf(room);
+      if (stake && (await coinsOf(playerId)) < stake) return send(res, 422, { error: `Not enough coins for this stake (${stake})` });
       // Une place à la fois : le marqueur de membre évite les doublons, le compteur évite de dépasser la taille.
       const [isNew] = await redis([['HSETNX', roomKey(code), `m:${playerId}`, 1]]);
       if (Number(isNew) !== 1) return send(res, 200, await view((await load(code)) || room, playerId));
@@ -392,6 +421,7 @@ module.exports = async (req, res) => {
         return send(res, 422, { error: 'This duel is full' });
       }
       const writes = [['RPUSH', playersKey(code), JSON.stringify(await seat(playerId, name))], ['HSET', roomKey(code), `seen:${playerId}`, Date.now()], ...touchLive(room)];
+      if (stake) writes.push(['HINCRBY', statsKey(playerId), 'spent', stake], ['HSET', roomKey(code), `paid:${playerId}`, stake]); // mise sous séquestre
       if (Number(count) === room.size) writes.push(['HSET', roomKey(code), 'started', 1]); // complet : la partie commence
       await redis(writes);
       return send(res, 200, await view(await load(code), playerId));
@@ -402,6 +432,7 @@ module.exports = async (req, res) => {
     if (body.action === 'ask') {
       if (member) return send(res, 200, await view(room, playerId));
       if (!room.started) return send(res, 422, { error: 'This duel has not started: join it instead' });
+      if (stakeOf(room)) return send(res, 422, { error: 'This duel has a stake: nobody can join once it has started' });
       if (score(room).done) return send(res, 422, { error: 'This duel is over' });
       if (room.players.length >= MAX_PLAYERS) return send(res, 422, { error: 'This duel is full' });
       if (asksOf(room).length >= 5 && !room.h[`ask:${playerId}`]) return send(res, 429, { error: 'Too many requests for this duel, try again later' });
@@ -439,6 +470,7 @@ module.exports = async (req, res) => {
     if (body.action === 'addBot') {
       if (room.host !== playerId) return send(res, 422, { error: 'Only the host can add bots' });
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
+      if (stakeOf(room)) return send(res, 422, { error: 'No bots in a duel with a stake' });
       const [count] = await redis([['HINCRBY', roomKey(code), 'count', 1]]);
       if (Number(count) > room.size) {
         await redis([['HINCRBY', roomKey(code), 'count', -1]]);
@@ -489,13 +521,19 @@ module.exports = async (req, res) => {
       if (!score(room).done) return send(res, 422, { error: 'This duel is not over yet' });
       let next = room.h.next || null;
       if (!next) {
-        const code2 = await createRoom({ size: room.players.length, mode: room.mode, target: room.target, isPublic: room.h.public === '1' }, room.players);
+        let stake = stakeOf(room);
+        if (stake) {
+          const coins = await Promise.all(room.players.map(p => coinsOf(p.id)));
+          if (coins.some(c => c < stake)) stake = 0; // quelqu'un ne peut plus suivre : revanche sans mise
+        }
+        const code2 = await createRoom({ size: room.players.length, mode: room.mode, target: room.target, stake, isPublic: room.h.public === '1' }, room.players);
         if (!code2) return send(res, 503, { error: 'Could not create a duel, try again' });
         const [won] = await redis([['HSETNX', roomKey(code), 'next', code2]]);
         if (Number(won) === 1) {
           next = code2;
           await redis([['HSET', roomKey(code), 'nextBy', name]]);
         } else {
+          await settleWager(code2, null); // la salle en double rend les mises avant de disparaître
           await redis([['DEL', roomKey(code2), playersKey(code2)]]);
           [next] = await redis([['HGET', roomKey(code), 'next']]);
         }
