@@ -812,7 +812,7 @@
       m.querySelector('#set-clear').addEventListener('click', () => {
         const k = Store.rolls.length;
         if (!k) { toast('History is already empty.'); return; }
-        if (!confirm(`Delete all ${fmt(k)} rolls from this device? Export first if you want to keep them.`)) return;
+        if (!confirm(window.RNGI18n.t(`Delete all ${fmt(k)} rolls from this device? Export first if you want to keep them.`))) return;
         Store.clearRolls();
         Collection.built = false;
         closeModal();
@@ -1100,7 +1100,7 @@
       const onServer = Store.rollSet(server.rolls);
       // Le serveur n'accepte plus les tirages faits hors ligne (anti-triche) : on prévient avant de les retirer d'ici.
       const localOnly = Store.rolls.filter(r => !onServer.has(r[0], r[2])).length;
-      if (localOnly && !confirm(`${plural(localOnly, 'roll')} on this device could not be saved to your account (made offline). Sign out anyway and remove ${localOnly === 1 ? 'it' : 'them'} from this device?`)) return;
+      if (localOnly && !confirm(window.RNGI18n.t(`${plural(localOnly, 'roll')} on this device could not be saved to your account (made offline). Sign out anyway and remove ${localOnly === 1 ? 'it' : 'them'} from this device?`))) return;
     } catch (err) {
       toast('Could not reach your account, try signing out again');
       return;
@@ -2036,6 +2036,7 @@
       xp: XP_TARGETS.includes(Number(d.xp)) ? Number(d.xp) : 50000,
       isPublic: d.isPublic !== false,
       stake: Shop.STAKES.includes(Number(d.stake)) ? Number(d.stake) : 0,
+      opp: d.opp === 'bots' ? 'bots' : 'friends',
     };
   }
 
@@ -2051,15 +2052,10 @@
           <div class="panel-head"><h3 class="panel-title">Live now</h3><span class="panel-note">public games · watch or join without a code</span></div>
           <div id="d-live"><div class="empty">Loading…</div></div>
         </div>
-        <div class="grid-2 stats-sep">
+        <div class="duel-layout stats-sep">
           <div class="panel">
-            <div class="panel-head"><h3 class="panel-title">Create a game</h3></div>
+            <div class="panel-head"><h3 class="panel-title">New duel</h3></div>
             <div id="d-setup"></div>
-            <div class="room-buttons" style="justify-content:flex-start">
-              <button class="btn-roll small" id="d-create">⚔️ Create the game</button>
-              <button class="btn" id="d-bots"></button>
-            </div>
-            <p class="panel-note" style="margin:.6rem 0 0">Against bots the game starts at once and your rolls count as usual, but not duel wins, rivalries or duel achievements.</p>
           </div>
           <div class="panel">
             <div class="panel-head"><h3 class="panel-title">Join with a code</h3></div>
@@ -2071,31 +2067,74 @@
           </div>
         </div>
       </div>`;
+    // Création en questions simples, dans l'ordre où on se les pose ; chaque choix dit ce qu'il change.
     const drawSetup = () => {
       const p = duelPrefs();
-      const seg = (id, values, current, label = v => v) => `<div class="seg wrap" data-pref="${id}">${values.map(v => `<button data-v="${v}" class="${v === current ? 'on' : ''}">${label(v)}</button>`).join('')}</div>`;
+      const bots = p.opp === 'bots';
+      const choice = (key, value, on, emoji, title, text) => `<button class="choice${on ? ' on' : ''}" data-pref="${key}" data-v="${value}"><span class="choice-emoji">${emoji}</span><span class="choice-text"><b>${title}</b><span>${text}</span></span></button>`;
+      const stepper = (key, value, min, max) => `<div class="stepper"><button data-step="${key}" data-d="-1"${value <= min ? ' disabled' : ''} aria-label="Less">−</button><b class="mono">${value}</b><button data-step="${key}" data-d="1"${value >= max ? ' disabled' : ''} aria-label="More">+</button></div>`;
+      const chips = (key, values, current, label) => `<div class="chips-row">${values.map(v => `<button class="chip${v === current ? ' on' : ''}" data-pref="${key}" data-v="${v}">${label(v)}</button>`).join('')}</div>`;
+      const others = p.size - 1;
       $('#d-setup').innerHTML = `
-        <div class="field"><label>Players</label>${seg('size', [2, 3, 4, 5, 6, 7, 8, 9, 10], p.size)}</div>
-        <div class="field"><label>How to win</label>${seg('mode', ['rounds', 'xp'], p.mode, v => (v === 'xp' ? 'XP race' : 'Rounds'))}</div>
-        ${p.mode === 'xp'
-          ? `<div class="field"><label>First to reach (XP)</label>${seg('xp', XP_TARGETS, p.xp, v => compact(v))}</div>`
-          : `<div class="field"><label>Round wins needed</label>${seg('wins', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], p.wins)}</div>`}
-        <div class="field"><label>Visibility</label>${seg('isPublic', ['true', 'false'], String(p.isPublic), v => (v === 'true' ? 'Public' : 'Private'))}</div>
-        <div class="field"><label>Stake (coins each, winner takes the pot)</label>${seg('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${v}` : 'None'))}</div>
-        <p class="panel-note">${p.size} players · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })} · ${p.isPublic ? 'listed in Live now' : 'code only'}${p.stake ? ` · 🪙 ${fmt(p.stake)} each, pot ${fmt(p.stake * p.size)}: paid on joining, refunded on a draw or if everyone leaves, no bots` : ''}</p>`;
-      $('#d-bots').textContent = `🤖 Play vs ${plural(p.size - 1, 'bot')}`;
+        <div class="setup-step">
+          <div class="setup-q">1 · Who do you play against?</div>
+          <div class="choice-row">
+            ${choice('opp', 'friends', !bots, '👥', 'Other players', 'You get a code to share')}
+            ${choice('opp', 'bots', bots, '🤖', 'Bots', 'Starts right away')}
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-q">2 · How many players?</div>
+          <div class="setup-line">${stepper('size', p.size, 2, 10)}<span class="panel-note">You + ${bots ? plural(others, 'bot') : plural(others, 'opponent')}</span></div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-q">3 · How do you win?</div>
+          <div class="choice-row">
+            ${choice('mode', 'rounds', p.mode !== 'xp', '🏁', 'Rounds', 'The highest roll wins the round')}
+            ${choice('mode', 'xp', p.mode === 'xp', '⚡', 'XP race', 'Every roll adds up')}
+          </div>
+          ${p.mode === 'xp'
+            ? `<div class="setup-line"><span class="panel-note">First to reach</span>${chips('xp', XP_TARGETS, p.xp, v => `${compact(v)} XP`)}</div>`
+            : `<div class="setup-line"><span class="panel-note">First to win</span>${stepper('wins', p.wins, 1, 10)}<span class="panel-note">${p.wins === 1 ? 'round' : 'rounds'}</span></div>`}
+        </div>
+        ${bots ? '' : `
+        <div class="setup-step">
+          <div class="setup-q">4 · Who can join?</div>
+          <div class="choice-row">
+            ${choice('isPublic', 'true', p.isPublic, '🌍', 'Everyone', 'Listed in Live now')}
+            ${choice('isPublic', 'false', !p.isPublic, '🔒', 'Only with the code', 'Hidden from the list')}
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
+          ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
+          <p class="panel-note setup-help">${p.stake
+            ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves.`
+            : 'Just for fun: nobody pays anything.'}</p>
+        </div>`}
+        <div class="setup-summary">
+          <span>${plural(p.size, 'player')} · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })}${bots ? ' · against bots' : ` · ${p.isPublic ? 'public' : 'private'}${p.stake ? ` · 🪙 ${fmt(p.stake)} each` : ''}`}</span>
+          <button class="btn-roll small" id="d-go">${bots ? `🤖 Start vs ${plural(others, 'bot')}` : '⚔️ Create the duel'}</button>
+        </div>
+        ${bots ? '<p class="panel-note setup-help">Against bots your rolls count as usual, but not duel wins, rivalries or duel achievements.</p>' : ''}`;
     };
     drawSetup();
     $('#d-setup').addEventListener('click', e => {
-      const btn = e.target.closest('[data-pref] button');
+      const p = duelPrefs();
+      const step = e.target.closest('[data-step]');
+      if (step) {
+        const key = step.dataset.step, [min, max] = key === 'size' ? [2, 10] : [1, 10];
+        Store.setSetting('duel', { ...p, [key]: Math.min(max, Math.max(min, p[key] + Number(step.dataset.d))) });
+        return drawSetup();
+      }
+      if (e.target.closest('#d-go')) return createRoom(p.opp === 'bots' ? p.size - 1 : 0);
+      const btn = e.target.closest('[data-pref]');
       if (!btn) return;
-      const key = btn.parentElement.dataset.pref;
-      const value = key === 'mode' ? btn.dataset.v : key === 'isPublic' ? btn.dataset.v === 'true' : Number(btn.dataset.v);
-      Store.setSetting('duel', { ...duelPrefs(), [key]: value });
+      const key = btn.dataset.pref, v = btn.dataset.v;
+      const value = key === 'mode' || key === 'opp' ? v : key === 'isPublic' ? v === 'true' : Number(v);
+      Store.setSetting('duel', { ...p, [key]: value });
       drawSetup();
     });
-    $('#d-create').addEventListener('click', () => createRoom());
-    $('#d-bots').addEventListener('click', () => createRoom(duelPrefs().size - 1));
     $('#d-join').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#d-code').value); });
     drawLive();
   }
@@ -2287,7 +2326,7 @@
     $('#f-body').addEventListener('click', e => {
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
-      if (btn.dataset.fr === 'remove' && !confirm(`Remove ${btn.dataset.name} from your friends?`)) return;
+      if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();

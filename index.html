@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Press+Start+2P&family=Graduate&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=5b264e3474">
+  <link rel="stylesheet" href="css/style.css?v=f8964bd2f3">
   <script>
     // Thème appliqué avant le rendu pour éviter le flash.
     (function () {
@@ -67,6 +67,9 @@
       <button class="sound-btn" id="sound-btn" aria-label="Sound" aria-pressed="true" title="Sound on">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path class="on" d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/><path class="off" d="m23 9-6 6M17 9l6 6"/></svg>
       </button>
+      <div class="lang-switch" role="group" aria-label="Language" data-no-i18n>
+        <button data-lang="fr" title="Français" aria-pressed="false">FR</button><span aria-hidden="true">/</span><button data-lang="en" title="English" aria-pressed="true">EN</button>
+      </div>
       <div class="theme-switch" role="radiogroup" aria-label="Theme">
         <button data-theme-pref="light" aria-label="Light" title="Light">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -104,11 +107,12 @@
   <script src="js/engine.js?v=1911d92cb0"></script>
   <script src="js/shop.js?v=76efe75179"></script>
   <script src="js/quests.js?v=bb93a99388"></script>
+  <script src="js/i18n.js?v=a81e2c62f6"></script>
   <script src="js/achievements.js?v=e56e6db8a7"></script>
   <script src="js/store.js?v=87f8a12133"></script>
   <script src="js/synth.js?v=47721f152d"></script>
   <script src="js/sound.js?v=ff51e9a0fe"></script>
   <script src="js/skinfx.js?v=f05df7dc16"></script>
-  <script src="js/app.js?v=6e925c8f5f"></script>
+  <script src="js/app.js?v=eeefbdcac4"></script>
 </body>
 </html>

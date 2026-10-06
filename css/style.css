@@ -2226,3 +2226,39 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
 .case-cell { justify-content: flex-end; min-height: 5.2rem; }
 .case-cell .num-card.sm { font-size: .8rem; max-width: 5.4rem; }
+
+/* ================================================================== création de duel en questions (2026-10-07) */
+.duel-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 760px) { .duel-layout { grid-template-columns: 1fr; } }
+.setup-step { padding: .85rem 0; border-top: 1px solid var(--outline); }
+.setup-step:first-child { border-top: 0; padding-top: .2rem; }
+.setup-q { font-size: .8rem; font-weight: 800; letter-spacing: .02em; margin-bottom: .55rem; }
+.setup-q .panel-note { font-weight: 500; margin-left: .3rem; }
+.choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+@media (max-width: 420px) { .choice-row { grid-template-columns: 1fr; } }
+.choice { display: flex; align-items: center; gap: .6rem; padding: .6rem .7rem; text-align: left; border: 1.5px solid var(--outline-mid); border-radius: .6rem; background: var(--surface); color: var(--prose-2); transition: border-color .15s, background .15s, transform .12s var(--ease-snap); }
+.choice:hover { border-color: var(--outline-strong); transform: translateY(-1px); }
+.choice.on { border-color: var(--prose); background: var(--surface-raised); color: var(--prose); box-shadow: inset 0 0 0 1px var(--prose); }
+.choice-emoji { font-size: 1.25rem; line-height: 1; }
+.choice-text { display: flex; flex-direction: column; min-width: 0; }
+.choice-text b { font-size: .82rem; }
+.choice-text span { font-size: .7rem; color: var(--prose-3); }
+.setup-line { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .55rem; }
+.setup-step > .setup-line:first-of-type:not(:only-of-type) { margin-top: .55rem; }
+.stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--outline-mid); border-radius: .6rem; overflow: hidden; }
+.stepper button { width: 2.2rem; height: 2.2rem; border: 0; background: var(--surface); color: var(--prose); font-size: 1.1rem; font-weight: 700; }
+.stepper button:hover:not(:disabled) { background: var(--surface-raised); }
+.stepper button:disabled { opacity: .3; cursor: default; }
+.stepper b { min-width: 2.4rem; text-align: center; font-size: 1rem; }
+.chips-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+.chip { padding: .4rem .7rem; border: 1.5px solid var(--outline-mid); border-radius: 999px; background: var(--surface); color: var(--prose-2); font-size: .74rem; font-weight: 700; white-space: nowrap; }
+.chip:hover { border-color: var(--outline-strong); }
+.chip.on { border-color: var(--prose); background: var(--prose); color: var(--site-bg); }
+.setup-help { margin: .5rem 0 0; }
+.setup-summary { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; margin-top: .4rem; padding: .8rem .9rem; border-radius: .7rem; background: var(--surface-dim); border: 1px solid var(--outline); font-size: .8rem; font-weight: 600; }
+
+/* Choix de la langue (FR / EN), à côté du thème. */
+.lang-switch { display: inline-flex; align-items: center; gap: .15rem; font-size: .66rem; font-weight: 800; letter-spacing: .04em; color: var(--prose-3); }
+.lang-switch button { border: 0; background: none; padding: .3rem .2rem; color: var(--prose-3); font: inherit; }
+.lang-switch button:hover { color: var(--prose); }
+.lang-switch button[aria-pressed="true"] { color: var(--prose); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
