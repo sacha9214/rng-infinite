@@ -2147,11 +2147,12 @@
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
-            const odds = Shop.caseOdds(c).map(o => `${Shop.byId.get(o.id).emoji} ${Shop.byId.get(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
+            const odds = Shop.caseOdds(c).map(o => `<span style="color:${Shop.rarityOf(o.id).color}">■</span> ${Shop.byId.get(o.id).emoji} ${Shop.byId.get(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
             return `
             <div class="case-tile">
               <div class="case-box" aria-hidden="true">${c.emoji}</div>
               <div class="skin-name"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></div>
+              <div class="case-contents" aria-hidden="true">${Shop.caseOdds(c).map(o => `<i style="--rar:${Shop.rarityOf(o.id).color}" title="${esc(Shop.byId.get(o.id).name)}"></i>`).join('')}</div>
               <span class="case-odds" data-tip="${esc(`<b>${c.name} odds</b><br>${odds}`)}">Odds ⓘ</span>
               <button class="btn" data-case="${c.id}">🪙 ${fmt(c.price)}</button>
             </div>`;
@@ -2253,50 +2254,89 @@
     };
   }
 
-  // Ouverture d'une caisse : le serveur tire le skin, le site fait défiler une bande de skins qui s'arrête dessus.
+  // Ouverture d'une caisse, façon caisses de jeu de tir : le serveur a déjà tiré le skin ; la bande file, ralentit
+  // longuement et s'arrête dessus, avec un tic à chaque skin qui passe sous le repère, puis la révélation dans la
+  // couleur de sa rareté. Le résultat ne dépend pas de l'animation (elle peut être coupée sans rien changer).
   async function openCase(box, state, btn) {
     if (state.coins < box.price) { toast(`${fmt(box.price - state.coins)} more coins needed for the ${box.name}`); return; }
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     let result;
     try {
       result = await Online.shopCase(box.id);
     } catch (err) {
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
       toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
       return;
     }
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
     const pool = Shop.caseOdds(box);
     const pick = () => { let u = Math.random(), acc = 0; for (const o of pool) { acc += o.p; if (u < acc) return o.id; } return pool[0].id; };
-    const WIN = 32, strip = Array.from({ length: 38 }, (_, i) => (i === WIN ? result.won : pick()));
-    const won = Shop.byId.get(result.won);
-    const cell = id => `<div class="case-cell"><div class="num-card sm${skinClass(id)}" data-tier="rare">${slotsHTML('777')}</div><span>${Shop.byId.get(id).emoji} ${esc(Shop.byId.get(id).name)}</span></div>`;
+    const WIN = 58, COUNT = 64;
+    const strip = Array.from({ length: COUNT }, (_, i) => (i === WIN ? result.won : pick()));
+    // Juste après le skin gagné, un skin rare : le « presque » qui fait retenir son souffle.
+    const rarest = pool[pool.length - 1].id;
+    if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
+    const won = Shop.byId.get(result.won), rarity = Shop.rarityOf(won.id);
+    const cell = id => {
+      const k = Shop.byId.get(id), r = Shop.rarityOf(id);
+      return `<div class="case-cell" style="--rar:${r.color}"><div class="num-card sm${skinClass(id)}" data-tier="rare">${slotsHTML('777')}</div><span>${k.emoji} ${esc(k.name)}</span></div>`;
+    };
     openModal(`
-      <h2>${box.emoji} ${esc(box.name)}</h2>
-      <div class="case-reel"><div class="case-marker"></div><div class="case-strip" id="case-strip">${strip.map(cell).join('')}</div></div>
-      <div class="case-result" id="case-result" hidden>
-        <div class="num-card md${skinClass(won.id)}" data-tier="${result.duplicate ? 'common' : 'epic'}">${slotsHTML('235711')}</div>
-        <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : 'new skin unlocked!'}</p>
-        <div class="room-buttons">
-          ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">Equip</button>`}
-          <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
+      <div class="case-open" style="--rar:${rarity.color}">
+        <h2>${box.emoji} ${esc(box.name)}</h2>
+        <div class="case-reel" id="case-reel"><div class="case-marker" id="case-marker"></div><div class="case-strip" id="case-strip">${strip.map(cell).join('')}</div></div>
+        <div class="case-result" id="case-result" hidden>
+          <div class="case-glow" aria-hidden="true"></div>
+          <div class="case-rarity">${rarity.name}</div>
+          <div class="num-card md${skinClass(won.id)}" data-tier="${result.duplicate ? 'common' : 'epic'}">${slotsHTML('235711')}</div>
+          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : 'new skin unlocked!'}</p>
+          <div class="room-buttons">
+            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">Equip</button>`}
+            <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
+          </div>
         </div>
       </div>`, () => {
-      const el = $('#case-strip'), reel = el.parentElement;
-      const target = el.children[WIN];
-      // Arrêt sur le skin gagné, légèrement décalé du centre comme une vraie roue.
-      const shift = target.offsetLeft + target.offsetWidth / 2 - reel.clientWidth / 2 + (Math.random() - 0.5) * target.offsetWidth * 0.6;
+      const el = $('#case-strip'), reel = $('#case-reel'), marker = $('#case-marker');
+      const cells = Array.from(el.children), target = cells[WIN];
+      const pitch = cells[1].offsetLeft - cells[0].offsetLeft, half = reel.clientWidth / 2;
+      // Arrêt quelque part dans la case gagnée, pas pile au centre : parfois tout près du voisin.
+      const end = target.offsetLeft + target.offsetWidth / 2 - half + (Math.random() - 0.5) * target.offsetWidth * 0.82;
+      let raf = 0, done = false, lastIndex = -1;
       const finish = () => {
+        if (done) return;
+        done = true;
+        cancelAnimationFrame(raf);
+        el.style.transform = `translateX(${-end}px)`;
+        reel.classList.add('stopped');
         target.classList.add('won');
-        $('#case-result').hidden = false;
-        Sound.play('lock', { i: result.duplicate ? 1 : 6 });
-        if (!result.duplicate) FX.celebrate('epic', target);
-        drawShop(result);
+        setTimeout(() => {
+          if (!$('#case-result')) return;
+          $('#case-result').hidden = false;
+          const big = ['red', 'gold'].includes(rarity.id);
+          Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card'));
+          drawShop(result);
+        }, reducedMotion ? 0 : 650);
       };
-      if (reducedMotion) { el.style.transform = `translateX(${-shift}px)`; finish(); }
+      if (reducedMotion) finish();
       else {
-        requestAnimationFrame(() => { el.style.transition = 'transform 4.2s cubic-bezier(.12, .7, .1, 1)'; el.style.transform = `translateX(${-shift}px)`; });
-        setTimeout(finish, 4300);
+        const DURATION = 6400, t0 = performance.now();
+        Sound.play('riser');
+        const frame = now => {
+          if (!el.isConnected) return; // fenêtre fermée : le skin est déjà acquis côté serveur
+          const t = Math.min(1, (now - t0) / DURATION);
+          const x = end * (1 - Math.pow(1 - t, 4.4)); // départ très vite, puis un long ralenti
+          el.style.transform = `translateX(${-x}px)`;
+          // Un tic à chaque skin qui passe sous le repère : ils s'espacent à mesure que la bande ralentit.
+          const index = Math.floor((x + half) / pitch);
+          if (index !== lastIndex) {
+            lastIndex = index;
+            Sound.tick({ soft: t < 0.35, last: t > 0.8 ? Math.round((t - 0.8) * 40) : 0 });
+            marker.classList.remove('tick'); void marker.offsetWidth; marker.classList.add('tick');
+          }
+          if (t < 1) raf = requestAnimationFrame(frame); else finish();
+        };
+        raf = requestAnimationFrame(frame);
       }
       const equip = $('#case-equip');
       if (equip) equip.addEventListener('click', async () => {

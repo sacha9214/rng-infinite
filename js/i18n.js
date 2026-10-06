@@ -143,6 +143,7 @@
     ': this version removes the daily limit and adds history, stats, Google sign-in and a leaderboard between friends.': ' : cette version retire la limite quotidienne et ajoute l\'historique, les stats, la connexion Google et un classement entre amis.',
     '— hit Generate (or Space) as often as you like.': '— appuie sur Générer (ou Espace) autant que tu veux.', 'XP, so a badge earned by 1 number in 1,000 is worth about 100,000 XP. Related badges form a family (e.g. Pair → Two Pair → Three Pair); only the best badge of a family counts toward your total.': 'XP : un badge obtenu par 1 nombre sur 1 000 vaut donc environ 100 000 XP. Les badges proches forment une famille (ex. Pair → Two Pair → Three Pair) ; seul le meilleur badge d\'une famille compte dans ton total.',
     '100 × 1,000,001 ÷ (numbers that earn it)': '100 × 1 000 001 ÷ (nombres qui l\'obtiennent)', 'under 0.001% (1 in 100,000+)': 'moins de 0,001 % (1 sur 100 000 et plus)',
+    'Common': 'Common', 'Legendary': 'Legendary',
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
   };

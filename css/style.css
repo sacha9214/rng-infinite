@@ -2262,3 +2262,39 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .lang-switch button { border: 0; background: none; padding: .3rem .2rem; color: var(--prose-3); font: inherit; }
 .lang-switch button:hover { color: var(--prose); }
 .lang-switch button[aria-pressed="true"] { color: var(--prose); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+
+/* ================================================================== ouverture de caisse, version « caisses de FPS » (2026-10-07)
+   Bande large qui file puis ralentit longuement, repère jaune qui tique à chaque skin, couleur de rareté sous chaque
+   skin, puis révélation dans la couleur de la rareté gagnée. */
+.modal:has(.case-open) { width: min(94vw, 54rem); max-width: none; }
+.case-open h2 { margin-bottom: .2rem; }
+.case-reel { position: relative; overflow: hidden; margin: 1rem 0 .6rem; padding: .9rem 0; border: 1px solid var(--outline); border-radius: .5rem;
+  background: linear-gradient(180deg, #0b0d12, #151922);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); }
+.case-strip { display: flex; gap: .4rem; width: max-content; will-change: transform; }
+.case-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: .35rem; width: 7.4rem; min-height: 6.4rem; padding: .6rem .3rem .55rem;
+  border: 0; border-radius: .3rem; font-size: .68rem; font-weight: 700; color: #e5e7eb; white-space: nowrap;
+  background: linear-gradient(180deg, #2a2f3a 0%, #1b1f28 55%, color-mix(in srgb, var(--rar) 55%, #1b1f28) 100%);
+  box-shadow: inset 0 -4px 0 var(--rar), inset 0 0 0 1px rgba(255, 255, 255, .05); transition: opacity .5s, filter .5s, transform .45s var(--ease-snap), box-shadow .45s; }
+.case-cell .num-card.sm { font-size: .82rem; max-width: 6.6rem; min-width: 0; }
+.case-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; z-index: 2; background: #facc15; box-shadow: 0 0 10px #facc15, 0 0 22px rgba(250, 204, 21, .6); transform-origin: 50% 50%; }
+.case-marker::before, .case-marker::after { content: ''; position: absolute; left: 50%; margin-left: -7px; border: 7px solid transparent; }
+.case-marker::before { top: 0; border-top-color: #facc15; }
+.case-marker::after { bottom: 0; border-bottom-color: #facc15; }
+.case-marker.tick { animation: case-tick .09s ease-out; }
+@keyframes case-tick { 0% { transform: scaleX(2.4); filter: brightness(1.8); } 100% { transform: none; filter: none; } }
+/* À l'arrêt : tout s'efface autour du skin gagné, qui s'allume dans sa couleur. */
+.case-reel.stopped .case-cell:not(.won) { opacity: .28; filter: saturate(.4); }
+.case-cell.won { transform: scale(1.07); z-index: 1; box-shadow: inset 0 -4px 0 var(--rar), 0 0 0 2px var(--rar), 0 0 26px var(--rar); animation: case-won 1.1s ease-in-out infinite alternate; }
+@keyframes case-won { to { box-shadow: inset 0 -4px 0 var(--rar), 0 0 0 2px var(--rar), 0 0 44px var(--rar); } }
+.case-result { position: relative; text-align: center; padding: .9rem 0 .2rem; animation: case-reveal .5s var(--ease-snap) backwards; isolation: isolate; }
+@keyframes case-reveal { 0% { opacity: 0; transform: translateY(.6rem) scale(.92); } 60% { opacity: 1; } 100% { transform: none; } }
+.case-glow { position: absolute; left: 50%; top: 2.6rem; width: 22rem; height: 9rem; margin-left: -11rem; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--rar) 55%, transparent), transparent 68%); filter: blur(6px); animation: case-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes case-pulse { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
+.case-rarity { display: inline-block; margin-bottom: .6rem; padding: .15rem .7rem; border-radius: 999px; font-size: .66rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff; background: var(--rar); box-shadow: 0 0 14px var(--rar); }
+.case-result p { margin: .8rem 0; }
+.case-contents { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; max-width: 9rem; }
+.case-contents i { width: 12px; height: 5px; border-radius: 2px; background: var(--rar); }
+@media (max-width: 560px) { .case-cell { width: 6rem; min-height: 5.6rem; } }
+.case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }

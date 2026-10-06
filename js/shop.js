@@ -73,10 +73,20 @@
     return odds[odds.length - 1].id;
   }
 
+  // Rareté d'un skin dans une caisse, par son prix, aux couleurs classiques des caisses (du plus courant au plus rare).
+  const RARITIES = [
+    { id: 'blue', name: 'Common', max: 300, color: '#4b69ff' },
+    { id: 'purple', name: 'Uncommon', max: 700, color: '#8847ff' },
+    { id: 'pink', name: 'Rare', max: 1200, color: '#d32ce6' },
+    { id: 'red', name: 'Epic', max: 2500, color: '#eb4b4b' },
+    { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
+  ];
+  const rarityOf = id => RARITIES.find(r => (byId.get(id) || { price: 0 }).price <= r.max);
+
   // Mises possibles pour un duel (0 = sans mise).
   const STAKES = [0, 50, 100, 250, 500, 1000];
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES };
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);
