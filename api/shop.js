@@ -2,6 +2,7 @@
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
 // POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
+// POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
 const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
 const crypto = require('node:crypto');
@@ -9,11 +10,12 @@ const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
+const ownedEmotesKey = id => `emotes:${id}`; // émotes spéciales achetées (lu aussi par api/room.js)
 const ownedButtonsKey = id => `btns:${id}`; // boutons achetés à part ; le hash "btns" retient le bouton choisi
 
 async function state(id) {
   const stats = await readStats(id);
-  const [owned, skin, bought, button] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id]]);
+  const [owned, skin, bought, button, emotes] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   const isOwner = Number(stats.owner) >= 1;
   const mine = [...new Set((owned || []).map(Shop.resolve))].filter(s => s !== 'classic' && Shop.byId.has(s) && !Shop.byId.get(s).hidden);
@@ -30,6 +32,7 @@ async function state(id) {
     skin: equipped && Shop.byId.has(equipped) && (!Shop.byId.get(equipped).hidden || isOwner) ? equipped : 'classic',
     buttons,
     button: mineToo ? button : Shop.MATCH,
+    emotes: Shop.EMOTES.map(e => e.id).filter(e => (emotes || []).includes(e)),
   };
 }
 
@@ -99,6 +102,25 @@ module.exports = async (req, res) => {
           ]);
         }
         await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
+        return send(res, 200, await state(playerId));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    if (body.action === 'buyemote') {
+      const item = Shop.emoteById.get(String(body.emote || ''));
+      if (!item) return send(res, 400, { error: 'Unknown emote' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        if (!st.emotes.includes(item.id)) {
+          if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
+          await redis([
+            ['HINCRBY', statsKey(playerId), 'spent', item.price],
+            ['SADD', ownedEmotesKey(playerId), item.id],
+          ]);
+        }
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

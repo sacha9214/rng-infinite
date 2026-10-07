@@ -125,6 +125,10 @@
     'Legendary skins': 'Skins légendaires', 'a full animated signature around your number': 'une signature animée complète autour de ton nombre', 'also plays in duels': 'jouée aussi en duel',
     '▶ Preview': '▶ Aperçu', 'Preview': 'Aperçu', '↻ Replay': '↻ Rejouer', 'shown as a Mythic roll, the strongest reveal': 'montré comme un tirage Mythic, la révélation la plus forte',
     'A blade, a branch in bloom, a rising moon': 'Une lame, une branche en fleurs, la lune qui se lève', 'Lightning strikes every digit': 'La foudre frappe chaque chiffre', 'A dragon circles your number and forges it': 'Un dragon tourne autour de ton nombre et le forge', 'Light bends around your number': 'La lumière se courbe autour de ton nombre',
+    // Émotes spéciales (boutique, duel)
+    'Emotes': 'Émotes', 'animated reactions for your duels': 'des réactions animées pour tes duels', 'everyone sees them': 'tout le monde les voit', 'Owned': 'Possédée',
+    'The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.': 'Les six émotes classiques sont gratuites. Celles-ci bougent : achètes-en une une fois, elle rejoint ta barre de réactions dans tous les duels.',
+    'Buy this emote first': 'Achète d\'abord cette émote', 'Unknown emote': 'Émote inconnue',
     // Boutons de tirage (boutique)
     'Generate button': 'Bouton Générer', 'only you see it': 'toi seul le vois', 'press one to try it': 'appuie dessus pour l\'essayer',
     'Your Generate button follows your skin: every skin comes with its own button. You can also wear the button of any skin you own, or one of the buttons sold only here.': 'Ton bouton Générer suit ton skin : chaque skin a son propre bouton. Tu peux aussi porter le bouton de n\'importe quel skin que tu possèdes, ou l\'un des boutons vendus uniquement ici.',
@@ -202,6 +206,8 @@
     [/^New quests in (\d+) (h|min)$/, m => `Nouvelles quêtes dans ${m[1]} ${m[2]}`],
     [/^tomorrow: (\d+) coins$/, m => `demain : ${m[1]} pièces`],
     [/^\+([\d,]+) coins$/, m => `+${nb(m[1])} pièces`],
+    [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
+    [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],
     [/^([\d,]+) more coins needed for the (.+) button$/, m => `Il manque ${nb(m[1])} pièces pour le bouton ${m[2]}`],
     [/^([\d,]+) more coins needed for (?:the )?(.+)$/, m => `Il manque ${nb(m[1])} pièces pour ${one(m[2])}`],
     [/^Not enough coins: ([\d,]+) more needed$/, m => `Pas assez de pièces : il en manque ${nb(m[1])}`],

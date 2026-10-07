@@ -1013,6 +1013,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await btn(frank, 'buybutton', 'keycap')).body.coins, 250, 'racheter ne débite pas deux fois');
   assert.equal(look(await state(frank)), 'keycap');
   // Un achat à la fois : pendant qu'un autre est en cours, celui-ci est refusé sans rien débiter.
+  await new Promise(resolve => setImmediate(resolve)); // la requête précédente relâche son verrou après avoir répondu
   run([['SET', `shop:${frank.playerId}`, '1']]);
   assert.equal((await btn(frank, 'buybutton', 'terminal')).status, 429);
   run([['DEL', `shop:${frank.playerId}`]]);
@@ -1041,6 +1042,49 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const id of [...Shop.SKINS.map(k => k.id).filter(id => id !== 'classic'), 'owner', ...Shop.BUTTONS.map(b => b.id)]) {
     assert.ok(css.includes(`.btn-roll.gen-${id} {`), `style du bouton ${id} manquant dans css/buttons.css`);
   }
+}
+
+// ================================================================ 28. Émotes spéciales : achetées une fois, réservées à qui les possède
+{
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const buy = (who, emote) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'buyemote', emote } });
+  const setCoins = async (who, target) => run([['HINCRBY', `stats:${who.playerId}`, 'bonus', target - (await state(who)).coins]]);
+  assert.deepEqual((await state(frank)).emotes, [], 'aucune émote spéciale au départ');
+  assert.equal((await buy(frank, 'licorne')).status, 400);
+  assert.equal((await buy(frank, 'laugh')).status, 400, 'les six de base ne se vendent pas');
+  assert.equal((await buy({ ...frank, secret: '9'.repeat(32) }, 'gg')).status, 403);
+  await setCoins(frank, 250);
+  r = await buy(frank, 'gg'); // 300 pièces
+  assert.equal(r.status, 422);
+  assert.match(r.body.error, /50 more needed/);
+  await setCoins(frank, 1000);
+  r = await buy(frank, 'gg');
+  assert.deepEqual([r.status, r.body.coins, r.body.emotes], [200, 700, ['gg']], JSON.stringify(r.body));
+  assert.equal((await buy(frank, 'gg')).body.coins, 700, 'racheter ne débite pas deux fois');
+  // La requête précédente relâche son verrou juste après avoir répondu : on la laisse finir avant de poser le nôtre.
+  await new Promise(resolve => setImmediate(resolve));
+  run([['SET', `shop:${frank.playerId}`, '1']]);
+  assert.equal((await buy(frank, 'rage')).status, 429, 'un achat à la fois');
+  run([['DEL', `shop:${frank.playerId}`]]);
+  run([['SADD', `emotes:${frank.playerId}`, 'licorne']]);
+  assert.deepEqual((await state(frank)).emotes, ['gg'], 'un identifiant inventé est ignoré');
+  // En duel : une émote spéciale ne part que si on la possède ; les six de base partent toujours.
+  r = await roomPost(frank, 'create', { size: 2, mode: 'rounds', target: 1, bots: 1 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const code = r.body.code;
+  await later(1000, async () => {
+    r = await roomPost(frank, 'react', { code, emoji: 'rage' });
+    assert.deepEqual([r.status, r.body.error], [403, 'Buy this emote first']);
+  });
+  await later(1000, async () => {
+    r = await roomPost(frank, 'react', { code, emoji: 'gg' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(r.body.reacts.some(x => x.e === 'gg' && x.name === frank.name), 'la réaction part, visible de tous');
+  });
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: 'cool' })).status, 200));
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: '🦄' })).status, 400));
+  // Catalogue : identifiants distincts des émotes de base.
+  assert.ok(Shop.EMOTES.every(e => !Shop.BASE_EMOTES.includes(e.id) && e.price > 0));
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -174,3 +174,51 @@
 .skin-preview { position: relative; display: grid; place-items: center; height: 17rem; margin: .4rem -.4rem .2rem; }
 .skin-preview .card-stage { position: relative; }
 @media (max-width: 560px) { .skin-preview { height: 14rem; } .premium-grid { grid-template-columns: 1fr; } }
+
+/* ================================================================== émotes spéciales (js/emotes.js) */
+.emote-svg { display: block; }
+.emote-svg svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.emote-svg .em { transform-box: fill-box; transform-origin: 50% 50%; animation-duration: 1.2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-play-state: paused; }
+/* Elles bougent dans une bulle de réaction, au survol de leur bouton, et dans la boutique ; ailleurs, la pose seule. */
+.react-bubble .emote-svg .em, .react-btn:hover .emote-svg .em, .emote-tile .emote-svg .em { animation-play-state: running; }
+.em-bounce { animation-name: em-bounce; }
+.em-breathe { animation-name: em-breathe; animation-duration: 2.4s !important; }
+.em-tremble { animation-name: em-tremble; animation-duration: .16s !important; animation-timing-function: linear !important; }
+.em-shake { animation-name: em-shake; animation-duration: .12s !important; animation-timing-function: linear !important; }
+.em-thumb { animation-name: em-thumb; transform-origin: 50% 100% !important; }
+.em-pop { animation-name: em-pop; }
+.em-z { animation-name: em-z; animation-duration: 1.8s !important; animation-timing-function: ease-out !important; }
+.em-drop { animation-name: em-drop; animation-duration: 1.1s !important; animation-timing-function: ease-in !important; }
+.em-pulse { animation-name: em-pulse; animation-duration: .7s !important; }
+.em-float { animation-name: em-float; animation-duration: 2s !important; animation-timing-function: ease-out !important; }
+.em-steam { animation-name: em-steam; animation-duration: .9s !important; animation-timing-function: ease-out !important; }
+.em-wobble { animation-name: em-wobble; animation-duration: .9s !important; }
+.em-honk { animation-name: em-honk; animation-duration: .8s !important; }
+.em-fall { animation-name: em-fall; animation-duration: 1.5s !important; animation-timing-function: ease-in !important; }
+.em-spinx { animation-name: em-spinx; animation-duration: 1s !important; }
+.em-burst { animation-name: em-burst; animation-duration: .9s !important; transform-origin: 50% 100% !important; }
+.em-ray { animation-name: em-ray; animation-duration: .9s !important; }
+@keyframes em-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes em-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04, .97) translateY(1px); } }
+@keyframes em-tremble { 0%, 100% { transform: translate(-.6px, 0); } 50% { transform: translate(.6px, .4px); } }
+@keyframes em-shake { 0%, 100% { transform: translate(-1.4px, .6px) rotate(-1.5deg); } 50% { transform: translate(1.4px, -.6px) rotate(1.5deg); } }
+@keyframes em-thumb { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg) translateY(-2px); } }
+@keyframes em-pop { 0%, 100% { transform: scale(1) rotate(-6deg); } 50% { transform: scale(1.14) rotate(4deg); } }
+@keyframes em-z { 0% { transform: translate(-4px, 6px) scale(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(4px, -7px) scale(1.1); opacity: 0; } }
+@keyframes em-drop { 0% { transform: translateY(-4px) scale(.7); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(16px) scale(1); opacity: 0; } }
+@keyframes em-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
+@keyframes em-float { 0% { transform: translateY(8px) scale(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-14px) scale(1.1); opacity: 0; } }
+@keyframes em-steam { 0% { transform: translateY(6px) scale(.5); opacity: 0; } 35% { opacity: 1; } 100% { transform: translateY(-9px) scale(1.15); opacity: 0; } }
+@keyframes em-wobble { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes em-honk { 0%, 60%, 100% { transform: scale(1); } 75% { transform: scale(1.45); } 88% { transform: scale(.9); } }
+@keyframes em-fall { 0% { transform: translateY(-12px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(30px) rotate(40deg); opacity: 0; } }
+@keyframes em-spinx { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.12); } }
+@keyframes em-burst { 0%, 100% { transform: scale(.82); } 45% { transform: scale(1.18); } }
+@keyframes em-ray { 0%, 100% { opacity: 0; } 45% { opacity: 1; } }
+/* Boutique et barre de réactions. */
+.emote-grid { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
+.emote-tile .emote { width: 84px; height: 84px; }
+.emote-tile.owned { border-color: color-mix(in srgb, var(--success) 45%, var(--outline)); }
+.room-reacts { flex-wrap: wrap; }
+.react-btn.special { border-color: rgba(234, 179, 8, .55); }
+@media (max-width: 560px) { .emote-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .emote-tile .emote { width: 64px; height: 64px; } }

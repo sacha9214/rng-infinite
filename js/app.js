@@ -195,6 +195,7 @@
   function applyShop(state) {
     Store.setSetting('skin', state.skin);
     Store.setSetting('button', Shop.buttonLook(state.button, state.skin, state.owned, state.buttons));
+    Store.setSetting('emotes', state.emotes || []);
     paintRollButtons();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
@@ -2046,9 +2047,14 @@
   // Emotes de duel : la mascotte dé (images dessinées pour le site). Touches 1 à 6.
   const REACTIONS = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
   const EMOTE_LABELS = { laugh: 'Laugh', cry: 'Cry', angry: 'Angry', cool: 'Cool', shock: 'Shocked', king: 'King' };
+  // Les six de base sont des images ; les émotes spéciales (achetées dans la boutique) sont dessinées et animées en
+  // SVG (js/emotes.js). Tout le monde les voit, seuls ceux qui les possèdent peuvent les envoyer.
+  const Emotes = window.RNGEmotes || { svg: () => '', has: () => false };
   const emoteHTML = (id, cls = '') => (EMOTE_LABELS[id]
     ? `<img class="emote${cls}" src="img/emotes/${id}.png" alt="${EMOTE_LABELS[id]}" draggable="false">`
+    : Emotes.has(id) ? `<span class="emote emote-svg${cls}" role="img" aria-label="${esc((Shop.emoteById.get(id) || {}).name || id)}" data-no-i18n>${Emotes.svg(id)}</span>`
     : esc(id)); // ancienne réaction en emoji (salles d'avant les emotes)
+  const myEmotes = () => (Store.settings.emotes || []).filter(e => Shop.emoteById.has(e) && Emotes.has(e));
   const titleEmoji = id => (id && Ach.byId.get(id) && !Ach.byId.get(id).hidden ? ` ${Ach.byId.get(id).emoji}` : '');
   const goalText = d => (d.mode === 'xp' ? `first to ${compact(d.target)} XP` : `first to ${plural(d.target, 'round win')}`);
 
@@ -2194,6 +2200,11 @@
           <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
           <div class="skin-grid" id="d-skins"></div>
         </div>
+        <div class="panel stats-sep" id="d-emotes-panel" hidden>
+          <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
+          <div class="skin-grid emote-grid" id="d-emotes"></div>
+        </div>
         <div class="panel stats-sep" id="d-buttons-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Generate button</h3><span class="panel-note">only you see it · press one to try it</span></div>
           <p class="panel-note" style="margin-top:-.3rem">Your Generate button follows your skin: every skin comes with its own button. You can also wear the button of any skin you own, or one of the buttons sold only here.</p>
@@ -2254,6 +2265,7 @@
     applyShop(state);
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
+    drawEmotes(state);
     const cases = $('#d-cases');
     if (cases) cases.onclick = e => {
       const btn = e.target.closest('[data-case]');
@@ -2288,6 +2300,35 @@
       try {
         const next = await Online.shopAction(buy ? 'buy' : 'equip', skin.id);
         toast(buy ? `${skin.emoji} ${skin.name} unlocked and equipped` : `${skin.emoji} ${skin.name} equipped`);
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
+  }
+
+  // Émotes spéciales : une tuile par émote, animée en permanence ici ; achetée une fois, elle rejoint la barre de
+  // réactions de tous les duels.
+  function drawEmotes(state) {
+    const grid = $('#d-emotes');
+    if (!grid) return;
+    $('#d-emotes-panel').hidden = false;
+    grid.innerHTML = Shop.EMOTES.filter(e => Emotes.has(e.id)).map(e => `
+      <div class="skin-tile emote-tile${state.emotes.includes(e.id) ? ' owned' : ''}">
+        ${emoteHTML(e.id)}
+        <div class="skin-name"><b data-no-i18n>${esc(e.name)}</b></div>
+        ${state.emotes.includes(e.id) ? '<span class="skin-state">Owned</span>' : `<button class="btn${state.coins >= e.price ? '' : ' disabled'}" data-emote-buy="${e.id}">🪙 ${fmt(e.price)}</button>`}
+      </div>`).join('');
+    grid.onclick = async ev => {
+      const btn = ev.target.closest('[data-emote-buy]');
+      if (!btn || btn.disabled) return;
+      const item = Shop.emoteById.get(btn.dataset.emoteBuy);
+      if (state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for the ${item.name} emote`); return; }
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction('buyemote', undefined, { emote: item.id });
+        toast(`${item.name} emote unlocked: use it in your next duel`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -2874,7 +2915,7 @@
     try {
       applyRoom(await Online.roomAction('react', Room.code, { emoji }), token, sent, Date.now());
     } catch (err) {
-      if (err.status !== 429) toast('Reaction not sent');
+      if (err.status !== 429) toast(err.status === 403 ? 'Buy this emote first' : 'Reaction not sent');
     }
   }
 
@@ -2966,7 +3007,7 @@
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
-        ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).join('')}</div>` : ''}
+        ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p></div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
       if (!Room.anim) { $('#room-stage').innerHTML = stageHTML(Room.shown ? d.rounds[Room.shown - 1] : null); Room.skinSig = skinSig(d); }

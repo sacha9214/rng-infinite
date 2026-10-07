@@ -115,10 +115,25 @@
     return resolve(skin) || 'classic';
   }
 
+  // Émotes spéciales : en plus des six réactions de base (gratuites), à acheter une fois pour s'en servir en duel.
+  // Dessinées et animées dans js/emotes.js (même identifiant).
+  const BASE_EMOTES = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
+  const EMOTES = [
+    { id: 'gg', name: 'GG', price: 300 },
+    { id: 'sleep', name: 'Zzz', price: 300 },
+    { id: 'sweat', name: 'Phew', price: 400 },
+    { id: 'love', name: 'Love', price: 500 },
+    { id: 'rage', name: 'Rage', price: 600 },
+    { id: 'clown', name: 'Clown', price: 700 },
+    { id: 'money', name: 'Rich', price: 900 },
+    { id: 'mindblown', name: 'Mind blown', price: 1200 },
+  ];
+  const emoteById = new Map(EMOTES.map(e => [e.id, e]));
+
   // Mises possibles pour un duel (0 = sans mise).
   const STAKES = [0, 50, 100, 250, 500, 1000];
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook };
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

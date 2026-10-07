@@ -542,7 +542,12 @@ module.exports = async (req, res) => {
     // Réaction : un emoji de la liste, au plus une toutes les 0,7 s par joueur.
     if (body.action === 'react') {
       if (!member) return send(res, 422, { error: 'You are not in this duel' });
-      if (!REACTIONS.includes(body.emoji)) return send(res, 400, { error: 'Unknown reaction' });
+      if (!REACTIONS.includes(body.emoji) && !Shop.emoteById.has(body.emoji)) return send(res, 400, { error: 'Unknown reaction' });
+      // Émote spéciale : il faut l'avoir achetée (une lecture de plus, seulement pour celles-là).
+      if (Shop.emoteById.has(body.emoji)) {
+        const [mine] = await redis([['SISMEMBER', `emotes:${playerId}`, body.emoji]]);
+        if (Number(mine) !== 1) return send(res, 403, { error: 'Buy this emote first' });
+      }
       const [ok] = await redis([['SET', `react:${playerId}`, '1', 'PX', REACT_EVERY_MS, 'NX']]);
       if (ok !== 'OK') return send(res, 429, { error: 'Too many reactions' });
       const i = room.players.findIndex(p => p.id === playerId);
