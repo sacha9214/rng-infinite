@@ -1183,6 +1183,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-08b', date: 'Oct 8, 2026', en: ['Casino tables redrawn: a real 3D roulette wheel with its ball, dealt and flipped cards, a bouncing Plinko ball, flipping Mines tiles, a Crash rocket'], fr: ['Tables du casino redessinées : vraie roue de roulette en 3D avec sa bille, cartes distribuées et retournées, bille de Plinko qui rebondit, cases de Mines qui basculent, fusée de Crash'] },
     { id: '2026-10-08', date: 'Oct 8, 2026', en: ['Rewatch any roll: open a roll (yours or another player\'s) and press Rewatch', 'Casino: three new games (Crash, Mines, Plinko) and a new look', 'This update log'], fr: ['Revoir un tirage : ouvre un tirage (le tien ou celui d\'un autre) et appuie sur Rewatch', 'Casino : trois nouveaux jeux (Crash, Mines, Plinko) et un nouveau décor', 'Ce journal des mises à jour'] },
     { id: '2026-10-07b', date: 'Oct 7, 2026', en: ['Skip known badges: a setting unlocked at 500 rolls', 'Gamble section: roulette and blackjack with your coins', 'Vaporwave skin redesigned', 'The XP on the Generate screen now matches the leaderboard'], fr: ['Passer les badges connus : un réglage débloqué à 500 tirages', 'Section Casino : roulette et blackjack avec tes pièces', 'Skin Vaporwave refait', 'L\'XP de l\'écran Générer est maintenant celui du classement'] },
     { id: '2026-10-07a', date: 'Oct 7, 2026', en: ['4 legendary skins with a full animated signature: Sakura, Storm, Dragon, Singularity', 'Preview any skin in the shop before buying', 'Every skin\'s animation now plays in duels', '8 animated emotes to buy', 'Chat in duels', 'Generate button skins'], fr: ['4 skins légendaires avec une signature animée : Sakura, Storm, Dragon, Singularity', 'Aperçu de chaque skin dans la boutique avant d\'acheter', 'L\'animation de chaque skin se joue en duel', '8 émotes animées à acheter', 'Chat dans les duels', 'Skins du bouton Générer'] },
@@ -2380,7 +2381,8 @@
   const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-  const cardHTML = c => (c ? `<span class="pcard${c.s === 1 || c.s === 2 ? ' red' : ''}" data-no-i18n><b>${RANKS[c.r]}</b><i>${SUITS[c.s]}</i></span>` : '<span class="pcard back"></span>');
+  // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
+  const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
   function renderGamble() {
     currentView = 'gamble';
     const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
@@ -2413,7 +2415,7 @@
           </div>
           <div class="panel g-game" data-game="roulette">
             <div class="panel-head"><h3 class="panel-title">Roulette</h3><span class="panel-note">one zero · red or black pays 2× · a number pays 36×</span></div>
-            <div class="rwheel" id="r-wheel" data-color="idle"><span class="mono" id="r-number">?</span></div>
+            <div class="rw-scene"><div class="rw-tilt"><canvas id="rw-canvas" width="520" height="520"></canvas></div><div class="rw-readout" id="r-wheel" data-color="idle"><span class="mono" id="r-number">?</span></div></div>
             <div class="rbets" id="r-bets">
               ${bet('red', 'Red', 'red')}${bet('black', 'Black', 'black')}${bet('even', 'Even')}${bet('odd', 'Odd')}${bet('low', '1–18')}${bet('high', '19–36')}
               ${bet('d1', '1–12')}${bet('d2', '13–24')}${bet('d3', '25–36')}
@@ -2432,7 +2434,52 @@
       </div>`;
     const showCoins = c => { if (c != null) Gamble.coins = c; if ($('#g-coins') && Gamble.coins != null) $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; };
     const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'One move at a time' : 'Gamble unavailable right now, try again');
-    // ---- roulette
+    // ---- roulette : la roue européenne (ordre réel des cases), dessinée à plat puis inclinée en CSS
+    const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+    const rw = $('#rw-canvas').getContext('2d'), RC = 260, SEG = (Math.PI * 2) / 37;
+    let wheelAngle = Gamble.wheelAngle || 0;
+    const drawWheel = (wa, ball) => {
+      rw.clearRect(0, 0, 520, 520);
+      const ring = (r, fill) => { rw.beginPath(); rw.arc(RC, RC, r, 0, 7); rw.fillStyle = fill; rw.fill(); };
+      const wood = rw.createRadialGradient(RC, RC, 200, RC, RC, 258); wood.addColorStop(0, '#3b1d0a'); wood.addColorStop(.5, '#7a4318'); wood.addColorStop(1, '#2a1406');
+      ring(258, wood); ring(232, '#1a0f08');
+      const track = rw.createRadialGradient(RC, RC, 196, RC, RC, 232); track.addColorStop(0, '#5a3413'); track.addColorStop(1, '#8a5524'); ring(230, track);
+      rw.save(); rw.translate(RC, RC); rw.rotate(wa);
+      WHEEL.forEach((n, i) => {
+        const a0 = i * SEG - SEG / 2 - Math.PI / 2;
+        rw.beginPath(); rw.moveTo(0, 0); rw.arc(0, 0, 196, a0, a0 + SEG); rw.closePath();
+        rw.fillStyle = n === 0 ? '#15803d' : RED_NUMBERS.has(n) ? '#b91c1c' : '#141416'; rw.fill();
+        rw.strokeStyle = '#d4a84a'; rw.lineWidth = 1.2; rw.stroke();
+        rw.save(); rw.rotate(i * SEG); rw.fillStyle = '#fff'; rw.font = '700 15px Inter, sans-serif'; rw.textAlign = 'center'; rw.fillText(String(n), 0, -170); rw.restore();
+      });
+      rw.beginPath(); rw.arc(0, 0, 150, 0, 7); rw.strokeStyle = '#d4a84a'; rw.lineWidth = 2; rw.stroke();
+      const cone = rw.createRadialGradient(-20, -24, 6, 0, 0, 112); cone.addColorStop(0, '#a26a2c'); cone.addColorStop(.7, '#5b3311'); cone.addColorStop(1, '#2f1a08');
+      rw.beginPath(); rw.arc(0, 0, 112, 0, 7); rw.fillStyle = cone; rw.fill();
+      for (let k = 0; k < 4; k++) { rw.save(); rw.rotate(k * Math.PI / 2); const g = rw.createLinearGradient(0, -6, 0, 6); g.addColorStop(0, '#fff3c4'); g.addColorStop(1, '#a16207'); rw.fillStyle = g; rw.fillRect(14, -4, 70, 8); rw.beginPath(); rw.arc(88, 0, 9, 0, 7); rw.fill(); rw.restore(); }
+      const hub = rw.createRadialGradient(-6, -8, 2, 0, 0, 24); hub.addColorStop(0, '#fff8d6'); hub.addColorStop(1, '#a16207'); rw.beginPath(); rw.arc(0, 0, 22, 0, 7); rw.fillStyle = hub; rw.fill();
+      rw.restore();
+      if (ball) { const bx = RC + Math.cos(ball.a) * ball.r, by = RC + Math.sin(ball.a) * ball.r; rw.beginPath(); rw.arc(bx + 3, by + 4, 9, 0, 7); rw.fillStyle = 'rgba(0,0,0,.4)'; rw.fill(); const bg = rw.createRadialGradient(bx - 3, by - 3, 1, bx, by, 9); bg.addColorStop(0, '#fff'); bg.addColorStop(1, '#b8bcc4'); rw.beginPath(); rw.arc(bx, by, 9, 0, 7); rw.fillStyle = bg; rw.fill(); }
+    };
+    drawWheel(wheelAngle, Gamble.ball || null);
+    const spinWheel = n => new Promise(done => {
+      const T = 5600, t0 = performance.now(), w0 = wheelAngle, wTurn = Math.PI * 2 * 2.6;
+      const wEnd = w0 + wTurn, target = wEnd + WHEEL.indexOf(n) * SEG - Math.PI / 2; // où la case tirée s'arrêtera
+      const b0 = target + Math.PI * 2 * 7.5 + Math.random() * .2; // la bille part loin en avant et revient à contresens
+      let lastTick = 0;
+      const frame = now => {
+        const k = Math.min(1, (now - t0) / T), e = 1 - Math.pow(1 - k, 3);
+        wheelAngle = w0 + wTurn * e;
+        const be = 1 - Math.pow(1 - k, 2.4), drop = Math.max(0, (k - .62) / .38), bounce = drop > 0 && drop < 1 ? Math.abs(Math.sin(drop * Math.PI * 3)) * (1 - drop) * 12 : 0;
+        // tant qu'elle roule sur la piste, la bille est libre ; dans le dernier tiers elle se cale sur la roue
+        const free = b0 - (b0 - target) * be - (wEnd - wheelAngle) * (1 - drop), a = k < 1 ? free : target;
+        const ball = { a, r: 214 - 40 * (1 - Math.pow(1 - drop, 2)) + bounce };
+        Gamble.ball = ball; Gamble.wheelAngle = wheelAngle;
+        drawWheel(wheelAngle, ball);
+        const step = Math.floor(a / SEG); if (step !== lastTick && k < .97) { lastTick = step; if (k > .25 || step % 3 === 0) Sound.tick({ soft: k < .7 }); }
+        if (k < 1 && currentView === 'gamble') requestAnimationFrame(frame); else done();
+      };
+      requestAnimationFrame(frame);
+    });
     const drawBets = () => {
       document.querySelectorAll('#r-bets [data-bet]').forEach(b => { const v = Gamble.bets[b.dataset.bet]; const out = b.querySelector('b'); if (out) out.textContent = v ? fmt(v) : ''; b.classList.toggle('on', !!v); });
       const nums = Object.entries(Gamble.bets).filter(([k]) => k.startsWith('n:'));
@@ -2460,9 +2507,9 @@
       const wheel = $('#r-wheel'), num = $('#r-number');
       try {
         const res = await gamble('roulette', { bets });
-        // La bille tourne : des numéros défilent de plus en plus lentement, puis le vrai.
-        wheel.dataset.color = 'spin';
-        for (let i = 0, wait = 45; i < 26 && currentView === 'gamble'; i++, wait *= 1.09) { const k = (Math.random() * 37) | 0; num.textContent = k; wheel.dataset.color = rouletteColor(k); Sound.tick({ soft: i < 18 }); await new Promise(r => setTimeout(r, wait)); }
+        // La roue tourne dans un sens, la bille dans l'autre ; elle ralentit, descend et se loge dans la case tirée.
+        wheel.dataset.color = 'spin'; num.textContent = '';
+        await spinWheel(res.n);
         if (currentView !== 'gamble') return;
         num.textContent = res.n; wheel.dataset.color = res.color; replay(wheel, 'landed');
         const net = res.win - res.total;
@@ -2475,10 +2522,15 @@
     const BJ_TEXT = { blackjack: 'Blackjack!', win: 'You win', push: 'Push: your bet comes back', lose: 'Dealer wins', bust: 'Bust' };
     const drawHand = h => {
       Gamble.hand = h;
+      const seen = h && !h.idle && Gamble.bjSeen && Gamble.bjKey === h.bet + ':' + h.player[0].r + h.player[0].s ? Gamble.bjSeen : { p: 0, d: 0 };
+      if (h && !h.idle) Gamble.bjKey = h.bet + ':' + h.player[0].r + h.player[0].s;
       const playing = h && !h.idle && !h.done;
       $('#bj-table').innerHTML = !h || h.idle ? '<div class="empty">Place a bet and deal.</div>' : `
-        <div class="bj-row"><span class="eyebrow">Dealer${h.done ? ` · ${h.dealerValue}` : ''}</span><div class="bj-cards">${h.dealer.map(cardHTML).join('')}${h.done ? '' : cardHTML(null)}</div></div>
-        <div class="bj-row"><span class="eyebrow">You · ${h.value}</span><div class="bj-cards">${h.player.map(cardHTML).join('')}</div></div>`;
+        <div class="bj-shoe" aria-hidden="true"></div>
+        <div class="bj-row"><span class="eyebrow">Dealer${h.done ? ` · ${h.dealerValue}` : ''}</span><div class="bj-cards">${h.dealer.map((c, i) => cardHTML(c, i >= seen.d, i - seen.d)).join('')}${h.done ? '' : cardHTML(null, seen.d < 2, 1)}</div></div>
+        <div class="bj-felt-text" aria-hidden="true">BLACKJACK PAYS 3 TO 2</div>
+        <div class="bj-row"><span class="eyebrow">You · ${h.value}</span><div class="bj-cards">${h.player.map((c, i) => cardHTML(c, i >= seen.p, i - seen.p)).join('')}</div><span class="bj-stack" data-no-i18n>${fmt(h.bet)}</span></div>`;
+      Gamble.bjSeen = h && !h.idle ? { p: h.player.length, d: h.done ? h.dealer.length : 1 } : { p: 0, d: 0 };
       $('#bj-actions').innerHTML = playing
         ? `<button class="btn-roll small" data-bj="hit">Hit</button><button class="btn" data-bj="stand">Stand</button>${h.canDouble ? '<button class="btn" data-bj="double">Double</button>' : ''}`
         : `<button class="btn-roll small" data-bj="deal">Deal · ${fmt(Gamble.chip)}</button>`;
@@ -2505,10 +2557,23 @@
     // ---- plinko : la bille suit le chemin tiré par le serveur, un clou toutes les 110 ms
     const pk = $('#pk-canvas').getContext('2d'), PW = 520, PH = 360, ROWS = 12, GAPX = PW / (ROWS + 2), GAPY = (PH - 40) / ROWS;
     const peg = (r, i) => ({ x: PW / 2 + (i - r / 2) * GAPX, y: 26 + r * GAPY });
-    const drawBoard = ball => {
+    const lit = new Map(); // clou touché → instant, pour le faire briller un moment
+    const drawBoard = (ball, trail = []) => {
       pk.clearRect(0, 0, PW, PH);
-      for (let r = 0; r < ROWS; r++) for (let i = 0; i <= r + 1; i++) { const q = peg(r + 1, i); pk.beginPath(); pk.arc(q.x, q.y - GAPY, 3.2, 0, 7); pk.fillStyle = 'rgba(255,255,255,.75)'; pk.fill(); }
-      if (ball) { pk.beginPath(); pk.arc(ball.x, ball.y, 8, 0, 7); pk.fillStyle = '#fbbf24'; pk.shadowColor = '#f59e0b'; pk.shadowBlur = 16; pk.fill(); pk.shadowBlur = 0; }
+      const now = performance.now();
+      for (let r = 0; r < ROWS; r++) for (let i = 0; i <= r + 1; i++) {
+        const q = peg(r + 1, i), y = q.y - GAPY, hot = Math.max(0, 1 - (now - (lit.get(`${r}:${i}`) || 0)) / 420);
+        pk.beginPath(); pk.arc(q.x + 1.5, y + 2.5, 4.2, 0, 7); pk.fillStyle = 'rgba(0,0,0,.45)'; pk.fill();
+        if (hot > 0) { pk.beginPath(); pk.arc(q.x, y, 4 + 9 * hot, 0, 7); pk.fillStyle = `rgba(251,191,36,${.35 * hot})`; pk.fill(); }
+        const g = pk.createRadialGradient(q.x - 1.4, y - 1.6, .5, q.x, y, 4.4); g.addColorStop(0, '#fff'); g.addColorStop(1, hot > 0 ? '#fbbf24' : '#8b93a7');
+        pk.beginPath(); pk.arc(q.x, y, 4.2, 0, 7); pk.fillStyle = g; pk.fill();
+      }
+      trail.forEach((t, k) => { pk.beginPath(); pk.arc(t.x, t.y, 7 * (k / trail.length), 0, 7); pk.fillStyle = `rgba(251,191,36,${.18 * (k / trail.length)})`; pk.fill(); });
+      if (ball) {
+        pk.beginPath(); pk.ellipse(ball.x + 3, ball.y + 6, 8, 5, 0, 0, 7); pk.fillStyle = 'rgba(0,0,0,.4)'; pk.fill();
+        const g = pk.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, 9); g.addColorStop(0, '#fff7c2'); g.addColorStop(.5, '#fbbf24'); g.addColorStop(1, '#b45309');
+        pk.beginPath(); pk.arc(ball.x, ball.y, 9, 0, 7); pk.fillStyle = g; pk.shadowColor = '#f59e0b'; pk.shadowBlur = 18; pk.fill(); pk.shadowBlur = 0;
+      }
     };
     drawBoard();
     $('#pk-go').addEventListener('click', async () => {
@@ -2517,11 +2582,15 @@
       try {
         const res = await gamble('plinko', { bet: Gamble.chip });
         showCoins(res.coins + 0 - res.win); // le gain s'affiche quand la bille arrive
-        let pos = 0;
+        // La bille tombe de clou en clou : un petit rebond en cloche à chaque rangée, de plus en plus vif.
+        let pos = 0; const trail = [];
+        const hop = (from, to, ms) => new Promise(done => { const t0 = performance.now(); const f = now => { const t = Math.min(1, (now - t0) / ms), x = from.x + (to.x - from.x) * t, y = from.y + (to.y - from.y) * t * t - Math.sin(Math.PI * t) * 11; trail.push({ x, y }); if (trail.length > 9) trail.shift(); drawBoard({ x, y }, trail); if (t < 1 && currentView === 'gamble') requestAnimationFrame(f); else done(); }; requestAnimationFrame(f); });
+        let at = { x: PW / 2, y: -6 };
         for (let r = 0; r <= ROWS && currentView === 'gamble'; r++) {
-          const from = peg(r, pos), to = r < ROWS ? peg(r + 1, pos + res.path[r]) : { x: from.x, y: PH - 6 };
-          for (let k = 0; k <= 6; k++) { const t = k / 6; drawBoard({ x: from.x + (to.x - from.x) * t, y: from.y - GAPY + (to.y - from.y) * t * t + (r ? 0 : 0) - Math.sin(Math.PI * t) * 7 }); await new Promise(r2 => setTimeout(r2, 17)); }
-          if (r < ROWS) { pos += res.path[r]; Sound.tick({ soft: 1 }); }
+          const q = r < ROWS ? peg(r + 1, pos + res.path[r]) : null, to = q ? { x: q.x - (res.path[r] ? 6 : -6), y: q.y - GAPY - 12 } : { x: at.x, y: PH + 4 };
+          await hop(at, to, r === 0 ? 260 : Math.max(120, 190 - r * 6));
+          at = to;
+          if (r < ROWS) { pos += res.path[r]; lit.set(`${r}:${pos}`, performance.now()); Sound.tick({ soft: 1 }); }
         }
         if (currentView !== 'gamble') return;
         document.querySelectorAll('#pk-slots span').forEach(x => x.classList.toggle('hit', Number(x.dataset.slot) === res.slot));
@@ -2534,7 +2603,7 @@
     const drawMines = g => {
       Gamble.mn = g;
       const live = g && !g.idle && !g.done;
-      document.querySelectorAll('.mn-cell').forEach(c => { const i = Number(c.dataset.cell); const open = g && g.open && g.open.includes(i), bomb = g && g.bombs && g.bombs.includes(i); c.className = `mn-cell${open ? ' gem' : ''}${bomb ? ' bomb' : ''}${g && g.hit === i ? ' hit' : ''}`; c.textContent = open ? '💎' : bomb ? '💣' : ''; c.disabled = !live || open; });
+      document.querySelectorAll('.mn-cell').forEach(c => { const i = Number(c.dataset.cell); const open = g && g.open && g.open.includes(i), bomb = g && g.bombs && g.bombs.includes(i); const was = c.dataset.face || ''; const face = open ? 'gem' : bomb ? 'bomb' : ''; c.className = `mn-cell${face ? ` ${face}` : ''}${g && g.hit === i ? ' hit' : ''}${face && face !== was ? ' flip' : ''}`; c.dataset.face = face; c.innerHTML = face === 'gem' ? '<span class="mn-gem"></span>' : face === 'bomb' ? '<span class="mn-bomb">💣</span>' : ''; c.disabled = !live || open; });
       $('#mn-go').textContent = live ? (g.open.length ? `Cash out · ${fmt(Math.floor(g.bet * g.mult))}` : 'Pick a tile') : `Start · ${fmt(Gamble.chip)}`;
       $('#mn-go').disabled = live && !g.open.length;
       $('#mn-mult').textContent = live ? `${g.mult.toFixed(2)}×${g.next ? ` → ${g.next.toFixed(2)}×` : ''}` : '';
@@ -2547,15 +2616,31 @@
     $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
     // ---- crash : la courbe monte avec l'heure du serveur ; on sonde pour savoir si c'est fini
     const cc = $('#cr-canvas').getContext('2d'), screen = $('#cr-screen');
+    const stars = Array.from({ length: 70 }, () => ({ x: Math.random() * 640, y: Math.random() * 260, z: .3 + Math.random() * .7 })), boom = [];
     const drawCurve = (mult, state) => {
       cc.clearRect(0, 0, 640, 260);
-      const top = Math.max(2, mult * 1.15), X = m => 30 + 580 * Math.min(1, Math.log(m) / Math.log(top)), Y = m => 240 - 210 * ((m - 1) / (top - 1));
-      cc.strokeStyle = 'rgba(255,255,255,.08)'; cc.lineWidth = 1; for (let k = 1; k <= 4; k++) { cc.beginPath(); cc.moveTo(30, 240 - k * 52); cc.lineTo(610, 240 - k * 52); cc.stroke(); }
-      cc.beginPath(); cc.moveTo(30, 240); for (let m = 1; m <= mult; m += (mult - 1) / 40 + .0001) cc.lineTo(X(m), Y(m)); cc.lineTo(X(mult), Y(mult));
-      cc.strokeStyle = state === 'crash' ? '#ef4444' : state === 'cash' ? '#22c55e' : '#fbbf24'; cc.lineWidth = 4; cc.lineCap = 'round'; cc.shadowColor = cc.strokeStyle; cc.shadowBlur = 14; cc.stroke(); cc.shadowBlur = 0;
-      cc.font = '22px sans-serif'; cc.fillText(state === 'crash' ? '💥' : '🚀', X(mult) - 6, Y(mult) - 6);
+      const speed = state === 'run' ? .6 + Math.log(mult) * 2.4 : .15;
+      stars.forEach(st => { st.x -= speed * st.z * 2; st.y += speed * st.z; if (st.x < 0 || st.y > 260) { st.x = 640 * Math.random() + 200; st.y = -4; } cc.fillStyle = `rgba(255,255,255,${.25 + .5 * st.z})`; cc.fillRect(st.x, st.y, 1 + st.z * 1.4 + (state === 'run' ? speed * st.z : 0), 1 + st.z * .6); });
+      const top = Math.max(2, mult * 1.18), X = m => 34 + 560 * Math.min(1, Math.log(m) / Math.log(top)), Y = m => 236 - 200 * ((m - 1) / (top - 1));
+      cc.font = '600 10px ui-monospace, monospace'; cc.textAlign = 'left';
+      for (let k = 0; k <= 4; k++) { const m = 1 + ((top - 1) * k) / 4, y = Y(m); cc.strokeStyle = 'rgba(255,255,255,.07)'; cc.lineWidth = 1; cc.beginPath(); cc.moveTo(34, y); cc.lineTo(626, y); cc.stroke(); cc.fillStyle = 'rgba(255,255,255,.4)'; cc.fillText(`${m.toFixed(top > 4 ? 1 : 2)}×`, 2, y + 3); }
+      const color = state === 'crash' ? '#ef4444' : state === 'cash' ? '#22c55e' : '#fbbf24', pts = [];
+      for (let k = 0; k <= 48; k++) { const m = 1 + ((mult - 1) * k) / 48; pts.push([X(m), Y(m)]); }
+      const fill = cc.createLinearGradient(0, Y(mult), 0, 236); fill.addColorStop(0, color + '55'); fill.addColorStop(1, color + '00');
+      cc.beginPath(); cc.moveTo(34, 236); pts.forEach(([x, y]) => cc.lineTo(x, y)); cc.lineTo(pts[48][0], 236); cc.closePath(); cc.fillStyle = fill; cc.fill();
+      cc.beginPath(); pts.forEach(([x, y], k) => (k ? cc.lineTo(x, y) : cc.moveTo(x, y))); cc.strokeStyle = color; cc.lineWidth = 4; cc.lineCap = 'round'; cc.lineJoin = 'round'; cc.shadowColor = color; cc.shadowBlur = 16; cc.stroke(); cc.shadowBlur = 0;
+      const [hx, hy] = pts[48], [px, py] = pts[44], ang = Math.atan2(hy - py, hx - px);
+      if (state === 'crash') { if (!boom.length) for (let k = 0; k < 26; k++) { const a = Math.random() * 7, v = 1 + Math.random() * 4; boom.push({ x: hx, y: hy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1 }); } boom.forEach(b => { b.x += b.vx; b.y += b.vy; b.vy += .08; b.l *= .95; cc.fillStyle = `rgba(251,146,60,${b.l})`; cc.beginPath(); cc.arc(b.x, b.y, 3 * b.l + 1, 0, 7); cc.fill(); }); return; }
+      boom.length = 0;
+      cc.save(); cc.translate(hx, hy); cc.rotate(ang);
+      if (state === 'run') { const fl = cc.createLinearGradient(-34, 0, -8, 0); fl.addColorStop(0, 'rgba(251,146,60,0)'); fl.addColorStop(.6, '#fb923c'); fl.addColorStop(1, '#fff7c2'); cc.fillStyle = fl; cc.beginPath(); cc.moveTo(-10, -5); cc.lineTo(-30 - Math.random() * 10, 0); cc.lineTo(-10, 5); cc.closePath(); cc.fill(); }
+      const body = cc.createLinearGradient(0, -8, 0, 8); body.addColorStop(0, '#ffffff'); body.addColorStop(1, '#94a3b8');
+      cc.fillStyle = '#ef4444'; cc.beginPath(); cc.moveTo(-10, -7); cc.lineTo(-18, -13); cc.lineTo(-4, -7); cc.closePath(); cc.fill(); cc.beginPath(); cc.moveTo(-10, 7); cc.lineTo(-18, 13); cc.lineTo(-4, 7); cc.closePath(); cc.fill();
+      cc.fillStyle = body; cc.beginPath(); cc.moveTo(-12, -7); cc.lineTo(8, -7); cc.quadraticCurveTo(22, 0, 8, 7); cc.lineTo(-12, 7); cc.closePath(); cc.fill();
+      cc.fillStyle = '#38bdf8'; cc.beginPath(); cc.arc(5, 0, 3.4, 0, 7); cc.fill(); cc.strokeStyle = '#0f172a'; cc.lineWidth = 1; cc.stroke();
+      cc.restore();
     };
-    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
+    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
     const runCrash = st => {
       Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
       const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)); $('#cr-mult').textContent = `${m.toFixed(2)}×`; $('#cr-go').textContent = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };

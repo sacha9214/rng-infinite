@@ -2449,3 +2449,49 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .pk-slots span[data-m="hi"] { background: #ef4444; color: #fff; } .pk-slots span[data-m="lo"] { background: #64748b; color: #fff; }
 .pk-slots span.hit { transform: translateY(5px) scale(1.12); box-shadow: 0 0 14px currentColor; }
 @media (max-width: 560px) { .g-tab span { font-size: .58rem; letter-spacing: 0; } .gchip { width: 2.3rem; height: 2.3rem; } .g-bet { gap: .4rem; } .g-bet .eyebrow { display: none; } .pk-slots span { font-size: .46rem; } }
+
+/* ------------------------------------------------------------------ Casino : l'intérieur des jeux, façon vraie table */
+/* Roulette : la roue est dessinée à plat puis couchée par la perspective ; le numéro sorti s'affiche à côté. */
+.rw-scene { position: relative; display: grid; place-items: center; height: 15.5rem; margin: 0 0 .6rem; perspective: 900px; }
+.rw-tilt { width: min(19rem, 86%); aspect-ratio: 1; transform: rotateX(52deg); transform-style: preserve-3d; filter: drop-shadow(0 34px 22px rgba(0, 0, 0, .65)); }
+.rw-tilt canvas { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 6px #2a1406, 0 0 0 9px #a16207, inset 0 0 40px rgba(0, 0, 0, .5); }
+.rw-readout { position: absolute; right: 4%; top: 6%; width: 3.6rem; height: 3.6rem; display: grid; place-items: center; border-radius: .7rem; font-size: 1.6rem; font-weight: 700; color: #fff; background: #27272a; border: 2px solid #a16207; box-shadow: 0 6px 14px rgba(0, 0, 0, .45); }
+.rw-readout[data-color="red"] { background: #b91c1c; } .rw-readout[data-color="black"] { background: #111113; } .rw-readout[data-color="green"] { background: #15803d; }
+.rw-readout.landed { animation: pill-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+/* Blackjack : tapis, sabot, cartes à deux faces qui glissent du sabot et se retournent. */
+.bj-table { position: relative; min-height: 15rem; perspective: 900px; background: radial-gradient(ellipse 120% 90% at 50% 0%, #1c9a52, #0f5132 62%, #0a3a24); border: 6px solid #5b3311; border-radius: 1rem 1rem 6rem 6rem / 1rem 1rem 2.4rem 2.4rem; box-shadow: inset 0 0 0 2px #a16207, inset 0 0 40px rgba(0, 0, 0, .45), 0 10px 22px rgba(0, 0, 0, .4); }
+.bj-shoe { position: absolute; right: .8rem; top: .7rem; width: 2.7rem; height: 3.7rem; border-radius: .35rem; background: repeating-linear-gradient(45deg, #991b1b 0 5px, #7f1d1d 5px 10px); border: 3px solid #fff; box-shadow: 3px 3px 0 #e5e5e5, 6px 6px 0 #d4d4d4, 8px 10px 12px rgba(0, 0, 0, .45); transform: rotate(8deg); }
+.bj-felt-text { text-align: center; font: 700 .58rem var(--font-sans); letter-spacing: .32em; color: rgba(253, 230, 138, .5); }
+.bj-row { position: relative; }
+.bj-cards { min-height: 5.2rem; gap: .4rem; }
+.bj-stack { position: absolute; right: .2rem; bottom: .2rem; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 50%; font: 700 .62rem var(--font-mono); color: #fff; background: #b91c1c; border: 3px dashed rgba(255, 255, 255, .8); box-shadow: 0 3px 0 #7f1d1d, 0 6px 0 #991b1b, 0 9px 0 #7f1d1d, 0 12px 10px rgba(0, 0, 0, .45); }
+.pcard { width: 3.3rem; height: 4.7rem; display: block; background: none; border: 0; box-shadow: none; animation: none; perspective: 600px; }
+.pc-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .45s var(--ease-out); }
+.pcard.down .pc-in { transform: rotateY(180deg); }
+.pc-front, .pc-back { position: absolute; inset: 0; border-radius: .42rem; backface-visibility: hidden; box-shadow: 0 4px 9px rgba(0, 0, 0, .4); }
+.pc-front { display: grid; place-items: center; background: linear-gradient(160deg, #fff, #f1f1f1); border: 1px solid #d4d4d4; color: #111; font-family: var(--font-sans); }
+.pcard.red .pc-front { color: #dc2626; }
+.pc-front b { position: absolute; left: .28rem; top: .2rem; display: grid; justify-items: center; font-size: .82rem; line-height: 1; font-weight: 800; }
+.pc-front b i { font-style: normal; font-size: .7rem; }
+.pc-front b.low { left: auto; top: auto; right: .28rem; bottom: .2rem; transform: rotate(180deg); }
+.pc-front em { font-style: normal; font-size: 1.7rem; font-weight: 800; line-height: 1; }
+.pc-back { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #991b1b 0 5px, #7f1d1d 5px 10px); border: 3px solid #fff; }
+.pcard.deal { animation: pc-deal .5s var(--ease-out) backwards; animation-delay: calc(var(--i) * 170ms); }
+.pcard.deal .pc-in { animation: pc-flip .5s var(--ease-out) backwards; animation-delay: calc(var(--i) * 170ms); }
+.pcard.deal.down .pc-in { animation: none; }
+@keyframes pc-deal { from { transform: translate(12rem, -7rem) rotate(24deg); opacity: 0; } }
+@keyframes pc-flip { from { transform: rotateY(180deg); } }
+/* Plinko : le plateau penche légèrement vers nous. */
+.pk-board { perspective: 900px; overflow: hidden; }
+.pk-board canvas { transform: rotateX(14deg); transform-origin: 50% 100%; }
+/* Mines : la case bascule et montre une pierre taillée, ou la mine. */
+.mn-grid { perspective: 700px; }
+.mn-cell { display: grid; place-items: center; background: linear-gradient(160deg, #475569, #1e293b); box-shadow: 0 5px 0 #0f172a, inset 0 2px 0 rgba(255, 255, 255, .18), inset 0 -6px 10px rgba(0, 0, 0, .3); }
+.mn-cell.flip { animation: mn-flip .42s var(--ease-out); }
+@keyframes mn-flip { 0% { transform: rotateY(90deg) scale(.9); filter: brightness(2); } 60% { transform: rotateY(-8deg) scale(1.06); } 100% { transform: none; } }
+.mn-gem { width: 56%; aspect-ratio: 1; clip-path: polygon(50% 0, 100% 36%, 80% 100%, 20% 100%, 0 36%); background: linear-gradient(135deg, #a7f3d0 0 28%, #34d399 28% 52%, #059669 52% 76%, #064e3b 76%); filter: drop-shadow(0 0 6px rgba(52, 211, 153, .9)); animation: gem-glint 2.4s ease-in-out infinite; }
+.mn-bomb { font-size: 1.6rem; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .6)); }
+.mn-cell.bomb.hit::after { content: ''; position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, rgba(254, 240, 138, .9), rgba(249, 115, 22, .7) 40%, transparent 70%); animation: mn-boom .6s ease-out forwards; pointer-events: none; }
+.mn-cell { position: relative; }
+@keyframes mn-boom { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+@media (max-width: 560px) { .rw-scene { height: 12.5rem; } .pcard { width: 2.7rem; height: 3.9rem; } .pc-front em { font-size: 1.3rem; } .bj-shoe { display: none; } }
