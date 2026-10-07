@@ -982,4 +982,65 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(r.body.week.countries.some(x => x.name === 'FR') && r.body.totals.named > 5);
 }
 
+// ================================================================ 27. Boutons de tirage : assortis au skin, ou achetés à part
+{
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const btn = (who, action, button) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, button } });
+  const look = st => Shop.buttonLook(st.button, st.skin, st.owned, st.buttons);
+  const setCoins = async (who, target) => run([['HINCRBY', `stats:${who.playerId}`, 'bonus', target - (await state(who)).coins]]);
+  await shop(frank, 'equip', 'neon');
+  let st = await state(frank);
+  assert.deepEqual([st.button, st.buttons, look(st)], ['match', [], 'neon'], 'par défaut : le bouton suit le skin équipé');
+  // Le bouton d'un skin : seulement si on possède le skin.
+  assert.equal((await btn(frank, 'button', 'gold')).status, 422, 'bouton d\'un skin non possédé');
+  assert.equal((await btn(frank, 'button', 'licorne')).status, 400);
+  assert.equal((await btn({ ...frank, secret: '9'.repeat(32) }, 'button', 'classic')).status, 403);
+  r = await btn(frank, 'button', 'classic');
+  assert.deepEqual([r.status, r.body.button], [200, 'classic']);
+  st = await state(frank);
+  assert.deepEqual([st.skin, look(st)], ['neon', 'classic'], 'skin Neon, bouton Classic');
+  // Bouton vendu à part : pas sans l'acheter, pas sans les pièces, débité une seule fois, équipé à l'achat.
+  assert.equal((await btn(frank, 'button', 'keycap')).status, 422, 'pas encore acheté');
+  assert.equal((await btn(frank, 'buybutton', 'neon')).status, 400, 'le bouton d\'un skin ne s\'achète pas à part');
+  await setCoins(frank, 100);
+  r = await btn(frank, 'buybutton', 'keycap');
+  assert.equal(r.status, 422);
+  assert.match(r.body.error, /50 more needed/);
+  assert.deepEqual((await state(frank)).buttons, [], 'rien d\'acquis sans les pièces');
+  await setCoins(frank, 400);
+  r = await btn(frank, 'buybutton', 'keycap');
+  assert.deepEqual([r.status, r.body.coins, r.body.button, r.body.buttons], [200, 250, 'keycap', ['keycap']], JSON.stringify(r.body));
+  assert.equal((await btn(frank, 'buybutton', 'keycap')).body.coins, 250, 'racheter ne débite pas deux fois');
+  assert.equal(look(await state(frank)), 'keycap');
+  // Un achat à la fois : pendant qu'un autre est en cours, celui-ci est refusé sans rien débiter.
+  run([['SET', `shop:${frank.playerId}`, '1']]);
+  assert.equal((await btn(frank, 'buybutton', 'terminal')).status, 429);
+  run([['DEL', `shop:${frank.playerId}`]]);
+  assert.equal((await state(frank)).coins, 250);
+  // Retour au bouton assorti : changer de skin change alors le bouton.
+  assert.equal((await btn(frank, 'button', 'match')).body.button, 'match');
+  await shop(frank, 'equip', 'classic');
+  assert.equal(look(await state(frank)), 'classic');
+  await shop(frank, 'equip', 'neon');
+  assert.equal(look(await state(frank)), 'neon');
+  // Le bouton acheté reste possédé et se rééquipe sans payer.
+  r = await btn(frank, 'button', 'keycap');
+  assert.deepEqual([r.status, r.body.button, r.body.coins], [200, 'keycap', 250]);
+  // Un choix enregistré qui n'est pas possédé (donnée abîmée) retombe sur « match » ; un identifiant inventé est ignoré.
+  run([['HSET', 'btns', frank.playerId, 'gold'], ['SADD', `btns:${frank.playerId}`, 'licorne']]);
+  st = await state(frank);
+  assert.deepEqual([st.button, st.buttons, look(st)], ['match', ['keycap'], 'neon']);
+  // Le bouton du créateur : réservé à son compte.
+  assert.equal((await btn(frank, 'button', 'owner')).status, 422);
+  const boss = { playerId: '9'.repeat(16), secret: '7'.repeat(32) };
+  r = await btn(boss, 'button', 'owner');
+  assert.deepEqual([r.status, r.body.button], [200, 'owner'], JSON.stringify(r.body));
+  // Catalogue : identifiants distincts de ceux des skins, et chaque bouton (ceux des skins compris) a bien son style.
+  assert.ok(Shop.BUTTONS.every(b => !Shop.byId.has(b.id) && b.id !== Shop.MATCH && b.price > 0));
+  const css = fs.readFileSync(path.join(ROOT, 'css/buttons.css'), 'utf8');
+  for (const id of [...Shop.SKINS.map(k => k.id).filter(id => id !== 'classic'), 'owner', ...Shop.BUTTONS.map(b => b.id)]) {
+    assert.ok(css.includes(`.btn-roll.gen-${id} {`), `style du bouton ${id} manquant dans css/buttons.css`);
+  }
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

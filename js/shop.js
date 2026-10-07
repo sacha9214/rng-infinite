@@ -86,10 +86,33 @@
   ];
   const rarityOf = id => RARITIES.find(r => (byId.get(id) || { price: 0 }).price <= r.max);
 
+  // Apparence du bouton qui lance un tirage (« Generate », « Roll again », « Roll round » en duel). Chaque skin de
+  // nombre apporte le bouton assorti (même identifiant) ; ceux-ci se vendent à part et ne changent que le bouton.
+  // Personne d'autre ne voit ton bouton : prix plus doux que les skins.
+  const BUTTONS = [
+    { id: 'keycap', name: 'Keycap', emoji: '⌨️', price: 150, desc: 'A chunky mechanical key' },
+    { id: 'terminal', name: 'Terminal', emoji: '💻', price: 250, desc: 'Run the command yourself' },
+    { id: 'arcade', name: 'Arcade', emoji: '🕹️', price: 350, desc: 'Big red cabinet button' },
+    { id: 'ticket', name: 'Ticket', emoji: '🎟️', price: 450, desc: 'Tear off a raffle ticket' },
+    { id: 'comic', name: 'Comic', emoji: '💥', price: 600, desc: 'Halftone and a loud outline' },
+    { id: 'launch', name: 'Launch', emoji: '🚀', price: 900, desc: 'Hazard stripes, handle with care' },
+    { id: 'hologram', name: 'Hologram', emoji: '🪩', price: 1400, desc: 'Foil that shifts with the light' },
+    { id: 'royal', name: 'Royal', emoji: '👑', price: 2200, desc: 'Velvet with a gold trim' },
+  ];
+  const buttonById = new Map(BUTTONS.map(b => [b.id, b]));
+  const MATCH = 'match'; // choix par défaut : le bouton suit le skin équipé
+  // Bouton réellement affiché : le choix du joueur s'il le possède encore, sinon celui du skin équipé.
+  // owned = skins possédés, buttons = boutons achetés à part.
+  function buttonLook(choice, skin, owned, buttons) {
+    const id = resolve(choice);
+    if (id && id !== MATCH && ((byId.has(id) && (owned || []).includes(id)) || (buttonById.has(id) && (buttons || []).includes(id)))) return id;
+    return resolve(skin) || 'classic';
+  }
+
   // Mises possibles pour un duel (0 = sans mise).
   const STAKES = [0, 50, 100, 250, 500, 1000];
 
-  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf };
+  const api = { COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

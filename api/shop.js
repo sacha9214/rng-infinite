@@ -1,6 +1,7 @@
 // GET  /api/shop?me=<playerId>                                   → pièces, skins possédés, skin équipé
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
 // POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin tiré par le serveur)
+// POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
 const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
 const crypto = require('node:crypto');
@@ -8,19 +9,27 @@ const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
+const ownedButtonsKey = id => `btns:${id}`; // boutons achetés à part ; le hash "btns" retient le bouton choisi
 
 async function state(id) {
   const stats = await readStats(id);
-  const [owned, skin] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id]]);
+  const [owned, skin, bought, button] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   const isOwner = Number(stats.owner) >= 1;
   const mine = [...new Set((owned || []).map(Shop.resolve))].filter(s => s !== 'classic' && Shop.byId.has(s) && !Shop.byId.get(s).hidden);
   const equipped = Shop.resolve(skin);
+  const skins = ['classic', ...mine, ...(isOwner ? ['owner'] : [])];
+  const buttons = [...new Set(bought || [])].filter(b => Shop.buttonById.has(b));
+  // Bouton de tirage : "match" (il suit le skin équipé) tant que le choix enregistré n'est pas un bouton possédé —
+  // celui d'un skin possédé, ou un bouton acheté à part.
+  const mineToo = button && (Shop.byId.has(button) ? skins.includes(button) : buttons.includes(button));
   return {
     coins: Shop.balance(stats),
     earned: Shop.earned(stats),
-    owned: ['classic', ...mine, ...(isOwner ? ['owner'] : [])],
+    owned: skins,
     skin: equipped && Shop.byId.has(equipped) && (!Shop.byId.get(equipped).hidden || isOwner) ? equipped : 'classic',
+    buttons,
+    button: mineToo ? button : Shop.MATCH,
   };
 }
 
@@ -59,6 +68,38 @@ module.exports = async (req, res) => {
         if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    // Bouton de tirage. Équiper : "match", le bouton d'un skin possédé ou un bouton acheté. Acheter : seulement
+    // ceux vendus à part (ceux des skins viennent avec le skin), même verrou que les autres achats.
+    if (body.action === 'button') {
+      const id = String(body.button || '');
+      if (id !== Shop.MATCH && !Shop.byId.has(id) && !Shop.buttonById.has(id)) return send(res, 400, { error: 'Unknown button' });
+      const st = await state(playerId);
+      if (id !== Shop.MATCH && !(Shop.byId.has(id) ? st.owned.includes(id) : st.buttons.includes(id))) {
+        return send(res, 422, { error: Shop.byId.has(id) ? 'This button comes with its skin: get the skin first' : 'Buy this button first' });
+      }
+      await redis([id === Shop.MATCH ? ['HDEL', 'btns', playerId] : ['HSET', 'btns', playerId, id]]);
+      return send(res, 200, { ...st, button: id });
+    }
+    if (body.action === 'buybutton') {
+      const item = Shop.buttonById.get(String(body.button || ''));
+      if (!item) return send(res, 400, { error: 'Unknown button' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        if (!st.buttons.includes(item.id)) {
+          if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
+          await redis([
+            ['HINCRBY', statsKey(playerId), 'spent', item.price],
+            ['SADD', ownedButtonsKey(playerId), item.id],
+          ]);
+        }
+        await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
+        return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }

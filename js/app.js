@@ -71,9 +71,9 @@
     shop() {
       return this.request(`/api/shop?me=${Store.player.id}`);
     },
-    shopAction(action, skin) {
+    shopAction(action, skin, extra = {}) {
       const p = Store.player;
-      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin }) });
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra }) });
     },
     liveRooms() {
       return this.request('/api/room?live=1');
@@ -176,6 +176,27 @@
     if (id === 'owner') return ' owner-ruby'; // le rubis du créateur
     return id && id !== 'classic' && Shop.byId.has(id) ? ` skin-${id}` : '';
   };
+  // Bouton de tirage (« Generate », « Roll again », « Roll round ») : il porte le skin choisi dans la boutique, par
+  // défaut celui du skin de nombre équipé (css/buttons.css). settings.button = bouton à afficher, calculé depuis la
+  // boutique ; tant qu'elle n'a pas répondu sur cet appareil, on suit le skin connu.
+  const ROLL_BUTTONS = '#roll-btn, #r-again, #room-roll';
+  const genClass = raw => {
+    const id = Shop.resolve(raw === undefined ? Store.settings.button || Store.settings.skin : raw);
+    return id && id !== 'classic' && (Shop.byId.has(id) || Shop.buttonById.has(id)) ? ` gen-${id}` : '';
+  };
+  function paintRollButtons() {
+    const cls = genClass().trim();
+    document.querySelectorAll(ROLL_BUTTONS).forEach(b => {
+      [...b.classList].filter(c => c.startsWith('gen-') && c !== cls).forEach(c => b.classList.remove(c));
+      if (cls) b.classList.add(cls);
+    });
+  }
+  // État de la boutique reçu du serveur : skin équipé et bouton de tirage, retenus sur l'appareil.
+  function applyShop(state) {
+    Store.setSetting('skin', state.skin);
+    Store.setSetting('button', Shop.buttonLook(state.button, state.skin, state.owned, state.buttons));
+    paintRollButtons();
+  }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
   const LEVER = '<span class="slot-lever" aria-hidden="true"></span>';
   const withLever = (card, raw) => (Shop.resolve(raw) === 'slots' ? `<span class="lever-wrap">${card}${LEVER}</span>` : card);
@@ -853,7 +874,7 @@
         <section class="hero">
           <div class="qmarks" aria-hidden="true">${'??????'.split('').map(c => `<span>${c}</span>`).join('')}</div>
           <p class="tagline">Infinite rolls. One number at a time. What will yours be?</p>
-          <button class="btn-roll" id="roll-btn">Generate</button>
+          <button class="btn-roll${genClass()}" id="roll-btn">Generate</button>
           <p class="hint">
             ${rolls.length ? `${plural(rolls.length, 'roll')} · ${fmt(lifetimeEP())} lifetime XP · ` : ''}
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
@@ -1272,7 +1293,7 @@
           </div>
           <div class="result-actions invisible" id="r-actions">
             <button class="btn" id="r-share">${shareIcon()} Share</button>
-            <button class="btn-roll small" id="r-again">Roll again</button>
+            <button class="btn-roll small${genClass()}" id="r-again">Roll again</button>
           </div>
           <p class="hint invisible" id="r-hint"></p>
           <div id="r-notes" style="text-align:center"></div>
@@ -2169,6 +2190,11 @@
           <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
           <div class="skin-grid" id="d-skins"></div>
         </div>
+        <div class="panel stats-sep" id="d-buttons-panel" hidden>
+          <div class="panel-head"><h3 class="panel-title">Generate button</h3><span class="panel-note">only you see it · press one to try it</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">Your Generate button follows your skin: every skin comes with its own button. You can also wear the button of any skin you own, or one of the buttons sold only here.</p>
+          <div class="skin-grid gen-grid" id="d-buttons"></div>
+        </div>
       </div>`;
     drawShop();
   }
@@ -2221,8 +2247,9 @@
       }
       if (currentView !== 'shop' || !$('#d-skins')) return;
     }
-    Store.setSetting('skin', state.skin);
+    applyShop(state);
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
+    drawButtons(state);
     const cases = $('#d-cases');
     if (cases) cases.onclick = e => {
       const btn = e.target.closest('[data-case]');
@@ -2251,6 +2278,47 @@
       try {
         const next = await Online.shopAction(buy ? 'buy' : 'equip', skin.id);
         toast(buy ? `${skin.emoji} ${skin.name} unlocked and equipped` : `${skin.emoji} ${skin.name} equipped`);
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
+  }
+
+  // Boutons de tirage : « Match my skin » (défaut), les boutons vendus à part, puis ceux des skins (possédés d'abord).
+  // Chaque aperçu est un vrai bouton : on peut l'enfoncer pour sentir sa course, il ne lance rien.
+  function drawButtons(state) {
+    const grid = $('#d-buttons');
+    if (!grid) return;
+    $('#d-buttons-panel').hidden = false; // caché tant que la boutique n'a pas répondu (ou sans pseudo)
+    const tile = (look, choice, title, sub, action) => `
+      <div class="skin-tile gen-tile${state.button === choice ? ' equipped' : ''}">
+        <button type="button" class="btn-roll small${genClass(look)}" tabindex="-1" data-gen-try>Generate</button>
+        <div class="skin-name"><b>${title}</b><span>${sub}</span></div>
+        ${state.button === choice ? '<span class="skin-state">Equipped</span>' : action}
+      </div>`;
+    const equip = id => `<button class="btn" data-gen-equip="${id}">Equip</button>`;
+    const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS);
+    const mine = skins.filter(k => state.owned.includes(k.id)), locked = skins.filter(k => !state.owned.includes(k.id));
+    grid.innerHTML = [
+      tile(state.skin, Shop.MATCH, '🔗 Match my skin', 'Follows the skin you have equipped', equip(Shop.MATCH)),
+      ...Shop.BUTTONS.map(b => tile(b.id, b.id, `${b.emoji} ${esc(b.name)}`, esc(b.desc), state.buttons.includes(b.id) ? equip(b.id)
+        : `<button class="btn${state.coins >= b.price ? '' : ' disabled'}" data-gen-buy="${b.id}">🪙 ${fmt(b.price)}</button>`)),
+      ...mine.map(k => tile(k.id, k.id, `${k.emoji} ${esc(k.name)}`, 'Comes with your skin', equip(k.id))),
+      ...locked.map(k => tile(k.id, k.id, `${k.emoji} ${esc(k.name)}`, 'Comes with the skin', '<span class="skin-state locked">🔒 Get the skin</span>')),
+    ].join('');
+    grid.onclick = async e => {
+      const buy = e.target.closest('[data-gen-buy]'), eq = e.target.closest('[data-gen-equip]');
+      const btn = buy || eq;
+      if (!btn || btn.disabled) return;
+      const id = btn.dataset.genBuy || btn.dataset.genEquip;
+      const item = Shop.buttonById.get(id) || Shop.byId.get(id);
+      if (buy && state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for the ${item.name} button`); return; }
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction(buy ? 'buybutton' : 'button', undefined, { button: id });
+        toast(id === Shop.MATCH ? 'Your button now follows your skin' : buy ? `${item.emoji} ${item.name} button unlocked and equipped` : `${item.emoji} ${item.name} button equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -2904,7 +2972,7 @@
       cta = `<p class="room-wait">Waiting for ${missing.length <= 3 ? esc(missing.join(', ')) : `${missing.length} players`}…</p>`;
       hint = `${readyCount} / ${people.length} ready${countdown}`;
     } else {
-      cta = `<button class="btn-roll" id="room-roll">🎲 Roll round ${d.rounds.length + 1}</button>`;
+      cta = `<button class="btn-roll${genClass()}" id="room-roll">🎲 Roll round ${d.rounds.length + 1}</button>`;
       hint = `${readyCount && people.length > 1 ? `${readyCount} / ${people.length} ready${countdown} · ` : ''}press <kbd>Space</kbd>`;
     }
     if (!finished && d.asks && d.asks.length) cta += d.asks.map(n => `<div class="room-ask"><span><b>${esc(n)}</b> wants to join</span><button class="btn-roll small" data-accept="${esc(n)}">Accept</button><button class="btn" data-decline="${esc(n)}">Decline</button></div>`).join('');
@@ -3302,6 +3370,8 @@
 
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
+  // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
+  if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
 
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.

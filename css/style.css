@@ -2357,3 +2357,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .lang-switch { gap: .05rem; }
   .lang-switch button { padding: .3rem .12rem; }
 }
+
+/* Boutique sur téléphone : deux colonnes égales qui ne s'élargissent plus avec leur contenu (les cartes larges
+   poussaient la page de côté). */
+@media (max-width: 560px) {
+  .skin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skin-tile { min-width: 0; padding-inline: .35rem; }
+}
+@media (max-width: 380px) { .skin-tile > .num-card, .skin-tile > .lever-wrap { zoom: .9; } }
+@media (max-width: 340px) { .skin-tile > .num-card, .skin-tile > .lever-wrap { zoom: .76; } }
