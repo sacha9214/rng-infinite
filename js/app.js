@@ -2377,7 +2377,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const cardHTML = c => (c ? `<span class="pcard${c.s === 1 || c.s === 2 ? ' red' : ''}" data-no-i18n><b>${RANKS[c.r]}</b><i>${SUITS[c.s]}</i></span>` : '<span class="pcard back"></span>');
@@ -2388,24 +2388,45 @@
       <div class="page page-wide">
         <h1 class="page-title">Gamble</h1>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls. <span class="coins mono" id="g-coins"></span></p>
-        <div class="grid-2 gamble-grid">
-          <div class="panel">
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
+        <div class="g-stage">
+          <div class="panel g-game" data-game="crash">
+            <div class="panel-head"><h3 class="panel-title">Crash</h3><span class="panel-note">cash out before it crashes</span></div>
+            <div class="crash-screen" id="cr-screen" data-state="idle"><canvas id="cr-canvas" width="640" height="260"></canvas><b class="mono" id="cr-mult">1.00×</b></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="cr-go">Start</button></div>
+            <p class="panel-note g-result" id="cr-result"></p>
+          </div>
+          <div class="panel g-game" data-game="mines">
+            <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it</span></div>
+            <div class="mn-setup"><span class="eyebrow">Mines</span><div class="seg" id="mn-count">${[1, 3, 5, 10, 24].map(m => `<button data-v="${m}" class="${m === Gamble.mines ? 'on' : ''}">${m}</button>`).join('')}</div><b class="mono" id="mn-mult"></b></div>
+            <div class="mn-grid" id="mn-grid">${Array.from({ length: 25 }, (_, i) => `<button class="mn-cell" data-cell="${i}" disabled></button>`).join('')}</div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="mn-go">Start</button></div>
+            <p class="panel-note g-result" id="mn-result"></p>
+          </div>
+          <div class="panel g-game" data-game="plinko">
+            <div class="panel-head"><h3 class="panel-title">Plinko</h3><span class="panel-note">12 rows · the edges pay the most</span></div>
+            <div class="pk-board" id="pk-board"><canvas id="pk-canvas" width="520" height="360"></canvas></div>
+            <div class="pk-slots" id="pk-slots">${[33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33].map((m, i) => `<span data-slot="${i}" data-m="${m >= 4 ? 'hi' : m >= 1 ? 'mid' : 'lo'}">${m}×</span>`).join('')}</div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="pk-go">Drop</button></div>
+            <p class="panel-note g-result" id="pk-result"></p>
+          </div>
+          <div class="panel g-game" data-game="roulette">
             <div class="panel-head"><h3 class="panel-title">Roulette</h3><span class="panel-note">one zero · red or black pays 2× · a number pays 36×</span></div>
             <div class="rwheel" id="r-wheel" data-color="idle"><span class="mono" id="r-number">?</span></div>
-            <div class="gchips" id="g-chips">${[10, 50, 100, 250].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c}</button>`).join('')}</div>
             <div class="rbets" id="r-bets">
               ${bet('red', 'Red', 'red')}${bet('black', 'Black', 'black')}${bet('even', 'Even')}${bet('odd', 'Odd')}${bet('low', '1–18')}${bet('high', '19–36')}
               ${bet('d1', '1–12')}${bet('d2', '13–24')}${bet('d3', '25–36')}
               <span class="rbet number"><input class="input mono" id="r-pick" type="number" min="0" max="36" placeholder="0–36" aria-label="Number"><button class="btn" data-bet="n">+ Number</button><b class="mono" id="r-nbets"></b></span>
             </div>
             <div class="actions"><button class="btn ghost" id="r-clear">Clear</button><button class="btn-roll small" id="r-spin">Spin</button></div>
-            <p class="panel-note" id="r-result"></p>
+            <p class="panel-note g-result" id="r-result"></p>
           </div>
-          <div class="panel">
+          <div class="panel g-game" data-game="bj">
             <div class="panel-head"><h3 class="panel-title">Blackjack</h3><span class="panel-note">dealer stands on 17 · blackjack pays 3 to 2</span></div>
             <div class="bj-table" id="bj-table"></div>
             <div class="actions" id="bj-actions"></div>
-            <p class="panel-note" id="bj-result"></p>
+            <p class="panel-note g-result" id="bj-result"></p>
           </div>
         </div>
       </div>`;
@@ -2476,6 +2497,80 @@
         if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
+    // ---- onglets des jeux
+    const showTab = id => { Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
+    $('#g-tabs').addEventListener('click', e => { const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab); });
+    showTab(Gamble.tab);
+    const say = (el, win, bet, text) => { el.textContent = text; el.dataset.won = win > bet ? 'yes' : win === bet ? 'even' : 'no'; };
+    // ---- plinko : la bille suit le chemin tiré par le serveur, un clou toutes les 110 ms
+    const pk = $('#pk-canvas').getContext('2d'), PW = 520, PH = 360, ROWS = 12, GAPX = PW / (ROWS + 2), GAPY = (PH - 40) / ROWS;
+    const peg = (r, i) => ({ x: PW / 2 + (i - r / 2) * GAPX, y: 26 + r * GAPY });
+    const drawBoard = ball => {
+      pk.clearRect(0, 0, PW, PH);
+      for (let r = 0; r < ROWS; r++) for (let i = 0; i <= r + 1; i++) { const q = peg(r + 1, i); pk.beginPath(); pk.arc(q.x, q.y - GAPY, 3.2, 0, 7); pk.fillStyle = 'rgba(255,255,255,.75)'; pk.fill(); }
+      if (ball) { pk.beginPath(); pk.arc(ball.x, ball.y, 8, 0, 7); pk.fillStyle = '#fbbf24'; pk.shadowColor = '#f59e0b'; pk.shadowBlur = 16; pk.fill(); pk.shadowBlur = 0; }
+    };
+    drawBoard();
+    $('#pk-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true;
+      try {
+        const res = await gamble('plinko', { bet: Gamble.chip });
+        showCoins(res.coins + 0 - res.win); // le gain s'affiche quand la bille arrive
+        let pos = 0;
+        for (let r = 0; r <= ROWS && currentView === 'gamble'; r++) {
+          const from = peg(r, pos), to = r < ROWS ? peg(r + 1, pos + res.path[r]) : { x: from.x, y: PH - 6 };
+          for (let k = 0; k <= 6; k++) { const t = k / 6; drawBoard({ x: from.x + (to.x - from.x) * t, y: from.y - GAPY + (to.y - from.y) * t * t + (r ? 0 : 0) - Math.sin(Math.PI * t) * 7 }); await new Promise(r2 => setTimeout(r2, 17)); }
+          if (r < ROWS) { pos += res.path[r]; Sound.tick({ soft: 1 }); }
+        }
+        if (currentView !== 'gamble') return;
+        document.querySelectorAll('#pk-slots span').forEach(x => x.classList.toggle('hit', Number(x.dataset.slot) === res.slot));
+        say($('#pk-result'), res.win, res.bet, `${res.mult}× · ${res.win ? `you get ${fmt(res.win)} coins` : `−${fmt(res.bet)}`}`);
+        if (res.win > res.bet) { Sound.play('reveal', { small: 1 }); if (res.mult >= 4) FX.celebrate(res.mult >= 11 ? 'epic' : 'uncommon', $('#pk-slots')); }
+        showCoins(res.coins);
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    // ---- mines
+    const drawMines = g => {
+      Gamble.mn = g;
+      const live = g && !g.idle && !g.done;
+      document.querySelectorAll('.mn-cell').forEach(c => { const i = Number(c.dataset.cell); const open = g && g.open && g.open.includes(i), bomb = g && g.bombs && g.bombs.includes(i); c.className = `mn-cell${open ? ' gem' : ''}${bomb ? ' bomb' : ''}${g && g.hit === i ? ' hit' : ''}`; c.textContent = open ? '💎' : bomb ? '💣' : ''; c.disabled = !live || open; });
+      $('#mn-go').textContent = live ? (g.open.length ? `Cash out · ${fmt(Math.floor(g.bet * g.mult))}` : 'Pick a tile') : `Start · ${fmt(Gamble.chip)}`;
+      $('#mn-go').disabled = live && !g.open.length;
+      $('#mn-mult').textContent = live ? `${g.mult.toFixed(2)}×${g.next ? ` → ${g.next.toFixed(2)}×` : ''}` : '';
+      if (g && g.done && !g.idle) say($('#mn-result'), g.win, g.bet, g.result === 'cash' ? `${g.mult.toFixed(2)}× · you get ${fmt(g.win)} coins` : `Boom · −${fmt(g.bet)}`);
+      if (g) showCoins(g.coins);
+    };
+    $('#mn-count').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || (Gamble.mn && !Gamble.mn.done)) return; Gamble.mines = Number(b.dataset.v); document.querySelectorAll('#mn-count button').forEach(x => x.classList.toggle('on', x === b)); });
+    const minesMove = async extra => { if (Gamble.busy) return; Gamble.busy = true; try { const g = await gamble('mines', extra); drawMines(g); if (g.result === 'boom') Sound.play('lock', { i: 0 }); else if (g.result === 'cash') { Sound.play('reveal', { small: 1 }); FX.celebrate(g.mult >= 5 ? 'epic' : 'uncommon', $('#mn-grid')); } else Sound.play('lock', { i: g.open.length, soft: 1 }); } catch (err) { fail(err); } finally { Gamble.busy = false; } };
+    $('#mn-go').addEventListener('click', () => { const g = Gamble.mn; if (g && !g.done && !g.idle) minesMove({ move: 'cash' }); else { $('#mn-result').textContent = ''; minesMove({ move: 'start', bet: Gamble.chip, mines: Gamble.mines }); } });
+    $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
+    // ---- crash : la courbe monte avec l'heure du serveur ; on sonde pour savoir si c'est fini
+    const cc = $('#cr-canvas').getContext('2d'), screen = $('#cr-screen');
+    const drawCurve = (mult, state) => {
+      cc.clearRect(0, 0, 640, 260);
+      const top = Math.max(2, mult * 1.15), X = m => 30 + 580 * Math.min(1, Math.log(m) / Math.log(top)), Y = m => 240 - 210 * ((m - 1) / (top - 1));
+      cc.strokeStyle = 'rgba(255,255,255,.08)'; cc.lineWidth = 1; for (let k = 1; k <= 4; k++) { cc.beginPath(); cc.moveTo(30, 240 - k * 52); cc.lineTo(610, 240 - k * 52); cc.stroke(); }
+      cc.beginPath(); cc.moveTo(30, 240); for (let m = 1; m <= mult; m += (mult - 1) / 40 + .0001) cc.lineTo(X(m), Y(m)); cc.lineTo(X(mult), Y(mult));
+      cc.strokeStyle = state === 'crash' ? '#ef4444' : state === 'cash' ? '#22c55e' : '#fbbf24'; cc.lineWidth = 4; cc.lineCap = 'round'; cc.shadowColor = cc.strokeStyle; cc.shadowBlur = 14; cc.stroke(); cc.shadowBlur = 0;
+      cc.font = '22px sans-serif'; cc.fillText(state === 'crash' ? '💥' : '🚀', X(mult) - 6, Y(mult) - 6);
+    };
+    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
+    const runCrash = st => {
+      Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
+      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)); $('#cr-mult').textContent = `${m.toFixed(2)}×`; $('#cr-go').textContent = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+      frame();
+      clearInterval(Gamble.poll);
+      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); } catch (err) { /* prochain sondage */ } }, 700);
+    };
+    $('#cr-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true;
+      try { const res = await gamble('crash', Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip }); if (res.done) endCrash(res); else runCrash(res); } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? Gamble.mn : null); });
+    if (Store.player.name) { gamble('mines', { move: 'state' }).then(g => { if (currentView === 'gamble' && !g.idle) drawMines(g); }).catch(() => {}); gamble('crash', { move: 'state' }).then(st => { if (currentView === 'gamble' && !st.done) runCrash(st); }).catch(() => {}); }
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
@@ -3653,6 +3748,7 @@
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
+    if (e.target.closest('[data-news]')) { e.preventDefault(); openNews(); return; }
     if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
@@ -3716,6 +3812,7 @@
 
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
+  paintNewsDot();
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);

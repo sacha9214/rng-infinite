@@ -109,11 +109,12 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    if (body.action === 'roulette' || body.action === 'bj') {
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, crash: Gamble.crash };
+    if (GAMES[body.action]) {
       const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
       if (lock !== 'OK') return send(res, 429, { error: 'One move at a time' });
       try {
-        return send(res, 200, await (body.action === 'bj' ? Gamble.blackjack(playerId, body) : Gamble.roulette(playerId, body)));
+        return send(res, 200, await GAMES[body.action](playerId, body));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }

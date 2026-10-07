@@ -1219,4 +1219,51 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   crypto.randomInt = realInt;
 }
 
+// ================================================================ 32. Plinko, Mines, Crash
+{
+  const g = (who, action, extra) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const coins = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  const setCoins = async (who, target) => run([['HINCRBY', `stats:${who.playerId}`, 'bonus', target - (await coins(who))]]);
+  const realInt = crypto.randomInt; let forced = [];
+  crypto.randomInt = (lo, hi) => (forced.length ? forced.shift() : realInt(lo, hi));
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  await tick(); await setCoins(frank, 1000);
+  // Plinko : douze fois à droite → dernière case, ×33.
+  forced = Array(12).fill(1);
+  r = await g(frank, 'plinko', { bet: 10 });
+  assert.deepEqual([r.status, r.body.slot, r.body.mult, r.body.win, r.body.coins], [200, 12, 33, 330, 1320], JSON.stringify(r.body));
+  await tick(); forced = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
+  r = await g(frank, 'plinko', { bet: 100 });
+  assert.deepEqual([r.body.slot, r.body.mult, r.body.win, r.body.coins], [6, 0.3, 30, 1250]);
+  await tick(); assert.equal((await g(frank, 'plinko', { bet: 5 })).status, 400); await tick();
+  // Mines : 3 mines ; le mélange est laissé au hasard, on lit les mines dans la base pour jouer une case sûre puis une mine.
+  r = await g(frank, 'mines', { move: 'start', bet: 100, mines: 3 });
+  assert.deepEqual([r.status, r.body.open, r.body.mult, r.body.coins, r.body.bombs], [200, [], 0.99, 1150, undefined], 'les mines ne sortent pas');
+  let bombs = JSON.parse(run([['GET', `mn:${frank.playerId}`]])[0].result).bombs;
+  const safe = [...Array(25).keys()].filter(c => !bombs.includes(c));
+  await tick(); r = await g(frank, 'mines', { move: 'pick', cell: safe[0] });
+  assert.deepEqual([r.body.open, r.body.mult, r.body.done], [[safe[0]], 1.12, false]);
+  await tick(); assert.equal((await g(frank, 'mines', { move: 'pick', cell: safe[0] })).status, 400, 'case déjà ouverte');
+  await tick(); r = await g(frank, 'mines', { move: 'cash' });
+  assert.deepEqual([r.body.result, r.body.win, r.body.coins, r.body.bombs.length], ['cash', 112, 1262, 3]);
+  await tick(); r = await g(frank, 'mines', { move: 'start', bet: 100, mines: 24 });
+  bombs = JSON.parse(run([['GET', `mn:${frank.playerId}`]])[0].result).bombs;
+  await tick(); assert.equal((await g(frank, 'mines', { move: 'cash' })).status, 422, 'rien à encaisser sans case ouverte');
+  await tick(); r = await g(frank, 'mines', { move: 'pick', cell: bombs[0] });
+  assert.deepEqual([r.body.result, r.body.win, r.body.hit, r.body.coins], ['boom', 0, bombs[0], 1162]);
+  await tick(); assert.equal((await g(frank, 'mines', { move: 'pick', cell: 3 })).status, 422);
+  // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
+  await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
+  r = await g(frank, 'crash', { move: 'start', bet: 100 });
+  assert.deepEqual([r.status, r.body.done, r.body.point, r.body.coins], [200, false, undefined, 1062], 'le point de crash ne sort pas');
+  await later(5000, async () => { r = await g(frank, 'crash', { move: 'cash' }); });
+  assert.deepEqual([r.body.result, r.body.mult, r.body.win, r.body.coins], ['cash', 1.41, 141, 1203], JSON.stringify(r.body));
+  await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
+  await g(frank, 'crash', { move: 'start', bet: 100 });
+  await later(12000, async () => { r = await g(frank, 'crash', { move: 'cash' }); });
+  assert.deepEqual([r.body.result, r.body.win, r.body.point, r.body.coins], ['crash', 0, 1.99, 1103], JSON.stringify(r.body));
+  await tick(); assert.equal((await g(frank, 'crash', { move: 'state' })).body.idle, true);
+  crypto.randomInt = realInt;
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

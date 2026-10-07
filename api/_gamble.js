@@ -82,4 +82,90 @@ async function blackjack(id, body) {
   return show(g, (await wallet(id)).coins);
 }
 
-module.exports = { roulette, blackjack, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+// ---------------------------------------------------------------- Plinko, Mines, Crash
+// Trois jeux de casino en ligne classiques, tous à 99 % de retour théorique. Rien de ce qui décide du résultat ne
+// quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
+// dans Redis tant que la manche dure.
+const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win]]);
+async function debit(id, raw) {
+  const bet = amount(raw);
+  if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
+  await mustAfford(id, bet);
+  await redis([['HINCRBY', statsKey(id), 'spent', bet]]);
+  return bet;
+}
+
+// Plinko : 12 rangées, la bille tombe à gauche ou à droite à chaque clou ; 13 cases, les bords paient le plus.
+const PLINKO = [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33];
+async function plinko(id, body) {
+  const bet = await debit(id, body.bet);
+  const path = Array.from({ length: 12 }, () => crypto.randomInt(0, 2));
+  const slot = path.reduce((x, d) => x + d, 0), mult = PLINKO[slot], win = Math.floor(bet * mult);
+  await credit(id, bet, win, 'gPlinko');
+  return { path, slot, mult, bet, win, coins: (await wallet(id)).coins };
+}
+
+// Mines : 25 cases, m mines. Chaque case sûre fait monter le multiplicateur ; on encaisse quand on veut.
+const mnKey = id => `mn:${id}`;
+const minesMult = (m, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= (25 - i) / (25 - m - i); return Math.floor(x * 100) / 100; };
+const showMines = (g, coins, end) => ({ bet: g.bet, mines: g.m, open: g.open, mult: minesMult(g.m, g.open.length), next: g.open.length < 25 - g.m ? minesMult(g.m, g.open.length + 1) : null, done: !!end, ...(end ? { result: end, win: g.win || 0, bombs: g.bombs } : {}), coins });
+async function mines(id, body) {
+  const [raw] = await redis([['GET', mnKey(id)]]);
+  let g = raw ? JSON.parse(raw) : null;
+  const move = String(body.move || 'state');
+  if (move === 'state') return g ? showMines(g, (await wallet(id)).coins) : { done: true, idle: true, coins: (await wallet(id)).coins };
+  if (move === 'start') {
+    if (g) throw refuse(422, 'Finish your game first');
+    const m = Number(body.mines);
+    if (!Number.isInteger(m) || m < 1 || m > 24) throw refuse(400, 'Between 1 and 24 mines');
+    const bet = await debit(id, body.bet);
+    const cells = Array.from({ length: 25 }, (_, i) => i);
+    for (let i = 24; i > 0; i--) { const j = crypto.randomInt(0, i + 1); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+    g = { bet, m, bombs: cells.slice(0, m).sort((a, b) => a - b), open: [] };
+  } else {
+    if (!g) throw refuse(422, 'No game in progress');
+    if (move === 'pick') {
+      const c = Number(body.cell);
+      if (!Number.isInteger(c) || c < 0 || c > 24 || g.open.includes(c)) throw refuse(400, 'Pick a closed tile');
+      if (g.bombs.includes(c)) { await redis([['DEL', mnKey(id)]]); await credit(id, g.bet, 0, 'gMines'); return { ...showMines(g, (await wallet(id)).coins, 'boom'), hit: c }; }
+      g.open.push(c);
+      if (g.open.length < 25 - g.m) { await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', 1800]]); return showMines(g, (await wallet(id)).coins); }
+    } else if (move !== 'cash') throw refuse(400, 'Unknown move');
+    if (!g.open.length) throw refuse(422, 'Open a tile first');
+    g.win = Math.floor(g.bet * minesMult(g.m, g.open.length));
+    await redis([['DEL', mnKey(id)]]); await credit(id, g.bet, g.win, 'gMines');
+    return showMines(g, (await wallet(id)).coins, 'cash');
+  }
+  await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', 1800]]);
+  return showMines(g, (await wallet(id)).coins);
+}
+
+// Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
+// qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
+const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500;
+const crashAt = ms => Math.floor(Math.exp(CRASH_RATE * ms) * 100) / 100;
+async function crash(id, body) {
+  const [raw] = await redis([['GET', crKey(id)]]);
+  let g = raw ? JSON.parse(raw) : null;
+  const move = String(body.move || 'state'), now = Date.now();
+  const bust = async () => { await redis([['DEL', crKey(id)]]); await credit(id, g.bet, 0, 'gCrash'); return { done: true, result: 'crash', point: g.point, bet: g.bet, win: 0, coins: (await wallet(id)).coins }; };
+  if (g && crashAt(now - g.t0) >= g.point) return bust();
+  if (move === 'state') return g ? { done: false, t0: g.t0, now, bet: g.bet, rate: CRASH_RATE, coins: (await wallet(id)).coins } : { done: true, idle: true, coins: (await wallet(id)).coins };
+  if (move === 'start') {
+    if (g) throw refuse(422, 'Finish your game first');
+    const bet = await debit(id, body.bet);
+    const point = Math.min(CRASH_CAP, Math.max(1, Math.floor((0.99 / (1 - u01())) * 100) / 100));
+    g = { bet, point, t0: Date.now() };
+    await redis([['SET', crKey(id), JSON.stringify(g), 'EX', 600]]);
+    if (point <= 1) return bust();
+    return { done: false, t0: g.t0, now: g.t0, bet, rate: CRASH_RATE, coins: (await wallet(id)).coins };
+  }
+  if (move !== 'cash') throw refuse(400, 'Unknown move');
+  if (!g) throw refuse(422, 'No game in progress');
+  const mult = crashAt(now - g.t0), win = Math.floor(g.bet * mult);
+  await redis([['DEL', crKey(id)]]); await credit(id, g.bet, win, 'gCrash');
+  return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
+}
+
+module.exports = { roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

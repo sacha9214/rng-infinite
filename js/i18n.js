@@ -134,6 +134,9 @@
     'Place a bet and deal.': 'Mise, puis distribue.', 'Place a bet first': 'Pose d\'abord une mise', 'Pick a number from 0 to 36': 'Choisis un numéro de 0 à 36', 'Maximum 1,000 coins per spin': '1 000 pièces au plus par tour', 'One move at a time': 'Un coup à la fois', 'Gamble unavailable right now, try again': 'Casino indisponible pour le moment, réessaie',
     'Blackjack!': 'Blackjack !', 'You win': 'Tu gagnes', 'Push: your bet comes back': 'Égalité : ta mise revient', 'Dealer wins': 'Le croupier gagne', 'Bust': 'Sauté', 'Finish your hand first': 'Termine d\'abord ta main', 'No hand in progress': 'Aucune main en cours', 'Invalid bet': 'Mise invalide', 'You can only double on your first two cards': 'On ne double que sur ses deux premières cartes',
     'Skip known badges': 'Passer les badges connus', 'Badges you already own appear at once. New badges always get their full reveal.': 'Les badges que tu as déjà s\'affichent d\'un coup. Un nouveau badge garde toujours sa révélation complète.',
+    'What\'s new': 'Nouveautés', '▶ Rewatch': '▶ Revoir', '← Back': '← Retour', 'nothing is rolled or counted': 'rien n\'est tiré ni compté', '▶ Replay': '▶ Rediffusion',
+    'Bet': 'Mise', 'Crash': 'Crash', 'Mines': 'Mines', 'Plinko': 'Plinko', 'cash out before it crashes': 'encaisse avant que ça explose', 'every safe tile raises the payout': 'chaque case sûre fait monter le gain', 'one mine ends it': 'une mine et c\'est fini', '12 rows': '12 rangées', 'the edges pay the most': 'les bords paient le plus',
+    'Start': 'Démarrer', 'Drop': 'Lâcher', 'Pick a tile': 'Choisis une case', 'Finish your game first': 'Termine d\'abord ta partie', 'No game in progress': 'Aucune partie en cours', 'Open a tile first': 'Ouvre d\'abord une case', 'Pick a closed tile': 'Choisis une case fermée', 'Between 1 and 24 mines': 'Entre 1 et 24 mines',
     // Chat du duel
     'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
@@ -225,6 +228,8 @@
     [/^Bet: ([\d,]+) coins$/, m => `Mise : ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins$/, m => `tu reçois ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins \(([+−])([\d,]+)\)$/, m => `tu reçois ${nb(m[1])} pièces (${m[2]}${nb(m[3])})`], [/^no win this time \(−([\d,]+)\)$/, m => `perdu cette fois (−${nb(m[1])})`],
     [/^Bet between (\d+) and (\d+) coins$/, m => `Mise entre ${m[1]} et ${m[2]} pièces`], [/^Maximum (\d+) coins per spin$/, m => `${m[1]} pièces au plus par tour`],
     [/^🔒 Unlocks at ([\d,]+) rolls \(you have ([\d,]+)\)$/, m => `🔒 Débloqué à ${nb(m[1])} tirages (tu en as ${nb(m[2])})`],
+    [/^Start · ([\d,]+)$/, m => `Démarrer · ${nb(m[1])}`], [/^Cash out · ([\d,]+)$/, m => `Encaisser · ${nb(m[1])}`], [/^Boom · −([\d,]+)$/, m => `Boum · −${nb(m[1])}`], [/^Crashed at ([\d.]+)×$/, m => `Explosé à ${m[1]}×`],
+    [/^Cashed out at ([\d.]+)×$/, m => `Encaissé à ${m[1]}×`], [/^you get ([\d,]+) coins \(it crashed at ([\d.]+)×\)$/, m => `tu reçois ${nb(m[1])} pièces (explosion à ${m[2]}×)`],
     [/^(\d+) players? hidden$/, m => `${m[1]} joueur${m[1] === '1' ? '' : 's'} masqué${m[1] === '1' ? '' : 's'}`],
     [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
     [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],
