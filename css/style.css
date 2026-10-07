@@ -2366,3 +2366,23 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 }
 @media (max-width: 380px) { .skin-tile > .num-card, .skin-tile > .lever-wrap { zoom: .9; } }
 @media (max-width: 340px) { .skin-tile > .num-card, .skin-tile > .lever-wrap { zoom: .76; } }
+
+/* ------------------------------------------------------------------ chat du duel */
+.chat-panel { margin-top: 1rem; }
+.chat-list { display: flex; flex-direction: column; gap: .3rem; max-height: 12.5rem; min-height: 3.2rem; overflow-y: auto; overscroll-behavior: contain; padding: .2rem .1rem .3rem; scrollbar-width: thin; }
+.chat-list .empty { padding: .9rem 0; }
+.chat-msg { display: flex; align-items: baseline; gap: .5rem; font-size: .84rem; line-height: 1.35; animation: chat-in .22s var(--ease-out) backwards; }
+.chat-name { flex: none; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--prose-2); }
+.chat-msg.mine .chat-name { color: var(--ep-text, var(--prose)); }
+.chat-text { min-width: 0; overflow-wrap: anywhere; }
+.chat-hide, .chat-show { flex: none; margin-left: auto; border: 0; background: none; padding: 0 .2rem; font: inherit; font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--prose-3); cursor: pointer; }
+.chat-hide { opacity: 0; transition: opacity .15s ease; }
+.chat-msg:hover .chat-hide, .chat-hide:focus-visible { opacity: 1; }
+.chat-hide:hover, .chat-show:hover { color: var(--prose); }
+.chat-show { margin-left: 0; text-decoration: underline; text-underline-offset: 2px; }
+.chat-hidden:empty { display: none; }
+.chat-hidden { margin: .3rem 0 0; }
+.chat-form { display: flex; gap: .5rem; margin-top: .55rem; }
+.chat-form .input { flex: 1; min-width: 0; }
+@keyframes chat-in { from { opacity: 0; transform: translateY(4px); } }
+@media (hover: none) { .chat-hide { opacity: .7; } }

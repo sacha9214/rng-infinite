@@ -17,6 +17,7 @@
 const crypto = require('node:crypto');
 const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
+const { cleanChat } = require('./_chat');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
 const MAX_WINS = 10;
@@ -35,6 +36,10 @@ const TTL = 86400; // une salle est gardée un jour après sa dernière action
 const REACTIONS = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
 const REACT_SHOWN_MS = 15000; // réactions renvoyées aux sondages pendant 15 s
 const REACT_EVERY_MS = 700; // au plus une réaction toutes les 0,7 s par joueur
+const CHAT_SHOWN = 40; // messages renvoyés aux sondages
+const CHAT_KEPT = 80; // messages gardés par salle (ils disparaissent avec elle, un jour après sa dernière action)
+const CHAT_EVERY_MS = 1200; // au plus un message toutes les 1,2 s par joueur
+const CHAT_BURST = 12, CHAT_BURST_S = 30; // et pas plus de 12 messages par 30 s
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O ni 1/I, 32 signes
 const BOT_NAMES = ['Robo', 'DiceBot', 'Lucky 9000', 'Glitch', 'Byte', 'Clanky', 'Sparky', 'Nano', 'Beep Boop', 'Tux'];
 const pick = list => list[crypto.randomInt(0, list.length)];
@@ -48,6 +53,7 @@ const roomKey = code => `room:${code}`;
 const playersKey = code => `room:${code}:players`;
 const roundsKey = code => `room:${code}:rounds`;
 const reactsKey = code => `room:${code}:reacts`;
+const chatKey = code => `room:${code}:chat`; // les derniers messages du chat { t, i (index du joueur), m }
 const LIVE_KEY = 'rooms:live'; // parties publiques, score = dernière activité
 const LIVE_MS = 10 * 60000; // une partie sans activité depuis 10 min sort de la liste
 const isCode = code => /^[A-Z2-9]{5}$/.test(code);
@@ -93,8 +99,9 @@ const touchLive = (room, now = Date.now()) => (room.h.public === '1' ? [['ZADD',
 // premier prêt), la liste ordonnée des joueurs { id, name, title }, les manches { t, revealAt, n: [un nombre par joueur] }
 // et les dernières réactions { t, i (index du joueur), e }.
 async function load(code) {
-  const [flat, players, rounds, reacts] = await redis([
+  const [flat, players, rounds, reacts, chat] = await redis([
     ['HGETALL', roomKey(code)], ['LRANGE', playersKey(code), 0, -1], ['LRANGE', roundsKey(code), 0, -1], ['LRANGE', reactsKey(code), -20, -1],
+    ['LRANGE', chatKey(code), -CHAT_SHOWN, -1],
   ]);
   const h = {};
   for (let i = 0; i < (flat || []).length; i += 2) h[flat[i]] = flat[i + 1];
@@ -103,6 +110,7 @@ async function load(code) {
     code, h, host: h.host, size: Number(h.size), mode: h.mode, target: Number(h.target), started: h.started === '1',
     players: (players || []).map(p => JSON.parse(p)), rounds: (rounds || []).map(r => JSON.parse(r)),
     reacts: (reacts || []).map(r => JSON.parse(r)),
+    chat: (chat || []).map(c => JSON.parse(c)),
   };
 }
 
@@ -329,6 +337,8 @@ async function view(room, me) {
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
+    // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
+    chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m })),
     achievements: status === 'done' && room.players.some(p => p.id === me) ? Achievements.unlocked(await readStats(me)) : undefined,
     now: Date.now(),
   };
@@ -540,6 +550,22 @@ module.exports = async (req, res) => {
     }
 
     // Réaction : un emoji de la liste, au plus une toutes les 0,7 s par joueur.
+    // Chat : réservé aux joueurs assis (un spectateur lit, sans écrire). Le texte est nettoyé avant d'être gardé.
+    if (body.action === 'chat') {
+      if (!member) return send(res, 422, { error: 'Only players in this duel can write' });
+      const text = cleanChat(body.text);
+      if (!text) return send(res, 422, { error: 'Write something first' });
+      // Deux freins : un écart minimal entre deux messages, puis un plafond par demi-minute (seuls les messages
+      // acceptés par le premier comptent pour le second).
+      const [ok] = await redis([['SET', `chat:${playerId}`, '1', 'PX', CHAT_EVERY_MS, 'NX']]);
+      if (ok !== 'OK') return send(res, 429, { error: 'Slow down a little' });
+      const [, count] = await redis([['SET', `chatn:${playerId}`, '0', 'EX', CHAT_BURST_S, 'NX'], ['INCR', `chatn:${playerId}`]]);
+      if (Number(count) > CHAT_BURST) return send(res, 429, { error: 'Slow down a little' });
+      const message = { t: Date.now(), i: room.players.findIndex(p => p.id === playerId), m: text };
+      await redis([['RPUSH', chatKey(code), JSON.stringify(message)], ['LTRIM', chatKey(code), -CHAT_KEPT, -1], ['EXPIRE', chatKey(code), TTL]]);
+      room.chat.push(message);
+      return send(res, 200, await view(room, playerId));
+    }
     if (body.action === 'react') {
       if (!member) return send(res, 422, { error: 'You are not in this duel' });
       if (!REACTIONS.includes(body.emoji) && !Shop.emoteById.has(body.emoji)) return send(res, 400, { error: 'Unknown reaction' });

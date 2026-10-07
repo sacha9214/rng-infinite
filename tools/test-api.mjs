@@ -1087,4 +1087,49 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(Shop.EMOTES.every(e => !Shop.BASE_EMOTES.includes(e.id) && e.price > 0));
 }
 
+// ================================================================ 29. Chat des duels : joueurs assis seulement, filtré, limité en débit
+{
+  const { cleanChat } = require(path.join(ROOT, 'api/_chat.js'));
+  assert.equal(cleanChat('  hello   world \u0007 '), 'hello world');
+  assert.equal(cleanChat('FUCK you'), '**** you');
+  assert.equal(cleanChat('f.u.c.k off'), '******* off', 'lettres séparées');
+  assert.equal(cleanChat('sh1t!'), '****!', 'chiffres à la place des lettres, ponctuation gardée');
+  assert.equal(cleanChat('sale connard'), 'sale *******');
+  assert.equal(cleanChat('ta gueule stp'), '******** stp');
+  for (const ok of ['pass the class', 'Scunthorpe united', "j'ai tiré 7175 !", 'my best is 777777', 'score: 1,234,567 XP', 'assassin', 'well played 🎉']) assert.equal(cleanChat(ok), ok, `« ${ok} » ne doit pas être touché`);
+  assert.equal(cleanChat('go https://evil.com/x now'), 'go [link] now');
+  assert.equal(cleanChat('join discord.gg/abc'), 'join [link]');
+  assert.equal(cleanChat('mon num 06 12 34 56 78'), 'mon num [number]');
+  assert.equal(cleanChat('x'.repeat(300)).length, 140);
+  assert.equal(cleanChat(' ​ \n '), '');
+
+  r = await roomPost(frank, 'create', { size: 2, mode: 'rounds', target: 1, bots: 1 });
+  const code = r.body.code;
+  assert.deepEqual(r.body.chat, [], 'pas de message au départ');
+  const say = (who, text) => roomPost(who, 'chat', { code, text });
+  await later(2000, async () => {
+    r = await say(frank, 'Hello there, FUCK this https://evil.com');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual(r.body.chat.map(c => [c.name, c.me, c.bot, c.m]), [['Frank', true, false, 'Hello there, **** this [link]']]);
+    assert.ok(!JSON.stringify(r.body.chat).includes(frank.playerId), 'aucun identifiant dans le chat');
+    assert.equal((await say(frank, 'again')).status, 429, 'pas deux messages coup sur coup');
+  });
+  await later(1300, async () => {
+    assert.equal((await say(alice, 'let me in')).status, 422, 'un spectateur ne peut pas écrire');
+    assert.equal((await say(frank, '   ')).status, 422, 'message vide');
+    assert.equal((await say({ ...frank, secret: '9'.repeat(32) }, 'hi')).status, 403);
+  });
+  // Vu par quelqu'un d'autre : le message est là, sans « me ».
+  r = await call(roomApi, { url: `/api/room?code=${code}&me=${alice.playerId}` });
+  assert.deepEqual(r.body.chat.map(c => [c.name, c.me, c.m]), [['Frank', false, 'Hello there, **** this [link]']]);
+  // Rafale : 12 messages par 30 s au plus, même en respectant l'écart entre deux messages.
+  let statuses = [];
+  for (let k = 0; k < 13; k++) await later(1300, async () => statuses.push((await say(frank, `message ${k}`)).status));
+  assert.equal(statuses.filter(x => x === 200).length, 11, `11 de plus passent (12 avec le premier), puis 429 : ${statuses}`);
+  assert.equal(statuses[statuses.length - 1], 429);
+  r = await call(roomApi, { url: `/api/room?code=${code}&me=${frank.playerId}` });
+  assert.equal(r.body.chat.length, 12);
+  assert.equal(r.body.chat[r.body.chat.length - 1].m, 'message 10');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -125,6 +125,10 @@
     'Legendary skins': 'Skins légendaires', 'a full animated signature around your number': 'une signature animée complète autour de ton nombre', 'also plays in duels': 'jouée aussi en duel',
     '▶ Preview': '▶ Aperçu', 'Preview': 'Aperçu', '↻ Replay': '↻ Rejouer', 'shown as a Mythic roll, the strongest reveal': 'montré comme un tirage Mythic, la révélation la plus forte',
     'A blade, a branch in bloom, a rising moon': 'Une lame, une branche en fleurs, la lune qui se lève', 'Lightning strikes every digit': 'La foudre frappe chaque chiffre', 'A dragon circles your number and forges it': 'Un dragon tourne autour de ton nombre et le forge', 'Light bends around your number': 'La lumière se courbe autour de ton nombre',
+    // Chat du duel
+    'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
+    'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
+    'Hide': 'Masquer', 'Hide this player\'s messages': 'Masquer les messages de ce joueur', 'Show again': 'Réafficher', 'Slow down a little': 'Doucement, pas si vite', 'Message not sent': 'Message non envoyé', 'Write something first': 'Écris d\'abord quelque chose',
     // Émotes spéciales (boutique, duel)
     'Emotes': 'Émotes', 'animated reactions for your duels': 'des réactions animées pour tes duels', 'everyone sees them': 'tout le monde les voit', 'Owned': 'Possédée',
     'The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.': 'Les six émotes classiques sont gratuites. Celles-ci bougent : achètes-en une une fois, elle rejoint ta barre de réactions dans tous les duels.',
@@ -206,6 +210,7 @@
     [/^New quests in (\d+) (h|min)$/, m => `Nouvelles quêtes dans ${m[1]} ${m[2]}`],
     [/^tomorrow: (\d+) coins$/, m => `demain : ${m[1]} pièces`],
     [/^\+([\d,]+) coins$/, m => `+${nb(m[1])} pièces`],
+    [/^(\d+) players? hidden$/, m => `${m[1]} joueur${m[1] === '1' ? '' : 's'} masqué${m[1] === '1' ? '' : 's'}`],
     [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
     [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],
     [/^([\d,]+) more coins needed for the (.+) button$/, m => `Il manque ${nb(m[1])} pièces pour le bouton ${m[2]}`],

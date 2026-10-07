@@ -2043,7 +2043,7 @@
   const ROOM_POLL_MS = 1500;
   const ROOM_IDLE_MS = 10 * 60000; // sans aucun changement pendant 10 min, on arrête de sonder (quota de la base)
   const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
-  const Room = { code: null, token: 0, timer: 0, offset: 0, rtt: Infinity, data: null, shown: 0, anim: null, view: null, sig: '', changedAt: 0, reactSeen: new Set(), reactBusy: false, achNoted: false };
+  const Room = { code: null, token: 0, timer: 0, offset: 0, rtt: Infinity, data: null, shown: 0, anim: null, view: null, sig: '', changedAt: 0, reactSeen: new Set(), reactBusy: false, achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' };
   // Emotes de duel : la mascotte dé (images dessinées pour le site). Touches 1 à 6.
   const REACTIONS = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
   const EMOTE_LABELS = { laugh: 'Laugh', cry: 'Cry', angry: 'Angry', cool: 'Cool', shock: 'Shocked', king: 'King' };
@@ -2807,7 +2807,7 @@
     currentView = 'room';
     REACTIONS.forEach(id => { new Image().src = `img/emotes/${id}.png`; });
     stopRoom();
-    Object.assign(Room, { code: code.toUpperCase(), data: null, shown: 0, rtt: Infinity, view: null, sig: '', changedAt: Date.now(), reactSeen: new Set(), achNoted: false });
+    Object.assign(Room, { code: code.toUpperCase(), data: null, shown: 0, rtt: Infinity, view: null, sig: '', changedAt: Date.now(), reactSeen: new Set(), achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' });
     app.innerHTML = `
       <div class="page page-wide">
         <a class="back-link" href="#/duel">← Duel</a>
@@ -2856,6 +2856,8 @@
   // Rythme du sondage selon ce qui peut arriver : vite seulement quand une manche peut partir sans action de ma part
   // (je suis prêt et j'attends les autres), sinon plus lentement — mes propres actions reçoivent l'état aussitôt.
   function nextPollMs(d) {
+    // On discute (un message vient d'arriver ou de partir, ou le champ est ouvert) : le chat doit rester vif.
+    if (Date.now() - Room.chatAt < 20000 || (document.activeElement && document.activeElement.id === 'chat-input')) return ROOM_POLL_MS;
     if (Room.anim) return 3000;
     if (!d || d.status !== 'playing') return 3000;
     const me = d.players.find(p => p.me);
@@ -2905,6 +2907,47 @@
     el.innerHTML = `${emoteHTML(r.e)}<small>${esc(r.name)}</small>`;
     layer.appendChild(el);
     setTimeout(() => el.remove(), 2800);
+  }
+
+  // Chat du duel : les messages arrivent avec chaque sondage, déjà filtrés par le serveur. Chacun peut masquer un
+  // joueur (ses messages disparaissent sur cet appareil, dans tous les duels) ; seuls les joueurs assis écrivent.
+  function drawChat(d) {
+    const list = $('#chat-list');
+    if (!list || !d) return;
+    const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
+    const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}`;
+    if (sig !== Room.chatSig) {
+      Room.chatSig = sig;
+      const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+      list.innerHTML = shown.length ? shown.map(c => `
+        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.me || c.bot ? '' : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button>`}</div>`).join('')
+        : '<div class="empty">No message yet. Say hi!</div>';
+      if (atBottom) list.scrollTop = list.scrollHeight;
+      const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
+      $('#chat-hidden').innerHTML = hidden ? `${plural(hidden, 'player')} hidden · <button class="chat-show" data-chat-show>Show again</button>` : '';
+      setHTML($('#chat-foot'), me
+        ? '<form class="chat-form" id="chat-form"><input class="input" id="chat-input" maxlength="140" autocomplete="off" enterkeyhint="send" placeholder="Write a message…" aria-label="Message"><button class="btn" type="submit">Send</button></form>'
+        : '<p class="panel-note">Only players in this duel can write.</p>');
+    }
+    const last = chat.length ? chat[chat.length - 1] : null;
+    if (last && last.t > Room.chatSeen) {
+      if (Room.chatSeen && !last.me && !muted.has(last.name)) Sound.tick({ soft: 1 }); // pas de son pour l'historique à l'arrivée
+      Room.chatSeen = last.t;
+      if (Date.now() - last.t + Room.offset < 30000) Room.chatAt = Date.now();
+    }
+  }
+
+  async function sendChat(text) {
+    const token = Room.token, sent = Date.now();
+    Room.chatAt = sent;
+    try {
+      applyRoom(await Online.roomAction('chat', Room.code, { text }), token, sent, Date.now());
+      return true;
+    } catch (err) {
+      toast(err.status === 429 ? 'Slow down a little' : err.status === 422 ? err.message : 'Message not sent');
+      return false;
+    }
   }
 
   async function sendReaction(emoji) {
@@ -3009,7 +3052,31 @@
         </div>
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p></div>
+        <div class="panel chat-panel" id="room-chat">
+          <div class="panel-head"><h3 class="panel-title">Chat</h3><span class="panel-note">be kind · never share personal details</span></div>
+          <div class="chat-list" id="chat-list" aria-live="polite"></div>
+          <p class="panel-note chat-hidden" id="chat-hidden"></p>
+          <div id="chat-foot"></div>
+        </div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
+      $('#room-chat').addEventListener('click', e => {
+        const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');
+        if (!hide && !show) return;
+        const muted = new Set(Store.settings.chatMuted || []);
+        if (hide) muted.add(hide.dataset.chatHide); else muted.clear();
+        Store.setSetting('chatMuted', [...muted].slice(-200));
+        Room.chatSig = '';
+        drawChat(Room.data);
+      });
+      $('#room-chat').addEventListener('submit', async e => {
+        e.preventDefault();
+        const input = $('#chat-input'), text = input.value.trim();
+        if (!text || input.disabled) return;
+        input.disabled = true;
+        if (await sendChat(text)) input.value = '';
+        input.disabled = false;
+        input.focus();
+      });
       if (!Room.anim) { $('#room-stage').innerHTML = stageHTML(Room.shown ? d.rounds[Room.shown - 1] : null); Room.skinSig = skinSig(d); }
       const reacts = $('#room-reacts');
       if (reacts) reacts.addEventListener('click', e => { const b = e.target.closest('[data-react]'); if (b) sendReaction(b.dataset.react); });
@@ -3089,6 +3156,7 @@
       const a = analysis(r.n[j]);
       return `<span class="num-card sm" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(`${d.players[j].name} · round ${i + 1}`)}" style="cursor:pointer">${a.str}</span>`;
     };
+    drawChat(d);
     setHTML($('#room-rounds'), Room.shown ? d.rounds.slice(0, Room.shown).map((r, i) => `
       <div class="room-round">
         <span class="rank">${i + 1}</span>
