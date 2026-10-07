@@ -2185,6 +2185,10 @@
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Half of the case price comes back. Coins only, no real money.</p>
         </div>
+        <div class="panel stats-sep premium-panel" id="d-premium-panel" hidden>
+          <div class="panel-head"><h3 class="panel-title">Legendary skins</h3><span class="panel-note">a full animated signature around your number · also plays in duels</span></div>
+          <div class="skin-grid premium-grid" id="d-premium"></div>
+        </div>
         <div class="panel stats-sep">
           <div class="panel-head"><h3 class="panel-title">Skins</h3><span class="coins mono" id="d-coins"></span></div>
           <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
@@ -2255,20 +2259,26 @@
       const btn = e.target.closest('[data-case]');
       if (btn && !btn.disabled) openCase(Shop.caseById.get(btn.dataset.case), state, btn);
     };
-    // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
-    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS).map(k => {
+    const tile = k => {
       const owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       const button = equipped ? '<span class="skin-state">Equipped</span>'
         : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>`
         : `<button class="btn${state.coins >= k.price ? '' : ' disabled'}" data-skin-buy="${k.id}">🪙 ${fmt(k.price)}</button>`;
       return `
-        <div class="skin-tile${equipped ? ' equipped' : ''}">
+        <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
           ${withLever(`<div class="num-card md${skinClass(k.id)}" data-tier="rare">${slotsHTML('235711')}</div>`, k.id)}
           <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
-          ${button}
+          <div class="skin-actions">${SkinFX.has(k.id) || k.id === 'owner' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
         </div>`;
-    }).join('');
-    grid.onclick = async e => {
+    };
+    // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium)).map(tile).join('');
+    const premium = $('#d-premium');
+    premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
+    $('#d-premium-panel').hidden = false;
+    grid.onclick = premium.onclick = async e => {
+      const preview = e.target.closest('[data-skin-preview]');
+      if (preview) { previewSkin(preview.dataset.skinPreview); return; }
       const buy = e.target.closest('[data-skin-buy]'), equip = e.target.closest('[data-skin-equip]');
       const btn = buy || equip;
       if (!btn || btn.disabled) return;
@@ -2284,6 +2294,51 @@
         toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
       }
     };
+  }
+
+  // Aperçu d'un skin avant l'achat : un tirage de démonstration (aucun nombre n'est tiré, rien n'est enregistré), au
+  // rythme d'un vrai mais resserré, révélé comme un Mythic pour montrer toute la séquence. Rejouable.
+  function previewSkin(id) {
+    const skin = Shop.byId.get(id);
+    if (!skin) return;
+    openModal(`
+      <h2>${skin.emoji} ${esc(skin.name)}</h2>
+      <p class="panel-note" style="margin:-.3rem 0 0">Preview · shown as a Mythic roll, the strongest reveal</p>
+      <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
+      <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button></div>`, m => {
+      const stage = m.querySelector('#sp-stage');
+      let timers = [], spin = 0, fx = null;
+      const stop = () => { timers.forEach(clearTimeout); timers = []; clearInterval(spin); if (fx) fx.destroy(); fx = null; };
+      const play = () => {
+        stop();
+        const digits = Array.from({ length: 6 }, (_, k) => String(k ? (Math.random() * 10) | 0 : 1 + ((Math.random() * 9) | 0)));
+        stage.innerHTML = withLever(`<div class="num-card lg neutral charging${skinClass(id)}">${digits.map(() => '<span class="slot spinning">0</span>').join('')}</div>`, id);
+        const card = stage.querySelector('.num-card'), slots = [...card.querySelectorAll('.slot')];
+        let shown = 0;
+        fx = id === 'owner' ? SkinFX.mount(stage, card, '', { owner: true }) : SkinFX.mount(stage, card, id);
+        spin = setInterval(() => {
+          if (!m.isConnected) { stop(); return; } // fenêtre fermée : tout s'arrête
+          for (let k = shown; k < 6; k++) slots[k].textContent = spinChar(card);
+          if (shown < 6) Sound.tick({ soft: 1 });
+        }, 55);
+        const at = (ms, fn) => timers.push(setTimeout(() => { if (m.isConnected) fn(); }, ms));
+        const LOCKS = [700, 1150, 1600, 2100, 2700, 3900];
+        LOCKS.forEach((ms, k) => at(ms, () => {
+          slots[k].textContent = digits[k]; slots[k].classList.remove('spinning'); slots[k].classList.add('revealed'); shown = k + 1;
+          if (fx) fx.lock(slots[k], { last: k === 5 });
+          Sound.play('lock', { i: k, soft: 1 });
+        }));
+        at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
+        at(LOCKS[5] + 600, () => {
+          clearInterval(spin);
+          card.classList.remove('neutral', 'charging'); card.dataset.tier = 'mythic';
+          if (fx) fx.reveal('mythic');
+          Sound.play('reveal', { small: 1 });
+        });
+      };
+      m.querySelector('#sp-again').addEventListener('click', play);
+      play();
+    });
   }
 
   // Boutons de tirage : « Match my skin » (défaut), les boutons vendus à part, puis ceux des skins (possédés d'abord).

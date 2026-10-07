@@ -85,6 +85,8 @@ await page.addInitScript(([saved, tagged]) => {
     requestAnimationFrame(loop);
   });
 }, [JSON.stringify({ version: 1, player: { id: 'a1b2c3d4e5f60718', secret: '00112233445566778899aabbccddeeff', name: 'Film' }, settings: { speed: SPEED, theme: THEME, sound: SOUND ? 'on' : 'off', achSeen: [], ...(SKIN ? { skin: SKIN } : {}) }, rolls: [] }), !VIDEO]);
+// La boutique est lue au chargement (skin et bouton du compte) : on lui fait répondre le skin du film.
+await page.route('**/api/shop*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ coins: 0, earned: 0, owned: ['classic', ...(SKIN ? [SKIN] : []), ...(has('owner') ? ['owner'] : [])], skin: has('owner') ? 'owner' : SKIN || 'classic', buttons: [], button: 'match' }) }));
 await page.route('**/api/roll', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ n: N, s: engine.scoreOf(N), t: Date.now(), bestToday: false, dayRank: null, achievements: has('owner') ? ['owner'] : [] }) }));
 await page.goto(`${SITE}/`, { waitUntil: 'load' });
 await page.waitForTimeout(1500);

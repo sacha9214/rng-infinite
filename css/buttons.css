@@ -419,6 +419,92 @@
 .btn-roll.gen-owner::before { top: 0; bottom: 0; left: -45%; width: 24%; transform: skewX(-18deg); background: linear-gradient(100deg, transparent, rgba(255, 228, 234, .35), transparent); animation: gen-owner-sheen 6s ease-in-out infinite; }
 @keyframes gen-owner-sheen { 0%, 78% { left: -45%; } 100% { left: 125%; } }
 
+/* Sakura — laque et feuille d'or : lune pâle, pétales qui glissent au survol, lettres crème. */
+.btn-roll.gen-sakura {
+  overflow: hidden; border-radius: .45rem; border: 2px solid #d4a84a; color: #fff4ec; letter-spacing: .16em;
+  background:
+    radial-gradient(circle at 90% 30%, #fff6e5 0 .34em, rgba(255, 246, 229, .25) .36em .5em, transparent .8em),
+    radial-gradient(ellipse 60% 100% at 8% 120%, rgba(244, 114, 182, .3), transparent 62%),
+    linear-gradient(160deg, #24122a 0%, #150b18 55%, #0b0610 100%);
+  text-shadow: 0 .05em 0 #7a2a52, 0 0 .5em rgba(244, 114, 182, .75);
+  --gs: 0 0 0 1px #2a1420, 0 .24em 0 #5b3a12, 0 .5em 1em rgba(0, 0, 0, .5), 0 0 18px rgba(244, 114, 182, .28);
+  --gs-h: 0 0 0 1px #2a1420, 0 .28em 0 #5b3a12, 0 .6em 1.2em rgba(0, 0, 0, .55), 0 0 28px rgba(244, 114, 182, .5);
+  --gs-a: 0 0 0 1px #2a1420, 0 .04em 0 #5b3a12, inset 0 3px 8px rgba(0, 0, 0, .6);
+  --press: .2em; --edge: .25em;
+}
+.btn-roll.gen-sakura::before {
+  inset: 0;
+  background:
+    radial-gradient(ellipse 4px 2.5px at 50% 50%, #f9a8d4, transparent 72%) 10px 0 / 61px 43px,
+    radial-gradient(ellipse 3px 2px at 50% 50%, #fde0eb, transparent 72%) 38px 18px / 83px 37px,
+    radial-gradient(ellipse 4px 2.5px at 50% 50%, #f472b6, transparent 72%) 22px 30px / 97px 51px;
+  opacity: .55; animation: gen-petals 9s linear infinite;
+}
+.btn-roll.gen-sakura:hover::before { opacity: .95; animation-duration: 3.5s; }
+@keyframes gen-petals { to { background-position: 71px 43px, 121px 55px, 119px 81px; } }
+
+/* Storm — verre d'orage : nuages sombres, pluie en biais, éclair qui traverse le bouton au survol. */
+.btn-roll.gen-storm {
+  overflow: hidden; border-radius: .45rem; border: 2px solid #7dd3fc; color: #f0fbff;
+  background:
+    radial-gradient(ellipse 50% 70% at 20% 0%, rgba(148, 163, 184, .4), transparent 70%),
+    radial-gradient(ellipse 45% 60% at 76% -6%, rgba(100, 116, 139, .42), transparent 70%),
+    linear-gradient(180deg, #17202f 0%, #0b1220 60%, #070b14 100%);
+  text-shadow: 0 0 .22em #7dd3fc, 0 0 .6em rgba(56, 189, 248, .85), 0 .05em 0 #0c4a6e;
+  --gs: 0 0 0 1px #0b1220, 0 .24em 0 #0f2a44, 0 .5em 1em rgba(0, 0, 0, .5), 0 0 20px rgba(56, 189, 248, .4);
+  --gs-h: 0 0 0 1px #0b1220, 0 .28em 0 #0f2a44, 0 .6em 1.2em rgba(0, 0, 0, .55), 0 0 32px rgba(56, 189, 248, .7);
+  --gs-a: 0 0 0 1px #0b1220, 0 .04em 0 #0f2a44, inset 0 0 26px rgba(186, 230, 253, .55);
+  --press: .2em; --edge: .25em;
+}
+.btn-roll.gen-storm::before {
+  inset: -30% -10%; opacity: .5;
+  background: repeating-linear-gradient(104deg, transparent 0 9px, rgba(186, 230, 253, .3) 9px 10px, transparent 10px 23px);
+  animation: storm-rain .5s linear infinite;
+}
+.btn-roll.gen-storm::after { top: -10%; bottom: -10%; left: 18%; width: 64%; opacity: 0; background: linear-gradient(100deg, transparent 46%, #fff 49% 51%, transparent 54%), linear-gradient(80deg, transparent 58%, rgba(186, 230, 253, .9) 60% 61%, transparent 63%); }
+.btn-roll.gen-storm:hover::after { animation: gen-flash .7s steps(1) 1; }
+@keyframes gen-flash { 0% { opacity: 1; } 8% { opacity: 0; } 14% { opacity: .9; } 22%, 100% { opacity: 0; } }
+
+/* Dragon — écailles d'obsidienne et or en fusion : la braise monte du bas, les lettres sont forgées dans l'or. */
+.btn-roll.gen-dragon {
+  overflow: hidden; border-radius: .4rem; border: 2px solid #d99a2b; color: #ffd76a;
+  background:
+    radial-gradient(circle at 50% 0, transparent .2em, rgba(0, 0, 0, .5) .21em .24em, transparent .25em) 0 0 / .5em .3em,
+    radial-gradient(circle at 50% 0, transparent .2em, rgba(0, 0, 0, .5) .21em .24em, transparent .25em) .25em .15em / .5em .3em,
+    radial-gradient(ellipse 90% 90% at 50% 130%, rgba(251, 146, 60, .6), rgba(180, 30, 14, .28) 45%, transparent 72%),
+    linear-gradient(180deg, #2a0d0b 0%, #1a0706 55%, #0d0403 100%);
+  text-shadow: 0 .05em 0 #5c1a05, 0 .09em 0 #2a0d03, 0 0 .4em rgba(251, 146, 60, .8);
+  --gs: 0 0 0 1px #1a0706, 0 0 0 3px #7a4a10, 0 .26em 0 3px #4a2a06, 0 .55em 1em rgba(0, 0, 0, .55), 0 0 22px rgba(234, 88, 12, .45);
+  --gs-h: 0 0 0 1px #1a0706, 0 0 0 3px #7a4a10, 0 .3em 0 3px #4a2a06, 0 .65em 1.2em rgba(0, 0, 0, .6), 0 0 34px rgba(234, 88, 12, .75);
+  --gs-a: 0 0 0 1px #1a0706, 0 0 0 3px #7a4a10, 0 .05em 0 3px #4a2a06, inset 0 -10px 22px rgba(251, 146, 60, .55);
+  --press: .21em; --edge: .32em;
+}
+.btn-roll.gen-dragon::before {
+  left: 0; right: 0; bottom: -14%; height: 74%; transform-origin: 50% 100%; filter: blur(1.6px);
+  background:
+    radial-gradient(ellipse 15px 100% at 50% 100%, rgba(253, 186, 116, .6), transparent 72%) 0 100% / 34px 100% repeat-x,
+    radial-gradient(ellipse 11px 66% at 50% 100%, rgba(248, 113, 22, .55), transparent 72%) 17px 100% / 46px 100% repeat-x;
+  animation: gen-flames 1.3s ease-in-out infinite alternate;
+}
+.btn-roll.gen-dragon:hover::before { animation-duration: .5s; }
+
+/* Singularity — verre noir : l'anneau d'accrétion derrière les lettres, étoiles, frange bleue et orange. */
+.btn-roll.gen-blackhole {
+  overflow: hidden; border-radius: .6rem; border: 2px solid #fdba74; color: #fff;
+  background:
+    radial-gradient(ellipse 74% 260% at 50% 50%, transparent 59%, rgba(255, 244, 214, .85) 61.5%, rgba(251, 146, 60, .7) 64.5%, rgba(194, 65, 12, .25) 70%, transparent 78%),
+    radial-gradient(ellipse 58% 200% at 50% 50%, #000 66%, transparent 80%),
+    radial-gradient(1px 1px at 8% 26%, #fff, transparent), radial-gradient(1px 1px at 92% 70%, #fff, transparent), radial-gradient(1.2px 1.2px at 14% 80%, #bfdbfe, transparent), radial-gradient(1px 1px at 86% 18%, #fde68a, transparent),
+    #020203;
+  text-shadow: -.035em 0 0 rgba(96, 165, 250, .95), .035em 0 0 rgba(251, 146, 60, .95), 0 0 .4em rgba(255, 237, 213, .8);
+  --gs: 0 0 0 3px rgba(251, 146, 60, .22), 0 0 24px rgba(251, 146, 60, .5), 0 0 54px rgba(124, 58, 237, .25), 0 .5em 1em rgba(0, 0, 0, .6);
+  --gs-h: 0 0 0 3px rgba(251, 146, 60, .35), 0 0 36px rgba(251, 146, 60, .8), 0 0 70px rgba(124, 58, 237, .4), 0 .5em 1.1em rgba(0, 0, 0, .65);
+  --gs-a: 0 0 0 3px rgba(251, 146, 60, .22), 0 0 12px rgba(251, 146, 60, .45), inset 0 0 30px #000;
+  transition: transform .2s var(--ease-snap), box-shadow .16s ease, letter-spacing .2s var(--ease-out);
+}
+.btn-roll.gen-blackhole:hover { letter-spacing: .14em; }
+.btn-roll.gen-blackhole:active { transform: scale(.94, .9); letter-spacing: .04em; }
+
 /* ------------------------------------------------------------------ vendus à part (BUTTONS) */
 
 /* Keycap — touche mécanique : dessus creusé, jupe haute, la plus longue course de tous les boutons. */

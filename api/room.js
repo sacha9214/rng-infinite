@@ -42,7 +42,7 @@ const pick = list => list[crypto.randomInt(0, list.length)];
 // Un bot : identifiant qui ne peut pas être celui d'un vrai joueur, nom libre dans la salle, skin au hasard.
 function makeBot(taken) {
   const free = BOT_NAMES.filter(n => !taken.includes(n));
-  return { id: `bot-${crypto.randomBytes(4).toString('hex')}`, name: free.length ? pick(free) : `Bot ${taken.length + 1}`, bot: true, title: null, skin: pick(Shop.SKINS).id };
+  return { id: `bot-${crypto.randomBytes(4).toString('hex')}`, name: free.length ? pick(free) : `Bot ${taken.length + 1}`, bot: true, title: null, skin: pick(Shop.SKINS.filter(k => !k.premium)).id }; // pas de skin premium sur un bot : ils se méritent
 }
 const roomKey = code => `room:${code}`;
 const playersKey = code => `room:${code}:players`;

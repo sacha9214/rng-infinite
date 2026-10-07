@@ -121,6 +121,10 @@
     'Starter Case': 'Caisse Starter', 'Premium Case': 'Caisse Premium', 'A skin worth 200 to 800 coins': 'Un skin valant 200 à 800 pièces', 'A skin worth 800 to 5,000 coins': 'Un skin valant 800 à 5 000 pièces', 'Odds ⓘ': 'Chances ⓘ', 'Odds': 'Chances',
     'new skin unlocked!': 'nouveau skin débloqué !', 'Roll once to start earning coins.': 'Fais un tirage pour commencer à gagner des pièces.', 'Shop unavailable right now.': 'Boutique indisponible pour le moment.',
     'Shop unavailable right now, try again': 'Boutique indisponible pour le moment, réessaie', 'Purchase already in progress': 'Achat déjà en cours', 'Buy this skin first': 'Achète d\'abord ce skin', 'This skin is not for sale': 'Ce skin n\'est pas à vendre',
+    // Skins premium et aperçu (boutique)
+    'Legendary skins': 'Skins légendaires', 'a full animated signature around your number': 'une signature animée complète autour de ton nombre', 'also plays in duels': 'jouée aussi en duel',
+    '▶ Preview': '▶ Aperçu', 'Preview': 'Aperçu', '↻ Replay': '↻ Rejouer', 'shown as a Mythic roll, the strongest reveal': 'montré comme un tirage Mythic, la révélation la plus forte',
+    'A blade, a branch in bloom, a rising moon': 'Une lame, une branche en fleurs, la lune qui se lève', 'Lightning strikes every digit': 'La foudre frappe chaque chiffre', 'A dragon circles your number and forges it': 'Un dragon tourne autour de ton nombre et le forge', 'Light bends around your number': 'La lumière se courbe autour de ton nombre',
     // Boutons de tirage (boutique)
     'Generate button': 'Bouton Générer', 'only you see it': 'toi seul le vois', 'press one to try it': 'appuie dessus pour l\'essayer',
     'Your Generate button follows your skin: every skin comes with its own button. You can also wear the button of any skin you own, or one of the buttons sold only here.': 'Ton bouton Générer suit ton skin : chaque skin a son propre bouton. Tu peux aussi porter le bouton de n\'importe quel skin que tu possèdes, ou l\'un des boutons vendus uniquement ici.',
