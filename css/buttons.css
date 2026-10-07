@@ -328,25 +328,29 @@
 .btn-roll.gen-fire:hover::before { animation-duration: .55s; }
 @keyframes gen-flames { from { transform: scaleY(.78) skewX(-4deg); opacity: .7; } to { transform: scaleY(1.12) skewX(4deg); opacity: 1; } }
 
-/* Vaporwave — coucher de soleil synthétique : ciel violet à pêche, sol quadrillé en perspective, italique chromée. */
+/* Vaporwave — coucher de soleil synthwave : ciel en dégradé, soleil rayé posé sur l'horizon derrière les lettres,
+   sol quadrillé en perspective qui défile au survol, italique blanche à franges rose et cyan. */
 .btn-roll.gen-vaporwave {
-  overflow: hidden; font-style: italic; border-radius: .5rem; border: 2px solid #f0abfc; color: #fff;
-  background: linear-gradient(180deg, #1b0b3a 0%, #4c1d95 34%, #c026d3 60%, #fb7185 80%, #fdba74 100%);
-  text-shadow: 2px 2px 0 #a21caf, -1px -1px 0 #22d3ee, 0 0 14px rgba(240, 171, 252, .6);
-  --gs: 0 .24em 0 #3b0764, 0 .5em 1em rgba(192, 38, 211, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
-  --gs-h: 0 .28em 0 #3b0764, 0 .6em 1.2em rgba(192, 38, 211, .55), inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 18px rgba(34, 211, 238, .35);
-  --gs-a: 0 .04em 0 #3b0764, inset 0 3px 8px rgba(27, 11, 58, .6);
+  overflow: hidden; font-style: italic; font-weight: 900; border-radius: .5rem; border: 2px solid #f0abfc; color: #fff;
+  background:
+    linear-gradient(180deg, transparent 0 62%, #fff 62% 63.2%, rgba(13, 2, 33, .96) 63.2% 100%),
+    linear-gradient(180deg, transparent 0 36%, #3b0f66 36% 39%, transparent 39% 45%, #3b0f66 45% 49%, transparent 49% 54%, #3b0f66 54% 59%, transparent 59%) 50% 0 / 3.2em 100% no-repeat,
+    radial-gradient(circle 1.5em at 50% 63%, #fff59d 0, #fde047 26%, #fb923c 62%, #f43f5e 99%, transparent 100%),
+    linear-gradient(180deg, #170a3a 0%, #4c1d95 40%, #c026d3 74%, #fb7185 100%);
+  text-shadow: .05em .05em 0 #a21caf, -.03em -.03em 0 #22d3ee, 0 0 .5em rgba(23, 10, 58, .9);
+  --gs: 0 0 0 1px #2e1065, 0 .24em 0 #3b0764, 0 .5em 1em rgba(192, 38, 211, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
+  --gs-h: 0 0 0 1px #2e1065, 0 .28em 0 #3b0764, 0 .6em 1.2em rgba(192, 38, 211, .55), inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 18px rgba(34, 211, 238, .35);
+  --gs-a: 0 0 0 1px #2e1065, 0 .04em 0 #3b0764, inset 0 3px 8px rgba(27, 11, 58, .6);
   --press: .2em;
 }
 .btn-roll.gen-vaporwave::before {
-  left: -30%; right: -30%; bottom: 0; height: 40%; transform: perspective(70px) rotateX(55deg); transform-origin: 50% 100%;
+  left: -30%; right: -30%; bottom: 0; height: 37%; transform: perspective(70px) rotateX(55deg); transform-origin: 50% 100%;
   background:
     repeating-linear-gradient(90deg, rgba(103, 232, 249, .7) 0 1px, transparent 1px 20px),
-    repeating-linear-gradient(0deg, rgba(103, 232, 249, .7) var(--gen-shift), rgba(103, 232, 249, .7) calc(var(--gen-shift) + 1px), transparent calc(var(--gen-shift) + 1px), transparent calc(var(--gen-shift) + 8px)),
-    linear-gradient(180deg, rgba(27, 11, 58, .55), rgba(27, 11, 58, .92));
+    repeating-linear-gradient(0deg, rgba(103, 232, 249, .7) var(--gen-shift), rgba(103, 232, 249, .7) calc(var(--gen-shift) + 1px), transparent calc(var(--gen-shift) + 1px), transparent calc(var(--gen-shift) + 8px));
 }
 .btn-roll.gen-vaporwave:hover::before { animation: gen-grid .5s linear infinite; }
-.btn-roll.gen-vaporwave:active { text-shadow: 3px 1px 0 #a21caf, -3px -1px 0 #22d3ee; }
+.btn-roll.gen-vaporwave:active { text-shadow: .09em .03em 0 #a21caf, -.09em -.03em 0 #22d3ee; }
 @keyframes gen-grid { to { --gen-shift: -8px; } }
 
 /* Galaxy — ciel profond : nébuleuses, trois plans d'étoiles, une étoile filante au survol. */

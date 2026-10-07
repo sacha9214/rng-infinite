@@ -629,7 +629,6 @@
     circuit: pieces({ live: { chase: ['#34d399', '#fde047'], arcs: ['#34d399', '#6ee7b7'] }, cols: ['#34d399', '#6ee7b7', '#fde047'], shapes: ['spark', 'square'], size: [1.6, 3.2], g: 0, drag: 2.4, spin: 0, glowc: '#34d399', ring: '#6ee7b7', square: true, drift: { rate: 7, from: 'around' } }),
     matrix: pieces({ live: { scan: '#00ff41', chase: ['#00ff41'] }, cols: ['#00ff41', '#7dffa0'], shapes: ['glyph'], chars: 'ｱｶｻﾀﾅﾊﾏ01'.split(''), size: [2.6, 4.2], g: 260, drag: .4, spin: 0, glowc: '#00ff41', ring: '#00ff41', square: true, drift: { rate: 8, from: 'bottom' } }),
     nixie: pieces({ live: { twinkle: '#ffb347', arcs: ['#ff7a18', '#ffb347'] }, cols: ['#ffb347', '#ff7a18'], shapes: ['star', 'spark'], size: [1.8, 3.6], g: -60, drag: 1.5, up: true, life: 1.3, glowc: '#ff9a3c', ring: '#ffb347', drift: { rate: 6, from: 'top' } }),
-    vaporwave: pieces({ live: { grid: '#ff71ce', chase: ['#ff71ce', '#01cdfe'], sweep: '#fffb96' }, cols: ['#ff71ce', '#01cdfe', '#b967ff', '#fffb96'], shapes: ['seg', 'star', 'square'], size: [2, 4.5], g: 0, drag: 1.6, glowc: '#ff71ce', ring: '#01cdfe', drift: { rate: 6, from: 'around' } }),
     rainbow: pieces({ live: { rays: RAINBOW, chase: ['#ef4444', '#facc15', '#3b82f6', '#a855f7'], twinkle: '#ffffff' }, cols: RAINBOW, shapes: ['star', 'drop', 'sprinkle'], size: [2.6, 5.2], g: 380, drag: 1, up: true, life: 1.4, glowc: '#f0abfc', ring: '#a855f7', drift: { rate: 9, from: 'top' } }),
   });
 
@@ -888,24 +887,6 @@
         },
         lock(p, o) { halos.add({ x: p.x, y: p.y, size: card.h * (o.ghost ? .2 : o.last ? .9 : .55), life: .6 }); },
         reveal(tier, p) { for (let i = Math.round(10 * p); i > 0; i--) { const from = along(card, rnd()); plasma.add({ x: from.x, y: from.y, a: Math.atan2(from.y - cy, from.x - cx), ph: rnd(TAU), len: rnd(40, 60 + 110 * p), w: p, delay: rnd(0, .3), life: .5 + .9 * p }); } halos.add({ x: cx, y: cy, size: card.w * (.3 + .4 * p), life: .8 }); },
-      };
-    },
-    // 🌴 Vaporwave — un soleil rayé se lève derrière la carte, l'image « glitche » à chaque chiffre, des triangles néon s'envolent à la révélation.
-    vaporwave: (env, { cx, cy, st }) => {
-      const { co, card, dark } = env, glitches = timed(), tris = particles();
-      let rise = 0;
-      return {
-        frame(t, dt) {
-          rise += ((st.revealed ? .5 + .5 * st.p : .25 + .3 * st.heat) - rise) * Math.min(1, dt * 2);
-          co.globalCompositeOperation = 'source-over';
-          const r = card.h * 1.15, sy = card.y + card.h * .2 - rise * card.h * 1.1; // soleil rayé derrière le haut de la carte
-          for (let i = 0; i < 11; i++) { const y = sy - r + (i / 11) * r * 2, half = Math.sqrt(Math.max(0, r * r - (y - sy) * (y - sy))); if (y > card.y - 2) continue; co.globalAlpha = dark ? .85 : .7; co.fillStyle = i < 5 ? '#fffb96' : i < 8 ? '#ff9a5c' : '#ff71ce'; co.fillRect(cx - half, y, half * 2, r * 2 / 11 - (i > 5 ? (i - 5) * 1.2 : 0)); }
-          glitches.run(dt, (g, k) => { co.globalAlpha = (1 - k) * .75; for (let i = 0; i < 4; i++) { co.fillStyle = i % 2 ? '#01cdfe' : '#ff71ce'; co.fillRect(g.x - g.w / 2 + Math.sin(i * 9 + k * 30) * 14, g.y - g.h / 2 + i * g.h / 4, g.w, g.h / 8); } });
-          tris.step(dt);
-          tris.each((p, k) => { co.save(); co.translate(p.x, p.y); co.rotate(p.rot + k * 3); co.globalAlpha = 1 - k; co.strokeStyle = p.c; co.lineWidth = 2; co.beginPath(); co.moveTo(0, -p.size); co.lineTo(p.size * .87, p.size * .5); co.lineTo(-p.size * .87, p.size * .5); co.closePath(); co.stroke(); co.restore(); });
-        },
-        lock(p, o) { if (!o.ghost) glitches.add({ x: p.x, y: p.y, w: card.h * (o.last ? 2.6 : .9), h: card.h * .9, life: .28 }); },
-        reveal(tier, p) { glitches.add({ x: cx, y: cy, w: card.w * 1.2, h: card.h * 1.3, life: .3 + .3 * p }); for (let i = burst(p, 50, 3); i > 0; i--) tris.add({ x: rnd(card.x - 60, card.x + card.w + 60), y: rnd(card.y, card.y + card.h), vx: rnd(-50, 50), vy: -rnd(40, 160), max: rnd(1.2, 2.4), size: rnd(6, 16), rot: rnd(TAU), c: pick(['#ff71ce', '#01cdfe', '#b967ff', '#fffb96']) }); },
       };
     },
     // 🌈 Rainbow — un arc-en-ciel se dessine au-dessus de la carte, bande après bande avec les chiffres, et se double à la révélation.
@@ -1545,6 +1526,100 @@
       },
       build() { target = 1.35; squeezeTo = .88; },
       reveal(tier) { p = POWER[tier] || 0; revealed = true; banged = false; since = 0; heat = .8 + .7 * p; target = .3 + .3 * p; },
+    };
+  };
+
+  // 🌴 Vaporwave (refonte du 2026-10-07) — un crépuscule synthwave, net et calme : un grand soleil rayé monte derrière
+  // la carte, un cran par chiffre ; la ligne d'horizon se prolonge de chaque côté ; deux palmiers en néon se balancent ;
+  // un trait de laser passe sous chaque chiffre qui se pose. À la révélation : le soleil rayonne, des arcs de néon
+  // s'élèvent, des étoiles filent. Peu d'éléments, tous grands — et rien de durable sous la carte.
+  SCENES.vaporwave = env => {
+    const { ci, co, w, h, W, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const PINK = dark ? '#f472b6' : '#be185d', HOT = dark ? '#ff71ce' : '#a21caf', CYAN = dark ? '#67e8f9' : '#0e7490', SUN1 = '#fff59d', SUN2 = '#fb923c', SUN3 = '#f43f5e', WHITE = dark ? '#ffffff' : '#701a75';
+    const R = Math.min(card.w * .34, card.h * .92), sparks = particles(), bokeh = particles(), lasers = timed(), glints = timed(), arcs = timed(), comets = timed(), emit = emitter();
+    let heat = 0, target = .35, p = 0, since = 0, revealed = false, locked = 0, rise = 0, riseTo = .08, formed = 0;
+    // Un palmier en néon : un tronc courbe, sept palmes qui retombent ; `dir` = de quel côté il penche.
+    function palm(bx, by, dir, t) {
+      const top = { x: bx + dir * 14, y: by - (card.h + 24) }, sway = Math.sin(t * 1.3 + dir) * (.04 + .05 * Math.min(1, heat));
+      const stroke = (width, a, color) => { co.lineWidth = width; co.globalAlpha = a * formed; co.strokeStyle = color; co.stroke(); };
+      co.lineCap = 'round'; co.lineJoin = 'round';
+      co.beginPath(); co.moveTo(bx, by); co.quadraticCurveTo(bx - dir * 8, by - (card.h + 24) * .55, top.x, top.y);
+      co.globalCompositeOperation = add; stroke(7, .16, HOT); stroke(2.4, .95, PINK);
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI / 2 + (i - 3) * .52 + sway * (1 + Math.abs(i - 3) * .4), len = 27 - Math.abs(i - 3) * 2.2;
+        const ex = top.x + Math.cos(a) * len, ey = top.y + Math.sin(a) * len * .72 + 10 + Math.abs(i - 3) * 2.4;
+        co.beginPath(); co.moveTo(top.x, top.y); co.quadraticCurveTo(top.x + Math.cos(a) * len * .6, top.y + Math.sin(a) * len * .95 - 3, ex, ey);
+        stroke(6, .13, i % 2 ? CYAN : HOT); stroke(1.9, .95, i % 2 ? CYAN : PINK);
+      }
+    }
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 3); since += dt; formed = Math.min(1, formed + dt * 1.6);
+        rise += (riseTo - rise) * Math.min(1, dt * 4);
+        // Dans la carte : la lueur du couchant sur l'horizon, et un reflet qui la traverse.
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, '#fb7185', w * .5, h * .66, w * .5, .1 + .14 * heat + (revealed ? .12 * p : 0), h * .3);
+        dot(ci, '#ffffff', w * (((t * .2) % 1.6) * 1.25 - .3), h * .45, h * .3, .1, h * 1.2);
+        // Le soleil, derrière la carte : il ne dépasse que par le haut, de plus en plus à mesure que les chiffres tombent.
+        const capMax = Math.min(44, R * .7), sy = card.y + R - capMax * rise, flare = revealed ? Math.max(0, 1 - since / (4 + 4 * p)) : 0;
+        behind(env, () => {
+          co.globalCompositeOperation = add;
+          dot(co, dark ? '#f472b6' : '#f9a8d4', cx, card.y, R * (1.5 + .3 * heat), (dark ? .2 : .3) * rise * (.7 + .3 * heat));
+          // Les rayons de la révélation, en éventail au-dessus de l'horizon.
+          if (flare > 0) { const open = outCubic(Math.min(1, since / .5)); for (let i = 0; i < 13; i++) { const a = -Math.PI + ((i + .5) / 13) * Math.PI + Math.sin(t * .4) * .04, len = R * (1.25 + .9 * p) * open * (i % 2 ? 1 : .74); tail(co, i % 2 ? SUN1 : HOT, cx + Math.cos(a) * (R + len), sy + Math.sin(a) * (R + len), cx + Math.cos(a) * R * .9, sy + Math.sin(a) * R * .9, 5 + 5 * p, flare * (dark ? .5 : .65)); } }
+          co.globalCompositeOperation = 'source-over';
+          co.save(); co.beginPath(); co.rect(0, 0, W, card.y + 2); co.clip(); // seulement la calotte au-dessus de la carte
+          co.beginPath(); co.arc(cx, sy, R, 0, TAU); co.clip();
+          const g = co.createLinearGradient(0, sy - R, 0, sy - R + capMax * 1.25); g.addColorStop(0, SUN1); g.addColorStop(.45, SUN2); g.addColorStop(1, SUN3);
+          co.globalAlpha = .96; co.fillStyle = g; co.fillRect(cx - R, sy - R, R * 2, R * 2);
+          // Les fentes : trois bandes vides, de plus en plus épaisses vers l'horizon.
+          co.globalCompositeOperation = 'destination-out'; co.globalAlpha = 1;
+          [[5, 3.4], [14, 2.6], [22, 1.8]].forEach(([up, thick]) => co.fillRect(cx - R, card.y - up, R * 2, thick));
+          co.restore();
+        }, true);
+        // L'horizon se prolonge de part et d'autre de la carte : un filet rose, un cœur clair.
+        co.globalCompositeOperation = add; co.lineCap = 'round';
+        const reach = (card.x - 12) * (.35 + .65 * Math.min(1, heat * .8 + (flare > 0 ? .6 : 0))) * formed, hy = card.y + card.h * .66;
+        for (const dir of [-1, 1]) { const x0 = cx + dir * (card.w / 2 + 3); tail(co, HOT, x0 + dir * reach, hy, x0, hy, 6, .22 + .3 * Math.min(1, heat)); tail(co, dark ? '#ffffff' : CYAN, x0 + dir * reach * .8, hy, x0, hy, 1.4, .55 + .4 * Math.min(1, heat)); }
+        // Les deux palmiers.
+        palm(card.x - 34, card.y + card.h + 8, -1, t);
+        palm(card.x + card.w + 34, card.y + card.h + 8, 1, t);
+        // Des halos qui montent doucement de chaque côté.
+        co.globalCompositeOperation = add;
+        for (let n = emit((3 + 9 * heat) * q, dt); n > 0; n--) { const side = Math.random() < .5 ? -1 : 1; bokeh.add({ x: cx + side * (card.w / 2 + rnd(20, Math.min(170, card.x - 20))), y: card.y + card.h + rnd(0, 30), vx: rnd(-6, 6), vy: -rnd(12, 34) * (1 + .6 * heat), max: rnd(2.4, 4.4), size: rnd(3, 9), c: pick([PINK, CYAN, SUN2]), tw: rnd(TAU) }); }
+        bokeh.step(dt);
+        bokeh.each((d, k) => dot(co, d.c, d.x + Math.sin(t * 1.2 + d.tw) * 5, d.y, d.size, Math.sin(Math.PI * k) * (dark ? .34 : .4)));
+        // Arcs de néon de la révélation : des demi-ellipses qui s'élèvent au-dessus de la carte, découpées derrière elle.
+        behind(env, () => arcs.run(dt, (a, k) => { const e = outCubic(k), rx = card.w * (.42 + a.grow * e), ry = (card.h * .5 + 16 + 30 * a.grow * e); co.beginPath(); co.ellipse(cx, cy, rx, ry, 0, Math.PI, TAU); co.globalAlpha = (1 - k) * .2; co.strokeStyle = a.c; co.lineWidth = 6; co.stroke(); co.globalAlpha = (1 - k) * .9; co.strokeStyle = dark ? '#ffffff' : a.c; co.lineWidth = 1.2; co.stroke(); }), true);
+        // Le laser sous le chiffre qui se pose, puis l'éclat sur son chrome.
+        lasers.run(dt, (l, k) => { const e = outExpo(Math.min(1, k * 2)), a = 1 - Math.pow(k, 1.5), half = l.len * e; tail(co, HOT, l.x - half, l.y, l.x, l.y, 5 * l.w, a * .5); tail(co, CYAN, l.x + half, l.y, l.x, l.y, 5 * l.w, a * .5); tail(co, dark ? '#ffffff' : HOT, l.x - half * .8, l.y, l.x, l.y, 1.4 * l.w, a); tail(co, dark ? '#ffffff' : CYAN, l.x + half * .8, l.y, l.x, l.y, 1.4 * l.w, a); });
+        glints.run(dt, (g, k) => { const a = 1 - outCubic(k), r = g.size * (.4 + outExpo(k)); dot(co, '#ffffff', g.x, g.y, r * .3, a); dot(co, dark ? '#ffffff' : HOT, g.x, g.y, r * 2.4, a * .9, 1.3); dot(co, dark ? '#ffffff' : HOT, g.x, g.y, 1.3, a * .9, r * 2.4); dot(co, PINK, g.x, g.y, r, a * .45); });
+        // Étoiles filantes, dans le ciel de part et d'autre.
+        comets.run(dt, (c, k) => { const x = c.x + c.vx * k, y = c.y + c.vy * k, a = Math.sin(Math.PI * k); tail(co, dark ? '#ffffff' : HOT, x - c.vx * .16, y - c.vy * .16, x, y, 1.8, a); dot(co, dark ? '#ffffff' : HOT, x, y, 3.2, a); });
+        // Petites étoiles à quatre branches qui s'envolent.
+        co.globalCompositeOperation = 'source-over';
+        sparks.step(dt);
+        sparks.each((d, k) => { co.save(); co.translate(d.x, d.y); co.rotate(d.rot + d.vr * d.life); co.globalAlpha = Math.min(1, (1 - k) * 2.2) * (.6 + .4 * Math.sin(t * 13 + d.tw)); co.fillStyle = d.c; SHAPES.star(co, d, d.size); co.restore(); });
+      },
+      lock(pos, o) {
+        if (o.ghost) return;
+        locked++; riseTo = Math.min(1, .08 + locked * .16);
+        lasers.add({ x: pos.x, y: pos.y + card.h * .3, len: card.h * (o.last ? 1.9 : 1.1), w: o.last ? 1.4 : 1, life: .42 });
+        glints.add({ x: pos.x + card.h * .1, y: pos.y - card.h * .2, size: card.h * (o.last ? .46 : .28), life: .5, delay: .06 });
+        for (let i = Math.round((o.last ? 12 : 6) * q); i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.1, 1.1), v = rnd(50, o.last ? 190 : 130); sparks.add({ x: pos.x, y: pos.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 90, drag: 1.5, max: rnd(.6, 1.1), size: rnd(1.6, 3), c: pick([PINK, CYAN, SUN1]), rot: rnd(TAU), vr: rnd(-3, 3), tw: rnd(TAU) }); }
+        if (o.last) { riseTo = 1; target = .35; }
+        heat = Math.min(1.4, heat + .16);
+      },
+      build() { target = 1.3; riseTo = Math.max(riseTo, .92); },
+      reveal(tier) {
+        p = POWER[tier] || 0; revealed = true; since = 0; heat = .7 + .7 * p; target = .3 + .3 * p; riseTo = 1;
+        for (let i = 0; i < 2 + Math.round(2 * p); i++) arcs.add({ delay: i * .16, life: 1.2, grow: .16 + .14 * i + .2 * p, c: i % 2 ? CYAN : HOT });
+        glints.add({ x: cx, y: cy - card.h * .2, size: card.h * (.6 + .8 * p), life: .9 });
+        lasers.add({ x: cx, y: card.y + card.h * .66, len: card.w * (.7 + .5 * p), w: 1.6 + p, life: .6 });
+        for (let i = 0; i < 1 + Math.round(4 * p); i++) { const side = i % 2 ? -1 : 1; comets.add({ delay: .15 + i * .22, life: .7, x: cx + side * (card.w / 2 + rnd(30, 140)), y: card.y - rnd(20, 44), vx: -side * rnd(120, 200), vy: rnd(50, 90) }); }
+        for (let i = burst(p, 90 * q, 8); i > 0; i--) { const from = along(grown(card, 8), rnd()), a = Math.atan2(from.y - cy, from.x - cx) + rnd(-.5, .5), v = rnd(60, 160 + 300 * p); sparks.add({ x: from.x, y: from.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: 110, drag: 1.2, max: rnd(.9, 1.6 + p), size: rnd(1.8, 3.6 + 1.5 * p), c: pick([PINK, CYAN, SUN1, '#ffffff']), rot: rnd(TAU), vr: rnd(-4, 4), tw: rnd(TAU) }); }
+      },
     };
   };
 
