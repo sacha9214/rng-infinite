@@ -2530,3 +2530,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 @media (max-width: 400px) { .g-tabs { gap: .3rem; } .g-tab { padding-inline: .1rem; } .g-tab span { font-size: .5rem; } }
 /* Casino : le texte d'introduction remontait sous la boîte « Your coins » (marge négative prévue pour un titre seul). */
 .g-head + .profile-sub { margin-top: .4rem; }
+/* Annonce cliquable (quête terminée : ramène à l'accueil pour récupérer les pièces). */
+.toast.link { cursor: pointer; }
+@media (max-width: 560px) { .toast { max-width: calc(100vw - 1.5rem); width: max-content; text-align: center; } }

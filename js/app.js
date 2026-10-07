@@ -154,10 +154,11 @@
   const fullDate = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   let toastTimer = 0;
-  function toast(msg, ms = 2600, kind = '') {
+  function toast(msg, ms = 2600, kind = '', onClick = null) {
     const el = $('#toast');
     el.textContent = msg;
-    el.className = `toast${kind ? ` ${kind}` : ''}`;
+    el.className = `toast${kind ? ` ${kind}` : ''}${onClick ? ' link' : ''}`;
+    el.onclick = onClick ? () => { el.hidden = true; onClick(); } : null;
     el.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
@@ -305,6 +306,58 @@
       ? `🏆 Achievement unlocked: ${fresh[0].emoji} ${fresh[0].title}. Equip its title from your profile`
       : `🏆 ${fresh.length} achievements unlocked: ${fresh.map(a => `${a.emoji} ${a.title}`).join(', ')}`, 6000, 'achv');
   }
+
+  // ---------------------------------------------------------------- quête du jour terminée : annonce avec sa récompense
+  // L'état des quêtes est gardé en mémoire et avancé sur place à chaque tirage compté (mêmes règles que le serveur,
+  // js/quests.js) ; quand une quête semble atteinte, le serveur confirme avant l'annonce. Chaque quête n'est annoncée
+  // qu'une fois par jour et par appareil (settings.questSeen), et jamais au chargement : pas d'avalanche d'annonces.
+  const QuestWatch = {
+    state: null, busy: false,
+    seen() { const s = Store.settings.questSeen; return s && this.state && s.day === this.state.day ? s.ids : []; },
+    ready(q) { return q.progress >= q.target && !q.claimed; },
+    // Reçoit un état frais du serveur. quiet : ce qui est déjà terminé est noté sans être annoncé.
+    take(state, quiet) {
+      if (!state || !Array.isArray(state.quests)) return;
+      this.state = state;
+      const seen = this.seen(), fresh = state.quests.filter(q => this.ready(q) && !seen.includes(q.id));
+      const done = state.quests.filter(q => q.progress >= q.target).map(q => q.id);
+      Store.setSetting('questSeen', { day: state.day, ids: [...new Set([...seen, ...done])] });
+      if (quiet || !fresh.length) return;
+      const total = fresh.reduce((x, q) => x + q.reward, 0);
+      const msg = fresh.length === 1
+        ? `✅ Quest complete: ${fresh[0].emoji} ${fresh[0].text} · +${fresh[0].reward} 🪙 to claim on the home page`
+        : `✅ ${fresh.length} quests complete · +${total} 🪙 to claim on the home page`;
+      // Attend son tour si une autre annonce (succès débloqué) est encore à l'écran.
+      const show = tries => {
+        if (!$('#toast').hidden && tries < 12) { setTimeout(() => show(tries + 1), 700); return; }
+        toast(msg, 6500, 'achv', () => { location.hash = '#/'; });
+        Sound.play('lock', { i: 5 });
+      };
+      show(0);
+    },
+    async sync(quiet) {
+      if (this.busy || !Store.player.name) return;
+      this.busy = true;
+      try { this.take(await Online.quests(), quiet); } catch (err) { /* hors ligne : on réessaiera au prochain tirage */ }
+      this.busy = false;
+    },
+    // Après un tirage compté par le serveur (delta = compteurs du jour qu'il vient d'ajouter) ou la fin d'un duel (sans delta).
+    bump(delta) {
+      const today = new Date(serverNow()).toISOString().slice(0, 10);
+      if (!this.state || this.state.day !== today) { this.sync(!this.state); return; }
+      if (!delta) { this.sync(false); return; }
+      const seen = this.seen();
+      let crossed = false;
+      for (const q of this.state.quests) {
+        const def = Quests.byId.get(q.id);
+        if (!def || q.progress >= q.target) continue;
+        q.progress = Math.min(q.target, q.progress + def.value(delta));
+        if (this.ready(q) && !seen.includes(q.id)) crossed = true;
+      }
+      if (crossed) this.sync(false);
+    },
+  };
+  const questDelta = (score, tier) => ({ rolls: 1, xp: score, [`t:${tier}`]: 1 });
 
   // Analyses mises en cache : un nombre donne toujours le même résultat.
   const cache = new Map();
@@ -929,6 +982,7 @@
       try { state = await Online.quests(); } catch (err) { return; }
       if (!slot.isConnected) return;
     }
+    QuestWatch.take(state, true);
     const left = Math.max(0, state.resetAt - Date.now());
     const resetIn = left > 3600000 ? `${Math.floor(left / 3600000)} h` : `${Math.max(1, Math.ceil(left / 60000))} min`;
     const d = state.daily;
@@ -1184,6 +1238,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-08e', date: 'Oct 8, 2026', en: ['A notification tells you when you complete a daily quest, with its coin reward'], fr: ['Une notification te prévient quand tu termines une quête du jour, avec sa récompense en pièces'] },
     { id: '2026-10-08d', date: 'Oct 8, 2026', en: ['Layout pass for every screen size: on phones and tablets the four round buttons now sit at the bottom of the page instead of floating over the game, and the menu fits on the smallest phones'], fr: ['Mise en page revue pour toutes les tailles d\'écran : sur téléphone et tablette, les quatre boutons ronds sont rangés en bas de page au lieu de flotter sur le jeu, et le menu tient sur les plus petits téléphones'] },
     { id: '2026-10-08c', date: 'Oct 8, 2026', en: ['Coins leaderboard', 'Your coin balance is shown when you set a duel stake and at the top of the casino', 'New trailer'], fr: ['Classement des pièces', 'Ton solde s\'affiche quand tu choisis une mise en duel et en haut du casino', 'Nouveau trailer'] },
     { id: '2026-10-08b', date: 'Oct 8, 2026', en: ['Casino tables redrawn: a real 3D roulette wheel with its ball, dealt and flipped cards, a bouncing Plinko ball, flipping Mines tiles, a Crash rocket'], fr: ['Tables du casino redessinées : vraie roue de roulette en 3D avec sa bille, cartes distribuées et retournées, bille de Plinko qui rebondit, cases de Mines qui basculent, fusée de Crash'] },
@@ -1457,7 +1512,7 @@
       show($('#r-hint'), 'fade-in');
       document.body.classList.remove('locked');
       canReroll = true;
-      if (ctx.online) noteAchievements(ctx.online.achievements);
+      if (ctx.online) { noteAchievements(ctx.online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
     });
     step(REVEAL.stats, () => show($('#r-meta'), 'pop-in'));
     step(REVEAL.lifetimeShow, () => show($('#r-life'), 'fade-in'));
@@ -3474,6 +3529,11 @@
       Room.achNoted = JSON.stringify(d.achievements);
       noteAchievements(d.achievements);
     }
+    // Quêtes de duel : comptées par le serveur à la révélation de la dernière manche, une vérification par partie finie.
+    if (finished && d.players.some(p => p.me) && Room.questNoted !== `${d.code}:${d.rounds.length}:${d.rounds[d.rounds.length - 1].t}`) {
+      Room.questNoted = `${d.code}:${d.rounds.length}:${d.rounds[d.rounds.length - 1].t}`;
+      setTimeout(() => QuestWatch.bump(), 2500);
+    }
     if (finished) {
       const w = d.winner;
       const how = w === null ? '' : d.mode === 'xp' ? ` with ${fmt(totals[w])} XP` : ` with ${plural(wins[w], 'round')}`;
@@ -3592,6 +3652,7 @@
       if (mine < 0 || !sides[mine] || Store.rolls.some(x => x[0] === sides[mine].n && x[2] === r.t)) return;
       Collection.ensure();
       Store.addRoll(sides[mine].n, sides[mine].s, r.t);
+      QuestWatch.bump(questDelta(sides[mine].s, sides[mine].a.tier));
       Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     };
 
@@ -3914,6 +3975,7 @@
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
   paintNewsDot();
+  QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);

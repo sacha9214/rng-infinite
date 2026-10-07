@@ -261,6 +261,8 @@
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],
     [/^(\d+) achievements unlocked: (.+)$/, m => `${m[1]} succès débloqués : ${m[2]}`],
+    [/^Quest complete: (\S+) (.+) · \+(\d+) 🪙 to claim on the home page$/, m => `Quête terminée : ${m[1]} ${one(m[2])} · +${m[3]} 🪙 à récupérer sur l'accueil`],
+    [/^(\d+) quests complete · \+(\d+) 🪙 to claim on the home page$/, m => `${m[1]} quêtes terminées · +${m[2]} 🪙 à récupérer sur l'accueil`],
     [/^No rolls (today|this week|yet), be the first!$/, m => `Aucun tirage ${m[1] === 'today' ? 'aujourd\'hui' : m[1] === 'this week' ? 'cette semaine' : 'pour l\'instant'}, sois le premier !`],
     [/^Remove (.+) from your friends\?$/, m => `Retirer ${m[1]} de tes amis ?`],
     [/^"(.+)" is already taken by another player\. Pick a new name\.$/, m => `« ${m[1]} » est déjà pris par un autre joueur. Choisis un autre pseudo.`],
