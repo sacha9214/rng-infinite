@@ -198,8 +198,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   justify-content: space-between;
   gap: .75rem;
   padding: .55rem 1rem;
-  background: color-mix(in srgb, var(--site-bg) 88%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--site-bg); /* opaque : à 88 % le texte de la page se lisait à travers les onglets en défilant */
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: .6rem; min-width: 0; }
 .logo {
@@ -2503,3 +2502,31 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .g-wallet { display: grid; justify-items: end; padding: .45rem .9rem; border-radius: .7rem; border: 1px solid #eab308; background: linear-gradient(180deg, rgba(234, 179, 8, .16), rgba(234, 179, 8, .04)); box-shadow: 0 0 18px rgba(234, 179, 8, .15); }
 .g-wallet b { font-size: 1.25rem; color: #fde68a; }
 @media (max-width: 560px) { .lb-tabs button { font-size: .6rem; padding-inline: .1rem; } }
+
+/* Les quatre ronds (nouveautés, GitHub, idée, café) : fixes dans les coins sur grand écran, où les marges sont vides ;
+   en dessous de 900 px ils recouvraient des boutons en défilant, donc ils se rangent en bas de page. */
+.corners { display: contents; }
+@media (max-width: 900px) {
+  .corners { display: flex; justify-content: center; gap: .7rem; padding: 0 0 1.4rem; position: relative; z-index: 1; }
+  .corners .gh-corner { position: relative; inset: auto; opacity: .9; }
+  .app { padding-bottom: 2rem; }
+}
+/* Très petit téléphone (320 px) : huit onglets, la langue et le joueur tiennent sans se chevaucher. */
+@media (max-width: 350px) {
+  .topbar .icon-link { display: none; }
+  .logo { letter-spacing: 0; font-size: .92rem; }
+  .nav a { padding: .42rem .17rem; }
+  .topbar { padding-inline: .45rem; }
+}
+
+/* Fenêtres : un titre long passe à la ligne avant la croix au lieu de glisser dessous ; sur un écran de 320 px,
+   marges resserrées pour que le bouton Google (largeur imposée par Google) tienne dedans. */
+.modal h2 { padding-right: 1.9rem; }
+@media (max-width: 350px) {
+  .modal-backdrop { padding-inline: .5rem; }
+  .modal { padding-inline: .8rem; }
+}
+/* Casino sur petit téléphone : « BLACKJACK » débordait de son onglet. */
+@media (max-width: 400px) { .g-tabs { gap: .3rem; } .g-tab { padding-inline: .1rem; } .g-tab span { font-size: .5rem; } }
+/* Casino : le texte d'introduction remontait sous la boîte « Your coins » (marge négative prévue pour un titre seul). */
+.g-head + .profile-sub { margin-top: .4rem; }
