@@ -133,6 +133,7 @@
     'Red': 'Rouge', 'Black': 'Noir', 'Even': 'Pair', 'Odd': 'Impair', '+ Number': '+ Numéro', 'Number': 'Numéro', 'Clear': 'Effacer', 'Spin': 'Lancer', 'Hit': 'Carte', 'Stand': 'Rester', 'Double': 'Doubler', 'Dealer': 'Croupier',
     'Place a bet and deal.': 'Mise, puis distribue.', 'Place a bet first': 'Pose d\'abord une mise', 'Pick a number from 0 to 36': 'Choisis un numéro de 0 à 36', 'Maximum 1,000 coins per spin': '1 000 pièces au plus par tour', 'One move at a time': 'Un coup à la fois', 'Gamble unavailable right now, try again': 'Casino indisponible pour le moment, réessaie',
     'Blackjack!': 'Blackjack !', 'You win': 'Tu gagnes', 'Push: your bet comes back': 'Égalité : ta mise revient', 'Dealer wins': 'Le croupier gagne', 'Bust': 'Sauté', 'Finish your hand first': 'Termine d\'abord ta main', 'No hand in progress': 'Aucune main en cours', 'Invalid bet': 'Mise invalide', 'You can only double on your first two cards': 'On ne double que sur ses deux premières cartes',
+    'Skip known badges': 'Passer les badges connus', 'Badges you already own appear at once. New badges always get their full reveal.': 'Les badges que tu as déjà s\'affichent d\'un coup. Un nouveau badge garde toujours sa révélation complète.',
     // Chat du duel
     'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
@@ -223,6 +224,7 @@
     [/^Spin · ([\d,]+)$/, m => `Lancer · ${nb(m[1])}`], [/^Deal · ([\d,]+)$/, m => `Distribuer · ${nb(m[1])}`], [/^Dealer · (\d+)$/, m => `Croupier · ${m[1]}`], [/^You · (\d+)$/, m => `Toi · ${m[1]}`],
     [/^Bet: ([\d,]+) coins$/, m => `Mise : ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins$/, m => `tu reçois ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins \(([+−])([\d,]+)\)$/, m => `tu reçois ${nb(m[1])} pièces (${m[2]}${nb(m[3])})`], [/^no win this time \(−([\d,]+)\)$/, m => `perdu cette fois (−${nb(m[1])})`],
     [/^Bet between (\d+) and (\d+) coins$/, m => `Mise entre ${m[1]} et ${m[2]} pièces`], [/^Maximum (\d+) coins per spin$/, m => `${m[1]} pièces au plus par tour`],
+    [/^🔒 Unlocks at ([\d,]+) rolls \(you have ([\d,]+)\)$/, m => `🔒 Débloqué à ${nb(m[1])} tirages (tu en as ${nb(m[2])})`],
     [/^(\d+) players? hidden$/, m => `${m[1]} joueur${m[1] === '1' ? '' : 's'} masqué${m[1] === '1' ? '' : 's'}`],
     [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
     [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],

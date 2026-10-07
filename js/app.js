@@ -345,6 +345,9 @@
   // fait hors ligne (4e case à 1, voir Store.addRoll) reste dans l'historique, marqué, sans s'ajouter au total.
   const lifetimeEP = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : r[1]), 0);
   const countedRolls = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : 1), 0);
+  // Passer les badges déjà obtenus : une récompense pour ceux qui ont assez tiré, éteinte par défaut.
+  const SKIP_BADGES_AT = 500;
+  const skipBadgesOn = () => Store.settings.skipBadges === 'on' && countedRolls() >= SKIP_BADGES_AT;
 
   function bestRollIndex() {
     let best = -1;
@@ -782,6 +785,7 @@
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${googleAccountHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
+      <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
       <div class="danger-zone">
@@ -1375,15 +1379,21 @@
     });
 
     // 2. Badges un par un, du moins rare au plus rare : chacun s'insère en haut et fait monter l'XP.
+    // Réglage « Skip known badges » (débloqué à SKIP_BADGES_AT tirages) : un badge déjà obtenu se pose d'un coup ; un
+    // badge jamais vu garde toujours sa révélation complète. Chiffres et rareté ne se sautent jamais.
+    const skipKnown = skipBadgesOn() && !ctx.isFirst;
+    const known = g => skipKnown && ![g.badge, ...g.subsidiary].some(b => ctx.newIds && ctx.newIds.has(b.id));
     ascending.forEach((g, i) => {
-      step(i === 0 ? REVEAL.badgeStart : badgeDelay(i - 1, ascending.length), quick => {
+      const fast = known(g);
+      step(fast ? (i === 0 ? 260 : 70) / kb : i === 0 ? REVEAL.badgeStart : badgeDelay(i - 1, ascending.length), q0 => {
+        const quick = q0 || fast;
         $('#r-breakdown').hidden = false;
         $('#r-list').insertAdjacentHTML('afterbegin', badgeCardHTML(g, n, { newIds: ctx.newIds, animate: !quick && !reducedMotion, delay: 0 }));
         animateDigits($('#r-list'), { start: reducedMotion ? 0 : 450 });
         const from = running;
         running += g.badge.score;
         countUp(ep, from, running, quick ? 0 : REVEAL.badgeEp * kb, v => `${fmt(v)} XP`);
-        if (!late) Sound.badge(i, ascending.length);
+        if (!late && !fast) Sound.badge(i, ascending.length);
       }, kb);
     });
 
