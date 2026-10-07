@@ -1140,7 +1140,7 @@
       stage.appendChild(outer);
       const env = {
         ci, co, w, h, W, H, card: { x: mx, y: my, w: cw, h: ch, r: parseFloat(getComputedStyle(card).borderTopLeftRadius) || 10 },
-        dark: document.documentElement.classList.contains('dark'), q: root.innerWidth < 720 ? .65 : 1,
+        dark: document.documentElement.classList.contains('dark'), q: (root.innerWidth < 720 ? .65 : 1) * (o.q || 1), // o.q : scène allégée (duel à plusieurs)
       };
       const scene = o.owner ? both(make ? make(env) : null, OWNER(env)) : make(env);
       let t = 0, last = 0, raf = 0, stopped = false, restSince = Infinity, skip = false, owed = 0;

@@ -3020,6 +3020,7 @@
 
   const skinSig = d => d.players.map(p => p.skin || '').join('|');
   // Retire les séquences de skin encore affichées dans la salle (manche précédente).
+  const FX_CARDS = 4; // nombre de cartes animées en même temps dans un duel
   function clearRoomFx() {
     (Room.fx || []).forEach(fx => { if (fx) fx.destroy(); });
     Room.fx = [];
@@ -3076,11 +3077,17 @@
     const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
-    // La signature du créateur se joue aussi en duel, sur sa carte (skin Owner équipé). Celle de la manche d'avant est
-    // retirée d'abord : son calque vit hors de la scène (au-dessus des cartes) et resterait affiché, cristaux déjà
-    // sortis, par-dessus la nouvelle manche.
+    // La séquence de chaque skin se joue en duel comme en solo, sur la carte de son joueur (la signature du créateur
+    // avec le skin Owner). Celles de la manche d'avant sont retirées d'abord : leur calque vit hors de la scène
+    // (au-dessus des cartes) et resterait affiché par-dessus la nouvelle manche. Au-delà de FX_CARDS cartes, seule la
+    // mienne est animée, et à plusieurs les scènes sont allégées : dix scènes complètes à la fois font saccader.
     clearRoomFx();
-    const ownerFx = Room.fx = late ? [] : d.players.map((p, j) => (Shop.resolve(p.skin) === 'owner' && cards[j] && cards[j].offsetParent ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { owner: true }) : null));
+    const roomFx = Room.fx = d.players.map((p, j) => {
+      const skin = Shop.resolve(p.skin);
+      if (late || !cards[j] || !cards[j].offsetParent || (sides.length > FX_CARDS && !p.me)) return null;
+      const o = { q: sides.length <= 2 ? 1 : .6 };
+      return skin === 'owner' ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { ...o, owner: true }) : SkinFX.mount(cards[j].offsetParent, cards[j], skin, o);
+    });
     const spin = setInterval(() => {
       slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
@@ -3098,15 +3105,16 @@
         });
         sides.forEach((x, j) => replay($(`#rs-${j}`), 'thump'));
         revealed = k + 1;
-        ownerFx.forEach((fx, j) => { if (fx) fx.lock(slots[j][k], { ghost: k < slotCount - sides[j].a.str.length, last: k === slotCount - 1 }); });
+        roomFx.forEach((fx, j) => { if (fx) fx.lock(slots[j][k], { ghost: k < slotCount - sides[j].a.str.length, last: k === slotCount - 1 }); });
         sfx('lock', { i: k, soft: 1 });
       });
     }
+    at(clock - Sound.LEAD, () => roomFx.forEach(fx => { if (fx) fx.build(Sound.LEAD); })); // la tension monte avant le dernier chiffre
     at(clock + 600, () => {
       clearInterval(spin);
       keepMine();
       sfx('reveal', size);
-      ownerFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
+      roomFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
       sides.forEach((x, j) => {
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;
