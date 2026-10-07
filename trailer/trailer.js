@@ -25,9 +25,9 @@
   const T_SPLIT = 4.75; // la carte se décale, les badges arrivent
   const T_HERO_OUT = 7.5; // badges et XP sortent, la carte revient au centre pour les skins
   // Skins : sur les temps (4), puis deux fois plus vite (6), puis quatre fois plus vite (4), comme un roulement vers le mur.
-  const SWAPS = [[8, 'neon'], [8.5, 'slots'], [9, 'gold'], [9.5, 'matrix'], [10, 'fire'], [10.25, 'vaporwave'], [10.5, 'galaxy'], [10.75, 'diamond'],
-    [11, 'candy'], [11.25, 'blocks'], [11.5, 'dice'], [11.625, 'ice'], [11.75, 'pixel'], [11.875, 'rainbow']];
-  const T_WALL = 12, T_DUEL = 14, T_LB = 20, T_OUTRO = 24;
+  // (2026-10-08) Les skins tiennent en deux mesures, le mur passe à 10 s : la mesure 12-14 est pour les skins légendaires.
+  const SWAPS = [[8, 'neon'], [8.5, 'gold'], [9, 'vaporwave'], [9.25, 'fire'], [9.5, 'galaxy'], [9.625, 'blocks'], [9.75, 'candy'], [9.875, 'rainbow']];
+  const T_WALL = 10, T_LEGEND = 12, T_DUEL = 14, T_LB = 20, T_OUTRO = 24;
   // Musique : à chaque mesure (ou presque), l'intensité (0 = silence tendu, 1 = pulsation, 2 = demi-rythme, 3 = rythme
   // complet, 4 = accord final) et l'accord. La bande-son est fabriquée à partir de cette partition.
   const SCORE = [[0, 1, 'G'], [2, 1, 'G'], [3, 0, 'G'], [4, 3, 'Em'], [6, 3, 'Em'], [8, 3, 'C'], [10, 3, 'C'], [12, 2, 'D'], [14, 3, 'G'], [16, 3, 'G'],
@@ -487,6 +487,65 @@
   };
 
   function buildScenes() {
+    // ================================================================ 2 bis. émotes animées et chat, par-dessus le duel
+    scene('social', T_DUEL + 1.5, T_LB, root => {
+      const T0 = T_DUEL + 1.5, EM = [['gg', 0, .3], ['love', .75, .62], ['rage', 1.5, .42], ['mindblown', 2.5, .7], ['money', 3.25, .26]];
+      const CHAT = [['Kairo', 'gg!! 🔥', .5, 0], ['You', 'rematch?', 2, 1], ['Kairo', 'no way that was luck', 3, 0]];
+      const svg = id => (window.RNGEmotes ? window.RNGEmotes.svg(id) : '');
+      root.innerHTML = EM.map(([id]) => `<div class="tr-emote emote-tile"><span class="emote emote-svg">${svg(id)}</span></div>`).join('')
+        + `<div class="tr-chat">${CHAT.map(([who, text, , me]) => `<div class="tr-msg${me ? ' me' : ''}"><b>${esc(who)}</b>${esc(text)}</div>`).join('')}</div>`;
+      const ems = Array.from(root.querySelectorAll('.tr-emote')), msgs = Array.from(root.querySelectorAll('.tr-msg'));
+      const tag = put(fade(root, 'sub', '<span class="chip">animated <b>emotes</b> · live <b>chat</b></span>'), P ? 1700 : 965, P ? 40 : 40);
+      EM.forEach(([, at]) => cue(T0 + at, 'badge', { i: 2, of: 6 }));
+      return t => {
+        ems.forEach((e, i) => { const k = prog(t, T0 + EM[i][1], 1.9), a = E.outBack(prog(t, T0 + EM[i][1], .3), 2); e.style.opacity = (Math.min(1, k * 12) * (1 - E.inCubic(clamp((k - .7) / .3)))).toFixed(3); e.style.transform = `translate(${(W * EM[i][2] + Math.sin(k * 7 + i) * 26).toFixed(1)}px, ${(H * (P ? .7 : .86) - k * H * (P ? .2 : .3)).toFixed(1)}px) translate(-50%, -50%) scale(${(a * (P ? 1.7 : 1.5)).toFixed(3)})`; });
+        msgs.forEach((m, i) => { const a = E.outBack(prog(t, T0 + CHAT[i][2], .32), 1.8), out = E.inCubic(prog(t, T_LB - .3, .25)); m.style.opacity = (prog(t, T0 + CHAT[i][2], .1) * (1 - out)).toFixed(3); m.style.transform = `translateY(${((1 - a) * 30).toFixed(1)}px) scale(${lerp(.85, 1, a).toFixed(3)})`; });
+        tag.at(t, T0 + .2, T_LB - .4);
+      };
+    });
+
+    // ================================================================ 1 bis. les quatre skins légendaires, signature comprise
+    // Les vraies séquences du jeu (js/skinfx.js), avancées à la main par pas fixes avec un hasard à graine : la même
+    // image pour le même instant, quel que soit l'ordre dans lequel le film est rendu. Chaque carte a déjà « tiré » ses
+    // six chiffres avant d'apparaître (2 s de simulation hors champ), et révèle un Mythic en entrant.
+    scene('legend', T_LEGEND, T_DUEL, root => {
+      const LEG = [['sakura', '424242'], ['storm', '131313'], ['dragon', '888888'], ['blackhole', '999999']];
+      const pos = P ? [[.5, .3], [.5, .47], [.5, .64], [.5, .81]] : [[.26, .4], [.74, .4], [.26, .76], [.74, .76]], S = P ? 1.75 : 1.8, PRE = 2, STEP = 1 / 120;
+      root.innerHTML = `<div class="leg-back"></div>${LEG.map(([id, n], i) => `<div class="pin leg" style="left:${pos[i][0] * W}px;top:${pos[i][1] * H}px"><div class="leg-in"><div class="card-stage"><div class="num-card lg skin-${id}" data-tier="mythic">${n.split('').map(c => `<span class="slot">${c}</span>`).join('')}</div></div><div class="leg-name">${Shop.byId.get(id).emoji} ${esc(Shop.byId.get(id).name)}</div></div></div>`).join('')}`;
+      const back = root.querySelector('.leg-back'), cells = Array.from(root.querySelectorAll('.leg-in'));
+      const title = put(claim(root, P ? 'Legendary|*skins*' : 'Legendary *skins*'), P ? 150 : 56, P ? 120 : 96);
+      const sims = LEG.map(([id], i) => ({ id, i, fx: null, t: 0, ev: 0, seed: 0 }));
+      const prng = sim => () => { sim.seed = (sim.seed + 0x6D2B79F5) | 0; let x = Math.imul(sim.seed ^ (sim.seed >>> 15), 1 | sim.seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+      const withSeed = (sim, fn) => { const real = Math.random; Math.random = sim.rand; try { fn(); } finally { Math.random = real; } };
+      function advance(sim, target) {
+        if (!window.SkinFX) return;
+        if (!sim.fx || target < sim.t - 1e-6) { // premier passage, ou retour en arrière : on repart du début
+          if (sim.fx) sim.fx.destroy();
+          const stage = cells[sim.i].querySelector('.card-stage'), card = stage.querySelector('.num-card');
+          sim.seed = 1234 + sim.i * 777; sim.rand = prng(sim); sim.t = 0; sim.ev = 0;
+          withSeed(sim, () => { sim.fx = window.SkinFX.mount(stage, card, sim.id, { manual: true }); });
+          if (!sim.fx) return;
+          const slots = Array.from(card.querySelectorAll('.slot'));
+          sim.events = [[.2, 0], [.45, 1], [.7, 2], [.95, 3], [1.2, 4], [1.5, 5]].map(([at, k]) => [at, () => sim.fx.lock(slots[k], { last: k === 5 })])
+            .concat([[1.25, () => sim.fx.build(900)], [PRE + sim.i * .25 + .12, () => sim.fx.reveal('mythic')]]).sort((a, b) => a[0] - b[0]);
+        }
+        if (!sim.fx) return;
+        withSeed(sim, () => { while (sim.t + STEP <= target + 1e-9) { while (sim.ev < sim.events.length && sim.events[sim.ev][0] <= sim.t) sim.events[sim.ev++][1](); sim.fx.step(STEP); sim.t += STEP; } });
+      }
+      LEG.forEach((x, i) => { cue(T_LEGEND + i * .25, 'swap', { i, of: 4 }); cue(T_LEGEND + i * .25 + .12, 'lock', { i: i + 2 }); });
+      cue(T_LEGEND, 'whoosh', { dur: .4 });
+      return t => {
+        back.style.opacity = E.outCubic(prog(t, T_LEGEND, .22)).toFixed(3);
+        title.at(t, T_LEGEND + .05, T_DUEL - .35);
+        cells.forEach((c, i) => {
+          const t0 = T_LEGEND + i * .25, e = E.outBack(prog(t, t0, .32), 1.6), out = E.inCubic(prog(t, T_DUEL - .22, .22));
+          c.style.opacity = (prog(t, t0, .08) * (1 - out)).toFixed(3);
+          c.style.transform = `translate(-50%, -50%) scale(${(S * lerp(.72, 1, e) * (1 + .06 * out)).toFixed(4)})`;
+          advance(sims[i], t - T_LEGEND + PRE);
+        });
+      };
+    });
+
     // ================================================================ 1. le tirage, les badges, les skins
     scene('hero', 0, T_DUEL, root => {
       const N = 777777, a = analysis(N), str = a.str;
@@ -570,7 +629,7 @@
       const sB = put(fade(root, 'sub', `<b>${a.earnedIds.length}</b> on this roll alone`), P ? 1014 : 908, 32);
       if (!P) { cB.el.style.right = sB.el.style.right = 'auto'; cB.el.style.width = sB.el.style.width = `${HB.x * 2}px`; }
       const cC = put(claim(root, P ? 'Make it|*yours*' : 'Make it *yours*'), P ? 330 : 92, P ? 132 : 118);
-      const cW = put(claim(root, P ? '22|*skins*' : '22 *skins*'), P ? 620 : 372, P ? 300 : 250);
+      const cW = put(claim(root, P ? `${Shop.SKINS.length}|*skins*` : `${Shop.SKINS.length} *skins*`), P ? 620 : 372, P ? 300 : 250);
       const sW = put(fade(root, 'sub', '<span class="chip">earned by playing · <b>no real money</b></span>'), P ? 1250 : 650, P ? 34 : 40);
 
       // Effets à instants fixes.

@@ -1674,7 +1674,7 @@
         scene.frame(t, owed);
         owed = 0;
       };
-      raf = requestAnimationFrame(frame);
+      if (!o.manual) raf = requestAnimationFrame(frame);
       const guard = fn => (...a) => { try { if (!stopped) fn(...a); } catch (e) { /* une scène ne doit jamais casser le tirage */ } };
       return {
         lock: guard((slot, o = {}) => {
@@ -1684,6 +1684,9 @@
         build: guard(ms => scene.build(ms)),
         reveal: guard(tier => { scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0); }),
         stop() { stopped = true; cancelAnimationFrame(raf); },
+        // Mode manuel (o.manual, pour le trailer) : pas d'horloge ; l'appelant avance la scène lui-même, de dt secondes,
+        // et obtient donc la même image pour le même instant.
+        step(dt) { if (stopped) return; t += dt; ci.clearRect(0, 0, w, h); co.clearRect(0, 0, W, H); ci.globalAlpha = co.globalAlpha = 1; try { scene.frame(t, dt); } catch (e) { /* une scène ne casse rien */ } },
         // Arrête la scène et retire ses calques : indispensable quand la carte est rejouée au même endroit (manches
         // d'un duel), sinon l'ancienne image reste affichée par-dessus la nouvelle.
         destroy() { stopped = true; cancelAnimationFrame(raf); outer.remove(); inner.remove(); card.classList.remove('has-fx'); },
