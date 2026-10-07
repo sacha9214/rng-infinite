@@ -37,14 +37,39 @@ async function migrateXp() {
   await redis([['DEL', `${MIGRATED}:lock`]]);
 }
 
+// Classement des pièces : le solde n'est stocké nulle part (il se calcule depuis les stats), donc on le recalcule pour
+// tous les joueurs nommés et on garde le résultat une minute.
+const Shop = require('../js/shop.js');
+const COINS_CACHE = 'lbcache:coins', COINS_TTL_S = 60;
+async function coinsBoard(me) {
+  let [cached] = await redis([['GET', COINS_CACHE]]);
+  if (!cached) {
+    const [ids] = await redis([['HKEYS', 'names']]);
+    const all = [];
+    for (let i = 0; i < (ids || []).length; i += 150) {
+      const part = ids.slice(i, i + 150), rows = await redis(part.map(id => ['HGETALL', `stats:${id}`]));
+      rows.forEach((flat, j) => { const st = {}; for (let k = 0; k < (flat || []).length; k += 2) st[flat[k]] = flat[k + 1]; const coins = Shop.balance(st); if (coins > 0) all.push([part[j], coins, Number(st.rolls) || 0]); });
+    }
+    all.sort((a, b) => b[1] - a[1]);
+    cached = JSON.stringify(all);
+    await redis([['SET', COINS_CACHE, cached, 'EX', COINS_TTL_S]]);
+  }
+  const all = JSON.parse(cached), top = all.slice(0, LIMIT), myIndex = me ? all.findIndex(x => x[0] === me) : -1;
+  const wanted = myIndex >= LIMIT ? [...top, all[myIndex]] : top;
+  const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, coins: x[1], rolls: x[2], me: x[0] === me });
+  return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
+}
+
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   await flushDue();
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'all', 'xp'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'all', 'xp', 'coins'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
+    if (period === 'coins') return send(res, 200, await coinsBoard(me));
     const t = Date.now();
     if (period === 'xp' || period === 'all') await migrateXp();
     const scope = period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);

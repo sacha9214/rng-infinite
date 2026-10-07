@@ -739,7 +739,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* classement en ligne */
 #today-slot .feature-card { margin-top: 1.8rem; }
 .lb-card { margin-top: 1.4rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); overflow: hidden; }
-.lb-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--outline); }
+.lb-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--outline); }
 .lb-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
@@ -2495,3 +2495,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .mn-cell { position: relative; }
 @keyframes mn-boom { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 @media (max-width: 560px) { .rw-scene { height: 12.5rem; } .pcard { width: 2.7rem; height: 3.9rem; } .pc-front em { font-size: 1.3rem; } .bj-shoe { display: none; } }
+
+/* Classement des pièces, solde dans le duel et au casino. */
+.lb-coins { font-weight: 700; color: var(--ep-text, #fbbf24); white-space: nowrap; }
+.d-wallet { margin: .45rem 0 0; font-weight: 700; color: var(--prose); }
+.g-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.g-wallet { display: grid; justify-items: end; padding: .45rem .9rem; border-radius: .7rem; border: 1px solid #eab308; background: linear-gradient(180deg, rgba(234, 179, 8, .16), rgba(234, 179, 8, .04)); box-shadow: 0 0 18px rgba(234, 179, 8, .15); }
+.g-wallet b { font-size: 1.25rem; color: #fde68a; }
+@media (max-width: 560px) { .lb-tabs button { font-size: .6rem; padding-inline: .1rem; } }

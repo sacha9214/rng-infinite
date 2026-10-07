@@ -197,6 +197,7 @@
     Store.setSetting('skin', state.skin);
     Store.setSetting('button', Shop.buttonLook(state.button, state.skin, state.owned, state.buttons));
     Store.setSetting('emotes', state.emotes || []);
+    Store.setSetting('coins', state.coins);
     paintRollButtons();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
@@ -1183,6 +1184,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-08c', date: 'Oct 8, 2026', en: ['Coins leaderboard', 'Your coin balance is shown when you set a duel stake and at the top of the casino', 'New trailer'], fr: ['Classement des pièces', 'Ton solde s\'affiche quand tu choisis une mise en duel et en haut du casino', 'Nouveau trailer'] },
     { id: '2026-10-08b', date: 'Oct 8, 2026', en: ['Casino tables redrawn: a real 3D roulette wheel with its ball, dealt and flipped cards, a bouncing Plinko ball, flipping Mines tiles, a Crash rocket'], fr: ['Tables du casino redessinées : vraie roue de roulette en 3D avec sa bille, cartes distribuées et retournées, bille de Plinko qui rebondit, cases de Mines qui basculent, fusée de Crash'] },
     { id: '2026-10-08', date: 'Oct 8, 2026', en: ['Rewatch any roll: open a roll (yours or another player\'s) and press Rewatch', 'Casino: three new games (Crash, Mines, Plinko) and a new look', 'This update log'], fr: ['Revoir un tirage : ouvre un tirage (le tien ou celui d\'un autre) et appuie sur Rewatch', 'Casino : trois nouveaux jeux (Crash, Mines, Plinko) et un nouveau décor', 'Ce journal des mises à jour'] },
     { id: '2026-10-07b', date: 'Oct 7, 2026', en: ['Skip known badges: a setting unlocked at 500 rolls', 'Gamble section: roulette and blackjack with your coins', 'Vaporwave skin redesigned', 'The XP on the Generate screen now matches the leaderboard'], fr: ['Passer les badges connus : un réglage débloqué à 500 tirages', 'Section Casino : roulette et blackjack avec tes pièces', 'Skin Vaporwave refait', 'L\'XP de l\'écran Générer est maintenant celui du classement'] },
@@ -2141,6 +2143,8 @@
   let hubTimer = 0;
   function renderDuelHub() {
     currentView = 'duel';
+    // Solde à jour pour la ligne de mise (« You have 🪙 … »).
+    if (Store.player.name) Online.shop().then(st => { applyShop(st); const w = $('#d-wallet'); if (w) w.textContent = `You have 🪙 ${fmt(st.coins)}`; }).catch(() => {});
     app.innerHTML = `
       <div class="page page-wide">
         <h1 class="page-title">Duel</h1>
@@ -2205,6 +2209,7 @@
         <div class="setup-step">
           <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
           ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
+          <p class="panel-note d-wallet" id="d-wallet">${Store.settings.coins != null ? `You have 🪙 ${fmt(Store.settings.coins)}` : ''}</p>
           <p class="panel-note setup-help">${p.stake
             ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves. Needs 30 rolls on your account.`
             : 'Just for fun: nobody pays anything.'}</p>
@@ -2388,8 +2393,8 @@
     const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
     app.innerHTML = `
       <div class="page page-wide">
-        <h1 class="page-title">Gamble</h1>
-        <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls. <span class="coins mono" id="g-coins"></span></p>
+        <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
+        <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
@@ -2432,7 +2437,8 @@
           </div>
         </div>
       </div>`;
-    const showCoins = c => { if (c != null) Gamble.coins = c; if ($('#g-coins') && Gamble.coins != null) $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; };
+    const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
+    if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
     const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'One move at a time' : 'Gamble unavailable right now, try again');
     // ---- roulette : la roue européenne (ordre réel des cases), dessinée à plat puis inclinée en CSS
     const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
@@ -3671,7 +3677,8 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['day', 'Today'], ['week', 'This week'], ['all', 'All-time'], ['xp', 'Lifetime XP']];
+    const tabs = [['day', 'Today'], ['week', 'This week'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins']];
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -3681,7 +3688,7 @@
           <div id="lb-list"><div class="empty">Loading…</div></div>
         </div>
         <p class="panel-note" style="text-align:center;margin-top:.9rem">
-          <span id="lb-rule">${lbState.period === 'xp' ? 'Total XP of every roll ever made' : 'Best single roll per player · days reset at midnight UTC'}</span> ·
+          <span id="lb-rule">${lbRule()}</span> ·
           ${name ? `playing as <b>${esc(name)}</b> · <a href="javascript:void 0" id="lb-name">change</a>` : '<a href="javascript:void 0" id="lb-name">pick a name</a>'}
         </p>
       </div>`;
@@ -3691,7 +3698,7 @@
       if (!btn) return;
       lbState.period = btn.dataset.period;
       document.querySelectorAll('.lb-tabs button').forEach(b => b.classList.toggle('on', b === btn));
-      $('#lb-rule').textContent = lbState.period === 'xp' ? 'Total XP of every roll ever made' : 'Best single roll per player · days reset at midnight UTC';
+      $('#lb-rule').textContent = lbRule();
       $('#lb-list').innerHTML = '<div class="empty">Loading…</div>';
       drawLeaderboard();
     });
@@ -3710,7 +3717,7 @@
       return;
     }
     if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
-    const when = { day: 'today', week: 'this week', all: 'yet', xp: 'yet' }[period];
+    const when = { day: 'today', week: 'this week', all: 'yet', xp: 'yet', coins: 'yet' }[period];
     $('#lb-list').innerHTML = data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">No rolls ${when}, be the first!</div>`;
@@ -3721,6 +3728,14 @@
   // XP à vie : des milliards possibles, affichés en abrégé (le détail au survol).
   const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact(v) : fmt(v)} XP</span>`;
   function lbRowHTML(e) {
+    // Classement des pièces : pas de tirage à montrer, juste le solde.
+    if (lbState.period === 'coins') return `
+      <div class="lb-row${e.me ? ' me' : ''}">
+        <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
+        <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
+        <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
+      </div>`;
     const a = analysis(e.n);
     const xp = lbState.period === 'xp';
     const medal = { 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank];

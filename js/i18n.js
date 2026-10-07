@@ -137,6 +137,7 @@
     'What\'s new': 'Nouveautés', '▶ Rewatch': '▶ Revoir', '← Back': '← Retour', 'nothing is rolled or counted': 'rien n\'est tiré ni compté', '▶ Replay': '▶ Rediffusion',
     'Bet': 'Mise', 'Crash': 'Crash', 'Mines': 'Mines', 'Plinko': 'Plinko', 'cash out before it crashes': 'encaisse avant que ça explose', 'every safe tile raises the payout': 'chaque case sûre fait monter le gain', 'one mine ends it': 'une mine et c\'est fini', '12 rows': '12 rangées', 'the edges pay the most': 'les bords paient le plus',
     'Start': 'Démarrer', 'Drop': 'Lâcher', 'Pick a tile': 'Choisis une case', 'Finish your game first': 'Termine d\'abord ta partie', 'No game in progress': 'Aucune partie en cours', 'Open a tile first': 'Ouvre d\'abord une case', 'Pick a closed tile': 'Choisis une case fermée', 'Between 1 and 24 mines': 'Entre 1 et 24 mines',
+    'Coins': 'Pièces', 'Your coins': 'Tes pièces', 'Coins each player holds right now': 'Les pièces que chaque joueur possède en ce moment', 'refreshed every minute': 'actualisé chaque minute',
     // Chat du duel
     'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
@@ -230,6 +231,7 @@
     [/^🔒 Unlocks at ([\d,]+) rolls \(you have ([\d,]+)\)$/, m => `🔒 Débloqué à ${nb(m[1])} tirages (tu en as ${nb(m[2])})`],
     [/^Start · ([\d,]+)$/, m => `Démarrer · ${nb(m[1])}`], [/^Cash out · ([\d,]+)$/, m => `Encaisser · ${nb(m[1])}`], [/^Boom · −([\d,]+)$/, m => `Boum · −${nb(m[1])}`], [/^Crashed at ([\d.]+)×$/, m => `Explosé à ${m[1]}×`],
     [/^Cashed out at ([\d.]+)×$/, m => `Encaissé à ${m[1]}×`], [/^you get ([\d,]+) coins \(it crashed at ([\d.]+)×\)$/, m => `tu reçois ${nb(m[1])} pièces (explosion à ${m[2]}×)`],
+    [/^You have 🪙 ([\d,]+)$/, m => `Tu as 🪙 ${nb(m[1])}`],
     [/^(\d+) players? hidden$/, m => `${m[1]} joueur${m[1] === '1' ? '' : 's'} masqué${m[1] === '1' ? '' : 's'}`],
     [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
     [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],

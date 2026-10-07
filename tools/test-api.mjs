@@ -1266,4 +1266,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   crypto.randomInt = realInt;
 }
 
+// ================================================================ 33. Classement des pièces
+{
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js'));
+  run([['DEL', 'lbcache:coins']]);
+  r = await call(lbApi, { url: `/api/leaderboard?period=coins&me=${frank.playerId}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 200));
+  assert.equal(r.body.period, 'coins');
+  assert.ok(r.body.entries.length >= 3 && r.body.entries.every((e, i, l) => !i || l[i - 1].coins >= e.coins), 'trié du plus riche au moins riche');
+  const mine = r.body.entries.find(e => e.me);
+  assert.equal(mine.name, 'Frank');
+  assert.equal(mine.coins, (await call(shopApi, { url: `/api/shop?me=${frank.playerId}` })).body.coins, 'le même solde que la boutique');
+  assert.ok(!JSON.stringify(r.body).includes(frank.playerId), 'aucun identifiant');
+  // Gardé une minute : un changement de solde n'apparaît qu'au recalcul suivant.
+  run([['HINCRBY', `stats:${frank.playerId}`, 'bonus', 5000]]);
+  assert.equal((await call(lbApi, { url: `/api/leaderboard?period=coins&me=${frank.playerId}` })).body.entries.find(e => e.me).coins, mine.coins);
+  run([['DEL', 'lbcache:coins']]);
+  assert.equal((await call(lbApi, { url: `/api/leaderboard?period=coins&me=${frank.playerId}` })).body.entries.find(e => e.me).coins, mine.coins + 5000);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
