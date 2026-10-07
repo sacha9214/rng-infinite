@@ -7,6 +7,7 @@
 const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
 const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
+const Gamble = require('./_gamble');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
@@ -103,6 +104,16 @@ module.exports = async (req, res) => {
         }
         await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
         return send(res, 200, await state(playerId));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
+    if (body.action === 'roulette' || body.action === 'bj') {
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'One move at a time' });
+      try {
+        return send(res, 200, await (body.action === 'bj' ? Gamble.blackjack(playerId, body) : Gamble.roulette(playerId, body)));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }

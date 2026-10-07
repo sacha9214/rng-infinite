@@ -128,6 +128,11 @@
     // Tirages hors ligne (le serveur n'a pas répondu) : gardés, non comptés
     'Server unreachable: this roll stays on your device and is not counted': 'Serveur injoignable : ce tirage reste sur ton appareil et ne compte pas', 'The server is slow to answer, trying again…': 'Le serveur tarde à répondre, nouvel essai…',
     'offline roll': 'tirage hors ligne', 'not counted': 'non compté', 'offline': 'hors ligne', 'Rolled while the server was unreachable: not counted on the leaderboard or in your lifetime XP': 'Tiré alors que le serveur était injoignable : ne compte ni au classement ni dans ton XP à vie',
+    // Gamble
+    'Gamble': 'Casino', 'Roulette': 'Roulette', 'Blackjack': 'Blackjack', 'one zero': 'un seul zéro', 'red or black pays 2×': 'rouge ou noir paie 2×', 'a number pays 36×': 'un numéro paie 36×', 'dealer stands on 17': 'le croupier reste à 17', 'blackjack pays 3 to 2': 'le blackjack paie 3 pour 2',
+    'Red': 'Rouge', 'Black': 'Noir', 'Even': 'Pair', 'Odd': 'Impair', '+ Number': '+ Numéro', 'Number': 'Numéro', 'Clear': 'Effacer', 'Spin': 'Lancer', 'Hit': 'Carte', 'Stand': 'Rester', 'Double': 'Doubler', 'Dealer': 'Croupier',
+    'Place a bet and deal.': 'Mise, puis distribue.', 'Place a bet first': 'Pose d\'abord une mise', 'Pick a number from 0 to 36': 'Choisis un numéro de 0 à 36', 'Maximum 1,000 coins per spin': '1 000 pièces au plus par tour', 'One move at a time': 'Un coup à la fois', 'Gamble unavailable right now, try again': 'Casino indisponible pour le moment, réessaie',
+    'Blackjack!': 'Blackjack !', 'You win': 'Tu gagnes', 'Push: your bet comes back': 'Égalité : ta mise revient', 'Dealer wins': 'Le croupier gagne', 'Bust': 'Sauté', 'Finish your hand first': 'Termine d\'abord ta main', 'No hand in progress': 'Aucune main en cours', 'Invalid bet': 'Mise invalide', 'You can only double on your first two cards': 'On ne double que sur ses deux premières cartes',
     // Chat du duel
     'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
@@ -213,6 +218,11 @@
     [/^New quests in (\d+) (h|min)$/, m => `Nouvelles quêtes dans ${m[1]} ${m[2]}`],
     [/^tomorrow: (\d+) coins$/, m => `demain : ${m[1]} pièces`],
     [/^\+([\d,]+) coins$/, m => `+${nb(m[1])} pièces`],
+    [/^Play with the coins you earn in the game\. No real money: coins cannot be bought or cashed out\. Bets from (\d+) to ([\d,]+) coins, unlocked after 30 rolls\.$/, m => `Joue avec les pièces gagnées dans le jeu. Pas d'argent réel : les pièces ne s'achètent pas et ne se retirent pas. Mises de ${m[1]} à ${nb(m[2])} pièces, débloqué après 30 tirages.`],
+    [/^Gamble unlocks after 30 rolls \(you have (\d+)\)$/, m => `Le casino se débloque après 30 tirages (tu en as ${m[1]})`],
+    [/^Spin · ([\d,]+)$/, m => `Lancer · ${nb(m[1])}`], [/^Deal · ([\d,]+)$/, m => `Distribuer · ${nb(m[1])}`], [/^Dealer · (\d+)$/, m => `Croupier · ${m[1]}`], [/^You · (\d+)$/, m => `Toi · ${m[1]}`],
+    [/^Bet: ([\d,]+) coins$/, m => `Mise : ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins$/, m => `tu reçois ${nb(m[1])} pièces`], [/^you get ([\d,]+) coins \(([+−])([\d,]+)\)$/, m => `tu reçois ${nb(m[1])} pièces (${m[2]}${nb(m[3])})`], [/^no win this time \(−([\d,]+)\)$/, m => `perdu cette fois (−${nb(m[1])})`],
+    [/^Bet between (\d+) and (\d+) coins$/, m => `Mise entre ${m[1]} et ${m[2]} pièces`], [/^Maximum (\d+) coins per spin$/, m => `${m[1]} pièces au plus par tour`],
     [/^(\d+) players? hidden$/, m => `${m[1]} joueur${m[1] === '1' ? '' : 's'} masqué${m[1] === '1' ? '' : 's'}`],
     [/^([\d,]+) more coins needed for the (.+) emote$/, m => `Il manque ${nb(m[1])} pièces pour l'émote ${m[2]}`],
     [/^(.+) emote unlocked: use it in your next duel$/, m => `Émote ${m[1]} débloquée : utilise-la dans ton prochain duel`],

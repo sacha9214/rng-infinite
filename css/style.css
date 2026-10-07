@@ -2272,8 +2272,8 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 
 /* En-tête : 7 onglets, c'est large. On retire dans l'ordre ce qui se règle aussi dans « Player & settings »
    (le thème), puis les libellés des onglets, pour que rien ne se chevauche entre 720 et 1180 px. */
-@media (max-width: 1180px) { .theme-switch { display: none; } .player-btn { max-width: 8rem; } }
-@media (max-width: 1020px) { .nav a span { display: none; } .nav { margin-left: .2rem; } }
+@media (max-width: 1280px) { .theme-switch { display: none; } .player-btn { max-width: 8rem; } }
+@media (max-width: 1110px) { .nav a span { display: none; } .nav { margin-left: .2rem; } }
 
 /* Téléphone : 7 onglets + langue + joueur doivent tenir sur 360 px de large ; en dessous, les onglets défilent
    plutôt que de pousser la page de côté. */
@@ -2283,7 +2283,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .topbar-right { gap: .3rem; flex: none; }
   .nav { margin-left: 0; gap: 0; min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .nav::-webkit-scrollbar { display: none; }
-  .nav a { padding: .42rem .34rem; flex: none; }
+  .nav a { padding: .42rem .26rem; flex: none; }
   .player-btn { padding: 0 .5rem; }
   .player-btn span { display: none; }
   .lang-switch { gap: .05rem; }
@@ -2379,3 +2379,30 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .side-vaporwave::before, .side-vaporwave::after { top: auto; bottom: .4rem; font-size: 1.25rem; transform-origin: 50% 100%; animation: vw-sway 3.4s ease-in-out infinite alternate; }
 .side-vaporwave::after { animation-delay: -1.4s; }
 @keyframes vw-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+
+/* ------------------------------------------------------------------ Gamble : roulette et blackjack */
+.gamble-grid { align-items: start; }
+.rwheel { width: 7.5rem; height: 7.5rem; margin: .4rem auto .9rem; display: grid; place-items: center; border-radius: 50%; font-size: 2.6rem; font-weight: 700; color: #fff; border: .35rem solid #a16207; box-shadow: 0 0 0 3px #1c1917, inset 0 0 0 .3rem rgba(0, 0, 0, .25), 0 10px 22px rgba(0, 0, 0, .4); background: #27272a; transition: background-color .08s linear; }
+.rwheel[data-color="red"] { background: #b91c1c; } .rwheel[data-color="black"] { background: #111113; } .rwheel[data-color="green"] { background: #15803d; }
+.rwheel.landed { animation: pill-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+.chips { display: flex; justify-content: center; gap: .45rem; margin-bottom: .8rem; }
+.chip { width: 2.7rem; height: 2.7rem; border-radius: 50%; border: 3px dashed rgba(255, 255, 255, .7); background: #1d4ed8; color: #fff; font: 700 .74rem var(--font-mono); cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); transition: transform .12s var(--ease-out); }
+.chip[data-chip="10"] { background: #475569; } .chip[data-chip="100"] { background: #b91c1c; } .chip[data-chip="250"] { background: #7e22ce; }
+.chip.on { transform: translateY(-4px) scale(1.08); box-shadow: 0 7px 0 rgba(0, 0, 0, .35), 0 0 0 2px var(--prose); }
+.rbets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.rbet { display: flex; align-items: center; justify-content: space-between; gap: .3rem; min-height: 2.5rem; padding: .35rem .6rem; border: 1px solid var(--outline); border-radius: .5rem; background: var(--surface-dim); color: var(--prose); font: 700 .74rem var(--font-sans); text-transform: uppercase; letter-spacing: .03em; cursor: pointer; }
+.rbet.red { background: #7f1d1d; color: #fff; border-color: #b91c1c; } .rbet.black { background: #111113; color: #fff; border-color: #3f3f46; }
+.rbet.on { box-shadow: 0 0 0 2px var(--ep-outline, #eab308); }
+.rbet b { color: #fde047; font-size: .72rem; }
+.rbet.number { grid-column: 1 / -1; cursor: default; justify-content: flex-start; flex-wrap: wrap; }
+.rbet.number .input { width: 5.2rem; }
+.bj-table { min-height: 11rem; display: grid; gap: .8rem; align-content: center; padding: .9rem; border-radius: .7rem; background: radial-gradient(ellipse at center, #15803d, #0f5132 80%); border: 3px solid #92400e; }
+.bj-table .empty { color: rgba(255, 255, 255, .8); }
+.bj-row .eyebrow { color: rgba(255, 255, 255, .85); }
+.bj-cards { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .3rem; min-height: 4rem; }
+.pcard { width: 2.7rem; height: 3.8rem; display: grid; place-items: center; align-content: center; border-radius: .4rem; background: #fff; color: #111; border: 1px solid #d4d4d4; box-shadow: 0 3px 6px rgba(0, 0, 0, .35); font-family: var(--font-sans); animation: chat-in .25s var(--ease-out) backwards; }
+.pcard b { font-size: 1.05rem; line-height: 1; } .pcard i { font-style: normal; font-size: 1.05rem; line-height: 1.1; }
+.pcard.red { color: #dc2626; }
+.pcard.back { background: repeating-linear-gradient(45deg, #1d4ed8 0 5px, #1e3a8a 5px 10px); border: 3px solid #fff; }
+#g-coins { margin-left: .4rem; }
+@media (max-width: 760px) { .gamble-grid { grid-template-columns: 1fr; } }

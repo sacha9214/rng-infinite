@@ -1160,4 +1160,63 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   });
 }
 
+// ================================================================ 31. Gamble : roulette et blackjack, tirés par le serveur, pièces débitées puis créditées
+{
+  const g = (who, action, extra) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const coins = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  const setCoins = async (who, target) => run([['HINCRBY', `stats:${who.playerId}`, 'bonus', target - (await coins(who))]]);
+  const realInt = crypto.randomInt; let forced = [];
+  crypto.randomInt = (lo, hi) => (forced.length ? forced.shift() : realInt(lo, hi));
+  const tick = () => new Promise(resolve => setImmediate(resolve)); // le verrou se relâche juste après la réponse
+  run([['HSET', `stats:${frank.playerId}`, 'rolls', 5]]);
+  await setCoins(frank, 1000);
+  r = await g(frank, 'roulette', { bets: [{ t: 'red', a: 100 }] });
+  assert.deepEqual([r.status, r.body.error], [422, 'Gamble unlocks after 30 rolls (you have 5)']);
+  run([['HSET', `stats:${frank.playerId}`, 'rolls', 60]]); await tick();
+  // Roulette : rouge 100 + numéro 7 pour 50 ; le 7 sort (rouge) → 200 + 1 800.
+  forced = [7];
+  r = await g(frank, 'roulette', { bets: [{ t: 'red', a: 100 }, { t: 'n', v: 7, a: 50 }] });
+  assert.deepEqual([r.status, r.body.n, r.body.color, r.body.total, r.body.win, r.body.coins], [200, 7, 'red', 150, 2000, 2850], JSON.stringify(r.body));
+  await tick(); forced = [0];
+  r = await g(frank, 'roulette', { bets: [{ t: 'black', a: 100 }, { t: 'even', a: 100 }, { t: 'd1', a: 100 }] });
+  assert.deepEqual([r.body.n, r.body.color, r.body.win, r.body.coins], [0, 'green', 0, 2550], 'le zéro fait tout perdre');
+  await tick();
+  for (const bad of [[], [{ t: 'red', a: 5 }], [{ t: 'licorne', a: 100 }], [{ t: 'n', v: 37, a: 100 }], [{ t: 'red', a: 100.5 }], [{ t: 'red', a: -100 }]]) { assert.equal((await g(frank, 'roulette', { bets: bad })).status, 400, JSON.stringify(bad)); await tick(); }
+  assert.equal((await g(frank, 'roulette', { bets: [{ t: 'red', a: 600 }, { t: 'black', a: 600 }] })).status, 422, 'plafond par tour'); await tick();
+  await setCoins(frank, 50);
+  assert.equal((await g(frank, 'roulette', { bets: [{ t: 'red', a: 100 }] })).status, 422, 'pas assez de pièces'); await tick();
+  assert.equal(await coins(frank), 50);
+  assert.equal((await g({ ...frank, secret: '9'.repeat(32) }, 'roulette', { bets: [{ t: 'red', a: 10 }] })).status, 403);
+  // Blackjack. Cartes forcées : [rang, couleur] pour joueur, joueur, croupier, croupier, puis les tirages suivants.
+  await setCoins(frank, 1000);
+  forced = [10, 0, 9, 1, 10, 2, 7, 3]; // 19 contre 17
+  r = await g(frank, 'bj', { move: 'deal', bet: 100 });
+  assert.deepEqual([r.status, r.body.value, r.body.dealer.length, r.body.done, r.body.coins], [200, 19, 1, false, 900], JSON.stringify(r.body));
+  assert.ok(!JSON.stringify(r.body).includes('"r":7'), 'la carte cachée du croupier ne sort pas');
+  await tick();
+  assert.equal((await g(frank, 'bj', { move: 'deal', bet: 100 })).status, 422, 'une main à la fois'); await tick();
+  r = await g(frank, 'bj', { move: 'stand' });
+  assert.deepEqual([r.body.result, r.body.win, r.body.dealerValue, r.body.coins], ['win', 200, 17, 1100]);
+  await tick(); forced = [1, 0, 13, 1, 9, 2, 5, 3]; // blackjack d'entrée : payé 3 pour 2
+  r = await g(frank, 'bj', { move: 'deal', bet: 100 });
+  assert.deepEqual([r.body.result, r.body.win, r.body.coins], ['blackjack', 250, 1250]);
+  await tick(); forced = [10, 0, 6, 1, 10, 2, 8, 3, 9, 0]; // 16, on tire un 9 : sauté
+  await g(frank, 'bj', { move: 'deal', bet: 100 }); await tick();
+  r = await g(frank, 'bj', { move: 'hit' });
+  assert.deepEqual([r.body.result, r.body.win, r.body.coins], ['bust', 0, 1150]);
+  await tick(); forced = [5, 0, 6, 1, 10, 2, 6, 3, 10, 0, 10, 1]; // 11, on double : 21 ; le croupier (16) tire un 10 et saute
+  await g(frank, 'bj', { move: 'deal', bet: 100 }); await tick();
+  r = await g(frank, 'bj', { move: 'double' });
+  assert.deepEqual([r.body.bet, r.body.value, r.body.result, r.body.win, r.body.coins], [200, 21, 'win', 400, 1350]);
+  await tick(); forced = [10, 0, 8, 1, 10, 2, 8, 3]; // égalité : la mise revient
+  await g(frank, 'bj', { move: 'deal', bet: 100 }); await tick();
+  r = await g(frank, 'bj', { move: 'stand' });
+  assert.deepEqual([r.body.result, r.body.coins], ['push', 1350]);
+  await tick();
+  assert.equal((await g(frank, 'bj', { move: 'hit' })).status, 422, 'aucune main en cours'); await tick();
+  assert.equal((await g(frank, 'bj', { move: 'deal', bet: 5000 })).status, 400); await tick();
+  assert.equal((await g(frank, 'bj', { move: 'state' })).body.idle, true);
+  crypto.randomInt = realInt;
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

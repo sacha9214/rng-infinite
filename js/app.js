@@ -2325,6 +2325,116 @@
     };
   }
 
+  // ---------------------------------------------------------------- Gamble : roulette et blackjack, avec les pièces du jeu
+  // Tout se joue sur le serveur (api/_gamble.js) : le site envoie des mises et des choix, reçoit le résultat et le
+  // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
+  const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+  const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null };
+  const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
+  const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const cardHTML = c => (c ? `<span class="pcard${c.s === 1 || c.s === 2 ? ' red' : ''}" data-no-i18n><b>${RANKS[c.r]}</b><i>${SUITS[c.s]}</i></span>` : '<span class="pcard back"></span>');
+  function renderGamble() {
+    currentView = 'gamble';
+    const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
+    app.innerHTML = `
+      <div class="page page-wide">
+        <h1 class="page-title">Gamble</h1>
+        <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls. <span class="coins mono" id="g-coins"></span></p>
+        <div class="grid-2 gamble-grid">
+          <div class="panel">
+            <div class="panel-head"><h3 class="panel-title">Roulette</h3><span class="panel-note">one zero · red or black pays 2× · a number pays 36×</span></div>
+            <div class="rwheel" id="r-wheel" data-color="idle"><span class="mono" id="r-number">?</span></div>
+            <div class="chips" id="g-chips">${[10, 50, 100, 250].map(c => `<button class="chip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c}</button>`).join('')}</div>
+            <div class="rbets" id="r-bets">
+              ${bet('red', 'Red', 'red')}${bet('black', 'Black', 'black')}${bet('even', 'Even')}${bet('odd', 'Odd')}${bet('low', '1–18')}${bet('high', '19–36')}
+              ${bet('d1', '1–12')}${bet('d2', '13–24')}${bet('d3', '25–36')}
+              <span class="rbet number"><input class="input mono" id="r-pick" type="number" min="0" max="36" placeholder="0–36" aria-label="Number"><button class="btn" data-bet="n">+ Number</button><b class="mono" id="r-nbets"></b></span>
+            </div>
+            <div class="actions"><button class="btn ghost" id="r-clear">Clear</button><button class="btn-roll small" id="r-spin">Spin</button></div>
+            <p class="panel-note" id="r-result"></p>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3 class="panel-title">Blackjack</h3><span class="panel-note">dealer stands on 17 · blackjack pays 3 to 2</span></div>
+            <div class="bj-table" id="bj-table"></div>
+            <div class="actions" id="bj-actions"></div>
+            <p class="panel-note" id="bj-result"></p>
+          </div>
+        </div>
+      </div>`;
+    const showCoins = c => { if (c != null) Gamble.coins = c; if ($('#g-coins') && Gamble.coins != null) $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; };
+    const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'One move at a time' : 'Gamble unavailable right now, try again');
+    // ---- roulette
+    const drawBets = () => {
+      document.querySelectorAll('#r-bets [data-bet]').forEach(b => { const v = Gamble.bets[b.dataset.bet]; const out = b.querySelector('b'); if (out) out.textContent = v ? fmt(v) : ''; b.classList.toggle('on', !!v); });
+      const nums = Object.entries(Gamble.bets).filter(([k]) => k.startsWith('n:'));
+      $('#r-nbets').textContent = nums.map(([k, v]) => `${k.slice(2)}: ${fmt(v)}`).join(' · ');
+      const total = Object.values(Gamble.bets).reduce((x, v) => x + v, 0);
+      $('#r-spin').textContent = total ? `Spin · ${fmt(total)}` : 'Spin';
+    };
+    $('#g-chips').addEventListener('click', e => { const c = e.target.closest('[data-chip]'); if (!c) return; Gamble.chip = Number(c.dataset.chip); document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c)); });
+    $('#r-bets').addEventListener('click', e => {
+      const b = e.target.closest('[data-bet]');
+      if (!b || Gamble.busy) return;
+      let key = b.dataset.bet;
+      if (key === 'n') { const v = Number($('#r-pick').value); if (!Number.isInteger(v) || v < 0 || v > 36 || $('#r-pick').value === '') { toast('Pick a number from 0 to 36'); return; } key = `n:${v}`; }
+      const total = Object.values(Gamble.bets).reduce((x, v) => x + v, 0);
+      if (total + Gamble.chip > 1000) { toast('Maximum 1,000 coins per spin'); return; }
+      Gamble.bets[key] = (Gamble.bets[key] || 0) + Gamble.chip;
+      drawBets();
+    });
+    $('#r-clear').addEventListener('click', () => { if (!Gamble.busy) { Gamble.bets = {}; drawBets(); } });
+    $('#r-spin').addEventListener('click', async () => {
+      const bets = Object.entries(Gamble.bets).map(([k, a]) => (k.startsWith('n:') ? { t: 'n', v: Number(k.slice(2)), a } : { t: k, a }));
+      if (!bets.length) { toast('Place a bet first'); return; }
+      if (Gamble.busy) return;
+      Gamble.busy = true;
+      const wheel = $('#r-wheel'), num = $('#r-number');
+      try {
+        const res = await gamble('roulette', { bets });
+        // La bille tourne : des numéros défilent de plus en plus lentement, puis le vrai.
+        wheel.dataset.color = 'spin';
+        for (let i = 0, wait = 45; i < 26 && currentView === 'gamble'; i++, wait *= 1.09) { const k = (Math.random() * 37) | 0; num.textContent = k; wheel.dataset.color = rouletteColor(k); Sound.tick({ soft: i < 18 }); await new Promise(r => setTimeout(r, wait)); }
+        if (currentView !== 'gamble') return;
+        num.textContent = res.n; wheel.dataset.color = res.color; replay(wheel, 'landed');
+        const net = res.win - res.total;
+        $('#r-result').textContent = res.win ? `${res.n} · you get ${fmt(res.win)} coins (${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))})` : `${res.n} · no win this time (−${fmt(res.total)})`;
+        if (net > 0) { Sound.play('reveal', { small: 1 }); FX.celebrate(net >= res.total * 5 ? 'epic' : 'uncommon', wheel); }
+        showCoins(res.coins);
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    // ---- blackjack
+    const BJ_TEXT = { blackjack: 'Blackjack!', win: 'You win', push: 'Push: your bet comes back', lose: 'Dealer wins', bust: 'Bust' };
+    const drawHand = h => {
+      Gamble.hand = h;
+      const playing = h && !h.idle && !h.done;
+      $('#bj-table').innerHTML = !h || h.idle ? '<div class="empty">Place a bet and deal.</div>' : `
+        <div class="bj-row"><span class="eyebrow">Dealer${h.done ? ` · ${h.dealerValue}` : ''}</span><div class="bj-cards">${h.dealer.map(cardHTML).join('')}${h.done ? '' : cardHTML(null)}</div></div>
+        <div class="bj-row"><span class="eyebrow">You · ${h.value}</span><div class="bj-cards">${h.player.map(cardHTML).join('')}</div></div>`;
+      $('#bj-actions').innerHTML = playing
+        ? `<button class="btn-roll small" data-bj="hit">Hit</button><button class="btn" data-bj="stand">Stand</button>${h.canDouble ? '<button class="btn" data-bj="double">Double</button>' : ''}`
+        : `<button class="btn-roll small" data-bj="deal">Deal · ${fmt(Gamble.chip)}</button>`;
+      $('#bj-result').textContent = h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '';
+      if (h) showCoins(h.coins);
+    };
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.hand || Gamble.hand.done) drawHand(Gamble.hand); });
+    $('#bj-actions').addEventListener('click', async e => {
+      const b = e.target.closest('[data-bj]');
+      if (!b || Gamble.busy) return;
+      Gamble.busy = true;
+      try {
+        const h = await gamble('bj', { move: b.dataset.bj, bet: Gamble.chip });
+        Sound.play('lock', { i: h.player.length, soft: 1 });
+        drawHand(h);
+        if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    drawBets();
+    drawHand(null);
+    if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
+    gamble('bj', { move: 'state' }).then(h => { if (currentView === 'gamble') drawHand(h); }).catch(() => {});
+  }
+
   // Émotes spéciales : une tuile par émote, animée en permanence ici ; achetée une fois, elle rejoint la barre de
   // réactions de tous les duels.
   function drawEmotes(state) {
@@ -3436,7 +3546,7 @@
   }
 
   // ---------------------------------------------------------------- navigation, thème, clavier
-  const ROUTES = { '': renderHome, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
+  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
 
   function route() {
     if (session && !session.finished) session.cancel();
