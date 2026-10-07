@@ -47,9 +47,10 @@
         clearTimeout(timer);
       }
     },
-    roll() {
+    // nonce : le même pour chaque nouvelle tentative d'un même tirage (le serveur renvoie alors le tirage déjà fait).
+    roll(nonce) {
       const p = Store.player;
-      return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name }) });
+      return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, nonce }) });
     },
     equip(title) {
       const p = Store.player;
@@ -340,7 +341,10 @@
     },
   };
 
-  const lifetimeEP = () => Store.rolls.reduce((acc, r) => acc + r[1], 0);
+  // XP à vie et nombre de tirages : seuls comptent ceux que le serveur a tirés (les mêmes qu'au classement). Un tirage
+  // fait hors ligne (4e case à 1, voir Store.addRoll) reste dans l'historique, marqué, sans s'ajouter au total.
+  const lifetimeEP = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : r[1]), 0);
+  const countedRolls = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : 1), 0);
 
   function bestRollIndex() {
     let best = -1;
@@ -877,7 +881,7 @@
           <p class="tagline">Infinite rolls. One number at a time. What will yours be?</p>
           <button class="btn-roll${genClass()}" id="roll-btn">Generate</button>
           <p class="hint">
-            ${rolls.length ? `${plural(rolls.length, 'roll')} · ${fmt(lifetimeEP())} lifetime XP · ` : ''}
+            ${rolls.length ? `${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP · ` : ''}
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>Space</kbd>
           </p>
@@ -1101,10 +1105,13 @@
         try {
           const server = await Online.history();
           const onServer = Store.rollSet(server.rolls);
-          const localOnly = Store.rolls.filter(r => !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
+          // Les tirages déjà marqués hors ligne ont été proposés au serveur, qui ne les prend plus : inutile d'y revenir.
+          const localOnly = Store.rolls.filter(r => !r[3] && !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
           const added = Store.mergeRolls(server.rolls, n => Engine.scoreOf(n));
           for (let i = 0; i < localOnly.length; i += 2000) await Online.history(localOnly.slice(i, i + 2000), false);
-          if (added) {
+          // L'XP affiché ne compte que les tirages présents sur le compte : c'est le même total qu'au classement.
+          const marked = Store.markOffline(onServer);
+          if (added || marked) {
             Collection.built = false;
             if (currentView !== 'result' && !$('#modal-root').firstChild) route();
           }
@@ -1204,7 +1211,17 @@
     const buttons = Array.from(document.querySelectorAll('#roll-btn, #r-again'));
     buttons.forEach(b => { b.disabled = true; });
     let n, online = null;
-    const asked = Online.roll();
+    // Le serveur ne répond pas (réseau, délai dépassé) : on redemande deux fois le même tirage avant de renoncer.
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
+    const asked = (async () => {
+      for (let attempt = 0; ; attempt++) {
+        try { return await Online.roll(nonce); } catch (err) {
+          if (err.status === 409 || err.status === 429 || err.status === 403 || attempt >= 2) throw err;
+          if (!attempt) toast('The server is slow to answer, trying again…');
+          await new Promise(resolve => setTimeout(resolve, 600 + 900 * attempt));
+        }
+      }
+    })();
     Sound.play('click'); // après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
     try {
       online = await asked;
@@ -1228,7 +1245,7 @@
         return;
       }
       n = Engine.roll();
-      toast('Leaderboard offline: this roll stays on your device only');
+      toast('Server unreachable: this roll stays on your device and is not counted');
     }
     rollPending = false;
     if (session && !session.finished) session.cancel();
@@ -1240,7 +1257,7 @@
     const isFirst = Store.rolls.length === 0;
     const lifetimeBefore = lifetimeEP();
     // Le tirage est enregistré avant l'animation : quitter la page ne permet pas de relancer.
-    const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now());
+    const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
     if (!saved) toast('Could not save — storage is full. Export your history from the player menu.');
@@ -1289,7 +1306,7 @@
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
           <div class="lifetime invisible" id="r-life">
-            <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>+${fmt(a.total)}</span></div>
+            <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>${ctx.online ? `+${fmt(a.total)}` : 'offline roll · not counted'}</span></div>
             <div class="l">Your lifetime XP</div>
           </div>
           <div class="result-actions invisible" id="r-actions">
@@ -1400,7 +1417,7 @@
       const delta = $('#r-life-delta');
       delta.hidden = false;
       if (!quick && !reducedMotion) delta.classList.add('float-up');
-      countUp($('#r-life-v'), ctx.lifetimeBefore, ctx.lifetimeBefore + a.total, quick ? 0 : REVEAL.lifetimeTick * k, fmt);
+      if (ctx.online) countUp($('#r-life-v'), ctx.lifetimeBefore, ctx.lifetimeBefore + a.total, quick ? 0 : REVEAL.lifetimeTick * k, fmt);
     });
     step(REVEAL.lifetimeTick + REVEAL.end, () => {
       vignette.classList.remove('on');
@@ -1457,7 +1474,7 @@
   }
 
   function filteredRolls() {
-    let items = Store.rolls.map((r, i) => ({ n: r[0], s: r[1], t: r[2], i, tier: Engine.cardTier(r[1]) }));
+    let items = Store.rolls.map((r, i) => ({ n: r[0], s: r[1], t: r[2], i, tier: Engine.cardTier(r[1]), off: !!r[3] }));
     if (histState.tier === 'rare+') items = items.filter(x => TIER_RANK[x.tier] >= 3);
     else if (histState.tier !== 'all') items = items.filter(x => x.tier === histState.tier);
     const q = histState.q.trim().toLowerCase();
@@ -1494,7 +1511,7 @@
       <div class="row" data-roll="${x.i}">
         <span class="idx">#${fmt(x.i + 1)}</span>
         <span><span class="num-card sm" data-tier="${x.tier}">${a.str}</span></span>
-        <span class="mid">${tierPill(x.tier)}<span class="emojis">${a.groups.slice(0, 4).map(g => g.badge.emoji).join(' ')}</span>${reps > 1 ? `<span class="muted" style="font-size:.66rem" title="Rolled ${reps} times">×${reps}</span>` : ''}</span>
+        <span class="mid">${tierPill(x.tier)}<span class="emojis">${a.groups.slice(0, 4).map(g => g.badge.emoji).join(' ')}</span>${reps > 1 ? `<span class="muted" style="font-size:.66rem" title="Rolled ${reps} times">×${reps}</span>` : ''}${x.off ? '<span class="offline-tag" title="Rolled while the server was unreachable: not counted on the leaderboard or in your lifetime XP">offline</span>' : ''}</span>
         <span class="right"><span class="ep-pill">${fmt(x.s)} XP</span><span class="when" title="${fullDate(x.t)}">${relTime(x.t)}</span></span>
       </div>`;
   }

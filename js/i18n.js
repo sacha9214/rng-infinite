@@ -125,6 +125,9 @@
     'Legendary skins': 'Skins légendaires', 'a full animated signature around your number': 'une signature animée complète autour de ton nombre', 'also plays in duels': 'jouée aussi en duel',
     '▶ Preview': '▶ Aperçu', 'Preview': 'Aperçu', '↻ Replay': '↻ Rejouer', 'shown as a Mythic roll, the strongest reveal': 'montré comme un tirage Mythic, la révélation la plus forte',
     'A blade, a branch in bloom, a rising moon': 'Une lame, une branche en fleurs, la lune qui se lève', 'Lightning strikes every digit': 'La foudre frappe chaque chiffre', 'A dragon circles your number and forges it': 'Un dragon tourne autour de ton nombre et le forge', 'Light bends around your number': 'La lumière se courbe autour de ton nombre',
+    // Tirages hors ligne (le serveur n'a pas répondu) : gardés, non comptés
+    'Server unreachable: this roll stays on your device and is not counted': 'Serveur injoignable : ce tirage reste sur ton appareil et ne compte pas', 'The server is slow to answer, trying again…': 'Le serveur tarde à répondre, nouvel essai…',
+    'offline roll': 'tirage hors ligne', 'not counted': 'non compté', 'offline': 'hors ligne', 'Rolled while the server was unreachable: not counted on the leaderboard or in your lifetime XP': 'Tiré alors que le serveur était injoignable : ne compte ni au classement ni dans ton XP à vie',
     // Chat du duel
     'Chat': 'Chat', 'be kind': 'reste sympa', 'never share personal details': 'ne donne jamais d\'informations personnelles', 'Write a message…': 'Écris un message…', 'Message': 'Message',
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',

@@ -1132,4 +1132,32 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.chat[r.body.chat.length - 1].m, 'message 10');
 }
 
+// ================================================================ 30. Tirage redemandé : le même jeton renvoie le même tirage, compté une seule fois
+{
+  const rollWith = (who, nonce) => call(roll, { method: 'POST', body: { ...who, nonce } });
+  const rollsOf = who => Number(run([['HGET', `stats:${who.playerId}`, 'rolls']])[0].result) || 0;
+  const xpOf = who => Number(run([['ZSCORE', 'lb:xp', who.playerId]])[0].result) || 0;
+  await later(20000, async () => {
+    const before = [rollsOf(alice), xpOf(alice)];
+    r = await rollWith(alice, 'a1'.repeat(12));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const first = r.body;
+    assert.equal(first.again, undefined);
+    // La réponse s'est perdue : le site redemande aussitôt avec le même jeton (en plein délai entre deux tirages).
+    r = await rollWith(alice, 'a1'.repeat(12));
+    assert.deepEqual([r.status, r.body.n, r.body.s, r.body.t, r.body.again], [200, first.n, first.s, first.t, true], 'le même tirage, pas un refus');
+    assert.deepEqual([rollsOf(alice), xpOf(alice)], [before[0] + 1, before[1] + first.s], 'compté une seule fois');
+    // Un autre jeton pendant le délai : c'est un nouveau tirage, donc refusé comme avant.
+    assert.equal((await rollWith(alice, 'b2'.repeat(12))).status, 429);
+    assert.equal((await rollWith(alice, undefined)).status, 429, 'sans jeton : comportement inchangé');
+    assert.equal((await rollWith(alice, 'pas un jeton')).status, 429, 'jeton invalide ignoré');
+  });
+  // Le jeton d'un joueur ne donne rien à un autre.
+  await later(9000, async () => {
+    r = await rollWith(bob, 'a1'.repeat(12));
+    assert.equal(r.status, 200);
+    assert.equal(r.body.again, undefined);
+  });
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

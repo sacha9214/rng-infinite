@@ -2386,3 +2386,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .chat-form .input { flex: 1; min-width: 0; }
 @keyframes chat-in { from { opacity: 0; transform: translateY(4px); } }
 @media (hover: none) { .chat-hide { opacity: .7; } }
+
+/* Tirage fait hors ligne : gardé dans l'historique, non compté. */
+.offline-tag { font-size: .58rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--prose-3); border: 1px dashed var(--outline-strong); border-radius: 999px; padding: .05rem .4rem; }

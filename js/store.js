@@ -90,8 +90,10 @@
     get settings() { return this.state.settings; },
 
     // t = heure du serveur pour un tirage en ligne : c'est la même clé que dans l'historique du compte.
-    addRoll(n, ep, t = Date.now()) {
-      const roll = [n, ep, t];
+    // offline : tiré sur l'appareil faute de réponse du serveur. Il reste dans l'historique mais ne compte ni au
+    // classement ni dans l'XP affiché (4e case à 1 ; un tirage compté n'en a que trois).
+    addRoll(n, ep, t = Date.now(), offline = false) {
+      const roll = offline ? [n, ep, t, 1] : [n, ep, t];
       this.state.rolls.push(roll);
       const ok = this.save();
       this.emit();
@@ -146,6 +148,20 @@
         this.emit();
       }
       return added;
+    },
+
+    // Après lecture de l'historique du compte : un tirage absent du serveur est « hors ligne » (non compté), un tirage
+    // présent ne l'est pas. Les tout récents sont laissés tels quels : le serveur n'enregistre un tirage de duel qu'à
+    // la fin de sa révélation. Renvoie le nombre de tirages dont la marque a changé.
+    markOffline(onServer, graceMs = 120000, now = Date.now()) {
+      let changed = 0;
+      for (const r of this.state.rolls) {
+        const counted = onServer.has(r[0], r[2]);
+        if (counted && r[3]) { r.length = 3; changed++; }
+        else if (!counted && !r[3] && now - r[2] > graceMs) { r[3] = 1; changed++; }
+      }
+      if (changed) { this.save(); this.emit(); }
+      return changed;
     },
 
     // Retire les doublons d'un même tirage (voir rollSet) : la synchronisation du 21/09/2026 en a copié quelques-uns.
