@@ -729,10 +729,11 @@
         <div class="result-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
         <div class="ep-big">${fmt(a.total)} XP</div>
         ${occ.length > 1 ? `<p class="repeat-note">Rolled ${occ.length}× in your history: ${occ.map(i => `<a href="javascript:void 0" data-roll="${i}">#${fmt(i + 1)}</a>`).join(', ')}</p>` : ''}
-        <div class="result-actions"><button class="btn" data-share>${shareIcon()} Share</button></div>
+        <div class="result-actions"><button class="btn" data-share>${shareIcon()} Share</button><button class="btn" data-rewatch>▶ Rewatch</button></div>
         ${breakdownHTML(r[0], a)}
       </div>`, m => {
       m.querySelector('[data-share]').addEventListener('click', () => share(a));
+      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(r[0], `Your roll #${fmt(index + 1)}`));
       animateDigits(m, { stagger: 120 });
     });
   }
@@ -1171,8 +1172,40 @@
         <div style="margin-top:.9rem"><span class="num-card lg" data-tier="${a.tier}">${a.str}</span></div>
         <div class="result-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
         <div class="ep-big">${fmt(a.total)} XP</div>
+        <div class="result-actions"><button class="btn" data-rewatch>▶ Rewatch</button></div>
         ${breakdownHTML(n, a)}
-      </div>`, m => animateDigits(m, { stagger: 120 }));
+      </div>`, m => {
+      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(n, caption || ''));
+      animateDigits(m, { stagger: 120 });
+    });
+  }
+
+  // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
+  // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
+  const UPDATES = [
+    { id: '2026-10-08', date: 'Oct 8, 2026', en: ['Rewatch any roll: open a roll (yours or another player\'s) and press Rewatch', 'Casino: three new games (Crash, Mines, Plinko) and a new look', 'This update log'], fr: ['Revoir un tirage : ouvre un tirage (le tien ou celui d\'un autre) et appuie sur Rewatch', 'Casino : trois nouveaux jeux (Crash, Mines, Plinko) et un nouveau décor', 'Ce journal des mises à jour'] },
+    { id: '2026-10-07b', date: 'Oct 7, 2026', en: ['Skip known badges: a setting unlocked at 500 rolls', 'Gamble section: roulette and blackjack with your coins', 'Vaporwave skin redesigned', 'The XP on the Generate screen now matches the leaderboard'], fr: ['Passer les badges connus : un réglage débloqué à 500 tirages', 'Section Casino : roulette et blackjack avec tes pièces', 'Skin Vaporwave refait', 'L\'XP de l\'écran Générer est maintenant celui du classement'] },
+    { id: '2026-10-07a', date: 'Oct 7, 2026', en: ['4 legendary skins with a full animated signature: Sakura, Storm, Dragon, Singularity', 'Preview any skin in the shop before buying', 'Every skin\'s animation now plays in duels', '8 animated emotes to buy', 'Chat in duels', 'Generate button skins'], fr: ['4 skins légendaires avec une signature animée : Sakura, Storm, Dragon, Singularity', 'Aperçu de chaque skin dans la boutique avant d\'acheter', 'L\'animation de chaque skin se joue en duel', '8 émotes animées à acheter', 'Chat dans les duels', 'Skins du bouton Générer'] },
+    { id: '2026-10-06', date: 'Oct 6, 2026', en: ['Daily quests and login streak', 'Duels with a coin stake', 'Skin cases', 'Friends', 'French version of the game', 'Suggestion box'], fr: ['Quêtes du jour et série de connexion', 'Duels avec une mise en pièces', 'Caisses de skins', 'Amis', 'Version française du jeu', 'Boîte à idées'] },
+  ];
+  const newsUnread = () => Store.settings.newsSeen !== UPDATES[0].id;
+  function paintNewsDot() { const b = $('#news-btn'); if (b) b.classList.toggle('unread', newsUnread()); }
+  function openNews() {
+    const fr = window.RNGI18n && window.RNGI18n.lang === 'fr';
+    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2><div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
+      <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && newsUnread() ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
+    Store.setSetting('newsSeen', UPDATES[0].id);
+    paintNewsDot();
+  }
+
+  // Revoir un tirage (le sien ou celui d'un autre) : la révélation complète rejouée avec mon skin, sans rien tirer ni
+  // enregistrer. Les badges se rejouent tous (pas de saut), l'XP à vie ne bouge pas.
+  function rewatch(n, caption) {
+    if (session && !session.finished) session.cancel();
+    closeModal();
+    const back = (session && session.replayBack) || location.hash;
+    currentView = 'result';
+    session = playReveal({ n, a: analysis(n), previous: [], newIds: null, isFirst: false, lifetimeBefore: lifetimeEP(), index: -1, online: null, replay: { caption, back } });
   }
 
   function todayCardHTML(entry, rollsToday) {
@@ -1279,6 +1312,7 @@
       const lastIdx = ctx.previous[ctx.previous.length - 1];
       notes.push(`<p class="repeat-note">You've rolled <b class="mono">${a.str}</b> before — ${ctx.previous.length}× (last ${relTime(Store.rolls[lastIdx][2])}, <a href="javascript:void 0" data-roll="${lastIdx}">#${fmt(lastIdx + 1)}</a>)</p>`);
     }
+    if (ctx.replay) return `<p class="repeat-note">▶ Replay${ctx.replay.caption ? ` · <span data-no-i18n>${esc(ctx.replay.caption)}</span>` : ''} · nothing is rolled or counted</p>`;
     if (!ctx.online) notes.push('<p class="repeat-note">Offline roll: not on the leaderboard</p>');
     else if (ctx.online.bestToday) notes.push(`<p class="new-note">🏆 Your best roll today: #${ctx.online.dayRank} on <a href="#/leaderboard">today's leaderboard</a></p>`);
     return notes.join('');
@@ -1309,13 +1343,13 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
-          <div class="lifetime invisible" id="r-life">
+          <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
             <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>${ctx.online ? `+${fmt(a.total)}` : 'offline roll · not counted'}</span></div>
             <div class="l">Your lifetime XP</div>
           </div>
           <div class="result-actions invisible" id="r-actions">
             <button class="btn" id="r-share">${shareIcon()} Share</button>
-            <button class="btn-roll small${genClass()}" id="r-again">Roll again</button>
+            ${ctx.replay ? '<button class="btn" id="r-back">← Back</button><button class="btn" id="r-replay">↻ Replay</button>' : `<button class="btn-roll small${genClass()}" id="r-again">Roll again</button>`}
           </div>
           <p class="hint invisible" id="r-hint"></p>
           <div id="r-notes" style="text-align:center"></div>
@@ -1381,7 +1415,7 @@
     // 2. Badges un par un, du moins rare au plus rare : chacun s'insère en haut et fait monter l'XP.
     // Réglage « Skip known badges » (débloqué à SKIP_BADGES_AT tirages) : un badge déjà obtenu se pose d'un coup ; un
     // badge jamais vu garde toujours sa révélation complète. Chiffres et rareté ne se sautent jamais.
-    const skipKnown = skipBadgesOn() && !ctx.isFirst;
+    const skipKnown = skipBadgesOn() && !ctx.isFirst && !ctx.replay;
     const known = g => skipKnown && ![g.badge, ...g.subsidiary].some(b => ctx.newIds && ctx.newIds.has(b.id));
     ascending.forEach((g, i) => {
       const fast = known(g);
@@ -1436,7 +1470,10 @@
 
     const runStep = s => { if (!s.done) { s.done = true; late = performance.now() - began - s.at > 250; s.run(false); } };
     $('#r-share').addEventListener('click', () => share(a));
-    $('#r-again').addEventListener('click', () => startRoll(true));
+    if (ctx.replay) {
+      $('#r-back').addEventListener('click', () => { if (session) session.cancel(); session = null; if (location.hash === ctx.replay.back) route(); else location.hash = ctx.replay.back || '#/'; });
+      $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption); });
+    } else $('#r-again').addEventListener('click', () => startRoll(true));
 
     steps.forEach(s => timers.push(setTimeout(() => runStep(s, false), s.at)));
 
@@ -2355,7 +2392,7 @@
           <div class="panel">
             <div class="panel-head"><h3 class="panel-title">Roulette</h3><span class="panel-note">one zero · red or black pays 2× · a number pays 36×</span></div>
             <div class="rwheel" id="r-wheel" data-color="idle"><span class="mono" id="r-number">?</span></div>
-            <div class="chips" id="g-chips">${[10, 50, 100, 250].map(c => `<button class="chip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c}</button>`).join('')}</div>
+            <div class="gchips" id="g-chips">${[10, 50, 100, 250].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c}</button>`).join('')}</div>
             <div class="rbets" id="r-bets">
               ${bet('red', 'Red', 'red')}${bet('black', 'Black', 'black')}${bet('even', 'Even')}${bet('odd', 'Odd')}${bet('low', '1–18')}${bet('high', '19–36')}
               ${bet('d1', '1–12')}${bet('d2', '13–24')}${bet('d3', '25–36')}
@@ -2382,7 +2419,7 @@
       const total = Object.values(Gamble.bets).reduce((x, v) => x + v, 0);
       $('#r-spin').textContent = total ? `Spin · ${fmt(total)}` : 'Spin';
     };
-    $('#g-chips').addEventListener('click', e => { const c = e.target.closest('[data-chip]'); if (!c) return; Gamble.chip = Number(c.dataset.chip); document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c)); });
+    $('#g-chips').addEventListener('click', e => { const c = e.target.closest('[data-chip]'); if (!c) return; Gamble.chip = Number(c.dataset.chip); document.querySelectorAll('.gchip').forEach(x => x.classList.toggle('on', x === c)); });
     $('#r-bets').addEventListener('click', e => {
       const b = e.target.closest('[data-bet]');
       if (!b || Gamble.busy) return;

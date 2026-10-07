@@ -2385,10 +2385,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .rwheel { width: 7.5rem; height: 7.5rem; margin: .4rem auto .9rem; display: grid; place-items: center; border-radius: 50%; font-size: 2.6rem; font-weight: 700; color: #fff; border: .35rem solid #a16207; box-shadow: 0 0 0 3px #1c1917, inset 0 0 0 .3rem rgba(0, 0, 0, .25), 0 10px 22px rgba(0, 0, 0, .4); background: #27272a; transition: background-color .08s linear; }
 .rwheel[data-color="red"] { background: #b91c1c; } .rwheel[data-color="black"] { background: #111113; } .rwheel[data-color="green"] { background: #15803d; }
 .rwheel.landed { animation: pill-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
-.chips { display: flex; justify-content: center; gap: .45rem; margin-bottom: .8rem; }
-.chip { width: 2.7rem; height: 2.7rem; border-radius: 50%; border: 3px dashed rgba(255, 255, 255, .7); background: #1d4ed8; color: #fff; font: 700 .74rem var(--font-mono); cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); transition: transform .12s var(--ease-out); }
-.chip[data-chip="10"] { background: #475569; } .chip[data-chip="100"] { background: #b91c1c; } .chip[data-chip="250"] { background: #7e22ce; }
-.chip.on { transform: translateY(-4px) scale(1.08); box-shadow: 0 7px 0 rgba(0, 0, 0, .35), 0 0 0 2px var(--prose); }
+.gchips { display: flex; justify-content: center; gap: .45rem; margin-bottom: .8rem; }
+.gchip { width: 2.7rem; height: 2.7rem; border-radius: 50%; border: 3px dashed rgba(255, 255, 255, .7); background: #1d4ed8; color: #fff; font: 700 .74rem var(--font-mono); cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); transition: transform .12s var(--ease-out); }
+.gchip[data-chip="10"] { background: #475569; } .gchip[data-chip="100"] { background: #b91c1c; } .gchip[data-chip="250"] { background: #7e22ce; }
+.gchip.on { transform: translateY(-4px) scale(1.08); box-shadow: 0 7px 0 rgba(0, 0, 0, .35), 0 0 0 2px var(--prose); }
 .rbets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
 .rbet { display: flex; align-items: center; justify-content: space-between; gap: .3rem; min-height: 2.5rem; padding: .35rem .6rem; border: 1px solid var(--outline); border-radius: .5rem; background: var(--surface-dim); color: var(--prose); font: 700 .74rem var(--font-sans); text-transform: uppercase; letter-spacing: .03em; cursor: pointer; }
 .rbet.red { background: #7f1d1d; color: #fff; border-color: #b91c1c; } .rbet.black { background: #111113; color: #fff; border-color: #3f3f46; }
