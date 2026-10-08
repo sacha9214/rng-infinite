@@ -173,6 +173,7 @@
   const Ach = window.RNGAchievements;
   const Shop = window.RNGShop;
   const Quests = window.RNGQuests;
+  const ShareCard = window.RNGShareCard;
   const skinClass = raw => {
     const id = Shop.resolve(raw);
     if (id === 'owner') return ' owner-ruby'; // le rubis du créateur
@@ -557,7 +558,56 @@
     return lines.join('\n');
   }
 
-  const share = a => shareOrCopy(shareText(a));
+  // Partage d'un tirage : une carte en image (js/sharecard.js) à coller dans Discord, à télécharger ou à envoyer par la
+  // feuille de partage du téléphone ; le texte d'avant reste proposé à côté.
+  function share(a) {
+    const rank = Engine.topLabel(a.percentile);
+    const canvas = document.createElement('canvas');
+    const data = {
+      str: a.str, tier: a.tier, rank: rank ? cap(rank.toLowerCase()) : '', xp: fmt(a.total), name: Store.player.name || '', host: 'rng-infinite.com',
+      badges: a.groups.slice(0, 5).map(g => ({ emoji: g.badge.emoji, label: g.badge.label, tier: g.badge.tier })), more: Math.max(0, a.groups.length - 5),
+    };
+    const blobOf = () => new Promise(done => canvas.toBlob(done, 'image/png'));
+    const file = `rng-infinite-${a.str}.png`;
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    openModal(`
+      <h2>Share this roll</h2>
+      <img class="share-card" id="share-img" alt="Card of the roll ${esc(a.str)}" width="1200" height="630">
+      <div class="actions share-actions">
+        ${touch && navigator.canShare ? '<button class="btn-roll small" id="share-send">Share image</button>' : '<button class="btn-roll small" id="share-copy">Copy image</button>'}
+        <button class="btn ghost" id="share-dl">Download</button>
+        <button class="btn ghost" id="share-text">Copy text</button>
+      </div>
+      <p class="panel-note share-note">${touch ? 'Send the image to Discord, a story or a friend.' : 'Copy the image, then paste it in Discord (Ctrl/Cmd + V).'}</p>`, async m => {
+      // Les polices du site doivent être prêtes avant de dessiner, sinon le canvas retombe sur une police système.
+      try { await Promise.all([document.fonts.load("900 46px 'Inter'"), document.fonts.load("700 26px 'Inter'"), document.fonts.load("700 170px 'Space Mono'")]); } catch (e) { /* dessin avec les polices disponibles */ }
+      ShareCard.draw(canvas, data);
+      const img = m.querySelector('#share-img');
+      if (!img) return;
+      img.src = canvas.toDataURL('image/png');
+      const on = (id, fn) => { const b = m.querySelector(id); if (b) b.addEventListener('click', fn); };
+      on('#share-copy', async () => {
+        try {
+          // La promesse est passée telle quelle : Safari exige que l'écriture démarre dans le clic.
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobOf() })]);
+          toast('Image copied: paste it in Discord');
+        } catch (e) { toast('Your browser cannot copy images: use Download'); }
+      });
+      on('#share-send', async () => {
+        const f = new File([await blobOf()], file, { type: 'image/png' });
+        try {
+          if (navigator.canShare({ files: [f] })) await navigator.share({ files: [f], text: `RNG∞ 🎲 ${a.str} · ${location.origin + location.pathname}?ref=share` });
+          else toast('Your browser cannot share images: use Download');
+        } catch (e) { /* annulé */ }
+      });
+      on('#share-dl', async () => {
+        const url = URL.createObjectURL(await blobOf()), link = document.createElement('a');
+        link.href = url; link.download = file; document.body.append(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      });
+      on('#share-text', () => shareOrCopy(shareText(a)));
+    });
+  }
 
   // Téléphone : feuille de partage du système. Ordinateur : presse-papiers, ou le texte sélectionné s'il est refusé.
   async function shareOrCopy(text, title = 'Share') {
@@ -1238,6 +1288,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-08f', date: 'Oct 8, 2026', en: ['Share a roll as an image card: press Share, then copy it straight into Discord or download it'], fr: ['Partage un tirage en image : appuie sur Partager, puis colle la carte directement dans Discord ou télécharge-la'] },
     { id: '2026-10-08e', date: 'Oct 8, 2026', en: ['A notification tells you when you complete a daily quest, with its coin reward'], fr: ['Une notification te prévient quand tu termines une quête du jour, avec sa récompense en pièces'] },
     { id: '2026-10-08d', date: 'Oct 8, 2026', en: ['Layout pass for every screen size: on phones and tablets the four round buttons now sit at the bottom of the page instead of floating over the game, and the menu fits on the smallest phones'], fr: ['Mise en page revue pour toutes les tailles d\'écran : sur téléphone et tablette, les quatre boutons ronds sont rangés en bas de page au lieu de flotter sur le jeu, et le menu tient sur les plus petits téléphones'] },
     { id: '2026-10-08c', date: 'Oct 8, 2026', en: ['Coins leaderboard', 'Your coin balance is shown when you set a duel stake and at the top of the casino', 'New trailer'], fr: ['Classement des pièces', 'Ton solde s\'affiche quand tu choisis une mise en duel et en haut du casino', 'Nouveau trailer'] },

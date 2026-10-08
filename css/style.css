@@ -2533,3 +2533,8 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* Annonce cliquable (quête terminée : ramène à l'accueil pour récupérer les pièces). */
 .toast.link { cursor: pointer; }
 @media (max-width: 560px) { .toast { max-width: calc(100vw - 1.5rem); width: max-content; text-align: center; } }
+/* Carte de tirage à partager : aperçu dans la fenêtre de partage. */
+.share-card { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; border-radius: .6rem; background: #0d0b14; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.share-actions { justify-content: center; margin-top: .9rem; }
+.share-note { text-align: center; margin: .7rem 0 0; }
+.modal:has(.share-card) { width: min(100%, 40rem); }
