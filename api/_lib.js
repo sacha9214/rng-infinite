@@ -160,7 +160,7 @@ async function claimPlayer(playerId, secret) {
 // un faux historique (/api/history) puis se faire créditer pièces et succès.
 async function markFresh(playerId) {
   const [size] = await redis([['ZCARD', historyKey(playerId)]]);
-  if (!Number(size)) await redis([['HSETNX', statsKey(playerId), 'v', STATS_VERSION]]);
+  if (!Number(size)) await redis([['HSETNX', statsKey(playerId), 'v', STATS_VERSION], ['HSETNX', statsKey(playerId), 'tv', TIERS_VERSION]]);
 }
 
 // Clé d'unicité d'un nom : sans accents, majuscules, espaces ni ponctuation ("Sacha", "sâcha" et "Sa-cha!" = le même nom).
@@ -243,8 +243,11 @@ async function findPlayer(name) {
 // ---------------------------------------------------------------- stats des succès
 // Tenues par le serveur, donc infalsifiables : stats:<id> (compteurs) et badges:<id> (badges différents obtenus).
 // Pour un ancien joueur, elles sont reconstruites une fois depuis son historique ("v" marque une reconstruction faite).
-const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
+const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
 const STATS_VERSION = '1';
+// Raretés au-dessus de Mythic (2026-10-09) : "tv" marque les compteurs déjà répartis entre Mythic et les trois nouvelles.
+const TIERS_VERSION = '2';
+const TOP_TIERS = ['celestial', 'divine', 'infinite'];
 const statsKey = id => `stats:${id}`;
 const badgesKey = id => `badges:${id}`;
 const toObject = flat => {
@@ -271,7 +274,7 @@ async function rebuildStats(playerId) {
     if (a.earnedIds.includes('DRASTIX')) drastix = 1;
   }
   const writes = [
-    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'v', STATS_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
+    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'v', STATS_VERSION, 'tv', TIERS_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
     ['DEL', badgesKey(playerId)],
   ];
   if (badges.size) writes.push(['SADD', badgesKey(playerId), ...badges]);
@@ -280,11 +283,47 @@ async function rebuildStats(playerId) {
   return { ...toObject(out[out.length - 1]), badges: badges.size };
 }
 
+// Anciens Mythic : une fois par joueur, ceux qui tombent dans une des nouvelles raretés y sont reclassés, depuis son
+// historique. Les compteurs ne font que monter de rareté (les pièces aussi) ; rien d'autre n'est touché. Un joueur
+// sans aucun Mythic est seulement marqué. Le marqueur posé en premier sert de verrou : une seule répartition.
+async function splitTopTiers(playerId, stats) {
+  if (stats.tv === TIERS_VERSION) return stats;
+  const [first] = await redis([['HSETNX', statsKey(playerId), 'tv', TIERS_VERSION]]);
+  stats.tv = TIERS_VERSION;
+  const mythic = Number(stats['t:mythic']) || 0;
+  if (Number(first) !== 1 || !mythic) return stats;
+  const [members] = await redis([['ZRANGE', historyKey(playerId), 0, -1]]);
+  const seen = rollSet(), found = Object.fromEntries(TOP_TIERS.map(t => [t, 0]));
+  for (const m of members || []) {
+    const [t, n] = m.split(':').map(Number);
+    if (!seen.add(n, t)) continue;
+    const tier = engine.cardTier(engine.scoreOf(n));
+    if (tier in found) found[tier]++;
+  }
+  // Déjà comptés dans les nouvelles raretés (tirages faits depuis la mise à jour) : ils sont aussi dans l'historique.
+  const already = TOP_TIERS.reduce((x, k) => x + (Number(stats[`t:${k}`]) || 0), 0);
+  const total = TOP_TIERS.reduce((x, k) => x + found[k], 0);
+  const moved = Math.max(0, Math.min(mythic, total - already));
+  if (!moved) return stats;
+  // Du plus rare au moins rare : si l'historique en montre plus que l'ancien compteur n'en avait, le surplus est ignoré.
+  let left = moved + already;
+  const writes = [['HINCRBY', statsKey(playerId), 't:mythic', -moved]];
+  for (const k of TOP_TIERS.slice().reverse()) {
+    const v = Math.max(Number(stats[`t:${k}`]) || 0, Math.min(found[k], left));
+    left -= Math.min(found[k], left);
+    writes.push(['HSET', statsKey(playerId), `t:${k}`, v]);
+    stats[`t:${k}`] = String(v);
+  }
+  stats['t:mythic'] = String(mythic - moved);
+  await redis(writes);
+  return stats;
+}
+
 async function readStats(playerId) {
   const [flat, count] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)]]);
   const stats = toObject(flat);
   if (!stats.v) return rebuildStats(playerId);
-  return { ...stats, badges: Number(count) };
+  return { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
 }
 
 // ---------------------------------------------------------------- quêtes, pièces offertes, mises de duel
@@ -364,6 +403,7 @@ async function recordRoll(playerId, n, t) {
   if (!stats.v && Number(out[out.length - 2]) <= 1) { fix.push(['HSET', statsKey(playerId), 'v', STATS_VERSION]); stats.v = STATS_VERSION; }
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
+  else stats = await splitTopTiers(playerId, stats);
   return { s, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 

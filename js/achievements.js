@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
 
-  const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
+  const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
   const num = v => Number(v) || 0;
   // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
   const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
@@ -21,8 +21,11 @@
     { id: 'lucky', emoji: '🍀', title: 'Lucky', desc: 'Roll a Rare or better', test: st => atLeast(st, 'rare') >= 1 },
     { id: 'blessed', emoji: '✨', title: 'Blessed', desc: 'Roll an Epic or better', test: st => atLeast(st, 'epic') >= 1 },
     { id: 'anomaly', emoji: '🌋', title: 'Anomaly', desc: 'Roll an Anomaly or better', test: st => atLeast(st, 'anomaly') >= 1 },
-    { id: 'mythic', emoji: '🔮', title: 'Mythic', desc: 'Roll a Mythic (top 1%)', test: st => num(st['t:mythic']) >= 1 },
-    { id: 'chosen', emoji: '👁️', title: 'Chosen One', desc: 'Roll 10 Mythics', test: st => num(st['t:mythic']) >= 10 },
+    { id: 'mythic', emoji: '🔮', title: 'Mythic', desc: 'Roll a Mythic or better (top 1%)', test: st => atLeast(st, 'mythic') >= 1 },
+    { id: 'chosen', emoji: '👁️', title: 'Chosen One', desc: 'Roll 10 Mythics or better', test: st => atLeast(st, 'mythic') >= 10 },
+    { id: 'celestial', emoji: '🌠', title: 'Celestial', desc: 'Roll a Celestial or better (top 0.1%)', test: st => atLeast(st, 'celestial') >= 1 },
+    { id: 'divine', emoji: '👼', title: 'Divine', desc: 'Roll a Divine or better (top 0.01%)', test: st => atLeast(st, 'divine') >= 1 },
+    { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
     { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
     { id: 'collector', emoji: '📦', title: 'Collector', desc: 'Find 50 different badges', test: st => num(st.badges) >= 50 },

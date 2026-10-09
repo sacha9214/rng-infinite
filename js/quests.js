@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
 
-  const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
+  const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
   const num = v => Number(v) || 0;
   const atLeast = (c, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + num(c[`t:${t}`]), 0);
 

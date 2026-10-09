@@ -625,8 +625,10 @@
 
   // ---------------------------------------------------------------- raretés
   const BADGE_TIERS = [[1e3, 'common'], [1e4, 'uncommon'], [1e5, 'rare'], [1e6, 'epic'], [1e7, 'anomaly']];
-  const CARD_TIERS = [[1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly']];
-  const TIER_ORDER = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
+  // Carte : au-dessus de Mythic (top 1 %), trois raretés découpent le sommet : Celestial (top 0,1 %, 900 nombres),
+  // Divine (top 0,01 %, 90 nombres) et Infinite (top 0,001 %, les 9 meilleurs nombres du jeu). Les badges s'arrêtent à Mythic.
+  const CARD_TIERS = [[1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.999, 'divine']];
+  const TIER_ORDER = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
 
   function badgeTier(score) {
     for (const [limit, tier] of BADGE_TIERS) if (score < limit) return tier;
@@ -672,7 +674,7 @@
     function cardTier(total) {
       const p = percentileOf(total);
       for (const [limit, tier] of CARD_TIERS) if (p < limit) return tier;
-      return 'mythic';
+      return 'infinite';
     }
 
     // Analyse complète pour l'affichage.
@@ -724,6 +726,8 @@
 
     function topLabel(percentile) {
       const top = 100 - percentile;
+      // Sous 0,5 %, l'arrondi à l'unité dirait « <1 » pour tout le sommet : on garde le premier chiffre qui compte.
+      if (top < .5) return 'TOP ' + (top < .001 ? '<0.001' : top.toFixed(top >= .05 ? 1 : top >= .005 ? 2 : 3)) + '%';
       if (top <= 50) return 'TOP ' + (Math.round(top) || '<1') + '%';
       if (top > 90) return 'BOTTOM ' + (Math.round(100 - top) || '<1') + '%';
       return null;

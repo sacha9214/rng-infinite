@@ -46,6 +46,10 @@
     },
     // La rareté se révèle : d'un coup sourd pour un tirage raté à l'impact du trailer pour un Mythic.
     tier: ({ tier }) => {
+      // Au-dessus de Mythic : le même impact, suivi d'un, deux ou trois autres et d'une gerbe de cloches de plus en plus longue.
+      if (tier === 'celestial') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .7, .3, .6], ...arpeggio(.3, .8)];
+      if (tier === 'divine') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .75, -.3, .6], [S.impact('logo'), .9, .8, 0, .65], ...arpeggio(.3, 1.3), ...arpeggio(.22, 1.6)];
+      if (tier === 'infinite') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .75, -.35, .6], [S.impact('mythic'), .84, .8, .35, .6], [S.impact('logo'), 1.3, .9, 0, .7], ...arpeggio(.3, 1.8), ...arpeggio(.26, 2.1), ...arpeggio(.2, 2.4)];
       if (tier === 'mythic') return [[S.impact('mythic'), 0, 1.1, 0, .5]];
       if (tier === 'anomaly') return [[S.impact('gold'), 0, .9, 0, .5]];
       if (tier === 'epic') return [[S.impact('epic'), 0, .75, 0, .45]];

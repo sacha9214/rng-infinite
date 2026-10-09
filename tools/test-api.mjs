@@ -1285,4 +1285,47 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await call(lbApi, { url: `/api/leaderboard?period=coins&me=${frank.playerId}` })).body.entries.find(e => e.me).coins, mine.coins + 5000);
 }
 
+// ================================================================ 34. Raretés au-dessus de Mythic : anciens tirages reclassés une fois
+{
+  const { engine } = require(path.join(ROOT, 'api/_lib.js'));
+  const Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const tierOf = n => engine.cardTier(engine.scoreOf(n));
+  const toObj = flat => { const o = {}; for (let i = 0; i < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
+  // Le découpage : 9 001 Mythic, 900 Celestial, 90 Divine, 9 Infinite sur 1 000 001 nombres.
+  const count = {};
+  for (let n = 0; n <= 1000000; n++) { const k = tierOf(n); count[k] = (count[k] || 0) + 1; }
+  assert.deepEqual([count.mythic, count.celestial, count.divine, count.infinite], [9001, 900, 90, 9]);
+  const pick = tier => { for (let n = 0; n <= 1000000; n++) if (tierOf(n) === tier) return n; };
+  const sample = { mythic: pick('mythic'), celestial: pick('celestial'), divine: pick('divine'), infinite: pick('infinite') };
+  // Un joueur d'avant la mise à jour : 4 « Mythic » au compteur, dont un de chaque nouvelle rareté dans son historique.
+  const id = frank.playerId, key = `stats:${id}`, old = toObj(run([['HGETALL', key]])[0].result);
+  const base = Number(old['t:mythic']) || 0, t0 = 1700000000000;
+  run([['HDEL', key, 'tv'], ['HINCRBY', key, 't:mythic', 4],
+    ['ZADD', `hist:${id}`, t0, `${t0}:${sample.mythic}`], ['ZADD', `hist:${id}`, t0 + 1, `${t0 + 1}:${sample.celestial}`],
+    ['ZADD', `hist:${id}`, t0 + 2, `${t0 + 2}:${sample.divine}`], ['ZADD', `hist:${id}`, t0 + 3, `${t0 + 3}:${sample.infinite}`]]);
+  const before = (await call(shopApi, { url: `/api/shop?me=${id}` })).body.coins; // cette lecture fait la répartition
+  let st = toObj(run([['HGETALL', key]])[0].result);
+  assert.equal(st.tv, '2');
+  assert.deepEqual([st['t:mythic'], st['t:celestial'], st['t:divine'], st['t:infinite']].map(Number),
+    [base + 1, (Number(old['t:celestial']) || 0) + 1, (Number(old['t:divine']) || 0) + 1, (Number(old['t:infinite']) || 0) + 1]);
+  for (const a of ['mythic', 'celestial', 'divine', 'infinite']) assert.ok(Ach.unlocked(st).includes(a), `titre ${a} débloqué`);
+  // Une seule fois : relire ne déplace plus rien, même si le compteur Mythic remonte.
+  run([['HINCRBY', key, 't:mythic', 2]]);
+  const after = (await call(shopApi, { url: `/api/shop?me=${id}` })).body.coins;
+  st = toObj(run([['HGETALL', key]])[0].result);
+  assert.equal(Number(st['t:mythic']), base + 3);
+  assert.equal(after - before, 200, 'deux Mythic de plus = 200 pièces, rien d\'autre');
+  // Sans Mythic au compteur : seulement marqué, l'historique n'est pas lu.
+  run([['HDEL', key, 'tv'], ['HSET', key, 't:mythic', 0, 't:celestial', 0]]);
+  await call(shopApi, { url: `/api/shop?me=${id}` });
+  st = toObj(run([['HGETALL', key]])[0].result);
+  assert.deepEqual([st.tv, Number(st['t:celestial'])], ['2', 0]);
+  // Les pièces : un Celestial 300, un Divine 1 000, un Infinite 5 000.
+  const Shop = require(path.join(ROOT, 'js/shop.js'));
+  assert.deepEqual([Shop.COINS.celestial, Shop.COINS.divine, Shop.COINS.infinite], [300, 1000, 5000]);
+  // Les quêtes « Rare ou mieux » comptent les nouvelles raretés.
+  const Q = require(path.join(ROOT, 'js/quests.js'));
+  assert.equal(Q.byId.get('epic1').value({ 't:infinite': 1 }), 1);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

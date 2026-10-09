@@ -3,9 +3,9 @@
   'use strict';
 
   const Engine = RNGEngine.createEngine(window.BADGE_META, window.SCORE_PERCENTILES);
-  const TIERS_DESC = ['mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash'];
-  const TIER_RANK = { trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6 };
-  const TIER_EMOJI = { trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥' };
+  const TIERS_DESC = ['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash'];
+  const TIER_RANK = { trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, infinite: 9 };
+  const TIER_EMOJI = { trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', infinite: '♾️' };
   // Rythme de révélation du site d'origine (ms). Chaque vitesse applique un facteur à toutes ces durées.
   const REVEAL = {
     digitStart: 2000, digitBase: 1000, digitMax: 2000,
@@ -649,6 +649,10 @@
       epic: { count: 60, speed: 7, colors: ['#a855f7', '#d8b4fe', '#7c3aed', '#f0abfc'] },
       anomaly: { count: 120, speed: 9, colors: ['#f97316', '#fdba74', '#fbbf24', '#ea580c'] },
       mythic: { count: 240, speed: 12, colors: ['#ec4899', '#a855f7', '#22d3ee', '#f43f5e', '#fde047'] },
+      // Au-dessus de Mythic : plus de confettis, plus vite, et des salves qui se répètent (waves).
+      celestial: { count: 300, speed: 13, colors: ['#22d3ee', '#a5f3fc', '#ffffff', '#38bdf8', '#818cf8'], waves: 2, flash: 'rgba(34,211,238,.5), rgba(129,140,248,.3) 40%, rgba(255,255,255,.12) 70%' },
+      divine: { count: 340, speed: 14, colors: ['#fde047', '#fef9c3', '#ffffff', '#f59e0b', '#fbbf24'], waves: 3, flash: 'rgba(253,224,71,.6), rgba(245,158,11,.35) 40%, rgba(255,255,255,.15) 70%' },
+      infinite: { count: 380, speed: 15, colors: ['#f472b6', '#c084fc', '#60a5fa', '#34d399', '#fde047', '#fb923c', '#ffffff'], waves: 5, flash: 'rgba(255,255,255,.75), rgba(192,132,252,.45) 35%, rgba(96,165,250,.2) 70%' },
     };
     function tick() {
       ctx.clearRect(0, 0, innerWidth, innerHeight);
@@ -678,7 +682,7 @@
       }
       raf = parts.length ? requestAnimationFrame(tick) : 0;
     }
-    function celebrate(tier, el) {
+    function celebrate(tier, el, wave = 0) {
       const c = CONF[tier];
       if (!c || reducedMotion || !el) return;
       const r = el.getBoundingClientRect();
@@ -695,12 +699,14 @@
           color: c.colors[i % c.colors.length], life: 0, max: (spark ? 45 : 70) + Math.random() * 60,
         });
       }
-      if (tier === 'mythic') {
+      if ((tier === 'mythic' || c.flash) && !wave) {
         const f = document.createElement('div');
         f.className = 'flash';
-        f.style.background = 'radial-gradient(circle at 50% 30%, rgba(236,72,153,.5), rgba(168,85,247,.3) 40%, rgba(34,211,238,.12) 70%, transparent)';
+        f.style.background = `radial-gradient(circle at 50% 30%, ${c.flash || 'rgba(236,72,153,.5), rgba(168,85,247,.3) 40%, rgba(34,211,238,.12) 70%'}, transparent)`;
         document.body.appendChild(f);
         setTimeout(() => f.remove(), 1000);
+        // Salves suivantes : la même gerbe, toutes les 550 ms, tant que la carte est encore à l'écran.
+        if (c.waves) for (let k = 1; k < c.waves; k++) setTimeout(() => { if (el.isConnected) celebrate(tier, el, k); }, k * 550);
       }
       if (parts.length > 600) parts.splice(0, parts.length - 600);
       if (!raf) raf = requestAnimationFrame(tick);
@@ -723,12 +729,12 @@
   }
 
   // Onde de choc à la couleur de la rareté, qui part de la carte au moment où la rareté se révèle.
-  const TIER_RING = { uncommon: '#10b981', rare: '#3b82f6', epic: '#a855f7', anomaly: '#f97316', mythic: '#ec4899' };
+  const TIER_RING = { uncommon: '#10b981', rare: '#3b82f6', epic: '#a855f7', anomaly: '#f97316', mythic: '#ec4899', celestial: '#22d3ee', divine: '#fde047', infinite: '#ffffff' };
   function shockwave(el, tier) {
     const color = TIER_RING[tier];
     if (!color || reducedMotion || !el) return;
     const r = el.getBoundingClientRect();
-    const rings = TIER_RANK[tier] >= TIER_RANK.epic ? 2 : 1;
+    const rings = TIER_RANK[tier] > TIER_RANK.mythic ? TIER_RANK[tier] - 3 : TIER_RANK[tier] >= TIER_RANK.epic ? 2 : 1; // Celestial 4, Divine 5, Infinite 6
     for (let k = 0; k < rings; k++) {
       const w = document.createElement('div');
       w.className = 'shockwave';
@@ -1288,6 +1294,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-09', date: 'Oct 9, 2026', en: ['Three new rarities above Mythic: Celestial (about 1 roll in 1,000), Divine (1 in 10,000) and Infinite (1 in 100,000), each with its own reveal, sound and coin reward', 'A new title for each of them. Your old rolls count: past Mythics that qualify are upgraded automatically'], fr: ['Trois nouvelles raretés au-dessus de Mythic : Celestial (environ 1 tirage sur 1 000), Divine (1 sur 10 000) et Infinite (1 sur 100 000), chacune avec sa révélation, son son et sa récompense en pièces', 'Un nouveau titre pour chacune. Tes anciens tirages comptent : les anciens Mythic concernés sont reclassés automatiquement'] },
     { id: '2026-10-08f', date: 'Oct 8, 2026', en: ['Share a roll as an image card: press Share, then copy it straight into Discord or download it'], fr: ['Partage un tirage en image : appuie sur Partager, puis colle la carte directement dans Discord ou télécharge-la'] },
     { id: '2026-10-08e', date: 'Oct 8, 2026', en: ['A notification tells you when you complete a daily quest, with its coin reward'], fr: ['Une notification te prévient quand tu termines une quête du jour, avec sa récompense en pièces'] },
     { id: '2026-10-08d', date: 'Oct 8, 2026', en: ['Layout pass for every screen size: on phones and tablets the four round buttons now sit at the bottom of the page instead of floating over the game, and the menu fits on the smallest phones'], fr: ['Mise en page revue pour toutes les tailles d\'écran : sur téléphone et tablette, les quatre boutons ronds sont rangés en bas de page au lieu de flotter sur le jeu, et le menu tient sur les plus petits téléphones'] },
@@ -1549,7 +1556,7 @@
     step(REVEAL.rarity, () => {
       card.classList.remove('neutral');
       card.removeAttribute('title');
-      if (!reducedMotion) card.classList.add(a.tier === 'anomaly' || a.tier === 'mythic' ? 'shake' : 'reveal-pulse');
+      if (!reducedMotion) card.classList.add(TIER_RANK[a.tier] >= TIER_RANK.anomaly ? 'shake' : 'reveal-pulse');
       ep.classList.remove('pending');
       countUp(ep, 0, a.total, 0, v => `${fmt(v)} XP`);
       replay(ep, 'glint');
@@ -1696,7 +1703,7 @@
       buckets[Math.min(9, Math.floor(r[0] / 100000))]++;
       if (TIER_RANK[tier] >= 3) { sinceRare = i; dry = 0; } else { dry++; longestDry = Math.max(longestDry, dry); }
       if (TIER_RANK[tier] >= 4) sinceEpic = i;
-      if (tier === 'mythic') sinceMythic = i;
+      if (TIER_RANK[tier] >= TIER_RANK.mythic) sinceMythic = i;
       if (r[2] >= startOfDay) today++;
     });
     const since = i => (i === null ? 'never' : fmt(N - 1 - i));
@@ -1894,7 +1901,7 @@
             <div class="panel-head"><h3 class="panel-title">Streaks & oddities</h3></div>
             <div class="kv"><span class="k">Rolls since last Rare or better</span><span class="v">${st.sinceRare}</span></div>
             <div class="kv"><span class="k">Rolls since last Epic or better</span><span class="v">${st.sinceEpic}</span></div>
-            <div class="kv"><span class="k">Rolls since last Mythic</span><span class="v">${st.sinceMythic}</span></div>
+            <div class="kv"><span class="k">Rolls since last Mythic or better</span><span class="v">${st.sinceMythic}</span></div>
             <div class="kv"><span class="k">Longest run without Rare+</span><span class="v">${fmt(st.longestDry)}</span></div>
             <div class="kv"><span class="k">Numbers rolled more than once</span><span class="v">${fmt(st.repeats)}</span></div>
             ${st.rarest ? `<div class="kv"><span class="k">Rarest badge found</span><span class="v" data-badge="${st.rarest}" style="cursor:pointer">${Engine.byId.get(st.rarest).emoji} ${oneIn(window.BADGE_ODDS[st.rarest])}</span></div>` : ''}
@@ -2153,7 +2160,7 @@
       ['Best roll', p => (p.best[0] ? p.best[0].s : 0), (v, p) => bestCell(p), 1],
       ['All-time rank', p => p.rank || Infinity, v => (v === Infinity ? '–' : '#' + v), -1],
       ['Luck (avg percentile)', p => (p.luck == null ? -1 : p.luck), v => (v < 0 ? '–' : v.toFixed(1)), 1],
-      ...['mythic', 'anomaly', 'epic', 'rare'].map(t => [`${cap(t)} rolls`, p => (p.tiers && p.tiers[t]) || 0, v => fmt(v), 1]),
+      ...['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare'].map(t => [`${cap(t)} rolls`, p => (p.tiers && p.tiers[t]) || 0, v => fmt(v), 1]),
       ['Duels won', p => (p.duels ? p.duels.won : 0), v => fmt(v), 1],
       ['Duel win rate', p => (p.duels && p.duels.played ? p.duels.won / p.duels.played : -1), v => (v < 0 ? '–' : `${Math.round(v * 100)}%`), 1],
       ['Badges found', found, v => `${v}/${Engine.badges.length}`, 1],
@@ -3864,7 +3871,7 @@
 
   function renderAbout() {
     currentView = 'about';
-    const cardRows = [['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1%']];
+    const cardRows = [['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.001% (90 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
     const badgeRows = [['common', 'more than 10% of rolls'], ['uncommon', '1–10% of rolls'], ['rare', '0.1–1% of rolls'], ['epic', '0.01–0.1% of rolls'], ['anomaly', '0.001–0.01% of rolls'], ['mythic', 'under 0.001% (1 in 100,000+)']];
     app.innerHTML = `
       <div class="page prose">

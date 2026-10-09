@@ -2538,3 +2538,51 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .share-actions { justify-content: center; margin-top: .9rem; }
 .share-note { text-align: center; margin: .7rem 0 0; }
 .modal:has(.share-card) { width: min(100%, 40rem); }
+
+/* ------------------------------------------------------------------ raretés au-dessus de Mythic (cartes seulement)
+   Celestial : glace et ciel. Divine : or blanc. Infinite : blanc prismatique dont le halo fait le tour des couleurs. */
+[data-tier="celestial"] {
+  --t-from: #cffafe; --t-via: #f0f9ff; --t-to: #e0e7ff; --t-border: #67e8f9;
+  --t-glow: 0 0 18px rgba(34, 211, 238, .35), 0 0 34px rgba(129, 140, 248, .18);
+  --t-text: #0e7490; --t-pill-text: #0e7490; --t-pill-bg: #ecfeff; --t-pill-border: #67e8f9;
+  --t-hl: #a5f3fc; --t-hl-border: #0891b2; --t-accent: #0891b2; --t-shimmer: 1;
+}
+[data-tier="divine"] {
+  --t-from: #fef9c3; --t-via: #fffef5; --t-to: #fde68a; --t-border: #facc15;
+  --t-glow: 0 0 20px rgba(250, 204, 21, .45), 0 0 40px rgba(245, 158, 11, .2);
+  --t-text: #854d0e; --t-pill-text: #854d0e; --t-pill-bg: #fefce8; --t-pill-border: #facc15;
+  --t-hl: #fef08a; --t-hl-border: #ca8a04; --t-accent: #ca8a04; --t-shimmer: 1;
+}
+[data-tier="infinite"] {
+  --t-from: #fce7f3; --t-via: #ffffff; --t-to: #dbeafe; --t-border: #c084fc;
+  --t-glow: 0 0 22px rgba(192, 132, 252, .5), 0 0 46px rgba(96, 165, 250, .25);
+  --t-text: #111827; --t-pill-text: #6d28d9; --t-pill-bg: #faf5ff; --t-pill-border: #c084fc;
+  --t-hl: #f5d0fe; --t-hl-border: #7c3aed; --t-accent: #7c3aed; --t-shimmer: 1;
+}
+.dark [data-tier="celestial"] {
+  --t-from: rgba(14, 116, 144, .55); --t-via: rgba(30, 41, 59, .7); --t-to: rgba(55, 48, 163, .5); --t-border: #22d3ee;
+  --t-glow: 0 0 22px rgba(34, 211, 238, .5), 0 0 44px rgba(129, 140, 248, .25);
+  --t-text: #ecfeff; --t-pill-text: #67e8f9; --t-pill-bg: rgba(8, 51, 68, .5); --t-pill-border: rgba(34, 211, 238, .6);
+}
+.dark [data-tier="divine"] {
+  --t-from: rgba(133, 77, 14, .6); --t-via: rgba(66, 32, 6, .6); --t-to: rgba(161, 98, 7, .55); --t-border: #facc15;
+  --t-glow: 0 0 24px rgba(250, 204, 21, .55), 0 0 50px rgba(245, 158, 11, .28);
+  --t-text: #fefce8; --t-pill-text: #fde047; --t-pill-bg: rgba(66, 32, 6, .5); --t-pill-border: rgba(250, 204, 21, .6);
+}
+.dark [data-tier="infinite"] {
+  --t-from: rgba(131, 24, 67, .5); --t-via: rgba(49, 46, 129, .55); --t-to: rgba(6, 78, 59, .45); --t-border: #f5d0fe;
+  --t-glow: 0 0 26px rgba(255, 255, 255, .45), 0 0 56px rgba(192, 132, 252, .4);
+  --t-text: #ffffff; --t-pill-text: #f5d0fe; --t-pill-bg: rgba(59, 7, 100, .5); --t-pill-border: rgba(245, 208, 254, .65);
+}
+[data-tier="celestial"] .card-stage.lit .rays { opacity: .55; animation-duration: 7s; }
+[data-tier="divine"] .card-stage.lit .rays { opacity: .62; animation-duration: 6s; }
+[data-tier="infinite"] .card-stage.lit .rays { opacity: .7; animation-duration: 4.5s; }
+/* Les pastilles des trois raretés brillent ; celle d'Infinite fait défiler un arc-en-ciel. */
+.pill[data-tier="celestial"], .pill[data-tier="divine"], .pill[data-tier="infinite"] { font-weight: 800; box-shadow: 0 0 10px color-mix(in srgb, var(--t-pill-border) 60%, transparent); }
+.pill[data-tier="infinite"] {
+  color: #fff; border-color: transparent; text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  background: linear-gradient(90deg, #ec4899, #a855f7, #3b82f6, #10b981, #eab308, #f97316, #ec4899) 0 0 / 300% 100%;
+  animation: tier-rainbow 5s linear infinite;
+}
+@keyframes tier-rainbow { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .pill[data-tier="infinite"] { animation: none; } }
