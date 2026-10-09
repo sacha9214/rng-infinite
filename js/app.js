@@ -123,6 +123,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const plural = (k, word) => `${fmt(k)} ${word}${k === 1 ? '' : 's'}`;
+  const precisePct = v => (v > 0 && v < .001 ? '<0.001' : v <= 0 ? '<0.001' : RNGEngine.formatPct(v));
   const pctStr = p => {
     const v = p * 100;
     if (v === 0) return '0%';
@@ -137,7 +138,8 @@
 
   // "Top x %" / "Bottom x %" arrondi et coloré selon le percentile, comme l'écran de résultat d'origine.
   function percentileHTML(p) {
-    const text = p >= 50 ? `Top ${Math.round(100 - p) || '<1'}%` : `Bottom ${Math.round(p) || '<1'}%`;
+    // Jamais « <1 % » : sous 1 %, le chiffre exact (0,4 %, 0,05 %, 0,001 %).
+    const text = p >= 50 ? `Top ${precisePct(100 - p)}%` : `Bottom ${precisePct(p)}%`;
     const color = p >= 95 ? '#eab308' : p >= 80 ? '#22c55e' : p >= 50 ? '#10b981' : p >= 20 ? '#f97316' : '#ef4444';
     return `<span class="top" style="color:${color}">${text}</span>`;
   }

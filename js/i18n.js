@@ -257,7 +257,7 @@
     [/^you already own it: 🪙 ([\d,]+) refunded$/, m => `tu l'as déjà : 🪙 ${nb(m[1])} remboursées`],
     [/^Open another$/, () => 'En ouvrir une autre'],
     [/^([\d,.]+) XP per roll$/, m => `${nb(m[1])} XP par tirage`], [/^(\d+)% of the collection$/, m => `${m[1]} % de la collection`],
-    [/^Top (\S+)%$/, m => `Top ${m[1]} %`], [/^Bottom (\S+)%$/, m => `${m[1]} % les plus bas`],
+    [/^Top (\S+)%$/, m => `Top ${m[1].replace('.', ',')} %`], [/^Bottom (\S+)%$/, m => `${m[1].replace('.', ',')} % les plus bas`],
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],
     [/^(\d+) achievements unlocked: (.+)$/, m => `${m[1]} succès débloqués : ${m[2]}`],

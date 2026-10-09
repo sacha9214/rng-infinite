@@ -726,10 +726,10 @@
 
     function topLabel(percentile) {
       const top = 100 - percentile;
-      // Sous 0,5 %, l'arrondi à l'unité dirait « <1 » pour tout le sommet : on garde le premier chiffre qui compte.
-      if (top < .5) return 'TOP ' + (top < .001 ? '<0.001' : top.toFixed(top >= .05 ? 1 : top >= .005 ? 2 : 3)) + '%';
-      if (top <= 50) return 'TOP ' + (Math.round(top) || '<1') + '%';
-      if (top > 90) return 'BOTTOM ' + (Math.round(100 - top) || '<1') + '%';
+      // Jamais « <1 % » : sous 1 %, le chiffre exact (0,4 %, 0,05 %, 0,001 %).
+      const exact = v => (v < .001 ? '<0.001' : formatPct(v));
+      if (top <= 50) return 'TOP ' + exact(top) + '%';
+      if (top > 90) return 'BOTTOM ' + exact(100 - top) + '%';
       return null;
     }
 
