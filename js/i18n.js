@@ -50,7 +50,7 @@
     'History cleared': 'Historique effacé', 'History is already empty.': 'L\'historique est déjà vide.', 'That file is not a valid RNG∞ export.': 'Ce fichier n\'est pas un export RNG∞ valide.', 'My profile': 'Mon profil', 'Privacy policy': 'Confidentialité', 'Done': 'OK',
     // dons
     '☕ Buy me a coffee': '☕ Offre-moi un café', 'Donate with PayPal': 'Donner avec PayPal', 'Select and copy the address': 'Sélectionne et copie l\'adresse',
-    'RNG∞ is free and has no ads. If you enjoy it, you can chip in. It is entirely optional and gives nothing in the game: no coins, no skins, no luck.': 'RNG∞ est gratuit et sans pub. Si tu l\'aimes, tu peux participer. C\'est entièrement facultatif et ça ne donne rien dans le jeu : ni pièces, ni skins, ni chance.',
+    'RNG∞ is free and has no ads. If you enjoy it, you can chip in to the server fund. It is entirely optional. Write your player name in the message and you get the 💗 Supporter skin as a thank-you: only a look, no coins, no luck.': 'RNG∞ est gratuit et sans pub. Si le jeu te plaît, tu peux participer à la cagnotte du serveur. C\'est entièrement facultatif. Écris ton pseudo dans le message et tu reçois le skin 💗 Supporter en remerciement : seulement une apparence, pas de pièces, pas de chance.', 'Ko-fi (card or PayPal)': 'Ko-fi (carte ou PayPal)', 'Contribute on Ko-fi': 'Contribuer sur Ko-fi',
     'Send only USDT or USDC on Ethereum to this address. Anything sent on another network may be lost.': 'N\'envoie que de l\'USDT ou de l\'USDC sur Ethereum à cette adresse. Tout envoi sur un autre réseau peut être perdu.',
     'Crypto — USDT or USDC, Ethereum network (ERC-20) only': 'Crypto — USDT ou USDC, réseau Ethereum (ERC-20) uniquement',
     // historique

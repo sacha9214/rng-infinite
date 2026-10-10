@@ -815,7 +815,7 @@
   }
 
   // Dons facultatifs (« Buy me a coffee ») : PayPal, ou USDT / USDC sur le réseau Ethereum. Aucun avantage en jeu.
-  const TIP = { paypal: 'https://paypal.me/sacha9214', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
+  const TIP = { kofi: 'https://ko-fi.com/sacha9214all', paypal: 'https://paypal.me/sacha9214', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
   // ---------------------------------------------------------------- cagnotte du serveur
   // Le total du mois arrive avec la balise de visite (une fois par onglet), sinon par une petite demande gardée 5 min.
   // Le site n'encaisse rien : « Contribuer » ouvre la page de dons ; le créateur inscrit ensuite la contribution, et
@@ -844,7 +844,7 @@
   };
   function openFund() {
     const s = Fund.state || { cents: 0, goal: Shop.FUND_GOAL, url: '' }, name = Store.player.name;
-    const link = s.url || TIP.paypal;
+    const link = s.url || TIP.kofi; // la page de dons par défaut ; la page Owner peut en régler une autre
     openModal(`
       <h2>🖥️ Server fund</h2>
       <p class="panel-note" style="margin:-.3rem 0 .8rem">RNG∞ is free and has no ads. The fund pays for the server: when it reaches ${euros(s.goal)} in a month, the game can move to a better one. Contributing is optional.</p>
@@ -867,8 +867,9 @@
     const pay = TIP.paypal;
     openModal(`
       <h2>☕ Buy me a coffee</h2>
-      <p class="panel-note" style="margin:-.3rem 0 1rem">RNG∞ is free and has no ads. If you enjoy it, you can chip in. It is entirely optional and gives nothing in the game: no coins, no skins, no luck.</p>
-      <div class="field"><label>PayPal</label><a class="btn-roll small" href="${pay}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Donate with PayPal</a></div>
+      <p class="panel-note" style="margin:-.3rem 0 1rem">RNG∞ is free and has no ads. If you enjoy it, you can chip in to the server fund. It is entirely optional. Write your player name in the message and you get the 💗 Supporter skin as a thank-you: only a look, no coins, no luck.</p>
+      <div class="field"><label>Ko-fi (card or PayPal)</label><a class="btn-roll small" href="${TIP.kofi}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Contribute on Ko-fi</a></div>
+      <div class="field"><label>PayPal</label><a class="btn" href="${pay}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Donate with PayPal</a></div>
       <div class="field"><label>Crypto — USDT or USDC, Ethereum network (ERC-20) only</label>
         <div class="tip-wallet"><code id="tip-wallet">${TIP.wallet}</code><button class="btn" id="tip-copy">Copy</button></div>
         <span class="panel-note">Send only USDT or USDC on Ethereum to this address. Anything sent on another network may be lost.</span></div>
