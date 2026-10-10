@@ -5,5 +5,12 @@
     "desc": "Contains \"235\".",
     "emoji": "💥",
     "score": 25000
+  },
+  {
+    "id": "FULL_STACK",
+    "label": "Full Stack",
+    "desc": "Contains \"64\": a full stack of blocks.",
+    "emoji": "🧱",
+    "score": 6400
   }
 ]

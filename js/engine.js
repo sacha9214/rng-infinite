@@ -251,6 +251,7 @@
     LUCKY_7: '7', JACKPOT: '777', JACKPOT_FOUR: '7777', JACKPOT_FIVE: '77777', JACKPOT_SIX: '777777',
     ROYAL_FLUSH: '56789',
     DRASTIX: '235', // badge perso, absent de l'original
+    FULL_STACK: '64', // badge perso : 64, une pile complète de blocs
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
