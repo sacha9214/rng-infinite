@@ -214,7 +214,8 @@ async function creditFund({ target, name, cents, counted = false, auto = false }
 const FUND_PENDING = 'fund:pending';
 // Prudence : un mot d'une phrase ordinaire (« très bon jeu ») peut être le pseudo de quelqu'un d'autre. Un pseudo
 // n'est donc reconnu que dans quatre cas : le message entier est un pseudo ; il suit un libellé (« pseudo : X »,
-// « my name is X ») ; le message est très court (trois mots au plus) ; ou le nom du compte Ko-fi est un pseudo.
+// « my name is X ») ; le message est très court (deux mots au plus : « gg alice ») ; ou le nom du compte Ko-fi est
+// un pseudo. Le créateur du jeu n'est jamais reconnu : « nice game sacha » s'adresse à lui, ce n'est pas son don.
 // Tout le reste attend que le créateur tranche.
 async function matchPlayer(message, fromName) {
   const text = String(message || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 300);
@@ -222,7 +223,7 @@ async function matchPlayer(message, fromName) {
   const tries = [text];
   const label = text.match(/(?:pseudo|player name|username|in[- ]?game name|ign|name|nom|je suis|i am|i'm|my name is|c'est|it's|its)\s*(?:is|est)?\s*[:=\-]?\s*(.+)$/i);
   if (label) { const rest = label[1].trim(), w = rest.split(/[\s,;.!?()]+/).filter(Boolean); tries.push(rest, w.slice(0, 2).join(' '), w[0] || ''); }
-  if (words.length <= 3) tries.push(...words, ...words.slice(0, -1).map((w, i) => `${w} ${words[i + 1]}`));
+  if (words.length <= 2) tries.push(...words);
   tries.push(String(fromName || ''));
   const seen = new Set();
   for (const raw of tries) {
@@ -230,7 +231,10 @@ async function matchPlayer(message, fromName) {
     if (!name || seen.has(nameKey(name)) || seen.size >= 20) continue;
     seen.add(nameKey(name));
     const [id] = await redis([['GET', `name:${nameKey(name)}`]]);
-    if (id) { const [real] = await redis([['HGET', 'names', id]]); return { target: id, name: real || name }; }
+    if (!id) continue;
+    const [real, owner] = await redis([['HGET', 'names', id], ['HGET', statsKey(id), 'owner']]);
+    if (Number(owner) >= 1) continue; // le créateur : jamais attribué tout seul
+    return { target: id, name: real || name };
   }
   return null;
 }

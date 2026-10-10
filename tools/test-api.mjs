@@ -1670,6 +1670,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
   // Un message ordinaire qui contient par hasard le pseudo de quelqu'un ne donne rien tout seul : il attend.
   process.env.KOFI_TOKEN = 'kofi-secret-123';
+  // … ni un compliment adressé au créateur (Frank, ici), même court, même seul, même comme nom de compte.
+  for (const [msg, from] of [['nice game frank', 'x'], ['merci Frank', 'x'], ['Frank', 'x'], ['pseudo: frank', 'x'], ['hello', 'Frank'], ['nice game alice', 'x']]) { r = await kofi(tip({ message: msg, from_name: from, amount: '1' })); assert.equal(r.body.matched, false, msg); }
   for (const msg of ['Really great game, Alice and me play it every day after school', 'très bon jeu continue comme ça frank !!']) { r = await kofi(tip({ message: msg, from_name: 'Somebody Else', amount: '1' })); assert.equal(r.body.matched, false, msg); }
   // Reconnu : le pseudo seul, avec un libellé, dans un message très court, ou comme nom du compte Ko-fi.
   for (const [msg, from] of [['Alice', 'x'], ['pseudo : alice', 'x'], ['Super jeu ! Mon pseudo est Alice', 'x'], ['gg alice', 'x'], ['IGN: Alice thanks for the game', 'x'], ['très bon jeu, continuez comme ça', 'Alice']]) { r = await kofi(tip({ message: msg, from_name: from, amount: '1' })); assert.equal(r.body.matched, true, msg); }
