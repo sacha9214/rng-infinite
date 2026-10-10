@@ -206,6 +206,7 @@
     Store.setSetting('emotes', state.emotes || []);
     Store.setSetting('coins', state.coins);
     Store.setSetting('speedLv', state.speed || 0);
+    Store.setSetting('skinsOwned', state.owned || []);
     paintRollButtons();
     // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
     if ((state.owned || []).includes('owner')) Inbox.watch();
@@ -849,7 +850,7 @@
       <h2>🖥️ Server fund</h2>
       <p class="panel-note" style="margin:-.3rem 0 .8rem">RNG∞ is free and has no ads. The fund pays for the server: when it reaches ${euros(s.goal)} in a month, the game can move to a better one. Contributing is optional.</p>
       <div class="fund-perk">
-        <div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div>
+        <div class="fund-perk-card"><div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div><button class="btn ghost" data-skin-preview="supporter">▶ Preview</button></div>
         <div><b>💗 Supporter skin and title</b><span class="panel-note">A thank-you for any contribution, whatever the amount. It is only a look: no coins, no luck, no advantage in the game.</span></div>
       </div>
       <ol class="fund-steps">
@@ -2587,7 +2588,7 @@
         <div class="skin-tile supporter-tile${equipped ? ' equipped' : ''}">
           <div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div>
           <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
-          <div class="skin-actions">${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<button class="btn" data-fund>💗 Contribute to get it</button>'}</div>
+          <div class="skin-actions"><button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<button class="btn" data-fund>💗 Contribute to get it</button>'}</div>
         </div>`;
     };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
@@ -3202,7 +3203,8 @@
       <h2>${skin.emoji} ${esc(skin.name)}</h2>
       <p class="panel-note" style="margin:-.3rem 0 0">Preview · shown as a Mythic roll, the strongest reveal</p>
       <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
-      <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button></div>`, m => {
+      <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button>${skin.supporter && !(Store.settings.skinsOwned || []).includes('supporter') ? '<button class="btn-roll small" data-fund>💗 Contribute to get it</button>' : ''}</div>
+      ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}`, m => {
       const stage = m.querySelector('#sp-stage');
       let timers = [], spin = 0, fx = null;
       const stop = () => { timers.forEach(clearTimeout); timers = []; clearInterval(spin); if (fx) fx.destroy(); fx = null; };
@@ -4503,6 +4505,8 @@
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
     if (e.target.closest('[data-fund]')) { e.preventDefault(); openFund(); return; }
+    // Aperçu d'un skin demandé hors de la grille du Shop (fenêtre de la cagnotte) ; la grille a son propre écouteur.
+    { const pv = e.target.closest('[data-skin-preview]'); if (pv && !pv.closest('.skin-grid')) { e.preventDefault(); previewSkin(pv.dataset.skinPreview); return; } }
     if (e.target.closest('[data-news]')) { e.preventDefault(); openNews(); return; }
     if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
