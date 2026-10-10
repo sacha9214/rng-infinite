@@ -1668,6 +1668,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const c0 = (await fundNow()).cents; await kofi(tip({ message: '', from_name: 'Jo Example', amount: '3.00' })); assert.equal((await fundNow()).cents, c0 + 300); r = await post(frank, 'fund'); r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true, remove: true }); assert.deepEqual([r.body.pending.length, r.body.cents], [0, c0]); }
   // Un joueur ordinaire ne peut rien attribuer.
   assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
+  // Un message ordinaire qui contient par hasard le pseudo de quelqu'un ne donne rien tout seul : il attend.
+  process.env.KOFI_TOKEN = 'kofi-secret-123';
+  for (const msg of ['Really great game, Alice and me play it every day after school', 'très bon jeu continue comme ça frank !!']) { r = await kofi(tip({ message: msg, from_name: 'Somebody Else', amount: '1' })); assert.equal(r.body.matched, false, msg); }
+  // Reconnu : le pseudo seul, avec un libellé, dans un message très court, ou comme nom du compte Ko-fi.
+  for (const [msg, from] of [['Alice', 'x'], ['pseudo : alice', 'x'], ['Super jeu ! Mon pseudo est Alice', 'x'], ['gg alice', 'x'], ['IGN: Alice thanks for the game', 'x'], ['très bon jeu, continuez comme ça', 'Alice']]) { r = await kofi(tip({ message: msg, from_name: from, amount: '1' })); assert.equal(r.body.matched, true, msg); }
+  r = await post(frank, 'fund'); for (const x of r.body.pending) await post(frank, 'fundAssign', { tx: x.tx, dismiss: true, remove: true });
   // Jeton collé avec un retour à la ligne ou des guillemets dans les réglages : accepté quand même.
   for (const messy of ['kofi-secret-123\n', '  kofi-secret-123  ', '"kofi-secret-123"']) { process.env.KOFI_TOKEN = messy; r = await kofi(tip({ type: 'Shop Order' })); assert.equal(r.status, 200, JSON.stringify(messy)); }
   // Jeton au format de Ko-fi collé avec un libellé devant : le serveur retrouve le jeton dans la valeur.

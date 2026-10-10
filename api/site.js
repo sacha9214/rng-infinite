@@ -212,15 +212,22 @@ async function creditFund({ target, name, cents, counted = false, auto = false }
 // Introuvable, le don compte quand même dans le mois et attend sur la page Owner que le créateur dise à qui il est.
 // L'adresse e-mail du donateur n'est jamais gardée.
 const FUND_PENDING = 'fund:pending';
+// Prudence : un mot d'une phrase ordinaire (« très bon jeu ») peut être le pseudo de quelqu'un d'autre. Un pseudo
+// n'est donc reconnu que dans quatre cas : le message entier est un pseudo ; il suit un libellé (« pseudo : X »,
+// « my name is X ») ; le message est très court (trois mots au plus) ; ou le nom du compte Ko-fi est un pseudo.
+// Tout le reste attend que le créateur tranche.
 async function matchPlayer(message, fromName) {
-  const text = String(message || '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 300);
-  const words = text.split(/[\s,;:!?()"'«»]+/).filter(w => w.length >= 2 && w.length <= 20);
-  const stripped = text.replace(/^.*?(?:pseudo|player name|username|name|nom|je suis|i am|i'm|my name is|c'est)\s*(?:is|est)?\s*[:=\-]?\s*/i, '');
-  const tries = [text, stripped, stripped.split(/[\s,;.!?]+/)[0], ...words, ...words.slice(0, -1).map((w, i) => `${w} ${words[i + 1]}`), String(fromName || '')];
+  const text = String(message || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 300);
+  const words = text.split(/[\s,;:!?()"'«».]+/).filter(w => w.length >= 2 && w.length <= 20);
+  const tries = [text];
+  const label = text.match(/(?:pseudo|player name|username|in[- ]?game name|ign|name|nom|je suis|i am|i'm|my name is|c'est|it's|its)\s*(?:is|est)?\s*[:=\-]?\s*(.+)$/i);
+  if (label) { const rest = label[1].trim(), w = rest.split(/[\s,;.!?()]+/).filter(Boolean); tries.push(rest, w.slice(0, 2).join(' '), w[0] || ''); }
+  if (words.length <= 3) tries.push(...words, ...words.slice(0, -1).map((w, i) => `${w} ${words[i + 1]}`));
+  tries.push(String(fromName || ''));
   const seen = new Set();
   for (const raw of tries) {
     const name = cleanName(raw);
-    if (!name || seen.has(nameKey(name)) || seen.size >= 30) continue;
+    if (!name || seen.has(nameKey(name)) || seen.size >= 20) continue;
     seen.add(nameKey(name));
     const [id] = await redis([['GET', `name:${nameKey(name)}`]]);
     if (id) { const [real] = await redis([['HGET', 'names', id]]); return { target: id, name: real || name }; }
