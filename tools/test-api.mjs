@@ -1434,4 +1434,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await call(shopApi, { url: `/api/shop?me=${frank.playerId}` })).body.coins, before);
 }
 
+// ================================================================ 38. Crash : le sondage d'une manche en vol ne prend pas le verrou
+{
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  const g = (who, action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const crypto2 = require('node:crypto'), realInt = crypto2.randomInt;
+  run([['HINCRBY', `stats:${frank.playerId}`, 'bonus', 5000], ['DEL', `cr:${frank.playerId}`]]);
+  await tick(); crypto2.randomInt = (a, b) => (b === 2 ** 32 ? Math.floor(0.9 * 2 ** 32) : realInt(a, b)); // point de crash à 9,90
+  r = await g(frank, 'crash', { move: 'start', bet: 100 }); crypto2.randomInt = realInt;
+  assert.equal(r.body.done, false);
+  // Verrou tenu par autre chose (un autre coup en cours) : le sondage répond quand même, tout de suite, sans rien écrire.
+  await tick(); run([['SET', `shop:${frank.playerId}`, '1', 'PX', '60000']]);
+  const n0 = calls;
+  r = await g(frank, 'crash', { move: 'state' });
+  assert.deepEqual([r.status, r.body.done, r.body.point, r.body.coins], [200, false, undefined, undefined]);
+  assert.ok(calls - n0 <= 3, `sondage léger (${calls - n0} allers-retours)`);
+  assert.equal(run([['GET', `shop:${frank.playerId}`]])[0].result, '1', 'le verrou d\'un autre coup n\'est pas touché');
+  run([['DEL', `shop:${frank.playerId}`]]);
+  // Une fois la fusée explosée, le sondage passe par le chemin normal et règle la manche.
+  await later(40000, async () => { r = await g(frank, 'crash', { move: 'state' }); });
+  assert.deepEqual([r.body.done, r.body.result, r.body.win], [true, 'crash', 0], JSON.stringify(r.body));
+  assert.equal(run([['GET', `cr:${frank.playerId}`]])[0].result, null);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -119,6 +119,10 @@ module.exports = async (req, res) => {
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
       // tour (jusqu'à ~1,5 s) au lieu d'être refusée ; l'heure qui compte pour le Crash reste celle de son arrivée.
       const at = Date.now();
+      if (body.action === 'crash' && String(body.move || 'state') === 'state') {
+        const flying = await Gamble.crashPeek(playerId, at);
+        if (flying) return send(res, 200, flying);
+      }
       let lock = null;
       for (let tries = 0; tries < 25 && lock !== 'OK'; tries++) {
         if (tries) await new Promise(resolve => setTimeout(resolve, 60));

@@ -184,6 +184,15 @@ async function mines(id, body) {
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500;
 const crashAt = ms => Math.floor(Math.exp(CRASH_RATE * ms) * 100) / 100;
+// Sondage d'une manche en vol, sans verrou ni écriture : la page le fait chaque seconde pour savoir si la fusée a
+// explosé. Tant qu'elle vole, il ne doit jamais gêner le « Cash out » du joueur. Rend null dès qu'il y a quelque chose
+// à régler (explosée) ou rien en cours : le chemin normal, sous verrou, prend alors le relais.
+async function crashPeek(id, at) {
+  const [raw] = await redis([['GET', crKey(id)]]);
+  const g = raw ? JSON.parse(raw) : null;
+  if (!g || crashAt(at - g.t0) >= g.point) return null;
+  return { done: false, t0: g.t0, now: at, bet: g.bet, rate: CRASH_RATE }; // sans le solde : une seule lecture, la page ne s'en sert pas ici
+}
 async function crash(id, body, at) {
   const [raw] = await redis([['GET', crKey(id)]]);
   let g = raw ? JSON.parse(raw) : null;
@@ -208,4 +217,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

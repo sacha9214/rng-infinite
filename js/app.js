@@ -1300,6 +1300,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-10f', date: 'Oct 10, 2026', en: ['Crash: the rocket is much smoother, and Cash out no longer answers "One move at a time"'], fr: ['Crash : la fusée est beaucoup plus fluide, et « Cash out » ne répond plus « One move at a time »'] },
     { id: '2026-10-10e', date: 'Oct 10, 2026', en: ['Casino fixes: on phones the roulette wheel no longer covers the Red, Black and Even bets; a Crash cash-out is never refused because of bad timing; a blackjack hand or a Mines grid left open is kept for a week and always comes back after a reload'], fr: ['Corrections du casino : sur téléphone, la roue de la roulette ne recouvre plus les mises Rouge, Noir et Pair ; un encaissement au Crash n\'est plus jamais refusé pour une question de timing ; une main de blackjack ou une grille de Mines laissée ouverte est gardée une semaine et revient toujours après un rechargement'] },
     { id: '2026-10-10d', date: 'Oct 10, 2026', en: ['Casino: a small live strip shows all the coins that went through it (bets taken, winnings paid) and the latest results'], fr: ['Casino : un petit bandeau en direct montre toutes les pièces qui y sont passées (mises prises, gains versés) et les derniers résultats'] },
     { id: '2026-10-10c', date: 'Oct 10, 2026', en: ['Duels: the score is now a compact strip and the roll button always stays on screen, so no more scrolling down to roll'], fr: ['Duels : le score tient maintenant en une bande compacte et le bouton de tirage reste toujours à l\'écran, plus besoin de descendre pour tirer'] },
@@ -2623,7 +2624,7 @@
     drawHouse();
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
-    const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'One move at a time' : 'Gamble unavailable right now, try again');
+    const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'Too fast, try again in a second' : 'Gamble unavailable right now, try again');
     // ---- roulette : la roue européenne (ordre réel des cases), dessinée à plat puis inclinée en CSS
     const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
     const rw = $('#rw-canvas').getContext('2d'), RC = 260, SEG = (Math.PI * 2) / 37;
@@ -2819,7 +2820,7 @@
       for (let k = 0; k <= 48; k++) { const m = 1 + ((mult - 1) * k) / 48; pts.push([X(m), Y(m)]); }
       const fill = cc.createLinearGradient(0, Y(mult), 0, 236); fill.addColorStop(0, color + '55'); fill.addColorStop(1, color + '00');
       cc.beginPath(); cc.moveTo(34, 236); pts.forEach(([x, y]) => cc.lineTo(x, y)); cc.lineTo(pts[48][0], 236); cc.closePath(); cc.fillStyle = fill; cc.fill();
-      cc.beginPath(); pts.forEach(([x, y], k) => (k ? cc.lineTo(x, y) : cc.moveTo(x, y))); cc.strokeStyle = color; cc.lineWidth = 4; cc.lineCap = 'round'; cc.lineJoin = 'round'; cc.shadowColor = color; cc.shadowBlur = 16; cc.stroke(); cc.shadowBlur = 0;
+      cc.beginPath(); pts.forEach(([x, y], k) => (k ? cc.lineTo(x, y) : cc.moveTo(x, y))); cc.lineCap = 'round'; cc.lineJoin = 'round'; cc.strokeStyle = color + '33'; cc.lineWidth = 14; cc.stroke(); cc.strokeStyle = color + '55'; cc.lineWidth = 8; cc.stroke(); cc.strokeStyle = color; cc.lineWidth = 4; cc.stroke(); // halo sans shadowBlur, trop lent à chaque image
       const [hx, hy] = pts[48], [px, py] = pts[44], ang = Math.atan2(hy - py, hx - px);
       if (state === 'crash') { if (!boom.length) for (let k = 0; k < 26; k++) { const a = Math.random() * 7, v = 1 + Math.random() * 4; boom.push({ x: hx, y: hy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1 }); } boom.forEach(b => { b.x += b.vx; b.y += b.vy; b.vy += .08; b.l *= .95; cc.fillStyle = `rgba(251,146,60,${b.l})`; cc.beginPath(); cc.arc(b.x, b.y, 3 * b.l + 1, 0, 7); cc.fill(); }); return; }
       boom.length = 0;
@@ -2836,15 +2837,22 @@
     const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
     const runCrash = st => {
       Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
-      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.floor(Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)) * 100) / 100; $('#cr-mult').textContent = `${m.toFixed(2)}×`; $('#cr-go').textContent = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.floor(Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)) * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
       frame();
       clearInterval(Gamble.poll);
-      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } }, 700);
+      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } }, 1000);
     };
     $('#cr-go').addEventListener('click', async () => {
       if (Gamble.busy) return;
       Gamble.busy = true;
-      try { const res = await gamble('crash', Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip }); if (res.done) endCrash(res); else runCrash(res); } catch (err) { if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash(); else fail(err); } finally { Gamble.busy = false; }
+      try {
+        // Un refus passager (429 : deux demandes qui se croisent, ou trop de demandes depuis la même connexion) ne doit
+        // jamais faire rater un encaissement : la même demande repart aussitôt, jusqu'à quatre fois.
+        const move = Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip };
+        let res;
+        for (let k = 0; ; k++) { try { res = await gamble('crash', move); break; } catch (err) { if (err.status !== 429 || k >= 4 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
+        if (res.done) endCrash(res); else runCrash(res);
+      } catch (err) { if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash(); else fail(err); } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
     $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? Gamble.mn : null); });
