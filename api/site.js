@@ -238,7 +238,11 @@ async function kofiWebhook(req) {
     data = typeof raw === 'string' ? JSON.parse(raw) : raw;
   } catch (e) { return [400, { error: 'Unreadable message' }]; }
   const given = Buffer.from(String((data && data.verification_token) || '').trim()), expected = Buffer.from(token);
-  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return [401, { error: 'Wrong token' }];
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+    // Pour comprendre un refus sans jamais écrire de secret : seulement la forme du message et la longueur des deux jetons.
+    console.warn(`kofi 401: body=${typeof req.body}${req.body && typeof req.body === 'object' ? ' keys=' + Object.keys(req.body).slice(0, 6).join(',') : ''} type=${String(req.headers['content-type'] || '').slice(0, 50)} fields=${data && typeof data === 'object' ? Object.keys(data).slice(0, 5).join(',') : typeof data} given=${given.length} expected=${expected.length}`);
+    return [401, { error: 'Wrong token' }];
+  }
   // Seuls les dons comptent (ponctuels ou mensuels) ; une vente de boutique ou une commande est ignorée.
   // Ko-fi nomme un don « Tip » (« Donation » dans son ancien format) et un don mensuel « Subscription ».
   if (!['Tip', 'Donation', 'Subscription'].includes(String(data.type))) return [200, { ok: true, ignored: true }];
