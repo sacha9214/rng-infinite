@@ -1502,4 +1502,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(d).includes(frank.playerId) && !JSON.stringify(d).includes(frank.secret), 'aucun identifiant ni secret');
 }
 
+// ================================================================ 40. Point rouge de l'ampoule : suggestions reçues depuis la dernière vue
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
+  // Un joueur ordinaire n'apprend rien.
+  r = await post(bob, 'peek', { since: 0 }); assert.deepEqual(r.body, { owner: false });
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
+  r = await post(frank, 'peek', { since: 0 });
+  const had = r.body.fresh, seen = r.body.latest;
+  assert.equal(r.body.owner, true);
+  // Rien de neuf depuis la dernière vue ; puis une suggestion arrive.
+  assert.equal((await post(frank, 'peek', { since: seen })).body.fresh, 0);
+  await later(5000, async () => { r = await post(bob, 'suggest', { text: 'Add a pet system please' }); });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await post(frank, 'peek', { since: seen });
+  assert.deepEqual([r.body.fresh, r.body.latest > seen], [1, true]);
+  assert.equal((await post(frank, 'peek', { since: 0 })).body.fresh, had + 1);
+  assert.equal((await post(frank, 'peek', { since: r.body.latest })).body.fresh, 0, 'vue : plus de point');
+  run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

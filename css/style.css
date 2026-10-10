@@ -2408,7 +2408,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 
 /* Journal des mises à jour : au-dessus du lien GitHub ; pastille rouge tant que la dernière entrée n'est pas lue. */
 .gh-corner.news-corner { bottom: 60px; font-size: 1rem; cursor: pointer; }
-.news-corner.unread::after { content: ''; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px var(--site-bg); animation: news-pulse 1.8s ease-in-out infinite; }
+.news-corner.unread::after, .idea-corner.unread::after { content: ''; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px var(--site-bg); animation: news-pulse 1.8s ease-in-out infinite; }
 @keyframes news-pulse { 50% { transform: scale(1.25); } }
 .news-list { display: grid; gap: .9rem; max-height: 60vh; overflow-y: auto; }
 .news-item ul { margin: .3rem 0 0; padding-left: 1.1rem; font-size: .86rem; line-height: 1.5; }

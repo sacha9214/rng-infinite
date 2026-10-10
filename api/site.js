@@ -1,6 +1,7 @@
 // POST /api/site { action, … } — ce qui concerne le site plutôt qu'une partie : boîte à suggestions et fréquentation.
 //   visit                       (sans compte) compteurs anonymes du jour : visites, site d'origine, pays, appareil, langue
 //   suggest  { text }           (joueur) envoie une suggestion
+//   peek     { since }          (Owner) nombre de suggestions reçues depuis « since » : le point rouge de l'ampoule
 //   mine                        (joueur) ses suggestions, leur statut et la réponse éventuelle ; dit aussi s'il est Owner
 //   inbox                       (Owner) toutes les suggestions
 //   mark     { id, status, reply }   (Owner) change le statut et/ou répond     · delete { id } (Owner) supprime
@@ -192,6 +193,16 @@ module.exports = async (req, res) => {
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
     const stats = await readStats(playerId);
     const isOwner = Number(stats.owner) >= 1;
+
+    // Pour le créateur seulement : combien de suggestions sont arrivées depuis la dernière qu'il a vue (« since », l'heure
+    // de celle-ci, gardée par son navigateur) et l'heure de la plus récente. Sert au point rouge sur l'ampoule.
+    if (body.action === 'peek') {
+      if (!isOwner) return send(res, 200, { owner: false });
+      const since = Number(body.since) || 0;
+      const [fresh, last] = await redis([['ZCOUNT', 'sugg:all', since + 1, '+inf'], ['ZREVRANGE', 'sugg:all', 0, 0]]);
+      const [t] = last && last.length ? await redis([['HGET', suggKey(last[0]), 't']]) : [0];
+      return send(res, 200, { owner: true, fresh: Number(fresh) || 0, latest: Number(t) || 0 });
+    }
 
     if (body.action === 'mine') {
       const [ids] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);

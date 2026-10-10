@@ -207,6 +207,8 @@
     Store.setSetting('coins', state.coins);
     Store.setSetting('speedLv', state.speed || 0);
     paintRollButtons();
+    // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
+    if ((state.owned || []).includes('owner')) Inbox.watch();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
   const LEVER = '<span class="slot-lever" aria-hidden="true"></span>';
@@ -1044,6 +1046,7 @@
       try { state = await Online.quests(); } catch (err) { return; }
       if (!slot.isConnected) return;
     }
+    if (!state.daily || !Array.isArray(state.quests)) return; // réponse coupée en route (page rechargée pendant la lecture)
     QuestWatch.take(state, true);
     const left = Math.max(0, state.resetAt - Date.now());
     const resetIn = left > 3600000 ? `${Math.floor(left / 3600000)} h` : `${Math.max(1, Math.ceil(left / 60000))} min`;
@@ -3276,7 +3279,33 @@
   // ---------------------------------------------------------------- boîte à suggestions (bouton 💡)
   const SUGG_STATUS = { new: 'Sent', seen: 'Read', planned: 'Planned', done: 'Added', declined: 'Not planned' };
   const suggDate = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Point rouge sur l'ampoule, pour le créateur : une suggestion est arrivée depuis la dernière qu'il a vue sur la page
+  // Owner (settings.suggSeen garde l'heure de celle-ci, sur cet appareil). Revérifié toutes les 2 minutes, onglet visible.
+  const Inbox = {
+    timer: 0, fresh: 0, latest: 0,
+    paint() {
+      const b = document.querySelector('.idea-corner');
+      if (!b) return;
+      b.classList.toggle('unread', this.fresh > 0);
+      b.title = this.fresh > 0 ? `${this.fresh} new suggestion${this.fresh > 1 ? 's' : ''}` : 'Suggest an idea';
+    },
+    async check() {
+      if (document.hidden || !Store.player.name) return;
+      try {
+        const since = Store.settings.suggSeen || 0;
+        const r = await Online.site('peek', { since });
+        if (!r.owner) { clearInterval(this.timer); this.timer = 0; return; }
+        if ((Store.settings.suggSeen || 0) !== since) return; // la boîte a été ouverte entre-temps : réponse périmée
+        this.fresh = r.fresh; this.latest = r.latest; this.paint();
+      } catch (err) { /* prochain passage */ }
+    },
+    watch() { if (this.timer) return; this.timer = setInterval(() => this.check(), 120000); this.check(); },
+    // La page Owner est ouverte : tout ce qui est arrivé jusqu'ici est vu.
+    seen(latest) { if (latest > (Store.settings.suggSeen || 0)) Store.setSetting('suggSeen', latest); this.fresh = 0; this.paint(); },
+  };
   function openIdeas() {
+    // Le créateur avec des suggestions non lues va droit à sa boîte de réception.
+    if (Inbox.fresh > 0) { location.hash = '#/owner'; return; }
     if (!Store.player.name) { askName(openIdeas); return; }
     openModal(`
       <h2>💡 Suggest an idea</h2>
@@ -3432,6 +3461,7 @@
       const box = $('#o-inbox');
       if (currentView !== 'owner' || !box) return;
       $('#o-count').textContent = `${data.total} received`;
+      Inbox.seen(Math.max(0, ...data.suggestions.map(x => x.t)));
       box.innerHTML = data.suggestions.length ? data.suggestions.map(x => `
         <div class="idea-row" data-id="${x.id}">
           <div class="idea-head"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a><span class="panel-note">${suggDate(x.t)} · ${x.lang || '?'}</span>

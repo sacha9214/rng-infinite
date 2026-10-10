@@ -261,6 +261,7 @@
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],
     [/^(\d+) achievements unlocked: (.+)$/, m => `${m[1]} succès débloqués : ${m[2]}`],
+    [/^(\d+) new suggestions?$/, m => `${m[1]} nouvelle${m[1] === '1' ? '' : 's'} suggestion${m[1] === '1' ? '' : 's'}`],
     [/^Drop · ([\d,]+)$/, m => `Lâcher · ${nb(m[1])}`], [/^(\d+) balls: ([+−])([\d,]+)$/, m => `${m[1]} billes : ${m[2]}${nb(m[3])}`],
     [/^Spin · ([\d,]+)$/, m => `Lancer · ${nb(m[1])}`], [/^No line · −([\d,]+)$/, m => `Aucune ligne · −${nb(m[1])}`],
     [/^All the coins that went through the casino, all players together: bets taken and winnings paid · ([\d,]+) rounds played$/, m => `Toutes les pièces passées par le casino, tous joueurs confondus : mises prises et gains versés · ${nb(m[1])} manches jouées`],
