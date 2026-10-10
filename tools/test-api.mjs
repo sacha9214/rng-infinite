@@ -1668,6 +1668,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const c0 = (await fundNow()).cents; await kofi(tip({ message: '', from_name: 'Jo Example', amount: '3.00' })); assert.equal((await fundNow()).cents, c0 + 300); r = await post(frank, 'fund'); r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true, remove: true }); assert.deepEqual([r.body.pending.length, r.body.cents], [0, c0]); }
   // Un joueur ordinaire ne peut rien attribuer.
   assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
+  // Jeton collé avec un retour à la ligne ou des guillemets dans les réglages : accepté quand même.
+  for (const messy of ['kofi-secret-123\n', '  kofi-secret-123  ', '"kofi-secret-123"']) { process.env.KOFI_TOKEN = messy; r = await kofi(tip({ type: 'Shop Order' })); assert.equal(r.status, 200, JSON.stringify(messy)); }
   run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
   delete process.env.KOFI_TOKEN;
 }

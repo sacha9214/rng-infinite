@@ -228,7 +228,8 @@ async function matchPlayer(message, fromName) {
   return null;
 }
 async function kofiWebhook(req) {
-  const token = process.env.KOFI_TOKEN || '';
+  // Espaces, retours à la ligne ou guillemets collés par mégarde avec le jeton dans les réglages : ignorés.
+  const token = String(process.env.KOFI_TOKEN || '').trim().replace(/^["']|["']$/g, '').trim();
   if (!token) return [503, { error: 'Automatic contributions are not configured' }];
   let data;
   try {
@@ -236,7 +237,7 @@ async function kofiWebhook(req) {
     const raw = typeof body === 'string' ? (new URLSearchParams(body).get('data') || body) : body && body.data !== undefined ? body.data : body;
     data = typeof raw === 'string' ? JSON.parse(raw) : raw;
   } catch (e) { return [400, { error: 'Unreadable message' }]; }
-  const given = Buffer.from(String((data && data.verification_token) || '')), expected = Buffer.from(token);
+  const given = Buffer.from(String((data && data.verification_token) || '').trim()), expected = Buffer.from(token);
   if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return [401, { error: 'Wrong token' }];
   // Seuls les dons comptent (ponctuels ou mensuels) ; une vente de boutique ou une commande est ignorée.
   // Ko-fi nomme un don « Tip » (« Donation » dans son ancien format) et un don mensuel « Subscription ».
