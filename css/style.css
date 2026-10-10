@@ -2609,3 +2609,37 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .shop-tabs button { flex-direction: column; gap: .2rem; padding: .55rem .1rem; font-size: .56rem; letter-spacing: 0; }
   .shop-tabs button i { font-size: 1.25rem; }
 }
+
+/* ------------------------------------------------------------------ duel : score compact, bouton de tirage toujours à l'écran
+   Avant : une ligne par joueur (223 px à six) poussait les cartes et le bouton sous l'écran. Le score devient une
+   bande de pastilles, et le bloc du bouton reste collé en bas de l'écran tant qu'on n'a pas défilé jusqu'à lui. */
+.room-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .4rem; padding: 0; border: 0; background: none; margin-bottom: .8rem; }
+.room-board .board-row { min-width: 0; gap: .4rem; padding: .34rem .6rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); font-size: .78rem; }
+.room-board .board-row:first-child { border-top: 1px solid var(--outline); }
+.room-board .board-row.me { border-color: color-mix(in srgb, var(--chart-accent) 55%, var(--outline)); }
+.room-board .board-row .rank { width: auto; }
+.board-who { display: flex; align-items: center; gap: .3rem; min-width: 0; overflow: hidden; white-space: nowrap; }
+.board-who > a, .board-who > .bot-name { overflow: hidden; text-overflow: ellipsis; }
+.board-who > .muted { display: none; }
+.room-board .board-metric { gap: .4rem; }
+.room-board .board-metric > .mono, .room-board .board-metric > .board-wins { min-width: 0; }
+.room-board .xp-bar { width: 3rem; }
+.room-actions {
+  position: sticky; bottom: .6rem; z-index: 15; width: fit-content; max-width: 100%; margin: 1rem auto .6rem; padding: .6rem .9rem .5rem;
+  border: 1px solid var(--outline); border-radius: 1rem; background: color-mix(in srgb, var(--site-bg) 90%, transparent); backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+.room-actions .hint { margin: .35rem 0 0; }
+.room-actions .hint:empty { display: none; }
+.room-actions .room-wait { margin: .2rem 0; }
+@media (max-width: 560px) {
+  .room-board { grid-template-columns: repeat(auto-fit, minmax(7.2rem, 1fr)); gap: .3rem; }
+  .room-board .board-row { padding: .28rem .45rem; font-size: .72rem; }
+  .room-board .board-xp, .room-board .xp-bar, .room-board .board-who .title-chip { display: none; }
+  .room-actions { bottom: .4rem; padding: .45rem .6rem .4rem; }
+  .room-actions .btn-roll { padding-block: .7rem; font-size: 1rem; }
+  .room-actions .hint kbd, .room-actions .hint { font-size: .7rem; }
+}
+/* Téléphone : pas de clavier, donc pas de « press Space » ; la pastille de score garde la place pour le nom. */
+@media (pointer: coarse) { .room-actions .hint:has(kbd) { display: none; } }
+@media (max-width: 560px) { .room-board .board-row .rank { display: none; } .room-board .board-wins { word-spacing: -.35em; } }
