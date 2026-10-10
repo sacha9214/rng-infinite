@@ -2801,3 +2801,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .home-row > [data-fund-slot] { grid-column: 3; justify-self: start; width: min(17rem, 100%); }
   .home-row > #quests-slot:empty + [data-fund-slot] { grid-column: 2; justify-self: center; width: 100%; }
 }
+
+/* Page Owner : dons arrivés sans pseudo reconnu, à attribuer. */
+.o-fund-auto { margin: .2rem 0 .8rem; }
+.o-fund-pending { display: grid; gap: .5rem; margin-bottom: 1rem; padding: .7rem .8rem; border-radius: .7rem; border: 1px solid #eab308; background: rgba(234, 179, 8, .07); }
+.o-pending { display: grid; grid-template-columns: minmax(0, 1fr) 11rem auto auto; gap: .5rem; align-items: center; }
+.o-pending-what { display: grid; gap: .1rem; min-width: 0; font-size: .82rem; }
+.o-pending-what em { font-style: normal; color: var(--prose-2); overflow-wrap: anywhere; }
+.o-pending .input { text-align: left; text-transform: none; letter-spacing: 0; font-size: .82rem; }
+@media (max-width: 700px) { .o-pending { grid-template-columns: 1fr 1fr; } .o-pending-what, .o-pending .input { grid-column: 1 / -1; } }

@@ -13,7 +13,7 @@
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -193,10 +193,72 @@ async function fundState() {
   return { month, cents: Math.max(0, Number(m.cents) || 0), count: Number(m.count) || 0, goal: Number(c.goal) || Shop.FUND_GOAL, url: safeUrl(c.url) };
 }
 
+// Une contribution pour un joueur : son total (skin et titre Supporter), le total du mois (sauf si le montant y est
+// déjà : `counted`) et le journal. Une correction qui le ramène à zéro lui retire le skin s'il le portait.
+async function creditFund({ target, name, cents, counted = false, auto = false }) {
+  const now = Date.now(), month = monthKey(now);
+  const [total] = await redis([['HINCRBY', statsKey(target), 'supporter', cents]]);
+  const writes = [['ZADD', FUND_LOG, now, JSON.stringify({ t: now, name, cents, month, ...(auto ? { auto: 1 } : {}) })]];
+  if (!counted) writes.push(['HINCRBY', fundKey(month), 'cents', cents], ['HINCRBY', fundKey(month), 'count', cents > 0 ? 1 : 0]);
+  if (Number(total) <= 0) { writes.push(['HDEL', statsKey(target), 'supporter']); const [worn] = await redis([['HGET', 'skins', target]]); if (worn === 'supporter') writes.push(['HDEL', 'skins', target]); }
+  await redis(writes);
+}
+
+// ---------------------------------------------------------------- attribution automatique (webhook Ko-fi)
+// À chaque don, Ko-fi appelle /api/site?kofi=1 avec un formulaire dont le champ « data » est un JSON : montant, message
+// du donateur, numéro de transaction, et un jeton secret que seuls Ko-fi et le serveur connaissent (variable
+// d'environnement KOFI_TOKEN, posée par le créateur). Sans ce jeton exact, rien n'est pris en compte.
+// Le pseudo est cherché dans le message (puis dans le nom Ko-fi) ; trouvé, le joueur reçoit skin et titre aussitôt.
+// Introuvable, le don compte quand même dans le mois et attend sur la page Owner que le créateur dise à qui il est.
+// L'adresse e-mail du donateur n'est jamais gardée.
+const FUND_PENDING = 'fund:pending';
+async function matchPlayer(message, fromName) {
+  const text = String(message || '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 300);
+  const words = text.split(/[\s,;:!?()"'«»]+/).filter(w => w.length >= 2 && w.length <= 20);
+  const stripped = text.replace(/^.*?(?:pseudo|player name|username|name|nom|je suis|i am|i'm|my name is|c'est)\s*(?:is|est)?\s*[:=\-]?\s*/i, '');
+  const tries = [text, stripped, stripped.split(/[\s,;.!?]+/)[0], ...words, ...words.slice(0, -1).map((w, i) => `${w} ${words[i + 1]}`), String(fromName || '')];
+  const seen = new Set();
+  for (const raw of tries) {
+    const name = cleanName(raw);
+    if (!name || seen.has(nameKey(name)) || seen.size >= 30) continue;
+    seen.add(nameKey(name));
+    const [id] = await redis([['GET', `name:${nameKey(name)}`]]);
+    if (id) { const [real] = await redis([['HGET', 'names', id]]); return { target: id, name: real || name }; }
+  }
+  return null;
+}
+async function kofiWebhook(req) {
+  const token = process.env.KOFI_TOKEN || '';
+  if (!token) return [503, { error: 'Automatic contributions are not configured' }];
+  let data;
+  try {
+    const body = req.body;
+    const raw = typeof body === 'string' ? (new URLSearchParams(body).get('data') || body) : body && body.data !== undefined ? body.data : body;
+    data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (e) { return [400, { error: 'Unreadable message' }]; }
+  const given = Buffer.from(String((data && data.verification_token) || '')), expected = Buffer.from(token);
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return [401, { error: 'Wrong token' }];
+  // Seuls les dons comptent (ponctuels ou mensuels) ; une vente de boutique ou une commande est ignorée.
+  if (!['Donation', 'Subscription'].includes(String(data.type))) return [200, { ok: true, ignored: true }];
+  const cents = Math.round(Number(data.amount) * 100), tx = String(data.kofi_transaction_id || data.message_id || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
+  if (!Number.isFinite(cents) || cents <= 0 || cents > 1000000 || !tx) return [400, { error: 'Unreadable amount' }];
+  // Ko-fi renvoie un message tant qu'il n'a pas reçu de réponse : chaque transaction ne compte qu'une fois.
+  const [first] = await redis([['SET', `kofi:tx:${tx}`, '1', 'NX', 'EX', 200 * 86400]]);
+  if (first !== 'OK') return [200, { ok: true, duplicate: true }];
+  const found = await matchPlayer(data.message, data.from_name);
+  if (found) { await creditFund({ ...found, cents, auto: true }); return [200, { ok: true, matched: true }]; }
+  const now = Date.now(), month = monthKey(now);
+  await redis([['HINCRBY', fundKey(month), 'cents', cents], ['HINCRBY', fundKey(month), 'count', 1],
+    ['HSET', FUND_PENDING, tx, JSON.stringify({ tx, t: now, cents, from: cleanText(data.from_name, 40), message: cleanText(data.message, 200), currency: String(data.currency || '').slice(0, 5) })]]);
+  return [200, { ok: true, matched: false }];
+}
+
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST' });
   try {
+    // Message automatique de la page de dons (Ko-fi) : il arrive sur /api/site?kofi=1, dans un autre format.
+    if (/[?&]kofi=1/.test(req.url || '')) return send(res, ...(await kofiWebhook(req)));
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     if (body.action === 'visit') {
       await recordVisit(req, body);
@@ -247,7 +309,7 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
     if (!isOwner) return send(res, 403, { error: 'Owner only' });
     const id = String(body.id || '');
     if (body.action === 'mark' || body.action === 'delete') {
@@ -279,19 +341,26 @@ module.exports = async (req, res) => {
       const who = cleanName(body.name);
       const target = who ? await findPlayer(who) : null;
       if (!target) return send(res, 404, { error: 'No player with this name' });
-      const now = Date.now(), month = monthKey(now);
-      const [total] = await redis([['HINCRBY', statsKey(target), 'supporter', cents]]);
-      const writes = [['HINCRBY', fundKey(month), 'cents', cents], ['HINCRBY', fundKey(month), 'count', cents > 0 ? 1 : 0],
-        ['ZADD', FUND_LOG, now, JSON.stringify({ t: now, name: who, cents, month })]];
-      // Correction qui ramène un joueur à zéro : il n'est plus Supporter, et le skin lui est retiré s'il le portait.
-      if (Number(total) <= 0) { writes.push(['HDEL', statsKey(target), 'supporter']); const [worn] = await redis([['HGET', 'skins', target]]); if (worn === 'supporter') writes.push(['HDEL', 'skins', target]); }
-      await redis(writes);
+      await creditFund({ target, name: who, cents });
     }
-    if (['fund', 'fundAdd', 'fundSet'].includes(body.action)) {
-      const [raw] = await redis([['ZREVRANGE', FUND_LOG, 0, 49]]);
+    // Contribution arrivée toute seule mais sans pseudo reconnu : le créateur dit à qui elle revient (le montant est
+    // déjà dans le total du mois), ou la classe sans suite.
+    if (body.action === 'fundAssign') {
+      const [raw] = await redis([['HGET', FUND_PENDING, String(body.tx || '')]]);
+      if (!raw) return send(res, 404, { error: 'This contribution is no longer waiting' });
+      const item = JSON.parse(raw);
+      if (!body.dismiss) {
+        const who = cleanName(body.name), target = who ? await findPlayer(who) : null;
+        if (!target) return send(res, 404, { error: 'No player with this name' });
+        await creditFund({ target, name: who, cents: item.cents, counted: true, auto: true });
+      }
+      await redis([['HDEL', FUND_PENDING, String(body.tx)]]);
+    }
+    if (['fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) {
+      const [raw, waiting] = await redis([['ZREVRANGE', FUND_LOG, 0, 49], ['HVALS', FUND_PENDING]]);
       const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); });
       const totals = await redis(months.map(mo => ['HGETALL', fundKey(mo)]));
-      return send(res, 200, { ...(await fundState()), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
+      return send(res, 200, { ...(await fundState()), auto: !!process.env.KOFI_TOKEN, pending: (waiting || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => b.t - a.t), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
     }
     const [ids, total] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1], ['ZCARD', 'sugg:all']]);
     return send(res, 200, { suggestions: await listSuggestions(ids || []), total: Number(total) || 0 });

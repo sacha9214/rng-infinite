@@ -855,7 +855,7 @@
       <ol class="fund-steps">
         <li>Open the contribution page and give what you want.</li>
         <li>Write your player name in the message${name ? `: <b data-no-i18n>${esc(name)}</b>` : ''}.</li>
-        <li>The creator adds your skin by hand, usually within a day.</li>
+        <li>Your skin arrives right away if your name is recognised, otherwise within a day.</li>
       </ol>
       <p class="panel-note">Under 18? Ask a parent first: it is their money and their decision.</p>
       <div class="actions"><button class="btn" id="fund-close">Close</button><a class="btn-roll small" href="${esc(link)}" target="_blank" rel="noopener" style="text-decoration:none">Contribute</a></div>`, m => {
@@ -3491,6 +3491,10 @@
         <div class="panel stats-sep">
           <div class="panel-head"><h3 class="panel-title">Server fund</h3><span class="panel-note" data-no-i18n>${f.month} · ${euros(f.cents)} / ${euros(f.goal)} · ${f.count} contribution${f.count === 1 ? '' : 's'}</span></div>
           <span class="fund-bar"><span style="width:${Math.min(100, (f.cents / f.goal) * 100)}%"></span></span>
+          <p class="panel-note o-fund-auto">${f.auto ? '🟢 Automatic: a tip whose message contains a player name gives the skin by itself.' : '⚪ Automatic attribution is off (no Ko-fi token on the server yet): record contributions by hand below.'}</p>
+          ${(f.pending || []).length ? `<div class="o-fund-pending"><span class="eyebrow">Waiting for a player · ${f.pending.length}</span><span class="panel-note">These tips arrived without a recognisable player name. The amount is already counted in the month: just say who gets the skin.</span>${f.pending.map(x => `
+            <form class="o-pending" data-tx="${esc(x.tx)}"><span class="o-pending-what"><b data-no-i18n>${euros(x.cents)}</b> <span class="panel-note" data-no-i18n>${suggDate(x.t)} · ${esc(x.from || '?')}</span><em data-no-i18n>${esc(x.message || '(no message)')}</em></span>
+              <input class="input" name="name" maxlength="20" placeholder="Player name" aria-label="Player name" required><button class="btn">Give the skin</button><button class="btn ghost" type="button" data-dismiss>Dismiss</button></form>`).join('')}</div>` : ''}
           <div class="o-fund-forms">
             <form class="o-fund-form" id="o-fund-add">
               <span class="eyebrow">Record a contribution</span>
@@ -3520,6 +3524,11 @@
         catch (err) { btn.disabled = false; toast([404, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
       });
       send($('#o-fund-add'), 'fundAdd', d => ({ name: d.name, euros: Number(String(d.euros).replace(',', '.')) }));
+      box.querySelectorAll('.o-pending').forEach(form => {
+        const run = extra => Online.site('fundAssign', { tx: form.dataset.tx, ...extra }).then(next => { drawFund(next); toast(extra.dismiss ? 'Dismissed' : 'Skin given'); }).catch(err => toast([404, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'));
+        form.addEventListener('submit', e => { e.preventDefault(); run({ name: new FormData(form).get('name') }); });
+        form.querySelector('[data-dismiss]').addEventListener('click', () => run({ dismiss: true }));
+      });
       send($('#o-fund-set'), 'fundSet', d => ({ goal: Number(String(d.goal).replace(',', '.')), url: d.url }));
     };
     Online.site('fund').then(drawFund).catch(() => {});

@@ -46,6 +46,7 @@ export function fakeRedis() {
     HGET: (k, f) => (db.has(k) && db.get(k).has(f) ? db.get(k).get(f) : null),
     HMGET: (k, ...fields) => fields.map(f => COMMANDS.HGET(k, f)),
     HGETALL: k => (db.has(k) ? [...db.get(k).entries()].flat() : []),
+    HVALS: k => (db.has(k) ? [...db.get(k).values()] : []),
     HKEYS: k => (db.has(k) ? [...db.get(k).keys()] : []),
     HLEN: k => (db.has(k) ? db.get(k).size : 0),
     HEXISTS: (k, f) => (db.has(k) && db.get(k).has(f) ? 1 : 0),

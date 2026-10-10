@@ -1606,4 +1606,65 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HDEL', `stats:${frank.playerId}`, 'owner'], ['HDEL', 'fund:cfg', 'url', 'goal']]);
 }
 
+// ================================================================ 43. Dons automatiques : le message de Ko-fi donne le skin tout seul
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
+  const fundNow = async () => (await call(siteApi, { method: 'POST', body: { action: 'fundInfo' } })).body;
+  // Ko-fi envoie un formulaire : un champ « data » qui contient du JSON.
+  const kofi = (data, asString) => call(siteApi, { method: 'POST', url: '/api/site?kofi=1', body: asString ? 'data=' + encodeURIComponent(JSON.stringify(data)) : { data: JSON.stringify(data) } });
+  const tip = (over = {}) => ({ verification_token: 'kofi-secret-123', message_id: 'm-' + Math.random().toString(36).slice(2), kofi_transaction_id: 'tx-' + Math.random().toString(36).slice(2), type: 'Donation', from_name: 'Somebody', message: '', amount: '3.00', currency: 'EUR', email: 'private@example.com', is_public: true, ...over });
+  // Pas configuré : rien n'est accepté.
+  delete process.env.KOFI_TOKEN;
+  assert.equal((await kofi(tip())).status, 503);
+  process.env.KOFI_TOKEN = 'kofi-secret-123';
+  // Mauvais jeton, jeton absent, données illisibles : refusés sans rien écrire.
+  const before = await fundNow();
+  assert.equal((await kofi(tip({ verification_token: 'nope' }))).status, 401);
+  assert.equal((await kofi(tip({ verification_token: undefined }))).status, 401);
+  assert.equal((await call(siteApi, { method: 'POST', url: '/api/site?kofi=1', body: { data: '{pas du json' } })).status, 400);
+  assert.equal((await kofi(tip({ amount: 'abc' }))).status, 400);
+  assert.deepEqual(await fundNow(), before);
+  // Le pseudo est dans le message (au milieu d'une phrase, autre casse) : skin et titre tout de suite.
+  assert.ok(!(await state(alice)).owned.includes('supporter'));
+  const t1 = tip({ message: 'Love the game! my name is ALICE :)', amount: '5.00' });
+  r = await kofi(t1, true);
+  assert.deepEqual([r.status, r.body.matched], [200, true], JSON.stringify(r.body));
+  assert.ok((await state(alice)).owned.includes('supporter'));
+  assert.equal((await fundNow()).cents, before.cents + 500);
+  // Ko-fi renvoie le même message : compté une seule fois.
+  r = await kofi(t1); assert.equal(r.body.duplicate, true);
+  assert.equal((await fundNow()).cents, before.cents + 500);
+  // Une vente de boutique n'est pas un don.
+  r = await kofi(tip({ type: 'Shop Order', message: 'Alice' })); assert.equal(r.body.ignored, true);
+  assert.equal((await fundNow()).cents, before.cents + 500);
+  // Aucun pseudo reconnu : le don compte dans le mois et attend sur la page du créateur, sans l'adresse e-mail.
+  const t2 = tip({ message: 'keep it up!!', from_name: 'Anonymous Fan', amount: '2.50' });
+  r = await kofi(t2); assert.deepEqual([r.status, r.body.matched], [200, false]);
+  assert.equal((await fundNow()).cents, before.cents + 750);
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
+  r = await post(frank, 'fund');
+  assert.equal(r.body.auto, true);
+  assert.deepEqual(r.body.pending.map(x => [x.cents, x.from, x.message]), [[250, 'Anonymous Fan', 'keep it up!!']]);
+  assert.ok(!JSON.stringify(r.body).includes('private@example.com') && !JSON.stringify(run([['HGETALL', 'fund:pending'], ['ZRANGE', 'fund:log', '0', '-1']])).includes('private@example.com'), 'aucune adresse e-mail gardée');
+  assert.ok(r.body.log.some(x => x.name === 'Alice' && x.cents === 500 && x.auto === 1));
+  // Le créateur l'attribue à Frank : skin donné, le total du mois ne bouge pas (déjà compté).
+  const tx = r.body.pending[0].tx;
+  assert.equal((await post(frank, 'fundAssign', { tx, name: 'Nobody Here' })).status, 404);
+  r = await post(frank, 'fundAssign', { tx, name: 'Frank' });
+  assert.deepEqual([r.status, r.body.pending.length, r.body.cents], [200, 0, before.cents + 750], JSON.stringify(r.body).slice(0, 200));
+  assert.ok((await state(frank)).owned.includes('supporter'));
+  assert.equal((await post(frank, 'fundAssign', { tx, name: 'Frank' })).status, 404, 'déjà traité');
+  // Le pseudo seul dans le nom Ko-fi suffit aussi ; un don classé sans suite disparaît de l'attente.
+  r = await kofi(tip({ message: '', from_name: 'alice', amount: '1' })); assert.equal(r.body.matched, true);
+  const t3 = tip({ message: '???', from_name: 'x' }); await kofi(t3);
+  r = await post(frank, 'fund'); assert.equal(r.body.pending.length, 1);
+  r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true }); assert.equal(r.body.pending.length, 0);
+  // Un joueur ordinaire ne peut rien attribuer.
+  assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
+  run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
+  delete process.env.KOFI_TOKEN;
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
