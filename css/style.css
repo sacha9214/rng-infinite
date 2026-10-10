@@ -2715,3 +2715,30 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 @media (max-width: 350px) { .sm-machine { --c: 3.5rem; } }
 @media (prefers-reduced-motion: reduce) { .sm-bulbs i, .sm-cell.win, .sm-machine[data-state="jackpot"], .sm-reel.stopped { animation: none; } .sm-strip.blur { filter: none; } }
 .g-game[data-game="slots"] .actions { display: flex; }
+
+/* ------------------------------------------------------------------ page Owner : carte, heures, casino, joueurs */
+.o-section { margin: 1.8rem 0 .7rem; font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.o-map-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem; align-items: start; }
+.o-map { display: block; width: 100%; height: auto; border-radius: .6rem; background: radial-gradient(ellipse at 50% 40%, rgba(129, 140, 248, .08), transparent 70%), var(--surface-dim); }
+.o-map path { fill: var(--surface-raised); stroke: var(--site-bg); stroke-width: .5; transition: filter .15s ease; }
+.o-map path:hover { filter: brightness(1.5); }
+.o-dot { fill: rgba(244, 114, 182, .75); stroke: #fff; stroke-width: .4; }
+.o-ping { fill: #f472b6; stroke: #fff; stroke-width: .5; transform-box: fill-box; transform-origin: center; animation: o-ping 1.8s ease-out infinite; }
+@keyframes o-ping { 0% { transform: scale(.7); opacity: 1; } 70% { transform: scale(2.1); opacity: .15; } 100% { transform: scale(.7); opacity: 1; } }
+.o-countries { display: grid; gap: .1rem; font-size: .78rem; }
+.o-country { display: grid; grid-template-columns: minmax(0, 1fr) auto 3.2rem; gap: .5rem; align-items: baseline; padding: .22rem 0; border-top: 1px solid var(--outline); }
+.o-country:first-child { border-top: 0; }
+.o-country > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-country .panel-note { text-align: right; }
+.o-hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; height: 8rem; align-items: end; padding-bottom: 1.1rem; }
+.o-hour { position: relative; height: 100%; display: flex; align-items: flex-end; }
+.o-hour i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #a855f7, #3b82f6); }
+.o-hour em { position: absolute; left: 0; right: 0; bottom: -1.1rem; text-align: center; font: 500 .6rem var(--font-mono); color: var(--prose-3); }
+.o-tr.c5 { grid-template-columns: minmax(6.5rem, 1.4fr) repeat(4, minmax(3rem, 1fr)); }
+.o-tr.c4 { grid-template-columns: minmax(6.5rem, 1.6fr) repeat(3, minmax(3rem, 1fr)); }
+.o-up { color: #34d399; } .o-down { color: #f87171; }
+@media (max-width: 760px) { .o-map-wrap { grid-template-columns: 1fr; } .o-countries { grid-template-columns: 1fr 1fr; column-gap: 1rem; } }
+@media (prefers-reduced-motion: reduce) { .o-ping { animation: none; } }
+.o-tr.c6 { grid-template-columns: 3.2rem repeat(4, minmax(2.6rem, 1fr)) minmax(5.6rem, 1.5fr); }
+.o-tr.c6 span, .o-tr.c5 span, .o-tr.c4 span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) { .o-countries { grid-template-columns: 1fr; } }

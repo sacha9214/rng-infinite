@@ -3264,6 +3264,7 @@
       <div class="page page-wide">
         <h1 class="page-title" data-no-i18n>Owner</h1>
         <div id="o-stats"><div class="empty">Loading…</div></div>
+        <div id="o-insights"></div>
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>
       </div>`;
     const denied = err => `<div class="empty">${err.status === 403 ? 'This page is for the creator of the game.' : 'Unavailable right now.'}</div>`;
@@ -3277,7 +3278,7 @@
       if (currentView !== 'owner' || !box) return;
       const today = st.days[0], week = st.days.slice(0, 7), sum = (list, k) => list.reduce((x, d) => x + d[k], 0);
       box.innerHTML = `
-        <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC.</p>
+        <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC. The map counts visits per square of about 100 km, never per player.</p>
         <div class="tiles">
           ${tile('Visits today', fmt(today.visits), `${fmt(today.uniq)} devices · ${fmt(today.fresh)} new`)}
           ${tile('Visits, 7 days', fmt(sum(week, 'visits')), `${fmt(sum(week, 'fresh'))} new devices`)}
@@ -3295,6 +3296,77 @@
           ${st.days.slice(0, 14).map(d => `<div class="o-tr"><span>${d.day}</span><span>${fmt(d.visits)}</span><span>${fmt(d.uniq)}</span><span>${fmt(d.fresh)}</span><span>${d.players ? fmt(d.players) : '–'}</span><span>${d.rolls ? fmt(d.rolls) : '–'}</span></div>`).join('')}</div>
         </div>`;
     }).catch(err => { if ($('#o-stats')) $('#o-stats').innerHTML = denied(err); });
+    // ---- Carte des visites, heures, casino, joueurs : tout vient de l'action « insights » (agrégats, aucun identifiant).
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack' };
+    const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
+    const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)}%` : '–');
+    const table = (cols, rows, cls = '') => `<div class="o-table"><div class="o-tr head ${cls}">${cols.map(c => `<span>${c}</span>`).join('')}</div>${rows.length ? rows.map(r => `<div class="o-tr ${cls}">${r.map(c => `<span>${c}</span>`).join('')}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    const panel = (title, note, body) => `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3>${note ? `<span class="panel-note">${note}</span>` : ''}</div>${body}</div>`;
+    Promise.all([Online.site('insights'), fetch('data/world-map.json').then(r => r.json()).catch(() => null)]).then(([d, world]) => {
+      const box = $('#o-insights');
+      if (currentView !== 'owner' || !box) return;
+      // Carte : chaque pays teinté selon ses visites (échelle logarithmique), un rond par case de 100 km, les cases
+      // du jour qui pulsent.
+      const byCountry = new Map(d.map.countries.map(c => [c.name, c.count])), visits = d.map.countries.reduce((x, c) => x + c.count, 0);
+      const maxC = Math.max(1, ...d.map.countries.filter(c => c.name !== 'ZZ').map(c => c.count));
+      const nameOf = c => (world && world.points[c] ? world.points[c][2] : c === 'ZZ' ? 'Unknown' : c);
+      let mapHTML = '<div class="empty">Map unavailable right now.</div>';
+      if (world) {
+        const X = lon => ((lon + 180) / 360) * world.w, Y = lat => ((world.top - lat) / 360) * world.w;
+        const shade = n => (n ? `rgba(129,140,248,${(.22 + .68 * (Math.log(1 + n) / Math.log(1 + maxC))).toFixed(2)})` : '');
+        const dot = (p, cls) => `<circle class="${cls}" cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="${Math.min(9, 1.6 + Math.sqrt(p.n) * .9).toFixed(1)}" data-tip="${esc(`<b>${fmt(p.n)}</b> ${p.n > 1 ? 'visits' : 'visit'} around ${Math.abs(p.lat)}°${p.lat < 0 ? 'S' : 'N'} ${Math.abs(p.lon)}°${p.lon < 0 ? 'W' : 'E'}`)}"/>`;
+        mapHTML = `<svg class="o-map" viewBox="0 0 ${world.w} ${world.h}" role="img" aria-label="World map of visits">
+          ${world.countries.map(c => { const n = byCountry.get(c.c) || 0; return `<path d="${c.d}"${n ? ` style="fill:${shade(n)}"` : ''} data-tip="${esc(`<b>${c.n}</b><br>${n ? `${fmt(n)} visits · ${pct(n, visits)}` : 'no visit'}`)}"/>`; }).join('')}
+          ${d.map.points.map(p => dot(p, 'o-dot')).join('')}${d.map.today.map(p => dot(p, 'o-ping')).join('')}
+        </svg>`;
+      }
+      const offset = -new Date().getTimezoneOffset() / 60, localHours = d.hours.map((_, h) => d.hours[((h - Math.round(offset)) % 24 + 24) % 24]), maxH = Math.max(1, ...localHours);
+      const peak = localHours.indexOf(Math.max(...localHours));
+      // Casino.
+      const c = d.casino, allRounds = c.allTime.reduce((x, g) => x + g.count, 0), keeps = c.total.bet - c.total.won;
+      const best = c.allTime.slice().sort((a, b) => b.count - a.count)[0];
+      const tracked = c.tracked.filter(g => g.rounds).sort((a, b) => b.rounds - a.rounds);
+      // Joueurs.
+      const pl = d.players;
+      box.innerHTML = `
+        <div class="panel stats-sep">
+          <div class="panel-head"><h3 class="panel-title">Where players connect from · 30 days</h3><span class="panel-note">${fmt(d.map.countries.filter(x => x.name !== 'ZZ').length)} countries · ${d.map.points.length ? `${fmt(d.map.points.length)} areas, the pulsing ones are today` : 'area dots start filling in from today'}</span></div>
+          <div class="o-map-wrap">${mapHTML}
+            <div class="o-countries">${d.map.countries.slice(0, 12).map(x => `<div class="o-country"><span data-no-i18n>${flag(x.name)} ${esc(nameOf(x.name))}</span><b class="mono">${fmt(x.count)}</b><span class="panel-note mono">${pct(x.count, visits)}</span></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>
+          </div>
+        </div>
+        ${panel('When they play · 30 days', `your local time · busiest hour: ${peak}:00`, `<div class="o-hours">${localHours.map((n, h) => `<span class="o-hour" data-tip="${esc(`<b>${h}:00 – ${h}:59</b><br>${fmt(n)} visits`)}"><i style="height:${Math.max(2, (n / maxH) * 100)}%"></i><em>${h % 3 === 0 ? h : ''}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}
+        <h2 class="o-section">Casino</h2>
+        <div class="tiles">
+          ${tile('Rounds played', fmt(allRounds), `most played: ${best && best.count ? GAME_NAMES[best.name] : '–'}`)}
+          ${tile('Coins wagered', compact(c.total.bet), `${compact(c.total.won)} paid back`)}
+          ${keeps >= 0 ? tile('The house kept', compact(keeps), `${pct(keeps, c.total.bet)} of the bets`) : tile('The house lost', compact(-keeps), 'players are ahead overall')}
+          ${tile('Players who gambled', fmt(c.gamblers), `${pct(c.gamblers, c.unlocked)} of the ${fmt(c.unlocked)} who unlocked it`)}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('Most played games · all time', c.allTime.slice().sort((a, b) => b.count - a.count), n => GAME_NAMES[n] || n)}
+          ${panel('Per game', 'counted since 11 Oct 2026', table(['Game', 'Rounds', 'Wagered', 'Paid', 'Return'], tracked.map(g => [GAME_NAMES[g.name], fmt(g.rounds), compact(g.bet), compact(g.won), pct(g.won, g.bet)]), 'c5'))}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${panel('Casino, day by day', 'last 14 days', table(['Day', 'Players', 'Rounds', 'Wagered', 'House', 'Top game'], c.daily.filter(x => x.rounds).map(x => { const topGame = Object.entries(x.games).sort((a, b) => b[1] - a[1])[0]; return [x.day.slice(5), fmt(x.players), fmt(x.rounds), compact(x.bet), `${x.bet - x.won >= 0 ? '+' : '−'}${compact(Math.abs(x.bet - x.won))}`, GAME_NAMES[topGame[0]]]; }), 'c6'))}
+          ${panel('Biggest gamblers', 'all time · net = won − wagered', table(['Player', 'Rounds', 'Wagered', 'Net'], c.topWagered.map(x => [`<a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>`, fmt(x.rounds), compact(x.bet), `<span class="${x.net >= 0 ? 'o-up' : 'o-down'}">${x.net >= 0 ? '+' : '−'}${compact(Math.abs(x.net))}</span>`]), 'c4'))}
+        </div>
+        <h2 class="o-section">Players</h2>
+        <div class="tiles">
+          ${tile('Active, 24 h', fmt(pl.active.day), `${fmt(pl.active.week)} in 7 days · ${fmt(pl.active.month)} in 30`)}
+          ${tile('Rolls, all time', compact(pl.totalRolls), `${fmt(Math.round(pl.totalRolls / Math.max(1, pl.rolled)))} per player on average`)}
+          ${tile('Coins in circulation', compact(d.economy.coins), `${compact(d.economy.earned)} earned · ${compact(d.economy.spent)} spent`)}
+          ${tile('Daily streak alive', fmt(pl.streaks), `${fmt(pl.questsDone)} quests claimed in all`)}
+          ${tile('Top rolls ever', `${fmt(pl.top.infinite)} · ${fmt(pl.top.divine)} · ${fmt(pl.top.celestial)}`, 'Infinite · Divine · Celestial')}
+          ${tile('Duels won', fmt(pl.duelWins), 'against real players and bots')}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('How much they have rolled · players', pl.rollBuckets, n => `${n} rolls`)}
+          ${bars('Roll speed level · players', pl.speed)}
+          ${bars('Equipped skins', pl.skins, n => (Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n))}
+          ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
+        </div>`;
+    }).catch(err => { if ($('#o-insights')) $('#o-insights').innerHTML = err.status === 403 ? '' : '<div class="empty">Insights unavailable right now.</div>'; });
     const drawInbox = data => {
       const box = $('#o-inbox');
       if (currentView !== 'owner' || !box) return;

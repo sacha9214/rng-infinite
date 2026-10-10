@@ -23,8 +23,15 @@ const refuse = (status, error) => Object.assign(new Error(error), { status });
 // le gain s'ajoutent aux totaux et la manche rejoint un fil de 20 entrées ; ces commandes partent avec l'écriture du
 // résultat, sans aller-retour de plus.
 const HOUSE_KEY = 'casino', FEED_KEY = 'casino:feed', FEED_KEPT = 20;
+// Pour la page Owner : les mêmes totaux par jeu (r:, b:, w:), les mêmes par jour (casino:d:<jour>, gardés 100 jours)
+// et les joueurs du jour (casino:p:<jour>, un ensemble d'identifiants qui ne sert qu'à les compter).
+const dayOf = t => new Date(t).toISOString().slice(0, 10);
 function ledger(id, game, bet, win) {
-  const out = [['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win]];
+  const day = dayOf(Date.now()), daily = `casino:d:${day}`, players = `casino:p:${day}`;
+  const out = [['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win],
+    ['HINCRBY', HOUSE_KEY, `r:${game}`, 1], ['HINCRBY', HOUSE_KEY, `b:${game}`, bet], ['HINCRBY', HOUSE_KEY, `w:${game}`, win],
+    ['HINCRBY', daily, `r:${game}`, 1], ['HINCRBY', daily, `b:${game}`, bet], ['HINCRBY', daily, `w:${game}`, win], ['EXPIRE', daily, 100 * 86400],
+    ['SADD', players, id], ['EXPIRE', players, 100 * 86400]];
   if (win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
   return out;
 }

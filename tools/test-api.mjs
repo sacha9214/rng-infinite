@@ -1457,4 +1457,49 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(run([['GET', `cr:${frank.playerId}`]])[0].result, null);
 }
 
+// ================================================================ 39. Page Owner : carte des visites, heures, casino par jeu, joueurs
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const post = (body, headers = {}) => call(siteApi, { method: 'POST', body, headers });
+  const day = new Date(Date.now()).toISOString().slice(0, 10);
+  // Visites avec la position donnée par l'hébergeur : seule la case arrondie au degré est comptée, sans rien d'autre.
+  const paris = { 'x-vercel-ip-country': 'FR', 'x-vercel-ip-latitude': '48.8566', 'x-vercel-ip-longitude': '2.3522', 'x-forwarded-for': '9.9.9.1' };
+  const g0 = Number(run([['HGET', `ang:${day}`, '49,2']])[0].result) || 0;
+  await post({ action: 'visit', lang: 'fr' }, paris); await post({ action: 'visit', lang: 'fr' }, paris);
+  await post({ action: 'visit' }, { 'x-vercel-ip-country': 'US', 'x-vercel-ip-latitude': '40.71', 'x-vercel-ip-longitude': '-74.01', 'x-forwarded-for': '9.9.9.2' });
+  await post({ action: 'visit' }, { 'x-vercel-ip-country': 'US', 'x-forwarded-for': '9.9.9.3' }); // sans position : pays seulement
+  await post({ action: 'visit' }, { 'x-vercel-ip-latitude': 'abc', 'x-vercel-ip-longitude': '500', 'x-forwarded-for': '9.9.9.4' }); // position invalide : ignorée
+  const geo = Object.fromEntries((() => { const f = run([['HGETALL', `ang:${day}`]])[0].result; const o = []; for (let i = 0; i < f.length; i += 2) o.push([f[i], Number(f[i + 1])]); return o; })());
+  assert.equal(geo['49,2'], g0 + 2); assert.equal(geo['41,-74'], 1);
+  assert.ok(Object.keys(geo).every(k => /^-?\d{1,2},-?\d{1,3}$/.test(k)), 'des cases entières seulement');
+  assert.ok(!JSON.stringify(run([['HGETALL', `ang:${day}`], ['HGETALL', `an:${day}`]])).includes('9.9.9'), 'aucune adresse IP stockée');
+  { const hh = String(new Date(Date.now()).getUTCHours()).padStart(2, '0'); assert.ok(Number(run([['HGET', `an:${day}`, `h:${hh}`]])[0].result) >= 5, 'heure de la visite comptée'); }
+  // Réservé au créateur.
+  r = await post({ action: 'insights', playerId: frank.playerId, secret: frank.secret }); assert.equal(r.status, 403);
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
+  r = await post({ action: 'insights', playerId: frank.playerId, secret: frank.secret });
+  run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
+  assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 300));
+  const d = r.body;
+  assert.ok(d.map.countries.find(c => c.name === 'FR').count >= 2 && d.map.countries.find(c => c.name === 'US').count >= 2);
+  assert.ok(d.map.points.some(p => p.lat === 49 && p.lon === 2 && p.n >= 2) && d.map.today.some(p => p.lat === 41 && p.lon === -74));
+  assert.equal(d.hours.length, 24); assert.ok(d.hours.reduce((x, v) => x + v, 0) >= 5);
+  // Casino : les manches par jeu de toujours viennent des fiches des joueurs ; les mises par jeu des compteurs de la maison.
+  const sumAll = d.casino.allTime.reduce((x, g) => x + g.count, 0);
+  assert.ok(sumAll > 20 && d.casino.allTime.find(g => g.name === 'plinko').count >= 10, JSON.stringify(d.casino.allTime));
+  const tracked = Object.fromEntries(d.casino.tracked.map(g => [g.name, g]));
+  assert.ok(tracked.plinko.rounds >= 10 && tracked.plinko.bet >= 1000 && tracked.roulette.rounds >= 1, JSON.stringify(d.casino.tracked));
+  assert.equal(d.casino.tracked.reduce((x, g) => x + g.bet, 0) <= d.casino.total.bet, true);
+  assert.ok(d.casino.daily[0].rounds >= 11 && d.casino.daily[0].players >= 1 && d.casino.daily[0].games.plinko >= 10, JSON.stringify(d.casino.daily[0]));
+  assert.ok(d.casino.gamblers >= 1 && d.casino.topWagered[0].bet >= d.casino.topWagered[d.casino.topWagered.length - 1].bet);
+  assert.ok(d.casino.topWagered.some(x => x.name === 'Frank'));
+  // Joueurs et économie.
+  assert.ok(d.players.named >= 3 && d.players.rolled >= 3 && d.players.rollBuckets.reduce((x, b) => x + b.count, 0) === d.players.rolled);
+  assert.ok(d.players.active.day >= 1 && d.players.active.month >= d.players.active.week && d.players.active.week >= d.players.active.day);
+  assert.equal(d.players.speed.reduce((x, s) => x + s.count, 0), d.players.named);
+  assert.ok(d.players.speed[5].count >= 1, 'Frank est au niveau 5 de vitesse');
+  assert.ok(d.economy.coins >= 0 && d.economy.earned >= d.economy.coins);
+  assert.ok(!JSON.stringify(d).includes(frank.playerId) && !JSON.stringify(d).includes(frank.secret), 'aucun identifiant ni secret');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
