@@ -1297,6 +1297,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-10b', date: 'Oct 10, 2026', en: ['Shop reorganised: one tab per category (Skins, Buttons, Emotes, Cases, Speed) and your coins always shown at the top'], fr: ['Shop réorganisé : un onglet par catégorie (Skins, Boutons, Émotes, Caisses, Vitesse) et tes pièces toujours affichées en haut'] },
     { id: '2026-10-10', date: 'Oct 10, 2026', en: ['Roll speed upgrades in the Shop: five levels bought with coins, each one makes the reveal faster and shortens the wait between rolls (down to 4 s)'], fr: ['Vitesse de tirage dans le Shop : cinq niveaux à acheter avec tes pièces, chacun accélère la révélation et raccourcit l\'attente entre deux tirages (jusqu\'à 4 s)'] },
     { id: '2026-10-09', date: 'Oct 9, 2026', en: ['Three new rarities above Mythic: Celestial (about 1 roll in 1,000), Divine (1 in 10,000) and Infinite (1 in 100,000), each with its own reveal, sound and coin reward', 'A new title for each of them. Your old rolls count: past Mythics that qualify are upgraded automatically'], fr: ['Trois nouvelles raretés au-dessus de Mythic : Celestial (environ 1 tirage sur 1 000), Divine (1 sur 10 000) et Infinite (1 sur 100 000), chacune avec sa révélation, son son et sa récompense en pièces', 'Un nouveau titre pour chacune. Tes anciens tirages comptent : les anciens Mythic concernés sont reclassés automatiquement'] },
     { id: '2026-10-08f', date: 'Oct 8, 2026', en: ['Share a roll as an image card: press Share, then copy it straight into Discord or download it'], fr: ['Partage un tirage en image : appuie sur Partager, puis colle la carte directement dans Discord ou télécharge-la'] },
@@ -2361,11 +2362,16 @@
     drawLive();
   }
 
+  // Catégories de la boutique, dans l'ordre des onglets.
+  const SHOP_TABS = [['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Speed']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
       <div class="page page-wide">
-        <h1 class="page-title">Shop</h1>
+        <div class="g-head"><h1 class="page-title">Shop</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="d-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
+        <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}`)}">How much? ⓘ</span></p>
+        <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
+        <section class="shop-pane" data-shop-pane="cases" hidden>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
@@ -2381,30 +2387,47 @@
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Half of the case price comes back. Coins only, no real money.</p>
         </div>
-        <div class="panel stats-sep premium-panel" id="d-premium-panel" hidden>
+        </section>
+        <section class="shop-pane" data-shop-pane="skins" hidden>
+        <div class="panel premium-panel" id="d-premium-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Legendary skins</h3><span class="panel-note">a full animated signature around your number · also plays in duels</span></div>
           <div class="skin-grid premium-grid" id="d-premium"></div>
         </div>
         <div class="panel stats-sep">
-          <div class="panel-head"><h3 class="panel-title">Skins</h3><span class="coins mono" id="d-coins"></span></div>
-          <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
+          <div class="panel-head"><h3 class="panel-title">Skins</h3><span class="panel-note">how your number looks, on your rolls and in duels</span></div>
           <div class="skin-grid" id="d-skins"></div>
         </div>
-        <div class="panel stats-sep" id="d-speed-panel" hidden>
+        </section>
+        <section class="shop-pane" data-shop-pane="speed" hidden>
+        <div class="panel" id="d-speed-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Roll speed</h3><span class="panel-note">a faster reveal, so more rolls per minute</span></div>
           <div id="d-speed"></div>
         </div>
-        <div class="panel stats-sep" id="d-emotes-panel" hidden>
+        </section>
+        <section class="shop-pane" data-shop-pane="emotes" hidden>
+        <div class="panel" id="d-emotes-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
           <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
           <div class="skin-grid emote-grid" id="d-emotes"></div>
         </div>
-        <div class="panel stats-sep" id="d-buttons-panel" hidden>
+        </section>
+        <section class="shop-pane" data-shop-pane="buttons" hidden>
+        <div class="panel" id="d-buttons-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Generate button</h3><span class="panel-note">only you see it · press one to try it</span></div>
-          <p class="panel-note" style="margin-top:-.3rem">Your Generate button follows your skin: every skin comes with its own button. You can also wear the button of any skin you own, or one of the buttons sold only here.</p>
+          <p class="panel-note" style="margin-top:-.3rem">Your Generate button follows your skin. You can also wear the button of any skin you own, or one of the buttons sold only here.</p>
           <div class="skin-grid gen-grid" id="d-buttons"></div>
         </div>
+        </section>
       </div>`;
+    // Onglets : une catégorie à la fois, la dernière ouverte est retenue sur cet appareil.
+    const openTab = id => {
+      const tab = SHOP_TABS.some(x => x[0] === id) ? id : 'skins';
+      app.querySelectorAll('[data-shop-pane]').forEach(el => { el.hidden = el.dataset.shopPane !== tab; });
+      app.querySelectorAll('[data-shop-tab]').forEach(el => { el.classList.toggle('on', el.dataset.shopTab === tab); el.setAttribute('aria-selected', el.dataset.shopTab === tab); });
+      if (Store.settings.shopTab !== tab) Store.setSetting('shopTab', tab);
+    };
+    $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
+    openTab(Store.settings.shopTab);
     drawShop();
   }
 
@@ -2913,14 +2936,14 @@
       </div>`;
     const equip = id => `<button class="btn" data-gen-equip="${id}">Equip</button>`;
     const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS);
-    const mine = skins.filter(k => state.owned.includes(k.id)), locked = skins.filter(k => !state.owned.includes(k.id));
+    // Seuls les boutons qu'on peut porter ou acheter ici : celui d'un skin pas encore possédé s'obtient avec le skin.
+    const mine = skins.filter(k => state.owned.includes(k.id)), locked = skins.length - mine.length;
     grid.innerHTML = [
       tile(state.skin, Shop.MATCH, '🔗 Match my skin', 'Follows the skin you have equipped', equip(Shop.MATCH)),
       ...Shop.BUTTONS.map(b => tile(b.id, b.id, `${b.emoji} ${esc(b.name)}`, esc(b.desc), state.buttons.includes(b.id) ? equip(b.id)
         : `<button class="btn${state.coins >= b.price ? '' : ' disabled'}" data-gen-buy="${b.id}">🪙 ${fmt(b.price)}</button>`)),
       ...mine.map(k => tile(k.id, k.id, `${k.emoji} ${esc(k.name)}`, 'Comes with your skin', equip(k.id))),
-      ...locked.map(k => tile(k.id, k.id, `${k.emoji} ${esc(k.name)}`, 'Comes with the skin', '<span class="skin-state locked">🔒 Get the skin</span>')),
-    ].join('');
+    ].join('') + (locked ? `<p class="panel-note shop-more">🔒 ${locked} more buttons come with skins you do not own yet: every skin brings its own button.</p>` : '');
     grid.onclick = async e => {
       const buy = e.target.closest('[data-gen-buy]'), eq = e.target.closest('[data-gen-equip]');
       const btn = buy || eq;

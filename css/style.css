@@ -2594,3 +2594,18 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .speed-pips i.on { background: linear-gradient(90deg, #f472b6, #818cf8); border-color: transparent; box-shadow: 0 0 10px rgba(192, 132, 252, .5); }
 .speed-text { display: grid; gap: .1rem; flex: 1 1 10rem; min-width: 0; }
 .speed-note { margin: .7rem 0 0; }
+
+/* Shop : onglets de catégorie (une seule catégorie affichée à la fois). */
+.shop-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .45rem; margin: 0 0 1rem; }
+.shop-tabs button { display: flex; align-items: center; justify-content: center; gap: .45rem; padding: .7rem .4rem; border-radius: .7rem; border: 1px solid var(--outline); background: var(--surface); color: var(--prose-2); font: 800 .78rem var(--font-sans); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; transition: transform .15s ease, border-color .15s ease, color .15s ease; }
+.shop-tabs button i { font-style: normal; font-size: 1.1rem; line-height: 1; filter: grayscale(.6); }
+.shop-tabs button:hover { transform: translateY(-1px); border-color: var(--outline-strong); color: var(--prose); }
+.shop-tabs button.on { color: var(--prose); border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(120deg, #f472b6, #c084fc, #818cf8) border-box; box-shadow: 0 0 18px rgba(192, 132, 252, .22); }
+.shop-tabs button.on i { filter: none; }
+.shop-pane > .panel + .panel { margin-top: 1rem; }
+.shop-more { grid-column: 1 / -1; margin: .4rem 0 0; text-align: center; }
+@media (max-width: 560px) {
+  .shop-tabs { gap: .3rem; }
+  .shop-tabs button { flex-direction: column; gap: .2rem; padding: .55rem .1rem; font-size: .56rem; letter-spacing: 0; }
+  .shop-tabs button i { font-size: 1.25rem; }
+}
