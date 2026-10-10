@@ -261,6 +261,7 @@
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],
     [/^(\d+) achievements unlocked: (.+)$/, m => `${m[1]} succès débloqués : ${m[2]}`],
+    [/^\+?(\d+) coins when you link your Google account$/, m => `${m[1]} pièces offertes quand tu associes ton compte Google`], [/^\+?(\d+) coins for linking your Google account$/, m => `${m[1]} pièces pour avoir associé ton compte Google`],
     [/^([\d,]+) more rolls to unlock$/, m => `Encore ${nb(m[1])} tirages pour débloquer`], [/^unlocks at ([\d,]+) rolls$/, m => `se débloque à ${nb(m[1])} tirages`], [/^([\d,]+) \/ ([\d,]+) rolls$/, m => `${nb(m[1])} / ${nb(m[2])} tirages`],
     [/^(\d+) new suggestions?$/, m => `${m[1]} nouvelle${m[1] === '1' ? '' : 's'} suggestion${m[1] === '1' ? '' : 's'}`],
     [/^Drop · ([\d,]+)$/, m => `Lâcher · ${nb(m[1])}`], [/^(\d+) balls: ([+−])([\d,]+)$/, m => `${m[1]} billes : ${m[2]}${nb(m[3])}`],

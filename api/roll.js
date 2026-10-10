@@ -2,7 +2,7 @@
 // Le serveur tire le nombre (personne ne peut choisir son 1337), calcule l'XP avec le moteur du site,
 // puis met à jour le meilleur tirage du joueur pour le jour, la semaine et tous les temps.
 const crypto = require('node:crypto');
-const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, flushDue, statsKey } = require('./_lib');
+const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, flushDue, statsKey, grantGoogleBonus } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 // Une révélation dure au moins ~10 s : 8 s minimum entre deux tirages ne gêne jamais un vrai joueur.
@@ -31,7 +31,9 @@ module.exports = async (req, res) => {
 
     const nonce = /^[0-9a-f]{16,32}$/.test(String(body.nonce || '')) ? String(body.nonce) : '';
     // Délai entre deux tirages : 8 s, raccourci par le niveau de vitesse acheté dans la boutique (js/shop.js).
-    const [level, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
+    // Dans la même lecture : ce joueur a-t-il un compte Google sans avoir reçu son bonus (comptes associés avant le
+    // 2026-10-11) ? Il le reçoit alors à son prochain tirage, sans avoir à se reconnecter.
+    const [level, linked, hadBonus, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ['GET', `player:${playerId}:google`], ['HGET', statsKey(playerId), 'googleBonus'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
     if (again) return send(res, 200, { ...JSON.parse(again), again: true });
     const [cooldown] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX']]);
     if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish' });
@@ -40,6 +42,7 @@ module.exports = async (req, res) => {
     const t = Date.now();
     const { s, bestToday, dayRank, achievements } = await recordRoll(playerId, n, t);
     const result = { n, s, t, bestToday, dayRank, achievements };
+    if (linked && !hadBonus) { const bonus = await grantGoogleBonus(playerId); if (bonus) result.googleBonus = bonus; }
     if (nonce) await redis([['SET', nonceKey(playerId, nonce), JSON.stringify(result), 'EX', NONCE_TTL_S]]);
     return send(res, 200, result);
   } catch (err) {

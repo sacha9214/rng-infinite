@@ -319,6 +319,16 @@ async function splitTopTiers(playerId, stats) {
   return stats;
 }
 
+// Bonus du compte Google : une fois par joueur (le marqueur posé en premier sert de verrou), donc une fois par compte
+// Google, puisqu'un compte ne tient qu'un joueur. Rend le montant versé, ou 0 s'il l'avait déjà eu.
+async function grantGoogleBonus(playerId) {
+  const [first] = await redis([['HSETNX', statsKey(playerId), 'googleBonus', 1]]);
+  if (Number(first) !== 1) return 0;
+  const amount = require('../js/shop.js').GOOGLE_BONUS;
+  await redis([['HINCRBY', statsKey(playerId), 'bonus', amount]]);
+  return amount;
+}
+
 async function readStats(playerId) {
   const [flat, count] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)]]);
   const stats = toObject(flat);
@@ -430,7 +440,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = {
-  queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, settleWager,
+  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, markFresh,

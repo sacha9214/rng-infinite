@@ -2756,3 +2756,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .up-progress { display: grid; gap: .25rem; flex: 0 0 9rem; }
 .up-progress .quest-bar { height: .6rem; }
 .up-progress .quest-bar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f472b6, #818cf8); }
+
+/* Sous le bouton Google : le bonus d'association. */
+.google-promo { display: inline-block; margin: .1rem 0; padding: .2rem .6rem; border-radius: 999px; border: 1px solid #eab308; background: rgba(234, 179, 8, .12); color: #fde68a; font-size: .74rem; font-weight: 700; }
+:root:not(.dark) .google-promo { color: #854d0e; }

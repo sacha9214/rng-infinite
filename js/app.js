@@ -1125,6 +1125,8 @@
     }
   }
 
+  // Sous chaque bouton Google : ce que l'on gagne à associer son compte (une seule fois par joueur).
+  const GOOGLE_PROMO = `<span class="google-promo">🪙 +${Shop.GOOGLE_BONUS} coins when you link your Google account</span>`;
   function askName(then, suggested = '', error = '', label = 'Save') {
     const offerGoogle = googleEnabled() && !Store.player.google;
     openModal(`
@@ -1135,7 +1137,7 @@
         <p class="field-error" id="name-error"${error ? '' : ' hidden'}>${esc(error)}</p>
         <div class="actions"><button class="btn-roll small" type="submit">${label}</button></div>
       </form>
-      ${offerGoogle ? '<div class="or-google"><span class="panel-note">or sign in to keep your player on every device</span><div id="google-btn" class="google-btn"></div></div>' : ''}`, m => {
+      ${offerGoogle ? `<div class="or-google"><span class="panel-note">or sign in to keep your player on every device</span><div id="google-btn" class="google-btn"></div>${GOOGLE_PROMO}</div>` : ''}`, m => {
       const input = m.querySelector('#name-input');
       const errorEl = m.querySelector('#name-error');
       const submit = m.querySelector('#name-form button');
@@ -1208,7 +1210,8 @@
       if (data.name) Store.setPlayerName(data.name);
       closeModal();
       const restored = await syncHistory().catch(() => 0);
-      toast(`Signed in as ${data.email || 'your Google account'}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`);
+      if (data.bonus) { toast(`🪙 +${data.bonus} coins for linking your Google account`, 5000, 'achv'); Sound.play('lock', { i: 5 }); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + data.bonus); }
+      else toast(`Signed in as ${data.email || 'your Google account'}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`);
       const next = afterGoogle;
       afterGoogle = null;
       if (!Store.player.name) askName(next || (() => {}), (data.givenName || '').slice(0, 20));
@@ -1280,6 +1283,7 @@
           <span class="panel-note">Your player, leaderboard spots and whole roll history (stats, badges) follow you on every device.</span></div>`
       : `<div class="field"><label>Account</label>
           <div id="google-btn" class="google-btn"></div>
+          ${GOOGLE_PROMO}
           <span class="panel-note">Sign in to keep the same player, your leaderboard spots and your whole roll history (stats, badges) on every device.</span></div>`;
   }
 
@@ -1303,6 +1307,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11d', date: 'Oct 11, 2026', en: ['Link your Google account and get 150 coins (once). Already linked? You get them on your next roll'], fr: ['Associe ton compte Google et reçois 150 pièces (une seule fois). Déjà associé ? Tu les reçois à ton prochain tirage'] },
     { id: '2026-10-11c', date: 'Oct 11, 2026', en: ['Shop: the Speed tab is now Upgrades, and shows your progress toward Skip known badges (unlocked at 500 rolls) with its on/off switch'], fr: ['Shop : l\'onglet Vitesse devient Boosts, et montre où tu en es pour « Skip known badges » (débloqué à 500 tirages) avec son interrupteur'] },
     { id: '2026-10-11b', date: 'Oct 11, 2026', en: ['Plinko: bet as little as 1 coin, and drop as many balls as you want at once (click fast or hold the button)'], fr: ['Plinko : mise à partir de 1 pièce, et autant de billes que tu veux en même temps (clique vite ou maintiens le bouton)'] },
     { id: '2026-10-11', date: 'Oct 11, 2026', en: ['Casino: a slot machine 🎰 with three animated reels, a lever to pull and a 250× jackpot on 7 7 7'], fr: ['Casino : une machine à sous 🎰 avec trois rouleaux animés, un levier à tirer et un jackpot à 250× sur 7 7 7'] },
@@ -1592,6 +1597,8 @@
       document.body.classList.remove('locked');
       canReroll = true;
       if (ctx.online) { noteAchievements(ctx.online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
+      // Compte Google associé avant que le bonus existe : il arrive avec ce tirage.
+      if (ctx.online && ctx.online.googleBonus) setTimeout(() => { toast(`🪙 +${ctx.online.googleBonus} coins for linking your Google account`, 5000, 'achv'); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + ctx.online.googleBonus); }, 1200);
     });
     step(REVEAL.stats, () => show($('#r-meta'), 'pop-in'));
     step(REVEAL.lifetimeShow, () => show($('#r-life'), 'fade-in'));

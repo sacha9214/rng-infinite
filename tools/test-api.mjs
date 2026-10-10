@@ -1523,4 +1523,39 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
 }
 
+// ================================================================ 41. Bonus du compte Google : 150 pièces, une seule fois
+{
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  const coinsOf = async id => (await call(shopApi, { url: `/api/shop?me=${id}` })).body.coins;
+  // Un joueur joue d'abord sans compte, puis associe Google : +150, et il garde son joueur.
+  const zed = { playerId: '7a'.repeat(8), secret: '5c'.repeat(16), name: 'Zed' };
+  await later(60000, async () => { r = await call(roll, { method: 'POST', body: zed }); }); assert.equal(r.status, 200);
+  assert.equal(r.body.googleBonus, undefined, 'pas de bonus sans compte Google');
+  const before = await coinsOf(zed.playerId);
+  r = await signIn({ sub: 'google-zed', email: 'zed@example.com', email_verified: true }, { playerId: zed.playerId, secret: zed.secret });
+  assert.deepEqual([r.status, r.body.playerId, r.body.bonus], [200, zed.playerId, 150], JSON.stringify(r.body));
+  assert.equal(await coinsOf(zed.playerId), before + 150);
+  zed.secret = r.body.secret; // une fois le compte associé, c'est le secret reçu à la connexion qui permet de tirer
+  // Reconnexion (autre appareil, ou la même page) : plus rien. Un tirage non plus.
+  r = await signIn({ sub: 'google-zed', email: 'zed@example.com', email_verified: true }, {});
+  assert.deepEqual([r.body.playerId, r.body.bonus], [zed.playerId, 0]);
+  await later(60000, async () => { r = await call(roll, { method: 'POST', body: zed }); });
+  assert.equal(r.body.googleBonus, undefined);
+  assert.equal(await coinsOf(zed.playerId), before + 150 + (await coinsOf(zed.playerId) - before - 150), 'seul le tirage a ajouté des pièces');
+  // Un compte associé AVANT le bonus (marqueur absent) le reçoit à son prochain tirage, une seule fois.
+  run([['HDEL', `stats:${zed.playerId}`, 'googleBonus']]);
+  const mid = await coinsOf(zed.playerId);
+  await later(60000, async () => { r = await call(roll, { method: 'POST', body: zed }); });
+  assert.equal(r.body.googleBonus, 150);
+  const gain = await coinsOf(zed.playerId) - mid; assert.ok(gain >= 151 && gain <= 150 + 5000, `bonus + pièces du tirage (${gain})`);
+  await later(60000, async () => { r = await call(roll, { method: 'POST', body: zed }); });
+  assert.equal(r.body.googleBonus, undefined);
+  // Deux connexions simultanées d'un compte tout neuf : un seul bonus.
+  const twin = await Promise.all([signIn({ sub: 'google-twin', email: 't@example.com' }, {}), signIn({ sub: 'google-twin', email: 't@example.com' }, {})]);
+  assert.equal(twin[0].body.playerId, twin[1].body.playerId);
+  assert.equal(twin[0].body.bonus + twin[1].body.bonus, 150);
+  assert.equal(await coinsOf(twin[0].body.playerId), 150);
+  await tick();
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
