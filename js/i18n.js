@@ -261,7 +261,7 @@
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],
     [/^(\d+) achievements unlocked: (.+)$/, m => `${m[1]} succès débloqués : ${m[2]}`],
-    [/^The house, all players together since Oct 10, 2026 · ([\d,]+) rounds played$/, m => `La maison, tous joueurs confondus depuis le 10 oct. 2026 · ${nb(m[1])} manches jouées`],
+    [/^All the coins that went through the casino, all players together: bets taken and winnings paid · ([\d,]+) rounds played$/, m => `Toutes les pièces passées par le casino, tous joueurs confondus : mises prises et gains versés · ${nb(m[1])} manches jouées`],
     [/^🔒 (\d+) more buttons come with skins you do not own yet: every skin brings its own button\.$/, m => `🔒 ${m[1]} autres boutons viennent avec des skins que tu n'as pas encore : chaque skin apporte son bouton.`],
     [/^Level (\d) \/ (\d)$/, m => `Niveau ${m[1]} / ${m[2]}`], [/^Upgrade · 🪙 ([\d,]+)$/, m => `Améliorer · 🪙 ${nb(m[1])}`],
     [/^reveal (\d+)% faster · ([\d.]+) s between rolls$/, m => `révélation ${m[1]} % plus rapide · ${m[2].replace('.', ',')} s entre deux tirages`],

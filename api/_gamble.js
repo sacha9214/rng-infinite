@@ -18,26 +18,39 @@ const ROULETTE = {
 };
 const amount = v => (Number.isInteger(v) && v >= MIN_BET && v <= MAX_BET ? v : 0);
 const refuse = (status, error) => Object.assign(new Error(error), { status });
-// Compte de la maison, visible par tous sur la page du casino : à chaque manche finie, ce que le joueur a gagné en plus
-// de sa mise est « donné », ce qu'il a perdu est « pris » (une égalité ne compte nulle part). Les dernières manches
-// vont dans un fil de 20 entrées. Ces commandes partent avec l'écriture du résultat : aucun aller-retour de plus.
+// Compte de la maison, visible par tous sur la page du casino : tout l'argent qui y est passé. « took » = toutes les
+// mises encaissées, « gave » = tous les gains versés, depuis l'ouverture du casino. À chaque manche finie, la mise et
+// le gain s'ajoutent aux totaux et la manche rejoint un fil de 20 entrées ; ces commandes partent avec l'écriture du
+// résultat, sans aller-retour de plus.
 const HOUSE_KEY = 'casino', FEED_KEY = 'casino:feed', FEED_KEPT = 20;
 function ledger(id, game, bet, win) {
-  const net = win - bet;
-  if (!net) return [['HINCRBY', HOUSE_KEY, 'rounds', 1]];
-  return [
-    ['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, net > 0 ? 'gave' : 'took', Math.abs(net)],
-    ['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: net, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1],
-  ];
+  const out = [['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win]];
+  if (win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
+  return out;
+}
+// Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
+// chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash'];
+async function seedHouse() {
+  const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
+  if (Number(first) !== 1) return;
+  const [ids] = await redis([['HKEYS', 'names']]);
+  let bet = 0, won = 0, rounds = 0;
+  for (let i = 0; i < (ids || []).length; i += 200) {
+    const rows = await redis(ids.slice(i, i + 200).map(id => ['HMGET', statsKey(id), 'gBet', 'gWon', ...PLAYED]));
+    for (const r of rows) { bet += Number(r && r[0]) || 0; won += Number(r && r[1]) || 0; for (let k = 2; k < 2 + PLAYED.length; k++) rounds += Number(r && r[k]) || 0; }
+  }
+  await redis([['HSET', HOUSE_KEY, 'bet', bet, 'won', won, 'rounds', rounds]]);
 }
 // Ce que la page affiche : totaux et dernières manches, avec le pseudo des joueurs (jamais leur identifiant).
 async function house() {
-  const [flat, raw] = await redis([['HGETALL', HOUSE_KEY], ['LRANGE', FEED_KEY, -8, -1]]);
+  let [flat, raw] = await redis([['HGETALL', HOUSE_KEY], ['LRANGE', FEED_KEY, -8, -1]]);
+  if (!(flat || []).includes('seeded')) { await seedHouse(); [flat] = await redis([['HGETALL', HOUSE_KEY]]); }
   const tot = {};
   for (let i = 0; i < (flat || []).length; i += 2) tot[flat[i]] = Number(flat[i + 1]) || 0;
   const rows = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).reverse();
   const names = rows.length ? (await redis([['HMGET', 'names', ...rows.map(r => r.id)]]))[0] || [] : [];
-  return { gave: tot.gave || 0, took: tot.took || 0, rounds: tot.rounds || 0, feed: rows.map((r, i) => ({ name: names[i] || 'Someone', game: r.g, net: r.n, t: r.t })) };
+  return { gave: tot.won || 0, took: tot.bet || 0, rounds: tot.rounds || 0, feed: rows.map((r, i) => ({ name: names[i] || 'Someone', game: r.g, net: r.n, t: r.t })) };
 }
 
 async function wallet(id) { const st = await readStats(id); return { coins: Shop.balance(st), rolls: Number(st.rolls) || 0 }; }

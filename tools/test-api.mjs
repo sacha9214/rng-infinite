@@ -1371,15 +1371,24 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const g = (who, action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
   const house = async () => (await call(shopApi, { url: '/api/shop?casino=1' })).body;
   run([['HINCRBY', `stats:${frank.playerId}`, 'bonus', 5000]]);
+  // Premier affichage : les totaux reprennent tout ce qui a été misé et gagné depuis le début, par tous les joueurs.
+  const { redis: rawRedis } = require(path.join(ROOT, 'api/_lib.js'));
+  let sumBet = 0, sumWon = 0;
+  for (const id of run([['HKEYS', 'names']])[0].result) { const [b, w] = run([['HMGET', `stats:${id}`, 'gBet', 'gWon']])[0].result; sumBet += Number(b) || 0; sumWon += Number(w) || 0; }
+  assert.ok(sumBet > 0, 'des manches ont déjà été jouées dans les sections précédentes');
+  run([['DEL', 'casino']]);
   let h0 = await house();
+  assert.deepEqual([h0.took, h0.gave], [sumBet, sumWon], 'totaux repris des compteurs des joueurs');
+  assert.deepEqual([(await house()).took, (await house()).gave], [sumBet, sumWon], 'repris une seule fois');
+  void rawRedis;
   assert.ok(['gave', 'took', 'rounds'].every(k => Number.isInteger(h0[k])) && Array.isArray(h0.feed), JSON.stringify(h0).slice(0, 200));
-  // Dix billes de Plinko : chaque manche déplace « donné » ou « pris » de son écart exact avec la mise.
+  // Dix billes de Plinko : chaque manche ajoute sa mise à « pris » et son gain à « donné ».
   let gave = 0, took = 0, last = null, played = 0;
   for (let i = 0; i < 10; i++) {
     await tick(); r = await g(frank, 'plinko', { bet: 100 });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     const net = r.body.win - 100; played++;
-    if (net > 0) gave += net; else took -= net;
+    gave += r.body.win; took += 100;
     if (net) last = net;
   }
   const h1 = await house();
@@ -1390,7 +1399,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await tick(); r = await g(frank, 'roulette', { bets: [{ t: 'red', a: 50 }, { t: 'black', a: 50 }] });
   const h2 = await house();
   const net = r.body.win - 100;
-  assert.deepEqual([h2.gave - h1.gave, h2.took - h1.took, h2.rounds - h1.rounds], [Math.max(0, net), Math.max(0, -net), 1]);
+  assert.deepEqual([h2.gave - h1.gave, h2.took - h1.took, h2.rounds - h1.rounds], [r.body.win, 100, 1]);
+  void net;
   // Le fil ne garde que 20 manches.
   assert.ok(run([['LLEN', 'casino:feed']])[0].result <= 20);
 }
