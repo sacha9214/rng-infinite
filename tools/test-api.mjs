@@ -1405,4 +1405,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(run([['LLEN', 'casino:feed']])[0].result <= 20);
 }
 
+// ================================================================ 37. Casino : deux demandes du même joueur qui se croisent
+{
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  const g = (who, action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  run([['HINCRBY', `stats:${frank.playerId}`, 'bonus', 5000], ['DEL', `bj:${frank.playerId}`, `mn:${frank.playerId}`, `cr:${frank.playerId}`]]);
+  await tick();
+  // Les trois reprises de partie partent ensemble à l'ouverture de la page : aucune n'est refusée.
+  const three = await Promise.all([g(frank, 'bj', { move: 'state' }), g(frank, 'mines', { move: 'state' }), g(frank, 'crash', { move: 'state' })]);
+  assert.deepEqual(three.map(x => x.status), [200, 200, 200], 'reprises simultanées');
+  // Sondage du Crash et « Cash out » envoyés en même temps : l'encaissement passe (il attend son tour).
+  await tick(); r = await g(frank, 'crash', { move: 'start', bet: 100 });
+  if (!r.body.done) {
+    const [poll, cash] = await Promise.all([g(frank, 'crash', { move: 'state' }), g(frank, 'crash', { move: 'cash' })]);
+    assert.deepEqual([poll.status, cash.status], [200, 200], JSON.stringify([poll.body, cash.body]));
+    assert.ok(cash.body.done && ['cash', 'crash'].includes(cash.body.result) || /No game/.test(cash.body.error || ''));
+  }
+  assert.equal(run([['GET', `cr:${frank.playerId}`]])[0].result, null, 'manche close');
+  // Verrou tenu trop longtemps par autre chose : refus propre après l'attente, sans rien débiter.
+  await tick(); const before = (await call(shopApi, { url: `/api/shop?me=${frank.playerId}` })).body.coins;
+  run([['SET', `shop:${frank.playerId}`, '1', 'PX', '60000']]);
+  r = await g(frank, 'plinko', { bet: 100 }); assert.equal(r.status, 429);
+  run([['DEL', `shop:${frank.playerId}`]]);
+  assert.equal((await call(shopApi, { url: `/api/shop?me=${frank.playerId}` })).body.coins, before);
+  // Roulette : treize mises différentes refusées d'un bloc.
+  await tick(); r = await g(frank, 'roulette', { bets: Array.from({ length: 13 }, (_, v) => ({ t: 'n', v, a: 10 })) });
+  assert.equal(r.status, 422); assert.match(r.body.error, /At most 12/);
+  assert.equal((await call(shopApi, { url: `/api/shop?me=${frank.playerId}` })).body.coins, before);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

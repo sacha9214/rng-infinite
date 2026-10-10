@@ -115,10 +115,18 @@ module.exports = async (req, res) => {
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
     const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, crash: Gamble.crash };
     if (GAMES[body.action]) {
-      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
+      // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
+      // tour (jusqu'à ~1,5 s) au lieu d'être refusée ; l'heure qui compte pour le Crash reste celle de son arrivée.
+      const at = Date.now();
+      let lock = null;
+      for (let tries = 0; tries < 25 && lock !== 'OK'; tries++) {
+        if (tries) await new Promise(resolve => setTimeout(resolve, 60));
+        [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      }
       if (lock !== 'OK') return send(res, 429, { error: 'One move at a time' });
       try {
-        return send(res, 200, await GAMES[body.action](playerId, body));
+        return send(res, 200, await GAMES[body.action](playerId, body, at));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }

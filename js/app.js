@@ -1300,6 +1300,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-10e', date: 'Oct 10, 2026', en: ['Casino fixes: on phones the roulette wheel no longer covers the Red, Black and Even bets; a Crash cash-out is never refused because of bad timing; a blackjack hand or a Mines grid left open is kept for a week and always comes back after a reload'], fr: ['Corrections du casino : sur téléphone, la roue de la roulette ne recouvre plus les mises Rouge, Noir et Pair ; un encaissement au Crash n\'est plus jamais refusé pour une question de timing ; une main de blackjack ou une grille de Mines laissée ouverte est gardée une semaine et revient toujours après un rechargement'] },
     { id: '2026-10-10d', date: 'Oct 10, 2026', en: ['Casino: a small live strip shows all the coins that went through it (bets taken, winnings paid) and the latest results'], fr: ['Casino : un petit bandeau en direct montre toutes les pièces qui y sont passées (mises prises, gains versés) et les derniers résultats'] },
     { id: '2026-10-10c', date: 'Oct 10, 2026', en: ['Duels: the score is now a compact strip and the roll button always stays on screen, so no more scrolling down to roll'], fr: ['Duels : le score tient maintenant en une bande compacte et le bouton de tirage reste toujours à l\'écran, plus besoin de descendre pour tirer'] },
     { id: '2026-10-10b', date: 'Oct 10, 2026', en: ['Shop reorganised: one tab per category (Skins, Buttons, Emotes, Cases, Speed) and your coins always shown at the top'], fr: ['Shop réorganisé : un onglet par catégorie (Skins, Boutons, Émotes, Caisses, Vitesse) et tes pièces toujours affichées en haut'] },
@@ -2684,6 +2685,7 @@
       if (key === 'n') { const v = Number($('#r-pick').value); if (!Number.isInteger(v) || v < 0 || v > 36 || $('#r-pick').value === '') { toast('Pick a number from 0 to 36'); return; } key = `n:${v}`; }
       const total = Object.values(Gamble.bets).reduce((x, v) => x + v, 0);
       if (total + Gamble.chip > 1000) { toast('Maximum 1,000 coins per spin'); return; }
+      if (!Gamble.bets[key] && Object.keys(Gamble.bets).length >= 12) { toast('At most 12 different bets per spin'); return; }
       Gamble.bets[key] = (Gamble.bets[key] || 0) + Gamble.chip;
       drawBets();
     });
@@ -2699,7 +2701,7 @@
         // La roue tourne dans un sens, la bille dans l'autre ; elle ralentit, descend et se loge dans la case tirée.
         wheel.dataset.color = 'spin'; num.textContent = '';
         await spinWheel(res.n);
-        if (currentView !== 'gamble') return;
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; } // parti pendant le tour : le solde reste juste ailleurs
         num.textContent = res.n; wheel.dataset.color = res.color; replay(wheel, 'landed');
         const net = res.win - res.total;
         $('#r-result').textContent = res.win ? `${res.n} · you get ${fmt(res.win)} coins (${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))})` : `${res.n} · no win this time (−${fmt(res.total)})`;
@@ -2781,7 +2783,7 @@
           at = to;
           if (r < ROWS) { pos += res.path[r]; lit.set(`${r}:${pos}`, performance.now()); Sound.tick({ soft: 1 }); }
         }
-        if (currentView !== 'gamble') return;
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
         document.querySelectorAll('#pk-slots span').forEach(x => x.classList.toggle('hit', Number(x.dataset.slot) === res.slot));
         say($('#pk-result'), res.win, res.bet, `${res.mult}× · ${res.win ? `you get ${fmt(res.win)} coins` : `−${fmt(res.bet)}`}`);
         if (res.win > res.bet) { Sound.play('reveal', { small: 1 }); if (res.mult >= 4) FX.celebrate(res.mult >= 11 ? 'epic' : 'uncommon', $('#pk-slots')); }
@@ -2830,25 +2832,33 @@
       cc.restore();
     };
     const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
+    // La manche n'existe plus côté serveur (expirée, ou finie depuis un autre onglet) : retour à l'écran de départ.
+    const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
     const runCrash = st => {
       Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
-      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)); $('#cr-mult').textContent = `${m.toFixed(2)}×`; $('#cr-go').textContent = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.floor(Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)) * 100) / 100; $('#cr-mult').textContent = `${m.toFixed(2)}×`; $('#cr-go').textContent = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
       frame();
       clearInterval(Gamble.poll);
-      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); } catch (err) { /* prochain sondage */ } }, 700);
+      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } }, 700);
     };
     $('#cr-go').addEventListener('click', async () => {
       if (Gamble.busy) return;
       Gamble.busy = true;
-      try { const res = await gamble('crash', Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip }); if (res.done) endCrash(res); else runCrash(res); } catch (err) { fail(err); } finally { Gamble.busy = false; }
+      try { const res = await gamble('crash', Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip }); if (res.done) endCrash(res); else runCrash(res); } catch (err) { if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash(); else fail(err); } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
     $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? Gamble.mn : null); });
-    if (Store.player.name) { gamble('mines', { move: 'state' }).then(g => { if (currentView === 'gamble' && !g.idle) drawMines(g); }).catch(() => {}); gamble('crash', { move: 'state' }).then(st => { if (currentView === 'gamble' && !st.done) runCrash(st); }).catch(() => {}); }
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
-    gamble('bj', { move: 'state' }).then(h => { if (currentView === 'gamble') drawHand(h); }).catch(() => {});
+    // Parties laissées en cours (main de blackjack, grille de mines, fusée) : reprises l'une après l'autre, chacune
+    // réessayée une fois, pour qu'aucune ne manque si le réseau accroche.
+    const resume = async (game, apply) => { for (let k = 0; k < 2; k++) { try { const s = await gamble(game, { move: 'state' }); if (currentView === 'gamble') apply(s); return; } catch (err) { await new Promise(r => setTimeout(r, 500)); } } };
+    (async () => {
+      await resume('bj', h => drawHand(h));
+      await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
+      await resume('crash', st => { if (!st.done) runCrash(st); else if (st.result === 'crash') endCrash(st); });
+    })();
   }
 
   // Vitesse du tirage : cinq niveaux achetés l'un après l'autre (js/shop.js). Le serveur raccourcit d'autant le délai

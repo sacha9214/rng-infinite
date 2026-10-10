@@ -60,8 +60,10 @@ async function mustAfford(id, bet) {
   if (w.coins < bet) throw refuse(422, `Not enough coins: ${bet - w.coins} more needed`);
 }
 
+const MAX_BETS = 12; // mises différentes par tour ; au-delà, refus net (elles étaient ignorées en silence)
 async function roulette(id, body) {
-  const bets = (Array.isArray(body.bets) ? body.bets : []).slice(0, 12).map(b => ({ t: String(b && b.t), v: Number(b && b.v), a: amount(b && b.a) }));
+  if (Array.isArray(body.bets) && body.bets.length > MAX_BETS) throw refuse(422, `At most ${MAX_BETS} different bets per spin`);
+  const bets = (Array.isArray(body.bets) ? body.bets : []).map(b => ({ t: String(b && b.t), v: Number(b && b.v), a: amount(b && b.a) }));
   if (!bets.length || bets.some(b => !ROULETTE[b.t] || !b.a || (b.t === 'n' && !(Number.isInteger(b.v) && b.v >= 0 && b.v <= 36)))) throw refuse(400, 'Invalid bet');
   const total = bets.reduce((x, b) => x + b.a, 0);
   if (total > MAX_BET) throw refuse(422, `Maximum ${MAX_BET} coins per spin`);
@@ -72,6 +74,8 @@ async function roulette(id, body) {
   return { n, color: n === 0 ? 'green' : RED.has(n) ? 'red' : 'black', total, win, coins: (await wallet(id)).coins };
 }
 
+// Une main ou une grille laissée en plan attend son joueur une semaine (elle était perdue après 30 minutes).
+const KEEP_S = 7 * 86400;
 // Blackjack : sabot infini, le croupier reste à 17, blackjack payé 3 pour 2, doubler sur les deux premières cartes,
 // pas de séparation des paires. La main en cours vit dans bj:<id> (30 min) ; le site ne voit la carte cachée qu'à la fin.
 const bjKey = id => `bj:${id}`;
@@ -113,7 +117,7 @@ async function blackjack(id, body) {
       await settle(id, g);
     } else throw refuse(400, 'Unknown move');
   }
-  if (!g.done) await redis([['SET', bjKey(id), JSON.stringify(g), 'EX', 1800]]);
+  if (!g.done) await redis([['SET', bjKey(id), JSON.stringify(g), 'EX', KEEP_S]]);
   return show(g, (await wallet(id)).coins);
 }
 
@@ -165,14 +169,14 @@ async function mines(id, body) {
       if (!Number.isInteger(c) || c < 0 || c > 24 || g.open.includes(c)) throw refuse(400, 'Pick a closed tile');
       if (g.bombs.includes(c)) { await redis([['DEL', mnKey(id)]]); await credit(id, g.bet, 0, 'gMines'); return { ...showMines(g, (await wallet(id)).coins, 'boom'), hit: c }; }
       g.open.push(c);
-      if (g.open.length < 25 - g.m) { await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', 1800]]); return showMines(g, (await wallet(id)).coins); }
+      if (g.open.length < 25 - g.m) { await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', KEEP_S]]); return showMines(g, (await wallet(id)).coins); }
     } else if (move !== 'cash') throw refuse(400, 'Unknown move');
     if (!g.open.length) throw refuse(422, 'Open a tile first');
     g.win = Math.floor(g.bet * minesMult(g.m, g.open.length));
     await redis([['DEL', mnKey(id)]]); await credit(id, g.bet, g.win, 'gMines');
     return showMines(g, (await wallet(id)).coins, 'cash');
   }
-  await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', 1800]]);
+  await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', KEEP_S]]);
   return showMines(g, (await wallet(id)).coins);
 }
 
@@ -180,10 +184,11 @@ async function mines(id, body) {
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500;
 const crashAt = ms => Math.floor(Math.exp(CRASH_RATE * ms) * 100) / 100;
-async function crash(id, body) {
+async function crash(id, body, at) {
   const [raw] = await redis([['GET', crKey(id)]]);
   let g = raw ? JSON.parse(raw) : null;
-  const move = String(body.move || 'state'), now = Date.now();
+  // « at » : l'heure d'arrivée de la demande, avant une éventuelle attente du verrou (api/shop.js).
+  const move = String(body.move || 'state'), now = Number.isFinite(at) ? at : Date.now();
   const bust = async () => { await redis([['DEL', crKey(id)]]); await credit(id, g.bet, 0, 'gCrash'); return { done: true, result: 'crash', point: g.point, bet: g.bet, win: 0, coins: (await wallet(id)).coins }; };
   if (g && crashAt(now - g.t0) >= g.point) return bust();
   if (move === 'state') return g ? { done: false, t0: g.t0, now, bet: g.bet, rate: CRASH_RATE, coins: (await wallet(id)).coins } : { done: true, idle: true, coins: (await wallet(id)).coins };
@@ -203,4 +208,4 @@ async function crash(id, body) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

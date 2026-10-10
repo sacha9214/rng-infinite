@@ -2656,3 +2656,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .g-live-row b { font-size: .7rem; }
 @media (max-width: 560px) { .g-live-feed { flex-basis: 100%; justify-content: flex-start; } }
 @media (prefers-reduced-motion: reduce) { .g-live-dot { animation: none; } }
+
+/* Roulette : la roue inclinée en 3D déborde de sa zone et captait les clics des mises placées dessous (sur téléphone,
+   Red, Black et Even étaient inatteignables). Elle n'a rien de cliquable : elle laisse passer les clics. */
+.rw-scene, .rw-scene * { pointer-events: none; }
+/* … et elle passait aussi visuellement sur la première rangée de mises : la zone de la roue est agrandie. */
+.rw-scene { height: 16.5rem; margin-bottom: 1.4rem; }
+@media (max-width: 560px) { .rw-scene { height: 14rem; margin-bottom: 1.8rem; } }
