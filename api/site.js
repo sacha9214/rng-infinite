@@ -229,7 +229,12 @@ async function matchPlayer(message, fromName) {
 }
 async function kofiWebhook(req) {
   // Espaces, retours à la ligne ou guillemets collés par mégarde avec le jeton dans les réglages : ignorés.
-  const token = String(process.env.KOFI_TOKEN || '').trim().replace(/^["']|["']$/g, '').trim();
+  // Espaces, retours à la ligne ou guillemets collés par mégarde avec le jeton dans les réglages : ignorés. Le jeton
+  // de Ko-fi est un identifiant de 36 caractères (8-4-4-4-12) : s'il y en a un dans la valeur, c'est lui qui compte,
+  // même entouré d'un libellé collé avec (« KOFI_TOKEN: … »).
+  const rawToken = String(process.env.KOFI_TOKEN || '').trim().replace(/^["']|["']$/g, '').trim();
+  const uuid = rawToken.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  const token = uuid ? uuid[0] : rawToken;
   if (!token) return [503, { error: 'Automatic contributions are not configured' }];
   let data;
   try {

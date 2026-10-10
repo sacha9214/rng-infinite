@@ -1670,6 +1670,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
   // Jeton collé avec un retour à la ligne ou des guillemets dans les réglages : accepté quand même.
   for (const messy of ['kofi-secret-123\n', '  kofi-secret-123  ', '"kofi-secret-123"']) { process.env.KOFI_TOKEN = messy; r = await kofi(tip({ type: 'Shop Order' })); assert.equal(r.status, 200, JSON.stringify(messy)); }
+  // Jeton au format de Ko-fi collé avec un libellé devant : le serveur retrouve le jeton dans la valeur.
+  { const id = '0a1b2c3d-1111-2222-3333-444455556666'; for (const v of [id, `KOFI_TOKEN: ${id}`, `Verification token ${id}\n`]) { process.env.KOFI_TOKEN = v; r = await kofi(tip({ verification_token: id, type: 'Shop Order' })); assert.equal(r.status, 200, v); assert.equal((await kofi(tip({ verification_token: id.replace('0a', '0b'), type: 'Shop Order' }))).status, 401); } }
   run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
   delete process.env.KOFI_TOKEN;
 }
