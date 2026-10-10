@@ -1235,7 +1235,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await tick(); forced = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
   r = await g(frank, 'plinko', { bet: 100 });
   assert.deepEqual([r.body.slot, r.body.mult, r.body.win, r.body.coins], [6, 0.3, 30, 1250]);
-  await tick(); assert.equal((await g(frank, 'plinko', { bet: 5 })).status, 400); await tick();
+  await tick(); assert.equal((await g(frank, 'plinko', { bet: 0 })).status, 400); await tick();
   // Mines : 3 mines ; le mélange est laissé au hasard, on lit les mines dans la base pour jouer une case sûre puis une mine.
   r = await g(frank, 'mines', { move: 'start', bet: 100, mines: 3 });
   assert.deepEqual([r.status, r.body.open, r.body.mult, r.body.coins, r.body.bombs], [200, [], 0.99, 1150, undefined], 'les mines ne sortent pas');

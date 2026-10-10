@@ -1300,6 +1300,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11b', date: 'Oct 11, 2026', en: ['Plinko: bet as little as 1 coin, and drop as many balls as you want at once (click fast or hold the button)'], fr: ['Plinko : mise à partir de 1 pièce, et autant de billes que tu veux en même temps (clique vite ou maintiens le bouton)'] },
     { id: '2026-10-11', date: 'Oct 11, 2026', en: ['Casino: a slot machine 🎰 with three animated reels, a lever to pull and a 250× jackpot on 7 7 7'], fr: ['Casino : une machine à sous 🎰 avec trois rouleaux animés, un levier à tirer et un jackpot à 250× sur 7 7 7'] },
     { id: '2026-10-10g', date: 'Oct 10, 2026', en: ['New badge: Full Stack 🧱 — any number containing 64 (a full stack of blocks) earns 6,400 XP'], fr: ['Nouveau badge : Full Stack 🧱 — tout nombre contenant 64 (une pile complète de blocs) rapporte 6 400 XP'] },
     { id: '2026-10-10f', date: 'Oct 10, 2026', en: ['Crash: the rocket is much smoother, and Cash out no longer answers "One move at a time"'], fr: ['Crash : la fusée est beaucoup plus fluide, et « Cash out » ne répond plus « One move at a time »'] },
@@ -2582,7 +2583,7 @@
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
         <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
-        <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
+        <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
             <div class="panel-head"><h3 class="panel-title">Crash</h3><span class="panel-note">cash out before it crashes</span></div>
@@ -2620,6 +2621,7 @@
             <div class="pk-board" id="pk-board"><canvas id="pk-canvas" width="520" height="360"></canvas></div>
             <div class="pk-slots" id="pk-slots">${[33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33].map((m, i) => `<span data-slot="${i}" data-m="${m >= 4 ? 'hi' : m >= 1 ? 'mid' : 'lo'}">${m}×</span>`).join('')}</div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="pk-go">Drop</button></div>
+            <p class="panel-note pk-hint">click as fast as you like, or hold the button</p>
             <p class="panel-note g-result" id="pk-result"></p>
           </div>
           <div class="panel g-game" data-game="roulette">
@@ -2749,7 +2751,9 @@
       $('#bj-result').textContent = h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '';
       if (h) showCoins(h.coins);
     };
-    $('#g-chips').addEventListener('click', () => { if (!Gamble.hand || Gamble.hand.done) drawHand(Gamble.hand); });
+    // Changer de pièce redessine le bouton « Deal » ; sans le solde de la dernière main, qui a pu changer depuis
+    // (il remettait à l'écran le solde d'avant les parties jouées entre-temps).
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.hand || Gamble.hand.done) drawHand(Gamble.hand ? { ...Gamble.hand, coins: null } : null); });
     $('#bj-actions').addEventListener('click', async e => {
       const b = e.target.closest('[data-bj]');
       if (!b || Gamble.busy) return;
@@ -2762,7 +2766,11 @@
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     // ---- onglets des jeux
-    const showTab = id => { Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
+    const showTab = id => {
+      // Les pièces de 1 et 5 n'existent qu'au Plinko : ailleurs elles disparaissent, et la mise remonte à 10.
+      $('#g-chips').dataset.game = id;
+      if (id !== 'plinko' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
+      Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
     $('#g-tabs').addEventListener('click', e => { const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab); });
     showTab(Gamble.tab);
     const say = (el, win, bet, text) => { el.textContent = text; el.dataset.won = win > bet ? 'yes' : win === bet ? 'even' : 'no'; };
@@ -2770,7 +2778,7 @@
     const pk = $('#pk-canvas').getContext('2d'), PW = 520, PH = 360, ROWS = 12, GAPX = PW / (ROWS + 2), GAPY = (PH - 40) / ROWS;
     const peg = (r, i) => ({ x: PW / 2 + (i - r / 2) * GAPX, y: 26 + r * GAPY });
     const lit = new Map(); // clou touché → instant, pour le faire briller un moment
-    const drawBoard = (ball, trail = []) => {
+    const drawBoard = (balls = []) => {
       pk.clearRect(0, 0, PW, PH);
       const now = performance.now();
       for (let r = 0; r < ROWS; r++) for (let i = 0; i <= r + 1; i++) {
@@ -2780,37 +2788,90 @@
         const g = pk.createRadialGradient(q.x - 1.4, y - 1.6, .5, q.x, y, 4.4); g.addColorStop(0, '#fff'); g.addColorStop(1, hot > 0 ? '#fbbf24' : '#8b93a7');
         pk.beginPath(); pk.arc(q.x, y, 4.2, 0, 7); pk.fillStyle = g; pk.fill();
       }
-      trail.forEach((t, k) => { pk.beginPath(); pk.arc(t.x, t.y, 7 * (k / trail.length), 0, 7); pk.fillStyle = `rgba(251,191,36,${.18 * (k / trail.length)})`; pk.fill(); });
-      if (ball) {
+      for (const ball of balls) {
+        ball.trail.forEach((q, k) => { pk.beginPath(); pk.arc(q.x, q.y, 7 * (k / ball.trail.length), 0, 7); pk.fillStyle = `rgba(251,191,36,${.18 * (k / ball.trail.length)})`; pk.fill(); });
         pk.beginPath(); pk.ellipse(ball.x + 3, ball.y + 6, 8, 5, 0, 0, 7); pk.fillStyle = 'rgba(0,0,0,.4)'; pk.fill();
         const g = pk.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, 9); g.addColorStop(0, '#fff7c2'); g.addColorStop(.5, '#fbbf24'); g.addColorStop(1, '#b45309');
-        pk.beginPath(); pk.arc(ball.x, ball.y, 9, 0, 7); pk.fillStyle = g; pk.shadowColor = '#f59e0b'; pk.shadowBlur = 18; pk.fill(); pk.shadowBlur = 0;
+        pk.beginPath(); pk.arc(ball.x, ball.y, 9, 0, 7); pk.fillStyle = g; pk.fill();
+        pk.beginPath(); pk.arc(ball.x, ball.y, 12, 0, 7); pk.strokeStyle = 'rgba(245,158,11,.35)'; pk.lineWidth = 3; pk.stroke(); // halo sans shadowBlur
       }
     };
     drawBoard();
-    $('#pk-go').addEventListener('click', async () => {
-      if (Gamble.busy) return;
-      Gamble.busy = true;
+    // Plusieurs billes à la fois, comme dans les Plinko en ligne : chaque clic ajoute une bille. Pendant qu'une demande
+    // est en route, les clics suivants s'accumulent et partent ensemble dans la suivante (20 billes au plus par demande),
+    // si bien qu'on peut marteler le bouton sans noyer le serveur. Une seule boucle anime toutes les billes ; le solde
+    // affiché ne compte un gain qu'à l'arrivée de sa bille.
+    const PK = Gamble.pk = { balls: [], queue: 0, sending: false, pending: 0, raf: 0, lastTick: 0, lastFx: 0, n: 0, net: 0, idle: 0, hold: 0, wait: 0 };
+    const pkLabel = () => { $('#pk-go').textContent = `Drop · ${fmt(Gamble.chip)}`; };
+    const pkCoins = () => { if ($('#g-coins') && Gamble.coins != null) $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins - PK.pending)}`; };
+    const pkTarget = ball => {
+      const r = ball.r, q = r < ROWS ? peg(r + 1, ball.pos + ball.path[r]) : null;
+      ball.from = { x: ball.x, y: ball.y };
+      ball.to = q ? { x: q.x - (ball.path[r] ? 6 : -6), y: q.y - GAPY - 12 } : { x: ball.x, y: PH + 4 };
+      ball.t0 = performance.now(); ball.ms = r === 0 ? 260 : Math.max(120, 190 - r * 6);
+    };
+    const pkLand = ball => {
+      PK.pending -= ball.win; pkCoins();
+      const slot = document.querySelector(`#pk-slots span[data-slot="${ball.slot}"]`);
+      if (slot) { slot.classList.add('hit'); clearTimeout(slot._off); slot._off = setTimeout(() => slot.classList.remove('hit'), 900); }
+      PK.n++; PK.net += ball.win - ball.bet;
+      clearTimeout(PK.idle); PK.idle = setTimeout(() => { PK.n = 0; PK.net = 0; }, 5000); // une série s'arrête après 5 s sans bille
+      const series = PK.n > 1 ? ` · ${PK.n} balls: ${PK.net >= 0 ? '+' : '−'}${fmt(Math.abs(PK.net))}` : '';
+      say($('#pk-result'), PK.n > 1 ? PK.net + 1 : ball.win, PK.n > 1 ? 1 : ball.bet, `${ball.mult}× · ${ball.win === 1 ? 'you get 1 coin' : ball.win ? `you get ${fmt(ball.win)} coins` : `−${fmt(ball.bet)}`}${series}`);
+      const now = performance.now();
+      if (ball.win > ball.bet && now - PK.lastFx > 220) { PK.lastFx = now; Sound.play('reveal', { small: 1 }); if (ball.mult >= 4) FX.celebrate(ball.mult >= 11 ? 'epic' : 'uncommon', $('#pk-slots')); }
+    };
+    const pkFrame = now => {
+      PK.raf = 0;
+      if (currentView !== 'gamble') { PK.balls.length = 0; PK.pending = 0; return; } // parti : le vrai solde est déjà enregistré
+      for (const ball of PK.balls.slice()) {
+        const k = Math.min(1, (now - ball.t0) / ball.ms);
+        ball.x = ball.from.x + (ball.to.x - ball.from.x) * k;
+        ball.y = ball.from.y + (ball.to.y - ball.from.y) * k * k - Math.sin(Math.PI * k) * 11;
+        ball.trail.push({ x: ball.x, y: ball.y }); if (ball.trail.length > 9) ball.trail.shift();
+        if (k < 1) continue;
+        if (ball.r < ROWS) {
+          ball.pos += ball.path[ball.r]; lit.set(`${ball.r}:${ball.pos}`, now); PK.lastLit = now;
+          if (now - PK.lastTick > 45) { PK.lastTick = now; Sound.tick({ soft: 1 }); }
+          ball.r++; pkTarget(ball);
+        } else { PK.balls.splice(PK.balls.indexOf(ball), 1); pkLand(ball); }
+      }
+      drawBoard(PK.balls);
+      // La boucle tourne encore un peu après la dernière bille, le temps que les clous s'éteignent.
+      if (PK.balls.length || now - PK.lastLit < 450) PK.raf = requestAnimationFrame(pkFrame);
+    };
+    const pkLaunch = (b, bet) => {
+      const ball = { ...b, bet, r: 0, pos: 0, x: PW / 2 + (Math.random() - .5) * 6, y: -6, trail: [] };
+      pkTarget(ball); PK.balls.push(ball);
+      if (!PK.raf) PK.raf = requestAnimationFrame(pkFrame);
+    };
+    const pkPump = async () => {
+      if (PK.sending || !PK.queue) return;
+      PK.sending = true;
+      const count = Math.min(20, PK.queue), bet = Gamble.chip;
+      PK.queue -= count;
       try {
-        const res = await gamble('plinko', { bet: Gamble.chip });
-        showCoins(res.coins + 0 - res.win); // le gain s'affiche quand la bille arrive
-        // La bille tombe de clou en clou : un petit rebond en cloche à chaque rangée, de plus en plus vif.
-        let pos = 0; const trail = [];
-        const hop = (from, to, ms) => new Promise(done => { const t0 = performance.now(); const f = now => { const t = Math.min(1, (now - t0) / ms), x = from.x + (to.x - from.x) * t, y = from.y + (to.y - from.y) * t * t - Math.sin(Math.PI * t) * 11; trail.push({ x, y }); if (trail.length > 9) trail.shift(); drawBoard({ x, y }, trail); if (t < 1 && currentView === 'gamble') requestAnimationFrame(f); else done(); }; requestAnimationFrame(f); });
-        let at = { x: PW / 2, y: -6 };
-        for (let r = 0; r <= ROWS && currentView === 'gamble'; r++) {
-          const q = r < ROWS ? peg(r + 1, pos + res.path[r]) : null, to = q ? { x: q.x - (res.path[r] ? 6 : -6), y: q.y - GAPY - 12 } : { x: at.x, y: PH + 4 };
-          await hop(at, to, r === 0 ? 260 : Math.max(120, 190 - r * 6));
-          at = to;
-          if (r < ROWS) { pos += res.path[r]; lit.set(`${r}:${pos}`, performance.now()); Sound.tick({ soft: 1 }); }
-        }
-        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
-        document.querySelectorAll('#pk-slots span').forEach(x => x.classList.toggle('hit', Number(x.dataset.slot) === res.slot));
-        say($('#pk-result'), res.win, res.bet, `${res.mult}× · ${res.win ? `you get ${fmt(res.win)} coins` : `−${fmt(res.bet)}`}`);
-        if (res.win > res.bet) { Sound.play('reveal', { small: 1 }); if (res.mult >= 4) FX.celebrate(res.mult >= 11 ? 'epic' : 'uncommon', $('#pk-slots')); }
-        showCoins(res.coins);
-      } catch (err) { fail(err); } finally { Gamble.busy = false; }
-    });
+        const res = await gamble('plinko', { bet, count });
+        const balls = res.balls || [res];
+        PK.pending += balls.reduce((x, b) => x + b.win, 0);
+        Gamble.coins = res.coins; Store.setSetting('coins', res.coins); pkCoins();
+        balls.forEach((b, i) => setTimeout(() => { if (currentView === 'gamble') pkLaunch(b, bet); else PK.pending = 0; }, i * 95));
+      } catch (err) { PK.queue = 0; pkStop(); PK.blocked = performance.now() + 1500; fail(err); } finally { PK.sending = false; if (PK.queue) pkPump(); } // refus (solde trop court…) : un seul message, les clics des 1,5 s suivantes sont ignorés
+    };
+    const pkDrop = () => {
+      if (Gamble.busy || performance.now() < (PK.blocked || 0)) return;
+      if (PK.queue + PK.balls.length >= 60) return; // 60 billes en jeu ou en attente au plus
+      PK.queue++; pkPump();
+    };
+    // Maintenir le bouton : une bille tout de suite, puis une toutes les 110 ms après un court délai.
+    const pkStop = () => { clearTimeout(PK.wait); clearInterval(PK.hold); PK.hold = 0; };
+    const go = $('#pk-go');
+    go.addEventListener('pointerdown', e => { if (e.button) return; pkStop(); pkDrop(); PK.wait = setTimeout(() => { PK.hold = setInterval(() => { if (currentView === 'gamble' && document.body.contains(go)) pkDrop(); else pkStop(); }, 110); }, 320); });
+    ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => go.addEventListener(ev, pkStop));
+    go.addEventListener('click', e => { if (e.detail === 0) pkDrop(); }); // clavier (Entrée, Espace) : la souris et le doigt passent par pointerdown
+    go.addEventListener('contextmenu', e => e.preventDefault()); // appui long sur téléphone : pas de menu
+    pkLabel();
+    $('#g-chips').addEventListener('click', pkLabel);
     // ---- machine à sous : trois bandes de symboles qui défilent vers le bas et s'arrêtent l'une après l'autre sur le
     // tirage du serveur. Les symboles sont dessinés en SVG (pas d'émojis : le même rendu partout).
     const SM = {
@@ -2959,7 +3020,7 @@
       } catch (err) { if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash(); else fail(err); } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
-    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? Gamble.mn : null); });
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); });
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }

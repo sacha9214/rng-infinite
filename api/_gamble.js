@@ -16,7 +16,7 @@ const ROULETTE = {
   d1: { pays: 3, wins: n => n >= 1 && n <= 12 }, d2: { pays: 3, wins: n => n >= 13 && n <= 24 }, d3: { pays: 3, wins: n => n >= 25 },
   n: { pays: 36, wins: (n, v) => n === v },
 };
-const amount = v => (Number.isInteger(v) && v >= MIN_BET && v <= MAX_BET ? v : 0);
+const amount = (v, min = MIN_BET) => (Number.isInteger(v) && v >= min && v <= MAX_BET ? v : 0);
 const refuse = (status, error) => Object.assign(new Error(error), { status });
 // Compte de la maison, visible par tous sur la page du casino : tout l'argent qui y est passé. « took » = toutes les
 // mises encaissées, « gave » = tous les gains versés, depuis l'ouverture du casino. À chaque manche finie, la mise et
@@ -26,11 +26,11 @@ const HOUSE_KEY = 'casino', FEED_KEY = 'casino:feed', FEED_KEPT = 20;
 // Pour la page Owner : les mêmes totaux par jeu (r:, b:, w:), les mêmes par jour (casino:d:<jour>, gardés 100 jours)
 // et les joueurs du jour (casino:p:<jour>, un ensemble d'identifiants qui ne sert qu'à les compter).
 const dayOf = t => new Date(t).toISOString().slice(0, 10);
-function ledger(id, game, bet, win) {
+function ledger(id, game, bet, win, rounds = 1) {
   const day = dayOf(Date.now()), daily = `casino:d:${day}`, players = `casino:p:${day}`;
-  const out = [['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win],
-    ['HINCRBY', HOUSE_KEY, `r:${game}`, 1], ['HINCRBY', HOUSE_KEY, `b:${game}`, bet], ['HINCRBY', HOUSE_KEY, `w:${game}`, win],
-    ['HINCRBY', daily, `r:${game}`, 1], ['HINCRBY', daily, `b:${game}`, bet], ['HINCRBY', daily, `w:${game}`, win], ['EXPIRE', daily, 100 * 86400],
+  const out = [['HINCRBY', HOUSE_KEY, 'rounds', rounds], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win],
+    ['HINCRBY', HOUSE_KEY, `r:${game}`, rounds], ['HINCRBY', HOUSE_KEY, `b:${game}`, bet], ['HINCRBY', HOUSE_KEY, `w:${game}`, win],
+    ['HINCRBY', daily, `r:${game}`, rounds], ['HINCRBY', daily, `b:${game}`, bet], ['HINCRBY', daily, `w:${game}`, win], ['EXPIRE', daily, 100 * 86400],
     ['SADD', players, id], ['EXPIRE', players, 100 * 86400]];
   if (win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
   return out;
@@ -144,12 +144,28 @@ async function debit(id, raw) {
 
 // Plinko : 12 rangées, la bille tombe à gauche ou à droite à chaque clou ; 13 cases, les bords paient le plus.
 const PLINKO = [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33];
+// Seul jeu où l'on peut miser 1 pièce, et lâcher plusieurs billes d'un coup (« count », 20 au plus) : la page regroupe
+// ainsi les clics rapprochés en une seule demande. Une pièce ne se coupe pas : quand mise × case ne tombe pas juste
+// (1 pièce sur ×0,6), la fraction est jouée au hasard (6 chances sur 10 de recevoir la pièce), pour que les petites
+// mises rendent en moyenne exactement autant que les grosses (99 %). Aux mises multiples de 10, rien ne change.
+const PLINKO_MIN = 1, PLINKO_BALLS = 20;
 async function plinko(id, body) {
-  const bet = await debit(id, body.bet);
-  const path = Array.from({ length: 12 }, () => crypto.randomInt(0, 2));
-  const slot = path.reduce((x, d) => x + d, 0), mult = PLINKO[slot], win = Math.floor(bet * mult);
-  await credit(id, bet, win, 'gPlinko');
-  return { path, slot, mult, bet, win, coins: (await wallet(id)).coins };
+  const bet = amount(body.bet, PLINKO_MIN);
+  if (!bet) throw refuse(400, `Bet between ${PLINKO_MIN} and ${MAX_BET} coins`);
+  const count = body.count === undefined ? 1 : Number(body.count);
+  if (!Number.isInteger(count) || count < 1 || count > PLINKO_BALLS) throw refuse(400, `Between 1 and ${PLINKO_BALLS} balls at a time`);
+  const total = bet * count;
+  await mustAfford(id, total);
+  const balls = Array.from({ length: count }, () => {
+    const path = Array.from({ length: 12 }, () => crypto.randomInt(0, 2));
+    const slot = path.reduce((x, d) => x + d, 0), mult = PLINKO[slot];
+    const tenths = bet * Math.round(mult * 10); // gain en dixièmes de pièce, toujours entier
+    return { path, slot, mult, win: Math.floor(tenths / 10) + (crypto.randomInt(0, 10) < tenths % 10 ? 1 : 0) };
+  });
+  const win = balls.reduce((x, b) => x + b.win, 0);
+  await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gPlinko', count], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, 'plinko', total, win, count)]);
+  // Une seule bille : la réponse garde aussi sa forme d'avant (path, slot, mult), pour une page pas encore rechargée.
+  return { ...(count === 1 ? balls[0] : {}), balls, bet, total, win, coins: (await wallet(id)).coins };
 }
 
 // Machine à sous : trois rouleaux tirés indépendamment sur 20 crans (5 cerises, 5 citrons, 4 cloches, 3 étoiles,
@@ -242,4 +258,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

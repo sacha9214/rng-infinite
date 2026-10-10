@@ -2742,3 +2742,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .o-tr.c6 { grid-template-columns: 3.2rem repeat(4, minmax(2.6rem, 1fr)) minmax(5.6rem, 1.5fr); }
 .o-tr.c6 span, .o-tr.c5 span, .o-tr.c4 span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 560px) { .o-countries { grid-template-columns: 1fr; } }
+
+/* Plinko : pièces de 1 et 5 visibles seulement sur ce jeu ; bouton qu'on peut marteler ou maintenir. */
+.gchip.pk-only { display: none; }
+.gchips[data-game="plinko"] .gchip.pk-only { display: inline-block; }
+.gchip[data-chip="1"] { background: #e4e4e7; color: #18181b; border-color: rgba(0, 0, 0, .45); }
+.gchip[data-chip="5"] { background: #0f766e; }
+.pk-hint { text-align: center; margin: .4rem 0 0; font-size: .7rem; }
+#pk-go { touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.g-game[data-game="plinko"] .actions { display: flex; }

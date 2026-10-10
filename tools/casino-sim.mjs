@@ -97,6 +97,28 @@ rtp = await series('plinko', '98,99 %', async () => {
 }, N * 3);
 assert.ok(rtp > .95 && rtp < 1.03, `plinko ${rtp}`);
 assert.ok(slots[6] > slots[4] && slots[4] > slots[2], 'le centre sort plus que les bords');
+// Petites mises (1 et 5 pièces) et billes par paquets : le gain de chaque bille est l'arrondi inférieur ou supérieur
+// de mise × case, le total suit, et le retour reste autour de 99 % (la fraction est jouée au hasard, pas perdue).
+for (const small of [1, 5, 7]) {
+  let bet = 0, win = 0;
+  for (let i = 0; i < N / 10; i++) {
+    const count = 1 + rnd(G.PLINKO_BALLS), c0 = coins(), h0 = house();
+    const r = await G.plinko(id, { bet: small, count });
+    assert.equal(r.balls.length, count); assert.equal(r.total, small * count);
+    for (const b of r.balls) { const exact = small * b.mult; assert.ok(b.win === Math.floor(exact + 1e-9) || b.win === Math.ceil(exact - 1e-9), `bille ${small} × ${b.mult} → ${b.win}`); assert.equal(b.slot, b.path.reduce((x, d) => x + d, 0)); }
+    assert.equal(r.win, r.balls.reduce((x, b) => x + b.win, 0));
+    assert.equal(coins() - c0, r.win - r.total, 'solde du paquet');
+    const h1 = house(); assert.deepEqual([h1[0] - h0[0], h1[1] - h0[1], h1[2] - h0[2]], [r.total, r.win, count], 'compte de la maison du paquet');
+    bet += r.total; win += r.win;
+  }
+  report.push({ jeu: `plinko à ${small}`, manches: Math.round(N / 10), 'retour mesuré': (100 * win / bet).toFixed(2) + ' %', 'retour théorique': '98,99 %', 'plus gros gain': '' });
+  assert.ok(win / bet > .9 && win / bet < 1.08, `plinko à ${small} : ${win / bet}`);
+}
+for (const bad of [0, 21, 1.5, -1, 'x']) await assert.rejects(G.plinko(id, { bet: 10, count: bad }));
+assert.equal((await G.plinko(id, { bet: 1 })).balls.length, 1);
+// Mises sous 10 : refusées partout ailleurs.
+for (const b of [1, 5, 9]) { await assert.rejects(G.slots(id, { bet: b })); await assert.rejects(G.crash(id, { move: 'start', bet: b })); await assert.rejects(G.roulette(id, { bets: [{ t: 'red', a: b }] })); }
+
 
 // ---- Machine à sous : trois symboles du rouleau, gain recalculé depuis la table
 const combos = {};
@@ -163,7 +185,7 @@ assert.ok(rtp > .9 && rtp < 1.08, `crash ${rtp}`);
 // ---- Refus : mises hors bornes, solde insuffisant, coups impossibles — sans jamais toucher au solde
 const c0 = coins();
 for (const bad of [0, 5, 9, 1001, 10.5, -50, '100', null, NaN]) {
-  await assert.rejects(G.plinko(id, { bet: bad })); await assert.rejects(G.slots(id, { bet: bad })); await assert.rejects(G.crash(id, { move: 'start', bet: bad }));
+  if (![5, 9].includes(bad)) await assert.rejects(G.plinko(id, { bet: bad })); await assert.rejects(G.slots(id, { bet: bad })); await assert.rejects(G.crash(id, { move: 'start', bet: bad }));
   await assert.rejects(G.mines(id, { move: 'start', bet: bad, mines: 3 })); await assert.rejects(G.blackjack(id, { move: 'deal', bet: bad }));
   await assert.rejects(G.roulette(id, { bets: [{ t: 'red', a: bad }] }));
 }
