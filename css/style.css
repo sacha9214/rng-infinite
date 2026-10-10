@@ -2643,3 +2643,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* Téléphone : pas de clavier, donc pas de « press Space » ; la pastille de score garde la place pour le nom. */
 @media (pointer: coarse) { .room-actions .hint:has(kbd) { display: none; } }
 @media (max-width: 560px) { .room-board .board-row .rank { display: none; } .room-board .board-wins { word-spacing: -.35em; } }
+
+/* Casino : bandeau « en direct » de la maison (donné / pris, dernières manches), sur une ligne, discret. */
+.g-live { display: flex; align-items: center; gap: .55rem .8rem; flex-wrap: wrap; margin: 0 0 .7rem; padding: .4rem .7rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); font-size: .72rem; color: var(--prose-2); overflow: hidden; }
+.g-live .eyebrow { font-size: .62rem; margin: 0 0 0 -.3rem; }
+.g-live-dot { width: .45rem; height: .45rem; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, .6); animation: g-live-pulse 1.8s ease-out infinite; }
+@keyframes g-live-pulse { to { box-shadow: 0 0 0 .5rem rgba(239, 68, 68, 0); } }
+.g-live .up { color: #34d399; }
+.g-live .down { color: #f87171; }
+.g-live-feed { display: flex; gap: .4rem; flex: 1 1 12rem; min-width: 0; overflow: hidden; white-space: nowrap; justify-content: flex-end; mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.g-live-row { display: inline-flex; align-items: center; gap: .25rem; padding: .12rem .45rem; border-radius: 999px; background: var(--surface-dim); color: var(--prose-2); }
+.g-live-row b { font-size: .7rem; }
+@media (max-width: 560px) { .g-live-feed { flex-basis: 100%; justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { .g-live-dot { animation: none; } }

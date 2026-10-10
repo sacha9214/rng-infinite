@@ -43,7 +43,10 @@ module.exports = async (req, res) => {
   await flushDue();
   try {
     if (req.method === 'GET') {
-      const me = new URL(req.url, 'http://localhost').searchParams.get('me');
+      const query = new URL(req.url, 'http://localhost').searchParams;
+      // Compte de la maison du casino (ce qu'elle a donné et pris, dernières manches) : public, sans joueur.
+      if (query.get('casino')) return send(res, 200, await Gamble.house());
+      const me = query.get('me');
       if (!isPlayerId(me)) return send(res, 400, { error: 'Invalid player' });
       return send(res, 200, await state(me));
     }

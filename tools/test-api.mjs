@@ -1365,4 +1365,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HSET', key, 'speedLv', 5]]);
 }
 
+// ================================================================ 36. Casino : compte de la maison (donné / pris) et fil des dernières manches
+{
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  const g = (who, action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const house = async () => (await call(shopApi, { url: '/api/shop?casino=1' })).body;
+  run([['HINCRBY', `stats:${frank.playerId}`, 'bonus', 5000]]);
+  let h0 = await house();
+  assert.ok(['gave', 'took', 'rounds'].every(k => Number.isInteger(h0[k])) && Array.isArray(h0.feed), JSON.stringify(h0).slice(0, 200));
+  // Dix billes de Plinko : chaque manche déplace « donné » ou « pris » de son écart exact avec la mise.
+  let gave = 0, took = 0, last = null, played = 0;
+  for (let i = 0; i < 10; i++) {
+    await tick(); r = await g(frank, 'plinko', { bet: 100 });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const net = r.body.win - 100; played++;
+    if (net > 0) gave += net; else took -= net;
+    if (net) last = net;
+  }
+  const h1 = await house();
+  assert.deepEqual([h1.gave - h0.gave, h1.took - h0.took, h1.rounds - h0.rounds], [gave, took, played]);
+  assert.deepEqual([h1.feed[0].name, h1.feed[0].game, h1.feed[0].net], ['Frank', 'plinko', last], 'la dernière manche en tête du fil');
+  assert.ok(h1.feed.length <= 8 && !JSON.stringify(h1).includes(frank.playerId), 'huit manches au plus, aucun identifiant');
+  // Roulette perdue à coup sûr sur un numéro plein non sorti, ou gagnée : l'écart suit toujours.
+  await tick(); r = await g(frank, 'roulette', { bets: [{ t: 'red', a: 50 }, { t: 'black', a: 50 }] });
+  const h2 = await house();
+  const net = r.body.win - 100;
+  assert.deepEqual([h2.gave - h1.gave, h2.took - h1.took, h2.rounds - h1.rounds], [Math.max(0, net), Math.max(0, -net), 1]);
+  // Le fil ne garde que 20 manches.
+  assert.ok(run([['LLEN', 'casino:feed']])[0].result <= 20);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

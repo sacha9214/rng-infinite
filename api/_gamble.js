@@ -18,6 +18,28 @@ const ROULETTE = {
 };
 const amount = v => (Number.isInteger(v) && v >= MIN_BET && v <= MAX_BET ? v : 0);
 const refuse = (status, error) => Object.assign(new Error(error), { status });
+// Compte de la maison, visible par tous sur la page du casino : à chaque manche finie, ce que le joueur a gagné en plus
+// de sa mise est « donné », ce qu'il a perdu est « pris » (une égalité ne compte nulle part). Les dernières manches
+// vont dans un fil de 20 entrées. Ces commandes partent avec l'écriture du résultat : aucun aller-retour de plus.
+const HOUSE_KEY = 'casino', FEED_KEY = 'casino:feed', FEED_KEPT = 20;
+function ledger(id, game, bet, win) {
+  const net = win - bet;
+  if (!net) return [['HINCRBY', HOUSE_KEY, 'rounds', 1]];
+  return [
+    ['HINCRBY', HOUSE_KEY, 'rounds', 1], ['HINCRBY', HOUSE_KEY, net > 0 ? 'gave' : 'took', Math.abs(net)],
+    ['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: net, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1],
+  ];
+}
+// Ce que la page affiche : totaux et dernières manches, avec le pseudo des joueurs (jamais leur identifiant).
+async function house() {
+  const [flat, raw] = await redis([['HGETALL', HOUSE_KEY], ['LRANGE', FEED_KEY, -8, -1]]);
+  const tot = {};
+  for (let i = 0; i < (flat || []).length; i += 2) tot[flat[i]] = Number(flat[i + 1]) || 0;
+  const rows = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).reverse();
+  const names = rows.length ? (await redis([['HMGET', 'names', ...rows.map(r => r.id)]]))[0] || [] : [];
+  return { gave: tot.gave || 0, took: tot.took || 0, rounds: tot.rounds || 0, feed: rows.map((r, i) => ({ name: names[i] || 'Someone', game: r.g, net: r.n, t: r.t })) };
+}
+
 async function wallet(id) { const st = await readStats(id); return { coins: Shop.balance(st), rolls: Number(st.rolls) || 0 }; }
 async function mustAfford(id, bet) {
   const w = await wallet(id);
@@ -33,7 +55,7 @@ async function roulette(id, body) {
   await mustAfford(id, total);
   const n = crypto.randomInt(0, 37);
   const win = bets.reduce((x, b) => x + (ROULETTE[b.t].wins(n, b.v) ? b.a * ROULETTE[b.t].pays : 0), 0);
-  await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gSpins', 1], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win]]);
+  await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gSpins', 1], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, 'roulette', total, win)]);
   return { n, color: n === 0 ? 'green' : RED.has(n) ? 'red' : 'black', total, win, coins: (await wallet(id)).coins };
 }
 
@@ -51,7 +73,7 @@ async function settle(id, g) {
   g.result = p > 21 ? 'bust' : natural(g.player) && !natural(g.dealer) ? 'blackjack' : natural(g.dealer) && !natural(g.player) ? 'lose' : d > 21 || p > d ? 'win' : p === d ? 'push' : 'lose';
   g.win = g.result === 'blackjack' ? Math.floor(g.bet * 2.5) : g.result === 'win' ? g.bet * 2 : g.result === 'push' ? g.bet : 0;
   g.done = true;
-  await redis([['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)]]);
+  await redis([['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)], ...ledger(id, 'bj', g.bet, g.win)]);
 }
 async function blackjack(id, body) {
   const [raw] = await redis([['GET', bjKey(id)]]);
@@ -87,7 +109,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win]]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -168,4 +190,4 @@ async function crash(id, body) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

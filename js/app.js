@@ -72,6 +72,9 @@
     shop() {
       return this.request(`/api/shop?me=${Store.player.id}`);
     },
+    house() {
+      return this.request('/api/shop?casino=1');
+    },
     shopAction(action, skin, extra = {}) {
       const p = Store.player;
       return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra }) });
@@ -1297,6 +1300,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-10d', date: 'Oct 10, 2026', en: ['Casino: a small live strip shows how much the house has given to players and taken from them, with the latest results'], fr: ['Casino : un petit bandeau en direct montre combien la maison a donné aux joueurs et combien elle leur a pris, avec les derniers résultats'] },
     { id: '2026-10-10c', date: 'Oct 10, 2026', en: ['Duels: the score is now a compact strip and the roll button always stays on screen, so no more scrolling down to roll'], fr: ['Duels : le score tient maintenant en une bande compacte et le bouton de tirage reste toujours à l\'écran, plus besoin de descendre pour tirer'] },
     { id: '2026-10-10b', date: 'Oct 10, 2026', en: ['Shop reorganised: one tab per category (Skins, Buttons, Emotes, Cases, Speed) and your coins always shown at the top'], fr: ['Shop réorganisé : un onglet par catégorie (Skins, Boutons, Émotes, Caisses, Vitesse) et tes pièces toujours affichées en haut'] },
     { id: '2026-10-10', date: 'Oct 10, 2026', en: ['Roll speed upgrades in the Shop: five levels bought with coins, each one makes the reveal faster and shortens the wait between rolls (down to 4 s)'], fr: ['Vitesse de tirage dans le Shop : cinq niveaux à acheter avec tes pièces, chacun accélère la révélation et raccourcit l\'attente entre deux tirages (jusqu\'à 4 s)'] },
@@ -2537,6 +2541,33 @@
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
+  // Bandeau « en direct » du casino : ce que la maison a donné et pris à tous les joueurs, et les dernières manches.
+  // Relu toutes les 6 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
+  // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
+  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏' };
+  let houseTimer = 0;
+  async function drawHouse() {
+    clearTimeout(houseTimer);
+    const box = $('#g-live');
+    if (currentView !== 'gamble' || !box) return;
+    if (!document.hidden) {
+      try {
+        const h = await Online.house();
+        if (currentView !== 'gamble' || !box.isConnected) return;
+        const now = Date.now() + Room.offset, mine = Store.player.name;
+        const feed = h.feed.filter(r => !(r.name === mine && now - r.t < 7000)).slice(0, 5);
+        const html = `
+          <span class="g-live-dot" aria-hidden="true"></span><span class="eyebrow">Live</span>
+          <span class="g-live-tot">gave <b class="mono up">🪙 ${compact(h.gave)}</b></span>
+          <span class="g-live-tot">took <b class="mono down">🪙 ${compact(h.took)}</b></span>
+          <span class="g-live-feed">${feed.map(r => `<span class="g-live-row ${r.net > 0 ? 'up' : 'down'}">${GAME_ICONS[r.game] || '🎲'} <span data-no-i18n>${esc(r.name)}</span> <b class="mono">${r.net > 0 ? '+' : '−'}${fmt(Math.abs(r.net))}</b></span>`).join('')}</span>`;
+        if (box.dataset.sig !== html) { box.dataset.sig = html; box.innerHTML = html; }
+        box.title = `The house, all players together since Oct 10, 2026 · ${fmt(h.rounds)} rounds played`;
+        box.hidden = false;
+      } catch (err) { /* hors ligne : le bandeau garde ses derniers chiffres */ }
+    }
+    houseTimer = setTimeout(drawHouse, 6000);
+  }
   function renderGamble() {
     currentView = 'gamble';
     const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
@@ -2544,6 +2575,7 @@
       <div class="page page-wide">
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
+        <div class="g-live" id="g-live" hidden></div>
         <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
@@ -2586,6 +2618,7 @@
           </div>
         </div>
       </div>`;
+    drawHouse();
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
     const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'One move at a time' : 'Gamble unavailable right now, try again');
