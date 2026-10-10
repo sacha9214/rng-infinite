@@ -2586,3 +2586,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 }
 @keyframes tier-rainbow { to { background-position: 300% 0; } }
 @media (prefers-reduced-motion: reduce) { .pill[data-tier="infinite"] { animation: none; } }
+
+/* Shop : niveaux de vitesse du tirage. */
+.speed-row { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
+.speed-pips { display: flex; gap: .3rem; }
+.speed-pips i { width: 1.5rem; height: .6rem; border-radius: .3rem; background: var(--surface-dim); border: 1px solid var(--outline); transform: skewX(-18deg); }
+.speed-pips i.on { background: linear-gradient(90deg, #f472b6, #818cf8); border-color: transparent; box-shadow: 0 0 10px rgba(192, 132, 252, .5); }
+.speed-text { display: grid; gap: .1rem; flex: 1 1 10rem; min-width: 0; }
+.speed-note { margin: .7rem 0 0; }

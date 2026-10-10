@@ -1328,4 +1328,41 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(Q.byId.get('epic1').value({ 't:infinite': 1 }), 1);
 }
 
+// ================================================================ 35. Vitesse du tirage : niveaux achetés, délai entre tirages raccourci
+{
+  const Shop = require(path.join(ROOT, 'js/shop.js'));
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  const id = frank.playerId, key = `stats:${id}`;
+  const shop = (action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: frank.playerId, secret: frank.secret, action, ...extra } });
+  const rollNow = () => call(roll, { method: 'POST', body: frank });
+  assert.deepEqual([Shop.speedFactor(0), Shop.speedFactor(5), Shop.speedFactor(99), Shop.speedFactor('x'), Shop.speedFactor(-3)], [1, .5, .5, 1, 1]);
+  // Niveau 0 : 8 s entre deux tirages, comme avant.
+  await later(60000, async () => { r = await rollNow(); }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  await later(7900, async () => { r = await rollNow(); }); assert.equal(r.status, 429);
+  await later(200, async () => { r = await rollNow(); }); assert.equal(r.status, 200);
+  // Sans les pièces : refusé, rien ne bouge.
+  const coins0 = (await call(shopApi, { url: `/api/shop?me=${id}` })).body.coins;
+  run([['HINCRBY', key, 'spent', coins0]]);
+  await tick(); r = await shop('speed'); assert.equal(r.status, 422); assert.match(r.body.error, /Not enough coins: 1000 more needed/);
+  // Les cinq niveaux, un par un, au bon prix.
+  run([['HINCRBY', key, 'bonus', 64500]]);
+  let left = 64500;
+  for (let lv = 1; lv <= 5; lv++) {
+    await tick(); r = await shop('speed');
+    left -= Shop.SPEED.prices[lv - 1];
+    assert.deepEqual([r.status, r.body.speed, r.body.coins], [200, lv, left], JSON.stringify(r.body).slice(0, 200));
+  }
+  assert.equal(left, 0);
+  await tick(); r = await shop('speed'); assert.equal(r.status, 422); assert.match(r.body.error, /maximum/);
+  assert.equal((await call(shopApi, { url: `/api/shop?me=${id}` })).body.speed, 5);
+  // Niveau 5 : 4 s entre deux tirages.
+  await later(60000, async () => { r = await rollNow(); }); assert.equal(r.status, 200);
+  await later(3900, async () => { r = await rollNow(); }); assert.equal(r.status, 429);
+  await later(200, async () => { r = await rollNow(); }); assert.equal(r.status, 200, 'tirage accepté après 4,1 s');
+  // Un niveau trafiqué dans la base ne descend pas sous le plancher.
+  run([['HSET', key, 'speedLv', 999]]);
+  await later(3900, async () => { r = await rollNow(); }); assert.equal(r.status, 429);
+  run([['HSET', key, 'speedLv', 5]]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

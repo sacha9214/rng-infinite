@@ -202,6 +202,7 @@
     Store.setSetting('button', Shop.buttonLook(state.button, state.skin, state.owned, state.buttons));
     Store.setSetting('emotes', state.emotes || []);
     Store.setSetting('coins', state.coins);
+    Store.setSetting('speedLv', state.speed || 0);
     paintRollButtons();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
@@ -1296,6 +1297,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-10', date: 'Oct 10, 2026', en: ['Roll speed upgrades in the Shop: five levels bought with coins, each one makes the reveal faster and shortens the wait between rolls (down to 4 s)'], fr: ['Vitesse de tirage dans le Shop : cinq niveaux à acheter avec tes pièces, chacun accélère la révélation et raccourcit l\'attente entre deux tirages (jusqu\'à 4 s)'] },
     { id: '2026-10-09', date: 'Oct 9, 2026', en: ['Three new rarities above Mythic: Celestial (about 1 roll in 1,000), Divine (1 in 10,000) and Infinite (1 in 100,000), each with its own reveal, sound and coin reward', 'A new title for each of them. Your old rolls count: past Mythics that qualify are upgraded automatically'], fr: ['Trois nouvelles raretés au-dessus de Mythic : Celestial (environ 1 tirage sur 1 000), Divine (1 sur 10 000) et Infinite (1 sur 100 000), chacune avec sa révélation, son son et sa récompense en pièces', 'Un nouveau titre pour chacune. Tes anciens tirages comptent : les anciens Mythic concernés sont reclassés automatiquement'] },
     { id: '2026-10-08f', date: 'Oct 8, 2026', en: ['Share a roll as an image card: press Share, then copy it straight into Discord or download it'], fr: ['Partage un tirage en image : appuie sur Partager, puis colle la carte directement dans Discord ou télécharge-la'] },
     { id: '2026-10-08e', date: 'Oct 8, 2026', en: ['A notification tells you when you complete a daily quest, with its coin reward'], fr: ['Une notification te prévient quand tu termines une quête du jour, avec sa récompense en pièces'] },
@@ -1444,7 +1446,9 @@
     currentView = 'result';
     const { n, a } = ctx;
     const speed = SPEEDS[Store.settings.speed] || SPEEDS.normal;
-    const k = speed.base, kb = speed.badges;
+    // Niveau de vitesse acheté dans la boutique : toute la révélation raccourcit, chiffres compris (un rewatch aussi).
+    const kd = Shop.speedFactor(Store.settings.speedLv);
+    const k = speed.base * kd, kb = speed.badges * kd;
     const slotCount = Math.max(6, a.str.length);
     const padded = a.str.padStart(slotCount, '0');
     const lead = slotCount - a.str.length;
@@ -1490,7 +1494,7 @@
     const step = (delay, run, factor = k) => { clock += delay * factor; steps.push({ at: clock, run, done: false }); };
     const show = (el, cls) => { el.classList.remove('invisible'); if (cls && !reducedMotion) el.classList.add(cls); };
     // Sons : une étape en retard (onglet endormi puis réveillé, tout tombe d'un coup) se joue sans le sien.
-    const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount);
+    const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount) * kd;
     let late = false, lastFrom = 0;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     Sound.warm([['tier', { tier: a.tier }]]);
@@ -1520,8 +1524,8 @@
       if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
-    step(REVEAL.digitStart, revealDigit(0), 1);
-    for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), 1);
+    step(REVEAL.digitStart, revealDigit(0), kd);
+    for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), kd);
     steps.push({ at: clock - Sound.LEAD, run: () => { sfx('riser'); if (skinFx) skinFx.build(Sound.LEAD); }, done: false }); // montée de tension, coupée juste avant le dernier chiffre
     step(0, quick => {
       clearInterval(spin);
@@ -2386,6 +2390,10 @@
           <p class="panel-note" style="margin-top:-.3rem">Change how your number looks, on your rolls and on your cards in duels. Earn coins by rolling (${Object.entries(Shop.COINS).map(([t, v]) => `${t[0].toUpperCase()}${t.slice(1)} ${v}`).join(', ')}) and by winning duels (+${Shop.DUEL_WIN_COINS}).</p>
           <div class="skin-grid" id="d-skins"></div>
         </div>
+        <div class="panel stats-sep" id="d-speed-panel" hidden>
+          <div class="panel-head"><h3 class="panel-title">Roll speed</h3><span class="panel-note">a faster reveal, so more rolls per minute</span></div>
+          <div id="d-speed"></div>
+        </div>
         <div class="panel stats-sep" id="d-emotes-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
           <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
@@ -2452,6 +2460,7 @@
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
     drawEmotes(state);
+    drawSpeed(state);
     const cases = $('#d-cases');
     if (cases) cases.onclick = e => {
       const btn = e.target.closest('[data-case]');
@@ -2782,6 +2791,38 @@
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
     gamble('bj', { move: 'state' }).then(h => { if (currentView === 'gamble') drawHand(h); }).catch(() => {});
+  }
+
+  // Vitesse du tirage : cinq niveaux achetés l'un après l'autre (js/shop.js). Le serveur raccourcit d'autant le délai
+  // entre deux tirages ; la durée affichée est celle d'un tirage sans badge, au réglage d'animation « normal ».
+  function drawSpeed(state) {
+    const box = $('#d-speed');
+    if (!box) return;
+    $('#d-speed-panel').hidden = false;
+    const lv = state.speed || 0, max = Shop.SPEED.prices.length, price = Shop.SPEED.prices[lv];
+    const pct = l => Math.round((1 - Shop.SPEED.factors[l]) * 100);
+    const wait = l => (8 * Shop.SPEED.factors[l]).toFixed(1).replace(/\.0$/, '');
+    box.innerHTML = `
+      <div class="speed-row">
+        <div class="speed-pips" aria-label="Level ${lv} of ${max}">${Shop.SPEED.prices.map((p, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>
+        <div class="speed-text"><b>Level ${lv} / ${max}</b><span class="panel-note">${lv ? `reveal ${pct(lv)}% faster · ${wait(lv)} s between rolls` : `8 s between rolls`}</span></div>
+        ${price === undefined ? '<span class="skin-state">Max level</span>' : `<button class="btn-roll small${state.coins >= price ? '' : ' disabled'}" id="d-speed-buy">Upgrade · 🪙 ${fmt(price)}</button>`}
+      </div>
+      <p class="panel-note speed-note">${price === undefined ? 'Your rolls are as fast as they get. Duels keep their shared pace.' : `Next level: reveal ${pct(lv + 1)}% faster, ${wait(lv + 1)} s between rolls. Solo rolls only: duels keep their shared pace.`}</p>`;
+    const btn = $('#d-speed-buy');
+    if (btn) btn.onclick = async () => {
+      if (state.coins < price) { toast(`${fmt(price - state.coins)} more coins needed for the next speed level`); return; }
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction('speed');
+        toast(`⚡ Roll speed level ${next.speed}: your reveals are now ${pct(next.speed)}% faster`, 4000, 'achv');
+        Sound.play('lock', { i: 5 });
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
   }
 
   // Émotes spéciales : une tuile par émote, animée en permanence ici ; achetée une fois, elle rejoint la barre de

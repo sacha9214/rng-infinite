@@ -2,7 +2,8 @@
 // Le serveur tire le nombre (personne ne peut choisir son 1337), calcule l'XP avec le moteur du site,
 // puis met à jour le meilleur tirage du joueur pour le jour, la semaine et tous les temps.
 const crypto = require('node:crypto');
-const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, flushDue } = require('./_lib');
+const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, flushDue, statsKey } = require('./_lib');
+const Shop = require('../js/shop.js');
 
 // Une révélation dure au moins ~10 s : 8 s minimum entre deux tirages ne gêne jamais un vrai joueur.
 const COOLDOWN_MS = 8000;
@@ -29,8 +30,10 @@ module.exports = async (req, res) => {
     if (!(await claimName(playerId, name))) return send(res, 409, { error: 'This name is already taken, pick another one' });
 
     const nonce = /^[0-9a-f]{16,32}$/.test(String(body.nonce || '')) ? String(body.nonce) : '';
-    const [cooldown, again] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', COOLDOWN_MS, 'NX'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
+    // Délai entre deux tirages : 8 s, raccourci par le niveau de vitesse acheté dans la boutique (js/shop.js).
+    const [level, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
     if (again) return send(res, 200, { ...JSON.parse(again), again: true });
+    const [cooldown] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX']]);
     if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish' });
 
     const n = crypto.randomInt(0, 1000001);

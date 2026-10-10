@@ -34,6 +34,7 @@ async function state(id) {
     buttons,
     button: mineToo ? button : Shop.MATCH,
     emotes: Shop.EMOTES.map(e => e.id).filter(e => (emotes || []).includes(e)),
+    speed: Shop.speedLevel(stats.speedLv),
   };
 }
 
@@ -115,6 +116,21 @@ module.exports = async (req, res) => {
       if (lock !== 'OK') return send(res, 429, { error: 'One move at a time' });
       try {
         return send(res, 200, await GAMES[body.action](playerId, body));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    // Vitesse du tirage : achète le niveau suivant (jamais deux d'un coup, jamais au-delà du dernier).
+    if (body.action === 'speed') {
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        const price = Shop.SPEED.prices[st.speed];
+        if (price === undefined) return send(res, 422, { error: 'Roll speed is already at its maximum' });
+        if (st.coins < price) return send(res, 422, { error: `Not enough coins: ${price - st.coins} more needed` });
+        await redis([['HINCRBY', statsKey(playerId), 'spent', price], ['HSET', statsKey(playerId), 'speedLv', st.speed + 1]]);
+        return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }
