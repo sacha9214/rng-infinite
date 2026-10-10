@@ -1664,6 +1664,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const t3 = tip({ message: '???', from_name: 'x' }); await kofi(t3);
   r = await post(frank, 'fund'); assert.equal(r.body.pending.length, 1);
   r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true }); assert.equal(r.body.pending.length, 0);
+  // Un faux don (test de Ko-fi) : « pas un vrai don » le retire aussi du total du mois.
+  { const c0 = (await fundNow()).cents; await kofi(tip({ message: '', from_name: 'Jo Example', amount: '3.00' })); assert.equal((await fundNow()).cents, c0 + 300); r = await post(frank, 'fund'); r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true, remove: true }); assert.deepEqual([r.body.pending.length, r.body.cents], [0, c0]); }
   // Un joueur ordinaire ne peut rien attribuer.
   assert.equal((await post(bob, 'fundAssign', { tx: 'x', name: 'Bob' })).status, 403);
   run([['HDEL', `stats:${frank.playerId}`, 'owner']]);

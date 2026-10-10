@@ -355,6 +355,8 @@ module.exports = async (req, res) => {
         if (!target) return send(res, 404, { error: 'No player with this name' });
         await creditFund({ target, name: who, cents: item.cents, counted: true, auto: true });
       }
+      // Un faux don (le test de Ko-fi) : retiré aussi du total du mois où il avait été compté.
+      if (body.dismiss && body.remove) { const mo = monthKey(item.t); await redis([['HINCRBY', fundKey(mo), 'cents', -item.cents], ['HINCRBY', fundKey(mo), 'count', -1]]); }
       await redis([['HDEL', FUND_PENDING, String(body.tx)]]);
     }
     if (['fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) {

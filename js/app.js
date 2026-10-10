@@ -3494,7 +3494,7 @@
           <p class="panel-note o-fund-auto">${f.auto ? '🟢 Automatic: a tip whose message contains a player name gives the skin by itself.' : '⚪ Automatic attribution is off (no Ko-fi token on the server yet): record contributions by hand below.'}</p>
           ${(f.pending || []).length ? `<div class="o-fund-pending"><span class="eyebrow">Waiting for a player · ${f.pending.length}</span><span class="panel-note">These tips arrived without a recognisable player name. The amount is already counted in the month: just say who gets the skin.</span>${f.pending.map(x => `
             <form class="o-pending" data-tx="${esc(x.tx)}"><span class="o-pending-what"><b data-no-i18n>${euros(x.cents)}</b> <span class="panel-note" data-no-i18n>${suggDate(x.t)} · ${esc(x.from || '?')}</span><em data-no-i18n>${esc(x.message || '(no message)')}</em></span>
-              <input class="input" name="name" maxlength="20" placeholder="Player name" aria-label="Player name" required><button class="btn">Give the skin</button><button class="btn ghost" type="button" data-dismiss>Dismiss</button></form>`).join('')}</div>` : ''}
+              <input class="input" name="name" maxlength="20" placeholder="Player name" aria-label="Player name" required><button class="btn">Give the skin</button><button class="btn ghost" type="button" data-dismiss title="Keep the amount in the month, give no skin">Dismiss</button><button class="btn ghost" type="button" data-remove title="A test or a mistake: also take the amount out of the month">Not a real tip</button></form>`).join('')}</div>` : ''}
           <div class="o-fund-forms">
             <form class="o-fund-form" id="o-fund-add">
               <span class="eyebrow">Record a contribution</span>
@@ -3528,6 +3528,7 @@
         const run = extra => Online.site('fundAssign', { tx: form.dataset.tx, ...extra }).then(next => { drawFund(next); toast(extra.dismiss ? 'Dismissed' : 'Skin given'); }).catch(err => toast([404, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'));
         form.addEventListener('submit', e => { e.preventDefault(); run({ name: new FormData(form).get('name') }); });
         form.querySelector('[data-dismiss]').addEventListener('click', () => run({ dismiss: true }));
+        form.querySelector('[data-remove]').addEventListener('click', () => run({ dismiss: true, remove: true }));
       });
       send($('#o-fund-set'), 'fundSet', d => ({ goal: Number(String(d.goal).replace(',', '.')), url: d.url }));
     };
