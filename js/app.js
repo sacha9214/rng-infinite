@@ -3011,7 +3011,9 @@
     const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
     const runCrash = st => {
       Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
-      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; const m = Math.floor(Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)) * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(m, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; // Le texte suit l'arrondi du serveur (deux décimales, vers le bas) ; la courbe et la fusée suivent la valeur exacte,
+        // prise sur l'horloge de l'image : dessinées avec la valeur arrondie, elles avançaient par à-coups (7 pas par seconde).
+        const exact = Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)), m = Math.floor(exact * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(exact, 'run'); Gamble.raf = requestAnimationFrame(frame); };
       frame();
       clearInterval(Gamble.poll);
       Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } }, 1000);
