@@ -1057,8 +1057,7 @@
             press <kbd>Space</kbd>
           </p>
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
-          <div id="quests-slot"></div>
-          <div data-fund-slot></div>
+          <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div></div>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
