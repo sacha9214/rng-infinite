@@ -267,3 +267,6 @@
 @keyframes supp-heart { 0%, 100% { transform: scale(1); opacity: .6; } 12% { transform: scale(1.35); opacity: 1; } 24% { transform: scale(1.05); } 36% { transform: scale(1.22); opacity: .95; } 52% { transform: scale(1); opacity: .6; } }
 .room-stage.many .num-card.skin-supporter::before { animation: none; }
 .room-stage.many .side-supporter::before, .room-stage.many .side-supporter::after { animation: none; }
+
+/* Avec la scène animée (js/skinfx.js), la ligne de pouls est dessinée dans le canvas : celle du CSS se retire. */
+.num-card.skin-supporter.has-fx::before { opacity: 0; animation: none; }

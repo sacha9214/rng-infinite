@@ -1628,6 +1628,93 @@
 
   // ---------------------------------------------------------------- montage sur une carte
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // 💗 Supporter — un cœur qui bat. La ligne de pouls court dans la carte et accélère à chaque chiffre posé ; chaque
+  // chiffre est un battement (double onde corail, quelques cœurs qui s'envolent) ; avant le dernier le pouls s'emballe ;
+  // la révélation est une grande onde autour de la carte et une envolée de cœurs. Tirage raté : la ligne devient plate.
+  SCENES.supporter = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const CORAL = '#fb7185', ROSE = '#fda4af', GOLD = '#fde68a', DEEP = '#e11d48';
+    const TONES = dark ? [CORAL, ROSE, GOLD, '#ffffff'] : [DEEP, CORAL, '#f59e0b', ROSE];
+    const hearts = particles(), sparks = particles(), rings = timed(), flashes = timed();
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, dk = dark ? 1 : .75;
+    // Tracé d'un battement sur un cycle (0 à 1) : onde P, pointe QRS, onde T.
+    const ECG = [[0, 0], [.3, 0], [.33, .12], [.36, 0], [.4, 0], [.425, -.15], [.455, 1], [.49, -.32], [.52, 0], [.62, 0], [.68, .22], [.74, 0], [1, 0]];
+    const ecg = u => { for (let i = 1; i < ECG.length; i++) if (u <= ECG[i][0]) { const [x0, y0] = ECG[i - 1], [x1, y1] = ECG[i]; return y0 + (y1 - y0) * ((u - x0) / (x1 - x0 || 1)); } return 0; };
+    let bpm = 64, target = 64, travel = 0, phase = 0, amp = 1, ampTo = 1, lit = 0, surge = 0;
+    const heart = (c, x, y, s, color, a, rot) => {
+      if (a <= .01 || s <= .3) return;
+      c.save(); c.translate(x, y); c.rotate(rot); c.globalAlpha = Math.min(1, a); c.fillStyle = color;
+      c.beginPath(); c.moveTo(0, s * .9); c.bezierCurveTo(-s * 1.5, -s * .2, -s * .75, -s * 1.25, 0, -s * .45); c.bezierCurveTo(s * .75, -s * 1.25, s * 1.5, -s * .2, 0, s * .9); c.fill();
+      c.globalAlpha = Math.min(1, a * .55); c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(-s * .42, -s * .42, s * .2, s * .13, -.6, 0, TAU); c.fill();
+      c.restore();
+    };
+    const fly = (x, y, vx, vy, size) => hearts.add({ x, y, vx, vy, g: -26, drag: 1.3, max: rnd(.9, 1.7), size, c: pick(TONES), rot: rnd(-.45, .45), spin: rnd(-.6, .6), wob: rnd(3, 6), ph: rnd(TAU), sway: rnd(3, 9) });
+    return {
+      frame(t, dt) {
+        bpm += (target - bpm) * Math.min(1, dt * 2.4);
+        amp += (ampTo - amp) * Math.min(1, dt * 5);
+        travel += dt * bpm / 60;
+        phase = travel % 1;
+        surge = Math.max(0, surge - dt * .9);
+        // Enveloppe du battement : « boum », puis « boum » un peu plus faible.
+        const pulse = d => (d >= 0 && d < .5 ? Math.exp(-d * 11) : 0);
+        const beat = amp * Math.max(pulse(phase), .7 * pulse(phase - .19));
+        // Dans la carte : lueur qui respire au rythme du cœur, et la ligne de pouls qui défile.
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, CORAL, w * .5, h * .55, w * .58, (.1 + .3 * lit) * (.55 + .9 * beat) + surge * .35);
+        flashes.run(dt, (f, k) => dot(ci, f.c, f.x, h * .5, h * (.5 + .9 * outExpo(k)), (1 - k) * (1 - k) * f.a));
+        ci.lineCap = ci.lineJoin = 'round';
+        const base = h * .8, tall = h * .3 * amp, cycles = 1.5; // sous les chiffres : seule la pointe monte derrière eux
+        for (const [width, alpha, color] of [[5, .14, CORAL], [1.6, .6, dark ? ROSE : CORAL]]) {
+          ci.globalAlpha = alpha * (.55 + .45 * Math.min(1, lit + .4)); ci.strokeStyle = color; ci.lineWidth = width;
+          ci.beginPath();
+          for (let x = -2; x <= w + 2; x += 2.5) { const u = (((x / w) * cycles - travel) % 1 + 1) % 1, y = base - ecg(u) * tall; x < 0 ? ci.moveTo(x, y) : ci.lineTo(x, y); }
+          ci.stroke();
+        }
+        // Autour : un halo qui bat avec la carte et un liseré qui gonfle à chaque battement.
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        dot(co, CORAL, cx, cy, card.w * (.66 + .1 * beat + .25 * surge), (.07 + .13 * beat * (.4 + lit) + surge * .22) * dk);
+        if (beat > .03) { const g = grown(card, 2 + 7 * beat); roundRect(co, g.x, g.y, g.w, g.h, g.r); co.globalAlpha = Math.min(1, beat * (.25 + .5 * lit)) * dk; co.strokeStyle = dark ? ROSE : CORAL; co.lineWidth = 1 + 2.5 * beat; co.stroke(); }
+        rings.run(dt, (r, k) => {
+          const a = (1 - k) * (1 - k) * r.a * dk;
+          co.globalAlpha = Math.min(1, a); co.strokeStyle = r.c; co.lineWidth = r.width * (1 - .6 * k) + .5;
+          if (r.card) { const g = grown(card, 4 + r.size * outCubic(k)); roundRect(co, g.x, g.y, g.w, g.h, g.r); } else { co.beginPath(); co.arc(r.x, r.y, 4 + r.size * outCubic(k), 0, TAU); }
+          co.stroke();
+        });
+        co.globalCompositeOperation = 'source-over';
+        sparks.step(dt);
+        sparks.each((s, k) => dot(co, s.c, s.x, s.y, s.size * (1 - .5 * k), (1 - k * k) * dk));
+        hearts.step(dt);
+        hearts.each((p, k) => heart(co, p.x + Math.sin(p.life * p.wob + p.ph) * p.sway, p.y, p.size * (k < .12 ? .3 + .7 * (k / .12) : 1 - .25 * k), p.c, k < .7 ? 1 : 1 - (k - .7) / .3, p.rot + p.spin * p.life));
+      },
+      lock(p, o) { // un battement : le pouls repart de ce chiffre, double onde, quelques cœurs
+        lit = Math.min(1, lit + (o.ghost ? .03 : 1 / 6));
+        target = Math.min(150, target + (o.ghost ? 3 : 11));
+        travel = Math.floor(travel) + .43; // la pointe du tracé tombe sur cet instant
+        const big = o.last ? 1.5 : 1;
+        flashes.add({ x: p.x - card.x, life: o.last ? .55 : .38, a: o.ghost ? .25 : .75, c: CORAL });
+        if (!o.ghost) {
+          rings.add({ x: p.x, y: p.y, size: card.h * .7 * big, life: .55, a: 1, width: 3.6, c: dark ? ROSE : CORAL });
+          rings.add({ x: p.x, y: p.y, size: card.h * .5 * big, life: .5, a: .85, width: 2.6, c: dark ? GOLD : DEEP, delay: .15 });
+        }
+        for (let i = Math.round((o.ghost ? 1 : o.last ? 13 : 6) * q); i > 0; i--) fly(p.x + rnd(-11, 11), p.y - card.h * .22, rnd(-60, 60), rnd(-210, -90) * (o.last ? 1.25 : 1), rnd(6.5, 10.5) * (o.last ? 1.3 : 1));
+        for (let i = Math.round((o.ghost ? 0 : 5) * q); i > 0; i--) { const a = rnd(TAU), v = rnd(50, 150); sparks.add({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 3, max: rnd(.3, .6), size: rnd(2, 4), c: pick([GOLD, ROSE]) }); }
+        if (o.last) { surge = .7; lit = 1; }
+      },
+      build() { target = 172; }, // le cœur s'emballe avant le dernier chiffre
+      reveal(tier) {
+        const p = POWER[tier];
+        if (!p) { ampTo = .04; target = 40; lit = .25; surge = 0; fly(cx, card.y, rnd(-10, 10), -40, 5); return; } // tirage raté : la ligne devient plate
+        surge = .3 + .7 * p;
+        target = 66 + 26 * p;
+        travel = Math.floor(travel) + .43;
+        for (let i = 0; i < 1 + Math.round(2 * p); i++) rings.add({ card: true, size: 26 + 120 * p - 14 * i, life: .7 + .6 * p, a: .9 - .15 * i, width: 3 + 2 * p, c: i % 2 ? (dark ? GOLD : DEEP) : (dark ? ROSE : CORAL), delay: i * .17 });
+        for (let i = burst(p, 64 * q, 3); i > 0; i--) { const from = along(card, rnd()), a = Math.atan2(from.y - cy, (from.x - cx) * .7), v = rnd(60, 150 + 250 * p); fly(from.x, from.y, Math.cos(a) * v, Math.sin(a) * v - rnd(30, 120), rnd(4.5, 7 + 6 * p)); }
+        for (let i = burst(p, 90 * q, 4); i > 0; i--) { const from = along(card, rnd()), a = Math.atan2(from.y - cy, from.x - cx) + rnd(-.6, .6), v = rnd(70, 200 + 320 * p); sparks.add({ x: from.x, y: from.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 120, drag: 1.6, max: rnd(.5, 1.2), size: rnd(2, 4.5), c: pick([GOLD, ROSE, '#ffffff']) }); }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
