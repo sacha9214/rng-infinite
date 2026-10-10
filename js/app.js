@@ -1300,6 +1300,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11', date: 'Oct 11, 2026', en: ['Casino: a slot machine 🎰 with three animated reels, a lever to pull and a 250× jackpot on 7 7 7'], fr: ['Casino : une machine à sous 🎰 avec trois rouleaux animés, un levier à tirer et un jackpot à 250× sur 7 7 7'] },
     { id: '2026-10-10g', date: 'Oct 10, 2026', en: ['New badge: Full Stack 🧱 — any number containing 64 (a full stack of blocks) earns 6,400 XP'], fr: ['Nouveau badge : Full Stack 🧱 — tout nombre contenant 64 (une pile complète de blocs) rapporte 6 400 XP'] },
     { id: '2026-10-10f', date: 'Oct 10, 2026', en: ['Crash: the rocket is much smoother, and Cash out no longer answers "One move at a time"'], fr: ['Crash : la fusée est beaucoup plus fluide, et « Cash out » ne répond plus « One move at a time »'] },
     { id: '2026-10-10e', date: 'Oct 10, 2026', en: ['Casino fixes: on phones the roulette wheel no longer covers the Red, Black and Even bets; a Crash cash-out is never refused because of bad timing; a blackjack hand or a Mines grid left open is kept for a week and always comes back after a reload'], fr: ['Corrections du casino : sur téléphone, la roue de la roulette ne recouvre plus les mises Rouge, Noir et Pair ; un encaissement au Crash n\'est plus jamais refusé pour une question de timing ; une main de blackjack ou une grille de Mines laissée ouverte est gardée une semaine et revient toujours après un rechargement'] },
@@ -2548,7 +2549,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 6 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -2580,7 +2581,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -2595,6 +2596,24 @@
             <div class="mn-grid" id="mn-grid">${Array.from({ length: 25 }, (_, i) => `<button class="mn-cell" data-cell="${i}" disabled></button>`).join('')}</div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="mn-go">Start</button></div>
             <p class="panel-note g-result" id="mn-result"></p>
+          </div>
+          <div class="panel g-game" data-game="slots">
+            <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
+            <div class="sm-machine" id="sm-machine" data-state="idle">
+              <div class="sm-crown"><span class="sm-bulbs" aria-hidden="true">${'<i></i>'.repeat(11)}</span><b class="sm-name" data-no-i18n>LUCKY ∞</b><span class="sm-bulbs" aria-hidden="true">${'<i></i>'.repeat(11)}</span></div>
+              <div class="sm-body">
+                <div class="sm-window">
+                  ${[0, 1, 2].map(r => `<div class="sm-reel" data-reel="${r}"><div class="sm-strip"></div></div>`).join('')}
+                  <div class="sm-payline" aria-hidden="true"></div>
+                  <div class="sm-glass" aria-hidden="true"></div>
+                </div>
+                <button class="sm-lever" id="sm-lever" aria-label="Pull the lever"><span class="sm-arm"><i></i></span></button>
+              </div>
+              <div class="sm-tray"><span class="sm-win mono" id="sm-win" data-no-i18n></span></div>
+            </div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="sm-go">Spin</button></div>
+            <p class="panel-note g-result" id="sm-result"></p>
+            <div class="sm-pays" id="sm-pays"></div>
           </div>
           <div class="panel g-game" data-game="plinko">
             <div class="panel-head"><h3 class="panel-title">Plinko</h3><span class="panel-note">12 rows · the edges pay the most</span></div>
@@ -2792,6 +2811,90 @@
         showCoins(res.coins);
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
+    // ---- machine à sous : trois bandes de symboles qui défilent vers le bas et s'arrêtent l'une après l'autre sur le
+    // tirage du serveur. Les symboles sont dessinés en SVG (pas d'émojis : le même rendu partout).
+    const SM = {
+      cherry: '<svg viewBox="0 0 64 64"><path d="M40 8c-9 6-15 16-17 30M40 8c2 10 6 20 6 28" fill="none" stroke="#15803d" stroke-width="3.5" stroke-linecap="round"/><path d="M40 8c8-4 16-2 20 4-8 4-15 3-20-4z" fill="#22c55e"/><circle cx="21" cy="44" r="13" fill="#dc2626"/><circle cx="46" cy="42" r="12" fill="#ef4444"/><circle cx="16" cy="39" r="4" fill="#fecaca" opacity=".8"/><circle cx="42" cy="37" r="3.5" fill="#fecaca" opacity=".8"/></svg>',
+      lemon: '<svg viewBox="0 0 64 64"><ellipse cx="32" cy="35" rx="24" ry="17" transform="rotate(-24 32 35)" fill="#facc15"/><ellipse cx="32" cy="35" rx="24" ry="17" transform="rotate(-24 32 35)" fill="none" stroke="#ca8a04" stroke-width="2.5"/><path d="M9 45c-3 2-5 1-6-1M55 25c3-2 5-1 6 1" stroke="#ca8a04" stroke-width="3" stroke-linecap="round" fill="none"/><ellipse cx="25" cy="29" rx="8" ry="4" transform="rotate(-24 25 29)" fill="#fef9c3" opacity=".75"/><path d="M48 14c4-6 10-7 14-4-3 6-9 8-14 4z" fill="#22c55e"/></svg>',
+      bell: '<svg viewBox="0 0 64 64"><path d="M32 8c-11 0-17 8-17 20v10l-7 10h48l-7-10V28c0-12-6-20-17-20z" fill="#f59e0b"/><path d="M32 8c-11 0-17 8-17 20v10l-7 10h20z" fill="#fbbf24"/><path d="M8 48h48" stroke="#b45309" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="55" r="5" fill="#b45309"/><rect x="29" y="3" width="6" height="7" rx="3" fill="#b45309"/><path d="M22 20c1-5 4-8 8-9" stroke="#fef3c7" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/></svg>',
+      star: '<svg viewBox="0 0 64 64"><path d="M32 5l8 18 19 2-14 13 4 19-17-10-17 10 4-19L5 25l19-2z" fill="#fde047" stroke="#ca8a04" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 13l5 12 12 1-9 8 3 12-11-6z" fill="#fef9c3" opacity=".65"/></svg>',
+      diamond: '<svg viewBox="0 0 64 64"><path d="M16 12h32l12 14-28 30L4 26z" fill="#22d3ee"/><path d="M16 12l8 14H4zM48 12l-8 14h20zM24 26h16l-8 30z" fill="#67e8f9"/><path d="M16 12h32l-8 14H24z" fill="#a5f3fc"/><path d="M16 12h32l12 14-28 30L4 26z" fill="none" stroke="#0e7490" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+      seven: '<svg viewBox="0 0 64 64"><path d="M12 9h42v10L34 57H18l18-34H12z" fill="#b91c1c" stroke="#fde047" stroke-width="3.5" stroke-linejoin="round"/><path d="M16 13h34v3L30 53h-5l19-36H16z" fill="#ef4444"/></svg>',
+    };
+    const SM_NAMES = Object.keys(SM), SM_THREE = { seven: 250, diamond: 75, star: 30, bell: 12, lemon: 8, cherry: 5 }, SM_TWO = { seven: 5, cherry: 2, lemon: 1 };
+    const smCell = (s, extra = '') => `<span class="sm-cell${extra}" data-sym="${s}">${SM[s]}</span>`;
+    const smAny = () => SM_NAMES[Math.floor(Math.random() * SM_NAMES.length)];
+    const machine = $('#sm-machine'), strips = [...document.querySelectorAll('.sm-strip')];
+    // Ce que chaque rouleau montre au repos : [au-dessus, ligne de gain, en dessous].
+    Gamble.smShown = Gamble.smShown || [['lemon', 'seven', 'bell'], ['star', 'seven', 'cherry'], ['diamond', 'seven', 'lemon']];
+    strips.forEach((st, r) => { st.innerHTML = Gamble.smShown[r].map(s => smCell(s)).join(''); });
+    $('#sm-pays').innerHTML = [...Object.entries(SM_THREE).map(([s, m]) => [SM[s].repeat(3), m]), ...Object.entries(SM_TWO).map(([s, m]) => [SM[s].repeat(2), m])]
+      .map(([icons, m]) => `<span class="sm-pay"><span class="sm-pay-icons">${icons}</span><b class="mono">${m}×</b></span>`).join('');
+    const smLabel = () => { $('#sm-go').textContent = `Spin · ${fmt(Gamble.chip)}`; };
+    smLabel();
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) smLabel(); });
+    // Un rouleau : la bande est remplie de symboles au hasard entre ce qu'il montre et ce qu'il doit montrer, placée
+    // tout en haut, puis ramenée à zéro. Les symboles défilent donc vers le bas, et la fin de course rebondit un peu.
+    const smSpin = (r, final, ms) => new Promise(done => {
+      const st = strips[r], filler = Array.from({ length: 14 + r * 5 + Math.round(ms / 260) }, smAny);
+      const cells = [...final, ...filler, ...Gamble.smShown[r]];
+      st.style.transition = 'none';
+      st.innerHTML = cells.map(s => smCell(s)).join('');
+      const cell = st.firstElementChild.getBoundingClientRect().height;
+      st.style.transform = `translateY(${-(cells.length - 3) * cell}px)`;
+      st.classList.add('blur');
+      void st.offsetHeight; // la position de départ est prise en compte avant de lancer la course
+      st.style.transition = `transform ${ms}ms cubic-bezier(.16, .62, .24, 1.045)`;
+      st.style.transform = 'translateY(0)';
+      setTimeout(() => st.classList.remove('blur'), ms * .72);
+      setTimeout(() => {
+        st.style.transition = 'none'; st.innerHTML = final.map(s => smCell(s)).join(''); st.style.transform = 'translateY(0)';
+        Gamble.smShown[r] = final;
+        st.parentElement.classList.remove('stopped'); void st.parentElement.offsetWidth; st.parentElement.classList.add('stopped');
+        done();
+      }, ms + 30);
+    });
+    const smPlay = async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true;
+      const lever = $('#sm-lever');
+      try {
+        $('#sm-result').textContent = ''; $('#sm-result').dataset.won = ''; $('#sm-win').textContent = '';
+        machine.querySelectorAll('.sm-cell.win').forEach(c => c.classList.remove('win'));
+        lever.classList.remove('pull'); void lever.offsetWidth; lever.classList.add('pull');
+        Sound.play('click');
+        const res = await gamble('slots', { bet: Gamble.chip });
+        showCoins(res.coins - res.win); // le gain s'affiche quand le dernier rouleau s'arrête
+        machine.dataset.state = 'spin';
+        const quick = reducedMotion ? .35 : 1;
+        // Deux premiers rouleaux identiques : le troisième se fait attendre, les lumières s'emballent.
+        const tease = res.reels[0] === res.reels[1] && !reducedMotion;
+        const times = [1500, 2150, tease ? 4100 : 2800].map(x => x * quick);
+        const ticks = setInterval(() => { if (currentView === 'gamble') Sound.tick({ soft: 1 }); }, 85);
+        const stops = res.reels.map((sym, r) => smSpin(r, [smAny(), sym, smAny()], times[r]).then(() => {
+          if (currentView !== 'gamble') return;
+          Sound.play('lock', { i: r + 2, final: r === 2 ? 1 : 0 });
+          if (r === 1 && tease) machine.dataset.state = 'tease';
+        }));
+        await Promise.all(stops);
+        clearInterval(ticks);
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        machine.dataset.state = res.win > res.bet ? (res.mult >= 30 ? 'jackpot' : 'win') : 'idle';
+        // Les symboles payés s'allument sur la ligne de gain.
+        const three = res.reels[0] === res.reels[1] && res.reels[1] === res.reels[2];
+        const paid = three ? res.reels[0] : Object.keys(SM_TWO).find(k => res.reels.filter(x => x === k).length === 2);
+        if (res.mult) strips.forEach((st, r) => { if (res.reels[r] === paid) st.children[1].classList.add('win'); });
+        say($('#sm-result'), res.win, res.bet, res.win ? `${res.mult}× · you get ${fmt(res.win)} coins` : `No line · −${fmt(res.bet)}`);
+        if (res.win > res.bet) {
+          countUp($('#sm-win'), 0, res.win, 900, v => `+${fmt(v)}`);
+          Sound.play(res.mult >= 30 ? 'tier' : 'reveal', res.mult >= 30 ? { tier: res.mult >= 250 ? 'mythic' : 'anomaly' } : { small: 1 });
+          FX.celebrate(res.mult >= 250 ? 'mythic' : res.mult >= 30 ? 'anomaly' : res.mult >= 8 ? 'epic' : 'uncommon', machine);
+        }
+        showCoins(res.coins);
+      } catch (err) { machine.dataset.state = 'idle'; fail(err); } finally { Gamble.busy = false; smLabel(); }
+    };
+    $('#sm-go').addEventListener('click', smPlay);
+    $('#sm-lever').addEventListener('click', smPlay);
     // ---- mines
     const drawMines = g => {
       Gamble.mn = g;

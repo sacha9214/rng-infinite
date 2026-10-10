@@ -126,7 +126,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -143,6 +143,24 @@ async function plinko(id, body) {
   const slot = path.reduce((x, d) => x + d, 0), mult = PLINKO[slot], win = Math.floor(bet * mult);
   await credit(id, bet, win, 'gPlinko');
   return { path, slot, mult, bet, win, coins: (await wallet(id)).coins };
+}
+
+// Machine à sous : trois rouleaux tirés indépendamment sur 20 crans (5 cerises, 5 citrons, 4 cloches, 3 étoiles,
+// 2 diamants, un 7). Trois symboles identiques paient le plus ; deux 7, deux cerises ou deux citrons paient un peu.
+// Retour théorique : 96,41 %, une manche sur trois rend quelque chose. La table est partagée avec la page.
+const SLOT_REEL = ['cherry', 'cherry', 'cherry', 'cherry', 'cherry', 'lemon', 'lemon', 'lemon', 'lemon', 'lemon', 'bell', 'bell', 'bell', 'bell', 'star', 'star', 'star', 'diamond', 'diamond', 'seven'];
+const SLOT_PAYS = { three: { seven: 250, diamond: 75, star: 30, bell: 12, lemon: 8, cherry: 5 }, two: { seven: 5, cherry: 2, lemon: 1 } };
+function slotMult(reels) {
+  if (reels[0] === reels[1] && reels[1] === reels[2]) return SLOT_PAYS.three[reels[0]];
+  for (const k of Object.keys(SLOT_PAYS.two)) if (reels.filter(x => x === k).length === 2) return SLOT_PAYS.two[k];
+  return 0;
+}
+async function slots(id, body) {
+  const bet = await debit(id, body.bet);
+  const reels = [0, 1, 2].map(() => SLOT_REEL[crypto.randomInt(0, SLOT_REEL.length)]);
+  const mult = slotMult(reels), win = Math.floor(bet * mult);
+  await credit(id, bet, win, 'gSlots');
+  return { reels, mult, bet, win, coins: (await wallet(id)).coins };
 }
 
 // Mines : 25 cases, m mines. Chaque case sûre fait monter le multiplicateur ; on encaisse quand on veut.
@@ -217,4 +235,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

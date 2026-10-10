@@ -98,6 +98,23 @@ rtp = await series('plinko', '98,99 %', async () => {
 assert.ok(rtp > .95 && rtp < 1.03, `plinko ${rtp}`);
 assert.ok(slots[6] > slots[4] && slots[4] > slots[2], 'le centre sort plus que les bords');
 
+// ---- Machine à sous : trois symboles du rouleau, gain recalculé depuis la table
+const combos = {};
+rtp = await series('machine à sous', '96,41 %', async () => {
+  const bet = pick(BETS), r = await G.slots(id, { bet });
+  assert.ok(r.reels.length === 3 && r.reels.every(s => G.SLOT_REEL.includes(s)));
+  const three = r.reels[0] === r.reels[1] && r.reels[1] === r.reels[2];
+  const two = Object.keys(G.SLOT_PAYS.two).find(k => r.reels.filter(x => x === k).length === 2);
+  const mult = three ? G.SLOT_PAYS.three[r.reels[0]] : two ? G.SLOT_PAYS.two[two] : 0;
+  assert.equal(r.mult, mult); assert.equal(r.win, Math.floor(bet * mult));
+  const k = three ? '3 ' + r.reels[0] : two ? '2 ' + two : 'rien'; combos[k] = (combos[k] || 0) + 1;
+  return { bet, win: r.win };
+}, N * 5);
+assert.ok(rtp > .9 && rtp < 1.03, `machine à sous ${rtp}`);
+assert.ok(combos['3 seven'] > 0 && combos['3 diamond'] > 0 && combos['2 cherry'] > 0 && combos.rien > 0, 'toutes les combinaisons sortent, jackpot compris');
+// Retour exact de la table, par énumération des 8 000 combinaisons.
+{ let ev = 0, hit = 0; for (const a of G.SLOT_REEL) for (const b of G.SLOT_REEL) for (const c of G.SLOT_REEL) { const m = G.slotMult([a, b, c]); ev += m; if (m) hit++; } assert.equal((ev / 8000).toFixed(4), '0.9641'); assert.equal((hit / 8000).toFixed(3), '0.332'); }
+
 // ---- Mines : nombre de mines et de cases au hasard, multiplicateur recalculé
 const mult = (m, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= (25 - i) / (25 - m - i); return Math.floor(x * 100) / 100; };
 let booms = 0, cashes = 0, full = 0;
@@ -118,7 +135,10 @@ rtp = await series('mines', '≈ 99 % (moins l\'arrondi)', async () => {
   return { bet, win: g.win };
 }, Math.round(N / 2));
 assert.ok(booms > 0 && cashes > 0 && full > 0, 'explosions, encaissements et grilles vidées');
-assert.ok(rtp > .9 && rtp < 1.08, `mines ${rtp}`);
+// Le retour mesuré dépend beaucoup de la chance (des gains à ×297 sortent) : la bande est large. Le contrôle serré
+// est exact : pour chaque nombre de mines et de cases ouvertes, chance de survie × multiplicateur ≤ 99 %.
+void rtp;
+for (let m = 1; m <= 24; m++) for (let k = 1; k <= 25 - m; k++) { let pr = 1; for (let i = 0; i < k; i++) pr *= (25 - m - i) / (25 - i); const ev = pr * G.minesMult(m, k); assert.ok(ev <= .99000001 && ev > .93, `mines ${m}/${k} : ${ev}`); }
 
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;
@@ -143,7 +163,7 @@ assert.ok(rtp > .9 && rtp < 1.08, `crash ${rtp}`);
 // ---- Refus : mises hors bornes, solde insuffisant, coups impossibles — sans jamais toucher au solde
 const c0 = coins();
 for (const bad of [0, 5, 9, 1001, 10.5, -50, '100', null, NaN]) {
-  await assert.rejects(G.plinko(id, { bet: bad })); await assert.rejects(G.crash(id, { move: 'start', bet: bad }));
+  await assert.rejects(G.plinko(id, { bet: bad })); await assert.rejects(G.slots(id, { bet: bad })); await assert.rejects(G.crash(id, { move: 'start', bet: bad }));
   await assert.rejects(G.mines(id, { move: 'start', bet: bad, mines: 3 })); await assert.rejects(G.blackjack(id, { move: 'deal', bet: bad }));
   await assert.rejects(G.roulette(id, { bets: [{ t: 'red', a: bad }] }));
 }

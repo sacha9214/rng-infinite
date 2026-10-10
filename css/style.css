@@ -2663,3 +2663,55 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* … et elle passait aussi visuellement sur la première rangée de mises : la zone de la roue est agrandie. */
 .rw-scene { height: 16.5rem; margin-bottom: 1.4rem; }
 @media (max-width: 560px) { .rw-scene { height: 14rem; margin-bottom: 1.8rem; } }
+
+/* ------------------------------------------------------------------ casino : machine à sous (préfixe sm-)
+   Un meuble rouge et or : fronton à ampoules, vitre à trois rouleaux, ligne de gain, levier sur le côté, bac à pièces. */
+.g-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 560px) { .g-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.sm-machine { --c: 5.4rem; position: relative; width: fit-content; max-width: 100%; margin: .4rem auto .9rem; padding: .7rem .9rem .8rem; border-radius: 1.4rem 1.4rem 1rem 1rem;
+  background: linear-gradient(180deg, #b91c1c, #7f1d1d 55%, #450a0a); border: 3px solid #fbbf24;
+  box-shadow: 0 0 0 4px #78350f, 0 18px 40px rgba(0, 0, 0, .55), inset 0 2px 0 rgba(255, 255, 255, .25), inset 0 -10px 24px rgba(0, 0, 0, .35); }
+.sm-crown { display: flex; align-items: center; justify-content: center; gap: .6rem; margin-bottom: .6rem; }
+.sm-name { font: 900 1.25rem var(--font-sans); letter-spacing: .14em; color: #fde68a; text-shadow: 0 0 12px rgba(253, 224, 71, .8), 0 2px 0 #78350f; white-space: nowrap; }
+.sm-bulbs { display: flex; gap: .3rem; flex: 1 1 0; justify-content: space-between; min-width: 0; overflow: hidden; }
+.sm-bulbs i { flex: 0 0 auto; width: .5rem; height: .5rem; border-radius: 50%; background: #fde047; box-shadow: 0 0 8px #fde047; animation: sm-bulb 1.4s steps(1) infinite; }
+.sm-bulbs i:nth-child(odd) { animation-delay: -.7s; }
+@keyframes sm-bulb { 0%, 49% { opacity: 1; } 50%, 100% { opacity: .22; box-shadow: none; } }
+.sm-machine[data-state="spin"] .sm-bulbs i { animation-duration: .5s; }
+.sm-machine[data-state="tease"] .sm-bulbs i { animation-duration: .16s; background: #fb923c; box-shadow: 0 0 10px #fb923c; }
+.sm-machine[data-state="win"] .sm-bulbs i, .sm-machine[data-state="jackpot"] .sm-bulbs i { animation-duration: .22s; background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+.sm-machine[data-state="jackpot"] { animation: sm-jackpot .5s ease-in-out 5; }
+@keyframes sm-jackpot { 50% { box-shadow: 0 0 0 4px #78350f, 0 0 60px rgba(253, 224, 71, .9), inset 0 2px 0 rgba(255, 255, 255, .25); transform: scale(1.012); } }
+.sm-body { display: flex; align-items: center; gap: .7rem; }
+.sm-window { position: relative; display: grid; grid-template-columns: repeat(3, var(--c)); gap: .35rem; height: calc(var(--c) * 3); padding: .35rem; border-radius: .7rem; overflow: hidden;
+  background: #0b0b10; border: 3px solid #fbbf24; box-shadow: inset 0 0 22px rgba(0, 0, 0, .9); box-sizing: content-box; }
+.sm-reel { position: relative; height: calc(var(--c) * 3); overflow: hidden; border-radius: .4rem; background: linear-gradient(180deg, #d4d4d8, #fafafa 22%, #ffffff 50%, #fafafa 78%, #d4d4d8); }
+.sm-strip { display: flex; flex-direction: column; will-change: transform; }
+.sm-strip.blur { filter: blur(1.6px); }
+.sm-cell { display: grid; place-items: center; height: var(--c); flex: 0 0 var(--c); }
+.sm-cell svg { width: 72%; height: 72%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .25)); }
+.sm-reel.stopped { animation: sm-stop .28s ease-out; }
+@keyframes sm-stop { 30% { transform: translateY(5px); } 65% { transform: translateY(-2px); } }
+.sm-cell.win { animation: sm-win 0.55s ease-in-out infinite alternate; }
+@keyframes sm-win { from { transform: scale(1); filter: none; } to { transform: scale(1.16); filter: drop-shadow(0 0 10px #facc15) brightness(1.1); } }
+.sm-payline { position: absolute; left: 0; right: 0; top: 50%; height: calc(var(--c) + 2px); transform: translateY(-50%); border-block: 2px solid rgba(239, 68, 68, .75); pointer-events: none; box-shadow: 0 0 12px rgba(239, 68, 68, .35); }
+.sm-machine[data-state="win"] .sm-payline, .sm-machine[data-state="jackpot"] .sm-payline { border-color: #4ade80; box-shadow: 0 0 18px rgba(74, 222, 128, .7); }
+.sm-glass { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent 26%, transparent 74%, rgba(0, 0, 0, .55)), linear-gradient(115deg, rgba(255, 255, 255, .16), transparent 30%); }
+.sm-lever { position: relative; flex: 0 0 1.5rem; width: 1.5rem; height: calc(var(--c) * 2.4); padding: 0; border: 0; background: none; cursor: pointer; }
+.sm-lever::before { content: ''; position: absolute; left: 50%; bottom: 8%; width: 1.3rem; height: 2.2rem; transform: translateX(-50%); border-radius: .4rem; background: linear-gradient(90deg, #52525b, #d4d4d8, #52525b); box-shadow: 0 3px 6px rgba(0, 0, 0, .5); }
+.sm-arm { position: absolute; left: 50%; bottom: 22%; width: .42rem; height: 68%; margin-left: -.21rem; border-radius: .2rem; background: linear-gradient(90deg, #a1a1aa, #f4f4f5, #71717a); transform-origin: 50% 100%; }
+.sm-arm i { position: absolute; left: 50%; top: -1rem; width: 1.5rem; height: 1.5rem; margin-left: -.75rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fecaca, #dc2626 55%, #7f1d1d); box-shadow: 0 3px 6px rgba(0, 0, 0, .5); }
+.sm-lever:hover .sm-arm i { filter: brightness(1.15); }
+.sm-lever.pull .sm-arm { animation: sm-pull .7s cubic-bezier(.3, .1, .3, 1); }
+@keyframes sm-pull { 35% { transform: scaleY(.28); } 100% { transform: scaleY(1); } }
+.sm-tray { height: 2rem; margin-top: .65rem; border-radius: .5rem; background: linear-gradient(180deg, #18181b, #27272a); border: 2px solid #78350f; display: grid; place-items: center; box-shadow: inset 0 4px 10px rgba(0, 0, 0, .7); }
+.sm-win { font-size: 1.15rem; font-weight: 700; color: #4ade80; text-shadow: 0 0 12px rgba(74, 222, 128, .7); }
+.sm-pays { display: flex; flex-wrap: wrap; justify-content: center; gap: .35rem .5rem; margin-top: .8rem; }
+.sm-pay { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .5rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface-dim); font-size: .72rem; }
+.sm-pay-icons { display: inline-flex; gap: 1px; }
+.sm-pay-icons svg { width: 1.05rem; height: 1.05rem; }
+.sm-pay b { color: #fde68a; }
+@media (max-width: 560px) { .sm-machine { --c: 4.2rem; padding: .55rem .6rem .65rem; } .sm-name { font-size: .95rem; letter-spacing: .08em; } .sm-body { gap: .45rem; } .sm-bulbs i:nth-child(n+7) { display: none; } }
+@media (max-width: 350px) { .sm-machine { --c: 3.5rem; } }
+@media (prefers-reduced-motion: reduce) { .sm-bulbs i, .sm-cell.win, .sm-machine[data-state="jackpot"], .sm-reel.stopped { animation: none; } .sm-strip.blur { filter: none; } }
+.g-game[data-game="slots"] .actions { display: flex; }
