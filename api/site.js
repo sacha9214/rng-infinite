@@ -239,7 +239,8 @@ async function kofiWebhook(req) {
   const given = Buffer.from(String((data && data.verification_token) || '')), expected = Buffer.from(token);
   if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return [401, { error: 'Wrong token' }];
   // Seuls les dons comptent (ponctuels ou mensuels) ; une vente de boutique ou une commande est ignorée.
-  if (!['Donation', 'Subscription'].includes(String(data.type))) return [200, { ok: true, ignored: true }];
+  // Ko-fi nomme un don « Tip » (« Donation » dans son ancien format) et un don mensuel « Subscription ».
+  if (!['Tip', 'Donation', 'Subscription'].includes(String(data.type))) return [200, { ok: true, ignored: true }];
   const cents = Math.round(Number(data.amount) * 100), tx = String(data.kofi_transaction_id || data.message_id || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
   if (!Number.isFinite(cents) || cents <= 0 || cents > 1000000 || !tx) return [400, { error: 'Unreadable amount' }];
   // Ko-fi renvoie un message tant qu'il n'a pas reçu de réponse : chaque transaction ne compte qu'une fois.

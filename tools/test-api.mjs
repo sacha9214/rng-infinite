@@ -1614,7 +1614,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const fundNow = async () => (await call(siteApi, { method: 'POST', body: { action: 'fundInfo' } })).body;
   // Ko-fi envoie un formulaire : un champ « data » qui contient du JSON.
   const kofi = (data, asString) => call(siteApi, { method: 'POST', url: '/api/site?kofi=1', body: asString ? 'data=' + encodeURIComponent(JSON.stringify(data)) : { data: JSON.stringify(data) } });
-  const tip = (over = {}) => ({ verification_token: 'kofi-secret-123', message_id: 'm-' + Math.random().toString(36).slice(2), kofi_transaction_id: 'tx-' + Math.random().toString(36).slice(2), type: 'Donation', from_name: 'Somebody', message: '', amount: '3.00', currency: 'EUR', email: 'private@example.com', is_public: true, ...over });
+  const tip = (over = {}) => ({ verification_token: 'kofi-secret-123', message_id: 'm-' + Math.random().toString(36).slice(2), kofi_transaction_id: 'tx-' + Math.random().toString(36).slice(2), type: 'Tip', from_name: 'Somebody', message: '', amount: '3.00', currency: 'EUR', email: 'private@example.com', is_public: true, ...over });
   // Pas configuré : rien n'est accepté.
   delete process.env.KOFI_TOKEN;
   assert.equal((await kofi(tip())).status, 503);
@@ -1636,6 +1636,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Ko-fi renvoie le même message : compté une seule fois.
   r = await kofi(t1); assert.equal(r.body.duplicate, true);
   assert.equal((await fundNow()).cents, before.cents + 500);
+  // Les trois noms d'un don sont acceptés ; une commande (« Commission ») ou une vente ne l'est pas.
+  r = await kofi(tip({ type: 'Commission', message: 'Alice' })); assert.equal(r.body.ignored, true);
   // Une vente de boutique n'est pas un don.
   r = await kofi(tip({ type: 'Shop Order', message: 'Alice' })); assert.equal(r.body.ignored, true);
   assert.equal((await fundNow()).cents, before.cents + 500);
@@ -1658,6 +1660,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await post(frank, 'fundAssign', { tx, name: 'Frank' })).status, 404, 'déjà traité');
   // Le pseudo seul dans le nom Ko-fi suffit aussi ; un don classé sans suite disparaît de l'attente.
   r = await kofi(tip({ message: '', from_name: 'alice', amount: '1' })); assert.equal(r.body.matched, true);
+  for (const type of ['Donation', 'Subscription']) { r = await kofi(tip({ type, message: 'Alice', amount: '1' })); assert.equal(r.body.matched, true, type); }
   const t3 = tip({ message: '???', from_name: 'x' }); await kofi(t3);
   r = await post(frank, 'fund'); assert.equal(r.body.pending.length, 1);
   r = await post(frank, 'fundAssign', { tx: r.body.pending[0].tx, dismiss: true }); assert.equal(r.body.pending.length, 0);
