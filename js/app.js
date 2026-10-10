@@ -1303,6 +1303,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11c', date: 'Oct 11, 2026', en: ['Shop: the Speed tab is now Upgrades, and shows your progress toward Skip known badges (unlocked at 500 rolls) with its on/off switch'], fr: ['Shop : l\'onglet Vitesse devient Boosts, et montre où tu en es pour « Skip known badges » (débloqué à 500 tirages) avec son interrupteur'] },
     { id: '2026-10-11b', date: 'Oct 11, 2026', en: ['Plinko: bet as little as 1 coin, and drop as many balls as you want at once (click fast or hold the button)'], fr: ['Plinko : mise à partir de 1 pièce, et autant de billes que tu veux en même temps (clique vite ou maintiens le bouton)'] },
     { id: '2026-10-11', date: 'Oct 11, 2026', en: ['Casino: a slot machine 🎰 with three animated reels, a lever to pull and a 250× jackpot on 7 7 7'], fr: ['Casino : une machine à sous 🎰 avec trois rouleaux animés, un levier à tirer et un jackpot à 250× sur 7 7 7'] },
     { id: '2026-10-10g', date: 'Oct 10, 2026', en: ['New badge: Full Stack 🧱 — any number containing 64 (a full stack of blocks) earns 6,400 XP'], fr: ['Nouveau badge : Full Stack 🧱 — tout nombre contenant 64 (une pile complète de blocs) rapporte 6 400 XP'] },
@@ -2376,7 +2377,7 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Speed']];
+  const SHOP_TABS = [['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
@@ -2416,6 +2417,10 @@
           <div class="panel-head"><h3 class="panel-title">Roll speed</h3><span class="panel-note">a faster reveal, so more rolls per minute</span></div>
           <div id="d-speed"></div>
         </div>
+        <div class="panel" id="d-skip-panel">
+          <div class="panel-head"><h3 class="panel-title">Skip known badges</h3><span class="panel-note">free · unlocked by playing, not with coins</span></div>
+          <div id="d-skip"></div>
+        </div>
         </section>
         <section class="shop-pane" data-shop-pane="emotes" hidden>
         <div class="panel" id="d-emotes-panel" hidden>
@@ -2441,6 +2446,7 @@
     };
     $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
     openTab(Store.settings.shopTab);
+    drawSkip();
     drawShop();
   }
 
@@ -3035,6 +3041,23 @@
       await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
       await resume('crash', st => { if (!st.done) runCrash(st); else if (st.result === 'crash') endCrash(st); });
     })();
+  }
+
+  // « Skip known badges » dans la boutique, à côté de la vitesse : ce n'est pas un achat (il se débloque à
+  // SKIP_BADGES_AT tirages), mais c'est ici qu'on voit qu'il existe, où l'on en est, et qu'on l'allume une fois acquis.
+  function drawSkip() {
+    const box = $('#d-skip');
+    if (!box) return;
+    const rolls = countedRolls(), open = rolls >= SKIP_BADGES_AT, on = Store.settings.skipBadges === 'on';
+    box.innerHTML = `
+      <div class="speed-row">
+        <div class="up-progress"><span class="quest-bar"><span style="width:${Math.min(100, (rolls / SKIP_BADGES_AT) * 100)}%"></span></span><span class="panel-note mono">${fmt(Math.min(rolls, SKIP_BADGES_AT))} / ${fmt(SKIP_BADGES_AT)} rolls</span></div>
+        <div class="speed-text"><b>${open ? 'Unlocked' : `${fmt(SKIP_BADGES_AT - rolls)} more rolls to unlock`}</b><span class="panel-note">${open ? (on ? 'on: badges you already own land instantly' : 'off: every badge plays its full reveal') : `unlocks at ${fmt(SKIP_BADGES_AT)} rolls`}</span></div>
+        ${open ? `<div class="seg" id="d-skip-seg"><button data-v="on" class="${on ? 'on' : ''}">on</button><button data-v="off" class="${on ? '' : 'on'}">off</button></div>` : '<span class="skin-state locked">🔒 Locked</span>'}
+      </div>
+      <p class="panel-note speed-note">Badges you have already collected land at once instead of one by one, so a roll ends sooner. A badge you have never seen always gets its full reveal, and the digits and the rarity are never skipped.</p>`;
+    const seg = $('#d-skip-seg');
+    if (seg) seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; Store.setSetting('skipBadges', b.dataset.v); toast(b.dataset.v === 'on' ? 'Known badges will now be skipped' : 'Every badge plays its full reveal again'); drawSkip(); };
   }
 
   // Vitesse du tirage : cinq niveaux achetés l'un après l'autre (js/shop.js). Le serveur raccourcit d'autant le délai

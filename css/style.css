@@ -2751,3 +2751,8 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .pk-hint { text-align: center; margin: .4rem 0 0; font-size: .7rem; }
 #pk-go { touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .g-game[data-game="plinko"] .actions { display: flex; }
+
+/* Shop, onglet Améliorations : progression vers « Skip known badges ». */
+.up-progress { display: grid; gap: .25rem; flex: 0 0 9rem; }
+.up-progress .quest-bar { height: .6rem; }
+.up-progress .quest-bar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f472b6, #818cf8); }
