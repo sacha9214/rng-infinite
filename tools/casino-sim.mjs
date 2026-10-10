@@ -148,19 +148,24 @@ rtp = await series('mines', '≈ 99 % (moins l\'arrondi)', async () => {
   const order = Array.from({ length: 25 }, (_, i) => i).sort(() => Math.random() - .5);
   for (let k = 0; k < want && !g.done; k++) {
     g = await G.mines(id, { move: 'pick', cell: order[k] });
-    if (!g.done) { assert.equal(g.mult, mult(m, g.open.length)); assert.equal(g.bombs, undefined); }
+    if (!g.done) { assert.equal(g.mult, Math.min(G.MINES_CAP, mult(m, g.open.length))); assert.equal(g.bombs, undefined); }
   }
   if (!g.done) g = await G.mines(id, { move: 'cash' });
   assert.equal(g.bombs.length, m); assert.ok(g.open.every(c => !g.bombs.includes(c)), 'une case ouverte n\'est jamais une mine');
   if (g.result === 'boom') { booms++; assert.equal(g.win, 0); assert.ok(g.bombs.includes(g.hit)); }
-  else { cashes++; assert.equal(g.win, Math.floor(bet * mult(m, g.open.length))); if (g.open.length === 25 - m) full++; }
+  else { cashes++; assert.equal(g.win, Math.floor(bet * Math.min(G.MINES_CAP, mult(m, g.open.length)))); if (g.open.length === 25 - m) full++; }
   return { bet, win: g.win };
 }, Math.round(N / 2));
 assert.ok(booms > 0 && cashes > 0 && full > 0, 'explosions, encaissements et grilles vidées');
 // Le retour mesuré dépend beaucoup de la chance (des gains à ×297 sortent) : la bande est large. Le contrôle serré
 // est exact : pour chaque nombre de mines et de cases ouvertes, chance de survie × multiplicateur ≤ 99 %.
 void rtp;
-for (let m = 1; m <= 24; m++) for (let k = 1; k <= 25 - m; k++) { let pr = 1; for (let i = 0; i < k; i++) pr *= (25 - m - i) / (25 - i); const ev = pr * G.minesMult(m, k); assert.ok(ev <= .99000001 && ev > .93, `mines ${m}/${k} : ${ev}`); }
+// Plafond de 250× : jamais dépassé ; sous le plafond le retour reste entre 93 et 99 %, au-dessus il ne peut que baisser.
+let cappedCases = 0;
+for (let m = 1; m <= 24; m++) for (let k = 1; k <= 25 - m; k++) { let pr = 1; for (let i = 0; i < k; i++) pr *= (25 - m - i) / (25 - i); const mu = G.minesMult(m, k), ev = pr * mu; assert.ok(mu <= G.MINES_CAP, `plafond ${m}/${k}`); if (mu < G.MINES_CAP) assert.ok(ev <= .99000001 && ev > .93, `mines ${m}/${k} : ${ev}`); else { cappedCases++; assert.ok(ev <= .99000001); } }
+assert.ok(cappedCases > 50, 'des grilles atteignent le plafond');
+// Une grille qui atteint le plafond s'encaisse toute seule, à 250× exactement, et rien ne reste en cours.
+{ let g = await G.mines(id, { move: 'start', bet: 10, mines: 20 }); const bombs = JSON.parse(run([['GET', `mn:${id}`]])[0].result).bombs, safe = Array.from({ length: 25 }, (_, i) => i).filter(i => !bombs.includes(i)); for (let k = 0; k < safe.length && !g.done; k++) { g = await G.mines(id, { move: 'pick', cell: safe[k] }); if (!g.done) assert.ok(g.mult < 250 && !g.capped); } assert.deepEqual([g.result, g.mult, g.capped, g.win, g.open.length], ['cash', 250, true, 2500, 4], JSON.stringify(g)); assert.equal(keys(), 0); }
 
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;

@@ -188,8 +188,12 @@ async function slots(id, body) {
 
 // Mines : 25 cases, m mines. Chaque case sûre fait monter le multiplicateur ; on encaisse quand on veut.
 const mnKey = id => `mn:${id}`;
-const minesMult = (m, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= (25 - i) / (25 - m - i); return Math.floor(x * 100) / 100; };
-const showMines = (g, coins, end) => ({ bet: g.bet, mines: g.m, open: g.open, mult: minesMult(g.m, g.open.length), next: g.open.length < 25 - g.m ? minesMult(g.m, g.open.length + 1) : null, done: !!end, ...(end ? { result: end, win: g.win || 0, bombs: g.bombs } : {}), coins });
+// Plafond : un gain ne dépasse pas 250 fois la mise (comme le jackpot de la machine à sous). Sans lui, vider une
+// grille piégée payait des milliers, voire des millions de fois la mise, et un seul coup de chance vidait de leur
+// sens toutes les pièces du jeu. Le multiplicateur s'arrête au plafond, et la partie s'encaisse seule en l'atteignant.
+const MINES_CAP = 250;
+const minesMult = (m, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= (25 - i) / (25 - m - i); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
+const showMines = (g, coins, end) => ({ bet: g.bet, mines: g.m, open: g.open, cap: MINES_CAP, capped: minesMult(g.m, g.open.length) >= MINES_CAP, mult: minesMult(g.m, g.open.length), next: g.open.length < 25 - g.m ? minesMult(g.m, g.open.length + 1) : null, done: !!end, ...(end ? { result: end, win: g.win || 0, bombs: g.bombs } : {}), coins });
 async function mines(id, body) {
   const [raw] = await redis([['GET', mnKey(id)]]);
   let g = raw ? JSON.parse(raw) : null;
@@ -210,7 +214,7 @@ async function mines(id, body) {
       if (!Number.isInteger(c) || c < 0 || c > 24 || g.open.includes(c)) throw refuse(400, 'Pick a closed tile');
       if (g.bombs.includes(c)) { await redis([['DEL', mnKey(id)]]); await credit(id, g.bet, 0, 'gMines'); return { ...showMines(g, (await wallet(id)).coins, 'boom'), hit: c }; }
       g.open.push(c);
-      if (g.open.length < 25 - g.m) { await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', KEEP_S]]); return showMines(g, (await wallet(id)).coins); }
+      if (g.open.length < 25 - g.m && minesMult(g.m, g.open.length) < MINES_CAP) { await redis([['SET', mnKey(id), JSON.stringify(g), 'EX', KEEP_S]]); return showMines(g, (await wallet(id)).coins); }
     } else if (move !== 'cash') throw refuse(400, 'Unknown move');
     if (!g.open.length) throw refuse(422, 'Open a tile first');
     g.win = Math.floor(g.bet * minesMult(g.m, g.open.length));
@@ -258,4 +262,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

@@ -1356,6 +1356,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11f', date: 'Oct 11, 2026', en: ['Mines: a win is now capped at 250× the bet, like the slot jackpot (the game cashes out by itself when you reach it)'], fr: ['Mines : un gain est maintenant plafonné à 250 fois la mise, comme le jackpot de la machine à sous (la partie s\'encaisse toute seule quand tu l\'atteins)'] },
     { id: '2026-10-11e', date: 'Oct 11, 2026', en: ['Server fund: a monthly goal to pay for a better server. Contributing is optional and gives nothing in the game except a thank-you: the 💗 Supporter skin and title'], fr: ['Cagnotte du serveur : un objectif mensuel pour payer un meilleur serveur. Contribuer est facultatif et ne donne rien en jeu, à part un remerciement : le skin et le titre 💗 Supporter'] },
     { id: '2026-10-11d', date: 'Oct 11, 2026', en: ['Link your Google account and get 150 coins (once). Already linked? You get them on your next roll'], fr: ['Associe ton compte Google et reçois 150 pièces (une seule fois). Déjà associé ? Tu les reçois à ton prochain tirage'] },
     { id: '2026-10-11c', date: 'Oct 11, 2026', en: ['Shop: the Speed tab is now Upgrades, and shows your progress toward Skip known badges (unlocked at 500 rolls) with its on/off switch'], fr: ['Shop : l\'onglet Vitesse devient Boosts, et montre où tu en es pour « Skip known badges » (débloqué à 500 tirages) avec son interrupteur'] },
@@ -2670,7 +2671,7 @@
             <p class="panel-note g-result" id="cr-result"></p>
           </div>
           <div class="panel g-game" data-game="mines">
-            <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it</span></div>
+            <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it · max win 250×</span></div>
             <div class="mn-setup"><span class="eyebrow">Mines</span><div class="seg" id="mn-count">${[1, 3, 5, 10, 24].map(m => `<button data-v="${m}" class="${m === Gamble.mines ? 'on' : ''}">${m}</button>`).join('')}</div><b class="mono" id="mn-mult"></b></div>
             <div class="mn-grid" id="mn-grid">${Array.from({ length: 25 }, (_, i) => `<button class="mn-cell" data-cell="${i}" disabled></button>`).join('')}</div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="mn-go">Start</button></div>
@@ -3042,7 +3043,7 @@
       $('#mn-go').textContent = live ? (g.open.length ? `Cash out · ${fmt(Math.floor(g.bet * g.mult))}` : 'Pick a tile') : `Start · ${fmt(Gamble.chip)}`;
       $('#mn-go').disabled = live && !g.open.length;
       $('#mn-mult').textContent = live ? `${g.mult.toFixed(2)}×${g.next ? ` → ${g.next.toFixed(2)}×` : ''}` : '';
-      if (g && g.done && !g.idle) say($('#mn-result'), g.win, g.bet, g.result === 'cash' ? `${g.mult.toFixed(2)}× · you get ${fmt(g.win)} coins` : `Boom · −${fmt(g.bet)}`);
+      if (g && g.done && !g.idle) say($('#mn-result'), g.win, g.bet, g.result === 'cash' ? `${g.mult.toFixed(2)}×${g.capped ? ' · max win reached' : ''} · you get ${fmt(g.win)} coins` : `Boom · −${fmt(g.bet)}`);
       if (g) showCoins(g.coins);
     };
     $('#mn-count').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || (Gamble.mn && !Gamble.mn.done)) return; Gamble.mines = Number(b.dataset.v); document.querySelectorAll('#mn-count button').forEach(x => x.classList.toggle('on', x === b)); });
