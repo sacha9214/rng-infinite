@@ -18,10 +18,12 @@ async function state(id) {
   const stats = await readStats(id);
   const [owned, skin, bought, button, emotes] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
-  const isOwner = Number(stats.owner) >= 1;
+  const isOwner = Number(stats.owner) >= 1, isSupporter = Number(stats.supporter) >= 1;
+  // Un skin réservé (Owner, Supporter) ne se porte que si le joueur y a droit.
+  const allowed = s => !Shop.byId.get(s).hidden || (s === 'owner' ? isOwner : s === 'supporter' ? isSupporter : false);
   const mine = [...new Set((owned || []).map(Shop.resolve))].filter(s => s !== 'classic' && Shop.byId.has(s) && !Shop.byId.get(s).hidden);
   const equipped = Shop.resolve(skin);
-  const skins = ['classic', ...mine, ...(isOwner ? ['owner'] : [])];
+  const skins = ['classic', ...mine, ...(isSupporter ? ['supporter'] : []), ...(isOwner ? ['owner'] : [])];
   const buttons = [...new Set(bought || [])].filter(b => Shop.buttonById.has(b));
   // Bouton de tirage : "match" (il suit le skin équipé) tant que le choix enregistré n'est pas un bouton possédé —
   // celui d'un skin possédé, ou un bouton acheté à part.
@@ -30,7 +32,8 @@ async function state(id) {
     coins: Shop.balance(stats),
     earned: Shop.earned(stats),
     owned: skins,
-    skin: equipped && Shop.byId.has(equipped) && (!Shop.byId.get(equipped).hidden || isOwner) ? equipped : 'classic',
+    skin: equipped && Shop.byId.has(equipped) && allowed(equipped) ? equipped : 'classic',
+    supporter: isSupporter,
     buttons,
     button: mineToo ? button : Shop.MATCH,
     emotes: Shop.EMOTES.map(e => e.id).filter(e => (emotes || []).includes(e)),

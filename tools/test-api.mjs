@@ -1558,4 +1558,52 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await tick();
 }
 
+// ================================================================ 42. Cagnotte du serveur et skin Supporter
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const Shop = require(path.join(ROOT, 'js/shop.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
+  const shop = (who, action, extra = {}) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  // La visite rapporte la cagnotte du mois : vide, objectif par défaut de 20 €, pas de lien.
+  r = await call(siteApi, { method: 'POST', body: { action: 'visit' }, headers: { 'x-forwarded-for': '8.8.1.1' } });
+  assert.deepEqual([r.body.fund.cents, r.body.fund.goal, r.body.fund.url, r.body.fund.month], [0, 2000, '', new Date(Date.now()).toISOString().slice(0, 7)]);
+  // Le skin Supporter ne se prend ni ne s'achète, et il n'est dans aucune caisse ni sur aucun bot.
+  assert.ok(!(await state(frank)).owned.includes('supporter'));
+  await tick(); assert.equal((await shop(frank, 'equip', { skin: 'supporter' })).status, 422);
+  await tick(); r = await shop(frank, 'buy', { skin: 'supporter' }); assert.equal(r.status, 422); assert.match(r.body.error, /not for sale/);
+  assert.ok(!Shop.SKINS.some(k => k.id === 'supporter') && Shop.CASES.every(c => !Shop.casePool(c).some(k => k.id === 'supporter')));
+  // Réservé au créateur.
+  assert.equal((await post(frank, 'fundAdd', { name: 'Frank', euros: 5 })).status, 403);
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
+  for (const bad of [0, 'x', 5000, -5000]) assert.equal((await post(frank, 'fundAdd', { name: 'Frank', euros: bad })).status, 422);
+  assert.equal((await post(frank, 'fundAdd', { name: 'Nobody Here', euros: 5 })).status, 404);
+  // Une contribution de 5 € pour Bob (pseudo écrit autrement) : total du mois, journal, skin et titre.
+  r = await post(frank, 'fundAdd', { name: '  bob<script> ', euros: 5 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.cents, r.body.count, r.body.log[0].cents, r.body.months[0].cents], [500, 1, 500, 500]);
+  let st = await state(bob);
+  assert.ok(st.owned.includes('supporter') && st.supporter === true);
+  const bobStats = (() => { const f = run([['HGETALL', `stats:${bob.playerId}`]])[0].result, o = {}; for (let i = 0; i < f.length; i += 2) o[f[i]] = f[i + 1]; return o; })();
+  assert.ok(Ach.unlocked(bobStats).includes('supporter'), 'titre Supporter débloqué');
+  assert.equal(Shop.balance(bobStats), st.coins, 'aucune pièce donnée');
+  await tick(); r = await shop(bob, 'equip', { skin: 'supporter' }); assert.deepEqual([r.status, r.body.skin], [200, 'supporter']);
+  assert.equal((await state(bob)).skin, 'supporter');
+  // Deuxième contribution, puis réglage de l'objectif et du lien.
+  r = await post(frank, 'fundAdd', { name: bob.name, euros: 2.5 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await post(frank, 'fundSet', { goal: 30, url: 'https://ko-fi.com/example' });
+  assert.deepEqual([r.body.cents, r.body.count, r.body.goal, r.body.url], [750, 2, 3000, 'https://ko-fi.com/example']);
+  assert.equal((await post(frank, 'fundSet', { url: 'javascript:alert(1)' })).status, 422);
+  r = await call(siteApi, { method: 'POST', body: { action: 'visit' }, headers: { 'x-forwarded-for': '8.8.1.2' } });
+  assert.deepEqual([r.body.fund.cents, r.body.fund.goal, r.body.fund.url], [750, 3000, 'https://ko-fi.com/example']);
+  assert.ok(!JSON.stringify(r.body).includes('Bob'), 'les noms des contributeurs ne sortent pas en public');
+  // Correction d'une erreur de saisie : retour à zéro, plus de skin (retiré s'il était porté), plus de titre.
+  r = await post(frank, 'fundAdd', { name: bob.name, euros: -7.5 });
+  assert.equal(r.body.cents, 0);
+  st = await state(bob);
+  assert.deepEqual([st.owned.includes('supporter'), st.skin, st.supporter], [false, 'classic', false]);
+  run([['HDEL', `stats:${frank.playerId}`, 'owner'], ['HDEL', 'fund:cfg', 'url', 'goal']]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

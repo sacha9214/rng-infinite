@@ -47,7 +47,12 @@
   SKINS.sort((a, b) => a.price - b.price); // boutique rangée du moins cher au plus cher (tri stable)
   // Skin du créateur : hors boutique, donné par le serveur au seul compte Owner (rubis et signature en béryl rouge).
   const OWNER = { id: 'owner', name: 'Owner', emoji: '♛', price: 0, desc: 'Ruby, for the creator only', hidden: true };
-  const byId = new Map(SKINS.concat(OWNER).map(s => [s.id, s]));
+  // Skin de remerciement : pour les joueurs qui ont contribué à la cagnotte du serveur (stats.supporter, posé par le
+  // créateur depuis sa page). Ni achetable avec des pièces, ni dans les caisses, ni porté par les bots.
+  const SUPPORTER = { id: 'supporter', name: 'Supporter', emoji: '💗', price: 0, desc: 'Rose gold, for those who keep the server alive', hidden: true, supporter: true };
+  // Cagnotte : objectif par défaut du mois, en centimes (réglable depuis la page Owner).
+  const FUND_GOAL = 2000;
+  const byId = new Map(SKINS.concat(OWNER, SUPPORTER).map(s => [s.id, s]));
   // Skins remplacés : qui avait l'ancien a le nouveau (Donut → Slots, 2026-09-23).
   const ALIASES = { donut: 'slots' };
   const resolve = id => (id && ALIASES[id]) || id;
@@ -142,7 +147,7 @@
   const speedLevel = v => Math.max(0, Math.min(SPEED.prices.length, Math.floor(Number(v) || 0)));
   const speedFactor = v => SPEED.factors[speedLevel(v)];
 
-  const api = { GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

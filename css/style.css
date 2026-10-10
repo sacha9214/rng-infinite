@@ -2760,3 +2760,24 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* Sous le bouton Google : le bonus d'association. */
 .google-promo { display: inline-block; margin: .1rem 0; padding: .2rem .6rem; border-radius: 999px; border: 1px solid #eab308; background: rgba(234, 179, 8, .12); color: #fde68a; font-size: .74rem; font-weight: 700; }
 :root:not(.dark) .google-promo { color: #854d0e; }
+
+/* ------------------------------------------------------------------ cagnotte du serveur */
+[data-fund-slot]:empty { display: none; }
+.fund-card { margin: 1rem auto; max-width: 34rem; padding: .7rem .9rem .75rem; border-radius: .8rem; border: 1px solid #e8a798; text-align: left;
+  background: radial-gradient(120% 100% at 0% 0%, rgba(251, 113, 133, .14), transparent 60%), var(--surface); }
+.shop-pane ~ .fund-card, .page-wide > [data-fund-slot] .fund-card { max-width: none; margin: 0 0 1rem; }
+.fund-head { display: flex; justify-content: space-between; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.fund-head b { color: #fda4af; }
+.fund-bar { display: block; height: .6rem; margin: .45rem 0 .55rem; border-radius: 999px; background: var(--surface-raised); overflow: hidden; }
+.fund-bar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fb7185, #f9a8d4, #fde68a); transition: width .8s ease; }
+.fund-card.reached { box-shadow: 0 0 18px rgba(251, 113, 133, .3); }
+.fund-foot { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+.fund-foot .panel-note { flex: 1 1 14rem; margin: 0; }
+.fund-perk { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; padding: .8rem; margin-bottom: .8rem; border-radius: .7rem; border: 1px solid var(--outline); background: var(--surface-dim); }
+.fund-perk > div:last-child { display: grid; gap: .2rem; flex: 1 1 12rem; }
+.fund-steps { margin: 0 0 .8rem; padding-left: 1.2rem; display: grid; gap: .3rem; font-size: .86rem; }
+.supporter-tile { border-color: rgba(232, 167, 152, .55); background: radial-gradient(120% 80% at 50% 0%, rgba(251, 113, 133, .1), transparent 60%), var(--surface); }
+.o-fund-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin: .4rem 0 1rem; }
+.o-fund-form { display: grid; gap: .45rem; align-content: start; }
+.o-fund-form .input { text-align: left; text-transform: none; letter-spacing: 0; font-size: .85rem; }
+.o-tr.c3 { grid-template-columns: minmax(4.5rem, 1fr) minmax(5rem, 1.6fr) minmax(4rem, 1fr); }

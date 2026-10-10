@@ -6,12 +6,14 @@
 //   inbox                       (Owner) toutes les suggestions
 //   mark     { id, status, reply }   (Owner) change le statut et/ou répond     · delete { id } (Owner) supprime
 //   stats                       (Owner) fréquentation des 30 derniers jours
+//   fund                        (Owner) contributions reçues ; fundAdd { name, euros } inscrit une contribution et donne
+//                               au joueur le skin et le titre Supporter ; fundSet { goal, url } règle l'objectif et le lien
 //   insights                    (Owner) carte des visites, heures d'activité, casino par jeu, joueurs et économie
 // Fréquentation : uniquement des compteurs agrégés par jour (an:<jour>), sans identifiant, sans adresse IP, sans cookie.
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -177,6 +179,20 @@ async function insights() {
   };
 }
 
+// ---------------------------------------------------------------- cagnotte du serveur
+// Les contributions passent par une page de dons extérieure : le site n'encaisse rien et ne voit aucun paiement. Le
+// créateur inscrit ici chaque contribution reçue (pseudo, montant) ; le joueur reçoit alors le skin et le titre
+// Supporter (stats.supporter = total de ses contributions, en centimes) et le total du mois avance.
+const FUND_CFG = 'fund:cfg', FUND_LOG = 'fund:log';
+const monthKey = t => new Date(t).toISOString().slice(0, 7), fundKey = month => `fund:${month}`;
+const safeUrl = raw => { const u = String(raw || '').trim(); return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s<>"']*)?$/i.test(u) && u.length <= 200 ? u : ''; };
+async function fundState() {
+  const month = monthKey(Date.now());
+  const [cfg, flat] = await redis([['HGETALL', FUND_CFG], ['HGETALL', fundKey(month)]]);
+  const c = toObject(cfg), m = toObject(flat);
+  return { month, cents: Math.max(0, Number(m.cents) || 0), count: Number(m.count) || 0, goal: Number(c.goal) || Shop.FUND_GOAL, url: safeUrl(c.url) };
+}
+
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST' });
@@ -184,8 +200,11 @@ module.exports = async (req, res) => {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     if (body.action === 'visit') {
       await recordVisit(req, body);
-      return send(res, 200, { ok: true });
+      // La cagnotte du mois part avec la réponse : le site l'affiche sans demande supplémentaire.
+      return send(res, 200, { ok: true, fund: await fundState() });
     }
+    // Cagnotte du mois (total, objectif, lien) : public, sans joueur. Aucun nom de contributeur.
+    if (body.action === 'fundInfo') return send(res, 200, await fundState());
     await flushDue();
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
@@ -228,7 +247,7 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['inbox', 'mark', 'delete', 'stats', 'insights'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
     if (!isOwner) return send(res, 403, { error: 'Owner only' });
     const id = String(body.id || '');
     if (body.action === 'mark' || body.action === 'delete') {
@@ -245,6 +264,35 @@ module.exports = async (req, res) => {
     }
     if (body.action === 'stats') return send(res, 200, await siteStats());
     if (body.action === 'insights') return send(res, 200, await insights());
+    if (body.action === 'fundSet') {
+      const writes = [];
+      const goal = Math.round(Number(body.goal) * 100);
+      if (Number.isFinite(goal) && goal >= 100 && goal <= 1000000) writes.push(['HSET', FUND_CFG, 'goal', goal]);
+      if (typeof body.url === 'string') writes.push(body.url.trim() ? (safeUrl(body.url) ? ['HSET', FUND_CFG, 'url', safeUrl(body.url)] : null) : ['HDEL', FUND_CFG, 'url']);
+      if (writes.includes(null)) return send(res, 422, { error: 'The link must start with https://' });
+      if (writes.length) await redis(writes);
+    }
+    if (body.action === 'fundAdd') {
+      // Montant en euros, positif pour une contribution, négatif pour corriger une erreur de saisie.
+      const cents = Math.round(Number(body.euros) * 100);
+      if (!Number.isFinite(cents) || !cents || Math.abs(cents) > 100000) return send(res, 422, { error: 'Amount between 0.01 and 1,000 euros' });
+      const who = cleanName(body.name);
+      const target = who ? await findPlayer(who) : null;
+      if (!target) return send(res, 404, { error: 'No player with this name' });
+      const now = Date.now(), month = monthKey(now);
+      const [total] = await redis([['HINCRBY', statsKey(target), 'supporter', cents]]);
+      const writes = [['HINCRBY', fundKey(month), 'cents', cents], ['HINCRBY', fundKey(month), 'count', cents > 0 ? 1 : 0],
+        ['ZADD', FUND_LOG, now, JSON.stringify({ t: now, name: who, cents, month })]];
+      // Correction qui ramène un joueur à zéro : il n'est plus Supporter, et le skin lui est retiré s'il le portait.
+      if (Number(total) <= 0) { writes.push(['HDEL', statsKey(target), 'supporter']); const [worn] = await redis([['HGET', 'skins', target]]); if (worn === 'supporter') writes.push(['HDEL', 'skins', target]); }
+      await redis(writes);
+    }
+    if (['fund', 'fundAdd', 'fundSet'].includes(body.action)) {
+      const [raw] = await redis([['ZREVRANGE', FUND_LOG, 0, 49]]);
+      const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); });
+      const totals = await redis(months.map(mo => ['HGETALL', fundKey(mo)]));
+      return send(res, 200, { ...(await fundState()), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
+    }
     const [ids, total] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1], ['ZCARD', 'sugg:all']]);
     return send(res, 200, { suggestions: await listSuggestions(ids || []), total: Number(total) || 0 });
   } catch (err) {

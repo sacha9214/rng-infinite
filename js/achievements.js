@@ -37,6 +37,8 @@
     { id: 'flawless', emoji: '💎', title: 'Flawless', desc: 'Win a rounds duel (first to 2 or more) without anyone else winning a round', test: st => num(st.flawless) >= 1 },
     { id: 'warlord', emoji: '🏰', title: 'Warlord', desc: 'Win a duel with 5 players or more', test: st => num(st.bigWin) >= 1 },
     { id: 'speedrunner', emoji: '⚡', title: 'Speedrunner', desc: 'Win an XP race duel', test: st => num(st.xpWin) >= 1 },
+    // Remerciement : contribution à la cagnotte du serveur (aucun avantage en jeu).
+    { id: 'supporter', emoji: '💗', title: 'Supporter', desc: 'Contribute to the server fund', test: st => num(st.supporter) >= 1 },
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
   ];

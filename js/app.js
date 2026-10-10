@@ -816,6 +816,53 @@
 
   // Dons facultatifs (« Buy me a coffee ») : PayPal, ou USDT / USDC sur le réseau Ethereum. Aucun avantage en jeu.
   const TIP = { paypal: 'https://paypal.me/sacha9214', wallet: '0x85c90AD40EC0914Cc8519138099F860Bb5a41E2A' };
+  // ---------------------------------------------------------------- cagnotte du serveur
+  // Le total du mois arrive avec la balise de visite (une fois par onglet), sinon par une petite demande gardée 5 min.
+  // Le site n'encaisse rien : « Contribuer » ouvre la page de dons ; le créateur inscrit ensuite la contribution, et
+  // le joueur reçoit le skin et le titre Supporter. Aucun avantage en jeu.
+  const euros = cents => { const v = cents / 100; return `${Number.isInteger(v) ? v : v.toFixed(2)} €`; };
+  const Fund = {
+    state: null,
+    set(s) { if (!s || typeof s.cents !== 'number') return; this.state = s; try { sessionStorage.setItem('rng-fund', JSON.stringify({ t: Date.now(), s })); } catch (e) { /* stockage bloqué */ } this.paint(); },
+    async load() {
+      if (this.state) return this.paint();
+      try { const c = JSON.parse(sessionStorage.getItem('rng-fund') || 'null'); if (c && Date.now() - c.t < 120000) { this.state = c.s; return this.paint(); } } catch (e) { /* cache illisible */ }
+      try { this.set(await Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'fundInfo' }) })); } catch (err) { /* hors ligne : pas de carte */ }
+    },
+    html() {
+      const s = this.state;
+      if (!s) return '';
+      const pct = Math.min(100, (s.cents / s.goal) * 100), month = new Date(`${s.month}-15`).toLocaleDateString('en-US', { month: 'long' });
+      return `
+        <div class="fund-card${s.cents >= s.goal ? ' reached' : ''}">
+          <div class="fund-head"><span class="eyebrow">🖥️ Server fund · ${month}</span><b class="mono" data-no-i18n>${euros(s.cents)} / ${euros(s.goal)}</b></div>
+          <span class="fund-bar"><span style="width:${Math.max(pct, s.cents ? 3 : 0)}%"></span></span>
+          <div class="fund-foot"><span class="panel-note"><span>${s.cents >= s.goal ? 'Goal reached this month, thank you!' : 'Pays for the server each month.'}</span> <span>Contributors get the 💗 Supporter skin and title.</span></span><button class="btn" data-fund>Contribute</button></div>
+        </div>`;
+    },
+    paint() { document.querySelectorAll('[data-fund-slot]').forEach(el => { el.innerHTML = this.html(); }); },
+  };
+  function openFund() {
+    const s = Fund.state || { cents: 0, goal: Shop.FUND_GOAL, url: '' }, name = Store.player.name;
+    const link = s.url || TIP.paypal;
+    openModal(`
+      <h2>🖥️ Server fund</h2>
+      <p class="panel-note" style="margin:-.3rem 0 .8rem">RNG∞ is free and has no ads. The fund pays for the server: when it reaches ${euros(s.goal)} in a month, the game can move to a better one. Contributing is optional.</p>
+      <div class="fund-perk">
+        <div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div>
+        <div><b>💗 Supporter skin and title</b><span class="panel-note">A thank-you for any contribution, whatever the amount. It is only a look: no coins, no luck, no advantage in the game.</span></div>
+      </div>
+      <ol class="fund-steps">
+        <li>Open the contribution page and give what you want.</li>
+        <li>Write your player name in the message${name ? `: <b data-no-i18n>${esc(name)}</b>` : ''}.</li>
+        <li>The creator adds your skin by hand, usually within a day.</li>
+      </ol>
+      <p class="panel-note">Under 18? Ask a parent first: it is their money and their decision.</p>
+      <div class="actions"><button class="btn" id="fund-close">Close</button><a class="btn-roll small" href="${esc(link)}" target="_blank" rel="noopener" style="text-decoration:none">Contribute</a></div>`, m => {
+      m.querySelector('#fund-close').addEventListener('click', closeModal);
+    });
+  }
+
   function openCoffee() {
     const pay = TIP.paypal;
     openModal(`
@@ -1010,6 +1057,7 @@
           </p>
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div id="quests-slot"></div>
+          <div data-fund-slot></div>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
@@ -1035,6 +1083,7 @@
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
     loadQuests($('#quests-slot'));
+    Fund.load();
     $('#room-join-form').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#room-code').value); });
   }
 
@@ -1307,6 +1356,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11e', date: 'Oct 11, 2026', en: ['Server fund: a monthly goal to pay for a better server. Contributing is optional and gives nothing in the game except a thank-you: the 💗 Supporter skin and title'], fr: ['Cagnotte du serveur : un objectif mensuel pour payer un meilleur serveur. Contribuer est facultatif et ne donne rien en jeu, à part un remerciement : le skin et le titre 💗 Supporter'] },
     { id: '2026-10-11d', date: 'Oct 11, 2026', en: ['Link your Google account and get 150 coins (once). Already linked? You get them on your next roll'], fr: ['Associe ton compte Google et reçois 150 pièces (une seule fois). Déjà associé ? Tu les reçois à ton prochain tirage'] },
     { id: '2026-10-11c', date: 'Oct 11, 2026', en: ['Shop: the Speed tab is now Upgrades, and shows your progress toward Skip known badges (unlocked at 500 rolls) with its on/off switch'], fr: ['Shop : l\'onglet Vitesse devient Boosts, et montre où tu en es pour « Skip known badges » (débloqué à 500 tirages) avec son interrupteur'] },
     { id: '2026-10-11b', date: 'Oct 11, 2026', en: ['Plinko: bet as little as 1 coin, and drop as many balls as you want at once (click fast or hold the button)'], fr: ['Plinko : mise à partir de 1 pièce, et autant de billes que tu veux en même temps (clique vite ou maintiens le bouton)'] },
@@ -2391,6 +2441,7 @@
       <div class="page page-wide">
         <div class="g-head"><h1 class="page-title">Shop</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="d-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}`)}">How much? ⓘ</span></p>
+        <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
         <section class="shop-pane" data-shop-pane="cases" hidden>
         <div class="panel">
@@ -2454,6 +2505,7 @@
     $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
     openTab(Store.settings.shopTab);
     drawSkip();
+    Fund.load();
     drawShop();
   }
 
@@ -2527,8 +2579,18 @@
           <div class="skin-actions">${SkinFX.has(k.id) || k.id === 'owner' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
         </div>`;
     };
+    // Skin Supporter : montré à tout le monde. Qui l'a peut l'équiper ; les autres voient comment l'obtenir.
+    const supporterTile = () => {
+      const k = Shop.SUPPORTER, owned = state.owned.includes(k.id), equipped = state.skin === k.id;
+      return `
+        <div class="skin-tile supporter-tile${equipped ? ' equipped' : ''}">
+          <div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div>
+          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
+          <div class="skin-actions">${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<button class="btn" data-fund>💗 Contribute to get it</button>'}</div>
+        </div>`;
+    };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
-    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium)).map(tile).join('');
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium)).map(tile).join('') + supporterTile();
     const premium = $('#d-premium');
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;
@@ -3188,7 +3250,7 @@
         ${state.button === choice ? '<span class="skin-state">Equipped</span>' : action}
       </div>`;
     const equip = id => `<button class="btn" data-gen-equip="${id}">Equip</button>`;
-    const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS);
+    const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(state.owned.includes('supporter') ? [Shop.SUPPORTER] : [], Shop.SKINS);
     // Seuls les boutons qu'on peut porter ou acheter ici : celui d'un skin pas encore possédé s'obtient avec le skin.
     const mine = skins.filter(k => state.owned.includes(k.id)), locked = skins.length - mine.length;
     grid.innerHTML = [
@@ -3386,6 +3448,7 @@
       <div class="page page-wide">
         <h1 class="page-title" data-no-i18n>Owner</h1>
         <div id="o-stats"><div class="empty">Loading…</div></div>
+        <div id="o-fund"></div>
         <div id="o-insights"></div>
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>
       </div>`;
@@ -3418,6 +3481,48 @@
           ${st.days.slice(0, 14).map(d => `<div class="o-tr"><span>${d.day}</span><span>${fmt(d.visits)}</span><span>${fmt(d.uniq)}</span><span>${fmt(d.fresh)}</span><span>${d.players ? fmt(d.players) : '–'}</span><span>${d.rolls ? fmt(d.rolls) : '–'}</span></div>`).join('')}</div>
         </div>`;
     }).catch(err => { if ($('#o-stats')) $('#o-stats').innerHTML = denied(err); });
+    // ---- Cagnotte : inscrire une contribution reçue (le joueur reçoit le skin et le titre Supporter), régler
+    // l'objectif du mois et le lien de la page de dons, relire les dernières contributions.
+    const drawFund = f => {
+      const box = $('#o-fund');
+      if (currentView !== 'owner' || !box) return;
+      Fund.set({ month: f.month, cents: f.cents, count: f.count, goal: f.goal, url: f.url });
+      box.innerHTML = `
+        <div class="panel stats-sep">
+          <div class="panel-head"><h3 class="panel-title">Server fund</h3><span class="panel-note" data-no-i18n>${f.month} · ${euros(f.cents)} / ${euros(f.goal)} · ${f.count} contribution${f.count === 1 ? '' : 's'}</span></div>
+          <span class="fund-bar"><span style="width:${Math.min(100, (f.cents / f.goal) * 100)}%"></span></span>
+          <div class="o-fund-forms">
+            <form class="o-fund-form" id="o-fund-add">
+              <span class="eyebrow">Record a contribution</span>
+              <input class="input" name="name" maxlength="20" placeholder="Player name" aria-label="Player name" required>
+              <input class="input" name="euros" inputmode="decimal" placeholder="€ (5 or 2.50)" aria-label="Amount in euros" required>
+              <button class="btn-roll small">Add + give the skin</button>
+              <span class="panel-note">The player gets the Supporter skin and title at once. A wrong entry? Add the same amount with a minus sign.</span>
+            </form>
+            <form class="o-fund-form" id="o-fund-set">
+              <span class="eyebrow">Settings</span>
+              <input class="input" name="goal" inputmode="decimal" value="${f.goal / 100}" aria-label="Monthly goal in euros">
+              <input class="input" name="url" maxlength="200" value="${esc(f.url)}" placeholder="https://… contribution page (empty = PayPal)" aria-label="Contribution page">
+              <button class="btn">Save</button>
+              <span class="panel-note">Goal in euros per month, and the page the Contribute button opens.</span>
+            </form>
+          </div>
+          <div class="grid-2">
+            ${panel('Latest contributions', '', table(['When', 'Player', 'Amount'], f.log.slice(0, 12).map(x => [suggDate(x.t), `<a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>`, `<span class="${x.cents >= 0 ? 'o-up' : 'o-down'}" data-no-i18n>${x.cents >= 0 ? '+' : '−'}${euros(Math.abs(x.cents))}</span>`]), 'c3'))}
+            ${panel('Month by month', '', table(['Month', 'Contributions', 'Total'], f.months.map(x => [x.month, fmt(x.count), `<span data-no-i18n>${euros(x.cents)}</span>`]), 'c3'))}
+          </div>
+        </div>`;
+      const send = (form, action, pick) => form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form)), btn = form.querySelector('button');
+        btn.disabled = true;
+        try { drawFund(await Online.site(action, pick(data))); toast(action === 'fundAdd' ? 'Contribution recorded' : 'Saved'); }
+        catch (err) { btn.disabled = false; toast([404, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+      });
+      send($('#o-fund-add'), 'fundAdd', d => ({ name: d.name, euros: Number(String(d.euros).replace(',', '.')) }));
+      send($('#o-fund-set'), 'fundSet', d => ({ goal: Number(String(d.goal).replace(',', '.')), url: d.url }));
+    };
+    Online.site('fund').then(drawFund).catch(() => {});
     // ---- Carte des visites, heures, casino, joueurs : tout vient de l'action « insights » (agrégats, aucun identifiant).
     const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
@@ -4386,6 +4491,7 @@
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
+    if (e.target.closest('[data-fund]')) { e.preventDefault(); openFund(); return; }
     if (e.target.closest('[data-news]')) { e.preventDefault(); openNews(); return; }
     if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
@@ -4476,7 +4582,7 @@
         action: 'visit', ref, src: q.get('utm_source') || q.get('ref') || '', first, daily,
         mobile: window.matchMedia('(max-width: 720px)').matches || /Mobi|Android/i.test(navigator.userAgent),
         lang: (window.RNGI18n && window.RNGI18n.lang) || 'en',
-      }) }).catch(() => {});
+      }) }).then(r => { if (r && r.fund) Fund.set(r.fund); }).catch(() => {});
     }
   } catch (e) { /* stockage bloqué : pas de balise */ }
 })();

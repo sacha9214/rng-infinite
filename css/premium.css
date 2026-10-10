@@ -222,3 +222,48 @@
 .room-reacts { flex-wrap: wrap; }
 .react-btn.special { border-color: rgba(234, 179, 8, .55); }
 @media (max-width: 560px) { .emote-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .emote-tile .emote { width: 64px; height: 64px; } }
+
+/* ------------------------------------------------------------------ skin Supporter (remerciement de la cagnotte)
+   Une plaque prune cerclée d'or rose, chiffres en or rose poli, et derrière eux la ligne d'un pouls qui défile :
+   « tu gardes le serveur en vie ». Pendant le tirage les chiffres battent ; au verrouillage, un battement franc. */
+.num-card.skin-supporter {
+  --ecg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40' viewBox='0 0 120 40'%3E%3Cpath d='M0 22H34l5-4 5 4h8l4-17 6 30 5-19 4 6h49' fill='none' stroke='%23fb7185' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  position: relative; border-color: #e8a798;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(251, 113, 133, .22), transparent 62%), linear-gradient(160deg, #3a1d2a, #24121b 60%, #2e1622);
+  box-shadow: 0 0 0 1px rgba(255, 220, 205, .25) inset, 0 0 16px rgba(244, 148, 132, .38), 0 5px 0 #6b2f3a, 0 10px 18px rgba(0, 0, 0, .45);
+}
+.num-card.skin-supporter::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .42;
+  background: var(--ecg) 0 58% / auto 62% repeat-x; animation: supp-ecg 2.4s linear infinite;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+@keyframes supp-ecg { to { background-position-x: -120px; } }
+.skin-supporter .slot {
+  position: relative; z-index: 1; padding: 0 .04em; color: transparent;
+  background: linear-gradient(180deg, #ffffff 0%, #ffe3d8 30%, #f2a898 52%, #ffd2c4 70%, #fff3ee 100%); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1.5px 0 #6b2733) drop-shadow(0 0 2px rgba(251, 113, 133, .45));
+}
+/* Tirage : un pouls, deux coups rapprochés puis un temps. */
+.skin-supporter .slot.spinning { opacity: 1; animation: supp-beat .36s ease-in-out infinite; }
+@keyframes supp-beat { 0%, 100% { transform: scale(.9); filter: drop-shadow(0 1.5px 0 #6b2733) brightness(.85); } 22% { transform: scale(1.12); filter: drop-shadow(0 1.5px 0 #6b2733) drop-shadow(0 0 5px rgba(251, 113, 133, .9)) brightness(1.2); } 44% { transform: scale(.96); filter: drop-shadow(0 1.5px 0 #6b2733) brightness(.95); } 62% { transform: scale(1.06); filter: drop-shadow(0 1.5px 0 #6b2733) drop-shadow(0 0 4px rgba(251, 113, 133, .7)) brightness(1.1); } }
+/* Verrouillage : le chiffre se tasse, frappe avec un éclat corail, dépasse, se pose. */
+.skin-supporter .slot.revealed { animation: supp-thump .62s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+@keyframes supp-thump {
+  0% { transform: scale(.72) translateY(.12em); filter: brightness(.8); }
+  26% { transform: scale(1.24) translateY(-.06em); filter: drop-shadow(0 1.5px 0 #6b2733) brightness(1.35) drop-shadow(0 0 7px #fb7185); }
+  52% { transform: scale(.93); filter: drop-shadow(0 1.5px 0 #6b2733) brightness(1.12) drop-shadow(0 0 4px rgba(251, 113, 133, .8)); }
+  76% { transform: scale(1.05); }
+  100% { transform: none; }
+}
+/* Cadre de duel : salon prune, lueur corail, un cœur qui bat et la ligne du pouls au pied du panneau. */
+.side-supporter {
+  --side-border: #e8a798; --side-glow: 0 0 18px rgba(244, 148, 132, .32); --side-ink: #fb7185; --side-ink-glow: 0 0 8px rgba(251, 113, 133, .9);
+  --side-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40' viewBox='0 0 120 40'%3E%3Cpath d='M0 22H34l5-4 5 4h8l4-17 6 30 5-19 4 6h49' fill='none' stroke='%23fb7185' stroke-opacity='.35' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 0 100% / auto 2.2rem repeat-x,
+    radial-gradient(110% 70% at 50% 0%, rgba(251, 113, 133, .2), transparent 65%), linear-gradient(180deg, rgba(58, 29, 42, .55), rgba(36, 18, 27, .35));
+  --deco-a: '♥'; --deco-b: '♥ ♥';
+}
+.side-supporter::before { animation: supp-heart 1.6s ease-in-out infinite; transform-origin: center; }
+.side-supporter::after { animation: supp-heart 1.6s ease-in-out .8s infinite; }
+@keyframes supp-heart { 0%, 100% { transform: scale(1); opacity: .6; } 12% { transform: scale(1.35); opacity: 1; } 24% { transform: scale(1.05); } 36% { transform: scale(1.22); opacity: .95; } 52% { transform: scale(1); opacity: .6; } }
+.room-stage.many .num-card.skin-supporter::before { animation: none; }
+.room-stage.many .side-supporter::before, .room-stage.many .side-supporter::after { animation: none; }

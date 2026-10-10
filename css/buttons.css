@@ -665,3 +665,14 @@
 .skin-state.locked { color: var(--prose-3); font-weight: 600; }
 @media (max-width: 560px) { .gen-tile .btn-roll { zoom: .8; } }
 @media (max-width: 340px) { .gen-tile .btn-roll { zoom: .72; } }
+
+/* Supporter : or rose poli, liseré clair, halo corail qui bat doucement au survol. */
+.btn-roll.gen-supporter {
+  overflow: hidden; border-radius: .6rem; border: 2px solid #ffe1d6; color: #5a1f2b;
+  background: linear-gradient(180deg, #fff1ea 0%, #f9c7b7 26%, #e59a8c 60%, #c9756d 100%);
+  text-shadow: 0 1px 0 rgba(255, 241, 234, .85), 0 -1px 0 rgba(90, 31, 43, .3);
+  --gs: 0 .3em 0 #7a3340, 0 .55em 1em rgba(251, 113, 133, .35), inset 0 2px 0 rgba(255, 255, 255, .6), inset 0 -3px 6px rgba(122, 51, 64, .35);
+  --gs-h: 0 .34em 0 #7a3340, 0 .7em 1.4em rgba(251, 113, 133, .6), inset 0 2px 0 rgba(255, 255, 255, .6), inset 0 -3px 6px rgba(122, 51, 64, .35);
+  --gs-a: 0 .06em 0 #7a3340, inset 0 3px 7px rgba(122, 51, 64, .55);
+  --press: .24em; --edge: .3em;
+}
