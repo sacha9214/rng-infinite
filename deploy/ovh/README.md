@@ -20,3 +20,22 @@ the relay and compares every reply with the test double (0 differences).
 4. Vercel → Settings → Environment Variables: `KV_REST_API_URL=https://db.rng-infinite.com`,
    `KV_REST_API_TOKEN=$(sudo cat /etc/rng-relay/token)`; add `"regions": ["fra1"]` to `vercel.json`
    (functions next to the VPS in Zurich); redeploy.
+
+## The game API on the same server
+
+The twelve `/api` functions also run here, as one Node process next to the database: no compute quota, and one
+network hop fewer per call. The copy hosted with the site stays deployed as a fallback (the site switches to it
+by itself for a minute when this server does not answer) and still receives the visit beacon (country lookup)
+and the Ko-fi webhook.
+
+| File | Role |
+|---|---|
+| `api-server.js` | Serves `api/*.js` unchanged on `127.0.0.1:8787` (JSON or form bodies, clean shutdown on SIGTERM) |
+| `install-api.sh` | Installs Node, the systemd service `rng-api` and the Caddy route `/api/*` (asks for the sudo password once, no secret to type) |
+| `deploy-api.sh` | Pulls `main`, checks that the new code loads, restarts the service (no password) |
+
+Checked by `node tools/test-server.mjs` (real HTTP against the server with a fake relay).
+
+1. On the VPS: `git clone https://github.com/sacha9214/rng-infinite ~/rng-infinite`, then `bash ~/rng-infinite/deploy/ovh/install-api.sh`.
+2. Set `apiBase` in `js/config.js` to `https://db.rng-infinite.com`.
+3. After each push that touches `api/` or the shared modules: `ssh <vps> 'bash ~/rng-infinite/deploy/ovh/deploy-api.sh'`.

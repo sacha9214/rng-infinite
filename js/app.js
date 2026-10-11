@@ -32,19 +32,49 @@
   const SkinFX = window.SkinFX || { mount: () => null };
 
   // ---------------------------------------------------------------- serveur (classement en ligne, hébergé sur Vercel)
-  // Sur Vercel l'API est sur le même domaine ; depuis GitHub Pages on appelle le déploiement Vercel.
-  const API_BASE = location.hostname.endsWith('github.io') ? window.RNG_CONFIG.apiBase : '';
+  // L'API tourne sur notre serveur (RNG_CONFIG.apiBase) ; la copie hébergée avec le site (même domaine) sert de secours.
+  // En local et sur les aperçus, tout reste sur le même domaine.
+  const HOSTED = /(^|\.)rng-infinite\.com$/.test(location.hostname) || location.hostname.endsWith('github.io');
+  const API_SAME = location.hostname.endsWith('github.io') ? window.RNG_CONFIG.apiFallback : '';
+  const API_BASE = HOSTED && window.RNG_CONFIG.apiBase !== location.origin ? window.RNG_CONFIG.apiBase : '';
+  // Notre serveur lit le JSON quel que soit le type annoncé ; la copie hébergée avec le site exige application/json.
+  const API_PLAIN = API_BASE && API_BASE !== window.RNG_CONFIG.apiFallback;
+  const API_RETRY_MS = 60000;
+  let apiDownUntil = 0;
   const Online = {
-    async request(pathname, options = {}) {
+    // Un seul essai sur une base. Vers un autre domaine, le corps part en text/plain et sans en-tête ajouté : le
+    // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
+    async attempt(base, pathname, options) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 6000);
       try {
-        const res = await fetch(API_BASE + pathname, { ...options, signal: ctrl.signal, headers: { 'Content-Type': 'application/json' } });
+        const headers = API_PLAIN && base === API_BASE ? (options.body ? { 'Content-Type': 'text/plain' } : {}) : { 'Content-Type': 'application/json' };
+        const res = await fetch(base + pathname, { ...options, signal: ctrl.signal, headers });
+        // Le serveur est en train de redémarrer : la requête n'a pas été traitée, on peut la rejouer ailleurs.
+        if (base && base === API_BASE && (res.status === 502 || res.status === 503)) throw Object.assign(new Error(`HTTP ${res.status}`), { unreached: true });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status });
         return body;
+      } catch (err) {
+        // Échec réseau (TypeError) : rien n'est arrivé au serveur. Un délai dépassé, lui, a pu être traité.
+        if (err instanceof TypeError) err.unreached = true;
+        throw err;
       } finally {
         clearTimeout(timer);
+      }
+    },
+    // { local: true } : toujours la copie du même domaine (la balise de visite, qui a besoin du pays vu par l'hébergeur).
+    async request(pathname, options = {}) {
+      const { local, ...opts } = options;
+      if (!API_BASE || API_BASE === API_SAME || local || Date.now() < apiDownUntil) return this.attempt(API_SAME, pathname, opts);
+      try {
+        return await this.attempt(API_BASE, pathname, opts);
+      } catch (err) {
+        const timedOut = err.name === 'AbortError';
+        if (!err.unreached && !timedOut) throw err;
+        apiDownUntil = Date.now() + API_RETRY_MS;
+        if (timedOut) throw err;
+        return this.attempt(API_SAME, pathname, opts);
       }
     },
     // nonce : le même pour chaque nouvelle tentative d'un même tirage (le serveur renvoie alors le tirage déjà fait).
@@ -4615,7 +4645,7 @@
       let ref = '';
       try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* pas d'origine */ }
       const q = new URLSearchParams(location.search);
-      Online.request('/api/site', { method: 'POST', body: JSON.stringify({
+      Online.request('/api/site', { local: true, method: 'POST', body: JSON.stringify({
         action: 'visit', ref, src: q.get('utm_source') || q.get('ref') || '', first, daily,
         mobile: window.matchMedia('(max-width: 720px)').matches || /Mobi|Android/i.test(navigator.userAgent),
         lang: (window.RNGI18n && window.RNGI18n.lang) || 'en',
