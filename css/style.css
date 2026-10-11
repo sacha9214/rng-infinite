@@ -2902,3 +2902,13 @@ button.o-chip { cursor: pointer; }
   .g-top-row { grid-template-columns: 1.9rem minmax(0, 1fr) 5.2rem 4.9rem; gap: .35rem; font-size: .76rem; padding: .45rem .3rem; }
   .g-top-rounds { display: none; }
 }
+/* Duel : interrupteur « tirage auto » sous le bouton de la manche. */
+.room-auto { display: inline-flex; align-items: center; gap: .45rem; margin-top: .5rem; font-size: .76rem; font-weight: 700; color: var(--prose-2); cursor: pointer; user-select: none; }
+.room-auto[hidden] { display: none; }
+.room-auto input { position: absolute; opacity: 0; width: 0; height: 0; }
+.room-auto i { position: relative; width: 2rem; height: 1.1rem; border-radius: 999px; background: var(--surface-raised); border: 1px solid var(--outline-mid); transition: background .15s; }
+.room-auto i::after { content: ''; position: absolute; top: 1px; left: 1px; width: calc(1.1rem - 4px); height: calc(1.1rem - 4px); border-radius: 50%; background: var(--prose-3); transition: transform .15s, background .15s; }
+.room-auto input:checked + i { background: linear-gradient(120deg, #6366f1, #a855f7); border-color: transparent; }
+.room-auto input:checked + i::after { transform: translateX(.9rem); background: #fff; }
+.room-auto input:checked ~ span { color: var(--prose); }
+.room-auto input:focus-visible + i { outline: 2px solid #818cf8; outline-offset: 2px; }

@@ -1390,6 +1390,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11i', date: 'Oct 11, 2026', en: ['Duels: an Auto-roll switch under the round button rolls every round for you, against bots or players, until the duel ends'], fr: ['Duels : un interrupteur « Tirage auto » sous le bouton de la manche lance chaque manche à ta place, contre des bots ou des joueurs, jusqu\'à la fin du duel'] },
     { id: '2026-10-11h', date: 'Oct 11, 2026', en: ['Gamble: a casino leaderboard under the games, with the biggest winners, the biggest losers and the biggest gamblers of all time (and your own rank)'], fr: ['Gamble : un classement du casino sous les jeux, avec les plus gros gagnants, les plus gros perdants et les plus gros joueurs depuis toujours (et ton propre rang)'] },
     { id: '2026-10-11g', date: 'Oct 11, 2026', en: ['Duels: type your own goal, up to 50 rounds to win or any XP target from 5K to 10M (the usual buttons are still there)', 'Supporter skin: an animated heartbeat on every digit'], fr: ['Duels : tape ton propre objectif, jusqu\'à 50 manches à gagner ou n\'importe quel objectif d\'XP de 5 000 à 10 millions (les boutons habituels sont toujours là)', 'Skin Supporter : un battement de cœur animé sur chaque chiffre'] },
     { id: '2026-10-11f', date: 'Oct 11, 2026', en: ['Mines: a win is now capped at 250× the bet, like the slot jackpot (the game cashes out by itself when you reach it)'], fr: ['Mines : un gain est maintenant plafonné à 250 fois la mise, comme le jackpot de la machine à sous (la partie s\'encaisse toute seule quand tu l\'atteins)'] },
@@ -2345,7 +2346,7 @@
   const DUEL_WINS_MAX = 50, DUEL_XP_MIN = 5000, DUEL_XP_MAX = 10000000;
   // « 300k », « 1.5m », « 250 000 » → un nombre ; NaN si ce n'en est pas un.
   const parseAmount = raw => { const m = String(raw).trim().toLowerCase().replace(/[\s,_']/g, '').replace(/xp$/, '').match(/^(\d+(?:\.\d+)?)([km]?)$/); return m ? Math.round(Number(m[1]) * (m[2] === 'k' ? 1e3 : m[2] === 'm' ? 1e6 : 1)) : NaN; };
-  const Room = { code: null, token: 0, timer: 0, offset: 0, rtt: Infinity, data: null, shown: 0, anim: null, view: null, sig: '', changedAt: 0, reactSeen: new Set(), reactBusy: false, achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' };
+  const Room = { code: null, token: 0, timer: 0, offset: 0, rtt: Infinity, data: null, shown: 0, anim: null, view: null, sig: '', changedAt: 0, reactSeen: new Set(), reactBusy: false, achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '', auto: false, autoCode: '', autoRound: -1, autoTimer: 0 };
   // Emotes de duel : la mascotte dé (images dessinées pour le site). Touches 1 à 6.
   const REACTIONS = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
   const EMOTE_LABELS = { laugh: 'Laugh', cry: 'Cry', angry: 'Angry', cool: 'Cool', shock: 'Shocked', king: 'King' };
@@ -4026,6 +4027,7 @@
 
   function stopRoom() {
     clearTimeout(Room.timer);
+    clearTimeout(Room.autoTimer);
     if (Room.anim) Room.anim.cancel();
     Room.anim = null;
     clearRoomFx();
@@ -4037,6 +4039,9 @@
     REACTIONS.forEach(id => { new Image().src = `img/emotes/${id}.png`; });
     stopRoom();
     Object.assign(Room, { code: code.toUpperCase(), data: null, shown: 0, rtt: Infinity, view: null, sig: '', changedAt: Date.now(), reactSeen: new Set(), achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' });
+    // Le tirage auto vaut pour une partie : une autre salle (ou la revanche) repart éteint.
+    if (Room.autoCode !== Room.code) { Room.auto = false; Room.autoCode = Room.code; }
+    Room.autoRound = -1;
     app.innerHTML = `
       <div class="page page-wide">
         <a class="back-link" href="#/duel">← Duel</a>
@@ -4280,7 +4285,7 @@
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
-        <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p></div>
+        <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel chat-panel" id="room-chat">
           <div class="panel-head"><h3 class="panel-title">Chat</h3><span class="panel-note">be kind · never share personal details</span></div>
           <div class="chat-list" id="chat-list" aria-live="polite"></div>
@@ -4370,7 +4375,7 @@
       hint = `${readyCount} / ${people.length} ready${countdown}`;
     } else {
       cta = `<button class="btn-roll${genClass()}" id="room-roll">🎲 Roll round ${d.rounds.length + 1}</button>`;
-      hint = `${readyCount && people.length > 1 ? `${readyCount} / ${people.length} ready${countdown} · ` : ''}press <kbd>Space</kbd>`;
+      hint = Room.auto ? 'Auto-roll is on: rolling for you' : `${readyCount && people.length > 1 ? `${readyCount} / ${people.length} ready${countdown} · ` : ''}press <kbd>Space</kbd>`;
     }
     if (!finished && d.asks && d.asks.length) cta += d.asks.map(n => `<div class="room-ask"><span><b>${esc(n)}</b> wants to join</span><button class="btn-roll small" data-accept="${esc(n)}">Accept</button><button class="btn" data-decline="${esc(n)}">Decline</button></div>`).join('');
     if (setHTML($('#room-cta'), cta)) {
@@ -4383,6 +4388,28 @@
       if (rematchBtn) rematchBtn.addEventListener('click', roomRematch);
     }
     setHTML($('#room-hint'), hint);
+    // Tirage auto : dès que c'est à moi de lancer une manche, elle part toute seule (une fois par manche, après un
+    // court instant pour voir le résultat de la précédente). S'arrête avec la partie : la revanche reste un vrai clic.
+    const autoWrap = $('#room-auto-wrap');
+    if (autoWrap) {
+      autoWrap.hidden = finished;
+      const box = $('#room-auto');
+      if (!box.dataset.wired) {
+        box.dataset.wired = '1';
+        box.addEventListener('change', () => { Room.auto = box.checked; Room.autoRound = -1; clearTimeout(Room.autoTimer); if (Room.auto) Sound.unlock(); if (Room.data) drawRoom(); });
+      }
+      if (Room.auto && !finished && $('#room-roll') && Room.autoRound !== d.rounds.length) {
+        Room.autoRound = d.rounds.length;
+        const code = d.code;
+        clearTimeout(Room.autoTimer);
+        Room.autoTimer = setTimeout(() => {
+          if (!Room.auto || Room.code !== code) return;
+          roomReady();
+          // Le bouton n'était pas là (révélation en cours) ou l'envoi a échoué : on retente au prochain affichage.
+          Room.autoTimer = setTimeout(() => { Room.autoRound = -1; if (Room.auto && Room.code === code && Room.data) drawRoom(); }, 4000);
+        }, d.rounds.length ? 900 : 300);
+      }
+    }
 
     // Manches : le gagnant et son nombre, plus le mien si ce n'est pas moi.
     const mine = d.players.findIndex(p => p.me);
