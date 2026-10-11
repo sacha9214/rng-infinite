@@ -3507,7 +3507,7 @@
         const box = $('#idea-mine');
         if (!box) return;
         box.innerHTML = `
-          ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : ''}
+          ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
             <div class="idea-row">
               <div class="idea-head"><span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span></div>
@@ -3545,6 +3545,7 @@
     app.innerHTML = `
       <div class="page page-wide o-page">
         <h1 class="page-title" data-no-i18n>Owner</h1>
+        <p class="o-guest" id="o-guest" hidden>👀 View only: you can see everything here, but only the creator of the game can change it.</p>
         <nav class="o-tabs" role="tablist" aria-label="Owner sections">${OWNER_TABS.map(([id, emoji, name]) => `<button role="tab" data-tab="${id}"><i>${emoji}</i><span>${name}</span><b class="o-badge" data-badge="${id}" hidden></b></button>`).join('')}</nav>
         ${OWNER_TABS.map(([id]) => `<section class="o-pane" data-pane="${id}" role="tabpanel" hidden>${id === 'fund' ? '<div id="o-fund"><div class="empty">Loading…</div></div>' : id === 'inbox' ? '<div class="panel"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>' : '<div class="empty">Loading…</div>'}</section>`).join('')}
       </div>`;
@@ -3558,6 +3559,8 @@
     app.querySelector('.o-tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
     app.addEventListener('click', e => { const go = e.target.closest('[data-go-tab]'); if (go && currentView === 'owner') { show(go.dataset.goTab); window.scrollTo({ top: 0 }); } });
     show(first, true);
+    // Invité (lecture seule) : le serveur refuse de toute façon ses écritures ; ici on retire juste les commandes.
+    const guest = on => { if (!on || currentView !== 'owner') return; const page = app.querySelector('.o-page'); if (!page) return; page.classList.add('o-readonly'); $('#o-guest').hidden = false; page.querySelectorAll('.o-status').forEach(x => { x.disabled = true; }); };
 
     // ---- petits outils d'affichage
     const denied = err => `<div class="empty">${err && err.status === 403 ? 'This page is for the creator of the game.' : 'Unavailable right now.'}</div>`;
@@ -3595,6 +3598,7 @@
     // ---- Vue d'ensemble, rétention, fréquentation, casino, joueurs : deux lectures (stats + insights) et la carte.
     Promise.all([Online.site('stats'), Online.site('insights'), fetch('data/world-map.json').then(r => r.json()).catch(() => null)]).then(([st, d, world]) => {
       if (currentView !== 'owner' || !pane('overview')) return;
+      guest(st.readOnly);
       const R = d.retention, week = st.days.slice(0, 7), prevWeek = st.days.slice(7, 14);
       const step = n => R.summary.find(x => x.n === n);
       const rateTile = (label, s, hint) => tile(label, s.rate === null ? '–' : `${s.rate}%`, s.players ? `${fmt(s.back)} of ${fmt(s.players)} new players · ${hint}` : 'not enough days of data yet');
@@ -3764,6 +3768,7 @@
       if (currentView !== 'owner' || !box) return;
       Fund.set({ month: f.month, cents: f.cents, count: f.count, goal: f.goal, url: f.url });
       todo.tips = (f.pending || []).length; badge('fund', todo.tips); drawTodo();
+      setTimeout(() => guest(f.readOnly), 0);
       box.innerHTML = `
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Server fund</h3><span class="panel-note" data-no-i18n>${f.month} · ${euros(f.cents)} / ${euros(f.goal)} · ${f.count} contribution${f.count === 1 ? '' : 's'}</span></div>
@@ -3815,6 +3820,7 @@
       if (currentView !== 'owner' || !box) return;
       $('#o-count').textContent = `${data.total} received`;
       todo.ideas = data.suggestions.filter(x => x.status === 'new').length; badge('inbox', todo.ideas); drawTodo();
+      setTimeout(() => guest(data.readOnly), 0);
       Inbox.seen(Math.max(0, ...data.suggestions.map(x => x.t)));
       // Deux sections : ce qui reste à lire (statut « Sent »), puis ce qui a déjà été lu ou traité.
       const row = x => `
@@ -3824,6 +3830,7 @@
             <button class="btn${x.status === 'new' ? '' : ' ghost'}" data-o="${x.status === 'new' ? 'read' : 'unread'}">${x.status === 'new' ? '✓ Mark as read' : 'Mark as not read'}</button>
             <button class="btn ghost" data-o="delete">Delete</button></div>
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+          ${x.reply ? `<p class="idea-reply o-guest-only"><b>Reply from the creator</b><span data-no-i18n>${esc(x.reply)}</span></p>` : ''}
           <div class="o-reply"><input class="input" maxlength="300" placeholder="Reply shown to the player (optional)" value="${esc(x.reply)}"><button class="btn" data-o="reply">Save reply</button></div>
         </div>`;
       const fresh = data.suggestions.filter(x => x.status === 'new'), old = data.suggestions.filter(x => x.status !== 'new');

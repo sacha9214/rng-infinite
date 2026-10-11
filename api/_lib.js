@@ -91,6 +91,10 @@ async function verifyGoogleToken(token, clientId) {
 // Compte du créateur du site : empreinte SHA-256 de son e-mail Google (l'adresse n'apparaît ni dans le code ni en base).
 const OWNER_EMAIL_SHA256 = process.env.OWNER_EMAIL_SHA256 || '15fcdda9573617a0e5814e3fc4e37be0d01ebd0cc7a568b0dcb7a3a1fb26b9c7';
 
+// Comptes invités à consulter la page Owner sans rien pouvoir y changer (empreintes SHA-256 de leur e-mail Google, comme
+// pour le créateur). Retirer une empreinte d'ici retire l'accès : elle est revérifiée à chaque demande.
+const VIEWER_EMAILS_SHA256 = new Set((process.env.VIEWER_EMAILS_SHA256 || '34f4c34b6ef234e7f7bd0e326b51c73a293c8cc71ad1f5173f5bebbe6e9813a2').split(',').map(x => x.trim()).filter(Boolean));
+
 // Noms : lettres de l'alphabet latin (accents compris), chiffres, espaces et _ . - ' seulement ; pas de sosies en
 // cyrillique ("Ѕасhа") ni de caractères invisibles. Les caractères de contrôle ne passent donc plus non plus.
 const cleanName = raw => String(raw || '').normalize('NFC').replace(/[^\p{Script=Latin}0-9 _.\-']/gu, '').replace(/\s+/g, ' ').trim().slice(0, 20);
@@ -451,5 +455,5 @@ module.exports = {
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
-  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, markFresh,
+  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, markFresh,
 };

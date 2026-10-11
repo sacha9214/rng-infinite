@@ -3,7 +3,7 @@
 // Le même compte Google retrouve donc son joueur (et ses places au classement) sur n'importe quel appareil.
 const crypto = require('node:crypto');
 const config = require('../js/config.js');
-const { redis, verifyGoogleToken, sha256, statsKey, OWNER_EMAIL_SHA256, markFresh, grantGoogleBonus, cors, send, flushDue } = require('./_lib');
+const { redis, verifyGoogleToken, sha256, statsKey, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, markFresh, grantGoogleBonus, cors, send, flushDue } = require('./_lib');
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
@@ -57,6 +57,8 @@ module.exports = async (req, res) => {
     // Le créateur du site (e-mail vérifié par Google) débloque le titre Owner ; l'e-mail n'est comparé qu'en mémoire.
     const email = String(google.email || '').trim().toLowerCase();
     if (google.email_verified && email && sha256(email) === OWNER_EMAIL_SHA256) writes.push(['HSET', statsKey(playerId), 'owner', 1]);
+    // Invité de la page Owner (lecture seule) : on garde l'empreinte, pour pouvoir retirer l'accès plus tard.
+    if (google.email_verified && email && VIEWER_EMAILS_SHA256.has(sha256(email))) writes.push(['HSET', statsKey(playerId), 'viewer', sha256(email)]);
     const [, name] = await redis(writes);
     // 150 pièces la première fois que ce joueur a un compte Google (rien les fois suivantes, ni sur un autre appareil).
     const bonus = await grantGoogleBonus(playerId);

@@ -2912,3 +2912,9 @@ button.o-chip { cursor: pointer; }
 .room-auto input:checked + i::after { transform: translateX(.9rem); background: #fff; }
 .room-auto input:checked ~ span { color: var(--prose); }
 .room-auto input:focus-visible + i { outline: 2px solid #818cf8; outline-offset: 2px; }
+/* Page Owner vue par un invité : tout est lisible, les commandes sont retirées. */
+.o-guest { margin: 0 0 .8rem; padding: .55rem .8rem; border: 1px solid rgba(129, 140, 248, .5); border-radius: .6rem; background: rgba(129, 140, 248, .1); font-size: .8rem; font-weight: 600; color: var(--prose); }
+.o-guest[hidden] { display: none; }
+.o-readonly .o-fund-forms, .o-readonly .o-reply, .o-readonly [data-o], .o-readonly .o-pending input, .o-readonly .o-pending button { display: none !important; }
+.o-readonly .o-status { pointer-events: none; opacity: .8; }
+.o-guest-only { display: none; } .o-readonly .o-guest-only { display: block; }

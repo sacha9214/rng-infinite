@@ -13,7 +13,7 @@
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256 } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -391,6 +391,8 @@ module.exports = async (req, res) => {
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
     const stats = await readStats(playerId);
     const isOwner = Number(stats.owner) >= 1;
+    // Invité : il voit tout ce que voit le créateur sur sa page, sans pouvoir rien modifier.
+    const isViewer = !isOwner && !!stats.viewer && VIEWER_EMAILS_SHA256.has(stats.viewer), canSee = isOwner || isViewer;
 
     // Pour le créateur seulement : combien de suggestions sont arrivées depuis la dernière qu'il a vue (« since », l'heure
     // de celle-ci, gardée par son navigateur) et l'heure de la plus récente. Sert au point rouge sur l'ampoule.
@@ -404,7 +406,7 @@ module.exports = async (req, res) => {
 
     if (body.action === 'mine') {
       const [ids] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);
-      return send(res, 200, { owner: isOwner, mine: (await listSuggestions(ids || [])).map(({ name, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY });
+      return send(res, 200, { owner: isOwner, viewer: isViewer, mine: (await listSuggestions(ids || [])).map(({ name, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY });
     }
 
     if (body.action === 'suggest') {
@@ -422,12 +424,12 @@ module.exports = async (req, res) => {
         ['ZADD', byPlayer(playerId), t, id],
       ]);
       const [ids] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);
-      return send(res, 200, { owner: isOwner, mine: (await listSuggestions(ids || [])).map(({ name: n, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY, sent: true });
+      return send(res, 200, { owner: isOwner, viewer: isViewer, mine: (await listSuggestions(ids || [])).map(({ name: n, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY, sent: true });
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
     if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!isOwner) return send(res, 403, { error: 'Owner only' });
+    if (!(['inbox', 'stats', 'insights', 'fund'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
     const id = String(body.id || '');
     if (body.action === 'mark' || body.action === 'delete') {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
@@ -441,7 +443,7 @@ module.exports = async (req, res) => {
         if (writes.length) await redis(writes);
       }
     }
-    if (body.action === 'stats') return send(res, 200, await siteStats());
+    if (body.action === 'stats') return send(res, 200, { ...(await siteStats()), readOnly: !isOwner });
     if (body.action === 'insights') return send(res, 200, await insights());
     if (body.action === 'fundSet') {
       const writes = [];
@@ -479,10 +481,10 @@ module.exports = async (req, res) => {
       const [raw, waiting] = await redis([['ZREVRANGE', FUND_LOG, 0, 49], ['HVALS', FUND_PENDING]]);
       const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); });
       const totals = await redis(months.map(mo => ['HGETALL', fundKey(mo)]));
-      return send(res, 200, { ...(await fundState()), auto: !!process.env.KOFI_TOKEN || process.env.KOFI_RELAYED === '1', pending: (waiting || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => b.t - a.t), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
+      return send(res, 200, { ...(await fundState()), readOnly: !isOwner, auto: !!process.env.KOFI_TOKEN || process.env.KOFI_RELAYED === '1', pending: (waiting || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => b.t - a.t), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
     }
     const [ids, total] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1], ['ZCARD', 'sugg:all']]);
-    return send(res, 200, { suggestions: await listSuggestions(ids || []), total: Number(total) || 0 });
+    return send(res, 200, { suggestions: await listSuggestions(ids || []), total: Number(total) || 0, readOnly: !isOwner });
   } catch (err) {
     return send(res, err.status || 500, { error: err.message });
   }

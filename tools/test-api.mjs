@@ -16,6 +16,7 @@ process.env.KV_REST_API_URL = 'https://fake-redis.test';
 process.env.KV_REST_API_TOKEN = 'test-token';
 process.env.GOOGLE_CLIENT_ID = 'test-client.apps.googleusercontent.com';
 process.env.OWNER_EMAIL_SHA256 = crypto.createHash('sha256').update('owner@example.com').digest('hex');
+process.env.VIEWER_EMAILS_SHA256 = crypto.createHash('sha256').update('guest@example.com').digest('hex');
 
 // Fausse paire de clés "Google" : les jetons de test sont signés avec, et fetch sert la clé publique.
 const GOOGLE_CERTS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
@@ -1780,6 +1781,40 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // L'ancien appel (bandeau en direct) répond toujours.
   assert.ok('took' in (await call(shopApi, { url: '/api/shop?casino=1' })).body);
   run([...ids.flatMap(id => [['HDEL', 'names', id], ['DEL', `stats:${id}`]]), ['DEL', 'casino:board']]);
+}
+
+// ================================================================ 46. Invité de la page Owner : il voit tout, il ne change rien
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
+  const guest = { playerId: 'ab'.repeat(8), secret: 'c'.repeat(32), name: 'Guest' };
+  db.delete(`cooldown:${guest.playerId}`);
+  assert.equal((await call(roll, { method: 'POST', body: guest })).status, 200);
+  // Avant de se connecter avec Google : un joueur comme un autre.
+  for (const a of ['inbox', 'stats', 'insights', 'fund']) assert.equal((await post(guest, a)).status, 403, a);
+  // E-mail non vérifié, ou autre adresse : toujours rien.
+  r = await signIn({ sub: 'g-guest-fake', email: 'guest@example.com', email_verified: false }, { playerId: 'ac'.repeat(8), secret: 'd'.repeat(32) });
+  assert.equal(run([['HGET', `stats:${r.body.playerId}`, 'viewer']])[0].result, null);
+  // Connexion avec l'adresse invitée (majuscules et espaces ignorés) : accès en lecture.
+  r = await signIn({ sub: 'g-guest', email: ' Guest@Example.com ' }, { playerId: guest.playerId, secret: guest.secret });
+  assert.equal(r.status, 200); assert.equal(r.body.playerId, guest.playerId);
+  r = await post(guest, 'mine'); assert.deepEqual([r.body.owner, r.body.viewer], [false, true]);
+  for (const a of ['inbox', 'stats', 'fund']) { r = await post(guest, a); assert.equal(r.status, 200, a); assert.equal(r.body.readOnly, true, a); }
+  r = await post(guest, 'insights'); assert.equal(r.status, 200); assert.ok(r.body.retention && r.body.casino);
+  // Aucune écriture : ni suggestions, ni cagnotte ; et pas de point rouge ni de skin Owner.
+  const [sid] = run([['ZREVRANGE', 'sugg:all', 0, 0]])[0].result || [];
+  const before = JSON.stringify(run([['HGETALL', `sugg:${sid}`], ['HGETALL', 'fund:cfg'], ['ZCARD', 'fund:log'], ['ZCARD', 'sugg:all']]));
+  for (const [a, extra] of [['mark', { id: sid, status: 'done', reply: 'hacked' }], ['delete', { id: sid }], ['fundAdd', { name: 'Alice', euros: 5 }], ['fundSet', { goal: 1, url: 'https://evil.example' }], ['fundAssign', { tx: 'x', name: 'Alice' }]]) assert.equal((await post(guest, a, extra)).status, 403, a);
+  assert.equal(JSON.stringify(run([['HGETALL', `sugg:${sid}`], ['HGETALL', 'fund:cfg'], ['ZCARD', 'fund:log'], ['ZCARD', 'sugg:all']])), before, 'rien n\'a bougé');
+  r = await post(guest, 'peek', { since: 0 }); assert.equal(r.body.owner, false);
+  assert.equal((await equip(guest, 'owner')).status, 422);
+  // Le créateur, lui, n'est pas en lecture seule.
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
+  r = await post(frank, 'stats'); assert.equal(r.body.readOnly, false); r = await post(frank, 'mine'); assert.deepEqual([r.body.owner, r.body.viewer], [true, false]);
+  run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
+  // Accès retiré : une empreinte qui n'est plus dans la liste ne donne plus rien, même si la fiche la porte encore.
+  run([['HSET', `stats:${guest.playerId}`, 'viewer', 'f'.repeat(64)]]);
+  assert.equal((await post(guest, 'stats')).status, 403); assert.equal((await post(guest, 'mine')).body.viewer, false);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
