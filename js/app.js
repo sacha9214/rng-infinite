@@ -2302,7 +2302,9 @@
   // historique, XP et classement. Une manche part toute seule 15 s après le premier joueur prêt.
   const roomHref = code => `#/room/${code}`;
   const stakeText = d => (d.stake ? ` · 🪙 stake ${fmt(d.stake)} each, pot ${fmt(d.pot)}` : '');
-  const ROOM_POLL_MS = 1500;
+  // Rythmes de sondage allongés le 2026-10-11 : chaque appel coûte du temps de calcul chez l'hébergeur, dont le quota
+  // mensuel gratuit (4 h) était consommé aux trois quarts. Les duels restent synchronisés par l'heure du serveur.
+  const ROOM_POLL_MS = 2000;
   const ROOM_IDLE_MS = 10 * 60000; // sans aucun changement pendant 10 min, on arrête de sonder (quota de la base)
   const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
   // Objectifs libres d'un duel (mêmes bornes que api/room.js) : manches à gagner, XP à atteindre.
@@ -2531,7 +2533,7 @@
     drawShop();
   }
 
-  // "Live now", rafraîchi toutes les 10 s tant que l'onglet est visible.
+  // "Live now", rafraîchi toutes les 30 s tant que l'onglet est visible.
   async function drawLive() {
     clearTimeout(hubTimer);
     let rooms;
@@ -2559,7 +2561,7 @@
     }).join('') : '<div class="empty">No public game right now. Create one!</div>');
     // Écouteurs posés seulement quand la liste a changé : sinon chaque rafraîchissement en ajouterait un de plus.
     if (changed) box.querySelectorAll('[data-join]').forEach(b => b.addEventListener('click', () => joinRoom(b.dataset.join)));
-    if (!document.hidden) hubTimer = setTimeout(() => { if (currentView === 'duel') drawLive(); }, 10000);
+    if (!document.hidden) hubTimer = setTimeout(() => { if (currentView === 'duel') drawLive(); }, 30000);
   }
 
   // Boutique : pièces, skins possédés et équipé ; acheter = équiper.
@@ -2648,7 +2650,7 @@
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
   // Bandeau « en direct » du casino : tout l'argent qui y est passé (mises prises, gains versés, tous joueurs confondus
   // depuis l'ouverture) et les dernières manches.
-  // Relu toutes les 6 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
+  // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
   const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰' };
   let houseTimer = 0;
@@ -2672,7 +2674,7 @@
         box.hidden = false;
       } catch (err) { /* hors ligne : le bandeau garde ses derniers chiffres */ }
     }
-    houseTimer = setTimeout(drawHouse, 6000);
+    houseTimer = setTimeout(drawHouse, 20000);
   }
   function renderGamble() {
     currentView = 'gamble';
@@ -3888,14 +3890,14 @@
   function nextPollMs(d) {
     // On discute (un message vient d'arriver ou de partir, ou le champ est ouvert) : le chat doit rester vif.
     if (Date.now() - Room.chatAt < 20000 || (document.activeElement && document.activeElement.id === 'chat-input')) return ROOM_POLL_MS;
-    if (Room.anim) return 3000;
-    if (!d || d.status !== 'playing') return 3000;
+    if (Room.anim) return 4500; // une révélation dure une dizaine de secondes : rien à apprendre pendant ce temps
+    if (!d || d.status !== 'playing') return 4000;
     const me = d.players.find(p => p.me);
-    if (!me) return 2000; // spectateur
+    if (!me) return 3000; // spectateur
     if (me.ready) return ROOM_POLL_MS;
     // Pas prêt : la manche ne part qu'au départ automatique (heure connue) ; on sonde juste après.
     const auto = d.autoAt ? d.autoAt - serverNow() : Infinity;
-    return Math.max(ROOM_POLL_MS, Math.min(4000, auto + 200));
+    return Math.max(ROOM_POLL_MS, Math.min(6000, auto + 200));
   }
 
   function applyRoom(d, token, sent, got) {
