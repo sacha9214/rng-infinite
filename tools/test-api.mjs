@@ -1817,4 +1817,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await post(guest, 'stats')).status, 403); assert.equal((await post(guest, 'mine')).body.viewer, false);
 }
 
+// ================================================================ 47. Longue partie : la limite de manches suit l'objectif
+{
+  // Un nombre qui rapporte peu : 300 manches restent loin des 10 M d'XP.
+  let low = 100000; for (let n = 100000; n < 130000; n++) if (engine.scoreOf(n) < engine.scoreOf(low)) low = n;
+  const per = engine.scoreOf(low); assert.ok(per < 2000, `tirage faible : ${per} XP`);
+  const make = async (mode, target) => { run([['DEL', `cooldown:${alice.playerId}`]]); const r = await roomPost(alice, 'create', { size: 2, mode, target, bots: 1 }); assert.equal(r.status, 200, JSON.stringify(r.body)); return r.body.code; };
+  const fill = (code, count) => run(Array.from({ length: count }, (_, i) => ['RPUSH', `room:${code}:rounds`, JSON.stringify({ t: 1000 + i, revealAt: 1000 + i, n: [low, low] })]));
+  const state = async code => (await roomGet(code, alice)).body;
+  // Course à 10 M : 300 manches jouées, objectif pas atteint, la partie continue (elle s'arrêtait à 100).
+  let code = await make('xp', 10000000); fill(code, 300);
+  let d = await state(code); assert.equal(d.target, 10000000); assert.equal(d.rounds.length, 300); assert.equal(d.status, 'playing', 'plus de limite à 100 manches');
+  assert.ok(d.players[0].total === 300 * per && d.players[0].total < d.target);
+  // Le garde-fou existe toujours, plus loin : 4 000 manches pour 10 M.
+  fill(code, 3699); assert.equal((await state(code)).status, 'playing'); fill(code, 1); assert.equal((await state(code)).status, 'done');
+  // Petit objectif : la limite reste 100 manches ; l'objectif atteint termine la partie comme avant.
+  code = await make('xp', 250000); fill(code, 99); assert.equal((await state(code)).status, 'playing'); fill(code, 1); assert.equal((await state(code)).status, 'done');
+  // Manches à gagner : 50 manches à 2 joueurs laissent la place d'y arriver (égalités comprises).
+  code = await make('rounds', 50); fill(code, 299); assert.equal((await state(code)).status, 'playing'); fill(code, 1); assert.equal((await state(code)).status, 'done');
+  code = await make('rounds', 3); fill(code, 99); assert.equal((await state(code)).status, 'playing'); fill(code, 1); assert.equal((await state(code)).status, 'done');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -1390,6 +1390,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11j', date: 'Oct 11, 2026', en: ['Fixed: long duels no longer stop after 100 rounds, so an XP race to 10M (or 50 rounds to win) now really goes to the end'], fr: ['Corrigé : les longs duels ne s\'arrêtent plus au bout de 100 manches, une course à 10 M d\'XP (ou 50 manches à gagner) va maintenant vraiment jusqu\'au bout'] },
     { id: '2026-10-11i', date: 'Oct 11, 2026', en: ['Duels: an Auto-roll switch under the round button rolls every round for you, against bots or players, until the duel ends'], fr: ['Duels : un interrupteur « Tirage auto » sous le bouton de la manche lance chaque manche à ta place, contre des bots ou des joueurs, jusqu\'à la fin du duel'] },
     { id: '2026-10-11h', date: 'Oct 11, 2026', en: ['Gamble: a casino leaderboard under the games, with the biggest winners, the biggest losers and the biggest gamblers of all time (and your own rank)'], fr: ['Gamble : un classement du casino sous les jeux, avec les plus gros gagnants, les plus gros perdants et les plus gros joueurs depuis toujours (et ton propre rang)'] },
     { id: '2026-10-11g', date: 'Oct 11, 2026', en: ['Duels: type your own goal, up to 50 rounds to win or any XP target from 5K to 10M (the usual buttons are still there)', 'Supporter skin: an animated heartbeat on every digit'], fr: ['Duels : tape ton propre objectif, jusqu\'à 50 manches à gagner ou n\'importe quel objectif d\'XP de 5 000 à 10 millions (les boutons habituels sont toujours là)', 'Skin Supporter : un battement de cœur animé sur chaque chiffre'] },
@@ -4425,12 +4426,14 @@
       return `<span class="num-card sm" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(`${d.players[j].name} · round ${i + 1}`)}" style="cursor:pointer">${a.str}</span>`;
     };
     drawChat(d);
-    setHTML($('#room-rounds'), Room.shown ? d.rounds.slice(0, Room.shown).map((r, i) => `
+    // Longue partie : seules les 30 dernières manches sont affichées (la liste entière ralentirait la page).
+    const hiddenRounds = Math.max(0, Room.shown - 30);
+    setHTML($('#room-rounds'), Room.shown ? (hiddenRounds ? `<p class="panel-note room-rounds-more">${fmt(hiddenRounds)} earlier rounds not shown</p>` : '') + d.rounds.slice(hiddenRounds, Room.shown).map((r, k) => { const i = hiddenRounds + k; return `
       <div class="room-round">
         <span class="rank">${i + 1}</span>
         ${r.winner === null ? '<span class="muted">tie at the top</span>' : `${numberCard(r, r.winner, i)}<span>🏆 ${esc(d.players[r.winner].name)} · ${compact(r.s[r.winner])} XP</span>`}
         ${mine >= 0 && mine !== r.winner && r.n[mine] != null ? `<span class="room-round-mine">you: ${numberCard(r, mine, i)}</span>` : ''}
-      </div>`).join('') : '<div class="empty">No round yet.</div>');
+      </div>`; }).join('') : '<div class="empty">No round yet.</div>');
   }
 
   // Badges d'une carte de duel : les 2 plus gros, + le nombre des autres. Survol = détail (description, calcul, XP,

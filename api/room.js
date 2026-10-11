@@ -24,7 +24,11 @@ const MAX_WINS = 50; // au choix du créateur de la partie (tapé à la main au-
 const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
 // Objectif d'XP libre : entre 5 000 (une ou deux manches) et 10 millions (plusieurs centaines de manches).
 const XP_MIN = 5000, XP_MAX = 10000000;
-const MAX_ROUNDS = 100; // garde-fou : au-delà, le plus de manches (puis d'XP) gagne
+// Garde-fou : une partie ne dure pas sans fin ; au-delà, le plus de manches (puis d'XP) gagne. La limite suit
+// l'objectif, sinon une longue partie s'arrêtait avant de l'atteindre (une course à 10 M d'XP demande ~500 manches,
+// un tirage rapportant ~20 000 XP en moyenne ; l'ancienne limite fixe de 100 manches la coupait vers 1 à 2 M).
+const MIN_ROUNDS_CAP = 100, XP_PER_ROUND_FLOOR = 2500;
+const maxRounds = room => Math.max(MIN_ROUNDS_CAP, room.mode === 'xp' ? Math.ceil(room.target / XP_PER_ROUND_FLOOR) : room.target * Math.max(2, room.players.length) * 3);
 const LEAD_MS = 2500; // délai avant la révélation commune : tout le monde a le temps de recevoir la manche
 // Révélation complète d'une manche à l'écran (dernier chiffre + gagnant, voir roundLength dans app.js) : les tirages
 // n'apparaissent dans l'historique, le classement et les stats qu'après.
@@ -140,7 +144,7 @@ function score(room) {
   } else if (room.mode !== 'xp' && wins.some(v => v >= room.target)) {
     done = true;
     winner = wins.findIndex(v => v >= room.target);
-  } else if (room.rounds.length >= MAX_ROUNDS) {
+  } else if (room.rounds.length >= maxRounds(room)) {
     done = true;
     winner = argmax(wins);
     if (winner === null) winner = argmax(totals);

@@ -211,6 +211,7 @@
     [/^([\d,]+) bots?$/, m => `${m[1]} bot${s(m[1])}`],
     [/^([\d,]+) opponents?$/, m => `${m[1]} adversaire${s(m[1])}`],
     [/^([\d,]+) rounds?$/, m => `${m[1]} manche${s(m[1])}`],
+    [/^([\d,]+) earlier rounds not shown$/, m => `${nb(m[1])} manche${s(m[1])} plus ancienne${s(m[1])} non affichée${s(m[1])}`],
     [/^([\d,]+) days? streak$/, m => `série de ${m[1]} jour${s(m[1])}`],
     [/^([\d,]+) new badges?$/, m => `${m[1]} nouveau${s(m[1]) ? 'x' : ''} badge${s(m[1])}`],
     [/^([\d,]+) more badges?$/, m => `${m[1]} autre${s(m[1])} badge${s(m[1])}`],
