@@ -105,6 +105,9 @@
     house() {
       return this.request('/api/shop?casino=1');
     },
+    casinoTop() {
+      return this.request(`/api/shop?casino=top&me=${Store.player.id}`);
+    },
     shopAction(action, skin, extra = {}) {
       const p = Store.player;
       return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra }) });
@@ -1387,6 +1390,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11h', date: 'Oct 11, 2026', en: ['Gamble: a casino leaderboard under the games, with the biggest winners, the biggest losers and the biggest gamblers of all time (and your own rank)'], fr: ['Gamble : un classement du casino sous les jeux, avec les plus gros gagnants, les plus gros perdants et les plus gros joueurs depuis toujours (et ton propre rang)'] },
     { id: '2026-10-11g', date: 'Oct 11, 2026', en: ['Duels: type your own goal, up to 50 rounds to win or any XP target from 5K to 10M (the usual buttons are still there)', 'Supporter skin: an animated heartbeat on every digit'], fr: ['Duels : tape ton propre objectif, jusqu\'à 50 manches à gagner ou n\'importe quel objectif d\'XP de 5 000 à 10 millions (les boutons habituels sont toujours là)', 'Skin Supporter : un battement de cœur animé sur chaque chiffre'] },
     { id: '2026-10-11f', date: 'Oct 11, 2026', en: ['Mines: a win is now capped at 250× the bet, like the slot jackpot (the game cashes out by itself when you reach it)'], fr: ['Mines : un gain est maintenant plafonné à 250 fois la mise, comme le jackpot de la machine à sous (la partie s\'encaisse toute seule quand tu l\'atteins)'] },
     { id: '2026-10-11e', date: 'Oct 11, 2026', en: ['Server fund: a monthly goal to pay for a better server. Contributing is optional and gives nothing in the game except a thank-you: the 💗 Supporter skin and title'], fr: ['Cagnotte du serveur : un objectif mensuel pour payer un meilleur serveur. Contribuer est facultatif et ne donne rien en jeu, à part un remerciement : le skin et le titre 💗 Supporter'] },
@@ -2673,7 +2677,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', mines: 3, mn: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
@@ -2705,6 +2709,34 @@
       } catch (err) { /* hors ligne : le bandeau garde ses derniers chiffres */ }
     }
     houseTimer = setTimeout(drawHouse, 20000);
+  }
+  // Classement du casino : trois tableaux (gagnants, perdants, plus gros parieurs), relus chaque minute tant que
+  // l'onglet Gamble est ouvert. Hors du top 10, le joueur voit sa propre ligne et son rang en dessous.
+  let topTimer = 0, topData = null;
+  async function drawCasinoTop(fetchNow) {
+    const box = $('#g-top-list');
+    if (currentView !== 'gamble' || !box) return;
+    if (fetchNow) {
+      clearTimeout(topTimer);
+      if (!document.hidden) { try { topData = await Online.casinoTop(); } catch (err) { /* hors ligne : on garde le dernier classement */ } }
+      topTimer = setTimeout(() => drawCasinoTop(true), 60000);
+      if (currentView !== 'gamble' || !box.isConnected) return;
+    }
+    if (!topData) { box.innerHTML = '<div class="empty">Leaderboard unavailable right now.</div>'; return; }
+    const key = Gamble.top, list = topData[key] || [], mine = topData.mine && topData.mine[key];
+    const money = v => `🪙 ${v >= 1e5 ? compact(v) : fmt(v)}`;
+    const row = x => `
+      <div class="g-top-row${x.me ? ' me' : ''}">
+        <span class="g-top-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[x.rank] || '#' + x.rank}</span>
+        <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>
+        <span class="mono g-top-rounds" title="${fmt(x.rounds)}">${x.rounds >= 1e5 ? compact(x.rounds) : fmt(x.rounds)}</span>
+        <span class="mono" title="🪙 ${fmt(x.bet)}">${money(x.bet)}</span>
+        <b class="mono ${x.net >= 0 ? 'up' : 'down'}" title="${x.net >= 0 ? '+' : '−'}${fmt(Math.abs(x.net))}">${x.net >= 0 ? '+' : '−'}${money(Math.abs(x.net)).slice(3)}</b>
+      </div>`;
+    const EMPTY = { winners: 'Nobody is ahead of the house yet.', losers: 'Nobody has lost coins yet.', gamblers: 'Nobody has gambled yet.' };
+    box.innerHTML = list.length ? `
+      <div class="g-top-row head"><span>#</span><span>Player</span><span class="g-top-rounds">Rounds</span><span>Wagered</span><span>${key === 'gamblers' ? 'Net' : key === 'winners' ? 'Won' : 'Lost'}</span></div>
+      ${list.map(row).join('')}${mine ? `<div class="lb-gap">···</div>${row(mine)}` : ''}` : `<div class="empty">${EMPTY[key]}</div>`;
   }
   function renderGamble() {
     currentView = 'gamble';
@@ -2774,8 +2806,15 @@
             <p class="panel-note g-result" id="bj-result"></p>
           </div>
         </div>
+        <div class="panel g-top stats-sep" id="g-top">
+          <div class="panel-head"><h3 class="panel-title">Casino leaderboard</h3><span class="panel-note">all time · refreshed every minute</span></div>
+          <div class="g-top-tabs" role="tablist">${[['winners', '💰', 'Biggest winners'], ['losers', '📉', 'Biggest losers'], ['gamblers', '🎲', 'Biggest gamblers']].map(([id, e, label]) => `<button role="tab" data-top="${id}" class="${id === Gamble.top ? 'on' : ''}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+          <div id="g-top-list"><div class="empty">Loading…</div></div>
+        </div>
       </div>`;
     drawHouse();
+    drawCasinoTop(true);
+    $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
     const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'Too fast, try again in a second' : 'Gamble unavailable right now, try again');

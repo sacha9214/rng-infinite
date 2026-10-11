@@ -48,6 +48,8 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const query = new URL(req.url, 'http://localhost').searchParams;
       // Compte de la maison du casino (ce qu'elle a donné et pris, dernières manches) : public, sans joueur.
+      // Classement du casino (gagnants, perdants, plus gros parieurs) : public, pseudos seulement ; « me » situe le joueur.
+      if (query.get('casino') === 'top') return send(res, 200, await Gamble.board(isPlayerId(query.get('me')) ? query.get('me') : ''));
       if (query.get('casino')) return send(res, 200, await Gamble.house());
       const me = query.get('me');
       if (!isPlayerId(me)) return send(res, 400, { error: 'Invalid player' });

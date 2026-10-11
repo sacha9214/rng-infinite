@@ -2884,3 +2884,21 @@ button.o-chip { cursor: pointer; }
 .o-inbox-title.unread { color: var(--prose); }
 .o-inbox-title.unread b { background: #ef4444; color: #fff; }
 .idea-row.unread { border-left: 3px solid #ef4444; padding-left: .7rem; background: rgba(239, 68, 68, .06); border-radius: 0 .4rem .4rem 0; }
+/* Classement du casino (onglet Gamble) : trois tableaux, une ligne par joueur. */
+.g-top-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; margin: 0 0 .7rem; }
+.g-top-tabs button { display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .55rem .4rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); color: var(--prose-2); font: 800 .74rem var(--font-sans); letter-spacing: .02em; cursor: pointer; }
+.g-top-tabs button i { font-style: normal; font-size: 1rem; line-height: 1; }
+.g-top-tabs button:hover { color: var(--prose); border-color: var(--outline-strong); }
+.g-top-tabs button.on { color: var(--prose); border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(120deg, #fbbf24, #f472b6, #818cf8) border-box; }
+.g-top-row { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) 4.5rem 6rem 6rem; align-items: center; gap: .6rem; padding: .45rem .5rem; border-top: 1px solid var(--outline); font-size: .84rem; text-align: right; }
+.g-top-row > :nth-child(1), .g-top-row > :nth-child(2) { text-align: left; }
+.g-top-row > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-top-row.head { border-top: 0; padding-top: 0; font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); }
+.g-top-row.me { background: color-mix(in srgb, var(--chart-accent) 9%, transparent); border-radius: .4rem; }
+.g-top-rank { font-family: var(--font-mono); color: var(--prose-3); }
+.g-top-row b.up { color: #34d399; } .g-top-row b.down { color: #f87171; }
+@media (max-width: 560px) {
+  .g-top-tabs button { flex-direction: column; gap: .15rem; font-size: .62rem; padding: .5rem .2rem; }
+  .g-top-row { grid-template-columns: 1.9rem minmax(0, 1fr) 5.2rem 4.9rem; gap: .35rem; font-size: .76rem; padding: .45rem .3rem; }
+  .g-top-rounds { display: none; }
+}

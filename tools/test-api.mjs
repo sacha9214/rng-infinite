@@ -1750,4 +1750,36 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(today(), before + 1); assert.ok(firstBefore && run([['HGET', `stats:${alice.playerId}`, 'first']])[0].result === firstBefore);
 }
 
+// ================================================================ 45. Classement du casino : gagnants, perdants, plus gros parieurs
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const top = async me => (await call(shopApi, { url: `/api/shop?casino=top${me ? `&me=${me}` : ''}` })).body;
+  // Quinze joueurs inventés : les 7 premiers gagnent (de plus en plus), les 8 autres perdent ; mises croissantes.
+  const ids = Array.from({ length: 15 }, (_, i) => ('f' + i.toString(16)).padEnd(16, 'a'));
+  run(ids.flatMap((id, i) => [['HSET', 'names', id, `Gam${i}`], ['HSET', `stats:${id}`, 'gBet', 1e9 + i * 1000, 'gWon', i < 7 ? 1e9 + i * 1000 + (i + 1) * 1e6 : 1e9 + i * 1000 - (i + 1) * 1e6, 'gPlinko', 10 + i, 'gSlots', 5]]));
+  run([['DEL', 'casino:board']]);
+  let b = await top(ids[0]);
+  assert.ok(b.winners.length >= 7 && b.winners.length <= 10); assert.ok(b.losers.length >= 8 && b.losers.length <= 10); assert.equal(b.gamblers.length, 10);
+  // Gagnants : net décroissant, le plus gros d'abord ; perdants : la plus grosse perte d'abord ; parieurs : par total misé.
+  assert.deepEqual(b.winners.slice(0, 7).map(x => x.name), ['Gam6', 'Gam5', 'Gam4', 'Gam3', 'Gam2', 'Gam1', 'Gam0']);
+  assert.ok(b.winners.every(x => x.net > 0) && b.losers.every(x => x.net < 0));
+  assert.deepEqual(b.losers.slice(0, 3).map(x => [x.name, x.net]), [['Gam14', -15e6], ['Gam13', -14e6], ['Gam12', -13e6]]);
+  assert.deepEqual(b.gamblers.slice(0, 2).map(x => x.name), ['Gam14', 'Gam13']); assert.equal(b.gamblers[0].rounds, 29); assert.equal(b.gamblers[0].rank, 1);
+  // Le joueur qui demande est repéré dans le top, sans que le moindre identifiant sorte.
+  assert.equal(b.winners.find(x => x.me).name, 'Gam0'); assert.ok(!b.mine.winners, 'déjà dans le top : pas de ligne en plus');
+  assert.ok(!JSON.stringify(b).includes(ids[0]) && !JSON.stringify(b).includes(ids[14]));
+  // Hors du top des parieurs (mise la plus faible des quinze) : sa ligne et son vrai rang sont joints.
+  assert.ok(b.mine.gamblers && b.mine.gamblers.name === 'Gam0' && b.mine.gamblers.rank >= 15 && b.mine.gamblers.me, JSON.stringify(b.mine));
+  // Sans joueur : même classement, personne de repéré.
+  b = await top(''); assert.ok(b.winners.every(x => !x.me) && Object.keys(b.mine).length === 0 && b.players >= 15);
+  // Gardé une minute : un changement de fiche n'apparaît qu'une fois le cache expiré.
+  run([['HSET', `stats:${ids[0]}`, 'gWon', 9e9]]);
+  assert.equal((await top('')).winners[0].name, 'Gam6');
+  run([['DEL', 'casino:board']]);
+  assert.equal((await top('')).winners[0].name, 'Gam0');
+  // L'ancien appel (bandeau en direct) répond toujours.
+  assert.ok('took' in (await call(shopApi, { url: '/api/shop?casino=1' })).body);
+  run([...ids.flatMap(id => [['HDEL', 'names', id], ['DEL', `stats:${id}`]]), ['DEL', 'casino:board']]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

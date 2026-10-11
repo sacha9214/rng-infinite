@@ -60,6 +60,41 @@ async function house() {
   return { gave: tot.won || 0, took: tot.bet || 0, rounds: tot.rounds || 0, feed: rows.map((r, i) => ({ name: names[i] || 'Someone', game: r.g, net: r.n, t: r.t })) };
 }
 
+// Classement du casino, depuis toujours : plus gros gagnants (net = gagné − misé), plus gros perdants, plus gros
+// parieurs (total misé). Calculé depuis les compteurs de chaque joueur (gBet, gWon, manches par jeu) et gardé une
+// minute : la page peut le demander souvent sans relire toutes les fiches à chaque fois.
+const BOARD_KEY = 'casino:board', BOARD_TTL_S = 60, BOARD_TOP = 10, ROUND_FIELDS = [...PLAYED, 'gSlots'];
+async function board(me) {
+  const [raw] = await redis([['GET', BOARD_KEY]]);
+  let data = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch (e) { /* cache illisible : recalcul */ }
+  if (!data) {
+    const [ids] = await redis([['HKEYS', 'names']]);
+    const rows = [];
+    for (let i = 0; i < (ids || []).length; i += 200) {
+      const part = ids.slice(i, i + 200), stats = await redis(part.map(id => ['HMGET', statsKey(id), 'gBet', 'gWon', ...ROUND_FIELDS]));
+      stats.forEach((r, k) => { const bet = Number(r && r[0]) || 0; if (bet > 0) rows.push([part[k], bet, (Number(r[1]) || 0) - bet, r.slice(2).reduce((x, v) => x + (Number(v) || 0), 0)]); });
+    }
+    // Trois ordres, chacun la liste entière des identifiants : le rang de n'importe quel joueur s'y lit directement.
+    const order = (list, cmp) => list.slice().sort(cmp).map(r => r[0]);
+    const lists = { winners: order(rows.filter(r => r[2] > 0), (a, b) => b[2] - a[2]), losers: order(rows.filter(r => r[2] < 0), (a, b) => a[2] - b[2]), gamblers: order(rows, (a, b) => b[1] - a[1]) };
+    const shown = [...new Set(Object.values(lists).flatMap(l => l.slice(0, BOARD_TOP)))];
+    const names = shown.length ? (await redis([['HMGET', 'names', ...shown]]))[0] || [] : [];
+    data = { rows: Object.fromEntries(rows.map(r => [r[0], r.slice(1)])), lists, names: Object.fromEntries(shown.map((id, i) => [id, names[i] || 'Player'])) };
+    await redis([['SET', BOARD_KEY, JSON.stringify(data), 'EX', BOARD_TTL_S]]);
+  }
+  const entry = (id, rank, name) => ({ rank, name, bet: data.rows[id][0], net: data.rows[id][1], rounds: data.rows[id][2], me: id === me });
+  const out = { players: Object.keys(data.rows).length, mine: {} };
+  let myName = null;
+  for (const [key, list] of Object.entries(data.lists)) {
+    out[key] = list.slice(0, BOARD_TOP).map((id, i) => entry(id, i + 1, data.names[id]));
+    // Le joueur hors du top voit quand même sa ligne et son rang ; son identifiant ne sort jamais.
+    const at = me ? list.indexOf(me) : -1;
+    if (at >= BOARD_TOP) { if (myName === null) myName = (await redis([['HGET', 'names', me]]))[0] || 'Player'; out.mine[key] = entry(me, at + 1, myName); }
+  }
+  return out;
+}
+
 async function wallet(id) { const st = await readStats(id); return { coins: Shop.balance(st), rolls: Number(st.rolls) || 0 }; }
 async function mustAfford(id, bet) {
   const w = await wallet(id);
@@ -262,4 +297,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
