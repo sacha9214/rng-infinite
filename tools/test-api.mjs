@@ -1687,4 +1687,67 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   delete process.env.KOFI_TOKEN;
 }
 
+// ================================================================ 44. Page Owner : activité par jour et rétention par cohorte
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const DAY = 86400000, now = Date.now(), dk = i => new Date(now - i * DAY).toISOString().slice(0, 10), at = i => Date.parse(`${dk(i)}T12:00:00Z`);
+  // Quatre joueurs arrivés il y a 5 jours (cohorte) : deux reviennent le lendemain, un seul trois jours après ; un
+  // ancien habitué joue 6 jours puis s'arrête il y a 4 jours. Seul leur historique existe : aucun compteur d'activité.
+  const seed = (id, name, daysAgo, stats = {}) => run([
+    ['HSET', 'names', id, name], ['HSET', `stats:${id}`, 'rolls', daysAgo.length * 2, ...Object.entries(stats).flat()],
+    ...daysAgo.flatMap(i => [['ZADD', `hist:${id}`, at(i), `${at(i)}:${1000 + i}`], ['ZADD', `hist:${id}`, at(i) + 60000, `${at(i) + 60000}:${2000 + i}`]]),
+  ]);
+  // Le reste de la suite a déjà ses propres joueurs : on mesure l'écart avec l'état d'avant.
+  const reset = () => run([['DEL', 'act:backfill'], ...Array.from({ length: 30 }, (_, i) => ['DEL', `act:${dk(i + 1)}`])]);
+  const ask = async () => { run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]); const r = await call(siteApi, { method: 'POST', body: { action: 'insights', playerId: frank.playerId, secret: frank.secret } }); run([['HDEL', `stats:${frank.playerId}`, 'owner']]); assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 300)); return r.body.retention; };
+  reset(); const R0 = await ask();
+  const co = ['c1', 'c2', 'c3', 'c4'].map(x => (x + '0'.repeat(16)).slice(0, 16).replace(/c/, 'c'));
+  seed(co[0], 'Coh One', [5, 4, 2], { questsDone: 3, duels: 1 }); seed(co[1], 'Coh Two', [5, 4]); seed(co[2], 'Coh Three', [5]); seed(co[3], 'Coh Four', [5]);
+  const old = 'd'.repeat(15) + '1';
+  seed(old, 'Old Regular', [20, 9, 8, 7, 6, 5, 4]);
+  run([['SET', `player:${co[0]}:google`, 'g-test']]); reset();
+  let R = await ask();
+  // Reconstruit depuis l'historique : qui a joué chaque jour, combien de tirages, et la date du premier tirage.
+  const day5 = Object.fromEntries((run([['HGETALL', `act:${dk(5)}`]])[0].result || []).reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, arr[i + 1]]]), []));
+  for (const id of co) assert.equal(String(day5[id]), '2', 'deux tirages ce jour-là');
+  assert.equal(String(day5[old]), '2');
+  assert.equal(String(run([['HGET', `stats:${co[0]}`, 'first']])[0].result), String(at(5)));
+  assert.ok(run([['GET', 'act:backfill']])[0].result, 'reconstruction marquée comme faite');
+  // La cohorte d'il y a 5 jours : 4 nouveaux (l'habitué, arrivé avant, n'en fait pas partie), 50 % à J1, 25 % à J3.
+  const c5 = R.cohorts[5], b5 = R0.cohorts[5];
+  assert.equal(c5.day, dk(5)); assert.equal(c5.size - b5.size, 4);
+  const cell = n => c5.cells.find(x => x.n === n).back, grew = n => cell(n) - b5.cells.find(x => x.n === n).back;
+  assert.equal(grew(1), 2); assert.equal(grew(2), 0); assert.equal(grew(3), 1); assert.equal(grew(4), 0);
+  // J5 tombe aujourd'hui (jour incomplet), J7 dans le futur : pas encore de valeur, et pas un zéro.
+  assert.equal(cell(5), null); assert.equal(cell(7), null); assert.equal(cell(30), null);
+  // Le résumé pondère toutes les cohortes prêtes : J1 compte au moins ces 4 joueurs, dont 2 revenus.
+  const d1 = R.summary.find(x => x.n === 1), d1b = R0.summary.find(x => x.n === 1); assert.ok(d1.players - d1b.players === 5 && d1.back - d1b.back === 2 && d1.rate > 0 && d1.rate <= 100, JSON.stringify([d1, d1b]));
+  assert.equal(R.cameBack.players - R0.cameBack.players, 5); assert.equal(R.cameBack.back - R0.cameBack.back, 3);
+  // Jour par jour : il y a 5 jours, 5 actifs dont 4 nouveaux et 1 revenu, 10 tirages.
+  for (const [k, v] of [['active', 5], ['fresh', 4], ['back', 1], ['rolls', 10]]) assert.equal(R.series[5][k] - R0.series[5][k], v, k);
+  assert.equal(R.series.length, 30); assert.ok(R.series[0].active >= 3, 'les tirages du jour comptent déjà');
+  assert.ok(R.active.month >= R.active.week && R.active.week >= R.active.today && R.active.stickiness >= 0 && R.active.stickiness <= 100);
+  // L'habitué silencieux depuis 4 jours est signalé, avec son nombre de jours joués ; les fidèles sont triés par jours joués.
+  const quiet = R.quiet.find(x => x.name === 'Old Regular'); assert.ok(quiet && quiet.ago === 4 && quiet.days === 7, JSON.stringify(R.quiet));
+  assert.ok(R.loyal[0].days >= R.loyal[R.loyal.length - 1].days && R.loyal.some(x => x.name === 'Old Regular'));
+  // Répartitions : chaque joueur est dans une seule case.
+  assert.equal(R.status.reduce((x, b) => x + b.count, 0), R.base.players);
+  assert.ok(R.status.find(b => b.name.startsWith('Cooling')).count >= 3 && R.daysPlayed.find(b => b.name === '1 day').count >= 2);
+  // Parcours des nouveaux : chaque étape contient moins de monde que le départ ; fonctions utilisées au moins une fois.
+  assert.equal(R.funnel[0].count, R.base.newcomers); assert.ok(R.funnel.every(x => x.count <= R.funnel[0].count));
+  assert.equal(R.base.newcomers - R0.base.newcomers, 5); assert.equal(R.base.players - R0.base.players, 5);
+  const step = (X, n) => X.funnel.find(x => x.name.startsWith(n)).count; assert.equal(step(R, 'Played on 2') - step(R0, 'Played on 2'), 3);
+  assert.ok(R.features.find(x => x.name.startsWith('Linked a Google')).count >= 1 && R.features.find(x => x.name.startsWith('Played a duel')).fresh >= 1);
+  assert.ok(!JSON.stringify(R).includes(co[0]) && !JSON.stringify(R).includes(frank.playerId), 'aucun identifiant');
+  // La reconstruction ne se refait pas : un jour effacé à la main n'est pas réécrit.
+  run([['DEL', `act:${dk(5)}`]]);
+  R = await ask(); assert.equal(R.series[5].active, 0); assert.ok(R0.series[5].active > 0);
+  // Un tirage inscrit le joueur dans le jour en cours, et ne touche plus à sa date de premier tirage.
+  const today = () => Number(run([['HGET', `act:${dk(0)}`, alice.playerId]])[0].result) || 0, before = today();
+  run([['DEL', `cooldown:${alice.playerId}`]]);
+  const firstBefore = run([['HGET', `stats:${alice.playerId}`, 'first']])[0].result;
+  const rr = await call(roll, { method: 'POST', body: alice }); assert.equal(rr.status, 200, JSON.stringify(rr.body));
+  assert.equal(today(), before + 1); assert.ok(firstBefore && run([['HGET', `stats:${alice.playerId}`, 'first']])[0].result === firstBefore);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

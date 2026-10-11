@@ -74,10 +74,11 @@ export function fakeRedis() {
     ZSCORE: (k, m) => (db.has(k) && db.get(k).has(m) ? String(db.get(k).get(m)) : null),
     ZCARD: k => (db.has(k) ? db.get(k).size : 0),
     ZCOUNT(k, min, max) { if (!db.has(k)) return 0; const lo = min === '-inf' ? -Infinity : Number(min), hi = max === '+inf' ? Infinity : Number(max); return [...db.get(k).values()].filter(s => Number(s) >= lo && Number(s) <= hi).length; },
-    ZRANGE(k, a, b) {
+    ZRANGE(k, a, b, ...opts) {
       const all = asc(k);
       const [s, e] = range(all.length, a, b);
-      return all.slice(s, e + 1).map(([m]) => m);
+      const out = all.slice(s, e + 1);
+      return opts.includes('WITHSCORES') ? out.flatMap(([m, score]) => [m, String(score)]) : out.map(([m]) => m);
     },
     ZREVRANGE(k, a, b, ...opts) {
       const all = asc(k).reverse();

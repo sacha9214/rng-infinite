@@ -13,7 +13,7 @@
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -100,6 +100,96 @@ async function siteStats(days = 30) {
   };
 }
 
+// ---------------------------------------------------------------- activité et rétention
+// Qui a joué quel jour : act:<jour> (identifiant → tirages), tenu à jour à chaque tirage depuis le 2026-10-11. Les
+// jours d'avant sont reconstruits une seule fois depuis l'historique des joueurs (qui garde chaque tirage et son heure).
+const ACT_DAYS = 90, ACT_DONE = 'act:backfill', ACT_LOCK = 'act:lock';
+const dayStart = day => Date.parse(`${day}T00:00:00Z`);
+const chunked = async (commands, size = 800) => { const out = []; for (let i = 0; i < commands.length; i += size) out.push(...(await redis(commands.slice(i, i + size)))); return out; };
+async function backfillActivity(ids, now) {
+  const [done] = await redis([['GET', ACT_DONE]]);
+  if (done || !ids.length) return false;
+  const [lock] = await redis([['SET', ACT_LOCK, '1', 'NX', 'EX', 300]]);
+  if (lock !== 'OK') return false;
+  const firsts = (await chunked(ids.map(id => ['ZRANGE', historyKey(id), 0, 0, 'WITHSCORES']))).map(r => (r && r.length >= 2 ? Number(r[1]) : 0));
+  const oldest = dayStart(dayKey(now - (ACT_DAYS - 1) * DAY_MS)), today = dayStart(dayKey(now));
+  const asks = [];
+  ids.forEach((id, i) => { if (firsts[i]) for (let t = Math.max(oldest, dayStart(dayKey(firsts[i]))); t <= today; t += DAY_MS) asks.push([id, t]); });
+  const counts = await chunked(asks.map(([id, t]) => ['ZCOUNT', historyKey(id), t, t + DAY_MS - 1]));
+  const writes = [], touched = new Set();
+  asks.forEach(([id, t], i) => { if (Number(counts[i]) > 0) { writes.push(['HSET', actKey(dayKey(t)), id, Number(counts[i])]); touched.add(dayKey(t)); } });
+  ids.forEach((id, i) => { if (firsts[i]) writes.push(['HSETNX', statsKey(id), 'first', firsts[i]]); });
+  for (const d of touched) writes.push(['EXPIRE', actKey(d), ACT_TTL]);
+  await chunked(writes);
+  await redis([['SET', ACT_DONE, String(now)], ['DEL', ACT_LOCK]]);
+  return true;
+}
+
+// Tout est calculé sur des jours UTC. « Jn » = le joueur a tiré exactement n jours après son premier jour ; le jour
+// en cours, incomplet, ne compte jamais comme un jour de retour manqué.
+const RET_STEPS = [1, 2, 3, 4, 5, 6, 7, 14, 30];
+function retention(now, ids, names, stats, linked, act) {
+  const days = act.map(a => a.day), index = new Map(days.map((d, i) => [d, i]));
+  const played = new Map(ids.map(id => [id, []])); // identifiant → index des jours joués (0 = aujourd'hui), croissant
+  act.forEach((a, i) => { for (const id of Object.keys(a.h)) if (played.has(id)) played.get(id).push(i); });
+  const rate = (a, b) => (b ? Math.round((1000 * a) / b) / 10 : null);
+  const people = ids.map((id, i) => {
+    const st = stats[i], mine = played.get(id), firstDay = num(st.first) ? dayKey(num(st.first)) : mine.length ? days[mine[mine.length - 1]] : '';
+    // Premier jour : son index dans la fenêtre, ou -1 s'il est plus ancien (ou inconnu).
+    return { id, name: names[i] || 'Player', st, mine, set: new Set(mine), first: index.has(firstDay) ? index.get(firstDay) : -1, last: mine.length ? mine[0] : -1, rolls: num(st.rolls), linked: !!linked[i] };
+  }).filter(p => p.rolls > 0 || p.mine.length);
+  // Jour par jour : actifs, nouveaux, revenus, tirages.
+  const series = act.slice(0, 30).map((a, i) => {
+    const active = Object.keys(a.h).length, fresh = people.filter(p => p.first === i).length;
+    return { day: a.day, active, fresh, back: Math.max(0, active - fresh), rolls: Object.values(a.h).reduce((x, v) => x + num(v), 0) };
+  });
+  // Cohortes : les nouveaux d'un jour, et la part qui a joué n jours plus tard.
+  const cohort = c => {
+    const members = people.filter(p => p.first === c);
+    return { day: days[c], size: members.length, cells: RET_STEPS.map(n => (c - n >= 1 ? { n, back: members.filter(p => p.set.has(c - n)).length } : { n, back: null })) };
+  };
+  const all = days.map((_, c) => cohort(c));
+  const summary = RET_STEPS.map((n, k) => {
+    const ready = all.filter(c => c.cells[k].back !== null && c.size);
+    const size = ready.reduce((x, c) => x + c.size, 0), back = ready.reduce((x, c) => x + c.cells[k].back, 0);
+    return { n, players: size, back, rate: rate(back, size) };
+  });
+  // Revenus au moins une fois : parmi ceux qui ont eu au moins un jour complet après leur premier jour.
+  const mature = people.filter(p => p.first >= 2), returned = mature.filter(p => p.mine.some(i => i < p.first && i >= 1));
+  const bucket = (list, value, edges) => edges.map(([a, b, name]) => ({ name, count: list.filter(p => value(p) >= a && value(p) <= b).length }));
+  const distinct = (from, to) => people.filter(p => p.mine.some(i => i >= from && i <= to)).length;
+  const mean = (from, to) => series.slice(from, to + 1).reduce((x, d) => x + d.active, 0) / Math.max(1, Math.min(series.length - 1, to) - from + 1);
+  const sum = (k, from, to) => series.slice(from, to + 1).reduce((x, d) => x + d[k], 0);
+  const mau = distinct(0, 29), dauAvg = mean(1, 7);
+  // Parcours des nouveaux des 30 derniers jours, et ce que tous les joueurs ont déjà fait au moins une fois.
+  const STEPS = [
+    ['Rolled at least once', () => true], ['10 rolls or more', p => p.rolls >= 10], ['30 rolls (casino unlocked)', p => p.rolls >= 30],
+    ['Played on 2 different days', p => p.mine.length >= 2], ['100 rolls or more', p => p.rolls >= 100], ['Played on 7 different days', p => p.mine.length >= 7],
+  ];
+  const FEATURES = [
+    ['Claimed a daily quest', p => num(p.st.questsDone) > 0], ['Spent coins in the shop', p => num(p.st.spent) > 0], ['Played a duel', p => num(p.st.duels) > 0],
+    ['Gambled in the casino', p => num(p.st.gBet) > 0], ['Linked a Google account', p => p.linked], ['Opened a case', p => num(p.st.cases) > 0],
+    ['Bought a speed upgrade', p => num(p.st.speedLv) > 0], ['Supported the server', p => num(p.st.supporter) > 0],
+  ];
+  const newcomers = people.filter(p => p.first >= 0 && p.first <= 29);
+  const row = p => ({ name: p.name, days: p.mine.filter(i => i <= 29).length, ago: p.last, rolls: p.rolls });
+  return {
+    since: days[days.length - 1], steps: RET_STEPS, series,
+    active: { today: series[0].active, yesterday: series[1] ? series[1].active : 0, week: distinct(0, 6), month: mau, dauAvg: Math.round(dauAvg * 10) / 10, dauPrev: Math.round(mean(8, 14) * 10) / 10, stickiness: rate(dauAvg, mau) },
+    fresh: { week: sum('fresh', 0, 6), prev: sum('fresh', 7, 13), month: sum('fresh', 0, 29) },
+    rolls: { week: sum('rolls', 0, 6), prev: sum('rolls', 7, 13) },
+    summary, cameBack: { players: mature.length, back: returned.length, rate: rate(returned.length, mature.length) },
+    cohorts: all.slice(0, 21),
+    daysPlayed: bucket(people.filter(p => p.mine.length), p => p.mine.filter(i => i <= 29).length, [[1, 1, '1 day'], [2, 3, '2–3 days'], [4, 7, '4–7 days'], [8, 14, '8–14 days'], [15, 30, '15+ days']]),
+    status: bucket(people, p => (p.last < 0 ? 999 : p.last), [[0, 0, 'Played today'], [1, 2, 'Active (1–2 days ago)'], [3, 6, 'Cooling off (3–6 days)'], [7, 13, 'At risk (7–13 days)'], [14, 29, 'Dormant (14–29 days)'], [30, 999, 'Gone (30+ days)']]),
+    funnel: STEPS.map(([name, test]) => ({ name, count: newcomers.filter(test).length })),
+    features: FEATURES.map(([name, test]) => ({ name, count: people.filter(test).length, fresh: newcomers.filter(test).length })),
+    base: { players: people.length, newcomers: newcomers.length },
+    quiet: people.filter(p => p.mine.length >= 4 && p.last >= 3 && p.last <= 20).sort((a, b) => b.mine.length - a.mine.length || a.last - b.last).slice(0, 10).map(row),
+    loyal: people.filter(p => p.mine.length >= 2).sort((a, b) => b.mine.filter(i => i <= 29).length - a.mine.filter(i => i <= 29).length || b.rolls - a.rolls).slice(0, 10).map(row),
+  };
+}
+
 // ---------------------------------------------------------------- page Owner : comprendre les joueurs
 // Tout est agrégé ici, à la demande : la carte (pays et cases sur 30 jours, cases du jour), les heures d'activité, le
 // casino (par jeu, par jour, plus gros joueurs) et l'état des joueurs (activité, ancienneté en tirages, économie).
@@ -132,7 +222,11 @@ async function insights() {
   // Joueurs : une lecture de chaque fiche, par paquets.
   const ids = rows[base + 29] || [];
   const stats = [];
-  for (let i = 0; i < ids.length; i += 200) (await redis(ids.slice(i, i + 200).map(id => ['HGETALL', statsKey(id)]))).forEach(flat => stats.push(toObject(flat)));
+  await backfillActivity(ids, now);
+  const linked = [];
+  for (let i = 0; i < ids.length; i += 200) (await redis(ids.slice(i, i + 200).flatMap(id => [['HGETALL', statsKey(id)], ['EXISTS', `player:${id}:google`]]))).forEach((r, k) => (k % 2 ? linked.push(Number(r) === 1) : stats.push(toObject(r))));
+  const actDays = Array.from({ length: ACT_DAYS }, (_, i) => dayKey(now - i * DAY_MS));
+  const act = (await redis(actDays.map(d => ['HGETALL', actKey(d)]))).map((flat, i) => ({ day: actDays[i], h: toObject(flat) }));
   const names = ids.length ? (await redis([['HMGET', 'names', ...ids]]))[0] || [] : [];
   const BUCKETS = [[1, 9], [10, 29], [30, 99], [100, 499], [500, 1999], [2000, Infinity]];
   const rollBuckets = BUCKETS.map(([a, b]) => ({ name: b === Infinity ? `${a}+` : `${a}–${b}`, count: 0 }));
@@ -176,6 +270,7 @@ async function insights() {
       skins: tally(rows[base + 30]), buttons: tally(rows[base + 31]),
     },
     economy: { coins, earned, spent },
+    retention: retention(now, ids, names, stats, linked, act),
   };
 }
 

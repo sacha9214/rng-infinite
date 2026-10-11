@@ -3495,55 +3495,237 @@
     });
   }
 
-  // ---------------------------------------------------------------- page du créateur : fréquentation et suggestions reçues
+  // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['retention', '🔁', 'Retention'], ['traffic', '🌍', 'Traffic'], ['casino', '🎰', 'Casino'], ['players', '👥', 'Players'], ['fund', '💶', 'Fund'], ['inbox', '💡', 'Inbox']];
   function renderOwner() {
     currentView = 'owner';
+    const wanted = (location.hash.split('/')[2] || '').split('?')[0];
+    const first = OWNER_TABS.some(t => t[0] === wanted) ? wanted : Inbox.fresh > 0 ? 'inbox' : 'overview';
     app.innerHTML = `
-      <div class="page page-wide">
+      <div class="page page-wide o-page">
         <h1 class="page-title" data-no-i18n>Owner</h1>
-        <div id="o-stats"><div class="empty">Loading…</div></div>
-        <div id="o-fund"></div>
-        <div id="o-insights"></div>
-        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>
+        <nav class="o-tabs" role="tablist" aria-label="Owner sections">${OWNER_TABS.map(([id, emoji, name]) => `<button role="tab" data-tab="${id}"><i>${emoji}</i><span>${name}</span><b class="o-badge" data-badge="${id}" hidden></b></button>`).join('')}</nav>
+        ${OWNER_TABS.map(([id]) => `<section class="o-pane" data-pane="${id}" role="tabpanel" hidden>${id === 'fund' ? '<div id="o-fund"><div class="empty">Loading…</div></div>' : id === 'inbox' ? '<div class="panel"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>' : '<div class="empty">Loading…</div>'}</section>`).join('')}
       </div>`;
-    const denied = err => `<div class="empty">${err.status === 403 ? 'This page is for the creator of the game.' : 'Unavailable right now.'}</div>`;
-    const bars = (title, list, label = x => x) => {
-      const max = Math.max(1, ...list.map(x => x.count));
-      return `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3></div>${list.length ? list.slice(0, 12).map(x => `
-        <div class="o-bar"><span class="o-name"${label(x.name) === x.name ? ' data-no-i18n' : ''}>${esc(label(x.name))}</span><span class="o-track"><span style="width:${(x.count / max) * 100}%"></span></span><span class="mono">${fmt(x.count)}</span></div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    const pane = id => app.querySelector(`[data-pane="${id}"]`);
+    const show = (id, keep) => {
+      app.querySelectorAll('.o-tabs button').forEach(b => { const on = b.dataset.tab === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+      app.querySelectorAll('.o-pane').forEach(p => { p.hidden = p.dataset.pane !== id; });
+      if (!keep) { try { history.replaceState(null, '', `#/owner/${id}`); } catch (e) { /* adresse inchangée */ } }
     };
-    Online.site('stats').then(st => {
-      const box = $('#o-stats');
-      if (currentView !== 'owner' || !box) return;
-      const today = st.days[0], week = st.days.slice(0, 7), sum = (list, k) => list.reduce((x, d) => x + d[k], 0);
-      box.innerHTML = `
+    const badge = (id, n) => { const b = app.querySelector(`[data-badge="${id}"]`); if (b) { b.hidden = !n; b.textContent = n; } };
+    app.querySelector('.o-tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
+    app.addEventListener('click', e => { const go = e.target.closest('[data-go-tab]'); if (go && currentView === 'owner') { show(go.dataset.goTab); window.scrollTo({ top: 0 }); } });
+    show(first, true);
+
+    // ---- petits outils d'affichage
+    const denied = err => `<div class="empty">${err && err.status === 403 ? 'This page is for the creator of the game.' : 'Unavailable right now.'}</div>`;
+    const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)}%` : '–');
+    const bars = (title, list, label = x => x, note = '', share = 0) => {
+      const max = Math.max(1, ...list.map(x => x.count));
+      return `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3>${note ? `<span class="panel-note">${note}</span>` : ''}</div>${list.length ? list.slice(0, 12).map(x => `
+        <div class="o-bar"><span class="o-name"${label(x.name) === x.name ? ' data-no-i18n' : ''}>${esc(label(x.name))}</span><span class="o-track"><span style="width:${(x.count / max) * 100}%"></span></span><span class="mono">${fmt(x.count)}${share ? ` <em class="o-share">${pct(x.count, share)}</em>` : ''}</span></div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    };
+    const table = (cols, rows, cls = '') => `<div class="o-table"><div class="o-tr head ${cls}">${cols.map(c => `<span>${c}</span>`).join('')}</div>${rows.length ? rows.map(r => `<div class="o-tr ${cls}">${r.map(c => `<span>${c}</span>`).join('')}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    const panel = (title, note, body) => `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3>${note ? `<span class="panel-note">${note}</span>` : ''}</div>${body}</div>`;
+    const sum = (list, k) => list.reduce((x, d) => x + d[k], 0);
+    // Évolution par rapport à la période d'avant : flèche et pourcentage, ou rien si la base est vide.
+    const trend = (cur, prev, what = 'vs the 7 days before') => {
+      if (!prev) return cur ? `new ${what.replace('vs ', 'since ')}` : `– ${what}`;
+      const d = ((cur - prev) / prev) * 100;
+      return `<span class="${d >= 0 ? 'o-up' : 'o-down'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}%</span> ${what}`;
+    };
+    const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
+    const ago = n => (n === 0 ? 'today' : `${n}d ago`);
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack' };
+    const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
+
+    // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
+    const todo = { ideas: null, tips: null };
+    const drawTodo = () => {
+      const box = $('#o-todo');
+      if (!box) return;
+      const items = [];
+      if (todo.ideas) items.push(`<button class="o-chip warn" data-go-tab="inbox">💡 ${todo.ideas} suggestion${todo.ideas === 1 ? '' : 's'} to read</button>`);
+      if (todo.tips) items.push(`<button class="o-chip warn" data-go-tab="fund">💶 ${todo.tips} tip${todo.tips === 1 ? '' : 's'} waiting for a player</button>`);
+      box.innerHTML = items.length ? items.join('') : todo.ideas === null && todo.tips === null ? '' : '<span class="o-chip">✅ Nothing waiting for you</span>';
+    };
+
+    // ---- Vue d'ensemble, rétention, fréquentation, casino, joueurs : deux lectures (stats + insights) et la carte.
+    Promise.all([Online.site('stats'), Online.site('insights'), fetch('data/world-map.json').then(r => r.json()).catch(() => null)]).then(([st, d, world]) => {
+      if (currentView !== 'owner' || !pane('overview')) return;
+      const R = d.retention, week = st.days.slice(0, 7), prevWeek = st.days.slice(7, 14);
+      const step = n => R.summary.find(x => x.n === n);
+      const rateTile = (label, s, hint) => tile(label, s.rate === null ? '–' : `${s.rate}%`, s.players ? `${fmt(s.back)} of ${fmt(s.players)} new players · ${hint}` : 'not enough days of data yet');
+
+      // Graphique des joueurs actifs : une colonne par jour, les revenus en bas, les nouveaux au-dessus.
+      const series = R.series.slice().reverse(), maxA = Math.max(1, ...series.map(x => x.active));
+      const daysChart = `<div class="o-days">${series.map((x, i) => `<span class="o-day${i === series.length - 1 ? ' partial' : ''}" data-tip="${esc(`<b>${x.day}${i === series.length - 1 ? ' (today, so far)' : ''}</b><br>${fmt(x.active)} players · ${fmt(x.fresh)} new · ${fmt(x.back)} returning<br>${fmt(x.rolls)} rolls`)}"><i class="new" style="height:${(x.fresh / maxA) * 100}%"></i><i class="back" style="height:${(x.back / maxA) * 100}%"></i><em>${i % 5 === 4 || i === series.length - 1 ? x.day.slice(8) : ''}</em></span>`).join('')}</div>
+        <div class="o-legend"><span><i class="back"></i>Returning players</span><span><i class="new"></i>New players</span><span class="panel-note">Days in UTC · today is still filling up</span></div>`;
+
+      // Lecture en clair : trois ou quatre phrases tirées des chiffres, pour savoir où regarder.
+      const reading = [];
+      const d1 = step(1), d7 = step(7), oneDay = R.daysPlayed.find(x => x.name === '1 day'), everyone = R.daysPlayed.reduce((x, b) => x + b.count, 0);
+      if (d1.players >= 5) reading.push(`<b>${Math.round(d1.rate / 10)} in 10</b> new players come back the day after their first roll${d1.rate >= 35 ? ': that is strong.' : d1.rate >= 20 ? ': decent, room to grow.' : ': most leave after day one, so the first session is where to improve.'}`);
+      if (d7.players >= 5) reading.push(`<b>${d7.rate}%</b> are still playing one week later.`);
+      if (everyone) reading.push(`<b>${pct(oneDay.count, everyone)}</b> of the players seen in the last 30 days played on one single day.`);
+      const drops = R.funnel.slice(1).map((x, i) => ({ from: R.funnel[i], to: x, lost: R.funnel[i].count - x.count })).filter(x => x.from.count > 0).sort((a, b) => b.lost / b.from.count - a.lost / a.from.count)[0];
+      if (drops && R.funnel[0].count >= 5) reading.push(`Biggest drop for newcomers: from “${drops.from.name}” to “${drops.to.name}” (<b>${pct(drops.lost, drops.from.count)}</b> lost).`);
+      const topRef = st.month.refs.filter(x => x.name !== 'direct')[0];
+      if (topRef) reading.push(`Best outside source of visits: <b data-no-i18n>${esc(topRef.name)}</b> (${fmt(topRef.count)} in 30 days).`);
+      if (R.quiet.length) reading.push(`<b>${R.quiet.length}</b> regular player${R.quiet.length === 1 ? ' has' : 's have'} gone quiet. <button class="o-link" data-go-tab="retention">See who</button>`);
+
+      pane('overview').innerHTML = `
+        <div class="o-todo" id="o-todo"></div>
+        <div class="tiles">
+          ${tile('Players today', fmt(R.active.today), `${fmt(R.active.yesterday)} yesterday`)}
+          ${tile('Daily players, 7-day average', fmt(R.active.dauAvg), trend(R.active.dauAvg, R.active.dauPrev))}
+          ${tile('New players, 7 days', fmt(R.fresh.week), trend(R.fresh.week, R.fresh.prev))}
+          ${tile('Rolls, 7 days', compact(R.rolls.week), trend(R.rolls.week, R.rolls.prev))}
+          ${tile('Visits, 7 days', fmt(sum(week, 'visits')), trend(sum(week, 'visits'), sum(prevWeek, 'visits')))}
+          ${rateTile('Back the next day', d1, 'day 1')}
+          ${rateTile('Back a week later', d7, 'day 7')}
+          ${tile('Stickiness', R.active.stickiness === null ? '–' : `${R.active.stickiness}%`, `${fmt(R.active.month)} players in 30 days · share who play on a given day`)}
+        </div>
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Players per day · 30 days</h3><span class="panel-note">a player = someone who rolled that day</span></div>${daysChart}</div>
+        <div class="grid-2 stats-sep">
+          ${panel('What the numbers say', '', reading.length ? `<ul class="o-read">${reading.map(x => `<li>${x}</li>`).join('')}</ul>` : '<div class="empty">Not enough data yet.</div>')}
+          ${panel('From visit to player · 30 days', 'new devices that became players', `
+            <div class="o-funnel">
+              ${[['New devices on the site', sum(st.days, 'fresh')], ['New players (first roll)', R.fresh.month], ['Came back another day', R.funnel.find(x => x.name.startsWith('Played on 2')).count]].map(([name, n], i, all) => `<div class="o-step"><span class="o-name">${name}</span><span class="o-track"><span style="width:${Math.min(100, (n / Math.max(1, all[0][1])) * 100)}%"></span></span><span class="mono">${fmt(n)}</span><em class="o-share">${i ? pct(n, all[i - 1][1]) : ''}</em></div>`).join('')}
+            </div><p class="panel-note">The percentage is the share kept from the line above. Devices are counted in the browser, players on the server, so the first step is an estimate.</p>`)}
+        </div>`;
+      drawTodo();
+
+      // ---------------- Rétention
+      const cohortRows = R.cohorts.filter(c => c.size > 0);
+      const heat = c => c.cells.map(x => (x.back === null ? '<span class="o-cell none">·</span>' : `<span class="o-cell" style="background:rgba(52,211,153,${(.06 + .7 * (x.back / c.size)).toFixed(2)})" data-tip="${esc(`<b>${c.day} · day ${x.n}</b><br>${x.back} of ${c.size} played`)}">${Math.round((100 * x.back) / c.size)}%</span>`)).join('');
+      const funnelTop = Math.max(1, R.funnel[0].count);
+      pane('retention').innerHTML = `
+        <p class="panel-note profile-sub">Retention = how many new players come back. “Day 1” means they rolled again the day after their first roll, “day 7” exactly one week after. Days are UTC, over the last 90 days; today is never counted as a missed day. Rough guide for a casual web game: day 1 above 30% is good, day 7 above 10% is good.</p>
+        <div class="tiles">
+          ${rateTile('Day 1', step(1), 'next day')}
+          ${rateTile('Day 3', step(3), '3 days later')}
+          ${rateTile('Day 7', step(7), '1 week later')}
+          ${rateTile('Day 14', step(14), '2 weeks later')}
+          ${rateTile('Day 30', step(30), '1 month later')}
+          ${tile('Came back at least once', R.cameBack.rate === null ? '–' : `${R.cameBack.rate}%`, `${fmt(R.cameBack.back)} of ${fmt(R.cameBack.players)} players, on any later day`)}
+        </div>
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Cohorts · new players by first day</h3><span class="panel-note">each row: the players who started that day, and the share who played N days later</span></div>
+          <div class="o-table"><div class="o-cohort head"><span>First day</span><span>New</span>${R.steps.map(n => `<span>D${n}</span>`).join('')}</div>
+          ${cohortRows.length ? cohortRows.map(c => `<div class="o-cohort"><span>${c.day.slice(5)}</span><span>${fmt(c.size)}</span>${heat(c)}</div>`).join('') : '<div class="empty">No new player in the last 3 weeks.</div>'}</div>
+        </div>
+        <div class="grid-2 stats-sep">
+          ${panel('Newcomer journey · started in the last 30 days', `${fmt(R.base.newcomers)} players`, `<div class="o-funnel">${R.funnel.map(x => `<div class="o-step"><span class="o-name">${x.name}</span><span class="o-track"><span style="width:${(x.count / funnelTop) * 100}%"></span></span><span class="mono">${fmt(x.count)}</span><em class="o-share">${pct(x.count, R.funnel[0].count)}</em></div>`).join('')}</div>`)}
+          ${bars('Where every player stands today', R.status, x => x, 'by the last day they rolled', R.base.players)}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('Days played in the last 30 days', R.daysPlayed, x => x, 'players by number of different days', R.daysPlayed.reduce((x, b) => x + b.count, 0))}
+          ${bars('Features used at least once', R.features.slice().sort((a, b) => b.count - a.count), x => x, `share of the ${fmt(R.base.players)} players`, R.base.players)}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${panel('Regulars who went quiet', 'played 4+ days, silent for 3 to 20 days', table(['Player', 'Days', 'Last roll', 'Rolls'], R.quiet.map(x => [who(x.name), fmt(x.days), ago(x.ago), fmt(x.rolls)]), 'c4'))}
+          ${panel('Most loyal players', 'different days played in the last 30', table(['Player', 'Days', 'Last roll', 'Rolls'], R.loyal.map(x => [who(x.name), fmt(x.days), ago(x.ago), fmt(x.rolls)]), 'c4'))}
+        </div>`;
+
+      // ---------------- Fréquentation
+      const byCountry = new Map(d.map.countries.map(c => [c.name, c.count])), visits = d.map.countries.reduce((x, c) => x + c.count, 0);
+      const maxC = Math.max(1, ...d.map.countries.filter(c => c.name !== 'ZZ').map(c => c.count));
+      const nameOf = c => (world && world.points[c] ? world.points[c][2] : c === 'ZZ' ? 'Unknown' : c);
+      let mapHTML = '<div class="empty">Map unavailable right now.</div>';
+      if (world) {
+        // Chaque pays teinté selon ses visites (échelle logarithmique), un rond par case de 100 km, celles du jour pulsent.
+        const X = lon => ((lon + 180) / 360) * world.w, Y = lat => ((world.top - lat) / 360) * world.w;
+        const shade = n => (n ? `rgba(129,140,248,${(.22 + .68 * (Math.log(1 + n) / Math.log(1 + maxC))).toFixed(2)})` : '');
+        const dot = (p, cls) => `<circle class="${cls}" cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="${Math.min(9, 1.6 + Math.sqrt(p.n) * .9).toFixed(1)}" data-tip="${esc(`<b>${fmt(p.n)}</b> ${p.n > 1 ? 'visits' : 'visit'} around ${Math.abs(p.lat)}°${p.lat < 0 ? 'S' : 'N'} ${Math.abs(p.lon)}°${p.lon < 0 ? 'W' : 'E'}`)}"/>`;
+        mapHTML = `<svg class="o-map" viewBox="0 0 ${world.w} ${world.h}" role="img" aria-label="World map of visits">
+          ${world.countries.map(c => { const n = byCountry.get(c.c) || 0; return `<path d="${c.d}"${n ? ` style="fill:${shade(n)}"` : ''} data-tip="${esc(`<b>${c.n}</b><br>${n ? `${fmt(n)} visits · ${pct(n, visits)}` : 'no visit'}`)}"/>`; }).join('')}
+          ${d.map.points.map(p => dot(p, 'o-dot')).join('')}${d.map.today.map(p => dot(p, 'o-ping')).join('')}
+        </svg>`;
+      }
+      const offset = -new Date().getTimezoneOffset() / 60, localHours = d.hours.map((_, h) => d.hours[((h - Math.round(offset)) % 24 + 24) % 24]), maxH = Math.max(1, ...localHours);
+      const peak = localHours.indexOf(Math.max(...localHours));
+      const today = st.days[0], byDay = new Map(R.series.map(x => [x.day, x]));
+      pane('traffic').innerHTML = `
         <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC. The map counts visits per square of about 100 km, never per player.</p>
         <div class="tiles">
           ${tile('Visits today', fmt(today.visits), `${fmt(today.uniq)} devices · ${fmt(today.fresh)} new`)}
-          ${tile('Visits, 7 days', fmt(sum(week, 'visits')), `${fmt(sum(week, 'fresh'))} new devices`)}
+          ${tile('Visits, 7 days', fmt(sum(week, 'visits')), trend(sum(week, 'visits'), sum(prevWeek, 'visits')))}
           ${tile('Visits, 30 days', fmt(sum(st.days, 'visits')), `${fmt(sum(st.days, 'fresh'))} new devices`)}
-          ${tile('Players', fmt(st.totals.named), `${fmt(st.totals.ranked)} on the leaderboard`)}
+          ${tile('Players with a name', fmt(st.totals.named), `${fmt(st.totals.ranked)} on the leaderboard`)}
         </div>
+        <div class="panel stats-sep">
+          <div class="panel-head"><h3 class="panel-title">Where players connect from · 30 days</h3><span class="panel-note">${fmt(d.map.countries.filter(x => x.name !== 'ZZ').length)} countries · ${d.map.points.length ? `${fmt(d.map.points.length)} areas, the pulsing ones are today` : 'area dots start filling in from today'}</span></div>
+          <div class="o-map-wrap">${mapHTML}
+            <div class="o-countries">${d.map.countries.slice(0, 12).map(x => `<div class="o-country"><span data-no-i18n>${flag(x.name)} ${esc(nameOf(x.name))}</span><b class="mono">${fmt(x.count)}</b><span class="panel-note mono">${pct(x.count, visits)}</span></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>
+          </div>
+        </div>
+        ${panel('When they play · 30 days', `your local time · busiest hour: ${peak}:00`, `<div class="o-hours">${localHours.map((n, h) => `<span class="o-hour" data-tip="${esc(`<b>${h}:00 – ${h}:59</b><br>${fmt(n)} visits`)}"><i style="height:${Math.max(2, (n / maxH) * 100)}%"></i><em>${h % 3 === 0 ? h : ''}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}
         <div class="grid-2 stats-sep">
           ${bars('Where visitors come from · 30 days', st.month.refs, n => (n === 'direct' ? 'Direct (typed, bookmark, app)' : n))}
           ${bars('Tagged links (?ref=…) · 30 days', st.month.sources, n => ({ share: 'share · a shared roll', duel: 'duel · a duel invite' }[n] || n))}
-          ${bars('Countries · 30 days', st.month.countries, n => (n === 'ZZ' ? 'Unknown' : n))}
-          ${bars('Device and language · 30 days', [...st.month.devices, ...st.month.langs])}
+          ${bars('Device · 30 days', st.month.devices, x => x, '', sum(st.month.devices, 'count'))}
+          ${bars('Language · 30 days', st.month.langs, x => x, '', sum(st.month.langs, 'count'))}
         </div>
-        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Day by day</h3><span class="panel-note">players and rolls are kept 8 days</span></div>
-          <div class="o-table"><div class="o-tr head"><span>Day</span><span>Visits</span><span>Devices</span><span>New</span><span>Players</span><span>Rolls</span></div>
-          ${st.days.slice(0, 14).map(d => `<div class="o-tr"><span>${d.day}</span><span>${fmt(d.visits)}</span><span>${fmt(d.uniq)}</span><span>${fmt(d.fresh)}</span><span>${d.players ? fmt(d.players) : '–'}</span><span>${d.rolls ? fmt(d.rolls) : '–'}</span></div>`).join('')}</div>
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Day by day</h3><span class="panel-note">last 14 days</span></div>
+          ${table(['Day', 'Visits', 'Devices', 'New devices', 'Players', 'New players', 'Rolls'], st.days.slice(0, 14).map(x => { const a = byDay.get(x.day) || { active: 0, fresh: 0, rolls: 0 }; return [x.day.slice(5), fmt(x.visits), fmt(x.uniq), fmt(x.fresh), fmt(a.active), fmt(a.fresh), fmt(a.rolls)]; }), 'c7')}
         </div>`;
-    }).catch(err => { if ($('#o-stats')) $('#o-stats').innerHTML = denied(err); });
+
+      // ---------------- Casino
+      const c = d.casino, allRounds = c.allTime.reduce((x, g) => x + g.count, 0), keeps = c.total.bet - c.total.won;
+      const best = c.allTime.slice().sort((a, b) => b.count - a.count)[0];
+      const tracked = c.tracked.filter(g => g.rounds).sort((a, b) => b.rounds - a.rounds);
+      const netCell = x => `<span class="${x.net >= 0 ? 'o-up' : 'o-down'}">${x.net >= 0 ? '+' : '−'}${compact(Math.abs(x.net))}</span>`;
+      pane('casino').innerHTML = `
+        <div class="tiles">
+          ${tile('Rounds played', fmt(allRounds), `most played: ${best && best.count ? GAME_NAMES[best.name] : '–'}`)}
+          ${tile('Coins wagered', compact(c.total.bet), `${compact(c.total.won)} paid back`)}
+          ${keeps >= 0 ? tile('The house kept', compact(keeps), `${pct(keeps, c.total.bet)} of the bets`) : tile('The house lost', compact(-keeps), 'players are ahead overall')}
+          ${tile('Players who gambled', fmt(c.gamblers), `${pct(c.gamblers, c.unlocked)} of the ${fmt(c.unlocked)} who unlocked it`)}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('Most played games · all time', c.allTime.slice().sort((a, b) => b.count - a.count), n => GAME_NAMES[n] || n, '', allRounds)}
+          ${panel('Per game', 'counted since 11 Oct 2026', table(['Game', 'Rounds', 'Wagered', 'Paid', 'Return'], tracked.map(g => [GAME_NAMES[g.name], fmt(g.rounds), compact(g.bet), compact(g.won), pct(g.won, g.bet)]), 'c5'))}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${panel('Casino, day by day', 'last 14 days', table(['Day', 'Players', 'Rounds', 'Wagered', 'House', 'Top game'], c.daily.filter(x => x.rounds).map(x => { const topGame = Object.entries(x.games).sort((a, b) => b[1] - a[1])[0]; return [x.day.slice(5), fmt(x.players), fmt(x.rounds), compact(x.bet), `${x.bet - x.won >= 0 ? '+' : '−'}${compact(Math.abs(x.bet - x.won))}`, GAME_NAMES[topGame[0]]]; }), 'c6'))}
+          ${panel('Biggest gamblers', 'all time · net = won − wagered', table(['Player', 'Rounds', 'Wagered', 'Net'], c.topWagered.map(x => [who(x.name), fmt(x.rounds), compact(x.bet), netCell(x)]), 'c4'))}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${panel('Biggest winners', 'all time', table(['Player', 'Rounds', 'Wagered', 'Net'], c.topWinners.filter(x => x.net > 0).map(x => [who(x.name), fmt(x.rounds), compact(x.bet), netCell(x)]), 'c4'))}
+          ${panel('Biggest losers', 'all time', table(['Player', 'Rounds', 'Wagered', 'Net'], c.topLosers.filter(x => x.net < 0).map(x => [who(x.name), fmt(x.rounds), compact(x.bet), netCell(x)]), 'c4'))}
+        </div>`;
+
+      // ---------------- Joueurs et économie
+      const pl = d.players;
+      pane('players').innerHTML = `
+        <div class="tiles">
+          ${tile('Players', fmt(pl.rolled), `${fmt(R.active.week)} active in 7 days · ${fmt(R.active.month)} in 30`)}
+          ${tile('Rolls, all time', compact(pl.totalRolls), `${fmt(Math.round(pl.totalRolls / Math.max(1, pl.rolled)))} per player on average`)}
+          ${tile('Rolls per player per day', R.active.dauAvg ? fmt(Math.round(R.rolls.week / Math.max(1, sum(R.series.slice(0, 7), 'active')))) : '–', 'average over the last 7 days')}
+          ${tile('Coins in circulation', compact(d.economy.coins), `${compact(d.economy.earned)} earned · ${compact(d.economy.spent)} spent`)}
+          ${tile('Daily streak alive', fmt(pl.streaks), `${fmt(pl.questsDone)} quests claimed in all`)}
+          ${tile('Top rolls ever', `${fmt(pl.top.infinite)} · ${fmt(pl.top.divine)} · ${fmt(pl.top.celestial)}`, 'Infinite · Divine · Celestial')}
+          ${tile('Duels won', fmt(pl.duelWins), 'against real players and bots')}
+          ${tile('Coins spent', pct(d.economy.spent, d.economy.earned), 'of all the coins ever earned')}
+        </div>
+        <div class="grid-2 stats-sep">
+          ${bars('How much they have rolled · players', pl.rollBuckets, n => `${n} rolls`, '', pl.rolled)}
+          ${bars('Roll speed level · players', pl.speed, x => x, '', pl.named)}
+          ${bars('Equipped skins', pl.skins, n => (Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n))}
+          ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
+        </div>`;
+    }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'retention', 'traffic', 'casino', 'players']) if (pane(id)) pane(id).innerHTML = denied(err); });
     // ---- Cagnotte : inscrire une contribution reçue (le joueur reçoit le skin et le titre Supporter), régler
     // l'objectif du mois et le lien de la page de dons, relire les dernières contributions.
     const drawFund = f => {
       const box = $('#o-fund');
       if (currentView !== 'owner' || !box) return;
       Fund.set({ month: f.month, cents: f.cents, count: f.count, goal: f.goal, url: f.url });
+      todo.tips = (f.pending || []).length; badge('fund', todo.tips); drawTodo();
       box.innerHTML = `
-        <div class="panel stats-sep">
+        <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Server fund</h3><span class="panel-note" data-no-i18n>${f.month} · ${euros(f.cents)} / ${euros(f.goal)} · ${f.count} contribution${f.count === 1 ? '' : 's'}</span></div>
           <span class="fund-bar"><span style="width:${Math.min(100, (f.cents / f.goal) * 100)}%"></span></span>
           <p class="panel-note o-fund-auto">${f.auto ? '🟢 Automatic: a tip whose message contains a player name gives the skin by itself.' : '⚪ Automatic attribution is off (no Ko-fi token on the server yet): record contributions by hand below.'}</p>
@@ -3587,82 +3769,12 @@
       });
       send($('#o-fund-set'), 'fundSet', d => ({ goal: Number(String(d.goal).replace(',', '.')), url: d.url }));
     };
-    Online.site('fund').then(drawFund).catch(() => {});
-    // ---- Carte des visites, heures, casino, joueurs : tout vient de l'action « insights » (agrégats, aucun identifiant).
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack' };
-    const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
-    const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)}%` : '–');
-    const table = (cols, rows, cls = '') => `<div class="o-table"><div class="o-tr head ${cls}">${cols.map(c => `<span>${c}</span>`).join('')}</div>${rows.length ? rows.map(r => `<div class="o-tr ${cls}">${r.map(c => `<span>${c}</span>`).join('')}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
-    const panel = (title, note, body) => `<div class="panel"><div class="panel-head"><h3 class="panel-title">${title}</h3>${note ? `<span class="panel-note">${note}</span>` : ''}</div>${body}</div>`;
-    Promise.all([Online.site('insights'), fetch('data/world-map.json').then(r => r.json()).catch(() => null)]).then(([d, world]) => {
-      const box = $('#o-insights');
-      if (currentView !== 'owner' || !box) return;
-      // Carte : chaque pays teinté selon ses visites (échelle logarithmique), un rond par case de 100 km, les cases
-      // du jour qui pulsent.
-      const byCountry = new Map(d.map.countries.map(c => [c.name, c.count])), visits = d.map.countries.reduce((x, c) => x + c.count, 0);
-      const maxC = Math.max(1, ...d.map.countries.filter(c => c.name !== 'ZZ').map(c => c.count));
-      const nameOf = c => (world && world.points[c] ? world.points[c][2] : c === 'ZZ' ? 'Unknown' : c);
-      let mapHTML = '<div class="empty">Map unavailable right now.</div>';
-      if (world) {
-        const X = lon => ((lon + 180) / 360) * world.w, Y = lat => ((world.top - lat) / 360) * world.w;
-        const shade = n => (n ? `rgba(129,140,248,${(.22 + .68 * (Math.log(1 + n) / Math.log(1 + maxC))).toFixed(2)})` : '');
-        const dot = (p, cls) => `<circle class="${cls}" cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="${Math.min(9, 1.6 + Math.sqrt(p.n) * .9).toFixed(1)}" data-tip="${esc(`<b>${fmt(p.n)}</b> ${p.n > 1 ? 'visits' : 'visit'} around ${Math.abs(p.lat)}°${p.lat < 0 ? 'S' : 'N'} ${Math.abs(p.lon)}°${p.lon < 0 ? 'W' : 'E'}`)}"/>`;
-        mapHTML = `<svg class="o-map" viewBox="0 0 ${world.w} ${world.h}" role="img" aria-label="World map of visits">
-          ${world.countries.map(c => { const n = byCountry.get(c.c) || 0; return `<path d="${c.d}"${n ? ` style="fill:${shade(n)}"` : ''} data-tip="${esc(`<b>${c.n}</b><br>${n ? `${fmt(n)} visits · ${pct(n, visits)}` : 'no visit'}`)}"/>`; }).join('')}
-          ${d.map.points.map(p => dot(p, 'o-dot')).join('')}${d.map.today.map(p => dot(p, 'o-ping')).join('')}
-        </svg>`;
-      }
-      const offset = -new Date().getTimezoneOffset() / 60, localHours = d.hours.map((_, h) => d.hours[((h - Math.round(offset)) % 24 + 24) % 24]), maxH = Math.max(1, ...localHours);
-      const peak = localHours.indexOf(Math.max(...localHours));
-      // Casino.
-      const c = d.casino, allRounds = c.allTime.reduce((x, g) => x + g.count, 0), keeps = c.total.bet - c.total.won;
-      const best = c.allTime.slice().sort((a, b) => b.count - a.count)[0];
-      const tracked = c.tracked.filter(g => g.rounds).sort((a, b) => b.rounds - a.rounds);
-      // Joueurs.
-      const pl = d.players;
-      box.innerHTML = `
-        <div class="panel stats-sep">
-          <div class="panel-head"><h3 class="panel-title">Where players connect from · 30 days</h3><span class="panel-note">${fmt(d.map.countries.filter(x => x.name !== 'ZZ').length)} countries · ${d.map.points.length ? `${fmt(d.map.points.length)} areas, the pulsing ones are today` : 'area dots start filling in from today'}</span></div>
-          <div class="o-map-wrap">${mapHTML}
-            <div class="o-countries">${d.map.countries.slice(0, 12).map(x => `<div class="o-country"><span data-no-i18n>${flag(x.name)} ${esc(nameOf(x.name))}</span><b class="mono">${fmt(x.count)}</b><span class="panel-note mono">${pct(x.count, visits)}</span></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>
-          </div>
-        </div>
-        ${panel('When they play · 30 days', `your local time · busiest hour: ${peak}:00`, `<div class="o-hours">${localHours.map((n, h) => `<span class="o-hour" data-tip="${esc(`<b>${h}:00 – ${h}:59</b><br>${fmt(n)} visits`)}"><i style="height:${Math.max(2, (n / maxH) * 100)}%"></i><em>${h % 3 === 0 ? h : ''}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}
-        <h2 class="o-section">Casino</h2>
-        <div class="tiles">
-          ${tile('Rounds played', fmt(allRounds), `most played: ${best && best.count ? GAME_NAMES[best.name] : '–'}`)}
-          ${tile('Coins wagered', compact(c.total.bet), `${compact(c.total.won)} paid back`)}
-          ${keeps >= 0 ? tile('The house kept', compact(keeps), `${pct(keeps, c.total.bet)} of the bets`) : tile('The house lost', compact(-keeps), 'players are ahead overall')}
-          ${tile('Players who gambled', fmt(c.gamblers), `${pct(c.gamblers, c.unlocked)} of the ${fmt(c.unlocked)} who unlocked it`)}
-        </div>
-        <div class="grid-2 stats-sep">
-          ${bars('Most played games · all time', c.allTime.slice().sort((a, b) => b.count - a.count), n => GAME_NAMES[n] || n)}
-          ${panel('Per game', 'counted since 11 Oct 2026', table(['Game', 'Rounds', 'Wagered', 'Paid', 'Return'], tracked.map(g => [GAME_NAMES[g.name], fmt(g.rounds), compact(g.bet), compact(g.won), pct(g.won, g.bet)]), 'c5'))}
-        </div>
-        <div class="grid-2 stats-sep">
-          ${panel('Casino, day by day', 'last 14 days', table(['Day', 'Players', 'Rounds', 'Wagered', 'House', 'Top game'], c.daily.filter(x => x.rounds).map(x => { const topGame = Object.entries(x.games).sort((a, b) => b[1] - a[1])[0]; return [x.day.slice(5), fmt(x.players), fmt(x.rounds), compact(x.bet), `${x.bet - x.won >= 0 ? '+' : '−'}${compact(Math.abs(x.bet - x.won))}`, GAME_NAMES[topGame[0]]]; }), 'c6'))}
-          ${panel('Biggest gamblers', 'all time · net = won − wagered', table(['Player', 'Rounds', 'Wagered', 'Net'], c.topWagered.map(x => [`<a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>`, fmt(x.rounds), compact(x.bet), `<span class="${x.net >= 0 ? 'o-up' : 'o-down'}">${x.net >= 0 ? '+' : '−'}${compact(Math.abs(x.net))}</span>`]), 'c4'))}
-        </div>
-        <h2 class="o-section">Players</h2>
-        <div class="tiles">
-          ${tile('Active, 24 h', fmt(pl.active.day), `${fmt(pl.active.week)} in 7 days · ${fmt(pl.active.month)} in 30`)}
-          ${tile('Rolls, all time', compact(pl.totalRolls), `${fmt(Math.round(pl.totalRolls / Math.max(1, pl.rolled)))} per player on average`)}
-          ${tile('Coins in circulation', compact(d.economy.coins), `${compact(d.economy.earned)} earned · ${compact(d.economy.spent)} spent`)}
-          ${tile('Daily streak alive', fmt(pl.streaks), `${fmt(pl.questsDone)} quests claimed in all`)}
-          ${tile('Top rolls ever', `${fmt(pl.top.infinite)} · ${fmt(pl.top.divine)} · ${fmt(pl.top.celestial)}`, 'Infinite · Divine · Celestial')}
-          ${tile('Duels won', fmt(pl.duelWins), 'against real players and bots')}
-        </div>
-        <div class="grid-2 stats-sep">
-          ${bars('How much they have rolled · players', pl.rollBuckets, n => `${n} rolls`)}
-          ${bars('Roll speed level · players', pl.speed)}
-          ${bars('Equipped skins', pl.skins, n => (Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n))}
-          ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
-        </div>`;
-    }).catch(err => { if ($('#o-insights')) $('#o-insights').innerHTML = err.status === 403 ? '' : '<div class="empty">Insights unavailable right now.</div>'; });
+    Online.site('fund').then(drawFund).catch(err => { if ($('#o-fund')) $('#o-fund').innerHTML = denied(err); });
     const drawInbox = data => {
       const box = $('#o-inbox');
       if (currentView !== 'owner' || !box) return;
       $('#o-count').textContent = `${data.total} received`;
+      todo.ideas = data.suggestions.filter(x => x.status === 'new').length; badge('inbox', todo.ideas); drawTodo();
       Inbox.seen(Math.max(0, ...data.suggestions.map(x => x.t)));
       box.innerHTML = data.suggestions.length ? data.suggestions.map(x => `
         <div class="idea-row" data-id="${x.id}">

@@ -341,6 +341,9 @@ async function readStats(playerId) {
 // Compteurs du jour d'un joueur (voir js/quests.js), gardés 3 jours.
 const questKey = (day, playerId) => `q:${day}:${playerId}`;
 const QUEST_TTL = 3 * 86400;
+// Joueurs actifs d'un jour : hash identifiant → nombre de tirages ce jour-là, gardé 400 jours. Sert uniquement aux
+// totaux de la page Owner (actifs par jour, rétention par cohorte) ; jamais affiché par joueur.
+const actKey = day => `act:${day}`, ACT_TTL = 400 * 86400;
 const SEEN_KEY = 'seen'; // dernière activité de chaque joueur (score = heure)
 
 // Mise d'un duel : chaque joueur l'a payée en entrant (stats.spent += mise, champ "paid:<id>" de la salle).
@@ -389,6 +392,10 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', questKey(dayKey(t), playerId), `t:${a.tier}`, 1],
     ['EXPIRE', questKey(dayKey(t), playerId), QUEST_TTL],
     ['ZADD', SEEN_KEY, t, playerId],
+    // Activité par jour (page Owner : joueurs actifs, rétention) et date du tout premier tirage.
+    ['HINCRBY', actKey(dayKey(t)), playerId, 1],
+    ['EXPIRE', actKey(dayKey(t)), ACT_TTL],
+    ['HSETNX', statsKey(playerId), 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
@@ -441,7 +448,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = {
-  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, settleWager,
+  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, markFresh,
