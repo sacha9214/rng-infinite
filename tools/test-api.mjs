@@ -282,9 +282,12 @@ const later = async (ms, fn) => { clock += ms; return fn(); };
 
 // Règles bornées : 2 à 10 joueurs, 1 à 10 manches, paliers d'XP connus.
 r = await roomPost(dave, 'create', { size: 50, mode: 'rounds', target: 99 });
-assert.deepEqual([r.body.size, r.body.mode, r.body.target], [10, 'rounds', 10]);
+assert.deepEqual([r.body.size, r.body.mode, r.body.target], [10, 'rounds', 50]);
 r = await roomPost(dave, 'create', { size: 1, mode: 'xp', target: 12345 });
-assert.deepEqual([r.body.size, r.body.mode, r.body.target], [2, 'xp', 50000]);
+assert.deepEqual([r.body.size, r.body.mode, r.body.target], [2, 'xp', 12345]); // objectif d'XP libre depuis le 2026-10-11
+// Bornes de l'objectif libre : 5 000 à 10 millions d'XP, 1 à 50 manches ; une valeur illisible retombe sur le défaut.
+{ const { __goal } = { __goal: require(path.join(ROOT, 'api/room.js')).goalOf };
+  if (__goal) { assert.deepEqual([['xp', 1], ['xp', 4999.4], ['xp', 300000], ['xp', 1e12], ['xp', 'abc'], ['xp', -5], ['rounds', 50], ['rounds', 999], ['rounds', 7.4], ['rounds', 'x']].map(([mode, target]) => __goal({ mode, target }).target), [5000, 5000, 300000, 10000000, 50000, 50000, 50, 50, 7, 3]); } else assert.fail('goalOf non exporté'); }
 
 // Partie à 3, premier à 2 manches : elle démarre toute seule quand la salle est pleine.
 r = await roomPost(alice, 'create', { size: 3, mode: 'rounds', target: 2 });

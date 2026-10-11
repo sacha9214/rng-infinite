@@ -1357,6 +1357,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-11g', date: 'Oct 11, 2026', en: ['Duels: type your own goal, up to 50 rounds to win or any XP target from 5K to 10M (the usual buttons are still there)', 'Supporter skin: an animated heartbeat on every digit'], fr: ['Duels : tape ton propre objectif, jusqu\'à 50 manches à gagner ou n\'importe quel objectif d\'XP de 5 000 à 10 millions (les boutons habituels sont toujours là)', 'Skin Supporter : un battement de cœur animé sur chaque chiffre'] },
     { id: '2026-10-11f', date: 'Oct 11, 2026', en: ['Mines: a win is now capped at 250× the bet, like the slot jackpot (the game cashes out by itself when you reach it)'], fr: ['Mines : un gain est maintenant plafonné à 250 fois la mise, comme le jackpot de la machine à sous (la partie s\'encaisse toute seule quand tu l\'atteins)'] },
     { id: '2026-10-11e', date: 'Oct 11, 2026', en: ['Server fund: a monthly goal to pay for a better server. Contributing is optional and gives nothing in the game except a thank-you: the 💗 Supporter skin and title'], fr: ['Cagnotte du serveur : un objectif mensuel pour payer un meilleur serveur. Contribuer est facultatif et ne donne rien en jeu, à part un remerciement : le skin et le titre 💗 Supporter'] },
     { id: '2026-10-11d', date: 'Oct 11, 2026', en: ['Link your Google account and get 150 coins (once). Already linked? You get them on your next roll'], fr: ['Associe ton compte Google et reçois 150 pièces (une seule fois). Déjà associé ? Tu les reçois à ton prochain tirage'] },
@@ -2304,6 +2305,10 @@
   const ROOM_POLL_MS = 1500;
   const ROOM_IDLE_MS = 10 * 60000; // sans aucun changement pendant 10 min, on arrête de sonder (quota de la base)
   const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
+  // Objectifs libres d'un duel (mêmes bornes que api/room.js) : manches à gagner, XP à atteindre.
+  const DUEL_WINS_MAX = 50, DUEL_XP_MIN = 5000, DUEL_XP_MAX = 10000000;
+  // « 300k », « 1.5m », « 250 000 » → un nombre ; NaN si ce n'en est pas un.
+  const parseAmount = raw => { const m = String(raw).trim().toLowerCase().replace(/[\s,_']/g, '').replace(/xp$/, '').match(/^(\d+(?:\.\d+)?)([km]?)$/); return m ? Math.round(Number(m[1]) * (m[2] === 'k' ? 1e3 : m[2] === 'm' ? 1e6 : 1)) : NaN; };
   const Room = { code: null, token: 0, timer: 0, offset: 0, rtt: Infinity, data: null, shown: 0, anim: null, view: null, sig: '', changedAt: 0, reactSeen: new Set(), reactBusy: false, achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' };
   // Emotes de duel : la mascotte dé (images dessinées pour le site). Touches 1 à 6.
   const REACTIONS = ['laugh', 'cry', 'angry', 'cool', 'shock', 'king'];
@@ -2325,8 +2330,8 @@
     return {
       size: Math.min(10, Math.max(2, Number(d.size) || 2)),
       mode: d.mode === 'xp' ? 'xp' : 'rounds',
-      wins: Math.min(10, Math.max(1, Number(d.wins) || 3)),
-      xp: XP_TARGETS.includes(Number(d.xp)) ? Number(d.xp) : 50000,
+      wins: Math.min(DUEL_WINS_MAX, Math.max(1, Math.round(Number(d.wins)) || 3)),
+      xp: Number(d.xp) > 0 ? Math.min(DUEL_XP_MAX, Math.max(DUEL_XP_MIN, Math.round(Number(d.xp)))) : 50000,
       isPublic: d.isPublic !== false,
       stake: Shop.STAKES.includes(Number(d.stake)) ? Number(d.stake) : 0,
       opp: d.opp === 'bots' ? 'bots' : 'friends',
@@ -2367,7 +2372,8 @@
       const p = duelPrefs();
       const bots = p.opp === 'bots';
       const choice = (key, value, on, emoji, title, text) => `<button class="choice${on ? ' on' : ''}" data-pref="${key}" data-v="${value}"><span class="choice-emoji">${emoji}</span><span class="choice-text"><b>${title}</b><span>${text}</span></span></button>`;
-      const stepper = (key, value, min, max) => `<div class="stepper"><button data-step="${key}" data-d="-1"${value <= min ? ' disabled' : ''} aria-label="Less">−</button><b class="mono">${value}</b><button data-step="${key}" data-d="1"${value >= max ? ' disabled' : ''} aria-label="More">+</button></div>`;
+      // typed : le nombre du milieu devient un champ où l'on peut écrire sa valeur.
+      const stepper = (key, value, min, max, typed) => `<div class="stepper"><button data-step="${key}" data-d="-1"${value <= min ? ' disabled' : ''} aria-label="Less">−</button>${typed ? `<input class="mono step-input" data-type="${key}" inputmode="numeric" maxlength="3" value="${value}" aria-label="Rounds to win">` : `<b class="mono">${value}</b>`}<button data-step="${key}" data-d="1"${value >= max ? ' disabled' : ''} aria-label="More">+</button></div>`;
       const chips = (key, values, current, label) => `<div class="chips-row">${values.map(v => `<button class="chip${v === current ? ' on' : ''}" data-pref="${key}" data-v="${v}">${label(v)}</button>`).join('')}</div>`;
       const others = p.size - 1;
       $('#d-setup').innerHTML = `
@@ -2389,8 +2395,9 @@
             ${choice('mode', 'xp', p.mode === 'xp', '⚡', 'XP race', 'Every roll adds up')}
           </div>
           ${p.mode === 'xp'
-            ? `<div class="setup-line"><span class="panel-note">First to reach</span>${chips('xp', XP_TARGETS, p.xp, v => `${compact(v)} XP`)}</div>`
-            : `<div class="setup-line"><span class="panel-note">First to win</span>${stepper('wins', p.wins, 1, 10)}<span class="panel-note">${p.wins === 1 ? 'round' : 'rounds'}</span></div>`}
+            ? `<div class="setup-line"><span class="panel-note">First to reach</span>${chips('xp', XP_TARGETS, p.xp, v => `${compact(v)} XP`)}</div>
+               <div class="setup-line setup-custom"><span class="panel-note">or type your own</span><input class="input setup-input${XP_TARGETS.includes(p.xp) ? '' : ' on'}" data-type="xp" inputmode="decimal" maxlength="12" placeholder="e.g. 300k" value="${XP_TARGETS.includes(p.xp) ? '' : fmt(p.xp)}" aria-label="XP to reach"><span class="panel-note">XP · ${compact(DUEL_XP_MIN)} to ${compact(DUEL_XP_MAX)}</span></div>`
+            : `<div class="setup-line"><span class="panel-note">First to win</span>${stepper('wins', p.wins, 1, DUEL_WINS_MAX, true)}<span class="panel-note">${p.wins === 1 ? 'round' : 'rounds'} · type a number up to ${DUEL_WINS_MAX}</span></div>`}
         </div>
         ${bots ? '' : `
         <div class="setup-step">
@@ -2419,7 +2426,7 @@
       const p = duelPrefs();
       const step = e.target.closest('[data-step]');
       if (step) {
-        const key = step.dataset.step, [min, max] = key === 'size' ? [2, 10] : [1, 10];
+        const key = step.dataset.step, [min, max] = key === 'size' ? [2, 10] : [1, DUEL_WINS_MAX];
         Store.setSetting('duel', { ...p, [key]: Math.min(max, Math.max(min, p[key] + Number(step.dataset.d))) });
         return drawSetup();
       }
@@ -2431,6 +2438,19 @@
       Store.setSetting('duel', { ...p, [key]: value });
       drawSetup();
     });
+    // Valeur tapée à la main (manches à gagner, XP à atteindre) : prise en compte quand on quitte le champ ou sur Entrée.
+    const typed = e => {
+      const field = e.target.closest('[data-type]');
+      if (!field) return;
+      const p = duelPrefs(), key = field.dataset.type, n = parseAmount(field.value);
+      if (!Number.isFinite(n) || n <= 0) { if (field.value.trim()) toast(key === 'xp' ? 'Type an amount of XP, like 300k or 2m' : 'Type a number of rounds'); return drawSetup(); }
+      const [min, max] = key === 'xp' ? [DUEL_XP_MIN, DUEL_XP_MAX] : [1, DUEL_WINS_MAX], value = Math.min(max, Math.max(min, n));
+      if (value !== n) toast(key === 'xp' ? `Between ${compact(min)} and ${compact(max)} XP` : `Between ${min} and ${max} rounds`);
+      Store.setSetting('duel', { ...p, [key]: value });
+      drawSetup();
+    };
+    $('#d-setup').addEventListener('change', typed);
+    $('#d-setup').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('[data-type]')) { e.preventDefault(); e.target.blur(); } });
     $('#d-join').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#d-code').value); });
     drawLive();
   }

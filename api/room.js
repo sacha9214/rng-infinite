@@ -20,8 +20,10 @@ const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
-const MAX_WINS = 10;
+const MAX_WINS = 50; // au choix du créateur de la partie (tapé à la main au-delà des boutons)
 const XP_TARGETS = [25000, 50000, 100000, 250000, 1000000];
+// Objectif d'XP libre : entre 5 000 (une ou deux manches) et 10 millions (plusieurs centaines de manches).
+const XP_MIN = 5000, XP_MAX = 10000000;
 const MAX_ROUNDS = 100; // garde-fou : au-delà, le plus de manches (puis d'XP) gagne
 const LEAD_MS = 2500; // délai avant la révélation commune : tout le monde a le temps de recevoir la manche
 // Révélation complète d'une manche à l'écran (dernier chiffre + gagnant, voir roundLength dans app.js) : les tirages
@@ -60,12 +62,12 @@ const isCode = code => /^[A-Z2-9]{5}$/.test(code);
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const newCode = () => Array.from(crypto.randomBytes(5), b => ALPHABET[b % 32]).join('');
 
-// Règles de la partie, bornées : taille 2-10, 1-10 manches gagnantes, ou un des paliers d'XP proposés.
+// Règles de la partie, bornées : taille 2-10, 1 à 50 manches gagnantes, ou un objectif d'XP de 5 000 à 10 millions.
 function rules(body) {
   const size = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, Math.round(Number(body.size) || 2)));
   const mode = body.mode === 'xp' ? 'xp' : 'rounds';
   const target = mode === 'xp'
-    ? (XP_TARGETS.includes(Number(body.target)) ? Number(body.target) : XP_TARGETS[1])
+    ? (Number.isFinite(Number(body.target)) && Number(body.target) > 0 ? Math.min(XP_MAX, Math.max(XP_MIN, Math.round(Number(body.target)))) : XP_TARGETS[1])
     : Math.min(MAX_WINS, Math.max(1, Math.round(Number(body.target) || 3)));
   // Mise en pièces (0 = aucune) : chacun la paie en entrant, le gagnant prend le pot.
   const stake = Shop.STAKES.includes(Number(body.stake)) ? Number(body.stake) : 0;
@@ -613,3 +615,5 @@ module.exports = async (req, res) => {
     return send(res, err.status || 500, { error: err.message });
   }
 };
+// Pour les tests : les règles d'une partie telles que le serveur les borne.
+module.exports.goalOf = rules;
