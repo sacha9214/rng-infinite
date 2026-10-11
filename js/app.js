@@ -3776,20 +3776,36 @@
       $('#o-count').textContent = `${data.total} received`;
       todo.ideas = data.suggestions.filter(x => x.status === 'new').length; badge('inbox', todo.ideas); drawTodo();
       Inbox.seen(Math.max(0, ...data.suggestions.map(x => x.t)));
-      box.innerHTML = data.suggestions.length ? data.suggestions.map(x => `
-        <div class="idea-row" data-id="${x.id}">
+      // Deux sections : ce qui reste à lire (statut « Sent »), puis ce qui a déjà été lu ou traité.
+      const row = x => `
+        <div class="idea-row${x.status === 'new' ? ' unread' : ''}" data-id="${x.id}">
           <div class="idea-head"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a><span class="panel-note">${suggDate(x.t)} · ${x.lang || '?'}</span>
             <select class="input o-status" aria-label="Status">${Object.entries(SUGG_STATUS).map(([k, v]) => `<option value="${k}"${k === x.status ? ' selected' : ''}>${v}</option>`).join('')}</select>
+            <button class="btn${x.status === 'new' ? '' : ' ghost'}" data-o="${x.status === 'new' ? 'read' : 'unread'}">${x.status === 'new' ? '✓ Mark as read' : 'Mark as not read'}</button>
             <button class="btn ghost" data-o="delete">Delete</button></div>
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
           <div class="o-reply"><input class="input" maxlength="300" placeholder="Reply shown to the player (optional)" value="${esc(x.reply)}"><button class="btn" data-o="reply">Save reply</button></div>
-        </div>`).join('') : '<div class="empty">No suggestion yet.</div>';
+        </div>`;
+      const fresh = data.suggestions.filter(x => x.status === 'new'), old = data.suggestions.filter(x => x.status !== 'new');
+      box.innerHTML = data.suggestions.length ? `
+        <div class="o-inbox-head"><h4 class="o-inbox-title unread">Not read <b>${fresh.length}</b></h4>${fresh.length > 1 ? '<button class="btn ghost" data-o="readall">✓ Mark all as read</button>' : ''}</div>
+        ${fresh.length ? fresh.map(row).join('') : '<div class="empty">You have read everything.</div>'}
+        <div class="o-inbox-head"><h4 class="o-inbox-title">Read <b>${old.length}</b></h4></div>
+        ${old.length ? old.map(row).join('') : '<div class="empty">Nothing here yet.</div>'}` : '<div class="empty">No suggestion yet.</div>';
     };
     const act = (action, extra) => Online.site(action, extra).then(drawInbox).catch(err => toast(err.status === 403 ? 'Owner only' : 'Unavailable right now, try again'));
     $('#o-inbox').addEventListener('change', e => { const row = e.target.closest('.idea-row'); if (row && e.target.matches('.o-status')) act('mark', { id: row.dataset.id, status: e.target.value }); });
     $('#o-inbox').addEventListener('click', e => {
       const btn = e.target.closest('[data-o]'), row = e.target.closest('.idea-row');
+      if (btn && btn.dataset.o === 'readall') {
+        // L'une après l'autre : chaque réponse est la boîte entière, la dernière est la bonne.
+        btn.disabled = true;
+        const ids = [...$('#o-inbox').querySelectorAll('.idea-row.unread')].map(r => r.dataset.id);
+        ids.reduce((p, id, i) => p.then(() => Online.site('mark', { id, status: 'seen' })), Promise.resolve()).then(drawInbox).catch(() => { toast('Unavailable right now, try again'); btn.disabled = false; });
+        return;
+      }
       if (!btn || !row) return;
+      if (btn.dataset.o === 'read' || btn.dataset.o === 'unread') { act('mark', { id: row.dataset.id, status: btn.dataset.o === 'read' ? 'seen' : 'new' }); return; }
       if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply saved'));
     });
     Online.site('inbox').then(drawInbox).catch(err => { if ($('#o-inbox')) $('#o-inbox').innerHTML = denied(err); });

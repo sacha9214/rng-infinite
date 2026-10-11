@@ -2876,3 +2876,11 @@ button.o-chip { cursor: pointer; }
   .o-step { grid-template-columns: 1fr 2.6rem 3rem; gap: .15rem .4rem; font-size: .76rem; }
   .o-step .o-name { grid-column: 1 / -1; white-space: normal; }
 }
+/* Boîte à idées du créateur : non lues en haut (liseré rouge), lues en dessous. */
+.o-inbox-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin: 1rem 0 .2rem; }
+.o-inbox-head:first-child { margin-top: 0; }
+.o-inbox-title { margin: 0; font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); }
+.o-inbox-title b { margin-left: .3rem; padding: 0 .4rem; border-radius: 999px; background: var(--surface-raised); color: var(--prose-2); font: 800 .68rem/1.2rem var(--font-mono); display: inline-block; }
+.o-inbox-title.unread { color: var(--prose); }
+.o-inbox-title.unread b { background: #ef4444; color: #fff; }
+.idea-row.unread { border-left: 3px solid #ef4444; padding-left: .7rem; background: rgba(239, 68, 68, .06); border-radius: 0 .4rem .4rem 0; }
