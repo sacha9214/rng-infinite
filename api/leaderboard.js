@@ -1,7 +1,7 @@
-// GET /api/leaderboard?period=day|week|all|xp&me=<playerId>
+// GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { redis, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, cors, send, flushDue } = require('./_lib');
+const { redis, engine, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -61,18 +61,45 @@ async function coinsBoard(me) {
   return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
 }
 
+// Le classement du mois existe depuis le 2026-10-12 : la première fois, le mois en cours est rempli depuis
+// l'historique de chaque joueur (meilleur tirage et nombre de tirages depuis le 1er). Les mois suivants partent de zéro
+// et se remplissent tout seuls à chaque tirage.
+const MONTH_SEEDED = 'lb:month:seeded';
+async function seedMonth(scope, t) {
+  const [first] = await redis([['SET', MONTH_SEEDED, String(t), 'NX']]);
+  if (first !== 'OK') return;
+  const start = Date.parse(`${dayKey(t).slice(0, 7)}-01T00:00:00Z`);
+  const [ids] = await redis([['HKEYS', 'names']]);
+  let total = 0;
+  for (let i = 0; i < (ids || []).length; i += 100) {
+    const part = ids.slice(i, i + 100), lists = await redis(part.map(id => ['ZRANGEBYSCORE', historyKey(id), start, '+inf']));
+    const writes = [];
+    lists.forEach((rolls, k) => {
+      if (!rolls || !rolls.length) return;
+      // Membre de l'historique : « heure:nombre ». Le meilleur du mois = le plus d'XP (le premier en cas d'égalité).
+      let best = null;
+      for (const m of rolls) { const [at, n] = m.split(':').map(Number), s = engine.scoreOf(n); if (!best || s > best.s) best = { n, s, t: at }; }
+      total += rolls.length;
+      writes.push(['ZADD', scope.lb, best.s, part[k]], ['HSET', scope.best, part[k], JSON.stringify(best)], ['HSET', scope.count, part[k], rolls.length]);
+    });
+    if (writes.length) await redis(writes);
+  }
+  if (total) await redis([['SET', scope.total, total], ...[scope.lb, scope.best, scope.count, scope.total].map(k => ['EXPIRE', k, scope.ttl])]);
+}
+
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   await flushDue();
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'all', 'xp', 'coins'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'month', 'all', 'xp', 'coins'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
     const t = Date.now();
     if (period === 'xp' || period === 'all') await migrateXp();
     const scope = period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
+    if (period === 'month') await seedMonth(scope, t);
 
     const [flat, rolls, rollsToday, players, myRank] = await redis([
       ['ZREVRANGE', scope.lb, 0, LIMIT - 1, 'WITHSCORES'],

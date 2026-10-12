@@ -1838,4 +1838,41 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   code = await make('rounds', 3); fill(code, 99); assert.equal((await state(code)).status, 'playing'); fill(code, 1); assert.equal((await state(code)).status, 'done');
 }
 
+// ================================================================ 48. Classement du mois
+{
+  const board = async (who, period = 'month') => (await call(leaderboard, { url: `/api/leaderboard?period=${period}${who ? `&me=${who.playerId}` : ''}` })).body;
+  const now = Date.now(), month = new Date(now).toISOString().slice(0, 7), start = Date.parse(`${month}-01T00:00:00Z`);
+  // Deux joueurs connus seulement par leur historique : l'un a un gros tirage ce mois-ci, l'autre seulement le mois dernier.
+  let big = 111000; for (let n = 111000; n < 112000; n++) if (engine.scoreOf(n) > engine.scoreOf(big)) big = n;
+  const inMonth = '7e'.repeat(8), before = '7f'.repeat(8);
+  run([
+    ['HSET', 'names', inMonth, 'Monthly'], ['HSET', 'names', before, 'LastMonth'],
+    ['ZADD', `hist:${inMonth}`, start + 5000, `${start + 5000}:${big}`], ['ZADD', `hist:${inMonth}`, start + 9000, `${start + 9000}:12`], ['ZADD', `hist:${inMonth}`, start - 5000, `${start - 5000}:1000000`],
+    ['ZADD', `hist:${before}`, start - 86400000, `${start - 86400000}:1000000`],
+    ['DEL', 'lb:month:seeded'], ['DEL', `lb:month:${month}`], ['DEL', `best:month:${month}`], ['DEL', `count:month:${month}`], ['DEL', `rolls:month:${month}`],
+  ]);
+  // Premier affichage : le mois en cours est rempli depuis les historiques (tirages d'avant le 1er ignorés).
+  let b = await board(null);
+  assert.equal(b.period, 'month');
+  const row = b.entries.find(e => e.name === 'Monthly');
+  assert.ok(row, 'joueur repris de son historique'); assert.deepEqual([row.n, row.s, row.t, row.rolls], [big, engine.scoreOf(big), start + 5000, 2]);
+  assert.ok(!b.entries.some(e => e.name === 'LastMonth'), 'un tirage du mois dernier ne compte pas');
+  assert.ok(b.entries.every((e, i) => i === 0 || b.entries[i - 1].s >= e.s), 'trié par XP');
+  assert.ok(b.rolls >= 2 && b.players === b.entries.length);
+  // Les joueurs de la suite (Alice a tiré aujourd'hui) y sont aussi, et le remplissage ne se refait pas.
+  assert.ok(b.entries.some(e => e.name === 'Alice' || e.name === 'Alicia') || b.entries.length >= 3);
+  run([['ZREM', `lb:month:${month}`, inMonth]]);
+  assert.ok(!(await board(null)).entries.some(e => e.name === 'Monthly'), 'rempli une seule fois');
+  // Un nouveau tirage met à jour le mois : compteur +1, et la ligne « moi » est signalée.
+  const mine = async () => { const x = await board(alice); return x.entries.find(e => e.me) || x.mine; };
+  run([['DEL', `cooldown:${alice.playerId}`]]);
+  const c0 = (await mine()) ? (await mine()).rolls : 0;
+  const rr = await call(roll, { method: 'POST', body: alice }); assert.equal(rr.status, 200, JSON.stringify(rr.body));
+  const after = await mine(); assert.ok(after && after.rolls === c0 + 1 && after.s >= rr.body.s, JSON.stringify(after));
+  // Les autres périodes répondent toujours ; une période inconnue retombe sur le jour.
+  for (const per of ['day', 'week', 'all', 'xp', 'coins']) assert.equal((await board(alice, per)).period, per);
+  assert.equal((await board(null, 'year')).period, 'day');
+  run([['HDEL', 'names', inMonth], ['HDEL', 'names', before], ['DEL', `hist:${inMonth}`], ['DEL', `hist:${before}`], ['ZREM', `lb:month:${month}`, inMonth], ['HDEL', `best:month:${month}`, inMonth], ['HDEL', `count:month:${month}`, inMonth]]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

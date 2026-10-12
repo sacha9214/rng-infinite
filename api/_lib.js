@@ -45,10 +45,11 @@ function weekKey(t) {
 // Pour chaque période : un sorted set (score = EP du meilleur tirage du joueur), un hash avec le détail de ce tirage,
 // un hash du nombre de tirages par joueur et un compteur du total de tirages.
 function scopes(t) {
-  const day = dayKey(t), week = weekKey(t);
+  const day = dayKey(t), week = weekKey(t), month = day.slice(0, 7);
   return [
     { period: 'day', lb: `lb:day:${day}`, best: `best:day:${day}`, count: `count:day:${day}`, total: `rolls:day:${day}`, ttl: 8 * 86400 },
     { period: 'week', lb: `lb:week:${week}`, best: `best:week:${week}`, count: `count:week:${week}`, total: `rolls:week:${week}`, ttl: 40 * 86400 },
+    { period: 'month', lb: `lb:month:${month}`, best: `best:month:${month}`, count: `count:month:${month}`, total: `rolls:month:${month}`, ttl: 70 * 86400 },
     { period: 'all', lb: 'lb:all', best: 'best:all', count: 'count:all', total: 'rolls:all', ttl: 0 },
   ];
 }

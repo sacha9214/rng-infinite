@@ -1390,6 +1390,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-12a', date: 'Oct 12, 2026', en: ['Leaderboard: a new This month tab with the best roll of the month (it already counts every roll since the 1st)'], fr: ['Classement : un nouvel onglet Ce mois avec le meilleur tirage du mois (il compte déjà tous les tirages depuis le 1er)'] },
     { id: '2026-10-11j', date: 'Oct 11, 2026', en: ['Fixed: long duels no longer stop after 100 rounds, so an XP race to 10M (or 50 rounds to win) now really goes to the end'], fr: ['Corrigé : les longs duels ne s\'arrêtent plus au bout de 100 manches, une course à 10 M d\'XP (ou 50 manches à gagner) va maintenant vraiment jusqu\'au bout'] },
     { id: '2026-10-11i', date: 'Oct 11, 2026', en: ['Duels: an Auto-roll switch under the round button rolls every round for you, against bots or players, until the duel ends'], fr: ['Duels : un interrupteur « Tirage auto » sous le bouton de la manche lance chaque manche à ta place, contre des bots ou des joueurs, jusqu\'à la fin du duel'] },
     { id: '2026-10-11h', date: 'Oct 11, 2026', en: ['Gamble: a casino leaderboard under the games, with the biggest winners, the biggest losers and the biggest gamblers of all time (and your own rank)'], fr: ['Gamble : un classement du casino sous les jeux, avec les plus gros gagnants, les plus gros perdants et les plus gros joueurs depuis toujours (et ton propre rang)'] },
@@ -4589,7 +4590,7 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['day', 'Today'], ['week', 'This week'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins']];
+    const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins']];
     const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
@@ -4629,7 +4630,7 @@
       return;
     }
     if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
-    const when = { day: 'today', week: 'this week', all: 'yet', xp: 'yet', coins: 'yet' }[period];
+    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet' }[period];
     $('#lb-list').innerHTML = data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">No rolls ${when}, be the first!</div>`;
@@ -4655,7 +4656,7 @@
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
         <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
-        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', all: 'in total', xp: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
+        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
       </div>`;
@@ -4686,7 +4687,7 @@
         <p>A badge is worth <span class="mono">100 × 1,000,001 ÷ (numbers that earn it)</span> XP, so a badge earned by 1 number in 1,000 is worth about 100,000 XP. Related badges form a family (e.g. Pair → Two Pair → Three Pair); only the best badge of a family counts toward your total.</p>
         <div class="rarity-table">${badgeRows.map(([t, l]) => `${tierPill(t)}<span>${l}</span>`).join('')}</div>
         <h2 class="panel-title">Your data</h2>
-        <p>Numbers are drawn by the server, so nobody can pick their own 1337. Your best roll of the day, the week and all time goes on the leaderboard under your player name.</p>
+        <p>Numbers are drawn by the server, so nobody can pick their own 1337. Your best roll of the day, the week, the month and all time goes on the leaderboard under your player name.</p>
         <p>Click a name on the leaderboard to see that player's profile (best rolls, badge collection) and compare it with yours.</p>
         <p>No one around? Play a duel against bots from the Duel tab: your rolls count as usual, but not duel wins, rivalries or duel achievements.</p>
         <p>Coins and skins: every roll earns coins (more for rarer rolls) and so does every duel you win. Spend them in the Shop tab on skins that change how your number looks. In-game coins only.</p>

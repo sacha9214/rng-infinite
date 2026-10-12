@@ -738,7 +738,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* classement en ligne */
 #today-slot .feature-card { margin-top: 1.8rem; }
 .lb-card { margin-top: 1.4rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); overflow: hidden; }
-.lb-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--outline); }
+.lb-tabs { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 1px solid var(--outline); }
 .lb-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
