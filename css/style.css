@@ -927,6 +927,15 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-owner { --owner-a: #e11d48; --owner-b: #fb7185; --owner-shine: #fff1f2; } }
 :root[data-theme="dark"] .title-owner { --owner-a: #e11d48; --owner-b: #fb7185; --owner-shine: #fff1f2; }
 .page-title .title-owner { font-size: .9rem; }
+/* Manager : même traitement que Owner, en bleu, avec une petite invite de terminal « >_ » à la place de la couronne. */
+.title-manager { --owner-a: #1d4ed8; --owner-b: #2563eb; --owner-shine: #bfdbfe; align-items: center; }
+.dark .title-manager, :root[data-theme="dark"] .title-manager { --owner-a: #2563eb; --owner-b: #60a5fa; --owner-shine: #eff6ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-manager { --owner-a: #2563eb; --owner-b: #60a5fa; --owner-shine: #eff6ff; } }
+.title-manager::before {
+  content: '>_'; font: 800 .82em/1 var(--font-mono); letter-spacing: -.04em; padding: .22em .34em .26em; border-radius: .34em;
+  background: linear-gradient(140deg, #0b1220, #172554); -webkit-text-fill-color: #93c5fd; color: #93c5fd;
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, .55), 0 0 .5em rgba(59, 130, 246, .35);
+}
 @keyframes owner-sheen { 0%, 70% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .lb-who { display: flex; align-items: center; min-width: 0; }
 .lb-who .lb-name { flex: 0 1 auto; }

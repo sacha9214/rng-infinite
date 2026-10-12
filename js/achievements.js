@@ -41,6 +41,8 @@
     { id: 'supporter', emoji: '💗', title: 'Supporter', desc: 'Contribute to the server fund', test: st => num(st.supporter) >= 1 },
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
+    // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google).
+    { id: 'manager', emoji: '🖥️', title: 'Manager', desc: 'Helps run RNG∞', hidden: true, test: st => num(st.manager) >= 1 },
   ];
   const byId = new Map(LIST.map(a => [a.id, a]));
 

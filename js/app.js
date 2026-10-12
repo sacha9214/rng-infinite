@@ -333,8 +333,9 @@
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
     if (!a) return '';
-    // Titre du créateur : le mot seul, en rouge béryl, sans pastille autour.
-    if (a.hidden) return `<span class="title-owner" title="${esc(a.desc)}">${esc(a.title)}</span>`;
+    // Titres réservés : le mot seul, sans pastille, avec un reflet. Rouge béryl et couronne pour le créateur, bleu et
+    // invite de terminal pour un Manager.
+    if (a.hidden) return `<span class="title-owner${a.id === 'manager' ? ' title-manager' : ''}" title="${esc(a.desc)}">${esc(a.title)}</span>`;
     return `<span class="title-pill" title="${esc(a.desc)}">${a.emoji} <span class="t">${esc(a.title)}</span></span>`;
   };
 

@@ -1808,6 +1808,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(JSON.stringify(run([['HGETALL', `sugg:${sid}`], ['HGETALL', 'fund:cfg'], ['ZCARD', 'fund:log'], ['ZCARD', 'sugg:all']])), before, 'rien n\'a bougé');
   r = await post(guest, 'peek', { since: 0 }); assert.equal(r.body.owner, false);
   assert.equal((await equip(guest, 'owner')).status, 422);
+  // Il reçoit le titre Manager (réservé : un joueur ordinaire ne peut pas l'équiper), visible au classement.
+  r = await equip(guest, 'manager'); assert.deepEqual([r.status, r.body.title], [200, 'manager']);
+  assert.equal((await equip(alice, 'manager')).status, 422);
   // Le créateur, lui, n'est pas en lecture seule.
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
   r = await post(frank, 'stats'); assert.equal(r.body.readOnly, false); r = await post(frank, 'mine'); assert.deepEqual([r.body.owner, r.body.viewer], [true, false]);
