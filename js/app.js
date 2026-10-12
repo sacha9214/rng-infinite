@@ -242,7 +242,7 @@
     Store.setSetting('skinsOwned', state.owned || []);
     paintRollButtons();
     // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
-    if ((state.owned || []).includes('owner')) Inbox.watch();
+    if ((state.owned || []).includes('owner') || Store.settings.hasSugg) Inbox.watch();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
   const LEVER = '<span class="slot-lever" aria-hidden="true"></span>';
@@ -1391,6 +1391,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-12b', date: 'Oct 12, 2026', en: ['Ideas 💡: when the creator answers your suggestion, you can now reply in the same conversation (no need to send a new one), and the bulb shows a red dot when there is an answer for you'], fr: ['Idées 💡 : quand le créateur répond à ta suggestion, tu peux maintenant lui répondre dans la même conversation (plus besoin d\'en envoyer une nouvelle), et l\'ampoule affiche un point rouge quand une réponse t\'attend'] },
     { id: '2026-10-12a', date: 'Oct 12, 2026', en: ['Leaderboard: a new This month tab with the best roll of the month (it already counts every roll since the 1st)'], fr: ['Classement : un nouvel onglet Ce mois avec le meilleur tirage du mois (il compte déjà tous les tirages depuis le 1er)'] },
     { id: '2026-10-11j', date: 'Oct 11, 2026', en: ['Fixed: long duels no longer stop after 100 rounds, so an XP race to 10M (or 50 rounds to win) now really goes to the end'], fr: ['Corrigé : les longs duels ne s\'arrêtent plus au bout de 100 manches, une course à 10 M d\'XP (ou 50 manches à gagner) va maintenant vraiment jusqu\'au bout'] },
     { id: '2026-10-11i', date: 'Oct 11, 2026', en: ['Duels: an Auto-roll switch under the round button rolls every round for you, against bots or players, until the duel ends'], fr: ['Duels : un interrupteur « Tirage auto » sous le bouton de la manche lance chaque manche à ta place, contre des bots ou des joueurs, jusqu\'à la fin du duel'] },
@@ -3474,19 +3475,20 @@
   // Point rouge sur l'ampoule, pour le créateur : une suggestion est arrivée depuis la dernière qu'il a vue sur la page
   // Owner (settings.suggSeen garde l'heure de celle-ci, sur cet appareil). Revérifié toutes les 2 minutes, onglet visible.
   const Inbox = {
-    timer: 0, fresh: 0, latest: 0,
+    timer: 0, fresh: 0, latest: 0, replies: 0, replyLatest: 0,
     paint() {
       const b = document.querySelector('.idea-corner');
       if (!b) return;
-      b.classList.toggle('unread', this.fresh > 0);
-      b.title = this.fresh > 0 ? `${this.fresh} new suggestion${this.fresh > 1 ? 's' : ''}` : 'Suggest an idea';
+      b.classList.toggle('unread', this.fresh > 0 || this.replies > 0);
+      b.title = this.fresh > 0 ? `${this.fresh} new suggestion${this.fresh > 1 ? 's' : ''}` : this.replies > 0 ? 'The creator replied to your suggestion' : 'Suggest an idea';
     },
     async check() {
       if (document.hidden || !Store.player.name) return;
       try {
         const since = Store.settings.suggSeen || 0;
-        const r = await Online.site('peek', { since });
-        if (!r.owner) { clearInterval(this.timer); this.timer = 0; return; }
+        const r = await Online.site('peek', { since, seen: Store.settings.suggReplySeen || 0 });
+        // Un joueur : point rouge quand le créateur a répondu à l'une de ses suggestions (vérifié moins souvent).
+        if (!r.owner) { this.replies = r.replies || 0; this.replyLatest = r.latest || 0; this.paint(); if (!this.slow) { clearInterval(this.timer); this.slow = true; this.timer = r.latest || Store.settings.hasSugg ? setInterval(() => this.check(), 600000) : 0; } return; }
         if ((Store.settings.suggSeen || 0) !== since) return; // la boîte a été ouverte entre-temps : réponse périmée
         this.fresh = r.fresh; this.latest = r.latest; this.paint();
       } catch (err) { /* prochain passage */ }
@@ -3494,7 +3496,11 @@
     watch() { if (this.timer) return; this.timer = setInterval(() => this.check(), 120000); this.check(); },
     // La page Owner est ouverte : tout ce qui est arrivé jusqu'ici est vu.
     seen(latest) { if (latest > (Store.settings.suggSeen || 0)) Store.setSetting('suggSeen', latest); this.fresh = 0; this.paint(); },
+    // Le joueur a ouvert ses suggestions : les réponses du créateur sont vues.
+    repliesSeen(latest) { if (latest > (Store.settings.suggReplySeen || 0)) Store.setSetting('suggReplySeen', latest); this.replies = 0; this.paint(); },
   };
+  // Fil d'une suggestion : les messages du créateur et du joueur, dans l'ordre. `mine` = libellé du côté joueur.
+  const threadHTML = (thread, mine) => (thread && thread.length ? `<div class="idea-thread">${thread.map(m => `<p class="idea-msg ${m.from}"><b>${m.from === 'owner' ? 'Creator' : mine}</b><span data-no-i18n>${esc(m.text)}</span>${m.t ? `<i>${suggDate(m.t)}</i>` : ''}</p>`).join('')}</div>` : '');
   function openIdeas() {
     // Le créateur avec des suggestions non lues va droit à sa boîte de réception.
     if (Inbox.fresh > 0) { location.hash = '#/owner'; return; }
@@ -3509,15 +3515,31 @@
       const draw = state => {
         const box = $('#idea-mine');
         if (!box) return;
+        const seenBefore = Store.settings.suggReplySeen || 0;
         box.innerHTML = `
           ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
-            <div class="idea-row">
-              <div class="idea-head"><span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span></div>
+            <div class="idea-row" data-id="${x.id}">
+              <div class="idea-head"><span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
               <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
-              ${x.reply ? `<p class="idea-reply"><b>Reply from the creator</b><span data-no-i18n>${esc(x.reply)}</span></p>` : ''}
+              ${threadHTML(x.thread, 'You')}
+              ${x.thread.some(m => m.from === 'owner') ? `<form class="idea-answer"><input class="input" maxlength="500" placeholder="Reply to the creator…" aria-label="Reply to the creator"><button class="btn">Reply</button></form>` : ''}
             </div>`).join('')}` : ''}`;
+        // Tout ce qui est affiché est vu : le point rouge de l'ampoule s'éteint.
+        if (state.mine.length) Store.setSetting('hasSugg', true);
+        Inbox.repliesSeen(Math.max(0, ...state.mine.map(x => x.ownerAt || 0)));
       };
+      // Répondre dans le fil d'une suggestion (au lieu d'en envoyer une nouvelle).
+      $('#idea-mine').addEventListener('submit', async e => {
+        const form = e.target.closest('.idea-answer');
+        if (!form) return;
+        e.preventDefault();
+        const input = form.querySelector('input'), btn = form.querySelector('button');
+        if (input.value.trim().length < 2) { toast('Write a few words first'); return; }
+        btn.disabled = true;
+        try { draw(await Online.site('reply', { id: form.closest('.idea-row').dataset.id, text: input.value })); toast('Reply sent', 2200, 'achv'); }
+        catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Could not send your reply, try again'); }
+      });
       text.addEventListener('input', () => { $('#idea-count').textContent = `${text.value.length} / 500`; });
       send.addEventListener('click', async () => {
         if (text.value.trim().length < 5) { toast('Write a few words first'); return; }
@@ -3833,8 +3855,8 @@
             <button class="btn${x.status === 'new' ? '' : ' ghost'}" data-o="${x.status === 'new' ? 'read' : 'unread'}">${x.status === 'new' ? '✓ Mark as read' : 'Mark as not read'}</button>
             <button class="btn ghost" data-o="delete">Delete</button></div>
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
-          ${x.reply ? `<p class="idea-reply o-guest-only"><b>Reply from the creator</b><span data-no-i18n>${esc(x.reply)}</span></p>` : ''}
-          <div class="o-reply"><input class="input" maxlength="300" placeholder="Reply shown to the player (optional)" value="${esc(x.reply)}"><button class="btn" data-o="reply">Save reply</button></div>
+          ${threadHTML(x.thread, 'Player')}
+          <div class="o-reply"><input class="input" maxlength="300" placeholder="${x.thread.length ? 'Reply in this conversation…' : 'Reply to the player (they can answer back)'}"><button class="btn" data-o="reply">Send reply</button></div>
         </div>`;
       const fresh = data.suggestions.filter(x => x.status === 'new'), old = data.suggestions.filter(x => x.status !== 'new');
       box.innerHTML = data.suggestions.length ? `
@@ -3856,7 +3878,7 @@
       }
       if (!btn || !row) return;
       if (btn.dataset.o === 'read' || btn.dataset.o === 'unread') { act('mark', { id: row.dataset.id, status: btn.dataset.o === 'read' ? 'seen' : 'new' }); return; }
-      if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply saved'));
+      if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else if (row.querySelector('.o-reply input').value.trim()) act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply sent')); else toast('Write a few words first');
     });
     Online.site('inbox').then(drawInbox).catch(err => { if ($('#o-inbox')) $('#o-inbox').innerHTML = denied(err); });
   }

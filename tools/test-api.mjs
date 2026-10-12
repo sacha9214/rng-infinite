@@ -1511,7 +1511,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const siteApi = require(path.join(ROOT, 'api/site.js'));
   const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
   // Un joueur ordinaire n'apprend rien.
-  r = await post(bob, 'peek', { since: 0 }); assert.deepEqual(r.body, { owner: false });
+  r = await post(bob, 'peek', { since: 0 }); assert.equal(r.body.owner, false); assert.ok(!('fresh' in r.body), 'pas le compteur du créateur');
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
   r = await post(frank, 'peek', { since: 0 });
   const had = r.body.fresh, seen = r.body.latest;
@@ -1876,6 +1876,57 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const per of ['day', 'week', 'all', 'xp', 'coins']) assert.equal((await board(alice, per)).period, per);
   assert.equal((await board(null, 'year')).period, 'day');
   run([['HDEL', 'names', inMonth], ['HDEL', 'names', before], ['DEL', `hist:${inMonth}`], ['DEL', `hist:${before}`], ['ZREM', `lb:month:${month}`, inMonth], ['HDEL', `best:month:${month}`, inMonth], ['HDEL', `count:month:${month}`, inMonth]]);
+}
+
+// ================================================================ 49. Suggestions : une vraie conversation (le joueur répond dans le même fil)
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, name: who.name, action, ...extra } });
+  const asOwner = async (action, extra) => { run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]); const x = await post(frank, action, extra); run([['HDEL', `stats:${frank.playerId}`, 'owner']]); return x; };
+  const day = new Date(Date.now()).toISOString().slice(0, 10);
+  run([['DEL', `sugg:rate:${day}:${alice.playerId}`], ['DEL', `sugg:replies:${day}:${alice.playerId}`]]);
+  r = await post(alice, 'suggest', { text: 'Add more luck' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const sid = r.body.mine[0].id; assert.deepEqual(r.body.mine[0].thread, []);
+  // Pas encore de réponse du créateur : rien à signaler au joueur.
+  r = await post(alice, 'peek', { seen: 0 }); assert.equal(r.body.replies, 0);
+  // Le créateur pose une question : elle arrive dans le fil, la suggestion passe en « lue », le joueur est prévenu.
+  r = await asOwner('mark', { id: sid, reply: 'In which way could that be done?' });
+  let s1 = r.body.suggestions.find(x => x.id === sid);
+  assert.deepEqual(s1.thread.map(m => [m.from, m.text]), [['owner', 'In which way could that be done?']]); assert.equal(s1.status, 'seen'); assert.equal(s1.reply, 'In which way could that be done?');
+  r = await post(alice, 'peek', { seen: 0 }); assert.equal(r.body.replies, 1); const seenAt = r.body.latest; assert.ok(seenAt > 0);
+  assert.equal((await post(alice, 'peek', { seen: seenAt })).body.replies, 0, 'vu : plus de point rouge');
+  // Le joueur répond dans le même fil : pas de nouvelle suggestion, et elle repasse en « non lue » en tête de la boîte.
+  const total = Number(run([['ZCARD', 'sugg:all']])[0].result);
+  r = await post(alice, 'reply', { id: sid, text: '  A lucky streak bonus after 10 bad rolls  ' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.mine.find(x => x.id === sid).thread.map(m => [m.from, m.text]), [['owner', 'In which way could that be done?'], ['player', 'A lucky streak bonus after 10 bad rolls']]);
+  assert.equal(Number(run([['ZCARD', 'sugg:all']])[0].result), total, 'aucun nouveau ticket');
+  r = await asOwner('inbox'); assert.equal(r.body.suggestions[0].id, sid, 'remontée en tête'); assert.equal(r.body.suggestions[0].status, 'new'); assert.equal(r.body.suggestions[0].thread.length, 2);
+  run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]); assert.ok((await post(frank, 'peek', { since: Date.now() - 5000 })).body.fresh >= 1, 'point rouge du créateur'); run([['HDEL', `stats:${frank.playerId}`, 'owner']]);
+  // La conversation continue ; le texte de départ et son heure ne bougent pas.
+  r = await asOwner('mark', { id: sid, reply: 'Nice, I will try it', status: 'planned' });
+  s1 = r.body.suggestions.find(x => x.id === sid); assert.equal(s1.thread.length, 3); assert.equal(s1.status, 'planned'); assert.equal(s1.text, 'Add more luck');
+  // Changer seulement le statut n'ajoute pas de message ; une réponse vide non plus.
+  assert.equal((await asOwner('mark', { id: sid, status: 'done' })).body.suggestions.find(x => x.id === sid).thread.length, 3);
+  assert.equal((await asOwner('mark', { id: sid, reply: '   ' })).body.suggestions.find(x => x.id === sid).thread.length, 3);
+  // On ne répond que dans ses propres suggestions, avec un vrai texte, et pas sans fin.
+  assert.equal((await post(bob, 'reply', { id: sid, text: 'me too' })).status, 404);
+  assert.equal((await post(alice, 'reply', { id: 'zz', text: 'hello' })).status, 400);
+  assert.equal((await post(alice, 'reply', { id: sid, text: ' ' })).status, 422);
+  r = await post(alice, 'reply', { id: sid, text: 'x'.repeat(900) + '\u0007' }); assert.equal(r.body.mine.find(x => x.id === sid).thread.pop().text.length, 500);
+  run([['SET', `sugg:replies:${day}:${alice.playerId}`, '20']]); assert.equal((await post(alice, 'reply', { id: sid, text: 'again' })).status, 429);
+  // Fil borné à 40 messages.
+  run(Array.from({ length: 60 }, (_, i) => ['RPUSH', `sugg:${sid}:msgs`, JSON.stringify({ f: 'p', x: `m${i}`, t: i })])); run([['DEL', `sugg:replies:${day}:${alice.playerId}`]]);
+  r = await post(alice, 'reply', { id: sid, text: 'last one' }); assert.equal(r.body.mine.find(x => x.id === sid).thread.length, 40);
+  // Ancienne suggestion (une seule réponse, sans fil) : la réponse ouvre le fil et n'est pas perdue quand on continue.
+  run([['DEL', `sugg:rate:${day}:${alice.playerId}`]]);
+  const old = (await post(alice, 'suggest', { text: 'An older idea' })).body.mine[0].id;
+  run([['HSET', `sugg:${old}`, 'reply', 'Old style answer', 'status', 'seen']]);
+  r = await post(alice, 'mine'); assert.deepEqual(r.body.mine.find(x => x.id === old).thread.map(m => [m.from, m.text]), [['owner', 'Old style answer']]);
+  r = await post(alice, 'reply', { id: old, text: 'Thanks!' }); assert.deepEqual(r.body.mine.find(x => x.id === old).thread.map(m => m.text), ['Old style answer', 'Thanks!']);
+  // Supprimer la suggestion supprime aussi la conversation ; aucun identifiant ne sort.
+  assert.ok(!JSON.stringify(r.body).includes(alice.playerId));
+  await asOwner('delete', { id: sid }); assert.equal(run([['LLEN', `sugg:${sid}:msgs`]])[0].result, 0);
+  await asOwner('delete', { id: old });
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

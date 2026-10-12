@@ -2927,3 +2927,14 @@ button.o-chip { cursor: pointer; }
 .o-readonly .o-fund-forms, .o-readonly .o-reply, .o-readonly [data-o], .o-readonly .o-pending input, .o-readonly .o-pending button { display: none !important; }
 .o-readonly .o-status { pointer-events: none; opacity: .8; }
 .o-guest-only { display: none; } .o-readonly .o-guest-only { display: block; }
+/* Suggestions : la conversation entre le joueur et le créateur, puis la zone de réponse. */
+.idea-thread { display: grid; gap: .35rem; margin: .5rem 0 0; }
+.idea-msg { margin: 0; padding: .45rem .7rem; border-radius: .5rem; font-size: .82rem; line-height: 1.4; max-width: 88%; overflow-wrap: anywhere; white-space: pre-wrap; }
+.idea-msg b { display: block; font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: .1rem; color: var(--prose-3); }
+.idea-msg i { display: block; margin-top: .15rem; font-style: normal; font-size: .62rem; color: var(--prose-3); }
+.idea-msg.owner { justify-self: start; border-left: 3px solid var(--ep-outline); border-radius: 0 .5rem .5rem 0; background: var(--surface-dim); }
+.idea-msg.owner b { color: var(--ep-text); }
+.idea-msg.player { justify-self: end; background: color-mix(in srgb, var(--chart-accent) 14%, transparent); }
+.idea-answer { display: flex; gap: .4rem; margin-top: .5rem; }
+.idea-answer .input { flex: 1; min-width: 0; font-size: .82rem; text-transform: none; letter-spacing: 0; text-align: left; }
+.idea-new { padding: .05rem .45rem; border-radius: 999px; background: #ef4444; color: #fff; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }

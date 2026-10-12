@@ -4,7 +4,8 @@
 //   peek     { since }          (Owner) nombre de suggestions reçues depuis « since » : le point rouge de l'ampoule
 //   mine                        (joueur) ses suggestions, leur statut et la réponse éventuelle ; dit aussi s'il est Owner
 //   inbox                       (Owner) toutes les suggestions
-//   mark     { id, status, reply }   (Owner) change le statut et/ou répond     · delete { id } (Owner) supprime
+//   mark     { id, status, reply }   (Owner) change le statut et/ou répond (un message de plus dans le fil) · delete { id }
+//   reply    { id, text }       (joueur) répond dans le fil de sa propre suggestion
 //   stats                       (Owner) fréquentation des 30 derniers jours
 //   fund                        (Owner) contributions reçues ; fundAdd { name, euros } inscrit une contribution et donne
 //                               au joueur le skin et le titre Supporter ; fundSet { goal, url } règle l'objectif et le lien
@@ -26,11 +27,28 @@ const suggKey = id => `sugg:${id}`, byPlayer = id => `sugg:by:${id}`;
 // Texte libre : on retire les caractères de contrôle et on borne la longueur ; l'affichage l'échappe côté site.
 const cleanText = (raw, max) => String(raw || '').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 
+// Conversation d'une suggestion : sugg:<id>:msgs, une liste de { f: 'o' (créateur) | 'p' (joueur), x: texte, t }.
+// Les suggestions d'avant le 2026-10-12 n'avaient qu'une réponse (champ « reply ») : elle ouvre alors le fil.
+const THREAD_MAX = 40, REPLIES_PER_DAY = 20;
+const threadKey = id => `sugg:${id}:msgs`;
 async function listSuggestions(ids) {
   if (!ids.length) return [];
-  const rows = await redis(ids.map(id => ['HGETALL', suggKey(id)]));
-  return rows.map((flat, i) => ({ id: ids[i], ...toObject(flat) })).filter(x => x.text)
-    .map(x => ({ id: x.id, t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: x.reply || '', lang: x.lang || '' }));
+  const rows = await redis(ids.flatMap(id => [['HGETALL', suggKey(id)], ['LRANGE', threadKey(id), 0, -1]]));
+  return ids.map((id, i) => ({ id, ...toObject(rows[i * 2]), msgs: rows[i * 2 + 1] || [] })).filter(x => x.text)
+    .map(x => {
+      let thread = x.msgs.map(m => { try { const o = JSON.parse(m); return { from: o.f === 'o' ? 'owner' : 'player', text: String(o.x || ''), t: Number(o.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
+      if (!thread.length && x.reply) thread = [{ from: 'owner', text: x.reply, t: Number(x.replyAt) || 0 }];
+      const lastOwner = thread.filter(m => m.from === 'owner').pop();
+      return { id: x.id, t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: lastOwner ? lastOwner.text : '', lang: x.lang || '', thread, ownerAt: Number(x.ownerAt) || 0 };
+    });
+}
+// Ajoute un message au fil. Une ancienne réponse unique y est d'abord recopiée, pour ne pas la perdre.
+async function pushMessage(id, from, text, t) {
+  const [len, reply, replyAt] = await redis([['LLEN', threadKey(id)], ['HGET', suggKey(id), 'reply'], ['HGET', suggKey(id), 'replyAt']]);
+  const writes = [];
+  if (!Number(len) && reply) writes.push(['RPUSH', threadKey(id), JSON.stringify({ f: 'o', x: reply, t: Number(replyAt) || 0 })]);
+  writes.push(['RPUSH', threadKey(id), JSON.stringify({ f: from, x: text, t })], ['LTRIM', threadKey(id), -THREAD_MAX, -1]);
+  await redis(writes);
 }
 
 // ---------------------------------------------------------------- fréquentation
@@ -397,7 +415,13 @@ module.exports = async (req, res) => {
     // Pour le créateur seulement : combien de suggestions sont arrivées depuis la dernière qu'il a vue (« since », l'heure
     // de celle-ci, gardée par son navigateur) et l'heure de la plus récente. Sert au point rouge sur l'ampoule.
     if (body.action === 'peek') {
-      if (!isOwner) return send(res, 200, { owner: false });
+      if (!isOwner) {
+        // Pour un joueur : le créateur a-t-il répondu à l'une de ses suggestions depuis « seen » (gardé par son navigateur) ?
+        const [mineIds] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);
+        const ats = (mineIds || []).length ? await redis(mineIds.map(x => ['HGET', suggKey(x), 'ownerAt'])) : [];
+        const seen = Number(body.seen) || 0, latest = Math.max(0, ...ats.map(Number).filter(Number.isFinite));
+        return send(res, 200, { owner: false, replies: ats.filter(x => Number(x) > seen).length, latest });
+      }
       const since = Number(body.since) || 0;
       const [fresh, last] = await redis([['ZCOUNT', 'sugg:all', since + 1, '+inf'], ['ZREVRANGE', 'sugg:all', 0, 0]]);
       const [t] = last && last.length ? await redis([['HGET', suggKey(last[0]), 't']]) : [0];
@@ -427,6 +451,24 @@ module.exports = async (req, res) => {
       return send(res, 200, { owner: isOwner, viewer: isViewer, mine: (await listSuggestions(ids || [])).map(({ name: n, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY, sent: true });
     }
 
+    // Le joueur répond dans le fil de sa propre suggestion (au lieu d'en ouvrir une nouvelle) : elle repasse en « non lue »
+    // chez le créateur et remonte en tête de sa boîte.
+    if (body.action === 'reply') {
+      const sid = String(body.id || ''), text = cleanText(body.text, SUGG_MAX);
+      if (!/^[0-9a-f]{12}$/.test(sid)) return send(res, 400, { error: 'Unknown suggestion' });
+      const [pid] = await redis([['HGET', suggKey(sid), 'pid']]);
+      if (pid !== playerId) return send(res, 404, { error: 'Unknown suggestion' });
+      if (text.length < 2) return send(res, 422, { error: 'Write a few words first' });
+      const day = dayKey(Date.now());
+      const [count] = await redis([['INCR', `sugg:replies:${day}:${playerId}`], ['EXPIRE', `sugg:replies:${day}:${playerId}`, 2 * 86400]]);
+      if (Number(count) > REPLIES_PER_DAY) return send(res, 429, { error: `You can send ${REPLIES_PER_DAY} replies a day: come back tomorrow` });
+      const t = Date.now();
+      await pushMessage(sid, 'p', text, t);
+      await redis([['HSET', suggKey(sid), 'status', 'new'], ['ZADD', 'sugg:all', t, sid]]);
+      const [ids] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);
+      return send(res, 200, { owner: isOwner, viewer: isViewer, mine: (await listSuggestions(ids || [])).map(({ name: n, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY, sent: true });
+    }
+
     // ------------------------------------------------------------ réservé au créateur du site
     if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
     if (!(['inbox', 'stats', 'insights', 'fund'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
@@ -435,11 +477,18 @@ module.exports = async (req, res) => {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
       const [pid] = await redis([['HGET', suggKey(id), 'pid']]);
       if (!pid) return send(res, 404, { error: 'Unknown suggestion' });
-      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
+      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
-        if (typeof body.reply === 'string') writes.push(['HSET', suggKey(id), 'reply', cleanText(body.reply, REPLY_MAX)]);
+        // Réponse du créateur : un message de plus dans le fil ; le joueur verra un point rouge sur l'ampoule.
+        const reply = typeof body.reply === 'string' ? cleanText(body.reply, REPLY_MAX) : '';
+        if (reply) {
+          const t = Date.now();
+          await pushMessage(id, 'o', reply, t);
+          writes.push(['HSET', suggKey(id), 'ownerAt', t]);
+          if (!STATUSES.includes(body.status)) { const [st] = await redis([['HGET', suggKey(id), 'status']]); if (st === 'new' || !st) writes.push(['HSET', suggKey(id), 'status', 'seen']); }
+        }
         if (writes.length) await redis(writes);
       }
     }
