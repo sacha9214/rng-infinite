@@ -1,7 +1,7 @@
 /* RNG∞ — succès et titres.
  * Pur JS, chargeable dans le navigateur (window.RNGAchievements) et dans Node (module.exports).
  * Chaque succès se lit sur les stats du joueur tenues par le serveur (stats:<id>) : un titre ne s'équipe que débloqué.
- * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, year2026, dayTop, duelWins, flawless, bigWin, xpWin }
+ * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, first (heure du premier tirage), dayTop, duelWins, flawless, bigWin, xpWin }
  */
 (function (root) {
   'use strict';
@@ -28,7 +28,9 @@
     { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
     { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
-    { id: 'year2026', emoji: '📅', title: '2026', desc: 'Earn the Current Year badge (a number containing 2026)', test: st => num(st.year2026) >= 1 },
+    // Titre d'ancien : pour qui a joué en 2026 (premier tirage avant le 1er janvier 2027). Les joueurs d'avant le champ
+    // « first » ont forcément commencé en 2026 (le jeu date de 2026).
+    { id: 'year2026', emoji: '📅', title: '2026', desc: 'Play in 2026', test: st => num(st.rolls) >= 1 && num(st.first) < Date.UTC(2027, 0, 1) },
     { id: 'collector', emoji: '📦', title: 'Collector', desc: 'Find 50 different badges', test: st => num(st.badges) >= 50 },
     { id: 'hoarder', emoji: '🗄️', title: 'Hoarder', desc: 'Find 100 different badges', test: st => num(st.badges) >= 100 },
     { id: 'completionist', emoji: '🏛️', title: 'Completionist', desc: 'Find 150 different badges', test: st => num(st.badges) >= 150 },
