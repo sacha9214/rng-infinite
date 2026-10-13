@@ -753,7 +753,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.ok(pool.includes(r.body.won), 'un skin de la caisse');
     assert.ok(r.body.owned.includes(r.body.won));
-    assert.equal(r.body.refund, r.body.duplicate ? 125 : 0, 'doublon : moitié rendue');
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(Shop.caseById.get('starter'), r.body.won) : 0, 'doublon : selon la rareté');
+    if (r.body.duplicate) assert.ok(r.body.refund >= 125 && r.body.refund < 250, 'entre la moitié et le prix de la caisse');
     assert.equal(r.body.coins, before - 250 + r.body.refund);
     r.body.duplicate ? dups++ : news++;
   }
@@ -2126,7 +2127,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.deepEqual([r.status, r.body.won, r.body.duplicate, r.body.refund, r.body.coins], [200, 'infinity', false, 0, 99000 - 900], JSON.stringify(r.body));
     assert.ok(r.body.owned.includes('infinity'));
     r = await shopPost(baker, { action: 'case', case: 'premium' });
-    assert.deepEqual([r.body.won, r.body.duplicate, r.body.refund, r.body.coins], ['infinity', true, 450, 99000 - 900 - 450]);
+    assert.deepEqual([r.body.won, r.body.duplicate, r.body.refund, r.body.coins], ['infinity', true, 810, 99000 - 900 - 90]);
   } finally {
     crypto.randomInt = realRandom;
   }
@@ -2135,7 +2136,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await shopPost(baker, { action: 'button', button: 'infinity' })).status, 200, 'et son bouton');
   r = await shopPost(baker, { action: 'buy', skin: 'infinity' });
   assert.deepEqual([r.status, r.body.skin], [200, 'infinity'], 'déjà possédé : « acheter » ne fait que l\'équiper, sans rien dépenser');
-  assert.equal(r.body.coins, 99000 - 900 - 450);
+  assert.equal(r.body.coins, 99000 - 900 - 90);
   // Les bots ne portent jamais Infinity (ni un skin légendaire).
   const seen = new Set();
   for (let i = 0; i < 6; i++) {
@@ -2193,6 +2194,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!Ach.unlocked({ rolls: 5 }).includes('year2026'));
   assert.ok(Ach.unlocked({ year2026: 1 }).includes('year2026'));
   await equip(alice, '');
+}
+
+// ================================================================ 55. Doublon de caisse : remboursement selon la rareté
+{
+  const premium = Shop.caseById.get('premium'), starter = Shop.caseById.get('starter');
+  const byRarity = {};
+  for (const c of [starter, premium]) for (const k of Shop.casePool(c)) byRarity[`${c.id}:${Shop.rarityOf(k.id).id}`] = Shop.duplicateRefund(c, k.id);
+  assert.equal(Shop.duplicateRefund(starter, 'neon'), 125, 'Common : la moitié');
+  assert.equal(Shop.duplicateRefund(premium, 'infinity'), 810, 'Legendary : 90 %');
+  assert.equal(Shop.duplicateRefund(premium, 'galaxy'), 675, 'Epic : 75 %');
+  for (const c of [starter, premium]) for (const k of Shop.casePool(c)) {
+    const v = Shop.duplicateRefund(c, k.id);
+    assert.ok(v >= c.price / 2 && v < c.price, `${c.id} ${k.id} : ${v}`);
+  }
+  // Plus rare, jamais moins remboursé.
+  const order = ['blue', 'purple', 'pink', 'red', 'gold'];
+  assert.ok(order.every((r, i) => !i || Shop.DUPLICATE_REFUND[r] >= Shop.DUPLICATE_REFUND[order[i - 1]]));
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

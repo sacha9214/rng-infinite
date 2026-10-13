@@ -1455,6 +1455,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13l', date: 'Oct 13, 2026', en: ['Cases: a skin you already own now refunds more when it is rarer — 50% of the case price for a Common, 55% Uncommon, 65% Rare, 75% Epic, 90% Legendary'], fr: ['Caisses : un skin que tu as déjà rembourse maintenant plus quand il est rare — 50 % du prix de la caisse pour un Common, 55 % Uncommon, 65 % Rare, 75 % Epic, 90 % Legendary'] },
     { id: '2026-10-13k', date: 'Oct 13, 2026', en: ['New title to equip: 📅 2026 — unlocked when you earn the Current Year badge (a number containing 2026). Equip it from your profile'], fr: ['Nouveau titre à équiper : 📅 2026 — débloqué quand tu obtiens le badge Current Year (un nombre contenant 2026). Équipe-le depuis ton profil'] },
     { id: '2026-10-13j', date: 'Oct 13, 2026', en: ['New badge: Current Year 📅 — any number containing 2026 (12026, 520269, 202600…) earns 20,260 XP'], fr: ['Nouveau badge : Current Year 📅 — tout nombre contenant 2026 (12026, 520269, 202600…) rapporte 20 260 XP'] },
     { id: '2026-10-13i', date: 'Oct 13, 2026', en: ['Gift codes: enter a code in Player & settings to get its prize (each code works once, after 30 rolls). Try SACHA for 200 coins'], fr: ['Codes cadeaux : entre un code dans Joueur et réglages pour gagner son prix (chaque code marche une fois, après 30 tirages). Essaie SACHA pour 200 pièces'] },
@@ -2637,7 +2638,7 @@
               <button class="btn" data-case="${c.id}">🪙 ${fmt(c.price)}</button>
             </div>`;
           }).join('')}</div>
-          <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Half of the case price comes back. Coins only, no real money.</p>
+          <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>

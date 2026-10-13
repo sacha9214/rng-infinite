@@ -82,7 +82,10 @@
   const caseById = new Map(CASES.map(c => [c.id, c]));
   const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);
   const casePool = c => SKINS.filter(s => !s.caseOnly && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
-  const DUPLICATE_REFUND = 0.5;
+  // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
+  // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
+  const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };
+  const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(rarityOf(skinId) || RARITIES[0]).id] || .5));
   // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
   // viennent en dernier (les plus rares).
   function caseOdds(c) {
@@ -157,7 +160,7 @@
   const speedLevel = v => Math.max(0, Math.min(SPEED.prices.length, Math.floor(Number(v) || 0)));
   const speedFactor = v => SPEED.factors[speedLevel(v)];
 
-  const api = { SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);
