@@ -128,6 +128,7 @@
     'Legendary skins': 'Skins légendaires', 'a full animated signature around your number': 'une signature animée complète autour de ton nombre', 'also plays in duels': 'jouée aussi en duel',
     '▶ Preview': '▶ Aperçu', 'Preview': 'Aperçu', '↻ Replay': '↻ Rejouer', 'shown as a Mythic roll, the strongest reveal': 'montré comme un tirage Mythic, la révélation la plus forte',
     'A blade, a branch in bloom, a rising moon': 'Une lame, une branche en fleurs, la lune qui se lève', 'Lightning strikes every digit': 'La foudre frappe chaque chiffre', 'A dragon circles your number and forges it': 'Un dragon tourne autour de ton nombre et le forge', 'Light bends around your number': 'La lumière se courbe autour de ton nombre',
+    'Fresh bread and cookies': 'Pain frais et cookies', 'A galaxy folded into an endless loop': 'Une galaxie pliée en une boucle sans fin', 'A skin worth 800 to 5,000 coins, or the rare Infinity': 'Un skin valant 800 à 5 000 pièces, ou le rare Infinity', 'This skin only comes from the Premium Case': 'Ce skin ne s\'obtient que dans la Caisse Premium',
     // Tirages hors ligne (le serveur n'a pas répondu) : gardés, non comptés
     'Server unreachable: this roll stays on your device and is not counted': 'Serveur injoignable : ce tirage reste sur ton appareil et ne compte pas', 'The server is slow to answer, trying again…': 'Le serveur tarde à répondre, nouvel essai…',
     'offline roll': 'tirage hors ligne', 'not counted': 'non compté', 'offline': 'hors ligne', 'Rolled while the server was unreachable: not counted on the leaderboard or in your lifetime XP': 'Tiré alors que le serveur était injoignable : ne compte ni au classement ni dans ton XP à vie',
@@ -266,6 +267,7 @@
     [/^you already own it: 🪙 ([\d,]+) refunded$/, m => `tu l'as déjà : 🪙 ${nb(m[1])} remboursées`],
     [/^Open another$/, () => 'En ouvrir une autre'],
     [/^([\d,.]+) XP per roll$/, m => `${nb(m[1])} XP par tirage`], [/^(\d+)% of the collection$/, m => `${m[1]} % de la collection`],
+    [/^🎁 Premium Case only · ([\d.]+)%$/, m => `🎁 Caisse Premium seulement · ${m[1].replace('.', ',')} %`],
     [/^Top (\S+)%$/, m => `Top ${m[1].replace('.', ',')} %`], [/^Bottom (\S+)%$/, m => `${m[1].replace('.', ',')} % les plus bas`],
     [/^Your best roll today: #(\d+) on$/, m => `Ton meilleur tirage du jour : n° ${m[1]} sur`], [/^today's leaderboard$/, () => 'le classement du jour'],
     [/^Achievement unlocked: (.+)\. Equip its title from your profile$/, m => `Succès débloqué : ${m[1]}. Équipe son titre depuis ton profil`],

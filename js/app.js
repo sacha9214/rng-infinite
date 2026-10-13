@@ -1437,6 +1437,9 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13h', date: 'Oct 13, 2026', en: ['New skin: Bakery 🥐 — digits of golden crust with chocolate chips, and steam rising at the end (1,000 coins)'], fr: ['Nouveau skin : Bakery 🥐 — des chiffres en croûte dorée aux pépites de chocolat, et de la vapeur qui monte à la fin (1 000 pièces)'] },
+    { id: '2026-10-13g', date: 'Oct 13, 2026', en: ['New legendary skin: Infinity ♾️ — a living nebula and a comet tracing an infinity loop around your number. Only from the Premium Case, 1 chance in 200'], fr: ['Nouveau skin légendaire : Infinity ♾️ — une nébuleuse vivante et une comète qui trace un infini autour de ton nombre. Seulement dans la caisse Premium, 1 chance sur 200'] },
+    { id: '2026-10-13f', date: 'Oct 13, 2026', en: ['Performance mode (Player & settings): fewer animations and effects for tablets and devices that lag'], fr: ['Mode performance (Joueur et réglages) : moins d\'animations et d\'effets pour les tablettes et appareils qui rament'] },
     { id: '2026-10-13e', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges are now earned at the end of the month: the ten best players of the monthly leaderboard keep their badge forever, with the month and year ("Top 1 · Oct 2026"). Climb before the month ends!'], fr: ['Les badges Top 1 👑, Top 5 🥈 et Top 10 🥉 se gagnent maintenant à la fin du mois : les dix meilleurs du classement du mois gardent leur badge pour toujours, avec le mois et l\'année (« Top 1 · Oct. 2026 »). Grimpe avant la fin du mois !'] },
     { id: '2026-10-13d', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges: only the ten best players of this month\'s leaderboard wear one, next to their name on the leaderboard, on their profile and in duels. Drop out of the top 10 and it\'s gone'], fr: ['Badges Top 1 👑, Top 5 🥈 et Top 10 🥉 : seuls les dix meilleurs joueurs du classement du mois en portent un, à côté de leur nom dans le classement, sur leur profil et en duel. Sors du top 10 et il disparaît'] },
     { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
@@ -2727,6 +2730,8 @@
       const owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       const button = equipped ? '<span class="skin-state">Equipped</span>'
         : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>`
+        // Réservé à une caisse (Infinity) : pas de prix, le bouton mène à l'onglet des caisses.
+        : k.caseOnly ? `<button class="btn ghost case-only" data-case-go>${Shop.caseById.get(k.caseOnly).emoji} ${esc(Shop.caseById.get(k.caseOnly).name)} only · ${+(k.chance * 100).toFixed(2)}%</button>`
         : `<button class="btn${state.coins >= k.price ? '' : ' disabled'}" data-skin-buy="${k.id}">🪙 ${fmt(k.price)}</button>`;
       return `
         <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
@@ -2753,6 +2758,7 @@
     grid.onclick = premium.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
+      if (e.target.closest('[data-case-go]')) { $('#shop-tabs [data-shop-tab="cases"]').click(); window.scrollTo(0, 0); return; }
       const buy = e.target.closest('[data-skin-buy]'), equip = e.target.closest('[data-skin-equip]');
       const btn = buy || equip;
       if (!btn || btn.disabled) return;
