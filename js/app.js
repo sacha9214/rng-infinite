@@ -148,7 +148,33 @@
   };
 
   const app = document.getElementById('app');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Mode performance (réglages) : pour les tablettes et appareils qui rament. Mêmes coupes que « réduire les
+  // animations » du système (pas de particules, de secousse ni de signature de skin), et en plus, par la classe perf
+  // sur <html>, plus aucune animation décorative en boucle ni flou d'arrière-plan (css/style.css) ; les chiffres
+  // tournent toujours.
+  const osReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reducedMotion = osReducedMotion || Store.settings.perf === 'on';
+  function applyPerf() {
+    const on = Store.settings.perf === 'on';
+    document.documentElement.classList.toggle('perf', on);
+    reducedMotion = osReducedMotion || on;
+  }
+  applyPerf();
+  // Une révélation qui saccade (moins de ~28 images/s en moyenne pendant les chiffres) : on propose le mode
+  // performance, une seule fois par appareil.
+  function watchFps(ms) {
+    if (Store.settings.perf === 'on' || Store.settings.perfHint || reducedMotion || !window.requestAnimationFrame) return;
+    let frames = 0, first = 0;
+    const tick = now => {
+      if (!first) first = now;
+      frames++;
+      if (now - first < ms) { requestAnimationFrame(tick); return; }
+      if (document.hidden || frames * 1000 / (now - first) >= 28) return;
+      Store.setSetting('perfHint', 1);
+      toast('Laggy? Turn on Performance mode for fewer animations (tap here)', 8000, '', openSettings);
+    };
+    requestAnimationFrame(tick);
+  }
   let currentView = 'home';
   let session = null;
 
@@ -1005,6 +1031,7 @@
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
+      <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
@@ -1043,6 +1070,7 @@
           Store.setSetting(group.dataset.seg, btn.dataset.v);
           if (group.dataset.seg === 'theme') applyTheme();
           if (group.dataset.seg === 'sound') applySound(true);
+          if (group.dataset.seg === 'perf') applyPerf();
         });
       });
       m.querySelector('#set-done').addEventListener('click', closeModal);
@@ -1671,6 +1699,7 @@
     Sound.warm([['tier', { tier: a.tier }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
+    if (!ctx.replay) watchFps(1800);
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);

@@ -1627,7 +1627,8 @@
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 
   // ---------------------------------------------------------------- montage sur une carte
-  const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Mouvement réduit du système, ou mode performance du jeu (classe perf sur <html>) : pas de scène.
+  const reduced = () => !!((root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || (root.document && root.document.documentElement.classList.contains('perf')));
   // 💗 Supporter — un cœur qui bat. La ligne de pouls court dans la carte et accélère à chaque chiffre posé ; chaque
   // chiffre est un battement (double onde corail, quelques cœurs qui s'envolent) ; avant le dernier le pouls s'emballe ;
   // la révélation est une grande onde autour de la carte et une envolée de cœurs. Tirage raté : la ligne devient plate.

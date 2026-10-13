@@ -2966,3 +2966,9 @@ button.o-chip { cursor: pointer; }
 @media (min-width: 84rem) {
   .lb-aside { position: absolute; top: 0; left: calc(100% + 1.75rem); width: 17rem; margin-top: 0; }
 }
+/* Mode performance (Joueur et réglages) : plus aucune animation décorative ni flou, sauf les chiffres qui tournent
+   pendant un tirage. Les particules, secousses et signatures de skin sont coupées côté JS (reducedMotion). */
+html.perf *:not(.slot), html.perf *::before, html.perf *::after { animation: none !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+html.perf .slot:not(.spinning) { animation: none !important; }
+html.perf * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-out { display: none !important; }
