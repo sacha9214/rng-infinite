@@ -26,5 +26,12 @@
     "desc": "Exactly \"2016\": the golden era.",
     "emoji": "🏆",
     "score": 216000
+  },
+  {
+    "id": "CURRENT_YEAR",
+    "label": "Current Year",
+    "desc": "Contains \"2026\", the current year.",
+    "emoji": "📅",
+    "score": 20260
   }
 ]
