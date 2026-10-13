@@ -40,6 +40,7 @@ async function migrateXp() {
 // Classement des pièces : le solde n'est stocké nulle part (il se calcule depuis les stats), donc on le recalcule pour
 // tous les joueurs nommés et on garde le résultat une minute.
 const Shop = require('../js/shop.js');
+const { monthTop } = require('./_rank');
 const COINS_CACHE = 'lbcache:coins', COINS_TTL_S = 60;
 async function coinsBoard(me) {
   let [cached] = await redis([['GET', COINS_CACHE]]);
@@ -56,8 +57,9 @@ async function coinsBoard(me) {
   }
   const all = JSON.parse(cached), top = all.slice(0, LIMIT), myIndex = me ? all.findIndex(x => x[0] === me) : -1;
   const wanted = myIndex >= LIMIT ? [...top, all[myIndex]] : top;
+  const marks = await monthTop();
   const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, coins: x[1], rolls: x[2], me: x[0] === me });
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, coins: x[1], rolls: x[2], me: x[0] === me });
   return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
 }
 
@@ -110,6 +112,8 @@ module.exports = async (req, res) => {
     ]);
     const ids = [];
     for (let i = 0; i < flat.length; i += 2) ids.push(flat[i]);
+    // Badges Top 1 / 5 / 10 du mois, montrés sur tous les onglets (pour l'onglet du mois, c'est la même liste).
+    const marks = period === 'month' ? new Map(ids.slice(0, 10).map((id, i) => [id, i === 0 ? 1 : i < 5 ? 5 : 10])) : await monthTop(t);
     const meOutsideTop = me && myRank !== null && Number(myRank) >= LIMIT;
     const wanted = meOutsideTop ? [...ids, me] : ids;
 
@@ -134,7 +138,7 @@ module.exports = async (req, res) => {
       if (!details[i]) return null;
       const d = JSON.parse(details[i]);
       const s = period === 'xp' ? (id in xpOf ? xpOf[id] : Number(myXp)) : d.s;
-      return { rank, name: names[i] || 'Player', title: titles[i] || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
+      return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
     };
     const entries = ids.map((id, i) => toEntry(id, i, i + 1)).filter(Boolean);
     const mine = meOutsideTop ? toEntry(me, ids.length, Number(myRank) + 1) : null;

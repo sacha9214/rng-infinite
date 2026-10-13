@@ -90,6 +90,9 @@
     'No friends yet. Add one by name above, or from a player profile.': 'Pas encore d\'amis. Ajoutes-en un par son pseudo ci-dessus, ou depuis un profil.', 'Roll once (and pick a name) to add friends.': 'Fais un tirage (et choisis un pseudo) pour ajouter des amis.',
     'Friends unavailable right now.': 'Amis indisponibles pour le moment.', 'Friends unavailable right now, try again': 'Amis indisponibles pour le moment, réessaie', 'Enter a player name': 'Entre un pseudo', 'Request sent': 'Demande envoyée',
     'You are now friends': 'Vous êtes maintenant amis', 'Already friends': 'Déjà amis', 'No player with this name': 'Aucun joueur avec ce pseudo', 'That is you': 'C\'est toi', 'This request is gone': 'Cette demande n\'existe plus',
+    'Give coins': 'Offrir des pièces', 'Give coins to': 'Offrir des pièces à', 'Send gift': 'Envoyer', 'Amount': 'Montant', 'Gifts received': 'Cadeaux reçus',
+    'You gave all you can today: come back tomorrow': 'Tu as donné tout ce que tu pouvais aujourd\'hui : reviens demain', 'You can only give coins to your friends': 'Tu ne peux offrir des pièces qu\'à tes amis',
+    'One gift at a time': 'Un cadeau à la fois',
     'Too many pending requests': 'Trop de demandes en attente', 'This player has too many pending requests': 'Ce joueur a trop de demandes en attente', 'Friends list full': 'Liste d\'amis pleine',
     // duel : accueil et création
     'Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard.': 'Tout le monde tire en même temps et tous les nombres se révèlent ensemble, chiffre par chiffre. Les tirages de duel sont des tirages normaux : ils restent dans ton historique et comptent au classement.',
@@ -136,7 +139,7 @@
     'Skip known badges': 'Passer les badges connus', 'Badges you already own appear at once. New badges always get their full reveal.': 'Les badges que tu as déjà s\'affichent d\'un coup. Un nouveau badge garde toujours sa révélation complète.',
     'What\'s new': 'Nouveautés', '▶ Rewatch': '▶ Revoir', '← Back': '← Retour', 'nothing is rolled or counted': 'rien n\'est tiré ni compté', '▶ Replay': '▶ Rediffusion',
     "Casino leaderboard": "Classement du casino", "all time · refreshed every minute": "depuis toujours · actualisé chaque minute", "Biggest winners": "Plus gros gagnants", "Biggest losers": "Plus gros perdants", "Biggest gamblers": "Plus gros joueurs", "Wagered": "Misé", "Net": "Net", "Won": "Gagné", "Lost": "Perdu", "Nobody is ahead of the house yet.": "Personne n'a encore battu la maison.", "Nobody has lost coins yet.": "Personne n'a encore perdu de pièces.", "Nobody has gambled yet.": "Personne n'a encore joué.",
-    'Auto-roll': 'Tirage auto', 'Rolls every round for you until this duel ends': "Lance chaque manche à ta place jusqu'à la fin de ce duel", 'Auto-roll is on: rolling for you': 'Tirage auto activé : les manches se lancent toutes seules',
+    'Auto-roll': 'Tirage auto', "First place on this month's leaderboard": 'Première place du classement du mois', "In the top 5 of this month's leaderboard": 'Dans le top 5 du classement du mois', "In the top 10 of this month's leaderboard": 'Dans le top 10 du classement du mois', 'Rolls again by itself after each reveal; stops on a Mythic or better': 'Relance tout seul après chaque révélation ; s\'arrête sur un Mythic ou mieux', '✨ Auto-roll stopped on a Mythic or better: enjoy it!': '✨ Tirage auto arrêté sur un Mythic ou mieux : profites-en !', 'Rolls every round for you until this duel ends': "Lance chaque manche à ta place jusqu'à la fin de ce duel", 'Auto-roll is on: rolling for you': 'Tirage auto activé : les manches se lancent toutes seules',
     '📊 Game dashboard (view only)': '📊 Tableau de bord du jeu (lecture seule)',
     "New reply": "Nouvelle réponse", "Reply to the creator…": "Réponds au créateur…", "Reply to the creator": "Répondre au créateur", "Reply": "Répondre", "Creator": "Créateur", "Reply sent": "Réponse envoyée", "Could not send your reply, try again": "Impossible d'envoyer ta réponse, réessaie", "The creator replied to your suggestion": "Le créateur a répondu à ta suggestion",
     'Bet': 'Mise', 'Crash': 'Crash', 'Mines': 'Mines', 'Plinko': 'Plinko', 'cash out before it crashes': 'encaisse avant que ça explose', 'every safe tile raises the payout': 'chaque case sûre fait monter le gain', 'one mine ends it': 'une mine et c\'est fini', '12 rows': '12 rangées', 'the edges pay the most': 'les bords paient le plus',
@@ -306,6 +309,17 @@
     [/^([\d,]+) received$/, m => `${nb(m[1])} reçue${s(m[1])}`], [/^([\d,]+) devices$/, m => `${nb(m[1])} appareils`], [/^([\d,]+) new$/, m => `${nb(m[1])} nouveaux`],
     [/^([\d,]+) new devices$/, m => `${nb(m[1])} nouveaux appareils`], [/^([\d,]+) on the leaderboard$/, m => `${nb(m[1])} au classement`],
     [/^Friends list full \((\d+)\)$/, m => `Liste d'amis pleine (${m[1]})`],
+    [/^From (\d+) to (\d+) coins per gift\. Up to ([\d,]+) a day, and a friend can receive up to ([\d,]+) a day\.$/, m => `De ${m[1]} à ${m[2]} pièces par cadeau. Jusqu'à ${nb(m[3])} par jour, et un ami peut en recevoir jusqu'à ${nb(m[4])} par jour.`],
+    [/^You can still give ([\d,]+) coins today$/, m => `Tu peux encore donner ${nb(m[1])} pièces aujourd'hui`],
+    [/^Gifts unlock after (\d+) rolls \(you have ([\d,]+)\)$/, m => `Les cadeaux se débloquent après ${m[1]} tirages (tu en as ${nb(m[2])})`],
+    [/^Give between (\d+) and (\d+) coins$/, m => `Donne entre ${m[1]} et ${m[2]} pièces`],
+    [/^You can give ([\d,]+) more coins today$/, m => `Tu peux encore donner ${nb(m[1])} pièces aujourd'hui`],
+    [/^You already gave ([\d,]+) coins today: come back tomorrow$/, m => `Tu as déjà donné ${nb(m[1])} pièces aujourd'hui : reviens demain`],
+    [/^(.+) can receive ([\d,]+) more coins today$/, m => `${m[1]} peut encore recevoir ${nb(m[2])} pièces aujourd'hui`],
+    [/^(.+) already received ([\d,]+) coins today: try tomorrow$/, m => `${m[1]} a déjà reçu ${nb(m[2])} pièces aujourd'hui : réessaie demain`],
+    [/^You sent ([\d,]+) coins to (.+)$/, m => `Tu as envoyé ${nb(m[1])} pièces à ${m[2]}`],
+    [/^(.+) sent you ([\d,]+) coins$/, m => `${m[1]} t'a envoyé ${nb(m[2])} pièces`],
+    [/^(\d+) gifts from your friends: \+([\d,]+) coins$/, m => `${m[1]} cadeaux de tes amis : +${nb(m[2])} pièces`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte

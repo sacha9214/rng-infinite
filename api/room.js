@@ -18,6 +18,7 @@ const crypto = require('node:crypto');
 const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
+const { monthTop } = require('./_rank');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
 const MAX_WINS = 50; // au choix du créateur de la partie (tapé à la main au-delà des boutons)
@@ -327,7 +328,7 @@ async function view(room, me) {
     reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
-      name: p.name, title: p.title || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
+      name: p.name, title: p.title || null, top: p.top || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
       ready: status === 'playing' && !p.bot && readyFor(room, p) === k, wins: sc.wins[i], total: sc.totals[i],
     })),
     rounds: sc.list,
@@ -351,9 +352,10 @@ async function view(room, me) {
 }
 
 // Titre et skin équipés d'un joueur au moment où il entre dans la salle (affichés à côté de son nom et sur ses cartes).
+// top : son badge Top 1 / 5 / 10 du mois à ce moment-là.
 async function seat(id, name) {
-  const [title, skin] = await redis([['HGET', 'titles', id], ['HGET', 'skins', id]]);
-  return { id, name, title: title || null, skin: Shop.resolve(skin) || null };
+  const [[title, skin], marks] = await Promise.all([redis([['HGET', 'titles', id], ['HGET', 'skins', id]]), monthTop()]);
+  return { id, name, title: title || null, top: marks.get(id) || null, skin: Shop.resolve(skin) || null };
 }
 
 // "Live now" : les 10 parties publiques les plus récemment actives, sans identifiant.

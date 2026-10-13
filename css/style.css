@@ -2164,6 +2164,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .add-friend { font-size: .7rem; vertical-align: middle; margin-left: .5rem; }
 @media (max-width: 560px) { .nav a span { display: none; } }
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
+/* Pièces offertes à un ami (2026-10-13) : fenêtre « Give coins » ; sur téléphone, le bouton ne garde que 🎁. */
+.gift-presets { margin-bottom: .6rem; }
+.gift-presets .chip:disabled { opacity: .4; cursor: not-allowed; }
+.gift-left { margin: .5rem 0 0; }
+@media (max-width: 560px) { .friend-actions .gift-label { display: none; } }
 .case-cell { justify-content: flex-end; min-height: 5.2rem; }
 .case-cell .num-card.sm { font-size: .8rem; max-width: 5.4rem; }
 
@@ -2938,3 +2943,11 @@ button.o-chip { cursor: pointer; }
 .idea-answer { display: flex; gap: .4rem; margin-top: .5rem; }
 .idea-answer .input { flex: 1; min-width: 0; font-size: .82rem; text-transform: none; letter-spacing: 0; text-align: left; }
 .idea-new { padding: .05rem .45rem; border-radius: 999px; background: #ef4444; color: #fff; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+/* Tirage auto en solo : même interrupteur que dans les duels, sous le bouton */
+.hero .solo-auto { margin: .2rem auto .4rem; }
+.solo-auto-row { display: flex; justify-content: center; margin-top: -.2rem; }
+/* Badges Top 1 / 5 / 10 du classement du mois */
+.top-mark { display: inline-flex; align-items: center; gap: .2rem; margin-left: .35rem; padding: .05rem .45rem; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .02em; white-space: nowrap; vertical-align: middle; border: 1px solid transparent; }
+.top-mark.gold { color: #7a4b00; background: linear-gradient(120deg, #fde68a, #f59e0b, #fde68a); border-color: #d97706; box-shadow: 0 0 10px rgba(245, 158, 11, .45); }
+.top-mark.silver { color: #374151; background: linear-gradient(120deg, #f3f4f6, #cbd5e1, #f3f4f6); border-color: #94a3b8; }
+.top-mark.bronze { color: #5b2c0c; background: linear-gradient(120deg, #fed7aa, #d97706 60%, #fed7aa); border-color: #b45309; }

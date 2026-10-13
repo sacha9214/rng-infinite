@@ -132,9 +132,9 @@
       return this.request('/api/site', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, ...extra }) });
     },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
-    friends(action = 'list', name) {
+    friends(action = 'list', name, extra = {}) {
       const p = Store.player;
-      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name }) });
+      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name, ...extra }) });
     },
     claimName(name) {
       const p = Store.player;
@@ -330,6 +330,13 @@
   })();
   // Chiffre affiché pendant que ça tourne : du code qui défile pour le skin Matrix, un chiffre sinon.
   const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph() : String((Math.random() * 10) | 0));
+  // Badges Top 1 / 5 / 10 : seulement pour les dix premiers du classement du mois, tant qu'ils y sont (voir api/_rank.js).
+  const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
+  const topHTML = top => {
+    const m = TOP_MARKS[top];
+    return m ? `<span class="top-mark ${m[2]}" title="${top === 1 ? 'First place on this month\'s leaderboard' : `In the top ${top} of this month's leaderboard`}">${m[0]} ${m[1]}</span>` : '';
+  };
+  const topEmoji = top => (TOP_MARKS[top] ? ` ${TOP_MARKS[top][0]}` : '');
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
     if (!a) return '';
@@ -1091,6 +1098,7 @@
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>Space</kbd>
           </p>
+          ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div></div>
           <div id="today-slot"></div>
@@ -1114,6 +1122,7 @@
         </section>
       </div>`;
     $('#roll-btn').addEventListener('click', startRoll);
+    bindSoloAuto();
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
@@ -1391,6 +1400,10 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13d', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges: only the ten best players of this month\'s leaderboard wear one, next to their name on the leaderboard, on their profile and in duels. Drop out of the top 10 and it\'s gone'], fr: ['Badges Top 1 👑, Top 5 🥈 et Top 10 🥉 : seuls les dix meilleurs joueurs du classement du mois en portent un, à côté de leur nom dans le classement, sur leur profil et en duel. Sors du top 10 et il disparaît'] },
+    { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
+    { id: '2026-10-13b', date: 'Oct 13, 2026', en: ['Auto-roll is no longer only for duels: turn it on under Generate and the game rolls again by itself after each reveal. It stops on a Mythic or better so you never miss it'], fr: ['Le tirage auto n\'est plus réservé aux duels : active-le sous Générer et le jeu relance tout seul après chaque révélation. Il s\'arrête sur un Mythic ou mieux pour que tu ne le rates jamais'] },
+    { id: '2026-10-13a', date: 'Oct 13, 2026', en: ['Two new badges suggested by players: RTX 5090 🎮 (exactly 5090, 50,900 XP) and The Golden Era 🏆 (exactly 2016, 216,000 XP)'], fr: ['Deux nouveaux badges suggérés par des joueurs : RTX 5090 🎮 (exactement 5090, 50 900 XP) et The Golden Era 🏆 (exactement 2016, 216 000 XP)'] },
     { id: '2026-10-12b', date: 'Oct 12, 2026', en: ['Ideas 💡: when the creator answers your suggestion, you can now reply in the same conversation (no need to send a new one), and the bulb shows a red dot when there is an answer for you'], fr: ['Idées 💡 : quand le créateur répond à ta suggestion, tu peux maintenant lui répondre dans la même conversation (plus besoin d\'en envoyer une nouvelle), et l\'ampoule affiche un point rouge quand une réponse t\'attend'] },
     { id: '2026-10-12a', date: 'Oct 12, 2026', en: ['Leaderboard: a new This month tab with the best roll of the month (it already counts every roll since the 1st)'], fr: ['Classement : un nouvel onglet Ce mois avec le meilleur tirage du mois (il compte déjà tous les tirages depuis le 1er)'] },
     { id: '2026-10-11j', date: 'Oct 11, 2026', en: ['Fixed: long duels no longer stop after 100 rounds, so an XP race to 10M (or 50 rounds to win) now really goes to the end'], fr: ['Corrigé : les longs duels ne s\'arrêtent plus au bout de 100 manches, une course à 10 M d\'XP (ou 50 manches à gagner) va maintenant vraiment jusqu\'au bout'] },
@@ -1473,6 +1486,38 @@
   // on tire en local : le tirage reste dans l'historique mais pas au classement.
   // Rien ne se saute : pendant la révélation, Espace est ignoré ; une fois la rareté affichée, il relance.
   let rollPending = false;
+  // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
+  // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
+  // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
+  const SoloAuto = { on: false, timer: 0 };
+  const soloAutoHTML = () => `<label class="room-auto solo-auto" title="Rolls again by itself after each reveal; stops on a Mythic or better"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>`;
+  function stopSoloAuto() {
+    SoloAuto.on = false;
+    clearTimeout(SoloAuto.timer);
+    const box = $('#solo-auto');
+    if (box) box.checked = false;
+  }
+  function bindSoloAuto() {
+    const box = $('#solo-auto');
+    if (!box) return;
+    box.addEventListener('change', () => {
+      SoloAuto.on = box.checked;
+      clearTimeout(SoloAuto.timer);
+      if (!SoloAuto.on) return;
+      Sound.unlock();
+      if (!session || session.finished) startRoll(true);
+    });
+  }
+  function scheduleSoloAuto(delay) {
+    clearTimeout(SoloAuto.timer);
+    SoloAuto.timer = setTimeout(() => {
+      if (!SoloAuto.on) return;
+      if (currentView !== 'result' && currentView !== 'home') { stopSoloAuto(); return; }
+      // Onglet caché ou fenêtre ouverte : on attend sans rien tirer.
+      if (document.hidden || $('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
+      startRoll(true);
+    }, delay);
+  }
   async function startRoll(force) {
     if (rollPending) return;
     if (session && !session.finished && force !== true && !session.canReroll) return;
@@ -1497,6 +1542,8 @@
       online = await asked;
       n = online.n;
     } catch (err) {
+      if (err.status === 429 && SoloAuto.on) { rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
+      if (SoloAuto.on) stopSoloAuto();
       if (err.status === 409) {
         rollPending = false;
         buttons.forEach(b => { b.disabled = false; });
@@ -1515,6 +1562,7 @@
         return;
       }
       n = Engine.roll();
+      if (SoloAuto.on) stopSoloAuto();
       toast('Server unreachable: this roll stays on your device and is not counted');
     }
     rollPending = false;
@@ -1587,6 +1635,7 @@
             ${ctx.replay ? '<button class="btn" id="r-back">← Back</button><button class="btn" id="r-replay">↻ Replay</button>' : `<button class="btn-roll small${genClass()}" id="r-again">Roll again</button>`}
           </div>
           <p class="hint invisible" id="r-hint"></p>
+          ${ctx.replay ? '' : `<div class="solo-auto-row">${soloAutoHTML()}</div>`}
           <div id="r-notes" style="text-align:center"></div>
           <section class="breakdown" id="r-breakdown" hidden>
             <h2 class="section-title">Badge breakdown</h2>
@@ -1703,6 +1752,10 @@
     step(REVEAL.lifetimeTick + REVEAL.end, () => {
       vignette.classList.remove('on');
       finished = true;
+      if (SoloAuto.on && !ctx.replay) {
+        if (TIER_RANK[a.tier] >= TIER_RANK.mythic) { stopSoloAuto(); toast('✨ Auto-roll stopped on a Mythic or better: enjoy it!', 5000, 'achv'); }
+        else scheduleSoloAuto(900);
+      }
     });
 
     const runStep = s => { if (!s.done) { s.done = true; late = performance.now() - began - s.at > 250; s.run(false); } };
@@ -1710,7 +1763,7 @@
     if (ctx.replay) {
       $('#r-back').addEventListener('click', () => { if (session) session.cancel(); session = null; if (location.hash === ctx.replay.back) route(); else location.hash = ctx.replay.back || '#/'; });
       $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption); });
-    } else $('#r-again').addEventListener('click', () => startRoll(true));
+    } else { $('#r-again').addEventListener('click', () => startRoll(true)); bindSoloAuto(); }
 
     steps.forEach(s => timers.push(setTimeout(() => runStep(s, false), s.at)));
 
@@ -2164,7 +2217,7 @@
     const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const caption = x => `${p.name} · ${fullDate(x.t)}`;
     const collectionState = { filter: 'all', q: '' };
-    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
+    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${topHTML(p.top)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
     const addFriend = $('#p-friend');
     if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
     if (me) noteAchievements(p.achievements);
@@ -3951,9 +4004,67 @@
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
       if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
+      if (btn.dataset.fr === 'gift') { openGift(btn.dataset.name); return; }
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();
+    checkGifts();
+  }
+  // Pièces offertes à un ami (api/friends.js, action « gift ») : le serveur vérifie tout (amitié, 30 tirages, 10 à 500
+  // pièces, 1 000 données et 2 000 reçues par jour, solde). La fenêtre affiche ce qu'il reste à donner aujourd'hui.
+  let friendsState = null;
+  function openGift(name) {
+    const g = friendsState && friendsState.gift;
+    if (!g) return;
+    const locked = g.myRolls < g.rolls, most = Math.min(g.max, g.left, Math.max(0, g.coins));
+    const start = Math.min(100, most) >= g.min ? Math.min(100, most) : g.min;
+    openModal(`
+      <h2>Give coins to <span data-no-i18n>${esc(name)}</span></h2>
+      <p class="panel-note" style="margin:-.3rem 0 1rem">From ${g.min} to ${g.max} coins per gift. Up to ${fmt(g.sendDay)} a day, and a friend can receive up to ${fmt(g.receiveDay)} a day.</p>
+      <form id="gift-form">
+        <div class="chips-row gift-presets">${[50, 100, 250, 500].map(v => `<button type="button" class="chip${v === start ? ' on' : ''}" data-amt="${v}"${v > most ? ' disabled' : ''}>🪙 ${v}</button>`).join('')}</div>
+        <input class="input" id="gift-amount" type="number" inputmode="numeric" min="${g.min}" max="${g.max}" step="1" value="${start}" aria-label="Amount" style="width:100%">
+        <p class="panel-note gift-left">${locked ? `🔒 Gifts unlock after ${g.rolls} rolls (you have ${fmt(g.myRolls)})` : g.left > 0 ? `You can still give ${fmt(g.left)} coins today` : 'You gave all you can today: come back tomorrow'} · You have 🪙 ${fmt(g.coins)}</p>
+        <p class="field-error" id="gift-error" hidden></p>
+        <div class="actions"><button class="btn-roll small" type="submit"${locked || !g.left ? ' disabled' : ''}>Send gift</button></div>
+      </form>`, m => {
+      const input = m.querySelector('#gift-amount'), errorEl = m.querySelector('#gift-error'), submit = m.querySelector('#gift-form button[type=submit]');
+      const sync = () => m.querySelectorAll('[data-amt]').forEach(c => c.classList.toggle('on', Number(c.dataset.amt) === Number(input.value)));
+      m.querySelector('.gift-presets').addEventListener('click', e => { const c = e.target.closest('[data-amt]'); if (!c || c.disabled) return; input.value = c.dataset.amt; sync(); input.focus(); });
+      input.addEventListener('input', sync);
+      if (!locked && g.left) input.focus();
+      m.querySelector('#gift-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const amount = Number(input.value);
+        if (!Number.isInteger(amount) || amount < g.min || amount > g.max) { errorEl.textContent = `Give between ${g.min} and ${g.max} coins`; errorEl.hidden = false; input.focus(); return; }
+        submit.disabled = true;
+        try {
+          const state = await Online.friends('gift', name, { amount });
+          Store.setSetting('coins', state.gift.coins);
+          closeModal();
+          toast(`🎁 You sent ${fmt(state.sent.amount)} coins to ${state.sent.name}`, 4000, 'achv');
+          Sound.play('lock', { i: 3 });
+          if (currentView === 'friends') drawFriends(state);
+        } catch (err) {
+          submit.disabled = false;
+          errorEl.textContent = [400, 403, 404, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again';
+          errorEl.hidden = false;
+        }
+      });
+    });
+  }
+  // Cadeaux reçus depuis la dernière fois : annoncés une seule fois (le serveur les marque vus), au chargement du jeu
+  // et à l'ouverture des amis. Le solde gardé sur l'appareil suit.
+  async function checkGifts() {
+    if (!Store.player.name) return;
+    try {
+      const r = await Online.friends('gifts');
+      if (!r.gifts || !r.gifts.length) return;
+      if (r.coins != null) Store.setSetting('coins', r.coins);
+      const total = r.gifts.reduce((x, g) => x + g.amount, 0);
+      toast(r.gifts.length === 1 ? `🎁 ${r.gifts[0].name} sent you ${fmt(total)} coins` : `🎁 ${r.gifts.length} gifts from your friends: +${fmt(total)} coins`, 6000, 'achv');
+      Sound.play('lock', { i: 5 });
+    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
   }
   async function friendAction(action, name) {
     if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
@@ -3976,7 +4087,9 @@
       try { state = await Online.friends(); } catch (err) { body.innerHTML = '<div class="empty">Friends unavailable right now.</div>'; return; }
       if (currentView !== 'friends' || !$('#f-body')) return;
     }
+    friendsState = state;
     const btn = (action, name, label, cls = 'btn') => `<button class="${cls}" data-fr="${action}" data-name="${esc(name)}">${label}</button>`;
+    const received = (state.gift && state.gift.received) || [];
     setHTML(body, `
       ${state.incoming.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Friend requests</h3></div>
@@ -3989,12 +4102,16 @@
             <span class="live-dot${f.room ? ' on' : ''}"></span>
             <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}</span></span>
-            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
+            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
       ${state.outgoing.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Requests sent</h3></div>
           ${state.outgoing.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('cancel', n, 'Cancel')}</span></div>`).join('')}
+        </div>` : ''}
+      ${received.length ? `
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Gifts received</h3></div>
+          ${received.map(x => `<div class="friend-row"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a><span class="panel-note">🪙 ${fmt(x.amount)} · ${relTime(x.t)}</span></div>`).join('')}
         </div>` : ''}`);
     if (!document.hidden) friendsTimer = setTimeout(() => { if (currentView === 'friends') drawFriends(); }, 15000);
   }
@@ -4274,7 +4391,7 @@
         body.innerHTML = '<div class="room-code-box" id="room-lobby"></div>';
       }
       const host = d.players.find(p => p.host);
-      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${p.me ? ' (you)' : ''}</span>`).join('')
+      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}</span>`).join('')
         + '<span class="badge-pill empty-seat">…</span>'.repeat(Math.max(0, d.size - d.players.length));
       const wait = !me ? '' : me.host
         ? (d.players.length > 1 ? 'Start now, or wait: the game starts by itself when it is full' : 'Waiting for players…')
@@ -4366,7 +4483,7 @@
         : `<span class="mono board-wins">${wins[i]} / ${d.target}</span><span class="panel-note board-xp">${compact(totals[i])} XP</span>`;
       const ready = d.status === 'playing' && p.ready && !Room.anim ? '<span class="ready-chip">ready</span>' : '';
       const who = p.bot ? `<span class="bot-name">🤖 ${esc(p.name)}</span>` : `<a class="player-link" href="${profileHref(p.name)}">${esc(p.name)}</a>`;
-      return `<div class="board-row${p.me ? ' me' : ''}" data-pi="${i}"><span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}" data-pi="${i}"><span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -4496,7 +4613,7 @@
         : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
-          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}</div>
+          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
           ${card}
           <div class="room-meta" id="rm-${j}">${a ? `${tierPill(a.tier)}<span class="ep-pill">${fmt(a.total)} XP</span>` : ''}</div>
           <div class="pill-row" id="rb-${j}">${a ? duelBadgesHTML(a, r.n[j]) : ''}</div>
@@ -4668,7 +4785,7 @@
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -4678,7 +4795,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
@@ -4855,6 +4972,8 @@
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
+  // Pièces offertes par un ami depuis la dernière visite (la page Amis s'en charge elle-même).
+  if (Store.player.name && currentView !== 'friends') setTimeout(checkGifts, 1500);
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
 
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.
