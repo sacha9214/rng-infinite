@@ -252,6 +252,7 @@
     ROYAL_FLUSH: '56789',
     DRASTIX: '235', // badge perso, absent de l'original
     FULL_STACK: '64', // badge perso : 64, une pile complète de blocs
+    CURRENT_YEAR: '2026', // badge perso : l'année en cours (à changer chaque 1er janvier)
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
