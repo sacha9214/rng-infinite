@@ -1888,7 +1888,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const day = new Date(Date.now()).toISOString().slice(0, 10);
   run([['DEL', `sugg:rate:${day}:${alice.playerId}`], ['DEL', `sugg:replies:${day}:${alice.playerId}`]]);
   r = await post(alice, 'suggest', { text: 'Add more luck' }); assert.equal(r.status, 200, JSON.stringify(r.body));
-  const sid = r.body.mine[0].id; assert.deepEqual(r.body.mine[0].thread, []);
+  const sid = r.body.mine.find(x => x.text === 'Add more luck').id; assert.deepEqual(r.body.mine.find(x => x.id === sid).thread, []);
   // Pas encore de réponse du créateur : rien à signaler au joueur.
   r = await post(alice, 'peek', { seen: 0 }); assert.equal(r.body.replies, 0);
   // Le créateur pose une question : elle arrive dans le fil, la suggestion passe en « lue », le joueur est prévenu.
@@ -1921,7 +1921,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await post(alice, 'reply', { id: sid, text: 'last one' }); assert.equal(r.body.mine.find(x => x.id === sid).thread.length, 40);
   // Ancienne suggestion (une seule réponse, sans fil) : la réponse ouvre le fil et n'est pas perdue quand on continue.
   run([['DEL', `sugg:rate:${day}:${alice.playerId}`]]);
-  const old = (await post(alice, 'suggest', { text: 'An older idea' })).body.mine[0].id;
+  const old = (await post(alice, 'suggest', { text: 'An older idea' })).body.mine.find(x => x.text === 'An older idea').id; // par son texte : deux suggestions de la même milliseconde n'ont pas d'ordre garanti
   run([['HSET', `sugg:${old}`, 'reply', 'Old style answer', 'status', 'seen']]);
   r = await post(alice, 'mine'); assert.deepEqual(r.body.mine.find(x => x.id === old).thread.map(m => [m.from, m.text]), [['owner', 'Old style answer']]);
   r = await post(alice, 'reply', { id: old, text: 'Thanks!' }); assert.deepEqual(r.body.mine.find(x => x.id === old).thread.map(m => m.text), ['Old style answer', 'Thanks!']);

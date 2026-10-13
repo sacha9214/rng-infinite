@@ -3037,3 +3037,15 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 /* Code cadeau (Joueur et réglages) */
 .code-form { display: flex; gap: .4rem; }
 .code-form .input { flex: 1; min-width: 0; font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+
+/* Très petits téléphones : les 8 jetons du Plinko (1 et 5 en plus) tiennent sur la largeur, sans faire déborder la page. */
+@media (max-width: 380px) {
+  .gchips { gap: .25rem; flex-wrap: wrap; }
+  .gchip { width: 1.95rem; height: 1.95rem; font-size: .62rem; border-width: 2px; }
+}
+/* Duel sur téléphone : les émotes restent accrochées juste au-dessus de la barre « Roll », elle-même accrochée en bas.
+   Sans ça la barre passait par-dessus les émotes (on ne pouvait plus les toucher sans faire défiler). --room-bar-h est
+   la hauteur réelle de la barre, mise à jour par le site à chaque affichage. */
+@media (max-width: 720px) {
+  .room-reacts { position: sticky; bottom: calc(var(--room-bar-h, 6rem) + .9rem); z-index: 14; width: fit-content; max-width: 100%; margin-inline: auto; padding: .3rem .45rem; border-radius: .9rem; background: color-mix(in srgb, var(--site-bg) 88%, transparent); backdrop-filter: blur(8px); }
+}

@@ -4651,6 +4651,8 @@
       if (rematchBtn) rematchBtn.addEventListener('click', roomRematch);
     }
     setHTML($('#room-hint'), hint);
+    // Hauteur de la barre d'action, pour que les émotes s'accrochent juste au-dessus sur téléphone (css/style.css).
+    { const bar = app.querySelector('.room-actions'); if (bar) requestAnimationFrame(() => document.documentElement.style.setProperty('--room-bar-h', `${bar.offsetHeight}px`)); }
     // Tirage auto : dès que c'est à moi de lancer une manche, elle part toute seule (une fois par manche, après un
     // court instant pour voir le résultat de la précédente). S'arrête avec la partie : la revanche reste un vrai clic.
     const autoWrap = $('#room-auto-wrap');
