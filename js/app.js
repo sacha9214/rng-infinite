@@ -4747,9 +4747,12 @@
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
         <div id="today-slot"></div>
-        <div class="lb-card">
-          <div class="lb-tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-period="${k}" class="${lbState.period === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-          <div id="lb-list"><div class="empty">Loading…</div></div>
+        <div class="lb-wrap">
+          ${trophiesAsideHTML()}
+          <div class="lb-card">
+            <div class="lb-tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-period="${k}" class="${lbState.period === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+            <div id="lb-list"><div class="empty">Loading…</div></div>
+          </div>
         </div>
         <p class="panel-note" style="text-align:center;margin-top:.9rem">
           <span id="lb-rule">${lbRule()}</span> ·
@@ -4768,6 +4771,23 @@
     });
     loadTodayCard($('#today-slot'));
     drawLeaderboard();
+  }
+
+  // Vitrine des badges Top 1 / 5 / 10 : à droite du classement sur grand écran, au-dessus sur petit écran.
+  // Montre les trois badges du mois en cours, comment les gagner et le temps qu'il reste avant la remise.
+  function trophiesAsideHTML() {
+    const now = new Date(serverNow()), month = now.toISOString().slice(0, 7);
+    const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+    const days = Math.ceil((end - now.getTime()) / 86400000);
+    const left = days <= 1 ? 'Ends today (midnight UTC)' : `Ends in ${days} days`;
+    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span></li>`;
+    return `
+      <aside class="lb-aside panel" aria-label="Monthly trophies">
+        <div class="eyebrow">🏆 Monthly trophies</div>
+        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever.</p>
+        <ul class="lb-aside-list">${row(1, '1st place')}${row(5, '2nd to 5th')}${row(10, '6th to 10th')}</ul>
+        <p class="lb-aside-foot"><b>${left}</b> · it shows next to your name on the leaderboard, your profile and in duels</p>
+      </aside>`;
   }
 
   async function drawLeaderboard() {

@@ -2953,3 +2953,16 @@ button.o-chip { cursor: pointer; }
 .top-mark.bronze { color: #5b2c0c; background: linear-gradient(120deg, #fed7aa, #d97706 60%, #fed7aa); border-color: #b45309; }
 .top-marks-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-bottom: .4rem; }
 .top-marks-row .top-mark { margin-left: 0; }
+/* Vitrine des badges du mois : à droite du classement sur grand écran, au-dessus sur petit écran */
+.lb-wrap { position: relative; }
+.lb-aside { margin-top: 1.4rem; padding: 1rem 1.1rem; }
+.lb-aside .eyebrow { margin-bottom: .4rem; }
+.lb-aside-lead { margin: 0 0 .7rem; font-size: .84rem; line-height: 1.45; color: var(--prose-2); }
+.lb-aside-list { list-style: none; margin: 0 0 .7rem; padding: 0; display: grid; gap: .45rem; }
+.lb-aside-list li { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-size: .8rem; font-weight: 700; color: var(--prose-2); }
+.lb-aside-list .top-mark { margin-left: 0; font-size: .74rem; }
+.lb-aside-foot { margin: 0; font-size: .76rem; line-height: 1.45; color: var(--prose-3); }
+.lb-aside-foot b { color: var(--prose); }
+@media (min-width: 84rem) {
+  .lb-aside { position: absolute; top: 0; left: calc(100% + 1.75rem); width: 17rem; margin-top: 0; }
+}
