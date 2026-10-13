@@ -2938,3 +2938,6 @@ button.o-chip { cursor: pointer; }
 .idea-answer { display: flex; gap: .4rem; margin-top: .5rem; }
 .idea-answer .input { flex: 1; min-width: 0; font-size: .82rem; text-transform: none; letter-spacing: 0; text-align: left; }
 .idea-new { padding: .05rem .45rem; border-radius: 999px; background: #ef4444; color: #fff; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+/* Tirage auto en solo : même interrupteur que dans les duels, sous le bouton */
+.hero .solo-auto { margin: .2rem auto .4rem; }
+.solo-auto-row { display: flex; justify-content: center; margin-top: -.2rem; }

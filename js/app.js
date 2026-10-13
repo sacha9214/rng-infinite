@@ -1091,6 +1091,7 @@
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>Space</kbd>
           </p>
+          ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div></div>
           <div id="today-slot"></div>
@@ -1114,6 +1115,7 @@
         </section>
       </div>`;
     $('#roll-btn').addEventListener('click', startRoll);
+    bindSoloAuto();
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
@@ -1391,6 +1393,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13b', date: 'Oct 13, 2026', en: ['Auto-roll is no longer only for duels: turn it on under Generate and the game rolls again by itself after each reveal. It stops on a Mythic or better so you never miss it'], fr: ['Le tirage auto n\'est plus réservé aux duels : active-le sous Générer et le jeu relance tout seul après chaque révélation. Il s\'arrête sur un Mythic ou mieux pour que tu ne le rates jamais'] },
     { id: '2026-10-13a', date: 'Oct 13, 2026', en: ['Two new badges suggested by players: RTX 5090 🎮 (exactly 5090, 50,900 XP) and The Golden Era 🏆 (exactly 2016, 216,000 XP)'], fr: ['Deux nouveaux badges suggérés par des joueurs : RTX 5090 🎮 (exactement 5090, 50 900 XP) et The Golden Era 🏆 (exactement 2016, 216 000 XP)'] },
     { id: '2026-10-12b', date: 'Oct 12, 2026', en: ['Ideas 💡: when the creator answers your suggestion, you can now reply in the same conversation (no need to send a new one), and the bulb shows a red dot when there is an answer for you'], fr: ['Idées 💡 : quand le créateur répond à ta suggestion, tu peux maintenant lui répondre dans la même conversation (plus besoin d\'en envoyer une nouvelle), et l\'ampoule affiche un point rouge quand une réponse t\'attend'] },
     { id: '2026-10-12a', date: 'Oct 12, 2026', en: ['Leaderboard: a new This month tab with the best roll of the month (it already counts every roll since the 1st)'], fr: ['Classement : un nouvel onglet Ce mois avec le meilleur tirage du mois (il compte déjà tous les tirages depuis le 1er)'] },
@@ -1474,6 +1477,38 @@
   // on tire en local : le tirage reste dans l'historique mais pas au classement.
   // Rien ne se saute : pendant la révélation, Espace est ignoré ; une fois la rareté affichée, il relance.
   let rollPending = false;
+  // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
+  // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
+  // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
+  const SoloAuto = { on: false, timer: 0 };
+  const soloAutoHTML = () => `<label class="room-auto solo-auto" title="Rolls again by itself after each reveal; stops on a Mythic or better"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>`;
+  function stopSoloAuto() {
+    SoloAuto.on = false;
+    clearTimeout(SoloAuto.timer);
+    const box = $('#solo-auto');
+    if (box) box.checked = false;
+  }
+  function bindSoloAuto() {
+    const box = $('#solo-auto');
+    if (!box) return;
+    box.addEventListener('change', () => {
+      SoloAuto.on = box.checked;
+      clearTimeout(SoloAuto.timer);
+      if (!SoloAuto.on) return;
+      Sound.unlock();
+      if (!session || session.finished) startRoll(true);
+    });
+  }
+  function scheduleSoloAuto(delay) {
+    clearTimeout(SoloAuto.timer);
+    SoloAuto.timer = setTimeout(() => {
+      if (!SoloAuto.on) return;
+      if (currentView !== 'result' && currentView !== 'home') { stopSoloAuto(); return; }
+      // Onglet caché ou fenêtre ouverte : on attend sans rien tirer.
+      if (document.hidden || $('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
+      startRoll(true);
+    }, delay);
+  }
   async function startRoll(force) {
     if (rollPending) return;
     if (session && !session.finished && force !== true && !session.canReroll) return;
@@ -1498,6 +1533,8 @@
       online = await asked;
       n = online.n;
     } catch (err) {
+      if (err.status === 429 && SoloAuto.on) { rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
+      if (SoloAuto.on) stopSoloAuto();
       if (err.status === 409) {
         rollPending = false;
         buttons.forEach(b => { b.disabled = false; });
@@ -1516,6 +1553,7 @@
         return;
       }
       n = Engine.roll();
+      if (SoloAuto.on) stopSoloAuto();
       toast('Server unreachable: this roll stays on your device and is not counted');
     }
     rollPending = false;
@@ -1588,6 +1626,7 @@
             ${ctx.replay ? '<button class="btn" id="r-back">← Back</button><button class="btn" id="r-replay">↻ Replay</button>' : `<button class="btn-roll small${genClass()}" id="r-again">Roll again</button>`}
           </div>
           <p class="hint invisible" id="r-hint"></p>
+          ${ctx.replay ? '' : `<div class="solo-auto-row">${soloAutoHTML()}</div>`}
           <div id="r-notes" style="text-align:center"></div>
           <section class="breakdown" id="r-breakdown" hidden>
             <h2 class="section-title">Badge breakdown</h2>
@@ -1704,6 +1743,10 @@
     step(REVEAL.lifetimeTick + REVEAL.end, () => {
       vignette.classList.remove('on');
       finished = true;
+      if (SoloAuto.on && !ctx.replay) {
+        if (TIER_RANK[a.tier] >= TIER_RANK.mythic) { stopSoloAuto(); toast('✨ Auto-roll stopped on a Mythic or better: enjoy it!', 5000, 'achv'); }
+        else scheduleSoloAuto(900);
+      }
     });
 
     const runStep = s => { if (!s.done) { s.done = true; late = performance.now() - began - s.at > 250; s.run(false); } };
@@ -1711,7 +1754,7 @@
     if (ctx.replay) {
       $('#r-back').addEventListener('click', () => { if (session) session.cancel(); session = null; if (location.hash === ctx.replay.back) route(); else location.hash = ctx.replay.back || '#/'; });
       $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption); });
-    } else $('#r-again').addEventListener('click', () => startRoll(true));
+    } else { $('#r-again').addEventListener('click', () => startRoll(true)); bindSoloAuto(); }
 
     steps.forEach(s => timers.push(setTimeout(() => runStep(s, false), s.at)));
 
