@@ -1455,6 +1455,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13k', date: 'Oct 13, 2026', en: ['New title to equip: 📅 2026 — unlocked when you earn the Current Year badge (a number containing 2026). Equip it from your profile'], fr: ['Nouveau titre à équiper : 📅 2026 — débloqué quand tu obtiens le badge Current Year (un nombre contenant 2026). Équipe-le depuis ton profil'] },
     { id: '2026-10-13j', date: 'Oct 13, 2026', en: ['New badge: Current Year 📅 — any number containing 2026 (12026, 520269, 202600…) earns 20,260 XP'], fr: ['Nouveau badge : Current Year 📅 — tout nombre contenant 2026 (12026, 520269, 202600…) rapporte 20 260 XP'] },
     { id: '2026-10-13i', date: 'Oct 13, 2026', en: ['Gift codes: enter a code in Player & settings to get its prize (each code works once, after 30 rolls). Try SACHA for 200 coins'], fr: ['Codes cadeaux : entre un code dans Joueur et réglages pour gagner son prix (chaque code marche une fois, après 30 tirages). Essaie SACHA pour 200 pièces'] },
     { id: '2026-10-13h', date: 'Oct 13, 2026', en: ['New skin: Bakery 🥐 — digits of golden crust with chocolate chips, and steam rising at the end (1,000 coins)'], fr: ['Nouveau skin : Bakery 🥐 — des chiffres en croûte dorée aux pépites de chocolat, et de la vapeur qui monte à la fin (1 000 pièces)'] },

@@ -2176,4 +2176,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HSET', key, 'rolls', rolls0 || 0], ['HINCRBY', key, 'bonus', -400]]);
 }
 
+// ================================================================ 54. Titre « 2026 » : débloqué par le badge Current Year
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js'));
+  const key = `stats:${alice.playerId}`;
+  run([['HDEL', key, 'year2026']]);
+  let r = await equip(alice, 'year2026');
+  assert.equal(r.status, 422, 'verrouillé avant le badge');
+  await lib.recordRoll(alice.playerId, 520269, Date.now());
+  assert.equal(run([['HGET', key, 'year2026']])[0].result, '1');
+  r = await equip(alice, 'year2026');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['HGET', 'titles', alice.playerId]])[0].result, 'year2026');
+  // Un nombre sans 2026 ne le donne pas.
+  const Ach = require(path.join(ROOT, 'js/achievements.js'));
+  assert.ok(!Ach.unlocked({ rolls: 5 }).includes('year2026'));
+  assert.ok(Ach.unlocked({ year2026: 1 }).includes('year2026'));
+  await equip(alice, '');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

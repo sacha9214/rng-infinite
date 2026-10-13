@@ -1,7 +1,7 @@
 /* RNG∞ — succès et titres.
  * Pur JS, chargeable dans le navigateur (window.RNGAchievements) et dans Node (module.exports).
  * Chaque succès se lit sur les stats du joueur tenues par le serveur (stats:<id>) : un titre ne s'équipe que débloqué.
- * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, dayTop, duelWins, flawless, bigWin, xpWin }
+ * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, year2026, dayTop, duelWins, flawless, bigWin, xpWin }
  */
 (function (root) {
   'use strict';
@@ -28,6 +28,7 @@
     { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
     { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
+    { id: 'year2026', emoji: '📅', title: '2026', desc: 'Earn the Current Year badge (a number containing 2026)', test: st => num(st.year2026) >= 1 },
     { id: 'collector', emoji: '📦', title: 'Collector', desc: 'Find 50 different badges', test: st => num(st.badges) >= 50 },
     { id: 'hoarder', emoji: '🗄️', title: 'Hoarder', desc: 'Find 100 different badges', test: st => num(st.badges) >= 100 },
     { id: 'completionist', emoji: '🏛️', title: 'Completionist', desc: 'Find 150 different badges', test: st => num(st.badges) >= 150 },
