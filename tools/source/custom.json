@@ -12,5 +12,19 @@
     "desc": "Contains \"64\": a full stack of blocks.",
     "emoji": "🧱",
     "score": 6400
+  },
+  {
+    "id": "RTX_5090",
+    "label": "RTX 5090",
+    "desc": "Exactly \"5090\": the graphics card.",
+    "emoji": "🎮",
+    "score": 50900
+  },
+  {
+    "id": "GOLDEN_ERA",
+    "label": "The Golden Era",
+    "desc": "Exactly \"2016\": the golden era.",
+    "emoji": "🏆",
+    "score": 216000
   }
 ]

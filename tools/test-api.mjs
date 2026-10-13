@@ -1295,10 +1295,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const Ach = require(path.join(ROOT, 'js/achievements.js'));
   const tierOf = n => engine.cardTier(engine.scoreOf(n));
   const toObj = flat => { const o = {}; for (let i = 0; i < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
-  // Le découpage : 9 001 Mythic, 900 Celestial, 90 Divine, 9 Infinite sur 1 000 001 nombres.
+  // Le découpage : 9 000 Mythic, 900 Celestial, 90 Divine, 9 Infinite sur 1 000 001 nombres (2016, The Golden Era,
+  // est entré dans les Mythic et en a sorti les deux ex aequo de la limite, 210982 et 821098).
   const count = {};
   for (let n = 0; n <= 1000000; n++) { const k = tierOf(n); count[k] = (count[k] || 0) + 1; }
-  assert.deepEqual([count.mythic, count.celestial, count.divine, count.infinite], [9001, 900, 90, 9]);
+  assert.deepEqual([count.mythic, count.celestial, count.divine, count.infinite], [9000, 900, 90, 9]);
   const pick = tier => { for (let n = 0; n <= 1000000; n++) if (tierOf(n) === tier) return n; };
   const sample = { mythic: pick('mythic'), celestial: pick('celestial'), divine: pick('divine'), infinite: pick('infinite') };
   // Un joueur d'avant la mise à jour : 4 « Mythic » au compteur, dont un de chaque nouvelle rareté dans son historique.
