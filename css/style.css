@@ -2951,3 +2951,5 @@ button.o-chip { cursor: pointer; }
 .top-mark.gold { color: #7a4b00; background: linear-gradient(120deg, #fde68a, #f59e0b, #fde68a); border-color: #d97706; box-shadow: 0 0 10px rgba(245, 158, 11, .45); }
 .top-mark.silver { color: #374151; background: linear-gradient(120deg, #f3f4f6, #cbd5e1, #f3f4f6); border-color: #94a3b8; }
 .top-mark.bronze { color: #5b2c0c; background: linear-gradient(120deg, #fed7aa, #d97706 60%, #fed7aa); border-color: #b45309; }
+.top-marks-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-bottom: .4rem; }
+.top-marks-row .top-mark { margin-left: 0; }
