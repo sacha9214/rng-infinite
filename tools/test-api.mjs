@@ -2024,32 +2024,61 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual([st1, st2], [1100, 2110]);
 }
 
-// ================================================================ 51. Badges Top 1 / 5 / 10 du classement du mois
+// ================================================================ 51. Badges Top 1 / 5 / 10 : remis à la fin du mois, avec le mois
 {
-  const month = new Date(Date.now()).toISOString().slice(0, 7), lb = `lb:month:${month}`;
+  const rank = require(path.join(ROOT, 'api/_rank.js'));
+  const monthOf = t => new Date(t).toISOString().slice(0, 7);
+  const month = monthOf(Date.now()), lb = `lb:month:${month}`;
   const ids = Array.from({ length: 12 }, (_, i) => (0x5100 + i).toString(16).padStart(16, '0'));
   // Alice en tête du mois, puis onze joueurs factices ; le 12e reste hors du top 10.
-  run([['DEL', lb], ['ZADD', lb, 9e12, alice.playerId], ...ids.flatMap((id, i) => [
+  run([['DEL', lb], ['ZADD', lb, 9e12, alice.playerId], ['HSET', `best:month:${month}`, alice.playerId, JSON.stringify({ n: 5, s: 9e12, t: Date.now() })], ...ids.flatMap((id, i) => [
     ['ZADD', lb, 1e9 - i, id], ['HSET', 'names', id, `Topper${i}`], ['HSET', `best:month:${month}`, id, JSON.stringify({ n: 5, s: 1e9 - i, t: Date.now() })],
   ])]);
-  run([['HSET', `best:month:${month}`, alice.playerId, JSON.stringify({ n: 5, s: 9e12, t: Date.now() })]]);
-  const board = async period => (await call(leaderboard, { url: `/api/leaderboard?period=${period}&me=${alice.playerId}` })).body;
-  const b = await board('month');
-  const tops = b.entries.slice(0, 12).map(e => e.top);
-  assert.deepEqual(tops, [1, 5, 5, 5, 5, 10, 10, 10, 10, 10, null, null], JSON.stringify(tops));
-  assert.ok(b.entries[0].me, 'Alice est 1re');
-  // Les autres onglets montrent le même badge du mois.
-  for (const per of ['day', 'all', 'xp', 'coins']) {
-    const mine = (await board(per)).entries.find(e => e.me);
-    if (mine) assert.equal(mine.top, 1, per);
-  }
   const [aliceName] = run([['HGET', 'names', alice.playerId]]).map(x => x.result);
-  assert.equal((await call(profile, { url: `/api/profile?name=${encodeURIComponent(aliceName)}` })).body.top, 1, 'profil');
-  assert.equal((await call(profile, { url: '/api/profile?name=Topper10' })).body.top, null, '11e : pas de badge');
-  // Sortie du top 10 : le badge disparaît.
-  run([['ZADD', lb, 1, alice.playerId]]);
-  assert.equal((await call(profile, { url: `/api/profile?name=${encodeURIComponent(aliceName)}` })).body.top, null, 'hors du top 10');
-  run([['ZREM', lb, ...ids], ...ids.flatMap(id => [['HDEL', 'names', id], ['HDEL', `best:month:${month}`, id]])]);
+  const board = async period => (await call(leaderboard, { url: `/api/leaderboard?period=${period}&me=${alice.playerId}` })).body;
+  const prof = async name => (await call(profile, { url: `/api/profile?name=${encodeURIComponent(name)}` })).body;
+  // Pendant le mois : aucun badge, même pour le 1er.
+  let b = await board('month');
+  assert.ok(b.entries[0].me, 'Alice est 1re');
+  assert.ok(b.entries.every(e => e.top === null), 'rien avant la fin du mois');
+  assert.equal((await prof(aliceName)).top, null);
+  // Le mois suivant : le top 10 du mois fini reçoit son badge, avec le mois.
+  const saved = clock;
+  const d = new Date(Date.now()); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1); d.setUTCHours(0, 0, 5);
+  clock += d.getTime() - Date.now();
+  assert.equal(rank.prevMonth(Date.now()), month);
+  b = await board('all');
+  const p0 = await prof(aliceName);
+  assert.deepEqual(p0.top, { top: 1, month }); assert.deepEqual(p0.tops, [{ top: 1, month }]);
+  const tops = await Promise.all(ids.map(async (id, i) => (await prof(`Topper${i}`)).top));
+  assert.deepEqual(tops.map(x => x && x.top), [5, 5, 5, 5, 10, 10, 10, 10, 10, null, null, null], JSON.stringify(tops));
+  assert.ok(tops.slice(0, 9).every(x => x.month === month));
+  const mine = (await board('day')).entries.find(e => e.me) || (await board('all')).entries.find(e => e.me);
+  if (mine) assert.deepEqual(mine.top, { top: 1, month }, 'à côté du nom dans le classement');
+  // Gardé pour toujours : sortir du classement ne l'enlève pas, et la remise ne se refait pas.
+  run([['DEL', lb]]);
+  rank._reset();
+  assert.deepEqual((await prof(aliceName)).top, { top: 1, month });
+  // Un mois plus tard, un moins bon rang ne remplace pas le meilleur badge, mais s'ajoute à la liste.
+  const month2 = monthOf(Date.now());
+  run([['ZADD', `lb:month:${month2}`, 9, ids[0]], ['ZADD', `lb:month:${month2}`, 1, ids[1]], ['ZADD', `lb:month:${month2}`, 99, alice.playerId]]);
+  // ids[1] (Top 5 au mois 1) devient 3e : toujours Top 5, mois plus récent → affiché ; Alice 1re à nouveau.
+  run([['ZADD', `lb:month:${month2}`, 50, ids[2]]]);
+  const d2 = new Date(Date.now()); d2.setUTCDate(1); d2.setUTCMonth(d2.getUTCMonth() + 1); d2.setUTCHours(0, 0, 5);
+  clock += d2.getTime() - Date.now();
+  const pa = await prof(aliceName);
+  assert.deepEqual(pa.tops.map(x => x.month), [month2, month], 'du plus récent au plus ancien');
+  assert.deepEqual(pa.top, { top: 1, month: month2 }, 'à rang égal, le plus récent');
+  const p1 = await prof('Topper1');
+  assert.deepEqual(p1.top, { top: 5, month: month2 });
+  const p2 = await prof('Topper2');
+  assert.deepEqual(p2.top, { top: 5, month: month2 }, 'Top 5 les deux mois : le plus récent');
+  assert.equal(p2.tops.length, 2);
+  // Duel : le badge suit le joueur à sa place.
+  assert.deepEqual((await rank.bestAwards([alice.playerId])).get(alice.playerId), { top: 1, month: month2 });
+  clock = saved;
+  rank._reset();
+  run([['DEL', 'topbest', `topawards:${alice.playerId}`, ...ids.map(id => `topawards:${id}`), `lb:month:${month2}`], ...ids.flatMap(id => [['HDEL', 'names', id], ['HDEL', `best:month:${month}`, id]])]);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

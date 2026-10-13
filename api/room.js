@@ -18,7 +18,7 @@ const crypto = require('node:crypto');
 const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
-const { monthTop } = require('./_rank');
+const { bestAwards } = require('./_rank');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
 const MAX_WINS = 50; // au choix du créateur de la partie (tapé à la main au-delà des boutons)
@@ -352,9 +352,9 @@ async function view(room, me) {
 }
 
 // Titre et skin équipés d'un joueur au moment où il entre dans la salle (affichés à côté de son nom et sur ses cartes).
-// top : son badge Top 1 / 5 / 10 du mois à ce moment-là.
+// top : son meilleur badge Top 1 / 5 / 10 d'un mois passé ({ top, month }).
 async function seat(id, name) {
-  const [[title, skin], marks] = await Promise.all([redis([['HGET', 'titles', id], ['HGET', 'skins', id]]), monthTop()]);
+  const [[title, skin], marks] = await Promise.all([redis([['HGET', 'titles', id], ['HGET', 'skins', id]]), bestAwards([id])]);
   return { id, name, title: title || null, top: marks.get(id) || null, skin: Shop.resolve(skin) || null };
 }
 

@@ -3,7 +3,7 @@
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
 const { engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
-const { monthTop } = require('./_rank');
+const { awardsOf } = require('./_rank');
 
 const BEST_LIMIT = 10;
 
@@ -28,7 +28,9 @@ module.exports = async (req, res) => {
       ['HGETALL', `h2h:${id}`],
     ]);
     const stats = await readStats(id);
-    const top = (await monthTop()).get(id) || null;
+    // Badges Top 1 / 5 / 10 des mois finis : tous, et le meilleur (rang, puis le plus récent) pour l'en-tête.
+    const tops = await awardsOf(id);
+    const top = tops.slice().sort((a, b) => a.top - b.top || (a.month < b.month ? 1 : -1))[0] || null;
     const achievements = Achievements.unlocked(stats);
 
     // Duels : bilan, rivaux les plus affrontés (face-à-face) et bilan contre celui qui regarde.
@@ -92,7 +94,7 @@ module.exports = async (req, res) => {
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé
       title: title || null,
-      top, // badge Top 1 / 5 / 10 du classement du mois, tant qu'il y est
+      top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
     });
   } catch (err) {

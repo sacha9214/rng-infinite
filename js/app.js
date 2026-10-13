@@ -330,13 +330,22 @@
   })();
   // Chiffre affiché pendant que ça tourne : du code qui défile pour le skin Matrix, un chiffre sinon.
   const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph() : String((Math.random() * 10) | 0));
-  // Badges Top 1 / 5 / 10 : seulement pour les dix premiers du classement du mois, tant qu'ils y sont (voir api/_rank.js).
+  // Badges Top 1 / 5 / 10 : remis à la fin de chaque mois aux dix premiers du classement du mois, gardés pour toujours
+  // (voir api/_rank.js). award = { top: 1 | 5 | 10, month: 'AAAA-MM' } ; le serveur envoie le meilleur de chacun.
   const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
-  const topHTML = top => {
-    const m = TOP_MARKS[top];
-    return m ? `<span class="top-mark ${m[2]}" title="${top === 1 ? 'First place on this month\'s leaderboard' : `In the top ${top} of this month's leaderboard`}">${m[0]} ${m[1]}</span>` : '';
+  const monthLabel = month => {
+    const fr = window.RNGI18n && window.RNGI18n.lang === 'fr';
+    const txt = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(fr ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
   };
-  const topEmoji = top => (TOP_MARKS[top] ? ` ${TOP_MARKS[top][0]}` : '');
+  const topHTML = award => {
+    const m = award && TOP_MARKS[award.top];
+    if (!m || !/^\d{4}-\d{2}$/.test(award.month || '')) return '';
+    const when = monthLabel(award.month);
+    const tip = award.top === 1 ? `First place on the monthly leaderboard · ${when}` : `Top ${award.top} on the monthly leaderboard · ${when}`;
+    return `<span class="top-mark ${m[2]}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)}</span>`;
+  };
+  const topEmoji = award => (award && TOP_MARKS[award.top] ? ` ${TOP_MARKS[award.top][0]}` : '');
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
     if (!a) return '';
@@ -1400,6 +1409,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13e', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges are now earned at the end of the month: the ten best players of the monthly leaderboard keep their badge forever, with the month and year ("Top 1 · Oct 2026"). Climb before the month ends!'], fr: ['Les badges Top 1 👑, Top 5 🥈 et Top 10 🥉 se gagnent maintenant à la fin du mois : les dix meilleurs du classement du mois gardent leur badge pour toujours, avec le mois et l\'année (« Top 1 · Oct. 2026 »). Grimpe avant la fin du mois !'] },
     { id: '2026-10-13d', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges: only the ten best players of this month\'s leaderboard wear one, next to their name on the leaderboard, on their profile and in duels. Drop out of the top 10 and it\'s gone'], fr: ['Badges Top 1 👑, Top 5 🥈 et Top 10 🥉 : seuls les dix meilleurs joueurs du classement du mois en portent un, à côté de leur nom dans le classement, sur leur profil et en duel. Sors du top 10 et il disparaît'] },
     { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
     { id: '2026-10-13b', date: 'Oct 13, 2026', en: ['Auto-roll is no longer only for duels: turn it on under Generate and the game rolls again by itself after each reveal. It stops on a Mythic or better so you never miss it'], fr: ['Le tirage auto n\'est plus réservé aux duels : active-le sous Générer et le jeu relance tout seul après chaque révélation. Il s\'arrête sur un Mythic ou mieux pour que tu ne le rates jamais'] },
@@ -2222,6 +2232,7 @@
     if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
     if (me) noteAchievements(p.achievements);
     $('#p-body').innerHTML = `
+      ${(p.tops || []).length > 1 ? `<p class="panel-note top-marks-row"><span>Monthly trophies</span> ${p.tops.map(topHTML).join('')}</p>` : ''}
       <p class="panel-note profile-sub">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</p>
       <div class="tiles">
         ${tile('Rolls', fmt(p.rolls), p.rolls ? `${fmt(p.lifetime / p.rolls)} XP per roll` : '–')}
@@ -4731,7 +4742,7 @@
     currentView = 'leaderboard';
     const name = Store.player.name;
     const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins']];
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
