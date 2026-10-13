@@ -330,6 +330,13 @@
   })();
   // Chiffre affiché pendant que ça tourne : du code qui défile pour le skin Matrix, un chiffre sinon.
   const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph() : String((Math.random() * 10) | 0));
+  // Badges Top 1 / 5 / 10 : seulement pour les dix premiers du classement du mois, tant qu'ils y sont (voir api/_rank.js).
+  const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
+  const topHTML = top => {
+    const m = TOP_MARKS[top];
+    return m ? `<span class="top-mark ${m[2]}" title="${top === 1 ? 'First place on this month\'s leaderboard' : `In the top ${top} of this month's leaderboard`}">${m[0]} ${m[1]}</span>` : '';
+  };
+  const topEmoji = top => (TOP_MARKS[top] ? ` ${TOP_MARKS[top][0]}` : '');
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
     if (!a) return '';
@@ -1393,6 +1400,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13d', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges: only the ten best players of this month\'s leaderboard wear one, next to their name on the leaderboard, on their profile and in duels. Drop out of the top 10 and it\'s gone'], fr: ['Badges Top 1 👑, Top 5 🥈 et Top 10 🥉 : seuls les dix meilleurs joueurs du classement du mois en portent un, à côté de leur nom dans le classement, sur leur profil et en duel. Sors du top 10 et il disparaît'] },
     { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
     { id: '2026-10-13b', date: 'Oct 13, 2026', en: ['Auto-roll is no longer only for duels: turn it on under Generate and the game rolls again by itself after each reveal. It stops on a Mythic or better so you never miss it'], fr: ['Le tirage auto n\'est plus réservé aux duels : active-le sous Générer et le jeu relance tout seul après chaque révélation. Il s\'arrête sur un Mythic ou mieux pour que tu ne le rates jamais'] },
     { id: '2026-10-13a', date: 'Oct 13, 2026', en: ['Two new badges suggested by players: RTX 5090 🎮 (exactly 5090, 50,900 XP) and The Golden Era 🏆 (exactly 2016, 216,000 XP)'], fr: ['Deux nouveaux badges suggérés par des joueurs : RTX 5090 🎮 (exactement 5090, 50 900 XP) et The Golden Era 🏆 (exactement 2016, 216 000 XP)'] },
@@ -2209,7 +2217,7 @@
     const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const caption = x => `${p.name} · ${fullDate(x.t)}`;
     const collectionState = { filter: 'all', q: '' };
-    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
+    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${topHTML(p.top)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
     const addFriend = $('#p-friend');
     if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
     if (me) noteAchievements(p.achievements);
@@ -4383,7 +4391,7 @@
         body.innerHTML = '<div class="room-code-box" id="room-lobby"></div>';
       }
       const host = d.players.find(p => p.host);
-      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${p.me ? ' (you)' : ''}</span>`).join('')
+      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}</span>`).join('')
         + '<span class="badge-pill empty-seat">…</span>'.repeat(Math.max(0, d.size - d.players.length));
       const wait = !me ? '' : me.host
         ? (d.players.length > 1 ? 'Start now, or wait: the game starts by itself when it is full' : 'Waiting for players…')
@@ -4475,7 +4483,7 @@
         : `<span class="mono board-wins">${wins[i]} / ${d.target}</span><span class="panel-note board-xp">${compact(totals[i])} XP</span>`;
       const ready = d.status === 'playing' && p.ready && !Room.anim ? '<span class="ready-chip">ready</span>' : '';
       const who = p.bot ? `<span class="bot-name">🤖 ${esc(p.name)}</span>` : `<a class="player-link" href="${profileHref(p.name)}">${esc(p.name)}</a>`;
-      return `<div class="board-row${p.me ? ' me' : ''}" data-pi="${i}"><span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}" data-pi="${i}"><span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -4605,7 +4613,7 @@
         : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
-          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}</div>
+          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
           ${card}
           <div class="room-meta" id="rm-${j}">${a ? `${tierPill(a.tier)}<span class="ep-pill">${fmt(a.total)} XP</span>` : ''}</div>
           <div class="pill-row" id="rb-${j}">${a ? duelBadgesHTML(a, r.n[j]) : ''}</div>
@@ -4777,7 +4785,7 @@
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -4787,7 +4795,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>

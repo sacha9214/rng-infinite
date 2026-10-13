@@ -2024,4 +2024,32 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual([st1, st2], [1100, 2110]);
 }
 
+// ================================================================ 51. Badges Top 1 / 5 / 10 du classement du mois
+{
+  const month = new Date(Date.now()).toISOString().slice(0, 7), lb = `lb:month:${month}`;
+  const ids = Array.from({ length: 12 }, (_, i) => (0x5100 + i).toString(16).padStart(16, '0'));
+  // Alice en tête du mois, puis onze joueurs factices ; le 12e reste hors du top 10.
+  run([['DEL', lb], ['ZADD', lb, 9e12, alice.playerId], ...ids.flatMap((id, i) => [
+    ['ZADD', lb, 1e9 - i, id], ['HSET', 'names', id, `Topper${i}`], ['HSET', `best:month:${month}`, id, JSON.stringify({ n: 5, s: 1e9 - i, t: Date.now() })],
+  ])]);
+  run([['HSET', `best:month:${month}`, alice.playerId, JSON.stringify({ n: 5, s: 9e12, t: Date.now() })]]);
+  const board = async period => (await call(leaderboard, { url: `/api/leaderboard?period=${period}&me=${alice.playerId}` })).body;
+  const b = await board('month');
+  const tops = b.entries.slice(0, 12).map(e => e.top);
+  assert.deepEqual(tops, [1, 5, 5, 5, 5, 10, 10, 10, 10, 10, null, null], JSON.stringify(tops));
+  assert.ok(b.entries[0].me, 'Alice est 1re');
+  // Les autres onglets montrent le même badge du mois.
+  for (const per of ['day', 'all', 'xp', 'coins']) {
+    const mine = (await board(per)).entries.find(e => e.me);
+    if (mine) assert.equal(mine.top, 1, per);
+  }
+  const [aliceName] = run([['HGET', 'names', alice.playerId]]).map(x => x.result);
+  assert.equal((await call(profile, { url: `/api/profile?name=${encodeURIComponent(aliceName)}` })).body.top, 1, 'profil');
+  assert.equal((await call(profile, { url: '/api/profile?name=Topper10' })).body.top, null, '11e : pas de badge');
+  // Sortie du top 10 : le badge disparaît.
+  run([['ZADD', lb, 1, alice.playerId]]);
+  assert.equal((await call(profile, { url: `/api/profile?name=${encodeURIComponent(aliceName)}` })).body.top, null, 'hors du top 10');
+  run([['ZREM', lb, ...ids], ...ids.flatMap(id => [['HDEL', 'names', id], ['HDEL', `best:month:${month}`, id]])]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

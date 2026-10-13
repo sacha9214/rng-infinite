@@ -2946,3 +2946,8 @@ button.o-chip { cursor: pointer; }
 /* Tirage auto en solo : même interrupteur que dans les duels, sous le bouton */
 .hero .solo-auto { margin: .2rem auto .4rem; }
 .solo-auto-row { display: flex; justify-content: center; margin-top: -.2rem; }
+/* Badges Top 1 / 5 / 10 du classement du mois */
+.top-mark { display: inline-flex; align-items: center; gap: .2rem; margin-left: .35rem; padding: .05rem .45rem; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .02em; white-space: nowrap; vertical-align: middle; border: 1px solid transparent; }
+.top-mark.gold { color: #7a4b00; background: linear-gradient(120deg, #fde68a, #f59e0b, #fde68a); border-color: #d97706; box-shadow: 0 0 10px rgba(245, 158, 11, .45); }
+.top-mark.silver { color: #374151; background: linear-gradient(120deg, #f3f4f6, #cbd5e1, #f3f4f6); border-color: #94a3b8; }
+.top-mark.bronze { color: #5b2c0c; background: linear-gradient(120deg, #fed7aa, #d97706 60%, #fed7aa); border-color: #b45309; }
