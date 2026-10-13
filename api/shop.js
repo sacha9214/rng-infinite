@@ -85,7 +85,7 @@ module.exports = async (req, res) => {
         if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         const duplicate = st.owned.includes(won);
-        const refund = duplicate ? Math.round(box.price * Shop.DUPLICATE_REFUND) : 0;
+        const refund = duplicate ? Shop.duplicateRefund(box, won) : 0;
         const writes = [['HINCRBY', statsKey(playerId), 'spent', box.price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1]];
         if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
         await redis(writes);
