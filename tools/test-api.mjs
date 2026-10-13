@@ -1930,4 +1930,98 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await asOwner('delete', { id: old });
 }
 
+// ================================================================ 50. Pièces offertes entre amis : plafonds par cadeau et par jour
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js'));
+  const fr = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  const give = (who, name, amount) => fr(who, 'gift', { name, amount });
+  const coinsOf = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  const [g1, g2, g3, g4, g5, g6] = ['Gfgiver', 'Gfgetter', 'Gfnewbie', 'Gfstranger', 'Gfhelper', 'Gfextra'].map((name, i) => ({ playerId: `9${i}`.repeat(8), secret: `8${i}`.repeat(16), name }));
+  for (const g of [g1, g2, g3, g4, g5, g6]) { clock += 9000; const x = await call(roll, { method: 'POST', body: g }); assert.equal(x.status, 200, g.name + JSON.stringify(x.body)); }
+  for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 40], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
+  run([['HINCRBY', `stats:${g3.playerId}`, 'bonus', 3000]]); // riche, mais un seul tirage
+  // Amis : Gfgiver ↔ Gfgetter, Gfnewbie ↔ Gfgetter, Gfhelper ↔ Gfgetter, Gfextra ↔ Gfgetter. Gfstranger a seulement demandé.
+  for (const g of [g1, g3, g5, g6]) { await fr(g, 'add', { name: 'Gfgetter' }); await fr(g2, 'accept', { name: g.name }); }
+  await fr(g4, 'add', { name: 'Gfgetter' });
+  const day = new Date(Date.now()).toISOString().slice(0, 10);
+  run([['DEL', `gift:${day}`]]);
+  const before1 = await coinsOf(g1), before2 = await coinsOf(g2);
+  // L'état de la liste dit ce qui reste à donner.
+  r = await fr(g1, 'list');
+  assert.deepEqual([r.body.gift.min, r.body.gift.max, r.body.gift.sendDay, r.body.gift.receiveDay, r.body.gift.rolls, r.body.gift.left, r.body.gift.coins], [10, 500, 1000, 2000, 30, 1000, before1]);
+  // Un cadeau : débité d'un côté, crédité de l'autre, au même solde que la boutique.
+  r = await give(g1, 'gfgetter', 200);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.sent, { name: 'Gfgetter', amount: 200 });
+  assert.equal(r.body.gift.left, 800);
+  assert.equal(r.body.gift.coins, before1 - 200);
+  assert.equal(await coinsOf(g1), before1 - 200);
+  assert.equal(await coinsOf(g2), before2 + 200);
+  assert.ok(!JSON.stringify(r.body).includes(g2.playerId), 'aucun identifiant');
+  // Le classement des pièces lit le même solde.
+  run([['DEL', 'lbcache:coins']]);
+  const board = (await call(lbApi, { url: `/api/leaderboard?period=coins&me=${g2.playerId}` })).body;
+  assert.equal([...board.entries, board.mine].find(e => e && e.me).coins, before2 + 200);
+  // Celui qui reçoit voit le cadeau une seule fois, avec son nouveau solde.
+  r = await fr(g2, 'gifts');
+  assert.deepEqual(r.body.gifts.map(x => [x.name, x.amount]), [['Gfgiver', 200]]);
+  assert.equal(r.body.coins, before2 + 200);
+  assert.ok(!JSON.stringify(r.body).includes(g1.playerId), 'aucun identifiant');
+  assert.deepEqual((await fr(g2, 'gifts')).body.gifts, [], 'montré une seule fois');
+  assert.deepEqual((await fr(g2, 'list')).body.gift.received.map(x => [x.name, x.amount]), [['Gfgiver', 200]], 'reste dans les derniers cadeaux reçus');
+  // Refus : montants hors limites ou pas entiers, soi-même, pas ami (demande en attente), compte trop neuf, pas assez.
+  for (const bad of [9, 501, 50.5, '100', -10, null]) assert.equal((await give(g1, 'Gfgetter', bad)).status, 400, `montant ${bad}`);
+  assert.match((await give(g1, 'Gfgetter', 501)).body.error, /Give between 10 and 500 coins/);
+  assert.equal((await give(g1, 'Gfgiver', 100)).status, 422, 'pas à soi-même');
+  r = await give(g4, 'Gfgetter', 100);
+  assert.equal(r.status, 403); assert.match(r.body.error, /only give coins to your friends/);
+  r = await give(g1, 'Gfstranger', 100);
+  assert.equal(r.status, 403, 'pas ami');
+  r = await give(g3, 'Gfgetter', 100);
+  assert.equal(r.status, 422); assert.match(r.body.error, /Gifts unlock after 30 rolls \(you have 1\)/);
+  run([['HINCRBY', `stats:${g5.playerId}`, 'spent', (await coinsOf(g5)) - 50]]); // Gfhelper n'a plus que 50 pièces
+  r = await give(g5, 'Gfgetter', 100);
+  assert.equal(r.status, 422); assert.match(r.body.error, /Not enough coins: 50 more needed/);
+  assert.equal(await coinsOf(g5), 50, 'rien de débité');
+  assert.equal((await give({ ...g1, secret: '7'.repeat(32) }, 'Gfgetter', 100)).status, 403);
+  // Un achat (ou un cadeau) en cours : le verrou fait attendre puis refuse, sans rien débiter.
+  run([['SET', `shop:${g1.playerId}`, '1', 'PX', 60000]]);
+  assert.equal((await give(g1, 'Gfgetter', 100)).status, 429);
+  run([['DEL', `shop:${g1.playerId}`]]);
+  // Plafond de celui qui donne : 1 000 par jour (200 déjà donnés).
+  for (const a of [500, 300]) assert.equal((await give(g1, 'Gfgetter', a)).status, 200);
+  r = await give(g1, 'Gfgetter', 10);
+  assert.equal(r.status, 422); assert.match(r.body.error, /You already gave 1,000 coins today/);
+  assert.equal((await fr(g1, 'list')).body.gift.left, 0);
+  assert.equal(await coinsOf(g1), before1 - 1000);
+  // Plafond de celui qui reçoit : 2 000 par jour, tous amis confondus (1 000 déjà reçus).
+  run([['HINCRBY', `stats:${g5.playerId}`, 'bonus', 2000]]);
+  assert.equal((await give(g6, 'Gfgetter', 500)).status, 200);
+  assert.equal((await give(g5, 'Gfgetter', 400)).status, 200);
+  r = await give(g6, 'Gfgetter', 200);
+  assert.equal(r.status, 422); assert.match(r.body.error, /Gfgetter can receive 100 more coins today/);
+  const extraBefore = await coinsOf(g6);
+  assert.equal((await give(g6, 'Gfgetter', 100)).status, 200, 'juste le reste');
+  r = await give(g5, 'Gfgetter', 10);
+  assert.equal(r.status, 422); assert.match(r.body.error, /Gfgetter already received 2,000 coins today/);
+  assert.equal(await coinsOf(g6), extraBefore - 100, 'les refus ne débitent rien');
+  assert.equal(await coinsOf(g2), before2 + 2000);
+  assert.equal((await fr(g6, 'list')).body.gift.left, 400, 'le refus a rendu ses 200 au compteur de Gfextra (1 000 − 500 − 100)');
+  // Les cadeaux reçus arrivent tous, dans l'ordre ; la liste est bornée à 20.
+  r = await fr(g2, 'gifts');
+  assert.deepEqual(r.body.gifts.map(x => x.amount), [500, 300, 500, 400, 100]);
+  // Le lendemain (UTC), les compteurs repartent de zéro.
+  clock += 86400000;
+  assert.equal((await give(g1, 'Gfgetter', 100)).status, 200, 'nouveau jour');
+  assert.equal((await fr(g1, 'list')).body.gift.left, 900);
+  run([['DEL', `gifts:${g2.playerId}`]]);
+  for (let i = 0; i < 25; i++) run([['RPUSH', `gifts:${g2.playerId}`, JSON.stringify({ f: g1.playerId, a: 10, t: 1 })]]);
+  assert.equal((await give(g6, 'Gfgetter', 10)).status, 200);
+  assert.equal(run([['LLEN', `gifts:${g2.playerId}`]])[0].result, 20, '20 derniers seulement');
+  // Le serveur garde le compte des cadeaux de chacun.
+  const [st1, st2] = run([['HMGET', `stats:${g1.playerId}`, 'giftOut'], ['HMGET', `stats:${g2.playerId}`, 'giftIn']]).map(x => Number(x.result[0]));
+  assert.deepEqual([st1, st2], [1100, 2110]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

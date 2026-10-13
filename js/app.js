@@ -132,9 +132,9 @@
       return this.request('/api/site', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, ...extra }) });
     },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
-    friends(action = 'list', name) {
+    friends(action = 'list', name, extra = {}) {
       const p = Store.player;
-      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name }) });
+      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name, ...extra }) });
     },
     claimName(name) {
       const p = Store.player;
@@ -1393,6 +1393,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
     { id: '2026-10-13b', date: 'Oct 13, 2026', en: ['Auto-roll is no longer only for duels: turn it on under Generate and the game rolls again by itself after each reveal. It stops on a Mythic or better so you never miss it'], fr: ['Le tirage auto n\'est plus réservé aux duels : active-le sous Générer et le jeu relance tout seul après chaque révélation. Il s\'arrête sur un Mythic ou mieux pour que tu ne le rates jamais'] },
     { id: '2026-10-13a', date: 'Oct 13, 2026', en: ['Two new badges suggested by players: RTX 5090 🎮 (exactly 5090, 50,900 XP) and The Golden Era 🏆 (exactly 2016, 216,000 XP)'], fr: ['Deux nouveaux badges suggérés par des joueurs : RTX 5090 🎮 (exactement 5090, 50 900 XP) et The Golden Era 🏆 (exactement 2016, 216 000 XP)'] },
     { id: '2026-10-12b', date: 'Oct 12, 2026', en: ['Ideas 💡: when the creator answers your suggestion, you can now reply in the same conversation (no need to send a new one), and the bulb shows a red dot when there is an answer for you'], fr: ['Idées 💡 : quand le créateur répond à ta suggestion, tu peux maintenant lui répondre dans la même conversation (plus besoin d\'en envoyer une nouvelle), et l\'ampoule affiche un point rouge quand une réponse t\'attend'] },
@@ -3995,9 +3996,67 @@
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
       if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
+      if (btn.dataset.fr === 'gift') { openGift(btn.dataset.name); return; }
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();
+    checkGifts();
+  }
+  // Pièces offertes à un ami (api/friends.js, action « gift ») : le serveur vérifie tout (amitié, 30 tirages, 10 à 500
+  // pièces, 1 000 données et 2 000 reçues par jour, solde). La fenêtre affiche ce qu'il reste à donner aujourd'hui.
+  let friendsState = null;
+  function openGift(name) {
+    const g = friendsState && friendsState.gift;
+    if (!g) return;
+    const locked = g.myRolls < g.rolls, most = Math.min(g.max, g.left, Math.max(0, g.coins));
+    const start = Math.min(100, most) >= g.min ? Math.min(100, most) : g.min;
+    openModal(`
+      <h2>Give coins to <span data-no-i18n>${esc(name)}</span></h2>
+      <p class="panel-note" style="margin:-.3rem 0 1rem">From ${g.min} to ${g.max} coins per gift. Up to ${fmt(g.sendDay)} a day, and a friend can receive up to ${fmt(g.receiveDay)} a day.</p>
+      <form id="gift-form">
+        <div class="chips-row gift-presets">${[50, 100, 250, 500].map(v => `<button type="button" class="chip${v === start ? ' on' : ''}" data-amt="${v}"${v > most ? ' disabled' : ''}>🪙 ${v}</button>`).join('')}</div>
+        <input class="input" id="gift-amount" type="number" inputmode="numeric" min="${g.min}" max="${g.max}" step="1" value="${start}" aria-label="Amount" style="width:100%">
+        <p class="panel-note gift-left">${locked ? `🔒 Gifts unlock after ${g.rolls} rolls (you have ${fmt(g.myRolls)})` : g.left > 0 ? `You can still give ${fmt(g.left)} coins today` : 'You gave all you can today: come back tomorrow'} · You have 🪙 ${fmt(g.coins)}</p>
+        <p class="field-error" id="gift-error" hidden></p>
+        <div class="actions"><button class="btn-roll small" type="submit"${locked || !g.left ? ' disabled' : ''}>Send gift</button></div>
+      </form>`, m => {
+      const input = m.querySelector('#gift-amount'), errorEl = m.querySelector('#gift-error'), submit = m.querySelector('#gift-form button[type=submit]');
+      const sync = () => m.querySelectorAll('[data-amt]').forEach(c => c.classList.toggle('on', Number(c.dataset.amt) === Number(input.value)));
+      m.querySelector('.gift-presets').addEventListener('click', e => { const c = e.target.closest('[data-amt]'); if (!c || c.disabled) return; input.value = c.dataset.amt; sync(); input.focus(); });
+      input.addEventListener('input', sync);
+      if (!locked && g.left) input.focus();
+      m.querySelector('#gift-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const amount = Number(input.value);
+        if (!Number.isInteger(amount) || amount < g.min || amount > g.max) { errorEl.textContent = `Give between ${g.min} and ${g.max} coins`; errorEl.hidden = false; input.focus(); return; }
+        submit.disabled = true;
+        try {
+          const state = await Online.friends('gift', name, { amount });
+          Store.setSetting('coins', state.gift.coins);
+          closeModal();
+          toast(`🎁 You sent ${fmt(state.sent.amount)} coins to ${state.sent.name}`, 4000, 'achv');
+          Sound.play('lock', { i: 3 });
+          if (currentView === 'friends') drawFriends(state);
+        } catch (err) {
+          submit.disabled = false;
+          errorEl.textContent = [400, 403, 404, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again';
+          errorEl.hidden = false;
+        }
+      });
+    });
+  }
+  // Cadeaux reçus depuis la dernière fois : annoncés une seule fois (le serveur les marque vus), au chargement du jeu
+  // et à l'ouverture des amis. Le solde gardé sur l'appareil suit.
+  async function checkGifts() {
+    if (!Store.player.name) return;
+    try {
+      const r = await Online.friends('gifts');
+      if (!r.gifts || !r.gifts.length) return;
+      if (r.coins != null) Store.setSetting('coins', r.coins);
+      const total = r.gifts.reduce((x, g) => x + g.amount, 0);
+      toast(r.gifts.length === 1 ? `🎁 ${r.gifts[0].name} sent you ${fmt(total)} coins` : `🎁 ${r.gifts.length} gifts from your friends: +${fmt(total)} coins`, 6000, 'achv');
+      Sound.play('lock', { i: 5 });
+    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
   }
   async function friendAction(action, name) {
     if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
@@ -4020,7 +4079,9 @@
       try { state = await Online.friends(); } catch (err) { body.innerHTML = '<div class="empty">Friends unavailable right now.</div>'; return; }
       if (currentView !== 'friends' || !$('#f-body')) return;
     }
+    friendsState = state;
     const btn = (action, name, label, cls = 'btn') => `<button class="${cls}" data-fr="${action}" data-name="${esc(name)}">${label}</button>`;
+    const received = (state.gift && state.gift.received) || [];
     setHTML(body, `
       ${state.incoming.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Friend requests</h3></div>
@@ -4033,12 +4094,16 @@
             <span class="live-dot${f.room ? ' on' : ''}"></span>
             <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}</span></span>
-            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
+            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
       ${state.outgoing.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Requests sent</h3></div>
           ${state.outgoing.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('cancel', n, 'Cancel')}</span></div>`).join('')}
+        </div>` : ''}
+      ${received.length ? `
+        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Gifts received</h3></div>
+          ${received.map(x => `<div class="friend-row"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a><span class="panel-note">🪙 ${fmt(x.amount)} · ${relTime(x.t)}</span></div>`).join('')}
         </div>` : ''}`);
     if (!document.hidden) friendsTimer = setTimeout(() => { if (currentView === 'friends') drawFriends(); }, 15000);
   }
@@ -4899,6 +4964,8 @@
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
+  // Pièces offertes par un ami depuis la dernière visite (la page Amis s'en charge elle-même).
+  if (Store.player.name && currentView !== 'friends') setTimeout(checkGifts, 1500);
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
 
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.

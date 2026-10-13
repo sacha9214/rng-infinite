@@ -2164,6 +2164,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .add-friend { font-size: .7rem; vertical-align: middle; margin-left: .5rem; }
 @media (max-width: 560px) { .nav a span { display: none; } }
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
+/* Pièces offertes à un ami (2026-10-13) : fenêtre « Give coins » ; sur téléphone, le bouton ne garde que 🎁. */
+.gift-presets { margin-bottom: .6rem; }
+.gift-presets .chip:disabled { opacity: .4; cursor: not-allowed; }
+.gift-left { margin: .5rem 0 0; }
+@media (max-width: 560px) { .friend-actions .gift-label { display: none; } }
 .case-cell { justify-content: flex-end; min-height: 5.2rem; }
 .case-cell .num-card.sm { font-size: .8rem; max-width: 5.4rem; }
 
