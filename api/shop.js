@@ -3,6 +3,7 @@
 // POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
+// POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
 const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
 const crypto = require('node:crypto');
@@ -13,6 +14,14 @@ const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
 const ownedEmotesKey = id => `emotes:${id}`; // émotes spéciales achetées (lu aussi par api/room.js)
 const ownedButtonsKey = id => `btns:${id}`; // boutons achetés à part ; le hash "btns" retient le bouton choisi
+// Codes cadeaux (Joueur et réglages) : chaque code ne sert qu'une fois par joueur, après 30 tirages comme les cadeaux
+// et le casino (un compte neuf ne sert pas à les ramasser). Majuscules/minuscules et espaces ignorés.
+// Pour en ajouter un : une ligne ici, puis déployer. codes:<id> = les codes déjà utilisés par ce joueur.
+const CODES = {
+  SACHA: { coins: 200 },
+};
+const CODE_MIN_ROLLS = 30;
+const usedCodesKey = id => `codes:${id}`;
 
 async function state(id) {
   const stats = await readStats(id);
@@ -173,6 +182,19 @@ module.exports = async (req, res) => {
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
       }
+    }
+    if (body.action === 'redeem') {
+      const code = String(body.code || '').toUpperCase().replace(/\s+/g, '').slice(0, 32);
+      const prize = Object.prototype.hasOwnProperty.call(CODES, code) ? CODES[code] : null;
+      if (!prize) return send(res, 404, { error: 'This code does not exist' });
+      const stats = await readStats(playerId);
+      const rolls = Number(stats.rolls) || 0;
+      if (rolls < CODE_MIN_ROLLS) return send(res, 422, { error: `Codes unlock after ${CODE_MIN_ROLLS} rolls (you have ${rolls})` });
+      // SADD répond 1 la première fois seulement : deux envois simultanés ne créditent qu'une fois.
+      const [fresh] = await redis([['SADD', usedCodesKey(playerId), code]]);
+      if (Number(fresh) !== 1) return send(res, 409, { error: 'You already used this code' });
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ['HINCRBY', 'codes:count', code, 1]]);
+      return send(res, 200, { ...(await state(playerId)), redeemed: { code, coins: prize.coins } });
     }
     if (!skin) return send(res, 400, { error: 'Unknown skin' });
 
