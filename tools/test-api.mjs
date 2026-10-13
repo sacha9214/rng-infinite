@@ -2147,4 +2147,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(seen.size > 5 && [...seen].every(id => Shop.byId.has(id) && !Shop.byId.get(id).premium && !Shop.byId.get(id).caseOnly), [...seen].join());
 }
 
+// ================================================================ 53. Codes cadeaux : une fois par joueur, après 30 tirages
+{
+  const redeem = (who, code) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'redeem', code } });
+  const coins = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  const key = `stats:${alice.playerId}`;
+  const [rolls0] = run([['HGET', key, 'rolls']]).map(x => x.result);
+  run([['HSET', key, 'rolls', 5], ['DEL', `codes:${alice.playerId}`]]);
+  let r = await redeem(alice, 'SACHA');
+  assert.equal(r.status, 422); assert.match(r.body.error, /Codes unlock after 30 rolls \(you have 5\)/);
+  assert.equal(run([['SISMEMBER', `codes:${alice.playerId}`, 'SACHA']])[0].result, 0, 'refusé : pas consommé');
+  run([['HSET', key, 'rolls', 40]]);
+  assert.equal((await redeem(alice, 'NOPE')).status, 404);
+  const before = await coins(alice);
+  r = await redeem(alice, ' sa cha ');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.redeemed, { code: 'SACHA', coins: 200 });
+  assert.equal(r.body.coins, before + 200);
+  assert.equal(await coins(alice), before + 200, 'le même solde que la boutique');
+  r = await redeem(alice, 'sacha');
+  assert.equal(r.status, 409); assert.equal(await coins(alice), before + 200, 'une seule fois');
+  // Deux envois simultanés : un seul crédit.
+  run([['DEL', `codes:${alice.playerId}`]]);
+  const both = await Promise.all([redeem(alice, 'SACHA'), redeem(alice, 'SACHA')]);
+  assert.deepEqual(both.map(x => x.status).sort(), [200, 409]);
+  assert.equal(await coins(alice), before + 400);
+  assert.equal((await call(shopApi, { method: 'POST', body: { playerId: alice.playerId, secret: '0'.repeat(32), action: 'redeem', code: 'SACHA' } })).status, 403);
+  run([['HSET', key, 'rolls', rolls0 || 0], ['HINCRBY', key, 'bonus', -400]]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

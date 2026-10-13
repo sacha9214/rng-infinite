@@ -1033,6 +1033,7 @@
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
+      ${Store.player.name ? `<div class="field"><label for="set-code">Redeem a code</label><form class="code-form" id="set-code-form"><input class="input" id="set-code" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE"><button class="btn" type="submit">Redeem</button></form><span class="panel-note">Got a code? Enter it to get its prize. Each code works once.</span></div>` : ''}
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
         <button class="btn" id="set-import">Import</button>
@@ -1074,6 +1075,23 @@
         });
       });
       m.querySelector('#set-done').addEventListener('click', closeModal);
+      // Code cadeau : vérifié et crédité par le serveur (api/shop.js), une fois par joueur.
+      const codeForm = m.querySelector('#set-code-form');
+      if (codeForm) codeForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const input = m.querySelector('#set-code'), btn = codeForm.querySelector('button');
+        if (!input.value.trim()) return;
+        btn.disabled = true;
+        try {
+          const st = await Online.shopAction('redeem', undefined, { code: input.value });
+          Store.setSetting('coins', st.coins);
+          input.value = '';
+          toast(`🎁 Code ${st.redeemed.code}: +${fmt(st.redeemed.coins)} coins!`, 5000, 'achv');
+          Sound.play('reveal', { small: 1 });
+        } catch (err) {
+          toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again');
+        } finally { btn.disabled = false; }
+      });
       m.querySelector('#set-export').addEventListener('click', exportHistory);
       const file = m.querySelector('#set-file');
       m.querySelector('#set-import').addEventListener('click', () => file.click());
@@ -1437,6 +1455,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13i', date: 'Oct 13, 2026', en: ['Gift codes: enter a code in Player & settings to get its prize (each code works once, after 30 rolls). Try SACHA for 200 coins'], fr: ['Codes cadeaux : entre un code dans Joueur et réglages pour gagner son prix (chaque code marche une fois, après 30 tirages). Essaie SACHA pour 200 pièces'] },
     { id: '2026-10-13h', date: 'Oct 13, 2026', en: ['New skin: Bakery 🥐 — digits of golden crust with chocolate chips, and steam rising at the end (1,000 coins)'], fr: ['Nouveau skin : Bakery 🥐 — des chiffres en croûte dorée aux pépites de chocolat, et de la vapeur qui monte à la fin (1 000 pièces)'] },
     { id: '2026-10-13g', date: 'Oct 13, 2026', en: ['New legendary skin: Infinity ♾️ — a living nebula and a comet tracing an infinity loop around your number. Only from the Premium Case, 1 chance in 200'], fr: ['Nouveau skin légendaire : Infinity ♾️ — une nébuleuse vivante et une comète qui trace un infini autour de ton nombre. Seulement dans la caisse Premium, 1 chance sur 200'] },
     { id: '2026-10-13f', date: 'Oct 13, 2026', en: ['Performance mode (Player & settings): fewer animations and effects for tablets and devices that lag'], fr: ['Mode performance (Joueur et réglages) : moins d\'animations et d\'effets pour les tablettes et appareils qui rament'] },

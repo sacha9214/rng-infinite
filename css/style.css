@@ -3034,3 +3034,6 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 .idea-row[data-status="planned"] { border-left: 3px solid #f59e0b; padding-left: .7rem; }
 .idea-row[data-status="done"] { border-left: 3px solid #22c55e; padding-left: .7rem; }
 .idea-row[data-status="declined"] .idea-body { color: var(--prose-3); }
+/* Code cadeau (Joueur et réglages) */
+.code-form { display: flex; gap: .4rem; }
+.code-form .input { flex: 1; min-width: 0; font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
