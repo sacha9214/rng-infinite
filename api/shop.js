@@ -191,6 +191,8 @@ module.exports = async (req, res) => {
         const st = await state(playerId);
         if (!st.owned.includes(skin.id)) {
           if (skin.hidden) return send(res, 422, { error: 'This skin is not for sale' });
+          // Réservé à une caisse (Infinity) : il ne s'obtient qu'en l'ouvrant.
+          if (skin.caseOnly) return send(res, 422, { error: `This skin only comes from the ${Shop.caseById.get(skin.caseOnly).name}` });
           if (st.coins < skin.price) return send(res, 422, { error: `Not enough coins: ${skin.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', skin.price],

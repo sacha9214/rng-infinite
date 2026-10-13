@@ -2081,4 +2081,70 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['DEL', 'topbest', `topawards:${alice.playerId}`, ...ids.map(id => `topawards:${id}`), `lb:month:${month2}`], ...ids.flatMap(id => [['HDEL', 'names', id], ['HDEL', `best:month:${month}`, id]])]);
 }
 
+// ================================================================ 52. Skins Infinity (caisse Premium seulement, 0,5 %) et Bakery
+{
+  const shopPost = (who, extra) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, ...extra } });
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const baker = { playerId: 'e8'.repeat(8), secret: 'f8'.repeat(16), name: 'Baker' };
+  let r = await call(roll, { method: 'POST', body: baker });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  run([['HINCRBY', `stats:${baker.playerId}`, 'bonus', 100000 - (await state(baker)).coins]]);
+  // Catalogue : Infinity est rangé avec les légendaires, Legendary, jamais vendu ; Bakery est un skin comme les autres.
+  const inf = Shop.byId.get('infinity'), bak = Shop.byId.get('bakery');
+  assert.ok(inf && inf.caseOnly === 'premium' && inf.premium && !inf.hidden && inf.chance === 0.005);
+  assert.equal(Shop.rarityOf('infinity').name, 'Legendary');
+  assert.ok(bak && bak.price === 1000 && !bak.premium && !bak.caseOnly);
+  // Infinity ne s'achète pas, avec toutes les pièces du monde ; l'équiper sans l'avoir est refusé.
+  r = await shopPost(baker, { action: 'buy', skin: 'infinity' });
+  assert.deepEqual([r.status, r.body.error], [422, 'This skin only comes from the Premium Case']);
+  assert.equal((await state(baker)).coins, 100000, 'rien de dépensé');
+  assert.ok(!(await state(baker)).owned.includes('infinity'));
+  assert.equal((await shopPost(baker, { action: 'equip', skin: 'infinity' })).status, 422);
+  assert.equal((await shopPost(baker, { action: 'button', button: 'infinity' })).status, 422, 'son bouton vient avec le skin');
+  // Bakery s'achète (et s'équipe) normalement.
+  r = await shopPost(baker, { action: 'buy', skin: 'bakery' });
+  assert.deepEqual([r.status, r.body.skin, r.body.coins], [200, 'bakery', 99000], JSON.stringify(r.body));
+  // Chances : Infinity à 0,5 % exactement dans la caisse Premium, en dernier ; les autres gardent leurs poids 1 / prix.
+  const premium = Shop.caseById.get('premium'), starter = Shop.caseById.get('starter'), odds = Shop.caseOdds(premium);
+  assert.ok(Math.abs(odds.reduce((x, o) => x + o.p, 0) - 1) < 1e-9);
+  assert.deepEqual(odds[odds.length - 1], { id: 'infinity', p: 0.005 });
+  assert.equal(odds.filter(o => o.id === 'infinity').length, 1);
+  const chrome = odds.find(o => o.id === 'chrome'), rainbow = odds.find(o => o.id === 'rainbow');
+  assert.ok(Math.abs(chrome.p / rainbow.p - 5000 / 800) < 1e-9, 'poids 1 / prix entre les autres');
+  assert.ok(odds.some(o => o.id === 'bakery'), 'Bakery (1 000) est dans la caisse Premium');
+  assert.ok(!Shop.casePool(starter).some(k => k.id === 'infinity') && !Shop.caseOdds(starter).some(o => o.id === 'infinity'), 'jamais dans la Starter');
+  // Tirage : la dernière tranche (0,995 à 1) donne Infinity, juste avant non.
+  assert.equal(Shop.drawCase(premium, 0.9999999), 'infinity');
+  assert.equal(Shop.drawCase(premium, 0.9951), 'infinity');
+  assert.notEqual(Shop.drawCase(premium, 0.9949), 'infinity');
+  for (let i = 0; i < 2000; i++) assert.notEqual(Shop.drawCase(starter, i / 2000), 'infinity');
+  // Gagné dans une caisse : possédé, équipable ; une seconde fois, la moitié du prix est rendue.
+  const realRandom = crypto.randomInt;
+  crypto.randomInt = () => 2 ** 32 - 1; // le tirage du serveur tombe tout au bout : Infinity
+  try {
+    r = await shopPost(baker, { action: 'case', case: 'premium' });
+    assert.deepEqual([r.status, r.body.won, r.body.duplicate, r.body.refund, r.body.coins], [200, 'infinity', false, 0, 99000 - 900], JSON.stringify(r.body));
+    assert.ok(r.body.owned.includes('infinity'));
+    r = await shopPost(baker, { action: 'case', case: 'premium' });
+    assert.deepEqual([r.body.won, r.body.duplicate, r.body.refund, r.body.coins], ['infinity', true, 450, 99000 - 900 - 450]);
+  } finally {
+    crypto.randomInt = realRandom;
+  }
+  r = await shopPost(baker, { action: 'equip', skin: 'infinity' });
+  assert.deepEqual([r.status, r.body.skin], [200, 'infinity']);
+  assert.equal((await shopPost(baker, { action: 'button', button: 'infinity' })).status, 200, 'et son bouton');
+  r = await shopPost(baker, { action: 'buy', skin: 'infinity' });
+  assert.deepEqual([r.status, r.body.skin], [200, 'infinity'], 'déjà possédé : « acheter » ne fait que l\'équiper, sans rien dépenser');
+  assert.equal(r.body.coins, 99000 - 900 - 450);
+  // Les bots ne portent jamais Infinity (ni un skin légendaire).
+  const seen = new Set();
+  for (let i = 0; i < 6; i++) {
+    r = await roomPost(baker, 'create', { size: 10, mode: 'rounds', target: 1, bots: 9 });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    r.body.players.filter(p => p.bot).forEach(p => seen.add(p.skin));
+    await roomPost(baker, 'leave', { code: r.body.code });
+  }
+  assert.ok(seen.size > 5 && [...seen].every(id => Shop.byId.has(id) && !Shop.byId.get(id).premium && !Shop.byId.get(id).caseOnly), [...seen].join());
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

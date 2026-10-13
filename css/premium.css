@@ -158,6 +158,85 @@
 .side-blackhole::after { animation: bh-orbit 6s linear infinite; }
 @keyframes bh-orbit { from { transform: rotate(0) translateX(.3rem) rotate(0); } to { transform: rotate(360deg) translateX(.3rem) rotate(-360deg); } }
 
+/* ================================================================== ♾️ Infinity — une galaxie pliée en boucle sans fin
+   Seulement dans la caisse Premium (0,5 %). Une nébuleuse profonde qui change lentement de couleur derrière les
+   chiffres et dedans (étoiles comprises), un liseré irisé qui tourne autour de la carte ; le ∞ de lumière qui
+   l'entoure à la révélation est dans js/skinfx.js. */
+@property --inf-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.num-card.skin-infinity {
+  border: 2px solid transparent; border-radius: .7rem; color: #fff;
+  background:
+    radial-gradient(1px 1px at 7% 24%, #fff, transparent), radial-gradient(1px 1px at 93% 72%, #fff, transparent), radial-gradient(1.2px 1.2px at 22% 86%, #a5f3fc, transparent),
+    radial-gradient(1px 1px at 78% 12%, #fde68a, transparent), radial-gradient(1.2px 1.2px at 58% 92%, #f5d0fe, transparent), radial-gradient(1px 1px at 40% 8%, #fff, transparent),
+    linear-gradient(135deg, #070322 0%, #12063a 48%, #04021a 100%) padding-box,
+    conic-gradient(from var(--inf-a), #22d3ee, #a855f7, #ec4899, #fbbf24, #a855f7, #22d3ee) border-box;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 0 22px rgba(168, 85, 247, .55), 0 0 56px rgba(34, 211, 238, .22), 0 12px 22px rgba(0, 0, 0, .6);
+  animation: inf-turn 7s linear infinite;
+}
+@keyframes inf-turn { to { --inf-a: 360deg; } }
+/* La nébuleuse : trois nuages qui dérivent et changent de teinte, très lentement, derrière les chiffres. */
+.num-card.skin-infinity::before {
+  content: ''; position: absolute; inset: -40% -20%; z-index: 0; pointer-events: none; border-radius: inherit;
+  background:
+    radial-gradient(ellipse 34% 48% at 30% 42%, rgba(236, 72, 153, .5), transparent 70%),
+    radial-gradient(ellipse 36% 52% at 70% 58%, rgba(34, 211, 238, .42), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(124, 58, 237, .6), transparent 72%),
+    radial-gradient(ellipse 22% 26% at 52% 30%, rgba(251, 191, 36, .22), transparent 70%);
+  animation: inf-nebula 16s ease-in-out infinite alternate;
+}
+@keyframes inf-nebula {
+  0% { transform: translate(-6%, 2%) rotate(-6deg) scale(1); filter: hue-rotate(0deg); }
+  50% { transform: translate(4%, -3%) rotate(4deg) scale(1.08); filter: hue-rotate(-40deg); }
+  100% { transform: translate(7%, 3%) rotate(10deg) scale(.96); filter: hue-rotate(35deg); }
+}
+/* Les chiffres : la même nébuleuse en dedans, semée d'étoiles, dont les couleurs glissent sans fin. */
+.skin-infinity .slot {
+  position: relative; z-index: 1; color: transparent; padding: 0 .05em; margin: 0 -.05em;
+  background:
+    radial-gradient(circle, #fff 0 .018em, transparent .034em) 0 0 / .37em .41em,
+    radial-gradient(circle, rgba(255, 255, 255, .75) 0 .014em, transparent .028em) .13em .21em / .53em .47em,
+    linear-gradient(115deg, #67e8f9, #a78bfa 17%, #f0abfc 33%, #fff1c1 45%, #f472b6 58%, #818cf8 76%, #67e8f9) 0 0 / 3em 100%;
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 .035em 0 rgba(24, 6, 70, .95)) drop-shadow(0 0 .14em rgba(168, 85, 247, .85));
+  animation: inf-ink 10s linear infinite;
+}
+.skin-infinity .slot:nth-child(2n) { animation-delay: -3.3s; }
+.skin-infinity .slot:nth-child(3n) { animation-delay: -6.6s; }
+@keyframes inf-ink { to { background-position: .37em -.82em, -.53em .68em, -3em 0; } }
+/* Pendant le tirage : le chiffre tourbillonne comme une galaxie et change de couleur. */
+.skin-infinity .slot.spinning { opacity: .9; animation: inf-swirl .22s var(--ease-in-out) infinite alternate, inf-ink 1.2s linear infinite; }
+@keyframes inf-swirl {
+  from { transform: rotate(-9deg) scale(.9); filter: blur(.8px) drop-shadow(0 0 .2em rgba(34, 211, 238, .9)); }
+  to { transform: rotate(9deg) scale(1.05); filter: blur(.2px) drop-shadow(0 0 .3em rgba(236, 72, 153, .9)); }
+}
+/* Il se pose : un nuage de lumière qui se condense en chiffre, et une étoile s'allume à son coin. */
+.skin-infinity .slot.revealed { animation: inf-form .55s var(--ease-out) backwards, inf-ink 10s .55s linear infinite; }
+@keyframes inf-form {
+  0% { transform: scale(1.12) rotate(-14deg); filter: blur(2px) brightness(2.6) drop-shadow(0 0 .4em #fff); }
+  45% { transform: scale(.97) rotate(2deg); filter: blur(0) brightness(1.6) drop-shadow(0 0 .3em #f0abfc); }
+  100% { transform: none; }
+}
+.skin-infinity .slot.revealed::after {
+  content: '✦'; position: absolute; top: .02em; right: -.08em; font-size: .34em; line-height: 1; color: #fff; pointer-events: none;
+  -webkit-text-fill-color: #fff; text-shadow: 0 0 .3em #fff, 0 0 .8em #a78bfa; opacity: 0;
+  animation: inf-glint .8s .1s var(--ease-out) backwards;
+}
+@keyframes inf-glint { 0% { transform: scale(0) rotate(0); opacity: 1; } 40% { transform: scale(1.4) rotate(90deg); opacity: 1; } 100% { transform: scale(.4) rotate(180deg); opacity: 0; } }
+.skin-infinity .slot.ghost { opacity: .3; }
+.side-infinity { --side-border: #a78bfa; --side-glow: 0 0 20px rgba(168, 85, 247, .38), 0 0 40px rgba(34, 211, 238, .16); --side-ink: #e9d5ff; --side-ink-glow: 0 0 6px #fff, 0 0 14px #a855f7;
+  --side-bg: radial-gradient(1.5px 1.5px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 80% 28%, #fff, transparent), radial-gradient(1.5px 1.5px at 28% 82%, #a5f3fc, transparent), radial-gradient(1px 1px at 90% 78%, #fde68a, transparent), radial-gradient(1px 1px at 56% 10%, #f5d0fe, transparent),
+    radial-gradient(60% 50% at 22% 32%, rgba(236, 72, 153, .22), transparent), radial-gradient(60% 50% at 80% 76%, rgba(34, 211, 238, .2), transparent), radial-gradient(70% 60% at 50% 50%, rgba(124, 58, 237, .22), transparent), linear-gradient(rgba(18, 6, 58, .3), rgba(18, 6, 58, .3));
+  --deco-a: '∞'; --deco-b: '✦ ✧'; }
+.side-infinity::before { font-size: 1.5rem; letter-spacing: 0; animation: inf-deco 4s ease-in-out infinite; }
+.side-infinity::after { animation: gold-sparkle 2s ease-in-out infinite; }
+@keyframes inf-deco { 0%, 100% { opacity: .55; filter: hue-rotate(0deg); transform: scale(1); } 50% { opacity: 1; filter: hue-rotate(120deg); transform: scale(1.12); } }
+/* Petites cartes (caisses) et duels à 3 joueurs et plus : la nébuleuse s'immobilise. */
+.num-card.sm.skin-infinity::before, .room-stage.many .num-card.skin-infinity::before { animation: none; }
+.room-stage.many .num-card.skin-infinity { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .num-card.skin-infinity, .num-card.skin-infinity::before, .skin-infinity .slot, .skin-infinity .slot.revealed::after { animation: none; }
+}
+
 /* Duels à 3 joueurs et plus : la pluie d'orage s'arrête (décor permanent). */
 .room-stage.many .num-card.skin-storm::before { animation: none; }
 
@@ -169,6 +248,8 @@
 .skin-tile.premium .skin-name b { font-size: .92rem; }
 .skin-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .4rem; }
 .skin-actions .btn.ghost { font-size: .68rem; padding-inline: .6rem; }
+/* Skin réservé à une caisse (Infinity) : à la place du prix, la caisse et sa chance. */
+.skin-actions .btn.case-only { max-width: 100%; line-height: 1.35; font-size: .62rem; padding-inline: .55rem; border-color: rgba(234, 179, 8, .45); }
 /* La scène de l'aperçu : assez de place autour de la carte pour ce qui en jaillit. */
 .modal:has(.skin-preview) { max-width: min(46rem, 96vw); width: 46rem; overflow: hidden; }
 .skin-preview { position: relative; display: grid; place-items: center; height: 17rem; margin: .4rem -.4rem .2rem; }

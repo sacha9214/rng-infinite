@@ -43,6 +43,12 @@
     { id: 'storm', name: 'Storm', emoji: '⚡', price: 10000, desc: 'Lightning strikes every digit', premium: true },
     { id: 'dragon', name: 'Dragon', emoji: '🐉', price: 12500, desc: 'A dragon circles your number and forges it', premium: true },
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
+    // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
+    { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
+    // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
+    // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
+    // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
+    { id: 'infinity', name: 'Infinity', emoji: '♾️', price: 20000, desc: 'A galaxy folded into an endless loop', premium: true, caseOnly: 'premium', chance: 0.005 },
   ];
   SKINS.sort((a, b) => a.price - b.price); // boutique rangée du moins cher au plus cher (tri stable)
   // Skin du créateur : hors boutique, donné par le serveur au seul compte Owner (rubis et signature en béryl rouge).
@@ -67,19 +73,23 @@
   const balance = st => earned(st) + num(st.bonus) - num(st.spent);
 
   // Caisses : un skin tiré au hasard par le serveur dans la liste de la caisse ; plus un skin est cher, plus il est rare
-  // (poids = 1 / prix). Déjà possédé : la moitié du prix de la caisse est rendue.
+  // (poids = 1 / prix). Déjà possédé : la moitié du prix de la caisse est rendue. Un skin réservé à une caisse
+  // (caseOnly) n'y entre pas par son prix mais avec sa chance fixe ; les autres se partagent le reste.
   const CASES = [
     { id: 'starter', name: 'Starter Case', emoji: '📦', price: 250, desc: 'A skin worth 200 to 800 coins', min: 200, max: 800 },
-    { id: 'premium', name: 'Premium Case', emoji: '🎁', price: 900, desc: 'A skin worth 800 to 5,000 coins', min: 800, max: 5000 },
+    { id: 'premium', name: 'Premium Case', emoji: '🎁', price: 900, desc: 'A skin worth 800 to 5,000 coins, or the rare Infinity', min: 800, max: 5000 },
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
-  const casePool = c => SKINS.filter(s => s.price >= c.min && s.price <= c.max);
+  const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);
+  const casePool = c => SKINS.filter(s => !s.caseOnly && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   const DUPLICATE_REFUND = 0.5;
-  // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage.
+  // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
+  // viennent en dernier (les plus rares).
   function caseOdds(c) {
-    const pool = casePool(c);
+    const fixed = caseOnly(c), pool = casePool(c).filter(s => !s.caseOnly);
+    const rest = 1 - fixed.reduce((x, s) => x + s.chance, 0);
     const total = pool.reduce((x, s) => x + 1 / s.price, 0);
-    return pool.map(s => ({ id: s.id, p: 1 / s.price / total }));
+    return pool.map(s => ({ id: s.id, p: (rest / s.price) / total })).concat(fixed.map(s => ({ id: s.id, p: s.chance })));
   }
   // Tirage : u uniforme dans [0, 1) fourni par l'appelant (crypto côté serveur).
   function drawCase(c, u) {

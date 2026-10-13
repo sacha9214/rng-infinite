@@ -509,6 +509,45 @@
 .btn-roll.gen-blackhole:hover { letter-spacing: .14em; }
 .btn-roll.gen-blackhole:active { transform: scale(.94, .9); letter-spacing: .04em; }
 
+/* Bakery — une miche dorée : croûte cuite, trois entailles de boulanger, lettres crème ; elle gonfle au survol. */
+.btn-roll.gen-bakery {
+  overflow: hidden; border-radius: 999px; border: 2px solid #8a4513; color: #fff7e6;
+  background:
+    radial-gradient(ellipse 50% 40% at 35% 22%, rgba(255, 236, 190, .75), transparent 70%),
+    radial-gradient(ellipse 2px 1.4px at 22% 70%, #fff3d0 60%, transparent), radial-gradient(ellipse 2px 1.4px at 74% 30%, #fff3d0 60%, transparent), radial-gradient(ellipse 2px 1.4px at 88% 66%, #fff3d0 60%, transparent),
+    linear-gradient(180deg, #f6c46e 0%, #e09a45 40%, #c2702a 78%, #9a5219 100%);
+  text-shadow: 0 1px 0 #6b3410, 0 0 6px rgba(107, 52, 16, .5);
+  --gs: 0 .3em 0 #6b3410, 0 .55em 1em rgba(181, 101, 29, .4), inset 0 2px 0 rgba(255, 236, 190, .6), inset 0 -4px 8px rgba(107, 52, 16, .45);
+  --gs-h: 0 .34em 0 #6b3410, 0 .7em 1.3em rgba(245, 158, 11, .5), inset 0 2px 0 rgba(255, 236, 190, .6), inset 0 -4px 8px rgba(107, 52, 16, .45);
+  --gs-a: 0 .06em 0 #6b3410, inset 0 3px 8px rgba(107, 52, 16, .6);
+  --press: .24em; --edge: .3em;
+  transition: transform .26s var(--ease-snap), box-shadow .16s ease;
+}
+.btn-roll.gen-bakery::before { inset: 0; background: repeating-linear-gradient(115deg, transparent 0 22%, rgba(255, 240, 200, .5) 22% 23.5%, rgba(107, 52, 16, .35) 23.5% 25.5%, transparent 25.5% 33%) 18% 0 / 100% 100% no-repeat; opacity: .45; }
+.btn-roll.gen-bakery:hover { transform: translateY(-1px) scale(1.04, 1.06); filter: none; }
+
+/* Infinity — l'espace profond dans un liseré irisé qui tourne sans fin ; un ∞ de lumière passe au survol. */
+.btn-roll.gen-infinity {
+  overflow: hidden; border-radius: .7rem; border: 2px solid transparent; color: #fff;
+  background:
+    radial-gradient(circle, #fff 0 1px, transparent 1.5px) 10px 12px / 47px 33px padding-box,
+    radial-gradient(circle, rgba(165, 243, 252, .85) 0 1px, transparent 1.5px) 31px 25px / 67px 41px padding-box,
+    radial-gradient(ellipse 45% 90% at 22% 40%, rgba(236, 72, 153, .5), transparent 70%) padding-box,
+    radial-gradient(ellipse 45% 90% at 80% 60%, rgba(34, 211, 238, .42), transparent 70%) padding-box,
+    linear-gradient(135deg, #070322, #1d0b55 52%, #04021a) padding-box,
+    conic-gradient(from var(--inf-a), #22d3ee, #a855f7, #ec4899, #fbbf24, #a855f7, #22d3ee) border-box; /* --inf-a : css/premium.css */
+  text-shadow: 0 0 6px rgba(255, 255, 255, .8), 0 0 16px rgba(168, 85, 247, .9);
+  --gs: 0 0 18px rgba(168, 85, 247, .55), 0 0 36px rgba(34, 211, 238, .2), 0 .5em 1em rgba(0, 0, 0, .55);
+  --gs-h: 0 0 28px rgba(168, 85, 247, .8), 0 0 50px rgba(34, 211, 238, .35), 0 .5em 1.1em rgba(0, 0, 0, .6);
+  --gs-a: 0 0 10px rgba(168, 85, 247, .45), inset 0 0 26px rgba(4, 2, 26, .85);
+  animation: inf-turn 7s linear infinite;
+}
+.btn-roll.gen-infinity::after { content: '∞'; top: 50%; left: -30%; font-size: 2.6em; line-height: 1; margin-top: -.55em; color: transparent; opacity: 0;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, .7); text-shadow: 0 0 10px rgba(240, 171, 252, .9); }
+.btn-roll.gen-infinity:hover::after { animation: gen-inf-pass 1.1s var(--ease-out) 1; }
+@keyframes gen-inf-pass { 0% { left: -30%; opacity: 0; } 25% { opacity: .9; } 100% { left: 110%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-infinity, .btn-roll.gen-infinity:hover::after { animation: none; } }
+
 /* ------------------------------------------------------------------ vendus à part (BUTTONS) */
 
 /* Keycap — touche mécanique : dessus creusé, jupe haute, la plus longue course de tous les boutons. */

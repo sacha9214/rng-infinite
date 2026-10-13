@@ -148,7 +148,33 @@
   };
 
   const app = document.getElementById('app');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Mode performance (réglages) : pour les tablettes et appareils qui rament. Mêmes coupes que « réduire les
+  // animations » du système (pas de particules, de secousse ni de signature de skin), et en plus, par la classe perf
+  // sur <html>, plus aucune animation décorative en boucle ni flou d'arrière-plan (css/style.css) ; les chiffres
+  // tournent toujours.
+  const osReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reducedMotion = osReducedMotion || Store.settings.perf === 'on';
+  function applyPerf() {
+    const on = Store.settings.perf === 'on';
+    document.documentElement.classList.toggle('perf', on);
+    reducedMotion = osReducedMotion || on;
+  }
+  applyPerf();
+  // Une révélation qui saccade (moins de ~28 images/s en moyenne pendant les chiffres) : on propose le mode
+  // performance, une seule fois par appareil.
+  function watchFps(ms) {
+    if (Store.settings.perf === 'on' || Store.settings.perfHint || reducedMotion || !window.requestAnimationFrame) return;
+    let frames = 0, first = 0;
+    const tick = now => {
+      if (!first) first = now;
+      frames++;
+      if (now - first < ms) { requestAnimationFrame(tick); return; }
+      if (document.hidden || frames * 1000 / (now - first) >= 28) return;
+      Store.setSetting('perfHint', 1);
+      toast('Laggy? Turn on Performance mode for fewer animations (tap here)', 8000, '', openSettings);
+    };
+    requestAnimationFrame(tick);
+  }
   let currentView = 'home';
   let session = null;
 
@@ -1005,6 +1031,7 @@
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
+      <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
@@ -1043,6 +1070,7 @@
           Store.setSetting(group.dataset.seg, btn.dataset.v);
           if (group.dataset.seg === 'theme') applyTheme();
           if (group.dataset.seg === 'sound') applySound(true);
+          if (group.dataset.seg === 'perf') applyPerf();
         });
       });
       m.querySelector('#set-done').addEventListener('click', closeModal);
@@ -1409,6 +1437,9 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-13h', date: 'Oct 13, 2026', en: ['New skin: Bakery 🥐 — digits of golden crust with chocolate chips, and steam rising at the end (1,000 coins)'], fr: ['Nouveau skin : Bakery 🥐 — des chiffres en croûte dorée aux pépites de chocolat, et de la vapeur qui monte à la fin (1 000 pièces)'] },
+    { id: '2026-10-13g', date: 'Oct 13, 2026', en: ['New legendary skin: Infinity ♾️ — a living nebula and a comet tracing an infinity loop around your number. Only from the Premium Case, 1 chance in 200'], fr: ['Nouveau skin légendaire : Infinity ♾️ — une nébuleuse vivante et une comète qui trace un infini autour de ton nombre. Seulement dans la caisse Premium, 1 chance sur 200'] },
+    { id: '2026-10-13f', date: 'Oct 13, 2026', en: ['Performance mode (Player & settings): fewer animations and effects for tablets and devices that lag'], fr: ['Mode performance (Joueur et réglages) : moins d\'animations et d\'effets pour les tablettes et appareils qui rament'] },
     { id: '2026-10-13e', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges are now earned at the end of the month: the ten best players of the monthly leaderboard keep their badge forever, with the month and year ("Top 1 · Oct 2026"). Climb before the month ends!'], fr: ['Les badges Top 1 👑, Top 5 🥈 et Top 10 🥉 se gagnent maintenant à la fin du mois : les dix meilleurs du classement du mois gardent leur badge pour toujours, avec le mois et l\'année (« Top 1 · Oct. 2026 »). Grimpe avant la fin du mois !'] },
     { id: '2026-10-13d', date: 'Oct 13, 2026', en: ['Top 1 👑, Top 5 🥈 and Top 10 🥉 badges: only the ten best players of this month\'s leaderboard wear one, next to their name on the leaderboard, on their profile and in duels. Drop out of the top 10 and it\'s gone'], fr: ['Badges Top 1 👑, Top 5 🥈 et Top 10 🥉 : seuls les dix meilleurs joueurs du classement du mois en portent un, à côté de leur nom dans le classement, sur leur profil et en duel. Sors du top 10 et il disparaît'] },
     { id: '2026-10-13c', date: 'Oct 13, 2026', en: ['Give coins to your friends (suggested by players): a 🎁 button next to each friend sends 10 to 500 coins. Up to 1,000 coins given and 2,000 received per day, unlocked after 30 rolls. Your friend sees it the next time they play'], fr: ['Offre des pièces à tes amis (suggéré par des joueurs) : un bouton 🎁 à côté de chaque ami envoie de 10 à 500 pièces. Jusqu\'à 1 000 pièces données et 2 000 reçues par jour, débloqué après 30 tirages. Ton ami le voit la prochaine fois qu\'il joue'] },
@@ -1671,6 +1702,7 @@
     Sound.warm([['tier', { tier: a.tier }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
+    if (!ctx.replay) watchFps(1800);
 
     const spin = setInterval(() => {
       for (let i = revealed; i < slotCount; i++) slots[i].textContent = spinChar(card);
@@ -2698,6 +2730,8 @@
       const owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       const button = equipped ? '<span class="skin-state">Equipped</span>'
         : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>`
+        // Réservé à une caisse (Infinity) : pas de prix, le bouton mène à l'onglet des caisses.
+        : k.caseOnly ? `<button class="btn ghost case-only" data-case-go>${Shop.caseById.get(k.caseOnly).emoji} ${esc(Shop.caseById.get(k.caseOnly).name)} only · ${+(k.chance * 100).toFixed(2)}%</button>`
         : `<button class="btn${state.coins >= k.price ? '' : ' disabled'}" data-skin-buy="${k.id}">🪙 ${fmt(k.price)}</button>`;
       return `
         <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
@@ -2724,6 +2758,7 @@
     grid.onclick = premium.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
+      if (e.target.closest('[data-case-go]')) { $('#shop-tabs [data-shop-tab="cases"]').click(); window.scrollTo(0, 0); return; }
       const buy = e.target.closest('[data-skin-buy]'), equip = e.target.closest('[data-skin-equip]');
       const btn = buy || equip;
       if (!btn || btn.disabled) return;
