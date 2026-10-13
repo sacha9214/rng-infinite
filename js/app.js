@@ -1455,6 +1455,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14a', date: 'Oct 14, 2026', en: ['Auto-roll: choose the rarity it stops on, from Rare to Infinite', 'New badge: Natural (exactly 711, 71,100 XP)'], fr: ['Tirage auto : choisis la rareté à laquelle il s\'arrête, de Rare à Infinite', 'Nouveau badge : Natural (exactement 711, 71 100 XP)'] },
     { id: '2026-10-13l', date: 'Oct 13, 2026', en: ['Cases: a skin you already own now refunds more when it is rarer — 50% of the case price for a Common, 55% Uncommon, 65% Rare, 75% Epic, 90% Legendary'], fr: ['Caisses : un skin que tu as déjà rembourse maintenant plus quand il est rare — 50 % du prix de la caisse pour un Common, 55 % Uncommon, 65 % Rare, 75 % Epic, 90 % Legendary'] },
     { id: '2026-10-13k', date: 'Oct 13, 2026', en: ['New title to equip: 📅 2026 — unlocked when you earn the Current Year badge (a number containing 2026). Equip it from your profile'], fr: ['Nouveau titre à équiper : 📅 2026 — débloqué quand tu obtiens le badge Current Year (un nombre contenant 2026). Équipe-le depuis ton profil'] },
     { id: '2026-10-13j', date: 'Oct 13, 2026', en: ['New badge: Current Year 📅 — any number containing 2026 (12026, 520269, 202600…) earns 20,260 XP'], fr: ['Nouveau badge : Current Year 📅 — tout nombre contenant 2026 (12026, 520269, 202600…) rapporte 20 260 XP'] },
@@ -1553,7 +1554,10 @@
   // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
   // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
   const SoloAuto = { on: false, timer: 0 };
-  const soloAutoHTML = () => `<label class="room-auto solo-auto" title="Rolls again by itself after each reveal; stops on a Mythic or better"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>`;
+  // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
+  const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+  const autoStop = () => (AUTO_STOPS.includes(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
+  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</select></label></span>`;
   function stopSoloAuto() {
     SoloAuto.on = false;
     clearTimeout(SoloAuto.timer);
@@ -1563,6 +1567,8 @@
   function bindSoloAuto() {
     const box = $('#solo-auto');
     if (!box) return;
+    const stop = $('#solo-stop');
+    if (stop) stop.addEventListener('change', () => { if (AUTO_STOPS.includes(stop.value)) Store.setSetting('autoStop', stop.value); });
     box.addEventListener('change', () => {
       SoloAuto.on = box.checked;
       clearTimeout(SoloAuto.timer);
@@ -1817,7 +1823,7 @@
       vignette.classList.remove('on');
       finished = true;
       if (SoloAuto.on && !ctx.replay) {
-        if (TIER_RANK[a.tier] >= TIER_RANK.mythic) { stopSoloAuto(); toast('✨ Auto-roll stopped on a Mythic or better: enjoy it!', 5000, 'achv'); }
+        if (TIER_RANK[a.tier] >= TIER_RANK[autoStop()]) { stopSoloAuto(); toast(`✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`, 5000, 'achv'); }
         else scheduleSoloAuto(900);
       }
     });
@@ -3629,6 +3635,7 @@
     openModal(`
       <h2>💡 Suggest an idea</h2>
       <p class="panel-note" style="margin:-.3rem 0 .8rem">An idea, a bug, something missing? Your message goes straight to the creator of the game.</p>
+      <p class="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
       <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your idea"></textarea>
       <div class="idea-foot"><span class="panel-note mono" id="idea-count">0 / 500</span><button class="btn-roll small" id="idea-send">Send</button></div>
       <div id="idea-mine"><div class="empty">Loading…</div></div>`, () => {

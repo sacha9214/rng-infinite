@@ -3049,3 +3049,9 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 @media (max-width: 720px) {
   .room-reacts { position: sticky; bottom: calc(var(--room-bar-h, 6rem) + .9rem); z-index: 14; width: fit-content; max-width: 100%; margin-inline: auto; padding: .3rem .45rem; border-radius: .9rem; background: color-mix(in srgb, var(--site-bg) 88%, transparent); backdrop-filter: blur(8px); }
 }
+
+/* Tirage auto en solo : l'interrupteur et, à côté, la rareté qui l'arrête. Avertissement dans la fenêtre des idées. */
+.solo-auto-box { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .3rem .7rem; }
+.solo-stop { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 700; color: var(--prose-3); }
+.solo-stop select { padding: .2rem .4rem; border: 1px solid var(--outline-mid); border-radius: .4rem; background: var(--surface); color: var(--prose); font: 700 .72rem var(--font-sans); }
+.idea-warn { display: flex; gap: .45rem; margin: 0 0 .8rem; padding: .5rem .7rem; border: 1px solid rgba(251, 191, 36, .5); border-radius: .5rem; background: rgba(251, 191, 36, .1); font-size: .78rem; line-height: 1.4; color: var(--prose); }

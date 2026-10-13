@@ -33,5 +33,12 @@
     "desc": "Contains \"2026\", the current year.",
     "emoji": "📅",
     "score": 20260
+  },
+  {
+    "id": "NATURAL",
+    "label": "Natural",
+    "desc": "Exactly \"711\": seven and eleven, the two rolls that win on the first throw of the dice.",
+    "emoji": "🎲",
+    "score": 71100
   }
 ]
