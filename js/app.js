@@ -1032,6 +1032,7 @@
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${googleAccountHTML()}
+      ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
@@ -1067,6 +1068,7 @@
       if (googleSlot) renderGoogleButton(googleSlot);
       const googleOut = m.querySelector('#google-out');
       if (googleOut) googleOut.addEventListener('click', signOutGoogle);
+      bindPassword(m);
       m.querySelectorAll('[data-seg]').forEach(group => {
         group.addEventListener('click', e => {
           const btn = e.target.closest('button');
@@ -1426,6 +1428,43 @@
     route();
   }
 
+  // ---- Pseudo + mot de passe (api/auth.js) : choisir un mot de passe pour son joueur, ou se connecter avec sur cet
+  // appareil. Aucun e-mail : un mot de passe oublié se règle avec le créateur.
+  function passwordHTML() {
+    return `<div class="field pw-field"><label>Password</label>
+      <div id="pw-state" class="panel-note">${Store.player.name ? 'Set a password to sign in with your player name on any device.' : 'Pick a player name first, then you can set a password.'}</div>
+      ${Store.player.name ? `<form class="pw-form" id="pw-set"><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="100" placeholder="New password (8+ characters)" aria-label="New password" required><input class="input" type="password" name="again" autocomplete="new-password" placeholder="Same password again" aria-label="Same password again" required><button class="btn">Save password</button></form>` : ''}
+      <details class="pw-login"><summary>Sign in with a name and password</summary>
+        <form class="pw-form" id="pw-login"><input class="input" name="name" autocomplete="username" maxlength="20" placeholder="Player name" aria-label="Player name" required><input class="input" type="password" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="btn">Sign in</button></form>
+        <span class="panel-note">This device switches to that player. The player you use here now stays saved on the server under its name.</span>
+      </details></div>`;
+  }
+  function bindPassword(m) {
+    const state = m.querySelector('#pw-state'), set = m.querySelector('#pw-set'), login = m.querySelector('#pw-login'), p = Store.player;
+    if (p.name) Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => { if (r.has && state) state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); }).catch(() => {});
+    if (set) set.addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(set);
+      if (f.get('password') !== f.get('again')) { toast('The two passwords are different'); return; }
+      try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); toast('Password saved', 2500, 'achv'); }
+      catch (err) { toast([403, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+    });
+    if (login) login.addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(login), btn = login.querySelector('button');
+      btn.disabled = true;
+      try {
+        const data = await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordLogin', name: f.get('name'), password: f.get('password') }) });
+        Store.setIdentity({ id: data.playerId, secret: data.secret, google: null });
+        Store.setPlayerName(data.name);
+        closeModal();
+        const restored = await syncHistory().catch(() => 0);
+        toast(`Signed in as ${data.name}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`, 3500, 'achv');
+        route();
+      } catch (err) { btn.disabled = false; toast([401, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+    });
+  }
+
   function googleAccountHTML() {
     if (!googleEnabled()) return '';
     const g = Store.player.google;
@@ -1459,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14l', date: 'Oct 14, 2026', en: ['New: sign in with your player name and a password (Player & settings). No e-mail needed'], fr: ['Nouveau : connecte-toi avec ton pseudo et un mot de passe (Joueur et réglages). Pas besoin d\'e-mail'] },
     { id: '2026-10-14k', date: 'Oct 14, 2026', en: ['Every title now has its own style, like the Owner one: its own colours, a shine that passes over it and its icon (a moving rainbow for Infinite)'], fr: ['Chaque titre a maintenant son propre style, comme celui du créateur : ses couleurs, un reflet qui passe dessus et son icône (un arc-en-ciel qui défile pour Infinite)'] },
     { id: '2026-10-14j', date: 'Oct 14, 2026', en: ['Crypto is now live: the price, the last candle and your position gains move with every real trade, several times a second'], fr: ['La crypto est maintenant en direct : le prix, la dernière bougie et les gains de tes positions bougent à chaque vrai échange, plusieurs fois par seconde'] },
     { id: '2026-10-14i', date: 'Oct 14, 2026', en: ['HellBorn now has its own animation (embers, sparks on every digit, an eruption and lava drips) and a Preview in the shop', 'Mayo skin reworked: a real mayonnaise jar, glossy piped digits, better squeeze bottles and a big zigzag at the end'], fr: ['HellBorn a maintenant sa propre animation (braises, étincelles sur chaque chiffre, éruption et gouttes de lave) et un aperçu dans la boutique', 'Skin Mayo refait : un vrai pot de mayonnaise, des chiffres de mayo brillants à la poche, de plus beaux flacons et un grand zigzag à la fin'] },

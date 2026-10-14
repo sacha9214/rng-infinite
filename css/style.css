@@ -3364,3 +3364,9 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 @keyframes fj-shake { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
 .prank-form { display: grid; gap: .6rem; }
 .prank-bar { gap: .4rem; flex-wrap: wrap; }
+
+/* Joueur et réglages : mot de passe. */
+.pw-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: .4rem; margin-top: .45rem; }
+.pw-form .input { min-width: 0; text-transform: none; letter-spacing: 0; text-align: left; }
+.pw-login { margin-top: .6rem; } .pw-login summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--prose-2); }
+@media (max-width: 520px) { .pw-form { grid-template-columns: 1fr; } }

@@ -2422,4 +2422,29 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HDEL', `stats:${boss.playerId}`, 'owner']]);
 }
 
+// ================================================================ 57. Pseudo + mot de passe
+{
+  const pw = body => call(auth, { method: 'POST', body, headers: { 'x-forwarded-for': '203.0.113.50' } });
+  const u = { playerId: '5e'.repeat(8), secret: '6e'.repeat(16), name: 'Passy' };
+  db.delete(`cooldown:${u.playerId}`); assert.equal((await call(roll, { method: 'POST', body: u })).status, 200);
+  assert.equal((await pw({ action: 'passwordState', ...u })).body.has, false);
+  assert.equal((await pw({ action: 'setPassword', ...u, password: 'short' })).status, 422);
+  assert.equal((await pw({ action: 'setPassword', ...u, password: 'passy' + '' })).status, 422);
+  assert.equal((await pw({ action: 'setPassword', ...u, secret: '0'.repeat(32), password: 'goodpassword' })).status, 403, 'pas sans le secret');
+  let r = await pw({ action: 'setPassword', ...u, password: 'correct horse' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const stored = run([['GET', `player:${u.playerId}:pw`]])[0].result; assert.ok(/^s1\$[0-9a-f]{32}\$[0-9a-f]{128}$/.test(stored) && !stored.includes('correct'), 'seulement une empreinte');
+  // Connexion depuis un autre appareil : bon mot de passe → le même joueur et un nouveau secret qui marche.
+  r = await pw({ action: 'passwordLogin', name: ' passy ', password: 'correct horse' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.playerId, u.playerId); assert.equal(r.body.name, 'Passy');
+  db.delete(`cooldown:${u.playerId}`); assert.equal((await call(roll, { method: 'POST', body: { playerId: u.playerId, secret: r.body.secret, name: 'Passy' } })).status, 200, 'le nouveau secret permet de tirer');
+  // Mauvais mot de passe et pseudo inconnu : même réponse.
+  const a1 = await pw({ action: 'passwordLogin', name: 'Passy', password: 'nope nope' }), a2 = await pw({ action: 'passwordLogin', name: 'Nobody Here', password: 'nope nope' });
+  assert.deepEqual([a1.status, a1.body.error], [401, 'Wrong name or password']); assert.deepEqual([a2.status, a2.body.error], [401, 'Wrong name or password']);
+  // Trop d'essais sur ce joueur : bloqué 15 min, même avec le bon mot de passe.
+  run([['SET', `pwfail:${u.playerId}`, 8]]); assert.equal((await pw({ action: 'passwordLogin', name: 'Passy', password: 'correct horse' })).status, 429);
+  run([['DEL', `pwfail:${u.playerId}`], ['SET', 'pwip:203.0.113.50', 30]]); assert.equal((await pw({ action: 'passwordLogin', name: 'Passy', password: 'correct horse' })).status, 429, 'trop d\'essais depuis cette adresse');
+  run([['DEL', 'pwip:203.0.113.50']]);
+  assert.equal((await pw({ action: 'passwordState', ...u })).body.has, true);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
