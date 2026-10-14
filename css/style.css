@@ -3146,3 +3146,17 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .btc-note { margin-top: .6rem; }
 @media (max-width: 420px) { .btc-own { grid-template-columns: 1fr 1fr; } .btc-own > div:last-child { grid-column: 1 / -1; } }
 .g-bet[hidden] { display: none !important; }
+
+/* Gamble · Crypto : graphique en bougies façon TradingView. */
+.tv-assets { display: flex; gap: .35rem; margin-bottom: .6rem; }
+.tv-bar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; margin-bottom: .3rem; }
+.tv-group { display: inline-flex; border: 1px solid var(--outline); border-radius: .45rem; overflow: hidden; }
+.tv-btn { padding: .3rem .55rem; border: 0; background: var(--surface); color: var(--prose-3); font: 700 .72rem var(--font-mono); cursor: pointer; }
+.tv-btn + .tv-btn { border-left: 1px solid var(--outline); }
+.tv-btn.on { color: var(--prose); background: var(--surface-raised); }
+.tv-ohlc { min-height: 1.1rem; font-size: .7rem; color: var(--prose-3); margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-ohlc b { color: var(--prose); font-weight: 700; margin-right: .35rem; } .tv-ohlc b.up { color: #26a69a; } .tv-ohlc b.down { color: #ef5350; }
+.tv-wrap { position: relative; }
+.tv-chart { display: block; width: 100%; height: 17rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface-dim); touch-action: pan-y; cursor: crosshair; }
+.tv-legend { position: absolute; top: .4rem; left: .55rem; display: flex; gap: .6rem; font: 700 .64rem var(--font-mono); pointer-events: none; }
+@media (max-width: 560px) { .tv-chart { height: 14rem; } }

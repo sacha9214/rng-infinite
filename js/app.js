@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14e', date: 'Oct 14, 2026', en: ['Gamble: the Bitcoin tab becomes Crypto, with Ethereum too, and a real candlestick chart like TradingView: time frames from 5 minutes to 1 day, moving averages 20 and 50, volume, crosshair with open/high/low/close, zoom with the mouse wheel'], fr: ['Gamble : l\'onglet Bitcoin devient Crypto, avec l\'Ethereum en plus, et un vrai graphique en bougies comme TradingView : unités de 5 minutes à 1 jour, moyennes mobiles 20 et 50, volume, réticule avec ouverture/haut/bas/clôture, zoom à la molette'] },
     { id: '2026-10-14d', date: 'Oct 14, 2026', en: ['Gamble: a new Bitcoin tab. Buy and sell Bitcoin with your coins at the real live price (1 coin = 1 $), with a 24-hour chart. Game coins only, no real money'], fr: ['Gamble : un nouvel onglet Bitcoin. Achète et revends du Bitcoin avec tes pièces au vrai prix en direct (1 pièce = 1 $), avec la courbe sur 24 h. Pièces du jeu seulement, pas de vrai argent'] },
     { id: '2026-10-14c', date: 'Oct 14, 2026', en: ['Fixed: the Pixel skin no longer covers the rarity and percentage under your number', 'Blackjack: two optional Match side bets. Your 1st or 2nd card has the same value as the dealer\'s face-up card: 8×, same suit too: 24×, both your cards match: ×1.5'], fr: ['Corrigé : le skin Pixel ne cache plus la rareté et le pourcentage sous ton nombre', 'Blackjack : deux mises annexes Match facultatives. Ta 1re ou 2e carte a la même valeur que la carte visible du croupier : 8×, même couleur aussi : 24×, tes deux cartes correspondent : ×1,5'] },
     { id: '2026-10-14b', date: 'Oct 14, 2026', en: ['Friends: send messages to your friends with the 💬 button. Only you two can read them, they are filtered like the duel chat, deleted after 7 days, and you can block someone', 'New skin: HellBorn, black volcanic stone with lava in the cracks'], fr: ['Amis : envoie des messages à tes amis avec le bouton 💬. Vous seuls pouvez les lire, ils sont filtrés comme le chat des duels, supprimés au bout de 7 jours, et tu peux bloquer quelqu\'un', 'Nouveau skin : HellBorn, pierre volcanique noire avec de la lave dans les fissures'] },
@@ -2813,7 +2814,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], mines: 3, mn: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, zoom: 90, hover: null, hy: null, mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
@@ -2882,7 +2883,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '₿', 'Bitcoin']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -2942,9 +2943,9 @@
             <p class="panel-note g-result" id="bj-result"></p>
           </div>
           <div class="panel g-game" data-game="btc">
-            <div class="panel-head"><h3 class="panel-title">Bitcoin</h3><span class="panel-note">the real price, live · 1 coin = 1 $</span></div>
+            <div class="panel-head"><h3 class="panel-title">Crypto</h3><span class="panel-note">the real price, live · 1 coin = 1 $</span></div>
             <div id="btc-body"><div class="empty">Loading…</div></div>
-            <p class="panel-note btc-note">Game coins only: this is not real Bitcoin, nothing can be bought or cashed out with real money. Buying and selling each cost 1%.</p>
+            <p class="panel-note btc-note">Game coins only: this is not real crypto, nothing can be bought or cashed out with real money. Buying and selling each cost 1%.</p>
           </div>
         </div>
         <div class="panel g-top stats-sep" id="g-top">
@@ -3085,29 +3086,90 @@
     });
     // ---- bitcoin : vrai prix (api/_btc.js), relu toutes les 20 s tant que l'onglet est ouvert
     const btcFmt = sats => (sats / 1e8).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
-    const btcChart = hist => {
-      if (hist.length < 2) return '<div class="empty btc-chart-empty">The 24-hour chart fills in over the next hours.</div>';
-      const W = 600, H = 150, xs = hist.map(h => h[0]), ys = hist.map(h => h[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * .1 || 1;
-      const X = t => ((t - x0) / Math.max(1, x1 - x0)) * W, Y = v => H - ((v - lo + pad) / (hi - lo + 2 * pad)) * H;
-      const line = hist.map((h, i) => `${i ? 'L' : 'M'}${X(h[0]).toFixed(1)},${Y(h[1]).toFixed(1)}`).join(''), up = ys[ys.length - 1] >= ys[0];
-      return `<svg class="btc-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Bitcoin price, last 24 hours"><path class="area" d="${line}L${W},${H}L0,${H}Z"/><path class="line" d="${line}"/></svg>`;
+    // Graphique en bougies, façon TradingView : bougies vertes / rouges, volume en bas, moyennes mobiles 20 et 50,
+    // ligne du dernier prix, réticule qui donne l'ouverture, le haut, le bas et la clôture. Molette ou pincement : zoom.
+    const TFS = [['5m', '5m'], ['15m', '15m'], ['1h', '1H'], ['6h', '6H'], ['1d', '1D']];
+    const sma = (rows, n) => rows.map((_, i) => (i + 1 < n ? null : rows.slice(i + 1 - n, i + 1).reduce((x, r) => x + r[4], 0) / n));
+    const pfmt = v => (v >= 1000 ? fmt(Math.round(v)) : v.toFixed(2));
+    function drawCandles(cv, rows, o) {
+      const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+      if (!W || !H) return;
+      if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+      const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+      const dark = document.documentElement.classList.contains('dark') || matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light';
+      const GRID = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)', INK = dark ? '#9ca3af' : '#6b7280', UP = '#26a69a', DOWN = '#ef5350';
+      const n = Math.max(20, Math.min(rows.length, o.count)), show = rows.slice(-n), ma20 = sma(rows, 20).slice(-n), ma50 = sma(rows, 50).slice(-n);
+      const R = 58, B = 18, plotW = W - R, volH = o.vol ? (H - B) * .18 : 0, priceH = H - B - volH - 6;
+      let lo = Math.min(...show.map(r => r[3])), hi = Math.max(...show.map(r => r[2]));
+      if (o.ma) for (const v of [...ma20, ...ma50]) if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      const pad = (hi - lo) * .06 || 1; lo -= pad; hi += pad;
+      const Y = v => 4 + (1 - (v - lo) / (hi - lo)) * (priceH - 4), step = plotW / n, bw = Math.max(1, step * .68), X = i => i * step + step / 2;
+      c.font = '10px ' + getComputedStyle(document.body).fontFamily; c.textBaseline = 'middle';
+      // grille et prix à droite
+      for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4, y = Y(v); c.strokeStyle = GRID; c.beginPath(); c.moveTo(0, y); c.lineTo(plotW, y); c.stroke(); c.fillStyle = INK; c.fillText(pfmt(v), plotW + 6, y); }
+      // heures en bas
+      const lab = t => { const d = new Date(t * 1000); return o.tf === '1d' ? d.toLocaleDateString([], { day: 'numeric', month: 'short' }) : o.tf === '6h' ? d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + d.getHours() + 'h' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+      c.textAlign = 'center'; const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(plotW / 80))));
+      for (let i = 0; i < n; i += every) { c.fillStyle = INK; const tx = lab(show[i][0]), half = c.measureText(tx).width / 2; if (X(i) - half >= 0 && X(i) + half <= plotW) c.fillText(tx, X(i), H - B / 2); c.strokeStyle = GRID; c.beginPath(); c.moveTo(X(i), 0); c.lineTo(X(i), H - B); c.stroke(); }
+      c.textAlign = 'left';
+      // volume
+      if (o.vol) { const vmax = Math.max(...show.map(r => r[5])) || 1; show.forEach((r, i) => { const h = (r[5] / vmax) * volH; c.fillStyle = (r[4] >= r[1] ? UP : DOWN) + '55'; c.fillRect(X(i) - bw / 2, H - B - h, bw, h); }); }
+      // bougies
+      show.forEach((r, i) => {
+        const up = r[4] >= r[1], col = up ? UP : DOWN, x = X(i);
+        c.strokeStyle = col; c.lineWidth = 1; c.beginPath(); c.moveTo(Math.round(x) + .5, Y(r[2])); c.lineTo(Math.round(x) + .5, Y(r[3])); c.stroke();
+        const y1 = Y(Math.max(r[1], r[4])), y2 = Y(Math.min(r[1], r[4])); c.fillStyle = col; c.fillRect(x - bw / 2, y1, bw, Math.max(1, y2 - y1));
+      });
+      // moyennes mobiles
+      if (o.ma) for (const [line, col] of [[ma20, '#f5a623'], [ma50, '#7b61ff']]) { c.strokeStyle = col; c.lineWidth = 1.4; c.beginPath(); let on = false; line.forEach((v, i) => { if (v == null) return; if (on) c.lineTo(X(i), Y(v)); else { c.moveTo(X(i), Y(v)); on = true; } }); c.stroke(); }
+      // dernier prix
+      const last = o.price || show[show.length - 1][4], ly = Y(last), lup = last >= show[show.length - 1][1];
+      c.setLineDash([3, 3]); c.strokeStyle = lup ? UP : DOWN; c.beginPath(); c.moveTo(0, ly); c.lineTo(plotW, ly); c.stroke(); c.setLineDash([]);
+      c.fillStyle = lup ? UP : DOWN; c.fillRect(plotW, ly - 8, R, 16); c.fillStyle = '#fff'; c.fillText(pfmt(last), plotW + 6, ly);
+      // réticule
+      if (o.hover != null && o.hover >= 0 && o.hover < n) {
+        const r = show[o.hover], x = X(o.hover); c.strokeStyle = INK; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H - B); c.stroke();
+        if (o.hy != null && o.hy < priceH) { c.beginPath(); c.moveTo(0, o.hy); c.lineTo(plotW, o.hy); c.stroke(); const v = lo + (1 - (o.hy - 4) / (priceH - 4)) * (hi - lo); c.setLineDash([]); c.fillStyle = dark ? '#374151' : '#e5e7eb'; c.fillRect(plotW, o.hy - 8, R, 16); c.fillStyle = dark ? '#fff' : '#111'; c.fillText(pfmt(v), plotW + 6, o.hy); }
+        c.setLineDash([]);
+        return r;
+      }
+      return show[show.length - 1];
+    }
+    const btcChart = () => `
+      <div class="tv-bar">
+        <div class="tv-group">${TFS.map(([k, l]) => `<button class="tv-btn${Gamble.tf === k ? ' on' : ''}" data-tf="${k}">${l}</button>`).join('')}</div>
+        <div class="tv-group"><button class="tv-btn${Gamble.ind.ma ? ' on' : ''}" data-ind="ma" title="Moving averages 20 and 50">MA</button><button class="tv-btn${Gamble.ind.vol ? ' on' : ''}" data-ind="vol" title="Volume">Vol</button></div>
+      </div>
+      <div class="tv-ohlc mono" id="tv-ohlc"></div>
+      <div class="tv-wrap"><canvas class="tv-chart" id="tv-chart"></canvas><div class="tv-legend">${Gamble.ind.ma ? '<span style="color:#f5a623">MA 20</span><span style="color:#7b61ff">MA 50</span>' : ''}</div></div>`;
+    const paintChart = () => {
+      const cv = $('#tv-chart'), data = Gamble.cndl;
+      if (!cv || !data || data.asset !== Gamble.asset || data.tf !== Gamble.tf) { if (cv) { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); } return; }
+      const r = drawCandles(cv, data.rows, { count: Gamble.zoom, ma: Gamble.ind.ma, vol: Gamble.ind.vol, tf: Gamble.tf, price: Gamble.btc && Gamble.btc.price, hover: Gamble.hover, hy: Gamble.hy });
+      const o = $('#tv-ohlc'); if (o && r) { const ch = ((r[4] - r[1]) / r[1]) * 100; o.innerHTML = `O <b>${pfmt(r[1])}</b> H <b>${pfmt(r[2])}</b> L <b>${pfmt(r[3])}</b> C <b class="${ch >= 0 ? 'up' : 'down'}">${pfmt(r[4])} (${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%)</b>`; }
+    };
+    const loadCandles = async () => {
+      const asset = Gamble.asset, tf = Gamble.tf;
+      try { const d = await Online.request(`/api/shop?candles=1&asset=${asset}&tf=${tf}`); if (asset === Gamble.asset && tf === Gamble.tf) { Gamble.cndl = { ...d, asset }; paintChart(); } }
+      catch (err) { const o = $('#tv-ohlc'); if (o) o.textContent = 'The chart is unavailable right now.'; }
     };
     async function drawBtc(fetchNow) {
       clearTimeout(Gamble.btcTimer);
       const box = $('#btc-body');
       if (!box || currentView !== 'gamble' || Gamble.tab !== 'btc' && !fetchNow) return;
-      if (fetchNow || !Gamble.btc) { try { Gamble.btc = await Online.request(`/api/shop?btc=1&me=${Store.player.id}`); } catch (err) { if (!Gamble.btc) { box.innerHTML = '<div class="empty">The Bitcoin price is unavailable right now.</div>'; } } }
+      if (fetchNow || !Gamble.btc || Gamble.btc.asset !== Gamble.asset) { try { Gamble.btc = await Online.request(`/api/shop?btc=1&asset=${Gamble.asset}&me=${Store.player.id}`); loadCandles(); } catch (err) { if (!Gamble.btc) { box.innerHTML = '<div class="empty">The Bitcoin price is unavailable right now.</div>'; } } }
       Gamble.btcTimer = setTimeout(() => { if (currentView === 'gamble' && Gamble.tab === 'btc' && !document.hidden) drawBtc(true); else if (currentView === 'gamble') Gamble.btcTimer = setTimeout(() => drawBtc(true), 20000); }, 20000);
       const d = Gamble.btc;
       if (!d || !$('#btc-body')) return;
       if (d.coins != null) showCoins(d.coins);
-      const first = d.hist.length ? d.hist[0][1] : d.price, change = d.price && first ? ((d.price - first) / first) * 100 : 0;
+      const day = Gamble.cndl && Gamble.cndl.asset === d.asset && Gamble.cndl.tf === '1h' ? Gamble.cndl.rows.slice(-24)[0] : null, first = day ? day[1] : d.hist.length ? d.hist[0][1] : d.price, change = d.price && first ? ((d.price - first) / first) * 100 : 0;
       const profit = d.value != null ? d.value - d.cost : 0, keep = $('#btc-buy') ? $('#btc-buy').value : '100';
       box.innerHTML = `
-        <div class="btc-top"><span class="btc-price mono">${d.price ? `🪙 ${fmt(Math.round(d.price))}` : '—'}</span><span class="btc-unit">for 1 BTC</span>${d.hist.length > 1 ? `<span class="btc-change ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}% · 24 h</span>` : ''}</div>
-        ${btcChart(d.hist)}
+        <div class="tv-assets">${[['btc', '₿ Bitcoin'], ['eth', 'Ξ Ethereum']].map(([k, l]) => `<button class="chip${Gamble.asset === k ? ' on' : ''}" data-asset="${k}" data-no-i18n>${l}</button>`).join('')}</div>
+        <div class="btc-top"><span class="btc-price mono">${d.price ? `🪙 ${d.price >= 1000 ? fmt(Math.round(d.price)) : d.price.toFixed(2)}` : '—'}</span><span class="btc-unit" data-no-i18n>${window.RNGI18n ? window.RNGI18n.t('for 1') : 'for 1'} ${d.sym}</span>${d.hist.length > 1 || day ? `<span class="btc-change ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}% · 24 h</span>` : ''}</div>
+        ${btcChart()}
         <div class="btc-own">
-          <div><span class="eyebrow">You own</span><b class="mono">${btcFmt(d.sats)} BTC</b></div>
+          <div><span class="eyebrow">You own</span><b class="mono" data-no-i18n>${btcFmt(d.sats)} ${d.sym}</b></div>
           <div><span class="eyebrow">Worth now</span><b class="mono">🪙 ${fmt(d.value || 0)}</b></div>
           <div><span class="eyebrow">Profit</span><b class="mono ${profit >= 0 ? 'up' : 'down'}">${d.sats ? `${profit >= 0 ? '+' : '−'}${fmt(Math.abs(profit))}` : '–'}</b></div>
         </div>
@@ -3117,14 +3179,26 @@
           <div class="btc-sell">${[[25, '25%'], [50, '50%'], [100, 'Sell all']].map(([k, l]) => `<button class="btn${k === 100 ? '' : ' ghost'}" data-btc-sell="${k}"${d.sats ? '' : ' disabled'}>${l}</button>`).join('')}</div>
         </div>
         <p class="panel-note g-result" id="btc-result">${Gamble.btcMsg || ''}</p>`;
+      paintChart();
+      const cv = $('#tv-chart');
+      if (cv) {
+        const at = ev => { const r = cv.getBoundingClientRect(), p = ev.touches ? ev.touches[0] : ev, n = Math.max(20, Math.min((Gamble.cndl && Gamble.cndl.rows.length) || 0, Gamble.zoom)); Gamble.hover = Math.floor(((p.clientX - r.left) / Math.max(1, r.width - 58)) * n); Gamble.hy = p.clientY - r.top; paintChart(); };
+        cv.addEventListener('mousemove', at); cv.addEventListener('touchmove', at, { passive: true }); cv.addEventListener('touchstart', at, { passive: true });
+        cv.addEventListener('mouseleave', () => { Gamble.hover = null; Gamble.hy = null; paintChart(); });
+        cv.addEventListener('wheel', ev => { ev.preventDefault(); Gamble.zoom = Math.max(20, Math.min(300, Math.round(Gamble.zoom * (ev.deltaY > 0 ? 1.15 : .87)))); paintChart(); }, { passive: false });
+      }
     }
     $('#btc-body').addEventListener('click', async e => {
+      const as = e.target.closest('[data-asset]'), tf = e.target.closest('[data-tf]'), ind = e.target.closest('[data-ind]');
+      if (as && as.dataset.asset !== Gamble.asset) { Gamble.asset = as.dataset.asset; Gamble.btcMsg = ''; Gamble.hover = null; drawBtc(true); return; }
+      if (tf) { Gamble.tf = tf.dataset.tf; Gamble.hover = null; $('#btc-body').querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b === tf)); paintChart(); loadCandles(); return; }
+      if (ind) { Gamble.ind[ind.dataset.ind] = !Gamble.ind[ind.dataset.ind]; ind.classList.toggle('on'); const lg = $('#btc-body .tv-legend'); if (lg) lg.innerHTML = Gamble.ind.ma ? '<span style="color:#f5a623">MA 20</span><span style="color:#7b61ff">MA 50</span>' : ''; paintChart(); return; }
       const amt = e.target.closest('[data-btc-amt]'), sell = e.target.closest('[data-btc-sell]');
       if (amt) { $('#btc-buy').value = amt.dataset.btcAmt === 'max' ? Math.max(0, Math.min(Gamble.btc.max, Gamble.coins || 0)) : amt.dataset.btcAmt; return; }
       if (!sell || Gamble.busy) return;
       const k = Number(sell.dataset.btcSell), sats = Gamble.btc.sats;
       Gamble.busy = true;
-      try { Gamble.btc = await gamble('btc', k === 100 ? { move: 'sell', all: true } : { move: 'sell', sats: Math.floor(sats * k / 100) }); Gamble.btcMsg = `Sold ${btcFmt(Gamble.btc.done.sats)} BTC for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
+      try { Gamble.btc = await gamble('btc', k === 100 ? { asset: Gamble.asset, move: 'sell', all: true } : { asset: Gamble.asset, move: 'sell', sats: Math.floor(sats * k / 100) }); Gamble.btcMsg = `Sold ${btcFmt(Gamble.btc.done.sats)} ${Gamble.btc.sym} for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
       catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     $('#btc-body').addEventListener('submit', async e => {
@@ -3132,7 +3206,7 @@
       if (Gamble.busy) return;
       const coins = Math.floor(Number($('#btc-buy').value));
       Gamble.busy = true;
-      try { Gamble.btc = await gamble('btc', { move: 'buy', coins }); Gamble.btcMsg = `Bought ${btcFmt(Gamble.btc.done.sats)} BTC for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
+      try { Gamble.btc = await gamble('btc', { asset: Gamble.asset, move: 'buy', coins }); Gamble.btcMsg = `Bought ${btcFmt(Gamble.btc.done.sats)} ${Gamble.btc.sym} for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
       catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     // ---- onglets des jeux

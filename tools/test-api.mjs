@@ -28,6 +28,8 @@ let calls = 0;
 globalThis.fetch = async (url, opts) => {
   if (url === GOOGLE_CERTS_URL) return { ok: true, json: async () => ({ keys: [googleJwk] }) };
   // Prix du bitcoin (api/_btc.js) : réglé par le test ; null = source injoignable.
+  if (/exchange\.coinbase\.com\/products\/(\w+)-USD\/candles/.test(url)) { if (globalThis.__btc == null) throw new Error('offline'); const g = Number(/granularity=(\d+)/.exec(url)[1]); return { ok: true, json: async () => Array.from({ length: 50 }, (_, i) => [1000000 + (49 - i) * g, 90 + i, 110 + i, 100 + i, 105 + i, 7]) }; }
+  if (/coinbase\.com\/v2\/prices\/ETH/.test(url)) { if (globalThis.__eth == null) throw new Error('offline'); return { ok: true, json: async () => ({ data: { amount: String(globalThis.__eth) } }) }; }
   if (/coinbase|kraken/.test(url)) { if (globalThis.__btc == null) throw new Error('offline'); return /coinbase/.test(url) ? { ok: true, json: async () => ({ data: { amount: String(globalThis.__btc) } }) } : { ok: true, json: async () => ({ result: { X: { c: [String(globalThis.__btc)] } } }) }; }
   assert.equal(url, 'https://fake-redis.test/pipeline');
   assert.equal(opts.headers.Authorization, 'Bearer test-token');
@@ -2296,6 +2298,31 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await tr(trader, { move: 'buy', coins: 100 })).status, 503, 'prix trop vieux : pas d\'échange');
   globalThis.__btc = 5; fresh(); assert.equal((await pub()).price, null, 'prix absurde ignoré');
   globalThis.__btc = 80000; fresh();
+}
+
+// ================================================================ 53. Ethereum et bougies du graphique
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const trader = { playerId: '6e'.repeat(8), secret: '7e'.repeat(16), name: 'Trader' };
+  const tr = extra => call(shopApi, { method: 'POST', body: { playerId: trader.playerId, secret: trader.secret, action: 'btc', ...extra } });
+  globalThis.__btc = 80000; globalThis.__eth = 2500; run([['DEL', 'btc:price'], ['DEL', 'eth:price']]);
+  let r = await call(shopApi, { url: `/api/shop?btc=1&asset=eth&me=${trader.playerId}` });
+  assert.equal(r.body.price, 2500); assert.equal(r.body.sym, 'ETH');
+  r = await tr({ asset: 'eth', move: 'buy', coins: 2525 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.sats, 1e8 - 1 <= r.body.sats ? r.body.sats : Math.floor(2525 / (2500 * 1.01) * 1e8)); assert.equal(r.body.asset, 'eth');
+  const st = Object.fromEntries((run([['HGETALL', `stats:${trader.playerId}`]])[0].result || []).reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, arr[i + 1]]]), []));
+  assert.ok(Number(st.ethSats) > 0 && !Number(st.btcSats), 'Ethereum gardé à part du Bitcoin');
+  assert.equal((await tr({ asset: 'eth', move: 'sell', all: true })).status, 200);
+  assert.equal((await tr({ asset: 'doge', move: 'buy', coins: 100 })).status, 400);
+  // Bougies : triées dans le temps, [t, o, h, l, c, v], gardées en cache ; unité de temps inconnue refusée.
+  r = await call(shopApi, { url: '/api/shop?candles=1&asset=btc&tf=1h' });
+  assert.equal(r.status, 200); assert.equal(r.body.rows.length, 50); assert.ok(r.body.rows.every((x, i) => i === 0 || x[0] > r.body.rows[i - 1][0]));
+  assert.deepEqual(r.body.rows[0].slice(1, 5), [100 + 49, 110 + 49, 90 + 49, 105 + 49], 'ouverture, haut, bas, clôture');
+  assert.ok(run([['GET', 'cndl:BTC:1h']])[0].result, 'en cache');
+  assert.equal((await call(shopApi, { url: '/api/shop?candles=1&asset=btc&tf=3m' })).status, 400);
+  globalThis.__btc = null; run([['DEL', 'cndl:ETH:5m']]);
+  assert.equal((await call(shopApi, { url: '/api/shop?candles=1&asset=eth&tf=5m' })).status, 503);
+  globalThis.__btc = 80000;
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
