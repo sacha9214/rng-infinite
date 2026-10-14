@@ -87,7 +87,7 @@ if (args[0] === '--check') process.exit(args.slice(1).map(motionCheck).every(Boo
 // ------------------------------------------------------------------ navigateur
 const pw = require('playwright');
 const useFirefox = opt('browser', 'chrome') === 'firefox';
-const launch = () => (useFirefox ? pw.firefox.launch() : pw.chromium.launch({ channel: 'chrome' }));
+const launch = () => (useFirefox ? pw.firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } }) : pw.chromium.launch({ channel: 'chrome', args: ['--mute-audio'] }));
 async function openStage(browser, f, timecode) {
   const [width, height] = f === 'v' ? [1080, 1920] : [1920, 1080];
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'no-preference' });

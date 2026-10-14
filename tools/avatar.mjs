@@ -27,7 +27,7 @@ const svg = withText => {
 </svg>`;
 };
 fs.mkdirSync(path.join(ROOT, 'brand'), { recursive: true });
-const browser = await firefox.launch();
+const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const page = await browser.newPage({ viewport: { width: 1024, height: 1024 } });
 for (const [name, withText] of [['avatar', false], ['avatar-rng', true]]) {
   await page.setContent(`<link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet"><style>body{margin:0}</style>${svg(withText)}`);

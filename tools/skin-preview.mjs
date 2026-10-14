@@ -17,7 +17,7 @@ fs.mkdirSync(path.join(ROOT, 'skin-previews'), { recursive: true });
 const SPIN_T = [0, 60, 120, 180, 240];
 const REVEAL_T = [0, 80, 160, 260, 400, 700];
 
-const browser = await firefox.launch();
+const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 for (const skin of skins) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 200 }, colorScheme: 'dark' });
   await page.route('**/api/**', r => r.fulfill({ status: 503, body: '{}' })); // aucune requête au serveur

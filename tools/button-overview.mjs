@@ -16,7 +16,7 @@ const ids = args.length ? args : all;
 const out = path.join(ROOT, 'skin-previews', args.length ? `buttons-${ids.join('-')}.png` : 'buttons.png');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 
-const browser = await firefox.launch();
+const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const page = await browser.newPage({ viewport: { width: 1500, height: 300 }, colorScheme: 'dark', deviceScaleFactor: 2 });
 await page.route('**/api/**', r => r.fulfill({ status: 503, body: '{}' }));
 await page.goto('file://' + path.join(ROOT, 'index.html') + '#/about');

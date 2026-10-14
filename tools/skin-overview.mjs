@@ -13,7 +13,7 @@ const skins = process.argv.slice(2).length ? process.argv.slice(2) : Shop.SKINS.
 const out = path.join(ROOT, 'skin-previews', process.argv.slice(2).length ? `overview-${skins.join('-')}.png` : 'overview.png');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 
-const browser = await firefox.launch();
+const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const page = await browser.newPage({ viewport: { width: 2100, height: 300 }, colorScheme: 'dark' });
 await page.route('**/api/**', r => r.fulfill({ status: 503, body: '{}' }));
 await page.goto('file://' + path.join(ROOT, 'index.html') + '#/about');

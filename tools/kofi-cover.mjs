@@ -22,7 +22,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" widt
   <text x="474" y="392" font-family="'Space Mono', monospace" font-weight="700" font-size="28" fill="#a5b4fc">rng-infinite.com</text>
   ${card(1310, 140, '777777', '#f9a8d4', '#db2777', 6)}${card(1280, 262, '314159', '#c4b5fd', '#7c3aed', -5)}${card(1320, 380, '123456', '#93c5fd', '#2563eb', 4)}
 </svg>`;
-const browser = await firefox.launch();
+const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const page = await browser.newPage({ viewport: { width: 1500, height: 500 } });
 await page.setContent(`<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"><style>body{margin:0}</style>${svg}`);
 await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(700);
