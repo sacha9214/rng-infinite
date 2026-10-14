@@ -3363,3 +3363,4 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 @keyframes fj-pulse { to { transform: scale(1.06); } }
 @keyframes fj-shake { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
 .prank-form { display: grid; gap: .6rem; }
+.prank-bar { gap: .4rem; flex-wrap: wrap; }

@@ -4875,7 +4875,7 @@
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
-        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
+        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel chat-panel" id="room-chat">
@@ -4886,6 +4886,25 @@
         </div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
       const pb = $('#prank-jackpot');
+      const ps = $('#prank-sound');
+      if (ps) ps.addEventListener('click', () => {
+        const others = Room.data.players.filter(p => !p.me && !p.bot);
+        openModal(`
+          <h2>📢 Loud sound</h2>
+          <p class="panel-note" style="margin:-.3rem 0 .8rem">Plays right now on their screen (only if their sound is on). 3 seconds between two sounds.</p>
+          <form id="psound-form" class="prank-form">
+            <label class="lev-field"><span>Who</span><select class="input" name="target"><option value="*">Everyone</option>${others.map(p => `<option value="${esc(p.name)}" data-no-i18n>${esc(p.name)}</option>`).join('')}</select></label>
+            <div class="chips-row">${[['airhorn', '📯 Air horn'], ['trombone', '🎺 Sad trombone'], ['buzzer', '🚨 Buzzer'], ['scream', '😱 Scream']].map(([k, l]) => `<button type="button" class="chip" data-ps="${k}">${l}</button>`).join('')}</div>
+            <p class="panel-note">Tap a sound to send it (you hear a quiet preview).</p>
+          </form>`, m => {
+          m.querySelector('.chips-row').addEventListener('click', async e => {
+            const c = e.target.closest('[data-ps]'); if (!c) return;
+            prankSound(c.dataset.ps, .15);
+            try { applyRoom(await Online.roomAction('prankSound', Room.code, { target: m.querySelector('[name="target"]').value, kind: c.dataset.ps }), Room.token, Date.now(), Date.now()); toast('📢 Sent', 1500); }
+            catch (err) { toast([400, 403, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+          });
+        });
+      });
       // 🎭 Choisir la cible et le nombre qu'elle verra se poser sur sa carte à la prochaine manche.
       if (pb) pb.addEventListener('click', () => {
         const others = Room.data.players.filter(p => !p.me && !p.bot);
@@ -5005,7 +5024,9 @@
       if (rematchBtn) rematchBtn.addEventListener('click', roomRematch);
     }
     setHTML($('#room-hint'), hint);
-    { const left = $('#prank-left'); if (left) { left.textContent = d.prankArmed != null && d.prankArmed >= d.rounds.length ? '· armed' : `· ${d.pranksLeft ?? 3} left`; $('#prank-jackpot').disabled = !d.pranksLeft || (d.prankArmed != null && d.prankArmed >= d.rounds.length); } }
+    { const left = $('#prank-left'); if (left) left.textContent = d.prankArmed != null && d.prankArmed >= d.rounds.length ? '· armed' : ''; }
+    // Farce sonore reçue : jouée une seule fois.
+    if (d.psound && d.psound.t !== Room.psoundSeen) { Room.psoundSeen = d.psound.t; prankSound(d.psound.kind); }
     // Hauteur de la barre d'action, pour que les émotes s'accrochent juste au-dessus sur téléphone (css/style.css).
     { const bar = app.querySelector('.room-actions'); if (bar) requestAnimationFrame(() => document.documentElement.style.setProperty('--room-bar-h', `${bar.offsetHeight}px`)); }
     // Tirage auto : dès que c'est à moi de lancer une manche, elle part toute seule (une fois par manche, après un
@@ -5094,6 +5115,23 @@
   }
 
   // Révélation d'une manche, en même temps chez tous les joueurs : les chiffres de toutes les cartes tombent ensemble.
+  // 📢 Sons de farce, fabriqués sur place (aucun fichier) : forts mais passés dans un compresseur, jamais au-delà du
+  // maximum normal du navigateur. Rien ne joue si le son du jeu est coupé ou si la page n'a jamais été touchée.
+  let prankCtx = null;
+  function prankSound(kind, vol = 1) {
+    if (Store.settings.sound === 'off') return; // son du jeu coupé : on respecte
+    try {
+      prankCtx = prankCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const c = prankCtx; if (c.state === 'suspended') c.resume();
+      const out = c.createDynamicsCompressor(), master = c.createGain(); master.gain.value = .9 * vol; out.connect(master); master.connect(c.destination);
+      const t0 = c.currentTime;
+      const tone = (type, f0, f1, start, dur, g = .5) => { const o = c.createOscillator(), a = c.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t0 + start); o.frequency.linearRampToValueAtTime(f1, t0 + start + dur); a.gain.setValueAtTime(0, t0 + start); a.gain.linearRampToValueAtTime(g, t0 + start + .02); a.gain.setValueAtTime(g, t0 + start + dur - .05); a.gain.linearRampToValueAtTime(0, t0 + start + dur); o.connect(a); a.connect(out); o.start(t0 + start); o.stop(t0 + start + dur + .05); };
+      if (kind === 'airhorn') for (const [st, d] of [[0, .35], [.45, .35], [.9, 1.1]]) for (const f of [415, 523, 622]) tone('sawtooth', f, f * 1.01, st, d, .35);
+      else if (kind === 'trombone') [[392, 370], [370, 349], [349, 330], [330, 262]].forEach(([a, b], i) => tone('sawtooth', a, b, i * .45, i === 3 ? 1.2 : .4, .45));
+      else if (kind === 'buzzer') for (let i = 0; i < 3; i++) tone('square', 110, 105, i * .5, .4, .6);
+      else if (kind === 'scream') { tone('sawtooth', 600, 1400, 0, .5, .4); tone('sawtooth', 1400, 900, .5, .9, .4); tone('square', 650, 1500, 0, .5, .15); }
+    } catch (e) { /* pas de son possible : tant pis */ }
+  }
   // 🎭 Fin de la farce : une annonce par-dessus l'écran, signée par le créateur.
   function prankReveal(by) {
     const el = document.createElement('div');

@@ -344,9 +344,10 @@ async function view(room, me) {
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
     // Farce en cours : envoyée à tous ceux qui regardent la salle (le faux nombre tombe chez tout le monde sur la carte de la
     // cible), jamais un identifiant ; pour le créateur, combien il en reste.
-    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; const shown = { round: pk.round, by: pk.by, n: pk.n, i: room.players.findIndex(p => p.id === pk.to) }; return pk.from === me ? { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round, prank: shown } : { prank: shown }; })(),
+    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: 999 }; const shown = { round: pk.round, by: pk.by, n: pk.n, i: room.players.findIndex(p => p.id === pk.to) }; return pk.from === me ? { pranksLeft: 999, prankArmed: pk.round, prank: shown } : { prank: shown }; })(),
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
+    ...(() => { let ps = null; try { ps = room.h.psound ? JSON.parse(room.h.psound) : null; } catch (e) { ps = null; } return ps && Date.now() - ps.t < 10000 && ps.from !== me && (ps.to === 'all' || ps.to === me) ? { psound: { t: ps.t, kind: ps.kind, by: ps.by } } : {}; })(),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
     chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m })),
     achievements: status === 'done' && room.players.some(p => p.id === me) ? Achievements.unlocked(await readStats(me)) : undefined,
@@ -583,17 +584,33 @@ module.exports = async (req, res) => {
     if (body.action === 'prank') {
       if (!member) return send(res, 422, { error: 'You are not in this duel' });
       if (!(Number((await readStats(playerId)).owner) >= 1)) return send(res, 403, { error: 'Owner only' });
-      const [used] = await redis([['HINCRBY', roomKey(code), 'pranks', 1]]);
-      if (Number(used) > 3) return send(res, 429, { error: 'No more pranks in this duel (3 max)' });
+      const [used] = await redis([['HINCRBY', roomKey(code), 'pranks', 1]]); // plus de limite (demandé par Sacha)
       const me = room.players.find(p => p.id === playerId);
       // La cible (un autre vrai joueur de la salle, choisi par son pseudo) et le nombre qu'elle croira avoir tiré.
       const target = room.players.find(p => !p.bot && p.id !== playerId && String(p.name).toLowerCase() === String(body.target || '').toLowerCase());
       const n = Number(body.n);
-      if (!target) { await redis([['HINCRBY', roomKey(code), 'pranks', -1]]); return send(res, 400, { error: 'Pick a player in this duel' }); }
-      if (!Number.isInteger(n) || n < 0 || n > 1000000) { await redis([['HINCRBY', roomKey(code), 'pranks', -1]]); return send(res, 400, { error: 'Pick a number from 0 to 1,000,000' }); }
+      if (!target) return send(res, 400, { error: 'Pick a player in this duel' });
+      if (!Number.isInteger(n) || n < 0 || n > 1000000) return send(res, 400, { error: 'Pick a number from 0 to 1,000,000' });
       const prank = { round: room.rounds.length, by: me ? me.name : 'Owner', from: playerId, to: target.id, n };
       await redis([['HSET', roomKey(code), 'prank', JSON.stringify(prank)]]);
       room.h.prank = JSON.stringify(prank); room.h.pranks = String(used);
+      return send(res, 200, await view(room, playerId));
+    }
+
+    // Farce sonore du créateur : un son fort joué tout de suite chez la cible (ou chez tous les autres). 3 s entre deux.
+    // room.h.psound = { t, kind, to (identifiant ou 'all'), by }, montré aux concernés pendant 10 s.
+    if (body.action === 'prankSound') {
+      if (!member) return send(res, 422, { error: 'You are not in this duel' });
+      if (!(Number((await readStats(playerId)).owner) >= 1)) return send(res, 403, { error: 'Owner only' });
+      const kind = ['airhorn', 'trombone', 'buzzer', 'scream'].includes(body.kind) ? body.kind : null;
+      if (!kind) return send(res, 400, { error: 'Unknown sound' });
+      const all = String(body.target || '') === '*', target = all ? null : room.players.find(p => !p.bot && p.id !== playerId && String(p.name).toLowerCase() === String(body.target || '').toLowerCase());
+      if (!all && !target) return send(res, 400, { error: 'Pick a player in this duel' });
+      const [ok] = await redis([['SET', `psound:${code}`, '1', 'PX', 3000, 'NX']]);
+      if (ok !== 'OK') return send(res, 429, { error: 'Wait 3 seconds between two sounds' });
+      const me = room.players.find(p => p.id === playerId), ps = { t: Date.now(), kind, to: all ? 'all' : target.id, by: me ? me.name : 'Owner', from: playerId };
+      await redis([['HSET', roomKey(code), 'psound', JSON.stringify(ps)]]);
+      room.h.psound = JSON.stringify(ps);
       return send(res, 200, await view(room, playerId));
     }
 

@@ -2399,13 +2399,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await roomPost(boss, 'prank', { code, target: 'Nobody', n: 777777 })).status, 400, 'cible inconnue');
   assert.equal((await roomPost(boss, 'prank', { code, target: 'Pally', n: 2000000 })).status, 400, 'nombre impossible');
   r = await roomPost(boss, 'prank', { code, target: 'pally', n: 777777 }); assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 }, 'le créateur la voit aussi'); assert.equal(r.body.pranksLeft, 2); assert.equal(r.body.prankArmed, 0);
+  assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 }, 'le créateur la voit aussi'); assert.equal(r.body.prankArmed, 0);
   r = await roomGet(code, pal); assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 });
   assert.deepEqual((await roomGet(code)).body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 }, 'les spectateurs aussi');
   assert.ok(!JSON.stringify(r.body).includes(boss.playerId), 'aucun identifiant');
   // 3 par duel au plus.
-  await roomPost(boss, 'prank', { code, target: 'Pally', n: 1 }); await roomPost(boss, 'prank', { code, target: 'Pally', n: 2 });
-  assert.equal((await roomPost(boss, 'prank', { code, target: 'Pally', n: 3 })).status, 429);
+  // Plus de limite pour le créateur.
+  for (const n of [1, 2, 3, 4, 5]) assert.equal((await roomPost(boss, 'prank', { code, target: 'Pally', n })).status, 200);
+  // Farce sonore : tout de suite chez la cible, pas chez le créateur ; 3 s entre deux ; personne d'autre ne peut.
+  assert.equal((await roomPost(pal, 'prankSound', { code, target: 'Bossy', kind: 'airhorn' })).status, 403);
+  assert.equal((await roomPost(boss, 'prankSound', { code, target: 'Pally', kind: 'nope' })).status, 400);
+  r = await roomPost(boss, 'prankSound', { code, target: 'Pally', kind: 'airhorn' }); assert.equal(r.status, 200); assert.ok(!r.body.psound);
+  r = await roomGet(code, pal); assert.equal(r.body.psound.kind, 'airhorn'); assert.equal(r.body.psound.by, 'Bossy');
+  assert.equal((await roomPost(boss, 'prankSound', { code, target: '*', kind: 'buzzer' })).status, 429);
+  db.delete(`psound:${code}`);
+  assert.equal((await roomPost(boss, 'prankSound', { code, target: '*', kind: 'buzzer' })).status, 200);
+  assert.equal((await roomGet(code, pal)).body.psound.kind, 'buzzer');
   // Le résultat n'est pas touché : la manche se joue normalement, les nombres sont ceux tirés par le serveur.
   for (const p of [boss, pal]) { db.delete(`cooldown:${p.playerId}`); await roomPost(p, 'ready', { code }); }
   r = await roomGet(code, pal); assert.equal(r.body.rounds.length, 1);
