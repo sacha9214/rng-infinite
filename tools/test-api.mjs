@@ -2399,8 +2399,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await roomPost(boss, 'prank', { code, target: 'Nobody', n: 777777 })).status, 400, 'cible inconnue');
   assert.equal((await roomPost(boss, 'prank', { code, target: 'Pally', n: 2000000 })).status, 400, 'nombre impossible');
   r = await roomPost(boss, 'prank', { code, target: 'pally', n: 777777 }); assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.ok(!r.body.prank, 'le créateur ne voit pas sa propre farce'); assert.equal(r.body.pranksLeft, 2); assert.equal(r.body.prankArmed, 0);
-  r = await roomGet(code, pal); assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777 });
+  assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 }, 'le créateur la voit aussi'); assert.equal(r.body.pranksLeft, 2); assert.equal(r.body.prankArmed, 0);
+  r = await roomGet(code, pal); assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 });
+  assert.deepEqual((await roomGet(code)).body.prank, { round: 0, by: 'Bossy', n: 777777, i: 1 }, 'les spectateurs aussi');
   assert.ok(!JSON.stringify(r.body).includes(boss.playerId), 'aucun identifiant');
   // 3 par duel au plus.
   await roomPost(boss, 'prank', { code, target: 'Pally', n: 1 }); await roomPost(boss, 'prank', { code, target: 'Pally', n: 2 });

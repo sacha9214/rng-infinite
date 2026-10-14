@@ -5107,9 +5107,9 @@
     const stage = $('#room-stage');
     if (!stage) return;
     const sides = r.n.map((n, j) => ({ n, s: r.s[j], a: analysis(n) }));
-    // 🎭 Farce du créateur : sur cette manche, ma carte tourne et se pose sur le nombre qu'il a choisi (rareté, XP, badges,
-    // confettis), puis reprend mon vrai tirage avant l'annonce du gagnant. Le vrai tirage reste celui qui compte.
-    const real = sides.slice(), pk = d.prank && d.prank.round === i ? d.prank : null, faked = pk ? d.players.findIndex(p => p.me) : -1;
+    // 🎭 Farce du créateur : sur cette manche, la carte de la cible tourne et se pose, chiffre par chiffre et chez tout le
+    // monde, sur le nombre choisi (rareté, XP, badges, confettis), puis reprend le vrai tirage avant l'annonce du gagnant.
+    const real = sides.slice(), pk = d.prank && d.prank.round === i && d.players[d.prank.i] ? d.prank : null, faked = pk ? pk.i : -1;
     if (faked >= 0) { const fa = analysis(pk.n); sides[faked] = { n: pk.n, s: fa.total, a: fa }; }
     const slotCount = Math.max(6, ...sides.map(x => x.a.str.length));
     stage.innerHTML = stageHTML(r, true);

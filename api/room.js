@@ -342,8 +342,9 @@ async function view(room, me) {
     canAsk: status === 'playing' && room.players.length < MAX_PLAYERS && !stakeOf(room),
     next: room.h.next || null, // code de la revanche, une fois lancée
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
-    // Farce en cours : seulement pour ceux qui la subissent (jamais l'identifiant du créateur) ; pour lui, combien il en reste.
-    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; if (pk.from === me) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round }; return pk.to === me ? { prank: { round: pk.round, by: pk.by, n: pk.n } } : {}; })(),
+    // Farce en cours : envoyée à tous ceux qui regardent la salle (le faux nombre tombe chez tout le monde sur la carte de la
+    // cible), jamais un identifiant ; pour le créateur, combien il en reste.
+    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; const shown = { round: pk.round, by: pk.by, n: pk.n, i: room.players.findIndex(p => p.id === pk.to) }; return pk.from === me ? { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round, prank: shown } : { prank: shown }; })(),
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
