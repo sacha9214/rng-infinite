@@ -228,6 +228,23 @@ rtp = await series('crash', '≈ 99 % (moins l\'arrondi)', async () => {
   return { bet, win: r.win };
 });
 assert.ok(instant > 0 && cashed > 0, 'crashs immédiats et encaissements');
+// Temps annoncé par la page (« ms ») : payé s'il est plus court que le vrai, plafonné au vrai sinon, et l'explosion se
+// juge toujours sur le temps réel.
+{
+  let checked = 0;
+  for (let i = 0; i < 400 && checked < 30; i++) {
+    const s = await G.crash(id, { move: 'start', bet: 100 });
+    if (s.done) continue;
+    const r = await G.crash(id, { move: 'cash', ms: i % 2 ? 999999 : 500 }, s.t0 + 1000);
+    if (r.result !== 'cash') continue;
+    const m = ms => Math.floor(Math.exp(0.00007 * ms) * 100) / 100;
+    assert.equal(r.mult, i % 2 ? m(1000) : m(500), `temps annoncé ${i % 2 ? 'trop long, plafonné' : 'plus court, payé tel quel'}`);
+    checked++;
+  }
+  assert.ok(checked >= 20, `encaissements avec temps annoncé : ${checked}`);
+  const s = await G.crash(id, { move: 'start', bet: 100 });
+  if (!s.done) { const r = await G.crash(id, { move: 'cash', ms: 10 }, s.t0 + 10 * 60000); assert.equal(r.result, 'crash', 'un temps court annoncé après l\'explosion ne sauve pas la mise'); }
+}
 assert.ok(rtp > .9 && rtp < 1.08, `crash ${rtp}`);
 
 // ---- Refus : mises hors bornes, solde insuffisant, coups impossibles — sans jamais toucher au solde

@@ -350,7 +350,11 @@ async function crash(id, body, at) {
   }
   if (move !== 'cash') throw refuse(400, 'Unknown move');
   if (!g) throw refuse(422, 'No game in progress');
-  const mult = crashAt(now - g.t0), win = Math.floor(g.bet * mult);
+  // « ms » : le temps de vol affiché sur la page au moment du clic (la page affiche un peu en retard, voir js/app.js).
+  // On paie ce que le joueur a vu, jamais plus que le temps réel : annoncer un temps plus court ne fait que perdre, et
+  // l'explosion se juge toujours sur le temps réel (au-dessus).
+  const claimed = Number(body.ms), real = now - g.t0, ms = Number.isFinite(claimed) && claimed >= 0 ? Math.min(claimed, real) : real;
+  const mult = crashAt(ms), win = Math.floor(g.bet * mult);
   await redis([['DEL', crKey(id)]]); await credit(id, g.bet, win, 'gCrash');
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }

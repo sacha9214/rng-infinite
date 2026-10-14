@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14r', date: 'Oct 14, 2026', en: ['🚀 Crash: the rocket now stops the instant you click Cash out, and you get exactly the multiplier you saw. When it explodes, it no longer flies past the crash point first'], fr: ['🚀 Crash : la fusée s\'arrête maintenant dès que tu cliques sur Encaisser, et tu reçois exactement le multiplicateur que tu as vu. Quand elle explose, elle ne dépasse plus le point de crash avant'] },
     { id: '2026-10-14q', date: 'Oct 14, 2026', en: ['🔥 Plinko High risk: 15 rows, up to 1000× on the edges (max 100 coins per ball). The normal board is still there', '🃏 Blackjack: insurance when the dealer shows an ace (pays 2 to 1), and lucky-hand bonuses: 7-7-7 pays 7×, 21 in 5 cards 1×, 6 cards 3×, 7 cards or more 10×', 'Thanks A Dude for both ideas!'], fr: ['🔥 Plinko Gros risque : 15 rangées, jusqu\'à 1000× sur les bords (100 pièces max par bille). Le plateau normal est toujours là', '🃏 Blackjack : assurance quand le croupier montre un as (payée 2 contre 1), et bonus des mains chanceuses : 7-7-7 paie 7×, 21 en 5 cartes 1×, en 6 cartes 3×, en 7 cartes ou plus 10×', 'Merci A Dude pour les deux idées !'] },
     { id: '2026-10-14p', date: 'Oct 14, 2026', en: ['Duels: on a computer the chat is now a sidebar on the right, always in view, and player names are no longer cut in the duel scoreboard (tested with 10 players)'], fr: ['Duels : sur ordinateur, le chat est maintenant une barre à droite, toujours visible, et les noms ne sont plus coupés dans le classement du duel (testé à 10 joueurs)'] },
     { id: '2026-10-14o', date: 'Oct 14, 2026', en: ["🎃 Halloween event in the shop's Limited tab: two new skins, Jack-o'-Lantern (digits carved in a pumpkin, bats fly out) and Witch's Brew (a bubbling green potion). On sale until October 31 only"], fr: ["🎃 Événement d'Halloween dans l'onglet Limités de la boutique : deux nouveaux skins, Jack-o'-Lantern (chiffres creusés dans une citrouille, des chauves-souris s'envolent) et Witch's Brew (une potion verte qui bouillonne). En vente jusqu'au 31 octobre seulement"] },
@@ -3634,14 +3635,19 @@
     const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
     // La manche n'existe plus côté serveur (expirée, ou finie depuis un autre onglet) : retour à l'écran de départ.
     const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
+    // La fusée s'affiche avec CR_LAG ms de retard sur le serveur, et on sonde toutes les CR_POLL ms : l'explosion est
+    // connue avant que la fusée affichée n'atteigne le point, elle ne le dépasse plus (elle allait jusqu'à 1 s trop loin
+    // puis revenait en arrière). Au clic, la fusée s'arrête aussitôt et le serveur paie le temps affiché (api/_gamble.js).
+    const CR_LAG = 200, CR_POLL = 150;
+    const crElapsed = () => Math.max(0, Date.now() - Gamble.cr.t0 - CR_LAG);
     const runCrash = st => {
       Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
-      const frame = () => { if (!Gamble.cr || currentView !== 'gamble') return; // Le texte suit l'arrondi du serveur (deux décimales, vers le bas) ; la courbe et la fusée suivent la valeur exacte,
+      const frame = () => { if (!Gamble.cr || Gamble.cr.frozen != null || currentView !== 'gamble') return; // Le texte suit l'arrondi du serveur (deux décimales, vers le bas) ; la courbe et la fusée suivent la valeur exacte,
         // prise sur l'horloge de l'image : dessinées avec la valeur arrondie, elles avançaient par à-coups (7 pas par seconde).
-        const exact = Math.exp(Gamble.cr.rate * (Date.now() - Gamble.cr.t0)), m = Math.floor(exact * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(exact, 'run'); Gamble.raf = requestAnimationFrame(frame); };
-      frame();
+        const exact = Math.exp(Gamble.cr.rate * crElapsed()), m = Math.floor(exact * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(exact, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+      Gamble.cr.frame = frame; frame();
       clearInterval(Gamble.poll);
-      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy) return; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } }, 1000);
+      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy || Gamble.crPolling) return; Gamble.crPolling = true; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } finally { Gamble.crPolling = false; } }, CR_POLL);
     };
     $('#cr-go').addEventListener('click', async () => {
       if (Gamble.busy) return;
@@ -3649,11 +3655,21 @@
       try {
         // Un refus passager (429 : deux demandes qui se croisent, ou trop de demandes depuis la même connexion) ne doit
         // jamais faire rater un encaissement : la même demande repart aussitôt, jusqu'à quatre fois.
-        const move = Gamble.cr ? { move: 'cash' } : { move: 'start', bet: Gamble.chip };
+        let move = { move: 'start', bet: Gamble.chip };
+        if (Gamble.cr) {
+          // Arrêt immédiat à l'écran : la fusée se fige sur la valeur vue au clic, le serveur paie cette valeur.
+          const ms = crElapsed(), m = Math.floor(Math.exp(Gamble.cr.rate * ms) * 100) / 100;
+          Gamble.cr.frozen = ms; cancelAnimationFrame(Gamble.raf);
+          $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(Math.exp(Gamble.cr.rate * ms), 'cash'); $('#cr-go').textContent = 'Cashing out…';
+          move = { move: 'cash', ms };
+        }
         let res;
         for (let k = 0; ; k++) { try { res = await gamble('crash', move); break; } catch (err) { if (err.status !== 429 || k >= 4 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
         if (res.done) endCrash(res); else runCrash(res);
-      } catch (err) { if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash(); else fail(err); } finally { Gamble.busy = false; }
+      } catch (err) {
+        if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash();
+        else { if (Gamble.cr && Gamble.cr.frozen != null) { Gamble.cr.frozen = null; Gamble.cr.bt = null; Gamble.cr.frame(); } fail(err); } // encaissement raté : la fusée repart
+      } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
     $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); });
