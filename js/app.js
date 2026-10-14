@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14p', date: 'Oct 14, 2026', en: ['Duels: on a computer the chat is now a sidebar on the right, always in view, and player names are no longer cut in the duel scoreboard (tested with 10 players)'], fr: ['Duels : sur ordinateur, le chat est maintenant une barre à droite, toujours visible, et les noms ne sont plus coupés dans le classement du duel (testé à 10 joueurs)'] },
     { id: '2026-10-14o', date: 'Oct 14, 2026', en: ["🎃 Halloween event in the shop's Limited tab: two new skins, Jack-o'-Lantern (digits carved in a pumpkin, bats fly out) and Witch's Brew (a bubbling green potion). On sale until October 31 only"], fr: ["🎃 Événement d'Halloween dans l'onglet Limités de la boutique : deux nouveaux skins, Jack-o'-Lantern (chiffres creusés dans une citrouille, des chauves-souris s'envolent) et Witch's Brew (une potion verte qui bouillonne). En vente jusqu'au 31 octobre seulement"] },
     { id: '2026-10-14n', date: 'Oct 14, 2026', en: ['Shop: a new Limited tab for event skins, with the time left', 'Haunted skin: a graveyard around your number, with ghosts rising from the graves'], fr: ['Boutique : un nouvel onglet Limités pour les skins d\'événement, avec le temps qu\'il reste', 'Skin Haunted : un cimetière autour de ton nombre, avec des fantômes qui sortent des tombes'] },
     { id: '2026-10-14m', date: 'Oct 14, 2026', en: ['🎃 Halloween code: SPOOKYMONTH gives 300 coins and the Spooky title. Enter it in Player & settings → Redeem a code (after 30 rolls). Valid until October 31'], fr: ['🎃 Code d\'Halloween : SPOOKYMONTH donne 300 pièces et le titre Spooky. Entre-le dans Joueur et réglages → Utiliser un code (après 30 tirages). Valable jusqu\'au 31 octobre'] },
@@ -4689,7 +4690,7 @@
     if (Room.autoCode !== Room.code) { Room.auto = false; Room.autoCode = Room.code; }
     Room.autoRound = -1;
     app.innerHTML = `
-      <div class="page page-wide">
+      <div class="page page-wide room-page">
         <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">Live duel <span class="muted mono">${esc(Room.code)}</span></h1>
         <div id="room-body"><div class="empty">Loading…</div></div>
@@ -4924,6 +4925,7 @@
       Room.view = 'playing';
       Room.seats = seats;
       body.innerHTML = `
+      <div class="room-layout"><div class="room-main">
         <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
         <div class="room-board" id="room-board"></div>
         <div class="room-arena">
@@ -4933,13 +4935,15 @@
         ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
+        <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>
+      </div><aside class="room-aside">
         <div class="panel chat-panel" id="room-chat">
           <div class="panel-head"><h3 class="panel-title">Chat</h3><span class="panel-note">be kind · never share personal details</span></div>
           <div class="chat-list" id="chat-list" aria-live="polite"></div>
           <p class="panel-note chat-hidden" id="chat-hidden"></p>
           <div id="chat-foot"></div>
         </div>
-        <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
+      </aside></div>`;
       const pb = $('#prank-jackpot');
       const ps = $('#prank-sound');
       if (ps) ps.addEventListener('click', () => {
