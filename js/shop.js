@@ -47,6 +47,8 @@
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé
     // pour toujours par ceux qui l'ont acheté. Jamais dans une caisse.
+    { id: 'pumpkin', name: "Jack-o'-Lantern", emoji: '🎃', price: 1031, desc: 'Digits carved in a pumpkin, lit by a flickering candle · until November 1', until: '2026-11-01T00:00:00Z' },
+    { id: 'brew', name: "Witch's Brew", emoji: '🧪', price: 1313, desc: 'A bubbling green potion in a witch cauldron · until November 1', until: '2026-11-01T00:00:00Z' },
     { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },

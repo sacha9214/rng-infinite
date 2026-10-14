@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14o', date: 'Oct 14, 2026', en: ["🎃 Halloween event in the shop's Limited tab: two new skins, Jack-o'-Lantern (digits carved in a pumpkin, bats fly out) and Witch's Brew (a bubbling green potion). On sale until October 31 only"], fr: ["🎃 Événement d'Halloween dans l'onglet Limités de la boutique : deux nouveaux skins, Jack-o'-Lantern (chiffres creusés dans une citrouille, des chauves-souris s'envolent) et Witch's Brew (une potion verte qui bouillonne). En vente jusqu'au 31 octobre seulement"] },
     { id: '2026-10-14n', date: 'Oct 14, 2026', en: ['Shop: a new Limited tab for event skins, with the time left', 'Haunted skin: a graveyard around your number, with ghosts rising from the graves'], fr: ['Boutique : un nouvel onglet Limités pour les skins d\'événement, avec le temps qu\'il reste', 'Skin Haunted : un cimetière autour de ton nombre, avec des fantômes qui sortent des tombes'] },
     { id: '2026-10-14m', date: 'Oct 14, 2026', en: ['🎃 Halloween code: SPOOKYMONTH gives 300 coins and the Spooky title. Enter it in Player & settings → Redeem a code (after 30 rolls). Valid until October 31'], fr: ['🎃 Code d\'Halloween : SPOOKYMONTH donne 300 pièces et le titre Spooky. Entre-le dans Joueur et réglages → Utiliser un code (après 30 tirages). Valable jusqu\'au 31 octobre'] },
     { id: '2026-10-14l', date: 'Oct 14, 2026', en: ['New: sign in with your player name and a password (Player & settings). No e-mail needed'], fr: ['Nouveau : connecte-toi avec ton pseudo et un mot de passe (Joueur et réglages). Pas besoin d\'e-mail'] },
@@ -2689,6 +2690,7 @@
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          <div class="limited-banner" id="limited-banner"><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><b>🎃 HALLOWEEN EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
         </div>
         </section>
@@ -2849,6 +2851,7 @@
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
     const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
     const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
+    { const ev = Date.parse('2026-11-01T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after October 31 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
     grid.onclick = premium.onclick = limited.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');

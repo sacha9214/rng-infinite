@@ -1908,6 +1908,44 @@
     };
   };
 
+  // 🦇 Chauves-souris partagées par les skins d'Halloween : un corps, deux ailes qui battent.
+  const bat = (co, x, y, s, flap, a) => {
+    co.save(); co.translate(x, y); co.globalAlpha = a; co.fillStyle = '#120a1f';
+    const w = Math.sin(flap) * .6 + .4;
+    co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-s * .6, -s * w, -s * 1.3, -s * .2 * w); co.quadraticCurveTo(-s * .9, s * .1, -s * .7, s * .35); co.quadraticCurveTo(-s * .4, s * .1, 0, s * .3);
+    co.quadraticCurveTo(s * .4, s * .1, s * .7, s * .35); co.quadraticCurveTo(s * .9, s * .1, s * 1.3, -s * .2 * w); co.quadraticCurveTo(s * .6, -s * w, 0, 0); co.fill();
+    co.beginPath(); co.arc(0, s * .05, s * .22, 0, TAU); co.fill(); co.restore();
+  };
+  // 🎃 Jack-o'-Lantern — une lueur de bougie vacille derrière la carte, des étincelles orangées à chaque chiffre creusé,
+  // et à la révélation des chauves-souris s'échappent de la citrouille.
+  SCENES.pumpkin = custom(pieces({ cols: ['#fb923c', '#fbbf24', '#fde68a', '#ea580c'], shapes: ['spark', 'drop'], size: [1.4, 3.2], g: -220, spin: 2, up: true, glowc: '#f59e0b', ring: '#fb923c', drift: { rate: 3, from: 'around' } }), env => {
+    const { co, card } = env, bats = timed();
+    const fly = (delay, big) => { const dir = Math.random() < .5 ? -1 : 1; bats.add({ delay, life: rnd(1.4, 2.2), x: rnd(card.x + card.w * .3, card.x + card.w * .7), y: card.y + card.h * .4, vx: dir * rnd(90, 200), vy: -rnd(60, 140), s: card.h * (big ? rnd(.14, .2) : .1), ph: rnd(TAU) }); };
+    return {
+      frame(t, dt) { co.globalCompositeOperation = 'source-over'; bats.run(dt, (b, k) => bat(co, b.x + b.vx * k * 1.6, b.y + b.vy * k * 1.6 + Math.sin(t * 9 + b.ph) * 5, b.s * (.6 + .6 * Math.min(1, k * 4)), t * 22 + b.ph, Math.min(1, (1 - k) * 2.5))); co.globalAlpha = 1; },
+      lock(p, o) { if (o.last) fly(0, false); },
+      reveal(tier, p) { for (let i = 0, n = 4 + Math.round(8 * p); i < n; i++) fly(i * .07, true); },
+    };
+  });
+  // 🧪 Witch's Brew — des bulles vertes montent sans cesse du chaudron, chaque chiffre fait « plop », et à la révélation
+  // une grande fumée verte s'élève avec des étincelles violettes.
+  SCENES.brew = custom(pieces({ cols: ['#bef264', '#a3e635', '#84cc16', '#d9f99d'], shapes: ['bubble'], size: [2, 5], g: -160, spin: 0, up: true, glowc: '#84cc16', ring: '#a3e635', drift: { rate: 6, from: 'bottom' } }), env => {
+    const { co, card, dark } = env, puffs = timed(), sparks = timed();
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        puffs.run(dt, (f, k) => { co.globalAlpha = (1 - k) * .45; const g = co.createRadialGradient(f.x, f.y - k * 70, 0, f.x, f.y - k * 70, f.r * (1 + k * 1.6)); g.addColorStop(0, dark ? 'rgba(190,242,100,.8)' : 'rgba(101,163,13,.6)'); g.addColorStop(1, 'rgba(132,204,22,0)'); co.fillStyle = g; co.beginPath(); co.arc(f.x, f.y - k * 70, f.r * (1 + k * 1.6), 0, TAU); co.fill(); });
+        sparks.run(dt, (s, k) => { co.globalAlpha = 1 - k; co.fillStyle = s.c; co.beginPath(); co.arc(s.x + s.vx * k, s.y + s.vy * k + 60 * k * k, s.r * (1 - k * .5), 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) puffs.add({ x: p.x, y: card.y, r: card.h * .3, life: .9 }); },
+      reveal(tier, p) {
+        for (let i = 0; i < 7; i++) puffs.add({ delay: i * .06, x: rnd(card.x, card.x + card.w), y: card.y + card.h * .2, r: card.h * rnd(.5, .9), life: rnd(1.6, 2.4) });
+        for (let i = 0, n = 20 + Math.round(30 * p); i < n; i++) sparks.add({ delay: rnd(0, .3), x: rnd(card.x, card.x + card.w), y: card.y, vx: rnd(-80, 80), vy: -rnd(60, 160), r: rnd(1.5, 3.2), c: pick(['#c084fc', '#a855f7', '#e9d5ff', '#bef264']), life: rnd(.8, 1.4) });
+      },
+    };
+  });
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 
