@@ -4932,7 +4932,6 @@
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
-        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>
@@ -4943,6 +4942,7 @@
           <p class="panel-note chat-hidden" id="chat-hidden"></p>
           <div id="chat-foot"></div>
         </div>
+        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
       </aside></div>`;
       const pb = $('#prank-jackpot');
       const ps = $('#prank-sound');

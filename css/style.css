@@ -3478,3 +3478,6 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
   .room-board .board-who { flex: 1 1 calc(100% - 1.6rem); }
   .room-board .board-metric { flex: 1 1 100%; justify-content: flex-start; padding-left: 1.2rem; }
 }
+/* Farces du créateur : sous le chat, dans la barre de droite (2026-10-14). */
+.room-aside .prank-bar { margin-top: .6rem; }
+.room-aside .prank-bar .prank-btn { flex: 1 1 auto; }
