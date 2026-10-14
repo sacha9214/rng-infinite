@@ -216,5 +216,30 @@ await assert.rejects(G.blackjack(poor, { move: 'double' }), /Not enough coins/);
 assert.equal((await G.blackjack(poor, { move: 'state' })).done, false, 'la main est toujours là');
 await assert.rejects(G.blackjack(poor, { move: 'deal', bet: 10 }), /Finish your hand first/);
 
+// Mises annexes « Match » du blackjack : calcul exact, puis 400 000 donnes jouées par le vrai serveur.
+{
+  const exact = (3 / 52 * G.SIDE.rank + 1 / 52 * G.SIDE.suited) * (1 + (G.SIDE.pair - 1) * 4 / 52);
+  assert.ok(exact < 0.97 && exact > 0.9, `retour théorique ${exact}`);
+  // Énumération exhaustive (52 × 52 × 52 donnes) : même chiffre que la formule.
+  let tot = 0, n = 0;
+  for (let u = 0; u < 52; u++) for (let a = 0; a < 52; a++) for (let b = 0; b < 52; b++) {
+    const card = k => ({ r: (k % 13) + 1, s: (k / 13) | 0 });
+    const w = G.sideWins({ dealer: [card(u)], player: [card(a), card(b)], side: [1000, 1000] });
+    tot += w[0].win + w[1].win; n += 2000;
+  }
+  assert.ok(Math.abs(tot / n - exact) < 1e-9, `énumération ${tot / n} ≠ ${exact}`);
+  run([['DEL', `bj:${id}`], ['HSET', key, 'bonus', 1e12]]);
+  const [b0, w0] = house(); let bet = 0, won = 0;
+  for (let i = 0; i < 400000; i++) {
+    const h = await G.blackjack(id, { move: 'deal', bet: 10, side: [10, 10] });
+    bet += 20; won += h.sides.reduce((x, r) => x + r.win, 0);
+    if (!h.done) await G.blackjack(id, { move: 'stand' });
+  }
+  const sim = won / bet;
+  assert.ok(Math.abs(sim - exact) < 0.01 && sim < 1, `simulé ${sim}`);
+  const [b1, w1] = house(); assert.ok(b1 - b0 >= bet && w1 - w0 >= won, 'comptés dans les totaux du casino');
+  await assert.rejects(G.blackjack(id, { move: 'deal', bet: 10, side: [5, 0] }), /Side bets between/);
+  report.push({ jeu: 'blackjack · Match', manches: 800000, 'retour mesuré': `${(sim * 100).toFixed(2)} %`, 'retour théorique': `${(exact * 100).toFixed(2)} % (exact)`, 'plus gros gain': `${G.SIDE.suited * G.SIDE.pair}×` });
+}
 console.table(report);
 console.log('OK : tous les contrôles passent sur', report.reduce((x, r) => x + r.manches, 0), 'manches');

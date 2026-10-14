@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14c', date: 'Oct 14, 2026', en: ['Fixed: the Pixel skin no longer covers the rarity and percentage under your number', 'Blackjack: two optional Match side bets. Your 1st or 2nd card has the same value as the dealer\'s face-up card: 8×, same suit too: 24×, both your cards match: ×1.5'], fr: ['Corrigé : le skin Pixel ne cache plus la rareté et le pourcentage sous ton nombre', 'Blackjack : deux mises annexes Match facultatives. Ta 1re ou 2e carte a la même valeur que la carte visible du croupier : 8×, même couleur aussi : 24×, tes deux cartes correspondent : ×1,5'] },
     { id: '2026-10-14b', date: 'Oct 14, 2026', en: ['Friends: send messages to your friends with the 💬 button. Only you two can read them, they are filtered like the duel chat, deleted after 7 days, and you can block someone', 'New skin: HellBorn, black volcanic stone with lava in the cracks'], fr: ['Amis : envoie des messages à tes amis avec le bouton 💬. Vous seuls pouvez les lire, ils sont filtrés comme le chat des duels, supprimés au bout de 7 jours, et tu peux bloquer quelqu\'un', 'Nouveau skin : HellBorn, pierre volcanique noire avec de la lave dans les fissures'] },
     { id: '2026-10-14a', date: 'Oct 14, 2026', en: ['Auto-roll: choose the rarity it stops on, from Rare to Infinite', 'New badge: Natural (exactly 711, 71,100 XP)'], fr: ['Tirage auto : choisis la rareté à laquelle il s\'arrête, de Rare à Infinite', 'Nouveau badge : Natural (exactement 711, 71 100 XP)'] },
     { id: '2026-10-13l', date: 'Oct 13, 2026', en: ['Cases: a skin you already own now refunds more when it is rarer — 50% of the case price for a Common, 55% Uncommon, 65% Rare, 75% Epic, 90% Legendary'], fr: ['Caisses : un skin que tu as déjà rembourse maintenant plus quand il est rare — 50 % du prix de la caisse pour un Common, 55 % Uncommon, 65 % Rare, 75 % Epic, 90 % Legendary'] },
@@ -2811,7 +2812,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', mines: 3, mn: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
@@ -3052,19 +3053,25 @@
       Gamble.bjSeen = h && !h.idle ? { p: h.player.length, d: h.done ? h.dealer.length : 1 } : { p: 0, d: 0 };
       $('#bj-actions').innerHTML = playing
         ? `<button class="btn-roll small" data-bj="hit">Hit</button><button class="btn" data-bj="stand">Stand</button>${h.canDouble ? '<button class="btn" data-bj="double">Double</button>' : ''}`
-        : `<button class="btn-roll small" data-bj="deal">Deal · ${fmt(Gamble.chip)}</button>`;
-      $('#bj-result').textContent = h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '';
+        : `<span class="bj-side" title="Your card has the same value as the dealer's face-up card: 8×. Same suit too: 24×. Both your cards match: ×1.5">${['1st', '2nd'].map((n, i) => `<button class="chip${Gamble.side[i] ? ' on' : ''}" data-side="${i}">🎯 Match ${n} card</button>`).join('')}</span><button class="btn-roll small" data-bj="deal">Deal · ${fmt(Gamble.chip * (1 + Gamble.side.filter(Boolean).length))}</button>`;
+      // Résultat des mises annexes, morceau par morceau à travers la traduction (la phrase entière ne figure pas au dictionnaire).
+      const tr = x => (window.RNGI18n && window.RNGI18n.t ? window.RNGI18n.t(x) : x);
+      const sideText = h && !h.idle && h.sides ? ' · ' + h.sides.map((x, i) => (x.bet ? `${tr(i ? 'Match 2nd' : 'Match 1st')}: ${x.win ? `+${fmt(x.win)}${x.kind === 'suited' ? ` (${tr('same suit!')})` : ''}` : tr('no match')}` : '')).filter(Boolean).join(' · ') : '';
+      $('#bj-result').textContent = (h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '') + sideText;
       if (h) showCoins(h.coins);
     };
     // Changer de pièce redessine le bouton « Deal » ; sans le solde de la dernière main, qui a pu changer depuis
     // (il remettait à l'écran le solde d'avant les parties jouées entre-temps).
     $('#g-chips').addEventListener('click', () => { if (!Gamble.hand || Gamble.hand.done) drawHand(Gamble.hand ? { ...Gamble.hand, coins: null } : null); });
     $('#bj-actions').addEventListener('click', async e => {
+      const sb = e.target.closest('[data-side]');
+      if (sb) { Gamble.side[sb.dataset.side] = !Gamble.side[sb.dataset.side]; drawHand(Gamble.hand ? { ...Gamble.hand, coins: null } : null); return; }
       const b = e.target.closest('[data-bj]');
       if (!b || Gamble.busy) return;
       Gamble.busy = true;
       try {
-        const h = await gamble('bj', { move: b.dataset.bj, bet: Gamble.chip });
+        const h = await gamble('bj', { move: b.dataset.bj, bet: Gamble.chip, side: b.dataset.bj === 'deal' ? Gamble.side.map(on => (on ? Gamble.chip : 0)) : undefined });
+        if (h.sides && h.sides.some(x => x.win) && b.dataset.bj === 'deal') { Sound.play('reveal', { small: 1 }); FX.celebrate(h.sides.some(x => x.kind === 'suited') ? 'epic' : 'uncommon', $('#bj-table')); }
         Sound.play('lock', { i: h.player.length, soft: 1 });
         drawHand(h);
         if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }

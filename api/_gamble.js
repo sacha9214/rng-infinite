@@ -124,7 +124,7 @@ const bjKey = id => `bj:${id}`;
 const card = () => ({ r: crypto.randomInt(1, 14), s: crypto.randomInt(0, 4) }); // r : 1 = as … 11 valet, 12 dame, 13 roi
 const value = hand => { let v = hand.reduce((x, c) => x + Math.min(10, c.r), 0); if (hand.some(c => c.r === 1) && v + 10 <= 21) v += 10; return v; };
 const natural = hand => hand.length === 2 && value(hand) === 21;
-const show = (g, coins) => ({ bet: g.bet, player: g.player, value: value(g.player), dealer: g.done ? g.dealer : [g.dealer[0]], dealerValue: g.done ? value(g.dealer) : undefined, done: !!g.done, result: g.result, win: g.win, canDouble: !g.done && g.player.length === 2, coins });
+const show = (g, coins) => ({ sides: g.sides || null, bet: g.bet, player: g.player, value: value(g.player), dealer: g.done ? g.dealer : [g.dealer[0]], dealerValue: g.done ? value(g.dealer) : undefined, done: !!g.done, result: g.result, win: g.win, canDouble: !g.done && g.player.length === 2, coins });
 async function settle(id, g) {
   const p = value(g.player);
   if (p <= 21 && !natural(g.player)) while (value(g.dealer) < 17) g.dealer.push(card());
@@ -134,6 +134,21 @@ async function settle(id, g) {
   g.done = true;
   await redis([['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)], ...ledger(id, 'bj', g.bet, g.win)]);
 }
+// Mises annexes « Match » (idée d'un joueur, 2026-10-14) : une sur ta 1re carte, une sur ta 2e. Chacune gagne si sa
+// carte a la même valeur que la carte visible du croupier : 8× la mise, 24× si la couleur est la même aussi ; si tes
+// deux cartes correspondent, chaque mise gagnante est payée 1,5 fois plus. Sabot infini, donc par mise :
+// (3/52 × 8 + 1/52 × 24) × (1 + 0,5 × 4/52) = 95,9 % rendus en moyenne, 4,1 % gardés par le casino (tools/casino-sim.mjs).
+const SIDE = { rank: 8, suited: 24, pair: 1.5 };
+function sideWins(g) {
+  const up = g.dealer[0], both = g.player[0].r === up.r && g.player[1].r === up.r;
+  return g.side.map((bet, i) => {
+    const c = g.player[i];
+    if (!bet || c.r !== up.r) return { bet, win: 0, kind: null };
+    const kind = c.s === up.s ? 'suited' : 'rank';
+    return { bet, win: Math.floor(bet * SIDE[kind] * (both ? SIDE.pair : 1)), kind, pair: both };
+  });
+}
+
 async function blackjack(id, body) {
   const [raw] = await redis([['GET', bjKey(id)]]);
   let g = raw ? JSON.parse(raw) : null;
@@ -143,9 +158,19 @@ async function blackjack(id, body) {
     if (g) throw refuse(422, 'Finish your hand first');
     const bet = amount(body.bet);
     if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
-    await mustAfford(id, bet);
-    g = { bet, player: [card(), card()], dealer: [card(), card()] };
-    await redis([['HINCRBY', statsKey(id), 'spent', bet]]);
+    // Mises annexes facultatives : 0, ou entre la mise minimale et la maximale.
+    const asked = (Array.isArray(body.side) ? body.side : []).slice(0, 2);
+    if (asked.some(v => v && !amount(v))) throw refuse(400, `Side bets between ${MIN_BET} and ${MAX_BET} coins`);
+    const side = [0, 1].map(i => (asked[i] ? amount(asked[i]) : 0));
+    const sides = side[0] + side[1];
+    await mustAfford(id, bet + sides);
+    g = { bet, player: [card(), card()], dealer: [card(), card()], side };
+    await redis([['HINCRBY', statsKey(id), 'spent', bet + sides]]);
+    if (sides) {
+      g.sides = sideWins(g);
+      const won = g.sides.reduce((x, r) => x + r.win, 0);
+      await redis([['HINCRBY', statsKey(id), 'bonus', won], ['HINCRBY', statsKey(id), 'gBet', sides], ['HINCRBY', statsKey(id), 'gWon', won], ...ledger(id, 'bj', sides, won, 0)]);
+    }
     if (natural(g.player) || natural(g.dealer)) await settle(id, g);
   } else {
     if (!g) throw refuse(422, 'No hand in progress');
@@ -297,4 +322,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

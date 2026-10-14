@@ -3119,3 +3119,8 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .dm-msg.me { align-self: flex-end; background: color-mix(in srgb, var(--chart-accent) 22%, var(--surface)); border-bottom-right-radius: .2rem; }
 .dm-form { display: flex; gap: .4rem; margin-top: .6rem; }
 .dm-form .input { flex: 1; min-width: 0; text-transform: none; letter-spacing: 0; text-align: left; }
+
+/* Blackjack : les deux mises annexes « Match », à côté du bouton Deal. */
+.bj-side { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: .35rem; }
+.bj-side .chip { font-size: .72rem; }
+#bj-actions { flex-wrap: wrap; justify-content: center; }
