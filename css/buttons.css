@@ -729,3 +729,8 @@
   animation: gen-hb-pulse 2.2s ease-in-out infinite alternate;
 }
 @keyframes gen-hb-pulse { from { filter: brightness(.95); } to { filter: brightness(1.18) saturate(1.15); } }
+
+/* Bouton Generate Mayo : un flacon jaune moelleux. */
+.btn-roll.gen-mayo { border: 2px solid #ca8a04; border-radius: 999px; color: #713f12; background: radial-gradient(ellipse 60% 45% at 35% 25%, rgba(255, 255, 255, .8), transparent 70%), linear-gradient(180deg, #fef08a, #facc15 60%, #eab308); text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  --gs: 0 .3em 0 #a16207, 0 .5em 1em rgba(234, 179, 8, .35); --gs-h: 0 .34em 0 #a16207, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #a16207; }
+.btn-roll.gen-mayo:hover { transform: translateY(-1px) scale(1.05, .96); }

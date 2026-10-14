@@ -1778,6 +1778,56 @@
     };
   });
 
+  // 🥫 Mayo (2026-10-14, idée d'un joueur) — à chaque chiffre posé, un flacon souple surgit à côté, se penche et
+  // envoie un trait de mayonnaise sur le chiffre (petite éclaboussure) ; à la révélation, des flacons tout autour
+  // giclent ensemble et des noisettes de mayo retombent. Matière molle : tout s'écrase et rebondit.
+  Object.assign(SHAPES, {
+    dollop(c, p, s) { c.fillStyle = '#fff6cf'; c.beginPath(); c.arc(0, s * .2, s, Math.PI, 0); c.quadraticCurveTo(s * .4, -s * .2, 0, -s * 1.2); c.quadraticCurveTo(-s * .4, -s * .2, -s, s * .2); c.fill(); c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(-s * .35, -s * .1, s * .25, 0, TAU); c.fill(); },
+  });
+  SCENES.mayo = custom(pieces({ cols: ['#fff6cf', '#fff1b8', '#ffffff', '#f5e7a6'], shapes: ['dollop'], size: [2.4, 4.6], g: 700, spin: 2, up: true, glowc: '#fff1b8', ring: '#f5e7a6', drift: { rate: 2, from: 'around' } }), env => {
+    const { co, card, dark } = env, bottles = timed(), splats = timed();
+    const CREAM = '#fff6cf', EDGE = dark ? 'rgba(0,0,0,.35)' : 'rgba(120,100,40,.45)';
+    // Un flacon souple : corps crème arrondi, étiquette jaune « MAYO », bouchon pointu ; serré au moment du jet.
+    const bottle = (x, y, ang, squeeze, s) => {
+      co.save(); co.translate(x, y); co.rotate(ang); co.scale(1 + squeeze * .18, 1 - squeeze * .12);
+      co.fillStyle = '#fffbe8'; co.strokeStyle = EDGE; co.lineWidth = 1.2;
+      co.beginPath(); co.roundRect ? co.roundRect(-s * .42, -s * .2, s * .84, s * 1.2, s * .28) : co.rect(-s * .42, -s * .2, s * .84, s * 1.2); co.fill(); co.stroke();
+      co.fillStyle = '#facc15'; co.fillRect(-s * .42, s * .25, s * .84, s * .38);
+      co.fillStyle = '#7c2d12'; co.font = `900 ${Math.round(s * .24)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText('MAYO', 0, s * .45);
+      co.fillStyle = '#facc15'; co.beginPath(); co.moveTo(-s * .2, -s * .2); co.lineTo(s * .2, -s * .2); co.lineTo(s * .05, -s * .55); co.lineTo(-s * .05, -s * .55); co.closePath(); co.fill();
+      co.restore();
+    };
+    const shoot = (tx, ty, delay, big) => {
+      const left = tx < card.x + card.w / 2, side = left ? -1 : 1, s = card.h * (big ? .7 : .55);
+      const bx = left ? card.x - s * .9 : card.x + card.w + s * .9, by = card.y - s * .2;
+      bottles.add({ delay, life: .9, bx, by, tx, ty, s, side });
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over'; co.lineCap = 'round';
+        bottles.run(dt, (b, k) => {
+          const pop = Math.min(1, k / .25), out = k > .8 ? (1 - k) / .2 : 1, squeeze = k > .3 && k < .65 ? Math.sin((k - .3) / .35 * Math.PI) : 0;
+          // le flacon arrive en rebondissant, penché vers le chiffre
+          const y = b.by - (1 - outCubic(pop)) * b.s * .8, ang = b.side * -(.9 + .25 * squeeze);
+          co.globalAlpha = out;
+          if (k > .3 && k < .75) {
+            // le jet : un trait épais qui part du bouchon et se pose sur le chiffre
+            const u = Math.min(1, (k - .3) / .2), nx = b.bx + Math.cos(ang - Math.PI / 2) * b.s * .55, ny = y + Math.sin(ang - Math.PI / 2) * b.s * .55;
+            const ex = lerp(nx, b.tx, u), ey = lerp(ny, b.ty, u), mx = (nx + ex) / 2, my = Math.min(ny, ey) - b.s * .6;
+            for (const [w, col] of [[b.s * .2, EDGE], [b.s * .15, CREAM], [b.s * .05, '#ffffff']]) { co.strokeStyle = col; co.lineWidth = w; co.beginPath(); co.moveTo(nx, ny); co.quadraticCurveTo(mx, my, ex, ey); co.stroke(); }
+            if (u >= 1 && !b.hit) { b.hit = true; splats.add({ x: b.tx, y: b.ty, s: b.s * .5, life: .6 }); }
+          }
+          bottle(b.bx, y, ang, squeeze, b.s);
+        });
+        // éclaboussure : une galette qui s'écrase puis rebondit
+        splats.run(dt, (p, k) => { const sq = k < .3 ? 1 + k * 2 : 1.6 - (k - .3) * .9; co.globalAlpha = 1 - k * k; co.fillStyle = CREAM; co.beginPath(); co.ellipse(p.x, p.y, p.s * sq, p.s * (1.4 - sq * .5), 0, 0, TAU); co.fill(); co.fillStyle = 'rgba(255,255,255,.9)'; co.beginPath(); co.ellipse(p.x - p.s * .3, p.y - p.s * .2, p.s * .25, p.s * .15, 0, 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) shoot(p.x, p.y, 0, o.last); },
+      reveal(tier, p) { const n = 2 + Math.round(4 * p); for (let i = 0; i < n; i++) shoot(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), i * .12, true); },
+    };
+  });
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 
