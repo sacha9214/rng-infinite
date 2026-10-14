@@ -46,6 +46,8 @@
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
     // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google : le
     // marqueur d'invité suffit, pour ceux qui se sont connectés avant que ce titre existe).
+    // Donné à la main par le créateur à un joueur qui l'aide à trier les idées de la boîte à idées (2026-10-14).
+    { id: 'ideas', emoji: '💡', title: 'Idea Manager', desc: 'Helps sort the ideas box', hidden: true, test: st => num(st.ideaManager) >= 1 },
     { id: 'manager', emoji: '🖥️', title: 'Manager', desc: 'Helps run RNG∞', hidden: true, test: st => num(st.manager) >= 1 || /^[0-9a-f]{64}$/.test(String(st.viewer || '')) },
   ];
   const byId = new Map(LIST.map(a => [a.id, a]));
