@@ -1778,79 +1778,92 @@
     };
   });
 
+  // 🌋 HellBorn — des braises montent des fissures pendant le tirage, chaque chiffre posé crache une gerbe d'étincelles ;
+  // à la révélation, une éruption, puis des gouttes de lave qui coulent du bas de la carte et refroidissent.
+  SCENES.hellborn = custom(pieces({ cols: ['#ff5a00', '#ffb000', '#ff2d00', '#ffd166'], shapes: ['spark', 'drop', 'square'], size: [1.4, 3.4], g: -260, spin: 3, up: true, glowc: '#ff4500', ring: '#ff6a00', drift: { rate: 7, from: 'around' } }), env => {
+    const { co, card, dark } = env, drips = timed();
+    const drip = delay => drips.add({ delay, life: rnd(1.4, 2.2), x: rnd(card.x + card.w * .08, card.x + card.w * .92), len: card.h * rnd(.25, .6), w: rnd(2.5, 5) });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        drips.run(dt, (d, k) => {
+          // la goutte s'étire sous la carte, se détache et tombe en virant au rouge sombre
+          const y0 = card.y + card.h - 2, grow = Math.min(1, k * 2.2), fall = Math.max(0, k - .45) * card.h * 2.4, heat = 1 - k;
+          const col = `rgb(255,${Math.round(60 + 140 * heat)},${Math.round(20 * heat)})`;
+          co.globalAlpha = Math.min(1, (1 - k) * 2.5);
+          co.fillStyle = col; co.shadowColor = '#ff4500'; co.shadowBlur = 8 * heat;
+          co.beginPath(); co.moveTo(d.x - d.w, y0); co.quadraticCurveTo(d.x, y0 + d.len * grow * 1.2 + fall, d.x + d.w, y0); co.fill();
+          if (k > .45) { co.beginPath(); co.arc(d.x, y0 + d.len + fall, d.w * .9, 0, TAU); co.fill(); }
+          co.shadowBlur = 0;
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) drip(0); },
+      reveal(tier, p) { for (let i = 0, n = 3 + Math.round(5 * p); i < n; i++) drip(i * .15); },
+    };
+  });
+
   // 🥫 Mayo (2026-10-14, idée d'un joueur) — à chaque chiffre posé, un flacon souple surgit à côté, se penche et
   // envoie un trait de mayonnaise sur le chiffre (petite éclaboussure) ; à la révélation, des flacons tout autour
   // giclent ensemble et des noisettes de mayo retombent. Matière molle : tout s'écrase et rebondit.
   Object.assign(SHAPES, {
     dollop(c, p, s) { c.fillStyle = '#fff6cf'; c.beginPath(); c.arc(0, s * .2, s, Math.PI, 0); c.quadraticCurveTo(s * .4, -s * .2, 0, -s * 1.2); c.quadraticCurveTo(-s * .4, -s * .2, -s, s * .2); c.fill(); c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(-s * .35, -s * .1, s * .25, 0, TAU); c.fill(); },
   });
-  SCENES.mayo = custom(pieces({ cols: ['#fff6cf', '#fff1b8', '#ffffff', '#f5e7a6'], shapes: ['dollop'], size: [2.4, 4.6], g: 700, spin: 2, up: true, glowc: '#fff1b8', ring: '#f5e7a6', drift: { rate: 2, from: 'around' } }), env => {
-    const { co, card, dark } = env, bottles = timed(), splats = timed();
-    const CREAM = '#fff6cf', EDGE = dark ? 'rgba(0,0,0,.35)' : 'rgba(120,100,40,.45)';
-    // Un flacon souple : corps crème arrondi, étiquette jaune « MAYO », bouchon pointu ; serré au moment du jet.
+  SCENES.mayo = custom(pieces({ cols: ['#fff6cf', '#fff1b8', '#ffffff', '#f5e7a6'], shapes: ['dollop'], size: [2.6, 5], g: 700, spin: 2, up: true, glowc: '#fff1b8', ring: '#f5e7a6', drift: { rate: 2, from: 'around' } }), env => {
+    const { co, card, dark } = env, bottles = timed(), splats = timed(), blobs = timed(), zig = timed();
+    const CREAM = '#fff6cf', SHADE = '#e9d27d', EDGE = dark ? 'rgba(0,0,0,.35)' : 'rgba(120,100,40,.45)';
+    // Flacon souple dessiné : corps arrondi en dégradé crème, reflet, étiquette bleue rayée de jaune, embout rouge… non :
+    // embout jaune pointu (aucune marque réelle).
     const bottle = (x, y, ang, squeeze, s) => {
-      co.save(); co.translate(x, y); co.rotate(ang); co.scale(1 + squeeze * .18, 1 - squeeze * .12);
-      co.fillStyle = '#fffbe8'; co.strokeStyle = EDGE; co.lineWidth = 1.2;
-      co.beginPath(); co.roundRect ? co.roundRect(-s * .42, -s * .2, s * .84, s * 1.2, s * .28) : co.rect(-s * .42, -s * .2, s * .84, s * 1.2); co.fill(); co.stroke();
-      co.fillStyle = '#facc15'; co.fillRect(-s * .42, s * .25, s * .84, s * .38);
-      co.fillStyle = '#7c2d12'; co.font = `900 ${Math.round(s * .24)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText('MAYO', 0, s * .45);
-      co.fillStyle = '#facc15'; co.beginPath(); co.moveTo(-s * .2, -s * .2); co.lineTo(s * .2, -s * .2); co.lineTo(s * .05, -s * .55); co.lineTo(-s * .05, -s * .55); co.closePath(); co.fill();
+      co.save(); co.translate(x, y); co.rotate(ang); co.scale(1 + squeeze * .2, 1 - squeeze * .14);
+      const g = co.createLinearGradient(-s * .45, 0, s * .45, 0); g.addColorStop(0, '#f3e3a0'); g.addColorStop(.35, '#fffdf2'); g.addColorStop(1, '#e8d38a');
+      co.fillStyle = g; co.strokeStyle = EDGE; co.lineWidth = 1.2;
+      co.beginPath(); if (co.roundRect) co.roundRect(-s * .45, -s * .15, s * .9, s * 1.25, s * .32); else co.rect(-s * .45, -s * .15, s * .9, s * 1.25); co.fill(); co.stroke();
+      co.fillStyle = '#1e3a8a'; co.fillRect(-s * .45, s * .3, s * .9, s * .42);
+      co.fillStyle = '#facc15'; co.fillRect(-s * .45, s * .3, s * .9, s * .05); co.fillRect(-s * .45, s * .67, s * .9, s * .05);
+      co.fillStyle = '#fff6cf'; co.font = `900 ${Math.round(s * .22)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText('MAYO', 0, s * .51);
+      co.fillStyle = 'rgba(255,255,255,.7)'; co.fillRect(-s * .3, -s * .05, s * .08, s * .9);
+      co.fillStyle = '#facc15'; co.strokeStyle = '#ca8a04'; co.beginPath(); co.moveTo(-s * .22, -s * .15); co.lineTo(s * .22, -s * .15); co.lineTo(s * .06, -s * .58); co.lineTo(-s * .06, -s * .58); co.closePath(); co.fill(); co.stroke();
       co.restore();
     };
+    // Trait de mayo brillant : une ombre, la crème, un reflet.
+    const stream = (pts, w) => { co.lineCap = co.lineJoin = 'round'; for (const [k, col] of [[1.25, EDGE], [1, CREAM], [.35, '#ffffff']]) { co.strokeStyle = col; co.lineWidth = w * k; co.beginPath(); pts.forEach((p, i) => (i ? co.lineTo(p[0], p[1]) : co.moveTo(p[0], p[1]))); co.stroke(); } };
+    const dollop = (x, y, s, a) => { co.globalAlpha = a; co.fillStyle = SHADE; co.beginPath(); co.ellipse(x, y + s * .25, s * 1.1, s * .55, 0, 0, TAU); co.fill(); co.fillStyle = CREAM; co.beginPath(); co.ellipse(x, y, s, s * .7, 0, 0, TAU); co.fill(); co.beginPath(); co.moveTo(x - s * .35, y - s * .3); co.quadraticCurveTo(x, y - s * 1.3, x + s * .1, y - s * .6); co.fill(); co.fillStyle = '#fff'; co.beginPath(); co.ellipse(x - s * .35, y - s * .15, s * .22, s * .14, -.4, 0, TAU); co.fill(); };
     const shoot = (tx, ty, delay, big) => {
-      const left = tx < card.x + card.w / 2, side = left ? -1 : 1, s = card.h * (big ? .7 : .55);
-      const bx = left ? card.x - s * .9 : card.x + card.w + s * .9, by = card.y - s * .2;
-      bottles.add({ delay, life: .9, bx, by, tx, ty, s, side });
+      const left = tx < card.x + card.w / 2, s = card.h * (big ? .75 : .6);
+      bottles.add({ delay, life: 1, bx: left ? card.x - s * .95 : card.x + card.w + s * .95, by: card.y - s * .1, tx, ty, s, side: left ? -1 : 1 });
     };
-    return {
-      frame(t, dt) {
-        co.globalCompositeOperation = 'source-over'; co.lineCap = 'round';
-        bottles.run(dt, (b, k) => {
-          const pop = Math.min(1, k / .25), out = k > .8 ? (1 - k) / .2 : 1, squeeze = k > .3 && k < .65 ? Math.sin((k - .3) / .35 * Math.PI) : 0;
-          // le flacon arrive en rebondissant, penché vers le chiffre
-          const y = b.by - (1 - outCubic(pop)) * b.s * .8, ang = b.side * -(.9 + .25 * squeeze);
-          co.globalAlpha = out;
-          if (k > .3 && k < .75) {
-            // le jet : un trait épais qui part du bouchon et se pose sur le chiffre
-            const u = Math.min(1, (k - .3) / .2), nx = b.bx + Math.cos(ang - Math.PI / 2) * b.s * .55, ny = y + Math.sin(ang - Math.PI / 2) * b.s * .55;
-            const ex = lerp(nx, b.tx, u), ey = lerp(ny, b.ty, u), mx = (nx + ex) / 2, my = Math.min(ny, ey) - b.s * .6;
-            for (const [w, col] of [[b.s * .2, EDGE], [b.s * .15, CREAM], [b.s * .05, '#ffffff']]) { co.strokeStyle = col; co.lineWidth = w; co.beginPath(); co.moveTo(nx, ny); co.quadraticCurveTo(mx, my, ex, ey); co.stroke(); }
-            if (u >= 1 && !b.hit) { b.hit = true; splats.add({ x: b.tx, y: b.ty, s: b.s * .5, life: .6 }); }
-          }
-          bottle(b.bx, y, ang, squeeze, b.s);
-        });
-        // éclaboussure : une galette qui s'écrase puis rebondit
-        splats.run(dt, (p, k) => { const sq = k < .3 ? 1 + k * 2 : 1.6 - (k - .3) * .9; co.globalAlpha = 1 - k * k; co.fillStyle = CREAM; co.beginPath(); co.ellipse(p.x, p.y, p.s * sq, p.s * (1.4 - sq * .5), 0, 0, TAU); co.fill(); co.fillStyle = 'rgba(255,255,255,.9)'; co.beginPath(); co.ellipse(p.x - p.s * .3, p.y - p.s * .2, p.s * .25, p.s * .15, 0, 0, TAU); co.fill(); });
-        co.globalAlpha = 1;
-      },
-      lock(p, o) { if (!o.ghost) shoot(p.x, p.y, 0, o.last); },
-      reveal(tier, p) { const n = 2 + Math.round(4 * p); for (let i = 0; i < n; i++) shoot(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), i * .12, true); },
-    };
-  });
-
-  // 👻 Haunted (Halloween 2026) — un petit fantôme s'échappe de chaque chiffre posé ; à la révélation, une nuée de
-  // fantômes sort du nombre et s'envole en ondulant.
-  SCENES.haunted = env => {
-    const { co, card, dark } = env, ghosts = timed();
-    const ghost = (x, y, s, a, wob) => {
-      co.save(); co.translate(x, y); co.globalAlpha = a; co.fillStyle = dark ? '#f5f3ff' : '#ede9fe'; co.shadowColor = 'rgba(196,181,253,.9)'; co.shadowBlur = s * .6;
-      co.beginPath(); co.arc(0, 0, s, Math.PI, 0); co.lineTo(s, s * 1.2);
-      for (let i = 0; i < 4; i++) { const x1 = s - (i + .5) * s / 2, x2 = s - (i + 1) * s / 2; co.quadraticCurveTo(x1, s * (1.2 + (i % 2 ? -.35 : .35) + Math.sin(wob + i) * .1), x2, s * 1.2); }
-      co.closePath(); co.fill(); co.shadowBlur = 0; co.fillStyle = '#1e1b2e';
-      co.beginPath(); co.ellipse(-s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.ellipse(s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.fill();
-      co.beginPath(); co.ellipse(0, s * .35, s * .12, s * .16, 0, 0, TAU); co.fill(); co.restore();
-    };
-    const add = (x, y, big, delay) => ghosts.add({ delay, life: rnd(1.6, 2.4), x, y, s: card.h * (big ? rnd(.22, .34) : .18), dx: rnd(-40, 40), ph: rnd(TAU) });
     return {
       frame(t, dt) {
         co.globalCompositeOperation = 'source-over';
-        ghosts.run(dt, (g, k) => ghost(g.x + g.dx * k + Math.sin(t * 3 + g.ph) * 8, g.y - k * card.h * 2.2, g.s * (.7 + .5 * Math.min(1, k * 3)), Math.sin(Math.PI * Math.min(1, k * 1.2)) * .85, t * 4 + g.ph));
+        // noisettes déposées : restent un moment au pied des chiffres puis fondent
+        blobs.run(dt, (b, k) => dollop(b.x, b.y, b.s * (k < .1 ? k * 10 : 1), k > .7 ? (1 - k) / .3 : 1));
+        bottles.run(dt, (b, k) => {
+          const pop = Math.min(1, k / .2), out = k > .85 ? (1 - k) / .15 : 1, squeeze = k > .25 && k < .65 ? Math.sin((k - .25) / .4 * Math.PI) : 0;
+          const y = b.by - (1 - outCubic(pop)) * b.s, ang = b.side * -(.95 + .3 * squeeze);
+          co.globalAlpha = out;
+          if (k > .25 && k < .8) {
+            const u = Math.min(1, (k - .25) / .18), nx = b.bx + Math.cos(ang - Math.PI / 2) * b.s * .6, ny = y + Math.sin(ang - Math.PI / 2) * b.s * .6;
+            const pts = []; for (let i = 0; i <= 16; i++) { const v = (i / 16) * u; pts.push([lerp(nx, b.tx, v), lerp(ny, b.ty, v) - Math.sin(v * Math.PI) * b.s * .7]); }
+            stream(pts, b.s * .16 * (k > .65 ? (.8 - k) / .15 : 1));
+            if (u >= 1 && !b.hit) { b.hit = true; splats.add({ x: b.tx, y: b.ty, s: b.s * .42, life: .5 }); blobs.add({ x: b.tx, y: card.y + card.h - 3, s: b.s * .12, life: 2.4 }); }
+          }
+          bottle(b.bx, y, ang, squeeze, b.s);
+        });
+        splats.run(dt, (p, k) => { const sq = k < .3 ? 1 + k * 2.2 : 1.66 - (k - .3) * 1; co.globalAlpha = 1 - k * k; co.fillStyle = CREAM; co.beginPath(); co.ellipse(p.x, p.y, p.s * sq, p.s * (1.5 - sq * .55), 0, 0, TAU); co.fill(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + p.s, r = p.s * (1.2 + k * 1.4); co.beginPath(); co.arc(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r * .6, p.s * .16 * (1 - k), 0, TAU); co.fill(); } });
+        // grand zigzag de la fin, comme sur des frites : il se dessine de gauche à droite puis s'efface
+        zig.run(dt, (z, k) => {
+          const draw = Math.min(1, k / .4), fade = k > .7 ? (1 - k) / .3 : 1, pts = [], n = 9, y0 = card.y - card.h * .05;
+          for (let i = 0; i <= 60 * draw; i++) { const v = i / 60, x = card.x - 6 + v * (card.w + 12), y = y0 + (Math.floor(v * n) % 2 ? 1 - (v * n % 1) : v * n % 1) * card.h * .22; pts.push([x, y]); }
+          co.globalAlpha = fade; if (pts.length > 1) stream(pts, card.h * .09);
+          const tip = pts[pts.length - 1]; if (tip && draw < 1) bottle(tip[0], tip[1] - card.h * .55, Math.PI, .6, card.h * .55);
+        });
         co.globalAlpha = 1;
       },
-      lock(p, o) { if (!o.ghost) add(p.x, p.y, false, 0); },
-      reveal(tier, p) { for (let i = 0, n = 5 + Math.round(10 * p); i < n; i++) add(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), true, i * .08); },
+      lock(p, o) { if (!o.ghost) shoot(p.x, p.y, 0, o.last); },
+      reveal(tier, p) { zig.add({ life: 2.2 }); for (let i = 0, n = 1 + Math.round(4 * p); i < n; i++) shoot(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), .4 + i * .14, true); },
     };
-  };
+  });
 
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });

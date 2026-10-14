@@ -3186,25 +3186,34 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .lev-hist > div { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: .5rem; }
 .lev .up { color: #26a69a; } .lev .down { color: #ef5350; }
 
-/* ------------------------------------------------------------------ Mayo : mayonnaise à la poche, flacons souples.
-   Matière molle : écrasement et rebond, jamais de choc sec. */
+/* ------------------------------------------------------------------ Mayo : un pot de mayonnaise vu à travers le verre
+   (crème en haut et en bas, étiquette bleu marine au milieu, couvercle jaune), chiffres de mayo à la poche, striés et
+   brillants. Matière molle : on la presse, elle s'écrase et rebondit. */
 .num-card.skin-mayo {
-  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(96, 165, 250, .35), transparent 70%), linear-gradient(180deg, #1e3a8a, #172554);
-  border: 3px solid #facc15; border-radius: 1.1rem; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .15), inset 0 -8px 14px rgba(0, 0, 0, .35), 0 8px 18px rgba(23, 37, 84, .45);
+  background:
+    linear-gradient(100deg, transparent 8%, rgba(255, 255, 255, .55) 10%, transparent 14%, transparent 80%, rgba(255, 255, 255, .25) 83%, transparent 86%),
+    linear-gradient(180deg, transparent 0 21%, #facc15 21% 23%, transparent 23% 77%, #facc15 77% 79%, transparent 79%),
+    linear-gradient(180deg, #fffbe6 0%, #fff3c4 21%, #1e3a8a 21%, #172554 79%, #fff3c4 79%, #fde68a 100%);
+  border: 2px solid rgba(255, 255, 255, .7); border-top: 6px solid #facc15; border-radius: .9rem .9rem 1.2rem 1.2rem;
+  box-shadow: inset 0 0 0 1px rgba(161, 98, 7, .35), inset 0 -6px 10px rgba(161, 98, 7, .25), 0 0 0 2px #eab308, 0 10px 18px rgba(23, 37, 84, .35);
 }
 .skin-mayo .slot {
   font-weight: 900; color: transparent;
-  background: linear-gradient(180deg, #ffffff 0%, #fffbea 30%, #fff1b8 70%, #f2dd8c 100%);
+  background:
+    repeating-linear-gradient(118deg, transparent 0 .09em, rgba(255, 255, 255, .7) .09em .12em, transparent .12em .2em),
+    linear-gradient(180deg, #ffffff 0%, #fffbea 35%, #fff1b8 70%, #ecd27a 100%);
   -webkit-background-clip: text; background-clip: text;
-  -webkit-text-stroke: .02em #e8cf7a;
-  filter: drop-shadow(0 .05em 0 #c9a63a) drop-shadow(0 .12em .1em rgba(0, 0, 0, .45));
+  -webkit-text-stroke: .025em #d4b04a;
+  filter: drop-shadow(0 .05em 0 #b8902c) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45));
 }
-.skin-mayo .slot.ghost { opacity: .22; }
-.skin-mayo .slot.spinning { animation: mayo-jiggle .24s ease-in-out infinite alternate; }
-@keyframes mayo-jiggle { from { transform: scale(1.08, .9) translateY(.03em); } to { transform: scale(.94, 1.07) translateY(-.03em); } }
-/* Il se pose : une noisette qui s'écrase, déborde un peu, puis reprend sa forme. */
-.skin-mayo .slot.revealed { animation: mayo-splat .62s cubic-bezier(.3, 1.6, .5, 1) backwards; }
-@keyframes mayo-splat { 0% { transform: translateY(-.35em) scale(.7, 1.3); } 40% { transform: translateY(.04em) scale(1.25, .72); } 70% { transform: scale(.95, 1.06); } 100% { transform: none; } }
+.skin-mayo .slot.ghost { opacity: .2; }
+/* Pendant le tirage : chaque chiffre sort de la douille, encore et encore. */
+.skin-mayo .slot.spinning { transform-origin: 50% 100%; animation: mayo-pipe .28s cubic-bezier(.3, 1.5, .5, 1) infinite; }
+@keyframes mayo-pipe { 0% { transform: scale(.8, .25); } 60% { transform: scale(1.06, 1.08); } 100% { transform: scale(1, 1); } }
+/* Il se pose : une noisette tombe, s'écrase, déborde, reprend sa forme, puis un reflet passe dessus. */
+.skin-mayo .slot.revealed { transform-origin: 50% 100%; animation: mayo-splat .62s cubic-bezier(.3, 1.6, .5, 1) backwards, mayo-shine 1.2s .5s ease-out backwards; }
+@keyframes mayo-splat { 0% { transform: translateY(-.45em) scale(.65, 1.35); } 40% { transform: translateY(.03em) scale(1.3, .68); } 70% { transform: scale(.94, 1.08); } 100% { transform: none; } }
+@keyframes mayo-shine { 0% { filter: drop-shadow(0 .05em 0 #b8902c) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)) brightness(1.35); } 100% { filter: drop-shadow(0 .05em 0 #b8902c) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)); } }
 .skin-mayo .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
 @media (prefers-reduced-motion: reduce) { .skin-mayo .slot { animation: none; } }
 .side-mayo { --side-border: #eab308; --side-glow: 0 0 14px rgba(250, 204, 21, .3); --side-ink: #a16207;
