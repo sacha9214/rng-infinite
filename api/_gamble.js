@@ -124,13 +124,23 @@ const bjKey = id => `bj:${id}`;
 const card = () => ({ r: crypto.randomInt(1, 14), s: crypto.randomInt(0, 4) }); // r : 1 = as … 11 valet, 12 dame, 13 roi
 const value = hand => { let v = hand.reduce((x, c) => x + Math.min(10, c.r), 0); if (hand.some(c => c.r === 1) && v + 10 <= 21) v += 10; return v; };
 const natural = hand => hand.length === 2 && value(hand) === 21;
-const show = (g, coins) => ({ sides: g.sides || null, bet: g.bet, player: g.player, value: value(g.player), dealer: g.done ? g.dealer : [g.dealer[0]], dealerValue: g.done ? value(g.dealer) : undefined, done: !!g.done, result: g.result, win: g.win, canDouble: !g.done && g.player.length === 2, coins });
+// Bonus des mains très chanceuses (idée d'un joueur, 2026-10-14), payés en plus du résultat sur la mise de départ,
+// quand la main fait 21 : trois 7 (7-7-7), ou 21 en 5 cartes, en 6, en 7 ou plus. Montants choisis pour que même la
+// meilleure stratégie possible (tirer exprès pour chercher 5 cartes) rende au plus 99,6 % : le casino garde toujours
+// l'avantage (calcul exact par programmation dynamique, sabot infini).
+const BONUS = { triple7: 7, five: 1, six: 3, seven: 10 };
+const bonusKind = hand => (value(hand) !== 21 ? null : hand.length === 3 && hand.every(c => c.r === 7) ? 'triple7' : hand.length >= 7 ? 'seven' : hand.length === 6 ? 'six' : hand.length === 5 ? 'five' : null);
+// Assurance : quand la carte visible du croupier est un as, on peut s'assurer contre son blackjack (de la mise minimale
+// à sa mise) ; payée 2 contre 1 s'il l'a. Comme au vrai casino, c'est un mauvais pari : 7,7 % gardés en moyenne.
+const show = (g, coins) => ({ sides: g.sides || null, insurance: g.ins || 0, insWin: g.insWin, canInsure: !!g.offer, bonus: g.bonus || null, bet: g.bet, player: g.player, value: value(g.player), dealer: g.done ? g.dealer : [g.dealer[0]], dealerValue: g.done ? value(g.dealer) : undefined, done: !!g.done, result: g.result, win: g.win, canDouble: !g.done && g.player.length === 2, coins });
 async function settle(id, g) {
   const p = value(g.player);
   if (p <= 21 && !natural(g.player)) while (value(g.dealer) < 17) g.dealer.push(card());
   const d = value(g.dealer);
   g.result = p > 21 ? 'bust' : natural(g.player) && !natural(g.dealer) ? 'blackjack' : natural(g.dealer) && !natural(g.player) ? 'lose' : d > 21 || p > d ? 'win' : p === d ? 'push' : 'lose';
   g.win = g.result === 'blackjack' ? Math.floor(g.bet * 2.5) : g.result === 'win' ? g.bet * 2 : g.result === 'push' ? g.bet : 0;
+  const kind = bonusKind(g.player);
+  if (kind) { g.bonus = { kind, win: (g.base || g.bet) * BONUS[kind] }; g.win += g.bonus.win; }
   g.done = true;
   await redis([['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)], ...ledger(id, 'bj', g.bet, g.win)]);
 }
@@ -171,9 +181,25 @@ async function blackjack(id, body) {
       const won = g.sides.reduce((x, r) => x + r.win, 0);
       await redis([['HINCRBY', statsKey(id), 'bonus', won], ['HINCRBY', statsKey(id), 'gBet', sides], ['HINCRBY', statsKey(id), 'gWon', won], ...ledger(id, 'bj', sides, won, 0)]);
     }
-    if (natural(g.player) || natural(g.dealer)) await settle(id, g);
+    g.base = bet;
+    // As visible et pas de blackjack pour le joueur : on propose l'assurance avant de regarder la carte cachée.
+    if (g.dealer[0].r === 1 && !natural(g.player)) g.offer = true;
+    else if (natural(g.player) || natural(g.dealer)) await settle(id, g);
+  } else if (move === 'insure' || move === 'noinsure') {
+    if (!g || !g.offer) throw refuse(422, 'No insurance to take');
+    if (move === 'insure') {
+      const ins = Number(body.amount);
+      if (!Number.isInteger(ins) || ins < MIN_BET || ins > g.bet) throw refuse(400, `Insurance between ${MIN_BET} and ${g.bet} coins`);
+      await mustAfford(id, ins);
+      g.ins = ins; g.insWin = natural(g.dealer) ? ins * 3 : 0;
+      await redis([['HINCRBY', statsKey(id), 'spent', ins], ['HINCRBY', statsKey(id), 'bonus', g.insWin], ['HINCRBY', statsKey(id), 'gBet', ins], ['HINCRBY', statsKey(id), 'gWon', g.insWin], ...ledger(id, 'bj', ins, g.insWin, 0)]);
+    }
+    g.offer = false;
+    if (natural(g.dealer)) await settle(id, g);
   } else {
     if (!g) throw refuse(422, 'No hand in progress');
+    // Jouer sans répondre à l'assurance, c'est la refuser ; si le croupier a blackjack, la main s'arrête là.
+    if (g.offer) { g.offer = false; if (natural(g.dealer)) { await settle(id, g); await redis([['DEL', bjKey(id)]]); return show(g, (await wallet(id)).coins); } }
     if (move === 'hit') { g.player.push(card()); if (value(g.player) >= 21) await settle(id, g); }
     else if (move === 'stand') await settle(id, g);
     else if (move === 'double') {
@@ -204,28 +230,35 @@ async function debit(id, raw) {
 
 // Plinko : 12 rangées, la bille tombe à gauche ou à droite à chaque clou ; 13 cases, les bords paient le plus.
 const PLINKO = [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33];
+// Mode « High risk » (idée d'un joueur, 2026-10-14) : 15 rangées, 16 cases, 1000× sur les bords (1 chance sur 16 384
+// de chaque côté) mais le milieu rend presque rien. Retour théorique : 96,90 %. Mise plafonnée à 100 pièces, pour qu'un
+// coup de chance ne rapporte pas plus de 100 000 pièces d'un coup.
+const PLINKO_HIGH = [1000, 130, 26, 5, 2, 0.8, 0.3, 0.2, 0.2, 0.3, 0.8, 2, 5, 26, 130, 1000];
+const PLINKO_HIGH_MAX = 100;
 // Seul jeu où l'on peut miser 1 pièce, et lâcher plusieurs billes d'un coup (« count », 20 au plus) : la page regroupe
 // ainsi les clics rapprochés en une seule demande. Une pièce ne se coupe pas : quand mise × case ne tombe pas juste
 // (1 pièce sur ×0,6), la fraction est jouée au hasard (6 chances sur 10 de recevoir la pièce), pour que les petites
 // mises rendent en moyenne exactement autant que les grosses (99 %). Aux mises multiples de 10, rien ne change.
 const PLINKO_MIN = 1, PLINKO_BALLS = 20;
 async function plinko(id, body) {
+  const high = body.risk === 'high', table = high ? PLINKO_HIGH : PLINKO, rows = table.length - 1;
   const bet = amount(body.bet, PLINKO_MIN);
   if (!bet) throw refuse(400, `Bet between ${PLINKO_MIN} and ${MAX_BET} coins`);
+  if (high && bet > PLINKO_HIGH_MAX) throw refuse(400, `High risk: bet at most ${PLINKO_HIGH_MAX} coins per ball`);
   const count = body.count === undefined ? 1 : Number(body.count);
   if (!Number.isInteger(count) || count < 1 || count > PLINKO_BALLS) throw refuse(400, `Between 1 and ${PLINKO_BALLS} balls at a time`);
   const total = bet * count;
   await mustAfford(id, total);
   const balls = Array.from({ length: count }, () => {
-    const path = Array.from({ length: 12 }, () => crypto.randomInt(0, 2));
-    const slot = path.reduce((x, d) => x + d, 0), mult = PLINKO[slot];
+    const path = Array.from({ length: rows }, () => crypto.randomInt(0, 2));
+    const slot = path.reduce((x, d) => x + d, 0), mult = table[slot];
     const tenths = bet * Math.round(mult * 10); // gain en dixièmes de pièce, toujours entier
     return { path, slot, mult, win: Math.floor(tenths / 10) + (crypto.randomInt(0, 10) < tenths % 10 ? 1 : 0) };
   });
   const win = balls.reduce((x, b) => x + b.win, 0);
   await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gPlinko', count], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, 'plinko', total, win, count)]);
   // Une seule bille : la réponse garde aussi sa forme d'avant (path, slot, mult), pour une page pas encore rechargée.
-  return { ...(count === 1 ? balls[0] : {}), balls, bet, total, win, coins: (await wallet(id)).coins };
+  return { ...(count === 1 ? balls[0] : {}), balls, bet, total, risk: high ? 'high' : 'normal', win, coins: (await wallet(id)).coins };
 }
 
 // Machine à sous : trois rouleaux tirés indépendamment sur 20 crans (5 cerises, 5 citrons, 4 cloches, 3 étoiles,
@@ -322,4 +355,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

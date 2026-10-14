@@ -66,7 +66,7 @@ assert.ok(rtp > .93 && rtp < 1.01, `roulette ${rtp}`);
 // ---- Blackjack : stratégie simple (tirer sous 17, doubler à 10 ou 11), résultat recalculé depuis les cartes
 const val = h => { let v = h.reduce((x, c) => x + Math.min(10, c.r), 0); if (h.some(c => c.r === 1) && v + 10 <= 21) v += 10; return v; };
 const nat = h => h.length === 2 && val(h) === 21;
-const results = {};
+const results = {}, bonuses = {};
 rtp = await series('blackjack', '≈ 97 à 99 % (selon le jeu du joueur)', async () => {
   let h = await G.blackjack(id, { move: 'deal', bet: pick(BETS) });
   while (!h.done) {
@@ -77,7 +77,10 @@ rtp = await series('blackjack', '≈ 97 à 99 % (selon le jeu du joueur)', async
   const p = val(h.player), d = val(h.dealer);
   const expect = p > 21 ? 'bust' : nat(h.player) && !nat(h.dealer) ? 'blackjack' : nat(h.dealer) && !nat(h.player) ? 'lose' : d > 21 || p > d ? 'win' : p === d ? 'push' : 'lose';
   assert.equal(h.result, expect, JSON.stringify(h));
-  assert.equal(h.win, { blackjack: Math.floor(h.bet * 2.5), win: h.bet * 2, push: h.bet }[expect] || 0);
+  const kind = G.bonusKind(h.player);
+  assert.deepEqual(h.bonus ? h.bonus.kind : null, kind, 'bonus de la main');
+  assert.equal(h.win, ({ blackjack: Math.floor(h.bet * 2.5), win: h.bet * 2, push: h.bet }[expect] || 0) + (kind ? h.bonus.win : 0));
+  if (kind) bonuses[kind] = (bonuses[kind] || 0) + 1;
   if (p <= 21 && !nat(h.player)) assert.ok(d >= 17, 'le croupier tire jusqu\'à 17');
   for (const c of [...h.player, ...h.dealer]) assert.ok(c.r >= 1 && c.r <= 13 && c.s >= 0 && c.s <= 3);
   results[expect] = (results[expect] || 0) + 1;
@@ -85,6 +88,28 @@ rtp = await series('blackjack', '≈ 97 à 99 % (selon le jeu du joueur)', async
 });
 assert.ok(rtp > .93 && rtp < 1.03, `blackjack ${rtp}`);
 assert.ok(['blackjack', 'win', 'push', 'lose', 'bust'].every(k => results[k] > 0), 'toutes les issues se produisent');
+assert.ok(bonuses.five > 0, `des 21 en 5 cartes sortent (${JSON.stringify(bonuses)})`);
+assert.equal(G.bonusKind([{ r: 7 }, { r: 7 }, { r: 7 }]), 'triple7'); assert.equal(G.bonusKind([{ r: 7 }, { r: 7 }, { r: 6 }]), null);
+assert.equal(G.bonusKind([{ r: 2 }, { r: 3 }, { r: 4 }, { r: 5 }, { r: 7 }]), 'five'); assert.equal(G.bonusKind([{ r: 1 }, { r: 1 }, { r: 2 }, { r: 3 }, { r: 2 }, { r: 2 }]), 'six');
+// ---- Assurance : proposée seulement sous un as visible ; payée 2 contre 1 si le croupier a blackjack ; mauvais pari.
+{
+  let offered = 0, insBet = 0, insWon = 0, other = 0;
+  for (let i = 0; i < N; i++) {
+    let h = await G.blackjack(id, { move: 'deal', bet: 10 });
+    if (!h.canInsure) { if (!h.done) assert.ok(h.dealer[0].r !== 1 || h.value === 21, 'pas d\'assurance sans as'); other++; while (!h.done) h = await G.blackjack(id, { move: 'stand' }); continue; }
+    assert.equal(h.dealer[0].r, 1); offered++;
+    await assert.rejects(G.blackjack(id, { move: 'insure', amount: 11 }), /between 10 and 10/);
+    const c0 = coins();
+    h = await G.blackjack(id, { move: 'insure', amount: 10 });
+    insBet += 10; insWon += h.insWin;
+    assert.equal(h.insurance, 10); assert.ok(h.insWin === 0 || h.insWin === 30);
+    if (h.insWin) { assert.ok(h.done && nat(h.dealer), 'assurance gagnée = blackjack du croupier'); }
+    await assert.rejects(G.blackjack(id, { move: 'insure', amount: 10 }), /No insurance|No hand/);
+    while (!h.done) h = await G.blackjack(id, { move: 'stand' });
+  }
+  report.push({ jeu: 'blackjack · assurance', manches: offered, 'retour mesuré': (100 * insWon / insBet).toFixed(2) + ' %', 'retour théorique': '92.31 % (exact)', 'plus gros gain': '3×' });
+  assert.ok(offered > N / 20 && insWon / insBet < 1.1, `assurance ${insWon / insBet}`);
+}
 
 // ---- Plinko : la case est la somme du chemin, le gain suit la table
 const slots = new Array(13).fill(0);
@@ -113,6 +138,24 @@ for (const small of [1, 5, 7]) {
   }
   report.push({ jeu: `plinko à ${small}`, manches: Math.round(N / 10), 'retour mesuré': (100 * win / bet).toFixed(2) + ' %', 'retour théorique': '98,99 %', 'plus gros gain': '' });
   assert.ok(win / bet > .9 && win / bet < 1.08, `plinko à ${small} : ${win / bet}`);
+}
+// ---- Plinko High risk : 15 rangées, 1000× aux bords. Le retour exact se calcule (loi binomiale) : le 1000× est trop
+// rare pour qu'une simulation le mesure, donc on vérifie le calcul, puis la mécanique sur des billes réelles.
+{
+  const T = G.PLINKO_HIGH, n = T.length - 1, C = k => { let c = 1; for (let i = 0; i < k; i++) c = c * (n - i) / (i + 1); return c; };
+  const exact = T.reduce((x, m, k) => x + C(k) * m, 0) / 2 ** n;
+  assert.equal(n, 15); assert.deepEqual(T, T.slice().reverse(), 'table symétrique');
+  assert.ok(exact < .98 && exact > .94, `High risk : retour exact ${exact}`);
+  let bet = 0, win = 0;
+  for (let i = 0; i < N / 5; i++) {
+    const r = await G.plinko(id, { bet: 100, count: 20, risk: 'high' });
+    assert.equal(r.risk, 'high');
+    for (const b of r.balls) { assert.equal(b.path.length, 15); assert.equal(b.mult, T[b.slot]); }
+    bet += r.total; win += r.win;
+  }
+  report.push({ jeu: 'plinko high risk', manches: Math.round(N / 5) * 20, 'retour mesuré': (100 * win / bet).toFixed(2) + ' %', 'retour théorique': (100 * exact).toFixed(2) + ' %', 'plus gros gain': '' });
+  await assert.rejects(G.plinko(id, { bet: 101, risk: 'high' }), /at most 100/);
+  assert.equal((await G.plinko(id, { bet: 500 })).risk, 'normal');
 }
 for (const bad of [0, 21, 1.5, -1, 'x']) await assert.rejects(G.plinko(id, { bet: 10, count: bad }));
 assert.equal((await G.plinko(id, { bet: 1 })).balls.length, 1);

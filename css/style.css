@@ -3481,3 +3481,16 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 /* Farces du créateur : sous le chat, dans la barre de droite (2026-10-14). */
 .room-aside .prank-bar { margin-top: .6rem; }
 .room-aside .prank-bar .prank-btn { flex: 1 1 auto; }
+/* Plinko : choix Normal / High risk (15 rangées, 16 cases, 1000× aux bords). */
+.pk-risk { display: flex; justify-content: center; gap: .4rem; margin: 0 0 .5rem; flex-wrap: wrap; }
+.pk-risk-btn { border: 1px solid var(--outline); background: var(--surface); color: var(--prose-2); border-radius: 999px; padding: .3rem .8rem; font: 700 .68rem var(--font-sans, inherit); cursor: pointer; }
+.pk-risk-btn.on { border-color: #f59e0b; color: var(--prose-1, inherit); box-shadow: 0 0 0 2px rgba(245, 158, 11, .35); }
+.pk-risk-btn[data-risk="high"].on { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, .4), 0 0 14px rgba(239, 68, 68, .35); }
+.pk-slots[data-risk="high"] { grid-template-columns: repeat(16, 1fr); gap: 2px; }
+.pk-slots[data-risk="high"] span { font-size: .5rem; letter-spacing: -.03em; }
+.pk-slots span[data-m="top"] { background: linear-gradient(160deg, #fde047, #f97316 55%, #dc2626); color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+@media (max-width: 560px) { .pk-slots[data-risk="high"] span { font-size: .38rem; padding: .3rem 0; } }
+/* Blackjack : assurance (as visible) et rappel des bonus 7-7-7 / 21 en 5, 6, 7 cartes. */
+.bj-felt-bonus { text-align: center; font: 700 .5rem var(--font-sans); letter-spacing: .14em; color: rgba(253, 230, 138, .38); margin-top: -.3rem; }
+.bj-ins { display: flex; align-items: center; justify-content: center; gap: .35rem; flex-wrap: wrap; flex-basis: 100%; padding: .4rem .6rem; border: 1px dashed rgba(245, 158, 11, .6); border-radius: .6rem; background: rgba(245, 158, 11, .08); }
+.bj-ins b { font-size: .72rem; }

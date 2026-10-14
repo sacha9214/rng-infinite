@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14q', date: 'Oct 14, 2026', en: ['🔥 Plinko High risk: 15 rows, up to 1000× on the edges (max 100 coins per ball). The normal board is still there', '🃏 Blackjack: insurance when the dealer shows an ace (pays 2 to 1), and lucky-hand bonuses: 7-7-7 pays 7×, 21 in 5 cards 1×, 6 cards 3×, 7 cards or more 10×', 'Thanks A Dude for both ideas!'], fr: ['🔥 Plinko Gros risque : 15 rangées, jusqu\'à 1000× sur les bords (100 pièces max par bille). Le plateau normal est toujours là', '🃏 Blackjack : assurance quand le croupier montre un as (payée 2 contre 1), et bonus des mains chanceuses : 7-7-7 paie 7×, 21 en 5 cartes 1×, en 6 cartes 3×, en 7 cartes ou plus 10×', 'Merci A Dude pour les deux idées !'] },
     { id: '2026-10-14p', date: 'Oct 14, 2026', en: ['Duels: on a computer the chat is now a sidebar on the right, always in view, and player names are no longer cut in the duel scoreboard (tested with 10 players)'], fr: ['Duels : sur ordinateur, le chat est maintenant une barre à droite, toujours visible, et les noms ne sont plus coupés dans le classement du duel (testé à 10 joueurs)'] },
     { id: '2026-10-14o', date: 'Oct 14, 2026', en: ["🎃 Halloween event in the shop's Limited tab: two new skins, Jack-o'-Lantern (digits carved in a pumpkin, bats fly out) and Witch's Brew (a bubbling green potion). On sale until October 31 only"], fr: ["🎃 Événement d'Halloween dans l'onglet Limités de la boutique : deux nouveaux skins, Jack-o'-Lantern (chiffres creusés dans une citrouille, des chauves-souris s'envolent) et Witch's Brew (une potion verte qui bouillonne). En vente jusqu'au 31 octobre seulement"] },
     { id: '2026-10-14n', date: 'Oct 14, 2026', en: ['Shop: a new Limited tab for event skins, with the time left', 'Haunted skin: a graveyard around your number, with ghosts rising from the graves'], fr: ['Boutique : un nouvel onglet Limités pour les skins d\'événement, avec le temps qu\'il reste', 'Skin Haunted : un cimetière autour de ton nombre, avec des fantômes qui sortent des tombes'] },
@@ -2984,9 +2985,10 @@
             <div class="sm-pays" id="sm-pays"></div>
           </div>
           <div class="panel g-game" data-game="plinko">
-            <div class="panel-head"><h3 class="panel-title">Plinko</h3><span class="panel-note">12 rows · the edges pay the most</span></div>
+            <div class="panel-head"><h3 class="panel-title">Plinko</h3><span class="panel-note" id="pk-note">12 rows · the edges pay the most</span></div>
+            <div class="pk-risk" id="pk-risk" role="group" aria-label="Risk"><button class="pk-risk-btn on" data-risk="normal">Normal</button><button class="pk-risk-btn" data-risk="high" title="15 rows: up to 1000×, but the middle pays very little. Max 100 coins per ball">🔥 High risk · up to 1000×</button></div>
             <div class="pk-board" id="pk-board"><canvas id="pk-canvas" width="520" height="360"></canvas></div>
-            <div class="pk-slots" id="pk-slots">${[33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33].map((m, i) => `<span data-slot="${i}" data-m="${m >= 4 ? 'hi' : m >= 1 ? 'mid' : 'lo'}">${m}×</span>`).join('')}</div>
+            <div class="pk-slots" id="pk-slots"></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="pk-go">Drop</button></div>
             <p class="panel-note pk-hint">click as fast as you like, or hold the button</p>
             <p class="panel-note g-result" id="pk-result"></p>
@@ -3112,6 +3114,7 @@
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     // ---- blackjack
+    const BJ_BONUS = { triple7: '7-7-7', five: '5-card 21', six: '6-card 21', seven: '7-card 21' };
     const BJ_TEXT = { blackjack: 'Blackjack!', win: 'You win', push: 'Push: your bet comes back', lose: 'Dealer wins', bust: 'Bust' };
     const drawHand = h => {
       Gamble.hand = h;
@@ -3122,15 +3125,21 @@
         <div class="bj-shoe" aria-hidden="true"></div>
         <div class="bj-row"><span class="eyebrow">Dealer${h.done ? ` · ${h.dealerValue}` : ''}</span><div class="bj-cards">${h.dealer.map((c, i) => cardHTML(c, i >= seen.d, i - seen.d)).join('')}${h.done ? '' : cardHTML(null, seen.d < 2, 1)}</div></div>
         <div class="bj-felt-text" aria-hidden="true">BLACKJACK PAYS 3 TO 2</div>
+        <div class="bj-felt-bonus">BONUS · 7-7-7 ×7 · 21 IN 5 CARDS ×1 · 6 CARDS ×3 · 7+ CARDS ×10</div>
         <div class="bj-row"><span class="eyebrow">You · ${h.value}</span><div class="bj-cards">${h.player.map((c, i) => cardHTML(c, i >= seen.p, i - seen.p)).join('')}</div><span class="bj-stack" data-no-i18n>${fmt(h.bet)}</span></div>`;
       Gamble.bjSeen = h && !h.idle ? { p: h.player.length, d: h.done ? h.dealer.length : 1 } : { p: 0, d: 0 };
+      // Assurance (as visible) : moitié de la mise ou toute la mise, ou non merci ; jouer la main la refuse aussi.
+      const half = h && Math.max(10, Math.floor(h.bet / 2));
+      const insure = playing && h.canInsure ? `<span class="bj-ins" title="The dealer shows an ace. Insurance pays 2 to 1 if the dealer has blackjack"><b>🛡️ Insurance?</b><button class="chip" data-bj="insure" data-amt="${half}">Half · ${fmt(half)}</button>${h.bet > half ? `<button class="chip" data-bj="insure" data-amt="${h.bet}">All · ${fmt(h.bet)}</button>` : ''}<button class="chip" data-bj="noinsure">No thanks</button></span>` : '';
       $('#bj-actions').innerHTML = playing
-        ? `<button class="btn-roll small" data-bj="hit">Hit</button><button class="btn" data-bj="stand">Stand</button>${h.canDouble ? '<button class="btn" data-bj="double">Double</button>' : ''}`
+        ? insure + `<button class="btn-roll small" data-bj="hit">Hit</button><button class="btn" data-bj="stand">Stand</button>${h.canDouble ? '<button class="btn" data-bj="double">Double</button>' : ''}`
         : `<span class="bj-side" title="Your card has the same value as the dealer's face-up card: 8×. Same suit too: 24×. Both your cards match: ×1.5">${['1st', '2nd'].map((n, i) => `<button class="chip${Gamble.side[i] ? ' on' : ''}" data-side="${i}">🎯 Match ${n} card</button>`).join('')}</span><button class="btn-roll small" data-bj="deal">Deal · ${fmt(Gamble.chip * (1 + Gamble.side.filter(Boolean).length))}</button>`;
       // Résultat des mises annexes, morceau par morceau à travers la traduction (la phrase entière ne figure pas au dictionnaire).
       const tr = x => (window.RNGI18n && window.RNGI18n.t ? window.RNGI18n.t(x) : x);
       const sideText = h && !h.idle && h.sides ? ' · ' + h.sides.map((x, i) => (x.bet ? `${tr(i ? 'Match 2nd' : 'Match 1st')}: ${x.win ? `+${fmt(x.win)}${x.kind === 'suited' ? ` (${tr('same suit!')})` : ''}` : tr('no match')}` : '')).filter(Boolean).join(' · ') : '';
-      $('#bj-result').textContent = (h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '') + sideText;
+      const insText = h && !h.idle && h.insurance ? ` · ${tr('Insurance')}: ${h.insWin ? `+${fmt(h.insWin)}` : `−${fmt(h.insurance)}`}` : '';
+      const bonusText = h && h.bonus ? ` · ${tr(BJ_BONUS[h.bonus.kind])} ${tr('bonus')}: +${fmt(h.bonus.win)}` : '';
+      $('#bj-result').textContent = (h && h.done && !h.idle ? `${BJ_TEXT[h.result]} · ${h.win ? `you get ${fmt(h.win)} coins` : `−${fmt(h.bet)}`}` : playing ? `Bet: ${fmt(h.bet)} coins` : '') + bonusText + insText + sideText;
       if (h) showCoins(h.coins);
     };
     // Changer de pièce redessine le bouton « Deal » ; sans le solde de la dernière main, qui a pu changer depuis
@@ -3143,11 +3152,12 @@
       if (!b || Gamble.busy) return;
       Gamble.busy = true;
       try {
-        const h = await gamble('bj', { move: b.dataset.bj, bet: Gamble.chip, side: b.dataset.bj === 'deal' ? Gamble.side.map(on => (on ? Gamble.chip : 0)) : undefined });
+        const h = await gamble('bj', { move: b.dataset.bj, bet: Gamble.chip, amount: b.dataset.amt ? Number(b.dataset.amt) : undefined, side: b.dataset.bj === 'deal' ? Gamble.side.map(on => (on ? Gamble.chip : 0)) : undefined });
         if (h.sides && h.sides.some(x => x.win) && b.dataset.bj === 'deal') { Sound.play('reveal', { small: 1 }); FX.celebrate(h.sides.some(x => x.kind === 'suited') ? 'epic' : 'uncommon', $('#bj-table')); }
         Sound.play('lock', { i: h.player.length, soft: 1 });
         drawHand(h);
-        if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
+        if (h.bonus) { Sound.play('reveal', {}); FX.celebrate('epic', $('#bj-table')); }
+        else if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     // ---- bitcoin : vrai prix (api/_btc.js), relu toutes les 20 s tant que l'onglet est ouvert
@@ -3381,7 +3391,19 @@
     showTab(Gamble.tab);
     const say = (el, win, bet, text) => { el.textContent = text; el.dataset.won = win > bet ? 'yes' : win === bet ? 'even' : 'no'; };
     // ---- plinko : la bille suit le chemin tiré par le serveur, un clou toutes les 110 ms
-    const pk = $('#pk-canvas').getContext('2d'), PW = 520, PH = 360, ROWS = 12, GAPX = PW / (ROWS + 2), GAPY = (PH - 40) / ROWS;
+    const pk = $('#pk-canvas').getContext('2d'), PW = 520, PH = 360;
+    // Deux plateaux : Normal (12 rangées) et High risk (15 rangées, 1000× aux bords ; mêmes tables que api/_gamble.js).
+    const PK_TABLES = { normal: [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33], high: [1000, 130, 26, 5, 2, 0.8, 0.3, 0.2, 0.2, 0.3, 0.8, 2, 5, 26, 130, 1000] };
+    let ROWS = 12, GAPX = 0, GAPY = 0;
+    const pkSetRisk = risk => {
+      Gamble.pkRisk = risk; const t = PK_TABLES[risk];
+      ROWS = t.length - 1; GAPX = PW / (ROWS + 2); GAPY = (PH - 40) / ROWS;
+      $('#pk-slots').dataset.risk = risk;
+      $('#pk-slots').innerHTML = t.map((m, i) => `<span data-slot="${i}" data-m="${m >= 100 ? 'top' : m >= 4 ? 'hi' : m >= 1 ? 'mid' : 'lo'}">${m}×</span>`).join('');
+      $('#pk-note').textContent = risk === 'high' ? '15 rows · 1000× on the edges · max 100 per ball' : '12 rows · the edges pay the most';
+      document.querySelectorAll('#pk-risk [data-risk]').forEach(b => b.classList.toggle('on', b.dataset.risk === risk));
+      lit.clear();
+    };
     const peg = (r, i) => ({ x: PW / 2 + (i - r / 2) * GAPX, y: 26 + r * GAPY });
     const lit = new Map(); // clou touché → instant, pour le faire briller un moment
     const drawBoard = (balls = []) => {
@@ -3402,13 +3424,19 @@
         pk.beginPath(); pk.arc(ball.x, ball.y, 12, 0, 7); pk.strokeStyle = 'rgba(245,158,11,.35)'; pk.lineWidth = 3; pk.stroke(); // halo sans shadowBlur
       }
     };
-    drawBoard();
+    pkSetRisk(Gamble.pkRisk || 'normal'); drawBoard();
+    // Changer de plateau seulement quand aucune bille n'est en jeu ni en attente.
+    $('#pk-risk').addEventListener('click', e => {
+      const b = e.target.closest('[data-risk]'); if (!b || b.dataset.risk === Gamble.pkRisk) return;
+      if (PK.balls.length || PK.queue || PK.sending) { toast('Wait for the balls to land', 1500); return; }
+      pkSetRisk(b.dataset.risk); drawBoard(); pkLabel();
+    });
     // Plusieurs billes à la fois, comme dans les Plinko en ligne : chaque clic ajoute une bille. Pendant qu'une demande
     // est en route, les clics suivants s'accumulent et partent ensemble dans la suivante (20 billes au plus par demande),
     // si bien qu'on peut marteler le bouton sans noyer le serveur. Une seule boucle anime toutes les billes ; le solde
     // affiché ne compte un gain qu'à l'arrivée de sa bille.
     const PK = Gamble.pk = { balls: [], queue: 0, sending: false, pending: 0, raf: 0, lastTick: 0, lastFx: 0, n: 0, net: 0, idle: 0, hold: 0, wait: 0 };
-    const pkLabel = () => { $('#pk-go').textContent = `Drop · ${fmt(Gamble.chip)}`; };
+    const pkLabel = () => { $('#pk-go').textContent = `Drop · ${fmt(Gamble.pkRisk === 'high' ? Math.min(Gamble.chip, 100) : Gamble.chip)}`; };
     const pkCoins = () => { if ($('#g-coins') && Gamble.coins != null) $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins - PK.pending)}`; };
     const pkTarget = ball => {
       const r = ball.r, q = r < ROWS ? peg(r + 1, ball.pos + ball.path[r]) : null;
@@ -3454,10 +3482,10 @@
     const pkPump = async () => {
       if (PK.sending || !PK.queue) return;
       PK.sending = true;
-      const count = Math.min(20, PK.queue), bet = Gamble.chip;
+      const count = Math.min(20, PK.queue), risk = Gamble.pkRisk || 'normal', bet = risk === 'high' ? Math.min(Gamble.chip, 100) : Gamble.chip;
       PK.queue -= count;
       try {
-        const res = await gamble('plinko', { bet, count });
+        const res = await gamble('plinko', { bet, count, risk });
         const balls = res.balls || [res];
         PK.pending += balls.reduce((x, b) => x + b.win, 0);
         Gamble.coins = res.coins; Store.setSetting('coins', res.coins); pkCoins();
