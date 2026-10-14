@@ -379,7 +379,9 @@
     // Titres réservés : le mot seul, sans pastille, avec un reflet. Rouge béryl et couronne pour le créateur, bleu et
     // invite de terminal pour un Manager.
     if (a.hidden) return `<span class="title-owner${a.id === 'manager' ? ' title-manager' : ''}" title="${esc(a.desc)}">${esc(a.title)}</span>`;
-    return `<span class="title-pill" title="${esc(a.desc)}">${a.emoji} <span class="t">${esc(a.title)}</span></span>`;
+    // Tous les titres ont le style du titre Owner : le mot seul en petites capitales, un dégradé à leur couleur (css/style.css,
+    // .tt-<id>) avec un reflet qui passe, et leur icône devant.
+    return `<span class="title-owner title-fx tt-${esc(a.id)}" title="${esc(a.desc)}"><i aria-hidden="true">${a.emoji}</i>${esc(a.title)}</span>`;
   };
 
   function noteAchievements(list) {
@@ -1456,6 +1458,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14k', date: 'Oct 14, 2026', en: ['Every title now has its own style, like the Owner one: its own colours, a shine that passes over it and its icon (a moving rainbow for Infinite)'], fr: ['Chaque titre a maintenant son propre style, comme celui du créateur : ses couleurs, un reflet qui passe dessus et son icône (un arc-en-ciel qui défile pour Infinite)'] },
     { id: '2026-10-14j', date: 'Oct 14, 2026', en: ['Crypto is now live: the price, the last candle and your position gains move with every real trade, several times a second'], fr: ['La crypto est maintenant en direct : le prix, la dernière bougie et les gains de tes positions bougent à chaque vrai échange, plusieurs fois par seconde'] },
     { id: '2026-10-14i', date: 'Oct 14, 2026', en: ['HellBorn now has its own animation (embers, sparks on every digit, an eruption and lava drips) and a Preview in the shop', 'Mayo skin reworked: a real mayonnaise jar, glossy piped digits, better squeeze bottles and a big zigzag at the end'], fr: ['HellBorn a maintenant sa propre animation (braises, étincelles sur chaque chiffre, éruption et gouttes de lave) et un aperçu dans la boutique', 'Skin Mayo refait : un vrai pot de mayonnaise, des chiffres de mayo brillants à la poche, de plus beaux flacons et un grand zigzag à la fin'] },
     { id: '2026-10-14h', date: 'Oct 14, 2026', en: ['🎃 Halloween skin: Haunted (666 coins), on sale until November 1 only. A haunted house under the moon, ghostly digits, ghosts flying out at the reveal', 'New badges for numbers that contain a perfect square: Little, Inside, Big and Huge Square (444 to 24,307 XP, set by how rare they are)'], fr: ['🎃 Skin d\'Halloween : Haunted (666 pièces), en vente jusqu\'au 1er novembre seulement. Une maison hantée sous la lune, des chiffres fantômes, des fantômes qui s\'envolent à la révélation', 'Nouveaux badges pour les nombres qui contiennent un carré parfait : Little, Inside, Big et Huge Square (de 444 à 24 307 XP, selon leur rareté)'] },

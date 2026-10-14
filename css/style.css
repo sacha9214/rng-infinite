@@ -3260,3 +3260,91 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .btc-price.tick-up { animation: tick-up .6s ease-out; } .btc-price.tick-down { animation: tick-down .6s ease-out; }
 @keyframes tick-up { from { color: #26a69a; text-shadow: 0 0 12px rgba(38, 166, 154, .7); } }
 @keyframes tick-down { from { color: #ef5350; text-shadow: 0 0 12px rgba(239, 83, 80, .7); } }
+
+/* Tous les titres façon Owner : chacun sa couleur (a = sombre, b = principale, reflet). L'icône garde ses couleurs. */
+.title-fx::before { content: none; }
+.title-fx i { font-style: normal; font-size: 1.05em; letter-spacing: 0; -webkit-text-fill-color: initial; margin-right: .1em; }
+.title-fx { animation-duration: 7s; }
+.title-fx.tt-rookie { --owner-a: #475569 !important; --owner-b: #64748b !important; --owner-shine: #e2e8f0 !important; }
+.title-fx.tt-regular { --owner-a: #0f766e !important; --owner-b: #14b8a6 !important; --owner-shine: #ccfbf1 !important; }
+.title-fx.tt-addict { --owner-a: #6d28d9 !important; --owner-b: #8b5cf6 !important; --owner-shine: #ede9fe !important; }
+.title-fx.tt-nolife { --owner-a: #3f6212 !important; --owner-b: #65a30d !important; --owner-shine: #ecfccb !important; }
+.title-fx.tt-cursed { --owner-a: #57534e !important; --owner-b: #7c2d12 !important; --owner-shine: #fde68a !important; }
+.title-fx.tt-lucky { --owner-a: #15803d !important; --owner-b: #22c55e !important; --owner-shine: #dcfce7 !important; }
+.title-fx.tt-blessed { --owner-a: #a16207 !important; --owner-b: #eab308 !important; --owner-shine: #fffbeb !important; }
+.title-fx.tt-anomaly { --owner-a: #c2410c !important; --owner-b: #f97316 !important; --owner-shine: #ffedd5 !important; }
+.title-fx.tt-mythic { --owner-a: #be185d !important; --owner-b: #ec4899 !important; --owner-shine: #fce7f3 !important; }
+.title-fx.tt-chosen { --owner-a: #7e22ce !important; --owner-b: #06b6d4 !important; --owner-shine: #f5f3ff !important; }
+.title-fx.tt-celestial { --owner-a: #0e7490 !important; --owner-b: #22d3ee !important; --owner-shine: #ecfeff !important; }
+.title-fx.tt-divine { --owner-a: #a16207 !important; --owner-b: #facc15 !important; --owner-shine: #ffffff !important; }
+.title-fx.tt-millionaire { --owner-a: #15803d !important; --owner-b: #ca8a04 !important; --owner-shine: #fef9c3 !important; }
+.title-fx.tt-drastix { --owner-a: #b91c1c !important; --owner-b: #f97316 !important; --owner-shine: #fee2e2 !important; }
+.title-fx.tt-year2026 { --owner-a: #1d4ed8 !important; --owner-b: #6366f1 !important; --owner-shine: #e0e7ff !important; }
+.title-fx.tt-collector { --owner-a: #b45309 !important; --owner-b: #f59e0b !important; --owner-shine: #fef3c7 !important; }
+.title-fx.tt-hoarder { --owner-a: #334155 !important; --owner-b: #78716c !important; --owner-shine: #f5f5f4 !important; }
+.title-fx.tt-completionist { --owner-a: #78350f !important; --owner-b: #d4a373 !important; --owner-shine: #fff7ed !important; }
+.title-fx.tt-daily { --owner-a: #a16207 !important; --owner-b: #f59e0b !important; --owner-shine: #fff7cc !important; }
+.title-fx.tt-duelist { --owner-a: #991b1b !important; --owner-b: #ef4444 !important; --owner-shine: #fee2e2 !important; }
+.title-fx.tt-gladiator { --owner-a: #475569 !important; --owner-b: #94a3b8 !important; --owner-shine: #ffffff !important; }
+.title-fx.tt-flawless { --owner-a: #0369a1 !important; --owner-b: #7dd3fc !important; --owner-shine: #ffffff !important; }
+.title-fx.tt-warlord { --owner-a: #7f1d1d !important; --owner-b: #b91c1c !important; --owner-shine: #fecaca !important; }
+.title-fx.tt-speedrunner { --owner-a: #ca8a04 !important; --owner-b: #facc15 !important; --owner-shine: #ffffff !important; }
+.title-fx.tt-supporter { --owner-a: #e11d48 !important; --owner-b: #fb7185 !important; --owner-shine: #fff1f2 !important; }
+/* Infinite : un arc-en-ciel qui défile. */
+.tt-infinite { background: linear-gradient(90deg, #f472b6, #c084fc, #60a5fa, #34d399, #facc15, #fb923c, #f472b6) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; animation: tt-rainbow 4s linear infinite; }
+@keyframes tt-rainbow { to { background-position: 300% 0; } }
+.lb-who .title-fx { font-size: .62rem; }
+@media (max-width: 560px) { .lb-who .title-fx { font-size: 0; gap: 0; } .lb-who .title-fx i { font-size: .8rem; } }
+@media (prefers-reduced-motion: reduce) { .title-fx { animation: none; } }
+/* Les couleurs de chaque titre passent devant celles du titre Owner (plus spécifiques en thème sombre) ; en sombre,
+   la teinte principale sert aussi de bord pour rester lisible sur fond noir. */
+.dark .title-fx.tt-rookie, :root[data-theme="dark"] .title-fx.tt-rookie { --owner-a: #64748b !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-rookie { --owner-a: #64748b !important; } }
+.dark .title-fx.tt-regular, :root[data-theme="dark"] .title-fx.tt-regular { --owner-a: #14b8a6 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-regular { --owner-a: #14b8a6 !important; } }
+.dark .title-fx.tt-addict, :root[data-theme="dark"] .title-fx.tt-addict { --owner-a: #8b5cf6 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-addict { --owner-a: #8b5cf6 !important; } }
+.dark .title-fx.tt-nolife, :root[data-theme="dark"] .title-fx.tt-nolife { --owner-a: #65a30d !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-nolife { --owner-a: #65a30d !important; } }
+.dark .title-fx.tt-cursed, :root[data-theme="dark"] .title-fx.tt-cursed { --owner-a: #7c2d12 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-cursed { --owner-a: #7c2d12 !important; } }
+.dark .title-fx.tt-lucky, :root[data-theme="dark"] .title-fx.tt-lucky { --owner-a: #22c55e !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-lucky { --owner-a: #22c55e !important; } }
+.dark .title-fx.tt-blessed, :root[data-theme="dark"] .title-fx.tt-blessed { --owner-a: #eab308 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-blessed { --owner-a: #eab308 !important; } }
+.dark .title-fx.tt-anomaly, :root[data-theme="dark"] .title-fx.tt-anomaly { --owner-a: #f97316 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-anomaly { --owner-a: #f97316 !important; } }
+.dark .title-fx.tt-mythic, :root[data-theme="dark"] .title-fx.tt-mythic { --owner-a: #ec4899 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-mythic { --owner-a: #ec4899 !important; } }
+.dark .title-fx.tt-chosen, :root[data-theme="dark"] .title-fx.tt-chosen { --owner-a: #06b6d4 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-chosen { --owner-a: #06b6d4 !important; } }
+.dark .title-fx.tt-celestial, :root[data-theme="dark"] .title-fx.tt-celestial { --owner-a: #22d3ee !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-celestial { --owner-a: #22d3ee !important; } }
+.dark .title-fx.tt-divine, :root[data-theme="dark"] .title-fx.tt-divine { --owner-a: #facc15 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-divine { --owner-a: #facc15 !important; } }
+.dark .title-fx.tt-millionaire, :root[data-theme="dark"] .title-fx.tt-millionaire { --owner-a: #ca8a04 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-millionaire { --owner-a: #ca8a04 !important; } }
+.dark .title-fx.tt-drastix, :root[data-theme="dark"] .title-fx.tt-drastix { --owner-a: #f97316 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-drastix { --owner-a: #f97316 !important; } }
+.dark .title-fx.tt-year2026, :root[data-theme="dark"] .title-fx.tt-year2026 { --owner-a: #6366f1 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-year2026 { --owner-a: #6366f1 !important; } }
+.dark .title-fx.tt-collector, :root[data-theme="dark"] .title-fx.tt-collector { --owner-a: #f59e0b !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-collector { --owner-a: #f59e0b !important; } }
+.dark .title-fx.tt-hoarder, :root[data-theme="dark"] .title-fx.tt-hoarder { --owner-a: #78716c !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-hoarder { --owner-a: #78716c !important; } }
+.dark .title-fx.tt-completionist, :root[data-theme="dark"] .title-fx.tt-completionist { --owner-a: #d4a373 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-completionist { --owner-a: #d4a373 !important; } }
+.dark .title-fx.tt-daily, :root[data-theme="dark"] .title-fx.tt-daily { --owner-a: #f59e0b !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-daily { --owner-a: #f59e0b !important; } }
+.dark .title-fx.tt-duelist, :root[data-theme="dark"] .title-fx.tt-duelist { --owner-a: #ef4444 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-duelist { --owner-a: #ef4444 !important; } }
+.dark .title-fx.tt-gladiator, :root[data-theme="dark"] .title-fx.tt-gladiator { --owner-a: #94a3b8 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-gladiator { --owner-a: #94a3b8 !important; } }
+.dark .title-fx.tt-flawless, :root[data-theme="dark"] .title-fx.tt-flawless { --owner-a: #7dd3fc !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-flawless { --owner-a: #7dd3fc !important; } }
+.dark .title-fx.tt-warlord, :root[data-theme="dark"] .title-fx.tt-warlord { --owner-a: #b91c1c !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-warlord { --owner-a: #b91c1c !important; } }
+.dark .title-fx.tt-speedrunner, :root[data-theme="dark"] .title-fx.tt-speedrunner { --owner-a: #facc15 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-speedrunner { --owner-a: #facc15 !important; } }
+.dark .title-fx.tt-supporter, :root[data-theme="dark"] .title-fx.tt-supporter { --owner-a: #fb7185 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-supporter { --owner-a: #fb7185 !important; } }
