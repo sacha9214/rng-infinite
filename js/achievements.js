@@ -41,6 +41,8 @@
     // Remerciement : contribution à la cagnotte du serveur (aucun avantage en jeu).
     { id: 'supporter', emoji: '💗', title: 'Supporter', desc: 'Contribute to the server fund', test: st => num(st.supporter) >= 1 },
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
+    // Code SPOOKYMONTH (Halloween 2026) : caché à ceux qui ne l'ont pas, pour ne pas dévoiler le code.
+    { id: 'spooky', emoji: '🎃', title: 'Spooky', desc: 'Redeemed the Halloween 2026 code', hidden: true, test: st => num(st.spooky) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
     // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google : le
     // marqueur d'invité suffit, pour ceux qui se sont connectés avant que ce titre existe).

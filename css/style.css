@@ -3370,3 +3370,6 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .pw-form .input { min-width: 0; text-transform: none; letter-spacing: 0; text-align: left; }
 .pw-login { margin-top: .6rem; } .pw-login summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--prose-2); }
 @media (max-width: 520px) { .pw-form { grid-template-columns: 1fr; } }
+.title-fx.tt-spooky { --owner-a: #7c3aed !important; --owner-b: #f97316 !important; --owner-shine: #fde68a !important; }
+.dark .title-fx.tt-spooky, :root[data-theme="dark"] .title-fx.tt-spooky { --owner-a: #a78bfa !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-spooky { --owner-a: #a78bfa !important; } }

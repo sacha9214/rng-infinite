@@ -379,7 +379,7 @@
     if (!a) return '';
     // Titres réservés : le mot seul, sans pastille, avec un reflet. Rouge béryl et couronne pour le créateur, bleu et
     // invite de terminal pour un Manager.
-    if (a.hidden) return `<span class="title-owner${a.id === 'manager' ? ' title-manager' : ''}" title="${esc(a.desc)}">${esc(a.title)}</span>`;
+    if (a.hidden && (a.id === 'owner' || a.id === 'manager')) return `<span class="title-owner${a.id === 'manager' ? ' title-manager' : ''}" title="${esc(a.desc)}">${esc(a.title)}</span>`;
     // Tous les titres ont le style du titre Owner : le mot seul en petites capitales, un dégradé à leur couleur (css/style.css,
     // .tt-<id>) avec un reflet qui passe, et leur icône devant.
     return `<span class="title-owner title-fx tt-${esc(a.id)}" title="${esc(a.desc)}"><i aria-hidden="true">${a.emoji}</i>${esc(a.title)}</span>`;
@@ -1092,7 +1092,7 @@
           const st = await Online.shopAction('redeem', undefined, { code: input.value });
           Store.setSetting('coins', st.coins);
           input.value = '';
-          toast(`🎁 Code ${st.redeemed.code}: +${fmt(st.redeemed.coins)} coins!`, 5000, 'achv');
+          toast(`🎁 Code ${st.redeemed.code}: +${fmt(st.redeemed.coins)} coins${st.redeemed.title ? ' and a new title' : ''}!`, 5000, 'achv');
           Sound.play('reveal', { small: 1 });
         } catch (err) {
           toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again');

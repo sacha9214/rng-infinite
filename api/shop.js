@@ -21,6 +21,8 @@ const ownedButtonsKey = id => `btns:${id}`; // boutons achetés à part ; le has
 // Pour en ajouter un : une ligne ici, puis déployer. codes:<id> = les codes déjà utilisés par ce joueur.
 const CODES = {
   SACHA: { coins: 200 },
+  // Halloween 2026 : 300 pièces et le titre Spooky (stats.spooky), valable jusqu'au 1er novembre.
+  SPOOKYMONTH: { coins: 300, title: 'spooky', until: '2026-11-01T00:00:00Z' },
 };
 const CODE_MIN_ROLLS = 30;
 const usedCodesKey = id => `codes:${id}`;
@@ -192,14 +194,15 @@ module.exports = async (req, res) => {
       const code = String(body.code || '').toUpperCase().replace(/\s+/g, '').slice(0, 32);
       const prize = Object.prototype.hasOwnProperty.call(CODES, code) ? CODES[code] : null;
       if (!prize) return send(res, 404, { error: 'This code does not exist' });
+      if (prize.until && Date.now() >= Date.parse(prize.until)) return send(res, 410, { error: 'This code has expired' });
       const stats = await readStats(playerId);
       const rolls = Number(stats.rolls) || 0;
       if (rolls < CODE_MIN_ROLLS) return send(res, 422, { error: `Codes unlock after ${CODE_MIN_ROLLS} rolls (you have ${rolls})` });
       // SADD répond 1 la première fois seulement : deux envois simultanés ne créditent qu'une fois.
       const [fresh] = await redis([['SADD', usedCodesKey(playerId), code]]);
       if (Number(fresh) !== 1) return send(res, 409, { error: 'You already used this code' });
-      await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ['HINCRBY', 'codes:count', code, 1]]);
-      return send(res, 200, { ...(await state(playerId)), redeemed: { code, coins: prize.coins } });
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ['HINCRBY', 'codes:count', code, 1], ...(prize.title ? [['HSET', statsKey(playerId), prize.title, 1]] : [])]);
+      return send(res, 200, { ...(await state(playerId)), redeemed: { code, coins: prize.coins, title: prize.title || null } });
     }
     if (!skin) return send(res, 400, { error: 'Unknown skin' });
 

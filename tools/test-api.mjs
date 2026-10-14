@@ -2166,7 +2166,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const before = await coins(alice);
   r = await redeem(alice, ' sa cha ');
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.deepEqual(r.body.redeemed, { code: 'SACHA', coins: 200 });
+  assert.deepEqual(r.body.redeemed, { code: 'SACHA', coins: 200, title: null });
   assert.equal(r.body.coins, before + 200);
   assert.equal(await coins(alice), before + 200, 'le même solde que la boutique');
   r = await redeem(alice, 'sacha');
@@ -2445,6 +2445,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['DEL', `pwfail:${u.playerId}`], ['SET', 'pwip:203.0.113.50', 30]]); assert.equal((await pw({ action: 'passwordLogin', name: 'Passy', password: 'correct horse' })).status, 429, 'trop d\'essais depuis cette adresse');
   run([['DEL', 'pwip:203.0.113.50']]);
   assert.equal((await pw({ action: 'passwordState', ...u })).body.has, true);
+}
+
+// ================================================================ 58. Code SPOOKYMONTH : 300 pièces + titre Spooky, jusqu'au 1er novembre
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const k = { playerId: '7c'.repeat(8), secret: '8c'.repeat(16), name: 'Spooker' };
+  db.delete(`cooldown:${k.playerId}`); assert.equal((await call(roll, { method: 'POST', body: k })).status, 200);
+  run([['HSET', `stats:${k.playerId}`, 'rolls', 40]]);
+  const redeem = () => call(shopApi, { method: 'POST', body: { playerId: k.playerId, secret: k.secret, action: 'redeem', code: 'spooky month' } });
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-11-01T00:00:01Z');
+  try { const r = await redeem(); assert.equal(r.status, 410); } finally { Date.now = realNow; }
+  Date.now = () => Date.parse('2026-10-20T12:00:00Z');
+  try { const r = await redeem(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual([r.body.redeemed.coins, r.body.redeemed.title], [300, 'spooky']); } finally { Date.now = realNow; }
+  assert.equal((await equip(k, 'spooky')).status, 200, 'titre équipable');
+  assert.equal((await equip(alice, 'spooky')).status, 422, 'pas sans le code');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
