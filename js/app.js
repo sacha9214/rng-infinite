@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14j', date: 'Oct 14, 2026', en: ['Crypto is now live: the price, the last candle and your position gains move with every real trade, several times a second'], fr: ['La crypto est maintenant en direct : le prix, la dernière bougie et les gains de tes positions bougent à chaque vrai échange, plusieurs fois par seconde'] },
     { id: '2026-10-14i', date: 'Oct 14, 2026', en: ['HellBorn now has its own animation (embers, sparks on every digit, an eruption and lava drips) and a Preview in the shop', 'Mayo skin reworked: a real mayonnaise jar, glossy piped digits, better squeeze bottles and a big zigzag at the end'], fr: ['HellBorn a maintenant sa propre animation (braises, étincelles sur chaque chiffre, éruption et gouttes de lave) et un aperçu dans la boutique', 'Skin Mayo refait : un vrai pot de mayonnaise, des chiffres de mayo brillants à la poche, de plus beaux flacons et un grand zigzag à la fin'] },
     { id: '2026-10-14h', date: 'Oct 14, 2026', en: ['🎃 Halloween skin: Haunted (666 coins), on sale until November 1 only. A haunted house under the moon, ghostly digits, ghosts flying out at the reveal', 'New badges for numbers that contain a perfect square: Little, Inside, Big and Huge Square (444 to 24,307 XP, set by how rare they are)'], fr: ['🎃 Skin d\'Halloween : Haunted (666 pièces), en vente jusqu\'au 1er novembre seulement. Une maison hantée sous la lune, des chiffres fantômes, des fantômes qui s\'envolent à la révélation', 'Nouveaux badges pour les nombres qui contiennent un carré parfait : Little, Inside, Big et Huge Square (de 444 à 24 307 XP, selon leur rareté)'] },
     { id: '2026-10-14g', date: 'Oct 14, 2026', en: ['New cheap skin: Mayo (250 coins). Squeeze bottles pop up and squirt mayonnaise on every digit'], fr: ['Nouveau skin pas cher : Mayo (250 pièces). Des flacons surgissent et giclent de la mayonnaise sur chaque chiffre'] },
@@ -3197,6 +3198,43 @@
       const box = $('#lev-box'); if (box) box.innerHTML = leverHTML();
       paintChart();
     };
+    // Prix en direct : le flux public de Coinbase (chaque échange, plusieurs fois par seconde), seulement pour l'affichage.
+    // Le prix de la dernière bougie, le prix affiché et les gains des positions bougent en direct ; les achats et ventes
+    // se font toujours au prix lu par le serveur (moins de 3 s).
+    const Live = { ws: null, p: {}, raf: 0, retry: 0 };
+    const liveStart = () => {
+      if (Live.ws || typeof WebSocket === 'undefined') return;
+      try {
+        const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
+        Live.ws = ws;
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', product_ids: ['BTC-USD', 'ETH-USD'], channels: ['ticker'] }));
+        ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type !== 'ticker' || !m.price) return; const a = m.product_id === 'ETH-USD' ? 'eth' : 'btc'; Live.p[a] = Number(m.price); if (a === Gamble.asset && !Live.raf) Live.raf = requestAnimationFrame(liveTick); };
+        ws.onclose = () => { Live.ws = null; if (currentView === 'gamble' && Gamble.tab === 'btc') Live.retry = setTimeout(liveStart, 3000); };
+        ws.onerror = () => { try { ws.close(); } catch (e) { /* déjà fermée */ } };
+      } catch (e) { Live.ws = null; }
+    };
+    const liveStop = () => { clearTimeout(Live.retry); if (Live.ws) { Live.ws.onclose = null; try { Live.ws.close(); } catch (e) { /* déjà fermée */ } Live.ws = null; } };
+    const liveTick = () => {
+      Live.raf = 0;
+      const P = Live.p[Gamble.asset], d = Gamble.btc;
+      if (!P || !d || currentView !== 'gamble' || Gamble.tab !== 'btc') { if (currentView !== 'gamble') liveStop(); return; }
+      const el = $('#btc-body .btc-price');
+      if (el) { const prev = d.livePrice || d.price; el.textContent = `🪙 ${P >= 1000 ? fmt(Math.round(P)) : P.toFixed(2)}`; if (prev && P !== prev) { el.classList.remove('tick-up', 'tick-down'); void el.offsetWidth; el.classList.add(P > prev ? 'tick-up' : 'tick-down'); } d.livePrice = P; }
+      // la dernière bougie suit le prix ; une nouvelle commence quand son temps est écoulé
+      const c = Gamble.cndl;
+      if (c && c.asset === Gamble.asset && c.rows.length) {
+        const g = { '5m': 300, '15m': 900, '1h': 3600, '6h': 21600, '1d': 86400 }[c.tf], now = Date.now() / 1000, last = c.rows[c.rows.length - 1];
+        if (now >= last[0] + g) c.rows.push([Math.floor(now / g) * g, last[4], Math.max(last[4], P), Math.min(last[4], P), P, 0]);
+        else { last[4] = P; last[2] = Math.max(last[2], P); last[3] = Math.min(last[3], P); }
+        Gamble.btc.price = P; paintChart();
+      }
+      // gains des positions à effet de levier, en direct
+      for (const p of (Gamble.lev && Gamble.lev.positions) || []) {
+        if (p.a !== Gamble.asset) continue;
+        const v = Math.max(0, Math.floor(p.m + p.m * p.lev * (p.side === 'short' ? -1 : 1) * (P / p.entry - 1) - p.m * p.lev * .002)), pnl = v - p.m, row = $(`#btc-body [data-pos="${p.id}"] .lev-pos-top span`);
+        if (row) { row.textContent = `${pnl >= 0 ? '+' : '−'}${fmt(Math.abs(pnl))} (${pnl >= 0 ? '+' : ''}${((pnl / p.m) * 100).toFixed(1)}%)`; row.className = `mono ${pnl >= 0 ? 'up' : 'down'}`; }
+      }
+    };
     async function drawBtc(fetchNow) {
       clearTimeout(Gamble.btcTimer);
       const box = $('#btc-body');
@@ -3225,6 +3263,7 @@
         <p class="panel-note g-result" id="btc-result">${Gamble.btcMsg || ''}</p>
         <div id="lev-box">${leverHTML()}</div>`;
       paintChart();
+      if (Live.p[Gamble.asset] && !Live.raf) Live.raf = requestAnimationFrame(liveTick);
       const cv = $('#tv-chart');
       if (cv) {
         const at = ev => { const r = cv.getBoundingClientRect(), p = ev.touches ? ev.touches[0] : ev, n = Math.max(20, Math.min((Gamble.cndl && Gamble.cndl.rows.length) || 0, Gamble.zoom)); Gamble.hover = Math.floor(((p.clientX - r.left) / Math.max(1, r.width - 58)) * n); Gamble.hy = p.clientY - r.top; paintChart(); };
@@ -3276,7 +3315,7 @@
       $('#g-chips').dataset.game = id;
       if (id !== 'plinko' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
       const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
-      if (id === 'btc') drawBtc(true); else clearTimeout(Gamble.btcTimer);
+      if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
     $('#g-tabs').addEventListener('click', e => { const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab); });
     showTab(Gamble.tab);

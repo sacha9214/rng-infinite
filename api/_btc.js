@@ -14,7 +14,7 @@ const ASSETS = {
 };
 const assetOf = raw => ASSETS[String(raw || 'btc').toLowerCase()] || null;
 const PRICE_KEY = ASSETS.btc.price, HIST_KEY = ASSETS.btc.hist;
-const PRICE_TTL_S = 20, MAX_AGE_MS = 120000, HIST_EVERY_MS = 5 * 60000, HIST_KEEP = 288; // 24 h de points toutes les 5 min
+const PRICE_TTL_S = 5, MAX_AGE_MS = 120000, HIST_EVERY_MS = 5 * 60000, HIST_KEEP = 288; // 24 h de points toutes les 5 min
 const SPREAD = 0.01, MIN_TRADE = 10, MAX_TRADE = 50000, SATS = 1e8, MIN_ROLLS = 30;
 const refuse = (status, error) => Object.assign(new Error(error), { status });
 
@@ -123,7 +123,7 @@ async function candles(a, tf) {
   }
   if (!rows || !rows.length) throw refuse(503, 'The chart is unavailable right now');
   const out = { tf, rows: rows.slice(-300) };
-  await redis([['SET', key, JSON.stringify(out), 'EX', Math.max(30, Math.min(300, g / 6))]]);
+  await redis([['SET', key, JSON.stringify(out), 'EX', Math.max(10, Math.min(120, g / 30))]]); // le site fait vivre la dernière bougie en direct
   return out;
 }
 

@@ -3255,3 +3255,8 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .room-stage.many .side-haunted::before { animation: none; }
 .o-dms { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .o-tr.c2 { grid-template-columns: minmax(0, 1fr) 5rem; }
+
+/* Prix crypto en direct : un éclair vert ou rouge à chaque changement. */
+.btc-price.tick-up { animation: tick-up .6s ease-out; } .btc-price.tick-down { animation: tick-down .6s ease-out; }
+@keyframes tick-up { from { color: #26a69a; text-shadow: 0 0 12px rgba(38, 166, 154, .7); } }
+@keyframes tick-down { from { color: #ef5350; text-shadow: 0 0 12px rgba(239, 83, 80, .7); } }
