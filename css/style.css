@@ -3244,3 +3244,5 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .side-haunted::before { animation: haunt-rise 3.6s ease-in-out infinite; }
 @keyframes haunt-rise { 0% { transform: translateY(6px); opacity: 0; } 30%, 70% { opacity: .9; } 100% { transform: translateY(-14px); opacity: 0; } }
 .room-stage.many .side-haunted::before { animation: none; }
+.o-dms { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.o-tr.c2 { grid-template-columns: minmax(0, 1fr) 5rem; }

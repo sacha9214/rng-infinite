@@ -111,7 +111,7 @@ async function sendDm(me, other, raw) {
   const [perMin, perDay] = await redis([['INCR', `dmrate:${me}:${minute}`], ['INCR', `dmrate:${me}:${dayKey(t)}`], ['EXPIRE', `dmrate:${me}:${minute}`, 120], ['EXPIRE', `dmrate:${me}:${dayKey(t)}`, 2 * 86400]]);
   if (Number(perMin) > DM_PER_MIN || Number(perDay) > DM_PER_DAY) throw refuse(429, 'Slow down: too many messages');
   const key = dmKey(me, other);
-  await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL]]);
+  await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL], ['HINCRBY', 'feat:dms', dayKey(t), 1]]); // compteur du jour pour la page Owner
 }
 
 async function state(id) {

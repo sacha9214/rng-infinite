@@ -214,6 +214,20 @@ function retention(now, ids, names, stats, linked, act) {
 const GAMES = ['crash', 'mines', 'plinko', 'slots', 'roulette', 'bj'];
 const COUNTERS = { crash: 'gCrash', mines: 'gMines', plinko: 'gPlinko', slots: 'gSlots', roulette: 'gSpins', bj: 'gHands' };
 const num = v => Number(v) || 0;
+// Nouveautés (crypto, levier, cadeaux, codes, messages) : ce qui s'ajoute aux sommes faites sur les fiches.
+async function featureStats(feat, now) {
+  const Btc = require('./_btc');
+  const [btc, eth] = [await Btc.price(now, Btc.ASSETS.btc), await Btc.price(now, Btc.ASSETS.eth)];
+  const days = Array.from({ length: 7 }, (_, i) => dayKey(now - i * DAY_MS));
+  const [open, codes, dms, sides] = await redis([['ZCARD', 'pos:open'], ['HGETALL', 'codes:count'], ['HMGET', 'feat:dms', ...days], ['HGETALL', 'casino']]);
+  const value = (btc ? feat.btcSats / 1e8 * btc.p : 0) + (eth ? feat.ethSats / 1e8 * eth.p : 0);
+  return {
+    ...feat, value: Math.round(value), btcPrice: btc ? btc.p : null, ethPrice: eth ? eth.p : null, openPositions: num(open),
+    codes: Object.entries(toObject(codes)).map(([name, count]) => ({ name, count: num(count) })),
+    dms: days.map((d, i) => ({ day: d, count: num((dms || [])[i]) })),
+  };
+}
+
 async function insights() {
   const now = Date.now();
   const days = Array.from({ length: 30 }, (_, i) => dayKey(now - i * DAY_MS));
@@ -250,6 +264,7 @@ async function insights() {
   const rollBuckets = BUCKETS.map(([a, b]) => ({ name: b === Infinity ? `${a}+` : `${a}–${b}`, count: 0 }));
   const allTime = Object.fromEntries(GAMES.map(g => [g, 0]));
   const speed = [0, 0, 0, 0, 0, 0], top = { celestial: 0, divine: 0, infinite: 0, mythic: 0 };
+  const feat = { btcHolders: 0, ethHolders: 0, btcSats: 0, ethSats: 0, invested: 0, trades: 0, levIn: 0, levOut: 0, levPlayers: 0, giftOut: 0, givers: 0, supporters: 0 };
   let rolled = 0, coins = 0, earned = 0, spent = 0, gamblers = 0, unlocked = 0, questsDone = 0, duelWins = 0, totalRolls = 0, streaks = 0;
   const gamblerRows = [];
   const today = dayKey(now), yesterday = dayKey(now - DAY_MS);
@@ -265,6 +280,12 @@ async function insights() {
     for (const k of Object.keys(top)) top[k] += num(st[`t:${k}`]);
     questsDone += num(st.questsDone); duelWins += num(st.duelWins);
     if (st.streakDay === today || st.streakDay === yesterday) streaks++;
+    // Nouveautés d'octobre : crypto, effet de levier, cadeaux.
+    if (num(st.btcSats) > 0) { feat.btcHolders++; feat.btcSats += num(st.btcSats); }
+    if (num(st.ethSats) > 0) { feat.ethHolders++; feat.ethSats += num(st.ethSats); }
+    feat.invested += num(st.btcCost) + num(st.ethCost); feat.trades += num(st.btcTrades);
+    if (num(st.levIn) > 0) { feat.levPlayers++; feat.levIn += num(st.levIn); feat.levOut += num(st.levOut); }
+    if (num(st.giftOut) > 0) { feat.givers++; feat.giftOut += num(st.giftOut); }
   });
   const tally = flat => { const out = {}; const o = toObject(flat); for (const v of Object.values(o)) { const k = Shop.resolve(v) || v; out[k] = (out[k] || 0) + 1; } return Object.entries(out).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, count]) => ({ name, count })); };
   const byBet = gamblerRows.slice().sort((a, b) => b.bet - a.bet).slice(0, 8);
@@ -288,6 +309,7 @@ async function insights() {
       skins: tally(rows[base + 30]), buttons: tally(rows[base + 31]),
     },
     economy: { coins, earned, spent },
+    features: await featureStats(feat, now),
     retention: retention(now, ids, names, stats, linked, act),
   };
 }

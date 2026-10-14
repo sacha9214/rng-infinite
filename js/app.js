@@ -3893,7 +3893,7 @@
 
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['retention', '🔁', 'Retention'], ['traffic', '🌍', 'Traffic'], ['casino', '🎰', 'Casino'], ['players', '👥', 'Players'], ['fund', '💶', 'Fund'], ['inbox', '💡', 'Inbox']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['retention', '🔁', 'Retention'], ['traffic', '🌍', 'Traffic'], ['casino', '🎰', 'Casino'], ['crypto', '📈', 'Crypto & social'], ['players', '👥', 'Players'], ['fund', '💶', 'Fund'], ['inbox', '💡', 'Inbox']];
   function renderOwner() {
     currentView = 'owner';
     const wanted = (location.hash.split('/')[2] || '').split('?')[0];
@@ -4100,6 +4100,31 @@
 
       // ---------------- Joueurs et économie
       const pl = d.players;
+      // ---------------- Crypto, levier, cadeaux, codes, messages (nouveautés d'octobre)
+      const F = d.features || {};
+      if (pane('crypto')) {
+        const levNet = (F.levIn || 0) - (F.levOut || 0), cryptoNet = (F.value || 0) - (F.invested || 0), maxDm = Math.max(1, ...(F.dms || []).map(x => x.count));
+        pane('crypto').innerHTML = `
+          <p class="panel-note profile-sub">Game coins only. “Invested” is what players paid for the crypto they still hold; “worth now” is that crypto at today's price (${F.btcPrice ? `BTC ${fmt(Math.round(F.btcPrice))} $` : 'BTC –'} · ${F.ethPrice ? `ETH ${fmt(Math.round(F.ethPrice))} $` : 'ETH –'}).</p>
+          <h2 class="o-section">Crypto</h2>
+          <div class="tiles">
+            ${tile('Players holding', fmt((F.btcHolders || 0) + (F.ethHolders || 0)), `${fmt(F.btcHolders || 0)} Bitcoin · ${fmt(F.ethHolders || 0)} Ethereum`)}
+            ${tile('Coins invested', compact(F.invested || 0), `worth ${compact(F.value || 0)} now`)}
+            ${tile('Players are', `${cryptoNet >= 0 ? '+' : '−'}${compact(Math.abs(cryptoNet))}`, cryptoNet >= 0 ? 'up on the crypto they hold' : 'down on the crypto they hold')}
+            ${tile('Trades', fmt(F.trades || 0), 'buys and sells, all time')}
+          </div>
+          <h2 class="o-section">Leverage</h2>
+          <div class="tiles">
+            ${tile('Players who used it', fmt(F.levPlayers || 0), `${fmt(F.openPositions || 0)} positions open right now`)}
+            ${tile('Margin put in', compact(F.levIn || 0), `${compact(F.levOut || 0)} paid back`)}
+            ${tile(levNet >= 0 ? 'Players lost' : 'Players won', compact(Math.abs(levNet)), 'margin in − paid back (open positions count as lost until closed)')}
+          </div>
+          <div class="grid-2 stats-sep">
+            ${panel('Coin gifts between friends', 'all time', `<div class="tiles">${tile('Players who gave', fmt(F.givers || 0), '')}${tile('Coins given', compact(F.giftOut || 0), '')}</div>`)}
+            ${panel('Gift codes', 'times each code was used', table(['Code', 'Used'], (F.codes || []).map(x => [`<span data-no-i18n>${esc(x.name)}</span>`, fmt(x.count)]), 'c2'))}
+          </div>
+          ${panel('Friend messages · 7 days', 'messages sent per day (their content is private)', `<div class="o-hours o-dms">${(F.dms || []).slice().reverse().map(x => `<span class="o-hour" data-tip="${esc(`<b>${x.day}</b><br>${fmt(x.count)} messages`)}"><i style="height:${Math.max(2, (x.count / maxDm) * 100)}%"></i><em>${x.day.slice(8)}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}`;
+      }
       pane('players').innerHTML = `
         <div class="tiles">
           ${tile('Players', fmt(pl.rolled), `${fmt(R.active.week)} active in 7 days · ${fmt(R.active.month)} in 30`)}
@@ -4117,7 +4142,7 @@
           ${bars('Equipped skins', pl.skins, n => (Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n))}
           ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
         </div>`;
-    }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'retention', 'traffic', 'casino', 'players']) if (pane(id)) pane(id).innerHTML = denied(err); });
+    }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'retention', 'traffic', 'casino', 'crypto', 'players']) if (pane(id)) pane(id).innerHTML = denied(err); });
     // ---- Cagnotte : inscrire une contribution reçue (le joueur reçoit le skin et le titre Supporter), régler
     // l'objectif du mois et le lien de la page de dons, relire les dernières contributions.
     const drawFund = f => {
