@@ -47,5 +47,33 @@
     "desc": "Exactly \"061209\": an important birthday.",
     "emoji": "🎂",
     "score": 61209
+  },
+  {
+    "id": "SQUARE_IN_2",
+    "label": "Little Square",
+    "desc": "Contains a 2-digit perfect square (like 16, 49, 81). Only the biggest one counts.",
+    "emoji": "🔲",
+    "score": 444
+  },
+  {
+    "id": "SQUARE_IN_3",
+    "label": "Square Inside",
+    "desc": "Contains a 3-digit perfect square (like 144, 625). Only the biggest one counts.",
+    "emoji": "🟩",
+    "score": 1248
+  },
+  {
+    "id": "SQUARE_IN_4",
+    "label": "Big Square",
+    "desc": "Contains a 4-digit perfect square (like 1024, 7744). Only the biggest one counts.",
+    "emoji": "🟦",
+    "score": 5023
+  },
+  {
+    "id": "SQUARE_IN_5",
+    "label": "Huge Square",
+    "desc": "Contains a 5-digit perfect square (like 15625, 99856). Only the biggest one counts.",
+    "emoji": "🟪",
+    "score": 24307
   }
 ]

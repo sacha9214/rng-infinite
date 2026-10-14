@@ -3211,3 +3211,36 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
   --side-bg: linear-gradient(180deg, rgba(30, 58, 138, .25), rgba(250, 204, 21, .12));
   --deco-a: '🥫'; --deco-b: '🍟'; }
 @keyframes mayo-bob { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
+
+/* ------------------------------------------------------------------ Haunted (Halloween, jusqu'au 1er novembre) :
+   une maison hantée sous la lune au fond, des chiffres de brume blanche à moitié transparents. */
+.num-card.skin-haunted {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60' preserveAspectRatio='xMidYMax slice'%3E%3Cpath fill='%230f0c1a' d='M0 60V50h8l3-6 3 6h4V40l8-9 8 9v20h6V30l7-12 7 12v30h8V46l10-8 10 8v14h20V42l5-5 5 5v18h40V48l4-3 4 3v12h45V60z'/%3E%3Crect fill='%23f59e0b' opacity='.85' x='52' y='34' width='3' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.7' x='58' y='34' width='3' height='4'/%3E%3Crect fill='%23fb923c' opacity='.8' x='86' y='48' width='4' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.6' x='30' y='45' width='3' height='4'/%3E%3Cpath fill='%230f0c1a' d='M150 60l2-12 2 12M160 60l1-8 3-1 1 9'/%3E%3C/svg%3E") 50% 100% / 100% 42% no-repeat,
+    radial-gradient(circle at 93% 16%, #fef9c3 0 5%, rgba(254, 249, 195, .3) 7%, transparent 12%),
+    linear-gradient(180deg, #1e0b45 0%, #4c1d95 55%, #c2410c 120%);
+  border: 2px solid #7c3aed; border-radius: .7rem;
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, .55), 0 0 18px rgba(124, 58, 237, .45), 0 0 4px rgba(249, 115, 22, .5);
+}
+.skin-haunted .slot {
+  font-weight: 900; color: rgba(255, 255, 255, .62);
+  text-shadow: 0 0 .12em rgba(255, 255, 255, .9), 0 0 .35em rgba(196, 181, 253, .7), 0 .08em .25em rgba(0, 0, 0, .5);
+  animation: haunt-float 3.2s ease-in-out infinite;
+}
+.skin-haunted .slot:nth-child(2n) { animation-delay: -1.6s; }
+@keyframes haunt-float { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-.05em); opacity: .65; } }
+.skin-haunted .slot.ghost { opacity: .15; animation: none; }
+.skin-haunted .slot.spinning { animation: haunt-flicker .12s steps(2) infinite; }
+@keyframes haunt-flicker { from { opacity: .25; filter: blur(.04em); } to { opacity: .75; filter: none; } }
+/* Il apparaît : sort de la brume (flou, transparent, plus grand) puis se fige, un frisson à la fin. */
+.skin-haunted .slot.revealed { animation: haunt-appear .7s ease-out backwards, haunt-float 3.2s .7s ease-in-out infinite; }
+@keyframes haunt-appear { 0% { transform: scale(1.35) translateY(-.15em); filter: blur(.12em); opacity: 0; } 60% { transform: scale(.96); filter: blur(0); opacity: .95; } 75% { transform: translateX(-.02em); } 88% { transform: translateX(.02em); } 100% { transform: none; } }
+.skin-haunted .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-haunted .slot { animation: none; } }
+/* Cadre de duel : un cimetière (tombes en bas), des fantômes qui sortent et flottent. */
+.side-haunted { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .4); --side-ink: #c4b5fd;
+  --side-bg: radial-gradient(ellipse 14% 22% at 12% 100%, #1f1b2e 60%, transparent 62%), radial-gradient(ellipse 12% 18% at 34% 100%, #1f1b2e 60%, transparent 62%), radial-gradient(ellipse 13% 20% at 70% 100%, #1f1b2e 60%, transparent 62%), radial-gradient(ellipse 11% 17% at 90% 100%, #1f1b2e 60%, transparent 62%), linear-gradient(180deg, rgba(46, 16, 101, .45), rgba(12, 10, 20, .6));
+  --deco-a: '👻'; --deco-b: '🪦 🎃'; }
+.side-haunted::before { animation: haunt-rise 3.6s ease-in-out infinite; }
+@keyframes haunt-rise { 0% { transform: translateY(6px); opacity: 0; } 30%, 70% { opacity: .9; } 100% { transform: translateY(-14px); opacity: 0; } }
+.room-stage.many .side-haunted::before { animation: none; }

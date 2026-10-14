@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14h', date: 'Oct 14, 2026', en: ['🎃 Halloween skin: Haunted (666 coins), on sale until November 1 only. A haunted house under the moon, ghostly digits, ghosts flying out at the reveal', 'New badges for numbers that contain a perfect square: Little, Inside, Big and Huge Square (444 to 24,307 XP, set by how rare they are)'], fr: ['🎃 Skin d\'Halloween : Haunted (666 pièces), en vente jusqu\'au 1er novembre seulement. Une maison hantée sous la lune, des chiffres fantômes, des fantômes qui s\'envolent à la révélation', 'Nouveaux badges pour les nombres qui contiennent un carré parfait : Little, Inside, Big et Huge Square (de 444 à 24 307 XP, selon leur rareté)'] },
     { id: '2026-10-14g', date: 'Oct 14, 2026', en: ['New cheap skin: Mayo (250 coins). Squeeze bottles pop up and squirt mayonnaise on every digit'], fr: ['Nouveau skin pas cher : Mayo (250 pièces). Des flacons surgissent et giclent de la mayonnaise sur chaque chiffre'] },
     { id: '2026-10-14f', date: 'Oct 14, 2026', en: ['Crypto: leverage trading. Go long or short with 2×, 3× or 5×, with an optional stop loss and take profit (checked every 15 seconds, even when you are away). You can never lose more than your margin', 'New badge: Important Birthday (061209)'], fr: ['Crypto : trading à effet de levier. Joue la hausse (long) ou la baisse (short) en 2×, 3× ou 5×, avec stop loss et take profit facultatifs (vérifiés toutes les 15 secondes, même quand tu n\'es pas là). Tu ne peux jamais perdre plus que ta mise', 'Nouveau badge : Important Birthday (061209)'] },
     { id: '2026-10-14e', date: 'Oct 14, 2026', en: ['Gamble: the Bitcoin tab becomes Crypto, with Ethereum too, and a real candlestick chart like TradingView: time frames from 5 minutes to 1 day, moving averages 20 and 50, volume, crosshair with open/high/low/close, zoom with the mouse wheel'], fr: ['Gamble : l\'onglet Bitcoin devient Crypto, avec l\'Ethereum en plus, et un vrai graphique en bougies comme TradingView : unités de 5 minutes à 1 jour, moyennes mobiles 20 et 50, volume, réticule avec ouverture/haut/bas/clôture, zoom à la molette'] },
@@ -2767,6 +2768,7 @@
         : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>`
         // Réservé à une caisse (Infinity) : pas de prix, le bouton mène à l'onglet des caisses.
         : k.caseOnly ? `<button class="btn ghost case-only" data-case-go>${Shop.caseById.get(k.caseOnly).emoji} ${esc(Shop.caseById.get(k.caseOnly).name)} only · ${+(k.chance * 100).toFixed(2)}%</button>`
+        : k.until && Date.now() + Room.offset >= Date.parse(k.until) ? '<span class="skin-state">No longer for sale</span>'
         : `<button class="btn${state.coins >= k.price ? '' : ' disabled'}" data-skin-buy="${k.id}">🪙 ${fmt(k.price)}</button>`;
       return `
         <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
@@ -2786,7 +2788,7 @@
         </div>`;
     };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
-    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium)).map(tile).join('') + supporterTile();
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && (!k.until || Date.now() < Date.parse(k.until) || state.owned.includes(k.id)))).map(tile).join('') + supporterTile();
     const premium = $('#d-premium');
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;

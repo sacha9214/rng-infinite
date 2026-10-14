@@ -734,3 +734,7 @@
 .btn-roll.gen-mayo { border: 2px solid #ca8a04; border-radius: 999px; color: #713f12; background: radial-gradient(ellipse 60% 45% at 35% 25%, rgba(255, 255, 255, .8), transparent 70%), linear-gradient(180deg, #fef08a, #facc15 60%, #eab308); text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
   --gs: 0 .3em 0 #a16207, 0 .5em 1em rgba(234, 179, 8, .35); --gs-h: 0 .34em 0 #a16207, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #a16207; }
 .btn-roll.gen-mayo:hover { transform: translateY(-1px) scale(1.05, .96); }
+
+/* Bouton Generate Haunted : nuit violette, lune, lueur de citrouille. */
+.btn-roll.gen-haunted { border: 2px solid #7c3aed; color: #f5f3ff; background: radial-gradient(circle at 85% 30%, #fef9c3 0 8%, transparent 14%), linear-gradient(180deg, #2e1065, #4c1d95 60%, #9a3412); text-shadow: 0 0 8px rgba(255, 255, 255, .7);
+  --gs: 0 .3em 0 #1e0b45, 0 .5em 1em rgba(124, 58, 237, .45); --gs-h: 0 .34em 0 #1e0b45, 0 .7em 1.4em rgba(249, 115, 22, .45); --gs-a: 0 .06em 0 #1e0b45; }

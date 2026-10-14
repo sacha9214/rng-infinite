@@ -429,6 +429,10 @@
       c.s[0] !== c.s[1] && c.s[5] !== c.s[3],
 
     SQUARE: c => isSquare(c.n),
+    // Badges perso (idée d'un joueur, 2026-10-14) : le nombre contient un carré parfait de 2 à 5 chiffres ; seul le plus
+    // grand compte. XP fixé d'après la rareté réelle, comme les badges d'origine (100 × 1 000 001 / nombres concernés).
+    SQUARE_IN_2: c => biggestSquareInside(c.s) === 2, SQUARE_IN_3: c => biggestSquareInside(c.s) === 3,
+    SQUARE_IN_4: c => biggestSquareInside(c.s) === 4, SQUARE_IN_5: c => biggestSquareInside(c.s) === 5,
     CUBE: c => isCube(c.n),
     FIBONACCI: c => isFibonacci(c.n),
     POWER_OF_TWO: c => c.n > 0 && (c.n & (c.n - 1)) === 0,
@@ -632,6 +636,10 @@
   const BADGE_TIERS = [[1e3, 'common'], [1e4, 'uncommon'], [1e5, 'rare'], [1e6, 'epic'], [1e7, 'anomaly']];
   // Carte : au-dessus de Mythic (top 1 %), trois raretés découpent le sommet : Celestial (top 0,1 %, 900 nombres),
   // Divine (top 0,01 %, 90 nombres) et Infinite (top 0,001 %, les 9 meilleurs nombres du jeu). Les badges s'arrêtent à Mythic.
+  // Carrés parfaits par nombre de chiffres (16 à 99 856), pour les badges « contient un carré ».
+  const SQUARES_BY_LEN = {};
+  for (let r = 4; r * r < 100000; r++) { const q = String(r * r); (SQUARES_BY_LEN[q.length] = SQUARES_BY_LEN[q.length] || []).push(q); }
+  const biggestSquareInside = s => { for (const L of [5, 4, 3, 2]) if (L < s.length && SQUARES_BY_LEN[L].some(q => s.includes(q))) return L; return 0; };
   const CARD_TIERS = [[1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.999, 'divine']];
   const TIER_ORDER = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
 

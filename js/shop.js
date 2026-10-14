@@ -45,6 +45,9 @@
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
+    // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé
+    // pour toujours par ceux qui l'ont acheté. Jamais dans une caisse.
+    { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
@@ -85,7 +88,7 @@
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
   const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);
-  const casePool = c => SKINS.filter(s => !s.caseOnly && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
+  const casePool = c => SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
   // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
   const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };

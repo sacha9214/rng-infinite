@@ -1828,6 +1828,30 @@
     };
   });
 
+  // 👻 Haunted (Halloween 2026) — un petit fantôme s'échappe de chaque chiffre posé ; à la révélation, une nuée de
+  // fantômes sort du nombre et s'envole en ondulant.
+  SCENES.haunted = env => {
+    const { co, card, dark } = env, ghosts = timed();
+    const ghost = (x, y, s, a, wob) => {
+      co.save(); co.translate(x, y); co.globalAlpha = a; co.fillStyle = dark ? '#f5f3ff' : '#ede9fe'; co.shadowColor = 'rgba(196,181,253,.9)'; co.shadowBlur = s * .6;
+      co.beginPath(); co.arc(0, 0, s, Math.PI, 0); co.lineTo(s, s * 1.2);
+      for (let i = 0; i < 4; i++) { const x1 = s - (i + .5) * s / 2, x2 = s - (i + 1) * s / 2; co.quadraticCurveTo(x1, s * (1.2 + (i % 2 ? -.35 : .35) + Math.sin(wob + i) * .1), x2, s * 1.2); }
+      co.closePath(); co.fill(); co.shadowBlur = 0; co.fillStyle = '#1e1b2e';
+      co.beginPath(); co.ellipse(-s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.ellipse(s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.fill();
+      co.beginPath(); co.ellipse(0, s * .35, s * .12, s * .16, 0, 0, TAU); co.fill(); co.restore();
+    };
+    const add = (x, y, big, delay) => ghosts.add({ delay, life: rnd(1.6, 2.4), x, y, s: card.h * (big ? rnd(.22, .34) : .18), dx: rnd(-40, 40), ph: rnd(TAU) });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        ghosts.run(dt, (g, k) => ghost(g.x + g.dx * k + Math.sin(t * 3 + g.ph) * 8, g.y - k * card.h * 2.2, g.s * (.7 + .5 * Math.min(1, k * 3)), Math.sin(Math.PI * Math.min(1, k * 1.2)) * .85, t * 4 + g.ph));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) add(p.x, p.y, false, 0); },
+      reveal(tier, p) { for (let i = 0, n = 5 + Math.round(10 * p); i < n; i++) add(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), true, i * .08); },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 

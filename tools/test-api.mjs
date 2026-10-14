@@ -1306,7 +1306,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (let n = 0; n <= 1000000; n++) { const k = tierOf(n); count[k] = (count[k] || 0) + 1; }
   // Mythic : 9 000 à quelques ex aequo près à la limite (elle bouge d'un cran quand un badge perso est ajouté).
   assert.ok(Math.abs(count.mythic - 9000) <= 3, `mythic ${count.mythic}`);
-  assert.deepEqual([count.celestial, count.divine, count.infinite], [900, 90, 9]);
+  assert.ok(Math.abs(count.celestial - 900) <= 3 && Math.abs(count.divine - 90) <= 2, JSON.stringify(count)); assert.equal(count.infinite, 9);
   const pick = tier => { for (let n = 0; n <= 1000000; n++) if (tierOf(n) === tier) return n; };
   const sample = { mythic: pick('mythic'), celestial: pick('celestial'), divine: pick('divine'), infinite: pick('infinite') };
   // Un joueur d'avant la mise à jour : 4 « Mythic » au compteur, dont un de chaque nouvelle rareté dans son historique.
@@ -2369,6 +2369,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.history.filter(h => h.entry === 80000 && h.m === 100).length <= 1, true);
   const hist = (await go({ move: 'state' })).body.history.filter(h => h.m === 100 && h.lev === 3); assert.equal(hist.length, 1, 'payée une seule fois');
   setPrice(80000); globalThis.__eth = 2500;
+}
+
+// ================================================================ 55. Skin Haunted : en vente jusqu'au 1er novembre seulement, jamais en caisse ; badges « carré à l'intérieur »
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), Shop = require(path.join(ROOT, 'js/shop.js'));
+  const h = Shop.byId.get('haunted'); assert.equal(h.price, 666); assert.ok(h.until);
+  for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'haunted'), `pas dans ${c.id}`);
+  const buyer = { playerId: '9a'.repeat(8), secret: '9b'.repeat(16), name: 'Spooky' };
+  db.delete(`cooldown:${buyer.playerId}`); assert.equal((await call(roll, { method: 'POST', body: buyer })).status, 200);
+  run([['HINCRBY', `stats:${buyer.playerId}`, 'bonus', 5000]]);
+  const buy = () => call(shopApi, { method: 'POST', body: { playerId: buyer.playerId, secret: buyer.secret, action: 'buy', skin: 'haunted' } });
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-11-01T00:00:01Z');
+  try { const r = await buy(); assert.equal(r.status, 422); assert.match(r.body.error, /no longer for sale/); } finally { Date.now = realNow; }
+  Date.now = () => Date.parse('2026-10-31T23:59:00Z');
+  try { const r = await buy(); assert.equal(r.status, 200, JSON.stringify(r.body)); } finally { Date.now = realNow; }
+  // Les badges « contient un carré » : seul le plus grand compte, jamais sur le nombre entier.
+  const ids = n => engine.analyze(n).earnedIds.filter(x => /^SQUARE_IN_/.test(x));
+  assert.deepEqual(ids(815625), ['SQUARE_IN_5']); assert.deepEqual(ids(51449), ['SQUARE_IN_3']); assert.deepEqual(ids(144), []); assert.deepEqual(ids(907744), ['SQUARE_IN_4']);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
