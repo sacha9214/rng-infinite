@@ -1865,6 +1865,49 @@
     };
   });
 
+  // 👻 Haunted (Halloween 2026) — un cimetière autour de la carte : des tombes de part et d'autre (posées au niveau de son
+  // bas), une grille rouillée, de la brume au sol ; des fantômes sortent des tombes de temps en temps, un petit fantôme
+  // s'échappe de chaque chiffre posé, et une nuée s'envole à la révélation.
+  SCENES.haunted = env => {
+    const { co, card, dark } = env, ghosts = timed(), emit = emitter();
+    const base = card.y + card.h + 6, k = Math.min(1.3, card.h / 60), STONE = dark ? '#3b3650' : '#6b6480', EDGE = dark ? '#1c1928' : '#3f3a52';
+    const graves = [-1, 1].flatMap(side => [0, 1, 2].map(i => ({ x: side < 0 ? card.x - (26 + i * 34) * k : card.x + card.w + (26 + i * 34) * k, h: (26 - i * 4) * k, w: (16 - i * 2) * k, tilt: side * (i % 2 ? .08 : -.05), cross: i === 1 })));
+    let formed = 0;
+    const ghost = (x, y, s, a, wob) => {
+      co.save(); co.translate(x, y); co.globalAlpha = a; co.fillStyle = dark ? '#f5f3ff' : '#ede9fe'; co.shadowColor = 'rgba(196,181,253,.9)'; co.shadowBlur = s * .6;
+      co.beginPath(); co.arc(0, 0, s, Math.PI, 0); co.lineTo(s, s * 1.2);
+      for (let i = 0; i < 4; i++) { const x1 = s - (i + .5) * s / 2, x2 = s - (i + 1) * s / 2; co.quadraticCurveTo(x1, s * (1.2 + (i % 2 ? -.35 : .35) + Math.sin(wob + i) * .1), x2, s * 1.2); }
+      co.closePath(); co.fill(); co.shadowBlur = 0; co.fillStyle = '#1e1b2e';
+      co.beginPath(); co.ellipse(-s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.ellipse(s * .35, -s * .1, s * .14, s * .2, 0, 0, TAU); co.fill();
+      co.beginPath(); co.ellipse(0, s * .35, s * .12, s * .16, 0, 0, TAU); co.fill(); co.restore();
+    };
+    const tomb = g => {
+      co.save(); co.translate(g.x, base); co.rotate(g.tilt); co.globalAlpha = formed;
+      co.fillStyle = STONE; co.strokeStyle = EDGE; co.lineWidth = 1.5;
+      if (g.cross) { co.fillRect(-g.w * .15, -g.h * 1.15, g.w * .3, g.h * 1.15); co.fillRect(-g.w * .5, -g.h * .85, g.w, g.w * .28); }
+      else { co.beginPath(); co.moveTo(-g.w / 2, 0); co.lineTo(-g.w / 2, -g.h + g.w / 2); co.arc(0, -g.h + g.w / 2, g.w / 2, Math.PI, 0); co.lineTo(g.w / 2, 0); co.closePath(); co.fill(); co.stroke(); co.fillStyle = EDGE; co.fillRect(-g.w * .22, -g.h * .62, g.w * .44, 2); co.fillRect(-g.w * .15, -g.h * .48, g.w * .3, 2); }
+      co.restore();
+    };
+    const rise = (g, big, delay = 0) => ghosts.add({ delay, life: rnd(2.2, 3), x: g ? g.x : rnd(card.x, card.x + card.w), y: g ? base - g.h : rnd(card.y, card.y + card.h), s: card.h * (big ? rnd(.22, .32) : rnd(.13, .18)), dx: rnd(-30, 30), ph: rnd(TAU), grave: !!g });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        formed = Math.min(1, formed + dt * 1.5);
+        co.globalAlpha = .35 * formed; const mist = co.createLinearGradient(0, base - 14 * k, 0, base + 8 * k); mist.addColorStop(0, 'rgba(196,181,253,0)'); mist.addColorStop(.6, dark ? 'rgba(196,181,253,.35)' : 'rgba(124,58,237,.18)'); mist.addColorStop(1, 'rgba(196,181,253,0)');
+        co.fillStyle = mist; co.fillRect(card.x - 130 * k, base - 14 * k, card.w + 260 * k, 22 * k);
+        co.globalAlpha = .55 * formed; co.strokeStyle = dark ? '#4b4560' : '#5b5470'; co.lineWidth = 1.4;
+        co.beginPath(); co.moveTo(card.x - 120 * k, base - 9 * k); co.lineTo(card.x + card.w + 120 * k, base - 9 * k); co.stroke();
+        for (let x = card.x - 118 * k; x < card.x + card.w + 120 * k; x += 9 * k) { co.beginPath(); co.moveTo(x, base); co.lineTo(x, base - 15 * k); co.lineTo(x - 2 * k, base - 12 * k); co.stroke(); }
+        graves.forEach(tomb);
+        for (let n = emit(.55 * formed, dt); n > 0; n--) rise(pick(graves), false);
+        ghosts.run(dt, (g, kk) => ghost(g.x + g.dx * kk + Math.sin(t * 3 + g.ph) * 6, g.y - kk * card.h * (g.grave ? 1.6 : 2.2), g.s * (.6 + .5 * Math.min(1, kk * 3)), Math.sin(Math.PI * Math.min(1, kk * 1.1)) * .8, t * 4 + g.ph));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) rise(null, false); },
+      reveal(tier, p) { for (let i = 0, n = 6 + Math.round(10 * p); i < n; i++) rise(i % 2 ? pick(graves) : null, true, i * .08); },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 

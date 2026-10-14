@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14n', date: 'Oct 14, 2026', en: ['Shop: a new Limited tab for event skins, with the time left', 'Haunted skin: a graveyard around your number, with ghosts rising from the graves'], fr: ['Boutique : un nouvel onglet Limités pour les skins d\'événement, avec le temps qu\'il reste', 'Skin Haunted : un cimetière autour de ton nombre, avec des fantômes qui sortent des tombes'] },
     { id: '2026-10-14m', date: 'Oct 14, 2026', en: ['🎃 Halloween code: SPOOKYMONTH gives 300 coins and the Spooky title. Enter it in Player & settings → Redeem a code (after 30 rolls). Valid until October 31'], fr: ['🎃 Code d\'Halloween : SPOOKYMONTH donne 300 pièces et le titre Spooky. Entre-le dans Joueur et réglages → Utiliser un code (après 30 tirages). Valable jusqu\'au 31 octobre'] },
     { id: '2026-10-14l', date: 'Oct 14, 2026', en: ['New: sign in with your player name and a password (Player & settings). No e-mail needed'], fr: ['Nouveau : connecte-toi avec ton pseudo et un mot de passe (Joueur et réglages). Pas besoin d\'e-mail'] },
     { id: '2026-10-14k', date: 'Oct 14, 2026', en: ['Every title now has its own style, like the Owner one: its own colours, a shine that passes over it and its icon (a moving rainbow for Infinite)'], fr: ['Chaque titre a maintenant son propre style, comme celui du créateur : ses couleurs, un reflet qui passe dessus et son icône (un arc-en-ciel qui défile pour Infinite)'] },
@@ -2676,7 +2677,7 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
+  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
@@ -2685,6 +2686,12 @@
         <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}`)}">How much? ⓘ</span></p>
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
+        <section class="shop-pane" data-shop-pane="limited" hidden>
+        <div class="panel limited-panel">
+          <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
+        </div>
+        </section>
         <section class="shop-pane" data-shop-pane="cases" hidden>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
@@ -2835,11 +2842,15 @@
         </div>`;
     };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
-    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && (!k.until || Date.now() < Date.parse(k.until) || state.owned.includes(k.id)))).map(tile).join('') + supporterTile();
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && !k.until)).map(tile).join('') + supporterTile();
     const premium = $('#d-premium');
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;
-    grid.onclick = premium.onclick = async e => {
+    // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
+    const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
+    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
+    limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
+    grid.onclick = premium.onclick = limited.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
       if (e.target.closest('[data-case-go]')) { $('#shop-tabs [data-shop-tab="cases"]').click(); window.scrollTo(0, 0); return; }
