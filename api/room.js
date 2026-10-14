@@ -343,7 +343,7 @@ async function view(room, me) {
     next: room.h.next || null, // code de la revanche, une fois lancée
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
     // Farce en cours : seulement pour ceux qui la subissent (jamais l'identifiant du créateur) ; pour lui, combien il en reste.
-    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; return pk.from === me ? { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round } : { prank: { round: pk.round, by: pk.by } }; })(),
+    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; if (pk.from === me) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round }; return pk.to === me ? { prank: { round: pk.round, by: pk.by, n: pk.n } } : {}; })(),
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
@@ -585,7 +585,12 @@ module.exports = async (req, res) => {
       const [used] = await redis([['HINCRBY', roomKey(code), 'pranks', 1]]);
       if (Number(used) > 3) return send(res, 429, { error: 'No more pranks in this duel (3 max)' });
       const me = room.players.find(p => p.id === playerId);
-      const prank = { round: room.rounds.length, by: me ? me.name : 'Owner', from: playerId };
+      // La cible (un autre vrai joueur de la salle, choisi par son pseudo) et le nombre qu'elle croira avoir tiré.
+      const target = room.players.find(p => !p.bot && p.id !== playerId && String(p.name).toLowerCase() === String(body.target || '').toLowerCase());
+      const n = Number(body.n);
+      if (!target) { await redis([['HINCRBY', roomKey(code), 'pranks', -1]]); return send(res, 400, { error: 'Pick a player in this duel' }); }
+      if (!Number.isInteger(n) || n < 0 || n > 1000000) { await redis([['HINCRBY', roomKey(code), 'pranks', -1]]); return send(res, 400, { error: 'Pick a number from 0 to 1,000,000' }); }
+      const prank = { round: room.rounds.length, by: me ? me.name : 'Owner', from: playerId, to: target.id, n };
       await redis([['HSET', roomKey(code), 'prank', JSON.stringify(prank)]]);
       room.h.prank = JSON.stringify(prank); room.h.pranks = String(used);
       return send(res, 200, await view(room, playerId));

@@ -4875,7 +4875,7 @@
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
-        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-jackpot" title="On the next round, the other players see a fake Infinite roll, then the joke. Nothing changes in the real result.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
+        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel chat-panel" id="room-chat">
@@ -4886,11 +4886,29 @@
         </div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
       const pb = $('#prank-jackpot');
-      if (pb) pb.addEventListener('click', async () => {
-        pb.disabled = true;
-        try { applyRoom(await Online.roomAction('prank', Room.code), Room.token, Date.now(), Date.now()); toast('🎭 Armed: their next round will look like an Infinite', 3000); }
-        catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
-        pb.disabled = false;
+      // 🎭 Choisir la cible et le nombre qu'elle verra se poser sur sa carte à la prochaine manche.
+      if (pb) pb.addEventListener('click', () => {
+        const others = Room.data.players.filter(p => !p.me && !p.bot);
+        openModal(`
+          <h2>🎭 Fake jackpot</h2>
+          <p class="panel-note" style="margin:-.3rem 0 .8rem">On the next round, their own card rolls and lands on this number (rarity, XP, badges, confetti), then their real roll comes back. Nothing real changes.</p>
+          <form id="prank-form" class="prank-form">
+            <label class="lev-field"><span>Who</span><select class="input" name="target">${others.map(p => `<option value="${esc(p.name)}" data-no-i18n>${esc(p.name)}</option>`).join('')}</select></label>
+            <label class="lev-field"><span>Number they will see</span><input class="input mono" name="n" type="number" min="0" max="1000000" value="777777" required></label>
+            <div class="chips-row">${['777777', '999999', '000000', '1000000', '123456', '69420'].map(v => `<button type="button" class="chip" data-pn="${v}" data-no-i18n>${v}</button>`).join('')}</div>
+            <p class="panel-note" id="prank-preview"></p>
+            <div class="actions"><button class="btn-roll small">Arm the prank</button></div>
+          </form>`, m => {
+          const f = m.querySelector('#prank-form'), input = f.elements.n, prev = m.querySelector('#prank-preview');
+          const show = () => { const v = Number(input.value); if (Number.isInteger(v) && v >= 0 && v <= 1000000) { const a = analysis(v); prev.innerHTML = `They will see <b class="mono" data-no-i18n>${a.str.padStart(6, '0')}</b> · ${tierPill(a.tier)} · ${fmt(a.total)} XP`; } else prev.textContent = 'From 0 to 1,000,000'; };
+          m.querySelector('.chips-row').addEventListener('click', e => { const c = e.target.closest('[data-pn]'); if (c) { input.value = Number(c.dataset.pn); show(); } });
+          input.addEventListener('input', show); show();
+          f.addEventListener('submit', async e => {
+            e.preventDefault();
+            try { applyRoom(await Online.roomAction('prank', Room.code, { target: f.elements.target.value, n: Number(input.value) }), Room.token, Date.now(), Date.now()); closeModal(); toast(`🎭 Armed for ${f.elements.target.value}'s next round`, 3000); }
+            catch (err) { toast([400, 403, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+          });
+        });
       });
       $('#room-chat').addEventListener('click', e => {
         const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');
@@ -5076,24 +5094,23 @@
   }
 
   // Révélation d'une manche, en même temps chez tous les joueurs : les chiffres de toutes les cartes tombent ensemble.
-  // 🎭 Faux jackpot (farce du créateur) : par-dessus l'écran, un tirage Infinite avec tout le spectacle, puis la vérité.
-  // Le vrai tirage, en dessous, ne change pas.
-  function fakeJackpot(by) {
-    const fake = ['999999', '777777', '000000', '123456'][Math.floor(Math.random() * 4)];
+  // 🎭 Fin de la farce : une annonce par-dessus l'écran, signée par le créateur.
+  function prankReveal(by) {
     const el = document.createElement('div');
-    el.className = 'fake-jackpot';
-    el.innerHTML = `<div class="fj-box"><div class="fj-title">♾️ INFINITE!!</div><div class="num-card lg" data-tier="infinite">${slotsHTML(fake)}</div><div class="fj-sub">the rarest roll in the game</div></div>`;
+    el.className = 'fake-jackpot fj-reveal';
+    el.innerHTML = `<div class="fj-box"><div class="fj-title">😂 JUST KIDDING</div><div class="fj-sub" data-no-i18n>👑 prank by ${esc(by)}</div></div>`;
     document.body.appendChild(el);
-    FX.celebrate('infinite', el.querySelector('.num-card'));
-    Sound.play('tier', { tier: 'infinite' });
-    setTimeout(() => { el.classList.add('fj-reveal'); el.querySelector('.fj-box').innerHTML = `<div class="fj-title">😂 JUST KIDDING</div><div class="fj-sub" data-no-i18n>👑 prank by ${esc(by)}</div>`; }, 2800);
-    setTimeout(() => { el.classList.add('fj-out'); setTimeout(() => el.remove(), 600); }, 4800);
+    setTimeout(() => { el.classList.add('fj-out'); setTimeout(() => el.remove(), 600); }, 2000);
   }
   function playRound(i) {
     const d = Room.data, r = d.rounds[i];
     const stage = $('#room-stage');
     if (!stage) return;
     const sides = r.n.map((n, j) => ({ n, s: r.s[j], a: analysis(n) }));
+    // 🎭 Farce du créateur : sur cette manche, ma carte tourne et se pose sur le nombre qu'il a choisi (rareté, XP, badges,
+    // confettis), puis reprend mon vrai tirage avant l'annonce du gagnant. Le vrai tirage reste celui qui compte.
+    const real = sides.slice(), pk = d.prank && d.prank.round === i ? d.prank : null, faked = pk ? d.players.findIndex(p => p.me) : -1;
+    if (faked >= 0) { const fa = analysis(pk.n); sides[faked] = { n: pk.n, s: fa.total, a: fa }; }
     const slotCount = Math.max(6, ...sides.map(x => x.a.str.length));
     stage.innerHTML = stageHTML(r, true);
     Room.skinSig = skinSig(d);
@@ -5106,10 +5123,10 @@
     // ouvert sur History ne peut pas le montrer avant. Le serveur fait de même (queueReveal dans api/room.js).
     const mine = d.players.findIndex(p => p.me);
     const keepMine = () => {
-      if (mine < 0 || !sides[mine] || Store.rolls.some(x => x[0] === sides[mine].n && x[2] === r.t)) return;
+      if (mine < 0 || !real[mine] || Store.rolls.some(x => x[0] === real[mine].n && x[2] === r.t)) return;
       Collection.ensure();
-      Store.addRoll(sides[mine].n, sides[mine].s, r.t);
-      QuestWatch.bump(questDelta(sides[mine].s, sides[mine].a.tier));
+      Store.addRoll(real[mine].n, real[mine].s, r.t);
+      QuestWatch.bump(questDelta(real[mine].s, real[mine].a.tier));
       Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     };
 
@@ -5158,7 +5175,6 @@
       keepMine();
       sfx('reveal', size);
       roomFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
-      if (d.prank && d.prank.round === i && d.players.some(p => p.me)) fakeJackpot(d.prank.by);
       sides.forEach((x, j) => {
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;
@@ -5169,7 +5185,16 @@
         if (sides.length <= 2 || d.players[j].me || r.winner === j) FX.celebrate(x.a.tier, cards[j]);
       });
     });
-    at(clock + 1500, () => {
+    if (faked >= 0) at(clock + 2800, () => {
+      // la vérité : le vrai nombre reprend sa place, avec sa rareté et ses badges
+      const x = real[faked], str = x.a.str.padStart(slotCount, '0');
+      cards[faked].innerHTML = str.split('').map((c, k) => `<span class="slot${k < slotCount - x.a.str.length ? ' ghost' : ''}">${c}</span>`).join('');
+      cards[faked].dataset.tier = x.a.tier;
+      $(`#rm-${faked}`).innerHTML = `${tierPill(x.a.tier)}<span class="ep-pill">${fmt(x.s)} XP</span>`;
+      $(`#rb-${faked}`).innerHTML = duelBadgesHTML(x.a, x.n);
+      prankReveal(pk.by);
+    });
+    at(clock + 1500 + (faked >= 0 ? 2800 : 0), () => {
       if (r.winner !== null) {
         const side = $(`#rs-${r.winner}`);
         side.classList.add('won');
