@@ -35,11 +35,14 @@ const SOURCES = [
 // Le prix du moment : celui de Redis s'il a moins de 20 s, sinon une nouvelle lecture (et un point de plus dans
 // l'historique toutes les 5 min). Sans source joignable, le dernier prix connu tant qu'il a moins de 2 min ; au-delà,
 // on ne peut plus acheter ni vendre (le site l'affiche).
-async function price(now = Date.now(), a = ASSETS.btc) {
+// fresh : âge maximal accepté (ms). Pour un échange, 3 s : sinon on pourrait acheter à un prix vieux de 20 s alors
+// qu'on voit déjà ailleurs que le vrai prix a monté (audit anti-triche du 2026-10-14).
+const TRADE_FRESH_MS = 3000;
+async function price(now = Date.now(), a = ASSETS.btc, fresh = PRICE_TTL_S * 1000) {
   const [raw] = await redis([['GET', a.price]]);
   let cur = null;
   try { cur = raw ? JSON.parse(raw) : null; } catch (e) { cur = null; }
-  if (cur && now - cur.t < PRICE_TTL_S * 1000) return cur;
+  if (cur && now - cur.t < fresh) return cur;
   for (const source of SOURCES) {
     try {
       const p = await source(a);
@@ -53,7 +56,8 @@ async function price(now = Date.now(), a = ASSETS.btc) {
       return fresh;
     } catch (e) { /* source suivante */ }
   }
-  return cur && now - cur.t < MAX_AGE_MS ? cur : null;
+  // Sans source joignable : pour l'affichage, le dernier prix connu (moins de 2 min) ; pour un échange, rien.
+  return cur && now - cur.t < Math.min(MAX_AGE_MS, Math.max(fresh, 0) || MAX_AGE_MS) && fresh >= PRICE_TTL_S * 1000 ? cur : null;
 }
 
 async function view(id, a = ASSETS.btc) {
@@ -76,7 +80,7 @@ async function trade(id, body) {
   if (!a) throw refuse(400, 'Unknown coin');
   const move = String(body.move || 'state');
   if (move === 'state') return view(id, a);
-  const p = await price(Date.now(), a);
+  const p = await price(Date.now(), a, TRADE_FRESH_MS);
   if (!p) throw refuse(503, `The ${a.name} price is unavailable right now: try again in a minute`);
   const st = await readStats(id), coins = Shop.balance(st), sats = Number(st[a.sats]) || 0, rolls = Number(st.rolls) || 0;
   if (rolls < MIN_ROLLS) throw refuse(422, `Crypto unlocks after ${MIN_ROLLS} rolls (you have ${rolls})`);
@@ -123,4 +127,4 @@ async function candles(a, tf) {
   return out;
 }
 
-module.exports = { ASSETS, assetOf, candles, TFS, trade, view, price, SPREAD, MIN_TRADE, MAX_TRADE, SATS, PRICE_KEY, HIST_KEY };
+module.exports = { TRADE_FRESH_MS, ASSETS, assetOf, candles, TFS, trade, view, price, SPREAD, MIN_TRADE, MAX_TRADE, SATS, PRICE_KEY, HIST_KEY };

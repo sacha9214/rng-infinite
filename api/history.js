@@ -26,8 +26,9 @@ module.exports = async (req, res) => {
 
     // Seuls les anciens joueurs (stats pas encore reconstruites) peuvent encore verser leurs tirages locaux, une fois.
     // Ensuite l'historique ne contient que des tirages faits par le serveur : impossible d'y glisser un faux 1337.
-    const [verified] = await redis([['HGET', statsKey(playerId), 'v']]);
-    if (verified) valid.length = 0;
+    // Fermé pour tout le monde depuis le 2026-10-14 (audit anti-triche) : la reprise des tirages faits sur l'appareil
+    // avant le 2026-09-23 est terminée ; l'historique ne reçoit plus que les tirages faits par le serveur.
+    valid.length = 0;
 
     let stored = 0;
     if (valid.length) {

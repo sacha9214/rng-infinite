@@ -93,7 +93,7 @@ async function act(id, body) {
     if (m > coins) throw refuse(422, `Not enough coins: ${m - coins} more needed`);
     const [count] = await redis([['HLEN', posKey(id)]]);
     if (Number(count) >= MAX_OPEN) throw refuse(422, `At most ${MAX_OPEN} open positions`);
-    const pr = await Btc.price(Date.now(), a);
+    const pr = await Btc.price(Date.now(), a, Btc.TRADE_FRESH_MS);
     if (!pr) throw refuse(503, `The ${a.name} price is unavailable right now: try again in a minute`);
     const p = { id: crypto.randomBytes(5).toString('hex'), a: body.asset.toLowerCase(), side, lev, m, entry: pr.p, t: Date.now(), sl: level(body.sl), tp: level(body.tp) };
     p.liq = round(liqPrice(p));
@@ -106,7 +106,7 @@ async function act(id, body) {
   if (!raw) throw refuse(404, 'This position is already closed');
   const p = JSON.parse(raw);
   if (move === 'close') {
-    const pr = await Btc.price(Date.now(), Btc.ASSETS[p.a]);
+    const pr = await Btc.price(Date.now(), Btc.ASSETS[p.a], Btc.TRADE_FRESH_MS);
     if (!pr) throw refuse(503, 'The price is unavailable right now: try again in a minute');
     const row = await close(id, posId, pr.p, trigger(p, pr.p) || 'manual');
     return { ...(await view(id)), closed: row };

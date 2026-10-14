@@ -196,19 +196,16 @@ assert.ok(before.some(([n, t]) => n === aliceFirst.n && t === aliceFirst.t));
 
 const t0 = Date.UTC(2026, 8, 20, 12);
 const upload = [[42, t0], [42, t0], [1337, t0 + 1], [-5, t0], [7, 123], ['x', t0], [8, Date.now() + 3 * 86400000]];
+// Depuis le 2026-10-14, plus aucun appareil ne peut verser de tirages, même un ancien joueur : rien n'est gardé.
 r = await call(history, { method: 'POST', body: { ...aliceTab, add: upload } });
-assert.equal(r.body.stored, 2, 'doublons et entrées invalides ignorés');
-assert.equal(r.body.rolls.length, before.length + 2);
-assert.ok(r.body.rolls.every((x, i, all) => i === 0 || all[i - 1][1] <= x[1]), 'du plus ancien au plus récent');
-
-r = await call(history, { method: 'POST', body: { ...aliceTab, add: [[42, t0]], fetch: false } });
-assert.equal(r.body.stored, 0, 'renvoyer un tirage déjà connu ne crée pas de doublon');
-assert.equal(r.body.rolls, undefined);
-// Le même tirage à l'heure de l'appareil (0,7 s d'écart) n'est pas un nouveau tirage ; le même nombre 2 min plus tard, si.
-r = await call(history, { method: 'POST', body: { ...aliceTab, add: [[42, t0 + 700], [42, t0 + 800]], fetch: false } });
-assert.equal(r.body.stored, 0, 'même nombre à moins d\'une minute = même tirage');
+assert.equal(r.body.stored, 0, 'envoi d\'historique fermé');
+assert.equal(r.body.rolls.length, before.length);
 r = await call(history, { method: 'POST', body: { ...aliceTab, add: [[42, t0 + 120000]], fetch: false } });
-assert.equal(r.body.stored, 1, 'un vrai second 42 est gardé');
+assert.equal(r.body.stored, 0);
+// La suite des tests part des trois anciens tirages qu'Alice avait versés : on les remet directement en base.
+run([['ZADD', `hist:${alice.playerId}`, t0, `${t0}:42`, t0 + 1, `${t0 + 1}:1337`, t0 + 120000, `${t0 + 120000}:42`]]);
+r = await call(history, { method: 'POST', body: aliceTab });
+assert.ok(r.body.rolls.every((x, k, all) => k === 0 || all[k - 1][1] <= x[1]), 'du plus ancien au plus récent');
 
 assert.equal((await call(history, { method: 'POST', body: { ...aliceTab, secret: '9'.repeat(32) } })).status, 403);
 assert.equal((await call(history, { method: 'POST', body: { playerId: 'nope', secret: 'x' } })).status, 400);
@@ -1946,7 +1943,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const coinsOf = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
   const [g1, g2, g3, g4, g5, g6] = ['Gfgiver', 'Gfgetter', 'Gfnewbie', 'Gfstranger', 'Gfhelper', 'Gfextra'].map((name, i) => ({ playerId: `9${i}`.repeat(8), secret: `8${i}`.repeat(16), name }));
   for (const g of [g1, g2, g3, g4, g5, g6]) { clock += 9000; const x = await call(roll, { method: 'POST', body: g }); assert.equal(x.status, 200, g.name + JSON.stringify(x.body)); }
-  for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 40], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
+  for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 400], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
   run([['HINCRBY', `stats:${g3.playerId}`, 'bonus', 3000]]); // riche, mais un seul tirage
   // Amis : Gfgiver ↔ Gfgetter, Gfnewbie ↔ Gfgetter, Gfhelper ↔ Gfgetter, Gfextra ↔ Gfgetter. Gfstranger a seulement demandé.
   for (const g of [g1, g3, g5, g6]) { await fr(g, 'add', { name: 'Gfgetter' }); await fr(g2, 'accept', { name: g.name }); }
@@ -1956,7 +1953,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const before1 = await coinsOf(g1), before2 = await coinsOf(g2);
   // L'état de la liste dit ce qui reste à donner.
   r = await fr(g1, 'list');
-  assert.deepEqual([r.body.gift.min, r.body.gift.max, r.body.gift.sendDay, r.body.gift.receiveDay, r.body.gift.rolls, r.body.gift.left, r.body.gift.coins], [10, 500, 1000, 2000, 30, 1000, before1]);
+  assert.deepEqual([r.body.gift.min, r.body.gift.max, r.body.gift.sendDay, r.body.gift.receiveDay, r.body.gift.rolls, r.body.gift.left, r.body.gift.coins], [10, 500, 1000, 2000, 300, 1000, before1]);
   // Un cadeau : débité d'un côté, crédité de l'autre, au même solde que la boutique.
   r = await give(g1, 'gfgetter', 200);
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -1986,7 +1983,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await give(g1, 'Gfstranger', 100);
   assert.equal(r.status, 403, 'pas ami');
   r = await give(g3, 'Gfgetter', 100);
-  assert.equal(r.status, 422); assert.match(r.body.error, /Gifts unlock after 30 rolls \(you have 1\)/);
+  assert.equal(r.status, 422); assert.match(r.body.error, /Gifts unlock after 300 rolls \(you have 1\)/);
   run([['HINCRBY', `stats:${g5.playerId}`, 'spent', (await coinsOf(g5)) - 50]]); // Gfhelper n'a plus que 50 pièces
   r = await give(g5, 'Gfgetter', 100);
   assert.equal(r.status, 422); assert.match(r.body.error, /Not enough coins: 50 more needed/);

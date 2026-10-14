@@ -19,7 +19,10 @@ const frKey = id => `fr:${id}`, inKey = id => `frin:${id}`, outKey = id => `frou
 // au plus ; ces plafonds freinent les comptes créés pour nourrir un compte principal. Compteurs du jour : hash
 // gift:<jour> (champs o:<id> donné, i:<id> reçu), gardé 2 jours. Les pièces passent comme partout : « spent » chez
 // celui qui donne, « bonus » chez celui qui reçoit, sous le verrou d'achat de la boutique (shop:<id>).
-const GIFT = { min: 10, max: 500, sendDay: 1000, receiveDay: 2000, rolls: MIN_ROLLS };
+// Pour donner, 300 tirages (audit anti-triche du 2026-10-14) : un compte créé juste pour encaisser le code cadeau et le
+// bonus Google puis tout envoyer à son compte principal coûterait plus de temps que de jouer normalement.
+const GIFT_ROLLS = 300;
+const GIFT = { min: 10, max: 500, sendDay: 1000, receiveDay: 2000, rolls: Math.max(MIN_ROLLS, GIFT_ROLLS) };
 const giftDayKey = t => `gift:${dayKey(t)}`, GIFT_DAY_TTL = 2 * 86400;
 // Cadeaux reçus : liste gifts:<id> des 20 derniers ({ f: donneur, a: pièces, t: heure }), gardée 30 jours ; le
 // joueur les voit une fois (giftseen:<id> = heure du dernier cadeau montré).
