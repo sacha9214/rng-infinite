@@ -3160,3 +3160,28 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .tv-chart { display: block; width: 100%; height: 17rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface-dim); touch-action: pan-y; cursor: crosshair; }
 .tv-legend { position: absolute; top: .4rem; left: .55rem; display: flex; gap: .6rem; font: 700 .64rem var(--font-mono); pointer-events: none; }
 @media (max-width: 560px) { .tv-chart { height: 14rem; } }
+
+/* Crypto · effet de levier */
+.lev { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--outline); }
+.lev-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; margin-bottom: .6rem; }
+.lev-head h4 { margin: 0; font-size: .95rem; }
+.lev-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; align-items: end; }
+.lev-side, .lev-x { grid-column: span 3; }
+@media (min-width: 640px) { .lev-side { grid-column: span 1; } .lev-x { grid-column: span 2; } }
+.lev-side { display: flex; } .lev-side button { flex: 1; }
+.lev-side button.on:first-child { background: #26a69a; color: #fff; } .lev-side button.on:last-child { background: #ef5350; color: #fff; }
+.lev-x { display: flex; gap: .35rem; }
+.lev-field { display: grid; gap: .2rem; font-size: .68rem; font-weight: 700; color: var(--prose-3); text-transform: uppercase; letter-spacing: .04em; min-width: 0; }
+.lev-field .input { min-width: 0; }
+.lev-go { grid-column: 1 / -1; }
+.lev-go.long { background: #1f7a6f; } .lev-go.short { background: #b23b39; }
+.lev-list { display: grid; gap: .5rem; margin-top: .8rem; }
+.lev-pos { padding: .55rem .7rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); }
+.lev-pos-top { display: flex; align-items: center; gap: .6rem; } .lev-pos-top span { margin-left: auto; }
+.lev-pos-top b.long { color: #26a69a; } .lev-pos-top b.short { color: #ef5350; }
+.lev-pos-info { margin-top: .25rem; font-size: .68rem; color: var(--prose-3); overflow-wrap: anywhere; }
+.lev-edit { display: grid; grid-template-columns: 1fr 1fr auto; gap: .35rem; margin-top: .4rem; }
+.lev-edit .input { min-width: 0; font-size: .75rem; }
+.lev-hist { display: grid; gap: .2rem; margin-top: .8rem; font-size: .72rem; }
+.lev-hist > div { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: .5rem; }
+.lev .up { color: #26a69a; } .lev .down { color: #ef5350; }

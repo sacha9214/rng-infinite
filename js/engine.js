@@ -264,6 +264,7 @@
     ORIENTATION_EXACT: ['101'], CALENDAR_EXACT: ['365'], BRAINROT: ['676767'], GROUNDHOG_DAY: ['365365'],
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     RTX_5090: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
+    IMPORTANT_BIRTHDAY: ['61209'], // badge perso (idée d'un joueur) : 061209, tiré comme le nombre 61209
     NATURAL: ['711'], // badge perso (idée d'un joueur) : 7 et 11, les deux lancers gagnants aux dés
     EXACT_BOOB: ['8008', '58008'], ULTIMEME_EXACT: ['69420', '42069'], ALWAYS: ['247365', '365247'],
     PI: ['314', '3141', '31415', '314159'], E: ['271', '2718', '27182', '271828'],

@@ -2325,4 +2325,50 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   globalThis.__btc = 80000;
 }
 
+// ================================================================ 54. Effet de levier : long / short, 2× 3× 5×, stop loss, take profit, liquidation
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), Shop = require(path.join(ROOT, 'js/shop.js')), Lever = require(path.join(ROOT, 'api/_lever.js'));
+  const lv = { playerId: '8e'.repeat(8), secret: '9e'.repeat(16), name: 'Lever' };
+  db.delete(`cooldown:${lv.playerId}`); assert.equal((await call(roll, { method: 'POST', body: lv })).status, 200);
+  const go = extra => call(shopApi, { method: 'POST', body: { playerId: lv.playerId, secret: lv.secret, action: 'lever', ...extra } });
+  const bal = () => Shop.balance(Object.fromEntries((run([['HGETALL', `stats:${lv.playerId}`]])[0].result || []).reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, arr[i + 1]]]), [])));
+  run([['HSET', `stats:${lv.playerId}`, 'rolls', 100], ['HINCRBY', `stats:${lv.playerId}`, 'bonus', 50000]]);
+  const setPrice = v => { globalThis.__btc = v; run([['DEL', 'btc:price']]); };
+  // Long 5× sur 1 000 pièces : le prix monte de 10 % → +50 % moins les frais (2 × 0,1 % × 5 000 = 10).
+  setPrice(80000); let c0 = bal();
+  let r = await go({ move: 'open', asset: 'btc', side: 'long', lev: 5, margin: 1000 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const p1 = r.body.opened; assert.equal(bal(), c0 - 1000); assert.equal(p1.entry, 80000);
+  assert.ok(Math.abs(p1.liq - 80000 * (1 - (0.95 - 0.01) / 5)) < 1, `liquidation ${p1.liq}`);
+  setPrice(88000); r = await go({ move: 'close', id: p1.id }); assert.equal(r.body.closed.payout, 1490); assert.equal(bal(), c0 + 490);
+  // Short 3× : le prix baisse de 10 % → gagne.
+  setPrice(80000); c0 = bal(); r = await go({ move: 'open', asset: 'btc', side: 'short', lev: 3, margin: 1000 });
+  setPrice(72000); r = await go({ move: 'close', id: r.body.opened.id }); assert.equal(r.body.closed.payout, 1294); // 1000 + 300 − 6
+  // Liquidation : long 5×, le prix chute de 20 % → mise perdue, jamais plus.
+  setPrice(80000); c0 = bal(); r = await go({ move: 'open', asset: 'btc', side: 'long', lev: 5, margin: 500 });
+  setPrice(64000); assert.equal(await Lever.tick(), 1);
+  r = await go({ move: 'state' }); assert.equal(r.body.positions.length, 0); assert.equal(r.body.history[0].why, 'liquidated'); assert.equal(r.body.history[0].payout, 0); assert.equal(bal(), c0 - 500);
+  // Stop loss et take profit, déclenchés par la vérification régulière.
+  setPrice(80000); r = await go({ move: 'open', asset: 'btc', side: 'long', lev: 2, margin: 1000, sl: 76000, tp: 84000 });
+  const pid = r.body.opened.id; setPrice(81000); assert.equal(await Lever.tick(), 0, 'rien à fermer');
+  setPrice(84500); assert.equal(await Lever.tick(), 1); r = await go({ move: 'state' }); assert.equal(r.body.history[0].why, 'take'); assert.ok(r.body.history[0].payout > 1000);
+  setPrice(80000); r = await go({ move: 'open', asset: 'btc', side: 'short', lev: 2, margin: 1000, sl: 82000 });
+  setPrice(82100); await Lever.tick(); r = await go({ move: 'state' }); assert.equal(r.body.history[0].why, 'stop'); assert.ok(r.body.history[0].payout < 1000);
+  // Modifier stop et objectif ; niveaux incohérents refusés.
+  setPrice(80000); r = await go({ move: 'open', asset: 'btc', side: 'long', lev: 3, margin: 100 }); const e = r.body.opened.id;
+  assert.equal((await go({ move: 'edit', id: e, sl: 79000, tp: 90000 })).status, 200);
+  assert.equal((await go({ move: 'edit', id: e, sl: 81000 })).status, 422, 'stop au-dessus du prix d\'entrée d\'un long');
+  assert.equal((await go({ move: 'edit', id: e, sl: 50000 })).status, 422, 'stop sous la liquidation');
+  assert.equal((await go({ move: 'edit', id: e, tp: 70000 })).status, 422);
+  // Refus à l'ouverture.
+  for (const [k, v] of [['lev', 40], ['lev', 1], ['margin', 5], ['margin', 20000], ['side', 'up'], ['asset', 'doge']]) assert.equal((await go({ move: 'open', asset: 'btc', side: 'long', lev: 5, margin: 100, [k]: v })).status, 400, `${k}=${v}`);
+  for (let i = 0; i < 4; i++) await go({ move: 'open', asset: 'eth', side: 'long', lev: 2, margin: 10 });
+  assert.equal((await go({ move: 'open', asset: 'btc', side: 'long', lev: 2, margin: 10 })).status, 422, '5 positions au plus');
+  // Fermée une seule fois, même si deux fermetures se croisent.
+  const [a1, a2] = await Promise.all([go({ move: 'close', id: e }), go({ move: 'close', id: e })]);
+  assert.equal([a1.status, a2.status].filter(x => x === 200).length >= 1, true);
+  assert.equal(r.body.history.filter(h => h.entry === 80000 && h.m === 100).length <= 1, true);
+  const hist = (await go({ move: 'state' })).body.history.filter(h => h.m === 100 && h.lev === 3); assert.equal(hist.length, 1, 'payée une seule fois');
+  setPrice(80000); globalThis.__eth = 2500;
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

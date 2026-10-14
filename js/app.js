@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14f', date: 'Oct 14, 2026', en: ['Crypto: leverage trading. Go long or short with 2×, 3× or 5×, with an optional stop loss and take profit (checked every 15 seconds, even when you are away). You can never lose more than your margin', 'New badge: Important Birthday (061209)'], fr: ['Crypto : trading à effet de levier. Joue la hausse (long) ou la baisse (short) en 2×, 3× ou 5×, avec stop loss et take profit facultatifs (vérifiés toutes les 15 secondes, même quand tu n\'es pas là). Tu ne peux jamais perdre plus que ta mise', 'Nouveau badge : Important Birthday (061209)'] },
     { id: '2026-10-14e', date: 'Oct 14, 2026', en: ['Gamble: the Bitcoin tab becomes Crypto, with Ethereum too, and a real candlestick chart like TradingView: time frames from 5 minutes to 1 day, moving averages 20 and 50, volume, crosshair with open/high/low/close, zoom with the mouse wheel'], fr: ['Gamble : l\'onglet Bitcoin devient Crypto, avec l\'Ethereum en plus, et un vrai graphique en bougies comme TradingView : unités de 5 minutes à 1 jour, moyennes mobiles 20 et 50, volume, réticule avec ouverture/haut/bas/clôture, zoom à la molette'] },
     { id: '2026-10-14d', date: 'Oct 14, 2026', en: ['Gamble: a new Bitcoin tab. Buy and sell Bitcoin with your coins at the real live price (1 coin = 1 $), with a 24-hour chart. Game coins only, no real money'], fr: ['Gamble : un nouvel onglet Bitcoin. Achète et revends du Bitcoin avec tes pièces au vrai prix en direct (1 pièce = 1 $), avec la courbe sur 24 h. Pièces du jeu seulement, pas de vrai argent'] },
     { id: '2026-10-14c', date: 'Oct 14, 2026', en: ['Fixed: the Pixel skin no longer covers the rarity and percentage under your number', 'Blackjack: two optional Match side bets. Your 1st or 2nd card has the same value as the dealer\'s face-up card: 8×, same suit too: 24×, both your cards match: ×1.5'], fr: ['Corrigé : le skin Pixel ne cache plus la rareté et le pourcentage sous ton nombre', 'Blackjack : deux mises annexes Match facultatives. Ta 1re ou 2e carte a la même valeur que la carte visible du croupier : 8×, même couleur aussi : 24×, tes deux cartes correspondent : ×1,5'] },
@@ -2814,7 +2815,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, zoom: 90, hover: null, hy: null, mines: 3, mn: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, lev: null, levSide: 'long', levX: 5, levSeen: 0, zoom: 90, hover: null, hy: null, mines: 3, mn: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
@@ -3122,6 +3123,8 @@
       });
       // moyennes mobiles
       if (o.ma) for (const [line, col] of [[ma20, '#f5a623'], [ma50, '#7b61ff']]) { c.strokeStyle = col; c.lineWidth = 1.4; c.beginPath(); let on = false; line.forEach((v, i) => { if (v == null) return; if (on) c.lineTo(X(i), Y(v)); else { c.moveTo(X(i), Y(v)); on = true; } }); c.stroke(); }
+      // positions ouvertes : entrée, stop loss, take profit, liquidation
+      for (const [v, col, name] of o.lines || []) { if (!(v > lo && v < hi)) continue; const y = Y(v); c.setLineDash(name === 'Entry' ? [] : [6, 4]); c.strokeStyle = col; c.lineWidth = 1; c.beginPath(); c.moveTo(0, y); c.lineTo(plotW, y); c.stroke(); c.setLineDash([]); c.fillStyle = col; c.fillText(name, 4, y - 7); }
       // dernier prix
       const last = o.price || show[show.length - 1][4], ly = Y(last), lup = last >= show[show.length - 1][1];
       c.setLineDash([3, 3]); c.strokeStyle = lup ? UP : DOWN; c.beginPath(); c.moveTo(0, ly); c.lineTo(plotW, ly); c.stroke(); c.setLineDash([]);
@@ -3145,7 +3148,8 @@
     const paintChart = () => {
       const cv = $('#tv-chart'), data = Gamble.cndl;
       if (!cv || !data || data.asset !== Gamble.asset || data.tf !== Gamble.tf) { if (cv) { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); } return; }
-      const r = drawCandles(cv, data.rows, { count: Gamble.zoom, ma: Gamble.ind.ma, vol: Gamble.ind.vol, tf: Gamble.tf, price: Gamble.btc && Gamble.btc.price, hover: Gamble.hover, hy: Gamble.hy });
+      const lines = ((Gamble.lev && Gamble.lev.positions) || []).filter(p => p.a === Gamble.asset).flatMap(p => [[p.entry, '#9ca3af', 'Entry'], [p.liq, '#ef5350', 'Liq.'], ...(p.sl ? [[p.sl, '#f59e0b', 'SL']] : []), ...(p.tp ? [[p.tp, '#26a69a', 'TP']] : [])]);
+      const r = drawCandles(cv, data.rows, { lines, count: Gamble.zoom, ma: Gamble.ind.ma, vol: Gamble.ind.vol, tf: Gamble.tf, price: Gamble.btc && Gamble.btc.price, hover: Gamble.hover, hy: Gamble.hy });
       const o = $('#tv-ohlc'); if (o && r) { const ch = ((r[4] - r[1]) / r[1]) * 100; o.innerHTML = `O <b>${pfmt(r[1])}</b> H <b>${pfmt(r[2])}</b> L <b>${pfmt(r[3])}</b> C <b class="${ch >= 0 ? 'up' : 'down'}">${pfmt(r[4])} (${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%)</b>`; }
     };
     const loadCandles = async () => {
@@ -3153,11 +3157,47 @@
       try { const d = await Online.request(`/api/shop?candles=1&asset=${asset}&tf=${tf}`); if (asset === Gamble.asset && tf === Gamble.tf) { Gamble.cndl = { ...d, asset }; paintChart(); } }
       catch (err) { const o = $('#tv-ohlc'); if (o) o.textContent = 'The chart is unavailable right now.'; }
     };
+    // ---- effet de levier (api/_lever.js) : long ou short, 2× 3× 5×, stop loss / take profit facultatifs
+    const T = x => (window.RNGI18n && window.RNGI18n.t ? window.RNGI18n.t(x) : x);
+    const WHY = { take: '🎯 Take profit', stop: '🛑 Stop loss', liquidated: '💥 Liquidated', manual: 'Closed' };
+    const leverHTML = () => {
+      const L = Gamble.lev, d = Gamble.btc;
+      if (!L || !d) return '';
+      const mine = L.positions, hist = L.history.slice(0, 5);
+      return `
+        <div class="lev">
+          <div class="lev-head"><h4>⚡ Leverage</h4><span class="panel-note">bet on a rise (long) or a fall (short) with ${L.leverages.join('×, ')}× · you can never lose more than your margin</span></div>
+          <form class="lev-form" id="lev-form">
+            <div class="seg lev-side"><button type="button" data-lev-side="long" class="${Gamble.levSide === 'long' ? 'on' : ''}">▲ Long</button><button type="button" data-lev-side="short" class="${Gamble.levSide === 'short' ? 'on' : ''}">▼ Short</button></div>
+            <div class="lev-x">${L.leverages.map(x => `<button type="button" class="chip${Gamble.levX === x ? ' on' : ''}" data-lev-x="${x}">${x}×</button>`).join('')}</div>
+            <label class="lev-field"><span>Margin</span><input class="input mono" name="margin" type="number" inputmode="numeric" min="${L.min}" max="${L.max}" value="100" required></label>
+            <label class="lev-field"><span>Stop loss</span><input class="input mono" name="sl" type="number" inputmode="decimal" step="any" placeholder="optional"></label>
+            <label class="lev-field"><span>Take profit</span><input class="input mono" name="tp" type="number" inputmode="decimal" step="any" placeholder="optional"></label>
+            <button class="btn-roll small lev-go ${Gamble.levSide}">${Gamble.levSide === 'long' ? '▲ Open long' : '▼ Open short'} ${Gamble.levX}× ${d.sym}</button>
+          </form>
+          ${mine.length ? `<div class="lev-list">${mine.map(p => { const pnl = p.value - p.m, pct = (pnl / p.m) * 100; return `
+            <div class="lev-pos" data-pos="${p.id}">
+              <div class="lev-pos-top"><b class="${p.side}">${p.side === 'long' ? '▲ Long' : '▼ Short'} ${p.lev}× ${p.a.toUpperCase()}</b><span class="mono ${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : '−'}${fmt(Math.abs(pnl))} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span><button class="btn" data-lev-close="${p.id}">Close</button></div>
+              <div class="lev-pos-info mono" data-no-i18n>${T('Margin')} 🪙 ${fmt(p.m)} · ${T('Entry')} ${pfmt(p.entry)} · ${T('Now')} ${p.price ? pfmt(p.price) : '–'} · <span class="down">Liq. ${pfmt(p.liq)}</span></div>
+              <form class="lev-edit" data-lev-edit="${p.id}"><input class="input mono" name="sl" type="number" step="any" placeholder="Stop loss" value="${p.sl || ''}" aria-label="Stop loss"><input class="input mono" name="tp" type="number" step="any" placeholder="Take profit" value="${p.tp || ''}" aria-label="Take profit"><button class="btn ghost">Save</button></form>
+            </div>`; }).join('')}</div>` : ''}
+          ${hist.length ? `<div class="lev-hist"><span class="eyebrow">Last closed</span>${hist.map(h => `<div class="mono"><span>${WHY[h.why] || h.why}</span><span>${h.side === 'long' ? '▲' : '▼'} ${h.lev}× ${h.a.toUpperCase()}</span><span class="${h.payout >= h.m ? 'up' : 'down'}">${h.payout >= h.m ? '+' : '−'}${fmt(Math.abs(h.payout - h.m))}</span></div>`).join('')}</div>` : ''}
+        </div>`;
+    };
+    // Une position fermée toute seule (stop, objectif, liquidation) depuis la dernière fois : annoncée une fois.
+    const setLever = L => {
+      const fresh = L.history.filter(h => h.t > Gamble.levSeen && h.why !== 'manual');
+      if (Gamble.levSeen && fresh.length) for (const h of fresh) toast(`${WHY[h.why]}: ${h.side === 'long' ? 'long' : 'short'} ${h.lev}× ${h.a.toUpperCase()} closed, you get 🪙 ${fmt(h.payout)}`, 5000, h.payout >= h.m ? 'achv' : '');
+      Gamble.levSeen = Math.max(Gamble.levSeen || 1, ...L.history.map(h => h.t));
+      Gamble.lev = L;
+      const box = $('#lev-box'); if (box) box.innerHTML = leverHTML();
+      paintChart();
+    };
     async function drawBtc(fetchNow) {
       clearTimeout(Gamble.btcTimer);
       const box = $('#btc-body');
       if (!box || currentView !== 'gamble' || Gamble.tab !== 'btc' && !fetchNow) return;
-      if (fetchNow || !Gamble.btc || Gamble.btc.asset !== Gamble.asset) { try { Gamble.btc = await Online.request(`/api/shop?btc=1&asset=${Gamble.asset}&me=${Store.player.id}`); loadCandles(); } catch (err) { if (!Gamble.btc) { box.innerHTML = '<div class="empty">The Bitcoin price is unavailable right now.</div>'; } } }
+      if (fetchNow || !Gamble.btc || Gamble.btc.asset !== Gamble.asset) { try { Gamble.btc = await Online.request(`/api/shop?btc=1&asset=${Gamble.asset}&me=${Store.player.id}`); loadCandles(); if (Store.player.name) gamble('lever', { move: 'state' }).then(setLever).catch(() => {}); } catch (err) { if (!Gamble.btc) { box.innerHTML = '<div class="empty">The Bitcoin price is unavailable right now.</div>'; } } }
       Gamble.btcTimer = setTimeout(() => { if (currentView === 'gamble' && Gamble.tab === 'btc' && !document.hidden) drawBtc(true); else if (currentView === 'gamble') Gamble.btcTimer = setTimeout(() => drawBtc(true), 20000); }, 20000);
       const d = Gamble.btc;
       if (!d || !$('#btc-body')) return;
@@ -3178,7 +3218,8 @@
           <div class="btc-presets">${[100, 1000, 10000].map(v => `<button class="chip" data-btc-amt="${v}">🪙 ${v >= 1000 ? `${v / 1000}K` : v}</button>`).join('')}<button class="chip" data-btc-amt="max">Max</button></div>
           <div class="btc-sell">${[[25, '25%'], [50, '50%'], [100, 'Sell all']].map(([k, l]) => `<button class="btn${k === 100 ? '' : ' ghost'}" data-btc-sell="${k}"${d.sats ? '' : ' disabled'}>${l}</button>`).join('')}</div>
         </div>
-        <p class="panel-note g-result" id="btc-result">${Gamble.btcMsg || ''}</p>`;
+        <p class="panel-note g-result" id="btc-result">${Gamble.btcMsg || ''}</p>
+        <div id="lev-box">${leverHTML()}</div>`;
       paintChart();
       const cv = $('#tv-chart');
       if (cv) {
@@ -3193,6 +3234,9 @@
       if (as && as.dataset.asset !== Gamble.asset) { Gamble.asset = as.dataset.asset; Gamble.btcMsg = ''; Gamble.hover = null; drawBtc(true); return; }
       if (tf) { Gamble.tf = tf.dataset.tf; Gamble.hover = null; $('#btc-body').querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b === tf)); paintChart(); loadCandles(); return; }
       if (ind) { Gamble.ind[ind.dataset.ind] = !Gamble.ind[ind.dataset.ind]; ind.classList.toggle('on'); const lg = $('#btc-body .tv-legend'); if (lg) lg.innerHTML = Gamble.ind.ma ? '<span style="color:#f5a623">MA 20</span><span style="color:#7b61ff">MA 50</span>' : ''; paintChart(); return; }
+      const ls = e.target.closest('[data-lev-side]'), lx = e.target.closest('[data-lev-x]'), lc = e.target.closest('[data-lev-close]');
+      if (ls || lx) { if (ls) Gamble.levSide = ls.dataset.levSide; if (lx) Gamble.levX = Number(lx.dataset.levX); const f = $('#lev-form'), keep = f ? Object.fromEntries(new FormData(f)) : {}; $('#lev-box').innerHTML = leverHTML(); const g = $('#lev-form'); if (g) for (const [k, v] of Object.entries(keep)) g.elements[k].value = v; return; }
+      if (lc) { if (Gamble.busy) return; Gamble.busy = true; try { const L = await gamble('lever', { move: 'close', id: lc.dataset.levClose }); const h = L.closed; Gamble.levSeen = Math.max(Gamble.levSeen, h ? h.t : 0); setLever(L); if (h) toast(`Closed: you get 🪙 ${fmt(h.payout)}`, 3500, h.payout >= h.m ? 'achv' : ''); Online.shop().then(st => showCoins(st.coins)).catch(() => {}); } catch (err) { fail(err); } finally { Gamble.busy = false; } return; }
       const amt = e.target.closest('[data-btc-amt]'), sell = e.target.closest('[data-btc-sell]');
       if (amt) { $('#btc-buy').value = amt.dataset.btcAmt === 'max' ? Math.max(0, Math.min(Gamble.btc.max, Gamble.coins || 0)) : amt.dataset.btcAmt; return; }
       if (!sell || Gamble.busy) return;
@@ -3202,6 +3246,19 @@
       catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
     $('#btc-body').addEventListener('submit', async e => {
+      const lf = e.target.closest('#lev-form'), le = e.target.closest('[data-lev-edit]');
+      if (lf || le) {
+        e.preventDefault();
+        if (Gamble.busy) return;
+        const f = Object.fromEntries(new FormData(lf || le)), num = v => (v === '' || v == null ? null : Number(v));
+        Gamble.busy = true;
+        try {
+          const L = lf ? await gamble('lever', { move: 'open', asset: Gamble.asset, side: Gamble.levSide, lev: Gamble.levX, margin: Math.floor(Number(f.margin)), sl: num(f.sl), tp: num(f.tp) }) : await gamble('lever', { move: 'edit', id: le.dataset.levEdit, sl: num(f.sl), tp: num(f.tp) });
+          setLever(L); toast(lf ? `${Gamble.levSide === 'long' ? '▲ Long' : '▼ Short'} ${Gamble.levX}× opened` : 'Saved', 2500);
+          Online.shop().then(st => showCoins(st.coins)).catch(() => {});
+        } catch (err) { fail(err); } finally { Gamble.busy = false; }
+        return;
+      }
       e.preventDefault();
       if (Gamble.busy) return;
       const coins = Math.floor(Number($('#btc-buy').value));

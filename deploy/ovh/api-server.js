@@ -80,4 +80,9 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
   });
 }
 
+// Positions à effet de levier : stop loss, take profit et liquidations vérifiés toutes les 15 s, même quand personne
+// n'a le jeu ouvert (api/_lever.js).
+const Lever = require(path.join(ROOT, 'api/_lever.js'));
+setInterval(() => { Lever.tick().catch(err => console.error('lever tick:', err.message)); }, 15000).unref();
+
 server.listen(PORT, HOST, () => console.log(`RNG∞ API ${version || '(dev)'} : http://${HOST}:${PORT}`));
