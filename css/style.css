@@ -3348,3 +3348,17 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-speedrunner { --owner-a: #facc15 !important; } }
 .dark .title-fx.tt-supporter, :root[data-theme="dark"] .title-fx.tt-supporter { --owner-a: #fb7185 !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .title-fx.tt-supporter { --owner-a: #fb7185 !important; } }
+
+/* Farce du créateur : faux jackpot par-dessus l'écran du duel. */
+.prank-bar { display: flex; justify-content: center; margin: .5rem 0 0; }
+.prank-btn b { font-weight: 700; opacity: .7; margin-left: .2rem; }
+.fake-jackpot { position: fixed; inset: 0; z-index: 5000; display: grid; place-items: center; background: radial-gradient(circle, rgba(76, 29, 149, .92), rgba(0, 0, 0, .96)); isolation: isolate; animation: fj-in .35s ease-out; pointer-events: none; }
+.fj-box { display: grid; justify-items: center; gap: .8rem; text-align: center; padding: 1rem; }
+.fj-title { font: 900 clamp(2rem, 9vw, 4.5rem)/1 var(--font-sans); letter-spacing: .04em; color: #fff; text-shadow: 0 0 24px #c084fc, 0 0 48px #60a5fa; animation: fj-pulse .5s ease-in-out infinite alternate; }
+.fj-sub { font: 700 1rem var(--font-sans); color: #f5d0fe; }
+.fake-jackpot.fj-reveal { background: radial-gradient(circle, rgba(250, 204, 21, .35), rgba(0, 0, 0, .8)); }
+.fake-jackpot.fj-reveal .fj-title { animation: fj-shake .4s ease-in-out 2; text-shadow: 0 0 20px #facc15; }
+.fake-jackpot.fj-out { opacity: 0; transition: opacity .6s; }
+@keyframes fj-in { from { opacity: 0; transform: scale(1.1); } }
+@keyframes fj-pulse { to { transform: scale(1.06); } }
+@keyframes fj-shake { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }

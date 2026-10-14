@@ -2387,4 +2387,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(ids(815625), ['SQUARE_IN_5']); assert.deepEqual(ids(51449), ['SQUARE_IN_3']); assert.deepEqual(ids(144), []); assert.deepEqual(ids(907744), ['SQUARE_IN_4']);
 }
 
+// ================================================================ 56. Farce du créateur en duel : faux jackpot, visible seulement chez les autres
+{
+  const boss = { playerId: '1d'.repeat(8), secret: '2d'.repeat(16), name: 'Bossy' }, pal = { playerId: '3d'.repeat(8), secret: '4d'.repeat(16), name: 'Pally' };
+  for (const p of [boss, pal]) { db.delete(`cooldown:${p.playerId}`); assert.equal((await call(roll, { method: 'POST', body: p })).status, 200); }
+  let r = await roomPost(boss, 'create', { size: 2, mode: 'rounds', target: 3 }); const code = r.body.code;
+  await roomPost(pal, 'join', { code });
+  // Un joueur ordinaire ne peut pas.
+  assert.equal((await roomPost(pal, 'prank', { code })).status, 403);
+  run([['HSET', `stats:${boss.playerId}`, 'owner', '1']]);
+  r = await roomPost(boss, 'prank', { code }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(!r.body.prank, 'le créateur ne voit pas sa propre farce'); assert.equal(r.body.pranksLeft, 2); assert.equal(r.body.prankArmed, 0);
+  r = await roomGet(code, pal); assert.deepEqual(r.body.prank, { round: 0, by: 'Bossy' });
+  assert.ok(!JSON.stringify(r.body).includes(boss.playerId), 'aucun identifiant');
+  // 3 par duel au plus.
+  await roomPost(boss, 'prank', { code }); await roomPost(boss, 'prank', { code });
+  assert.equal((await roomPost(boss, 'prank', { code })).status, 429);
+  // Le résultat n'est pas touché : la manche se joue normalement, les nombres sont ceux tirés par le serveur.
+  for (const p of [boss, pal]) { db.delete(`cooldown:${p.playerId}`); await roomPost(p, 'ready', { code }); }
+  r = await roomGet(code, pal); assert.equal(r.body.rounds.length, 1);
+  const [n0, n1] = r.body.rounds[0].n; assert.equal(r.body.rounds[0].s[0], engine.scoreOf(n0)); assert.equal(r.body.rounds[0].s[1], engine.scoreOf(n1));
+  run([['HDEL', `stats:${boss.playerId}`, 'owner']]);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

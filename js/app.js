@@ -268,6 +268,7 @@
     Store.setSetting('skinsOwned', state.owned || []);
     paintRollButtons();
     // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
+    Room.isOwner = (state.owned || []).includes('owner');
     if ((state.owned || []).includes('owner') || Store.settings.hasSugg) Inbox.watch();
     Messages.watch();
   }
@@ -4874,6 +4875,7 @@
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
+        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-jackpot" title="On the next round, the other players see a fake Infinite roll, then the joke. Nothing changes in the real result.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
         <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel chat-panel" id="room-chat">
@@ -4883,6 +4885,13 @@
           <div id="chat-foot"></div>
         </div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>`;
+      const pb = $('#prank-jackpot');
+      if (pb) pb.addEventListener('click', async () => {
+        pb.disabled = true;
+        try { applyRoom(await Online.roomAction('prank', Room.code), Room.token, Date.now(), Date.now()); toast('🎭 Armed: their next round will look like an Infinite', 3000); }
+        catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+        pb.disabled = false;
+      });
       $('#room-chat').addEventListener('click', e => {
         const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');
         if (!hide && !show) return;
@@ -4978,6 +4987,7 @@
       if (rematchBtn) rematchBtn.addEventListener('click', roomRematch);
     }
     setHTML($('#room-hint'), hint);
+    { const left = $('#prank-left'); if (left) { left.textContent = d.prankArmed != null && d.prankArmed >= d.rounds.length ? '· armed' : `· ${d.pranksLeft ?? 3} left`; $('#prank-jackpot').disabled = !d.pranksLeft || (d.prankArmed != null && d.prankArmed >= d.rounds.length); } }
     // Hauteur de la barre d'action, pour que les émotes s'accrochent juste au-dessus sur téléphone (css/style.css).
     { const bar = app.querySelector('.room-actions'); if (bar) requestAnimationFrame(() => document.documentElement.style.setProperty('--room-bar-h', `${bar.offsetHeight}px`)); }
     // Tirage auto : dès que c'est à moi de lancer une manche, elle part toute seule (une fois par manche, après un
@@ -5066,6 +5076,19 @@
   }
 
   // Révélation d'une manche, en même temps chez tous les joueurs : les chiffres de toutes les cartes tombent ensemble.
+  // 🎭 Faux jackpot (farce du créateur) : par-dessus l'écran, un tirage Infinite avec tout le spectacle, puis la vérité.
+  // Le vrai tirage, en dessous, ne change pas.
+  function fakeJackpot(by) {
+    const fake = ['999999', '777777', '000000', '123456'][Math.floor(Math.random() * 4)];
+    const el = document.createElement('div');
+    el.className = 'fake-jackpot';
+    el.innerHTML = `<div class="fj-box"><div class="fj-title">♾️ INFINITE!!</div><div class="num-card lg" data-tier="infinite">${slotsHTML(fake)}</div><div class="fj-sub">the rarest roll in the game</div></div>`;
+    document.body.appendChild(el);
+    FX.celebrate('infinite', el.querySelector('.num-card'));
+    Sound.play('tier', { tier: 'infinite' });
+    setTimeout(() => { el.classList.add('fj-reveal'); el.querySelector('.fj-box').innerHTML = `<div class="fj-title">😂 JUST KIDDING</div><div class="fj-sub" data-no-i18n>👑 prank by ${esc(by)}</div>`; }, 2800);
+    setTimeout(() => { el.classList.add('fj-out'); setTimeout(() => el.remove(), 600); }, 4800);
+  }
   function playRound(i) {
     const d = Room.data, r = d.rounds[i];
     const stage = $('#room-stage');
@@ -5135,6 +5158,7 @@
       keepMine();
       sfx('reveal', size);
       roomFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
+      if (d.prank && d.prank.round === i && d.players.some(p => p.me)) fakeJackpot(d.prank.by);
       sides.forEach((x, j) => {
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;

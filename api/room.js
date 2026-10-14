@@ -342,6 +342,8 @@ async function view(room, me) {
     canAsk: status === 'playing' && room.players.length < MAX_PLAYERS && !stakeOf(room),
     next: room.h.next || null, // code de la revanche, une fois lancée
     nextBy: room.h.nextBy || null, // nom de celui qui l'a lancée
+    // Farce en cours : seulement pour ceux qui la subissent (jamais l'identifiant du créateur) ; pour lui, combien il en reste.
+    ...(() => { let pk = null; try { pk = room.h.prank ? JSON.parse(room.h.prank) : null; } catch (e) { pk = null; } if (!pk) return { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)) }; return pk.from === me ? { pranksLeft: Math.max(0, 3 - (Number(room.h.pranks) || 0)), prankArmed: pk.round } : { prank: { round: pk.round, by: pk.by } }; })(),
     reacts: room.reacts.filter(r => r.t > Date.now() - REACT_SHOWN_MS && room.players[r.i])
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
@@ -574,6 +576,21 @@ module.exports = async (req, res) => {
       room.chat.push(message);
       return send(res, 200, await view(room, playerId));
     }
+    // Farce du créateur (« faux jackpot ») : sur la prochaine manche, l'écran des autres joueurs affiche un faux tirage
+    // Infinite avant de révéler la blague. Rien ne change dans le résultat, les scores ou les pièces. Créateur seulement,
+    // 3 par duel. room.h.prank = { round, by } : la manche visée et le pseudo signé à la fin.
+    if (body.action === 'prank') {
+      if (!member) return send(res, 422, { error: 'You are not in this duel' });
+      if (!(Number((await readStats(playerId)).owner) >= 1)) return send(res, 403, { error: 'Owner only' });
+      const [used] = await redis([['HINCRBY', roomKey(code), 'pranks', 1]]);
+      if (Number(used) > 3) return send(res, 429, { error: 'No more pranks in this duel (3 max)' });
+      const me = room.players.find(p => p.id === playerId);
+      const prank = { round: room.rounds.length, by: me ? me.name : 'Owner', from: playerId };
+      await redis([['HSET', roomKey(code), 'prank', JSON.stringify(prank)]]);
+      room.h.prank = JSON.stringify(prank); room.h.pranks = String(used);
+      return send(res, 200, await view(room, playerId));
+    }
+
     if (body.action === 'react') {
       if (!member) return send(res, 422, { error: 'You are not in this duel' });
       if (!REACTIONS.includes(body.emoji) && !Shop.emoteById.has(body.emoji)) return send(res, 400, { error: 'Unknown reaction' });
