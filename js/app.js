@@ -1456,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14d', date: 'Oct 14, 2026', en: ['Gamble: a new Bitcoin tab. Buy and sell Bitcoin with your coins at the real live price (1 coin = 1 $), with a 24-hour chart. Game coins only, no real money'], fr: ['Gamble : un nouvel onglet Bitcoin. Achète et revends du Bitcoin avec tes pièces au vrai prix en direct (1 pièce = 1 $), avec la courbe sur 24 h. Pièces du jeu seulement, pas de vrai argent'] },
     { id: '2026-10-14c', date: 'Oct 14, 2026', en: ['Fixed: the Pixel skin no longer covers the rarity and percentage under your number', 'Blackjack: two optional Match side bets. Your 1st or 2nd card has the same value as the dealer\'s face-up card: 8×, same suit too: 24×, both your cards match: ×1.5'], fr: ['Corrigé : le skin Pixel ne cache plus la rareté et le pourcentage sous ton nombre', 'Blackjack : deux mises annexes Match facultatives. Ta 1re ou 2e carte a la même valeur que la carte visible du croupier : 8×, même couleur aussi : 24×, tes deux cartes correspondent : ×1,5'] },
     { id: '2026-10-14b', date: 'Oct 14, 2026', en: ['Friends: send messages to your friends with the 💬 button. Only you two can read them, they are filtered like the duel chat, deleted after 7 days, and you can block someone', 'New skin: HellBorn, black volcanic stone with lava in the cracks'], fr: ['Amis : envoie des messages à tes amis avec le bouton 💬. Vous seuls pouvez les lire, ils sont filtrés comme le chat des duels, supprimés au bout de 7 jours, et tu peux bloquer quelqu\'un', 'Nouveau skin : HellBorn, pierre volcanique noire avec de la lave dans les fissures'] },
     { id: '2026-10-14a', date: 'Oct 14, 2026', en: ['Auto-roll: choose the rarity it stops on, from Rare to Infinite', 'New badge: Natural (exactly 711, 71,100 XP)'], fr: ['Tirage auto : choisis la rareté à laquelle il s\'arrête, de Rare à Infinite', 'Nouveau badge : Natural (exactement 711, 71 100 XP)'] },
@@ -2881,7 +2882,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '₿', 'Bitcoin']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -2939,6 +2940,11 @@
             <div class="bj-table" id="bj-table"></div>
             <div class="actions" id="bj-actions"></div>
             <p class="panel-note g-result" id="bj-result"></p>
+          </div>
+          <div class="panel g-game" data-game="btc">
+            <div class="panel-head"><h3 class="panel-title">Bitcoin</h3><span class="panel-note">the real price, live · 1 coin = 1 $</span></div>
+            <div id="btc-body"><div class="empty">Loading…</div></div>
+            <p class="panel-note btc-note">Game coins only: this is not real Bitcoin, nothing can be bought or cashed out with real money. Buying and selling each cost 1%.</p>
           </div>
         </div>
         <div class="panel g-top stats-sep" id="g-top">
@@ -3077,11 +3083,65 @@
         if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
     });
+    // ---- bitcoin : vrai prix (api/_btc.js), relu toutes les 20 s tant que l'onglet est ouvert
+    const btcFmt = sats => (sats / 1e8).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+    const btcChart = hist => {
+      if (hist.length < 2) return '<div class="empty btc-chart-empty">The 24-hour chart fills in over the next hours.</div>';
+      const W = 600, H = 150, xs = hist.map(h => h[0]), ys = hist.map(h => h[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * .1 || 1;
+      const X = t => ((t - x0) / Math.max(1, x1 - x0)) * W, Y = v => H - ((v - lo + pad) / (hi - lo + 2 * pad)) * H;
+      const line = hist.map((h, i) => `${i ? 'L' : 'M'}${X(h[0]).toFixed(1)},${Y(h[1]).toFixed(1)}`).join(''), up = ys[ys.length - 1] >= ys[0];
+      return `<svg class="btc-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Bitcoin price, last 24 hours"><path class="area" d="${line}L${W},${H}L0,${H}Z"/><path class="line" d="${line}"/></svg>`;
+    };
+    async function drawBtc(fetchNow) {
+      clearTimeout(Gamble.btcTimer);
+      const box = $('#btc-body');
+      if (!box || currentView !== 'gamble' || Gamble.tab !== 'btc' && !fetchNow) return;
+      if (fetchNow || !Gamble.btc) { try { Gamble.btc = await Online.request(`/api/shop?btc=1&me=${Store.player.id}`); } catch (err) { if (!Gamble.btc) { box.innerHTML = '<div class="empty">The Bitcoin price is unavailable right now.</div>'; } } }
+      Gamble.btcTimer = setTimeout(() => { if (currentView === 'gamble' && Gamble.tab === 'btc' && !document.hidden) drawBtc(true); else if (currentView === 'gamble') Gamble.btcTimer = setTimeout(() => drawBtc(true), 20000); }, 20000);
+      const d = Gamble.btc;
+      if (!d || !$('#btc-body')) return;
+      if (d.coins != null) showCoins(d.coins);
+      const first = d.hist.length ? d.hist[0][1] : d.price, change = d.price && first ? ((d.price - first) / first) * 100 : 0;
+      const profit = d.value != null ? d.value - d.cost : 0, keep = $('#btc-buy') ? $('#btc-buy').value : '100';
+      box.innerHTML = `
+        <div class="btc-top"><span class="btc-price mono">${d.price ? `🪙 ${fmt(Math.round(d.price))}` : '—'}</span><span class="btc-unit">for 1 BTC</span>${d.hist.length > 1 ? `<span class="btc-change ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}% · 24 h</span>` : ''}</div>
+        ${btcChart(d.hist)}
+        <div class="btc-own">
+          <div><span class="eyebrow">You own</span><b class="mono">${btcFmt(d.sats)} BTC</b></div>
+          <div><span class="eyebrow">Worth now</span><b class="mono">🪙 ${fmt(d.value || 0)}</b></div>
+          <div><span class="eyebrow">Profit</span><b class="mono ${profit >= 0 ? 'up' : 'down'}">${d.sats ? `${profit >= 0 ? '+' : '−'}${fmt(Math.abs(profit))}` : '–'}</b></div>
+        </div>
+        <div class="btc-trade">
+          <form id="btc-buy-form"><input class="input mono" id="btc-buy" type="number" inputmode="numeric" min="${d.min}" max="${d.max}" step="1" value="${esc(keep)}" aria-label="Coins to spend"><button class="btn-roll small">Buy</button></form>
+          <div class="btc-presets">${[100, 1000, 10000].map(v => `<button class="chip" data-btc-amt="${v}">🪙 ${v >= 1000 ? `${v / 1000}K` : v}</button>`).join('')}<button class="chip" data-btc-amt="max">Max</button></div>
+          <div class="btc-sell">${[[25, '25%'], [50, '50%'], [100, 'Sell all']].map(([k, l]) => `<button class="btn${k === 100 ? '' : ' ghost'}" data-btc-sell="${k}"${d.sats ? '' : ' disabled'}>${l}</button>`).join('')}</div>
+        </div>
+        <p class="panel-note g-result" id="btc-result">${Gamble.btcMsg || ''}</p>`;
+    }
+    $('#btc-body').addEventListener('click', async e => {
+      const amt = e.target.closest('[data-btc-amt]'), sell = e.target.closest('[data-btc-sell]');
+      if (amt) { $('#btc-buy').value = amt.dataset.btcAmt === 'max' ? Math.max(0, Math.min(Gamble.btc.max, Gamble.coins || 0)) : amt.dataset.btcAmt; return; }
+      if (!sell || Gamble.busy) return;
+      const k = Number(sell.dataset.btcSell), sats = Gamble.btc.sats;
+      Gamble.busy = true;
+      try { Gamble.btc = await gamble('btc', k === 100 ? { move: 'sell', all: true } : { move: 'sell', sats: Math.floor(sats * k / 100) }); Gamble.btcMsg = `Sold ${btcFmt(Gamble.btc.done.sats)} BTC for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
+      catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    $('#btc-body').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (Gamble.busy) return;
+      const coins = Math.floor(Number($('#btc-buy').value));
+      Gamble.busy = true;
+      try { Gamble.btc = await gamble('btc', { move: 'buy', coins }); Gamble.btcMsg = `Bought ${btcFmt(Gamble.btc.done.sats)} BTC for 🪙 ${fmt(Gamble.btc.done.coins)}`; Sound.play('lock', { i: 4 }); drawBtc(); }
+      catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
     // ---- onglets des jeux
     const showTab = id => {
       // Les pièces de 1 et 5 n'existent qu'au Plinko : ailleurs elles disparaissent, et la mise remonte à 10.
       $('#g-chips').dataset.game = id;
       if (id !== 'plinko' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
+      const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
+      if (id === 'btc') drawBtc(true); else clearTimeout(Gamble.btcTimer);
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
     $('#g-tabs').addEventListener('click', e => { const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab); });
     showTab(Gamble.tab);

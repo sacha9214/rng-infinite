@@ -9,6 +9,7 @@ const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require
 const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
+const Btc = require('./_btc');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
@@ -58,6 +59,8 @@ module.exports = async (req, res) => {
       const query = new URL(req.url, 'http://localhost').searchParams;
       // Compte de la maison du casino (ce qu'elle a donné et pris, dernières manches) : public, sans joueur.
       // Classement du casino (gagnants, perdants, plus gros parieurs) : public, pseudos seulement ; « me » situe le joueur.
+      // Bitcoin du casino : prix du moment et historique 24 h (public) ; avec « me », les avoirs du joueur.
+      if (query.get('btc')) return send(res, 200, await Btc.view(isPlayerId(query.get('me')) ? query.get('me') : ''));
       if (query.get('casino') === 'top') return send(res, 200, await Gamble.board(isPlayerId(query.get('me')) ? query.get('me') : ''));
       if (query.get('casino')) return send(res, 200, await Gamble.house());
       const me = query.get('me');
@@ -127,7 +130,7 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, crash: Gamble.crash, slots: Gamble.slots };
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, crash: Gamble.crash, slots: Gamble.slots, btc: Btc.trade };
     if (GAMES[body.action]) {
       // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son

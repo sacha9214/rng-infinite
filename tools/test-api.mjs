@@ -27,6 +27,8 @@ const { db, zset, run } = fakeRedis();
 let calls = 0;
 globalThis.fetch = async (url, opts) => {
   if (url === GOOGLE_CERTS_URL) return { ok: true, json: async () => ({ keys: [googleJwk] }) };
+  // Prix du bitcoin (api/_btc.js) : réglé par le test ; null = source injoignable.
+  if (/coinbase|kraken/.test(url)) { if (globalThis.__btc == null) throw new Error('offline'); return /coinbase/.test(url) ? { ok: true, json: async () => ({ data: { amount: String(globalThis.__btc) } }) } : { ok: true, json: async () => ({ result: { X: { c: [String(globalThis.__btc)] } } }) }; }
   assert.equal(url, 'https://fake-redis.test/pipeline');
   assert.equal(opts.headers.Authorization, 'Bearer test-token');
   calls++;
@@ -2256,6 +2258,44 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await fr(ann, 'message', 'Benny', { text: 'last' }); assert.equal(r.body.messages.length, 100); assert.equal(r.body.messages.pop().text, 'last');
   // Plus amis : plus de messages.
   await fr(ann, 'remove', 'Benny'); assert.equal((await fr(ann, 'message', 'Benny', { text: 'hey' })).status, 403);
+}
+
+// ================================================================ 52. Bitcoin du casino : vrai prix, 1 % d'écart à l'achat et à la vente
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), Shop = require(path.join(ROOT, 'js/shop.js'));
+  const tr = (who, extra) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'btc', ...extra } });
+  const pub = async me => (await call(shopApi, { url: `/api/shop?btc=1${me ? `&me=${me.playerId}` : ''}` })).body;
+  const fresh = () => run([['DEL', 'btc:price']]);
+  const trader = { playerId: '6e'.repeat(8), secret: '7e'.repeat(16), name: 'Trader' };
+  db.delete(`cooldown:${trader.playerId}`); assert.equal((await call(roll, { method: 'POST', body: trader })).status, 200);
+  const bal = () => Shop.balance(Object.fromEntries((run([['HGETALL', `stats:${trader.playerId}`]])[0].result || []).reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, arr[i + 1]]]), [])));
+  run([['HSET', `stats:${trader.playerId}`, 'rolls', 100], ['HINCRBY', `stats:${trader.playerId}`, 'bonus', 100000]]);
+  // Le prix public, sans compte ; un point d'historique.
+  globalThis.__btc = 80000; fresh(); run([['DEL', 'btc:hist']]);
+  let v = await pub(); assert.equal(v.price, 80000); assert.equal(v.hist.length, 1); assert.equal(v.sats, 0);
+  // Acheter pour 1 000 pièces au prix + 1 %.
+  const c0 = bal();
+  let r = await tr(trader, { move: 'buy', coins: 1000 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.sats, Math.floor(1000 / (80000 * 1.01) * 1e8)); assert.equal(bal(), c0 - 1000); assert.equal(r.body.cost, 1000);
+  // Revendre tout aussitôt : moins 2 % environ, jamais un gain.
+  r = await tr(trader, { move: 'sell', all: true }); assert.equal(r.status, 200);
+  assert.equal(r.body.sats, 0); assert.ok(bal() - c0 < 0 && bal() - c0 >= -21, `aller-retour ${bal() - c0}`); assert.equal(r.body.cost, 0);
+  // Le prix monte de 10 % : la revente rapporte plus que l'achat.
+  const c1 = bal(); await tr(trader, { move: 'buy', coins: 5000 });
+  globalThis.__btc = 88000; fresh();
+  v = await pub(trader); assert.ok(v.value > 5300 && v.value < 5400, `valeur ${v.value}`);
+  r = await tr(trader, { move: 'sell', sats: Math.floor(v.sats / 2) }); assert.equal(r.status, 200);
+  assert.ok(Math.abs(r.body.cost - 2500) <= 1, 'le prix payé suit la part vendue');
+  await tr(trader, { move: 'sell', all: true }); assert.ok(bal() - c1 > 350 && bal() - c1 < 450, `gain ${bal() - c1}`);
+  // Refus : montants, solde, avoirs, avant 30 tirages, prix introuvable.
+  for (const coins of [5, 50001, 12.5, 'x']) assert.equal((await tr(trader, { move: 'buy', coins })).status, 400, String(coins));
+  run([['HSET', `stats:${trader.playerId}`, 'spent', 1e9]]); assert.equal((await tr(trader, { move: 'buy', coins: 100 })).status, 422); run([['HSET', `stats:${trader.playerId}`, 'spent', 0]]);
+  assert.equal((await tr(trader, { move: 'sell', sats: 5 })).status, 422, 'rien à vendre');
+  run([['HSET', `stats:${trader.playerId}`, 'rolls', 10]]); assert.equal((await tr(trader, { move: 'buy', coins: 100 })).status, 422); run([['HSET', `stats:${trader.playerId}`, 'rolls', 100]]);
+  globalThis.__btc = null; run([['SET', 'btc:price', JSON.stringify({ p: 88000, t: Date.now() - 600000 })]]);
+  assert.equal((await tr(trader, { move: 'buy', coins: 100 })).status, 503, 'prix trop vieux : pas d\'échange');
+  globalThis.__btc = 5; fresh(); assert.equal((await pub()).price, null, 'prix absurde ignoré');
+  globalThis.__btc = 80000; fresh();
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

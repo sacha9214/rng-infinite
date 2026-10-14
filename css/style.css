@@ -3124,3 +3124,25 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .bj-side { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: .35rem; }
 .bj-side .chip { font-size: .72rem; }
 #bj-actions { flex-wrap: wrap; justify-content: center; }
+
+/* Gamble · Bitcoin : prix, courbe 24 h, avoirs, achat et vente. */
+.btc-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .7rem; margin-bottom: .6rem; }
+.btc-price { font-size: 1.8rem; font-weight: 800; }
+.btc-unit { font-size: .8rem; color: var(--prose-3); }
+.btc-change { font: 700 .8rem var(--font-mono); }
+.btc-change.up, .btc-own .up { color: #34d399; } .btc-change.down, .btc-own .down { color: #f87171; }
+.btc-chart { display: block; width: 100%; height: 9rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface-dim); }
+.btc-chart .line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.btc-chart.up .line { stroke: #34d399; } .btc-chart.down .line { stroke: #f87171; }
+.btc-chart.up .area { fill: rgba(52, 211, 153, .12); } .btc-chart.down .area { fill: rgba(248, 113, 113, .12); }
+.btc-chart-empty { padding: 1.5rem .5rem; }
+.btc-own { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0; }
+.btc-own > div { padding: .5rem .6rem; border: 1px solid var(--outline); border-radius: .5rem; background: var(--surface); min-width: 0; }
+.btc-own b { display: block; font-size: .9rem; margin-top: .15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btc-trade { display: grid; gap: .5rem; }
+#btc-buy-form { display: flex; gap: .4rem; } #btc-buy-form .input { flex: 1; min-width: 0; }
+.btc-presets, .btc-sell { display: flex; flex-wrap: wrap; gap: .35rem; }
+.btc-sell .btn { flex: 1; }
+.btc-note { margin-top: .6rem; }
+@media (max-width: 420px) { .btc-own { grid-template-columns: 1fr 1fr; } .btc-own > div:last-child { grid-column: 1 / -1; } }
+.g-bet[hidden] { display: none !important; }
