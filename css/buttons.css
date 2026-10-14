@@ -715,3 +715,17 @@
   --gs-a: 0 .06em 0 #7a3340, inset 0 3px 7px rgba(122, 51, 64, .55);
   --press: .24em; --edge: .3em;
 }
+
+/* Bouton Generate HellBorn : une dalle de basalte fendue, la lave pulse dans les fentes. */
+.btn-roll.gen-hellborn {
+  overflow: hidden; border: 2px solid #ff5a00; color: #ffe2c2; border-radius: .8rem;
+  background:
+    linear-gradient(118deg, transparent 40%, rgba(255, 106, 0, .8) 40.6%, rgba(255, 200, 80, .9) 41.2%, transparent 42%),
+    linear-gradient(64deg, transparent 66%, rgba(255, 106, 0, .7) 66.5%, transparent 67.4%),
+    radial-gradient(ellipse 90% 70% at 50% 120%, rgba(255, 80, 0, .7), transparent 65%),
+    linear-gradient(180deg, #2a1712, #120806);
+  text-shadow: 0 0 8px rgba(255, 106, 0, .8), 0 1px 0 #000;
+  --gs: 0 .3em 0 #3d1408, 0 .5em 1em rgba(255, 69, 0, .45); --gs-h: 0 .34em 0 #3d1408, 0 .7em 1.4em rgba(255, 106, 0, .6); --gs-a: 0 .06em 0 #3d1408;
+  animation: gen-hb-pulse 2.2s ease-in-out infinite alternate;
+}
+@keyframes gen-hb-pulse { from { filter: brightness(.95); } to { filter: brightness(1.18) saturate(1.15); } }

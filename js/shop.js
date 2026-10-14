@@ -45,6 +45,8 @@
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
+    // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
+    { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

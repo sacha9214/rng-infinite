@@ -2215,4 +2215,47 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(order.every((r, i) => !i || Shop.DUPLICATE_REFUND[r] >= Shop.DUPLICATE_REFUND[order[i - 1]]));
 }
 
+// ================================================================ 51. Messages entre amis
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const fr = (who, action, name, extra = {}) => call(friendsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, name, ...extra } });
+  const mk = (id, name) => ({ playerId: id.repeat(8), secret: (id + 'f').repeat(32).slice(0, 32), name });
+  const ann = mk('3c', 'Annie'), ben = mk('4c', 'Benny'), cid = mk('5c', 'Cidney');
+  for (const p of [ann, ben, cid]) { db.delete(`cooldown:${p.playerId}`); assert.equal((await call(roll, { method: 'POST', body: p })).status, 200); }
+  // Pas encore amis : impossible d'écrire, même avec une demande en attente.
+  assert.equal((await fr(ann, 'message', 'Benny', { text: 'hi' })).status, 403);
+  await fr(ann, 'add', 'Benny'); assert.equal((await fr(ann, 'message', 'Benny', { text: 'hi' })).status, 403, 'demande pas encore acceptée');
+  await fr(ben, 'accept', 'Annie');
+  // Amis : le message passe, nettoyé par le filtre du chat, et Benny a un message non lu.
+  let r = await fr(ann, 'message', 'Benny', { text: '  hey you fucking legend, see www.evil.com  ' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.messages.map(m => [m.me, m.text]), [[true, 'hey you ******* legend, see [link]']]);
+  assert.equal((await fr(ben, 'gifts')).body.messages, 1, 'un message non lu');
+  r = await fr(ben, 'list'); assert.equal(r.body.friends.find(f => f.name === 'Annie').unread, 1);
+  // Benny l'ouvre : c'est lu ; il répond ; chacun voit les siens à droite.
+  r = await fr(ben, 'messages', 'Annie'); assert.deepEqual(r.body.messages.map(m => m.me), [false]);
+  assert.equal((await fr(ben, 'gifts')).body.messages, 0);
+  r = await fr(ben, 'message', 'Annie', { text: 'gg on your 777777!' }); assert.deepEqual(r.body.messages.map(m => [m.me, m.text]), [[false, 'hey you ******* legend, see [link]'], [true, 'gg on your 777777!']]);
+  assert.ok(!JSON.stringify(r.body).includes(ann.playerId) && !JSON.stringify(r.body).includes(ben.playerId), 'aucun identifiant');
+  // Un tiers ne lit rien et ne peut pas écrire.
+  assert.equal((await fr(cid, 'message', 'Annie', { text: 'yo' })).status, 403);
+  assert.deepEqual((await fr(cid, 'messages', 'Annie')).body.messages, []);
+  // Message vide (ou vidé), trop rapide.
+  assert.equal((await fr(ann, 'message', 'Benny', { text: '   ' })).status, 422);
+  const minute = Math.floor(Date.now() / 60000); run([['SET', `dmrate:${ann.playerId}:${minute}`, 20]]);
+  assert.equal((await fr(ann, 'message', 'Benny', { text: 'one more' })).status, 429); run([['DEL', `dmrate:${ann.playerId}:${minute}`]]);
+  // Benny bloque Annie : elle ne peut plus lui écrire ; il peut la débloquer.
+  r = await fr(ben, 'block', 'Annie'); assert.equal(r.body.blocked, true);
+  assert.equal((await fr(ann, 'message', 'Benny', { text: 'please' })).status, 403);
+  assert.equal((await fr(ben, 'message', 'Annie', { text: 'x' })).status, 422, 'celui qui bloque doit débloquer pour écrire');
+  r = await fr(ben, 'unblock', 'Annie'); assert.equal(r.body.blocked, false);
+  assert.equal((await fr(ann, 'message', 'Benny', { text: 'thanks' })).status, 200);
+  // Gardés 7 jours, 100 messages au plus.
+  const key = `dm:${[ann.playerId, ben.playerId].sort().join(':')}`;
+  run(Array.from({ length: 120 }, (_, i) => ['RPUSH', key, JSON.stringify({ s: ann.playerId, x: `m${i}`, t: i })]));
+  r = await fr(ann, 'message', 'Benny', { text: 'last' }); assert.equal(r.body.messages.length, 100); assert.equal(r.body.messages.pop().text, 'last');
+  // Plus amis : plus de messages.
+  await fr(ann, 'remove', 'Benny'); assert.equal((await fr(ann, 'message', 'Benny', { text: 'hey' })).status, 403);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

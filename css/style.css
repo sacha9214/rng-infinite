@@ -3055,3 +3055,67 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 .solo-stop { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 700; color: var(--prose-3); }
 .solo-stop select { padding: .2rem .4rem; border: 1px solid var(--outline-mid); border-radius: .4rem; background: var(--surface); color: var(--prose); font: 700 .72rem var(--font-sans); }
 .idea-warn { display: flex; gap: .45rem; margin: 0 0 .8rem; padding: .5rem .7rem; border: 1px solid rgba(251, 191, 36, .5); border-radius: .5rem; background: rgba(251, 191, 36, .1); font-size: .78rem; line-height: 1.4; color: var(--prose); }
+
+/* ------------------------------------------------------------------ HellBorn : basalte noir, lave dans les fissures.
+   Matière dure : pas d'écrasement, un choc sec et un éclat. Fire = flammes vives ; ici la chaleur vient de l'intérieur. */
+.num-card.skin-hellborn {
+  background:
+    linear-gradient(118deg, transparent 8%, rgba(255, 98, 0, .45) 8.4%, rgba(255, 190, 60, .5) 8.8%, transparent 9.4%),
+    linear-gradient(62deg, transparent 90%, rgba(255, 98, 0, .45) 90.3%, rgba(255, 190, 60, .5) 90.6%, transparent 91.2%),
+    radial-gradient(ellipse 90% 45% at 50% 122%, rgba(255, 80, 0, .7), rgba(180, 30, 0, .3) 45%, transparent 70%),
+    radial-gradient(ellipse at 50% 30%, #2a1712, #120806 70%);
+  border: 2px solid #3d1408; border-radius: .7rem;
+  box-shadow: 0 0 0 1px #ff5a00, inset 0 0 22px rgba(0, 0, 0, .8), inset 0 -10px 24px rgba(255, 80, 0, .3), 0 0 22px rgba(255, 69, 0, .45), 0 10px 20px rgba(0, 0, 0, .45);
+}
+/* Chiffres : basalte massif (gris-brun mat) traversé de deux fissures où brille la lave. */
+.skin-hellborn .slot {
+  font-weight: 900; color: transparent;
+  background:
+    linear-gradient(112deg, transparent 0 42.4%, #ff6a00 42.9%, #ffe08a 43.3%, #ff6a00 43.7%, transparent 44.2%) 0 0 / 100% 100%,
+    linear-gradient(64deg, transparent 0 64.4%, #ff6a00 64.8%, #ffc35a 65.1%, #ff6a00 65.4%, transparent 65.8%) 0 0 / 100% 100%,
+    linear-gradient(180deg, #a07d6a 0%, #74544a 35%, #4a3128 72%, #2e1b14 100%) 0 0 / 100% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .012em #1a0a05;
+  filter: drop-shadow(0 0 .05em rgba(255, 110, 0, .95)) drop-shadow(0 0 .16em rgba(255, 69, 0, .55)) drop-shadow(0 .05em .08em rgba(0, 0, 0, .8));
+  animation: hb-glow 2.6s ease-in-out infinite alternate;
+}
+@keyframes hb-glow { from { filter: drop-shadow(0 0 .04em rgba(255, 110, 0, .8)) drop-shadow(0 0 .12em rgba(255, 69, 0, .4)) drop-shadow(0 .05em .08em rgba(0, 0, 0, .8)); } to { filter: drop-shadow(0 0 .07em rgba(255, 150, 0, 1)) drop-shadow(0 0 .22em rgba(255, 69, 0, .7)) drop-shadow(0 .05em .08em rgba(0, 0, 0, .8)); } }
+.skin-hellborn .slot.ghost { opacity: .2; animation: none; }
+/* Pendant le tirage : le magma bouillonne (la coulée monte et descend vite, le chiffre tremble). */
+.skin-hellborn .slot.spinning { opacity: .9; animation: hb-boil .22s linear infinite, hb-tremble .09s steps(2) infinite; }
+@keyframes hb-boil { from { background-position: 0 .3em, 0 -.25em, 0 0; } to { background-position: 0 -.3em, 0 .25em, 0 0; } }
+@keyframes hb-tremble { from { transform: translate(.01em, 0); } to { transform: translate(-.01em, .015em); } }
+/* Il se pose : la pierre monte un instant, retombe d'un coup, les fissures flambent puis refroidissent. */
+.skin-hellborn .slot.revealed { animation: hb-slam .62s cubic-bezier(.5, 0, .2, 1) backwards, hb-glow 2.6s .62s ease-in-out infinite alternate; }
+@keyframes hb-slam {
+  0% { transform: translateY(-.22em) scale(1.08); filter: brightness(.45) drop-shadow(0 0 0 transparent); }
+  38% { transform: translateY(.05em) scale(1); filter: brightness(2.4) drop-shadow(0 0 .35em #ffb000) drop-shadow(0 0 .7em #ff4500); }
+  52% { transform: translateY(-.02em); }
+  100% { transform: none; filter: drop-shadow(0 0 .08em rgba(255, 100, 0, .9)) drop-shadow(0 .06em .12em rgba(0, 0, 0, .7)); }
+}
+.skin-hellborn .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-hellborn .slot { animation: none; } }
+/* Cadre de duel : une coulée de lave au pied du panneau et des braises qui montent. */
+.side-hellborn { --side-border: #ff5a00; --side-glow: 0 0 18px rgba(255, 69, 0, .45); --side-ink: #ff8a3d;
+  --side-bg: radial-gradient(ellipse 80% 40% at 50% 112%, rgba(255, 80, 0, .45), transparent 70%), linear-gradient(180deg, rgba(20, 8, 6, .55), rgba(40, 12, 4, .35));
+  --deco-a: '🔥'; --deco-b: '🌋'; }
+.side-hellborn::before, .side-hellborn::after { top: auto; bottom: .4rem; font-size: 1.05rem; animation: hb-ember 2.4s ease-in infinite; }
+.side-hellborn::after { animation-delay: 1.2s; }
+@keyframes hb-ember { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-1.6rem); opacity: 0; } }
+.room-stage.many .side-hellborn::before, .room-stage.many .side-hellborn::after { animation: none; }
+
+/* Messages entre amis : bouton avec pastille de non-lus, fenêtre de conversation, point sur le lien Amis du menu. */
+.fr-chat { position: relative; }
+.fr-unread { position: absolute; top: -.35rem; right: -.35rem; min-width: 1.1rem; padding: 0 .25rem; border-radius: 999px; background: #ef4444; color: #fff; font: 800 .6rem/1.1rem var(--font-mono); text-align: center; }
+a[data-route="friends"].has-msg { position: relative; }
+a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .2rem; right: .1rem; width: .5rem; height: .5rem; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px var(--site-bg); }
+.dm-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding-right: 2rem; }
+.dm-head h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-note { margin: .3rem 0 .6rem; }
+.dm-list { display: flex; flex-direction: column; gap: .35rem; height: min(52vh, 22rem); overflow-y: auto; padding: .5rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface-dim); }
+.dm-msg { margin: 0; max-width: 80%; padding: .4rem .65rem; border-radius: .7rem; font-size: .86rem; line-height: 1.35; overflow-wrap: anywhere; }
+.dm-msg i { display: block; margin-top: .1rem; font-style: normal; font-size: .6rem; opacity: .6; }
+.dm-msg.them { align-self: flex-start; background: var(--surface); border: 1px solid var(--outline); border-bottom-left-radius: .2rem; }
+.dm-msg.me { align-self: flex-end; background: color-mix(in srgb, var(--chart-accent) 22%, var(--surface)); border-bottom-right-radius: .2rem; }
+.dm-form { display: flex; gap: .4rem; margin-top: .6rem; }
+.dm-form .input { flex: 1; min-width: 0; text-transform: none; letter-spacing: 0; text-align: left; }

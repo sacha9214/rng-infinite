@@ -269,6 +269,7 @@
     paintRollButtons();
     // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
     if ((state.owned || []).includes('owner') || Store.settings.hasSugg) Inbox.watch();
+    Messages.watch();
   }
   // Skin Slots : une manette sur le côté de la machine, qu'on abaisse au lancement (voir .slot-lever dans le CSS).
   const LEVER = '<span class="slot-lever" aria-hidden="true"></span>';
@@ -1455,6 +1456,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-14b', date: 'Oct 14, 2026', en: ['Friends: send messages to your friends with the 💬 button. Only you two can read them, they are filtered like the duel chat, deleted after 7 days, and you can block someone', 'New skin: HellBorn, black volcanic stone with lava in the cracks'], fr: ['Amis : envoie des messages à tes amis avec le bouton 💬. Vous seuls pouvez les lire, ils sont filtrés comme le chat des duels, supprimés au bout de 7 jours, et tu peux bloquer quelqu\'un', 'Nouveau skin : HellBorn, pierre volcanique noire avec de la lave dans les fissures'] },
     { id: '2026-10-14a', date: 'Oct 14, 2026', en: ['Auto-roll: choose the rarity it stops on, from Rare to Infinite', 'New badge: Natural (exactly 711, 71,100 XP)'], fr: ['Tirage auto : choisis la rareté à laquelle il s\'arrête, de Rare à Infinite', 'Nouveau badge : Natural (exactement 711, 71 100 XP)'] },
     { id: '2026-10-13l', date: 'Oct 13, 2026', en: ['Cases: a skin you already own now refunds more when it is rarer — 50% of the case price for a Common, 55% Uncommon, 65% Rare, 75% Epic, 90% Legendary'], fr: ['Caisses : un skin que tu as déjà rembourse maintenant plus quand il est rare — 50 % du prix de la caisse pour un Common, 55 % Uncommon, 65 % Rare, 75 % Epic, 90 % Legendary'] },
     { id: '2026-10-13k', date: 'Oct 13, 2026', en: ['New title to equip: 📅 2026 — unlocked when you earn the Current Year badge (a number containing 2026). Equip it from your profile'], fr: ['Nouveau titre à équiper : 📅 2026 — débloqué quand tu obtiens le badge Current Year (un nombre contenant 2026). Équipe-le depuis ton profil'] },
@@ -4126,6 +4128,7 @@
       if (!btn) return;
       if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
       if (btn.dataset.fr === 'gift') { openGift(btn.dataset.name); return; }
+      if (btn.dataset.fr === 'chat') { openChat(btn.dataset.name); return; }
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();
@@ -4176,10 +4179,58 @@
   }
   // Cadeaux reçus depuis la dernière fois : annoncés une seule fois (le serveur les marque vus), au chargement du jeu
   // et à l'ouverture des amis. Le solde gardé sur l'appareil suit.
+  // ---- Messages entre amis (api/friends.js) : une fenêtre de conversation par ami, relue toutes les 4 s tant qu'elle
+  // est ouverte. Le filtre du chat des duels s'applique côté serveur ; on peut bloquer un ami depuis la fenêtre.
+  const Messages = {
+    count: 0, timer: 0,
+    set(n) { this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (!document.hidden && Store.player.name) Online.friends('gifts').then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 180000); setTimeout(tick, 4000); },
+  };
+  function openChat(name) {
+    let poll = 0, sig = '';
+    const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    openModal(`
+      <div class="dm-head"><h2>💬 <span data-no-i18n>${esc(name)}</span></h2><button class="btn ghost" id="dm-block"></button></div>
+      <p class="panel-note dm-note">Only you two can read this. Messages are filtered and deleted after 7 days. Never share personal details.</p>
+      <div class="dm-list" id="dm-list" aria-live="polite"><div class="empty">Loading…</div></div>
+      <form class="dm-form" id="dm-form"><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
+      const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block');
+      const draw = d => {
+        block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
+        block.dataset.blocked = d.blocked ? '1' : '';
+        input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        if (html === sig) return;
+        const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+        sig = html; list.innerHTML = html;
+        if (atBottom || !list.dataset.ready) list.scrollTop = list.scrollHeight;
+        list.dataset.ready = '1';
+      };
+      const load = () => Online.friends('messages', name).then(d => { if (m.isConnected) draw(d); }).catch(() => {});
+      const loop = () => { if (!m.isConnected) { clearInterval(poll); checkGifts(); if (currentView === 'friends') drawFriends(); return; } if (!document.hidden) load(); };
+      poll = setInterval(loop, 4000);
+      load();
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!input.value.trim()) return;
+        const btn = form.querySelector('button'); btn.disabled = true;
+        try { draw(await Online.friends('message', name, { text: input.value })); input.value = ''; list.scrollTop = list.scrollHeight; }
+        catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your message, try again'); }
+        btn.disabled = false; input.focus();
+      });
+      block.addEventListener('click', async () => {
+        const blocking = !block.dataset.blocked;
+        if (blocking && !confirm(window.RNGI18n.t(`Block ${name}? They will not be able to message you.`))) return;
+        try { draw(await Online.friends(blocking ? 'block' : 'unblock', name)); toast(blocking ? 'Blocked' : 'Unblocked'); } catch (err) { toast('Unavailable right now, try again'); }
+      });
+      input.focus();
+    });
+  }
   async function checkGifts() {
     if (!Store.player.name) return;
     try {
       const r = await Online.friends('gifts');
+      Messages.set(r.messages || 0);
       if (!r.gifts || !r.gifts.length) return;
       if (r.coins != null) Store.setSetting('coins', r.coins);
       const total = r.gifts.reduce((x, g) => x + g.amount, 0);
@@ -4223,7 +4274,7 @@
             <span class="live-dot${f.room ? ' on' : ''}"></span>
             <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}</span></span>
-            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
+            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
       ${state.outgoing.length ? `

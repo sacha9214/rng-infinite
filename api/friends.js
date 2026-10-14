@@ -1,12 +1,14 @@
 // POST /api/friends { playerId, secret, action: 'list' }                  → amis, demandes reçues et envoyées
 // POST /api/friends { playerId, secret, action, name }                    → add | accept | decline | remove | cancel
 // POST /api/friends { playerId, secret, action: 'gift', name, amount }    → donne des pièces à un ami
-// POST /api/friends { playerId, secret, action: 'gifts' }                 → cadeaux reçus pas encore vus (puis vus)
+// POST /api/friends { playerId, secret, action: 'gifts' }                 → cadeaux reçus pas encore vus (puis vus), et messages non lus
+// POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
 const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey } = require('./_lib');
 const Shop = require('../js/shop.js');
 const { MIN_ROLLS } = require('./_gamble');
+const { cleanChat, MAX_CHARS } = require('./_chat');
 
 const MAX_FRIENDS = 100, MAX_PENDING = 30;
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -87,18 +89,44 @@ async function unseenGifts(id) {
   return rows.map((r, i) => ({ name: (names || [])[i] || 'Player', amount: r.a, t: r.t }));
 }
 
+// ---------------------------------------------------------------- messages entre amis (idée d'un joueur, 2026-10-14)
+// Seulement entre amis acceptés des deux côtés ; même filtre que le chat des duels (insultes, liens, numéros) ; gardés
+// 7 jours après le dernier message ; chacun peut bloquer l'autre. dm:<idA>:<idB> (ids triés) = les 100 derniers
+// messages { s: expéditeur, x: texte, t } ; dmu:<id> = non lus par ami ; dmblock:<id> = ceux que ce joueur a bloqués.
+const DM_KEEP = 100, DM_TTL = 7 * 86400, DM_PER_MIN = 20, DM_PER_DAY = 400;
+const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`, unreadKey = id => `dmu:${id}`, blockKey = id => `dmblock:${id}`;
+async function dmThread(me, other) {
+  const [raw, iBlocked] = await redis([['LRANGE', dmKey(me, other), 0, -1], ['SISMEMBER', blockKey(me), other], ['HDEL', unreadKey(me), other]]);
+  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
+  return { messages, blocked: Number(iBlocked) === 1, max: MAX_CHARS };
+}
+async function sendDm(me, other, raw) {
+  const [mine, theirs, blockedByThem, iBlocked] = await redis([['SISMEMBER', frKey(me), other], ['SISMEMBER', frKey(other), me], ['SISMEMBER', blockKey(other), me], ['SISMEMBER', blockKey(me), other]]);
+  if (Number(mine) !== 1 || Number(theirs) !== 1) throw refuse(403, 'You can only message your friends');
+  if (Number(iBlocked) === 1) throw refuse(422, 'You blocked this player: unblock them to send a message');
+  if (Number(blockedByThem) === 1) throw refuse(403, 'This player does not accept your messages');
+  const text = cleanChat(raw);
+  if (!text) throw refuse(422, 'Write a message first');
+  const t = Date.now(), minute = Math.floor(t / 60000);
+  const [perMin, perDay] = await redis([['INCR', `dmrate:${me}:${minute}`], ['INCR', `dmrate:${me}:${dayKey(t)}`], ['EXPIRE', `dmrate:${me}:${minute}`, 120], ['EXPIRE', `dmrate:${me}:${dayKey(t)}`, 2 * 86400]]);
+  if (Number(perMin) > DM_PER_MIN || Number(perDay) > DM_PER_DAY) throw refuse(429, 'Slow down: too many messages');
+  const key = dmKey(me, other);
+  await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL]]);
+}
+
 async function state(id) {
   const [friends, incoming, outgoing] = await redis([['SMEMBERS', frKey(id)], ['SMEMBERS', inKey(id)], ['SMEMBERS', outKey(id)]]);
   const all = [...new Set([...(friends || []), ...(incoming || []), ...(outgoing || [])])];
-  let names = [], titles = [], extra = [];
+  let names = [], titles = [], extra = [], unread = [];
   if (all.length) {
     [names, titles] = await redis([['HMGET', 'names', ...all], ['HMGET', 'titles', ...all]]);
     extra = await redis((friends || []).flatMap(f => [['ZSCORE', XP_LB, f], ['ZSCORE', SEEN_KEY, f], ['GET', `inroom:${f}`]]));
+    unread = (friends || []).length ? (await redis([['HMGET', unreadKey(id), ...friends]]))[0] || [] : [];
   }
   const nameOf = pid => names[all.indexOf(pid)] || 'Player';
   const list = (friends || []).map((f, i) => ({
     name: nameOf(f), title: titles[all.indexOf(f)] || null,
-    xp: Number(extra[i * 3] || 0), seen: Number(extra[i * 3 + 1] || 0), room: extra[i * 3 + 2] || null,
+    xp: Number(extra[i * 3] || 0), seen: Number(extra[i * 3 + 1] || 0), room: extra[i * 3 + 2] || null, unread: Number(unread[i] || 0),
   })).sort((a, b) => (b.room ? 1 : 0) - (a.room ? 1 : 0) || b.seen - a.seen);
   return { friends: list, incoming: (incoming || []).map(nameOf).sort(), outgoing: (outgoing || []).map(nameOf).sort(), max: MAX_FRIENDS, now: Date.now(), gift: await giftInfo(id) };
 }
@@ -118,7 +146,8 @@ module.exports = async (req, res) => {
     if (body.action === 'list') return send(res, 200, await state(playerId));
     if (body.action === 'gifts') {
       const gifts = await unseenGifts(playerId);
-      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null });
+      const [counts] = await redis([['HVALS', unreadKey(playerId)]]);
+      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0) });
     }
 
     const other = await findPlayer(cleanName(body.name));
@@ -153,6 +182,12 @@ module.exports = async (req, res) => {
     if (body.action === 'cancel') {
       await redis([['SREM', outKey(playerId), other], ['SREM', inKey(other), playerId]]);
       return send(res, 200, await state(playerId));
+    }
+    if (body.action === 'messages') return send(res, 200, await dmThread(playerId, other));
+    if (body.action === 'message') { await sendDm(playerId, other, body.text); return send(res, 200, await dmThread(playerId, other)); }
+    if (body.action === 'block' || body.action === 'unblock') {
+      await redis([[body.action === 'block' ? 'SADD' : 'SREM', blockKey(playerId), other], ['HDEL', unreadKey(playerId), other]]);
+      return send(res, 200, await dmThread(playerId, other));
     }
     if (body.action === 'gift') {
       const amount = await gift(playerId, other, body.amount);
