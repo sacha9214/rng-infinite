@@ -2866,6 +2866,17 @@
     };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
     grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && !k.until)).map(tile).join('') + supporterTile() + (Shop.COLLAB_LIVE || state.owned.includes('fisher') ? fisherTile() : '');
+    // Retour sur l'onglet après s'être connecté sur Canne & Dauphins : la boutique se relit d'elle-même (une fois), pour
+    // que le skin Fisherman apparaisse sans recharger la page.
+    if (!state.owned.includes('fisher') && !drawShop.watching) {
+      drawShop.watching = true;
+      const back = () => {
+        if (document.hidden) return;
+        document.removeEventListener('visibilitychange', back); drawShop.watching = false;
+        if (currentView === 'shop') Online.shop().then(st => { if (currentView === 'shop' && st.owned.includes('fisher')) { drawShop(st); toast('🎣 Fisherman skin unlocked!', 3500, 'achv'); } }).catch(() => {});
+      };
+      document.addEventListener('visibilitychange', back);
+    }
     // Ce lien vers son jeu compte aussi dans l'encadré Collab de la page Owner.
     grid.querySelectorAll('[data-fish-out]').forEach(a => a.addEventListener('click', () => { Online.request('/api/site', { local: true, method: 'POST', keepalive: true, body: JSON.stringify({ action: 'out', to: 'pechadophin' }) }).catch(() => {}); }));
     const premium = $('#d-premium');

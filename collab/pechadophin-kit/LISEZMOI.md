@@ -51,11 +51,24 @@ if (sk.collab && !shop.owned.includes(sk.id)) continue;
 
 ## 4. La récompense par compte Google
 
-Dans ta fonction `gOnCredential(resp)`, ajoute à la fin :
+**Dans `gOnCredential(resp)`** (la fonction de **connexion**, celle qui contient `gDecode(resp.credential)` et `localStorage.setItem(GOOGLE_KEY, …)`), ajoute à la fin :
 
 ```js
 rngCollab(resp.credential);
 ```
+
+⚠️ Pas dans `gSignOut()` : elle finit aussi par `gUpdateBtn();gRenderAcc();gCheckDev();`, mais elle n'a pas de `resp` (ça la fait planter).
+
+**Pour que ce soit instantané** pour les joueurs déjà connectés (sinon ils devraient se déconnecter puis se reconnecter) :
+
+1. dans `gLoadScript`, remplace `auto_select:false` par `auto_select:!!gUser` ;
+2. tout en bas, juste après la ligne `gUpdateBtn();gCheckDev();`, ajoute :
+
+```js
+if(gUser)gLoadScript(ok=>{if(ok)try{google.accounts.id.prompt();}catch(e){}});
+```
+
+Au chargement du jeu, Google reconnecte alors en silence un joueur déjà connecté : un jeton frais arrive dans `gOnCredential`, et la récompense part toute seule.
 
 Quand un joueur se connecte avec Google dans ton jeu :
 - **s'il a aussi un compte RNG∞** (connecté avec le même compte Google), il reçoit tout de suite le skin RNG∞ chez toi, et le skin **Fisherman** (ton pêcheur qui pêche les chiffres) chez nous ;
