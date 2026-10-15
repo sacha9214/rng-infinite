@@ -249,7 +249,7 @@ async function findPlayer(name) {
 // ---------------------------------------------------------------- stats des succès
 // Tenues par le serveur, donc infalsifiables : stats:<id> (compteurs) et badges:<id> (badges différents obtenus).
 // Pour un ancien joueur, elles sont reconstruites une fois depuis son historique ("v" marque une reconstruction faite).
-const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+const TIERS = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
 const STATS_VERSION = '1';
 // Raretés au-dessus de Mythic (2026-10-09) : "tv" marque les compteurs déjà répartis entre Mythic et les trois nouvelles.
 const TIERS_VERSION = '2';

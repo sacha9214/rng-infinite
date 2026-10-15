@@ -8,7 +8,7 @@
   const W = 1200, H = 630;
   // Couleurs des raretés (mêmes teintes que le site en thème sombre) : [clair, vif].
   const TIERS = {
-    trash: ['#c8a87c', '#7c5a2e'], common: ['#d1d5db', '#6b7280'], uncommon: ['#6ee7b7', '#059669'], rare: ['#93c5fd', '#2563eb'],
+    landwaste: ['#a3e635', '#3f6212'], garbage: ['#a8a29e', '#57534e'], trash: ['#c8a87c', '#7c5a2e'], common: ['#d1d5db', '#6b7280'], uncommon: ['#6ee7b7', '#059669'], rare: ['#93c5fd', '#2563eb'],
     epic: ['#c4b5fd', '#7c3aed'], anomaly: ['#fdba74', '#ea580c'], mythic: ['#f9a8d4', '#db2777'],
     celestial: ['#a5f3fc', '#0891b2'], divine: ['#fef08a', '#ca8a04'], infinite: ['#ffffff', '#8b5cf6'],
   };

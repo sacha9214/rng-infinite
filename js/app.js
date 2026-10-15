@@ -3,9 +3,9 @@
   'use strict';
 
   const Engine = RNGEngine.createEngine(window.BADGE_META, window.SCORE_PERCENTILES);
-  const TIERS_DESC = ['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash'];
-  const TIER_RANK = { trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, infinite: 9 };
-  const TIER_EMOJI = { trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', infinite: '♾️' };
+  const TIERS_DESC = ['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash', 'garbage', 'landwaste'];
+  const TIER_RANK = { landwaste: -2, garbage: -1, trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, infinite: 9 };
+  const TIER_EMOJI = { landwaste: '☣️', garbage: '🗑️', trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', infinite: '♾️' };
   // Rythme de révélation du site d'origine (ms). Chaque vitesse applique un facteur à toutes ces durées.
   const REVEAL = {
     digitStart: 2000, digitBase: 1000, digitMax: 2000,
@@ -196,7 +196,8 @@
   const oneIn = p => (p > 0 ? '1 in ' + fmt(1 / p) : '—');
   const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
   const sup = k => String(k).split('').map(ch => SUP[ch]).join('');
-  const tierPill = tier => `<span class="pill" data-tier="${tier}">${tier}</span>`;
+  const TIER_LABEL = { landwaste: 'land waste' };
+  const tierPill = tier => `<span class="pill" data-tier="${tier}">${TIER_LABEL[tier] || tier}</span>`;
 
   // "Top x %" / "Bottom x %" arrondi et coloré selon le percentile, comme l'écran de résultat d'origine.
   function percentileHTML(p) {
@@ -1507,6 +1508,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16e', date: 'Oct 16, 2026', en: ['🗑️ Two new rarities at the very bottom, below Trash: Garbage (the 471 worst numbers, about 1 roll in 2,100, +50 coins) and ☣️ Land waste (the 73 worst numbers of all, 1 roll in 13,700, +300 coins). Bad luck has never been this rare'], fr: ['🗑️ Deux nouvelles raretés tout en bas, sous Trash : Garbage (les 471 pires nombres, environ 1 tirage sur 2 100, +50 pièces) et ☣️ Land waste (les 73 pires nombres, 1 tirage sur 13 700, +300 pièces). La malchance n\'a jamais été aussi rare'] },
     { id: '2026-10-16d', date: 'Oct 16, 2026', en: ['☁️ New skin: Sky (1,600 coins). Cloud digits that condense out of the mist, clouds drifting around your card, and if you roll Mythic or better the whole sky takes its color (thanks Deadshot!)', '🃏 New skin: Deck (1,400 coins). Every digit is a playing card dealt from the deck and flipped onto the felt, and big rolls end in a Solitaire card cascade (thanks GamblrGod!)'], fr: ['☁️ Nouveau skin : Sky (1 600 pièces). Des chiffres en nuage qui se forment dans la brume, des nuages autour de ta carte, et si tu tires Mythique ou mieux tout le ciel prend sa couleur (merci Deadshot !)', '🃏 Nouveau skin : Deck (1 400 pièces). Chaque chiffre est une carte distribuée du paquet et retournée sur le tapis, et les gros tirages finissent en cascade de cartes comme au Solitaire (merci GamblrGod !)'] },
     { id: '2026-10-16c', date: 'Oct 16, 2026', en: ['🪙 New casino game: Coin flip, double or nothing. Pick heads or tails: win ×1.96, then cash out or flip again to double it, up to 8 wins in a row (×217)'], fr: ['🪙 Nouveau jeu au casino : Pile ou face, quitte ou double. Choisis face ou pile : gagné ×1,96, puis encaisse ou relance pour doubler, jusqu\'à 8 fois de suite (×217)'] },
     { id: '2026-10-16b', date: 'Oct 16, 2026', en: ['📋 5 daily quests instead of 3: new XP and casino quests', '🏅 Quest streak: finish all your quests in a day to grow it. The bonus grows every day (from 50 to 300 coins), plus 500 on day 7 and 2,000 on day 30. Your best quest streak is on your profile'], fr: ['📋 5 quêtes du jour au lieu de 3 : nouvelles quêtes d\'XP et de casino', '🏅 Série de quêtes : finis toutes tes quêtes dans la journée pour la faire monter. Le bonus grossit chaque jour (de 50 à 300 pièces), plus 500 au 7e jour et 2 000 au 30e. Ton record est sur ton profil'] },
@@ -4125,8 +4127,7 @@
   // Fil d'une suggestion : les messages du créateur et du joueur, dans l'ordre. `mine` = libellé du côté joueur.
   const threadHTML = (thread, mine) => (thread && thread.length ? `<div class="idea-thread">${thread.map(m => `<p class="idea-msg ${m.from}"><b>${m.from === 'owner' ? 'Creator' : mine}</b><span data-no-i18n>${esc(m.text)}</span>${m.t ? `<i>${suggDate(m.t)}</i>` : ''}</p>`).join('')}</div>` : '');
   function openIdeas() {
-    // Le créateur avec des suggestions non lues va droit à sa boîte de réception.
-    if (Inbox.fresh > 0) { location.hash = '#/owner'; return; }
+    // Le créateur peut aussi écrire une idée : la fenêtre s'ouvre toujours, et le lien vers sa boîte dit combien sont non lues.
     if (!Store.player.name) { askName(openIdeas); return; }
     openModal(`
       <h2>💡 Ideas & bugs</h2>
@@ -4147,7 +4148,7 @@
         if (!box) return;
         const seenBefore = Store.settings.suggReplySeen || 0;
         box.innerHTML = `
-          ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
+          ${state.owner ? `<p style="margin:.2rem 0 .6rem"><a class="btn${Inbox.fresh > 0 ? ' btn-roll small' : ''}" href="#/owner">📥 Inbox & visitors${Inbox.fresh > 0 ? ` (${Inbox.fresh} unread)` : ''}</a></p>` : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
             <div class="idea-row" data-id="${x.id}">
               <div class="idea-head">${x.kind === 'bug' ? `<span class="o-pill bug">🐞 Bug${x.shot ? ' · 📎' : ''}</span>` : ''}<span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
@@ -5564,7 +5565,7 @@
         const side = $(`#rs-${r.winner}`);
         side.classList.add('won');
         side.querySelector('.room-name').insertAdjacentHTML('afterbegin', '<span class="trophy-drop">🏆</span> ');
-        shockwave(cards[r.winner], sides[r.winner].a.tier === 'common' || sides[r.winner].a.tier === 'trash' ? 'uncommon' : sides[r.winner].a.tier);
+        shockwave(cards[r.winner], ['common', 'trash', 'garbage', 'landwaste'].includes(sides[r.winner].a.tier) ? 'uncommon' : sides[r.winner].a.tier);
         d.players.forEach((p, j) => { if (j !== r.winner) $(`#rs-${j}`).classList.add('lost'); });
         sfx('win', size);
       }
@@ -5681,7 +5682,7 @@
 
   function renderAbout() {
     currentView = 'about';
-    const cardRows = [['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.001% (90 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
+    const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.001% (90 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
     const badgeRows = [['common', 'more than 10% of rolls'], ['uncommon', '1–10% of rolls'], ['rare', '0.1–1% of rolls'], ['epic', '0.01–0.1% of rolls'], ['anomaly', '0.001–0.01% of rolls'], ['mythic', 'under 0.001% (1 in 100,000+)']];
     app.innerHTML = `
       <div class="page prose">

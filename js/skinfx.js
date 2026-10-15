@@ -22,7 +22,7 @@
   const outCubic = p => 1 - Math.pow(1 - clamp(p), 3);
   const outExpo = p => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(p)));
   // Force d'une révélation selon la rareté : le nombre de particules, la lumière et la durée en découlent.
-  const POWER = { trash: 0, common: .12, uncommon: .25, rare: .42, epic: .62, anomaly: .8, mythic: 1, celestial: 1, divine: 1, infinite: 1 };
+  const POWER = { landwaste: 0, garbage: 0, trash: 0, common: .12, uncommon: .25, rare: .42, epic: .62, anomaly: .8, mythic: 1, celestial: 1, divine: 1, infinite: 1 };
   // Nombre de particules d'une révélation : quelques-unes pour un Common (un tirage sur deux), `most` pour un Mythic.
   const burst = (p, most, few = 4) => Math.round(few + most * Math.pow(p, 1.25));
 

@@ -650,8 +650,10 @@
   const SQUARES_BY_LEN = {};
   for (let r = 4; r * r < 100000; r++) { const q = String(r * r); (SQUARES_BY_LEN[q.length] = SQUARES_BY_LEN[q.length] || []).push(q); }
   const biggestSquareInside = s => { for (const L of [5, 4, 3, 2]) if (L < s.length && SQUARES_BY_LEN[L].some(q => s.includes(q))) return L; return 0; };
-  const CARD_TIERS = [[1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.999, 'divine']];
-  const TIER_ORDER = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+  // Land waste : aucun tirage n'est plus mauvais (le pire score, 73 nombres) ; Garbage : moins de 0,04 % plus mauvais
+  // (les 3 pires scores, 471 nombres). Idée d'un joueur, 2026-10-16.
+  const CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.999, 'divine']];
+  const TIER_ORDER = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
 
   function badgeTier(score) {
     for (const [limit, tier] of BADGE_TIERS) if (score < limit) return tier;

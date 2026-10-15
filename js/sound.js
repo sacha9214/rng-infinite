@@ -97,7 +97,7 @@
       if (tier === 'mythic') return [[S.impact('mythic'), 0, 1.1, 0, .5]];
       if (tier === 'anomaly') return [[S.impact('gold'), 0, .9, 0, .5]];
       if (tier === 'epic') return [[S.impact('epic'), 0, .75, 0, .45]];
-      if (tier === 'trash') return [[thud(), 0, .3, 0, .2]];
+      if (tier === 'trash' || tier === 'garbage' || tier === 'landwaste') return [[thud(), 0, tier === 'trash' ? .3 : .42, 0, .2]];
       if (tier === 'common') return [[S.sum(thud(), ring(3, .5)), 0, .3, 0, .35]];
       const both = [[S.sum(thud(), ring(3, .5), ring(5, .4)), 0, tier === 'rare' ? .5 : .4, 0, .35]];
       return tier === 'rare' ? both.concat(arpeggio(.2, .1)) : both;

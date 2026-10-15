@@ -87,7 +87,7 @@ let lastPct = -1;
 for (let i = 0; i < SPAN; i++) {
   if (i > 0 && sorted[i] === sorted[i - 1]) continue;
   const pct = (100 * i) / SPAN;
-  const isTail = pct >= 99;
+  const isTail = pct >= 99 || pct < 0.1; // les deux bouts : chaque score distinct (raretés Land waste, Garbage)
   if (table.length === 0 || pct - lastPct >= (isTail ? 0.0001 : 0.01)) {
     table.push([sorted[i], Math.round(pct * 10000) / 10000]);
     lastPct = pct;

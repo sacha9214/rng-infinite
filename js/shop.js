@@ -7,7 +7,7 @@
   'use strict';
 
   // Pièces par tirage selon la rareté de la carte (Trash rapporte un peu plus que Common : lot de consolation).
-  const COINS = { trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, infinite: 5000 };
+  const COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, infinite: 5000 };
   const DUEL_WIN_COINS = 25;
   // Pièces offertes une seule fois à un joueur qui associe son compte Google (il retrouve alors son joueur partout).
   const GOOGLE_BONUS = 150;

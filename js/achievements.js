@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
 
-  const TIERS = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+  const TIERS = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
   const num = v => Number(v) || 0;
   // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
   const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));

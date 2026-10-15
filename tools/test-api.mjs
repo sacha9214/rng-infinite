@@ -1778,8 +1778,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(R.features.find(x => x.name.startsWith('Linked a Google')).count >= 1 && R.features.find(x => x.name.startsWith('Played a duel')).fresh >= 1);
   assert.ok(!JSON.stringify(R).includes(co[0]) && !JSON.stringify(R).includes(frank.playerId), 'aucun identifiant');
   // La reconstruction ne se refait pas : un jour effacé à la main n'est pas réécrit.
+  const seeded5 = R.series[5].active; // la cohorte du test a joué il y a 5 jours : jamais vide, à toute heure
   run([['DEL', `act:${dk(5)}`]]);
-  R = await ask(); assert.equal(R.series[5].active, 0); assert.ok(R0.series[5].active > 0);
+  R = await ask(); assert.equal(R.series[5].active, 0); assert.ok(seeded5 > 0);
   // Un tirage inscrit le joueur dans le jour en cours, et ne touche plus à sa date de premier tirage.
   const today = () => Number(run([['HGET', `act:${dk(0)}`, alice.playerId]])[0].result) || 0, before = today();
   run([['DEL', `cooldown:${alice.playerId}`]]);

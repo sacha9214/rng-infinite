@@ -89,6 +89,30 @@
 }
 
 /* ------------------------------------------------------------------ rareté : variables par tier */
+/* Garbage (gris sale) et Land waste (vert toxique) : les raretés tout en bas, sous Trash (2026-10-16). */
+:root { --tier-garbage: #78716c; --tier-landwaste: #4d7c0f; --chart-garbage: #a8a29e; --chart-landwaste: #84cc16; }
+[data-tier="garbage"] {
+  --t-from: #f5f5f4; --t-via: #e7e5e4; --t-to: #f5f5f4; --t-border: #78716c; --t-glow: none;
+  --t-text: #44403c; --t-pill-text: #44403c; --t-pill-bg: #e7e5e4; --t-pill-border: #a8a29e;
+  --t-hl: #a8a29e; --t-hl-border: #57534e; --t-accent: var(--tier-garbage); --t-shimmer: 0;
+}
+[data-tier="landwaste"] {
+  --t-from: #ecfccb; --t-via: #f7fee7; --t-to: #d9f99d; --t-border: #65a30d; --t-glow: 0 0 18px rgba(132, 204, 22, .55);
+  --t-text: #365314; --t-pill-text: #365314; --t-pill-bg: #ecfccb; --t-pill-border: #84cc16;
+  --t-hl: #a3e635; --t-hl-border: #3f6212; --t-accent: var(--tier-landwaste); --t-shimmer: 1;
+}
+.dark [data-tier="garbage"] {
+  --t-from: rgba(68, 64, 60, .7); --t-via: #27272a; --t-to: rgba(68, 64, 60, .7); --t-border: #78716c;
+  --t-text: #d6d3d1; --t-pill-text: #d6d3d1; --t-pill-bg: rgba(41, 37, 36, .6); --t-pill-border: rgba(120, 113, 108, .7);
+}
+.dark [data-tier="landwaste"] {
+  --t-from: rgba(54, 83, 20, .75); --t-via: #1a2e05; --t-to: rgba(54, 83, 20, .75); --t-border: #84cc16; --t-glow: 0 0 22px rgba(163, 230, 53, .5);
+  --t-text: #d9f99d; --t-pill-text: #d9f99d; --t-pill-bg: rgba(26, 46, 5, .7); --t-pill-border: rgba(132, 204, 22, .7);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-tier="garbage"] { --t-from: rgba(68, 64, 60, .7); --t-via: #27272a; --t-to: rgba(68, 64, 60, .7); --t-border: #78716c; --t-text: #d6d3d1; --t-pill-text: #d6d3d1; --t-pill-bg: rgba(41, 37, 36, .6); --t-pill-border: rgba(120, 113, 108, .7); }
+  :root:not([data-theme="light"]) [data-tier="landwaste"] { --t-from: rgba(54, 83, 20, .75); --t-via: #1a2e05; --t-to: rgba(54, 83, 20, .75); --t-border: #84cc16; --t-glow: 0 0 22px rgba(163, 230, 53, .5); --t-text: #d9f99d; --t-pill-text: #d9f99d; --t-pill-bg: rgba(26, 46, 5, .7); --t-pill-border: rgba(132, 204, 22, .7); }
+}
 [data-tier="trash"] {
   --t-from: #fffbeb; --t-via: #ffffff; --t-to: #fffbeb; --t-border: #fcd34d; --t-glow: none;
   --t-text: #92400e; --t-pill-text: #78350f; --t-pill-bg: #fffbeb; --t-pill-border: #fde68a;
