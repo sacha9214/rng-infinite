@@ -157,6 +157,30 @@ for (const small of [1, 5, 7]) {
   await assert.rejects(G.plinko(id, { bet: 101, risk: 'high' }), /at most 100/);
   assert.equal((await G.plinko(id, { bet: 500 })).risk, 'normal');
 }
+// ---- Pile ou face « double ou rien » : chaque lancer gagné multiplie par 1,96 ; on encaisse après k lancers gagnés.
+for (const k of [1, 2, 3, 5]) {
+  let bet = 0, win = 0, heads = 0, flips = 0;
+  for (let i = 0; i < N; i++) {
+    const c0 = coins();
+    let r = await G.coinflip(id, { move: 'flip', bet: 100, side: i % 2 ? 'heads' : 'tails' });
+    bet += 100; flips++; if (r.last === 'heads') heads++;
+    while (!r.done && r.wins < k) { r = await G.coinflip(id, { move: 'flip', side: Math.random() < .5 ? 'heads' : 'tails' }); flips++; if (r.last === 'heads') heads++; }
+    if (!r.done) r = await G.coinflip(id, { move: 'cash' });
+    assert.ok(r.done);
+    if (r.result === 'cash') { assert.equal(r.win, Math.floor(100 * G.flipMult(k))); assert.equal(r.wins, k); }
+    else assert.equal(r.win, 0);
+    assert.equal(coins() - c0, r.win - 100, 'solde du pile ou face');
+    win += r.win;
+  }
+  const exact = Math.pow(0.5, k) * Math.floor(100 * G.flipMult(k)) / 100;
+  report.push({ jeu: `pile ou face, encaisse après ${k}`, manches: N, 'retour mesuré': (100 * win / bet).toFixed(2) + ' %', 'retour théorique': (100 * exact).toFixed(2) + ' %', 'plus gros gain': `${G.flipMult(k)}×` });
+  assert.ok(exact < 1, `pile ou face ${k} : le casino garde l'avantage (${exact})`);
+  assert.ok(Math.abs(heads / flips - .5) < .03, `pièce équilibrée (${heads}/${flips})`);
+}
+await assert.rejects(G.coinflip(id, { move: 'cash' }), /No winnings/);
+await assert.rejects(G.coinflip(id, { move: 'flip', bet: 100, side: 'edge' }), /heads or tails/);
+{ let r; do { r = await G.coinflip(id, { move: 'flip', bet: 100, side: 'heads' }); } while (r.done); for (let i = 0; i < 20 && !r.done && r.wins < G.FLIP_MAX; i++) r = await G.coinflip(id, { move: 'flip', side: r.last }); if (!r.done) { if (r.wins >= G.FLIP_MAX) await assert.rejects(G.coinflip(id, { move: 'flip', side: 'heads' }), /Maximum/); await G.coinflip(id, { move: 'cash' }); } }
+
 for (const bad of [0, 21, 1.5, -1, 'x']) await assert.rejects(G.plinko(id, { bet: 10, count: bad }));
 assert.equal((await G.plinko(id, { bet: 1 })).balls.length, 1);
 // Mises sous 10 : refusées partout ailleurs.

@@ -3541,3 +3541,16 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .xc-meta { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .3rem 0 .6rem; }
 .xc-badges { justify-content: center; }
 .xc-ghost { opacity: .3; }
+/* Pile ou face : une pièce qui tourne en 3D (∞ face, 🎲 pile), l'échelle des multiplicateurs en dessous. */
+.cf-stage { display: grid; place-items: center; height: 11rem; perspective: 700px; margin: .4rem 0; }
+.cf-coin { position: relative; width: 8rem; height: 8rem; transform-style: preserve-3d; }
+.cf-face { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; backface-visibility: hidden; font-size: 3.2rem; font-weight: 900;
+  background: radial-gradient(circle at 35% 30%, #fff6c2, #fbbf24 45%, #b45309); color: #7c2d12; box-shadow: inset 0 0 0 .45rem #f59e0b, inset 0 0 0 .6rem #92400e, 0 .6rem 1.4rem rgba(0, 0, 0, .35); }
+.cf-tails { transform: rotateY(180deg); background: radial-gradient(circle at 35% 30%, #f1f5f9, #94a3b8 45%, #475569); box-shadow: inset 0 0 0 .45rem #cbd5e1, inset 0 0 0 .6rem #334155, 0 .6rem 1.4rem rgba(0, 0, 0, .35); }
+.cf-ladder { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .25rem; margin: 0 0 .7rem; }
+.cf-ladder span { text-align: center; padding: .3rem 0; border-radius: .4rem; border: 1px solid var(--outline); font: 700 .62rem var(--font-mono); color: var(--prose-3); }
+.cf-ladder span.on { background: #16a34a; border-color: #16a34a; color: #fff; }
+.cf-ladder span.next { border-color: #f59e0b; color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, .3); }
+.cf-actions { justify-content: center; }
+@media (max-width: 480px) { .cf-ladder span { font-size: .5rem; } }
+#cf-cash[hidden] { display: none; }

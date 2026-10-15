@@ -237,8 +237,8 @@ function retention(now, ids, names, stats, linked, act) {
 // ---------------------------------------------------------------- page Owner : comprendre les joueurs
 // Tout est agrégé ici, à la demande : la carte (pays et cases sur 30 jours, cases du jour), les heures d'activité, le
 // casino (par jeu, par jour, plus gros joueurs) et l'état des joueurs (activité, ancienneté en tirages, économie).
-const GAMES = ['crash', 'mines', 'plinko', 'slots', 'roulette', 'bj'];
-const COUNTERS = { crash: 'gCrash', mines: 'gMines', plinko: 'gPlinko', slots: 'gSlots', roulette: 'gSpins', bj: 'gHands' };
+const GAMES = ['crash', 'mines', 'plinko', 'slots', 'roulette', 'bj', 'flip'];
+const COUNTERS = { crash: 'gCrash', mines: 'gMines', plinko: 'gPlinko', slots: 'gSlots', roulette: 'gSpins', bj: 'gHands', flip: 'gFlips' };
 const num = v => Number(v) || 0;
 // Nouveautés (crypto, levier, cadeaux, codes, messages) : ce qui s'ajoute aux sommes faites sur les fiches.
 async function featureStats(feat, now) {

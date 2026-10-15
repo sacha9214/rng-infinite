@@ -1507,6 +1507,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16c', date: 'Oct 16, 2026', en: ['🪙 New casino game: Coin flip, double or nothing. Pick heads or tails: win ×1.96, then cash out or flip again to double it, up to 8 wins in a row (×217)'], fr: ['🪙 Nouveau jeu au casino : Pile ou face, quitte ou double. Choisis face ou pile : gagné ×1,96, puis encaisse ou relance pour doubler, jusqu\'à 8 fois de suite (×217)'] },
     { id: '2026-10-16b', date: 'Oct 16, 2026', en: ['📋 5 daily quests instead of 3: new XP and casino quests', '🏅 Quest streak: finish all your quests in a day to grow it. The bonus grows every day (from 50 to 300 coins), plus 500 on day 7 and 2,000 on day 30. Your best quest streak is on your profile'], fr: ['📋 5 quêtes du jour au lieu de 3 : nouvelles quêtes d\'XP et de casino', '🏅 Série de quêtes : finis toutes tes quêtes dans la journée pour la faire monter. Le bonus grossit chaque jour (de 50 à 300 pièces), plus 500 au 7e jour et 2 000 au 30e. Ton record est sur ton profil'] },
     { id: '2026-10-16a', date: 'Oct 16, 2026', en: ['🔎 XP checker on the Badges page: type any number to see its XP and badges (shown as a simulation, it is not a roll)', 'New badges: 🪖 Spartans (contains 117) and Exact Spartan (exactly 117), and Fibonacci slices like the Pi ones: contains 112, 1123, 11235, and Exact Fibonacci (112358). Only the best badge of each family counts, like Pi', 'Crash: an instant crash at 1.00× now says so (it happens about 2 times in 100)'], fr: ['🔎 Vérificateur d\'XP dans la page Badges : tape un nombre pour voir son XP et ses badges (affiché comme une simulation, ce n\'est pas un tirage)', 'Nouveaux badges : 🪖 Spartans (contient 117) et Exact Spartan (exactement 117), et des tranches de Fibonacci comme pour Pi : contient 112, 1123, 11235, et Exact Fibonacci (112358). Seul le meilleur badge de chaque famille compte, comme pour Pi', 'Crash : une explosion immédiate à 1.00× l\'explique maintenant (ça arrive environ 2 fois sur 100)'] },
     { id: '2026-10-15g', date: 'Oct 15, 2026', en: ['🎣 New exclusive skin: Fisherman, a collab with Canne & Dauphins by L\'taleshy & cocobat. Their fisherman reels in your digits one by one, and dolphins jump over your card. To get it, sign in with the same Google account on RNG∞ and on Canne & Dauphins (you also get an RNG∞ skin in their game!). It is in the Shop, Skins tab'], fr: ['🎣 Nouveau skin exclusif : Pêcheur, en collab avec Canne & Dauphins de L\'taleshy et cocobat. Leur pêcheur remonte tes chiffres un par un, et des dauphins sautent par-dessus ta carte. Pour l\'avoir, connecte-toi avec le même compte Google sur RNG∞ et sur Canne & Dauphins (tu gagnes aussi un skin RNG∞ dans leur jeu !). Il est dans la boutique, onglet Skins'] },
@@ -2959,7 +2960,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -3019,7 +3020,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -3029,6 +3030,14 @@
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="cr-go">Start</button></div>
             <p class="panel-note g-result" id="cr-result"></p>
             <p class="panel-note fish-collab" id="fish-collab">🎣 Collab with <a href="https://pechadophin.vercel.app/" target="_blank" rel="noopener" data-no-i18n>Canne &amp; Dauphins</a> by L'taleshy &amp; cocobat · the deeper the line, the bigger the dolphin, but watch out for the shark</p>
+          </div>
+          <div class="panel g-game" data-game="flip">
+            <div class="panel-head"><h3 class="panel-title">Coin flip</h3><span class="panel-note">double or nothing · ×1.96 per win · up to 8 wins in a row</span></div>
+            <div class="cf-stage"><div class="cf-coin" id="cf-coin" data-side="heads"><div class="cf-face cf-heads"><span>∞</span></div><div class="cf-face cf-tails"><span>🎲</span></div></div></div>
+            <div class="cf-ladder" id="cf-ladder"></div>
+            <div class="actions cf-actions"><button class="btn-roll small" data-cf="heads">∞ Heads</button><button class="btn-roll small" data-cf="tails">🎲 Tails</button></div>
+            <div class="actions" style="justify-content:center"><button class="btn" id="cf-cash" hidden></button></div>
+            <p class="panel-note g-result" id="cf-result"></p>
           </div>
           <div class="panel g-game" data-game="mines">
             <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it · max win 250×</span></div>
@@ -3676,6 +3685,52 @@
     const minesMove = async extra => { if (Gamble.busy) return; Gamble.busy = true; try { const g = await gamble('mines', extra); drawMines(g); if (g.result === 'boom') Sound.play('lock', { i: 0 }); else if (g.result === 'cash') { Sound.play('reveal', { small: 1 }); FX.celebrate(g.mult >= 5 ? 'epic' : 'uncommon', $('#mn-grid')); } else Sound.play('lock', { i: g.open.length, soft: 1 }); } catch (err) { fail(err); } finally { Gamble.busy = false; } };
     $('#mn-go').addEventListener('click', () => { const g = Gamble.mn; if (g && !g.done && !g.idle) minesMove({ move: 'cash' }); else { $('#mn-result').textContent = ''; minesMove({ move: 'start', bet: Gamble.chip, mines: Gamble.mines }); } });
     $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
+    // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
+    // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
+    const CF_MULT = k => Math.floor(Math.pow(1.96, k) * 100) / 100;
+    const drawFlip = g => {
+      Gamble.cf = g && !g.done && !g.idle ? g : null;
+      const wins = Gamble.cf ? g.wins : 0;
+      $('#cf-ladder').innerHTML = Array.from({ length: 8 }, (_, i) => `<span class="${i < wins ? 'on' : ''}${i === wins && Gamble.cf ? ' next' : ''}">×${CF_MULT(i + 1)}</span>`).join('');
+      const cash = $('#cf-cash');
+      cash.hidden = !Gamble.cf;
+      if (Gamble.cf) cash.textContent = `Cash out · ${fmt(Math.floor(g.bet * g.mult))}`;
+      document.querySelectorAll('[data-cf]').forEach(b => { b.disabled = !!(Gamble.cf && wins >= 8); b.textContent = `${b.dataset.cf === 'heads' ? '∞ Heads' : '🎲 Tails'}${Gamble.cf ? ` · ×${CF_MULT(wins + 1)}` : ` · ${fmt(Gamble.chip)}`}`; });
+      if (g && g.coins != null) showCoins(g.coins);
+    };
+    let cfTurns = 0;
+    const spinCoin = side => new Promise(done => {
+      const coin = $('#cf-coin'); cfTurns += 4;
+      coin.style.transition = 'transform .9s cubic-bezier(.2,.7,.25,1)';
+      coin.style.transform = `rotateY(${cfTurns * 360 + (side === 'tails' ? 180 : 0)}deg)`;
+      setTimeout(done, 950);
+    });
+    document.querySelector('.cf-actions').addEventListener('click', async e => {
+      const b = e.target.closest('[data-cf]');
+      if (!b || b.disabled || Gamble.busy) return;
+      Gamble.busy = true;
+      try {
+        const res = await gamble('flip', Gamble.cf ? { move: 'flip', side: b.dataset.cf } : { move: 'flip', side: b.dataset.cf, bet: Gamble.chip });
+        Sound.play('tick', { k: 3 });
+        await spinCoin(res.last);
+        const lost = res.done && res.result === 'lose';
+        say($('#cf-result'), lost ? 0 : 2, 1, lost ? `${res.last === 'heads' ? '∞ Heads' : '🎲 Tails'}: lost · −${fmt(res.bet)}` : `${res.last === 'heads' ? '∞ Heads' : '🎲 Tails'}! ×${res.mult} · cash out ${fmt(Math.floor(res.bet * res.mult))} or flip again`);
+        if (!lost) { Sound.play('reveal', { small: 1 }); if (res.wins >= 3) FX.celebrate(res.wins >= 5 ? 'epic' : 'uncommon', $('#cf-coin')); }
+        drawFlip(res);
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    $('#cf-cash').addEventListener('click', async () => {
+      if (Gamble.busy || !Gamble.cf) return;
+      Gamble.busy = true;
+      try {
+        const res = await gamble('flip', { move: 'cash' });
+        say($('#cf-result'), res.win, res.bet, `Cashed out at ×${res.mult} · you get ${fmt(res.win)} coins`);
+        Sound.play('reveal', { small: 1 });
+        drawFlip(res);
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cf) drawFlip(null); });
+    drawFlip(null);
     // ---- crash : la courbe monte avec l'heure du serveur ; on sonde pour savoir si c'est fini
     const cc = $('#cr-canvas').getContext('2d'), screen = $('#cr-screen');
     // Pêche (collab Canne & Dauphins, js/fishing.js) ou fusée : même partie côté serveur, seul le dessin change.
@@ -3773,6 +3828,7 @@
     (async () => {
       await resume('bj', h => drawHand(h));
       await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
+      await resume('flip', g => { if (!g.idle) drawFlip(g); });
       await resume('crash', st => { if (!st.done) runCrash(st, true); else if (st.result === 'crash') endCrash(st); });
     })();
   }
@@ -4221,7 +4277,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)

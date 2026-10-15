@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -221,7 +221,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -279,6 +279,35 @@ async function slots(id, body) {
   const mult = slotMult(reels), win = Math.floor(bet * mult);
   await credit(id, bet, win, 'gSlots');
   return { reels, mult, bet, win, coins: (await wallet(id)).coins };
+}
+
+// Pile ou face « double ou rien » (idée d'un joueur, 2026-10-16). On mise et on choisit un côté : gagné, le gain est
+// multiplié par 1,96 (98 % rendus par lancer : l'avantage du casino) ; on encaisse, ou on relance pour doubler encore.
+// Perdu : tout est perdu. Au plus 8 lancers gagnés de suite (×1,96⁸ ≈ ×218). La pièce est tirée sur le serveur.
+const cfKey = id => `cf:${id}`, FLIP_MULT = 1.96, FLIP_MAX = 8;
+const flipMult = k => Math.floor(Math.pow(FLIP_MULT, k) * 100) / 100;
+const showFlip = (g, coins, end) => ({ bet: g.bet, wins: g.wins, mult: flipMult(g.wins), next: g.wins < FLIP_MAX ? flipMult(g.wins + 1) : null, max: FLIP_MAX, last: g.last || null, pick: g.pick || null, done: !!end, ...(end ? { result: end, win: g.win || 0 } : {}), coins });
+async function coinflip(id, body) {
+  const [raw] = await redis([['GET', cfKey(id)]]);
+  let g = raw ? JSON.parse(raw) : null;
+  const move = String(body.move || 'state');
+  if (move === 'state') return g ? showFlip(g, (await wallet(id)).coins) : { done: true, idle: true, coins: (await wallet(id)).coins };
+  if (move === 'flip') {
+    const side = body.side === 'tails' ? 'tails' : body.side === 'heads' ? 'heads' : null;
+    if (!side) throw refuse(400, 'Pick heads or tails');
+    if (!g) g = { bet: await debit(id, body.bet), wins: 0 };
+    else if (g.wins >= FLIP_MAX) throw refuse(422, 'Maximum reached: cash out');
+    g.pick = side; g.last = crypto.randomInt(0, 2) ? 'heads' : 'tails';
+    if (g.last !== side) { await redis([['DEL', cfKey(id)]]); await credit(id, g.bet, 0, 'gFlips'); return showFlip(g, (await wallet(id)).coins, 'lose'); }
+    g.wins++;
+    await redis([['SET', cfKey(id), JSON.stringify(g), 'EX', KEEP_S]]);
+    return showFlip(g, (await wallet(id)).coins);
+  }
+  if (move !== 'cash') throw refuse(400, 'Unknown move');
+  if (!g || !g.wins) throw refuse(422, 'No winnings to cash out');
+  g.win = Math.floor(g.bet * flipMult(g.wins));
+  await redis([['DEL', cfKey(id)]]); await credit(id, g.bet, g.win, 'gFlips');
+  return showFlip(g, (await wallet(id)).coins, 'cash');
 }
 
 // Mines : 25 cases, m mines. Chaque case sûre fait monter le multiplicateur ; on encaisse quand on veut.
@@ -361,4 +390,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
