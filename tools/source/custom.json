@@ -89,5 +89,33 @@
     "desc": "Contains a 5-digit perfect square (like 15625, 99856). Only the biggest one counts.",
     "emoji": "🟪",
     "score": 24307
+  },
+  {
+    "id": "NINE_TO_FIVE",
+    "label": "9 to 5",
+    "desc": "Contains \"925\": working 9 to 5, like the Dolly Parton song.",
+    "emoji": "💼",
+    "score": 25925
+  },
+  {
+    "id": "EXACT_JOB",
+    "label": "Exact Job",
+    "desc": "Exactly \"925\": the full 9 to 5.",
+    "emoji": "👩‍💼",
+    "score": 100000100
+  },
+  {
+    "id": "MUNCHAUSEN_EXACT",
+    "label": "Exact Munchausen",
+    "desc": "Exactly \"3435\": 3³ + 4⁴ + 3³ + 5⁵ = 3435, each digit raised to its own power gives the number back (a Munchausen number).",
+    "emoji": "🎩",
+    "score": 100000100
+  },
+  {
+    "id": "PYTHAG_EXACT",
+    "label": "Exact Pythag",
+    "desc": "Exactly \"91625\": 9 + 16 = 25, the squares of the 3-4-5 right triangle.",
+    "emoji": "📐",
+    "score": 100000100
   }
 ]

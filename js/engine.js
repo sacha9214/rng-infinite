@@ -256,6 +256,7 @@
     // Badges perso passés de « exactement » à « contient » le 2026-10-15 (idée d'un joueur) ; les versions exactes
     // restent, sous leur propre nom (RTX_5090_EXACT, NATURAL_EXACT).
     RTX_5090: '5090', NATURAL: '711',
+    NINE_TO_FIVE: '925', // badge perso (2026-10-15) : « 9 to 5 », la chanson de Dolly Parton
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
@@ -268,7 +269,10 @@
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
     IMPORTANT_BIRTHDAY: ['61209'], // badge perso (idée d'un joueur) : 061209, tiré comme le nombre 61209
-    NATURAL_EXACT: ['711'], // badge perso (idée d'un joueur) : 7 et 11, les deux lancers gagnants aux dés
+    EXACT_JOB: ['925'], // badge perso : exactement 925 (« 9 to 5 »)
+    MUNCHAUSEN_EXACT: ['3435'], // nombre de Münchhausen : 3^3 + 4^4 + 3^3 + 5^5 = 3435
+    PYTHAG_EXACT: ['91625'], // 9 + 16 = 25 : les carrés du triangle 3-4-5
+        NATURAL_EXACT: ['711'], // badge perso (idée d'un joueur) : 7 et 11, les deux lancers gagnants aux dés
     EXACT_BOOB: ['8008', '58008'], ULTIMEME_EXACT: ['69420', '42069'], ALWAYS: ['247365', '365247'],
     PI: ['314', '3141', '31415', '314159'], E: ['271', '2718', '27182', '271828'],
     TAU: ['6283', '62831', '628318'], GOLDEN_RATIO: ['1618', '16180', '161803'],

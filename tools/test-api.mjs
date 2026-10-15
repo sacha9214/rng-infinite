@@ -1303,7 +1303,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (let n = 0; n <= 1000000; n++) { const k = tierOf(n); count[k] = (count[k] || 0) + 1; }
   // Mythic : 9 000 à quelques ex aequo près à la limite (elle bouge d'un cran quand un badge perso est ajouté).
   assert.ok(Math.abs(count.mythic - 9000) <= 3, `mythic ${count.mythic}`);
-  assert.ok(Math.abs(count.celestial - 900) <= 3 && Math.abs(count.divine - 90) <= 2, JSON.stringify(count)); assert.equal(count.infinite, 9);
+  assert.ok(Math.abs(count.celestial - 900) <= 3 && Math.abs(count.divine - 90) <= 2, JSON.stringify(count)); assert.ok(count.infinite >= 9 && count.infinite <= 10, `infinite ${count.infinite}`); // 10 depuis les badges du 2026-10-15 : un cran de plus à la limite
   const pick = tier => { for (let n = 0; n <= 1000000; n++) if (tierOf(n) === tier) return n; };
   const sample = { mythic: pick('mythic'), celestial: pick('celestial'), divine: pick('divine'), infinite: pick('infinite') };
   // Un joueur d'avant la mise à jour : 4 « Mythic » au compteur, dont un de chaque nouvelle rareté dans son historique.
