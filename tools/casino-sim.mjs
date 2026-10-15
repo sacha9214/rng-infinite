@@ -157,7 +157,7 @@ for (const small of [1, 5, 7]) {
   await assert.rejects(G.plinko(id, { bet: 101, risk: 'high' }), /at most 100/);
   assert.equal((await G.plinko(id, { bet: 500 })).risk, 'normal');
 }
-// ---- Pile ou face « double ou rien » : chaque lancer gagné multiplie par 1,96 ; on encaisse après k lancers gagnés.
+// ---- Pile ou face « double ou rien » : chaque lancer gagné multiplie par 1,9 ; on encaisse après k lancers gagnés.
 for (const k of [1, 2, 3, 5]) {
   let bet = 0, win = 0, heads = 0, flips = 0;
   for (let i = 0; i < N; i++) {

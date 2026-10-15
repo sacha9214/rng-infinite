@@ -282,9 +282,9 @@ async function slots(id, body) {
 }
 
 // Pile ou face « double ou rien » (idée d'un joueur, 2026-10-16). On mise et on choisit un côté : gagné, le gain est
-// multiplié par 1,96 (98 % rendus par lancer : l'avantage du casino) ; on encaisse, ou on relance pour doubler encore.
-// Perdu : tout est perdu. Au plus 8 lancers gagnés de suite (×1,96⁸ ≈ ×218). La pièce est tirée sur le serveur.
-const cfKey = id => `cf:${id}`, FLIP_MULT = 1.96, FLIP_MAX = 8;
+// multiplié par 1,9 (95 % rendus par lancer : l'avantage du casino) ; on encaisse, ou on relance pour doubler encore.
+// Perdu : tout est perdu. Au plus 7 lancers gagnés de suite (×1,9⁷ ≈ ×89). La pièce est tirée sur le serveur.
+const cfKey = id => `cf:${id}`, FLIP_MULT = 1.9, FLIP_MAX = 7; // 1,96 et 8 jusqu'au 2026-10-16 : jugé trop facile
 const flipMult = k => Math.floor(Math.pow(FLIP_MULT, k) * 100) / 100;
 const showFlip = (g, coins, end) => ({ bet: g.bet, wins: g.wins, mult: flipMult(g.wins), next: g.wins < FLIP_MAX ? flipMult(g.wins + 1) : null, max: FLIP_MAX, last: g.last || null, pick: g.pick || null, done: !!end, ...(end ? { result: end, win: g.win || 0 } : {}), coins });
 async function coinflip(id, body) {

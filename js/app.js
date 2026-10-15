@@ -1508,6 +1508,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16f', date: 'Oct 16, 2026', en: ['🪙 Coin flip is harder: ×1.9 per win (was ×1.96) and up to 7 wins in a row (×89)'], fr: ['🪙 Le pile ou face est plus dur : ×1,9 par lancer gagné (au lieu de ×1,96) et 7 de suite au plus (×89)'] },
     { id: '2026-10-16e', date: 'Oct 16, 2026', en: ['🗑️ Two new rarities at the very bottom, below Trash: Garbage (the 471 worst numbers, about 1 roll in 2,100, +50 coins) and ☣️ Land waste (the 73 worst numbers of all, 1 roll in 13,700, +300 coins). Bad luck has never been this rare'], fr: ['🗑️ Deux nouvelles raretés tout en bas, sous Trash : Garbage (les 471 pires nombres, environ 1 tirage sur 2 100, +50 pièces) et ☣️ Land waste (les 73 pires nombres, 1 tirage sur 13 700, +300 pièces). La malchance n\'a jamais été aussi rare'] },
     { id: '2026-10-16d', date: 'Oct 16, 2026', en: ['☁️ New skin: Sky (1,600 coins). Cloud digits that condense out of the mist, clouds drifting around your card, and if you roll Mythic or better the whole sky takes its color (thanks Deadshot!)', '🃏 New skin: Deck (1,400 coins). Every digit is a playing card dealt from the deck and flipped onto the felt, and big rolls end in a Solitaire card cascade (thanks GamblrGod!)'], fr: ['☁️ Nouveau skin : Sky (1 600 pièces). Des chiffres en nuage qui se forment dans la brume, des nuages autour de ta carte, et si tu tires Mythique ou mieux tout le ciel prend sa couleur (merci Deadshot !)', '🃏 Nouveau skin : Deck (1 400 pièces). Chaque chiffre est une carte distribuée du paquet et retournée sur le tapis, et les gros tirages finissent en cascade de cartes comme au Solitaire (merci GamblrGod !)'] },
     { id: '2026-10-16c', date: 'Oct 16, 2026', en: ['🪙 New casino game: Coin flip, double or nothing. Pick heads or tails: win ×1.96, then cash out or flip again to double it, up to 8 wins in a row (×217)'], fr: ['🪙 Nouveau jeu au casino : Pile ou face, quitte ou double. Choisis face ou pile : gagné ×1,96, puis encaisse ou relance pour doubler, jusqu\'à 8 fois de suite (×217)'] },
@@ -3035,7 +3036,7 @@
             <p class="panel-note fish-collab" id="fish-collab">🎣 Collab with <a href="https://pechadophin.vercel.app/" target="_blank" rel="noopener" data-no-i18n>Canne &amp; Dauphins</a> by L'taleshy &amp; cocobat · the deeper the line, the bigger the dolphin, but watch out for the shark</p>
           </div>
           <div class="panel g-game" data-game="flip">
-            <div class="panel-head"><h3 class="panel-title">Coin flip</h3><span class="panel-note">double or nothing · ×1.96 per win · up to 8 wins in a row</span></div>
+            <div class="panel-head"><h3 class="panel-title">Coin flip</h3><span class="panel-note">double or nothing · ×1.9 per win · up to 7 wins in a row</span></div>
             <div class="cf-stage"><div class="cf-coin" id="cf-coin" data-side="heads"><div class="cf-face cf-heads"><span>∞</span></div><div class="cf-face cf-tails"><span>🎲</span></div></div></div>
             <div class="cf-ladder" id="cf-ladder"></div>
             <div class="actions cf-actions"><button class="btn-roll small" data-cf="heads">∞ Heads</button><button class="btn-roll small" data-cf="tails">🎲 Tails</button></div>
@@ -3690,15 +3691,15 @@
     $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
-    const CF_MULT = k => Math.floor(Math.pow(1.96, k) * 100) / 100;
+    const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
     const drawFlip = g => {
       Gamble.cf = g && !g.done && !g.idle ? g : null;
       const wins = Gamble.cf ? g.wins : 0;
-      $('#cf-ladder').innerHTML = Array.from({ length: 8 }, (_, i) => `<span class="${i < wins ? 'on' : ''}${i === wins && Gamble.cf ? ' next' : ''}">×${CF_MULT(i + 1)}</span>`).join('');
+      $('#cf-ladder').innerHTML = Array.from({ length: CF_MAX }, (_, i) => `<span class="${i < wins ? 'on' : ''}${i === wins && Gamble.cf ? ' next' : ''}">×${CF_MULT(i + 1)}</span>`).join('');
       const cash = $('#cf-cash');
       cash.hidden = !Gamble.cf;
       if (Gamble.cf) cash.textContent = `Cash out · ${fmt(Math.floor(g.bet * g.mult))}`;
-      document.querySelectorAll('[data-cf]').forEach(b => { b.disabled = !!(Gamble.cf && wins >= 8); b.textContent = `${b.dataset.cf === 'heads' ? '∞ Heads' : '🎲 Tails'}${Gamble.cf ? ` · ×${CF_MULT(wins + 1)}` : ` · ${fmt(Gamble.chip)}`}`; });
+      document.querySelectorAll('[data-cf]').forEach(b => { b.disabled = !!(Gamble.cf && wins >= CF_MAX); b.textContent = `${b.dataset.cf === 'heads' ? '∞ Heads' : '🎲 Tails'}${Gamble.cf ? ` · ×${CF_MULT(wins + 1)}` : ` · ${fmt(Gamble.chip)}`}`; });
       if (g && g.coins != null) showCoins(g.coins);
     };
     let cfTurns = 0;
