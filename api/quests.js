@@ -26,6 +26,11 @@ async function state(id, now = Date.now()) {
       progress: Quests.progress(q, counters), claimed: counters[`claimed:${q.id}`] === '1',
     })),
     daily: { claimed: claimedToday, streak, reward: Quests.dailyReward(claimedToday ? streak : streak + 1), next: Quests.dailyReward((claimedToday ? streak : streak + 1) + 1) },
+    // Série de quêtes : jours de suite avec les 5 quêtes réclamées. Retombe à 0 si hier n'a pas été fini.
+    questStreak: (() => {
+      const doneToday = stats.qsDay === day, alive = doneToday || stats.qsDay === Quests.dayBefore(day), cur = alive ? Number(stats.qs) || 0 : 0;
+      return { doneToday, streak: cur, best: Number(stats.qsBest) || 0, bonus: Quests.allDoneReward(doneToday ? cur : cur + 1) };
+    })(),
   };
 }
 
@@ -56,7 +61,20 @@ module.exports = async (req, res) => {
       const [first] = await redis([['HSETNX', questKey(day, playerId), `claimed:${quest.id}`, 1]]);
       if (Number(first) !== 1) return send(res, 422, { error: 'Reward already claimed' });
       await redis([['HINCRBY', statsKey(playerId), 'bonus', quest.reward], ['HINCRBY', statsKey(playerId), 'questsDone', 1]]);
-      return send(res, 200, { ...(await state(playerId)), gained: quest.reward });
+      // Dernière quête du jour réclamée : la série de quêtes monte, et le bonus « tout fini » est versé (une seule fois).
+      const [after] = await redis([['HGETALL', questKey(day, playerId)]]);
+      const c = toObject(after);
+      let allDone = null;
+      if (Quests.ofDay(day).every(q => c[`claimed:${q.id}`] === '1')) {
+        const [firstAll] = await redis([['HSETNX', questKey(day, playerId), 'allDone', 1]]);
+        if (Number(firstAll) === 1) {
+          const st = await readStats(playerId);
+          const streak = st.qsDay === Quests.dayBefore(day) ? (Number(st.qs) || 0) + 1 : 1, bonus = Quests.allDoneReward(streak);
+          await redis([['HSET', statsKey(playerId), 'qs', streak, 'qsDay', day, 'qsBest', Math.max(streak, Number(st.qsBest) || 0)], ['HINCRBY', statsKey(playerId), 'bonus', bonus]]);
+          allDone = { streak, bonus };
+        }
+      }
+      return send(res, 200, { ...(await state(playerId)), gained: quest.reward + (allDone ? allDone.bonus : 0), allDone });
     }
 
     if (body.action === 'daily') {

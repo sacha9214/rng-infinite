@@ -96,6 +96,7 @@ module.exports = async (req, res) => {
       title: title || null,
       top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
+      questBest: Number(stats.qsBest) || 0, // meilleure série de jours avec toutes les quêtes finies
     });
   } catch (err) {
     return send(res, err.status || 500, { error: err.message });

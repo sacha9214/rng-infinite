@@ -3,7 +3,7 @@
 // Tout est tiré ici, avec crypto : le site n'envoie que des mises et des choix. La mise est débitée (« spent ») avant
 // le tirage, le gain crédité (« bonus ») après ; le verrou d'achat de la boutique empêche deux coups en même temps.
 const crypto = require('node:crypto');
-const { redis, readStats, statsKey } = require('./_lib');
+const { redis, readStats, statsKey, questKey, QUEST_TTL } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const MIN_BET = 10, MAX_BET = 1000, MIN_ROLLS = 30; // mêmes 30 tirages que pour les mises en duel
@@ -31,7 +31,9 @@ function ledger(id, game, bet, win, rounds = 1) {
   const out = [['HINCRBY', HOUSE_KEY, 'rounds', rounds], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win],
     ['HINCRBY', HOUSE_KEY, `r:${game}`, rounds], ['HINCRBY', HOUSE_KEY, `b:${game}`, bet], ['HINCRBY', HOUSE_KEY, `w:${game}`, win],
     ['HINCRBY', daily, `r:${game}`, rounds], ['HINCRBY', daily, `b:${game}`, bet], ['HINCRBY', daily, `w:${game}`, win], ['EXPIRE', daily, 100 * 86400],
-    ['SADD', players, id], ['EXPIRE', players, 100 * 86400]];
+    ['SADD', players, id], ['EXPIRE', players, 100 * 86400],
+    // Quêtes du jour de casino (js/quests.js) : manches jouées et pièces misées.
+    ['HINCRBY', questKey(day, id), 'casino', rounds], ['HINCRBY', questKey(day, id), 'casinoBet', bet], ['EXPIRE', questKey(day, id), QUEST_TTL]];
   if (win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
   return out;
 }

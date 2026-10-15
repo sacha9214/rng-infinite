@@ -709,9 +709,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(Number(run([['HGET', `q:${today()}:${quinn.playerId}`, 'xp']])[0].result), r.body.s);
   r = await qGet(quinn);
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.quests.length, 3, '3 quêtes par jour');
+  assert.equal(r.body.quests.length, 5, '5 quêtes par jour');
   assert.deepEqual(r.body.quests.map(q => q.id), Quests.ofDay(today()).map(q => q.id), 'les mêmes pour tout le monde');
-  assert.deepEqual(new Set(Quests.ofDay(today()).map(q => q.group)), new Set(['rolls', 'rarity', 'duel']), 'une par groupe');
+  assert.deepEqual(new Set(Quests.ofDay(today()).map(q => q.group)), new Set(['rolls', 'xp', 'rarity', 'duel', 'casino']), 'une par groupe');
   assert.ok(r.body.quests.every(q => !q.claimed));
   assert.deepEqual([r.body.daily.claimed, r.body.daily.streak, r.body.daily.reward], [false, 0, 20]);
   const first = r.body.quests[0];
@@ -720,7 +720,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await qPost(quinn, 'claim', { quest: 'nope' })).status, 400);
   assert.equal((await qPost({ ...quinn, secret: '9'.repeat(32) }, 'claim', { quest: first.id })).status, 403);
   // Compteurs du jour remplis (comme après une grosse journée) : tout est réclamable, une seule fois.
-  run([['HSET', `q:${today()}:${quinn.playerId}`, 'rolls', 40, 'xp', 200000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1]]);
+  run([['HSET', `q:${today()}:${quinn.playerId}`, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1, 'casino', 15, 'casinoBet', 500]]);
   let before = await coinsOf(quinn);
   r = await qPost(quinn, 'claim', { quest: first.id });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -729,6 +729,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await qPost(quinn, 'claim', { quest: first.id })).status, 422, 'une seule fois');
   assert.equal(await coinsOf(quinn), before + first.reward);
   assert.ok((await qGet(quinn)).body.quests[0].claimed);
+  // Série de quêtes : la 5e quête réclamée verse le bonus « tout fini » une seule fois, et la série monte de jour en jour.
+  assert.equal((await qGet(quinn)).body.questStreak.streak, 0);
+  const coinsBeforeStreak = await coinsOf(quinn);
+  const rest = (await qGet(quinn)).body.quests.filter(q => !q.claimed);
+  for (const [i, q] of rest.entries()) {
+    before = await coinsOf(quinn);
+    r = await qPost(quinn, 'claim', { quest: q.id });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    if (i < rest.length - 1) assert.deepEqual([r.body.gained, r.body.allDone], [q.reward, null], 'pas encore tout fini');
+    else {
+      assert.deepEqual([r.body.allDone, r.body.gained], [{ streak: 1, bonus: 50 }, q.reward + 50], 'tout fini : bonus du 1er jour');
+      assert.equal(await coinsOf(quinn), before + q.reward + 50);
+      assert.deepEqual([r.body.questStreak.doneToday, r.body.questStreak.streak, r.body.questStreak.best], [true, 1, 1]);
+    }
+  }
+  const finishDay = async () => { run([['HSET', `q:${today()}:${quinn.playerId}`, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1, 'casino', 15, 'casinoBet', 500]]); let last; for (const q of Quests.ofDay(today())) last = await qPost(quinn, 'claim', { quest: q.id }); return last.body; };
+  const save = clock;
+  clock += 86400000; let b = await finishDay();
+  assert.deepEqual([b.allDone.streak, b.allDone.bonus, b.questStreak.best], [2, 75, 2], '2e jour de suite : 75');
+  clock += 2 * 86400000;
+  assert.equal((await qGet(quinn)).body.questStreak.streak, 0, 'un jour sauté : série de quêtes perdue');
+  b = await finishDay();
+  assert.deepEqual([b.allDone.streak, b.questStreak.best], [1, 2], 'repart à 1, le record reste');
+  assert.equal((await call(require(path.join(ROOT, 'api/profile.js')), { url: '/api/profile?name=Quinn' })).body.questBest, 2, 'record sur le profil');
+  assert.deepEqual([1, 2, 7, 11, 30, 40].map(Quests.allDoneReward), [50, 75, 700, 300, 2300, 300], 'barème du bonus');
+  clock = save;
+  run([['HINCRBY', `stats:${quinn.playerId}`, 'spent', (await coinsOf(quinn)) - coinsBeforeStreak]]); // solde remis comme avant, pour la suite
   // Bonus quotidien : une fois par jour, la série monte de 10 pièces par jour, retombe si on saute un jour.
   before = await coinsOf(quinn);
   r = await qPost(quinn, 'daily');
@@ -1241,6 +1268,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Plinko : douze fois à droite → dernière case, ×33.
   forced = Array(12).fill(1);
   r = await g(frank, 'plinko', { bet: 10 });
+  { const qk = `q:${new Date(Date.now()).toISOString().slice(0, 10)}:${frank.playerId}`; assert.ok(Number(run([['HGET', qk, 'casino']])[0].result) >= 1 && Number(run([['HGET', qk, 'casinoBet']])[0].result) >= 10, 'une partie de casino compte pour la quête de casino'); }
   assert.deepEqual([r.status, r.body.slot, r.body.mult, r.body.win, r.body.coins], [200, 12, 33, 330, 1320], JSON.stringify(r.body));
   await tick(); forced = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
   r = await g(frank, 'plinko', { bet: 100 });

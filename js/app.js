@@ -1193,7 +1193,8 @@
   }
 
   // ---------------------------------------------------------------- quêtes du jour et bonus quotidien (accueil)
-  // 3 quêtes par jour, les mêmes pour tous ; la progression et les récompenses viennent du serveur.
+  // 5 quêtes par jour, les mêmes pour tous ; la progression et les récompenses viennent du serveur. Les finir toutes fait
+  // monter la série de quêtes, avec un bonus « tout fini » (js/quests.js).
   async function loadQuests(slot, state) {
     if (!slot || !Store.player.name) return;
     if (!state) {
@@ -1224,6 +1225,13 @@
             ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
           </div>`;
         }).join('')}
+        ${state.questStreak ? (() => { const qs = state.questStreak, claimed = state.quests.filter(q => q.claimed).length; return `
+        <div class="quest qstreak${qs.doneToday ? ' done' : ''}">
+          <span class="quest-emoji">🏅</span>
+          <span class="quest-text"><b>Quest streak${qs.streak ? `: ${plural(qs.streak, 'day')}` : ''}</b>
+            <span class="panel-note">${qs.doneToday ? 'All quests done today, come back tomorrow' : `Finish all ${state.quests.length} quests today (${claimed}/${state.quests.length}) for a bonus`}${qs.best ? ` · best: ${plural(qs.best, 'day')}` : ''}</span></span>
+          ${qs.doneToday ? '<span class="quest-state">✓ Done</span>' : `<span class="quest-reward mono">+${fmt(qs.bonus)} 🪙</span>`}
+        </div>`; })() : ''}
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     slot.onclick = async e => {
@@ -1232,7 +1240,8 @@
       btn.disabled = true;
       try {
         const next = await Online.questAction(btn.dataset.quest ? 'claim' : 'daily', btn.dataset.quest);
-        toast(`🪙 +${next.gained} coins${btn.dataset.quest ? '' : ` · ${plural(next.daily.streak, 'day')} streak`}`, 2600, 'achv');
+        toast(next.allDone ? `🏅 All quests done! +${fmt(next.gained)} coins · quest streak: ${plural(next.allDone.streak, 'day')}` : `🪙 +${next.gained} coins${btn.dataset.quest ? '' : ` · ${plural(next.daily.streak, 'day')} streak`}`, next.allDone ? 4000 : 2600, 'achv');
+        if (next.allDone) FX.celebrate(next.allDone.streak >= 7 ? 'epic' : 'uncommon', slot);
         Sound.play('lock', { i: 5 });
         loadQuests(slot, next);
       } catch (err) {
@@ -1498,6 +1507,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16b', date: 'Oct 16, 2026', en: ['📋 5 daily quests instead of 3: new XP and casino quests', '🏅 Quest streak: finish all your quests in a day to grow it. The bonus grows every day (from 50 to 300 coins), plus 500 on day 7 and 2,000 on day 30. Your best quest streak is on your profile'], fr: ['📋 5 quêtes du jour au lieu de 3 : nouvelles quêtes d\'XP et de casino', '🏅 Série de quêtes : finis toutes tes quêtes dans la journée pour la faire monter. Le bonus grossit chaque jour (de 50 à 300 pièces), plus 500 au 7e jour et 2 000 au 30e. Ton record est sur ton profil'] },
     { id: '2026-10-16a', date: 'Oct 16, 2026', en: ['🔎 XP checker on the Badges page: type any number to see its XP and badges (shown as a simulation, it is not a roll)', 'New badges: 🪖 Spartans (contains 117) and Exact Spartan (exactly 117), and Fibonacci slices like the Pi ones: contains 112, 1123, 11235, and Exact Fibonacci (112358). Only the best badge of each family counts, like Pi', 'Crash: an instant crash at 1.00× now says so (it happens about 2 times in 100)'], fr: ['🔎 Vérificateur d\'XP dans la page Badges : tape un nombre pour voir son XP et ses badges (affiché comme une simulation, ce n\'est pas un tirage)', 'Nouveaux badges : 🪖 Spartans (contient 117) et Exact Spartan (exactement 117), et des tranches de Fibonacci comme pour Pi : contient 112, 1123, 11235, et Exact Fibonacci (112358). Seul le meilleur badge de chaque famille compte, comme pour Pi', 'Crash : une explosion immédiate à 1.00× l\'explique maintenant (ça arrive environ 2 fois sur 100)'] },
     { id: '2026-10-15g', date: 'Oct 15, 2026', en: ['🎣 New exclusive skin: Fisherman, a collab with Canne & Dauphins by L\'taleshy & cocobat. Their fisherman reels in your digits one by one, and dolphins jump over your card. To get it, sign in with the same Google account on RNG∞ and on Canne & Dauphins (you also get an RNG∞ skin in their game!). It is in the Shop, Skins tab'], fr: ['🎣 Nouveau skin exclusif : Pêcheur, en collab avec Canne & Dauphins de L\'taleshy et cocobat. Leur pêcheur remonte tes chiffres un par un, et des dauphins sautent par-dessus ta carte. Pour l\'avoir, connecte-toi avec le même compte Google sur RNG∞ et sur Canne & Dauphins (tu gagnes aussi un skin RNG∞ dans leur jeu !). Il est dans la boutique, onglet Skins'] },
     { id: '2026-10-15f', date: 'Oct 15, 2026', en: ['🎣 Fishing now has 8-bit sounds: the cast, the splash, a beep at each round multiplier, the reel, a little fanfare for your catch (longer for pink and red dolphins), the shark\'s bite and the line snapping', 'Bug fixes from your reports, thank you! The Lifetime XP leaderboard now matches the XP on your page again (it is recalculated whenever badges change). Haunted: the leading zero no longer shows as a little grey block, and the windows are back on the houses. Galaxy and the other skins: no more streaks left on the side of the screen. Blackjack: the Match bet explanation now says it compares your card with the dealer\'s face-up card, by exact rank'], fr: ['🎣 La pêche a maintenant des sons 8-bit : le lancer, le plouf, un bip à chaque multiplicateur rond, le moulinet, une petite fanfare pour ta prise (plus longue pour les dauphins roses et rouges), la morsure du requin et le fil qui casse', 'Bugs corrigés grâce à vos signalements, merci ! Le classement Lifetime XP correspond de nouveau à l\'XP de ta page (il est recalculé quand les badges changent). Haunted : le zéro de tête n\'apparaît plus en petit bloc gris, et les fenêtres sont revenues sur les maisons. Galaxy et les autres skins : plus de traînées sur le bord de l\'écran. Blackjack : l\'explication du pari Match précise qu\'il compare ta carte à la carte visible du croupier, au rang exact'] },
@@ -2388,6 +2398,7 @@
         ${tile('Best roll', top ? `<span data-number="${top.n}" data-caption="${esc(caption(top))}" style="cursor:pointer">${analysis(top.n).str}</span>` : '–', top ? `${fmt(top.s)} XP` : '')}
         ${tile('All-time rank', p.rank ? '#' + p.rank : '–', 'best single roll')}
         ${tile('Badges', `${found}/${total}`, `${((found / total) * 100).toFixed(0)}% of the collection`)}
+        ${tile('Best quest streak', p.questBest ? plural(p.questBest, 'day') : '–', 'days in a row with every quest done')}
       </div>
       ${!me && mine ? compareHTML(mine, p) : ''}
       ${duelsPanelHTML(p, me)}
