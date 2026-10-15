@@ -16,6 +16,13 @@
   {
     "id": "RTX_5090",
     "label": "RTX 5090",
+    "desc": "Contains \"5090\": the graphics card.",
+    "emoji": "🎮",
+    "score": 20090
+  },
+  {
+    "id": "RTX_5090_EXACT",
+    "label": "Exact RTX 5090",
     "desc": "Exactly \"5090\": the graphics card.",
     "emoji": "🎮",
     "score": 50900
@@ -37,6 +44,13 @@
   {
     "id": "NATURAL",
     "label": "Natural",
+    "desc": "Contains \"711\": seven and eleven, the two rolls that win on the first throw of the dice.",
+    "emoji": "🎲",
+    "score": 7110
+  },
+  {
+    "id": "NATURAL_EXACT",
+    "label": "Exact Natural",
     "desc": "Exactly \"711\": seven and eleven, the two rolls that win on the first throw of the dice.",
     "emoji": "🎲",
     "score": 71100
