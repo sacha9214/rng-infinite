@@ -2860,7 +2860,11 @@
       return `
         <div class="skin-tile fisher-tile${equipped ? ' equipped' : ''}">
           <div class="num-card md skin-fisher" data-tier="rare">${slotsHTML('235711')}</div>
-          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${owned ? '' : '<span class="fisher-how">Sign in with the same Google account on RNG∞ and on Canne &amp; Dauphins to unlock it</span>'}</div>
+          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${owned ? '' : `<ol class="fisher-steps">
+            <li>${Store.player.google ? '<span class="fisher-done">✓ Signed in with Google on RNG∞</span>' : '<button class="btn ghost small" data-fish-google>Sign in with Google here</button>'}</li>
+            <li>Open Canne &amp; Dauphins and sign in with the <b>same Google account</b></li>
+            <li>Come back here: the skin unlocks by itself</li>
+          </ol>`}</div>
           <div class="skin-actions"><button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<a class="btn" href="https://pechadophin.vercel.app/" target="_blank" rel="noopener" data-fish-out>🎣 Play Canne &amp; Dauphins</a>'}</div>
         </div>`;
     };
@@ -2877,6 +2881,7 @@
       };
       document.addEventListener('visibilitychange', back);
     }
+    grid.querySelectorAll('[data-fish-google]').forEach(b => b.addEventListener('click', () => openSettings()));
     // Ce lien vers son jeu compte aussi dans l'encadré Collab de la page Owner.
     grid.querySelectorAll('[data-fish-out]').forEach(a => a.addEventListener('click', () => { Online.request('/api/site', { local: true, method: 'POST', keepalive: true, body: JSON.stringify({ action: 'out', to: 'pechadophin' }) }).catch(() => {}); }));
     const premium = $('#d-premium');
@@ -3829,7 +3834,7 @@
       <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
       <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button>${skin.supporter && !(Store.settings.skinsOwned || []).includes('supporter') ? '<button class="btn-roll small" data-fund>💗 Contribute to get it</button>' : ''}</div>
       ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}
-      ${skin.collab ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">Collab with Canne &amp; Dauphins by L\'taleshy &amp; cocobat. Sign in with the same Google account on both games to unlock it.</p>' : ''}`, m => {
+      ${skin.collab ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">Collab with Canne &amp; Dauphins by L\'taleshy &amp; cocobat. To unlock it: sign in with Google on RNG∞, then sign in with the same Google account on Canne &amp; Dauphins.</p>' : ''}`, m => {
       const stage = m.querySelector('#sp-stage');
       let timers = [], spin = 0, fx = null;
       const stop = () => { timers.forEach(clearTimeout); timers = []; clearInterval(spin); if (fx) fx.destroy(); fx = null; };

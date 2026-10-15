@@ -394,3 +394,7 @@
 @keyframes fisher-dolphin { 0%, 60% { transform: translateY(0); } 75% { transform: translateY(-8px) rotate(-15deg); } 90% { transform: translateY(-3px) rotate(10deg); } }
 .room-stage.many .side-fisher::after { animation: none; }
 .fisher-how { display: block; margin-top: .25rem; color: #c98a4b; font-weight: 600; }
+.fisher-steps { margin: .4rem 0 0; padding-left: 1.2rem; text-align: left; font-size: .72rem; color: var(--prose-2); display: grid; gap: .25rem; }
+.fisher-steps li::marker { color: #c98a4b; font-weight: 800; }
+.fisher-done { color: #22c55e; font-weight: 700; }
+.fisher-steps [data-fish-google] { text-transform: none; letter-spacing: 0; font-size: .72rem; font-weight: 700; padding: .22rem .55rem; text-align: left; border: 1px solid #c98a4b; border-radius: .4rem; color: inherit; background: rgba(201, 138, 75, .12); }
