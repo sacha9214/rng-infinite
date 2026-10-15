@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-15a', date: 'Oct 15, 2026', en: ['🐞 Report a bug: the 💡 window now has a Report a bug option, and you can add a screenshot (pick a file or paste it)'], fr: ['🐞 Signaler un bug : la fenêtre 💡 a maintenant une option Signaler un bug, et tu peux ajouter une capture d\'écran (choisis un fichier ou colle-la)'] },
     { id: '2026-10-14r', date: 'Oct 14, 2026', en: ['🚀 Crash: the rocket now stops the instant you click Cash out, and you get exactly the multiplier you saw. When it explodes, it no longer flies past the crash point first'], fr: ['🚀 Crash : la fusée s\'arrête maintenant dès que tu cliques sur Encaisser, et tu reçois exactement le multiplicateur que tu as vu. Quand elle explose, elle ne dépasse plus le point de crash avant'] },
     { id: '2026-10-14q', date: 'Oct 14, 2026', en: ['🔥 Plinko High risk: 15 rows, up to 1000× on the edges (max 100 coins per ball). The normal board is still there', '🃏 Blackjack: insurance when the dealer shows an ace (pays 2 to 1), and lucky-hand bonuses: 7-7-7 pays 7×, 21 in 5 cards 1×, 6 cards 3×, 7 cards or more 10×', 'Thanks A Dude for both ideas!'], fr: ['🔥 Plinko Gros risque : 15 rangées, jusqu\'à 1000× sur les bords (100 pièces max par bille). Le plateau normal est toujours là', '🃏 Blackjack : assurance quand le croupier montre un as (payée 2 contre 1), et bonus des mains chanceuses : 7-7-7 paie 7×, 21 en 5 cartes 1×, en 6 cartes 3×, en 7 cartes ou plus 10×', 'Merci A Dude pour les deux idées !'] },
     { id: '2026-10-14p', date: 'Oct 14, 2026', en: ['Duels: on a computer the chat is now a sidebar on the right, always in view, and player names are no longer cut in the duel scoreboard (tested with 10 players)'], fr: ['Duels : sur ordinateur, le chat est maintenant une barre à droite, toujours visible, et les noms ne sont plus coupés dans le classement du duel (testé à 10 joueurs)'] },
@@ -3980,10 +3981,16 @@
     if (Inbox.fresh > 0) { location.hash = '#/owner'; return; }
     if (!Store.player.name) { askName(openIdeas); return; }
     openModal(`
-      <h2>💡 Suggest an idea</h2>
-      <p class="panel-note" style="margin:-.3rem 0 .8rem">An idea, a bug, something missing? Your message goes straight to the creator of the game.</p>
-      <p class="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
-      <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your idea"></textarea>
+      <h2>💡 Ideas & bugs</h2>
+      <p class="panel-note" style="margin:-.3rem 0 .8rem">Your message goes straight to the creator of the game.</p>
+      <div class="seg idea-kind" id="idea-kind" role="tablist"><button data-kind="idea" class="on">💡 Suggest an idea</button><button data-kind="bug">🐞 Report a bug</button></div>
+      <p class="idea-warn" id="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
+      <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your message"></textarea>
+      <div class="idea-shot" id="idea-shot" hidden>
+        <label class="btn ghost idea-shot-btn"><input type="file" accept="image/*" id="idea-file" hidden>📎 Add a screenshot (optional)</label>
+        <span class="panel-note">or paste it here (Ctrl+V / ⌘V)</span>
+        <div class="idea-shot-prev" id="idea-shot-prev" hidden><img alt="Your screenshot" id="idea-shot-img"><button class="btn ghost" id="idea-shot-del" title="Remove the screenshot">✕</button></div>
+      </div>
       <div class="idea-foot"><span class="panel-note mono" id="idea-count">0 / 500</span><button class="btn-roll small" id="idea-send">Send</button></div>
       <div id="idea-mine"><div class="empty">Loading…</div></div>`, () => {
       const text = $('#idea-text'), send = $('#idea-send');
@@ -3995,7 +4002,7 @@
           ${state.owner ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📥 Inbox & visitors</a></p>' : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
             <div class="idea-row" data-id="${x.id}">
-              <div class="idea-head"><span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
+              <div class="idea-head">${x.kind === 'bug' ? `<span class="o-pill bug">🐞 Bug${x.shot ? ' · 📎' : ''}</span>` : ''}<span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
               <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
               ${threadHTML(x.thread, 'You')}
               ${x.thread.some(m => m.from === 'owner') ? `<form class="idea-answer"><input class="input" maxlength="500" placeholder="Reply to the creator…" aria-label="Reply to the creator"><button class="btn">Reply</button></form>` : ''}
@@ -4016,14 +4023,56 @@
         catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Could not send your reply, try again'); }
       });
       text.addEventListener('input', () => { $('#idea-count').textContent = `${text.value.length} / 500`; });
+      // Idée ou bug : un bug peut avoir une capture d'écran (choisie ou collée), réduite ici en JPEG de moins de ~150 Ko.
+      let kind = 'idea', shot = null;
+      $('#idea-kind').addEventListener('click', e => {
+        const b = e.target.closest('[data-kind]'); if (!b) return;
+        kind = b.dataset.kind;
+        document.querySelectorAll('#idea-kind [data-kind]').forEach(x => x.classList.toggle('on', x === b));
+        $('#idea-shot').hidden = kind !== 'bug'; $('#idea-warn').hidden = kind === 'bug';
+        text.placeholder = window.RNGI18n ? window.RNGI18n.t(kind === 'bug' ? 'What went wrong? What did you do just before?' : 'Your idea…') : text.placeholder;
+        text.focus();
+      });
+      const shrink = file => new Promise((done, fail) => {
+        const url = URL.createObjectURL(file), img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let side = 1600, q = .82, out = '';
+          for (let k = 0; k < 12; k++) {
+            const r = Math.min(1, side / Math.max(img.width, img.height)), c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
+            const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+            out = c.toDataURL('image/jpeg', q);
+            if (out.length <= 190000) return done(out);
+            if (q > .5) q -= .12; else side = Math.round(side * .8);
+          }
+          fail(new Error('too big'));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
+        img.src = url;
+      });
+      const setShot = async file => {
+        if (!file || !/^image\//.test(file.type)) { toast('Pick an image'); return; }
+        if (file.size > 25e6) { toast('This image is too big'); return; }
+        try { shot = await shrink(file); $('#idea-shot-img').src = shot; $('#idea-shot-prev').hidden = false; }
+        catch (err) { shot = null; toast('This screenshot could not be read: try another image'); }
+      };
+      $('#idea-file').addEventListener('change', e => { setShot(e.target.files[0]); e.target.value = ''; });
+      $('#idea-shot-del').addEventListener('click', () => { shot = null; $('#idea-shot-prev').hidden = true; $('#idea-shot-img').removeAttribute('src'); });
+      $('#modal-root').addEventListener('paste', e => {
+        if (kind !== 'bug') return;
+        const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(x => x.kind === 'file' && /^image\//.test(x.type));
+        if (item) { e.preventDefault(); setShot(item.getAsFile()); }
+      });
       send.addEventListener('click', async () => {
         if (text.value.trim().length < 5) { toast('Write a few words first'); return; }
         send.disabled = true;
         try {
-          const state = await Online.site('suggest', { text: text.value, lang: (window.RNGI18n && window.RNGI18n.lang) || 'en' });
+          const state = await Online.site('suggest', { text: text.value, kind, shot: kind === 'bug' && shot ? shot : undefined, lang: (window.RNGI18n && window.RNGI18n.lang) || 'en' });
           text.value = '';
           $('#idea-count').textContent = '0 / 500';
-          toast('Thanks! Your suggestion was sent', 2600, 'achv');
+          if (shot) $('#idea-shot-del').click();
+          toast(kind === 'bug' ? 'Thanks! Your bug report was sent' : 'Thanks! Your suggestion was sent', 2600, 'achv');
           draw(state);
         } catch (err) {
           toast([422, 429].includes(err.status) ? err.message : 'Could not send your suggestion, try again');
@@ -4382,11 +4431,13 @@
           <div class="idea-head">
             <a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a>
             <span class="panel-note">${suggDate(x.t)} · ${x.lang || '?'}</span>
+            ${x.kind === 'bug' ? '<span class="o-pill bug">🐞 Bug</span>' : ''}
             ${x.status === 'new' && replied(x) ? '<span class="o-pill reply">💬 Player replied</span>' : ''}
             ${tab === 'all' ? `<span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span>` : ''}
             <button class="btn ghost o-del" data-o="delete" title="Delete">🗑</button>
           </div>
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+          ${x.shot ? `<div class="o-shot" data-shot="${x.id}"><button class="btn ghost" data-o="shot">📎 View the screenshot</button></div>` : ''}
           ${threadHTML(x.thread, 'Player')}
           <div class="o-moves">
             ${x.status === 'new' ? '<button class="btn" data-o="read">✓ Mark as read</button>' : '<button class="btn ghost" data-o="unread">↩ Not read</button>'}
@@ -4422,6 +4473,13 @@
         return;
       }
       if (!btn || !row) return;
+      // Capture d'écran d'un bug : chargée seulement quand on la demande (elle pèse jusqu'à ~150 Ko).
+      if (btn.dataset.o === 'shot') {
+        btn.disabled = true;
+        Online.site('shot', { id: row.dataset.id }).then(r => { const box = btn.parentElement; box.innerHTML = '<img alt="Screenshot of the bug" title="Click to enlarge">'; const img = box.querySelector('img'); img.src = r.shot; img.addEventListener('click', () => box.classList.toggle('big')); })
+          .catch(err => { btn.disabled = false; toast(err.status === 404 ? err.message : 'Unavailable right now, try again'); });
+        return;
+      }
       if (btn.dataset.o === 'read' || btn.dataset.o === 'unread') { act('mark', { id: row.dataset.id, status: btn.dataset.o === 'read' ? 'seen' : 'new' }); return; }
       if (btn.dataset.o === 'move') { act('mark', { id: row.dataset.id, status: btn.dataset.st }).then(() => toast(`Moved to ${INBOX_TABS.find(t => t[0] === btn.dataset.st)[2]}`)); return; }
       if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else if (row.querySelector('.o-reply input').value.trim()) act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply sent')); else toast('Write a few words first');

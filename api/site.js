@@ -1,6 +1,7 @@
 // POST /api/site { action, … } — ce qui concerne le site plutôt qu'une partie : boîte à suggestions et fréquentation.
 //   visit                       (sans compte) compteurs anonymes du jour : visites, site d'origine, pays, appareil, langue
-//   suggest  { text }           (joueur) envoie une suggestion
+//   suggest  { text, kind?, shot? } (joueur) envoie une suggestion, ou un bug ('bug') avec une capture JPEG facultative
+//   shot     { id }             (Owner, invité) la capture d'écran d'un bug
 //   peek     { since }          (Owner) nombre de suggestions reçues depuis « since » : le point rouge de l'ampoule
 //   mine                        (joueur) ses suggestions, leur statut et la réponse éventuelle ; dit aussi s'il est Owner
 //   inbox                       (Owner) toutes les suggestions
@@ -31,6 +32,15 @@ const cleanText = (raw, max) => String(raw || '').replace(/[\u0000-\u0008\u000b-
 // Les suggestions d'avant le 2026-10-12 n'avaient qu'une réponse (champ « reply ») : elle ouvre alors le fil.
 const THREAD_MAX = 40, REPLIES_PER_DAY = 20;
 const threadKey = id => `sugg:${id}:msgs`;
+// Signalement de bug (2026-10-15) : capture d'écran facultative, réduite et recompressée en JPEG par la page, gardée à
+// part dans sugg:<id>:shot (90 jours) et lue seulement par le créateur et son invité. On n'accepte qu'un vrai JPEG.
+const shotKey = id => `sugg:${id}:shot`, SHOT_MAX = 200000, SHOT_TTL = 90 * 86400;
+function cleanShot(raw) {
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(raw || ''));
+  if (!m || m[1].length > SHOT_MAX) return null;
+  const buf = Buffer.from(m[1], 'base64');
+  return buf.length > 100 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? `data:image/jpeg;base64,${m[1]}` : null;
+}
 async function listSuggestions(ids) {
   if (!ids.length) return [];
   const rows = await redis(ids.flatMap(id => [['HGETALL', suggKey(id)], ['LRANGE', threadKey(id), 0, -1]]));
@@ -39,7 +49,7 @@ async function listSuggestions(ids) {
       let thread = x.msgs.map(m => { try { const o = JSON.parse(m); return { from: o.f === 'o' ? 'owner' : 'player', text: String(o.x || ''), t: Number(o.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
       if (!thread.length && x.reply) thread = [{ from: 'owner', text: x.reply, t: Number(x.replyAt) || 0 }];
       const lastOwner = thread.filter(m => m.from === 'owner').pop();
-      return { id: x.id, t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: lastOwner ? lastOwner.text : '', lang: x.lang || '', thread, ownerAt: Number(x.ownerAt) || 0 };
+      return { id: x.id, kind: x.kind === 'bug' ? 'bug' : 'idea', shot: x.shot === '1', t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: lastOwner ? lastOwner.text : '', lang: x.lang || '', thread, ownerAt: Number(x.ownerAt) || 0 };
     });
 }
 // Ajoute un message au fil. Une ancienne réponse unique y est d'abord recopiée, pour ne pas la perdre.
@@ -463,9 +473,12 @@ module.exports = async (req, res) => {
       const day = dayKey(Date.now());
       const [count] = await redis([['INCR', `sugg:rate:${day}:${playerId}`], ['EXPIRE', `sugg:rate:${day}:${playerId}`, 2 * 86400]]);
       if (Number(count) > SUGG_PER_DAY) return send(res, 429, { error: `You can send ${SUGG_PER_DAY} suggestions a day: come back tomorrow` });
+      const bug = body.kind === 'bug', shot = bug && body.shot ? cleanShot(body.shot) : null;
+      if (bug && body.shot && !shot) return send(res, 422, { error: 'This screenshot could not be read: try another image' });
       const id = crypto.randomBytes(6).toString('hex'), t = Date.now();
       await redis([
-        ['HSET', suggKey(id), 't', t, 'pid', playerId, 'name', name, 'text', text, 'status', 'new', 'lang', body.lang === 'fr' ? 'fr' : 'en'],
+        ['HSET', suggKey(id), 't', t, 'pid', playerId, 'name', name, 'text', text, 'status', 'new', 'lang', body.lang === 'fr' ? 'fr' : 'en', 'kind', bug ? 'bug' : 'idea', 'shot', shot ? '1' : '0'],
+        ...(shot ? [['SET', shotKey(id), shot, 'EX', SHOT_TTL]] : []),
         ['ZADD', 'sugg:all', t, id],
         ['ZADD', byPlayer(playerId), t, id],
       ]);
@@ -492,14 +505,19 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['inbox', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'stats', 'insights', 'fund'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
     const id = String(body.id || '');
+    if (body.action === 'shot') {
+      if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
+      const [shot] = await redis([['GET', shotKey(id)]]);
+      return shot ? send(res, 200, { shot }) : send(res, 404, { error: 'No screenshot (or it expired after 90 days)' });
+    }
     if (body.action === 'mark' || body.action === 'delete') {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
       const [pid] = await redis([['HGET', suggKey(id), 'pid']]);
       if (!pid) return send(res, 404, { error: 'Unknown suggestion' });
-      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
+      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['DEL', shotKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
