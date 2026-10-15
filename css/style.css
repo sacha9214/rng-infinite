@@ -3507,3 +3507,16 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .o-shot img { display: block; max-width: min(100%, 320px); max-height: 220px; border-radius: .5rem; border: 1px solid var(--outline); cursor: zoom-in; }
 .o-shot.big img { max-width: 100%; max-height: none; cursor: zoom-out; }
 .idea-shot[hidden], .idea-shot-prev[hidden] { display: none; }
+/* Crash en mode Pêche (collab Canne & Dauphins) : la scène en pixel art agrandie sans flou, le multiplicateur sur le côté. */
+.cr-mode { display: flex; margin: 0 0 .6rem; }
+.cr-mode button { flex: 1; }
+#fish-canvas { display: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+.crash-screen[data-mode="fish"] #cr-canvas { display: none; }
+.crash-screen[data-mode="fish"] #fish-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.crash-screen[data-mode="fish"] { background: #3f8fe8; }
+.crash-screen[data-mode="fish"] b { left: auto; right: 7%; top: 7%; transform: none; font-size: clamp(1.5rem, 6vw, 2.6rem); text-shadow: 0 2px 0 #14182c, 0 0 14px rgba(20, 24, 44, .6); }
+.crash-screen[data-mode="fish"][data-state="idle"] b { opacity: 0; }
+.crash-screen[data-mode="fish"][data-state="crash"] b { color: #ff6a6a; text-shadow: 0 2px 0 #2a0408, 0 0 14px rgba(42, 4, 8, .6); }
+.crash-screen[data-mode="fish"][data-state="cash"] b { color: #7dffa4; text-shadow: 0 2px 0 #0b2a14, 0 0 14px rgba(11, 42, 20, .6); }
+.fish-collab { text-align: center; margin-top: .4rem; }
+.fish-collab a { color: #ff9a3c; font-weight: 700; }

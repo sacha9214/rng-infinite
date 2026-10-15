@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-15d', date: 'Oct 15, 2026', en: ['🎣 Collab with Canne & Dauphins by L\'taleshy & cocobat: Crash now has a Fishing mode in their pixel art. The fisherman casts his line, it sinks as the multiplier climbs, cash out to reel in a dolphin (blue, pink above 2×, red above 10×), but if you wait too long the demon shark snaps the line. The rocket is still there with the 🚀 button', 'Crash: the delay before the screen shows the explosion now adapts to your connection, so the line or rocket never goes past the crash point'], fr: ['🎣 Collab avec Canne & Dauphins de L\'taleshy et cocobat : le Crash a maintenant un mode Pêche dans leur pixel art. Le pêcheur lance sa ligne, elle descend pendant que le multiplicateur monte, encaisse pour remonter un dauphin (bleu, rose au-dessus de 2×, rouge au-dessus de 10×), mais si tu attends trop le requin démon casse le fil. La fusée est toujours là avec le bouton 🚀', 'Crash : le retard avant l\'explosion à l\'écran s\'adapte maintenant à ta connexion, la ligne ou la fusée ne dépasse plus le point de crash'] },
     { id: '2026-10-15c', date: 'Oct 15, 2026', en: ['4 new badges: 💼 9 to 5 (contains 925, Rare) and 👩‍💼 Exact Job (exactly 925, Mythic), for the Dolly Parton song', '🎩 Exact Munchausen (exactly 3435: 3³ + 4⁴ + 3³ + 5⁵ = 3435, Mythic)', '📐 Exact Pythag (exactly 91625: 9 + 16 = 25, Mythic)'], fr: ['4 nouveaux badges : 💼 9 to 5 (contient 925, Rare) et 👩‍💼 Exact Job (exactement 925, Mythique), pour la chanson de Dolly Parton', '🎩 Exact Munchausen (exactement 3435 : 3³ + 4⁴ + 3³ + 5⁵ = 3435, Mythique)', '📐 Exact Pythag (exactement 91625 : 9 + 16 = 25, Mythique)'] },
     { id: '2026-10-15b', date: 'Oct 15, 2026', en: ['🎲 Natural now only needs your number to contain 711, and 🎮 RTX 5090 to contain 5090 (thanks casmictechthing!). The exact numbers have their own badges: Exact Natural (000711) and Exact RTX 5090 (005090), with the big XP'], fr: ['🎲 Natural demande maintenant juste que ton nombre contienne 711, et 🎮 RTX 5090 qu\'il contienne 5090 (merci casmictechthing !). Les nombres exacts ont leurs propres badges : Exact Natural (000711) et Exact RTX 5090 (005090), avec le gros XP'] },
     { id: '2026-10-15a', date: 'Oct 15, 2026', en: ['🐞 Report a bug: the 💡 window now has a Report a bug option, and you can add a screenshot (pick a file or paste it)'], fr: ['🐞 Signaler un bug : la fenêtre 💡 a maintenant une option Signaler un bug, et tu peux ajouter une capture d\'écran (choisis un fichier ou colle-la)'] },
@@ -2959,9 +2960,11 @@
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
             <div class="panel-head"><h3 class="panel-title">Crash</h3><span class="panel-note">cash out before it crashes</span></div>
-            <div class="crash-screen" id="cr-screen" data-state="idle"><canvas id="cr-canvas" width="640" height="260"></canvas><b class="mono" id="cr-mult">1.00×</b></div>
+            <div class="seg cr-mode" id="cr-mode" role="tablist"><button data-mode="fish">🎣 Fishing</button><button data-mode="rocket">🚀 Rocket</button></div>
+            <div class="crash-screen" id="cr-screen" data-state="idle" data-mode="fish"><canvas id="cr-canvas" width="640" height="260"></canvas><canvas id="fish-canvas" width="256" height="144" aria-label="A fisherman on a pier"></canvas><b class="mono" id="cr-mult">1.00×</b></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="cr-go">Start</button></div>
             <p class="panel-note g-result" id="cr-result"></p>
+            <p class="panel-note fish-collab" id="fish-collab">🎣 Collab with <a href="https://firetaleshy.github.io/Pechadophin/" target="_blank" rel="noopener" data-no-i18n>Canne &amp; Dauphins</a> by L'taleshy &amp; cocobat · the deeper the line, the bigger the dolphin, but watch out for the shark</p>
           </div>
           <div class="panel g-game" data-game="mines">
             <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it · max win 250×</span></div>
@@ -3611,6 +3614,17 @@
     $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
     // ---- crash : la courbe monte avec l'heure du serveur ; on sonde pour savoir si c'est fini
     const cc = $('#cr-canvas').getContext('2d'), screen = $('#cr-screen');
+    // Pêche (collab Canne & Dauphins, js/fishing.js) ou fusée : même partie côté serveur, seul le dessin change.
+    // La pêche est affichée par défaut ; le choix du joueur est retenu.
+    const Fish = window.RNGFishing ? window.RNGFishing.create($('#fish-canvas')) : null;
+    const setCrMode = mode => {
+      mode = mode === 'rocket' || !Fish ? 'rocket' : 'fish';
+      screen.dataset.mode = mode; $('#fish-collab').hidden = mode !== 'fish';
+      document.querySelectorAll('#cr-mode [data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+      if (Fish && mode === 'fish') Fish.wake();
+    };
+    setCrMode(Store.settings.crMode);
+    $('#cr-mode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Store.setSetting('crMode', b.dataset.mode); setCrMode(b.dataset.mode); });
     const stars = Array.from({ length: 70 }, () => ({ x: Math.random() * 640, y: Math.random() * 260, z: .3 + Math.random() * .7 })), boom = [];
     const drawCurve = (mult, state) => {
       cc.clearRect(0, 0, 640, 260);
@@ -3635,22 +3649,28 @@
       cc.fillStyle = '#38bdf8'; cc.beginPath(); cc.arc(5, 0, 3.4, 0, 7); cc.fill(); cc.strokeStyle = '#0f172a'; cc.lineWidth = 1; cc.stroke();
       cc.restore();
     };
-    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
+    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; if (Fish) { if (res.result === 'cash') Fish.catch(res.mult); else Fish.snap(res.point); } screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
     // La manche n'existe plus côté serveur (expirée, ou finie depuis un autre onglet) : retour à l'écran de départ.
-    const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
-    // La fusée s'affiche avec CR_LAG ms de retard sur le serveur, et on sonde toutes les CR_POLL ms : l'explosion est
+    const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; if (Fish) Fish.idle(); screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
+    // La fusée (ou la ligne de pêche) s'affiche avec un peu de retard sur le serveur, et on sonde toutes les CR_POLL ms : l'explosion est
     // connue avant que la fusée affichée n'atteigne le point, elle ne le dépasse plus (elle allait jusqu'à 1 s trop loin
     // puis revenait en arrière). Au clic, la fusée s'arrête aussitôt et le serveur paie le temps affiché (api/_gamble.js).
-    const CR_LAG = 200, CR_POLL = 150;
-    const crElapsed = () => Math.max(0, Date.now() - Gamble.cr.t0 - CR_LAG);
-    const runCrash = st => {
-      Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate }; screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
+    // Le retard s'adapte au réseau du joueur : le pire délai pour apprendre l'explosion est un intervalle de sondage plus
+    // un aller-retour, donc retard = aller-retour mesuré + CR_POLL + marge (200 ms au moins). Fixé au départ de chaque
+    // partie, pour que la fusée ne recule jamais. On paie toujours le temps affiché : ce retard ne coûte rien au joueur.
+    const CR_POLL = 150;
+    const crLag = () => Math.min(700, Math.max(200, (Gamble.crRtt || 160) + CR_POLL + 60));
+    const crRttSeen = ms => { Gamble.crRtt = Gamble.crRtt ? Math.max(ms, Gamble.crRtt * .8 + ms * .2) : ms; };
+    const crElapsed = () => Math.max(0, Date.now() - Gamble.cr.t0 - Gamble.cr.lag);
+    const runCrash = (st, resumed) => {
+      Gamble.cr = { t0: st.t0 + (Date.now() - st.now), bet: st.bet, rate: st.rate, lag: crLag() };
+      if (Fish) { if (resumed) Fish.resume(Math.exp(st.rate * crElapsed())); else Fish.cast(); } screen.dataset.state = 'run'; $('#cr-result').textContent = ''; showCoins(st.coins);
       const frame = () => { if (!Gamble.cr || Gamble.cr.frozen != null || currentView !== 'gamble') return; // Le texte suit l'arrondi du serveur (deux décimales, vers le bas) ; la courbe et la fusée suivent la valeur exacte,
         // prise sur l'horloge de l'image : dessinées avec la valeur arrondie, elles avançaient par à-coups (7 pas par seconde).
-        const exact = Math.exp(Gamble.cr.rate * crElapsed()), m = Math.floor(exact * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(exact, 'run'); Gamble.raf = requestAnimationFrame(frame); };
+        const exact = Math.exp(Gamble.cr.rate * crElapsed()), m = Math.floor(exact * 100) / 100; const mt = `${m.toFixed(2)}×`, bt = `Cash out · ${fmt(Math.floor(Gamble.cr.bet * m))}`; if (Gamble.cr.mt !== mt) { Gamble.cr.mt = mt; $('#cr-mult').textContent = mt; } if (Gamble.cr.bt !== bt) { Gamble.cr.bt = bt; $('#cr-go').textContent = bt; } drawCurve(exact, 'run'); if (Fish) Fish.depth(exact); Gamble.raf = requestAnimationFrame(frame); };
       Gamble.cr.frame = frame; frame();
       clearInterval(Gamble.poll);
-      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy || Gamble.crPolling) return; Gamble.crPolling = true; try { const s2 = await gamble('crash', { move: 'state' }); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } finally { Gamble.crPolling = false; } }, CR_POLL);
+      Gamble.poll = setInterval(async () => { if (!Gamble.cr || currentView !== 'gamble') { clearInterval(Gamble.poll); return; } if (Gamble.busy || Gamble.crPolling) return; Gamble.crPolling = true; try { const sent = Date.now(), s2 = await gamble('crash', { move: 'state' }); crRttSeen(Date.now() - sent); if (s2.done && s2.result === 'crash' && Gamble.cr) endCrash(s2); else if (s2.done && s2.idle && Gamble.cr) resetCrash(s2.coins); } catch (err) { /* prochain sondage */ } finally { Gamble.crPolling = false; } }, CR_POLL);
     };
     $('#cr-go').addEventListener('click', async () => {
       if (Gamble.busy) return;
@@ -3667,7 +3687,7 @@
           move = { move: 'cash', ms };
         }
         let res;
-        for (let k = 0; ; k++) { try { res = await gamble('crash', move); break; } catch (err) { if (err.status !== 429 || k >= 4 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
+        for (let k = 0; ; k++) { try { const sent = Date.now(); res = await gamble('crash', move); crRttSeen(Date.now() - sent); break; } catch (err) { if (err.status !== 429 || k >= 4 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
         if (res.done) endCrash(res); else runCrash(res);
       } catch (err) {
         if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash();
@@ -3685,7 +3705,7 @@
     (async () => {
       await resume('bj', h => drawHand(h));
       await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
-      await resume('crash', st => { if (!st.done) runCrash(st); else if (st.result === 'crash') endCrash(st); });
+      await resume('crash', st => { if (!st.done) runCrash(st, true); else if (st.result === 'crash') endCrash(st); });
     })();
   }
 
