@@ -99,6 +99,10 @@ module.exports = async (req, res) => {
       await markFresh(playerId); // joueur neuf (sans historique) : pas de reconstruction à tromper
     }
 
+    // Collab Canne & Dauphins : ce compte Google joue aussi au jeu de Firetail (api/site.js, action « collab ») → skin Fisherman.
+    const [fisher] = await redis([['SISMEMBER', 'collab:pechadophin:subs', google.sub]]);
+    if (Number(fisher) === 1) await redis([['HSET', statsKey(playerId), 'collabFish', 1]]);
+
     // Un secret par appareil connecté : tous restent valides pour ce joueur.
     const secret = crypto.randomBytes(16).toString('hex');
     const writes = [

@@ -65,9 +65,14 @@
   // Skin de remerciement : pour les joueurs qui ont contribué à la cagnotte du serveur (stats.supporter, posé par le
   // créateur depuis sa page). Ni achetable avec des pièces, ni dans les caisses, ni porté par les bots.
   const SUPPORTER = { id: 'supporter', name: 'Supporter', emoji: '💗', price: 0, desc: 'Rose gold, for those who keep the server alive', hidden: true, supporter: true };
+  // Skin de la collab Canne & Dauphins (jeu de Firetail, 2026-10-15) : le pêcheur de son jeu pêche les chiffres. Exclusif :
+  // ni en vente, ni dans les caisses ; débloqué en jouant aux deux jeux avec le même compte Google (stats.collabFish).
+  // Tuile de la boutique montrée seulement quand le jeu de Firetail envoie ses connexions (son côté du kit publié).
+  const COLLAB_LIVE = false;
+  const FISHER = { id: 'fisher', name: 'Fisherman', emoji: '🎣', price: 0, desc: 'Collab with Canne & Dauphins: a fisherman reels in your digits', hidden: true, collab: true };
   // Cagnotte : objectif par défaut du mois, en centimes (réglable depuis la page Owner).
   const FUND_GOAL = 2000;
-  const byId = new Map(SKINS.concat(OWNER, SUPPORTER).map(s => [s.id, s]));
+  const byId = new Map(SKINS.concat(OWNER, SUPPORTER, FISHER).map(s => [s.id, s]));
   // Skins remplacés : qui avait l'ancien a le nouveau (Donut → Slots, 2026-09-23).
   const ALIASES = { donut: 'slots' };
   const resolve = id => (id && ALIASES[id]) || id;
@@ -169,7 +174,7 @@
   const speedLevel = v => Math.max(0, Math.min(SPEED.prices.length, Math.floor(Number(v) || 0)));
   const speedFactor = v => SPEED.factors[speedLevel(v)];
 
-  const api = { SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1955,6 +1955,77 @@
   // 💗 Supporter — un cœur qui bat. La ligne de pouls court dans la carte et accélère à chaque chiffre posé ; chaque
   // chiffre est un battement (double onde corail, quelques cœurs qui s'envolent) ; avant le dernier le pouls s'emballe ;
   // la révélation est une grande onde autour de la carte et une envolée de cœurs. Tirage raté : la ligne devient plate.
+  // 🎣 Fisherman (collab Canne & Dauphins) : le pêcheur de Firetail, debout sur un bout de ponton à gauche de la carte,
+  // pêche les chiffres. Son leurre flotte sur l'eau de la carte ; à chaque chiffre posé, il ferre : le fil part jusqu'au
+  // chiffre et revient, avec une éclaboussure de pixels. À la révélation, un dauphin saute par-dessus la carte (bleu,
+  // rose, puis rouge pour les tirages rares). Sprites et palettes de son jeu (js/fishing.js), agrandis sans flou.
+  SCENES.fisher = env => {
+    const { co, card } = env, SP = root.RNGFishing && root.RNGFishing.sprites ? root.RNGFishing.sprites() : null;
+    if (!SP) return { frame() {} };
+    const k = Math.max(2, Math.round(card.h / 22)), snapk = v => Math.round(v / k) * k;
+    const water = card.y + card.h * .57, feet = card.y + card.h; // la ligne d'eau de la carte, le dessus du ponton
+    const man = { x: snapk(card.x - 30 * k), y: snapk(feet - 16 * k) };
+    const hand = { x: man.x + 13 * k, y: man.y + 8 * k };
+    const restTip = { x: Math.min(hand.x + 14 * k, card.x - 3 * k), y: hand.y - 12 * k };
+    // Au repos, le leurre pend au bout de la canne, hors de la carte : il ne cache jamais un chiffre.
+    const lureRest = () => ({ x: restTip.x - k, y: restTip.y + 9 * k });
+    const hooks = [], drops = [], jumps = [];
+    let bend = 0, jolt = 0;
+    const px = (x, y, w, h, c) => { co.fillStyle = c; co.fillRect(Math.round(x), Math.round(y), w, h); };
+    const line = (x0, y0, x1, y1, c) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / k)); co.fillStyle = c; for (let i = 0; i <= n; i++) co.fillRect(snapk(x0 + (x1 - x0) * i / n), snapk(y0 + (y1 - y0) * i / n), k, k); };
+    const sprite = (img, x, y, flip, rot) => { co.save(); co.translate(Math.round(x), Math.round(y)); if (rot) co.rotate(rot); if (flip) co.scale(-1, 1); co.drawImage(img, -img.width * k / 2, -img.height * k / 2, img.width * k, img.height * k); co.restore(); };
+    const splash = (x, y, n, cols) => { for (let i = 0; i < n; i++) drops.push({ x, y, vx: rnd(-90, 90) * k / 3, vy: -rnd(60, 160) * k / 3, l: rnd(.5, .9), c: pick(cols) }); };
+    const WATER_COLS = ['#d8f1ff', '#ffffff', '#4aa8e8'];
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over'; co.imageSmoothingEnabled = false;
+        bend = Math.max(0, bend - dt * 3); jolt = Math.max(0, jolt - dt * 4);
+        // ponton (planches de son jeu) sous le pêcheur
+        for (let x = man.x - 14 * k; x < card.x - 2 * k; x += 16 * k) co.drawImage(SP.plank, snapk(x), snapk(feet), 16 * k, 16 * k);
+        for (const x of [man.x - 8 * k, man.x + 8 * k]) px(snapk(x), feet + 5 * k, 3 * k, 10 * k, '#5a3418');
+        // pêcheur : respire au repos, sursaute quand il ferre
+        const bob = jolt > .3 ? -k : (Math.floor(t * 1.4) % 2) * k;
+        co.drawImage(jolt > .3 ? SP.jump : SP.man, man.x - 8 * k + 8 * k, man.y + bob, 16 * k, 16 * k);
+        const tip = { x: restTip.x - bend * 4 * k, y: restTip.y + bend * 9 * k };
+        line(hand.x, hand.y + bob, tip.x, tip.y + bob, '#8a5a2b');
+        px(tip.x, tip.y + bob, k, k, '#ffe0a0');
+        // le fil : vers le leurre qui flotte, ou vers le chiffre qu'il vient de ferrer
+        const h = hooks[hooks.length - 1];
+        let lx, ly;
+        if (h) {
+          h.t += dt; const u = Math.min(1, h.t / .5), go = u < .3 ? u / .3 : 1 - (u - .3) / .7, rest = lureRest();
+          lx = rest.x + (h.x - rest.x) * go; ly = rest.y + (h.y - rest.y) * go - Math.sin(Math.PI * go) * 6 * k;
+          if (u >= 1) hooks.pop();
+        } else { const rest = lureRest(); lx = rest.x + Math.round(Math.sin(t * 1.6)) * k; ly = rest.y; }
+        line(tip.x, tip.y + bob, lx, ly, '#f4f7ff');
+        co.drawImage(SP.lure, snapk(lx) - 4 * k, snapk(ly) - 3 * k, SP.lure.width * k, SP.lure.height * k);
+        // dauphins qui sautent par-dessus la carte
+        for (let i = jumps.length - 1; i >= 0; i--) {
+          const j = jumps[i]; j.t += dt; const u = j.t / j.d;
+          if (u < 0) continue;
+          if (u >= 1) { splash(j.x1, water, 12, WATER_COLS); jumps.splice(i, 1); continue; }
+          if (!j.out) { j.out = true; splash(j.x0, water, 12, WATER_COLS); }
+          const x = j.x0 + (j.x1 - j.x0) * u, y = water - Math.sin(Math.PI * u) * j.hgt, ang = Math.atan2(-Math.cos(Math.PI * u) * j.hgt * Math.PI, j.x1 - j.x0);
+          sprite(SP.dol[j.kind], x, y, false, ang);
+        }
+        // éclaboussures en blocs de pixels
+        for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; d.vy += 420 * k / 3 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.l -= dt * 1.5; if (d.l <= 0) { drops.splice(i, 1); continue; } co.globalAlpha = Math.min(1, d.l * 2); px(snapk(d.x), snapk(d.y), k, k, d.c); }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o && o.ghost) return; // zéro de tête : pas de prise
+        hooks.length = 0; hooks.push({ x: p.x, y: p.y, t: 0 }); bend = 1; jolt = .5;
+        setTimeout(() => splash(p.x, p.y, 10, WATER_COLS), 150);
+      },
+      reveal(tier) {
+        const pw = POWER[tier] || 0, kind = pw > .55 ? 'red' : pw > .25 ? 'pink' : 'blue';
+        for (let i = 0, n = 1 + (pw > .4 ? 1 : 0) + (pw > .75 ? 1 : 0); i < n; i++) {
+          const flip = i % 2 === 1;
+          jumps.push({ t: -i * .35, d: .9 + rnd(0, .2), x0: flip ? card.x + card.w * .95 : card.x + card.w * .05, x1: flip ? card.x + card.w * .05 : card.x + card.w * .95, hgt: card.h * rnd(.7, 1), kind });
+        }
+      },
+    };
+  };
   SCENES.supporter = env => {
     const { ci, co, w, h, card, q, dark } = env;
     const CORAL = '#fb7185', ROSE = '#fda4af', GOLD = '#fde68a', DEEP = '#e11d48';

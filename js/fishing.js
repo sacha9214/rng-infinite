@@ -287,5 +287,7 @@
       kindOf,
     };
   }
-  root.RNGFishing = { create, kindOf, depthOf, size: [W, H] };
+  // Les sprites de Firetail, partagés avec le skin Fisherman (js/skinfx.js).
+  const sprites = () => { if (!S) build(); return S; };
+  root.RNGFishing = { create, kindOf, depthOf, sprites, size: [W, H] };
 })(typeof window !== 'undefined' ? window : globalThis);

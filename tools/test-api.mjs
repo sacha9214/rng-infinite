@@ -2467,4 +2467,36 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await equip(alice, 'spooky')).status, 422, 'pas sans le code');
 }
 
+// 59. Collab Canne & Dauphins : le jeu de Firetail envoie le jeton Google de son joueur (action « collab »).
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const state = who => call(shopApi, { url: `/api/shop?me=${who.playerId}` });
+  const collab = credential => call(siteApi, { method: 'POST', body: { action: 'collab', game: 'pechadophin', credential } });
+  const PECHA = '613987510700-0gp3rfu2tmcm32uu0aun7q1lmubl8vav.apps.googleusercontent.com';
+  // Refusé : jeton de RNG∞ (mauvais jeu), faux jeton, jeu inconnu.
+  assert.equal((await collab(googleToken({ sub: 'fish-1' }))).status, 401, 'un jeton émis pour un autre jeu est refusé');
+  assert.equal((await collab('abc.def.ghi')).status, 401);
+  assert.equal((await call(siteApi, { method: 'POST', body: { action: 'collab', game: 'nope', credential: googleToken({ sub: 'x', aud: PECHA }) } })).status, 400);
+  // 1er ordre : il a déjà un compte RNG∞ (connecté avec Google), puis il se connecte sur Canne & Dauphins.
+  let r = await signIn({ sub: 'fish-both', email: 'fishboth@example.com' }, {});
+  const both = { playerId: r.body.playerId, secret: r.body.secret };
+  r = await collab(googleToken({ sub: 'fish-both', aud: PECHA }));
+  assert.deepEqual([r.status, r.body.rng, r.body.reward], [200, true, 'rnginf'], 'compte RNG∞ trouvé : son skin est donné');
+  r = await state(both);
+  assert.ok(r.body.owned.includes('fisher'), 'skin Fisherman débloqué sur RNG∞');
+  // 2e ordre : il joue d'abord à Canne & Dauphins (pas de compte RNG∞), puis se connecte sur RNG∞.
+  r = await collab(googleToken({ sub: 'fish-later', aud: PECHA }));
+  assert.deepEqual([r.status, r.body.rng, r.body.reward], [200, false, null], 'pas encore de compte RNG∞');
+  r = await signIn({ sub: 'fish-later', email: 'fishlater@example.com' }, {});
+  r = await state({ playerId: r.body.playerId });
+  assert.ok(r.body.owned.includes('fisher'), 'débloqué à la connexion Google sur RNG∞');
+  // Personne d'autre ne l'a, et il ne s'achète pas.
+  r = await signIn({ sub: 'fish-none', email: 'fishnone@example.com' }, {});
+  const none = { playerId: r.body.playerId, secret: r.body.secret };
+  r = await state(none);
+  assert.ok(!r.body.owned.includes('fisher'), 'pas pour un compte qui ne joue pas aux deux');
+  r = await shop(none, 'buy', 'fisher');
+  assert.notEqual(r.status, 200, 'pas achetable');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

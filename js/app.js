@@ -2852,8 +2852,21 @@
           <div class="skin-actions"><button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<button class="btn" data-fund>💗 Contribute to get it</button>'}</div>
         </div>`;
     };
+    // Skin Fisherman (collab Canne & Dauphins) : montré à tout le monde. Il ne s'achète pas : on l'obtient en se connectant
+    // avec le même compte Google sur les deux jeux (api/site.js, action « collab », et api/auth.js).
+    const fisherTile = () => {
+      const k = Shop.FISHER, owned = state.owned.includes(k.id), equipped = state.skin === k.id;
+      return `
+        <div class="skin-tile fisher-tile${equipped ? ' equipped' : ''}">
+          <div class="num-card md skin-fisher" data-tier="rare">${slotsHTML('235711')}</div>
+          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${owned ? '' : '<span class="fisher-how">Sign in with the same Google account on RNG∞ and on Canne &amp; Dauphins to unlock it</span>'}</div>
+          <div class="skin-actions"><button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<a class="btn" href="https://pechadophin.vercel.app/" target="_blank" rel="noopener" data-fish-out>🎣 Play Canne &amp; Dauphins</a>'}</div>
+        </div>`;
+    };
     // Le skin du créateur n'apparaît que chez celui qui le possède, en tête de boutique.
-    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && !k.until)).map(tile).join('') + supporterTile();
+    grid.innerHTML = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(Shop.SKINS.filter(k => !k.premium && !k.until)).map(tile).join('') + supporterTile() + (Shop.COLLAB_LIVE || state.owned.includes('fisher') ? fisherTile() : '');
+    // Ce lien vers son jeu compte aussi dans l'encadré Collab de la page Owner.
+    grid.querySelectorAll('[data-fish-out]').forEach(a => a.addEventListener('click', () => { Online.request('/api/site', { local: true, method: 'POST', keepalive: true, body: JSON.stringify({ action: 'out', to: 'pechadophin' }) }).catch(() => {}); }));
     const premium = $('#d-premium');
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;
@@ -3803,7 +3816,8 @@
       <p class="panel-note" style="margin:-.3rem 0 0">Preview · shown as a Mythic roll, the strongest reveal</p>
       <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
       <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button>${skin.supporter && !(Store.settings.skinsOwned || []).includes('supporter') ? '<button class="btn-roll small" data-fund>💗 Contribute to get it</button>' : ''}</div>
-      ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}`, m => {
+      ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}
+      ${skin.collab ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">Collab with Canne &amp; Dauphins by L\'taleshy &amp; cocobat. Sign in with the same Google account on both games to unlock it.</p>' : ''}`, m => {
       const stage = m.querySelector('#sp-stage');
       let timers = [], spin = 0, fx = null;
       const stop = () => { timers.forEach(clearTimeout); timers = []; clearInterval(spin); if (fx) fx.destroy(); fx = null; };
@@ -3852,7 +3866,7 @@
         ${state.button === choice ? '<span class="skin-state">Equipped</span>' : action}
       </div>`;
     const equip = id => `<button class="btn" data-gen-equip="${id}">Equip</button>`;
-    const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(state.owned.includes('supporter') ? [Shop.SUPPORTER] : [], Shop.SKINS);
+    const skins = (state.owned.includes('owner') ? [Shop.OWNER] : []).concat(state.owned.includes('supporter') ? [Shop.SUPPORTER] : [], state.owned.includes('fisher') ? [Shop.FISHER] : [], Shop.SKINS);
     // Seuls les boutons qu'on peut porter ou acheter ici : celui d'un skin pas encore possédé s'obtient avec le skin.
     const mine = skins.filter(k => state.owned.includes(k.id)), locked = skins.length - mine.length;
     grid.innerHTML = [

@@ -351,3 +351,46 @@
 
 /* Avec la scène animée (js/skinfx.js), la ligne de pouls est dessinée dans le canvas : celle du CSS se retire. */
 .num-card.skin-supporter.has-fx::before { opacity: 0; animation: none; }
+
+/* ------------------------------------------------------------------ Fisherman (collab Canne & Dauphins, exclusif) :
+   une petite fenêtre de mer en pixel art dans un cadre de planches (le ponton du jeu de Firetail), ses couleurs et sa
+   police pixel. Sous l'eau pendant le tirage, chaque chiffre est ferré : il plonge un peu, puis il est arraché vers le
+   haut. Le pêcheur, la canne, le fil et les dauphins sont dessinés par la scène (js/skinfx.js, SCENES.fisher). */
+.num-card.skin-fisher {
+  background:
+    repeating-linear-gradient(90deg, #d8f1ff 0 .45em, transparent .45em .9em) 0 57% / 100% .16em no-repeat,
+    linear-gradient(180deg, #3f8fe8 0 10%, #4a9aec 10% 20%, #57a6f0 20% 30%, #66b2f3 30% 40%, #8dcbf7 40% 49%, #bce3fb 49% 56%, #4a9be8 56% 60%, #2b78cf 60% 80%, #2468b8 80% 100%);
+  border: 4px solid #6b3f1c; border-radius: 0;
+  box-shadow: inset 0 0 0 2px #c98a4b, inset 0 0 0 4px #3a2410, 4px 4px 0 #14182c;
+  animation: fisher-waves 1.2s steps(2) infinite;
+}
+@keyframes fisher-waves { to { background-position: .45em 57%, 0 0; } }
+.skin-fisher .slot {
+  font-family: 'Press Start 2P', monospace; font-size: .6em; width: 1.05em; color: #ffffff;
+  text-shadow: .08em 0 0 #14182c, -.08em 0 0 #14182c, 0 .08em 0 #14182c, 0 -.08em 0 #14182c, .08em .08em 0 #14182c, -.08em .08em 0 #14182c, .08em -.08em 0 #14182c, -.08em -.08em 0 #14182c, 0 .2em 0 #27479a;
+}
+/* Sous l'eau : bleuté, et il ondule par saccades de pixels. */
+.skin-fisher .slot.spinning { color: #a8dcff; animation: fisher-under .24s steps(2) infinite; }
+@keyframes fisher-under { from { transform: translateY(.08em); opacity: .7; } to { transform: translateY(-.04em); opacity: .9; } }
+/* Ferré : il plonge (le poisson tire), puis il est arraché hors de l'eau, retombe et se pose. */
+.skin-fisher .slot.revealed { animation: fisher-yank .6s steps(10) backwards; }
+@keyframes fisher-yank { 0% { transform: translateY(.18em); color: #a8dcff; } 22% { transform: translateY(.34em); color: #a8dcff; } 50% { transform: translateY(-.5em); color: #ffffff; } 72% { transform: translateY(.1em); } 86% { transform: translateY(-.06em); } 100% { transform: none; } }
+.skin-fisher .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Zéros de tête : après les règles d'animation (sinon elles leur rendraient l'opacité, comme sur Haunted). */
+.skin-fisher .slot.ghost, .skin-fisher .slot.ghost.revealed { animation: none; opacity: .18; }
+.skin-fisher .slot.collapsed, .skin-fisher .slot.collapsed.revealed { animation: none; opacity: 0; text-shadow: none; }
+.room-stage.many .num-card.skin-fisher { animation: none; }
+@media (prefers-reduced-motion: reduce) { .num-card.skin-fisher, .skin-fisher .slot { animation: none; } }
+.btn-roll.gen-fisher {
+  border: 3px solid #6b3f1c; border-radius: 0; color: #ffffff; font-family: 'Press Start 2P', monospace; letter-spacing: 0;
+  background: linear-gradient(180deg, #57a6f0 0 45%, #4a9be8 45% 52%, #2b78cf 52%);
+  text-shadow: .1em 0 0 #14182c, -.1em 0 0 #14182c, 0 .1em 0 #14182c, 0 -.1em 0 #14182c;
+  --gs: 0 .3em 0 #3a2410, 0 .5em 0 #14182c; --gs-h: 0 .34em 0 #3a2410, 0 .56em 0 #14182c; --gs-a: 0 .06em 0 #3a2410;
+}
+.side-fisher { --side-border: #c98a4b; --side-glow: 0 0 0 2px #6b3f1c; --side-ink: #fff2a8;
+  --side-bg: linear-gradient(180deg, rgba(63, 143, 232, .35) 0 55%, rgba(74, 155, 232, .5) 55% 60%, rgba(36, 104, 184, .55) 60%);
+  --deco-a: '🎣'; --deco-b: '🐬'; }
+.side-fisher::after { animation: fisher-dolphin 3s steps(6) infinite; }
+@keyframes fisher-dolphin { 0%, 60% { transform: translateY(0); } 75% { transform: translateY(-8px) rotate(-15deg); } 90% { transform: translateY(-3px) rotate(10deg); } }
+.room-stage.many .side-fisher::after { animation: none; }
+.fisher-how { display: block; margin-top: .25rem; color: #c98a4b; font-weight: 600; }

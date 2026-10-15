@@ -15,7 +15,7 @@
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256 } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -64,6 +64,12 @@ async function pushMessage(id, from, text, t) {
 // ---------------------------------------------------------------- fréquentation
 const AN_TTL = 200 * 86400, AN_FIELDS_MAX = 400;
 const PARTNERS = ['pechadophin']; // sites partenaires dont on compte les clics sortants (action « out »)
+// Récompenses croisées de la collab (2026-10-15) : un jeu partenaire envoie le jeton de connexion Google de son joueur
+// (action « collab »). On vérifie la signature de Google et que le jeton a bien été émis pour CE jeu (son identifiant
+// client), puis on retient que ce compte Google y joue (collab:<jeu>:subs, l'identifiant Google « sub », jamais l'e-mail).
+// Si ce compte Google a aussi un compte RNG∞, on lui donne le skin de la collab et on répond rng: true : le jeu partenaire
+// donne alors le sien. Dans l'autre ordre, api/auth.js donne le skin à la connexion Google sur RNG∞.
+const COLLAB = { pechadophin: { clientId: '613987510700-0gp3rfu2tmcm32uu0aun7q1lmubl8vav.apps.googleusercontent.com', stat: 'collabFish', reward: 'rnginf' } };
 const anKey = day => `an:${day}`, geoKey = day => `ang:${day}`, GEO_CELLS_MAX = 1500;
 const host = raw => {
   const h = String(raw || '').toLowerCase().replace(/^www\./, '');
@@ -437,6 +443,15 @@ module.exports = async (req, res) => {
     // Message automatique de la page de dons (Ko-fi) : il arrive sur /api/site?kofi=1, dans un autre format.
     if (/[?&]kofi=1/.test(req.url || '')) return send(res, ...(await kofiWebhook(req)));
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    if (body.action === 'collab') {
+      const game = COLLAB[String(body.game)];
+      if (!game) return send(res, 400, { error: 'Unknown game' });
+      let google;
+      try { google = await verifyGoogleToken(String(body.credential || ''), game.clientId); } catch (e) { return send(res, 401, { error: 'Invalid Google sign-in' }); }
+      const [, playerId] = await redis([['SADD', `collab:${body.game}:subs`, google.sub], ['GET', `google:${google.sub}`]]);
+      if (playerId) await redis([['HSET', statsKey(playerId), game.stat, 1]]);
+      return send(res, 200, { ok: true, rng: !!playerId, reward: playerId ? game.reward : null });
+    }
     // Clic sur le lien d'un site partenaire (collab), compté par jour comme les visites. Seuls les partenaires connus.
     if (body.action === 'out') {
       const to = PARTNERS.includes(String(body.to)) ? String(body.to) : '';
