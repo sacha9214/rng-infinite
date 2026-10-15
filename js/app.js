@@ -1498,6 +1498,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16a', date: 'Oct 16, 2026', en: ['🔎 XP checker on the Badges page: type any number to see its XP and badges (shown as a simulation, it is not a roll)', 'New badges: 🪖 Spartans (contains 117) and Exact Spartan (exactly 117), and Fibonacci slices like the Pi ones: contains 112, 1123, 11235, and Exact Fibonacci (112358). Only the best badge of each family counts, like Pi', 'Crash: an instant crash at 1.00× now says so (it happens about 2 times in 100)'], fr: ['🔎 Vérificateur d\'XP dans la page Badges : tape un nombre pour voir son XP et ses badges (affiché comme une simulation, ce n\'est pas un tirage)', 'Nouveaux badges : 🪖 Spartans (contient 117) et Exact Spartan (exactement 117), et des tranches de Fibonacci comme pour Pi : contient 112, 1123, 11235, et Exact Fibonacci (112358). Seul le meilleur badge de chaque famille compte, comme pour Pi', 'Crash : une explosion immédiate à 1.00× l\'explique maintenant (ça arrive environ 2 fois sur 100)'] },
     { id: '2026-10-15g', date: 'Oct 15, 2026', en: ['🎣 New exclusive skin: Fisherman, a collab with Canne & Dauphins by L\'taleshy & cocobat. Their fisherman reels in your digits one by one, and dolphins jump over your card. To get it, sign in with the same Google account on RNG∞ and on Canne & Dauphins (you also get an RNG∞ skin in their game!). It is in the Shop, Skins tab'], fr: ['🎣 Nouveau skin exclusif : Pêcheur, en collab avec Canne & Dauphins de L\'taleshy et cocobat. Leur pêcheur remonte tes chiffres un par un, et des dauphins sautent par-dessus ta carte. Pour l\'avoir, connecte-toi avec le même compte Google sur RNG∞ et sur Canne & Dauphins (tu gagnes aussi un skin RNG∞ dans leur jeu !). Il est dans la boutique, onglet Skins'] },
     { id: '2026-10-15f', date: 'Oct 15, 2026', en: ['🎣 Fishing now has 8-bit sounds: the cast, the splash, a beep at each round multiplier, the reel, a little fanfare for your catch (longer for pink and red dolphins), the shark\'s bite and the line snapping', 'Bug fixes from your reports, thank you! The Lifetime XP leaderboard now matches the XP on your page again (it is recalculated whenever badges change). Haunted: the leading zero no longer shows as a little grey block, and the windows are back on the houses. Galaxy and the other skins: no more streaks left on the side of the screen. Blackjack: the Match bet explanation now says it compares your card with the dealer\'s face-up card, by exact rank'], fr: ['🎣 La pêche a maintenant des sons 8-bit : le lancer, le plouf, un bip à chaque multiplicateur rond, le moulinet, une petite fanfare pour ta prise (plus longue pour les dauphins roses et rouges), la morsure du requin et le fil qui casse', 'Bugs corrigés grâce à vos signalements, merci ! Le classement Lifetime XP correspond de nouveau à l\'XP de ta page (il est recalculé quand les badges changent). Haunted : le zéro de tête n\'apparaît plus en petit bloc gris, et les fenêtres sont revenues sur les maisons. Galaxy et les autres skins : plus de traînées sur le bord de l\'écran. Blackjack : l\'explication du pari Match précise qu\'il compare ta carte à la carte visible du croupier, au rang exact'] },
     { id: '2026-10-15e', date: 'Oct 15, 2026', en: ['🎣 Fishing: smoother animation. The line, the camera, the dolphins and the shark now glide instead of moving pixel by pixel, with the same crisp pixel art'], fr: ['🎣 Pêche : animation plus fluide. La ligne, la caméra, les dauphins et le requin glissent maintenant au lieu d\'avancer pixel par pixel, avec le même pixel art bien net'] },
@@ -2239,6 +2240,11 @@
     app.innerHTML = `
       <div class="page page-wide">
         <h1 class="page-title">Badges</h1>
+        <div class="panel xc-panel">
+          <div class="panel-head"><h3 class="panel-title">🔎 XP checker</h3><span class="panel-note">type any number to see its XP and badges · it is not a roll</span></div>
+          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><button class="btn">Check</button></form>
+          <div id="xc-out"></div>
+        </div>
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>
@@ -2247,6 +2253,21 @@
       </div>`;
     mountCollection(localCollection(), collState);
     loadMyAchievements();
+    // Vérificateur d'XP (idée d'un joueur, 2026-10-16) : n'importe quel nombre, calculé ici comme un tirage, mais affiché
+    // exprès autrement qu'un tirage (cadre pointillé, « SIMULATION », pas de skin) : une capture ne peut pas passer pour un vrai.
+    $('#xc-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const raw = $('#xc-n').value.trim(), n = Number(raw);
+      if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      const a = analysis(n), top = Engine.topLabel(a.percentile);
+      $('#xc-out').innerHTML = `
+        <div class="xc-result">
+          <span class="xc-sim">Simulation · not a roll</span>
+          <div class="xc-num mono" data-no-i18n>${(() => { const full = String(n).padStart(6, '0'), lead = n ? full.search(/[1-9]/) : 5; return `<span class="xc-ghost">${full.slice(0, lead)}</span>${full.slice(lead)}`; })()}</div>
+          <div class="xc-meta"><span class="badge-pill" data-tier="${a.tier}">${esc(a.tier)}</span><b class="mono">${fmt(a.total)} XP</b><span class="panel-note">${esc(top)}</span></div>
+          <div class="pill-row xc-badges">${a.groups.length ? a.groups.map(g => `<span class="badge-pill" data-tier="${g.badge.tier}" data-badge="${g.badge.id}" style="cursor:pointer">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join(' ') : '<span class="panel-note">No badge</span>'}</div>
+        </div>`;
+    });
   }
 
   // Mes succès (calculés par le serveur) et le titre équipé, dans l'onglet Badges.
@@ -3685,7 +3706,7 @@
       cc.fillStyle = '#38bdf8'; cc.beginPath(); cc.arc(5, 0, 3.4, 0, 7); cc.fill(); cc.strokeStyle = '#0f172a'; cc.lineWidth = 1; cc.stroke();
       cc.restore();
     };
-    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; if (Fish) { if (res.result === 'cash') Fish.catch(res.mult); else Fish.snap(res.point); } screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
+    const endCrash = res => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; const m = res.result === 'cash' ? res.mult : res.point; if (Fish) { if (res.result === 'cash') Fish.catch(res.mult); else Fish.snap(res.point); } screen.dataset.state = res.result; $('#cr-mult').textContent = `${m.toFixed(2)}×`; drawCurve(m, res.result); if (res.result === 'crash') { let n = 0; const ex = () => { if (n++ < 40 && currentView === 'gamble' && !Gamble.cr) { drawCurve(m, 'crash'); requestAnimationFrame(ex); } }; requestAnimationFrame(ex); } $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; say($('#cr-result'), res.win, res.bet, res.result === 'cash' ? `Cashed out at ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins (it crashed at ${res.point.toFixed(2)}×)` : res.point <= 1 ? `Instant crash at 1.00×: it happens about 2 times in 100, that is the casino's edge · −${fmt(res.bet)}` : `Crashed at ${res.point.toFixed(2)}× · −${fmt(res.bet)}`); if (res.result === 'cash') { Sound.play('reveal', { small: 1 }); if (res.mult >= 2) FX.celebrate(res.mult >= 5 ? 'epic' : 'uncommon', screen); } showCoins(res.coins); };
     // La manche n'existe plus côté serveur (expirée, ou finie depuis un autre onglet) : retour à l'écran de départ.
     const resetCrash = coins => { cancelAnimationFrame(Gamble.raf); clearInterval(Gamble.poll); Gamble.cr = null; if (Fish) Fish.idle(); screen.dataset.state = 'idle'; $('#cr-mult').textContent = '1.00×'; drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; showCoins(coins); };
     // La fusée (ou la ligne de pêche) s'affiche avec un peu de retard sur le serveur, et on sonde toutes les CR_POLL ms : l'explosion est

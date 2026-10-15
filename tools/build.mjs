@@ -18,7 +18,7 @@ const custom = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/source/custom.j
 const CUSTOM_IDS = new Set(custom.map(b => b.id));
 const BADGE_META = [
   ...meta.map(b => ({ id: b.id, label: b.label, desc: b.desc, emoji: b.emoji, score: b.score, family: family[b.id] || null })),
-  ...custom.map(b => ({ id: b.id, label: b.label, desc: b.desc, emoji: b.emoji, score: b.score, family: null, custom: true })),
+  ...custom.map(b => ({ id: b.id, label: b.label, desc: b.desc, emoji: b.emoji, score: b.score, family: b.family || null, custom: true })), // family : seul le meilleur badge de la famille compte (comme Pi)
 ].sort((a, b) => b.score - a.score);
 
 const SPAN = 1000001;

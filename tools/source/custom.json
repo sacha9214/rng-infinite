@@ -117,5 +117,53 @@
     "desc": "Exactly \"91625\": 9 + 16 = 25, the squares of the 3-4-5 right triangle.",
     "emoji": "📐",
     "score": 100000100
+  },
+  {
+    "id": "SPARTANS",
+    "label": "Spartans",
+    "desc": "Contains \"117\", a Spartan's number.",
+    "emoji": "🪖",
+    "score": 25006,
+    "family": "SPARTAN"
+  },
+  {
+    "id": "SPARTAN_EXACT",
+    "label": "Exact Spartan",
+    "desc": "Exactly \"117\".",
+    "emoji": "🪖",
+    "score": 100000100,
+    "family": "SPARTAN"
+  },
+  {
+    "id": "FIB_CONTAINS_3",
+    "label": "Fibonacci Slice (3)",
+    "desc": "Contains \"112\": 1, 1, 2, the start of the Fibonacci sequence.",
+    "emoji": "🐚",
+    "score": 25006,
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_CONTAINS_4",
+    "label": "Fibonacci Slice (4)",
+    "desc": "Contains \"1123\": 1, 1, 2, 3.",
+    "emoji": "🐚",
+    "score": 333334,
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_CONTAINS_5",
+    "label": "Fibonacci Slice (5)",
+    "desc": "Contains \"11235\": 1, 1, 2, 3, 5.",
+    "emoji": "🐚",
+    "score": 5000005,
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_EXACT",
+    "label": "Exact Fibonacci",
+    "desc": "Exactly \"112358\": 1, 1, 2, 3, 5, 8, each number is the sum of the two before.",
+    "emoji": "🐚",
+    "score": 100000100,
+    "family": "FIB_SLICE"
   }
 ]
