@@ -2068,6 +2068,14 @@
         dark: document.documentElement.classList.contains('dark'), q: (root.innerWidth < 720 ? .65 : 1) * (o.q || 1), // o.q : scène allégée (duel à plusieurs)
       };
       const scene = o.owner ? both(make ? make(env) : null, OWNER(env)) : make(env);
+      // Bords du calque extérieur fondus : un rayon ou une particule qui sort du calque s'efface au lieu d'être coupé net
+      // (les rayons de Galaxy laissaient une colonne de traits sur le bord droit, signalé par un joueur le 2026-10-15).
+      const FADE = Math.min(40, mx * .3, my * .3);
+      const fades = [[0, 0, FADE, 0, 0, 0, FADE, H], [W, 0, W - FADE, 0, W - FADE, 0, FADE, H], [0, 0, 0, FADE, 0, 0, W, FADE], [0, H, 0, H - FADE, 0, H - FADE, W, FADE]].map(([x0, y0, x1, y1, rx, ry, rw, rh]) => {
+        const gr = co.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        return [gr, rx, ry, rw, rh];
+      });
+      const fadeEdges = () => { co.save(); co.globalAlpha = 1; co.globalCompositeOperation = 'destination-out'; for (const [gr, x, y, fw, fh] of fades) { co.fillStyle = gr; co.fillRect(x, y, fw, fh); } co.restore(); };
       let t = 0, last = 0, raf = 0, stopped = false, restSince = Infinity, skip = false, owed = 0;
       const frame = now => {
         if (stopped || !outer.isConnected) return;
@@ -2083,6 +2091,7 @@
         co.clearRect(0, 0, W, H);
         ci.globalAlpha = co.globalAlpha = 1;
         scene.frame(t, owed);
+        fadeEdges();
         owed = 0;
       };
       if (!o.manual) raf = requestAnimationFrame(frame);
@@ -2097,7 +2106,7 @@
         stop() { stopped = true; cancelAnimationFrame(raf); },
         // Mode manuel (o.manual, pour le trailer) : pas d'horloge ; l'appelant avance la scène lui-même, de dt secondes,
         // et obtient donc la même image pour le même instant.
-        step(dt) { if (stopped) return; t += dt; ci.clearRect(0, 0, w, h); co.clearRect(0, 0, W, H); ci.globalAlpha = co.globalAlpha = 1; try { scene.frame(t, dt); } catch (e) { /* une scène ne casse rien */ } },
+        step(dt) { if (stopped) return; t += dt; ci.clearRect(0, 0, w, h); co.clearRect(0, 0, W, H); ci.globalAlpha = co.globalAlpha = 1; try { scene.frame(t, dt); fadeEdges(); } catch (e) { /* une scène ne casse rien */ } },
         // Arrête la scène et retire ses calques : indispensable quand la carte est rejouée au même endroit (manches
         // d'un duel), sinon l'ancienne image reste affichée par-dessus la nouvelle.
         destroy() { stopped = true; cancelAnimationFrame(raf); outer.remove(); inner.remove(); card.classList.remove('has-fx'); },

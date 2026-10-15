@@ -3225,7 +3225,7 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
    une maison hantée sous la lune au fond, des chiffres de brume blanche à moitié transparents. */
 .num-card.skin-haunted {
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60' preserveAspectRatio='xMidYMax slice'%3E%3Cpath fill='%230f0c1a' d='M0 60V50h8l3-6 3 6h4V40l8-9 8 9v20h6V30l7-12 7 12v30h8V46l10-8 10 8v14h20V42l5-5 5 5v18h40V48l4-3 4 3v12h45V60z'/%3E%3Crect fill='%23f59e0b' opacity='.85' x='52' y='34' width='3' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.7' x='58' y='34' width='3' height='4'/%3E%3Crect fill='%23fb923c' opacity='.8' x='86' y='48' width='4' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.6' x='30' y='45' width='3' height='4'/%3E%3Cpath fill='%230f0c1a' d='M150 60l2-12 2 12M160 60l1-8 3-1 1 9'/%3E%3C/svg%3E") 50% 100% / 100% 42% no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60' preserveAspectRatio='xMidYMax slice'%3E%3Cpath fill='%230f0c1a' d='M0 60V50h8l3-6 3 6h4V40l8-9 8 9v20h6V30l7-12 7 12v30h8V46l10-8 10 8v14h20V42l5-5 5 5v18h40V48l4-3 4 3v12h45V60z'/%3E%3Crect fill='%23f59e0b' opacity='.85' x='43' y='34' width='3' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.7' x='49' y='34' width='3' height='4'/%3E%3Crect fill='%23fb923c' opacity='.8' x='70' y='49' width='4' height='4'/%3E%3Crect fill='%23f59e0b' opacity='.6' x='24' y='45' width='3' height='4'/%3E%3Cpath fill='%230f0c1a' d='M150 60l2-12 2 12M160 60l1-8 3-1 1 9'/%3E%3C/svg%3E") 50% 100% / 100% 42% no-repeat,
     radial-gradient(circle at 93% 16%, #fef9c3 0 5%, rgba(254, 249, 195, .3) 7%, transparent 12%),
     linear-gradient(180deg, #1e0b45 0%, #4c1d95 55%, #c2410c 120%);
   border: 2px solid #7c3aed; border-radius: .7rem;
@@ -3245,6 +3245,10 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .skin-haunted .slot.revealed { animation: haunt-appear .7s ease-out backwards, haunt-float 3.2s .7s ease-in-out infinite; }
 @keyframes haunt-appear { 0% { transform: scale(1.35) translateY(-.15em); filter: blur(.12em); opacity: 0; } 60% { transform: scale(.96); filter: blur(0); opacity: .95; } 75% { transform: translateX(-.02em); } 88% { transform: translateX(.02em); } 100% { transform: none; } }
 .skin-haunted .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Zéros de tête : après les règles d'animation, sinon le flottement leur rend l'opacité (le zéro réapparaissait en petit
+   rectangle lumineux en bas à gauche de la carte, signalé par un joueur le 2026-10-15). */
+.skin-haunted .slot.ghost, .skin-haunted .slot.ghost.revealed { animation: none; opacity: .15; }
+.skin-haunted .slot.collapsed, .skin-haunted .slot.collapsed.revealed { animation: none; opacity: 0; text-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .skin-haunted .slot { animation: none; } }
 /* Cadre de duel : un cimetière (tombes en bas), des fantômes qui sortent et flottent. */
 .side-haunted { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .4); --side-ink: #c4b5fd;

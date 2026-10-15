@@ -6,7 +6,13 @@ const { redis, engine, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, cors, 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
 const MIGRATED = 'lb:xp:migrated';
-const MIGRATION = '2'; // 1 : XP à vie ; 2 : + nombre de tirages à vie (count:all ne comptait que depuis le 2026-09-21)
+// 1 : XP à vie ; 2 : + nombre de tirages à vie (count:all ne comptait que depuis le 2026-09-21) ;
+// 3 : la version suit d'elle-même les règles des badges (empreinte de data/badge-meta.json et de js/engine.js). Un badge
+// ajouté ou changé change l'XP des anciens tirages, comme l'affiche la page du joueur : l'XP à vie du classement est
+// alors recalculée depuis l'historique au lieu de garder l'ancien total (signalé par un joueur le 2026-10-15).
+const MIGRATION = '3:' + require('node:crypto').createHash('sha256')
+  .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
+  .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
 // Remplissage unique pour les joueurs d'avant ces compteurs (2026-09-23), par lots, en quelques secondes au plus :
 // lb:xp (XP à vie) et count:all (tirages à vie). Les tirages suivants les incrémentent dans recordRoll ;

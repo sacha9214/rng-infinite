@@ -114,6 +114,9 @@
     g.imageSmoothingEnabled = false;
     const st = { phase: 'idle', t0: 0, lureY: PY + 6, lureX: 0, target: 0, camY: 0, kind: 'blue', parts: [], bubbles: [], flash: 0, shake: 0, sharkX: 0, startY: 0, jumpUntil: 0, snapEnd: null, raf: 0 };
     const now = () => performance.now() / 1000;
+    // Sons 8-bit (js/sound.js) : seulement si la scène est à l'écran ; le réglage son du joueur est respecté par Sound.
+    const sfx = (type, o) => { try { if (root.Sound && canvas.offsetParent !== null) root.Sound.play(type, o || {}); } catch (e) { /* jamais bloquant */ } };
+    const MARKS = [1.5, 2, 3, 5, 10, 20, 50, 100];
     const manX = 74, manTop = PY - 16, hand = () => ({ x: manX + 5, y: manTop + 10 });
     // Bout de la canne : au repos, levée ; pendant le lancer, elle part en arrière puis fouette vers l'avant.
     const tip = t => {
@@ -206,19 +209,21 @@
       else if (st.phase === 'cast') {
         const u = clamp((t - st.t0 - .3) / .45, 0, 1);
         if (u <= 0) { lx = tp.x; ly = tp.y + 4; } else { lx = tp.x + (LX - tp.x) * u; ly = tp.y + (WY + 2 - tp.y) * u - Math.sin(Math.PI * u) * 34; }
-        if (u >= 1 && !st.landedSplash) { st.landedSplash = true; splash(LX, WY, 10); }
+        if (u >= 1 && !st.landedSplash) { st.landedSplash = true; splash(LX, WY, 10); sfx('fishSplash'); }
         if (t - st.t0 > .75) { st.phase = 'down'; st.lureY = WY + 2; }
         else st.lureY = ly;
       } else if (st.phase === 'down') {
         st.lureY += (WY + 4 + st.target - st.lureY) * Math.min(1, dt * 14);
         lx = LX + Math.sin(t * 2.2) * 2; ly = st.lureY;
+        while (st.mark < MARKS.length && st.target >= depthOf(MARKS[st.mark])) { sfx('fishMark', { step: st.mark }); st.mark++; }
         if (Math.random() < dt * 5) st.bubbles.push({ x: lx + (Math.random() - .5) * 4, y: ly - 2, l: 1 });
       } else if (st.phase === 'reel') {
         const dur = st.dur, u = clamp((t - st.t0) / dur, 0, 1);
+        if (u < .72 && t - (st.lastReel || 0) > .065) { st.lastReel = t; sfx('fishReel', { k: st.reelK = (st.reelK || 0) + 1 }); }
         if (u < .72) { const v = ease(u / .72); ly = st.startY + (WY + 2 - st.startY) * v; lx = LX + Math.sin(t * 9) * 2 * (1 - v); }
-        else { const v = ease((u - .72) / .28); lx = LX + (tp.x + 2 - LX) * v; ly = WY + 2 + (tp.y + 18 - WY - 2) * v - Math.sin(Math.PI * v) * 26; if (!st.breach) { st.breach = true; splash(LX, WY, 14); } }
+        else { const v = ease((u - .72) / .28); lx = LX + (tp.x + 2 - LX) * v; ly = WY + 2 + (tp.y + 18 - WY - 2) * v - Math.sin(Math.PI * v) * 26; if (!st.breach) { st.breach = true; splash(LX, WY, 14); sfx('fishSplash'); } }
         st.lureY = ly;
-        if (u >= 1) st.phase = 'landed';
+        if (u >= 1) { st.phase = 'landed'; sfx('fishCatch', { kind: st.kind }); }
       } else if (st.phase === 'landed') { lx = tp.x + 2 + Math.sin(t * 2) * 1; ly = tp.y + 18; }
       if (st.phase !== 'snap' && st.phase !== 'broken') {
         line(tp.x, ty, lx, ly - cy, '#f4f7ff');
@@ -235,7 +240,7 @@
         const u = t - st.t0, biteX = LX + 2, by = st.lureY;
         let sx;
         if (u < .45) sx = W + 50 - (W + 50 - biteX) * ease(u / .45); else sx = biteX - (u - .45) * 120 - Math.max(0, u - 1.2) * 120;
-        if (u >= .45 && !st.bitten) { st.bitten = true; st.flash = 1; st.shake = 1; st.jumpUntil = t + .5; splash(biteX, by - cy, 18, '#ffd9d0'); st.snapEnd = { x: LX, y: by, vx: 0, vy: 0 }; }
+        if (u >= .45 && !st.bitten) { st.bitten = true; sfx('fishBite'); sfx('fishSnap'); sfx('fishSplash'); st.flash = 1; st.shake = 1; st.jumpUntil = t + .5; splash(biteX, by - cy, 18, '#ffd9d0'); st.snapEnd = { x: LX, y: by, vx: 0, vy: 0 }; }
         // le fil : entier jusqu'à la morsure, puis le bout cassé remonte comme un ressort
         if (!st.bitten) { line(tp.x, ty, LX + Math.sin(t * 2.2) * 2, by - cy, '#f4f7ff'); g.drawImage(S.lure, LX - 5, snap(by - cy) - 3); }
         else { const e = st.snapEnd; e.vx += (tp.x - e.x) * 30 * dt - e.vx * 4 * dt; e.vy += (tp.y + 10 - e.y) * 30 * dt - e.vy * 4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; line(tp.x, ty, e.x, e.y - cy, '#f4f7ff'); }
@@ -274,8 +279,8 @@
     return {
       wake,
       idle() { Object.assign(st, { phase: 'idle', target: 0, bitten: false, breach: false, landedSplash: false }); wake(); },
-      cast() { Object.assign(st, { phase: 'cast', t0: now(), target: 0, bitten: false, breach: false, landedSplash: false, flash: 0 }); wake(); },
-      resume(m) { Object.assign(st, { phase: 'down', target: depthOf(m || 1), lureY: WY + 4 + depthOf(m || 1), camY: Math.max(0, WY + 4 + depthOf(m || 1) - H * .6) }); wake(); },
+      cast() { Object.assign(st, { phase: 'cast', t0: now(), target: 0, bitten: false, breach: false, landedSplash: false, flash: 0, mark: 0 }); sfx('fishCast'); wake(); },
+      resume(m) { Object.assign(st, { mark: MARKS.filter(x => x <= (m || 1)).length, phase: 'down', target: depthOf(m || 1), lureY: WY + 4 + depthOf(m || 1), camY: Math.max(0, WY + 4 + depthOf(m || 1) - H * .6) }); wake(); },
       depth(m) { st.target = depthOf(m); if (st.phase === 'idle' || st.phase === 'landed' || st.phase === 'broken') this.resume(m); },
       catch(m) { if (st.phase === 'cast') st.lureY = WY + 2; Object.assign(st, { phase: 'reel', t0: now(), startY: Math.max(WY + 2, st.lureY), kind: kindOf(m), breach: false, dur: Math.min(1.8, .8 + (Math.max(WY + 2, st.lureY) - WY) / 700) }); wake(); },
       snap(p) { st.lureY = WY + 4 + depthOf(p || 1); Object.assign(st, { phase: 'snap', t0: now(), bitten: false }); wake(); },

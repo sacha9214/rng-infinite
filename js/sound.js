@@ -28,7 +28,51 @@
   const thud = () => S.gain(S.boom(.6, 100, 50), .6);
   const ring = (n, g) => S.gain(S.bell(S.note(n), .5), g);
   const arpeggio = (level, dt = 0) => [5, 7, 8].map((n, i) => [S.bell(S.note(n), .7, .8), dt + i * .07, level, 0, .45]);
+  // ---- Pêche (collab Canne & Dauphins) : des sons 8-bit, comme une vieille console. Ondes carrées (le rapport cyclique
+  // donne le grain), bruit « échantillonné-bloqué » pour les éclaboussures, et des glissés de hauteur. Courts et secs.
+  const chip = (f0, f1, dur, duty = .5, curve = 3) => {
+    const n = Math.round(dur * RATE), o = new Float32Array(n);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const u = i / n, f = f0 * Math.pow(f1 / f0, u); // glissé exponentiel
+      ph += f / RATE; ph -= Math.floor(ph);
+      const env = Math.min(1, i / (.004 * RATE)) * Math.pow(1 - u, curve);
+      o[i] = (ph < duty ? 1 : -1) * env;
+    }
+    return o;
+  };
+  // Bruit à la manière des consoles : une valeur au hasard tenue pendant quelques échantillons (plus elle est tenue, plus
+  // le bruit est grave). La tenue s'allonge au fil du son : l'éclaboussure part aiguë et retombe.
+  const crunch = (dur, hold0, hold1, curve = 2) => {
+    const n = Math.round(dur * RATE), o = new Float32Array(n);
+    let v = 0, left = 0;
+    for (let i = 0; i < n; i++) {
+      const u = i / n;
+      if (left-- <= 0) { v = Math.random() * 2 - 1; left = Math.round(hold0 + (hold1 - hold0) * u); }
+      o[i] = v * Math.min(1, i / (.003 * RATE)) * Math.pow(1 - u, curve);
+    }
+    return o;
+  };
+  const tune = (notes, step, duty = .25) => notes.map((f, i) => [chip(f, f, step * 1.6, duty, 1.5), i * step]);
+  const FISH = { cast: .14, splash: .2, reel: .05, mark: .07, catch: .13, bite: .26, snap: .16 };
   const RECIPES = {
+    // Pêche. Lancer : la canne fouette (glissé qui descend) et le fil siffle.
+    fishCast: () => [[chip(1400, 260, .22, .125, 2), 0, FISH.cast, .2, .05], [crunch(.18, 2, 6, 3), .02, FISH.cast * .5, .2, .05]],
+    // Plouf : bruit qui retombe et petit « bloup » grave.
+    fishSplash: () => [[crunch(.32, 3, 26, 2), 0, FISH.splash, .3, .08], [chip(420, 110, .16, .5, 2), 0, FISH.splash * .6, .3, .05]],
+    // Un cran du moulinet (joué en rafale pendant la remontée) ; k varie la hauteur.
+    fishReel: ({ k }) => [[chip(900 + (k % 3) * 120, 700, .025, .25, 1), 0, FISH.reel, -.1, 0]],
+    // Le leurre passe un multiplicateur rond (2×, 3×, 5×, 10×…) : un « bip » qui monte avec la profondeur (step 0 à 7).
+    fishMark: ({ step }) => [[chip(523 * Math.pow(2, step / 6), 523 * Math.pow(2, step / 6), .07, .5, 1.2), 0, FISH.mark, .2, .1]],
+    // Prise : la petite fanfare, plus longue et plus aiguë pour un dauphin rose, encore plus pour un rouge.
+    fishCatch: ({ kind }) => {
+      const notes = kind === 'red' ? [523, 659, 784, 1047, 1319, 1568] : kind === 'pink' ? [523, 659, 784, 1047, 1319] : [523, 659, 784, 1047];
+      return tune(notes, .075).map(([b, dt]) => [b, dt, FISH.catch, 0, .12]);
+    },
+    // Le requin croque : un grave qui s'écrase et un craquement.
+    fishBite: () => [[chip(190, 45, .38, .5, 1.5), 0, FISH.bite, 0, .1], [crunch(.22, 6, 40, 1.5), 0, FISH.bite * .8, 0, .08]],
+    // Le fil casse : un « twang » aigu qui retombe.
+    fishSnap: () => [[chip(1800, 220, .2, .125, 2.5), 0, FISH.snap, -.2, .06], [chip(3600, 3600, .012, .5, 1), 0, FISH.snap * .7, -.2, 0]],
     // Le bouton Generate.
     click: () => [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]],
     // Cliquetis des rouleaux (k : la variante). soft : en duel. last, de 1 à 8 : le dernier rouleau, de plus en plus grave et fort.

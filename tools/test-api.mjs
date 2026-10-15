@@ -679,7 +679,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.equal(run([['GET', 'lb:xp:migrated']])[0].result, '2', 'rempli une seule fois');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^3:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
+  run([['SET', 'lb:xp:migrated', '3:000000000000'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
+  r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
+  assert.equal(r.body.entries.find(e => e.name === 'Alice').s, xpFromHistory(alice), 'recalculé après un changement de badges');
   // Un nouveau tirage s'ajoute tout de suite.
   db.delete(`cooldown:${frank.playerId}`);
   const before = (await call(leaderboard, { url: '/api/leaderboard?period=xp' })).body.entries.find(e => e.name === 'Frank').s;
