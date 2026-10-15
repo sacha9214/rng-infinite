@@ -11,6 +11,9 @@
   'use strict';
   const W = 256, H = 144, WY = 72, PY = WY - 12; // largeur, hauteur, surface de l'eau, dessus du ponton (en pixels)
   const LX = 150, PER_LOG = 240; // x du leurre dans l'eau ; pixels de descente par unité de ln(multiplicateur)
+  // Dessin à 3× la résolution du pixel art : les sprites restent aussi nets (chaque pixel devient un bloc 3×3), mais ce
+  // qui bouge (caméra, leurre, requin, nuages) avance par tiers de pixel au lieu de sauter d'un gros pixel à la fois.
+  const RES = 3, snap = v => Math.round(v * RES) / RES;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
   // ---- sprites de Firetail (mêmes grilles, mêmes palettes, même contour)
@@ -106,6 +109,7 @@
 
   function create(canvas) {
     if (!S) build();
+    canvas.width = W * RES; canvas.height = H * RES;
     const g = canvas.getContext('2d');
     g.imageSmoothingEnabled = false;
     const st = { phase: 'idle', t0: 0, lureY: PY + 6, lureX: 0, target: 0, camY: 0, kind: 'blue', parts: [], bubbles: [], flash: 0, shake: 0, sharkX: 0, startY: 0, jumpUntil: 0, snapEnd: null, raf: 0 };
@@ -122,7 +126,7 @@
       const bend = st.phase === 'reel' ? 3 : st.phase === 'down' ? 1 : 0;
       return { x: h.x + 19, y: h.y - 13 + bend };
     };
-    function px(x, y, w, h, col) { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), w, h); }
+    function px(x, y, w, h, col) { g.fillStyle = col; g.fillRect(snap(x), snap(y), w, h); }
     function line(x0, y0, x1, y1, col) {
       x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
       const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
@@ -133,9 +137,9 @@
         const e2 = 2 * err; if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; }
       }
     }
-    function disc(cx, cy, r) { for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(r * r - y * y)); g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2, 1); } }
+    function disc(cx, cy, r) { for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(r * r - y * y)); g.fillRect(snap(cx - w), snap(cy + y), w * 2, 1); } }
     function cloud(x, y, u) {
-      const body = () => { disc(x + 8 * u, y, 7 * u); disc(x + 18 * u, y - 4 * u, 9 * u); disc(x + 30 * u, y, 7 * u); g.fillRect(Math.round(x + 8 * u), Math.round(y), 22 * u, Math.round(7 * u)); };
+      const body = () => { disc(x + 8 * u, y, 7 * u); disc(x + 18 * u, y - 4 * u, 9 * u); disc(x + 30 * u, y, 7 * u); g.fillRect(snap(x + 8 * u), snap(y), 22 * u, snap(7 * u)); };
       g.fillStyle = '#cfe3f8'; g.save(); g.translate(0, 2 * u); body(); g.restore();
       g.fillStyle = '#ffffff'; body();
     }
@@ -146,8 +150,9 @@
       const wantCam = st.phase === 'down' || st.phase === 'reel' || (st.phase === 'snap' && t - st.t0 < 2) ? Math.max(0, st.lureY - H * .6) : 0;
       st.camY += (wantCam - st.camY) * Math.min(1, dt * (st.phase === 'down' ? 9 : st.phase === 'snap' ? 2.2 : 5));
       if (Math.abs(st.camY - wantCam) < .2) st.camY = wantCam;
-      const cy = Math.round(st.camY), shx = st.shake > 0 ? Math.round((Math.random() - .5) * 4 * st.shake) : 0;
+      const cy = snap(st.camY), shx = st.shake > 0 ? snap((Math.random() - .5) * 4 * st.shake) : 0;
       st.shake = Math.max(0, st.shake - dt * 2.5);
+      g.setTransform(RES, 0, 0, RES, 0, 0); g.imageSmoothingEnabled = false;
       g.save(); g.translate(shx, 0);
       // ciel, soleil, nuages
       const bh = Math.ceil(WY / SKY.length);
@@ -157,8 +162,8 @@
         for (const [x0, y, u, sp] of [[20, 18, 1, 3], [120, 30, 1, 5], [200, 12, 1, 2.5], [300, 40, 1, 4]]) cloud(((x0 + t * sp) % (W + 60)) - 50, y - cy, u);
       }
       // eau : une ligne par rangée de pixels, de plus en plus sombre avec la profondeur
-      for (let sy = Math.max(0, WY - cy); sy < H; sy++) {
-        const d = (sy + cy - WY) / 260, i = Math.min(DEEP.length - 2, Math.floor(d)), f = Math.min(1, d - i), a = DEEP[i], b = DEEP[i + 1];
+      for (let wy = Math.max(WY, Math.floor(cy)); wy < cy + H + 1; wy++) {
+        const sy = wy - cy, d = (wy - WY) / 260, i = Math.min(DEEP.length - 2, Math.floor(d)), f = Math.min(1, d - i), a = DEEP[i], b = DEEP[i + 1];
         g.fillStyle = `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`; g.fillRect(-4, sy, W + 8, 1);
       }
       // rayons de lumière sous la surface
@@ -167,14 +172,14 @@
       g.fillStyle = 'rgba(214,241,255,.35)';
       for (let k = Math.floor(cy / 12); k <= Math.floor((cy + H) / 12); k++) {
         const wy = k * 12; if (wy < WY + 6) continue;
-        for (let j = 0; j < 2; j++) { const hsh = Math.sin(k * 91.7 + j * 37.3) * 43758.5453, fx = hsh - Math.floor(hsh); g.fillRect(Math.round(fx * W + Math.sin(t * .7 + k + j) * 3), wy + j * 6 - cy, 1, 1); }
+        for (let j = 0; j < 2; j++) { const hsh = Math.sin(k * 91.7 + j * 37.3) * 43758.5453, fx = hsh - Math.floor(hsh); g.fillRect(snap(fx * W + Math.sin(t * .7 + k + j) * 3), wy + j * 6 - cy, 1, 1); }
       }
       // dauphins du décor : un par tranche de profondeur, bleus près de la surface, roses puis rouges plus bas
       for (let k = Math.max(0, Math.floor((cy - 40) / 110)); k <= Math.floor((cy + H) / 110); k++) {
         const wy = WY + 40 + k * 110, sy = wy - cy; if (sy < -12 || sy > H + 4 || k > 400) continue;
         const dir = k % 2 ? 1 : -1, sp = 14 + (k * 7) % 11, span = W + 60, x = dir > 0 ? ((t * sp + k * 53) % span) - 30 : span - 30 - ((t * sp + k * 53) % span);
         const kind = k < 3 ? 'blue' : k < 9 ? 'pink' : 'red', img = S.dolFaded[kind];
-        g.save(); g.translate(Math.round(x), Math.round(sy + Math.sin(t * 2 + k) * 2)); if (dir < 0) g.scale(-1, 1); g.drawImage(img, -9, -5); g.restore();
+        g.save(); g.translate(snap(x), snap(sy + Math.sin(t * 2 + k) * 2)); if (dir < 0) g.scale(-1, 1); g.drawImage(img, -9, -5); g.restore();
       }
       // ponton : pieux puis planches
       const py = PY - cy;
@@ -221,9 +226,9 @@
         if (hooked) {
           // le dauphin pend la tête en haut, accroché au leurre, et se débat
           const img = S.dol[st.kind], wig = Math.sin(t * (st.phase === 'landed' ? 6 : 14)) * .25;
-          g.save(); g.translate(Math.round(lx), Math.round(ly - cy)); g.rotate(-Math.PI / 2 + wig); g.drawImage(img, -img.width + 3, -img.height / 2); g.restore();
+          g.save(); g.translate(snap(lx), snap(ly - cy)); g.rotate(-Math.PI / 2 + wig); g.drawImage(img, -img.width + 3, -img.height / 2); g.restore();
         }
-        g.drawImage(S.lure, Math.round(lx) - 5, Math.round(ly - cy) - 3);
+        g.drawImage(S.lure, snap(lx) - 5, snap(ly - cy) - 3);
       }
       // requin démon
       if (st.phase === 'snap') {
@@ -232,26 +237,26 @@
         if (u < .45) sx = W + 50 - (W + 50 - biteX) * ease(u / .45); else sx = biteX - (u - .45) * 120 - Math.max(0, u - 1.2) * 120;
         if (u >= .45 && !st.bitten) { st.bitten = true; st.flash = 1; st.shake = 1; st.jumpUntil = t + .5; splash(biteX, by - cy, 18, '#ffd9d0'); st.snapEnd = { x: LX, y: by, vx: 0, vy: 0 }; }
         // le fil : entier jusqu'à la morsure, puis le bout cassé remonte comme un ressort
-        if (!st.bitten) { line(tp.x, ty, LX + Math.sin(t * 2.2) * 2, by - cy, '#f4f7ff'); g.drawImage(S.lure, LX - 5, Math.round(by - cy) - 3); }
+        if (!st.bitten) { line(tp.x, ty, LX + Math.sin(t * 2.2) * 2, by - cy, '#f4f7ff'); g.drawImage(S.lure, LX - 5, snap(by - cy) - 3); }
         else { const e = st.snapEnd; e.vx += (tp.x - e.x) * 30 * dt - e.vx * 4 * dt; e.vy += (tp.y + 10 - e.y) * 30 * dt - e.vy * 4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; line(tp.x, ty, e.x, e.y - cy, '#f4f7ff'); }
         const img = st.flash > .8 ? S.sharkW : S.shark;
-        g.save(); g.translate(Math.round(sx) + 44, Math.round(by - cy - 18)); g.scale(-1, 1); g.drawImage(img, 0, 0); g.restore(); // tourné vers la gauche : la gueule est à sx
-        if (st.bitten && sx > -60) g.drawImage(S.lure, Math.round(sx) - 3, Math.round(by - cy) - 3);
+        g.save(); g.translate(snap(sx) + 44, snap(by - cy - 18)); g.scale(-1, 1); g.drawImage(img, 0, 0); g.restore(); // tourné vers la gauche : la gueule est à sx
+        if (st.bitten && sx > -60) g.drawImage(S.lure, snap(sx) - 3, snap(by - cy) - 3);
         if (u > 3.2) { st.phase = 'broken'; st.brokenEnd = { x: st.snapEnd.x, y: st.snapEnd.y }; }
       } else if (st.phase === 'broken') {
         const e = st.brokenEnd; e.x += (tp.x + 1 - e.x) * Math.min(1, dt * 3); e.y += (tp.y + 8 + Math.sin(t * 1.6) - e.y) * Math.min(1, dt * 3);
         line(tp.x, ty, e.x, e.y - cy, '#f4f7ff');
       }
       // bulles et éclaboussures
-      for (const b of st.bubbles) { b.y -= dt * 22; b.x += Math.sin(t * 6 + b.y) * .2; b.l -= dt * .6; if (b.y - cy > 0 && b.y > WY) { g.fillStyle = `rgba(214,241,255,${clamp(b.l, 0, 1)})`; g.fillRect(Math.round(b.x), Math.round(b.y - cy), 1, 1); } }
+      for (const b of st.bubbles) { b.y -= dt * 22; b.x += Math.sin(t * 6 + b.y) * .2; b.l -= dt * .6; if (b.y - cy > 0 && b.y > WY) { g.fillStyle = `rgba(214,241,255,${clamp(b.l, 0, 1)})`; g.fillRect(snap(b.x), snap(b.y - cy), 1, 1); } }
       st.bubbles = st.bubbles.filter(b => b.l > 0 && b.y > WY);
-      for (const p of st.parts) { p.vy += 160 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt * 1.4; g.fillStyle = p.c; g.globalAlpha = clamp(p.l, 0, 1); g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); g.globalAlpha = 1; }
+      for (const p of st.parts) { p.vy += 160 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt * 1.4; g.fillStyle = p.c; g.globalAlpha = clamp(p.l, 0, 1); g.fillRect(snap(p.x), snap(p.y), 2, 2); g.globalAlpha = 1; }
       st.parts = st.parts.filter(p => p.l > 0);
       // jauge de profondeur à droite : un cran par multiplicateur rond, le leurre en orange
       if (st.phase === 'down' || st.phase === 'reel' || st.phase === 'snap') {
         px(W - 9, 0, 1, H, 'rgba(255,255,255,.25)');
         for (const m of [1.5, 2, 3, 5, 10, 20, 50, 100, 200, 500]) { const y = WY + 4 + depthOf(m) - cy; if (y > -2 && y < H + 2) px(W - 12, y, m >= 10 ? 7 : 5, 1, m >= 10 ? '#f58fb8' : '#d6f1ff'); }
-        px(W - 13, Math.round(st.lureY - cy) - 1, 9, 3, '#ff9a3c');
+        px(W - 13, snap(st.lureY - cy) - 1, 9, 3, '#ff9a3c');
       }
       g.restore();
       if (st.flash > 0) { g.fillStyle = `rgba(214,58,58,${.4 * st.flash})`; g.fillRect(0, 0, W, H); st.flash = Math.max(0, st.flash - dt * 2.2); }
