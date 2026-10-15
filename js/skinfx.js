@@ -2026,6 +2026,110 @@
       },
     };
   };
+  // ☁️ Sky (idée de Deadshot) : de gros cumulus dérivent au-dessus et au-dessous de la carte. Chaque chiffre posé lâche
+  // une petite bouffée de nuage ; à la révélation, les nuages gonflent. Mythique ou mieux : ils prennent la couleur de la
+  // rareté (rose, cyan, or, arc-en-ciel pour Infini) et la gardent jusqu'au tirage suivant.
+  SCENES.sky = env => {
+    const { co, ci, w, h, card, W, dark } = env;
+    const TINT = { mythic: [244, 114, 182], celestial: [103, 232, 249], divine: [253, 224, 71] };
+    const k = Math.min(1.3, card.h / 60);
+    // Nuages au-dessus de la carte (ils dérivent et font le tour) et un de chaque côté (ils flottent sur place) : jamais
+    // en dessous, où s'affichent la rareté et l'XP.
+    const mk = (x, y, s, v, side) => ({ x, y, s, v, side, x0: x, ph: rnd(TAU), puffs: Array.from({ length: 5 }, (_, j) => ({ dx: (j - 2) * 11, dy: -(j % 2) * 6 - (j === 2 ? 4 : 0), r: 10 + (j === 2 ? 6 : j % 2 ? 3 : 0) })) });
+    const clouds = [
+      ...Array.from({ length: 4 }, (_, i) => mk(rnd(0, W), card.y - rnd(20, 48) * k, rnd(.8, 1.3) * k, rnd(6, 12) * (i % 2 ? 1 : -1), false)),
+      mk(card.x - 46 * k, card.y + card.h * .45, 1.05 * k, 0, true), mk(card.x + card.w + 46 * k, card.y + card.h * .4, .95 * k, 0, true),
+    ];
+    const puffs = timed();
+    let swell = 0, tint = null, tintK = 0, rainbow = false;
+    const tintOf = (t, m, a) => {
+      if (rainbow) return `hsla(${(t * 60) % 360}, 90%, ${Math.round(74 + 14 * m)}%, ${a})`;
+      const [r, g, b] = tint;
+      return `rgba(${Math.round(r + (255 - r) * m)}, ${Math.round(g + (255 - g) * m)}, ${Math.round(b + (255 - b) * m)}, ${a})`;
+    };
+    const cloud = (c, t) => {
+      const sc = c.s * (1 + swell * .18);
+      for (const [pass, col] of [[0, dark ? 'rgba(150,175,205,.55)' : 'rgba(169,191,214,.7)'], [1, 'rgba(255,255,255,.95)']]) {
+        co.fillStyle = col; co.beginPath();
+        for (const p of c.puffs) co.arc(c.x + p.dx * sc, c.y + p.dy * sc + (pass ? 0 : 4 * sc), p.r * sc, 0, TAU);
+        co.fill();
+        if (tintK > 0) { co.fillStyle = tintOf(t, pass ? .55 : .2, tintK * .85); co.fill(); }
+      }
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        swell = Math.max(0, swell - dt * 1.2);
+        if (tint || rainbow) tintK = Math.min(1, tintK + dt * 1.2);
+        // Le ciel de la carte prend la couleur de la rareté (calque intérieur, sous les chiffres).
+        if (tintK > 0) {
+          const g = ci.createLinearGradient(0, 0, 0, h);
+          g.addColorStop(0, tintOf(t, 0, .85 * tintK)); g.addColorStop(.6, tintOf(t, .35, .7 * tintK)); g.addColorStop(1, tintOf(t, .8, .55 * tintK));
+          ci.fillStyle = g; ci.fillRect(0, 0, w, h);
+        }
+        for (const c of clouds) {
+          if (c.side) c.y += Math.sin(t * .9 + c.ph) * .15;
+          else { c.x += c.v * dt; if (c.x > W + 60) c.x = -60; if (c.x < -60) c.x = W + 60; }
+          cloud(c, t);
+        }
+        puffs.run(dt, (p, kk) => { co.globalAlpha = (1 - kk) * .9; co.fillStyle = tintK > 0 ? tintOf(t, .7, 1) : '#ffffff'; for (let i = 0; i < 3; i++) { co.beginPath(); co.arc(p.x + (i - 1) * 7 * k * (1 + kk), p.y - kk * 14 * k - (i === 1 ? 4 * k : 0), (5 + 7 * kk) * k, 0, TAU); co.fill(); } co.globalAlpha = 1; });
+      },
+      // Chaque chiffre posé lâche une bouffée qui monte au-dessus de la carte.
+      lock(p, o) { if (!o || !o.ghost) puffs.add({ x: p.x, y: card.y + 4 * k, life: .6 }); },
+      reveal(tier) {
+        swell = 1;
+        if (tier === 'infinite') rainbow = true; else if (TINT[tier]) tint = TINT[tier];
+        for (let i = 0; i < 4 + Math.round(6 * (POWER[tier] || 0)); i++) puffs.add({ delay: i * .07, x: rnd(card.x, card.x + card.w), y: card.y - rnd(0, 10) * k, life: .8 });
+      },
+    };
+  };
+
+  // 🃏 Deck (idée de GamblrGod) : un paquet posé à gauche de la carte. À chaque chiffre posé, une carte part du paquet et
+  // vole jusqu'à sa place en tournant ; à la révélation, une cascade de cartes rebondit (plus le tirage est rare, plus il y
+  // en a, comme la fin d'une partie de Solitaire).
+  SCENES.cards = env => {
+    const { co, card, W, H } = env;
+    const k = Math.min(1.3, card.h / 60), cw = 22 * k, ch = 31 * k;
+    const deck = { x: card.x - 34 * k, y: card.y + card.h * .5 };
+    const flying = timed(), cascade = [];
+    const back = (x, y, rot, a) => {
+      co.save(); co.translate(x, y); co.rotate(rot); co.globalAlpha = a;
+      co.fillStyle = '#ffffff'; co.beginPath(); co.roundRect(-cw / 2, -ch / 2, cw, ch, 3 * k); co.fill();
+      co.fillStyle = '#dc2626'; co.beginPath(); co.roundRect(-cw / 2 + 2 * k, -ch / 2 + 2 * k, cw - 4 * k, ch - 4 * k, 2 * k); co.fill();
+      co.clip(); // les croisillons restent dans le dos de la carte
+      co.strokeStyle = 'rgba(255,255,255,.45)'; co.lineWidth = 1;
+      for (let i = -ch; i < ch; i += 4 * k) { co.beginPath(); co.moveTo(-cw / 2 + 2 * k, i); co.lineTo(cw / 2 - 2 * k, i + cw); co.stroke(); }
+      co.restore();
+    };
+    const face = (x, y, rot, suit, red) => {
+      co.save(); co.translate(x, y); co.rotate(rot);
+      co.fillStyle = '#ffffff'; co.shadowColor = 'rgba(0,0,0,.4)'; co.shadowBlur = 4; co.beginPath(); co.roundRect(-cw / 2, -ch / 2, cw, ch, 3 * k); co.fill(); co.shadowBlur = 0;
+      co.fillStyle = red ? '#dc2626' : '#111827'; co.font = `${Math.round(14 * k)}px Georgia, serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText(suit, 0, 1);
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        for (let i = 4; i >= 0; i--) back(deck.x + i * .8 * k, deck.y - i * 1.2 * k, -.06, 1); // le paquet
+        flying.run(dt, (f, kk) => { const e = 1 - Math.pow(1 - kk, 3); back(deck.x + (f.x - deck.x) * e, deck.y + (f.y - deck.y) * e - Math.sin(Math.PI * kk) * 30 * k, -.06 + kk * TAU * .75, 1 - Math.max(0, kk - .8) * 5); });
+        for (let i = cascade.length - 1; i >= 0; i--) {
+          const c = cascade[i];
+          if ((c.wait -= dt) > 0) continue;
+          c.vy += 900 * k * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.spin * dt;
+          if (c.y > card.y + card.h + 40 * k && c.vy > 0 && c.b < 2) { c.vy *= -.55; c.b++; }
+          if (c.y > H + 40 || c.x < -40 || c.x > W + 40) { cascade.splice(i, 1); continue; }
+          // la traînée des cartes du Solitaire
+          face(c.x, c.y, c.rot, c.suit, c.red);
+        }
+      },
+      lock(p, o) { if (!o || !o.ghost) flying.add({ x: p.x, y: p.y, life: .32 }); },
+      reveal(tier) {
+        const pw = POWER[tier] || 0, n = pw >= .42 ? Math.round(4 + 14 * pw) : 0;
+        for (let i = 0; i < n; i++) { const suit = '♠♥♣♦'[i % 4]; cascade.push({ wait: i * .06, x: deck.x, y: deck.y, vx: rnd(120, 420) * k * (i % 3 === 2 ? -.4 : 1), vy: -rnd(200, 420) * k, rot: 0, spin: rnd(-6, 6), b: 0, suit, red: suit === '♥' || suit === '♦' }); }
+      },
+    };
+  };
+
   SCENES.supporter = env => {
     const { ci, co, w, h, card, q, dark } = env;
     const CORAL = '#fb7185', ROSE = '#fda4af', GOLD = '#fde68a', DEEP = '#e11d48';

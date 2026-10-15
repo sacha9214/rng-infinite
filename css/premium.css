@@ -398,3 +398,84 @@
 .fisher-steps li::marker { color: #c98a4b; font-weight: 800; }
 .fisher-done { color: #22c55e; font-weight: 700; }
 .fisher-steps [data-fish-google] { text-transform: none; letter-spacing: 0; font-size: .72rem; font-weight: 700; padding: .22rem .55rem; text-align: left; border: 1px solid #c98a4b; border-radius: .4rem; color: inherit; background: rgba(201, 138, 75, .12); }
+
+/* ------------------------------------------------------------------ Sky (idée de Deadshot) : un ciel d'été, des chiffres en
+   nuage (blancs, bombés, ombrés de gris-bleu dessous). Pendant le tirage : de la brume qui dérive ; à la révélation, le nuage
+   se condense (matière molle : il s'écrase puis rebondit). Mythique ou mieux : le ciel et les nuages prennent la couleur de
+   la rareté (la scène, js/skinfx.js SCENES.sky, colore les nuages autour de la carte). */
+.num-card.skin-sky {
+  background:
+    radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 250, 220, .85), transparent 70%),
+    radial-gradient(ellipse 30% 26% at 18% 104%, #ffffff 60%, transparent 62%), radial-gradient(ellipse 26% 22% at 44% 108%, #f4f8fd 60%, transparent 62%),
+    radial-gradient(ellipse 30% 26% at 74% 106%, #ffffff 60%, transparent 62%), radial-gradient(ellipse 22% 20% at 96% 104%, #eef5fc 60%, transparent 62%),
+    linear-gradient(180deg, #4f9fe9 0%, #86c3f4 55%, #cfe7fb 100%);
+  border: 2px solid rgba(255, 255, 255, .85); border-radius: 1rem;
+  box-shadow: 0 0 0 1px #9cc9ef, 0 .5rem 1.4rem rgba(80, 140, 210, .35);
+  transition: background .8s ease;
+}
+.skin-sky .slot {
+  color: #ffffff; font-weight: 900;
+  text-shadow: 0 .04em 0 #e3ecf6, 0 .09em 0 #c3d4e6, 0 .14em 0 #a9bfd6, 0 .22em .32em rgba(50, 100, 160, .35), 0 0 .28em rgba(255, 255, 255, .7);
+}
+.skin-sky .slot.spinning { animation: sky-drift .46s ease-in-out infinite alternate; filter: blur(.05em); opacity: .55; }
+@keyframes sky-drift { from { transform: translateX(-.06em) scaleX(1.12); } to { transform: translateX(.06em) scaleX(.94); } }
+.skin-sky .slot.revealed { animation: sky-poof .72s cubic-bezier(.3, 1.4, .5, 1) backwards; }
+@keyframes sky-poof { 0% { transform: scale(1.5, .55); filter: blur(.14em); opacity: 0; } 45% { transform: scale(.9, 1.1); filter: blur(0); opacity: 1; } 70% { transform: scale(1.05, .95); } 100% { transform: none; } }
+.skin-sky .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-sky .slot.ghost, .skin-sky .slot.ghost.revealed { animation: none; opacity: .3; filter: none; }
+.skin-sky .slot.collapsed, .skin-sky .slot.collapsed.revealed { animation: none; opacity: 0; text-shadow: none; }
+/* Le ciel prend la couleur des grandes raretés. */
+.num-card.skin-sky[data-tier="mythic"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 228, 240, .9), transparent 70%), linear-gradient(180deg, #db2777 0%, #f472b6 55%, #fbcfe8 100%); }
+.num-card.skin-sky[data-tier="celestial"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(224, 252, 255, .9), transparent 70%), linear-gradient(180deg, #0e7490 0%, #22d3ee 55%, #cffafe 100%); }
+.num-card.skin-sky[data-tier="divine"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 251, 220, .95), transparent 70%), linear-gradient(180deg, #ca8a04 0%, #facc15 55%, #fef9c3 100%); }
+.num-card.skin-sky[data-tier="infinite"] { background: linear-gradient(120deg, #f472b6, #a78bfa, #60a5fa, #34d399, #facc15, #f472b6); background-size: 300% 100%; animation: sky-rainbow 6s linear infinite; }
+@keyframes sky-rainbow { to { background-position: 300% 0; } }
+.room-stage.many .num-card.skin-sky[data-tier="infinite"] { animation: none; }
+@media (prefers-reduced-motion: reduce) { .skin-sky .slot { animation: none; filter: none; } }
+.btn-roll.gen-sky { border: 2px solid #ffffff; border-radius: 999px; color: #ffffff; background: radial-gradient(ellipse 35% 60% at 15% 100%, #ffffff 55%, transparent 60%), radial-gradient(ellipse 30% 55% at 88% 105%, #f4f8fd 55%, transparent 60%), linear-gradient(180deg, #4f9fe9, #86c3f4);
+  text-shadow: 0 .06em 0 #3b82c4, 0 0 .4em rgba(30, 90, 160, .5);
+  --gs: 0 .3em 0 #3b82c4, 0 .5em 1em rgba(80, 140, 210, .45); --gs-h: 0 .34em 0 #3b82c4, 0 .7em 1.4em rgba(80, 140, 210, .6); --gs-a: 0 .06em 0 #3b82c4; }
+.side-sky { --side-border: #9cc9ef; --side-glow: 0 0 18px rgba(134, 195, 244, .5); --side-ink: #ffffff;
+  --side-bg: radial-gradient(ellipse 22% 16% at 15% 100%, rgba(255, 255, 255, .55) 60%, transparent 62%), radial-gradient(ellipse 20% 14% at 80% 100%, rgba(255, 255, 255, .5) 60%, transparent 62%), linear-gradient(180deg, rgba(79, 159, 233, .45), rgba(207, 231, 251, .25));
+  --deco-a: '☁️'; --deco-b: '☀️'; }
+.side-sky::before { animation: sky-float 4s ease-in-out infinite; }
+@keyframes sky-float { 50% { transform: translateX(6px); } }
+.room-stage.many .side-sky::before { animation: none; }
+
+/* ------------------------------------------------------------------ Deck (idée de GamblrGod) : un tapis de jeu vert au liseré
+   doré ; chaque chiffre est une carte à jouer (coins arrondis, couleur dans le coin, rouge ou noire). Pendant le tirage, les
+   cartes sont face cachée et se mélangent ; à la révélation, la carte se soulève, se retourne et claque sur le tapis. La scène
+   (js/skinfx.js, SCENES.cards) pose le paquet et fait voler les cartes. */
+.num-card.skin-cards {
+  background: radial-gradient(ellipse 80% 90% at 50% 40%, #1f7a4a 0%, #14603a 60%, #0b4027 100%);
+  border: 3px solid #c9a24a; border-radius: .9rem;
+  box-shadow: inset 0 0 0 2px #0b4027, inset 0 0 1.4rem rgba(0, 0, 0, .45), 0 .4rem 1.2rem rgba(0, 0, 0, .35);
+  gap: .12em;
+}
+.skin-cards .slot {
+  position: relative; width: .8em; height: 1.12em; display: inline-grid; place-items: center; margin: 0 .03em;
+  font-family: 'Times New Roman', Times, 'Liberation Serif', serif; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: 'lnum' 1; font-weight: 700; font-size: .72em; line-height: 1; color: #111827;
+  background: linear-gradient(180deg, #ffffff, #f1f1ea); border-radius: .1em; box-shadow: 0 .04em 0 #d6d3c4, 0 .08em .16em rgba(0, 0, 0, .45);
+}
+.skin-cards .slot:nth-child(even) { color: #dc2626; }
+.skin-cards .slot::before { content: '♠'; position: absolute; top: .06em; left: .08em; font-size: .28em; line-height: 1; }
+.skin-cards .slot:nth-child(4n+2)::before { content: '♥'; }
+.skin-cards .slot:nth-child(4n+3)::before { content: '♣'; }
+.skin-cards .slot:nth-child(4n)::before { content: '♦'; }
+/* Face cachée pendant le tirage : le dos rouge à croisillons, qui se mélange. */
+.skin-cards .slot.spinning { color: transparent; animation: cards-shuffle .18s steps(2) infinite;
+  background: repeating-linear-gradient(45deg, #b91c1c 0 .06em, #dc2626 .06em .12em), #dc2626; box-shadow: inset 0 0 0 .05em #ffffff, 0 .08em .16em rgba(0, 0, 0, .45); }
+.skin-cards .slot.spinning::before { content: none; }
+@keyframes cards-shuffle { from { transform: translateY(-.03em) rotate(-2deg); } to { transform: translateY(.02em) rotate(2deg); } }
+/* Retournée : elle se soulève, tourne d'un quart (on voit sa tranche), se pose face visible et claque. */
+.skin-cards .slot.revealed { animation: cards-flip .62s cubic-bezier(.3, 1.3, .5, 1) backwards; }
+@keyframes cards-flip { 0% { transform: translateY(-.25em) rotateY(90deg) scale(1.1); } 40% { transform: translateY(-.3em) rotateY(0) scale(1.12); } 70% { transform: translateY(.03em) scale(.97); } 100% { transform: none; } }
+.skin-cards .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-cards .slot.collapsed::before { content: none; }
+.skin-cards .slot.ghost, .skin-cards .slot.ghost.revealed { animation: none; opacity: .3; }
+.skin-cards .slot.collapsed, .skin-cards .slot.collapsed.revealed { animation: none; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .skin-cards .slot { animation: none; } }
+.btn-roll.gen-cards { border: 3px solid #c9a24a; border-radius: .6rem; color: #fff7d6; background: radial-gradient(ellipse 80% 120% at 50% 30%, #1f7a4a, #0b4027); font-family: Georgia, serif;
+  text-shadow: 0 .06em 0 #052e16; --gs: 0 .3em 0 #7a5a17, 0 .5em 1em rgba(0, 0, 0, .4); --gs-h: 0 .34em 0 #7a5a17, 0 .7em 1.4em rgba(201, 162, 74, .45); --gs-a: 0 .06em 0 #7a5a17; }
+.side-cards { --side-border: #c9a24a; --side-glow: 0 0 16px rgba(201, 162, 74, .35); --side-ink: #fff7d6;
+  --side-bg: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(31, 122, 74, .55), rgba(11, 64, 39, .6)); --deco-a: '♠ ♥'; --deco-b: '♣ ♦'; }

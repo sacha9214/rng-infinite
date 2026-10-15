@@ -26,6 +26,8 @@
     { id: 'gold', name: 'Gold', emoji: '🥇', price: 1000, desc: 'Solid gold' },
     { id: 'matrix', name: 'Matrix', emoji: '🟩', price: 1200, desc: 'Falling green code' },
     { id: 'fire', name: 'Fire', emoji: '🔥', price: 1500, desc: 'Burning digits' },
+    { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Mythic or better and the sky takes its color' }, // idée de Deadshot (2026-10-16)
+    { id: 'cards', name: 'Deck', emoji: '🃏', price: 1400, desc: 'Every digit is a card drawn from the deck' }, // idée de GamblrGod (2026-10-16)
     { id: 'galaxy', name: 'Galaxy', emoji: '🌌', price: 2500, desc: 'Written in the stars' },
     { id: 'rainbow', name: 'Rainbow', emoji: '🌈', price: 5000, desc: 'Every color at once' },
     // Ajoutés le 2026-09-28.
