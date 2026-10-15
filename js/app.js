@@ -2965,7 +2965,7 @@
             <div class="crash-screen" id="cr-screen" data-state="idle" data-mode="fish"><canvas id="cr-canvas" width="640" height="260"></canvas><canvas id="fish-canvas" width="256" height="144" aria-label="A fisherman on a pier"></canvas><b class="mono" id="cr-mult">1.00×</b></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="cr-go">Start</button></div>
             <p class="panel-note g-result" id="cr-result"></p>
-            <p class="panel-note fish-collab" id="fish-collab">🎣 Collab with <a href="https://firetaleshy.github.io/Pechadophin/" target="_blank" rel="noopener" data-no-i18n>Canne &amp; Dauphins</a> by L'taleshy &amp; cocobat · the deeper the line, the bigger the dolphin, but watch out for the shark</p>
+            <p class="panel-note fish-collab" id="fish-collab">🎣 Collab with <a href="https://pechadophin.vercel.app/" target="_blank" rel="noopener" data-no-i18n>Canne &amp; Dauphins</a> by L'taleshy &amp; cocobat · the deeper the line, the bigger the dolphin, but watch out for the shark</p>
           </div>
           <div class="panel g-game" data-game="mines">
             <div class="panel-head"><h3 class="panel-title">Mines</h3><span class="panel-note">every safe tile raises the payout · one mine ends it · max win 250×</span></div>
