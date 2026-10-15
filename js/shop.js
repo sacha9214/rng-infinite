@@ -68,7 +68,7 @@
   // Skin de la collab Canne & Dauphins (jeu de Firetail, 2026-10-15) : le pêcheur de son jeu pêche les chiffres. Exclusif :
   // ni en vente, ni dans les caisses ; débloqué en jouant aux deux jeux avec le même compte Google (stats.collabFish).
   // Tuile de la boutique montrée seulement quand le jeu de Firetail envoie ses connexions (son côté du kit publié).
-  const COLLAB_LIVE = false;
+  const COLLAB_LIVE = true; // son côté est en ligne depuis le 2026-10-15
   const FISHER = { id: 'fisher', name: 'Fisherman', emoji: '🎣', price: 0, desc: 'Collab with Canne & Dauphins: a fisherman reels in your digits', hidden: true, collab: true };
   // Cagnotte : objectif par défaut du mois, en centimes (réglable depuis la page Owner).
   const FUND_GOAL = 2000;
