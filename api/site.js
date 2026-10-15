@@ -63,6 +63,7 @@ async function pushMessage(id, from, text, t) {
 
 // ---------------------------------------------------------------- fréquentation
 const AN_TTL = 200 * 86400, AN_FIELDS_MAX = 400;
+const PARTNERS = ['pechadophin']; // sites partenaires dont on compte les clics sortants (action « out »)
 const anKey = day => `an:${day}`, geoKey = day => `ang:${day}`, GEO_CELLS_MAX = 1500;
 const host = raw => {
   const h = String(raw || '').toLowerCase().replace(/^www\./, '');
@@ -94,6 +95,7 @@ async function recordVisit(req, body) {
   if (body.daily) fields.push('uniq');
   if (body.first) fields.push('new');
   if (src) fields.push(`src:${src}`);
+  if (src && body.first) fields.push(`srcnew:${src}`); // nouvel appareil arrivé par ce lien
   // Un jour ne peut pas enfler sans fin (quelqu'un qui enverrait des milliers d'origines inventées) : passé 400 champs,
   // les origines inconnues vont dans « other ».
   const [size, ...known] = await redis([['HLEN', anKey(day)], ...fields.map(f => ['HEXISTS', anKey(day), f])]);
@@ -120,10 +122,18 @@ async function siteStats(days = 30) {
     for (const d of list) for (const [k, v] of Object.entries(d.h)) if (k.startsWith(prefix)) out[k.slice(prefix.length)] = (out[k.slice(prefix.length)] || 0) + (Number(v) || 0);
     return Object.entries(out).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([name, count]) => ({ name, count }));
   };
-  const group = list => ({ refs: sum(list, 'ref:'), sources: sum(list, 'src:'), countries: sum(list, 'c:'), devices: sum(list, 'd:'), langs: sum(list, 'l:') });
+  const group = list => ({ refs: sum(list, 'ref:'), sources: sum(list, 'src:'), sourcesNew: sum(list, 'srcnew:'), out: sum(list, 'out:'), countries: sum(list, 'c:'), devices: sum(list, 'd:'), langs: sum(list, 'l:') });
   const [names, google] = await redis([['HLEN', 'names'], ['ZCARD', 'lb:all']]);
+  // Joueurs venus par un lien tagué (pseudo choisi après être arrivés par ?ref=…), pour chaque source du mois.
+  const month = group(daily), tags = month.sources.map(x => x.name).filter(n => n !== 'other');
+  const members = tags.length ? await redis(tags.map(n => ['SMEMBERS', `srcp:${n}`])) : [];
+  const ids = [...new Set(members.flatMap(m => (m || []).slice(0, 100)))];
+  const nameRows = ids.length ? (await redis([['HMGET', 'names', ...ids]]))[0] || [] : [];
+  const nameOf = Object.fromEntries(ids.map((id, i) => [id, nameRows[i]]));
+  const sourcePlayers = tags.map((n, i) => ({ name: n, count: (members[i] || []).length, players: (members[i] || []).slice(0, 100).map(id => nameOf[id]).filter(Boolean) })).filter(x => x.count);
   return {
-    days: daily.map(({ h, ...d }) => d), week: group(daily.slice(0, 7)), month: group(daily),
+    sourcePlayers,
+    days: daily.map(({ h, ...d }) => d), week: group(daily.slice(0, 7)), month,
     totals: { named: Number(names) || 0, ranked: Number(google) || 0 },
   };
 }
@@ -427,6 +437,12 @@ module.exports = async (req, res) => {
     // Message automatique de la page de dons (Ko-fi) : il arrive sur /api/site?kofi=1, dans un autre format.
     if (/[?&]kofi=1/.test(req.url || '')) return send(res, ...(await kofiWebhook(req)));
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    // Clic sur le lien d'un site partenaire (collab), compté par jour comme les visites. Seuls les partenaires connus.
+    if (body.action === 'out') {
+      const to = PARTNERS.includes(String(body.to)) ? String(body.to) : '';
+      if (to && !tooManyBeacons(req)) { const day = dayKey(Date.now()); await redis([['HINCRBY', anKey(day), `out:${to}`, 1], ['EXPIRE', anKey(day), AN_TTL]]); }
+      return send(res, 200, { ok: true });
+    }
     if (body.action === 'visit') {
       await recordVisit(req, body);
       // La cagnotte du mois part avec la réponse : le site l'affiche sans demande supplémentaire.

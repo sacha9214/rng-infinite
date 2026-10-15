@@ -138,7 +138,7 @@
     },
     claimName(name) {
       const p = Store.player;
-      return this.request('/api/name', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name }) });
+      return this.request('/api/name', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name, src: (() => { try { return localStorage.getItem('rng-first-src') || ''; } catch (e) { return ''; } })() }) });
     },
     // Sans "add" : renvoie tout l'historique du compte. Avec "add" : y verse ces tirages.
     history(add, fetchAll = true) {
@@ -3626,7 +3626,11 @@
       if (Fish && mode === 'fish') Fish.wake();
     };
     setCrMode(Store.settings.crMode);
-    $('#cr-mode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Store.setSetting('crMode', b.dataset.mode); setCrMode(b.dataset.mode); });
+    // Clic vers le jeu de Firetail : compté (page Owner > Traffic, encadré Collab), sans rien retarder.
+    $('#fish-collab a').addEventListener('click', () => {
+      try { Online.request('/api/site', { local: true, method: 'POST', keepalive: true, body: JSON.stringify({ action: 'out', to: 'pechadophin' }) }).catch(() => {}); } catch (e) { /* jamais bloquant */ }
+    });
+        $('#cr-mode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Store.setSetting('crMode', b.dataset.mode); setCrMode(b.dataset.mode); });
     const stars = Array.from({ length: 70 }, () => ({ x: Math.random() * 640, y: Math.random() * 260, z: .3 + Math.random() * .7 })), boom = [];
     const drawCurve = (mult, state) => {
       cc.clearRect(0, 0, 640, 260);
@@ -4282,11 +4286,29 @@
         ${panel('When they play · 30 days', `your local time · busiest hour: ${peak}:00`, `<div class="o-hours">${localHours.map((n, h) => `<span class="o-hour" data-tip="${esc(`<b>${h}:00 – ${h}:59</b><br>${fmt(n)} visits`)}"><i style="height:${Math.max(2, (n / maxH) * 100)}%"></i><em>${h % 3 === 0 ? h : ''}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}
         <div class="grid-2 stats-sep">
           ${bars('Where visitors come from · 30 days', st.month.refs, n => (n === 'direct' ? 'Direct (typed, bookmark, app)' : n))}
-          ${bars('Tagged links (?ref=…) · 30 days', st.month.sources, n => ({ share: 'share · a shared roll', duel: 'duel · a duel invite' }[n] || n))}
+          ${bars('Tagged links (?ref=…) · 30 days', st.month.sources, n => ({ share: 'share · a shared roll', duel: 'duel · a duel invite', pechadophin: 'pechadophin · Firetail\'s game (collab)' }[n] || n))}
+          ${bars('New devices from a tagged link · 30 days', st.month.sourcesNew || [], n => ({ pechadophin: 'pechadophin · Firetail\'s game (collab)' }[n] || n))}
           ${bars('Device · 30 days', st.month.devices, x => x, '', sum(st.month.devices, 'count'))}
           ${bars('Language · 30 days', st.month.langs, x => x, '', sum(st.month.langs, 'count'))}
         </div>
-        <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Day by day</h3><span class="panel-note">last 14 days</span></div>
+        ${(() => {
+          // Collab Pechadophin, tout au même endroit : ce que son jeu nous amène, et ce que le nôtre lui envoie.
+          const get = (list, n) => ((list || []).find(x => x.name === n) || { count: 0 }).count;
+          const m = st.month, w = st.week, came = (st.sourcePlayers || []).find(x => x.name === 'pechadophin') || { count: 0, players: [] };
+          const box = (label, v7, v30) => `<div class="o-collab-k"><span class="panel-note">${label}</span><b class="mono">${fmt(v30)}</b><span class="panel-note">${fmt(v7)} in 7 days</span></div>`;
+          return `<div class="panel stats-sep o-collab"><div class="panel-head"><h3 class="panel-title">🎣 Collab Pechadophin</h3><span class="panel-note">last 30 days · link to give: <b data-no-i18n>rng-infinite.com/?ref=pechadophin</b></span></div>
+            <div class="o-collab-grid">
+              ${box('Visits from his game', get(w.sources, 'pechadophin'), get(m.sources, 'pechadophin'))}
+              ${box('New devices from his game', get(w.sourcesNew, 'pechadophin'), get(m.sourcesNew, 'pechadophin'))}
+              <div class="o-collab-k"><span class="panel-note">Players who picked a name</span><b class="mono">${fmt(came.count)}</b><span class="panel-note">since the start</span></div>
+              ${box('Clicks we sent to his site', get(w.out, 'pechadophin'), get(m.out, 'pechadophin'))}
+            </div>
+            ${came.players.length ? `<div class="o-src-names">${came.players.map(n => `<a class="badge-pill" href="${profileHref(n)}" data-no-i18n>${esc(n)}</a>`).join(' ')}</div>` : ''}
+          </div>`;
+        })()}
+                ${(st.sourcePlayers || []).length ? `<div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Players brought by a tagged link</h3><span class="panel-note">they arrived by the link, then picked a name</span></div>
+          ${st.sourcePlayers.map(x => `<div class="o-src-players"><b data-no-i18n>?ref=${esc(x.name)}</b> <span class="panel-note">${fmt(x.count)} player${x.count > 1 ? 's' : ''}</span><div class="o-src-names">${x.players.map(n => `<a class="badge-pill" href="${profileHref(n)}" data-no-i18n>${esc(n)}</a>`).join(' ')}</div></div>`).join('')}</div>` : ''}
+                <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Day by day</h3><span class="panel-note">last 14 days</span></div>
           ${table(['Day', 'Visits', 'Devices', 'New devices', 'Players', 'New players', 'Rolls'], st.days.slice(0, 14).map(x => { const a = byDay.get(x.day) || { active: 0, fresh: 0, rolls: 0 }; return [x.day.slice(5), fmt(x.visits), fmt(x.uniq), fmt(x.fresh), fmt(a.active), fmt(a.fresh), fmt(a.rolls)]; }), 'c7')}
         </div>`;
 
@@ -5714,7 +5736,8 @@
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.
   // Envoyé : le site d'origine (pas l'adresse complète), ?ref= ou ?utm_source= s'il y en a, téléphone ou ordinateur,
   // la langue, et deux drapeaux « première visite » / « première visite du jour » tenus sur l'appareil.
-  // Rien n'identifie le visiteur ; les navigateurs pilotés par un robot ne comptent pas.
+  // Rien n'identifie le visiteur ; les navigateurs pilotés par un robot ne comptent pas. Seule exception : arrivé par un
+  // lien tagué, le lien est gardé sur l'appareil et rattaché au joueur quand il choisit son pseudo (api/name.js).
   try {
     const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
     if (!sessionStorage.getItem('rng-visit') && (!navigator.webdriver || local)) {
@@ -5727,6 +5750,9 @@
       let ref = '';
       try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* pas d'origine */ }
       const q = new URLSearchParams(location.search);
+      // Premier lien d'arrivée (?ref=…), gardé pour l'envoyer avec le pseudo : on saura quel joueur il a amené.
+      const arrived = (q.get('utm_source') || q.get('ref') || '').toLowerCase();
+      if (arrived && /^[a-z0-9_.-]{1,30}$/.test(arrived) && !localStorage.getItem('rng-first-src') && !Store.player.name) localStorage.setItem('rng-first-src', arrived);
       Online.request('/api/site', { local: true, method: 'POST', body: JSON.stringify({
         action: 'visit', ref, src: q.get('utm_source') || q.get('ref') || '', first, daily,
         mobile: window.matchMedia('(max-width: 720px)').matches || /Mobi|Android/i.test(navigator.userAgent),
