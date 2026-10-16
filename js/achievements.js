@@ -46,7 +46,8 @@
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
     // Code SPOOKYMONTH (Halloween 2026) : caché à ceux qui ne l'ont pas, pour ne pas dévoiler le code.
     { id: 'spooky', emoji: '🎃', title: 'Spooky', desc: 'Redeemed the Halloween 2026 code', hidden: true, test: st => num(st.spooky) >= 1 },
-    { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Found all the hidden codes', hidden: true, test: st => num(st.codehunter) >= 1 },
+    // Visible verrouillé (2026-10-16) : les joueurs savent qu'il y a 3 codes à chercher.
+    { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Find the 3 secret codes hidden on the site', test: st => num(st.codehunter) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
     // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google : le
     // marqueur d'invité suffit, pour ceux qui se sont connectés avant que ce titre existe).
