@@ -11,7 +11,11 @@ const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 async function state(id, now = Date.now()) {
   const day = dayKey(now);
   // Première lecture depuis l'arrivée des niveaux : on part du niveau actuel (pas de récompenses en rattrapage).
-  { const st0 = await readStats(id); if (st0.lvlPaid === undefined) await redis([['HSETNX', statsKey(id), 'lvlPaid', Quests.levelOf(st0.xpLife)]]); }
+  {
+    const st0 = await readStats(id);
+    if (st0.lvlPaid === undefined) { const L0 = Quests.levelOf(st0.xpLife); await redis([['HSETNX', statsKey(id), 'lvlPaid', L0], ['HSETNX', statsKey(id), 'lvlStart', L0]]); }
+    else if (st0.lvlStart === undefined) await redis([['HSETNX', statsKey(id), 'lvlStart', st0.lvlPaid]]); // arrivés avant ce champ : leur dernier niveau payé
+  }
   const [flat] = await redis([['HGETALL', questKey(day, id)]]);
   const counters = toObject(flat);
   const stats = await readStats(id);
@@ -31,8 +35,12 @@ async function state(id, now = Date.now()) {
     level: (() => {
       const L = Quests.levelOf(stats.xpLife), paid = stats.lvlPaid === undefined ? L : Number(stats.lvlPaid) || 0;
       const pending = []; for (let l = paid + 1; l <= L; l++) pending.push(l);
-      const coins = pending.reduce((x, l) => x + Quests.levelReward(l).coins, 0), keys = pending.map(l => Quests.levelReward(l).key).filter(Boolean);
-      return { level: L, xp: Number(stats.xpLife) || 0, from: Quests.xpForLevel(L), to: Quests.xpForLevel(L + 1), pending: pending.length, coins, keys, next: Quests.levelReward(L + 1) };
+      let coins = pending.reduce((x, l) => x + Quests.levelReward(l).coins, 0), keys = pending.map(l => Quests.levelReward(l).key).filter(Boolean);
+      // Rattrapage des niveaux d'avant le système (une fois, plafonné) : lvlStart = niveau de départ du joueur.
+      const start = Number(stats.lvlStart) || 0, catchup = start > 0 && stats.lvlCatch !== '1' ? Quests.catchUp(start) : null;
+      if (catchup && (catchup.coins || catchup.keys.length)) { coins += catchup.coins; keys = keys.concat(catchup.keys); }
+      const due = pending.length + (catchup && (catchup.coins || catchup.keys.length) ? 1 : 0);
+      return { level: L, xp: Number(stats.xpLife) || 0, from: Quests.xpForLevel(L), to: Quests.xpForLevel(L + 1), pending: due, coins, keys, next: Quests.levelReward(L + 1), catchup: catchup && (catchup.coins || catchup.keys.length) ? catchup : null, start };
     })(),
     // Série de quêtes : jours de suite avec les 5 quêtes réclamées. Retombe à 0 si hier n'a pas été fini.
     questStreak: (() => {
@@ -92,7 +100,7 @@ module.exports = async (req, res) => {
       try {
         const st = await state(playerId), lv = st.level;
         if (!lv.pending) return send(res, 422, { error: 'No level reward to claim' });
-        const writes = [['HSET', statsKey(playerId), 'lvlPaid', lv.level], ['HINCRBY', statsKey(playerId), 'bonus', lv.coins]];
+        const writes = [['HSET', statsKey(playerId), 'lvlPaid', lv.level, ...(lv.catchup ? ['lvlCatch', '1'] : [])], ['HINCRBY', statsKey(playerId), 'bonus', lv.coins]];
         for (const k of lv.keys) writes.push(['HINCRBY', statsKey(playerId), `key:${k}`, 1]);
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), gained: lv.coins, keys: lv.keys, levels: lv.pending });

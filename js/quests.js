@@ -68,9 +68,18 @@
   const LEVEL_XP = 200000;
   const levelOf = xp => Math.floor(Math.sqrt(Math.max(0, num(xp)) / LEVEL_XP));
   const xpForLevel = L => L * L * LEVEL_XP;
-  const levelReward = L => ({ coins: 25 * L, key: L % 25 === 0 ? 'premium' : L % 5 === 0 ? 'starter' : null });
+  // 10 × L pièces (25 × L le premier jour : trop généreux, environ 30 % de pièces en plus de celles des tirages).
+  const levelReward = L => ({ coins: 10 * L, key: L % 25 === 0 ? 'premium' : L % 5 === 0 ? 'starter' : null });
+  // Rattrapage, une seule fois, pour les joueurs arrivés avec un niveau (stats.lvlPaid posé à leur niveau d'alors) :
+  // les clés de ces niveaux (au plus 4 Starter et 1 Premium) et leurs pièces, plafonnées à 1 000.
+  const CATCHUP = { coins: 1000, starter: 4, premium: 1 };
+  const catchUp = upTo => {
+    let coins = 0, starter = 0, premium = 0;
+    for (let l = 1; l <= upTo; l++) { const r = levelReward(l); coins += r.coins; if (r.key === 'starter') starter++; if (r.key === 'premium') premium++; }
+    return { coins: Math.min(CATCHUP.coins, coins), keys: [...Array(Math.min(CATCHUP.starter, starter)).fill('starter'), ...Array(Math.min(CATCHUP.premium, premium)).fill('premium')] };
+  };
 
-  const api = { POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP };
+  const api = { POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGQuests = api;
 })(typeof window !== 'undefined' ? window : globalThis);
