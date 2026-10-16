@@ -4001,9 +4001,11 @@
       <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}">
         <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
         <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
-        <div class="skin-actions">${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
+        <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`).join('');
     grid.onclick = async e => {
+      const tryBtn = e.target.closest('[data-wall-try]');
+      if (tryBtn) { tryWallpaper(tryBtn.dataset.wallTry, state); return; }
       const buy = e.target.closest('[data-wall-buy]'), use = e.target.closest('[data-wall]');
       const btn = buy || use;
       if (!btn || btn.disabled) return;
@@ -4017,9 +4019,35 @@
       } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
     };
   }
+  // Aperçu d'un fond : il passe derrière tout le site, le contenu s'efface pour le montrer en plein écran, et une barre
+  // en bas permet de l'acheter (ou de le mettre) ou de fermer. Rien n'est enregistré ; Échap ou Fermer remet le vrai fond.
+  function tryWallpaper(id, state) {
+    const item = Shop.wallById.get(id);
+    if (!item) return;
+    document.querySelector('.wall-try-bar')?.remove();
+    paintWallpaper(id);
+    document.documentElement.classList.add('wall-trying');
+    const owned = (state.walls || []).includes(id), on = state.wall === id;
+    const bar = document.createElement('div');
+    bar.className = 'wall-try-bar';
+    bar.innerHTML = `<b>${item.emoji} ${esc(item.name)}</b>
+      ${on ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-wall="${id}">Use</button>` : `<button class="btn${state.coins >= item.price ? '' : ' disabled'}" data-wall-buy="${id}">🪙 ${fmt(item.price)}</button>`}
+      <button class="btn ghost" data-wall-close>Close</button>`;
+    document.body.append(bar);
+    const end = () => { bar.remove(); document.documentElement.classList.remove('wall-trying'); removeEventListener('keydown', onKey); paintWallpaper(); };
+    const onKey = e => { if (e.key === 'Escape') end(); };
+    addEventListener('keydown', onKey);
+    addEventListener('hashchange', end, { once: true });
+    bar.onclick = e => {
+      if (e.target.closest('[data-wall-close]')) { end(); return; }
+      const act = e.target.closest('[data-wall-buy],[data-wall]');
+      if (act) { end(); $('#d-walls')?.querySelector(`[${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
+    };
+  }
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
-  function paintWallpaper() {
-    const id = Store.settings.wall && Shop.wallById.has(Store.settings.wall) ? Store.settings.wall : null;
+  function paintWallpaper(force) {
+    const want = force || Store.settings.wall;
+    const id = want && Shop.wallById.has(want) ? want : null;
     let layer = document.getElementById('wallpaper');
     if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
     if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }

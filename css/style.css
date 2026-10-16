@@ -3681,3 +3681,11 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !important; }
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
 #wallpaper.wp::before, #wallpaper.wp::after { will-change: transform, opacity; backface-visibility: hidden; }
+
+/* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
+html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
+.wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .8rem .6rem 1.1rem; border-radius: 999px; background: rgba(10, 10, 14, .82); border: 1px solid rgba(255, 255, 255, .15); color: #fff;
+  backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); max-width: calc(100vw - 32px); white-space: nowrap; }
+.wall-try-bar .btn.ghost { color: #fff; }
+html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibility: hidden; }
