@@ -1572,6 +1572,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16s', date: 'Oct 16, 2026', en: ['💠 Badges now go up to Celestial: the 45 badges that only one number in a million can earn (idea by Meretera)'], fr: ['💠 Les badges montent maintenant jusqu\'à Celestial : les 45 badges qu\'un seul nombre sur un million peut obtenir (idée de Meretera)'] },
     { id: '2026-10-16r', date: 'Oct 16, 2026', en: ['⚜️ New rarity Godlike, between Divine and Infinite: the 40 best numbers under the Infinite ones (top 0.005%), worth 2,500 coins (idea by MAYO)', '🍬 New Halloween skin Trick or Treat: the doors open on number-shaped candy, and leading zeros are empty houses (idea by Deadshot)'], fr: ['⚜️ Nouvelle rareté Godlike, entre Divine et Infinite : les 40 meilleurs nombres sous les Infinite (top 0,005 %), 2 500 pièces (idée de MAYO)', '🍬 Nouveau skin d\'Halloween Trick or Treat : les portes s\'ouvrent sur des bonbons en forme de chiffres, et les zéros de tête sont des maisons vides (idée de Deadshot)'] },
     { id: '2026-10-16q', date: 'Oct 16, 2026', en: ['🗑️ New Trash leaderboard: the worst roll of every player, of all time', '🌠 New Galaxy wallpaper: a purple nebula with stars rushing past', '🩸 New Bloodlust skin: glossy dark red drops that drip and splash'], fr: ['🗑️ Nouveau classement Poubelle : le pire tirage de chaque joueur, de tous les temps', '🌠 Nouveau fond Galaxie : une nébuleuse violette et des étoiles qui filent', '🩸 Nouveau skin Bloodlust : des gouttes rouge sombre qui coulent et éclaboussent'] },
     { id: '2026-10-16p', date: 'Oct 16, 2026', en: ['😇 New skin Heavenly: white marble and gold, a halo lands on every digit (idea by Gunnar)', '🍅 Ketchup and 🌭 Mustard skins, the cousins of Mayo (idea by Gunnar)', '🖼️ Preview any wallpaper full screen before buying it'], fr: ['😇 Nouveau skin Heavenly : marbre blanc et or, une auréole se pose sur chaque chiffre (idée de Gunnar)', '🍅 Skins Ketchup et 🌭 Moutarde, les cousins du Mayo (idée de Gunnar)', '🖼️ Aperçu en plein écran de chaque fond avant de l\'acheter'] },
@@ -2411,7 +2412,7 @@
 
   function drawCollection(src, state) {
     const q = state.q.trim().toLowerCase();
-    const blocks = ['mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common'].map(tier => {
+    const blocks = ['celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common'].map(tier => {
       const all = Engine.badges.filter(b => b.tier === tier);
       const foundInTier = all.filter(b => src.get(b.id)).length;
       const list = all
@@ -5889,7 +5890,7 @@
     const ordered = Object.entries(lows).sort((a, b) => a[1] - b[1]);
     const xpOf = v => (v < 100000 ? fmt(v) : compact(v)); // exact en bas (les raretés du bas ne diffèrent que de quelques XP)
     const xpRange = Object.fromEntries(ordered.map(([t, lo], i) => { const hi = i + 1 < ordered.length ? ordered[i + 1][1] - 1 : null; return [t, hi === null ? `${xpOf(lo)}+ XP` : hi === lo ? `${xpOf(lo)} XP` : `${xpOf(lo)} – ${xpOf(hi)} XP`]; }));
-    const badgeRows = [['common', 'more than 10% of rolls'], ['uncommon', '1–10% of rolls'], ['rare', '0.1–1% of rolls'], ['epic', '0.01–0.1% of rolls'], ['anomaly', '0.001–0.01% of rolls'], ['mythic', 'under 0.001% (1 in 100,000+)']];
+    const badgeRows = [['common', 'more than 10% of rolls'], ['uncommon', '1–10% of rolls'], ['rare', '0.1–1% of rolls'], ['epic', '0.01–0.1% of rolls'], ['anomaly', '0.001–0.01% of rolls'], ['mythic', '1 in 100,000 to 1 in 1,000,000'], ['celestial', 'a single number (1 in 1,000,000)']];
     app.innerHTML = `
       <div class="page prose">
         <h1 class="page-title">What is RNG∞?</h1>
