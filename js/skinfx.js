@@ -22,7 +22,7 @@
   const outCubic = p => 1 - Math.pow(1 - clamp(p), 3);
   const outExpo = p => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(p)));
   // Force d'une révélation selon la rareté : le nombre de particules, la lumière et la durée en découlent.
-  const POWER = { landwaste: 0, garbage: 0, trash: 0, common: .12, uncommon: .25, rare: .42, epic: .62, anomaly: .8, mythic: 1, celestial: 1, divine: 1, infinite: 1 };
+  const POWER = { landwaste: 0, garbage: 0, trash: 0, common: .12, uncommon: .25, rare: .42, epic: .62, anomaly: .8, mythic: 1, celestial: 1, divine: 1, godlike: 1, infinite: 1 };
   // Nombre de particules d'une révélation : quelques-unes pour un Common (un tirage sur deux), `most` pour un Mythic.
   const burst = (p, most, few = 4) => Math.round(few + most * Math.pow(p, 1.25));
 
@@ -2004,6 +2004,17 @@
       frame(t, dt) { co.globalCompositeOperation = 'source-over'; bats.run(dt, (b, k) => bat(co, b.x + b.vx * k * 1.6, b.y + b.vy * k * 1.6 + Math.sin(t * 9 + b.ph) * 5, b.s * (.6 + .6 * Math.min(1, k * 4)), t * 22 + b.ph, Math.min(1, (1 - k) * 2.5))); co.globalAlpha = 1; },
       lock(p, o) { if (o.last) fly(0, false); },
       reveal(tier, p) { for (let i = 0, n = 4 + Math.round(8 * p); i < n; i++) fly(i * .07, true); },
+    };
+  });
+  // 🍬 Trick or Treat (2026-10-16, idée de Deadshot) — des bonbons tombent autour des maisons ; à chaque porte ouverte,
+  // une poignée de bonbons en jaillit ; à la révélation, une volée de chauves-souris et une pluie de bonbons.
+  SCENES.trickortreat = custom(pieces({ cols: ['#fb7185', '#fbbf24', '#a78bfa', '#34d399', '#fb923c'], shapes: ['ball', 'sprinkle'], size: [1.8, 3.6], g: 520, spin: 3, up: true, glowc: '#fb923c', ring: '#a78bfa', drift: { rate: 2, from: 'around' } }), env => {
+    const { co, card } = env, bats = timed();
+    const fly = delay => { const dir = Math.random() < .5 ? -1 : 1; bats.add({ delay, life: rnd(1.4, 2.2), x: rnd(card.x + card.w * .3, card.x + card.w * .7), y: card.y + card.h * .3, vx: dir * rnd(90, 200), vy: -rnd(60, 140), s: card.h * rnd(.12, .18), ph: rnd(TAU) }); };
+    return {
+      frame(t, dt) { co.globalCompositeOperation = 'source-over'; bats.run(dt, (b, k) => bat(co, b.x + b.vx * k * 1.6, b.y + b.vy * k * 1.6 + Math.sin(t * 9 + b.ph) * 5, b.s * (.6 + .6 * Math.min(1, k * 4)), t * 22 + b.ph, Math.min(1, (1 - k) * 2.5))); co.globalAlpha = 1; },
+      lock() {},
+      reveal(tier, p) { for (let i = 0, n = 2 + Math.round(5 * p); i < n; i++) fly(i * .09); },
     };
   });
   // 🧪 Witch's Brew — des bulles vertes montent sans cesse du chaudron, chaque chiffre fait « plop », et à la révélation

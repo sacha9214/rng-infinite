@@ -2618,7 +2618,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .modal:has(.share-card) { width: min(100%, 40rem); }
 
 /* ------------------------------------------------------------------ raretés au-dessus de Mythic (cartes seulement)
-   Celestial : glace et ciel. Divine : or blanc. Infinite : blanc prismatique dont le halo fait le tour des couleurs. */
+   Celestial : glace et ciel. Divine : or blanc. Godlike : or rose (idée de MAYO, 2026-10-16). Infinite : blanc prismatique dont le halo fait le tour des couleurs. */
 [data-tier="celestial"] {
   --t-from: #cffafe; --t-via: #f0f9ff; --t-to: #e0e7ff; --t-border: #67e8f9;
   --t-glow: 0 0 18px rgba(34, 211, 238, .35), 0 0 34px rgba(129, 140, 248, .18);
@@ -2630,6 +2630,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   --t-glow: 0 0 20px rgba(250, 204, 21, .45), 0 0 40px rgba(245, 158, 11, .2);
   --t-text: #854d0e; --t-pill-text: #854d0e; --t-pill-bg: #fefce8; --t-pill-border: #facc15;
   --t-hl: #fef08a; --t-hl-border: #ca8a04; --t-accent: #ca8a04; --t-shimmer: 1;
+}
+[data-tier="godlike"] {
+  --t-from: #ffe4e6; --t-via: #fffbeb; --t-to: #fef08a; --t-border: #fb7185;
+  --t-glow: 0 0 22px rgba(251, 113, 133, .5), 0 0 44px rgba(250, 204, 21, .3);
+  --t-text: #9f1239; --t-pill-text: #9f1239; --t-pill-bg: #fff1f2; --t-pill-border: #fb7185;
+  --t-hl: #fecdd3; --t-hl-border: #e11d48; --t-accent: #e11d48; --t-shimmer: 1;
 }
 [data-tier="infinite"] {
   --t-from: #fce7f3; --t-via: #ffffff; --t-to: #dbeafe; --t-border: #c084fc;
@@ -2647,6 +2653,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   --t-glow: 0 0 24px rgba(250, 204, 21, .55), 0 0 50px rgba(245, 158, 11, .28);
   --t-text: #fefce8; --t-pill-text: #fde047; --t-pill-bg: rgba(66, 32, 6, .5); --t-pill-border: rgba(250, 204, 21, .6);
 }
+.dark [data-tier="godlike"] {
+  --t-from: rgba(159, 18, 57, .6); --t-via: rgba(66, 32, 6, .6); --t-to: rgba(161, 98, 7, .5); --t-border: #fb7185;
+  --t-glow: 0 0 26px rgba(251, 113, 133, .55), 0 0 52px rgba(250, 204, 21, .3);
+  --t-text: #fff1f2; --t-pill-text: #fda4af; --t-pill-bg: rgba(76, 5, 25, .5); --t-pill-border: rgba(251, 113, 133, .65);
+}
 .dark [data-tier="infinite"] {
   --t-from: rgba(131, 24, 67, .5); --t-via: rgba(49, 46, 129, .55); --t-to: rgba(6, 78, 59, .45); --t-border: #f5d0fe;
   --t-glow: 0 0 26px rgba(255, 255, 255, .45), 0 0 56px rgba(192, 132, 252, .4);
@@ -2654,9 +2665,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 }
 [data-tier="celestial"] .card-stage.lit .rays { opacity: .55; animation-duration: 7s; }
 [data-tier="divine"] .card-stage.lit .rays { opacity: .62; animation-duration: 6s; }
+[data-tier="godlike"] .card-stage.lit .rays { opacity: .66; animation-duration: 5s; }
 [data-tier="infinite"] .card-stage.lit .rays { opacity: .7; animation-duration: 4.5s; }
 /* Les pastilles des trois raretés brillent ; celle d'Infinite fait défiler un arc-en-ciel. */
-.pill[data-tier="celestial"], .pill[data-tier="divine"], .pill[data-tier="infinite"] { font-weight: 800; box-shadow: 0 0 10px color-mix(in srgb, var(--t-pill-border) 60%, transparent); }
+.pill[data-tier="celestial"], .pill[data-tier="divine"], .pill[data-tier="godlike"], .pill[data-tier="infinite"] { font-weight: 800; box-shadow: 0 0 10px color-mix(in srgb, var(--t-pill-border) 60%, transparent); }
 .pill[data-tier="infinite"] {
   color: #fff; border-color: transparent; text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
   background: linear-gradient(90deg, #ec4899, #a855f7, #3b82f6, #10b981, #eab308, #f97316, #ec4899) 0 0 / 300% 100%;
@@ -3830,3 +3842,45 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-bloodlust { --side-border: #991b1b; --side-glow: 0 0 16px rgba(185, 28, 28, .35); --side-ink: #b91c1c;
   --side-bg: linear-gradient(180deg, rgba(127, 29, 29, .35), rgba(18, 2, 2, .2));
   --deco-a: '🩸'; --deco-b: '🦇'; }
+
+/* ------------------------------------------------------------------ Trick or Treat (idée de Deadshot, 2026-10-16) :
+   une rue de maisons la nuit d'Halloween. Chaque chiffre est une porte éclairée ; pendant le tirage, la porte est fermée
+   et on y frappe ; à la révélation elle s'ouvre sur un bonbon en forme de chiffre. Derrière un zéro de tête : une
+   maison vide, porte ouverte sur le noir. */
+.num-card.skin-trickortreat {
+  background:
+    conic-gradient(from 135deg at 50% 0%, #1e1033 0 90deg, transparent 90deg) 0 0 / 2.2em 1.1em repeat-x,
+    radial-gradient(circle at 88% 18%, #fef3c7 0 .35em, rgba(254, 243, 199, .25) .36em .6em, transparent .62em),
+    linear-gradient(180deg, transparent 82%, #14532d 82% 86%, #0b2a17 86%),
+    linear-gradient(180deg, #4c1d95 0%, #2e1065 45%, #3b0764 100%);
+  border: 2px solid #f97316; border-radius: .8rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, .35), 0 0 18px rgba(249, 115, 22, .3), 0 8px 18px rgba(0, 0, 0, .4);
+}
+.skin-trickortreat .slot { position: relative; isolation: isolate; width: .72em; margin: 0 .03em; font-weight: 900; color: #fb7185;
+  -webkit-text-stroke: .025em #fff1f2; text-shadow: 0 .04em 0 #9d174d, 0 0 .2em rgba(251, 113, 133, .55); }
+.skin-trickortreat .slot:nth-child(3n+2) { color: #fbbf24; text-shadow: 0 .04em 0 #92400e, 0 0 .2em rgba(251, 191, 36, .55); }
+.skin-trickortreat .slot:nth-child(3n) { color: #a78bfa; text-shadow: 0 .04em 0 #4c1d95, 0 0 .2em rgba(167, 139, 250, .55); }
+/* l'encadrement de porte, éclairé de l'intérieur */
+.skin-trickortreat .slot::after { content: ''; position: absolute; left: 0; right: 0; top: .1em; bottom: -.04em; z-index: -1;
+  border: .05em solid #3b1d0e; border-bottom: 0; border-radius: .34em .34em 0 0;
+  background: radial-gradient(ellipse 80% 70% at 50% 60%, #fde68a, #f59e0b 70%, #b45309); }
+/* la porte en bois : ouverte au repos, fermée pendant le tirage */
+.skin-trickortreat .slot::before { content: ''; position: absolute; left: 0; right: 0; top: .1em; bottom: -.04em; z-index: 2;
+  border-radius: .34em .34em 0 0; transform-origin: 0 50%; transform: perspective(14em) rotateY(-105deg); opacity: 0;
+  background: radial-gradient(circle at 78% 58%, #fbbf24 0 .045em, transparent .055em), repeating-linear-gradient(90deg, #7c2d12 0 .12em, #9a3412 .12em .24em); box-shadow: inset 0 0 0 .04em #431407; }
+.skin-trickortreat .slot.spinning { opacity: 1; color: transparent; }
+.skin-trickortreat .slot.spinning::before { opacity: 1; transform: none; animation: tot-knock .32s ease-in-out infinite; }
+@keyframes tot-knock { 0%, 100% { transform: none; } 30% { transform: translateX(.02em) rotate(.6deg); } 60% { transform: translateX(-.02em) rotate(-.6deg); } }
+.skin-trickortreat .slot.revealed::before { animation: tot-open .6s cubic-bezier(.3, 1.4, .5, 1) backwards; }
+@keyframes tot-open { 0% { opacity: 1; transform: none; } 25% { opacity: 1; transform: perspective(14em) rotateY(8deg); } 100% { opacity: 0; transform: perspective(14em) rotateY(-105deg); } }
+.skin-trickortreat .slot.revealed { animation: tot-candy .6s .1s cubic-bezier(.3, 1.6, .5, 1) backwards; }
+@keyframes tot-candy { 0% { transform: scale(.82); } 60% { transform: scale(1.07); } 100% { transform: none; } }
+/* zéro de tête : une maison vide, porte ouverte sur le noir */
+.skin-trickortreat .slot.ghost { opacity: 1; color: transparent; -webkit-text-stroke: 0; text-shadow: none; }
+.skin-trickortreat .slot.ghost::after { background: linear-gradient(180deg, #0c0a16, #1c1530); border-color: #241225; }
+.skin-trickortreat .slot.collapsed { width: 0; margin: 0; }
+.skin-trickortreat .slot.collapsed::before, .skin-trickortreat .slot.collapsed::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .skin-trickortreat .slot, .skin-trickortreat .slot::before { animation: none; } }
+.side-trickortreat { --side-border: #f97316; --side-glow: 0 0 16px rgba(249, 115, 22, .35); --side-ink: #ea580c;
+  --side-bg: linear-gradient(180deg, rgba(76, 29, 149, .35), rgba(249, 115, 22, .1));
+  --deco-a: '🏚️'; --deco-b: '🍬'; }

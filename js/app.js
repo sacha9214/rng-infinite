@@ -3,9 +3,9 @@
   'use strict';
 
   const Engine = RNGEngine.createEngine(window.BADGE_META, window.SCORE_PERCENTILES);
-  const TIERS_DESC = ['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash', 'garbage', 'landwaste'];
-  const TIER_RANK = { landwaste: -2, garbage: -1, trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, infinite: 9 };
-  const TIER_EMOJI = { landwaste: '☣️', garbage: '🗑️', trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', infinite: '♾️' };
+  const TIERS_DESC = ['infinite', 'godlike', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash', 'garbage', 'landwaste'];
+  const TIER_RANK = { landwaste: -2, garbage: -1, trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, godlike: 9, infinite: 10 };
+  const TIER_EMOJI = { landwaste: '☣️', garbage: '🗑️', trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', godlike: '⚜️', infinite: '♾️' };
   // Rythme de révélation du site d'origine (ms). Chaque vitesse applique un facteur à toutes ces durées.
   const REVEAL = {
     digitStart: 2000, digitBase: 1000, digitMax: 2000,
@@ -744,6 +744,7 @@
       // Au-dessus de Mythic : plus de confettis, plus vite, et des salves qui se répètent (waves).
       celestial: { count: 300, speed: 13, colors: ['#22d3ee', '#a5f3fc', '#ffffff', '#38bdf8', '#818cf8'], waves: 2, flash: 'rgba(34,211,238,.5), rgba(129,140,248,.3) 40%, rgba(255,255,255,.12) 70%' },
       divine: { count: 340, speed: 14, colors: ['#fde047', '#fef9c3', '#ffffff', '#f59e0b', '#fbbf24'], waves: 3, flash: 'rgba(253,224,71,.6), rgba(245,158,11,.35) 40%, rgba(255,255,255,.15) 70%' },
+      godlike: { count: 360, speed: 14, colors: ['#fb7185', '#fde047', '#ffffff', '#f43f5e', '#fbbf24'], waves: 4, flash: 'rgba(251,113,133,.6), rgba(253,224,71,.4) 40%, rgba(255,255,255,.18) 70%' },
       infinite: { count: 380, speed: 15, colors: ['#f472b6', '#c084fc', '#60a5fa', '#34d399', '#fde047', '#fb923c', '#ffffff'], waves: 5, flash: 'rgba(255,255,255,.75), rgba(192,132,252,.45) 35%, rgba(96,165,250,.2) 70%' },
     };
     function tick() {
@@ -821,12 +822,12 @@
   }
 
   // Onde de choc à la couleur de la rareté, qui part de la carte au moment où la rareté se révèle.
-  const TIER_RING = { uncommon: '#10b981', rare: '#3b82f6', epic: '#a855f7', anomaly: '#f97316', mythic: '#ec4899', celestial: '#22d3ee', divine: '#fde047', infinite: '#ffffff' };
+  const TIER_RING = { uncommon: '#10b981', rare: '#3b82f6', epic: '#a855f7', anomaly: '#f97316', mythic: '#ec4899', celestial: '#22d3ee', divine: '#fde047', godlike: '#fb7185', infinite: '#ffffff' };
   function shockwave(el, tier) {
     const color = TIER_RING[tier];
     if (!color || reducedMotion || !el) return;
     const r = el.getBoundingClientRect();
-    const rings = TIER_RANK[tier] > TIER_RANK.mythic ? TIER_RANK[tier] - 3 : TIER_RANK[tier] >= TIER_RANK.epic ? 2 : 1; // Celestial 4, Divine 5, Infinite 6
+    const rings = TIER_RANK[tier] > TIER_RANK.mythic ? Math.min(6, TIER_RANK[tier] - 3) : TIER_RANK[tier] >= TIER_RANK.epic ? 2 : 1; // Celestial 4, Divine 5, Infinite 6
     for (let k = 0; k < rings; k++) {
       const w = document.createElement('div');
       w.className = 'shockwave';
@@ -1571,6 +1572,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16r', date: 'Oct 16, 2026', en: ['⚜️ New rarity Godlike, between Divine and Infinite: the 40 best numbers under the Infinite ones (top 0.005%), worth 2,500 coins (idea by MAYO)', '🍬 New Halloween skin Trick or Treat: the doors open on number-shaped candy, and leading zeros are empty houses (idea by Deadshot)'], fr: ['⚜️ Nouvelle rareté Godlike, entre Divine et Infinite : les 40 meilleurs nombres sous les Infinite (top 0,005 %), 2 500 pièces (idée de MAYO)', '🍬 Nouveau skin d\'Halloween Trick or Treat : les portes s\'ouvrent sur des bonbons en forme de chiffres, et les zéros de tête sont des maisons vides (idée de Deadshot)'] },
     { id: '2026-10-16q', date: 'Oct 16, 2026', en: ['🗑️ New Trash leaderboard: the worst roll of every player, of all time', '🌠 New Galaxy wallpaper: a purple nebula with stars rushing past', '🩸 New Bloodlust skin: glossy dark red drops that drip and splash'], fr: ['🗑️ Nouveau classement Poubelle : le pire tirage de chaque joueur, de tous les temps', '🌠 Nouveau fond Galaxie : une nébuleuse violette et des étoiles qui filent', '🩸 Nouveau skin Bloodlust : des gouttes rouge sombre qui coulent et éclaboussent'] },
     { id: '2026-10-16p', date: 'Oct 16, 2026', en: ['😇 New skin Heavenly: white marble and gold, a halo lands on every digit (idea by Gunnar)', '🍅 Ketchup and 🌭 Mustard skins, the cousins of Mayo (idea by Gunnar)', '🖼️ Preview any wallpaper full screen before buying it'], fr: ['😇 Nouveau skin Heavenly : marbre blanc et or, une auréole se pose sur chaque chiffre (idée de Gunnar)', '🍅 Skins Ketchup et 🌭 Moutarde, les cousins du Mayo (idée de Gunnar)', '🖼️ Aperçu en plein écran de chaque fond avant de l\'acheter'] },
     { id: '2026-10-16o', date: 'Oct 16, 2026', en: ['🖼️ New in the Shop: 6 animated wallpapers (Night forest, Starry sky, Abyss, Sakura, Sunset, Synthwave), thanks to MAYO for the idea'], fr: ['🖼️ Nouveau dans la Boutique : 6 fonds d\'écran animés (Forêt de nuit, Ciel étoilé, Abysses, Sakura, Coucher de soleil, Synthwave), merci à MAYO pour l\'idée'] },
@@ -1712,7 +1714,7 @@
   // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
   const SoloAuto = { on: false, timer: 0 };
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
-  const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+  const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
   const autoStop = () => (AUTO_STOPS.includes(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
   const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</select></label></span>`;
   function stopSoloAuto() {
@@ -2590,7 +2592,7 @@
       ['Best roll', p => (p.best[0] ? p.best[0].s : 0), (v, p) => bestCell(p), 1],
       ['All-time rank', p => p.rank || Infinity, v => (v === Infinity ? '–' : '#' + v), -1],
       ['Luck (avg percentile)', p => (p.luck == null ? -1 : p.luck), v => (v < 0 ? '–' : v.toFixed(1)), 1],
-      ...['infinite', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare'].map(t => [`${cap(t)} rolls`, p => (p.tiers && p.tiers[t]) || 0, v => fmt(v), 1]),
+      ...['infinite', 'godlike', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare'].map(t => [`${cap(t)} rolls`, p => (p.tiers && p.tiers[t]) || 0, v => fmt(v), 1]),
       ['Duels won', p => (p.duels ? p.duels.won : 0), v => fmt(v), 1],
       ['Duel win rate', p => (p.duels && p.duels.played ? p.duels.won / p.duels.played : -1), v => (v < 0 ? '–' : `${Math.round(v * 100)}%`), 1],
       ['Badges found', found, v => `${v}/${Engine.badges.length}`, 1],
@@ -5879,7 +5881,7 @@
 
   function renderAbout() {
     currentView = 'about';
-    const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.001% (90 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
+    const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.005% (about 50 numbers)'], ['godlike', 'top 0.005–0.001% (40 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
     // Plage d'XP de chaque rareté (idée d'un joueur, 2026-10-16), lue dans la table des rangs : le plus petit total de la
     // rareté, jusqu'au plus petit de la suivante.
     const lows = {};

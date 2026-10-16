@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
 
-  const TIERS = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'infinite'];
+  const TIERS = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
   const num = v => Number(v) || 0;
   // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
   const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
@@ -24,6 +24,7 @@
     { id: 'mythic', emoji: '🔮', title: 'Mythic', desc: 'Roll a Mythic or better (top 1%)', test: st => atLeast(st, 'mythic') >= 1 },
     { id: 'chosen', emoji: '👁️', title: 'Chosen One', desc: 'Roll 10 Mythics or better', test: st => atLeast(st, 'mythic') >= 10 },
     { id: 'celestial', emoji: '🌠', title: 'Celestial', desc: 'Roll a Celestial or better (top 0.1%)', test: st => atLeast(st, 'celestial') >= 1 },
+    { id: 'godlike', emoji: '⚜️', title: 'Godlike', desc: 'Roll a Godlike or better (top 0.005%)', test: st => atLeast(st, 'godlike') >= 1 },
     { id: 'divine', emoji: '👼', title: 'Divine', desc: 'Roll a Divine or better (top 0.01%)', test: st => atLeast(st, 'divine') >= 1 },
     { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
     // XP à vie (idée d'Avaneesh_17, 2026-10-16) : stats.xpLife, tenue à chaque tirage et recalculée avec le classement.

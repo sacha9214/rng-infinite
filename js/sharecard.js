@@ -10,7 +10,7 @@
   const TIERS = {
     landwaste: ['#a3e635', '#3f6212'], garbage: ['#a8a29e', '#57534e'], trash: ['#c8a87c', '#7c5a2e'], common: ['#d1d5db', '#6b7280'], uncommon: ['#6ee7b7', '#059669'], rare: ['#93c5fd', '#2563eb'],
     epic: ['#c4b5fd', '#7c3aed'], anomaly: ['#fdba74', '#ea580c'], mythic: ['#f9a8d4', '#db2777'],
-    celestial: ['#a5f3fc', '#0891b2'], divine: ['#fef08a', '#ca8a04'], infinite: ['#ffffff', '#8b5cf6'],
+    celestial: ['#a5f3fc', '#0891b2'], divine: ['#fef08a', '#ca8a04'], godlike: ['#fecdd3', '#e11d48'], infinite: ['#ffffff', '#8b5cf6'],
   };
   const SANS = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
   const MONO = "'Space Mono', ui-monospace, Menlo, monospace";

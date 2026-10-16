@@ -7,7 +7,7 @@
   'use strict';
 
   // Pièces par tirage selon la rareté de la carte (Trash rapporte un peu plus que Common : lot de consolation).
-  const COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, infinite: 5000 };
+  const COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, godlike: 2500, infinite: 5000 };
   const DUEL_WIN_COINS = 25;
   // Pièces offertes une seule fois à un joueur qui associe son compte Google (il retrouve alors son joueur partout).
   const GOOGLE_BONUS = 150;
@@ -54,6 +54,9 @@
     { id: 'pumpkin', name: "Jack-o'-Lantern", emoji: '🎃', price: 1031, desc: 'Digits carved in a pumpkin, lit by a flickering candle · until November 1', until: '2026-11-01T00:00:00Z' },
     { id: 'brew', name: "Witch's Brew", emoji: '🧪', price: 1313, desc: 'A bubbling green potion in a witch cauldron · until November 1', until: '2026-11-01T00:00:00Z' },
     { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
+    // Idée de Deadshot (2026-10-16) : des maisons du quartier, les portes s'ouvrent sur des bonbons en forme de chiffres ;
+    // derrière les zéros de tête, la porte s'ouvre sur une maison vide.
+    { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.

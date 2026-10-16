@@ -760,3 +760,5 @@
   --gs: 0 .3em 0 #a16207, 0 0 1.2em rgba(253, 224, 71, .45); --gs-h: 0 .34em 0 #a16207, 0 0 1.8em rgba(253, 224, 71, .65); --gs-a: 0 .06em 0 #a16207; }
 .btn-roll.gen-bloodlust { border: 2px solid #450a0a; border-radius: 999px; color: #fecaca; background: radial-gradient(ellipse 60% 45% at 35% 20%, rgba(254, 202, 202, .35), transparent 70%), linear-gradient(180deg, #b91c1c, #7f1d1d 60%, #450a0a); text-shadow: 0 1px 0 #3b0505;
   --gs: 0 .3em 0 #3b0505, 0 .5em 1em rgba(185, 28, 28, .35); --gs-h: 0 .34em 0 #3b0505, 0 .7em 1.3em rgba(220, 38, 38, .45); --gs-a: 0 .06em 0 #3b0505; }
+.btn-roll.gen-trickortreat { border: 2px solid #c2410c; border-radius: .6em .6em .2em .2em; color: #fff7ed; background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(253, 230, 138, .45), transparent 70%), linear-gradient(180deg, #f97316, #c2410c 60%, #7c2d12); text-shadow: 0 1px 0 #431407;
+  --gs: 0 .3em 0 #431407, 0 .5em 1em rgba(249, 115, 22, .35); --gs-h: 0 .34em 0 #431407, 0 .7em 1.3em rgba(251, 146, 60, .45); --gs-a: 0 .06em 0 #431407; }
