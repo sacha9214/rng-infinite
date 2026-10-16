@@ -259,6 +259,8 @@
     [/^Cashed out at ×([\d.]+) · you get ([\d,]+) coins$/, m => `Encaissé à ×${m[1]} · tu reçois ${m[2]} pièces`],
     [/^Cash out · ([\d,]+)$/, m => `Encaisser · ${m[1]}`],
     [/^Level ([\d,]+)$/, m => `Niveau ${m[1]}`],
+    [/^Claim \+([\d,]+) 🪙(.*)$/, m => `Réclamer +${m[1]} 🪙${m[2]}`],
+    [/^🎁 ([\d,]+) rewards? to claim$/, m => `🎁 ${m[1]} récompense${s(m[1])} à réclamer`],
     [/^⭐ Level ([\d,]+)$/, m => `⭐ Niveau ${m[1]}`],
     [/^Your level goes up with your lifetime XP \((.+) XP\)\. Every level gives coins, every 5 levels a 📦 Starter Case key, every 25 levels a 🎁 Premium Case key\.( You have rewards to claim on the home page!)?$/, m => `Ton niveau monte avec ton XP à vie (${m[1]} XP). Chaque niveau donne des pièces, tous les 5 niveaux une clé 📦 de Caisse Starter, tous les 25 une clé 🎁 de Caisse Premium.${m[2] ? ' Tu as des récompenses à réclamer sur l\'accueil !' : ''}`],
     [/^🔑 Open free \(([\d,]+)\)$/, m => `🔑 Ouvrir gratuitement (${m[1]})`],

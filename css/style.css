@@ -3611,3 +3611,7 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 /* Onglet Profil & amis : mon profil en résumé en haut. */
 .me-panel .me-title { margin: -.2rem 0 .5rem; }
 .me-tiles { margin-bottom: .6rem; }
+
+.tile.tile-btn { cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.tile.tile-btn:hover { border-color: #f59e0b; }
+.tile.tile-btn.ready { border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, .3); }

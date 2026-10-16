@@ -1292,8 +1292,25 @@
       <h2>⭐ Level ${fmt(lv.level)}</h2>
       <p class="panel-note" style="margin:-.3rem 0 .8rem">Your level goes up with your lifetime XP (${compact(lv.xp)} XP). Every level gives coins, every 5 levels a 📦 Starter Case key, every 25 levels a 🎁 Premium Case key.${lv.pending ? ' You have rewards to claim on the home page!' : ''}</p>
       <div class="road">${rows.join('')}</div>
-      <div class="actions"><button class="btn" data-close>Close</button></div>`, m => { const b = m.querySelector('[data-close]'); if (b) b.onclick = closeModal; const n = m.querySelector('.road-step.next'); if (n) n.scrollIntoView({ block: 'center' }); });
+      <div class="actions">${lv.pending ? `<button class="btn-roll small" data-road-claim>Claim +${fmt(lv.coins)} 🪙${lv.keys.length ? ` ${lv.keys.map(k => KEY[k][0]).join('')}` : ''}</button>` : ''}<button class="btn" data-close>Close</button></div>`, m => {
+      const b = m.querySelector('[data-close]'); if (b) b.onclick = closeModal;
+      const n = m.querySelector('.road-step.next'); if (n) n.scrollIntoView({ block: 'center' });
+      // Réclamer directement depuis la route (même action que le bouton des quêtes du jour).
+      const claim = m.querySelector('[data-road-claim]');
+      if (claim) claim.onclick = async () => {
+        claim.disabled = true;
+        try {
+          const next = await Online.questAction('level');
+          toast(`⭐ Level ${next.level.level}! +${fmt(next.gained)} coins${next.keys.length ? ` and ${next.keys.length} case key${next.keys.length > 1 ? 's' : ''} (Shop, Cases tab)` : ''}`, 4500, 'achv');
+          FX.celebrate(next.keys.length ? 'epic' : 'uncommon', m); Sound.play('reveal', { small: 1 });
+          LevelWatch.state = next.level; document.dispatchEvent(new CustomEvent('rng:level', { detail: next }));
+          if ($('#quests-slot')) loadQuests($('#quests-slot'), next); // la carte des quêtes de l'accueil suit
+          openLevelRoad(next.level);
+        } catch (err) { claim.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+      };
+    });
   }
+  const LevelWatch = { state: null };
 
   function featureCardHTML(i) {
     const r = Store.rolls[i];
@@ -1551,6 +1568,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16l', date: 'Oct 16, 2026', en: ['⭐ Level rewards are easier to find: click the Level tile in Profile & Friends (or your level at the top of the daily quests) to open the rewards road, and claim right from there'], fr: ['⭐ Les récompenses de niveau sont plus faciles à trouver : clique sur la tuile Niveau dans Profil & amis (ou sur ton niveau en haut des quêtes du jour) pour ouvrir la route des récompenses, et réclame directement depuis là'] },
     { id: '2026-10-16k', date: 'Oct 16, 2026', en: ['The Friends tab is now Profile & Friends: your profile summary (level, lifetime XP, best roll, rank) is at the top, with a button to open your full profile'], fr: ['L\'onglet Amis devient Profil & amis : le résumé de ton profil (niveau, XP à vie, meilleur tirage, rang) est en haut, avec un bouton pour ouvrir ton profil complet'] },
     { id: '2026-10-16j', date: 'Oct 16, 2026', en: ['🛣️ Level rewards road: click your level at the top of the daily quests to see every upcoming level and its reward'], fr: ['🛣️ Route des récompenses de niveau : clique sur ton niveau en haut des quêtes du jour pour voir tous les niveaux à venir et leurs récompenses'] },
     { id: '2026-10-16i', date: 'Oct 16, 2026', en: ['⭐ Levels! Your level goes up with your lifetime XP and is shown on your profile. Every new level gives coins, every 5 levels a free Starter Case key and every 25 levels a Premium Case key. Claim them at the top of your daily quests (thanks PRISMA123!)', '💎 New Elite Case in the shop: only skins worth 1,500 to 5,000 coins'], fr: ['⭐ Les niveaux ! Ton niveau monte avec ton XP à vie et s\'affiche sur ton profil. Chaque nouveau niveau donne des pièces, tous les 5 niveaux une clé de Caisse Starter gratuite et tous les 25 une clé de Caisse Premium. Réclame-les en haut de tes quêtes du jour (merci PRISMA123 !)', '💎 Nouvelle Caisse Élite dans la boutique : seulement des skins de 1 500 à 5 000 pièces'] },
@@ -4800,11 +4818,18 @@
       box.innerHTML = `
         ${t ? `<div class="me-title">${t}</div>` : ''}
         <div class="tiles me-tiles">
-          ${tile('Level', p.level != null ? `⭐ ${fmt(p.level)}` : '–', 'lifetime XP')}
+          <button class="tile tile-btn" id="f-level" title="See the level rewards road"><div class="l">Level</div><div class="v">${p.level != null ? `⭐ ${fmt(p.level)}` : '–'}</div><div class="s" id="f-level-sub">🛣️ See all rewards</div></button>
           ${tile('Lifetime XP', compact(p.lifetime), `${fmt(p.rolls)} rolls`)}
           ${tile('Best roll', p.best && p.best[0] ? analysis(p.best[0].n).str : '–', p.best && p.best[0] ? `${fmt(p.best[0].s)} XP` : '')}
           ${tile('All-time rank', p.rank ? '#' + p.rank : '–', 'best single roll')}
         </div>`;
+      // Le niveau détaillé (récompenses en attente) vient des quêtes : la tuile ouvre la route, et signale ce qu'il y a à prendre.
+      Online.quests().then(q => {
+        const btn = $('#f-level'); if (!btn || !q.level) return;
+        if (q.level.pending) { btn.classList.add('ready'); $('#f-level-sub').textContent = `🎁 ${q.level.pending} reward${q.level.pending > 1 ? 's' : ''} to claim`; }
+        btn.onclick = () => openLevelRoad(q.level);
+        document.addEventListener('rng:level', e => { if ($('#f-level')) { btn.classList.remove('ready'); $('#f-level-sub').textContent = '🛣️ See all rewards'; btn.onclick = () => openLevelRoad(e.detail.level); } }, { once: true });
+      }).catch(() => {});
     }).catch(() => { const box = $('#f-me-body'); if (box) box.innerHTML = '<div class="empty">Roll once to start your profile.</div>'; });
     $('#f-body').addEventListener('click', e => {
       const btn = e.target.closest('[data-fr]');
