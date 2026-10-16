@@ -12,7 +12,8 @@ const MIGRATED = 'lb:xp:migrated';
 // alors recalculée depuis l'historique au lieu de garder l'ancien total (signalé par un joueur le 2026-10-15).
 // 4 : + les meilleurs tirages (tout le temps, et jour, semaine, mois en cours) recalculés eux aussi : un 117 tiré avant
 // le badge Exact Spartan restait à son ancien score dans le classement (signalé par un joueur le 2026-10-16).
-const MIGRATION = '4:' + require('node:crypto').createHash('sha256')
+// 5 : + l'XP à vie copiée dans les stats (stats.xpLife), pour les titres d'XP à vie.
+const MIGRATION = '5:' + require('node:crypto').createHash('sha256')
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
@@ -35,7 +36,7 @@ async function migrateXp() {
     const writes = [];
     batch.forEach((id, j) => {
       const { xp, rolls } = lifetimeTotals(lists[j]);
-      if (xp > 0) writes.push(['ZADD', XP_LB, xp, id]);
+      if (xp > 0) writes.push(['ZADD', XP_LB, xp, id], ['HSET', statsKey(id), 'xpLife', xp]);
       if (rolls > Number(counts[j] || 0)) writes.push(['HSET', 'count:all', id, rolls]);
       // Meilleur tirage de chaque période encore ouverte, au barème actuel des badges.
       const tops = new Map(), members = (lists[j] || []).slice();

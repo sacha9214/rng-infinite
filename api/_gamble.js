@@ -26,7 +26,7 @@ const HOUSE_KEY = 'casino', FEED_KEY = 'casino:feed', FEED_KEPT = 20;
 // Pour la page Owner : les mêmes totaux par jeu (r:, b:, w:), les mêmes par jour (casino:d:<jour>, gardés 100 jours)
 // et les joueurs du jour (casino:p:<jour>, un ensemble d'identifiants qui ne sert qu'à les compter).
 const dayOf = t => new Date(t).toISOString().slice(0, 10);
-function ledger(id, game, bet, win, rounds = 1) {
+function ledger(id, game, bet, win, rounds = 1, feed = true) {
   const day = dayOf(Date.now()), daily = `casino:d:${day}`, players = `casino:p:${day}`;
   const out = [['HINCRBY', HOUSE_KEY, 'rounds', rounds], ['HINCRBY', HOUSE_KEY, 'bet', bet], ['HINCRBY', HOUSE_KEY, 'won', win],
     ['HINCRBY', HOUSE_KEY, `r:${game}`, rounds], ['HINCRBY', HOUSE_KEY, `b:${game}`, bet], ['HINCRBY', HOUSE_KEY, `w:${game}`, win],
@@ -34,7 +34,7 @@ function ledger(id, game, bet, win, rounds = 1) {
     ['SADD', players, id], ['EXPIRE', players, 100 * 86400],
     // Quêtes du jour de casino (js/quests.js) : manches jouées et pièces misées.
     ['HINCRBY', questKey(day, id), 'casino', rounds], ['HINCRBY', questKey(day, id), 'casinoBet', bet], ['EXPIRE', questKey(day, id), QUEST_TTL]];
-  if (win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
+  if (feed && win !== bet) out.push(['RPUSH', FEED_KEY, JSON.stringify({ id, g: game, n: win - bet, t: Date.now() })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]);
   return out;
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
@@ -258,7 +258,14 @@ async function plinko(id, body) {
     return { path, slot, mult, win: Math.floor(tenths / 10) + (crypto.randomInt(0, 10) < tenths % 10 ? 1 : 0) };
   });
   const win = balls.reduce((x, b) => x + b.win, 0);
-  await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gPlinko', count], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, 'plinko', total, win, count)]);
+  // Fil « LIVE » du casino : en lâchant des billes à la chaîne, une seule ligne par joueur, mise à jour avec le total des
+  // 5 dernières secondes, au lieu d'une ligne par demande (signalé par un joueur le 2026-10-16).
+  const now = Date.now(), [lastRaw] = await redis([['LINDEX', FEED_KEY, -1]]);
+  let last = null; try { last = lastRaw ? JSON.parse(lastRaw) : null; } catch (e) { last = null; }
+  const merge = last && last.id === id && last.g === 'plinko' && now - (last.t0 || last.t) < 5000;
+  const feed = merge ? [['LSET', FEED_KEY, -1, JSON.stringify({ ...last, n: last.n + win - total, t: now, t0: last.t0 || last.t })]]
+    : win !== total ? [['RPUSH', FEED_KEY, JSON.stringify({ id, g: 'plinko', n: win - total, t: now, t0: now })], ['LTRIM', FEED_KEY, -FEED_KEPT, -1]] : [];
+  await redis([['HINCRBY', statsKey(id), 'spent', total], ['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), 'gPlinko', count], ['HINCRBY', statsKey(id), 'gBet', total], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, 'plinko', total, win, count, false), ...feed]);
   // Une seule bille : la réponse garde aussi sa forme d'avant (path, slot, mult), pour une page pas encore rechargée.
   return { ...(count === 1 ? balls[0] : {}), balls, bet, total, risk: high ? 'high' : 'normal', win, coins: (await wallet(id)).coins };
 }

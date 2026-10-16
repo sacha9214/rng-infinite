@@ -26,6 +26,9 @@
     { id: 'celestial', emoji: '🌠', title: 'Celestial', desc: 'Roll a Celestial or better (top 0.1%)', test: st => atLeast(st, 'celestial') >= 1 },
     { id: 'divine', emoji: '👼', title: 'Divine', desc: 'Roll a Divine or better (top 0.01%)', test: st => atLeast(st, 'divine') >= 1 },
     { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
+    // XP à vie (idée d'Avaneesh_17, 2026-10-16) : stats.xpLife, tenue à chaque tirage et recalculée avec le classement.
+    { id: 'centimillionaire', emoji: '💎', title: 'Centimillionaire', desc: 'Reach 100,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e8 },
+    { id: 'billionaire', emoji: '🏦', title: 'Billionaire', desc: 'Reach 1,000,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e9 },
     { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
     { id: 'year2026', emoji: '📅', title: '2026', desc: 'Earn the Current Year badge (a number containing 2026)', test: st => num(st.year2026) >= 1 },
@@ -43,6 +46,7 @@
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
     // Code SPOOKYMONTH (Halloween 2026) : caché à ceux qui ne l'ont pas, pour ne pas dévoiler le code.
     { id: 'spooky', emoji: '🎃', title: 'Spooky', desc: 'Redeemed the Halloween 2026 code', hidden: true, test: st => num(st.spooky) >= 1 },
+    { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Found all the hidden codes', hidden: true, test: st => num(st.codehunter) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
     // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google : le
     // marqueur d'invité suffit, pour ceux qui se sont connectés avant que ce titre existe).

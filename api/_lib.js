@@ -391,6 +391,7 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', statsKey(playerId), 'rolls', 1],
     // XP à vie (classement « Lifetime XP ») : la somme de tous ses tirages.
     ['ZINCRBY', XP_LB, s, playerId],
+    ['HINCRBY', statsKey(playerId), 'xpLife', s], // XP à vie dans les stats aussi : titres Centimillionaire / Billionaire
     ['HINCRBY', statsKey(playerId), `t:${a.tier}`, 1],
     // Compteurs du jour (quêtes) et dernière activité (liste d'amis).
     ['HINCRBY', questKey(dayKey(t), playerId), 'rolls', 1],

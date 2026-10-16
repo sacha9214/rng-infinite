@@ -679,22 +679,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^4:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^5:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
   // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
-  run([['SET', 'lb:xp:migrated', '4:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
+  run([['SET', 'lb:xp:migrated', '5:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
   assert.equal(r.body.entries.find(e => e.name === 'Alice').s, xpFromHistory(alice), 'recalculé après un changement de badges');
   // Les meilleurs tirages aussi (tout le temps, et la période en cours) : un vieux score de meilleur tirage est corrigé.
   {
     const hist = run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.map(m => m.split(':').map(Number));
     const top = Math.max(...hist.map(([, n]) => engine.scoreOf(n)));
-    run([['SET', 'lb:xp:migrated', '4:000000000000'], ['ZADD', 'lb:all', 1, alice.playerId], ['HSET', `stats:${alice.playerId}`, 'best', 1]]);
+    run([['SET', 'lb:xp:migrated', '5:000000000000'], ['ZADD', 'lb:all', 1, alice.playerId], ['HSET', `stats:${alice.playerId}`, 'best', 1]]);
     await call(leaderboard, { url: '/api/leaderboard?period=xp' });
     assert.equal(Number(run([['ZSCORE', 'lb:all', alice.playerId]])[0].result), top, 'meilleur tirage de tous les temps recalculé');
     assert.equal(Number(run([['HGET', `stats:${alice.playerId}`, 'best']])[0].result), top);
     // Un record d'avant l'historique du serveur (absent de hist:) n'est jamais perdu.
     const legacy = { n: 1, s: 1, t: 0 };
-    run([['SET', 'lb:xp:migrated', '4:000000000001'], ['HSET', 'best:all', alice.playerId, JSON.stringify(legacy)], ['ZREM', `hist:${alice.playerId}`, ...run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.filter(m => m.endsWith(':1'))]]);
+    run([['SET', 'lb:xp:migrated', '5:000000000001'], ['HSET', 'best:all', alice.playerId, JSON.stringify(legacy)], ['ZREM', `hist:${alice.playerId}`, ...run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.filter(m => m.endsWith(':1'))]]);
     await call(leaderboard, { url: '/api/leaderboard?period=xp' });
     assert.ok(Number(run([['ZSCORE', 'lb:all', alice.playerId]])[0].result) >= Math.max(top, engine.scoreOf(1)), 'record ancien gardé');
   }
@@ -1440,7 +1440,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Dix billes de Plinko : chaque manche ajoute sa mise à « pris » et son gain à « donné ».
   let gave = 0, took = 0, last = null, played = 0;
   for (let i = 0; i < 10; i++) {
-    await tick(); r = await g(frank, 'plinko', { bet: 100 });
+    await tick(); clock += 6000; // plus de 5 s entre deux parties : une ligne par partie dans le fil (sinon elles se regroupent)
+    r = await g(frank, 'plinko', { bet: 100 });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     const net = r.body.win - 100; played++;
     gave += r.body.win; took += 100;
@@ -2540,6 +2541,31 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!r.body.owned.includes('fisher'), 'pas pour un compte qui ne joue pas aux deux');
   r = await shop(none, 'buy', 'fisher');
   assert.notEqual(r.status, 200, 'pas achetable');
+}
+
+// 60. Idées du 2026-10-16 : fil du Plinko regroupé, codes cachés (titre Code Hunter), XP à vie dans les stats.
+{
+  const shopApi2 = require(path.join(ROOT, 'api/shop.js'));
+  const p = frank, Achievements = require(path.join(ROOT, 'js/achievements.js'));
+  const toObjectStats = id => { const f = run([['HGETALL', `stats:${id}`]])[0].result || [], o = {}; for (let i = 0; i < f.length; i += 2) o[f[i]] = f[i + 1]; return o; };
+  run([['HINCRBY', `stats:${p.playerId}`, 'bonus', 5000], ['DEL', `cooldown:${p.playerId}`, `shop:${p.playerId}`]]);
+  const g = (action, extra) => call(shopApi2, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action, ...extra } });
+  const feedLen = () => run([['LLEN', 'casino:feed']])[0].result;
+  let r = await g('plinko', { bet: 10, count: 5 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const n0 = feedLen();
+  for (let i = 0; i < 6; i++) { r = await g('plinko', { bet: 10, count: 5 }); assert.equal(r.status, 200); }
+  assert.ok(feedLen() <= n0 + 1, `Plinko à la chaîne : une ligne dans le fil (${n0} → ${feedLen()})`);
+  const last = JSON.parse(run([['LINDEX', 'casino:feed', -1]])[0].result);
+  assert.equal(last.g, 'plinko'); assert.equal(last.id, p.playerId);
+  for (const [i, code] of ['ROLLFOREVER', 'consolecat', ' zerohero '].entries()) {
+    r = await g('redeem', { code }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.redeemed.coins, 150); assert.equal(r.body.redeemed.hunt.found, i + 1);
+    assert.equal(r.body.redeemed.title, i === 2 ? 'codehunter' : null, 'titre au 3e code seulement');
+  }
+  assert.equal((await g('redeem', { code: 'ZEROHERO' })).status, 409, 'une seule fois');
+  assert.ok(Achievements.unlocked(toObjectStats(p.playerId)).includes('codehunter'), 'succès Code Hunter');
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', 1e9]]);
+  assert.ok(['centimillionaire', 'billionaire'].every(a => Achievements.unlocked(toObjectStats(p.playerId)).includes(a)), 'titres d\'XP à vie');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

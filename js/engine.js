@@ -271,6 +271,8 @@
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
     IMPORTANT_BIRTHDAY: ['61209'], // badge perso (idée d'un joueur) : 061209, tiré comme le nombre 61209
+    // Distances Terre-Lune en km (idée de A Dude, 2026-10-16) et 711117 = Natural + Spartan (idée de casmictechthing).
+    MOON_PERIGEE: ['363104'], MOON_APOGEE: ['405696'], MOON_AVERAGE: ['384400'], TRUE_SPARTAN: ['711117'],
     SPARTAN_EXACT: ['117'], FIB_EXACT: ['112358'], // 1, 1, 2, 3, 5, 8 : le début de la suite de Fibonacci
     EXACT_JOB: ['925'], // badge perso : exactement 925 (« 9 to 5 »)
     MUNCHAUSEN_EXACT: ['3435'], // nombre de Münchhausen : 3^3 + 4^4 + 3^3 + 5^5 = 3435

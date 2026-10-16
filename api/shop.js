@@ -23,7 +23,13 @@ const CODES = {
   SACHA: { coins: 200 },
   // Halloween 2026 : 300 pièces et le titre Spooky (stats.spooky), valable jusqu'au 1er novembre.
   SPOOKYMONTH: { coins: 300, title: 'spooky', until: '2026-11-01T00:00:00Z' },
+  // Codes cachés dans le site (idée de PRISMA123, 2026-10-16) : page d'aide, console du navigateur, vérificateur d'XP
+  // sur le nombre 0. 150 pièces chacun ; les trois donnent le titre Code Hunter (stats.codehunter).
+  ROLLFOREVER: { coins: 150, hunt: true },
+  CONSOLECAT: { coins: 150, hunt: true },
+  ZEROHERO: { coins: 150, hunt: true },
 };
+const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
 const usedCodesKey = id => `codes:${id}`;
 
@@ -202,7 +208,12 @@ module.exports = async (req, res) => {
       const [fresh] = await redis([['SADD', usedCodesKey(playerId), code]]);
       if (Number(fresh) !== 1) return send(res, 409, { error: 'You already used this code' });
       await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ['HINCRBY', 'codes:count', code, 1], ...(prize.title ? [['HSET', statsKey(playerId), prize.title, 1]] : [])]);
-      return send(res, 200, { ...(await state(playerId)), redeemed: { code, coins: prize.coins, title: prize.title || null } });
+      let title = prize.title || null;
+      if (prize.hunt) {
+        const found = await redis(HUNT.map(c => ['SISMEMBER', usedCodesKey(playerId), c]));
+        if (found.every(x => Number(x) === 1)) { await redis([['HSET', statsKey(playerId), 'codehunter', 1]]); title = 'codehunter'; }
+      }
+      return send(res, 200, { ...(await state(playerId)), redeemed: { code, coins: prize.coins, title, ...(prize.hunt ? { hunt: { found: (await redis(HUNT.map(c => ['SISMEMBER', usedCodesKey(playerId), c]))).filter(x => Number(x) === 1).length, of: HUNT.length } } : {}) } });
     }
     if (!skin) return send(res, 400, { error: 'Unknown skin' });
 

@@ -3578,3 +3578,12 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .cf-actions { justify-content: center; }
 @media (max-width: 480px) { .cf-ladder span { font-size: .5rem; } }
 #cf-cash[hidden] { display: none; }
+/* Titres d'XP à vie : Centimillionaire (cyan glacé) et Billionaire (or massif, le reflet le plus visible du jeu). */
+.title-fx.tt-centimillionaire { --owner-a: #0891b2 !important; --owner-b: #22d3ee !important; --owner-shine: #ecfeff !important; }
+.title-fx.tt-billionaire { --owner-a: #a16207 !important; --owner-b: #facc15 !important; --owner-shine: #fffbeb !important; filter: drop-shadow(0 0 .35em rgba(250, 204, 21, .55)); }
+.dark .title-fx.tt-billionaire, :root[data-theme="dark"] .title-fx.tt-billionaire { --owner-a: #facc15 !important; --owner-b: #fde68a !important; }
+
+/* Codes cachés : à peine visibles, il faut les chercher. */
+.hidden-code { margin-top: 2.5rem; text-align: right; font: 700 .62rem var(--font-mono); letter-spacing: .2em; color: var(--prose-3); opacity: .14; user-select: all; }
+.hidden-code:hover { opacity: .5; }
+.xc-secret { margin: .2rem 0 .5rem; font: 700 .72rem var(--font-mono); letter-spacing: .15em; color: #facc15; }

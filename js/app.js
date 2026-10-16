@@ -1093,7 +1093,7 @@
           const st = await Online.shopAction('redeem', undefined, { code: input.value });
           Store.setSetting('coins', st.coins);
           input.value = '';
-          toast(`🎁 Code ${st.redeemed.code}: +${fmt(st.redeemed.coins)} coins${st.redeemed.title ? ' and a new title' : ''}!`, 5000, 'achv');
+          toast(st.redeemed.hunt ? (st.redeemed.title === 'codehunter' ? `🔑 All ${st.redeemed.hunt.of} hidden codes found! +${fmt(st.redeemed.coins)} coins and the Code Hunter title` : `🔑 Hidden code ${st.redeemed.hunt.found}/${st.redeemed.hunt.of}: +${fmt(st.redeemed.coins)} coins`) : `🎁 Code ${st.redeemed.code}: +${fmt(st.redeemed.coins)} coins${st.redeemed.title ? ' and a new title' : ''}!`, 5000, 'achv');
           Sound.play('reveal', { small: 1 });
         } catch (err) {
           toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again');
@@ -1508,6 +1508,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16h', date: 'Oct 16, 2026', en: ['🌙 New Mythic badges: Perigee (363104), Apogee (405696) and Moon Distance (384400), the Earth to Moon distances in km (thanks A Dude!), and 🛡️ True Spartan (711117, thanks casmictechthing!)', '💎 New lifetime XP titles: Centimillionaire (100 million XP) and 🏦 Billionaire (1 billion XP)', '🔑 3 secret codes are hidden on the site. Each gives 150 coins, and finding all 3 unlocks a hidden title. Good luck!', 'The help page now shows the XP range of each rarity', 'Plinko: holding the button no longer floods the casino live feed, your balls are grouped in one line'], fr: ['🌙 Nouveaux badges Mythiques : Perigee (363104), Apogee (405696) et Moon Distance (384400), les distances Terre-Lune en km (merci A Dude !), et 🛡️ True Spartan (711117, merci casmictechthing !)', '💎 Nouveaux titres d\'XP à vie : Centimillionaire (100 millions d\'XP) et 🏦 Billionaire (1 milliard d\'XP)', '🔑 3 codes secrets sont cachés sur le site. Chacun donne 150 pièces, et trouver les 3 débloque un titre caché. Bonne chasse !', 'La page d\'aide montre maintenant la plage d\'XP de chaque rareté', 'Plinko : garder le bouton enfoncé n\'inonde plus le fil du casino, tes billes sont regroupées en une ligne'] },
     { id: '2026-10-16g', date: 'Oct 16, 2026', en: ['Fixed: best rolls on the leaderboard now follow badge changes too (a roll that gained a new badge shows its new XP)', 'Fixed: the casino coin balance now updates by itself when you earn coins in another tab', 'Fixed: auto-roll no longer turns itself off after a connection problem, it tries again every 5 seconds'], fr: ['Corrigé : les meilleurs tirages du classement suivent aussi les changements de badges (un tirage qui a gagné un nouveau badge affiche son nouvel XP)', 'Corrigé : le solde de pièces du casino se met à jour tout seul quand tu gagnes des pièces dans un autre onglet', 'Corrigé : le tirage auto ne s\'éteint plus après un problème de connexion, il réessaie toutes les 5 secondes'] },
     { id: '2026-10-16f', date: 'Oct 16, 2026', en: ['🪙 Coin flip is harder: ×1.9 per win (was ×1.96) and up to 7 wins in a row (×89)'], fr: ['🪙 Le pile ou face est plus dur : ×1,9 par lancer gagné (au lieu de ×1,96) et 7 de suite au plus (×89)'] },
     { id: '2026-10-16e', date: 'Oct 16, 2026', en: ['🗑️ Two new rarities at the very bottom, below Trash: Garbage (the 471 worst numbers, about 1 roll in 2,100, +50 coins) and ☣️ Land waste (the 73 worst numbers of all, 1 roll in 13,700, +300 coins). Bad luck has never been this rare'], fr: ['🗑️ Deux nouvelles raretés tout en bas, sous Trash : Garbage (les 471 pires nombres, environ 1 tirage sur 2 100, +50 pièces) et ☣️ Land waste (les 73 pires nombres, 1 tirage sur 13 700, +300 pièces). La malchance n\'a jamais été aussi rare'] },
@@ -2282,13 +2283,13 @@
       e.preventDefault();
       const raw = $('#xc-n').value.trim(), n = Number(raw);
       if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
-      const a = analysis(n), top = Engine.topLabel(a.percentile);
+      const a = analysis(n), top = Engine.topLabel(a.percentile), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
       $('#xc-out').innerHTML = `
         <div class="xc-result">
           <span class="xc-sim">Simulation · not a roll</span>
           <div class="xc-num mono" data-no-i18n>${(() => { const full = String(n).padStart(6, '0'), lead = n ? full.search(/[1-9]/) : 5; return `<span class="xc-ghost">${full.slice(0, lead)}</span>${full.slice(lead)}`; })()}</div>
           <div class="xc-meta"><span class="badge-pill" data-tier="${a.tier}">${esc(a.tier)}</span><b class="mono">${fmt(a.total)} XP</b><span class="panel-note">${esc(top)}</span></div>
-          <div class="pill-row xc-badges">${a.groups.length ? a.groups.map(g => `<span class="badge-pill" data-tier="${g.badge.tier}" data-badge="${g.badge.id}" style="cursor:pointer">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join(' ') : '<span class="panel-note">No badge</span>'}</div>
+          ${secret}<div class="pill-row xc-badges">${a.groups.length ? a.groups.map(g => `<span class="badge-pill" data-tier="${g.badge.tier}" data-badge="${g.badge.id}" style="cursor:pointer">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join(' ') : '<span class="panel-note">No badge</span>'}</div>
         </div>`;
     });
   }
@@ -5698,6 +5699,13 @@
   function renderAbout() {
     currentView = 'about';
     const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.001% (90 numbers)'], ['infinite', 'top 0.001% (the 9 best numbers)']];
+    // Plage d'XP de chaque rareté (idée d'un joueur, 2026-10-16), lue dans la table des rangs : le plus petit total de la
+    // rareté, jusqu'au plus petit de la suivante.
+    const lows = {};
+    for (const [score] of window.SCORE_PERCENTILES || []) { const t = Engine.cardTier(score); if (!(t in lows) || score < lows[t]) lows[t] = score; }
+    const ordered = Object.entries(lows).sort((a, b) => a[1] - b[1]);
+    const xpOf = v => (v < 100000 ? fmt(v) : compact(v)); // exact en bas (les raretés du bas ne diffèrent que de quelques XP)
+    const xpRange = Object.fromEntries(ordered.map(([t, lo], i) => { const hi = i + 1 < ordered.length ? ordered[i + 1][1] - 1 : null; return [t, hi === null ? `${xpOf(lo)}+ XP` : hi === lo ? `${xpOf(lo)} XP` : `${xpOf(lo)} – ${xpOf(hi)} XP`]; }));
     const badgeRows = [['common', 'more than 10% of rolls'], ['uncommon', '1–10% of rolls'], ['rare', '0.1–1% of rolls'], ['epic', '0.01–0.1% of rolls'], ['anomaly', '0.001–0.01% of rolls'], ['mythic', 'under 0.001% (1 in 100,000+)']];
     app.innerHTML = `
       <div class="page prose">
@@ -5715,7 +5723,7 @@
         </div>
         <h2 class="panel-title">Number rarity</h2>
         <p>Your roll's rarity compares its total XP with every possible roll.</p>
-        <div class="rarity-table">${cardRows.map(([t, l]) => `${tierPill(t)}<span>${l}</span>`).join('')}</div>
+        <div class="rarity-table">${cardRows.map(([t, l]) => `${tierPill(t)}<span>${l}${xpRange[t] ? ` <span class="muted mono">· ${xpRange[t]}</span>` : ''}</span>`).join('')}</div>
         <h2 class="panel-title">Badge rarity & XP</h2>
         <p>A badge is worth <span class="mono">100 × 1,000,001 ÷ (numbers that earn it)</span> XP, so a badge earned by 1 number in 1,000 is worth about 100,000 XP. Related badges form a family (e.g. Pair → Two Pair → Three Pair); only the best badge of a family counts toward your total.</p>
         <div class="rarity-table">${badgeRows.map(([t, l]) => `${tierPill(t)}<span>${l}</span>`).join('')}</div>
@@ -5730,10 +5738,13 @@
         <p class="muted">Based on the daily game <a href="https://www.rngdle.com" target="_blank" rel="noopener">rngdle.com</a>: this version removes the daily limit and adds history, stats, Google sign-in and a leaderboard between friends.</p>
         <p class="muted"><a href="privacy.html">Privacy policy</a></p>
         <p><a class="btn" href="#/">Go roll</a> <button class="btn ghost" data-intro>Replay the intro</button> <button class="btn ghost" data-idea>💡 Suggest an idea</button></p>
+        <p class="hidden-code" data-no-i18n aria-hidden="true">🔑 ROLLFOREVER</p>
       </div>`;
   }
 
   // ---------------------------------------------------------------- navigation, thème, clavier
+  // Code caché n°2 (les deux autres : bas de la page d'aide, et le nombre 0 dans le vérificateur d'XP).
+  try { console.log('%c🔑 You found a hidden code: CONSOLECAT', 'font: 700 14px monospace; color: #facc15; background: #111; padding: 6px 10px; border-radius: 6px'); } catch (e) { /* pas de console */ }
   const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
 
   function route() {

@@ -165,5 +165,33 @@
     "emoji": "🐚",
     "score": 100000100,
     "family": "FIB_SLICE"
+  },
+  {
+    "id": "MOON_PERIGEE",
+    "label": "Perigee",
+    "desc": "Exactly \"363104\": the closest the Moon gets to Earth, in km.",
+    "emoji": "🌕",
+    "score": 100000100
+  },
+  {
+    "id": "MOON_APOGEE",
+    "label": "Apogee",
+    "desc": "Exactly \"405696\": the farthest the Moon gets from Earth, in km.",
+    "emoji": "🌑",
+    "score": 100000100
+  },
+  {
+    "id": "MOON_AVERAGE",
+    "label": "Moon Distance",
+    "desc": "Exactly \"384400\": the average distance from Earth to the Moon, in km.",
+    "emoji": "🌙",
+    "score": 100000100
+  },
+  {
+    "id": "TRUE_SPARTAN",
+    "label": "True Spartan",
+    "desc": "Exactly \"711117\": a Natural and a Spartan in one number.",
+    "emoji": "🛡️",
+    "score": 100000100
   }
 ]
