@@ -94,6 +94,7 @@
   const CASES = [
     { id: 'starter', name: 'Starter Case', emoji: '📦', price: 250, desc: 'A skin worth 200 to 800 coins', min: 200, max: 800 },
     { id: 'premium', name: 'Premium Case', emoji: '🎁', price: 900, desc: 'A skin worth 800 to 5,000 coins, or the rare Infinity', min: 800, max: 5000 },
+    { id: 'elite', name: 'Elite Case', emoji: '💎', price: 1800, desc: 'Only skins worth 1,500 to 5,000 coins', min: 1500, max: 5000 }, // 2026-10-16
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
   const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);

@@ -53,6 +53,7 @@ async function state(id) {
     owned: skins,
     skin: equipped && Shop.byId.has(equipped) && allowed(equipped) ? equipped : 'classic',
     supporter: isSupporter,
+    keys: Object.fromEntries(Shop.CASES.map(c => [c.id, Math.max(0, Number(stats[`key:${c.id}`]) || 0)])), // clés de caisse gagnées avec les niveaux
     buttons,
     button: mineToo ? button : Shop.MATCH,
     emotes: Shop.EMOTES.map(e => e.id).filter(e => (emotes || []).includes(e)),
@@ -95,11 +96,17 @@ module.exports = async (req, res) => {
       if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
       try {
         const st = await state(playerId);
-        if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
+        // Clé de caisse gagnée avec les niveaux (stats.key:<caisse>) : la caisse s'ouvre gratuitement.
+        let price = box.price;
+        if (body.free) {
+          const [left] = await redis([['HINCRBY', statsKey(playerId), `key:${box.id}`, -1]]);
+          if (Number(left) < 0) { await redis([['HINCRBY', statsKey(playerId), `key:${box.id}`, 1]]); return send(res, 422, { error: 'No key for this case' }); }
+          price = 0;
+        } else if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         const duplicate = st.owned.includes(won);
-        const refund = duplicate ? Shop.duplicateRefund(box, won) : 0;
-        const writes = [['HINCRBY', statsKey(playerId), 'spent', box.price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1]];
+        const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
+        const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1]];
         if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });

@@ -10,6 +10,8 @@ const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 
 async function state(id, now = Date.now()) {
   const day = dayKey(now);
+  // Première lecture depuis l'arrivée des niveaux : on part du niveau actuel (pas de récompenses en rattrapage).
+  { const st0 = await readStats(id); if (st0.lvlPaid === undefined) await redis([['HSETNX', statsKey(id), 'lvlPaid', Quests.levelOf(st0.xpLife)]]); }
   const [flat] = await redis([['HGETALL', questKey(day, id)]]);
   const counters = toObject(flat);
   const stats = await readStats(id);
@@ -26,6 +28,12 @@ async function state(id, now = Date.now()) {
       progress: Quests.progress(q, counters), claimed: counters[`claimed:${q.id}`] === '1',
     })),
     daily: { claimed: claimedToday, streak, reward: Quests.dailyReward(claimedToday ? streak : streak + 1), next: Quests.dailyReward((claimedToday ? streak : streak + 1) + 1) },
+    level: (() => {
+      const L = Quests.levelOf(stats.xpLife), paid = stats.lvlPaid === undefined ? L : Number(stats.lvlPaid) || 0;
+      const pending = []; for (let l = paid + 1; l <= L; l++) pending.push(l);
+      const coins = pending.reduce((x, l) => x + Quests.levelReward(l).coins, 0), keys = pending.map(l => Quests.levelReward(l).key).filter(Boolean);
+      return { level: L, xp: Number(stats.xpLife) || 0, from: Quests.xpForLevel(L), to: Quests.xpForLevel(L + 1), pending: pending.length, coins, keys, next: Quests.levelReward(L + 1) };
+    })(),
     // Série de quêtes : jours de suite avec les 5 quêtes réclamées. Retombe à 0 si hier n'a pas été fini.
     questStreak: (() => {
       const doneToday = stats.qsDay === day, alive = doneToday || stats.qsDay === Quests.dayBefore(day), cur = alive ? Number(stats.qs) || 0 : 0;
@@ -77,6 +85,19 @@ module.exports = async (req, res) => {
       return send(res, 200, { ...(await state(playerId)), gained: quest.reward + (allDone ? allDone.bonus : 0), allDone });
     }
 
+    if (body.action === 'level') {
+      // Une réclamation à la fois (deux clics simultanés ne paient qu'une fois).
+      const [lock] = await redis([['SET', `lvlclaim:${playerId}`, '1', 'NX', 'PX', 5000]]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Already claiming' });
+      try {
+        const st = await state(playerId), lv = st.level;
+        if (!lv.pending) return send(res, 422, { error: 'No level reward to claim' });
+        const writes = [['HSET', statsKey(playerId), 'lvlPaid', lv.level], ['HINCRBY', statsKey(playerId), 'bonus', lv.coins]];
+        for (const k of lv.keys) writes.push(['HINCRBY', statsKey(playerId), `key:${k}`, 1]);
+        await redis(writes);
+        return send(res, 200, { ...(await state(playerId)), gained: lv.coins, keys: lv.keys, levels: lv.pending });
+      } finally { await redis([['DEL', `lvlclaim:${playerId}`]]); }
+    }
     if (body.action === 'daily') {
       // Un seul bonus par jour, même avec deux clics simultanés.
       const [lock] = await redis([['SET', `daily:${day}:${playerId}`, '1', 'NX', 'EX', 2 * 86400]]);

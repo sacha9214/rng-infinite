@@ -3587,3 +3587,8 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .hidden-code { margin-top: 2.5rem; text-align: right; font: 700 .62rem var(--font-mono); letter-spacing: .2em; color: var(--prose-3); opacity: .14; user-select: all; }
 .hidden-code:hover { opacity: .5; }
 .xc-secret { margin: .2rem 0 .5rem; font: 700 .72rem var(--font-mono); letter-spacing: .15em; color: #facc15; }
+
+/* Niveaux (ligne en haut des quêtes du jour) et clés de caisse. */
+.quest.level .quest-emoji { filter: drop-shadow(0 0 .3em rgba(250, 204, 21, .6)); }
+.case-free[hidden] { display: none; }
+.case-free { margin-top: .35rem; }

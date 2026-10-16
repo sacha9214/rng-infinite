@@ -61,7 +61,16 @@
   const QUEST_STREAK_CAP = 11;
   const allDoneReward = streak => 50 + 25 * (Math.min(QUEST_STREAK_CAP, Math.max(1, streak)) - 1) + (streak === 7 ? 500 : 0) + (streak === 30 ? 2000 : 0);
 
-  const api = { POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP };
+  // Niveaux (idée de PRISMA123, 2026-10-16) : le niveau monte avec l'XP à vie (stats.xpLife). Niveau L dès L² × 200 000 XP :
+  // 1 vers 30 tirages, 10 vers 20 M d'XP, 20 vers 80 M. Chaque niveau donne 25 × L pièces ; tous les 5 niveaux une clé
+  // de Starter Case, tous les 25 une clé de Premium Case (à la place). Pas de rattrapage : un joueur d'avant les niveaux
+  // part de son niveau du jour (stats.lvlPaid posé à la première lecture).
+  const LEVEL_XP = 200000;
+  const levelOf = xp => Math.floor(Math.sqrt(Math.max(0, num(xp)) / LEVEL_XP));
+  const xpForLevel = L => L * L * LEVEL_XP;
+  const levelReward = L => ({ coins: 25 * L, key: L % 25 === 0 ? 'premium' : L % 5 === 0 ? 'starter' : null });
+
+  const api = { POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGQuests = api;
 })(typeof window !== 'undefined' ? window : globalThis);

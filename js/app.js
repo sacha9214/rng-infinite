@@ -115,9 +115,9 @@
     liveRooms() {
       return this.request('/api/room?live=1');
     },
-    shopCase(id) {
+    shopCase(id, free) {
       const p = Store.player;
-      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id }) });
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id, free: !!free }) });
     },
     quests() {
       return this.request(`/api/quests?me=${Store.player.id}`);
@@ -1210,6 +1210,15 @@
     slot.innerHTML = `
       <div class="quests-card">
         <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
+        ${state.level ? (() => { const lv = state.level, pct = Math.min(100, ((lv.xp - lv.from) / Math.max(1, lv.to - lv.from)) * 100), KEY = { starter: '📦', premium: '🎁', elite: '💎' };
+          const nextTxt = `next level: +${fmt(lv.next.coins)} 🪙${lv.next.key ? ` and a ${KEY[lv.next.key]} key` : ''}`;
+          return `<div class="quest level${lv.pending ? '' : ' done'}">
+          <span class="quest-emoji">⭐</span>
+          <span class="quest-text"><b>Level ${fmt(lv.level)}</b>
+            <span class="quest-bar"><span style="width:${pct}%"></span></span>
+            <span class="panel-note">${compact(lv.xp)} / ${compact(lv.to)} XP · ${nextTxt}</span></span>
+          ${lv.pending ? `<button class="btn-roll small" data-level>+${fmt(lv.coins)} 🪙${lv.keys.length ? ` ${lv.keys.map(k => KEY[k]).join('')}` : ''}</button>` : ''}
+        </div>`; })() : ''}
         <div class="quest daily${d.claimed ? ' done' : ''}">
           <span class="quest-emoji">🔥</span>
           <span class="quest-text"><b>Daily bonus</b><span class="panel-note">${d.streak ? `${plural(d.streak, 'day')} streak` : 'Start a streak'}${d.claimed ? ` · tomorrow: ${d.next} coins` : ''}</span></span>
@@ -1236,9 +1245,18 @@
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     slot.onclick = async e => {
-      const btn = e.target.closest('[data-quest], [data-daily]');
+      const btn = e.target.closest('[data-quest], [data-daily], [data-level]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
+      if (btn.dataset.level !== undefined) {
+        try {
+          const next = await Online.questAction('level');
+          toast(`⭐ Level ${next.level.level}! +${fmt(next.gained)} coins${next.keys.length ? ` and ${next.keys.length} case key${next.keys.length > 1 ? 's' : ''} (Shop, Cases tab)` : ''}`, 4500, 'achv');
+          FX.celebrate(next.keys.length ? 'epic' : 'uncommon', slot); Sound.play('reveal', { small: 1 });
+          loadQuests(slot, next);
+        } catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       try {
         const next = await Online.questAction(btn.dataset.quest ? 'claim' : 'daily', btn.dataset.quest);
         toast(next.allDone ? `🏅 All quests done! +${fmt(next.gained)} coins · quest streak: ${plural(next.allDone.streak, 'day')}` : `🪙 +${next.gained} coins${btn.dataset.quest ? '' : ` · ${plural(next.daily.streak, 'day')} streak`}`, next.allDone ? 4000 : 2600, 'achv');
@@ -1508,6 +1526,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16i', date: 'Oct 16, 2026', en: ['⭐ Levels! Your level goes up with your lifetime XP and is shown on your profile. Every new level gives coins, every 5 levels a free Starter Case key and every 25 levels a Premium Case key. Claim them at the top of your daily quests (thanks PRISMA123!)', '💎 New Elite Case in the shop: only skins worth 1,500 to 5,000 coins'], fr: ['⭐ Les niveaux ! Ton niveau monte avec ton XP à vie et s\'affiche sur ton profil. Chaque nouveau niveau donne des pièces, tous les 5 niveaux une clé de Caisse Starter gratuite et tous les 25 une clé de Caisse Premium. Réclame-les en haut de tes quêtes du jour (merci PRISMA123 !)', '💎 Nouvelle Caisse Élite dans la boutique : seulement des skins de 1 500 à 5 000 pièces'] },
     { id: '2026-10-16h', date: 'Oct 16, 2026', en: ['🌙 New Mythic badges: Perigee (363104), Apogee (405696) and Moon Distance (384400), the Earth to Moon distances in km (thanks A Dude!), and 🛡️ True Spartan (711117, thanks casmictechthing!)', '💎 New lifetime XP titles: Centimillionaire (100 million XP) and 🏦 Billionaire (1 billion XP)', '🔑 3 secret codes are hidden on the site. Each gives 150 coins, and finding all 3 unlocks a hidden title. Good luck!', 'The help page now shows the XP range of each rarity', 'Plinko: holding the button no longer floods the casino live feed, your balls are grouped in one line'], fr: ['🌙 Nouveaux badges Mythiques : Perigee (363104), Apogee (405696) et Moon Distance (384400), les distances Terre-Lune en km (merci A Dude !), et 🛡️ True Spartan (711117, merci casmictechthing !)', '💎 Nouveaux titres d\'XP à vie : Centimillionaire (100 millions d\'XP) et 🏦 Billionaire (1 milliard d\'XP)', '🔑 3 codes secrets sont cachés sur le site. Chacun donne 150 pièces, et trouver les 3 débloque un titre caché. Bonne chasse !', 'La page d\'aide montre maintenant la plage d\'XP de chaque rareté', 'Plinko : garder le bouton enfoncé n\'inonde plus le fil du casino, tes billes sont regroupées en une ligne'] },
     { id: '2026-10-16g', date: 'Oct 16, 2026', en: ['Fixed: best rolls on the leaderboard now follow badge changes too (a roll that gained a new badge shows its new XP)', 'Fixed: the casino coin balance now updates by itself when you earn coins in another tab', 'Fixed: auto-roll no longer turns itself off after a connection problem, it tries again every 5 seconds'], fr: ['Corrigé : les meilleurs tirages du classement suivent aussi les changements de badges (un tirage qui a gagné un nouveau badge affiche son nouvel XP)', 'Corrigé : le solde de pièces du casino se met à jour tout seul quand tu gagnes des pièces dans un autre onglet', 'Corrigé : le tirage auto ne s\'éteint plus après un problème de connexion, il réessaie toutes les 5 secondes'] },
     { id: '2026-10-16f', date: 'Oct 16, 2026', en: ['🪙 Coin flip is harder: ×1.9 per win (was ×1.96) and up to 7 wins in a row (×89)'], fr: ['🪙 Le pile ou face est plus dur : ×1,9 par lancer gagné (au lieu de ×1,96) et 7 de suite au plus (×89)'] },
@@ -2412,6 +2431,7 @@
         ${tile('Best roll', top ? `<span data-number="${top.n}" data-caption="${esc(caption(top))}" style="cursor:pointer">${analysis(top.n).str}</span>` : '–', top ? `${fmt(top.s)} XP` : '')}
         ${tile('All-time rank', p.rank ? '#' + p.rank : '–', 'best single roll')}
         ${tile('Badges', `${found}/${total}`, `${((found / total) * 100).toFixed(0)}% of the collection`)}
+        ${tile('Level', p.level != null ? `⭐ ${fmt(p.level)}` : '–', 'goes up with lifetime XP')}
         ${tile('Best quest streak', p.questBest ? plural(p.questBest, 'day') : '–', 'days in a row with every quest done')}
       </div>
       ${!me && mine ? compareHTML(mine, p) : ''}
@@ -2762,6 +2782,7 @@
               <div class="case-contents" aria-hidden="true">${Shop.caseOdds(c).map(o => `<i style="--rar:${Shop.rarityOf(o.id).color}" title="${esc(Shop.byId.get(o.id).name)}"></i>`).join('')}</div>
               <span class="case-odds" data-tip="${esc(`<b>${c.name} odds</b><br>${odds}`)}">Odds ⓘ</span>
               <button class="btn" data-case="${c.id}">🪙 ${fmt(c.price)}</button>
+              <button class="btn-roll small case-free" data-case-free="${c.id}" hidden>🔑 Open free</button>
             </div>`;
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
@@ -2870,7 +2891,11 @@
     drawEmotes(state);
     drawSpeed(state);
     const cases = $('#d-cases');
+    // Clés de caisse gagnées avec les niveaux : un bouton « ouvrir gratuitement » sur la caisse correspondante.
+    document.querySelectorAll('[data-case-free]').forEach(b => { const n = (state.keys || {})[b.dataset.caseFree] || 0; b.hidden = !n; b.textContent = `🔑 Open free (${n})`; });
     if (cases) cases.onclick = e => {
+      const free = e.target.closest('[data-case-free]');
+      if (free && !free.disabled) { openCase(Shop.caseById.get(free.dataset.caseFree), state, free, true); return; }
       const btn = e.target.closest('[data-case]');
       if (btn && !btn.disabled) openCase(Shop.caseById.get(btn.dataset.case), state, btn);
     };
@@ -4021,12 +4046,12 @@
   // Ouverture d'une caisse, façon caisses de jeu de tir : le serveur a déjà tiré le skin ; la bande file, ralentit
   // longuement et s'arrête dessus, avec un tic à chaque skin qui passe sous le repère, puis la révélation dans la
   // couleur de sa rareté. Le résultat ne dépend pas de l'animation (elle peut être coupée sans rien changer).
-  async function openCase(box, state, btn) {
-    if (state.coins < box.price) { toast(`${fmt(box.price - state.coins)} more coins needed for the ${box.name}`); return; }
+  async function openCase(box, state, btn, free) {
+    if (!free && state.coins < box.price) { toast(`${fmt(box.price - state.coins)} more coins needed for the ${box.name}`); return; }
     if (btn) btn.disabled = true;
     let result;
     try {
-      result = await Online.shopCase(box.id);
+      result = await Online.shopCase(box.id, free);
     } catch (err) {
       if (btn) btn.disabled = false;
       toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');

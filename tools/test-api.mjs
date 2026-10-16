@@ -2568,4 +2568,32 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(['centimillionaire', 'billionaire'].every(a => Achievements.unlocked(toObjectStats(p.playerId)).includes(a)), 'titres d\'XP à vie');
 }
 
+// 61. Niveaux et clés de caisse (idée de PRISMA123, 2026-10-16).
+{
+  const questsApi2 = require(path.join(ROOT, 'api/quests.js')), shopApi3 = require(path.join(ROOT, 'api/shop.js')), Q = require(path.join(ROOT, 'js/quests.js'));
+  const p = bob, qGet2 = () => call(questsApi2, { url: `/api/quests?me=${p.playerId}` }), qPost2 = (action, extra = {}) => call(questsApi2, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action, ...extra } });
+  const shopState = () => call(shopApi3, { url: `/api/shop?me=${p.playerId}` }), openCase = (id, free) => call(shopApi3, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action: 'case', case: id, free } });
+  // Joueur d'avant les niveaux : il part de son niveau actuel, sans rattrapage.
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', Q.xpForLevel(12) + 5], ['HDEL', `stats:${p.playerId}`, 'lvlPaid', 'key:starter', 'key:premium']]);
+  let r = await qGet2(); assert.deepEqual([r.body.level.level, r.body.level.pending], [12, 0], 'pas de rattrapage');
+  assert.equal((await qPost2('level')).status, 422);
+  // Il monte du niveau 12 au 15 : 13 + 14 + 15 → (13+14+15) × 25 pièces et une clé Starter (niveau 15).
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', Q.xpForLevel(15) + 1]]);
+  r = await qGet2(); assert.deepEqual([r.body.level.pending, r.body.level.coins, r.body.level.keys], [3, 25 * (13 + 14 + 15), ['starter']]);
+  const coins0 = (await shopState()).body.coins;
+  r = await qPost2('level'); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.gained, r.body.keys, r.body.level.pending], [25 * 42, ['starter'], 0]);
+  assert.equal((await qPost2('level')).status, 422, 'une seule fois');
+  let sh = await shopState(); assert.equal(sh.body.coins, coins0 + 25 * 42); assert.equal(sh.body.keys.starter, 1);
+  // La clé ouvre la Starter Case gratuitement, une seule fois ; sans clé : refusé.
+  r = await openCase('starter', true); assert.equal(r.status, 200, JSON.stringify(r.body));
+  sh = await shopState(); assert.equal(sh.body.keys.starter, 0); assert.ok(sh.body.coins >= coins0 + 25 * 42, 'gratuite (un doublon rembourse même un peu)');
+  assert.equal((await openCase('starter', true)).status, 422, 'plus de clé');
+  assert.equal((await openCase('premium', true)).status, 422, 'pas de clé Premium');
+  // Niveau 25 : une clé Premium à la place de la Starter.
+  assert.deepEqual([Q.levelReward(25).key, Q.levelReward(20).key, Q.levelReward(21).key], ['premium', 'starter', null]);
+  // Elite Case : dans la boutique, que des skins de 1 500 à 5 000.
+  assert.ok(Shop.casePool(Shop.caseById.get('elite')).every(k => k.price >= 1500 && k.price <= 5000));
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
