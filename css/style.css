@@ -3747,6 +3747,14 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
   animation: wp-twinkle 3s ease-in-out infinite, wp-flies 40s linear infinite; }
 @keyframes wp-flies { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(360px, -280px, 0); } }
 
+/* 🌌 Galaxie (idée d'un joueur, 2026-10-16) : une nébuleuse violette et des étoiles qui passent, deux couches à deux
+   vitesses (les proches filent, les lointaines glissent). Tuiles SVG, comme Sakura, pour rester à 60 images/s. */
+.wp-galaxy { background: radial-gradient(ellipse 60% 45% at 30% 35%, rgba(168, 85, 247, .35), transparent 70%), radial-gradient(ellipse 50% 40% at 75% 70%, rgba(45, 212, 191, .2), transparent 70%), radial-gradient(ellipse 35% 25% at 60% 30%, rgba(236, 72, 153, .18), transparent 70%), linear-gradient(180deg, #0a0420 0%, #05020f 100%); }
+.wp-galaxy::before { left: -260px; right: 0; top: 0; bottom: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><g fill='%23c7d2fe'><circle cx='20' cy='30' r='0.8' opacity='0.6'/><circle cx='90' cy='70' r='0.6' opacity='0.5'/><circle cx='160' cy='20' r='0.9' opacity='0.7'/><circle cx='230' cy='90' r='0.7' opacity='0.5'/><circle cx='60' cy='150' r='0.8' opacity='0.6'/><circle cx='130' cy='190' r='0.6' opacity='0.45'/><circle cx='200' cy='160' r='0.9' opacity='0.65'/><circle cx='30' cy='230' r='0.7' opacity='0.5'/><circle cx='180' cy='240' r='0.6' opacity='0.5'/><circle cx='110' cy='110' r='0.5' opacity='0.4'/></g></svg>") 0 0 / 260px 260px; animation: wp-pass-far 26s linear infinite; }
+.wp-galaxy::after { left: -400px; right: 0; top: 0; bottom: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><g fill='%23ffffff'><ellipse cx='30' cy='40' rx='4.199999999999999' ry='1.4' opacity='0.9'/><ellipse cx='180' cy='90' rx='3.3000000000000003' ry='1.1' opacity='0.8'/><ellipse cx='320' cy='30' rx='4.800000000000001' ry='1.6' opacity='1'/><ellipse cx='90' cy='210' rx='3.5999999999999996' ry='1.2' opacity='0.85'/><ellipse cx='260' cy='170' rx='3' ry='1' opacity='0.7'/><ellipse cx='370' cy='260' rx='4.199999999999999' ry='1.4' opacity='0.9'/><ellipse cx='140' cy='330' rx='3.5999999999999996' ry='1.2' opacity='0.8'/><ellipse cx='40' cy='370' rx='3' ry='1' opacity='0.7'/><ellipse cx='230' cy='300' rx='4.5' ry='1.5' opacity='0.95'/></g></svg>") 0 0 / 400px 400px; animation: wp-pass-near 7s linear infinite; }
+@keyframes wp-pass-far { from { transform: translate3d(260px, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes wp-pass-near { from { transform: translate3d(400px, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+
 @media (prefers-reduced-motion: reduce) { .wp::before, .wp::after { animation: none !important; } }
 html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !important; }
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
@@ -3790,3 +3798,35 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-heavenly { --side-border: #eab308; --side-glow: 0 0 18px rgba(253, 224, 71, .4); --side-ink: #a16207;
   --side-bg: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(254, 243, 199, .35), transparent 70%), linear-gradient(180deg, rgba(255, 251, 235, .12), rgba(234, 179, 8, .08));
   --deco-a: '🪽'; --deco-b: '✨'; }
+
+/* ------------------------------------------------------------------ Bloodlust (idée d'un joueur, 2026-10-16) : un
+   liquide rouge sombre et brillant, stylisé. Carte noire veloutée, coulures figées au bord haut ; chiffres en gouttes
+   laquées. Matière molle : pendant le tirage les chiffres coulent vers le bas, à la révélation ils tombent et s'étalent. */
+.num-card.skin-bloodlust {
+  background:
+    radial-gradient(4px 14px at 12% 0%, #7f1d1d 90%, transparent 100%), radial-gradient(5px 22px at 31% 0%, #991b1b 90%, transparent 100%),
+    radial-gradient(3px 10px at 52% 0%, #7f1d1d 90%, transparent 100%), radial-gradient(6px 26px at 74% 0%, #991b1b 90%, transparent 100%),
+    radial-gradient(4px 12px at 90% 0%, #7f1d1d 90%, transparent 100%),
+    linear-gradient(180deg, #991b1b 0, #7f1d1d 6%, transparent 6.5%),
+    radial-gradient(ellipse 80% 70% at 50% 60%, #2a0707, #120202 75%);
+  border: 2px solid #450a0a; border-radius: .9rem;
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, .25), inset 0 -10px 18px rgba(0, 0, 0, .6), 0 0 18px rgba(185, 28, 28, .3), 0 8px 18px rgba(0, 0, 0, .45);
+}
+.skin-bloodlust .slot {
+  font-weight: 900; color: transparent;
+  background: radial-gradient(ellipse 40% 30% at 35% 25%, rgba(254, 202, 202, .9), transparent 60%), linear-gradient(180deg, #ef4444 0%, #b91c1c 45%, #7f1d1d 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .02em #450a0a;
+  filter: drop-shadow(0 .06em 0 #3b0505) drop-shadow(0 0 .12em rgba(239, 68, 68, .35));
+}
+.skin-bloodlust .slot.ghost { opacity: .2; }
+.skin-bloodlust .slot.spinning { transform-origin: 50% 0; animation: blood-ooze .3s ease-in infinite; }
+@keyframes blood-ooze { 0% { transform: translateY(-.12em) scale(1, .92); } 70% { transform: translateY(.08em) scale(.94, 1.12); } 100% { transform: translateY(.12em) scale(1, 1); } }
+.skin-bloodlust .slot.revealed { transform-origin: 50% 100%; animation: blood-drop .62s cubic-bezier(.3, 1.5, .5, 1) backwards, blood-gloss 1.1s .45s ease-out backwards; }
+@keyframes blood-drop { 0% { transform: translateY(-.5em) scale(.7, 1.35); } 42% { transform: translateY(.03em) scale(1.25, .72); } 72% { transform: scale(.95, 1.06); } 100% { transform: none; } }
+@keyframes blood-gloss { 0% { filter: drop-shadow(0 .06em 0 #3b0505) drop-shadow(0 0 .3em rgba(239, 68, 68, .8)) brightness(1.4); } 100% { filter: drop-shadow(0 .06em 0 #3b0505) drop-shadow(0 0 .12em rgba(239, 68, 68, .35)); } }
+.skin-bloodlust .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-bloodlust .slot { animation: none; } }
+.side-bloodlust { --side-border: #991b1b; --side-glow: 0 0 16px rgba(185, 28, 28, .35); --side-ink: #b91c1c;
+  --side-bg: linear-gradient(180deg, rgba(127, 29, 29, .35), rgba(18, 2, 2, .2));
+  --deco-a: '🩸'; --deco-b: '🦇'; }

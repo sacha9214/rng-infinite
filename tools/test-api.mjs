@@ -123,6 +123,13 @@ assert.equal(r.body.rolls, 3);
 assert.equal(r.body.players, 2);
 assert.equal(r.body.entries.find(e => e.name === 'Alice').rolls, 2);
 
+// 6b. Classement Poubelle : le pire tirage de chaque joueur, le plus petit score en tête.
+r = await call(leaderboard, { url: `/api/leaderboard?period=worst&me=${alice.playerId}` });
+assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.period, "worst");
+assert.equal(r.body.entries.find(e => e.name === 'Alice').n, (aliceSecond.s < aliceFirst.s ? aliceSecond : aliceFirst).n, 'Alice : son pire tirage');
+assert.ok(r.body.entries.every((e, i, a) => !i || a[i - 1].s <= e.s), 'ordre croissant');
+assert.ok(!JSON.stringify(r.body).includes(alice.playerId), 'aucun id dans la réponse');
+
 // 7. Périodes et paramètres inconnus.
 for (const period of ['week', 'all', 'nimportequoi']) {
   r = await call(leaderboard, { url: `/api/leaderboard?period=${period}` });
@@ -679,7 +686,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^5:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^6:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
   // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
   run([['SET', 'lb:xp:migrated', '5:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });

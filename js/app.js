@@ -1571,6 +1571,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16q', date: 'Oct 16, 2026', en: ['🗑️ New Trash leaderboard: the worst roll of every player, of all time', '🌠 New Galaxy wallpaper: a purple nebula with stars rushing past', '🩸 New Bloodlust skin: glossy dark red drops that drip and splash'], fr: ['🗑️ Nouveau classement Poubelle : le pire tirage de chaque joueur, de tous les temps', '🌠 Nouveau fond Galaxie : une nébuleuse violette et des étoiles qui filent', '🩸 Nouveau skin Bloodlust : des gouttes rouge sombre qui coulent et éclaboussent'] },
     { id: '2026-10-16p', date: 'Oct 16, 2026', en: ['😇 New skin Heavenly: white marble and gold, a halo lands on every digit (idea by Gunnar)', '🍅 Ketchup and 🌭 Mustard skins, the cousins of Mayo (idea by Gunnar)', '🖼️ Preview any wallpaper full screen before buying it'], fr: ['😇 Nouveau skin Heavenly : marbre blanc et or, une auréole se pose sur chaque chiffre (idée de Gunnar)', '🍅 Skins Ketchup et 🌭 Moutarde, les cousins du Mayo (idée de Gunnar)', '🖼️ Aperçu en plein écran de chaque fond avant de l\'acheter'] },
     { id: '2026-10-16o', date: 'Oct 16, 2026', en: ['🖼️ New in the Shop: 6 animated wallpapers (Night forest, Starry sky, Abyss, Sakura, Sunset, Synthwave), thanks to MAYO for the idea'], fr: ['🖼️ Nouveau dans la Boutique : 6 fonds d\'écran animés (Forêt de nuit, Ciel étoilé, Abysses, Sakura, Coucher de soleil, Synthwave), merci à MAYO pour l\'idée'] },
     { id: '2026-10-16n', date: 'Oct 16, 2026', en: ['🔑 The Code Hunter title is now in the Badges tab: find the 3 secret codes hidden on the site to unlock it'], fr: ['🔑 Le titre Code Hunter est maintenant dans l\'onglet Badges : trouve les 3 codes secrets cachés sur le site pour le débloquer'] },
@@ -5784,8 +5785,8 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins']];
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash']];
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -5870,7 +5871,7 @@
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
         <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
-        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
+        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
       </div>`;

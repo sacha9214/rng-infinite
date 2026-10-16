@@ -1911,6 +1911,39 @@
     };
   });
 
+  // 🩸 Bloodlust (2026-10-16, idée d'un joueur) — un liquide rouge sombre et brillant, stylisé (rien de gore) : au-
+  // dessus de chaque chiffre posé, une goutte gonfle, se détache et s'écrase sur le haut de la carte ; à la révélation,
+  // une pluie de gouttes s'y écrase. Matière molle : les gouttes s'étirent et s'aplatissent.
+  SCENES.bloodlust = custom(pieces({ cols: ['#991b1b', '#b91c1c', '#7f1d1d', '#dc2626'], shapes: ['drop'], size: [1.6, 3.4], g: 900, spin: 0, glowc: '#ef4444', ring: '#7f1d1d', drift: { rate: 1.2, from: 'around' } }), env => {
+    const { co, card } = env, drips = timed(), splats = timed();
+    const DARK = '#7f1d1d', RED = '#ef4444', HI = 'rgba(254,226,226,.9)';
+    const drop = (x, y, r, stretch) => {
+      co.shadowColor = 'rgba(239,68,68,.7)'; co.shadowBlur = r * 1.2; co.fillStyle = RED; co.beginPath(); co.moveTo(x, y - r * stretch * 1.6); co.bezierCurveTo(x + r * 1.1, y - r * .2, x + r, y + r, x, y + r); co.bezierCurveTo(x - r, y + r, x - r * 1.1, y - r * .2, x, y - r * stretch * 1.6); co.fill(); co.shadowBlur = 0;
+      co.fillStyle = HI; co.beginPath(); co.ellipse(x - r * .35, y, r * .2, r * .35, -.3, 0, TAU); co.fill();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        drips.run(dt, (d, k) => {
+          // 0 → .55 : la goutte gonfle et s'étire sous le bord ; puis elle tombe
+          const g0 = d.fall ? .2 : .55, grow = Math.min(1, k / g0), fall = k > g0 ? (k - g0) / (1 - g0) : 0, y = d.y + fall * fall * (card.y - d.y);
+          co.globalAlpha = 1; drop(d.x, y - d.r * (1 - fall), d.r * (.4 + .6 * grow), 1 + grow * .6 + fall * .8);
+          if (fall >= .98 && !d.hit) { d.hit = true; splats.add({ x: d.x, y: card.y, r: d.r, life: 1.1 }); }
+        });
+        splats.run(dt, (p, k) => {
+          const w = p.r * (1.2 + Math.min(1, k * 6) * 1.6); co.globalAlpha = k > .6 ? (1 - k) / .4 : 1;
+          co.fillStyle = DARK; co.beginPath(); co.ellipse(p.x, p.y + 1, w * 1.05, w * .3, 0, 0, TAU); co.fill();
+          co.fillStyle = RED; co.beginPath(); co.ellipse(p.x, p.y, w, w * .26, 0, 0, TAU); co.fill();
+          for (let i = 0; i < 4; i++) { const a = Math.PI + (i + .5) * Math.PI / 4, rr = w * (1 + k * 1.2); co.beginPath(); co.arc(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr * .5, p.r * .18 * (1 - k), 0, TAU); co.fill(); }
+        });
+        co.globalAlpha = 1;
+      },
+      // Le canevas est derrière la carte et le bas est masqué sur la page de résultat : tout se passe au-dessus.
+      lock(p, o) { if (!o.ghost) drips.add({ x: p.x, y: card.y - card.h * 1.1, r: card.h * (o.last ? .13 : .1), drop: card.h * 1.1, life: .9 }); },
+      reveal(tier, p) { for (let i = 0, n = 5 + Math.round(8 * p); i < n; i++) drips.add({ delay: rnd(0, .5), x: card.x + card.w * rnd(.03, .97), y: card.y - card.h * rnd(.9, 1.6), r: card.h * rnd(.08, .14), drop: card.h * 1.4, life: rnd(.8, 1.1), fall: true }); },
+    };
+  });
+
   // 👻 Haunted (Halloween 2026) — un cimetière autour de la carte : des tombes de part et d'autre (posées au niveau de son
   // bas), une grille rouillée, de la brume au sol ; des fantômes sortent des tombes de temps en temps, un petit fantôme
   // s'échappe de chaque chiffre posé, et une nuée s'envole à la révélation.

@@ -118,6 +118,7 @@ export function fakeRedis() {
       return removed.length;
     },
     ZREM: (k, ...members) => members.filter(m => db.has(k) && db.get(k).delete(m)).length,
+    ZRANK: (k, m) => { const i = asc(k).findIndex(([id]) => id === m); return i < 0 ? null : i; },
     ZREVRANK: (k, m) => { const i = asc(k).reverse().findIndex(([id]) => id === m); return i < 0 ? null : i; },
     ZREMRANGEBYRANK(k, a, b) {
       const all = asc(k);

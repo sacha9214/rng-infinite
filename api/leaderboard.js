@@ -1,10 +1,11 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { redis, engine, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
+const { redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
+const WORST_SCOPE = { period: 'worst', lb: WORST_LB, best: WORST_BEST, count: 'count:all', total: 'rolls:all' };
 const MIGRATED = 'lb:xp:migrated';
 // 1 : XP à vie ; 2 : + nombre de tirages à vie (count:all ne comptait que depuis le 2026-09-21) ;
 // 3 : la version suit d'elle-même les règles des badges (empreinte de data/badge-meta.json et de js/engine.js). Un badge
@@ -13,7 +14,8 @@ const MIGRATED = 'lb:xp:migrated';
 // 4 : + les meilleurs tirages (tout le temps, et jour, semaine, mois en cours) recalculés eux aussi : un 117 tiré avant
 // le badge Exact Spartan restait à son ancien score dans le classement (signalé par un joueur le 2026-10-16).
 // 5 : + l'XP à vie copiée dans les stats (stats.xpLife), pour les titres d'XP à vie.
-const MIGRATION = '5:' + require('node:crypto').createHash('sha256')
+// 6 : + le pire tirage de tous les temps (classement Poubelle), rempli depuis l'historique.
+const MIGRATION = '6:' + require('node:crypto').createHash('sha256')
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
@@ -46,6 +48,10 @@ async function migrateXp() {
         const [t, n] = m.split(':').map(Number), s = engine.scoreOf(n);
         for (const p of scopes(t)) { if (!open.has(p.lb)) continue; const cur = tops.get(p.lb); if (!cur || s > cur.s) tops.set(p.lb, { p, n, s, t }); }
       }
+      // Pire tirage de tous les temps (classement Poubelle), au barème actuel.
+      let low = null;
+      for (const m of lists[j] || []) { const [t, n] = m.split(':').map(Number), s = engine.scoreOf(n); if (!low || s < low.s) low = { n, s, t }; }
+      if (low) writes.push(['ZADD', WORST_LB, low.s, id], ['HSET', WORST_BEST, id, JSON.stringify(low)]);
       for (const { p, n, s, t } of tops.values()) {
         writes.push(['ZADD', p.lb, s, id], ['HSET', p.best, id, JSON.stringify({ n, s, t })]);
         if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
@@ -118,20 +124,22 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'month', 'all', 'xp', 'coins'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
     const t = Date.now();
-    if (period === 'xp' || period === 'all') await migrateXp();
-    const scope = period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
+    if (period === 'xp' || period === 'all' || period === 'worst') await migrateXp();
+    // Poubelle : le plus petit score en tête (classement croissant).
+    const low = period === 'worst';
+    const scope = period === 'worst' ? WORST_SCOPE : period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
     if (period === 'month') await seedMonth(scope, t);
 
     const [flat, rolls, rollsToday, players, myRank] = await redis([
-      ['ZREVRANGE', scope.lb, 0, LIMIT - 1, 'WITHSCORES'],
+      [low ? 'ZRANGE' : 'ZREVRANGE', scope.lb, 0, LIMIT - 1, 'WITHSCORES'],
       ['GET', scope.total],
       ['GET', `rolls:day:${dayKey(t)}`],
       ['ZCARD', scope.lb],
-      ['ZREVRANK', scope.lb, me || '-'],
+      [low ? 'ZRANK' : 'ZREVRANK', scope.lb, me || '-'],
     ]);
     const ids = [];
     for (let i = 0; i < flat.length; i += 2) ids.push(flat[i]);

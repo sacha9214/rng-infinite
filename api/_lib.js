@@ -376,11 +376,12 @@ async function settleWager(code, winnerId) {
 // Historique, compteurs, meilleurs tirages (jour, semaine, all-time) et stats des succès d'un joueur.
 // Appelé par /api/roll et par les duels. Lit puis écrit le meilleur score : le délai de 8 s entre deux tirages
 // (et entre deux manches) évite que deux tirages du même joueur se croisent.
+const WORST_LB = 'lb:worst', WORST_BEST = 'worst:all';
 async function recordRoll(playerId, n, t) {
   const a = engine.analyze(n);
   const s = a.total;
   const periods = scopes(t);
-  const current = await redis(periods.map(p => ['ZSCORE', p.lb, playerId]));
+  const [worst, ...current] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId])]);
   const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
   const entry = JSON.stringify({ n, s, t });
   const writes = [
@@ -413,6 +414,8 @@ async function recordRoll(playerId, n, t) {
     writes.push(['INCR', p.total], ['HINCRBY', p.count, playerId, 1]);
     if (p.ttl) writes.push(['EXPIRE', p.total, p.ttl], ['EXPIRE', p.count, p.ttl]);
   }
+  // Classement Poubelle (idée d'un joueur, 2026-10-16) : le pire tirage de chaque joueur, de tous les temps.
+  if (worst === null || s < Number(worst)) writes.push(['ZADD', WORST_LB, s, playerId], ['HSET', WORST_BEST, playerId, entry]);
   for (const p of improved) {
     writes.push(['ZADD', p.lb, s, playerId], ['HSET', p.best, playerId, entry]);
     if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
@@ -456,7 +459,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = {
+module.exports = { WORST_LB, WORST_BEST,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

@@ -758,3 +758,5 @@
   text-shadow: 0 .06em 0 #052e16; --gs: 0 .3em 0 #7a5a17, 0 .5em 1em rgba(0, 0, 0, .4); --gs-h: 0 .34em 0 #7a5a17, 0 .7em 1.4em rgba(201, 162, 74, .45); --gs-a: 0 .06em 0 #7a5a17; }
 .btn-roll.gen-heavenly { border: 2px solid #ca8a04; border-radius: 999px; color: #92400e; background: radial-gradient(ellipse 70% 60% at 50% 0%, #fff, transparent 75%), linear-gradient(180deg, #fffdf7, #f5f0e6 60%, #e9e1d0); text-shadow: 0 1px 0 #fff;
   --gs: 0 .3em 0 #a16207, 0 0 1.2em rgba(253, 224, 71, .45); --gs-h: 0 .34em 0 #a16207, 0 0 1.8em rgba(253, 224, 71, .65); --gs-a: 0 .06em 0 #a16207; }
+.btn-roll.gen-bloodlust { border: 2px solid #450a0a; border-radius: 999px; color: #fecaca; background: radial-gradient(ellipse 60% 45% at 35% 20%, rgba(254, 202, 202, .35), transparent 70%), linear-gradient(180deg, #b91c1c, #7f1d1d 60%, #450a0a); text-shadow: 0 1px 0 #3b0505;
+  --gs: 0 .3em 0 #3b0505, 0 .5em 1em rgba(185, 28, 28, .35); --gs-h: 0 .34em 0 #3b0505, 0 .7em 1.3em rgba(220, 38, 38, .45); --gs-a: 0 .06em 0 #3b0505; }
