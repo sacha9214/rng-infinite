@@ -27,6 +27,8 @@
     { id: 'matrix', name: 'Matrix', emoji: '🟩', price: 1200, desc: 'Falling green code' },
     { id: 'fire', name: 'Fire', emoji: '🔥', price: 1500, desc: 'Burning digits' },
     { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Mythic or better and the sky takes its color' }, // idée de Deadshot (2026-10-16)
+    // Idée de Gunnar (2026-10-16, « heavenly ») : marbre et or, une auréole sur chaque chiffre.
+    { id: 'heavenly', name: 'Heavenly', emoji: '😇', price: 2000, desc: 'White marble and gold leaf; every digit gets its halo' },
     { id: 'cards', name: 'Deck', emoji: '🃏', price: 1400, desc: 'Every digit is a card drawn from the deck' }, // idée de GamblrGod (2026-10-16)
     { id: 'galaxy', name: 'Galaxy', emoji: '🌌', price: 2500, desc: 'Written in the stars' },
     { id: 'rainbow', name: 'Rainbow', emoji: '🌈', price: 5000, desc: 'Every color at once' },
@@ -54,6 +56,9 @@
     { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
+    // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
+    { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat' },
+    { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance

@@ -45,6 +45,7 @@
     { id: 'supporter', emoji: '💗', title: 'Supporter', desc: 'Contribute to the server fund', test: st => num(st.supporter) >= 1 },
     // Réservé au créateur du site (marqué à sa connexion Google) ; caché aux autres, même verrouillé.
     // Code SPOOKYMONTH (Halloween 2026) : caché à ceux qui ne l'ont pas, pour ne pas dévoiler le code.
+    { id: 'gatekeep', emoji: '🚧', title: 'Gatekeep', desc: 'Redeemed the BC code', hidden: true, test: st => num(st.gatekeep) >= 1 },
     { id: 'spooky', emoji: '🎃', title: 'Spooky', desc: 'Redeemed the Halloween 2026 code', hidden: true, test: st => num(st.spooky) >= 1 },
     // Visible verrouillé (2026-10-16) : les joueurs savent qu'il y a 3 codes à chercher.
     { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Find the 3 secret codes hidden on the site', test: st => num(st.codehunter) >= 1 },

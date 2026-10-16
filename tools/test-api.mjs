@@ -2511,6 +2511,19 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await equip(alice, 'spooky')).status, 422, 'pas sans le code');
 }
 
+// 58b. Code BC (idée de MAYO) : 100 pièces + titre Gatekeep, une seule fois.
+{
+  const shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const k = { playerId: '7d'.repeat(8), secret: '8d'.repeat(16), name: 'Gatekeeper' };
+  db.delete(`cooldown:${k.playerId}`); assert.equal((await call(roll, { method: 'POST', body: k })).status, 200);
+  run([['HSET', `stats:${k.playerId}`, 'rolls', 40]]);
+  const redeem = () => call(shopApi, { method: 'POST', body: { playerId: k.playerId, secret: k.secret, action: 'redeem', code: 'bc' } });
+  const r = await redeem(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual([r.body.redeemed.coins, r.body.redeemed.title], [100, 'gatekeep']);
+  assert.equal((await redeem()).status, 409, 'une seule fois');
+  assert.equal((await equip(k, 'gatekeep')).status, 200, 'titre équipable');
+  assert.equal((await equip(alice, 'gatekeep')).status, 422, 'pas sans le code');
+}
+
 // 59. Collab Canne & Dauphins : le jeu de Firetail envoie le jeton Google de son joueur (action « collab »).
 {
   const siteApi = require(path.join(ROOT, 'api/site.js'));

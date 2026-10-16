@@ -1808,27 +1808,30 @@
   // giclent ensemble et des noisettes de mayo retombent. Matière molle : tout s'écrase et rebondit.
   Object.assign(SHAPES, {
     dollop(c, p, s) { c.fillStyle = '#fff6cf'; c.beginPath(); c.arc(0, s * .2, s, Math.PI, 0); c.quadraticCurveTo(s * .4, -s * .2, 0, -s * 1.2); c.quadraticCurveTo(-s * .4, -s * .2, -s, s * .2); c.fill(); c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(-s * .35, -s * .1, s * .25, 0, TAU); c.fill(); },
+    kdollop(c, p, s) { c.fillStyle = '#dc2626'; c.beginPath(); c.arc(0, s * .2, s, Math.PI, 0); c.quadraticCurveTo(s * .4, -s * .2, 0, -s * 1.2); c.quadraticCurveTo(-s * .4, -s * .2, -s, s * .2); c.fill(); c.fillStyle = 'rgba(254,202,202,.8)'; c.beginPath(); c.arc(-s * .35, -s * .1, s * .25, 0, TAU); c.fill(); },
+    mdollop(c, p, s) { c.fillStyle = '#eab308'; c.beginPath(); c.arc(0, s * .2, s, Math.PI, 0); c.quadraticCurveTo(s * .4, -s * .2, 0, -s * 1.2); c.quadraticCurveTo(-s * .4, -s * .2, -s, s * .2); c.fill(); c.fillStyle = 'rgba(254,249,195,.85)'; c.beginPath(); c.arc(-s * .35, -s * .1, s * .25, 0, TAU); c.fill(); },
   });
-  SCENES.mayo = custom(pieces({ cols: ['#fff6cf', '#fff1b8', '#ffffff', '#f5e7a6'], shapes: ['dollop'], size: [2.6, 5], g: 700, spin: 2, up: true, glowc: '#fff1b8', ring: '#f5e7a6', drift: { rate: 2, from: 'around' } }), env => {
+  // Même scène pour les trois sauces (Mayo, Ketchup, Moutarde) : seules les couleurs, l'étiquette et le mot changent.
+  const sauceScene = P => custom(pieces({ cols: P.bits, shapes: [P.shape], size: [2.6, 5], g: 700, spin: 2, up: true, glowc: P.bits[1], ring: P.bits[3], drift: { rate: 2, from: 'around' } }), env => {
     const { co, card, dark } = env, bottles = timed(), splats = timed(), blobs = timed(), zig = timed();
-    const CREAM = '#fff6cf', SHADE = '#e9d27d', EDGE = dark ? 'rgba(0,0,0,.35)' : 'rgba(120,100,40,.45)';
+    const CREAM = P.cream, SHADE = P.shade, HI = P.hi, EDGE = dark ? 'rgba(0,0,0,.35)' : 'rgba(120,100,40,.45)';
     // Flacon souple dessiné : corps arrondi en dégradé crème, reflet, étiquette bleue rayée de jaune, embout rouge… non :
     // embout jaune pointu (aucune marque réelle).
     const bottle = (x, y, ang, squeeze, s) => {
       co.save(); co.translate(x, y); co.rotate(ang); co.scale(1 + squeeze * .2, 1 - squeeze * .14);
-      const g = co.createLinearGradient(-s * .45, 0, s * .45, 0); g.addColorStop(0, '#f3e3a0'); g.addColorStop(.35, '#fffdf2'); g.addColorStop(1, '#e8d38a');
+      const g = co.createLinearGradient(-s * .45, 0, s * .45, 0); g.addColorStop(0, P.body[0]); g.addColorStop(.35, P.body[1]); g.addColorStop(1, P.body[2]);
       co.fillStyle = g; co.strokeStyle = EDGE; co.lineWidth = 1.2;
       co.beginPath(); if (co.roundRect) co.roundRect(-s * .45, -s * .15, s * .9, s * 1.25, s * .32); else co.rect(-s * .45, -s * .15, s * .9, s * 1.25); co.fill(); co.stroke();
-      co.fillStyle = '#1e3a8a'; co.fillRect(-s * .45, s * .3, s * .9, s * .42);
-      co.fillStyle = '#facc15'; co.fillRect(-s * .45, s * .3, s * .9, s * .05); co.fillRect(-s * .45, s * .67, s * .9, s * .05);
-      co.fillStyle = '#fff6cf'; co.font = `900 ${Math.round(s * .22)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText('MAYO', 0, s * .51);
+      co.fillStyle = P.label; co.fillRect(-s * .45, s * .3, s * .9, s * .42);
+      co.fillStyle = P.stripe; co.fillRect(-s * .45, s * .3, s * .9, s * .05); co.fillRect(-s * .45, s * .67, s * .9, s * .05);
+      co.fillStyle = P.ink; co.font = `900 ${Math.round(s * P.fs)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText(P.word, 0, s * .51);
       co.fillStyle = 'rgba(255,255,255,.7)'; co.fillRect(-s * .3, -s * .05, s * .08, s * .9);
-      co.fillStyle = '#facc15'; co.strokeStyle = '#ca8a04'; co.beginPath(); co.moveTo(-s * .22, -s * .15); co.lineTo(s * .22, -s * .15); co.lineTo(s * .06, -s * .58); co.lineTo(-s * .06, -s * .58); co.closePath(); co.fill(); co.stroke();
+      co.fillStyle = P.cap[0]; co.strokeStyle = P.cap[1]; co.beginPath(); co.moveTo(-s * .22, -s * .15); co.lineTo(s * .22, -s * .15); co.lineTo(s * .06, -s * .58); co.lineTo(-s * .06, -s * .58); co.closePath(); co.fill(); co.stroke();
       co.restore();
     };
     // Trait de mayo brillant : une ombre, la crème, un reflet.
-    const stream = (pts, w) => { co.lineCap = co.lineJoin = 'round'; for (const [k, col] of [[1.25, EDGE], [1, CREAM], [.35, '#ffffff']]) { co.strokeStyle = col; co.lineWidth = w * k; co.beginPath(); pts.forEach((p, i) => (i ? co.lineTo(p[0], p[1]) : co.moveTo(p[0], p[1]))); co.stroke(); } };
-    const dollop = (x, y, s, a) => { co.globalAlpha = a; co.fillStyle = SHADE; co.beginPath(); co.ellipse(x, y + s * .25, s * 1.1, s * .55, 0, 0, TAU); co.fill(); co.fillStyle = CREAM; co.beginPath(); co.ellipse(x, y, s, s * .7, 0, 0, TAU); co.fill(); co.beginPath(); co.moveTo(x - s * .35, y - s * .3); co.quadraticCurveTo(x, y - s * 1.3, x + s * .1, y - s * .6); co.fill(); co.fillStyle = '#fff'; co.beginPath(); co.ellipse(x - s * .35, y - s * .15, s * .22, s * .14, -.4, 0, TAU); co.fill(); };
+    const stream = (pts, w) => { co.lineCap = co.lineJoin = 'round'; for (const [k, col] of [[1.25, EDGE], [1, CREAM], [.35, HI]]) { co.strokeStyle = col; co.lineWidth = w * k; co.beginPath(); pts.forEach((p, i) => (i ? co.lineTo(p[0], p[1]) : co.moveTo(p[0], p[1]))); co.stroke(); } };
+    const dollop = (x, y, s, a) => { co.globalAlpha = a; co.fillStyle = SHADE; co.beginPath(); co.ellipse(x, y + s * .25, s * 1.1, s * .55, 0, 0, TAU); co.fill(); co.fillStyle = CREAM; co.beginPath(); co.ellipse(x, y, s, s * .7, 0, 0, TAU); co.fill(); co.beginPath(); co.moveTo(x - s * .35, y - s * .3); co.quadraticCurveTo(x, y - s * 1.3, x + s * .1, y - s * .6); co.fill(); co.fillStyle = HI; co.beginPath(); co.ellipse(x - s * .35, y - s * .15, s * .22, s * .14, -.4, 0, TAU); co.fill(); };
     const shoot = (tx, ty, delay, big) => {
       const left = tx < card.x + card.w / 2, s = card.h * (big ? .75 : .6);
       bottles.add({ delay, life: 1, bx: left ? card.x - s * .95 : card.x + card.w + s * .95, by: card.y - s * .1, tx, ty, s, side: left ? -1 : 1 });
@@ -1862,6 +1865,49 @@
       },
       lock(p, o) { if (!o.ghost) shoot(p.x, p.y, 0, o.last); },
       reveal(tier, p) { zig.add({ life: 2.2 }); for (let i = 0, n = 1 + Math.round(4 * p); i < n; i++) shoot(rnd(card.x, card.x + card.w), rnd(card.y, card.y + card.h), .4 + i * .14, true); },
+    };
+  });
+
+  SCENES.mayo = sauceScene({ bits: ['#fff6cf', '#fff1b8', '#ffffff', '#f5e7a6'], shape: 'dollop', cream: '#fff6cf', shade: '#e9d27d', hi: '#ffffff', body: ['#f3e3a0', '#fffdf2', '#e8d38a'], label: '#1e3a8a', stripe: '#facc15', ink: '#fff6cf', word: 'MAYO', fs: .22, cap: ['#facc15', '#ca8a04'] });
+  // 🍅 Ketchup et 🌭 Moutarde (2026-10-16, idée de Gunnar) : les cousins du Mayo, mêmes flacons, autres sauces.
+  SCENES.ketchup = sauceScene({ bits: ['#dc2626', '#ef4444', '#fca5a5', '#b91c1c'], shape: 'kdollop', cream: '#dc2626', shade: '#7f1d1d', hi: '#fecaca', body: ['#b91c1c', '#ef4444', '#991b1b'], label: '#fef2f2', stripe: '#16a34a', ink: '#b91c1c', word: 'KETCHUP', fs: .12, cap: ['#fef2f2', '#991b1b'] });
+  SCENES.mustard = sauceScene({ bits: ['#eab308', '#facc15', '#fef08a', '#ca8a04'], shape: 'mdollop', cream: '#eab308', shade: '#a16207', hi: '#fef9c3', body: ['#ca8a04', '#fde047', '#a16207'], label: '#7f1d1d', stripe: '#fef08a', ink: '#fde047', word: 'MUSTARD', fs: .12, cap: ['#dc2626', '#7f1d1d'] });
+
+  // 😇 Heavenly (2026-10-16, idée de Gunnar « heavenly ») — marbre blanc et feuille d'or. Des plumes tombent doucement
+  // autour de la carte ; chaque chiffre posé reçoit une auréole d'or qui descend sur lui et s'illumine ; à la révélation,
+  // des rayons de lumière tombent du haut et une nuée de plumes s'envole. Matière dure : éclats, pas d'écrasement.
+  Object.assign(SHAPES, {
+    feather(c, p, s) { c.fillStyle = '#fffdf5'; c.beginPath(); c.moveTo(0, -s * 1.6); c.quadraticCurveTo(s * .9, -s * .2, 0, s * 1.6); c.quadraticCurveTo(-s * .9, -s * .2, 0, -s * 1.6); c.fill(); c.strokeStyle = 'rgba(202,138,4,.7)'; c.lineWidth = Math.max(.6, s * .12); c.beginPath(); c.moveTo(0, -s * 1.4); c.lineTo(0, s * 1.9); c.stroke(); },
+  });
+  SCENES.heavenly = custom(pieces({ cols: ['#fffdf5', '#fef3c7', '#ffffff', '#fde68a'], shapes: ['feather', 'star'], size: [2.4, 4.4], g: 60, spin: 1.2, up: true, glowc: '#fde68a', ring: '#facc15', drift: { rate: 1.6, from: 'around' } }), env => {
+    const { co, card, dark } = env, halos = timed(), rays = timed();
+    const halo = (x, y, r, a, glow) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.scale(1, .32);
+      co.shadowColor = 'rgba(250,204,21,.95)'; co.shadowBlur = 8 + glow * 18; co.strokeStyle = '#fde047'; co.lineWidth = 3.2;
+      co.beginPath(); co.arc(0, 0, r, 0, TAU); co.stroke(); co.shadowBlur = 0; co.strokeStyle = '#fffbeb'; co.lineWidth = 1.1; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.stroke(); co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // rayons divins : des faisceaux qui tombent du haut sur la carte puis s'effacent
+        rays.run(dt, (r, k) => {
+          const a = (k < .2 ? k / .2 : 1 - (k - .2) / .8) * (dark ? .6 : .7);
+          for (let i = 0; i < 5; i++) {
+            const x = card.x + card.w * (.1 + i * .2) + Math.sin(t * .8 + i) * 6, w = card.w * (.1 + (i % 2) * .05);
+            const g = co.createLinearGradient(0, card.y - card.h * 2.2, 0, card.y + card.h); g.addColorStop(0, 'rgba(254,243,199,0)'); g.addColorStop(.6, `rgba(254,240,138,${a})`); g.addColorStop(1, 'rgba(254,240,138,0)');
+            co.fillStyle = g; co.beginPath(); co.moveTo(x - w * .4, card.y - card.h * 2.2); co.lineTo(x + w * .4, card.y - card.h * 2.2); co.lineTo(x + w * 1.4, card.y + card.h); co.lineTo(x - w * 1.4, card.y + card.h); co.closePath(); co.fill();
+          }
+        });
+        co.globalCompositeOperation = 'source-over';
+        // auréole : descend du haut, se pose au-dessus du chiffre, s'illumine puis reste un instant
+        halos.run(dt, (h, k) => {
+          const fall = Math.min(1, k / .3), y = h.y - card.h * .8 * (1 - outCubic(fall)), glow = k > .3 && k < .5 ? Math.sin((k - .3) / .2 * Math.PI) : 0;
+          halo(h.x, y, h.r * (1 + glow * .15), (k > .75 ? (1 - k) / .25 : 1) * (fall < 1 ? fall : 1), glow);
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) halos.add({ x: p.x, y: p.y - card.h * .38, r: card.h * (o.last ? .24 : .2), life: .85 }); },
+      reveal(tier, p) { rays.add({ life: 1.6 + p * 1.2 }); },
     };
   });
 

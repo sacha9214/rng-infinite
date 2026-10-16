@@ -3245,6 +3245,76 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
   --deco-a: '🥫'; --deco-b: '🍟'; }
 @keyframes mayo-bob { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
 
+/* ------------------------------------------------------------------ Ketchup (cousin du Mayo) : un pot de ketchup vu à travers le verre
+   (crème en haut et en bas, étiquette bleu marine au milieu, couvercle jaune), chiffres de mayo à la poche, striés et
+   brillants. Matière molle : on la presse, elle s'écrase et rebondit. */
+.num-card.skin-ketchup {
+  background:
+    linear-gradient(100deg, transparent 8%, rgba(255, 255, 255, .55) 10%, transparent 14%, transparent 80%, rgba(255, 255, 255, .25) 83%, transparent 86%),
+    linear-gradient(180deg, transparent 0 21%, #16a34a 21% 23%, transparent 23% 77%, #16a34a 77% 79%, transparent 79%),
+    linear-gradient(180deg, #ef4444 0%, #dc2626 21%, #fef2f2 21%, #fee2e2 79%, #dc2626 79%, #991b1b 100%);
+  border: 2px solid rgba(255, 255, 255, .7); border-top: 6px solid #fef2f2; border-radius: .9rem .9rem 1.2rem 1.2rem;
+  box-shadow: inset 0 0 0 1px rgba(127, 29, 29, .35), inset 0 -6px 10px rgba(127, 29, 29, .25), 0 0 0 2px #b91c1c, 0 10px 18px rgba(127, 29, 29, .35);
+}
+.skin-ketchup .slot {
+  font-weight: 900; color: transparent;
+  background:
+    repeating-linear-gradient(118deg, transparent 0 .09em, rgba(254, 202, 202, .6) .09em .12em, transparent .12em .2em),
+    linear-gradient(180deg, #f87171 0%, #ef4444 35%, #dc2626 70%, #991b1b 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .025em #7f1d1d;
+  filter: drop-shadow(0 .05em 0 #5f0f0f) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45));
+}
+.skin-ketchup .slot.ghost { opacity: .2; }
+/* Pendant le tirage : chaque chiffre sort de la douille, encore et encore. */
+.skin-ketchup .slot.spinning { transform-origin: 50% 100%; animation: ketchup-pipe .28s cubic-bezier(.3, 1.5, .5, 1) infinite; }
+@keyframes ketchup-pipe { 0% { transform: scale(.8, .25); } 60% { transform: scale(1.06, 1.08); } 100% { transform: scale(1, 1); } }
+/* Il se pose : une noisette tombe, s'écrase, déborde, reprend sa forme, puis un reflet passe dessus. */
+.skin-ketchup .slot.revealed { transform-origin: 50% 100%; animation: ketchup-splat .62s cubic-bezier(.3, 1.6, .5, 1) backwards, ketchup-shine 1.2s .5s ease-out backwards; }
+@keyframes ketchup-splat { 0% { transform: translateY(-.45em) scale(.65, 1.35); } 40% { transform: translateY(.03em) scale(1.3, .68); } 70% { transform: scale(.94, 1.08); } 100% { transform: none; } }
+@keyframes ketchup-shine { 0% { filter: drop-shadow(0 .05em 0 #5f0f0f) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)) brightness(1.35); } 100% { filter: drop-shadow(0 .05em 0 #5f0f0f) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)); } }
+.skin-ketchup .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-ketchup .slot { animation: none; } }
+.side-ketchup { --side-border: #dc2626; --side-glow: 0 0 14px rgba(239, 68, 68, .3); --side-ink: #b91c1c;
+  --side-bg: linear-gradient(180deg, rgba(220, 38, 38, .2), rgba(22, 163, 74, .1));
+  --deco-a: '🍅'; --deco-b: '🍟'; }
+@keyframes ketchup-bob { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
+
+/* ------------------------------------------------------------------ Moutarde (cousine du Mayo) : un pot de moutarde vu à travers le verre
+   (crème en haut et en bas, étiquette bleu marine au milieu, couvercle jaune), chiffres de mayo à la poche, striés et
+   brillants. Matière molle : on la presse, elle s'écrase et rebondit. */
+.num-card.skin-mustard {
+  background:
+    linear-gradient(100deg, transparent 8%, rgba(255, 255, 255, .55) 10%, transparent 14%, transparent 80%, rgba(255, 255, 255, .25) 83%, transparent 86%),
+    linear-gradient(180deg, transparent 0 21%, #fef08a 21% 23%, transparent 23% 77%, #fef08a 77% 79%, transparent 79%),
+    linear-gradient(180deg, #fde047 0%, #eab308 21%, #7f1d1d 21%, #450a0a 79%, #eab308 79%, #a16207 100%);
+  border: 2px solid rgba(255, 255, 255, .7); border-top: 6px solid #dc2626; border-radius: .9rem .9rem 1.2rem 1.2rem;
+  box-shadow: inset 0 0 0 1px rgba(161, 98, 7, .35), inset 0 -6px 10px rgba(161, 98, 7, .25), 0 0 0 2px #ca8a04, 0 10px 18px rgba(69, 10, 10, .35);
+}
+.skin-mustard .slot {
+  font-weight: 900; color: transparent;
+  background:
+    repeating-linear-gradient(118deg, transparent 0 .09em, rgba(254, 249, 195, .65) .09em .12em, transparent .12em .2em),
+    linear-gradient(180deg, #fef08a 0%, #facc15 35%, #eab308 70%, #a16207 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .025em #854d0e;
+  filter: drop-shadow(0 .05em 0 #713f12) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45));
+}
+.skin-mustard .slot.ghost { opacity: .2; }
+/* Pendant le tirage : chaque chiffre sort de la douille, encore et encore. */
+.skin-mustard .slot.spinning { transform-origin: 50% 100%; animation: mustard-pipe .28s cubic-bezier(.3, 1.5, .5, 1) infinite; }
+@keyframes mustard-pipe { 0% { transform: scale(.8, .25); } 60% { transform: scale(1.06, 1.08); } 100% { transform: scale(1, 1); } }
+/* Il se pose : une noisette tombe, s'écrase, déborde, reprend sa forme, puis un reflet passe dessus. */
+.skin-mustard .slot.revealed { transform-origin: 50% 100%; animation: mustard-splat .62s cubic-bezier(.3, 1.6, .5, 1) backwards, mustard-shine 1.2s .5s ease-out backwards; }
+@keyframes mustard-splat { 0% { transform: translateY(-.45em) scale(.65, 1.35); } 40% { transform: translateY(.03em) scale(1.3, .68); } 70% { transform: scale(.94, 1.08); } 100% { transform: none; } }
+@keyframes mustard-shine { 0% { filter: drop-shadow(0 .05em 0 #713f12) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)) brightness(1.35); } 100% { filter: drop-shadow(0 .05em 0 #713f12) drop-shadow(0 .1em .1em rgba(0, 0, 0, .45)); } }
+.skin-mustard .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-mustard .slot { animation: none; } }
+.side-mustard { --side-border: #ca8a04; --side-glow: 0 0 14px rgba(234, 179, 8, .3); --side-ink: #a16207;
+  --side-bg: linear-gradient(180deg, rgba(127, 29, 29, .22), rgba(234, 179, 8, .14));
+  --deco-a: '🌭'; --deco-b: '🥨'; }
+@keyframes mustard-bob { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
+
 /* ------------------------------------------------------------------ Haunted (Halloween, jusqu'au 1er novembre) :
    une maison hantée sous la lune au fond, des chiffres de brume blanche à moitié transparents. */
 .num-card.skin-haunted {
@@ -3689,3 +3759,34 @@ html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; point
   backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); max-width: calc(100vw - 32px); white-space: nowrap; }
 .wall-try-bar .btn.ghost { color: #fff; }
 html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibility: hidden; }
+
+/* ------------------------------------------------------------------ Heavenly (idée de Gunnar, 2026-10-16) : marbre
+   blanc veiné d'or, chiffres en feuille d'or. Matière dure : le chiffre descend du ciel, s'illumine d'un éclat, pas
+   d'écrasement ; pendant le tirage, les chiffres montent comme de la lumière. */
+.num-card.skin-heavenly {
+  background:
+    linear-gradient(115deg, transparent 30%, rgba(234, 179, 8, .35) 31%, transparent 32.5%, transparent 62%, rgba(234, 179, 8, .22) 63%, transparent 64%),
+    linear-gradient(70deg, transparent 45%, rgba(148, 163, 184, .25) 46%, transparent 48%),
+    radial-gradient(ellipse 70% 60% at 50% 0%, #ffffff, transparent 75%),
+    linear-gradient(180deg, #fffdf7 0%, #f5f0e6 60%, #e9e1d0 100%);
+  border: 2px solid #eab308; border-radius: 1rem;
+  box-shadow: inset 0 0 0 3px #fffbeb, inset 0 0 0 4px rgba(202, 138, 4, .55), 0 0 22px rgba(253, 224, 71, .35), 0 8px 18px rgba(120, 90, 20, .25);
+}
+.skin-heavenly .slot {
+  font-weight: 900; color: transparent;
+  background: linear-gradient(180deg, #fff7c2 0%, #facc15 38%, #b45309 55%, #fde68a 72%, #ca8a04 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .02em #92400e;
+  filter: drop-shadow(0 .04em 0 rgba(255, 255, 255, .9)) drop-shadow(0 .08em .12em rgba(146, 64, 14, .35));
+}
+.skin-heavenly .slot.ghost { opacity: .18; }
+.skin-heavenly .slot.spinning { animation: heavenly-rise .24s linear infinite; }
+@keyframes heavenly-rise { 0% { transform: translateY(.18em); opacity: .55; } 100% { transform: translateY(-.18em); opacity: 1; } }
+.skin-heavenly .slot.revealed { animation: heavenly-land .6s cubic-bezier(.2, .9, .3, 1) backwards, heavenly-glow 1.1s .25s ease-out backwards; }
+@keyframes heavenly-land { 0% { transform: translateY(-.6em) scale(.9); } 55% { transform: translateY(.04em) scale(1.04); } 100% { transform: none; } }
+@keyframes heavenly-glow { 0% { filter: drop-shadow(0 0 .3em #fde047) drop-shadow(0 0 .1em #fff) brightness(1.6); } 100% { filter: drop-shadow(0 .04em 0 rgba(255, 255, 255, .9)) drop-shadow(0 .08em .12em rgba(146, 64, 14, .35)); } }
+.skin-heavenly .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-heavenly .slot { animation: none; } }
+.side-heavenly { --side-border: #eab308; --side-glow: 0 0 18px rgba(253, 224, 71, .4); --side-ink: #a16207;
+  --side-bg: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(254, 243, 199, .35), transparent 70%), linear-gradient(180deg, rgba(255, 251, 235, .12), rgba(234, 179, 8, .08));
+  --deco-a: '🪽'; --deco-b: '✨'; }

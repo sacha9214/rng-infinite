@@ -734,6 +734,12 @@
 .btn-roll.gen-mayo { border: 2px solid #ca8a04; border-radius: 999px; color: #713f12; background: radial-gradient(ellipse 60% 45% at 35% 25%, rgba(255, 255, 255, .8), transparent 70%), linear-gradient(180deg, #fef08a, #facc15 60%, #eab308); text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
   --gs: 0 .3em 0 #a16207, 0 .5em 1em rgba(234, 179, 8, .35); --gs-h: 0 .34em 0 #a16207, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #a16207; }
 .btn-roll.gen-mayo:hover { transform: translateY(-1px) scale(1.05, .96); }
+.btn-roll.gen-ketchup { border: 2px solid #991b1b; border-radius: 999px; color: #fff; background: radial-gradient(ellipse 60% 45% at 35% 25%, rgba(255, 255, 255, .45), transparent 70%), linear-gradient(180deg, #f87171, #dc2626 60%, #b91c1c); text-shadow: 0 1px 0 rgba(127, 29, 29, .6);
+  --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(220, 38, 38, .35); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(239, 68, 68, .45); --gs-a: 0 .06em 0 #7f1d1d; }
+.btn-roll.gen-ketchup:hover { transform: translateY(-1px) scale(1.05, .96); }
+.btn-roll.gen-mustard { border: 2px solid #a16207; border-radius: 999px; color: #713f12; background: radial-gradient(ellipse 60% 45% at 35% 25%, rgba(255, 255, 255, .6), transparent 70%), linear-gradient(180deg, #fde047, #eab308 60%, #ca8a04); text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+  --gs: 0 .3em 0 #854d0e, 0 .5em 1em rgba(202, 138, 4, .35); --gs-h: 0 .34em 0 #854d0e, 0 .7em 1.3em rgba(234, 179, 8, .45); --gs-a: 0 .06em 0 #854d0e; }
+.btn-roll.gen-mustard:hover { transform: translateY(-1px) scale(1.05, .96); }
 
 /* Bouton Generate Haunted : nuit violette, lune, lueur de citrouille. */
 .btn-roll.gen-haunted { border: 2px solid #7c3aed; color: #f5f3ff; background: radial-gradient(circle at 85% 30%, #fef9c3 0 8%, transparent 14%), linear-gradient(180deg, #2e1065, #4c1d95 60%, #9a3412); text-shadow: 0 0 8px rgba(255, 255, 255, .7);
@@ -750,3 +756,5 @@
   --gs: 0 .3em 0 #3b82c4, 0 .5em 1em rgba(80, 140, 210, .45); --gs-h: 0 .34em 0 #3b82c4, 0 .7em 1.4em rgba(80, 140, 210, .6); --gs-a: 0 .06em 0 #3b82c4; }
 .btn-roll.gen-cards { border: 3px solid #c9a24a; border-radius: .6rem; color: #fff7d6; background: radial-gradient(ellipse 80% 120% at 50% 30%, #1f7a4a, #0b4027); font-family: Georgia, serif;
   text-shadow: 0 .06em 0 #052e16; --gs: 0 .3em 0 #7a5a17, 0 .5em 1em rgba(0, 0, 0, .4); --gs-h: 0 .34em 0 #7a5a17, 0 .7em 1.4em rgba(201, 162, 74, .45); --gs-a: 0 .06em 0 #7a5a17; }
+.btn-roll.gen-heavenly { border: 2px solid #ca8a04; border-radius: 999px; color: #92400e; background: radial-gradient(ellipse 70% 60% at 50% 0%, #fff, transparent 75%), linear-gradient(180deg, #fffdf7, #f5f0e6 60%, #e9e1d0); text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #a16207, 0 0 1.2em rgba(253, 224, 71, .45); --gs-h: 0 .34em 0 #a16207, 0 0 1.8em rgba(253, 224, 71, .65); --gs-a: 0 .06em 0 #a16207; }

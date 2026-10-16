@@ -28,6 +28,9 @@ const CODES = {
   ROLLFOREVER: { coins: 150, hunt: true },
   CONSOLECAT: { coins: 150, hunt: true },
   ZEROHERO: { coins: 150, hunt: true },
+  // Idée de MAYO (2026-10-16) : clin d'œil à son école, où ses amis et lui « gatekeepaient » le jeu au début.
+  // 100 pièces et le titre Gatekeep (stats.gatekeep).
+  BC: { coins: 100, title: 'gatekeep' },
 };
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
