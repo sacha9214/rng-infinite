@@ -3607,3 +3607,7 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .road-step.key-starter { background: linear-gradient(90deg, rgba(245, 158, 11, .12), var(--surface)); }
 .road-step.key-premium { background: linear-gradient(90deg, rgba(168, 85, 247, .2), var(--surface)); border-color: #a855f7; }
 @media (max-width: 420px) { .road-step { grid-template-columns: 2rem 1fr 1.4rem; } .road-x { display: none; } }
+
+/* Onglet Profil & amis : mon profil en résumé en haut. */
+.me-panel .me-title { margin: -.2rem 0 .5rem; }
+.me-tiles { margin-bottom: .6rem; }

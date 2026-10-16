@@ -1551,6 +1551,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16k', date: 'Oct 16, 2026', en: ['The Friends tab is now Profile & Friends: your profile summary (level, lifetime XP, best roll, rank) is at the top, with a button to open your full profile'], fr: ['L\'onglet Amis devient Profil & amis : le résumé de ton profil (niveau, XP à vie, meilleur tirage, rang) est en haut, avec un bouton pour ouvrir ton profil complet'] },
     { id: '2026-10-16j', date: 'Oct 16, 2026', en: ['🛣️ Level rewards road: click your level at the top of the daily quests to see every upcoming level and its reward'], fr: ['🛣️ Route des récompenses de niveau : clique sur ton niveau en haut des quêtes du jour pour voir tous les niveaux à venir et leurs récompenses'] },
     { id: '2026-10-16i', date: 'Oct 16, 2026', en: ['⭐ Levels! Your level goes up with your lifetime XP and is shown on your profile. Every new level gives coins, every 5 levels a free Starter Case key and every 25 levels a Premium Case key. Claim them at the top of your daily quests (thanks PRISMA123!)', '💎 New Elite Case in the shop: only skins worth 1,500 to 5,000 coins'], fr: ['⭐ Les niveaux ! Ton niveau monte avec ton XP à vie et s\'affiche sur ton profil. Chaque nouveau niveau donne des pièces, tous les 5 niveaux une clé de Caisse Starter gratuite et tous les 25 une clé de Caisse Premium. Réclame-les en haut de tes quêtes du jour (merci PRISMA123 !)', '💎 Nouvelle Caisse Élite dans la boutique : seulement des skins de 1 500 à 5 000 pièces'] },
     { id: '2026-10-16h', date: 'Oct 16, 2026', en: ['🌙 New Mythic badges: Perigee (363104), Apogee (405696) and Moon Distance (384400), the Earth to Moon distances in km (thanks A Dude!), and 🛡️ True Spartan (711117, thanks casmictechthing!)', '💎 New lifetime XP titles: Centimillionaire (100 million XP) and 🏦 Billionaire (1 billion XP)', '🔑 3 secret codes are hidden on the site. Each gives 150 coins, and finding all 3 unlocks a hidden title. Good luck!', 'The help page now shows the XP range of each rarity', 'Plinko: holding the button no longer floods the casino live feed, your balls are grouped in one line'], fr: ['🌙 Nouveaux badges Mythiques : Perigee (363104), Apogee (405696) et Moon Distance (384400), les distances Terre-Lune en km (merci A Dude !), et 🛡️ True Spartan (711117, merci casmictechthing !)', '💎 Nouveaux titres d\'XP à vie : Centimillionaire (100 millions d\'XP) et 🏦 Billionaire (1 milliard d\'XP)', '🔑 3 codes secrets sont cachés sur le site. Chacun donne 150 pièces, et trouver les 3 débloque un titre caché. Bonne chasse !', 'La page d\'aide montre maintenant la plage d\'XP de chaque rareté', 'Plinko : garder le bouton enfoncé n\'inonde plus le fil du casino, tes billes sont regroupées en une ligne'] },
@@ -4774,7 +4775,13 @@
     currentView = 'friends';
     app.innerHTML = `
       <div class="page">
-        <h1 class="page-title">Friends</h1>
+        <h1 class="page-title">Profile &amp; Friends</h1>
+        ${Store.player.name ? `<div class="panel me-panel" id="f-me">
+          <div class="panel-head"><h3 class="panel-title">My profile</h3><span class="panel-note" data-no-i18n>${esc(Store.player.name)}</span></div>
+          <div class="me-row" id="f-me-body"><div class="empty">Loading…</div></div>
+          <div class="actions"><a class="btn-roll small" href="${profileHref(Store.player.name)}">Open my profile</a><button class="btn" id="f-settings">⚙️ Player &amp; settings</button></div>
+        </div>` : ''}
+        <h2 class="panel-title" style="margin:1.4rem 0 .35rem">Friends</h2>
         <p class="panel-note profile-sub">Add players by name to follow their progress and jump into their duels.</p>
         <div class="panel">
           <form class="duel-join" id="f-add">
@@ -4785,6 +4792,20 @@
         <div id="f-body"><div class="empty">Loading…</div></div>
       </div>`;
     $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
+    // Mon profil, en résumé (fusion des onglets Profil et Amis, 2026-10-16).
+    if ($('#f-settings')) $('#f-settings').addEventListener('click', openSettings);
+    if (Store.player.name) Online.profile(Store.player.name).then(p => {
+      const box = $('#f-me-body'); if (!box) return;
+      const t = p.title ? titleHTML(p.title) : '';
+      box.innerHTML = `
+        ${t ? `<div class="me-title">${t}</div>` : ''}
+        <div class="tiles me-tiles">
+          ${tile('Level', p.level != null ? `⭐ ${fmt(p.level)}` : '–', 'lifetime XP')}
+          ${tile('Lifetime XP', compact(p.lifetime), `${fmt(p.rolls)} rolls`)}
+          ${tile('Best roll', p.best && p.best[0] ? analysis(p.best[0].n).str : '–', p.best && p.best[0] ? `${fmt(p.best[0].s)} XP` : '')}
+          ${tile('All-time rank', p.rank ? '#' + p.rank : '–', 'best single roll')}
+        </div>`;
+    }).catch(() => { const box = $('#f-me-body'); if (box) box.innerHTML = '<div class="empty">Roll once to start your profile.</div>'; });
     $('#f-body').addEventListener('click', e => {
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
