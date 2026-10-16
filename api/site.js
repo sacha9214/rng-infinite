@@ -262,6 +262,7 @@ async function insights() {
     ...days.slice(0, 14).flatMap(d => [['HGETALL', `casino:d:${d}`], ['SCARD', `casino:p:${d}`]]),
     ['HGETALL', 'casino'], ['HKEYS', 'names'], ['HGETALL', 'skins'], ['HGETALL', 'btns'],
     ['ZCOUNT', SEEN_KEY, now - DAY_MS, '+inf'], ['ZCOUNT', SEEN_KEY, now - 7 * DAY_MS, '+inf'], ['ZCOUNT', SEEN_KEY, now - 30 * DAY_MS, '+inf'],
+    ['HGETALL', 'wall'], // fonds d'écran affichés (2026-10-16)
   ]);
   // Carte et heures.
   const countries = {}, cells = {}, hours = new Array(24).fill(0);
@@ -289,7 +290,7 @@ async function insights() {
   const BUCKETS = [[1, 9], [10, 29], [30, 99], [100, 499], [500, 1999], [2000, Infinity]];
   const rollBuckets = BUCKETS.map(([a, b]) => ({ name: b === Infinity ? `${a}+` : `${a}–${b}`, count: 0 }));
   const allTime = Object.fromEntries(GAMES.map(g => [g, 0]));
-  const speed = [0, 0, 0, 0, 0, 0], top = { celestial: 0, divine: 0, infinite: 0, mythic: 0 };
+  const speed = [0, 0, 0, 0, 0, 0], top = { celestial: 0, divine: 0, godlike: 0, infinite: 0, mythic: 0 };
   const feat = { btcHolders: 0, ethHolders: 0, btcSats: 0, ethSats: 0, invested: 0, trades: 0, levIn: 0, levOut: 0, levPlayers: 0, giftOut: 0, givers: 0, supporters: 0 };
   let rolled = 0, coins = 0, earned = 0, spent = 0, gamblers = 0, unlocked = 0, questsDone = 0, duelWins = 0, totalRolls = 0, streaks = 0;
   const gamblerRows = [];
@@ -332,7 +333,7 @@ async function insights() {
     players: {
       named: ids.length, rolled, totalRolls, active: { day: num(rows[base + 32]), week: num(rows[base + 33]), month: num(rows[base + 34]) },
       rollBuckets, speed: speed.map((count, lv) => ({ name: `Level ${lv}`, count })), streaks, questsDone, duelWins, top,
-      skins: tally(rows[base + 30]), buttons: tally(rows[base + 31]),
+      skins: tally(rows[base + 30]), buttons: tally(rows[base + 31]), walls: tally(rows[base + 35]),
     },
     economy: { coins, earned, spent },
     features: await featureStats(feat, now),

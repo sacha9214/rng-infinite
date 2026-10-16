@@ -4673,7 +4673,7 @@
           ${tile('Rolls per player per day', R.active.dauAvg ? fmt(Math.round(R.rolls.week / Math.max(1, sum(R.series.slice(0, 7), 'active')))) : '–', 'average over the last 7 days')}
           ${tile('Coins in circulation', compact(d.economy.coins), `${compact(d.economy.earned)} earned · ${compact(d.economy.spent)} spent`)}
           ${tile('Daily streak alive', fmt(pl.streaks), `${fmt(pl.questsDone)} quests claimed in all`)}
-          ${tile('Top rolls ever', `${fmt(pl.top.infinite)} · ${fmt(pl.top.divine)} · ${fmt(pl.top.celestial)}`, 'Infinite · Divine · Celestial')}
+          ${tile('Top rolls ever', `${fmt(pl.top.infinite)} · ${fmt(pl.top.godlike || 0)} · ${fmt(pl.top.divine)} · ${fmt(pl.top.celestial)}`, 'Infinite · Godlike · Divine · Celestial')}
           ${tile('Duels won', fmt(pl.duelWins), 'against real players and bots')}
           ${tile('Coins spent', pct(d.economy.spent, d.economy.earned), 'of all the coins ever earned')}
         </div>
@@ -4682,6 +4682,7 @@
           ${bars('Roll speed level · players', pl.speed, x => x, '', pl.named)}
           ${bars('Equipped skins', pl.skins, n => (Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n))}
           ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
+          ${bars('Wallpapers in use', pl.walls || [], n => (Shop.wallById.has(n) ? `${Shop.wallById.get(n).emoji} ${Shop.wallById.get(n).name}` : n))}
         </div>`;
     }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'retention', 'traffic', 'casino', 'crypto', 'players']) if (pane(id)) pane(id).innerHTML = denied(err); });
     // ---- Cagnotte : inscrire une contribution reçue (le joueur reçoit le skin et le titre Supporter), régler

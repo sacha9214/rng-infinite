@@ -1032,8 +1032,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await site(null, 'visit', { ref: 'brand-new.example' }, { 'x-forwarded-for': '198.51.100.7' });
   assert.equal(run([['HGET', `an:${today()}`, 'ref:brand-new.example']])[0].result, null);
   assert.equal(run([['HGET', `an:${today()}`, 'ref:other']])[0].result, '1');
+  run([['HSET', 'wall', 'ee'.repeat(8), 'graveyard']]);
   r = await site(boss, 'stats');
   assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 200));
+  { const ins = await site(boss, 'insights'); assert.ok(ins.body.players.walls.some(x => x.name === 'graveyard' && x.count >= 1), 'fonds d\'écran affichés comptés'); assert.ok('godlike' in ins.body.players.top, 'Godlike compté'); }
   assert.equal(r.body.days.length, 30);
   assert.equal(r.body.days[0].day, today());
   assert.ok(r.body.days[0].visits >= 4 && r.body.week.refs.some(x => x.name === 'reddit.com' && x.count === 2));
