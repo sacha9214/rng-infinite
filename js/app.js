@@ -1212,11 +1212,12 @@
         <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
         ${state.level ? (() => { const lv = state.level, pct = Math.min(100, ((lv.xp - lv.from) / Math.max(1, lv.to - lv.from)) * 100), KEY = { starter: '📦', premium: '🎁', elite: '💎' };
           const nextTxt = `next level: +${fmt(lv.next.coins)} 🪙${lv.next.key ? ` and a ${KEY[lv.next.key]} key` : ''}`;
-          return `<div class="quest level${lv.pending ? '' : ' done'}">
+          return `<div class="quest level${lv.pending ? '' : ' done'}" data-level-road title="See the level rewards road">
           <span class="quest-emoji">⭐</span>
           <span class="quest-text"><b>Level ${fmt(lv.level)}</b>
             <span class="quest-bar"><span style="width:${pct}%"></span></span>
-            <span class="panel-note">${compact(lv.xp)} / ${compact(lv.to)} XP · ${nextTxt}</span></span>
+            <span class="panel-note">${compact(lv.xp)} / ${compact(lv.to)} XP · ${nextTxt}</span>
+            <span class="level-road-link">🛣️ See all rewards</span></span>
           ${lv.pending ? `<button class="btn-roll small" data-level>+${fmt(lv.coins)} 🪙${lv.keys.length ? ` ${lv.keys.map(k => KEY[k]).join('')}` : ''}</button>` : ''}
         </div>`; })() : ''}
         <div class="quest daily${d.claimed ? ' done' : ''}">
@@ -1245,6 +1246,7 @@
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     slot.onclick = async e => {
+      if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       const btn = e.target.closest('[data-quest], [data-daily], [data-level]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -1268,6 +1270,29 @@
         toast(err.status === 422 ? err.message : 'Quests unavailable right now, try again');
       }
     };
+  }
+
+  // Route des récompenses de niveau (2026-10-16) : du niveau d'avant jusqu'au prochain palier de 25, chaque niveau avec
+  // ses pièces et sa clé de caisse ; les niveaux à clé ressortent, ceux déjà payés sont cochés.
+  function openLevelRoad(lv) {
+    if (!lv) return;
+    const KEY = { starter: ['📦', 'Starter Case key'], premium: ['🎁', 'Premium Case key'] };
+    const paidUpTo = lv.level - lv.pending, from = Math.max(1, lv.level - 2), to = Math.max(lv.level + 12, Math.ceil((lv.level + 1) / 25) * 25);
+    const rows = [];
+    for (let L = from; L <= to; L++) {
+      const r = Quests.levelReward(L), state = L <= paidUpTo ? 'paid' : L <= lv.level ? 'ready' : 'locked';
+      rows.push(`<div class="road-step ${state}${r.key ? ` key-${r.key}` : ''}${L === lv.level + 1 ? ' next' : ''}">
+        <span class="road-n">${fmt(L)}</span>
+        <span class="road-r">+${fmt(r.coins)} 🪙${r.key ? ` <b>${KEY[r.key][0]} ${KEY[r.key][1]}</b>` : ''}</span>
+        <span class="road-x mono">${compact(Quests.xpForLevel(L))} XP</span>
+        <span class="road-s">${state === 'paid' ? '✓' : state === 'ready' ? '🎁' : '🔒'}</span>
+      </div>`);
+    }
+    openModal(`
+      <h2>⭐ Level ${fmt(lv.level)}</h2>
+      <p class="panel-note" style="margin:-.3rem 0 .8rem">Your level goes up with your lifetime XP (${compact(lv.xp)} XP). Every level gives coins, every 5 levels a 📦 Starter Case key, every 25 levels a 🎁 Premium Case key.${lv.pending ? ' You have rewards to claim on the home page!' : ''}</p>
+      <div class="road">${rows.join('')}</div>
+      <div class="actions"><button class="btn" data-close>Close</button></div>`, m => { const b = m.querySelector('[data-close]'); if (b) b.onclick = closeModal; const n = m.querySelector('.road-step.next'); if (n) n.scrollIntoView({ block: 'center' }); });
   }
 
   function featureCardHTML(i) {
@@ -1526,6 +1551,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16j', date: 'Oct 16, 2026', en: ['🛣️ Level rewards road: click your level at the top of the daily quests to see every upcoming level and its reward'], fr: ['🛣️ Route des récompenses de niveau : clique sur ton niveau en haut des quêtes du jour pour voir tous les niveaux à venir et leurs récompenses'] },
     { id: '2026-10-16i', date: 'Oct 16, 2026', en: ['⭐ Levels! Your level goes up with your lifetime XP and is shown on your profile. Every new level gives coins, every 5 levels a free Starter Case key and every 25 levels a Premium Case key. Claim them at the top of your daily quests (thanks PRISMA123!)', '💎 New Elite Case in the shop: only skins worth 1,500 to 5,000 coins'], fr: ['⭐ Les niveaux ! Ton niveau monte avec ton XP à vie et s\'affiche sur ton profil. Chaque nouveau niveau donne des pièces, tous les 5 niveaux une clé de Caisse Starter gratuite et tous les 25 une clé de Caisse Premium. Réclame-les en haut de tes quêtes du jour (merci PRISMA123 !)', '💎 Nouvelle Caisse Élite dans la boutique : seulement des skins de 1 500 à 5 000 pièces'] },
     { id: '2026-10-16h', date: 'Oct 16, 2026', en: ['🌙 New Mythic badges: Perigee (363104), Apogee (405696) and Moon Distance (384400), the Earth to Moon distances in km (thanks A Dude!), and 🛡️ True Spartan (711117, thanks casmictechthing!)', '💎 New lifetime XP titles: Centimillionaire (100 million XP) and 🏦 Billionaire (1 billion XP)', '🔑 3 secret codes are hidden on the site. Each gives 150 coins, and finding all 3 unlocks a hidden title. Good luck!', 'The help page now shows the XP range of each rarity', 'Plinko: holding the button no longer floods the casino live feed, your balls are grouped in one line'], fr: ['🌙 Nouveaux badges Mythiques : Perigee (363104), Apogee (405696) et Moon Distance (384400), les distances Terre-Lune en km (merci A Dude !), et 🛡️ True Spartan (711117, merci casmictechthing !)', '💎 Nouveaux titres d\'XP à vie : Centimillionaire (100 millions d\'XP) et 🏦 Billionaire (1 milliard d\'XP)', '🔑 3 codes secrets sont cachés sur le site. Chacun donne 150 pièces, et trouver les 3 débloque un titre caché. Bonne chasse !', 'La page d\'aide montre maintenant la plage d\'XP de chaque rareté', 'Plinko : garder le bouton enfoncé n\'inonde plus le fil du casino, tes billes sont regroupées en une ligne'] },
     { id: '2026-10-16g', date: 'Oct 16, 2026', en: ['Fixed: best rolls on the leaderboard now follow badge changes too (a roll that gained a new badge shows its new XP)', 'Fixed: the casino coin balance now updates by itself when you earn coins in another tab', 'Fixed: auto-roll no longer turns itself off after a connection problem, it tries again every 5 seconds'], fr: ['Corrigé : les meilleurs tirages du classement suivent aussi les changements de badges (un tirage qui a gagné un nouveau badge affiche son nouvel XP)', 'Corrigé : le solde de pièces du casino se met à jour tout seul quand tu gagnes des pièces dans un autre onglet', 'Corrigé : le tirage auto ne s\'éteint plus après un problème de connexion, il réessaie toutes les 5 secondes'] },
