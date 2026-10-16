@@ -97,6 +97,16 @@
     { id: 'elite', name: 'Elite Case', emoji: '💎', price: 1800, desc: 'Only skins worth 1,500 to 5,000 coins', min: 1500, max: 5000 }, // 2026-10-16
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
+  // Fonds d'écran animés (idée de MAYO, 2026-10-16) : changent tout l'arrière-plan du site, pour soi seul.
+  const WALLPAPERS = [
+    { id: 'forest', name: 'Night Forest', emoji: '🌲', price: 500, desc: 'Fireflies over a dark forest' },
+    { id: 'stars', name: 'Starry Sky', emoji: '🌌', price: 600, desc: 'A night sky full of twinkling stars' },
+    { id: 'abyss', name: 'Abyss', emoji: '🌊', price: 700, desc: 'Deep ocean, swaying light and bubbles' },
+    { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 800, desc: 'Cherry blossom petals falling' },
+    { id: 'sunset', name: 'Sunset', emoji: '🌅', price: 900, desc: 'A glowing sun sinking into purple skies' },
+    { id: 'synthwave', name: 'Synthwave', emoji: '🟣', price: 1200, desc: 'A neon grid rolling to the horizon' },
+  ];
+  const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);
   const casePool = c => SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
@@ -177,7 +187,7 @@
   const speedLevel = v => Math.max(0, Math.min(SPEED.prices.length, Math.floor(Number(v) || 0)));
   const speedFactor = v => SPEED.factors[speedLevel(v)];
 
-  const api = { COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

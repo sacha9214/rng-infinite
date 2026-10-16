@@ -3618,3 +3618,66 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .road-catchup { margin-bottom: .5rem; grid-template-columns: 2.4rem 1fr 0 1.6rem; }
 .title-fx.tt-codehunter { --owner-a: #ca8a04 !important; --owner-b: #facc15 !important; --owner-shine: #fef9c3 !important; }
 .dark .title-fx.tt-codehunter, :root[data-theme="dark"] .title-fx.tt-codehunter { --owner-a: #facc15 !important; --owner-b: #fde68a !important; }
+
+/* ------------------------------------------------------------------ Fonds d'écran animés (idée de MAYO, 2026-10-16).
+   #wallpaper : un calque fixe derrière tout le site. Chaque fond = un dégradé + deux couches animées (::before, ::after)
+   qui ne bougent que par transform / opacity (pas de nouveau dessin de l'écran à chaque image). Les aperçus de la
+   boutique (.wall-preview) utilisent les mêmes classes. Coupé en mouvement réduit et en mode performance. */
+#wallpaper { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.wall-preview { position: relative; height: 6.5rem; border-radius: .6rem; overflow: hidden; border: 1px solid var(--outline); margin-bottom: .5rem; }
+.wall-preview.wp-none { background: var(--site-bg); }
+.wp::before, .wp::after { content: ''; position: absolute; pointer-events: none; }
+
+/* 🌌 Ciel étoilé : deux couches d'étoiles qui scintillent à contretemps et dérivent très lentement. */
+.wp-stars { background: radial-gradient(ellipse at 70% 0%, #1e3a8a 0%, transparent 60%), linear-gradient(180deg, #0b1026 0%, #050816 100%); }
+.wp-stars::before, .wp-stars::after { inset: -10%; background-size: 220px 220px;
+  background-image: radial-gradient(1.4px 1.4px at 20px 30px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 90px 160px, #fff 50%, transparent 52%), radial-gradient(1.6px 1.6px at 170px 70px, #dbeafe 50%, transparent 52%), radial-gradient(1px 1px at 130px 200px, #fff 50%, transparent 52%), radial-gradient(1.2px 1.2px at 60px 110px, #fef9c3 50%, transparent 52%); }
+.wp-stars::before { animation: wp-twinkle 4s ease-in-out infinite, wp-drift 160s linear infinite; }
+.wp-stars::after { background-size: 310px 310px; transform: rotate(17deg); animation: wp-twinkle 5.5s ease-in-out -2.7s infinite; }
+@keyframes wp-twinkle { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes wp-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-220px, 110px, 0); } }
+
+/* 🌅 Coucher de soleil : le soleil palpite doucement, une bande de nuages passe devant. */
+.wp-sunset { background: linear-gradient(180deg, #1e1b4b 0%, #581c87 45%, #9d174d 75%, #c2410c 100%); }
+.wp-sunset::before { left: 50%; bottom: -18vmin; width: 60vmin; height: 60vmin; margin-left: -30vmin; border-radius: 50%;
+  background: radial-gradient(circle, #fde68a 0%, #fb923c 35%, rgba(251, 146, 60, .35) 55%, transparent 70%); animation: wp-sun 7s ease-in-out infinite; }
+.wp-sunset::after { left: 0; right: -100%; bottom: 14%; height: 9vmin; background: repeating-linear-gradient(90deg, rgba(88, 28, 135, .55) 0 18vmin, transparent 18vmin 30vmin, rgba(88, 28, 135, .4) 30vmin 52vmin, transparent 52vmin 70vmin); filter: blur(6px); animation: wp-clouds 60s linear infinite; }
+@keyframes wp-sun { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes wp-clouds { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+
+/* 🌊 Abysses : des rayons de lumière ondulent, des bulles montent. */
+.wp-abyss { background: radial-gradient(ellipse at 50% -10%, rgba(56, 189, 248, .35) 0%, transparent 55%), linear-gradient(180deg, #082f49 0%, #0c1e3a 50%, #020617 100%); }
+.wp-abyss::before { inset: -20% -10% 30% -10%; background: linear-gradient(105deg, transparent 30%, rgba(125, 211, 252, .09) 36%, transparent 42%, transparent 55%, rgba(125, 211, 252, .07) 61%, transparent 67%, transparent 75%, rgba(125, 211, 252, .06) 80%, transparent 85%); transform-origin: 50% 0; animation: wp-rays 9s ease-in-out infinite alternate; }
+.wp-abyss::after { left: 0; right: 0; top: 0; bottom: -300px; background-size: 260px 300px;
+  background-image: radial-gradient(3px 3px at 40px 250px, rgba(186, 230, 253, .5) 50%, transparent 55%), radial-gradient(2px 2px at 150px 120px, rgba(186, 230, 253, .45) 50%, transparent 55%), radial-gradient(4px 4px at 210px 40px, rgba(186, 230, 253, .35) 45%, transparent 55%); animation: wp-rise 14s linear infinite; }
+@keyframes wp-rays { from { transform: skewX(-6deg) translateX(-2%); } to { transform: skewX(6deg) translateX(2%); } }
+@keyframes wp-rise { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -300px, 0); } }
+
+/* 🟣 Synthwave : un soleil rayé à l'horizon et une grille néon qui défile vers nous. */
+.wp-synthwave { background: linear-gradient(180deg, #12002b 0%, #2e0a4f 50%, #4c0b5e 60%, #12002b 61%); }
+.wp-synthwave::after { left: 50%; top: 22%; width: 34vmin; height: 34vmin; margin-left: -17vmin; border-radius: 50%;
+  background: linear-gradient(180deg, #fde047 0%, #f97316 45%, #ec4899 100%); -webkit-mask: repeating-linear-gradient(180deg, #000 0 8%, transparent 8% 11%); mask: repeating-linear-gradient(180deg, #000 0 8%, transparent 8% 11%); filter: drop-shadow(0 0 2rem rgba(236, 72, 153, .7)); }
+.wp-synthwave::before { left: -50%; right: -50%; top: 60%; height: 120%; transform-origin: 50% 0;
+  background: repeating-linear-gradient(90deg, rgba(236, 72, 153, .75) 0 2px, transparent 2px 70px), repeating-linear-gradient(0deg, rgba(236, 72, 153, .75) 0 2px, transparent 2px 70px);
+  animation: wp-grid 1.6s linear infinite; }
+@keyframes wp-grid { from { transform: perspective(300px) rotateX(70deg) translate3d(0, 0, 0); } to { transform: perspective(300px) rotateX(70deg) translate3d(0, 70px, 0); } }
+
+/* 🌸 Sakura : des pétales qui tombent en biais. Une seule couche (deux couches animées coûtaient trop : 19 images/s). */
+.wp-sakura { background: radial-gradient(ellipse at 20% 0%, rgba(244, 114, 182, .35), transparent 60%), linear-gradient(180deg, #3b0a24 0%, #24081a 60%, #12040d 100%); }
+.wp-sakura::before { left: -300px; right: 0; top: -300px; bottom: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><g fill='%23fbcfe8'><ellipse cx='40' cy='60' rx='6' ry='4' opacity='.85' transform='rotate(30 40 60)'/><ellipse cx='140' cy='220' rx='7' ry='4' opacity='.7' transform='rotate(-20 140 220)'/><ellipse cx='90' cy='130' rx='4' ry='3' opacity='.55'/><ellipse cx='240' cy='280' rx='4' ry='3' opacity='.55'/></g><g fill='%23f9a8d4'><ellipse cx='200' cy='30' rx='5' ry='3' opacity='.75' transform='rotate(50 200 30)'/><ellipse cx='10' cy='260' rx='5' ry='3' opacity='.5'/><ellipse cx='160' cy='110' rx='5' ry='3' opacity='.5' transform='rotate(70 160 110)'/></g><ellipse cx='260' cy='170' rx='5' ry='3' fill='%23fce7f3' opacity='.8' transform='rotate(-40 260 170)'/></svg>") 0 0 / 300px 300px; animation: wp-fall 18s linear infinite; }
+@keyframes wp-fall { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(150px, 300px, 0); } }
+
+/* 🌲 Forêt de nuit : des sapins sombres en bas, des lucioles qui s'allument et dérivent. */
+.wp-forest { background: radial-gradient(ellipse at 80% 0%, rgba(253, 224, 71, .12), transparent 40%), linear-gradient(180deg, #052e16 0%, #06210f 55%, #020a05 100%); }
+.wp-forest::after { left: 0; right: 0; bottom: 0; height: 26vmin;
+  background: conic-gradient(from 150deg at 50% 0%, transparent 0 60deg, #021007 60deg 120deg, transparent 120deg) 0 100% / 9vmin 100% repeat-x, conic-gradient(from 155deg at 50% 0%, transparent 0 50deg, #031a0b 50deg 130deg, transparent 130deg) 4vmin 100% / 13vmin 80% repeat-x; }
+.wp-forest::before { inset: -10%; background-size: 360px 280px;
+  background-image: radial-gradient(3px 3px at 50px 200px, #fde047 40%, rgba(253, 224, 71, .25) 60%, transparent 70%), radial-gradient(2.5px 2.5px at 230px 90px, #facc15 40%, rgba(250, 204, 21, .25) 60%, transparent 70%), radial-gradient(3px 3px at 300px 230px, #fef08a 40%, rgba(254, 240, 138, .2) 60%, transparent 70%);
+  animation: wp-twinkle 3s ease-in-out infinite, wp-flies 40s linear infinite; }
+@keyframes wp-flies { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(360px, -280px, 0); } }
+
+@media (prefers-reduced-motion: reduce) { .wp::before, .wp::after { animation: none !important; } }
+html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !important; }
+/* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
+#wallpaper.wp::before, #wallpaper.wp::after { will-change: transform, opacity; backface-visibility: hidden; }

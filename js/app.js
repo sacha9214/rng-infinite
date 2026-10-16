@@ -267,6 +267,8 @@
     Store.setSetting('coins', state.coins);
     Store.setSetting('speedLv', state.speed || 0);
     Store.setSetting('skinsOwned', state.owned || []);
+    Store.setSetting('wall', state.wall || '');
+    paintWallpaper();
     paintRollButtons();
     // Le skin Owner n'appartient qu'au créateur : c'est lui, on surveille sa boîte à suggestions.
     Room.isOwner = (state.owned || []).includes('owner');
@@ -1569,6 +1571,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16o', date: 'Oct 16, 2026', en: ['🖼️ New in the Shop: 6 animated wallpapers (Night forest, Starry sky, Abyss, Sakura, Sunset, Synthwave), thanks to MAYO for the idea'], fr: ['🖼️ Nouveau dans la Boutique : 6 fonds d\'écran animés (Forêt de nuit, Ciel étoilé, Abysses, Sakura, Coucher de soleil, Synthwave), merci à MAYO pour l\'idée'] },
     { id: '2026-10-16n', date: 'Oct 16, 2026', en: ['🔑 The Code Hunter title is now in the Badges tab: find the 3 secret codes hidden on the site to unlock it'], fr: ['🔑 Le titre Code Hunter est maintenant dans l\'onglet Badges : trouve les 3 codes secrets cachés sur le site pour le débloquer'] },
     { id: '2026-10-16m', date: 'Oct 16, 2026', en: ['⭐ Level rewards rebalanced: 10 coins × the level (they gave too much). Players who already had levels can now claim a one-time catch-up for those earlier levels: their case keys (up to 4 Starter and 1 Premium) and up to 1,000 coins. Open the level rewards road to claim it'], fr: ['⭐ Récompenses de niveau rééquilibrées : 10 pièces × le niveau (elles donnaient trop). Les joueurs qui avaient déjà des niveaux peuvent réclamer une fois un rattrapage pour ces niveaux : leurs clés de caisse (jusqu\'à 4 Starter et 1 Premium) et jusqu\'à 1 000 pièces. Ouvre la route des récompenses de niveau pour le réclamer'] },
     { id: '2026-10-16l', date: 'Oct 16, 2026', en: ['⭐ Level rewards are easier to find: click the Level tile in Profile & Friends (or your level at the top of the daily quests) to open the rewards road, and claim right from there'], fr: ['⭐ Les récompenses de niveau sont plus faciles à trouver : clique sur la tuile Niveau dans Profil & amis (ou sur ton niveau en haut des quêtes du jour) pour ouvrir la route des récompenses, et réclame directement depuis là'] },
@@ -2802,7 +2805,7 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
+  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
@@ -2854,6 +2857,12 @@
         <div class="panel" id="d-skip-panel">
           <div class="panel-head"><h3 class="panel-title">Skip known badges</h3><span class="panel-note">free · unlocked by playing, not with coins</span></div>
           <div id="d-skip"></div>
+        </div>
+        </section>
+        <section class="shop-pane" data-shop-pane="walls" hidden>
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Wallpapers</h3><span class="panel-note">animated backgrounds for the whole site · only you see yours</span></div>
+          <div class="skin-grid wall-grid" id="d-walls"></div>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="emotes" hidden>
@@ -2937,6 +2946,7 @@
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
     drawEmotes(state);
+    drawWalls(state);
     drawSpeed(state);
     const cases = $('#d-cases');
     // Clés de caisse gagnées avec les niveaux : un bouton « ouvrir gratuitement » sur la caisse correspondante.
@@ -3976,6 +3986,47 @@
 
   // Émotes spéciales : une tuile par émote, animée en permanence ici ; achetée une fois, elle rejoint la barre de
   // réactions de tous les duels.
+  // Fonds d'écran (2026-10-16) : un aperçu animé par fond, acheter (il s'affiche aussitôt) ou choisir, et revenir au fond
+  // d'origine.
+  function drawWalls(state) {
+    const grid = $('#d-walls');
+    if (!grid) return;
+    const owned = state.walls || [], on = state.wall || null;
+    grid.innerHTML = `
+      <div class="skin-tile wall-tile${on ? '' : ' equipped'}">
+        <div class="wall-preview wp-none" aria-hidden="true"></div>
+        <div class="skin-name"><b>⬛ Original</b><span>The plain background</span></div>
+        <div class="skin-actions">${on ? '<button class="btn" data-wall="none">Use</button>' : '<span class="skin-state">Equipped</span>'}</div>
+      </div>` + Shop.WALLPAPERS.map(w => `
+      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}">
+        <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
+        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
+        <div class="skin-actions">${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
+      </div>`).join('');
+    grid.onclick = async e => {
+      const buy = e.target.closest('[data-wall-buy]'), use = e.target.closest('[data-wall]');
+      const btn = buy || use;
+      if (!btn || btn.disabled) return;
+      const id = btn.dataset.wallBuy || btn.dataset.wall, item = Shop.wallById.get(id);
+      if (buy && state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for ${item.name}`); return; }
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction(buy ? 'buywall' : 'wall', undefined, { wall: id });
+        toast(id === 'none' ? 'Back to the original background' : buy ? `${item.emoji} ${item.name} unlocked and on` : `${item.emoji} ${item.name} on`);
+        drawShop(next);
+      } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
+    };
+  }
+  // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
+  function paintWallpaper() {
+    const id = Store.settings.wall && Shop.wallById.has(Store.settings.wall) ? Store.settings.wall : null;
+    let layer = document.getElementById('wallpaper');
+    if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
+    if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }
+    layer.className = `wp wp-${id}`;
+    document.documentElement.classList.add('has-wall');
+  }
+
   function drawEmotes(state) {
     const grid = $('#d-emotes');
     if (!grid) return;
@@ -5845,6 +5896,7 @@
   // ---------------------------------------------------------------- navigation, thème, clavier
   // Code caché n°2 (les deux autres : bas de la page d'aide, et le nombre 0 dans le vérificateur d'XP).
   try { console.log('%c🔑 You found a hidden code: CONSOLECAT', 'font: 700 14px monospace; color: #facc15; background: #111; padding: 6px 10px; border-radius: 6px'); } catch (e) { /* pas de console */ }
+  try { paintWallpaper(); } catch (e) { /* jamais bloquant */ }
   const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
 
   function route() {

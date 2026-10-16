@@ -32,10 +32,11 @@ const CODES = {
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
 const usedCodesKey = id => `codes:${id}`;
+const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash "wall" retient celui affiché
 
 async function state(id) {
   const stats = await readStats(id);
-  const [owned, skin, bought, button, emotes] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)]]);
+  const [owned, skin, bought, button, emotes, walls, wall] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   const isOwner = Number(stats.owner) >= 1, isSupporter = Number(stats.supporter) >= 1, isFisher = Number(stats.collabFish) >= 1;
   // Un skin réservé (Owner, Supporter) ne se porte que si le joueur y a droit.
@@ -53,6 +54,8 @@ async function state(id) {
     owned: skins,
     skin: equipped && Shop.byId.has(equipped) && allowed(equipped) ? equipped : 'classic',
     supporter: isSupporter,
+    walls: (walls || []).filter(w => Shop.wallById.has(w)),
+    wall: wall && Shop.wallById.has(wall) && (walls || []).includes(wall) ? wall : null,
     keys: Object.fromEntries(Shop.CASES.map(c => [c.id, Math.max(0, Number(stats[`key:${c.id}`]) || 0)])), // clés de caisse gagnées avec les niveaux
     buttons,
     button: mineToo ? button : Shop.MATCH,
@@ -125,6 +128,31 @@ module.exports = async (req, res) => {
       }
       await redis([id === Shop.MATCH ? ['HDEL', 'btns', playerId] : ['HSET', 'btns', playerId, id]]);
       return send(res, 200, { ...st, button: id });
+    }
+    // Fonds d'écran : acheter (une fois, il s'affiche aussitôt) ou choisir lequel afficher ('none' = le fond d'origine).
+    if (body.action === 'wall') {
+      const id = String(body.wall || '');
+      const st = await state(playerId);
+      if (id !== 'none' && !st.walls.includes(id)) return send(res, 422, { error: 'Buy this wallpaper first' });
+      await redis([id === 'none' ? ['HDEL', 'wall', playerId] : ['HSET', 'wall', playerId, id]]);
+      return send(res, 200, { ...st, wall: id === 'none' ? null : id });
+    }
+    if (body.action === 'buywall') {
+      const item = Shop.wallById.get(String(body.wall || ''));
+      if (!item) return send(res, 400, { error: 'Unknown wallpaper' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        if (!st.walls.includes(item.id)) {
+          if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
+          await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id]]);
+        }
+        await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché
+        return send(res, 200, await state(playerId));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
     }
     if (body.action === 'buybutton') {
       const item = Shop.buttonById.get(String(body.button || ''));
