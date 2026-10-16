@@ -143,6 +143,8 @@ module.exports = async (req, res) => {
     if (body.action === 'buywall') {
       const item = Shop.wallById.get(String(body.wall || ''));
       if (!item) return send(res, 400, { error: 'Unknown wallpaper' });
+      const owns = (await redis([['SISMEMBER', ownedWallsKey(playerId), item.id]]))[0];
+      if (item.until && Date.now() >= Date.parse(item.until) && !Number(owns)) return send(res, 422, { error: 'This wallpaper is no longer for sale' });
       const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
       if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
       try {

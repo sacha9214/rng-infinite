@@ -2621,4 +2621,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(Shop.casePool(Shop.caseById.get('elite')).every(k => k.price >= 1500 && k.price <= 5000));
 }
 
+// Godlike (2026-10-16) : un ancien tirage Godlike, compté en Divine avant la nouvelle rareté, passe en Godlike à la
+// première lecture des stats, une seule fois, et débloque le succès.
+{
+  const { readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const id = 'f0e1'.repeat(4), T0 = 1790000000000;
+  db.delete(`stats:${id}`); db.delete(`hist:${id}`);
+  run([['ZADD', `hist:${id}`, T0, `${T0}:69`, T0 + 1, `${T0 + 1}:5`], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'rolls', 2, 't:divine', 1, 't:common', 1]]);
+  let st = await readStats(id);
+  assert.deepEqual([Number(st['t:divine']), Number(st['t:godlike'])], [0, 1], JSON.stringify(st));
+  st = await readStats(id);
+  assert.deepEqual([Number(st['t:divine']), Number(st['t:godlike'])], [0, 1], 'une seule fois');
+  assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked(st).includes('godlike'), 'succès Godlike');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

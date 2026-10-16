@@ -116,6 +116,9 @@
     { id: 'sunset', name: 'Sunset', emoji: '🌅', price: 900, desc: 'A glowing sun sinking into purple skies' },
     { id: 'synthwave', name: 'Synthwave', emoji: '🟣', price: 1200, desc: 'A neon grid rolling to the horizon' },
     { id: 'galaxy', name: 'Galaxy', emoji: '🌠', price: 1000, desc: 'A purple nebula with stars rushing past' },
+    // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
+    { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
+    { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);

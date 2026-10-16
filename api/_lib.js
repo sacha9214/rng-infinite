@@ -166,7 +166,7 @@ async function claimPlayer(playerId, secret) {
 // un faux historique (/api/history) puis se faire créditer pièces et succès.
 async function markFresh(playerId) {
   const [size] = await redis([['ZCARD', historyKey(playerId)]]);
-  if (!Number(size)) await redis([['HSETNX', statsKey(playerId), 'v', STATS_VERSION], ['HSETNX', statsKey(playerId), 'tv', TIERS_VERSION]]);
+  if (!Number(size)) await redis([['HSETNX', statsKey(playerId), 'v', STATS_VERSION], ['HSETNX', statsKey(playerId), 'tv', TIERS_VERSION], ['HSETNX', statsKey(playerId), 'gv', GODLIKE_VERSION]]);
 }
 
 // Clé d'unicité d'un nom : sans accents, majuscules, espaces ni ponctuation ("Sacha", "sâcha" et "Sa-cha!" = le même nom).
@@ -254,6 +254,9 @@ const STATS_VERSION = '1';
 // Raretés au-dessus de Mythic (2026-10-09) : "tv" marque les compteurs déjà répartis entre Mythic et les trois nouvelles.
 const TIERS_VERSION = '2';
 const TOP_TIERS = ['celestial', 'divine', 'godlike', 'infinite'];
+// Rareté Godlike (2026-10-16), prise dans Divine : "gv" marque les compteurs où les anciens Godlike ont été retirés de
+// Divine (signalé par MAYO : les joueurs qui en avaient tiré un n'avaient pas le succès).
+const GODLIKE_VERSION = '1';
 const statsKey = id => `stats:${id}`;
 const badgesKey = id => `badges:${id}`;
 const toObject = flat => {
@@ -281,7 +284,7 @@ async function rebuildStats(playerId) {
     if (a.earnedIds.includes('CURRENT_YEAR')) year2026 = 1;
   }
   const writes = [
-    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'year2026', year2026, 'v', STATS_VERSION, 'tv', TIERS_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
+    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'year2026', year2026, 'v', STATS_VERSION, 'tv', TIERS_VERSION, 'gv', GODLIKE_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
     ['DEL', badgesKey(playerId)],
   ];
   if (badges.size) writes.push(['SADD', badgesKey(playerId), ...badges]);
@@ -294,7 +297,7 @@ async function rebuildStats(playerId) {
 // historique. Les compteurs ne font que monter de rareté (les pièces aussi) ; rien d'autre n'est touché. Un joueur
 // sans aucun Mythic est seulement marqué. Le marqueur posé en premier sert de verrou : une seule répartition.
 async function splitTopTiers(playerId, stats) {
-  if (stats.tv === TIERS_VERSION) return stats;
+  if (stats.tv === TIERS_VERSION) return splitGodlike(playerId, stats);
   const [first] = await redis([['HSETNX', statsKey(playerId), 'tv', TIERS_VERSION]]);
   stats.tv = TIERS_VERSION;
   const mythic = Number(stats['t:mythic']) || 0;
@@ -323,6 +326,29 @@ async function splitTopTiers(playerId, stats) {
   }
   stats['t:mythic'] = String(mythic - moved);
   await redis(writes);
+  return stats;
+}
+
+// Les Godlike d'avant la nouvelle rareté étaient comptés en Divine : on les retrouve dans l'historique et on les déplace.
+async function splitGodlike(playerId, stats) {
+  if (stats.gv === GODLIKE_VERSION) return stats;
+  const [first] = await redis([['HSETNX', statsKey(playerId), 'gv', GODLIKE_VERSION]]);
+  stats.gv = GODLIKE_VERSION;
+  const divine = Number(stats['t:divine']) || 0;
+  if (Number(first) !== 1 || !divine) return stats;
+  const [members] = await redis([['ZRANGE', historyKey(playerId), 0, -1]]);
+  const seen = rollSet();
+  let found = 0;
+  for (const m of members || []) {
+    const [t, n] = m.split(':').map(Number);
+    if (seen.add(n, t) && engine.cardTier(engine.scoreOf(n)) === 'godlike') found++;
+  }
+  // Déjà comptés en Godlike (tirés depuis la mise à jour) : ils sont aussi dans l'historique.
+  const already = Number(stats['t:godlike']) || 0;
+  const moved = Math.max(0, Math.min(divine, found - already));
+  if (!moved) return stats;
+  await redis([['HINCRBY', statsKey(playerId), 't:divine', -moved], ['HINCRBY', statsKey(playerId), 't:godlike', moved]]);
+  stats['t:divine'] = String(divine - moved); stats['t:godlike'] = String(already + moved);
   return stats;
 }
 

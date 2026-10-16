@@ -1572,6 +1572,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16t', date: 'Oct 16, 2026', en: ['🎃 Two Halloween wallpapers in the shop\'s Limited tab until October 31: Moonlit Graveyard and Pumpkin Patch (idea by Deadshot)', 'Fixed: players who rolled a Godlike number before the new rarity now have it counted, and get the Godlike achievement (reported by MAYO)'], fr: ['🎃 Deux fonds d\'Halloween dans l\'onglet Limités de la boutique jusqu\'au 31 octobre : Cimetière au clair de lune et Champ de citrouilles (idée de Deadshot)', 'Corrigé : les joueurs qui avaient tiré un nombre Godlike avant la nouvelle rareté l\'ont maintenant dans leurs stats, avec le succès Godlike (signalé par MAYO)'] },
     { id: '2026-10-16s', date: 'Oct 16, 2026', en: ['💠 Badges now go up to Celestial: the 45 badges that only one number in a million can earn (idea by Meretera)'], fr: ['💠 Les badges montent maintenant jusqu\'à Celestial : les 45 badges qu\'un seul nombre sur un million peut obtenir (idée de Meretera)'] },
     { id: '2026-10-16r', date: 'Oct 16, 2026', en: ['⚜️ New rarity Godlike, between Divine and Infinite: the 40 best numbers under the Infinite ones (top 0.005%), worth 2,500 coins (idea by MAYO)', '🍬 New Halloween skin Trick or Treat: the doors open on number-shaped candy, and leading zeros are empty houses (idea by Deadshot)'], fr: ['⚜️ Nouvelle rareté Godlike, entre Divine et Infinite : les 40 meilleurs nombres sous les Infinite (top 0,005 %), 2 500 pièces (idée de MAYO)', '🍬 Nouveau skin d\'Halloween Trick or Treat : les portes s\'ouvrent sur des bonbons en forme de chiffres, et les zéros de tête sont des maisons vides (idée de Deadshot)'] },
     { id: '2026-10-16q', date: 'Oct 16, 2026', en: ['🗑️ New Trash leaderboard: the worst roll of every player, of all time', '🌠 New Galaxy wallpaper: a purple nebula with stars rushing past', '🩸 New Bloodlust skin: glossy dark red drops that drip and splash'], fr: ['🗑️ Nouveau classement Poubelle : le pire tirage de chaque joueur, de tous les temps', '🌠 Nouveau fond Galaxie : une nébuleuse violette et des étoiles qui filent', '🩸 Nouveau skin Bloodlust : des gouttes rouge sombre qui coulent et éclaboussent'] },
@@ -2824,6 +2825,8 @@
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
           <div class="limited-banner" id="limited-banner"><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><b>🎃 HALLOWEEN EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
+          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · until October 31</span></div>
+          <div class="skin-grid wall-grid" id="d-limited-walls"></div>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="cases" hidden>
@@ -3994,20 +3997,24 @@
   // Fonds d'écran (2026-10-16) : un aperçu animé par fond, acheter (il s'affiche aussitôt) ou choisir, et revenir au fond
   // d'origine.
   function drawWalls(state) {
-    const grid = $('#d-walls');
+    const grid = $('#d-walls'), limitedGrid = $('#d-limited-walls');
     if (!grid) return;
     const owned = state.walls || [], on = state.wall || null;
+    // Fonds d'Halloween : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui les ont.
+    const onSale = w => !w.until || Date.now() < Date.parse(w.until);
+    const wallTile = w => `
+      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}">
+        <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
+        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
+        <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
+      </div>`;
+    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
     grid.innerHTML = `
       <div class="skin-tile wall-tile${on ? '' : ' equipped'}">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
         <div class="skin-name"><b>⬛ Original</b><span>The plain background</span></div>
         <div class="skin-actions">${on ? '<button class="btn" data-wall="none">Use</button>' : '<span class="skin-state">Equipped</span>'}</div>
-      </div>` + Shop.WALLPAPERS.map(w => `
-      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}">
-        <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
-        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
-        <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
-      </div>`).join('');
+      </div>` + Shop.WALLPAPERS.filter(w => !w.until || owned.includes(w.id)).map(wallTile).join('');
     grid.onclick = async e => {
       const tryBtn = e.target.closest('[data-wall-try]');
       if (tryBtn) { tryWallpaper(tryBtn.dataset.wallTry, state); return; }
@@ -4023,6 +4030,7 @@
         drawShop(next);
       } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
     };
+    if (limitedGrid) limitedGrid.onclick = grid.onclick;
   }
   // Aperçu d'un fond : il passe derrière tout le site, le contenu s'efface pour le montrer en plein écran, et une barre
   // en bas permet de l'acheter (ou de le mettre) ou de fermer. Rien n'est enregistré ; Échap ou Fermer remet le vrai fond.
@@ -4046,7 +4054,7 @@
     bar.onclick = e => {
       if (e.target.closest('[data-wall-close]')) { end(); return; }
       const act = e.target.closest('[data-wall-buy],[data-wall]');
-      if (act) { end(); $('#d-walls')?.querySelector(`[${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
+      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
