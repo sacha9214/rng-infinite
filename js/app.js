@@ -1508,6 +1508,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-16g', date: 'Oct 16, 2026', en: ['Fixed: best rolls on the leaderboard now follow badge changes too (a roll that gained a new badge shows its new XP)', 'Fixed: the casino coin balance now updates by itself when you earn coins in another tab', 'Fixed: auto-roll no longer turns itself off after a connection problem, it tries again every 5 seconds'], fr: ['Corrigé : les meilleurs tirages du classement suivent aussi les changements de badges (un tirage qui a gagné un nouveau badge affiche son nouvel XP)', 'Corrigé : le solde de pièces du casino se met à jour tout seul quand tu gagnes des pièces dans un autre onglet', 'Corrigé : le tirage auto ne s\'éteint plus après un problème de connexion, il réessaie toutes les 5 secondes'] },
     { id: '2026-10-16f', date: 'Oct 16, 2026', en: ['🪙 Coin flip is harder: ×1.9 per win (was ×1.96) and up to 7 wins in a row (×89)'], fr: ['🪙 Le pile ou face est plus dur : ×1,9 par lancer gagné (au lieu de ×1,96) et 7 de suite au plus (×89)'] },
     { id: '2026-10-16e', date: 'Oct 16, 2026', en: ['🗑️ Two new rarities at the very bottom, below Trash: Garbage (the 471 worst numbers, about 1 roll in 2,100, +50 coins) and ☣️ Land waste (the 73 worst numbers of all, 1 roll in 13,700, +300 coins). Bad luck has never been this rare'], fr: ['🗑️ Deux nouvelles raretés tout en bas, sous Trash : Garbage (les 471 pires nombres, environ 1 tirage sur 2 100, +50 pièces) et ☣️ Land waste (les 73 pires nombres, 1 tirage sur 13 700, +300 pièces). La malchance n\'a jamais été aussi rare'] },
     { id: '2026-10-16d', date: 'Oct 16, 2026', en: ['☁️ New skin: Sky (1,600 coins). Cloud digits that condense out of the mist, clouds drifting around your card, and if you roll Mythic or better the whole sky takes its color (thanks Deadshot!)', '🃏 New skin: Deck (1,400 coins). Every digit is a playing card dealt from the deck and flipped onto the felt, and big rolls end in a Solitaire card cascade (thanks GamblrGod!)'], fr: ['☁️ Nouveau skin : Sky (1 600 pièces). Des chiffres en nuage qui se forment dans la brume, des nuages autour de ta carte, et si tu tires Mythique ou mieux tout le ciel prend sa couleur (merci Deadshot !)', '🃏 Nouveau skin : Deck (1 400 pièces). Chaque chiffre est une carte distribuée du paquet et retournée sur le tapis, et les gros tirages finissent en cascade de cartes comme au Solitaire (merci GamblrGod !)'] },
@@ -1695,6 +1696,13 @@
       n = online.n;
     } catch (err) {
       if (err.status === 429 && SoloAuto.on) { rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
+      // Réseau ou serveur qui hoquette (pas de réponse, 5xx) : l'auto-roll reste allumé et réessaie dans 5 s, au lieu de
+      // s'éteindre et de laisser le joueur croire à un plantage (signalé par un joueur le 2026-10-16).
+      if (SoloAuto.on && (!err.status || err.status >= 500)) {
+        rollPending = false; buttons.forEach(b => { b.disabled = false; });
+        toast('Connection problem: auto-roll will try again in 5 s', 3000);
+        scheduleSoloAuto(5000); return;
+      }
       if (SoloAuto.on) stopSoloAuto();
       if (err.status === 409) {
         rollPending = false;
@@ -3111,6 +3119,12 @@
     $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
+    // Pièces gagnées ailleurs (un autre onglet qui tire, des quêtes) : le solde se relit quand la page revient au premier
+    // plan, et toutes les 10 s tant qu'elle est affichée, seulement entre deux parties (signalé par un joueur le 2026-10-16).
+    const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle);
+    const refreshCoins = () => { if (!Store.player.name || document.hidden || !idle()) return; Online.shop().then(st => { if (idle()) showCoins(st.coins); }).catch(() => {}); };
+    clearInterval(Gamble.coinTimer); Gamble.coinTimer = setInterval(() => { if (currentView !== 'gamble') { clearInterval(Gamble.coinTimer); return; } refreshCoins(); }, 10000);
+    if (!Gamble.coinWatch) { Gamble.coinWatch = true; document.addEventListener('visibilitychange', () => refreshCoins()); window.addEventListener('focus', () => refreshCoins()); }
     const fail = err => toast(err.status === 422 || err.status === 400 ? err.message : err.status === 429 ? 'Too fast, try again in a second' : 'Gamble unavailable right now, try again');
     // ---- roulette : la roue européenne (ordre réel des cases), dessinée à plat puis inclinée en CSS
     const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];

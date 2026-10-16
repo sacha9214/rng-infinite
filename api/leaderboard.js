@@ -1,7 +1,7 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { redis, engine, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, cors, send, flushDue } = require('./_lib');
+const { redis, engine, scopes, dayKey, historyKey, XP_LB, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -10,7 +10,9 @@ const MIGRATED = 'lb:xp:migrated';
 // 3 : la version suit d'elle-même les règles des badges (empreinte de data/badge-meta.json et de js/engine.js). Un badge
 // ajouté ou changé change l'XP des anciens tirages, comme l'affiche la page du joueur : l'XP à vie du classement est
 // alors recalculée depuis l'historique au lieu de garder l'ancien total (signalé par un joueur le 2026-10-15).
-const MIGRATION = '3:' + require('node:crypto').createHash('sha256')
+// 4 : + les meilleurs tirages (tout le temps, et jour, semaine, mois en cours) recalculés eux aussi : un 117 tiré avant
+// le badge Exact Spartan restait à son ancien score dans le classement (signalé par un joueur le 2026-10-16).
+const MIGRATION = '4:' + require('node:crypto').createHash('sha256')
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
@@ -26,14 +28,28 @@ async function migrateXp() {
   // Joueurs nommés et tous ceux du classement à vie (d'anciens identifiants n'ont plus de nom à eux).
   const [named, ranked, finished] = await redis([['HKEYS', 'names'], ['ZRANGE', 'lb:all', 0, -1], ['SMEMBERS', `${MIGRATED}:ids`]]);
   const todo = [...new Set([...(named || []), ...(ranked || [])])].filter(id => !(finished || []).includes(id));
+  const open = new Set(scopes(Date.now()).map(p => p.lb)); // périodes en cours (les mois finis gardent leurs trophées)
   for (let i = 0; i < todo.length && Date.now() - start < 6000; i += 20) {
     const batch = todo.slice(i, i + 20);
-    const [counts, ...lists] = await redis([['HMGET', 'count:all', ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
+    const [counts, oldBest, ...lists] = await redis([['HMGET', 'count:all', ...batch], ['HMGET', 'best:all', ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
     const writes = [];
     batch.forEach((id, j) => {
       const { xp, rolls } = lifetimeTotals(lists[j]);
       if (xp > 0) writes.push(['ZADD', XP_LB, xp, id]);
       if (rolls > Number(counts[j] || 0)) writes.push(['HSET', 'count:all', id, rolls]);
+      // Meilleur tirage de chaque période encore ouverte, au barème actuel des badges.
+      const tops = new Map(), members = (lists[j] || []).slice();
+      // Un record d'avant l'historique du serveur reste candidat (rescoré lui aussi), pour ne jamais être perdu.
+      try { const b = oldBest && oldBest[j] ? JSON.parse(oldBest[j]) : null; if (b && Number.isInteger(b.n)) members.push(`${Number(b.t) || 0}:${b.n}`); } catch (e) { /* ignoré */ }
+      for (const m of members) {
+        const [t, n] = m.split(':').map(Number), s = engine.scoreOf(n);
+        for (const p of scopes(t)) { if (!open.has(p.lb)) continue; const cur = tops.get(p.lb); if (!cur || s > cur.s) tops.set(p.lb, { p, n, s, t }); }
+      }
+      for (const { p, n, s, t } of tops.values()) {
+        writes.push(['ZADD', p.lb, s, id], ['HSET', p.best, id, JSON.stringify({ n, s, t })]);
+        if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
+        if (p.period === 'all') writes.push(['HSET', statsKey(id), 'best', s]);
+      }
     });
     writes.push(['SADD', `${MIGRATED}:ids`, ...batch]);
     await redis(writes);

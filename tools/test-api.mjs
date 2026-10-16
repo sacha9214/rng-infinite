@@ -679,11 +679,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^3:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^4:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
   // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
-  run([['SET', 'lb:xp:migrated', '3:000000000000'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
+  run([['SET', 'lb:xp:migrated', '4:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
   assert.equal(r.body.entries.find(e => e.name === 'Alice').s, xpFromHistory(alice), 'recalculé après un changement de badges');
+  // Les meilleurs tirages aussi (tout le temps, et la période en cours) : un vieux score de meilleur tirage est corrigé.
+  {
+    const hist = run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.map(m => m.split(':').map(Number));
+    const top = Math.max(...hist.map(([, n]) => engine.scoreOf(n)));
+    run([['SET', 'lb:xp:migrated', '4:000000000000'], ['ZADD', 'lb:all', 1, alice.playerId], ['HSET', `stats:${alice.playerId}`, 'best', 1]]);
+    await call(leaderboard, { url: '/api/leaderboard?period=xp' });
+    assert.equal(Number(run([['ZSCORE', 'lb:all', alice.playerId]])[0].result), top, 'meilleur tirage de tous les temps recalculé');
+    assert.equal(Number(run([['HGET', `stats:${alice.playerId}`, 'best']])[0].result), top);
+    // Un record d'avant l'historique du serveur (absent de hist:) n'est jamais perdu.
+    const legacy = { n: 1, s: 1, t: 0 };
+    run([['SET', 'lb:xp:migrated', '4:000000000001'], ['HSET', 'best:all', alice.playerId, JSON.stringify(legacy)], ['ZREM', `hist:${alice.playerId}`, ...run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.filter(m => m.endsWith(':1'))]]);
+    await call(leaderboard, { url: '/api/leaderboard?period=xp' });
+    assert.ok(Number(run([['ZSCORE', 'lb:all', alice.playerId]])[0].result) >= Math.max(top, engine.scoreOf(1)), 'record ancien gardé');
+  }
   // Un nouveau tirage s'ajoute tout de suite.
   db.delete(`cooldown:${frank.playerId}`);
   const before = (await call(leaderboard, { url: '/api/leaderboard?period=xp' })).body.entries.find(e => e.name === 'Frank').s;
