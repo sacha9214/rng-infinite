@@ -3,6 +3,8 @@
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
 const { breathe, engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+// Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
+const AGG = new Map();
 const { awardsOf } = require('./_rank');
 
 const BEST_LIMIT = 10;
@@ -63,13 +65,14 @@ module.exports = async (req, res) => {
     const known = rollSet();
     const rolls = members.map(m => m.split(':').map(Number)).sort((a, b) => a[0] - b[0]).filter(([t, n]) => known.add(n, t));
 
-    // ~20 µs par nombre distinct : 2 s au pire pour un historique plein (100 000 tirages).
-    const analyses = new Map();
-    const analyze = n => analyses.get(n) || (analyses.set(n, engine.analyze(n)), analyses.get(n));
-    let lifetime = 0, percentileSum = 0;
-    const badges = {}, tiers = {};
+    // ~70 µs par tirage : 5 s pour le plus gros historique (64 000 tirages, 2026-10-17). Les totaux d'un profil restent
+    // en mémoire ; à la visite suivante, seuls les nouveaux tirages sont analysés.
+    const analyze = n => engine.analyze(n);
+    const prev = AGG.get(id), same = prev && rolls.length >= prev.count && prev.count > 0 && rolls[0][0] === prev.first && rolls[prev.count - 1][0] === prev.last;
+    let lifetime = same ? prev.lifetime : 0, percentileSum = same ? prev.percentileSum : 0;
+    const badges = same ? Object.fromEntries(Object.entries(prev.badges).map(([k, v]) => [k, v.slice()])) : {}, tiers = same ? { ...prev.tiers } : {};
     let step = 0;
-    for (const [, n] of rolls) {
+    for (const [, n] of same ? rolls.slice(prev.count) : rolls) {
       if (++step % 2000 === 0) await breathe(); // gros historique : laisse passer les autres demandes
       const a = analyze(n);
       lifetime += a.total;
@@ -80,7 +83,11 @@ module.exports = async (req, res) => {
         else badges[b] = [1, n];
       }
     }
-    const scored = rolls.map(([t, n]) => ({ n, s: analyze(n).total, t }));
+    if (rolls.length) {
+      AGG.set(id, { count: rolls.length, first: rolls[0][0], last: rolls[rolls.length - 1][0], lifetime, percentileSum, badges, tiers });
+      if (AGG.size > 300) AGG.delete(AGG.keys().next().value); // les plus anciens profils sortent de la mémoire
+    }
+    const scored = rolls.map(([t, n]) => ({ n, s: engine.scoreOf(n), t }));
     const best = scored.slice().sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT);
     // Les 10 pires tirages (idée d'Angelicide9, 2026-10-17), le plus mauvais en premier.
     const worst = scored.sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);

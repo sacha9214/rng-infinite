@@ -254,6 +254,18 @@ assert.deepEqual(Object.keys(r.body.badges).sort(), [...new Set(aliceBadges)].so
 assert.equal(Object.values(r.body.badges).reduce((x, [c]) => x + c, 0), aliceBadges.length, 'chaque badge compté autant de fois qu\'obtenu');
 assert.equal(typeof r.body.rank, 'number');
 assert.ok(!JSON.stringify(r.body).includes(alice.playerId), 'aucun id dans le profil');
+// Profil gardé en mémoire : après un nouveau tirage, seuls les nouveaux sont ajoutés, et le résultat est le même qu'un
+// calcul complet (2026-10-17).
+{
+  db.delete(`cooldown:${alice.playerId}`); const extra = (await call(roll, { method: 'POST', body: alice })).body;
+  const r2 = await call(profile, { url: '/api/profile?name=Alice' });
+  const hist2 = (await call(history, { method: 'POST', body: aliceTab })).body.rolls;
+  assert.equal(r2.body.rolls, hist2.length, 'nouveau tirage compté');
+  assert.equal(r2.body.lifetime, hist2.reduce((x, [n]) => x + engine.scoreOf(n), 0), 'XP à vie à jour');
+  const b2 = hist2.flatMap(([n]) => engine.analyze(n).earnedIds);
+  assert.equal(Object.values(r2.body.badges).reduce((x, [c]) => x + c, 0), b2.length, 'badges à jour');
+  assert.ok(extra.n >= 0);
+}
 
 // Ancien joueur sans clé name:* : retrouvé par le hash "names", son meilleur tirage compte même hors historique.
 const legacy = 'c'.repeat(16);
