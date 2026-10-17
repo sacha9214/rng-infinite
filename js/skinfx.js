@@ -1925,6 +1925,59 @@
     };
   });
 
+  // 🤠 Western (2026-10-17, idée de JBearr12) — un revolver à côté de la carte tire sur chaque bouteille posée sur la
+  // palissade : éclair de bouche, trait de la balle, la bouteille éclate en éclats de verre vert. À la révélation, il
+  // vide son barillet (une rafale), un nuage de fumée monte et il tourne sur son doigt. Matière dure : éclats et recul.
+  SCENES.western = custom(pieces({ cols: ['#4ade80', '#16a34a', '#bbf7d0', '#a16207'], shapes: ['shard'], size: [1.8, 3.6], g: 900, spin: 6, glowc: '#fbbf24', ring: '#d97706', drift: { rate: .6, from: 'around' } }), env => {
+    const { co, card, dark } = env, shots = timed(), bursts = timed(), smoke = timed();
+    const S = card.h * .55, gx = card.x + card.w + S * 1.3, gy = card.y + card.h * .5;
+    let recoil = 0, twirl = 0;
+    // Revolver dessiné de profil, canon vers la carte (vers la gauche), sans marque.
+    const gun = () => {
+      co.save(); co.translate(gx + recoil * S * .25, gy); co.rotate(twirl - recoil * .35);
+      co.fillStyle = '#4b5563'; co.strokeStyle = '#111827'; co.lineWidth = 1.2;
+      co.fillRect(-S * 1.1, -S * .14, S * .8, S * .18); co.strokeRect(-S * 1.1, -S * .14, S * .8, S * .18); // canon
+      co.fillStyle = '#6b7280'; co.beginPath(); co.ellipse(-S * .15, -S * .03, S * .24, S * .2, 0, 0, TAU); co.fill(); co.stroke(); // barillet
+      co.fillStyle = '#374151'; co.fillRect(-S * .38, -S * .2, S * .55, S * .1);
+      co.fillStyle = '#7c2d12'; co.beginPath(); co.moveTo(S * .05, -S * .05); co.lineTo(S * .35, -S * .08); co.lineTo(S * .55, S * .55); co.lineTo(S * .25, S * .6); co.closePath(); co.fill(); co.stroke(); // crosse en bois
+      co.strokeStyle = '#111827'; co.lineWidth = 2; co.beginPath(); co.arc(-S * .05, S * .2, S * .14, Math.PI * .1, Math.PI * .9); co.stroke(); // pontet
+      co.restore();
+    };
+    const fire = (tx, ty, delay, big) => shots.add({ delay, life: .32, tx, ty, big });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        recoil = Math.max(0, recoil - dt * 6);
+        smoke.run(dt, (p, k) => { co.globalAlpha = (1 - k) * .45; co.fillStyle = dark ? '#d6d3d1' : '#a8a29e'; co.beginPath(); co.arc(p.x + p.vx * k, p.y - k * card.h * .9, p.r * (1 + k * 2.2), 0, TAU); co.fill(); });
+        co.globalAlpha = 1; gun();
+        shots.run(dt, (b, k) => {
+          if (!b.fired) { b.fired = true; recoil = 1; for (let i = 0; i < 3; i++) smoke.add({ life: rnd(1.2, 2), x: gx - S * 1.15, y: gy - S * .05, vx: rnd(-20, 10), r: S * rnd(.08, .14) }); }
+          const mx = gx - S * 1.1 + recoil * S * .25, my = gy - S * .05;
+          // éclair de bouche
+          if (k < .35) { co.globalAlpha = 1 - k / .35; co.fillStyle = '#fde047'; co.beginPath(); co.moveTo(mx, my - S * .12); co.lineTo(mx - S * (b.big ? .55 : .4), my); co.lineTo(mx, my + S * .12); co.closePath(); co.fill(); }
+          // trait de la balle
+          const u = Math.min(1, k / .45); co.globalAlpha = .8 * (1 - k); co.strokeStyle = '#fef3c7'; co.lineWidth = 1.6;
+          co.beginPath(); co.moveTo(mx, my); co.lineTo(mx + (b.tx - mx) * u, my + (b.ty - my) * u); co.stroke();
+          if (u >= 1 && !b.hit) { b.hit = true; bursts.add({ x: b.tx, y: b.ty, life: .5, s: card.h * (b.big ? .5 : .38) }); }
+        });
+        // la bouteille éclate : un anneau de verre vert et des éclats en étoile
+        bursts.run(dt, (p, k) => {
+          co.globalAlpha = 1 - k; co.strokeStyle = '#86efac'; co.lineWidth = 2;
+          for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + p.s, r0 = p.s * (.2 + k * .6), r1 = p.s * (.35 + k * 1.1); co.beginPath(); co.moveTo(p.x + Math.cos(a) * r0, p.y + Math.sin(a) * r0); co.lineTo(p.x + Math.cos(a) * r1, p.y + Math.sin(a) * r1); co.stroke(); }
+          co.globalAlpha = (1 - k) * .6; co.fillStyle = '#fef9c3'; co.beginPath(); co.arc(p.x, p.y, p.s * .25 * (1 - k), 0, TAU); co.fill();
+        });
+        if (twirl) twirl = Math.max(0, twirl - dt * 7);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (!o.ghost) fire(p.x, p.y, 0, o.last); },
+      reveal(tier, p) {
+        const n = 3 + Math.round(3 * p);
+        for (let i = 0; i < n; i++) fire(rnd(card.x + card.w * .1, card.x + card.w * .9), rnd(card.y, card.y + card.h), .15 + i * .14, true);
+        setTimeout(() => { twirl = TAU * 2; }, (.3 + n * .14) * 1000);
+      },
+    };
+  });
+
   // 🩸 Bloodlust (2026-10-16, idée d'un joueur) — un liquide rouge sombre et brillant, stylisé (rien de gore) : au-
   // dessus de chaque chiffre posé, une goutte gonfle, se détache et s'écrase sur le haut de la carte ; à la révélation,
   // une pluie de gouttes s'y écrase. Matière molle : les gouttes s'étirent et s'aplatissent.
