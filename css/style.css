@@ -3945,3 +3945,18 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-western { --side-border: #b45309; --side-glow: 0 0 16px rgba(245, 158, 11, .35); --side-ink: #b45309;
   --side-bg: linear-gradient(180deg, rgba(194, 65, 12, .3), rgba(253, 211, 77, .12));
   --deco-a: '🌵'; --deco-b: '🤠'; }
+
+/* Bouton Discord (serveur RNG∞, 2026-10-17) : au-dessus des nouveautés, à gauche ; violet Discord au survol. */
+.gh-corner.discord-corner { bottom: 106px; }
+.gh-corner.discord-corner:hover, .gh-corner.discord-corner:focus-visible { color: #5865f2; }
+
+/* Corrections d'affichage sur téléphone (audit du 2026-10-17). Boutique : 7 onglets, libellés longs (WALLPAPERS,
+   UPGRADES) qui débordaient ; ils passent sous l'icône, en plus petit. Profil : les deux boutons de « My profile » se
+   chevauchaient ; ils passent à la ligne. Badges : le champ du vérificateur poussait « Check » hors de l'écran. */
+.shop-tabs { grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); }
+@media (max-width: 900px) {
+  .shop-tabs { grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr)); }
+  .shop-tabs button { flex-direction: column; gap: .25rem; font-size: .62rem; letter-spacing: 0; padding: .55rem .2rem; }
+}
+.me-panel .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.xc-form .input { min-width: 0; }
