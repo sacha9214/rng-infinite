@@ -2664,4 +2664,24 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked(st).includes('godlike'), 'succès Godlike');
 }
 
+// Annonce Discord des grands tirages (2026-10-17) : seulement Celestial ou mieux, sans mention possible, et rien du
+// tout sans webhook configuré.
+{
+  const modPath = require.resolve(path.join(ROOT, 'api/_discord.js'));
+  assert.equal(require(modPath).enabled(), false, 'pas de webhook dans les tests');
+  delete require.cache[modPath];
+  process.env.RNG_DISCORD_WEBHOOK = 'https://example.invalid/webhook';
+  const D = require(modPath); delete process.env.RNG_DISCORD_WEBHOOK; delete require.cache[modPath];
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => { sent.push(JSON.parse(o.body)); return { ok: true }; };
+  try {
+    D.announceRoll({ name: '@everyone **Bob**', n: 69, a: engine.analyze(69) });
+    D.announceRoll({ name: 'Bob', n: 123457, a: engine.analyze(123457) });
+  } finally { globalThis.fetch = realFetch; }
+  assert.equal(sent.length, 1, 'un tirage courant ne part pas');
+  assert.deepEqual(sent[0].allowed_mentions, { parse: [] }, 'aucune mention');
+  assert.match(sent[0].embeds[0].description, /`000069`/);
+  assert.ok(!sent[0].embeds[0].description.includes('**Bob**'), 'mise en forme du pseudo neutralisée');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

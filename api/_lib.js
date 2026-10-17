@@ -1,5 +1,6 @@
 // Outils partagés par les fonctions /api (le préfixe _ empêche Vercel d'en faire un endpoint).
 const crypto = require('node:crypto');
+const Discord = require('./_discord');
 const { createEngine } = require('../js/engine.js');
 const Achievements = require('../js/achievements.js');
 const meta = require('../data/badge-meta.json');
@@ -477,6 +478,8 @@ async function recordRoll(playerId, n, t) {
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
+  // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
+  if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
   return { s, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 
