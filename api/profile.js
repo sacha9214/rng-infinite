@@ -2,7 +2,8 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { breathe, engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { statsKey, breathe, engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
 const { awardsOf } = require('./_rank');
@@ -21,7 +22,7 @@ module.exports = async (req, res) => {
     const id = await findPlayer(name);
     if (!id) return send(res, 404, { error: 'No player with this name' });
 
-    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls] = await redis([
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName] = await redis([
       ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
@@ -31,6 +32,8 @@ module.exports = async (req, res) => {
       // Inventaire visible par tous (idée de kaz, 2026-10-17) : skins et fonds d'écran achetés ou gagnés.
       ['SMEMBERS', `skins:${id}`],
       ['SMEMBERS', `walls:${id}`],
+      ['HGET', 'skins', id], // skin équipé : le meilleur tirage s'affiche avec, en tête du profil
+      ['HGET', statsKey(id), 'discordName'],
     ]);
     const stats = await readStats(id);
     // Badges Top 1 / 5 / 10 des mois finis : tous, et le meilleur (rang, puis le plus récent) pour l'en-tête.
@@ -104,6 +107,7 @@ module.exports = async (req, res) => {
       tiers,
       best,
       worst,
+      skin: Shop.resolve(skin) || 'classic', discord: discordName || null,
       inventory: { skins: (ownedSkins || []).filter(k => k !== 'owner'), walls: ownedWalls || [] },
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé

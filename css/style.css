@@ -2585,7 +2585,7 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
    en dessous de 900 px ils recouvraient des boutons en défilant, donc ils se rangent en bas de page. */
 .corners { display: contents; }
 @media (max-width: 900px) {
-  .corners { display: flex; justify-content: center; gap: .7rem; padding: 0 0 1.4rem; position: relative; z-index: 1; }
+  .corners { display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem; padding: 0 0 1.4rem; position: relative; z-index: 1; }
   .corners .gh-corner { position: relative; inset: auto; opacity: .9; }
   .app { padding-bottom: 2rem; }
 }
@@ -3947,7 +3947,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   --deco-a: '🌵'; --deco-b: '🤠'; }
 
 /* Bouton Discord (serveur RNG∞, 2026-10-17) : au-dessus des nouveautés, à gauche ; violet Discord au survol. */
-.gh-corner.discord-corner { bottom: 106px; }
+@media (min-width: 901px) { .gh-corner.discord-corner { bottom: 106px; } } /* téléphone : rangé en bas de page avec les autres */
 .gh-corner.discord-corner:hover, .gh-corner.discord-corner:focus-visible { color: #5865f2; }
 
 /* Corrections d'affichage sur téléphone (audit du 2026-10-17). Boutique : 7 onglets, libellés longs (WALLPAPERS,
@@ -3965,3 +3965,48 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .discord-link { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .4rem 0 .7rem; font-size: .85rem; color: var(--prose-2); }
 .discord-link .dl-btn { background: #5865f2; border-color: #5865f2; color: #fff; }
 .discord-link .dl-on b { color: var(--prose); }
+
+/* ------------------------------------------------------------------ Profil (refait le 2026-10-17) : une carte
+   d'en-tête (identité, meilleur tirage dans le skin du joueur, 4 chiffres clés) puis des onglets. */
+.pf-hero { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "id best" "stats best" "more more"; gap: 1rem 1.5rem; padding: 1.4rem 1.5rem; margin: .4rem 0 1rem;
+  border: 1px solid var(--outline); border-radius: 1.1rem; background: radial-gradient(ellipse 60% 90% at 100% 0%, color-mix(in srgb, #a855f7 14%, transparent), transparent 70%), var(--surface); box-shadow: 0 10px 30px rgba(0, 0, 0, .12); }
+.pf-id { grid-area: id; min-width: 0; }
+.pf-name { font: 900 clamp(1.6rem, 4vw, 2.4rem)/1.1 var(--font-sans); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.pf-name .muted { font-size: .5em; font-weight: 600; }
+.pf-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .45rem; }
+.pf-tags:empty { display: none; }
+.pf-discord { font-size: .75rem; font-weight: 700; color: #5865f2; background: color-mix(in srgb, #5865f2 12%, transparent); border-radius: 999px; padding: .15rem .55rem; }
+.pf-since { margin-top: .5rem; font-size: .82rem; color: var(--prose-3); }
+.pf-actions { margin-top: .8rem; }
+.pf-best { grid-area: best; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .55rem; min-width: 15rem; padding: .9rem 1.1rem; border-radius: .9rem; background: color-mix(in srgb, var(--site-bg) 55%, transparent); }
+.pf-best-label { font: 800 .7rem var(--font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--prose-3); }
+.pf-best-meta { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.pf-stats { grid-area: stats; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; align-self: end; }
+.pf-stat { padding: .6rem .7rem; border-radius: .7rem; border: 1px solid var(--outline); background: var(--site-bg); min-width: 0; }
+.pf-stat span { display: block; font: 700 .66rem var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--prose-3); }
+.pf-stat b { display: block; margin-top: .2rem; font: 800 1.25rem var(--font-mono, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-stat b small { font-size: .7em; color: var(--prose-3); }
+.pf-more { grid-area: more; font-size: .82rem; color: var(--prose-2); border-top: 1px dashed var(--outline); padding-top: .7rem; }
+.pf-tabs { margin: 0 0 1rem; }
+.pf-tabs button small { opacity: .6; font-size: .8em; margin-left: .15rem; }
+.pf-tabs button i { font-style: normal; }
+.pf-rarities { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .5rem; }
+.pf-rar { text-align: center; padding: .55rem .2rem; border-radius: .6rem; border: 1px solid var(--t-border, var(--outline)); background: linear-gradient(160deg, var(--t-from, var(--surface)), var(--t-to, var(--surface))); color: var(--t-text, var(--prose)); }
+.pf-rar b { display: block; font: 900 1.25rem var(--font-mono, monospace); }
+.pf-rar span { font: 800 .62rem var(--font-sans); letter-spacing: .06em; text-transform: uppercase; }
+.pf-rar.none { opacity: .35; filter: grayscale(.6); }
+.pf-rolls .panel { margin: 0; }
+.pf-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .6rem; }
+.pf-inv-item { display: flex; flex-direction: column; align-items: center; gap: .45rem; padding: .7rem .5rem; border: 1px solid var(--outline); border-radius: .8rem; text-align: center; font-size: .8rem; }
+.pf-inv-item.on { border-color: #a855f7; box-shadow: 0 0 0 1px #a855f7 inset; }
+.pf-inv-item .wall-preview { width: 100%; height: 4.2rem; margin: 0; }
+@media (max-width: 760px) {
+  .pf-hero { grid-template-columns: 1fr; grid-template-areas: "id" "best" "stats" "more"; padding: 1.1rem; }
+  .pf-best { min-width: 0; }
+  .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-rarities { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pf-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .pf-tabs button { flex: 0 0 auto; padding-left: .8rem; padding-right: .8rem; white-space: nowrap; }
+}
+.pf-best .num-card { font-size: 2.7rem; padding: .35em .55em; }
+@media (max-width: 760px) { .pf-best .num-card { font-size: 2.2rem; } }

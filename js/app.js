@@ -1576,6 +1576,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-17e', date: 'Oct 17, 2026', en: ['👤 New profile page: a header card with your best roll shown in your skin and your key numbers, then tabs (Overview, Rolls, Badges, Achievements, Duels, Inventory) instead of one long page'], fr: ['👤 Nouvelle page de profil : une carte d\'en-tête avec ton meilleur tirage dans ton skin et tes chiffres clés, puis des onglets (Aperçu, Tirages, Badges, Succès, Duels, Inventaire) au lieu d\'une longue page'] },
     { id: '2026-10-17d', date: 'Oct 17, 2026', en: ['🔗 Link your Discord in Profile & Friends: you get your rarity role (Mythic to Infinite), Supporter and Idea Manager on the RNG∞ server, and it follows your new records', '🏆 The Discord now announces every Celestial and better roll live, open duels, game updates, and the rolls of the day at midnight UTC. Pick what pings you when you join'], fr: ['🔗 Lie ton Discord dans Profil & amis : tu reçois ton rôle de rareté (de Mythic à Infinite), Supporter et Idea Manager sur le serveur RNG∞, et il suit tes nouveaux records', '🏆 Le Discord annonce maintenant en direct chaque tirage Celestial ou mieux, les duels ouverts, les mises à jour, et les tirages du jour à minuit UTC. Choisis ce qui te mentionne en arrivant'] },
     { id: '2026-10-17c', date: 'Oct 17, 2026', en: ['💬 RNG∞ has a Discord server! Click the Discord button in the corner to join: share your rolls, find duels, send ideas', 'Faster server: rolls, leaderboards and profiles answer much quicker'], fr: ['💬 RNG∞ a son serveur Discord ! Clique sur le bouton Discord dans le coin pour le rejoindre : partage tes tirages, trouve des duels, envoie tes idées', 'Serveur plus rapide : tirages, classements et profils répondent beaucoup plus vite'] },
     { id: '2026-10-17b', date: 'Oct 17, 2026', en: ['🤠 New skin Western: a revolver shoots the bottles off the fence and each one bursts into a digit (idea by JBearr12)'], fr: ['🤠 Nouveau skin Western : un revolver tire sur les bouteilles de la palissade et chacune éclate en un chiffre (idée de JBearr12)'] },
@@ -2486,61 +2487,106 @@
     const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const caption = x => `${p.name} · ${fullDate(x.t)}`;
     const collectionState = { filter: 'all', q: '' };
-    $('#p-title').innerHTML = `${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''} ${titleHTML(p.title)}${topHTML(p.top)}${me ? '' : ' <button class="btn add-friend" id="p-friend">👥 Add friend</button>'}`;
+    // Profil en deux temps (refait le 2026-10-17, « parti en bazar ») : une carte d'en-tête (qui il est, son meilleur
+    // tirage dans son skin, 4 chiffres clés), puis des onglets au lieu de dix blocs empilés.
+    $('#p-title').remove();
+    const topRoll = top ? analysis(top.n) : null;
+    const tierCount = t => (p.tiers && p.tiers[t]) || 0;
+    const rollRow = (x, k) => {
+      const a = analysis(x.n);
+      return `
+        <div class="record" data-number="${x.n}" data-caption="${esc(caption(x))}">
+          <span class="rank">${k + 1}</span>
+          <span class="num-card sm" data-tier="${a.tier}">${a.str}</span>
+          <span class="grow">${a.groups.slice(0, 3).map(g => `${g.badge.emoji} ${esc(g.badge.label)}`).join(' · ')}</span>
+          <span class="when" title="${fullDate(x.t)}">${relTime(x.t)}</span>
+          <span class="ep-pill">${compact(x.s)} XP</span>
+        </div>`;
+    };
+    const rollList = list => (list && list.length ? `<div class="records">${list.map(rollRow).join('')}</div>` : '<div class="empty">No rolls yet.</div>');
+    const inv = p.inventory || { skins: [], walls: [] };
+    const invSkins = inv.skins.filter(k => Shop.byId.has(k)).map(k => Shop.byId.get(k)).sort((x, y) => y.price - x.price);
+    const invWalls = inv.walls.filter(k => Shop.wallById.has(k)).map(k => Shop.wallById.get(k));
+    const achDone = (p.achievements || []).filter(id => Ach.byId.has(id) && !Ach.byId.get(id).hidden).length;
+    const achTotal = Ach.LIST.filter(a => !a.hidden).length;
+    const d = p.duels || {};
+    const TABS = [
+      ['overview', '🏠', 'Overview'],
+      ['rolls', '🎲', 'Rolls'],
+      ['badges', '🏅', `Badges <small>${found}</small>`],
+      ['achievements', '🏆', `Achievements <small>${achDone}</small>`],
+      ...(d.played || (d.rivals || []).length ? [['duels', '⚔️', `Duels <small>${fmt(d.won || 0)}</small>`]] : []),
+      ['inventory', '🎒', `Inventory <small>${invSkins.length + invWalls.length}</small>`],
+    ];
+    let tab = 'overview';
+    try { const t = sessionStorage.getItem('rngProfileTab'); if (TABS.some(x => x[0] === t)) tab = t; } catch (e) { /* onglet par défaut */ }
+    const rarities = ['infinite', 'godlike', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare'];
+
+    $('#p-body').innerHTML = `
+      <section class="pf-hero">
+        <div class="pf-id">
+          <div class="pf-name">${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</div>
+          <div class="pf-tags">${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
+          <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
+          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : '<button class="btn add-friend" id="p-friend">👥 Add friend</button>'}</div>
+        </div>
+        <div class="pf-best">
+          ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
+          <span class="num-card md skin-${esc(p.skin || 'classic')}" data-tier="${topRoll.tier}" data-number="${top.n}" data-caption="${esc(caption(top))}" style="cursor:pointer">${(() => { const lead = top.n ? topRoll.str.search(/[1-9]/) : topRoll.str.length - 1; return topRoll.str.split('').map((c, i) => `<span class="slot${i < lead ? ' ghost' : ''}">${c}</span>`).join(''); })()}</span>
+          <div class="pf-best-meta">${tierPill(topRoll.tier)}<b class="mono">${fmt(top.s)} XP</b></div>` : '<div class="empty">No rolls yet</div>'}
+        </div>
+        <div class="pf-stats">
+          <div class="pf-stat"><span>Level</span><b>${p.level != null ? `⭐ ${fmt(p.level)}` : '–'}</b></div>
+          <div class="pf-stat"><span>Lifetime XP</span><b title="${fmt(p.lifetime)} XP">${compact(p.lifetime)}</b></div>
+          <div class="pf-stat"><span>All-time rank</span><b>${p.rank ? '#' + fmt(p.rank) : '–'}</b></div>
+          <div class="pf-stat"><span>Badges</span><b>${found}<small>/${total}</small></b></div>
+        </div>
+        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}</div>
+      </section>
+      <div class="lb-tabs pf-tabs" role="tablist" style="grid-template-columns:repeat(${TABS.length},1fr)">${TABS.map(([id, icon, label]) => `<button role="tab" data-ptab="${id}" class="${id === tab ? 'on' : ''}"><i aria-hidden="true">${icon}</i> ${label}</button>`).join('')}</div>
+      <div class="pf-pane" data-pane="overview">
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Rare rolls</h3><span class="panel-note">how many times ${me ? 'you' : esc(p.name)} hit each top rarity</span></div>
+          <div class="pf-rarities">${rarities.map(t => `<div class="pf-rar${tierCount(t) ? '' : ' none'}" data-tier="${t}"><b>${fmt(tierCount(t))}</b><span>${cap(t)}</span></div>`).join('')}</div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Top 5 rolls</h3><span class="panel-note">click a number for its badges · all of them in Rolls</span></div>
+          ${rollList(p.best.slice(0, 5))}
+        </div>
+        ${!me && mine ? compareHTML(mine, p) : ''}
+      </div>
+      <div class="pf-pane" data-pane="rolls" hidden>
+        <div class="grid-2 pf-rolls">
+          <div class="panel"><div class="panel-head"><h3 class="panel-title">🏆 Best rolls</h3><span class="panel-note">the 10 highest</span></div>${rollList(p.best)}</div>
+          <div class="panel"><div class="panel-head"><h3 class="panel-title">🗑️ Worst rolls</h3><span class="panel-note">the 10 lowest, worst first</span></div>${rollList(p.worst)}</div>
+        </div>
+      </div>
+      <div class="pf-pane" data-pane="badges" hidden>
+        <div class="panel"><div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>${collectionHTML(found, collectionState)}</div>
+      </div>
+      <div class="pf-pane" data-pane="achievements" hidden>${achievementsPanelHTML(p, me)}</div>
+      <div class="pf-pane" data-pane="duels" hidden>${duelsPanelHTML(p, me)}</div>
+      <div class="pf-pane" data-pane="inventory" hidden>
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">🎨 Skins</h3><span class="panel-note">${plural(invSkins.length, 'skin')}${p.skin && p.skin !== 'classic' && Shop.byId.has(p.skin) ? ` · wearing ${Shop.byId.get(p.skin).emoji} ${esc(Shop.byId.get(p.skin).name)}` : ''}</span></div>
+          ${invSkins.length ? `<div class="pf-inv">${invSkins.map(k => `<div class="pf-inv-item${k.id === p.skin ? ' on' : ''}" title="${esc(k.desc)}"><span class="num-card sm skin-${k.id}" data-tier="rare">${slotsHTML('777')}</span><b>${k.emoji} ${esc(k.name)}</b></div>`).join('')}</div>` : '<div class="empty">No skins yet.</div>'}
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">🖼️ Wallpapers</h3><span class="panel-note">${plural(invWalls.length, 'wallpaper')}</span></div>
+          ${invWalls.length ? `<div class="pf-inv">${invWalls.map(w => `<div class="pf-inv-item" title="${esc(w.desc)}"><span class="wall-preview wp wp-${w.id}" aria-hidden="true"></span><b>${w.emoji} ${esc(w.name)}</b></div>`).join('')}</div>` : '<div class="empty">No wallpapers yet.</div>'}
+        </div>
+      </div>`;
+    const showTab = id => {
+      tab = id;
+      $('#p-body').querySelectorAll('[data-ptab]').forEach(b => b.classList.toggle('on', b.dataset.ptab === id));
+      $('#p-body').querySelectorAll('.pf-pane').forEach(el => { el.hidden = el.dataset.pane !== id; });
+      try { sessionStorage.setItem('rngProfileTab', id); } catch (e) { /* idem */ }
+    };
+    showTab(tab);
+    $('#p-body').querySelector('.pf-tabs').addEventListener('click', e => { const b = e.target.closest('[data-ptab]'); if (b) showTab(b.dataset.ptab); });
     const addFriend = $('#p-friend');
     if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
     if (me) noteAchievements(p.achievements);
-    $('#p-body').innerHTML = `
-      ${(p.tops || []).length > 1 ? `<p class="panel-note top-marks-row"><span>Monthly trophies</span> ${p.tops.map(topHTML).join('')}</p>` : ''}
-      <p class="panel-note profile-sub">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</p>
-      <div class="tiles">
-        ${tile('Rolls', fmt(p.rolls), p.rolls ? `${fmt(p.lifetime / p.rolls)} XP per roll` : '–')}
-        ${tile('Lifetime XP', compact(p.lifetime), `${fmt(p.lifetime)} XP`)}
-        ${tile('Best roll', top ? `<span data-number="${top.n}" data-caption="${esc(caption(top))}" style="cursor:pointer">${analysis(top.n).str}</span>` : '–', top ? `${fmt(top.s)} XP` : '')}
-        ${tile('All-time rank', p.rank ? '#' + p.rank : '–', 'best single roll')}
-        ${tile('Badges', `${found}/${total}`, `${((found / total) * 100).toFixed(0)}% of the collection`)}
-        ${tile('Level', p.level != null ? `⭐ ${fmt(p.level)}` : '–', 'goes up with lifetime XP')}
-        ${tile('Best quest streak', p.questBest ? plural(p.questBest, 'day') : '–', 'days in a row with every quest done')}
-      </div>
-      ${!me && mine ? compareHTML(mine, p) : ''}
-      ${duelsPanelHTML(p, me)}
-      ${achievementsPanelHTML(p, me)}
-      <div class="panel">
-        <div class="panel-head"><h3 class="panel-title">Best rolls</h3><span class="panel-note">click a number for its badges</span></div>
-        ${p.best.length ? `<div class="records">${p.best.map((x, k) => {
-          const a = analysis(x.n);
-          return `
-            <div class="record" data-number="${x.n}" data-caption="${esc(caption(x))}">
-              <span class="rank">${k + 1}</span>
-              <span class="num-card sm" data-tier="${a.tier}">${a.str}</span>
-              <span class="grow">${a.groups.slice(0, 3).map(g => `${g.badge.emoji} ${esc(g.badge.label)}`).join(' · ')}</span>
-              <span class="when" title="${fullDate(x.t)}">${relTime(x.t)}</span>
-              <span class="ep-pill">${compact(x.s)} XP</span>
-            </div>`;
-        }).join('')}</div>` : '<div class="empty">No rolls yet.</div>'}
-      </div>
-      ${p.inventory && (p.inventory.skins.length || p.inventory.walls.length) ? `<div class="panel">
-        <div class="panel-head"><h3 class="panel-title">🎒 Inventory</h3><span class="panel-note">${plural(p.inventory.skins.filter(k => Shop.byId.has(k)).length, 'skin')} · ${plural(p.inventory.walls.filter(k => Shop.wallById.has(k)).length, 'wallpaper')}</span></div>
-        <div class="inv-list">${p.inventory.skins.filter(k => Shop.byId.has(k)).map(k => Shop.byId.get(k)).sort((a, b) => b.price - a.price).map(k => `<span class="badge-pill inv-item" title="${esc(k.desc)}">${k.emoji} ${esc(k.name)}</span>`).join('')}${p.inventory.walls.filter(k => Shop.wallById.has(k)).map(k => Shop.wallById.get(k)).map(w => `<span class="badge-pill inv-item inv-wall" title="${esc(w.desc)}">🖼️ ${w.emoji} ${esc(w.name)}</span>`).join('')}</div>
-      </div>` : ''}
-      ${p.worst && p.worst.length ? `<div class="panel">
-        <div class="panel-head"><h3 class="panel-title">🗑️ Worst rolls</h3><span class="panel-note">the 10 lowest, worst first</span></div>
-        <div class="records">${p.worst.map((x, k) => {
-          const a = analysis(x.n);
-          return `
-            <div class="record" data-number="${x.n}" data-caption="${esc(caption(x))}">
-              <span class="rank">${k + 1}</span>
-              <span class="num-card sm" data-tier="${a.tier}">${a.str}</span>
-              <span class="grow">${a.groups.slice(0, 3).map(g => `${g.badge.emoji} ${esc(g.badge.label)}`).join(' · ')}</span>
-              <span class="when" title="${fullDate(x.t)}">${relTime(x.t)}</span>
-              <span class="ep-pill">${compact(x.s)} XP</span>
-            </div>`;
-        }).join('')}</div>
-      </div>` : ''}
-      <div class="panel">
-        <div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>
-        ${collectionHTML(found, collectionState)}
-      </div>`;
     mountCollection(profileCollection(p.badges), collectionState);
     if (me) wireEquip($('#p-body'), () => renderProfile(p.name));
   }
