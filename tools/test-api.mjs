@@ -2684,4 +2684,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!sent[0].embeds[0].description.includes('**Bob**'), 'mise en forme du pseudo neutralisée');
 }
 
+// Discord, suite : duels ouverts, nouveautés publiées une seule fois, podium du jour une seule fois, mentions de rôle.
+{
+  const dPath = require.resolve(path.join(ROOT, 'api/_discord.js')), tPath = require.resolve(path.join(ROOT, 'api/_discord_tasks.js'));
+  delete require.cache[dPath]; delete require.cache[tPath];
+  process.env.RNG_DISCORD_CONFIG = JSON.stringify({ bigRolls: 'https://x.invalid/big', updates: 'https://x.invalid/up', duels: 'https://x.invalid/duel', roles: { bigRolls: '111', updates: '222', duels: '333' } });
+  const D = require(dPath), T = require(tPath);
+  delete process.env.RNG_DISCORD_CONFIG;
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => { if (!String(u).startsWith('https://x.invalid/')) return realFetch(u, o); sent.push({ u, b: JSON.parse(o.body) }); return { ok: true }; };
+  try {
+    D.announceRoll({ name: 'Bob', n: 69, a: engine.analyze(69) }); // Godlike : mention du rôle Big Rolls
+    assert.deepEqual(sent.pop().b.allowed_mentions, { parse: [], roles: ['111'] });
+    D.announceDuel({ host: 'Al@everyone', code: 'ABCD', mode: 'xp', target: 50000, size: 4, stake: 0 });
+    let m = sent.pop(); assert.equal(m.u, 'https://x.invalid/duel'); assert.match(m.b.embeds[0].description, /#\/room\/ABCD/); assert.ok(!m.b.embeds[0].description.includes('@everyone'));
+    run([['DEL', 'discord:updates:seen']]);
+    assert.equal(await T.postNewUpdates(), 1, 'premier lancement : seulement la dernière entrée');
+    assert.equal(await T.postNewUpdates(), 0, 'rien de neuf');
+    run([['SREM', 'discord:updates:seen', T.readUpdates()[1].id]]);
+    assert.equal(await T.postNewUpdates(), 1, 'une entrée manquante est publiée');
+    assert.equal(sent.filter(x => x.u === 'https://x.invalid/up').length, 2);
+    sent.length = 0;
+    const now = Date.parse('2026-10-18T00:20:00Z'), y = '2026-10-17';
+    run([['DEL', `discord:recap:${y}`], ['ZADD', `lb:day:${y}`, 102135744, alice.playerId], ['HSET', `best:day:${y}`, alice.playerId, JSON.stringify({ n: 69, s: 102135744, t: now - 5e6 })]]);
+    assert.equal(await T.dailyRecap(now), true); assert.equal(await T.dailyRecap(now), false, 'une seule fois');
+    assert.match(sent[0].b.embeds[0].description, /Alice/);
+    assert.equal(await T.dailyRecap(Date.parse('2026-10-18T10:00:00Z')), false, 'pas en retard dans la journée');
+  } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; delete require.cache[tPath]; }
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

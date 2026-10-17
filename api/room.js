@@ -16,6 +16,7 @@
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
 const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
 const { bestAwards } = require('./_rank');
@@ -455,6 +456,8 @@ module.exports = async (req, res) => {
       if (refused) return send(res, 422, { error: refused });
       const code = await createRoom(r, players);
       if (!code) return send(res, 503, { error: 'Could not create a duel, try again' });
+      // Duel public ouvert : annoncé sur le Discord avec le lien pour rejoindre (pas les parties contre des bots).
+      if (!bots && r.isPublic) Discord.announceDuel({ host: name, code, mode: r.mode, target: r.target, size: r.size, stake: r.stake });
       return send(res, 200, await view(await load(code), playerId));
     }
 

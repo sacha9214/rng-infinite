@@ -1,41 +1,98 @@
-// Annonce des grands tirages sur le serveur Discord de RNG∞ (salon 🏆・big-rolls, 2026-10-17) : chaque tirage
-// Celestial ou mieux part en message riche par un webhook. L'adresse du webhook est secrète : elle vient de
-// RNG_DISCORD_WEBHOOK ou du fichier ~/.config/rng/discord-webhook sur le VPS ; sans elle (tests, Vercel), rien ne part.
-// Jamais bloquant : la demande part en arrière-plan, avec un délai maximum, et une erreur est ignorée.
+// Le jeu parle sur le serveur Discord de RNG∞ (2026-10-17) :
+//   - grands tirages (Celestial ou mieux) dans 🏆・big-rolls, avec la mention du rôle 🔔 Big Rolls à partir de Divine ;
+//   - nouveautés du journal des mises à jour (UPDATES de js/app.js) dans 🆕・updates, rôle 🔔 Updates ;
+//   - duels publics ouverts dans ⚔️・duels avec le lien pour rejoindre, rôle 🔔 Duels ;
+//   - à minuit UTC, le récapitulatif « tirages du jour » dans 🏆・big-rolls.
+// Les adresses des webhooks sont secrètes : fichier ~/.config/rng/discord.json sur le VPS (ou RNG_DISCORD_WEBHOOK pour
+// les grands tirages seuls, ancien format ~/.config/rng/discord-webhook). Sans configuration (tests, Vercel), rien ne
+// part. Jamais bloquant : chaque envoi part en arrière-plan avec un délai maximum, une erreur est ignorée.
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 
-const FILE = path.join(os.homedir(), '.config/rng/discord-webhook');
-let url = process.env.RNG_DISCORD_WEBHOOK || '';
-try { if (!url) url = fs.readFileSync(FILE, 'utf8').trim(); } catch (e) { /* pas de webhook : pas d'annonce */ }
+const DIR = path.join(os.homedir(), '.config/rng');
+let cfg = {};
+try { cfg = JSON.parse(fs.readFileSync(path.join(DIR, 'discord.json'), 'utf8')); } catch (e) { /* pas de fichier */ }
+try { if (!cfg.bigRolls) cfg.bigRolls = fs.readFileSync(path.join(DIR, 'discord-webhook'), 'utf8').trim(); } catch (e) { /* idem */ }
+if (process.env.RNG_DISCORD_WEBHOOK) cfg = { bigRolls: process.env.RNG_DISCORD_WEBHOOK };
+if (process.env.RNG_DISCORD_CONFIG) cfg = JSON.parse(process.env.RNG_DISCORD_CONFIG); // tests
+const roles = cfg.roles || {};
 
 const SITE = 'https://rng-infinite.com';
 const ANNOUNCED = ['celestial', 'divine', 'godlike', 'infinite'];
+const PINGED = ['divine', 'godlike', 'infinite']; // Celestial : ~100 par jour, sans mention
 const LOOK = {
   celestial: { color: 0x22d3ee, emoji: '💠', title: 'Celestial roll!' },
   divine: { color: 0xfde047, emoji: '🌟', title: 'DIVINE ROLL!' },
   godlike: { color: 0xfb7185, emoji: '⚜️', title: '⚜️ GODLIKE ROLL ⚜️' },
   infinite: { color: 0xc084fc, emoji: '♾️', title: '♾️ INFINITE ROLL ♾️' },
 };
+const clean = s => String(s || '').replace(/[*_`~|>\\]/g, '').replace(/@/g, '@​'); // pas de mise en forme ni de mention par un pseudo
+
+function post(url, body) {
+  if (!url) return;
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 5000);
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'RNG∞', ...body }), signal: ctrl.signal })
+    .catch(() => {}).finally(() => clearTimeout(timer));
+}
+// Mention d'un rôle d'abonnement (choisi par le joueur à l'arrivée sur le serveur), et seulement celui-là.
+const ping = role => (role ? { content: `<@&${role}>`, allowed_mentions: { parse: [], roles: [role] } } : { allowed_mentions: { parse: [] } });
 
 function announceRoll({ name, n, a }) {
-  if (!url || !ANNOUNCED.includes(a.tier)) return;
+  if (!cfg.bigRolls || !ANNOUNCED.includes(a.tier)) return;
   const look = LOOK[a.tier], number = String(n).padStart(6, '0');
   const badges = (a.groups || []).slice(0, 4).map(g => `${g.badge.emoji} ${g.badge.label}`).join(' · ');
-  const body = {
-    username: 'RNG∞',
-    allowed_mentions: { parse: [] }, // jamais de @everyone ni de mention, même si un pseudo en contient
+  post(cfg.bigRolls, {
+    ...(PINGED.includes(a.tier) ? ping(roles.bigRolls) : { allowed_mentions: { parse: [] } }),
     embeds: [{
       title: `${look.emoji} ${look.title}`,
       url: `${SITE}/#/player/${encodeURIComponent(name || '')}`,
-      description: `**${String(name || 'A player').replace(/[*_`~|>]/g, '')}** rolled **\`${number}\`**\n${a.total.toLocaleString('en-US')} XP${badges ? `\n${badges}` : ''}`,
+      description: `**${clean(name) || 'A player'}** rolled **\`${number}\`**\n${a.total.toLocaleString('en-US')} XP${badges ? `\n${badges}` : ''}`,
       color: look.color,
       footer: { text: `${a.tier[0].toUpperCase()}${a.tier.slice(1)} · roll yours on rng-infinite.com` },
       timestamp: new Date().toISOString(),
     }],
-  };
-  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 5000);
-  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal })
-    .catch(() => {}).finally(() => clearTimeout(timer));
+  });
 }
 
-module.exports = { announceRoll, ANNOUNCED, enabled: () => !!url };
+function announceDuel({ host, code, mode, target, size, stake }) {
+  if (!cfg.duels) return;
+  const goal = mode === 'xp' ? `first to ${Number(target).toLocaleString('en-US')} XP` : `first to ${target} round${target > 1 ? 's' : ''}`;
+  post(cfg.duels, {
+    ...ping(roles.duels),
+    embeds: [{
+      title: '⚔️ A duel is open!',
+      url: `${SITE}/#/room/${code}`,
+      description: `**${clean(host) || 'A player'}** is waiting for opponents: ${goal}, up to ${size} players${stake ? `, 🪙 ${Number(stake).toLocaleString('en-US')} stake each` : ''}.\n**[Join the duel](${SITE}/#/room/${code})** · code \`${code}\``,
+      color: 0xf97316,
+    }],
+  });
+}
+
+function announceUpdate(entry) {
+  if (!cfg.updates) return;
+  post(cfg.updates, {
+    ...ping(roles.updates),
+    embeds: [{
+      title: `🆕 Update · ${entry.date}`,
+      url: SITE,
+      description: entry.en.map(x => `• ${x}`).join('\n').slice(0, 3900),
+      color: 0x22c55e,
+    }],
+  });
+}
+
+function announceRecap({ day, rows, rolls }) {
+  if (!cfg.bigRolls || !rows.length) return;
+  const medal = ['🥇', '🥈', '🥉'];
+  post(cfg.bigRolls, {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      title: `🏆 Rolls of the day · ${day}`,
+      url: `${SITE}/#/leaderboard`,
+      description: rows.map((r, i) => `${medal[i]} **${clean(r.name)}** · \`${String(r.n).padStart(6, '0')}\` · ${r.s.toLocaleString('en-US')} XP`).join('\n') +
+        `\n\n🎲 ${Number(rolls || 0).toLocaleString('en-US')} rolls were made that day. A new day starts now!`,
+      color: 0xa855f7,
+    }],
+  });
+}
+
+module.exports = { announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };

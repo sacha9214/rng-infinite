@@ -84,5 +84,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
 // n'a le jeu ouvert (api/_lever.js).
 const Lever = require(path.join(ROOT, 'api/_lever.js'));
 setInterval(() => { Lever.tick().catch(err => console.error('lever tick:', err.message)); }, 15000).unref();
+// Discord : nouveautés publiées au démarrage, podium du jour à minuit UTC (api/_discord_tasks.js).
+require(path.join(ROOT, 'api/_discord_tasks.js')).start();
 
 server.listen(PORT, HOST, () => console.log(`RNG∞ API ${version || '(dev)'} : http://${HOST}:${PORT}`));
