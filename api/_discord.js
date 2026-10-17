@@ -7,6 +7,9 @@
 // les grands tirages seuls, ancien format ~/.config/rng/discord-webhook). Sans configuration (tests, Vercel), rien ne
 // part. Jamais bloquant : chaque envoi part en arrière-plan avec un délai maximum, une erreur est ignorée.
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const Card = require('./_discord_card');
+let engine = null; // rang « Top x % » de la carte ; chargé tard (_lib requiert ce module)
+const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
 const DIR = path.join(os.homedir(), '.config/rng');
 let cfg = {};
@@ -27,8 +30,16 @@ const LOOK = {
 };
 const clean = s => String(s || '').replace(/[*_`~|>\\]/g, '').replace(/@/g, '@​'); // pas de mise en forme ni de mention par un pseudo
 
-function post(url, body) {
+function post(url, body, file) {
   if (!url) return;
+  if (file) { // image jointe (carte du tirage) : envoi en multipart, l'embed la montre par « attachment://… »
+    const form = new FormData();
+    form.append('payload_json', JSON.stringify({ username: 'RNG∞', ...body }));
+    form.append('files[0]', new Blob([file.data], { type: 'image/png' }), file.name);
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 10000);
+    fetch(url, { method: 'POST', body: form, signal: ctrl.signal }).catch(() => {}).finally(() => clearTimeout(timer));
+    return;
+  }
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 5000);
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'RNG∞', ...body }), signal: ctrl.signal })
     .catch(() => {}).finally(() => clearTimeout(timer));
@@ -37,20 +48,28 @@ function post(url, body) {
 const ping = role => (role ? { content: `<@&${role}>`, allowed_mentions: { parse: [], roles: [role] } } : { allowed_mentions: { parse: [] } });
 
 function announceRoll({ name, n, a }) {
+  if (!engine) try { engine = require('./_lib').engine; } catch (e) { /* sans rang */ }
   if (!cfg.bigRolls || !ANNOUNCED.includes(a.tier)) return;
   const look = LOOK[a.tier], number = String(n).padStart(6, '0');
   const badges = (a.groups || []).slice(0, 4).map(g => `${g.badge.emoji} ${g.badge.label}`).join(' · ');
+  // Carte image, la même que le bouton « Share » du site (api/_discord_card.js) ; sans elle, le texte seul.
+  const png = Card.render({
+    str: a.str, tier: a.tier, rank: (engine && engine.topLabel ? cap((engine.topLabel(a.percentile) || '').toLowerCase()) : ''),
+    xp: a.total.toLocaleString('en-US'), name: String(name || ''), host: 'rng-infinite.com',
+    badges: (a.groups || []).slice(0, 5).map(g => ({ emoji: g.badge.emoji, label: g.badge.label, tier: g.badge.tier })), more: Math.max(0, (a.groups || []).length - 5),
+  });
   post(cfg.bigRolls, {
     ...(PINGED.includes(a.tier) ? ping(roles.bigRolls) : { allowed_mentions: { parse: [] } }),
     embeds: [{
       title: `${look.emoji} ${look.title}`,
       url: `${SITE}/#/player/${encodeURIComponent(name || '')}`,
-      description: `**${clean(name) || 'A player'}** rolled **\`${number}\`**\n${a.total.toLocaleString('en-US')} XP${badges ? `\n${badges}` : ''}`,
+      description: `**${clean(name) || 'A player'}** rolled **\`${number}\`** · ${a.total.toLocaleString('en-US')} XP${png ? '' : badges ? `\n${badges}` : ''}`,
       color: look.color,
-      footer: { text: `${a.tier[0].toUpperCase()}${a.tier.slice(1)} · roll yours on rng-infinite.com` },
+      ...(png ? { image: { url: 'attachment://roll.png' } } : {}),
+      footer: { text: `${cap(a.tier)} · roll yours on rng-infinite.com` },
       timestamp: new Date().toISOString(),
     }],
-  });
+  }, png ? { name: 'roll.png', data: png } : null);
 }
 
 function announceDuel({ host, code, mode, target, size, stake }) {
