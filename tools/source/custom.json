@@ -193,5 +193,35 @@
     "desc": "Exactly \"711117\": a Natural and a Spartan in one number.",
     "emoji": "🛡️",
     "score": 100000100
+  },
+  {
+    "id": "HAPPY",
+    "label": "Happy",
+    "desc": "A happy number: replace it by the sum of the squares of its digits, again and again, and you reach 1.",
+    "emoji": "😊",
+    "score": 699,
+    "family": "HAPPY"
+  },
+  {
+    "id": "HAPPY_PRIME",
+    "label": "Happy Prime",
+    "desc": "A happy number that is also prime.",
+    "emoji": "🥳",
+    "score": 8973,
+    "family": "HAPPY"
+  },
+  {
+    "id": "THREE_SIX_NINE",
+    "label": "369",
+    "desc": "Contains \"369\", like the song.",
+    "emoji": "🎵",
+    "score": 25369
+  },
+  {
+    "id": "EXACT_369",
+    "label": "Exact 369",
+    "desc": "Exactly \"369\".",
+    "emoji": "🎶",
+    "score": 100000100
   }
 ]

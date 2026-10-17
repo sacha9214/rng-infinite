@@ -358,7 +358,7 @@ async function mines(id, body) {
 
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
-const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500;
+const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
 const crashAt = ms => Math.floor(Math.exp(CRASH_RATE * ms) * 100) / 100;
 // Sondage d'une manche en vol, sans verrou ni écriture : la page le fait chaque seconde pour savoir si la fusée a
 // explosé. Tant qu'elle vole, il ne doit jamais gêner le « Cash out » du joueur. Rend null dès qu'il y a quelque chose
@@ -366,7 +366,10 @@ const crashAt = ms => Math.floor(Math.exp(CRASH_RATE * ms) * 100) / 100;
 async function crashPeek(id, at) {
   const [raw] = await redis([['GET', crKey(id)]]);
   const g = raw ? JSON.parse(raw) : null;
-  if (!g || crashAt(at - g.t0) >= g.point) return null;
+  if (!g) return null;
+  // Explosée : on le note dans la manche avant de le dire à la page. Une fois que la page le sait, un « Cash out »
+  // daté d'avant l'explosion n'est plus accepté (sinon on pourrait attendre l'explosion puis encaisser juste avant).
+  if (crashAt(at - g.t0) >= g.point) { if (!g.seen) await redis([['SET', crKey(id), JSON.stringify({ ...g, seen: 1 }), 'EX', 600]]); return null; }
   return { done: false, t0: g.t0, now: at, bet: g.bet, rate: CRASH_RATE }; // sans le solde : une seule lecture, la page ne s'en sert pas ici
 }
 async function crash(id, body, at) {
@@ -375,7 +378,11 @@ async function crash(id, body, at) {
   // « at » : l'heure d'arrivée de la demande, avant une éventuelle attente du verrou (api/shop.js).
   const move = String(body.move || 'state'), now = Number.isFinite(at) ? at : Date.now();
   const bust = async () => { await redis([['DEL', crKey(id)]]); await credit(id, g.bet, 0, 'gCrash'); return { done: true, result: 'crash', point: g.point, bet: g.bet, win: 0, coins: (await wallet(id)).coins }; };
-  if (g && crashAt(now - g.t0) >= g.point) return bust();
+  // Clic arrivé après l'explosion à cause du réseau (signalé par Colt2 le 2026-10-16 : encaissé à 1.57 sur la page,
+  // « explosé à 1.78 ») : on paie le moment du clic s'il était avant l'explosion, que la demande a moins de 3 s de
+  // retard, et que personne n'a encore appris l'explosion au serveur (voir crashPeek).
+  const late = g && move === 'cash' && !g.seen && Number.isFinite(Number(body.ms)) && Number(body.ms) >= 0 && now - g.t0 - Number(body.ms) <= CRASH_LATE_MS && crashAt(Number(body.ms)) < g.point;
+  if (g && crashAt(now - g.t0) >= g.point && !late) return bust();
   if (move === 'state') return g ? { done: false, t0: g.t0, now, bet: g.bet, rate: CRASH_RATE, coins: (await wallet(id)).coins } : { done: true, idle: true, coins: (await wallet(id)).coins };
   if (move === 'start') {
     if (g) throw refuse(422, 'Finish your game first');

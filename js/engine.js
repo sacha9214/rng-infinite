@@ -15,6 +15,12 @@
     for (let i = 5; i * i <= n; i += 6) if (n % i === 0 || n % (i + 2) === 0) return false;
     return true;
   }
+  // Nombre heureux : en remplaçant le nombre par la somme des carrés de ses chiffres, on finit par tomber sur 1.
+  function isHappy(n) {
+    const seen = new Set();
+    while (n !== 1 && !seen.has(n)) { seen.add(n); let s = 0; while (n) { const d = n % 10; s += d * d; n = (n - d) / 10; } n = s; }
+    return n === 1;
+  }
   function isSquare(n) { if (n < 0) return false; const r = Math.round(Math.sqrt(n)); return r * r === n; }
   function isCube(n) { const r = Math.round(Math.cbrt(n)); return r * r * r === n; }
   function isPerfectPower(n, k) {
@@ -259,6 +265,7 @@
     SPARTANS: '117', // badge perso (idée de Deadshot, 2026-10-16) : le numéro d'un Spartan
     FIB_CONTAINS_3: '112', FIB_CONTAINS_4: '1123', FIB_CONTAINS_5: '11235', // Fibonacci par tranches, comme Pi (idée de CococoC)
     NINE_TO_FIVE: '925', // badge perso (2026-10-15) : « 9 to 5 », la chanson de Dolly Parton
+    THREE_SIX_NINE: '369', // idée de GamblrGod (2026-10-17) : « 369 », comme la chanson
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
@@ -275,6 +282,7 @@
     MOON_PERIGEE: ['363104'], MOON_APOGEE: ['405696'], MOON_AVERAGE: ['384400'], TRUE_SPARTAN: ['711117'],
     SPARTAN_EXACT: ['117'], FIB_EXACT: ['112358'], // 1, 1, 2, 3, 5, 8 : le début de la suite de Fibonacci
     EXACT_JOB: ['925'], // badge perso : exactement 925 (« 9 to 5 »)
+    EXACT_369: ['369'],
     MUNCHAUSEN_EXACT: ['3435'], // nombre de Münchhausen : 3^3 + 4^4 + 3^3 + 5^5 = 3435
     PYTHAG_EXACT: ['91625'], // 9 + 16 = 25 : les carrés du triangle 3-4-5
         NATURAL_EXACT: ['711'], // badge perso (idée d'un joueur) : 7 et 11, les deux lancers gagnants aux dés
@@ -305,6 +313,9 @@
   // Chaque check peut aussi exposer des "groupes" de chiffres à surligner via HIGHLIGHTS plus bas.
   const CHECKS = {
     PRIME: c => isPrime(c.n),
+    // Idée de A Dude (2026-10-17) : nombre heureux, et nombre heureux premier (famille HAPPY : seul le meilleur compte).
+    HAPPY: c => isHappy(c.n),
+    HAPPY_PRIME: c => isPrime(c.n) && isHappy(c.n),
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
     HEAVY: c => c.sum > 45,

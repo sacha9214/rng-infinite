@@ -1880,7 +1880,8 @@
     feather(c, p, s) { c.fillStyle = '#fffdf5'; c.beginPath(); c.moveTo(0, -s * 1.6); c.quadraticCurveTo(s * .9, -s * .2, 0, s * 1.6); c.quadraticCurveTo(-s * .9, -s * .2, 0, -s * 1.6); c.fill(); c.strokeStyle = 'rgba(202,138,4,.7)'; c.lineWidth = Math.max(.6, s * .12); c.beginPath(); c.moveTo(0, -s * 1.4); c.lineTo(0, s * 1.9); c.stroke(); },
   });
   SCENES.heavenly = custom(pieces({ cols: ['#fffdf5', '#fef3c7', '#ffffff', '#fde68a'], shapes: ['feather', 'star'], size: [2.4, 4.4], g: 60, spin: 1.2, up: true, glowc: '#fde68a', ring: '#facc15', drift: { rate: 1.6, from: 'around' } }), env => {
-    const { co, card, dark } = env, halos = timed(), rays = timed();
+    const { co, card, dark } = env, halos = timed(), rays = timed(), motes = timed(), emit = emitter();
+    let glow = 0; // la lumière d'en haut s'intensifie à la révélation puis retombe doucement
     const halo = (x, y, r, a, glow) => {
       co.save(); co.globalAlpha = a; co.translate(x, y); co.scale(1, .32);
       co.shadowColor = 'rgba(250,204,21,.95)'; co.shadowBlur = 8 + glow * 18; co.strokeStyle = '#fde047'; co.lineWidth = 3.2;
@@ -1889,6 +1890,19 @@
     return {
       frame(t, dt) {
         co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // Projecteur céleste permanent (idée de casmictechthing, 2026-10-17) : un cône doux qui tombe sur la carte.
+        glow = Math.max(0, glow - dt * .35);
+        { const a = (dark ? .16 : .22) + glow * .3, top = card.y - card.h * 2.4, cx = card.x + card.w / 2;
+          const g = co.createLinearGradient(0, top, 0, card.y + card.h * 1.2); g.addColorStop(0, 'rgba(254,249,195,0)'); g.addColorStop(.55, `rgba(254,243,199,${a})`); g.addColorStop(1, 'rgba(254,243,199,0)');
+          co.fillStyle = g; co.beginPath(); co.moveTo(cx - card.w * .12, top); co.lineTo(cx + card.w * .12, top); co.lineTo(cx + card.w * .75, card.y + card.h * 1.2); co.lineTo(cx - card.w * .75, card.y + card.h * 1.2); co.closePath(); co.fill(); }
+        // Poussières de lumière qui flottent et s'attardent autour de la carte.
+        for (let i = 0, n = emit(3 + glow * 10, dt); i < n; i++) motes.add({ life: rnd(2.5, 4.5), x: rnd(card.x - card.w * .3, card.x + card.w * 1.3), y: rnd(card.y - card.h * .6, card.y + card.h * 1.4), vx: rnd(-6, 6), vy: -rnd(4, 14), r: rnd(.8, 2.2), ph: rnd(TAU) });
+        motes.run(dt, (m, k) => {
+          const a = Math.sin(k * Math.PI) * (.55 + .45 * Math.sin(t * 3 + m.ph));
+          co.globalAlpha = a; co.fillStyle = '#fef9c3'; co.shadowColor = 'rgba(253,224,71,.9)'; co.shadowBlur = 6;
+          co.beginPath(); co.arc(m.x + m.vx * k * m.life + Math.sin(t + m.ph) * 3, m.y + m.vy * k * m.life, m.r, 0, TAU); co.fill(); co.shadowBlur = 0;
+        });
+        co.globalAlpha = 1;
         // rayons divins : des faisceaux qui tombent du haut sur la carte puis s'effacent
         rays.run(dt, (r, k) => {
           const a = (k < .2 ? k / .2 : 1 - (k - .2) / .8) * (dark ? .6 : .7);
@@ -1907,7 +1921,7 @@
         co.globalAlpha = 1;
       },
       lock(p, o) { if (!o.ghost) halos.add({ x: p.x, y: p.y - card.h * .38, r: card.h * (o.last ? .24 : .2), life: .85 }); },
-      reveal(tier, p) { rays.add({ life: 1.6 + p * 1.2 }); },
+      reveal(tier, p) { rays.add({ life: 1.6 + p * 1.2 }); glow = .6 + p * .6; },
     };
   });
 

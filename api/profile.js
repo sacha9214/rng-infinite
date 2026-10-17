@@ -19,13 +19,16 @@ module.exports = async (req, res) => {
     const id = await findPlayer(name);
     if (!id) return send(res, 404, { error: 'No player with this name' });
 
-    const [members, shownName, bestAll, rank, title, h2hFlat] = await redis([
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls] = await redis([
       ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
       ['ZREVRANK', 'lb:all', id],
       ['HGET', 'titles', id],
       ['HGETALL', `h2h:${id}`],
+      // Inventaire visible par tous (idée de kaz, 2026-10-17) : skins et fonds d'écran achetés ou gagnés.
+      ['SMEMBERS', `skins:${id}`],
+      ['SMEMBERS', `walls:${id}`],
     ]);
     const stats = await readStats(id);
     // Badges Top 1 / 5 / 10 des mois finis : tous, et le meilleur (rang, puis le plus récent) pour l'en-tête.
@@ -75,10 +78,10 @@ module.exports = async (req, res) => {
         else badges[b] = [1, n];
       }
     }
-    const best = rolls
-      .map(([t, n]) => ({ n, s: analyze(n).total, t }))
-      .sort((x, y) => y.s - x.s || x.t - y.t)
-      .slice(0, BEST_LIMIT);
+    const scored = rolls.map(([t, n]) => ({ n, s: analyze(n).total, t }));
+    const best = scored.slice().sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT);
+    // Les 10 pires tirages (idée d'Angelicide9, 2026-10-17), le plus mauvais en premier.
+    const worst = scored.sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);
 
     return send(res, 200, {
       name: shownName || name,
@@ -91,6 +94,8 @@ module.exports = async (req, res) => {
       luck: rolls.length ? Math.round((percentileSum / rolls.length) * 10) / 10 : null,
       tiers,
       best,
+      worst,
+      inventory: { skins: (ownedSkins || []).filter(k => k !== 'owner'), walls: ownedWalls || [] },
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé
       title: title || null,

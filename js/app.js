@@ -1572,6 +1572,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-17a', date: 'Oct 17, 2026', en: ['Fixed: in Crash, a Cash out that reached the server late because of the network is now paid at the moment you clicked, if it was before the crash (reported by Colt2)', 'Fixed: the XP checker no longer says "null" for common numbers (reported by A Dude)', 'Fixed: auto-roll starts again by itself when you come back to the roll page (reported by MereTera)', 'Fixed: the Sunset clouds and the Abyss light rays (reported by A Dude)', '🗑️ Your 10 worst rolls on your profile (idea by Angelicide9)', '🎒 Inventory on every profile: the skins and wallpapers a player owns (idea by kaz)', '💻 New Hacker wallpaper: green code raining down (idea by JAKE)', '😊 New badges: Happy, Happy Prime (idea by A Dude), 369 and Exact 369 (idea by GamblrGod)', '😇 Heavenly now has a beam of light from above and floating specks of light (idea by casmictechthing)'], fr: ['Corrigé : au Crash, un « Encaisser » arrivé en retard au serveur à cause du réseau est payé au moment du clic, s\'il était avant l\'explosion (signalé par Colt2)', 'Corrigé : le vérificateur d\'XP n\'affiche plus « null » pour les nombres courants (signalé par A Dude)', 'Corrigé : le tirage auto repart tout seul quand on revient sur la page des tirages (signalé par MereTera)', 'Corrigé : les nuages de Sunset et les rayons d\'Abyss (signalé par A Dude)', '🗑️ Tes 10 pires tirages sur ton profil (idée d\'Angelicide9)', '🎒 Inventaire sur chaque profil : les skins et fonds d\'un joueur (idée de kaz)', '💻 Nouveau fond Hacker : du code vert qui tombe (idée de JAKE)', '😊 Nouveaux badges : Happy, Happy Prime (idée de A Dude), 369 et Exact 369 (idée de GamblrGod)', '😇 Heavenly a maintenant un rayon de lumière venu d\'en haut et des poussières de lumière qui flottent (idée de casmictechthing)'] },
     { id: '2026-10-16t', date: 'Oct 16, 2026', en: ['🎃 Two Halloween wallpapers in the shop\'s Limited tab until October 31: Moonlit Graveyard and Pumpkin Patch (idea by Deadshot)', 'Fixed: players who rolled a Godlike number before the new rarity now have it counted, and get the Godlike achievement (reported by MAYO)'], fr: ['🎃 Deux fonds d\'Halloween dans l\'onglet Limités de la boutique jusqu\'au 31 octobre : Cimetière au clair de lune et Champ de citrouilles (idée de Deadshot)', 'Corrigé : les joueurs qui avaient tiré un nombre Godlike avant la nouvelle rareté l\'ont maintenant dans leurs stats, avec le succès Godlike (signalé par MAYO)'] },
     { id: '2026-10-16s', date: 'Oct 16, 2026', en: ['💠 Badges now go up to Celestial: the 45 badges that only one number in a million can earn (idea by Meretera)'], fr: ['💠 Les badges montent maintenant jusqu\'à Celestial : les 45 badges qu\'un seul nombre sur un million peut obtenir (idée de Meretera)'] },
     { id: '2026-10-16r', date: 'Oct 16, 2026', en: ['⚜️ New rarity Godlike, between Divine and Infinite: the 40 best numbers under the Infinite ones (top 0.005%), worth 2,500 coins (idea by MAYO)', '🍬 New Halloween skin Trick or Treat: the doors open on number-shaped candy, and leading zeros are empty houses (idea by Deadshot)'], fr: ['⚜️ Nouvelle rareté Godlike, entre Divine et Infinite : les 40 meilleurs nombres sous les Infinite (top 0,005 %), 2 500 pièces (idée de MAYO)', '🍬 Nouveau skin d\'Halloween Trick or Treat : les portes s\'ouvrent sur des bonbons en forme de chiffres, et les zéros de tête sont des maisons vides (idée de Deadshot)'] },
@@ -1728,6 +1729,9 @@
   function bindSoloAuto() {
     const box = $('#solo-auto');
     if (!box) return;
+    // Retour sur l'accueil avec le tirage auto encore allumé (parti sur un autre onglet du jeu en plein tirage) : il
+    // repart tout seul au lieu d'attendre un premier clic (signalé par MereTera le 2026-10-17).
+    if (SoloAuto.on && currentView === 'home' && !rollPending) scheduleSoloAuto(900);
     const stop = $('#solo-stop');
     if (stop) stop.addEventListener('change', () => { if (AUTO_STOPS.includes(stop.value)) Store.setSetting('autoStop', stop.value); });
     box.addEventListener('change', () => {
@@ -2359,12 +2363,12 @@
       e.preventDefault();
       const raw = $('#xc-n').value.trim(), n = Number(raw);
       if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
-      const a = analysis(n), top = Engine.topLabel(a.percentile), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
+      const a = analysis(n), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
       $('#xc-out').innerHTML = `
         <div class="xc-result">
           <span class="xc-sim">Simulation · not a roll</span>
           <div class="xc-num mono" data-no-i18n>${(() => { const full = String(n).padStart(6, '0'), lead = n ? full.search(/[1-9]/) : 5; return `<span class="xc-ghost">${full.slice(0, lead)}</span>${full.slice(lead)}`; })()}</div>
-          <div class="xc-meta"><span class="badge-pill" data-tier="${a.tier}">${esc(a.tier)}</span><b class="mono">${fmt(a.total)} XP</b><span class="panel-note">${esc(top)}</span></div>
+          <div class="xc-meta"><span class="badge-pill" data-tier="${a.tier}">${esc(a.tier)}</span><b class="mono">${fmt(a.total)} XP</b>${percentileHTML(a.percentile)}</div>
           ${secret}<div class="pill-row xc-badges">${a.groups.length ? a.groups.map(g => `<span class="badge-pill" data-tier="${g.badge.tier}" data-badge="${g.badge.id}" style="cursor:pointer">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join(' ') : '<span class="panel-note">No badge</span>'}</div>
         </div>`;
     });
@@ -2508,6 +2512,24 @@
             </div>`;
         }).join('')}</div>` : '<div class="empty">No rolls yet.</div>'}
       </div>
+      ${p.inventory && (p.inventory.skins.length || p.inventory.walls.length) ? `<div class="panel">
+        <div class="panel-head"><h3 class="panel-title">🎒 Inventory</h3><span class="panel-note">${plural(p.inventory.skins.filter(k => Shop.byId.has(k)).length, 'skin')} · ${plural(p.inventory.walls.filter(k => Shop.wallById.has(k)).length, 'wallpaper')}</span></div>
+        <div class="inv-list">${p.inventory.skins.filter(k => Shop.byId.has(k)).map(k => Shop.byId.get(k)).sort((a, b) => b.price - a.price).map(k => `<span class="badge-pill inv-item" title="${esc(k.desc)}">${k.emoji} ${esc(k.name)}</span>`).join('')}${p.inventory.walls.filter(k => Shop.wallById.has(k)).map(k => Shop.wallById.get(k)).map(w => `<span class="badge-pill inv-item inv-wall" title="${esc(w.desc)}">🖼️ ${w.emoji} ${esc(w.name)}</span>`).join('')}</div>
+      </div>` : ''}
+      ${p.worst && p.worst.length ? `<div class="panel">
+        <div class="panel-head"><h3 class="panel-title">🗑️ Worst rolls</h3><span class="panel-note">the 10 lowest, worst first</span></div>
+        <div class="records">${p.worst.map((x, k) => {
+          const a = analysis(x.n);
+          return `
+            <div class="record" data-number="${x.n}" data-caption="${esc(caption(x))}">
+              <span class="rank">${k + 1}</span>
+              <span class="num-card sm" data-tier="${a.tier}">${a.str}</span>
+              <span class="grow">${a.groups.slice(0, 3).map(g => `${g.badge.emoji} ${esc(g.badge.label)}`).join(' · ')}</span>
+              <span class="when" title="${fullDate(x.t)}">${relTime(x.t)}</span>
+              <span class="ep-pill">${compact(x.s)} XP</span>
+            </div>`;
+        }).join('')}</div>
+      </div>` : ''}
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>
         ${collectionHTML(found, collectionState)}

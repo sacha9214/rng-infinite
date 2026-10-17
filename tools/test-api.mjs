@@ -1324,6 +1324,21 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await later(12000, async () => { r = await g(frank, 'crash', { move: 'cash' }); });
   assert.deepEqual([r.body.result, r.body.win, r.body.point, r.body.coins], ['crash', 0, 1.99, 1103], JSON.stringify(r.body));
   await tick(); assert.equal((await g(frank, 'crash', { move: 'state' })).body.idle, true);
+  // Clic à 9 s (×1,87) arrivé 2 s plus tard, après l'explosion à 1,99 : payé au moment du clic (signalé par Colt2).
+  await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
+  await g(frank, 'crash', { move: 'start', bet: 100 });
+  await later(11000, async () => { r = await g(frank, 'crash', { move: 'cash', ms: 9000 }); });
+  assert.deepEqual([r.body.result, r.body.mult, r.body.win], ['cash', 1.87, 187], JSON.stringify(r.body));
+  // Triche : la page apprend l'explosion (sondage), puis envoie un clic daté d'avant : refusé.
+  await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
+  await g(frank, 'crash', { move: 'start', bet: 100 });
+  await later(11000, async () => { await g(frank, 'crash', { move: 'state' }); r = await g(frank, 'crash', { move: 'cash', ms: 9000 }); });
+  assert.notEqual(r.body.result, 'cash', JSON.stringify(r.body));
+  // Trop en retard (clic à 5 s, arrivé 6 s après) : pas payé.
+  await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
+  await g(frank, 'crash', { move: 'start', bet: 100 });
+  await later(11000, async () => { r = await g(frank, 'crash', { move: 'cash', ms: 5000 }); });
+  assert.equal(r.body.result, 'crash', JSON.stringify(r.body));
   crypto.randomInt = realInt;
 }
 
