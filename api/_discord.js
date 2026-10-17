@@ -114,4 +114,30 @@ function announceRecap({ day, rows, rolls }) {
   });
 }
 
-module.exports = { announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+// Événement de la semaine (js/events.js) : le lancement le lundi, et le podium de la semaine passée.
+function announceEvent(ev) {
+  if (!cfg.events) return;
+  post(cfg.events, {
+    ...ping(roles.updates),
+    embeds: [{
+      title: `${ev.emoji} This week's event: ${ev.title}`,
+      url: SITE,
+      description: `**${ev.desc}** before <t:${Math.floor(ev.end / 1000)}:F> and win **🪙 ${ev.reward} coins**.\nEvery roll with a matching badge counts. Track your progress on the home page of ${SITE}`,
+      color: 0xf59e0b,
+    }],
+  });
+}
+function announceEventPodium(ev, rows, players) {
+  if (!cfg.events || !rows.length) return;
+  const medal = ['🥇', '🥈', '🥉'];
+  post(cfg.events, {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      title: `${ev.emoji} ${ev.title} is over!`,
+      description: rows.map((r, i) => `${medal[i]} **${clean(r.name)}** · ${r.n} hits`).join('\n') + `\n\n${players} players took part. A new event starts now!`,
+      color: 0xf59e0b,
+    }],
+  });
+}
+
+module.exports = { announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };

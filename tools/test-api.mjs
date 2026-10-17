@@ -2725,4 +2725,45 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(dApi.wanted({ best: 5000 }), ['Player'], 'pas de rôle de rareté sous Mythic');
 }
 
+// Événement de la semaine (2026-10-17) : compté à chaque tirage par le serveur, récompense une seule fois et seulement
+// une fois l'objectif atteint, succès Event Hunter, annonces Discord une seule fois.
+{
+  const Events = require(path.join(ROOT, 'js/events.js')), qApi = require(path.join(ROOT, 'api/quests.js'));
+  const ev = Events.current(), key = Events.key(ev);
+  const who = { playerId: 'e7'.repeat(8), secret: 'e8'.repeat(16), name: 'Eventer' };
+  db.delete(`cooldown:${who.playerId}`); assert.equal((await call(roll, { method: 'POST', body: who })).status, 200);
+  const st = async () => (await call(qApi, { url: `/api/quests?me=${who.playerId}` })).body.event;
+  let e = await st(); assert.equal(e.id, ev.id); assert.equal(e.goal, ev.goal);
+  const claim = () => call(qApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'event' } });
+  assert.equal((await claim()).status, 422, 'pas avant l\'objectif');
+  // Un tirage du thème compte : on cherche un nombre qui a un badge du thème et on le fait passer par recordRoll.
+  const { recordRoll } = require(path.join(ROOT, 'api/_lib.js'));
+  let n = 0; while (!Events.counts(ev, engine.analyze(n).earnedIds)) n++;
+  const before = (await st()).progress;
+  await recordRoll(who.playerId, n, Date.now());
+  assert.equal((await st()).progress, before + 1, 'un tirage du thème compte');
+  run([['ZADD', key, ev.goal, who.playerId]]);
+  let r = await claim(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, ev.reward); assert.equal(r.body.event.claimed, true);
+  assert.equal((await claim()).status, 422, 'une seule fois');
+  run([['HSET', `stats:${who.playerId}`, 'events', 3]]);
+  assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked({ events: 3 }).includes('eventhunter'));
+  // Rotation : deux semaines de suite n'ont pas le même thème ; la semaine de lancement finit le lundi 19 octobre.
+  assert.notEqual(Events.current(Date.parse('2026-10-20T00:00:00Z')).key, Events.current(Date.parse('2026-10-27T00:00:00Z')).key);
+  assert.equal(new Date(Events.current(Date.parse('2026-10-18T12:00:00Z')).end).toISOString(), '2026-10-19T00:00:00.000Z');
+  // Discord : lancement et podium une seule fois.
+  const dPath = require.resolve(path.join(ROOT, 'api/_discord.js')), tPath = require.resolve(path.join(ROOT, 'api/_discord_tasks.js'));
+  delete require.cache[dPath]; delete require.cache[tPath];
+  process.env.RNG_DISCORD_CONFIG = JSON.stringify({ bigRolls: 'https://x.invalid/big', events: 'https://x.invalid/ev', roles: { updates: '222' } });
+  const T = require(tPath); delete process.env.RNG_DISCORD_CONFIG;
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => { if (!String(u).startsWith('https://x.invalid/')) return realFetch(u, o); sent.push({ u, b: JSON.parse(o.body) }); return { ok: true }; };
+  try {
+    const mon = Date.parse('2026-10-26T01:00:00Z'), prev = Events.current(mon - 7 * 86400000);
+    run([['DEL', `discord:evpod:${prev.id}`, `discord:event:${Events.current(mon).id}`], ['ZADD', Events.key(prev), 9, alice.playerId]]);
+    assert.equal(await T.weeklyEvent(mon), true); assert.equal(await T.weeklyEvent(mon), false, 'une seule fois');
+    assert.equal(sent.length, 2, 'podium + lancement'); assert.match(sent[0].b.embeds[0].description, /Alice/);
+    assert.match(sent[1].b.embeds[0].title, new RegExp(Events.current(mon).title));
+  } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; delete require.cache[tPath]; }
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

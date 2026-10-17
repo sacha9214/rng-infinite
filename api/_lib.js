@@ -1,6 +1,7 @@
 // Outils partagés par les fonctions /api (le préfixe _ empêche Vercel d'en faire un endpoint).
 const crypto = require('node:crypto');
 const Discord = require('./_discord');
+const Events = require('../js/events.js');
 const { createEngine } = require('../js/engine.js');
 const Achievements = require('../js/achievements.js');
 const meta = require('../data/badge-meta.json');
@@ -450,6 +451,8 @@ async function recordRoll(playerId, n, t) {
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
+  // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
+  { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
   // Titre « 2026 » : le badge Current Year (un nombre contenant 2026).
   if (a.earnedIds.includes('CURRENT_YEAR')) writes.push(['HSET', statsKey(playerId), 'year2026', 1]);

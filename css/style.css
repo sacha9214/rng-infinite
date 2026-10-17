@@ -4010,3 +4010,9 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 }
 .pf-best .num-card { font-size: 2.7rem; padding: .35em .55em; }
 @media (max-width: 760px) { .pf-best .num-card { font-size: 2.2rem; } }
+
+/* Événement de la semaine (2026-10-17), en tête des quêtes : liseré doré et mini-podium. */
+.quest.event-quest { border: 1px solid color-mix(in srgb, #f59e0b 55%, transparent); background: linear-gradient(120deg, color-mix(in srgb, #f59e0b 12%, transparent), transparent 70%); border-radius: .7rem; padding: .55rem .6rem; margin-bottom: .35rem; }
+.quest.event-quest .quest-bar span { background: linear-gradient(90deg, #f59e0b, #fde047); }
+.event-top { display: flex; flex-wrap: wrap; gap: .3rem .7rem; margin-top: .25rem; font-size: .72rem; color: var(--prose-2); }
+.event-top .me { color: var(--prose); font-weight: 800; }

@@ -5,6 +5,7 @@
 const fs = require('node:fs'), path = require('node:path');
 const { redis, dayKey } = require('./_lib');
 const Discord = require('./_discord');
+const Events = require('../js/events.js');
 
 const SEEN = 'discord:updates:seen';
 
@@ -51,11 +52,33 @@ async function dailyRecap(now = Date.now()) {
   return true;
 }
 
+// Le lundi (dans les 6 premières heures de la semaine) : podium de l'événement passé, puis lancement du nouveau.
+async function weeklyEvent(now = Date.now()) {
+  if (!Discord.has('events')) return false;
+  const ev = Events.current(now);
+  const prev = Events.current(ev.start - 1), key = Events.key(prev);
+  // Podium : seulement dans les 6 premières heures (un redémarrage en milieu de semaine ne le publie pas en retard).
+  const [podium] = now - ev.start <= 6 * 3600000 ? await redis([['SET', `discord:evpod:${prev.id}`, '1', 'NX', 'EX', 30 * 86400]]) : [null];
+  if (podium === 'OK') {
+    const [flat, players] = await redis([['ZREVRANGE', key, 0, 2, 'WITHSCORES'], ['ZCARD', key]]);
+    const ids = []; for (let i = 0; i < (flat || []).length; i += 2) ids.push([flat[i], Number(flat[i + 1])]);
+    if (ids.length) {
+      const [names] = await redis([['HMGET', 'names', ...ids.map(x => x[0])]]);
+      Discord.announceEventPodium(prev, ids.map(([, n], i) => ({ name: names[i] || 'Player', n })), Number(players) || 0);
+    }
+  }
+  // Lancement : une fois par événement, tant qu'il reste au moins 12 h (le tout premier, lancé en cours de semaine, aussi).
+  if (ev.end - now < 12 * 3600000) return false;
+  const [launch] = await redis([['SET', `discord:event:${ev.id}`, '1', 'NX', 'EX', 30 * 86400]]);
+  if (launch === 'OK') Discord.announceEvent(ev);
+  return launch === 'OK';
+}
+
 function start() {
   postNewUpdates().catch(err => console.error('discord updates:', err.message));
-  const tick = () => dailyRecap().catch(err => console.error('discord recap:', err.message));
+  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); };
   tick();
   setInterval(tick, 10 * 60000).unref();
 }
 
-module.exports = { start, readUpdates, postNewUpdates, dailyRecap };
+module.exports = { start, readUpdates, postNewUpdates, dailyRecap, weeklyEvent };

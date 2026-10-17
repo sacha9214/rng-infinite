@@ -1217,6 +1217,16 @@
     slot.innerHTML = `
       <div class="quests-card">
         <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
+        ${state.event ? (() => { const ev = state.event, done = ev.progress >= ev.goal, left = Math.max(0, ev.end - Date.now());
+          const leftTxt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
+          return `<div class="quest event-quest${ev.claimed ? ' done' : ''}">
+          <span class="quest-emoji">${ev.emoji}</span>
+          <span class="quest-text"><b>🎯 Event: ${esc(ev.title)}</b><span class="panel-note">${esc(ev.desc)} · ${leftTxt}</span>
+            <span class="quest-bar"><span style="width:${Math.min(100, (ev.progress / ev.goal) * 100)}%"></span></span>
+            <span class="panel-note">${Math.min(ev.progress, ev.goal)} / ${ev.goal}${ev.rank ? ` · #${ev.rank} of ${fmt(ev.players)} this week` : ''}</span>
+            ${ev.top.length ? `<span class="event-top">${ev.top.slice(0, 3).map((t, i) => `<span${t.me ? ' class="me"' : ''}>${['🥇', '🥈', '🥉'][i]} <span data-no-i18n>${esc(t.name)}</span> ${t.n}</span>`).join('')}</span>` : ''}</span>
+          ${ev.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-event>+${fmt(ev.reward)} 🪙</button>` : `<span class="quest-reward mono">${fmt(ev.reward)} 🪙</span>`}
+        </div>`; })() : ''}
         ${state.level ? (() => { const lv = state.level, pct = Math.min(100, ((lv.xp - lv.from) / Math.max(1, lv.to - lv.from)) * 100), KEY = { starter: '📦', premium: '🎁', elite: '💎' };
           const nextTxt = `next level: +${fmt(lv.next.coins)} 🪙${lv.next.key ? ` and a ${KEY[lv.next.key]} key` : ''}`;
           return `<div class="quest level${lv.pending ? '' : ' done'}" data-level-road title="See the level rewards road">
@@ -1254,9 +1264,18 @@
       </div>`;
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
-      const btn = e.target.closest('[data-quest], [data-daily], [data-level]');
+      const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
+      if (btn.dataset.event !== undefined) {
+        try {
+          const next = await Online.questAction('event');
+          toast(`🎯 Event complete! +${fmt(next.gained)} coins`, 4500, 'achv');
+          FX.celebrate('epic', slot); Sound.play('reveal', { small: 1 });
+          loadQuests(slot, next);
+        } catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       if (btn.dataset.level !== undefined) {
         try {
           const next = await Online.questAction('level');
@@ -1576,6 +1595,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-18a', date: 'Oct 18, 2026', en: ['🎯 Weekly events! Every week has a theme (Prime Time, Happy Week, Meme Week…): hit the goal before Monday for 500 coins, and climb the event podium. Find it at the top of your daily quests', '🎯 New achievement Event Hunter: complete 3 weekly events', '🛡️ The Discord now has automatic moderation against insults, spam and scam links'], fr: ['🎯 Événements de la semaine ! Chaque semaine a un thème (Prime Time, Happy Week, Meme Week…) : atteins l\'objectif avant lundi pour 500 pièces, et grimpe sur le podium de l\'événement. C\'est en haut de tes quêtes du jour', '🎯 Nouveau succès Event Hunter : termine 3 événements de la semaine', '🛡️ Le Discord a maintenant une modération automatique contre les insultes, le spam et les liens d\'arnaque'] },
     { id: '2026-10-17e', date: 'Oct 17, 2026', en: ['👤 New profile page: a header card with your best roll shown in your skin and your key numbers, then tabs (Overview, Rolls, Badges, Achievements, Duels, Inventory) instead of one long page'], fr: ['👤 Nouvelle page de profil : une carte d\'en-tête avec ton meilleur tirage dans ton skin et tes chiffres clés, puis des onglets (Aperçu, Tirages, Badges, Succès, Duels, Inventaire) au lieu d\'une longue page'] },
     { id: '2026-10-17d', date: 'Oct 17, 2026', en: ['🔗 Link your Discord in Profile & Friends: you get your rarity role (Mythic to Infinite), Supporter and Idea Manager on the RNG∞ server, and it follows your new records', '🏆 The Discord now announces every Celestial and better roll live, open duels, game updates, and the rolls of the day at midnight UTC. Pick what pings you when you join'], fr: ['🔗 Lie ton Discord dans Profil & amis : tu reçois ton rôle de rareté (de Mythic à Infinite), Supporter et Idea Manager sur le serveur RNG∞, et il suit tes nouveaux records', '🏆 Le Discord annonce maintenant en direct chaque tirage Celestial ou mieux, les duels ouverts, les mises à jour, et les tirages du jour à minuit UTC. Choisis ce qui te mentionne en arrivant'] },
     { id: '2026-10-17c', date: 'Oct 17, 2026', en: ['💬 RNG∞ has a Discord server! Click the Discord button in the corner to join: share your rolls, find duels, send ideas', 'Faster server: rolls, leaderboards and profiles answer much quicker'], fr: ['💬 RNG∞ a son serveur Discord ! Clique sur le bouton Discord dans le coin pour le rejoindre : partage tes tirages, trouve des duels, envoie tes idées', 'Serveur plus rapide : tirages, classements et profils répondent beaucoup plus vite'] },

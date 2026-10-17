@@ -5,6 +5,20 @@
 const { redis, ownsPlayer, readStats, statsKey, questKey, dayKey, toObject, cors, send, flushDue } = require('./_lib');
 const Quests = require('../js/quests.js');
 const Shop = require('../js/shop.js');
+const Events = require('../js/events.js');
+
+// Événement de la semaine : progression, récompense réclamée, top 5 et ma place (classement des tirages du thème).
+async function eventState(id, now) {
+  const ev = Events.current(now), key = Events.key(ev);
+  const [score, claimed, flat, rank, players] = await redis([['ZSCORE', key, id], ['SISMEMBER', `${key}:claimed`, id], ['ZREVRANGE', key, 0, 4, 'WITHSCORES'], ['ZREVRANK', key, id], ['ZCARD', key]]);
+  const ids = []; for (let i = 0; i < (flat || []).length; i += 2) ids.push([flat[i], Number(flat[i + 1])]);
+  const [names] = ids.length ? await redis([['HMGET', 'names', ...ids.map(x => x[0])]]) : [[]];
+  return {
+    id: ev.id, key: ev.key, emoji: ev.emoji, title: ev.title, desc: ev.desc, goal: ev.goal, reward: ev.reward, end: ev.end,
+    progress: Number(score) || 0, claimed: Number(claimed) === 1, rank: rank === null ? null : Number(rank) + 1, players: Number(players) || 0,
+    top: ids.map(([pid, n], i) => ({ name: names[i] || 'Player', n, me: pid === id })),
+  };
+}
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 
@@ -23,7 +37,9 @@ async function state(id, now = Date.now()) {
   // Série affichée : celle en cours si le bonus d'hier ou d'aujourd'hui a été pris, sinon elle est retombée à 0.
   const alive = claimedToday || stats.streakDay === Quests.dayBefore(day);
   const streak = alive ? Number(stats.streak) || 0 : 0;
+  const event = await eventState(id, now);
   return {
+    event,
     day,
     resetAt: Date.parse(`${day}T00:00:00Z`) + 86400000,
     coins: Shop.balance(stats),
@@ -106,6 +122,17 @@ module.exports = async (req, res) => {
         return send(res, 200, { ...(await state(playerId)), gained: lv.coins, keys: lv.keys, levels: lv.pending });
       } finally { await redis([['DEL', `lvlclaim:${playerId}`]]); }
     }
+    // Récompense de l'événement de la semaine : une fois, objectif atteint (compté par le serveur à chaque tirage).
+    if (body.action === 'event') {
+      const ev = Events.current(), key = Events.key(ev);
+      const [score] = await redis([['ZSCORE', key, playerId]]);
+      if ((Number(score) || 0) < ev.goal) return send(res, 422, { error: `${ev.title}: ${Number(score) || 0} / ${ev.goal} so far` });
+      const [fresh] = await redis([['SADD', `${key}:claimed`, playerId], ['EXPIRE', `${key}:claimed`, 60 * 86400]]);
+      if (Number(fresh) !== 1) return send(res, 422, { error: 'Event reward already claimed' });
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', ev.reward], ['HINCRBY', statsKey(playerId), 'events', 1]]);
+      return send(res, 200, { ...(await state(playerId)), gained: ev.reward });
+    }
+
     if (body.action === 'daily') {
       // Un seul bonus par jour, même avec deux clics simultanés.
       const [lock] = await redis([['SET', `daily:${day}:${playerId}`, '1', 'NX', 'EX', 2 * 86400]]);

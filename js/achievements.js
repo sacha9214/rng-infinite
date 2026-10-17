@@ -49,6 +49,7 @@
     { id: 'gatekeep', emoji: '🚧', title: 'Gatekeep', desc: 'Redeemed the BC code', hidden: true, test: st => num(st.gatekeep) >= 1 },
     { id: 'spooky', emoji: '🎃', title: 'Spooky', desc: 'Redeemed the Halloween 2026 code', hidden: true, test: st => num(st.spooky) >= 1 },
     // Visible verrouillé (2026-10-16) : les joueurs savent qu'il y a 3 codes à chercher.
+    { id: 'eventhunter', emoji: '🎯', title: 'Event Hunter', desc: 'Complete 3 weekly events', test: st => num(st.events) >= 3 },
     { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Find the 3 secret codes hidden on the site', test: st => num(st.codehunter) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },
     // Réservé aux comptes que le créateur a invités à suivre le jeu avec lui (marqués à leur connexion Google : le
