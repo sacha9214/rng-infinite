@@ -132,6 +132,10 @@
       return this.request('/api/site', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, ...extra }) });
     },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
+    discord(action = 'state', extra = {}) {
+      const p = Store.player;
+      return this.request('/api/discord', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, ...extra }) });
+    },
     friends(action = 'list', name, extra = {}) {
       const p = Store.player;
       return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name, ...extra }) });
@@ -1572,6 +1576,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-17d', date: 'Oct 17, 2026', en: ['🔗 Link your Discord in Profile & Friends: you get your rarity role (Mythic to Infinite), Supporter and Idea Manager on the RNG∞ server, and it follows your new records', '🏆 The Discord now announces every Celestial and better roll live, open duels, game updates, and the rolls of the day at midnight UTC. Pick what pings you when you join'], fr: ['🔗 Lie ton Discord dans Profil & amis : tu reçois ton rôle de rareté (de Mythic à Infinite), Supporter et Idea Manager sur le serveur RNG∞, et il suit tes nouveaux records', '🏆 Le Discord annonce maintenant en direct chaque tirage Celestial ou mieux, les duels ouverts, les mises à jour, et les tirages du jour à minuit UTC. Choisis ce qui te mentionne en arrivant'] },
     { id: '2026-10-17c', date: 'Oct 17, 2026', en: ['💬 RNG∞ has a Discord server! Click the Discord button in the corner to join: share your rolls, find duels, send ideas', 'Faster server: rolls, leaderboards and profiles answer much quicker'], fr: ['💬 RNG∞ a son serveur Discord ! Clique sur le bouton Discord dans le coin pour le rejoindre : partage tes tirages, trouve des duels, envoie tes idées', 'Serveur plus rapide : tirages, classements et profils répondent beaucoup plus vite'] },
     { id: '2026-10-17b', date: 'Oct 17, 2026', en: ['🤠 New skin Western: a revolver shoots the bottles off the fence and each one bursts into a digit (idea by JBearr12)'], fr: ['🤠 Nouveau skin Western : un revolver tire sur les bouteilles de la palissade et chacune éclate en un chiffre (idée de JBearr12)'] },
     { id: '2026-10-17a', date: 'Oct 17, 2026', en: ['Fixed: in Crash, a Cash out that reached the server late because of the network is now paid at the moment you clicked, if it was before the crash (reported by Colt2)', 'Fixed: the XP checker no longer says "null" for common numbers (reported by A Dude)', 'Fixed: auto-roll starts again by itself when you come back to the roll page (reported by MereTera)', 'Fixed: the Sunset clouds and the Abyss light rays (reported by A Dude)', '🗑️ Your 10 worst rolls on your profile (idea by Angelicide9)', '🎒 Inventory on every profile: the skins and wallpapers a player owns (idea by kaz)', '💻 New Hacker wallpaper: green code raining down (idea by JAKE)', '😊 New badges: Happy, Happy Prime (idea by A Dude), 369 and Exact 369 (idea by GamblrGod)', '😇 Heavenly now has a beam of light from above and floating specks of light (idea by casmictechthing)'], fr: ['Corrigé : au Crash, un « Encaisser » arrivé en retard au serveur à cause du réseau est payé au moment du clic, s\'il était avant l\'explosion (signalé par Colt2)', 'Corrigé : le vérificateur d\'XP n\'affiche plus « null » pour les nombres courants (signalé par A Dude)', 'Corrigé : le tirage auto repart tout seul quand on revient sur la page des tirages (signalé par MereTera)', 'Corrigé : les nuages de Sunset et les rayons d\'Abyss (signalé par A Dude)', '🗑️ Tes 10 pires tirages sur ton profil (idée d\'Angelicide9)', '🎒 Inventaire sur chaque profil : les skins et fonds d\'un joueur (idée de kaz)', '💻 Nouveau fond Hacker : du code vert qui tombe (idée de JAKE)', '😊 Nouveaux badges : Happy, Happy Prime (idée de A Dude), 369 et Exact 369 (idée de GamblrGod)', '😇 Heavenly a maintenant un rayon de lumière venu d\'en haut et des poussières de lumière qui flottent (idée de casmictechthing)'] },
@@ -4917,6 +4922,7 @@
         ${Store.player.name ? `<div class="panel me-panel" id="f-me">
           <div class="panel-head"><h3 class="panel-title">My profile</h3><span class="panel-note" data-no-i18n>${esc(Store.player.name)}</span></div>
           <div class="me-row" id="f-me-body"><div class="empty">Loading…</div></div>
+          <div class="discord-link" id="f-discord"></div>
           <div class="actions"><a class="btn-roll small" href="${profileHref(Store.player.name)}">Open my profile</a><button class="btn" id="f-settings">⚙️ Player &amp; settings</button></div>
         </div>` : ''}
         <h2 class="panel-title" style="margin:1.4rem 0 .35rem">Friends</h2>
@@ -4932,6 +4938,7 @@
     $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
     // Mon profil, en résumé (fusion des onglets Profil et Amis, 2026-10-16).
     if ($('#f-settings')) $('#f-settings').addEventListener('click', openSettings);
+    if ($('#f-discord')) drawDiscordLink();
     if (Store.player.name) Online.profile(Store.player.name).then(p => {
       const box = $('#f-me-body'); if (!box) return;
       const t = p.title ? titleHTML(p.title) : '';
@@ -6079,6 +6086,49 @@
       pollRoom(Room.token);
     }
   });
+
+  // ---- Discord : lier son compte (rôles de rareté, Supporter… donnés tout seuls sur le serveur RNG∞, 2026-10-17).
+  // Connexion OAuth2 « implicite » : Discord renvoie sur le site avec #access_token=… ; le serveur vérifie le jeton.
+  const DISCORD = { app: '1561067574509183136', invite: 'https://discord.gg/Jz5VRa5w9R' };
+  function discordAuthorize() {
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
+    try { sessionStorage.setItem('rngDiscordState', state); } catch (e) { /* sans stockage : refusé au retour */ }
+    location.href = `https://discord.com/oauth2/authorize?client_id=${DISCORD.app}&response_type=token&scope=${encodeURIComponent('identify guilds.join')}&redirect_uri=${encodeURIComponent(location.origin + '/')}&state=${state}`;
+  }
+  async function drawDiscordLink() {
+    const box = $('#f-discord');
+    if (!box) return;
+    let st = null;
+    try { st = await Online.discord('state'); } catch (e) { box.innerHTML = ''; return; }
+    if (!$('#f-discord')) return;
+    box.innerHTML = st.linked
+      ? `<span class="dl-on">✓ Discord linked: <b data-no-i18n>${esc(st.username || '')}</b></span><button class="btn ghost" data-dl="sync">🔄 Update my roles</button><button class="btn ghost" data-dl="unlink">Unlink</button>`
+      : `<span class="dl-off">Link Discord to get your rarity role on the <a href="${DISCORD.invite}" target="_blank" rel="noopener">RNG∞ server</a></span>${st.available ? '<button class="btn dl-btn" data-dl="link">🔗 Link my Discord</button>' : ''}`;
+    box.onclick = async e => {
+      const b = e.target.closest('[data-dl]');
+      if (!b) return;
+      if (b.dataset.dl === 'link') { discordAuthorize(); return; }
+      b.disabled = true;
+      try {
+        const r = await Online.discord(b.dataset.dl);
+        toast(b.dataset.dl === 'unlink' ? 'Discord unlinked' : r.inGuild === false ? 'Join the RNG∞ Discord first, then update your roles' : `Roles updated: ${(r.roles || []).join(', ')}`);
+      } catch (err) { toast(err.message || 'Discord is not answering, try again'); }
+      drawDiscordLink();
+    };
+  }
+  // Retour de Discord après l'autorisation.
+  if (/access_token=/.test(location.hash) || /[#&]error=/.test(location.hash)) {
+    const q = new URLSearchParams(location.hash.slice(1));
+    let expected = null;
+    try { expected = sessionStorage.getItem('rngDiscordState'); sessionStorage.removeItem('rngDiscordState'); } catch (e) { /* idem */ }
+    history.replaceState(null, '', location.pathname + location.search + '#/friends');
+    const token = q.get('access_token');
+    if (token && expected && q.get('state') === expected && Store.player.id) {
+      Online.discord('link', { accessToken: token })
+        .then(r => { toast(`🎉 Discord linked as ${r.username}${r.roles && r.roles.length ? ` · roles: ${r.roles.join(', ')}` : ''}`, 6000, 'achv'); drawDiscordLink(); })
+        .catch(err => toast(err.message || 'Could not link Discord, try again', 5000));
+    } else if (q.get('error')) toast('Discord link cancelled');
+  }
 
   MatrixRain.watch(app);
   window.addEventListener('hashchange', route);

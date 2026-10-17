@@ -3960,3 +3960,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 }
 .me-panel .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .xc-form .input { min-width: 0; }
+
+/* Lier son Discord (Profil & amis → Mon profil, 2026-10-17). */
+.discord-link { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .4rem 0 .7rem; font-size: .85rem; color: var(--prose-2); }
+.discord-link .dl-btn { background: #5865f2; border-color: #5865f2; color: #fff; }
+.discord-link .dl-on b { color: var(--prose); }

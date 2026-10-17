@@ -478,6 +478,8 @@ async function recordRoll(playerId, n, t) {
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
+  // Nouveau record Mythic ou mieux d'un joueur qui a lié son Discord : son rôle de rareté suit (api/discord.js).
+  if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./discord').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
   return { s, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };

@@ -2713,4 +2713,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; delete require.cache[tPath]; }
 }
 
+// Lier son Discord (2026-10-17) : sans jeton de bot (hors VPS), état lisible et liaison refusée proprement ; rôles voulus
+// d'après les stats tenues par le serveur.
+{
+  const dApi = require(path.join(ROOT, 'api/discord.js'));
+  const post = (who, action, extra = {}) => call(dApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  let r = await post(alice, 'state'); assert.deepEqual([r.status, r.body.linked, r.body.available], [200, false, false], JSON.stringify(r.body));
+  assert.equal((await post(alice, 'link', { accessToken: 'abcdefghijklmnop' })).status, 503);
+  assert.equal((await post({ ...alice, secret: '0'.repeat(32) }, 'state')).status, 403, 'pas sans le secret');
+  assert.deepEqual(dApi.wanted({ best: engine.scoreOf(69), supporter: 1 }), ['Player', 'Godlike', 'Supporter']);
+  assert.deepEqual(dApi.wanted({ best: 5000 }), ['Player'], 'pas de rôle de rareté sous Mythic');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
