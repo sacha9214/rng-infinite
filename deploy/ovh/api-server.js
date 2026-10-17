@@ -18,8 +18,10 @@ if (!process.env.RNG_REDIS_TOKEN && process.env.RNG_REDIS_TOKEN_FILE) {
   process.env.RNG_REDIS_TOKEN = fs.readFileSync(process.env.RNG_REDIS_TOKEN_FILE, 'utf8').trim();
 }
 
-const NAMES = ['auth', 'discord', 'friends', 'history', 'leaderboard', 'name', 'profile', 'quests', 'roll', 'room', 'shop', 'site', 'title'];
+const NAMES = ['auth', 'friends', 'history', 'leaderboard', 'name', 'profile', 'quests', 'roll', 'room', 'shop', 'site', 'title'];
 const API = Object.fromEntries(NAMES.map(name => [name, require(path.join(ROOT, `api/${name}.js`))]));
+// Seulement sur le VPS (le jeton du bot n'est qu'ici) ; « _ » : Vercel ne le déploie pas (12 fonctions au plus).
+API.discord = require(path.join(ROOT, 'api/_discord_link.js'));
 let version = '';
 try { version = fs.readFileSync(path.join(ROOT, '.git/refs/heads/main'), 'utf8').trim().slice(0, 7); } catch (e) { /* pas un dépôt */ }
 

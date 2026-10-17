@@ -2716,7 +2716,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 // Lier son Discord (2026-10-17) : sans jeton de bot (hors VPS), état lisible et liaison refusée proprement ; rôles voulus
 // d'après les stats tenues par le serveur.
 {
-  const dApi = require(path.join(ROOT, 'api/discord.js'));
+  const dApi = require(path.join(ROOT, 'api/_discord_link.js'));
   const post = (who, action, extra = {}) => call(dApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
   let r = await post(alice, 'state'); assert.deepEqual([r.status, r.body.linked, r.body.available], [200, false, false], JSON.stringify(r.body));
   assert.equal((await post(alice, 'link', { accessToken: 'abcdefghijklmnop' })).status, 503);
