@@ -2,7 +2,7 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { breathe, engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
 const { awardsOf } = require('./_rank');
 
 const BEST_LIMIT = 10;
@@ -68,7 +68,9 @@ module.exports = async (req, res) => {
     const analyze = n => analyses.get(n) || (analyses.set(n, engine.analyze(n)), analyses.get(n));
     let lifetime = 0, percentileSum = 0;
     const badges = {}, tiers = {};
+    let step = 0;
     for (const [, n] of rolls) {
+      if (++step % 2000 === 0) await breathe(); // gros historique : laisse passer les autres demandes
       const a = analyze(n);
       lifetime += a.total;
       percentileSum += a.percentile;

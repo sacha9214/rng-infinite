@@ -90,8 +90,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        # En-têtes et corps dans un seul paquet : écrits en deux, le second attendait l'ACK retardé du client (40 ms
+        # une réponse sur deux en connexion gardée ouverte, mesuré le 2026-10-17).
+        self._headers_buffer.append(b'\r\n')
+        self.wfile.write(b''.join(self._headers_buffer) + body)
+        self._headers_buffer = []
 
     def do_GET(self):
         if self.path == '/health':

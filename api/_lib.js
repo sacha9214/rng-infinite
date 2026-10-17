@@ -7,6 +7,18 @@ const percentiles = require('../data/percentiles.json');
 
 // Même moteur et mêmes données que le site : l'EP calculé ici est identique à celui affiché.
 const engine = createEngine(meta, percentiles);
+// Score de chaque nombre gardé en mémoire (1 000 001 nombres possibles, 4 Mo) : le recalcul des classements et les
+// gros profils (jusqu'à 64 000 tirages) recalculaient des centaines de milliers de scores en bloquant le serveur.
+{
+  const raw = engine.scoreOf.bind(engine), memo = new Int32Array(1000001).fill(-1);
+  engine.scoreOf = (n, onBadge) => {
+    if (onBadge || !Number.isInteger(n) || n < 0 || n > 1000000) return raw(n, onBadge);
+    const v = memo[n];
+    return v >= 0 ? v : (memo[n] = raw(n));
+  };
+}
+// Laisse passer les autres demandes pendant un long calcul (à appeler toutes les quelques milliers d'itérations).
+const breathe = () => new Promise(done => setImmediate(done));
 
 // Variables posées par l'intégration Upstash Redis de Vercel (noms KV_* ou UPSTASH_*).
 // Base de données : notre Redis sur le VPS (RNG_REDIS_*, voir deploy/ovh) en priorité, sinon Upstash (variables de
@@ -14,12 +26,17 @@ const engine = createEngine(meta, percentiles);
 const REDIS_URL = process.env.RNG_REDIS_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.RNG_REDIS_TOKEN || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
+// Relais sur la même machine (VPS) : une connexion neuve par appel. En gardant la connexion ouverte, une réponse sur
+// deux attendait 40 ms (le relais Python écrit en deux paquets, Nagle + ACK retardé) : 22 ms en moyenne par appel au
+// lieu de 2 (mesuré le 2026-10-17, tous les tirages ralentis). Vers Upstash / HTTPS, on garde la connexion ouverte.
+const LOCAL_RELAY = /^http:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(String(REDIS_URL || ''));
+
 // Exécute une liste de commandes Redis en un seul aller-retour (API REST d'Upstash).
 async function redis(commands) {
   if (!REDIS_URL || !REDIS_TOKEN) throw Object.assign(new Error('Leaderboard database is not configured'), { status: 503 });
   const res = await fetch(`${REDIS_URL}/pipeline`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json', ...(LOCAL_RELAY ? { Connection: 'close' } : {}) },
     body: JSON.stringify(commands.map(c => c.map(String))),
   });
   if (!res.ok) throw new Error(`Redis HTTP ${res.status}`);
@@ -485,7 +502,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { WORST_LB, WORST_BEST,
+module.exports = { breathe, WORST_LB, WORST_BEST,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

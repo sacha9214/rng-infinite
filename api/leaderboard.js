@@ -1,7 +1,7 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
+const { breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -36,7 +36,9 @@ async function migrateXp() {
     const batch = todo.slice(i, i + 20);
     const [counts, oldBest, ...lists] = await redis([['HMGET', 'count:all', ...batch], ['HMGET', 'best:all', ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
     const writes = [];
-    batch.forEach((id, j) => {
+    for (let j = 0; j < batch.length; j++) {
+      const id = batch[j];
+      await breathe(); // un joueur à la fois : les tirages des autres passent pendant le recalcul
       const { xp, rolls } = lifetimeTotals(lists[j]);
       if (xp > 0) writes.push(['ZADD', XP_LB, xp, id], ['HSET', statsKey(id), 'xpLife', xp]);
       if (rolls > Number(counts[j] || 0)) writes.push(['HSET', 'count:all', id, rolls]);
@@ -57,7 +59,7 @@ async function migrateXp() {
         if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
         if (p.period === 'all') writes.push(['HSET', statsKey(id), 'best', s]);
       }
-    });
+    }
     writes.push(['SADD', `${MIGRATED}:ids`, ...batch]);
     await redis(writes);
     if (i + 20 >= todo.length) await redis([['SET', MIGRATED, MIGRATION], ['DEL', `${MIGRATED}:ids`]]);
