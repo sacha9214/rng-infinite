@@ -128,7 +128,10 @@ module.exports = async (req, res) => {
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
     const t = Date.now();
-    if (period === 'xp' || period === 'all' || period === 'worst') await migrateXp();
+    // Recalcul après un changement de badges : en arrière-plan, la page attend 250 ms au plus (le classement Poubelle restait
+    // bloqué plusieurs secondes sur « not loading » pendant le recalcul, signalé le 2026-10-17). Il avance par lots à
+    // chaque demande et montre l'ancien classement en attendant.
+    if (period === 'xp' || period === 'all' || period === 'worst') await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
     // Poubelle : le plus petit score en tête (classement croissant).
     const low = period === 'worst';
     const scope = period === 'worst' ? WORST_SCOPE : period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
