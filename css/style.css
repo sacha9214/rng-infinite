@@ -2892,7 +2892,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .home-row > #quests-slot { grid-column: 2; }
   .home-row > [data-fund-slot] { grid-column: 3; justify-self: start; width: min(17rem, 100%); }
   .home-row > #quests-slot:empty + [data-fund-slot] { grid-column: 2; justify-self: center; width: 100%; }
+  /* l'événement de la semaine, sous la cagnotte */
+  .home-row { grid-template-rows: auto 1fr; }
+  .home-row > #quests-slot { grid-row: 1 / span 2; }
+  .home-row > #event-side { grid-column: 3; grid-row: 2; justify-self: start; width: min(17rem, 100%); }
+  .home-row > #event-side .event-quest { margin: 0; padding: .8rem .9rem; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .3rem .6rem; text-align: left; background-color: var(--panel, #15151c); border-top: 1px solid color-mix(in srgb, #f59e0b 55%, transparent); }
+  .home-row > #event-side .event-quest > .quest-emoji { grid-row: 1; grid-column: 1; }
+  .home-row > #event-side .event-quest > :last-child { grid-row: 1; grid-column: 2; justify-self: end; }
+  .home-row > #event-side .event-quest > .quest-text { grid-row: 2; grid-column: 1 / -1; text-align: left; }
 }
+#event-side:empty { display: none; }
 
 /* Page Owner : dons arrivés sans pseudo reconnu, à attribuer. */
 .o-fund-auto { margin: .2rem 0 .8rem; }

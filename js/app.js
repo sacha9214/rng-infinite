@@ -1169,7 +1169,7 @@
           </p>
           ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
-          <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div></div>
+          <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div><div id="event-side"></div></div>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
@@ -1265,6 +1265,9 @@
         </div>`; })() : ''}
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
+    // Sur grand écran, l'événement de la semaine passe sous la cagnotte (moins de choses empilées dans les quêtes).
+    { const side = $('#event-side'), ev = slot.querySelector('.event-quest');
+      if (side) { side.innerHTML = ''; if (ev && matchMedia('(min-width: 1180px)').matches) { side.appendChild(ev); side.onclick = e => slot.onclick(e); } } }
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.tab = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
