@@ -1018,6 +1018,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const seen = (await site(alice, 'mine')).body.mine.find(x => x.id === first.id);
   assert.deepEqual([seen.status, seen.reply], ['planned', 'Good idea, coming soon!'], 'le joueur voit le statut et la réponse');
   assert.equal((await site(boss, 'mark', { id: first.id, status: 'hacked' })).body.suggestions.find(x => x.id === first.id).status, 'planned', 'statut inconnu ignoré');
+  // Passée en Added : un point Contributor (idée), une seule fois même si on la remet en Added (2026-10-18).
+  { const before = Number(run([['HGET', `stats:${alice.playerId}`, 'ideasAdded']])[0].result || 0);
+    await site(boss, 'mark', { id: first.id, status: 'done' }); await site(boss, 'mark', { id: first.id, status: 'seen' }); await site(boss, 'mark', { id: first.id, status: 'done' });
+    assert.equal(Number(run([['HGET', `stats:${alice.playerId}`, 'ideasAdded']])[0].result), before + 1, 'compté une fois');
+    assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked({ ideasAdded: 1 }).includes('contributor'));
+    await site(boss, 'mark', { id: first.id, status: 'planned' }); }
   r = await site(boss, 'delete', { id: first.id });
   assert.equal(r.body.total, 5);
   assert.ok(!(await site(alice, 'mine')).body.mine.some(x => x.id === first.id), 'supprimée aussi chez le joueur');

@@ -64,6 +64,8 @@
     { id: 'bloodlust', name: 'Bloodlust', emoji: '🩸', price: 1400, desc: 'Glossy dark red drops that drip and splash' },
     // Idée de JBearr12 (2026-10-17) : un revolver tire sur des bouteilles qui éclatent en chiffres.
     { id: 'western', name: 'Western', emoji: '🤠', price: 1500, desc: 'A revolver shoots the bottles off the fence, and each one bursts into a digit' },
+    // Idée de costoroll (2026-10-18) : des météorites tombent sur chaque chiffre, la dernière plus fort.
+    { id: 'meteor', name: 'Meteor', emoji: '☄️', price: 2200, desc: 'Meteors crash onto every digit over a city at night; the last one hits hardest' },
     { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat' },
     { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).

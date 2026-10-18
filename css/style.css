@@ -2423,7 +2423,9 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   filter: drop-shadow(0 0 .18em rgba(251, 146, 60, .7));
 }
 .skin-vaporwave .slot {
-  position: relative; z-index: 1; width: .74em; padding: 0 .05em; margin: 0 -.05em; font-size: .86em;
+  /* Italique : la zone remplie (padding) déborde de chaque côté pour couvrir les jambages penchés, sinon le chiffre perdait
+     un morceau ; un peu plus large pour que le 4 et le 1 ne se chevauchent plus (signalé par A Dude, 2026-10-18). */
+  position: relative; z-index: 1; width: .8em; padding: 0 .1em; margin: 0 -.03em; font-size: .86em;
   font-family: var(--font-sans); font-weight: 800; font-style: italic; font-variant-numeric: tabular-nums;
   background: linear-gradient(180deg, #ffffff 0%, #a5f3fc 22%, #e0f7ff 40%, #ffffff 46%, #312e81 49.5%, #f5d0fe 55%, #f472b6 76%, #fdba74 100%) 0 50% / 100% 170%;
   -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -4025,3 +4027,39 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .event-how { display: block; margin-top: .3rem; font-size: .72rem; color: var(--prose-2); line-height: 1.35; }
 .event-lb-link { display: inline-block; margin-top: .3rem; font-size: .74rem; font-weight: 700; color: #f59e0b; }
 @media (max-width: 380px) { .lb-tabs.lb-tabs-8 button { white-space: normal; line-height: 1.15; padding-inline: .1rem; letter-spacing: 0; font-size: .56rem; } }
+
+/* « 🔁 Duplicate! » sous l'XP quand le nombre a déjà été tiré (idée de MereTera, 2026-10-18). */
+.dup-tag { margin: .35rem auto 0; width: fit-content; padding: .2rem .7rem; border-radius: 999px; font: 800 .78rem var(--font-sans); letter-spacing: .04em; color: #0e7490; background: color-mix(in srgb, #22d3ee 18%, transparent); border: 1px solid color-mix(in srgb, #22d3ee 45%, transparent); }
+.dup-tag span { font-weight: 600; opacity: .75; margin-left: .25rem; }
+.dark .dup-tag, :root[data-theme="dark"] .dup-tag { color: #67e8f9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dup-tag { color: #67e8f9; } }
+.dup-tag[hidden] { display: none; }
+
+/* ------------------------------------------------------------------ Meteor (idée de costoroll, 2026-10-18) : une ville la
+   nuit sous un ciel étoilé. Les chiffres sont du métal en fusion : ils arrivent chauffés à blanc (la météorite du
+   canevas s'écrase dessus) puis refroidissent en orange braise. Matière dure : éclair et recul, pas d'écrasement. */
+.num-card.skin-meteor {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='60'><g fill='%23060912'><rect x='0' y='30' width='22' height='30'/><rect x='24' y='14' width='18' height='46'/><rect x='44' y='36' width='26' height='24'/><rect x='72' y='6' width='16' height='54'/><rect x='90' y='26' width='28' height='34'/><rect x='120' y='40' width='20' height='20'/><rect x='142' y='18' width='22' height='42'/><rect x='166' y='32' width='30' height='28'/><rect x='198' y='10' width='16' height='50'/><rect x='216' y='28' width='24' height='32'/></g><g fill='%23fde68a' opacity='.75'><rect x='28' y='20' width='3' height='3'/><rect x='35' y='30' width='3' height='3'/><rect x='76' y='12' width='3' height='3'/><rect x='81' y='26' width='3' height='3'/><rect x='96' y='32' width='3' height='3'/><rect x='148' y='24' width='3' height='3'/><rect x='155' y='38' width='3' height='3'/><rect x='202' y='16' width='3' height='3'/><rect x='172' y='40' width='3' height='3'/></g></svg>") 0 100% / 5.5em .85em repeat-x,
+    radial-gradient(1px 1px at 14% 22%, #fff, transparent), radial-gradient(1px 1px at 38% 12%, #e0f2fe, transparent), radial-gradient(1.2px 1.2px at 63% 28%, #fff, transparent), radial-gradient(1px 1px at 86% 16%, #fde68a, transparent),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(249, 115, 22, .28), transparent 70%),
+    linear-gradient(180deg, #050816 0%, #0f1b3d 60%, #23123a 100%);
+  border: 2px solid #1e293b; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, .25), 0 0 18px rgba(249, 115, 22, .25), 0 10px 20px rgba(0, 0, 0, .5);
+}
+.skin-meteor .slot { position: relative; z-index: 1; font-weight: 900; color: transparent;
+  background: linear-gradient(180deg, #fff7ed 0%, #fdba74 35%, #f97316 62%, #9a3412 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .02em #431407; filter: drop-shadow(0 0 .12em rgba(249, 115, 22, .7)) drop-shadow(0 .05em 0 #1c0a03); }
+.skin-meteor .slot.ghost { opacity: .2; }
+/* en cours : des étoiles filantes qui passent, le chiffre file en biais */
+.skin-meteor .slot.spinning { opacity: .8; animation: met-streak .2s linear infinite; }
+@keyframes met-streak { 0% { transform: translate(-.08em, -.12em) skewX(-14deg); filter: blur(1px) drop-shadow(-.2em -.15em .1em rgba(253, 186, 116, .8)); } 100% { transform: translate(.04em, .06em) skewX(-6deg); filter: blur(.3px); } }
+/* il se pose : impact chauffé à blanc, petit recul, puis il refroidit */
+.skin-meteor .slot.revealed { animation: met-hit .42s cubic-bezier(.2, .9, .3, 1) backwards, met-cool 1.4s .1s ease-out backwards; }
+@keyframes met-hit { 0% { transform: translate(-.25em, -.35em) scale(1.25); } 45% { transform: translate(.02em, .04em) scale(.94); } 100% { transform: none; } }
+@keyframes met-cool { 0% { filter: brightness(2.4) drop-shadow(0 0 .35em #fff7ed); } 100% { filter: drop-shadow(0 0 .12em rgba(249, 115, 22, .7)) drop-shadow(0 .05em 0 #1c0a03); } }
+.skin-meteor .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-meteor .slot { animation: none; } }
+.side-meteor { --side-border: #f97316; --side-glow: 0 0 16px rgba(249, 115, 22, .35); --side-ink: #ea580c;
+  --side-bg: linear-gradient(180deg, rgba(15, 27, 61, .55), rgba(249, 115, 22, .1));
+  --deco-a: '☄️'; --deco-b: '🌃'; }

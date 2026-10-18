@@ -1443,7 +1443,8 @@
     const { ci, co, w, h, W, H, card, q, dark } = env;
     const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
     const HOT = dark ? '#fff4d6' : '#b45309', ORANGE = dark ? '#fb923c' : '#c2410c', BLUEW = dark ? '#bfdbfe' : '#1d4ed8', VIOLET = dark ? '#a78bfa' : '#6d28d9', STAR = dark ? '#ffffff' : '#334155';
-    const RX = card.w * .5 + 30, RY = card.h * .5 + 28, TILT = -.09, cosT = Math.cos(TILT), sinT = Math.sin(TILT);
+    // RY : le bas de l'anneau passe au-dessus de la ligne de rareté (« Epic · Top 7 % » le coupait, A Dude 2026-10-18).
+    const RX = card.w * .5 + 30, RY = card.h * .5 + 14, TILT = -.09, cosT = Math.cos(TILT), sinT = Math.sin(TILT);
     const place = (a, rx, ry) => { const x = Math.cos(a) * rx, y = Math.sin(a) * ry; return { x: cx + x * cosT - y * sinT, y: cy + x * sinT + y * cosT }; };
     const disc = Array.from({ length: Math.round(170 * q) }, () => { const r = rnd(1, 1.36); return { a: rnd(TAU), r, r0: r, s: rnd(.7, 1.8) }; });
     const far = Math.min(W, H * 1.6) / 2, star = d => ({ a: rnd(TAU), d: d || rnd(RX * 1.1, far), tw: rnd(TAU), size: rnd(.6, 1.5) });
@@ -1978,6 +1979,53 @@
     };
   });
 
+  // ☄️ Meteor (2026-10-18, idée de costoroll) — une ville la nuit. À chaque chiffre posé, une météorite arrive en biais
+  // du haut à gauche avec sa traînée et s'écrase sur l'emplacement du chiffre : éclair d'impact dans la carte, gerbe
+  // d'étincelles. La dernière est plus grosse : traînée plus longue, onde de choc, plus de débris. Matière dure : éclats.
+  SCENES.meteor = custom(pieces({ cols: ['#fde68a', '#fb923c', '#f97316', '#fef3c7'], shapes: ['spark', 'shard'], size: [1.4, 3.2], g: 600, spin: 5, glowc: '#fb923c', ring: '#f97316', drift: { rate: .5, from: 'around' } }), env => {
+    const { co, ci, card, dark } = env, rocks = timed(), hits = timed(), waves = timed(), debris = particles();
+    const FLY = .32; // durée du vol (s) : la météorite touche quand le chiffre se pose
+    const rock = (x, y, r, ang, big) => {
+      // traînée : un cône qui s'élargit vers l'arrière, du blanc chaud au rouge
+      co.save(); co.translate(x, y); co.rotate(ang);
+      const len = r * (big ? 26 : 18), g = co.createLinearGradient(-len, 0, 0, 0);
+      g.addColorStop(0, 'rgba(249,115,22,0)'); g.addColorStop(.6, 'rgba(251,146,60,.55)'); g.addColorStop(1, 'rgba(254,243,199,.95)');
+      co.fillStyle = g; co.beginPath(); co.moveTo(0, -r * .9); co.lineTo(-len, -r * .15); co.lineTo(-len, r * .15); co.lineTo(0, r * .9); co.closePath(); co.fill();
+      co.shadowColor = '#fb923c'; co.shadowBlur = r * 2.2; co.fillStyle = '#fff7ed'; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill(); co.shadowBlur = 0;
+      co.fillStyle = '#7c2d12'; co.beginPath(); co.arc(r * .25, r * .2, r * .45, 0, TAU); co.fill();
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        rocks.run(dt, (m, k) => {
+          const u = Math.min(1, k / (FLY / m.life)), e = u * u; // accélère en tombant
+          if (u < 1) { const x = m.x0 + (m.x1 - m.x0) * e, y = m.y0 + (m.y1 - m.y0) * e; co.globalAlpha = 1; rock(x, y, card.h * (m.big ? .22 : .15), Math.atan2(m.y1 - m.y0, m.x1 - m.x0), m.big); }
+          else if (!m.hit) {
+            m.hit = true;
+            hits.add({ x: m.x1 - card.x, y: m.y1 - card.y, r: card.h * (m.big ? .9 : .55), life: m.big ? .7 : .45 });
+            if (m.big) waves.add({ x: card.x + card.w / 2, y: card.y + card.h / 2, life: .8, r: card.w * .9 });
+            for (let i = 0; i < (m.big ? 26 : 10); i++) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = rnd(120, m.big ? 420 : 260); debris.add({ x: m.x1, y: card.y + card.h * .1, vx: Math.cos(a) * v, vy: Math.sin(a) * v, max: rnd(.4, .9), g: 700, drag: 1.5, size: rnd(1.2, 2.6), col: ['#fde68a', '#fb923c', '#f97316'][i % 3] }); }
+          }
+        });
+        debris.step(dt);
+        debris.each((p, k) => { co.globalAlpha = 1 - k; co.fillStyle = p.col; co.fillRect(p.x - p.size, p.y - p.size * .4, p.size * 2, p.size * .8); });
+        waves.run(dt, (w, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = '#fdba74'; co.lineWidth = 3 * (1 - k) + .5; co.beginPath(); co.ellipse(w.x, w.y, w.r * (.3 + k), w.r * (.3 + k) * .45, 0, 0, TAU); co.stroke(); });
+        // éclair d'impact dans la carte (calque intérieur, sous les chiffres)
+        ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        hits.run(dt, (h, k) => dot(ci, '#fdba74', h.x, h.y, h.r * (1 + k * .6), (1 - k) * .9));
+        ci.globalCompositeOperation = 'source-over';
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const big = !!o.last, d = card.h * (big ? 4.6 : 3.6);
+        rocks.add({ x0: p.x - d * .9, y0: p.y - d, x1: p.x, y1: p.y, x: p.x, y: p.y, big, life: FLY + .05 });
+      },
+      reveal(tier, p) { for (let i = 0, n = Math.round(2 + 4 * p); i < n; i++) { const x = rnd(card.x, card.x + card.w), d = card.h * 3; rocks.add({ delay: i * .12, x0: x - d * .9, y0: card.y - d, x1: x, y1: card.y + card.h * .5, big: false, life: FLY + .05 }); } },
+    };
+  });
+
   // 🩸 Bloodlust (2026-10-16, idée d'un joueur) — un liquide rouge sombre et brillant, stylisé (rien de gore) : au-
   // dessus de chaque chiffre posé, une goutte gonfle, se détache et s'écrase sur le haut de la carte ; à la révélation,
   // une pluie de gouttes s'y écrase. Matière molle : les gouttes s'étirent et s'aplatissent.
@@ -2408,16 +2456,20 @@
         return [gr, rx, ry, rw, rh];
       });
       const fadeEdges = () => { co.save(); co.globalAlpha = 1; co.globalCompositeOperation = 'destination-out'; for (const [gr, x, y, fw, fh] of fades) { co.fillStyle = gr; co.fillRect(x, y, fw, fh); } co.restore(); };
-      let t = 0, last = 0, raf = 0, stopped = false, restSince = Infinity, skip = false, owed = 0;
+      let t = 0, last = 0, raf = 0, stopped = false, restSince = Infinity, skip = 0, owed = 0, lastLeft = null;
       const frame = now => {
         if (stopped || !outer.isConnected) return;
         raf = requestAnimationFrame(frame);
         const dt = Math.min(.05, last ? (now - last) / 1000 : 0);
         last = now;
-        // Une fois la révélation retombée : une image sur deux, puis plus rien après 40 s (la dernière image reste).
-        if (t > restSince + 40) { stopped = true; return; }
+        // La carte rétrécit quand les zéros de tête s'effacent et se recentre : le calque d'effets la suit, sinon l'anneau
+        // de Singularity restait centré sur 6 chiffres et débordait d'un seul côté (signalé par A Dude, 2026-10-18).
+        const left = card.offsetLeft + card.offsetWidth / 2 - W / 2;
+        if (left !== lastLeft) { outer.style.left = `${left}px`; lastLeft = left; }
+        // Une fois la révélation retombée : une image sur deux, puis au ralenti (une sur six) au lieu de s'arrêter après
+        // 40 s, pour que les petites lumières continuent de tourner (signalé par A Dude, 2026-10-18).
         owed += dt;
-        if (t > restSince && (skip = !skip)) return;
+        if (t > restSince && (skip = (skip + 1) % (t > restSince + 40 ? 6 : 2))) return;
         t += owed;
         ci.clearRect(0, 0, w, h);
         co.clearRect(0, 0, W, H);
@@ -2434,7 +2486,8 @@
           scene.lock({ x: (s.left + s.width / 2 - b.left) * k, y: (s.top + s.height / 2 - b.top) * k }, o);
         }),
         build: guard(ms => scene.build(ms)),
-        reveal: guard(tier => { scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0); }),
+        // Garbage et Land waste : pas de grand effet de révélation (« ça remue le couteau dans la plaie », A Dude 2026-10-18).
+        reveal: guard(tier => { if (tier === 'garbage' || tier === 'landwaste') { restSince = t + 1; return; } scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0); }),
         stop() { stopped = true; cancelAnimationFrame(raf); },
         // Mode manuel (o.manual, pour le trailer) : pas d'horloge ; l'appelant avance la scène lui-même, de dt secondes,
         // et obtient donc la même image pour le même instant.

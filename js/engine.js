@@ -266,6 +266,9 @@
     FIB_CONTAINS_3: '112', FIB_CONTAINS_4: '1123', FIB_CONTAINS_5: '11235', // Fibonacci par tranches, comme Pi (idée de CococoC)
     NINE_TO_FIVE: '925', // badge perso (2026-10-15) : « 9 to 5 », la chanson de Dolly Parton
     THREE_SIX_NINE: '369', // idée de GamblrGod (2026-10-17) : « 369 », comme la chanson
+    TWENTY_ONE: '21', // idée de kaz (2026-10-18)
+    PLAYER_456: '456', // idée de R77 (2026-10-18) : le joueur le plus célèbre d'un jeu de survie en série
+    HALVING: '8421', // idée de finnnnn (2026-10-18) : chaque chiffre est la moitié du précédent
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
@@ -283,6 +286,7 @@
     SPARTAN_EXACT: ['117'], FIB_EXACT: ['112358'], // 1, 1, 2, 3, 5, 8 : le début de la suite de Fibonacci
     EXACT_JOB: ['925'], // badge perso : exactement 925 (« 9 to 5 »)
     EXACT_369: ['369'],
+    EXACT_21: ['21'], EXACT_456: ['456'], EXACT_HALVING: ['168421'], // 16, 8, 4, 2, 1
     MUNCHAUSEN_EXACT: ['3435'], // nombre de Münchhausen : 3^3 + 4^4 + 3^3 + 5^5 = 3435
     PYTHAG_EXACT: ['91625'], // 9 + 16 = 25 : les carrés du triangle 3-4-5
         NATURAL_EXACT: ['711'], // badge perso (idée d'un joueur) : 7 et 11, les deux lancers gagnants aux dés

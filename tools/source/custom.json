@@ -223,5 +223,47 @@
     "desc": "Exactly \"369\".",
     "emoji": "🎶",
     "score": 100000100
+  },
+  {
+    "id": "TWENTY_ONE",
+    "label": "Twenty-One",
+    "desc": "Contains \"21\".",
+    "emoji": "🃏",
+    "score": 2021
+  },
+  {
+    "id": "EXACT_21",
+    "label": "Exact 21",
+    "desc": "Exactly \"21\".",
+    "emoji": "🎰",
+    "score": 100000100
+  },
+  {
+    "id": "PLAYER_456",
+    "label": "Player 456",
+    "desc": "Contains \"456\", the most famous player number.",
+    "emoji": "🦑",
+    "score": 25456
+  },
+  {
+    "id": "EXACT_456",
+    "label": "Exact 456",
+    "desc": "Exactly \"456\".",
+    "emoji": "🟢",
+    "score": 100000100
+  },
+  {
+    "id": "HALVING",
+    "label": "Halving",
+    "desc": "Contains \"8421\": every digit is half of the one before.",
+    "emoji": "✂️",
+    "score": 333421
+  },
+  {
+    "id": "EXACT_HALVING",
+    "label": "Exact Halving",
+    "desc": "Exactly \"168421\": 16, 8, 4, 2, 1, halving all the way down.",
+    "emoji": "🪜",
+    "score": 100000100
   }
 ]

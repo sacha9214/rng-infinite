@@ -553,6 +553,11 @@ module.exports = async (req, res) => {
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
+        // Passée en Added pour la première fois : un point pour le titre Bug Hunter (bug) ou Contributor (idée).
+        if (body.status === 'done') {
+          const [was, kind, credited] = await redis([['HGET', suggKey(id), 'status'], ['HGET', suggKey(id), 'kind'], ['HGET', suggKey(id), 'credited']]);
+          if (was !== 'done' && !credited) writes.push(['HINCRBY', `stats:${pid}`, kind === 'bug' ? 'bugsFixed' : 'ideasAdded', 1], ['HSET', suggKey(id), 'credited', 1]);
+        }
         // Réponse du créateur : un message de plus dans le fil ; le joueur verra un point rouge sur l'ampoule.
         const reply = typeof body.reply === 'string' ? cleanText(body.reply, REPLY_MAX) : '';
         if (reply) {

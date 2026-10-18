@@ -1598,6 +1598,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-18c', date: 'Oct 18, 2026', en: ['☄️ New skin Meteor: meteors crash onto every digit over a city at night, the last one hits hardest (idea by costoroll)', '🔁 "Duplicate!" shows under the XP when you roll a number you already had (idea by MereTera)', '🃏 New badges: Twenty-One and Exact 21 (idea by kaz), Player 456 and Exact 456 (idea by R77), Halving 8421 and Exact Halving 168421 (idea by finnnnn)', '🐛 New titles Bug Hunter and 💡 Contributor: send a bug that gets fixed or an idea that gets added', 'Fixed: the Singularity ring stays centered on shorter numbers and no longer hits the rarity line; skin animations keep looping slowly instead of stopping; no big effect on Garbage rolls (reported by A Dude)', 'Fixed: Vaporwave digits are no longer cut or overlapping (reported by A Dude)', 'Fixed: the profile of a friend shows "Friends" instead of "Add friend" (reported by kaz)', 'Auto-roll now leaves each result on screen longer so you can see its badges and XP (reported by finnnnn)'], fr: ['☄️ Nouveau skin Meteor : des météorites s\'écrasent sur chaque chiffre au-dessus d\'une ville la nuit, la dernière frappe le plus fort (idée de costoroll)', '🔁 « Doublon ! » s\'affiche sous l\'XP quand tu tires un nombre que tu as déjà eu (idée de MereTera)', '🃏 Nouveaux badges : Twenty-One et Exact 21 (idée de kaz), Player 456 et Exact 456 (idée de R77), Halving 8421 et Exact Halving 168421 (idée de finnnnn)', '🐛 Nouveaux titres Bug Hunter et 💡 Contributor : envoie un bug qui est corrigé ou une idée qui est ajoutée', 'Corrigé : l\'anneau de Singularity reste centré sur les nombres plus courts et ne touche plus la ligne de rareté ; les animations des skins continuent doucement au lieu de s\'arrêter ; plus de grand effet sur les tirages Garbage (signalé par A Dude)', 'Corrigé : les chiffres de Vaporwave ne sont plus coupés ni collés (signalé par A Dude)', 'Corrigé : le profil d\'un ami affiche « Amis » au lieu de « Ajouter en ami » (signalé par kaz)', 'Le tirage auto laisse chaque résultat plus longtemps à l\'écran pour voir ses badges et son XP (signalé par finnnnn)'] },
     { id: '2026-10-18b', date: 'Oct 18, 2026', en: ['🎯 Event leaderboard: a new Event tab in the Leaderboard shows everyone\'s progress on this week\'s event', 'The event card now explains how it works, with an example, and links to the event leaderboard'], fr: ['🎯 Classement de l\'événement : un nouvel onglet Événement dans le Classement montre la progression de chacun sur l\'événement de la semaine', 'La carte de l\'événement explique maintenant comment ça marche, avec un exemple, et mène à son classement'] },
     { id: '2026-10-18a', date: 'Oct 18, 2026', en: ['🎯 Weekly events! Every week has a theme (Prime Time, Happy Week, Meme Week…): hit the goal before Monday for 500 coins, and climb the event podium. Find it at the top of your daily quests', '🎯 New achievement Event Hunter: complete 3 weekly events', '🛡️ The Discord now has automatic moderation against insults, spam and scam links'], fr: ['🎯 Événements de la semaine ! Chaque semaine a un thème (Prime Time, Happy Week, Meme Week…) : atteins l\'objectif avant lundi pour 500 pièces, et grimpe sur le podium de l\'événement. C\'est en haut de tes quêtes du jour', '🎯 Nouveau succès Event Hunter : termine 3 événements de la semaine', '🛡️ Le Discord a maintenant une modération automatique contre les insultes, le spam et les liens d\'arnaque'] },
     { id: '2026-10-17e', date: 'Oct 17, 2026', en: ['👤 New profile page: a header card with your best roll shown in your skin and your key numbers, then tabs (Overview, Rolls, Badges, Achievements, Duels, Inventory) instead of one long page'], fr: ['👤 Nouvelle page de profil : une carte d\'en-tête avec ton meilleur tirage dans ton skin et tes chiffres clés, puis des onglets (Aperçu, Tirages, Badges, Succès, Duels, Inventaire) au lieu d\'une longue page'] },
@@ -1899,6 +1900,7 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
+          ${ctx.previous.length && !ctx.replay ? `<div class="dup-tag" id="r-dup" hidden>🔁 Duplicate! <span>rolled ${plural(ctx.previous.length + 1, 'time')}</span></div>` : ''}
           <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
             <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>${ctx.online ? `+${fmt(a.total)}` : 'offline roll · not counted'}</span></div>
             <div class="l">Your lifetime XP</div>
@@ -2015,7 +2017,7 @@
       // Compte Google associé avant que le bonus existe : il arrive avec ce tirage.
       if (ctx.online && ctx.online.googleBonus) setTimeout(() => { toast(`🪙 +${ctx.online.googleBonus} coins for linking your Google account`, 5000, 'achv'); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + ctx.online.googleBonus); }, 1200);
     });
-    step(REVEAL.stats, () => show($('#r-meta'), 'pop-in'));
+    step(REVEAL.stats, () => { show($('#r-meta'), 'pop-in'); const dup = $('#r-dup'); if (dup) { dup.hidden = false; dup.classList.add('pop-in'); } }); // « Duplicate! » (idée de MereTera, 2026-10-18)
     step(REVEAL.lifetimeShow, () => show($('#r-life'), 'fade-in'));
     step(REVEAL.lifetimePause, quick => {
       const delta = $('#r-life-delta');
@@ -2028,7 +2030,9 @@
       finished = true;
       if (SoloAuto.on && !ctx.replay) {
         if (TIER_RANK[a.tier] >= TIER_RANK[autoStop()]) { stopSoloAuto(); toast(`✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`, 5000, 'achv'); }
-        else scheduleSoloAuto(900);
+        // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
+        // ni son XP, surtout quand la page avait été ralentie et que la révélation se jouait d'un coup ; finnnnn, 2026-10-18).
+        else scheduleSoloAuto(late ? 3000 : 1800);
       }
     });
 
@@ -2609,7 +2613,17 @@
     showTab(tab);
     $('#p-body').querySelector('.pf-tabs').addEventListener('click', e => { const b = e.target.closest('[data-ptab]'); if (b) showTab(b.dataset.ptab); });
     const addFriend = $('#p-friend');
-    if (addFriend) addFriend.addEventListener('click', () => friendAction('add', p.name));
+    if (addFriend) {
+      addFriend.addEventListener('click', () => friendAction(addFriend.dataset.act || 'add', p.name).then(() => renderProfile(p.name)));
+      // Déjà ami, demande envoyée ou reçue : le bon bouton, pas « Add friend » (signalé par kaz, 2026-10-18).
+      if (Store.player.name) Online.friends().then(fs => {
+        if (!addFriend.isConnected) return;
+        const low = String(p.name).toLowerCase(), has = list => (list || []).some(x => String(x && x.name || x).toLowerCase() === low);
+        if (has(fs.friends)) { addFriend.textContent = '✓ Friends'; addFriend.disabled = true; addFriend.classList.add('is-friend'); }
+        else if (has(fs.outgoing)) { addFriend.textContent = '⏳ Request sent'; addFriend.disabled = true; }
+        else if (has(fs.incoming)) { addFriend.textContent = '✓ Accept friend request'; addFriend.dataset.act = 'accept'; }
+      }).catch(() => {});
+    }
     if (me) noteAchievements(p.achievements);
     mountCollection(profileCollection(p.badges), collectionState);
     if (me) wireEquip($('#p-body'), () => renderProfile(p.name));
