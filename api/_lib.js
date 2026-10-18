@@ -422,11 +422,15 @@ async function settleWager(code, winnerId) {
 // Appelé par /api/roll et par les duels. Lit puis écrit le meilleur score : le délai de 8 s entre deux tirages
 // (et entre deux manches) évite que deux tirages du même joueur se croisent.
 const WORST_LB = 'lb:worst', WORST_BEST = 'worst:all';
+// Poubelle par période (idée d'Angelicide9, 2026-10-18) : pire tirage du jour, de la semaine et du mois, à côté des meilleurs.
+const worstKeys = p => ({ lb: p.lb.replace(/^lb:/, 'lbw:'), best: p.best.replace(/^best:/, 'worstp:') });
 async function recordRoll(playerId, n, t) {
   const a = engine.analyze(n);
   const s = a.total;
   const periods = scopes(t);
-  const [worst, ...current] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId])]);
+  const wPeriods = periods.filter(p => p.period !== 'all');
+  const [worst, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId])]);
+  const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length);
   const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
   const entry = JSON.stringify({ n, s, t });
   const writes = [
@@ -463,10 +467,19 @@ async function recordRoll(playerId, n, t) {
   }
   // Classement Poubelle (idée d'un joueur, 2026-10-16) : le pire tirage de chaque joueur, de tous les temps.
   if (worst === null || s < Number(worst)) writes.push(['ZADD', WORST_LB, s, playerId], ['HSET', WORST_BEST, playerId, entry]);
+  wPeriods.forEach((p, i) => {
+    if (worstNow[i] !== null && s >= Number(worstNow[i])) return;
+    const k = worstKeys(p);
+    writes.push(['ZADD', k.lb, s, playerId], ['HSET', k.best, playerId, entry], ['EXPIRE', k.lb, p.ttl], ['EXPIRE', k.best, p.ttl]);
+  });
   for (const p of improved) {
     writes.push(['ZADD', p.lb, s, playerId], ['HSET', p.best, playerId, entry]);
     if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
   }
+  // Doublons (succès Déjà vu, idée de Lolha39, 2026-10-18) : nums:<id> = les nombres déjà tirés ; SADD répond 0 si
+  // le nombre y était déjà.
+  const dupAt = writes.length;
+  writes.push(['SADD', `nums:${playerId}`, n]);
   writes.push(['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)], ['ZCARD', historyKey(playerId)]);
   writes.push(['ZREVRANK', periods[0].lb, playerId]);
   const out = await redis(writes);
@@ -478,6 +491,14 @@ async function recordRoll(playerId, n, t) {
   if (s > Number(stats.best || 0)) { fix.push(['HSET', statsKey(playerId), 'best', s]); stats.best = s; }
   if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', statsKey(playerId), 'dayTop', 1]); stats.dayTop = 1; }
   if (!stats.v && Number(out[out.length - 2]) <= 1) { fix.push(['HSET', statsKey(playerId), 'v', STATS_VERSION]); stats.v = STATS_VERSION; }
+  if (stats.dv !== '1') {
+    // Joueur d'avant ce compteur : ses doublons recomptés une fois depuis son historique (qui contient déjà ce tirage).
+    const [members] = await redis([['ZRANGE', historyKey(playerId), 0, -1]]);
+    const nums = (members || []).map(m => Number(String(m).split(':')[1])).filter(Number.isInteger), distinct = new Set(nums);
+    fix.push(['HSET', statsKey(playerId), 'dups', nums.length - distinct.size, 'dv', 1]);
+    if (distinct.size) fix.push(['SADD', `nums:${playerId}`, ...distinct]);
+    stats.dups = String(nums.length - distinct.size); stats.dv = '1';
+  } else if (Number(out[dupAt]) === 0) { fix.push(['HINCRBY', statsKey(playerId), 'dups', 1]); stats.dups = String((Number(stats.dups) || 0) + 1); }
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
@@ -510,7 +531,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { breathe, WORST_LB, WORST_BEST,
+module.exports = { worstKeys, breathe, WORST_LB, WORST_BEST,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

@@ -1,7 +1,7 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
+const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -155,7 +155,10 @@ module.exports = async (req, res) => {
     if (period === 'xp' || period === 'all' || period === 'worst') await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
     // Poubelle : le plus petit score en tête (classement croissant).
     const low = period === 'worst';
-    const scope = period === 'worst' ? WORST_SCOPE : period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
+    // Poubelle : span = day | week | month | all (tout le temps par défaut).
+    const span = ['day', 'week', 'month'].includes(params.get('span')) ? params.get('span') : 'all';
+    const spanScope = span !== 'all' ? (() => { const p = scopes(t).find(x => x.period === span), k = worstKeys(p); return { period: 'worst', lb: k.lb, best: k.best, count: p.count, total: p.total }; })() : null;
+    const scope = period === 'worst' ? (spanScope || WORST_SCOPE) : period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
     if (period === 'month') await seedMonth(scope, t);
 
     const [flat, rolls, rollsToday, players, myRank] = await redis([
@@ -199,7 +202,7 @@ module.exports = async (req, res) => {
     const mine = meOutsideTop ? toEntry(me, ids.length, Number(myRank) + 1) : null;
 
     return send(res, 200, {
-      period, entries, mine,
+      period, entries, mine, ...(period === "worst" ? { span } : {}),
       rolls: Number(rolls || 0),
       players: Number(players || 0),
       rollsToday: Number(rollsToday || 0),

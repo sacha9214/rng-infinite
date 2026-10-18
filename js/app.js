@@ -93,8 +93,8 @@
       const p = Store.player;
       return this.request('/api/room', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, code, ...extra }) });
     },
-    leaderboard(period) {
-      return this.request(`/api/leaderboard?period=${period}&me=${Store.player.id}`);
+    leaderboard(period, span) {
+      return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}`);
     },
     profile(name) {
       return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}`);
@@ -1598,6 +1598,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-18d', date: 'Oct 18, 2026', en: ['🗑️ The Trash leaderboard now has Today, This week, This month and All-time (idea by Angelicide9)', '👑 New title Trash King: the worst roll of the month wins it when the month ends', '🗑️ New titles Garbage Collector and ☣️ Land Waster for rolling a Garbage or a Land waste (idea by Angelicide9)', '🔁 New achievements Déjà Vu (5 duplicates) and 📀 Broken Record (25) (idea by Lolha39)', 'History: sort by smallest or biggest number (idea by Lolha39)', 'Fixed: the Singularity ring, aura and orbiting dots now shrink with shorter numbers and stay above the rarity line (reported by A Dude)'], fr: ['🗑️ Le classement Poubelle a maintenant Aujourd\'hui, Cette semaine, Ce mois-ci et Tout le temps (idée d\'Angelicide9)', '👑 Nouveau titre Trash King : le pire tirage du mois le gagne à la fin du mois', '🗑️ Nouveaux titres Éboueur et ☣️ Désastre total pour avoir tiré un Garbage ou un Land waste (idée d\'Angelicide9)', '🔁 Nouveaux succès Déjà vu (5 doublons) et 📀 Disque rayé (25) (idée de Lolha39)', 'Historique : tri par plus petit ou plus grand nombre (idée de Lolha39)', 'Corrigé : l\'anneau, l\'aura et les points de Singularity rétrécissent avec les nombres plus courts et restent au-dessus de la ligne de rareté (signalé par A Dude)'] },
     { id: '2026-10-18c', date: 'Oct 18, 2026', en: ['☄️ New skin Meteor: meteors crash onto every digit over a city at night, the last one hits hardest (idea by costoroll)', '🔁 "Duplicate!" shows under the XP when you roll a number you already had (idea by MereTera)', '🃏 New badges: Twenty-One and Exact 21 (idea by kaz), Player 456 and Exact 456 (idea by R77), Halving 8421 and Exact Halving 168421 (idea by finnnnn)', '🐛 New titles Bug Hunter and 💡 Contributor: send a bug that gets fixed or an idea that gets added', 'Fixed: the Singularity ring stays centered on shorter numbers and no longer hits the rarity line; skin animations keep looping slowly instead of stopping; no big effect on Garbage rolls (reported by A Dude)', 'Fixed: Vaporwave digits are no longer cut or overlapping (reported by A Dude)', 'Fixed: the profile of a friend shows "Friends" instead of "Add friend" (reported by kaz)', 'Auto-roll now leaves each result on screen longer so you can see its badges and XP (reported by finnnnn)'], fr: ['☄️ Nouveau skin Meteor : des météorites s\'écrasent sur chaque chiffre au-dessus d\'une ville la nuit, la dernière frappe le plus fort (idée de costoroll)', '🔁 « Doublon ! » s\'affiche sous l\'XP quand tu tires un nombre que tu as déjà eu (idée de MereTera)', '🃏 Nouveaux badges : Twenty-One et Exact 21 (idée de kaz), Player 456 et Exact 456 (idée de R77), Halving 8421 et Exact Halving 168421 (idée de finnnnn)', '🐛 Nouveaux titres Bug Hunter et 💡 Contributor : envoie un bug qui est corrigé ou une idée qui est ajoutée', 'Corrigé : l\'anneau de Singularity reste centré sur les nombres plus courts et ne touche plus la ligne de rareté ; les animations des skins continuent doucement au lieu de s\'arrêter ; plus de grand effet sur les tirages Garbage (signalé par A Dude)', 'Corrigé : les chiffres de Vaporwave ne sont plus coupés ni collés (signalé par A Dude)', 'Corrigé : le profil d\'un ami affiche « Amis » au lieu de « Ajouter en ami » (signalé par kaz)', 'Le tirage auto laisse chaque résultat plus longtemps à l\'écran pour voir ses badges et son XP (signalé par finnnnn)'] },
     { id: '2026-10-18b', date: 'Oct 18, 2026', en: ['🎯 Event leaderboard: a new Event tab in the Leaderboard shows everyone\'s progress on this week\'s event', 'The event card now explains how it works, with an example, and links to the event leaderboard'], fr: ['🎯 Classement de l\'événement : un nouvel onglet Événement dans le Classement montre la progression de chacun sur l\'événement de la semaine', 'La carte de l\'événement explique maintenant comment ça marche, avec un exemple, et mène à son classement'] },
     { id: '2026-10-18a', date: 'Oct 18, 2026', en: ['🎯 Weekly events! Every week has a theme (Prime Time, Happy Week, Meme Week…): hit the goal before Monday for 500 coins, and climb the event podium. Find it at the top of your daily quests', '🎯 New achievement Event Hunter: complete 3 weekly events', '🛡️ The Discord now has automatic moderation against insults, spam and scam links'], fr: ['🎯 Événements de la semaine ! Chaque semaine a un thème (Prime Time, Happy Week, Meme Week…) : atteins l\'objectif avant lundi pour 500 pièces, et grimpe sur le podium de l\'événement. C\'est en haut de tes quêtes du jour', '🎯 Nouveau succès Event Hunter : termine 3 événements de la semaine', '🛡️ Le Discord a maintenant une modération automatique contre les insultes, le spam et les liens d\'arnaque'] },
@@ -2068,7 +2069,7 @@
     }
     Collection.ensure();
     const tierOptions = [['all', 'All rarities'], ['rare+', 'Rare or better'], ...TIERS_DESC.map(t => [t, cap(t)])];
-    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP']];
+    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP'], ['numUp', 'Smallest number'], ['numDown', 'Biggest number']]; // tri par valeur : idée de Lolha39 (2026-10-18)
     const options = (list, value) => list.map(([v, l]) => `<option value="${v}"${v === value ? ' selected' : ''}>${l}</option>`).join('');
     app.innerHTML = `
       <div class="page">
@@ -2101,6 +2102,8 @@
     const sorters = {
       new: (a, b) => b.i - a.i,
       old: (a, b) => a.i - b.i,
+      numUp: (a, b) => a.n - b.n || b.i - a.i,
+      numDown: (a, b) => b.n - a.n || b.i - a.i,
       high: (a, b) => b.s - a.s || b.i - a.i,
       low: (a, b) => a.s - b.s || b.i - a.i,
     };
@@ -5931,6 +5934,13 @@
         </p>
       </div>`;
     $('#lb-name').addEventListener('click', openSettings);
+    $('#lb-list').addEventListener('click', e => {
+      const b = e.target.closest('[data-span]');
+      if (!b) return;
+      lbState.span = b.dataset.span;
+      $('#lb-list').innerHTML = '<div class="empty">Loading…</div>';
+      drawLeaderboard();
+    });
     $('.lb-tabs').addEventListener('click', e => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -5966,7 +5976,7 @@
     const period = lbState.period;
     let data;
     try {
-      data = await Online.leaderboard(period);
+      data = await Online.leaderboard(period, period === 'worst' ? lbState.span || 'all' : null);
     } catch (err) {
       if ($('#lb-list')) $('#lb-list').innerHTML = '<div class="empty">Leaderboard unavailable right now.</div>';
       return;
@@ -5975,7 +5985,9 @@
     const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet' }[period];
     const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
       return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
-    $('#lb-list').innerHTML = evHead + (data.entries.length
+    // Poubelle : jour, semaine, mois ou tout le temps (idée d'Angelicide9, 2026-10-18).
+    const spanBar = period === 'worst' ? `<div class="lb-spans">${[['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time']].map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
+    $('#lb-list').innerHTML = spanBar + evHead + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
     if (lbState.scroll) { lbState.scroll = false; const card = $('.lb-card'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }

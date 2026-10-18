@@ -2779,4 +2779,29 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; delete require.cache[tPath]; }
 }
 
+// Doublons (Déjà vu), Poubelle par période et Trash King (2026-10-18).
+{
+  const { recordRoll, readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const who = 'd0d1'.repeat(4), T = Date.now();
+  db.delete(`stats:${who}`); db.delete(`hist:${who}`); db.delete(`nums:${who}`);
+  run([['ZADD', `hist:${who}`, T - 9000, `${T - 9000}:777`, T - 8000, `${T - 8000}:777`], ['HSET', `stats:${who}`, 'v', '1', 'tv', '2', 'gv', '1', 'rolls', 2]]);
+  await recordRoll(who, 5, T); // ancien joueur : ses doublons recomptés depuis l'historique (777 deux fois = 1)
+  assert.equal(Number((await readStats(who)).dups), 1, 'recompté depuis l\'historique');
+  await recordRoll(who, 777, T + 1000); await recordRoll(who, 5, T + 2000); await recordRoll(who, 6, T + 3000);
+  assert.equal(Number((await readStats(who)).dups), 3, 'deux nouveaux doublons, un nombre neuf');
+  // Poubelle du jour : le pire tirage du jour, classement croissant.
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js'));
+  const day = await call(lbApi, { url: '/api/leaderboard?period=worst&span=day' });
+  assert.equal(day.status, 200); assert.equal(day.body.span, 'day');
+  assert.ok(day.body.entries.every((x, i, a) => !i || a[i - 1].s <= x.s), 'croissant');
+  // Trash King : le 1er du mois, une seule fois, au pire tirage du mois passé.
+  const T2 = require(path.join(ROOT, 'api/_discord_tasks.js'));
+  const now = Date.parse('2026-11-01T02:00:00Z');
+  run([['DEL', 'award:trashking:2026-10'], ['ZADD', 'lbw:month:2026-10', 1759, who]]);
+  const before = Number((await readStats(who)).trashKing || 0);
+  assert.equal(await T2.trashKing(now), who); assert.equal(await T2.trashKing(now), null, 'une seule fois');
+  assert.equal(Number((await readStats(who)).trashKing), before + 1);
+  assert.equal(await T2.trashKing(Date.parse('2026-11-02T02:00:00Z')), null, 'seulement le 1er');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

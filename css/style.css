@@ -4063,3 +4063,9 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-meteor { --side-border: #f97316; --side-glow: 0 0 16px rgba(249, 115, 22, .35); --side-ink: #ea580c;
   --side-bg: linear-gradient(180deg, rgba(15, 27, 61, .55), rgba(249, 115, 22, .1));
   --deco-a: '☄️'; --deco-b: '🌃'; }
+
+/* Poubelle par période (2026-10-18). */
+.lb-spans { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; margin: .6rem 0 .4rem; }
+.lb-span { font: 700 .74rem var(--font-sans); padding: .3rem .75rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--prose-2); cursor: pointer; }
+.lb-span.on { color: var(--prose); border-color: var(--prose-2); background: var(--site-bg); }
+.lb-span-note { text-align: center; margin: 0 0 .4rem; }

@@ -51,6 +51,12 @@
     // Visible verrouillé (2026-10-16) : les joueurs savent qu'il y a 3 codes à chercher.
     { id: 'bughunter', emoji: '🐛', title: 'Bug Hunter', desc: 'Report a bug that gets fixed', test: st => num(st.bugsFixed) >= 1 },
     { id: 'contributor', emoji: '💡', title: 'Contributor', desc: 'Send an idea that gets added to the game', test: st => num(st.ideasAdded) >= 1 },
+    // Idée d'Angelicide9 (2026-10-18) : des titres pour les pires raretés, et le pire tirage du mois.
+    { id: 'garbageman', emoji: '🗑️', title: 'Garbage Collector', desc: 'Roll a Garbage (bottom 0.05%)', test: st => num(st['t:garbage']) >= 1 },
+    { id: 'landwaster', emoji: '☣️', title: 'Land Waster', desc: 'Roll a Land waste, the worst score there is', test: st => num(st['t:landwaste']) >= 1 },
+    { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
+    { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
+    { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },
     { id: 'eventhunter', emoji: '🎯', title: 'Event Hunter', desc: 'Complete 3 weekly events', test: st => num(st.events) >= 3 },
     { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Find the 3 secret codes hidden on the site', test: st => num(st.codehunter) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },

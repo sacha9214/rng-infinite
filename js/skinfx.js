@@ -1444,7 +1444,8 @@
     const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
     const HOT = dark ? '#fff4d6' : '#b45309', ORANGE = dark ? '#fb923c' : '#c2410c', BLUEW = dark ? '#bfdbfe' : '#1d4ed8', VIOLET = dark ? '#a78bfa' : '#6d28d9', STAR = dark ? '#ffffff' : '#334155';
     // RY : le bas de l'anneau passe au-dessus de la ligne de rareté (« Epic · Top 7 % » le coupait, A Dude 2026-10-18).
-    const RX = card.w * .5 + 30, RY = card.h * .5 + 14, TILT = -.09, cosT = Math.cos(TILT), sinT = Math.sin(TILT);
+    let RX = card.w * .5 + 30; // suit la largeur réelle de la carte (mise à jour à chaque image)
+    const RY = card.h * .5 + 6, TILT = -.09, cosT = Math.cos(TILT), sinT = Math.sin(TILT);
     const place = (a, rx, ry) => { const x = Math.cos(a) * rx, y = Math.sin(a) * ry; return { x: cx + x * cosT - y * sinT, y: cy + x * sinT + y * cosT }; };
     const disc = Array.from({ length: Math.round(170 * q) }, () => { const r = rnd(1, 1.36); return { a: rnd(TAU), r, r0: r, s: rnd(.7, 1.8) }; });
     const far = Math.min(W, H * 1.6) / 2, star = d => ({ a: rnd(TAU), d: d || rnd(RX * 1.1, far), tw: rnd(TAU), size: rnd(.6, 1.5) });
@@ -1454,6 +1455,7 @@
     const ellipse = (rx, ry, a0 = 0, a1 = TAU, ox = 0, oy = 0) => { co.beginPath(); co.ellipse(cx + ox, cy + oy, Math.max(.1, rx), Math.max(.1, ry), TILT, a0, a1); };
     return {
       frame(t, dt) {
+        RX += (card.w * .5 + 30 - RX) * Math.min(1, dt * 8); // la carte rétrécit : l'anneau aussi, en douceur
         heat += (target - heat) * Math.min(1, dt * 3); since += dt; innerFlash = Math.max(0, innerFlash - dt * 2.6);
         if (revealed && since < .16) squeezeTo = .5; else if (revealed && !banged) {
           banged = true; squeezeTo = 1; jet = 1; innerFlash = 1;
@@ -2466,6 +2468,10 @@
         // de Singularity restait centré sur 6 chiffres et débordait d'un seul côté (signalé par A Dude, 2026-10-18).
         const left = card.offsetLeft + card.offsetWidth / 2 - W / 2;
         if (left !== lastLeft) { outer.style.left = `${left}px`; lastLeft = left; }
+        // … et les scènes connaissent sa vraie largeur : l'anneau, l'aura et les points suivent le nombre plus court au
+        // lieu de garder la place de 6 chiffres (A Dude, 2026-10-18 : « je n'ai pas payé 15 000 pièces pour du vide »).
+        const cwNow = card.offsetWidth;
+        if (cwNow && cwNow !== env.card.w) { env.card.w = cwNow; env.card.x = mx + (cw - cwNow) / 2; }
         // Une fois la révélation retombée : une image sur deux, puis au ralenti (une sur six) au lieu de s'arrêter après
         // 40 s, pour que les petites lumières continuent de tourner (signalé par A Dude, 2026-10-18).
         owed += dt;

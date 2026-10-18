@@ -74,11 +74,25 @@ async function weeklyEvent(now = Date.now()) {
   return launch === 'OK';
 }
 
+// Titre Trash King (idée d'Angelicide9, 2026-10-18) : le 1er du mois, dans les 6 premières heures, le joueur au pire
+// tirage du mois qui vient de finir (classement lbw:month:<mois>) reçoit le titre ; une seule fois par mois.
+async function trashKing(now = Date.now()) {
+  const d = new Date(now);
+  if (d.getUTCDate() !== 1 || d.getUTCHours() >= 6) return null;
+  const month = dayKey(now - 86400000).slice(0, 7);
+  const [ok] = await redis([['SET', `award:trashking:${month}`, '1', 'NX', 'EX', 90 * 86400]]);
+  if (ok !== 'OK') return null;
+  const [low] = await redis([['ZRANGE', `lbw:month:${month}`, 0, 0]]);
+  if (!low || !low.length) return null;
+  await redis([['HINCRBY', `stats:${low[0]}`, 'trashKing', 1]]);
+  return low[0];
+}
+
 function start() {
   postNewUpdates().catch(err => console.error('discord updates:', err.message));
-  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); };
+  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); trashKing().catch(err => console.error('trash king:', err.message)); };
   tick();
   setInterval(tick, 10 * 60000).unref();
 }
 
-module.exports = { start, readUpdates, postNewUpdates, dailyRecap, weeklyEvent };
+module.exports = { start, readUpdates, postNewUpdates, dailyRecap, weeklyEvent, trashKing };
