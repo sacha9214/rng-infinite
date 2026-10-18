@@ -94,6 +94,24 @@ async function coinsBoard(me) {
   return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
 }
 
+// Classement de l'événement de la semaine (js/events.js) : nombre de tirages du thème cette semaine, par joueur.
+const Events = require('../js/events.js');
+async function eventBoard(me) {
+  const ev = Events.current(), key = Events.key(ev);
+  const [flat, players, myRank, myScore] = await redis([['ZREVRANGE', key, 0, LIMIT - 1, 'WITHSCORES'], ['ZCARD', key], ['ZREVRANK', key, me || '-'], ['ZSCORE', key, me || '-']]);
+  const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
+  const outside = me && myRank !== null && Number(myRank) >= LIMIT;
+  const wanted = outside ? [...rows, [me, Number(myScore)]] : rows;
+  const marks = await bestAwards(wanted.map(x => x[0]));
+  const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, count: x[1], done: x[1] >= ev.goal, me: x[0] === me });
+  return {
+    period: 'event', event: { id: ev.id, emoji: ev.emoji, title: ev.title, desc: ev.desc, goal: ev.goal, reward: ev.reward, end: ev.end },
+    entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null,
+    players: Number(players) || 0, rolls: 0, rollsToday: 0,
+  };
+}
+
 // Le classement du mois existe depuis le 2026-10-12 : la première fois, le mois en cours est rempli depuis
 // l'historique de chaque joueur (meilleur tirage et nombre de tirages depuis le 1er). Les mois suivants partent de zéro
 // et se remplissent tout seuls à chaque tirage.
@@ -126,9 +144,10 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
+    if (period === 'event') return send(res, 200, await eventBoard(me));
     const t = Date.now();
     // Recalcul après un changement de badges : en arrière-plan, la page attend 250 ms au plus (le classement Poubelle restait
     // bloqué plusieurs secondes sur « not loading » pendant le recalcul, signalé le 2026-10-17). Il avance par lots à

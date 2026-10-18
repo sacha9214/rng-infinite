@@ -1224,7 +1224,9 @@
           <span class="quest-text"><b>🎯 Event: ${esc(ev.title)}</b><span class="panel-note">${esc(ev.desc)} · ${leftTxt}</span>
             <span class="quest-bar"><span style="width:${Math.min(100, (ev.progress / ev.goal) * 100)}%"></span></span>
             <span class="panel-note">${Math.min(ev.progress, ev.goal)} / ${ev.goal}${ev.rank ? ` · #${ev.rank} of ${fmt(ev.players)} this week` : ''}</span>
-            ${ev.top.length ? `<span class="event-top">${ev.top.slice(0, 3).map((t, i) => `<span${t.me ? ' class="me"' : ''}>${['🥇', '🥈', '🥉'][i]} <span data-no-i18n>${esc(t.name)}</span> ${t.n}</span>`).join('')}</span>` : ''}</span>
+            <span class="event-how">ℹ️ How it works: just roll as usual. Every roll that gets one of this week's badges counts +1${ev.example ? ` (e.g. ${esc(ev.example)})` : ''}. Reach the goal before Monday to claim the coins.</span>
+            ${ev.top.length ? `<span class="event-top">${ev.top.slice(0, 3).map((t, i) => `<span${t.me ? ' class="me"' : ''}>${['🥇', '🥈', '🥉'][i]} <span data-no-i18n>${esc(t.name)}</span> ${t.n}</span>`).join('')}</span>` : ''}
+            <a class="event-lb-link" href="#/leaderboard" data-event-lb>🏆 See the event leaderboard</a></span>
           ${ev.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-event>+${fmt(ev.reward)} 🪙</button>` : `<span class="quest-reward mono">${fmt(ev.reward)} 🪙</span>`}
         </div>`; })() : ''}
         ${state.level ? (() => { const lv = state.level, pct = Math.min(100, ((lv.xp - lv.from) / Math.max(1, lv.to - lv.from)) * 100), KEY = { starter: '📦', premium: '🎁', elite: '💎' };
@@ -1264,6 +1266,7 @@
       </div>`;
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
+      if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
       const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -5894,8 +5897,8 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash']];
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const tabs = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -5903,7 +5906,7 @@
         <div class="lb-wrap">
           ${trophiesAsideHTML()}
           <div class="lb-card">
-            <div class="lb-tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-period="${k}" class="${lbState.period === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+            <div class="lb-tabs lb-tabs-8" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-period="${k}" class="${lbState.period === k ? 'on' : ''}">${l}</button>`).join('')}</div>
             <div id="lb-list"><div class="empty">Loading…</div></div>
           </div>
         </div>
@@ -5955,9 +5958,12 @@
     }
     if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
     const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet' }[period];
-    $('#lb-list').innerHTML = data.entries.length
+    const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
+      return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
+    $('#lb-list').innerHTML = evHead + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
-      : `<div class="empty">No rolls ${when}, be the first!</div>`;
+      : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
+    if (lbState.scroll) { lbState.scroll = false; const card = $('.lb-card'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     // Rafraîchi seulement quand l'onglet est visible : un onglet oublié ne doit pas vider le quota gratuit de la base.
     if (!document.hidden) lbTimer = setTimeout(() => { if (currentView === 'leaderboard') drawLeaderboard(); }, 60000);
   }
@@ -5966,6 +5972,14 @@
   const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact(v) : fmt(v)} XP</span>`;
   function lbRowHTML(e) {
     // Classement des pièces : pas de tirage à montrer, juste le solde.
+    // Événement de la semaine : nombre de tirages du thème, ✓ quand l'objectif est atteint.
+    if (lbState.period === 'event') return `
+      <div class="lb-row${e.me ? ' me' : ''}">
+        <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
+        <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
+      </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>

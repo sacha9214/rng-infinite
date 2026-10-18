@@ -2747,6 +2747,13 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await claim()).status, 422, 'une seule fois');
   run([['HSET', `stats:${who.playerId}`, 'events', 3]]);
   assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked({ events: 3 }).includes('eventhunter'));
+  // Classement de l'événement : trié par tirages du thème, objectif atteint marqué, sans identifiant.
+  { const lbApi = require(path.join(ROOT, 'api/leaderboard.js'));
+    const lb = await call(lbApi, { url: `/api/leaderboard?period=event&me=${who.playerId}` });
+    assert.equal(lb.status, 200); assert.equal(lb.body.event.id, ev.id);
+    const mine = lb.body.entries.find(x => x.me); assert.ok(mine && mine.done && mine.count >= ev.goal, JSON.stringify(lb.body.entries));
+    assert.ok(lb.body.entries.every((x, i, a) => !i || a[i - 1].count >= x.count), 'trié');
+    assert.ok(!JSON.stringify(lb.body).includes(who.playerId), 'aucun id'); }
   // Rotation : deux semaines de suite n'ont pas le même thème ; la semaine de lancement finit le lundi 19 octobre.
   assert.notEqual(Events.current(Date.parse('2026-10-20T00:00:00Z')).key, Events.current(Date.parse('2026-10-27T00:00:00Z')).key);
   assert.equal(new Date(Events.current(Date.parse('2026-10-18T12:00:00Z')).end).toISOString(), '2026-10-19T00:00:00.000Z');

@@ -14,7 +14,7 @@ async function eventState(id, now) {
   const ids = []; for (let i = 0; i < (flat || []).length; i += 2) ids.push([flat[i], Number(flat[i + 1])]);
   const [names] = ids.length ? await redis([['HMGET', 'names', ...ids.map(x => x[0])]]) : [[]];
   return {
-    id: ev.id, key: ev.key, emoji: ev.emoji, title: ev.title, desc: ev.desc, goal: ev.goal, reward: ev.reward, end: ev.end,
+    id: ev.id, key: ev.key, emoji: ev.emoji, title: ev.title, desc: ev.desc, example: ev.example, goal: ev.goal, reward: ev.reward, end: ev.end,
     progress: Number(score) || 0, claimed: Number(claimed) === 1, rank: rank === null ? null : Number(rank) + 1, players: Number(players) || 0,
     top: ids.map(([pid, n], i) => ({ name: names[i] || 'Player', n, me: pid === id })),
   };
