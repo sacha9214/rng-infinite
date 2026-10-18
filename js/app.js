@@ -1602,6 +1602,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-18h', date: 'Oct 18, 2026', en: ['⚙️ Auto-roll can now stop on an XP amount too, from 25K to 10M XP (idea by WpBejs)', '📍 Every leaderboard tab shows your spot at the top, Trash included (idea by WpBejs)', '🗿 New badges: Forty-One (contains 41) and 🃏 Super 21 (contains 2121) (ideas by WpBejs)', 'Fixed: the wallpaper previews in the Shop were a thin line (reported by Me Cojoni)'], fr: ['⚙️ Le tirage auto peut aussi s\'arrêter sur un montant d\'XP, de 25K à 10M XP (idée de WpBejs)', '📍 Chaque onglet du classement montre ta place en haut, Poubelle comprise (idée de WpBejs)', '🗿 Nouveaux badges : Forty-One (contient 41) et 🃏 Super 21 (contient 2121) (idées de WpBejs)', 'Corrigé : les aperçus des fonds dans la boutique étaient un simple trait (signalé par Me Cojoni)'] },
     { id: '2026-10-18g', date: 'Oct 18, 2026', en: ['🔥 Weekend Rush: every Saturday and Sunday (UTC), coins from rolls and daily quests are doubled (casino not included)'], fr: ['🔥 Weekend Rush : chaque samedi et dimanche (UTC), les pièces des tirages et des quêtes du jour sont doublées (hors casino)'] },
     { id: '2026-10-18e', date: 'Oct 18, 2026', en: ['🏆 Leaderboard: Today, This week, This month and All-time are now inside one Best roll tab, like the Trash one, so all tabs fit on one row'], fr: ['🏆 Classement : Aujourd\'hui, Cette semaine, Ce mois-ci et Tout le temps sont maintenant dans un seul onglet Meilleur tirage, comme la Poubelle, et tous les onglets tiennent sur une ligne'] },
     { id: '2026-10-18d', date: 'Oct 18, 2026', en: ['🗑️ The Trash leaderboard now has Today, This week, This month and All-time (idea by Angelicide9)', '👑 New title Trash King: the worst roll of the month wins it when the month ends', '🗑️ New titles Garbage Collector and ☣️ Land Waster for rolling a Garbage or a Land waste (idea by Angelicide9)', '🔁 New achievements Déjà Vu (5 duplicates) and 📀 Broken Record (25) (idea by Lolha39)', 'History: sort by smallest or biggest number (idea by Lolha39)', 'Fixed: the Singularity ring, aura and orbiting dots now shrink with shorter numbers and stay above the rarity line (reported by A Dude)'], fr: ['🗑️ Le classement Poubelle a maintenant Aujourd\'hui, Cette semaine, Ce mois-ci et Tout le temps (idée d\'Angelicide9)', '👑 Nouveau titre Trash King : le pire tirage du mois le gagne à la fin du mois', '🗑️ Nouveaux titres Éboueur et ☣️ Désastre total pour avoir tiré un Garbage ou un Land waste (idée d\'Angelicide9)', '🔁 Nouveaux succès Déjà vu (5 doublons) et 📀 Disque rayé (25) (idée de Lolha39)', 'Historique : tri par plus petit ou plus grand nombre (idée de Lolha39)', 'Corrigé : l\'anneau, l\'aura et les points de Singularity rétrécissent avec les nombres plus courts et restent au-dessus de la ligne de rareté (signalé par A Dude)'] },
@@ -1758,8 +1759,12 @@
   const SoloAuto = { on: false, timer: 0 };
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
-  const autoStop = () => (AUTO_STOPS.includes(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
-  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</select></label></span>`;
+  // Ou un seuil d'XP (idée de WpBejs, 2026-10-18) : s'arrête sur le premier tirage qui rapporte au moins autant.
+  const AUTO_XP = [25000, 50000, 100000, 250000, 500000, 1000000, 10000000];
+  const STOP_OK = v => AUTO_STOPS.includes(v) || AUTO_XP.map(x => `xp:${x}`).includes(v);
+  const autoStop = () => (STOP_OK(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
+  const kfmt = x => (x >= 1e6 ? `${x / 1e6}M` : `${x / 1e3}K`);
+  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}</optgroup></select></label></span>`;
   function stopSoloAuto() {
     SoloAuto.on = false;
     clearTimeout(SoloAuto.timer);
@@ -1773,7 +1778,7 @@
     // repart tout seul au lieu d'attendre un premier clic (signalé par MereTera le 2026-10-17).
     if (SoloAuto.on && currentView === 'home' && !rollPending) scheduleSoloAuto(900);
     const stop = $('#solo-stop');
-    if (stop) stop.addEventListener('change', () => { if (AUTO_STOPS.includes(stop.value)) Store.setSetting('autoStop', stop.value); });
+    if (stop) stop.addEventListener('change', () => { if (STOP_OK(stop.value)) Store.setSetting('autoStop', stop.value); });
     box.addEventListener('change', () => {
       SoloAuto.on = box.checked;
       clearTimeout(SoloAuto.timer);
@@ -2036,7 +2041,8 @@
       vignette.classList.remove('on');
       finished = true;
       if (SoloAuto.on && !ctx.replay) {
-        if (TIER_RANK[a.tier] >= TIER_RANK[autoStop()]) { stopSoloAuto(); toast(`✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`, 5000, 'achv'); }
+        const st = autoStop(), xp = st.startsWith('xp:') ? Number(st.slice(3)) : 0;
+        if (xp ? a.total >= xp : TIER_RANK[a.tier] >= TIER_RANK[st]) { stopSoloAuto(); toast(xp ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`, 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
         // ni son XP, surtout quand la page avait été ralentie et que la révélation se jouait d'un coup ; finnnnn, 2026-10-18).
         else scheduleSoloAuto(late ? 3000 : 1800);
@@ -6062,7 +6068,10 @@
     const SPANS = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time']];
     const bestBar = lbState.tab === 'best' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${period === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
     const spanBar = period === 'worst' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
-    $('#lb-list').innerHTML = bestBar + spanBar + evHead + (data.entries.length
+    // Ma place, en tête de liste (idée de WpBejs, 2026-10-18 : voir son meilleur sur la Poubelle sans chercher).
+    const me = data.entries.find(e => e.me) || data.mine;
+    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
+    $('#lb-list').innerHTML = bestBar + spanBar + evHead + meBar + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
     if (lbState.scroll) { lbState.scroll = false; const card = $('.lb-card'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }

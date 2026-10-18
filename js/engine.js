@@ -267,6 +267,7 @@
     NINE_TO_FIVE: '925', // badge perso (2026-10-15) : « 9 to 5 », la chanson de Dolly Parton
     THREE_SIX_NINE: '369', // idée de GamblrGod (2026-10-17) : « 369 », comme la chanson
     TWENTY_ONE: '21', // idée de kaz (2026-10-18)
+    FORTY_ONE: '41', SUPER_21: '2121', // idées de WpBejs (2026-10-18) : le mème 41, et 2121
     PLAYER_456: '456', // idée de R77 (2026-10-18) : le joueur le plus célèbre d'un jeu de survie en série
     HALVING: '8421', // idée de finnnnn (2026-10-18) : chaque chiffre est la moitié du précédent
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',

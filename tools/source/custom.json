@@ -265,5 +265,19 @@
     "desc": "Exactly \"168421\": 16, 8, 4, 2, 1, halving all the way down.",
     "emoji": "🪜",
     "score": 100000100
+  },
+  {
+    "id": "FORTY_ONE",
+    "label": "Forty-One",
+    "desc": "Contains \"41\", a meme like 21, 67 and 69.",
+    "emoji": "🗿",
+    "score": 2024
+  },
+  {
+    "id": "SUPER_21",
+    "label": "Super 21",
+    "desc": "Contains \"2121\": twenty-one, twice.",
+    "emoji": "🃏",
+    "score": 334448
   }
 ]

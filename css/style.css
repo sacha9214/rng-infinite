@@ -4118,3 +4118,6 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Weekend Rush (2026-10-18) */
 .rush-banner { margin: 6px 0 10px; padding: 8px 12px; border-radius: 10px; font-size: .9em;
   background: linear-gradient(90deg, rgba(249,115,22,.22), rgba(234,179,8,.14)); border: 1px solid rgba(249,115,22,.45); }
+
+/* Classement : ma place en tête de liste */
+.lb-me-bar { margin: 0 0 .6rem; padding: .45rem .7rem; border-radius: .6rem; font-size: .9em; border: 1px dashed var(--outline); }
