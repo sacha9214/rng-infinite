@@ -26,7 +26,12 @@
   // Un tirage (identifiants des badges obtenus) compte-t-il pour l'événement ?
   const counts = (ev, earnedIds) => (earnedIds || []).some(id => ev.badges.includes(id));
 
-  const api = { THEMES, REWARD, current, counts, key: ev => `ev:${ev.id}` };
+  // Weekend Rush (2026-10-18) : samedi et dimanche (jours UTC), les pièces des tirages et des quêtes sont doublées.
+  // Le casino, les duels, les niveaux et le reste ne changent pas.
+  const rush = (t = Date.now()) => [0, 6].includes(new Date(t).getUTCDay());
+  const rushMult = t => (rush(t) ? 2 : 1);
+  const rushEnd = (t = Date.now()) => { const d = new Date(t); d.setUTCHours(0, 0, 0, 0); return d.getTime() + (d.getUTCDay() === 6 ? 2 : 1) * 86400000; };
+  const api = { rush, rushMult, rushEnd, THEMES, REWARD, current, counts, key: ev => `ev:${ev.id}` };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGEvents = api;
 })(typeof window !== 'undefined' ? window : globalThis);

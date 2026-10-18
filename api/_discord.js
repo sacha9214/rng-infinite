@@ -140,4 +140,18 @@ function announceEventPodium(ev, rows, players) {
   });
 }
 
-module.exports = { announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+// Weekend Rush (js/events.js) : le samedi à son lancement.
+function announceRush(end) {
+  if (!cfg.events) return;
+  post(cfg.events, {
+    ...ping(roles.updates),
+    embeds: [{
+      title: '🔥 Weekend Rush is on!',
+      url: SITE,
+      description: `Until <t:${Math.floor(end / 1000)}:F>, **coins from rolls and daily quests are doubled**.\nRoll on ${SITE}`,
+      color: 0xf97316,
+    }],
+  });
+}
+
+module.exports = { announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };

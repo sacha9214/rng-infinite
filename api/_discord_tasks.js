@@ -88,11 +88,19 @@ async function trashKing(now = Date.now()) {
   return low[0];
 }
 
+// Weekend Rush : annonce le samedi, dans les 6 premières heures, une seule fois par week-end.
+async function weekendRush(now = Date.now()) {
+  if (!Discord.has('events') || new Date(now).getUTCDay() !== 6 || new Date(now).getUTCHours() >= 6) return false;
+  const [ok] = await redis([['SET', `discord:rush:${dayKey(now)}`, '1', 'NX', 'EX', 7 * 86400]]);
+  if (ok === 'OK') Discord.announceRush(Events.rushEnd(now));
+  return ok === 'OK';
+}
+
 function start() {
   postNewUpdates().catch(err => console.error('discord updates:', err.message));
-  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); trashKing().catch(err => console.error('trash king:', err.message)); };
+  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); trashKing().catch(err => console.error('trash king:', err.message)); weekendRush().catch(err => console.error('discord rush:', err.message)); };
   tick();
   setInterval(tick, 10 * 60000).unref();
 }
 
-module.exports = { start, readUpdates, postNewUpdates, dailyRecap, weeklyEvent, trashKing };
+module.exports = { weekendRush, start, readUpdates, postNewUpdates, dailyRecap, weeklyEvent, trashKing };
