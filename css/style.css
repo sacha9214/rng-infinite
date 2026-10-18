@@ -3717,7 +3717,7 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
    qui ne bougent que par transform / opacity (pas de nouveau dessin de l'écran à chaque image). Les aperçus de la
    boutique (.wall-preview) utilisent les mêmes classes. Coupé en mouvement réduit et en mode performance. */
 #wallpaper { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-.wall-preview { position: relative; height: 6.5rem; border-radius: .6rem; overflow: hidden; border: 1px solid var(--outline); margin-bottom: .5rem; }
+.wall-preview { position: relative; width: 100%; align-self: stretch; box-sizing: border-box; height: 6.5rem; border-radius: .6rem; overflow: hidden; border: 1px solid var(--outline); margin-bottom: .5rem; }
 .wall-preview.wp-none { background: var(--site-bg); }
 .wp::before, .wp::after { content: ''; position: absolute; pointer-events: none; }
 
