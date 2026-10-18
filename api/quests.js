@@ -2,7 +2,7 @@
 // POST /api/quests { playerId, secret, action: 'claim', quest }   → réclame la récompense d'une quête terminée
 // POST /api/quests { playerId, secret, action: 'daily' }          → réclame le bonus quotidien (série de jours)
 // Tout se lit sur les compteurs tenus par le serveur (q:<jour>:<id>) : rien ne se crédite depuis le site.
-const { redis, ownsPlayer, readStats, statsKey, questKey, dayKey, toObject, cors, send, flushDue } = require('./_lib');
+const { eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, toObject, cors, send, flushDue } = require('./_lib');
 const Quests = require('../js/quests.js');
 const Shop = require('../js/shop.js');
 const Events = require('../js/events.js');
@@ -92,7 +92,7 @@ module.exports = async (req, res) => {
       // Une seule fois : le marqueur du jour sert de verrou.
       const [first] = await redis([['HSETNX', questKey(day, playerId), `claimed:${quest.id}`, 1]]);
       if (Number(first) !== 1) return send(res, 422, { error: 'Reward already claimed' });
-      await redis([['HINCRBY', statsKey(playerId), 'bonus', quest.reward], ['HINCRBY', statsKey(playerId), 'questsDone', 1]]);
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', quest.reward], ['HINCRBY', statsKey(playerId), 'questsDone', 1], ...eco('in:quests', quest.reward)]);
       // Dernière quête du jour réclamée : la série de quêtes monte, et le bonus « tout fini » est versé (une seule fois).
       const [after] = await redis([['HGETALL', questKey(day, playerId)]]);
       const c = toObject(after);
@@ -116,7 +116,7 @@ module.exports = async (req, res) => {
       try {
         const st = await state(playerId), lv = st.level;
         if (!lv.pending) return send(res, 422, { error: 'No level reward to claim' });
-        const writes = [['HSET', statsKey(playerId), 'lvlPaid', lv.level, ...(lv.catchup ? ['lvlCatch', '1'] : [])], ['HINCRBY', statsKey(playerId), 'bonus', lv.coins]];
+        const writes = [['HSET', statsKey(playerId), 'lvlPaid', lv.level, ...(lv.catchup ? ['lvlCatch', '1'] : [])], ['HINCRBY', statsKey(playerId), 'bonus', lv.coins], ...eco('in:levels', lv.coins)];
         for (const k of lv.keys) writes.push(['HINCRBY', statsKey(playerId), `key:${k}`, 1]);
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), gained: lv.coins, keys: lv.keys, levels: lv.pending });
@@ -129,7 +129,7 @@ module.exports = async (req, res) => {
       if ((Number(score) || 0) < ev.goal) return send(res, 422, { error: `${ev.title}: ${Number(score) || 0} / ${ev.goal} so far` });
       const [fresh] = await redis([['SADD', `${key}:claimed`, playerId], ['EXPIRE', `${key}:claimed`, 60 * 86400]]);
       if (Number(fresh) !== 1) return send(res, 422, { error: 'Event reward already claimed' });
-      await redis([['HINCRBY', statsKey(playerId), 'bonus', ev.reward], ['HINCRBY', statsKey(playerId), 'events', 1]]);
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', ev.reward], ['HINCRBY', statsKey(playerId), 'events', 1], ...eco('in:events', ev.reward)]);
       return send(res, 200, { ...(await state(playerId)), gained: ev.reward });
     }
 
@@ -140,7 +140,7 @@ module.exports = async (req, res) => {
       const stats = await readStats(playerId);
       const streak = Quests.nextStreak(day, stats.streakDay, stats.streak);
       const reward = Quests.dailyReward(streak);
-      await redis([['HSET', statsKey(playerId), 'streak', streak, 'streakDay', day], ['HINCRBY', statsKey(playerId), 'bonus', reward]]);
+      await redis([['HSET', statsKey(playerId), 'streak', streak, 'streakDay', day], ['HINCRBY', statsKey(playerId), 'bonus', reward], ...eco('in:daily', reward)]);
       return send(res, 200, { ...(await state(playerId)), gained: reward });
     }
     return send(res, 400, { error: 'Unknown action' });

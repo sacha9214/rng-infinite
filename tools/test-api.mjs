@@ -1054,6 +1054,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await site(boss, 'stats');
   assert.equal(r.status, 200, JSON.stringify(r.body).slice(0, 200));
   { const ins = await site(boss, 'insights'); assert.ok(ins.body.players.walls.some(x => x.name === 'graveyard' && x.count >= 1), 'fonds d\'écran affichés comptés'); assert.ok('godlike' in ins.body.players.top, 'Godlike compté'); }
+  // Nouveaux blocs de la page Owner (2026-10-18).
+  { const x = (await site(boss, 'insights')).body.extra;
+    assert.equal(x.weekdays.length, 7); assert.equal(x.weekdays[0].name, 'Mon');
+    assert.equal(x.economy.length, 14); assert.ok(x.economy[0].in.rolls > 0, 'les tirages du jour créent des pièces : ' + JSON.stringify(x.economy[0]));
+    assert.ok(x.sales.some(i => i.kind === 'skins' && i.price > 0)); assert.equal(x.health.length, 7);
+    assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0); }
   assert.equal(r.body.days.length, 30);
   assert.equal(r.body.days[0].day, today());
   assert.ok(r.body.days[0].visits >= 4 && r.body.week.refs.some(x => x.name === 'reddit.com' && x.count === 2));

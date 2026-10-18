@@ -15,7 +15,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
@@ -258,7 +258,7 @@ async function duelOutcome(room, now = Date.now()) {
   const w = statsKey(winner.id), day = dayKey(now), wins = winsKey(day, winner.id);
   // Face-à-face : le gagnant bat chacun des autres (h2h:<id> → "w:<adversaire>" victoires, "l:<adversaire>" défaites).
   others.forEach(p => writes.push(['HINCRBY', `h2h:${winner.id}`, `w:${p.id}`, 1], ['HINCRBY', `h2h:${p.id}`, `l:${winner.id}`, 1]));
-  writes.push(['HINCRBY', w, 'duelWins', 1]);
+  writes.push(['HINCRBY', w, 'duelWins', 1], ...eco('in:duels', Shop.DUEL_WIN_COINS, now));
   const [flat] = await redis([['HGETALL', wins]]);
   const today = {};
   for (let i = 0; i < (flat || []).length; i += 2) today[flat[i]] = Number(flat[i + 1]) || 0;

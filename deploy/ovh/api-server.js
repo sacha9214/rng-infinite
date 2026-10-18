@@ -48,6 +48,28 @@ async function readBody(req) {
   try { return JSON.parse(raw); } catch (e) { throw Object.assign(new Error('Invalid JSON'), { status: 400 }); }
 }
 
+// Santé du serveur pour la page Owner (2026-10-18) : requêtes, lentes (> 2 s), erreurs 5xx et la plus lente, par jour et
+// par route, comptées en mémoire et écrites une fois par minute dans health:<jour> (rien de plus à chaque requête).
+const health = new Map(); // champ → nombre ; « max:<route> » → ms (le plus grand)
+const bump = (k, v = 1) => health.set(k, (health.get(k) || 0) + v);
+let flushing = false;
+async function flushHealth() {
+  if (!health.size || flushing) return;
+  flushing = true;
+  const day = new Date().toISOString().slice(0, 10), key = `health:${day}`, items = [...health];
+  health.clear();
+  try {
+    const { redis } = require(path.join(ROOT, 'api/_lib.js'));
+    const [cur] = await redis([['HGETALL', key]]);
+    const old = {}; for (let i = 0; i < (cur || []).length; i += 2) old[cur[i]] = Number(cur[i + 1]) || 0;
+    const writes = [];
+    for (const [k, v] of items) writes.push(k.startsWith('max:') ? ['HSET', key, k, Math.max(v, old[k] || 0)] : ['HINCRBY', key, k, v]);
+    writes.push(['HSET', key, 'version', version || 'dev'], ['HSET', key, 'started', String(Date.now() - Math.round(process.uptime() * 1000))], ['EXPIRE', key, 40 * 86400]);
+    await redis(writes);
+  } catch (e) { for (const [k, v] of items) if (!k.startsWith('max:')) bump(k, v); } finally { flushing = false; }
+}
+setInterval(flushHealth, 60000).unref();
+
 const server = http.createServer(async (req, res) => {
   const started = Date.now();
   const pathname = String(req.url || '/').split('?')[0];
@@ -61,8 +83,14 @@ const server = http.createServer(async (req, res) => {
     if (!err.status) console.error(`${req.method} ${pathname}: ${err.stack || err}`);
     reply(res, err.status || 500, { error: err.status ? err.message : 'Server error' });
   } finally {
-    const ms = Date.now() - started;
+    const ms = Date.now() - started, route = pathname.startsWith('/api/') ? pathname.slice(5) : 'other';
     if (ms > 2000) console.warn(`slow: ${req.method} ${pathname} ${ms} ms`);
+    if (pathname !== '/health' && pathname !== '/api/health') {
+      bump('req'); bump(`req:${route}`);
+      if (ms > 2000) { bump('slow'); bump(`slow:${route}`); }
+      if (res.statusCode >= 500) bump('err');
+      if (ms > (health.get(`max:${route}`) || 0)) health.set(`max:${route}`, ms);
+    }
   }
 });
 server.requestTimeout = 15000;

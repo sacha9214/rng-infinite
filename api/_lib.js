@@ -377,7 +377,7 @@ async function grantGoogleBonus(playerId) {
   const [first] = await redis([['HSETNX', statsKey(playerId), 'googleBonus', 1]]);
   if (Number(first) !== 1) return 0;
   const amount = require('../js/shop.js').GOOGLE_BONUS;
-  await redis([['HINCRBY', statsKey(playerId), 'bonus', amount]]);
+  await redis([['HINCRBY', statsKey(playerId), 'bonus', amount], ...eco('in:other', amount)]);
   return amount;
 }
 
@@ -421,6 +421,10 @@ async function settleWager(code, winnerId) {
 // Historique, compteurs, meilleurs tirages (jour, semaine, all-time) et stats des succès d'un joueur.
 // Appelé par /api/roll et par les duels. Lit puis écrit le meilleur score : le délai de 8 s entre deux tirages
 // (et entre deux manches) évite que deux tirages du même joueur se croisent.
+// Économie (page Owner, 2026-10-18) : pièces créées et dépensées par jour, par source. eco:<jour> → in:<source> et
+// out:<usage>. Les cadeaux et les mises de duel ne sont pas comptés : ils passent d'un joueur à l'autre.
+const ecoKey = t => `eco:${dayKey(t)}`;
+const eco = (field, amount, t = Date.now()) => (amount ? [['HINCRBY', ecoKey(t), field, Math.round(amount)], ['EXPIRE', ecoKey(t), 100 * 86400]] : []);
 const WORST_LB = 'lb:worst', WORST_BEST = 'worst:all';
 // Poubelle par période (idée d'Angelicide9, 2026-10-18) : pire tirage du jour, de la semaine et du mois, à côté des meilleurs.
 const worstKeys = p => ({ lb: p.lb.replace(/^lb:/, 'lbw:'), best: p.best.replace(/^best:/, 'worstp:') });
@@ -455,6 +459,7 @@ async function recordRoll(playerId, n, t) {
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
+  writes.push(...eco('in:rolls', (require('../js/shop.js').COINS[a.tier] || 0), t));
   // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
   { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
@@ -531,7 +536,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { worstKeys, breathe, WORST_LB, WORST_BEST,
+module.exports = { eco, worstKeys, breathe, WORST_LB, WORST_BEST,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

@@ -3,7 +3,7 @@
 // Le prix vient de Coinbase (Kraken en secours), gardé 20 s dans Redis pour tout le monde. Un écart de 1 % à l'achat
 // comme à la vente (comme chez un vrai courtier) : acheter puis revendre aussitôt coûte 2 %, et un prix vieux de
 // quelques secondes ne permet pas de gagner à coup sûr. Avoirs : stats.btcSats (en satoshis, 1e-8 BTC).
-const { redis, statsKey, readStats } = require('./_lib');
+const { eco, redis, statsKey, readStats } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 // Deux actifs (Ethereum ajouté le 2026-10-14). Avoirs en unités de 1e-8 (satoshis pour le Bitcoin) dans stats :
@@ -90,7 +90,7 @@ async function trade(id, body) {
     if (spend > coins) throw refuse(422, `Not enough coins: ${spend - coins} more needed`);
     const got = Math.floor((spend / (p.p * (1 + SPREAD))) * SATS);
     if (got < 1) throw refuse(422, 'Too small to buy');
-    await redis([['HINCRBY', statsKey(id), 'spent', spend], ['HINCRBY', statsKey(id), a.sats, got], ['HINCRBY', statsKey(id), a.cost, spend], ['HINCRBY', statsKey(id), 'btcTrades', 1]]);
+    await redis([['HINCRBY', statsKey(id), 'spent', spend], ['HINCRBY', statsKey(id), a.sats, got], ['HINCRBY', statsKey(id), a.cost, spend], ['HINCRBY', statsKey(id), 'btcTrades', 1], ...eco('out:crypto', spend)]);
     return { ...(await view(id, a)), done: { move, coins: spend, sats: got, price: p.p } };
   }
   if (move === 'sell') {
@@ -101,7 +101,7 @@ async function trade(id, body) {
     if (back < 1) throw refuse(422, 'Too small to sell');
     // Le prix payé suit la part vendue, pour que « gagné / perdu » reste juste après une vente partielle.
     const costPart = sats ? Math.round((Number(st[a.cost]) || 0) * (sell / sats)) : 0;
-    await redis([['HINCRBY', statsKey(id), 'bonus', back], ['HINCRBY', statsKey(id), a.sats, -sell], ['HINCRBY', statsKey(id), a.cost, -costPart], ['HINCRBY', statsKey(id), 'btcTrades', 1]]);
+    await redis([['HINCRBY', statsKey(id), 'bonus', back], ['HINCRBY', statsKey(id), a.sats, -sell], ['HINCRBY', statsKey(id), a.cost, -costPart], ['HINCRBY', statsKey(id), 'btcTrades', 1], ...eco('in:crypto', back)]);
     return { ...(await view(id, a)), done: { move, coins: back, sats: sell, price: p.p } };
   }
   throw refuse(400, 'Unknown move');

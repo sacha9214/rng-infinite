@@ -254,6 +254,53 @@ async function featureStats(feat, now) {
   };
 }
 
+// Nouveaux blocs de la page Owner (2026-10-18) : jours de la semaine, économie, ventes de la boutique, santé du serveur,
+// nouvelles fonctions. Lu seulement quand la page s'ouvre.
+const Events = require('../js/events.js');
+async function extraInsights(ids, now) {
+  const W = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  // Jours de la semaine : 8 dernières semaines complètes (aujourd'hui exclu), moyenne des jours où le jeu tournait.
+  const wdays = Array.from({ length: 56 }, (_, i) => dayKey(now - (i + 1) * DAY_MS));
+  const wr = await redis(wdays.flatMap(d => [['HLEN', `act:${d}`], ['GET', `rolls:day:${d}`]]));
+  const byW = W.map(name => ({ name, players: 0, rolls: 0, days: 0 }));
+  wdays.forEach((d, i) => { const n = Number(wr[2 * i]) || 0; if (!n) return; const b = byW[new Date(`${d}T12:00:00Z`).getUTCDay()]; b.players += n; b.rolls += Number(wr[2 * i + 1]) || 0; b.days++; });
+  const weekdays = [1, 2, 3, 4, 5, 6, 0].map(i => byW[i]).map(b => ({ name: b.name, players: b.days ? Math.round(b.players / b.days) : 0, rolls: b.days ? Math.round(b.rolls / b.days) : 0, days: b.days }));
+  // Économie : 14 derniers jours (aujourd'hui compris), pièces créées / dépensées par source, avec le casino.
+  const edays = Array.from({ length: 14 }, (_, i) => dayKey(now - i * DAY_MS));
+  const er = await redis(edays.flatMap(d => [['HGETALL', `eco:${d}`], ['HGETALL', `casino:d:${d}`]]));
+  const economy = edays.map((day, i) => {
+    const e = toObject(er[2 * i]), c = toObject(er[2 * i + 1]), inn = {}, out = {};
+    for (const [k, v] of Object.entries(e)) { if (k.startsWith('in:')) inn[k.slice(3)] = Number(v) || 0; else if (k.startsWith('out:')) out[k.slice(4)] = Number(v) || 0; }
+    let bet = 0, won = 0; for (const [k, v] of Object.entries(c)) { if (k.startsWith('b:')) bet += Number(v) || 0; if (k.startsWith('w:')) won += Number(v) || 0; }
+    if (bet || won) { inn.casino = won; out.casino = bet; }
+    return { day, in: inn, out };
+  });
+  // Ventes : nombre de joueurs qui possèdent chaque objet (achat ou caisse), et les pièces que ça représente au prix.
+  const kinds = [['skins', 'skins', Shop.SKINS], ['walls', 'walls', Shop.WALLPAPERS], ['btns', 'buttons', Shop.BUTTONS], ['emotes', 'emotes', Shop.EMOTES]];
+  const owned = {};
+  for (let i = 0; i < ids.length; i += 150) {
+    const part = ids.slice(i, i + 150), res = await redis(part.flatMap(id => kinds.map(([k]) => ['SMEMBERS', `${k}:${id}`])));
+    res.forEach((list, j) => { const kind = kinds[j % kinds.length][1]; for (const item of list || []) { const key = `${kind}:${item}`; owned[key] = (owned[key] || 0) + 1; } });
+  }
+  const sales = kinds.flatMap(([, kind, cat]) => (cat || []).filter(x => x.price).map(x => ({ kind, id: x.id, name: x.name, emoji: x.emoji || '', price: x.price, owners: owned[`${kind}:${x.id}`] || 0, limited: !!x.until, caseOnly: !!x.caseOnly })));
+  // Santé du serveur : 7 derniers jours (compté par deploy/ovh/api-server.js).
+  const hdays = Array.from({ length: 7 }, (_, i) => dayKey(now - i * DAY_MS));
+  const hr = await redis(hdays.map(d => ['HGETALL', `health:${d}`]));
+  const health = hdays.map((day, i) => { const h = toObject(hr[i]), routes = {};
+    for (const [k, v] of Object.entries(h)) { const m = k.match(/^(req|slow|max):(.+)$/); if (m) { routes[m[2]] = routes[m[2]] || { req: 0, slow: 0, max: 0 }; routes[m[2]][m[1]] = Number(v) || 0; } }
+    return { day, req: Number(h.req) || 0, slow: Number(h.slow) || 0, err: Number(h.err) || 0, version: h.version || null, started: Number(h.started) || null, routes }; });
+  // Nouvelles fonctions : comptes Discord liés, événement de la semaine, doublons.
+  const ev = Events.current(now), evKey = Events.key(ev);
+  const [links, evPlayers, evDone, evClaimed] = await redis([['HLEN', 'discord:links'], ['ZCARD', evKey], ['ZCOUNT', evKey, ev.goal, '+inf'], ['SCARD', `${evKey}:claimed`]]);
+  let dejavu = 0, bug = 0, contrib = 0;
+  for (let i = 0; i < ids.length; i += 200) {
+    const part = ids.slice(i, i + 200), st = await redis(part.map(id => ['HMGET', `stats:${id}`, 'dups', 'bugsFixed', 'ideasAdded']));
+    st.forEach(x => { if (Number(x[0]) >= 5) dejavu++; if (Number(x[1]) >= 1) bug++; if (Number(x[2]) >= 1) contrib++; });
+  }
+  const newFeatures = { discordLinks: Number(links) || 0, event: { title: ev.title, emoji: ev.emoji, goal: ev.goal, players: Number(evPlayers) || 0, done: Number(evDone) || 0, claimed: Number(evClaimed) || 0 }, dejavu, bugHunters: bug, contributors: contrib };
+  return { weekdays, economy, sales, health, newFeatures };
+}
+
 async function insights() {
   const now = Date.now();
   const days = Array.from({ length: 30 }, (_, i) => dayKey(now - i * DAY_MS));
@@ -337,6 +384,7 @@ async function insights() {
     },
     economy: { coins, earned, spent },
     features: await featureStats(feat, now),
+    extra: await extraInsights(ids, now),
     retention: retention(now, ids, names, stats, linked, act),
   };
 }

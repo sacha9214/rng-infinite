@@ -5,7 +5,7 @@
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
-const { redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
+const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
 const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
@@ -112,7 +112,7 @@ module.exports = async (req, res) => {
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         const duplicate = st.owned.includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
-        const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1]];
+        const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
         if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
@@ -151,7 +151,7 @@ module.exports = async (req, res) => {
         const st = await state(playerId);
         if (!st.walls.includes(item.id)) {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
-          await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id]]);
+          await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], ...eco('out:wallpapers', item.price)]);
         }
         await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché
         return send(res, 200, await state(playerId));
@@ -169,7 +169,7 @@ module.exports = async (req, res) => {
         if (!st.buttons.includes(item.id)) {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([
-            ['HINCRBY', statsKey(playerId), 'spent', item.price],
+            ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:buttons', item.price),
             ['SADD', ownedButtonsKey(playerId), item.id],
           ]);
         }
@@ -211,7 +211,7 @@ module.exports = async (req, res) => {
         const price = Shop.SPEED.prices[st.speed];
         if (price === undefined) return send(res, 422, { error: 'Roll speed is already at its maximum' });
         if (st.coins < price) return send(res, 422, { error: `Not enough coins: ${price - st.coins} more needed` });
-        await redis([['HINCRBY', statsKey(playerId), 'spent', price], ['HSET', statsKey(playerId), 'speedLv', st.speed + 1]]);
+        await redis([['HINCRBY', statsKey(playerId), 'spent', price], ['HSET', statsKey(playerId), 'speedLv', st.speed + 1], ...eco('out:upgrades', price)]);
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -227,7 +227,7 @@ module.exports = async (req, res) => {
         if (!st.emotes.includes(item.id)) {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([
-            ['HINCRBY', statsKey(playerId), 'spent', item.price],
+            ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:emotes', item.price),
             ['SADD', ownedEmotesKey(playerId), item.id],
           ]);
         }
@@ -247,7 +247,7 @@ module.exports = async (req, res) => {
       // SADD répond 1 la première fois seulement : deux envois simultanés ne créditent qu'une fois.
       const [fresh] = await redis([['SADD', usedCodesKey(playerId), code]]);
       if (Number(fresh) !== 1) return send(res, 409, { error: 'You already used this code' });
-      await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ['HINCRBY', 'codes:count', code, 1], ...(prize.title ? [['HSET', statsKey(playerId), prize.title, 1]] : [])]);
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', prize.coins], ...eco('in:codes', prize.coins), ['HINCRBY', 'codes:count', code, 1], ...(prize.title ? [['HSET', statsKey(playerId), prize.title, 1]] : [])]);
       let title = prize.title || null;
       if (prize.hunt) {
         const found = await redis(HUNT.map(c => ['SISMEMBER', usedCodesKey(playerId), c]));
@@ -277,7 +277,7 @@ module.exports = async (req, res) => {
           if (skin.caseOnly) return send(res, 422, { error: `This skin only comes from the ${Shop.caseById.get(skin.caseOnly).name}` });
           if (st.coins < skin.price) return send(res, 422, { error: `Not enough coins: ${skin.price - st.coins} more needed` });
           await redis([
-            ['HINCRBY', statsKey(playerId), 'spent', skin.price],
+            ['HINCRBY', statsKey(playerId), 'spent', skin.price], ...eco('out:skins', skin.price),
             ['SADD', ownedKey(playerId), skin.id],
           ]);
         }

@@ -4069,3 +4069,39 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .lb-span { font: 700 .74rem var(--font-sans); padding: .3rem .75rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--prose-2); cursor: pointer; }
 .lb-span.on { color: var(--prose); border-color: var(--prose-2); background: var(--site-bg); }
 .lb-span-note { text-align: center; margin: 0 0 .4rem; }
+
+/* ------------------------------------------------------------------ Page Owner refaite (2026-10-18) : sections titrées
+   avec une phrase d'explication, cartes de chiffres clés (accent vert = bon, orange = à surveiller), graphique des jours. */
+.o-page .page-title { display: flex; align-items: baseline; gap: .6rem; }
+.o-page .o-section { display: flex; align-items: center; gap: .6rem; margin: 2rem 0 .3rem; font-size: .95rem; letter-spacing: .06em; color: var(--prose); }
+.o-page .o-section::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--outline), transparent); }
+.o-page .o-pane > .o-section:first-child { margin-top: .4rem; }
+.o-section-desc { margin: 0 0 .8rem; max-width: 62rem; font-size: .82rem; line-height: 1.5; color: var(--prose-3); }
+.o-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr)); gap: .7rem; }
+.o-kpi { position: relative; display: flex; flex-direction: column; gap: .25rem; padding: .9rem 1rem .85rem; border: 1px solid var(--outline); border-radius: .9rem; background: var(--surface); overflow: hidden; box-shadow: 0 6px 16px rgba(0, 0, 0, .08); }
+.o-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #6366f1, #a855f7); }
+.o-kpi.good::before { background: linear-gradient(180deg, #10b981, #34d399); }
+.o-kpi.warn::before { background: linear-gradient(180deg, #f59e0b, #f97316); }
+.o-kpi-l { font: 700 .68rem var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--prose-3); }
+.o-kpi-v { font: 800 1.55rem/1.15 var(--font-mono, monospace); color: var(--prose); overflow-wrap: anywhere; }
+.o-kpi-s { font-size: .75rem; color: var(--prose-2); line-height: 1.35; }
+.o-page .tiles .tile { border-radius: .9rem; box-shadow: 0 6px 16px rgba(0, 0, 0, .08); }
+.o-page .panel { border-radius: .9rem; }
+.o-page .panel-title { letter-spacing: .04em; }
+/* jours de la semaine : deux barres par jour (joueurs, tirages), le week-end en orange */
+.o-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .6rem; align-items: end; height: 11rem; padding-top: .4rem; }
+.o-wd { display: flex; flex-direction: column; align-items: center; gap: .3rem; height: 100%; }
+.o-wd-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+.o-wd-bars i { width: 38%; min-height: 2px; border-radius: 4px 4px 0 0; }
+.o-wd-bars i.p, .o-legend i.p { background: #818cf8; }
+.o-wd-bars i.r, .o-legend i.r { background: color-mix(in srgb, #818cf8 45%, transparent); }
+.o-wd.weekend .o-wd-bars i.p { background: #f97316; }
+.o-wd.weekend .o-wd-bars i.r { background: color-mix(in srgb, #f97316 45%, transparent); }
+.o-wd em { font: 700 .72rem var(--font-sans); font-style: normal; color: var(--prose-2); }
+.o-wd b { font-size: .78rem; }
+@media (max-width: 600px) { .o-kpi-v { font-size: 1.25rem; } .o-week { gap: .3rem; height: 9rem; } }
+.o-page .tile .v { white-space: normal; overflow-wrap: anywhere; } /* « 0 · 0 · 0 · 0 » des meilleurs tirages passe à la ligne sur téléphone */
+/* Cartes de l'ancienne page (Vue d'ensemble, Joueurs, Casino…) au même style que les nouvelles : liseré à gauche. */
+.o-page .tiles .tile { position: relative; overflow: hidden; }
+.o-page .tiles .tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #6366f1, #a855f7); }
+@media (max-width: 600px) { .o-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; } .o-kpi { padding: .7rem .75rem; } }

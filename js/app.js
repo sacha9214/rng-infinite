@@ -1598,6 +1598,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-18f', date: 'Oct 18, 2026', en: ['Owner page redesigned: Overview, Players, Traffic, Economy, Server, Inbox and Fund, with activity by day of the week, coins in and out, shop sales and server health'], fr: ['Page Owner refaite : Vue d\'ensemble, Joueurs, Fréquentation, Économie, Serveur, Boîte à idées et Cagnotte, avec l\'activité par jour de la semaine, les pièces créées et dépensées, les ventes de la boutique et la santé du serveur'] },
     { id: '2026-10-18e', date: 'Oct 18, 2026', en: ['🏆 Leaderboard: Today, This week, This month and All-time are now inside one Best roll tab, like the Trash one, so all tabs fit on one row'], fr: ['🏆 Classement : Aujourd\'hui, Cette semaine, Ce mois-ci et Tout le temps sont maintenant dans un seul onglet Meilleur tirage, comme la Poubelle, et tous les onglets tiennent sur une ligne'] },
     { id: '2026-10-18d', date: 'Oct 18, 2026', en: ['🗑️ The Trash leaderboard now has Today, This week, This month and All-time (idea by Angelicide9)', '👑 New title Trash King: the worst roll of the month wins it when the month ends', '🗑️ New titles Garbage Collector and ☣️ Land Waster for rolling a Garbage or a Land waste (idea by Angelicide9)', '🔁 New achievements Déjà Vu (5 duplicates) and 📀 Broken Record (25) (idea by Lolha39)', 'History: sort by smallest or biggest number (idea by Lolha39)', 'Fixed: the Singularity ring, aura and orbiting dots now shrink with shorter numbers and stay above the rarity line (reported by A Dude)'], fr: ['🗑️ Le classement Poubelle a maintenant Aujourd\'hui, Cette semaine, Ce mois-ci et Tout le temps (idée d\'Angelicide9)', '👑 Nouveau titre Trash King : le pire tirage du mois le gagne à la fin du mois', '🗑️ Nouveaux titres Éboueur et ☣️ Désastre total pour avoir tiré un Garbage ou un Land waste (idée d\'Angelicide9)', '🔁 Nouveaux succès Déjà vu (5 doublons) et 📀 Disque rayé (25) (idée de Lolha39)', 'Historique : tri par plus petit ou plus grand nombre (idée de Lolha39)', 'Corrigé : l\'anneau, l\'aura et les points de Singularity rétrécissent avec les nombres plus courts et restent au-dessus de la ligne de rareté (signalé par A Dude)'] },
     { id: '2026-10-18c', date: 'Oct 18, 2026', en: ['☄️ New skin Meteor: meteors crash onto every digit over a city at night, the last one hits hardest (idea by costoroll)', '🔁 "Duplicate!" shows under the XP when you roll a number you already had (idea by MereTera)', '🃏 New badges: Twenty-One and Exact 21 (idea by kaz), Player 456 and Exact 456 (idea by R77), Halving 8421 and Exact Halving 168421 (idea by finnnnn)', '🐛 New titles Bug Hunter and 💡 Contributor: send a bug that gets fixed or an idea that gets added', 'Fixed: the Singularity ring stays centered on shorter numbers and no longer hits the rarity line; skin animations keep looping slowly instead of stopping; no big effect on Garbage rolls (reported by A Dude)', 'Fixed: Vaporwave digits are no longer cut or overlapping (reported by A Dude)', 'Fixed: the profile of a friend shows "Friends" instead of "Add friend" (reported by kaz)', 'Auto-roll now leaves each result on screen longer so you can see its badges and XP (reported by finnnnn)'], fr: ['☄️ Nouveau skin Meteor : des météorites s\'écrasent sur chaque chiffre au-dessus d\'une ville la nuit, la dernière frappe le plus fort (idée de costoroll)', '🔁 « Doublon ! » s\'affiche sous l\'XP quand tu tires un nombre que tu as déjà eu (idée de MereTera)', '🃏 Nouveaux badges : Twenty-One et Exact 21 (idée de kaz), Player 456 et Exact 456 (idée de R77), Halving 8421 et Exact Halving 168421 (idée de finnnnn)', '🐛 Nouveaux titres Bug Hunter et 💡 Contributor : envoie un bug qui est corrigé ou une idée qui est ajoutée', 'Corrigé : l\'anneau de Singularity reste centré sur les nombres plus courts et ne touche plus la ligne de rareté ; les animations des skins continuent doucement au lieu de s\'arrêter ; plus de grand effet sur les tirages Garbage (signalé par A Dude)', 'Corrigé : les chiffres de Vaporwave ne sont plus coupés ni collés (signalé par A Dude)', 'Corrigé : le profil d\'un ami affiche « Amis » au lieu de « Ajouter en ami » (signalé par kaz)', 'Le tirage auto laisse chaque résultat plus longtemps à l\'écran pour voir ses badges et son XP (signalé par finnnnn)'] },
@@ -4533,7 +4534,8 @@
 
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['retention', '🔁', 'Retention'], ['traffic', '🌍', 'Traffic'], ['casino', '🎰', 'Casino'], ['crypto', '📈', 'Crypto & social'], ['players', '👥', 'Players'], ['fund', '💶', 'Fund'], ['inbox', '💡', 'Inbox']];
+  // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['fund', '💶', 'Fund']];
   function renderOwner() {
     currentView = 'owner';
     const wanted = (location.hash.split('/')[2] || '').split('?')[0];
@@ -4588,6 +4590,7 @@
       const items = [];
       if (todo.ideas) items.push(`<button class="o-chip warn" data-go-tab="inbox">💡 ${todo.ideas} suggestion${todo.ideas === 1 ? '' : 's'} to read</button>`);
       if (todo.decide) items.push(`<button class="o-chip" data-go-tab="inbox" data-go-itab="seen">🤔 ${todo.decide} suggestion${todo.decide === 1 ? '' : 's'} to decide</button>`);
+      if (todo.server) items.push(`<button class="o-chip warn" data-go-tab="server">🖥️ ${todo.server}</button>`);
       if (todo.tips) items.push(`<button class="o-chip warn" data-go-tab="fund">💶 ${todo.tips} tip${todo.tips === 1 ? '' : 's'} waiting for a player</button>`);
       box.innerHTML = items.length ? items.join('') : todo.ideas === null && todo.tips === null ? '' : '<span class="o-chip">✅ Nothing waiting for you</span>';
     };
@@ -4615,7 +4618,7 @@
       if (drops && R.funnel[0].count >= 5) reading.push(`Biggest drop for newcomers: from “${drops.from.name}” to “${drops.to.name}” (<b>${pct(drops.lost, drops.from.count)}</b> lost).`);
       const topRef = st.month.refs.filter(x => x.name !== 'direct')[0];
       if (topRef) reading.push(`Best outside source of visits: <b data-no-i18n>${esc(topRef.name)}</b> (${fmt(topRef.count)} in 30 days).`);
-      if (R.quiet.length) reading.push(`<b>${R.quiet.length}</b> regular player${R.quiet.length === 1 ? ' has' : 's have'} gone quiet. <button class="o-link" data-go-tab="retention">See who</button>`);
+      if (R.quiet.length) reading.push(`<b>${R.quiet.length}</b> regular player${R.quiet.length === 1 ? ' has' : 's have'} gone quiet. <button class="o-link" data-go-tab="players">See who</button>`);
 
       pane('overview').innerHTML = `
         <div class="o-todo" id="o-todo"></div>
@@ -4643,7 +4646,7 @@
       const cohortRows = R.cohorts.filter(c => c.size > 0);
       const heat = c => c.cells.map(x => (x.back === null ? '<span class="o-cell none">·</span>' : `<span class="o-cell" style="background:rgba(52,211,153,${(.06 + .7 * (x.back / c.size)).toFixed(2)})" data-tip="${esc(`<b>${c.day} · day ${x.n}</b><br>${x.back} of ${c.size} played`)}">${Math.round((100 * x.back) / c.size)}%</span>`)).join('');
       const funnelTop = Math.max(1, R.funnel[0].count);
-      pane('retention').innerHTML = `
+      const retentionHTML = `
         <p class="panel-note profile-sub">Retention = how many new players come back. “Day 1” means they rolled again the day after their first roll, “day 7” exactly one week after. Days are UTC, over the last 90 days; today is never counted as a missed day. Rough guide for a casual web game: day 1 above 30% is good, day 7 above 10% is good.</p>
         <div class="tiles">
           ${rateTile('Day 1', step(1), 'next day')}
@@ -4736,7 +4739,7 @@
       const best = c.allTime.slice().sort((a, b) => b.count - a.count)[0];
       const tracked = c.tracked.filter(g => g.rounds).sort((a, b) => b.rounds - a.rounds);
       const netCell = x => `<span class="${x.net >= 0 ? 'o-up' : 'o-down'}">${x.net >= 0 ? '+' : '−'}${compact(Math.abs(x.net))}</span>`;
-      pane('casino').innerHTML = `
+      const casinoHTML = `
         <div class="tiles">
           ${tile('Rounds played', fmt(allRounds), `most played: ${best && best.count ? GAME_NAMES[best.name] : '–'}`)}
           ${tile('Coins wagered', compact(c.total.bet), `${compact(c.total.won)} paid back`)}
@@ -4760,9 +4763,10 @@
       const pl = d.players;
       // ---------------- Crypto, levier, cadeaux, codes, messages (nouveautés d'octobre)
       const F = d.features || {};
-      if (pane('crypto')) {
+      let cryptoHTML = '';
+      {
         const levNet = (F.levIn || 0) - (F.levOut || 0), cryptoNet = (F.value || 0) - (F.invested || 0), maxDm = Math.max(1, ...(F.dms || []).map(x => x.count));
-        pane('crypto').innerHTML = `
+        cryptoHTML = `
           <p class="panel-note profile-sub">Game coins only. “Invested” is what players paid for the crypto they still hold; “worth now” is that crypto at today's price (${F.btcPrice ? `BTC ${fmt(Math.round(F.btcPrice))} $` : 'BTC –'} · ${F.ethPrice ? `ETH ${fmt(Math.round(F.ethPrice))} $` : 'ETH –'}).</p>
           <h2 class="o-section">Crypto</h2>
           <div class="tiles">
@@ -4783,7 +4787,7 @@
           </div>
           ${panel('Friend messages · 7 days', 'messages sent per day (their content is private)', `<div class="o-hours o-dms">${(F.dms || []).slice().reverse().map(x => `<span class="o-hour" data-tip="${esc(`<b>${x.day}</b><br>${fmt(x.count)} messages`)}"><i style="height:${Math.max(2, (x.count / maxDm) * 100)}%"></i><em>${x.day.slice(8)}</em></span>`).join('')}</div>`).replace('class="panel"', 'class="panel stats-sep"')}`;
       }
-      pane('players').innerHTML = `
+      const playersHTML = `
         <div class="tiles">
           ${tile('Players', fmt(pl.rolled), `${fmt(R.active.week)} active in 7 days · ${fmt(R.active.month)} in 30`)}
           ${tile('Rolls, all time', compact(pl.totalRolls), `${fmt(Math.round(pl.totalRolls / Math.max(1, pl.rolled)))} per player on average`)}
@@ -4801,7 +4805,65 @@
           ${bars('Equipped Generate buttons', pl.buttons, n => (Shop.buttonById.has(n) ? `${Shop.buttonById.get(n).emoji} ${Shop.buttonById.get(n).name}` : Shop.byId.has(n) ? `${Shop.byId.get(n).emoji} ${Shop.byId.get(n).name}` : n === 'match' ? 'Match my skin' : n))}
           ${bars('Wallpapers in use', pl.walls || [], n => (Shop.wallById.has(n) ? `${Shop.wallById.get(n).emoji} ${Shop.wallById.get(n).name}` : n))}
         </div>`;
-    }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'retention', 'traffic', 'casino', 'crypto', 'players']) if (pane(id)) pane(id).innerHTML = denied(err); });
+
+      // ---------------- Nouveaux blocs (2026-10-18) et répartition dans les onglets
+      const X = d.extra || {};
+      const section = (title, desc) => `<h2 class="o-section">${title}</h2>${desc ? `<p class="o-section-desc">${desc}</p>` : ''}`;
+      const kpi = (label, value, sub, tone = '') => `<div class="o-kpi ${tone}"><span class="o-kpi-l">${label}</span><b class="o-kpi-v">${value}</b><span class="o-kpi-s">${sub || ''}</span></div>`;
+      const kpis = list => `<div class="o-kpis">${list.join('')}</div>`;
+      // Jours de la semaine
+      const wk = X.weekdays || [], maxWP = Math.max(1, ...wk.map(x => x.players)), maxWR = Math.max(1, ...wk.map(x => x.rolls));
+      const weekdayHTML = wk.length ? panel('Activity by day of the week', 'average over the last 8 weeks · UTC days', `
+        <div class="o-week">${wk.map(x => `<div class="o-wd${['Sat', 'Sun'].includes(x.name) ? ' weekend' : ''}" data-tip="${esc(`<b>${x.name}</b><br>${fmt(x.players)} players · ${fmt(x.rolls)} rolls<br>average of ${x.days} day${x.days === 1 ? '' : 's'}`)}">
+          <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
+        <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
+      // Économie
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin' };
+      const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
+      const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
+      const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
+      const flowBars = (title, obj, labels) => bars(title, Object.entries(obj).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(([name, count]) => ({ name, count })), n => labels[n] || n, 'last 14 days', tot(obj));
+      const ecoHTML = `
+        ${section('Coins', 'Coins created (in) and spent (out) every day. Gifts and duel stakes move coins between players and are not counted. If more coins come in than go out for long, skins lose their value.')}
+        ${kpis([kpi('Created, 7 days', compact(in7), 'coins given to players'), kpi('Spent, 7 days', compact(out7), 'coins taken back by the game'), kpi('Net, 7 days', `${net7 >= 0 ? '+' : '−'}${compact(Math.abs(net7))}`, net7 > 0 ? 'more coins in the game' : 'fewer coins in the game', net7 > 0 ? 'warn' : 'good'), kpi('Spent / created', in7 ? `${Math.round((out7 / in7) * 100)}%` : '–', 'below 70% for long = inflation')])}
+        ${ecoDays < 3 ? '<p class="panel-note">Counted since 18 Oct 2026: the numbers fill in over the next days.</p>' : ''}
+        <div class="grid-2 stats-sep">${flowBars('Where coins come from', span(E, 'in'), LABEL_IN)}${flowBars('Where coins go', span(E, 'out'), LABEL_OUT)}</div>
+        ${panel('Day by day', 'coins in, out and the difference', table(['Day', 'In', 'Out', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${n > 0 ? 'o-down' : 'o-up'}">${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}</span>`]; }), 'c4')).replace('class="panel"', 'class="panel stats-sep"')}`;
+      // Ventes de la boutique
+      const S = (X.sales || []).filter(x => !x.caseOnly || x.owners), KIND = { skins: '🎨', walls: '🖼️', buttons: '🔘', emotes: '😎' };
+      const topSales = S.slice().sort((x, y) => y.owners * y.price - x.owners * x.price);
+      const never = S.filter(x => !x.owners && !x.limited);
+      const salesHTML = `
+        ${section('Shop', 'How many players own each item (bought or won in a case) and what that is worth at its price. Use it to set prices and decide what to make next.')}
+        ${kpis([kpi('Items owned', fmt(S.reduce((x, i) => x + i.owners, 0)), `${fmt(S.filter(x => x.owners).length)} different items`), kpi('Worth at shop price', compact(S.reduce((x, i) => x + i.owners * i.price, 0)), 'coins'), kpi('Best seller', topSales[0] && topSales[0].owners ? `${topSales[0].emoji} ${esc(topSales[0].name)}` : '–', topSales[0] ? `${fmt(topSales[0].owners)} owners` : ''), kpi('Never bought', fmt(never.length), 'items nobody owns yet', never.length ? 'warn' : '')])}
+        <div class="grid-2 stats-sep">
+          ${panel('Top items', 'by coins at shop price', table(['Item', 'Price', 'Owners', 'Worth'], topSales.filter(x => x.owners).slice(0, 12).map(x => [`${KIND[x.kind]} ${x.emoji} <span data-no-i18n>${esc(x.name)}</span>`, fmt(x.price), fmt(x.owners), compact(x.owners * x.price)]), 'c4'))}
+          ${panel('Nobody owns these yet', 'maybe too expensive or not visible enough', never.length ? `<div class="o-src-names">${never.slice().sort((x, y) => x.price - y.price).slice(0, 12).map(x => `<span class="badge-pill">${KIND[x.kind]} ${x.emoji} <span data-no-i18n>${esc(x.name)}</span> · ${fmt(x.price)}</span>`).join(' ')}${never.length > 12 ? ` <span class="panel-note">+${never.length - 12} more</span>` : ''}</div>` : '<div class="empty">Every item has at least one owner 🎉</div>')}
+        </div>`;
+      // Serveur
+      const H = X.health || [], h0 = H[0] || {}, routesToday = Object.entries(h0.routes || {}).sort((x, y) => y[1].max - x[1].max);
+      const slowPct = h0.req ? (100 * h0.slow) / h0.req : 0, up = h0.started ? Math.max(0, Date.now() - h0.started) : 0;
+      const upTxt = up ? (up > 86400000 ? `${Math.floor(up / 86400000)} d ${Math.floor(up / 3600000) % 24} h` : `${Math.floor(up / 3600000)} h ${Math.floor(up / 60000) % 60} min`) : '–';
+      const NF = X.newFeatures || {};
+      const serverHTML = `
+        ${section('Server health', 'Counted by the game server on the VPS: every request, the slow ones (more than 2 seconds) and the errors. Today is still filling up.')}
+        ${kpis([kpi('Requests today', fmt(h0.req || 0), `${fmt(H.slice(1).reduce((x, d) => x + d.req, 0))} the 6 days before`), kpi('Slow requests', `${slowPct.toFixed(slowPct < 1 ? 2 : 1)}%`, `${fmt(h0.slow || 0)} over 2 s today`, slowPct > 1 ? 'warn' : 'good'), kpi('Errors', fmt(h0.err || 0), 'server errors today', h0.err ? 'warn' : 'good'), kpi('Version online', `<span data-no-i18n>${esc(h0.version || '–')}</span>`, `running for ${upTxt}`)])}
+        ${!H.some(x => x.req) ? '<p class="panel-note">Counted since 18 Oct 2026: the numbers appear within a minute of the next requests.</p>' : ''}
+        <div class="grid-2 stats-sep">
+          ${panel('Last 7 days', 'requests, slow ones and errors', table(['Day', 'Requests', 'Slow', 'Errors'], H.filter(x => x.req).map(x => [x.day.slice(5), fmt(x.req), `${fmt(x.slow)} <em class="o-share">${pct(x.slow, x.req)}</em>`, fmt(x.err)]), 'c4'))}
+          ${panel('Slowest pages today', 'slowest single answer per API route', table(['Route', 'Requests', 'Slow', 'Slowest'], routesToday.slice(0, 10).map(([r, v]) => [`<span data-no-i18n>${esc(r)}</span>`, fmt(v.req), fmt(v.slow), `<span class="${v.max > 2000 ? 'o-down' : ''}">${v.max >= 1000 ? `${(v.max / 1000).toFixed(1)} s` : `${v.max} ms`}</span>`]), 'c4'))}
+        </div>
+        ${section('New features', 'Are players using what came out recently?')}
+        ${kpis([kpi('Discord accounts linked', fmt(NF.discordLinks || 0), `of ${fmt(pl.named)} named players`), kpi(`${NF.event ? NF.event.emoji : '🎯'} Event this week`, fmt(NF.event ? NF.event.players : 0), NF.event ? `${esc(NF.event.title)} · ${fmt(NF.event.done)} reached ${NF.event.goal} · ${fmt(NF.event.claimed)} claimed` : ''), kpi('🔁 Déjà Vu', fmt(NF.dejavu || 0), 'players with 5+ duplicates'), kpi('🐛 Bug Hunters · 💡 Contributors', `${fmt(NF.bugHunters || 0)} · ${fmt(NF.contributors || 0)}`, 'players credited for a fixed bug / an added idea')])}`;
+
+      pane('overview').insertAdjacentHTML('beforeend', `<div class="stats-sep">${weekdayHTML}</div>`);
+      pane('players').innerHTML = `${section('Retention', '')}${retentionHTML}${section('Players', '')}${playersHTML}`;
+      pane('economy').innerHTML = `${ecoHTML}${salesHTML}${section('Casino', '')}${casinoHTML}${cryptoHTML}`;
+      pane('server').innerHTML = serverHTML;
+      // Rappel sur la vue d'ensemble si le serveur souffre aujourd'hui (erreurs ou plus de 1 % de requêtes lentes).
+      todo.server = h0.err ? `${fmt(h0.err)} server error${h0.err === 1 ? '' : 's'} today` : slowPct > 1 ? `${slowPct.toFixed(1)}% slow requests today` : null;
+      drawTodo();
+    }).catch(err => { if (currentView === 'owner') for (const id of ['overview', 'players', 'traffic', 'economy', 'server']) if (pane(id)) pane(id).innerHTML = denied(err); });
     // ---- Cagnotte : inscrire une contribution reçue (le joueur reçoit le skin et le titre Supporter), régler
     // l'objectif du mois et le lien de la page de dons, relire les dernières contributions.
     const drawFund = f => {

@@ -6,7 +6,7 @@
 // serveur relit toutes les 15 s (deploy/ovh/api-server.js) et à chaque affichage, pour fermer ce qui doit l'être.
 // Fermer = HDEL (répond 1 une seule fois) : une position n'est jamais payée deux fois, même fermée de deux côtés.
 const crypto = require('node:crypto');
-const { redis, statsKey, readStats } = require('./_lib');
+const { eco, redis, statsKey, readStats } = require('./_lib');
 const Shop = require('../js/shop.js');
 const Btc = require('./_btc');
 
@@ -39,7 +39,7 @@ async function close(id, posId, P, why) {
   const row = { a: p.a, side: p.side, lev: p.lev, m: p.m, entry: p.entry, exit: round(P), payout, why, t: Date.now() };
   await redis([
     ['ZREM', OPEN, `${id}:${posId}`],
-    ...(payout ? [['HINCRBY', statsKey(id), 'bonus', payout]] : []), ['HINCRBY', statsKey(id), 'levOut', payout],
+    ...(payout ? [['HINCRBY', statsKey(id), 'bonus', payout], ...eco('in:leverage', payout)] : []), ['HINCRBY', statsKey(id), 'levOut', payout],
     ['RPUSH', histKey(id), JSON.stringify(row)], ['LTRIM', histKey(id), -HIST_KEEP, -1],
   ]);
   return row;
@@ -98,7 +98,7 @@ async function act(id, body) {
     const p = { id: crypto.randomBytes(5).toString('hex'), a: body.asset.toLowerCase(), side, lev, m, entry: pr.p, t: Date.now(), sl: level(body.sl), tp: level(body.tp) };
     p.liq = round(liqPrice(p));
     checkLevels(p);
-    await redis([['HINCRBY', statsKey(id), 'spent', m], ['HINCRBY', statsKey(id), 'levIn', m], ['HSET', posKey(id), p.id, JSON.stringify(p)], ['ZADD', OPEN, p.t, `${id}:${p.id}`]]);
+    await redis([['HINCRBY', statsKey(id), 'spent', m], ['HINCRBY', statsKey(id), 'levIn', m], ...eco('out:leverage', m), ['HSET', posKey(id), p.id, JSON.stringify(p)], ['ZADD', OPEN, p.t, `${id}:${p.id}`]]);
     return { ...(await view(id)), opened: p };
   }
   const posId = String(body.id || '');
