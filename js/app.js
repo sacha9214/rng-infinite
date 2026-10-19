@@ -1602,6 +1602,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-19b', date: 'Oct 19, 2026', en: ['🎲 Auto-roll keeps rolling when you switch to another tab (without the animation). The tab title counts your rolls, and you get a summary when you come back (idea by Phong)'], fr: ['🎲 Le tirage auto continue quand tu passes sur un autre onglet (sans l\'animation). Le titre de l\'onglet compte tes tirages, et un résumé s\'affiche à ton retour (idée de Phong)'] },
     { id: '2026-10-19a', date: 'Oct 19, 2026', en: ['🖥️ New code EPITECH>42: 150 coins and the Epitech > 42 title (enter it in Player & settings, after 30 rolls)'], fr: ['🖥️ Nouveau code EPITECH>42 : 150 pièces et le titre Epitech > 42 (à entrer dans Joueur et réglages, après 30 tirages)'] },
     { id: '2026-10-18h', date: 'Oct 18, 2026', en: ['⚙️ Auto-roll can now stop on an XP amount too, from 25K to 10M XP (idea by WpBejs)', '📍 Every leaderboard tab shows your spot at the top, Trash included (idea by WpBejs)', '🗿 New badges: Forty-One (contains 41) and 🃏 Super 21 (contains 2121) (ideas by WpBejs)', 'Fixed: the wallpaper previews in the Shop were a thin line (reported by Me Cojoni)'], fr: ['⚙️ Le tirage auto peut aussi s\'arrêter sur un montant d\'XP, de 25K à 10M XP (idée de WpBejs)', '📍 Chaque onglet du classement montre ta place en haut, Poubelle comprise (idée de WpBejs)', '🗿 Nouveaux badges : Forty-One (contient 41) et 🃏 Super 21 (contient 2121) (idées de WpBejs)', 'Corrigé : les aperçus des fonds dans la boutique étaient un simple trait (signalé par Me Cojoni)'] },
     { id: '2026-10-18g', date: 'Oct 18, 2026', en: ['🔥 Weekend Rush: every Saturday and Sunday (UTC), coins from rolls and daily quests are doubled (casino not included)'], fr: ['🔥 Weekend Rush : chaque samedi et dimanche (UTC), les pièces des tirages et des quêtes du jour sont doublées (hors casino)'] },
@@ -1768,7 +1769,7 @@
   const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}</optgroup></select></label></span>`;
   function stopSoloAuto() {
     SoloAuto.on = false;
-    clearTimeout(SoloAuto.timer);
+    BgTimer.clear(SoloAuto.timer);
     const box = $('#solo-auto');
     if (box) box.checked = false;
   }
@@ -1782,22 +1783,75 @@
     if (stop) stop.addEventListener('change', () => { if (STOP_OK(stop.value)) Store.setSetting('autoStop', stop.value); });
     box.addEventListener('change', () => {
       SoloAuto.on = box.checked;
-      clearTimeout(SoloAuto.timer);
+      BgTimer.clear(SoloAuto.timer);
       if (!SoloAuto.on) return;
       Sound.unlock();
       if (!session || session.finished) startRoll(true);
     });
   }
+  // Minuteur d'un Worker : dans un onglet caché, le navigateur ralentit les setTimeout de la page (jusqu'à un par
+  // minute dans Chrome), pas ceux d'un Worker. Repli sur setTimeout si les Workers sont bloqués.
+  const BgTimer = (() => {
+    let w = null, seq = 0; const cbs = new Map();
+    try {
+      w = new Worker(URL.createObjectURL(new Blob(['onmessage=e=>setTimeout(()=>postMessage(e.data.id),e.data.ms)'], { type: 'text/javascript' })));
+      w.onmessage = e => { const f = cbs.get(e.data); cbs.delete(e.data); if (f) f(); };
+    } catch (e) { w = null; }
+    return {
+      set(fn, ms) { if (!w) return setTimeout(fn, ms); const id = `b${++seq}`; cbs.set(id, fn); w.postMessage({ id, ms }); return id; },
+      clear(id) { if (typeof id === 'string') cbs.delete(id); else clearTimeout(id); },
+    };
+  })();
   function scheduleSoloAuto(delay) {
-    clearTimeout(SoloAuto.timer);
-    SoloAuto.timer = setTimeout(() => {
+    BgTimer.clear(SoloAuto.timer);
+    SoloAuto.timer = BgTimer.set(() => {
       if (!SoloAuto.on) return;
       if (currentView !== 'result' && currentView !== 'home') { stopSoloAuto(); return; }
-      // Onglet caché ou fenêtre ouverte : on attend sans rien tirer.
-      if (document.hidden || $('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
+      // Onglet caché (demandé par Sacha, 2026-10-19) : on continue sans animation, voir bgSoloRoll.
+      if (document.hidden) { bgSoloRoll(); return; }
+      // Fenêtre ouverte : on attend sans rien tirer.
+      if ($('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
       startRoll(true);
     }, delay);
   }
+  // Tirage auto pendant que l'onglet est caché : même tirage serveur, enregistré tout pareil, sans révélation.
+  // Le titre de l'onglet compte les tirages ; au retour, un message résume (et dit si l'auto-roll s'est arrêté).
+  const BgRolls = { count: 0, stopped: null, title: '' };
+  async function bgSoloRoll() {
+    if (rollPending) { scheduleSoloAuto(1000); return; }
+    rollPending = true;
+    let online;
+    try {
+      online = await Online.roll(Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''));
+    } catch (err) {
+      rollPending = false;
+      if (err.status === 403 || err.status === 409) { stopSoloAuto(); return; }
+      scheduleSoloAuto(err.status === 429 ? 1500 : 5000); return;
+    }
+    rollPending = false;
+    Collection.ensure();
+    const n = online.n, a = analysis(n);
+    Store.addRoll(n, a.total, online.t, false);
+    Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
+    if (!BgRolls.count) BgRolls.title = document.title;
+    BgRolls.count++;
+    document.title = `(${BgRolls.count}) ${BgRolls.title}`;
+    const st = autoStop(), xp = st.startsWith('xp:') ? Number(st.slice(3)) : 0;
+    if (xp ? a.total >= xp : TIER_RANK[a.tier] >= TIER_RANK[st]) {
+      stopSoloAuto(); BgRolls.stopped = { n, a };
+      document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
+      return;
+    }
+    scheduleSoloAuto(1800);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !BgRolls.count) return;
+    const { count, stopped } = BgRolls;
+    document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null;
+    toast(stopped ? `✨ ${plural(count, 'roll')} while you were away. Auto-roll stopped on ${stopped.a.str} (${cap(stopped.a.tier)}, ${fmt(stopped.a.total)} XP)`
+      : `🎲 ${plural(count, 'roll')} while you were away, all saved`, 6000, stopped ? 'achv' : undefined);
+    if (currentView === 'home') route(); // l'accueil et ses compteurs à jour
+  });
   async function startRoll(force) {
     if (rollPending) return;
     if (session && !session.finished && force !== true && !session.canReroll) return;
