@@ -31,6 +31,8 @@ const CODES = {
   // Idée de MAYO (2026-10-16) : clin d'œil à son école, où ses amis et lui « gatekeepaient » le jeu au début.
   // 100 pièces et le titre Gatekeep (stats.gatekeep).
   BC: { coins: 100, title: 'gatekeep' },
+  // Demandé par Sacha (2026-10-19) : 150 pièces et le titre Epitech (stats.epitech).
+  'EPITECH>42': { coins: 150, title: 'epitech' },
 };
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
