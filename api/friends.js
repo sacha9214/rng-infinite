@@ -6,6 +6,7 @@
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
 const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey } = require('./_lib');
+const Reports = require('./_reports');
 const Shop = require('../js/shop.js');
 const { MIN_ROLLS } = require('./_gamble');
 const { cleanChat, MAX_CHARS } = require('./_chat');
@@ -187,6 +188,14 @@ module.exports = async (req, res) => {
       return send(res, 200, await state(playerId));
     }
     if (body.action === 'messages') return send(res, 200, await dmThread(playerId, other));
+    // Signaler un message reçu (api/_reports.js) : seulement un message de l'autre, retrouvé par son heure.
+    if (body.action === 'report') {
+      const [raw] = await redis([['LRANGE', dmKey(playerId, other), 0, -1]]);
+      const m = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).find(x => x && x.s === other && Number(x.t) === Number(body.t));
+      if (!m) return send(res, 404, { error: 'This message is gone' });
+      try { return send(res, 200, await Reports.fileReport({ reporter: playerId, author: other, text: m.x, where: 'private message', msgT: m.t })); }
+      catch (err) { return send(res, err.status || 500, { error: err.message }); }
+    }
     if (body.action === 'message') { await sendDm(playerId, other, body.text); return send(res, 200, await dmThread(playerId, other)); }
     if (body.action === 'block' || body.action === 'unblock') {
       await redis([[body.action === 'block' ? 'SADD' : 'SREM', blockKey(playerId), other], ['HDEL', unreadKey(playerId), other]]);

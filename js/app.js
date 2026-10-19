@@ -1802,6 +1802,13 @@
       clear(id) { if (typeof id === 'string') cbs.delete(id); else clearTimeout(id); },
     };
   })();
+  // Signaler un message (chat des duels, messages entre amis) : confirmation, puis le bouton devient « Reported ».
+  async function reportMessage(btn, send) {
+    if (btn.disabled || !confirm(window.RNGI18n ? window.RNGI18n.t('Report this message to the creator of the game?') : 'Report this message to the creator of the game?')) return;
+    btn.disabled = true;
+    try { await send(); btn.textContent = window.RNGI18n ? window.RNGI18n.t('Reported') : 'Reported'; toast('Thanks, the message was reported', 2500, 'achv'); }
+    catch (err) { btn.disabled = false; toast([404, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+  }
   function scheduleSoloAuto(delay) {
     BgTimer.clear(SoloAuto.timer);
     SoloAuto.timer = BgTimer.set(() => {
@@ -4600,7 +4607,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['reports', '🚩', 'Reports'], ['fund', '💶', 'Fund']];
   function renderOwner() {
     currentView = 'owner';
     const wanted = (location.hash.split('/')[2] || '').split('?')[0];
@@ -4655,6 +4662,7 @@
       const items = [];
       if (todo.ideas) items.push(`<button class="o-chip warn" data-go-tab="inbox">💡 ${todo.ideas} suggestion${todo.ideas === 1 ? '' : 's'} to read</button>`);
       if (todo.decide) items.push(`<button class="o-chip" data-go-tab="inbox" data-go-itab="seen">🤔 ${todo.decide} suggestion${todo.decide === 1 ? '' : 's'} to decide</button>`);
+      if (todo.reports) items.push(`<button class="o-chip warn" data-go-tab="reports">🚩 ${todo.reports} reported message${todo.reports === 1 ? '' : 's'}</button>`);
       if (todo.server) items.push(`<button class="o-chip warn" data-go-tab="server">🖥️ ${todo.server}</button>`);
       if (todo.tips) items.push(`<button class="o-chip warn" data-go-tab="fund">💶 ${todo.tips} tip${todo.tips === 1 ? '' : 's'} waiting for a player</button>`);
       box.innerHTML = items.length ? items.join('') : todo.ideas === null && todo.tips === null ? '' : '<span class="o-chip">✅ Nothing waiting for you</span>';
@@ -4983,6 +4991,25 @@
       send($('#o-fund-set'), 'fundSet', d => ({ goal: Number(String(d.goal).replace(',', '.')), url: d.url }));
     };
     Online.site('fund').then(drawFund).catch(err => { if ($('#o-fund')) $('#o-fund').innerHTML = denied(err); });
+    // ---- Signalements de messages (chat des duels, messages entre amis), du plus récent au plus ancien.
+    const drawReports = d => {
+      if (currentView !== 'owner' || !pane('reports')) return;
+      const open = d.reports.filter(r => !r.done);
+      badge('reports', open.length);
+      todo.reports = open.length; drawTodo();
+      const row = r => `<div class="o-report${r.done ? ' done' : ''}">
+        <div class="o-report-head">${who(r.author)}${r.against > 1 ? ` <span class="o-chip warn">${r.against} reports</span>` : ''}<span class="panel-note">${esc(r.where)} · ${relTime(r.msgT)} · reported by ${who(r.reporter)}</span></div>
+        <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
+        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>`}</div>`;
+      pane('reports').innerHTML = panel('Reported messages', `${fmt(open.length)} to look at · messages players reported from duel chats and private messages`,
+        d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
+    };
+    Online.site('reports').then(drawReports).catch(err => { if (pane('reports')) pane('reports').innerHTML = denied(err); });
+    app.addEventListener('click', async e => {
+      const b = e.target.closest('[data-report-done]'); if (!b || currentView !== 'owner') return;
+      b.disabled = true;
+      try { drawReports(await Online.site('reportDone', { id: b.dataset.reportDone })); } catch (err) { b.disabled = false; toast('Unavailable right now, try again'); }
+    });
     const drawInbox = data => {
       const box = $('#o-inbox');
       if (currentView !== 'owner' || !box) return;
@@ -5249,7 +5276,7 @@
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.me ? '' : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
@@ -5268,6 +5295,7 @@
         catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your message, try again'); }
         btn.disabled = false; input.focus();
       });
+      list.addEventListener('click', e => { const rep = e.target.closest('[data-dm-report]'); if (rep) reportMessage(rep, () => Online.friends('report', name, { t: Number(rep.dataset.dmReport) })); });
       block.addEventListener('click', async () => {
         const blocking = !block.dataset.blocked;
         if (blocking && !confirm(window.RNGI18n.t(`Block ${name}? They will not be able to message you.`))) return;
@@ -5526,7 +5554,7 @@
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.me || c.bot ? '' : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button>`}</div>`).join('')
+        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.me || c.bot ? '' : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -5713,6 +5741,8 @@
         });
       });
       $('#room-chat').addEventListener('click', e => {
+        const rep = e.target.closest('[data-chat-report]');
+        if (rep) { reportMessage(rep, () => Online.roomAction('report', Room.code, { t: Number(rep.dataset.chatReport) })); return; }
         const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');
         if (!hide && !show) return;
         const muted = new Set(Store.settings.chatMuted || []);

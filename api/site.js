@@ -16,6 +16,7 @@
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken } = require('./_lib');
+const Reports = require('./_reports');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -585,9 +586,12 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'shot', 'stats', 'insights', 'fund'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
     const id = String(body.id || '');
+    // Signalements de messages (api/_reports.js) : la liste, et « traité » pour le créateur.
+    if (body.action === 'reportDone') { if (/^[0-9a-f]{12}$/.test(id)) await Reports.markDone(id); }
+    if (body.action === 'reports' || body.action === 'reportDone') return send(res, 200, { reports: await Reports.listReports(), readOnly: !isOwner });
     if (body.action === 'shot') {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
       const [shot] = await redis([['GET', shotKey(id)]]);

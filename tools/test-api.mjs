@@ -1213,6 +1213,15 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(statuses[statuses.length - 1], 429);
   r = await call(roomApi, { url: `/api/room?code=${code}&me=${frank.playerId}` });
   assert.equal(r.body.chat.length, 12);
+  // Signalement (api/_reports.js) : un spectateur signale un message de Frank ; pas son propre message, pas un faux.
+  {
+    const first = r.body.chat[0];
+    const rep = t => roomPost(alice, 'report', { code, t });
+    let x = await rep(first.t); assert.equal(x.status, 200, JSON.stringify(x.body)); assert.equal(x.body.reported, true);
+    assert.equal((await rep(first.t)).body.already, true, 'une seule fois');
+    assert.equal((await rep(12345)).status, 404, 'message inventé');
+    assert.equal((await roomPost(frank, 'report', { code, t: first.t })).status, 422, 'pas son propre message');
+  }
   assert.equal(r.body.chat[r.body.chat.length - 1].m, 'message 10');
 }
 
@@ -2334,6 +2343,24 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await fr(ben, 'gifts')).body.messages, 0);
   r = await fr(ben, 'message', 'Annie', { text: 'gg on your 777777!' }); assert.deepEqual(r.body.messages.map(m => [m.me, m.text]), [[false, 'hey you ******* legend, see [link]'], [true, 'gg on your 777777!']]);
   assert.ok(!JSON.stringify(r.body).includes(ann.playerId) && !JSON.stringify(r.body).includes(ben.playerId), 'aucun identifiant');
+  // Annie signale le message de Benny ; elle ne peut pas signaler le sien ; la page Owner les voit, sans identifiant.
+  {
+    const theirs = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => !m.me), mine = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => m.me);
+    let x = await fr(ann, 'report', 'Benny', { t: theirs.t }); assert.equal(x.status, 200, JSON.stringify(x.body)); assert.equal(x.body.reported, true);
+    assert.equal((await fr(ann, 'report', 'Benny', { t: mine.t })).status, 404, 'pas son propre message');
+    const siteApi = require(path.join(ROOT, 'api/site.js'));
+    const owner = action => call(siteApi, { method: 'POST', body: { action, playerId: cid.playerId, secret: cid.secret, id: x.id } });
+    assert.equal((await owner('reports')).status, 403, 'réservé au créateur');
+    run([['HSET', `stats:${cid.playerId}`, 'owner', '1']]);
+    x = await owner('reports'); assert.equal(x.status, 200);
+    const dm = x.body.reports.find(r => r.where === 'private message');
+    assert.deepEqual([dm.author, dm.reporter, dm.text, dm.done], ['Benny', 'Annie', 'gg on your 777777!', false]);
+    assert.ok(x.body.reports.some(r => r.where.startsWith('duel ') && r.author === 'Frank'), 'le signalement du duel aussi');
+    assert.ok(!JSON.stringify(x.body).includes(ben.playerId), 'aucun identifiant');
+    x = await call(siteApi, { method: 'POST', body: { action: 'reportDone', playerId: cid.playerId, secret: cid.secret, id: dm.id } });
+    assert.equal(x.body.reports.find(r => r.id === dm.id).done, true);
+    run([['HDEL', `stats:${cid.playerId}`, 'owner']]);
+  }
   // Un tiers ne lit rien et ne peut pas écrire.
   assert.equal((await fr(cid, 'message', 'Annie', { text: 'yo' })).status, 403);
   assert.deepEqual((await fr(cid, 'messages', 'Annie')).body.messages, []);

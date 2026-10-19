@@ -19,6 +19,7 @@ const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, read
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
+const Reports = require('./_reports');
 const { bestAwards } = require('./_rank');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
@@ -580,6 +581,14 @@ module.exports = async (req, res) => {
       await redis([['RPUSH', chatKey(code), JSON.stringify(message)], ['LTRIM', chatKey(code), -CHAT_KEPT, -1], ['EXPIRE', chatKey(code), TTL]]);
       room.chat.push(message);
       return send(res, 200, await view(room, playerId));
+    }
+    // Signaler un message du chat (api/_reports.js) : le serveur retrouve le message par son heure.
+    if (body.action === 'report') {
+      const c = room.chat.find(x => x.t === Number(body.t));
+      const author = c && room.players[c.i];
+      if (!author || author.bot) return send(res, 404, { error: 'This message is gone' });
+      try { return send(res, 200, await Reports.fileReport({ reporter: playerId, author: author.id, text: c.m, where: `duel ${code}`, msgT: c.t })); }
+      catch (err) { return send(res, err.status || 500, { error: err.message }); }
     }
     // Farce du créateur (« faux jackpot ») : sur la prochaine manche, l'écran des autres joueurs affiche un faux tirage
     // Infinite avant de révéler la blague. Rien ne change dans le résultat, les scores ou les pièces. Créateur seulement,

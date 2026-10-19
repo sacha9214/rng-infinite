@@ -4121,3 +4121,12 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 
 /* Classement : ma place en tête de liste */
 .lb-me-bar { margin: 0 0 .6rem; padding: .45rem .7rem; border-radius: .6rem; font-size: .9em; border: 1px dashed var(--outline); }
+
+/* Signalements (2026-10-19) */
+.chat-report, .dm-report { opacity: .55; }
+.dm-report { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.chat-report:hover, .dm-report:hover { opacity: 1; }
+.o-report { padding: .7rem 0; border-top: 1px solid var(--outline); }
+.o-report.done { opacity: .5; }
+.o-report-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
+.o-report-text { margin: .35rem 0 .45rem; padding: .45rem .6rem; border-radius: .5rem; background: color-mix(in srgb, var(--outline) 35%, transparent); overflow-wrap: anywhere; }
