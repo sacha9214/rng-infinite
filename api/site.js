@@ -522,7 +522,7 @@ module.exports = async (req, res) => {
     const stats = await readStats(playerId);
     const isOwner = Number(stats.owner) >= 1;
     // Invité : il voit tout ce que voit le créateur sur sa page, sans pouvoir rien modifier.
-    const isViewer = !isOwner && !!stats.viewer && VIEWER_EMAILS_SHA256.has(stats.viewer), canSee = isOwner || isViewer;
+    const isViewer = !isOwner && ((!!stats.viewer && VIEWER_EMAILS_SHA256.has(stats.viewer)) || stats.viewerGrant === '1') /* accès lecture seule donné à la main (HSET stats:<id> viewerGrant 1) */, canSee = isOwner || isViewer;
 
     // Pour le créateur seulement : combien de suggestions sont arrivées depuis la dernière qu'il a vue (« since », l'heure
     // de celle-ci, gardée par son navigateur) et l'heure de la plus récente. Sert au point rouge sur l'ampoule.
