@@ -41,6 +41,13 @@
   const API_PLAIN = API_BASE && API_BASE !== window.RNG_CONFIG.apiFallback;
   const API_RETRY_MS = 60000;
   let apiDownUntil = 0;
+  const HdrCoins = {
+    timer: 0,
+    set(n) { const el = document.getElementById('hdr-coins'); if (!el) return; el.hidden = !Store.player.name; el.querySelector('b').textContent = innerWidth <= 520 && n >= 10000 ? compact(n) : fmt(n); el.title = `${fmt(n)} coins`; },
+    // Après un tirage (pièces gagnées) : une seule relecture, un peu après le dernier.
+    soon(ms = 2500) { clearTimeout(this.timer); this.timer = setTimeout(() => this.refresh(), ms); },
+    refresh() { if (Store.player.name && !document.hidden) Online.shop().catch(() => {}); },
+  };
   const Online = {
     // Un seul essai sur une base. Vers un autre domaine, le corps part en text/plain et sans en-tête ajouté : le
     // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
@@ -64,7 +71,14 @@
       }
     },
     // { local: true } : toujours la copie du même domaine (la balise de visite, qui a besoin du pays vu par l'hébergeur).
+    // Solde en haut à droite (demandé par Sacha, 2026-10-19) : toute réponse de la boutique (casino compris) ou des
+    // quêtes porte le solde du joueur ; on le recopie au passage.
     async request(pathname, options = {}) {
+      const r = await this.send(pathname, options);
+      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests)\b/.test(pathname)) HdrCoins.set(r.coins);
+      return r;
+    },
+    async send(pathname, options = {}) {
       const { local, ...opts } = options;
       if (!API_BASE || API_BASE === API_SAME || local || Date.now() < apiDownUntil) return this.attempt(API_SAME, pathname, opts);
       try {
@@ -1602,6 +1616,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-19d', date: 'Oct 19, 2026', en: ['🪙 Your coin balance is always shown at the top right, next to the language. Click it to open the Shop'], fr: ['🪙 Ton solde de pièces s\'affiche en permanence en haut à droite, à côté de la langue. Clique dessus pour ouvrir la boutique'] },
     { id: '2026-10-19c', date: 'Oct 19, 2026', en: ['🚩 You can now report a message in the duel chat or in your private messages with the small Report button. It goes straight to the creator of the game'], fr: ['🚩 Tu peux maintenant signaler un message dans le chat des duels ou dans tes messages privés avec le petit bouton Signaler. Il arrive directement au créateur du jeu'] },
     { id: '2026-10-19b', date: 'Oct 19, 2026', en: ['🎲 Auto-roll keeps rolling when you switch to another tab (without the animation). The tab title counts your rolls, and you get a summary when you come back (idea by Phong)'], fr: ['🎲 Le tirage auto continue quand tu passes sur un autre onglet (sans l\'animation). Le titre de l\'onglet compte tes tirages, et un résumé s\'affiche à ton retour (idée de Phong)'] },
     { id: '2026-10-19a', date: 'Oct 19, 2026', en: ['🖥️ New code EPITECH>42: 150 coins and the Epitech > 42 title (enter it in Player & settings, after 30 rolls)'], fr: ['🖥️ Nouveau code EPITECH>42 : 150 pièces et le titre Epitech > 42 (à entrer dans Joueur et réglages, après 30 tirages)'] },
@@ -1839,6 +1854,7 @@
     rollPending = false;
     Collection.ensure();
     const n = online.n, a = analysis(n);
+    HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     if (!BgRolls.count) BgRolls.title = document.title;
@@ -1883,6 +1899,7 @@
     try {
       online = await asked;
       n = online.n;
+      HdrCoins.soon();
     } catch (err) {
       if (err.status === 429 && SoloAuto.on) { rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
       // Réseau ou serveur qui hoquette (pas de réponse, 5xx) : l'auto-roll reste allumé et réessaie dans 5 s, au lieu de
@@ -6421,6 +6438,8 @@
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });
+  setInterval(() => HdrCoins.refresh(), 60000); // le solde bouge aussi ailleurs (cadeaux, duels, autre appareil)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) HdrCoins.refresh(); });
   // Pièces offertes par un ami depuis la dernière visite (la page Amis s'en charge elle-même).
   if (Store.player.name && currentView !== 'friends') setTimeout(checkGifts, 1500);
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);

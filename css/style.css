@@ -4130,3 +4130,13 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .o-report.done { opacity: .5; }
 .o-report-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
 .o-report-text { margin: .35rem 0 .45rem; padding: .45rem .6rem; border-radius: .5rem; background: color-mix(in srgb, var(--outline) 35%, transparent); overflow-wrap: anywhere; }
+
+/* Solde en haut à droite (2026-10-19) */
+.hdr-coins { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--outline); font-size: .78rem; font-weight: 800; color: inherit; text-decoration: none; white-space: nowrap; }
+.hdr-coins[hidden] { display: none; }
+.hdr-coins b { font-variant-numeric: tabular-nums; }
+.hdr-coins:hover { border-color: #eab308; }
+@media (max-width: 520px) { .hdr-coins { padding: 0 .1rem; border: 0; gap: .15rem; font-size: .7rem; } }
+/* Téléphone avec le solde en haut : un peu moins d'espace autour des onglets pour qu'ils tiennent tous. */
+@media (max-width: 560px) { .nav a { padding-inline: .2rem; } .topbar-right { gap: .22rem; } .player-btn { padding: 0 .4rem; } }
+@media (max-width: 380px) { .nav a { padding-inline: .15rem; } .lang-switch > span { display: none; } .hdr-coins { font-size: .66rem; } .topbar { padding-inline: .45rem; } }
