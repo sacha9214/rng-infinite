@@ -2028,6 +2028,64 @@
     };
   });
 
+  // 🌀 Cursed Energy (2026-10-20, idée d'Edward) — énergie maudite bleu-violet, dessin original. Dans la carte, une
+  // aura ondule derrière les chiffres pendant le tirage. À chaque chiffre posé, un sceau (deux cercles, huit traits,
+  // un triangle) se dessine autour de lui en tournant puis se resserre, et deux petits arcs violets crépitent ; le
+  // dernier sceau est plus grand. À la révélation, des langues d'énergie montent de la carte et des arcs la parcourent.
+  SCENES.cursed = custom(pieces({ cols: ['#a78bfa', '#818cf8', '#c084fc', '#e0e7ff'], shapes: ['spark'], size: [1.2, 2.8], g: -220, spin: 2, up: true, glowc: '#8b5cf6', ring: '#7c3aed', drift: { rate: 3, from: 'around' } }), env => {
+    const { co, ci, card, dark } = env, seals = timed(), arcs = timed(), tongues = timed();
+    const COLS = ['#4c1d95', '#a78bfa', '#f5f3ff'];
+    let aura = 0; // l'aura intérieure monte pendant le tirage, retombe ensuite
+    const seal = (x, y, r, rot, a) => {
+      co.save(); co.translate(x, y); co.rotate(rot); co.globalAlpha = a;
+      co.strokeStyle = '#c4b5fd'; co.shadowColor = '#8b5cf6'; co.shadowBlur = r * .4; co.lineWidth = Math.max(1, r * .06);
+      co.beginPath(); co.arc(0, 0, r, 0, TAU); co.stroke();
+      co.setLineDash([r * .12, r * .2]); co.beginPath(); co.arc(0, 0, r * .8, 0, TAU); co.stroke(); co.setLineDash([]);
+      co.beginPath(); for (let i = 0; i < 3; i++) { const q = -Math.PI / 2 + i * TAU / 3; co.lineTo(Math.cos(q) * r * .7, Math.sin(q) * r * .7); } co.closePath(); co.stroke();
+      for (let i = 0; i < 8; i++) { const q = i * TAU / 8; co.beginPath(); co.moveTo(Math.cos(q) * r * 1.05, Math.sin(q) * r * 1.05); co.lineTo(Math.cos(q) * r * 1.25, Math.sin(q) * r * 1.25); co.stroke(); }
+      co.shadowBlur = 0; co.restore();
+    };
+    return {
+      frame(t, dt) {
+        // aura dans la carte : trois nappes violettes qui ondulent sous les chiffres
+        aura = Math.max(0, aura - dt * .4);
+        if (aura > .01) {
+          ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          for (let i = 0; i < 4; i++) { const x = card.w * (.15 + i * .24) + Math.sin(t * 2.2 + i) * card.w * .04; dot(ci, i % 2 ? '#7c3aed' : '#4f46e5', x, card.h * (.95 - .1 * Math.sin(t * 3 + i * 1.7)), card.h * .35, aura * .6, card.h * .7); }
+          ci.globalCompositeOperation = 'source-over';
+        }
+        co.globalCompositeOperation = 'source-over';
+        seals.run(dt, (s, k) => {
+          // il apparaît grand, tourne et se resserre sur le chiffre, puis s'efface
+          const r = s.r * (1.6 - .6 * outExpo(k * 1.6)), a = k < .15 ? k / .15 : 1 - Math.max(0, (k - .5) / .5);
+          seal(s.x, s.y, r, s.rot + k * (s.big ? 2.4 : 1.6), a * (s.big ? .55 : .5));
+        });
+        arcs.run(dt, (b, k) => { if (Math.random() < .7) bolt(co, b.x1, b.y1, b.x2, b.y2, b.jag, COLS, (1 - k), b.w); });
+        tongues.run(dt, (f, k) => {
+          // langue d'énergie : un fuseau étiré qui monte, se tord et s'efface
+          const y = f.y - k * f.h, x = f.x + Math.sin(k * 6 + f.ph) * f.h * .12;
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          dot(co, f.c, x, y, f.w * (1 - k * .5), (1 - k) * .5, f.h * .35);
+          co.globalCompositeOperation = 'source-over';
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        aura = Math.min(1, aura + .35);
+        if (o.ghost) return;
+        // le dernier sceau entoure tout le nombre (centré sur la carte) pour ne pas masquer le chiffre qui se pose
+        const big = !!o.last, r = card.h * (big ? 1.15 : .42);
+        seals.add({ x: big ? card.x + card.w / 2 : p.x, y: big ? card.y + card.h / 2 : p.y, r, rot: rnd(TAU), big, life: big ? .9 : .6 });
+        for (let i = 0, n = big ? 4 : 2; i < n; i++) { const q = rnd(TAU), d = r * rnd(1, 1.5); arcs.add({ delay: i * .04, x1: p.x, y1: p.y, x2: p.x + Math.cos(q) * d, y2: p.y + Math.sin(q) * d, jag: r * .3, w: big ? 1 : .7, life: .18 }); }
+      },
+      build() { aura = 1; },
+      reveal(tier, p) {
+        for (let i = 0, n = burst(p, 16, 4); i < n; i++) tongues.add({ delay: rnd(0, .45), x: rnd(card.x, card.x + card.w), y: card.y + card.h * rnd(.4, .9), h: card.h * rnd(1.2, 2.4), w: card.h * rnd(.18, .3), ph: rnd(TAU), c: pick(['#8b5cf6', '#6366f1', '#a855f7']), life: rnd(.8, 1.3) });
+        for (let i = 0, n = Math.round(1 + 4 * p); i < n; i++) { const y = card.y + rnd(card.h * .1, card.h * .9); arcs.add({ delay: .1 + i * .09, x1: card.x - 6, y1: y, x2: card.x + card.w + 6, y2: card.y + rnd(card.h), jag: card.h * .35, w: 1, life: .22 }); }
+      },
+    };
+  });
+
   // 🩸 Bloodlust (2026-10-16, idée d'un joueur) — un liquide rouge sombre et brillant, stylisé (rien de gore) : au-
   // dessus de chaque chiffre posé, une goutte gonfle, se détache et s'écrase sur le haut de la carte ; à la révélation,
   // une pluie de gouttes s'y écrase. Matière molle : les gouttes s'étirent et s'aplatissent.

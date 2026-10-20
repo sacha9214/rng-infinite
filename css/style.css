@@ -4299,3 +4299,48 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .tw-setup .seg { flex: none; }
 .tw-setup b { min-width: 0; }
 @media (max-width: 560px) { .tw-setup .eyebrow { display: none; } }
+
+/* ------------------------------------------------------------------ Cursed Energy (idée d'Edward, 2026-10-20) : les
+   chiffres sont de l'énergie condensée, bleu-violet, cernée d'encre noire ; derrière, un sceau original (cercles,
+   huit traits, triangle) et une aura qui ondule. Pendant le tirage l'énergie vacille comme une flamme froide ; au
+   moment où le chiffre se pose, elle se contracte (anticipation) puis éclate en crépitant et retombe. */
+.num-card.skin-cursed {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23a78bfa' stroke-opacity='.3'><circle cx='60' cy='60' r='52' stroke-width='1.5'/><circle cx='60' cy='60' r='44' stroke-dasharray='3 5'/><circle cx='60' cy='60' r='20'/><path d='M60 22 L93 79 L27 79 Z' stroke-width='1.2'/><path d='M60 8v10M60 102v10M8 60h10M102 60h10M23 23l7 7M90 90l7 7M97 23l-7 7M30 90l-7 7' stroke-width='2'/></g></svg>") 50% 50% / 3.6em 3.6em no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='60'><g fill='none' stroke='%2393c5fd' stroke-opacity='.35' stroke-width='.8'><path d='M0 44 l12 -6 l6 5 l14 -9 l8 4'/><path d='M128 10 l10 7 l9 -4 l12 8 l7 -3'/><path d='M170 50 l9 -5 l5 4 l12 -7'/></g></svg>") 0 0 / 7em 100% repeat-x,
+    radial-gradient(ellipse 70% 70% at 50% 120%, rgba(79, 70, 229, .55), transparent 70%),
+    radial-gradient(ellipse 45% 70% at 10% -10%, rgba(147, 51, 234, .35), transparent 70%),
+    linear-gradient(180deg, #07051a 0%, #0f0a2e 55%, #030210 100%);
+  border: 2px solid #312e81; border-radius: .7rem; position: relative;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, .3), inset 0 0 1.2em rgba(76, 29, 149, .6), 0 0 18px rgba(124, 58, 237, .35), 0 10px 20px rgba(0, 0, 0, .5);
+}
+/* l'aura : des langues d'énergie qui montent du bas, en boucle lente (coupée en duel à 3+) */
+.num-card.skin-cursed::before { content: ''; position: absolute; inset: 35% -5% 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 12% 40% at 12% 100%, rgba(129, 140, 248, .5), transparent 70%), radial-gradient(ellipse 10% 55% at 34% 100%, rgba(167, 139, 250, .45), transparent 70%),
+    radial-gradient(ellipse 13% 45% at 58% 100%, rgba(99, 102, 241, .5), transparent 70%), radial-gradient(ellipse 10% 60% at 82% 100%, rgba(192, 132, 252, .45), transparent 70%);
+  filter: blur(2px); mix-blend-mode: screen; opacity: .75; animation: cur-aura 2.4s ease-in-out infinite alternate; }
+@keyframes cur-aura { 0% { transform: translateY(10%) scaleY(.8); opacity: .5; } 50% { transform: translateY(0) scaleY(1.1) skewX(-4deg); opacity: .85; } 100% { transform: translateY(5%) scaleY(.95) skewX(4deg); opacity: .6; } }
+.room-stage.many .num-card.skin-cursed::before { animation: none; }
+.skin-cursed .slot { position: relative; z-index: 1; font-weight: 900; color: transparent;
+  background: linear-gradient(180deg, #312e81 0%, #1e1048 45%, #05020f 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .045em #c4b5fd; filter: drop-shadow(0 0 .06em #a78bfa) drop-shadow(0 0 .16em #7c3aed) drop-shadow(0 -.06em .2em rgba(59, 130, 246, .7)); }
+.skin-cursed .slot.ghost { opacity: .2; }
+/* en cours : l'énergie vacille, se tord et change de teinte, comme une flamme froide */
+.skin-cursed .slot.spinning { opacity: .85; animation: cur-flicker .24s steps(4) infinite; }
+@keyframes cur-flicker {
+  0% { transform: translate(-.03em, .02em) skewX(-6deg) scaleY(1.06); filter: blur(.5px) drop-shadow(0 -.12em .12em #6366f1) drop-shadow(0 -.3em .2em rgba(124, 58, 237, .8)); }
+  50% { transform: translate(.03em, -.04em) skewX(5deg) scaleY(.96); filter: blur(1px) hue-rotate(18deg) drop-shadow(0 -.2em .15em #a855f7) drop-shadow(0 -.4em .25em rgba(59, 130, 246, .7)); }
+  100% { transform: translate(-.01em, -.02em) skewX(-2deg) scaleY(1.1); filter: blur(.3px) hue-rotate(-14deg) drop-shadow(0 -.15em .1em #818cf8) drop-shadow(0 -.32em .2em rgba(147, 51, 234, .8)); } }
+/* il se pose : l'énergie se contracte, éclate en blanc-violet, puis retombe dans son aura */
+.skin-cursed .slot.revealed { animation: cur-seal .62s cubic-bezier(.3, 1.5, .5, 1) backwards, cur-burst .75s ease-out backwards; }
+@keyframes cur-seal { 0% { transform: scale(1.35); } 22% { transform: scale(.78); } 45% { transform: scale(1.14); } 100% { transform: none; } }
+@keyframes cur-burst {
+  0% { filter: blur(3px) brightness(.6) drop-shadow(0 0 .1em #4c1d95); }
+  22% { filter: blur(1px) brightness(.8) drop-shadow(0 0 .05em #312e81); }
+  32% { filter: brightness(3) drop-shadow(0 0 .2em #e0e7ff) drop-shadow(0 0 .55em #a855f7) drop-shadow(0 0 1em #3b82f6); }
+  100% { filter: drop-shadow(0 0 .06em #a78bfa) drop-shadow(0 0 .16em #7c3aed) drop-shadow(0 -.06em .2em rgba(59, 130, 246, .7)); } }
+.skin-cursed .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-cursed .slot, .num-card.skin-cursed::before { animation: none; } }
+.side-cursed { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .45); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(99, 102, 241, .25), transparent 70%), linear-gradient(180deg, rgba(20, 11, 51, .6), rgba(124, 58, 237, .12));
+  --deco-a: '🌀'; --deco-b: '🔮'; }
