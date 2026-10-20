@@ -1070,6 +1070,7 @@
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
+      <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
       <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
       ${Store.player.name ? `<div class="field"><label for="set-code">Redeem a code</label><form class="code-form" id="set-code-form"><input class="input" id="set-code" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE"><button class="btn" type="submit">Redeem</button></form><span class="panel-note">Got a code? Enter it to get its prize. Each code works once.</span></div>` : ''}
@@ -1110,7 +1111,8 @@
           group.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === btn));
           Store.setSetting(group.dataset.seg, btn.dataset.v);
           if (group.dataset.seg === 'theme') applyTheme();
-          if (group.dataset.seg === 'sound') applySound(true);
+          if (group.dataset.seg === 'sound') { applySound(true); Music.sync(); }
+          if (group.dataset.seg === 'music') Music.sync();
           if (group.dataset.seg === 'perf') applyPerf();
         });
       });
@@ -1639,6 +1641,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-21b', date: 'Oct 21, 2026', en: ['🎵 RNG∞ has music! “Distant Odds” by Phong67 plays softly in the background. Turn it off in Player & settings (Music), or with the sound button'], fr: ['🎵 RNG∞ a sa musique ! « Distant Odds » de Phong67 joue doucement en fond. Coupe-la dans Joueur et réglages (Musique), ou avec le bouton du son'] },
     { id: '2026-10-21a', date: 'Oct 21, 2026', en: [
       '🗼 New casino game: Tower (idea by Zombara). Bet, then climb 8 floors by picking a safe tile on each one: Easy (4 tiles), Normal (3) or Hard (2), one bomb per floor. Every floor raises the multiplier, up to 250×. Cash out whenever you like',
       '🧈 ASMR pack (idea by JAKECisthebest): the new ASMR skin turns your digits into pastel crunchy wax, kneaded while it rolls and pressed with a satisfying crunch. Two new Generate buttons, Thock and Crunchy Wax, each with its own sound',
@@ -6453,9 +6456,27 @@
     btn.title = on ? 'Sound on' : 'Sound off';
     if (on && heard) Sound.play('lock', { i: 3 }); // une note, pour entendre qu'il est remis
   }
+  // Musique de fond « Distant Odds » de Phong67 (2026-10-21) : en boucle, très bas, coupée avec le son ou à part dans
+  // les réglages. Les navigateurs refusent le son avant une première action du joueur : elle démarre à son premier clic
+  // ou sa première touche, et se met en pause quand l'onglet est caché.
+  const MUSIC_VOLUME = 0.04;
+  const Music = {
+    el: null, started: false,
+    on: () => Store.settings.music !== 'off' && soundOn(),
+    sync() {
+      if (this.started && this.on() && !document.hidden) {
+        if (!this.el) { this.el = new Audio('media/music/distant-odds.mp3'); this.el.loop = true; this.el.volume = MUSIC_VOLUME; }
+        this.el.play().catch(() => {});
+      } else if (this.el) this.el.pause();
+    },
+    start() { if (this.started) return; this.started = true; this.sync(); },
+  };
+  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => Music.start(), { once: true, capture: true }));
+  document.addEventListener('visibilitychange', () => Music.sync());
   $('#sound-btn').addEventListener('click', () => {
     Store.setSetting('sound', soundOn() ? 'off' : 'on');
     applySound(true);
+    Music.sync();
   });
 
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
