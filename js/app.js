@@ -2198,6 +2198,7 @@
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier });
       if (skinFx) skinFx.reveal(a.tier);
+      if (!late) wallReact(a.tier);
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = `<kbd>${esc(keyName())}</kbd> to roll again · click a badge name for details`;
@@ -4425,8 +4426,21 @@
     let layer = document.getElementById('wallpaper');
     if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
     if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }
+    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = id === 'aether' ? '<i class="wpi-glow"></i><i class="wpi-spark"></i>' : '';
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
+  }
+  // Fond Infinity (idée de Me Cojoni) : à la révélation, le fond prend la couleur de la rareté pendant quelques
+  // secondes (data-react), puis se calme. Tout le visuel est en CSS ; ici on ne fait que poser et retirer l'attribut.
+  let wallReactTimer = 0;
+  function wallReact(tier) {
+    const layer = document.getElementById('wallpaper');
+    if (!layer || !layer.classList.contains('wp-aether') || document.hidden) return;
+    clearTimeout(wallReactTimer);
+    layer.removeAttribute('data-react');
+    void layer.offsetWidth; // relance l'animation même si deux tirages de suite ont la même rareté
+    layer.dataset.react = tier;
+    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), 4500);
   }
 
   function drawEmotes(state) {

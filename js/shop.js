@@ -123,6 +123,9 @@
     { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 800, desc: 'Cherry blossom petals falling' },
     { id: 'sunset', name: 'Sunset', emoji: '🌅', price: 900, desc: 'A glowing sun sinking into purple skies' },
     { id: 'synthwave', name: 'Synthwave', emoji: '🟣', price: 1200, desc: 'A neon grid rolling to the horizon' },
+    // Idée de Me Cojoni (2026-10-20) : un fond galactique qui réagit à chaque tirage selon sa rareté (id « aether » :
+    // « infinity » est déjà l'identifiant d'un skin).
+    { id: 'aether', name: 'Aether', emoji: '♾️', price: 2500, desc: 'A galaxy around a glowing infinity sign that reacts to the rarity of every roll' },
     { id: 'galaxy', name: 'Galaxy', emoji: '🌠', price: 1000, desc: 'A purple nebula with stars rushing past' },
     // Idée de JAKE (2026-10-17) : du code vert qui tombe, façon hacker.
     { id: 'hacker', name: 'Hacker', emoji: '💻', price: 900, desc: 'Green code raining down the screen' },
