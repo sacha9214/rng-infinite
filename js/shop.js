@@ -122,6 +122,8 @@
     { id: 'galaxy', name: 'Galaxy', emoji: '🌠', price: 1000, desc: 'A purple nebula with stars rushing past' },
     // Idée de JAKE (2026-10-17) : du code vert qui tombe, façon hacker.
     { id: 'hacker', name: 'Hacker', emoji: '💻', price: 900, desc: 'Green code raining down the screen' },
+    // Assorti au skin Western (idée de JBearr12) : désert au coucher du soleil, palissade, virevoltants.
+    { id: 'western', name: 'Western', emoji: '🌵', price: 1100, desc: 'A desert sunset, a wooden fence and tumbleweeds rolling by' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },

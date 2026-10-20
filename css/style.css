@@ -3796,6 +3796,25 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 @keyframes wp-code-far { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, 420px, 0); } }
 @keyframes wp-code-near { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, 560px, 0); } }
 
+/* 🤠 Western (assorti au skin Western de JBearr12, 2026-10-20) : le désert au coucher du soleil. Ciel orangé, gros
+   soleil bas, mesas en silhouette (dans le fond, immobiles) ; au premier plan une palissade et un cactus (::after,
+   fixes) ; des virevoltants roulent par bonds de droite à gauche (::before, transform seulement). */
+.wp-western { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='220'><path d='M0 220V150h40l18-60h120l16 60h130l24-30h90l20 30h160l22-88h150l20 88h90v70z' fill='%239a3412' opacity='.55'/><path d='M0 220v-28h160l40-22h90l34 22h210l50-30h110l36 30h170v28z' fill='%237c2d12' opacity='.8'/></svg>") 0 100% / 900px 220px repeat-x,
+    radial-gradient(circle at 62% 72%, #fef3c7 0 7vmin, rgba(253, 230, 138, .55) 7.2vmin 11vmin, rgba(251, 146, 60, .25) 11.5vmin 22vmin, transparent 30vmin),
+    linear-gradient(180deg, #431407 0%, #7c2d12 28%, #c2410c 55%, #f59e0b 80%, #fcd34d 100%); }
+.wp-western::after { left: 0; right: 0; bottom: 0; height: 130px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='130'><g fill='%232a1206'><rect x='0' y='112' width='480' height='18'/><rect x='18' y='58' width='9' height='56'/><rect x='118' y='54' width='9' height='60'/><rect x='218' y='60' width='9' height='54'/><rect x='0' y='68' width='240' height='6' transform='rotate(-1 120 70)'/><rect x='0' y='88' width='240' height='6' transform='rotate(1 120 90)'/><rect x='238' y='86' width='9' height='28' transform='rotate(-12 242 112)'/><path d='M380 114v-62q0-8 7-8t7 8v62zM372 84v-16q0-5 4-5t4 5v10h8v8zM394 76h8v-14q0-5 4-5t4 5v18q0 4-4 4h-12z'/></g></svg>") 0 100% / 480px 130px repeat-x; }
+.wp-western::before { z-index: 1; left: 0; right: -1100px; bottom: 4px; height: 70px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1100' height='70'><g fill='none' stroke-width='2.2' stroke-linecap='round'><g transform='translate(120 44) scale(1.35)'><circle r='19' fill='%23c2410c' opacity='.45'/><g stroke='%23fbbf24'><path d='M-18-4q12 20 32-10M-14 14q8-28 28-6M-6-18q-8 16 20 28M-20 6q22-2 28-24M2 18q-2-20 16-24M-10-12q16 6 18 26M-17 2q10-14 30-8M8-16q-14 14-18 32'/></g><g stroke='%2392400e'><path d='M-15 8q14-4 26 6M-8-17q4 18-6 32M12-12q-16 0-24 18'/></g></g><g transform='translate(700 52) scale(.9) rotate(70)'><circle r='19' fill='%23c2410c' opacity='.45'/><g stroke='%23fbbf24'><path d='M-18-4q12 20 32-10M-14 14q8-28 28-6M-6-18q-8 16 20 28M-20 6q22-2 28-24M2 18q-2-20 16-24M-10-12q16 6 18 26M-17 2q10-14 30-8M8-16q-14 14-18 32'/></g><g stroke='%2392400e'><path d='M-15 8q14-4 26 6M-8-17q4 18-6 32M12-12q-16 0-24 18'/></g></g></g></svg>") 0 0 / 1100px 70px repeat-x; animation: wp-tumble 18s linear infinite; }
+/* aperçu de la boutique : décor réduit pour que le soleil et la palissade tiennent dans la vignette */
+.wall-preview.wp-western { background-size: 450px 110px, auto, auto; background-position: 0 100%, 0 0, 0 0; }
+.wall-preview.wp-western::after { height: 52px; background-size: 192px 52px; }
+.wall-preview.wp-western::before { bottom: 2px; height: 28px; right: -440px; background-size: 440px 28px; animation-name: wp-tumble-sm; }
+@keyframes wp-tumble-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-440px, 0, 0); } }
+@keyframes wp-tumble { 0% { transform: translate3d(0, 0, 0); } 10% { transform: translate3d(-110px, -14px, 0); } 20% { transform: translate3d(-220px, 0, 0); }
+  30% { transform: translate3d(-330px, -10px, 0); } 40% { transform: translate3d(-440px, 0, 0); } 50% { transform: translate3d(-550px, -16px, 0); }
+  60% { transform: translate3d(-660px, 0, 0); } 70% { transform: translate3d(-770px, -9px, 0); } 80% { transform: translate3d(-880px, 0, 0); }
+  90% { transform: translate3d(-990px, -13px, 0); } 100% { transform: translate3d(-1100px, 0, 0); } }
+
 @media (prefers-reduced-motion: reduce) { .wp::before, .wp::after { animation: none !important; } }
 html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !important; }
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
@@ -3814,26 +3833,29 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
    d'écrasement ; pendant le tirage, les chiffres montent comme de la lumière. */
 .num-card.skin-heavenly {
   background:
-    linear-gradient(115deg, transparent 30%, rgba(234, 179, 8, .35) 31%, transparent 32.5%, transparent 62%, rgba(234, 179, 8, .22) 63%, transparent 64%),
-    linear-gradient(70deg, transparent 45%, rgba(148, 163, 184, .25) 46%, transparent 48%),
+    linear-gradient(115deg, transparent 30%, rgba(234, 179, 8, .2) 31%, transparent 32.5%, transparent 62%, rgba(234, 179, 8, .13) 63%, transparent 64%),
+    linear-gradient(70deg, transparent 45%, rgba(148, 163, 184, .14) 46%, transparent 48%),
     radial-gradient(ellipse 70% 60% at 50% 0%, #ffffff, transparent 75%),
     linear-gradient(180deg, #fffdf7 0%, #f5f0e6 60%, #e9e1d0 100%);
   border: 2px solid #eab308; border-radius: 1rem;
   box-shadow: inset 0 0 0 3px #fffbeb, inset 0 0 0 4px rgba(202, 138, 4, .55), 0 0 22px rgba(253, 224, 71, .35), 0 8px 18px rgba(120, 90, 20, .25);
 }
+/* Lisibilité (signalé par casmictechthing, 2026-10-20) : l'or clair se perdait sur le marbre blanc. Feuille d'or plus
+   profonde (bronze → or → bronze), contour brun plus épais et une ombre portée sombre qui détache le chiffre du marbre ;
+   le reflet blanc reste en haut pour garder l'éclat. */
 .skin-heavenly .slot {
   font-weight: 900; color: transparent;
-  background: linear-gradient(180deg, #fff7c2 0%, #facc15 38%, #b45309 55%, #fde68a 72%, #ca8a04 100%);
+  background: linear-gradient(180deg, #b45309 0%, #eab308 32%, #a16207 50%, #f59e0b 68%, #854d0e 100%);
   -webkit-background-clip: text; background-clip: text;
-  -webkit-text-stroke: .02em #92400e;
-  filter: drop-shadow(0 .04em 0 rgba(255, 255, 255, .9)) drop-shadow(0 .08em .12em rgba(146, 64, 14, .35));
+  -webkit-text-stroke: .04em #4a2205;
+  filter: drop-shadow(0 -.03em 0 rgba(255, 255, 255, .95)) drop-shadow(0 .05em .02em rgba(69, 26, 3, .55)) drop-shadow(0 0 .12em rgba(253, 224, 71, .55));
 }
 .skin-heavenly .slot.ghost { opacity: .18; }
 .skin-heavenly .slot.spinning { animation: heavenly-rise .24s linear infinite; }
-@keyframes heavenly-rise { 0% { transform: translateY(.18em); opacity: .55; } 100% { transform: translateY(-.18em); opacity: 1; } }
+@keyframes heavenly-rise { 0% { transform: translateY(.14em); opacity: .9; } 100% { transform: translateY(-.14em); opacity: 1; } }
 .skin-heavenly .slot.revealed { animation: heavenly-land .6s cubic-bezier(.2, .9, .3, 1) backwards, heavenly-glow 1.1s .25s ease-out backwards; }
 @keyframes heavenly-land { 0% { transform: translateY(-.6em) scale(.9); } 55% { transform: translateY(.04em) scale(1.04); } 100% { transform: none; } }
-@keyframes heavenly-glow { 0% { filter: drop-shadow(0 0 .3em #fde047) drop-shadow(0 0 .1em #fff) brightness(1.6); } 100% { filter: drop-shadow(0 .04em 0 rgba(255, 255, 255, .9)) drop-shadow(0 .08em .12em rgba(146, 64, 14, .35)); } }
+@keyframes heavenly-glow { 0% { filter: drop-shadow(0 -.03em 0 #fff) drop-shadow(0 .05em .02em rgba(69, 26, 3, .55)) drop-shadow(0 0 .35em #facc15) brightness(1.15); } 100% { filter: drop-shadow(0 -.03em 0 rgba(255, 255, 255, .95)) drop-shadow(0 .05em .02em rgba(69, 26, 3, .55)) drop-shadow(0 0 .12em rgba(253, 224, 71, .55)); } }
 .skin-heavenly .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
 @media (prefers-reduced-motion: reduce) { .skin-heavenly .slot { animation: none; } }
 .side-heavenly { --side-border: #eab308; --side-glow: 0 0 18px rgba(253, 224, 71, .4); --side-ink: #a16207;
