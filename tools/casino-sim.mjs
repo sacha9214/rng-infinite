@@ -253,7 +253,9 @@ rtp = await series('tower', '≈ 98-99 % (moins l\'arrondi)', async () => {
   return { bet, win: g.win };
 }, Math.round(N / 2));
 assert.ok(twBooms > 0 && twCash > 0 && twTop > 0, 'explosions, encaissements et sommets atteints');
-assert.ok(rtp > .85 && rtp < 1.15, `tower ${rtp}`);
+// Gains jusqu'à ×250 : sur 5 000 parties la moyenne varie beaucoup (88 à 124 % mesurés). La garantie est le calcul
+// exact juste dessous (chaque étage de chaque difficulté rend au plus 99 %) ; ici on vérifie seulement l'ordre de grandeur.
+assert.ok(rtp > .6 && rtp < 1.6, `tower ${rtp}`);
 for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) { const ev = Math.pow((n - 1) / n, k) * G.towerMult(n, k); assert.ok(ev <= .99000001 && ev > .97, `tower ${level}/${k} : ${ev}`); }
 assert.equal(keys(), 0);
 
