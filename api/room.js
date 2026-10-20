@@ -11,6 +11,7 @@
 //   POST /api/room { action: 'create' | 'join' | 'start' | 'ready' | 'react' | 'rematch', code?, size?, mode?, target?, emoji?, playerId, secret, name }
 //   GET  /api/room?code=<code>&me=<playerId>   (sondé toutes les ~1,5 s par les joueurs et les spectateurs)
 //   GET  /api/room?live=1                      → parties publiques en cours ("Live now"), à regarder ou rejoindre
+//   POST /api/room { action: 'tourney', op: 'view' | 'join' | 'roll', … } : tournoi du jour (api/_tournament.js)
 // Bots : "create" avec bots: k (partie privée qui démarre aussitôt) ou "addBot" par l'hôte dans le salon. Toujours prêts,
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
@@ -21,6 +22,7 @@ const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
 const Reports = require('./_reports');
 const { bestAwards } = require('./_rank');
+const Tournament = require('./_tournament');
 
 const MIN_PLAYERS = 2, MAX_PLAYERS = 10;
 const MAX_WINS = 50; // au choix du créateur de la partie (tapé à la main au-delà des boutons)
@@ -413,6 +415,8 @@ module.exports = async (req, res) => {
     if (req.method !== 'POST') return send(res, 405, { error: 'Use GET or POST' });
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    // Tournoi du jour : vérifie lui-même le joueur (la vue publique n'en demande pas).
+    if (body.action === 'tourney') return send(res, 200, await Tournament.handle(body));
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
     const name = cleanName(body.name);

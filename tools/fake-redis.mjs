@@ -64,9 +64,12 @@ export function fakeRedis() {
     ZINCRBY(k, by, m) { const z = zset(k), v = (z.get(m) || 0) + Number(by); z.set(m, v); return String(v); },
     ZADD(k, ...pairs) {
       const z = zset(k);
+      const nx = pairs[0] === 'NX'; // NX : n'ajoute que les membres absents (inscription au tournoi)
+      if (nx) pairs = pairs.slice(1);
       let added = 0;
       for (let i = 0; i < pairs.length; i += 2) {
         if (!z.has(pairs[i + 1])) added++;
+        else if (nx) continue;
         z.set(pairs[i + 1], Number(pairs[i]));
       }
       return added;
