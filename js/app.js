@@ -133,6 +133,11 @@
     liveRooms() {
       return this.request('/api/room?live=1');
     },
+    // Tournoi du jour (api/_tournament.js, par /api/room) : en POST, le secret prouve qui regarde (ses tirages cachés).
+    tourney(op, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/room', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'tourney', op, ...extra }) });
+    },
     shopCase(id, free) {
       const p = Store.player;
       return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id, free: !!free }) });
@@ -2999,6 +3004,7 @@
       <div class="page page-wide">
         <h1 class="page-title">Duel</h1>
         <p class="panel-note profile-sub">Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard.</p>
+        <div class="panel tn-teaser" id="d-tourney"><span class="panel-note">🏆 Loading the tournament…</span></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Live now</h3><span class="panel-note">public games · watch or join without a code</span></div>
           <div id="d-live"><div class="empty">Loading…</div></div>
@@ -3104,6 +3110,7 @@
     $('#d-setup').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('[data-type]')) { e.preventDefault(); e.target.blur(); } });
     $('#d-join').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#d-code').value); });
     drawLive();
+    drawTourneyTeaser();
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
@@ -6407,11 +6414,167 @@
       </div>`;
   }
 
+  // ---------------------------------------------------------------- tournoi du jour (idée de PRISMA123, 2026-10-20)
+  // Tableau à élimination directe joué en différé (règles dans api/_tournament.js). Les tirages de l'adversaire restent
+  // cachés tant que ses 5 tirages ou les tiens ne sont pas faits.
+  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false;
+  const tnClock = () => Date.now() + tnSkew;
+  const tnCd = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':'); };
+  const tnHour = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  function tnRoundName(r, total) {
+    const left = total - r;
+    return left === 1 ? 'Final' : left === 2 ? 'Semi-finals' : left === 3 ? 'Quarter-finals' : `Round ${r + 1}`;
+  }
+  function stopTournament() { clearTimeout(tnTimer); clearInterval(tnTick); tnTimer = 0; tnTick = 0; }
+  async function loadTournament() {
+    const st = await Online.tourney('view');
+    tnSkew = st.now - Date.now();
+    return st;
+  }
+  // Carte du Duel : l'état du tournoi en une ligne, et le lien vers sa page.
+  async function drawTourneyTeaser() {
+    const box = $('#d-tourney');
+    if (!box) return;
+    try {
+      const st = await loadTournament();
+      if (!$('#d-tourney')) return;
+      const line = st.phase === 'signup' ? `<span>Sign-ups open</span> · <span class="mono">${st.count}/${st.max}</span> · <span>closes at</span> <span class="mono">${tnHour(st.close)}</span>`
+        : st.phase === 'running' ? `<span>${st.round >= 0 ? tnRoundName(st.round, st.rounds.length) : 'In progress'}</span> · <span class="mono">${st.entrants.length}</span> <span>players</span>`
+        : st.phase === 'done' ? `<span>Champion:</span> <b data-no-i18n>${esc(st.result.champion.name)}</b>` : '<span>Cancelled: not enough players</span>';
+      box.innerHTML = `<div class="tn-teaser-text"><b>Daily tournament</b><span class="panel-note tn-teaser-line">${line}</span></div><a class="btn" href="#/tournament">${st.joined ? 'My match' : 'Open'}</a>`;
+    } catch (err) { box.innerHTML = '<span class="panel-note">Tournament unavailable</span>'; }
+  }
+
+  function renderTournament() {
+    currentView = 'tournament';
+    tnState = null;
+    app.innerHTML = `
+      <div class="page page-wide tn-page">
+        <a class="back-link" href="#/duel">← Duel</a>
+        <h1 class="page-title">🏆 Tournament</h1>
+        <p class="panel-note profile-sub">A new tournament every day. Sign up before 12:00 UTC, then play your match whenever you want during its round: 5 tournament rolls each, the highest total wins. Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
+        <div id="tn-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    const refresh = async () => {
+      clearTimeout(tnTimer);
+      try { tnState = await loadTournament(); drawTournament(); }
+      catch (err) { if (!tnState) $('#tn-body').innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+      if (currentView === 'tournament' && !document.hidden) tnTimer = setTimeout(refresh, 15000);
+    };
+    // Comptes à rebours, à la seconde ; une échéance passée relit l'état (tour suivant, résultats).
+    tnTick = setInterval(() => {
+      if (currentView !== 'tournament') return stopTournament();
+      let due = false;
+      document.querySelectorAll('[data-cd]').forEach(el => { const left = Number(el.dataset.cd) - tnClock(); el.textContent = tnCd(left); if (left <= -2000 && left > -3000) due = true; });
+      if (due) refresh();
+    }, 1000);
+    refresh();
+  }
+
+  function drawTournament() {
+    const st = tnState, body = $('#tn-body');
+    if (!st || !body) return;
+    const now = tnClock(), R = st.rounds.length;
+    const nm = p => `<span class="tn-name" data-no-i18n>${esc(p.name)}</span>`;
+    // État du jour
+    let status = '';
+    if (st.phase === 'signup') {
+      const can = Store.player.name && !st.joined && st.count < st.max;
+      status = `<div class="tn-status">
+          <div><div class="tn-big"><span>Sign-ups close in</span> <span class="mono" data-cd="${st.close}">${tnCd(st.close - now)}</span></div>
+          <div class="panel-note"><span class="mono">${st.count}/${st.max}</span> · <span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div>
+          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
+        </div>
+        ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.id === Store.player.id ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
+    } else if (st.phase === 'running') {
+      const r = st.round;
+      status = `<div class="tn-status"><div><div class="tn-big">${r >= 0 ? `<span>${tnRoundName(r, R)}</span> · <span>ends in</span> <span class="mono" data-cd="${st.rounds[r].end}">${tnCd(st.rounds[r].end - now)}</span>` : '<span>Results coming</span>'}</div>
+        <div class="panel-note"><span class="mono">${st.entrants.length}</span> <span>players</span></div></div></div>`;
+    } else if (st.phase === 'done') {
+      const res = st.result;
+      status = `<div class="tn-podium"><div class="tn-champ">🏆 ${nm(res.champion)}</div>
+        <div class="panel-note"><span>Final:</span> ${res.finalist ? nm(res.finalist) : '–'}${res.semis.length ? ` · <span>Semi-finals:</span> ${res.semis.map(nm).join(', ')}` : ''}</div>
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div>`;
+    } else {
+      status = `<div class="tn-status"><div><div class="tn-big"><span>Cancelled: fewer than ${st.minPlayers} players signed up</span></div>
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div></div>`;
+    }
+    if (st.prev) status += `<p class="panel-note tn-prev"><span>Yesterday's champion:</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
+
+    // Mon match
+    let match = '';
+    const m = st.match;
+    if (m) {
+      const card = (n, s) => `<span class="num-card sm" data-tier="${Engine.cardTier(s)}">${n}</span>`;
+      const hidden = k => Array.from({ length: k }, () => '<span class="num-card sm neutral tn-hidden">?</span>').join('');
+      const empty = k => Array.from({ length: k }, () => '<span class="num-card sm neutral tn-empty">·</span>').join('');
+      const mine = m.me.rolls.map((n, i) => card(n, m.me.scores[i])).join('') + empty(st.rolls - m.me.count);
+      const opp = m.opp ? (m.opp.rolls ? m.opp.rolls.map((n, i) => card(n, m.opp.scores[i])).join('') + empty(st.rolls - m.opp.count) : hidden(m.opp.count) + empty(st.rolls - m.opp.count)) : '';
+      const banner = m.result === 'won' ? (st.phase === 'done' ? '<div class="tn-banner win">🏆 You won the tournament!</div>' : '<div class="tn-banner win">✅ You won this match</div>')
+        : m.result === 'lost' ? '<div class="tn-banner lose">❌ You were knocked out</div>' : '';
+      const canRoll = m.live && !m.bye && m.me.count < st.rolls;
+      match = `<div class="panel">
+        <div class="panel-head"><h3 class="panel-title">Your match · <span>${tnRoundName(m.round, R)}</span></h3>${m.live ? `<span class="panel-note"><span>ends in</span> <span class="mono" data-cd="${m.end}">${tnCd(m.end - now)}</span></span>` : now < m.start ? `<span class="panel-note"><span>starts at</span> <span class="mono">${tnHour(m.start)}</span></span>` : ''}</div>
+        ${banner}
+        ${m.bye ? '<p class="panel-note">Bye: you go straight to the next round.</p>' : `
+        <div class="tn-vs">
+          <div class="tn-side"><div class="tn-side-head"><b>You</b><span class="mono">${fmt(m.me.total)} XP</span></div><div class="tn-cards">${mine}</div></div>
+          <div class="tn-side"><div class="tn-side-head">${nm(m.opp)}<span class="mono">${m.opp.rolls ? `${fmt(m.opp.total)} XP` : `${m.opp.count}/${st.rolls}`}</span></div><div class="tn-cards">${opp}</div>
+          ${!m.opp.rolls && m.live ? '<p class="panel-note">Their numbers show once you\'ve made your 5 rolls.</p>' : ''}</div>
+        </div>
+        ${canRoll ? `<div class="tn-roll-row"><button class="btn-roll" id="tn-roll">🎲 <span>Roll</span> (<span class="mono">${m.me.count + 1}/${st.rolls}</span>)</button></div>` : ''}`}
+      </div>`;
+    }
+
+    // Tableau
+    let bracket = '';
+    if (st.size) {
+      const side = (p, w, bye) => {
+        if (p === undefined) return '<div class="tn-p tn-tbd">–</div>';
+        if (!p) return `<div class="tn-p tn-bye">${bye ? 'bye' : '–'}</div>`;
+        const cls = w ? (w === p.id ? ' win' : ' lose') : '';
+        const score = p.total !== undefined ? fmt(p.total) : `${p.count}/${st.rolls}`;
+        return `<div class="tn-p${cls}${p.id === Store.player.id ? ' me' : ''}">${nm(p)}<span class="mono">${score}</span></div>`;
+      };
+      bracket = `<div class="panel"><div class="panel-head"><h3 class="panel-title">Bracket</h3><span class="panel-note"><span class="mono">${st.size}</span> <span>slots</span></span></div>
+        <div class="tn-bracket" style="--tn-cols:${R}">${st.rounds.map((rd, r) => `<div class="tn-col${r === st.round ? ' now' : ''}">
+          <div class="tn-col-head"><b>${tnRoundName(r, R)}</b><span class="panel-note mono">${tnHour(rd.start)}–${tnHour(rd.end)}</span></div>
+          <div class="tn-matches">${rd.matches.map(x => `<div class="tn-match">${side(x.a, x.w, x.bye)}${side(x.b, x.w, x.bye)}</div>`).join('')}</div>
+        </div>`).join('')}</div></div>`;
+    }
+
+    const prizes = `<div class="panel"><div class="panel-head"><h3 class="panel-title">Prizes</h3></div>
+      <div class="tn-prizes"><div><span>🥇</span><b class="mono">🪙 ${fmt(st.prizes.champion)}</b><span class="panel-note">+ Champion title</span></div>
+      <div><span>🥈</span><b class="mono">🪙 ${fmt(st.prizes.finalist)}</b><span class="panel-note">Finalist</span></div>
+      <div><span>🥉</span><b class="mono">🪙 ${fmt(st.prizes.semi)}</b><span class="panel-note">Semi-finalists</span></div></div></div>`;
+
+    body.innerHTML = `<div class="panel">${status}</div>${match}${bracket}${prizes}`;
+    const join = $('#tn-join');
+    if (join) join.addEventListener('click', async () => {
+      if (tnBusy) return; tnBusy = true; join.disabled = true;
+      try { tnState = { ...(await Online.tourney('join')), prev: tnState.prev }; toast('✓ Signed up for today\'s tournament'); drawTournament(); }
+      catch (err) { toast(err.message, 3500, 'error'); join.disabled = false; }
+      finally { tnBusy = false; }
+    });
+    const rollBtn = $('#tn-roll');
+    if (rollBtn) rollBtn.addEventListener('click', async () => {
+      if (tnBusy) return; tnBusy = true; rollBtn.disabled = true;
+      try {
+        const r = await Online.tourney('roll');
+        try { Sound.play('lock', { i: 3 }); } catch (e) { /* son facultatif */ }
+        tnState = { ...r.state, prev: tnState.prev }; drawTournament();
+        const last = document.querySelectorAll('.tn-side:first-child .tn-cards .num-card:not(.neutral)');
+        if (last.length) last[last.length - 1].classList.add('tn-pop');
+      } catch (err) { toast(err.message, 3500, 'error'); rollBtn.disabled = false; }
+      finally { setTimeout(() => { tnBusy = false; const b = $('#tn-roll'); if (b) b.disabled = false; }, 1500); }
+    });
+  }
+
   // ---------------------------------------------------------------- navigation, thème, clavier
   // Code caché n°2 (les deux autres : bas de la page d'aide, et le nombre 0 dans le vérificateur d'XP).
   try { console.log('%c🔑 You found a hidden code: CONSOLECAT', 'font: 700 14px monospace; color: #facc15; background: #111; padding: 6px 10px; border-radius: 6px'); } catch (e) { /* pas de console */ }
   try { paintWallpaper(); } catch (e) { /* jamais bloquant */ }
-  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, shop: renderShop, friends: renderFriends, owner: renderOwner };
+  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -6419,6 +6582,7 @@
     clearTimeout(lbTimer);
     stopRoom();
     clearTimeout(hubTimer);
+    stopTournament();
     clearTimeout(friendsTimer);
     closeModal();
     tip.hidden = true;
@@ -6426,7 +6590,7 @@
     if (key === 'player' && rest.length) renderProfile(decodeURIComponent(rest.join('/')));
     else if (key === 'room' && rest.length) renderRoom(rest[0]);
     else (ROUTES[key] || renderHome)();
-    const navKey = key === 'player' ? 'leaderboard' : key === 'room' ? 'duel' : key;
+    const navKey = key === 'player' ? 'leaderboard' : key === 'room' || key === 'tournament' ? 'duel' : key;
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navKey));
     window.scrollTo(0, 0);
   }

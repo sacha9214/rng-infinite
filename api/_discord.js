@@ -154,4 +154,17 @@ function announceRush(end) {
   });
 }
 
-module.exports = { announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+// Tournoi du jour terminé (api/_tournament.js) : le champion et le finaliste, dans le salon des événements.
+function announceTournament({ day, champion, finalist, players }) {
+  if (!cfg.events) return;
+  post(cfg.events, {
+    embeds: [{
+      title: `🏆 ${champion} wins the daily tournament!`,
+      url: SITE,
+      description: `Tournament of ${day}: **${champion}** beat **${finalist}** in the final (${players} players).\nSign-ups for the next one open at 00:00 UTC on ${SITE}`,
+      color: 0xeab308,
+    }],
+  });
+}
+
+module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };

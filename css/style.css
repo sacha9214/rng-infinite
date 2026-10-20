@@ -4299,3 +4299,58 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .tw-setup .seg { flex: none; }
 .tw-setup b { min-width: 0; }
 @media (max-width: 560px) { .tw-setup .eyebrow { display: none; } }
+
+/* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
+.tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
+.tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }
+.tn-teaser-text b::before { content: '🏆 '; }
+.tn-teaser-line { font-size: .78rem; }
+.tn-status { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+.tn-big { font-size: 1.05rem; font-weight: 700; }
+.tn-big .mono { font-size: 1.2rem; color: var(--ep-text); }
+.tn-in { font-weight: 700; color: var(--success); }
+.tn-entrants { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .8rem; }
+.tn-prev { margin: .6rem 0 0; }
+.tn-podium { text-align: center; display: flex; flex-direction: column; gap: .35rem; }
+.tn-champ { font-size: 1.5rem; font-weight: 800; }
+.tn-banner { border-radius: .45rem; padding: .5rem .7rem; font-weight: 700; margin-bottom: .7rem; }
+.tn-banner.win { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.tn-banner.lose { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.tn-vs { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.tn-side { border: 1px solid var(--outline); border-radius: .5rem; padding: .6rem; background: var(--surface-dim); min-width: 0; }
+.tn-side-head { display: flex; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; font-size: .85rem; }
+.tn-side-head .tn-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-cards { display: flex; flex-wrap: wrap; gap: .35rem; }
+.tn-cards .num-card.sm { min-width: 4.4rem; text-align: center; }
+.tn-hidden { color: var(--prose-3); }
+.tn-empty { opacity: .4; }
+.tn-pop { animation: tn-pop .45s ease-out; }
+@keyframes tn-pop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+.tn-roll-row { display: flex; justify-content: center; margin-top: .9rem; }
+.tn-bracket { display: grid; grid-template-columns: repeat(var(--tn-cols, 3), minmax(9.5rem, 1fr)); gap: .7rem; overflow-x: auto; padding-bottom: .3rem; }
+.tn-col { display: flex; flex-direction: column; min-width: 0; }
+.tn-col-head { display: flex; flex-direction: column; margin-bottom: .45rem; font-size: .78rem; }
+.tn-col.now .tn-col-head b { color: var(--ep-text); }
+.tn-matches { display: flex; flex-direction: column; justify-content: space-around; gap: .5rem; flex: 1; }
+.tn-match { border: 1px solid var(--outline); border-radius: .45rem; overflow: hidden; background: var(--surface-dim); }
+.tn-col.now .tn-match { border-color: color-mix(in srgb, var(--ep-text) 45%, var(--outline)); }
+.tn-p { display: flex; justify-content: space-between; gap: .4rem; padding: .3rem .5rem; font-size: .78rem; }
+.tn-p + .tn-p { border-top: 1px solid var(--outline); }
+.tn-p .tn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-p.win { font-weight: 800; }
+.tn-p.lose { opacity: .5; }
+.tn-p.me { background: color-mix(in srgb, var(--ep-text) 12%, transparent); }
+.tn-bye, .tn-tbd { color: var(--prose-3); font-style: italic; }
+.tn-prizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; text-align: center; }
+.tn-prizes > div { display: flex; flex-direction: column; align-items: center; gap: .1rem; border: 1px solid var(--outline); border-radius: .5rem; padding: .55rem .3rem; background: var(--surface-dim); }
+.tn-prizes > div > span:first-child { font-size: 1.4rem; }
+@media (max-width: 560px) {
+  .tn-vs { grid-template-columns: 1fr; }
+  .tn-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .25rem; }
+  .tn-cards .num-card.sm { min-width: 0; font-size: .74rem; padding: .2rem .1rem; }
+  .tn-bracket { grid-template-columns: 1fr; overflow: visible; }
+  .tn-matches { display: grid; grid-template-columns: 1fr 1fr; }
+  .tn-col + .tn-col { border-top: 1px solid var(--outline); padding-top: .6rem; }
+  .tn-prizes { grid-template-columns: 1fr; }
+  .tn-prizes > div { flex-direction: row; justify-content: center; gap: .5rem; }
+}

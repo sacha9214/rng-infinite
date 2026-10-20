@@ -1,7 +1,7 @@
 // Tâches Discord lancées par le serveur d'API du VPS (deploy/ovh/api-server.js), voir api/_discord.js :
 //   - au démarrage (donc à chaque mise en ligne), les nouvelles entrées du journal des mises à jour partent dans
 //     🆕・updates ; une entrée n'est publiée qu'une fois (ensemble discord:updates:seen) ;
-//   - toutes les 10 minutes : si le jour UTC a changé, le podium d'hier part dans 🏆・big-rolls (une seule fois).
+//   - toutes les 10 minutes : le tournoi du jour avance (api/_tournament.js, prix versés après minuit) ; si le jour UTC a changé, le podium d'hier part dans 🏆・big-rolls (une seule fois).
 const fs = require('node:fs'), path = require('node:path');
 const { redis, dayKey } = require('./_lib');
 const Discord = require('./_discord');
@@ -98,7 +98,7 @@ async function weekendRush(now = Date.now()) {
 
 function start() {
   postNewUpdates().catch(err => console.error('discord updates:', err.message));
-  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); trashKing().catch(err => console.error('trash king:', err.message)); weekendRush().catch(err => console.error('discord rush:', err.message)); };
+  const tick = () => { dailyRecap().catch(err => console.error('discord recap:', err.message)); weeklyEvent().catch(err => console.error('discord event:', err.message)); trashKing().catch(err => console.error('trash king:', err.message)); weekendRush().catch(err => console.error('discord rush:', err.message)); require('./_tournament').tick().catch(err => console.error('tournament:', err.message)); };
   tick();
   setInterval(tick, 10 * 60000).unref();
 }

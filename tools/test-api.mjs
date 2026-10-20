@@ -2884,4 +2884,138 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(await T2.trashKing(Date.parse('2026-11-02T02:00:00Z')), null, 'seulement le 1er');
 }
 
+// Tournoi du jour (idée de PRISMA123, 2026-10-20) : inscriptions, tableau, tirages à part, tours, prix, titre Champion.
+{
+  const TN = require(path.join(ROOT, 'api/_tournament.js'));
+  const { readStats, Achievements } = require(path.join(ROOT, 'api/_lib.js'));
+  const roomApi = require(path.join(ROOT, 'api/room.js'));
+  const DAY = '2030-01-15', T0 = Date.parse(`${DAY}T00:00:00Z`), H = 3600000;
+  const pid = i => (`7e${String(i).padStart(2, '0')}`).repeat(4);
+  const sec = i => (`5${String(i).padStart(2, '0')}`).repeat(11).slice(0, 32);
+  const mk = (i, rolls = 40) => { const id = pid(i); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(sec(i)).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', 'rolls', rolls], ['HSET', 'names', id, `Tn${i}`]]); return id; };
+  const refused = async (p, status, re) => { await assert.rejects(p, e => e.status === status && (!re || re.test(e.message)), `attendu ${status}`); };
+
+  // Tirage du tableau : taille = puissance de deux ≥ inscrits, un exempt au plus par match, tout le monde placé.
+  for (let n = 4; n <= 32; n++) {
+    const ids = Array.from({ length: n }, (_, i) => `p${i}`), slots = TN.seed(ids);
+    const size = 2 ** Math.ceil(Math.log2(n));
+    assert.equal(slots.length, size, `taille pour ${n}`);
+    assert.deepEqual(slots.filter(Boolean).sort(), ids.slice().sort(), 'chacun une fois');
+    for (let i = 0; i < size; i += 2) assert.ok(slots[i] || slots[i + 1], 'jamais exempt contre exempt');
+    assert.equal(slots.filter(x => !x).length, size - n);
+  }
+
+  // Vainqueur d'un match : total, puis plus gros tirage, puis premier fini ; forfait ; ni l'un ni l'autre.
+  const R = (s, t) => ({ n: s.map(() => 1), s, t });
+  assert.equal(TN.winner(DAY, 0, 'a', 'b', R([5, 5, 5, 5, 5], 9), R([1, 1, 1, 1, 30], 1)), 'b', 'plus gros total');
+  assert.equal(TN.winner(DAY, 0, 'a', 'b', R([5, 5, 5, 5, 10], 9), R([6, 6, 6, 6, 6], 1)), 'a', 'égalité : plus gros tirage');
+  assert.equal(TN.winner(DAY, 0, 'a', 'b', R([6, 6, 6, 6, 6], 9), R([6, 6, 6, 6, 6], 1)), 'b', 'encore égalité : premier fini');
+  assert.equal(TN.winner(DAY, 0, 'a', 'b', R([1, 1, 1, 1, 1], 9), R([999, 999], undefined)), 'a', 'qui n\'a pas fini perd');
+  assert.equal(TN.winner(DAY, 0, 'a', 'b', R([999], undefined), undefined), 'a', 'aucun fini : le plus de tirages');
+  const c1 = TN.winner(DAY, 0, 'a', 'b', undefined, undefined);
+  assert.ok(['a', 'b'].includes(c1)); assert.equal(TN.winner(DAY, 0, 'a', 'b', undefined, undefined), c1, 'tirage au sort stable');
+  assert.equal(TN.winner(DAY, 0, 'a', null), 'a', 'exempt');
+
+  // Inscriptions : 30 tirages, fenêtre 00:00-12:00, pas deux fois, 32 places.
+  const rookie = mk(90, 29);
+  await refused(TN.signup(rookie, T0 + H), 422, /30 rolls/);
+  const ids = [1, 2, 3, 4, 5].map(i => mk(i));
+  await refused(TN.signup(ids[0], T0 + 12 * H), 422, /closed/);
+  for (const [i, id] of ids.entries()) assert.equal((await TN.signup(id, T0 + H + i)).place, i + 1);
+  await refused(TN.signup(ids[0], T0 + 2 * H), 409, /already/);
+  // Par /api/room : vue publique (sans joueur) et mauvais secret refusé.
+  const pub = await call(roomApi, { method: 'POST', body: { action: 'tourney', op: 'view' } });
+  assert.equal(pub.status, 200); assert.equal(pub.body.joined, false);
+  const bad = await call(roomApi, { method: 'POST', body: { action: 'tourney', op: 'join', playerId: ids[0], secret: '0'.repeat(32) } });
+  assert.equal(bad.status, 403);
+  let v = await TN.view(DAY, ids[0], T0 + 2 * H);
+  assert.equal(v.phase, 'signup'); assert.equal(v.count, 5); assert.equal(v.joined, true);
+
+  // Pas de tirage avant le tableau.
+  await refused(TN.roll(ids[0], T0 + 2 * H), 422);
+
+  // 12:00 : tableau de 8 (3 exempts), 3 tours de 4 h. Le premier à lire le tournoi le tire.
+  v = await TN.view(DAY, null, T0 + 12 * H + 1000);
+  assert.equal(v.phase, 'running'); assert.equal(v.size, 8); assert.equal(v.rounds.length, 3); assert.equal(v.round, 0);
+  assert.equal(v.rounds[0].end - v.rounds[0].start, 4 * H);
+  assert.equal(v.rounds[0].matches.filter(m => m.bye).length, 3);
+  const again = await TN.view(DAY, null, T0 + 12 * H + 2000);
+  assert.deepEqual(again.rounds[0].matches.map(m => [m.a && m.a.id, m.b && m.b.id]), v.rounds[0].matches.map(m => [m.a && m.a.id, m.b && m.b.id]), 'tableau tiré une seule fois');
+  await refused(TN.signup(mk(6), T0 + 12 * H + 3000), 422, /closed/);
+
+  // Le seul vrai match du 1er tour (5 inscrits sur 8 places).
+  const real = v.rounds[0].matches.find(m => !m.bye), [pa, pb] = [real.a.id, real.b.id];
+  const byePlayer = v.rounds[0].matches.find(m => m.bye).a?.id || v.rounds[0].matches.find(m => m.bye).b.id;
+  await refused(TN.roll(byePlayer, T0 + 13 * H), 422, /bye/);
+
+  // Les tirages de tournoi ne touchent ni XP, ni classements, ni quêtes, ni pièces, ni historique.
+  const snap = id => JSON.stringify([...['stats:', 'hist:', 'badges:', 'nums:', `q:${DAY}:`].map(p => db.get(p + id)), db.get('lb:xp')?.get(id), db.get(`eco:${DAY}`), db.get(`lb:day:${DAY}`), db.get('rolls:all')].map(x => x instanceof Map ? [...x] : x instanceof Set ? [...x] : x ?? null));
+  const before = snap(pa);
+  let t = T0 + 13 * H, last;
+  for (let k = 0; k < 5; k++) { db.delete(`tnlock:${pa}`); last = await TN.roll(pa, t); t += 2000; }
+  assert.equal(last.count, 5); assert.equal(snap(pa), before, 'rien d\'autre ne bouge');
+  await refused(TN.roll(pa, t), 409, /already/);
+  // Délai entre deux tirages (verrou de 1,5 s, levé par le temps réel : ici, deux tirages à la suite).
+  await TN.roll(pb, t); await refused(TN.roll(pb, t + 10), 429);
+  db.delete(`tnlock:${pb}`);
+
+  // Anti-sniping : pb n'a pas fini → ses tirages et ceux de pa sont cachés au public ; pa (fini) voit ceux de pb ;
+  // pb ne voit pas ceux de pa.
+  const pubNow = await TN.view(DAY, null, t + 100), pm = pubNow.rounds[0].matches.find(m => !m.bye);
+  assert.equal(pm.a.total, undefined); assert.equal(pm.b.total, undefined); assert.ok(pm.a.count + pm.b.count === 6);
+  const va = await TN.view(DAY, pa, t + 100), vb = await TN.view(DAY, pb, t + 100);
+  assert.equal(va.match.me.count, 5); assert.ok(Array.isArray(va.match.opp.rolls), 'fini : voit l\'adversaire');
+  assert.equal(vb.match.opp.rolls, undefined, 'pas fini : adversaire caché'); assert.equal(vb.match.opp.count, 5);
+  // Les 5 dernières secondes du tour : plus de tirage.
+  await refused(TN.roll(pb, T0 + 16 * H - 1000), 422, /over/);
+  // pb ne finit pas : il perd. Tour 2 (16:00-20:00) lu à 16:00 pile.
+  v = await TN.view(DAY, pa, T0 + 16 * H);
+  assert.equal(v.round, 1); assert.equal(v.rounds[0].matches.find(m => !m.bye).w, pa, 'forfait : pa passe');
+  assert.equal(v.match.round, 1); assert.equal(v.match.live, true);
+  const vpb = await TN.view(DAY, pb, T0 + 16 * H); assert.equal(vpb.match.result, 'lost');
+
+  // Tour 2 : pa joue, son adversaire non ; l'autre demi-finale : personne ne joue (tirage au sort).
+  for (let k = 0; k < 5; k++) { db.delete(`tnlock:${pa}`); await TN.roll(pa, T0 + 17 * H + k); }
+  // Finale (20:00-24:00) : personne ne joue sauf l'adversaire de pa → pa perd en finale.
+  v = await TN.view(DAY, null, T0 + 20 * H);
+  assert.equal(v.round, 2);
+  const fin = v.rounds[2].matches[0], other = fin.a.id === pa ? fin.b.id : fin.a.id;
+  assert.ok([fin.a.id, fin.b.id].includes(pa));
+  for (let k = 0; k < 5; k++) { db.delete(`tnlock:${other}`); await TN.roll(other, T0 + 21 * H + k); }
+
+  // Lu le lendemain (le tournoi d'hier avance à la lecture du jour) : prix versés une fois.
+  const bonusOf = async id => Number((await readStats(id)).bonus || 0);
+  const all = v.rounds[1].matches.flatMap(m => [m.a.id, m.b.id]);
+  const semis = all.filter(id => id !== pa && id !== other);
+  const b0 = Object.fromEntries(await Promise.all(ids.map(async id => [id, await bonusOf(id)])));
+  const ecoBefore = Number(db.get(`eco:2030-01-16`)?.get('in:tourney') || 0);
+  const out = await TN.handle({ op: 'view' }, T0 + 24 * H + 5000);
+  assert.equal(out.day, '2030-01-16'); assert.equal(out.prev.champion, db.get('names').get(other));
+  await TN.advance(DAY, T0 + 25 * H); await TN.tick(T0 + 26 * H); // relu plusieurs fois
+  const done = await TN.view(DAY, null, T0 + 27 * H);
+  assert.equal(done.phase, 'done'); assert.equal(done.result.champion.id, other); assert.equal(done.result.finalist.id, pa);
+  assert.deepEqual(done.result.semis.map(s => s.id).sort(), semis.sort());
+  assert.equal(await bonusOf(other) - b0[other], 1000); assert.equal(await bonusOf(pa) - b0[pa], 400);
+  for (const s of semis) assert.equal(await bonusOf(s) - b0[s], 150);
+  for (const id of ids.filter(id => ![other, pa, ...semis].includes(id))) assert.equal(await bonusOf(id), b0[id], 'les autres rien');
+  assert.equal(Number(db.get('eco:2030-01-16').get('in:tourney')) - ecoBefore, 1000 + 400 + 300);
+  const champ = await readStats(other);
+  assert.equal(Number(champ.tourneyWins), 1); assert.ok(Achievements.unlocked(champ).includes('champion'), 'titre Champion');
+  assert.ok(!Achievements.unlocked(await readStats(pa)).includes('champion'));
+  // Tous les tirages de la finale montrés une fois le tour fini.
+  assert.equal(done.rounds[2].matches[0][done.rounds[2].matches[0].a.id === other ? 'a' : 'b'].rolls.length, 5);
+
+  // Moins de 4 inscrits : annulé, rien versé. Et le 33e est refusé.
+  const D2 = '2030-02-01', T2 = Date.parse(`${D2}T00:00:00Z`);
+  for (const i of [1, 2, 3]) await TN.signup(pid(i), T2 + H);
+  const c = await TN.view(D2, null, T2 + 13 * H); assert.equal(c.phase, 'cancelled'); assert.equal(c.size, 0);
+  await refused(TN.roll(pid(1), T2 + 13 * H), 422);
+  const D3 = '2030-03-01', T3 = Date.parse(`${D3}T00:00:00Z`);
+  for (let i = 0; i < 32; i++) await TN.signup(mk(10 + i), T3 + H + i);
+  await refused(TN.signup(mk(50), T3 + 2 * H), 422, /full/);
+  const big = await TN.view(D3, null, T3 + 12 * H);
+  assert.equal(big.size, 32); assert.equal(big.rounds.length, 5); assert.equal(big.rounds[0].matches.filter(m => m.bye).length, 0);
+  assert.equal(big.rounds[4].end, T3 + 24 * H, 'fini à minuit');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

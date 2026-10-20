@@ -10,6 +10,21 @@
 
   // ---------------------------------------------------------------- dictionnaire (texte anglais exact → français)
   const FR = {
+    // tournoi du jour
+    'Tournament': 'Tournoi', '🏆 Tournament': '🏆 Tournoi', 'Daily tournament': 'Tournoi du jour', 'Sign-ups open': 'Inscriptions ouvertes', 'closes at': 'fermeture à',
+    'In progress': 'En cours', 'Champion:': 'Champion :', 'Cancelled: not enough players': 'Annulé : pas assez de joueurs', 'My match': 'Mon match', 'Open': 'Ouvrir',
+    'Tournament unavailable': 'Tournoi indisponible', '🏆 Loading the tournament…': '🏆 Chargement du tournoi…',
+    'A new tournament every day. Sign up before 12:00 UTC, then play your match whenever you want during its round: 5 tournament rolls each, the highest total wins. Tournament rolls don\'t count for XP, leaderboards, quests or coins.': 'Un nouveau tournoi chaque jour. Inscris-toi avant 12:00 UTC, puis joue ton match quand tu veux pendant son tour : 5 tirages de tournoi chacun, le plus gros total gagne. Les tirages de tournoi ne comptent ni pour l\'XP, ni pour les classements, les quêtes ou les pièces.',
+    'Sign-ups close in': 'Fin des inscriptions dans', 'Sign up': 'S\'inscrire', 'Full': 'Complet', '✓ You\'re in': '✓ Tu es inscrit', 'Nobody yet: be the first!': 'Personne pour l\'instant : sois le premier !',
+    'ends in': 'fin dans', 'starts at': 'début à', 'Results coming': 'Résultats en cours', 'Final:': 'Finale :', 'Semi-finals:': 'Demi-finales :', 'Next tournament opens in': 'Prochain tournoi dans',
+    'Yesterday\'s champion:': 'Champion d\'hier :', '🏆 You won the tournament!': '🏆 Tu as gagné le tournoi !', '✅ You won this match': '✅ Tu as gagné ce match', '❌ You were knocked out': '❌ Tu es éliminé',
+    'Your match ·': 'Ton match ·', 'Bye: you go straight to the next round.': 'Exempt : tu passes directement au tour suivant.',
+    'Their numbers show once you\'ve made your 5 rolls.': 'Ses nombres s\'affichent une fois tes 5 tirages faits.', 'Bracket': 'Tableau', 'slots': 'places', 'bye': 'exempt',
+    'Final': 'Finale', 'Semi-finals': 'Demi-finales', 'Quarter-finals': 'Quarts de finale', 'Prizes': 'Prix', '+ Champion title': '+ titre Champion', 'Finalist': 'Finaliste', 'Semi-finalists': 'Demi-finalistes',
+    '✓ Signed up for today\'s tournament': '✓ Inscrit au tournoi du jour', 'Win a daily tournament': 'Gagne un tournoi du jour',
+    'Sign-ups for today\'s tournament are closed (they open at 00:00 UTC)': 'Les inscriptions au tournoi du jour sont fermées (elles ouvrent à 00:00 UTC)',
+    'You are already signed up': 'Tu es déjà inscrit', 'No tournament round is being played right now': 'Aucun tour de tournoi en cours', 'You have no match in this round': 'Tu n\'as pas de match dans ce tour',
+    'You have a bye this round: you go through without playing': 'Tu es exempt à ce tour : tu passes sans jouer', 'This round is over': 'Ce tour est terminé',
     // navigation, barre du haut
     'Duel': 'Duel', 'Leaderboard': 'Classement', 'Badges': 'Badges', 'Stats': 'Stats', 'History': 'Historique', 'Shop': 'Boutique', 'Friends': 'Amis',
     'How it works': 'Comment ça marche', 'Player & settings': 'Joueur et réglages', 'Player': 'Joueur', 'Theme': 'Thème', 'Light': 'Clair', 'System': 'Système', 'Dark': 'Sombre',
@@ -229,6 +244,10 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    [/^Free · needs (\d+) rolls · at least (\d+) players$/, m => `Gratuit · ${m[1]} tirages requis · ${m[2]} joueurs minimum`],
+    [/^Cancelled: fewer than (\d+) players signed up$/, m => `Annulé : moins de ${m[1]} joueurs inscrits`],
+    [/^Round (\d+)$/, m => `Tour ${m[1]}`], [/^Tournaments unlock after (\d+) rolls \(you have (\d+)\)$/, m => `Les tournois s'ouvrent après ${m[1]} tirages (tu en as ${m[2]})`],
+    [/^Today's tournament is full \((\d+) players\)$/, m => `Le tournoi du jour est complet (${m[1]} joueurs)`], [/^You already made your (\d+) rolls$/, m => `Tu as déjà fait tes ${m[1]} tirages`],
     [/^([\d,]+) rolls?$/, m => `${nb(m[1])} tirage${s(m[1])}`],
     [/^([\d,]+) players?$/, m => `${nb(m[1])} joueur${s(m[1])}`],
     [/^([\d,]+) bots?$/, m => `${m[1]} bot${s(m[1])}`],
