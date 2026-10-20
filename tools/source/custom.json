@@ -32,7 +32,7 @@
     "label": "The Golden Era",
     "desc": "Exactly \"2016\": the golden era.",
     "emoji": "🏆",
-    "score": 216000
+    "score": 100000100
   },
   {
     "id": "CURRENT_YEAR",
@@ -279,5 +279,12 @@
     "desc": "Contains \"2121\": twenty-one, twice.",
     "emoji": "🃏",
     "score": 334448
+  },
+  {
+    "id": "EXACT_DRASTIX",
+    "label": "Exact Drastix",
+    "desc": "Exactly \"235\".",
+    "emoji": "💥",
+    "score": 100000100
   }
 ]
