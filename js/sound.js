@@ -54,6 +54,25 @@
     return o;
   };
   const tune = (notes, step, duty = .25) => notes.map((f, i) => [chip(f, f, step * 1.6, duty, 1.5), i * step]);
+  // ---- Pack ASMR (idée de JAKECisthebest, 2026-10-20). Craquement de cire : une rafale de petits grains de bruit filtré,
+  // serrés au début puis espacés (la croûte cède, puis quelques miettes), sur un « pouf » grave et mou.
+  const wax = (seed, n = 14, len = .14, f = 1800) => {
+    let r = seed;
+    const rand = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+    const grains = [];
+    for (let g = 0; g < n; g++) {
+      const at = len * Math.pow(g / n, 1.7), lvl = .5 + .5 * rand();
+      grains.push(S.delayed(S.gain(S.shape(S.filter(S.noise(.02, seed + g), 'bp', f * (.7 + .6 * rand()), 1.4), S.expo(.003 + .004 * rand(), .0004)), lvl), at));
+    }
+    const squish = S.osc(.16, t => 130 - 60 * t / .16, S.expo(.045, .006));
+    return S.sum(...grains, S.gain(squish, .5));
+  };
+  // Thock : touche lubrifiée, un coup grave et mat (le bas de course) suivi du retour, plus discret.
+  const thock = () => {
+    const body = S.sum(S.osc(.12, t => 180 - 70 * Math.exp(-t / .02), S.expo(.03, .001)), S.gain(S.shape(S.filter(S.noise(.03, 7), 'bp', 700, 1.6), S.expo(.006, .0005)), .7));
+    const back = S.gain(S.shape(S.filter(S.noise(.02, 8), 'bp', 1100, 1.6), S.expo(.004, .0005)), .35);
+    return S.sum(body, S.delayed(back, .07));
+  };
   const FISH = { cast: .14, splash: .2, reel: .05, mark: .07, catch: .13, bite: .26, snap: .16 };
   const RECIPES = {
     // Pêche. Lancer : la canne fouette (glissé qui descend) et le fil siffle.
@@ -74,11 +93,19 @@
     // Le fil casse : un « twang » aigu qui retombe.
     fishSnap: () => [[chip(1800, 220, .2, .125, 2.5), 0, FISH.snap, -.2, .06], [chip(3600, 3600, .012, .5, 1), 0, FISH.snap * .7, -.2, 0]],
     // Le bouton Generate.
-    click: () => [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]],
+    // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
+    click: ({ look } = {}) => {
+      if (look === 'thock') return [[thock(), 0, .18, 0, .08]];
+      if (look === 'wax' || look === 'asmr') return [[wax(41), 0, .24, 0, .1]];
+      return [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]];
+    },
     // Cliquetis des rouleaux (k : la variante). soft : en duel. last, de 1 à 8 : le dernier rouleau, de plus en plus grave et fort.
     tick: ({ k, soft, last }) => [[S.tick(100 + k, last ? .3 + .7 * last / 8 : 0), 0, soft ? .045 : last ? .08 + .09 * last / 8 : .07, ((k * 37) % 9) / 9 - .5, .08]],
     // Un chiffre se pose : une note par rouleau, en montant la gamme. soft : zéro de tête, ou duel. final : le dernier chiffre.
-    lock: ({ i, soft, final }) => [[S.lock(S.note(i), soft ? .5 : final ? 1.2 : 1), 0, soft ? .2 : final ? .4 : .36, 0, .25]],
+    // skin 'asmr' : la note garde sa place dans la gamme, plus douce, et la cire craque dessous (plus fort au dernier).
+    lock: ({ i, soft, final, skin }) => skin === 'asmr'
+      ? [[S.lock(S.note(i), .4), 0, soft ? .2 : final ? .4 : .36, 0, .25], [wax(90 + i, final ? 20 : 12, final ? .2 : .12), 0, soft ? .14 : final ? .36 : .28, ((i * 37) % 9) / 18 - .25, .12]]
+      : [[S.lock(S.note(i), soft ? .5 : final ? 1.2 : 1), 0, soft ? .2 : final ? .4 : .36, 0, .25]],
     // Montée de tension avant le dernier chiffre (plus discrète que dans le film : ici elle revient à chaque tirage).
     riser: () => [[S.riser(RISER), 0, .4, 0, .2]],
     // Un badge arrive : la note monte avec sa place dans la liste (step, de 0 à 3) ; le dernier, le plus rare, reçoit un grave en plus.

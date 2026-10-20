@@ -687,10 +687,56 @@
 .btn-roll.small.gen-royal::before { left: .62em; }
 .btn-roll.small.gen-royal::after { right: .62em; }
 
+/* Pack ASMR (idée de JAKECisthebest, 2026-10-20). Chacun a son propre son de pression (js/sound.js, recette click). */
+/* Thock — touche mécanique lubrifiée : capuchon fumé translucide, rétroéclairage pastel qui déborde dessous, course
+   courte et sèche. Le son est grave et mat (le « thock »), pas le clic aigu de Keycap. */
+.btn-roll.gen-thock {
+  border-radius: .6rem; border: 1px solid #3f3f46; color: #f5f3ff; letter-spacing: .12em;
+  background: linear-gradient(180deg, rgba(82, 82, 91, .95) 0%, rgba(39, 39, 42, .95) 100%);
+  text-shadow: 0 0 6px rgba(196, 181, 253, .7);
+  --gs: inset 0 1px 0 rgba(255, 255, 255, .25), inset 0 -.2em .3em rgba(0, 0, 0, .35), 0 .14em 0 #27272a, 0 .34em 0 #18181b, 0 .34em .9em rgba(167, 139, 250, .55), 0 .6em 1em rgba(0, 0, 0, .45);
+  --gs-h: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 -.2em .3em rgba(0, 0, 0, .35), 0 .14em 0 #27272a, 0 .38em 0 #18181b, 0 .38em 1.3em rgba(167, 139, 250, .75), 0 .7em 1.1em rgba(0, 0, 0, .5);
+  --gs-a: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 -.1em .3em rgba(0, 0, 0, .4), 0 .04em 0 #27272a, 0 .08em 0 #18181b, 0 .1em 1.6em rgba(167, 139, 250, .95);
+  --press: .26em;
+  transition: transform .06s cubic-bezier(.5, 0, .9, .5), box-shadow .06s linear;
+}
+/* Dessus légèrement creusé (cylindrique), comme un vrai capuchon. */
+.btn-roll.gen-thock::before { inset: 10% 5% 18%; border-radius: .45rem; background: linear-gradient(180deg, rgba(0, 0, 0, .22), rgba(255, 255, 255, .06) 60%, transparent); }
+.btn-roll.gen-thock:hover { filter: none; }
+
+/* Crunchy Wax (et ASMR, le skin assorti) — pavé de cire pastel mat, craquelé : il s'écrase sous le doigt, les fissures
+   s'éclairent, puis il revient lentement. */
+.btn-roll.gen-wax, .btn-roll.gen-asmr {
+  border-radius: 1rem; border: 2px solid; letter-spacing: .1em;
+  background:
+    linear-gradient(28deg, transparent 18%, rgba(255, 255, 255, .7) 18.6%, transparent 19.6%),
+    linear-gradient(-40deg, transparent 72%, rgba(255, 255, 255, .6) 72.6%, transparent 73.6%),
+    linear-gradient(96deg, transparent 88%, rgba(255, 255, 255, .55) 88.5%, transparent 89.5%),
+    radial-gradient(ellipse 60% 50% at 30% 15%, rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(180deg, #ffe9a6, #fbd168);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .2), 0 1px 0 rgba(255, 255, 255, .7);
+  --gs: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -.2em .35em rgba(180, 120, 20, .25), 0 .28em 0 #c9922a, 0 .5em .9em rgba(120, 70, 10, .35);
+  --gs-h: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -.2em .35em rgba(180, 120, 20, .25), 0 .32em 0 #c9922a, 0 .6em 1em rgba(120, 70, 10, .4);
+  --gs-a: inset 0 2px 0 rgba(255, 255, 255, .5), inset 0 .2em .5em rgba(180, 120, 20, .35), 0 .06em 0 #c9922a, 0 .15em .3em rgba(120, 70, 10, .35);
+  transform-origin: 50% 100%;
+  transition: transform .32s cubic-bezier(.3, 1.5, .5, 1), box-shadow .2s ease, filter .2s ease;
+}
+.btn-roll.gen-wax { border-color: #f0c75e; color: #8a5a12; }
+.btn-roll.gen-asmr { border-color: #c4b5fd; color: #6d28d9; background:
+    linear-gradient(28deg, transparent 18%, rgba(255, 255, 255, .7) 18.6%, transparent 19.6%),
+    linear-gradient(-40deg, transparent 72%, rgba(255, 255, 255, .6) 72.6%, transparent 73.6%),
+    radial-gradient(ellipse 60% 50% at 30% 15%, rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(90deg, #ffe08a, #b8f2d4 35%, #e2cdff 65%, #ffc9dc);
+  --gs: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -.2em .35em rgba(124, 58, 237, .18), 0 .28em 0 #a78bfa, 0 .5em .9em rgba(88, 28, 135, .3);
+  --gs-h: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -.2em .35em rgba(124, 58, 237, .18), 0 .32em 0 #a78bfa, 0 .6em 1em rgba(88, 28, 135, .35);
+  --gs-a: inset 0 2px 0 rgba(255, 255, 255, .5), inset 0 .2em .5em rgba(124, 58, 237, .25), 0 .06em 0 #a78bfa, 0 .15em .3em rgba(88, 28, 135, .3); }
+.btn-roll.gen-wax:hover, .btn-roll.gen-asmr:hover { transform: translateY(-1px) scale(1.01, .99); filter: none; }
+.btn-roll.gen-wax:active, .btn-roll.gen-asmr:active { transform: translateY(.22em) scale(1.06, .86); filter: brightness(1.04); transition: transform .05s ease-out, box-shadow .05s; }
+
 /* Épaisseur de la tranche visible sous chaque bouton (voir margin-bottom plus haut) ; la course du clic reste en deçà. */
 .btn-roll.gen-keycap { --edge: .52em; }
 .btn-roll.gen-blocks, .btn-roll.gen-arcade { --edge: .42em; }
-.btn-roll.gen-candy, .btn-roll.gen-slots, .btn-roll.gen-dice, .btn-roll.gen-gold, .btn-roll.gen-comic { --edge: .3em; }
+.btn-roll.gen-thock, .btn-roll.gen-wax, .btn-roll.gen-asmr, .btn-roll.gen-candy, .btn-roll.gen-slots, .btn-roll.gen-dice, .btn-roll.gen-gold, .btn-roll.gen-comic { --edge: .3em; }
 .btn-roll.gen-jersey, .btn-roll.gen-ocean, .btn-roll.gen-chrome, .btn-roll.gen-ice, .btn-roll.gen-circuit, .btn-roll.gen-vaporwave,
 .btn-roll.gen-diamond, .btn-roll.gen-launch, .btn-roll.gen-hologram, .btn-roll.gen-royal { --edge: .25em; }
 .btn-roll.gen-pixel, .btn-roll.gen-lcd { --edge: 6px; }

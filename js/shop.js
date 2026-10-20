@@ -69,6 +69,8 @@
     { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat' },
     { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
+    // Idée de JAKECisthebest (2026-10-20) : de la cire ASMR croquante, pressée et craquée ; boutons et sons assortis.
+    { id: 'asmr', name: 'ASMR', emoji: '🧈', price: 3000, desc: 'Pastel crunchy wax, kneaded while it rolls, pressed and crunched on every digit' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
@@ -169,7 +171,10 @@
     { id: 'terminal', name: 'Terminal', emoji: '💻', price: 250, desc: 'Run the command yourself' },
     { id: 'arcade', name: 'Arcade', emoji: '🕹️', price: 350, desc: 'Big red cabinet button' },
     { id: 'ticket', name: 'Ticket', emoji: '🎟️', price: 450, desc: 'Tear off a raffle ticket' },
+    // Pack ASMR (idée de JAKECisthebest, 2026-10-20) : chacun a son propre son de pression (js/sound.js).
+    { id: 'thock', name: 'Thock', emoji: '🎹', price: 500, desc: 'A lubed mechanical key with a deep thock' },
     { id: 'comic', name: 'Comic', emoji: '💥', price: 600, desc: 'Halftone and a loud outline' },
+    { id: 'wax', name: 'Crunchy Wax', emoji: '🧈', price: 700, desc: 'A block of crunchy wax that crackles when pressed' },
     { id: 'launch', name: 'Launch', emoji: '🚀', price: 900, desc: 'Hazard stripes, handle with care' },
     { id: 'hologram', name: 'Hologram', emoji: '🪩', price: 1400, desc: 'Foil that shifts with the light' },
     { id: 'royal', name: 'Royal', emoji: '👑', price: 2200, desc: 'Velvet with a gold trim' },
