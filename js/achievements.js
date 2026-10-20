@@ -17,6 +17,7 @@
     { id: 'regular', emoji: '🔁', title: 'Regular', desc: 'Make 100 rolls', test: st => num(st.rolls) >= 100 },
     { id: 'addict', emoji: '🌀', title: 'Addict', desc: 'Make 1,000 rolls', test: st => num(st.rolls) >= 1000 },
     { id: 'nolife', emoji: '🧟', title: 'No Life', desc: 'Make 10,000 rolls', test: st => num(st.rolls) >= 10000 },
+    { id: 'connoisseur', emoji: '🖼️', title: 'Collectible Connoisseur', desc: 'Own every skin (limited ones excepted)', test: st => num(st.connoisseur) >= 1 }, // idée de kaz (2026-10-20)
     { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => num(st.rolls) >= 100000 }, // idée de PRISMA123 (2026-10-20)
     { id: 'cardshark', emoji: '🃏', title: 'Card Shark', desc: 'Get 100 blackjacks in the casino', test: st => num(st.gNaturals) >= 100 }, // idée de Dylanrulez123 (2026-10-20)
     { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => num(st['t:trash']) >= 1 },

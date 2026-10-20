@@ -1641,6 +1641,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-21c', date: 'Oct 21, 2026', en: ['📺 New badge 852655: exactly 852655 (idea by CococoC)', '🖼️ New title Collectible Connoisseur: own every skin, limited ones excepted (idea by kaz)'], fr: ['📺 Nouveau badge 852655 : exactement 852655 (idée de CococoC)', '🖼️ Nouveau titre Grand collectionneur : possède tous les skins, sauf les limités (idée de kaz)'] },
     { id: '2026-10-21b', date: 'Oct 21, 2026', en: ['🎵 RNG∞ has music! “Distant Odds” by Phong67 plays softly in the background. Turn it off in Player & settings (Music), or with the sound button'], fr: ['🎵 RNG∞ a sa musique ! « Distant Odds » de Phong67 joue doucement en fond. Coupe-la dans Joueur et réglages (Musique), ou avec le bouton du son'] },
     { id: '2026-10-21a', date: 'Oct 21, 2026', en: [
       '🗼 New casino game: Tower (idea by Zombara). Bet, then climb 8 floors by picking a safe tile on each one: Easy (4 tiles), Normal (3) or Hard (2), one bomb per floor. Every floor raises the multiplier, up to 250×. Cash out whenever you like',

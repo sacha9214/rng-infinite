@@ -36,6 +36,12 @@ const CODES = {
 };
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
+// Titre Collectible Connoisseur : posé une fois quand le joueur possède tous les skins hors limités (après un achat ou
+// une caisse) ; un skin ajouté plus tard ne le retire pas.
+async function checkCollection(playerId) {
+  const [owned] = await redis([['SMEMBERS', ownedKey(playerId)]]);
+  if (Shop.collectible().every(id => (owned || []).includes(id))) await redis([['HSET', statsKey(playerId), 'connoisseur', 1]]);
+}
 const usedCodesKey = id => `codes:${id}`;
 const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash "wall" retient celui affiché
 
@@ -117,6 +123,7 @@ module.exports = async (req, res) => {
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
         if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
         await redis(writes);
+        if (!duplicate) await checkCollection(playerId);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -282,6 +289,7 @@ module.exports = async (req, res) => {
             ['HINCRBY', statsKey(playerId), 'spent', skin.price], ...eco('out:skins', skin.price),
             ['SADD', ownedKey(playerId), skin.id],
           ]);
+          await checkCollection(playerId);
         }
         await redis([['HSET', 'skins', playerId, skin.id]]); // acheté = équipé
         return send(res, 200, await state(playerId));

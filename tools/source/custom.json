@@ -335,5 +335,12 @@
     "desc": "Contains \"14142\": √2 = 1.4142…",
     "emoji": "📐",
     "score": 5000005
+  },
+  {
+    "id": "EXACT_852655",
+    "label": "852655",
+    "desc": "Exactly \"852655\", the number from the famous short.",
+    "emoji": "📺",
+    "score": 100000100
   }
 ]

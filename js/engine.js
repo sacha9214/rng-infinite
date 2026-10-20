@@ -282,6 +282,7 @@
     BIG_BROTHER_EXACT: ['1984'], SIXTY_SEVEN_EXACT: ['67'], EIGHTY_SIX_EXACT: ['86'],
     ORIENTATION_EXACT: ['101'], CALENDAR_EXACT: ['365'], BRAINROT: ['676767'], GROUNDHOG_DAY: ['365365'],
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
+    EXACT_852655: ['852655'], // idée de CococoC, acceptée par Sacha (2026-10-20)
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
     IMPORTANT_BIRTHDAY: ['61209'], // badge perso (idée d'un joueur) : 061209, tiré comme le nombre 61209
