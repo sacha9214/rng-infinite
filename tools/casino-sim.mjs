@@ -22,7 +22,7 @@ const id = 'c'.repeat(16), key = `stats:${id}`;
 const obj = flat => { const o = {}; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
 const coins = () => Shop.balance(obj(run([['HGETALL', key]])[0].result));
 const house = () => { const h = obj(run([['HGETALL', 'casino']])[0].result || []); return [Number(h.bet) || 0, Number(h.won) || 0, Number(h.rounds) || 0]; };
-const keys = () => ['bj', 'mn', 'cr'].map(k => run([['GET', `${k}:${id}`]])[0].result).filter(Boolean).length;
+const keys = () => ['bj', 'mn', 'cr', 'tw'].map(k => run([['GET', `${k}:${id}`]])[0].result).filter(Boolean).length;
 run([['HSET', key, 'v', '1', 'tv', '2', 'rolls', '100', 'bonus', '2000000000'], ['HSET', 'names', id, 'Sim'], ['HSET', 'casino', 'seeded', '1']]);
 const rnd = n => Math.floor(Math.random() * n), pick = a => a[rnd(a.length)];
 const BETS = [10, 50, 100, 250, 500, 1000];
@@ -234,6 +234,29 @@ assert.ok(cappedCases > 50, 'des grilles atteignent le plafond');
 // Une grille qui atteint le plafond s'encaisse toute seule, à 250× exactement, et rien ne reste en cours.
 { let g = await G.mines(id, { move: 'start', bet: 10, mines: 20 }); const bombs = JSON.parse(run([['GET', `mn:${id}`]])[0].result).bombs, safe = Array.from({ length: 25 }, (_, i) => i).filter(i => !bombs.includes(i)); for (let k = 0; k < safe.length && !g.done; k++) { g = await G.mines(id, { move: 'pick', cell: safe[k] }); if (!g.done) assert.ok(g.mult < 250 && !g.capped); } assert.deepEqual([g.result, g.mult, g.capped, g.win, g.open.length], ['cash', 250, true, 2500, 4], JSON.stringify(g)); assert.equal(keys(), 0); }
 
+// ---- Tower (idée de Zombara) : difficulté et étage visé au hasard, cases au hasard, multiplicateur recalculé
+let twBooms = 0, twCash = 0, twTop = 0;
+rtp = await series('tower', '≈ 98-99 % (moins l\'arrondi)', async () => {
+  const level = pick(Object.keys(G.TOWER_LEVELS)), n = G.TOWER_LEVELS[level], bet = pick(BETS), want = 1 + rnd(G.TOWER_FLOORS);
+  let g = await G.tower(id, { move: 'start', bet, level });
+  assert.deepEqual([g.picks.length, g.done, g.bombs, g.tiles], [0, false, undefined, n], 'les bombes ne sortent pas avant la fin');
+  await assert.rejects(G.tower(id, { move: 'start', bet, level }), /Finish your game/);
+  await assert.rejects(G.tower(id, { move: 'cash' }), /Climb one floor/);
+  for (let k = 0; k < want && !g.done; k++) {
+    g = await G.tower(id, { move: 'pick', tile: rnd(n) });
+    if (!g.done) { assert.equal(g.mult, G.towerMult(n, g.picks.length)); assert.equal(g.bombs, undefined); }
+  }
+  if (!g.done) g = await G.tower(id, { move: 'cash' });
+  assert.equal(g.bombs.length, G.TOWER_FLOORS); assert.ok(g.picks.every((t, f) => g.bombs[f] !== t), 'une case franchie n\'est jamais une bombe');
+  if (g.result === 'boom') { twBooms++; assert.equal(g.win, 0); assert.equal(g.bombs[g.floor], g.hit); }
+  else { twCash++; assert.equal(g.win, Math.floor(bet * G.towerMult(n, g.picks.length))); if (g.picks.length === G.TOWER_FLOORS) twTop++; }
+  return { bet, win: g.win };
+}, Math.round(N / 2));
+assert.ok(twBooms > 0 && twCash > 0 && twTop > 0, 'explosions, encaissements et sommets atteints');
+assert.ok(rtp > .85 && rtp < 1.15, `tower ${rtp}`);
+for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) { const ev = Math.pow((n - 1) / n, k) * G.towerMult(n, k); assert.ok(ev <= .99000001 && ev > .97, `tower ${level}/${k} : ${ev}`); }
+assert.equal(keys(), 0);
+
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;
 rtp = await series('crash', '≈ 99 % (moins l\'arrondi)', async () => {
@@ -279,6 +302,8 @@ for (const bad of [0, 5, 9, 1001, 10.5, -50, '100', null, NaN]) {
   await assert.rejects(G.roulette(id, { bets: [{ t: 'red', a: bad }] }));
 }
 for (const m of [0, 25, 2.5, -1, 'x']) await assert.rejects(G.mines(id, { move: 'start', bet: 100, mines: m }));
+for (const l of ['', 'medium', 'EASY', 3, null]) await assert.rejects(G.tower(id, { move: 'start', bet: 100, level: l }));
+for (const bad of [0, 9, 1001, 10.5, '100']) await assert.rejects(G.tower(id, { move: 'start', bet: bad, level: 'easy' }));
 await assert.rejects(G.roulette(id, { bets: [] })); await assert.rejects(G.roulette(id, { bets: [{ t: 'n', v: 37, a: 10 }] })); await assert.rejects(G.roulette(id, { bets: [{ t: 'zzz', a: 10 }] }));
 await assert.rejects(G.roulette(id, { bets: [{ t: 'red', a: 600 }, { t: 'black', a: 600 }] }), /Maximum/);
 await assert.rejects(G.roulette(id, { bets: Array.from({ length: 13 }, (_, v) => ({ t: 'n', v, a: 10 })) }), /At most 12/);

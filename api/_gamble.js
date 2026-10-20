@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1, feed = true) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -221,7 +221,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -356,6 +356,49 @@ async function mines(id, body) {
   return showMines(g, (await wallet(id)).coins);
 }
 
+// Tower (idée du joueur Zombara, 2026-10-20) : 8 étages, une bombe cachée à chaque étage parmi 4, 3 ou 2 cases selon la
+// difficulté. Chaque case sûre fait monter d'un étage et le multiplicateur ; on encaisse quand on veut. Même calcul que
+// les Mines : 99 % des vraies chances à chaque étage, arrondi vers le bas, même plafond (×250, atteint seulement au
+// dernier étage en Hard). Les bombes sont tirées au départ et restent dans Redis jusqu'à la fin de la partie.
+const twKey = id => `tw:${id}`;
+const TOWER_FLOORS = 8, TOWER_LEVELS = { easy: 4, normal: 3, hard: 2 };
+const towerMult = (n, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= n / (n - 1); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
+const towerLadder = n => Array.from({ length: TOWER_FLOORS }, (_, i) => towerMult(n, i + 1));
+const showTower = (g, coins, end) => {
+  const n = TOWER_LEVELS[g.level], k = g.picks.length;
+  return { bet: g.bet, level: g.level, tiles: n, floors: TOWER_FLOORS, picks: g.picks, ladder: towerLadder(n), cap: MINES_CAP, mult: k ? towerMult(n, k) : 1, next: k < TOWER_FLOORS ? towerMult(n, k + 1) : null, done: !!end, ...(end ? { result: end, win: g.win || 0, bombs: g.bombs } : {}), coins };
+};
+async function tower(id, body) {
+  const [raw] = await redis([['GET', twKey(id)]]);
+  let g = raw ? JSON.parse(raw) : null;
+  const move = String(body.move || 'state');
+  if (move === 'state') return g ? showTower(g, (await wallet(id)).coins) : { done: true, idle: true, coins: (await wallet(id)).coins };
+  if (move === 'start') {
+    if (g) throw refuse(422, 'Finish your game first');
+    const level = String(body.level || '');
+    if (!Object.prototype.hasOwnProperty.call(TOWER_LEVELS, level)) throw refuse(400, 'Pick Easy, Normal or Hard');
+    const bet = await debit(id, body.bet);
+    // Une bombe par étage, tirée avec crypto, gardée ici jusqu'à la fin.
+    g = { bet, level, bombs: Array.from({ length: TOWER_FLOORS }, () => crypto.randomInt(0, TOWER_LEVELS[level])), picks: [] };
+  } else {
+    if (!g) throw refuse(422, 'No game in progress');
+    if (move === 'pick') {
+      const t = Number(body.tile), floor = g.picks.length;
+      if (!Number.isInteger(t) || t < 0 || t >= TOWER_LEVELS[g.level]) throw refuse(400, 'Pick a tile on the current floor');
+      if (g.bombs[floor] === t) { await redis([['DEL', twKey(id)]]); await credit(id, g.bet, 0, 'gTower'); return { ...showTower(g, (await wallet(id)).coins, 'boom'), hit: t, floor }; }
+      g.picks.push(t);
+      if (g.picks.length < TOWER_FLOORS) { await redis([['SET', twKey(id), JSON.stringify(g), 'EX', KEEP_S]]); return showTower(g, (await wallet(id)).coins); }
+      // Sommet atteint : la partie s'encaisse seule.
+    } else if (move !== 'cash') throw refuse(400, 'Unknown move');
+    if (!g.picks.length) throw refuse(422, 'Climb one floor first');
+    g.win = Math.floor(g.bet * towerMult(TOWER_LEVELS[g.level], g.picks.length));
+    await redis([['DEL', twKey(id)]]); await credit(id, g.bet, g.win, 'gTower');
+    return showTower(g, (await wallet(id)).coins, 'cash');
+  }
+  await redis([['SET', twKey(id), JSON.stringify(g), 'EX', KEEP_S]]);
+  return showTower(g, (await wallet(id)).coins);
+}
+
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
@@ -404,4 +447,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

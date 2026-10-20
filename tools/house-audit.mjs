@@ -35,6 +35,14 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   }
   add('Mines', best, how, 'chaque case paie 99 % des vraies chances, arrondi vers le bas, plafond ×250');
 }
+// Tower : n cases par étage dont une bombe, on encaisse après k étages. Toutes les combinaisons possibles.
+{
+  let best = 0, how = '';
+  for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) {
+    const r = Math.pow((n - 1) / n, k) * G.towerMult(n, k); if (r > best) { best = r; how = `${level}, encaisser après ${k} étage(s)`; }
+  }
+  add('Tower', best, how, 'même calcul que les Mines : 99 % des vraies chances, arrondi vers le bas, plafond ×250');
+}
 // Crash : point = min(500, plancher(0,99 / (1 − u), 2 décimales)). Encaisser à m gagne si le point dépasse m.
 {
   let best = 0, how = '';
