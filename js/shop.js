@@ -71,6 +71,8 @@
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
     // Idée de JAKECisthebest (2026-10-20) : de la cire ASMR croquante, pressée et craquée ; boutons et sons assortis.
     { id: 'asmr', name: 'ASMR', emoji: '🧈', price: 3000, desc: 'Pastel crunchy wax, kneaded while it rolls, pressed and crunched on every digit' },
+    // Idée d'Edward (2026-10-20) : une énergie maudite bleu-violet, aura qui crépite et sceaux. Dessin original.
+    { id: 'cursed', name: 'Cursed Energy', emoji: '🌀', price: 6000, desc: 'Violet cursed energy flows around every digit, and a seal burns on each one' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
