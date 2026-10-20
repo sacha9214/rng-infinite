@@ -4,7 +4,8 @@
 // À lancer sur le VPS après le déploiement :  node tools/migrate-exact.js [--apply]
 const L = require('../api/_lib');
 const { redis, engine, scopes, XP_LB } = L;
-const OLD = { 235: { tier: 'mythic', s: 370278 }, 2016: { tier: 'mythic', s: 240597 } };
+// 2026-10-21 : 852655 (nouveau badge exact, Common → Divine) ; marqueur distinct pour ne pas rejouer 235 et 2016.
+const OLD = { 852655: { tier: 'common', s: 4996 } };
 const APPLY = process.argv.includes('--apply');
 
 (async () => {
@@ -12,7 +13,7 @@ const APPLY = process.argv.includes('--apply');
   const ids = []; for (let i = 0; i < flat.length; i += 2) ids.push([flat[i], flat[i + 1]]);
   let touched = 0;
   for (const [id, name] of ids) {
-    const [members, done] = await redis([['ZRANGE', L.historyKey ? L.historyKey(id) : `hist:${id}`, 0, -1], ['SISMEMBER', 'migrate:exact2', id]]);
+    const [members, done] = await redis([['ZRANGE', L.historyKey ? L.historyKey(id) : `hist:${id}`, 0, -1], ['SISMEMBER', 'migrate:exact3', id]]);
     if (Number(done) === 1) continue;
     const hits = [];
     const seen = new Set();
@@ -45,7 +46,7 @@ const APPLY = process.argv.includes('--apply');
     // XP à vie : seulement là où il est déjà tenu (sinon il est recalculé depuis l'historique, déjà juste).
     if (Number(hasXp) === 1) w.push(['HINCRBY', `stats:${id}`, 'xpLife', xp]);
     if (onLb !== null) w.push(['ZINCRBY', XP_LB, xp, id]);
-    w.push(['SADD', 'migrate:exact2', id]);
+    w.push(['SADD', 'migrate:exact3', id]);
     if (APPLY) await redis(w);
   }
   console.log(`${touched} joueur(s) ${APPLY ? 'mis à jour' : 'à mettre à jour (simulation, ajouter --apply)'}`);
