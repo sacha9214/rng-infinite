@@ -141,7 +141,7 @@
     // On retire l'infra-grave (inaudible, et il mange la marge) et on adoucit le haut du spectre.
     const finish = x => filter(filter(x, 'hp', 34), 'lp', 6000, .6);
 
-    return { SR, note, expo, osc, noise, filter, shape, gain, sum, bell, lock, tick, whoosh, riser, boom, impact, reverb, finish };
+    return { SR, note, expo, osc, noise, filter, shape, gain, sum, delayed, bell, lock, tick, whoosh, riser, boom, impact, reverb, finish };
   }
 
   const api = { create };

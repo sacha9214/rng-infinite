@@ -4140,3 +4140,98 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Téléphone avec le solde en haut : un peu moins d'espace autour des onglets pour qu'ils tiennent tous. */
 @media (max-width: 560px) { .nav a { padding-inline: .2rem; } .topbar-right { gap: .22rem; } .player-btn { padding: 0 .4rem; } }
 @media (max-width: 380px) { .nav a { padding-inline: .15rem; } .lang-switch > span { display: none; } .hdr-coins { font-size: .66rem; } .topbar { padding-inline: .45rem; } }
+
+/* ------------------------------------------------------------------ ASMR : cire croquante (idée de JAKECisthebest, 2026-10-20)
+   Chaque chiffre est imprimé dans un pavé de cire pastel mate (la « crunchy butter wax » des vidéos ASMR), craquelée en
+   surface. Pendant le tirage les pavés sont malaxés (écrasés, étirés) ; quand un chiffre se pose, un doigt invisible
+   presse le pavé : il se tasse, la croûte craque (les fissures s'éclairent) et des miettes sautent, puis il reprend forme.
+   Matière molle : écrasement et étirement, aucun éclat métallique. */
+.num-card.skin-asmr {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, .5) 0 .12rem, transparent .14rem) 0 0 / 2.3rem 1.9rem,
+    radial-gradient(circle at 70% 70%, rgba(214, 170, 120, .35) 0 .08rem, transparent .1rem) 0 0 / 1.7rem 1.5rem,
+    linear-gradient(180deg, #fbf3ff 0%, #f3e8ff 55%, #e9d5ff 100%);
+  border: 2px solid #d8b4fe; border-radius: 1rem;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .8), inset 0 -6px 12px rgba(168, 85, 247, .18), 0 0 0 2px #c4b5fd, 0 10px 18px rgba(88, 28, 135, .28);
+}
+.skin-asmr .slot {
+  --wax: #ffe08a; --wax-d: #e8b64a; --wax-ink: #a1701a;
+  position: relative; font-size: .6em; font-weight: 900; width: 1.32em; height: 1.48em; margin: 0 .06em;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: .34em .34em .3em .3em;
+  color: var(--wax-ink);
+  background:
+    radial-gradient(ellipse 70% 40% at 35% 18%, rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(180deg, var(--wax), var(--wax-d));
+  /* Chiffre imprimé dans la cire : creux sombre en haut, bord clair en bas. */
+  text-shadow: 0 -.035em 0 rgba(0, 0, 0, .3), 0 .05em 0 rgba(255, 255, 255, .75);
+  box-shadow: inset 0 .06em 0 rgba(255, 255, 255, .7), inset 0 -.1em .14em rgba(0, 0, 0, .12), 0 .12em 0 var(--wax-ink), 0 .24em .3em rgba(60, 20, 80, .3);
+  transform-origin: 50% 100%;
+}
+/* Six cires pastel, comme les blocs des vidéos : beurre, menthe, lilas, pêche, rose, ciel. */
+.skin-asmr .slot:nth-child(6n+2) { --wax: #b8f2d4; --wax-d: #79d9a8; --wax-ink: #2f8f62; }
+.skin-asmr .slot:nth-child(6n+3) { --wax: #e2cdff; --wax-d: #b994f5; --wax-ink: #6d43b8; }
+.skin-asmr .slot:nth-child(6n+4) { --wax: #ffd0b0; --wax-d: #f7a173; --wax-ink: #b45a2c; }
+.skin-asmr .slot:nth-child(6n+5) { --wax: #ffc9dc; --wax-d: #f592b7; --wax-ink: #b03a69; }
+.skin-asmr .slot:nth-child(6n+6) { --wax: #c4e6ff; --wax-d: #86c3f0; --wax-ink: #2f6fa6; }
+/* La croûte craquelée (::before) et les miettes (::after, invisibles au repos). */
+.skin-asmr .slot::before, .skin-asmr .slot::after { content: ''; position: absolute; pointer-events: none; }
+.skin-asmr .slot::before {
+  inset: 0; border-radius: inherit; opacity: .35;
+  /* Fissures fines, surtout vers les bords : le chiffre reste propre au milieu. */
+  background:
+    linear-gradient(32deg, transparent 12%, rgba(255, 255, 255, .95) 13%, transparent 14.5%),
+    linear-gradient(-58deg, transparent 80%, rgba(255, 255, 255, .9) 81%, transparent 82.5%),
+    linear-gradient(104deg, transparent 8%, rgba(255, 255, 255, .85) 9%, transparent 10.5%),
+    linear-gradient(-14deg, transparent 88%, rgba(255, 255, 255, .85) 89%, transparent 90.5%),
+    linear-gradient(70deg, transparent 90%, rgba(0, 0, 0, .25) 91%, transparent 92%);
+}
+.skin-asmr .slot::after {
+  left: -40%; right: -40%; top: -30%; bottom: -12%; opacity: 0;
+  --c: var(--wax); --e: var(--wax-ink);
+  background:
+    radial-gradient(circle, var(--c) 0 .07em, var(--e) .075em .095em, transparent .1em) 4% 34% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .05em, var(--e) .055em .075em, transparent .08em) 94% 20% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .06em, var(--e) .065em .085em, transparent .09em) 0% 74% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .08em, var(--e) .085em .105em, transparent .11em) 100% 62% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .05em, var(--e) .055em .075em, transparent .08em) 26% 0% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .06em, var(--e) .065em .085em, transparent .09em) 76% 2% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .04em, var(--e) .045em .065em, transparent .07em) 12% 96% / .5em .5em no-repeat,
+    radial-gradient(circle, var(--c) 0 .045em, var(--e) .05em .07em, transparent .075em) 88% 98% / .5em .5em no-repeat;
+}
+.skin-asmr .slot.ghost { opacity: .22; }
+.skin-asmr .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-asmr .slot.collapsed::before, .skin-asmr .slot.collapsed::after { display: none; }
+/* Pendant le tirage : la cire est malaxée (écrasée, étirée, un peu de travers), le chiffre flou dans la pâte. */
+.skin-asmr .slot.spinning { opacity: .92; color: var(--wax-ink); animation: asmr-knead .24s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+@keyframes asmr-knead {
+  from { transform: scale(1.14, .8) skewX(-5deg); border-radius: .5em .3em .3em .45em; }
+  to { transform: scale(.9, 1.1) skewX(4deg); border-radius: .3em .5em .45em .3em; }
+}
+/* Il se pose : le pavé se soulève (élan), le doigt l'écrase (la croûte craque, les miettes sautent), il remonte et se tasse. */
+.skin-asmr .slot.revealed { animation: asmr-press .7s cubic-bezier(.3, 1.4, .5, 1) backwards; }
+.skin-asmr .slot.revealed::before { animation: asmr-crack .7s ease-out backwards; }
+.skin-asmr .slot.revealed::after { animation: asmr-crumbs .7s cubic-bezier(.2, .7, .4, 1) backwards; }
+@keyframes asmr-press {
+  0% { transform: scale(.94, 1.12) translateY(-.06em); }
+  18% { transform: scale(1.26, .68); }
+  32% { transform: scale(1.2, .74); }
+  58% { transform: scale(.95, 1.07); }
+  80% { transform: scale(1.03, .97); }
+  100% { transform: none; }
+}
+@keyframes asmr-crack { 0%, 12% { opacity: .15; } 22%, 34% { opacity: 1; filter: drop-shadow(0 0 .04em #fff); } 100% { opacity: .35; } }
+@keyframes asmr-crumbs {
+  0%, 14% { opacity: 0; transform: scale(.35); }
+  22% { opacity: 1; transform: scale(.7); }
+  65% { opacity: 1; transform: scale(1.15) translateY(.06em); }
+  100% { opacity: 0; transform: scale(1.3) translateY(.3em); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-asmr .slot, .skin-asmr .slot::before, .skin-asmr .slot::after { animation: none; } }
+/* Cadre de duel : un plan de travail pastel à petits carreaux ; le pavé de cire se fait presser, une miette scintille. */
+.side-asmr { --side-border: #c4b5fd; --side-glow: 0 0 14px rgba(196, 181, 253, .45); --side-ink: #7c3aed;
+  --side-bg: repeating-linear-gradient(45deg, rgba(196, 181, 253, .08) 0 8px, transparent 8px 16px), linear-gradient(180deg, rgba(233, 213, 255, .2), rgba(255, 224, 138, .14) 60%, rgba(184, 242, 212, .16));
+  --deco-a: '🧈'; --deco-b: '✨ 👆'; }
+.side-asmr::before { font-size: 1.2rem; transform-origin: 50% 100%; animation: asmr-squish 1.8s cubic-bezier(.3, 1.4, .5, 1) infinite; }
+.side-asmr::after { animation: asmr-tap 1.8s ease-in-out infinite; }
+@keyframes asmr-squish { 0%, 45%, 100% { transform: none; } 55% { transform: scale(1.35, .65); } 70% { transform: scale(.92, 1.1); } }
+@keyframes asmr-tap { 0%, 35%, 100% { transform: translateY(0); } 50% { transform: translateY(3px) scale(.95); } }
