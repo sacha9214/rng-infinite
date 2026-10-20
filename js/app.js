@@ -1646,6 +1646,13 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-21d', date: 'Oct 21, 2026', en: [
+      '🏆 Daily tournaments (idea by PRISMA123)! Sign up for free before 12:00 UTC (30 rolls needed), then play your match whenever you like during its round: 5 tournament rolls each, highest total wins. Tournament rolls don\'t count anywhere else. Winner gets 1,000 coins and the Champion title, finalist 400, semi-finalists 150. Find it on the Duel page',
+      '🌀 New skin Cursed Energy: violet cursed energy flows around every digit and a seal burns on each one, with a matching Generate button and duel frame (idea by Edward)',
+    ], fr: [
+      '🏆 Tournois quotidiens (idée de PRISMA123) ! Inscris-toi gratuitement avant 12:00 UTC (30 tirages requis), puis joue ton match quand tu veux pendant son tour : 5 tirages de tournoi chacun, le plus gros total gagne. Les tirages de tournoi ne comptent nulle part ailleurs. Le vainqueur gagne 1 000 pièces et le titre Champion, le finaliste 400, les demi-finalistes 150. À retrouver sur la page Duel',
+      '🌀 Nouveau skin Cursed Energy : une énergie maudite violette coule autour de chaque chiffre et un sceau brûle sur chacun, avec son bouton Generate et son cadre de duel assortis (idée d\'Edward)',
+    ] },
     { id: '2026-10-21c', date: 'Oct 21, 2026', en: ['📺 New badge 852655: exactly 852655 (idea by CococoC)', '🖼️ New title Collectible Connoisseur: own every skin, limited ones excepted (idea by kaz)'], fr: ['📺 Nouveau badge 852655 : exactement 852655 (idée de CococoC)', '🖼️ Nouveau titre Grand collectionneur : possède tous les skins, sauf les limités (idée de kaz)'] },
     { id: '2026-10-21b', date: 'Oct 21, 2026', en: ['🎵 RNG∞ has music! “Distant Odds” by Phong67 plays softly in the background. Turn it off in Player & settings (Music), or with the sound button'], fr: ['🎵 RNG∞ a sa musique ! « Distant Odds » de Phong67 joue doucement en fond. Coupe-la dans Joueur et réglages (Musique), ou avec le bouton du son'] },
     { id: '2026-10-21a', date: 'Oct 21, 2026', en: [
