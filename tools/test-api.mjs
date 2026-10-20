@@ -1346,6 +1346,41 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await tick(); r = await g(frank, 'mines', { move: 'pick', cell: bombs[0] });
   assert.deepEqual([r.body.result, r.body.win, r.body.hit, r.body.coins], ['boom', 0, bombs[0], 1162]);
   await tick(); assert.equal((await g(frank, 'mines', { move: 'pick', cell: 3 })).status, 422);
+  // Tower (idée de Zombara) : bombes tirées au départ, jamais envoyées avant la fin ; mises validées comme aux Mines.
+  await tick(); for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'tower', { move: 'start', bet: bad, level: 'easy' })).status, 400, `mise ${bad}`); await tick(); }
+  assert.equal((await g(frank, 'tower', { move: 'start', bet: 100, level: 'insane' })).status, 400, 'difficulté inconnue'); await tick();
+  await setCoins(frank, 50); assert.equal((await g(frank, 'tower', { move: 'start', bet: 100, level: 'easy' })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1162);
+  assert.equal((await g(frank, 'tower', { move: 'cash' })).status, 422, 'pas de partie'); await tick();
+  r = await g(frank, 'tower', { move: 'start', bet: 100, level: 'normal' });
+  assert.deepEqual([r.status, r.body.picks, r.body.tiles, r.body.mult, r.body.next, r.body.coins, r.body.bombs, JSON.stringify(r.body).includes('bomb')], [200, [], 3, 1, 1.48, 1062, undefined, false], 'les bombes de la tour ne sortent pas');
+  assert.deepEqual(r.body.ladder, [1.48, 2.22, 3.34, 5.01, 7.51, 11.27, 16.91, 25.37]);
+  let tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
+  assert.equal(tb.length, 8); assert.ok(tb.every(b => Number.isInteger(b) && b >= 0 && b < 3));
+  await tick(); assert.equal((await g(frank, 'tower', { move: 'start', bet: 100, level: 'easy' })).status, 422, 'une seule partie à la fois');
+  await tick(); assert.equal((await g(frank, 'tower', { move: 'cash' })).status, 422, 'rien à encaisser au rez-de-chaussée');
+  await tick(); assert.equal((await g(frank, 'tower', { move: 'pick', tile: 3 })).status, 400, 'case hors de l\'étage');
+  await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[0] + 1) % 3 });
+  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.done, r.body.bombs], [1, 1.48, false, undefined]);
+  await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[1] + 1) % 3 });
+  await tick(); r = await g(frank, 'tower', { move: 'state' });
+  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.bombs], [2, 2.22, undefined], 'reprise de partie');
+  await tick(); r = await g(frank, 'tower', { move: 'cash' });
+  assert.deepEqual([r.body.result, r.body.win, r.body.coins, r.body.bombs], ['cash', 222, 1284, tb], 'encaisser paie mise × multiplicateur et dévoile les bombes');
+  // Hard : la bombe du 1er étage perd la mise.
+  await tick(); r = await g(frank, 'tower', { move: 'start', bet: 100, level: 'hard' });
+  tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
+  await tick(); r = await g(frank, 'tower', { move: 'pick', tile: tb[0] });
+  assert.deepEqual([r.body.result, r.body.win, r.body.hit, r.body.floor, r.body.coins, r.body.bombs.length], ['boom', 0, tb[0], 0, 1184, 8]);
+  await tick(); assert.equal((await g(frank, 'tower', { move: 'pick', tile: 0 })).status, 422);
+  // Easy jusqu'en haut : la partie s'encaisse seule au 8e étage (×9,88).
+  await tick(); r = await g(frank, 'tower', { move: 'start', bet: 10, level: 'easy' });
+  tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
+  for (let f = 0; f < 8; f++) { await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[f] + 1) % 4 }); }
+  assert.deepEqual([r.body.result, r.body.mult, r.body.win, r.body.coins, r.body.picks.length], ['cash', 9.88, 98, 1272, 8]);
+  assert.equal(run([['GET', `tw:${frank.playerId}`]])[0].result, null);
+  { const h = run([['HMGET', `stats:${frank.playerId}`, 'gTower']])[0].result; assert.equal(Number(h[0]), 3, 'compteur de manches gTower'); }
+  { const c = run([['HMGET', 'casino', 'r:tower', 'b:tower', 'w:tower']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 320], 'compte de la maison par jeu'); }
+  await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
   await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
   r = await g(frank, 'crash', { move: 'start', bet: 100 });

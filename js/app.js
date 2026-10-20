@@ -3319,7 +3319,7 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, lev: null, levSide: 'long', levX: 5, levSeen: 0, zoom: 90, hover: null, hy: null, mines: 3, mn: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, lev: null, levSide: 'long', levX: 5, levSeen: 0, zoom: 90, hover: null, hy: null, mines: 3, mn: null, twLevel: 'normal', tw: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
@@ -3328,7 +3328,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -3388,7 +3388,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -3413,6 +3413,13 @@
             <div class="mn-grid" id="mn-grid">${Array.from({ length: 25 }, (_, i) => `<button class="mn-cell" data-cell="${i}" disabled></button>`).join('')}</div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="mn-go">Start</button></div>
             <p class="panel-note g-result" id="mn-result"></p>
+          </div>
+          <div class="panel g-game" data-game="tower">
+            <div class="panel-head"><h3 class="panel-title">Tower</h3><span class="panel-note">climb 8 floors · one bomb per floor · cash out any time</span></div>
+            <div class="mn-setup tw-setup"><span class="eyebrow">Difficulty</span><div class="seg" id="tw-level">${[['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']].map(([v, l]) => `<button data-v="${v}" class="${v === Gamble.twLevel ? 'on' : ''}">${l}</button>`).join('')}</div><b class="mono" id="tw-mult"></b></div>
+            <div class="tw-tower" id="tw-tower"></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="tw-go">Start</button></div>
+            <p class="panel-note g-result" id="tw-result"></p>
           </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
@@ -3477,7 +3484,7 @@
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
     // Pièces gagnées ailleurs (un autre onglet qui tire, des quêtes) : le solde se relit quand la page revient au premier
     // plan, et toutes les 10 s tant qu'elle est affichée, seulement entre deux parties (signalé par un joueur le 2026-10-16).
-    const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle);
+    const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle) && !(Gamble.tw && !Gamble.tw.done && !Gamble.tw.idle);
     const refreshCoins = () => { if (!Store.player.name || document.hidden || !idle()) return; Online.shop().then(st => { if (idle()) showCoins(st.coins); }).catch(() => {}); };
     clearInterval(Gamble.coinTimer); Gamble.coinTimer = setInterval(() => { if (currentView !== 'gamble') { clearInterval(Gamble.coinTimer); return; } refreshCoins(); }, 10000);
     if (!Gamble.coinWatch) { Gamble.coinWatch = true; document.addEventListener('visibilitychange', () => refreshCoins()); window.addEventListener('focus', () => refreshCoins()); }
@@ -4059,6 +4066,48 @@
     const minesMove = async extra => { if (Gamble.busy) return; Gamble.busy = true; try { const g = await gamble('mines', extra); drawMines(g); if (g.result === 'boom') Sound.play('lock', { i: 0 }); else if (g.result === 'cash') { Sound.play('reveal', { small: 1 }); FX.celebrate(g.mult >= 5 ? 'epic' : 'uncommon', $('#mn-grid')); } else Sound.play('lock', { i: g.open.length, soft: 1 }); } catch (err) { fail(err); } finally { Gamble.busy = false; } };
     $('#mn-go').addEventListener('click', () => { const g = Gamble.mn; if (g && !g.done && !g.idle) minesMove({ move: 'cash' }); else { $('#mn-result').textContent = ''; minesMove({ move: 'start', bet: Gamble.chip, mines: Gamble.mines }); } });
     $('#mn-grid').addEventListener('click', e => { const c = e.target.closest('.mn-cell'); if (c && !c.disabled) minesMove({ move: 'pick', cell: Number(c.dataset.cell) }); });
+    // ---- tour (api/_gamble.js) : 8 étages, une bombe par étage parmi 4, 3 ou 2 cases. Le serveur ne dévoile les bombes
+    // qu'à la fin ; d'ici là on ne connaît que les cases choisies. Les multiplicateurs de chaque étage sont affichés à côté.
+    const TW_TILES = { easy: 4, normal: 3, hard: 2 };
+    // Même calcul que le serveur (towerMult), pour afficher l'échelle avant la première partie.
+    const twLadder = n => { const out = []; let x = 0.99; for (let i = 0; i < 8; i++) { x *= n / (n - 1); out.push(Math.min(250, Math.floor(x * 100) / 100)); } return out; };
+    const drawTower = (g, fresh) => {
+      Gamble.tw = g;
+      const live = g && !g.idle && !g.done, n = g && g.tiles ? g.tiles : TW_TILES[Gamble.twLevel];
+      const ladder = g && g.ladder ? g.ladder : twLadder(n), picks = g && g.picks ? g.picks : [], at = picks.length;
+      const rows = [];
+      for (let f = 7; f >= 0; f--) {
+        const state = f < at ? 'passed' : live && f === at ? 'current' : g && g.done && !g.idle && g.result === 'boom' && f === g.floor ? 'lost' : '';
+        const tiles = Array.from({ length: n }, (_, t) => {
+          const safe = picks[f] === t, bomb = g && g.bombs && g.bombs[f] === t, hit = g && g.result === 'boom' && g.floor === f && g.hit === t;
+          const face = safe ? 'safe' : bomb ? 'bomb' : g && g.bombs ? 'clear' : '';
+          const pop = fresh && ((safe && f === at - 1) || hit) ? ' pop' : '';
+          return `<button class="tw-tile${face ? ` ${face}` : ''}${hit ? ' hit' : ''}${pop}" data-floor="${f}" data-tile="${t}" ${live && f === at ? '' : 'disabled'} aria-label="Floor ${f + 1}, tile ${t + 1}">${face === 'safe' ? '<span class="tw-gem"></span>' : face === 'bomb' ? '<span class="tw-bomb">💣</span>' : ''}</button>`;
+        }).join('');
+        rows.push(`<div class="tw-floor${state ? ` ${state}` : ''}" style="--n:${n}"><span class="tw-lvl mono">${f + 1}</span><div class="tw-row">${tiles}</div><b class="tw-x mono">${ladder[f].toFixed(2)}×</b></div>`);
+      }
+      $('#tw-tower').innerHTML = rows.join('');
+      $('#tw-tower').dataset.level = g && g.level ? g.level : Gamble.twLevel;
+      $('#tw-go').textContent = live ? (at ? `Cash out · ${fmt(Math.floor(g.bet * g.mult))}` : 'Pick a tile') : `Start · ${fmt(Gamble.chip)}`;
+      $('#tw-go').disabled = !!(live && !at);
+      $('#tw-mult').textContent = live ? `${at ? g.mult.toFixed(2) : '1.00'}×${g.next ? ` → ${g.next.toFixed(2)}×` : ''}` : '';
+      document.querySelectorAll('#tw-level button').forEach(x => { x.disabled = !!live; x.classList.toggle('on', x.dataset.v === (live ? g.level : Gamble.twLevel)); });
+      if (g && g.done && !g.idle) say($('#tw-result'), g.win, g.bet, g.result === 'cash' ? `${g.mult.toFixed(2)}×${at === 8 ? ' · top floor' : ''} · you get ${fmt(g.win)} coins` : `Boom · −${fmt(g.bet)}`);
+      if (g) showCoins(g.coins);
+    };
+    $('#tw-level').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || (Gamble.tw && !Gamble.tw.done && !Gamble.tw.idle)) return; Gamble.twLevel = b.dataset.v; $('#tw-result').textContent = ''; drawTower(null); });
+    const towerMove = async extra => {
+      if (Gamble.busy) return; Gamble.busy = true;
+      try {
+        const g = await gamble('tower', extra); drawTower(g, true);
+        // Une note de plus en plus haute à chaque étage ; la bombe, un coup sourd et la tour qui tremble.
+        if (g.result === 'boom') { Sound.play('tier', { tier: 'trash' }); const t = $('#tw-tower'); t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake'); }
+        else if (g.result === 'cash') { Sound.play('reveal', { small: 1 }); FX.celebrate(g.mult >= 5 ? 'epic' : 'uncommon', $('#tw-tower')); }
+        else if (g.picks.length) Sound.play('lock', { i: g.picks.length + 1, final: g.picks.length === 7 });
+      } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    };
+    $('#tw-go').addEventListener('click', () => { const g = Gamble.tw; if (g && !g.done && !g.idle) towerMove({ move: 'cash' }); else { $('#tw-result').textContent = ''; towerMove({ move: 'start', bet: Gamble.chip, level: Gamble.twLevel }); } });
+    $('#tw-tower').addEventListener('click', e => { const c = e.target.closest('.tw-tile'); if (c && !c.disabled) towerMove({ move: 'pick', tile: Number(c.dataset.tile) }); });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -4191,8 +4240,8 @@
         else { if (Gamble.cr && Gamble.cr.frozen != null) { Gamble.cr.frozen = null; Gamble.cr.bt = null; Gamble.cr.frame(); } fail(err); } // encaissement raté : la fusée repart
       } finally { Gamble.busy = false; }
     });
-    drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null);
-    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); });
+    drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null); drawTower(null);
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); if (!Gamble.tw || Gamble.tw.done || Gamble.tw.idle) $('#tw-go').textContent = `Start · ${fmt(Gamble.chip)}`; });
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
@@ -4202,6 +4251,7 @@
     (async () => {
       await resume('bj', h => drawHand(h));
       await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
+      await resume('tower', g => { if (!g.idle) drawTower(g); });
       await resume('flip', g => { if (!g.idle) drawFlip(g); });
       await resume('crash', st => { if (!st.done) runCrash(st, true); else if (st.result === 'crash') endCrash(st); });
     })();
@@ -4732,7 +4782,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)

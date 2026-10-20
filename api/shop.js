@@ -182,7 +182,7 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
     if (GAMES[body.action]) {
       // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
