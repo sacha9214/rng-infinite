@@ -48,6 +48,9 @@
     soon(ms = 2500) { clearTimeout(this.timer); this.timer = setTimeout(() => this.refresh(), ms); },
     refresh() { if (Store.player.name && !document.hidden) Online.shop().catch(() => {}); },
   };
+  // Signale au serveur un cas anormal (compteur anonyme, une fois par nom et par visite) : voir api/site.js « evt ».
+  const seenEvt = new Set();
+  const clientEvt = name => { if (seenEvt.has(name)) return; seenEvt.add(name); try { Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'evt', name }) }).catch(() => {}); } catch (e) { /* rien */ } };
   const Online = {
     // Un seul essai sur une base. Vers un autre domaine, le corps part en text/plain et sans en-tête ajouté : le
     // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
@@ -1735,7 +1738,7 @@
   // Revoir un tirage (le sien ou celui d'un autre) : la révélation complète rejouée avec mon skin, sans rien tirer ni
   // enregistrer. Les badges se rejouent tous (pas de saut), l'XP à vie ne bouge pas.
   function rewatch(n, caption) {
-    if (session && !session.finished) session.cancel();
+    if (session && !session.finished) { clientEvt('reveal_cut'); session.cancel(); }
     closeModal();
     const back = (session && session.replayBack) || location.hash;
     currentView = 'result';
@@ -1851,6 +1854,7 @@
       online = await Online.roll(Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''));
     } catch (err) {
       rollPending = false;
+      clientEvt('bg_error');
       if (err.status === 403 || err.status === 409) { stopSoloAuto(); return; }
       scheduleSoloAuto(err.status === 429 ? 1500 : 5000); return;
     }
@@ -1904,7 +1908,8 @@
       n = online.n;
       HdrCoins.soon();
     } catch (err) {
-      if (err.status === 429 && SoloAuto.on) { rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
+      if (err.status === 429 && SoloAuto.on) {
+        clientEvt('auto_429'); rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
       // Réseau ou serveur qui hoquette (pas de réponse, 5xx) : l'auto-roll reste allumé et réessaie dans 5 s, au lieu de
       // s'éteindre et de laisser le joueur croire à un plantage (signalé par un joueur le 2026-10-16).
       if (SoloAuto.on && (!err.status || err.status >= 500)) {
@@ -1921,6 +1926,7 @@
       }
       const wasGoogle = !!Store.player.google;
       if (err.status === 403) {
+        clientEvt('id_reset');
         if (wasGoogle) Store.signOut(); else Store.resetIdentity();
       }
       if (err.status === 429 || err.status === 403) {
@@ -1931,6 +1937,7 @@
         return;
       }
       n = Engine.roll();
+      clientEvt('offline_roll');
       if (SoloAuto.on) stopSoloAuto();
       toast('Server unreachable: this roll stays on your device and is not counted');
     }
@@ -1947,6 +1954,7 @@
     const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
+    if (!saved) clientEvt('storage_full');
     if (!saved) toast('Could not save — storage is full. Export your history from the player menu.');
     session = playReveal({ n, a, previous, newIds: isFirst ? null : newIds, isFirst, lifetimeBefore, index, online });
   }

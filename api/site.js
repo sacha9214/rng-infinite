@@ -25,6 +25,7 @@ const DAY_MS = 86400000;
 // ---------------------------------------------------------------- suggestions
 const SUGG_MAX = 500, SUGG_MIN = 5, SUGG_PER_DAY = 5, REPLY_MAX = 300, INBOX_MAX = 200;
 const STATUSES = ['new', 'seen', 'planned', 'done', 'declined'];
+const CLIENT_EVENTS = ['offline_roll', 'reveal_cut', 'storage_full', 'id_reset', 'bg_error', 'auto_429'];
 const suggKey = id => `sugg:${id}`, byPlayer = id => `sugg:by:${id}`;
 // Texte libre : on retire les caractères de contrôle et on borne la longueur ; l'affichage l'échappe côté site.
 const cleanText = (raw, max) => String(raw || '').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
@@ -503,6 +504,13 @@ module.exports = async (req, res) => {
       return send(res, 200, { ok: true, rng: !!playerId, reward: playerId ? game.reward : null });
     }
     // Clic sur le lien d'un site partenaire (collab), compté par jour comme les visites. Seuls les partenaires connus.
+    // Événements anormaux côté navigateur (2026-10-20, enquête « tirages qui disparaissent en auto-roll ») : un
+    // compteur par jour et par nom, anonyme ; liste fermée de noms.
+    if (body.action === 'evt') {
+      const name = String(body.name || '');
+      if (CLIENT_EVENTS.includes(name) && !tooManyBeacons(req)) { const day = dayKey(Date.now()); await redis([['HINCRBY', `clientevt:${day}`, name, 1], ['EXPIRE', `clientevt:${day}`, 30 * 86400]]); }
+      return send(res, 200, { ok: true });
+    }
     if (body.action === 'out') {
       const to = PARTNERS.includes(String(body.to)) ? String(body.to) : '';
       if (to && !tooManyBeacons(req)) { const day = dayKey(Date.now()); await redis([['HINCRBY', anKey(day), `out:${to}`, 1], ['EXPIRE', anKey(day), AN_TTL]]); }
