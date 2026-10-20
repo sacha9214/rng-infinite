@@ -2347,7 +2347,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   {
     const theirs = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => !m.me), mine = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => m.me);
     let x = await fr(ann, 'report', 'Benny', { t: theirs.t }); assert.equal(x.status, 200, JSON.stringify(x.body)); assert.equal(x.body.reported, true);
-    assert.equal((await fr(ann, 'report', 'Benny', { t: mine.t })).status, 404, 'pas son propre message');
+    if (mine.t !== theirs.t) assert.equal((await fr(ann, 'report', 'Benny', { t: mine.t })).status, 404, 'pas son propre message'); // même milliseconde possible ici
     const siteApi = require(path.join(ROOT, 'api/site.js'));
     const owner = action => call(siteApi, { method: 'POST', body: { action, playerId: cid.playerId, secret: cid.secret, id: x.id } });
     assert.equal((await owner('reports')).status, 403, 'réservé au créateur');

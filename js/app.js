@@ -75,7 +75,8 @@
     // quêtes porte le solde du joueur ; on le recopie au passage.
     async request(pathname, options = {}) {
       const r = await this.send(pathname, options);
-      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests)\b/.test(pathname)) HdrCoins.set(r.coins);
+      // Au casino, le solde se met à jour à la fin de l'animation (showCoins), pour ne pas dévoiler le résultat avant.
+      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests)\b/.test(pathname) && currentView !== 'gamble') HdrCoins.set(r.coins);
       return r;
     },
     async send(pathname, options = {}) {
@@ -1616,6 +1617,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-20a', date: 'Oct 20, 2026', en: ['Fixed: closing a case before the end of the animation now updates your coins right away (the case was always paid, only the display was late; reported by JBearr12)'], fr: ['Corrigé : fermer une caisse avant la fin de l\'animation met ton solde à jour tout de suite (la caisse était toujours payée, seul l\'affichage était en retard ; signalé par JBearr12)'] },
     { id: '2026-10-19d', date: 'Oct 19, 2026', en: ['🪙 Your coin balance is always shown at the top right, next to the language. Click it to open the Shop'], fr: ['🪙 Ton solde de pièces s\'affiche en permanence en haut à droite, à côté de la langue. Clique dessus pour ouvrir la boutique'] },
     { id: '2026-10-19c', date: 'Oct 19, 2026', en: ['🚩 You can now report a message in the duel chat or in your private messages with the small Report button. It goes straight to the creator of the game'], fr: ['🚩 Tu peux maintenant signaler un message dans le chat des duels ou dans tes messages privés avec le petit bouton Signaler. Il arrive directement au créateur du jeu'] },
     { id: '2026-10-19b', date: 'Oct 19, 2026', en: ['🎲 Auto-roll keeps rolling when you switch to another tab (without the animation). The tab title counts your rolls, and you get a summary when you come back (idea by Phong)'], fr: ['🎲 Le tirage auto continue quand tu passes sur un autre onglet (sans l\'animation). Le titre de l\'onglet compte tes tirages, et un résumé s\'affiche à ton retour (idée de Phong)'] },
@@ -3417,7 +3419,7 @@
     drawHouse();
     drawCasinoTop(true);
     $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
-    const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
+    const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); HdrCoins.set(c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
     // Pièces gagnées ailleurs (un autre onglet qui tire, des quêtes) : le solde se relit quand la page revient au premier
     // plan, et toutes les 10 s tant qu'elle est affichée, seulement entre deux parties (signalé par un joueur le 2026-10-16).
@@ -4438,7 +4440,10 @@
       const pitch = cells[1].offsetLeft - cells[0].offsetLeft, half = reel.clientWidth / 2;
       // Arrêt quelque part dans la case gagnée, pas pile au centre : parfois tout près du voisin.
       const end = target.offsetLeft + target.offsetWidth / 2 - half + (Math.random() - 0.5) * target.offsetWidth * 0.82;
-      let raf = 0, done = false, lastIndex = -1;
+      let raf = 0, done = false, lastIndex = -1, synced = false;
+      // Le Shop (solde, skins possédés) suit le résultat même si la fenêtre est fermée pendant l'animation : sinon le
+      // solde affiché restait l'ancien et faisait croire que la caisse était gratuite (signalé par JBearr12, 2026-10-20).
+      const sync = () => { if (synced) return; synced = true; if (currentView === 'shop') drawShop(result); };
       const finish = () => {
         if (done) return;
         done = true;
@@ -4447,12 +4452,12 @@
         reel.classList.add('stopped');
         target.classList.add('won');
         setTimeout(() => {
-          if (!$('#case-result')) return;
+          if (!$('#case-result')) { sync(); return; }
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
           if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card'));
-          drawShop(result);
+          sync();
         }, reducedMotion ? 0 : 650);
       };
       if (reducedMotion) finish();
@@ -4460,7 +4465,7 @@
         const DURATION = 6400, t0 = performance.now();
         Sound.play('riser');
         const frame = now => {
-          if (!el.isConnected) return; // fenêtre fermée : le skin est déjà acquis côté serveur
+          if (!el.isConnected) { sync(); return; } // fenêtre fermée : le skin est déjà acquis côté serveur
           const t = Math.min(1, (now - t0) / DURATION);
           const x = end * (1 - Math.pow(1 - t, 4.4)); // départ très vite, puis un long ralenti
           el.style.transform = `translateX(${-x}px)`;
