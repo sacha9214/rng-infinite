@@ -3815,6 +3815,68 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
   60% { transform: translate3d(-660px, 0, 0); } 70% { transform: translate3d(-770px, -9px, 0); } 80% { transform: translate3d(-880px, 0, 0); }
   90% { transform: translate3d(-990px, -13px, 0); } 100% { transform: translate3d(-1100px, 0, 0); } }
 
+/* ♾️ Infinity, id « aether » car « infinity » est déjà un skin (idée de Me Cojoni, 2026-10-20) : une galaxie autour d'un grand signe infini très doux. Au repos : étoiles
+   qui dérivent (::before) et nébuleuse qui respire (::after). À la révélation d'un tirage, app.js pose data-react="<rareté>"
+   pendant 4,5 s : la couche .wpi-glow prend la couleur de la rareté (sombre pour les tirages courants), .wpi-spark fait
+   scintiller des éclats à partir de Mythique, et Divine / Godlike / Infinite déclenchent une courte explosion céleste.
+   Seulement opacity / transform ; le fond reste en retrait, les chiffres restent le centre de l'écran. */
+.wp-aether { --wi-bg1: #0b0826; --wi-bg2: #03020c; --wi-neb1: rgba(124, 58, 237, .28); --wi-neb2: rgba(34, 211, 238, .14); --wi-neb3: rgba(236, 72, 153, .12); --wi-loop: .22;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 112 62'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%2322d3ee'/><stop offset='.5' stop-color='%23a78bfa'/><stop offset='1' stop-color='%23f472b6'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-linecap='round'><path id='l' d='M50 25C62 8 96 2 96 25S62 42 50 25 4 2 4 25 38 42 50 25z' stroke-width='1.8' opacity='.07'/><use href='%23l' stroke-width='.9' opacity='.14'/><use href='%23l' stroke-width='.3' opacity='.6'/></g></svg>") center 42% / min(88vw, 900px) auto no-repeat,
+    radial-gradient(ellipse 55% 40% at 50% 42%, rgba(167, 139, 250, .14), transparent 70%),
+    linear-gradient(180deg, var(--wi-bg1) 0%, var(--wi-bg2) 100%); }
+/* aperçu de la boutique : le signe infini entier dans la vignette */
+.wall-preview.wp-aether { background-size: 82% auto, auto, auto; background-position: center 45%, 0 0, 0 0; }
+html:not(.dark) .wp-aether { --wi-bg1: #eef0ff; --wi-bg2: #f8f4ff; --wi-neb1: rgba(167, 139, 250, .3); --wi-neb2: rgba(103, 232, 249, .22); --wi-neb3: rgba(249, 168, 212, .22); }
+.wp-aether::before { inset: -10%; background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><g fill='%23e0e7ff'><circle cx='14' cy='22' r='.8' opacity='.7'/><circle cx='80' cy='60' r='.6' opacity='.5'/><circle cx='150' cy='18' r='1' opacity='.8'/><circle cx='214' cy='84' r='.7' opacity='.55'/><circle cx='52' cy='140' r='.9' opacity='.7'/><circle cx='122' cy='176' r='.6' opacity='.45'/><circle cx='190' cy='150' r='1' opacity='.75'/><circle cx='26' cy='214' r='.7' opacity='.5'/><circle cx='170' cy='226' r='.6' opacity='.5'/><circle cx='104' cy='104' r='.5' opacity='.4'/></g></svg>") 0 0 / 240px 240px;
+  animation: wp-twinkle 6s ease-in-out infinite, wp-drift 200s linear infinite; }
+html:not(.dark) .wp-aether::before { filter: invert(.55) sepia(.4) hue-rotate(200deg); opacity: .6; }
+.wp-aether::after { inset: -15%; background: radial-gradient(ellipse 40% 30% at 32% 40%, var(--wi-neb1), transparent 70%), radial-gradient(ellipse 36% 28% at 70% 58%, var(--wi-neb2), transparent 70%), radial-gradient(ellipse 26% 20% at 58% 30%, var(--wi-neb3), transparent 70%);
+  animation: wpi-breathe 14s ease-in-out infinite alternate; }
+@keyframes wpi-breathe { from { opacity: .7; transform: scale(1) rotate(0deg); } to { opacity: 1; transform: scale(1.06) rotate(3deg); } }
+/* calques de réaction (seulement sur le vrai fond, pas dans les aperçus de la boutique) */
+#wallpaper .wpi-glow, #wallpaper .wpi-spark { position: absolute; inset: 0; opacity: 0; pointer-events: none; will-change: opacity, transform; }
+#wallpaper .wpi-glow { background: radial-gradient(ellipse 60% 45% at 50% 42%, rgba(var(--wr), .55), rgba(var(--wr), .16) 55%, transparent 78%); }
+#wallpaper .wpi-spark { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='520' height='460'><g fill='%23ffffff'><path d='M46 58l1.6 5.4 5.4 1.6-5.4 1.6-1.6 5.4-1.6-5.4-5.4-1.6 5.4-1.6z' opacity='.9'/><path d='M318 34l.9 3 3 .9-3 .9-.9 3-.9-3-3-.9 3-.9z' opacity='.7'/><path d='M201 187l2.4 8 8 2.4-8 2.4-2.4 8-2.4-8-8-2.4 8-2.4z'/><path d='M452 251l1 3.4 3.4 1-3.4 1-1 3.4-1-3.4-3.4-1 3.4-1z' opacity='.75'/><path d='M97 349l1.3 4.4 4.4 1.3-4.4 1.3-1.3 4.4-1.3-4.4-4.4-1.3 4.4-1.3z' opacity='.8'/><path d='M381 402l2 6.6 6.6 2-6.6 2-2 6.6-2-6.6-6.6-2 6.6-2z' opacity='.85'/><circle cx='263' cy='112' r='1.1' opacity='.8'/><circle cx='22' cy='214' r='.9' opacity='.6'/><circle cx='137' cy='441' r='1' opacity='.7'/><circle cx='497' cy='133' r='.8' opacity='.6'/><circle cx='292' cy='316' r='1.2' opacity='.7'/></g></svg>") 37px 11px / 520px 460px;
+  filter: drop-shadow(0 0 4px rgba(var(--wr, 255, 255, 255), .9)); }
+html:not(.dark) #wallpaper .wpi-spark { filter: brightness(.35) drop-shadow(0 0 3px rgba(var(--wr), .9)); }
+/* couleur par rareté : sombre et calme en bas de l'échelle, couleur de la rareté au-dessus */
+#wallpaper[data-react] { --wr: 15, 23, 42; }
+#wallpaper[data-react="uncommon"] { --wr: 16, 185, 129; }
+#wallpaper[data-react="rare"] { --wr: 59, 130, 246; }
+#wallpaper[data-react="epic"] { --wr: 168, 85, 247; }
+#wallpaper[data-react="anomaly"] { --wr: 249, 115, 22; }
+#wallpaper[data-react="mythic"] { --wr: 244, 63, 94; }
+#wallpaper[data-react="celestial"] { --wr: 56, 189, 248; }
+#wallpaper[data-react="divine"] { --wr: 253, 224, 71; }
+#wallpaper[data-react="godlike"] { --wr: 251, 191, 36; }
+#wallpaper[data-react="infinite"] { --wr: 232, 121, 249; }
+html:not(.dark) #wallpaper[data-react]:is([data-react="landwaste"], [data-react="garbage"], [data-react="trash"], [data-react="common"]) { --wr: 100, 116, 139; }
+/* courant : la nébuleuse s'assombrit un peu ; rare / épique : vague de couleur ; mythique et + : éclats ; divine et + : explosion */
+#wallpaper[data-react] .wpi-glow { animation: wpi-dim 4.2s ease-out both; }
+#wallpaper:is([data-react="uncommon"], [data-react="rare"], [data-react="epic"]) .wpi-glow { animation: wpi-wave 4.2s ease-out both; }
+#wallpaper:is([data-react="anomaly"], [data-react="mythic"], [data-react="celestial"]) .wpi-glow { animation: wpi-wave-strong 4.4s ease-out both; }
+#wallpaper:is([data-react="anomaly"], [data-react="mythic"], [data-react="celestial"]) .wpi-spark { animation: wpi-sparkle 4.4s ease-out both; }
+#wallpaper:is([data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-glow { background: radial-gradient(ellipse 22% 16% at 50% 42%, rgba(255, 251, 235, .55), transparent 70%), radial-gradient(ellipse 60% 45% at 50% 42%, rgba(var(--wr), .6), rgba(var(--wr), .18) 55%, transparent 78%); animation: wpi-burst 4.4s cubic-bezier(.2, .7, .2, 1) both; }
+#wallpaper:is([data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-spark { animation: wpi-sparkle-burst 4.4s ease-out both; }
+#wallpaper[data-react]::after { transition: opacity 1.5s; }
+@keyframes wpi-dim { 0% { opacity: 0; } 20% { opacity: .5; } 100% { opacity: 0; } }
+@keyframes wpi-wave { 0% { opacity: 0; transform: scale(.85); } 25% { opacity: .55; transform: scale(1); } 100% { opacity: 0; transform: scale(1.12); } }
+@keyframes wpi-wave-strong { 0% { opacity: 0; transform: scale(.8); } 18% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
+@keyframes wpi-sparkle { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(1); } 15% { opacity: .7; } 35% { opacity: .35; } 50% { opacity: .6; } 100% { opacity: 0; transform: translate3d(0, -30px, 0) scale(1.05); } }
+@keyframes wpi-burst { 0% { opacity: 0; transform: scale(.4); } 9% { opacity: 1; transform: scale(1.05); } 30% { opacity: .75; transform: scale(1.35); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes wpi-sparkle-burst { 0% { opacity: 0; transform: scale(.7); } 12% { opacity: 1; transform: scale(1); } 45% { opacity: .7; } 100% { opacity: 0; transform: scale(1.5); } }
+/* mouvement réduit / mode performance : pas d'éclat ni d'explosion, juste un léger changement de couleur en fondu */
+@media (prefers-reduced-motion: reduce) {
+  #wallpaper .wpi-spark { display: none; }
+  #wallpaper[data-react] .wpi-glow { animation: none !important; transform: none; opacity: .3; }
+  #wallpaper .wpi-glow { transition: opacity 1.2s; } }
+html.perf #wallpaper .wpi-spark { display: none; }
+html.perf #wallpaper[data-react] .wpi-glow { animation: none !important; transform: none; opacity: .3; }
+html.perf #wallpaper .wpi-glow { transition: opacity 1.2s; }
+
 @media (prefers-reduced-motion: reduce) { .wp::before, .wp::after { animation: none !important; } }
 html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !important; }
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
