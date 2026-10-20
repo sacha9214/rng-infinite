@@ -268,6 +268,8 @@
     THREE_SIX_NINE: '369', // idée de GamblrGod (2026-10-17) : « 369 », comme la chanson
     TWENTY_ONE: '21', // idée de kaz (2026-10-18)
     FORTY_ONE: '41', SUPER_21: '2121', // idées de WpBejs (2026-10-18) : le mème 41, et 2121
+    // Idées du 2026-10-20 : CococoC (504, 9001, 12345, racine de 2), R79a (2077, 2099).
+    MED_CHECK: '504', OVER_9000: '9001', PASSWORD: '12345', YEAR_2077: '2077', YEAR_2099: '2099', ROOT_TWO_4: '1414', ROOT_TWO_5: '14142',
     PLAYER_456: '456', // idée de R77 (2026-10-18) : le joueur le plus célèbre d'un jeu de survie en série
     HALVING: '8421', // idée de finnnnn (2026-10-18) : chaque chiffre est la moitié du précédent
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',

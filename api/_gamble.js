@@ -144,7 +144,8 @@ async function settle(id, g) {
   const kind = bonusKind(g.player);
   if (kind) { g.bonus = { kind, win: (g.base || g.bet) * BONUS[kind] }; g.win += g.bonus.win; }
   g.done = true;
-  await redis([['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)], ...ledger(id, 'bj', g.bet, g.win)]);
+  // gNaturals : blackjacks obtenus (succès Card Shark), comptés depuis le 2026-10-20.
+  await redis([...(g.result === 'blackjack' ? [['HINCRBY', statsKey(id), 'gNaturals', 1]] : []), ['HINCRBY', statsKey(id), 'bonus', g.win], ['HINCRBY', statsKey(id), 'gHands', 1], ['HINCRBY', statsKey(id), 'gBet', g.bet], ['HINCRBY', statsKey(id), 'gWon', g.win], ['DEL', bjKey(id)], ...ledger(id, 'bj', g.bet, g.win)]);
 }
 // Mises annexes « Match » (idée d'un joueur, 2026-10-14) : une sur ta 1re carte, une sur ta 2e. Chacune gagne si sa
 // carte a la même valeur que la carte visible du croupier : 8× la mise, 24× si la couleur est la même aussi ; si tes

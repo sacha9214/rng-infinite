@@ -286,5 +286,54 @@
     "desc": "Exactly \"235\".",
     "emoji": "💥",
     "score": 100000100
+  },
+  {
+    "id": "MED_CHECK",
+    "label": "Med Check",
+    "desc": "Contains \"504\".",
+    "emoji": "🩺",
+    "score": 25006
+  },
+  {
+    "id": "OVER_9000",
+    "label": "Over 9000",
+    "desc": "Contains \"9001\": it's over 9000!",
+    "emoji": "💪",
+    "score": 333334
+  },
+  {
+    "id": "PASSWORD",
+    "label": "Password",
+    "desc": "Contains \"12345\", the worst password ever.",
+    "emoji": "🔑",
+    "score": 5000005
+  },
+  {
+    "id": "YEAR_2077",
+    "label": "2077",
+    "desc": "Contains \"2077\": the future.",
+    "emoji": "🌆",
+    "score": 333334
+  },
+  {
+    "id": "YEAR_2099",
+    "label": "2099",
+    "desc": "Contains \"2099\": even further in the future.",
+    "emoji": "🚀",
+    "score": 333334
+  },
+  {
+    "id": "ROOT_TWO_4",
+    "label": "Root of Two",
+    "desc": "Contains \"1414\": √2 = 1.414…",
+    "emoji": "📐",
+    "score": 334448
+  },
+  {
+    "id": "ROOT_TWO_5",
+    "label": "Root of Two+",
+    "desc": "Contains \"14142\": √2 = 1.4142…",
+    "emoji": "📐",
+    "score": 5000005
   }
 ]

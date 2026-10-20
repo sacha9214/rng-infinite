@@ -2727,7 +2727,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   globalThis.fetch = async (u, o) => { sent.push(JSON.parse(o.body)); return { ok: true }; };
   try {
     D.announceRoll({ name: '@everyone **Bob**', n: 69, a: engine.analyze(69) });
-    D.announceRoll({ name: 'Bob', n: 123457, a: engine.analyze(123457) });
+    D.announceRoll({ name: 'Bob', n: 384719, a: engine.analyze(384719) }); // un tirage courant (123457 contient 12345 : badge Password)
   } finally { globalThis.fetch = realFetch; }
   assert.equal(sent.length, 1, 'un tirage courant ne part pas');
   assert.deepEqual(sent[0].allowed_mentions, { parse: [] }, 'aucune mention');

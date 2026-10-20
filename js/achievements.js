@@ -17,6 +17,8 @@
     { id: 'regular', emoji: '🔁', title: 'Regular', desc: 'Make 100 rolls', test: st => num(st.rolls) >= 100 },
     { id: 'addict', emoji: '🌀', title: 'Addict', desc: 'Make 1,000 rolls', test: st => num(st.rolls) >= 1000 },
     { id: 'nolife', emoji: '🧟', title: 'No Life', desc: 'Make 10,000 rolls', test: st => num(st.rolls) >= 10000 },
+    { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => num(st.rolls) >= 100000 }, // idée de PRISMA123 (2026-10-20)
+    { id: 'cardshark', emoji: '🃏', title: 'Card Shark', desc: 'Get 100 blackjacks in the casino', test: st => num(st.gNaturals) >= 100 }, // idée de Dylanrulez123 (2026-10-20)
     { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => num(st['t:trash']) >= 1 },
     { id: 'lucky', emoji: '🍀', title: 'Lucky', desc: 'Roll a Rare or better', test: st => atLeast(st, 'rare') >= 1 },
     { id: 'blessed', emoji: '✨', title: 'Blessed', desc: 'Roll an Epic or better', test: st => atLeast(st, 'epic') >= 1 },
@@ -26,7 +28,7 @@
     { id: 'celestial', emoji: '🌠', title: 'Celestial', desc: 'Roll a Celestial or better (top 0.1%)', test: st => atLeast(st, 'celestial') >= 1 },
     { id: 'godlike', emoji: '⚜️', title: 'Godlike', desc: 'Roll a Godlike or better (top 0.005%)', test: st => atLeast(st, 'godlike') >= 1 },
     { id: 'divine', emoji: '👼', title: 'Divine', desc: 'Roll a Divine or better (top 0.01%)', test: st => atLeast(st, 'divine') >= 1 },
-    { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the 9 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
+    { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the ~10 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
     // XP à vie (idée d'Avaneesh_17, 2026-10-16) : stats.xpLife, tenue à chaque tirage et recalculée avec le classement.
     { id: 'centimillionaire', emoji: '💎', title: 'Centimillionaire', desc: 'Reach 100,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e8 },
     { id: 'billionaire', emoji: '🏦', title: 'Billionaire', desc: 'Reach 1,000,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e9 },

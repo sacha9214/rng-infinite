@@ -115,6 +115,7 @@ module.exports = async (req, res) => {
       top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
       questBest: Number(stats.qsBest) || 0,
+      spent: Number(stats.spent) || 0, cases: Number(stats.cases) || 0, // pièces dépensées et caisses ouvertes (idée de PRISMA123, 2026-10-20)
       level: require('../js/quests.js').levelOf(stats.xpLife), // niveau du joueur (XP à vie) // meilleure série de jours avec toutes les quêtes finies
     });
   } catch (err) {

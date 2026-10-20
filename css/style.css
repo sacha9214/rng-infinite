@@ -4140,3 +4140,10 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Téléphone avec le solde en haut : un peu moins d'espace autour des onglets pour qu'ils tiennent tous. */
 @media (max-width: 560px) { .nav a { padding-inline: .2rem; } .topbar-right { gap: .22rem; } .player-btn { padding: 0 .4rem; } }
 @media (max-width: 380px) { .nav a { padding-inline: .15rem; } .lang-switch > span { display: none; } .hdr-coins { font-size: .66rem; } .topbar { padding-inline: .45rem; } }
+
+/* « ~1 in N » à côté du Top x % (2026-10-20) */
+.one-in { opacity: .75; font-weight: 600; }
+
+/* Caisses : passer l'animation (2026-10-20) */
+.case-skip { display: block; margin: .6rem auto 0; }
+.case-skip[hidden] { display: none; }
