@@ -1646,6 +1646,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-21e', date: 'Oct 21, 2026', en: ['♾️ New legendary wallpaper Aether: a galaxy around a glowing infinity sign that reacts to every roll: calm on common rolls, a wave of colour on rare ones, sparkles from Mythic and a celestial burst on Divine and above (idea by Me Cojoni)'], fr: ['♾️ Nouveau fond légendaire Aether : une galaxie autour d\'un signe infini lumineux qui réagit à chaque tirage : calme sur les tirages courants, une vague de couleur sur les rares, des éclats dès Mythique et une explosion céleste à partir de Divine (idée de Me Cojoni)'] },
     { id: '2026-10-21d', date: 'Oct 21, 2026', en: [
       '🏆 Daily tournaments (idea by PRISMA123)! Sign up for free before 12:00 UTC (30 rolls needed), then play your match whenever you like during its round: 5 tournament rolls each, highest total wins. Tournament rolls don\'t count anywhere else. Winner gets 1,000 coins and the Champion title, finalist 400, semi-finalists 150. Find it on the Duel page',
       '🌀 New skin Cursed Energy: violet cursed energy flows around every digit and a seal burns on each one, with a matching Generate button and duel frame (idea by Edward)',
@@ -2198,7 +2199,7 @@
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier });
       if (skinFx) skinFx.reveal(a.tier);
-      if (!late) wallReact(a.tier);
+      wallReact(a.tier); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = `<kbd>${esc(keyName())}</kbd> to roll again · click a badge name for details`;
@@ -3180,7 +3181,11 @@
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="walls" hidden>
-        <div class="panel">
+        <div class="panel premium-panel">
+          <div class="panel-head"><h3 class="panel-title">Legendary wallpapers</h3><span class="panel-note">they react to every roll you make</span></div>
+          <div class="skin-grid wall-grid premium-grid" id="d-premium-walls"></div>
+        </div>
+        <div class="panel stats-sep">
           <div class="panel-head"><h3 class="panel-title">Wallpapers</h3><span class="panel-note">animated backgrounds for the whole site · only you see yours</span></div>
           <div class="skin-grid wall-grid" id="d-walls"></div>
         </div>
@@ -4365,7 +4370,7 @@
     // Fonds d'Halloween : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui les ont.
     const onSale = w => !w.until || Date.now() < Date.parse(w.until);
     const wallTile = w => `
-      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}">
+      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}">
         <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
         <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
@@ -4376,7 +4381,10 @@
         <div class="wall-preview wp-none" aria-hidden="true"></div>
         <div class="skin-name"><b>⬛ Original</b><span>The plain background</span></div>
         <div class="skin-actions">${on ? '<button class="btn" data-wall="none">Use</button>' : '<span class="skin-state">Equipped</span>'}</div>
-      </div>` + Shop.WALLPAPERS.filter(w => !w.until || owned.includes(w.id)).map(wallTile).join('');
+      </div>` + Shop.WALLPAPERS.filter(w => !w.premium && (!w.until || owned.includes(w.id))).map(wallTile).join('');
+    // Fonds légendaires (2026-10-21) : ceux qui réagissent aux tirages, dans leur propre panneau, comme les skins légendaires.
+    const premiumWalls = $('#d-premium-walls');
+    if (premiumWalls) { premiumWalls.innerHTML = Shop.WALLPAPERS.filter(w => w.premium).map(wallTile).join(''); premiumWalls.onclick = e => grid.onclick(e); }
     grid.onclick = async e => {
       const tryBtn = e.target.closest('[data-wall-try]');
       if (tryBtn) { tryWallpaper(tryBtn.dataset.wallTry, state); return; }
@@ -4416,7 +4424,7 @@
     bar.onclick = e => {
       if (e.target.closest('[data-wall-close]')) { end(); return; }
       const act = e.target.closest('[data-wall-buy],[data-wall]');
-      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
+      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
