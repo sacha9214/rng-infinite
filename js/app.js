@@ -6459,7 +6459,7 @@
   // Musique de fond « Distant Odds » de Phong67 (2026-10-21) : en boucle, très bas, coupée avec le son ou à part dans
   // les réglages. Les navigateurs refusent le son avant une première action du joueur : elle démarre à son premier clic
   // ou sa première touche, et se met en pause quand l'onglet est caché.
-  const MUSIC_VOLUME = 0.04;
+  const MUSIC_VOLUME = 0.03;
   const Music = {
     el: null, started: false,
     on: () => Store.settings.music !== 'off' && soundOn(),
