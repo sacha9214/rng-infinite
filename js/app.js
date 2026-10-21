@@ -1648,6 +1648,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22i', date: 'Oct 22, 2026', en: ['Fixed: auto-roll could sometimes start the next roll right away; the result now always stays on screen for a moment, also when you come back to the tab (reported by WpBejs)'], fr: ['Corrigé : le tirage auto pouvait parfois relancer tout de suite ; le résultat reste maintenant toujours affiché un instant, aussi au retour sur l\'onglet (signalé par WpBejs)'] },
     { id: '2026-10-22h', date: 'Oct 22, 2026', en: ['⚔️ Duels: the host can remove a player from the lobby with the small ✕ next to their name, before the game starts. Their stake is refunded and they can\'t rejoin that duel'], fr: ['⚔️ Duels : l\'hôte peut exclure un joueur du salon avec le petit ✕ à côté de son nom, avant le début de la partie. Sa mise lui est rendue et il ne peut plus revenir dans ce duel'] },
     { id: '2026-10-22g', date: 'Oct 22, 2026', en: ['🗼 Tower: Easy and Normal multipliers are lower, to match how likely each floor is (Normal top floor: ×24.09, Easy: ×9.38). Hard stays as it is'], fr: ['🗼 Tour : les multiplicateurs Facile et Normal sont plus bas, pour coller aux vraies chances de chaque étage (sommet en Normal : ×24,09, en Facile : ×9,38). Le Difficile ne change pas'] },
     { id: '2026-10-22f', date: 'Oct 22, 2026', en: [
@@ -1894,7 +1895,8 @@
   // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
   // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
   // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
-  const SoloAuto = { on: false, timer: 0 };
+  const SoloAuto = { on: false, timer: 0, shownAt: 0 };
+  const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
   // Ou un seuil d'XP (idée de WpBejs, 2026-10-18) : s'arrête sur le premier tirage qui rapporte au moins autant.
@@ -1975,6 +1977,10 @@
       if (document.hidden) { bgSoloRoll(); return; }
       // Fenêtre ouverte : on attend sans rien tirer.
       if ($('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
+      // Pause garantie : le dernier résultat reste visible au moins 1,8 s, quel que soit le chemin qui a programmé ce
+      // tirage (retour d'un autre onglet, réaffichage de l'accueil…) ; signalé par WpBejs, 2026-10-22.
+      const wait = SOLO_PAUSE - (Date.now() - SoloAuto.shownAt);
+      if (wait > 50) { scheduleSoloAuto(wait); return; }
       startRoll(true);
     }, delay);
   }
@@ -2010,6 +2016,7 @@
     scheduleSoloAuto(1800);
   }
   document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) SoloAuto.shownAt = Date.now(); // retour sur l'onglet : on laisse voir l'écran avant le tirage suivant
     if (document.hidden || !BgRolls.count) return;
     const { count, stopped } = BgRolls;
     document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null;
@@ -2280,6 +2287,7 @@
     step(REVEAL.lifetimeTick + REVEAL.end, () => {
       vignette.classList.remove('on');
       finished = true;
+      SoloAuto.shownAt = Date.now();
       if (SoloAuto.on && !ctx.replay) {
         if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
