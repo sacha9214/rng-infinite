@@ -236,8 +236,8 @@ assert.ok(cappedCases > 50, 'des grilles atteignent le plafond');
 
 // ---- Tower (idée de Zombara) : difficulté et étage visé au hasard, cases au hasard, multiplicateur recalculé
 let twBooms = 0, twCash = 0, twTop = 0;
-rtp = await series('tower', '≈ 98-99 % (moins l\'arrondi)', async () => {
-  const level = pick(Object.keys(G.TOWER_LEVELS)), n = G.TOWER_LEVELS[level], bet = pick(BETS), want = 1 + rnd(G.TOWER_FLOORS);
+rtp = await series('tower', '≈ 96-97 % (moins l\'arrondi)', async () => {
+  const level = pick(Object.keys(G.TOWER_LEVELS)), n = G.TOWER_LEVELS[level], bet = pick(level === 'hard' ? BETS.filter(b => b <= G.TOWER_HARD_MAX) : BETS), want = 1 + rnd(G.TOWER_FLOORS);
   let g = await G.tower(id, { move: 'start', bet, level });
   assert.deepEqual([g.picks.length, g.done, g.bombs, g.tiles], [0, false, undefined, n], 'les bombes ne sortent pas avant la fin');
   await assert.rejects(G.tower(id, { move: 'start', bet, level }), /Finish your game/);
@@ -256,7 +256,7 @@ assert.ok(twBooms > 0 && twCash > 0 && twTop > 0, 'explosions, encaissements et 
 // Gains jusqu'à ×250 : sur 5 000 parties la moyenne varie beaucoup (88 à 124 % mesurés). La garantie est le calcul
 // exact juste dessous (chaque étage de chaque difficulté rend au plus 99 %) ; ici on vérifie seulement l'ordre de grandeur.
 assert.ok(rtp > .6 && rtp < 1.6, `tower ${rtp}`);
-for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) { const ev = Math.pow((n - 1) / n, k) * G.towerMult(n, k); assert.ok(ev <= .99000001 && ev > .97, `tower ${level}/${k} : ${ev}`); }
+for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) { const ev = Math.pow((n - 1) / n, k) * G.towerMult(n, k); assert.ok(ev <= .97000001 && ev > .94, `tower ${level}/${k} : ${ev}`); } // marge 3 % depuis le 2026-10-22
 assert.equal(keys(), 0);
 
 // ---- Keno (idée de CYCOX) : 1 à 10 numéros au hasard, tirage et gain recalculés ici

@@ -358,12 +358,15 @@ async function mines(id, body) {
 }
 
 // Tower (idée du joueur Zombara, 2026-10-20) : 8 étages, une bombe cachée à chaque étage parmi 4, 3 ou 2 cases selon la
-// difficulté. Chaque case sûre fait monter d'un étage et le multiplicateur ; on encaisse quand on veut. Même calcul que
-// les Mines : 99 % des vraies chances à chaque étage, arrondi vers le bas, même plafond (×250, atteint seulement au
+// difficulté. Chaque case sûre fait monter d'un étage et le multiplicateur ; on encaisse quand on veut. 97 % des vraies
+// chances à chaque étage (depuis le 2026-10-22), arrondi vers le bas, même plafond (×250, atteint seulement au
 // dernier étage en Hard). Les bombes sont tirées au départ et restent dans Redis jusqu'à la fin de la partie.
 const twKey = id => `tw:${id}`;
 const TOWER_FLOORS = 8, TOWER_LEVELS = { easy: 4, normal: 3, hard: 2 };
-const towerMult = (n, k) => { let x = 0.99; for (let i = 0; i < k; i++) x *= n / (n - 1); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
+// Marge 3 % (2026-10-22, demandé par Sacha) : avec 99 %, la Tour a rendu 110 % en deux jours (variance des ×250 en Hard).
+// Elle rend maintenant au plus 97 %, comme les autres jeux, et la mise est plafonnée à 100 en Hard (voir tower()).
+const TOWER_EDGE = 0.97, TOWER_HARD_MAX = 100;
+const towerMult = (n, k) => { let x = TOWER_EDGE; for (let i = 0; i < k; i++) x *= n / (n - 1); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
 const towerLadder = n => Array.from({ length: TOWER_FLOORS }, (_, i) => towerMult(n, i + 1));
 const showTower = (g, coins, end) => {
   const n = TOWER_LEVELS[g.level], k = g.picks.length;
@@ -378,6 +381,7 @@ async function tower(id, body) {
     if (g) throw refuse(422, 'Finish your game first');
     const level = String(body.level || '');
     if (!Object.prototype.hasOwnProperty.call(TOWER_LEVELS, level)) throw refuse(400, 'Pick Easy, Normal or Hard');
+    if (level === 'hard' && Number(body.bet) > TOWER_HARD_MAX) throw refuse(400, `Hard: bet at most ${TOWER_HARD_MAX} coins`);
     const bet = await debit(id, body.bet);
     // Une bombe par étage, tirée avec crypto, gardée ici jusqu'à la fin.
     g = { bet, level, bombs: Array.from({ length: TOWER_FLOORS }, () => crypto.randomInt(0, TOWER_LEVELS[level])), picks: [] };
@@ -491,4 +495,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_HARD_MAX, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
