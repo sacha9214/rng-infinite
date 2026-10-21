@@ -1388,7 +1388,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     for (const picks of [[], Array.from({ length: 11 }, (_, i) => i + 1), [1, 1], [0], [41], [2.5], ['3'], 'x', undefined]) {
       assert.equal((await g(frank, 'keno', { bet: 100, picks })).status, 400, `numéros ${JSON.stringify(picks)}`); await tick();
     }
-    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'keno', { bet: bad, picks: [1] })).status, 400, `mise ${bad}`); await tick(); }
+    for (const bad of [0, 5, 101, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'keno', { bet: bad, picks: [1] })).status, 400, `mise ${bad}`); await tick(); } // 100 max au Keno
     await setCoins(frank, 50); assert.equal((await g(frank, 'keno', { bet: 100, picks: [1] })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
     run([['HSET', `stats:${frank.playerId}`, 'rolls', 5]]);
     r = await g(frank, 'keno', { bet: 100, picks: [1] }); assert.deepEqual([r.status, r.body.error], [422, 'Gamble unlocks after 30 rolls (you have 5)']);

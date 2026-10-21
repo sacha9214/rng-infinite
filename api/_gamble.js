@@ -424,12 +424,15 @@ const KENO_PAYS = [null,
 const KENO_CAP = 1000;
 // Mise × multiplicateur en centièmes, pour que 0,3 × 10 donne bien 3 et pas 2,9999.
 const kenoWin = (bet, k, h) => Math.floor(bet * Math.round(KENO_PAYS[k][h] * 100) / 100);
+const KENO_MAX_BET = 100;
 async function keno(id, body) {
   const raw = body.picks;
   if (!Array.isArray(raw) || raw.length < 1 || raw.length > KENO_MAX_PICKS) throw refuse(400, `Pick between 1 and ${KENO_MAX_PICKS} numbers`);
   if (!raw.every(n => Number.isInteger(n) && n >= 1 && n <= KENO_NUMBERS)) throw refuse(400, `Numbers go from 1 to ${KENO_NUMBERS}`);
   if (new Set(raw).size !== raw.length) throw refuse(400, 'Each number only once');
   const picks = [...raw].sort((a, b) => a - b);
+  // Mise plafonnée comme le Plinko gros risque : le gros lot (×1000) ne verse jamais plus de 100 000 pièces d'un coup.
+  if (Number(body.bet) > KENO_MAX_BET) throw refuse(400, `Keno: bet at most ${KENO_MAX_BET} coins`);
   const bet = await debit(id, body.bet);
   // Tirage : mélange partiel (Fisher-Yates) des 40 numéros, les 10 premiers sortent, dans l'ordre du tirage.
   const pool = Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1);
@@ -488,4 +491,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, keno, kenoWin, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

@@ -1648,6 +1648,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22b', date: 'Oct 22, 2026', en: ['🎱 New casino game: Keno (idea by CYCOX). Pick 1 to 10 numbers out of 40, bet up to 100 coins and watch 10 balls being drawn. The more of your numbers come out, the bigger the win, up to 1000×. Your last picks are remembered for a quick replay'], fr: ['🎱 Nouveau jeu de casino : le Keno (idée de CYCOX). Coche 1 à 10 numéros parmi 40, mise jusqu\'à 100 pièces et regarde les 10 boules sortir. Plus tu trouves de numéros, plus tu gagnes, jusqu\'à 1000×. Tes derniers numéros sont gardés pour rejouer en un clic'] },
     { id: '2026-10-22a', date: 'Oct 22, 2026', en: [
       '🟢 Friends: see if each friend is Online, AFK (tab hidden or idle for 5 min) or Offline',
       '🧪 New skin Lab: six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes (idea by costoroll)',
@@ -4256,6 +4257,7 @@
     $('#kn-go').addEventListener('click', async () => {
       const kn = Gamble.kn;
       if (Gamble.busy || !kn.picks.length) return;
+      if (Gamble.chip > 100) { toast('Keno: 100 coins max per game'); return; }
       Gamble.busy = true; $('#kn-go').disabled = true;
       try {
         knReset(); drawKeno(); Sound.play('click');

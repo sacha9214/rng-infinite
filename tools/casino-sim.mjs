@@ -264,7 +264,7 @@ const Cn = (n, k) => { let c = 1; for (let i = 0; i < k; i++) c = c * (n - i) / 
 const kenoRtp = k => G.KENO_PAYS[k].reduce((x, m, h) => x + Cn(k, h) * Cn(40 - k, 10 - h) / Cn(40, 10) * m, 0);
 const knHits = new Set();
 rtp = await series('keno', '98,3 à 98,8 % selon les cochés', async () => {
-  const k = 1 + rnd(10), bet = pick(BETS), all = Array.from({ length: 40 }, (_, i) => i + 1);
+  const k = 1 + rnd(10), bet = pick(BETS.filter(b => b <= G.KENO_MAX_BET)), all = Array.from({ length: 40 }, (_, i) => i + 1);
   for (let i = 39; i > 0; i--) { const j = rnd(i + 1); [all[i], all[j]] = [all[j], all[i]]; }
   const picks = all.slice(0, k), r = await G.keno(id, { bet, picks });
   assert.ok(r.drawn.length === 10 && new Set(r.drawn).size === 10 && r.drawn.every(n => Number.isInteger(n) && n >= 1 && n <= 40));
