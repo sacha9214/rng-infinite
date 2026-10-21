@@ -4425,6 +4425,51 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-cursed { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .45); --side-ink: #7c3aed;
   --side-bg: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(99, 102, 241, .25), transparent 70%), linear-gradient(180deg, rgba(20, 11, 51, .6), rgba(124, 58, 237, .12));
   --deco-a: '🌀'; --deco-b: '🔮'; }
+/* ------------------------------------------------------------------ Marshmallow (idée de DandoriNinja, 2026-10-21) : un ciel
+   pastel rose-lilas, des nuages de sucre. Les chiffres sont des guimauves gonflées, mates et poudrées (blanches et
+   roses en alternance). Matière molle : en cours, ils gigotent en s'écrasant ; à la pose, ils tombent, s'aplatissent
+   (« plof ») et rebondissent. Les guimauves qui tombent et les canons à confettis sont dans js/skinfx.js. */
+.num-card.skin-marsh {
+  background:
+    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, .55) 0 .05em, transparent .06em) 0 0 / 1.3em 1.1em,
+    radial-gradient(ellipse 30% 26% at 10% 104%, #fff 60%, transparent 62%), radial-gradient(ellipse 26% 30% at 34% 106%, #fff7fb 60%, transparent 62%),
+    radial-gradient(ellipse 30% 24% at 64% 104%, #fff 60%, transparent 62%), radial-gradient(ellipse 26% 28% at 92% 104%, #fff7fb 60%, transparent 62%),
+    linear-gradient(180deg, #f9c9df 0%, #e7c6f5 55%, #cdbdf3 100%);
+  border: 2px solid #f3a9c8; border-radius: 1rem;
+  box-shadow: inset 0 .25em .5em rgba(255, 255, 255, .6), inset 0 -.2em .4em rgba(167, 139, 250, .25), 0 0 16px rgba(244, 114, 182, .3), 0 8px 18px rgba(124, 58, 237, .18);
+}
+.skin-marsh .slot { position: relative; z-index: 1; font-weight: 900; transform-origin: 50% 88%; color: transparent;
+  background: radial-gradient(ellipse 60% 30% at 40% 22%, #fff 40%, transparent 75%), linear-gradient(180deg, #ffffff 0%, #fff4f9 45%, #f6d6e6 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .055em #dc7aa6; paint-order: stroke fill;
+  filter: drop-shadow(0 .05em 0 #d9799f) drop-shadow(0 .08em .06em rgba(157, 23, 77, .35)); }
+.skin-marsh .slot:nth-child(even) { background: radial-gradient(ellipse 60% 30% at 40% 22%, #fff 30%, transparent 75%), linear-gradient(180deg, #ffe4ef 0%, #ffc4dc 50%, #f6a5c6 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-stroke-color: #d66d9a; }
+.skin-marsh .slot.ghost { opacity: .22; }
+/* en cours : la guimauve gigote, s'écrase et s'étire */
+.skin-marsh .slot.spinning { opacity: .9; animation: mal-jiggle .22s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+@keyframes mal-jiggle { 0% { transform: translateY(.03em) scale(1.1, .88); filter: blur(.4px); } 100% { transform: translateY(-.05em) scale(.92, 1.08); filter: blur(.2px); } }
+/* elle se pose : tombe étirée, s'écrase au sol (plof), rebondit et se calme */
+.skin-marsh .slot.revealed { animation: mal-plop .72s cubic-bezier(.3, 1.2, .5, 1) backwards; }
+@keyframes mal-plop {
+  0% { transform: translateY(-.28em) scale(.86, 1.16); }
+  28% { transform: translateY(0) scale(1.24, .74); }
+  48% { transform: translateY(-.06em) scale(.88, 1.13); }
+  66% { transform: scale(1.07, .94); }
+  84% { transform: scale(.98, 1.02); }
+  100% { transform: none; } }
+.skin-marsh .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-marsh .slot { animation: none; } }
+/* cadre de duel : un auvent de confiserie à rayures pastel, un canon à confettis qui sursaute, un nuage qui flotte */
+.side-marsh { --side-border: #f472b6; --side-glow: 0 0 14px rgba(244, 114, 182, .4); --side-ink: #db2777;
+  --side-bg: radial-gradient(circle at 50% 0, rgba(249, 168, 212, .75) 0 9px, transparent 10px) 0 0 / 20px 14px repeat-x,
+    repeating-linear-gradient(90deg, rgba(249, 168, 212, .7) 0 10px, rgba(255, 241, 247, .7) 10px 20px) 0 0 / 100% 7px no-repeat,
+    radial-gradient(ellipse 60% 40% at 50% 105%, rgba(255, 255, 255, .22), transparent 70%),
+    linear-gradient(180deg, rgba(251, 207, 232, .3), rgba(196, 181, 253, .24));
+  --deco-a: '🎉'; --deco-b: '☁️ 🍡'; }
+.side-marsh::before { font-size: 1.15rem; transform-origin: 20% 90%; animation: mal-pop 2.2s cubic-bezier(.3, 1.6, .5, 1) infinite; }
+.side-marsh::after { animation: mal-float 3s ease-in-out infinite alternate; }
+@keyframes mal-pop { 0%, 60%, 100% { transform: none; } 68% { transform: rotate(-14deg) scale(1.25, .85); } 80% { transform: rotate(4deg) scale(.95, 1.08); } }
+@keyframes mal-float { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }

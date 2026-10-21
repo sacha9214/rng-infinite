@@ -510,6 +510,8 @@
     seg(c, p, s) { c.fillRect(-s * 1.5, -s * .35, s * 3, s * .7); },
     ball(c, p, s) { c.beginPath(); c.arc(0, 0, s, 0, TAU); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = '#111'; c.lineWidth = 1; c.stroke(); c.fillStyle = '#111'; c.beginPath(); c.arc(0, 0, s * .38, 0, TAU); c.fill(); },
     spark(c, p, s) { c.fillRect(-s * 2, -s * .3, s * 4, s * .6); },
+    // Mini-guimauve : un petit cylindre arrondi, mat, avec un reflet poudré en haut et un liseré pour la page claire.
+    mallow(c, p, s) { roundRect(c, -s, -s * .8, 2 * s, 1.6 * s, s * .65); c.fill(); c.strokeStyle = 'rgba(190,80,140,.45)'; c.lineWidth = .8; c.stroke(); c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.ellipse(0, -s * .45, s * .7, s * .22, 0, 0, TAU); c.fill(); },
   };
   const PIPS = [[[0, 0]], [[-1, -1], [1, 1]], [[-1, -1], [0, 0], [1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]]];
   // cfg : cols (couleurs), shapes, size [min, max], g (gravité, négative = ça monte), spin, glowc (lueur), ring,
@@ -2082,6 +2084,75 @@
       reveal(tier, p) {
         for (let i = 0, n = burst(p, 16, 4); i < n; i++) tongues.add({ delay: rnd(0, .45), x: rnd(card.x, card.x + card.w), y: card.y + card.h * rnd(.4, .9), h: card.h * rnd(1.2, 2.4), w: card.h * rnd(.18, .3), ph: rnd(TAU), c: pick(['#8b5cf6', '#6366f1', '#a855f7']), life: rnd(.8, 1.3) });
         for (let i = 0, n = Math.round(1 + 4 * p); i < n; i++) { const y = card.y + rnd(card.h * .1, card.h * .9); arcs.add({ delay: .1 + i * .09, x1: card.x - 6, y1: y, x2: card.x + card.w + 6, y2: card.y + rnd(card.h), jag: card.h * .35, w: 1, life: .22 }); }
+      },
+    };
+  });
+
+  // 🍡 Marshmallow (2026-10-21, idée de DandoriNinja) — un ciel pastel. Pendant le tirage, des guimauves blanches et
+  // roses tombent doucement derrière les chiffres (calque intérieur, en sourdine). Chaque chiffre posé lâche une petite
+  // bouffée de sucre. À la révélation, deux canons à confettis surgissent aux coins bas de la carte, sursautent et
+  // crachent des mini-guimauves arc-en-ciel pastel qui retombent en tournoyant ; à partir de Mythic, trois salves et de
+  // plus grosses guimauves. Rien pour un tirage raté. Matière molle : tout rebondit et s'écrase.
+  const PASTEL = ['#fca5a5', '#fdba74', '#fde68a', '#bbf7d0', '#bae6fd', '#c4b5fd', '#f9a8d4', '#ffffff'];
+  // la révélation des morceaux génériques est coupée : ce sont les canons qui la font, sans couvrir les chiffres
+  const quiet = base => env => { const s = base(env); return Object.assign({}, s, { reveal() {} }); };
+  SCENES.marsh = custom(quiet(pieces({ cols: ['#ffffff', '#fbcfe8', '#f9a8d4'], shapes: ['mallow'], size: [2.4, 4], g: 300, drag: 1.2, spin: 3, up: true, life: 1.2, glowc: '#f9a8d4', ring: '#f9a8d4', drift: { rate: .6, from: 'around' } })), env => {
+    const { co, ci, w, h, card, q, dark } = env, fall = particles(), mini = particles(), puffs = timed(), emit = emitter();
+    let snow = .7; // débit des guimauves qui tombent : monte pendant le tirage, s'arrête après la révélation
+    const S = card.h * .5;
+    // Canon à confettis : un cône à rayures pastel, la bouche vers la carte ; kick = le sursaut quand il tire.
+    const popper = (x, y, ang, a, kick) => {
+      co.save(); co.translate(x, y); co.rotate(ang - kick * .25 * Math.sign(Math.cos(ang))); co.scale(1 - kick * .15, 1 + kick * .2); co.globalAlpha = a;
+      co.beginPath(); co.moveTo(-S * .9, 0); co.lineTo(S * .15, -S * .32); co.lineTo(S * .15, S * .32); co.closePath();
+      co.fillStyle = '#f9a8d4'; co.fill(); co.save(); co.clip();
+      co.fillStyle = '#fef3c7'; for (let i = 0; i < 4; i++) { co.beginPath(); co.moveTo(-S * (.75 - i * .26), -S); co.lineTo(-S * (.62 - i * .26), -S); co.lineTo(-S * (.82 - i * .26), S); co.lineTo(-S * (.95 - i * .26), S); co.fill(); }
+      co.restore(); co.strokeStyle = '#be185d'; co.lineWidth = 1.4; co.stroke();
+      co.fillStyle = '#c4b5fd'; co.beginPath(); co.ellipse(S * .15, 0, S * .08, S * .32, 0, 0, TAU); co.fill(); co.stroke();
+      co.restore();
+    };
+    const guns = [];
+    const volley = (g, p, big) => {
+      g.kick = 1;
+      puffs.add({ x: g.x + Math.cos(g.ang) * S * .25, y: g.y + Math.sin(g.ang) * S * .25, r: S * (.5 + .4 * p), life: .45 });
+      for (let i = burst(p, 70 * q, 12); i > 0; i--) {
+        const a = g.ang + rnd(-.25, .25), v = rnd(260, 400 + 240 * p);
+        mini.add({ x: g.x + Math.cos(g.ang) * S * .2, y: g.y + Math.sin(g.ang) * S * .2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 520, drag: 1.5, max: rnd(1.3, 2.1), size: rnd(2.6, 4.2) * (big ? 1.4 : 1), c: pick(PASTEL), rot: rnd(TAU), vr: rnd(-6, 6) });
+      }
+    };
+    return {
+      frame(t, dt) {
+        // guimauves qui tombent dans la carte, derrière les chiffres
+        for (let n = emit(snow * 5 * q, dt); n > 0; n--) fall.add({ x: rnd(w * .03, w * .97), y: -h * .15, vx: rnd(-4, 4), vy: rnd(h * .35, h * .6), max: rnd(1.8, 2.8), size: rnd(h * .07, h * .11), c: Math.random() < .55 ? '#ffffff' : '#fbcfe8', rot: rnd(TAU), vr: rnd(-1.5, 1.5), ph: rnd(TAU) });
+        fall.step(dt);
+        ci.globalCompositeOperation = 'source-over';
+        fall.each((p, k) => { ci.save(); ci.translate(p.x + Math.sin(t * 2 + p.ph) * h * .05, p.y); ci.rotate(p.rot + p.vr * p.life); ci.globalAlpha = .75 * Math.min(1, k * 6, (1 - k) * 4); ci.fillStyle = p.c; SHAPES.mallow(ci, p, p.size); ci.restore(); });
+        ci.globalAlpha = 1;
+        co.globalCompositeOperation = 'source-over';
+        // bouffées de sucre glace
+        puffs.run(dt, (f, k) => { co.globalAlpha = (1 - k) * .7; co.fillStyle = dark ? '#fdf2f8' : '#fbcfe8'; for (let i = 0; i < 5; i++) { const a = i * TAU / 5 + f.r, d = f.r * .5 * outCubic(k); co.beginPath(); co.arc(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, f.r * (.25 + .25 * k), 0, TAU); co.fill(); } });
+        // canons : surgissent (petit rebond), tirent, puis s'effacent
+        for (const g of guns) {
+          g.t += dt; g.kick = Math.max(0, g.kick - dt * 5);
+          const inn = Math.min(1, g.t / .18), a = g.t > g.end ? Math.max(0, 1 - (g.t - g.end) / .4) : inn;
+          if (a > 0) popper(g.x, g.y + (1 - outCubic(inn)) * S * .6, g.ang, a, g.kick);
+        }
+        for (let i = guns.length - 1; i >= 0; i--) if (guns[i].t > guns[i].end + .4) guns.splice(i, 1);
+        mini.step(dt);
+        mini.each((p, k) => { co.save(); co.translate(p.x, p.y); co.rotate(p.rot + p.vr * p.life); co.scale(1, .75 + .25 * Math.cos(p.life * 8 + p.rot)); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = p.c; SHAPES.mallow(co, p, p.size); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        snow = Math.min(1, snow + .3);
+        if (!o.ghost) puffs.add({ x: p.x, y: p.y + card.h * .32, r: card.h * (o.last ? .22 : .14), life: o.last ? .5 : .35 });
+      },
+      build() { snow = 1; },
+      reveal(tier, p) {
+        setTimeout(() => { snow = 0; }, 600);
+        if (!p) return;
+        const big = p >= 1, y = card.y + card.h + S * .15;
+        const L = { x: card.x - S * .1, y, ang: -Math.PI / 2 + .1, t: 0, kick: 0, end: 1.6 + p }, R = { x: card.x + card.w + S * .1, y, ang: -Math.PI / 2 - .1, t: 0, kick: 0, end: 1.6 + p };
+        guns.push(L, R);
+        for (let i = 0, n = big ? 3 : 1; i < n; i++) setTimeout(() => { volley(L, p, big); volley(R, p, big); }, 200 + i * 420);
       },
     };
   });
