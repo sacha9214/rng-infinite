@@ -6996,7 +6996,7 @@
   route();
   syncHistory().catch(() => {});
 
-  // Nouvelle version en ligne (demandé par Sacha, 2026-10-22) : la page relit l'index toutes les 2 min et au retour sur
+  // Nouvelle version en ligne (demandé par Sacha, 2026-10-22) : la page relit la version au serveur toutes les 5 min et au retour sur
   // l'onglet, compare le tampon de js/app.js avec le sien, et se recharge seule à un moment sans risque (rien en cours :
   // pas de tirage, d'auto-roll, de duel, de partie de casino ni de fenêtre ouverte). Sinon, un bandeau propose de recharger.
   const Updater = {
@@ -7005,8 +7005,8 @@
     async check() {
       if (!this.mine || this.ready) return;
       try {
-        const html = await fetch(`./?v=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.text() : ''));
-        const live = (html.match(/js\/app\.js\?v=([^"&]+)/) || [])[1];
+        // Demandé au serveur de jeu (VPS), pas à l'hébergeur du site : rien ne compte dans les quotas de Vercel.
+        const live = (await Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'version' }) })).app;
         if (live && live !== this.mine) { this.ready = true; this.apply(); }
       } catch (e) { /* hors ligne : on réessaiera */ }
     },
@@ -7025,7 +7025,7 @@
       }
     },
   };
-  setInterval(() => { Updater.check(); Updater.apply(); }, 120000);
+  setInterval(() => { if (!document.hidden) Updater.check(); Updater.apply(); }, 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) Updater.check(); else Updater.apply(); });
   window.addEventListener('hashchange', () => setTimeout(() => Updater.apply(), 300)); // changement de page : souvent un bon moment
 

@@ -25,6 +25,14 @@ const DAY_MS = 86400000;
 // ---------------------------------------------------------------- suggestions
 const SUGG_MAX = 500, SUGG_MIN = 5, SUGG_PER_DAY = 5, REPLY_MAX = 300, INBOX_MAX = 200;
 const STATUSES = ['new', 'seen', 'planned', 'done', 'declined'];
+let versionCache = { at: 0, app: null };
+function siteVersion() {
+  if (Date.now() - versionCache.at < 30000) return versionCache.app;
+  let app = null;
+  try { app = (require('node:fs').readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8').match(/js\/app\.js\?v=([^"&]+)/) || [])[1] || null; } catch (e) { /* pas d'index ici */ }
+  versionCache = { at: Date.now(), app };
+  return app;
+}
 const CLIENT_EVENTS = ['offline_roll', 'reveal_cut', 'storage_full', 'id_reset', 'bg_error', 'auto_429'];
 const suggKey = id => `sugg:${id}`, byPlayer = id => `sugg:by:${id}`;
 // Texte libre : on retire les caractères de contrôle et on borne la longueur ; l'affichage l'échappe côté site.
@@ -516,6 +524,9 @@ module.exports = async (req, res) => {
       if (to && !tooManyBeacons(req)) { const day = dayKey(Date.now()); await redis([['HINCRBY', anKey(day), `out:${to}`, 1], ['EXPIRE', anKey(day), AN_TTL]]); }
       return send(res, 200, { ok: true });
     }
+    // Version du site en ligne (tampon de js/app.js dans index.html), lue sur le disque du serveur et gardée 30 s : la page
+    // la compare à la sienne pour se recharger après une mise à jour, sans relire l'index chez l'hébergeur (2026-10-22).
+    if (body.action === 'version') return send(res, 200, { app: siteVersion() });
     if (body.action === 'visit') {
       await recordVisit(req, body);
       // La cagnotte du mois part avec la réponse : le site l'affiche sans demande supplémentaire.
