@@ -610,6 +610,15 @@ module.exports = async (req, res) => {
       room.chat.push(message);
       return send(res, 200, await view(room, playerId));
     }
+    // Supprimer un de ses propres messages du chat (2026-10-22) : retrouvé par son heure et la place du joueur.
+    if (body.action === 'unsay') {
+      const i = room.players.findIndex(p => p.id === playerId);
+      const [raw] = await redis([['LRANGE', chatKey(code), 0, -1]]);
+      const entry = i < 0 ? null : (raw || []).find(x => { try { const c = JSON.parse(x); return c.i === i && c.t === Number(body.t); } catch (e) { return false; } });
+      if (!entry) return send(res, 404, { error: 'This message is gone' });
+      await redis([['LREM', chatKey(code), 1, entry]]);
+      return send(res, 200, await view(await load(code), playerId));
+    }
     // Signaler un message du chat (api/_reports.js) : le serveur retrouve le message par son heure.
     if (body.action === 'report') {
       const c = room.chat.find(x => x.t === Number(body.t));

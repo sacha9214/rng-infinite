@@ -1648,6 +1648,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22j', date: 'Oct 22, 2026', en: ['⚖️ History: tap Compare, then two rolls, to see them side by side: XP difference, badges in common and badges each one has (idea by kingston)', '🗑️ You can delete your own messages in private chats and in the duel chat (idea by Ann Joe NO.1 gambler)', '👽 New badge Area 51: contains 51 (idea by hii)'], fr: ['⚖️ Historique : touche Comparer, puis deux tirages, pour les voir côte à côte : écart d\'XP, badges en commun et badges propres à chacun (idée de kingston)', '🗑️ Tu peux supprimer tes propres messages en privé et dans le chat des duels (idée d\'Ann Joe NO.1 gambler)', '👽 Nouveau badge Area 51 : contient 51 (idée de hii)'] },
     { id: '2026-10-22i', date: 'Oct 22, 2026', en: ['Fixed: auto-roll could sometimes start the next roll right away; the result now always stays on screen for a moment, also when you come back to the tab (reported by WpBejs)'], fr: ['Corrigé : le tirage auto pouvait parfois relancer tout de suite ; le résultat reste maintenant toujours affiché un instant, aussi au retour sur l\'onglet (signalé par WpBejs)'] },
     { id: '2026-10-22h', date: 'Oct 22, 2026', en: ['⚔️ Duels: the host can remove a player from the lobby with the small ✕ next to their name, before the game starts. Their stake is refunded and they can\'t rejoin that duel'], fr: ['⚔️ Duels : l\'hôte peut exclure un joueur du salon avec le petit ✕ à côté de son nom, avant le début de la partie. Sa mise lui est rendue et il ne peut plus revenir dans ce duel'] },
     { id: '2026-10-22g', date: 'Oct 22, 2026', en: ['🗼 Tower: Easy and Normal multipliers are lower, to match how likely each floor is (Normal top floor: ×24.09, Easy: ×9.38). Hard stays as it is'], fr: ['🗼 Tour : les multiplicateurs Facile et Normal sont plus bas, pour coller aux vraies chances de chaque étage (sommet en Normal : ×24,09, en Facile : ×9,38). Le Difficile ne change pas'] },
@@ -2337,7 +2338,9 @@
           <input class="input grow" id="h-q" type="search" placeholder="Search a number, a badge or #roll…" value="${esc(histState.q)}">
           <select class="select" id="h-tier" aria-label="Rarity">${options(tierOptions, histState.tier)}</select>
           <select class="select" id="h-sort" aria-label="Sort">${options(sortOptions, histState.sort)}</select>
+          <button class="btn" id="h-compare" type="button" aria-pressed="false">⚖️ Compare</button>
         </div>
+        <p class="panel-note" id="h-compare-note" hidden>Click two rolls to compare them</p>
         <div class="count-line" id="h-count"></div>
         <div class="table-card" id="h-list"></div>
       </div>`;
@@ -2345,7 +2348,43 @@
     $('#h-q').addEventListener('input', e => { histState.q = e.target.value; redraw(); });
     $('#h-tier').addEventListener('change', e => { histState.tier = e.target.value; redraw(); });
     $('#h-sort').addEventListener('change', e => { histState.sort = e.target.value; redraw(); });
+    // Comparer deux tirages (idée de kingston, 2026-10-22) : mode « Compare », on clique deux lignes, une fenêtre les met
+    // côte à côte (XP, écart, badges en commun et propres à chacun).
+    let picked = [];
+    const setCompare = on => {
+      histState.compare = on; picked = [];
+      $('#h-compare').setAttribute('aria-pressed', String(on)); $('#h-compare').classList.toggle('on', on);
+      $('#h-compare-note').hidden = !on;
+      document.querySelectorAll('#h-list .picked').forEach(el => el.classList.remove('picked'));
+    };
+    $('#h-compare').addEventListener('click', () => setCompare(!histState.compare));
+    $('#h-list').addEventListener('click', e => {
+      if (!histState.compare) return;
+      const row = e.target.closest('[data-roll]'); if (!row) return;
+      e.preventDefault(); e.stopPropagation();
+      const i = Number(row.dataset.roll);
+      if (picked.includes(i)) { picked = picked.filter(x => x !== i); row.classList.remove('picked'); return; }
+      picked.push(i); row.classList.add('picked');
+      if (picked.length === 2) { const [a, b] = picked; setCompare(false); openCompareModal(a, b); }
+    }, true);
+    setCompare(!!histState.compare);
     drawHistoryList();
+  }
+
+  function openCompareModal(ia, ib) {
+    const side = i => { const r = Store.rolls[i], a = analysis(r[0]); return { i, n: r[0], a, ids: new Set(a.earnedIds) }; };
+    const A = side(ia), B = side(ib);
+    const pill = id => { const b = Engine.byId.get(id); return b ? `<span class="badge-pill" data-tier="${b.tier}">${b.emoji} ${esc(b.label)}</span>` : ''; };
+    const list = ids => (ids.length ? ids.sort((x, y) => (Engine.byId.get(y)?.score || 0) - (Engine.byId.get(x)?.score || 0)).map(pill).join(' ') : '<span class="panel-note">none</span>');
+    const common = [...A.ids].filter(id => B.ids.has(id)), onlyA = [...A.ids].filter(id => !B.ids.has(id)), onlyB = [...B.ids].filter(id => !A.ids.has(id));
+    const diff = A.a.total - B.a.total;
+    const card = x => `<div class="cmp-side"><span class="panel-note">#${fmt(x.i + 1)}</span><span class="num-card md" data-tier="${x.a.tier}">${x.a.str}</span><span class="badge-pill" data-tier="${x.a.tier}">${cap(x.a.tier)}</span><b class="mono">${fmt(x.a.total)} XP</b><span class="panel-note">${plural(x.ids.size, 'badge')}</span></div>`;
+    openModal(`
+      <h2>⚖️ Compare rolls</h2>
+      <div class="cmp-grid">${card(A)}<div class="cmp-vs">${diff === 0 ? '=' : diff > 0 ? '◀' : '▶'}<span class="panel-note">${diff === 0 ? 'same XP' : `${fmt(Math.abs(diff))} XP more`}</span></div>${card(B)}</div>
+      <div class="cmp-badges"><div class="eyebrow">In common (${common.length})</div><div class="pill-row">${list(common)}</div></div>
+      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(A.i + 1)} (${onlyA.length})</div><div class="pill-row">${list(onlyA)}</div></div>
+      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(B.i + 1)} (${onlyB.length})</div><div class="pill-row">${list(onlyB)}</div></div>`);
   }
 
   function filteredRolls() {
@@ -5649,7 +5688,7 @@
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.me ? '' : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.me ? ` · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
@@ -5668,7 +5707,12 @@
         catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your message, try again'); }
         btn.disabled = false; input.focus();
       });
-      list.addEventListener('click', e => { const rep = e.target.closest('[data-dm-report]'); if (rep) reportMessage(rep, () => Online.friends('report', name, { t: Number(rep.dataset.dmReport) })); });
+      list.addEventListener('click', async e => {
+        const rep = e.target.closest('[data-dm-report]'); if (rep) { reportMessage(rep, () => Online.friends('report', name, { t: Number(rep.dataset.dmReport) })); return; }
+        const del = e.target.closest('[data-dm-unsend]'); if (!del) return;
+        del.disabled = true;
+        try { draw(await Online.friends('unsend', name, { t: Number(del.dataset.dmUnsend) })); } catch (err) { del.disabled = false; toast('Unavailable right now, try again'); }
+      });
       block.addEventListener('click', async () => {
         const blocking = !block.dataset.blocked;
         if (blocking && !confirm(window.RNGI18n.t(`Block ${name}? They will not be able to message you.`))) return;
@@ -5927,7 +5971,7 @@
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.me || c.bot ? '' : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
+        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -6134,6 +6178,8 @@
       $('#room-chat').addEventListener('click', e => {
         const rep = e.target.closest('[data-chat-report]');
         if (rep) { reportMessage(rep, () => Online.roomAction('report', Room.code, { t: Number(rep.dataset.chatReport) })); return; }
+        const unsay = e.target.closest('[data-chat-unsay]');
+        if (unsay) { Room.chatSig = ''; roomSend('unsay', unsay, { t: Number(unsay.dataset.chatUnsay) }); return; }
         const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');
         if (!hide && !show) return;
         const muted = new Set(Store.settings.chatMuted || []);

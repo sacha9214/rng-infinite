@@ -2515,6 +2515,15 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(x.body.reports.find(r => r.id === dm.id).done, true);
     run([['HDEL', `stats:${cid.playerId}`, 'owner']]);
   }
+  // Supprimer un de ses messages (2026-10-22) : seulement les siens.
+  {
+    let x = await fr(ann, 'message', 'Benny', { text: 'oops typo' });
+    const mine = x.body.messages.filter(m => m.me).pop(), theirs = x.body.messages.find(m => !m.me);
+    await fr(ann, 'unsend', 'Benny', { t: theirs.t }); // même heure possible qu'un des siens : on vérifie juste que celui de l'autre reste
+    assert.ok((await fr(ann, 'messages', 'Benny')).body.messages.some(m => !m.me && m.text === theirs.text), 'le message de l\'autre reste');
+    x = await fr(ann, 'unsend', 'Benny', { t: mine.t }); assert.equal(x.status, 200);
+    assert.ok(!x.body.messages.some(m => m.text === 'oops typo'), 'message supprimé');
+  }
   // Présence (2026-10-21) : hors ligne sans signal, puis AFK, puis en ligne ; un signal trop vieux redevient hors ligne.
   {
     const status = async () => (await fr(ann, 'list')).body.friends.find(f => f.name === 'Benny').status;

@@ -271,6 +271,7 @@
     // Idées du 2026-10-20 : CococoC (504, 9001, 12345, racine de 2), R79a (2077, 2099).
     VORTROX: '49', KINGSAMMELOT: '55', // idée d'A Dude (2026-10-21) : deux nombres mèmes
     AK_47: '47', // idée de R77 (2026-10-21)
+    AREA_51: '51', // idée de hii (2026-10-22)
     MED_CHECK: '504', OVER_9000: '9001', PASSWORD: '12345', YEAR_2077: '2077', YEAR_2099: '2099', ROOT_TWO_4: '1414', ROOT_TWO_5: '14142',
     PLAYER_456: '456', // idée de R77 (2026-10-18) : le joueur le plus célèbre d'un jeu de survie en série
     HALVING: '8421', // idée de finnnnn (2026-10-18) : chaque chiffre est la moitié du précédent

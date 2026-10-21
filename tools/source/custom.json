@@ -370,5 +370,12 @@
     "desc": "The digits of 10, 9, 8, 7, 6, each once, in any order.",
     "emoji": "🔀",
     "score": 166667
+  },
+  {
+    "id": "AREA_51",
+    "label": "Area 51",
+    "desc": "Contains \"51\": the truth is out there.",
+    "emoji": "👽",
+    "score": 2024
   }
 ]

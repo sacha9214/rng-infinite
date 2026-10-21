@@ -201,6 +201,15 @@ module.exports = async (req, res) => {
       return send(res, 200, await state(playerId));
     }
     if (body.action === 'messages') return send(res, 200, await dmThread(playerId, other));
+    // Supprimer un de ses propres messages (idée d'Ann Joe NO.1 gambler, 2026-10-22) : retrouvé par son heure.
+    if (body.action === 'unsend') {
+      const key = dmKey(playerId, other);
+      const [raw] = await redis([['LRANGE', key, 0, -1]]);
+      const entry = (raw || []).find(x => { try { const m = JSON.parse(x); return m.s === playerId && Number(m.t) === Number(body.t); } catch (e) { return false; } });
+      if (!entry) return send(res, 404, { error: 'This message is gone' });
+      await redis([['LREM', key, 1, entry]]);
+      return send(res, 200, await dmThread(playerId, other));
+    }
     // Signaler un message reçu (api/_reports.js) : seulement un message de l'autre, retrouvé par son heure.
     if (body.action === 'report') {
       const [raw] = await redis([['LRANGE', dmKey(playerId, other), 0, -1]]);
