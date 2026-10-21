@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1, feed = true) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -222,7 +222,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -400,6 +400,46 @@ async function tower(id, body) {
   return showTower(g, (await wallet(id)).coins);
 }
 
+// Keno (idée du joueur CYCOX, 2026-10-21) : 40 numéros, le joueur en coche 1 à 10, le serveur en tire 10 au hasard
+// (crypto). Gain = mise × KENO_PAYS[cochés][trouvés], arrondi vers le bas. Une seule demande par partie : rien n'est
+// gardé entre deux. Chances exactes (loi hypergéométrique : 40 numéros, 10 tirés) et retour théorique par table :
+//   1 coché : 98,75 %   2 : 98,46 %   3 : 98,68 %   4 : 98,67 %   5 : 98,74 %
+//   6 : 98,56 %         7 : 98,75 %   8 : 98,77 %   9 : 98,30 %  10 : 98,57 %
+// (vérifiés par tools/test-api.mjs et tools/house-audit.mjs). Plafond ×1000, comme le Plinko High risk ; les grosses
+// cases sont très rares (10 sur 10 : 1 chance sur 847 660 528). Avec 10 cochés, n'en
+// trouver aucun rend la mise (1 chance sur 28).
+const KENO_NUMBERS = 40, KENO_DRAWN = 10, KENO_MAX_PICKS = 10;
+const KENO_PAYS = [null,
+  [0, 3.95],
+  [0, 1.3, 8.4],
+  [0, 1, 2.4, 18],
+  [0, 0.5, 2, 6.2, 40],
+  [0, 0.25, 1.4, 3.7, 15, 150],
+  [0, 0, 1.1, 2.5, 9, 40, 400],
+  [0, 0, 0.6, 2, 5.4, 24, 100, 1000],
+  [0, 0, 0.4, 1.4, 3.9, 12, 60, 300, 1000],
+  [0, 0, 0.3, 0.9, 2.65, 8, 40, 150, 500, 1000],
+  [1, 0, 0.2, 0.7, 1.95, 5, 20, 80, 250, 500, 1000],
+];
+const KENO_CAP = 1000;
+// Mise × multiplicateur en centièmes, pour que 0,3 × 10 donne bien 3 et pas 2,9999.
+const kenoWin = (bet, k, h) => Math.floor(bet * Math.round(KENO_PAYS[k][h] * 100) / 100);
+async function keno(id, body) {
+  const raw = body.picks;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > KENO_MAX_PICKS) throw refuse(400, `Pick between 1 and ${KENO_MAX_PICKS} numbers`);
+  if (!raw.every(n => Number.isInteger(n) && n >= 1 && n <= KENO_NUMBERS)) throw refuse(400, `Numbers go from 1 to ${KENO_NUMBERS}`);
+  if (new Set(raw).size !== raw.length) throw refuse(400, 'Each number only once');
+  const picks = [...raw].sort((a, b) => a - b);
+  const bet = await debit(id, body.bet);
+  // Tirage : mélange partiel (Fisher-Yates) des 40 numéros, les 10 premiers sortent, dans l'ordre du tirage.
+  const pool = Array.from({ length: KENO_NUMBERS }, (_, i) => i + 1);
+  for (let i = 0; i < KENO_DRAWN; i++) { const j = i + crypto.randomInt(0, KENO_NUMBERS - i); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const drawn = pool.slice(0, KENO_DRAWN), hits = picks.filter(n => drawn.includes(n)).length, k = picks.length;
+  const win = kenoWin(bet, k, hits);
+  await credit(id, bet, win, 'gKeno');
+  return { bet, picks, drawn, hits, mult: KENO_PAYS[k][hits], pays: KENO_PAYS[k], win, coins: (await wallet(id)).coins };
+}
+
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
@@ -448,4 +488,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, keno, kenoWin, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

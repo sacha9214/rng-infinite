@@ -259,6 +259,25 @@ assert.ok(rtp > .6 && rtp < 1.6, `tower ${rtp}`);
 for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) { const ev = Math.pow((n - 1) / n, k) * G.towerMult(n, k); assert.ok(ev <= .99000001 && ev > .97, `tower ${level}/${k} : ${ev}`); }
 assert.equal(keys(), 0);
 
+// ---- Keno (idée de CYCOX) : 1 à 10 numéros au hasard, tirage et gain recalculés ici
+const Cn = (n, k) => { let c = 1; for (let i = 0; i < k; i++) c = c * (n - i) / (i + 1); return c; };
+const kenoRtp = k => G.KENO_PAYS[k].reduce((x, m, h) => x + Cn(k, h) * Cn(40 - k, 10 - h) / Cn(40, 10) * m, 0);
+const knHits = new Set();
+rtp = await series('keno', '98,3 à 98,8 % selon les cochés', async () => {
+  const k = 1 + rnd(10), bet = pick(BETS), all = Array.from({ length: 40 }, (_, i) => i + 1);
+  for (let i = 39; i > 0; i--) { const j = rnd(i + 1); [all[i], all[j]] = [all[j], all[i]]; }
+  const picks = all.slice(0, k), r = await G.keno(id, { bet, picks });
+  assert.ok(r.drawn.length === 10 && new Set(r.drawn).size === 10 && r.drawn.every(n => Number.isInteger(n) && n >= 1 && n <= 40));
+  const h = picks.filter(n => r.drawn.includes(n)).length; knHits.add(`${k}/${h}`);
+  assert.equal(r.hits, h); assert.equal(r.win, Math.floor(bet * Math.round(G.KENO_PAYS[k][h] * 100) / 100), 'gain de keno');
+  return { bet, win: r.win };
+});
+// Gros gains rares (×1000) : bande large sur la mesure ; la garantie est le calcul exact par table juste dessous.
+assert.ok(rtp > .8 && rtp < 1.35, `keno ${rtp}`);
+assert.ok(knHits.size > 30, 'beaucoup de combinaisons cochés/trouvés vues');
+for (let k = 1; k <= 10; k++) { const ev = kenoRtp(k); assert.ok(ev >= .97 && ev <= .99, `keno ${k} : ${ev}`); }
+for (const bad of [[], [1, 1], [0], [41], Array.from({ length: 11 }, (_, i) => i + 1), null]) await assert.rejects(G.keno(id, { bet: 100, picks: bad }));
+
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;
 rtp = await series('crash', '≈ 99 % (moins l\'arrondi)', async () => {

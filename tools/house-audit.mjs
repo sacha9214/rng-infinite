@@ -43,6 +43,15 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   }
   add('Tower', best, how, 'même calcul que les Mines : 99 % des vraies chances, arrondi vers le bas, plafond ×250');
 }
+// Keno : k numéros cochés parmi 40, 10 tirés ; loi hypergéométrique exacte pour chaque nombre de cochés.
+{
+  let best = 0, how = '';
+  for (let k = 1; k <= 10; k++) {
+    let r = 0; for (let h = 0; h <= k; h++) r += C(k, h) * C(40 - k, 10 - h) / C(40, 10) * G.KENO_PAYS[k][h];
+    if (r > best) { best = r; how = `${k} numéro(s) coché(s)`; }
+  }
+  add('Keno', best, how, 'table de gains par nombre de cochés, plafond ×1000');
+}
 // Crash : point = min(500, plancher(0,99 / (1 − u), 2 décimales)). Encaisser à m gagne si le point dépasse m.
 {
   let best = 0, how = '';

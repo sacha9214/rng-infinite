@@ -1381,6 +1381,55 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(run([['GET', `tw:${frank.playerId}`]])[0].result, null);
   { const h = run([['HMGET', `stats:${frank.playerId}`, 'gTower']])[0].result; assert.equal(Number(h[0]), 3, 'compteur de manches gTower'); }
   { const c = run([['HMGET', 'casino', 'r:tower', 'b:tower', 'w:tower']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 320], 'compte de la maison par jeu'); }
+  // Keno (idée de CYCOX) : une demande par partie, 1 à 10 numéros cochés parmi 40, 10 tirés par le serveur.
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    for (const picks of [[], Array.from({ length: 11 }, (_, i) => i + 1), [1, 1], [0], [41], [2.5], ['3'], 'x', undefined]) {
+      assert.equal((await g(frank, 'keno', { bet: 100, picks })).status, 400, `numéros ${JSON.stringify(picks)}`); await tick();
+    }
+    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'keno', { bet: bad, picks: [1] })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'keno', { bet: 100, picks: [1] })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    run([['HSET', `stats:${frank.playerId}`, 'rolls', 5]]);
+    r = await g(frank, 'keno', { bet: 100, picks: [1] }); assert.deepEqual([r.status, r.body.error], [422, 'Gamble unlocks after 30 rolls (you have 5)']);
+    run([['HSET', `stats:${frank.playerId}`, 'rolls', 60]]); await tick();
+    assert.equal(await coins(frank), 1000, 'aucun refus ne coûte de pièces');
+    // Tirage forcé : 1 à 10. Cinq cochés, trois trouvés → ×3,7.
+    forced = Array(10).fill(0);
+    r = await g(frank, 'keno', { bet: 100, picks: [30, 2, 1, 20, 3] });
+    assert.deepEqual([r.status, r.body.picks, r.body.drawn, r.body.hits, r.body.mult, r.body.win, r.body.coins], [200, [1, 2, 3, 20, 30], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 3, 3.7, 370, 1270], JSON.stringify(r.body));
+    assert.deepEqual(r.body.pays, G.KENO_PAYS[5]);
+    // Dix cochés, aucun trouvé : la mise revient (×1).
+    await tick(); forced = Array(10).fill(0);
+    r = await g(frank, 'keno', { bet: 50, picks: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40] });
+    assert.deepEqual([r.body.hits, r.body.win, r.body.coins], [0, 50, 1270]);
+    // Tirages au hasard : 10 numéros distincts de 1 à 40, gain = plancher(mise × table[cochés][trouvés]).
+    let bet = 150, won = 420;
+    for (let i = 0; i < 40; i++) {
+      await tick();
+      const k = 1 + (i % 10), picks = Array.from({ length: k }, (_, j) => 1 + ((j * 7 + i) % 40)), b = 10 + 10 * (i % 5);
+      const c0 = await coins(frank); await tick();
+      r = await g(frank, 'keno', { bet: b, picks });
+      const d = r.body.drawn;
+      assert.ok(d.length === 10 && new Set(d).size === 10 && d.every(n => Number.isInteger(n) && n >= 1 && n <= 40), JSON.stringify(d));
+      const h = picks.filter(n => d.includes(n)).length;
+      assert.deepEqual([r.body.hits, r.body.win, r.body.coins], [h, Math.floor(b * Math.round(G.KENO_PAYS[k][h] * 100) / 100), c0 - b + r.body.win]);
+      bet += b; won += r.body.win;
+    }
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gKeno']])[0].result; assert.equal(Number(h), 42, 'compteur de manches gKeno'); }
+    { const c = run([['HMGET', 'casino', 'r:keno', 'b:keno', 'w:keno']])[0].result.map(Number); assert.deepEqual(c, [42, bet, won], 'compte de la maison par jeu'); }
+    // La page affiche les mêmes tables avant la première partie (copie dans js/app.js).
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.deepEqual(JSON.parse(/const KN_PAYS = (\[.*?\]);/.exec(src)[1]), G.KENO_PAYS, 'tables du keno identiques sur la page'); }
+    // Retour théorique EXACT de chaque table (loi hypergéométrique : 40 numéros, 10 tirés) : entre 97 et 99 %.
+    const Cn = (n, k) => { let c = 1; for (let i = 0; i < k; i++) c = c * (n - i) / (i + 1); return c; };
+    for (let k = 1; k <= 10; k++) {
+      const T = G.KENO_PAYS[k]; assert.equal(T.length, k + 1);
+      let rtp = 0, p = 0;
+      for (let h = 0; h <= k; h++) { const q = Cn(k, h) * Cn(40 - k, 10 - h) / Cn(40, 10); p += q; rtp += q * T[h]; assert.ok(T[h] <= G.KENO_CAP); }
+      assert.ok(Math.abs(p - 1) < 1e-12);
+      assert.ok(rtp >= 0.97 && rtp <= 0.99, `keno ${k} cochés : ${rtp}`);
+    }
+  }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
   await tick(); forced = [Math.floor(0.505 * 2 ** 32)];

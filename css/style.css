@@ -4381,6 +4381,36 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .tw-setup b { min-width: 0; }
 @media (max-width: 560px) { .tw-setup .eyebrow { display: none; } }
 
+/* ---------------------------------------------------------------- Keno (idée de CYCOX, 2026-10-21)
+   Un tableau de 40 boules (8 × 5) sur un tapis sombre, comme les autres tables du casino. Les numéros cochés sont
+   dorés ; au tirage, chaque boule sortie s'allume : verte et brillante si elle était cochée, bleutée sinon, et les
+   numéros non sortis s'éteignent. La table des gains du nombre de cochés court dessous, la ligne gagnée allumée. */
+.kn-table { max-width: 30rem; margin: 0 auto .8rem; padding: .75rem; border-radius: .9rem; color: #e2e8f0; background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(14, 165, 233, .18), transparent 70%), linear-gradient(180deg, #0b1a2c, #0a0f1d); border: 1px solid rgba(56, 189, 248, .3); box-shadow: inset 0 0 30px rgba(0, 0, 0, .5), 0 0 24px rgba(56, 189, 248, .12); }
+.kn-setup { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.kn-count { font-size: .85rem; color: #fde68a; font-weight: 700; }
+.kn-tools { display: flex; gap: .4rem; }
+.kn-tools .btn { color: #e2e8f0; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .15); }
+.kn-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .35rem; }
+.kn-cell { aspect-ratio: 1; min-width: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .1); background: radial-gradient(circle at 35% 30%, #3b4a63, #1b2335 70%); box-shadow: 0 2px 0 #070b14, inset 0 1px 0 rgba(255, 255, 255, .15); color: #cbd5e1; font-size: .82rem; font-weight: 700; cursor: pointer; transition: transform .12s var(--ease-snap), filter .15s ease, opacity .2s ease, box-shadow .2s ease; }
+.kn-cell:hover { filter: brightness(1.25); transform: translateY(-1px); }
+.kn-cell:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+.kn-cell.on { color: #1c1300; border-color: #fcd34d; background: radial-gradient(circle at 35% 30%, #fef3c7, #f59e0b 65%, #b45309); box-shadow: 0 2px 0 #78350f, 0 0 10px rgba(251, 191, 36, .45); }
+.kn-cell.drawn { color: #e0f2fe; border-color: #38bdf8; background: radial-gradient(circle at 35% 30%, #7dd3fc, #0369a1 65%, #0c4a6e); box-shadow: 0 2px 0 #082f49, 0 0 10px rgba(56, 189, 248, .4); }
+.kn-cell.hit { color: #022c22; border-color: #6ee7b7; background: radial-gradient(circle at 35% 30%, #d1fae5, #10b981 60%, #047857); box-shadow: 0 0 0 2px rgba(110, 231, 183, .6), 0 0 18px rgba(16, 185, 129, .85); z-index: 1; }
+.kn-cell.miss { opacity: .32; }
+.kn-cell.miss.on { opacity: .6; }
+.kn-cell.pop { animation: kn-pop .32s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes kn-pop { 0% { transform: scale(.55); filter: brightness(2); } 100% { transform: none; } }
+.kn-pays { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; margin-top: .7rem; min-height: 2.2rem; }
+.kn-pay { display: grid; justify-items: center; padding: .2rem .5rem; border-radius: .5rem; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); line-height: 1.2; }
+.kn-pay i { font-style: normal; font-size: .66rem; color: #94a3b8; }
+.kn-pay b { font-size: .8rem; color: #fde68a; }
+.kn-pay.lit { background: rgba(16, 185, 129, .2); border-color: #34d399; box-shadow: 0 0 14px rgba(52, 211, 153, .45); }
+.kn-pay.lit i, .kn-pay.lit b { color: #a7f3d0; }
+.kn-hint { font-size: .78rem; color: #94a3b8; align-self: center; }
+@media (max-width: 420px) { .kn-table { padding: .55rem; } .kn-board { gap: .25rem; } .kn-cell { font-size: .74rem; } .kn-pay { padding: .15rem .38rem; } }
+@media (prefers-reduced-motion: reduce) { .kn-cell, .kn-cell.pop { animation: none; transition: none; } .kn-cell:hover { transform: none; } }
+
 /* ------------------------------------------------------------------ Cursed Energy (idée d'Edward, 2026-10-20) : les
    chiffres sont de l'énergie condensée, bleu-violet, cernée d'encre noire ; derrière, un sceau original (cercles,
    huit traits, triangle) et une aura qui ondule. Pendant le tirage l'énergie vacille comme une flamme froide ; au

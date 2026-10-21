@@ -3418,7 +3418,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -3479,7 +3479,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -3511,6 +3511,16 @@
             <div class="tw-tower" id="tw-tower"></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="tw-go">Start</button></div>
             <p class="panel-note g-result" id="tw-result"></p>
+          </div>
+          <div class="panel g-game" data-game="keno">
+            <div class="panel-head"><h3 class="panel-title">Keno</h3><span class="panel-note">pick 1 to 10 numbers · 10 are drawn · max win 1000×</span></div>
+            <div class="kn-table">
+              <div class="kn-setup"><span class="kn-count mono" id="kn-count"></span><span class="kn-tools"><button class="btn small" id="kn-random">🎲 Random pick</button><button class="btn small" id="kn-clear">Clear</button></span></div>
+              <div class="kn-board" id="kn-board">${Array.from({ length: 40 }, (_, i) => `<button class="kn-cell mono" data-n="${i + 1}" aria-pressed="false" data-no-i18n>${i + 1}</button>`).join('')}</div>
+              <div class="kn-pays" id="kn-pays"></div>
+            </div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="kn-go">Play</button></div>
+            <p class="panel-note g-result" id="kn-result"></p>
           </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
@@ -4200,6 +4210,82 @@
     };
     $('#tw-go').addEventListener('click', () => { const g = Gamble.tw; if (g && !g.done && !g.idle) towerMove({ move: 'cash' }); else { $('#tw-result').textContent = ''; towerMove({ move: 'start', bet: Gamble.chip, level: Gamble.twLevel }); } });
     $('#tw-tower').addEventListener('click', e => { const c = e.target.closest('.tw-tile'); if (c && !c.disabled) towerMove({ move: 'pick', tile: Number(c.dataset.tile) }); });
+    // ---- keno (idée de CYCOX, api/_gamble.js) : 40 numéros, 1 à 10 cochés, le serveur en tire 10 d'un coup. Les boules
+    // sortent ici une à une (~150 ms, tout de suite si les animations sont réduites). Les derniers numéros cochés sont
+    // gardés sur l'appareil pour rejouer en un clic.
+    // Mêmes tables que KENO_PAYS dans api/_gamble.js (vérifié par tools/test-api.mjs) : KN_PAYS[cochés][trouvés].
+    const KN_PAYS = [null, [0, 3.95], [0, 1.3, 8.4], [0, 1, 2.4, 18], [0, 0.5, 2, 6.2, 40], [0, 0.25, 1.4, 3.7, 15, 150], [0, 0, 1.1, 2.5, 9, 40, 400], [0, 0, 0.6, 2, 5.4, 24, 100, 1000], [0, 0, 0.4, 1.4, 3.9, 12, 60, 300, 1000], [0, 0, 0.3, 0.9, 2.65, 8, 40, 150, 500, 1000], [1, 0, 0.2, 0.7, 1.95, 5, 20, 80, 250, 500, 1000]];
+    const KN_KEY = 'rng-keno-picks';
+    if (!Gamble.kn) {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(KN_KEY) || '[]'); } catch (e) { saved = []; }
+      Gamble.kn = { picks: Array.isArray(saved) ? [...new Set(saved.filter(n => Number.isInteger(n) && n >= 1 && n <= 40))].slice(0, 10) : [], drawn: [], hits: null };
+    }
+    const knSave = () => { try { localStorage.setItem(KN_KEY, JSON.stringify(Gamble.kn.picks)); } catch (e) { /* stockage bloqué : rien de grave */ } };
+    const knMult = m => `${m}×`;
+    const drawKeno = () => {
+      const kn = Gamble.kn, k = kn.picks.length, shown = new Set(kn.drawn);
+      document.querySelectorAll('.kn-cell').forEach(c => {
+        const n = Number(c.dataset.n), mine = kn.picks.includes(n), out = shown.has(n);
+        c.classList.toggle('on', mine); c.classList.toggle('drawn', out); c.classList.toggle('hit', mine && out);
+        c.classList.toggle('miss', kn.drawn.length > 0 && kn.hits != null && !out);
+        c.setAttribute('aria-pressed', mine ? 'true' : 'false');
+      });
+      $('#kn-count').textContent = `${k}/10 picked`;
+      $('#kn-pays').innerHTML = k ? KN_PAYS[k].map((m, h) => ({ m, h })).filter(x => x.m > 0).reverse().map(x => `<span class="kn-pay${kn.hits === x.h && kn.done ? ' lit' : ''}"><i class="mono">${x.h} hit${x.h === 1 ? '' : 's'}</i><b class="mono">${knMult(x.m)}</b></span>`).join('') : '<span class="kn-hint">Pick numbers on the board to see the payouts</span>';
+      $('#kn-go').textContent = `Play · ${fmt(Gamble.chip)}`;
+      $('#kn-go').disabled = !k;
+    };
+    const knReset = () => { Gamble.kn.drawn = []; Gamble.kn.hits = null; Gamble.kn.done = false; $('#kn-result').textContent = ''; };
+    $('#kn-board').addEventListener('click', e => {
+      const c = e.target.closest('.kn-cell'); if (!c || Gamble.busy) return;
+      const kn = Gamble.kn, n = Number(c.dataset.n);
+      if (kn.done) knReset();
+      if (kn.picks.includes(n)) kn.picks = kn.picks.filter(x => x !== n);
+      else if (kn.picks.length < 10) kn.picks.push(n);
+      else { toast('10 numbers at most'); return; }
+      Sound.play('click'); knSave(); drawKeno();
+    });
+    $('#kn-random').addEventListener('click', () => {
+      if (Gamble.busy) return;
+      const want = Gamble.kn.picks.length || 5, all = Array.from({ length: 40 }, (_, i) => i + 1);
+      for (let i = 39; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+      knReset(); Gamble.kn.picks = all.slice(0, want); Sound.play('click'); knSave(); drawKeno();
+    });
+    $('#kn-clear').addEventListener('click', () => { if (Gamble.busy) return; knReset(); Gamble.kn.picks = []; knSave(); drawKeno(); });
+    $('#kn-go').addEventListener('click', async () => {
+      const kn = Gamble.kn;
+      if (Gamble.busy || !kn.picks.length) return;
+      Gamble.busy = true; $('#kn-go').disabled = true;
+      try {
+        knReset(); drawKeno(); Sound.play('click');
+        const res = await gamble('keno', { bet: Gamble.chip, picks: kn.picks });
+        showCoins(res.coins - res.win); // le gain s'affiche quand la dernière boule est sortie
+        let found = 0;
+        for (let i = 0; i < res.drawn.length; i++) {
+          if (currentView !== 'gamble') break;
+          const n = res.drawn[i], hit = res.picks.includes(n);
+          kn.drawn.push(n); if (hit) found++;
+          const cell = document.querySelector(`.kn-cell[data-n="${n}"]`);
+          drawKeno();
+          if (!reducedMotion) {
+            if (cell) { cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop'); }
+            if (hit) Sound.play('lock', { i: found + 1, final: found === res.picks.length ? 1 : 0 }); else Sound.tick({ soft: 1 });
+            await new Promise(r => setTimeout(r, 150));
+          }
+        }
+        kn.drawn = res.drawn; kn.hits = res.hits; kn.done = true;
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        drawKeno();
+        say($('#kn-result'), res.win, res.bet, res.win ? `${res.hits}/${res.picks.length} hits · ${knMult(res.mult)} · you get ${fmt(res.win)} coins` : `${res.hits}/${res.picks.length} hits · −${fmt(res.bet)}`);
+        if (res.win > res.bet) {
+          Sound.play(res.mult >= 50 ? 'tier' : 'reveal', res.mult >= 50 ? { tier: res.mult >= 400 ? 'mythic' : 'anomaly' } : { small: 1 });
+          FX.celebrate(res.mult >= 400 ? 'mythic' : res.mult >= 50 ? 'anomaly' : res.mult >= 5 ? 'epic' : 'uncommon', $('#kn-board'));
+        }
+        showCoins(res.coins);
+      } catch (err) { fail(err); } finally { Gamble.busy = false; drawKeno(); }
+    });
+    drawKeno();
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -4333,7 +4419,7 @@
       } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null); drawTower(null);
-    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); if (!Gamble.tw || Gamble.tw.done || Gamble.tw.idle) $('#tw-go').textContent = `Start · ${fmt(Gamble.chip)}`; });
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); if (!Gamble.tw || Gamble.tw.done || Gamble.tw.idle) $('#tw-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.busy) $('#kn-go').textContent = `Play · ${fmt(Gamble.chip)}`; });
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
@@ -4890,7 +4976,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
