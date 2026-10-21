@@ -4605,6 +4605,126 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes lab-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg); } }
 .room-stage.many .side-lab::before, .room-stage.many .side-lab::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-lab::before, .side-lab::after { animation: none; } }
+/* ------------------------------------------------------------------ Wheelie (idée de JBearr12, 2026-10-21) : une rue au
+   crépuscule. Bitume sombre et grenu, une bordure de trottoir en béton tout en haut (le cycliste roule dessus), une ligne
+   jaune pointillée en bas. Les chiffres sont peints au pochoir sur la chaussée (peinture routière blanche, un peu usée).
+   Matière dure : en cours, ils tressautent comme sur une route bosselée ; à la pose, ils se cabrent (comme un wheelie)
+   puis claquent au sol et rebondissent raide. Le vélo, la poussière et les traces de pneu sont dans js/skinfx.js. */
+.num-card.skin-wheelie {
+  background:
+    /* bordure de trottoir en béton, le joint des dalles et son ombre sur la chaussée */
+    linear-gradient(180deg, #d6d3d1 0 .16em, #a8a29e .16em .22em, rgba(0, 0, 0, .45) .22em .3em, transparent .3em),
+    repeating-linear-gradient(90deg, transparent 0 2.2em, rgba(87, 83, 78, .7) 2.2em 2.26em) 0 0 / 100% .22em no-repeat,
+    /* ligne jaune pointillée */
+    repeating-linear-gradient(90deg, rgba(250, 204, 21, .8) 0 .9em, transparent .9em 1.6em) 0 calc(100% - .12em) / 100% .08em no-repeat,
+    /* grain du bitume */
+    radial-gradient(circle at 30% 40%, rgba(255, 255, 255, .09) 0 .03em, transparent .04em) 0 0 / .37em .31em,
+    radial-gradient(circle at 70% 60%, rgba(0, 0, 0, .35) 0 .04em, transparent .05em) 0 0 / .29em .41em,
+    /* lueur du lampadaire */
+    radial-gradient(ellipse 60% 90% at 78% 0%, rgba(251, 191, 36, .2), transparent 70%),
+    linear-gradient(180deg, #3f3f46 0%, #27272a 60%, #1f1f23 100%);
+  border: 2px solid #18181b; border-radius: .6rem;
+  box-shadow: inset 0 -.25em .5em rgba(0, 0, 0, .45), 0 0 0 1px rgba(250, 204, 21, .25), 0 0 14px rgba(251, 146, 60, .22), 0 10px 18px rgba(0, 0, 0, .4);
+  padding-top: .35rem;
+}
+.skin-wheelie .slot { position: relative; z-index: 1; font-weight: 900; transform-origin: 30% 92%;
+  color: transparent;
+  /* peinture blanche usée : de petits trous laissent voir le bitume */
+  background: radial-gradient(circle at 40% 50%, rgba(113, 113, 122, .55) 0 .018em, transparent .026em) 0 0 / .31em .37em,
+    linear-gradient(100deg, transparent 40%, rgba(161, 161, 170, .35) 48%, transparent 56%) 0 0 / .9em 100%,
+    linear-gradient(180deg, #ffffff, #f4f4f5 60%, #e4e4e7);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 .04em 0 rgba(0, 0, 0, .55)) drop-shadow(0 0 .12em rgba(250, 250, 250, .18)); }
+.skin-wheelie .slot.ghost { opacity: .2; }
+/* en cours : la route est bosselée, les chiffres tressautent par à-coups (raides : c'est de la peinture sur du bitume) */
+.skin-wheelie .slot.spinning { opacity: .85; animation: wh-bump .24s steps(4, end) infinite; }
+.skin-wheelie .slot.spinning:nth-child(odd) { animation-delay: -.11s; }
+@keyframes wh-bump { 0% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-.1em) rotate(-4deg); } 50% { transform: translateY(.03em) rotate(1deg); } 75% { transform: translateY(-.05em) rotate(3deg); } 100% { transform: none; } }
+/* il se pose : se cabre en arrière comme un wheelie, claque sur la chaussée, rebondit raide et se cale */
+.skin-wheelie .slot.revealed { animation: wh-stamp .62s cubic-bezier(.3, .9, .4, 1) backwards; }
+@keyframes wh-stamp {
+  0% { transform: translate(-.12em, -.14em) rotate(-14deg); filter: brightness(1.6) drop-shadow(0 .3em .1em rgba(0, 0, 0, .3)); }
+  18% { transform: translate(-.06em, -.2em) rotate(-18deg); }
+  36% { transform: translateY(.04em) rotate(0) scale(1.08, .96); filter: brightness(1.3) drop-shadow(0 .04em 0 rgba(0, 0, 0, .55)); }
+  52% { transform: translateY(-.07em) rotate(-5deg); }
+  70% { transform: translateY(0) rotate(1.5deg); }
+  86% { transform: rotate(-.5deg); }
+  100% { transform: none; } }
+.skin-wheelie .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-wheelie .slot { animation: none; } }
+/* cadre de duel : la rue au crépuscule, une ligne de chaussée qui défile, un vélo qui se cabre, un cône qui vacille */
+.side-wheelie { --side-border: #facc15; --side-glow: 0 0 14px rgba(250, 204, 21, .35); --side-ink: #ca8a04;
+  --side-bg: repeating-linear-gradient(90deg, rgba(250, 204, 21, .75) 0 18px, transparent 18px 34px) 0 calc(100% - 6px) / 100% 3px no-repeat,
+    linear-gradient(180deg, transparent calc(100% - 16px), rgba(63, 63, 70, .55) calc(100% - 16px)),
+    radial-gradient(ellipse 50% 60% at 85% 0%, rgba(251, 191, 36, .25), transparent 70%),
+    linear-gradient(180deg, rgba(251, 146, 60, .22), rgba(124, 58, 237, .14) 70%);
+  --deco-a: '🚲'; --deco-b: '🚧'; animation: wh-road 1.2s linear infinite; }
+.side-wheelie::before { font-size: 1.2rem; transform-origin: 15% 90%; animation: wh-lift 1.8s cubic-bezier(.4, 0, .3, 1) infinite; }
+.side-wheelie::after { transform-origin: 50% 100%; animation: wh-cone 2.4s ease-in-out infinite; }
+@keyframes wh-road { 0% { background-position: 0 calc(100% - 6px), 0 0, 0 0, 0 0, 0 0; } 100% { background-position: -34px calc(100% - 6px), 0 0, 0 0, 0 0, 0 0; } }
+@keyframes wh-lift { 0%, 100% { transform: rotate(0) translateX(0); } 40%, 70% { transform: rotate(-22deg) translateX(3px); } 55% { transform: rotate(-17deg) translateX(4px); } }
+@keyframes wh-cone { 0%, 70%, 100% { transform: none; } 78% { transform: rotate(-8deg); } 88% { transform: rotate(5deg); } }
+/* ------------------------------------------------------------------ Polygon Donut (idée de PongonLOLZFan, 2026-10-21) :
+   un donut 3D en low poly, tout en facettes plates. Fond pastel en maillage de triangles (rose, lilas, menthe) semé de
+   vermicelles. Les chiffres sont taillés en facettes : glaçage rose et chocolat en alternance, arêtes nettes, épaisseur
+   en dessous. Matière rigide (des polygones) : pas d'écrasement. En cours, les facettes miroitent et pivotent par
+   crans ; à la pose, le chiffre bascule d'un coup sec sur sa face, dépasse et se cale. Le donut qui tourne derrière les
+   chiffres et les vermicelles qui rebondissent sont dans js/skinfx.js (SCENES.polydonut). */
+.num-card.skin-polydonut {
+  background:
+    /* vermicelles */
+    linear-gradient(35deg, transparent 46%, #f472b6 46% 54%, transparent 54%) 4% 8% / .28em .28em no-repeat,
+    linear-gradient(-50deg, transparent 46%, #38bdf8 46% 54%, transparent 54%) 31% 96% / .28em .28em no-repeat,
+    linear-gradient(80deg, transparent 46%, #facc15 46% 54%, transparent 54%) 58% 4% / .28em .28em no-repeat,
+    linear-gradient(-20deg, transparent 46%, #4ade80 46% 54%, transparent 54%) 84% 97% / .28em .28em no-repeat,
+    linear-gradient(60deg, transparent 46%, #a78bfa 46% 54%, transparent 54%) 97% 10% / .28em .28em no-repeat,
+    /* voile clair au centre : le maillage reste derrière les chiffres sans les brouiller */
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 245, 250, .45), transparent 80%),
+    /* maillage low poly : triangles pastel de teintes voisines */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60' viewBox='0 0 120 60'><path d='M0 0h30L0 30z' fill='%23fbcfe8'/><path d='M30 0L0 30h34z' fill='%23f9a8d4'/><path d='M30 0h35L34 30z' fill='%23fce7f3'/><path d='M65 0L34 30h40z' fill='%23f5d0fe'/><path d='M65 0h30L74 30z' fill='%23e9d5ff'/><path d='M95 0L74 30h46z' fill='%23fbcfe8'/><path d='M95 0h25v30z' fill='%23f9a8d4'/><path d='M0 30h34L0 60z' fill='%23ddd6fe'/><path d='M34 30L0 60h30z' fill='%23f5d0fe'/><path d='M34 30h40L30 60z' fill='%23fbcfe8'/><path d='M74 30L30 60h48z' fill='%23fce7f3'/><path d='M74 30h46L78 60z' fill='%23f9a8d4'/><path d='M120 30v30H78z' fill='%23ccfbf1'/></svg>") 0 0 / 3.6em 1.8em,
+    #fbcfe8;
+  border: 2px solid #db2777; border-radius: .7rem;
+  box-shadow: inset 0 .2em 0 rgba(255, 255, 255, .45), inset 0 -.25em 0 rgba(190, 24, 93, .18), 0 0 0 1px rgba(255, 255, 255, .4), 0 0 16px rgba(244, 114, 182, .35), 0 10px 18px rgba(157, 23, 77, .25);
+}
+.skin-polydonut .slot { position: relative; z-index: 1; font-weight: 900; color: transparent;
+  /* facettes du glaçage : des aplats séparés par des arêtes nettes, éclairés d'en haut à gauche */
+  background: linear-gradient(155deg, #ffffff 0 24%, #fdf2f8 24% 38%, #f9a8d4 38% 55%, #ec4899 55% 72%, #be185d 72%);
+  background-size: 100% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .03em #831843; paint-order: stroke fill;
+  filter: drop-shadow(.03em .07em 0 #9d174d) drop-shadow(0 .1em .08em rgba(80, 7, 36, .4)); }
+/* un chiffre sur deux : glaçage chocolat */
+.skin-polydonut .slot:nth-of-type(even) { background: linear-gradient(155deg, #fde68a 0 20%, #d97706 20% 36%, #92400e 36% 58%, #78350f 58% 76%, #451a03 76%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-stroke-color: #2a1003; filter: drop-shadow(.03em .07em 0 #451a03) drop-shadow(0 .1em .08em rgba(42, 16, 3, .45)); }
+.skin-polydonut .slot.ghost { opacity: .2; }
+/* en cours : les facettes pivotent par crans (comme un objet 3D en peu de polygones) et la lumière glisse dessus */
+.skin-polydonut .slot.spinning { opacity: .92; animation: pd-facet .3s steps(3, end) infinite alternate; }
+.skin-polydonut .slot.spinning:nth-of-type(odd) { animation-delay: -.15s; }
+@keyframes pd-facet {
+  0% { transform: perspective(2em) rotateY(-40deg); filter: brightness(1.15) drop-shadow(.03em .07em 0 #9d174d); }
+  50% { transform: perspective(2em) rotateY(0) translateY(-.04em); filter: brightness(.9) drop-shadow(.03em .07em 0 #9d174d); }
+  100% { transform: perspective(2em) rotateY(40deg); filter: brightness(1.2) drop-shadow(.03em .07em 0 #9d174d); } }
+/* il se pose : bascule d'un coup sec de la tranche à la face, dépasse, se cale ; un éclair sur les arêtes */
+.skin-polydonut .slot.revealed { animation: pd-flip .6s cubic-bezier(.2, 1.4, .4, 1) backwards; }
+@keyframes pd-flip {
+  0% { transform: perspective(2em) rotateX(-85deg) scale(.85); filter: brightness(1.5) drop-shadow(.03em .07em 0 #9d174d); }
+  14% { transform: perspective(2em) rotateX(-85deg) scale(.85); }
+  40% { transform: perspective(2em) rotateX(14deg) scale(1.14); filter: brightness(1.35) drop-shadow(.03em .07em 0 #9d174d) drop-shadow(0 0 .2em #fff); }
+  60% { transform: perspective(2em) rotateX(-6deg) scale(.98); }
+  80% { transform: perspective(2em) rotateX(2deg) scale(1.01); }
+  100% { transform: none; } }
+.skin-polydonut .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-polydonut .slot { animation: none; } }
+/* cadre de duel : une vitrine de pâtisserie pastel en maillage de triangles, un donut qui tourne, des vermicelles */
+.side-polydonut { --side-border: #ec4899; --side-glow: 0 0 14px rgba(236, 72, 153, .38); --side-ink: #db2777;
+  --side-bg: linear-gradient(135deg, rgba(244, 114, 182, .22) 25%, transparent 25%) 0 0 / 22px 22px,
+    linear-gradient(225deg, rgba(167, 139, 250, .2) 25%, transparent 25%) 0 0 / 22px 22px,
+    linear-gradient(315deg, rgba(45, 212, 191, .14) 25%, transparent 25%) 0 0 / 22px 22px,
+    linear-gradient(180deg, rgba(236, 72, 153, .22), rgba(139, 92, 246, .18));
+  --deco-a: '🍩'; --deco-b: '✨'; }
+.side-polydonut::before { font-size: 1.2rem; animation: pd-turn 2.4s steps(8, end) infinite; }
+.side-polydonut::after { animation: pd-twinkle 1.8s steps(3, end) infinite alternate; }
+@keyframes pd-turn { 0% { transform: rotateY(0) rotate(0); } 100% { transform: rotateY(360deg) rotate(45deg); } }
+@keyframes pd-twinkle { 0% { transform: rotate(0) scale(1); opacity: .9; } 100% { transform: rotate(30deg) scale(1.2); opacity: .5; } }
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }

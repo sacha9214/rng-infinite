@@ -831,3 +831,14 @@
   text-shadow: 0 0 .35em #5eead4, 0 1px 0 #042f2e, 0 0 2px #042f2e;
   --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(45, 212, 191, .3); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.4em rgba(45, 212, 191, .5); --gs-a: 0 .06em 0 #6b4423; }
 .btn-roll.gen-lab:hover { background-position: 0 0, 18% 40%, 0 0, 0 100%, 0 0; transition: background-position .6s ease-out, transform .15s ease, box-shadow .15s ease; }
+/* Wheelie (idée de JBearr12, 2026-10-21) : une bande de bitume, la ligne jaune pointillée qui défile au survol. */
+.btn-roll.gen-wheelie { border: 2px solid #18181b; border-radius: .5em; color: #fafafa;
+  background: repeating-linear-gradient(90deg, #facc15 0 .9em, transparent .9em 1.6em) 0 calc(100% - .25em) / 100% .1em no-repeat, linear-gradient(180deg, #d6d3d1 0 .14em, #3f3f46 .14em, #27272a); text-shadow: 0 1px 0 #000;
+  --gs: 0 .3em 0 #09090b, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #09090b, 0 .7em 1.3em rgba(251, 146, 60, .4); --gs-a: 0 .06em 0 #09090b; }
+.btn-roll.gen-wheelie:hover { animation: wh-btn-road .6s linear infinite; }
+@keyframes wh-btn-road { 0% { background-position: 0 calc(100% - .25em), 0 0; } 100% { background-position: -1.6em calc(100% - .25em), 0 0; } }
+/* Polygon Donut (idée de PongonLOLZFan, 2026-10-21) : glaçage rose en facettes et quelques vermicelles. */
+.btn-roll.gen-polydonut { border: 2px solid #be185d; border-radius: 999px; color: #fff; text-shadow: 0 1px 0 #831843;
+  background: linear-gradient(35deg, transparent 46%, #facc15 46% 54%, transparent 54%) 12% 25% / .5em .5em no-repeat, linear-gradient(-40deg, transparent 46%, #38bdf8 46% 54%, transparent 54%) 86% 70% / .5em .5em no-repeat,
+    linear-gradient(155deg, #fbcfe8 0 22%, #f9a8d4 22% 45%, #f472b6 45% 68%, #ec4899 68% 86%, #d6a05c 86%);
+  --gs: 0 .3em 0 #9d174d, 0 .5em 1em rgba(236, 72, 153, .35); --gs-h: 0 .34em 0 #9d174d, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #9d174d; }

@@ -2346,6 +2346,204 @@
     };
   };
 
+  // 🚲 Wheelie (2026-10-21, idée de JBearr12) — un cycliste en wheelie roule sur la bordure de trottoir (le haut de la
+  // carte), de gauche à droite. Il arrive de la gauche au début du tirage et, à chaque chiffre posé, file juste devant lui :
+  // le chiffre surgit dans son sillage, avec une bouffée de poussière et une trace de pneu. À la révélation il saute et
+  // retombe sur sa roue avant (étincelles, et un salto arrière dès Mythic), puis sort à droite. Tirage raté : pas de saut.
+  SCENES.wheelie = env => {
+    const { co, card, dark, q } = env;
+    const R = Math.max(7, card.h * .21); // rayon des roues
+    const ground = () => card.y + 1;
+    const INK = dark ? '#f4f4f5' : '#18181b', HALO = dark ? 'rgba(9,9,11,.85)' : 'rgba(255,255,255,.9)';
+    const FRAME = '#22d3ee', HOODIE = '#f97316', HELMET = '#facc15';
+    const dust = particles(), sparks = particles(), skids = timed();
+    // x : roue arrière ; tx : où il va ; air : hauteur du saut ; flip : angle du salto
+    const bike = { x: card.x - card.h * 2.2, tx: card.x - R * 1.5, pitch: -.45, air: 0, flip: 0, a: 1, jump: null, gone: false };
+    let roll = 0;
+    // Le vélo, dessiné dans son repère : roue arrière au sol en (0, 0), l'avant vers +x, cabré de `pitch`.
+    const draw = (t) => {
+      const lw = Math.max(1.4, R * .22);
+      co.save();
+      co.translate(bike.x, ground() - bike.air);
+      // salto : on tourne autour du centre du vélo, pas de la roue arrière
+      if (bike.flip) { co.translate(R * 1.3, -R * 1.6); co.rotate(-bike.flip); co.translate(-R * 1.3, R * 1.6); }
+      co.rotate(bike.pitch);
+      co.globalAlpha = bike.a;
+      co.lineCap = 'round'; co.lineJoin = 'round';
+      const rear = [0, -R], front = [R * 2.7, -R], bb = [R * 1.15, -R * .85], seat = [R * .85, -R * 2.15], head = [R * 2.35, -R * 2.2], bar = [R * 2.15, -R * 2.85];
+      const crank = roll * .6, ped = [bb[0] + Math.cos(crank) * R * .45, bb[1] + Math.sin(crank) * R * .45], ped2 = [bb[0] - Math.cos(crank) * R * .45, bb[1] - Math.sin(crank) * R * .45];
+      const hip = [seat[0] - R * .1, seat[1] - R * .2], shoulder = [R * .35, -R * 3.7], hd = [R * .25, -R * 4.45];
+      const knee = (p) => { const mx = (hip[0] + p[0]) / 2, my = (hip[1] + p[1]) / 2; return [mx + R * .55, my - R * .35]; };
+      const k1 = knee(ped), k2 = knee(ped2);
+      const seg = (pts, col, w) => { co.strokeStyle = col; co.lineWidth = w; co.beginPath(); pts.forEach(([x, y], i) => (i ? co.lineTo(x, y) : co.moveTo(x, y))); co.stroke(); };
+      const wheel = ([x, y]) => {
+        co.strokeStyle = HALO; co.lineWidth = lw + 2.4; co.beginPath(); co.arc(x, y, R, 0, TAU); co.stroke();
+        co.strokeStyle = INK; co.lineWidth = lw; co.beginPath(); co.arc(x, y, R, 0, TAU); co.stroke();
+        co.lineWidth = Math.max(.8, lw * .35); co.globalAlpha = bike.a * .8;
+        for (let i = 0; i < 3; i++) { const a = roll + i * Math.PI / 3; co.beginPath(); co.moveTo(x + Math.cos(a) * R * .85, y + Math.sin(a) * R * .85); co.lineTo(x - Math.cos(a) * R * .85, y - Math.sin(a) * R * .85); co.stroke(); }
+        co.globalAlpha = bike.a;
+      };
+      // jambe du fond, roues, cadre, puis le cycliste
+      seg([hip, k2, ped2], HALO, lw * 1.5 + 2.4); seg([hip, k2, ped2], '#1e3a8a', lw * 1.5);
+      wheel(rear); wheel(front);
+      const frame = [[rear, bb, seat, rear], [bb, head], [seat, head], [head, front], [head, bar]];
+      for (const f of frame) seg(f, HALO, lw + 2.4);
+      for (const f of frame) seg(f, FRAME, lw);
+      seg([ped, ped2], INK, lw * .8);
+      seg([hip, shoulder], HALO, lw * 2.6 + 2.4); seg([hip, shoulder], HOODIE, lw * 2.6);
+      seg([shoulder, [R * 1.3, -R * 3.1], bar], HALO, lw * 1.2 + 2.4); seg([shoulder, [R * 1.3, -R * 3.1], bar], HOODIE, lw * 1.2);
+      seg([hip, k1, ped], HALO, lw * 1.6 + 2.4); seg([hip, k1, ped], '#2563eb', lw * 1.6);
+      co.fillStyle = HALO; co.beginPath(); co.arc(hd[0], hd[1], R * .62 + 1.2, 0, TAU); co.fill();
+      co.fillStyle = '#fcd9b6'; co.beginPath(); co.arc(hd[0], hd[1], R * .55, 0, TAU); co.fill();
+      co.fillStyle = HELMET; co.beginPath(); co.arc(hd[0], hd[1], R * .62, Math.PI * 1.02, Math.PI * 2.05); co.fill();
+      co.fillRect(hd[0], hd[1] - R * .12, R * .75, R * .14); // visière
+      co.restore();
+    };
+    const puff = (x, y, n, big) => { for (let i = Math.round(n * q); i > 0; i--) dust.add({ x: x + rnd(-R * .4, R * .4), y: y - rnd(0, R * .4), vx: -rnd(20, 90) * (big ? 1.6 : 1), vy: -rnd(10, 60) * (big ? 1.5 : 1), drag: 2.5, g: -10, max: rnd(.5, .9), size: R * rnd(.35, .7) * (big ? 1.4 : 1) }); };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // traces de pneu sur la bordure, qui s'effacent
+        skids.run(dt, (s, k) => { co.globalAlpha = (1 - k) * .55; co.strokeStyle = dark ? '#09090b' : '#3f3f46'; co.lineWidth = Math.max(1.5, R * .28); co.lineCap = 'round'; co.beginPath(); co.moveTo(s.x0, ground() + .5); co.lineTo(s.x1, ground() + .5); co.stroke(); });
+        // il avance vers sa cible (vite quand il a du retard, au pas sinon) ; la roue tourne avec la distance
+        if (!bike.jump) {
+          const d = bike.tx - bike.x, v = Math.sign(d) * Math.min(Math.abs(d), Math.max(card.h * .5, Math.abs(d) * 7) * dt);
+          bike.x += v; roll += v / R;
+          if (Math.abs(v) > .4 && Math.random() < .3) puff(bike.x - R * .2, ground(), 1, false);
+          bike.pitch = -.45 + Math.sin(t * 5.5) * .05 - Math.min(.12, Math.abs(v) / dt / (card.h * 40));
+        } else {
+          // le saut : une parabole, l'avant redescend en l'air, la roue avant touche la première (et le salto dès Mythic)
+          const j = bike.jump; j.t += dt; const k = clamp(j.t / j.d);
+          bike.x = lerp(j.x0, j.x1, k); roll += (j.x1 - j.x0) / j.d * dt / R;
+          bike.air = Math.sin(Math.PI * k) * j.h;
+          bike.pitch = lerp(-.5, .25, outCubic(k));
+          bike.flip = j.flip ? TAU * outCubic(clamp((k - .08) / .8)) : 0;
+          if (k >= 1) {
+            bike.jump = null; bike.air = 0; bike.flip = 0;
+            puff(bike.x + R * 2.4, ground(), j.p >= 1 ? 16 : 8, true);
+            for (let i = burst(j.p, 50 * q, 4); i > 0; i--) { const a = -Math.PI + rnd(.1, .9); const v = rnd(120, 260 + 200 * j.p); sparks.add({ x: bike.x + R * 2.6, y: ground(), vx: Math.cos(a) * v * (Math.random() < .5 ? 1 : -.6), vy: Math.sin(a) * v, g: 700, drag: 1.2, max: rnd(.3, .7), size: rnd(1, 2) }); }
+            bike.tx = card.x + card.w + card.h * 3; bike.gone = true;
+          }
+        }
+        if (bike.gone) bike.a = clamp((card.x + card.w + card.h * 2.4 - bike.x) / (card.h * 1.2));
+        if (bike.a > 0) draw(t);
+        dust.step(dt);
+        dust.each((p, k) => { co.globalAlpha = (1 - k) * (dark ? .55 : .7); co.fillStyle = dark ? '#a8a29e' : '#78716c'; co.beginPath(); co.arc(p.x, p.y, p.size * (.6 + k), 0, TAU); co.fill(); });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.step(dt);
+        sparks.each((p, k) => { tail(co, dark ? '#fde047' : '#f59e0b', p.x - p.vx * .03, p.y - p.vy * .03, p.x, p.y, p.size, 1 - k); });
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        // il file juste devant le chiffre : celui-ci surgit dans son sillage
+        bike.tx = Math.max(bike.tx, p.x + card.h * .25);
+        if (o.ghost) return;
+        const x = p.x;
+        setTimeout(() => { puff(x, ground(), o.last ? 9 : 5, o.last); skids.add({ x0: x - card.h * .35, x1: x + card.h * .1, life: 1.4 }); }, 0);
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { bike.tx = card.x + card.w + card.h * 3; bike.gone = true; return; }
+        // il prend son élan sur le dernier chiffre et saute vers la droite, plus haut et plus loin si c'est rare
+        bike.jump = { t: 0, d: .55 + .3 * p, x0: bike.x, x1: Math.min(bike.x + card.h * (1.4 + 1.6 * p), card.x + card.w + card.h * .5), h: card.h * (.5 + .9 * p), flip: p >= 1, p };
+        puff(bike.x, ground(), 6, true);
+      },
+    };
+  };
+
+  // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
+  // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
+  // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
+  // donne un petit à-coup à chaque chiffre posé. À la révélation, des vermicelles jaillissent des chiffres et rebondissent
+  // sur le haut de la carte ; dès Mythic, une explosion de vermicelles et d'éclats triangulaires.
+  SCENES.polydonut = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const U = 18, V = 8, RM = 1, RT = .42, TILT = 1.05; // segments, grand et petit rayon, inclinaison vers le spectateur
+    const SPR = ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#a78bfa', '#ffffff', '#fb923c'];
+    // maillage : sommets (u, v) et, pour chaque facette, si elle est glacée et ses vermicelles (fixes)
+    const quads = [];
+    for (let i = 0; i < U; i++) for (let j = 0; j < V; j++) {
+      const vm = (j + .5) / V * TAU, iced = Math.sin(vm) > -.25; // dessus du tore (côté +z local)
+      quads.push({ i, j, iced, spr: iced && Math.random() < .55 ? { c: pick(SPR), a: rnd(TAU), s: rnd(.25, .75) } : null });
+    }
+    const L = (() => { const x = -.45, y = -.7, z = .55, n = Math.hypot(x, y, z); return [x / n, y / n, z / n]; })();
+    let ang = 0, speed = .35, kick = 0;
+    const vert = (i, j, rot) => {
+      const u = i / U * TAU + rot, v = j / V * TAU;
+      const x = (RM + RT * Math.cos(v)) * Math.cos(u), y = (RM + RT * Math.cos(v)) * Math.sin(u), z = RT * Math.sin(v);
+      // incliné autour de l'axe horizontal : on voit le dessus glacé
+      const c = Math.cos(TILT), s = Math.sin(TILT);
+      return [x, y * c - z * s, y * s + z * c];
+    };
+    const shade = (base, l) => { const [r, g, b] = base; const k = .55 + .6 * l; return `rgb(${Math.min(255, r * k) | 0},${Math.min(255, g * k) | 0},${Math.min(255, b * k) | 0})`; };
+    const ICING = [244, 143, 190], DOUGH = [214, 160, 92];
+    const donut = (c, cx, cy, sx, sy, rot, alpha) => {
+      const tris = [];
+      for (const qd of quads) {
+        const { i, j } = qd, a = vert(i, j, rot), b = vert(i + 1, j, rot), d = vert(i, j + 1, rot), e = vert(i + 1, j + 1, rot);
+        for (const [p0, p1, p2, half] of [[a, b, e, 0], [a, e, d, 1]]) {
+          const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2], vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
+          let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const n = Math.hypot(nx, ny, nz) || 1; nx /= n; ny /= n; nz /= n;
+          if (nz < 0) continue; // face cachée (le spectateur regarde vers -z)
+          const l = clamp(nx * L[0] + ny * L[1] + nz * L[2]) + (half ? .06 : 0);
+          tris.push({ z: p0[2] + p1[2] + p2[2], p: [p0, p1, p2], col: shade(qd.iced ? ICING : DOUGH, l), spr: half ? null : qd.spr, l });
+        }
+      }
+      tris.sort((m, n) => m.z - n.z);
+      c.globalAlpha = alpha; c.lineJoin = 'round';
+      for (const tr of tris) {
+        c.fillStyle = tr.col; c.strokeStyle = tr.col; c.lineWidth = .8;
+        c.beginPath(); tr.p.forEach(([x, y], k) => (k ? c.lineTo(cx + x * sx, cy + y * sy) : c.moveTo(cx + x * sx, cy + y * sy))); c.closePath(); c.fill(); c.stroke();
+        if (tr.spr) { const [p0, p1, p2] = tr.p, mx = cx + (p0[0] + p1[0] + p2[0]) / 3 * sx, my = cy + (p0[1] + p1[1] + p2[1]) / 3 * sy, r = Math.min(sx, sy) * .07 * tr.spr.s; c.strokeStyle = tr.spr.c; c.lineWidth = Math.max(1, r * .7); c.lineCap = 'round'; c.beginPath(); c.moveTo(mx - Math.cos(tr.spr.a) * r, my - Math.sin(tr.spr.a) * r); c.lineTo(mx + Math.cos(tr.spr.a) * r, my + Math.sin(tr.spr.a) * r); c.stroke(); }
+      }
+      c.globalAlpha = 1;
+    };
+    const sprinkles = particles(), shards = particles(), flashes = timed();
+    const sprinkle = (x, y, v0, big) => { const a = -Math.PI / 2 + rnd(-1.1, 1.1); const v = rnd(.6, 1) * v0; sprinkles.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 900, max: rnd(.9, 1.5), size: rnd(2.2, 3.6) * (big ? 1.3 : 1), c: pick(SPR), rot: rnd(TAU), vr: rnd(-14, 14), bounced: 0 }); };
+    return {
+      frame(t, dt) {
+        kick = Math.max(0, kick - dt * 3);
+        ang += (speed + kick * 3) * dt;
+        // le donut, couché, tient dans la carte : large, aplati, derrière les chiffres
+        donut(ci, w / 2, h * .55, w * .36, h * .62, ang, dark ? .7 : .62);
+        // vermicelles : rebondissent sur le haut de la carte (une ou deux fois), en tournoyant
+        sprinkles.step(dt);
+        co.globalCompositeOperation = 'source-over';
+        sprinkles.each((p, k) => {
+          if (p.vy > 0 && p.y > card.y - 1 && p.x > card.x && p.x < card.x + card.w && p.bounced < 2) { p.y = card.y - 1; p.vy *= -.45; p.vx *= .7; p.vr *= .5; p.bounced++; }
+          const r = p.rot + p.vr * p.life; co.globalAlpha = Math.min(1, (1 - k) * 4); co.strokeStyle = p.c; co.lineWidth = p.size; co.lineCap = 'round';
+          co.beginPath(); co.moveTo(p.x - Math.cos(r) * p.size * 1.3, p.y - Math.sin(r) * p.size * 1.3); co.lineTo(p.x + Math.cos(r) * p.size * 1.3, p.y + Math.sin(r) * p.size * 1.3); co.stroke();
+        });
+        // éclats triangulaires (Mythic et mieux), à plat comme les facettes
+        shards.step(dt);
+        shards.each((p, k) => { const r = p.rot + p.vr * p.life, s = p.size; co.globalAlpha = (1 - k); co.fillStyle = p.c; co.beginPath(); for (let i = 0; i < 3; i++) { const a = r + i * TAU / 3; co[i ? 'lineTo' : 'moveTo'](p.x + Math.cos(a) * s, p.y + Math.sin(a) * s * Math.cos(p.life * 6)); } co.closePath(); co.fill(); });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        flashes.run(dt, (f, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = '#fff'; co.lineWidth = 2 * (1 - k) + .5; co.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + f.r, rr = f.s * (.5 + outCubic(k)); co[i ? 'lineTo' : 'moveTo'](f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr); } co.closePath(); co.stroke(); });
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        speed = Math.min(2.2, speed + .3); kick = 1;
+        if (o.ghost) return;
+        flashes.add({ x: p.x, y: p.y, s: card.h * (o.last ? .45 : .32), r: rnd(TAU), life: .35 });
+        for (let i = Math.round((o.last ? 9 : 5) * q); i > 0; i--) sprinkle(p.x + rnd(-6, 6), card.y + 2, card.h * rnd(3.5, 5.5), false);
+      },
+      build() { speed = 2.6; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        speed = .9 + p * .8; setTimeout(() => { speed = .35; }, 1400);
+        if (!p) return;
+        const big = p >= 1;
+        for (let i = burst(p, (big ? 120 : 50) * q, 6); i > 0; i--) sprinkle(rnd(card.x, card.x + card.w), card.y + rnd(0, card.h * .3), card.h * rnd(5, 8 + 5 * p), big);
+        if (big) {
+          const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+          for (let i = Math.round(40 * q); i > 0; i--) { const a = rnd(TAU), v = rnd(200, 520); shards.add({ x: cx + Math.cos(a) * card.w * .3, y: cy + Math.sin(a) * card.h * .3, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .7, g: 380, drag: 1.4, max: rnd(.8, 1.4), size: rnd(4, 8), c: pick(['#f9a8d4', '#f472b6', '#fde68a', '#d6a05c', '#c4b5fd']), rot: rnd(TAU), vr: rnd(-8, 8) }); }
+          for (let i = 0; i < 3; i++) flashes.add({ delay: i * .12, x: cx, y: cy, s: card.w * (.35 + i * .15), r: rnd(TAU), life: .6 });
+        }
+      },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 

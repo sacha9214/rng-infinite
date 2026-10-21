@@ -77,6 +77,11 @@
     { id: 'marsh', name: 'Marshmallow', emoji: '🍡', price: 2400, desc: 'Puffy pastel marshmallows fall from the sky, and party poppers burst rainbow minis' },
     // Idée de costoroll (2026-10-21) : six tubes à essai dans un portoir, les chiffres s'allument dans leur liquide, tintent et pétillent.
     { id: 'lab', name: 'Lab', emoji: '🧪', price: 3200, desc: 'Six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes' },
+    // Idée de JBearr12 (2026-10-21) : un vélo en wheelie traverse la carte, les chiffres apparaissent dans son sillage.
+    { id: 'wheelie', name: 'Wheelie', emoji: '🚲', price: 1800, desc: 'A rider pulls a wheelie across the street, and every digit pops up in his wake' },
+    // Idée de PongonLOLZFan (2026-10-21) : un donut 3D en polygones (low poly). Identifiant « polydonut » : « donut » est
+    // l'ancien skin remplacé par Slots (ALIASES).
+    { id: 'polydonut', name: 'Polygon Donut', emoji: '🍩', price: 2600, desc: 'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
