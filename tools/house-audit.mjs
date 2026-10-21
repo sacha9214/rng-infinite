@@ -41,7 +41,7 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   for (const [level, n] of Object.entries(G.TOWER_LEVELS)) for (let k = 1; k <= G.TOWER_FLOORS; k++) {
     const r = Math.pow((n - 1) / n, k) * G.towerMult(n, k); if (r > best) { best = r; how = `${level}, encaisser après ${k} étage(s)`; }
   }
-  add('Tower', best, how, 'même calcul que les Mines : 99 % des vraies chances, arrondi vers le bas, plafond ×250');
+  add('Tower', best, how, '97 % des vraies chances (marge 3 %), arrondi vers le bas, 100 max en Hard');
 }
 // Keno : k numéros cochés parmi 40, 10 tirés ; loi hypergéométrique exacte pour chaque nombre de cochés.
 {
