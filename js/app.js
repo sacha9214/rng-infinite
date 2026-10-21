@@ -1648,6 +1648,31 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22a', date: 'Oct 22, 2026', en: [
+      '🟢 Friends: see if each friend is Online, AFK (tab hidden or idle for 5 min) or Offline',
+      '🧪 New skin Lab: six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes (idea by costoroll)',
+      '🍡 New skin Marshmallow: puffy pastel digits, marshmallows falling from the sky and party poppers on the reveal (idea by DandoriNinja)',
+      '🍔 New Diner wallpaper: a 50s diner at night with a flickering neon sign (idea by JBearr12)',
+      '🏆 A banner on the home page and in the casino tells you when the daily tournament is open or when your match is ready (idea by PRISMA123)',
+      '🤖 Duels: the host can fill the empty seats with bots after 2 minutes (idea by Aussie Haüs)',
+      '🤑 New achievement Coin Millionaire: hold 1,000,000 coins at once (idea by A Dude)',
+      '🏷️ New badges: Forty-Nine (49) and Double Five (55) (idea by A Dude), AK (47) (idea by R77)',
+      '👑 A note shows when a number contains your best roll ever (idea by spookiedookie)',
+      'Fixed: pressing Roll during an auto-roll reveal could cut the roll short (found by shadow2)',
+      'Fixed: old Garbage and Land waste rolls now count for their rarity and titles (reported by R77)',
+    ], fr: [
+      '🟢 Amis : vois si chaque ami est En ligne, AFK (onglet caché ou inactif depuis 5 min) ou Hors ligne',
+      '🧪 Nouveau skin Lab : six tubes à essai de liquides colorés ; chaque chiffre s\'allume dans son tube avec un tintement de verre, puis pétille (idée de costoroll)',
+      '🍡 Nouveau skin Marshmallow : des chiffres en guimauve pastel, des guimauves qui tombent du ciel et des canons à confettis à la révélation (idée de DandoriNinja)',
+      '🍔 Nouveau fond Diner : un diner des années 50, la nuit, avec son enseigne néon qui grésille (idée de JBearr12)',
+      '🏆 Un bandeau sur l\'accueil et au casino te prévient quand le tournoi du jour est ouvert ou quand ton match est prêt (idée de PRISMA123)',
+      '🤖 Duels : l\'hôte peut compléter les places vides avec des bots après 2 minutes (idée d\'Aussie Haüs)',
+      '🤑 Nouveau succès Millionnaire : possède 1 000 000 de pièces en même temps (idée d\'A Dude)',
+      '🏷️ Nouveaux badges : Forty-Nine (49) et Double Five (55) (idée d\'A Dude), AK (47) (idée de R77)',
+      '👑 Une note s\'affiche quand un nombre contient ton meilleur tirage (idée de spookiedookie)',
+      'Corrigé : appuyer sur Roll pendant la révélation d\'un tirage auto pouvait couper le tirage (trouvé par shadow2)',
+      'Corrigé : les anciens tirages Garbage et Land waste comptent maintenant pour leur rareté et leurs titres (signalé par R77)',
+    ] },
     { id: '2026-10-21e', date: 'Oct 21, 2026', en: ['♾️ New legendary wallpaper Aether: a galaxy around a glowing infinity sign that reacts to every roll: calm on common rolls, a wave of colour on rare ones, sparkles from Mythic and a celestial burst on Divine and above (idea by Me Cojoni)'], fr: ['♾️ Nouveau fond légendaire Aether : une galaxie autour d\'un signe infini lumineux qui réagit à chaque tirage : calme sur les tirages courants, une vague de couleur sur les rares, des éclats dès Mythique et une explosion céleste à partir de Divine (idée de Me Cojoni)'] },
     { id: '2026-10-21d', date: 'Oct 21, 2026', en: [
       '🏆 Daily tournaments (idea by PRISMA123)! Sign up for free before 12:00 UTC (30 rolls needed), then play your match whenever you like during its round: 5 tournament rolls each, highest total wins. Tournament rolls don\'t count anywhere else. Winner gets 1,000 coins and the Champion title, finalist 400, semi-finalists 150. Find it on the Duel page',
@@ -5863,8 +5888,15 @@
       const host = d.players.find(p => p.host);
       const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}</span>`).join('')
         + '<span class="badge-pill empty-seat">…</span>'.repeat(Math.max(0, d.size - d.players.length));
+      // Places vides complétées par des bots après 2 min (idée d'Aussie Haüs, 2026-10-21) : choix de l'hôte, gardé sur son
+      // appareil ; jamais dans un duel avec mise (le serveur le refuse aussi). Un bot à la fois, à chaque relecture du salon.
+      const canFill = me && me.host && !d.stake && d.players.length < d.size;
+      const fillOn = canFill && Store.settings.botFill === 'on';
+      if (canFill) { Room.lobbyAt = Room.lobbyAt && Room.lobbyAt.code === d.code ? Room.lobbyAt : { code: d.code, t: Date.now() }; }
+      const fillLeft = fillOn ? Math.max(0, 120000 - (Date.now() - Room.lobbyAt.t)) : 0;
+      if (fillOn && !fillLeft && !Room.filling) { Room.filling = true; Online.roomAction('addBot', d.code).catch(() => {}).finally(() => { Room.filling = false; }); }
       const wait = !me ? '' : me.host
-        ? (d.players.length > 1 ? 'Start now, or wait: the game starts by itself when it is full' : 'Waiting for players…')
+        ? (fillOn ? `Bots fill the empty seats in ${Math.ceil(fillLeft / 1000)} s` : d.players.length > 1 ? 'Start now, or wait: the game starts by itself when it is full' : 'Waiting for players…')
         : `Waiting for ${esc(host.name)} to start (or for the game to fill up)…`;
       const html = `
         <div class="eyebrow">Duel code</div>
@@ -5875,6 +5907,7 @@
         <div class="room-buttons">
           ${me ? '<button class="btn" id="room-share">Share invite</button>' : '<button class="btn-roll small" id="room-join">⚔️ Join</button>'}
           ${me && me.host && d.players.length < d.size ? '<button class="btn" id="room-bot">🤖 Add a bot</button>' : ''}
+          ${canFill ? `<label class="room-auto room-fill"><input type="checkbox" id="room-fill"${fillOn ? ' checked' : ''}><i aria-hidden="true"></i><span>Fill with bots after 2 min</span></label>` : ''}
           ${me && me.host && d.players.length > 1 ? `<button class="btn-roll small" id="room-start">Start now with ${d.players.length}</button>` : ''}
         </div>
         ${wait ? `<p class="room-wait">${wait}</p>` : ''}`;
@@ -5887,6 +5920,8 @@
         if (start) start.addEventListener('click', () => roomSend('start', start));
         const addBot = $('#room-bot');
         if (addBot) addBot.addEventListener('click', () => roomSend('addBot', addBot));
+        const fill = $('#room-fill');
+        if (fill) fill.addEventListener('change', () => { Store.setSetting('botFill', fill.checked ? 'on' : 'off'); if (Room.lobbyAt) Room.lobbyAt.t = Date.now(); });
       }
       return;
     }
