@@ -3161,4 +3161,94 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(big.rounds[4].end, T3 + 24 * H, 'fini à minuit');
 }
 
+// Modes du tournoi (idée de PRISMA123, 2026-10-21) : rotation par la date, mode figé à la création, 3 ou 5 tirages,
+// critère du mode puis la chaîne habituelle (plus gros tirage, premier fini).
+{
+  const TN = require(path.join(ROOT, 'api/_tournament.js'));
+  const { engine } = require(path.join(ROOT, 'api/_lib.js'));
+  const H = 3600000;
+  const pid = i => (`6d${String(i).padStart(2, '0')}`).repeat(4);
+  const mk = i => { const id = pid(i); run([['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', 'rolls', 40], ['HSET', 'names', id, `Md${i}`]]); return id; };
+  const refused = async (p, status, re) => { await assert.rejects(p, e => e.status === status && (!re || re.test(e.message)), `attendu ${status}`); };
+  // Rotation : les 5 modes, un par jour, dans l'ordre, et le même jour donne toujours le même mode.
+  const days = Array.from({ length: 10 }, (_, i) => new Date(Date.parse('2031-05-01T00:00:00Z') + i * 864e5).toISOString().slice(0, 10));
+  const seen = days.map(TN.modeOf);
+  assert.deepEqual(new Set(seen.slice(0, 5)).size, 5, '5 modes en 5 jours'); assert.deepEqual(seen.slice(5), seen.slice(0, 5), 'cycle de 5 jours');
+  assert.equal(TN.modeOf(days[3]), seen[3]);
+  assert.deepEqual(TN.MODE_ORDER.map(TN.rollsOf), [5, 5, 3, 5, 5], 'tirages par mode');
+  const dayFor = (mode, k = 0) => { const d0 = Date.parse('2032-01-01T00:00:00Z'); let n = 0; for (let i = 0; ; i++) { const d = new Date(d0 + i * 864e5).toISOString().slice(0, 10); if (TN.modeOf(d) === mode && n++ === k) return d; } };
+
+  // Résolution par mode, tirages fabriqués (s : XP de chaque tirage ; n : nombres, utiles au « Badge Hunter »).
+  const R = (s, t, n) => ({ n: n || s.map(() => 1), s, t });
+  const W = (mode, ra, rb) => TN.winner('2032-01-01', 0, 'a', 'b', ra, rb, mode);
+  // Total
+  assert.equal(W('total', R([5, 5, 5, 5, 5], 9), R([1, 1, 1, 1, 30], 1)), 'b');
+  assert.equal(W('total', R([6, 6, 6, 6, 6], 1), R([5, 5, 5, 5, 10], 9)), 'b', 'total : égalité → plus gros tirage');
+  // Best Roll : seul le meilleur tirage compte (le total ne compte pas).
+  assert.equal(W('best', R([1, 1, 1, 1, 100], 9), R([50, 50, 50, 50, 50], 1)), 'a', 'best : meilleur tirage');
+  assert.equal(W('best', R([1, 1, 1, 1, 100], 9), R([99, 99, 99, 99, 100], 1)), 'b', 'best : égalité → premier fini');
+  // Best of 3 : duels un par un, puis total.
+  assert.equal(W('bo3', R([10, 1, 10], 9), R([5, 100, 5], 1)), 'a', 'bo3 : 2 duels sur 3 malgré un plus petit total');
+  assert.equal(W('bo3', R([10, 1, 5], 1), R([5, 10, 5], 9)), 'b', 'bo3 : 1-1 → total');
+  assert.equal(W('bo3', R([7, 3, 5], 9), R([3, 7, 5], 1)), 'b', 'bo3 : 1-1, même total, même meilleur → premier fini');
+  assert.equal(W('bo3', R([1, 1, 1], 9), R([999, 999], undefined)), 'a', 'bo3 : 3 tirages suffisent, 2 = forfait');
+  assert.equal(W('total', R([1, 1, 1], 9), R([999, 999], undefined)), 'a', 'mode à 5 : aucun fini → le plus de tirages');
+  // Lowest Wins : le plus petit total gagne ; égalité → plus gros tirage puis premier fini.
+  assert.equal(W('lowest', R([1, 1, 1, 1, 1], 9), R([5, 5, 5, 5, 5], 1)), 'a', 'lowest : plus petit total');
+  assert.equal(W('lowest', R([1, 1, 1, 1, 6], 1), R([2, 2, 2, 2, 2], 9)), 'a', 'lowest : égalité → plus gros tirage');
+  assert.equal(W('lowest', R([1, 1, 1, 1, 1], 9), R([999, 999], undefined)), 'a', 'lowest : qui n\'a pas fini perd quand même');
+  // Badge Hunter : badges différents (recalculés depuis les nombres), puis total.
+  const real = ns => R(ns.map(n => engine.analyze(n).total), 5, ns);
+  const many = [123456, 654321, 100000, 135791, 246802], few = [777777, 777777, 777777, 777777, 777777];
+  assert.ok(real(few).s.reduce((x, y) => x + y) > real(many).s.reduce((x, y) => x + y), 'few a le plus gros total');
+  assert.equal(W('badges', real(few), real(many)), 'b', 'badges : le plus de badges différents');
+  assert.equal(W('badges', { ...real(many), t: 9 }, { ...real(many.slice().reverse()), t: 1 }), 'b', 'badges : égalité totale → premier fini');
+
+  // Mode écrit à la première inscription, puis figé : un hash qui dit autre chose (code d'avant) l'emporte.
+  const DB3 = dayFor('bo3'), T = Date.parse(`${DB3}T00:00:00Z`);
+  const ids = [1, 2, 3, 4].map(mk);
+  for (const id of ids) await TN.signup(id, T + H);
+  assert.equal(db.get(`tn:${DB3}`).get('mode'), 'bo3', 'mode écrit à la création');
+  let v = await TN.view(DB3, ids[0], T + 2 * H);
+  assert.equal(v.mode, 'bo3'); assert.equal(v.rolls, 3);
+  const DF = dayFor('best', 1), TF = Date.parse(`${DF}T00:00:00Z`);
+  for (const i of [5, 6, 7, 8]) await TN.signup(mk(i), TF + H);
+  run([['HSET', `tn:${DF}`, 'mode', 'lowest']]); // comme si la rotation avait changé depuis
+  const vf = await TN.view(DF, null, TF + 12 * H + 1000);
+  assert.equal(vf.mode, 'lowest', 'le mode stocké gagne'); assert.equal(vf.rolls, 5); assert.equal(db.get(`tn:${DF}`).get('mode'), 'lowest', 'pas réécrit au tirage du tableau');
+  // Tournoi d'avant les modes (tableau tiré, pas de mode) : reste en total, à 5 tirages.
+  const DL = dayFor('bo3', 2), TL = Date.parse(`${DL}T00:00:00Z`);
+  for (const i of [9, 10, 11, 12]) await TN.signup(mk(i), TL + H);
+  await TN.view(DL, null, TL + 12 * H + 1000); run([['HDEL', `tn:${DL}`, 'mode']]);
+  const vl = await TN.view(DL, null, TL + 13 * H); assert.equal(vl.mode, 'total', 'ancien tournoi : total'); assert.equal(vl.rolls, 5);
+
+  // Jour « Best of 3 » de bout en bout : 3 tirages, scores cachés, forfait, 4e tirage refusé.
+  v = await TN.view(DB3, null, T + 12 * H + 1000);
+  const tok = id => crypto.createHash('sha256').update(`tn:${DB3}:${id}`).digest('hex').slice(0, 12);
+  const m0 = v.rounds[0].matches[0], pa = ids.find(id => tok(id) === m0.a.id), pb = ids.find(id => tok(id) === m0.b.id);
+  let t = T + 13 * H;
+  for (let k = 0; k < 3; k++) { db.delete(`tnlock:${pa}`); const r = await TN.roll(pa, t); assert.equal(r.mode, 'bo3'); t += 2000; }
+  db.delete(`tnlock:${pa}`); await refused(TN.roll(pa, t), 409, /3 rolls/);
+  db.delete(`tnlock:${pb}`); await TN.roll(pb, t); db.delete(`tnlock:${pb}`); await TN.roll(pb, t + 2000);
+  const pub = (await TN.view(DB3, null, t + 3000)).rounds[0].matches[0];
+  assert.equal(pub.a.total, undefined, 'caché tant que pb n\'a pas fini ses 3'); assert.equal(pub.b.total, undefined);
+  const va = await TN.view(DB3, pa, t + 3000), vb = await TN.view(DB3, pb, t + 3000);
+  assert.equal(va.match.me.count, 3); assert.ok(Array.isArray(va.match.opp.rolls), 'pa a fini ses 3 : voit pb');
+  assert.equal(typeof va.match.me.score, 'number', 'duels gagnés visibles une fois l\'adversaire visible');
+  assert.equal(vb.match.opp.rolls, undefined, 'pb (2/3) ne voit pas pa'); assert.equal(vb.match.me.score, null, 'pas de score de duels à l\'aveugle');
+  // Fin du tour 1 (12:00 → 18:00) : pb n'a fait que 2 tirages → forfait.
+  v = await TN.view(DB3, null, T + 18 * H);
+  assert.equal(v.rounds[0].matches[0].w, tok(pa), 'forfait à 2 tirages sur 3');
+  assert.equal(v.rounds[0].matches[0].a.rolls.length + v.rounds[0].matches[0].b.rolls.length, 5, 'révélé après le tour');
+  // Dans un mode à 5, 3 tirages ne suffisent pas.
+  const DT = dayFor('total', 3), TT = Date.parse(`${DT}T00:00:00Z`);
+  const ids5 = [13, 14, 15, 16].map(mk);
+  for (const id of ids5) await TN.signup(id, TT + H);
+  const v5 = await TN.view(DT, null, TT + 12 * H + 1000), tk5 = id => crypto.createHash('sha256').update(`tn:${DT}:${id}`).digest('hex').slice(0, 12);
+  const q = ids5.find(id => tk5(id) === v5.rounds[0].matches[0].a.id);
+  for (let k = 0; k < 3; k++) { db.delete(`tnlock:${q}`); await TN.roll(q, TT + 13 * H + k * 2000); }
+  const vq = await TN.view(DT, q, TT + 14 * H);
+  assert.equal(vq.rolls, 5); assert.equal(vq.match.opp.rolls, undefined, '3/5 : adversaire encore caché');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

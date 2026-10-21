@@ -155,13 +155,16 @@ function announceRush(end) {
 }
 
 // Tournoi du jour terminé (api/_tournament.js) : le champion et le finaliste, dans le salon des événements.
-function announceTournament({ day, champion, finalist, players }) {
+// Le mode du jour (idée de PRISMA123) est rappelé dans le message.
+const TOURNEY_MODES = { total: 'Total XP', best: 'Best Roll', bo3: 'Best of 3', lowest: 'Lowest Wins', badges: 'Badge Hunter' };
+function announceTournament({ day, mode, champion, finalist, players }) {
   if (!cfg.events) return;
+  const label = TOURNEY_MODES[mode] || TOURNEY_MODES.total;
   post(cfg.events, {
     embeds: [{
       title: `🏆 ${champion} wins the daily tournament!`,
       url: SITE,
-      description: `Tournament of ${day}: **${champion}** beat **${finalist}** in the final (${players} players).\nSign-ups for the next one open at 00:00 UTC on ${SITE}`,
+      description: `Tournament of ${day} · mode **${label}**: **${champion}** beat **${finalist}** in the final (${players} players).\nSign-ups for the next one open at 00:00 UTC on ${SITE}`,
       color: 0xeab308,
     }],
   });
