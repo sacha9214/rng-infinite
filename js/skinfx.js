@@ -2282,6 +2282,70 @@
     };
   });
 
+  // 🧪 Lab (idée de costoroll, 2026-10-21) — six tubes à essai. Chaque chiffre posé : un anneau à la surface de son
+  // liquide et un chapelet de bulles. À la révélation, tout pétille : des bulles montent du fond de chaque tube et
+  // éclatent à la surface ; dès Mythic, ça mousse et déborde (grosses bulles, gouttelettes projetées hors des tubes).
+  SCENES.lab = env => {
+    const { co, card, q, dark } = env;
+    const LIQ = ['#ef4444', '#a855f7', '#3b82f6', '#fb923c', '#f1f5f9', '#22c55e'];
+    const tubes = [], bubbles = particles(), drops = particles(), rings = timed(), pops = timed(), emit = [];
+    let n = 0, fizz = 0, fizzEnd = 0, strong = false, t0 = 0, now = 0;
+    // Géométrie d'un tube (en fraction de la hauteur de carte) : la surface du liquide un peu au-dessus du centre de la
+    // case, le fond en bas, la largeur intérieure.
+    const surf = y => y - card.h * .1, floor = y => y + card.h * .3, half = () => card.h * .11;
+    // La carte rétrécit quand les zéros de tête s'effacent : les tubes gardent leurs écarts, recentrés sur la carte.
+    const at = tb => { const live = tubes.filter(u => !u.ghost); const mid = live.length ? (live[0].x + live[live.length - 1].x) / 2 : tb.x; return tb.x - mid + card.x + card.w / 2; };
+    const bubble = (tb, big) => bubbles.add({ tb, x0: rnd(-1, 1) * half() * .75, y: floor(tb.y) - rnd(0, card.h * .08), vx: 0, vy: -rnd(30, 70) * (big ? 1.6 : 1), g: -rnd(60, 160) * (big ? 1.8 : 1), max: 3, size: rnd(.9, 2) * (big ? 1.6 : 1), ph: rnd(TAU), big });
+    const ring = (x, y, c, big) => rings.add({ x, y, c, size: half() * (big ? 2.4 : 1.6), life: big ? .5 : .38 });
+    return {
+      frame(t, dt) {
+        now = t;
+        co.globalCompositeOperation = 'source-over';
+        // la révélation : chaque tube émet ses bulles tant que le pétillement dure (il s'éteint en douceur)
+        if (fizz > 0 && t < fizzEnd) {
+          const k = clamp((fizzEnd - t) / (fizzEnd - t0)), rate = fizz * (.3 + .7 * k);
+          tubes.forEach((tb, i) => { if (tb.ghost) return; for (let m = emit[i](rate * q, dt); m > 0; m--) bubble(tb, strong && Math.random() < .35); });
+        }
+        bubbles.step(dt);
+        bubbles.each((b, k) => {
+          const x = at(b.tb) + b.x0 + Math.sin(b.life * 9 + b.ph) * half() * .12, top = surf(b.tb.y);
+          if (b.y <= top) { // arrivée à la surface : elle éclate (et, si ça mousse, elle déborde du tube)
+            b.life = b.max;
+            pops.add({ x, y: top, c: b.tb.c, size: b.size * 2.4, life: .22 });
+            if (strong && b.big) for (let j = 0; j < 2; j++) drops.add({ x, y: top - card.h * .3, vx: rnd(-70, 70), vy: -rnd(140, 280), g: 520, max: rnd(.6, 1), size: rnd(1.2, 2.4), c: b.tb.c });
+            return;
+          }
+          co.globalAlpha = .85; co.strokeStyle = 'rgba(255,255,255,.9)'; co.lineWidth = b.big ? 1.2 : .9;
+          co.beginPath(); co.arc(x, b.y, b.size, 0, TAU); co.stroke();
+          co.fillStyle = 'rgba(255,255,255,.75)'; co.beginPath(); co.arc(x - b.size * .35, b.y - b.size * .35, b.size * .28, 0, TAU); co.fill();
+        });
+        drops.step(dt);
+        drops.each((d, k) => dot(co, d.c, d.x, d.y, d.size * 2.2, (1 - k) * (dark ? .95 : .8)));
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        pops.run(dt, (p, k) => { co.globalAlpha = (1 - k) * .9; co.strokeStyle = '#ffffff'; co.lineWidth = 1; co.beginPath(); co.arc(p.x, p.y, p.size * (.5 + k), 0, TAU); co.stroke(); dot(co, p.c, p.x, p.y, p.size * 2, (1 - k) * .5); });
+        rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = r.c; co.lineWidth = 1.6 * (1 - k) + .4; co.beginPath(); co.ellipse(r.x, r.y, r.size * (.4 + .8 * outCubic(k)), r.size * .22 * (.4 + .8 * outCubic(k)), 0, 0, TAU); co.stroke(); });
+        // dès Mythic : la lueur des tubes pulse autour de la carte pendant que ça mousse
+        if (strong && t < fizzEnd) { const k = clamp((fizzEnd - t) / (fizzEnd - t0)); tubes.forEach(tb => { if (!tb.ghost) dot(co, tb.c, at(tb), tb.y, card.h * .55, k * (dark ? .22 : .14) * (.8 + .2 * Math.sin(t * 14 + tb.x))); }); }
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        const tb = { x: p.x, y: p.y, c: LIQ[n % 6], ghost: !!o.ghost };
+        n++; tubes.push(tb); emit.push(emitter());
+        if (o.ghost) return;
+        ring(p.x, surf(p.y), tb.c === '#f1f5f9' ? '#e0f2fe' : tb.c, o.last);
+        for (let i = Math.round((o.last ? 7 : 4) * q); i > 0; i--) bubble(tb, false);
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        strong = p >= 1; t0 = now;
+        // de deux bulles tristes (tirage raté) à un vrai pétillement, puis une mousse qui déborde dès Mythic
+        fizz = strong ? 26 : 2 + 14 * p; fizzEnd = now + (strong ? 3.2 : 1.2 + 1.4 * p);
+        if (strong) tubes.forEach(tb => { if (!tb.ghost) for (let i = 0; i < 6; i++) bubble(tb, true); });
+      },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 

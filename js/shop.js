@@ -73,8 +73,13 @@
     { id: 'asmr', name: 'ASMR', emoji: '🧈', price: 3000, desc: 'Pastel crunchy wax, kneaded while it rolls, pressed and crunched on every digit' },
     // Idée d'Edward (2026-10-20) : une énergie maudite bleu-violet, aura qui crépite et sceaux. Dessin original.
     { id: 'cursed', name: 'Cursed Energy', emoji: '🌀', price: 6000, desc: 'Violet cursed energy flows around every digit, and a seal burns on each one' },
+<<<<<<< HEAD
     // Idée de DandoriNinja (2026-10-21) : guimauves pastel qui tombent, canons à confettis de guimauves arc-en-ciel.
     { id: 'marsh', name: 'Marshmallow', emoji: '🍡', price: 2400, desc: 'Puffy pastel marshmallows fall from the sky, and party poppers burst rainbow minis' },
+=======
+    // Idée de costoroll (2026-10-21) : six tubes à essai dans un portoir, les chiffres s'allument dans leur liquide, tintent et pétillent.
+    { id: 'lab', name: 'Lab', emoji: '🧪', price: 3200, desc: 'Six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes' },
+>>>>>>> feat/lab
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

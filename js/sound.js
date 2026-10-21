@@ -67,6 +67,14 @@
     const squish = S.osc(.16, t => 130 - 60 * t / .16, S.expo(.045, .006));
     return S.sum(...grains, S.gain(squish, .5));
   };
+  // Tintement de verre (skin Lab) : un tube à essai heurte le portoir. Trois partiels aigus inharmoniques qui s'éteignent
+  // vite (un tube de verre sonne comme une petite barre libre) et un « tic » de contact très court. k fait varier la hauteur.
+  const clink = (k, big = 0) => {
+    const f = 1900 * Math.pow(2, ((k * 5) % 7) / 12) * (big ? .9 : 1);
+    const parts = [[1, 1, .09 + .05 * big], [2.76, .5, .045 + .02 * big], [5.4, .22, .022]].map(([m, a, d]) => S.gain(S.osc(d * 5, () => f * m, S.expo(d, .0008)), a));
+    const tap = S.shape(S.filter(S.noise(.015, 70 + k), 'hp', 3500), S.expo(.0018, .0002));
+    return S.sum(...parts, S.gain(tap, .45));
+  };
   // Thock : touche lubrifiée, un coup grave et mat (le bas de course) suivi du retour, plus discret.
   const thock = () => {
     const body = S.sum(S.osc(.12, t => 180 - 70 * Math.exp(-t / .02), S.expo(.03, .001)), S.gain(S.shape(S.filter(S.noise(.03, 7), 'bp', 700, 1.6), S.expo(.006, .0005)), .7));
@@ -103,9 +111,12 @@
     tick: ({ k, soft, last }) => [[S.tick(100 + k, last ? .3 + .7 * last / 8 : 0), 0, soft ? .045 : last ? .08 + .09 * last / 8 : .07, ((k * 37) % 9) / 9 - .5, .08]],
     // Un chiffre se pose : une note par rouleau, en montant la gamme. soft : zéro de tête, ou duel. final : le dernier chiffre.
     // skin 'asmr' : la note garde sa place dans la gamme, plus douce, et la cire craque dessous (plus fort au dernier).
+    // skin 'lab' : la note, plus douce, et le tube tinte contre le portoir (deux tintements au dernier, comme un « tchin »).
     lock: ({ i, soft, final, skin }) => skin === 'asmr'
       ? [[S.lock(S.note(i), .4), 0, soft ? .2 : final ? .4 : .36, 0, .25], [wax(90 + i, final ? 20 : 12, final ? .2 : .12), 0, soft ? .14 : final ? .36 : .28, ((i * 37) % 9) / 18 - .25, .12]]
-      : [[S.lock(S.note(i), soft ? .5 : final ? 1.2 : 1), 0, soft ? .2 : final ? .4 : .36, 0, .25]],
+      : skin === 'lab'
+        ? [[S.lock(S.note(i), .35), 0, soft ? .16 : final ? .32 : .28, 0, .22], [clink(i, final ? 1 : 0), 0, soft ? .1 : final ? .26 : .2, ((i * 37) % 9) / 18 - .25, .35]].concat(final ? [[clink(i + 3, 1), .07, .16, .2, .4]] : [])
+        : [[S.lock(S.note(i), soft ? .5 : final ? 1.2 : 1), 0, soft ? .2 : final ? .4 : .36, 0, .25]],
     // Montée de tension avant le dernier chiffre (plus discrète que dans le film : ici elle revient à chaque tirage).
     riser: () => [[S.riser(RISER), 0, .4, 0, .2]],
     // Un badge arrive : la note monte avec sa place dans la liste (step, de 0 à 3) ; le dernier, le plus rare, reçoit un grave en plus.
