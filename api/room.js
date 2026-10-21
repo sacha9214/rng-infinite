@@ -329,6 +329,7 @@ async function view(room, me) {
   const last = room.rounds[k - 1];
   return {
     code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room),
+    kicked: !!me && !!room.h[`kick:${me}`], // ce joueur a été exclu par l'hôte
     reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
@@ -476,6 +477,7 @@ module.exports = async (req, res) => {
     if (body.action === 'join') {
       if (member) return send(res, 200, await view(room, playerId));
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
+      if (room.h[`kick:${playerId}`]) return send(res, 403, { error: 'The host removed you from this duel' });
       const stake = stakeOf(room);
       const refused = stake ? await stakeRefusal(playerId, stake) : null;
       if (refused) return send(res, 422, { error: refused });
@@ -494,10 +496,32 @@ module.exports = async (req, res) => {
       return send(res, 200, await view(await load(code), playerId));
     }
 
+    // Exclure un joueur du salon (demandé par Sacha, 2026-10-22) : l'hôte seulement, avant le début de la partie. La
+    // place se libère, sa mise sous séquestre lui revient, et il ne peut plus revenir dans ce duel (kick:<id>).
+    if (body.action === 'kick') {
+      if (room.host !== playerId) return send(res, 422, { error: 'Only the host can remove a player' });
+      if (room.started) return send(res, 422, { error: 'This duel has already started' });
+      const target = room.players.find(p => p.name === String(body.who || '') && p.id !== room.host);
+      if (!target) return send(res, 404, { error: 'This player is not in the duel' });
+      const [raw] = await redis([['LRANGE', playersKey(code), 0, -1]]);
+      const entry = (raw || []).find(x => { try { return JSON.parse(x).id === target.id; } catch (e) { return false; } });
+      const [removed] = entry ? await redis([['LREM', playersKey(code), 1, entry]]) : [0];
+      if (Number(removed) !== 1) return send(res, 404, { error: 'This player is not in the duel' });
+      const paid = Number(room.h[`paid:${target.id}`]) || 0;
+      await redis([
+        ['HINCRBY', roomKey(code), 'count', -1],
+        ['HDEL', roomKey(code), `m:${target.id}`, `seen:${target.id}`, `paid:${target.id}`],
+        ['HSET', roomKey(code), `kick:${target.id}`, 1],
+        ...(paid && !target.bot ? [['HINCRBY', statsKey(target.id), 'spent', -paid]] : []), // mise rendue
+      ]);
+      return send(res, 200, await view(await load(code), playerId));
+    }
+
     // Entrer dans une partie déjà commencée : le spectateur demande, l'hôte tranche. Accepté, il s'assoit à la suite des
     // autres et joue dès la prochaine manche ; les manches déjà tirées n'ont pas de nombre pour lui (0 victoire, 0 XP).
     if (body.action === 'ask') {
       if (member) return send(res, 200, await view(room, playerId));
+      if (room.h[`kick:${playerId}`]) return send(res, 403, { error: 'The host removed you from this duel' });
       if (!room.started) return send(res, 422, { error: 'This duel has not started: join it instead' });
       if (stakeOf(room)) return send(res, 422, { error: 'This duel has a stake: nobody can join once it has started' });
       if (score(room).done) return send(res, 422, { error: 'This duel is over' });

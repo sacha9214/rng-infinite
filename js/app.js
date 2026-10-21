@@ -1648,6 +1648,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22h', date: 'Oct 22, 2026', en: ['⚔️ Duels: the host can remove a player from the lobby with the small ✕ next to their name, before the game starts. Their stake is refunded and they can\'t rejoin that duel'], fr: ['⚔️ Duels : l\'hôte peut exclure un joueur du salon avec le petit ✕ à côté de son nom, avant le début de la partie. Sa mise lui est rendue et il ne peut plus revenir dans ce duel'] },
     { id: '2026-10-22g', date: 'Oct 22, 2026', en: ['🗼 Tower: Easy and Normal multipliers are lower, to match how likely each floor is (Normal top floor: ×24.09, Easy: ×9.38). Hard stays as it is'], fr: ['🗼 Tour : les multiplicateurs Facile et Normal sont plus bas, pour coller aux vraies chances de chaque étage (sommet en Normal : ×24,09, en Facile : ×9,38). Le Difficile ne change pas'] },
     { id: '2026-10-22f', date: 'Oct 22, 2026', en: [
       '🔊 New skin Sonic Wave: the digits ride a glowing sound wave, every one lands with a shockwave and the last one booms (idea by Matthew)',
@@ -5999,13 +6000,15 @@
       return;
     }
 
+    // Exclu par l'hôte : on le prévient une fois, et le salon redevient pour lui celui d'un spectateur.
+    if (d.kicked && Room.kickedSeen !== d.code) { Room.kickedSeen = d.code; toast('The host removed you from this duel', 4500); }
     if (d.status === 'lobby') {
       if (Room.view !== 'lobby') {
         Room.view = 'lobby';
         body.innerHTML = '<div class="room-code-box" id="room-lobby"></div>';
       }
       const host = d.players.find(p => p.host);
-      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}</span>`).join('')
+      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}${me && me.host && !p.host ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('')
         + '<span class="badge-pill empty-seat">…</span>'.repeat(Math.max(0, d.size - d.players.length));
       // Places vides complétées par des bots après 2 min (idée d'Aussie Haüs, 2026-10-21) : choix de l'hôte, gardé sur son
       // appareil ; jamais dans un duel avec mise (le serveur le refuse aussi). Un bot à la fois, à chaque relecture du salon.
@@ -6039,6 +6042,12 @@
         if (start) start.addEventListener('click', () => roomSend('start', start));
         const addBot = $('#room-bot');
         if (addBot) addBot.addEventListener('click', () => roomSend('addBot', addBot));
+        // Exclure un joueur (hôte, avant le début) : il ne pourra plus revenir dans ce duel.
+        $('#room-lobby').onclick = e => {
+          const k = e.target.closest('[data-kick]'); if (!k) return;
+          if (!confirm(window.RNGI18n ? window.RNGI18n.t(`Remove ${k.dataset.kick} from this duel? They won't be able to come back.`) : `Remove ${k.dataset.kick} from this duel? They won't be able to come back.`)) return;
+          roomSend('kick', k, { who: k.dataset.kick });
+        };
         const fill = $('#room-fill');
         if (fill) fill.addEventListener('change', () => { Store.setSetting('botFill', fill.checked ? 'on' : 'off'); if (Room.lobbyAt) Room.lobbyAt.t = Date.now(); });
       }

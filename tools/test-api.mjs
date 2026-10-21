@@ -329,6 +329,24 @@ assert.ok(![alice, bob, carol].some(p => JSON.stringify(r.body).includes(p.playe
 assert.equal((await roomPost(dave, 'join', { code })).status, 422, 'partie commencée : plus de place');
 assert.equal((await roomPost(dave, 'ready', { code })).status, 422, 'un spectateur ne tire pas');
 
+// Exclure un joueur du salon (2026-10-22) : l'hôte seulement, avant le début ; la place se libère et il ne revient pas.
+{
+  let k = await roomPost(dave, 'create', { size: 3, mode: 'rounds', target: 1 });
+  const kc = k.body.code;
+  await roomPost(carol, 'join', { code: kc });
+  assert.equal((await roomPost(carol, 'kick', { code: kc, who: 'Dave' })).status, 422, 'seul l\'hôte exclut');
+  assert.equal((await roomPost(dave, 'kick', { code: kc, who: 'Nobody' })).status, 404);
+  k = await roomPost(dave, 'kick', { code: kc, who: 'Carol' });
+  assert.equal(k.status, 200, JSON.stringify(k.body));
+  assert.deepEqual([k.body.status, k.body.players.map(p => p.name)], ['lobby', ['Dave']]);
+  k = await roomPost(carol, 'join', { code: kc }); assert.equal(k.status, 403, 'pas de retour après exclusion');
+  k = await call(roomApi, { url: `/api/room?code=${kc}&me=${carol.playerId}` }); assert.equal(k.body.kicked, true, 'le joueur exclu le sait');
+  // La place libérée resservie : deux nouveaux joueurs remplissent le salon et la partie démarre.
+  await roomPost(alice, 'join', { code: kc }); k = await roomPost(bobNow, 'join', { code: kc });
+  assert.equal(k.body.status, 'playing', 'la place libérée est reprise');
+  assert.equal((await roomPost(dave, 'kick', { code: kc, who: 'Alice' })).status, 422, 'pas d\'exclusion une fois la partie lancée');
+}
+
 // Réactions : un emoji de la liste, visible par tous, au plus une toutes les 0,7 s par joueur.
 r = await roomPost(alice, 'react', { code, emoji: 'laugh' });
 assert.equal(r.status, 200, JSON.stringify(r.body));

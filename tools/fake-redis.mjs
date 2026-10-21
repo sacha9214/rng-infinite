@@ -98,6 +98,8 @@ export function fakeRedis() {
     },
     LSET(k, i, v) { const l = list(k); const j = Number(i) < 0 ? l.length + Number(i) : Number(i); if (j < 0 || j >= l.length) throw new Error('ERR index out of range'); l[j] = v; return 'OK'; },
     LLEN: k => (db.has(k) ? db.get(k).length : 0),
+    // LREM avec count > 0 : retire les premières occurrences (seul cas utilisé, exclusion d'un joueur du salon).
+    LREM(k, count, v) { const l = db.get(k) || []; let n = 0; const max = Number(count) || l.length; db.set(k, l.filter(x => (x === v && n < max ? (n++, false) : true))); return n; },
     LINDEX(k, i) {
       const l = db.get(k) || []; const n = Number(i); const v = l[n < 0 ? l.length + n : n];
       return v === undefined ? null : v;

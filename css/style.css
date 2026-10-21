@@ -4935,3 +4935,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Bandeau « nouvelle version » (2026-10-22) */
 .update-bar { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 1200; padding: .6rem 1rem; border-radius: 999px; border: 1px solid #22c55e;
   background: color-mix(in srgb, #22c55e 18%, var(--surface, #15151c)); color: inherit; font: inherit; font-size: .9rem; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); white-space: nowrap; }
+
+/* Exclure un joueur du salon (2026-10-22) */
+.seat-kick { margin-left: .4rem; padding: 0 .3rem; border: 0; border-radius: 999px; background: color-mix(in srgb, #ef4444 22%, transparent); color: #fca5a5; font: inherit; font-size: .75em; line-height: 1.4; cursor: pointer; }
+.seat-kick:hover { background: #ef4444; color: #fff; }
