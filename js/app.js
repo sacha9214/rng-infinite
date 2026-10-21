@@ -1648,6 +1648,21 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22f', date: 'Oct 22, 2026', en: [
+      '🔊 New skin Sonic Wave: the digits ride a glowing sound wave, every one lands with a shockwave and the last one booms (idea by Matthew)',
+      '🛸 New skin UFO: a flying saucer beams every digit down onto the grass, then zips away (idea by JBearr12)',
+      '🚲 New skin Wheelie: a rider pulls a wheelie along the curb and every digit pops up in his wake, then he jumps on the reveal (idea by JBearr12)',
+      '🍩 New skin Polygon Donut: a low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal (idea by PongonLOLZFan)',
+      '✨ Legendary skins upgraded: Sakura, Storm, Dragon and Singularity now have a finale that grows with rarity, from Mythic up to Divine and beyond (idea by PRISMA123)',
+      '🖼️ New Wallpaper Case: 600 coins for a random animated wallpaper worth 500 to 1,200; part of the price comes back if you already own it (idea by CrazyMiner22)',
+    ], fr: [
+      '🔊 Nouveau skin Sonic Wave : les chiffres voyagent sur une onde sonore lumineuse, chacun se pose avec une onde de choc et le dernier fait boum (idée de Matthew)',
+      '🛸 Nouveau skin UFO : une soucoupe volante dépose chaque chiffre sur l\'herbe avec son rayon, puis file à toute vitesse (idée de JBearr12)',
+      '🚲 Nouveau skin Wheelie : un cycliste roule en wheelie sur la bordure et chaque chiffre surgit dans son sillage, puis il saute à la révélation (idée de JBearr12)',
+      '🍩 Nouveau skin Polygon Donut : un donut glacé en polygones tourne derrière des chiffres à facettes, et des vermicelles rebondissent à la révélation (idée de PongonLOLZFan)',
+      '✨ Skins légendaires améliorés : Sakura, Storm, Dragon et Singularity ont un final qui grandit avec la rareté, de Mythic jusqu\'à Divine et au-delà (idée de PRISMA123)',
+      '🖼️ Nouvelle caisse de fonds : 600 pièces pour un fond animé au hasard valant 500 à 1 200 ; une partie du prix revient si tu l\'as déjà (idée de CrazyMiner22)',
+    ] },
     { id: '2026-10-22e', date: 'Oct 22, 2026', en: ['🗼 Tower rebalanced: multipliers are a little lower (the casino keeps 3%, like the other games) and Hard bets are capped at 100 coins, so one lucky climb can\'t break the leaderboard'], fr: ['🗼 Tour rééquilibrée : les multiplicateurs sont un peu plus bas (le casino garde 3 %, comme les autres jeux) et les mises en Difficile sont plafonnées à 100 pièces, pour qu\'un seul coup de chance ne fausse plus le classement'] },
     { id: '2026-10-22d', date: 'Oct 22, 2026', en: ['🥈🥉 The "Today\'s best roll" card now shows the 2nd and 3rd best rolls too (idea by JAKECisthebest)', '🔀 New badge Countdown Shuffle: the digits of 10, 9, 8, 7, 6 in any order (idea by MereTera)'], fr: ['🥈🥉 La carte « Meilleur tirage du jour » montre aussi le 2e et le 3e (idée de JAKECisthebest)', '🔀 Nouveau badge Countdown Shuffle : les chiffres de 10, 9, 8, 7, 6 dans n\'importe quel ordre (idée de MereTera)'] },
     { id: '2026-10-22c', date: 'Oct 22, 2026', en: ['Fixed: Coin Millionaire showed as unlocked for players who had rolled a 1M+ XP number (reported by PRISMA123)', '🧪 Lab: the tubes are now orange, blue, white, purple, green and red (asked by costoroll)'], fr: ['Corrigé : Coin Millionaire apparaissait débloqué chez ceux qui avaient tiré un nombre à plus d\'1M d\'XP (signalé par PRISMA123)', '🧪 Lab : les tubes sont maintenant orange, bleu, blanc, violet, vert et rouge (demandé par costoroll)'] },
