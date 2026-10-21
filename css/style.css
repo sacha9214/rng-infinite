@@ -4406,6 +4406,111 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-cursed { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .45); --side-ink: #7c3aed;
   --side-bg: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(99, 102, 241, .25), transparent 70%), linear-gradient(180deg, rgba(20, 11, 51, .6), rgba(124, 58, 237, .12));
   --deco-a: '🌀'; --deco-b: '🔮'; }
+/* ------------------------------------------------------------------ Lab (idée de costoroll, 2026-10-21) : six tubes à
+   essai remplis aux deux tiers (rouge, violet, bleu, orange, blanc, vert), posés dans un portoir en bois devant un mur de
+   labo carrelé. Chaque chiffre est une silhouette sombre qui flotte dans le liquide pendant le tirage ; quand il se pose,
+   le tube tinte contre le portoir (secousse rigide, pas d'écrasement : c'est du verre) et le chiffre s'illumine de la
+   couleur de son liquide. Les bulles de la fin sont dessinées par js/skinfx.js (SCENES.lab), plus fortes dès Mythic. */
+.num-card.skin-lab {
+  background:
+    /* étagère du fond : fioles et ballons en ombre chinoise */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><g fill='%2394f2e4' fill-opacity='.13'><path d='M10 38h12l-4-12v-10h-4v10z'/><circle cx='48' cy='31' r='7'/><rect x='46' y='16' width='4' height='10'/><rect x='70' y='18' width='5' height='20' rx='2'/><rect x='78' y='22' width='5' height='16' rx='2'/><path d='M104 38h16l-5-14v-8h-6v8z'/><circle cx='140' cy='32' r='6'/><rect x='138' y='20' width='4' height='8'/></g><rect y='38' width='160' height='2' fill='%23cbd5e1' fill-opacity='.16'/></svg>") 0 0 / 6.4em 1.6em repeat-x,
+    /* carrelage blanc du labo, joints fins */
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, .14) 0 1px, transparent 1px .5em),
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, .14) 0 1px, transparent 1px .5em),
+    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(94, 234, 212, .16), transparent 70%),
+    linear-gradient(180deg, #16303a 0%, #0f2129 62%, #3a2614 62.5%, #2a1a0c 100%);
+  border: 2px solid #64748b; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, .18), inset 0 -.3em .6em rgba(0, 0, 0, .45), 0 0 14px rgba(45, 212, 191, .2), 0 10px 18px rgba(0, 0, 0, .4);
+  padding-top: .25rem; padding-bottom: .45rem;
+}
+.skin-lab .slot {
+  --liq: #dc2626; --liq-d: #7f1d1d; --liq-hi: #fca5a5; --glow: #fee2e2;
+  position: relative; box-sizing: border-box; font-size: .56em; font-weight: 900; line-height: 1;
+  width: 1.08em; height: 2.45em; margin: 0 .09em; padding-bottom: .24em;
+  display: inline-flex; align-items: flex-end; justify-content: center; vertical-align: bottom;
+  border: 1px solid rgba(226, 232, 240, .55); border-top-color: rgba(255, 255, 255, .8); border-radius: .14em .14em .56em .56em;
+  /* le chiffre s'est allumé : clair, auréolé de la couleur du liquide, cerné de sombre pour rester lisible */
+  color: var(--glow); -webkit-text-stroke: .022em var(--liq-d);
+  text-shadow: 0 0 .1em var(--liq-hi), 0 0 .26em var(--liq), 0 .04em .02em rgba(0, 0, 0, .55);
+  background:
+    /* reflets du verre : une bande vive à gauche, une plus discrète à droite */
+    linear-gradient(90deg, transparent 12%, rgba(255, 255, 255, .5) 17%, rgba(255, 255, 255, .12) 26%, transparent 32%, transparent 72%, rgba(255, 255, 255, .2) 80%, transparent 86%),
+    /* ménisque : un fin trait clair à la surface du liquide */
+    linear-gradient(180deg, transparent 37%, rgba(255, 255, 255, .6) 37.5%, var(--liq-hi) 39%, transparent 42%),
+    /* le liquide, aux deux tiers */
+    linear-gradient(180deg, transparent 38%, var(--liq) 44%, var(--liq-d) 100%),
+    rgba(226, 232, 240, .07);
+  background-size: 100% 100%, 100% 100%, 100% 100%, auto;
+  box-shadow: inset 0 .08em 0 rgba(255, 255, 255, .35), inset -.1em 0 .14em rgba(0, 0, 0, .35), 0 .05em .14em rgba(0, 0, 0, .5);
+  transform-origin: 50% 20%;
+}
+/* Six liquides dans l'ordre de costoroll (nth-of-type : le canvas des effets se glisse en tête de la carte). */
+.skin-lab .slot:nth-of-type(6n+2) { --liq: #9333ea; --liq-d: #4c1d95; --liq-hi: #d8b4fe; --glow: #f3e8ff; }
+.skin-lab .slot:nth-of-type(6n+3) { --liq: #2563eb; --liq-d: #1e3a8a; --liq-hi: #93c5fd; --glow: #dbeafe; }
+.skin-lab .slot:nth-of-type(6n+4) { --liq: #f97316; --liq-d: #9a3412; --liq-hi: #fdba74; --glow: #ffedd5; }
+.skin-lab .slot:nth-of-type(6n+5) { --liq: #e2e8f0; --liq-d: #64748b; --liq-hi: #ffffff; --glow: #ffffff; }
+.skin-lab .slot:nth-of-type(6n+6) { --liq: #16a34a; --liq-d: #14532d; --liq-hi: #86efac; --glow: #dcfce7; }
+/* le liquide blanc est clair : le chiffre y garde une ombre plus franche */
+.skin-lab .slot:nth-of-type(6n+5) { -webkit-text-stroke-width: .04em; text-shadow: 0 0 .12em #fff, 0 0 .3em #bae6fd, 0 .04em .03em rgba(15, 23, 42, .8); }
+/* le portoir : une barre de bois qui passe devant chaque tube (les morceaux se rejoignent d'un tube à l'autre) */
+.skin-lab .slot::before { content: ''; position: absolute; left: -.2em; right: -.2em; top: 15%; height: .3em; pointer-events: none; z-index: 2;
+  background: radial-gradient(ellipse 34% 60% at 50% 50%, rgba(0, 0, 0, .45), transparent 75%), linear-gradient(180deg, #d4a373, #a0703f 55%, #6b4423);
+  box-shadow: 0 .05em .06em rgba(0, 0, 0, .45); }
+/* les bulles : invisibles au repos, elles montent pendant le tirage et jaillissent quand le chiffre se pose */
+.skin-lab .slot::after { content: ''; position: absolute; left: 6%; right: 6%; top: 42%; bottom: 8%; pointer-events: none; opacity: 0;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, .85) 0 .035em, transparent .05em) 0% 80% / .2em .2em no-repeat,
+    radial-gradient(circle, rgba(255, 255, 255, .75) 0 .025em, transparent .04em) 100% 55% / .2em .2em no-repeat,
+    radial-gradient(circle, rgba(255, 255, 255, .8) 0 .04em, transparent .055em) 4% 25% / .2em .2em no-repeat,
+    radial-gradient(circle, rgba(255, 255, 255, .7) 0 .03em, transparent .045em) 96% 6% / .2em .2em no-repeat,
+    radial-gradient(circle, rgba(255, 255, 255, .6) 0 .025em, transparent .04em) 50% 0% / .2em .2em no-repeat; }
+.skin-lab .slot.ghost { opacity: .22; }
+.skin-lab .slot.collapsed { width: 0; height: 0; margin: 0; border: 0; padding: 0; box-shadow: none; background: none; }
+.skin-lab .slot.collapsed::before, .skin-lab .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le chiffre n'est qu'une silhouette sombre qui flotte (il monte et descend dans le liquide), le
+   liquide clapote, des bulles montent. */
+.skin-lab .slot.spinning { opacity: .95; color: rgba(8, 10, 20, .6); -webkit-text-stroke-color: transparent; text-shadow: 0 0 .05em rgba(8, 10, 20, .6), 0 .14em .12em rgba(8, 10, 20, .3);
+  animation: lab-float .3s ease-in-out infinite alternate; }
+.skin-lab .slot.spinning::after { animation: lab-rise .5s linear infinite; }
+@keyframes lab-float {
+  from { padding-bottom: .18em; background-position: 0 0, 0 .03em, 0 .03em, 0 0; }
+  to { padding-bottom: .36em; background-position: 0 0, 0 -.03em, 0 -.03em, 0 0; }
+}
+@keyframes lab-rise { 0% { opacity: .9; transform: translateY(.2em); } 100% { opacity: .5; transform: translateY(-.35em); } }
+/* Il se pose : le tube recule un peu (élan), tinte contre le portoir (secousse rigide qui s'amortit) ; le chiffre passe
+   de l'ombre à un éclair blanc, puis garde la lueur de son liquide ; une gerbe de bulles part vers la surface. */
+.skin-lab .slot.revealed { animation: lab-clink .62s cubic-bezier(.25, .9, .35, 1) backwards, lab-light .7s ease-out backwards; }
+.skin-lab .slot.revealed::after { animation: lab-burst .7s ease-out backwards; }
+@keyframes lab-clink {
+  0% { transform: rotate(0); }
+  12% { transform: translateY(-.1em) rotate(3deg); }
+  24% { transform: rotate(-6deg); }
+  40% { transform: rotate(4deg); }
+  58% { transform: rotate(-2deg); }
+  78% { transform: rotate(.8deg); }
+  100% { transform: none; }
+}
+@keyframes lab-light {
+  0%, 14% { color: rgba(8, 10, 20, .6); -webkit-text-stroke-color: transparent; text-shadow: 0 0 .05em rgba(8, 10, 20, .6); }
+  26% { color: #fff; text-shadow: 0 0 .1em #fff, 0 0 .35em var(--liq-hi), 0 0 .8em var(--liq); }
+}
+@keyframes lab-burst {
+  0%, 18% { opacity: 0; transform: translateY(.25em) scale(.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-.45em) scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-lab .slot, .skin-lab .slot::after { animation: none; } }
+/* Cadre de duel : la paillasse d'un labo, carrelage clair et lueur turquoise ; le tube à essai bouillonne, le ballon tangue. */
+.side-lab { --side-border: #2dd4bf; --side-glow: 0 0 16px rgba(45, 212, 191, .35); --side-ink: #0d9488;
+  --side-bg: linear-gradient(180deg, transparent 72%, rgba(120, 72, 32, .22) 72.5%), repeating-linear-gradient(0deg, rgba(148, 163, 184, .1) 0 1px, transparent 1px 14px), repeating-linear-gradient(90deg, rgba(148, 163, 184, .1) 0 1px, transparent 1px 14px), radial-gradient(ellipse 80% 60% at 50% 30%, rgba(45, 212, 191, .14), transparent 70%);
+  --deco-a: '🧪'; --deco-b: '⚗️ 🔬'; }
+.side-lab::before { font-size: 1.15rem; transform-origin: 50% 90%; animation: lab-bubble 1.6s ease-in-out infinite; }
+.side-lab::after { transform-origin: 30% 100%; animation: lab-tilt 2.4s ease-in-out infinite; }
+@keyframes lab-bubble { 0%, 100% { transform: none; } 40% { transform: rotate(-8deg) translateY(-1px); } 60% { transform: rotate(6deg); } }
+@keyframes lab-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg); } }
+.room-stage.many .side-lab::before, .room-stage.many .side-lab::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-lab::before, .side-lab::after { animation: none; } }
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }

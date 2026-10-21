@@ -2124,7 +2124,7 @@
     Sound.warm([['tier', { tier: a.tier }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const lockSkin = owner ? '' : Shop.resolve(Store.settings.skin);
-    if (lockSkin === 'asmr') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, skin: 'asmr' } : { i, skin: 'asmr' }]));
+    if (lockSkin === 'asmr' || lockSkin === 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, skin: lockSkin } : { i, skin: lockSkin }]));
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
     if (!ctx.replay) watchFps(1800);
 
@@ -2148,7 +2148,7 @@
       if (revealed === slotCount - 1) lastFrom = performance.now();
       // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
       const lk = i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i };
-      if (lockSkin === 'asmr') lk.skin = 'asmr'; // la cire craque sous chaque chiffre (js/sound.js)
+      if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
       sfx('lock', lk);
       if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
