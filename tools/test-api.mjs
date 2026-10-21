@@ -1396,34 +1396,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await setCoins(frank, 50); assert.equal((await g(frank, 'tower', { move: 'start', bet: 100, level: 'easy' })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1162);
   assert.equal((await g(frank, 'tower', { move: 'cash' })).status, 422, 'pas de partie'); await tick();
   r = await g(frank, 'tower', { move: 'start', bet: 100, level: 'normal' });
-  assert.deepEqual([r.status, r.body.picks, r.body.tiles, r.body.mult, r.body.next, r.body.coins, r.body.bombs, JSON.stringify(r.body).includes('bomb')], [200, [], 3, 1, 1.45, 1062, undefined, false], 'les bombes de la tour ne sortent pas');
-  assert.deepEqual(r.body.ladder, [1.45, 2.18, 3.27, 4.91, 7.36, 11.04, 16.57, 24.86]);
+  assert.deepEqual([r.status, r.body.picks, r.body.tiles, r.body.mult, r.body.next, r.body.coins, r.body.bombs, JSON.stringify(r.body).includes('bomb')], [200, [], 3, 1, 1.41, 1062, undefined, false], 'les bombes de la tour ne sortent pas');
+  assert.deepEqual(r.body.ladder, [1.41, 2.11, 3.17, 4.75, 7.13, 10.7, 16.06, 24.09]);
   let tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
   assert.equal(tb.length, 8); assert.ok(tb.every(b => Number.isInteger(b) && b >= 0 && b < 3));
   await tick(); assert.equal((await g(frank, 'tower', { move: 'start', bet: 100, level: 'easy' })).status, 422, 'une seule partie à la fois');
   await tick(); assert.equal((await g(frank, 'tower', { move: 'cash' })).status, 422, 'rien à encaisser au rez-de-chaussée');
   await tick(); assert.equal((await g(frank, 'tower', { move: 'pick', tile: 3 })).status, 400, 'case hors de l\'étage');
   await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[0] + 1) % 3 });
-  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.done, r.body.bombs], [1, 1.45, false, undefined]);
+  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.done, r.body.bombs], [1, 1.41, false, undefined]);
   await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[1] + 1) % 3 });
   await tick(); r = await g(frank, 'tower', { move: 'state' });
-  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.bombs], [2, 2.18, undefined], 'reprise de partie');
+  assert.deepEqual([r.body.picks.length, r.body.mult, r.body.bombs], [2, 2.11, undefined], 'reprise de partie');
   await tick(); r = await g(frank, 'tower', { move: 'cash' });
-  assert.deepEqual([r.body.result, r.body.win, r.body.coins, r.body.bombs], ['cash', 218, 1280, tb], 'encaisser paie mise × multiplicateur et dévoile les bombes');
+  assert.deepEqual([r.body.result, r.body.win, r.body.coins, r.body.bombs], ['cash', 211, 1273, tb], 'encaisser paie mise × multiplicateur et dévoile les bombes');
   // Hard : la bombe du 1er étage perd la mise.
   await tick(); r = await g(frank, 'tower', { move: 'start', bet: 100, level: 'hard' });
   tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
   await tick(); r = await g(frank, 'tower', { move: 'pick', tile: tb[0] });
-  assert.deepEqual([r.body.result, r.body.win, r.body.hit, r.body.floor, r.body.coins, r.body.bombs.length], ['boom', 0, tb[0], 0, 1180, 8]);
+  assert.deepEqual([r.body.result, r.body.win, r.body.hit, r.body.floor, r.body.coins, r.body.bombs.length], ['boom', 0, tb[0], 0, 1173, 8]);
   await tick(); assert.equal((await g(frank, 'tower', { move: 'pick', tile: 0 })).status, 422);
-  // Easy jusqu'en haut : la partie s'encaisse seule au 8e étage (×9,68).
+  // Easy jusqu'en haut : la partie s'encaisse seule au 8e étage (×9,38).
   await tick(); r = await g(frank, 'tower', { move: 'start', bet: 10, level: 'easy' });
   tb = JSON.parse(run([['GET', `tw:${frank.playerId}`]])[0].result).bombs;
   for (let f = 0; f < 8; f++) { await tick(); r = await g(frank, 'tower', { move: 'pick', tile: (tb[f] + 1) % 4 }); }
-  assert.deepEqual([r.body.result, r.body.mult, r.body.win, r.body.coins, r.body.picks.length], ['cash', 9.68, 96, 1266, 8]);
+  assert.deepEqual([r.body.result, r.body.mult, r.body.win, r.body.coins, r.body.picks.length], ['cash', 9.38, 93, 1256, 8]);
   assert.equal(run([['GET', `tw:${frank.playerId}`]])[0].result, null);
   { const h = run([['HMGET', `stats:${frank.playerId}`, 'gTower']])[0].result; assert.equal(Number(h[0]), 3, 'compteur de manches gTower'); }
-  { const c = run([['HMGET', 'casino', 'r:tower', 'b:tower', 'w:tower']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 314], 'compte de la maison par jeu'); }
+  { const c = run([['HMGET', 'casino', 'r:tower', 'b:tower', 'w:tower']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 304], 'compte de la maison par jeu'); }
   // Keno (idée de CYCOX) : une demande par partie, 1 à 10 numéros cochés parmi 40, 10 tirés par le serveur.
   {
     const G = require('../api/_gamble.js');

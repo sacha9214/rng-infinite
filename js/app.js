@@ -1648,6 +1648,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22g', date: 'Oct 22, 2026', en: ['🗼 Tower: Easy and Normal multipliers are lower, to match how likely each floor is (Normal top floor: ×24.09, Easy: ×9.38). Hard stays as it is'], fr: ['🗼 Tour : les multiplicateurs Facile et Normal sont plus bas, pour coller aux vraies chances de chaque étage (sommet en Normal : ×24,09, en Facile : ×9,38). Le Difficile ne change pas'] },
     { id: '2026-10-22f', date: 'Oct 22, 2026', en: [
       '🔊 New skin Sonic Wave: the digits ride a glowing sound wave, every one lands with a shockwave and the last one booms (idea by Matthew)',
       '🛸 New skin UFO: a flying saucer beams every digit down onto the grass, then zips away (idea by JBearr12)',

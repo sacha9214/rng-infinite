@@ -365,8 +365,9 @@ const twKey = id => `tw:${id}`;
 const TOWER_FLOORS = 8, TOWER_LEVELS = { easy: 4, normal: 3, hard: 2 };
 // Marge 3 % (2026-10-22, demandé par Sacha) : avec 99 %, la Tour a rendu 110 % en deux jours (variance des ×250 en Hard).
 // Elle rend maintenant au plus 97 %, comme les autres jeux, et la mise est plafonnée à 100 en Hard (voir tower()).
-const TOWER_EDGE = 0.97, TOWER_HARD_MAX = 100;
-const towerMult = (n, k) => { let x = TOWER_EDGE; for (let i = 0; i < k; i++) x *= n / (n - 1); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
+// Facile et Normal (4 et 3 cases) : marge 6 % (demandé par Sacha, 2026-10-22, « trop haut pour la chance qu'ils ont »).
+const TOWER_EDGE = 0.97, TOWER_EDGE_SOFT = 0.94, TOWER_HARD_MAX = 100;
+const towerMult = (n, k) => { let x = n > 2 ? TOWER_EDGE_SOFT : TOWER_EDGE; for (let i = 0; i < k; i++) x *= n / (n - 1); return Math.min(MINES_CAP, Math.floor(x * 100) / 100); };
 const towerLadder = n => Array.from({ length: TOWER_FLOORS }, (_, i) => towerMult(n, i + 1));
 const showTower = (g, coins, end) => {
   const n = TOWER_LEVELS[g.level], k = g.picks.length;
@@ -495,4 +496,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_HARD_MAX, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
