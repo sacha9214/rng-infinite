@@ -6979,6 +6979,39 @@
   route();
   syncHistory().catch(() => {});
 
+  // Nouvelle version en ligne (demandé par Sacha, 2026-10-22) : la page relit l'index toutes les 2 min et au retour sur
+  // l'onglet, compare le tampon de js/app.js avec le sien, et se recharge seule à un moment sans risque (rien en cours :
+  // pas de tirage, d'auto-roll, de duel, de partie de casino ni de fenêtre ouverte). Sinon, un bandeau propose de recharger.
+  const Updater = {
+    mine: (document.querySelector('script[src*="js/app.js"]')?.getAttribute('src').match(/v=([^&"]+)/) || [])[1] || null,
+    ready: false,
+    async check() {
+      if (!this.mine || this.ready) return;
+      try {
+        const html = await fetch(`./?v=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.text() : ''));
+        const live = (html.match(/js\/app\.js\?v=([^"&]+)/) || [])[1];
+        if (live && live !== this.mine) { this.ready = true; this.apply(); }
+      } catch (e) { /* hors ligne : on réessaiera */ }
+    },
+    safe() {
+      return !$('#modal-root').firstChild && !rollPending && (!session || session.finished) && !SoloAuto.on && !Gamble.busy && !['room', 'tournament'].includes(currentView);
+    },
+    apply() {
+      if (!this.ready) return;
+      if (this.safe()) { location.reload(); return; }
+      if (!document.getElementById('update-bar') && !document.hidden) {
+        const bar = document.createElement('button');
+        bar.id = 'update-bar'; bar.className = 'update-bar'; bar.type = 'button';
+        bar.innerHTML = `🆕 <b>${window.RNGI18n ? window.RNGI18n.t('New version available') : 'New version available'}</b> · ${window.RNGI18n ? window.RNGI18n.t('Refresh') : 'Refresh'}`;
+        bar.addEventListener('click', () => location.reload());
+        document.body.appendChild(bar);
+      }
+    },
+  };
+  setInterval(() => { Updater.check(); Updater.apply(); }, 120000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) Updater.check(); else Updater.apply(); });
+  window.addEventListener('hashchange', () => setTimeout(() => Updater.apply(), 300)); // changement de page : souvent un bon moment
+
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
   paintNewsDot();
