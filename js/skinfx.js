@@ -2544,6 +2544,202 @@
     };
   };
 
+  // 🔊 Sonic Wave (2026-10-21, idée de Matthew) — un oscilloscope. Dans la carte, sous les chiffres, deux ondes (cyan et
+  // rose) courent et un égaliseur bat en bas : pendant le tirage elles s'agitent et grésillent, puis se calment. À chaque
+  // chiffre posé, une impulsion part de sa position le long de l'onde et deux anneaux d'onde de choc s'en écartent. À
+  // la révélation, un « bang » sonique : des anneaux concentriques autour de la carte et des barres d'égaliseur qui
+  // jaillissent de ses bords ; dès Mythic, plus d'anneaux, un flash et des lignes de vitesse qui rayonnent.
+  SCENES.sonic = env => {
+    const { co, ci, w, h, card, q, dark } = env, rings = timed(), kicks = [], bars = timed(), rays = timed();
+    const CY = '#22d3ee', PK = '#e879f9', WH = '#ecfeff';
+    let energy = 1, aim = 1, flash = 0, now = 0;
+    const eq = Array.from({ length: 18 }, () => ({ v: rnd(.2, .6), ph: rnd(TAU) }));
+    const ring = (x, y, r, c, life, delay = 0, width = 2) => rings.add({ x, y, r, c, life, delay, width });
+    return {
+      frame(t, dt) {
+        now = t;
+        energy += (aim - energy) * Math.min(1, dt * 4);
+        flash = Math.max(0, flash - dt * 3);
+        // les impulsions des chiffres posés s'éloignent de leur point de départ le long de l'onde
+        for (let i = kicks.length - 1; i >= 0; i--) { kicks[i].age += dt; if (kicks[i].age > 1.2) kicks.splice(i, 1); }
+        const bump = x => { let s = 0; for (const k of kicks) { const d = Math.abs(x - k.x) - k.age * w * .9; s += k.a * Math.exp(-d * d / (h * h * .08)) * (1 - k.age / 1.2); } return s; };
+        ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // égaliseur : les barres montent avec l'énergie
+        const n = eq.length, bw = w / n;
+        for (let i = 0; i < n; i++) {
+          const b = eq[i], lvl = clamp(.12 + energy * (.35 + .4 * Math.abs(Math.sin(t * (5 + i * .7) + b.ph))) * b.v * 1.6 + bump(bw * (i + .5)) * .6, 0, 1);
+          ci.globalAlpha = .16 + .14 * energy; ci.fillStyle = i % 3 ? CY : PK;
+          ci.fillRect(i * bw + bw * .18, h - lvl * h * .42, bw * .64, lvl * h * .42);
+        }
+        // deux ondes : l'amplitude suit l'énergie, un grésillement s'y ajoute pendant le tirage
+        ci.lineJoin = 'round';
+        for (let m = 0; m < 2; m++) {
+          ci.globalAlpha = (.28 + .3 * Math.min(1, energy)) * (m ? .8 : 1); ci.strokeStyle = m ? PK : CY; ci.lineWidth = m ? 1.4 : 2;
+          ci.shadowColor = m ? PK : CY; ci.shadowBlur = 6;
+          ci.beginPath();
+          for (let x = 0; x <= w; x += 3) {
+            const amp = h * (.05 + .16 * energy), noise = energy > .5 ? (Math.random() - .5) * h * .07 * (energy - .5) : 0;
+            const y = h * .5 + Math.sin(x / w * TAU * (m ? 3 : 2) - t * (m ? 7 : 5)) * amp * (m ? .7 : 1) + noise - bump(x) * h * .35 * (m ? -1 : 1);
+            x ? ci.lineTo(x, y) : ci.moveTo(x, y);
+          }
+          ci.stroke();
+        }
+        ci.shadowBlur = 0;
+        if (flash > 0) dot(ci, WH, w / 2, h / 2, w * .6, flash * .5, h);
+        ci.globalCompositeOperation = 'source-over';
+        // autour de la carte : anneaux d'onde de choc (aplatis comme sur un écran), barres et rayons du bang final
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        rings.run(dt, (r, k) => {
+          const e = outCubic(k), R = r.r * (.25 + .9 * e);
+          co.globalAlpha = (1 - k) * .9; co.strokeStyle = r.c; co.lineWidth = r.width * (1 - k) + .5; co.shadowColor = r.c; co.shadowBlur = 8;
+          co.beginPath(); co.ellipse(r.x, r.y, R, R * .62, 0, 0, TAU); co.stroke();
+        });
+        co.shadowBlur = 0;
+        bars.run(dt, (b, k) => {
+          const up = k < .35 ? outCubic(k / .35) : 1 - (k - .35) / .65, L = b.len * up;
+          co.globalAlpha = .85 * (1 - k * .6); co.fillStyle = b.c;
+          if (b.side === 0) co.fillRect(b.x - b.bw / 2, card.y - L - 3, b.bw, L); else co.fillRect(b.x - b.bw / 2, card.y + card.h + 3, b.bw, L);
+        });
+        rays.run(dt, (r, k) => {
+          const d0 = r.d * (.6 + 1.4 * outCubic(k)), d1 = d0 + r.len * (1 - k);
+          line(co, r.c, r.x + Math.cos(r.a) * d0, r.y + Math.sin(r.a) * d0 * .7, r.x + Math.cos(r.a) * d1, r.y + Math.sin(r.a) * d1 * .7, 2, (1 - k) * .8);
+        });
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        kicks.push({ x: p.x - card.x, a: o.last ? 1 : .7, age: 0 });
+        const big = !!o.last, r = card.h * (big ? 1.25 : .85);
+        ring(p.x, p.y, r, CY, big ? .6 : .45, 0, big ? 3 : 2);
+        ring(p.x, p.y, r * .8, PK, big ? .6 : .45, .06, big ? 2.4 : 1.6);
+        aim = big ? .5 : Math.min(1.3, aim + .05);
+      },
+      build() { aim = 1.4; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, cx = card.x + card.w / 2, cy = card.y + card.h / 2, strong = p >= 1;
+        aim = .18; flash = .5 + .5 * p;
+        energy = 1.2 + p;
+        // le bang : des anneaux concentriques qui partent de la carte, de plus en plus larges
+        const n = 2 + Math.round(3 * p) + (strong ? 2 : 0);
+        for (let i = 0; i < n; i++) ring(cx, cy, card.w * (.7 + .5 * p) * (1 + i * .12), i % 2 ? PK : (i % 3 === 2 ? WH : CY), .7 + .4 * p, i * .09, 3 + 2 * p);
+        // l'égaliseur jaillit des bords haut et bas de la carte
+        if (p >= .25) {
+          const m = Math.round((10 + 12 * p) * q);
+          for (let i = 0; i < m; i++) for (const side of [0, 1]) bars.add({ side, x: card.x + card.w * (i + .5) / m, bw: card.w / m * .6, len: card.h * rnd(.25, .5 + .9 * p) * (side ? .7 : 1), c: i % 3 ? CY : PK, life: .6 + .5 * p, delay: .05 + Math.abs(i - m / 2) / m * .25 });
+        }
+        // dès Mythic : des lignes de vitesse rayonnent autour du bang
+        if (strong) for (let i = Math.round(28 * q); i > 0; i--) rays.add({ x: cx, y: cy, a: rnd(TAU), d: card.w * .45, len: card.w * rnd(.15, .35), c: pick([CY, PK, WH]), life: rnd(.5, .8), delay: rnd(0, .2) });
+      },
+    };
+  };
+
+  // 🛸 UFO (2026-10-21, idée de JBearr12) — « une soucoupe qui dépose les chiffres sur l'herbe ». Une petite soucoupe
+  // survole la carte (un champ la nuit). Pendant le tirage, elle se balade d'un bout à l'autre et son rayon clignote.
+  // À chaque chiffre posé, elle file au-dessus de lui et l'éclaire d'un grand rayon vert (sous les chiffres dans la
+  // carte, par-dessus au-dehors) ; une poussière d'herbe se soulève. À la révélation, ses feux clignotent, un dernier
+  // rayon couvre toute la carte, puis elle s'envole en flèche ; dès Mythic, un tour de feux arc-en-ciel et des étincelles
+  // d'abord. Elle revient se placer au-dessus de la carte quelques secondes plus tard.
+  SCENES.ufo = env => {
+    const { co, ci, card, q, dark } = env, beams = timed(), dust = particles(), sparks = particles(), trail = timed();
+    const S = Math.max(30, card.h * .78); // largeur de la soucoupe
+    const home = () => ({ x: card.x + card.w / 2, y: card.y - S * .62 });
+    const u = { x: card.x + card.w / 2, y: card.y - S * .62, tx: card.x + card.w / 2, mode: 'roam', t: 0, vx: 0, vy: 0, lights: 0, rainbow: 0, a: 1 };
+    let now = 0, flick = 0;
+    const LIGHTS = ['#a3e635', '#facc15', '#f472b6', '#22d3ee'];
+    const saucer = (x, y, a) => {
+      co.save(); co.translate(x, y); co.globalAlpha = a; co.rotate(Math.sin(now * 2.1) * .06 + clamp(u.vx / 900, -.3, .3));
+      // coupole de verre
+      const g = co.createLinearGradient(0, -S * .45, 0, 0); g.addColorStop(0, 'rgba(165,243,252,.95)'); g.addColorStop(1, 'rgba(34,211,238,.55)');
+      co.fillStyle = g; co.beginPath(); co.ellipse(0, -S * .08, S * .22, S * .26, 0, Math.PI, 0); co.fill();
+      co.fillStyle = 'rgba(255,255,255,.75)'; co.beginPath(); co.ellipse(-S * .08, -S * .2, S * .04, S * .07, -.4, 0, TAU); co.fill();
+      // coque métal
+      const m = co.createLinearGradient(0, -S * .12, 0, S * .14); m.addColorStop(0, '#f8fafc'); m.addColorStop(.5, '#94a3b8'); m.addColorStop(1, '#334155');
+      co.fillStyle = m; co.beginPath(); co.ellipse(0, 0, S * .5, S * .14, 0, 0, TAU); co.fill();
+      co.strokeStyle = 'rgba(15,23,42,.6)'; co.lineWidth = 1; co.stroke();
+      co.fillStyle = '#475569'; co.beginPath(); co.ellipse(0, S * .1, S * .2, S * .06, 0, 0, TAU); co.fill();
+      // feux du bord : ils tournent, s'allument tous à la fin (et en arc-en-ciel dès Mythic)
+      for (let i = 0; i < 7; i++) {
+        const px = (i - 3) / 3.4 * S * .44, on = u.lights > 0 || ((Math.floor(now * 8) + i) % 3 === 0);
+        const c = u.rainbow > 0 ? `hsl(${(now * 360 + i * 50) % 360} 95% 65%)` : LIGHTS[i % LIGHTS.length];
+        co.fillStyle = on ? c : '#1e293b'; co.beginPath(); co.arc(px, S * .035, S * .035, 0, TAU); co.fill();
+        if (on) dot(co, c.startsWith('#') ? c : '#ffffff', px, S * .035, S * .1, .5 * a);
+      }
+      co.globalAlpha = a; dot(co, '#bef264', 0, S * .14, S * .2, .45 * a, S * .08);
+      co.restore();
+    };
+    // un rayon : un cône du dessous de la soucoupe jusqu'à `y1`, large de `half` en bas
+    const cone = (c, x0, y0, x1, y1, half, a, col = '190,242,100') => {
+      if (a <= .01) return;
+      const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(${col},${a * .35})`); g.addColorStop(1, `rgba(${col},${a})`);
+      c.globalAlpha = 1; c.fillStyle = g; c.beginPath(); c.moveTo(x0 - S * .12, y0); c.lineTo(x0 + S * .12, y0); c.lineTo(x1 + half, y1); c.lineTo(x1 - half, y1); c.closePath(); c.fill();
+    };
+    return {
+      frame(t, dt) {
+        now = t; flick = Math.random();
+        u.lights = Math.max(0, u.lights - dt); u.rainbow = Math.max(0, u.rainbow - dt);
+        const H = home();
+        if (u.mode === 'roam') { u.tx = card.x + card.w * (.5 + .38 * Math.sin(t * 1.1)); u.ty = H.y; }
+        if (u.mode === 'hold') { u.ty = H.y; if ((u.t -= dt) <= 0) u.mode = 'roam'; }
+        if (u.mode === 'rest') { u.tx = H.x + Math.sin(t * .7) * card.w * .08; u.ty = H.y; }
+        if (u.mode === 'zip') { u.vx += 2600 * dt; u.vy -= 1500 * dt; u.x += u.vx * dt; u.y += u.vy * dt; if (Math.random() < .9) trail.add({ x: u.x, y: u.y, life: .35 }); if ((u.t -= dt) <= 0) { u.mode = 'back'; u.x = card.x - S * 3; u.y = card.y - S * 3; u.vx = u.vy = 0; } }
+        else {
+          const k = Math.min(1, dt * (u.mode === 'hold' ? 16 : 3)), ox = u.x;
+          u.x += (u.tx - u.x) * k; u.y += ((u.ty ?? H.y) + Math.sin(t * 2.4) * S * .06 - u.y) * Math.min(1, dt * 4);
+          u.vx = (u.x - ox) / Math.max(dt, 1e-3);
+          if (u.mode === 'back') { u.tx = H.x; u.ty = H.y; if (Math.abs(u.x - H.x) < 4) u.mode = 'rest'; }
+        }
+        const bx = u.x, by = u.y + S * .12;
+        // le rayon qui grésille pendant le tirage, sur la carte entière en dessous
+        if (u.mode === 'roam') {
+          const a = .1 + .14 * flick;
+          cone(co, bx, by, bx, card.y, S * .32, a * (dark ? 1 : .8));
+          ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          cone(ci, bx - card.x, by - card.y, bx - card.x, card.h, S * .5, a * .8);
+        }
+        // les grands rayons des chiffres posés (et celui de la fin)
+        beams.run(dt, (b, k) => {
+          const a = (k < .15 ? k / .15 : 1 - (k - .15) / .85) * (b.big ? .9 : .7), half = b.half * (1 + .2 * Math.sin(t * 40));
+          cone(co, bx, by, b.x, card.y, half * .75, a * (dark ? .8 : .6));
+          ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          cone(ci, bx - card.x, by - card.y, b.x - card.x, card.h, half, a * .75, '217,249,157');
+          if (b.big) dot(ci, '#ecfccb', b.x - card.x, card.h * .5, card.w * .5, a * .35, card.h);
+        });
+        ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = 1;
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        trail.run(dt, (s, k) => dot(co, '#bef264', s.x, s.y, S * .3 * (1 - k), (1 - k) * .7));
+        sparks.step(dt);
+        sparks.each((p, k) => dot(co, p.c, p.x, p.y, p.size * 2.4, (1 - k) * .9));
+        co.globalCompositeOperation = 'source-over';
+        // poussière d'herbe : de petits brins verts qui retombent au pied de la carte
+        dust.step(dt);
+        dust.each((p, k) => { co.globalAlpha = (1 - k) * .9; co.fillStyle = p.c; co.fillRect(p.x - p.size * .3, p.y - p.size, p.size * .6, p.size * 2); });
+        co.globalAlpha = 1;
+        if (u.mode !== 'zip' || u.t > 0) saucer(u.x, u.y, 1);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const big = !!o.last;
+        u.mode = 'hold'; u.tx = p.x; u.t = big ? .9 : .45;
+        beams.add({ x: p.x, half: card.h * (big ? .42 : .32), life: big ? .8 : .6, big });
+        for (let i = Math.round((big ? 14 : 7) * q); i > 0; i--) { const a = rnd(-Math.PI * .9, -Math.PI * .1), v = rnd(60, big ? 220 : 150); dust.add({ x: p.x + rnd(-card.h * .2, card.h * .2), y: card.y + card.h - 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 520, drag: 1.2, max: rnd(.4, .8), size: rnd(1.6, 2.8), c: pick(['#22c55e', '#4ade80', '#a3e635', '#bbf7d0']) }); }
+      },
+      build() { u.lights = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, strong = p >= 1, cx = card.x + card.w / 2;
+        u.mode = 'hold'; u.tx = cx; u.t = 9;
+        u.lights = 1.4; if (strong) u.rainbow = 1.6;
+        // le dernier rayon : toute la carte s'éclaire
+        beams.add({ x: cx, half: card.w * .55, life: .7 + .4 * p, big: true, delay: .1 });
+        // dès Mythic : un tour de feux, puis des étincelles en couronne autour de la soucoupe
+        if (strong) setTimeout(() => { for (let i = Math.round(30 * q); i > 0; i--) { const a = rnd(TAU), v = rnd(80, 260); sparks.add({ x: u.x, y: u.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .6, drag: 1.8, max: rnd(.5, 1), size: rnd(1.2, 2.6), c: pick(['#bef264', '#f472b6', '#22d3ee', '#facc15']) }); } }, 500);
+        else if (p > 0) for (let i = Math.round(10 * p * q); i > 0; i--) { const a = rnd(TAU), v = rnd(50, 150); sparks.add({ x: u.x, y: u.y + S * .1, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .5, drag: 2, max: rnd(.4, .7), size: rnd(1, 2), c: '#bef264' }); }
+        // puis elle file en haut à droite, et revient plus tard
+        setTimeout(() => { u.mode = 'zip'; u.vx = 80; u.vy = 40; u.t = 3 + p * 2; }, (strong ? 1300 : 900 + 300 * p));
+      },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 

@@ -842,3 +842,26 @@
   background: linear-gradient(35deg, transparent 46%, #facc15 46% 54%, transparent 54%) 12% 25% / .5em .5em no-repeat, linear-gradient(-40deg, transparent 46%, #38bdf8 46% 54%, transparent 54%) 86% 70% / .5em .5em no-repeat,
     linear-gradient(155deg, #fbcfe8 0 22%, #f9a8d4 22% 45%, #f472b6 45% 68%, #ec4899 68% 86%, #d6a05c 86%);
   --gs: 0 .3em 0 #9d174d, 0 .5em 1em rgba(236, 72, 153, .35); --gs-h: 0 .34em 0 #9d174d, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #9d174d; }
+/* Sonic Wave (idée de Matthew, 2026-10-21) : l'écran d'un oscilloscope, une onde cyan au milieu, l'égaliseur en bas ;
+   au survol, l'onde défile. */
+.btn-roll.gen-sonic { border: 2px solid #22d3ee; border-radius: .6em; color: #ecfeff;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><path d='M0 20 Q10 4 20 20 T40 20 T60 20 T80 20' fill='none' stroke='%2367e8f9' stroke-opacity='.55' stroke-width='2'/><path d='M0 20 Q20 32 40 20 T80 20' fill='none' stroke='%23e879f9' stroke-opacity='.4' stroke-width='1.5'/></svg>") 0 50% / 2.6em 1.3em repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='20'><g fill='%2322d3ee' fill-opacity='.3'><rect x='1' y='10' width='4' height='10'/><rect x='7' y='4' width='4' height='16'/><rect x='13' y='13' width='4' height='7'/><rect x='19' y='7' width='4' height='13'/><rect x='25' y='2' width='4' height='18'/><rect x='31' y='12' width='4' height='8'/><rect x='37' y='6' width='4' height='14'/><rect x='43' y='14' width='4' height='6'/></g></svg>") 0 100% / 2em .55em repeat-x,
+    linear-gradient(180deg, #0a1033, #050816);
+  text-shadow: -.06em 0 0 rgba(236, 72, 153, .7), .06em 0 0 rgba(34, 211, 238, .8), 0 0 .4em #22d3ee;
+  --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .35); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #164e63; }
+.btn-roll.gen-sonic:hover { animation: gen-sonic-run .8s linear infinite; }
+@keyframes gen-sonic-run { to { background-position: -2.6em 50%, 0 100%, 0 0; } }
+/* UFO (idée de JBearr12, 2026-10-21) : un ciel de nuit, l'herbe en bas, un rayon vert qui descend au milieu. */
+.btn-roll.gen-ufo { border: 2px solid #84cc16; border-radius: 999px; color: #f7fee7;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='20'><path d='M0 20 L3 8 L5 20 L8 4 L11 20 L13 10 L16 20 L19 6 L22 20 L25 11 L27 20 L30 3 L33 20 L36 9 L38 20 L41 5 L44 20 L47 10 L49 20 L52 6 L55 20 L57 9 L60 20 Z' fill='%2316a34a'/></svg>") 0 100% / 2.4em .5em repeat-x,
+    linear-gradient(90deg, transparent 30%, rgba(190, 242, 100, .35) 42%, rgba(217, 249, 157, .5) 50%, rgba(190, 242, 100, .35) 58%, transparent 70%),
+    radial-gradient(1px 1px at 12% 25%, #fff, transparent), radial-gradient(1px 1px at 82% 20%, #fff, transparent), radial-gradient(1px 1px at 68% 45%, #bbf7d0, transparent),
+    linear-gradient(180deg, #0b1026, #1b2550);
+  text-shadow: 0 0 .35em #a3e635, 0 1px 0 #052e16, 0 0 2px #052e16;
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(132, 204, 22, .32); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(190, 242, 100, .5); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-ufo:hover { animation: gen-ufo-beam .5s steps(2) infinite; }
+@keyframes gen-ufo-beam { 50% { filter: brightness(1.18); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
