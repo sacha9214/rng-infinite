@@ -1839,7 +1839,7 @@
     session = playReveal({ n, a: analysis(n), previous: [], newIds: null, isFirst: false, lifetimeBefore: lifetimeEP(), index: -1, online: null, replay: { caption, back } });
   }
 
-  function todayCardHTML(entry, rollsToday) {
+  function todayCardHTML(entry, rollsToday, runners = []) {
     const a = analysis(entry.n);
     const pills = a.groups.slice(0, 7).map(g => `<span class="badge-pill" data-tier="${g.badge.tier}">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join('');
     const more = a.earnedIds.length - Math.min(7, a.groups.length);
@@ -1850,6 +1850,7 @@
         <div class="feature-meta">rolled by <a class="player-link" href="${profileHref(entry.name)}">${esc(entry.name)}</a>${entry.me ? ' (you)' : ''} ${titleHTML(entry.title)}</div>
         <div class="pill-row">${pills}${more > 0 ? `<span class="more">+${more} more</span>` : ''}</div>
         <div class="ep-big" style="display:inline-block;font-size:.85rem">${fmt(entry.s)} XP</div>
+        ${runners.length ? `<div class="today-podium">${runners.map((r, i) => { const b = analysis(r.n); return `<div class="today-podium-row" data-number="${r.n}" data-caption="${esc(`Today's #${i + 2} · ${r.name}`)}"><span>${['🥈', '🥉'][i]}</span><a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>${r.me ? ' <span class="muted">(you)</span>' : ''}<span class="num-card sm" data-tier="${b.tier}">${b.str}</span><span class="mono">${compact(r.s)} XP</span></div>`; }).join('')}</div>` : ''}
         <div class="feature-meta" style="margin-bottom:0">${plural(rollsToday, 'roll')} today</div>
       </div>`;
   }
@@ -1860,7 +1861,7 @@
       const data = await Online.leaderboard('day');
       if (!slot.isConnected) return;
       slot.innerHTML = data.entries.length
-        ? todayCardHTML(data.entries[0], data.rollsToday)
+        ? todayCardHTML(data.entries[0], data.rollsToday, data.entries.slice(1, 3)) // podium : le 2e et le 3e en dessous (idée de JAKECisthebest, 2026-10-22)
         : '<div class="feature-card"><div class="eyebrow">Today\'s best roll</div><p class="feature-meta">No rolls yet today — be the first!</p></div>';
     } catch (err) {
       slot.innerHTML = '';

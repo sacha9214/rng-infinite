@@ -327,6 +327,8 @@
     // Idée de A Dude (2026-10-17) : nombre heureux, et nombre heureux premier (famille HAPPY : seul le meilleur compte).
     HAPPY: c => isHappy(c.n),
     HAPPY_PRIME: c => isPrime(c.n) && isHappy(c.n),
+    // Idée de MereTera (2026-10-22) : les chiffres de 10, 9, 8, 7, 6 (1, 0, 9, 8, 7, 6), une fois chacun, dans n'importe quel ordre.
+    COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
     HEAVY: c => c.sum > 45,

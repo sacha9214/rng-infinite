@@ -363,5 +363,12 @@
     "desc": "Contains \"47\".",
     "emoji": "🎯",
     "score": 2024
+  },
+  {
+    "id": "COUNTDOWN_SCRAMBLED",
+    "label": "Countdown Shuffle",
+    "desc": "The digits of 10, 9, 8, 7, 6, each once, in any order.",
+    "emoji": "🔀",
+    "score": 166667
   }
 ]
