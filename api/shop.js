@@ -33,6 +33,8 @@ const CODES = {
   BC: { coins: 100, title: 'gatekeep' },
   // Demandé par Sacha (2026-10-19) : 150 pièces et le titre Epitech (stats.epitech).
   'EPITECH>42': { coins: 150, title: 'epitech' },
+  // Excuses pour la coupure du 2026-10-22 (le site a déménagé sur le VPS) : 500 pièces, valable une semaine.
+  SORRY404: { coins: 500, until: '2026-10-30T00:00:00Z' },
 };
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;
