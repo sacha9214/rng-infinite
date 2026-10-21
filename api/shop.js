@@ -49,6 +49,8 @@ async function state(id) {
   const stats = await readStats(id);
   const [owned, skin, bought, button, emotes, walls, wall] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
+  // Succès Coin Millionaire (idée d'A Dude, 2026-10-21) : posé une fois, la première fois que le solde atteint 1 000 000.
+  if (!Number(stats.millionaire) && Shop.balance(stats) >= 1000000) await redis([['HSET', statsKey(id), 'millionaire', 1]]);
   const isOwner = Number(stats.owner) >= 1, isSupporter = Number(stats.supporter) >= 1, isFisher = Number(stats.collabFish) >= 1;
   // Un skin réservé (Owner, Supporter) ne se porte que si le joueur y a droit.
   const allowed = s => !Shop.byId.get(s).hidden || (s === 'owner' ? isOwner : s === 'supporter' ? isSupporter : s === 'fisher' ? isFisher : false);

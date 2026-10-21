@@ -196,9 +196,12 @@ async function view(day, me, now = Date.now()) {
   const [names] = list.length ? await redis([['HMGET', 'names', ...list]]) : [[]];
   const nameOf = Object.fromEntries(list.map((id, i) => [id, names[i] || 'Player']));
   const phase = now < base.close ? 'signup' : !size ? 'cancelled' : t.h.paid ? 'done' : 'running';
+  // Les identifiants ne sortent jamais du serveur : chaque joueur devient un jeton opaque propre au tournoi du jour,
+  // et « me » signale sa propre ligne.
+  const tok = id => (id ? require('node:crypto').createHash('sha256').update(`tn:${day}:${id}`).digest('hex').slice(0, 12) : id);
   const side = (r, id, reveal) => {
     if (!id) return null;
-    const x = t.rolls[`${r}:${id}`], o = { id, name: nameOf[id], count: x ? x.s.length : 0 };
+    const x = t.rolls[`${r}:${id}`], o = { id: tok(id), me: !!me && id === me, name: nameOf[id], count: x ? x.s.length : 0 };
     if (reveal && x) Object.assign(o, { total: sum(x), best: top(x), rolls: x.n });
     return o;
   };
@@ -210,13 +213,13 @@ async function view(day, me, now = Date.now()) {
       const a = p ? p[2 * m] : undefined, b = p ? p[2 * m + 1] : undefined;
       const both = p && doneOf(t.rolls[`${r}:${a}`]) && doneOf(t.rolls[`${r}:${b}`]);
       const reveal = !!w || !!both;
-      matches.push({ a: p ? side(r, a, reveal) : undefined, b: p ? side(r, b, reveal) : undefined, bye: !!p && (!a || !b), w: w ? w[m] : null });
+      matches.push({ a: p ? side(r, a, reveal) : undefined, b: p ? side(r, b, reveal) : undefined, bye: !!p && (!a || !b), w: w ? tok(w[m]) : null });
     }
     rounds.push({ start: tm.start(r), end: tm.stop(r), matches });
   }
   const out = {
     day, now, phase, open: base.open, close: base.close, end: base.end, size, round: cur, rolls: ROLLS, minRolls: MIN_ROLLS, max: MAX_PLAYERS, minPlayers: MIN_PLAYERS, prizes: PRIZES,
-    count: Math.min(t.ins.length, MAX_PLAYERS), entrants: t.ins.slice(0, MAX_PLAYERS).map(id => ({ id, name: nameOf[id] })), joined: !!me && ids.has(me), rounds,
+    count: Math.min(t.ins.length, MAX_PLAYERS), entrants: t.ins.slice(0, MAX_PLAYERS).map(id => ({ id: tok(id), me: !!me && id === me, name: nameOf[id] })), joined: !!me && ids.has(me), rounds,
   };
   if (phase === 'done') { const pd = podium(t); out.result = { champion: side(0, pd.champion, false), finalist: side(0, pd.finalist, false), semis: pd.semis.map(id => side(0, id, false)) }; }
   if (me && ids.has(me) && size) {
@@ -230,7 +233,7 @@ async function view(day, me, now = Date.now()) {
       out.match = {
         round: r, live: r === cur && !w, start: tm.start(r), end: tm.stop(r), bye: !opp, result: w ? (w === me ? 'won' : 'lost') : null,
         me: { rolls: mine.n, scores: mine.s, total: sum(mine), count: mine.s.length },
-        opp: opp ? { id: opp, name: nameOf[opp], count: theirs ? theirs.s.length : 0, ...(showOpp && theirs ? { rolls: theirs.n, scores: theirs.s, total: sum(theirs) } : {}) } : null,
+        opp: opp ? { id: tok(opp), name: nameOf[opp], count: theirs ? theirs.s.length : 0, ...(showOpp && theirs ? { rolls: theirs.n, scores: theirs.s, total: sum(theirs) } : {}) } : null,
       };
     }
   }

@@ -4460,3 +4460,16 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   .tn-prizes { grid-template-columns: 1fr; }
   .tn-prizes > div { flex-direction: row; justify-content: center; gap: .5rem; }
 }
+
+/* Statut des amis (2026-10-21) : en ligne, AFK, hors ligne */
+.live-dot.fr-online { background: #22c55e; box-shadow: 0 0 0 3px color-mix(in srgb, #22c55e 25%, transparent); }
+.live-dot.fr-afk { background: #f59e0b; }
+.live-dot.fr-offline { background: var(--prose-3, #777); opacity: .55; }
+.fr-st.online { color: #22c55e; }
+.fr-st.afk { color: #f59e0b; }
+
+/* Bandeau du tournoi (accueil et casino, 2026-10-21) */
+.tn-banner { display: flex; align-items: center; gap: .6rem; margin: 0 auto .9rem; max-width: 40rem; padding: .55rem .9rem; border-radius: .8rem; font-size: .9em; text-decoration: none; color: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, #eab308 20%, transparent), color-mix(in srgb, #a855f7 14%, transparent)); border: 1px solid color-mix(in srgb, #eab308 55%, transparent); }
+.tn-banner:hover { border-color: #eab308; }
+.tn-banner-go { margin-left: auto; font-weight: 800; }

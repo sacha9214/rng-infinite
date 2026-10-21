@@ -1214,6 +1214,7 @@
           ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div><div id="event-side"></div></div>
+          <div id="tn-banner-slot"></div>
           <div id="today-slot"></div>
           <div class="duel-entry">
             <div class="eyebrow">⚔️ Live duel with a friend</div>
@@ -1239,6 +1240,7 @@
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
+    drawTourneyBanner($('#tn-banner-slot'));
     loadQuests($('#quests-slot'));
     Fund.load();
     $('#room-join-form').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#room-code').value); });
@@ -1940,7 +1942,7 @@
       online = await Online.roll(Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''));
     } catch (err) {
       rollPending = false;
-      clientEvt('bg_error');
+      if (err.status !== 429) clientEvt('bg_error'); // 429 = pause du serveur pas finie : on réessaie, rien n'est perdu
       if (err.status === 403 || err.status === 409) { stopSoloAuto(); return; }
       scheduleSoloAuto(err.status === 429 ? 1500 : 5000); return;
     }
@@ -1971,6 +1973,9 @@
   async function startRoll(force) {
     if (rollPending) return;
     if (session && !session.finished && force !== true && !session.canReroll) return;
+    // Auto-roll allumé : un appui sur Roll / Espace pendant une révélation coupait le tirage en cours, qui semblait perdu
+    // (trouvé par shadow2, 2026-10-21). L'auto-roll enchaîne déjà tout seul : on ignore l'appui.
+    if (SoloAuto.on && force !== true && session && !session.finished) return;
     if (!Store.player.name) { askName(() => startRoll(force), '', '', 'Save & roll'); return; }
     rollPending = true;
     const buttons = Array.from(document.querySelectorAll('#roll-btn, #r-again'));
@@ -2050,6 +2055,13 @@
     if (ctx.newIds && ctx.newIds.size) {
       const list = [...ctx.newIds].map(id => Engine.byId.get(id)).sort((x, y) => y.score - x.score);
       notes.push(`<p class="new-note">✨ ${plural(list.length, 'new badge')}: ${list.slice(0, 4).map(b => `${b.emoji} ${esc(b.label)}`).join(', ')}${list.length > 4 ? '…' : ''}</p>`);
+    }
+    // Le nombre contient ton meilleur tirage d'avant (idée de spookiedookie, 2026-10-21) : un clin d'œil, sans XP.
+    if (!ctx.replay && ctx.index > 0) {
+      let best = null;
+      for (let i = 0; i < ctx.index; i++) { const r = Store.rolls[i]; if (!r[3] && (!best || r[1] > best[1])) best = r; }
+      if (best && best[0] !== Number(a.str) && a.str.includes(String(best[0]))) notes.push(`<p class="new-note">👑 This number contains your best roll ever, <b class="mono">${esc(String(best[0]))}</b>!</p>`);
+      else if (best && best[0] === Number(a.str)) notes.push('<p class="new-note">👑 You rolled your best number ever again!</p>');
     }
     if (ctx.previous.length) {
       const lastIdx = ctx.previous[ctx.previous.length - 1];
@@ -3438,6 +3450,7 @@
     const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
     app.innerHTML = `
       <div class="page page-wide">
+        <div id="tn-banner-slot"></div>
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
@@ -3535,6 +3548,7 @@
     $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); HdrCoins.set(c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
+    drawTourneyBanner($('#tn-banner-slot'));
     // Pièces gagnées ailleurs (un autre onglet qui tire, des quêtes) : le solde se relit quand la page revient au premier
     // plan, et toutes les 10 s tant qu'elle est affichée, seulement entre deux parties (signalé par un joueur le 2026-10-16).
     const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle) && !(Gamble.tw && !Gamble.tw.done && !Gamble.tw.idle);
@@ -5458,12 +5472,16 @@
   // et à l'ouverture des amis. Le solde gardé sur l'appareil suit.
   // ---- Messages entre amis (api/friends.js) : une fenêtre de conversation par ami, relue toutes les 4 s tant qu'elle
   // est ouverte. Le filtre du chat des duels s'applique côté serveur ; on peut bloquer un ami depuis la fenêtre.
+  // Présence pour la liste d'amis : « afk » si l'onglet est caché ou sans action depuis 5 min, sinon « active ».
+  let lastInput = Date.now();
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true, capture: true }));
+  const presenceState = () => (document.hidden || Date.now() - lastInput > 5 * 60000 ? 'afk' : 'active');
   const Messages = {
     count: 0, timer: 0,
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (!document.hidden && Store.player.name) Online.friends('gifts').then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   function openChat(name) {
     let poll = 0, sig = '';
@@ -5551,9 +5569,9 @@
         <div class="panel-head"><h3 class="panel-title">Your friends</h3><span class="panel-note">${state.friends.length} / ${state.max}</span></div>
         ${state.friends.length ? state.friends.map(f => `
           <div class="friend-row">
-            <span class="live-dot${f.room ? ' on' : ''}"></span>
+            <span class="live-dot fr-${f.room ? 'duel' : f.status || 'offline'}${f.room ? ' on' : ''}" title="${f.room ? 'In a duel' : f.status === 'online' ? 'Online' : f.status === 'afk' ? 'AFK' : 'Offline'}"></span>
             <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
-              <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}</span></span>
+              <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.status === 'online' ? '<b class="fr-st online">Online</b>' : f.status === 'afk' ? '<b class="fr-st afk">AFK</b>' : `Offline · ${f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}`}</span></span>
             <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
@@ -6461,6 +6479,22 @@
     tnSkew = st.now - Date.now();
     return st;
   }
+  // Bandeau du tournoi sur l'accueil et le casino (idée de PRISMA123, 2026-10-21) : seulement quand il y a quelque chose à
+  // faire (s'inscrire, ou jouer son match). Relu au plus une fois par minute.
+  let tnBannerCache = null;
+  async function drawTourneyBanner(slot) {
+    if (!slot || !Store.player.name) return;
+    try {
+      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) tnBannerCache = { at: Date.now(), st: await loadTournament() };
+      const st = tnBannerCache.st, m = st.match;
+      let text = '';
+      if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> · matches start at <span class="mono">${tnHour(st.close)}</span>`;
+      else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
+      if (!slot.isConnected) return;
+      slot.innerHTML = text ? `<a class="tn-banner" href="#/tournament">${text}<span class="tn-banner-go">→</span></a>` : '';
+    } catch (err) { /* hors ligne : pas de bandeau */ }
+  }
   // Carte du Duel : l'état du tournoi en une ligne, et le lien vers sa page.
   async function drawTourneyTeaser() {
     const box = $('#d-tourney');
@@ -6515,7 +6549,7 @@
           <div class="panel-note"><span class="mono">${st.count}/${st.max}</span> · <span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div>
           ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
         </div>
-        ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.id === Store.player.id ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
+        ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.me ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
     } else if (st.phase === 'running') {
       const r = st.round;
       status = `<div class="tn-status"><div><div class="tn-big">${r >= 0 ? `<span>${tnRoundName(r, R)}</span> · <span>ends in</span> <span class="mono" data-cd="${st.rounds[r].end}">${tnCd(st.rounds[r].end - now)}</span>` : '<span>Results coming</span>'}</div>
@@ -6564,7 +6598,7 @@
         if (!p) return `<div class="tn-p tn-bye">${bye ? 'bye' : '–'}</div>`;
         const cls = w ? (w === p.id ? ' win' : ' lose') : '';
         const score = p.total !== undefined ? fmt(p.total) : `${p.count}/${st.rolls}`;
-        return `<div class="tn-p${cls}${p.id === Store.player.id ? ' me' : ''}">${nm(p)}<span class="mono">${score}</span></div>`;
+        return `<div class="tn-p${cls}${p.me ? ' me' : ''}">${nm(p)}<span class="mono">${score}</span></div>`;
       };
       bracket = `<div class="panel"><div class="panel-head"><h3 class="panel-title">Bracket</h3><span class="panel-note"><span class="mono">${st.size}</span> <span>slots</span></span></div>
         <div class="tn-bracket" style="--tn-cols:${R}">${st.rounds.map((rd, r) => `<div class="tn-col${r === st.round ? ' now' : ''}">

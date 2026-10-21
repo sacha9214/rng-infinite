@@ -118,20 +118,32 @@ async function sendDm(me, other, raw) {
   await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL], ['HINCRBY', 'feat:dms', dayKey(t), 1]]); // compteur du jour pour la page Owner
 }
 
+// Présence (demandé par Sacha, 2026-10-21) : chaque page ouverte envoie toutes les minutes « active » ou « afk » (onglet
+// caché ou aucune action depuis 5 min) avec la relecture des messages ; presence = { id: "<heure>:<état>" }. Sans
+// signal depuis 150 s, l'ami est hors ligne.
+const PRESENCE_TTL = 150000, RANK = { online: 2, afk: 1, offline: 0 };
+function statusOf(raw) {
+  const [t, s] = String(raw || '').split(':');
+  if (!t || Date.now() - Number(t) > PRESENCE_TTL) return 'offline';
+  return s === 'afk' ? 'afk' : 'online';
+}
+
 async function state(id) {
   const [friends, incoming, outgoing] = await redis([['SMEMBERS', frKey(id)], ['SMEMBERS', inKey(id)], ['SMEMBERS', outKey(id)]]);
   const all = [...new Set([...(friends || []), ...(incoming || []), ...(outgoing || [])])];
-  let names = [], titles = [], extra = [], unread = [];
+  let names = [], titles = [], extra = [], unread = [], presence = [];
   if (all.length) {
     [names, titles] = await redis([['HMGET', 'names', ...all], ['HMGET', 'titles', ...all]]);
     extra = await redis((friends || []).flatMap(f => [['ZSCORE', XP_LB, f], ['ZSCORE', SEEN_KEY, f], ['GET', `inroom:${f}`]]));
+    presence = (friends || []).length ? (await redis([['HMGET', 'presence', ...friends]]))[0] || [] : [];
     unread = (friends || []).length ? (await redis([['HMGET', unreadKey(id), ...friends]]))[0] || [] : [];
   }
   const nameOf = pid => names[all.indexOf(pid)] || 'Player';
   const list = (friends || []).map((f, i) => ({
     name: nameOf(f), title: titles[all.indexOf(f)] || null,
     xp: Number(extra[i * 3] || 0), seen: Number(extra[i * 3 + 1] || 0), room: extra[i * 3 + 2] || null, unread: Number(unread[i] || 0),
-  })).sort((a, b) => (b.room ? 1 : 0) - (a.room ? 1 : 0) || b.seen - a.seen);
+    status: statusOf(presence[i]),
+  })).sort((a, b) => (b.room ? 1 : 0) - (a.room ? 1 : 0) || RANK[b.status] - RANK[a.status] || b.seen - a.seen);
   return { friends: list, incoming: (incoming || []).map(nameOf).sort(), outgoing: (outgoing || []).map(nameOf).sort(), max: MAX_FRIENDS, now: Date.now(), gift: await giftInfo(id) };
 }
 
@@ -149,6 +161,7 @@ module.exports = async (req, res) => {
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
     if (body.action === 'list') return send(res, 200, await state(playerId));
     if (body.action === 'gifts') {
+      if (['active', 'afk'].includes(body.presence)) await redis([['HSET', 'presence', playerId, `${Date.now()}:${body.presence}`]]);
       const gifts = await unseenGifts(playerId);
       const [counts] = await redis([['HVALS', unreadKey(playerId)]]);
       return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0) });

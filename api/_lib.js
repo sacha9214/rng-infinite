@@ -461,7 +461,8 @@ async function recordRoll(playerId, n, t) {
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   { const c = require('../js/shop.js').COINS[a.tier] || 0; writes.push(...eco('in:rolls', c, t));
     // Weekend Rush : la même somme une deuxième fois, en bonus (le solde des tirages se calcule sur les compteurs de rareté).
-    if (c && Events.rush(t)) writes.push(['HINCRBY', statsKey(playerId), 'bonus', c], ...eco('in:weekend', c, t)); }
+    // rushBonus : la part du Weekend Rush dans « bonus » (sert aux tests et aux stats).
+    if (c && Events.rush(t)) writes.push(['HINCRBY', statsKey(playerId), 'bonus', c], ['HINCRBY', statsKey(playerId), 'rushBonus', c], ...eco('in:weekend', c, t)); }
   // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
   { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);

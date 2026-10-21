@@ -342,5 +342,26 @@
     "desc": "Exactly \"852655\", the number from the famous short.",
     "emoji": "📺",
     "score": 100000100
+  },
+  {
+    "id": "VORTROX",
+    "label": "Forty-Nine",
+    "desc": "Contains \"49\", a meme number.",
+    "emoji": "🌀",
+    "score": 2024
+  },
+  {
+    "id": "KINGSAMMELOT",
+    "label": "Double Five",
+    "desc": "Contains \"55\", a meme number.",
+    "emoji": "✋",
+    "score": 2186
+  },
+  {
+    "id": "AK_47",
+    "label": "AK",
+    "desc": "Contains \"47\".",
+    "emoji": "🎯",
+    "score": 2024
   }
 ]

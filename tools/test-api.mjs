@@ -902,7 +902,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.settled, 'paid');
   assert.ok(!JSON.stringify(r.body).includes(w1.playerId) && !JSON.stringify(r.body).includes(w2.playerId), 'aucun id dans la salle');
   // Chacun a aussi gagné des pièces avec ses tirages du duel : on compare hors tirages (bonus − spent).
-  const net = who => { const [b, s2] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent']]).map(x => Number(x.result) || 0); return b - s2; };
+  // Hors Weekend Rush aussi : l'horloge des tests avance de plusieurs jours et peut tomber un samedi.
+  const net = who => { const [b, s2, rush] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent'], ['HGET', `stats:${who.playerId}`, 'rushBonus']]).map(x => Number(x.result) || 0); return b - s2 - rush; };
   assert.equal(net(stakedWinner), 2000 + 100, 'le gagnant récupère sa mise et prend celle de l\'autre');
   assert.equal(net(stakedLoser), 2000 - 100, 'le perdant perd sa mise');
   assert.equal(net(w1) + net(w2), 4000, 'aucune pièce créée ni détruite');
@@ -2396,6 +2397,15 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(x.body.reports.find(r => r.id === dm.id).done, true);
     run([['HDEL', `stats:${cid.playerId}`, 'owner']]);
   }
+  // Présence (2026-10-21) : hors ligne sans signal, puis AFK, puis en ligne ; un signal trop vieux redevient hors ligne.
+  {
+    const status = async () => (await fr(ann, 'list')).body.friends.find(f => f.name === 'Benny').status;
+    assert.equal(await status(), 'offline');
+    await fr(ben, 'gifts', undefined, { presence: 'afk' }); assert.equal(await status(), 'afk');
+    await fr(ben, 'gifts', undefined, { presence: 'active' }); assert.equal(await status(), 'online');
+    run([['HSET', 'presence', ben.playerId, `${Date.now() - 200000}:active`]]); assert.equal(await status(), 'offline', 'signal trop vieux');
+    await fr(ben, 'gifts', undefined, { presence: 'hacker' }); assert.equal(await status(), 'offline', 'état inconnu ignoré');
+  }
   // Un tiers ne lit rien et ne peut pas écrire.
   assert.equal((await fr(cid, 'message', 'Annie', { text: 'yo' })).status, 403);
   assert.deepEqual((await fr(cid, 'messages', 'Annie')).body.messages, []);
@@ -2893,6 +2903,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const pid = i => (`7e${String(i).padStart(2, '0')}`).repeat(4);
   const sec = i => (`5${String(i).padStart(2, '0')}`).repeat(11).slice(0, 32);
   const mk = (i, rolls = 40) => { const id = pid(i); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(sec(i)).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', 'rolls', rolls], ['HSET', 'names', id, `Tn${i}`]]); return id; };
+  // La vue ne donne que des jetons opaques (jamais d'identifiant) : les tests les retraduisent en identifiants connus.
+  const tokOf = id => crypto.createHash('sha256').update(`tn:${DAY}:${id}`).digest('hex').slice(0, 12);
+  const untok = k => { for (let i = 0; i < 100; i++) if (tokOf(pid(i)) === k) return pid(i); return k; };
+  const de = v => JSON.parse(JSON.stringify(v), (k, val) => ((k === 'id' || k === 'w') && typeof val === 'string' ? untok(val) : val));
+  const viewD = async (...a) => de(await TN.view(...a));
   const refused = async (p, status, re) => { await assert.rejects(p, e => e.status === status && (!re || re.test(e.message)), `attendu ${status}`); };
 
   // Tirage du tableau : taille = puissance de deux ≥ inscrits, un exempt au plus par match, tout le monde placé.
@@ -2928,20 +2943,21 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(pub.status, 200); assert.equal(pub.body.joined, false);
   const bad = await call(roomApi, { method: 'POST', body: { action: 'tourney', op: 'join', playerId: ids[0], secret: '0'.repeat(32) } });
   assert.equal(bad.status, 403);
-  let v = await TN.view(DAY, ids[0], T0 + 2 * H);
+  let v = await viewD(DAY, ids[0], T0 + 2 * H);
   assert.equal(v.phase, 'signup'); assert.equal(v.count, 5); assert.equal(v.joined, true);
 
   // Pas de tirage avant le tableau.
   await refused(TN.roll(ids[0], T0 + 2 * H), 422);
 
   // 12:00 : tableau de 8 (3 exempts), 3 tours de 4 h. Le premier à lire le tournoi le tire.
-  v = await TN.view(DAY, null, T0 + 12 * H + 1000);
+  v = await viewD(DAY, null, T0 + 12 * H + 1000);
   assert.equal(v.phase, 'running'); assert.equal(v.size, 8); assert.equal(v.rounds.length, 3); assert.equal(v.round, 0);
   assert.equal(v.rounds[0].end - v.rounds[0].start, 4 * H);
   assert.equal(v.rounds[0].matches.filter(m => m.bye).length, 3);
-  const again = await TN.view(DAY, null, T0 + 12 * H + 2000);
+  const again = await viewD(DAY, null, T0 + 12 * H + 2000);
   assert.deepEqual(again.rounds[0].matches.map(m => [m.a && m.a.id, m.b && m.b.id]), v.rounds[0].matches.map(m => [m.a && m.a.id, m.b && m.b.id]), 'tableau tiré une seule fois');
   await refused(TN.signup(mk(6), T0 + 12 * H + 3000), 422, /closed/);
+  { const raw = JSON.stringify(await TN.view(DAY, pid(0), T0 + 12 * H + 2000)); assert.ok(![0, 1, 2, 3, 4, 5].some(i => raw.includes(pid(i))), 'aucun identifiant dans la vue du tournoi'); }
 
   // Le seul vrai match du 1er tour (5 inscrits sur 8 places).
   const real = v.rounds[0].matches.find(m => !m.bye), [pa, pb] = [real.a.id, real.b.id];
@@ -2961,23 +2977,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // Anti-sniping : pb n'a pas fini → ses tirages et ceux de pa sont cachés au public ; pa (fini) voit ceux de pb ;
   // pb ne voit pas ceux de pa.
-  const pubNow = await TN.view(DAY, null, t + 100), pm = pubNow.rounds[0].matches.find(m => !m.bye);
+  const pubNow = await viewD(DAY, null, t + 100), pm = pubNow.rounds[0].matches.find(m => !m.bye);
   assert.equal(pm.a.total, undefined); assert.equal(pm.b.total, undefined); assert.ok(pm.a.count + pm.b.count === 6);
-  const va = await TN.view(DAY, pa, t + 100), vb = await TN.view(DAY, pb, t + 100);
+  const va = await viewD(DAY, pa, t + 100), vb = await viewD(DAY, pb, t + 100);
   assert.equal(va.match.me.count, 5); assert.ok(Array.isArray(va.match.opp.rolls), 'fini : voit l\'adversaire');
   assert.equal(vb.match.opp.rolls, undefined, 'pas fini : adversaire caché'); assert.equal(vb.match.opp.count, 5);
   // Les 5 dernières secondes du tour : plus de tirage.
   await refused(TN.roll(pb, T0 + 16 * H - 1000), 422, /over/);
   // pb ne finit pas : il perd. Tour 2 (16:00-20:00) lu à 16:00 pile.
-  v = await TN.view(DAY, pa, T0 + 16 * H);
+  v = await viewD(DAY, pa, T0 + 16 * H);
   assert.equal(v.round, 1); assert.equal(v.rounds[0].matches.find(m => !m.bye).w, pa, 'forfait : pa passe');
   assert.equal(v.match.round, 1); assert.equal(v.match.live, true);
-  const vpb = await TN.view(DAY, pb, T0 + 16 * H); assert.equal(vpb.match.result, 'lost');
+  const vpb = await viewD(DAY, pb, T0 + 16 * H); assert.equal(vpb.match.result, 'lost');
 
   // Tour 2 : pa joue, son adversaire non ; l'autre demi-finale : personne ne joue (tirage au sort).
   for (let k = 0; k < 5; k++) { db.delete(`tnlock:${pa}`); await TN.roll(pa, T0 + 17 * H + k); }
   // Finale (20:00-24:00) : personne ne joue sauf l'adversaire de pa → pa perd en finale.
-  v = await TN.view(DAY, null, T0 + 20 * H);
+  v = await viewD(DAY, null, T0 + 20 * H);
   assert.equal(v.round, 2);
   const fin = v.rounds[2].matches[0], other = fin.a.id === pa ? fin.b.id : fin.a.id;
   assert.ok([fin.a.id, fin.b.id].includes(pa));
@@ -2992,7 +3008,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const out = await TN.handle({ op: 'view' }, T0 + 24 * H + 5000);
   assert.equal(out.day, '2030-01-16'); assert.equal(out.prev.champion, db.get('names').get(other));
   await TN.advance(DAY, T0 + 25 * H); await TN.tick(T0 + 26 * H); // relu plusieurs fois
-  const done = await TN.view(DAY, null, T0 + 27 * H);
+  const done = await viewD(DAY, null, T0 + 27 * H);
   assert.equal(done.phase, 'done'); assert.equal(done.result.champion.id, other); assert.equal(done.result.finalist.id, pa);
   assert.deepEqual(done.result.semis.map(s => s.id).sort(), semis.sort());
   assert.equal(await bonusOf(other) - b0[other], 1000); assert.equal(await bonusOf(pa) - b0[pa], 400);
@@ -3008,12 +3024,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Moins de 4 inscrits : annulé, rien versé. Et le 33e est refusé.
   const D2 = '2030-02-01', T2 = Date.parse(`${D2}T00:00:00Z`);
   for (const i of [1, 2, 3]) await TN.signup(pid(i), T2 + H);
-  const c = await TN.view(D2, null, T2 + 13 * H); assert.equal(c.phase, 'cancelled'); assert.equal(c.size, 0);
+  const c = await viewD(D2, null, T2 + 13 * H); assert.equal(c.phase, 'cancelled'); assert.equal(c.size, 0);
   await refused(TN.roll(pid(1), T2 + 13 * H), 422);
   const D3 = '2030-03-01', T3 = Date.parse(`${D3}T00:00:00Z`);
   for (let i = 0; i < 32; i++) await TN.signup(mk(10 + i), T3 + H + i);
   await refused(TN.signup(mk(50), T3 + 2 * H), 422, /full/);
-  const big = await TN.view(D3, null, T3 + 12 * H);
+  const big = await viewD(D3, null, T3 + 12 * H);
   assert.equal(big.size, 32); assert.equal(big.rounds.length, 5); assert.equal(big.rounds[0].matches.filter(m => m.bye).length, 0);
   assert.equal(big.rounds[4].end, T3 + 24 * H, 'fini à minuit');
 }
