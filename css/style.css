@@ -4605,6 +4605,135 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes lab-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg); } }
 .room-stage.many .side-lab::before, .room-stage.many .side-lab::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-lab::before, .side-lab::after { animation: none; } }
+/* ------------------------------------------------------------------ Sonic Wave (idée de Matthew, 2026-10-21) : l'écran
+   d'un oscilloscope. Grille fine, onde qui court au milieu, barres d'égaliseur en bas ; les chiffres sont des traces
+   lumineuses cyan, dédoublées en rose et bleu comme un signal saturé. En tirage ils vibrent sur la fréquence ; quand
+   ils se posent, une onde de choc part du chiffre (le « boum » du son). L'onde vivante et les grands anneaux de la fin
+   sont dessinés par js/skinfx.js (SCENES.sonic), plus forts dès Mythic. Matière : de la lumière, pas d'écrasement. */
+.num-card.skin-sonic {
+  background:
+    /* égaliseur en bas : des barres de hauteurs différentes */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='40'><g fill='%2322d3ee' fill-opacity='.2'><rect x='1' y='24' width='6' height='16'/><rect x='9' y='12' width='6' height='28'/><rect x='17' y='30' width='6' height='10'/><rect x='25' y='18' width='6' height='22'/><rect x='33' y='6' width='6' height='34'/><rect x='41' y='26' width='6' height='14'/><rect x='49' y='16' width='6' height='24'/><rect x='57' y='32' width='6' height='8'/><rect x='65' y='10' width='6' height='30'/><rect x='73' y='22' width='6' height='18'/><rect x='81' y='28' width='6' height='12'/><rect x='89' y='14' width='6' height='26'/></g></svg>") 0 100% / 2.4em 1em repeat-x,
+    /* deux ondes au repos, rose et cyan, décalées */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='40'><path d='M0 20 Q12.5 4 25 20 T50 20 T75 20 T100 20 T125 20 T150 20 T175 20 T200 20' fill='none' stroke='%23e879f9' stroke-opacity='.3' stroke-width='1.4'/><path d='M0 20 Q25 34 50 20 T100 20 T150 20 T200 20' fill='none' stroke='%2367e8f9' stroke-opacity='.38' stroke-width='1.6'/></svg>") 0 50% / 5em 1em repeat-x,
+    /* grille de l'oscilloscope */
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, .08) 0 1px, transparent 1px .45em),
+    repeating-linear-gradient(90deg, rgba(34, 211, 238, .08) 0 1px, transparent 1px .45em),
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(56, 189, 248, .2), transparent 70%),
+    linear-gradient(180deg, #050816 0%, #0a1033 55%, #150a2e 100%);
+  border: 2px solid #155e75; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, .28), inset 0 0 1.2em rgba(2, 6, 23, .8), 0 0 16px rgba(34, 211, 238, .28), 0 10px 20px rgba(0, 0, 0, .5);
+}
+.skin-sonic .slot { position: relative; z-index: 1; font-weight: 900; color: #ecfeff;
+  text-shadow: -.035em 0 0 rgba(236, 72, 153, .8), .035em 0 0 rgba(34, 211, 238, .9), 0 0 .2em #22d3ee, 0 0 .5em rgba(34, 211, 238, .35), 0 .05em .04em #020617; }
+.skin-sonic .slot.ghost { opacity: .2; }
+/* l'onde de choc : un anneau invisible au repos, il part du chiffre quand celui-ci se pose */
+.skin-sonic .slot::after { content: ''; position: absolute; left: 50%; top: 52%; width: 1em; height: 1em; margin: -.5em 0 0 -.5em; border-radius: 50%; pointer-events: none; opacity: 0;
+  border: .07em solid #a5f3fc; box-shadow: 0 0 .18em #22d3ee, inset 0 0 .16em #e879f9; }
+.skin-sonic .slot.ghost::after { display: none; }
+/* en tirage : le chiffre vibre sur la fréquence, le signal se dédouble davantage */
+.skin-sonic .slot.spinning { opacity: .85; animation: son-buzz .08s linear infinite alternate; }
+@keyframes son-buzz {
+  0% { transform: translate(-.04em, .01em) scale(1, .93); text-shadow: -.12em 0 0 rgba(236, 72, 153, .75), .12em 0 0 rgba(34, 211, 238, .85), 0 0 .3em #22d3ee; }
+  100% { transform: translate(.04em, -.02em) scale(1, 1.08); text-shadow: -.05em 0 0 rgba(236, 72, 153, .75), .05em 0 0 rgba(34, 211, 238, .85), 0 0 .2em #22d3ee; }
+}
+/* il se pose : le signal se tasse (élan), claque en blanc, puis la vibration s'amortit ; l'anneau part en même temps */
+.skin-sonic .slot.revealed { animation: son-boom .66s cubic-bezier(.2, .8, .3, 1) backwards; }
+.skin-sonic .slot.revealed::after { animation: son-ring .66s cubic-bezier(.1, .7, .3, 1) backwards; }
+@keyframes son-boom {
+  0% { transform: scale(.8, .6); filter: brightness(.6); }
+  16% { transform: scale(1.2); filter: brightness(1.7); }
+  30% { transform: translateY(-.05em) scale(1.02); }
+  44% { transform: translateY(.04em); filter: brightness(1.3); }
+  58% { transform: translateY(-.025em); }
+  74% { transform: translateY(.012em); }
+  100% { transform: none; filter: none; }
+}
+@keyframes son-ring { 0%, 10% { opacity: 0; transform: scale(.3); } 18% { opacity: 1; transform: scale(.55); } 100% { opacity: 0; transform: scale(2.8); border-width: .01em; } }
+.skin-sonic .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-sonic .slot.collapsed::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .skin-sonic .slot, .skin-sonic .slot::after { animation: none; } }
+/* Cadre de duel : un écran d'oscilloscope ; le haut-parleur bat la mesure, le casque oscille. */
+.side-sonic { --side-border: #22d3ee; --side-glow: 0 0 16px rgba(34, 211, 238, .38); --side-ink: #0891b2;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='40'><path d='M0 20 Q12.5 4 25 20 T50 20 T75 20 T100 20 T125 20 T150 20 T175 20 T200 20' fill='none' stroke='%2322d3ee' stroke-opacity='.22' stroke-width='1.4'/></svg>") 0 85% / 120px 24px repeat-x, repeating-linear-gradient(0deg, rgba(34, 211, 238, .07) 0 1px, transparent 1px 12px), repeating-linear-gradient(90deg, rgba(34, 211, 238, .07) 0 1px, transparent 1px 12px), radial-gradient(ellipse 80% 60% at 50% 35%, rgba(168, 85, 247, .14), transparent 70%);
+  --deco-a: '🔊'; --deco-b: '🎧 〰️'; }
+.side-sonic::before { font-size: 1.15rem; animation: son-thump 1.6s ease-out infinite; }
+.side-sonic::after { transform-origin: 50% 80%; animation: son-sway 2.4s ease-in-out infinite; }
+@keyframes son-thump { 0%, 30%, 60%, 100% { transform: none; } 8% { transform: scale(1.22); } 38% { transform: scale(1.14); } }
+@keyframes son-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.room-stage.many .side-sonic::before, .room-stage.many .side-sonic::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-sonic::before, .side-sonic::after { animation: none; } }
+
+/* ------------------------------------------------------------------ UFO (idée de JBearr12, 2026-10-21) : un champ la
+   nuit, ciel étoilé, lune, herbe au premier plan. Une petite soucoupe (dessinée par js/skinfx.js, SCENES.ufo) survole
+   la carte : pendant le tirage son rayon tracteur clignote sur chaque chiffre, qui flotte dedans, flou et pâle ; quand
+   il se pose, le rayon s'allume en grand, le chiffre descend et atterrit dans l'herbe (petit rebond rigide, nuage de
+   poussière). À la fin, la soucoupe file. Sans canevas (classements, profils), une soucoupe fixe reste dans le coin. */
+.num-card.skin-ufo {
+  background:
+    /* herbe : des brins en dents de scie, deux verts */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='20'><path d='M0 20 L3 8 L5 20 L8 4 L11 20 L13 10 L16 20 L19 6 L22 20 L25 11 L27 20 L30 3 L33 20 L36 9 L38 20 L41 5 L44 20 L47 10 L49 20 L52 6 L55 20 L57 9 L60 20 Z' fill='%2316a34a'/><path d='M1 20 L5 12 L7 20 L12 13 L14 20 L20 11 L23 20 L28 14 L31 20 L37 12 L40 20 L45 13 L48 20 L53 11 L56 20 Z' fill='%2322c55e'/></svg>") 0 100% / 2.4em .55em repeat-x,
+    linear-gradient(0deg, #14532d 0 .3em, transparent .3em),
+    /* lune et étoiles */
+    radial-gradient(circle at 90% 20%, #fefce8 0 .16em, rgba(254, 249, 195, .28) .2em, transparent .55em),
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 30% 34%, #e0f2fe, transparent), radial-gradient(1.2px 1.2px at 52% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 68% 30%, #fff, transparent), radial-gradient(1px 1px at 78% 8%, #bbf7d0, transparent), radial-gradient(1px 1px at 6% 46%, #fff, transparent),
+    /* lueur verte au-dessus du champ */
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(163, 230, 53, .22), transparent 70%),
+    linear-gradient(180deg, #060a1f 0%, #121a45 58%, #1d3a3a 100%);
+  border: 2px solid #1e293b; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(190, 242, 100, .22), 0 0 16px rgba(132, 204, 22, .22), 0 10px 20px rgba(0, 0, 0, .5);
+}
+/* la soucoupe fixe du coin, seulement quand aucune scène ne la dessine */
+.num-card.skin-ufo:not(.has-fx)::before { content: ''; position: absolute; left: 3%; top: 5%; width: .62em; height: .34em; pointer-events: none; z-index: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='24'><ellipse cx='22' cy='9' rx='8' ry='7' fill='%2367e8f9' fill-opacity='.75'/><ellipse cx='22' cy='14' rx='21' ry='6' fill='%23cbd5e1'/><ellipse cx='22' cy='13' rx='21' ry='3' fill='%23f8fafc'/><circle cx='10' cy='15' r='1.6' fill='%23a3e635'/><circle cx='22' cy='17' r='1.6' fill='%23facc15'/><circle cx='34' cy='15' r='1.6' fill='%23a3e635'/></svg>") center / contain no-repeat; opacity: .8; }
+.skin-ufo .slot { position: relative; z-index: 1; font-weight: 900; color: #f7fee7;
+  -webkit-text-stroke: .025em #14532d; text-shadow: 0 0 .14em rgba(190, 242, 100, .85), 0 0 .4em rgba(132, 204, 22, .35), 0 .06em .03em #052e16; }
+.skin-ufo .slot.ghost { opacity: .22; }
+/* le rayon tracteur : un cône de lumière verte qui descend du haut de la carte jusqu'au chiffre, éteint au repos */
+.skin-ufo .slot::before { content: ''; position: absolute; left: -.22em; right: -.22em; top: -1.2em; bottom: -.05em; z-index: -1; pointer-events: none; opacity: 0;
+  clip-path: polygon(36% 0, 64% 0, 100% 100%, 0 100%);
+  background: linear-gradient(90deg, transparent 8%, rgba(217, 249, 157, .25) 50%, transparent 92%), linear-gradient(180deg, rgba(132, 204, 22, .08), rgba(132, 204, 22, .4) 75%, rgba(163, 230, 53, .55)); }
+/* la poussière de l'atterrissage, au pied du chiffre */
+.skin-ufo .slot::after { content: ''; position: absolute; left: -.25em; right: -.25em; bottom: -.08em; height: .35em; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse 50% 50% at 50% 60%, rgba(236, 252, 203, .85), rgba(134, 239, 172, .4) 55%, transparent 72%); }
+.skin-ufo .slot.ghost::before, .skin-ufo .slot.ghost::after { display: none; }
+/* en tirage : le chiffre flotte dans le rayon qui grésille, pâle et flou, comme pas encore matérialisé */
+.skin-ufo .slot.spinning { color: #d9f99d; animation: ufo-float .5s ease-in-out infinite alternate; }
+.skin-ufo .slot.spinning::before { animation: ufo-flicker .18s steps(2) infinite; }
+@keyframes ufo-float {
+  from { transform: translateY(-.14em) rotate(-4deg); opacity: .7; filter: blur(.5px); }
+  to { transform: translateY(-.26em) rotate(4deg); opacity: .92; filter: blur(.1px); }
+}
+@keyframes ufo-flicker { 0% { opacity: .25; } 50% { opacity: .55; } 100% { opacity: .35; } }
+/* il est déposé : le rayon s'allume en grand, le chiffre descend du haut, touche l'herbe, rebondit un peu ; le rayon
+   s'éteint et un petit nuage de poussière se soulève */
+.skin-ufo .slot.revealed { animation: ufo-drop .7s cubic-bezier(.3, .7, .4, 1) backwards; }
+.skin-ufo .slot.revealed::before { animation: ufo-beam .7s ease-out backwards; }
+.skin-ufo .slot.revealed::after { animation: ufo-dust .7s ease-out backwards; }
+@keyframes ufo-drop {
+  0% { transform: translateY(-.6em) scale(.7); filter: brightness(1.8) blur(.8px); }
+  42% { transform: translateY(.05em) scale(1); filter: brightness(1.6); animation-timing-function: ease-out; }
+  58% { transform: translateY(-.12em); }
+  74% { transform: translateY(0); animation-timing-function: ease-out; }
+  86% { transform: translateY(-.03em); }
+  100% { transform: none; filter: none; }
+}
+@keyframes ufo-beam { 0% { opacity: .8; } 45% { opacity: .65; } 100% { opacity: 0; } }
+@keyframes ufo-dust { 0%, 38% { opacity: 0; transform: scale(.4, .6); } 52% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5, 1.1) translateY(-.06em); } }
+.skin-ufo .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-ufo .slot.collapsed::before, .skin-ufo .slot.collapsed::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .skin-ufo .slot, .skin-ufo .slot::before, .skin-ufo .slot::after { animation: none; } }
+/* Cadre de duel : un champ la nuit ; la soucoupe tangue en vol, la vache broute (et lève la tête de temps en temps). */
+.side-ufo { --side-border: #84cc16; --side-glow: 0 0 16px rgba(132, 204, 22, .35); --side-ink: #65a30d;
+  --side-bg: linear-gradient(180deg, transparent 78%, rgba(22, 163, 74, .26) 78.5%), radial-gradient(ellipse 30% 70% at 50% 20%, rgba(190, 242, 100, .12), transparent 70%), radial-gradient(1px 1px at 15% 20%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 70% 12%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 88% 40%, rgba(255, 255, 255, .6), transparent), linear-gradient(180deg, rgba(18, 26, 69, .45), transparent 80%);
+  --deco-a: '🛸'; --deco-b: '🐄 🌾'; }
+.side-ufo::before { font-size: 1.15rem; animation: ufo-hover 2.2s ease-in-out infinite; }
+.side-ufo::after { transform-origin: 30% 100%; animation: ufo-graze 3s ease-in-out infinite; }
+@keyframes ufo-hover { 0%, 100% { transform: translate(0, 0) rotate(-6deg); } 50% { transform: translate(3px, -3px) rotate(6deg); } }
+@keyframes ufo-graze { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-7deg) translateY(-1px); } }
+.room-stage.many .side-ufo::before, .room-stage.many .side-ufo::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-ufo::before, .side-ufo::after { animation: none; } }
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }
