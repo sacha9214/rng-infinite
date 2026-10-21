@@ -815,3 +815,7 @@
 /* Cursed Energy (idée d'Edward, 2026-10-20) : nuit violette, énergie qui remonte du bas, liseré d'aura. */
 .btn-roll.gen-cursed { border: 2px solid #6d28d9; border-radius: .6em; color: #ede9fe; background: radial-gradient(ellipse 70% 80% at 50% 130%, rgba(129, 140, 248, .6), transparent 70%), radial-gradient(ellipse 40% 60% at 15% 0%, rgba(168, 85, 247, .35), transparent 70%), linear-gradient(180deg, #1e1048, #0b0820); text-shadow: 0 0 .35em #a78bfa, 0 1px 0 #0a0518;
   --gs: 0 .3em 0 #1e1048, 0 .5em 1em rgba(124, 58, 237, .4); --gs-h: 0 .34em 0 #1e1048, 0 .7em 1.4em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #1e1048; }
+/* Marshmallow (idée de DandoriNinja, 2026-10-21) : une grosse guimauve rose poudrée, ciel pastel au-dessus. */
+.btn-roll.gen-marsh { border: 2px solid #f472b6; border-radius: 999px; color: #9d174d; background: radial-gradient(circle at 25% 30%, rgba(255, 255, 255, .7) 0 .08em, transparent .1em) 0 0 / 1.1em .9em, radial-gradient(ellipse 70% 55% at 50% 0%, #fff, transparent 75%), linear-gradient(180deg, #fff1f7, #fbcfe8 60%, #f5b4d3); text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #db7aa6, 0 .5em 1em rgba(244, 114, 182, .3); --gs-h: 0 .34em 0 #db7aa6, 0 .7em 1.3em rgba(196, 181, 253, .5); --gs-a: 0 .06em 0 #db7aa6; }
+.btn-roll.gen-marsh:active { transform: translateY(.22em) scale(1.05, .88); }
