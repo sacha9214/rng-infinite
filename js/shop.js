@@ -117,6 +117,9 @@
     { id: 'starter', name: 'Starter Case', emoji: '📦', price: 250, desc: 'A skin worth 200 to 800 coins', min: 200, max: 800 },
     { id: 'premium', name: 'Premium Case', emoji: '🎁', price: 900, desc: 'A skin worth 800 to 5,000 coins, or the rare Infinity', min: 800, max: 5000 },
     { id: 'elite', name: 'Elite Case', emoji: '💎', price: 1800, desc: 'Only skins worth 1,500 to 5,000 coins', min: 1500, max: 5000 }, // 2026-10-16
+    // Idée de CrazyMiner22 (2026-10-21) : une caisse qui donne un fond d'écran (wall: true) au lieu d'un skin. Les fonds
+    // normaux seulement (ni limités ni légendaires), poids 1 / prix comme les skins : valeur moyenne d'un tirage ≈ 812, caisse à 600 (0,74 : entre la Starter 0,70 et l'Elite 0,78).
+    { id: 'wallpaper', name: 'Wallpaper Case', emoji: '🖼️', price: 600, desc: 'An animated wallpaper worth 500 to 1,200 coins', wall: true },
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
   // Fonds d'écran animés (idée de MAYO, 2026-10-16) : changent tout l'arrière-plan du site, pour soi seul.
@@ -142,12 +145,15 @@
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
-  const caseOnly = c => SKINS.filter(s => s.caseOnly === c.id);
-  const casePool = c => SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
+  const caseOnly = c => (c.wall ? [] : SKINS.filter(s => s.caseOnly === c.id));
+  // Ce qu'une caisse donne : un skin, ou un fond d'écran pour la caisse de fonds (des identifiants existent dans les deux
+  // listes, comme galaxy ou sakura : toujours passer par la caisse).
+  const caseItem = (c, id) => (c && c.wall ? wallById : byId).get(id);
+  const casePool = c => c.wall ? WALLPAPERS.filter(w => !w.until && !w.premium).sort((a, b) => a.price - b.price) : SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
   // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
   const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };
-  const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(rarityOf(skinId) || RARITIES[0]).id] || .5));
+  const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(rarityOf(skinId, c.wall) || RARITIES[0]).id] || .5));
   // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
   // viennent en dernier (les plus rares).
   function caseOdds(c) {
@@ -172,7 +178,15 @@
     { id: 'red', name: 'Epic', max: 2500, color: '#eb4b4b' },
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
-  const rarityOf = id => RARITIES.find(r => (byId.get(id) || { price: 0 }).price <= r.max);
+  const rarityOf = (id, wall) => (wall ? WALL_RARITIES : RARITIES).find(r => ((wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
+  // Fonds d'écran : mêmes couleurs, paliers resserrés sur leurs prix (500 à 1 200).
+  const WALL_RARITIES = [
+    { id: 'blue', name: 'Common', max: 600, color: '#4b69ff' },
+    { id: 'purple', name: 'Uncommon', max: 800, color: '#8847ff' },
+    { id: 'pink', name: 'Rare', max: 1000, color: '#d32ce6' },
+    { id: 'red', name: 'Epic', max: 1500, color: '#eb4b4b' },
+    { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
+  ];
 
   // Apparence du bouton qui lance un tirage (« Generate », « Roll again », « Roll round » en duel). Chaque skin de
   // nombre apporte le bouton assorti (même identifiant) ; ceux-ci se vendent à part et ne changent que le bouton.
@@ -227,7 +241,7 @@
 
   // Collection complète (titre Collectible Connoisseur, idée de kaz, 2026-10-20) : tous les skins sauf les limités.
   const collectible = () => SKINS.filter(k => !k.until).map(k => k.id);
-  const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,6 +1,6 @@
 // GET  /api/shop?me=<playerId>                                   → pièces, skins possédés, skin équipé
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
-// POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin tiré par le serveur)
+// POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin, ou fond d'écran, tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
@@ -120,12 +120,13 @@ module.exports = async (req, res) => {
           price = 0;
         } else if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
-        const duplicate = st.owned.includes(won);
+        // Caisse de fonds d'écran (idée de CrazyMiner22) : le fond gagné rejoint walls:<id>, comme un achat (buywall).
+        const duplicate = (box.wall ? st.walls : st.owned).includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
-        if (!duplicate) writes.push(['SADD', ownedKey(playerId), won]);
+        if (!duplicate) writes.push(['SADD', box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
         await redis(writes);
-        if (!duplicate) await checkCollection(playerId);
+        if (!duplicate && !box.wall) await checkCollection(playerId);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

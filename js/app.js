@@ -3185,18 +3185,21 @@
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
-            const odds = Shop.caseOdds(c).map(o => `<span style="color:${Shop.rarityOf(o.id).color}">■</span> ${Shop.byId.get(o.id).emoji} ${Shop.byId.get(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
+            // Caisse de fonds d'écran : ses lots se cherchent dans les fonds (Shop.caseItem), avec leurs propres raretés.
+            const item = id => Shop.caseItem(c, id), rar = id => Shop.rarityOf(id, c.wall);
+            const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
             return `
             <div class="case-tile">
               <div class="case-box" aria-hidden="true">${c.emoji}</div>
               <div class="skin-name"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></div>
-              <div class="case-contents" aria-hidden="true">${Shop.caseOdds(c).map(o => `<i style="--rar:${Shop.rarityOf(o.id).color}" title="${esc(Shop.byId.get(o.id).name)}"></i>`).join('')}</div>
+              <div class="case-contents" aria-hidden="true">${Shop.caseOdds(c).map(o => `<i style="--rar:${rar(o.id).color}" title="${esc(item(o.id).name)}"></i>`).join('')}</div>
               <span class="case-odds" data-tip="${esc(`<b>${c.name} odds</b><br>${odds}`)}">Odds ⓘ</span>
               <button class="btn" data-case="${c.id}">🪙 ${fmt(c.price)}</button>
               <button class="btn-roll small case-free" data-case-free="${c.id}" hidden>🔑 Open free</button>
             </div>`;
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -4716,10 +4719,14 @@
     // Juste après le skin gagné, un skin rare : le « presque » qui fait retenir son souffle.
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
-    const won = Shop.byId.get(result.won), rarity = Shop.rarityOf(won.id);
+    // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
+    const wall = !!box.wall;
+    const won = Shop.caseItem(box, result.won), rarity = Shop.rarityOf(won.id, wall);
+    const look = (id, size) => wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
+      : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
-      const k = Shop.byId.get(id), r = Shop.rarityOf(id);
-      return `<div class="case-cell" style="--rar:${r.color}"><div class="num-card sm${skinClass(id)}" data-tier="rare">${slotsHTML('777')}</div><span>${k.emoji} ${esc(k.name)}</span></div>`;
+      const k = Shop.caseItem(box, id), r = Shop.rarityOf(id, wall);
+      return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji} ${esc(k.name)}</span></div>`;
     };
     openModal(`
       <div class="case-open" style="--rar:${rarity.color}">
@@ -4729,10 +4736,10 @@
         <div class="case-result" id="case-result" hidden>
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
-          <div class="num-card md${skinClass(won.id)}" data-tier="${result.duplicate ? 'common' : 'epic'}">${slotsHTML('235711')}</div>
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : 'new skin unlocked!'}</p>
+          ${look(won.id, 'md')}
+          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
-            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">Equip</button>`}
+            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
           </div>
         </div>
@@ -4759,7 +4766,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -4787,7 +4794,11 @@
       }
       const equip = $('#case-equip');
       if (equip) equip.addEventListener('click', async () => {
-        try { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); closeModal(); } catch (err) { toast('Shop unavailable right now, try again'); }
+        try {
+          if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
+          else { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); }
+          closeModal();
+        } catch (err) { toast('Shop unavailable right now, try again'); }
       });
       $('#case-again').addEventListener('click', () => { closeModal(); openCase(box, result, btn); });
     });
