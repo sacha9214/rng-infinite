@@ -4859,6 +4859,97 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes ufo-graze { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-7deg) translateY(-1px); } }
 .room-stage.many .side-ufo::before, .room-stage.many .side-ufo::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-ufo::before, .side-ufo::after { animation: none; } }
+/* ------------------------------------------------------------------ Blinds (idée de costoroll, 2026-10-21) : la fenêtre
+   d'une maison, cadre en bois beige, avec vue sur le jardin (ciel, soleil, palissade, pelouse). Chaque chiffre a sa
+   vitre et son store vénitien (lames rigides). Pendant le tirage, les lames sont fermées et l'ombre du chiffre grésille
+   dessus ; quand il se pose, les lames pivotent d'un coup sec (léger dépassement, pas d'écrasement : c'est rigide) et
+   le chiffre s'allume en jaune néon. Dès Mythic, js/skinfx.js (SCENES.blinds) couche le soleil et fait lever la lune.
+   --bl-o : épaisseur apparente des lames (1 = fermées, ~.2 = ouvertes, vues de la tranche). */
+@property --bl-o { syntax: '<number>'; inherits: false; initial-value: .15; }
+.num-card.skin-blinds {
+  background:
+    /* pelouse */
+    linear-gradient(180deg, transparent 84%, #4d7c0f 84%, #3f6212 100%),
+    /* palissade : des planches blanches à pointe, devant la pelouse */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='24'><path d='M2 24V6l4-5 4 5v18z' fill='%23f5f0e1'/><path d='M12 24V6l4-5 4 5v18z' fill='%23e7dfc8'/><rect y='10' width='20' height='2' fill='%23d6cbb0'/><rect y='18' width='20' height='2' fill='%23d6cbb0'/></svg>") 0 86% / .5em .6em repeat-x,
+    /* arbre du voisin, en masse sombre à gauche */
+    radial-gradient(ellipse 14% 26% at 9% 66%, #3f6212 0 60%, transparent 63%),
+    radial-gradient(ellipse 10% 20% at 17% 70%, #4d7c0f 0 60%, transparent 63%),
+    /* le soleil et son halo */
+    radial-gradient(circle at 80% 30%, #fffbeb 0 .16em, #fde68a .19em, rgba(253, 224, 71, .45) .26em, rgba(253, 186, 116, .12) .7em, transparent 1.1em),
+    /* ciel de fin d'après-midi : bleu profond en haut, chaud vers l'horizon */
+    linear-gradient(180deg, #1d4ed8 0%, #3b82f6 38%, #93c5fd 66%, #fde3b0 80%);
+  /* le cadre de la fenêtre : bois beige, chanfreiné */
+  border: .14em solid #c9a46a; border-top-color: #dfc08c; border-bottom-color: #a4804a; border-radius: .3rem;
+  box-shadow: inset 0 0 0 .05em #8a6a3a, inset 0 .1em .25em rgba(0, 0, 0, .35), 0 0 0 1px #6b4f2a, 0 0 18px rgba(250, 204, 21, .18), 0 10px 20px rgba(0, 0, 0, .45);
+  gap: 0;
+}
+/* sans canevas (classements, profils) : rien de plus, le soleil est déjà dans le fond */
+.skin-blinds .slot {
+  --bl-o: .15;
+  position: relative; z-index: 1; box-sizing: border-box; font-weight: 900; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: .86em; height: 1.22em; margin: 0 -.01em;
+  /* les montants de la fenêtre entre deux vitres */
+  border: .055em solid #c9a46a; border-top-color: #dcbd88; border-bottom-color: #a4804a;
+  /* la vitre : un reflet en biais et une teinte qui assombrit un peu le ciel, pour que le néon ressorte */
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, .16) 38%, transparent 46%), rgba(12, 22, 48, .26);
+  color: #fef08a; -webkit-text-stroke: .02em #713f12;
+  text-shadow: 0 0 .05em #fde047, 0 0 .18em #facc15, 0 0 .42em rgba(250, 204, 21, .55), 0 .03em .02em rgba(66, 32, 6, .7);
+}
+/* le store : boîtier en haut, deux cordons d'échelle, et les lames (épaisseur --bl-o), derrière le chiffre */
+.skin-blinds .slot::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, #e9d3a6 0 .07em, #9c7a45 .07em .09em, transparent .09em),
+    linear-gradient(90deg, transparent 22%, rgba(120, 90, 50, .45) 22% 24%, transparent 24% 76%, rgba(120, 90, 50, .45) 76% 78%, transparent 78%),
+    repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d calc(var(--bl-o) * .15em), rgba(80, 56, 24, .5) calc(var(--bl-o) * .15em), transparent calc(var(--bl-o) * .15em + .012em), transparent .15em);
+  background-position: 0 0, 0 0, 0 .09em; background-repeat: no-repeat, no-repeat, repeat;
+}
+/* zéros de tête : fenêtres aux stores fermés, à peine une ombre derrière */
+.skin-blinds .slot.ghost { opacity: 1; color: rgba(60, 40, 16, .32); -webkit-text-stroke: 0; text-shadow: none; }
+.skin-blinds .slot.ghost::after { --bl-o: 1; }
+/* en tirage : stores fermés, l'ombre du chiffre grésille sur les lames, qui frémissent */
+.skin-blinds .slot.spinning { opacity: 1; color: rgba(48, 30, 10, .5); -webkit-text-stroke: 0; text-shadow: 0 0 .1em rgba(48, 30, 10, .45), 0 0 .2em rgba(48, 30, 10, .25);
+  animation: bl-shadow .2s steps(2) infinite; }
+.skin-blinds .slot.spinning:nth-child(odd) { animation-delay: -.1s; }
+.skin-blinds .slot.spinning::after { --bl-o: 1; animation: bl-shiver .26s steps(2) infinite; }
+/* l'ombre vacille par sa couleur (pas par l'opacité de la case, qui ferait pâlir le store avec elle) */
+@keyframes bl-shadow { 0% { color: rgba(48, 30, 10, .3); transform: translateX(-.02em); } 50% { color: rgba(48, 30, 10, .66); transform: translateX(.02em); } 100% { color: rgba(48, 30, 10, .45); } }
+@keyframes bl-shiver { 50% { transform: translateY(.012em); } }
+/* il se pose : les lames se serrent (anticipation), pivotent d'un coup sec jusqu'à la tranche, dépassent un peu et
+   reviennent ; le néon s'allume en clignotant, comme un tube qui démarre */
+.skin-blinds .slot.revealed { animation: bl-neon .66s linear backwards; }
+.skin-blinds .slot.revealed::after { animation: bl-open .66s linear backwards; }
+@keyframes bl-open {
+  0% { --bl-o: 1; transform: none; }
+  16% { --bl-o: 1; transform: translateY(.025em); animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+  48% { --bl-o: .04; transform: none; animation-timing-function: ease-out; }
+  64% { --bl-o: .32; }
+  80% { --bl-o: .1; }
+  100% { --bl-o: .15; }
+}
+@keyframes bl-neon {
+  0%, 22% { color: rgba(48, 30, 10, .5); -webkit-text-stroke-color: transparent; text-shadow: none; transform: none; }
+  30% { color: #fffbe6; text-shadow: 0 0 .08em #fff, 0 0 .3em #fde047, 0 0 .8em rgba(250, 204, 21, .9); transform: scale(1.06); }
+  36% { color: #a16207; text-shadow: none; transform: scale(1.03); }
+  42% { color: #fffbe6; text-shadow: 0 0 .08em #fff, 0 0 .3em #fde047, 0 0 .7em rgba(250, 204, 21, .85); transform: scale(1.02); }
+  48% { color: #ca8a04; text-shadow: 0 0 .1em #facc15; }
+  56% { color: #fef9c3; text-shadow: 0 0 .06em #fff, 0 0 .24em #fde047, 0 0 .6em rgba(250, 204, 21, .75); transform: none; }
+}
+.skin-blinds .slot.collapsed { width: 0; height: 0; margin: 0; border: 0; padding: 0; box-shadow: none; background: none; }
+.skin-blinds .slot.collapsed::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .skin-blinds .slot, .skin-blinds .slot::after { animation: none; } }
+/* Cadre de duel : un mur de maison en lattes beiges, le soleil de l'après-midi ; le soleil tourne lentement, le
+   tournesol se balance. */
+.side-blinds { --side-border: #c9a46a; --side-glow: 0 0 14px rgba(250, 204, 21, .3); --side-ink: #a16207;
+  --side-bg: radial-gradient(circle at 88% 14%, rgba(253, 224, 71, .35), transparent 22%), repeating-linear-gradient(180deg, rgba(201, 164, 106, .16) 0 .9rem, rgba(120, 86, 40, .2) .9rem calc(.9rem + 1px)), linear-gradient(180deg, transparent 82%, rgba(77, 124, 15, .22) 82.5%);
+  --deco-a: '☀️'; --deco-b: '🪟 🌻'; }
+.side-blinds::before { animation: bl-sun 6s linear infinite; }
+.side-blinds::after { transform-origin: 80% 100%; animation: bl-sway 2.6s ease-in-out infinite; }
+@keyframes bl-sun { to { transform: rotate(360deg); } }
+@keyframes bl-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.room-stage.many .side-blinds::before, .room-stage.many .side-blinds::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-blinds::before, .side-blinds::after { animation: none; } }
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }

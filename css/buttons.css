@@ -864,4 +864,13 @@
   --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(132, 204, 22, .32); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(190, 242, 100, .5); --gs-a: 0 .06em 0 #14532d; }
 .btn-roll.gen-ufo:hover { animation: gen-ufo-beam .5s steps(2) infinite; }
 @keyframes gen-ufo-beam { 50% { filter: brightness(1.18); } }
+/* Blinds (idée de costoroll, 2026-10-21) : un store vénitien beige fermé, texte jaune néon ; au survol, les lames
+   pivotent et laissent voir le ciel bleu derrière. */
+.btn-roll.gen-blinds { border: 2px solid #a4804a; border-radius: .45em; color: #fef08a;
+  background: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .3em, rgba(80, 56, 24, .55) .3em, transparent calc(.3em + 1px), transparent .32em) 0 0 / 100% .32em, linear-gradient(180deg, #2563eb, #93c5fd);
+  text-shadow: 0 0 .25em #facc15, 0 0 .5em rgba(250, 204, 21, .6), 0 0 2px #713f12, 0 1px 0 #713f12;
+  transition: transform .15s ease, box-shadow .15s ease;
+  --gs: 0 .3em 0 #7c5a2c, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #7c5a2c, 0 .7em 1.4em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #7c5a2c; }
+/* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
+.btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }

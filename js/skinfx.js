@@ -2858,6 +2858,85 @@
     };
   };
 
+  // 🪟 Blinds (2026-10-21, idée de costoroll) — la fenêtre donne sur un jardin au soleil (le fond CSS de la carte). À chaque
+  // chiffre posé, la lumière du soleil passe entre les lames : quelques rais jaunes horizontaux filent de part et d'autre
+  // de la case, et une lueur néon s'allume dessus. À la révélation, un reflet de soleil. Dès Mythic, le canevas intérieur
+  // reprend le paysage et le soleil se couche derrière la palissade (le ciel passe à l'orange puis à la nuit), la lune se
+  // lève à gauche avec un halo doux et les étoiles s'allument ; la nuit reste jusqu'au tirage suivant.
+  SCENES.blinds = env => {
+    const { co, ci, w, h, card, dark, q } = env, rays = timed(), glints = timed();
+    const DAY = [[29, 78, 216], [59, 130, 246], [147, 197, 253], [253, 227, 176]];
+    const DUSK = [[67, 56, 202], [190, 75, 120], [249, 115, 22], [253, 186, 116]];
+    const NIGHT = [[3, 7, 30], [15, 23, 66], [30, 41, 95], [55, 48, 107]];
+    const mix = (a, b, k) => a.map((v, i) => Math.round(lerp(v, b[i], k)));
+    const stars = Array.from({ length: Math.round(26 * q) + 6 }, () => ({ x: rnd(w), y: rnd(h * .62), r: rnd(.5, 1.3), ph: rnd(TAU) }));
+    let set = -1, ascend = 0; // set : instant du début du coucher (secondes de la scène), -1 = jour
+    let now = 0;
+    const horizon = h * .84;
+    const fence = (c, shade) => {
+      // palissade et pelouse, redessinées par-dessus le soleil pour qu'il passe derrière
+      const pw = Math.max(5, h * .1), top = h * .62;
+      c.fillStyle = `rgb(${mix([245, 240, 225], [40, 44, 70], shade).join(',')})`;
+      for (let x = -pw * .2; x < w; x += pw) { c.beginPath(); c.moveTo(x + pw * .1, horizon + 2); c.lineTo(x + pw * .1, top + pw * .4); c.lineTo(x + pw * .5, top); c.lineTo(x + pw * .9, top + pw * .4); c.lineTo(x + pw * .9, horizon + 2); c.fill(); }
+      c.fillRect(0, top + (horizon - top) * .35, w, Math.max(1.5, h * .025));
+      c.fillStyle = `rgb(${mix([63, 98, 18], [10, 30, 18], shade).join(',')})`;
+      c.fillRect(0, horizon, w, h - horizon);
+    };
+    return {
+      frame(t, dt) {
+        now = t;
+        // rais de soleil entre les lames, au dehors de la carte
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        rays.run(dt, (r, k) => {
+          const a = (k < .2 ? k / .2 : 1 - (k - .2) / .8) * .8, len = card.h * (.6 + 1.8 * outCubic(k));
+          for (let i = 0; i < 4; i++) {
+            const y = r.y + (i - 1.5) * card.h * .14;
+            tail(co, dark ? '#fde047' : '#ca8a04', r.x + r.dir * (card.w * .02 + len), y, r.x + r.dir * card.w * .02, y, 2, a * (1 - i * .15));
+          }
+          dot(co, '#facc15', r.x, r.y, card.h * .5 * (1 - k * .5), a * .5);
+        });
+        glints.run(dt, (g, k) => { const a = Math.sin(Math.PI * k); godrays(co, dark ? '#fde68a' : '#d97706', g.x, g.y, 10, card.h * .1, card.h * (.5 + g.p), t * .4, 3, a * (.35 + .4 * g.p)); dot(co, '#fffbeb', g.x, g.y, card.h * (.3 + .3 * g.p), a * .7); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+        if (set < 0) return;
+        // le coucher : 0 → 1 en 3,6 s (jour → crépuscule → nuit)
+        const u = clamp((t - set) / 3.6), fadeIn = clamp((t - set) / .25);
+        const dusk = clamp(u / .45), night = clamp((u - .4) / .6);
+        const pal = DAY.map((c, i) => mix(mix(c, DUSK[i], dusk), NIGHT[i], night));
+        ci.globalAlpha = fadeIn;
+        const g = ci.createLinearGradient(0, 0, 0, horizon);
+        pal.forEach((c, i) => g.addColorStop([0, .45, .78, 1][i], `rgb(${c.join(',')})`));
+        ci.fillStyle = g; ci.fillRect(0, 0, w, h);
+        // étoiles qui s'allument (plus nombreuses au-delà de Mythic)
+        for (const s of stars) { const a = night * (.5 + .5 * Math.sin(t * 2 + s.ph)) * fadeIn; if (a > .02) { ci.globalAlpha = a; ci.fillStyle = '#fff'; ci.fillRect(s.x, s.y, s.r * (1 + ascend * .3), s.r * (1 + ascend * .3)); } }
+        ci.globalAlpha = fadeIn;
+        // le soleil descend derrière la palissade en rougissant
+        const R = h * .16, sx = w * .8, sy = lerp(h * .3, horizon + R * 1.6, Math.pow(u, 1.3));
+        const sun = mix([255, 251, 235], [251, 113, 60], dusk);
+        dot(ci, '#fb923c', sx, sy, R * 4, (1 - night) * .55 * fadeIn);
+        ci.globalAlpha = fadeIn; ci.fillStyle = `rgb(${sun.join(',')})`; ci.beginPath(); ci.arc(sx, sy, R, 0, TAU); ci.fill();
+        // la lune se lève à gauche, avec un halo qui respire
+        const m = clamp((u - .35) / .65), mx = w * .065, my = lerp(horizon + R * 1.6, h * .28, outCubic(m));
+        if (m > 0) {
+          dot(ci, '#e0e7ff', mx, my, R * (3.6 + .4 * Math.sin(t * 1.6)) * (1 + ascend * .25), .8 * m * fadeIn);
+          ci.globalAlpha = fadeIn; ci.fillStyle = '#f8fafc'; ci.beginPath(); ci.arc(mx, my, R * .9, 0, TAU); ci.fill();
+          ci.fillStyle = 'rgba(148,163,184,.45)'; ci.beginPath(); ci.arc(mx - R * .25, my - R * .2, R * .18, 0, TAU); ci.arc(mx + R * .3, my + R * .25, R * .13, 0, TAU); ci.fill();
+        }
+        fence(ci, night * .85 + dusk * .15);
+        ci.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        rays.add({ x: p.x, y: p.y, dir: -1, life: o.last ? .7 : .5 });
+        rays.add({ x: p.x, y: p.y, dir: 1, life: o.last ? .7 : .5 });
+      },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (p > 0) glints.add({ x: card.x + card.w * .8, y: card.y + card.h * .3, p, life: .9 + .6 * p, delay: .05 });
+        if (p >= 1) { set = now + .4; ascend = ASCEND[tier] || 0; }
+      },
+    };
+  };
+
   // Deux scènes jouées ensemble : celle du skin (s'il en a une), puis la signature par-dessus.
   const both = (a, b) => ({ frame(t, dt) { if (a) a.frame(t, dt); b.frame(t, dt); }, lock(p, o) { if (a) a.lock(p, o); b.lock(p, o); }, build(ms) { if (a) a.build(ms); b.build(ms); }, reveal(tier) { if (a) a.reveal(tier); b.reveal(tier); } });
 
