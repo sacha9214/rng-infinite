@@ -4519,7 +4519,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   padding-top: .25rem; padding-bottom: .45rem;
 }
 .skin-lab .slot {
-  --liq: #dc2626; --liq-d: #7f1d1d; --liq-hi: #fca5a5; --glow: #fee2e2;
+  --liq: #f97316; --liq-d: #9a3412; --liq-hi: #fdba74; --glow: #ffedd5;
   position: relative; box-sizing: border-box; font-size: .56em; font-weight: 900; line-height: 1;
   width: 1.08em; height: 2.45em; margin: 0 .09em; padding-bottom: .24em;
   display: inline-flex; align-items: flex-end; justify-content: center; vertical-align: bottom;
@@ -4540,13 +4540,13 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   transform-origin: 50% 20%;
 }
 /* Six liquides dans l'ordre de costoroll (nth-of-type : le canvas des effets se glisse en tête de la carte). */
-.skin-lab .slot:nth-of-type(6n+2) { --liq: #9333ea; --liq-d: #4c1d95; --liq-hi: #d8b4fe; --glow: #f3e8ff; }
-.skin-lab .slot:nth-of-type(6n+3) { --liq: #2563eb; --liq-d: #1e3a8a; --liq-hi: #93c5fd; --glow: #dbeafe; }
-.skin-lab .slot:nth-of-type(6n+4) { --liq: #f97316; --liq-d: #9a3412; --liq-hi: #fdba74; --glow: #ffedd5; }
-.skin-lab .slot:nth-of-type(6n+5) { --liq: #e2e8f0; --liq-d: #64748b; --liq-hi: #ffffff; --glow: #ffffff; }
-.skin-lab .slot:nth-of-type(6n+6) { --liq: #16a34a; --liq-d: #14532d; --liq-hi: #86efac; --glow: #dcfce7; }
+.skin-lab .slot:nth-of-type(6n+2) { --liq: #2563eb; --liq-d: #1e3a8a; --liq-hi: #93c5fd; --glow: #dbeafe; }
+.skin-lab .slot:nth-of-type(6n+3) { --liq: #e2e8f0; --liq-d: #64748b; --liq-hi: #ffffff; --glow: #ffffff; }
+.skin-lab .slot:nth-of-type(6n+4) { --liq: #9333ea; --liq-d: #4c1d95; --liq-hi: #d8b4fe; --glow: #f3e8ff; }
+.skin-lab .slot:nth-of-type(6n+5) { --liq: #16a34a; --liq-d: #14532d; --liq-hi: #86efac; --glow: #dcfce7; }
+.skin-lab .slot:nth-of-type(6n+6) { --liq: #dc2626; --liq-d: #7f1d1d; --liq-hi: #fca5a5; --glow: #fee2e2; }
 /* le liquide blanc est clair : le chiffre y garde une ombre plus franche */
-.skin-lab .slot:nth-of-type(6n+5) { -webkit-text-stroke-width: .04em; text-shadow: 0 0 .12em #fff, 0 0 .3em #bae6fd, 0 .04em .03em rgba(15, 23, 42, .8); }
+.skin-lab .slot:nth-of-type(6n+3) { -webkit-text-stroke-width: .04em; text-shadow: 0 0 .12em #fff, 0 0 .3em #bae6fd, 0 .04em .03em rgba(15, 23, 42, .8); }
 /* le portoir : une barre de bois qui passe devant chaque tube (les morceaux se rejoignent d'un tube à l'autre) */
 .skin-lab .slot::before { content: ''; position: absolute; left: -.2em; right: -.2em; top: 15%; height: .3em; pointer-events: none; z-index: 2;
   background: radial-gradient(ellipse 34% 60% at 50% 50%, rgba(0, 0, 0, .45), transparent 75%), linear-gradient(180deg, #d4a373, #a0703f 55%, #6b4423);

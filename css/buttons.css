@@ -826,7 +826,7 @@
     linear-gradient(180deg, rgba(255, 255, 255, .38), transparent 32%),
     radial-gradient(circle, rgba(255, 255, 255, .7) 0 .09em, transparent .13em) 18% 72% / 2.4em 100% repeat-x,
     linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, .25) 100%),
-    linear-gradient(90deg, #dc2626 0 16.6%, #9333ea 0 33.3%, #2563eb 0 50%, #f97316 0 66.6%, #e2e8f0 0 83.3%, #16a34a 0) 0 100% / 100% 48% no-repeat,
+    linear-gradient(90deg, #f97316 0 16.6%, #2563eb 0 33.3%, #e2e8f0 0 50%, #9333ea 0 66.6%, #16a34a 0 83.3%, #dc2626 0) 0 100% / 100% 48% no-repeat,
     linear-gradient(180deg, #1c3640, #0f2129);
   text-shadow: 0 0 .35em #5eead4, 0 1px 0 #042f2e, 0 0 2px #042f2e;
   --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(45, 212, 191, .3); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.4em rgba(45, 212, 191, .5); --gs-a: 0 .06em 0 #6b4423; }

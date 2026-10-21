@@ -2287,7 +2287,7 @@
   // éclatent à la surface ; dès Mythic, ça mousse et déborde (grosses bulles, gouttelettes projetées hors des tubes).
   SCENES.lab = env => {
     const { co, card, q, dark } = env;
-    const LIQ = ['#ef4444', '#a855f7', '#3b82f6', '#fb923c', '#f1f5f9', '#22c55e'];
+    const LIQ = ['#fb923c', '#3b82f6', '#f1f5f9', '#a855f7', '#22c55e', '#ef4444']; // ordre choisi par costoroll
     const tubes = [], bubbles = particles(), drops = particles(), rings = timed(), pops = timed(), emit = [];
     let n = 0, fizz = 0, fizzEnd = 0, strong = false, t0 = 0, now = 0;
     // Géométrie d'un tube (en fraction de la hauteur de carte) : la surface du liquide un peu au-dessus du centre de la

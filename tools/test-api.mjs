@@ -2406,6 +2406,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(order.every((r, i) => !i || Shop.DUPLICATE_REFUND[r] >= Shop.DUPLICATE_REFUND[order[i - 1]]));
 }
 
+// Succès et titres : chaque identifiant une seule fois (deux « millionaire » se mélangeaient, signalé par PRISMA123).
+{
+  const A = require(path.join(ROOT, 'js/achievements.js'));
+  const ids = A.LIST.map(a => a.id), dup = ids.filter((id, i) => ids.indexOf(id) !== i);
+  assert.deepEqual(dup, [], `succès en double : ${dup}`);
+  assert.ok(!A.unlocked({ best: 2000000 }).includes('coinmillionaire'), 'Coin Millionaire ne vient pas d\'un gros tirage');
+}
+
 // ================================================================ 51. Messages entre amis
 {
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
