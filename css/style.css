@@ -2306,6 +2306,9 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .case-contents { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; max-width: 9rem; }
 .case-contents i { width: 12px; height: 5px; border-radius: 2px; background: var(--rar); }
 @media (max-width: 560px) { .case-cell { width: 6rem; min-height: 5.6rem; } }
+/* Caisse de fonds d'écran : des mini-aperçus de fonds dans la bande, un plus grand au résultat. */
+.wall-preview.case-wall { width: 100%; height: 4.3rem; margin: 0; align-self: stretch; }
+.wall-preview.case-wall.md { width: min(20rem, 100%); height: 9rem; margin: 0 auto; box-shadow: 0 0 0 2px var(--rar), 0 0 28px color-mix(in srgb, var(--rar) 60%, transparent); }
 .case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }
 .room-noreward { max-width: 30rem; margin: .2rem auto .6rem; text-align: center; }
 

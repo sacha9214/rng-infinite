@@ -137,6 +137,9 @@
     'Skins': 'Skins', 'Cases': 'Caisses', 'a random skin · the pricier the skin, the rarer': 'un skin au hasard · plus le skin est cher, plus il est rare', 'a random skin': 'un skin au hasard', 'the pricier the skin, the rarer': 'plus le skin est cher, plus il est rare',
     'Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.': 'Tu possèdes déjà le skin tiré ? Une partie du prix de la caisse t\'est rendue, plus pour les skins rares : 50 % pour un Common jusqu\'à 90 % pour un Legendary. Des pièces uniquement, pas d\'argent réel.',
     'Starter Case': 'Caisse Starter', 'Premium Case': 'Caisse Premium', 'A skin worth 200 to 800 coins': 'Un skin valant 200 à 800 pièces', 'A skin worth 800 to 5,000 coins': 'Un skin valant 800 à 5 000 pièces', 'Odds ⓘ': 'Chances ⓘ', 'Odds': 'Chances',
+    // caisse de fonds d'écran (idée de CrazyMiner22)
+    'Wallpaper Case': 'Caisse de fonds', 'An animated wallpaper worth 500 to 1,200 coins': 'Un fond animé valant 500 à 1 200 pièces', 'new wallpaper unlocked!': 'nouveau fond débloqué !', 'Use': 'Mettre',
+    'The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.': 'La caisse de fonds marche pareil avec les fonds animés : tu possèdes déjà celui tiré ? Une partie du prix t\'est rendue aussi.',
     'new skin unlocked!': 'nouveau skin débloqué !', 'Roll once to start earning coins.': 'Fais un tirage pour commencer à gagner des pièces.', 'Shop unavailable right now.': 'Boutique indisponible pour le moment.',
     'Shop unavailable right now, try again': 'Boutique indisponible pour le moment, réessaie', 'Purchase already in progress': 'Achat déjà en cours', 'Buy this skin first': 'Achète d\'abord ce skin', 'This skin is not for sale': 'Ce skin n\'est pas à vendre',
     // Skins premium et aperçu (boutique)

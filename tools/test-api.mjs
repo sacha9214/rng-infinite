@@ -834,6 +834,48 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(Shop.drawCase(c, 0.999999), odds[odds.length - 1].id);
     assert.ok(!Shop.casePool(c).some(k => k.hidden), 'jamais le skin Owner');
   }
+  // Caisse de fonds d'écran (idée de CrazyMiner22) : un fond normal (ni limité ni légendaire) qui rejoint walls:<id>.
+  const wcase = Shop.caseById.get('wallpaper');
+  const wpool = Shop.casePool(wcase).map(w => w.id);
+  assert.ok(wpool.length >= 8 && wpool.every(id => Shop.wallById.has(id) && !Shop.wallById.get(id).until && !Shop.wallById.get(id).premium), 'fonds normaux seulement');
+  assert.ok(!wpool.includes('aether') && !wpool.includes('graveyard') && !wpool.includes('pumpkins'));
+  const wev = Shop.caseOdds(wcase).reduce((x, o) => x + o.p * Shop.caseItem(wcase, o.id).price, 0);
+  assert.ok(wcase.price < wev && wcase.price / wev > 0.6 && wcase.price / wev < 0.85, `prix sous la valeur moyenne, comme les caisses de skins (${wcase.price} / ${wev.toFixed(0)})`);
+  assert.equal(Shop.rarityOf('forest', true).name, 'Common');
+  assert.equal(Shop.rarityOf('synthwave', true).name, 'Epic');
+  assert.equal(Shop.caseItem(wcase, 'galaxy'), Shop.wallById.get('galaxy'), 'galaxy : le fond, pas le skin');
+  for (const id of wpool) { const v = Shop.duplicateRefund(wcase, id); assert.ok(v >= wcase.price / 2 && v < wcase.price, `remboursement ${id}`); }
+  const wally = { playerId: 'c7'.repeat(8), secret: 'd7'.repeat(16), name: 'Wally' };
+  assert.equal((await call(roll, { method: 'POST', body: wally })).status, 200);
+  assert.equal((await openCase(wally, 'wallpaper')).status, 422, 'pas assez de pièces');
+  run([['HINCRBY', `stats:${wally.playerId}`, 'bonus', 50000]]);
+  await new Promise(r => setTimeout(r, 20)); // le DEL du verrou de l'appel précédent part après sa réponse
+  run([['SET', `shop:${wally.playerId}`, '1']]);
+  assert.equal((await openCase(wally, 'wallpaper')).status, 429, 'verrou : une caisse à la fois');
+  run([['DEL', `shop:${wally.playerId}`]]);
+  const ecoCases = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(db.get(k)?.get?.('out:cases')) || 0), 0);
+  const skinsBefore = JSON.stringify((await call(shopApi, { url: `/api/shop?me=${wally.playerId}` })).body.owned);
+  let wdups = 0, wnews = 0;
+  for (let i = 0; i < 30; i++) {
+    before = await coinsOf(wally);
+    const [spent0, cases0] = run([['HGET', `stats:${wally.playerId}`, 'spent'], ['HGET', `stats:${wally.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(wally, 'wallpaper');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(wpool.includes(r.body.won), 'un fond de la caisse');
+    assert.ok(r.body.walls.includes(r.body.won), 'ajouté aux fonds possédés');
+    assert.ok(run([['SISMEMBER', `walls:${wally.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(wcase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - wcase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${wally.playerId}`, 'spent'], ['HGET', `stats:${wally.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [wcase.price - r.body.refund, 1, wcase.price - r.body.refund], 'spent, cases, eco');
+    r.body.duplicate ? wdups++ : wnews++;
+  }
+  assert.ok(wnews >= 4 && wnews <= wpool.length && wdups >= 1, `des nouveaux (${wnews}) et des doublons (${wdups})`);
+  assert.equal(JSON.stringify(r.body.owned), skinsBefore, 'aucun skin donné');
+  assert.equal(r.body.wall, null, 'gagné, pas affiché d\'office');
+  r = await call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'wall', wall: r.body.walls[0] } });
+  assert.equal(r.status, 200, 'un fond gagné se met comme un fond acheté');
 
   // ============================================================== 23. Amis
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
