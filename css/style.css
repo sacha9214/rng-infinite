@@ -4425,7 +4425,6 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-cursed { --side-border: #7c3aed; --side-glow: 0 0 18px rgba(124, 58, 237, .45); --side-ink: #7c3aed;
   --side-bg: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(99, 102, 241, .25), transparent 70%), linear-gradient(180deg, rgba(20, 11, 51, .6), rgba(124, 58, 237, .12));
   --deco-a: '🌀'; --deco-b: '🔮'; }
-<<<<<<< HEAD
 /* ------------------------------------------------------------------ Marshmallow (idée de DandoriNinja, 2026-10-21) : un ciel
    pastel rose-lilas, des nuages de sucre. Les chiffres sont des guimauves gonflées, mates et poudrées (blanches et
    roses en alternance). Matière molle : en cours, ils gigotent en s'écrasant ; à la pose, ils tombent, s'aplatissent
@@ -4471,7 +4470,6 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-marsh::after { animation: mal-float 3s ease-in-out infinite alternate; }
 @keyframes mal-pop { 0%, 60%, 100% { transform: none; } 68% { transform: rotate(-14deg) scale(1.25, .85); } 80% { transform: rotate(4deg) scale(.95, 1.08); } }
 @keyframes mal-float { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
-=======
 /* ------------------------------------------------------------------ Lab (idée de costoroll, 2026-10-21) : six tubes à
    essai remplis aux deux tiers (rouge, violet, bleu, orange, blanc, vert), posés dans un portoir en bois devant un mur de
    labo carrelé. Chaque chiffre est une silhouette sombre qui flotte dans le liquide pendant le tirage ; quand il se pose,
@@ -4577,7 +4575,6 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes lab-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg); } }
 .room-stage.many .side-lab::before, .room-stage.many .side-lab::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-lab::before, .side-lab::after { animation: none; } }
->>>>>>> feat/lab
 /* ---------------------------------------------------------------- tournoi du jour (js/app.js renderTournament) */
 .tn-teaser { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; border-color: color-mix(in srgb, #eab308 45%, var(--outline)); background: linear-gradient(135deg, color-mix(in srgb, #eab308 10%, var(--surface)), var(--surface)); }
 .tn-teaser-text { display: flex; flex-direction: column; gap: .15rem; }
