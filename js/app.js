@@ -6635,7 +6635,7 @@
 
   // ---------------------------------------------------------------- tournoi du jour (idée de PRISMA123, 2026-10-20)
   // Tableau à élimination directe joué en différé (règles dans api/_tournament.js). Les tirages de l'adversaire restent
-  // cachés tant que ses 5 tirages ou les tiens ne sont pas faits.
+  // cachés tant que ses tirages ou les tiens (3 ou 5 selon le mode du jour) ne sont pas faits.
   let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false;
   const tnClock = () => Date.now() + tnSkew;
   const tnCd = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':'); };
@@ -6644,6 +6644,18 @@
     const left = total - r;
     return left === 1 ? 'Final' : left === 2 ? 'Semi-finals' : left === 3 ? 'Quarter-finals' : `Round ${r + 1}`;
   }
+  // Mode du jour (idée de PRISMA123, 2026-10-21) : nom, règle en une ligne, unité du score affiché.
+  const TN_MODES = {
+    total: { name: '➕ Total XP', rule: '5 rolls each: the highest total XP wins.', unit: 'XP' },
+    best: { name: '🎯 Best Roll', rule: '5 rolls each: only your single best roll counts.', unit: 'XP' },
+    bo3: { name: '⚔️ Best of 3', rule: '3 rolls each, compared one by one (roll 1 vs roll 1…): win 2 of the 3 duels. Tie: total XP.', unit: 'duels' },
+    lowest: { name: '🗑️ Lowest Wins', rule: '5 rolls each: the LOWEST total XP wins. Trash is gold today!', unit: 'XP' },
+    badges: { name: '🏅 Badge Hunter', rule: '5 rolls each: the most different badges wins. Tie: total XP.', unit: 'badges' },
+  };
+  const tnMode = st => TN_MODES[st.mode] || TN_MODES.total;
+  // « 1 duel », « 2 duels » : l'unité au singulier pour 1.
+  const tnUnit = (st, v) => { const u = tnMode(st).unit; return v === 1 && u !== 'XP' ? u.slice(0, -1) : u; };
+  const tnScore = (st, p) => (p.score === undefined || p.score === null ? `${fmt(p.total)} XP` : `${fmt(p.score)} ${tnUnit(st, p.score)}`);
   function stopTournament() { clearTimeout(tnTimer); clearInterval(tnTick); tnTimer = 0; tnTick = 0; }
   async function loadTournament() {
     const st = await Online.tourney('view');
@@ -6659,9 +6671,10 @@
       if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) tnBannerCache = { at: Date.now(), st: await loadTournament() };
       const st = tnBannerCache.st, m = st.match;
       let text = '';
-      if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
-      else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> · matches start at <span class="mono">${tnHour(st.close)}</span>`;
-      else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
+      const md = `<span class="tn-mode-chip">${tnMode(st).name}</span>`;
+      if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
+      else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> ${md} · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
       if (!slot.isConnected) return;
       slot.innerHTML = text ? `<a class="tn-banner" href="#/tournament">${text}<span class="tn-banner-go">→</span></a>` : '';
     } catch (err) { /* hors ligne : pas de bandeau */ }
@@ -6676,7 +6689,7 @@
       const line = st.phase === 'signup' ? `<span>Sign-ups open</span> · <span class="mono">${st.count}/${st.max}</span> · <span>closes at</span> <span class="mono">${tnHour(st.close)}</span>`
         : st.phase === 'running' ? `<span>${st.round >= 0 ? tnRoundName(st.round, st.rounds.length) : 'In progress'}</span> · <span class="mono">${st.entrants.length}</span> <span>players</span>`
         : st.phase === 'done' ? `<span>Champion:</span> <b data-no-i18n>${esc(st.result.champion.name)}</b>` : '<span>Cancelled: not enough players</span>';
-      box.innerHTML = `<div class="tn-teaser-text"><b>Daily tournament</b><span class="panel-note tn-teaser-line">${line}</span></div><a class="btn" href="#/tournament">${st.joined ? 'My match' : 'Open'}</a>`;
+      box.innerHTML = `<div class="tn-teaser-text"><b>Daily tournament</b> <span class="tn-mode-chip">${tnMode(st).name}</span><span class="panel-note tn-teaser-line">${line}</span></div><a class="btn" href="#/tournament">${st.joined ? 'My match' : 'Open'}</a>`;
     } catch (err) { box.innerHTML = '<span class="panel-note">Tournament unavailable</span>'; }
   }
 
@@ -6687,7 +6700,7 @@
       <div class="page page-wide tn-page">
         <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">🏆 Tournament</h1>
-        <p class="panel-note profile-sub">A new tournament every day. Sign up before 12:00 UTC, then play your match whenever you want during its round: 5 tournament rolls each, the highest total wins. Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
+        <p class="panel-note profile-sub">A new tournament every day. Sign up before 12:00 UTC, then play your match whenever you want during its round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
         <div id="tn-body"><div class="empty">Loading…</div></div>
       </div>`;
     const refresh = async () => {
@@ -6735,16 +6748,21 @@
         <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div></div>`;
     }
     if (st.prev) status += `<p class="panel-note tn-prev"><span>Yesterday's champion:</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
+    const mode = tnMode(st);
+    status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
     // Mon match
     let match = '';
     const m = st.match;
     if (m) {
-      const card = (n, s) => `<span class="num-card sm" data-tier="${Engine.cardTier(s)}">${n}</span>`;
+      // « Best of 3 » : chaque carte montre si elle gagne son duel (adversaire visible seulement).
+      const duel = (i, s, other) => (st.mode === 'bo3' && other && other[i] !== undefined ? (s > other[i] ? ' tn-duel-win' : s < other[i] ? ' tn-duel-lose' : '') : '');
+      const card = (n, s, cls = '') => `<span class="num-card sm${cls}" data-tier="${Engine.cardTier(s)}">${n}</span>`;
       const hidden = k => Array.from({ length: k }, () => '<span class="num-card sm neutral tn-hidden">?</span>').join('');
       const empty = k => Array.from({ length: k }, () => '<span class="num-card sm neutral tn-empty">·</span>').join('');
-      const mine = m.me.rolls.map((n, i) => card(n, m.me.scores[i])).join('') + empty(st.rolls - m.me.count);
-      const opp = m.opp ? (m.opp.rolls ? m.opp.rolls.map((n, i) => card(n, m.opp.scores[i])).join('') + empty(st.rolls - m.opp.count) : hidden(m.opp.count) + empty(st.rolls - m.opp.count)) : '';
+      const oppScores = m.opp && m.opp.rolls ? m.opp.scores : null;
+      const mine = m.me.rolls.map((n, i) => card(n, m.me.scores[i], duel(i, m.me.scores[i], oppScores))).join('') + empty(st.rolls - m.me.count);
+      const opp = m.opp ? (m.opp.rolls ? m.opp.rolls.map((n, i) => card(n, m.opp.scores[i], duel(i, m.opp.scores[i], m.me.scores))).join('') + empty(st.rolls - m.opp.count) : hidden(m.opp.count) + empty(st.rolls - m.opp.count)) : '';
       const banner = m.result === 'won' ? (st.phase === 'done' ? '<div class="tn-banner win">🏆 You won the tournament!</div>' : '<div class="tn-banner win">✅ You won this match</div>')
         : m.result === 'lost' ? '<div class="tn-banner lose">❌ You were knocked out</div>' : '';
       const canRoll = m.live && !m.bye && m.me.count < st.rolls;
@@ -6753,9 +6771,9 @@
         ${banner}
         ${m.bye ? '<p class="panel-note">Bye: you go straight to the next round.</p>' : `
         <div class="tn-vs">
-          <div class="tn-side"><div class="tn-side-head"><b>You</b><span class="mono">${fmt(m.me.total)} XP</span></div><div class="tn-cards">${mine}</div></div>
-          <div class="tn-side"><div class="tn-side-head">${nm(m.opp)}<span class="mono">${m.opp.rolls ? `${fmt(m.opp.total)} XP` : `${m.opp.count}/${st.rolls}`}</span></div><div class="tn-cards">${opp}</div>
-          ${!m.opp.rolls && m.live ? '<p class="panel-note">Their numbers show once you\'ve made your 5 rolls.</p>' : ''}</div>
+          <div class="tn-side"><div class="tn-side-head"><b>You</b><span class="mono">${tnScore(st, m.me)}</span></div><div class="tn-cards">${mine}</div></div>
+          <div class="tn-side"><div class="tn-side-head">${nm(m.opp)}<span class="mono">${m.opp.rolls ? tnScore(st, m.opp) : `${m.opp.count}/${st.rolls}`}</span></div><div class="tn-cards">${opp}</div>
+          ${!m.opp.rolls && m.live ? '<p class="panel-note">Their numbers show once you\'ve made all your rolls.</p>' : ''}</div>
         </div>
         ${canRoll ? `<div class="tn-roll-row"><button class="btn-roll" id="tn-roll">🎲 <span>Roll</span> (<span class="mono">${m.me.count + 1}/${st.rolls}</span>)</button></div>` : ''}`}
       </div>`;
@@ -6768,7 +6786,7 @@
         if (p === undefined) return '<div class="tn-p tn-tbd">–</div>';
         if (!p) return `<div class="tn-p tn-bye">${bye ? 'bye' : '–'}</div>`;
         const cls = w ? (w === p.id ? ' win' : ' lose') : '';
-        const score = p.total !== undefined ? fmt(p.total) : `${p.count}/${st.rolls}`;
+        const score = p.total !== undefined ? (p.score !== undefined && p.score !== null && st.mode !== 'total' && st.mode !== 'lowest' ? `${fmt(p.score)} ${tnUnit(st, p.score)}` : fmt(p.total)) : `${p.count}/${st.rolls}`;
         return `<div class="tn-p${cls}${p.me ? ' me' : ''}">${nm(p)}<span class="mono">${score}</span></div>`;
       };
       bracket = `<div class="panel"><div class="panel-head"><h3 class="panel-title">Bracket</h3><span class="panel-note"><span class="mono">${st.size}</span> <span>slots</span></span></div>

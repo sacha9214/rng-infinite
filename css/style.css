@@ -4870,6 +4870,14 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .tn-in { font-weight: 700; color: var(--success); }
 .tn-entrants { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .8rem; }
 .tn-prev { margin: .6rem 0 0; }
+.tn-mode { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; margin-bottom: .8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--outline); }
+.tn-mode-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--prose-3); }
+.tn-mode-name { font-size: 1.05rem; }
+.tn-mode-rule { flex-basis: 100%; }
+.tn-mode-chip { display: inline-block; align-self: flex-start; padding: .05rem .5rem; border-radius: 999px; font-size: .78em; font-weight: 700; white-space: nowrap;
+  background: color-mix(in srgb, #eab308 18%, transparent); border: 1px solid color-mix(in srgb, #eab308 50%, transparent); }
+.tn-cards .num-card.tn-duel-win { outline: 2px solid var(--success); outline-offset: 1px; }
+.tn-cards .num-card.tn-duel-lose { opacity: .55; }
 .tn-podium { text-align: center; display: flex; flex-direction: column; gap: .35rem; }
 .tn-champ { font-size: 1.5rem; font-weight: 800; }
 .tn-banner { border-radius: .45rem; padding: .5rem .7rem; font-weight: 700; margin-bottom: .7rem; }
