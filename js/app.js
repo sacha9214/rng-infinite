@@ -1669,6 +1669,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
     { id: '2026-10-23e', date: 'Oct 23, 2026', en: ['🐞 Fixes: the case Odds ⓘ now open with a tap on iPad and phones (reported by Aussie Haüs); tapping Roll again while auto-roll is revealing no longer cuts the roll (reported by jaxoncool43)'], fr: ['🐞 Corrections : les chances des caisses (Odds ⓘ) s\'ouvrent d\'un toucher sur iPad et téléphone (signalé par Aussie Haüs) ; toucher Rejouer pendant une révélation en tirage auto ne coupe plus le tirage (signalé par jaxoncool43)'] },
     { id: '2026-10-23d', date: 'Oct 23, 2026', en: ['📷 You can now send images and screenshots to your friends: press 📷 next to the message box. Click an image to enlarge it'], fr: ['📷 Tu peux maintenant envoyer des images et des captures d\'écran à tes amis : appuie sur 📷 à côté du message. Clique une image pour l\'agrandir'] },
     { id: '2026-10-23c', date: 'Oct 23, 2026', en: ['🐞 Duels: the chat no longer disappears when the game starts, no refresh needed'], fr: ['🐞 Duels : le chat ne disparaît plus quand la partie commence, plus besoin de recharger'] },
@@ -7093,7 +7094,7 @@
   // ---------------------------------------------------------------- tournoi du jour (idée de PRISMA123, 2026-10-20)
   // Tableau à élimination directe joué en différé (règles dans api/_tournament.js). Les tirages de l'adversaire restent
   // cachés tant que ses tirages ou les tiens (3 ou 5 selon le mode du jour) ne sont pas faits.
-  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false;
+  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false, tnWhich = 0; // tnWhich : tournoi choisi (1 ou 2), 0 = le sien
   const tnClock = () => Date.now() + tnSkew;
   const tnCd = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':'); };
   const tnHour = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -7115,7 +7116,7 @@
   const tnScore = (st, p) => (p.score === undefined || p.score === null ? `${fmt(p.total)} XP` : `${fmt(p.score)} ${tnUnit(st, p.score)}`);
   function stopTournament() { clearTimeout(tnTimer); clearInterval(tnTick); tnTimer = 0; tnTick = 0; }
   async function loadTournament() {
-    const st = await Online.tourney('view');
+    const st = await Online.tourney('view', tnWhich ? { which: tnWhich } : {});
     tnSkew = st.now - Date.now();
     return st;
   }
@@ -7157,7 +7158,7 @@
       <div class="page page-wide tn-page">
         <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">🏆 Tournament</h1>
-        <p class="panel-note profile-sub">A new tournament every day. Sign up before 12:00 UTC, then play your match whenever you want during its round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
+        <p class="panel-note profile-sub">Two tournaments every day (32 players each, you can join one). Sign up before 12:00 UTC. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
         <div id="tn-body"><div class="empty">Loading…</div></div>
       </div>`;
     const refresh = async () => {
@@ -7184,11 +7185,11 @@
     // État du jour
     let status = '';
     if (st.phase === 'signup') {
-      const can = Store.player.name && !st.joined && st.count < st.max;
+      const can = Store.player.name && !st.joined && !st.mine && st.count < st.max;
       status = `<div class="tn-status">
           <div><div class="tn-big"><span>Sign-ups close in</span> <span class="mono" data-cd="${st.close}">${tnCd(st.close - now)}</span></div>
           <div class="panel-note"><span class="mono">${st.count}/${st.max}</span> · <span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div>
-          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
+          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : st.mine ? `<span class="tn-in">✓ <span>You're in tournament</span> ${st.mine}</span>` : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
         </div>
         ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.me ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
     } else if (st.phase === 'running') {
@@ -7204,7 +7205,9 @@
       status = `<div class="tn-status"><div><div class="tn-big"><span>Cancelled: fewer than ${st.minPlayers} players signed up</span></div>
         <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div></div>`;
     }
-    if (st.prev) status += `<p class="panel-note tn-prev"><span>Yesterday's champion:</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
+    if (st.prev) status += `<p class="panel-note tn-prev"><span>${st.prev.champions && st.prev.champions.length > 1 ? 'Yesterday\'s champions:' : 'Yesterday\'s champion:'}</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
+    // Les deux tournois du jour : on regarde l'un ou l'autre (inscrit dans l'un, on ne peut pas entrer dans l'autre).
+    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">🏆 <span>Tournament</span> ${b.which} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
     const mode = tnMode(st);
     status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
@@ -7228,8 +7231,9 @@
         ${banner}
         ${m.bye ? '<p class="panel-note">Bye: you go straight to the next round.</p>' : `
         <div class="tn-vs">
-          <div class="tn-side"><div class="tn-side-head"><b>You</b><span class="mono">${tnScore(st, m.me)}</span></div><div class="tn-cards">${mine}</div></div>
+          <div class="tn-side"><div class="tn-side-head"><b>You</b><span class="mono">${tnScore(st, m.me)}</span></div><div class="tn-cards">${mine}</div>${m.me.auto ? `<p class="panel-note tn-auto">🤖 <span class="mono">${m.me.auto}</span> <span>rolled for you</span></p>` : ''}</div>
           <div class="tn-side"><div class="tn-side-head">${nm(m.opp)}<span class="mono">${m.opp.rolls ? tnScore(st, m.opp) : `${m.opp.count}/${st.rolls}`}</span></div><div class="tn-cards">${opp}</div>
+          ${m.opp.rolls && m.opp.auto ? `<p class="panel-note tn-auto">🤖 <span class="mono">${m.opp.auto}</span> <span>rolled for them</span></p>` : ''}
           ${!m.opp.rolls && m.live ? '<p class="panel-note">Their numbers show once you\'ve made all your rolls.</p>' : ''}</div>
         </div>
         ${canRoll ? `<div class="tn-roll-row"><button class="btn-roll" id="tn-roll">🎲 <span>Roll</span> (<span class="mono">${m.me.count + 1}/${st.rolls}</span>)</button></div>` : ''}`}
@@ -7259,10 +7263,14 @@
       <div><span>🥉</span><b class="mono">🪙 ${fmt(st.prizes.semi)}</b><span class="panel-note">Semi-finalists</span></div></div></div>`;
 
     body.innerHTML = `<div class="panel">${status}</div>${match}${bracket}${prizes}`;
+    body.querySelectorAll('[data-tn-which]').forEach(b => b.addEventListener('click', async () => {
+      tnWhich = Number(b.dataset.tnWhich);
+      try { tnState = await loadTournament(); drawTournament(); } catch (err) { toast(err.message, 3500, 'error'); }
+    }));
     const join = $('#tn-join');
     if (join) join.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; join.disabled = true;
-      try { tnState = { ...(await Online.tourney('join')), prev: tnState.prev }; toast('✓ Signed up for today\'s tournament'); drawTournament(); }
+      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(`✓ Signed up for tournament ${tnState.which}`); tnWhich = 0; drawTournament(); }
       catch (err) { toast(err.message, 3500, 'error'); join.disabled = false; }
       finally { tnBusy = false; }
     });

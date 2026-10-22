@@ -3196,7 +3196,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Trash King : le 1er du mois, une seule fois, au pire tirage du mois passé.
   const T2 = require(path.join(ROOT, 'api/_discord_tasks.js'));
   const now = Date.parse('2026-11-01T02:00:00Z');
-  run([['DEL', 'award:trashking:2026-10'], ['ZADD', 'lbw:month:2026-10', 1759, who]]);
+  run([['DEL', 'award:trashking:2026-10'], ['ZADD', 'lbw:month:2026-10', 0, who]]);
   const before = Number((await readStats(who)).trashKing || 0);
   assert.equal(await T2.trashKing(now), who); assert.equal(await T2.trashKing(now), null, 'une seule fois');
   assert.equal(Number((await readStats(who)).trashKing), before + 1);
@@ -3277,58 +3277,59 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const snap = id => JSON.stringify([...['stats:', 'hist:', 'badges:', 'nums:', `q:${DAY}:`].map(p => db.get(p + id)), db.get('lb:xp')?.get(id), db.get(`eco:${DAY}`), db.get(`lb:day:${DAY}`), db.get('rolls:all')].map(x => x instanceof Map ? [...x] : x instanceof Set ? [...x] : x ?? null));
   const before = snap(pa);
   let t = T0 + 13 * H, last;
+  // Tirages partagés (2026-10-23) : chaque tirage de pa en donne un à pb, tiré par le serveur.
   for (let k = 0; k < 5; k++) { db.delete(`tnlock:${pa}`); last = await TN.roll(pa, t); t += 2000; }
   assert.equal(last.count, 5); assert.equal(snap(pa), before, 'rien d\'autre ne bouge');
-  await refused(TN.roll(pa, t), 409, /already/);
-  // Délai entre deux tirages (verrou de 1,5 s, levé par le temps réel : ici, deux tirages à la suite).
-  await TN.roll(pb, t); await refused(TN.roll(pb, t + 10), 429);
-  db.delete(`tnlock:${pb}`);
+  await refused(TN.roll(pa, t), 409, /done/);
+  db.delete(`tnlock:${pb}`); await refused(TN.roll(pb, t), 409, /done/, 'pb a reçu ses 5 tirages');
+  const vb = await viewD(DAY, pb, t + 100), va = await viewD(DAY, pa, t + 100);
+  assert.deepEqual([vb.match.me.count, vb.match.me.auto, va.match.me.auto], [5, 5, 0], 'les 5 de pb faits pour lui');
+  const pm = (await viewD(DAY, null, t + 100)).rounds[0].matches.find(m => !m.bye);
+  assert.equal(typeof pm.a.total, 'number', 'les deux ont fini : visible de tous');
 
-  // Anti-sniping : pb n'a pas fini → ses tirages et ceux de pa sont cachés au public ; pa (fini) voit ceux de pb ;
-  // pb ne voit pas ceux de pa.
-  const pubNow = await viewD(DAY, null, t + 100), pm = pubNow.rounds[0].matches.find(m => !m.bye);
-  assert.equal(pm.a.total, undefined); assert.equal(pm.b.total, undefined); assert.ok(pm.a.count + pm.b.count === 6);
-  const va = await viewD(DAY, pa, t + 100), vb = await viewD(DAY, pb, t + 100);
-  assert.equal(va.match.me.count, 5); assert.ok(Array.isArray(va.match.opp.rolls), 'fini : voit l\'adversaire');
-  assert.equal(vb.match.opp.rolls, undefined, 'pas fini : adversaire caché'); assert.equal(vb.match.opp.count, 5);
-  // Les 5 dernières secondes du tour : plus de tirage.
-  await refused(TN.roll(pb, T0 + 16 * H - 1000), 422, /over/);
-  // pb ne finit pas : il perd. Tour 2 (16:00-20:00) lu à 16:00 pile.
+  // 16:00 : le vainqueur est celui que désignent les tirages (plus de forfait).
+  const rollsOf = (r, id) => JSON.parse(db.get(`tn:${DAY}:rolls`).get(`${r}:${id}`));
   v = await viewD(DAY, pa, T0 + 16 * H);
-  assert.equal(v.round, 1); assert.equal(v.rounds[0].matches.find(m => !m.bye).w, pa, 'forfait : pa passe');
-  assert.equal(v.match.round, 1); assert.equal(v.match.live, true);
-  const vpb = await viewD(DAY, pb, T0 + 16 * H); assert.equal(vpb.match.result, 'lost');
+  assert.equal(v.round, 1);
+  const w0 = v.rounds[0].matches.find(m => !m.bye).w;
+  assert.equal(w0, TN.winner(DAY, 0, real.a.id, real.b.id, rollsOf(0, real.a.id), rollsOf(0, real.b.id), v.mode));
 
-  // Tour 2 : pa joue, son adversaire non ; l'autre demi-finale : personne ne joue (tirage au sort).
-  for (let k = 0; k < 5; k++) { db.delete(`tnlock:${pa}`); await TN.roll(pa, T0 + 17 * H + k); }
-  // Finale (20:00-24:00) : personne ne joue sauf l'adversaire de pa → pa perd en finale.
+  // Tour 2 : personne ne joue → à 20:00, le serveur tire les 5 de chacun ; vainqueurs calculés pareil.
   v = await viewD(DAY, null, T0 + 20 * H);
   assert.equal(v.round, 2);
-  const fin = v.rounds[2].matches[0], other = fin.a.id === pa ? fin.b.id : fin.a.id;
-  assert.ok([fin.a.id, fin.b.id].includes(pa));
-  for (let k = 0; k < 5; k++) { db.delete(`tnlock:${other}`); await TN.roll(other, T0 + 21 * H + k); }
+  for (const m of v.rounds[1].matches) for (const x of [m.a, m.b]) { const r = rollsOf(1, x.id); assert.deepEqual([r.s.length, r.auto], [5, 5], 'tirés pour les deux à la fin du tour'); }
+  for (const m of v.rounds[1].matches) assert.equal(m.w, TN.winner(DAY, 1, m.a.id, m.b.id, rollsOf(1, m.a.id), rollsOf(1, m.b.id), v.mode));
+  { const raw = JSON.stringify(db.get(`tn:${DAY}:rolls`)); const n1 = Object.keys(Object.fromEntries(db.get(`tn:${DAY}:rolls`))).length;
+    await TN.advance(DAY, T0 + 20 * H + 5); assert.equal(Object.keys(Object.fromEntries(db.get(`tn:${DAY}:rolls`))).length, n1, 'rempli une seule fois'); }
+  // Finale : un seul joue 2 tirages, l'autre en reçoit 2 ; le reste est tiré à minuit.
+  const fin = v.rounds[2].matches[0];
+  db.delete(`tnlock:${fin.a.id}`); await TN.roll(fin.a.id, T0 + 21 * H); db.delete(`tnlock:${fin.a.id}`); await TN.roll(fin.a.id, T0 + 21 * H + 2000);
+  assert.equal(rollsOf(2, fin.b.id).s.length, 2, 'l\'adversaire suit');
+  // Les 5 dernières secondes du tour : plus de tirage.
+  db.delete(`tnlock:${fin.a.id}`); await refused(TN.roll(fin.a.id, T0 + 24 * H - 1000), 422, /over/);
 
   // Lu le lendemain (le tournoi d'hier avance à la lecture du jour) : prix versés une fois.
   const bonusOf = async id => Number((await readStats(id)).bonus || 0);
-  const all = v.rounds[1].matches.flatMap(m => [m.a.id, m.b.id]);
-  const semis = all.filter(id => id !== pa && id !== other);
   const b0 = Object.fromEntries(await Promise.all(ids.map(async id => [id, await bonusOf(id)])));
   const ecoBefore = Number(db.get(`eco:2030-01-16`)?.get('in:tourney') || 0);
   const out = await TN.handle({ op: 'view' }, T0 + 24 * H + 5000);
-  assert.equal(out.day, '2030-01-16'); assert.equal(out.prev.champion, db.get('names').get(other));
+  assert.equal(out.day, '2030-01-16');
   await TN.advance(DAY, T0 + 25 * H); await TN.tick(T0 + 26 * H); // relu plusieurs fois
   const done = await viewD(DAY, null, T0 + 27 * H);
-  assert.equal(done.phase, 'done'); assert.equal(done.result.champion.id, other); assert.equal(done.result.finalist.id, pa);
-  assert.deepEqual(done.result.semis.map(s => s.id).sort(), semis.sort());
-  assert.equal(await bonusOf(other) - b0[other], 1000); assert.equal(await bonusOf(pa) - b0[pa], 400);
-  for (const s of semis) assert.equal(await bonusOf(s) - b0[s], 150);
-  for (const id of ids.filter(id => ![other, pa, ...semis].includes(id))) assert.equal(await bonusOf(id), b0[id], 'les autres rien');
+  const champion = done.result.champion.id, finalist = done.result.finalist.id, semis = done.result.semis.map(x => x.id);
+  assert.equal(done.phase, 'done'); assert.equal(out.prev.champion, db.get('names').get(champion));
+  assert.equal(champion, TN.winner(DAY, 2, fin.a.id, fin.b.id, rollsOf(2, fin.a.id), rollsOf(2, fin.b.id), done.mode));
+  assert.deepEqual([fin.a.id, fin.b.id].sort(), [champion, finalist].sort());
+  assert.equal(semis.length, 2);
+  assert.equal(await bonusOf(champion) - b0[champion], 1000); assert.equal(await bonusOf(finalist) - b0[finalist], 400);
+  for (const x of semis) assert.equal(await bonusOf(x) - b0[x], 150);
+  for (const id of ids.filter(id => ![champion, finalist, ...semis].includes(id))) assert.equal(await bonusOf(id), b0[id], 'les autres rien');
   assert.equal(Number(db.get('eco:2030-01-16').get('in:tourney')) - ecoBefore, 1000 + 400 + 300);
-  const champ = await readStats(other);
+  const champ = await readStats(champion);
   assert.equal(Number(champ.tourneyWins), 1); assert.ok(Achievements.unlocked(champ).includes('champion'), 'titre Champion');
-  assert.ok(!Achievements.unlocked(await readStats(pa)).includes('champion'));
+  assert.ok(!Achievements.unlocked(await readStats(finalist)).includes('champion'));
   // Tous les tirages de la finale montrés une fois le tour fini.
-  assert.equal(done.rounds[2].matches[0][done.rounds[2].matches[0].a.id === other ? 'a' : 'b'].rolls.length, 5);
+  assert.equal(done.rounds[2].matches[0].a.rolls.length, 5);
 
   // Moins de 4 inscrits : annulé, rien versé. Et le 33e est refusé.
   const D2 = '2030-02-01', T2 = Date.parse(`${D2}T00:00:00Z`);
@@ -3337,7 +3338,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await refused(TN.roll(pid(1), T2 + 13 * H), 422);
   const D3 = '2030-03-01', T3 = Date.parse(`${D3}T00:00:00Z`);
   for (let i = 0; i < 32; i++) await TN.signup(mk(10 + i), T3 + H + i);
-  await refused(TN.signup(mk(50), T3 + 2 * H), 422, /full/);
+  // Deux tournois par jour (2026-10-23) : le 33e va dans le second ; jamais dans les deux ; 64 places en tout.
+  const j33 = await TN.signup(mk(50), T3 + 2 * H); assert.deepEqual([j33.which, j33.place], [2, 1]);
+  await refused(TN.signup(mk(50), T3 + 2 * H + 1), 409, /already/); await refused(TN.signup(mk(10), T3 + 2 * H + 1), 409, /already/);
+  for (let i = 0; i < 31; i++) await TN.signup(mk(51 + i), T3 + 3 * H + i);
+  await refused(TN.signup(mk(95), T3 + 4 * H), 422, /full/);
+  { const h = await TN.handle({ op: 'view', playerId: mk(50), secret: sec(50) }, T3 + 5 * H);
+    assert.deepEqual([h.which, h.mine, h.joined, h.count, h.both.map(b => b.count)], [2, 2, true, 32, [32, 32]], 'chacun voit son tournoi');
+    const h1 = await TN.handle({ op: 'view', playerId: mk(50), secret: sec(50), which: 1 }, T3 + 5 * H); assert.equal(h1.which, 2, 'inscrit au 2 : toujours le sien'); }
+  // Choisir le second alors que le premier a de la place.
+  { const D4 = '2030-04-01', T4 = Date.parse(`${D4}T00:00:00Z`); const j = await TN.signup(mk(96), T4 + H, 2); assert.equal(j.which, 2); assert.equal((await TN.signup(mk(97), T4 + H)).which, 1); }
   const big = await viewD(D3, null, T3 + 12 * H);
   assert.equal(big.size, 32); assert.equal(big.rounds.length, 5); assert.equal(big.rounds[0].matches.filter(m => m.bye).length, 0);
   assert.equal(big.rounds[4].end, T3 + 24 * H, 'fini à minuit');
@@ -3411,17 +3421,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   let t = T + 13 * H;
   for (let k = 0; k < 3; k++) { db.delete(`tnlock:${pa}`); const r = await TN.roll(pa, t); assert.equal(r.mode, 'bo3'); t += 2000; }
   db.delete(`tnlock:${pa}`); await refused(TN.roll(pa, t), 409, /3 rolls/);
-  db.delete(`tnlock:${pb}`); await TN.roll(pb, t); db.delete(`tnlock:${pb}`); await TN.roll(pb, t + 2000);
+  // Tirages partagés : pb a reçu ses 3 tirages en même temps que pa ; le match est fini et visible de tous.
+  db.delete(`tnlock:${pb}`); await refused(TN.roll(pb, t), 409, /done/);
   const pub = (await TN.view(DB3, null, t + 3000)).rounds[0].matches[0];
-  assert.equal(pub.a.total, undefined, 'caché tant que pb n\'a pas fini ses 3'); assert.equal(pub.b.total, undefined);
+  assert.equal(typeof pub.a.total, 'number'); assert.equal(typeof pub.b.total, 'number');
   const va = await TN.view(DB3, pa, t + 3000), vb = await TN.view(DB3, pb, t + 3000);
-  assert.equal(va.match.me.count, 3); assert.ok(Array.isArray(va.match.opp.rolls), 'pa a fini ses 3 : voit pb');
-  assert.equal(typeof va.match.me.score, 'number', 'duels gagnés visibles une fois l\'adversaire visible');
-  assert.equal(vb.match.opp.rolls, undefined, 'pb (2/3) ne voit pas pa'); assert.equal(vb.match.me.score, null, 'pas de score de duels à l\'aveugle');
-  // Fin du tour 1 (12:00 → 18:00) : pb n'a fait que 2 tirages → forfait.
+  assert.equal(va.match.me.count, 3); assert.ok(Array.isArray(va.match.opp.rolls) && Array.isArray(vb.match.opp.rolls), 'chacun voit l\'autre');
+  assert.equal(typeof va.match.me.score, 'number', 'duels gagnés visibles'); assert.equal(vb.match.me.auto, 3);
+  // Fin du tour 1 : le vainqueur est celui des duels (plus de forfait).
   v = await TN.view(DB3, null, T + 18 * H);
-  assert.equal(v.rounds[0].matches[0].w, tok(pa), 'forfait à 2 tirages sur 3');
-  assert.equal(v.rounds[0].matches[0].a.rolls.length + v.rounds[0].matches[0].b.rolls.length, 5, 'révélé après le tour');
+  const rr = id => JSON.parse(db.get(`tn:${DB3}:rolls`).get(`0:${id}`));
+  assert.equal(v.rounds[0].matches[0].w, tok(TN.winner(DB3, 0, pa, pb, rr(pa), rr(pb), 'bo3')));
+  assert.equal(v.rounds[0].matches[0].a.rolls.length + v.rounds[0].matches[0].b.rolls.length, 6, 'révélé après le tour');
   // Dans un mode à 5, 3 tirages ne suffisent pas.
   const DT = dayFor('total', 3), TT = Date.parse(`${DT}T00:00:00Z`);
   const ids5 = [13, 14, 15, 16].map(mk);
