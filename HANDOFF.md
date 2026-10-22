@@ -120,6 +120,63 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
   (JBearr12: Contributor and Bug Hunter), skip known badges (TetoEnthusiast, MayonnaiseGmdGmd), XP checker (MyInternetNoWork),
   ideas author share (Gray alt: done at 5%).
 
+
+### Every other open thread (so nothing is lost)
+
+**Yes, more skins and wallpapers** (same rules as above):
+- Metal-ball launcher breaking crates (jjcoolcid1 [4bf26afedcb9]; original-style version of his Angry Birds idea [2b073a551ccc], no birds).
+- Stick man throwing axes (jjcoolcid1 [9e4d04f5b906]); also asked on Discord as a legendary.
+- Waterfall pushing digits down (jjcoolcid1 [9d0b104252d4]); Hell with a pitchfork (jjcoolcid1 [46debbb33cb5], close to Hellborn: make it a variant or skip);
+  black hole that swallows digits after each roll (jjcoolcid1 [e91629641d04], close to Black Hole: check first).
+- Grass block (finnnnn [a841d12aea44]: close to Blocks, check first), rainbow painting (finnnnn [7f9507fe5e51]), deep ocean / bloop (finnnnn [0555093cf3b9]),
+  obsidian "really strong" (finnnnn [7ac4a115abd4]), pickle (Dylanrulez123 [9b7bd2fd3aa4]).
+- Barn with horses and hay (R77 [988dcd01c381]).
+- Themes from dylanbuckleyisjewish: sports [8545cb3680cd], elemental [28fa71e7e07e] (merge with kaz's Elemental), space [19d44247eb7a], safari [49cc5dc9dfbc], American [2934d6bbe771], beach [a568c292ff53].
+- Legendary skins from Gray alt: Unlimited Void [2a351387801c] (rename: the name is from Jujutsu Kaisen), Divine Judgment [917364bbc5dd].
+- A skin paired with AnnJoe's aqua wallpaper [b4b16921441d] (do it with the underwater wallpaper).
+- A board / frame skin around the number (daddy finger [5561e1e54259]): Buttons and Wallpapers partly cover it; a "card frame" category could be new.
+- More music (shadow2 [d8def15e8470]): Phong254's casino track first.
+
+**Yes, small features or badges**:
+- Badges: exact 1987 (costoroll [11ad72757353]), 360 "Nailed it" (CococoC [a8da12a374dc]), 069420 (WormAttack [5a9f6a7eac92]: check ULTIMEME_EXACT covers 69420).
+- "Against All Odds": a Rare after a long dry streak (Gray [875834a239f7]), as an achievement (the server already tracks streaks without a Rare in Stats).
+- Badge filter "not unlocked yet" with hints, in the Badges page (kingston [c3ad9bec2887], [e874cbd1ce72]).
+- Rewards for the monthly leaderboard top 10 (LwsBoi [58ee3ff2c7a9], Marcoooo_seeva [e37d6a0076c9]): Top 1/5/10 badges exist (`api/_rank.js`); coins on top could be added.
+- Today's date as a bonus badge (kingston [edb200fb5ddc]): a "Today" badge for numbers that contain today's DDMMYY; it changes every day, so it cannot be in the static engine: discuss.
+- Casino mastery levels (JBearr12 [94c8c484ddcd]): discuss (it rewards gambling volume).
+- Faster XP count-up (Colt2 [4ede287e3458]): the speed setting exists; check the count-up duration.
+- Duel layout: no scrolling to reroll in big games, team score under the Roll button (Calurion [b9b71c05dd53], LeSombre [eb104d9b4e3f]); mobile game modes in a dropdown (AiziX69 [ed9b79fb0372]).
+- Daily shop with rotating skins (Rngroller123 [fa22f0bceabb]): discuss (it is a sales mechanic).
+- Coin pusher machine in the casino (Calurion [002b51663509]): discuss with the other casino games.
+- A fake "download" button in the Shop as a joke (Yentizx [4fdfd15538e5]): fun, cheap, Sacha's call.
+
+**No**:
+- Favourite-number badges for Sacha or a player (pilot56 [849db156f7d5], JAKECisthebest [6ae8dc57245b]): personal badges stay rare (Drastix is the exception).
+- "12 months", "7 for a week" (ichi [c7a05ad0313e], [d5d218353c9a]); 5,000 XP Mythic badge under 100,000 (JAKECisthebest [f019893d9e8c]): unclear or arbitrary.
+- 000000 worth the most (Deadshot [f7e536f658d7]): every number has the same chance; scoring is by badges.
+- New rarities or rarity badges (Angelicide6 [7417cc644423], [08184af563d5], [2e15d61e5c2f]); worse luck (casmictechthing [3b8a4f01c88c]); "give me luck" (senny [d19f95173caf]).
+- Infinite numbers rarer (PRISMA123 [9497b7b16ec3]); free codes (casmictechthing [2a94751eed96]); coin exception (Gray alt [64f373972bce]).
+- Casino winner/loser badges (Ann Joe [d39c41a137fe]: Sacha already said no). Back win bonuses in duels (Deadshot [1af644f8e5e7]): coins from duels are balanced as they are.
+- Gray helping to answer messages (Gray [66f92472c9c3]): only Sacha answers players.
+- Carnival robot horse (KMC [93f869da718a]): a reference we should not copy.
+- A native app (yukitsunodaiscool [5a46abe09659], JBearr12 [adb7502f381f]): the site works on phones; "Add to home screen" could be explained instead.
+- Username + password sign-up (JAKECisthebest [bd8d684ab5ec]): Google sign-in exists (and a password option in `api/auth.js`).
+- Crypto trading (Sacha [abc59d7f67c4]): already in the casino (Crypto tab).
+
+**Already in the game or answered** (reply or close):
+- 456 (pilot56 [b5ad628f87f5]), AK-47 (R77 [89a8328bd5cd]), Area 51 (hii [91d5106b916c]), Juice WRLD (Colt2 [98e5afc76f4b]: he was told "Triple Nine" in the past; Sacha decides), Error 404 (Gray [91823035e545]: existed already),
+  852655 (CococoC [f9bb8feb116e]: added), contains-your-best-roll (spookiedookie [648d02967bd6]), more upgrades / levels (pilot56 [047434a2b070], shadow2 Jr [cd51401971f5]: levels with rewards exist),
+  shop previews (JAKECisthebest [9c59584e02db]), live rare rolls and friends' status (kingston [e88dc3264aaa]), daily rewards (JohnLawrence [36011b657174], LwsBoi [0c5f9cc92bd5], Marcoooo_seeva [aa27e5864db5]),
+  contributor titles (JBearr12 [67a9be36c2a5]), hidden codes (PRISMA123 [77daffe9be04]), skip badges / skip after 1k rolls (TetoEnthusiast [8387c2745e3a], MayonnaiseGmdGmd [6086246b9f20]),
+  XP preview (MyInternetNoWork [03b8d35f70f7]), more gambling (Lewis6767 [dd3f00a3cbf5]: 10 casino games now), poker (Yentizx [c88e9dae282d], Roanono [28d4a65877c4]: in "To discuss"),
+  craps and blackjack lobbies (JBearr12 [f017e780fb7f]: in "To discuss"), stats page (PRISMA123 [3a7197db97cb]: Stats tab exists; Coin Millionaire bug fixed), skin-idea share (Gray alt [5c543bf658bb]: done at 5%),
+  more skins (leo [2034c6d8e60f]), 8686 (WpBejs [333c9af2ead8]: "we have it"), better rolls give more coins (schoolroller [700ba5a4abdf]: already true),
+  how coins work (Roanono [b2ac31534003]: the Shop explains it), CONSOLECAT (Gray [ea0e27f2fd49]: a hidden code, 1 per player).
+
+**Not ideas** (reports, thanks, chat; close them):
+- Cheating suspicions about two accounts with 100k+ casino wins (Gray alt [fb94d3be72b1], number 1 [5ff9b34f79c7]) and a "hacker" name (casmictechthing [71a80f2f76af]): Sacha checked the casino; close.
+- Thanks and chat: YU CHUAN 23 [cc03e936020f], [8169c7959d78], kingston [5e186aa0cf21], Marcoooo_seeva [353de3628c73], [08d5e19b0bf8], MereTera [21bd3aedfe86], MAYO [3f051de125d9], Avaneesh_The_Goat [bf0ded48c981], casmictechthing [e268fb31b28e].
+
 ## Decisions and why
 
 - **Everything on the VPS** (2026-10-22): Vercel paused the team for CPU; Sacha cannot pay Pro every month.
