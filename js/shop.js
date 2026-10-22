@@ -268,7 +268,8 @@
   const speedFactor = v => SPEED.factors[speedLevel(v)];
 
   // Collection complète (titre Collectible Connoisseur, idée de kaz, 2026-10-20) : tous les skins sauf les limités.
-  const collectible = () => SKINS.filter(k => !k.until).map(k => k.id);
+  // Classic est le skin gratuit de départ : jamais rangé dans skins:<id>, il ne compte pas (PRISMA123 bloqué, 2026-10-22).
+  const collectible = () => SKINS.filter(k => !k.until && k.id !== 'classic').map(k => k.id);
   const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;

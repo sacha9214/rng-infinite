@@ -2000,6 +2000,8 @@
       if ($('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
       // Pause garantie : le dernier résultat reste visible au moins 1,8 s, quel que soit le chemin qui a programmé ce
       // tirage (retour d'un autre onglet, réaffichage de l'accueil…) ; signalé par WpBejs, 2026-10-22.
+      // Un tirage est déjà en cours (lancé à la main pendant la pause) : on attend sa fin au lieu de le couper (Nero, 2026-10-21).
+      if (rollPending || (session && !session.finished)) { scheduleSoloAuto(500); return; }
       const wait = SOLO_PAUSE - (Date.now() - SoloAuto.shownAt);
       if (wait > 50) { scheduleSoloAuto(wait); return; }
       startRoll(true);
@@ -2071,7 +2073,8 @@
     try {
       online = await asked;
       n = online.n;
-      HdrCoins.soon();
+      // Pièces relues à la fin de la révélation seulement : avant, le compteur montait pendant l'animation et trahissait
+      // un bon tirage avant le 2e chiffre (kingston, 2026-10-21).
     } catch (err) {
       if (err.status === 429 && SoloAuto.on) {
         clientEvt('auto_429'); rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
@@ -2314,6 +2317,7 @@
       vignette.classList.remove('on');
       finished = true;
       SoloAuto.shownAt = Date.now();
+      if (ctx.online) HdrCoins.soon(300);
       if (SoloAuto.on && !ctx.replay) {
         if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
