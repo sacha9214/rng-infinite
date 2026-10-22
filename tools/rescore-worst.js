@@ -8,9 +8,11 @@ const { redis, engine, scopes, WORST_LB, WORST_BEST, worstKeys } = L;
 const APPLY = process.argv.includes('--apply');
 
 (async () => {
-  const [ids] = await redis([['ZRANGE', WORST_LB, 0, -1]]);
+  // Tous les joueurs présents sur une Poubelle : celle de toujours, et celles du jour, de la semaine et du mois en cours.
+  const boards = [WORST_LB, ...scopes(Date.now()).filter(p => p.period !== 'all').map(p => worstKeys(p).lb)];
+  const ids = [...new Set((await redis(boards.map(b => ['ZRANGE', b, 0, -1]))).flat())];
   let changed = 0;
-  for (const id of ids || []) {
+  for (const id of ids) {
     const [hist, oldAll] = await redis([['ZRANGE', L.historyKey(id), 0, -1], ['HGET', WORST_BEST, id]]);
     const mins = new Map(); // clé du classement → { s, entry, best, ttl }
     for (const m of hist || []) {
@@ -25,7 +27,7 @@ const APPLY = process.argv.includes('--apply');
       const [score] = await redis([['ZSCORE', lb, id]]);
       if (score === null || Number(score) === v.s) continue; // période expirée (rien à recréer) ou déjà juste
       w.push(['ZADD', lb, v.s, id], ['HSET', v.best, id, v.entry]);
-      if (lb === WORST_LB) console.log(`  ${id.slice(0, 6)}: ${score} → ${v.s} (${JSON.parse(v.entry).n})${oldAll ? ` · avant ${JSON.parse(oldAll).n}` : ''}`);
+      if (lb === WORST_LB || process.argv.includes('-v')) console.log(lb + ' ' + `  ${id.slice(0, 6)}: ${score} → ${v.s} (${JSON.parse(v.entry).n})${oldAll ? ` · avant ${JSON.parse(oldAll).n}` : ''}`);
     }
     if (w.length) { changed++; if (APPLY) await redis(w); }
   }
