@@ -1648,6 +1648,15 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-22m', date: 'Oct 22, 2026', en: [
+      '🎲 New casino game: Dice (idea by CYCOX and YU CHUAN 23). Set your target, pick Roll under or Roll over: the lower your chance, the bigger the payout (up to 48.5×). Or guess a 6-sided die for 5.82×',
+      '🧸 New casino game: Teddy Roulette (idea by d_alex). A confetti popper with 6 chambers aims at a cute teddy: each click raises your payout (up to 5.82×), but one chamber goes BOOM. Cash out whenever you like!',
+      '▶ Every skin in the shop now has a Preview button, ASMR included',
+    ], fr: [
+      '🎲 Nouveau jeu au casino : les Dés (idée de CYCOX et YU CHUAN 23). Règle ta cible, choisis En dessous ou Au-dessus : moins tu as de chances, plus le gain est gros (jusqu\'à 48,5×). Ou devine un dé à 6 faces pour 5,82×',
+      '🧸 Nouveau jeu au casino : la Roulette Nounours (idée de d_alex). Un canon à confettis à 6 chambres vise un nounours : chaque clic fait monter ton gain (jusqu\'à 5,82×), mais une chambre fait BOUM. Encaisse quand tu veux !',
+      '▶ Tous les skins de la boutique ont maintenant un bouton Aperçu, ASMR compris',
+    ] },
     { id: '2026-10-22l', date: 'Oct 22, 2026', en: [
       '🏆 Tournament modes: the daily tournament now changes its rules every day: Total XP, Best Roll, Best of 3, Lowest Wins (trash is gold!) and Badge Hunter (idea by PRISMA123)',
       '🪟 New skin Blinds: every digit hides behind a closed blind; the slats snap open on a glowing neon-yellow number, and from Mythic the sun sets and the moon rises (idea by costoroll)',
@@ -3411,7 +3420,7 @@
         <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
           ${withLever(`<div class="num-card md${skinClass(k.id)}" data-tier="rare">${slotsHTML('235711')}</div>`, k.id)}
           <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
-          <div class="skin-actions">${SkinFX.has(k.id) || k.id === 'owner' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
+          <div class="skin-actions">${k.id !== 'classic' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
         </div>`;
     };
     // Skin Supporter : montré à tout le monde. Qui l'a peut l'équiper ; les autres voient comment l'obtenir.
@@ -4897,7 +4906,7 @@
         LOCKS.forEach((ms, k) => at(ms, () => {
           slots[k].textContent = digits[k]; slots[k].classList.remove('spinning'); slots[k].classList.add('revealed'); shown = k + 1;
           if (fx) fx.lock(slots[k], { last: k === 5 });
-          Sound.play('lock', { i: k, soft: 1 });
+          Sound.play('lock', { i: k, soft: 1, ...(id === 'asmr' || id === 'lab' ? { skin: id, final: k === 5 ? 1 : 0 } : {}) });
         }));
         at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
         at(LOCKS[5] + 600, () => {
