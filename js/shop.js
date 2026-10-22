@@ -237,6 +237,7 @@
     { id: 'rage', name: 'Rage', price: 600 },
     { id: 'clown', name: 'Clown', price: 700 },
     { id: 'money', name: 'Rich', price: 900 },
+    { id: 'confused', name: 'Super confused', price: 800 }, // idée de finnnnn (2026-10-22)
     { id: 'mindblown', name: 'Mind blown', price: 1200 },
   ];
   const emoteById = new Map(EMOTES.map(e => [e.id, e]));
@@ -270,7 +271,12 @@
   // Collection complète (titre Collectible Connoisseur, idée de kaz, 2026-10-20) : tous les skins sauf les limités.
   // Classic est le skin gratuit de départ : jamais rangé dans skins:<id>, il ne compte pas (PRISMA123 bloqué, 2026-10-22).
   const collectible = () => SKINS.filter(k => !k.until && k.id !== 'classic').map(k => k.id);
-  const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  // Badges de collection (idée de PRISMA123, 2026-10-22) : tous les boutons, toutes les émotes, tous les fonds hors limités.
+  const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id) };
+  // Quelle clé ouvre quelle caisse (idée de keys, 2026-10-22) : une clé Premium ouvre aussi les caisses moins chères
+  // (Starter, Fonds d'écran) ; l'Élite ne s'ouvre jamais avec une clé.
+  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
+  const api = { KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

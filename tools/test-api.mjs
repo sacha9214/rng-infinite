@@ -2525,6 +2525,20 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await shopPost(baker, { action: 'buy', skin: 'infinity' });
   assert.deepEqual([r.status, r.body.skin], [200, 'infinity'], 'déjà possédé : « acheter » ne fait que l\'équiper, sans rien dépenser');
   assert.equal(r.body.coins, 99000 - 900 - 90);
+  // Clés (idée de keys, 2026-10-22) : une clé Premium ouvre aussi Starter et Fonds, jamais l'Élite ; une Starter seulement la sienne.
+  run([['HSET', `stats:${baker.playerId}`, 'key:premium', 2, 'key:starter', 1]]);
+  r = await shopPost(baker, { action: 'case', case: 'elite', free: 'premium' }); assert.equal(r.status, 422, 'jamais l\'Élite');
+  r = await shopPost(baker, { action: 'case', case: 'premium', free: 'starter' }); assert.equal(r.status, 422, 'une Starter n\'ouvre pas la Premium');
+  { const before = r.body.coins;
+    r = await shopPost(baker, { action: 'case', case: 'starter', free: 'premium' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual([r.body.keys.premium, r.body.keys.starter], [1, 1], 'la clé Premium est consommée, pas la Starter'); }
+  r = await shopPost(baker, { action: 'case', case: 'wallpaper', free: 'premium' }); assert.equal(r.status, 200);
+  r = await shopPost(baker, { action: 'case', case: 'wallpaper', free: 'premium' }); assert.equal(r.status, 422, 'plus de clé Premium');
+  // Titre de collection des boutons (idée de PRISMA123, 2026-10-22) : posé quand le dernier bouton est acheté.
+  { const all = Shop.collectibleSets.buttons();
+    run([['SADD', `btns:${baker.playerId}`, ...all.slice(0, -1)], ['HINCRBY', `stats:${baker.playerId}`, 'bonus', 5000]]);
+    r = await shopPost(baker, { action: 'buybutton', button: all[all.length - 1] }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(run([['HGET', `stats:${baker.playerId}`, 'allButtons']])[0].result, '1'); }
   // Les bots ne portent jamais Infinity (ni un skin légendaire).
   const seen = new Set();
   for (let i = 0; i < 6; i++) {
@@ -2657,6 +2671,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.ok((await fr(ann, 'messages', 'Benny')).body.messages.some(m => !m.me && m.text === theirs.text), 'le message de l\'autre reste');
     x = await fr(ann, 'unsend', 'Benny', { t: mine.t }); assert.equal(x.status, 200);
     assert.ok(!x.body.messages.some(m => m.text === 'oops typo'), 'message supprimé');
+  }
+  // Modifier un de ses messages (idée de kingston, 2026-10-22) : seulement les siens, marqué « edited ».
+  {
+    let x = await fr(ann, 'message', 'Benny', { text: 'helo' });
+    const mine = x.body.messages.filter(m => m.me).pop();
+    x = await fr(ann, 'edit', 'Benny', { t: mine.t, text: 'hello' }); assert.equal(x.status, 200);
+    const m2 = x.body.messages.find(m => m.t === mine.t && m.me);
+    assert.deepEqual([m2.text, m2.edited], ['hello', true]);
+    assert.equal((await fr(ann, 'edit', 'Benny', { t: mine.t, text: '   ' })).status, 422, 'texte vide refusé');
+    assert.equal((await fr(ann, 'edit', 'Benny', { t: 1, text: 'x' })).status, 404, 'message introuvable');
+    const theirs = (await fr(ben, 'messages', 'Annie')).body.messages.find(m => !m.me && m.t === mine.t);
+    assert.equal(theirs.text, 'hello', 'l\'autre voit la version modifiée');
   }
   // Présence (2026-10-21) : hors ligne sans signal, puis AFK, puis en ligne ; un signal trop vieux redevient hors ligne.
   {

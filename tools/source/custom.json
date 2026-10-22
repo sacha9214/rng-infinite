@@ -377,5 +377,75 @@
     "desc": "Contains \"51\": the truth is out there.",
     "emoji": "👽",
     "score": 2024
+  },
+  {
+    "id": "AMERICAN",
+    "label": "American",
+    "desc": "Contains \"1776\", the year of the Declaration of Independence.",
+    "emoji": "🇺🇸",
+    "score": 251776
+  },
+  {
+    "id": "ANGEL_82",
+    "label": "Angel Number",
+    "desc": "Contains \"82\": abundance and harmony, in numerology.",
+    "emoji": "😇",
+    "score": 2024
+  },
+  {
+    "id": "EXACT_82",
+    "label": "Exact 82",
+    "desc": "Exactly 82, the angel number.",
+    "emoji": "👼",
+    "score": 100000100
+  },
+  {
+    "id": "VORTROX_CURSE",
+    "label": "Vortrox Curse",
+    "desc": "Contains \"92\", the cursed meme number.",
+    "emoji": "🧿",
+    "score": 2024
+  },
+  {
+    "id": "EXACT_92",
+    "label": "Exact 92",
+    "desc": "Exactly 92: the curse in its purest form.",
+    "emoji": "🔮",
+    "score": 100000100
+  },
+  {
+    "id": "SIXTY_ONE",
+    "label": "Sixty-One",
+    "desc": "Contains \"61\", another brainrot number.",
+    "emoji": "🧃",
+    "score": 2024
+  },
+  {
+    "id": "JUICE_WRLD",
+    "label": "Juice WRLD",
+    "desc": "Contains \"999\".",
+    "emoji": "🖤",
+    "score": 25999
+  },
+  {
+    "id": "ERROR_404",
+    "label": "Error 404",
+    "desc": "Contains \"404\": badge not found. Wait, what?",
+    "emoji": "🚫",
+    "score": 25404
+  },
+  {
+    "id": "BRAINROT_KING",
+    "label": "Brainrot King",
+    "desc": "Contains \"6741\" or \"4167\".",
+    "emoji": "👑",
+    "score": 256741
+  },
+  {
+    "id": "BRAINROT_KING_EXACT",
+    "label": "Brainrot Emperor",
+    "desc": "Exactly 676741 or 674141.",
+    "emoji": "🫅",
+    "score": 100000100
   }
 ]

@@ -18,8 +18,13 @@
     { id: 'addict', emoji: '🌀', title: 'Addict', desc: 'Make 1,000 rolls', test: st => num(st.rolls) >= 1000 },
     { id: 'nolife', emoji: '🧟', title: 'No Life', desc: 'Make 10,000 rolls', test: st => num(st.rolls) >= 10000 },
     { id: 'connoisseur', emoji: '🖼️', title: 'Collectible Connoisseur', desc: 'Own every skin (limited ones excepted)', test: st => num(st.connoisseur) >= 1 }, // idée de kaz (2026-10-20)
+    { id: 'allbuttons', emoji: '🔘', title: 'Button Masher', desc: 'Own every Generate button (limited ones excepted)', test: st => num(st.allButtons) >= 1 }, // idée de PRISMA123 (2026-10-22)
+    { id: 'allemotes', emoji: '😎', title: 'Emote Lord', desc: 'Own every special emote', test: st => num(st.allEmotes) >= 1 },
+    { id: 'allwalls', emoji: '🖼️', title: 'Interior Designer', desc: 'Own every wallpaper (limited ones excepted)', test: st => num(st.allWalls) >= 1 },
     { id: 'coinmillionaire', emoji: '🤑', title: 'Coin Millionaire', desc: 'Hold 1,000,000 coins at once', test: st => num(st.millionaire) >= 1 }, // idée d'A Dude (2026-10-21)
     { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => num(st.rolls) >= 100000 }, // idée de PRISMA123 (2026-10-20)
+    { id: 'unemployking', emoji: '🛋️', title: 'The King Of Unemployment', desc: 'Make 1,000,000 rolls', test: st => num(st.rolls) >= 1000000 }, // idée d'A Dude (2026-10-22)
+    { id: 'unemploygod', emoji: '🛐', title: 'The God Of Unemployment', desc: 'Make 10,000,000 rolls', test: st => num(st.rolls) >= 10000000 },
     { id: 'cardshark', emoji: '🃏', title: 'Card Shark', desc: 'Get 100 blackjacks in the casino', test: st => num(st.gNaturals) >= 100 }, // idée de Dylanrulez123 (2026-10-20)
     { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => num(st['t:trash']) >= 1 },
     { id: 'lucky', emoji: '🍀', title: 'Lucky', desc: 'Roll a Rare or better', test: st => atLeast(st, 'rare') >= 1 },

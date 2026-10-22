@@ -75,6 +75,15 @@
       ${roundEyes(7, 1.7)}<ellipse cx="50" cy="63" rx="5" ry="6.5" fill="#7a1f2b" ${S} stroke-width="3"/>
       <g class="em em-burst">${[[50, 14, 10, '#fde047'], [37, 18, 7.5, '#fb923c'], [63, 18, 7.5, '#fb923c'], [44, 8, 6, '#fff'], [57, 9, 6, '#fff']].map(([x, y, r, c]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${S} stroke-width="2.6"/>`).join('')}</g>
       ${[[14, 16, -30], [86, 16, 30], [10, 34, -70], [90, 34, 70]].map(([x, y, a], i) => `<g transform="rotate(${a} ${x} ${y})"><path class="em em-ray" style="animation-delay:${i * .12}s" d="M${x} ${y} l0 -8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>`).join('')}`),
+    // Super confused (idée de finnnnn, 2026-10-22) : la tête penchée qui oscille, un œil grand et l'autre petit, la
+    // bouche en zigzag, et trois points d'interrogation qui montent l'un après l'autre.
+    confused: () => wrap(`${badge('#0d9488', '#99f6e4')}
+      <g class="em em-tilt">${cube()}
+        <circle cx="40" cy="45" r="7.5" fill="#fff" ${S} stroke-width="3"/><circle cx="42" cy="44" r="2.6" fill="${INK}"/>
+        <circle cx="61" cy="47" r="4.2" fill="#fff" ${S} stroke-width="3"/><circle cx="60" cy="48" r="1.7" fill="${INK}"/>
+        <path d="M34 36 L46 34" fill="none" ${S} stroke-width="3.6"/><path d="M55 40 Q61 34 67 39" fill="none" ${S} stroke-width="3.6"/>
+        <path d="M38 62 l4 -3 l4 3 l4 -3 l4 3 l4 -3 l4 3" fill="none" ${S} stroke-width="3.2"/></g>
+      ${[[17, 30, 22, 0], [84, 26, 19, .5], [80, 50, 14, 1]].map(([x, y, f, d]) => `<text class="em em-float" style="animation-delay:${d}s" x="${x}" y="${y}" text-anchor="middle" font-size="${f}" font-weight="900" font-family="system-ui, sans-serif" fill="#fde047" stroke="${INK}" stroke-width="1.8" paint-order="stroke">?</text>`).join('')}`),
   };
 
   const cache = new Map();

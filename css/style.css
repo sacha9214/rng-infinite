@@ -5175,3 +5175,5 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   .ib-date { margin-left: auto; }
   .ib-detail { padding-left: .9rem; }
 }
+
+.chat-edited { margin-left: .3rem; font-size: .7rem; color: var(--prose-3); font-style: normal; }

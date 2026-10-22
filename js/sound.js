@@ -67,6 +67,23 @@
     const squish = S.osc(.16, t => 130 - 60 * t / .16, S.expo(.045, .006));
     return S.sum(...grains, S.gain(squish, .5));
   };
+  // Craquement plus naturel pour le skin ASMR (JAKECisthebest, 2026-10-22 : « plus naturel, comme dans les vidéos ASMR »).
+  // Un vrai craquement n'a pas de note : ce sont des dizaines de micro-cassures de hauteur et de force très variées, à des
+  // instants irréguliers (serrées quand la croûte cède, puis des miettes), plus le froissement sourd de la matière pressée.
+  const crackle = (seed, n = 30, len = .2) => {
+    let r = seed * 7919 + 13;
+    const rand = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+    const grains = [];
+    let at = 0;
+    for (let g = 0; g < n && at < len; g++) {
+      const snap = rand() < .18, d = snap ? .006 + .006 * rand() : .002 + .004 * rand();
+      const f = snap ? 1500 + 2500 * rand() : 2500 + 5500 * rand();
+      grains.push(S.delayed(S.gain(S.shape(S.filter(S.noise(d + .004, seed * 31 + g), 'bp', f, .8 + .6 * rand()), S.expo(d * .5, .0002)), snap ? .8 + .4 * rand() : .2 + .45 * rand()), at));
+      at += (.002 + .02 * rand()) * (1 + 3 * at / len); // de plus en plus espacées
+    }
+    const press = S.shape(S.filter(S.noise(.12, seed + 500), 'lp', 520), S.expo(.035, .004));
+    return S.sum(...grains, S.gain(press, .55));
+  };
   // Tintement de verre (skin Lab) : un tube à essai heurte le portoir. Trois partiels aigus inharmoniques qui s'éteignent
   // vite (un tube de verre sonne comme une petite barre libre) et un « tic » de contact très court. k fait varier la hauteur.
   const clink = (k, big = 0) => {
@@ -182,7 +199,7 @@
     lock: ({ i, soft, final, skin, pack }) => PACKS[pack] && !skin
       ? [[PACKS[pack].lock(i, final), 0, PACKS[pack].level * (soft ? .5 : final ? 1.15 : 1), ((i * 37) % 9) / 18 - .25, .25]]
       : skin === 'asmr'
-      ? [[S.lock(S.note(i), .4), 0, soft ? .2 : final ? .4 : .36, 0, .25], [wax(90 + i, final ? 20 : 12, final ? .2 : .12), 0, soft ? .14 : final ? .36 : .28, ((i * 37) % 9) / 18 - .25, .12]]
+      ? [[S.lock(S.note(i), .3), 0, soft ? .08 : final ? .16 : .12, 0, .25], [crackle(90 + i, final ? 46 : 30, final ? .32 : .2), 0, soft ? .32 : final ? .8 : .65, ((i * 37) % 9) / 18 - .25, .12]]
       : skin === 'lab'
         ? [[S.lock(S.note(i), .35), 0, soft ? .16 : final ? .32 : .28, 0, .22], [clink(i, final ? 1 : 0), 0, soft ? .1 : final ? .26 : .2, ((i * 37) % 9) / 18 - .25, .35]].concat(final ? [[clink(i + 3, 1), .07, .16, .2, .4]] : [])
         : [[S.lock(S.note(i), soft ? .5 : final ? 1.2 : 1), 0, soft ? .2 : final ? .4 : .36, 0, .25]],

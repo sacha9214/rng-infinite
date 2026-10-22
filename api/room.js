@@ -354,7 +354,7 @@ async function view(room, me) {
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
     ...(() => { let ps = null; try { ps = room.h.psound ? JSON.parse(room.h.psound) : null; } catch (e) { ps = null; } return ps && Date.now() - ps.t < 10000 && ps.from !== me && (ps.to === 'all' || ps.to === me) ? { psound: { t: ps.t, kind: ps.kind, by: ps.by } } : {}; })(),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
-    chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m })),
+    chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m, ...(c.e ? { edited: true } : {}) })),
     achievements: status === 'done' && room.players.some(p => p.id === me) ? Achievements.unlocked(await readStats(me)) : undefined,
     now: Date.now(),
   };
@@ -617,6 +617,16 @@ module.exports = async (req, res) => {
       const entry = i < 0 ? null : (raw || []).find(x => { try { const c = JSON.parse(x); return c.i === i && c.t === Number(body.t); } catch (e) { return false; } });
       if (!entry) return send(res, 404, { error: 'This message is gone' });
       await redis([['LREM', chatKey(code), 1, entry]]);
+      return send(res, 200, await view(await load(code), playerId));
+    }
+    // Modifier un de ses messages du chat (idée de kingston, 2026-10-22).
+    if (body.action === 'edit') {
+      const i = room.players.findIndex(p => p.id === playerId), text = cleanChat(body.text);
+      if (!text) return send(res, 422, { error: 'Write something first' });
+      const [raw] = await redis([['LRANGE', chatKey(code), 0, -1]]);
+      const k = i < 0 ? -1 : (raw || []).findIndex(x => { try { const c = JSON.parse(x); return c.i === i && c.t === Number(body.t); } catch (e) { return false; } });
+      if (k < 0) return send(res, 404, { error: 'This message is gone' });
+      await redis([['LSET', chatKey(code), k, JSON.stringify({ ...JSON.parse(raw[k]), m: text, e: 1 })]]);
       return send(res, 200, await view(await load(code), playerId));
     }
     // Signaler un message du chat (api/_reports.js) : le serveur retrouve le message par son heure.

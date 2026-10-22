@@ -43,8 +43,14 @@ const CODE_MIN_ROLLS = 30;
 // Titre Collectible Connoisseur : posé une fois quand le joueur possède tous les skins hors limités (après un achat ou
 // une caisse) ; un skin ajouté plus tard ne le retire pas.
 async function checkCollection(playerId) {
-  const [owned] = await redis([['SMEMBERS', ownedKey(playerId)]]);
-  if (Shop.collectible().every(id => (owned || []).includes(id))) await redis([['HSET', statsKey(playerId), 'connoisseur', 1]]);
+  const [owned, btns, emos, walls] = await redis([['SMEMBERS', ownedKey(playerId)], ['SMEMBERS', ownedButtonsKey(playerId)], ['SMEMBERS', ownedEmotesKey(playerId)], ['SMEMBERS', ownedWallsKey(playerId)]]);
+  const has = (list, set) => list.every(id => (set || []).includes(id)), w = [];
+  if (has(Shop.collectible(), owned)) w.push(['HSET', statsKey(playerId), 'connoisseur', 1]);
+  // Titres de collection (idée de PRISMA123, 2026-10-22) : tous les boutons, toutes les émotes, tous les fonds.
+  if (has(Shop.collectibleSets.buttons(), btns)) w.push(['HSET', statsKey(playerId), 'allButtons', 1]);
+  if (has(Shop.collectibleSets.emotes(), emos)) w.push(['HSET', statsKey(playerId), 'allEmotes', 1]);
+  if (has(Shop.collectibleSets.walls(), walls)) w.push(['HSET', statsKey(playerId), 'allWalls', 1]);
+  if (w.length) await redis(w);
 }
 const usedCodesKey = id => `codes:${id}`;
 const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash "wall" retient celui affiché
@@ -121,8 +127,11 @@ module.exports = async (req, res) => {
         // Clé de caisse gagnée avec les niveaux (stats.key:<caisse>) : la caisse s'ouvre gratuitement.
         let price = box.price;
         if (body.free) {
-          const [left] = await redis([['HINCRBY', statsKey(playerId), `key:${box.id}`, -1]]);
-          if (Number(left) < 0) { await redis([['HINCRBY', statsKey(playerId), `key:${box.id}`, 1]]); return send(res, 422, { error: 'No key for this case' }); }
+          // free = true : la clé de cette caisse ; free = '<clé>' : une autre clé qui l'ouvre aussi (Shop.KEY_OPENS).
+          const keyId = typeof body.free === 'string' ? body.free : box.id;
+          if (!(Shop.KEY_OPENS[keyId] || []).includes(box.id)) return send(res, 422, { error: 'This key does not open this case' });
+          const [left] = await redis([['HINCRBY', statsKey(playerId), `key:${keyId}`, -1]]);
+          if (Number(left) < 0) { await redis([['HINCRBY', statsKey(playerId), `key:${keyId}`, 1]]); return send(res, 422, { error: 'No key for this case' }); }
           price = 0;
         } else if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
@@ -132,7 +141,7 @@ module.exports = async (req, res) => {
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
         if (!duplicate) writes.push(['SADD', box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
         await redis(writes);
-        if (!duplicate && !box.wall) await checkCollection(playerId);
+        if (!duplicate) await checkCollection(playerId);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -170,6 +179,7 @@ module.exports = async (req, res) => {
         if (!st.walls.includes(item.id)) {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], ...eco('out:wallpapers', item.price)]);
+          await checkCollection(playerId);
         }
         await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché
         return send(res, 200, await state(playerId));
@@ -190,6 +200,7 @@ module.exports = async (req, res) => {
             ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:buttons', item.price),
             ['SADD', ownedButtonsKey(playerId), item.id],
           ]);
+          await checkCollection(playerId);
         }
         await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
         return send(res, 200, await state(playerId));
@@ -277,6 +288,7 @@ module.exports = async (req, res) => {
             ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:emotes', item.price),
             ['SADD', ownedEmotesKey(playerId), item.id],
           ]);
+          await checkCollection(playerId);
         }
         return send(res, 200, await state(playerId));
       } finally {

@@ -279,6 +279,7 @@
 .em-spinx { animation-name: em-spinx; animation-duration: 1s !important; }
 .em-burst { animation-name: em-burst; animation-duration: .9s !important; transform-origin: 50% 100% !important; }
 .em-ray { animation-name: em-ray; animation-duration: .9s !important; }
+.em-tilt { animation-name: em-tilt; animation-duration: 2.2s !important; }
 @keyframes em-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes em-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04, .97) translateY(1px); } }
 @keyframes em-tremble { 0%, 100% { transform: translate(-.6px, 0); } 50% { transform: translate(.6px, .4px); } }
@@ -290,6 +291,7 @@
 @keyframes em-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
 @keyframes em-float { 0% { transform: translateY(8px) scale(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-14px) scale(1.1); opacity: 0; } }
 @keyframes em-steam { 0% { transform: translateY(6px) scale(.5); opacity: 0; } 35% { opacity: 1; } 100% { transform: translateY(-9px) scale(1.15); opacity: 0; } }
+@keyframes em-tilt { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(7deg) translateY(-1px); } }
 @keyframes em-wobble { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 @keyframes em-honk { 0%, 60%, 100% { transform: scale(1); } 75% { transform: scale(1.45); } 88% { transform: scale(.9); } }
 @keyframes em-fall { 0% { transform: translateY(-12px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(30px) rotate(40deg); opacity: 0; } }

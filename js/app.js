@@ -140,7 +140,7 @@
     },
     shopCase(id, free) {
       const p = Store.player;
-      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id, free: !!free }) });
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'case', case: id, free: typeof free === 'string' ? free : !!free }) });
     },
     quests() {
       return this.request(`/api/quests?me=${Store.player.id}`);
@@ -1049,9 +1049,19 @@
           ${family.map(f => `<span class="badge-pill" data-tier="${f.tier}" data-badge="${f.id}" style="cursor:pointer;${f.id === id ? 'font-weight:700' : ''}">${f.emoji} ${esc(f.label)}</span>`).join(' ')}
         </span></div>
         <p class="panel-note" style="margin:.2rem 0 0">Only the highest-scoring badge of a family counts toward XP; the others show as “earned”.</p>` : ''}
+      ${countedRolls() >= SKIP_BADGES_AT ? `<div class="kv"><span class="k">Skip known badges</span><span class="v"><button class="btn ghost small" id="bm-full">${(Store.settings.fullBadges || []).includes(id) ? '⭐ Always shown in full' : '⏩ Skipped when known'}</button></span></div>` : ''}
       ${holders.length ? `<div class="eyebrow" style="margin:1.1rem 0 .6rem">Your rolls with this badge${e.count > holders.length ? ` (latest ${holders.length})` : ''}</div>
         <div class="pill-row" style="justify-content:flex-start">${holders.map(i => `<button class="num-card sm" data-tier="${Engine.cardTier(Store.rolls[i][1])}" data-roll="${i}">${Store.rolls[i][0]}</button>`).join('')}</div>` : ''}
-    `);
+    `, m => {
+      const b2 = m.querySelector('#bm-full');
+      if (b2) b2.addEventListener('click', () => {
+        const set = new Set(Store.settings.fullBadges || []);
+        if (set.has(id)) set.delete(id); else set.add(id);
+        Store.setSetting('fullBadges', [...set].slice(-300));
+        b2.textContent = set.has(id) ? '⭐ Always shown in full' : '⏩ Skipped when known';
+        toast(set.has(id) ? 'This badge will always get its full reveal' : 'This badge is skipped again when you already have it');
+      });
+    });
   }
 
   // Touche de tirage choisie par le joueur (idée de jia jun, 2026-10-20) : Espace par défaut, Entrée marche toujours.
@@ -1073,7 +1083,7 @@
       ${googleAccountHTML()}
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
-      <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal.</span></div>
+      <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
@@ -1649,6 +1659,27 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23a', date: 'Oct 23, 2026', en: [
+      '🔢 New badges: 🇺🇸 American (1776, idea by jaxoncool43), 😇 Angel Number (82, idea by kaz), 🧿 Vortrox Curse (92, idea by CococoC), 🧃 Sixty-One (61, idea by schoolroller), 🖤 Juice WRLD (999, idea by Colt2), 🚫 Error 404 (404, idea by Gray), 👑 Brainrot King (6741 or 4167) and 🫅 Brainrot Emperor (exactly 676741 or 674141, ideas by CrazyMiner22)',
+      '🛋️ New titles: The King Of Unemployment (1,000,000 rolls) and The God Of Unemployment (10,000,000 rolls), idea by A Dude',
+      '🔘 New collection titles: Button Masher, Emote Lord and Interior Designer, for owning every button, emote or wallpaper (idea by PRISMA123)',
+      '😵‍💫 New emote: Super confused (idea by finnnnn)',
+      '✏️ You can now edit your messages, with friends and in the duel chat (idea by kingston)',
+      '🔑 A Premium key can now also open a Starter or Wallpaper case (idea by keys)',
+      '🧈 The ASMR skin crunches more naturally (idea by JAKECisthebest)',
+      '⭐ Skip known badges: open any badge and pick “Always shown in full” to keep its full reveal (idea by Aussie Haüs)',
+      '🐞 Fixes: the Collectible Connoisseur title no longer needs the free Classic skin; coins no longer go up before a roll is revealed; auto-roll no longer cuts a roll you started by hand',
+    ], fr: [
+      '🔢 Nouveaux badges : 🇺🇸 American (1776, idée de jaxoncool43), 😇 Angel Number (82, idée de kaz), 🧿 Vortrox Curse (92, idée de CococoC), 🧃 Sixty-One (61, idée de schoolroller), 🖤 Juice WRLD (999, idée de Colt2), 🚫 Error 404 (404, idée de Gray), 👑 Brainrot King (6741 ou 4167) et 🫅 Brainrot Emperor (exactement 676741 ou 674141, idées de CrazyMiner22)',
+      '🛋️ Nouveaux titres : le Roi du Chômage (1 000 000 de tirages) et le Dieu du Chômage (10 000 000), idée d\'A Dude',
+      '🔘 Nouveaux titres de collection : Maître des boutons, Seigneur des émotes et Décorateur, pour avoir tous les boutons, émotes ou fonds (idée de PRISMA123)',
+      '😵‍💫 Nouvelle émote : Super perdu (idée de finnnnn)',
+      '✏️ Tu peux maintenant modifier tes messages, entre amis et dans le chat des duels (idée de kingston)',
+      '🔑 Une clé Premium ouvre aussi une caisse Starter ou Fonds (idée de keys)',
+      '🧈 Le skin ASMR craque de façon plus naturelle (idée de JAKECisthebest)',
+      '⭐ Passer les badges connus : ouvre un badge et choisis « Toujours montré en entier » pour garder sa révélation (idée d\'Aussie Haüs)',
+      '🐞 Corrections : le titre Grand collectionneur ne demande plus le skin Classic gratuit ; les pièces ne montent plus avant la fin du tirage ; le tirage auto ne coupe plus un tirage lancé à la main',
+    ] },
     { id: '2026-10-22m', date: 'Oct 22, 2026', en: [
       '🎲 New casino game: Dice (idea by CYCOX and YU CHUAN 23). Set your target, pick Roll under or Roll over: the lower your chance, the bigger the payout (up to 48.5×). Or guess a 6-sided die for 5.82×',
       '🧸 New casino game: Teddy Roulette (idea by d_alex). A confetti popper with 6 chambers aims at a cute teddy: each click raises your payout (up to 5.82×), but one chamber goes BOOM. Cash out whenever you like!',
@@ -2263,7 +2294,9 @@
     // Réglage « Skip known badges » (débloqué à SKIP_BADGES_AT tirages) : un badge déjà obtenu se pose d'un coup ; un
     // badge jamais vu garde toujours sa révélation complète. Chiffres et rareté ne se sautent jamais.
     const skipKnown = skipBadgesOn() && !ctx.isFirst && !ctx.replay;
-    const known = g => skipKnown && ![g.badge, ...g.subsidiary].some(b => ctx.newIds && ctx.newIds.has(b.id));
+    // Badges choisis pour toujours garder leur révélation complète (idée d'Aussie Haüs, 2026-10-22 : fiche du badge).
+    const always = new Set(Store.settings.fullBadges || []);
+    const known = g => skipKnown && ![g.badge, ...g.subsidiary].some(b => (ctx.newIds && ctx.newIds.has(b.id)) || always.has(b.id));
     ascending.forEach((g, i) => {
       const fast = known(g);
       step(fast ? (i === 0 ? 260 : 70) / kb : i === 0 ? REVEAL.badgeStart : badgeDelay(i - 1, ascending.length), q0 => {
@@ -3421,10 +3454,16 @@
     drawSpeed(state);
     const cases = $('#d-cases');
     // Clés de caisse gagnées avec les niveaux : un bouton « ouvrir gratuitement » sur la caisse correspondante.
-    document.querySelectorAll('[data-case-free]').forEach(b => { const n = (state.keys || {})[b.dataset.caseFree] || 0; b.hidden = !n; b.textContent = `🔑 Open free (${n})`; });
+    // Sa propre clé d'abord, sinon une clé plus haute qui l'ouvre aussi (une clé Premium ouvre Starter et Fonds).
+    document.querySelectorAll('[data-case-free]').forEach(b => {
+      const id = b.dataset.caseFree, keys = state.keys || {};
+      const k = [id, ...Object.keys(Shop.KEY_OPENS).filter(x => x !== id)].find(x => (Shop.KEY_OPENS[x] || []).includes(id) && keys[x] > 0);
+      b.hidden = !k; b.dataset.key = k || '';
+      if (k) b.textContent = k === id ? `🔑 Open free (${keys[k]})` : `🔑 Use a ${Shop.caseById.get(k).name.replace(' Case', '')} key (${keys[k]})`;
+    });
     if (cases) cases.onclick = e => {
       const free = e.target.closest('[data-case-free]');
-      if (free && !free.disabled) { openCase(Shop.caseById.get(free.dataset.caseFree), state, free, true); return; }
+      if (free && !free.disabled) { openCase(Shop.caseById.get(free.dataset.caseFree), state, free, free.dataset.key && free.dataset.key !== free.dataset.caseFree ? free.dataset.key : true); return; }
       const btn = e.target.closest('[data-case]');
       if (btn && !btn.disabled) openCase(Shop.caseById.get(btn.dataset.case), state, btn);
     };
@@ -5991,7 +6030,7 @@
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.me ? ` · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
@@ -6012,6 +6051,13 @@
       });
       list.addEventListener('click', async e => {
         const rep = e.target.closest('[data-dm-report]'); if (rep) { reportMessage(rep, () => Online.friends('report', name, { t: Number(rep.dataset.dmReport) })); return; }
+        const ed = e.target.closest('[data-dm-edit]');
+        if (ed) {
+          const v = prompt(window.RNGI18n ? window.RNGI18n.t('Edit your message') : 'Edit your message', ed.dataset.text);
+          if (v == null || !v.trim() || v === ed.dataset.text) return;
+          try { draw(await Online.friends('edit', name, { t: Number(ed.dataset.dmEdit), text: v })); } catch (err) { toast([404, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
+          return;
+        }
         const del = e.target.closest('[data-dm-unsend]'); if (!del) return;
         del.disabled = true;
         try { draw(await Online.friends('unsend', name, { t: Number(del.dataset.dmUnsend) })); } catch (err) { del.disabled = false; toast('Unavailable right now, try again'); }
@@ -6269,12 +6315,12 @@
     if (!list || !d) return;
     const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
     const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
-    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}`;
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}`; // un message modifié redessine aussi
     if (sig !== Room.chatSig) {
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
+        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -6481,6 +6527,12 @@
       $('#room-chat').addEventListener('click', e => {
         const rep = e.target.closest('[data-chat-report]');
         if (rep) { reportMessage(rep, () => Online.roomAction('report', Room.code, { t: Number(rep.dataset.chatReport) })); return; }
+        const ed = e.target.closest('[data-chat-edit]');
+        if (ed) {
+          const v = prompt(window.RNGI18n ? window.RNGI18n.t('Edit your message') : 'Edit your message', ed.dataset.text);
+          if (v != null && v.trim() && v !== ed.dataset.text) { Room.chatSig = ''; roomSend('edit', ed, { t: Number(ed.dataset.chatEdit), text: v }); }
+          return;
+        }
         const unsay = e.target.closest('[data-chat-unsay]');
         if (unsay) { Room.chatSig = ''; roomSend('unsay', unsay, { t: Number(unsay.dataset.chatUnsay) }); return; }
         const hide = e.target.closest('[data-chat-hide]'), show = e.target.closest('[data-chat-show]');

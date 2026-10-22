@@ -101,7 +101,7 @@ const DM_KEEP = 100, DM_TTL = 7 * 86400, DM_PER_MIN = 20, DM_PER_DAY = 400;
 const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`, unreadKey = id => `dmu:${id}`, blockKey = id => `dmblock:${id}`;
 async function dmThread(me, other) {
   const [raw, iBlocked] = await redis([['LRANGE', dmKey(me, other), 0, -1], ['SISMEMBER', blockKey(me), other], ['HDEL', unreadKey(me), other]]);
-  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
+  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0, ...(m.e ? { edited: true } : {}) }; } catch (e) { return null; } }).filter(Boolean);
   return { messages, blocked: Number(iBlocked) === 1, max: MAX_CHARS };
 }
 async function sendDm(me, other, raw) {
@@ -208,6 +208,16 @@ module.exports = async (req, res) => {
       const entry = (raw || []).find(x => { try { const m = JSON.parse(x); return m.s === playerId && Number(m.t) === Number(body.t); } catch (e) { return false; } });
       if (!entry) return send(res, 404, { error: 'This message is gone' });
       await redis([['LREM', key, 1, entry]]);
+      return send(res, 200, await dmThread(playerId, other));
+    }
+    // Modifier un de ses messages (idée de kingston, 2026-10-22) : même nettoyage qu'à l'envoi, marqué « edited ».
+    if (body.action === 'edit') {
+      const key = dmKey(playerId, other), text = cleanChat(body.text);
+      if (!text) return send(res, 422, { error: 'Write a message first' });
+      const [raw] = await redis([['LRANGE', key, 0, -1]]);
+      const k = (raw || []).findIndex(x => { try { const m = JSON.parse(x); return m.s === playerId && Number(m.t) === Number(body.t); } catch (e) { return false; } });
+      if (k < 0) return send(res, 404, { error: 'This message is gone' });
+      await redis([['LSET', key, k, JSON.stringify({ ...JSON.parse(raw[k]), x: text, e: 1 })]]);
       return send(res, 200, await dmThread(playerId, other));
     }
     // Signaler un message reçu (api/_reports.js) : seulement un message de l'autre, retrouvé par son heure.
