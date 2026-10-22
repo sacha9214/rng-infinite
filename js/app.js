@@ -5335,6 +5335,18 @@
     currentView = 'ideas';
     app.innerHTML = `<div class="page page-wide"><h1 class="page-title">🧑‍⚖️ Idea Manager</h1>
       <p class="panel-note profile-sub">Read each player idea and say what you think: Yes, No, Discuss or Already exists, and always explain why. Sacha reads every review and makes the final call; players never see your reviews.</p>
+      <div class="panel im-howto">
+        <h3 class="panel-title">📝 How to review an idea</h3>
+        <ol>
+          <li><b>Pick your answer</b>: ✅ Yes, ❌ No, 🤔 Discuss or ♻️ Already exists.</li>
+          <li><b>Write why</b> in the box under it (at least 20 characters). This part is required: a review without a reason is not saved.</li>
+          <li><b>Press “Send my review”</b>. You'll see “Review saved” and the idea moves to the “Reviewed by me” tab. If it doesn't move, it was not sent.</li>
+        </ol>
+        <div class="im-example"><span class="panel-note">Example</span>
+          <p><i>“Add a pizza skin with melting cheese”</i></p>
+          <p>✅ <b>Yes</b> · “Food skins like Mayo and Bakery sell well, and there is no pizza yet. The melting cheese could be the reveal.”</p>
+        </div>
+      </div>
       <div id="im-body"><div class="empty">Loading…</div></div></div>`;
     mountIdeaManager($('#im-body'), false);
   }
