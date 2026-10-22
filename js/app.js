@@ -1659,6 +1659,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23c', date: 'Oct 23, 2026', en: ['🐞 Duels: the chat no longer disappears when the game starts, no refresh needed'], fr: ['🐞 Duels : le chat ne disparaît plus quand la partie commence, plus besoin de recharger'] },
     { id: '2026-10-23b', date: 'Oct 23, 2026', en: ['🎁 New code for my friend randomguy: use ICHI in Player & settings for 🪙 100 coins'], fr: ['🎁 Nouveau code pour mon ami randomguy : utilise ICHI dans Joueur et réglages pour 🪙 100 pièces'] },
     { id: '2026-10-23a', date: 'Oct 23, 2026', en: [
       '🔢 New badges: 🇺🇸 American (1776, idea by jaxoncool43), 😇 Angel Number (82, idea by kaz), 🧿 Vortrox Curse (92, idea by CococoC), 🧃 Sixty-One (61, idea by schoolroller), 🖤 Juice WRLD (999, idea by Colt2), 🚫 Error 404 (404, idea by Gray), 👑 Brainrot King (6741 or 4167) and 🫅 Brainrot Emperor (exactly 676741 or 674141, ideas by CrazyMiner22)',
@@ -6464,11 +6465,12 @@
       return;
     }
 
-    const seats = `${d.players.length}|${!!me}`;
+    const seats = `${d.players.length}|${!!me}|${Room.isOwner ? 1 : 0}`; // le statut de créateur peut arriver après le premier affichage
     if (Room.view === 'playing' && Room.seats !== seats && !Room.anim) Room.view = null; // quelqu'un est entré en cours de partie
     if (Room.view !== 'playing') {
       Room.view = 'playing';
       Room.seats = seats;
+      Room.chatSig = ''; // salon reconstruit (un joueur arrive) : la liste du chat est neuve, il faut la redessiner
       body.innerHTML = `
       <div class="room-layout"><div class="room-main">
         <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
@@ -6487,7 +6489,7 @@
           <p class="panel-note chat-hidden" id="chat-hidden"></p>
           <div id="chat-foot"></div>
         </div>
-        ${me && Room.isOwner && d.players.some(p => !p.me && !p.bot) ? `<div class="prank-bar"><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
+        ${Room.isOwner ? `<div class="prank-bar" id="prank-bar" hidden><button class="btn prank-btn" id="prank-sound" title="Play a loud sound right now on a player's screen">📢 Loud sound</button><button class="btn prank-btn" id="prank-jackpot" title="Pick a player and a number: on the next round their card lands on it, then the joke. Nothing real changes.">🎭 Fake jackpot <b id="prank-left"></b></button></div>` : ''}
       </aside></div>`;
       const pb = $('#prank-jackpot');
       const ps = $('#prank-sound');
@@ -6565,6 +6567,10 @@
       const reacts = $('#room-reacts');
       if (reacts) reacts.addEventListener('click', e => { const b = e.target.closest('[data-react]'); if (b) sendReaction(b.dataset.react); });
     }
+    // Boutons du créateur : toujours dessinés pour lui, montrés dès qu'un vrai joueur est là (y compris un joueur arrivé en
+    // cours de partie ; avant, ils n'apparaissaient qu'au premier affichage du salon, signalé par Sacha le 2026-10-23).
+    const prankBar = $('#prank-bar');
+    if (prankBar) prankBar.hidden = !(me && d.players.some(p => !p.me && !p.bot));
     // Un joueur a changé de skin dans Shop : ses cartes changent entre deux manches, jamais pendant une révélation.
     if (!Room.anim && $('#room-stage') && Room.skinSig !== skinSig(d)) {
       const r = Room.shown ? d.rounds[Room.shown - 1] : null;

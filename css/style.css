@@ -5185,3 +5185,5 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
    il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place. */
 #card-stage .num-card.skin-wheelie { margin-top: 3.6rem; }
 @media (max-width: 560px) { #card-stage .num-card.skin-wheelie { margin-top: 3rem; } }
+
+.prank-bar[hidden] { display: none; }
