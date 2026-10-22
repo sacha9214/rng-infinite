@@ -354,7 +354,7 @@ async function handle(body, now = Date.now()) {
     let tid = await tidOf(me, date);
     if (tid === tids[0] && !(me && (await redis([['ZSCORE', inKey(tids[0]), me]]))[0] !== null)) {
       const [n1] = await redis([['ZCARD', inKey(tids[0])]]);
-      if (Number(body.which) === 2 || (Number(body.which) !== 1 && Number(n1) >= MAX_PLAYERS)) tid = tids[1];
+      if (Number(body.which) === 2 || (Number(body.which) !== 1 && Number(n1) >= MAX_PLAYERS && now < times(date, 0).close)) tid = tids[1]; // plein : le second, seulement pendant les inscriptions
     }
     const out = await view(tid, me, now);
     // Les deux tournois du jour, pour passer de l'un à l'autre.
