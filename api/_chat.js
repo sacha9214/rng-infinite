@@ -49,4 +49,13 @@ function cleanChat(raw) {
   return text.replace(/\s+/g, ' ').trim();
 }
 
-module.exports = { cleanChat, MAX_CHARS };
+// Image envoyée par un joueur (capture d'un bug, image entre amis) : un JPEG en data URL, déjà réduit par la page,
+// vérifié ici (en-tête JPEG, taille maximale en caractères base64). Renvoie null sinon.
+function cleanImage(raw, max = 200000) {
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(raw || ''));
+  if (!m || m[1].length > max) return null;
+  const buf = Buffer.from(m[1], 'base64');
+  return buf.length > 100 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? `data:image/jpeg;base64,${m[1]}` : null;
+}
+
+module.exports = { cleanChat, cleanImage, MAX_CHARS };

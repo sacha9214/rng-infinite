@@ -9,7 +9,7 @@ const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, f
 const Reports = require('./_reports');
 const Shop = require('../js/shop.js');
 const { MIN_ROLLS } = require('./_gamble');
-const { cleanChat, MAX_CHARS } = require('./_chat');
+const { cleanChat, cleanImage, MAX_CHARS } = require('./_chat');
 
 const MAX_FRIENDS = 100, MAX_PENDING = 30;
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -98,24 +98,33 @@ async function unseenGifts(id) {
 // 7 jours après le dernier message ; chacun peut bloquer l'autre. dm:<idA>:<idB> (ids triés) = les 100 derniers
 // messages { s: expéditeur, x: texte, t } ; dmu:<id> = non lus par ami ; dmblock:<id> = ceux que ce joueur a bloqués.
 const DM_KEEP = 100, DM_TTL = 7 * 86400, DM_PER_MIN = 20, DM_PER_DAY = 400;
+// Images entre amis (demandé par Sacha, 2026-10-23) : un JPEG réduit par la page (~150 Ko au plus), gardé à part sous
+// dm:<a>:<b>:img:<heure>, effacé avec le message ou au bout de 7 jours comme lui. 30 images par jour et par joueur.
+const DM_IMG_PER_DAY = 30, dmImgKey = (a, b, t) => `${dmKey(a, b)}:img:${t}`;
 const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`, unreadKey = id => `dmu:${id}`, blockKey = id => `dmblock:${id}`;
 async function dmThread(me, other) {
   const [raw, iBlocked] = await redis([['LRANGE', dmKey(me, other), 0, -1], ['SISMEMBER', blockKey(me), other], ['HDEL', unreadKey(me), other]]);
-  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0, ...(m.e ? { edited: true } : {}) }; } catch (e) { return null; } }).filter(Boolean);
+  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0, ...(m.e ? { edited: true } : {}), ...(m.img ? { img: true } : {}) }; } catch (e) { return null; } }).filter(Boolean);
   return { messages, blocked: Number(iBlocked) === 1, max: MAX_CHARS };
 }
-async function sendDm(me, other, raw) {
+async function sendDm(me, other, raw, rawImage) {
   const [mine, theirs, blockedByThem, iBlocked] = await redis([['SISMEMBER', frKey(me), other], ['SISMEMBER', frKey(other), me], ['SISMEMBER', blockKey(other), me], ['SISMEMBER', blockKey(me), other]]);
   if (Number(mine) !== 1 || Number(theirs) !== 1) throw refuse(403, 'You can only message your friends');
   if (Number(iBlocked) === 1) throw refuse(422, 'You blocked this player: unblock them to send a message');
   if (Number(blockedByThem) === 1) throw refuse(403, 'This player does not accept your messages');
-  const text = cleanChat(raw);
-  if (!text) throw refuse(422, 'Write a message first');
+  const text = cleanChat(raw), image = rawImage ? cleanImage(rawImage) : null;
+  if (rawImage && !image) throw refuse(422, 'This image could not be sent: try another one');
+  if (!text && !image) throw refuse(422, 'Write a message first');
   const t = Date.now(), minute = Math.floor(t / 60000);
+  if (image) {
+    const [n] = await redis([['INCR', `dmimg:${me}:${dayKey(t)}`], ['EXPIRE', `dmimg:${me}:${dayKey(t)}`, 2 * 86400]]);
+    if (Number(n) > DM_IMG_PER_DAY) throw refuse(429, 'Too many images today');
+  }
   const [perMin, perDay] = await redis([['INCR', `dmrate:${me}:${minute}`], ['INCR', `dmrate:${me}:${dayKey(t)}`], ['EXPIRE', `dmrate:${me}:${minute}`, 120], ['EXPIRE', `dmrate:${me}:${dayKey(t)}`, 2 * 86400]]);
   if (Number(perMin) > DM_PER_MIN || Number(perDay) > DM_PER_DAY) throw refuse(429, 'Slow down: too many messages');
   const key = dmKey(me, other);
-  await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL], ['HINCRBY', 'feat:dms', dayKey(t), 1]]); // compteur du jour pour la page Owner
+  if (image) await redis([['SET', dmImgKey(me, other, t), image, 'EX', DM_TTL]]);
+  await redis([['RPUSH', key, JSON.stringify({ s: me, x: text, t, ...(image ? { img: 1 } : {}) })], ['LTRIM', key, -DM_KEEP, -1], ['EXPIRE', key, DM_TTL], ['HINCRBY', unreadKey(other), me, 1], ['EXPIRE', unreadKey(other), DM_TTL], ['HINCRBY', 'feat:dms', dayKey(t), 1]]); // compteur du jour pour la page Owner
 }
 
 // Présence (demandé par Sacha, 2026-10-21) : chaque page ouverte envoie toutes les minutes « active » ou « afk » (onglet
@@ -207,8 +216,16 @@ module.exports = async (req, res) => {
       const [raw] = await redis([['LRANGE', key, 0, -1]]);
       const entry = (raw || []).find(x => { try { const m = JSON.parse(x); return m.s === playerId && Number(m.t) === Number(body.t); } catch (e) { return false; } });
       if (!entry) return send(res, 404, { error: 'This message is gone' });
-      await redis([['LREM', key, 1, entry]]);
+      await redis([['LREM', key, 1, entry], ['DEL', dmImgKey(playerId, other, Number(body.t))]]);
       return send(res, 200, await dmThread(playerId, other));
+    }
+    // Lire une image du fil : seulement si le message existe encore entre ces deux joueurs.
+    if (body.action === 'image') {
+      const [raw] = await redis([['LRANGE', dmKey(playerId, other), 0, -1]]);
+      const ok = (raw || []).some(x => { try { const m = JSON.parse(x); return m.img && Number(m.t) === Number(body.t); } catch (e) { return false; } });
+      const [image] = ok ? await redis([['GET', dmImgKey(playerId, other, Number(body.t))]]) : [null];
+      if (!image) return send(res, 404, { error: 'This image is gone' });
+      return send(res, 200, { image });
     }
     // Modifier un de ses messages (idée de kingston, 2026-10-22) : même nettoyage qu'à l'envoi, marqué « edited ».
     if (body.action === 'edit') {
@@ -228,7 +245,7 @@ module.exports = async (req, res) => {
       try { return send(res, 200, await Reports.fileReport({ reporter: playerId, author: other, text: m.x, where: 'private message', msgT: m.t })); }
       catch (err) { return send(res, err.status || 500, { error: err.message }); }
     }
-    if (body.action === 'message') { await sendDm(playerId, other, body.text); return send(res, 200, await dmThread(playerId, other)); }
+    if (body.action === 'message') { await sendDm(playerId, other, body.text, body.image); return send(res, 200, await dmThread(playerId, other)); }
     if (body.action === 'block' || body.action === 'unblock') {
       await redis([[body.action === 'block' ? 'SADD' : 'SREM', blockKey(playerId), other], ['HDEL', unreadKey(playerId), other]]);
       return send(res, 200, await dmThread(playerId, other));

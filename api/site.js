@@ -17,6 +17,7 @@
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken } = require('./_lib');
 const Reports = require('./_reports');
+const { cleanImage } = require('./_chat');
 const Shop = require('../js/shop.js');
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
@@ -45,12 +46,7 @@ const threadKey = id => `sugg:${id}:msgs`;
 // Signalement de bug (2026-10-15) : capture d'écran facultative, réduite et recompressée en JPEG par la page, gardée à
 // part dans sugg:<id>:shot (90 jours) et lue seulement par le créateur et son invité. On n'accepte qu'un vrai JPEG.
 const shotKey = id => `sugg:${id}:shot`, SHOT_MAX = 200000, SHOT_TTL = 90 * 86400;
-function cleanShot(raw) {
-  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(raw || ''));
-  if (!m || m[1].length > SHOT_MAX) return null;
-  const buf = Buffer.from(m[1], 'base64');
-  return buf.length > 100 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? `data:image/jpeg;base64,${m[1]}` : null;
-}
+const cleanShot = raw => cleanImage(raw, SHOT_MAX); // api/_chat.js
 async function listSuggestions(ids) {
   if (!ids.length) return [];
   // Par paquets de 250 : toute la boîte (plusieurs centaines de suggestions) sans un pipeline géant.

@@ -1659,6 +1659,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23d', date: 'Oct 23, 2026', en: ['📷 You can now send images and screenshots to your friends: press 📷 next to the message box. Click an image to enlarge it'], fr: ['📷 Tu peux maintenant envoyer des images et des captures d\'écran à tes amis : appuie sur 📷 à côté du message. Clique une image pour l\'agrandir'] },
     { id: '2026-10-23c', date: 'Oct 23, 2026', en: ['🐞 Duels: the chat no longer disappears when the game starts, no refresh needed'], fr: ['🐞 Duels : le chat ne disparaît plus quand la partie commence, plus besoin de recharger'] },
     { id: '2026-10-23b', date: 'Oct 23, 2026', en: ['🎁 New code for my friend randomguy: use ICHI in Player & settings for 🪙 100 coins'], fr: ['🎁 Nouveau code pour mon ami randomguy : utilise ICHI dans Joueur et réglages pour 🪙 100 pièces'] },
     { id: '2026-10-23a', date: 'Oct 23, 2026', en: [
@@ -5275,24 +5276,7 @@
         text.placeholder = window.RNGI18n ? window.RNGI18n.t(kind === 'bug' ? 'What went wrong? What did you do just before?' : 'Your idea…') : text.placeholder;
         text.focus();
       });
-      const shrink = file => new Promise((done, fail) => {
-        const url = URL.createObjectURL(file), img = new Image();
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          let side = 1600, q = .82, out = '';
-          for (let k = 0; k < 12; k++) {
-            const r = Math.min(1, side / Math.max(img.width, img.height)), c = document.createElement('canvas');
-            c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
-            const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-            out = c.toDataURL('image/jpeg', q);
-            if (out.length <= 190000) return done(out);
-            if (q > .5) q -= .12; else side = Math.round(side * .8);
-          }
-          fail(new Error('too big'));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
-        img.src = url;
-      });
+      const shrink = shrinkImage;
       const setShot = async file => {
         if (!file || !/^image\//.test(file.type)) { toast('Pick an image'); return; }
         if (file.size > 25e6) { toast('This image is too big'); return; }
@@ -6027,6 +6011,25 @@
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
     watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
+  // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
+  const shrinkImage = file => new Promise((done, fail) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let side = 1600, q = .82, out = '';
+      for (let k = 0; k < 12; k++) {
+        const r = Math.min(1, side / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if (out.length <= 190000) return done(out);
+        if (q > .5) q -= .12; else side = Math.round(side * .8);
+      }
+      fail(new Error('too big'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
+    img.src = url;
+  });
   function openChat(name) {
     let poll = 0, sig = '';
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -6034,16 +6037,32 @@
       <div class="dm-head"><h2>💬 <span data-no-i18n>${esc(name)}</span></h2><button class="btn ghost" id="dm-block"></button></div>
       <p class="panel-note dm-note">Only you two can read this. Messages are filtered and deleted after 7 days. Never share personal details.</p>
       <div class="dm-list" id="dm-list" aria-live="polite"><div class="empty">Loading…</div></div>
-      <form class="dm-form" id="dm-form"><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
-      const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block');
+      <form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot">📷<input type="file" id="dm-file" accept="image/*" hidden></label><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
+      const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
+      const imgs = new Map();
+      file.addEventListener('change', async () => {
+        const f = file.files[0]; file.value = '';
+        if (!f || !/^image\//.test(f.type)) { if (f) toast('Pick an image'); return; }
+        if (f.size > 25e6) { toast('This image is too big'); return; }
+        let image;
+        try { image = await shrinkImage(f); } catch (err) { toast('This image could not be read: try another one'); return; }
+        try { draw(await Online.friends('message', name, { text: input.value, image })); input.value = ''; list.scrollTop = list.scrollHeight; }
+        catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your image, try again'); }
+      });
       const draw = d => {
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}"><span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
+        // Images : chargées une fois chacune, puis gardées tant que la conversation est ouverte.
+        list.querySelectorAll('[data-dm-img]').forEach(im => {
+          const t = Number(im.dataset.dmImg);
+          if (imgs.has(t)) { im.src = imgs.get(t); return; }
+          Online.friends('image', name, { t }).then(r => { imgs.set(t, r.image); list.querySelectorAll(`[data-dm-img="${t}"]`).forEach(x => { x.src = r.image; }); }).catch(() => { im.replaceWith(Object.assign(document.createElement('i'), { className: 'dm-gone', textContent: '🖼️ image expired' })); });
+        });
         if (atBottom || !list.dataset.ready) list.scrollTop = list.scrollHeight;
         list.dataset.ready = '1';
       };
@@ -6060,6 +6079,7 @@
         btn.disabled = false; input.focus();
       });
       list.addEventListener('click', async e => {
+        const pic = e.target.closest('.dm-img'); if (pic) { pic.classList.toggle('big'); return; }
         const rep = e.target.closest('[data-dm-report]'); if (rep) { reportMessage(rep, () => Online.friends('report', name, { t: Number(rep.dataset.dmReport) })); return; }
         const ed = e.target.closest('[data-dm-edit]');
         if (ed) {

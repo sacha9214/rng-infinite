@@ -2681,6 +2681,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     x = await fr(ann, 'unsend', 'Benny', { t: mine.t }); assert.equal(x.status, 200);
     assert.ok(!x.body.messages.some(m => m.text === 'oops typo'), 'message supprimé');
   }
+  // Images entre amis (2026-10-23) : un JPEG vérifié, lisible par les deux seulement, effacé avec le message.
+  {
+    const jpg = 'data:image/jpeg;base64,' + Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 7)]).toString('base64');
+    await new Promise(ok => setTimeout(ok, 3));
+    let x = await fr(ann, 'message', 'Benny', { text: '', image: jpg }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    const pic = x.body.messages.filter(m => m.me && m.img).pop(); assert.ok(pic, 'message image');
+    assert.equal((await fr(ben, 'image', 'Annie', { t: pic.t })).body.image, jpg, 'l\'ami la voit');
+    assert.equal((await fr(cid, 'image', 'Annie', { t: pic.t })).status !== 200, true, 'personne d\'autre');
+    assert.equal((await fr(ann, 'message', 'Benny', { text: 'hi', image: 'data:image/png;base64,AAAA' })).status, 422, 'pas un JPEG');
+    await fr(ann, 'unsend', 'Benny', { t: pic.t });
+    assert.equal((await fr(ben, 'image', 'Annie', { t: pic.t })).status, 404, 'effacée avec le message');
+  }
   // Modifier un de ses messages (idée de kingston, 2026-10-22) : seulement les siens, marqué « edited ».
   {
     await new Promise(ok => setTimeout(ok, 3));
