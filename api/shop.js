@@ -37,6 +37,7 @@ const CODES = {
   'EPITECH>42': { coins: 150, title: 'epitech' },
   // Excuses pour la coupure du 2026-10-22 (le site a déménagé sur le VPS) : 500 pièces, valable une semaine.
   SORRY404: { coins: 500, until: '2026-10-30T00:00:00Z' },
+  ICHI: { coins: 100 }, // demandé par Sacha (2026-10-23), pour son ami randomguy
 };
 const HUNT = Object.keys(CODES).filter(k => CODES[k].hunt);
 const CODE_MIN_ROLLS = 30;

@@ -1659,6 +1659,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23b', date: 'Oct 23, 2026', en: ['🎁 New code for my friend randomguy: use ICHI in Player & settings for 🪙 100 coins'], fr: ['🎁 Nouveau code pour mon ami randomguy : utilise ICHI dans Joueur et réglages pour 🪙 100 pièces'] },
     { id: '2026-10-23a', date: 'Oct 23, 2026', en: [
       '🔢 New badges: 🇺🇸 American (1776, idea by jaxoncool43), 😇 Angel Number (82, idea by kaz), 🧿 Vortrox Curse (92, idea by CococoC), 🧃 Sixty-One (61, idea by schoolroller), 🖤 Juice WRLD (999, idea by Colt2), 🚫 Error 404 (404, idea by Gray), 👑 Brainrot King (6741 or 4167) and 🫅 Brainrot Emperor (exactly 676741 or 674141, ideas by CrazyMiner22)',
       '🛋️ New titles: The King Of Unemployment (1,000,000 rolls) and The God Of Unemployment (10,000,000 rolls), idea by A Dude',
