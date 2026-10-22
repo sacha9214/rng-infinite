@@ -896,6 +896,16 @@
     const el = e.target.closest && e.target.closest('[data-tip]');
     if (el) showTip(el.dataset.tip, e.clientX, e.clientY); else if (!tip.hidden) tip.hidden = true;
   });
+  // Écran tactile (iPad, téléphone : signalé par Aussie Haüs, 2026-10-23) : pas de survol, donc un toucher ouvre la bulle
+  // au-dessus de l'élément, et un toucher ailleurs (ou le même) la referme.
+  let tipTouch = false, tipFor = null;
+  document.addEventListener('pointerdown', e => { tipTouch = e.pointerType === 'touch' || e.pointerType === 'pen'; }, { capture: true, passive: true });
+  document.addEventListener('click', e => {
+    if (!tipTouch) return;
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (el && el !== tipFor) { const r = el.getBoundingClientRect(); showTip(el.dataset.tip, r.left, r.bottom - 8); tipFor = el; }
+    else { tip.hidden = true; tipFor = null; }
+  }, true);
   document.addEventListener('scroll', () => { tip.hidden = true; }, { passive: true });
 
   // ---------------------------------------------------------------- modale
@@ -1659,6 +1669,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23e', date: 'Oct 23, 2026', en: ['🐞 Fixes: the case Odds ⓘ now open with a tap on iPad and phones (reported by Aussie Haüs); tapping Roll again while auto-roll is revealing no longer cuts the roll (reported by jaxoncool43)'], fr: ['🐞 Corrections : les chances des caisses (Odds ⓘ) s\'ouvrent d\'un toucher sur iPad et téléphone (signalé par Aussie Haüs) ; toucher Rejouer pendant une révélation en tirage auto ne coupe plus le tirage (signalé par jaxoncool43)'] },
     { id: '2026-10-23d', date: 'Oct 23, 2026', en: ['📷 You can now send images and screenshots to your friends: press 📷 next to the message box. Click an image to enlarge it'], fr: ['📷 Tu peux maintenant envoyer des images et des captures d\'écran à tes amis : appuie sur 📷 à côté du message. Clique une image pour l\'agrandir'] },
     { id: '2026-10-23c', date: 'Oct 23, 2026', en: ['🐞 Duels: the chat no longer disappears when the game starts, no refresh needed'], fr: ['🐞 Duels : le chat ne disparaît plus quand la partie commence, plus besoin de recharger'] },
     { id: '2026-10-23b', date: 'Oct 23, 2026', en: ['🎁 New code for my friend randomguy: use ICHI in Player & settings for 🪙 100 coins'], fr: ['🎁 Nouveau code pour mon ami randomguy : utilise ICHI dans Joueur et réglages pour 🪙 100 pièces'] },
@@ -2375,7 +2386,7 @@
     if (ctx.replay) {
       $('#r-back').addEventListener('click', () => { if (session) session.cancel(); session = null; if (location.hash === ctx.replay.back) route(); else location.hash = ctx.replay.back || '#/'; });
       $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption); });
-    } else { $('#r-again').addEventListener('click', () => startRoll(true)); bindSoloAuto(); }
+    } else { $('#r-again').addEventListener('click', () => startRoll('again')); bindSoloAuto(); } // pas « true » : ce bouton ne doit pas couper un tirage auto en cours (jaxoncool43, kingston, 2026-10-23)
 
     steps.forEach(s => timers.push(setTimeout(() => runStep(s, false), s.at)));
 
