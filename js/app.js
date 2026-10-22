@@ -6037,18 +6037,28 @@
       <div class="dm-head"><h2>💬 <span data-no-i18n>${esc(name)}</span></h2><button class="btn ghost" id="dm-block"></button></div>
       <p class="panel-note dm-note">Only you two can read this. Messages are filtered and deleted after 7 days. Never share personal details.</p>
       <div class="dm-list" id="dm-list" aria-live="polite"><div class="empty">Loading…</div></div>
-      <form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot">📷<input type="file" id="dm-file" accept="image/*" hidden></label><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
+      <form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot (you can also paste it with Ctrl/Cmd + V)">📷<input type="file" id="dm-file" accept="image/*" hidden></label><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
       const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
       const imgs = new Map();
-      file.addEventListener('change', async () => {
-        const f = file.files[0]; file.value = '';
+      // Une image choisie (📷), collée (Ctrl/Cmd + V) ou glissée dans la conversation part tout de suite.
+      const sendImage = async f => {
         if (!f || !/^image\//.test(f.type)) { if (f) toast('Pick an image'); return; }
         if (f.size > 25e6) { toast('This image is too big'); return; }
         let image;
         try { image = await shrinkImage(f); } catch (err) { toast('This image could not be read: try another one'); return; }
         try { draw(await Online.friends('message', name, { text: input.value, image })); input.value = ''; list.scrollTop = list.scrollHeight; }
         catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your image, try again'); }
+      };
+      file.addEventListener('change', () => { const f = file.files[0]; file.value = ''; sendImage(f); });
+      m.addEventListener('paste', e => {
+        const cd = e.clipboardData; if (!cd || input.disabled) return;
+        // Selon le navigateur, l'image collée est dans files (Safari) ou dans items (Chrome, Firefox).
+        const f = [...(cd.files || [])].find(x => /^image\//.test(x.type)) || ([...(cd.items || [])].find(x => x.kind === 'file' && /^image\//.test(x.type)) || { getAsFile: () => null }).getAsFile();
+        if (!f) return;
+        e.preventDefault(); sendImage(f);
       });
+      list.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
+      list.addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); sendImage(f); } });
       const draw = d => {
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
