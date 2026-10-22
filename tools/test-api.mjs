@@ -1119,7 +1119,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const x = (await site(boss, 'insights')).body.extra;
     assert.equal(x.weekdays.length, 7); assert.equal(x.weekdays[0].name, 'Mon');
     assert.equal(x.economy.length, 14); assert.ok(x.economy[0].in.rolls > 0, 'les tirages du jour créent des pièces : ' + JSON.stringify(x.economy[0]));
-    assert.ok(x.sales.some(i => i.kind === 'skins' && i.price > 0)); assert.equal(x.health.length, 7);
+    assert.ok(x.sales.some(i => i.kind === 'skins' && i.price > 0)); assert.ok(x.sales.some(i => i.kind === 'sounds' && i.id === 'arcade')); assert.equal(x.health.length, 7);
     assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0); }
   assert.equal(r.body.days.length, 30);
   assert.equal(r.body.days[0].day, today());
@@ -1187,6 +1187,52 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const id of [...Shop.SKINS.map(k => k.id).filter(id => id !== 'classic'), 'owner', ...Shop.BUTTONS.map(b => b.id)]) {
     assert.ok(css.includes(`.btn-roll.gen-${id} {`), `style du bouton ${id} manquant dans css/buttons.css`);
   }
+}
+
+// ================================================================ 27b. Packs de sons du tirage (idée d'Angelicide9)
+{
+  const state = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body;
+  const snd = (who, action, sound) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, sound } });
+  const setCoins = async (who, target) => run([['HINCRBY', `stats:${who.playerId}`, 'bonus', target - (await state(who)).coins]]);
+  let st = await state(frank);
+  assert.deepEqual([st.sound, st.sounds], ['classic', []], 'par défaut : Classic, rien d\'acheté');
+  assert.equal((await snd(frank, 'sound', 'arcade')).status, 422, 'pas encore acheté');
+  assert.equal((await snd(frank, 'sound', 'licorne')).status, 400);
+  assert.equal((await snd(frank, 'buysound', 'classic')).status, 400, 'Classic ne s\'achète pas');
+  assert.equal((await snd({ ...frank, secret: '9'.repeat(32) }, 'buysound', 'arcade')).status, 403);
+  await setCoins(frank, 100);
+  r = await snd(frank, 'buysound', 'arcade');
+  assert.equal(r.status, 422);
+  assert.match(r.body.error, /200 more needed/);
+  assert.deepEqual((await state(frank)).sounds, [], 'rien d\'acquis sans les pièces');
+  await setCoins(frank, 1000);
+  const spent0 = Number(db.get(`stats:${frank.playerId}`).get('spent')) || 0;
+  const ecoOut = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(db.get(k)?.get?.('out:sounds')) || 0), 0);
+  const eco0 = ecoOut();
+  r = await snd(frank, 'buysound', 'arcade');
+  assert.deepEqual([r.status, r.body.coins, r.body.sound, r.body.sounds], [200, 700, 'arcade', ['arcade']], JSON.stringify(r.body));
+  assert.equal(Number(db.get(`stats:${frank.playerId}`).get('spent')) - spent0, 300, 'spent compté');
+  assert.equal(ecoOut() - eco0, 300, 'eco out:sounds compté');
+  assert.equal((await snd(frank, 'buysound', 'arcade')).body.coins, 700, 'racheter ne débite pas deux fois');
+  // Un achat à la fois (même verrou que la boutique).
+  await new Promise(resolve => setImmediate(resolve));
+  run([['SET', `shop:${frank.playerId}`, '1']]);
+  assert.equal((await snd(frank, 'buysound', 'glass')).status, 429);
+  run([['DEL', `shop:${frank.playerId}`]]);
+  assert.equal((await state(frank)).coins, 700);
+  // Changer de pack : Classic toujours permis, le pack acheté se remet sans payer.
+  r = await snd(frank, 'sound', 'classic');
+  assert.deepEqual([r.status, r.body.sound], [200, 'classic']);
+  assert.equal((await state(frank)).sound, 'classic');
+  r = await snd(frank, 'sound', 'arcade');
+  assert.deepEqual([r.status, r.body.sound, r.body.coins], [200, 'arcade', 700]);
+  // Donnée abîmée : un pack en service non possédé retombe sur Classic ; un identifiant inventé est ignoré.
+  run([['HSET', 'snd', frank.playerId, 'glass'], ['SADD', `snds:${frank.playerId}`, 'licorne']]);
+  st = await state(frank);
+  assert.deepEqual([st.sound, st.sounds], ['classic', ['arcade']]);
+  // Catalogue : chaque pack payant a sa recette dans js/sound.js, prix entre 300 et 800.
+  const src = fs.readFileSync(path.join(ROOT, 'js/sound.js'), 'utf8');
+  for (const p of Shop.SOUNDS.filter(p => p.price)) { assert.ok(p.price >= 300 && p.price <= 800); assert.ok(new RegExp(`\\n    ${p.id}: \\{`).test(src), `recette du pack ${p.id}`); }
 }
 
 // ================================================================ 28. Émotes spéciales : achetées une fois, réservées à qui les possède

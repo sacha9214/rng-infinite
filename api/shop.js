@@ -2,6 +2,7 @@
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
 // POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin, ou fond d'écran, tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
+// POST /api/shop { playerId, secret, action: 'sound' | 'buysound', sound } → met en service ou achète un pack de sons
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
@@ -16,6 +17,7 @@ const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const ownedKey = id => `skins:${id}`;
 const ownedEmotesKey = id => `emotes:${id}`; // émotes spéciales achetées (lu aussi par api/room.js)
 const ownedButtonsKey = id => `btns:${id}`; // boutons achetés à part ; le hash "btns" retient le bouton choisi
+const ownedSoundsKey = id => `snds:${id}`; // packs de sons achetés ; le hash "snd" retient celui en service
 // Codes cadeaux (Joueur et réglages) : chaque code ne sert qu'une fois par joueur, après 30 tirages comme les cadeaux
 // et le casino (un compte neuf ne sert pas à les ramasser). Majuscules/minuscules et espaces ignorés.
 // Pour en ajouter un : une ligne ici, puis déployer. codes:<id> = les codes déjà utilisés par ce joueur.
@@ -49,7 +51,7 @@ const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash 
 
 async function state(id) {
   const stats = await readStats(id);
-  const [owned, skin, bought, button, emotes, walls, wall] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id]]);
+  const [owned, skin, bought, button, emotes, walls, wall, snds, snd] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id], ['SMEMBERS', ownedSoundsKey(id)], ['HGET', 'snd', id]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   // Succès Coin Millionaire (idée d'A Dude, 2026-10-21) : posé une fois, la première fois que le solde atteint 1 000 000.
   if (!Number(stats.millionaire) && Shop.balance(stats) >= 1000000) await redis([['HSET', statsKey(id), 'millionaire', 1]]);
@@ -76,6 +78,8 @@ async function state(id) {
     button: mineToo ? button : Shop.MATCH,
     emotes: Shop.EMOTES.map(e => e.id).filter(e => (emotes || []).includes(e)),
     speed: Shop.speedLevel(stats.speedLv),
+    sounds: Shop.SOUNDS.map(p => p.id).filter(p => p !== 'classic' && (snds || []).includes(p)),
+    sound: Shop.soundPack(snd, snds),
   };
 }
 
@@ -188,6 +192,35 @@ module.exports = async (req, res) => {
           ]);
         }
         await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
+        return send(res, 200, await state(playerId));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    // Packs de sons du tirage : mettre en service un pack possédé (ou Classic), ou en acheter un (acheté = en service).
+    if (body.action === 'sound') {
+      const id = String(body.sound || '');
+      if (!Shop.soundById.has(id)) return send(res, 400, { error: 'Unknown sound pack' });
+      const st = await state(playerId);
+      if (id !== 'classic' && !st.sounds.includes(id)) return send(res, 422, { error: 'Buy this sound pack first' });
+      await redis([id === 'classic' ? ['HDEL', 'snd', playerId] : ['HSET', 'snd', playerId, id]]);
+      return send(res, 200, { ...st, sound: id });
+    }
+    if (body.action === 'buysound') {
+      const item = Shop.soundById.get(String(body.sound || ''));
+      if (!item || !item.price) return send(res, 400, { error: 'Unknown sound pack' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId);
+        if (!st.sounds.includes(item.id)) {
+          if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
+          await redis([
+            ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:sounds', item.price),
+            ['SADD', ownedSoundsKey(playerId), item.id],
+          ]);
+        }
+        await redis([['HSET', 'snd', playerId, item.id]]); // acheté = en service
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

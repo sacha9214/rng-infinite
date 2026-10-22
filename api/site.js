@@ -286,7 +286,7 @@ async function extraInsights(ids, now) {
     return { day, in: inn, out };
   });
   // Ventes : nombre de joueurs qui possèdent chaque objet (achat ou caisse), et les pièces que ça représente au prix.
-  const kinds = [['skins', 'skins', Shop.SKINS], ['walls', 'walls', Shop.WALLPAPERS], ['btns', 'buttons', Shop.BUTTONS], ['emotes', 'emotes', Shop.EMOTES]];
+  const kinds = [['skins', 'skins', Shop.SKINS], ['walls', 'walls', Shop.WALLPAPERS], ['btns', 'buttons', Shop.BUTTONS], ['emotes', 'emotes', Shop.EMOTES], ['snds', 'sounds', Shop.SOUNDS]];
   const owned = {};
   for (let i = 0; i < ids.length; i += 150) {
     const part = ids.slice(i, i + 150), res = await redis(part.flatMap(id => kinds.map(([k]) => ['SMEMBERS', `${k}:${id}`])));

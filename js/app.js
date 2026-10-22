@@ -296,6 +296,7 @@
     Store.setSetting('emotes', state.emotes || []);
     Store.setSetting('coins', state.coins);
     Store.setSetting('speedLv', state.speed || 0);
+    Store.setSetting('soundPack', state.sound || 'classic'); // pas 'sound' : ce réglage-là, c'est le son coupé ou non
     Store.setSetting('skinsOwned', state.owned || []);
     Store.setSetting('wall', state.wall || '');
     paintWallpaper();
@@ -2205,9 +2206,13 @@
     const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount) * kd;
     let late = false, lastFrom = 0;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
-    Sound.warm([['tier', { tier: a.tier }]]);
+    // Pack de sons acheté (boutique, onglet Sounds) : il change la note des chiffres et le son de la rareté. Les skins dont
+    // le son est l'identité (ASMR, Lab) gardent leurs chiffres ; le pack joue quand même la rareté.
+    const pack = Store.settings.soundPack && Store.settings.soundPack !== 'classic' ? Store.settings.soundPack : undefined;
+    Sound.warm([['tier', { tier: a.tier, pack }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const lockSkin = owner ? '' : Shop.resolve(Store.settings.skin);
+    if (pack && lockSkin !== 'asmr' && lockSkin !== 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, pack } : { i, pack }]));
     if (lockSkin === 'asmr' || lockSkin === 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, skin: lockSkin } : { i, skin: lockSkin }]));
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
     if (!ctx.replay) watchFps(1800);
@@ -2233,6 +2238,7 @@
       // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
       const lk = i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i };
       if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
+      else if (pack) lk.pack = pack;
       sfx('lock', lk);
       if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
@@ -2281,7 +2287,7 @@
       replay(ep, 'glint');
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
-      sfx('tier', { tier: a.tier });
+      sfx('tier', { tier: a.tier, pack });
       if (skinFx) skinFx.reveal(a.tier);
       wallReact(a.tier); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
@@ -3247,7 +3253,7 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
+  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
@@ -3321,6 +3327,13 @@
           <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
           <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
           <div class="skin-grid emote-grid" id="d-emotes"></div>
+        </div>
+        </section>
+        <section class="shop-pane" data-shop-pane="sounds" hidden>
+        <div class="panel" id="d-sounds-panel" hidden>
+          <div class="panel-head"><h3 class="panel-title">Roll sounds</h3><span class="panel-note">only you hear them · ▶ to listen first</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">A sound pack changes the note of each digit and the sound of the rarity reveal. Rarer rolls still sound bigger. The ASMR and Lab skins keep their own digit sounds.</p>
+          <div class="skin-grid sound-grid" id="d-sounds"></div>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="buttons" hidden>
@@ -3397,6 +3410,7 @@
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
     drawEmotes(state);
+    drawSounds(state);
     drawWalls(state);
     drawSpeed(state);
     const cases = $('#d-cases');
@@ -4874,6 +4888,54 @@
     };
   }
 
+  // Packs de sons (idée d'Angelicide9) : ▶ joue une démo (six chiffres puis une rareté), sans rien acheter.
+  let soundDemo = [];
+  function previewSound(id) {
+    soundDemo.forEach(clearTimeout);
+    Sound.stop();
+    Sound.unlock();
+    const pack = id === 'classic' ? undefined : id, at = [0, 260, 500, 720, 920, 1250];
+    Sound.warm([...at.map((_, i) => ['lock', i === 5 ? { i, final: 1, pack } : { i, pack }]), ['tier', { tier: 'rare', pack }], ['tier', { tier: 'epic', pack }]]);
+    // Un rare, puis (deuxième écoute) un epic : on entend l'escalade.
+    const tier = previewSound.last === id ? 'epic' : 'rare';
+    previewSound.last = tier === 'epic' ? '' : id;
+    soundDemo = at.map((t, i) => setTimeout(() => Sound.play('lock', i === 5 ? { i, final: 1, pack } : { i, pack }), 120 + t))
+      .concat(setTimeout(() => Sound.play('tier', { tier, pack }), 120 + 1250 + 650));
+    if (Store.settings.sound === 'off') toast('Sound is off: turn it on with 🔊 at the top');
+  }
+  function drawSounds(state) {
+    const grid = $('#d-sounds');
+    if (!grid) return;
+    $('#d-sounds-panel').hidden = false;
+    const mine = id => id === 'classic' || (state.sounds || []).includes(id), on = state.sound || 'classic';
+    grid.innerHTML = Shop.SOUNDS.map(p => `
+      <div class="skin-tile sound-tile${mine(p.id) ? ' owned' : ''}${on === p.id ? ' equipped' : ''}">
+        <div class="sound-icon" aria-hidden="true">${p.emoji}</div>
+        <div class="skin-name"><b data-no-i18n>${esc(p.name)}</b><span>${esc(p.desc)}</span></div>
+        <button class="btn sound-play" data-sound-play="${p.id}" aria-label="Preview ${esc(p.name)}">▶ Preview</button>
+        ${on === p.id ? '<span class="skin-state">In use</span>'
+          : mine(p.id) ? `<button class="btn" data-sound-use="${p.id}">Use</button>`
+          : `<button class="btn${state.coins >= p.price ? '' : ' disabled'}" data-sound-buy="${p.id}">🪙 ${fmt(p.price)}</button>`}
+      </div>`).join('');
+    grid.onclick = async ev => {
+      const play = ev.target.closest('[data-sound-play]');
+      if (play) { previewSound(play.dataset.soundPlay); return; }
+      const btn = ev.target.closest('[data-sound-buy], [data-sound-use]');
+      if (!btn || btn.disabled) return;
+      const buy = !!btn.dataset.soundBuy, item = Shop.soundById.get(btn.dataset.soundBuy || btn.dataset.soundUse);
+      if (buy && state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for the ${item.name} sounds`); return; }
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction(buy ? 'buysound' : 'sound', undefined, { sound: item.id });
+        if (buy) toast(`${item.name} sounds unlocked: they play on your next roll`);
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
+  }
+
   // Aperçu d'un skin avant l'achat : un tirage de démonstration (aucun nombre n'est tiré, rien n'est enregistré), au
   // rythme d'un vrai mais resserré, révélé comme un Mythic pour montrer toute la séquence. Rejouable.
   function previewSkin(id) {
@@ -5496,7 +5558,7 @@
           <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
         <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
       // Économie
-      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin' };
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin' };
       const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
       const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
       const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
@@ -5508,7 +5570,7 @@
         <div class="grid-2 stats-sep">${flowBars('Where coins come from', span(E, 'in'), LABEL_IN)}${flowBars('Where coins go', span(E, 'out'), LABEL_OUT)}</div>
         ${panel('Day by day', 'coins in, out and the difference', table(['Day', 'In', 'Out', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${n > 0 ? 'o-down' : 'o-up'}">${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}</span>`]; }), 'c4')).replace('class="panel"', 'class="panel stats-sep"')}`;
       // Ventes de la boutique
-      const S = (X.sales || []).filter(x => !x.caseOnly || x.owners), KIND = { skins: '🎨', walls: '🖼️', buttons: '🔘', emotes: '😎' };
+      const S = (X.sales || []).filter(x => !x.caseOnly || x.owners), KIND = { skins: '🎨', walls: '🖼️', buttons: '🔘', emotes: '😎', sounds: '🔊' };
       const topSales = S.slice().sort((x, y) => y.owners * y.price - x.owners * x.price);
       const never = S.filter(x => !x.owners && !x.limited);
       const salesHTML = `
