@@ -1653,10 +1653,12 @@
       '🎲 New casino game: Dice (idea by CYCOX and YU CHUAN 23). Set your target, pick Roll under or Roll over: the lower your chance, the bigger the payout (up to 48.5×). Or guess a 6-sided die for 5.82×',
       '🧸 New casino game: Teddy Roulette (idea by d_alex). A confetti popper with 6 chambers aims at a cute teddy: each click raises your payout (up to 5.82×), but one chamber goes BOOM. Cash out whenever you like!',
       '▶ Every skin in the shop now has a Preview button, ASMR included',
+      '🔊 Roll sound packs: a new Sounds tab in the Shop with 5 packs (Arcade, Coins, Drums, Space, Glass, 300 to 800 coins). Each changes the sound of every digit and of the rarity reveal. Press ▶ Preview to listen before buying (idea by Angelicide9)',
     ], fr: [
       '🎲 Nouveau jeu au casino : les Dés (idée de CYCOX et YU CHUAN 23). Règle ta cible, choisis En dessous ou Au-dessus : moins tu as de chances, plus le gain est gros (jusqu\'à 48,5×). Ou devine un dé à 6 faces pour 5,82×',
       '🧸 Nouveau jeu au casino : la Roulette Nounours (idée de d_alex). Un canon à confettis à 6 chambres vise un nounours : chaque clic fait monter ton gain (jusqu\'à 5,82×), mais une chambre fait BOUM. Encaisse quand tu veux !',
       '▶ Tous les skins de la boutique ont maintenant un bouton Aperçu, ASMR compris',
+      '🔊 Packs de sons du tirage : un nouvel onglet Sons dans la boutique avec 5 packs (Arcade, Coins, Drums, Space, Glass, de 300 à 800 pièces). Chacun change le son de chaque chiffre et de la rareté. Appuie sur ▶ Aperçu pour écouter avant d\'acheter (idée d\'Angelicide9)',
     ] },
     { id: '2026-10-22l', date: 'Oct 22, 2026', en: [
       '🏆 Tournament modes: the daily tournament now changes its rules every day: Total XP, Best Roll, Best of 3, Lowest Wins (trash is gold!) and Badge Hunter (idea by PRISMA123)',
