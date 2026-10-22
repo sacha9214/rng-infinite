@@ -1668,6 +1668,8 @@
       '🔑 A Premium key can now also open a Starter or Wallpaper case (idea by keys)',
       '🧈 The ASMR skin crunches more naturally (idea by JAKECisthebest)',
       '⭐ Skip known badges: open any badge and pick “Always shown in full” to keep its full reveal (idea by Aussie Haüs)',
+      '🚲 Wheelie skin: the rider no longer hides under the top bar during a roll (reported by jia jun)',
+      '🎲 Back from another tab: the rolls made while you were away now also show your best one (idea by kingston)',
       '💡 Skin creators: when someone buys a skin that came from a player\'s idea, that player now gets 5% of the price in coins. Look for “Idea by” in the Shop! (idea by Gray alt)',
       '🐞 Fixes: the Collectible Connoisseur title no longer needs the free Classic skin; coins no longer go up before a roll is revealed; auto-roll no longer cuts a roll you started by hand',
     ], fr: [
@@ -1679,6 +1681,8 @@
       '🔑 Une clé Premium ouvre aussi une caisse Starter ou Fonds (idée de keys)',
       '🧈 Le skin ASMR craque de façon plus naturelle (idée de JAKECisthebest)',
       '⭐ Passer les badges connus : ouvre un badge et choisis « Toujours montré en entier » pour garder sa révélation (idée d\'Aussie Haüs)',
+      '🚲 Skin Wheelie : le cycliste ne se cache plus sous la barre du haut pendant un tirage (signalé par jia jun)',
+      '🎲 Retour d\'un autre onglet : les tirages faits pendant ton absence montrent aussi ton meilleur (idée de kingston)',
       '💡 Créateurs de skins : quand quelqu\'un achète un skin né de l\'idée d\'un joueur, ce joueur reçoit 5 % du prix en pièces. Cherche « Idea by » dans la boutique ! (idée de Gray alt)',
       '🐞 Corrections : le titre Grand collectionneur ne demande plus le skin Classic gratuit ; les pièces ne montent plus avant la fin du tirage ; le tirage auto ne coupe plus un tirage lancé à la main',
     ] },
@@ -2042,7 +2046,7 @@
   }
   // Tirage auto pendant que l'onglet est caché : même tirage serveur, enregistré tout pareil, sans révélation.
   // Le titre de l'onglet compte les tirages ; au retour, un message résume (et dit si l'auto-roll s'est arrêté).
-  const BgRolls = { count: 0, stopped: null, title: '' };
+  const BgRolls = { count: 0, stopped: null, title: '', best: null }; // best : le meilleur tirage fait en arrière-plan (kingston, 2026-10-22)
   async function bgSoloRoll() {
     if (rollPending) { scheduleSoloAuto(1000); return; }
     rollPending = true;
@@ -2063,6 +2067,7 @@
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
+    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a };
     document.title = `(${BgRolls.count}) ${BgRolls.title}`;
     if (autoStops(a)) {
       stopSoloAuto(); BgRolls.stopped = { n, a };
@@ -2074,10 +2079,11 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) SoloAuto.shownAt = Date.now(); // retour sur l'onglet : on laisse voir l'écran avant le tirage suivant
     if (document.hidden || !BgRolls.count) return;
-    const { count, stopped } = BgRolls;
-    document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null;
-    toast(stopped ? `✨ ${plural(count, 'roll')} while you were away. Auto-roll stopped on ${stopped.a.str} (${cap(stopped.a.tier)}, ${fmt(stopped.a.total)} XP)`
-      : `🎲 ${plural(count, 'roll')} while you were away, all saved`, 6000, stopped ? 'achv' : undefined);
+    const { count, stopped, best } = BgRolls;
+    document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
+    const bestTxt = best && (!stopped || best.n !== stopped.n) ? ` · best: ${best.a.str} (${cap(best.a.tier)}, ${fmt(best.a.total)} XP)` : '';
+    toast(stopped ? `✨ ${plural(count, 'roll')} while you were away. Auto-roll stopped on ${stopped.a.str} (${cap(stopped.a.tier)}, ${fmt(stopped.a.total)} XP)${bestTxt}`
+      : `🎲 ${plural(count, 'roll')} while you were away, all saved${bestTxt}`, 8000, stopped ? 'achv' : undefined);
     if (currentView === 'home') route(); // l'accueil et ses compteurs à jour
   });
   async function startRoll(force) {

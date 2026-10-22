@@ -5180,3 +5180,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 
 .skin-idea { display: block; margin-top: .2rem; font-size: .7rem; color: var(--prose-3); }
 .skin-idea a { color: inherit; font-weight: 700; }
+
+/* Wheelie : le cycliste roule au-dessus de la carte ; sur l'écran de tirage, la carte est collée sous la barre du haut et
+   il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place. */
+#card-stage .num-card.skin-wheelie { margin-top: 3.6rem; }
+@media (max-width: 560px) { #card-stage .num-card.skin-wheelie { margin-top: 3rem; } }
