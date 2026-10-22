@@ -22,7 +22,7 @@ const id = 'c'.repeat(16), key = `stats:${id}`;
 const obj = flat => { const o = {}; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
 const coins = () => Shop.balance(obj(run([['HGETALL', key]])[0].result));
 const house = () => { const h = obj(run([['HGETALL', 'casino']])[0].result || []); return [Number(h.bet) || 0, Number(h.won) || 0, Number(h.rounds) || 0]; };
-const keys = () => ['bj', 'mn', 'cr', 'tw'].map(k => run([['GET', `${k}:${id}`]])[0].result).filter(Boolean).length;
+const keys = () => ['bj', 'mn', 'cr', 'tw', 'td'].map(k => run([['GET', `${k}:${id}`]])[0].result).filter(Boolean).length;
 run([['HSET', key, 'v', '1', 'tv', '2', 'rolls', '100', 'bonus', '2000000000'], ['HSET', 'names', id, 'Sim'], ['HSET', 'casino', 'seeded', '1']]);
 const rnd = n => Math.floor(Math.random() * n), pick = a => a[rnd(a.length)];
 const BETS = [10, 50, 100, 250, 500, 1000];
@@ -277,6 +277,44 @@ assert.ok(rtp > .8 && rtp < 1.35, `keno ${rtp}`);
 assert.ok(knHits.size > 30, 'beaucoup de combinaisons cochés/trouvés vues');
 for (let k = 1; k <= 10; k++) { const ev = kenoRtp(k); assert.ok(ev >= .97 && ev <= .99, `keno ${k} : ${ev}`); }
 for (const bad of [[], [1, 1], [0], [41], Array.from({ length: 11 }, (_, i) => i + 1), null]) await assert.rejects(G.keno(id, { bet: 100, picks: bad }));
+
+// ---- Dice (idée de CYCOX et YU CHUAN 23) : mode, cible et mise au hasard, gain recalculé ici
+const dcSeen = new Set();
+rtp = await series('dice', '≤ 97 % pour chaque cible', async () => {
+  const mode = pick(['under', 'over', 'd6']), bet = pick(BETS);
+  const target = mode === 'd6' ? 1 + rnd(6) : mode === 'under' ? 3 + rnd(94) : 5 + rnd(94);
+  const r = await G.dice(id, { bet, mode, target });
+  assert.ok(Number.isInteger(r.roll) && r.roll >= 1 && r.roll <= (mode === 'd6' ? 6 : 100)); dcSeen.add(`${mode}${r.roll}`);
+  const ok = mode === 'd6' ? r.roll === target : mode === 'under' ? r.roll < target : r.roll > target;
+  const cents = mode === 'd6' ? 582 : Math.floor(9700 / G.diceCover(mode, target) + 1e-9);
+  assert.equal(r.win, ok ? Math.floor(bet * cents / 100) : 0, 'gain de dice');
+  return { bet, win: r.win };
+});
+assert.ok(rtp > .8 && rtp < 1.2, `dice ${rtp}`);
+assert.ok(dcSeen.size > 150, 'presque toutes les faces sortent');
+for (let w = G.DICE_MIN_W; w <= G.DICE_MAX_W; w++) { const ev = w / 100 * G.diceMult(w); assert.ok(ev <= .97000001 && ev > .96, `dice ${w} : ${ev}`); }
+assert.ok(G.DICE_D6 / 100 / 6 <= .97000001, 'dice d6');
+for (const [mode, t] of [['under', 2], ['under', 97], ['over', 4], ['over', 99], ['d6', 0], ['d6', 7], ['x', 50]]) await assert.rejects(G.dice(id, { bet: 100, mode, target: t }));
+
+// ---- Teddy Roulette (idée de d_alex) : nombre de clics visé au hasard, la chambre chargée n'est dévoilée qu'à la fin
+let tdBooms = 0, tdCash = 0, tdFull = 0;
+rtp = await series('teddy', '≈ 97 %', async () => {
+  const bet = pick(BETS), want = 1 + rnd(G.TEDDY_MAX);
+  let g = await G.teddy(id, { move: 'start', bet });
+  assert.deepEqual([g.pulls, g.done, g.boom], [0, false, undefined]);
+  await assert.rejects(G.teddy(id, { move: 'start', bet }), /Finish your game/);
+  await assert.rejects(G.teddy(id, { move: 'cash' }), /Pull once/);
+  for (let k = 0; k < want && !g.done; k++) { g = await G.teddy(id, { move: 'pull' }); if (!g.done) { assert.equal(g.mult, G.teddyMult(g.pulls)); assert.equal(g.boom, undefined); } }
+  if (!g.done) g = await G.teddy(id, { move: 'cash' });
+  assert.ok(Number.isInteger(g.boom) && g.boom >= 0 && g.boom < 6);
+  if (g.result === 'boom') { tdBooms++; assert.equal(g.win, 0); assert.equal(g.boom, g.pulls); }
+  else { tdCash++; assert.ok(g.boom >= g.pulls); assert.equal(g.win, Math.floor(bet * Math.round(G.teddyMult(g.pulls) * 100) / 100)); if (g.pulls === 5) tdFull++; }
+  return { bet, win: g.win };
+}, Math.round(N / 2));
+assert.ok(tdBooms > 0 && tdCash > 0 && tdFull > 0, 'BOOM, encaissements et 5 clics');
+assert.ok(rtp > .85 && rtp < 1.1, `teddy ${rtp}`);
+for (let k = 1; k <= G.TEDDY_MAX; k++) { const ev = (6 - k) / 6 * G.teddyMult(k); assert.ok(ev <= .97000001 && ev > .96, `teddy ${k} : ${ev}`); }
+assert.equal(keys(), 0);
 
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;

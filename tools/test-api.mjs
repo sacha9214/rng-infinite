@@ -1491,6 +1491,94 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
       assert.ok(rtp >= 0.97 && rtp <= 0.99, `keno ${k} cochés : ${rtp}`);
     }
   }
+  // Dice (idée de CYCOX et YU CHUAN 23) : une demande par partie ; dé à 100 faces « en dessous » / « au-dessus » d'une
+  // cible (2 à 95 numéros couverts, 97 % des vraies chances), ou deviner un dé à 6 faces (×5,82).
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    for (const [mode, target] of [['under', 2], ['under', 97], ['over', 99], ['over', 4], ['under', 50.5], ['d6', 0], ['d6', 7], ['d6', 2.5], ['sideways', 50], [undefined, 50], ['under', 'x']]) {
+      assert.equal((await g(frank, 'dice', { bet: 100, mode, target })).status, 400, `dice ${mode} ${target}`); await tick();
+    }
+    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'dice', { bet: bad, mode: 'under', target: 50 })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'dice', { bet: 100, mode: 'under', target: 50 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    assert.equal(await coins(frank), 1000, 'aucun refus ne coûte de pièces');
+    // Tirages forcés. En dessous de 50 (49 numéros, ×1,97) : 49 gagne, 50 perd.
+    forced = [49]; r = await g(frank, 'dice', { bet: 100, mode: 'under', target: 50 });
+    assert.deepEqual([r.status, r.body.roll, r.body.won, r.body.mult, r.body.chance, r.body.win, r.body.coins], [200, 49, true, 1.97, 0.49, 197, 1097], JSON.stringify(r.body));
+    await tick(); forced = [50]; r = await g(frank, 'dice', { bet: 100, mode: 'under', target: 50 });
+    assert.deepEqual([r.body.won, r.body.win, r.body.coins], [false, 0, 997]);
+    // Au-dessus de 98 (2 numéros, ×48,5) : 99 gagne, 98 perd. Au-dessus de 5 (95 numéros, ×1,02).
+    await tick(); forced = [99]; r = await g(frank, 'dice', { bet: 10, mode: 'over', target: 98 });
+    assert.deepEqual([r.body.won, r.body.mult, r.body.win, r.body.coins], [true, 48.5, 485, 1472]);
+    await tick(); forced = [98]; r = await g(frank, 'dice', { bet: 10, mode: 'over', target: 98 });
+    assert.deepEqual([r.body.won, r.body.win], [false, 0]);
+    await tick(); forced = [6]; r = await g(frank, 'dice', { bet: 50, mode: 'over', target: 5 });
+    assert.deepEqual([r.body.won, r.body.mult, r.body.win], [true, 1.02, 51]);
+    // Dé à 6 faces : la bonne face paie ×5,82.
+    await tick(); forced = [4]; r = await g(frank, 'dice', { bet: 100, mode: 'd6', target: 4 });
+    assert.deepEqual([r.body.roll, r.body.won, r.body.mult, r.body.win], [4, true, 5.82, 582]);
+    await tick(); forced = [3]; r = await g(frank, 'dice', { bet: 100, mode: 'd6', target: 4 });
+    assert.deepEqual([r.body.won, r.body.win], [false, 0]);
+    let bet = 470, won = 197 + 485 + 51 + 582;
+    // Au hasard : le dé reste entre 1 et 100 (1 et 6), gain = plancher(mise × multiplicateur).
+    for (let i = 0; i < 30; i++) {
+      await tick();
+      const mode = ['under', 'over', 'd6'][i % 3], target = mode === 'd6' ? 1 + (i % 6) : mode === 'under' ? 3 + (i * 7) % 94 : 5 + (i * 11) % 94, b = 10 + 10 * (i % 5);
+      const c0 = await coins(frank); await tick();
+      r = await g(frank, 'dice', { bet: b, mode, target });
+      const n = r.body.roll, w = mode === 'd6' ? null : G.diceCover(mode, target);
+      assert.ok(Number.isInteger(n) && n >= 1 && n <= (mode === 'd6' ? 6 : 100));
+      const ok = mode === 'd6' ? n === target : mode === 'under' ? n < target : n > target;
+      assert.deepEqual([r.body.won, r.body.win, r.body.coins], [ok, ok ? Math.floor(b * (mode === 'd6' ? 582 : G.diceCents(w)) / 100) : 0, c0 - b + r.body.win]);
+      bet += b; won += r.body.win;
+    }
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gDice']])[0].result; assert.equal(Number(h), 37, 'compteur de manches gDice'); }
+    { const c = run([['HMGET', 'casino', 'r:dice', 'b:dice', 'w:dice']])[0].result.map(Number); assert.deepEqual(c, [37, bet, won], 'compte de la maison par jeu'); }
+    // Retour exact : au plus 97 % pour chaque cible, 97 % tout rond au dé à 6 faces ; même calcul sur la page.
+    for (let w = G.DICE_MIN_W; w <= G.DICE_MAX_W; w++) { const ev = w / 100 * G.diceMult(w); assert.ok(ev <= 0.97000001 && ev > 0.96, `dice ${w} : ${ev}`); }
+    assert.ok(Math.abs(G.DICE_D6 / 100 / 6 - 0.97) < 1e-12);
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes('const dcCents = w => Math.floor(9700 / w + 1e-9);') && src.includes("const DC_LIMIT = { under: [3, 96], over: [5, 98] };"), 'mêmes multiplicateurs sur la page'); }
+  }
+  // Teddy Roulette (idée de d_alex) : chambre chargée tirée au départ, jamais envoyée avant la fin ; une partie à la fois.
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'teddy', { move: 'start', bet: bad })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'teddy', { move: 'start', bet: 100 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    assert.equal((await g(frank, 'teddy', { move: 'cash' })).status, 422, 'pas de partie'); await tick();
+    assert.equal((await g(frank, 'teddy', { move: 'pull' })).status, 422, 'pas de partie'); await tick();
+    r = await g(frank, 'teddy', { move: 'state' }); assert.deepEqual([r.body.idle, r.body.coins], [true, 1000]); await tick();
+    forced = [3];
+    r = await g(frank, 'teddy', { move: 'start', bet: 100 });
+    assert.deepEqual([r.status, r.body.pulls, r.body.mult, r.body.next, r.body.coins, r.body.boom, JSON.stringify(r.body).includes('boom')], [200, 0, 1, 1.16, 900, undefined, false], 'la chambre chargée ne sort pas');
+    assert.deepEqual(r.body.ladder, [1.16, 1.45, 1.94, 2.91, 5.82]);
+    assert.equal(JSON.parse(run([['GET', `td:${frank.playerId}`]])[0].result).boom, 3);
+    await tick(); assert.equal((await g(frank, 'teddy', { move: 'start', bet: 100 })).status, 422, 'une seule partie à la fois');
+    await tick(); assert.equal((await g(frank, 'teddy', { move: 'cash' })).status, 422, 'rien à encaisser avant le premier clic');
+    await tick(); assert.equal((await g(frank, 'teddy', { move: 'spin' })).status, 400, 'coup inconnu');
+    await tick(); r = await g(frank, 'teddy', { move: 'pull' });
+    assert.deepEqual([r.body.pulls, r.body.mult, r.body.next, r.body.done, r.body.boom], [1, 1.16, 1.45, false, undefined]);
+    await tick(); r = await g(frank, 'teddy', { move: 'pull' });
+    await tick(); r = await g(frank, 'teddy', { move: 'state' });
+    assert.deepEqual([r.body.pulls, r.body.mult, r.body.boom], [2, 1.45, undefined], 'reprise de partie');
+    await tick(); r = await g(frank, 'teddy', { move: 'cash' });
+    assert.deepEqual([r.body.result, r.body.win, r.body.coins, r.body.boom], ['cash', 145, 1045, 3], 'encaisser paie mise × multiplicateur et dévoile la chambre');
+    assert.equal(run([['GET', `td:${frank.playerId}`]])[0].result, null);
+    // BOOM au 3e tir (chambre 2) : mise perdue.
+    await tick(); forced = [2]; r = await g(frank, 'teddy', { move: 'start', bet: 100 });
+    await tick(); await g(frank, 'teddy', { move: 'pull' }); await tick(); await g(frank, 'teddy', { move: 'pull' });
+    await tick(); r = await g(frank, 'teddy', { move: 'pull' });
+    assert.deepEqual([r.body.result, r.body.win, r.body.pulls, r.body.boom, r.body.coins], ['boom', 0, 2, 2, 945]);
+    await tick(); assert.equal((await g(frank, 'teddy', { move: 'pull' })).status, 422, 'partie finie');
+    // Chambre 5 : 5 clics, la partie s'encaisse seule à ×5,82.
+    await tick(); forced = [5]; r = await g(frank, 'teddy', { move: 'start', bet: 10 });
+    for (let k = 0; k < 5; k++) { await tick(); r = await g(frank, 'teddy', { move: 'pull' }); }
+    assert.deepEqual([r.body.result, r.body.pulls, r.body.mult, r.body.win, r.body.coins, r.body.boom], ['cash', 5, 5.82, 58, 993, 5]);
+    assert.equal(run([['GET', `td:${frank.playerId}`]])[0].result, null);
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gTeddy']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gTeddy'); }
+    { const c = run([['HMGET', 'casino', 'r:teddy', 'b:teddy', 'w:teddy']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 203], 'compte de la maison par jeu'); }
+    for (let k = 1; k <= G.TEDDY_MAX; k++) { const ev = (6 - k) / 6 * G.teddyMult(k); assert.ok(ev <= 0.97000001 && ev > 0.96, `teddy ${k} : ${ev}`); }
+  }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
   await tick(); forced = [Math.floor(0.505 * 2 ** 32)];
