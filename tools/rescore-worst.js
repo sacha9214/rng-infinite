@@ -24,8 +24,11 @@ const APPLY = process.argv.includes('--apply');
     }
     const w = [];
     for (const [lb, v] of mins) {
-      const [score] = await redis([['ZSCORE', lb, id]]);
-      if (score === null || Number(score) === v.s) continue; // période expirée (rien à recréer) ou déjà juste
+      const [score, shown] = await redis([['ZSCORE', lb, id], ['HGET', v.best, id]]);
+      if (score === null) continue; // période expirée : rien à recréer
+      // Déjà juste : le bon score, et le nombre affiché vaut bien ce score (sinon un autre tirage au même score le remplace).
+      let shownN = null; try { shownN = JSON.parse(shown).n; } catch (e) { /* entrée illisible : on la réécrit */ }
+      if (Number(score) === v.s && shownN !== null && engine.analyze(shownN).total === v.s) continue;
       w.push(['ZADD', lb, v.s, id], ['HSET', v.best, id, v.entry]);
       if (lb === WORST_LB || process.argv.includes('-v')) console.log(lb + ' ' + `  ${id.slice(0, 6)}: ${score} → ${v.s} (${JSON.parse(v.entry).n})${oldAll ? ` · avant ${JSON.parse(oldAll).n}` : ''}`);
     }
