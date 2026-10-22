@@ -47,6 +47,41 @@ const threadKey = id => `sugg:${id}:msgs`;
 // part dans sugg:<id>:shot (90 jours) et lue seulement par le créateur et son invité. On n'accepte qu'un vrai JPEG.
 const shotKey = id => `sugg:${id}:shot`, SHOT_MAX = 200000, SHOT_TTL = 90 * 86400;
 const cleanShot = raw => cleanImage(raw, SHOT_MAX); // api/_chat.js
+
+// Avis des Idea Managers : hash sugg:<id>:im, un champ par manager → { v: verdict, r: justification, t }.
+const imKey = id => `sugg:${id}:im`, IM_VERDICTS = ['yes', 'no', 'discuss', 'exists'], IM_REASON_MIN = 20, IM_REASON_MAX = 300;
+// Une vraie justification (demandé par Sacha : « pas oui ou non bêtement ») : 20 caractères et 4 mots au moins, pas une
+// lettre répétée, pas une formule creuse.
+function imReasonProblem(reason) {
+  const r = String(reason || '').trim(), words = r.split(/\s+/).filter(w => /[a-z0-9]/i.test(w));
+  if (r.length < IM_REASON_MIN || words.length < 4) return `Explain why in at least ${IM_REASON_MIN} characters and 4 words`;
+  if (new Set(r.toLowerCase().replace(/[^a-z0-9]/g, '')).size < 6) return 'Write a real reason, not repeated letters';
+  if (/^(yes|no|good|bad|nice|cool|ok|okay|idk|good idea|bad idea|i like it|i don'?t like it)[\s.!]*$/i.test(r)) return 'Write a real reason';
+  return '';
+}
+// Avis par idée, avec le pseudo de chaque manager (jamais son identifiant).
+async function reviewsOf(ids, me) {
+  if (!ids.length) return {};
+  const raw = await redis(ids.map(id => ['HGETALL', imKey(id)])), who = new Set();
+  const parsed = raw.map(r => { const o = toObject(r); Object.keys(o).forEach(k => who.add(k)); return o; });
+  const list = [...who], [names] = list.length ? await redis([['HMGET', 'names', ...list]]) : [[]];
+  const nameOf = Object.fromEntries(list.map((k, i) => [k, names[i] || 'Player']));
+  const out = {};
+  ids.forEach((id, i) => {
+    const rows = Object.entries(parsed[i]).map(([k, v]) => { try { const o = JSON.parse(v); return { by: nameOf[k], verdict: o.v, reason: o.r, t: o.t, mine: k === me }; } catch (e) { return null; } }).filter(Boolean);
+    if (rows.length) out[id] = rows.sort((a, b) => a.t - b.t);
+  });
+  return out;
+}
+// Ce que voit un Idea Manager : les idées pas encore tranchées (nouvelles ou lues), sans les bugs ni les fils privés.
+async function imState(me, isOwner) {
+  const [ids] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1]]);
+  const list = (await listSuggestions(ids || [])).filter(x => x.kind === 'idea' && (x.status === 'new' || x.status === 'seen'));
+  const reviews = await reviewsOf(list.map(x => x.id), me);
+  const out = { ideas: list.map(x => ({ id: x.id, name: x.name, text: x.text, t: x.t, lang: x.lang, shot: x.shot, reviews: reviews[x.id] || [] })), min: IM_REASON_MIN, max: IM_REASON_MAX, owner: isOwner };
+  if (isOwner) { const [m] = await redis([['SMEMBERS', 'im:all']]); const [n] = (m || []).length ? await redis([['HMGET', 'names', ...m]]) : [[]]; out.managers = (n || []).filter(Boolean).sort(); }
+  return out;
+}
 async function listSuggestions(ids) {
   if (!ids.length) return [];
   // Par paquets de 250 : toute la boîte (plusieurs centaines de suggestions) sans un pipeline géant.
@@ -540,6 +575,8 @@ module.exports = async (req, res) => {
     const stats = await readStats(playerId);
     const isOwner = Number(stats.owner) >= 1;
     // Invité : il voit tout ce que voit le créateur sur sa page, sans pouvoir rien modifier.
+    // Idea Manager (demandé par Sacha, 2026-10-23) : donne un avis motivé sur les idées, rien d'autre (stats.ideaManager).
+    const isIM = !isOwner && stats.ideaManager === '1';
     const isViewer = !isOwner && ((!!stats.viewer && VIEWER_EMAILS_SHA256.has(stats.viewer)) || stats.viewerGrant === '1') /* accès lecture seule donné à la main (HSET stats:<id> viewerGrant 1) */, canSee = isOwner || isViewer;
 
     // Pour le créateur seulement : combien de suggestions sont arrivées depuis la dernière qu'il a vue (« since », l'heure
@@ -560,7 +597,26 @@ module.exports = async (req, res) => {
 
     if (body.action === 'mine') {
       const [ids] = await redis([['ZREVRANGE', byPlayer(playerId), 0, 19]]);
-      return send(res, 200, { owner: isOwner, viewer: isViewer, mine: (await listSuggestions(ids || [])).map(({ name, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY });
+      return send(res, 200, { owner: isOwner, viewer: isViewer, ideaManager: isIM, mine: (await listSuggestions(ids || [])).map(({ name, ...x }) => x), max: SUGG_MAX, perDay: SUGG_PER_DAY });
+    }
+
+    // ------------------------------------------------------------ Idea Managers
+    // Ils voient les idées encore à trier et donnent un avis (yes / no / discuss / exists) avec une justification
+    // obligatoire ; le créateur voit ces avis dans sa boîte et décide seul. Ni réponse au joueur, ni statut, ni bugs.
+    if (body.action === 'imInbox' || body.action === 'imReview') {
+      if (!isOwner && !isIM) return send(res, 403, { error: 'Idea Managers only' });
+      if (body.action === 'imReview') {
+        const id = String(body.id || ''), verdict = String(body.verdict || '');
+        if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
+        if (!IM_VERDICTS.includes(verdict)) return send(res, 400, { error: 'Pick Yes, No, Discuss or Already exists' });
+        const reason = cleanText(body.reason, IM_REASON_MAX), why = imReasonProblem(reason);
+        if (why) return send(res, 422, { error: why });
+        const [kind, st] = await redis([['HGET', suggKey(id), 'kind'], ['HGET', suggKey(id), 'status']]);
+        if (!st && !kind) return send(res, 404, { error: 'Unknown suggestion' });
+        if (kind === 'bug') return send(res, 422, { error: 'Bug reports are not reviewed here' });
+        await redis([['HSET', imKey(id), playerId, JSON.stringify({ v: verdict, r: reason, t: Date.now() })], ['EXPIRE', imKey(id), 180 * 86400]]);
+      }
+      return send(res, 200, await imState(playerId, isOwner));
     }
 
     if (body.action === 'suggest') {
@@ -603,8 +659,15 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports'].includes(body.action) ? canSee : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
+    // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
+    if (body.action === 'imSet') {
+      const who = await findPlayer(String(body.name || '').slice(0, 40));
+      if (!who) return send(res, 404, { error: 'No player with this name' });
+      await redis(body.on === false ? [['HDEL', statsKey(who), 'ideaManager'], ['SREM', 'im:all', who]] : [['HSET', statsKey(who), 'ideaManager', '1'], ['SADD', 'im:all', who]]);
+      return send(res, 200, await imState(playerId, true));
+    }
     const id = String(body.id || '');
     // Signalements de messages (api/_reports.js) : la liste, et « traité » pour le créateur.
     if (body.action === 'reportDone') { if (/^[0-9a-f]{12}$/.test(id)) await Reports.markDone(id); }
@@ -618,7 +681,7 @@ module.exports = async (req, res) => {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
       const [pid] = await redis([['HGET', suggKey(id), 'pid']]);
       if (!pid) return send(res, 404, { error: 'Unknown suggestion' });
-      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['DEL', shotKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
+      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['DEL', shotKey(id)], ['DEL', imKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
@@ -679,7 +742,8 @@ module.exports = async (req, res) => {
       return send(res, 200, { ...(await fundState()), readOnly: !isOwner, auto: !!process.env.KOFI_TOKEN || process.env.KOFI_RELAYED === '1', pending: (waiting || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => b.t - a.t), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
     }
     const [ids, total] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1], ['ZCARD', 'sugg:all']]);
-    return send(res, 200, { suggestions: await listSuggestions(ids || []), total: Number(total) || 0, readOnly: !isOwner });
+    const list = await listSuggestions(ids || []), reviews = await reviewsOf(list.map(x => x.id));
+    return send(res, 200, { suggestions: list.map(x => (reviews[x.id] ? { ...x, reviews: reviews[x.id] } : x)), total: Number(total) || 0, readOnly: !isOwner });
   } catch (err) {
     return send(res, err.status || 500, { error: err.message });
   }

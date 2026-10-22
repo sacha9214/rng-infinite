@@ -26,6 +26,7 @@ Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one
 - **Fixes**: Collectible Connoisseur no longer requires Classic; coins no longer reveal a good roll early; auto-roll
   no longer cut by Generate / Roll again; Wheelie rider visible; tooltips open on tap (iPad); duel chat and owner
   buttons after a player joins; Trash leaderboards rescored (`tools/rescore-worst.js`).
+- **Idea Managers** (10-23): players Sacha picks (Owner page → Idea Managers tab) review ideas on `#/ideas` with a verdict and a mandatory reason (20+ characters, server-checked). They see nothing else; Sacha sees their reviews in the Inbox and decides.
 - **Codes**: `EPITECH>42`, `SORRY404` (until Oct 29), `ICHI` (100 coins).
 
 ## To do, by priority

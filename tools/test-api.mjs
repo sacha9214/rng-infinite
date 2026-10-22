@@ -3444,4 +3444,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(vq.rolls, 5); assert.equal(vq.match.opp.rolls, undefined, '3/5 : adversaire encore caché');
 }
 
+// Idea Managers (2026-10-23) : rôle donné par le créateur, avis motivés obligatoires, aucun autre accès.
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'e').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 50, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const boss = mk('b1', 'Bossy', ['owner', '1']), mgr = mk('b2', 'Mango'), joe = mk('b3', 'Joey');
+  const T = Date.now();
+  run([['HSET', 'sugg:aaaaaaaaaaa1', 'pid', joe.playerId, 'name', 'Joey', 'text', 'Add a pizza skin with melting cheese', 't', T, 'status', 'new', 'kind', 'idea'], ['ZADD', 'sugg:all', T, 'aaaaaaaaaaa1'],
+       ['HSET', 'sugg:aaaaaaaaaab2', 'pid', joe.playerId, 'name', 'Joey', 'text', 'The shop is broken on my phone', 't', T + 1, 'status', 'new', 'kind', 'bug'], ['ZADD', 'sugg:all', T + 1, 'aaaaaaaaaab2']]);
+  const post = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  assert.equal((await post(mgr, 'imInbox')).status, 403, 'pas encore manager');
+  assert.equal((await post(joe, 'imSet', { name: 'Mango' })).status, 403, 'seul le créateur donne le rôle');
+  let r = await post(boss, 'imSet', { name: 'Mango' }); assert.equal(r.status, 200); assert.deepEqual(r.body.managers.includes('Mango'), true);
+  assert.equal((await post(mgr, 'mine')).body.ideaManager, true);
+  r = await post(mgr, 'imInbox'); assert.equal(r.status, 200);
+  assert.ok(r.body.ideas.some(x => x.id === 'aaaaaaaaaaa1'), 'voit les idées'); assert.ok(!r.body.ideas.some(x => x.id === 'aaaaaaaaaab2'), 'pas les bugs');
+  assert.ok(!JSON.stringify(r.body).includes(joe.playerId), 'aucun identifiant');
+  for (const a of ['inbox', 'stats', 'insights', 'fund', 'reports', 'mark']) assert.equal((await post(mgr, a, { id: 'aaaaaaaaaaa1', status: 'done' })).status, 403, `pas d'accès à ${a}`);
+  // Justification obligatoire et sérieuse.
+  for (const bad of ['', 'yes', 'good idea', 'aaaaaaaaaaaaaaaaaaaaaaaa', 'it is good ok']) assert.equal((await post(mgr, 'imReview', { id: 'aaaaaaaaaaa1', verdict: 'yes', reason: bad })).status, 422, `refusé : « ${bad} »`);
+  assert.equal((await post(mgr, 'imReview', { id: 'aaaaaaaaaaa1', verdict: 'maybe', reason: 'A real reason with enough words here' })).status, 400);
+  assert.equal((await post(mgr, 'imReview', { id: 'aaaaaaaaaab2', verdict: 'yes', reason: 'A real reason with enough words here' })).status, 422, 'pas sur un bug');
+  r = await post(mgr, 'imReview', { id: 'aaaaaaaaaaa1', verdict: 'yes', reason: 'Food skins sell well and nobody has a pizza yet' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.ideas.find(x => x.id === 'aaaaaaaaaaa1').reviews.map(x => [x.by, x.verdict, x.mine]), [['Mango', 'yes', true]]);
+  // Le créateur voit l'avis dans sa boîte ; le statut ne bouge pas.
+  r = await post(boss, 'inbox'); const it = r.body.suggestions.find(x => x.id === 'aaaaaaaaaaa1');
+  assert.deepEqual([it.status, it.reviews[0].by, it.reviews[0].reason], ['new', 'Mango', 'Food skins sell well and nobody has a pizza yet']);
+  // Rôle retiré : plus d'accès.
+  await post(boss, 'imSet', { name: 'Mango', on: false }); assert.equal((await post(mgr, 'imInbox')).status, 403);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

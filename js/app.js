@@ -5254,7 +5254,7 @@
         if (!box) return;
         const seenBefore = Store.settings.suggReplySeen || 0;
         box.innerHTML = `
-          ${state.owner ? `<p style="margin:.2rem 0 .6rem"><a class="btn${Inbox.fresh > 0 ? ' btn-roll small' : ''}" href="#/owner">📥 Inbox & visitors${Inbox.fresh > 0 ? ` (${Inbox.fresh} unread)` : ''}</a></p>` : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}
+          ${state.owner ? `<p style="margin:.2rem 0 .6rem"><a class="btn${Inbox.fresh > 0 ? ' btn-roll small' : ''}" href="#/owner">📥 Inbox & visitors${Inbox.fresh > 0 ? ` (${Inbox.fresh} unread)` : ''}</a></p>` : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}${state.ideaManager ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/ideas">🧑‍⚖️ Idea Manager</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
             <div class="idea-row" data-id="${x.id}">
               <div class="idea-head">${x.kind === 'bug' ? `<span class="o-pill bug">🐞 Bug${x.shot ? ' · 📎' : ''}</span>` : ''}<span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
@@ -5325,7 +5325,89 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['reports', '🚩', 'Reports'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['fund', '💶', 'Fund']];
+  // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
+  // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
+  // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
+  const IM_V = { yes: ['✅', 'Yes'], no: ['❌', 'No'], discuss: ['🤔', 'Discuss'], exists: ['♻️', 'Already exists'] };
+  const imReviewsHTML = list => (list && list.length ? `<div class="im-reviews">${list.map(r => `<div class="im-review v-${r.verdict}"><b>${IM_V[r.verdict][0]} ${IM_V[r.verdict][1]}</b> <span class="panel-note">by <span data-no-i18n>${esc(r.by)}</span>${r.mine ? ' (you)' : ''}</span><p data-no-i18n>${esc(r.reason)}</p></div>`).join('')}</div>` : '');
+  function renderIdeas() {
+    currentView = 'ideas';
+    app.innerHTML = `<div class="page page-wide"><h1 class="page-title">🧑‍⚖️ Idea Manager</h1>
+      <p class="panel-note profile-sub">Read each player idea and say what you think: Yes, No, Discuss or Already exists, and always explain why. Sacha reads every review and makes the final call; players never see your reviews.</p>
+      <div id="im-body"><div class="empty">Loading…</div></div></div>`;
+    mountIdeaManager($('#im-body'), false);
+  }
+  function mountIdeaManager(box, owner) {
+    if (!box) return;
+    let data = null, tab = owner ? 'reviewed' : 'todo', filter = '';
+    const mine = x => x.reviews.find(r => r.mine);
+    const split = x => { const v = new Set(x.reviews.map(r => r.verdict)); return v.has('yes') && v.has('no'); };
+    const draw = () => {
+      if (!data || !box.isConnected) return;
+      const TABS = owner ? [['reviewed', 'Reviewed'], ['yes', '✅ Yes'], ['no', '❌ No'], ['split', '⚖️ Disagreements'], ['todo', 'Not reviewed']] : [['todo', 'To review'], ['done', 'Reviewed by me'], ['all', 'All']];
+      const pick = x => (tab === 'todo' ? (owner ? !x.reviews.length : !mine(x)) : tab === 'done' ? !!mine(x) : tab === 'reviewed' ? x.reviews.length > 0 : tab === 'yes' ? x.reviews.some(r => r.verdict === 'yes') : tab === 'no' ? x.reviews.some(r => r.verdict === 'no') : tab === 'split' ? split(x) : true);
+      const q = filter.trim().toLowerCase();
+      const list = data.ideas.filter(pick).filter(x => !q || `${x.name} ${x.text}`.toLowerCase().includes(q));
+      const count = k => { const t0 = tab; tab = k; const n = data.ideas.filter(pick).length; tab = t0; return n; };
+      const card = x => {
+        const me = mine(x);
+        return `<div class="im-card" data-id="${x.id}">
+          <div class="ib-meta"><b data-no-i18n>${esc(x.name)}</b> · ${suggDate(x.t)}${x.shot ? ' · <button class="btn ghost small" data-im-shot>📎 Screenshot</button>' : ''}</div>
+          <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+          <div class="im-shot" hidden></div>
+          ${imReviewsHTML(x.reviews)}
+          ${owner ? `<div class="o-moves"><button class="btn ghost" data-im-mark="planned">📌 Plan</button><button class="btn ghost" data-im-mark="declined">🚫 Decline</button><a class="btn ghost" href="#/owner/inbox" data-im-open>Open in Inbox</a></div>` : `
+          <form class="im-form">
+            <div class="seg im-verdict">${Object.entries(IM_V).map(([k, [e, l]]) => `<button type="button" data-v="${k}" class="${me && me.verdict === k ? 'on' : ''}">${e} ${l}</button>`).join('')}</div>
+            <textarea class="input" maxlength="${data.max}" rows="2" placeholder="Why? (at least ${data.min} characters)">${me ? esc(me.reason) : ''}</textarea>
+            <div class="im-form-foot"><span class="panel-note im-left"></span><button class="btn">${me ? 'Update my review' : 'Send my review'}</button></div>
+          </form>`}
+        </div>`;
+      };
+      const focused = document.activeElement && document.activeElement.id === 'im-q';
+      box.innerHTML = `${owner ? `<div class="panel im-admin"><div class="panel-head"><h3 class="panel-title">Idea Managers</h3><span class="panel-note">they only see ideas to sort, nothing else</span></div>
+          <div class="im-managers">${(data.managers || []).map(n => `<span class="chip">${esc(n)} <button class="im-x" data-im-remove="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
+          <form class="im-add"><input class="input" id="im-add" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form></div>` : ''}
+        <div class="o-inbox-tabs">${TABS.map(([k, l]) => `<button data-im-tab="${k}" class="${k === tab ? 'on' : ''}">${l} <b>${count(k)}</b></button>`).join('')}</div>
+        <input class="input im-search" id="im-q" type="search" placeholder="Search a name or a word…" value="${esc(filter)}" autocomplete="off">
+        <div class="im-list">${list.length ? list.slice(0, 60).map(card).join('') : `<div class="empty">${tab === 'todo' ? 'Nothing left to review. 🎉' : 'Nothing here yet.'}</div>`}</div>
+        ${list.length > 60 ? `<p class="panel-note">Showing 60 of ${list.length}. Review some to see more.</p>` : ''}`;
+      if (focused) { const i = $('#im-q'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+      box.querySelectorAll('.im-form').forEach(f => {
+        const ta = f.querySelector('textarea'), left = f.querySelector('.im-left');
+        const upd = () => { const n = ta.value.trim().length; left.textContent = n < data.min ? `${data.min - n} more characters` : '✓'; };
+        ta.addEventListener('input', upd); upd();
+      });
+    };
+    const load = (action = 'imInbox', extra) => Online.site(action, extra).then(d => { data = d; draw(); }).catch(err => { if (!data) box.innerHTML = `<div class="empty">${err.status === 403 ? 'This page is for Idea Managers.' : 'Unavailable right now.'}</div>`; else toast(err.message || 'Unavailable right now, try again'); throw err; });
+    box.addEventListener('input', e => { if (e.target.id === 'im-q') { filter = e.target.value; draw(); } });
+    box.addEventListener('click', async e => {
+      const t = e.target.closest('[data-im-tab]'); if (t) { tab = t.dataset.imTab; draw(); return; }
+      const v = e.target.closest('.im-verdict [data-v]'); if (v) { v.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === v)); return; }
+      const rm = e.target.closest('[data-im-remove]'); if (rm) { if (confirm(window.RNGI18n ? window.RNGI18n.t('Remove this Idea Manager?') : 'Remove this Idea Manager?')) load('imSet', { name: rm.dataset.imRemove, on: false }).catch(() => {}); return; }
+      const card = e.target.closest('.im-card'); if (!card) return;
+      if (e.target.closest('[data-im-shot]')) {
+        const holder = card.querySelector('.im-shot');
+        Online.site('shot', { id: card.dataset.id }).then(r => { holder.innerHTML = `<img alt="Screenshot" src="${r.shot}">`; holder.hidden = false; }).catch(err => toast(err.message || 'Unavailable right now'));
+        return;
+      }
+      const mk = e.target.closest('[data-im-mark]');
+      if (mk) { mk.disabled = true; Online.site('mark', { id: card.dataset.id, status: mk.dataset.imMark }).then(() => { toast(mk.dataset.imMark === 'planned' ? 'Moved to Planned' : 'Moved to Not planned'); return load(); }).catch(() => { mk.disabled = false; }); }
+    });
+    box.addEventListener('submit', e => {
+      e.preventDefault();
+      if (e.target.classList.contains('im-add')) { const n = $('#im-add').value.trim(); if (n) load('imSet', { name: n, on: true }).then(() => toast('Role given')).catch(() => {}); return; }
+      const f = e.target.closest('.im-form'); if (!f) return;
+      const card = f.closest('.im-card'), on = f.querySelector('.im-verdict .on'), reason = f.querySelector('textarea').value.trim();
+      if (!on) { toast('Pick Yes, No, Discuss or Already exists'); return; }
+      if (reason.length < data.min) { toast(`Explain why in at least ${data.min} characters`); return; }
+      const btn = f.querySelector('button.btn'); btn.disabled = true;
+      load('imReview', { id: card.dataset.id, verdict: on.dataset.v, reason }).then(() => toast('Review saved')).catch(() => { btn.disabled = false; });
+    });
+    load().catch(() => {});
+  }
+
   function renderOwner() {
     currentView = 'owner';
     const wanted = (location.hash.split('/')[2] || '').split('?')[0];
@@ -5335,7 +5417,7 @@
         <h1 class="page-title" data-no-i18n>Owner</h1>
         <p class="o-guest" id="o-guest" hidden>👀 View only: you can see everything here, but only the creator of the game can change it.</p>
         <nav class="o-tabs" role="tablist" aria-label="Owner sections">${OWNER_TABS.map(([id, emoji, name]) => `<button role="tab" data-tab="${id}"><i>${emoji}</i><span>${name}</span><b class="o-badge" data-badge="${id}" hidden></b></button>`).join('')}</nav>
-        ${OWNER_TABS.map(([id]) => `<section class="o-pane" data-pane="${id}" role="tabpanel" hidden>${id === 'fund' ? '<div id="o-fund"><div class="empty">Loading…</div></div>' : id === 'inbox' ? '<div class="panel"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>' : '<div class="empty">Loading…</div>'}</section>`).join('')}
+        ${OWNER_TABS.map(([id]) => `<section class="o-pane" data-pane="${id}" role="tabpanel" hidden>${id === 'fund' ? '<div id="o-fund"><div class="empty">Loading…</div></div>' : id === 'ideas' ? '<div id="o-im"><div class="empty">Loading…</div></div>' : id === 'inbox' ? '<div class="panel"><div class="panel-head"><h3 class="panel-title">Suggestions</h3><span class="panel-note" id="o-count"></span></div><div id="o-inbox"><div class="empty">Loading…</div></div></div>' : '<div class="empty">Loading…</div>'}</section>`).join('')}
       </div>`;
     const pane = id => app.querySelector(`[data-pane="${id}"]`);
     const show = (id, keep) => {
@@ -5778,6 +5860,7 @@
             <div class="ib-meta"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a> · ${suggDate(x.t)} · ${x.lang || '?'} · <span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span><button class="btn ghost o-del" data-o="delete" title="Delete">🗑</button></div>
             <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
             ${x.shot ? `<div class="o-shot" data-shot="${x.id}"><button class="btn ghost" data-o="shot">📎 View the screenshot</button></div>` : ''}
+            ${imReviewsHTML(x.reviews)}
             ${threadHTML(x.thread, 'Player')}
             <div class="o-reply"><input class="input" maxlength="300" placeholder="${x.thread.length ? 'Reply in this conversation…' : 'Reply to the player (they can answer back)'}"><button class="btn" data-o="reply">Send reply</button></div>
             <div class="o-moves">
@@ -5793,6 +5876,7 @@
             <span class="ib-kind" title="${x.kind === 'bug' ? 'Bug' : 'Idea'}">${x.kind === 'bug' ? '🐞' : '💡'}</span>
             <b class="ib-name">${esc(x.name)}</b>
             <span class="ib-text" data-no-i18n>${esc(x.text)}</span>
+            ${x.reviews && x.reviews.length ? `<span class="ib-n" title="Idea Manager reviews">${x.reviews.map(r => IM_V[r.verdict][0]).join('')}</span>` : ''}
             ${replied(x) ? '<span class="o-pill reply">💬 replied</span>' : x.thread.length ? `<span class="ib-n" title="Messages">💬 ${x.thread.length}</span>` : ''}
             ${x.shot ? '<span class="ib-n" title="Screenshot">📎</span>' : ''}
             ${tab === 'all' ? `<span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span>` : ''}
@@ -5859,6 +5943,7 @@
       if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else if (row.querySelector('.o-reply input').value.trim()) act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply sent')); else toast('Write a few words first');
     });
     Online.site('inbox').then(drawInbox).catch(err => { if ($('#o-inbox')) $('#o-inbox').innerHTML = denied(err); });
+    mountIdeaManager($('#o-im'), true);
   }
 
   // ---------------------------------------------------------------- accueil d'un nouveau joueur : 3 écrans
@@ -7292,7 +7377,7 @@
   // Code caché n°2 (les deux autres : bas de la page d'aide, et le nombre 0 dans le vérificateur d'XP).
   try { console.log('%c🔑 You found a hidden code: CONSOLECAT', 'font: 700 14px monospace; color: #facc15; background: #111; padding: 6px 10px; border-radius: 6px'); } catch (e) { /* pas de console */ }
   try { paintWallpaper(); } catch (e) { /* jamais bloquant */ }
-  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner };
+  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas };
 
   function route() {
     if (session && !session.finished) session.cancel();

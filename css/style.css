@@ -5193,3 +5193,23 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .dm-img { display: block; max-width: 180px; max-height: 180px; margin-bottom: .25rem; border-radius: .5rem; border: 1px solid var(--outline); cursor: zoom-in; background: var(--surface-raised); min-width: 60px; min-height: 40px; object-fit: cover; }
 .dm-img.big { max-width: 100%; max-height: 70vh; cursor: zoom-out; }
 .dm-gone { display: block; font-size: .75rem; color: var(--prose-3); }
+
+/* Idea Managers (2026-10-23) */
+.im-list { display: grid; gap: .7rem; margin-top: .6rem; }
+.im-card { padding: .8rem .9rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); }
+.im-card .idea-body { margin: .4rem 0; }
+.im-shot img { max-width: 100%; max-height: 360px; border-radius: .4rem; border: 1px solid var(--outline); }
+.im-reviews { display: grid; gap: .35rem; margin: .5rem 0; }
+.im-review { padding: .4rem .6rem; border-left: 3px solid var(--outline); border-radius: 0 .4rem .4rem 0; background: var(--surface-raised); font-size: .82rem; }
+.im-review p { margin: .2rem 0 0; color: var(--prose-2); }
+.im-review.v-yes { border-left-color: #22c55e; } .im-review.v-no { border-left-color: #ef4444; }
+.im-review.v-discuss { border-left-color: #f59e0b; } .im-review.v-exists { border-left-color: #60a5fa; }
+.im-form { display: grid; gap: .45rem; margin-top: .5rem; }
+.im-form textarea { width: 100%; resize: vertical; text-transform: none; letter-spacing: 0; text-align: left; font-size: .85rem; }
+.im-verdict { flex-wrap: wrap; }
+.im-form-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.im-search { width: 100%; max-width: 22rem; margin-top: .5rem; text-transform: none; letter-spacing: 0; text-align: left; font-size: .8rem; }
+.im-managers { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .6rem; }
+.im-x { border: 0; background: none; color: var(--prose-3); cursor: pointer; font-weight: 800; }
+.im-add { display: flex; gap: .4rem; flex-wrap: wrap; }
+.im-add .input { width: 14rem; max-width: 100%; text-transform: none; letter-spacing: 0; text-align: left; }
