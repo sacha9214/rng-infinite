@@ -5701,58 +5701,88 @@
     ];
     const MOVES = { seen: ['🤔', 'To decide'], planned: ['📌', 'Plan'], done: ['✅', 'Added'], declined: ['🚫', 'Decline'] };
     let inboxData = null;
-    const inboxState = { tab: Store.settings.inboxTab || '', q: '' };
+    // Boîte de réception en liste compacte : une ligne par suggestion (nom, aperçu, date), un clic l'ouvre en dessous.
+    // Après un tri (Plan, Added, Decline…), la suivante de la liste s'ouvre seule : on enchaîne sans chercher.
+    const inboxState = { tab: Store.settings.inboxTab || '', q: '', kind: '', sort: 'new', open: '', limit: 50 };
+    const replied = x => x.thread.length > 0 && x.thread[x.thread.length - 1].from === 'player';
+    const inboxList = tab => {
+      const data = inboxData, q = inboxState.q.trim().toLowerCase();
+      const list = data.suggestions
+        .filter(x => tab === 'all' || x.status === tab)
+        .filter(x => !inboxState.kind || x.kind === inboxState.kind)
+        .filter(x => !q || `${x.name} ${x.text} ${x.thread.map(m => m.text).join(' ')}`.toLowerCase().includes(q));
+      const last = x => Math.max(x.t, ...x.thread.map(m => m.t || 0));
+      return list.sort(inboxState.sort === 'old' ? (a, b) => a.t - b.t : (a, b) => last(b) - last(a));
+    };
+    const inboxTab = () => {
+      const data = inboxData, count = k => (k === 'all' ? data.suggestions.length : data.suggestions.filter(x => x.status === k).length);
+      return INBOX_TABS.some(t => t[0] === inboxState.tab) ? inboxState.tab : count('new') ? 'new' : count('seen') ? 'seen' : 'planned';
+    };
     const drawInboxList = () => {
       const box = $('#o-inbox'), data = inboxData;
       if (!box || !data) return;
       if (!data.suggestions.length) { box.innerHTML = '<div class="empty">No suggestion yet.</div>'; return; }
       const count = k => (k === 'all' ? data.suggestions.length : data.suggestions.filter(x => x.status === k).length);
-      // Sans choix retenu : la première pile qui demande une action.
-      let tab = inboxState.tab;
-      if (!INBOX_TABS.some(t => t[0] === tab)) tab = count('new') ? 'new' : count('seen') ? 'seen' : 'planned';
-      const q = inboxState.q.trim().toLowerCase();
-      const list = data.suggestions
-        .filter(x => tab === 'all' || x.status === tab)
-        .filter(x => !q || `${x.name} ${x.text} ${x.thread.map(m => m.x || m.text || '').join(' ')}`.toLowerCase().includes(q));
-      const replied = x => x.thread.length && x.thread[x.thread.length - 1].f === 'p';
-      const row = x => `
-        <div class="idea-row${x.status === 'new' ? ' unread' : ''}" data-id="${x.id}" data-status="${x.status}">
-          <div class="idea-head">
-            <a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a>
-            <span class="panel-note">${suggDate(x.t)} · ${x.lang || '?'}</span>
-            ${x.kind === 'bug' ? '<span class="o-pill bug">🐞 Bug</span>' : ''}
-            ${x.status === 'new' && replied(x) ? '<span class="o-pill reply">💬 Player replied</span>' : ''}
+      const tab = inboxTab(), list = inboxList(tab), shown = list.slice(0, inboxState.limit);
+      const detail = x => `
+          <div class="ib-detail">
+            <div class="ib-meta"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a> · ${suggDate(x.t)} · ${x.lang || '?'} · <span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span><button class="btn ghost o-del" data-o="delete" title="Delete">🗑</button></div>
+            <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
+            ${x.shot ? `<div class="o-shot" data-shot="${x.id}"><button class="btn ghost" data-o="shot">📎 View the screenshot</button></div>` : ''}
+            ${threadHTML(x.thread, 'Player')}
+            <div class="o-reply"><input class="input" maxlength="300" placeholder="${x.thread.length ? 'Reply in this conversation…' : 'Reply to the player (they can answer back)'}"><button class="btn" data-o="reply">Send reply</button></div>
+            <div class="o-moves">
+              ${Object.entries(MOVES).filter(([k]) => k !== x.status).map(([k, [e, l]]) => `<button class="btn${k === 'planned' || k === 'done' ? '' : ' ghost'} o-move" data-o="move" data-st="${k}">${e} ${l}</button>`).join('')}
+              ${x.status === 'new' ? '<button class="btn ghost" data-o="read">✓ Mark as read</button>' : '<button class="btn ghost" data-o="unread">↩ Not read</button>'}
+            </div>
+          </div>`;
+      const row = x => {
+        const open = x.id === inboxState.open;
+        return `
+        <div class="idea-row ib-row${x.status === 'new' ? ' unread' : ''}${open ? ' open' : ''}" data-id="${x.id}" data-status="${x.status}">
+          <button class="ib-line" data-o="toggle" aria-expanded="${open}">
+            <span class="ib-kind" title="${x.kind === 'bug' ? 'Bug' : 'Idea'}">${x.kind === 'bug' ? '🐞' : '💡'}</span>
+            <b class="ib-name">${esc(x.name)}</b>
+            <span class="ib-text" data-no-i18n>${esc(x.text)}</span>
+            ${replied(x) ? '<span class="o-pill reply">💬 replied</span>' : x.thread.length ? `<span class="ib-n" title="Messages">💬 ${x.thread.length}</span>` : ''}
+            ${x.shot ? '<span class="ib-n" title="Screenshot">📎</span>' : ''}
             ${tab === 'all' ? `<span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span>` : ''}
-            <button class="btn ghost o-del" data-o="delete" title="Delete">🗑</button>
-          </div>
-          <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
-          ${x.shot ? `<div class="o-shot" data-shot="${x.id}"><button class="btn ghost" data-o="shot">📎 View the screenshot</button></div>` : ''}
-          ${threadHTML(x.thread, 'Player')}
-          <div class="o-moves">
-            ${x.status === 'new' ? '<button class="btn" data-o="read">✓ Mark as read</button>' : '<button class="btn ghost" data-o="unread">↩ Not read</button>'}
-            ${Object.entries(MOVES).filter(([k]) => k !== x.status).map(([k, [e, l]]) => `<button class="btn ghost o-move" data-o="move" data-st="${k}">${e} ${l}</button>`).join('')}
-          </div>
-          <div class="o-reply"><input class="input" maxlength="300" placeholder="${x.thread.length ? 'Reply in this conversation…' : 'Reply to the player (they can answer back)'}"><button class="btn" data-o="reply">Send reply</button></div>
+            <span class="ib-date">${suggDate(x.t)}</span>
+          </button>
+          ${open ? detail(x) : ''}
         </div>`;
+      };
       const info = INBOX_TABS.find(t => t[0] === tab);
       const focused = document.activeElement && document.activeElement.id === 'o-inbox-q';
+      const kinds = [['', 'All types'], ['idea', '💡 Ideas'], ['bug', '🐞 Bugs']];
       box.innerHTML = `
         <div class="o-inbox-tabs" role="tablist">${INBOX_TABS.map(([k, e, l]) => { const n = count(k); return `<button role="tab" data-itab="${k}" class="${k === tab ? 'on' : ''}${k === 'new' && n ? ' hot' : ''}">${e} <span>${l}</span> <b>${n}</b></button>`; }).join('')}</div>
         <div class="o-inbox-head">
           <p class="panel-note o-inbox-hint">${info[3]}</p>
           <div class="o-inbox-tools">
             <input class="input" id="o-inbox-q" type="search" placeholder="Search a name or a word…" value="${esc(inboxState.q)}" autocomplete="off">
+            <span class="ib-seg">${kinds.map(([k, l]) => `<button class="${inboxState.kind === k ? 'on' : ''}" data-ikind="${k}">${l}</button>`).join('')}</span>
+            <span class="ib-seg"><button class="${inboxState.sort === 'new' ? 'on' : ''}" data-isort="new">Latest activity</button><button class="${inboxState.sort === 'old' ? 'on' : ''}" data-isort="old">Oldest first</button></span>
             ${tab === 'new' && count('new') > 1 ? '<button class="btn ghost" data-o="readall">✓ Mark all as read</button>' : ''}
           </div>
         </div>
-        ${list.length ? list.map(row).join('') : `<div class="empty">${q ? 'Nothing matches this search.' : tab === 'new' ? 'You have read everything. 🎉' : tab === 'seen' ? 'Everything is sorted. 🎉' : 'Nothing here yet.'}</div>`}`;
+        <p class="panel-note ib-count">${list.length} suggestion${list.length === 1 ? '' : 's'}${list.length > shown.length ? ` · showing ${shown.length}` : ''} · click one to open it</p>
+        <div class="ib-list">${shown.length ? shown.map(row).join('') : `<div class="empty">${inboxState.q || inboxState.kind ? 'Nothing matches.' : tab === 'new' ? 'You have read everything. 🎉' : tab === 'seen' ? 'Everything is sorted. 🎉' : 'Nothing here yet.'}</div>`}</div>
+        ${list.length > shown.length ? `<div class="actions" style="justify-content:center"><button class="btn ghost" data-o="more">Show more (${list.length - shown.length} left)</button></div>` : ''}`;
       if (focused) { const i = $('#o-inbox-q'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+      const op = box.querySelector('.ib-row.open');
+      if (op && op.getBoundingClientRect().top < 0) op.scrollIntoView({ block: 'start' });
     };
     const act = (action, extra) => Online.site(action, extra).then(drawInbox).catch(err => toast(err.status === 403 ? 'Owner only' : 'Unavailable right now, try again'));
-    $('#o-inbox').addEventListener('input', e => { if (e.target.id === 'o-inbox-q') { inboxState.q = e.target.value; drawInboxList(); } });
+    $('#o-inbox').addEventListener('input', e => { if (e.target.id === 'o-inbox-q') { inboxState.q = e.target.value; inboxState.limit = 50; drawInboxList(); } });
+    // Après un tri : ouvre la suivante dans l'onglet courant (celle qui venait juste après).
+    const nextOpen = id => { const l = inboxList(inboxTab()).map(x => x.id), k = l.indexOf(id); return k >= 0 && k + 1 < l.length ? l[k + 1] : ''; };
     $('#o-inbox').addEventListener('click', e => {
       const tabBtn = e.target.closest('[data-itab]');
-      if (tabBtn) { inboxState.tab = tabBtn.dataset.itab; Store.setSetting('inboxTab', inboxState.tab); drawInboxList(); return; }
+      if (tabBtn) { inboxState.tab = tabBtn.dataset.itab; inboxState.open = ''; inboxState.limit = 50; Store.setSetting('inboxTab', inboxState.tab); drawInboxList(); return; }
+      const kindBtn = e.target.closest('[data-ikind]'), sortBtn = e.target.closest('[data-isort]');
+      if (kindBtn) { inboxState.kind = kindBtn.dataset.ikind; inboxState.limit = 50; drawInboxList(); return; }
+      if (sortBtn) { inboxState.sort = sortBtn.dataset.isort; drawInboxList(); return; }
       const btn = e.target.closest('[data-o]'), row = e.target.closest('.idea-row');
       if (btn && btn.dataset.o === 'readall') {
         // L'une après l'autre : chaque réponse est la boîte entière, la dernière est la bonne.
@@ -5761,7 +5791,13 @@
         ids.reduce((p, id, i) => p.then(() => Online.site('mark', { id, status: 'seen' })), Promise.resolve()).then(drawInbox).catch(() => { toast('Unavailable right now, try again'); btn.disabled = false; });
         return;
       }
+      if (btn && btn.dataset.o === 'more') { inboxState.limit += 50; drawInboxList(); return; }
       if (!btn || !row) return;
+      if (btn.dataset.o === 'toggle') {
+        const id = row.dataset.id; inboxState.open = inboxState.open === id ? '' : id; drawInboxList();
+        // Ouvrir une nouvelle suggestion la marque lue, sans la sortir de la vue tout de suite.
+        return;
+      }
       // Capture d'écran d'un bug : chargée seulement quand on la demande (elle pèse jusqu'à ~150 Ko).
       if (btn.dataset.o === 'shot') {
         btn.disabled = true;
@@ -5769,8 +5805,8 @@
           .catch(err => { btn.disabled = false; toast(err.status === 404 ? err.message : 'Unavailable right now, try again'); });
         return;
       }
-      if (btn.dataset.o === 'read' || btn.dataset.o === 'unread') { act('mark', { id: row.dataset.id, status: btn.dataset.o === 'read' ? 'seen' : 'new' }); return; }
-      if (btn.dataset.o === 'move') { act('mark', { id: row.dataset.id, status: btn.dataset.st }).then(() => toast(`Moved to ${INBOX_TABS.find(t => t[0] === btn.dataset.st)[2]}`)); return; }
+      if (btn.dataset.o === 'read' || btn.dataset.o === 'unread') { if (inboxTab() !== 'all') inboxState.open = nextOpen(row.dataset.id); act('mark', { id: row.dataset.id, status: btn.dataset.o === 'read' ? 'seen' : 'new' }); return; }
+      if (btn.dataset.o === 'move') { const id = row.dataset.id, nx = inboxTab() === 'all' ? id : nextOpen(id); inboxState.open = nx; act('mark', { id, status: btn.dataset.st }).then(() => toast(`Moved to ${INBOX_TABS.find(t => t[0] === btn.dataset.st)[2]}`)); return; }
       if (btn.dataset.o === 'delete') { if (confirm(window.RNGI18n.t('Delete this suggestion?'))) act('delete', { id: row.dataset.id }); } else if (row.querySelector('.o-reply input').value.trim()) act('mark', { id: row.dataset.id, reply: row.querySelector('.o-reply input').value }).then(() => toast('Reply sent')); else toast('Write a few words first');
     });
     Online.site('inbox').then(drawInbox).catch(err => { if ($('#o-inbox')) $('#o-inbox').innerHTML = denied(err); });

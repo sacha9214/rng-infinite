@@ -23,7 +23,7 @@ const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const DAY_MS = 86400000;
 
 // ---------------------------------------------------------------- suggestions
-const SUGG_MAX = 500, SUGG_MIN = 5, SUGG_PER_DAY = 5, REPLY_MAX = 300, INBOX_MAX = 200;
+const SUGG_MAX = 500, SUGG_MIN = 5, SUGG_PER_DAY = 5, REPLY_MAX = 300, INBOX_MAX = 5000;
 const STATUSES = ['new', 'seen', 'planned', 'done', 'declined'];
 let versionCache = { at: 0, app: null };
 function siteVersion() {
@@ -53,7 +53,9 @@ function cleanShot(raw) {
 }
 async function listSuggestions(ids) {
   if (!ids.length) return [];
-  const rows = await redis(ids.flatMap(id => [['HGETALL', suggKey(id)], ['LRANGE', threadKey(id), 0, -1]]));
+  // Par paquets de 250 : toute la boîte (plusieurs centaines de suggestions) sans un pipeline géant.
+  const rows = [];
+  for (let i = 0; i < ids.length; i += 250) rows.push(...(await redis(ids.slice(i, i + 250).flatMap(id => [['HGETALL', suggKey(id)], ['LRANGE', threadKey(id), 0, -1]]))));
   return ids.map((id, i) => ({ id, ...toObject(rows[i * 2]), msgs: rows[i * 2 + 1] || [] })).filter(x => x.text)
     .map(x => {
       let thread = x.msgs.map(m => { try { const o = JSON.parse(m); return { from: o.f === 'o' ? 'owner' : 'player', text: String(o.x || ''), t: Number(o.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
