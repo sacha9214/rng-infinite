@@ -4919,6 +4919,7 @@
       <p class="panel-note" style="margin:-.3rem 0 .8rem">Your message goes straight to the creator of the game.</p>
       <div class="seg idea-kind" id="idea-kind" role="tablist"><button data-kind="idea" class="on">💡 Suggest an idea</button><button data-kind="bug">🐞 Report a bug</button></div>
       <p class="idea-warn" id="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
+      <p class="idea-note">💛 <span>Thank you so much for all your ideas and reports! I get about a hundred every day and I'm making the game on my own, so answers and new features can take a little longer. Thanks for understanding!</span></p>
       <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your message"></textarea>
       <div class="idea-shot" id="idea-shot" hidden>
         <label class="btn ghost idea-shot-btn"><input type="file" accept="image/*" id="idea-file" hidden>📎 Add a screenshot (optional)</label>

@@ -5047,3 +5047,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .cmp-vs { display: flex; flex-direction: column; align-items: center; font-size: 1.4rem; font-weight: 800; }
 .cmp-badges { margin-top: .7rem; }
 @media (max-width: 480px) { .cmp-side .num-card.md { font-size: 1.1rem; } }
+
+/* Boîte à idées : mot du créateur (2026-10-22) */
+.idea-note { margin: .4rem 0 .8rem; padding: .55rem .7rem; border-radius: .6rem; font-size: .88em; line-height: 1.4;
+  background: color-mix(in srgb, #eab308 12%, transparent); border: 1px solid color-mix(in srgb, #eab308 40%, transparent); }
