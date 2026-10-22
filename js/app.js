@@ -1668,6 +1668,7 @@
       '🔑 A Premium key can now also open a Starter or Wallpaper case (idea by keys)',
       '🧈 The ASMR skin crunches more naturally (idea by JAKECisthebest)',
       '⭐ Skip known badges: open any badge and pick “Always shown in full” to keep its full reveal (idea by Aussie Haüs)',
+      '💡 Skin creators: when someone buys a skin that came from a player\'s idea, that player now gets 5% of the price in coins. Look for “Idea by” in the Shop! (idea by Gray alt)',
       '🐞 Fixes: the Collectible Connoisseur title no longer needs the free Classic skin; coins no longer go up before a roll is revealed; auto-roll no longer cuts a roll you started by hand',
     ], fr: [
       '🔢 Nouveaux badges : 🇺🇸 American (1776, idée de jaxoncool43), 😇 Angel Number (82, idée de kaz), 🧿 Vortrox Curse (92, idée de CococoC), 🧃 Sixty-One (61, idée de schoolroller), 🖤 Juice WRLD (999, idée de Colt2), 🚫 Error 404 (404, idée de Gray), 👑 Brainrot King (6741 ou 4167) et 🫅 Brainrot Emperor (exactement 676741 ou 674141, idées de CrazyMiner22)',
@@ -1678,6 +1679,7 @@
       '🔑 Une clé Premium ouvre aussi une caisse Starter ou Fonds (idée de keys)',
       '🧈 Le skin ASMR craque de façon plus naturelle (idée de JAKECisthebest)',
       '⭐ Passer les badges connus : ouvre un badge et choisis « Toujours montré en entier » pour garder sa révélation (idée d\'Aussie Haüs)',
+      '💡 Créateurs de skins : quand quelqu\'un achète un skin né de l\'idée d\'un joueur, ce joueur reçoit 5 % du prix en pièces. Cherche « Idea by » dans la boutique ! (idée de Gray alt)',
       '🐞 Corrections : le titre Grand collectionneur ne demande plus le skin Classic gratuit ; les pièces ne montent plus avant la fin du tirage ; le tirage auto ne coupe plus un tirage lancé à la main',
     ] },
     { id: '2026-10-22m', date: 'Oct 22, 2026', en: [
@@ -3478,7 +3480,7 @@
       return `
         <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
           ${withLever(`<div class="num-card md${skinClass(k.id)}" data-tier="rare">${slotsHTML('235711')}</div>`, k.id)}
-          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
+          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${k.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(k.idea)}" data-no-i18n>${esc(k.idea)}</a></span>` : ''}</div>
           <div class="skin-actions">${k.id !== 'classic' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
         </div>`;
     };

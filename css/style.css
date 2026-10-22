@@ -5177,3 +5177,6 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 }
 
 .chat-edited { margin-left: .3rem; font-size: .7rem; color: var(--prose-3); font-style: normal; }
+
+.skin-idea { display: block; margin-top: .2rem; font-size: .7rem; color: var(--prose-3); }
+.skin-idea a { color: inherit; font-weight: 700; }

@@ -2539,6 +2539,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     run([['SADD', `btns:${baker.playerId}`, ...all.slice(0, -1)], ['HINCRBY', `stats:${baker.playerId}`, 'bonus', 5000]]);
     r = await shopPost(baker, { action: 'buybutton', button: all[all.length - 1] }); assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(run([['HGET', `stats:${baker.playerId}`, 'allButtons']])[0].result, '1'); }
+  // 5 % pour l'auteur de l'idée d'un skin (2026-10-22) : créés en plus, jamais pour soi-même.
+  { const sky = Shop.byId.get('sky'), was = sky.idea; sky.idea = run([['HGET', 'names', alice.playerId]])[0].result;
+    const annie = alice.playerId;
+    const before = Number(run([['HGET', `stats:${annie}`, 'bonus']])[0].result) || 0;
+    r = await shopPost(baker, { action: 'buy', skin: 'sky' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(Number(run([['HGET', `stats:${annie}`, 'royalty']])[0].result), 80, '5 % de 1 600');
+    assert.equal(Number(run([['HGET', `stats:${annie}`, 'bonus']])[0].result) - before, 80);
+    sky.idea = was; }
   // Les bots ne portent jamais Infinity (ni un skin légendaire).
   const seen = new Set();
   for (let i = 0; i < 6; i++) {
@@ -2665,15 +2673,17 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   }
   // Supprimer un de ses messages (2026-10-22) : seulement les siens.
   {
+    await new Promise(ok => setTimeout(ok, 3)); // une milliseconde à lui : les messages sont retrouvés par leur heure
     let x = await fr(ann, 'message', 'Benny', { text: 'oops typo' });
     const mine = x.body.messages.filter(m => m.me).pop(), theirs = x.body.messages.find(m => !m.me);
-    await fr(ann, 'unsend', 'Benny', { t: theirs.t }); // même heure possible qu'un des siens : on vérifie juste que celui de l'autre reste
+    if (theirs.t !== mine.t) await fr(ann, 'unsend', 'Benny', { t: theirs.t }); // même heure possible qu'un des siens : on vérifie juste que celui de l'autre reste
     assert.ok((await fr(ann, 'messages', 'Benny')).body.messages.some(m => !m.me && m.text === theirs.text), 'le message de l\'autre reste');
     x = await fr(ann, 'unsend', 'Benny', { t: mine.t }); assert.equal(x.status, 200);
     assert.ok(!x.body.messages.some(m => m.text === 'oops typo'), 'message supprimé');
   }
   // Modifier un de ses messages (idée de kingston, 2026-10-22) : seulement les siens, marqué « edited ».
   {
+    await new Promise(ok => setTimeout(ok, 3));
     let x = await fr(ann, 'message', 'Benny', { text: 'helo' });
     const mine = x.body.messages.filter(m => m.me).pop();
     x = await fr(ann, 'edit', 'Benny', { t: mine.t, text: 'hello' }); assert.equal(x.status, 200);

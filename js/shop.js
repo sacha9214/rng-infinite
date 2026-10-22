@@ -26,10 +26,10 @@
     { id: 'gold', name: 'Gold', emoji: '🥇', price: 1000, desc: 'Solid gold' },
     { id: 'matrix', name: 'Matrix', emoji: '🟩', price: 1200, desc: 'Falling green code' },
     { id: 'fire', name: 'Fire', emoji: '🔥', price: 1500, desc: 'Burning digits' },
-    { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Mythic or better and the sky takes its color' }, // idée de Deadshot (2026-10-16)
+    { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Mythic or better and the sky takes its color', idea: 'Deadshot' }, // idée de Deadshot (2026-10-16)
     // Idée de Gunnar (2026-10-16, « heavenly ») : marbre et or, une auréole sur chaque chiffre.
-    { id: 'heavenly', name: 'Heavenly', emoji: '😇', price: 2000, desc: 'White marble and gold leaf; every digit gets its halo' },
-    { id: 'cards', name: 'Deck', emoji: '🃏', price: 1400, desc: 'Every digit is a card drawn from the deck' }, // idée de GamblrGod (2026-10-16)
+    { id: 'heavenly', name: 'Heavenly', emoji: '😇', price: 2000, desc: 'White marble and gold leaf; every digit gets its halo', idea: 'Gunnar' },
+    { id: 'cards', name: 'Deck', emoji: '🃏', price: 1400, desc: 'Every digit is a card drawn from the deck', idea: 'GamblrGod' }, // idée de GamblrGod (2026-10-16)
     { id: 'galaxy', name: 'Galaxy', emoji: '🌌', price: 2500, desc: 'Written in the stars' },
     { id: 'rainbow', name: 'Rainbow', emoji: '🌈', price: 5000, desc: 'Every color at once' },
     // Ajoutés le 2026-09-28.
@@ -56,39 +56,39 @@
     { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
     // Idée de Deadshot (2026-10-16) : des maisons du quartier, les portes s'ouvrent sur des bonbons en forme de chiffres ;
     // derrière les zéros de tête, la porte s'ouvre sur une maison vide.
-    { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z' },
+    { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', idea: 'Deadshot' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
     // Idée d'un joueur (2026-10-16) : un skin « sang », stylisé, rien de gore.
     { id: 'bloodlust', name: 'Bloodlust', emoji: '🩸', price: 1400, desc: 'Glossy dark red drops that drip and splash' },
     // Idée de JBearr12 (2026-10-17) : un revolver tire sur des bouteilles qui éclatent en chiffres.
-    { id: 'western', name: 'Western', emoji: '🤠', price: 1500, desc: 'A revolver shoots the bottles off the fence, and each one bursts into a digit' },
+    { id: 'western', name: 'Western', emoji: '🤠', price: 1500, desc: 'A revolver shoots the bottles off the fence, and each one bursts into a digit', idea: 'JBearr12' },
     // Idée de costoroll (2026-10-18) : des météorites tombent sur chaque chiffre, la dernière plus fort.
-    { id: 'meteor', name: 'Meteor', emoji: '☄️', price: 2200, desc: 'Meteors crash onto every digit over a city at night; the last one hits hardest' },
-    { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat' },
-    { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat' },
+    { id: 'meteor', name: 'Meteor', emoji: '☄️', price: 2200, desc: 'Meteors crash onto every digit over a city at night; the last one hits hardest', idea: 'costoroll' },
+    { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat', idea: 'Gunnar' },
+    { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat', idea: 'Gunnar' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
     // Idée de JAKECisthebest (2026-10-20) : de la cire ASMR croquante, pressée et craquée ; boutons et sons assortis.
-    { id: 'asmr', name: 'ASMR', emoji: '🧈', price: 3000, desc: 'Pastel crunchy wax, kneaded while it rolls, pressed and crunched on every digit' },
+    { id: 'asmr', name: 'ASMR', emoji: '🧈', price: 3000, desc: 'Pastel crunchy wax, kneaded while it rolls, pressed and crunched on every digit', idea: 'JAKECisthebest' },
     // Idée d'Edward (2026-10-20) : une énergie maudite bleu-violet, aura qui crépite et sceaux. Dessin original.
-    { id: 'cursed', name: 'Cursed Energy', emoji: '🌀', price: 6000, desc: 'Violet cursed energy flows around every digit, and a seal burns on each one' },
+    { id: 'cursed', name: 'Cursed Energy', emoji: '🌀', price: 6000, desc: 'Violet cursed energy flows around every digit, and a seal burns on each one', idea: 'Edward' },
     // Idée de DandoriNinja (2026-10-21) : guimauves pastel qui tombent, canons à confettis de guimauves arc-en-ciel.
-    { id: 'marsh', name: 'Marshmallow', emoji: '🍡', price: 2400, desc: 'Puffy pastel marshmallows fall from the sky, and party poppers burst rainbow minis' },
+    { id: 'marsh', name: 'Marshmallow', emoji: '🍡', price: 2400, desc: 'Puffy pastel marshmallows fall from the sky, and party poppers burst rainbow minis', idea: 'DandoriNinja' },
     // Idée de costoroll (2026-10-21) : six tubes à essai dans un portoir, les chiffres s'allument dans leur liquide, tintent et pétillent.
-    { id: 'lab', name: 'Lab', emoji: '🧪', price: 3200, desc: 'Six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes' },
+    { id: 'lab', name: 'Lab', emoji: '🧪', price: 3200, desc: 'Six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes', idea: 'costoroll' },
     // Idée de JBearr12 (2026-10-21) : un vélo en wheelie traverse la carte, les chiffres apparaissent dans son sillage.
-    { id: 'wheelie', name: 'Wheelie', emoji: '🚲', price: 1800, desc: 'A rider pulls a wheelie across the street, and every digit pops up in his wake' },
+    { id: 'wheelie', name: 'Wheelie', emoji: '🚲', price: 1800, desc: 'A rider pulls a wheelie across the street, and every digit pops up in his wake', idea: 'JBearr12' },
     // Idée de PongonLOLZFan (2026-10-21) : un donut 3D en polygones (low poly). Identifiant « polydonut » : « donut » est
     // l'ancien skin remplacé par Slots (ALIASES).
-    { id: 'polydonut', name: 'Polygon Donut', emoji: '🍩', price: 2600, desc: 'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal' },
+    { id: 'polydonut', name: 'Polygon Donut', emoji: '🍩', price: 2600, desc: 'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal', idea: 'PongonLOLZFan' },
     // Idée de Matthew (2026-10-21) : des ondes sonores qui portent les chiffres, un « boum » à chaque chiffre.
-    { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms' },
+    { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms', idea: 'Matthew' },
     // Idée de JBearr12 (2026-10-21) : une soucoupe qui dépose les chiffres sur l'herbe.
     // Idée de costoroll (2026-10-21) : un store vénitien fermé devant chaque chiffre, qui s'ouvre sur un chiffre néon jaune ;
     // la fenêtre donne sur un jardin au soleil, qui se couche (et la lune se lève) dès Mythic.
-    { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises' },
-    { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away' },
+    { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises', idea: 'costoroll' },
+    { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
@@ -275,8 +275,11 @@
   const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id) };
   // Quelle clé ouvre quelle caisse (idée de keys, 2026-10-22) : une clé Premium ouvre aussi les caisses moins chères
   // (Starter, Fonds d'écran) ; l'Élite ne s'ouvre jamais avec une clé.
+  // Part du créateur (idée de Gray alt, acceptée par Sacha à 5 %, 2026-10-22) : à chaque achat d'un skin né d'une idée de
+  // joueur (champ idea), son auteur reçoit 5 % du prix en pièces. Créées en plus : l'acheteur paie le prix normal.
+  const IDEA_SHARE = 0.05;
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
-  const api = { KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

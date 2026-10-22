@@ -6,7 +6,7 @@
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
-const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue } = require('./_lib');
+const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue, findPlayer } = require('./_lib');
 const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
@@ -340,6 +340,11 @@ module.exports = async (req, res) => {
             ['SADD', ownedKey(playerId), skin.id],
           ]);
           await checkCollection(playerId);
+          // 5 % pour le joueur qui a eu l'idée du skin (jamais pour soi-même) ; un nom introuvable ne bloque pas l'achat.
+          if (skin.idea) {
+            const author = await findPlayer(skin.idea).catch(() => null), cut = Math.round(skin.price * Shop.IDEA_SHARE);
+            if (author && author !== playerId && cut > 0) await redis([['HINCRBY', statsKey(author), 'bonus', cut], ['HINCRBY', statsKey(author), 'royalty', cut], ...eco('in:royalty', cut)]);
+          }
         }
         await redis([['HSET', 'skins', playerId, skin.id]]); // acheté = équipé
         return send(res, 200, await state(playerId));
