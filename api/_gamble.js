@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1, feed = true) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno', 'gDice', 'gTeddy'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -222,7 +222,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno', gDice: 'dice', gTeddy: 'teddy' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -448,6 +448,72 @@ async function keno(id, body) {
   return { bet, picks, drawn, hits, mult: KENO_PAYS[k][hits], pays: KENO_PAYS[k], win, coins: (await wallet(id)).coins };
 }
 
+// Dice (idée des joueurs CYCOX et YU CHUAN 23, 2026-10-22) : un dé à 100 faces (1 à 100), tiré avec crypto. Le joueur
+// règle une cible et choisit « en dessous » (gagne si le dé < cible) ou « au-dessus » (gagne si le dé > cible) : il
+// couvre w numéros sur 100, de 2 à 95. Multiplicateur = 97 % des vraies chances (0,97 × 100 / w), arrondi vers le bas
+// au centième : retour au plus 97 % pour chaque cible. Mode rapide « d6 » : deviner la face d'un dé à 6 faces, ×5,82
+// (0,97 × 6, retour 97 % tout rond). Une seule demande par partie : rien n'est gardé entre deux.
+const DICE_EDGE = 0.97, DICE_MIN_W = 2, DICE_MAX_W = 95, DICE_D6 = 582; // multiplicateurs en centièmes
+const diceCover = (mode, t) => (mode === 'under' ? t - 1 : mode === 'over' ? 100 - t : 0);
+// En centièmes entiers, pour que plancher(mise × multiplicateur) tombe juste (pas de 1,0199999).
+const diceCents = w => Math.floor(DICE_EDGE * 10000 / w + 1e-9);
+const diceMult = w => diceCents(w) / 100;
+async function dice(id, body) {
+  const mode = String(body.mode || ''), t = Number(body.target);
+  let cents, chance;
+  if (mode === 'd6') {
+    if (!Number.isInteger(t) || t < 1 || t > 6) throw refuse(400, 'Pick a face from 1 to 6');
+    cents = DICE_D6; chance = 1 / 6;
+  } else if (mode === 'under' || mode === 'over') {
+    const w = diceCover(mode, t);
+    if (!Number.isInteger(t) || w < DICE_MIN_W || w > DICE_MAX_W) throw refuse(400, `Win chance between ${DICE_MIN_W}% and ${DICE_MAX_W}%`);
+    cents = diceCents(w); chance = w / 100;
+  } else throw refuse(400, 'Pick Roll under, Roll over or the 6-sided die');
+  const bet = await debit(id, body.bet);
+  const roll = mode === 'd6' ? crypto.randomInt(1, 7) : crypto.randomInt(1, 101);
+  const won = mode === 'd6' ? roll === t : mode === 'under' ? roll < t : roll > t;
+  const win = won ? Math.floor(bet * cents / 100) : 0;
+  await credit(id, bet, win, 'gDice');
+  return { bet, mode, target: t, roll, chance, mult: cents / 100, won, win, coins: (await wallet(id)).coins };
+}
+
+// Teddy Roulette (idée du joueur d_alex, 2026-10-22) : un canon à confettis à 6 chambres pointé sur un nounours. Une
+// seule chambre est chargée (« BOUM » : le nounours est couvert de confettis et la mise est perdue), les 5 autres font
+// « clic ». Le joueur tire chambre après chambre ; chaque clic fait monter le multiplicateur, il encaisse quand il veut.
+// Après k clics : 97 % des vraies chances, 0,97 × 6 / (6 − k), arrondi vers le bas (1,16 · 1,45 · 1,94 · 2,91 · 5,82).
+// Au plus 5 tirs (la 6e chambre serait forcément la bonne) : le 5e clic s'encaisse seul. La chambre chargée est tirée
+// au départ (crypto) et reste dans Redis jusqu'à la fin, comme les bombes de la Tour.
+const tdKey = id => `td:${id}`;
+const TEDDY_CHAMBERS = 6, TEDDY_MAX = 5, TEDDY_EDGE = 0.97;
+const teddyMult = k => (k ? Math.floor(TEDDY_EDGE * TEDDY_CHAMBERS * 100 / (TEDDY_CHAMBERS - k) + 1e-9) / 100 : 1);
+const teddyLadder = () => Array.from({ length: TEDDY_MAX }, (_, i) => teddyMult(i + 1));
+const showTeddy = (g, coins, end) => ({ bet: g.bet, chambers: TEDDY_CHAMBERS, max: TEDDY_MAX, pulls: g.pulls, ladder: teddyLadder(), mult: teddyMult(g.pulls), next: g.pulls < TEDDY_MAX ? teddyMult(g.pulls + 1) : null, done: !!end, ...(end ? { result: end, win: g.win || 0, boom: g.boom } : {}), coins });
+async function teddy(id, body) {
+  const [raw] = await redis([['GET', tdKey(id)]]);
+  let g = raw ? JSON.parse(raw) : null;
+  const move = String(body.move || 'state');
+  if (move === 'state') return g ? showTeddy(g, (await wallet(id)).coins) : { done: true, idle: true, coins: (await wallet(id)).coins };
+  if (move === 'start') {
+    if (g) throw refuse(422, 'Finish your game first');
+    const bet = await debit(id, body.bet);
+    g = { bet, boom: crypto.randomInt(0, TEDDY_CHAMBERS), pulls: 0 };
+  } else {
+    if (!g) throw refuse(422, 'No game in progress');
+    if (move === 'pull') {
+      if (g.boom === g.pulls) { await redis([['DEL', tdKey(id)]]); await credit(id, g.bet, 0, 'gTeddy'); return showTeddy(g, (await wallet(id)).coins, 'boom'); }
+      g.pulls++;
+      if (g.pulls < TEDDY_MAX) { await redis([['SET', tdKey(id), JSON.stringify(g), 'EX', KEEP_S]]); return showTeddy(g, (await wallet(id)).coins); }
+      // 5 clics : il ne reste que la chambre chargée, la partie s'encaisse seule.
+    } else if (move !== 'cash') throw refuse(400, 'Unknown move');
+    if (!g.pulls) throw refuse(422, 'Pull once first');
+    g.win = Math.floor(g.bet * Math.round(teddyMult(g.pulls) * 100) / 100);
+    await redis([['DEL', tdKey(id)]]); await credit(id, g.bet, g.win, 'gTeddy');
+    return showTeddy(g, (await wallet(id)).coins, 'cash');
+  }
+  await redis([['SET', tdKey(id), JSON.stringify(g), 'EX', KEEP_S]]);
+  return showTeddy(g, (await wallet(id)).coins);
+}
+
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
@@ -496,4 +562,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

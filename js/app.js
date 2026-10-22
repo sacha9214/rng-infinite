@@ -3442,8 +3442,54 @@
   // nouveau solde. Aucun argent réel : les pièces ne s'achètent pas et ne se retirent pas.
   const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const rouletteColor = n => (n === 0 ? 'green' : RED_NUMBERS.has(n) ? 'red' : 'black');
-  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, lev: null, levSide: 'long', levX: 5, levSeen: 0, zoom: 90, hover: null, hy: null, mines: 3, mn: null, twLevel: 'normal', tw: null, cr: null, raf: 0 };
+  const Gamble = { chip: 50, bets: {}, busy: false, coins: null, hand: null, tab: 'crash', top: 'winners', side: [false, false], asset: 'btc', tf: '1h', ind: { ma: true, vol: true }, lev: null, levSide: 'long', levX: 5, levSeen: 0, zoom: 90, hover: null, hy: null, mines: 3, mn: null, twLevel: 'normal', tw: null, td: null, cr: null, raf: 0 };
   const gamble = (action, extra) => Online.shopAction(action, undefined, extra);
+  // Faces d'un dé à jouer : 3 × 3 emplacements, les points allumés selon la face.
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  const dicePips = n => `<span class="dc-pips" data-n="${n}">${Array.from({ length: 9 }, (_, i) => `<i${PIPS[n].includes(i) ? ' class="on"' : ''}></i>`).join('')}</span>`;
+  // Teddy Roulette (idée de d_alex) : un canon à confettis de fête (cône rayé sur roulettes, barillet de 6 chambres)
+  // pointé sur un nounours. Tout est dessiné ici, sans image : le barillet tourne d'un cran à chaque clic, et sur
+  // « BOOM » le nounours se retrouve couvert de confettis (calque .td-splat).
+  const teddySVG = () => {
+    const ch = Array.from({ length: 6 }, (_, i) => { const a = i * Math.PI / 3; return `<circle class="td-ch" data-ch="${i}" cx="${(62 + 19 * Math.cos(a)).toFixed(1)}" cy="${(100 + 19 * Math.sin(a)).toFixed(1)}" r="7"/>`; }).join('');
+    const COLORS = ['#f472b6', '#facc15', '#38bdf8', '#4ade80', '#a78bfa', '#fb923c'];
+    let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    const splat = Array.from({ length: 46 }, (_, i) => { const x = 222 + rnd() * 86, y = 46 + rnd() * 124, c = COLORS[i % 6]; return i % 3 ? `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="6" height="3.4" rx="1" fill="${c}" transform="rotate(${Math.round(rnd() * 180)} ${x.toFixed(1)} ${y.toFixed(1)})"/>` : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${c}"/>`; }).join('');
+    return `<svg class="td-svg" viewBox="0 0 340 185" role="img" aria-label="A confetti popper aimed at a teddy bear">
+      <defs><pattern id="td-stripes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="14" height="14" fill="#f9a8d4"/><rect width="7" height="14" fill="#fde68a"/></pattern></defs>
+      <ellipse class="td-floor" cx="170" cy="176" rx="160" ry="7"/>
+      <g class="td-cannon">
+        <rect x="34" y="128" width="84" height="12" rx="6" fill="#c4b5fd" stroke="#6d28d9" stroke-width="3"/>
+        <circle cx="50" cy="150" r="14" fill="#f9a8d4" stroke="#6d28d9" stroke-width="3"/><circle cx="50" cy="150" r="4" fill="#6d28d9"/>
+        <circle cx="102" cy="150" r="14" fill="#f9a8d4" stroke="#6d28d9" stroke-width="3"/><circle cx="102" cy="150" r="4" fill="#6d28d9"/>
+        <g class="td-barrel">
+          <path d="M66 90 L156 66 L156 134 L66 110 Z" fill="url(#td-stripes)" stroke="#6d28d9" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="156" cy="100" rx="9" ry="34" fill="#fef3c7" stroke="#6d28d9" stroke-width="3"/>
+          <ellipse cx="156" cy="100" rx="4" ry="22" fill="#fbcfe8"/>
+        </g>
+        <g class="td-drum"><circle cx="62" cy="100" r="31" fill="#e9d5ff" stroke="#6d28d9" stroke-width="3"/>${ch}<circle cx="62" cy="100" r="5" fill="#6d28d9"/></g>
+        <path class="td-aim" d="M90 86 l8 14 l-8 14" fill="none" stroke="#fef3c7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g class="td-bear">
+        <circle cx="234" cy="52" r="15" fill="#c8905e"/><circle cx="234" cy="52" r="8" fill="#f5d0a9"/>
+        <circle cx="296" cy="52" r="15" fill="#c8905e"/><circle cx="296" cy="52" r="8" fill="#f5d0a9"/>
+        <ellipse cx="226" cy="138" rx="10" ry="17" fill="#b67d4f" transform="rotate(20 226 138)"/>
+        <ellipse cx="304" cy="138" rx="10" ry="17" fill="#b67d4f" transform="rotate(-20 304 138)"/>
+        <ellipse cx="265" cy="142" rx="38" ry="31" fill="#c8905e"/><ellipse cx="265" cy="148" rx="23" ry="19" fill="#f5d0a9"/>
+        <ellipse cx="243" cy="170" rx="14" ry="8" fill="#b67d4f"/><ellipse cx="287" cy="170" rx="14" ry="8" fill="#b67d4f"/>
+        <circle cx="265" cy="80" r="37" fill="#c8905e"/>
+        <ellipse cx="265" cy="93" rx="17" ry="12.5" fill="#f5d0a9"/>
+        <ellipse cx="265" cy="87" rx="6.5" ry="4.5" fill="#3b2314"/>
+        <path class="td-smile" d="M258 96 Q265 103 272 96" fill="none" stroke="#3b2314" stroke-width="2.4" stroke-linecap="round"/>
+        <ellipse class="td-oh" cx="265" cy="99" rx="4" ry="5" fill="#3b2314"/>
+        <g class="td-eyes"><circle cx="251" cy="74" r="4.8" fill="#2b1a10"/><circle cx="279" cy="74" r="4.8" fill="#2b1a10"/><circle cx="252.6" cy="72.4" r="1.6" fill="#fff"/><circle cx="280.6" cy="72.4" r="1.6" fill="#fff"/></g>
+        <path class="td-happy" d="M245 75 Q251 69 257 75 M273 75 Q279 69 285 75" fill="none" stroke="#2b1a10" stroke-width="2.6" stroke-linecap="round"/>
+        <ellipse cx="242" cy="90" rx="6.5" ry="3.6" fill="#fda4af" opacity=".75"/><ellipse cx="288" cy="90" rx="6.5" ry="3.6" fill="#fda4af" opacity=".75"/>
+        <path d="M265 116 l-14 -7 v14 z M265 116 l14 -7 v14 z" fill="#f472b6" stroke="#be185d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="265" cy="116" r="3.6" fill="#be185d"/>
+        <g class="td-splat">${splat}</g>
+      </g>
+    </svg>`;
+  };
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
@@ -3451,7 +3497,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -3512,7 +3558,7 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -3554,6 +3600,33 @@
             </div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="kn-go">Play</button></div>
             <p class="panel-note g-result" id="kn-result"></p>
+          </div>
+          <div class="panel g-game" data-game="dice">
+            <div class="panel-head"><h3 class="panel-title">Dice</h3><span class="panel-note">a 100-sided die · pick your odds · or guess a 6-sided die for 5.82×</span></div>
+            <div class="seg dc-mode" id="dc-mode" role="tablist"><button data-mode="under">⬇️ Roll under</button><button data-mode="over">⬆️ Roll over</button><button data-mode="d6">🎲 Guess the die</button></div>
+            <div class="dc-table" id="dc-table" data-mode="under">
+              <div class="dc-view dc-100">
+                <div class="dc-die mono" id="dc-die" data-no-i18n>50</div>
+                <div class="dc-track" id="dc-track"><div class="dc-zone" id="dc-zone"></div><div class="dc-mark mono" id="dc-mark" hidden data-no-i18n></div></div>
+                <input type="range" class="dc-range" id="dc-target" min="3" max="96" step="1" value="50" aria-label="Target">
+                <div class="dc-scale mono" aria-hidden="true" data-no-i18n><span>1</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+                <p class="dc-rule" id="dc-rule"></p>
+              </div>
+              <div class="dc-view dc-6">
+                <div class="dc-cube" id="dc-cube"></div>
+                <div class="dc-faces" id="dc-faces" role="group" aria-label="Pick a face">${[1, 2, 3, 4, 5, 6].map(n => `<button class="dc-face" data-face="${n}" aria-pressed="false" aria-label="Face ${n}">${dicePips(n)}</button>`).join('')}</div>
+              </div>
+              <div class="dc-stats"><span><i>Win chance</i><b class="mono" id="dc-chance"></b></span><span><i>Multiplier</i><b class="mono" id="dc-mult"></b></span><span><i>Payout</i><b class="mono" id="dc-pay"></b></span></div>
+            </div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="dc-go">Roll</button></div>
+            <p class="panel-note g-result" id="dc-result"></p>
+          </div>
+          <div class="panel g-game" data-game="teddy">
+            <div class="panel-head"><h3 class="panel-title">Teddy Roulette</h3><span class="panel-note">a confetti popper with 6 chambers · one goes BOOM · every click raises the payout · cash out any time</span></div>
+            <div class="td-scene" id="td-scene" data-state="idle">${teddySVG()}<div class="td-pop" id="td-pop" aria-live="polite"></div><div class="td-burst" id="td-burst" aria-hidden="true"></div></div>
+            <div class="td-ladder" id="td-ladder"></div>
+            <div class="actions cf-actions"><button class="btn-roll small" id="td-go">Start</button><button class="btn" id="td-cash" hidden></button></div>
+            <p class="panel-note g-result" id="td-result"></p>
           </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
@@ -3619,7 +3692,7 @@
     drawTourneyBanner($('#tn-banner-slot'));
     // Pièces gagnées ailleurs (un autre onglet qui tire, des quêtes) : le solde se relit quand la page revient au premier
     // plan, et toutes les 10 s tant qu'elle est affichée, seulement entre deux parties (signalé par un joueur le 2026-10-16).
-    const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle) && !(Gamble.tw && !Gamble.tw.done && !Gamble.tw.idle);
+    const idle = () => currentView === 'gamble' && !Gamble.busy && !Gamble.cr && !Gamble.cf && !(Gamble.pk && (Gamble.pk.balls.length || Gamble.pk.queue || Gamble.pk.sending)) && !(Gamble.hand && !Gamble.hand.done && !Gamble.hand.idle) && !(Gamble.tw && !Gamble.tw.done && !Gamble.tw.idle) && !(Gamble.td && !Gamble.td.done && !Gamble.td.idle);
     const refreshCoins = () => { if (!Store.player.name || document.hidden || !idle()) return; Online.shop().then(st => { if (idle()) showCoins(st.coins); }).catch(() => {}); };
     clearInterval(Gamble.coinTimer); Gamble.coinTimer = setInterval(() => { if (currentView !== 'gamble') { clearInterval(Gamble.coinTimer); return; } refreshCoins(); }, 10000);
     if (!Gamble.coinWatch) { Gamble.coinWatch = true; document.addEventListener('visibilitychange', () => refreshCoins()); window.addEventListener('focus', () => refreshCoins()); }
@@ -4320,6 +4393,113 @@
       } catch (err) { fail(err); } finally { Gamble.busy = false; drawKeno(); }
     });
     drawKeno();
+    // ---- dés (idée de CYCOX et YU CHUAN 23, api/_gamble.js) : un dé à 100 faces, « en dessous » ou « au-dessus » d'une
+    // cible réglée au curseur, ou deviner la face d'un dé à 6 faces (×5,82). Le serveur tire ; ici on fait rouler le
+    // chiffre ~0,7 s (rien si les animations sont réduites) avant de poser le vrai résultat.
+    // Mêmes bornes et même calcul que le serveur (diceCover, diceCents) : 2 à 95 numéros couverts, 97 % des vraies chances.
+    const DC_LIMIT = { under: [3, 96], over: [5, 98] };
+    const dcCover = (mode, t) => (mode === 'under' ? t - 1 : 100 - t);
+    const dcCents = w => Math.floor(9700 / w + 1e-9);
+    if (!Gamble.dc) Gamble.dc = { mode: 'under', target: { under: 50, over: 50 }, face: 1, roll: null, won: null };
+    const drawDice = () => {
+      const dc = Gamble.dc, d6 = dc.mode === 'd6', table = $('#dc-table');
+      table.dataset.mode = dc.mode;
+      document.querySelectorAll('#dc-mode button').forEach(b => { b.classList.toggle('on', b.dataset.mode === dc.mode); b.disabled = Gamble.busy; });
+      let cents, chance;
+      if (d6) { cents = 582; chance = 100 / 6; }
+      else {
+        const [lo, hi] = DC_LIMIT[dc.mode], t = Math.min(hi, Math.max(lo, dc.target[dc.mode])), w = dcCover(dc.mode, t);
+        dc.target[dc.mode] = t;
+        const r = $('#dc-target'); r.min = lo; r.max = hi; r.value = t; r.disabled = Gamble.busy;
+        r.style.setProperty('--p', `${(t - 1) / 99 * 100}%`);
+        const zone = $('#dc-zone');
+        if (dc.mode === 'under') { zone.style.left = '0%'; zone.style.width = `${t - 1}%`; } else { zone.style.left = `${t}%`; zone.style.width = `${100 - t}%`; }
+        $('#dc-rule').textContent = `Win if the roll is ${dc.mode} ${t}`;
+        cents = dcCents(w); chance = w;
+      }
+      document.querySelectorAll('.dc-face').forEach(b => { const on = Number(b.dataset.face) === dc.face; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.disabled = Gamble.busy; });
+      $('#dc-chance').textContent = `${d6 ? chance.toFixed(2) : chance}%`;
+      $('#dc-mult').textContent = `${(cents / 100).toFixed(2)}×`;
+      $('#dc-pay').textContent = `🪙 ${fmt(Math.floor(Gamble.chip * cents / 100))}`;
+      if (!Gamble.busy) $('#dc-go').textContent = `Roll · ${fmt(Gamble.chip)}`;
+      $('#dc-go').disabled = Gamble.busy;
+    };
+    const dcSetCube = n => { $('#dc-cube').innerHTML = dicePips(n); };
+    const dcClear = () => { const dc = Gamble.dc; dc.roll = null; dc.won = null; $('#dc-result').textContent = ''; $('#dc-table').dataset.result = ''; $('#dc-mark').hidden = true; };
+    $('#dc-mode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b || Gamble.busy) return; Gamble.dc.mode = b.dataset.mode; dcClear(); Sound.play('click'); drawDice(); });
+    $('#dc-target').addEventListener('input', e => { if (Gamble.busy) return; const dc = Gamble.dc; dc.target[dc.mode] = Number(e.target.value); if (dc.roll != null) dcClear(); drawDice(); Sound.tick({ soft: 1 }); });
+    $('#dc-faces').addEventListener('click', e => { const b = e.target.closest('.dc-face'); if (!b || Gamble.busy) return; Gamble.dc.face = Number(b.dataset.face); dcClear(); dcSetCube(Gamble.dc.face); Sound.play('click'); drawDice(); });
+    $('#dc-go').addEventListener('click', async () => {
+      const dc = Gamble.dc;
+      if (Gamble.busy) return;
+      Gamble.busy = true; dcClear(); drawDice(); $('#dc-go').textContent = 'Rolling…';
+      const d6 = dc.mode === 'd6', table = $('#dc-table'), die = $('#dc-die'), cube = $('#dc-cube');
+      // Le chiffre roule pendant que le serveur répond (au moins 0,7 s, pour le suspense).
+      let spin = 0, turns = 0;
+      if (!reducedMotion) {
+        table.classList.add('rolling');
+        spin = setInterval(() => { turns++; if (d6) dcSetCube(1 + Math.floor(Math.random() * 6)); else die.textContent = 1 + Math.floor(Math.random() * 100); if (turns % 2) Sound.tick({ soft: 1 }); }, 60);
+      }
+      try {
+        const [res] = await Promise.all([gamble('dice', d6 ? { bet: Gamble.chip, mode: 'd6', target: dc.face } : { bet: Gamble.chip, mode: dc.mode, target: dc.target[dc.mode] }), new Promise(r => setTimeout(r, reducedMotion ? 0 : 700))]);
+        clearInterval(spin); table.classList.remove('rolling');
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        dc.roll = res.roll; dc.won = res.won;
+        if (d6) dcSetCube(res.roll);
+        else { die.textContent = res.roll; const m = $('#dc-mark'); m.hidden = false; m.textContent = res.roll; m.style.left = `${(res.roll - 0.5)}%`; }
+        table.dataset.result = res.won ? 'win' : 'lose';
+        if (!reducedMotion) { const el = d6 ? cube : die; el.classList.remove('land'); void el.offsetWidth; el.classList.add('land'); }
+        say($('#dc-result'), res.win, res.bet, res.won ? `${res.roll} · ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins` : `${res.roll} · −${fmt(res.bet)}`);
+        if (res.won) { Sound.play(res.mult >= 10 ? 'tier' : 'reveal', res.mult >= 10 ? { tier: res.mult >= 30 ? 'mythic' : 'anomaly' } : { small: 1 }); FX.celebrate(res.mult >= 30 ? 'mythic' : res.mult >= 10 ? 'anomaly' : res.mult >= 3 ? 'epic' : 'uncommon', d6 ? cube : die); }
+        else Sound.play('lock', { i: 0, soft: 1 });
+        showCoins(res.coins);
+      } catch (err) { clearInterval(spin); table.classList.remove('rolling'); if (!d6) die.textContent = '?'; fail(err); } finally { Gamble.busy = false; drawDice(); }
+    });
+    dcSetCube(Gamble.dc.face); drawDice();
+    // ---- Teddy Roulette (idée de d_alex, api/_gamble.js) : 6 chambres, une seule fait « BOOM » (confettis sur le
+    // nounours, mise perdue). Chaque « clic » fait tourner le barillet d'un cran et monter le gain ; on encaisse quand on
+    // veut, et le 5e clic s'encaisse seul. Le serveur ne dit où était la chambre chargée qu'à la fin.
+    const tdLadder = () => [1, 2, 3, 4, 5].map(k => Math.floor(97 * 6 / (6 - k) + 1e-9) / 100);
+    const tdBurst = () => {
+      const box = $('#td-burst'); if (!box || reducedMotion) return;
+      const w = box.clientWidth, h = box.clientHeight, C = ['#f472b6', '#facc15', '#38bdf8', '#4ade80', '#a78bfa', '#fb923c'];
+      box.innerHTML = Array.from({ length: 44 }, (_, i) => {
+        const dx = w * (0.18 + Math.random() * 0.36), dy = h * (Math.random() - 0.55) * 0.9;
+        return `<i style="--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--r:${Math.round(Math.random() * 720 - 360)}deg;--d:${Math.round(Math.random() * 120)}ms;background:${C[i % 6]}${i % 3 ? '' : ';border-radius:50%'}"></i>`;
+      }).join('');
+      setTimeout(() => { if (box.isConnected) box.innerHTML = ''; }, 1400);
+    };
+    const tdPop = (text, kind) => { const p = $('#td-pop'); p.textContent = text; p.dataset.kind = kind || ''; p.classList.remove('show'); void p.offsetWidth; if (text) p.classList.add('show'); };
+    const drawTeddy = g => {
+      Gamble.td = g;
+      const live = g && !g.idle && !g.done, pulls = g && g.pulls ? g.pulls : 0, ladder = g && g.ladder ? g.ladder : tdLadder();
+      const scene = $('#td-scene');
+      scene.dataset.state = !g || g.idle ? 'idle' : live ? 'live' : g.result;
+      scene.style.setProperty('--rot', `${-60 * (g && g.result === 'boom' ? g.boom : pulls)}deg`);
+      scene.querySelectorAll('.td-ch').forEach(c => { const i = Number(c.dataset.ch); c.setAttribute('class', `td-ch${i < pulls ? ' empty' : ''}${g && g.done && !g.idle && i === g.boom ? ' loaded' : ''}${live && i === pulls ? ' next' : ''}`); });
+      $('#td-ladder').innerHTML = ladder.map((m, i) => `<span class="td-step${i < pulls ? ' passed' : ''}${live && i === pulls ? ' next' : ''}${g && g.result === 'cash' && i === pulls - 1 ? ' lit' : ''}"><i class="mono">${i + 1} click${i ? 's' : ''}</i><b class="mono">${m.toFixed(2)}×</b></span>`).join('');
+      $('#td-go').textContent = live ? 'Pull 🎉' : `Start · ${fmt(Gamble.chip)}`;
+      const cash = $('#td-cash'); cash.hidden = !(live && pulls); cash.style.display = cash.hidden ? 'none' : ''; if (live && pulls) cash.textContent = `Cash out · ${fmt(Math.floor(g.bet * g.mult))}`;
+      if (g && g.done && !g.idle) say($('#td-result'), g.win, g.bet, g.result === 'cash' ? `${g.mult.toFixed(2)}×${pulls === 5 ? ' · all 5 clicks' : ''} · you get ${fmt(g.win)} coins` : `BOOM! Confetti everywhere · −${fmt(g.bet)}`);
+      if (g) showCoins(g.coins);
+    };
+    const teddyMove = async extra => {
+      if (Gamble.busy) return; Gamble.busy = true;
+      const scene = $('#td-scene');
+      try {
+        if (extra.move === 'pull' && !reducedMotion) { scene.classList.remove('pulling'); void scene.offsetWidth; scene.classList.add('pulling'); }
+        const [g] = await Promise.all([gamble('teddy', extra), new Promise(r => setTimeout(r, extra.move === 'pull' && !reducedMotion ? 420 : 0))]);
+        if (currentView !== 'gamble') return;
+        drawTeddy(g);
+        if (g.result === 'boom') { tdPop('BOOM!', 'boom'); tdBurst(); Sound.play('lock', { i: 0 }); Sound.play('tick', { k: 9 }); }
+        else if (g.result === 'cash') { tdPop(g.pulls === 5 ? 'Phew! 🧸' : '', 'cash'); Sound.play('reveal', { small: 1 }); FX.celebrate(g.mult >= 2.9 ? 'epic' : 'uncommon', $('#td-scene')); }
+        else if (extra.move === 'pull') { tdPop('click!', 'click'); Sound.play('click'); Sound.play('lock', { i: g.pulls + 1, soft: 1 }); }
+        else tdPop('', '');
+      } catch (err) { fail(err); } finally { Gamble.busy = false; scene.classList.remove('pulling'); }
+    };
+    $('#td-go').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle) teddyMove({ move: 'pull' }); else { $('#td-result').textContent = ''; teddyMove({ move: 'start', bet: Gamble.chip }); } });
+    $('#td-cash').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle && g.pulls) teddyMove({ move: 'cash' }); });
+    drawTeddy(null);
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -4453,7 +4633,7 @@
       } finally { Gamble.busy = false; }
     });
     drawCurve(1, 'idle'); $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; drawMines(null); drawTower(null);
-    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); if (!Gamble.tw || Gamble.tw.done || Gamble.tw.idle) $('#tw-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.busy) $('#kn-go').textContent = `Play · ${fmt(Gamble.chip)}`; });
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.cr) $('#cr-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.mn || Gamble.mn.done || Gamble.mn.idle) drawMines(Gamble.mn && Gamble.mn.idle ? { ...Gamble.mn, coins: null } : null); if (!Gamble.tw || Gamble.tw.done || Gamble.tw.idle) $('#tw-go').textContent = `Start · ${fmt(Gamble.chip)}`; if (!Gamble.busy) $('#kn-go').textContent = `Play · ${fmt(Gamble.chip)}`; if (!Gamble.busy) drawDice(); if (!Gamble.td || Gamble.td.done || Gamble.td.idle) $('#td-go').textContent = `Start · ${fmt(Gamble.chip)}`; });
     drawBets();
     drawHand(null);
     if (!Store.player.name) { $('#bj-table').innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
@@ -4464,6 +4644,7 @@
       await resume('bj', h => drawHand(h));
       await resume('mines', g => { if (!g.idle) drawMines(g); else showCoins(g.coins); });
       await resume('tower', g => { if (!g.idle) drawTower(g); });
+      await resume('teddy', g => { if (!g.idle) drawTeddy(g); });
       await resume('flip', g => { if (!g.idle) drawFlip(g); });
       await resume('crash', st => { if (!st.done) runCrash(st, true); else if (st.result === 'crash') endCrash(st); });
     })();
@@ -5018,7 +5199,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)

@@ -52,6 +52,19 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   }
   add('Keno', best, how, 'table de gains par nombre de cochés, plafond ×1000');
 }
+// Dice : w numéros couverts sur 100 (2 à 95), ou une face sur 6.
+{
+  let best = 0, how = '';
+  for (let w = G.DICE_MIN_W; w <= G.DICE_MAX_W; w++) { const r = w / 100 * G.diceMult(w); if (r > best) { best = r; how = `${w} numéro(s) couvert(s)`; } }
+  if (G.DICE_D6 / 600 > best) { best = G.DICE_D6 / 600; how = 'dé à 6 faces'; }
+  add('Dice', best, how, '97 % des vraies chances, arrondi vers le bas ; dé à 6 faces ×5,82');
+}
+// Teddy Roulette : une chambre chargée sur 6, on encaisse après k clics (1 à 5).
+{
+  let best = 0, how = '';
+  for (let k = 1; k <= G.TEDDY_MAX; k++) { const r = (6 - k) / 6 * G.teddyMult(k); if (r > best) { best = r; how = `encaisser après ${k} clic(s)`; } }
+  add('Teddy Roulette', best, how, '97 % des vraies chances, arrondi vers le bas');
+}
 // Crash : point = min(500, plancher(0,99 / (1 − u), 2 décimales)). Encaisser à m gagne si le point dépasse m.
 {
   let best = 0, how = '';
