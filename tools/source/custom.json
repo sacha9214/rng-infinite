@@ -428,13 +428,6 @@
     "score": 25999
   },
   {
-    "id": "ERROR_404",
-    "label": "Error 404",
-    "desc": "Contains \"404\": badge not found. Wait, what?",
-    "emoji": "🚫",
-    "score": 25404
-  },
-  {
     "id": "BRAINROT_KING",
     "label": "Brainrot King",
     "desc": "Contains \"6741\" or \"4167\".",

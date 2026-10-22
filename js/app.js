@@ -1662,7 +1662,7 @@
     { id: '2026-10-23c', date: 'Oct 23, 2026', en: ['🐞 Duels: the chat no longer disappears when the game starts, no refresh needed'], fr: ['🐞 Duels : le chat ne disparaît plus quand la partie commence, plus besoin de recharger'] },
     { id: '2026-10-23b', date: 'Oct 23, 2026', en: ['🎁 New code for my friend randomguy: use ICHI in Player & settings for 🪙 100 coins'], fr: ['🎁 Nouveau code pour mon ami randomguy : utilise ICHI dans Joueur et réglages pour 🪙 100 pièces'] },
     { id: '2026-10-23a', date: 'Oct 23, 2026', en: [
-      '🔢 New badges: 🇺🇸 American (1776, idea by jaxoncool43), 😇 Angel Number (82, idea by kaz), 🧿 Vortrox Curse (92, idea by CococoC), 🧃 Sixty-One (61, idea by schoolroller), 🖤 Juice WRLD (999, idea by Colt2), 🚫 Error 404 (404, idea by Gray), 👑 Brainrot King (6741 or 4167) and 🫅 Brainrot Emperor (exactly 676741 or 674141, ideas by CrazyMiner22)',
+      '🔢 New badges: 🇺🇸 American (1776, idea by jaxoncool43), 😇 Angel Number (82, idea by kaz), 🧿 Vortrox Curse (92, idea by CococoC), 🧃 Sixty-One (61, idea by schoolroller), 🖤 Juice WRLD (999, idea by Colt2), 👑 Brainrot King (6741 or 4167) and 🫅 Brainrot Emperor (exactly 676741 or 674141, ideas by CrazyMiner22)',
       '🛋️ New titles: The King Of Unemployment (1,000,000 rolls) and The God Of Unemployment (10,000,000 rolls), idea by A Dude',
       '🔘 New collection titles: Button Masher, Emote Lord and Interior Designer, for owning every button, emote or wallpaper (idea by PRISMA123)',
       '😵‍💫 New emote: Super confused (idea by finnnnn)',
@@ -1675,7 +1675,7 @@
       '💡 Skin creators: when someone buys a skin that came from a player\'s idea, that player now gets 5% of the price in coins. Look for “Idea by” in the Shop! (idea by Gray alt)',
       '🐞 Fixes: the Collectible Connoisseur title no longer needs the free Classic skin; coins no longer go up before a roll is revealed; auto-roll no longer cuts a roll you started by hand',
     ], fr: [
-      '🔢 Nouveaux badges : 🇺🇸 American (1776, idée de jaxoncool43), 😇 Angel Number (82, idée de kaz), 🧿 Vortrox Curse (92, idée de CococoC), 🧃 Sixty-One (61, idée de schoolroller), 🖤 Juice WRLD (999, idée de Colt2), 🚫 Error 404 (404, idée de Gray), 👑 Brainrot King (6741 ou 4167) et 🫅 Brainrot Emperor (exactement 676741 ou 674141, idées de CrazyMiner22)',
+      '🔢 Nouveaux badges : 🇺🇸 American (1776, idée de jaxoncool43), 😇 Angel Number (82, idée de kaz), 🧿 Vortrox Curse (92, idée de CococoC), 🧃 Sixty-One (61, idée de schoolroller), 🖤 Juice WRLD (999, idée de Colt2), 👑 Brainrot King (6741 ou 4167) et 🫅 Brainrot Emperor (exactement 676741 ou 674141, idées de CrazyMiner22)',
       '🛋️ Nouveaux titres : le Roi du Chômage (1 000 000 de tirages) et le Dieu du Chômage (10 000 000), idée d\'A Dude',
       '🔘 Nouveaux titres de collection : Maître des boutons, Seigneur des émotes et Décorateur, pour avoir tous les boutons, émotes ou fonds (idée de PRISMA123)',
       '😵‍💫 Nouvelle émote : Super perdu (idée de finnnnn)',
