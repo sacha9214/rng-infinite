@@ -238,6 +238,22 @@
   ];
   const emoteById = new Map(EMOTES.map(e => [e.id, e]));
 
+  // Packs de sons du tirage (idée d'Angelicide9, 2026-10-21) : chacun change la note de chaque chiffre et le son de la
+  // rareté révélée, en gardant la montée selon la rareté (js/sound.js, PACKS). Achetés une fois, gardés pour toujours ;
+  // le hash "snd" retient celui en service. "classic" (le son d'origine) est offert.
+  // Priorité : les skins dont le son est l'identité (ASMR, Lab) gardent leurs chiffres ; le pack joue quand même la rareté.
+  const SOUNDS = [
+    { id: 'classic', name: 'Classic', emoji: '🎵', price: 0, desc: 'The original wooden notes' },
+    { id: 'arcade', name: 'Arcade', emoji: '👾', price: 300, desc: '8-bit chiptune blips' },
+    { id: 'coins', name: 'Coins', emoji: '🪙', price: 400, desc: 'Coin clinks and a jackpot' },
+    { id: 'drums', name: 'Drums', emoji: '🥁', price: 500, desc: 'Taps, toms and a cymbal crash' },
+    { id: 'space', name: 'Space', emoji: '🛸', price: 650, desc: 'Soft synth zaps' },
+    { id: 'glass', name: 'Glass', emoji: '🔔', price: 800, desc: 'Crystal chimes' },
+  ];
+  const soundById = new Map(SOUNDS.map(p => [p.id, p]));
+  // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
+  const soundPack = (choice, owned) => (soundById.has(choice) && (choice === 'classic' || (owned || []).includes(choice)) ? choice : 'classic');
+
   // Mises possibles pour un duel (0 = sans mise).
   const STAKES = [0, 50, 100, 250, 500, 1000];
 
@@ -250,7 +266,7 @@
 
   // Collection complète (titre Collectible Connoisseur, idée de kaz, 2026-10-20) : tous les skins sauf les limités.
   const collectible = () => SKINS.filter(k => !k.until).map(k => k.id);
-  const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, BASE_EMOTES, EMOTES, emoteById };
+  const api = { collectible, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

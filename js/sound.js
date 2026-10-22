@@ -81,6 +81,72 @@
     const back = S.gain(S.shape(S.filter(S.noise(.02, 8), 'bp', 1100, 1.6), S.expo(.004, .0005)), .35);
     return S.sum(body, S.delayed(back, .07));
   };
+  // ---- Packs de sons du tirage (idée d'Angelicide9, 2026-10-21 ; achetés dans la boutique, js/shop.js SOUNDS).
+  // Chaque pack donne sa note à chaque chiffre (même place dans la gamme : la montée reste) et son propre son de rareté.
+  // La rareté garde son escalade : un coup sec pour un raté, puis une, deux, trois notes ; à partir d'Epic, l'impact
+  // d'origine reste dessous (le poids du moment) et le pack ajoute sa gerbe par-dessus.
+  // Cymbale (pack Drums) : bruit très aigu adouci par finish, long et clair, avec un « ping » métallique inharmonique.
+  const cymbal = (len, seed) => S.sum(
+    S.shape(S.filter(S.noise(len, seed), 'hp', 5200, .6), S.expo(len * .28, .002)),
+    S.gain(S.shape(S.filter(S.noise(len * .6, seed + 1), 'bp', 3300, 3), S.expo(len * .12, .002)), .6),
+    ...[[587, .25], [829, .18], [1243, .12]].map(([f, a]) => S.gain(S.osc(len * .5, () => f, S.expo(len * .15, .002)), a)));
+  // Tom (pack Drums) : la note qui s'écrase un peu vers le bas, et la peau frappée.
+  const tom = f => S.sum(S.osc(.4, t => f * (1 + .5 * Math.exp(-t / .025)), S.expo(.11, .001)),
+    S.gain(S.shape(S.filter(S.noise(.04, Math.round(f)), 'bp', 1800, 1), S.expo(.008, .0005)), .5));
+  // Pièce (pack Coins) : deux partiels aigus inharmoniques, un tintement court ; deux rebonds sur le comptoir.
+  const coin = (k, big = 0) => {
+    const f = 2350 * Math.pow(2, ((k * 2) % 5) / 12);
+    const ding = d => S.sum(...[[1, 1], [1.47, .55], [2.1, .25]].map(([m, a]) => S.gain(S.osc(d * 5, () => f * m, S.expo(d * (1.3 - m * .25), .0006)), a)));
+    return S.sum(ding(.08 + .08 * big), S.delayed(S.gain(ding(.03), .35), .055), S.delayed(S.gain(ding(.02), .15), .095));
+  };
+  // Zap doux (pack Space) : une note qui glisse depuis l'octave du dessus, triangle filtrée, avec un léger vibrato.
+  const zap = (f, len = .32) => S.filter(S.osc(len, t => f * (1 + Math.exp(-t / .035)) * (1 + .012 * Math.sin(t * 38)), S.expo(len * .3, .004), ph => (2 / Math.PI) * Math.asin(Math.sin(ph))), 'lp', 2400);
+  // Carillon (pack Glass) : cloche de cristal, la note deux octaves plus haut, partiels clairs et longs.
+  const crystal = (f, d = .6) => S.sum(S.bell(f, d, 2.2), S.gain(S.osc(d * 3, () => f * 4.2, S.expo(d * .18, .001)), .12));
+  const PACKS = {
+    arcade: {
+      lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
+      level: .25,
+      note: (n, len) => chip(S.note(n + 5), S.note(n + 5), len, .25, 1.4),
+      miss: () => S.sum(chip(330, 82, .35, .5, 1.2), S.gain(crunch(.12, 8, 30, 2), .5)), missLevel: .13,
+    },
+    glass: {
+      lock: (i, final) => crystal(S.note(i + 10), final ? 1 : .5),
+      level: .3,
+      note: (n, len) => crystal(S.note(n + 10), Math.max(.6, len * 6)),
+      miss: () => S.sum(S.gain(thud(), .9), S.gain(crystal(S.note(7), .35), .5)), missLevel: .2,
+    },
+    drums: {
+      lock: (i, final) => final ? S.sum(tom(S.note(i) * .5), S.gain(cymbal(.5, 40 + i), .35)) : tom(S.note(i) * .5),
+      level: .42, tierGain: .5, // la cymbale porte loin : la gerbe plus bas
+      note: (n, len) => S.sum(tom(S.note(n) * .5), S.gain(cymbal(Math.max(.8, len * 8), 50 + n), .5)),
+      miss: () => S.sum(S.gain(S.boom(.5, 90, 45), .8), S.gain(S.shape(S.filter(S.noise(.15, 9), 'bp', 400, .8), S.expo(.04, .001)), .5)), missLevel: .22,
+    },
+    space: {
+      lock: (i, final) => zap(S.note(i + 5), final ? .5 : .3),
+      level: .4,
+      note: (n, len) => zap(S.note(n + 5), Math.max(.45, len * 4)),
+      miss: () => S.osc(.6, t => 220 * Math.exp(-t / .25), S.expo(.18, .004), ph => (2 / Math.PI) * Math.asin(Math.sin(ph))), missLevel: .2,
+    },
+    coins: {
+      lock: (i, final) => coin(i, final ? 1 : 0),
+      level: .22,
+      note: (n) => coin(n + 2, 1),
+      miss: () => S.sum(S.gain(thud(), .8), S.delayed(S.gain(coin(0), .4), .02)), missLevel: .2,
+    },
+  };
+  // Une gerbe de notes du pack, en montant (steps : leurs places dans la gamme).
+  const flourish = (P, steps, level, dt = 0, gap = .08) => steps.map((n, k) => [P.note(n, gap), dt + k * gap, level * (P.tierGain || 1), ((k * 37) % 9) / 18 - .25, .4]);
+  // Le son de rareté d'un pack, avec la même escalade que le son d'origine.
+  function packTier(P, tier, classic) {
+    if (tier === 'trash' || tier === 'garbage' || tier === 'landwaste') return [[P.miss(), 0, P.missLevel * (tier === 'trash' ? 1 : 1.3), 0, .2]];
+    if (tier === 'common') return flourish(P, [3], P.level * 1.2);
+    if (tier === 'uncommon') return flourish(P, [3, 5], P.level * 1.2);
+    if (tier === 'rare') return flourish(P, [3, 5, 7, 8], P.level * 1.25);
+    // Epic et au-dessus : l'impact d'origine (un peu plus bas), puis la gerbe du pack, plus longue avec la rareté.
+    const big = { epic: [5, 7, 8, 10], anomaly: [5, 7, 8, 10, 12], mythic: [5, 7, 8, 10, 12, 13] }[tier] || [5, 7, 8, 10, 12, 13, 15];
+    return classic.map(([x, dt, lvl, pan, wet]) => [x, dt, lvl * .85, pan, wet]).concat(flourish(P, big, P.level * .8, .12, .07));
+  }
   const FISH = { cast: .14, splash: .2, reel: .05, mark: .07, catch: .13, bite: .26, snap: .16 };
   const RECIPES = {
     // Pêche. Lancer : la canne fouette (glissé qui descend) et le fil siffle.
@@ -112,7 +178,10 @@
     // Un chiffre se pose : une note par rouleau, en montant la gamme. soft : zéro de tête, ou duel. final : le dernier chiffre.
     // skin 'asmr' : la note garde sa place dans la gamme, plus douce, et la cire craque dessous (plus fort au dernier).
     // skin 'lab' : la note, plus douce, et le tube tinte contre le portoir (deux tintements au dernier, comme un « tchin »).
-    lock: ({ i, soft, final, skin }) => skin === 'asmr'
+    // pack : le pack de sons acheté (PACKS) ; les skins ASMR et Lab gardent leur son, c'est leur identité (js/app.js).
+    lock: ({ i, soft, final, skin, pack }) => PACKS[pack] && !skin
+      ? [[PACKS[pack].lock(i, final), 0, PACKS[pack].level * (soft ? .5 : final ? 1.15 : 1), ((i * 37) % 9) / 18 - .25, .25]]
+      : skin === 'asmr'
       ? [[S.lock(S.note(i), .4), 0, soft ? .2 : final ? .4 : .36, 0, .25], [wax(90 + i, final ? 20 : 12, final ? .2 : .12), 0, soft ? .14 : final ? .36 : .28, ((i * 37) % 9) / 18 - .25, .12]]
       : skin === 'lab'
         ? [[S.lock(S.note(i), .35), 0, soft ? .16 : final ? .32 : .28, 0, .22], [clink(i, final ? 1 : 0), 0, soft ? .1 : final ? .26 : .2, ((i * 37) % 9) / 18 - .25, .35]].concat(final ? [[clink(i + 3, 1), .07, .16, .2, .4]] : [])
@@ -127,7 +196,8 @@
       return voices;
     },
     // La rareté se révèle : d'un coup sourd pour un tirage raté à l'impact du trailer pour un Mythic.
-    tier: ({ tier }) => {
+    tier: ({ tier, pack }) => {
+      if (PACKS[pack]) return packTier(PACKS[pack], tier, RECIPES.tier({ tier }));
       // Au-dessus de Mythic : le même impact, suivi d'un, deux ou trois autres et d'une gerbe de cloches de plus en plus longue.
       if (tier === 'celestial') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .7, .3, .6], ...arpeggio(.3, .8)];
       if (tier === 'divine') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .75, -.3, .6], [S.impact('logo'), .9, .8, 0, .65], ...arpeggio(.3, 1.3), ...arpeggio(.22, 1.6)];
@@ -302,6 +372,7 @@
     // Douze cliquetis différents tournent, pour ne pas sonner comme une mitraillette.
     tick(o = {}) { play('tick', Object.assign({ k: o.last ? 0 : turn++ % 12 }, o)); },
     badge(i, of) { play('badge', { step: Math.round((i * 3) / Math.max(1, of - 1)), last: i === of - 1 }); },
+    PACKS: Object.keys(PACKS), // packs de sons qui ont leur recette (js/shop.js SOUNDS)
     LEAD: Math.round((RISER + .07) * 1000), // la montée se lance ce nombre de ms avant le dernier chiffre, et se coupe juste avant lui
     recipes: RECIPES, // pour le banc d'essai (tools/sound-check.mjs), qui compare ce qui sort du navigateur au mixage du trailer
   };

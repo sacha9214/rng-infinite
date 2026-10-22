@@ -474,3 +474,10 @@
 @media (prefers-reduced-motion: reduce) { .skin-cards .slot { animation: none; } }
 .side-cards { --side-border: #c9a24a; --side-glow: 0 0 16px rgba(201, 162, 74, .35); --side-ink: #fff7d6;
   --side-bg: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(31, 122, 74, .55), rgba(11, 64, 39, .6)); --deco-a: '♠ ♥'; --deco-b: '♣ ♦'; }
+
+/* Packs de sons du tirage (boutique, onglet Sounds) */
+.sound-grid { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
+.sound-tile .sound-icon { font-size: 2.4rem; line-height: 1; padding: .5rem 0 .2rem; }
+.sound-tile.owned { border-color: color-mix(in srgb, var(--success) 45%, var(--outline)); }
+.sound-tile .sound-play { font-size: .78rem; }
+@media (max-width: 560px) { .sound-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
