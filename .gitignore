@@ -1,5 +1,8 @@
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/lessons.md
+!.claude/launch.json
 node_modules/
 tools/.deps/
 skin-previews/
