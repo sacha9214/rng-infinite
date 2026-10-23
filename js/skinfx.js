@@ -2464,6 +2464,77 @@
     };
   };
 
+  // 🍔 Burger (2026-10-23, idée de jaxoncool43) — chaque ingrédient qui tombe (CSS) fait sauter quelques miettes et
+  // graines de sésame ; quand le pain du dessus se pose (transition CSS au retrait de .charging, juste après le dernier
+  // chiffre), les graines sautent du pain et des miettes giclent sur les côtés. À la révélation, la vapeur d'un burger
+  // tout chaud monte, plus dense si c'est rare ; dès Mythic, une pluie de sésame doré. Tirage raté : rien ne fume.
+  SCENES.burger = env => {
+    const { co, card, q, dark, el } = env;
+    const BUN = ['#f59e0b', '#d97706', '#fbbf24'], SEED = dark ? '#fffbeb' : '#fef3c7';
+    const bits = particles(), steam = particles(), glows = timed();
+    let now = 0, landAt = 0, steamEnd = 0, steamRate = 0, t0 = 0, gold = false, closing = false;
+    const emit = emitter();
+    // une graine (ovale clair qui tourne) ou une miette (rond doré), lancée vers le haut depuis (x, y)
+    const toss = (x, y, n, spread, up) => {
+      for (let i = Math.round(n * q); i > 0; i--) {
+        const seed = Math.random() < .55;
+        bits.add({ x: x + rnd(-spread, spread), y, vx: rnd(-1, 1) * card.h * 1.4, vy: -rnd(.6, 1) * up, g: card.h * 9, drag: .6, max: rnd(.45, .8), size: card.h * (seed ? rnd(.035, .05) : rnd(.025, .045)), rot: rnd(TAU), spin: rnd(-14, 14), seed, c: seed ? SEED : pick(BUN) });
+      }
+    };
+    const puffOf = strong => steam.add({ x: card.x + card.w * rnd(.15, .85), y: card.y + card.h * .1, vx: rnd(-6, 6), vy: -card.h * rnd(.7, 1.1), drag: .3, g: -card.h * .25, max: rnd(1, 1.6) * (strong ? 1.2 : 1), size: card.h * rnd(.05, .09), ph: rnd(TAU) });
+    return {
+      frame(t, dt) {
+        now = t;
+        // .charging vient de partir (tout de suite dans un tirage, 0,6 s plus tard dans l'aperçu de la boutique) : la
+        // transition du pain touche la pile vers 0,24 s ; alors les graines sautent et des miettes giclent des deux côtés
+        if (closing && el && !el.classList.contains('charging')) { closing = false; landAt = t + .24; }
+        if (landAt && t >= landAt) {
+          landAt = 0;
+          toss(card.x + card.w / 2, card.y + card.h * .1, 10, card.w * .38, card.h * 3.2);
+          toss(card.x + card.w * .06, card.y + card.h * .5, 3, card.h * .1, card.h * 2);
+          toss(card.x + card.w * .94, card.y + card.h * .5, 3, card.h * .1, card.h * 2);
+        }
+        if (steamRate && t < steamEnd) { const k = clamp((steamEnd - t) / (steamEnd - t0)); for (let m = emit(steamRate * q * (.35 + .65 * k), dt); m > 0; m--) puffOf(gold); }
+        // la vapeur : de fines volutes étirées qui montent en ondulant, s'élargissent et s'effacent (pas un nuage)
+        steam.step(dt);
+        co.globalCompositeOperation = 'source-over';
+        steam.each((s, k) => { const a = Math.sin(Math.PI * k) * (dark ? .2 : .32), r = s.size * (1 + k * 1.2); dot(co, dark ? '#f8fafc' : '#94a3b8', s.x + Math.sin(s.life * 5 + s.ph) * card.h * (.05 + .1 * k), s.y, r, a, r * 2.6); });
+        if (gold) glows.run(dt, (g, k) => { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#fbbf24', g.x, g.y, card.h * (1 + k), (1 - k) * (dark ? .35 : .22), card.h * .6 * (1 + k)); });
+        co.globalCompositeOperation = 'source-over';
+        bits.step(dt);
+        bits.each((b, k) => {
+          b.rot += b.spin * dt;
+          co.globalAlpha = Math.min(1, (1 - k) * 1.6);
+          co.save(); co.translate(b.x, b.y); co.rotate(b.rot);
+          co.fillStyle = dark ? 'rgba(0,0,0,.45)' : 'rgba(120,53,15,.45)';
+          co.beginPath(); co.ellipse(0, 0, b.size * (b.seed ? 1.25 : 1) + .8, b.size * (b.seed ? .6 : 1) + .8, 0, 0, TAU); co.fill();
+          co.fillStyle = b.c;
+          co.beginPath(); co.ellipse(0, 0, b.size * (b.seed ? 1.25 : 1), b.size * (b.seed ? .6 : 1), 0, 0, TAU); co.fill();
+          co.restore();
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        // l'ingrédient s'écrase sur la pile (40 % de son animation CSS de 0,6 s) : quelques miettes sautent
+        const x = p.x, y = p.y - card.h * .2;
+        setTimeout(() => toss(x, y, o.last ? 5 : 3, card.h * .15, card.h * 1.6), 240);
+        if (o.last) closing = true;
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) return;
+        gold = p >= 1; t0 = now;
+        steamRate = 4 + 12 * p; steamEnd = now + 1.2 + 1.6 * p;
+        if (gold) {
+          glows.add({ x: card.x + card.w / 2, y: card.y + card.h / 2, life: 1.2 });
+          for (let i = 0; i < 4; i++) setTimeout(() => toss(card.x + card.w / 2, card.y, 9, card.w * .5, card.h * 4), i * 140);
+        }
+      },
+    };
+  };
+
   // 🚲 Wheelie (2026-10-21, idée de JBearr12) — un cycliste en wheelie roule sur la bordure de trottoir (le haut de la
   // carte), de gauche à droite. Il arrive de la gauche au début du tirage et, à chaque chiffre posé, file juste devant lui :
   // le chiffre surgit dans son sillage, avec une bouffée de poussière et une trace de pneu. À la révélation il saute et
@@ -3232,6 +3303,7 @@
       const env = {
         ci, co, w, h, W, H, card: { x: mx, y: my, w: cw, h: ch, r: parseFloat(getComputedStyle(card).borderTopLeftRadius) || 10 },
         dark: document.documentElement.classList.contains('dark'), q: (root.innerWidth < 720 ? .65 : 1) * (o.q || 1), // o.q : scène allégée (duel à plusieurs)
+        el: card, // la carte elle-même : une scène peut suivre ses classes (Burger attend le retrait de .charging)
       };
       const scene = o.owner ? both(make ? make(env) : null, OWNER(env)) : make(env);
       // Bords du calque extérieur fondus : un rayon ou une particule qui sort du calque s'efface au lieu d'être coupé net

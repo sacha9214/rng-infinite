@@ -64,7 +64,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 **Skins** (follow `.claude/skills/rng-skin-design`; each needs a material, a spin verb and a reveal beat):
 - Rework **Infinity** to match Singularity (kaz [f221766d5b41]): most valuable, it is the rarest skin.
 - Dynamite / bombs: explosions reveal the digits, mushroom clouds from Mythic (casmictechthing [c1b8d0692aaa], jjcoolcid1 [cbd62f5eb1af], jaxoncool43 [4c5860edfce5]).
-- Burger: each digit adds a topping (jaxoncool43 [89f54801e139]).
+- ~~Burger: each digit adds a topping (jaxoncool43 [89f54801e139]).~~ Done by Drastix on `drastix/burger-skin` (PR, not merged yet).
 - Bowling: a ball knocks pins that reveal the digits (JBearr12 [3c6a579a405c], [fa910f1e244b]).
 - Basketball: a ball drops in a hoop per digit (jjcoolcid1 [e937ad77450c]).
 - Wood carving: a knife carves each digit (jjcoolcid1 [ff005e13b704], JBearr12 [0fa76af413d3]).
@@ -199,3 +199,4 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 
 <!-- Add one line per session: date, who, branch, what changed, what is left. -->
 - 2026-10-23 · Sacha · main · repo prepared for two people (CLAUDE.md, HANDOFF.md, skills, audits in tools/audit).
+- 2026-10-23 · Drastix · drastix/burger-skin · Burger skin (1,700 coins, idea by jaxoncool43): six ingredients drop one per digit (CSS), the top bun is lifted while `.charging` and slams down when it is removed (CSS transition, so nothing replays on cards already shown), `SCENES.burger` throws crumbs and sesame on each digit and on the bun landing, steam on the reveal (sesame shower from Mythic). Roll button `gen-burger`, duel frame `side-burger`, FR description, `UPDATES` entry. `js/skinfx.js` now passes `env.el` (the card) to scenes. `tools/skin-preview.mjs`: runs on Windows, `PW_BROWSER=chromium` option, new row "Fin du tirage" (card transitions when `.charging` goes). Previews in `docs/skins/`. Left: Sacha merges, deploys, replies to jaxoncool43. The layout audits in `tools/audit/` were not run (Firefox only; they do not start on Drastix's PC): shop width checked by hand at 320–414 px.
