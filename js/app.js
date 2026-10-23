@@ -62,7 +62,11 @@
         const res = await fetch(base + pathname, { ...options, signal: ctrl.signal, headers });
         // Le serveur est en train de redémarrer : la requête n'a pas été traitée, on peut la rejouer ailleurs.
         if (base && base === API_BASE && (res.status === 502 || res.status === 503)) throw Object.assign(new Error(`HTTP ${res.status}`), { unreached: true });
-        const body = await res.json().catch(() => ({}));
+        // Corps lu en entier : coupé par le délai (AbortError) ou illisible, une réponse « 200 » n'est pas une réponse.
+        // Avant, elle devenait {} et un tirage s'affichait « undefined » (Yentizx, 2026-10-23).
+        const raw = await res.text();
+        let body = {};
+        try { body = raw ? JSON.parse(raw) : {}; } catch (e) { if (res.ok) throw new Error('Bad response from the server'); }
         if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status });
         return body;
       } catch (err) {
@@ -1669,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
     { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
     { id: '2026-10-23e', date: 'Oct 23, 2026', en: ['🐞 Fixes: the case Odds ⓘ now open with a tap on iPad and phones (reported by Aussie Haüs); tapping Roll again while auto-roll is revealing no longer cuts the roll (reported by jaxoncool43)'], fr: ['🐞 Corrections : les chances des caisses (Odds ⓘ) s\'ouvrent d\'un toucher sur iPad et téléphone (signalé par Aussie Haüs) ; toucher Rejouer pendant une révélation en tirage auto ne coupe plus le tirage (signalé par jaxoncool43)'] },
@@ -2069,6 +2074,7 @@
     let online;
     try {
       online = await Online.roll(Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''));
+      if (!Number.isInteger(online.n)) throw new Error('Bad roll from the server'); // réponse coupée : on réessaie plus tard
     } catch (err) {
       rollPending = false;
       if (err.status !== 429) clientEvt('bg_error'); // 429 = pause du serveur pas finie : on réessaie, rien n'est perdu
@@ -2117,7 +2123,12 @@
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
     const asked = (async () => {
       for (let attempt = 0; ; attempt++) {
-        try { return await Online.roll(nonce); } catch (err) {
+        try {
+          const r = await Online.roll(nonce);
+          // Pas de nombre valide : on redemande le même tirage (le serveur renvoie celui déjà fait grâce au nonce).
+          if (!Number.isInteger(r.n) || r.n < 0 || r.n > 1000000) throw new Error('Bad roll from the server');
+          return r;
+        } catch (err) {
           if (err.status === 409 || err.status === 429 || err.status === 403 || attempt >= 2) throw err;
           if (!attempt) toast('The server is slow to answer, trying again…');
           await new Promise(resolve => setTimeout(resolve, 600 + 900 * attempt));
