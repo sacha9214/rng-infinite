@@ -24,6 +24,12 @@
 - Check: start EVERY publish command (tests + stamp + commit + push + deploy) with `set -e -o pipefail &&`; never write `node tools/test-api.mjs 2>&1 | grep … | tail -1 && …` without it. Read "OK —" in the output before pushing.
 - Seen: 2 (2026-10-16: `test-api | grep -v kofi | tail -1 && … && deploy` published the Sky/Deck skins with a failing test — button styles in the wrong CSS file)
 
+### Running tools/stamp.mjs on Windows
+- Did: on 2026-10-23 (Drastix's PC, fresh clone with Git for Windows' default `core.autocrlf=true`) changed js/app.js and js/i18n.js, then ran `node tools/stamp.mjs`.
+- Was: the working tree had CRLF line endings, so every hash in index.html changed (19 files instead of 2): every player would re-download everything and Sacha's next stamp would conflict. Caught before the commit.
+- Check: in a Windows clone, `git config core.autocrlf false`, then `git rm -rq --cached . && git reset -q --hard HEAD` (with no uncommitted work) to get LF files. After stamping, `git diff index.html` must only change the `?v=` of the files you touched.
+- Seen: 1
+
 ### Probing the live API to check a fix
 - Did: to check the new name rule in production, POSTed `/api/name` with a made-up player id `0000000000000000` and an all-zero secret.
 - Was: `claimPlayer` registers unknown ids, so this created a real player named "h" in production and reserved the name.

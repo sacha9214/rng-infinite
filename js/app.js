@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23-hist-reps', date: 'Oct 23, 2026', en: ['🔁 History: new sort "Most rolled" to see the numbers you got the most times first (idea by CococoC)'], fr: ['🔁 Historique : nouveau tri « Les plus tirés » pour voir d\'abord les nombres que tu as eus le plus de fois (idée de CococoC)'] },
     { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
     { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
@@ -2426,7 +2427,7 @@
     }
     Collection.ensure();
     const tierOptions = [['all', 'All rarities'], ['rare+', 'Rare or better'], ...TIERS_DESC.map(t => [t, cap(t)])];
-    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP'], ['numUp', 'Smallest number'], ['numDown', 'Biggest number']]; // tri par valeur : idée de Lolha39 (2026-10-18)
+    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP'], ['numUp', 'Smallest number'], ['numDown', 'Biggest number'], ['reps', 'Most rolled']]; // tri par valeur : idée de Lolha39 (2026-10-18) ; « Most rolled » : idée de CococoC (2026-10-23)
     const options = (list, value) => list.map(([v, l]) => `<option value="${v}"${v === value ? ' selected' : ''}>${l}</option>`).join('');
     app.innerHTML = `
       <div class="page">
@@ -2497,6 +2498,8 @@
       else if (/^\d+$/.test(digits)) items = items.filter(x => String(x.n).includes(digits));
       else items = items.filter(x => analysis(x.n).earnedIds.some(id => LABELS.get(id).includes(q)));
     }
+    // Nombre de fois où le nombre est sorti (tout l'historique, comme le « ×N » des lignes) ; les égalités restent groupées par nombre.
+    const reps = x => (Collection.seen.get(x.n) || []).length;
     const sorters = {
       new: (a, b) => b.i - a.i,
       old: (a, b) => a.i - b.i,
@@ -2504,6 +2507,7 @@
       numDown: (a, b) => b.n - a.n || b.i - a.i,
       high: (a, b) => b.s - a.s || b.i - a.i,
       low: (a, b) => a.s - b.s || b.i - a.i,
+      reps: (a, b) => reps(b) - reps(a) || a.n - b.n || b.i - a.i,
     };
     return items.sort(sorters[histState.sort]);
   }
