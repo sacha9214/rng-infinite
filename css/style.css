@@ -5224,3 +5224,5 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .out-chip { order: 9; margin-left: .3rem; padding: 0 .4rem; border-radius: 999px; background: var(--surface-raised); color: var(--prose-3); font-size: .68rem; font-weight: 700; white-space: nowrap; }
 .board-row .seat-kick { order: 10; }
 .room-quit { margin-top: .4rem; }
+
+.theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */

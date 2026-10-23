@@ -7493,6 +7493,8 @@
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
   Store.onChange(syncPlayer);
   $('#player-btn').addEventListener('click', openSettings);
+  // Roue crantée en haut à droite (demandé par Sacha, 2026-10-23) : les réglages, thème compris, à la place des trois boutons de thème.
+  $('#gear-btn').addEventListener('click', openSettings);
 
   document.addEventListener('click', e => {
     // Lien vers une page du site (profil d'un joueur…) dans une ligne cliquable : la navigation l'emporte.
