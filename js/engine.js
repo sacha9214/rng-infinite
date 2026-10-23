@@ -272,6 +272,8 @@
     VORTROX: '49', KINGSAMMELOT: '55', // idée d'A Dude (2026-10-21) : deux nombres mèmes
     AK_47: '47', // idée de R77 (2026-10-21)
     AREA_51: '51', // idée de hii (2026-10-22)
+    // Idée de TibotyTWO et CococoC (2026-10-23) : les numéros d'avions de ligne, famille JET (777 reste Jackpot).
+    JET_737: '737', JET_747: '747', JET_757: '757', JET_767: '767', JET_787: '787',
     // Idées du 2026-10-22 : jaxoncool43 (1776), kaz (82), CococoC (92), schoolroller (61), Colt2 (999).
     AMERICAN: '1776', ANGEL_82: '82', VORTROX_CURSE: '92', SIXTY_ONE: '61', JUICE_WRLD: '999',
     MED_CHECK: '504', OVER_9000: '9001', PASSWORD: '12345', YEAR_2077: '2077', YEAR_2099: '2099', ROOT_TWO_4: '1414', ROOT_TWO_5: '14142',

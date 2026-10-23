@@ -53,7 +53,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 
 **Badges** (quick; grep `js/engine.js` and `tools/source/*.json` first, then `node tools/build.mjs`, then
 `tools/rescore-worst.js` on the server after deploy):
-- Plane numbers: contains 737, 747, 757, 767, 777 is taken (Jackpot), 787 → one family "Jet" (TibotyTWO [bee00d9ad046], CococoC [604a068a6275]).
+- ~~Plane numbers: contains 737, 747, 757, 767, 777 is taken (Jackpot), 787 → one family "Jet" (TibotyTWO [bee00d9ad046], CococoC [604a068a6275]).~~ Done by Drastix on `drastix/jet-badges` (PR, not merged yet).
 - 727 "WYSI" (osu! meme), contains + exact (Phong254 [cbf3a830e791]).
 - Ends in 250, "Quarter Millennium" (WpBejs [3c8e159b40ec]); fits next to QUARTER_CENTURY in `ENDS`.
 - 142857, the cyclic number: exact, Godlike tier (JBearr12 [15430f4307b5]).
@@ -194,8 +194,12 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 ## Bugs in progress
 
 - None known to be broken right now. See "Open bug reports" above.
+- `node tools/build.mjs` reports **93/96** real rolls (13, 25111, 679999 are each 699 XP short), already on `main` at
+  e2a76c2 before any Jet change: one of the recent custom badges probably counts on numbers of the original
+  leaderboard. Not investigated yet (found by Drastix, 2026-10-23).
 
 ## Session log
 
 <!-- Add one line per session: date, who, branch, what changed, what is left. -->
 - 2026-10-23 · Sacha · main · repo prepared for two people (CLAUDE.md, HANDOFF.md, skills, audits in tools/audit).
+- 2026-10-23 · Drastix · drastix/jet-badges · Jet family: JET_737, Jumbo Jet (747), JET_757, JET_767, JET_787 (contains, 25,737–25,787 XP, family JET so only the best one scores; 777 stays Jackpot; no "Boeing" in names). `build.mjs` rerun: 55,782 numbers change tier (18,325 up, 37,457 down). Left for Sacha after merge: deploy, `tools/rescore-worst.js --apply` on the server, reply to TibotyTWO and CococoC.

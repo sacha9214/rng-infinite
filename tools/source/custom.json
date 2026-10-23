@@ -440,5 +440,45 @@
     "desc": "Exactly 676741 or 674141.",
     "emoji": "🫅",
     "score": 100000100
+  },
+  {
+    "id": "JET_737",
+    "label": "Jet 737",
+    "desc": "Contains \"737\", like a jet airliner.",
+    "emoji": "🛫",
+    "score": 25737,
+    "family": "JET"
+  },
+  {
+    "id": "JET_747",
+    "label": "Jumbo Jet",
+    "desc": "Contains \"747\", the jumbo jet.",
+    "emoji": "✈️",
+    "score": 25747,
+    "family": "JET"
+  },
+  {
+    "id": "JET_757",
+    "label": "Jet 757",
+    "desc": "Contains \"757\", like a jet airliner.",
+    "emoji": "🛩️",
+    "score": 25757,
+    "family": "JET"
+  },
+  {
+    "id": "JET_767",
+    "label": "Jet 767",
+    "desc": "Contains \"767\", like a jet airliner.",
+    "emoji": "🛬",
+    "score": 25767,
+    "family": "JET"
+  },
+  {
+    "id": "JET_787",
+    "label": "Jet 787",
+    "desc": "Contains \"787\", like a jet airliner.",
+    "emoji": "🌤️",
+    "score": 25787,
+    "family": "JET"
   }
 ]
