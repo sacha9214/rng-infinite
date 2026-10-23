@@ -5218,3 +5218,9 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .im-howto ol { margin: .4rem 0 .6rem 1.2rem; padding: 0; display: grid; gap: .3rem; font-size: .88rem; color: var(--prose-2); }
 .im-example { padding: .5rem .7rem; border-radius: .5rem; background: var(--surface-raised); font-size: .85rem; }
 .im-example p { margin: .2rem 0; }
+
+/* Duel : joueur sorti de la partie (2026-10-23) */
+.board-row.out { opacity: .5; }
+.out-chip { order: 9; margin-left: .3rem; padding: 0 .4rem; border-radius: 999px; background: var(--surface-raised); color: var(--prose-3); font-size: .68rem; font-weight: 700; white-space: nowrap; }
+.board-row .seat-kick { order: 10; }
+.room-quit { margin-top: .4rem; }

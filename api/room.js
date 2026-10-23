@@ -136,13 +136,17 @@ function score(room) {
   const count = room.players.length;
   const wins = Array(count).fill(0), totals = Array(count).fill(0);
   const list = room.rounds.map(r => {
-    const s = r.n.map(n => engine.scoreOf(n));
-    s.forEach((v, i) => { totals[i] += v; });
+    // Pas de nombre (arrivé après cette manche, ou sorti de la partie) : -1, ne gagne jamais la manche.
+    const s = room.players.map((p, i) => (r.n[i] == null ? -1 : engine.scoreOf(r.n[i])));
+    s.forEach((v, i) => { if (v > 0) totals[i] += v; });
     const winner = argmax(s);
     if (winner !== null) wins[winner]++;
     return { t: r.t, revealAt: r.revealAt, n: r.n, s, winner };
   });
   let done = false, winner = null;
+  // Tous les autres sont sortis (partis ou exclus par l'hôte) : le dernier joueur encore là gagne par forfait.
+  const stay = room.players.map((p, i) => (isOut(room, p) ? -1 : i)).filter(i => i >= 0);
+  if (room.started && room.players.length > 1 && stay.length === 1) return { list, wins, totals, done: true, winner: stay[0], forfeit: true };
   if (room.mode === 'xp' && totals.some(v => v >= room.target)) {
     done = true;
     winner = argmax(totals);
@@ -185,7 +189,10 @@ async function touchSeen(room, id, now = Date.now()) {
 
 // Manche pour laquelle un joueur est prêt ; un bot l'est toujours.
 const readyFor = (room, p) => (p.bot ? room.rounds.length : room.h[`ready:${p.id}`] == null ? -1 : Number(room.h[`ready:${p.id}`]));
-const humans = room => room.players.filter(p => !p.bot);
+// Sorti de la partie en cours (demandé par Sacha, 2026-10-23) : « out:<id> » = 'left' (parti) ou 'kicked' (exclu par
+// l'hôte). Il reste à sa place (les manches, le chat et les réactions sont indexés par place) mais ne tire plus.
+const isOut = (room, p) => !!room.h[`out:${p.id}`];
+const humans = room => room.players.filter(p => !p.bot && !isOut(room, p));
 const hasBots = room => room.players.some(p => p.bot);
 
 // Lance la manche suivante si tout le monde est prêt (ou 15 s après le premier prêt). Un seul appel (verrou par
@@ -207,11 +214,11 @@ async function advance(room, now = Date.now()) {
   if (ttls.some(ms => Number(ms) > 0)) return room;
   const [lock] = await redis([['SET', `${roomKey(room.code)}:draw:${k}`, '1', 'NX', 'EX', TTL]]);
   if (lock !== 'OK') return (await load(room.code)) || room;
-  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(() => crypto.randomInt(0, 1000001)) };
+  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, 1000001))) };
   room.rounds.push(round);
   const outcome = await duelOutcome(room, now);
   // Tirages (et bilan du duel s'il se termine) appliqués seulement une fois la manche révélée : voir queueReveal.
-  const rolls = room.players.map((p, i) => [p.id, round.n[i], round.t]).filter((x, i) => !room.players[i].bot);
+  const rolls = room.players.map((p, i) => [p.id, round.n[i], round.t]).filter((x, i) => !room.players[i].bot && x[1] != null);
   await redis([
     ['RPUSH', roundsKey(room.code), JSON.stringify(round)],
     ...[roomKey(room.code), playersKey(room.code), roundsKey(room.code)].map(key => ['EXPIRE', key, TTL]),
@@ -333,7 +340,7 @@ async function view(room, me) {
     reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
-      name: p.name, title: p.title || null, top: p.top || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host,
+      name: p.name, title: p.title || null, top: p.top || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host, out: room.h[`out:${p.id}`] || null,
       ready: status === 'playing' && !p.bot && readyFor(room, p) === k, wins: sc.wins[i], total: sc.totals[i],
     })),
     rounds: sc.list,
@@ -498,10 +505,38 @@ module.exports = async (req, res) => {
 
     // Exclure un joueur du salon (demandé par Sacha, 2026-10-22) : l'hôte seulement, avant le début de la partie. La
     // place se libère, sa mise sous séquestre lui revient, et il ne peut plus revenir dans ce duel (kick:<id>).
-    if (body.action === 'kick') {
-      if (room.host !== playerId) return send(res, 422, { error: 'Only the host can remove a player' });
-      if (room.started) return send(res, 422, { error: 'This duel has already started' });
-      const target = room.players.find(p => p.name === String(body.who || '') && p.id !== room.host);
+    // Quitter une partie en cours, ou en exclure un joueur (l'hôte) : il est marqué sorti (voir isOut). S'il ne reste
+    // qu'un joueur, il gagne par forfait ; la mise d'un joueur qui part reste dans le pot.
+    if (body.action === 'quit' || (body.action === 'kick' && room.started)) {
+      const quitting = body.action === 'quit';
+      if (!member) return send(res, 422, { error: 'You are not in this duel' });
+      if (room.h[`out:${playerId}`]) return send(res, 422, { error: 'You left this duel' });
+      if (!quitting && room.host !== playerId) return send(res, 422, { error: 'Only the host can remove a player' });
+      const target = quitting ? room.players.find(p => p.id === playerId) : room.players.find(p => p.name === String(body.who || '') && p.id !== room.host && !isOut(room, p));
+      if (!target) return send(res, 404, { error: 'This player is not in the duel' });
+      if (!room.started && quitting) {
+        // Pas encore commencée : on libère la place (comme une exclusion), la mise revient.
+        if (target.id === room.host) return send(res, 422, { error: 'The host cannot leave before the start: close the page instead' });
+      } else {
+        if (score(room).done) return send(res, 422, { error: 'This duel is over' });
+        if (!quitting && stakeOf(room)) return send(res, 422, { error: 'Nobody can be removed from a duel with a bet once it started' });
+        const w = [['HSET', roomKey(code), `out:${target.id}`, quitting ? 'left' : 'kicked']];
+        if (!quitting) w.push(['HSET', roomKey(code), `kick:${target.id}`, 1]);
+        room.h[`out:${target.id}`] = quitting ? 'left' : 'kicked';
+        // L'hôte s'en va : le premier joueur encore là prend sa place.
+        if (target.id === room.host) { const next = humans(room)[0]; if (next) { w.push(['HSET', roomKey(code), 'host', next.id]); room.host = next.id; room.h.host = next.id; } }
+        await redis(w);
+        const sc = score(room);
+        if (sc.done && sc.forfeit) {
+          await redis([['ZREM', LIVE_KEY, code]]);
+          if (stakeOf(room)) await settleWager(code, room.players[sc.winner].id);
+        }
+        return send(res, 200, await view(await load(code), playerId));
+      }
+    }
+    if (body.action === 'kick' || body.action === 'quit') {
+      if (body.action === 'kick' && room.host !== playerId) return send(res, 422, { error: 'Only the host can remove a player' });
+      const target = body.action === 'quit' ? room.players.find(p => p.id === playerId) : room.players.find(p => p.name === String(body.who || '') && p.id !== room.host);
       if (!target) return send(res, 404, { error: 'This player is not in the duel' });
       const [raw] = await redis([['LRANGE', playersKey(code), 0, -1]]);
       const entry = (raw || []).find(x => { try { return JSON.parse(x).id === target.id; } catch (e) { return false; } });
@@ -511,7 +546,7 @@ module.exports = async (req, res) => {
       await redis([
         ['HINCRBY', roomKey(code), 'count', -1],
         ['HDEL', roomKey(code), `m:${target.id}`, `seen:${target.id}`, `paid:${target.id}`],
-        ['HSET', roomKey(code), `kick:${target.id}`, 1],
+        ...(body.action === 'kick' ? [['HSET', roomKey(code), `kick:${target.id}`, 1]] : []),
         ...(paid && !target.bot ? [['HINCRBY', statsKey(target.id), 'spent', -paid]] : []), // mise rendue
       ]);
       return send(res, 200, await view(await load(code), playerId));
@@ -585,6 +620,7 @@ module.exports = async (req, res) => {
 
     if (body.action === 'ready') {
       if (!member) return send(res, 422, { error: 'You are not in this duel' });
+      if (room.h[`out:${playerId}`]) return send(res, 422, { error: 'You left this duel' });
       if (!room.started) return send(res, 422, { error: 'The duel has not started yet' });
       if (score(room).done) return send(res, 422, { error: 'This duel is over' });
       const k = room.rounds.length;

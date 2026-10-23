@@ -1669,6 +1669,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
     { id: '2026-10-23e', date: 'Oct 23, 2026', en: ['🐞 Fixes: the case Odds ⓘ now open with a tap on iPad and phones (reported by Aussie Haüs); tapping Roll again while auto-roll is revealing no longer cuts the roll (reported by jaxoncool43)'], fr: ['🐞 Corrections : les chances des caisses (Odds ⓘ) s\'ouvrent d\'un toucher sur iPad et téléphone (signalé par Aussie Haüs) ; toucher Rejouer pendant une révélation en tirage auto ne coupe plus le tirage (signalé par jaxoncool43)'] },
     { id: '2026-10-23d', date: 'Oct 23, 2026', en: ['📷 You can now send images and screenshots to your friends: press 📷 next to the message box. Click an image to enlarge it'], fr: ['📷 Tu peux maintenant envoyer des images et des captures d\'écran à tes amis : appuie sur 📷 à côté du message. Clique une image pour l\'agrandir'] },
@@ -6536,7 +6537,8 @@
   function drawRoom() {
     const d = Room.data, body = $('#room-body');
     if (!body) return;
-    const me = d.players.find(p => p.me);
+    // Sorti de la partie (parti ou exclu) : la suite se regarde comme un spectateur.
+    const me = d.players.find(p => p.me && !p.out);
 
     if (d.status === 'abandoned' && !Room.anim) {
       if (Room.view === 'abandoned') return;
@@ -6578,6 +6580,7 @@
         <p class="panel-note">${d.players.length} / ${d.size} players</p>
         <div class="room-buttons">
           ${me ? '<button class="btn" id="room-share">Share invite</button>' : '<button class="btn-roll small" id="room-join">⚔️ Join</button>'}
+          ${me && !me.host ? '<button class="btn ghost" id="room-leave">🚪 Leave</button>' : ''}
           ${me && me.host && d.players.length < d.size ? '<button class="btn" id="room-bot">🤖 Add a bot</button>' : ''}
           ${canFill ? `<label class="room-auto room-fill"><input type="checkbox" id="room-fill"${fillOn ? ' checked' : ''}><i aria-hidden="true"></i><span>Fill with bots after 2 min</span></label>` : ''}
           ${me && me.host && d.players.length > 1 ? `<button class="btn-roll small" id="room-start">Start now with ${d.players.length}</button>` : ''}
@@ -6588,6 +6591,8 @@
         if (share) share.addEventListener('click', () => shareOrCopy(`⚔️ Live duel on RNG∞ (${d.size} players, ${goalText(d)}), code ${d.code}\n${location.origin + location.pathname}?ref=duel${roomHref(d.code)}`, 'Duel invite'));
         const join = $('#room-join');
         if (join) join.addEventListener('click', () => joinRoom(d.code));
+        const leave = $('#room-leave');
+        if (leave) leave.addEventListener('click', () => roomSend('quit', leave));
         const start = $('#room-start');
         if (start) start.addEventListener('click', () => roomSend('start', start));
         const addBot = $('#room-bot');
@@ -6619,7 +6624,7 @@
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
         </div>
         ${me ? `<div class="room-reacts" id="room-reacts">${REACTIONS.map((e, i) => `<button class="react-btn" data-react="${e}" title="${EMOTE_LABELS[e]} (press ${i + 1})">${emoteHTML(e)}</button>`).concat(myEmotes().map(e => `<button class="react-btn special" data-react="${e}" title="${esc(Shop.emoteById.get(e).name)}">${emoteHTML(e)}</button>`)).join('')}</div>` : ''}
-        <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
+        <div class="room-actions"><div id="room-cta"></div><p class="hint" id="room-hint"></p>${me ? '<button class="btn ghost small room-quit" id="room-quit" type="button">🚪 Leave the game</button>' : ''}${me ? `<label class="room-auto" id="room-auto-wrap" title="Rolls every round for you until this duel ends"><input type="checkbox" id="room-auto"${Room.auto ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label>` : ''}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">Rounds</h3></div><div id="room-rounds"></div></div>
       </div><aside class="room-aside">
         <div class="panel chat-panel" id="room-chat">
@@ -6673,6 +6678,18 @@
             catch (err) { toast([400, 403, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
           });
         });
+      });
+      // Quitter la partie, ou (hôte) exclure un joueur depuis le classement.
+      const quit = $('#room-quit');
+      if (quit) quit.addEventListener('click', () => {
+        if (!confirm(window.RNGI18n ? window.RNGI18n.t(Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.') : (Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.'))) return;
+        Room.auto = false; roomSend('quit', quit);
+      });
+      $('#room-board').addEventListener('click', e => {
+        const k = e.target.closest('[data-kick]'); if (!k) return;
+        e.preventDefault();
+        if (!confirm(window.RNGI18n ? window.RNGI18n.t(`Remove ${k.dataset.kick} from this duel? They won't be able to come back.`) : `Remove ${k.dataset.kick} from this duel? They won't be able to come back.`)) return;
+        roomSend('kick', k, { who: k.dataset.kick });
       });
       $('#room-chat').addEventListener('click', e => {
         const rep = e.target.closest('[data-chat-report]');
@@ -6729,10 +6746,14 @@
         : `<span class="mono board-wins">${wins[i]} / ${d.target}</span><span class="panel-note board-xp">${compact(totals[i])} XP</span>`;
       const ready = d.status === 'playing' && p.ready && !Room.anim ? '<span class="ready-chip">ready</span>' : '';
       const who = p.bot ? `<span class="bot-name">🤖 ${esc(p.name)}</span>` : `<a class="player-link" href="${profileHref(p.name)}">${esc(p.name)}</a>`;
-      return `<div class="board-row${p.me ? ' me' : ''}" data-pi="${i}"><span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      // Sorti, ou bouton ✕ de l'hôte pour exclure un joueur pendant la partie (pas dans un duel avec mise).
+      const out = p.out ? `<span class="out-chip">${p.out === 'kicked' ? '✕ removed' : '🚪 left'}</span>` : '';
+      const kick = me && me.host && !p.me && !p.out && d.status === 'playing' && !d.stake ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
+      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
+    { const q = $('#room-quit'); if (q) q.hidden = d.status !== 'playing'; }
     const people = d.players.filter(p => !p.bot); // les bots sont toujours prêts : on ne compte que les humains
     const readyCount = people.filter(p => p.ready).length;
     const countdown = d.autoAt ? ` · starts by itself in ${Math.max(0, Math.ceil((d.autoAt - serverNow()) / 1000))} s` : '';

@@ -344,7 +344,8 @@ assert.equal((await roomPost(dave, 'ready', { code })).status, 422, 'un spectate
   // La place libérée resservie : deux nouveaux joueurs remplissent le salon et la partie démarre.
   await roomPost(alice, 'join', { code: kc }); k = await roomPost(bobNow, 'join', { code: kc });
   assert.equal(k.body.status, 'playing', 'la place libérée est reprise');
-  assert.equal((await roomPost(dave, 'kick', { code: kc, who: 'Alice' })).status, 422, 'pas d\'exclusion une fois la partie lancée');
+  // Depuis le 2026-10-23, l'hôte peut exclure pendant la partie : le joueur est marqué sorti (voir le bloc « Quitter »).
+  k = await roomPost(dave, 'kick', { code: kc, who: 'Alice' }); assert.equal(k.status, 200); assert.equal(k.body.players.find(p => p.name === 'Alice').out, 'kicked');
 }
 
 // Réactions : un emoji de la liste, visible par tous, au plus une toutes les 0,7 s par joueur.
@@ -3442,6 +3443,38 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (let k = 0; k < 3; k++) { db.delete(`tnlock:${q}`); await TN.roll(q, TT + 13 * H + k * 2000); }
   const vq = await TN.view(DT, q, TT + 14 * H);
   assert.equal(vq.rolls, 5); assert.equal(vq.match.opp.rolls, undefined, '3/5 : adversaire encore caché');
+}
+
+// Quitter un duel en cours, ou en être exclu par l'hôte (2026-10-23) : marqué sorti, forfait, mises.
+{
+  const mkq = (tag, name, coins = 0) => { const id = tag.repeat(8), secret = (tag + 'a').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', 'rolls', 60, 'bonus', coins], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const mkp = async (tag, name) => { const w = { playerId: tag.repeat(8), secret: (tag + 'a').repeat(16).slice(0, 32), name }; assert.equal((await call(roll, { method: 'POST', body: w })).status, 200); run([['HINCRBY', `stats:${w.playerId}`, 'bonus', 5000], ['HSET', `stats:${w.playerId}`, 'rolls', 60]]); return w; };
+  const q1 = mkq('97', 'Xena', 5000), q2 = mkq('98', 'Xavi', 5000), q3 = mkq('99', 'Xyla', 5000);
+  let r = await roomPost(q1, 'create', { size: 3, mode: 'rounds', target: 2 }); const code = r.body.code;
+  await roomPost(q2, 'join', { code }); r = await roomPost(q3, 'join', { code });
+  assert.equal(r.body.status, 'playing', 'complet : la partie commence');
+  assert.equal((await roomPost(q2, 'kick', { code, who: 'Xyla' })).status, 422, 'seul l\'hôte exclut');
+  r = await roomPost(q2, 'quit', { code }); assert.equal(r.status, 200);
+  assert.equal(r.body.players.find(p => p.name === 'Xavi').out, 'left'); assert.notEqual(r.body.status, 'done', 'il reste deux joueurs');
+  assert.equal((await roomPost(q2, 'ready', { code })).status, 422, 'sorti : ne joue plus');
+  assert.equal((await roomPost(q2, 'quit', { code })).status, 422, 'pas deux fois');
+  r = await roomPost(q1, 'kick', { code, who: 'Xyla' }); assert.equal(r.status, 200);
+  assert.equal(r.body.players.find(p => p.name === 'Xyla').out, 'kicked');
+  assert.equal(r.body.status, 'done', 'un seul joueur reste : il gagne par forfait');
+  assert.equal((await roomPost(q1, 'quit', { code })).status, 422, 'partie finie');
+  // Avec une mise : personne n'est exclu ; celui qui part laisse sa mise, le dernier joueur prend le pot.
+  const coins = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
+  r = await roomPost(q1, 'create', { size: 2, mode: 'rounds', target: 3, stake: 100 }); const c2 = r.body.code;
+  assert.equal(r.body.stake, 100, JSON.stringify(r.body));
+  r = await roomPost(q3, 'join', { code: c2 }); assert.equal(r.body.status, 'playing');
+  const a0 = await coins(q1), b0 = await coins(q3);
+  assert.equal((await roomPost(q1, 'kick', { code: c2, who: 'Xyla' })).status, 422, 'pas d\'exclusion avec une mise');
+  r = await roomPost(q3, 'quit', { code: c2 }); assert.equal(r.body.status, 'done');
+  assert.ok(await coins(q1) > a0, 'le pot va au dernier joueur'); assert.equal(await coins(q3), b0, 'la mise de celui qui part est perdue');
+  // Hôte qui part : le suivant devient hôte.
+  r = await roomPost(q2, 'create', { size: 3, mode: 'rounds', target: 2 }); const c3 = r.body.code;
+  await roomPost(q1, 'join', { code: c3 }); await roomPost(q3, 'join', { code: c3 });
+  r = await roomPost(q2, 'quit', { code: c3 }); assert.equal(r.body.players.find(p => p.host).name, 'Xena', 'nouvel hôte');
 }
 
 // Idea Managers (2026-10-23) : rôle donné par le créateur, avis motivés obligatoires, aucun autre accès.
