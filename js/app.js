@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-24-result-coins', date: 'Oct 24, 2026', en: ['🪙 The result screen now shows the coins a roll earned, right under its XP (idea by jaxoncool43)'], fr: ['🪙 L\'écran de résultat affiche maintenant les pièces gagnées par le tirage, juste sous son XP (idée de jaxoncool43)'] },
     { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
     { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
@@ -2220,6 +2221,13 @@
   // Révélation en étapes chronométrées, comme l'original :
   // chiffres → badges un par un (XP qui monte) → compteur de badges → rareté → TOP x % → XP à vie.
   // Rien ne peut être sauté ; le menu reste verrouillé jusqu'à l'affichage de la rareté.
+  // Pièces gagnées par le tirage (idée de jaxoncool43, 2026-10-24) : le serveur dit combien il a crédité, Weekend Rush
+  // compris ; un serveur d'avant ce champ laisse le tarif de la rareté (Shop.COINS).
+  function coinsTagHTML(online, tier) {
+    const base = Shop.COINS[tier] || 0, got = typeof online.coins === 'number' ? online.coins : base;
+    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > base && base ? ' <i>🔥 ×2 Weekend Rush</i>' : ''}</div>`;
+  }
+
   function playReveal(ctx) {
     currentView = 'result';
     const { n, a } = ctx;
@@ -2244,6 +2252,7 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
+          ${ctx.online && !ctx.replay ? coinsTagHTML(ctx.online, a.tier) : ''}
           ${ctx.previous.length && !ctx.replay ? `<div class="dup-tag" id="r-dup" hidden>🔁 Duplicate! <span>rolled ${plural(ctx.previous.length + 1, 'time')}</span></div>` : ''}
           <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
             <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>${ctx.online ? `+${fmt(a.total)}` : 'offline roll · not counted'}</span></div>
@@ -2358,6 +2367,9 @@
       ep.classList.remove('pending');
       countUp(ep, 0, a.total, 0, v => `${fmt(v)} XP`);
       replay(ep, 'glint');
+      // Pièces gagnées par ce tirage, à côté de l'XP (idée de jaxoncool43, 2026-10-24) : seulement maintenant, avec la
+      // rareté, pour ne pas trahir un bon tirage avant sa révélation. Hors ligne : rien n'est gagné, pas de pastille.
+      { const c = $('#r-coins'); if (c) { c.hidden = false; if (!reducedMotion) c.classList.add('pop-in'); } }
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier, pack });
