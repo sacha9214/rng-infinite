@@ -290,7 +290,7 @@ async function rebuildStats(playerId) {
   const seen = rollSet();
   const tiers = Object.fromEntries(TIERS.map(t => [t, 0]));
   const badges = new Set();
-  let rolls = 0, best = 0, drastix = 0, year2026 = 0;
+  let rolls = 0, best = 0, drastix = 0;
   for (const m of members || []) {
     const [t, n] = m.split(':').map(Number);
     if (!seen.add(n, t)) continue;
@@ -300,10 +300,9 @@ async function rebuildStats(playerId) {
     best = Math.max(best, a.total);
     a.earnedIds.forEach(id => badges.add(id));
     if (a.earnedIds.includes('DRASTIX')) drastix = 1;
-    if (a.earnedIds.includes('CURRENT_YEAR')) year2026 = 1;
   }
   const writes = [
-    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'year2026', year2026, 'v', STATS_VERSION, 'tv', TIERS_VERSION, 'gv', GODLIKE_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
+    ['HSET', statsKey(playerId), 'rolls', rolls, 'best', best, 'drastix', drastix, 'v', STATS_VERSION, 'tv', TIERS_VERSION, 'gv', GODLIKE_VERSION, ...TIERS.flatMap(t => [`t:${t}`, tiers[t]])],
     ['DEL', badgesKey(playerId)],
   ];
   if (badges.size) writes.push(['SADD', badgesKey(playerId), ...badges]);
@@ -466,8 +465,6 @@ async function recordRoll(playerId, n, t) {
   // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
   { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
-  // Titre « 2026 » : le badge Current Year (un nombre contenant 2026).
-  if (a.earnedIds.includes('CURRENT_YEAR')) writes.push(['HSET', statsKey(playerId), 'year2026', 1]);
   // Nombre de tirages de la période, au total et par joueur (affichés au classement).
   for (const p of periods) {
     writes.push(['INCR', p.total], ['HINCRBY', p.count, playerId, 1]);
