@@ -3637,9 +3637,14 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .idea-kind button { flex: 1; }
 .idea-shot { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .6rem; margin: .5rem 0 0; }
 .idea-shot-btn { cursor: pointer; }
-.idea-shot-prev { position: relative; flex-basis: 100%; }
-.idea-shot-prev img { display: block; max-width: 100%; max-height: 180px; border-radius: .5rem; border: 1px solid var(--outline); }
-.idea-shot-prev button { position: absolute; top: .3rem; left: .3rem; padding: .15rem .45rem; background: var(--surface); }
+/* jusqu'à 3 aperçus côte à côte (idée de Phong254, 2026-10-24) */
+.idea-shots { flex-basis: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.idea-shots[hidden] { display: none; }
+.idea-shot-prev { position: relative; min-width: 0; }
+.idea-shot-prev img { display: block; width: 100%; height: 96px; object-fit: cover; border-radius: .5rem; border: 1px solid var(--outline); }
+.idea-shot-prev button { position: absolute; top: .25rem; left: .25rem; padding: .1rem .4rem; background: var(--surface); }
+.idea-shot-btn.disabled { opacity: .45; pointer-events: none; }
+.o-shot img + img, .im-shot img + img { margin-top: .4rem; }
 .o-pill.bug { background: rgba(239, 68, 68, .14); color: #ef4444; border-color: rgba(239, 68, 68, .4); }
 .o-shot { margin: .3rem 0 .5rem; }
 .o-shot img { display: block; max-width: min(100%, 320px); max-height: 220px; border-radius: .5rem; border: 1px solid var(--outline); cursor: zoom-in; }
