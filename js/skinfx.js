@@ -1796,7 +1796,7 @@
         // Dans la carte : nuages qui passent d'une couleur à l'autre, étoiles qui scintillent.
         ci.globalCompositeOperation = 'lighter';
         for (const n of clouds) {
-          const f = .5 + .5 * Math.sin(t * .23 + n.ph), x = w * (n.x + .1 * Math.sin(t * .17 + n.ph)), y = h * (n.y + .2 * Math.cos(t * .13 + n.ph)), a = .2 * nebula * (1 - .8 * dim);
+          const f = .5 + .5 * Math.sin(t * .23 + n.ph), x = w * (n.x + .1 * Math.sin(t * .17 + n.ph)), y = h * (n.y + .2 * Math.cos(t * .13 + n.ph)), a = .12 * nebula * (1 - .8 * dim); // .12 : la carte reste du verre noir (refonte du 2026-10-24)
           dot(ci, n.c0, x, y, h * 1.15, a * (1 - f));
           dot(ci, n.c1, x, y, h * 1.15, a * f);
         }
@@ -1817,7 +1817,9 @@
         co.globalCompositeOperation = add;
         co.lineCap = 'round';
         behind(env, () => {
-          stroke(u, TAU, (dark ? .09 : .12) * (1 - .7 * dim) * (1 - fig), 1, 0, t * .3); // filigrane
+          // filigrane : assez présent pendant le tirage pour que le ∞ se lise autour de la carte (comme le disque de
+          // Singularity), plus fort quand la tension monte (refonte du 2026-10-24, idée de kaz)
+          stroke(u, TAU, .2 * (.7 + .3 * Math.min(1, heat)) * (1 - .7 * dim) * (1 - fig), 1.3, 0, t * .3);
           if (fig > 0) stroke(u, TAU, Math.min(1, fig * 1.6) * (dark ? .85 : .75), 2.2, 0, t * 1.2); // le ∞ tracé, qui s'éteint
           if (sweeping) stroke(u, Math.min(TAU, swept), 1, 2.6, .25, t * 1.2);
           else stroke(u, .8 + .7 * Math.min(1, heat), (.55 + .45 * Math.min(1, heat)) * (1 - .8 * dim), 1.6 + 1.2 * Math.min(1, heat), 1.6, t * .8);
