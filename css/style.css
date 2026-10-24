@@ -4180,6 +4180,75 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .side-meteor { --side-border: #f97316; --side-glow: 0 0 16px rgba(249, 115, 22, .35); --side-ink: #ea580c;
   --side-bg: linear-gradient(180deg, rgba(15, 27, 61, .55), rgba(249, 115, 22, .1));
   --deco-a: '☄️'; --deco-b: '🌃'; }
+/* ------------------------------------------------------------------ Dynamite (idée de casmictechthing et ichi,
+   2026-10-24) : une caisse de chantier en bois, une bande « danger » en bas ; chaque chiffre est un bâton de dynamite
+   rouge (un cylindre ombré), une étiquette crème où le chiffre est au pochoir, une mèche sur le dessus. Pendant le
+   tirage la mèche crépite et le bâton tremble ; il se pose : il gonfle (élan), flash blanc (le BOUM, dessiné par
+   js/skinfx.js : boule de feu, fumée, éclats ; champignon dès Mythic), puis se pose net, mèche brûlée. Dynamite de
+   dessin animé : rien d'un jeu connu (pas de bloc « TNT »). */
+.num-card.skin-dynamite {
+  background:
+    /* bande « danger » jaune et noire en bas */
+    repeating-linear-gradient(-45deg, #facc15 0 .22em, #1c1917 .22em .44em) 0 100% / 100% .2em no-repeat,
+    /* planches de la caisse : joints sombres, veines claires */
+    repeating-linear-gradient(180deg, transparent 0 .62em, rgba(41, 22, 8, .85) .62em .66em),
+    repeating-linear-gradient(90deg, rgba(255, 237, 213, .05) 0 2px, transparent 2px .5em),
+    radial-gradient(ellipse 70% 60% at 50% 45%, rgba(251, 146, 60, .14), transparent 75%),
+    linear-gradient(180deg, #8a5a2b, #6b4220 55%, #4a2c14);
+  border: 2px solid #3f2410; border-radius: .55rem;
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, .14), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 14px rgba(249, 115, 22, .2), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .55em .45em .5em;
+}
+.skin-dynamite .slot {
+  position: relative; box-sizing: border-box; font-size: .58em; font-weight: 900; line-height: 1;
+  width: 1em; height: 1.55em; margin: 0 -.01em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: .16em; color: #1c1917; text-shadow: 0 1px 0 rgba(255, 251, 235, .5);
+  background:
+    /* la sangle qui tient le fagot : une bande sombre continue d'un bâton à l'autre, en haut et en bas */
+    linear-gradient(180deg, transparent 9%, #292524 9%, #44403c 15%, transparent 15%, transparent 85%, #292524 85%, #44403c 91%, transparent 91%) 0 0 / 100% 100% no-repeat,
+    /* l'étiquette crème au milieu, où le chiffre est au pochoir */
+    linear-gradient(180deg, transparent 22%, #fef3c7 22%, #fde68a 78%, transparent 78%) 0 0 / 100% 100% no-repeat,
+    /* le cylindre rouge : ombre, reflet, ombre */
+    linear-gradient(90deg, #450a0a, #b91c1c 18%, #f87171 34%, #dc2626 52%, #991b1b 80%, #450a0a);
+  box-shadow: inset 0 .06em 0 rgba(255, 255, 255, .25), inset 0 -.08em .06em rgba(0, 0, 0, .35), 0 .06em .1em rgba(0, 0, 0, .5);
+  transform-origin: 50% 100%;
+}
+/* la mèche : un petit cordon qui sort du haut du bâton */
+.skin-dynamite .slot::before { content: ''; position: absolute; left: 50%; top: -.44em; width: .12em; height: .48em; margin-left: -.06em; border-radius: .06em;
+  background: repeating-linear-gradient(170deg, #d6b98c 0 .06em, #8a6a3e .06em .12em); box-shadow: 0 0 0 .02em rgba(28, 25, 23, .6); transform: rotate(14deg); transform-origin: 50% 100%; }
+/* l'étincelle au bout de la mèche, seulement pendant le tirage */
+.skin-dynamite .slot::after { content: ''; position: absolute; left: 50%; top: -.68em; width: .42em; height: .42em; margin-left: -.1em; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, #fff 0 18%, #fde047 30%, #fb923c 55%, transparent 72%); pointer-events: none; }
+.skin-dynamite .slot.ghost { opacity: .18; }
+.skin-dynamite .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-dynamite .slot.collapsed::before, .skin-dynamite .slot.collapsed::after { display: none; }
+/* Pendant le tirage : la mèche crépite, le bâton tremble, le chiffre n'est qu'une ombre sur l'étiquette. */
+.skin-dynamite .slot.spinning { color: rgba(28, 25, 23, .28); text-shadow: none; animation: dyn-tremble .1s steps(2) infinite; }
+.skin-dynamite .slot.spinning::after { opacity: 1; animation: dyn-spark .12s steps(2) infinite; }
+@keyframes dyn-tremble { 0% { transform: translate(-.02em, 0) rotate(-1.2deg); } 100% { transform: translate(.02em, -.01em) rotate(1.2deg); } }
+@keyframes dyn-spark { 0% { transform: scale(.75) rotate(0); filter: brightness(1); } 100% { transform: scale(1.25) rotate(45deg); filter: brightness(1.5); } }
+/* Il se pose : il gonfle (élan), flash blanc (le BOUM), se tasse puis se remet ; la mèche a brûlé. */
+.skin-dynamite .slot.revealed::before { height: .1em; top: -.06em; }
+.skin-dynamite .slot.revealed { animation: dyn-boom .55s backwards; }
+@keyframes dyn-boom {
+  0% { transform: scale(1.06, 1.12); filter: brightness(1.3); animation-timing-function: ease-in; }
+  22% { transform: scale(1.12, 1.18); filter: brightness(3.2) saturate(.3); animation-timing-function: ease-out; }
+  45% { transform: scale(1.1, .86); filter: brightness(1.4); }
+  70% { transform: scale(.97, 1.04); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-dynamite .slot, .skin-dynamite .slot::after { animation: none; } }
+/* Cadre de duel : une carrière poussiéreuse, la bande « danger » en bas ; 🧨 tremble, 💥 pulse. */
+.side-dynamite { --side-border: #f59e0b; --side-glow: 0 0 16px rgba(249, 115, 22, .32); --side-ink: #c2410c;
+  --side-bg: repeating-linear-gradient(-45deg, rgba(250, 204, 21, .45) 0 9px, rgba(28, 25, 23, .45) 9px 18px) 0 100% / 100% 8px no-repeat, radial-gradient(ellipse 80% 55% at 50% 100%, rgba(168, 120, 72, .28), transparent 70%), radial-gradient(ellipse 70% 50% at 50% 30%, rgba(251, 146, 60, .12), transparent 70%);
+  --deco-a: '🧨'; --deco-b: '💥'; }
+.side-dynamite::before { transform-origin: 50% 90%; animation: dyn-jitter 1.6s steps(2) infinite; }
+.side-dynamite::after { animation: dyn-pulse 1.4s ease-in-out infinite; }
+@keyframes dyn-jitter { 0%, 70%, 100% { transform: none; } 75% { transform: rotate(-8deg); } 85% { transform: rotate(7deg); } }
+@keyframes dyn-pulse { 0%, 100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.18); opacity: 1; } }
+.room-stage.many .side-dynamite::before, .room-stage.many .side-dynamite::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-dynamite::before, .side-dynamite::after { animation: none; } }
 
 /* Poubelle par période (2026-10-18). */
 .lb-spans { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; margin: .6rem 0 .4rem; }

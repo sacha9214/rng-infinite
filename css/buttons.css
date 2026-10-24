@@ -812,6 +812,16 @@
   --gs: 0 .3em 0 #451a03, 0 .5em 1em rgba(180, 83, 9, .35); --gs-h: 0 .34em 0 #451a03, 0 .7em 1.3em rgba(245, 158, 11, .45); --gs-a: 0 .06em 0 #451a03; }
 .btn-roll.gen-meteor { border: 2px solid #9a3412; border-radius: .6em; color: #fff7ed; background: radial-gradient(ellipse 80% 70% at 50% 120%, rgba(249, 115, 22, .55), transparent 70%), linear-gradient(180deg, #0f1b3d, #050816); text-shadow: 0 0 .4em #fb923c;
   --gs: 0 .3em 0 #431407, 0 .5em 1em rgba(249, 115, 22, .35); --gs-h: 0 .34em 0 #431407, 0 .7em 1.3em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #431407; }
+/* Dynamite (idée de casmictechthing et ichi, 2026-10-24) : un bâton rouge en cylindre, une étiquette crème au milieu,
+   la bande « danger » en bas ; au survol, une étincelle court au bord comme une mèche. */
+.btn-roll.gen-dynamite { border: 2px solid #450a0a; border-radius: .5em; color: #1c1917;
+  background:
+    repeating-linear-gradient(-45deg, #facc15 0 .3em, #1c1917 .3em .6em) 0 100% / 100% .28em no-repeat,
+    linear-gradient(180deg, transparent 24%, #fef3c7 24%, #fde68a 70%, transparent 70%),
+    linear-gradient(180deg, #f87171, #dc2626 40%, #991b1b);
+  text-shadow: 0 1px 0 rgba(255, 251, 235, .6);
+  --gs: 0 .3em 0 #450a0a, 0 .5em 1em rgba(220, 38, 38, .32); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.4em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #450a0a; }
+.btn-roll.gen-dynamite:hover { filter: brightness(1.08); }
 /* Cursed Energy (idée d'Edward, 2026-10-20) : nuit violette, énergie qui remonte du bas, liseré d'aura. */
 .btn-roll.gen-cursed { border: 2px solid #6d28d9; border-radius: .6em; color: #ede9fe; background: radial-gradient(ellipse 70% 80% at 50% 130%, rgba(129, 140, 248, .6), transparent 70%), radial-gradient(ellipse 40% 60% at 15% 0%, rgba(168, 85, 247, .35), transparent 70%), linear-gradient(180deg, #1e1048, #0b0820); text-shadow: 0 0 .35em #a78bfa, 0 1px 0 #0a0518;
   --gs: 0 .3em 0 #1e1048, 0 .5em 1em rgba(124, 58, 237, .4); --gs-h: 0 .34em 0 #1e1048, 0 .7em 1.4em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #1e1048; }
