@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-23-hist-reps', date: 'Oct 23, 2026', en: ['🔁 History: new sort "Most rolled" to see the numbers you got the most times first (idea by CococoC)'], fr: ['🔁 Historique : nouveau tri « Les plus tirés » pour voir d\'abord les nombres que tu as eus le plus de fois (idée de CococoC)'] },
     { id: '2026-10-24-title2026', date: 'Oct 24, 2026', en: ['The 📅 2026 title now goes to everyone who plays in 2026 (equip it from your profile). From January 1st, 2027, it can no longer be earned. The Current Year badge for numbers containing 2026 stays'], fr: ['Le titre 📅 2026 va maintenant à tous ceux qui jouent en 2026 (équipe-le depuis ton profil). À partir du 1er janvier 2027, il ne se gagne plus. Le badge Current Year pour les nombres contenant 2026 reste'] },
     { id: '2026-10-24-badges-250-99-727', date: 'Oct 24, 2026', en: ['🔢 New badges: ⏳ Quarter Millennium (ends in 250, idea by WpBejs), 9️⃣ Ninety-Nine and 🎯 Exact 99 (idea by kaz), 👀 WYSI and 🫣 Exact WYSI (727, idea by Phong254) and 🔁 Cyclic Number (exactly 142857, idea by JBearr12)'], fr: ['🔢 Nouveaux badges : ⏳ Quarter Millennium (finit par 250, idée de WpBejs), 9️⃣ Ninety-Nine et 🎯 Exact 99 (idée de kaz), 👀 WYSI et 🫣 Exact WYSI (727, idée de Phong254) et 🔁 Cyclic Number (exactement 142857, idée de JBearr12)'] },
     { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
@@ -2428,7 +2429,7 @@
     }
     Collection.ensure();
     const tierOptions = [['all', 'All rarities'], ['rare+', 'Rare or better'], ...TIERS_DESC.map(t => [t, cap(t)])];
-    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP'], ['numUp', 'Smallest number'], ['numDown', 'Biggest number']]; // tri par valeur : idée de Lolha39 (2026-10-18)
+    const sortOptions = [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Highest XP'], ['low', 'Lowest XP'], ['numUp', 'Smallest number'], ['numDown', 'Biggest number'], ['reps', 'Most rolled']]; // tri par valeur : idée de Lolha39 (2026-10-18) ; « Most rolled » : idée de CococoC (2026-10-23)
     const options = (list, value) => list.map(([v, l]) => `<option value="${v}"${v === value ? ' selected' : ''}>${l}</option>`).join('');
     app.innerHTML = `
       <div class="page">
@@ -2499,6 +2500,8 @@
       else if (/^\d+$/.test(digits)) items = items.filter(x => String(x.n).includes(digits));
       else items = items.filter(x => analysis(x.n).earnedIds.some(id => LABELS.get(id).includes(q)));
     }
+    // Nombre de fois où le nombre est sorti (tout l'historique, comme le « ×N » des lignes) ; les égalités restent groupées par nombre.
+    const reps = x => (Collection.seen.get(x.n) || []).length;
     const sorters = {
       new: (a, b) => b.i - a.i,
       old: (a, b) => a.i - b.i,
@@ -2506,6 +2509,7 @@
       numDown: (a, b) => b.n - a.n || b.i - a.i,
       high: (a, b) => b.s - a.s || b.i - a.i,
       low: (a, b) => a.s - b.s || b.i - a.i,
+      reps: (a, b) => reps(b) - reps(a) || a.n - b.n || b.i - a.i,
     };
     return items.sort(sorters[histState.sort]);
   }

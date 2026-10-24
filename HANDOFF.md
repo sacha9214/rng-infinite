@@ -82,7 +82,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - Aether: a glowing ball that always follows the trail, faster on better rolls (Angelicide9 [e4fb4bb75a32]).
 
 **Features**:
-- Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).
+- ~~Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).~~ Done by Drastix on `drastix/history-sort-count` (PR, not merged yet): sort "Most rolled" in History.
 - XP checker: compare two numbers you have not rolled (CrazyMiner22 [0cdfcaf764db]); the Compare panel already exists.
 - Session roll streak ("rolls this sitting") on the home screen or Stats (kingston [5834fea93493]).
 - Attach several images to an idea or bug report (Phong254 [6a25a130793b], R77 [272d6affd0bf]); reuse `shrinkImage` and the `sugg:<id>:shot` storage.
@@ -247,3 +247,4 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 
 <!-- Add one line per session: date, who, branch, what changed, what is left. -->
 - 2026-10-23 · Sacha · main · repo prepared for two people (CLAUDE.md, HANDOFF.md, skills, audits in tools/audit).
+- 2026-10-23 · Drastix · drastix/history-sort-count · History: new sort "Most rolled" (count desc, same numbers grouped, newest first inside a group), FR string, `UPDATES` entry crediting CococoC (date to adjust at merge). Left: Sacha merges, deploys and replies to CococoC. Notes for Windows: set `git config core.autocrlf false` in the clone (see lessons.md: CRLF changes every `stamp.mjs` hash); Playwright Firefox does not start on Drastix's PC (Windows Insider 26300, "mozglue" side-by-side error) while Chromium works, so the audits that hardcode `firefox.launch` cannot run there yet.
