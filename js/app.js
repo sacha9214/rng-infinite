@@ -5381,7 +5381,7 @@
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
           <div class="im-shot" hidden></div>
           ${imReviewsHTML(x.reviews)}
-          ${owner ? `<div class="o-moves"><button class="btn ghost" data-im-mark="planned">📌 Plan</button><button class="btn ghost" data-im-mark="declined">🚫 Decline</button><a class="btn ghost" href="#/owner/inbox" data-im-open>Open in Inbox</a></div>` : `
+          ${owner ? (data.readOnly ? '' : `<div class="o-moves"><button class="btn ghost" data-im-mark="planned">📌 Plan</button><button class="btn ghost" data-im-mark="declined">🚫 Decline</button><a class="btn ghost" href="#/owner/inbox" data-im-open>Open in Inbox</a></div>`) : `
           <form class="im-form">
             <div class="seg im-verdict">${Object.entries(IM_V).map(([k, [e, l]]) => `<button type="button" data-v="${k}" class="${me && me.verdict === k ? 'on' : ''}">${e} ${l}</button>`).join('')}</div>
             <textarea class="input" maxlength="${data.max}" rows="2" placeholder="Why? (at least ${data.min} characters)">${me ? esc(me.reason) : ''}</textarea>
@@ -5390,7 +5390,7 @@
         </div>`;
       };
       const focused = document.activeElement && document.activeElement.id === 'im-q';
-      box.innerHTML = `${owner ? `<div class="panel im-admin"><div class="panel-head"><h3 class="panel-title">Idea Managers</h3><span class="panel-note">they only see ideas to sort, nothing else</span></div>
+      box.innerHTML = `${owner && !data.readOnly ? `<div class="panel im-admin"><div class="panel-head"><h3 class="panel-title">Idea Managers</h3><span class="panel-note">they only see ideas to sort, nothing else</span></div>
           <div class="im-managers">${(data.managers || []).map(n => `<span class="chip">${esc(n)} <button class="im-x" data-im-remove="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
           <form class="im-add"><input class="input" id="im-add" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form></div>` : ''}
         <div class="o-inbox-tabs">${TABS.map(([k, l]) => `<button data-im-tab="${k}" class="${k === tab ? 'on' : ''}">${l} <b>${count(k)}</b></button>`).join('')}</div>

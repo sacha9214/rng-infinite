@@ -74,11 +74,11 @@ async function reviewsOf(ids, me) {
   return out;
 }
 // Ce que voit un Idea Manager : les idées pas encore tranchées (nouvelles ou lues), sans les bugs ni les fils privés.
-async function imState(me, isOwner) {
+async function imState(me, isOwner, readOnly = false) {
   const [ids] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1]]);
   const list = (await listSuggestions(ids || [])).filter(x => x.kind === 'idea' && (x.status === 'new' || x.status === 'seen'));
   const reviews = await reviewsOf(list.map(x => x.id), me);
-  const out = { ideas: list.map(x => ({ id: x.id, name: x.name, text: x.text, t: x.t, lang: x.lang, shot: x.shot, reviews: reviews[x.id] || [] })), min: IM_REASON_MIN, max: IM_REASON_MAX, owner: isOwner };
+  const out = { ideas: list.map(x => ({ id: x.id, name: x.name, text: x.text, t: x.t, lang: x.lang, shot: x.shot, reviews: reviews[x.id] || [] })), min: IM_REASON_MIN, max: IM_REASON_MAX, owner: isOwner, readOnly };
   if (isOwner) { const [m] = await redis([['SMEMBERS', 'im:all']]); const [n] = (m || []).length ? await redis([['HMGET', 'names', ...m]]) : [[]]; out.managers = (n || []).filter(Boolean).sort(); }
   return out;
 }
@@ -604,7 +604,10 @@ module.exports = async (req, res) => {
     // Ils voient les idées encore à trier et donnent un avis (yes / no / discuss / exists) avec une justification
     // obligatoire ; le créateur voit ces avis dans sa boîte et décide seul. Ni réponse au joueur, ni statut, ni bugs.
     if (body.action === 'imInbox' || body.action === 'imReview') {
-      if (!isOwner && !isIM) return send(res, 403, { error: 'Idea Managers only' });
+      // Lecture : le créateur, les managers, et les invités en lecture seule de la page Owner (vue du créateur, sans
+      // pouvoir rien changer : demandé par Sacha pour Drastix235, 2026-10-24). Donner un avis : managers et créateur.
+      if (!isOwner && !isIM && !isViewer) return send(res, 403, { error: 'Idea Managers only' });
+      if (body.action === 'imReview' && !isOwner && !isIM) return send(res, 403, { error: 'Idea Managers only' });
       if (body.action === 'imReview') {
         const id = String(body.id || ''), verdict = String(body.verdict || '');
         if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
@@ -616,7 +619,7 @@ module.exports = async (req, res) => {
         if (kind === 'bug') return send(res, 422, { error: 'Bug reports are not reviewed here' });
         await redis([['HSET', imKey(id), playerId, JSON.stringify({ v: verdict, r: reason, t: Date.now() })], ['EXPIRE', imKey(id), 180 * 86400]]);
       }
-      return send(res, 200, await imState(playerId, isOwner));
+      return send(res, 200, await imState(playerId, isOwner || (isViewer && !isIM), !isOwner));
     }
 
     if (body.action === 'suggest') {

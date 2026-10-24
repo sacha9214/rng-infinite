@@ -3503,6 +3503,13 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Le créateur voit l'avis dans sa boîte ; le statut ne bouge pas.
   r = await post(boss, 'inbox'); const it = r.body.suggestions.find(x => x.id === 'aaaaaaaaaaa1');
   assert.deepEqual([it.status, it.reviews[0].by, it.reviews[0].reason], ['new', 'Mango', 'Food skins sell well and nobody has a pizza yet']);
+  // Invité en lecture seule de la page Owner : voit les avis comme le créateur, sans rien pouvoir faire.
+  { const guest = mk('b4', 'Guesty', ['viewerGrant', '1']);
+    r = await post(guest, 'imInbox'); assert.equal(r.status, 200); assert.equal(r.body.readOnly, true);
+    assert.equal(r.body.ideas.find(x => x.id === 'aaaaaaaaaaa1').reviews[0].by, 'Mango', 'voit les avis');
+    assert.equal((await post(guest, 'imReview', { id: 'aaaaaaaaaaa1', verdict: 'no', reason: 'A real reason with enough words here' })).status, 403, 'ne donne pas d\'avis');
+    assert.equal((await post(guest, 'imSet', { name: 'Joey' })).status, 403, 'ne donne pas le rôle');
+    assert.equal((await post(guest, 'mark', { id: 'aaaaaaaaaaa1', status: 'planned' })).status, 403, 'ne change pas le statut'); }
   // Rôle retiré : plus d'accès.
   await post(boss, 'imSet', { name: 'Mango', on: false }); assert.equal((await post(mgr, 'imInbox')).status, 403);
 }
