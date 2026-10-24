@@ -2318,6 +2318,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(r.body).includes(alice.playerId));
   await asOwner('delete', { id: sid }); assert.equal(run([['LLEN', `sugg:${sid}:msgs`]])[0].result, 0);
   await asOwner('delete', { id: old });
+  // Jusqu'à 3 images, pour une idée comme pour un bug (idée de Phong254, 2026-10-24) : vrais JPEG seulement, 400 000
+  // caractères au total ; l'ancien champ « shot » d'un bug marche encore ; chaque image se lit par son numéro ; tout part
+  // avec la suggestion.
+  { run([['DEL', `sugg:rate:${day}:${alice.playerId}`]]);
+    const jpg = n => 'data:image/jpeg;base64,' + Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(n, 7)]).toString('base64');
+    const idOf = (res, text) => res.body.mine.find(x => x.text === text).id;
+    r = await post(alice, 'suggest', { text: 'Idea with pictures', shots: [jpg(300), jpg(400), jpg(500)] }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    const pic = idOf(r, 'Idea with pictures'); assert.deepEqual([r.body.mine.find(x => x.id === pic).shots, r.body.mine.find(x => x.id === pic).shot], [3, true]);
+    for (const i of [1, 2, 3]) { const g = await asOwner('shot', { id: pic, i }); assert.equal(g.body.shot, i === 1 ? jpg(300) : i === 2 ? jpg(400) : jpg(500), `image ${i}`); }
+    assert.equal((await asOwner('shot', { id: pic, i: 9 })).body.shot, jpg(500), 'numéro borné à 3');
+    assert.equal((await post(alice, 'suggest', { text: 'Too many pictures', shots: [jpg(10), jpg(10), jpg(10), jpg(10)] })).status, 422, '4 images');
+    assert.equal((await post(alice, 'suggest', { text: 'Not a jpeg here', shots: [jpg(10), 'data:image/png;base64,AAAA'] })).status, 422, 'pas un JPEG');
+    assert.equal((await post(alice, 'suggest', { text: 'Too big together', shots: [jpg(140000), jpg(140000), jpg(140000)] })).status, 422, 'trop lourd au total');
+    run([['DEL', `sugg:rate:${day}:${alice.playerId}`]]);
+    r = await post(alice, 'suggest', { text: 'Old page bug report', kind: 'bug', shot: jpg(200) }); assert.equal(r.status, 200);
+    const legacy = idOf(r, 'Old page bug report'); assert.equal((await asOwner('shot', { id: legacy })).body.shot, jpg(200), 'ancien champ shot');
+    const inbox = (await asOwner('inbox')).body.suggestions; assert.deepEqual([inbox.find(x => x.id === pic).shots, inbox.find(x => x.id === legacy).shots], [3, 1]);
+    await asOwner('delete', { id: pic }); await asOwner('delete', { id: legacy });
+    assert.equal(run([['EXISTS', `sugg:${pic}:shot`, `sugg:${pic}:shot:2`, `sugg:${pic}:shot:3`]])[0].result, 0, 'images effacées'); }
 }
 
 // ================================================================ 50. Pièces offertes entre amis : plafonds par cadeau et par jour

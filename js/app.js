@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-24-idea-images', date: 'Oct 24, 2026', en: ['📎 Ideas and bug reports: you can now attach up to 3 images, to an idea too (pick them or paste them in the 💡 window) (idea by Phong254)'], fr: ['📎 Idées et bugs : tu peux maintenant joindre jusqu\'à 3 images, à une idée aussi (choisis-les ou colle-les dans la fenêtre 💡) (idée de Phong254)'] },
     { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
     { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
@@ -5253,10 +5254,10 @@
       <p class="idea-warn" id="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
       <p class="idea-note">💛 <span>Thank you so much for all your ideas and reports! I get about a hundred every day and I'm making the game on my own, so answers and new features can take a little longer. Thanks for understanding!</span></p>
       <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your message"></textarea>
-      <div class="idea-shot" id="idea-shot" hidden>
-        <label class="btn ghost idea-shot-btn"><input type="file" accept="image/*" id="idea-file" hidden>📎 Add a screenshot (optional)</label>
-        <span class="panel-note">or paste it here (Ctrl+V / ⌘V)</span>
-        <div class="idea-shot-prev" id="idea-shot-prev" hidden><img alt="Your screenshot" id="idea-shot-img"><button class="btn ghost" id="idea-shot-del" title="Remove the screenshot">✕</button></div>
+      <div class="idea-shot" id="idea-shot">
+        <label class="btn ghost idea-shot-btn" id="idea-shot-add"><input type="file" accept="image/*" id="idea-file" multiple hidden>📎 Add images (optional, up to 3)</label>
+        <span class="panel-note">or paste them here (Ctrl+V / ⌘V)</span>
+        <div class="idea-shots" id="idea-shots" hidden></div>
       </div>
       <div class="idea-foot"><span class="panel-note mono" id="idea-count">0 / 500</span><button class="btn-roll small" id="idea-send">Send</button></div>
       <div id="idea-mine"><div class="empty">Loading…</div></div>`, () => {
@@ -5269,7 +5270,7 @@
           ${state.owner ? `<p style="margin:.2rem 0 .6rem"><a class="btn${Inbox.fresh > 0 ? ' btn-roll small' : ''}" href="#/owner">📥 Inbox & visitors${Inbox.fresh > 0 ? ` (${Inbox.fresh} unread)` : ''}</a></p>` : state.viewer ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/owner">📊 Game dashboard (view only)</a></p>' : ''}${state.ideaManager ? '<p style="margin:.2rem 0 .6rem"><a class="btn" href="#/ideas">🧑‍⚖️ Idea Manager</a></p>' : ''}
           ${state.mine.length ? `<div class="eyebrow" style="margin:.8rem 0 .3rem">Your suggestions</div>${state.mine.map(x => `
             <div class="idea-row" data-id="${x.id}">
-              <div class="idea-head">${x.kind === 'bug' ? `<span class="o-pill bug">🐞 Bug${x.shot ? ' · 📎' : ''}</span>` : ''}<span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
+              <div class="idea-head">${x.kind === 'bug' ? `<span class="o-pill bug">🐞 Bug${x.shots ? ` · 📎${x.shots > 1 ? ` ${x.shots}` : ''}` : ''}</span>` : x.shots ? `<span class="panel-note" title="Images">📎 ${x.shots}</span>` : ''}<span class="idea-status" data-status="${x.status}">${SUGG_STATUS[x.status] || x.status}</span><span class="panel-note">${suggDate(x.t)}</span>${x.ownerAt > seenBefore ? '<span class="idea-new">New reply</span>' : ''}</div>
               <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
               ${threadHTML(x.thread, 'You')}
               ${x.thread.some(m => m.from === 'owner') ? `<form class="idea-answer"><input class="input" maxlength="500" placeholder="Reply to the creator…" aria-label="Reply to the creator"><button class="btn">Reply</button></form>` : ''}
@@ -5290,38 +5291,46 @@
         catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Could not send your reply, try again'); }
       });
       text.addEventListener('input', () => { $('#idea-count').textContent = `${text.value.length} / 500`; });
-      // Idée ou bug : un bug peut avoir une capture d'écran (choisie ou collée), réduite ici en JPEG de moins de ~150 Ko.
-      let kind = 'idea', shot = null;
+      // Idée ou bug : jusqu'à 3 images (choisies ou collées), réduites ici en JPEG de moins de 125 000 caractères chacune
+      // (le serveur en accepte 400 000 au total ; idée de Phong254, 2026-10-24 : avant, une seule et pour un bug).
+      let kind = 'idea', shots = [];
       $('#idea-kind').addEventListener('click', e => {
         const b = e.target.closest('[data-kind]'); if (!b) return;
         kind = b.dataset.kind;
         document.querySelectorAll('#idea-kind [data-kind]').forEach(x => x.classList.toggle('on', x === b));
-        $('#idea-shot').hidden = kind !== 'bug'; $('#idea-warn').hidden = kind === 'bug';
+        $('#idea-warn').hidden = kind === 'bug';
         text.placeholder = window.RNGI18n ? window.RNGI18n.t(kind === 'bug' ? 'What went wrong? What did you do just before?' : 'Your idea…') : text.placeholder;
         text.focus();
       });
       const shrink = shrinkImage;
-      const setShot = async file => {
+      const SHOTS_MAX = 3;
+      const drawShots = () => {
+        const box = $('#idea-shots'); box.hidden = !shots.length;
+        box.innerHTML = shots.map((s, i) => `<div class="idea-shot-prev"><img alt="Your image ${i + 1}" src="${s}"><button class="btn ghost" data-shot-del="${i}" title="Remove this image">✕</button></div>`).join('');
+        const full = shots.length >= SHOTS_MAX; $('#idea-shot-add').classList.toggle('disabled', full); $('#idea-file').disabled = full;
+      };
+      const addShot = async file => {
+        if (shots.length >= SHOTS_MAX) { toast('Up to 3 images'); return; }
         if (!file || !/^image\//.test(file.type)) { toast('Pick an image'); return; }
         if (file.size > 25e6) { toast('This image is too big'); return; }
-        try { shot = await shrink(file); $('#idea-shot-img').src = shot; $('#idea-shot-prev').hidden = false; }
-        catch (err) { shot = null; toast('This screenshot could not be read: try another image'); }
+        try { shots.push(await shrink(file, 125000)); drawShots(); }
+        catch (err) { toast('This screenshot could not be read: try another image'); }
       };
-      $('#idea-file').addEventListener('change', e => { setShot(e.target.files[0]); e.target.value = ''; });
-      $('#idea-shot-del').addEventListener('click', () => { shot = null; $('#idea-shot-prev').hidden = true; $('#idea-shot-img').removeAttribute('src'); });
-      $('#modal-root').addEventListener('paste', e => {
-        if (kind !== 'bug') return;
-        const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(x => x.kind === 'file' && /^image\//.test(x.type));
-        if (item) { e.preventDefault(); setShot(item.getAsFile()); }
+      $('#idea-file').addEventListener('change', async e => { const files = [...e.target.files]; e.target.value = ''; for (const f of files) await addShot(f); });
+      $('#idea-shots').addEventListener('click', e => { const d = e.target.closest('[data-shot-del]'); if (d) { shots.splice(Number(d.dataset.shotDel), 1); drawShots(); } });
+      $('#modal-root').addEventListener('paste', async e => {
+        const items = [...(e.clipboardData ? e.clipboardData.items : [])].filter(x => x.kind === 'file' && /^image\//.test(x.type));
+        if (!items.length) return;
+        e.preventDefault(); for (const it of items) await addShot(it.getAsFile());
       });
       send.addEventListener('click', async () => {
         if (text.value.trim().length < 5) { toast('Write a few words first'); return; }
         send.disabled = true;
         try {
-          const state = await Online.site('suggest', { text: text.value, kind, shot: kind === 'bug' && shot ? shot : undefined, lang: (window.RNGI18n && window.RNGI18n.lang) || 'en' });
+          const state = await Online.site('suggest', { text: text.value, kind, shots: shots.length ? shots : undefined, lang: (window.RNGI18n && window.RNGI18n.lang) || 'en' });
           text.value = '';
           $('#idea-count').textContent = '0 / 500';
-          if (shot) $('#idea-shot-del').click();
+          shots = []; drawShots();
           toast(kind === 'bug' ? 'Thanks! Your bug report was sent' : 'Thanks! Your suggestion was sent', 2600, 'achv');
           draw(state);
         } catch (err) {
@@ -5377,7 +5386,7 @@
       const card = x => {
         const me = mine(x);
         return `<div class="im-card" data-id="${x.id}">
-          <div class="ib-meta"><b data-no-i18n>${esc(x.name)}</b> · ${suggDate(x.t)}${x.shot ? ' · <button class="btn ghost small" data-im-shot>📎 Screenshot</button>' : ''}</div>
+          <div class="ib-meta"><b data-no-i18n>${esc(x.name)}</b> · ${suggDate(x.t)}${x.shots ? ` · <button class="btn ghost small" data-im-shot title="Images">📎 ${x.shots}</button>` : ''}</div>
           <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
           <div class="im-shot" hidden></div>
           ${imReviewsHTML(x.reviews)}
@@ -5413,7 +5422,8 @@
       const card = e.target.closest('.im-card'); if (!card) return;
       if (e.target.closest('[data-im-shot]')) {
         const holder = card.querySelector('.im-shot');
-        Online.site('shot', { id: card.dataset.id }).then(r => { holder.innerHTML = `<img alt="Screenshot" src="${r.shot}">`; holder.hidden = false; }).catch(err => toast(err.message || 'Unavailable right now'));
+        const n = Number((data.ideas.find(x => x.id === card.dataset.id) || {}).shots) || 1;
+        Promise.all(Array.from({ length: n }, (_, k) => Online.site('shot', { id: card.dataset.id, i: k + 1 }))).then(rs => { holder.innerHTML = rs.map(r => `<img alt="Image" src="${r.shot}">`).join(''); holder.hidden = false; }).catch(err => toast(err.message || 'Unavailable right now'));
         return;
       }
       const mk = e.target.closest('[data-im-mark]');
@@ -5883,7 +5893,7 @@
           <div class="ib-detail">
             <div class="ib-meta"><a class="player-link" href="${profileHref(x.name)}">${esc(x.name)}</a> · ${suggDate(x.t)} · ${x.lang || '?'} · <span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span><button class="btn ghost o-del" data-o="delete" title="Delete">🗑</button></div>
             <p class="idea-body" data-no-i18n>${esc(x.text)}</p>
-            ${x.shot ? `<div class="o-shot" data-shot="${x.id}"><button class="btn ghost" data-o="shot">📎 View the screenshot</button></div>` : ''}
+            ${x.shots ? `<div class="o-shot" data-shot="${x.id}" data-n="${x.shots}"><button class="btn ghost" data-o="shot">📎 View the ${x.shots > 1 ? `${x.shots} images` : 'screenshot'}</button></div>` : ''}
             ${imReviewsHTML(x.reviews)}
             ${threadHTML(x.thread, 'Player')}
             <div class="o-reply"><input class="input" maxlength="300" placeholder="${x.thread.length ? 'Reply in this conversation…' : 'Reply to the player (they can answer back)'}"><button class="btn" data-o="reply">Send reply</button></div>
@@ -5902,7 +5912,7 @@
             <span class="ib-text" data-no-i18n>${esc(x.text)}</span>
             ${x.reviews && x.reviews.length ? `<span class="ib-n" title="Idea Manager reviews">${x.reviews.map(r => IM_V[r.verdict][0]).join('')}</span>` : ''}
             ${replied(x) ? '<span class="o-pill reply">💬 replied</span>' : x.thread.length ? `<span class="ib-n" title="Messages">💬 ${x.thread.length}</span>` : ''}
-            ${x.shot ? '<span class="ib-n" title="Screenshot">📎</span>' : ''}
+            ${x.shots ? `<span class="ib-n" title="Images">📎${x.shots > 1 ? ` ${x.shots}` : ''}</span>` : ''}
             ${tab === 'all' ? `<span class="o-pill st-${x.status}">${SUGG_STATUS[x.status]}</span>` : ''}
             <span class="ib-date">${suggDate(x.t)}</span>
           </button>
@@ -5958,7 +5968,11 @@
       // Capture d'écran d'un bug : chargée seulement quand on la demande (elle pèse jusqu'à ~150 Ko).
       if (btn.dataset.o === 'shot') {
         btn.disabled = true;
-        Online.site('shot', { id: row.dataset.id }).then(r => { const box = btn.parentElement; box.innerHTML = '<img alt="Screenshot of the bug" title="Click to enlarge">'; const img = box.querySelector('img'); img.src = r.shot; img.addEventListener('click', () => box.classList.toggle('big')); })
+        const box = btn.parentElement, n = Number(box.dataset.n) || 1;
+        Promise.all(Array.from({ length: n }, (_, k) => Online.site('shot', { id: row.dataset.id, i: k + 1 }))).then(rs => {
+          box.innerHTML = rs.map(() => '<img alt="Image sent with the message" title="Click to enlarge">').join('');
+          box.querySelectorAll('img').forEach((img, k) => { img.src = rs[k].shot; img.addEventListener('click', () => box.classList.toggle('big')); });
+        })
           .catch(err => { btn.disabled = false; toast(err.status === 404 ? err.message : 'Unavailable right now, try again'); });
         return;
       }
@@ -6133,7 +6147,7 @@
     watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
-  const shrinkImage = file => new Promise((done, fail) => {
+  const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
@@ -6143,7 +6157,7 @@
         c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
         const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
         out = c.toDataURL('image/jpeg', q);
-        if (out.length <= 190000) return done(out);
+        if (out.length <= max) return done(out);
         if (q > .5) q -= .12; else side = Math.round(side * .8);
       }
       fail(new Error('too big'));

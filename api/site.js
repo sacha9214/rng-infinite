@@ -47,6 +47,12 @@ const threadKey = id => `sugg:${id}:msgs`;
 // part dans sugg:<id>:shot (90 jours) et lue seulement par le créateur et son invité. On n'accepte qu'un vrai JPEG.
 const shotKey = id => `sugg:${id}:shot`, SHOT_MAX = 200000, SHOT_TTL = 90 * 86400;
 const cleanShot = raw => cleanImage(raw, SHOT_MAX); // api/_chat.js
+// Jusqu'à 3 images, pour une idée comme pour un bug (idée de Phong254, 2026-10-24). La 1re garde sa clé d'avant, les
+// suivantes sont sugg:<id>:shot:2 et :3 ; le champ « shots » de la suggestion en donne le nombre. Redis vit en mémoire
+// sur le VPS : 400 000 caractères au plus pour toutes les images d'une suggestion (la page les réduit d'autant).
+const SHOTS_MAX = 3, SHOTS_TOTAL = 400000;
+const nthShotKey = (id, i) => (i > 1 ? `${shotKey(id)}:${i}` : shotKey(id));
+const shotsOf = x => Number(x.shots) || (x.shot === '1' ? 1 : 0);
 
 // Avis des Idea Managers : hash sugg:<id>:im, un champ par manager → { v: verdict, r: justification, t }.
 const imKey = id => `sugg:${id}:im`, IM_VERDICTS = ['yes', 'no', 'discuss', 'exists'], IM_REASON_MIN = 20, IM_REASON_MAX = 300;
@@ -78,7 +84,7 @@ async function imState(me, isOwner, readOnly = false) {
   const [ids] = await redis([['ZREVRANGE', 'sugg:all', 0, INBOX_MAX - 1]]);
   const list = (await listSuggestions(ids || [])).filter(x => x.kind === 'idea' && (x.status === 'new' || x.status === 'seen'));
   const reviews = await reviewsOf(list.map(x => x.id), me);
-  const out = { ideas: list.map(x => ({ id: x.id, name: x.name, text: x.text, t: x.t, lang: x.lang, shot: x.shot, reviews: reviews[x.id] || [] })), min: IM_REASON_MIN, max: IM_REASON_MAX, owner: isOwner, readOnly };
+  const out = { ideas: list.map(x => ({ id: x.id, name: x.name, text: x.text, t: x.t, lang: x.lang, shot: x.shot, shots: x.shots, reviews: reviews[x.id] || [] })), min: IM_REASON_MIN, max: IM_REASON_MAX, owner: isOwner, readOnly };
   if (isOwner) { const [m] = await redis([['SMEMBERS', 'im:all']]); const [n] = (m || []).length ? await redis([['HMGET', 'names', ...m]]) : [[]]; out.managers = (n || []).filter(Boolean).sort(); }
   return out;
 }
@@ -92,7 +98,7 @@ async function listSuggestions(ids) {
       let thread = x.msgs.map(m => { try { const o = JSON.parse(m); return { from: o.f === 'o' ? 'owner' : 'player', text: String(o.x || ''), t: Number(o.t) || 0 }; } catch (e) { return null; } }).filter(Boolean);
       if (!thread.length && x.reply) thread = [{ from: 'owner', text: x.reply, t: Number(x.replyAt) || 0 }];
       const lastOwner = thread.filter(m => m.from === 'owner').pop();
-      return { id: x.id, kind: x.kind === 'bug' ? 'bug' : 'idea', shot: x.shot === '1', t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: lastOwner ? lastOwner.text : '', lang: x.lang || '', thread, ownerAt: Number(x.ownerAt) || 0 };
+      return { id: x.id, kind: x.kind === 'bug' ? 'bug' : 'idea', shot: shotsOf(x) > 0, shots: shotsOf(x), t: Number(x.t), name: x.name || 'Player', text: x.text, status: STATUSES.includes(x.status) ? x.status : 'new', reply: lastOwner ? lastOwner.text : '', lang: x.lang || '', thread, ownerAt: Number(x.ownerAt) || 0 };
     });
 }
 // Ajoute un message au fil. Une ancienne réponse unique y est d'abord recopiée, pour ne pas la perdre.
@@ -630,12 +636,17 @@ module.exports = async (req, res) => {
       const day = dayKey(Date.now());
       const [count] = await redis([['INCR', `sugg:rate:${day}:${playerId}`], ['EXPIRE', `sugg:rate:${day}:${playerId}`, 2 * 86400]]);
       if (Number(count) > SUGG_PER_DAY) return send(res, 429, { error: `You can send ${SUGG_PER_DAY} suggestions a day: come back tomorrow` });
-      const bug = body.kind === 'bug', shot = bug && body.shot ? cleanShot(body.shot) : null;
-      if (bug && body.shot && !shot) return send(res, 422, { error: 'This screenshot could not be read: try another image' });
+      const bug = body.kind === 'bug';
+      // « shots » : la liste d'images ; « shot » : l'ancienne image unique d'un bug (pages pas encore rechargées).
+      const raw = Array.isArray(body.shots) ? body.shots : bug && body.shot ? [body.shot] : [];
+      if (raw.length > SHOTS_MAX) return send(res, 422, { error: `You can attach up to ${SHOTS_MAX} images` });
+      const shots = raw.map(cleanShot);
+      if (shots.some(s => !s)) return send(res, 422, { error: 'This screenshot could not be read: try another image' });
+      if (shots.reduce((x, s) => x + s.length, 0) > SHOTS_TOTAL) return send(res, 422, { error: 'These images are too big together: remove one' });
       const id = crypto.randomBytes(6).toString('hex'), t = Date.now();
       await redis([
-        ['HSET', suggKey(id), 't', t, 'pid', playerId, 'name', name, 'text', text, 'status', 'new', 'lang', body.lang === 'fr' ? 'fr' : 'en', 'kind', bug ? 'bug' : 'idea', 'shot', shot ? '1' : '0'],
-        ...(shot ? [['SET', shotKey(id), shot, 'EX', SHOT_TTL]] : []),
+        ['HSET', suggKey(id), 't', t, 'pid', playerId, 'name', name, 'text', text, 'status', 'new', 'lang', body.lang === 'fr' ? 'fr' : 'en', 'kind', bug ? 'bug' : 'idea', 'shot', shots.length ? '1' : '0', 'shots', shots.length],
+        ...shots.map((s, i) => ['SET', nthShotKey(id, i + 1), s, 'EX', SHOT_TTL]),
         ['ZADD', 'sugg:all', t, id],
         ['ZADD', byPlayer(playerId), t, id],
       ]);
@@ -677,14 +688,15 @@ module.exports = async (req, res) => {
     if (body.action === 'reports' || body.action === 'reportDone') return send(res, 200, { reports: await Reports.listReports(), readOnly: !isOwner });
     if (body.action === 'shot') {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
-      const [shot] = await redis([['GET', shotKey(id)]]);
+      const i = Math.min(SHOTS_MAX, Math.max(1, Math.floor(Number(body.i)) || 1)); // n° de l'image, 1 par défaut
+      const [shot] = await redis([['GET', nthShotKey(id, i)]]);
       return shot ? send(res, 200, { shot }) : send(res, 404, { error: 'No screenshot (or it expired after 90 days)' });
     }
     if (body.action === 'mark' || body.action === 'delete') {
       if (!/^[0-9a-f]{12}$/.test(id)) return send(res, 400, { error: 'Unknown suggestion' });
       const [pid] = await redis([['HGET', suggKey(id), 'pid']]);
       if (!pid) return send(res, 404, { error: 'Unknown suggestion' });
-      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['DEL', shotKey(id)], ['DEL', imKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
+      if (body.action === 'delete') await redis([['DEL', suggKey(id)], ['DEL', threadKey(id)], ['DEL', ...Array.from({ length: SHOTS_MAX }, (_, k) => nthShotKey(id, k + 1))], ['DEL', imKey(id)], ['ZREM', 'sugg:all', id], ['ZREM', byPlayer(pid), id]]);
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
