@@ -195,7 +195,7 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 8. Emote "money spread" (finnnnn [9044fe933f8b]).
 
 ### B. Skins (follow `.claude/skills/rng-skin-design`, film them, put the preview in the PR)
-9. Rework **Infinity** so it matches Singularity (kaz [f221766d5b41]) — first, it is the rarest skin.
+9. Rework **Infinity** so it matches Singularity (kaz [f221766d5b41]) — first, it is the rarest skin. ✅ Done by Drastix on `drastix/infinity-rework` (PR, not merged yet).
 10. Burger (jaxoncool43 [be2e597cbe99]).
 11. Dynamite / TNT: explosions reveal the digits, mushroom clouds from Mythic (casmictechthing [c1b8d0692aaa], ichi [bac7cdca55c8]).
 12. Waterfall with a nature backdrop (JBearr12 [532fd4c22dda], jjcoolcid1 [9d0b104252d4]).
