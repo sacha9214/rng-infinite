@@ -40,8 +40,8 @@ module.exports = async (req, res) => {
 
     const n = crypto.randomInt(0, 1000001);
     const t = Date.now();
-    const { s, bestToday, dayRank, achievements } = await recordRoll(playerId, n, t);
-    const result = { n, s, t, bestToday, dayRank, achievements };
+    const { s, coins, bestToday, dayRank, achievements } = await recordRoll(playerId, n, t);
+    const result = { n, s, t, coins, bestToday, dayRank, achievements };
     if (linked && !hadBonus) { const bonus = await grantGoogleBonus(playerId); if (bonus) result.googleBonus = bonus; }
     if (nonce) await redis([['SET', nonceKey(playerId, nonce), JSON.stringify(result), 'EX', NONCE_TTL_S]]);
     return send(res, 200, result);

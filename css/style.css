@@ -4149,6 +4149,13 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .dup-tag { margin: .35rem auto 0; width: fit-content; padding: .2rem .7rem; border-radius: 999px; font: 800 .78rem var(--font-sans); letter-spacing: .04em; color: #0e7490; background: color-mix(in srgb, #22d3ee 18%, transparent); border: 1px solid color-mix(in srgb, #22d3ee 45%, transparent); }
 .dup-tag span { font-weight: 600; opacity: .75; margin-left: .25rem; }
 .dark .dup-tag, :root[data-theme="dark"] .dup-tag { color: #67e8f9; }
+/* Pièces gagnées par le tirage, sous l'XP (idée de jaxoncool43, 2026-10-24) */
+.r-coins { margin: .35rem auto 0; width: fit-content; padding: .2rem .7rem; border-radius: 999px; font: 800 .82rem var(--font-mono); font-variant-numeric: tabular-nums; color: #a16207; background: color-mix(in srgb, #facc15 18%, transparent); border: 1px solid color-mix(in srgb, #eab308 45%, transparent); }
+.r-coins span { font: 600 .74rem var(--font-sans); opacity: .8; }
+.r-coins i { font: 700 .7rem var(--font-sans); font-style: normal; color: #ea580c; margin-left: .2rem; }
+.dark .r-coins i, :root[data-theme="dark"] .r-coins i { color: #fb923c; }
+.r-coins[hidden] { display: none; }
+.dark .r-coins, :root[data-theme="dark"] .r-coins { color: #fde047; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dup-tag { color: #67e8f9; } }
 .dup-tag[hidden] { display: none; }
 

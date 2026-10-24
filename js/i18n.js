@@ -58,7 +58,7 @@
     'First roll on this device — welcome!': 'Premier tirage sur cet appareil — bienvenue !', 'Wait for the reveal to finish': 'Attends la fin de la révélation',
     'Leaderboard offline: this roll stays on your device only': 'Classement hors ligne : ce tirage reste sur ton appareil', 'Offline roll: not on the leaderboard': 'Tirage hors ligne : pas au classement',
     'Player id reset, roll again': 'Identifiant réinitialisé, retire', 'Session expired: sign in with Google again to get your player back': 'Session expirée : reconnecte-toi avec Google pour retrouver ton joueur',
-    'Your lifetime XP': 'Ton XP à vie', 'Badge breakdown': 'Détail des badges', 'Total': 'Total', 'Rarity': 'Rareté', 'Family': 'Famille', 'First found': 'Trouvé le', 'Expected': 'Attendu',
+    'Your lifetime XP': 'Ton XP à vie', 'coin': 'pièce', 'coins': 'pièces','Badge breakdown': 'Détail des badges', 'Total': 'Total', 'Rarity': 'Rareté', 'Family': 'Famille', 'First found': 'Trouvé le', 'Expected': 'Attendu',
     'You earned it': 'Tu l\'as obtenu', 'Not yet': 'Pas encore', 'not found': 'pas trouvé', 'Custom badge — not in the original game': 'Badge maison — absent du jeu d\'origine',
     'Could not save — storage is full. Export your history from the player menu.': 'Sauvegarde impossible — stockage plein. Exporte ton historique depuis le menu joueur.',
     // pseudo, réglages, compte

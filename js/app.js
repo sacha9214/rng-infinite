@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-24-result-coins', date: 'Oct 24, 2026', en: ['🪙 The result screen now shows the coins a roll earned, right under its XP (idea by jaxoncool43)'], fr: ['🪙 L\'écran de résultat affiche maintenant les pièces gagnées par le tirage, juste sous son XP (idée de jaxoncool43)'] },
     { id: '2026-10-23-jet-badges', date: 'Oct 23, 2026', en: ['✈️ New Jet badges for airliner numbers: 🛫 Jet 737, ✈️ Jumbo Jet (747), 🛩️ Jet 757, 🛬 Jet 767 and 🌤️ Jet 787 (ideas by TibotyTWO and CococoC). Only the best Jet badge of a roll counts, and 777 stays the Jackpot'], fr: ['✈️ Nouveaux badges Jet pour les numéros d\'avions de ligne : 🛫 Jet 737, ✈️ Jumbo Jet (747), 🛩️ Jet 757, 🛬 Jet 767 et 🌤️ Jet 787 (idées de TibotyTWO et CococoC). Seul le meilleur badge Jet d\'un tirage compte, et 777 reste le Jackpot'] },
     { id: '2026-10-23-hist-reps', date: 'Oct 23, 2026', en: ['🔁 History: new sort "Most rolled" to see the numbers you got the most times first (idea by CococoC)'], fr: ['🔁 Historique : nouveau tri « Les plus tirés » pour voir d\'abord les nombres que tu as eus le plus de fois (idée de CococoC)'] },
     { id: '2026-10-24-title2026', date: 'Oct 24, 2026', en: ['The 📅 2026 title now goes to everyone who plays in 2026 (equip it from your profile). From January 1st, 2027, it can no longer be earned. The Current Year badge for numbers containing 2026 stays'], fr: ['Le titre 📅 2026 va maintenant à tous ceux qui jouent en 2026 (équipe-le depuis ton profil). À partir du 1er janvier 2027, il ne se gagne plus. Le badge Current Year pour les nombres contenant 2026 reste'] },
@@ -2224,6 +2225,13 @@
   // Révélation en étapes chronométrées, comme l'original :
   // chiffres → badges un par un (XP qui monte) → compteur de badges → rareté → TOP x % → XP à vie.
   // Rien ne peut être sauté ; le menu reste verrouillé jusqu'à l'affichage de la rareté.
+  // Pièces gagnées par le tirage (idée de jaxoncool43, 2026-10-24) : le serveur dit combien il a crédité, Weekend Rush
+  // compris ; un serveur d'avant ce champ laisse le tarif de la rareté (Shop.COINS).
+  function coinsTagHTML(online, tier) {
+    const base = Shop.COINS[tier] || 0, got = typeof online.coins === 'number' ? online.coins : base;
+    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > base && base ? ' <i>🔥 ×2 Weekend Rush</i>' : ''}</div>`;
+  }
+
   function playReveal(ctx) {
     currentView = 'result';
     const { n, a } = ctx;
@@ -2248,6 +2256,7 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
+          ${ctx.online && !ctx.replay ? coinsTagHTML(ctx.online, a.tier) : ''}
           ${ctx.previous.length && !ctx.replay ? `<div class="dup-tag" id="r-dup" hidden>🔁 Duplicate! <span>rolled ${plural(ctx.previous.length + 1, 'time')}</span></div>` : ''}
           <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
             <div class="lifetime-row"><span class="v" id="r-life-v">${fmt(ctx.lifetimeBefore)}</span><span class="delta" id="r-life-delta" hidden>${ctx.online ? `+${fmt(a.total)}` : 'offline roll · not counted'}</span></div>
@@ -2362,6 +2371,9 @@
       ep.classList.remove('pending');
       countUp(ep, 0, a.total, 0, v => `${fmt(v)} XP`);
       replay(ep, 'glint');
+      // Pièces gagnées par ce tirage, à côté de l'XP (idée de jaxoncool43, 2026-10-24) : seulement maintenant, avec la
+      // rareté, pour ne pas trahir un bon tirage avant sa révélation. Hors ligne : rien n'est gagné, pas de pastille.
+      { const c = $('#r-coins'); if (c) { c.hidden = false; if (!reducedMotion) c.classList.add('pop-in'); } }
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier, pack });

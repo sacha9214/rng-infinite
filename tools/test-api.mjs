@@ -3145,6 +3145,17 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const before = (await st()).progress;
   await recordRoll(who.playerId, n, Date.now());
   assert.equal((await st()).progress, before + 1, 'un tirage du thème compte');
+  // Pièces du tirage renvoyées pour l'écran de résultat (idée de jaxoncool43, 2026-10-24) : le tarif de la rareté, doublé
+  // le samedi et le dimanche (UTC) par le Weekend Rush, comme ce qui est crédité.
+  { const Shop = require(path.join(ROOT, 'js/shop.js')), tier = engine.analyze(n).tier;
+    await new Promise(r => setTimeout(r, 3));
+    const sat = await recordRoll(who.playerId, n, Date.parse('2026-10-24T12:00:00Z'));
+    await new Promise(r => setTimeout(r, 3));
+    const tue = await recordRoll(who.playerId, n, Date.parse('2026-10-27T12:00:00Z'));
+    assert.deepEqual([sat.coins, tue.coins], [Shop.COINS[tier] * 2, Shop.COINS[tier]]);
+    db.delete(`cooldown:${who.playerId}`);
+    const r0 = await call(roll, { method: 'POST', body: who });
+    assert.equal(r0.body.coins, Shop.COINS[engine.analyze(r0.body.n).tier] * Events.rushMult(r0.body.t), JSON.stringify(r0.body)); }
   run([['ZADD', key, ev.goal, who.playerId]]);
   let r = await claim(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, ev.reward); assert.equal(r.body.event.claimed, true);
   assert.equal((await claim()).status, 422, 'une seule fois');

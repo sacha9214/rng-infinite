@@ -458,10 +458,12 @@ async function recordRoll(playerId, n, t) {
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
-  { const c = require('../js/shop.js').COINS[a.tier] || 0; writes.push(...eco('in:rolls', c, t));
+  // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
+  let coins = 0;
+  { const c = require('../js/shop.js').COINS[a.tier] || 0; writes.push(...eco('in:rolls', c, t)); coins = c;
     // Weekend Rush : la même somme une deuxième fois, en bonus (le solde des tirages se calcule sur les compteurs de rareté).
     // rushBonus : la part du Weekend Rush dans « bonus » (sert aux tests et aux stats).
-    if (c && Events.rush(t)) writes.push(['HINCRBY', statsKey(playerId), 'bonus', c], ['HINCRBY', statsKey(playerId), 'rushBonus', c], ...eco('in:weekend', c, t)); }
+    if (c && Events.rush(t)) { writes.push(['HINCRBY', statsKey(playerId), 'bonus', c], ['HINCRBY', statsKey(playerId), 'rushBonus', c], ...eco('in:weekend', c, t)); coins += c; } }
   // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
   { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
@@ -511,7 +513,7 @@ async function recordRoll(playerId, n, t) {
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
-  return { s, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
+  return { s, coins, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 
 // Tirages en attente de révélation. Un tirage de duel n'existe pour personne (historique, classement, stats, pièces,
