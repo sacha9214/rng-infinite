@@ -2106,6 +2106,87 @@
   // ☄️ Meteor (2026-10-18, idée de costoroll) — une ville la nuit. À chaque chiffre posé, une météorite arrive en biais
   // du haut à gauche avec sa traînée et s'écrase sur l'emplacement du chiffre : éclair d'impact dans la carte, gerbe
   // d'étincelles. La dernière est plus grosse : traînée plus longue, onde de choc, plus de débris. Matière dure : éclats.
+  // 🧨 Dynamite (2026-10-24, idée de casmictechthing et ichi) — chaque bâton qui se pose explose : flash blanc, boule
+  // de feu, éclats qui retombent, fumée qui monte ; le dernier fait le plus gros BOUM. À la révélation, une explosion
+  // derrière la carte qui grandit avec la rareté ; dès Mythic, un champignon de fumée de dessin animé monte au-dessus
+  // (pied, collerette, chapeau bouillonnant, du feu à la fumée). Tirage raté : une petite bouffée triste, « pfft ».
+  SCENES.dynamite = env => {
+    const { co, ci, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const booms = timed(), smoke = particles(), bits = particles(), glows = timed(), clouds = timed();
+    const FIRE = ['#fde047', '#fb923c', '#f97316', '#ef4444'], DEBRIS = ['#7f1d1d', '#dc2626', '#fef3c7', '#78350f', '#a8a29e'];
+    const SMOKE = dark ? ['#78716c', '#57534e', '#a8a29e'] : ['#a8a29e', '#78716c', '#d6d3d1'];
+    // une explosion : flash + boule de feu (timed), fumée et éclats (particules) ; s = sa taille en hauteurs de carte
+    const boom = (x, y, s) => {
+      booms.add({ x, y, r: card.h * s, life: .45 + .2 * s });
+      glows.add({ x: x - card.x, y: y - card.y, r: card.h * s * 1.4, life: .35 });
+      for (let i = Math.round((5 + 10 * s) * q); i > 0; i--) smoke.add({ x: x + rnd(-1, 1) * card.h * .25 * s, y: Math.min(y, card.y + card.h * .15), vx: rnd(-1, 1) * card.h * .5 * s, vy: -rnd(1.2, 2.2) * card.h * (.7 + .5 * s), drag: 1.4, g: -card.h * .2, max: rnd(.8, 1.5), size: card.h * rnd(.12, .22) * (.7 + s * .5), c: pick(SMOKE) });
+      for (let i = Math.round((6 + 16 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(3, 6 + 5 * s); bits.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 14, drag: .3, max: rnd(.5, 1), size: card.h * rnd(.025, .05), rot: rnd(TAU), spin: rnd(-12, 12), c: pick(DEBRIS) }); }
+    };
+    // le champignon (dès Mythic) : k de 0 à 1 sur sa vie ; il ne dépasse pas le haut du calque (marge env.card.y)
+    const mushroom = (m, k) => {
+      const rise = outCubic(Math.min(1, k / .55)), fade = k < .7 ? 1 : 1 - (k - .7) / .3, heatK = Math.max(0, 1 - k * 1.6);
+      // ~100 px au-dessus de la carte dans une page : pied fin, chapeau large et plat, centré à .75 hauteur de carte au-dessus
+      const top = card.y - card.h * .78 * rise * m.h, capR = card.h * (.4 + .55 * rise) * m.s, base = card.y + card.h * .1;
+      const fill = (x, y, r, c, a) => { co.globalAlpha = a * fade; co.fillStyle = c; co.beginPath(); co.arc(x, y, r, 0, TAU); co.fill(); };
+      // le pied : une colonne de bouffées qui monte de la carte au chapeau
+      for (let i = 0; i <= 7; i++) { const y = base + (top - base) * (i / 7), r = card.h * (.11 + .03 * Math.sin(i * 1.7 + k * 9)) * m.s; fill(cx + Math.sin(i * 2.3 + k * 6) * r * .3, y, r, SMOKE[i % 2], .85); }
+      // la collerette, à mi-hauteur
+      const ry = base + (top - base) * .45;
+      for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU + k * 2; fill(cx + Math.cos(a) * capR * .4, ry + Math.sin(a) * card.h * .05, card.h * .08 * m.s, SMOKE[2], .75); }
+      // le chapeau : un nuage de bouffées qui roule sur lui-même, orange au cœur au début puis gris
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * TAU + k * 1.5, rr = capR * (.62 + .18 * Math.sin(i * 3.1 + k * 7)), x = cx + Math.cos(a) * rr, y = top + Math.sin(a) * rr * .32;
+        fill(x, y, capR * (.27 + .06 * Math.sin(i * 1.3 + k * 11)), k < .35 ? ['#9a3412', '#c2410c', '#78350f'][i % 3] : SMOKE[i % 3], .92);
+      }
+      const hot = Math.max(heatK, k < .6 ? .35 * (1 - k / .6) : 0); // le feu reste au cœur du chapeau un moment
+      if (hot > 0) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#fb923c', cx, top, capR * 1.25, hot * .9); dot(co, '#fde047', cx, top + capR * .1, capR * .65, hot * .85); dot(co, '#fb923c', cx, (top + base) / 2, capR * .5, hot * .6, capR * 1.4); co.globalCompositeOperation = 'source-over'; }
+    };
+    return {
+      frame(t, dt) {
+        // Derrière la carte (les chiffres restent toujours lisibles) : champignon, fumée, boules de feu.
+        smoke.step(dt);
+        const rings = [];
+        behind(env, () => {
+          co.globalCompositeOperation = 'source-over';
+          clouds.run(dt, mushroom);
+          smoke.each((s, k) => { co.globalAlpha = Math.sin(Math.PI * Math.min(1, k * 1.4)) * (dark ? .6 : .65); co.fillStyle = s.c; co.beginPath(); co.arc(s.x, s.y, s.size * (1 + k * 1.8), 0, TAU); co.fill(); });
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          booms.run(dt, (b, k) => {
+            const e = outExpo(k), a = 1 - k;
+            if (k < .18) dot(co, '#ffffff', b.x, b.y, b.r * (.6 + 2 * k), (1 - k / .18) * .95); // le flash
+            dot(co, FIRE[1], b.x, b.y, b.r * (.5 + .9 * e), a * .85);
+            dot(co, FIRE[0], b.x, b.y, b.r * (.3 + .5 * e), a * .9);
+            rings.push([b, e, a]);
+          });
+        });
+        // Devant : l'onde de choc, un trait fin qui ne cache rien.
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        for (const [b, e, a] of rings) { co.globalAlpha = a * .7; co.strokeStyle = FIRE[2]; co.lineWidth = 1.5 + 2.5 * a; co.beginPath(); co.ellipse(b.x, b.y, b.r * (.4 + 1.3 * e), b.r * (.25 + .7 * e), 0, 0, TAU); co.stroke(); }
+        co.globalCompositeOperation = 'source-over';
+        bits.step(dt);
+        bits.each((p, k) => { p.rot += p.spin * dt; co.globalAlpha = 1 - k; co.save(); co.translate(p.x, p.y); co.rotate(p.rot); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .5, p.size * 2, p.size); co.restore(); });
+        // dans la carte : la lueur de l'explosion, sous les chiffres
+        ci.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        glows.run(dt, (g, k) => dot(ci, '#fdba74', g.x, g.y, g.r * (1 + k * .5), (1 - k) * .85));
+        ci.globalCompositeOperation = 'source-over';
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) { smoke.add({ x: p.x, y: p.y - card.h * .3, vx: 0, vy: -card.h * .4, drag: 1, g: 0, max: .9, size: card.h * .1, c: SMOKE[0] }); return; }
+        boom(p.x, p.y, o.last ? .9 : .5);
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { for (let i = 0; i < 3; i++) smoke.add({ x: cx + rnd(-1, 1) * card.h * .3, y: card.y, vx: rnd(-6, 6), vy: -card.h * .35, drag: 1, g: 0, max: 1.4, size: card.h * .14, c: SMOKE[0] }); return; } // « pfft »
+        boom(cx, cy, .7 + 1.3 * p);
+        if (p >= .6) for (let i = 0; i < 2; i++) setTimeout(() => boom(cx + (i ? 1 : -1) * card.w * .42, cy, .5 + .6 * p), 140 + i * 110);
+        if (p >= 1) clouds.add({ delay: .15, life: 3.4 + (ASCEND[tier] || 0) * .5, s: 1 + .15 * (ASCEND[tier] || 0), h: 1 });
+      },
+    };
+  };
+
   SCENES.meteor = custom(pieces({ cols: ['#fde68a', '#fb923c', '#f97316', '#fef3c7'], shapes: ['spark', 'shard'], size: [1.4, 3.2], g: 600, spin: 5, glowc: '#fb923c', ring: '#f97316', drift: { rate: .5, from: 'around' } }), env => {
     const { co, ci, card, dark } = env, rocks = timed(), hits = timed(), waves = timed(), debris = particles();
     const FLY = .32; // durée du vol (s) : la météorite touche quand le chiffre se pose
