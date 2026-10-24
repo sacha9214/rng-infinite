@@ -192,7 +192,7 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 5. Monthly leaderboard rewards: coins for the top 10 of the month, paid once on the 1st like the Trash King (`api/_discord_tasks.js`, `api/_rank.js`) (furcoat0 [efecba4e19e6], LwsBoi [58ee3ff2c7a9]). Keep amounts modest (ask Sacha: suggest 1,000 / 500 / 250).
 6. Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).
 7. Attach up to 3 images to an idea or bug report (Phong254 [6a25a130793b]).
-8. Emote "money spread" (finnnnn [9044fe933f8b]).
+8. Emote "money spread" (finnnnn [9044fe933f8b]). ✅ Done by Drastix on `drastix/emote-money-spread` (PR, not merged yet).
 
 ### B. Skins (follow `.claude/skills/rng-skin-design`, film them, put the preview in the PR)
 9. Rework **Infinity** so it matches Singularity (kaz [f221766d5b41]) — first, it is the rarest skin.
