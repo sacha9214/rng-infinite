@@ -196,6 +196,8 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 6. Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).
 7. Attach up to 3 images to an idea or bug report (Phong254 [6a25a130793b]). ✅ Done by Drastix on `drastix/idea-images` (PR, not merged yet).
 8. Emote "money spread" (finnnnn [9044fe933f8b]).
+7. Attach up to 3 images to an idea or bug report (Phong254 [6a25a130793b]).
+8. Emote "money spread" (finnnnn [9044fe933f8b]). ✅ Done by Drastix on `drastix/emote-money-spread` (PR, not merged yet).
 
 ### B. Skins (follow `.claude/skills/rng-skin-design`, film them, put the preview in the PR)
 9. Rework **Infinity** so it matches Singularity (kaz [f221766d5b41]) — first, it is the rarest skin.

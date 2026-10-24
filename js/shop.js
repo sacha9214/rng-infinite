@@ -237,6 +237,7 @@
     { id: 'rage', name: 'Rage', price: 600 },
     { id: 'clown', name: 'Clown', price: 700 },
     { id: 'money', name: 'Rich', price: 900 },
+    { id: 'spread', name: 'Money Spread', price: 1000 }, // idée de finnnnn (2026-10-24)
     { id: 'confused', name: 'Super confused', price: 800 }, // idée de finnnnn (2026-10-22)
     { id: 'mindblown', name: 'Mind blown', price: 1200 },
   ];

@@ -280,6 +280,9 @@
 .em-burst { animation-name: em-burst; animation-duration: .9s !important; transform-origin: 50% 100% !important; }
 .em-ray { animation-name: em-ray; animation-duration: .9s !important; }
 .em-tilt { animation-name: em-tilt; animation-duration: 2.2s !important; }
+/* Money Spread : l'éventail tourne autour du bas de chaque billet ; au repos (animation en pause), il est ouvert. */
+.em-fan { animation-name: em-fan; animation-duration: 1.6s !important; transform-origin: 50% 100% !important; transform: rotate(var(--fan, 0deg)); }
+.em-toss { animation-name: em-toss; animation-duration: 1.6s !important; animation-timing-function: ease-out !important; }
 @keyframes em-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes em-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04, .97) translateY(1px); } }
 @keyframes em-tremble { 0%, 100% { transform: translate(-.6px, 0); } 50% { transform: translate(.6px, .4px); } }
@@ -298,6 +301,11 @@
 @keyframes em-spinx { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.12); } }
 @keyframes em-burst { 0%, 100% { transform: scale(.82); } 45% { transform: scale(1.18); } }
 @keyframes em-ray { 0%, 100% { opacity: 0; } 45% { opacity: 1; } }
+@keyframes em-fan { 0%, 100% { transform: rotate(var(--fan, 0deg)); } 45%, 55% { transform: rotate(calc(var(--fan, 0deg) * .15)); } }
+/* les billets lancés partent du haut de l'éventail, vers la gauche (et vers la droite pour .em-toss-r) */
+.em-toss-r { animation-name: em-toss-r !important; }
+@keyframes em-toss { 0% { transform: translate(0, -6px) rotate(0) scale(.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-42px, -36px) rotate(-60deg) scale(1); opacity: 0; } }
+@keyframes em-toss-r { 0% { transform: translate(0, -6px) rotate(0) scale(.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(42px, -34px) rotate(65deg) scale(1); opacity: 0; } }
 /* Boutique et barre de réactions. */
 .emote-grid { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
 .emote-tile .emote { width: 84px; height: 84px; }

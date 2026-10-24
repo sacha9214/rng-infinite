@@ -27,6 +27,8 @@
   const heart = (x, y, s, cls = '', style = '') => `<path class="em ${cls}" style="${style}" d="M${x} ${y + s * .9} C${x - s * 1.5} ${y - s * .2} ${x - s * .6} ${y - s * 1.1} ${x} ${y - s * .3} C${x + s * .6} ${y - s * 1.1} ${x + s * 1.5} ${y - s * .2} ${x} ${y + s * .9}Z" fill="#ff3b6b" ${S} stroke-width="2.4"/>`;
   const coin = (x, y, r, cls = '', style = '') => `<g class="em ${cls}" style="${style}"><circle cx="${x}" cy="${y}" r="${r}" fill="#fbbf24" ${S} stroke-width="2.6"/><text x="${x}" y="${y + r * .42}" text-anchor="middle" font-size="${r * 1.25}" font-weight="900" font-family="Inter, system-ui, sans-serif" fill="#7a4a00">$</text></g>`;
   const puff = (x, y, cls, style) => `<g class="em ${cls}" style="${style}"><circle cx="${x}" cy="${y}" r="6" fill="#fff" ${S} stroke-width="2.4"/><circle cx="${x + 6}" cy="${y - 3}" r="4.5" fill="#fff" ${S} stroke-width="2.4"/><circle cx="${x + 2}" cy="${y - 1}" r="4.2" fill="#fff"/></g>`;
+  // Un billet vertical, pivot en bas au milieu (pour l'éventail) : vert, cadre clair, « $ » au centre.
+  const bill = (x, y, cls = '', style = '', k = 1) => `<g class="em ${cls}" style="${style}"><rect x="${x - 9 * k}" y="${y - 30 * k}" width="${18 * k}" height="${30 * k}" rx="${2.6 * k}" fill="#22c55e" ${S} stroke-width="2.6"/><rect x="${x - 6 * k}" y="${y - 27 * k}" width="${12 * k}" height="${24 * k}" rx="${1.6 * k}" fill="none" stroke="#bbf7d0" stroke-width="1.5"/><text x="${x}" y="${y - 10.5 * k}" text-anchor="middle" font-size="${12 * k}" font-weight="900" font-family="Inter, system-ui, sans-serif" fill="#14532d">$</text></g>`;
   const wrap = body => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">${body}</svg>`;
 
   const DRAW = {
@@ -69,6 +71,15 @@
       ${coin(16, 22, 6, 'em-fall', '')}${coin(86, 30, 5, 'em-fall', 'animation-delay:.6s')}${coin(80, 12, 4.4, 'em-fall', 'animation-delay:1.1s')}
       <g class="em em-bounce">${cube()}${coin(40, 46, 7.4, 'em-spinx')}${coin(60, 46, 7.4, 'em-spinx', 'animation-delay:.2s')}
         <path d="M37 57 Q50 71 63 57 Z" fill="#7a1f2b" ${S} stroke-width="3"/><path d="M45 62 Q50 76 55 62 Z" fill="#ff7b8a" ${S} stroke-width="2.4"/></g>`),
+    // Money Spread (idée de finnnnn, 2026-10-24) : l'air content de lui (paupières mi-closes, sourire en coin), il étale
+    // un éventail de cinq billets qui s'ouvre et se referme, et deux billets s'envolent sur les côtés, derrière lui (jamais devant les yeux). Au repos, l'éventail est ouvert.
+    spread: () => wrap(`${badge('#ca8a04', '#fde68a')}
+      ${bill(50, 88, 'em-toss', 'animation-delay:.3s', .7)}${bill(50, 88, 'em-toss em-toss-r', 'animation-delay:1s', .7)}
+      <g class="em em-bounce">${cube()}
+        ${[40, 60].map(x => `<circle cx="${x}" cy="43" r="6" fill="#fff" ${S} stroke-width="3"/><circle cx="${x + 1.5}" cy="44.5" r="2.4" fill="${INK}"/><path d="M${x - 6.5} 42.5 Q${x} 36.5 ${x + 6.5} 42.5 Z" fill="#fff6e6" ${S} stroke-width="3"/>`).join('')}
+        <path d="M34 33 Q40 29 46 32" fill="none" ${S} stroke-width="3.2"/><path d="M54 32 Q60 27 66 31" fill="none" ${S} stroke-width="3.2"/>
+        <path d="M42 54 Q51 58 59 51" fill="none" ${S} stroke-width="3.4"/></g>
+      ${[-48, -24, 0, 24, 48].map((a, i) => bill(50, 94, 'em-fan', `--fan:${a}deg;animation-delay:${i * .04}s`)).join('')}`),
     // Mind blown : les yeux ronds, la bouche ouverte, et le dessus de la tête qui explose.
     mindblown: () => wrap(`${badge('#7c3aed', '#c4b5fd')}
       ${cube()}<path d="M26 31 l7 -5 l6 6 l7 -7 l6 7 l7 -6 l7 6 l8 -4 V20 H26 Z" fill="#7c3aed" stroke="none"/><path d="M26 31 l7 -5 l6 6 l7 -7 l6 7 l7 -6 l7 6 l8 -4" fill="none" ${S} stroke-width="3"/>
