@@ -2724,6 +2724,62 @@
     };
   };
 
+  // 🏞️ Waterfall (2026-10-24, idée de JBearr12 et jjcoolcid1) — de la brume monte sans cesse du bassin au pied de la
+  // carte ; chaque chiffre qui touche le bassin fait une éclaboussure (gouttes en arc) et une onde ; le dernier, plus
+  // grosse. À la révélation, une gerbe d'embruns qui grandit avec la rareté et, dès Epic, un arc-en-ciel dans la brume
+  // au-dessus de la carte (comme au pied d'une vraie cascade) ; plus grand et plus vif dès Mythic. Tirage raté : une goutte.
+  SCENES.waterfall = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, pool = card.y + card.h - card.h * .12;
+    const mist = particles(), drops = particles(), ripples = timed(), bows = timed(), emit = emitter();
+    const SPRAY = dark ? ['#e0f2fe', '#bae6fd', '#ffffff'] : ['#7dd3fc', '#38bdf8', '#bae6fd'];
+    let mistRate = 6;
+    const splash = (x, s) => {
+      ripples.add({ x, y: pool, r: card.h * (.25 + .35 * s), life: .7 });
+      for (let i = Math.round((6 + 12 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .85, -Math.PI * .15), v = card.h * rnd(2.5, 4 + 4 * s); drops.add({ x: x + rnd(-1, 1) * card.h * .1, y: pool, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .2, max: rnd(.45, .8), size: card.h * rnd(.025, .045), c: pick(SPRAY) }); }
+      for (let i = Math.round(3 * s * q) + 1; i > 0; i--) mist.add({ x: x + rnd(-1, 1) * card.h * .3, y: pool, vx: rnd(-1, 1) * 8, vy: -card.h * rnd(.4, .8), drag: .8, g: 0, max: rnd(1, 1.8), size: card.h * rnd(.15, .3) });
+    };
+    // l'arc-en-ciel : sept bandes concentriques, centrées sous la carte, qui apparaissent puis s'effacent
+    const BOW = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#6366f1', '#a855f7'];
+    const rainbow = (b, k) => {
+      // de la lumière dans la brume : bandes fines et translucides, un voile blanc dessous ; assez petit pour tenir entier
+      const a = (k < .25 ? k / .25 : k > .75 ? (1 - k) / .25 : 1) * b.a, bw = card.h * .045 * b.s, cy = card.y + card.h * .95;
+      const R = Math.min(card.w * .5 + card.h * .55 * b.s, cy - 26);
+      co.lineCap = 'butt';
+      co.globalAlpha = a * .25; co.strokeStyle = '#ffffff'; co.lineWidth = bw * 9; co.beginPath(); co.arc(cx, cy, R - bw * 3, Math.PI * 1.1, Math.PI * 1.9); co.stroke();
+      co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+      BOW.forEach((c, i) => { co.globalAlpha = a * (dark ? .55 : .5); co.strokeStyle = c; co.lineWidth = bw; co.beginPath(); co.arc(cx, cy, R - i * bw, Math.PI * 1.1, Math.PI * 1.9); co.stroke(); });
+      co.globalCompositeOperation = 'source-over';
+    };
+    return {
+      frame(t, dt) {
+        // la brume du bassin, derrière la carte (elle ne cache jamais les chiffres)
+        for (let n = emit(mistRate * q, dt); n > 0; n--) mist.add({ x: cx + rnd(-.5, .5) * card.w, y: pool, vx: rnd(-1, 1) * 6, vy: -card.h * rnd(.2, .5), drag: .6, g: 0, max: rnd(1.4, 2.4), size: card.h * rnd(.18, .32) });
+        mistRate += (6 - mistRate) * Math.min(1, dt * .8);
+        mist.step(dt); drops.step(dt);
+        behind(env, () => {
+          co.globalCompositeOperation = 'source-over';
+          bows.run(dt, rainbow);
+          mist.each((m, k) => dot(co, dark ? '#e0f2fe' : '#bae6fd', m.x, m.y, m.size * (1 + k), Math.sin(Math.PI * k) * (dark ? .22 : .35)));
+          // les gouttes aussi passent derrière : une éclaboussure ne brouille jamais un chiffre
+          drops.each((d, k) => { co.globalAlpha = 1 - k * k; co.fillStyle = d.c; co.beginPath(); co.ellipse(d.x, d.y, d.size, d.size * 1.4, Math.atan2(d.vy, d.vx) + Math.PI / 2, 0, TAU); co.fill(); });
+        });
+        co.globalCompositeOperation = 'source-over';
+        ripples.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#e0f2fe' : '#0284c7'; co.lineWidth = 1.5 * (1 - k) + .5; co.beginPath(); co.ellipse(r.x, r.y + card.h * .2, r.r * (.3 + k), r.r * (.3 + k) * .25, 0, 0, TAU); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; splash(p.x, o.last ? .9 : .45); },
+      build() { mistRate = 14; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { drops.add({ x: cx, y: card.y - card.h * .2, vx: 0, vy: 0, g: card.h * 8, drag: 0, max: .5, size: card.h * .05, c: SPRAY[0] }); return; } // une goutte
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) setTimeout(() => splash(cx + rnd(-.45, .45) * card.w, .5 + .7 * p), i * 90);
+        mistRate = 10 + 30 * p;
+        if (p >= .6) bows.add({ delay: .25, life: 2.6 + 1.6 * p, s: p >= 1 ? 1.25 + .15 * (ASCEND[tier] || 0) : .9, a: p >= 1 ? .85 : .6 });
+      },
+    };
+  };
+
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et

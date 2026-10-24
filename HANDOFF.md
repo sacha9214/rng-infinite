@@ -204,6 +204,8 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 10. Burger (jaxoncool43 [be2e597cbe99]).
 11. Dynamite / TNT: explosions reveal the digits, mushroom clouds from Mythic (casmictechthing [c1b8d0692aaa], ichi [bac7cdca55c8]). ✅ Done by Drastix on `drastix/dynamite-skin` (PR, not merged yet; cartoon dynamite sticks, no "TNT" block).
 12. Waterfall with a nature backdrop (JBearr12 [532fd4c22dda], jjcoolcid1 [9d0b104252d4]).
+11. Dynamite / TNT: explosions reveal the digits, mushroom clouds from Mythic (casmictechthing [c1b8d0692aaa], ichi [bac7cdca55c8]).
+12. Waterfall with a nature backdrop (JBearr12 [532fd4c22dda], jjcoolcid1 [9d0b104252d4]). ✅ Done by Drastix on `drastix/waterfall-skin` (PR, not merged yet).
 13. Money: a 100-dollar bill with gold digits that melt on Mythic+ (JBearr12 [c512cd0b2fa2]) and coins (finnnnn [2457889a6d20]): one skin.
 14. Bowling (JBearr12 [fa910f1e244b]), Basketball (jjcoolcid1 [e937ad77450c]), Mini golf (Kj13 [f42cca32bbe2]): pick one sport first.
 15. Rock smash: a fist smashes a rock to reveal the digit (HSI [5b5f29b0cc52]); Cracked screen (KMC [a677e62ae02d]); Medieval castle (BIGBOIJONER69 [c10d8e68d556]); Chocolate (finnnnn [89626248c340]); Floppy Fish (AnnJoe [47b7afc07c18]); Stick man with axes (jjcoolcid1 [9e4d04f5b906]); Metal balls breaking crates (jjcoolcid1 [4bf26afedcb9]); Math symbols (sennybex1 [359f2e6f81a9]).
