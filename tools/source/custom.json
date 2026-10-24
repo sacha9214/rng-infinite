@@ -440,5 +440,51 @@
     "desc": "Exactly 676741 or 674141.",
     "emoji": "🫅",
     "score": 100000100
+  },
+  {
+    "id": "QUARTER_MILLENNIUM",
+    "label": "Quarter Millennium",
+    "desc": "Ends in \"250\".",
+    "emoji": "⏳",
+    "score": 100250
+  },
+  {
+    "id": "NINETY_NINE",
+    "label": "Ninety-Nine",
+    "desc": "Contains \"99\".",
+    "emoji": "9️⃣",
+    "score": 2099,
+    "family": "NINETY_NINE"
+  },
+  {
+    "id": "EXACT_99",
+    "label": "Exact 99",
+    "desc": "Exactly 99.",
+    "emoji": "🎯",
+    "score": 100000100,
+    "family": "NINETY_NINE"
+  },
+  {
+    "id": "WYSI",
+    "label": "WYSI",
+    "desc": "Contains \"727\": when you see it.",
+    "emoji": "👀",
+    "score": 25727,
+    "family": "WYSI"
+  },
+  {
+    "id": "WYSI_EXACT",
+    "label": "Exact WYSI",
+    "desc": "Exactly 727.",
+    "emoji": "🫣",
+    "score": 100000100,
+    "family": "WYSI"
+  },
+  {
+    "id": "CYCLIC",
+    "label": "Cyclic Number",
+    "desc": "Exactly 142857: multiply it by 2 to 6 and its digits only rotate.",
+    "emoji": "🔁",
+    "score": 100000100
   }
 ]

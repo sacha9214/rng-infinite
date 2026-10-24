@@ -272,6 +272,8 @@
     VORTROX: '49', KINGSAMMELOT: '55', // idée d'A Dude (2026-10-21) : deux nombres mèmes
     AK_47: '47', // idée de R77 (2026-10-21)
     AREA_51: '51', // idée de hii (2026-10-22)
+    // Idées du 2026-10-24 : kaz (99, famille NINETY_NINE), Phong254 (727, « When You See It », famille WYSI).
+    NINETY_NINE: '99', WYSI: '727',
     // Idées du 2026-10-22 : jaxoncool43 (1776), kaz (82), CococoC (92), schoolroller (61), Colt2 (999).
     AMERICAN: '1776', ANGEL_82: '82', VORTROX_CURSE: '92', SIXTY_ONE: '61', JUICE_WRLD: '999',
     MED_CHECK: '504', OVER_9000: '9001', PASSWORD: '12345', YEAR_2077: '2077', YEAR_2099: '2099', ROOT_TWO_4: '1414', ROOT_TWO_5: '14142',
@@ -289,6 +291,8 @@
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     EXACT_852655: ['852655'], // idée de CococoC, acceptée par Sacha (2026-10-20)
     EXACT_82: ['82'], EXACT_92: ['92'], BRAINROT_KING_EXACT: ['676741', '674141'], // idées du 2026-10-22 (kaz, CococoC, CrazyMiner22)
+    EXACT_99: ['99'], WYSI_EXACT: ['727'], // idées du 2026-10-24 (kaz, Phong254)
+    CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
     IMPORTANT_BIRTHDAY: ['61209'], // badge perso (idée d'un joueur) : 061209, tiré comme le nombre 61209
@@ -311,6 +315,7 @@
     CLEAN: '0', CENTURY: '00', MILLENNIUM: '000', EPOCH: '0000', EON: '00000',
     SEMI_CLEAN: '5', SEMI_CENTURY: '50', SEMI_MILLENNIUM: '500', SEMI_EPOCH: '5000', SEMI_EON: '50000',
     QUARTER_CENTURY: '25', THREE_QUARTER_CENTURY: '75',
+    QUARTER_MILLENNIUM: '250', // idée de WpBejs (2026-10-24)
     DOUBLE_NINE: '99', TRIPLE_NINE: '999', QUAD_NINE: '9999', QUINT_NINE: '99999',
   };
   const SINGLE_DIGIT_COUNT = {
