@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-24-casino-order', date: 'Oct 24, 2026', en: ['↕ Casino: put the games in your own order. Press "Reorder games" under the tabs, then use the arrows or drag the tabs (idea by jia jun)'], fr: ['↕ Casino : range les jeux dans ton ordre. Appuie sur « Réorganiser les jeux » sous les onglets, puis utilise les flèches ou fais glisser les onglets (idée de jia jun)'] },
     { id: '2026-10-23h', date: 'Oct 23, 2026', en: ['🐞 Fixed: a roll could show "undefined" when the server answered slowly (reported by Yentizx). The game now asks again for the same roll, so nothing is lost'], fr: ['🐞 Corrigé : un tirage pouvait afficher « undefined » quand le serveur répondait lentement (signalé par Yentizx). Le jeu redemande maintenant le même tirage, rien n\'est perdu'] },
     { id: '2026-10-23g', date: 'Oct 23, 2026', en: ['🚪 Duels: you can now leave a game in progress (button under the roll button), and the host can remove a player during the game with the ✕ next to their name. If everyone else leaves, the last player wins. In a duel with a bet, nobody can be removed, and a player who leaves loses their bet'], fr: ['🚪 Duels : tu peux maintenant quitter une partie en cours (bouton sous le bouton de tirage), et l\'hôte peut exclure un joueur pendant la partie avec le ✕ à côté de son nom. Si tous les autres partent, le dernier joueur gagne. Dans un duel avec mise, personne ne peut être exclu, et celui qui part perd sa mise'] },
     { id: '2026-10-23f', date: 'Oct 23, 2026', en: ['🏆 Tournaments: there are now two tournaments every day (32 players each, you can only join one), and you no longer need to be online at the same time as your opponent. When one of you rolls, the server rolls for the other too, and any rolls left are made for both at the end of the round. No more losing just because you were asleep!'], fr: ['🏆 Tournois : il y a maintenant deux tournois par jour (32 joueurs chacun, tu ne peux en rejoindre qu\'un), et plus besoin d\'être en ligne en même temps que ton adversaire. Quand l\'un de vous tire, le serveur tire aussi pour l\'autre, et les tirages qui restent sont faits pour les deux à la fin du tour. Fini de perdre parce que tu dormais !'] },
@@ -3699,6 +3700,20 @@
       <div class="g-top-row head"><span>#</span><span>Player</span><span class="g-top-rounds">Rounds</span><span>Wagered</span><span>${key === 'gamblers' ? 'Net' : key === 'winners' ? 'Won' : 'Lost'}</span></div>
       ${list.map(row).join('')}${mine ? `<div class="lb-gap">···</div>${row(mine)}` : ''}` : `<div class="empty">${EMPTY[key]}</div>`;
   }
+  // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
+  // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const gTabOrder = () => {
+    const ids = G_TABS.map(t => t[0]), saved = Array.isArray(Store.settings.casinoOrder) ? Store.settings.casinoOrder.filter(id => ids.includes(id)) : [];
+    return [...new Set(saved)].concat(ids.filter(id => !saved.includes(id)));
+  };
+  const gTabsHTML = edit => gTabOrder().map(id => {
+    const [, e, label] = G_TABS.find(t => t[0] === id), on = id === Gamble.tab ? ' on' : '';
+    return edit
+      ? `<div class="g-tab${on}" data-game-tab="${id}" draggable="true"><i>${e}</i><span>${label}</span><span class="g-moves"><button type="button" class="g-move" data-move="-1" aria-label="Move ${label} left">◀</button><button type="button" class="g-move" data-move="1" aria-label="Move ${label} right">▶</button></span></div>`
+      : `<button class="g-tab${on}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`;
+  }).join('');
+
   function renderGamble() {
     currentView = 'gamble';
     const bet = (t, label, cls = '') => `<button class="rbet ${cls}" data-bet="${t}"><span>${label}</span><b class="mono"></b></button>`;
@@ -3708,7 +3723,8 @@
         <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
-        <div class="g-tabs" id="g-tabs">${[['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']].map(([id, e, label]) => `<button class="g-tab${id === Gamble.tab ? ' on' : ''}" data-game-tab="${id}"><i>${e}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="g-tabs" id="g-tabs">${gTabsHTML(false)}</div>
+        <div class="g-order-row"><button type="button" class="g-order-reset" id="g-order-reset" hidden>Reset order</button><button type="button" class="g-order-btn" id="g-order" aria-pressed="false">↕ Reorder games</button></div>
         <div class="g-bet"><span class="eyebrow">Bet</span><div class="gchips" id="g-chips">${[1, 5, 10, 50, 100, 250, 500, 1000].map(c => `<button class="gchip${c === Gamble.chip ? ' on' : ''}${c < 10 ? ' pk-only' : ''}" data-chip="${c}">${c >= 1000 ? '1K' : c}</button>`).join('')}</div></div>
         <div class="g-stage">
           <div class="panel g-game" data-game="crash">
@@ -4206,7 +4222,31 @@
       const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
       if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
-    $('#g-tabs').addEventListener('click', e => { const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab); });
+    // Mode « Reorder » : chaque onglet a ses flèches ◀ ▶ (au doigt comme à la souris) et se glisse-dépose sur ordinateur.
+    let editing = false, dragId = null;
+    const drawTabs = () => { $('#g-tabs').innerHTML = gTabsHTML(editing); $('#g-tabs').classList.toggle('editing', editing); };
+    const saveOrder = order => { Store.setSetting('casinoOrder', order); drawTabs(); };
+    const moveTab = (id, to) => { const o = gTabOrder().filter(x => x !== id); o.splice(Math.max(0, Math.min(o.length, to)), 0, id); saveOrder(o); };
+    $('#g-order').addEventListener('click', () => {
+      editing = !editing; drawTabs();
+      $('#g-order').textContent = editing ? '✓ Done' : '↕ Reorder games'; $('#g-order').setAttribute('aria-pressed', String(editing));
+      $('#g-order-reset').hidden = !editing;
+    });
+    $('#g-order-reset').addEventListener('click', () => saveOrder(G_TABS.map(t => t[0])));
+    $('#g-tabs').addEventListener('click', e => {
+      const mv = e.target.closest('[data-move]');
+      if (mv) { const id = mv.closest('[data-game-tab]').dataset.gameTab; moveTab(id, gTabOrder().indexOf(id) + Number(mv.dataset.move)); return; }
+      const b = e.target.closest('[data-game-tab]'); if (b && !Gamble.busy) showTab(b.dataset.gameTab);
+    });
+    $('#g-tabs').addEventListener('dragstart', e => { const t = e.target.closest('[data-game-tab]'); if (!editing || !t) return; dragId = t.dataset.gameTab; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragId); } catch (err) { /* vieux navigateurs */ } });
+    $('#g-tabs').addEventListener('dragover', e => { if (editing && dragId) e.preventDefault(); });
+    $('#g-tabs').addEventListener('drop', e => {
+      const t = e.target.closest('[data-game-tab]'); if (!editing || !dragId || !t) return;
+      e.preventDefault();
+      const r = t.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2, o = gTabOrder().filter(x => x !== dragId);
+      o.splice(o.indexOf(t.dataset.gameTab) + (after ? 1 : 0), 0, dragId); dragId = null; saveOrder(o);
+    });
+    $('#g-tabs').addEventListener('dragend', () => { dragId = null; });
     showTab(Gamble.tab);
     const say = (el, win, bet, text) => { el.textContent = text; el.dataset.won = win > bet ? 'yes' : win === bet ? 'even' : 'no'; };
     // ---- plinko : la bille suit le chemin tiré par le serveur, un clou toutes les 110 ms

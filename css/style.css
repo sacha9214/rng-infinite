@@ -2503,6 +2503,20 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .g-tab:hover { transform: translateY(-2px); border-color: var(--outline-strong); }
 .g-tab.on { color: #fde68a; border-color: #eab308; background: linear-gradient(180deg, rgba(234, 179, 8, .18), rgba(234, 179, 8, .04)), var(--surface); box-shadow: 0 0 0 1px rgba(234, 179, 8, .35), 0 0 22px rgba(234, 179, 8, .18); }
 .g-tab.on i { filter: none; transform: scale(1.15); }
+/* Ordre des onglets (idée de jia jun, 2026-10-24) : mode « Reorder », flèches dans chaque onglet, glisser-déposer. */
+.g-order-row { display: flex; justify-content: flex-end; gap: .5rem; margin: -.45rem 0 .7rem; }
+.g-order-btn, .g-order-reset { padding: .2rem .55rem; border: 1px solid var(--outline); border-radius: 999px; background: none; color: var(--prose-3); font: 700 .7rem var(--font-sans); cursor: pointer; }
+.g-order-btn:hover, .g-order-reset:hover { color: var(--prose); border-color: var(--outline-strong); }
+.g-order-btn[aria-pressed="true"] { color: #a16207; border-color: #eab308; }
+.dark .g-order-btn[aria-pressed="true"], :root[data-theme="dark"] .g-order-btn[aria-pressed="true"] { color: #fde68a; }
+/* pas de tremblement : les flèches doivent rester immobiles sous le doigt */
+.g-tabs.editing .g-tab { position: relative; cursor: grab; border-style: dashed; border-color: color-mix(in srgb, #eab308 55%, var(--outline)); }
+.g-tabs.editing .g-tab:hover { transform: none; }
+/* les flèches ont leur propre ligne sous le nom : rien ne les recouvre, même dans un onglet de 55 px */
+.g-moves { display: flex; justify-content: center; gap: .25rem; width: 100%; margin-top: .2rem; }
+.g-move { flex: 1 1 0; max-width: 2rem; height: 1.5rem; padding: 0; border: 0; border-radius: .4rem; background: color-mix(in srgb, var(--prose) 12%, transparent); color: var(--prose-2); font-size: .72rem; line-height: 1; cursor: pointer; }
+.g-move:hover { background: color-mix(in srgb, #eab308 30%, transparent); color: var(--prose); }
+.g-tabs.editing .g-tab:first-child .g-move[data-move="-1"], .g-tabs.editing .g-tab:last-child .g-move[data-move="1"] { visibility: hidden; }
 .g-bet { display: flex; align-items: center; justify-content: center; gap: .8rem; margin-bottom: .9rem; }
 .g-bet .gchips { margin: 0; }
 .gchip[data-chip="500"] { background: #b45309; } .gchip[data-chip="1000"] { background: #111113; border-color: #eab308; color: #fde68a; }

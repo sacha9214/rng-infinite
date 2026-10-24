@@ -188,7 +188,7 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 1. Badges "Jet" (contains 737, 747, 757, 767, 787; 777 is Jackpot) (TibotyTWO [bee00d9ad046], CococoC [604a068a6275]).
 2. Badges: ends in 250 "Quarter Millennium" (WpBejs [3c8e159b40ec]); contains 99 "Ninety-Nine" + Exact 99 (kaz [4d50fddccb81]); 727 "WYSI" (Phong254 [cbf3a830e791]); exact 142857 (JBearr12 [15430f4307b5]). Grep first: no duplicates.
 3. Show the coins earned by a roll next to its XP on the result screen (jaxoncool43 [505eebd5889c]). The coins per rarity are in `Shop.COINS`.
-4. Let players reorder the casino game tabs (drag or arrows), saved in `Store.settings` (jia jun [f0aeec582de9]).
+4. Let players reorder the casino game tabs (drag or arrows), saved in `Store.settings` (jia jun [f0aeec582de9]). ✅ Done by Drastix on `drastix/casino-tab-order` (PR, not merged yet).
 5. Monthly leaderboard rewards: coins for the top 10 of the month, paid once on the 1st like the Trash King (`api/_discord_tasks.js`, `api/_rank.js`) (furcoat0 [efecba4e19e6], LwsBoi [58ee3ff2c7a9]). Keep amounts modest (ask Sacha: suggest 1,000 / 500 / 250).
 6. Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).
 7. Attach up to 3 images to an idea or bug report (Phong254 [6a25a130793b]).
