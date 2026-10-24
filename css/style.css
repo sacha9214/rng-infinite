@@ -4879,6 +4879,71 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes son-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 .room-stage.many .side-sonic::before, .room-stage.many .side-sonic::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-sonic::before, .side-sonic::after { animation: none; } }
+/* ------------------------------------------------------------------ Waterfall (idée de JBearr12 et jjcoolcid1,
+   2026-10-24) : une cascade dans une vallée verte. En haut, le rebord de la falaise (herbe et mousse) ; derrière les
+   chiffres, un rideau d'eau qui tombe sans fin (::before, stries qui défilent) ; en bas, le bassin et son écume ; des
+   rochers sombres sur les côtés. Chiffres blancs cernés de bleu nuit, lisibles sur l'eau claire. Pendant le tirage le
+   courant les emporte vers le bas ; ils tombent d'en haut et touchent le bassin ; l'éclaboussure, la brume et l'arc-en-
+   ciel (dès Epic) sont dans js/skinfx.js (SCENES.waterfall). */
+.num-card.skin-waterfall {
+  background:
+    /* le rebord de la falaise : des buissons ronds de trois verts, la roche moussue dessous */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 16' preserveAspectRatio='none'><path d='M0 16V9Q40 6 80 9V16Z' fill='%23365314'/><g fill='%2315803d'><circle cx='4' cy='7' r='6'/><circle cx='15' cy='5' r='5'/><circle cx='64' cy='5' r='5'/><circle cx='76' cy='7' r='6'/></g><g fill='%2322c55e'><circle cx='9' cy='4' r='4'/><circle cx='70' cy='4' r='4'/><circle cx='30' cy='8' r='3'/><circle cx='50' cy='8' r='3'/></g><g fill='%2386efac'><circle cx='8' cy='2.5' r='1.6'/><circle cx='69' cy='2.5' r='1.6'/></g><path d='M20 9Q40 7.5 60 9' stroke='%23e0f2fe' stroke-width='1.6' fill='none'/></svg>") 0 0 / 100% .5em no-repeat,
+    /* fougères sur les rochers, à gauche et à droite */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 40'><g stroke='%2322c55e' stroke-width='1.6' fill='none' stroke-linecap='round'><path d='M4 40Q6 24 15 12'/><path d='M6 32L2 28M7 28L3 23M9 24L6 19M11 20L9 15M7 31L11 29M9 26L13 24M11 22L15 20'/></g><g fill='%2315803d'><ellipse cx='5' cy='37' rx='5' ry='3'/><ellipse cx='12' cy='38' rx='4' ry='2.4'/></g></svg>") 0 100% / .55em 1.1em no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 40'><g stroke='%2322c55e' stroke-width='1.6' fill='none' stroke-linecap='round'><path d='M16 40Q14 24 5 12'/><path d='M14 32L18 28M13 28L17 23M11 24L14 19M9 20L11 15M13 31L9 29M11 26L7 24M9 22L5 20'/></g><g fill='%2315803d'><ellipse cx='15' cy='37' rx='5' ry='3'/><ellipse cx='8' cy='38' rx='4' ry='2.4'/></g></svg>") 100% 100% / .55em 1.1em no-repeat,
+    /* le bassin : des bouillons d'écume, puis l'eau profonde */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 8' preserveAspectRatio='none'><g fill='%23f0f9ff'><circle cx='3' cy='5' r='3'/><circle cx='9' cy='4' r='3.6'/><circle cx='16' cy='5' r='3'/><circle cx='22' cy='3.6' r='3.8'/><circle cx='29' cy='5' r='3.2'/><circle cx='35' cy='4' r='3.4'/></g></svg>") 50% calc(100% - .3em) / 86% .2em no-repeat,
+    linear-gradient(180deg, transparent calc(100% - .36em), #a5f3fc calc(100% - .36em), #0e7490 calc(100% - .12em), #164e63) 0 0 / 100% 100% no-repeat,
+    /* rochers sombres de chaque côté, de la mousse dessus */
+    radial-gradient(ellipse 12% 30% at 3% 30%, #3f6212 50%, transparent 54%), radial-gradient(ellipse 12% 30% at 97% 30%, #3f6212 50%, transparent 54%),
+    radial-gradient(ellipse 14% 70% at 0% 60%, #292524 60%, transparent 62%), radial-gradient(ellipse 14% 70% at 100% 60%, #292524 60%, transparent 62%),
+    /* la paroi derrière l'eau */
+    linear-gradient(180deg, #2e5f6b, #1d4a57 60%, #164e63);
+  border: 2px solid #14532d; border-radius: .6rem;
+  box-shadow: inset 0 0 0 1px rgba(187, 247, 208, .18), inset 0 -.25em .5em rgba(0, 0, 0, .25), 0 0 14px rgba(34, 211, 238, .22), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .5em .5em .55em;
+}
+/* le rideau d'eau : des stries claires qui descendent sans fin, entre les rochers, sous le rebord */
+.num-card.skin-waterfall::before { content: ''; position: absolute; left: 9%; right: 9%; top: .3em; bottom: .38em; z-index: 0; pointer-events: none;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  background:
+    /* le rebord : l'eau blanchit en passant la falaise */
+    linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .3) .22em, transparent .45em),
+    /* des filets d'eau de largeurs et de clartés différentes, qui ondulent un peu */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60' preserveAspectRatio='none'><g fill='none' stroke='%23fff' stroke-linecap='round'><path d='M4 0Q6 15 4 30T4 60' stroke-width='2' stroke-opacity='.55'/><path d='M11 0Q9 20 11 40T11 60' stroke-width='1' stroke-opacity='.8'/><path d='M19 0Q21 12 19 26T20 60' stroke-width='3' stroke-opacity='.35'/><path d='M27 0Q25 18 27 34T26 60' stroke-width='1.4' stroke-opacity='.7'/><path d='M34 0Q36 22 34 44T34 60' stroke-width='2.4' stroke-opacity='.45'/><path d='M42 0Q40 14 42 28T42 60' stroke-width='1' stroke-opacity='.85'/><path d='M49 0Q51 20 49 38T50 60' stroke-width='2.6' stroke-opacity='.4'/><path d='M56 0Q54 16 56 32T56 60' stroke-width='1.2' stroke-opacity='.7'/></g><g stroke='%23fff' stroke-linecap='round' stroke-opacity='.6' stroke-width='1.2'><path d='M8 10v6M23 30v8M38 6v5M46 40v7M15 48v5M53 22v6'/></g></svg>") 0 0 / 2.4em 1.6em,
+    linear-gradient(180deg, rgba(186, 230, 253, .6), rgba(125, 211, 252, .75));
+  animation: wtf-pour .7s linear infinite; }
+@keyframes wtf-pour { to { background-position: 0 0, 0 1.6em, 0 0; } }
+.skin-waterfall .slot { position: relative; z-index: 1; color: #fff; font-weight: 900;
+  -webkit-text-stroke: .035em #0c2b45; text-shadow: 0 .05em 0 #0c2b45, 0 .08em .12em rgba(8, 47, 73, .7), 0 0 .3em rgba(224, 242, 254, .6); }
+.skin-waterfall .slot.ghost { opacity: .18; }
+/* Pendant le tirage : le courant emporte le chiffre vers le bas, flou, en boucle. */
+.skin-waterfall .slot.spinning { opacity: .85; animation: wtf-carry .2s linear infinite; }
+.skin-waterfall .slot.spinning:nth-of-type(2n) { animation-delay: -.07s; }
+.skin-waterfall .slot.spinning:nth-of-type(3n) { animation-delay: -.13s; }
+@keyframes wtf-carry { 0% { transform: translateY(-.3em); opacity: 0; filter: blur(.6px); } 25% { opacity: .9; } 75% { opacity: .9; } 100% { transform: translateY(.3em); opacity: 0; filter: blur(.6px); } }
+/* Il tombe d'en haut (élan : il accélère), touche le bassin (écrasé, c'est de l'eau qui l'amortit), se pose. */
+.skin-waterfall .slot.revealed { animation: wtf-drop .55s backwards; transform-origin: 50% 100%; }
+@keyframes wtf-drop {
+  0% { transform: translateY(-1em) scaleY(1.15); opacity: 0; animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  15% { opacity: 1; }
+  42% { transform: translateY(.06em) scale(1.14, .82); animation-timing-function: ease-out; }
+  66% { transform: translateY(-.05em) scale(.96, 1.05); }
+  100% { transform: none; }
+}
+.room-stage.many .num-card.skin-waterfall::before, .num-card.sm.skin-waterfall::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .num-card.skin-waterfall::before, .skin-waterfall .slot { animation: none; } }
+/* Cadre de duel : une vallée verte dans la brume, de l'eau en bas ; 🌿 se balance, 💧 goutte. */
+.side-waterfall { --side-border: #22c55e; --side-glow: 0 0 16px rgba(34, 211, 238, .3); --side-ink: #15803d;
+  --side-bg: linear-gradient(180deg, transparent 78%, rgba(14, 116, 144, .3) 80%, rgba(14, 116, 144, .4)), radial-gradient(ellipse 30% 70% at 50% 40%, rgba(186, 230, 253, .25), transparent 70%), radial-gradient(ellipse 60% 40% at 15% 100%, rgba(22, 163, 74, .3), transparent 70%), radial-gradient(ellipse 60% 40% at 85% 100%, rgba(22, 163, 74, .3), transparent 70%);
+  --deco-a: '🌿'; --deco-b: '💧'; }
+.side-waterfall::before { transform-origin: 50% 100%; animation: wtf-sway 2.6s ease-in-out infinite; }
+.side-waterfall::after { animation: wtf-drip 1.6s ease-in infinite; }
+@keyframes wtf-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes wtf-drip { 0%, 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(6px); opacity: 0; } }
+.room-stage.many .side-waterfall::before, .room-stage.many .side-waterfall::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-waterfall::before, .side-waterfall::after { animation: none; } }
 
 /* ------------------------------------------------------------------ UFO (idée de JBearr12, 2026-10-21) : un champ la
    nuit, ciel étoilé, lune, herbe au premier plan. Une petite soucoupe (dessinée par js/skinfx.js, SCENES.ufo) survole
