@@ -178,6 +178,54 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - Cheating suspicions about two accounts with 100k+ casino wins (Gray alt [fb94d3be72b1], number 1 [5ff9b34f79c7]) and a "hacker" name (casmictechthing [71a80f2f76af]): Sacha checked the casino; close.
 - Thanks and chat: YU CHUAN 23 [cc03e936020f], [8169c7959d78], kingston [5e186aa0cf21], Marcoooo_seeva [353de3628c73], [08d5e19b0bf8], MereTera [21bd3aedfe86], MAYO [3f051de125d9], Avaneesh_The_Goat [bf0ded48c981], casmictechthing [e268fb31b28e].
 
+## Work batch for the second contributor (2026-10-24)
+
+Built from the Idea Manager reviews (254 ideas reviewed) and Sacha's rules. Do them **in this order**, one branch and
+one pull request per item (or per small group of badges). Credit the players in `UPDATES` (`(idea by X)`).
+Ids in brackets are suggestion ids; Sacha answers the players after merging.
+
+### A. Quick wins (badges and small features)
+1. Badges "Jet" (contains 737, 747, 757, 767, 787; 777 is Jackpot) (TibotyTWO [bee00d9ad046], CococoC [604a068a6275]).
+2. Badges: ends in 250 "Quarter Millennium" (WpBejs [3c8e159b40ec]); contains 99 "Ninety-Nine" + Exact 99 (kaz [4d50fddccb81]); 727 "WYSI" (Phong254 [cbf3a830e791]); exact 142857 (JBearr12 [15430f4307b5]). Grep first: no duplicates.
+3. Show the coins earned by a roll next to its XP on the result screen (jaxoncool43 [505eebd5889c]). The coins per rarity are in `Shop.COINS`.
+4. Let players reorder the casino game tabs (drag or arrows), saved in `Store.settings` (jia jun [f0aeec582de9]).
+5. Monthly leaderboard rewards: coins for the top 10 of the month, paid once on the 1st like the Trash King (`api/_discord_tasks.js`, `api/_rank.js`) (furcoat0 [efecba4e19e6], LwsBoi [58ee3ff2c7a9]). Keep amounts modest (ask Sacha: suggest 1,000 / 500 / 250).
+6. Sort History by how many times a number was rolled (CococoC [7ffd06d8ff64]).
+7. Attach up to 3 images to an idea or bug report (Phong254 [6a25a130793b]).
+8. Emote "money spread" (finnnnn [9044fe933f8b]).
+
+### B. Skins (follow `.claude/skills/rng-skin-design`, film them, put the preview in the PR)
+9. Rework **Infinity** so it matches Singularity (kaz [f221766d5b41]) — first, it is the rarest skin.
+10. Burger (jaxoncool43 [be2e597cbe99]).
+11. Dynamite / TNT: explosions reveal the digits, mushroom clouds from Mythic (casmictechthing [c1b8d0692aaa], ichi [bac7cdca55c8]).
+12. Waterfall with a nature backdrop (JBearr12 [532fd4c22dda], jjcoolcid1 [9d0b104252d4]).
+13. Money: a 100-dollar bill with gold digits that melt on Mythic+ (JBearr12 [c512cd0b2fa2]) and coins (finnnnn [2457889a6d20]): one skin.
+14. Bowling (JBearr12 [fa910f1e244b]), Basketball (jjcoolcid1 [e937ad77450c]), Mini golf (Kj13 [f42cca32bbe2]): pick one sport first.
+15. Rock smash: a fist smashes a rock to reveal the digit (HSI [5b5f29b0cc52]); Cracked screen (KMC [a677e62ae02d]); Medieval castle (BIGBOIJONER69 [c10d8e68d556]); Chocolate (finnnnn [89626248c340]); Floppy Fish (AnnJoe [47b7afc07c18]); Stick man with axes (jjcoolcid1 [9e4d04f5b906]); Metal balls breaking crates (jjcoolcid1 [4bf26afedcb9]); Math symbols (sennybex1 [359f2e6f81a9]).
+16. Legendary: **Christmas** (six presents that pop open, two trees, red and green lights) (JBearr12 [238c54c3daf9], Angelicide9 [1d43563c63f7]) — should ship before December as a limited skin (`until`); Divine Judgment (Gray alt [917364bbc5dd]).
+
+### C. Wallpapers (`js/shop.js` WALLPAPERS, `css/style.css` `.wp-<id>`)
+17. Underwater legendary with moving whales, sharks and dolphins (AnnJoe [cfc8a027d2a2], [4a54d5b3ada2]).
+18. Mountain with the sun, and the moon rising on Mythic+ (JBearr12 [9ba43f2987c5]).
+19. ASMR bubbles you can pop by clicking (kingston [ed5d1985429b]).
+20. Windy beach with an umbrella (17black [85d47bbec419]: he offered to animate it; ask Sacha before using outside art).
+
+### D. Ask Sacha before starting (the managers said yes, but each changes the game a lot)
+- Clans and clan battles (BIGBOIJONER69 [a17b96727ae9], KMC [85dda2459b20]).
+- Poker with friends (jaxoncool43 [e1547b646b5d], Roanono [28d4a65877c4]); F1 race betting (whywhywaylon [d10d0a3b344f]); chicken-crossing game (ANN JOE KAKAK SEXY [c14ecabadf1b]); multiplier wheel (Gray [06f56f10e214]). Every casino game must keep a house edge (`tools/casino-sim.mjs`, `tools/house-audit.mjs`).
+- Dogecoin in the Crypto tab (Aussie Haüs [cf7dce1e6e3e]): uses the real price, like BTC and ETH.
+- Group chats (furcoat0 [761f12575219]); preset avatars, no uploads (kingston [96a17679d210]).
+- A public roadmap page of accepted ideas (Phong67 [90bacc79d264]).
+- Auto-roll that keeps going on other pages of the site (kaz [ef720ee8447d]); playing the casino while a roll animates (jaxoncool43 [705caeb0b914]).
+- Daily shop, today's-date badge, Against All Odds achievement (see the backlog above).
+
+### E. Do not build, even if a manager said yes
+- Ironman or any brand or character (finnnnn [9cd670c54c89]); uploading your own background image (logannn [3a42860f42ac]); a native app (yukitsunodaiscool, JBearr12).
+- Badges for dead athletes' numbers (pilot56 [4a9c8d8e156e]): sensitive.
+- Biggest winner / loser badges (Ann Joe [d39c41a137fe]): Sacha already said no.
+- Follow button (randomguy [402d5f6e7966]): Sacha said "later".
+- Friend requests asked in an idea (YU CHUAN 23 [8169c7959d78]): not an idea.
+
 ## Decisions and why
 
 - **Everything on the VPS** (2026-10-22): Vercel paused the team for CPU; Sacha cannot pay Pro every month.
