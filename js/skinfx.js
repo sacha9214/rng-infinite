@@ -2780,6 +2780,60 @@
     };
   };
 
+  // 🏰 Medieval Castle (2026-10-25, idée de BIGBOIJONER69) — deux torches de part et d'autre du rempart : un bâton,
+  // une coupelle de fer, une flamme qui vacille et des braises qui montent ; elles flambent plus haut avant le dernier
+  // chiffre. Chaque bannière qui se déroule lâche une gerbe d'étincelles d'or. À la révélation, des fusées partent de
+  // derrière les créneaux et éclatent en feu d'artifice (plus nombreuses avec la rareté, couronne d'or dès Mythic) ;
+  // tirage raté : les torches baissent un instant.
+  SCENES.castle = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const embers = particles(), sparks = particles(), rockets = timed(), emit = emitter();
+    let blaze = 1, target = 1;
+    const COLS = ['#f87171', '#60a5fa', '#fde047', '#a3e635', '#f0abfc'];
+    const torches = () => [card.x - card.h * .32, card.x + card.w + card.h * .32];
+    const burst = (x, y, c, n, sp) => { for (let i = 0; i < n; i++) { const a = (i / n) * TAU + rnd(-.1, .1), v = sp * rnd(.8, 1.1); sparks.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 2.2, drag: 1.4, max: rnd(.9, 1.4), size: rnd(1.6, 2.6), c }); } };
+    return {
+      frame(t, dt) {
+        blaze += (target - blaze) * Math.min(1, dt * 3);
+        const add = dark ? 'lighter' : 'source-over';
+        for (const x of torches()) {
+          const top = card.y + card.h * .25, base = card.y + card.h * 1.05;
+          co.globalCompositeOperation = 'source-over';
+          line(co, '#78350f', x, top + card.h * .1, x, base, card.h * .07, 1); // le bâton
+          co.globalAlpha = 1; co.fillStyle = '#44403c'; co.beginPath(); co.moveTo(x - card.h * .12, top); co.lineTo(x + card.h * .12, top); co.lineTo(x + card.h * .06, top + card.h * .12); co.lineTo(x - card.h * .06, top + card.h * .12); co.closePath(); co.fill();
+          co.globalCompositeOperation = add;
+          const f = blaze * (1 + .12 * Math.sin(t * 17 + x) + .08 * Math.sin(t * 29));
+          dot(co, '#f97316', x, top - card.h * .12 * f, card.h * .3 * f, .5, card.h * .42 * f);
+          dot(co, '#fde047', x, top - card.h * .06 * f, card.h * .14 * f, .9, card.h * .24 * f);
+          if (dark) dot(co, '#fb923c', x, top, card.h * .9, .12 * blaze);
+          for (let n = emit(3 * blaze * q, dt / 2); n > 0; n--) embers.add({ x: x + rnd(-3, 3), y: top - card.h * .2, vx: rnd(-8, 8), vy: -card.h * rnd(.6, 1.2), drag: .5, g: 0, max: rnd(.6, 1.1), size: rnd(1, 2), c: '#fdba74' });
+        }
+        embers.step(dt); sparks.step(dt);
+        co.globalCompositeOperation = add;
+        embers.each((e, k) => dot(co, e.c, e.x + Math.sin(e.life * 9) * 2, e.y, e.size * 2, (1 - k) * .9));
+        rockets.run(dt, (r, k) => {
+          if (k < .5) { const kk = k / .5, y = r.y0 + (r.y1 - r.y0) * outCubic(kk); tail(co, dark ? '#fde68a' : '#ca8a04', r.x, y + card.h * .5, r.x, y, 2, .9); dot(co, '#fff7ed', r.x, y, 3, 1); }
+          else if (!r.done) { r.done = true; burst(r.x, r.y1, r.c, Math.round((18 + 14 * r.p) * q), card.h * (1.6 + 1.2 * r.p)); }
+        });
+        sparks.each((s, k) => { dot(co, s.c, s.x, s.y, s.size * 2.2, (1 - k) * (dark ? 1 : .9)); if (!dark) { co.globalAlpha = 1 - k; co.fillStyle = s.c; co.fillRect(s.x - 1, s.y - 1, 2, 2); } });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        for (let i = Math.round((o.last ? 16 : 8) * q); i > 0; i--) { const a = rnd(-Math.PI, 0), v = card.h * rnd(1, o.last ? 3 : 2); sparks.add({ x: p.x, y: card.y + card.h * .2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 4, drag: 1, max: rnd(.4, .8), size: rnd(1.2, 2), c: '#fde047' }); }
+      },
+      build() { target = 1.5; },
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        if (!P) { blaze = .4; target = 1; return; }
+        target = 1 + .4 * P;
+        const n = 1 + Math.round(5 * P);
+        for (let i = 0; i < n; i++) rockets.add({ delay: i * .18, life: .9, x: cx + rnd(-.6, .6) * card.w, y0: card.y + card.h * .1, y1: card.y - card.h * rnd(.8, 1.5), c: pick(COLS), p: P });
+        if (P >= 1) rockets.add({ delay: n * .18 + .1, life: 1, x: cx, y0: card.y, y1: card.y - card.h * 1.6, c: '#fde047', p: 1.8 + .3 * (ASCEND[tier] || 0) });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et

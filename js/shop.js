@@ -91,6 +91,7 @@
     // la fenêtre donne sur un jardin au soleil, qui se couche (et la lune se lève) dès Mythic.
     { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises', idea: 'costoroll' },
     { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
+    { id: 'castle', name: 'Medieval Castle', emoji: '🏰', price: 2400, desc: 'Royal banners unfurl one by one on a stone castle wall lit by torches; rare rolls end in fireworks over the battlements', idea: 'BIGBOIJONER69' }, // idée de BIGBOIJONER69 (2026-10-25)
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
