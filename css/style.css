@@ -5470,3 +5470,60 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-quit { margin-top: .4rem; }
 
 .theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */
+/* ------------------------------------------------------------------ Bowling (idée de JBearr12, 2026-10-25) : le bout
+   d'une piste de bowling en érable ciré (lattes claires, reflet), les gouttières sombres en haut et en bas, les flèches
+   de visée ; chaque chiffre est imprimé sur le ventre d'une quille blanche à deux bandes rouges. Pendant le tirage les
+   quilles vacillent sur leur base ; un chiffre qui se pose : la quille recule un instant (élan), la boule la frappe
+   (flash, elle bascule en arrière), elle revient en butée et se pose. Boule, éclats et « STRIKE! » : js/skinfx.js. */
+.num-card.skin-bowling {
+  background:
+    /* gouttières en haut et en bas */
+    linear-gradient(180deg, #1f2937 0 .16em, #4b5563 .16em .2em, transparent .2em calc(100% - .2em), #4b5563 calc(100% - .2em), #1f2937 calc(100% - .16em)),
+    /* flèches de visée, en bas */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><path d='M10 1L13 9H7Z' fill='%2378350f' fill-opacity='.55'/></svg>") 50% calc(100% - .24em) / .5em .25em repeat-x,
+    /* reflet ciré */
+    linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .28) 45%, transparent 60%),
+    /* lattes d'érable */
+    repeating-linear-gradient(90deg, #e8c48f 0 .16em, #dcb27a .16em .18em, #edd0a0 .18em .34em, #d9ab70 .34em .36em),
+    #e2bb84;
+  border: 2px solid #78350f; border-radius: .5rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 237, .35), inset 0 0 .5em rgba(120, 53, 15, .35), 0 0 14px rgba(251, 191, 36, .2), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .3em .45em .32em;
+}
+.skin-bowling .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .56em; font-weight: 900; line-height: 1;
+  width: 1.14em; height: 1.75em; margin: 0 -.02em; padding-bottom: .24em;
+  display: inline-flex; align-items: flex-end; justify-content: center; vertical-align: bottom;
+  color: #1e3a8a; text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 50'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%23cbd5e1'/><stop offset='.35' stop-color='%23ffffff'/><stop offset='.7' stop-color='%23f1f5f9'/><stop offset='1' stop-color='%2394a3b8'/></linearGradient><clipPath id='c'><path id='p' d='M10 1C6.6 1 6 5 6.8 9.5C7.4 13 6.4 15.5 4.3 20.5C1.4 27.5 1.4 39 4.6 49H15.4C18.6 39 18.6 27.5 15.7 20.5C13.6 15.5 12.6 13 13.2 9.5C14 5 13.4 1 10 1Z'/></clipPath></defs><g clip-path='url(%23c)'><rect width='20' height='50' fill='url(%23g)'/><rect y='11' width='20' height='1.6' fill='%23dc2626'/><rect y='14' width='20' height='1.6' fill='%23dc2626'/></g><path d='M10 1C6.6 1 6 5 6.8 9.5C7.4 13 6.4 15.5 4.3 20.5C1.4 27.5 1.4 39 4.6 49H15.4C18.6 39 18.6 27.5 15.7 20.5C13.6 15.5 12.6 13 13.2 9.5C14 5 13.4 1 10 1Z' fill='none' stroke='%2364748b' stroke-width='.6'/></svg>") 50% 100% / 100% 100% no-repeat;
+  filter: drop-shadow(.04em .06em .03em rgba(69, 26, 3, .45));
+  transform-origin: 50% 100%;
+}
+.skin-bowling .slot.ghost { opacity: .18; }
+.skin-bowling .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; filter: none; }
+/* Pendant le tirage : la quille vacille sur sa base, le chiffre n'est qu'une ombre. */
+.skin-bowling .slot.spinning { color: rgba(30, 58, 138, .5); text-shadow: none; animation: bwl-wobble .24s ease-in-out infinite alternate; }
+.skin-bowling .slot.spinning:nth-of-type(2n) { animation-delay: -.12s; }
+@keyframes bwl-wobble { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+/* Le coup : elle recule (élan), la boule frappe (flash, elle bascule en arrière), elle revient en butée et se pose. */
+.skin-bowling .slot.revealed { animation: bwl-hit .62s backwards; }
+@keyframes bwl-hit {
+  0% { transform: rotate(5deg); animation-timing-function: ease-in; }
+  14% { transform: rotate(7deg) translateX(-.04em); filter: drop-shadow(.04em .06em .03em rgba(69, 26, 3, .45)); }
+  24% { transform: rotate(-32deg) translate(.08em, -.18em); filter: brightness(1.6) drop-shadow(0 0 .2em #fff); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  52% { transform: rotate(9deg); filter: drop-shadow(.04em .06em .03em rgba(69, 26, 3, .45)); }
+  72% { transform: rotate(-4deg); }
+  88% { transform: rotate(1.5deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-bowling .slot { animation: none; } }
+/* Cadre de duel : une allée de bowling le soir, des lattes de piste en bas ; 🎳 bascule, 🏆 brille. */
+.side-bowling { --side-border: #f59e0b; --side-glow: 0 0 16px rgba(245, 158, 11, .3); --side-ink: #b45309;
+  --side-bg: repeating-linear-gradient(90deg, rgba(232, 196, 143, .35) 0 10px, rgba(217, 171, 112, .35) 10px 20px) 0 100% / 100% 22% no-repeat, radial-gradient(ellipse 70% 50% at 50% 20%, rgba(244, 114, 182, .14), transparent 70%), radial-gradient(ellipse 60% 50% at 50% 100%, rgba(251, 191, 36, .16), transparent 70%);
+  --deco-a: '🎳'; --deco-b: '🏆'; }
+.side-bowling::before { transform-origin: 50% 100%; animation: bwl-tip 2s ease-in-out infinite; }
+.side-bowling::after { animation: bwl-shine 1.8s ease-in-out infinite; }
+@keyframes bwl-tip { 0%, 60%, 100% { transform: none; } 70% { transform: rotate(-18deg); } 82% { transform: rotate(8deg); } 92% { transform: rotate(-3deg); } }
+@keyframes bwl-shine { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.12); filter: brightness(1.3); } }
+.room-stage.many .side-bowling::before, .room-stage.many .side-bowling::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-bowling::before, .side-bowling::after { animation: none; } }

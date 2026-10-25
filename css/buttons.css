@@ -908,3 +908,10 @@
 /* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
 .btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
+/* Bowling (idée de JBearr12, 2026-10-25) : une boule violette brillante sur une latte d'érable. */
+.btn-roll.gen-bowling { border: 2px solid #78350f; border-radius: 999px; color: #fff7ed;
+  background: radial-gradient(circle at 22% 35%, #c4b5fd 0 .12em, transparent .16em), radial-gradient(circle at 30% 30%, #7c3aed, #3b0764 70%), linear-gradient(180deg, #e8c48f, #c9955a);
+  background-size: 100% 100%, 2.2em 2.2em, 100% 100%; background-position: 0 0, .4em 50%, 0 0; background-repeat: no-repeat;
+  text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(0, 0, 0, .4);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(124, 58, 237, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(167, 139, 250, .45); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-bowling:hover { filter: brightness(1.08); }
