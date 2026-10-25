@@ -352,6 +352,8 @@
     // Idée de JAKECisthebest (2026-10-25) : nombre abondant (somme des diviseurs propres > n).
     // Un nombre sur quatre est abondant (trop courant), mais les abondants impairs sont rares (1 996 sur 1 000 001, le premier est 945).
     ODD_ABUNDANT: c => c.n % 2 === 1 && c.n >= 945 && sumProperDivisors(c.n) > c.n,
+    // Idée de CococoC (2026-10-25) : « Vortrox et Gina », 4992 ou 9249 n'importe où (couvre aussi les nombres Geometry Dash 554992…).
+    VORTROX_GINA: c => c.s.includes('4992') || c.s.includes('9249'),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,

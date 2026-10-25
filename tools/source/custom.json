@@ -547,5 +547,12 @@
     "desc": "An odd number smaller than the sum of its divisors (1,996 of them, the first is 945).",
     "emoji": "🍇",
     "score": 50100
+  },
+  {
+    "id": "VORTROX_GINA",
+    "label": "Vortrox and Gina",
+    "desc": "Contains \"4992\" or \"9249\".",
+    "emoji": "💞",
+    "score": 167224
   }
 ]
