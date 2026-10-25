@@ -58,7 +58,7 @@ const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash 
 
 async function state(id) {
   const stats = await readStats(id);
-  const [owned, skin, bought, button, emotes, walls, wall, snds, snd] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id], ['SMEMBERS', ownedSoundsKey(id)], ['HGET', 'snd', id]]);
+  const [owned, skin, bought, button, emotes, walls, wall, snds, snd, sold] = await redis([['SMEMBERS', ownedKey(id)], ['HGET', 'skins', id], ['SMEMBERS', ownedButtonsKey(id)], ['HGET', 'btns', id], ['SMEMBERS', ownedEmotesKey(id)], ['SMEMBERS', ownedWallsKey(id)], ['HGET', 'wall', id], ['SMEMBERS', ownedSoundsKey(id)], ['HGET', 'snd', id], ['HMGET', PRESTIGE_SOLD, ...Shop.PRESTIGE.map(x => x.id)]]);
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   // Succès Coin Millionaire (idée d'A Dude, 2026-10-21) : posé une fois, la première fois que le solde atteint 1 000 000.
   if (!Number(stats.millionaire) && Shop.balance(stats) >= 1000000) await redis([['HSET', statsKey(id), 'millionaire', 1]]);
@@ -87,8 +87,12 @@ async function state(id) {
     speed: Shop.speedLevel(stats.speedLv),
     sounds: Shop.SOUNDS.map(p => p.id).filter(p => p !== 'classic' && (snds || []).includes(p)),
     sound: Shop.soundPack(snd, snds),
+    // Prestige : ce que le joueur possède et le stock restant de chaque titre.
+    prestige: Shop.PRESTIGE.map((x, i) => ({ id: x.id, owned: Number(stats[`pr:${x.id}`]) >= 1, left: Math.max(0, x.stock - (Number((sold || [])[i]) || 0)) })),
   };
 }
+// Prestige (2026-10-25) : nombre d'exemplaires vendus de chaque titre (stock commun, Shop.PRESTIGE[].stock).
+const PRESTIGE_SOLD = 'prestige:sold';
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
@@ -291,6 +295,25 @@ module.exports = async (req, res) => {
           ]);
           await checkCollection(playerId);
         }
+        return send(res, 200, await state(playerId));
+      } finally {
+        await redis([['DEL', `shop:${playerId}`]]);
+      }
+    }
+    // Prestige (Sacha, 2026-10-25) : un titre de luxe, un exemplaire par joueur, stock limité pour tout le jeu. Le stock
+    // est réservé d'abord (HINCRBY) et rendu si le joueur ne peut pas payer : jamais plus de ventes que le stock.
+    if (body.action === 'prestige') {
+      const item = Shop.prestigeById.get(String(body.item || ''));
+      if (!item) return send(res, 400, { error: 'Unknown item' });
+      const [lock] = await redis([['SET', `shop:${playerId}`, '1', 'PX', 5000, 'NX']]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Purchase already in progress' });
+      try {
+        const st = await state(playerId), mine = st.prestige.find(x => x.id === item.id);
+        if (mine.owned) return send(res, 200, st);
+        if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
+        const [n] = await redis([['HINCRBY', PRESTIGE_SOLD, item.id, 1]]);
+        if (Number(n) > item.stock) { await redis([['HINCRBY', PRESTIGE_SOLD, item.id, -1]]); return send(res, 422, { error: 'Sold out' }); }
+        await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['HSET', statsKey(playerId), `pr:${item.id}`, 1], ...eco('out:prestige', item.price), ['HSET', 'titles', playerId, item.id]]);
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

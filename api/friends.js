@@ -3,11 +3,13 @@
 // POST /api/friends { playerId, secret, action: 'gift', name, amount }    → donne des pièces à un ami
 // POST /api/friends { playerId, secret, action: 'gifts' }                 → cadeaux reçus pas encore vus (puis vus), et messages non lus
 // POST /api/friends { playerId, secret, action: 'clan', op, … }         → clans (api/_clan.js)
+// POST /api/friends { action: 'gcList' | 'gcSend' | 'gcReport' | 'gcDelete' | 'gcMute' | 'gcAdmin' | 'gcUnmute' | 'gcModSet', … } → chat global (api/_global.js)
 // POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
 const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey } = require('./_lib');
 const Reports = require('./_reports');
+const Global = require('./_global');
 const Shop = require('../js/shop.js');
 const { MIN_ROLLS } = require('./_gamble');
 const { cleanChat, cleanImage, MAX_CHARS } = require('./_chat');
@@ -164,6 +166,8 @@ module.exports = async (req, res) => {
     // Toujours en POST : le secret du joueur ne voyage jamais dans une adresse.
     if (req.method !== 'POST') return send(res, 405, { error: 'Use POST' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    // Chat global (api/_global.js) : lisible sans joueur, il vérifie lui-même qui écrit ou modère.
+    if (/^gc[A-Z]/.test(String(body.action || ''))) return send(res, 200, await Global.handle(body));
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
     // La liste d'amis est privée : il faut prouver qui on est, même pour la lire.

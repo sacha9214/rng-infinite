@@ -428,11 +428,13 @@ module.exports = async (req, res) => {
     if (body.action === 'tourney') return send(res, 200, await Tournament.handle(body));
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
-    const name = cleanName(body.name);
+    let name = cleanName(body.name);
     if (!isPlayerId(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!name) return send(res, 400, { error: 'Pick a player name first' });
     if (!(await claimPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
-    if (!(await claimName(playerId, name))) return send(res, 409, { error: 'This name is already taken, pick another one' });
+    const claimed = await claimName(playerId, name);
+    if (!claimed) return send(res, 409, { error: 'This name is already taken, pick another one' });
+    if (claimed.kept) name = claimed.kept; // renommer est payant (api/name.js) : le pseudo enregistré reste
 
     // Nouvelle salle avec ses règles ; pour une revanche, tous les joueurs y sont déjà et la partie commence aussitôt.
     async function createRoom(r, players) {

@@ -83,7 +83,7 @@
     async request(pathname, options = {}) {
       const r = await this.send(pathname, options);
       // Au casino, le solde se met à jour à la fin de l'animation (showCoins), pour ne pas dévoiler le résultat avant.
-      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests)\b/.test(pathname) && currentView !== 'gamble') HdrCoins.set(r.coins);
+      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests|name)\b/.test(pathname) && currentView !== 'gamble') HdrCoins.set(r.coins);
       return r;
     },
     async send(pathname, options = {}) {
@@ -103,6 +103,11 @@
     roll(nonce) {
       const p = Store.player;
       return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, nonce }) });
+    },
+    // Chat global (api/_global.js par /api/friends) : le joueur s'identifie s'il en a un, la lecture marche sans.
+    global(action, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ ...(p.id && p.secret ? { playerId: p.id, secret: p.secret } : {}), action, ...extra }) });
     },
     equip(title) {
       const p = Store.player;
@@ -1101,7 +1106,7 @@
         <label for="set-name">Player name</label>
         <input class="input" id="set-name" maxlength="20" autocomplete="off" value="${esc(Store.player.name)}" placeholder="Player">
         <p class="field-error" id="set-name-error" hidden></p>
-        <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.</span>
+        <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.${Store.player.name ? ` Changing it costs 🪙 ${fmt(Shop.RENAME_PRICE)}.` : ''}</span>
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${googleAccountHTML()}
@@ -1128,6 +1133,8 @@
       name.addEventListener('change', async () => {
         const previous = Store.player.name;
         if (!name.value.trim() || name.value.trim() === previous) { name.value = previous; return; }
+        // Renommer coûte des pièces (2026-10-25) ; la casse ou les espaces seuls restent gratuits, comme sur le serveur.
+        if (previous && !sameName(previous, name.value) && !confirm(window.RNGI18n.t(`Change your name to "${name.value.trim()}" for ${fmt(Shop.RENAME_PRICE)} coins?`))) { name.value = previous; return; }
         const result = await saveName(name.value);
         if (result.ok) {
           nameError.hidden = true;
@@ -1298,7 +1305,7 @@
     slot.innerHTML = `
       <div class="quests-card">
         <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
-        ${state.rush ? `<div class="rush-banner">🔥 <b>Weekend Rush</b> · ×2 coins from rolls and quests · ends in ${Math.max(1, Math.floor((state.rush.end - Date.now()) / 3600000))} h</div>` : ''}
+        ${state.rush ? `<div class="rush-banner">🔥 <b>Weekend Rush</b> · +25% coins from rolls and quests · ends in ${Math.max(1, Math.floor((state.rush.end - Date.now()) / 3600000))} h</div>` : ''}
         ${state.event ? (() => { const ev = state.event, done = ev.progress >= ev.goal, left = Math.max(0, ev.end - Date.now());
           const leftTxt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
           return `<div class="quest event-quest${ev.claimed ? ' done' : ''}">
@@ -1445,6 +1452,8 @@
   // ---------------------------------------------------------------- tirage
   // Réserve le nom sur le serveur (un nom = un seul joueur). Serveur injoignable : on le garde localement,
   // le serveur tranchera au prochain tirage.
+  // Même clé que nameKey (api/_lib.js), en plus simple : sans accents, casse, espaces ni ponctuation.
+  const sameName = (a, b) => { const k = v => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); return k(a) === k(b); };
   async function saveName(raw) {
     const name = String(raw).trim().replace(/\s+/g, ' ').slice(0, 20);
     // Même règle que le serveur : alphabet latin (accents compris), chiffres, espaces et _ . - ' (pas de sosie en cyrillique).
@@ -1452,6 +1461,7 @@
     try {
       const data = await Online.claimName(name);
       Store.setPlayerName(data.name || name);
+      if (typeof data.coins === 'number') Store.setSetting('coins', data.coins);
       return { ok: true };
     } catch (err) {
       if (err.status === 409) {
@@ -1459,6 +1469,7 @@
         return { ok: false, error: `"${name}" is already taken. Pick another name${hint}.` };
       }
       if (err.status === 400) return { ok: false, error: 'That name is not valid.' };
+      if (err.status === 402 || err.status === 429) return { ok: false, error: `${err.message}.` };
       Store.setPlayerName(name);
       return { ok: true };
     }
@@ -1684,6 +1695,8 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
+    { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need a linked Google account and 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut un compte Google associé et 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
+    { id: '2026-10-25-economy', date: 'Oct 25, 2026', en: ['🪙 Coin balance: there were too many coins in the game, so skins were losing their value. Your XP, your luck and the leaderboards do not change', '🎲 Coins from rolls now depend on how many rolls you made today (UTC): your first 500 rolls pay full coins, rolls 501 to 2,000 pay 50%, and after that 20%. The rate shows under your coins after a roll', '🔥 Weekend Rush now gives +25% coins from rolls and quests (instead of ×2)', '✏️ Your first name is free; changing it now costs 5,000 coins', '👑 New Prestige tab in the Shop: three rare titles (Tycoon, Magnate, Coin Emperor) with a limited stock for the whole game'], fr: ['🪙 Équilibre des pièces : il y avait trop de pièces dans le jeu, les skins perdaient leur valeur. Ton XP, ta chance et les classements ne changent pas', '🎲 Les pièces des tirages dépendent maintenant du nombre de tirages faits aujourd\'hui (UTC) : tes 500 premiers tirages rapportent toutes leurs pièces, du 501e au 2 000e 50 %, et ensuite 20 %. Le taux s\'affiche sous tes pièces après un tirage', '🔥 Le Weekend Rush donne maintenant +25 % de pièces sur les tirages et les quêtes (au lieu de ×2)', '✏️ Ton premier pseudo est gratuit ; le changer coûte maintenant 5 000 pièces', '👑 Nouvel onglet Prestige dans la boutique : trois titres rares (Tycoon, Magnate, Coin Emperor) en stock limité pour tout le jeu'] },
     { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
     { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
     { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
@@ -2272,9 +2285,14 @@
   // Rien ne peut être sauté ; le menu reste verrouillé jusqu'à l'affichage de la rareté.
   // Pièces gagnées par le tirage (idée de jaxoncool43, 2026-10-24) : le serveur dit combien il a crédité, Weekend Rush
   // compris ; un serveur d'avant ce champ laisse le tarif de la rareté (Shop.COINS).
+  // Rendements décroissants (2026-10-25) : le serveur envoie aussi le taux du moment (rate) ; sous 100 %, une petite
+  // note le dit, avec le détail des paliers dans l'infobulle.
   function coinsTagHTML(online, tier) {
     const base = Shop.COINS[tier] || 0, got = typeof online.coins === 'number' ? online.coins : base;
-    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > base && base ? ' <i>🔥 ×2 Weekend Rush</i>' : ''}</div>`;
+    const rate = typeof online.rate === 'number' ? online.rate : 1, paid = Math.floor(base * rate);
+    const tiers = Shop.ROLL_TIERS || [], tip = `Coin rate today: 100% for your first ${fmt(tiers[0] ? tiers[0].upTo : 500)} rolls, then 50% until ${fmt(tiers[1] ? tiers[1].upTo : 2000)}, then 20%. XP and luck never change. Resets at 00:00 UTC.`;
+    const rateTag = rate < 1 ? ` <em class="r-rate" data-tip="${esc(tip)}">Coin rate today: ${Math.round(rate * 100)}%</em>` : '';
+    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > paid && paid ? ' <i>🔥 +25% Weekend Rush</i>' : ''}${rateTag}</div>`;
   }
 
   function playReveal(ctx) {
@@ -3391,13 +3409,13 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
+  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades'], ['prestige', '👑', 'Prestige']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
       <div class="page page-wide">
         <div class="g-head"><h1 class="page-title">Shop</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="d-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
-        <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}`)}">How much? ⓘ</span></p>
+        <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}<br><b>Coin rate per day</b><br>Rolls 1–500 · 100%<br>Rolls 501–2,000 · 50%<br>After 2,000 rolls · 20%`)}">How much? ⓘ</span></p>
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
@@ -3474,6 +3492,13 @@
           <div class="skin-grid sound-grid" id="d-sounds"></div>
         </div>
         </section>
+        <section class="shop-pane" data-shop-pane="prestige" hidden>
+        <div class="panel pr-panel">
+          <div class="panel-head"><h3 class="panel-title">Prestige</h3><span class="panel-note">rare titles · limited stock for the whole game · one each</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">Show off your coins: a prestige title appears next to your name on the leaderboards, your profile and in duels. When the stock runs out, nobody can buy it again.</p>
+          <div class="skin-grid pr-grid" id="d-prestige"><div class="empty">Loading…</div></div>
+        </div>
+        </section>
         <section class="shop-pane" data-shop-pane="buttons" hidden>
         <div class="panel" id="d-buttons-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Generate button</h3><span class="panel-note">only you see it · press one to try it</span></div>
@@ -3548,6 +3573,7 @@
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
     drawEmotes(state);
+    drawPrestige(state);
     drawSounds(state);
     drawWalls(state);
     drawSpeed(state);
@@ -5083,6 +5109,37 @@
     setTimeout(() => { hit.classList.remove('gone'); wallBubble(hit, 0); hit.style.animation = 'none'; void hit.offsetWidth; hit.style.animation = ''; }, 900);
   });
 
+  // Prestige (Sacha, 2026-10-25) : trois titres chers en stock limité, pour retirer des pièces du jeu. Achat vérifié par
+  // le serveur (api/shop.js, action « prestige »), le titre est équipé aussitôt.
+  function drawPrestige(state) {
+    const grid = $('#d-prestige');
+    if (!grid) return;
+    const mine = id => (state.prestige || []).find(x => x.id === id) || { owned: false, left: 0 };
+    grid.innerHTML = Shop.PRESTIGE.map(p => { const m = mine(p.id); return `
+      <div class="skin-tile pr-tile${m.owned ? ' owned' : ''}">
+        <div class="pr-badge" aria-hidden="true">${p.emoji}</div>
+        <div class="skin-name"><b>${titleHTML(p.id) || esc(p.name)}</b><span>${esc(p.desc)}</span></div>
+        <span class="pr-left">${m.owned ? 'Yours' : m.left ? `${fmt(m.left)} of ${fmt(p.stock)} left` : 'Sold out'}</span>
+        ${m.owned ? '<span class="skin-state">Owned</span>' : m.left ? `<button class="btn${state.coins >= p.price ? '' : ' disabled'}" data-pr-buy="${p.id}">🪙 ${fmt(p.price)}</button>` : ''}
+      </div>`; }).join('');
+    grid.onclick = async ev => {
+      const btn = ev.target.closest('[data-pr-buy]');
+      if (!btn || btn.disabled) return;
+      const item = Shop.prestigeById.get(btn.dataset.prBuy);
+      if (state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for ${item.name}`); return; }
+      if (!confirm(window.RNGI18n.t(`Buy the ${item.name} title for ${fmt(item.price)} coins?`))) return;
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction('prestige', undefined, { item: item.id });
+        toast(`${item.name} is yours: the title is now on your name`);
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
+  }
+
   function drawEmotes(state) {
     const grid = $('#d-emotes');
     if (!grid) return;
@@ -5487,7 +5544,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -5866,17 +5923,21 @@
           <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
         <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
       // Économie
-      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin' };
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
       const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
       const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
       const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
+      // Masse monétaire et casino par jour (2026-10-25) : mises − gains = ce que le casino retire du jeu.
+      const casinoNet = d => (d.out.casino || 0) - (d.in.casino || 0), signed = n => `${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}`;
+      const net0 = E[0] ? tot(E[0].in) - tot(E[0].out) : 0;
       const flowBars = (title, obj, labels) => bars(title, Object.entries(obj).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(([name, count]) => ({ name, count })), n => labels[n] || n, 'last 14 days', tot(obj));
       const ecoHTML = `
         ${section('Coins', 'Coins created (in) and spent (out) every day. Gifts and duel stakes move coins between players and are not counted. If more coins come in than go out for long, skins lose their value.')}
+        ${X.supply ? kpis([kpi('Total supply', compact(X.supply.total), `held by ${fmt(X.supply.holders)} player${X.supply.holders === 1 ? '' : 's'} · updated every 10 min`), kpi('Held by the top 1%', `${Math.round(X.supply.top1 * 100)}%`, 'of all coins', X.supply.top1 > 0.5 ? 'warn' : ''), kpi('Net today', signed(net0), X.supply.total ? `${((net0 / X.supply.total) * 100).toFixed(1)}% of the supply` : '', net0 > 0 ? 'warn' : 'good'), kpi('Casino net, 7 days', signed(w7.reduce((x, d) => x + casinoNet(d), 0)), 'bets minus payouts')]) : ''}
         ${kpis([kpi('Created, 7 days', compact(in7), 'coins given to players'), kpi('Spent, 7 days', compact(out7), 'coins taken back by the game'), kpi('Net, 7 days', `${net7 >= 0 ? '+' : '−'}${compact(Math.abs(net7))}`, net7 > 0 ? 'more coins in the game' : 'fewer coins in the game', net7 > 0 ? 'warn' : 'good'), kpi('Spent / created', in7 ? `${Math.round((out7 / in7) * 100)}%` : '–', 'below 70% for long = inflation')])}
         ${ecoDays < 3 ? '<p class="panel-note">Counted since 18 Oct 2026: the numbers fill in over the next days.</p>' : ''}
         <div class="grid-2 stats-sep">${flowBars('Where coins come from', span(E, 'in'), LABEL_IN)}${flowBars('Where coins go', span(E, 'out'), LABEL_OUT)}</div>
-        ${panel('Day by day', 'coins in, out and the difference', table(['Day', 'In', 'Out', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${n > 0 ? 'o-down' : 'o-up'}">${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}</span>`]; }), 'c4')).replace('class="panel"', 'class="panel stats-sep"')}`;
+        ${panel('Day by day', 'coins in, out, the casino alone and the difference', table(['Day', 'In', 'Out', 'Casino net', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out), cn = casinoNet(x); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${cn >= 0 ? 'o-up' : 'o-down'}" data-tip="${esc('Bets minus payouts: positive = the casino took coins out of the game')}">${signed(cn)}</span>`, `<span class="${n > 0 ? 'o-down' : 'o-up'}">${signed(n)}</span>`]; }), 'c5')).replace('class="panel"', 'class="panel stats-sep"')}`;
       // Ventes de la boutique
       const S = (X.sales || []).filter(x => !x.caseOnly || x.owners), KIND = { skins: '🎨', walls: '🖼️', buttons: '🔘', emotes: '😎', sounds: '🔊' };
       const topSales = S.slice().sort((x, y) => y.owners * y.price - x.owners * x.price);
@@ -5984,6 +6045,29 @@
       const b = e.target.closest('[data-report-done]'); if (!b || currentView !== 'owner') return;
       b.disabled = true;
       try { drawReports(await Online.site('reportDone', { id: b.dataset.reportDone })); } catch (err) { b.disabled = false; toast('Unavailable right now, try again'); }
+    });
+    // ---- Chat global (api/_global.js) : Modérateurs (donnés ou retirés par pseudo) et silences en cours, levés d'un clic.
+    const drawChat = d => {
+      const box = pane('chat'); if (currentView !== 'owner' || !box) return;
+      badge('chat', d.mutes.length);
+      const until = u => (u < 0 ? 'forever' : `until ${fullDate(u)}`);
+      box.innerHTML = panel('Chat moderators', 'they can delete messages and mute players in the global chat', `
+          <div class="im-managers">${d.mods.map(n => `<span class="chip"><span data-no-i18n>${esc(n)}</span> <button class="im-x" data-gc-mod="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
+          <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
+        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>');
+    };
+    const chatRun = (action, extra) => Online.global(action, extra).then(drawChat);
+    chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
+    // Écouteurs posés sur l'onglet lui-même (recréé à chaque visite de la page) : jamais en double.
+    pane('chat').addEventListener('click', e => {
+      if (currentView !== 'owner') return;
+      const un = e.target.closest('[data-gc-unmute]'); if (un) { un.disabled = true; chatRun('gcUnmute', { name: un.dataset.gcUnmute }).then(() => toast('Unmuted')).catch(err => { un.disabled = false; toast(err.message || 'Unavailable right now, try again'); }); return; }
+      const rm = e.target.closest('[data-gc-mod]'); if (rm && confirm(window.RNGI18n ? window.RNGI18n.t('Remove this moderator?') : 'Remove this moderator?')) chatRun('gcModSet', { name: rm.dataset.gcMod, on: false }).catch(err => toast(err.message || 'Unavailable right now, try again'));
+    });
+    pane('chat').addEventListener('submit', e => {
+      const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
+      e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
+      chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
     });
     const drawInbox = data => {
       const box = $('#o-inbox');
@@ -7943,6 +8027,115 @@
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
   Store.onChange(syncPlayer);
   $('#player-btn').addEventListener('click', openSettings);
+  // ---------------------------------------------------------------- chat global (demandé par Sacha, 2026-10-25)
+  // Un panneau ouvert par le bouton 💬 (coin en bas à droite ; en bas de page sur téléphone, comme les autres coins).
+  // Tout le monde lit ; écrire demande Google + 100 tirages (vérifié par le serveur, api/_global.js, qui refuse aussi
+  // liens, insultes et infos personnelles). Relecture toutes les 3 s seulement panneau ouvert ET onglet visible.
+  // Les messages sont du texte échappé (esc), marqués data-no-i18n (pseudos : .player-link) : jamais de HTML d'un joueur, jamais traduits.
+  const GChat = {
+    open: false, timer: 0, msgs: [], rev: null, del: 0, me: null, busy: false, menu: null,
+    el: null,
+    mount() {
+      if (this.el) return this.el;
+      const el = document.createElement('section');
+      el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
+      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+        <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
+        <footer class="gc-foot"></footer>`;
+      document.body.appendChild(el);
+      el.querySelector('.gc-close').addEventListener('click', () => this.close());
+      el.addEventListener('click', e => this.onClick(e));
+      el.addEventListener('submit', e => { e.preventDefault(); this.send(); });
+      el.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
+      this.el = el;
+      return el;
+    },
+    toggle() { this.open ? this.close() : this.show(); },
+    show() {
+      const el = this.mount();
+      el.hidden = false; this.open = true;
+      document.querySelectorAll('[data-gchat]').forEach(b => b.setAttribute('aria-expanded', 'true'));
+      this.rev = null; // première lecture : la liste entière
+      this.poll();
+    },
+    close() {
+      if (this.el) this.el.hidden = true;
+      this.open = false; clearTimeout(this.timer);
+      document.querySelectorAll('[data-gchat]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    },
+    // Relecture : une seule à la fois, la suivante 3 s après la réponse ; rien si le panneau est fermé ou l'onglet caché.
+    async poll() {
+      clearTimeout(this.timer);
+      if (!this.open || document.hidden) return;
+      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last() })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
+      if (this.open && !document.hidden) this.timer = setTimeout(() => this.poll(), 3000);
+    },
+    last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
+    list() { return this.el.querySelector('.gc-list'); },
+    apply(d) {
+      const before = JSON.stringify(this.me);
+      this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
+      if (d.me) this.me = d.me;
+      if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
+      if (d.same) return;
+      this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
+      this.drawList();
+    },
+    drawList() {
+      const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+      const me = this.me || {}, signed = !!Store.player.name;
+      const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}" data-id="${esc(m.id)}">
+          <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
+            ${!m.mine && signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
+          <p class="gc-text" data-no-i18n>${esc(m.text)}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${me.mod ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+        </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
+      if (stick) box.scrollTop = box.scrollHeight;
+    },
+    // Pied du panneau : la zone d'écriture, ou pourquoi on ne peut pas écrire (Google, tirages, silence).
+    drawFoot() {
+      const foot = this.el.querySelector('.gc-foot'), me = this.me;
+      const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
+      if (me && me.can) {
+        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message…" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
+        return;
+      }
+      const why = !me || !Store.player.name ? 'Pick a player name, link a Google account and make 100 rolls to write here.'
+        : me.reason === 'muted' ? (me.mutedUntil < 0 ? '🔇 You can no longer write in the chat.' : `🔇 You are muted until ${fullDate(me.mutedUntil)}.`)
+        : me.reason === 'google' ? `To write here, link a Google account (⚙️ Settings) and make ${me.need} rolls.`
+        : `To write here, make ${me.need} rolls (you have ${fmt(me.rolls)}).`;
+      foot.innerHTML = `<p class="gc-why">${esc(why)}</p>${me && me.reason === 'google' ? '<button class="btn ghost small" data-gc="google">⚙️ Link Google</button>' : ''}`;
+    },
+    async send() {
+      const input = this.el.querySelector('.gc-input'); if (!input || this.busy) return;
+      const text = input.value.trim(); if (!text) return;
+      this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
+      try {
+        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del }));
+        input.value = ''; this.list().scrollTop = this.list().scrollHeight;
+      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll(); }
+      finally { this.busy = false; btn.disabled = false; }
+    },
+    async onClick(e) {
+      const menu = e.target.closest('[data-gc-menu]');
+      if (menu) { const id = menu.closest('.gc-msg').dataset.id; this.menu = this.menu === id ? null : id; this.drawList(); return; }
+      const b = e.target.closest('[data-gc]'); if (!b) return;
+      if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
+      const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+      try {
+        if (b.dataset.gc === 'report') { const r = await Online.global('gcReport', { id }); toast(r.already ? 'Already reported' : 'Reported: thank you!'); }
+        else if (b.dataset.gc === 'delete') { if (!confirm(t('Delete this message?'))) return; this.apply(await Online.global('gcDelete', { id })); toast('Message deleted'); }
+        else if (b.dataset.gc === 'mute') { if (!confirm(t('Mute this player and delete the message?'))) return; this.apply(await Online.global('gcMute', { id, dur: b.dataset.dur })); toast('Player muted'); }
+        this.menu = null; this.drawList();
+      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    },
+  };
+  document.addEventListener('visibilitychange', () => { if (GChat.open && !document.hidden) GChat.poll(); });
+  // Changer de page ferme le panneau : il couvrirait la droite de la page (et tout l'écran sur téléphone).
+  window.addEventListener('hashchange', () => GChat.close());
+
   // Roue crantée en haut à droite (demandé par Sacha, 2026-10-23) : les réglages, thème compris, à la place des trois boutons de thème.
   $('#gear-btn').addEventListener('click', openSettings);
 
@@ -7952,6 +8145,7 @@
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
+    if (e.target.closest('[data-gchat]')) { e.preventDefault(); GChat.toggle(); return; }
     if (e.target.closest('[data-fund]')) { e.preventDefault(); openFund(); return; }
     // Aperçu d'un skin demandé hors de la grille du Shop (fenêtre de la cagnotte) ; la grille a son propre écouteur.
     { const pv = e.target.closest('[data-skin-preview]'); if (pv && !pv.closest('.skin-grid')) { e.preventDefault(); previewSkin(pv.dataset.skinPreview); return; } }

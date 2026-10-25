@@ -4,7 +4,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = process.env.RNG_BASE || 'http://localhost:8124'; // RNG_BASE : autre port (serveur de dev lancé avec PORT=…)
+const B = process.env.RNG_BASE || process.env.BASE || 'http://localhost:8124'; // RNG_BASE ou BASE : autre port (plusieurs serveurs de dev)
 // Une taille s'écrit « 390 » (hauteur par défaut) ou « 844x390 » (téléphone couché, petit portable).
 const widths = process.argv.slice(2).filter(a => /^\d+(x\d+)?$/.test(a));
 const HEIGHTS = {};

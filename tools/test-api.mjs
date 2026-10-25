@@ -229,7 +229,9 @@ for (const clash of ['sacha', ' SACHA ', 'Sâcha', 'Sa-cha!']) {
 db.delete(`cooldown:${bob.playerId}`);
 assert.equal((await call(roll, { method: 'POST', body: { ...bob, name: 'SACHA' } })).status, 409);
 assert.equal((await call(roll, { method: 'POST', body: bob })).status, 200);
-// Changer de nom libère l'ancien ; le classement affiche le nouveau.
+// Changer de nom libère l'ancien ; le classement affiche le nouveau. Renommer coûte Shop.RENAME_PRICE (2026-10-25) :
+// chacun reçoit juste de quoi payer (solde inchangé pour la suite des tests).
+run([['HINCRBY', `stats:${alice.playerId}`, 'bonus', 5000], ['HINCRBY', `stats:${bob.playerId}`, 'bonus', 5000]]);
 assert.equal((await setName(alice, 'Alice')).status, 200);
 assert.equal((await setName(bob, 'Sacha')).status, 200);
 r = await call(leaderboard, { url: '/api/leaderboard?period=all' });
@@ -1121,7 +1123,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(x.weekdays.length, 7); assert.equal(x.weekdays[0].name, 'Mon');
     assert.equal(x.economy.length, 14); assert.ok(x.economy[0].in.rolls > 0, 'les tirages du jour créent des pièces : ' + JSON.stringify(x.economy[0]));
     assert.ok(x.sales.some(i => i.kind === 'skins' && i.price > 0)); assert.ok(x.sales.some(i => i.kind === 'sounds' && i.id === 'arcade')); assert.equal(x.health.length, 7);
-    assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0); }
+    assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0);
+    // Masse monétaire (2026-10-25) : SCAN de stats:*, gardée 10 minutes dans eco:supply.
+    assert.ok(x.supply.total > 0 && x.supply.holders > 0 && x.supply.top1 > 0 && x.supply.top1 <= 1, JSON.stringify(x.supply));
+    assert.ok(run([['PTTL', 'eco:supply']])[0].result > 590000, 'en cache 10 min');
+    run([['HINCRBY', `stats:${boss.playerId}`, 'bonus', 777]]);
+    assert.equal((await site(boss, 'insights')).body.extra.supply.total, x.supply.total, 'relu depuis le cache');
+    run([['DEL', 'eco:supply']]);
+    assert.equal((await site(boss, 'insights')).body.extra.supply.total, x.supply.total + 777, 'recalculé une fois le cache parti'); }
   assert.equal(r.body.days.length, 30);
   assert.equal(r.body.days[0].day, today());
   assert.ok(r.body.days[0].visits >= 4 && r.body.week.refs.some(x => x.name === 'reddit.com' && x.count === 2));
@@ -1973,6 +1982,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
   for (const bad of [0, 'x', 5000, -5000]) assert.equal((await post(frank, 'fundAdd', { name: 'Frank', euros: bad })).status, 422);
   assert.equal((await post(frank, 'fundAdd', { name: 'Nobody Here', euros: 5 })).status, 404);
+  // Bob reprend son pseudo (payant depuis le 2026-10-25 : un tirage ne renomme plus) ; on lui donne de quoi payer.
+  run([['HINCRBY', `stats:${bob.playerId}`, 'bonus', Shop.RENAME_PRICE]]);
+  assert.equal((await setName(bob, bob.name)).status, 200);
   // Une contribution de 5 € pour Bob (pseudo écrit autrement) : total du mois, journal, skin et titre.
   r = await post(frank, 'fundAdd', { name: '  bob<script> ', euros: 5 });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -3171,10 +3183,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     const sat = await recordRoll(who.playerId, n, Date.parse('2026-10-24T12:00:00Z'));
     await new Promise(r => setTimeout(r, 3));
     const tue = await recordRoll(who.playerId, n, Date.parse('2026-10-27T12:00:00Z'));
-    assert.deepEqual([sat.coins, tue.coins], [Shop.COINS[tier] * 2, Shop.COINS[tier]]);
+    // Weekend Rush : +25 % (arrondi en dessous) depuis le 2026-10-25, au lieu de ×2.
+    assert.deepEqual([sat.coins, tue.coins], [Shop.COINS[tier] + Math.floor(Shop.COINS[tier] * 0.25), Shop.COINS[tier]]);
     db.delete(`cooldown:${who.playerId}`);
-    const r0 = await call(roll, { method: 'POST', body: who });
-    assert.equal(r0.body.coins, Shop.COINS[engine.analyze(r0.body.n).tier] * Events.rushMult(r0.body.t), JSON.stringify(r0.body)); }
+    const r0 = await call(roll, { method: 'POST', body: who }), c0 = Shop.COINS[engine.analyze(r0.body.n).tier];
+    assert.equal(r0.body.coins, c0 + Events.rushBonus(c0, r0.body.t), JSON.stringify(r0.body));
+    assert.equal(r0.body.rate, 1, 'premiers tirages du jour : plein tarif'); }
   run([['ZADD', key, ev.goal, who.playerId]]);
   let r = await claim(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, ev.reward); assert.equal(r.body.event.claimed, true);
   assert.equal((await claim()).status, 422, 'une seule fois');
@@ -3580,7 +3594,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const coins = who => ShopM.balance(statsOf(who.playerId));
   const H = (who, op, extra = {}, now) => Clan.handle(who.playerId, { op, ...extra }, now);
   const fails = async (p, status, msg) => { try { await p; } catch (err) { assert.equal(err.status, status, `${msg} : ${err.message}`); return err; } assert.fail(`${msg} : aurait dû échouer`); };
-  const ecoOut = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(run([['HGET', k, 'out:clans']])[0].result) || 0), 0); // toutes les dates (les guerres de test finissent dans 6 h)
+  const ecoOut = () => [...db.keys()].filter(k => /^eco:\d{4}-/.test(k)).reduce((x, k) => x + (Number(run([['HGET', k, 'out:clans']])[0].result) || 0), 0); // toutes les dates (les guerres de test finissent dans 6 h)
   const cidOf = who => run([['HGET', 'clanof', who.playerId]])[0].result;
   const A = mk(1, 'Clanlead', 80000), B = mk(2, 'Clanbee', 20000), C = mk(3, 'Clancee', 500), D = mk(4, 'Clandee', 500), E = mk(5, 'Claneee', 500);
   const poor = mk(6, 'Clanpoor', 9000), newbie = mk(7, 'Clannew', 50000, 5);
@@ -3788,6 +3802,190 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(run([['GET', 'clantagk:DICE']])[0].result, null);
   await fails(H(C, 'create', { clanName: 'Dice Lords', tag: 'DICE' }), 422, 'nom libre, mais pas 10 000 pièces');
   v = await H(B, 'create', { clanName: 'Dice Lords', tag: 'DICE' }); assert.equal(v.clan.tag, 'DICE', 'nom et tag réutilisables');
+}
+// Chat global (api/_global.js, routé par /api/friends) : qui écrit, délai, filtres, signalements, modération, 100 messages.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, { rolls = 150, google = true, extra = [] } = {}) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id], ...(google ? [['SET', `player:${id}:google`, `g-${tag}`]] : [])]); return { playerId: id, secret, name }; };
+  const boss = mk('c1', 'Chief', { extra: ['owner', '1'] }), kid = mk('c2', 'Kiddo'), pal = mk('c3', 'Pally'), modo = mk('c4', 'Modo');
+  const anon = mk('c5', 'NoGoogle', { google: false }), newbie = mk('c6', 'Newbie', { rolls: 99 });
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]); // lève le délai de 5 s sans attendre
+  // Lecture ouverte à tous, même sans joueur ; aucune info « me » alors.
+  let r = await gc(null, 'gcList'); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual(r.body.msgs, []); assert.equal(r.body.me, undefined);
+  r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } }); assert.equal(r.status, 200, 'visiteur inconnu du serveur : lit quand même'); assert.equal(r.body.me, undefined);
+  assert.equal(run([['GET', `player:${'7e1d'.repeat(4)}:secret`]])[0].result, null, 'lire ne crée aucun joueur');
+  assert.equal((await call(friendsApi, { method: 'POST', body: { action: 'gcSend', text: 'hi', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } })).status, 403);
+  // Éligibilité : Google + 100 tirages, expliqué au joueur.
+  r = await gc(anon, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason], [false, 'google']);
+  r = await gc(anon, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /Google/);
+  r = await gc(newbie, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason, r.body.me.rolls, r.body.me.need], [false, 'rolls', 99, 100]);
+  r = await gc(newbie, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /100 rolls/);
+  r = await gc(kid, 'gcSend', { text: 'Hello <b>everyone</b>!' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.msgs.length, 1); assert.deepEqual([r.body.msgs[0].name, r.body.msgs[0].text, r.body.msgs[0].mine], ['Kiddo', 'Hello <b>everyone</b>!', true]);
+  assert.ok(!JSON.stringify(r.body).includes(kid.playerId), 'aucun identifiant de joueur');
+  // Délai : un message toutes les 5 s.
+  r = await gc(kid, 'gcSend', { text: 'again' }); assert.equal(r.status, 429);
+  free(kid);
+  // Longueur et filtres : refusés avec une raison, jamais gardés.
+  const reject = async (text, re, what) => { free(kid); const x = await gc(kid, 'gcSend', { text }); assert.equal(x.status, 422, `${what} : « ${text} » → ${x.status}`); assert.match(x.body.error, re, what); };
+  await reject('x'.repeat(201), /200 characters/, 'trop long');
+  for (const t of ['you are a fucking idiot', 'sh1t', 'f u c k', 'n.i.g.g.e.r', 'espèce de connard', 'fils de pute']) await reject(t, /friendly/, 'insulte');
+  for (const t of ['call me 06 12 34 56 78', 'text +1 (555) 123-4567']) await reject(t, /personal info/, 'téléphone');
+  for (const t of ['my mail: kid.cool@gmail.com', 'kid (at) gmail (dot) com']) await reject(t, /personal info/, 'e-mail');
+  for (const t of ['I live at 12 Baker Street', "j'habite au 4 rue des Lilas", 'add me on snap', 'my insta is kidcool', '@kidcool99', 'discord: kidcool#1234', 'snapchat kidcool']) await reject(t, /personal info/, 'infos perso');
+  for (const t of ['go to freecoins.com', 'https://x.y/z', 'www.example.org', 'see site dot com', 'discord.gg/abc']) await reject(t, /Links/, 'lien');
+  for (const t of ['I got 999999 and 1000000 today!', 'gg, 3rd place', 'my number was 123456', 'join the RNG discord server', 'class assistant']) { free(kid); assert.equal((await gc(kid, 'gcSend', { text: t })).status, 200, `accepté : « ${t} »`); await wait(3); }
+  r = await gc(null, 'gcList'); assert.equal(r.body.msgs.length, 6, 'rien de refusé n\'a été gardé');
+  // Relecture bon marché : rien de neuf → « same » ; sinon seulement les nouveaux.
+  const { rev, del } = r.body, lastT = r.body.msgs.at(-1).t;
+  r = await gc(pal, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.same, true); assert.equal(r.body.msgs, undefined);
+  r = await gc(pal, 'gcSend', { text: 'hi Kiddo' }); assert.equal(r.status, 200);
+  r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.deepEqual(r.body.msgs.map(m => m.text), ['hi Kiddo']); assert.equal(r.body.full, false);
+  const palMsg = r.body.msgs[0];
+  // Signalement → liste « reports » (where: 'global chat'), un seul par message, pas le sien.
+  r = await gc(kid, 'gcReport', { id: palMsg.id }); assert.equal(r.status, 200); assert.equal(r.body.reported, true);
+  assert.equal((await gc(kid, 'gcReport', { id: palMsg.id })).body.already, true);
+  assert.equal((await gc(pal, 'gcReport', { id: palMsg.id })).status, 422, 'pas son propre message');
+  r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  assert.ok(r.body.reports.some(x => x.where === 'global chat' && x.text === 'hi Kiddo' && x.author === 'Pally'), JSON.stringify(r.body.reports.slice(0, 2)));
+  // Modération : un joueur ne supprime ni ne rend muet ; le rôle de Modérateur est donné par le créateur seul.
+  assert.equal((await gc(kid, 'gcDelete', { id: palMsg.id })).status, 403);
+  assert.equal((await gc(kid, 'gcMute', { id: palMsg.id, dur: '1h' })).status, 403);
+  assert.equal((await gc(kid, 'gcModSet', { name: 'Modo' })).status, 403, 'seul le créateur donne le rôle');
+  assert.equal((await gc(modo, 'gcAdmin')).status, 403);
+  r = await gc(boss, 'gcModSet', { name: 'Modo' }); assert.equal(r.status, 200); assert.deepEqual(r.body.mods, ['Modo']);
+  r = await gc(modo, 'gcList'); assert.equal(r.body.me.mod, true);
+  assert.equal((await gc(modo, 'gcModSet', { name: 'Kiddo' })).status, 403, 'un modérateur ne nomme personne');
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'Kiddo' })).status, 403);
+  r = await gc(modo, 'gcDelete', { id: palMsg.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === palMsg.id));
+  r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.full, true, 'après une suppression, la liste entière'); assert.equal(r.body.msgs.length, 6);
+  // Silence 1 h : le joueur voit jusqu'à quand ; ne peut plus écrire ; listé sur la page Owner ; levé par le créateur.
+  free(pal); r = await gc(pal, 'gcSend', { text: 'one more' }); const m2 = r.body.msgs.at(-1);
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '2h' })).status, 400);
+  r = await gc(modo, 'gcMute', { id: m2.id, dur: '1h' }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === m2.id), 'message retiré aussi');
+  r = await gc(pal, 'gcList'); assert.equal(r.body.me.reason, 'muted'); assert.ok(r.body.me.mutedUntil > Date.now() + 3500e3 && r.body.me.mutedUntil <= Date.now() + 3600e3);
+  free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'let me talk' })).status, 403);
+  r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by]), [['Pally', 'Modo']]);
+  assert.ok(!JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant sur la page Owner');
+  r = await gc(boss, 'gcUnmute', { name: 'Pally' }); assert.deepEqual(r.body.mutes, []);
+  free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'thanks' })).status, 200);
+  // Silence pour toujours, et un modérateur ne rend muet ni le créateur ni un autre modérateur.
+  free(kid); r = await gc(kid, 'gcSend', { text: 'bye' }); const m3 = r.body.msgs.at(-1);
+  await gc(boss, 'gcMute', { id: m3.id, dur: 'perm' });
+  r = await gc(kid, 'gcList'); assert.equal(r.body.me.mutedUntil, -1);
+  free(kid); r = await gc(kid, 'gcSend', { text: 'hello?' }); assert.equal(r.status, 403); assert.match(r.body.error, /no longer/);
+  free(boss); r = await gc(boss, 'gcSend', { text: 'Be nice everyone' }); const bm = r.body.msgs.at(-1);
+  assert.equal((await gc(modo, 'gcMute', { id: bm.id, dur: '24h' })).status, 403);
+  await gc(boss, 'gcUnmute', { name: 'Kiddo' });
+  // Rôle retiré : plus de modération.
+  await gc(boss, 'gcModSet', { name: 'Modo', on: false });
+  assert.equal((await gc(modo, 'gcDelete', { id: bm.id })).status, 403);
+  // Seuls les 100 derniers messages restent.
+  for (let i = 0; i < 105; i++) { free(kid); assert.equal((await gc(kid, 'gcSend', { text: `msg ${i}` })).status, 200); }
+  r = await gc(null, 'gcList'); assert.equal(r.body.msgs.length, 100); assert.equal(r.body.msgs.at(-1).text, 'msg 104'); assert.equal(r.body.msgs[0].text, 'msg 5');
+  assert.ok(r.body.msgs.every((m, i, a) => !i || m.t > a[i - 1].t), 'heures strictement croissantes');
+}
+
+// ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
+// pseudo payant, Prestige.
+{
+  const Shop = require(path.join(ROOT, 'js/shop.js')), Ev = require(path.join(ROOT, 'js/events.js'));
+  const { recordRoll } = require(path.join(ROOT, 'api/_lib.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), nameApi2 = require(path.join(ROOT, 'api/name.js'));
+  const field = (id, f) => Number(run([['HGET', `stats:${id}`, f]])[0].result) || 0;
+  const eco = (t, f) => Number(run([['HGET', `eco:${new Date(t).toISOString().slice(0, 10)}`, f]])[0].result) || 0;
+  const bal = id => { const f = run([['HGETALL', `stats:${id}`]])[0].result, o = {}; for (let k = 0; k < f.length; k += 2) o[f[k]] = f[k + 1]; return Shop.balance(o); };
+  const wait = () => new Promise(r => setTimeout(r, 3));
+
+  // 1. Paliers : 1–500 plein tarif, 501–2 000 à 50 %, au-delà 20 %, arrondi en dessous.
+  assert.deepEqual([1, 500, 501, 2000, 2001, 99999].map(Shop.rollRate), [1, 1, 0.5, 0.5, 0.2, 0.2]);
+  assert.deepEqual([Shop.rollPay(100, 1), Shop.rollPay(100, 501), Shop.rollPay(5, 501), Shop.rollPay(1, 501), Shop.rollPay(25, 2001), Shop.rollPay(1, 2001)], [100, 50, 2, 0, 5, 0]);
+  // Par le vrai recordRoll, un mardi (pas de Rush) : le compteur rc:<jour>:<id> est simulé à 500, 1 999, 2 000.
+  const dm = { playerId: 'd1'.repeat(8) }, TUE = Date.parse('2026-10-27T10:00:00Z');
+  let n = 0; while (engine.analyze(n).tier !== 'mythic') n++; // 100 pièces au plein tarif
+  const rc = `rc:2026-10-27:${dm.playerId}`;
+  const cases = [[0, 1, 100], [499, 1, 100], [500, 0.5, 50], [1999, 0.5, 50], [2000, 0.2, 20]];
+  let paidSum = 0, cutSum = 0; const ecoRolls0 = eco(TUE, 'in:rolls');
+  for (const [count, rate, coins] of cases) {
+    run([['SET', rc, String(count)]]); await wait();
+    const out = await recordRoll(dm.playerId, n, TUE + count);
+    assert.deepEqual([out.rate, out.coins, out.dayRoll], [rate, coins, count + 1], `tirage n° ${count + 1}`);
+    paidSum += coins; cutSum += 100 - coins;
+  }
+  assert.equal(field(dm.playerId, 'rollCut'), cutSum, 'la part retenue est notée dans rollCut');
+  assert.equal(bal(dm.playerId), paidSum, 'le solde ne compte que ce qui est versé');
+  assert.equal(eco(TUE, 'in:rolls') - ecoRolls0, paidSum, 'eco in:rolls = pièces réellement créées');
+  // L'XP n'est pas touchée : 5 tirages, 5 fois l'XP pleine.
+  assert.equal(field(dm.playerId, 'xpLife'), 5 * engine.analyze(n).total);
+  // Samedi, au-delà de 500 : le Rush (+25 %) s'applique à ce qui est versé.
+  const SAT = Date.parse('2026-10-31T10:00:00Z'), rcs = `rc:2026-10-31:${dm.playerId}`;
+  run([['SET', rcs, '700']]); await wait();
+  let out = await recordRoll(dm.playerId, n, SAT);
+  assert.deepEqual([out.rate, out.coins], [0.5, 50 + 12], '50 % puis +25 % arrondi en dessous');
+  // Par l'API : la réponse du tirage porte coins et rate.
+  const dr = { playerId: 'd2'.repeat(8), secret: 'd3'.repeat(16), name: 'Diminisher' };
+  run([['SET', `rc:${new Date(Date.now()).toISOString().slice(0, 10)}:${dr.playerId}`, '3000']]);
+  const rr = await call(roll, { method: 'POST', body: dr });
+  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], pay = Math.floor(full * 0.2);
+  assert.deepEqual([rr.body.rate, rr.body.coins], [0.2, pay + Ev.rushBonus(pay, rr.body.t)], JSON.stringify(rr.body));
+
+  // 2. Weekend Rush +25 % sur les quêtes : la récompense affichée le samedi.
+  assert.deepEqual([Ev.rushMult(SAT), Ev.rushMult(TUE), Ev.rushBonus(150, SAT), Ev.rushBonus(150, TUE), Ev.rushBonus(3, SAT)], [1.25, 1, 37, 0, 0]);
+  { const realNow = Date.now; Date.now = () => SAT;
+    try { const q = await call(require(path.join(ROOT, 'api/quests.js')), { url: `/api/quests?me=${dr.playerId}` });
+      const Quests = require(path.join(ROOT, 'js/quests.js'));
+      assert.ok(q.body.rush, 'Rush annoncé le samedi');
+      q.body.quests.forEach(x => { const base = Quests.POOL.find(y => y.id === x.id); if (base) assert.equal(x.reward, base.reward + Math.floor(base.reward * 0.25), x.id); });
+    } finally { Date.now = realNow; } }
+
+  // 3. Pseudo payant : le premier est gratuit, changer coûte 5 000 ; la casse seule reste gratuite ; un tirage sous un
+  // autre nom ne renomme plus.
+  const rn = { playerId: 'd4'.repeat(8), secret: 'd5'.repeat(16) };
+  const setN = name => call(nameApi2, { method: 'POST', body: { ...rn, name } });
+  assert.equal((await setN('Renamer')).status, 200, 'premier pseudo gratuit');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  assert.equal((await setN('RENAMER')).status, 200, 'casse seule : gratuit');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  let x = await setN('Renamer Two'); assert.equal(x.status, 402, 'sans les pièces : refusé'); assert.match(x.body.error, /5,000 coins/);
+  assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'RENAMER');
+  run([['HINCRBY', `stats:${rn.playerId}`, 'bonus', 6000]]);
+  assert.equal((await setN('Diminisher')).status, 409, 'nom d\'un autre : refusé sans payer');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  const ecoBefore = eco(Date.now(), 'out:rename');
+  x = await setN('Renamer Two'); assert.equal(x.status, 200); assert.deepEqual([x.body.paid, x.body.coins], [5000, 1000]);
+  assert.deepEqual([field(rn.playerId, 'spent'), bal(rn.playerId), eco(Date.now(), 'out:rename') - ecoBefore], [5000, 1000, 5000]);
+  assert.equal(run([['GET', 'name:renamer']])[0].result, null, 'l\'ancien nom est libéré');
+  db.delete(`cooldown:${rn.playerId}`);
+  assert.equal((await call(roll, { method: 'POST', body: { ...rn, name: 'Free Rename' } })).status, 200);
+  assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'Renamer Two', 'un tirage ne renomme pas gratuitement');
+  assert.equal(run([['GET', 'name:freerename']])[0].result, null, 'et ne réserve pas le nom');
+
+  // 4. Prestige : stock limité, un par joueur, titre débloqué et équipé, eco out:prestige.
+  const pr = { playerId: 'd6'.repeat(8), secret: 'd7'.repeat(16) };
+  run([['SET', `player:${pr.playerId}:secret`, crypto.createHash('sha256').update(pr.secret).digest('hex')]]);
+  const buy = item => call(shopApi, { method: 'POST', body: { ...pr, action: 'prestige', item } });
+  const tycoon = Shop.prestigeById.get('tycoon');
+  assert.ok(Shop.PRESTIGE.length === 3 && Shop.PRESTIGE.every(p => p.price >= 25000 && p.stock > 0));
+  assert.equal((await buy('nope')).status, 400);
+  x = await buy('tycoon'); assert.equal(x.status, 422); assert.match(x.body.error, /Not enough coins/);
+  run([['HINCRBY', `stats:${pr.playerId}`, 'bonus', tycoon.price + 10]]);
+  const pBefore = eco(Date.now(), 'out:prestige');
+  x = await buy('tycoon'); assert.equal(x.status, 200, JSON.stringify(x.body));
+  assert.deepEqual([x.body.coins, x.body.prestige.find(p => p.id === 'tycoon').owned, eco(Date.now(), 'out:prestige') - pBefore], [10, true, tycoon.price]);
+  assert.equal(x.body.prestige.find(p => p.id === 'tycoon').left, tycoon.stock - 1);
+  assert.equal(run([['HGET', 'titles', pr.playerId]])[0].result, 'tycoon', 'titre équipé');
+  assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked({ 'pr:tycoon': 1 }).includes('tycoon'));
+  await new Promise(r => setTimeout(r, 3));
+  x = await buy('tycoon'); assert.equal(x.status, 200); assert.equal(x.body.coins, 10, 'acheté une seule fois');
+  // Épuisé : le stock ne descend jamais sous zéro et le joueur ne paie rien.
+  run([['HSET', 'prestige:sold', 'magnate', String(Shop.prestigeById.get('magnate').stock)], ['HINCRBY', `stats:${pr.playerId}`, 'bonus', 100000]]);
+  await new Promise(r => setTimeout(r, 3));
+  x = await buy('magnate'); assert.equal(x.status, 422); assert.match(x.body.error, /Sold out/);
+  assert.equal(Number(run([['HGET', 'prestige:sold', 'magnate']])[0].result), Shop.prestigeById.get('magnate').stock);
+  assert.equal(bal(pr.playerId), 100010);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

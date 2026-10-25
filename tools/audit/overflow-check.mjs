@@ -3,7 +3,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = process.env.RNG_BASE || 'http://localhost:8124'; // RNG_BASE : autre port (serveur de dev lancé avec PORT=…)
+const B = process.env.RNG_BASE || process.env.BASE || 'http://localhost:8124'; // RNG_BASE ou BASE : autre port (plusieurs serveurs de dev)
 const widths = process.argv.slice(2).map(Number).filter(Boolean);
 const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const ctx = await browser.newContext({ viewport: { width: 375, height: 760 }, colorScheme: 'dark', locale: 'fr-FR' });

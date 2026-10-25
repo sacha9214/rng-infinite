@@ -35,6 +35,12 @@ function cleanChat(raw) {
   // Pas de lien (hameçonnage, pub) ni de longue suite de chiffres (numéro de téléphone) : les nombres du jeu ont 7 chiffres au plus.
   text = text.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '[link]').replace(/\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|fr|xyz|ru|tv|me|co|app|link|ly)\b\S*/gi, '[link]');
   text = text.replace(/(?:\d[\s.\-]?){9,}/g, '[number] ');
+  return maskBad(text).replace(/\s+/g, ' ').trim();
+}
+
+// Insultes masquées par des astérisques (chat des duels, messages entre amis, et test du chat global qui refuse tout
+// message que ce masque change : api/_global.js).
+function maskBad(text) {
   // Expressions masquées où qu'elles soient, puis mot par mot (lettres séparées par des points ou des tirets comprises).
   for (const bad of ANYWHERE) {
     const re = new RegExp(plain(bad).split('').map(c => (c === ' ' ? '[\\s._-]*' : `${c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}+[\\s._-]*`)).join(''), 'gi');
@@ -46,7 +52,7 @@ function cleanChat(raw) {
     const [, core, tail] = /^(.*?)([!$€]*)$/u.exec(word);
     return /\p{L}/u.test(core) && BLOCKED_SHAPES.has(shape(core)) ? stars(core.length) + tail : word;
   });
-  return text.replace(/\s+/g, ' ').trim();
+  return text;
 }
 
 // Image envoyée par un joueur (capture d'un bug, image entre amis) : un JPEG en data URL, déjà réduit par la page,
@@ -58,4 +64,4 @@ function cleanImage(raw, max = 200000) {
   return buf.length > 100 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? `data:image/jpeg;base64,${m[1]}` : null;
 }
 
-module.exports = { cleanChat, cleanImage, MAX_CHARS };
+module.exports = { cleanChat, cleanImage, maskBad, shape, BLOCKED_SHAPES, MAX_CHARS };
