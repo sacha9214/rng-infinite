@@ -5058,6 +5058,56 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes son-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 .room-stage.many .side-sonic::before, .room-stage.many .side-sonic::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-sonic::before, .side-sonic::after { animation: none; } }
+/* ------------------------------------------------------------------ DNA Helix (idée de R77, 2026-10-25) : une double
+   hélice d'ADN fluorescente, comme un gel sous UV. Derrière les chiffres, deux brins (cyan et magenta) qui se croisent
+   et défilent sans fin (::before) : l'hélice tourne. Chaque chiffre est une paire de bases : pendant le tirage il tourne
+   avec l'hélice (il passe de profil), à la révélation il se met de profil (élan), puis claque à plat avec un éclair
+   blanc et se pose. Les étincelles de liaison sont dans js/skinfx.js (SCENES.dna). */
+.num-card.skin-dna {
+  background:
+    radial-gradient(ellipse 70% 90% at 50% 50%, rgba(34, 211, 238, .16), transparent 70%),
+    linear-gradient(180deg, #0b1030, #120a2e 55%, #0a0f26);
+  border: 2px solid #4338ca; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(165, 243, 252, .18), inset 0 0 1.2em rgba(99, 102, 241, .25), 0 0 16px rgba(34, 211, 238, .25), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .5em .55em;
+}
+.num-card.skin-dna::before { content: ''; position: absolute; inset: 8% 0; z-index: 0; pointer-events: none; opacity: .5;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 40' preserveAspectRatio='none'><g stroke-linecap='round'><g stroke='%23a5b4fc' stroke-opacity='.45' stroke-width='1.6'><path d='M5 13.5V26.5M15 7V33M25 7V33M35 13.5V26.5M45 13.5V26.5M55 7V33M65 7V33M75 13.5V26.5'/></g><path d='M0 20C10 0 30 0 40 20S70 40 80 20' fill='none' stroke='%23e879f9' stroke-width='3.2' stroke-opacity='.55'/><path d='M0 20C10 40 30 40 40 20S70 0 80 20' fill='none' stroke='%2322d3ee' stroke-width='4'/><path d='M40 20C50 0 70 0 80 20' fill='none' stroke='%23e879f9' stroke-width='4'/></g></svg>") 0 50% / 3.2em 100% repeat-x;
+  filter: drop-shadow(0 0 3px rgba(34, 211, 238, .7));
+  animation: dna-twist 2.4s linear infinite; }
+@keyframes dna-twist { to { background-position: 3.2em 50%; } }
+.skin-dna .slot { position: relative; z-index: 1; color: #f8fafc; font-weight: 900;
+  -webkit-text-stroke: .03em #1e1b4b; text-shadow: 0 0 .08em #1e1b4b, 0 0 .2em #1e1b4b, 0 0 .45em rgba(34, 211, 238, .75); }
+.skin-dna .slot.ghost { opacity: .18; }
+/* Pendant le tirage : la paire de bases tourne avec l'hélice (elle passe de profil), décalée d'un chiffre à l'autre. */
+.num-card.skin-dna:has(.slot.spinning)::before { animation-duration: .6s; }
+.skin-dna .slot.spinning { animation: dna-turn .32s linear infinite; color: #a5f3fc; }
+.skin-dna .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; color: #f5d0fe; }
+.skin-dna .slot.spinning:nth-of-type(3n) { animation-delay: -.16s; }
+@keyframes dna-turn { 0%, 100% { transform: scaleX(1); } 25% { transform: scaleX(.55) translateY(-.08em); } 50% { transform: scaleX(.35); } 75% { transform: scaleX(.55) translateY(.08em); } }
+/* Révélation : élan (de profil, tiré en arrière), clic (à plat, plus grand, éclair blanc), retour au repos. Matière
+   rigide : pas d'écrasement, un rebond net. */
+.skin-dna .slot.revealed { animation: dna-lock .6s backwards; }
+@keyframes dna-lock {
+  0% { transform: scaleX(.55); color: #a5f3fc; animation-timing-function: cubic-bezier(.5, 0, .9, .4); }
+  18% { transform: scale(.88) scaleX(.4); color: #f5d0fe; animation-timing-function: cubic-bezier(.2, 1.6, .4, 1); }
+  38% { transform: scale(1.12); color: #fff; text-shadow: 0 0 .08em #1e1b4b, 0 0 .2em #1e1b4b, 0 0 .5em #22d3ee, 0 0 .9em #e879f9; }
+  70% { transform: scale(.96); }
+  100% { transform: none; }
+}
+.room-stage.many .num-card.skin-dna::before, .num-card.sm.skin-dna::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .num-card.skin-dna::before, .skin-dna .slot { animation: none; } }
+/* Cadre de duel : un labo sombre, la lueur d'une hélice ; 🧬 tourne, 🔬 se penche. */
+.side-dna { --side-border: #6366f1; --side-glow: 0 0 16px rgba(34, 211, 238, .3); --side-ink: #6366f1;
+  --side-bg: radial-gradient(ellipse 50% 70% at 50% 45%, rgba(34, 211, 238, .16), transparent 70%), radial-gradient(ellipse 40% 50% at 15% 90%, rgba(232, 121, 249, .16), transparent 70%), radial-gradient(ellipse 40% 50% at 85% 10%, rgba(99, 102, 241, .18), transparent 70%);
+  --deco-a: '🧬'; --deco-b: '🔬'; }
+.side-dna::before { animation: dna-spin 3s ease-in-out infinite; }
+.side-dna::after { transform-origin: 50% 100%; animation: dna-peek 2.2s ease-in-out infinite; }
+@keyframes dna-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+@keyframes dna-peek { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.room-stage.many .side-dna::before, .room-stage.many .side-dna::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-dna::before, .side-dna::after { animation: none; } }
 /* ------------------------------------------------------------------ Waterfall (idée de JBearr12 et jjcoolcid1,
    2026-10-24) : une cascade dans une vallée verte. En haut, le rebord de la falaise (herbe et mousse) ; derrière les
    chiffres, un rideau d'eau qui tombe sans fin (::before, stries qui défilent) ; en bas, le bassin et son écume ; des

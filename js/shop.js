@@ -85,6 +85,8 @@
     { id: 'polydonut', name: 'Polygon Donut', emoji: '🍩', price: 2600, desc: 'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal', idea: 'PongonLOLZFan' },
     // Idée de Matthew (2026-10-21) : des ondes sonores qui portent les chiffres, un « boum » à chaque chiffre.
     { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms', idea: 'Matthew' },
+    // Idée de R77 (2026-10-25) : une double hélice d'ADN qui tourne ; chaque chiffre est une paire de bases qui s'emboîte.
+    { id: 'dna', name: 'DNA Helix', emoji: '🧬', price: 2400, desc: 'A glowing double helix twists behind the digits; every digit snaps in like a base pair', idea: 'R77' },
     { id: 'waterfall', name: 'Waterfall', emoji: '🏞️', price: 2300, desc: 'A waterfall in a green valley carries every digit down into the pool with a splash; rare rolls make a rainbow in the spray', idea: 'JBearr12' }, // idée de JBearr12 et jjcoolcid1 (2026-10-24)
     // Idée de JBearr12 (2026-10-21) : une soucoupe qui dépose les chiffres sur l'herbe.
     // Idée de costoroll (2026-10-21) : un store vénitien fermé devant chaque chiffre, qui s'ouvre sur un chiffre néon jaune ;

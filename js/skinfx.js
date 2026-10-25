@@ -2724,6 +2724,41 @@
     };
   };
 
+  // 🧬 DNA Helix (2026-10-25, idée de R77) — chaque chiffre qui s'emboîte lâche deux gerbes d'étincelles de liaison
+  // (cyan à gauche, magenta à droite, comme les deux brins) ; à la révélation, des anneaux de lueur et, selon la
+  // rareté, une pluie de nucléotides colorés (A, T, G, C). Tout est dessiné derrière la carte.
+  SCENES.dna = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const sparks = particles(), rings = timed();
+    const BASES = ['#22d3ee', '#e879f9', '#a3e635', '#facc15'];
+    const bond = (x, s) => {
+      for (const [dir, c] of [[-1, '#22d3ee'], [1, '#e879f9']]) for (let i = Math.round((3 + 5 * s) * q); i > 0; i--) {
+        const a = (dir < 0 ? Math.PI : 0) + rnd(-.6, .6), v = card.h * rnd(1.5, 3 + 3 * s);
+        sparks.add({ x, y: cy + rnd(-.3, .3) * card.h, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 0, drag: 2.5, max: rnd(.35, .6), size: card.h * rnd(.02, .04), c });
+      }
+    };
+    return {
+      frame(t, dt) {
+        sparks.step(dt);
+        behind(env, () => {
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .7; co.strokeStyle = r.c; co.lineWidth = 2.5 * (1 - k) + .5; co.beginPath(); co.ellipse(cx, cy, card.w * (.5 + r.s * k), card.h * (.5 + r.s * 1.4 * k), 0, 0, TAU); co.stroke(); });
+          sparks.each((d, k) => dot(co, d.c, d.x, d.y, d.size * (1 - k * .5), 1 - k));
+          co.globalCompositeOperation = 'source-over';
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; bond(p.x, o.last ? .9 : .4); },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) return;
+        for (let i = 0; i < 1 + Math.round(2 * p); i++) rings.add({ delay: i * .14, life: .9, s: .3 + .4 * p, c: i % 2 ? '#e879f9' : '#22d3ee' });
+        for (let i = Math.round(30 * p * q); i > 0; i--) { const a = rnd(TAU), v = card.h * rnd(2, 4 + 5 * p); sparks.add({ x: cx + rnd(-.4, .4) * card.w, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 3, drag: 1.2, max: rnd(.7, 1.4), size: card.h * rnd(.03, .06), c: pick(BASES) }); }
+      },
+    };
+  };
+
   // 🏞️ Waterfall (2026-10-24, idée de JBearr12 et jjcoolcid1) — de la brume monte sans cesse du bassin au pied de la
   // carte ; chaque chiffre qui touche le bassin fait une éclaboussure (gouttes en arc) et une onde ; le dernier, plus
   // grosse. À la révélation, une gerbe d'embruns qui grandit avec la rareté et, dès Epic, un arc-en-ciel dans la brume

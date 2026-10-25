@@ -862,6 +862,17 @@
   text-shadow: -.06em 0 0 rgba(236, 72, 153, .7), .06em 0 0 rgba(34, 211, 238, .8), 0 0 .4em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .35); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-sonic:hover { animation: gen-sonic-run .8s linear infinite; }
+/* DNA Helix (idée de R77, 2026-10-25) : fond de labo sombre, deux brins cyan et magenta qui se croisent ; au survol,
+   l'hélice tourne. */
+.btn-roll.gen-dna { border: 2px solid #6366f1; border-radius: 999px; color: #fff;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 40' preserveAspectRatio='none'><path d='M0 20C10 40 30 40 40 20S70 0 80 20' fill='none' stroke='%2322d3ee' stroke-width='3' stroke-opacity='.6'/><path d='M0 20C10 0 30 0 40 20S70 40 80 20' fill='none' stroke='%23e879f9' stroke-width='3' stroke-opacity='.6'/></svg>") 0 50% / 3em 100% repeat-x,
+    linear-gradient(180deg, #1e1b4b, #0b1030);
+  text-shadow: 0 0 2px #1e1b4b, 0 0 .4em rgba(34, 211, 238, .8);
+  --gs: 0 .3em 0 #312e81, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #312e81, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #312e81; }
+.btn-roll.gen-dna:hover { animation: gen-dna-twist 1s linear infinite; }
+@keyframes gen-dna-twist { to { background-position: 3em 50%, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-dna:hover { animation: none; } }
 /* Waterfall (idée de JBearr12 et jjcoolcid1, 2026-10-24) : l'herbe en haut, un rideau d'eau, l'écume en bas ; au
    survol, l'eau coule. */
 .btn-roll.gen-waterfall { border: 2px solid #14532d; border-radius: .6em; color: #fff;
