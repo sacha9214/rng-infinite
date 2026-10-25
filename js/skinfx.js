@@ -3176,6 +3176,53 @@
       },
     };
   };
+  // ➗ Math (2026-10-25, idée de sennybex1) — des symboles mathématiques (+ − × ÷ = π √ ∑ ∞ %) flottent lentement
+  // autour du tableau, plus vite pendant le tirage. Chaque chiffre écrit lâche un petit nuage de poussière de craie et
+  // fait sauter un symbole. À la révélation, les symboles jaillissent (plus nombreux avec la rareté) ;
+  // dès Mythic, « Q.E.D. » s'écrit au-dessus. Tirage raté : un « ≠ » tombe, tout penaud.
+  SCENES.math = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const SYM = ['+', '−', '×', '÷', '=', 'π', '√', '∑', '∞', '%', '∫', 'x²'];
+    const ink = dark ? '#f8fafc' : '#166534', dustC = dark ? '#e2e8f0' : '#94a3b8';
+    const syms = particles(), dust = particles(), words = timed(), emit = emitter();
+    let speed = .4;
+    const sym = (x, y, vx, vy, o = {}) => syms.add(Object.assign({ x, y, vx, vy, g: 0, drag: .6, max: rnd(2.2, 3.4), size: card.h * rnd(.18, .3), ch: pick(SYM), rot: rnd(-.4, .4), spin: rnd(-1, 1) }, o));
+    const chalk = (s, x, y, size, a, k) => { // un mot à la craie qui s'écrit de gauche à droite (k de 0 à 1)
+      co.save(); co.globalAlpha = a; co.font = `italic 700 ${size}px Georgia, "Times New Roman", serif`; co.textAlign = 'left'; co.textBaseline = 'middle';
+      const w = co.measureText(s).width; co.beginPath(); co.rect(x - w / 2, y - size, w * clamp(k), size * 2); co.clip();
+      co.fillStyle = dark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.6)'; co.fillText(s, x - w / 2 + 1.5, y + 1.5);
+      co.fillStyle = ink; co.fillText(s, x - w / 2, y); co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // les symboles qui flottent tout autour (derrière la carte : jamais sur un chiffre)
+        for (let n = emit(2.2 * speed * q, dt); n > 0; n--) { const side = Math.random() < .5 ? -1 : 1; sym(cx + side * (card.w * .5 + rnd(10, 80)), card.y + card.h * rnd(-.6, 1.4), side * rnd(4, 14), -rnd(6, 20) * (1 + speed)); }
+        speed += (.4 - speed) * Math.min(1, dt * .6);
+        syms.step(dt); dust.step(dt);
+        behind(env, () => {
+          syms.each((s, k) => { co.save(); co.globalAlpha = Math.sin(Math.PI * k) * (dark ? .75 : .85); co.translate(s.x, s.y); co.rotate(s.rot + s.spin * s.life); co.font = `italic 700 ${s.size}px Georgia, "Times New Roman", serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillStyle = ink; co.fillText(s.ch, 0, 0); co.restore(); });
+          dust.each((d, k) => dot(co, dustC, d.x, d.y, d.size * (1 + k * 1.5), (1 - k) * .5));
+        });
+        words.run(dt, (w, k) => { const a = k > .8 ? (1 - k) * 5 : 1; chalk(w.s, w.x, w.y, w.size, a, k / .3); if (w.line) { co.globalAlpha = a; co.strokeStyle = ink; co.lineWidth = 2.5; co.lineCap = 'round'; const L = card.w * .4 * clamp(k / .25); for (const dy of [-4, 4]) { co.beginPath(); co.moveTo(cx - card.w * .2, w.y + dy); co.lineTo(cx - card.w * .2 + L, w.y + dy); co.stroke(); } } });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        for (let i = Math.round((o.last ? 8 : 4) * q); i > 0; i--) dust.add({ x: p.x + rnd(-1, 1) * card.h * .2, y: p.y + card.h * .25, vx: rnd(-1, 1) * card.h * .4, vy: -card.h * rnd(.1, .4), drag: 1.5, g: 0, max: rnd(.6, 1), size: card.h * rnd(.06, .12) });
+        sym(p.x, card.y - 4, rnd(-30, 30), -card.h * rnd(1.2, 2), { max: 1.2, size: card.h * (o.last ? .34 : .26), drag: 1.4 });
+        speed = Math.min(2.5, speed + .3);
+      },
+      build() { speed = 2.5; },
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        if (!P) { syms.add({ x: cx, y: card.y - card.h * .5, vx: 0, vy: 0, g: card.h * 2.5, drag: 0, max: 1.2, size: card.h * .4, ch: '≠', rot: 0, spin: 1.2 }); return; }
+        for (let i = Math.round((6 + 30 * P) * q); i > 0; i--) { const a = rnd(TAU), v = card.h * rnd(1.5, 3 + 3 * P); sym(cx + Math.cos(a) * card.w * .3, card.y + card.h / 2 + Math.sin(a) * card.h * .3, Math.cos(a) * v, Math.sin(a) * v, { max: rnd(1, 1.8), drag: 1.2 }); }
+        if (P >= 1) words.add({ delay: .45, s: 'Q.E.D.', x: cx, y: card.y - card.h * .45, size: card.h * (.42 + .06 * (ASCEND[tier] || 0)), life: 2.8 + .5 * (ASCEND[tier] || 0) });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et

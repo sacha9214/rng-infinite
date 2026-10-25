@@ -6028,3 +6028,53 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes axe-quiver { 0%, 78%, 100% { transform: none; } 82% { transform: translateX(2px); } 90% { transform: translateX(-1px); } }
 .room-stage.many .side-axeman::before, .room-stage.many .side-axeman::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-axeman::before, .side-axeman::after { animation: none; } }
+/* ------------------------------------------------------------------ Math (idée de sennybex1, 2026-10-25) : un tableau
+   noir vert dans son cadre de bois, une rainure à craie en bas avec un bâton de craie, des traces d'effaçage et de
+   vieilles formules à peine visibles (+ × ÷ π √ =). Les chiffres sont écrits à la craie (blancs, bords granuleux).
+   Pendant le tirage on efface et réécrit : le chiffre tremble et s'estompe par à-coups ; un chiffre qui se pose : la
+   craie se pose (petit recul), le chiffre s'écrit de gauche à droite d'un trait, un nuage de poussière, il se fige.
+   Symboles qui flottent, poussière de craie et « Q.E.D. » : js/skinfx.js. */
+.num-card.skin-math {
+  background:
+    /* la rainure à craie en bas, avec un bâton de craie */
+    linear-gradient(90deg, transparent 70%, #f8fafc 70% 82%, transparent 82%) 0 calc(100% - .03em) / 100% .07em no-repeat,
+    linear-gradient(180deg, #8b5a2b, #5c3a1a) 0 100% / 100% .14em no-repeat,
+    /* vieilles formules à demi effacées */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'><g fill='%23ffffff' fill-opacity='.1' font-family='serif' font-style='italic' font-size='9'><text x='4' y='12'>a²+b²=c²</text><text x='70' y='10'>√π ≈ 1.77</text><text x='8' y='36'>∑ x ÷ n</text><text x='78' y='36'>e^iπ+1=0</text></g></svg>") 0 0 / 100% 100% no-repeat,
+    /* traces d'effaçage */
+    radial-gradient(ellipse 30% 20% at 30% 40%, rgba(255, 255, 255, .07), transparent 70%),
+    radial-gradient(ellipse 25% 18% at 72% 65%, rgba(255, 255, 255, .06), transparent 70%),
+    linear-gradient(180deg, #1f4a37, #183d2d 60%, #12301f);
+  border: .14em solid #7c4a22; border-radius: .35rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4), inset 0 0 .6em rgba(0, 0, 0, .4), 0 0 14px rgba(74, 222, 128, .15), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .2em .5em .3em;
+}
+.skin-math .slot { position: relative; z-index: 1; color: #f8fafc; font-weight: 700;
+  /* craie : bords granuleux, un halo de poussière */
+  text-shadow: .025em .015em 0 rgba(248, 250, 252, .4), -.02em -.02em 0 rgba(248, 250, 252, .3), .01em -.025em 0 rgba(248, 250, 252, .25), 0 0 .14em rgba(248, 250, 252, .5);
+  -webkit-text-stroke: .01em rgba(18, 48, 31, .5); }
+.skin-math .slot.ghost { opacity: .18; }
+/* Pendant le tirage : on efface et on réécrit, le chiffre tremble et s'estompe par à-coups. */
+.skin-math .slot.spinning { animation: mth-erase .2s steps(2) infinite; }
+.skin-math .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; }
+@keyframes mth-erase { 0% { opacity: .75; transform: translate(-.02em, .01em) rotate(-2deg); } 100% { opacity: .35; transform: translate(.02em, -.01em) rotate(2deg); } }
+/* La craie se pose (petit recul), le chiffre s'écrit de gauche à droite, petit coup sec, il se fige. */
+.skin-math .slot.revealed { animation: mth-write .55s backwards; }
+@keyframes mth-write {
+  0% { clip-path: inset(0 100% 0 0); transform: translateY(-.04em); animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
+  45% { clip-path: inset(0 0 0 0); transform: translateY(-.04em); }
+  58% { clip-path: inset(0 0 0 0); transform: translateY(.03em) scale(1.06); }
+  76% { clip-path: inset(0 0 0 0); transform: scale(.98); }
+  100% { clip-path: inset(0 0 0 0); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-math .slot { animation: none; } }
+/* Cadre de duel : une salle de classe, un tableau vert en fond ; ➗ tourne, 📐 se balance. */
+.side-math { --side-border: #4ade80; --side-glow: 0 0 16px rgba(74, 222, 128, .25); --side-ink: #15803d;
+  --side-bg: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(31, 74, 55, .35), transparent 75%), linear-gradient(180deg, transparent 88%, rgba(139, 90, 43, .35) 88%);
+  --deco-a: '➗'; --deco-b: '📐'; }
+.side-math::before { animation: mth-turn 3s linear infinite; }
+.side-math::after { transform-origin: 50% 0; animation: mth-swing 2s ease-in-out infinite; }
+@keyframes mth-turn { to { transform: rotate(360deg); } }
+@keyframes mth-swing { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+.room-stage.many .side-math::before, .room-stage.many .side-math::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-math::before, .side-math::after { animation: none; } }

@@ -101,6 +101,7 @@
     { id: 'chocolate', name: 'Chocolate', emoji: '🍫', price: 1300, desc: 'A milk chocolate bar in gold foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with melted chocolate', idea: 'finnnnn' }, // idée de finnnnn (2026-10-25)
     { id: 'fish', name: 'Floppy Fish', emoji: '🐟', price: 2100, desc: 'A goofy fish flops out of the pond for every digit, and a giant fish leaps over the card on Mythic rolls', idea: 'AnnJoe' }, // idée d'AnnJoe (2026-10-25)
     { id: 'axeman', name: 'Axe Thrower', emoji: '🪓', price: 1900, desc: 'A stick man throws a spinning axe into every wooden target, and celebrates when the roll is good', idea: 'jjcoolcid1' }, // idée de jjcoolcid1 (2026-10-25)
+    { id: 'math', name: 'Math', emoji: '➗', price: 1200, desc: 'Chalk digits are written on a blackboard while math symbols float around; great rolls end with Q.E.D.', idea: 'sennybex1' }, // idée de sennybex1 (2026-10-25)
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance

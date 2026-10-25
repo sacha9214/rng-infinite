@@ -968,3 +968,9 @@
   text-shadow: 0 1px 0 #1c120a;
   --gs: 0 .3em 0 #1c120a, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #1c120a, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #1c120a; }
 .btn-roll.gen-axeman:hover { filter: brightness(1.1); }
+/* Math (idée de sennybex1, 2026-10-25) : un petit tableau vert dans son cadre de bois, texte à la craie. */
+.btn-roll.gen-math { border: .18em solid #7c4a22; border-radius: .35em; color: #f8fafc;
+  background: radial-gradient(ellipse 30% 40% at 25% 40%, rgba(255, 255, 255, .08), transparent 70%), linear-gradient(180deg, #1f4a37, #12301f);
+  text-shadow: .02em .02em 0 rgba(248, 250, 252, .4), 0 0 .2em rgba(248, 250, 252, .4);
+  --gs: 0 .3em 0 #4a2a12, 0 .5em 1em rgba(31, 74, 55, .4); --gs-h: 0 .34em 0 #4a2a12, 0 .7em 1.3em rgba(74, 222, 128, .3); --gs-a: 0 .06em 0 #4a2a12; }
+.btn-roll.gen-math:hover { filter: brightness(1.12); }
