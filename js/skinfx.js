@@ -3055,6 +3055,59 @@
       },
     };
   };
+  // 🐟 Floppy Fish (2026-10-25, idée d'AnnJoe) — à chaque chiffre posé, un poisson rigolo (orange, gros œil qui louche,
+  // bouche ronde) jaillit de la mare à côté du chiffre, fait un saut en arc en gigotant et replonge de l'autre côté :
+  // éclaboussure à la sortie et à l'entrée. Le dernier saute plus haut. À la révélation, plusieurs poissons sautent
+  // (plus avec la rareté) ; dès Mythic, un poisson GÉANT bondit derrière la carte d'un bord à l'autre et retombe dans
+  // une énorme gerbe. Tirage raté : un poisson sort la tête et fait une bulle.
+  SCENES.fish = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, water = card.y + card.h * .36;
+    const fishes = timed(), drops = particles(), bubbles = timed();
+    const COLS = [['#fb923c', '#ea580c'], ['#facc15', '#ca8a04'], ['#f472b6', '#db2777'], ['#4ade80', '#16a34a']];
+    // un poisson de profil, nez vers +x : corps ovale, queue en V, nageoire, œil énorme, bouche ronde
+    const fishShape = (x, y, s, ang, wig, col, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(ang);
+      co.lineWidth = Math.max(1.2, s * .08); co.strokeStyle = '#7c2d12'; co.fillStyle = col[0];
+      co.beginPath(); co.moveTo(-s * .8, 0); co.lineTo(-s * 1.35, -s * .5 + wig * s * .2); co.lineTo(-s * 1.25, s * .5 + wig * s * .2); co.closePath(); co.fill(); co.stroke(); // la queue
+      co.beginPath(); co.ellipse(0, 0, s, s * .58, 0, 0, TAU); co.fill(); co.stroke();
+      co.fillStyle = col[1]; co.beginPath(); co.moveTo(-s * .2, -s * .5); co.quadraticCurveTo(s * .1, -s * 1.05, s * .35, -s * .5); co.fill(); // nageoire
+      co.fillStyle = '#fff'; co.beginPath(); co.arc(s * .45, -s * .15, s * .3, 0, TAU); co.fill(); co.stroke();
+      co.fillStyle = '#111'; co.beginPath(); co.arc(s * .52 + wig * s * .06, -s * .1, s * .13, 0, TAU); co.fill(); // la pupille qui louche
+      co.fillStyle = '#7c2d12'; co.beginPath(); co.arc(s * .95, s * .12, s * .12, 0, TAU); co.fill(); // la bouche en O
+      co.restore();
+    };
+    const splash = (x, s) => {
+      for (let i = Math.round((6 + 12 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .85, -Math.PI * .15), v = card.h * rnd(2, 3.5 + 4 * s); drops.add({ x: x + rnd(-1, 1) * card.h * .08, y: water, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .2, max: rnd(.4, .75), size: card.h * rnd(.025, .045) * (1 + s) }); }
+    };
+    const jump = (x, s, h, delay, giant) => fishes.add({ delay, x0: x - card.h * .45 * s * (giant ? 4 : 1), x1: x + card.h * .45 * s * (giant ? 4 : 1), s: card.h * .2 * s * (giant ? 3.2 : 1), h: card.h * h, life: giant ? 1.4 : .6, col: pick(COLS), giant });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        const drawFish = (f, k) => {
+          const x = lerp(f.x0, f.x1, k), y = water - Math.sin(Math.PI * k) * f.h, ang = Math.atan2(-Math.cos(Math.PI * k) * f.h * Math.PI, f.x1 - f.x0) * (f.x1 > f.x0 ? 1 : -1);
+          if (!f.out && k > .02) { f.out = true; splash(f.x0, f.giant ? 1.4 : .4); }
+          if (!f.in && k > .96) { f.in = true; splash(f.x1, f.giant ? 2 : .5); }
+          fishShape(x, y, f.s, ang + Math.sin(t * 30) * .25, Math.sin(t * 40), f.col, k < .04 || k > .96 ? .5 : 1);
+        };
+        // le poisson géant passe derrière la carte (les chiffres restent devant)
+        behind(env, () => fishes.run(0, (f, k) => { if (f.giant) drawFish(f, k); }));
+        fishes.run(dt, (f, k) => { if (!f.giant) drawFish(f, k); });
+        drops.step(dt);
+        drops.each((d, k) => { co.globalAlpha = 1 - k * k; co.fillStyle = dark ? '#e0f2fe' : '#0ea5e9'; co.beginPath(); co.ellipse(d.x, d.y, d.size, d.size * 1.3, 0, 0, TAU); co.fill(); });
+        bubbles.run(dt, (b, k) => { co.globalAlpha = 1 - k; co.strokeStyle = dark ? '#e0f2fe' : '#0369a1'; co.lineWidth = 1.5; co.beginPath(); co.arc(b.x, water - card.h * .3 - k * card.h * .5, card.h * (.06 + .06 * k), 0, TAU); co.stroke(); fishShape(b.x, water - card.h * .05, card.h * .16, -Math.PI / 2, 0, COLS[0], k < .6 ? 1 : (1 - k) * 2.5); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; jump(p.x, o.last ? 1.3 : 1, o.last ? 1.2 : .8, 0, false); },
+      build() {},
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        if (!P) { bubbles.add({ x: cx, life: 1.1 }); return; }
+        for (let i = 0; i < 1 + Math.round(4 * P); i++) jump(cx + rnd(-.45, .45) * card.w, rnd(.9, 1.3), rnd(.8, 1.3), i * .15, false);
+        if (P >= 1) jump(cx, 1.2 + .15 * (ASCEND[tier] || 0), 1.05, .3, true);
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et

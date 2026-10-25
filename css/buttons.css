@@ -956,3 +956,9 @@
   text-shadow: 0 1px 0 #2a1408;
   --gs: 0 .3em 0 #2a1408, 0 .5em 1em rgba(123, 63, 28, .35); --gs-h: 0 .34em 0 #2a1408, 0 .7em 1.3em rgba(202, 138, 4, .4); --gs-a: 0 .06em 0 #2a1408; }
 .btn-roll.gen-chocolate:hover { filter: brightness(1.08); }
+/* Floppy Fish (idée d'AnnJoe, 2026-10-25) : la mare, une ligne d'eau ondulée, le ciel au-dessus. */
+.btn-roll.gen-fish { border: 2px solid #0c4a6e; border-radius: .8em; color: #fff;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10' preserveAspectRatio='none'><path d='M0 4Q5 0 10 4T20 4T30 4T40 4V10H0Z' fill='%230ea5e9'/><path d='M0 4Q5 0 10 4T20 4T30 4T40 4' fill='none' stroke='%23f0f9ff' stroke-width='1.4'/></svg>") 0 35% / 2em .4em repeat-x, linear-gradient(180deg, #bae6fd 0 42%, #0ea5e9 42%, #0369a1);
+  -webkit-text-stroke: .04em #0c2b45; text-shadow: 0 .06em 0 #0c2b45;
+  --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(14, 165, 233, .35); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
+.btn-roll.gen-fish:hover { filter: brightness(1.08); }
