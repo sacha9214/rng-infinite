@@ -104,6 +104,11 @@
       const p = Store.player;
       return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, nonce }) });
     },
+    // Chat global (api/_global.js par /api/friends) : le joueur s'identifie s'il en a un, la lecture marche sans.
+    global(action, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ ...(p.id && p.secret ? { playerId: p.id, secret: p.secret } : {}), action, ...extra }) });
+    },
     equip(title) {
       const p = Store.player;
       return this.request('/api/title', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, title }) });
@@ -1679,6 +1684,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need a linked Google account and 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut un compte Google associé et 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
     { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
     { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
     { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
@@ -5482,7 +5488,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -5979,6 +5985,29 @@
       const b = e.target.closest('[data-report-done]'); if (!b || currentView !== 'owner') return;
       b.disabled = true;
       try { drawReports(await Online.site('reportDone', { id: b.dataset.reportDone })); } catch (err) { b.disabled = false; toast('Unavailable right now, try again'); }
+    });
+    // ---- Chat global (api/_global.js) : Modérateurs (donnés ou retirés par pseudo) et silences en cours, levés d'un clic.
+    const drawChat = d => {
+      const box = pane('chat'); if (currentView !== 'owner' || !box) return;
+      badge('chat', d.mutes.length);
+      const until = u => (u < 0 ? 'forever' : `until ${fullDate(u)}`);
+      box.innerHTML = panel('Chat moderators', 'they can delete messages and mute players in the global chat', `
+          <div class="im-managers">${d.mods.map(n => `<span class="chip"><span data-no-i18n>${esc(n)}</span> <button class="im-x" data-gc-mod="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
+          <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
+        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>');
+    };
+    const chatRun = (action, extra) => Online.global(action, extra).then(drawChat);
+    chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
+    // Écouteurs posés sur l'onglet lui-même (recréé à chaque visite de la page) : jamais en double.
+    pane('chat').addEventListener('click', e => {
+      if (currentView !== 'owner') return;
+      const un = e.target.closest('[data-gc-unmute]'); if (un) { un.disabled = true; chatRun('gcUnmute', { name: un.dataset.gcUnmute }).then(() => toast('Unmuted')).catch(err => { un.disabled = false; toast(err.message || 'Unavailable right now, try again'); }); return; }
+      const rm = e.target.closest('[data-gc-mod]'); if (rm && confirm(window.RNGI18n ? window.RNGI18n.t('Remove this moderator?') : 'Remove this moderator?')) chatRun('gcModSet', { name: rm.dataset.gcMod, on: false }).catch(err => toast(err.message || 'Unavailable right now, try again'));
+    });
+    pane('chat').addEventListener('submit', e => {
+      const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
+      e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
+      chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
     });
     const drawInbox = data => {
       const box = $('#o-inbox');
@@ -7652,6 +7681,115 @@
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
   Store.onChange(syncPlayer);
   $('#player-btn').addEventListener('click', openSettings);
+  // ---------------------------------------------------------------- chat global (demandé par Sacha, 2026-10-25)
+  // Un panneau ouvert par le bouton 💬 (coin en bas à droite ; en bas de page sur téléphone, comme les autres coins).
+  // Tout le monde lit ; écrire demande Google + 100 tirages (vérifié par le serveur, api/_global.js, qui refuse aussi
+  // liens, insultes et infos personnelles). Relecture toutes les 3 s seulement panneau ouvert ET onglet visible.
+  // Les messages sont du texte échappé (esc), marqués data-no-i18n (pseudos : .player-link) : jamais de HTML d'un joueur, jamais traduits.
+  const GChat = {
+    open: false, timer: 0, msgs: [], rev: null, del: 0, me: null, busy: false, menu: null,
+    el: null,
+    mount() {
+      if (this.el) return this.el;
+      const el = document.createElement('section');
+      el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
+      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+        <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
+        <footer class="gc-foot"></footer>`;
+      document.body.appendChild(el);
+      el.querySelector('.gc-close').addEventListener('click', () => this.close());
+      el.addEventListener('click', e => this.onClick(e));
+      el.addEventListener('submit', e => { e.preventDefault(); this.send(); });
+      el.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
+      this.el = el;
+      return el;
+    },
+    toggle() { this.open ? this.close() : this.show(); },
+    show() {
+      const el = this.mount();
+      el.hidden = false; this.open = true;
+      document.querySelectorAll('[data-gchat]').forEach(b => b.setAttribute('aria-expanded', 'true'));
+      this.rev = null; // première lecture : la liste entière
+      this.poll();
+    },
+    close() {
+      if (this.el) this.el.hidden = true;
+      this.open = false; clearTimeout(this.timer);
+      document.querySelectorAll('[data-gchat]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    },
+    // Relecture : une seule à la fois, la suivante 3 s après la réponse ; rien si le panneau est fermé ou l'onglet caché.
+    async poll() {
+      clearTimeout(this.timer);
+      if (!this.open || document.hidden) return;
+      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last() })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
+      if (this.open && !document.hidden) this.timer = setTimeout(() => this.poll(), 3000);
+    },
+    last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
+    list() { return this.el.querySelector('.gc-list'); },
+    apply(d) {
+      const before = JSON.stringify(this.me);
+      this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
+      if (d.me) this.me = d.me;
+      if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
+      if (d.same) return;
+      this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
+      this.drawList();
+    },
+    drawList() {
+      const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+      const me = this.me || {}, signed = !!Store.player.name;
+      const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}" data-id="${esc(m.id)}">
+          <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
+            ${!m.mine && signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
+          <p class="gc-text" data-no-i18n>${esc(m.text)}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${me.mod ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+        </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
+      if (stick) box.scrollTop = box.scrollHeight;
+    },
+    // Pied du panneau : la zone d'écriture, ou pourquoi on ne peut pas écrire (Google, tirages, silence).
+    drawFoot() {
+      const foot = this.el.querySelector('.gc-foot'), me = this.me;
+      const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
+      if (me && me.can) {
+        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message…" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
+        return;
+      }
+      const why = !me || !Store.player.name ? 'Pick a player name, link a Google account and make 100 rolls to write here.'
+        : me.reason === 'muted' ? (me.mutedUntil < 0 ? '🔇 You can no longer write in the chat.' : `🔇 You are muted until ${fullDate(me.mutedUntil)}.`)
+        : me.reason === 'google' ? `To write here, link a Google account (⚙️ Settings) and make ${me.need} rolls.`
+        : `To write here, make ${me.need} rolls (you have ${fmt(me.rolls)}).`;
+      foot.innerHTML = `<p class="gc-why">${esc(why)}</p>${me && me.reason === 'google' ? '<button class="btn ghost small" data-gc="google">⚙️ Link Google</button>' : ''}`;
+    },
+    async send() {
+      const input = this.el.querySelector('.gc-input'); if (!input || this.busy) return;
+      const text = input.value.trim(); if (!text) return;
+      this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
+      try {
+        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del }));
+        input.value = ''; this.list().scrollTop = this.list().scrollHeight;
+      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll(); }
+      finally { this.busy = false; btn.disabled = false; }
+    },
+    async onClick(e) {
+      const menu = e.target.closest('[data-gc-menu]');
+      if (menu) { const id = menu.closest('.gc-msg').dataset.id; this.menu = this.menu === id ? null : id; this.drawList(); return; }
+      const b = e.target.closest('[data-gc]'); if (!b) return;
+      if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
+      const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+      try {
+        if (b.dataset.gc === 'report') { const r = await Online.global('gcReport', { id }); toast(r.already ? 'Already reported' : 'Reported: thank you!'); }
+        else if (b.dataset.gc === 'delete') { if (!confirm(t('Delete this message?'))) return; this.apply(await Online.global('gcDelete', { id })); toast('Message deleted'); }
+        else if (b.dataset.gc === 'mute') { if (!confirm(t('Mute this player and delete the message?'))) return; this.apply(await Online.global('gcMute', { id, dur: b.dataset.dur })); toast('Player muted'); }
+        this.menu = null; this.drawList();
+      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    },
+  };
+  document.addEventListener('visibilitychange', () => { if (GChat.open && !document.hidden) GChat.poll(); });
+  // Changer de page ferme le panneau : il couvrirait la droite de la page (et tout l'écran sur téléphone).
+  window.addEventListener('hashchange', () => GChat.close());
+
   // Roue crantée en haut à droite (demandé par Sacha, 2026-10-23) : les réglages, thème compris, à la place des trois boutons de thème.
   $('#gear-btn').addEventListener('click', openSettings);
 
@@ -7661,6 +7799,7 @@
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
     if (e.target.closest('[data-coffee]')) { e.preventDefault(); openCoffee(); return; }
     if (e.target.closest('[data-idea]')) { e.preventDefault(); openIdeas(); return; }
+    if (e.target.closest('[data-gchat]')) { e.preventDefault(); GChat.toggle(); return; }
     if (e.target.closest('[data-fund]')) { e.preventDefault(); openFund(); return; }
     // Aperçu d'un skin demandé hors de la grille du Shop (fenêtre de la cagnotte) ; la grille a son propre écouteur.
     { const pv = e.target.closest('[data-skin-preview]'); if (pv && !pv.closest('.skin-grid')) { e.preventDefault(); previewSkin(pv.dataset.skinPreview); return; } }

@@ -3,7 +3,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = 'http://localhost:8124';
+const B = process.env.BASE || 'http://localhost:8124'; // BASE : autre port (plusieurs serveurs de dev en même temps)
 const widths = process.argv.slice(2).map(Number).filter(Boolean);
 const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const ctx = await browser.newContext({ viewport: { width: 375, height: 760 }, colorScheme: 'dark', locale: 'fr-FR' });

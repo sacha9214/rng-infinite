@@ -4,7 +4,8 @@
 - Did: removed every `const top = Engine.topLabel(a.percentile);` with replace_all while moving the percentile display to `percentileHTML`, and reported the change as verified. Again on 2026-09-23: ran `sed -i '' '/^state = r.body;$/d' tools/test-api.mjs` to drop one stray test line.
 - Was: the first also deleted the declaration inside `shareText` (bare `top` became `window.top`, Share threw); the second also deleted the `state = r.body;` the XP race test needed, and the broken test got committed.
 - Check: before any pattern delete, `grep -n '<exact pattern>' <files>` and confirm the match count equals the number of lines you mean to remove; if it is higher, edit with a unique anchor (the surrounding lines) instead of the bare pattern. For a removed declaration, also `grep -n "\b<name>\b" js/*.js api/*.js` for remaining uses, then real-click every button whose handler reaches the edited code (`node tools/dev.mjs` running, `node tools/stamp.mjs` re-run).
-- Seen: 2
+- Seen: 3 (2026-10-25: `sed -i "s/'e'.repeat(16)/…/g" tools/test-api.mjs` to rename an id in my new test also renamed Dave, then `'9a'.repeat(8)` renamed the Spooky buyer; both caught by the failing suite before any commit)
+- Check (sed on a big file): restrict the substitution to a line range (`sed -i '' '3500,$s/…/…/'`) and read the removed lines of the diff right after.
 
 ### Reading a terse or typo'd request that could mean the opposite
 - Did: read "and ze should be able to skip the badge" as "add a Skip badges button", built it and tried to push it. Again on 2026-10-02: read the dictated "des animations comme la vidéo … pour les rôles … pour chacun des rôles, faire une petite vidéo" as "restage the base roll reveal like the trailer" (because "rôles" had meant "rolls" one message earlier), restated it in one line but kept working: read the trailer code, wrote a filming tool, designed a whole stage.
