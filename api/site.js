@@ -347,7 +347,31 @@ async function extraInsights(ids, now) {
     st.forEach(x => { if (Number(x[0]) >= 5) dejavu++; if (Number(x[1]) >= 1) bug++; if (Number(x[2]) >= 1) contrib++; });
   }
   const newFeatures = { discordLinks: Number(links) || 0, event: { title: ev.title, emoji: ev.emoji, goal: ev.goal, players: Number(evPlayers) || 0, done: Number(evDone) || 0, claimed: Number(evClaimed) || 0 }, dejavu, bugHunters: bug, contributors: contrib };
-  return { weekdays, economy, sales, health, newFeatures };
+  return { weekdays, economy, sales, health, newFeatures, supply: await coinSupply(now) };
+}
+
+// Masse monétaire (Sacha, 2026-10-25) : la somme des soldes de TOUS les joueurs (stats:*, pas seulement ceux qui ont un
+// pseudo), par un SCAN complet. Coûteux : gardé 10 minutes dans eco:supply. Avec la part des 1 % les plus riches.
+const SUPPLY_KEY = 'eco:supply', SUPPLY_TTL_S = 600;
+async function coinSupply(now = Date.now()) {
+  const [cached] = await redis([['GET', SUPPLY_KEY]]);
+  if (cached) { try { return JSON.parse(cached); } catch (e) { /* recalculé */ } }
+  const balances = [];
+  let cursor = '0', loops = 0;
+  do {
+    const [[next, keys]] = await redis([['SCAN', cursor, 'MATCH', 'stats:*', 'COUNT', 1000]]);
+    cursor = String(next);
+    const ids = (keys || []).filter(k => /^stats:[0-9a-f]{16}$/.test(k));
+    for (let i = 0; i < ids.length; i += 200) {
+      const rows = await redis(ids.slice(i, i + 200).map(k => ['HGETALL', k]));
+      rows.forEach(r => { const b = Shop.balance(toObject(r)); if (b > 0) balances.push(b); });
+    }
+  } while (cursor !== '0' && ++loops < 100000);
+  balances.sort((x, y) => y - x);
+  const total = balances.reduce((x, v) => x + v, 0), top = balances.slice(0, Math.max(1, Math.ceil(balances.length / 100))).reduce((x, v) => x + v, 0);
+  const out = { total, holders: balances.length, top1: total ? top / total : 0, at: now };
+  await redis([['SET', SUPPLY_KEY, JSON.stringify(out), 'EX', SUPPLY_TTL_S]]);
+  return out;
 }
 
 async function insights() {

@@ -26,12 +26,15 @@
   // Un tirage (identifiants des badges obtenus) compte-t-il pour l'événement ?
   const counts = (ev, earnedIds) => (earnedIds || []).some(id => ev.badges.includes(id));
 
-  // Weekend Rush (2026-10-18) : samedi et dimanche (jours UTC), les pièces des tirages et des quêtes sont doublées.
-  // Le casino, les duels, les niveaux et le reste ne changent pas.
+  // Weekend Rush (2026-10-18) : samedi et dimanche (jours UTC), les pièces des tirages et des quêtes reçoivent un bonus.
+  // Le casino, les duels, les niveaux et le reste ne changent pas. ×2 jusqu'au 2026-10-25, puis +25 % (Sacha : le
+  // week-end créait 4,1 M pièces par jour contre 2,1 M en semaine).
+  const RUSH_RATE = 0.25;
   const rush = (t = Date.now()) => [0, 6].includes(new Date(t).getUTCDay());
-  const rushMult = t => (rush(t) ? 2 : 1);
+  const rushMult = t => (rush(t) ? 1 + RUSH_RATE : 1);
+  const rushBonus = (coins, t) => (rush(t) ? Math.floor(coins * RUSH_RATE) : 0); // la part en plus, arrondie en dessous
   const rushEnd = (t = Date.now()) => { const d = new Date(t); d.setUTCHours(0, 0, 0, 0); return d.getTime() + (d.getUTCDay() === 6 ? 2 : 1) * 86400000; };
-  const api = { rush, rushMult, rushEnd, THEMES, REWARD, current, counts, key: ev => `ev:${ev.id}` };
+  const api = { RUSH_RATE, rush, rushMult, rushBonus, rushEnd, THEMES, REWARD, current, counts, key: ev => `ev:${ev.id}` };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGEvents = api;
 })(typeof window !== 'undefined' ? window : globalThis);

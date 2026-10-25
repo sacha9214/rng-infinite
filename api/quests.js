@@ -45,7 +45,7 @@ async function state(id, now = Date.now()) {
     resetAt: Date.parse(`${day}T00:00:00Z`) + 86400000,
     coins: Shop.balance(stats),
     quests: Quests.ofDay(day).map(q => ({
-      id: q.id, emoji: q.emoji, text: q.text, target: q.target, reward: q.reward * Events.rushMult(now),
+      id: q.id, emoji: q.emoji, text: q.text, target: q.target, reward: q.reward + Events.rushBonus(q.reward, now),
       progress: Quests.progress(q, counters), claimed: counters[`claimed:${q.id}`] === '1',
     })),
     daily: { claimed: claimedToday, streak, reward: Quests.dailyReward(claimedToday ? streak : streak + 1), next: Quests.dailyReward((claimedToday ? streak : streak + 1) + 1) },
@@ -93,7 +93,7 @@ module.exports = async (req, res) => {
       // Une seule fois : le marqueur du jour sert de verrou.
       const [first] = await redis([['HSETNX', questKey(day, playerId), `claimed:${quest.id}`, 1]]);
       if (Number(first) !== 1) return send(res, 422, { error: 'Reward already claimed' });
-      const reward = quest.reward * Events.rushMult(Date.now()); // Weekend Rush : ×2 le samedi et le dimanche
+      const reward = quest.reward + Events.rushBonus(quest.reward, Date.now()); // Weekend Rush : +25 % le samedi et le dimanche
       await redis([['HINCRBY', statsKey(playerId), 'bonus', reward], ['HINCRBY', statsKey(playerId), 'questsDone', 1], ...eco('in:quests', reward)]);
       // Dernière quête du jour réclamée : la série de quêtes monte, et le bonus « tout fini » est versé (une seule fois).
       const [after] = await redis([['HGETALL', questKey(day, playerId)]]);

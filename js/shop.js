@@ -147,10 +147,29 @@
   // Victoires de duel récompensées = toutes les victoires − celles sans enjeu (même adversaire trop souvent dans la
   // journée, compte adverse trop neuf : champ "duelUnpaid", voir duelOutcome dans api/room.js).
   const rankedWins = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
-  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * rankedWins(st);
+  // rollCut : les pièces de tirage retenues par les rendements décroissants (voir ROLL_TIERS) ; le solde se calcule sur
+  // les compteurs de rareté, la part non versée est donc soustraite ici.
+  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * rankedWins(st) - num(st.rollCut);
   // Solde = pièces gagnées en jouant + pièces reçues (quêtes, bonus quotidien, pots de duel, remboursements : champ
   // "bonus") − pièces dépensées (skins, caisses, mises de duel : champ "spent").
   const balance = st => earned(st) + num(st.bonus) - num(st.spent);
+
+  // Rendements décroissants des pièces de tirage (Sacha, 2026-10-25 : 9,2 M pièces en jeu, +10 %/jour, 80 % venant des
+  // tirages). Par joueur et par jour UTC : tirages 1–500 au plein tarif, 501–2 000 à 50 %, au-delà à 20 % (arrondi en
+  // dessous). Seules les pièces changent : l'XP, la chance et les classements restent les mêmes.
+  const ROLL_TIERS = [{ upTo: 500, rate: 1 }, { upTo: 2000, rate: 0.5 }, { upTo: Infinity, rate: 0.2 }];
+  const rollRate = k => ROLL_TIERS.find(x => k <= x.upTo).rate; // k = numéro du tirage dans la journée (1 = le premier)
+  const rollPay = (coins, k) => Math.floor(coins * rollRate(k));
+  // Changer de pseudo coûte des pièces (le premier pseudo reste gratuit).
+  const RENAME_PRICE = 5000;
+  // Prestige (Sacha, 2026-10-25) : trois titres de luxe, en quantité limitée (stock commun à tous les joueurs), un
+  // exemplaire par joueur. Le titre est un succès caché (js/achievements.js, champ de stats "pr:<id>").
+  const PRESTIGE = [
+    { id: 'tycoon', emoji: '🎩', name: 'Tycoon', price: 25000, stock: 200, desc: 'A prestige title for big spenders' },
+    { id: 'magnate', emoji: '💼', name: 'Magnate', price: 60000, stock: 100, desc: 'A rarer prestige title' },
+    { id: 'emperor', emoji: '👑', name: 'Coin Emperor', price: 150000, stock: 25, desc: 'The rarest title in the game' },
+  ];
+  const prestigeById = new Map(PRESTIGE.map(x => [x.id, x]));
 
   // Caisses : un skin tiré au hasard par le serveur dans la liste de la caisse ; plus un skin est cher, plus il est rare
   // (poids = 1 / prix). Déjà possédé : la moitié du prix de la caisse est rendue. Un skin réservé à une caisse
@@ -320,7 +339,7 @@
   // joueur (champ idea), son auteur reçoit 5 % du prix en pièces. Créées en plus : l'acheteur paie le prix normal.
   const IDEA_SHARE = 0.05;
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
-  const api = { IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { ROLL_TIERS, rollRate, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

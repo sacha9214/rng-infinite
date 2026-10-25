@@ -148,7 +148,7 @@ function announceRush(end) {
     embeds: [{
       title: '🔥 Weekend Rush is on!',
       url: SITE,
-      description: `Until <t:${Math.floor(end / 1000)}:F>, **coins from rolls and daily quests are doubled**.\nRoll on ${SITE}`,
+      description: `Until <t:${Math.floor(end / 1000)}:F>, **+25% coins from rolls and daily quests**.\nRoll on ${SITE}`,
       color: 0xf97316,
     }],
   });
