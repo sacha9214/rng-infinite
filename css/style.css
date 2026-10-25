@@ -4944,6 +4944,58 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes brg-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-5deg); } }
 .room-stage.many .side-burger::before, .room-stage.many .side-burger::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-burger::before, .side-burger::after { animation: none; } }
+/* ------------------------------------------------------------------ Wood carving (idée de jjcoolcid1 et JBearr12,
+   2026-10-25) : une planche de pin clair, veinée, avec un nœud. Chaque chiffre est taillé en V au couteau : un creux
+   sombre, ombré en haut et éclairé sur le bord du bas. Pendant le tirage, le chiffre n'est qu'un trait de crayon qui
+   tremble sous de petites entailles ; au moment où il se fixe, la lame appuie (le trait gonfle), coupe d'un coup sec (le
+   creux sombre apparaît, la planche tressaute) et les copeaux s'envolent (canvas). Matière dure : pas d'écrasement. */
+.num-card.skin-woodcarving {
+  background:
+    /* un nœud du bois, et les veines qui le contournent */
+    radial-gradient(ellipse .4em .2em at 95% 90%, #7c4a1e 0 18%, #a8692f 30%, rgba(168, 105, 47, .35) 48%, transparent 70%),
+    radial-gradient(ellipse 1.2em .5em at 95% 90%, transparent 40%, rgba(120, 66, 22, .18) 46%, transparent 52%, rgba(120, 66, 22, .14) 62%, transparent 68%),
+    /* veines longues, irrégulières (deux rythmes qui se croisent) */
+    repeating-linear-gradient(178deg, transparent 0 .19em, rgba(133, 77, 30, .22) .2em .23em, transparent .24em .41em),
+    repeating-linear-gradient(181deg, transparent 0 .31em, rgba(146, 84, 34, .16) .32em .37em, transparent .38em .6em),
+    /* lumière d'atelier sur la planche, bords plus sombres */
+    radial-gradient(ellipse 75% 70% at 45% 35%, rgba(255, 240, 210, .5), transparent 75%),
+    linear-gradient(180deg, #e9bf85, #d9a463 55%, #c38948);
+  border: 2px solid #7c4a1e; border-radius: .5rem;
+  box-shadow: inset 0 0 0 2px rgba(255, 228, 180, .35), inset 0 -.2em .45em rgba(92, 51, 18, .45), inset 0 .1em .2em rgba(255, 244, 220, .45), 0 0 12px rgba(180, 110, 50, .25), 0 9px 16px rgba(0, 0, 0, .38);
+}
+/* les chiffres : un creux taillé en V. L'ombre portée vers le haut (la lèvre du dessus cache la lumière), le bord du
+   bas éclairé, et un dégradé dans le creux : plus sombre au fond. */
+.skin-woodcarving .slot {
+  color: #2e1404;
+  text-shadow: 0 -.025em 0 rgba(40, 18, 4, .45), 0 .03em 0 rgba(255, 240, 212, .7);
+  transform-origin: 50% 60%;
+}
+.skin-woodcarving .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : un trait de crayon gris sur le bois, qui tremble sous les entailles de la lame. */
+.skin-woodcarving .slot.spinning {
+  color: rgba(55, 58, 68, .5); text-shadow: .015em .01em 0 rgba(55, 58, 68, .2);
+  animation: wc-nick .12s steps(2) infinite; }
+@keyframes wc-nick { 0% { transform: translate(-.015em, 0) rotate(-1deg); } 100% { transform: translate(.015em, -.01em) rotate(1deg); } }
+/* La coupe : la lame appuie (le trait gonfle, encore clair), coupe d'un coup sec (le creux sombre, la planche
+   tressaute), puis deux petits chocs rigides et elle se pose. Pas d'opacité dans les images-clés (zéros fantômes). */
+.skin-woodcarving .slot.revealed { animation: wc-cut .62s backwards; }
+@keyframes wc-cut {
+  0% { transform: translateY(-.05em) scale(1.12); filter: brightness(1.45) sepia(.5); animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  30% { transform: translateY(.03em) scale(.93); filter: brightness(.8); animation-timing-function: ease-out; }
+  48% { transform: translateX(-.025em) rotate(-1.6deg) scale(1.02); filter: none; }
+  66% { transform: translateX(.015em) rotate(.8deg); }
+  84% { transform: rotate(-.3deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-woodcarving .slot { animation: none; } }
+/* Cadre de duel : un établi (planches et veines), une bûche et un couteau qui taille, avec la lumière chaude d'atelier. */
+.side-woodcarving { --side-border: #a8692f; --side-glow: 0 0 14px rgba(217, 164, 99, .35); --side-ink: #92521c;
+  --side-bg: repeating-linear-gradient(178deg, transparent 0 7px, rgba(133, 77, 30, .14) 7px 8px, transparent 8px 15px), linear-gradient(180deg, transparent 72%, rgba(124, 74, 30, .28) 72.5%, rgba(168, 105, 47, .2) 100%), radial-gradient(ellipse 80% 60% at 50% 30%, rgba(233, 191, 133, .2), transparent 70%);
+  --deco-a: '🪵'; --deco-b: '🔪'; }
+.side-woodcarving::after { transform-origin: 80% 80%; animation: wc-whittle 1.6s ease-in-out infinite; }
+@keyframes wc-whittle { 0%, 100% { transform: rotate(0); } 40% { transform: translate(-3px, 2px) rotate(-14deg); } 55% { transform: translate(-4px, 3px) rotate(-16deg); } }
+.room-stage.many .side-woodcarving::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-woodcarving::after { animation: none; } }
 /* ------------------------------------------------------------------ Wheelie (idée de JBearr12, 2026-10-21) : une rue au
    crépuscule. Bitume sombre et grenu, une bordure de trottoir en béton tout en haut (le cycliste roule dessus), une ligne
    jaune pointillée en bas. Les chiffres sont peints au pochoir sur la chaussée (peinture routière blanche, un peu usée).

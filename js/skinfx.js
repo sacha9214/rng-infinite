@@ -2622,6 +2622,71 @@
     };
   };
 
+  // 🪵 Wood carving (2026-10-25, idées de jjcoolcid1 et JBearr12) — à chaque chiffre, un trait de lame clair traverse
+  // le chiffre en biais (la coupe) et des copeaux en spirale s'envolent puis retombent, avec un peu de sciure. À la
+  // révélation, une bouffée de sciure ; dès Mythic, un reflet de vernis doré balaie la planche et des copeaux dorés
+  // pleuvent. Tirage raté : rien.
+  SCENES.woodcarving = env => {
+    const { co, card, q, dark } = env;
+    const WOOD = ['#f3d3a1', '#e9bf85', '#d9a463', '#fbe3bb'];
+    const chips = particles(), dust = particles(), cuts = timed(), glints = timed();
+    let gold = false;
+    const shave = (x, y, n, up, golden) => {
+      for (let i = Math.round(n * q); i > 0; i--) chips.add({ x: x + rnd(-.1, .1) * card.h, y, vx: rnd(-1, 1) * card.h * 1.3, vy: -rnd(.5, 1) * up, g: card.h * 7, drag: .8, max: rnd(.6, 1), len: card.h * rnd(.09, .15), rot: rnd(TAU), spin: rnd(-10, 10), c: golden ? pick(['#fde68a', '#fbbf24', '#f59e0b']) : pick(WOOD) });
+      for (let i = Math.round(n * .8 * q); i > 0; i--) dust.add({ x: x + rnd(-.15, .15) * card.h, y, vx: rnd(-1, 1) * card.h * .6, vy: -rnd(.2, .6) * card.h, g: card.h * 1.2, drag: 1.5, max: rnd(.5, .9), size: card.h * rnd(.012, .022) });
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // la coupe : un trait clair en biais qui file sur le chiffre et s'efface
+        cuts.run(dt, (c, k) => {
+          const e = clamp(k / .35), a = (1 - k) * .9;
+          co.strokeStyle = `rgba(255,248,230,${a})`; co.lineWidth = Math.max(1.5, card.h * .03); co.lineCap = 'round';
+          co.beginPath(); co.moveTo(c.x - c.r, c.y - c.r * .8); co.lineTo(c.x - c.r + 2 * c.r * e, c.y - c.r * .8 + 1.6 * c.r * e); co.stroke();
+        });
+        if (gold) glints.run(dt, (g, k) => {
+          const x = card.x - card.w * .2 + card.w * 1.4 * k;
+          const gr = co.createLinearGradient(x - card.h, 0, x + card.h, 0);
+          gr.addColorStop(0, 'rgba(253,230,138,0)'); gr.addColorStop(.5, `rgba(253,230,138,${dark ? .45 : .35})`); gr.addColorStop(1, 'rgba(253,230,138,0)');
+          co.fillStyle = gr; co.fillRect(card.x, card.y, card.w, card.h);
+        });
+        dust.step(dt);
+        dust.each((d, k) => dot(co, dark ? '#e9bf85' : '#a8692f', d.x, d.y, d.size, (1 - k) * .6));
+        chips.step(dt);
+        chips.each((b, k) => {
+          b.rot += b.spin * dt;
+          co.globalAlpha = Math.min(1, (1 - k) * 1.8);
+          co.save(); co.translate(b.x, b.y); co.rotate(b.rot);
+          // un copeau : une boucle de bois clair (spirale ouverte), bord sombre pour se détacher sur fond clair
+          co.lineCap = 'round';
+          co.strokeStyle = 'rgba(92,51,18,.55)'; co.lineWidth = b.len * .42;
+          co.beginPath(); co.arc(0, 0, b.len * .45, 0, Math.PI * 1.4); co.stroke();
+          co.strokeStyle = b.c; co.lineWidth = b.len * .28;
+          co.beginPath(); co.arc(0, 0, b.len * .45, 0, Math.PI * 1.4); co.stroke();
+          co.restore();
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        cuts.add({ x: p.x, y: p.y, r: card.h * .28, life: .35 });
+        // la lame entre dans le bois au creux de l'animation CSS (30 % de 0,62 s)
+        setTimeout(() => shave(p.x, p.y - card.h * .1, o.last ? 6 : 4, card.h * 2.2, false), 180);
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) return;
+        shave(card.x + card.w / 2, card.y + card.h * .3, 4 + 10 * p, card.h * 2.6, false);
+        gold = p >= 1;
+        if (gold) {
+          glints.add({ life: .9 }); glints.add({ life: .9, delay: .9 });
+          for (let i = 0; i < 4; i++) setTimeout(() => shave(card.x + card.w * rnd(.2, .8), card.y, 6, card.h * 3.2, true), i * 160);
+        }
+      },
+    };
+  };
+
   // 🍔 Burger (2026-10-23, idée de jaxoncool43) — chaque ingrédient qui tombe (CSS) fait sauter quelques miettes et
   // graines de sésame ; quand le pain du dessus se pose (transition CSS au retrait de .charging, juste après le dernier
   // chiffre), les graines sautent du pain et des miettes giclent sur les côtés. À la révélation, la vapeur d'un burger

@@ -920,6 +920,16 @@
   text-shadow: 0 1px 0 #78350f, 0 0 2px #78350f, 0 0 .3em rgba(120, 53, 15, .8);
   --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(245, 158, 11, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.4em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #78350f; }
 .btn-roll.gen-burger:hover { filter: brightness(1.08) saturate(1.1); }
+/* Wood carving (idée de jjcoolcid1 et JBearr12, 2026-10-25) : une planche de pin veinée, le texte taillé en creux ; au
+   survol, la planche s'éclaire comme sous la lampe de l'établi. */
+.btn-roll.gen-woodcarving { border: 2px solid #7c4a1e; border-radius: .5em; color: #fff3dc;
+  background:
+    repeating-linear-gradient(178deg, transparent 0 .3em, rgba(133, 77, 30, .25) .31em .35em, transparent .36em .6em),
+    radial-gradient(ellipse 70% 60% at 40% 25%, rgba(255, 240, 210, .45), transparent 70%),
+    linear-gradient(180deg, #d9a463, #b9793a 60%, #8f5a26);
+  text-shadow: 0 -1px 0 #3a1b06, 0 1px 0 rgba(255, 238, 205, .5), 0 0 .3em rgba(58, 27, 6, .7);
+  --gs: 0 .3em 0 #5c3010, 0 .5em 1em rgba(168, 105, 47, .3); --gs-h: 0 .34em 0 #5c3010, 0 .7em 1.4em rgba(217, 164, 99, .45); --gs-a: 0 .06em 0 #5c3010; }
+.btn-roll.gen-woodcarving:hover { filter: brightness(1.1) saturate(1.05); }
 /* Blinds (idée de costoroll, 2026-10-21) : un store vénitien beige fermé, texte jaune néon ; au survol, les lames
    pivotent et laissent voir le ciel bleu derrière. */
 .btn-roll.gen-blinds { border: 2px solid #a4804a; border-radius: .45em; color: #fef08a;
