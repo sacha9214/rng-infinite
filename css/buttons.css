@@ -908,3 +908,9 @@
 /* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
 .btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
+/* Chocolate (idée de finnnnn, 2026-10-25) : des carrés de chocolat au lait biseautés, papier doré aux bouts. */
+.btn-roll.gen-chocolate { border: 2px solid #2a1408; border-radius: .45em; color: #fde68a;
+  background: linear-gradient(90deg, #ca8a04, #fef3c7 40%, #b45309) 0 0 / .45em 100% no-repeat, linear-gradient(90deg, #b45309, #fef3c7 60%, #ca8a04) 100% 0 / .45em 100% no-repeat, linear-gradient(90deg, rgba(42, 20, 8, .7) .08em, transparent .08em) 0 0 / 1.6em 100%, linear-gradient(145deg, #a0592c, #7b3f1c 55%, #5e2e12);
+  text-shadow: 0 1px 0 #2a1408;
+  --gs: 0 .3em 0 #2a1408, 0 .5em 1em rgba(123, 63, 28, .35); --gs-h: 0 .34em 0 #2a1408, 0 .7em 1.3em rgba(202, 138, 4, .4); --gs-a: 0 .06em 0 #2a1408; }
+.btn-roll.gen-chocolate:hover { filter: brightness(1.08); }
