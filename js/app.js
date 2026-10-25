@@ -123,8 +123,8 @@
     leaderboard(period, span) {
       return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}`);
     },
-    profile(name) {
-      return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}`);
+    profile(name, lite) {
+      return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}${lite ? '&lite=1' : ''}`);
     },
     shop() {
       return this.request(`/api/shop?me=${Store.player.id}`);
@@ -2902,7 +2902,8 @@
     if (!slot || !Store.player.name) return;
     let p;
     try {
-      p = await Online.profile(Store.player.name);
+      // lite : succès et titre seulement, sans l'historique (un gros historique dépassait le délai de 6 s, 2026-10-25).
+      p = await Online.profile(Store.player.name, true);
     } catch (err) {
       if (slot.isConnected) slot.innerHTML = `<div class="panel"><div class="empty">${err.status === 404 ? 'Roll once to start unlocking achievements and titles.' : 'Achievements unavailable right now.'}</div></div>`;
       return;

@@ -23,6 +23,12 @@ module.exports = async (req, res) => {
     if (!name) return send(res, 400, { error: 'Missing player name' });
     const id = await findPlayer(name);
     if (!id) return send(res, 404, { error: 'No player with this name' });
+    // ?lite=1 (onglet Badges : mes succès et mon titre) : sans l'historique, qui peut prendre plusieurs secondes à
+    // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).
+    if (params.get('lite') === '1') {
+      const [shown, liteTitle] = await redis([['HGET', 'names', id], ['HGET', 'titles', id]]);
+      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(await readStats(id)), title: liteTitle || null });
+    }
 
     // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil
     // bloquait Redis et le processus Node plusieurs secondes (et, l'historique étant plafonné, le cache ne servait plus
