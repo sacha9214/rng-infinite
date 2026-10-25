@@ -908,3 +908,9 @@
 /* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
 .btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
+/* Cracked Screen (idée de KMC, 2026-10-25) : une vitre noire bleutée, une fissure en étoile dans un coin. */
+.btn-roll.gen-cracked { border: 2px solid #3f3f46; border-radius: .8em; color: #f8fafc;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g fill='none' stroke='%23e0f2fe' stroke-opacity='.6' stroke-width='.8'><path d='M30 10L22 2M30 10L40 6M30 10L38 22M30 10L24 20L14 24M30 10L18 12'/></g></svg>") 100% 0 / 2.4em 2.4em no-repeat, linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .1) 45%, transparent 55%), radial-gradient(ellipse at 50% 50%, #0b1730, #020409);
+  text-shadow: -.04em 0 rgba(239, 68, 68, .7), .04em 0 rgba(34, 211, 238, .7);
+  --gs: 0 .3em 0 #18181b, 0 .5em 1em rgba(56, 189, 248, .25); --gs-h: 0 .34em 0 #18181b, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #18181b; }
+.btn-roll.gen-cracked:hover { filter: brightness(1.12); }
