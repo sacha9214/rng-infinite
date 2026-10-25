@@ -862,6 +862,16 @@
   text-shadow: -.06em 0 0 rgba(236, 72, 153, .7), .06em 0 0 rgba(34, 211, 238, .8), 0 0 .4em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .35); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-sonic:hover { animation: gen-sonic-run .8s linear infinite; }
+/* Christmas (idées de JBearr12 et Angelicide9, 2026-10-25) : un paquet cadeau, ruban doré en croix. */
+.btn-roll.gen-christmas { border: 2px solid #7f1d1d; border-radius: .5em; color: #fffbeb;
+  background:
+    linear-gradient(90deg, transparent 46%, #fbbf24 46%, #fde68a 50%, #fbbf24 54%, transparent 54%),
+    linear-gradient(180deg, transparent 44%, #fbbf24 44%, #fbbf24 56%, transparent 56%),
+    radial-gradient(circle, rgba(255, 255, 255, .16) 0 2px, transparent 2.5px) 0 0 / 12px 12px,
+    linear-gradient(180deg, #ef4444, #c81e1e 50%, #991b1b);
+  text-shadow: 0 1px 0 #450a0a, 0 0 3px #450a0a, 0 0 .4em rgba(69, 10, 10, .9);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(239, 68, 68, .3); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-christmas:hover { filter: brightness(1.08); }
 /* Waterfall (idée de JBearr12 et jjcoolcid1, 2026-10-24) : l'herbe en haut, un rideau d'eau, l'écume en bas ; au
    survol, l'eau coule. */
 .btn-roll.gen-waterfall { border: 2px solid #14532d; border-radius: .6em; color: #fff;

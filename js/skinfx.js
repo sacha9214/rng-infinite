@@ -3415,6 +3415,39 @@
     };
   };
 
+  // 🎄 Christmas Morning (2026-10-25, idées de JBearr12 et Angelicide9) — chaque cadeau qui s'ouvre lâche des
+  // confettis rouges, verts et dorés ; la neige tombe doucement autour de la carte, plus fort après un beau tirage ;
+  // dès Epic une étoile dorée s'allume au-dessus de la carte, dès Mythic elle rayonne et une averse d'étoiles tombe.
+  SCENES.christmas = custom(pieces({ cols: ['#ef4444', '#22c55e', '#fbbf24', '#f8fafc'], shapes: ['sprinkle', 'star', 'square'], size: [1.6, 3.4], g: 520, spin: 8, up: true, glowc: '#fbbf24', ring: '#ef4444', drift: { rate: 1.2, from: 'around' } }), (env, { cx, st }) => {
+    const { co, card, q, dark } = env, snow = particles(), emit = emitter(), stars = timed(), SNOW = dark ? '#f8fafc' : '#94a3b8';
+    const flake = y => snow.add({ x: rnd(card.x - card.w * .3, card.x + card.w * 1.3), y, vx: rnd(-8, 8), vy: rnd(18, 42), max: rnd(2.5, 4), size: rnd(1, 2.4), ph: rnd(TAU) });
+    return {
+      frame(t, dt) {
+        const rate = (3 + (st.revealed ? 40 * st.p * Math.max(0, 1 - st.since / 5) : 0)) * q;
+        for (let n = emit(rate, dt); n > 0; n--) flake(card.y - card.h * rnd(.2, .9));
+        snow.step(dt);
+        co.globalCompositeOperation = 'source-over';
+        snow.each((s, k) => { co.globalAlpha = Math.min(1, k * 6, (1 - k) * 3) * .85; co.fillStyle = SNOW; co.beginPath(); co.arc(s.x + Math.sin(t * 2 + s.ph) * 4, s.y, s.size, 0, TAU); co.fill(); });
+        stars.run(dt, (s, k) => {
+          const a = Math.min(1, k * 5, (1 - k) * 2.5), y = card.y - card.h * .45;
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          if (s.rays) godrays(co, '#fde68a', cx, y, 10, card.h * .2, card.h * (.9 + .4 * s.p), t * .4, 6, a * .5);
+          dot(co, '#fbbf24', cx, y, card.h * (.5 + .3 * Math.sin(t * 5)), a * .7);
+          co.globalCompositeOperation = 'source-over';
+          co.save(); co.translate(cx, y); co.rotate(Math.sin(t * 2) * .1); co.globalAlpha = a; co.fillStyle = '#fde047';
+          co.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? card.h * .1 : card.h * .24, ang = -Math.PI / 2 + (i * Math.PI) / 5; co.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); } co.closePath(); co.fill();
+          co.strokeStyle = '#b45309'; co.lineWidth = 1.2; co.stroke(); co.restore();
+          if (s.rays && Math.random() < dt * 30 * q) snow.add({ x: cx + rnd(-1, 1) * card.w * .7, y: y, vx: rnd(-30, 30), vy: rnd(40, 110), max: 1.6, size: rnd(1.5, 2.6), ph: 0 });
+        });
+      },
+      lock() {},
+      reveal(tier, p) {
+        if (p >= .6) stars.add({ delay: .15, life: 2.6 + 1.2 * p + (ASCEND[tier] || 0) * .4, p, rays: p >= 1 });
+        for (let i = Math.round(30 * p * q); i > 0; i--) flake(card.y - rnd(0, card.h * 1.2));
+      },
+    };
+  });
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
