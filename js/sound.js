@@ -183,6 +183,8 @@
     fishBite: () => [[chip(190, 45, .38, .5, 1.5), 0, FISH.bite, 0, .1], [crunch(.22, 6, 40, 1.5), 0, FISH.bite * .8, 0, .08]],
     // Le fil casse : un « twang » aigu qui retombe.
     fishSnap: () => [[chip(1800, 220, .2, .125, 2.5), 0, FISH.snap, -.2, .06], [chip(3600, 3600, .012, .5, 1), 0, FISH.snap * .7, -.2, 0]],
+    // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
+    bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
     click: ({ look } = {}) => {

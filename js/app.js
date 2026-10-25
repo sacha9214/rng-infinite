@@ -1701,6 +1701,7 @@
     { id: '2026-10-25-elemental-skin', date: 'Oct 25, 2026', en: ['🌀 New legendary skin: Elemental (14,000 coins). Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it, with four element spirits circling it (idea by kaz)'], fr: ['🌀 Nouveau skin légendaire : Elemental (14 000 pièces). Chaque chiffre se pose dans un nouvel élément, roche, glace, feu puis vent, et la carte en prend la matière, avec quatre esprits des éléments qui tournent autour (idée de kaz)'] },
     { id: '2026-10-25-divine-skin', date: 'Oct 25, 2026', en: ['⚖️ New Legendary skin: Divine Judgment (17,500 coins, Premium). A heavenly tribunal weighs every digit on golden scales, a pillar of light strikes each one into place, and Mythic rolls get a halo and falling feathers (idea by Gray alt)'], fr: ['⚖️ Nouveau skin Legendary : Divine Judgment (17 500 pièces, Premium). Un tribunal céleste pèse chaque chiffre sur une balance dorée, un pilier de lumière le frappe en place, et les tirages Mythic reçoivent une auréole et des plumes (idée de Gray alt)'] },
     { id: '2026-10-25-wp-summit', date: 'Oct 25, 2026', en: ['🏔️ New legendary wallpaper Summit (4,000 coins): snowy mountains under the sun, and on every Mythic+ roll night falls, the stars come out and the moon rises behind the peaks (idea by JBearr12)'], fr: ['🏔️ Nouveau fond légendaire Sommet (4 000 pièces) : des montagnes enneigées sous le soleil, et à chaque tirage Mythic+ la nuit tombe, les étoiles s\'allument et la lune se lève derrière les sommets (idée de JBearr12)'] },
+    { id: '2026-10-25-wp-bubbles', date: 'Oct 25, 2026', en: ['🫧 New wallpaper ASMR Bubbles (1,000 coins): shiny bubbles float up behind the game, and you can pop them with a click on the background, with a soft pop sound (idea by kingston)'], fr: ['🫧 Nouveau fond Bulles ASMR (1 000 pièces) : des bulles irisées montent derrière le jeu, et tu peux les éclater d\'un clic sur le fond, avec un petit « pop » (idée de kingston)'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
     { id: '2026-10-25-shinydiamond-skin', date: 'Oct 25, 2026', en: ['💍 New skin: Shiny Diamond (3,000 coins). Every digit is engraved in a brilliant-cut diamond on black velvet: the facets flicker while it turns, each stone locks in with a star glint, and rare rolls throw rainbow sparkles (idea by finnnnn)'], fr: ['💍 Nouveau skin : Shiny Diamond (3 000 pièces). Chaque chiffre est gravé dans un diamant taille brillant sur du velours noir : les facettes scintillent pendant le tirage, chaque pierre se sertit avec un éclat en étoile, et les tirages rares lancent des étincelles arc-en-ciel (idée de finnnnn)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
@@ -5015,6 +5016,7 @@
   const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>' };
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   const WALL_REACT = { aether: 4500, summit: 9000 };
+  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -5025,6 +5027,7 @@
     if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = WALL_LAYERS[id] || '';
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
+    if (id === 'bubbles' && !layer.querySelector('.wpb-b')) wallBubbles(layer);
   }
   // Fond Infinity (idée de Me Cojoni) : à la révélation, le fond prend la couleur de la rareté pendant quelques
   // secondes (data-react), puis se calme. Tout le visuel est en CSS ; ici on ne fait que poser et retirer l'attribut.
@@ -5039,6 +5042,39 @@
     layer.dataset.react = tier;
     wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), WALL_REACT[id]);
   }
+
+  // Bulles ASMR (idée de kingston, 2026-10-24) : des bulles montent derrière le site et éclatent quand on clique dessus.
+  // Le calque garde pointer-events: none : on écoute les clics de la page sans jamais les bloquer (pas de
+  // preventDefault), et une bulle n'éclate que si le clic tombe sur le fond lui-même (body, le vide de #app, ou l'aperçu
+  // plein écran), jamais sur un bouton ou un panneau du jeu.
+  const BUBBLES = 14;
+  function wallBubble(b, delay) {
+    const r = Math.random;
+    b.style.cssText = `--x:${(2 + r() * 92).toFixed(1)}vw;--s:${Math.round(28 + r() * 62)}px;--d:${(14 + r() * 14).toFixed(1)}s;--w:${(2.4 + r() * 2.4).toFixed(1)}s;--dx:${(r() * 8 - 4).toFixed(1)}vw;--y:${Math.round(12 + r() * 76)};animation-delay:${delay.toFixed(1)}s`;
+  }
+  function wallBubbles(layer) {
+    for (let i = 0; i < BUBBLES; i++) { const b = document.createElement('i'); b.className = 'wpb-b'; wallBubble(b, -Math.random() * 28); layer.appendChild(b); }
+  }
+  document.addEventListener('pointerdown', e => {
+    const layer = document.getElementById('wallpaper');
+    if (!layer || !layer.classList.contains('wp-bubbles') || e.button > 0) return;
+    const t = e.target, root = document.documentElement;
+    if (!(t === document.body || t === root || t.id === 'app' || (root.classList.contains('wall-trying') && !t.closest('.wall-try-bar')))) return;
+    const hit = [...layer.querySelectorAll('.wpb-b:not(.gone)')].find(b => {
+      const r = b.getBoundingClientRect(), rad = r.width / 2;
+      return Math.hypot(e.clientX - (r.left + rad), e.clientY - (r.top + r.height / 2)) <= rad + 6;
+    });
+    if (!hit) return;
+    const r = hit.getBoundingClientRect(), pop = document.createElement('i');
+    pop.className = 'wpb-pop';
+    pop.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--s:${r.width}px`;
+    layer.appendChild(pop);
+    setTimeout(() => pop.remove(), 700);
+    hit.classList.add('gone');
+    Sound.play('bubblePop', { k: Math.floor(Math.random() * 6) });
+    // une nouvelle bulle repart du bas un peu plus tard (même élément : le nombre de bulles ne bouge pas)
+    setTimeout(() => { hit.classList.remove('gone'); wallBubble(hit, 0); hit.style.animation = 'none'; void hit.offsetWidth; hit.style.animation = ''; }, 900);
+  });
 
   function drawEmotes(state) {
     const grid = $('#d-emotes');

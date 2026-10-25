@@ -147,6 +147,7 @@
     'Starter Case': 'Caisse Starter', 'Premium Case': 'Caisse Premium', 'A skin worth 200 to 800 coins': 'Un skin valant 200 à 800 pièces', 'A skin worth 800 to 5,000 coins': 'Un skin valant 800 à 5 000 pièces', 'Odds ⓘ': 'Chances ⓘ', 'Odds': 'Chances',
     // caisse de fonds d'écran (idée de CrazyMiner22)
     'Summit': 'Sommet', 'Snowy mountains under the sun; on a Mythic+ roll night falls and the moon rises behind the peaks': 'Des montagnes enneigées sous le soleil ; sur un tirage Mythic+, la nuit tombe et la lune se lève derrière les sommets',
+    'ASMR Bubbles': 'Bulles ASMR', 'Shiny bubbles float up behind the game; click the background to pop them': 'Des bulles irisées montent derrière le jeu ; clique sur le fond pour les éclater',
     'Wallpaper Case': 'Caisse de fonds', 'An animated wallpaper worth 500 to 1,200 coins': 'Un fond animé valant 500 à 1 200 pièces', 'new wallpaper unlocked!': 'nouveau fond débloqué !', 'Use': 'Mettre',
     'The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.': 'La caisse de fonds marche pareil avec les fonds animés : tu possèdes déjà celui tiré ? Une partie du prix t\'est rendue aussi.',
     'new skin unlocked!': 'nouveau skin débloqué !', 'Roll once to start earning coins.': 'Fais un tirage pour commencer à gagner des pièces.', 'Shop unavailable right now.': 'Boutique indisponible pour le moment.',
