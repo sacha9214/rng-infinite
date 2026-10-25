@@ -5470,3 +5470,51 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-quit { margin-top: .4rem; }
 
 .theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */
+/* ------------------------------------------------------------------ Floppy Fish (idée d'AnnJoe, 2026-10-25) : une mare
+   d'un bleu vif, la ligne de l'eau ondulée au tiers du haut, un ciel clair au-dessus, des reflets qui ondulent, des
+   nénuphars dans les coins. Chiffres blancs cernés de bleu marine, à moitié dans l'eau. Pendant le tirage ils flottent
+   sous la surface, ondulants ; un chiffre qui se pose : il plonge un peu (élan), bondit hors de l'eau en s'étirant,
+   retombe en s'écrasant (c'est mou et rigolo), se pose. Le poisson qui saute à chaque chiffre et le poisson géant
+   (Mythic) : js/skinfx.js. */
+.num-card.skin-fish {
+  background:
+    /* nénuphars dans les coins du bas */
+    radial-gradient(ellipse .34em .14em at .4em calc(100% - .25em), #16a34a 90%, transparent 100%),
+    radial-gradient(ellipse .28em .12em at calc(100% - .45em) calc(100% - .2em), #22c55e 90%, transparent 100%),
+    /* la ligne de l'eau, ondulée, avec son écume */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10' preserveAspectRatio='none'><path d='M0 4Q5 0 10 4T20 4T30 4T40 4V10H0Z' fill='%230ea5e9'/><path d='M0 4Q5 0 10 4T20 4T30 4T40 4' fill='none' stroke='%23f0f9ff' stroke-width='1.4'/></svg>") 0 32% / 1.6em .3em repeat-x,
+    /* reflets dans l'eau */
+    repeating-linear-gradient(170deg, transparent 0 .4em, rgba(255, 255, 255, .1) .4em .44em, transparent .44em .8em),
+    linear-gradient(180deg, #bae6fd 0 36%, #0ea5e9 36%, #0369a1 80%, #075985);
+  border: 2px solid #0c4a6e; border-radius: .6rem;
+  box-shadow: inset 0 0 0 1px rgba(224, 242, 254, .25), inset 0 -.3em .5em rgba(8, 47, 73, .35), 0 0 14px rgba(14, 165, 233, .25), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .4em .5em .3em;
+}
+.skin-fish .slot { position: relative; z-index: 1; color: #fff; font-weight: 900; transform-origin: 50% 100%;
+  -webkit-text-stroke: .035em #0c2b45; text-shadow: 0 .05em 0 #0c2b45, 0 .08em .1em rgba(8, 47, 73, .6); }
+.skin-fish .slot.ghost { opacity: .18; }
+/* Pendant le tirage : le chiffre flotte sous l'eau, bleuté, ondulant. */
+.skin-fish .slot.spinning { color: rgba(186, 230, 253, .7); -webkit-text-stroke: 0; text-shadow: none; filter: blur(.6px); animation: fsh-bob .3s ease-in-out infinite alternate; }
+.skin-fish .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes fsh-bob { from { transform: translateY(.12em) skewX(-6deg); } to { transform: translateY(.18em) skewX(6deg); } }
+/* Il plonge (élan), bondit hors de l'eau en s'étirant, retombe en s'écrasant, rebondit, se pose. */
+.skin-fish .slot.revealed { animation: fsh-leap .7s backwards; }
+@keyframes fsh-leap {
+  0% { transform: translateY(.2em) scale(1.1, .85); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  30% { transform: translateY(-.4em) scale(.86, 1.2) rotate(-8deg); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  52% { transform: translateY(.04em) scale(1.24, .76) rotate(4deg); animation-timing-function: ease-out; }
+  70% { transform: translateY(-.06em) scale(.95, 1.06); }
+  86% { transform: scale(1.03, .97); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-fish .slot { animation: none; } }
+/* Cadre de duel : un bord de mare, l'eau en bas ; 🐟 saute, 🌊 roule. */
+.side-fish { --side-border: #0ea5e9; --side-glow: 0 0 16px rgba(14, 165, 233, .3); --side-ink: #0369a1;
+  --side-bg: linear-gradient(180deg, transparent 72%, rgba(14, 165, 233, .28) 74%, rgba(3, 105, 161, .38)), radial-gradient(ellipse 70% 50% at 50% 30%, rgba(186, 230, 253, .18), transparent 70%), radial-gradient(ellipse 18% 6% at 12% 86%, rgba(34, 197, 94, .4), transparent 70%);
+  --deco-a: '🐟'; --deco-b: '🌊'; }
+.side-fish::before { animation: fsh-hop 1.6s ease-in-out infinite; }
+.side-fish::after { animation: fsh-roll 2s ease-in-out infinite; }
+@keyframes fsh-hop { 0%, 55%, 100% { transform: none; } 70% { transform: translateY(-9px) rotate(-25deg); } 85% { transform: translateY(0) rotate(15deg); } }
+@keyframes fsh-roll { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
+.room-stage.many .side-fish::before, .room-stage.many .side-fish::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-fish::before, .side-fish::after { animation: none; } }
