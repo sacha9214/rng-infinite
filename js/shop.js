@@ -71,6 +71,7 @@
     { id: 'dynamite', name: 'Dynamite', emoji: '🧨', price: 2500, desc: 'A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit; Mythic rolls end in a mushroom cloud', idea: 'casmictechthing' }, // idée de casmictechthing et ichi (2026-10-24)
     // Idée de jjcoolcid1 (2026-10-25) : une étoile qui meurt, néon bleu et violet, des ondes de choc à chaque chiffre.
     { id: 'supernova', name: 'Supernova', emoji: '💥', price: 3600, desc: 'A star collapses behind neon blue and violet digits; every digit sends out a shockwave, and the reveal goes supernova', idea: 'jjcoolcid1' },
+    { id: 'shinydiamond', name: 'Shiny Diamond', emoji: '💍', price: 3000, desc: 'Every digit is engraved in a brilliant-cut diamond on black velvet: the facets flicker as it turns and each stone locks in with a tink and a star glint', idea: 'finnnnn' }, // idée de finnnnn : un vrai diamant taille brillant par chiffre
     { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat', idea: 'MUSTARD' },
     { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat', idea: 'MUSTARD' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
