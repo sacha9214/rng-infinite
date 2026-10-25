@@ -1661,6 +1661,8 @@
     });
   }
 
+  // Aide sous le bouton Google (Sacha, 2026-10-25) : un bloqueur de pub ou de pop-ups empêche la fenêtre de Google de
+  // s'ouvrir, et le clic ne fait alors rien du tout ; on le dit, avec l'autre façon de se connecter (mot de passe).
   function googleAccountHTML() {
     if (!googleEnabled()) return '';
     const g = Store.player.google;
@@ -1670,6 +1672,7 @@
           <span class="panel-note">Your player, leaderboard spots and whole roll history (stats, badges) follow you on every device.</span></div>`
       : `<div class="field"><label>Account</label>
           <div id="google-btn" class="google-btn"></div>
+          <span class="panel-note google-help">Nothing happens? Allow pop-ups or pause your ad blocker for this site, or use a password below.</span>
           ${GOOGLE_PROMO}
           <span class="panel-note">Sign in to keep the same player, your leaderboard spots and your whole roll history (stats, badges) on every device.</span></div>`;
   }
