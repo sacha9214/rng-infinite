@@ -67,7 +67,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - ~~Burger: each digit adds a topping (jaxoncool43 [89f54801e139]).~~ Done by Drastix on `drastix/burger-skin` (PR, not merged yet).
 - Bowling: a ball knocks pins that reveal the digits (JBearr12 [3c6a579a405c], [fa910f1e244b]).
 - Basketball: a ball drops in a hoop per digit (jjcoolcid1 [e937ad77450c]).
-- Wood carving: a knife carves each digit (jjcoolcid1 [ff005e13b704], JBearr12 [0fa76af413d3]).
+- ~~Wood carving: a knife carves each digit (jjcoolcid1 [ff005e13b704], JBearr12 [0fa76af413d3]).~~ ✅ Done on `claude/woodcarving-skin` (not merged yet; 2,000 coins, V-cut digits in a pine plank, `SCENES.woodcarving` shavings, gold varnish from Mythic).
 - Shiny Diamond (finnnnn [719ff8538e67]), Chocolate (finnnnn [89626248c340]), Coins/Money (finnnnn [2457889a6d20]).
 - Supernova: neon blue/purple with shockwaves (jjcoolcid1 [0f487aa749b5]).
 - Floppy Fish: a goofy fish jumps per digit, a giant fish on Mythic+ (AnnJoe [47b7afc07c18]).
