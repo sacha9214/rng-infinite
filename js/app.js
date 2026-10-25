@@ -5019,10 +5019,6 @@
   const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>' };
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500 };
-  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
-  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
-  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
-  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
