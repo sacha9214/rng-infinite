@@ -874,6 +874,19 @@
 .btn-roll.gen-waterfall:hover { animation: gen-wtf-flow .6s linear infinite; }
 @keyframes gen-wtf-flow { to { background-position: 0 0, 0 1em, 0 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-waterfall:hover { animation: none; } }
+/* Greek (idée de kaz, 2026-10-25) : un bloc de marbre cannelé sous une frise à méandres dorée, texte gravé ; au survol,
+   un reflet doré passe sur la pierre. */
+.btn-roll.gen-greek { border: 2px solid #b08d2a; border-radius: .3em; color: #1e3a5f;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><rect width='20' height='10' fill='%231e3a5f'/><path d='M1 9V1h8v6H5V4h2' fill='none' stroke='%23e9c46a' stroke-width='1.3'/><path d='M11 9V1h8v6h-4V4h2' fill='none' stroke='%23e9c46a' stroke-width='1.3'/></svg>") 0 0 / .7em .35em repeat-x,
+    linear-gradient(100deg, transparent 40%, rgba(253, 230, 138, .55) 50%, transparent 60%) -200% 0 / 200% 100% no-repeat,
+    repeating-linear-gradient(90deg, rgba(120, 113, 108, .18) 0, rgba(255, 255, 255, .5) .25em, rgba(120, 113, 108, .18) .4em),
+    linear-gradient(90deg, #d6d3d1, #fafaf9 45%, #e7e5e4 70%, #a8a29e);
+  text-shadow: 0 -1px 0 rgba(28, 25, 23, .4), 0 1px 0 #fff;
+  --gs: 0 .3em 0 #78716c, 0 .5em 1em rgba(233, 196, 106, .3); --gs-h: 0 .34em 0 #78716c, 0 .7em 1.4em rgba(233, 196, 106, .5); --gs-a: 0 .06em 0 #78716c; }
+.btn-roll.gen-greek:hover { animation: gen-grk-glint 1.2s ease-in-out infinite; }
+@keyframes gen-grk-glint { to { background-position: 0 0, 300% 0, 0 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-greek:hover { animation: none; } }
 @keyframes gen-sonic-run { to { background-position: -2.6em 50%, 0 100%, 0 0; } }
 /* UFO (idée de JBearr12, 2026-10-21) : un ciel de nuit, l'herbe en bas, un rayon vert qui descend au milieu. */
 .btn-roll.gen-ufo { border: 2px solid #84cc16; border-radius: 999px; color: #f7fee7;

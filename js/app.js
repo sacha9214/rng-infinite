@@ -395,7 +395,11 @@
     return { glyph, watch };
   })();
   // Chiffre affiché pendant que ça tourne : du code qui défile pour le skin Matrix, un chiffre sinon.
-  const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph() : String((Math.random() * 10) | 0));
+  // Greek : pendant le tirage, le fût de colonne tourne et montre des chiffres romains (un seul caractère Unicode, Ⅰ à Ⅸ,
+  // N pour zéro, pour garder la largeur de la case) ; le chiffre arabe gravé n'apparaît qu'à la pose (lisible).
+  const ROMAN = ['N', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'];
+  const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph()
+    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0] : String((Math.random() * 10) | 0));
   // Badges Top 1 / 5 / 10 : remis à la fin de chaque mois aux dix premiers du classement du mois, gardés pour toujours
   // (voir api/_rank.js). award = { top: 1 | 5 | 10, month: 'AAAA-MM' } ; le serveur envoie le meilleur de chacun.
   const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
@@ -1673,6 +1677,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-greek-skin', date: 'Oct 25, 2026', en: ['🏛️ New skin: Greek (2,000 coins, idea by kaz). Every digit is carved on a turning marble column: roman numerals spin past, then the drum stops and the real digit is chiselled in, with a puff of marble dust; rare rolls get a golden laurel glow'], fr: ['🏛️ Nouveau skin : Grec (2 000 pièces, idée de kaz). Chaque chiffre est gravé sur une colonne de marbre qui tourne : des chiffres romains défilent, puis le fût s\'arrête et le vrai chiffre est ciselé, dans un nuage de poussière de marbre ; les tirages rares brillent d\'une lueur de laurier doré'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
     { id: '2026-10-24-infinity-rework', date: 'Oct 24, 2026', en: ['♾️ The Infinity skin was remade to match Singularity: dark space glass with a loop of light running through it, bright white digits that are easy to read, digits pulled around the loop while rolling, and the big ∞ stays visible the whole roll (idea by kaz)'], fr: ['♾️ Le skin Infinity a été refait pour être au niveau de Singularity : du verre spatial sombre traversé par une boucle de lumière, des chiffres blancs bien lisibles, entraînés autour de la boucle pendant le tirage, et le grand ∞ visible pendant tout le tirage (idée de kaz)'] },
