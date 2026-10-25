@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-wp-racetrack', date: 'Oct 25, 2026', en: ['🏎️ New wallpaper Grand Prix (1,100 coins): race cars scream down the main straight in front of a packed grandstand (idea by YU CHUAN 23)'], fr: ['🏎️ Nouveau fond Grand Prix (1 100 pièces) : des monoplaces filent sur la ligne droite devant une tribune pleine (idée de YU CHUAN 23)'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
     { id: '2026-10-24-infinity-rework', date: 'Oct 24, 2026', en: ['♾️ The Infinity skin was remade to match Singularity: dark space glass with a loop of light running through it, bright white digits that are easy to read, digits pulled around the loop while rolling, and the big ∞ stays visible the whole roll (idea by kaz)'], fr: ['♾️ Le skin Infinity a été refait pour être au niveau de Singularity : du verre spatial sombre traversé par une boucle de lumière, des chiffres blancs bien lisibles, entraînés autour de la boucle pendant le tirage, et le grand ∞ visible pendant tout le tirage (idée de kaz)'] },
@@ -4982,6 +4983,10 @@
       if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
+  // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', racetrack: '<i class="wpf-far"></i>' };
+  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
+  const WALL_REACT = { aether: 4500 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -4989,7 +4994,7 @@
     let layer = document.getElementById('wallpaper');
     if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
     if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }
-    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = id === 'aether' ? '<i class="wpi-glow"></i><i class="wpi-spark"></i>' : '';
+    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = WALL_LAYERS[id] || '';
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
   }
@@ -4998,12 +5003,13 @@
   let wallReactTimer = 0;
   function wallReact(tier) {
     const layer = document.getElementById('wallpaper');
-    if (!layer || !layer.classList.contains('wp-aether') || document.hidden) return;
+    const id = layer && Object.keys(WALL_REACT).find(w => layer.classList.contains(`wp-${w}`));
+    if (!id || document.hidden) return;
     clearTimeout(wallReactTimer);
     layer.removeAttribute('data-react');
     void layer.offsetWidth; // relance l'animation même si deux tirages de suite ont la même rareté
     layer.dataset.react = tier;
-    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), 4500);
+    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), WALL_REACT[id]);
   }
 
   function drawEmotes(state) {
