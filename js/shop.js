@@ -50,6 +50,9 @@
     // prend la matière de l'élément en cours.
     { id: 'elemental', name: 'Elemental', emoji: '🌀', price: 14000, desc: 'Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it', premium: true, idea: 'kaz' },
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
+    // Idée de Gray alt (2026-10-25) : un tribunal céleste, une balance, un pilier de lumière qui frappe chaque chiffre ;
+    // le verdict final sur les grandes raretés. Legendary, entre Singularity et Infinity.
+    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé

@@ -509,6 +509,21 @@
 .btn-roll.gen-blackhole:hover { letter-spacing: .14em; }
 .btn-roll.gen-blackhole:active { transform: scale(.94, .9); letter-spacing: .04em; }
 
+/* Divine Judgment (idée de Gray alt, 2026-10-25) — nuit violette, gloire dorée d'en haut, colonnes de marbre ; au
+   survol, la lumière s'intensifie. */
+.btn-roll.gen-divine {
+  overflow: hidden; border-radius: .6rem; border: 2px solid #f5d27a; color: #fffdf2;
+  background:
+    linear-gradient(90deg, #f5ead2 0 3%, rgba(184, 134, 11, .9) 3% 3.6%, transparent 3.6% 96.4%, rgba(184, 134, 11, .9) 96.4% 97%, #f5ead2 97%),
+    radial-gradient(ellipse 55% 120% at 50% -30%, rgba(255, 236, 170, .6), rgba(250, 204, 21, .15) 50%, transparent 72%),
+    repeating-conic-gradient(from -2deg at 50% -60%, rgba(253, 224, 71, .14) 0 2deg, transparent 2deg 6deg),
+    linear-gradient(180deg, #2b1d4d, #0c0819);
+  text-shadow: 0 .06em 0 #a16207, 0 0 .35em rgba(253, 224, 71, .9);
+  --gs: 0 0 0 3px rgba(250, 204, 21, .2), 0 0 22px rgba(250, 204, 21, .45), 0 .5em 1em rgba(0, 0, 0, .55);
+  --gs-h: 0 0 0 3px rgba(250, 204, 21, .35), 0 0 38px rgba(253, 224, 71, .8), 0 0 70px rgba(255, 244, 214, .3), 0 .5em 1.1em rgba(0, 0, 0, .6);
+  --gs-a: 0 0 0 3px rgba(250, 204, 21, .25), 0 0 14px rgba(250, 204, 21, .5), inset 0 0 26px rgba(255, 236, 170, .5);
+}
+
 /* Bakery — une miche dorée : croûte cuite, trois entailles de boulanger, lettres crème ; elle gonfle au survol. */
 .btn-roll.gen-bakery {
   overflow: hidden; border-radius: 999px; border: 2px solid #8a4513; color: #fff7e6;

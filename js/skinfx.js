@@ -3083,6 +3083,109 @@
     };
   };
 
+  // ⚖️ Divine Judgment (2026-10-25, idée de Gray alt) — un tribunal céleste. Une gloire dorée rayonne derrière la carte,
+  // une grande balance la surplombe (son fléau passe derrière la carte, les plateaux pendent de chaque côté) et pèse le
+  // nombre : elle oscille pendant le tirage, de plus en plus fort avant le dernier chiffre. Chaque chiffre reçoit un pilier
+  // de lumière venu d'en haut. Au verdict : la balance s'équilibre d'un coup, un grand pilier frappe la carte, les rayons
+  // s'embrasent, des ondes partent ; dès Mythic, une auréole et des plumes ; tirage raté : la balance penche, rien ne tombe.
+  SCENES.divine = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const GOLD = dark ? '#fde047' : '#b45309', PALE = dark ? '#fff7d6' : '#a16207', BRASS = dark ? '#f5d27a' : '#92400e', WHITE = dark ? '#ffffff' : '#78350f';
+    const pillars = timed(), rings = timed(), flashes = timed(), sparks = particles(), feathers = particles(), motes = particles(), emit = emitter();
+    let heat = 0, target = .25, tilt = 0, tiltTo = 0, swing = 0, p = 0, since = 0, revealed = false, verdict = 0, missed = false, spin = 0, asc = 0;
+    const strike = (x, y, s, life) => pillars.add({ x, y, s, life });
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 3); since += dt; spin += dt * (.05 + .25 * heat);
+        verdict = Math.max(0, verdict - dt * .35);
+        // la balance : elle oscille en pesant, puis s'immobilise (verdict) ou penche (tirage raté)
+        if (revealed) tiltTo = missed ? .32 : 0; else tiltTo = Math.sin(t * (2 + 6 * heat)) * (.05 + .16 * heat);
+        tilt += (tiltTo - tilt) * Math.min(1, dt * (revealed ? 5 : 8));
+        // Dans la carte : la lumière d'en haut respire, plus forte avec la tension.
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, '#fde68a', w * .5, -h * .15, w * .42, .1 + .14 * heat + .25 * verdict, h * .7);
+        // Des grains de lumière descendent lentement autour de la carte.
+        for (let n = emit((3 + 10 * heat) * q, dt); n > 0; n--) motes.add({ x: cx + rnd(-.75, .75) * card.w, y: card.y - rnd(10, 60), vx: rnd(-4, 4), vy: rnd(8, 22), max: rnd(2, 3.5), size: rnd(1.5, 3.2) });
+        motes.step(dt); sparks.step(dt); feathers.step(dt);
+        const RAY = Math.max(card.w * .62, card.h * 1.9), rayA = (dark ? .22 : .16) * (.5 + heat) + .45 * verdict;
+        behind(env, () => {
+          co.globalCompositeOperation = add;
+          // La gloire : des rayons en éventail autour du nombre, qui tournent doucement.
+          const N = 18;
+          for (let i = 0; i < N; i++) {
+            const a = spin + i * TAU / N, L = RAY * (i % 2 ? .78 : 1) * (1 + .35 * verdict), sw = .05;
+            const g = co.createRadialGradient(cx, cy, card.h * .3, cx, cy, L);
+            g.addColorStop(0, (dark ? '#fff4c2' : '#d97706') + 'ff'); g.addColorStop(1, (dark ? '#fde047' : '#d97706') + '00');
+            co.globalAlpha = Math.min(1, rayA); co.fillStyle = g; co.beginPath(); co.moveTo(cx, cy);
+            co.lineTo(cx + Math.cos(a - sw) * L, cy + Math.sin(a - sw) * L * .62); co.lineTo(cx + Math.cos(a + sw) * L, cy + Math.sin(a + sw) * L * .62); co.closePath(); co.fill();
+          }
+          flashes.run(dt, (f, k) => { const a = 1 - outCubic(k); dot(co, '#fff7d6', cx, cy, f.size * (.5 + .9 * k), a * (dark ? .9 : .55), f.size * .45 * (.5 + .9 * k)); });
+          // La balance : un fléau qui passe derrière la carte, deux chaînes, deux plateaux.
+          co.globalCompositeOperation = 'source-over';
+          const px = cx, py = card.y - 12, arm = card.w / 2 + 34, ca = Math.cos(tilt), sa = Math.sin(tilt);
+          const ends = [-1, 1].map(d => ({ x: px + d * arm * ca, y: py + d * arm * sa }));
+          co.globalAlpha = dark ? .9 : .85; co.strokeStyle = BRASS; co.lineCap = 'round';
+          co.lineWidth = 3; co.beginPath(); co.moveTo(ends[0].x, ends[0].y); co.lineTo(ends[1].x, ends[1].y); co.stroke();
+          co.fillStyle = BRASS; co.beginPath(); co.arc(px, py, 4.5, 0, TAU); co.fill();
+          co.beginPath(); co.moveTo(px, py - 4); co.lineTo(px - 4, py - 12); co.lineTo(px, py - 18); co.lineTo(px + 4, py - 12); co.closePath(); co.fill();
+          ends.forEach(e => {
+            const drop = card.h * .62, pw = 20;
+            co.lineWidth = 1; co.globalAlpha = dark ? .75 : .7;
+            co.beginPath(); co.moveTo(e.x, e.y); co.lineTo(e.x - pw, e.y + drop); co.moveTo(e.x, e.y); co.lineTo(e.x + pw, e.y + drop); co.stroke();
+            co.globalAlpha = dark ? .95 : .9; co.beginPath(); co.ellipse(e.x, e.y + drop, pw + 2, 5, 0, 0, Math.PI); co.closePath(); co.fill();
+            dot(co, dark ? '#fde68a' : '#f59e0b', e.x, e.y + drop, pw * 1.3, (dark ? .25 : .2) + .5 * verdict, 8);
+          });
+        });
+        co.globalCompositeOperation = add;
+        motes.each((m, k) => dot(co, dark ? '#fde68a' : '#d97706', m.x, m.y, m.size * (dark ? 2 : 1.4), Math.sin(Math.PI * k) * (dark ? .6 : .45)));
+        // Les piliers de lumière : d'en haut de l'écran jusqu'au haut de la carte (jamais sur les chiffres), le reste
+        // est dessiné dans la carte, derrière eux.
+        pillars.run(dt, (u, k) => {
+          const a = k < .12 ? k / .12 : 1 - outCubic((k - .12) / .88), wd = (6 + 20 * u.s) * (k < .12 ? .4 + 5 * k : 1 - .6 * k);
+          const x = u.x;
+          behind(env, () => {
+            co.globalCompositeOperation = add;
+            const g = co.createLinearGradient(x - wd, 0, x + wd, 0);
+            g.addColorStop(0, GOLD + '00'); g.addColorStop(.35, GOLD + 'aa'); g.addColorStop(.5, WHITE); g.addColorStop(.65, GOLD + 'aa'); g.addColorStop(1, GOLD + '00');
+            co.globalAlpha = a * (dark ? .9 : .7); co.fillStyle = g; co.fillRect(x - wd, 0, wd * 2, card.y + 2);
+          }, true);
+          ci.globalCompositeOperation = 'lighter';
+          dot(ci, '#fff7d6', u.x - card.x, (u.y - card.y) * .5, wd * 1.3, a * .45, (u.y - card.y) * .6 + 6);
+        });
+        rings.run(dt, (r, k) => { const e = outCubic(k), rx = r.r0 + r.r * e; co.globalCompositeOperation = add; co.globalAlpha = (1 - k) * .85; co.strokeStyle = PALE; co.lineWidth = 1.2 + 2 * (1 - k) * r.wd; co.beginPath(); co.ellipse(r.x, r.y, rx, rx * r.k, 0, 0, TAU); co.stroke(); });
+        sparks.each((s, k) => tail(co, s.c, s.x - s.vx * .04, s.y - s.vy * .04, s.x, s.y, s.size, 1 - k));
+        // Les plumes : de petits ovales blancs qui se balancent en tombant.
+        co.globalCompositeOperation = 'source-over';
+        feathers.each((f, k) => { co.globalAlpha = Math.min(1, (1 - k) * 2) * (dark ? .85 : .9); co.fillStyle = dark ? '#fffbeb' : '#fde68a'; co.strokeStyle = dark ? '#fde68a' : '#b45309'; co.lineWidth = .8; co.beginPath(); co.ellipse(f.x + Math.sin(f.life * 3 + f.ph) * 10, f.y, f.size * .35, f.size, Math.sin(f.life * 3 + f.ph) * .7, 0, TAU); co.fill(); co.stroke(); });
+        // Dès Mythic, une auréole dorée au-dessus de la carte, qui reste un moment.
+        if (revealed && !missed && p >= 1) {
+          const life = clamp((since - .2) * 3) * clamp((4 + 1.5 * asc - since) / 1.5);
+          if (life > .01) behind(env, () => { co.globalCompositeOperation = add; co.strokeStyle = GOLD; co.globalAlpha = life * .9; co.lineWidth = 3; co.beginPath(); co.ellipse(cx, card.y - 30, card.h * .55, card.h * .12, 0, 0, TAU); co.stroke(); dot(co, PALE, cx, card.y - 30, card.h * .8, life * .3, card.h * .22); }, true);
+        }
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(pt, o) {
+        if (o.ghost) return;
+        heat = Math.min(1.4, heat + .12);
+        strike(pt.x, pt.y, o.last ? 1 : .45, o.last ? .75 : .55);
+        rings.add({ x: pt.x, y: card.y + card.h - 4, r0: 6, r: card.h * (o.last ? .9 : .5), k: .22, wd: o.last ? 1.4 : .8, life: .6 });
+        for (let i = Math.round((o.last ? 14 : 6) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = rnd(60, 160); sparks.add({ x: pt.x, y: card.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 140, drag: 1.5, max: rnd(.3, .6), size: rnd(1, 2), c: pick([GOLD, PALE]) }); }
+      },
+      build() { target = 1.2; },
+      reveal(tier) {
+        p = POWER[tier] || 0; revealed = true; since = 0; missed = !p; target = missed ? .1 : .3 + .4 * p;
+        if (missed) return; // la balance penche : aucun verdict
+        verdict = .4 + .6 * p;
+        strike(cx, cy, 1.2 + 2 * p, .9 + .5 * p);
+        flashes.add({ life: .8, size: card.w * (.5 + .5 * p) });
+        for (let i = 0; i < 1 + Math.round(2 * p); i++) rings.add({ x: cx, y: cy, delay: i * .12, r0: card.w * .5, r: card.w * (.25 + .35 * p), k: card.h / card.w + .1, wd: 1 + p, life: .9 });
+        for (let i = burst(p, 60 * q, 8); i > 0; i--) { const a = rnd(TAU), v = rnd(90, 200 + 260 * p); sparks.add({ x: cx + Math.cos(a) * card.w * .45, y: cy + Math.sin(a) * card.h * .5, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .7, g: 60, drag: 1.4, max: rnd(.5, 1 + .5 * p), size: rnd(1, 2.4), c: pick([GOLD, PALE, WHITE]) }); }
+        if (p >= 1) { asc = ASCEND[tier] || 0; for (let i = Math.round((8 + 6 * asc) * q); i > 0; i--) feathers.add({ x: cx + rnd(-.8, .8) * card.w, y: card.y - rnd(20, 90), vx: rnd(-6, 6), vy: rnd(14, 30), max: rnd(2.5, 4), size: rnd(5, 8), ph: rnd(TAU) }); }
+      },
+    };
+  };
+
   // 🏞️ Waterfall (2026-10-24, idée de JBearr12 et jjcoolcid1) — de la brume monte sans cesse du bassin au pied de la
   // carte ; chaque chiffre qui touche le bassin fait une éclaboussure (gouttes en arc) et une onde ; le dernier, plus
   // grosse. À la révélation, une gerbe d'embruns qui grandit avec la rareté et, dès Epic, un arc-en-ciel dans la brume
