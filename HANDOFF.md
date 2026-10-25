@@ -73,7 +73,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - Floppy Fish: a goofy fish jumps per digit, a giant fish on Mythic+ (AnnJoe [47b7afc07c18]).
 - ~~Greek: roman numerals spinning on a pillar (kaz [b1ba92122752])~~ ✅ Done on `claude/greek-skin` (not merged yet); Scroll of Alchemy (R77 [16886be362f8]); DNA helix (R77 [4b77fa49c03e]); Fairy dust (R77 [d5a4ac437aae]).
 - Construction crane (yukitsunodaiscool [f727644461a7]), Mini golf (Kj13 [f42cca32bbe2]), Origami / Graffiti (JBearr12 [80a769fdea4c]), Beach, Safari, Space (dylanbuckleyisjewish).
-- Elemental legendary (rock → ice → fire → wind as digits land) (kaz [c51ae4e06e9d], [e680a2e9f98e]).
+- Elemental legendary (rock → ice → fire → wind as digits land) (kaz [c51ae4e06e9d], [e680a2e9f98e]). ✅ Done on `claude/elemental-skin` (not merged yet).
 
 **Wallpapers** (`js/shop.js` WALLPAPERS + `css/style.css` `.wp-<id>`):
 - Underwater legendary with whales and dolphins (AnnJoe [4a54d5b3ada2]).
