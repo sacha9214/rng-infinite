@@ -4275,6 +4275,70 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes dyn-pulse { 0%, 100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.18); opacity: 1; } }
 .room-stage.many .side-dynamite::before, .room-stage.many .side-dynamite::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-dynamite::before, .side-dynamite::after { animation: none; } }
+/* ------------------------------------------------------------------ Supernova (idée de jjcoolcid1, 2026-10-25) : une
+   étoile qui meurt. Le vide indigo, une coquille de nébuleuse bleue et violette (les filaments de la nébuleuse du
+   Crabe), un anneau de choc fin autour du centre ; chaque chiffre est un cœur de plasma blanc entouré de néon bleu et
+   violet. En tirage, le chiffre s'effondre sur lui-même et palpite ; il se pose : il se contracte (élan), éclate en
+   blanc (la détonation), une onde de choc part du chiffre, puis il se pose net (matière dure : pas d'écrasement).
+   Les grandes ondes de choc et l'éjecta sont dessinés par js/skinfx.js (SCENES.supernova), plus forts dès Mythic. */
+.num-card.skin-supernova {
+  background:
+    /* le reste de l'étoile : un point blanc-bleu au centre */
+    radial-gradient(circle at 50% 50%, rgba(224, 231, 255, .22) 0, rgba(129, 140, 248, .12) 8%, transparent 22%),
+    /* l'anneau de choc au repos, fin */
+    radial-gradient(ellipse 62% 78% at 50% 50%, transparent 58%, rgba(167, 139, 250, .35) 61%, rgba(96, 165, 250, .12) 64%, transparent 68%),
+    /* la coquille de nébuleuse, bleue à gauche, violette à droite */
+    radial-gradient(ellipse 55% 80% at 22% 40%, rgba(59, 130, 246, .5), transparent 70%),
+    radial-gradient(ellipse 55% 80% at 80% 62%, rgba(168, 85, 247, .55), transparent 70%),
+    /* quelques étoiles */
+    radial-gradient(circle at 12% 18%, #e0e7ff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 88% 22%, #c4b5fd 0 1px, transparent 1.5px),
+    radial-gradient(circle at 70% 85%, #bfdbfe 0 1px, transparent 1.5px),
+    radial-gradient(circle at 30% 80%, #e9d5ff 0 1px, transparent 1.5px),
+    linear-gradient(160deg, #0b0a2a 0%, #120a35 50%, #050414 100%);
+  border: 2px solid #6d28d9; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .35), inset 0 0 1.4em rgba(3, 2, 20, .75), 0 0 18px rgba(139, 92, 246, .4), 0 0 32px rgba(59, 130, 246, .18), 0 10px 20px rgba(0, 0, 0, .5);
+}
+.skin-supernova .slot { position: relative; z-index: 1; font-weight: 900; color: #f8faff;
+  text-shadow: -.03em 0 0 rgba(96, 165, 250, .9), .03em 0 0 rgba(192, 132, 252, .9), 0 0 .12em #6366f1, 0 0 .3em rgba(139, 92, 246, .6), 0 .05em .04em #050414; }
+.skin-supernova .slot.ghost { opacity: .18; }
+/* l'onde de choc du chiffre : invisible au repos, elle part quand il se pose */
+.skin-supernova .slot::after { content: ''; position: absolute; left: 50%; top: 52%; width: 1em; height: 1em; margin: -.5em 0 0 -.5em; border-radius: 50%; pointer-events: none; opacity: 0;
+  z-index: -1; border: .035em solid rgba(199, 210, 254, .8); box-shadow: 0 0 .12em #818cf8; }
+.skin-supernova .slot.ghost::after { display: none; }
+/* en tirage : le cœur s'effondre et palpite, le néon vire du bleu au violet */
+.skin-supernova .slot.spinning { animation: sn-collapse .16s ease-in-out infinite alternate; }
+@keyframes sn-collapse {
+  0% { transform: scale(.88); color: #bfdbfe; text-shadow: 0 0 .12em #3b82f6, 0 .05em .04em #050414; }
+  100% { transform: scale(1.03); color: #e9d5ff; text-shadow: 0 0 .12em #a855f7, 0 .05em .04em #050414; }
+}
+/* il se pose : contraction (élan), détonation blanche, retour sec ; l'anneau part au moment du flash */
+.skin-supernova .slot.revealed { animation: sn-blast .62s cubic-bezier(.2, .8, .3, 1) backwards; }
+.skin-supernova .slot.revealed::after { animation: sn-ring .62s cubic-bezier(.1, .7, .3, 1) backwards; }
+@keyframes sn-blast {
+  0% { transform: scale(.6); opacity: .6; }
+  14% { transform: scale(.52); }
+  28% { transform: scale(1.1); color: #fff; text-shadow: -.05em 0 0 rgba(96, 165, 250, .9), .05em 0 0 rgba(192, 132, 252, .9), 0 0 .18em #818cf8, 0 .05em .04em #050414; }
+  55% { transform: scale(.97); }
+  75% { transform: scale(1.01); }
+  100% { transform: none; }
+}
+@keyframes sn-ring {
+  0%, 24% { opacity: 0; transform: scale(.3); }
+  30% { opacity: .55; transform: scale(.6); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-supernova .slot, .skin-supernova .slot::after { animation: none; } }
+/* Cadre de duel : le vide profond, une nébuleuse bleue et violette ; ✨ scintille, 💫 tourne. */
+.side-supernova { --side-border: #8b5cf6; --side-glow: 0 0 18px rgba(139, 92, 246, .4); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(ellipse 70% 60% at 25% 35%, rgba(59, 130, 246, .2), transparent 70%), radial-gradient(ellipse 70% 60% at 78% 70%, rgba(168, 85, 247, .22), transparent 70%), radial-gradient(ellipse 40% 30% at 50% 50%, transparent 60%, rgba(167, 139, 250, .18) 66%, transparent 74%);
+  --deco-a: '✨'; --deco-b: '💫'; }
+.side-supernova::before { animation: sn-twinkle 1.8s ease-in-out infinite; }
+.side-supernova::after { animation: sn-spin 4s linear infinite; }
+@keyframes sn-twinkle { 0%, 100% { transform: scale(.85); opacity: .6; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes sn-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+.room-stage.many .side-supernova::before, .room-stage.many .side-supernova::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-supernova::before, .side-supernova::after { animation: none; } }
 
 /* Poubelle par période (2026-10-18). */
 .lb-spans { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; margin: .6rem 0 .4rem; }

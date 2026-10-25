@@ -69,6 +69,8 @@
     // Idée de costoroll (2026-10-18) : des météorites tombent sur chaque chiffre, la dernière plus fort.
     { id: 'meteor', name: 'Meteor', emoji: '☄️', price: 2200, desc: 'Meteors crash onto every digit over a city at night; the last one hits hardest', idea: 'costoroll' },
     { id: 'dynamite', name: 'Dynamite', emoji: '🧨', price: 2500, desc: 'A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit; Mythic rolls end in a mushroom cloud', idea: 'casmictechthing' }, // idée de casmictechthing et ichi (2026-10-24)
+    // Idée de jjcoolcid1 (2026-10-25) : une étoile qui meurt, néon bleu et violet, des ondes de choc à chaque chiffre.
+    { id: 'supernova', name: 'Supernova', emoji: '💥', price: 3600, desc: 'A star collapses behind neon blue and violet digits; every digit sends out a shockwave, and the reveal goes supernova', idea: 'jjcoolcid1' },
     { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat', idea: 'MUSTARD' },
     { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat', idea: 'MUSTARD' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
