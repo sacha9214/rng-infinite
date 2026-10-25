@@ -5871,3 +5871,59 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes cst-wave { 0%, 100% { transform: skewY(0) scaleX(1); } 50% { transform: skewY(-8deg) scaleX(.9); } }
 .room-stage.many .side-castle::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-castle::after { animation: none; } }
+/* ------------------------------------------------------------------ Chocolate (idée de finnnnn, 2026-10-25) : une
+   tablette de chocolat au lait à moitié sortie de son papier doré froissé (bords gauche et droit). Chaque chiffre est
+   moulé en relief dans un carré biseauté (reflet en haut à gauche, ombre en bas à droite). Pendant le tirage le chocolat
+   fond : le chiffre coule et s'affaisse, mou (étirement) ; un chiffre qui se pose : le carré se tasse (élan) puis se
+   fige d'un coup sec, net, avec un petit éclat brillant. Miettes, papier doré et coulures (Mythic) : js/skinfx.js. */
+.num-card.skin-chocolate {
+  background:
+    /* papier doré froissé, à gauche et à droite */
+    linear-gradient(90deg, #a16207, #fde68a 20%, #ca8a04 45%, #fef3c7 70%, #b45309) 0 0 / .32em 100% no-repeat,
+    linear-gradient(90deg, #b45309, #fef3c7 30%, #ca8a04 55%, #fde68a 80%, #a16207) 100% 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(170deg, rgba(255, 255, 255, .25) 0 .05em, transparent .05em .16em) 0 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(10deg, rgba(255, 255, 255, .25) 0 .05em, transparent .05em .16em) 100% 0 / .32em 100% no-repeat,
+    /* la tablette : rainures entre les carrés */
+    linear-gradient(180deg, #4a2511, #3b1d0c);
+  border: 2px solid #2a1408; border-radius: .45rem;
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, .25), 0 0 14px rgba(180, 83, 9, .25), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .14em .42em;
+}
+.skin-chocolate .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.18em; margin: .05em .03em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .1em; color: #e2a571;
+  /* chiffre moulé : clair en haut à gauche, sombre en bas à droite */
+  text-shadow: -.025em -.025em 0 #f7d2a8, .045em .045em 0 #2a1408, .06em .07em .06em rgba(0, 0, 0, .55);
+  background: linear-gradient(145deg, #a0592c, #7b3f1c 55%, #5e2e12);
+  box-shadow: inset .06em .06em 0 rgba(222, 160, 110, .55), inset -.06em -.07em 0 rgba(30, 12, 3, .7), 0 .04em .05em rgba(0, 0, 0, .5);
+  transform-origin: 50% 100%;
+}
+.skin-chocolate .slot.ghost { opacity: .22; }
+.skin-chocolate .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : le chiffre fond et coule, mou, en boucle. */
+.skin-chocolate .slot.spinning { color: rgba(226, 165, 113, .55); animation: cho-melt .3s ease-in-out infinite alternate; }
+.skin-chocolate .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes cho-melt { from { transform: scale(1.03, .94); filter: blur(.4px); } to { transform: scale(.94, 1.1) translateY(.03em); filter: blur(1.2px); } }
+/* Il se tasse (élan), se fige d'un coup sec (un éclat brillant), se pose. */
+.skin-chocolate .slot.revealed { animation: cho-snap .5s backwards; }
+@keyframes cho-snap {
+  0% { transform: scale(1.08, .82); filter: blur(1px); animation-timing-function: ease-in; }
+  20% { transform: scale(1.12, .78); filter: blur(.6px); animation-timing-function: steps(1); }
+  30% { transform: scale(.98, 1.06); filter: brightness(1.45); }
+  44% { transform: scale(1.02, .98); filter: brightness(1.15); }
+  60% { transform: none; filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-chocolate .slot { animation: none; } }
+/* Cadre de duel : un comptoir de chocolatier, papier doré en bas ; 🍫 oscille, ✨ scintille. */
+.side-chocolate { --side-border: #ca8a04; --side-glow: 0 0 16px rgba(180, 83, 9, .3); --side-ink: #92400e;
+  --side-bg: linear-gradient(90deg, rgba(202, 138, 4, .35), rgba(254, 243, 199, .4) 30%, rgba(202, 138, 4, .35) 60%, rgba(253, 230, 138, .4)) 0 100% / 100% 8px no-repeat, radial-gradient(ellipse 70% 60% at 50% 45%, rgba(123, 63, 28, .25), transparent 70%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(74, 37, 17, .3), transparent 70%);
+  --deco-a: '🍫'; --deco-b: '✨'; }
+.side-chocolate::before { animation: cho-rock 2.2s ease-in-out infinite; }
+.side-chocolate::after { animation: cho-twinkle 1.6s ease-in-out infinite; }
+@keyframes cho-rock { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes cho-twinkle { 0%, 100% { transform: scale(.85); opacity: .6; } 50% { transform: scale(1.2); opacity: 1; } }
+.room-stage.many .side-chocolate::before, .room-stage.many .side-chocolate::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-chocolate::before, .side-chocolate::after { animation: none; } }

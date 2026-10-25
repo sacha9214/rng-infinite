@@ -3011,6 +3011,50 @@
       },
     };
   };
+  // 🍫 Chocolate (2026-10-25, idée de finnnnn) — chaque carré qui se fige lâche des miettes de chocolat et un éclat
+  // brillant ; le dernier, plus. À la révélation, des morceaux de chocolat et des confettis de papier doré sautent
+  // autour de la tablette (plus avec la rareté) ; dès Mythic, du chocolat fondu coule du haut de la carte en grosses
+  // gouttes rondes qui s'allongent (seulement sur le bord, les chiffres restent lisibles). Tirage raté : une miette.
+  SCENES.chocolate = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const crumbs = particles(), foil = particles(), glints = timed(), drips = timed();
+    const CHOC = ['#7b3f1c', '#5e2e12', '#a0592c', '#3b1d0c'], GOLD = ['#fde68a', '#ca8a04', '#fef3c7', '#b45309'];
+    const crumb = (x, y, n, s) => { for (let i = Math.round(n * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(1.5, 3 + 3 * s); crumbs.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .3, max: rnd(.5, .9), size: card.h * rnd(.02, .045) * (1 + s * .5), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(CHOC) }); } };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // les coulures, sur le bord du haut : une bande, puis des gouttes qui s'allongent et pendent
+        drips.run(dt, (d, k) => {
+          const grow = outCubic(Math.min(1, k / .5)), a = k > .8 ? (1 - k) * 5 : 1, top = card.y - 2;
+          co.globalAlpha = a; co.fillStyle = '#9a552a';
+          roundRect(co, card.x, top, card.w, card.h * .1 * grow, 4); co.fill();
+          for (const g of d.g) { const len = card.h * g.l * grow, x = card.x + card.w * g.x; co.fillRect(x - g.w / 2, top, g.w, len); co.beginPath(); co.arc(x, top + len, g.w * .75, 0, TAU); co.fill(); co.fillStyle = 'rgba(247,210,168,.55)'; co.fillRect(x - g.w * .3, top + 2, g.w * .18, len * .8); co.fillStyle = '#9a552a'; }
+          co.fillStyle = 'rgba(222,160,110,.5)'; co.fillRect(card.x + 4, top + 1, card.w - 8, 2);
+        });
+        crumbs.step(dt); foil.step(dt);
+        crumbs.each((p, k) => { co.save(); co.globalAlpha = 1 - k * k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .8, p.size * 2, p.size * 1.6); co.restore(); });
+        foil.each((p, k) => { co.save(); co.globalAlpha = 1 - k * k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.scale(Math.cos(p.life * 10 + p.rot), 1); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .6, p.size * 2, p.size * 1.2); co.restore(); });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        glints.run(dt, (g, k) => { const a = Math.sin(Math.PI * k); dot(co, '#ffffff', g.x, g.y, g.r * .3, a); dot(co, '#fde68a', g.x, g.y, g.r, a * .5, g.r * .15); dot(co, '#fde68a', g.x, g.y, g.r * .15, a * .5, g.r); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        crumb(p.x, p.y, o.last ? 14 : 7, o.last ? .9 : .4);
+        glints.add({ x: p.x - card.h * .15, y: p.y - card.h * .2, r: card.h * (o.last ? .35 : .22), life: .35 });
+      },
+      build() {},
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        if (!P) { crumb(cx, card.y + card.h * .5, 1, .2); return; }
+        for (let i = 0; i < 1 + Math.round(3 * P); i++) crumb(cx + rnd(-.45, .45) * card.w, card.y + card.h * .3, 8, .5 + P);
+        if (P >= .4) for (let i = Math.round((10 + 40 * P) * q); i > 0; i--) { const a = rnd(-Math.PI * .9, -Math.PI * .1), v = card.h * rnd(2, 4 + 3 * P); foil.add({ x: cx + rnd(-.4, .4) * card.w, y: card.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 4, drag: 1.2, max: rnd(1.2, 2), size: card.h * rnd(.04, .07), rot: rnd(TAU), spin: rnd(-6, 6), c: pick(GOLD) }); }
+        if (P >= 1) drips.add({ delay: .2, life: 3.2 + .5 * (ASCEND[tier] || 0), g: Array.from({ length: 7 }, (_, i) => ({ x: .08 + i * .14 + rnd(-.03, .03), l: rnd(.25, .45), w: card.h * rnd(.07, .11) })) });
+        for (let i = 0; i < 2 + Math.round(4 * P); i++) glints.add({ delay: rnd(0, .6), x: cx + rnd(-.5, .5) * card.w, y: card.y + card.h * rnd(.1, .9), r: card.h * .3, life: .4 });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
