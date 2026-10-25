@@ -46,6 +46,9 @@
     { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 7500, desc: 'A blade, a branch in bloom, a rising moon', premium: true },
     { id: 'storm', name: 'Storm', emoji: '⚡', price: 10000, desc: 'Lightning strikes every digit', premium: true },
     { id: 'dragon', name: 'Dragon', emoji: '🐉', price: 12500, desc: 'A dragon circles your number and forges it', premium: true },
+    // Idée de kaz (2026-10-25) : légendaire, les chiffres se posent tour à tour en roche, glace, feu et vent, et la carte
+    // prend la matière de l'élément en cours.
+    { id: 'elemental', name: 'Elemental', emoji: '🌀', price: 14000, desc: 'Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it', premium: true, idea: 'kaz' },
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },

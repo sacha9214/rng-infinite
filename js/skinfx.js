@@ -2724,6 +2724,92 @@
     };
   };
 
+  // 🌀 Elemental (2026-10-25, idée de kaz) — légendaire. Quatre esprits (roche, glace, feu, vent) tournent autour de la
+  // carte ; celui de l'élément en cours brille. Chaque chiffre se pose dans un élément, dans l'ordre des cases (le CSS
+  // suit le même ordre) : la roche lâche des éclats et de la poussière, la glace des aiguilles de givre, le feu des
+  // braises qui montent, le vent des rafales en spirale. Tout ce qui jaillit passe derrière la carte : un chiffre n'est
+  // jamais couvert. Avant le dernier chiffre les esprits s'emballent ; à la révélation, un anneau des quatre couleurs
+  // s'ouvre et les quatre matières éclatent ensemble, dosées par la rareté (un anneau de plus par cran au-delà du Mythic).
+  SCENES.elemental = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    // roche, glace, feu, vent : couleur principale, claire, sombre (plus soutenues sur page claire)
+    const EL = [
+      { c: dark ? '#a8a29e' : '#57534e', hi: '#d6c7b0', lo: '#44403c' },
+      { c: dark ? '#7dd3fc' : '#0284c7', hi: '#e0f7ff', lo: '#0c4a6e' },
+      { c: dark ? '#fb923c' : '#ea580c', hi: '#fde047', lo: '#b91c1c' },
+      { c: dark ? '#5eead4' : '#0d9488', hi: '#ccfbf1', lo: '#115e59' },
+    ];
+    const bits = particles(), gusts = timed(), rings = timed(), flashes = timed();
+    const lv = [0, 0, 0, 0];
+    let idx = 0, cur = -1, heat = .25, target = .25, spin = 0, flare = 0;
+    const rx = card.w / 2 + 26, ry = card.h / 2 + 22;
+    const burstOf = (e, x, y, s) => {
+      const n = Math.round((e === 1 ? 14 : 11) * s * q) + 3;
+      for (let i = 0; i < n; i++) {
+        if (e === 0) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = rnd(60, 170) * s; bits.add({ e, x: x + rnd(-8, 8), y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 520, drag: .4, max: rnd(.6, 1), size: rnd(2.5, 5.5), rot: rnd(TAU), vr: rnd(-8, 8) }); if (i % 2) bits.add({ e: 4, x: x + rnd(-14, 14), y: y + rnd(0, 10), vx: rnd(-25, 25), vy: rnd(-25, -5), drag: 1.2, max: rnd(.7, 1.2), size: rnd(8, 15) }); }
+        else if (e === 1) { const a = rnd(TAU), v = rnd(90, 230) * s; bits.add({ e, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 4, max: rnd(.45, .8), size: rnd(5, 10) }); }
+        else if (e === 2) bits.add({ e, x: x + rnd(-12, 12), y: y + rnd(-6, 8), vx: rnd(-30, 30), vy: rnd(-160, -60) * s, g: -40, drag: 1, max: rnd(.6, 1.2), size: rnd(1.6, 3.4), ph: rnd(TAU) });
+        else bits.add({ e, x: x - rnd(10, 30), y: y + rnd(-14, 14), vx: rnd(160, 320) * s, vy: rnd(-20, 20), drag: 2, max: rnd(.4, .7), size: rnd(10, 22) });
+      }
+      if (e === 3) for (let i = 0; i < 2; i++) gusts.add({ x, y, life: .55, delay: i * .08, r: card.h * (.45 + .25 * i) * s, dir: i ? -1 : 1 });
+      flashes.add({ x, y, e, life: e === 1 ? .3 : .45, size: card.h * (.5 + .4 * s) });
+    };
+    const drawBit = (b, k) => {
+      const E = EL[b.e === 4 ? 0 : b.e];
+      if (b.e === 0) { co.save(); co.translate(b.x, b.y); co.rotate(b.rot + b.vr * b.life); co.globalAlpha = 1 - k * k; co.fillStyle = k < .3 ? E.hi : E.c; co.beginPath(); co.moveTo(-b.size, -b.size * .4); co.lineTo(b.size * .3, -b.size); co.lineTo(b.size, b.size * .2); co.lineTo(-b.size * .2, b.size * .8); co.closePath(); co.fill(); co.restore(); }
+      else if (b.e === 4) dot(co, dark ? '#a8a29e' : '#78716c', b.x, b.y, b.size * (1 + k), (1 - k) * .35);
+      else if (b.e === 1) { const a = Math.atan2(b.vy, b.vx), l = b.size * (1 - k * .5); co.lineCap = 'round'; line(co, E.c, b.x - Math.cos(a) * l, b.y - Math.sin(a) * l, b.x, b.y, 2, 1 - k); line(co, E.hi, b.x - Math.cos(a) * l * .5, b.y - Math.sin(a) * l * .5, b.x, b.y, 1, 1 - k); }
+      else if (b.e === 2) { co.globalCompositeOperation = add; dot(co, k < .4 ? E.hi : E.c, b.x + Math.sin(b.life * 9 + b.ph) * 3, b.y, b.size * 2.4, (1 - k) * .9); co.globalCompositeOperation = 'source-over'; }
+      else tail(co, E.c, b.x - b.size * 2, b.y, b.x, b.y, 1.6, (1 - k) * .8);
+    };
+    // Un esprit : un petit éclat de chaque matière.
+    const spirit = (e, x, y, r, a) => {
+      const E = EL[e];
+      co.globalCompositeOperation = add; dot(co, E.c, x, y, r * 3, a * .45); co.globalCompositeOperation = 'source-over';
+      co.globalAlpha = a; co.fillStyle = E.c; co.strokeStyle = E.hi; co.lineWidth = 1.2; co.beginPath();
+      if (e === 0) { co.moveTo(x - r, y + r * .5); co.lineTo(x - r * .5, y - r * .8); co.lineTo(x + r * .7, y - r * .6); co.lineTo(x + r, y + r * .6); co.closePath(); co.fill(); }
+      else if (e === 1) { co.moveTo(x, y - r * 1.3); co.lineTo(x + r * .7, y); co.lineTo(x, y + r * 1.3); co.lineTo(x - r * .7, y); co.closePath(); co.fill(); co.stroke(); }
+      else if (e === 2) { co.moveTo(x, y - r * 1.5); co.quadraticCurveTo(x + r, y - r * .2, x + r * .6, y + r * .7); co.quadraticCurveTo(x, y + r * 1.2, x - r * .6, y + r * .7); co.quadraticCurveTo(x - r, y - r * .2, x, y - r * 1.5); co.fill(); dot(co, E.hi, x, y + r * .3, r * .9, a); }
+      else { co.arc(x, y, r, 0, TAU * .8); co.moveTo(x + r * .5, y); co.arc(x, y, r * .5, 0, TAU * .7); co.stroke(); }
+    };
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 3); spin += dt * (.5 + 1.8 * heat); flare = Math.max(0, flare - dt * 1.2);
+        lv.forEach((v, i) => { lv[i] += ((i === cur ? 1 : 0) - v) * Math.min(1, dt * 5); });
+        // Dans la carte : la lueur de l'élément en cours (le CSS pose sa matière, la lueur la fait vivre).
+        ci.globalCompositeOperation = 'lighter';
+        lv.forEach((v, i) => { if (v > .02) dot(ci, EL[i].c, i === 2 ? w * .5 : w * (.5 + .3 * Math.sin(t * 1.3 + i)), i === 2 ? h * 1.05 : h * .5, w * .45, v * (i === 2 ? .35 + .1 * Math.sin(t * 17) : .2)); });
+        ci.globalCompositeOperation = 'source-over';
+        bits.step(dt);
+        behind(env, () => {
+          // l'anneau des quatre couleurs, à la révélation
+          rings.run(dt, (r, k) => { const R = 1 + r.grow * outCubic(k); for (let i = 0; i < 4; i++) { co.globalAlpha = (1 - k) * r.a; co.strokeStyle = EL[i].c; co.lineWidth = r.width * (1 - k * .6); co.beginPath(); co.ellipse(cx, cy, (card.w / 2 + 6) * R / 1 + r.grow * k * .3, (card.h / 2 + 6) + r.grow * k * .5, 0, spin * .3 + i * TAU / 4, spin * .3 + (i + 1) * TAU / 4 - .05); co.stroke(); } });
+          flashes.run(dt, (f, k) => { co.globalCompositeOperation = add; dot(co, EL[f.e].hi, f.x, f.y, f.size * (.5 + k), (1 - outCubic(k)) * .7); co.globalCompositeOperation = 'source-over'; });
+          gusts.run(dt, (g, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = EL[3].c; co.lineWidth = 2; co.lineCap = 'round'; co.beginPath(); co.arc(g.x, g.y, g.r * (.6 + k), g.dir * k * 3, g.dir * k * 3 + 2.4); co.stroke(); });
+          bits.each(drawBit);
+          // les quatre esprits sur leur orbite
+          for (let i = 0; i < 4; i++) { const a = spin + i * TAU / 4, s = 1 + .4 * flare; spirit(i, cx + Math.cos(a) * rx * s, cy + Math.sin(a) * ry * s, 5.5 + 4 * lv[i] + 3 * flare, .65 + .35 * Math.max(lv[i], flare)); }
+        });
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        const e = idx++ % 4; cur = e;
+        if (o.ghost) return;
+        burstOf(e, p.x, p.y, o.last ? 1.4 : 1);
+      },
+      build() { target = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        target = .3 + .4 * p;
+        if (!p) { bits.add({ e: 4, x: cx, y: card.y + card.h, vx: 0, vy: -20, drag: 1, max: 1, size: 14 }); return; } // tirage raté : un peu de poussière
+        flare = .5 + .5 * p;
+        for (let i = 0; i < 1 + Math.round(2 * p) + asc; i++) rings.add({ delay: i * .15, life: .9 + .5 * p, grow: 40 + 90 * p + 25 * i, width: 2 + 2.5 * p, a: .9 - .12 * i });
+        for (let e = 0; e < 4; e++) for (let i = 0; i < 1 + Math.round(2 * p); i++) { const pt = along(card, (e + rnd()) / 4); setTimeout(() => burstOf(e, pt.x, pt.y, .6 + .8 * p), 60 * i + e * 40); }
+      },
+    };
+  };
+
   // 🏞️ Waterfall (2026-10-24, idée de JBearr12 et jjcoolcid1) — de la brume monte sans cesse du bassin au pied de la
   // carte ; chaque chiffre qui touche le bassin fait une éclaboussure (gouttes en arc) et une onde ; le dernier, plus
   // grosse. À la révélation, une gerbe d'embruns qui grandit avec la rareté et, dès Epic, un arc-en-ciel dans la brume
