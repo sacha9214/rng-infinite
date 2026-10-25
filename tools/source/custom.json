@@ -421,6 +421,20 @@
     "score": 2024
   },
   {
+    "id": "EXACT_61",
+    "label": "Exact 61",
+    "desc": "Exactly 61, the brainrot number.",
+    "emoji": "🧪",
+    "score": 100000100
+  },
+  {
+    "id": "EXACT_55",
+    "label": "Exact 55",
+    "desc": "Exactly 55: double five, nothing else.",
+    "emoji": "🖐️",
+    "score": 100000100
+  },
+  {
     "id": "JUICE_WRLD",
     "label": "Juice WRLD",
     "desc": "Contains \"999\".",
@@ -526,5 +540,19 @@
     "emoji": "🌤️",
     "score": 25787,
     "family": "JET"
+  },
+  {
+    "id": "ODD_ABUNDANT",
+    "label": "Odd Abundant",
+    "desc": "An odd number smaller than the sum of its divisors (1,996 of them, the first is 945).",
+    "emoji": "🍇",
+    "score": 50100
+  },
+  {
+    "id": "VORTROX_GINA",
+    "label": "Vortrox and Gina",
+    "desc": "Contains \"4992\" or \"9249\".",
+    "emoji": "💞",
+    "score": 167224
   }
 ]

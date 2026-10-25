@@ -46,7 +46,13 @@
     { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 7500, desc: 'A blade, a branch in bloom, a rising moon', premium: true },
     { id: 'storm', name: 'Storm', emoji: '⚡', price: 10000, desc: 'Lightning strikes every digit', premium: true },
     { id: 'dragon', name: 'Dragon', emoji: '🐉', price: 12500, desc: 'A dragon circles your number and forges it', premium: true },
+    // Idée de kaz (2026-10-25) : légendaire, les chiffres se posent tour à tour en roche, glace, feu et vent, et la carte
+    // prend la matière de l'élément en cours.
+    { id: 'elemental', name: 'Elemental', emoji: '🌀', price: 14000, desc: 'Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it', premium: true, idea: 'kaz' },
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
+    // Idée de Gray alt (2026-10-25) : un tribunal céleste, une balance, un pilier de lumière qui frappe chaque chiffre ;
+    // le verdict final sur les grandes raretés. Legendary, entre Singularity et Infinity.
+    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé
@@ -57,6 +63,8 @@
     // Idée de Deadshot (2026-10-16) : des maisons du quartier, les portes s'ouvrent sur des bonbons en forme de chiffres ;
     // derrière les zéros de tête, la porte s'ouvre sur une maison vide.
     { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', idea: 'Deadshot' },
+    // Noël (idées de JBearr12 et Angelicide9, 2026-10-25) : Legendary limité, en vente jusqu'au 26 décembre (until).
+    { id: 'christmas', name: 'Christmas Morning', emoji: '🎄', price: 2512, desc: 'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26', until: '2026-12-26T00:00:00Z', idea: 'JBearr12' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -67,6 +75,9 @@
     // Idée de costoroll (2026-10-18) : des météorites tombent sur chaque chiffre, la dernière plus fort.
     { id: 'meteor', name: 'Meteor', emoji: '☄️', price: 2200, desc: 'Meteors crash onto every digit over a city at night; the last one hits hardest', idea: 'costoroll' },
     { id: 'dynamite', name: 'Dynamite', emoji: '🧨', price: 2500, desc: 'A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit; Mythic rolls end in a mushroom cloud', idea: 'casmictechthing' }, // idée de casmictechthing et ichi (2026-10-24)
+    // Idée de jjcoolcid1 (2026-10-25) : une étoile qui meurt, néon bleu et violet, des ondes de choc à chaque chiffre.
+    { id: 'supernova', name: 'Supernova', emoji: '💥', price: 3600, desc: 'A star collapses behind neon blue and violet digits; every digit sends out a shockwave, and the reveal goes supernova', idea: 'jjcoolcid1' },
+    { id: 'shinydiamond', name: 'Shiny Diamond', emoji: '💍', price: 3000, desc: 'Every digit is engraved in a brilliant-cut diamond on black velvet: the facets flicker as it turns and each stone locks in with a tink and a star glint', idea: 'finnnnn' }, // idée de finnnnn : un vrai diamant taille brillant par chiffre
     { id: 'ketchup', name: 'Ketchup', emoji: '🍅', price: 250, desc: 'Red squeeze bottles, piped ketchup, splat', idea: 'MUSTARD' },
     { id: 'mustard', name: 'Mustard', emoji: '🌭', price: 250, desc: 'Yellow squeeze bottles, piped mustard, splat', idea: 'MUSTARD' },
     // Idée d'un joueur (2026-10-14) : de la pierre volcanique noire dont les fissures laissent voir la lave (Fire, lui, ce sont des flammes).
@@ -85,13 +96,29 @@
     { id: 'polydonut', name: 'Polygon Donut', emoji: '🍩', price: 2600, desc: 'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal', idea: 'PongonLOLZFan' },
     // Idée de Matthew (2026-10-21) : des ondes sonores qui portent les chiffres, un « boum » à chaque chiffre.
     { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms', idea: 'Matthew' },
+    { id: 'money', name: 'Money', emoji: '💵', price: 1900, desc: 'A crisp 100 bill with gold-foil digits stamped one by one; coins rain down, and Mythic rolls make the gold melt', idea: 'JBearr12' }, // idée de JBearr12 et finnnnn (2026-10-25)
+    // Idée de R77 (2026-10-25) : une double hélice d'ADN qui tourne ; chaque chiffre est une paire de bases qui s'emboîte.
+    { id: 'dna', name: 'DNA Helix', emoji: '🧬', price: 2400, desc: 'A glowing double helix twists behind the digits; every digit snaps in like a base pair', idea: 'R77' },
+    // Idée de R77 (2026-10-25) : de la poussière de fée dorée qui fait apparaître chaque chiffre d'un coup de baguette.
+    { id: 'fairydust', name: 'Fairy Dust', emoji: '🧚', price: 2000, desc: 'Sparkling fairy dust swirls into every digit with a tap of the wand; rare rolls rain gold', idea: 'R77' },
     { id: 'waterfall', name: 'Waterfall', emoji: '🏞️', price: 2300, desc: 'A waterfall in a green valley carries every digit down into the pool with a splash; rare rolls make a rainbow in the spray', idea: 'JBearr12' }, // idée de JBearr12 et jjcoolcid1 (2026-10-24)
     // Idée de JBearr12 (2026-10-21) : une soucoupe qui dépose les chiffres sur l'herbe.
     // Idée de costoroll (2026-10-21) : un store vénitien fermé devant chaque chiffre, qui s'ouvre sur un chiffre néon jaune ;
     // la fenêtre donne sur un jardin au soleil, qui se couche (et la lune se lève) dès Mythic.
     { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises', idea: 'costoroll' },
     { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
+    { id: 'bowling', name: 'Bowling', emoji: '🎳', price: 2000, desc: 'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE', idea: 'JBearr12' }, // idée de JBearr12 (2026-10-25)
+    { id: 'rocksmash', name: 'Rock Smash', emoji: '🪨', price: 1600, desc: 'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone', idea: 'HSI' }, // idée de HSI (2026-10-25)
+    { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)
+    { id: 'castle', name: 'Medieval Castle', emoji: '🏰', price: 2400, desc: 'Royal banners unfurl one by one on a stone castle wall lit by torches; rare rolls end in fireworks over the battlements', idea: 'BIGBOIJONER69' }, // idée de BIGBOIJONER69 (2026-10-25)
+    { id: 'chocolate', name: 'Chocolate', emoji: '🍫', price: 1300, desc: 'A milk chocolate bar in gold foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with melted chocolate', idea: 'finnnnn' }, // idée de finnnnn (2026-10-25)
+    { id: 'fish', name: 'Floppy Fish', emoji: '🐟', price: 2100, desc: 'A goofy fish flops out of the pond for every digit, and a giant fish leaps over the card on Mythic rolls', idea: 'AnnJoe' }, // idée d'AnnJoe (2026-10-25)
+    { id: 'axeman', name: 'Axe Thrower', emoji: '🪓', price: 1900, desc: 'A stick man throws a spinning axe into every wooden target, and celebrates when the roll is good', idea: 'jjcoolcid1' }, // idée de jjcoolcid1 (2026-10-25)
+    { id: 'math', name: 'Math', emoji: '➗', price: 1200, desc: 'Chalk digits are written on a blackboard while math symbols float around; great rolls end with Q.E.D.', idea: 'sennybex1' }, // idée de sennybex1 (2026-10-25)
+    { id: 'greek', name: 'Greek', emoji: '🏛️', price: 2000, desc: 'Roman numerals spin on a marble column, then the real digit is chiselled into the stone', idea: 'kaz' }, // idée de kaz (2026-10-25)
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
+    // Wood carving : idée de jjcoolcid1 et JBearr12 (2026-10-25) — une lame taille chaque chiffre en creux dans une planche de pin.
+    { id: 'woodcarving', name: 'Wood Carving', emoji: '🪵', price: 2000, desc: 'A knife carves every digit into a pine plank and wood shavings fly; rare rolls get a coat of golden varnish', idea: 'jjcoolcid1' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
@@ -155,6 +182,16 @@
     { id: 'western', name: 'Western', emoji: '🌵', price: 1100, desc: 'A desert sunset, a wooden fence and tumbleweeds rolling by' },
     // Idée de JBearr12 (2026-10-21) : un diner américain des années 50, la nuit.
     { id: 'diner', name: 'Diner', emoji: '🍔', price: 1000, desc: 'A 50s diner at night: neon sign, red stools and fresh coffee' },
+    // Idée de JBearr12 (2026-10-24) : une montagne avec le soleil, et la lune qui se lève sur les tirages Mythique et plus.
+    { id: 'summit', name: 'Summit', emoji: '🏔️', price: 4000, premium: true, idea: 'JBearr12', desc: 'Snowy mountains under the sun; on a Mythic+ roll night falls and the moon rises behind the peaks' },
+    // Idée de kingston (2026-10-24) : des bulles ASMR qu'on éclate en cliquant (sur le fond seulement, jamais sur le jeu).
+    { id: 'bubbles', name: 'ASMR Bubbles', emoji: '🫧', price: 1000, idea: 'kingston', desc: 'Shiny bubbles float up behind the game; click the background to pop them' },
+    // Idée d'AnnJoe (2026-10-24) : un fond légendaire sous la mer, avec des baleines, des requins et des dauphins qui nagent.
+    { id: 'oceanic', name: 'Open Ocean', emoji: '🐋', price: 5000, premium: true, idea: 'AnnJoe', desc: 'Whales, sharks and dolphins swim by; rare rolls light up the water and Mythic+ rolls send a pod of dolphins racing past' },
+    // Idée de YU CHUAN 23 (2026-10-24) : un circuit de F1 (livrées inventées, aucune écurie ni marque réelle).
+    { id: 'racetrack', name: 'Grand Prix', emoji: '🏎️', price: 1100, idea: 'YU CHUAN 23', desc: 'Race cars scream down the main straight in front of a packed grandstand' },
+    // Idée de 17black (2026-10-24) : une plage venteuse avec un parasol.
+    { id: 'windybeach', name: 'Windy Beach', emoji: '🏖️', price: 900, idea: '17black', desc: 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },

@@ -67,13 +67,13 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - ~~Burger: each digit adds a topping (jaxoncool43 [89f54801e139]).~~ Done by Drastix on `drastix/burger-skin` (PR, not merged yet).
 - Bowling: a ball knocks pins that reveal the digits (JBearr12 [3c6a579a405c], [fa910f1e244b]).
 - Basketball: a ball drops in a hoop per digit (jjcoolcid1 [e937ad77450c]).
-- Wood carving: a knife carves each digit (jjcoolcid1 [ff005e13b704], JBearr12 [0fa76af413d3]).
-- Shiny Diamond (finnnnn [719ff8538e67]), Chocolate (finnnnn [89626248c340]), Coins/Money (finnnnn [2457889a6d20]).
-- Supernova: neon blue/purple with shockwaves (jjcoolcid1 [0f487aa749b5]).
+- ~~Wood carving: a knife carves each digit (jjcoolcid1 [ff005e13b704], JBearr12 [0fa76af413d3]).~~ ✅ Done on `claude/woodcarving-skin` (not merged yet; 2,000 coins, V-cut digits in a pine plank, `SCENES.woodcarving` shavings, gold varnish from Mythic).
+- Shiny Diamond (finnnnn [719ff8538e67]) ✅ Done on `claude/diamond-skin` (id `shinydiamond`, not merged yet), Chocolate (finnnnn [89626248c340]), Coins/Money (finnnnn [2457889a6d20]).
+- ~~Supernova: neon blue/purple with shockwaves (jjcoolcid1 [0f487aa749b5]).~~ ✅ Done on `claude/supernova-skin` (not merged yet).
 - Floppy Fish: a goofy fish jumps per digit, a giant fish on Mythic+ (AnnJoe [47b7afc07c18]).
-- Greek: roman numerals spinning on a pillar (kaz [b1ba92122752]); Scroll of Alchemy (R77 [16886be362f8]); DNA helix (R77 [4b77fa49c03e]); Fairy dust (R77 [d5a4ac437aae]).
+- ~~Greek: roman numerals spinning on a pillar (kaz [b1ba92122752])~~ ✅ Done on `claude/greek-skin`; Scroll of Alchemy (R77 [16886be362f8]); ~~DNA helix (R77 [4b77fa49c03e])~~ ✅ done on `claude/dna-skin`; ~~Fairy dust (R77 [d5a4ac437aae])~~ ✅ done on `claude/fairydust-skin` (all three merged in `claude/integration-2026-10-25`, not on main yet).
 - Construction crane (yukitsunodaiscool [f727644461a7]), Mini golf (Kj13 [f42cca32bbe2]), Origami / Graffiti (JBearr12 [80a769fdea4c]), Beach, Safari, Space (dylanbuckleyisjewish).
-- Elemental legendary (rock → ice → fire → wind as digits land) (kaz [c51ae4e06e9d], [e680a2e9f98e]).
+- Elemental legendary (rock → ice → fire → wind as digits land) (kaz [c51ae4e06e9d], [e680a2e9f98e]). ✅ Done on `claude/elemental-skin` (not merged yet).
 
 **Wallpapers** (`js/shop.js` WALLPAPERS + `css/style.css` `.wp-<id>`):
 - Underwater legendary with whales and dolphins (AnnJoe [4a54d5b3ada2]).
@@ -209,7 +209,7 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 13. Money: a 100-dollar bill with gold digits that melt on Mythic+ (JBearr12 [c512cd0b2fa2]) and coins (finnnnn [2457889a6d20]): one skin.
 14. Bowling (JBearr12 [fa910f1e244b]), Basketball (jjcoolcid1 [e937ad77450c]), Mini golf (Kj13 [f42cca32bbe2]): pick one sport first.
 15. Rock smash: a fist smashes a rock to reveal the digit (HSI [5b5f29b0cc52]); Cracked screen (KMC [a677e62ae02d]); Medieval castle (BIGBOIJONER69 [c10d8e68d556]); Chocolate (finnnnn [89626248c340]); Floppy Fish (AnnJoe [47b7afc07c18]); Stick man with axes (jjcoolcid1 [9e4d04f5b906]); Metal balls breaking crates (jjcoolcid1 [4bf26afedcb9]); Math symbols (sennybex1 [359f2e6f81a9]).
-16. Legendary: **Christmas** (six presents that pop open, two trees, red and green lights) (JBearr12 [238c54c3daf9], Angelicide9 [1d43563c63f7]) — should ship before December as a limited skin (`until`); Divine Judgment (Gray alt [917364bbc5dd]).
+16. Legendary: **Christmas** (six presents that pop open, two trees, red and green lights) (JBearr12 [238c54c3daf9], Angelicide9 [1d43563c63f7]) — should ship before December as a limited skin (`until`); Divine Judgment (Gray alt [917364bbc5dd]) ✅ done on `claude/divinejudgment-skin` (not merged yet).
 
 ### C. Wallpapers (`js/shop.js` WALLPAPERS, `css/style.css` `.wp-<id>`)
 17. Underwater legendary with moving whales, sharks and dolphins (AnnJoe [cfc8a027d2a2], [4a54d5b3ada2]).

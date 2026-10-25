@@ -293,6 +293,7 @@
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     EXACT_852655: ['852655'], // idée de CococoC, acceptée par Sacha (2026-10-20)
     EXACT_82: ['82'], EXACT_92: ['92'], BRAINROT_KING_EXACT: ['676741', '674141'], // idées du 2026-10-22 (kaz, CococoC, CrazyMiner22)
+    EXACT_61: ['61'], EXACT_55: ['55'], // idées de schoolroller et qwertyuiop (2026-10-25)
     EXACT_99: ['99'], WYSI_EXACT: ['727'], // idées du 2026-10-24 (kaz, Phong254)
     CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
@@ -331,6 +332,13 @@
   const DIVISORS = { DOZEN: 12, LUCKY_SEVEN_DIV: 7, ELEVEN: 11 };
   const STROBO = { 0: '0', 1: '1', 6: '9', 8: '8', 9: '6' };
 
+  // Somme des diviseurs propres de n (n impair : seuls les diviseurs impairs comptent, on saute les pairs).
+  function sumProperDivisors(n) {
+    let sum = 1;
+    for (let i = 3; i * i <= n; i += 2) if (n % i === 0) { sum += i; if (i * i !== n) sum += n / i; }
+    return sum;
+  }
+
   // ---------------------------------------------------------------- checks : id -> (ctx) => bool
   // Chaque check peut aussi exposer des "groupes" de chiffres à surligner via HIGHLIGHTS plus bas.
   const CHECKS = {
@@ -341,6 +349,11 @@
     // Idée de MereTera (2026-10-22) : les chiffres de 10, 9, 8, 7, 6 (1, 0, 9, 8, 7, 6), une fois chacun, dans n'importe quel ordre.
     // Idée de CrazyMiner22 (2026-10-22) : 6741 ou 4167 n'importe où.
     BRAINROT_KING: c => c.s.includes('6741') || c.s.includes('4167'),
+    // Idée de JAKECisthebest (2026-10-25) : nombre abondant (somme des diviseurs propres > n).
+    // Un nombre sur quatre est abondant (trop courant), mais les abondants impairs sont rares (1 996 sur 1 000 001, le premier est 945).
+    ODD_ABUNDANT: c => c.n % 2 === 1 && c.n >= 945 && sumProperDivisors(c.n) > c.n,
+    // Idée de CococoC (2026-10-25) : « Vortrox et Gina », 4992 ou 9249 n'importe où (couvre aussi les nombres Geometry Dash 554992…).
+    VORTROX_GINA: c => c.s.includes('4992') || c.s.includes('9249'),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,

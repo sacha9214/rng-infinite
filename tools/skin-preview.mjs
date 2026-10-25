@@ -33,7 +33,8 @@ for (const skin of skins) {
     const sheet = document.createElement('div');
     sheet.style.cssText = 'padding:18px;display:grid;gap:14px;font:12px system-ui;color:#aaa;background:#0f0f14';
     const card = (cls, digits = '372368') => `<div class="num-card md skin-${skin}" data-tier="rare">${digits.split('')
-      .map((c, i) => `<span class="slot ${cls}${cls === '' && digits.startsWith('0') && i < 4 ? ' ghost' : ''}">${c}</span>`).join('')}</div>`;
+      .map((c, i) => `<span class="slot ${cls}${cls === '' && digits.startsWith('0') && i < 4 ? ' ghost' : ''}">${cls === 'spinning' && skin === 'greek' ? 'NⅠⅡⅢⅣⅤⅥⅦⅧⅨ'[c] : c}</span>`).join('')}</div>`;
+    // (Greek montre des chiffres romains pendant le tirage, comme spinChar dans js/app.js.)
     const cell = (html, t) => `<div style="text-align:center"><div class="frame"${t == null ? '' : ` data-t="${t}"`}>${html}</div><div>${t == null ? '' : `${t} ms`}</div></div>`;
     const row = (label, cells) => `<div><div style="margin-bottom:6px">${label}</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">${cells}</div></div>`;
     sheet.innerHTML =

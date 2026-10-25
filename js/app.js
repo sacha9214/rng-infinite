@@ -395,7 +395,11 @@
     return { glyph, watch };
   })();
   // Chiffre affiché pendant que ça tourne : du code qui défile pour le skin Matrix, un chiffre sinon.
-  const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph() : String((Math.random() * 10) | 0));
+  // Greek : pendant le tirage, le fût de colonne tourne et montre des chiffres romains (un seul caractère Unicode, Ⅰ à Ⅸ,
+  // N pour zéro, pour garder la largeur de la case) ; le chiffre arabe gravé n'apparaît qu'à la pose (lisible).
+  const ROMAN = ['N', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'];
+  const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph()
+    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0] : String((Math.random() * 10) | 0));
   // Badges Top 1 / 5 / 10 : remis à la fin de chaque mois aux dix premiers du classement du mois, gardés pour toujours
   // (voir api/_rank.js). award = { top: 1 | 5 | 10, month: 'AAAA-MM' } ; le serveur envoie le meilleur de chacun.
   const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
@@ -411,6 +415,8 @@
     const tip = award.top === 1 ? `First place on the monthly leaderboard · ${when}` : `Top ${award.top} on the monthly leaderboard · ${when}`;
     return `<span class="top-mark ${m[2]}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)}</span>`;
   };
+  // Pièces versées avec le badge (mêmes montants que REWARDS dans api/_rank.js).
+  const TOP_COINS = { 1: 1000, 5: 500, 10: 250 };
   const topEmoji = award => (award && TOP_MARKS[award.top] ? ` ${TOP_MARKS[award.top][0]}` : '');
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
@@ -1673,7 +1679,34 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
+    { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
+    { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
+    { id: '2026-10-25-monthly-coins', date: 'Oct 25, 2026', en: ['🏆 The monthly leaderboard now pays coins too: when the month ends, 1st place gets 1,000 coins, 2nd to 5th 500 and 6th to 10th 250, on top of their Top 1 / 5 / 10 badge (idea by furcoat0 and LwsBoi)'], fr: ['🏆 Le classement du mois rapporte aussi des pièces : à la fin du mois, la 1re place gagne 1 000 pièces, les 2e à 5e 500 et les 6e à 10e 250, en plus de leur badge Top 1 / 5 / 10 (idée de furcoat0 et LwsBoi)'] },
+    { id: '2026-10-25-christmas-skin', date: 'Oct 25, 2026', en: ['🎄 New limited Legendary skin: Christmas Morning (2,512 coins, until December 26). Six presents get shaken while you roll, then pop open one by one to reveal your digits, between two snowy trees and red and green lights; rare rolls bring snow and a shining star (ideas by JBearr12 and Angelicide9)'], fr: ['🎄 Nouveau skin Legendary limité : Christmas Morning (2 512 pièces, jusqu\'au 26 décembre). Six cadeaux sont secoués pendant le tirage puis s\'ouvrent un par un pour révéler tes chiffres, entre deux sapins enneigés et une guirlande rouge et verte ; les tirages rares font tomber la neige et briller une étoile (idées de JBearr12 et Angelicide9)'] },
+    { id: '2026-10-25-money-skin', date: 'Oct 25, 2026', en: ['💵 New skin: Money (1,900 coins). A crisp 100 bill with gold-foil digits stamped one by one, coins raining down on good rolls, and on Mythic rolls the gold melts and drips off the bill (ideas by JBearr12 and finnnnn)'], fr: ['💵 Nouveau skin : Money (1 900 pièces). Un billet de 100 tout neuf aux chiffres en dorure tamponnés un par un, une pluie de pièces sur les beaux tirages, et sur un tirage Mythic l\'or fond et coule du billet (idées de JBearr12 et finnnnn)'] },
+    { id: '2026-10-25-bowling-skin', date: 'Oct 25, 2026', en: ['🎳 New skin: Bowling (2,000 coins). Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE (idea by JBearr12)'], fr: ['🎳 Nouveau skin : Bowling (2 000 pièces). Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE (idée de JBearr12)'] },
+    { id: '2026-10-25-rocksmash-skin', date: 'Oct 25, 2026', en: ['🪨 New skin: Rock Smash (1,600 coins). A fist smashes every boulder open, and a glowing digit shines inside the cracked stone (idea by HSI)'], fr: ['🪨 Nouveau skin : Rock Smash (1 600 pièces). Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue (idée de HSI)'] },
+    { id: '2026-10-25-cracked-skin', date: 'Oct 25, 2026', en: ['📱 New skin: Cracked Screen (1,500 coins). A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more, and Mythic rolls shatter it (idea by KMC)'], fr: ['📱 Nouveau skin : Cracked Screen (1 500 pièces). Un écran de téléphone qui bugue pendant le tirage ; chaque chiffre frappe la vitre et la fissure un peu plus, et les Mythic la font voler en éclats (idée de KMC)'] },
+    { id: '2026-10-25-castle-skin', date: 'Oct 25, 2026', en: ['🏰 New skin: Medieval Castle (2,400 coins). Royal banners unfurl one by one on a stone castle wall lit by torches, and rare rolls end in fireworks over the battlements (idea by BIGBOIJONER69)'], fr: ['🏰 Nouveau skin : Medieval Castle (2 400 pièces). Des bannières royales se déroulent une à une sur un rempart de pierre éclairé par des torches, et les tirages rares finissent en feu d\'artifice au-dessus des créneaux (idée de BIGBOIJONER69)'] },
+    { id: '2026-10-25-chocolate-skin', date: 'Oct 25, 2026', en: ['🍫 New skin: Chocolate (1,300 coins). A milk chocolate bar in gold foil: digits melt while it rolls, then every square snaps into shape, and Mythic rolls drip with melted chocolate (idea by finnnnn)'], fr: ['🍫 Nouveau skin : Chocolate (1 300 pièces). Une tablette de chocolat au lait dans du papier doré : les chiffres fondent pendant le tirage, puis chaque carré se fige d\'un coup sec, et les Mythic dégoulinent de chocolat fondu (idée de finnnnn)'] },
+    { id: '2026-10-25-fish-skin', date: 'Oct 25, 2026', en: ['🐟 New skin: Floppy Fish (2,100 coins). A goofy fish flops out of the pond for every digit, the digits jump out of the water, and a giant fish leaps over the card on Mythic rolls (idea by AnnJoe)'], fr: ['🐟 Nouveau skin : Floppy Fish (2 100 pièces). Un poisson rigolo saute hors de la mare pour chaque chiffre, les chiffres bondissent hors de l\'eau, et un poisson géant saute par-dessus la carte sur les Mythic (idée d\'AnnJoe)'] },
+    { id: '2026-10-25-axeman-skin', date: 'Oct 25, 2026', en: ['🪓 New skin: Axe Thrower (1,900 coins). A stick man throws a spinning axe into every wooden target (thunk!), and celebrates when the roll is good (idea by jjcoolcid1)'], fr: ['🪓 Nouveau skin : Axe Thrower (1 900 pièces). Un bonhomme bâton lance une hache qui tournoie dans chaque cible en bois (tchac !), et fait la fête quand le tirage est bon (idée de jjcoolcid1)'] },
+    { id: '2026-10-25-math-skin', date: 'Oct 25, 2026', en: ['➗ New skin: Math (1,200 coins). Chalk digits are written on a blackboard while math symbols (+ − × ÷ π √ ∑ ∞) float around, and great rolls end with Q.E.D. (idea by sennybex1)'], fr: ['➗ Nouveau skin : Math (1 200 pièces). Des chiffres à la craie s\'écrivent sur un tableau noir pendant que des symboles mathématiques (+ − × ÷ π √ ∑ ∞) flottent autour, et les grands tirages finissent par CQFD (idée de sennybex1)'] },
+    { id: '2026-10-25-supernova-skin', date: 'Oct 25, 2026', en: ['💥 New skin: Supernova (3,600 coins). A dying star in neon blue and violet: every digit sends out a shockwave, and the reveal goes supernova, bigger on Mythic rolls (idea by jjcoolcid1)'], fr: ['💥 Nouveau skin : Supernova (3 600 pièces). Une étoile qui meurt, en néon bleu et violet : chaque chiffre envoie une onde de choc, et la révélation explose en supernova, encore plus fort sur un Mythic (idée de jjcoolcid1)'] },
+    { id: '2026-10-25-woodcarving-skin', date: 'Oct 25, 2026', en: ['🪵 New skin: Wood Carving (2,000 coins, ideas by jjcoolcid1 and JBearr12). A knife carves every digit into a pine plank and the shavings fly; rare rolls get a coat of golden varnish'], fr: ['🪵 Nouveau skin : Wood Carving (2 000 pièces, idées de jjcoolcid1 et JBearr12). Une lame taille chaque chiffre dans une planche de pin et les copeaux volent ; les tirages rares reçoivent une couche de vernis doré'] },
+    { id: '2026-10-25-greek-skin', date: 'Oct 25, 2026', en: ['🏛️ New skin: Greek (2,000 coins, idea by kaz). Every digit is carved on a turning marble column: roman numerals spin past, then the drum stops and the real digit is chiselled in, with a puff of marble dust; rare rolls get a golden laurel glow'], fr: ['🏛️ Nouveau skin : Grec (2 000 pièces, idée de kaz). Chaque chiffre est gravé sur une colonne de marbre qui tourne : des chiffres romains défilent, puis le fût s\'arrête et le vrai chiffre est ciselé, dans un nuage de poussière de marbre ; les tirages rares brillent d\'une lueur de laurier doré'] },
+    { id: '2026-10-25-dna-skin', date: 'Oct 25, 2026', en: ['🧬 New skin: DNA Helix (2,400 coins). A glowing double helix twists behind the digits, and every digit snaps in like a base pair (idea by R77)'], fr: ['🧬 Nouveau skin : DNA Helix (2 400 pièces). Une double hélice lumineuse tourne derrière les chiffres, et chaque chiffre s\'emboîte comme une paire de bases (idée de R77)'] },
+    { id: '2026-10-25-fairydust-skin', date: 'Oct 25, 2026', en: ['🧚 New skin: Fairy Dust (2,000 coins, idea by R77). Sparkling fairy dust swirls into every digit with a tap of the wand, a fairy circles the card leaving a glittering trail, and rare rolls rain gold'], fr: ['🧚 Nouveau skin : Fairy Dust (2 000 pièces, idée de R77). Une poussière de fée scintillante se rassemble en chaque chiffre d\'un coup de baguette, une fée tourne autour de la carte en laissant une traînée de paillettes, et les tirages rares font pleuvoir de l\'or'] },
+    { id: '2026-10-25-elemental-skin', date: 'Oct 25, 2026', en: ['🌀 New legendary skin: Elemental (14,000 coins). Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it, with four element spirits circling it (idea by kaz)'], fr: ['🌀 Nouveau skin légendaire : Elemental (14 000 pièces). Chaque chiffre se pose dans un nouvel élément, roche, glace, feu puis vent, et la carte en prend la matière, avec quatre esprits des éléments qui tournent autour (idée de kaz)'] },
+    { id: '2026-10-25-divine-skin', date: 'Oct 25, 2026', en: ['⚖️ New Legendary skin: Divine Judgment (17,500 coins, Premium). A heavenly tribunal weighs every digit on golden scales, a pillar of light strikes each one into place, and Mythic rolls get a halo and falling feathers (idea by Gray alt)'], fr: ['⚖️ Nouveau skin Legendary : Divine Judgment (17 500 pièces, Premium). Un tribunal céleste pèse chaque chiffre sur une balance dorée, un pilier de lumière le frappe en place, et les tirages Mythic reçoivent une auréole et des plumes (idée de Gray alt)'] },
+    { id: '2026-10-25-wp-summit', date: 'Oct 25, 2026', en: ['🏔️ New legendary wallpaper Summit (4,000 coins): snowy mountains under the sun, and on every Mythic+ roll night falls, the stars come out and the moon rises behind the peaks (idea by JBearr12)'], fr: ['🏔️ Nouveau fond légendaire Sommet (4 000 pièces) : des montagnes enneigées sous le soleil, et à chaque tirage Mythic+ la nuit tombe, les étoiles s\'allument et la lune se lève derrière les sommets (idée de JBearr12)'] },
+    { id: '2026-10-25-wp-bubbles', date: 'Oct 25, 2026', en: ['🫧 New wallpaper ASMR Bubbles (1,000 coins): shiny bubbles float up behind the game, and you can pop them with a click on the background, with a soft pop sound (idea by kingston)'], fr: ['🫧 Nouveau fond Bulles ASMR (1 000 pièces) : des bulles irisées montent derrière le jeu, et tu peux les éclater d\'un clic sur le fond, avec un petit « pop » (idée de kingston)'] },
+    { id: '2026-10-25-wp-oceanic', date: 'Oct 25, 2026', en: ['🐋 New legendary wallpaper Open Ocean (5,000 coins): a humpback whale, sharks and dolphins swim across the screen; rare rolls light up the water, Anomaly+ sends up bubbles and Mythic+ a pod of dolphins (idea by AnnJoe)'], fr: ['🐋 Nouveau fond légendaire Pleine mer (5 000 pièces) : une baleine à bosse, des requins et des dauphins traversent l\'écran ; les tirages rares illuminent l\'eau, les Anomaly+ font monter des bulles et les Mythic+ un banc de dauphins (idée d\'AnnJoe)'] },
+    { id: '2026-10-25-wp-racetrack', date: 'Oct 25, 2026', en: ['🏎️ New wallpaper Grand Prix (1,100 coins): race cars scream down the main straight in front of a packed grandstand (idea by YU CHUAN 23)'], fr: ['🏎️ Nouveau fond Grand Prix (1 100 pièces) : des monoplaces filent sur la ligne droite devant une tribune pleine (idée de YU CHUAN 23)'] },
+    { id: '2026-10-25-wp-windybeach', date: 'Oct 25, 2026', en: ['🏖️ New wallpaper Windy Beach (900 coins): the umbrella leans in the gusts, sand blows across the screen and a beach ball rolls by (idea by 17black)'], fr: ['🏖️ Nouveau fond Plage venteuse (900 pièces) : le parasol penche dans les rafales, le sable vole et un ballon de plage roule (idée de 17black)'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
+    { id: '2026-10-25-shinydiamond-skin', date: 'Oct 25, 2026', en: ['💍 New skin: Shiny Diamond (3,000 coins). Every digit is engraved in a brilliant-cut diamond on black velvet: the facets flicker while it turns, each stone locks in with a star glint, and rare rolls throw rainbow sparkles (idea by finnnnn)'], fr: ['💍 Nouveau skin : Shiny Diamond (3 000 pièces). Chaque chiffre est gravé dans un diamant taille brillant sur du velours noir : les facettes scintillent pendant le tirage, chaque pierre se sertit avec un éclat en étoile, et les tirages rares lancent des étincelles arc-en-ciel (idée de finnnnn)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
     { id: '2026-10-24-infinity-rework', date: 'Oct 24, 2026', en: ['♾️ The Infinity skin was remade to match Singularity: dark space glass with a loop of light running through it, bright white digits that are easy to read, digits pulled around the loop while rolling, and the big ∞ stays visible the whole roll (idea by kaz)'], fr: ['♾️ Le skin Infinity a été refait pour être au niveau de Singularity : du verre spatial sombre traversé par une boucle de lumière, des chiffres blancs bien lisibles, entraînés autour de la boucle pendant le tirage, et le grand ∞ visible pendant tout le tirage (idée de kaz)'] },
     { id: '2026-10-23-burger-skin', date: 'Oct 23, 2026', en: ['🍔 New skin: Burger (idea by jaxoncool43). Every digit drops a topping (lettuce, cheddar, patty, tomato, onion, pickle), then the top bun slams down to finish the burger; rare rolls come out steaming'], fr: ['🍔 Nouveau skin : Burger (idée de jaxoncool43). Chaque chiffre fait tomber un ingrédient (salade, cheddar, steak, tomate, oignon, cornichon), puis le pain du dessus s\'écrase pour finir le burger ; les tirages rares sortent tout fumants'] },
@@ -4982,6 +5015,10 @@
       if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
+  // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>' };
+  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
+  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -4989,22 +5026,57 @@
     let layer = document.getElementById('wallpaper');
     if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
     if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }
-    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = id === 'aether' ? '<i class="wpi-glow"></i><i class="wpi-spark"></i>' : '';
+    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = WALL_LAYERS[id] || '';
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
+    if (id === 'bubbles' && !layer.querySelector('.wpb-b')) wallBubbles(layer);
   }
   // Fond Infinity (idée de Me Cojoni) : à la révélation, le fond prend la couleur de la rareté pendant quelques
   // secondes (data-react), puis se calme. Tout le visuel est en CSS ; ici on ne fait que poser et retirer l'attribut.
   let wallReactTimer = 0;
   function wallReact(tier) {
     const layer = document.getElementById('wallpaper');
-    if (!layer || !layer.classList.contains('wp-aether') || document.hidden) return;
+    const id = layer && Object.keys(WALL_REACT).find(w => layer.classList.contains(`wp-${w}`));
+    if (!id || document.hidden) return;
     clearTimeout(wallReactTimer);
     layer.removeAttribute('data-react');
     void layer.offsetWidth; // relance l'animation même si deux tirages de suite ont la même rareté
     layer.dataset.react = tier;
-    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), 4500);
+    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), WALL_REACT[id]);
   }
+
+  // Bulles ASMR (idée de kingston, 2026-10-24) : des bulles montent derrière le site et éclatent quand on clique dessus.
+  // Le calque garde pointer-events: none : on écoute les clics de la page sans jamais les bloquer (pas de
+  // preventDefault), et une bulle n'éclate que si le clic tombe sur le fond lui-même (body, le vide de #app, ou l'aperçu
+  // plein écran), jamais sur un bouton ou un panneau du jeu.
+  const BUBBLES = 14;
+  function wallBubble(b, delay) {
+    const r = Math.random;
+    b.style.cssText = `--x:${(2 + r() * 92).toFixed(1)}vw;--s:${Math.round(28 + r() * 62)}px;--d:${(14 + r() * 14).toFixed(1)}s;--w:${(2.4 + r() * 2.4).toFixed(1)}s;--dx:${(r() * 8 - 4).toFixed(1)}vw;--y:${Math.round(12 + r() * 76)};animation-delay:${delay.toFixed(1)}s`;
+  }
+  function wallBubbles(layer) {
+    for (let i = 0; i < BUBBLES; i++) { const b = document.createElement('i'); b.className = 'wpb-b'; wallBubble(b, -Math.random() * 28); layer.appendChild(b); }
+  }
+  document.addEventListener('pointerdown', e => {
+    const layer = document.getElementById('wallpaper');
+    if (!layer || !layer.classList.contains('wp-bubbles') || e.button > 0) return;
+    const t = e.target, root = document.documentElement;
+    if (!(t === document.body || t === root || t.id === 'app' || (root.classList.contains('wall-trying') && !t.closest('.wall-try-bar')))) return;
+    const hit = [...layer.querySelectorAll('.wpb-b:not(.gone)')].find(b => {
+      const r = b.getBoundingClientRect(), rad = r.width / 2;
+      return Math.hypot(e.clientX - (r.left + rad), e.clientY - (r.top + r.height / 2)) <= rad + 6;
+    });
+    if (!hit) return;
+    const r = hit.getBoundingClientRect(), pop = document.createElement('i');
+    pop.className = 'wpb-pop';
+    pop.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--s:${r.width}px`;
+    layer.appendChild(pop);
+    setTimeout(() => pop.remove(), 700);
+    hit.classList.add('gone');
+    Sound.play('bubblePop', { k: Math.floor(Math.random() * 6) });
+    // une nouvelle bulle repart du bas un peu plus tard (même élément : le nombre de bulles ne bouge pas)
+    setTimeout(() => { hit.classList.remove('gone'); wallBubble(hit, 0); hit.style.animation = 'none'; void hit.offsetWidth; hit.style.animation = ''; }, 900);
+  });
 
   function drawEmotes(state) {
     const grid = $('#d-emotes');
@@ -6208,7 +6280,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {
@@ -6312,14 +6384,23 @@
   async function checkGifts() {
     if (!Store.player.name) return;
     try {
-      const r = await Online.friends('gifts');
+      announceGifts(await Online.friends('gifts'));
+    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
+  }
+  // Cadeaux reçus (amis) et pièces du classement du mois (kind: 'top'), déjà marqués vus par le serveur.
+  function announceGifts(r) {
+    {
       Messages.set(r.messages || 0);
       if (!r.gifts || !r.gifts.length) return;
       if (r.coins != null) Store.setSetting('coins', r.coins);
+      // Pièces du classement du mois : annoncées à part, une par une.
+      r.gifts.filter(g => g.kind === 'top').forEach(g => toast(`🏆 #${g.place} on the ${monthLabel(g.month)} monthly leaderboard: +${fmt(g.amount)} coins`, 8000, 'achv'));
+      r.gifts = r.gifts.filter(g => g.kind !== 'top');
+      if (!r.gifts.length) { Sound.play('lock', { i: 5 }); return; }
       const total = r.gifts.reduce((x, g) => x + g.amount, 0);
       toast(r.gifts.length === 1 ? `🎁 ${r.gifts[0].name} sent you ${fmt(total)} coins` : `🎁 ${r.gifts.length} gifts from your friends: +${fmt(total)} coins`, 6000, 'achv');
       Sound.play('lock', { i: 5 });
-    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
+    }
   }
   async function friendAction(action, name) {
     if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
@@ -7134,7 +7215,7 @@
     const name = Store.player.name;
     const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
     lbState.tab = lbTabOf(lbState.period);
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -7181,11 +7262,11 @@
     const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
     const days = Math.ceil((end - now.getTime()) / 86400000);
     const left = days <= 1 ? 'Ends today (midnight UTC)' : `Ends in ${days} days`;
-    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span></li>`;
+    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span><b class="mono" data-no-i18n>🪙 ${fmt(TOP_COINS[top])}</b></li>`;
     return `
       <aside class="lb-aside panel" aria-label="Monthly trophies">
         <div class="eyebrow">🏆 Monthly trophies</div>
-        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever.</p>
+        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever, and coins.</p>
         <ul class="lb-aside-list">${row(1, '1st place')}${row(5, '2nd to 5th')}${row(10, '6th to 10th')}</ul>
         <p class="lb-aside-foot"><b>${left}</b> · it shows next to your name on the leaderboard, your profile and in duels</p>
       </aside>`;

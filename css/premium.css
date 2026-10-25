@@ -158,6 +158,65 @@
 .side-blackhole::after { animation: bh-orbit 6s linear infinite; }
 @keyframes bh-orbit { from { transform: rotate(0) translateX(.3rem) rotate(0); } to { transform: rotate(360deg) translateX(.3rem) rotate(-360deg); } }
 
+/* ================================================================== ⚖️ Divine Judgment (idée de Gray alt, 2026-10-25)
+   Un tribunal céleste : nuit violette, gloire dorée qui rayonne d'en haut, deux colonnes de marbre sur les bords.
+   Pendant le tirage, chaque chiffre est pesé (il oscille comme un plateau de balance) ; au verdict, un pilier de lumière
+   descend sur lui, il est happé vers le haut, puis frappé en place comme un coup de maillet. */
+.num-card.skin-divine {
+  background:
+    linear-gradient(90deg, #fff7e0 0, #e8dcc0 1.2%, #fffaf0 2.4%, #d9c9a3 3.6%, #f5ead2 4.8%, rgba(184, 134, 11, .9) 5.4%, transparent 5.6% 94.4%, rgba(184, 134, 11, .9) 94.6%, #f5ead2 95.2%, #d9c9a3 96.4%, #fffaf0 97.6%, #e8dcc0 98.8%, #fff7e0 100%),
+    radial-gradient(ellipse 55% 110% at 50% -25%, rgba(255, 236, 170, .6), rgba(250, 204, 21, .18) 45%, transparent 70%),
+    repeating-conic-gradient(from -2deg at 50% -35%, rgba(253, 224, 71, .13) 0 3deg, transparent 3deg 8deg),
+    linear-gradient(180deg, #2b1d4d, #150e2c 65%, #0c0819);
+  border: 2px solid #f5d27a; border-radius: .6rem; color: #fffdf2;
+  box-shadow: inset 0 0 0 2px rgba(20, 12, 40, .9), inset 0 0 0 3px rgba(245, 210, 122, .55), 0 0 22px rgba(250, 204, 21, .45), 0 0 54px rgba(255, 244, 214, .2), 0 12px 22px rgba(0, 0, 0, .6);
+}
+.skin-divine .slot {
+  position: relative; z-index: 0; color: #fffdf2;
+  text-shadow: 0 .045em 0 #a16207, 0 0 .06em #fff, 0 0 .22em rgba(253, 224, 71, .75), 0 0 .6em rgba(250, 204, 21, .3);
+}
+.skin-divine .slot.ghost { text-shadow: none; color: #e9d8a6; }
+/* Pesé : le chiffre monte et descend comme un plateau, la lumière vacille. */
+.skin-divine .slot.spinning { opacity: .9; animation: dj-weigh .2s var(--ease-in-out) infinite alternate; }
+@keyframes dj-weigh {
+  from { transform: translateY(-.1em) rotate(-7deg); filter: brightness(.8); }
+  to { transform: translateY(.1em) rotate(7deg); filter: brightness(1.35); }
+}
+/* Le verdict : happé vers le haut dans la lumière (anticipation), frappé en place (impact), petit rebond rigide. */
+.skin-divine .slot.revealed { animation: dj-verdict .62s linear backwards; }
+@keyframes dj-verdict {
+  0% { transform: translateY(-.08em) scale(.92); filter: brightness(.7); animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  24% { transform: translateY(-.3em) scale(.88, 1.06); filter: brightness(1.6); animation-timing-function: cubic-bezier(.7, 0, 1, .6); }
+  36% { transform: translateY(.05em) scale(1.16); filter: brightness(1.9) drop-shadow(0 0 .12em #fde047); animation-timing-function: ease-out; }
+  52% { transform: translateY(-.04em) scale(.97); filter: brightness(1.4); }
+  70% { transform: translateY(0) scale(1.02); filter: brightness(1.2); }
+  100% { transform: none; filter: none; }
+}
+/* Le pilier de lumière qui descend sur le chiffre (derrière lui), puis l'onde du maillet à ses pieds. */
+.skin-divine .slot.revealed::before, .skin-divine .slot.revealed::after { content: ''; position: absolute; pointer-events: none; z-index: -1; opacity: 0; }
+.skin-divine .slot.revealed::before {
+  left: 50%; width: .9em; margin-left: -.45em; top: -3em; bottom: .05em;
+  background: linear-gradient(90deg, transparent, rgba(250, 204, 21, .3) 30%, rgba(254, 240, 138, .6) 50%, rgba(250, 204, 21, .3) 70%, transparent);
+  transform-origin: 50% 0; animation: dj-pillar .62s linear backwards;
+}
+@keyframes dj-pillar {
+  0% { opacity: .2; transform: scaleX(.12) scaleY(.2); }
+  24% { opacity: .85; transform: scaleX(.25) scaleY(1); }
+  36% { opacity: .75; transform: scaleX(1) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(.05) scaleY(1); }
+}
+.skin-divine .slot.revealed::after {
+  left: 50%; bottom: .02em; width: 1.2em; height: .3em; margin-left: -.6em; border-radius: 50%;
+  border: .04em solid #fde68a; box-shadow: 0 0 .2em #facc15; animation: dj-ring .62s ease-out backwards;
+}
+@keyframes dj-ring { 0%, 34% { opacity: 0; transform: scale(.2); } 38% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.7); } }
+.side-divine { --side-border: #f5d27a; --side-glow: 0 0 22px rgba(250, 204, 21, .38), 0 0 44px rgba(255, 244, 214, .15); --side-ink: #fff7d6; --side-ink-glow: 0 0 8px rgba(250, 204, 21, .9);
+  --side-bg: radial-gradient(ellipse 60% 70% at 50% -10%, rgba(255, 236, 170, .38), transparent 70%), repeating-conic-gradient(from -2deg at 50% -20%, rgba(253, 224, 71, .1) 0 3deg, transparent 3deg 9deg), linear-gradient(90deg, rgba(245, 234, 210, .35) 0 3%, transparent 3% 97%, rgba(245, 234, 210, .35) 97%), linear-gradient(180deg, rgba(43, 29, 77, .85), rgba(12, 8, 25, .85));
+  --deco-a: '⚖️'; --deco-b: '✦'; }
+.side-divine::before { transform-origin: 50% 10%; animation: dj-balance 3.2s ease-in-out infinite; }
+.side-divine::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes dj-balance { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+
 /* ================================================================== ♾️ Infinity — une boucle de lumière dans du verre
    Seulement dans la caisse Premium (0,5 %). Refait le 2026-10-24 pour être au niveau de Singularity (idée de kaz) :
    du verre spatial presque noir (le contraste d'abord), un ∞ de lumière irisé dans la carte, parcouru sans fin par une
@@ -236,6 +295,111 @@
 
 /* Duels à 3 joueurs et plus : la pluie d'orage s'arrête (décor permanent). */
 .room-stage.many .num-card.skin-storm::before { animation: none; }
+
+/* ================================================================== 🜁 Elemental (idée de kaz, 2026-10-25) — une
+   dalle d'obsidienne au liseré d'or, quatre éléments dans les coins. Chaque chiffre est fait d'un élément, dans
+   l'ordre roche → glace → feu → vent, et la carte prend la matière du dernier chiffre posé (le :has() repère la
+   dernière case révélée). Pendant le tirage, les chiffres passent par les quatre éléments ; à la pose, la roche
+   s'écrase, la glace cristallise, le feu s'embrase, le vent tourbillonne. Débris, éclats, braises et rafales : js/skinfx.js. */
+.num-card.skin-elemental {
+  background:
+    radial-gradient(ellipse 38% 60% at 0% 0%, rgba(125, 211, 252, .2), transparent 70%),
+    radial-gradient(ellipse 38% 60% at 100% 0%, rgba(153, 246, 228, .16), transparent 70%),
+    radial-gradient(ellipse 38% 60% at 0% 100%, rgba(168, 162, 158, .22), transparent 70%),
+    radial-gradient(ellipse 38% 60% at 100% 100%, rgba(249, 115, 22, .24), transparent 70%),
+    linear-gradient(180deg, #1c1917, #0c0a09);
+  border: 2px solid #d4a72c; border-radius: .5rem; color: #fafaf9;
+  box-shadow: 0 0 0 1px #0c0a09, 0 0 0 3px rgba(212, 167, 44, .25), inset 0 1px 0 rgba(255, 255, 255, .12), 0 0 22px rgba(212, 167, 44, .3), 0 12px 20px rgba(0, 0, 0, .5);
+}
+/* La matière de l'élément en cours, derrière les chiffres. */
+.num-card.skin-elemental::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0; transition: opacity .25s; }
+.skin-elemental .slot { position: relative; z-index: 1; font-weight: 900; }
+/* roche : granit gris-brun, des fissures */
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+1):last-of-type)::before,
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+1) + .slot:not(.revealed))::before { opacity: 1;
+  background: linear-gradient(118deg, transparent 46%, rgba(0, 0, 0, .5) 47%, transparent 48.5%) 0 0 / 3.2em 100%, linear-gradient(64deg, transparent 52%, rgba(0, 0, 0, .4) 53%, transparent 54.5%) 1.1em 0 / 2.6em 100%,
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .08) 1px, transparent 2px) 0 0 / .5em .5em, linear-gradient(180deg, #57534e, #292524); }
+/* glace : bleu givré, des facettes */
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+2):last-of-type)::before,
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+2) + .slot:not(.revealed))::before { opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .18) 0 20%, transparent 20% 45%, rgba(255, 255, 255, .1) 45% 55%, transparent 55%), linear-gradient(60deg, transparent 60%, rgba(224, 242, 254, .16) 60% 75%, transparent 75%), linear-gradient(180deg, #0c4a6e, #082f49); }
+/* feu : braise rouge, lueur qui monte du bas */
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+3):last-of-type)::before,
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n+3) + .slot:not(.revealed))::before { opacity: 1;
+  background: radial-gradient(ellipse 70% 80% at 50% 120%, rgba(251, 146, 60, .75), transparent 70%), radial-gradient(ellipse 30% 50% at 20% 110%, rgba(250, 204, 21, .45), transparent 70%), linear-gradient(180deg, #450a0a, #7c2d12); }
+/* vent : sarcelle pâle, des rafales en biais */
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n):last-of-type)::before,
+.num-card.skin-elemental:has(.slot.revealed:nth-of-type(4n) + .slot:not(.revealed))::before { opacity: 1;
+  background: repeating-linear-gradient(172deg, transparent 0 .5em, rgba(204, 251, 241, .16) .5em .56em, transparent .56em 1.1em), linear-gradient(180deg, #134e4a, #0f2f2d); }
+/* Les chiffres, un élément chacun. */
+.skin-elemental .slot:nth-of-type(4n+1) { color: #c8b79a; -webkit-text-stroke: .035em #292018;
+  text-shadow: -.03em -.03em 0 #f5ecd9, 0 .05em 0 #6b5a45, 0 .09em 0 #3b2f22, 0 .13em .12em rgba(0, 0, 0, .7); }
+.skin-elemental .slot:nth-of-type(4n+2) { color: #e0f7ff; -webkit-text-stroke: .03em #075985;
+  text-shadow: 0 0 .06em #fff, 0 0 .25em #38bdf8, 0 .05em 0 #0c4a6e; }
+.skin-elemental .slot:nth-of-type(4n+3) { color: #ffd36b; -webkit-text-stroke: .03em #9a3412;
+  text-shadow: 0 0 .08em #fde047, 0 -.06em .2em #f97316, 0 -.14em .4em rgba(220, 38, 38, .8); }
+.skin-elemental .slot:nth-of-type(4n) { color: #f0fdfa; -webkit-text-stroke: .03em #115e59; font-style: italic;
+  text-shadow: -.05em 0 .06em rgba(153, 246, 228, .55), -.14em 0 .1em rgba(153, 246, 228, .25), 0 .04em 0 #134e4a; }
+.skin-elemental .slot.ghost { opacity: .18; }
+/* Tirage : chaque chiffre passe par les quatre éléments (roche, glace, feu, vent), avec un petit à-coup. */
+.skin-elemental .slot.spinning { opacity: .95; animation: el-cycle .32s steps(1) infinite; }
+.skin-elemental .slot.spinning:nth-of-type(4n+2) { animation-delay: -.08s; }
+.skin-elemental .slot.spinning:nth-of-type(4n+3) { animation-delay: -.16s; }
+.skin-elemental .slot.spinning:nth-of-type(4n) { animation-delay: -.24s; }
+@keyframes el-cycle {
+  0% { color: #c8b79a; -webkit-text-stroke-color: #292018; text-shadow: 0 .06em 0 #57534e, 0 .1em .1em #000; transform: translateY(.04em); }
+  25% { color: #e0f7ff; -webkit-text-stroke-color: #075985; text-shadow: 0 0 .25em #38bdf8; transform: scale(.94); }
+  50% { color: #ffd36b; -webkit-text-stroke-color: #9a3412; text-shadow: 0 -.08em .3em #f97316; transform: translateY(-.04em) scaleY(1.06); }
+  75% { color: #f0fdfa; -webkit-text-stroke-color: #115e59; text-shadow: -.1em 0 0 rgba(153, 246, 228, .5); transform: translateX(.04em) skewX(-8deg); }
+}
+/* Révélation : un geste par élément, toujours élan → impact → retour au calme. */
+.skin-elemental .slot.revealed:nth-of-type(4n+1) { animation: el-rock .55s backwards; }
+@keyframes el-rock { /* roche : soulevée, elle retombe lourdement, rebond rigide, sans écrasement */
+  0% { transform: translateY(-.55em) rotate(-4deg); opacity: 0; animation-timing-function: cubic-bezier(.6, 0, 1, .5); }
+  12% { opacity: 1; }
+  34% { transform: translateY(.05em) rotate(0); filter: brightness(1.6); animation-timing-function: ease-out; }
+  48% { transform: translateY(-.07em) rotate(1deg); filter: brightness(1.1); }
+  60% { transform: translateY(0) rotate(0); }
+  68% { transform: translateX(-.02em); }
+  76% { transform: translateX(.02em); }
+  100% { transform: none; filter: none; }
+}
+.skin-elemental .slot.revealed:nth-of-type(4n+2) { animation: el-ice .55s backwards; }
+@keyframes el-ice { /* glace : un germe se contracte, puis gèle d'un coup (éclat blanc), net */
+  0% { transform: scale(.4) rotate(12deg); opacity: 0; filter: blur(2px) brightness(2); }
+  18% { transform: scale(.3) rotate(0); opacity: .8; filter: blur(1px) brightness(3); }
+  36% { transform: scale(1.18); opacity: 1; filter: brightness(3.4) saturate(.2); animation-timing-function: steps(2); }
+  52% { transform: scale(.97); filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+.skin-elemental .slot.revealed:nth-of-type(4n+3) { animation: el-fire .6s backwards; transform-origin: 50% 100%; }
+@keyframes el-fire { /* feu : une flammèche couve, s'embrase très haut, puis vacille jusqu'au calme */
+  0% { transform: scale(.5, .2); opacity: 0; filter: brightness(2); }
+  16% { transform: scale(.6, .3); opacity: 1; filter: brightness(2.6) saturate(1.6); }
+  36% { transform: scale(.9, 1.35); filter: brightness(2.2) saturate(1.5); animation-timing-function: ease-out; }
+  54% { transform: scale(1.06, .92); filter: brightness(1.4); }
+  70% { transform: scale(.98, 1.05); }
+  100% { transform: none; filter: none; }
+}
+.skin-elemental .slot.revealed:nth-of-type(4n) { animation: el-wind .58s backwards; }
+@keyframes el-wind { /* vent : il recule, arrive en rafale de biais, dépasse puis se redresse */
+  0% { transform: translateX(-.7em) skewX(-30deg) rotate(-25deg); opacity: 0; filter: blur(2px); }
+  22% { transform: translateX(-.45em) skewX(-24deg) rotate(-10deg); opacity: .8; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  44% { transform: translateX(.1em) skewX(12deg); opacity: 1; filter: none; }
+  64% { transform: translateX(-.03em) skewX(-4deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-elemental .slot, .num-card.skin-elemental::before { animation: none; transition: none; } }
+/* Cadre de duel : les quatre éléments dans les coins ; 🔥 vacille, 🌪️ tourne. */
+.side-elemental { --side-border: #d4a72c; --side-glow: 0 0 18px rgba(212, 167, 44, .35); --side-ink: #b45309; --side-ink-glow: 0 0 6px rgba(212, 167, 44, .5);
+  --side-bg: radial-gradient(ellipse 45% 55% at 0% 0%, rgba(56, 189, 248, .22), transparent 70%), radial-gradient(ellipse 45% 55% at 100% 0%, rgba(45, 212, 191, .2), transparent 70%), radial-gradient(ellipse 45% 55% at 0% 100%, rgba(120, 113, 108, .3), transparent 70%), radial-gradient(ellipse 45% 55% at 100% 100%, rgba(249, 115, 22, .28), transparent 70%);
+  --deco-a: '🔥'; --deco-b: '🌪️'; }
+.side-elemental::before { transform-origin: 50% 100%; animation: el-flick 1.6s ease-in-out infinite; }
+.side-elemental::after { animation: el-whirl 2.4s linear infinite; }
+@keyframes el-flick { 0%, 100% { transform: scale(1, 1); } 30% { transform: scale(.92, 1.12); } 60% { transform: scale(1.06, .94); } }
+@keyframes el-whirl { to { transform: rotate(360deg); } }
+.room-stage.many .side-elemental::before, .room-stage.many .side-elemental::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-elemental::before, .side-elemental::after { animation: none; } }
 
 /* ================================================================== boutique : tuiles premium et fenêtre d'aperçu */
 .premium-panel { border-color: rgba(234, 179, 8, .45); box-shadow: 0 0 0 1px rgba(234, 179, 8, .12), 0 0 34px rgba(234, 179, 8, .08); }

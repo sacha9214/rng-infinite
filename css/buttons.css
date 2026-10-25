@@ -509,6 +509,21 @@
 .btn-roll.gen-blackhole:hover { letter-spacing: .14em; }
 .btn-roll.gen-blackhole:active { transform: scale(.94, .9); letter-spacing: .04em; }
 
+/* Divine Judgment (idée de Gray alt, 2026-10-25) — nuit violette, gloire dorée d'en haut, colonnes de marbre ; au
+   survol, la lumière s'intensifie. */
+.btn-roll.gen-divine {
+  overflow: hidden; border-radius: .6rem; border: 2px solid #f5d27a; color: #fffdf2;
+  background:
+    linear-gradient(90deg, #f5ead2 0 3%, rgba(184, 134, 11, .9) 3% 3.6%, transparent 3.6% 96.4%, rgba(184, 134, 11, .9) 96.4% 97%, #f5ead2 97%),
+    radial-gradient(ellipse 55% 120% at 50% -30%, rgba(255, 236, 170, .6), rgba(250, 204, 21, .15) 50%, transparent 72%),
+    repeating-conic-gradient(from -2deg at 50% -60%, rgba(253, 224, 71, .14) 0 2deg, transparent 2deg 6deg),
+    linear-gradient(180deg, #2b1d4d, #0c0819);
+  text-shadow: 0 .06em 0 #a16207, 0 0 .35em rgba(253, 224, 71, .9);
+  --gs: 0 0 0 3px rgba(250, 204, 21, .2), 0 0 22px rgba(250, 204, 21, .45), 0 .5em 1em rgba(0, 0, 0, .55);
+  --gs-h: 0 0 0 3px rgba(250, 204, 21, .35), 0 0 38px rgba(253, 224, 71, .8), 0 0 70px rgba(255, 244, 214, .3), 0 .5em 1.1em rgba(0, 0, 0, .6);
+  --gs-a: 0 0 0 3px rgba(250, 204, 21, .25), 0 0 14px rgba(250, 204, 21, .5), inset 0 0 26px rgba(255, 236, 170, .5);
+}
+
 /* Bakery — une miche dorée : croûte cuite, trois entailles de boulanger, lettres crème ; elle gonfle au survol. */
 .btn-roll.gen-bakery {
   overflow: hidden; border-radius: 999px; border: 2px solid #8a4513; color: #fff7e6;
@@ -822,6 +837,21 @@
   text-shadow: 0 1px 0 rgba(255, 251, 235, .6);
   --gs: 0 .3em 0 #450a0a, 0 .5em 1em rgba(220, 38, 38, .32); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.4em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #450a0a; }
 .btn-roll.gen-dynamite:hover { filter: brightness(1.08); }
+/* Supernova (idée de jjcoolcid1, 2026-10-25) : le vide indigo, un cœur blanc-bleu, un anneau de choc violet. */
+.btn-roll.gen-supernova { border: 2px solid #8b5cf6; border-radius: .6em; color: #f8faff;
+  background: radial-gradient(ellipse 30% 70% at 50% 50%, rgba(224, 231, 255, .35), transparent 70%), radial-gradient(ellipse 60% 120% at 50% 50%, transparent 55%, rgba(167, 139, 250, .5) 62%, transparent 70%), radial-gradient(ellipse 50% 90% at 15% 40%, rgba(59, 130, 246, .45), transparent 70%), radial-gradient(ellipse 50% 90% at 85% 60%, rgba(168, 85, 247, .5), transparent 70%), linear-gradient(160deg, #0b0a2a, #120a35 50%, #050414);
+  text-shadow: 0 0 .3em #818cf8, 0 0 .6em rgba(168, 85, 247, .6);
+  --gs: 0 .3em 0 #1e1048, 0 .5em 1em rgba(139, 92, 246, .4); --gs-h: 0 .34em 0 #1e1048, 0 .7em 1.4em rgba(96, 165, 250, .55); --gs-a: 0 .06em 0 #1e1048; }
+/* Shiny Diamond (idée de finnnnn, 2026-10-25) : velours noir, une rangée de facettes claires et sombres, un liseré
+   en or blanc ; au survol, les facettes s'allument. */
+.btn-roll.gen-shinydiamond { border: 2px solid #cbd5e1; border-radius: .5em; color: #f0f9ff;
+  background:
+    repeating-conic-gradient(from 11.25deg at 50% 50%, rgba(240, 249, 255, .14) 0 22.5deg, transparent 22.5deg 45deg),
+    radial-gradient(ellipse 70% 90% at 50% 0%, rgba(186, 230, 253, .3), transparent 70%),
+    linear-gradient(180deg, #2a2540, #0b0a12);
+  text-shadow: 0 0 6px rgba(186, 230, 253, .8);
+  --gs: 0 .3em 0 #475569, 0 .5em 1em rgba(186, 230, 253, .25); --gs-h: 0 .34em 0 #475569, 0 .7em 1.4em rgba(224, 242, 254, .5); --gs-a: 0 .06em 0 #475569; }
+.btn-roll.gen-shinydiamond:hover { filter: brightness(1.15) saturate(1.2); }
 /* Cursed Energy (idée d'Edward, 2026-10-20) : nuit violette, énergie qui remonte du bas, liseré d'aura. */
 .btn-roll.gen-cursed { border: 2px solid #6d28d9; border-radius: .6em; color: #ede9fe; background: radial-gradient(ellipse 70% 80% at 50% 130%, rgba(129, 140, 248, .6), transparent 70%), radial-gradient(ellipse 40% 60% at 15% 0%, rgba(168, 85, 247, .35), transparent 70%), linear-gradient(180deg, #1e1048, #0b0820); text-shadow: 0 0 .35em #a78bfa, 0 1px 0 #0a0518;
   --gs: 0 .3em 0 #1e1048, 0 .5em 1em rgba(124, 58, 237, .4); --gs-h: 0 .34em 0 #1e1048, 0 .7em 1.4em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #1e1048; }
@@ -862,6 +892,42 @@
   text-shadow: -.06em 0 0 rgba(236, 72, 153, .7), .06em 0 0 rgba(34, 211, 238, .8), 0 0 .4em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .35); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-sonic:hover { animation: gen-sonic-run .8s linear infinite; }
+/* Christmas (idées de JBearr12 et Angelicide9, 2026-10-25) : un paquet cadeau, ruban doré en croix. */
+.btn-roll.gen-christmas { border: 2px solid #7f1d1d; border-radius: .5em; color: #fffbeb;
+  background:
+    linear-gradient(90deg, transparent 46%, #fbbf24 46%, #fde68a 50%, #fbbf24 54%, transparent 54%),
+    linear-gradient(180deg, transparent 44%, #fbbf24 44%, #fbbf24 56%, transparent 56%),
+    radial-gradient(circle, rgba(255, 255, 255, .16) 0 2px, transparent 2.5px) 0 0 / 12px 12px,
+    linear-gradient(180deg, #ef4444, #c81e1e 50%, #991b1b);
+  text-shadow: 0 1px 0 #450a0a, 0 0 3px #450a0a, 0 0 .4em rgba(69, 10, 10, .9);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(239, 68, 68, .3); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-christmas:hover { filter: brightness(1.08); }
+/* Money (idées de JBearr12 et finnnnn, 2026-10-25) : un billet vert pâle à double cadre, texte doré. */
+.btn-roll.gen-money { border: 2px solid #2f5d3a; border-radius: .35em; color: #fde68a;
+  background: repeating-radial-gradient(ellipse 60% 90% at 50% 50%, transparent 0 4px, rgba(47, 93, 58, .12) 4px 5px), linear-gradient(180deg, #4d7c57, #2f5d3a);
+  box-shadow: inset 0 0 0 3px #4d7c57, inset 0 0 0 4px #cddfba;
+  text-shadow: 0 1px 0 #3b2304, 0 0 2px #3b2304;
+  --gs: 0 .3em 0 #1c3b24, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #1c3b24, 0 .7em 1.4em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #1c3b24; }
+.btn-roll.gen-money:hover { filter: brightness(1.1); }
+/* DNA Helix (idée de R77, 2026-10-25) : fond de labo sombre, deux brins cyan et magenta qui se croisent ; au survol,
+   l'hélice tourne. */
+.btn-roll.gen-dna { border: 2px solid #6366f1; border-radius: 999px; color: #fff;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 40' preserveAspectRatio='none'><path d='M0 20C10 40 30 40 40 20S70 0 80 20' fill='none' stroke='%2322d3ee' stroke-width='3' stroke-opacity='.6'/><path d='M0 20C10 0 30 0 40 20S70 40 80 20' fill='none' stroke='%23e879f9' stroke-width='3' stroke-opacity='.6'/></svg>") 0 50% / 3em 100% repeat-x,
+    linear-gradient(180deg, #1e1b4b, #0b1030);
+  text-shadow: 0 0 2px #1e1b4b, 0 0 .4em rgba(34, 211, 238, .8);
+  --gs: 0 .3em 0 #312e81, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #312e81, 0 .7em 1.4em rgba(232, 121, 249, .45); --gs-a: 0 .06em 0 #312e81; }
+.btn-roll.gen-dna:hover { animation: gen-dna-twist 1s linear infinite; }
+@keyframes gen-dna-twist { to { background-position: 3em 50%, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-dna:hover { animation: none; } }
+/* Elemental (idée de kaz, 2026-10-25) : quatre bandes roche, glace, feu, vent sous un liseré d'or ; au survol, elles défilent. */
+.btn-roll.gen-elemental { border: 2px solid #d4a72c; border-radius: .6em; color: #fff;
+  background: linear-gradient(90deg, #57534e 0 25%, #0369a1 25% 50%, #c2410c 50% 75%, #0f766e 75% 100%) 0 0 / 200% 100%;
+  text-shadow: 0 1px 0 #000, 0 0 .4em rgba(0, 0, 0, .7);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(212, 167, 44, .35); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.4em rgba(249, 115, 22, .45); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-elemental:hover { animation: gen-el-cycle 1.6s linear infinite; }
+@keyframes gen-el-cycle { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-elemental:hover { animation: none; } }
 /* Waterfall (idée de JBearr12 et jjcoolcid1, 2026-10-24) : l'herbe en haut, un rideau d'eau, l'écume en bas ; au
    survol, l'eau coule. */
 .btn-roll.gen-waterfall { border: 2px solid #14532d; border-radius: .6em; color: #fff;
@@ -874,6 +940,30 @@
 .btn-roll.gen-waterfall:hover { animation: gen-wtf-flow .6s linear infinite; }
 @keyframes gen-wtf-flow { to { background-position: 0 0, 0 1em, 0 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-waterfall:hover { animation: none; } }
+/* Greek (idée de kaz, 2026-10-25) : un bloc de marbre cannelé sous une frise à méandres dorée, texte gravé ; au survol,
+   un reflet doré passe sur la pierre. */
+.btn-roll.gen-greek { border: 2px solid #b08d2a; border-radius: .3em; color: #1e3a5f;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><rect width='20' height='10' fill='%231e3a5f'/><path d='M1 9V1h8v6H5V4h2' fill='none' stroke='%23e9c46a' stroke-width='1.3'/><path d='M11 9V1h8v6h-4V4h2' fill='none' stroke='%23e9c46a' stroke-width='1.3'/></svg>") 0 0 / .7em .35em repeat-x,
+    linear-gradient(100deg, transparent 40%, rgba(253, 230, 138, .55) 50%, transparent 60%) -200% 0 / 200% 100% no-repeat,
+    repeating-linear-gradient(90deg, rgba(120, 113, 108, .18) 0, rgba(255, 255, 255, .5) .25em, rgba(120, 113, 108, .18) .4em),
+    linear-gradient(90deg, #d6d3d1, #fafaf9 45%, #e7e5e4 70%, #a8a29e);
+  text-shadow: 0 -1px 0 rgba(28, 25, 23, .4), 0 1px 0 #fff;
+  --gs: 0 .3em 0 #78716c, 0 .5em 1em rgba(233, 196, 106, .3); --gs-h: 0 .34em 0 #78716c, 0 .7em 1.4em rgba(233, 196, 106, .5); --gs-a: 0 .06em 0 #78716c; }
+.btn-roll.gen-greek:hover { animation: gen-grk-glint 1.2s ease-in-out infinite; }
+@keyframes gen-grk-glint { to { background-position: 0 0, 300% 0, 0 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-greek:hover { animation: none; } }
+/* Fairy Dust (idée de R77, 2026-10-25) : velours violet semé de paillettes dorées ; au survol, elles scintillent. */
+.btn-roll.gen-fairydust { border: 2px solid #c4b5fd; border-radius: .8em; color: #fff7d6;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><g fill='%23fde68a'><path d='M7 4l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/><path d='M30 12l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/><circle cx='19' cy='8' r='.8'/><circle cx='36' cy='3' r='.6'/><circle cx='13' cy='16' r='.6'/></g></svg>") 0 0 / 2em 1em,
+    radial-gradient(ellipse 70% 80% at 50% 50%, rgba(244, 114, 182, .35), transparent 70%),
+    linear-gradient(160deg, #6d28d9, #4c1d95 55%, #2e1065);
+  text-shadow: 0 1px 0 #3b0764, 0 0 2px #3b0764, 0 0 .5em rgba(253, 224, 71, .7);
+  --gs: 0 .3em 0 #3b0764, 0 .5em 1em rgba(216, 180, 254, .35); --gs-h: 0 .34em 0 #3b0764, 0 .7em 1.4em rgba(253, 224, 71, .45); --gs-a: 0 .06em 0 #3b0764; }
+.btn-roll.gen-fairydust:hover { animation: gen-fdu-glint .9s ease-in-out infinite; }
+@keyframes gen-fdu-glint { 50% { background-position: .2em -.15em, 0 0, 0 0; filter: brightness(1.15); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-fairydust:hover { animation: none; } }
 @keyframes gen-sonic-run { to { background-position: -2.6em 50%, 0 100%, 0 0; } }
 /* UFO (idée de JBearr12, 2026-10-21) : un ciel de nuit, l'herbe en bas, un rayon vert qui descend au milieu. */
 .btn-roll.gen-ufo { border: 2px solid #84cc16; border-radius: 999px; color: #f7fee7;
@@ -898,6 +988,16 @@
   text-shadow: 0 1px 0 #78350f, 0 0 2px #78350f, 0 0 .3em rgba(120, 53, 15, .8);
   --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(245, 158, 11, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.4em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #78350f; }
 .btn-roll.gen-burger:hover { filter: brightness(1.08) saturate(1.1); }
+/* Wood carving (idée de jjcoolcid1 et JBearr12, 2026-10-25) : une planche de pin veinée, le texte taillé en creux ; au
+   survol, la planche s'éclaire comme sous la lampe de l'établi. */
+.btn-roll.gen-woodcarving { border: 2px solid #7c4a1e; border-radius: .5em; color: #fff3dc;
+  background:
+    repeating-linear-gradient(178deg, transparent 0 .3em, rgba(133, 77, 30, .25) .31em .35em, transparent .36em .6em),
+    radial-gradient(ellipse 70% 60% at 40% 25%, rgba(255, 240, 210, .45), transparent 70%),
+    linear-gradient(180deg, #d9a463, #b9793a 60%, #8f5a26);
+  text-shadow: 0 -1px 0 #3a1b06, 0 1px 0 rgba(255, 238, 205, .5), 0 0 .3em rgba(58, 27, 6, .7);
+  --gs: 0 .3em 0 #5c3010, 0 .5em 1em rgba(168, 105, 47, .3); --gs-h: 0 .34em 0 #5c3010, 0 .7em 1.4em rgba(217, 164, 99, .45); --gs-a: 0 .06em 0 #5c3010; }
+.btn-roll.gen-woodcarving:hover { filter: brightness(1.1) saturate(1.05); }
 /* Blinds (idée de costoroll, 2026-10-21) : un store vénitien beige fermé, texte jaune néon ; au survol, les lames
    pivotent et laissent voir le ciel bleu derrière. */
 .btn-roll.gen-blinds { border: 2px solid #a4804a; border-radius: .45em; color: #fef08a;
@@ -908,3 +1008,52 @@
 /* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
 .btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
+/* Bowling (idée de JBearr12, 2026-10-25) : une boule violette brillante sur une latte d'érable. */
+.btn-roll.gen-bowling { border: 2px solid #78350f; border-radius: 999px; color: #fff7ed;
+  background: radial-gradient(circle at 22% 35%, #c4b5fd 0 .12em, transparent .16em), radial-gradient(circle at 30% 30%, #7c3aed, #3b0764 70%), linear-gradient(180deg, #e8c48f, #c9955a);
+  background-size: 100% 100%, 2.2em 2.2em, 100% 100%; background-position: 0 0, .4em 50%, 0 0; background-repeat: no-repeat;
+  text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(0, 0, 0, .4);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(124, 58, 237, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(167, 139, 250, .45); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-bowling:hover { filter: brightness(1.08); }
+/* Rock Smash (idée de HSI, 2026-10-25) : une dalle de granit moucheté, une fissure ambre qui luit. */
+.btn-roll.gen-rocksmash { border: 2px solid #292524; border-radius: .7em .5em .8em .45em; color: #fef3c7;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .35) 0 1px, transparent 2px) 0 0 / .5em .45em, linear-gradient(115deg, transparent 47%, rgba(245, 158, 11, .7) 48.5%, transparent 50.5%), linear-gradient(160deg, #a8a29e, #78716c 55%, #57534e);
+  text-shadow: 0 0 .3em #f59e0b, 0 1px 0 #292524;
+  --gs: 0 .3em 0 #292524, 0 .5em 1em rgba(0, 0, 0, .35); --gs-h: 0 .34em 0 #292524, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #292524; }
+.btn-roll.gen-rocksmash:hover { filter: brightness(1.08); }
+/* Cracked Screen (idée de KMC, 2026-10-25) : une vitre noire bleutée, une fissure en étoile dans un coin. */
+.btn-roll.gen-cracked { border: 2px solid #3f3f46; border-radius: .8em; color: #f8fafc;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g fill='none' stroke='%23e0f2fe' stroke-opacity='.6' stroke-width='.8'><path d='M30 10L22 2M30 10L40 6M30 10L38 22M30 10L24 20L14 24M30 10L18 12'/></g></svg>") 100% 0 / 2.4em 2.4em no-repeat, linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .1) 45%, transparent 55%), radial-gradient(ellipse at 50% 50%, #0b1730, #020409);
+  text-shadow: -.04em 0 rgba(239, 68, 68, .7), .04em 0 rgba(34, 211, 238, .7);
+  --gs: 0 .3em 0 #18181b, 0 .5em 1em rgba(56, 189, 248, .25); --gs-h: 0 .34em 0 #18181b, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #18181b; }
+.btn-roll.gen-cracked:hover { filter: brightness(1.12); }
+/* Medieval Castle (idée de BIGBOIJONER69, 2026-10-25) : un bloc de rempart, des créneaux en haut, texte doré. */
+.btn-roll.gen-castle { border: 2px solid #292524; border-radius: .3em; color: #fde68a;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><path d='M0 10V0H7V5H13V0H20V10Z' fill='%23a8a29e'/></svg>") 0 0 / 1.4em .45em repeat-x, repeating-linear-gradient(180deg, transparent 0 .7em, rgba(28, 25, 23, .5) .7em .76em), linear-gradient(180deg, #78716c, #57534e);
+  padding-top: .5em; text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(251, 191, 36, .5);
+  --gs: 0 .3em 0 #292524, 0 .5em 1em rgba(202, 138, 4, .25); --gs-h: 0 .34em 0 #292524, 0 .7em 1.3em rgba(251, 191, 36, .4); --gs-a: 0 .06em 0 #292524; }
+.btn-roll.gen-castle:hover { filter: brightness(1.1); }
+/* Chocolate (idée de finnnnn, 2026-10-25) : des carrés de chocolat au lait biseautés, papier doré aux bouts. */
+.btn-roll.gen-chocolate { border: 2px solid #2a1408; border-radius: .45em; color: #fde68a;
+  background: linear-gradient(90deg, #ca8a04, #fef3c7 40%, #b45309) 0 0 / .45em 100% no-repeat, linear-gradient(90deg, #b45309, #fef3c7 60%, #ca8a04) 100% 0 / .45em 100% no-repeat, linear-gradient(90deg, rgba(42, 20, 8, .7) .08em, transparent .08em) 0 0 / 1.6em 100%, linear-gradient(145deg, #a0592c, #7b3f1c 55%, #5e2e12);
+  text-shadow: 0 1px 0 #2a1408;
+  --gs: 0 .3em 0 #2a1408, 0 .5em 1em rgba(123, 63, 28, .35); --gs-h: 0 .34em 0 #2a1408, 0 .7em 1.3em rgba(202, 138, 4, .4); --gs-a: 0 .06em 0 #2a1408; }
+.btn-roll.gen-chocolate:hover { filter: brightness(1.08); }
+/* Floppy Fish (idée d'AnnJoe, 2026-10-25) : la mare, une ligne d'eau ondulée, le ciel au-dessus. */
+.btn-roll.gen-fish { border: 2px solid #0c4a6e; border-radius: .8em; color: #fff;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10' preserveAspectRatio='none'><path d='M0 4Q5 0 10 4T20 4T30 4T40 4V10H0Z' fill='%230ea5e9'/><path d='M0 4Q5 0 10 4T20 4T30 4T40 4' fill='none' stroke='%23f0f9ff' stroke-width='1.4'/></svg>") 0 35% / 2em .4em repeat-x, linear-gradient(180deg, #bae6fd 0 42%, #0ea5e9 42%, #0369a1);
+  -webkit-text-stroke: .04em #0c2b45; text-shadow: 0 .06em 0 #0c2b45;
+  --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(14, 165, 233, .35); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
+.btn-roll.gen-fish:hover { filter: brightness(1.08); }
+/* Axe Thrower (idée de jjcoolcid1, 2026-10-25) : des planches sombres, une rondelle de bois cible à gauche. */
+.btn-roll.gen-axeman { border: 2px solid #1c120a; border-radius: .45em; color: #fde68a;
+  background: radial-gradient(circle, #f5deb3 0 15%, #cfa66c 16% 30%, #ecd0a0 31% 50%, #7c4a22 51% 62%, transparent 63%) .3em 50% / 1.6em 1.6em no-repeat, linear-gradient(90deg, rgba(0, 0, 0, .45) 1px, transparent 1px) 0 0 / 1.2em 100%, linear-gradient(180deg, #5a4030, #3a2819);
+  text-shadow: 0 1px 0 #1c120a;
+  --gs: 0 .3em 0 #1c120a, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #1c120a, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #1c120a; }
+.btn-roll.gen-axeman:hover { filter: brightness(1.1); }
+/* Math (idée de sennybex1, 2026-10-25) : un petit tableau vert dans son cadre de bois, texte à la craie. */
+.btn-roll.gen-math { border: .18em solid #7c4a22; border-radius: .35em; color: #f8fafc;
+  background: radial-gradient(ellipse 30% 40% at 25% 40%, rgba(255, 255, 255, .08), transparent 70%), linear-gradient(180deg, #1f4a37, #12301f);
+  text-shadow: .02em .02em 0 rgba(248, 250, 252, .4), 0 0 .2em rgba(248, 250, 252, .4);
+  --gs: 0 .3em 0 #4a2a12, 0 .5em 1em rgba(31, 74, 55, .4); --gs-h: 0 .34em 0 #4a2a12, 0 .7em 1.3em rgba(74, 222, 128, .3); --gs-a: 0 .06em 0 #4a2a12; }
+.btn-roll.gen-math:hover { filter: brightness(1.12); }

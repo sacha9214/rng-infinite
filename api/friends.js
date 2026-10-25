@@ -90,7 +90,7 @@ async function unseenGifts(id) {
   const rows = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(r => r && r.t > (Number(seen) || 0));
   if (!rows.length) return [];
   const [names] = await redis([['HMGET', 'names', ...rows.map(r => r.f)], ['SET', giftSeenKey(id), Math.max(...rows.map(r => r.t)), 'EX', GIFTS_TTL]]);
-  return rows.map((r, i) => ({ name: (names || [])[i] || 'Player', amount: r.a, t: r.t }));
+  return rows.map((r, i) => (r.k === 'top' ? { kind: 'top', place: r.p, month: r.m, amount: r.a, t: r.t } : { name: (names || [])[i] || 'Player', amount: r.a, t: r.t }));
 }
 
 // ---------------------------------------------------------------- messages entre amis (idée d'un joueur, 2026-10-14)
