@@ -932,3 +932,9 @@
   text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(0, 0, 0, .4);
   --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(124, 58, 237, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(167, 139, 250, .45); --gs-a: 0 .06em 0 #78350f; }
 .btn-roll.gen-bowling:hover { filter: brightness(1.08); }
+/* Rock Smash (idée de HSI, 2026-10-25) : une dalle de granit moucheté, une fissure ambre qui luit. */
+.btn-roll.gen-rocksmash { border: 2px solid #292524; border-radius: .7em .5em .8em .45em; color: #fef3c7;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .35) 0 1px, transparent 2px) 0 0 / .5em .45em, linear-gradient(115deg, transparent 47%, rgba(245, 158, 11, .7) 48.5%, transparent 50.5%), linear-gradient(160deg, #a8a29e, #78716c 55%, #57534e);
+  text-shadow: 0 0 .3em #f59e0b, 0 1px 0 #292524;
+  --gs: 0 .3em 0 #292524, 0 .5em 1em rgba(0, 0, 0, .35); --gs-h: 0 .34em 0 #292524, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #292524; }
+.btn-roll.gen-rocksmash:hover { filter: brightness(1.08); }

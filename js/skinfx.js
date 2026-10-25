@@ -2845,6 +2845,63 @@
       },
     };
   };
+  // 🪨 Rock Smash (2026-10-25, idée de HSI) — à chaque chiffre posé, un poing de dessin animé tombe d'en haut sur le
+  // rocher (traits de vitesse), le frappe, reste un instant puis remonte ; éclats de pierre et poussière jaillissent. Le
+  // dernier coup est plus gros. À la révélation, un grand poing frappe le milieu de la carte : onde de choc, pluie de
+  // cailloux, poussière, qui grandissent avec la rareté (deux poings dès Mythic) ; tirage raté : un petit caillou roule.
+  SCENES.rocksmash = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const fists = timed(), shards = particles(), dust = particles(), waves = timed();
+    const STONE = ['#a8a29e', '#78716c', '#57534e', '#d6d3d1'], DUST = dark ? '#a8a29e' : '#78716c';
+    // le poing, vu de face, phalanges vers le bas, au bout d'une manche qui vient du haut
+    const fist = (x, y, s, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y);
+      co.fillStyle = '#dc2626'; co.strokeStyle = '#450a0a'; co.lineWidth = Math.max(1, s * .06);
+      co.fillRect(-s * .5, -s * 3, s, s * 2.15); co.strokeRect(-s * .5, -s * 3, s, s * 2.15); // la manche
+      co.fillStyle = '#fbbf24'; co.fillRect(-s * .46, -s * 1.02, s * .92, s * .2); // le poignet de la manche
+      co.fillStyle = '#f2c29b'; co.strokeStyle = '#7c2d12';
+      roundRect(co, -s * .55, -s * .85, s * 1.1, s * .95, s * .22); co.fill(); co.stroke();
+      for (let i = 0; i < 4; i++) { co.beginPath(); co.ellipse(-s * .41 + i * s * .275, s * .08, s * .15, s * .13, 0, 0, TAU); co.fill(); co.stroke(); } // phalanges
+      co.beginPath(); co.moveTo(-s * .5, -s * .35); co.quadraticCurveTo(-s * .05, -s * .25, s * .25, -s * .42); co.stroke(); // le pouce
+      co.restore();
+    };
+    const smash = (x, y, s) => {
+      waves.add({ x, y, r: card.h * (.3 + .5 * s), life: .45 });
+      for (let i = Math.round((7 + 14 * s) * q); i > 0; i--) { const a = rnd(-Math.PI, 0), v = card.h * rnd(2, 4.5 + 4 * s); shards.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 13, drag: .3, max: rnd(.5, .9), size: card.h * rnd(.03, .06) * (1 + s * .4), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(STONE) }); }
+      for (let i = Math.round((3 + 5 * s) * q); i > 0; i--) dust.add({ x: x + rnd(-1, 1) * card.h * .2, y, vx: rnd(-1, 1) * card.h * .6, vy: -card.h * rnd(.2, .6), drag: 1.5, g: 0, max: rnd(.8, 1.4), size: card.h * rnd(.12, .2) * (1 + s * .5) });
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        dust.step(dt); shards.step(dt);
+        behind(env, () => dust.each((d, k) => dot(co, DUST, d.x, d.y, d.size * (1 + k), Math.sin(Math.PI * k) * (dark ? .35 : .45))));
+        // le poing : il tombe (k < .2), frappe, reste, remonte et s'efface
+        fists.run(dt, (f, k) => {
+          const fall = k < .2 ? 1 - Math.pow(k / .2, 2) : k < .5 ? 0 : outCubic((k - .5) / .5) * .8, y = f.y - fall * card.h * 1.6, a = k < .1 ? k * 10 : k > .7 ? (1 - k) / .3 : 1;
+          if (k < .22) for (let i = -1; i <= 1; i++) line(co, dark ? '#e7e5e4' : '#57534e', f.x + i * f.s * .35, y - f.s * 1.2, f.x + i * f.s * .35, y - f.s * 2.2, 1.5, .5 * a); // traits de vitesse
+          fist(f.x, y - f.s * .1, f.s, a);
+          if (!f.hit && k >= .2) { f.hit = true; smash(f.x, f.y, f.p); }
+        });
+        waves.run(dt, (w, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#fbbf24' : '#b45309'; co.lineWidth = 2.5 * (1 - k) + .5; co.beginPath(); co.ellipse(w.x, w.y, w.r * (.3 + k), w.r * (.3 + k) * .35, 0, 0, TAU); co.stroke(); });
+        shards.each((p, k) => { co.save(); co.globalAlpha = 1 - k * k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.fillStyle = p.c; SHAPES.shard(co, p, p.size); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        // le poing touche le haut du rocher quand le chiffre se pose (la CSS frappe à 24 % de ses 0,5 s)
+        fists.add({ x: p.x, y: p.y - card.h * .22, s: card.h * (o.last ? .55 : .42), p: o.last ? .9 : .45, life: .55 });
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { shards.add({ x: cx, y: card.y + card.h, vx: card.h * .8, vy: -card.h * .5, g: card.h * 6, drag: .5, max: 1.2, size: card.h * .05, rot: 0, spin: 6, c: STONE[1] }); return; } // un caillou roule
+        fists.add({ x: cx, y: card.y + card.h * .05, s: card.h * (.5 + .35 * p), p: .6 + p, life: .7 });
+        if (p >= 1) for (let i = 0; i < 2; i++) fists.add({ delay: .25 + i * .15, x: cx + (i ? 1 : -1) * card.w * .36, y: card.y + card.h * .1, s: card.h * .45, p: 1, life: .6 });
+        for (let i = Math.round((4 + 26 * p) * q); i > 0; i--) shards.add({ x: rnd(card.x - 80, card.x + card.w + 80), y: card.y - card.h * rnd(.8, 1.6), vx: rnd(-10, 10), vy: rnd(0, 60), g: card.h * 8, drag: 0, max: rnd(.8, 1.4), size: card.h * rnd(.03, .07), rot: rnd(TAU), spin: rnd(-8, 8), c: pick(STONE) });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
