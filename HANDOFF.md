@@ -71,7 +71,7 @@ The id in brackets is the suggestion id on the Owner page. One idea = one branch
 - Shiny Diamond (finnnnn [719ff8538e67]), Chocolate (finnnnn [89626248c340]), Coins/Money (finnnnn [2457889a6d20]).
 - Supernova: neon blue/purple with shockwaves (jjcoolcid1 [0f487aa749b5]).
 - Floppy Fish: a goofy fish jumps per digit, a giant fish on Mythic+ (AnnJoe [47b7afc07c18]).
-- Greek: roman numerals spinning on a pillar (kaz [b1ba92122752]); Scroll of Alchemy (R77 [16886be362f8]); DNA helix (R77 [4b77fa49c03e]); Fairy dust (R77 [d5a4ac437aae]).
+- Greek: roman numerals spinning on a pillar (kaz [b1ba92122752]); Scroll of Alchemy (R77 [16886be362f8]); DNA helix (R77 [4b77fa49c03e]); Fairy dust (R77 [d5a4ac437aae]). ✅ Fairy dust done on `claude/fairydust-skin` (not merged yet).
 - Construction crane (yukitsunodaiscool [f727644461a7]), Mini golf (Kj13 [f42cca32bbe2]), Origami / Graffiti (JBearr12 [80a769fdea4c]), Beach, Safari, Space (dylanbuckleyisjewish).
 - Elemental legendary (rock → ice → fire → wind as digits land) (kaz [c51ae4e06e9d], [e680a2e9f98e]).
 
