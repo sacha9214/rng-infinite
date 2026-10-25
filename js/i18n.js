@@ -326,7 +326,7 @@
     'No message yet. Say hi! 👋': 'Aucun message pour l\'instant. Dis bonjour ! 👋', 'Message options': 'Options du message', 'Options': 'Options',
     '🚩 Report': '🚩 Signaler', '🗑️ Delete': '🗑️ Supprimer', '🔇 1 h': '🔇 1 h', '🔇 24 h': '🔇 24 h', '⛔ Forever': '⛔ Pour toujours',
     'Write a message': 'Écris un message', '⚙️ Link Google': '⚙️ Associer Google',
-    'Pick a player name, link a Google account and make 100 rolls to write here.': 'Choisis un pseudo, associe un compte Google et fais 100 tirages pour écrire ici.',
+    'Pick a player name and make 100 rolls to write here.': 'Choisis un pseudo et fais 100 tirages pour écrire ici.',
     '🔇 You can no longer write in the chat.': '🔇 Tu ne peux plus écrire dans le chat.',
     'Delete this message?': 'Supprimer ce message ?', 'Mute this player and delete the message?': 'Rendre ce joueur muet et supprimer le message ?',
     'Already reported': 'Déjà signalé', 'Reported: thank you!': 'Signalé : merci !', 'Message deleted': 'Message supprimé', 'Player muted': 'Joueur rendu muet',
