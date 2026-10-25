@@ -74,7 +74,8 @@ async function meInfo(id, stats) {
   const [google, mute] = await redis([['GET', `player:${id}:google`], ['GET', `gc:mute:${id}`]]);
   const rolls = Number(stats.rolls) || 0, owner = Number(stats.owner) >= 1, mod = owner || stats.gcMod === '1';
   const mutedUntil = mute ? Number(mute) : 0;
-  const reason = mutedUntil ? 'muted' : !google ? 'google' : rolls < MIN_ROLLS ? 'rolls' : null;
+  // Sacha (2026-10-25) : plus besoin de compte Google, seulement 100 tirages.
+  const reason = mutedUntil ? 'muted' : rolls < MIN_ROLLS ? 'rolls' : null;
   return { can: !reason, reason, rolls, need: MIN_ROLLS, google: !!google, mutedUntil, mod, owner };
 }
 
@@ -94,7 +95,6 @@ async function list(body, me, stats) {
 async function post(me, stats, raw) {
   const info = await meInfo(me, stats);
   if (info.reason === 'muted') throw refuse(403, info.mutedUntil < 0 ? 'You can no longer write in the chat' : 'You are muted for now');
-  if (info.reason === 'google') throw refuse(403, 'Link a Google account to write in the chat');
   if (info.reason === 'rolls') throw refuse(403, `Make ${MIN_ROLLS} rolls to write in the chat (you have ${info.rolls})`);
   const text = checkMessage(raw);
   const [ok] = await redis([['SET', `gc:rl:${me}`, '1', 'PX', GAP_MS, 'NX']]);

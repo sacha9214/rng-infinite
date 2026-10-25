@@ -3819,8 +3819,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(run([['GET', `player:${'7e1d'.repeat(4)}:secret`]])[0].result, null, 'lire ne crée aucun joueur');
   assert.equal((await call(friendsApi, { method: 'POST', body: { action: 'gcSend', text: 'hi', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } })).status, 403);
   // Éligibilité : Google + 100 tirages, expliqué au joueur.
-  r = await gc(anon, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason], [false, 'google']);
-  r = await gc(anon, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /Google/);
+  r = await gc(anon, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason], [true, null], 'plus besoin de Google');
   r = await gc(newbie, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason, r.body.me.rolls, r.body.me.need], [false, 'rolls', 99, 100]);
   r = await gc(newbie, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /100 rolls/);
   r = await gc(kid, 'gcSend', { text: 'Hello <b>everyone</b>!' }); assert.equal(r.status, 200, JSON.stringify(r.body));
