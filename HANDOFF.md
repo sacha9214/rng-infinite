@@ -37,6 +37,12 @@ Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one
   delete and mute (1 h / 24 h / forever); the Chat tab lists mutes with Unmute (owner only). Polls every 3 s only while
   the panel is open and the tab visible (`same: true` when nothing changed). Decision: changing page closes the panel.
   Not done: clan tags (no `clanTag` helper exists yet); the filter is a list, so moderators remain necessary.
+- **Economy (2026-10-25, branch `claude/economy`, not merged)**: Weekend Rush is +25% (was x2); roll coins have daily
+  diminishing returns (rolls 1-500 full, 501-2,000 50%, then 20%; counter `rc:<day>:<id>`, withheld part in
+  `stats.rollCut`, subtracted by `Shop.earned`); renaming costs 5,000 coins (first name free, case-only free; rolls and
+  duels no longer rename); Shop > Prestige tab (Tycoon 25k x200, Magnate 60k x100, Coin Emperor 150k x25, hidden
+  achievements from `pr:<id>`, stock in `prestige:sold`); Owner > Economy: total supply (SCAN `stats:*`, cached 10 min
+  in `eco:supply`), top-1% share, casino net per day.
 
 ## To do, by priority
 

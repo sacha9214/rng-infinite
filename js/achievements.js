@@ -78,6 +78,10 @@
     // Donné à la main par le créateur à un joueur qui l'aide à trier les idées de la boîte à idées (2026-10-14).
     { id: 'ideas', emoji: '💡', title: 'Idea Manager', desc: 'Helps sort the ideas box', hidden: true, test: st => num(st.ideaManager) >= 1 },
     { id: 'manager', emoji: '🖥️', title: 'Manager', desc: 'Helps run RNG∞', hidden: true, test: st => num(st.manager) >= 1 || /^[0-9a-f]{64}$/.test(String(st.viewer || '')) },
+    // Titres de prestige (Sacha, 2026-10-25) : achetés dans la boutique (js/shop.js PRESTIGE), en quantité limitée.
+    { id: 'tycoon', emoji: '🎩', title: 'Tycoon', desc: 'Bought in the Prestige shop', hidden: true, test: st => num(st['pr:tycoon']) >= 1 },
+    { id: 'magnate', emoji: '💼', title: 'Magnate', desc: 'Bought in the Prestige shop', hidden: true, test: st => num(st['pr:magnate']) >= 1 },
+    { id: 'emperor', emoji: '👑', title: 'Coin Emperor', desc: 'Bought in the Prestige shop', hidden: true, test: st => num(st['pr:emperor']) >= 1 },
   ];
   const byId = new Map(LIST.map(a => [a.id, a]));
 

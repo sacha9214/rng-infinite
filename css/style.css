@@ -4380,6 +4380,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .r-coins i { font: 700 .7rem var(--font-sans); font-style: normal; color: #ea580c; margin-left: .2rem; }
 .dark .r-coins i, :root[data-theme="dark"] .r-coins i { color: #fb923c; }
 .r-coins[hidden] { display: none; }
+/* taux des pièces de tirage du jour (rendements décroissants, 2026-10-25) : discret, détail dans l'infobulle */
+.r-coins .r-rate { font: 600 .66rem var(--font-sans); font-style: normal; opacity: .7; margin-left: .35rem; cursor: help; border-bottom: 1px dotted currentColor; }
 .dark .r-coins, :root[data-theme="dark"] .r-coins { color: #fde047; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dup-tag { color: #67e8f9; } }
 .dup-tag[hidden] { display: none; }
@@ -6675,3 +6677,11 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @media (max-width: 900px) {
   .gc-panel { left: 0; right: 0; bottom: 0; width: auto; height: min(78vh, 600px); height: min(78dvh, 600px); border-radius: 16px 16px 0 0; border-bottom: 0; }
 }
+/* Prestige (2026-10-25) : titres de luxe achetés dans la boutique, en stock limité */
+.title-fx.tt-tycoon { --owner-a: #065f46 !important; --owner-b: #10b981 !important; --owner-shine: #d1fae5 !important; }
+.title-fx.tt-magnate { --owner-a: #1e3a8a !important; --owner-b: #6366f1 !important; --owner-shine: #e0e7ff !important; }
+.title-fx.tt-emperor { --owner-a: #92400e !important; --owner-b: #f59e0b !important; --owner-shine: #fef3c7 !important; }
+.pr-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); }
+.pr-tile { text-align: center; }
+.pr-badge { font-size: 2.4rem; line-height: 1; margin: .4rem 0 .2rem; filter: drop-shadow(0 4px 10px rgba(245, 158, 11, .35)); }
+.pr-left { display: block; font: 700 .72rem var(--font-sans); color: var(--prose-2); margin: .1rem 0 .4rem; }

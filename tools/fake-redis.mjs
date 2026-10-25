@@ -48,6 +48,8 @@ export function fakeRedis() {
     HGETALL: k => (db.has(k) ? [...db.get(k).entries()].flat() : []),
     HVALS: k => (db.has(k) ? [...db.get(k).values()] : []),
     HKEYS: k => (db.has(k) ? [...db.get(k).keys()] : []),
+    // SCAN : tout en un seul passage (curseur 0 → 0), avec MATCH en motif glob simple (*).
+    SCAN(cursor, ...opts) { const m = opts.indexOf('MATCH'), re = m >= 0 ? new RegExp(`^${opts[m + 1].replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`) : null; return ['0', [...db.keys()].filter(k => alive(k) && (!re || re.test(k)))]; },
     HLEN: k => (db.has(k) ? db.get(k).size : 0),
     HEXISTS: (k, f) => (db.has(k) && db.get(k).has(f) ? 1 : 0),
     HINCRBY(k, f, by) { const h = hash(k), v = Number(h.get(f) || 0) + Number(by); h.set(f, String(v)); return v; },
