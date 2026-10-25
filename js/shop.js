@@ -96,6 +96,7 @@
     { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
     { id: 'bowling', name: 'Bowling', emoji: '🎳', price: 2000, desc: 'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE', idea: 'JBearr12' }, // idée de JBearr12 (2026-10-25)
     { id: 'rocksmash', name: 'Rock Smash', emoji: '🪨', price: 1600, desc: 'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone', idea: 'HSI' }, // idée de HSI (2026-10-25)
+    { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance

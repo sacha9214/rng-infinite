@@ -5747,3 +5747,61 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes rks-rattle { 0%, 76%, 100% { transform: none; } 80% { transform: translateX(-2px) rotate(-6deg); } 88% { transform: translateX(2px) rotate(5deg); } }
 .room-stage.many .side-rocksmash::before, .room-stage.many .side-rocksmash::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-rocksmash::before, .side-rocksmash::after { animation: none; } }
+/* ------------------------------------------------------------------ Cracked Screen (idée de KMC, 2026-10-25) : la vitre
+   d'un téléphone allumé : un écran noir à reflets bleutés, un cadre fin presque noir, un reflet de verre en biais. Les
+   chiffres sont des pixels blancs lumineux avec un léger décalage rouge / cyan. Pendant le tirage l'image bugue (le
+   chiffre saute par tranches, les couleurs se séparent) ; un chiffre qui se pose : il recule (élan), frappe la vitre
+   (flash), une toile de fissures s'étend autour de lui et reste. Éclats de verre et fissures qui s'accumulent :
+   js/skinfx.js. Aucune marque de téléphone. */
+.num-card.skin-cracked {
+  background:
+    /* reflet de verre en biais */
+    linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, .1) 32%, transparent 33%, transparent 60%, rgba(255, 255, 255, .06) 64%, transparent 72%),
+    /* lignes de pixels, très légères */
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 80% 90% at 50% 50%, #0b1730, #050a16 70%, #020409);
+  border: 3px solid #0a0a0a; border-radius: .7rem;
+  box-shadow: 0 0 0 1px #3f3f46, inset 0 0 .6em rgba(59, 130, 246, .2), 0 0 14px rgba(56, 189, 248, .2), 0 10px 18px rgba(0, 0, 0, .5);
+  padding: .3em .5em;
+}
+.skin-cracked .slot { position: relative; z-index: 1; color: #f8fafc;
+  text-shadow: -.035em 0 rgba(239, 68, 68, .7), .035em 0 rgba(34, 211, 238, .7), 0 0 .25em rgba(147, 197, 253, .7); }
+/* l'écran est déjà fêlé au repos : une étoile de fissures dans le coin en haut à droite */
+.num-card.skin-cracked::before { content: ''; position: absolute; right: -.1em; top: -.1em; width: 1.3em; height: 1.1em; z-index: 0; pointer-events: none; opacity: .55;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 50'><g fill='none' stroke='%23e0f2fe' stroke-linejoin='round' stroke-width='1'><path d='M44 14L30 2M44 14L60 8M44 14L56 30M44 14L36 26L20 32L4 48M44 14L26 16L10 12M36 26L40 44'/><path d='M38 8L50 10L52 20L42 22L36 17Z' stroke-opacity='.7'/></g></svg>") 0 0 / 100% 100% no-repeat; }
+/* la toile de fissures autour du chiffre posé (derrière lui) : rayons et anneaux brisés, fins et clairs */
+.skin-cracked .slot.revealed::before { content: ''; position: absolute; left: 50%; top: 50%; width: 1.6em; height: 1.6em; margin: -.8em 0 0 -.8em; z-index: -1; pointer-events: none; opacity: .6;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'><g fill='none' stroke='%23e0f2fe' stroke-linejoin='round' stroke-linecap='round'><path d='M0 0L9 -21L13 -48M0 0L24 -8L49 -14M0 0L18 17L38 44M0 0L-4 23L-9 49M0 0L-21 10L-47 19M0 0L-15 -16L-35 -40M24 -8L36 7M-21 10L-30 -6' stroke-width='1.3' stroke-opacity='.75'/><path d='M7 -16L18 -6L13 13L-3 17L-15 8L-12 -11Z' stroke-width='.9' stroke-opacity='.55'/><path d='M11 -34L35 -11L29 30L-6 36L-33 14L-25 -27Z' stroke-width='.7' stroke-opacity='.35'/></g><circle r='3' fill='%23e0f2fe' fill-opacity='.45'/></svg>") 50% 50% / 100% 100% no-repeat;
+  animation: crk-web .3s steps(3) backwards; }
+@keyframes crk-web { 0% { transform: scale(.2) rotate(-8deg); } 100% { transform: scale(1); } }
+.skin-cracked .slot.ghost { opacity: .18; }
+.skin-cracked .slot.ghost::before { display: none; }
+/* Pendant le tirage : l'image bugue par tranches, les couleurs se séparent. */
+.skin-cracked .slot.spinning { opacity: .9; animation: crk-glitch .18s steps(1) infinite; }
+.skin-cracked .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes crk-glitch {
+  0% { transform: translateX(-.04em); clip-path: inset(0 0 55% 0); text-shadow: -.09em 0 #ef4444, .09em 0 #22d3ee; }
+  33% { transform: translateX(.05em); clip-path: inset(35% 0 0 0); text-shadow: .07em 0 #ef4444, -.07em 0 #22d3ee; }
+  66% { transform: translateX(-.02em) skewX(-8deg); clip-path: inset(15% 0 20% 0); text-shadow: -.05em 0 #ef4444, .05em 0 #22d3ee; }
+}
+/* La frappe : il recule (élan), cogne la vitre (flash, couleurs séparées), tremble, se fige net. */
+.skin-cracked .slot.revealed { animation: crk-hit .5s backwards; }
+@keyframes crk-hit {
+  0% { transform: scale(.82); filter: brightness(.6); animation-timing-function: ease-in; }
+  18% { transform: scale(1.22); filter: brightness(2.4); text-shadow: -.12em 0 #ef4444, .12em 0 #22d3ee, 0 0 .5em #fff; animation-timing-function: steps(1); }
+  30% { transform: translateX(.05em) scale(1.05); }
+  40% { transform: translateX(-.04em); filter: brightness(1.3); }
+  52% { transform: translateX(.02em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cracked .slot, .skin-cracked .slot::before { animation: none; } }
+/* Cadre de duel : la nuit derrière un écran bleuté, des lignes de pixels ; 📱 vibre, 💥 claque. */
+.side-cracked { --side-border: #38bdf8; --side-glow: 0 0 16px rgba(56, 189, 248, .3); --side-ink: #0369a1;
+  --side-bg: repeating-linear-gradient(180deg, rgba(56, 189, 248, .05) 0 2px, transparent 2px 5px), radial-gradient(ellipse 70% 60% at 50% 45%, rgba(37, 99, 235, .16), transparent 70%), linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .06) 50%, transparent 60%);
+  --deco-a: '📱'; --deco-b: '💥'; }
+.side-cracked::before { animation: crk-buzz 1.8s steps(2) infinite; }
+.side-cracked::after { animation: crk-pop 1.8s ease-out infinite; }
+@keyframes crk-buzz { 0%, 70%, 100% { transform: none; } 75% { transform: translateX(-2px) rotate(-4deg); } 85% { transform: translateX(2px) rotate(4deg); } }
+@keyframes crk-pop { 0%, 60%, 100% { transform: scale(1); opacity: .8; } 70% { transform: scale(1.3); opacity: 1; } }
+.room-stage.many .side-cracked::before, .room-stage.many .side-cracked::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cracked::before, .side-cracked::after { animation: none; } }

@@ -2902,6 +2902,61 @@
       },
     };
   };
+  // 📱 Cracked Screen (2026-10-25, idée de KMC) — chaque chiffre qui se pose frappe la vitre : flash blanc au point
+  // d'impact, éclats de verre qui sautent hors de l'écran, et des fissures en éclair qui partent du chiffre dans la vitre
+  // (dans la carte, sous les chiffres) et restent : l'écran est de plus en plus cassé. À la révélation, un gros impact
+  // au centre ; dès Epic des bandes de pixels qui bugent ; dès Mythic l'écran vole en éclats (fissures partout, pluie
+  // de verre). Tirage raté : l'écran clignote et s'éteint un instant.
+  SCENES.cracked = env => {
+    const { co, ci, card, w, h, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const cracks = [], glass = particles(), flashes = timed(), bars = timed(), blinks = timed();
+    // une fissure : un trait brisé de (x, y) dans une direction, avec une branche ; coordonnées de la carte (ci)
+    const crack = (x, y, len, delay) => {
+      const a = rnd(TAU), pts = [[x, y]]; let px = x, py = y, ang = a;
+      for (let i = 0; i < 5; i++) { ang += rnd(-.5, .5); px += Math.cos(ang) * len / 5; py += Math.sin(ang) * len / 5; pts.push([px, py]); }
+      cracks.push({ pts, t: -delay, br: 1 + ((Math.random() * 3) | 0) });
+    };
+    const impact = (gx, gy, s, n) => {
+      flashes.add({ x: gx, y: gy, r: card.h * (.35 + .6 * s), life: .25 });
+      for (let i = 0; i < n; i++) crack(gx - card.x, gy - card.y, card.h * rnd(.4, .8) * (1 + s), i * .02);
+      for (let i = Math.round((6 + 14 * s) * q); i > 0; i--) { const a = rnd(TAU), v = card.h * rnd(1.5, 4 + 4 * s); glass.add({ x: gx, y: gy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - card.h, g: card.h * 10, drag: .4, max: rnd(.5, 1), size: card.h * rnd(.025, .055), rot: rnd(TAU), spin: rnd(-12, 12) }); }
+    };
+    return {
+      frame(t, dt) {
+        // les fissures, dans la vitre : elles se tracent en .12 s puis restent
+        ci.globalCompositeOperation = 'source-over'; ci.lineJoin = 'round';
+        for (const c of cracks) {
+          c.t += dt; if (c.t <= 0) continue;
+          const k = clamp(c.t / .12), n = Math.max(1, Math.round(k * (c.pts.length - 1)));
+          ci.globalAlpha = .4; ci.strokeStyle = '#e0f2fe'; ci.lineWidth = 1.1;
+          ci.beginPath(); ci.moveTo(c.pts[0][0], c.pts[0][1]); for (let i = 1; i <= n; i++) ci.lineTo(c.pts[i][0], c.pts[i][1]); ci.stroke();
+          if (n >= c.br + 1) { const [bx, by] = c.pts[c.br], [nx, ny] = c.pts[c.br + 1]; ci.globalAlpha = .35; ci.beginPath(); ci.moveTo(bx, by); ci.lineTo(bx + (ny - by) * .8, by - (nx - bx) * .8); ci.stroke(); }
+        }
+        bars.run(dt, (b, k) => { if (Math.sin(t * 60 + b.y) > 0) { ci.globalAlpha = .35 * (1 - k); ci.fillStyle = b.c; ci.fillRect(0, b.y, w, b.hh); } });
+        blinks.run(dt, (b, k) => { ci.globalAlpha = (k < .5 ? k * 2 : (1 - k) * 2) * .85; ci.fillStyle = '#000'; ci.fillRect(0, 0, w, h); });
+        // dehors : flash d'impact et éclats de verre
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        flashes.run(dt, (f, k) => dot(co, dark ? '#e0f2fe' : '#38bdf8', f.x, f.y, f.r * (.6 + k), (1 - k) * .8));
+        co.globalCompositeOperation = 'source-over';
+        glass.step(dt);
+        glass.each((p, k) => { co.save(); co.globalAlpha = (1 - k) * .9; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.fillStyle = dark ? 'rgba(224,242,254,.8)' : 'rgba(14,116,144,.7)'; co.strokeStyle = dark ? '#fff' : '#0e7490'; co.lineWidth = .7; co.beginPath(); co.moveTo(0, -p.size * 1.4); co.lineTo(p.size, p.size * .6); co.lineTo(-p.size * .8, p.size); co.closePath(); co.fill(); co.stroke(); co.restore(); });
+        ci.globalAlpha = co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; impact(p.x, p.y, o.last ? .8 : .35, o.last ? 3 : 1); },
+      build() {},
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        if (!P) { blinks.add({ life: .35 }); return; }
+        impact(cx, cy, .5 + .8 * P, 3 + Math.round(4 * P));
+        if (P >= .6) for (let i = Math.round(4 + 6 * P); i > 0; i--) bars.add({ delay: rnd(0, .5), y: rnd(0, h), hh: rnd(2, 7), c: pick(['#ef4444', '#22d3ee', '#a3e635', '#f0abfc']), life: rnd(.3, .7) });
+        if (P >= 1) { // l'écran vole en éclats
+          for (let i = 0; i < 6; i++) setTimeout(() => impact(card.x + card.w * (.1 + .16 * i), card.y + card.h * rnd(.2, .8), .5, 2), 120 + i * 60);
+          for (let i = Math.round(40 * q); i > 0; i--) glass.add({ x: rnd(card.x - 60, card.x + card.w + 60), y: card.y - rnd(20, 120), vx: rnd(-20, 20), vy: rnd(0, 80), g: card.h * 6, drag: 0, max: rnd(1, 1.6), size: card.h * rnd(.03, .06), rot: rnd(TAU), spin: rnd(-8, 8) });
+        }
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
