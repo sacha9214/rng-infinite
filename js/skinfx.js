@@ -3415,6 +3415,52 @@
     };
   };
 
+  // 💵 Money (2026-10-25, idées de JBearr12 et finnnnn) — chaque chiffre tamponné fait sauter des pièces ; à la
+  // révélation, une pluie de pièces qui grossit avec la rareté ; dès Mythic, l'or des chiffres fond : des coulures
+  // dorées descendent sous chaque chiffre et gouttent sous le billet. Tirage raté : une seule pièce qui roule.
+  SCENES.money = custom(pieces({ cols: ['#fbbf24', '#f59e0b', '#fde68a'], shapes: ['coin', 'coin', 'spark'], size: [3, 5.5], g: 760, spin: 0, up: true, glowc: '#fbbf24', ring: '#ca8a04', drift: { rate: .8, from: 'around' } }), (env, { st }) => {
+    const { co, card, q, dark, el } = env, rain = particles(), emit = emitter(), drips = timed(), drops = particles();
+    const EDGE = dark ? 'rgba(92,61,7,.7)' : 'rgba(92,61,7,.9)';
+    // centres des chiffres non fantômes, pour les coulures (dans le repère du calque extérieur)
+    const digitXs = () => {
+      const slots = el ? [...el.querySelectorAll('.slot:not(.ghost):not(.collapsed)')] : [];
+      if (!slots.length) return Array.from({ length: 6 }, (_, i) => card.x + card.w * (.28 + i * .088));
+      const b = el.getBoundingClientRect(), k = card.w / (b.width || 1);
+      return slots.map(s => { const r = s.getBoundingClientRect(); return card.x + (r.left + r.width / 2 - b.left) * k; });
+    };
+    return {
+      frame(t, dt) {
+        if (st.revealed && st.since < .6 + 2.2 * st.p) for (let n = emit(70 * st.p * q, dt); n > 0; n--) rain.add({ x: rnd(card.x - card.w * .4, card.x + card.w * 1.4), y: card.y - card.h * rnd(.8, 1.6), vx: rnd(-15, 15), vy: rnd(60, 160), g: 520, max: 1.8, rot: rnd(TAU), s: rnd(4, 7), c: pick(['#fbbf24', '#f59e0b']) });
+        rain.step(dt);
+        co.globalCompositeOperation = 'source-over';
+        rain.each((p, k) => { co.save(); co.translate(p.x, p.y); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = p.c; SHAPES.coin(co, p, p.s); co.restore(); });
+        // l'or qui fond : une coulure par chiffre, du bas du chiffre vers le bas du billet puis au-delà, avec une goutte au bout
+        drips.run(dt, (d, k) => {
+          const grow = outCubic(Math.min(1, k / .55)), fade = k < .8 ? 1 : (1 - k) / .2, y0 = card.y + card.h * .8, len = d.len * grow;
+          co.globalAlpha = fade; co.lineCap = 'round';
+          const g = co.createLinearGradient(0, y0, 0, y0 + len);
+          g.addColorStop(0, '#fde68a'); g.addColorStop(.5, '#f59e0b'); g.addColorStop(1, '#b45309');
+          co.strokeStyle = EDGE; co.lineWidth = d.w + 2; co.beginPath(); co.moveTo(d.x, y0); co.lineTo(d.x, y0 + len); co.stroke();
+          co.strokeStyle = g; co.lineWidth = d.w; co.beginPath(); co.moveTo(d.x, y0); co.lineTo(d.x, y0 + len); co.stroke();
+          co.fillStyle = '#d97706'; co.beginPath(); co.arc(d.x, y0 + len, d.w * .85, 0, TAU); co.fill();
+          co.fillStyle = 'rgba(255,247,194,.85)'; co.beginPath(); co.arc(d.x - d.w * .25, y0 + len - d.w * .25, d.w * .25, 0, TAU); co.fill();
+          if (!d.fell && k > .55) { d.fell = true; drops.add({ x: d.x, y: y0 + len, vx: 0, vy: 30, g: 600, max: .3, w: d.w * .8 }); }
+        });
+        drops.step(dt);
+        drops.each((p, k) => { co.globalAlpha = 1 - k; co.fillStyle = '#f59e0b'; co.beginPath(); co.ellipse(p.x, p.y, p.w * .7, p.w * 1.1, 0, 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+      },
+      lock() {},
+      reveal(tier, p) {
+        if (!p) { rain.add({ x: card.x + card.w * .5, y: card.y - card.h * .4, vx: rnd(-20, 20), vy: 40, g: 520, max: 1.2, rot: 0, s: 5, c: '#fbbf24' }); return; }
+        if (p >= 1) {
+          const extra = ASCEND[tier] || 0;
+          digitXs().forEach((x, i) => drips.add({ delay: .2 + i * .09 + rnd(0, .12), life: 3 + extra * .5, x: x + rnd(-2, 2), w: card.h * rnd(.06, .09), len: card.h * rnd(.22, .4) * (1 + .1 * extra) }));
+        }
+      },
+    };
+  });
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
