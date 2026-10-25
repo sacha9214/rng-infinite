@@ -1673,6 +1673,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-wp-bubbles', date: 'Oct 25, 2026', en: ['🫧 New wallpaper ASMR Bubbles (1,000 coins): shiny bubbles float up behind the game, and you can pop them with a click on the background, with a soft pop sound (idea by kingston)'], fr: ['🫧 Nouveau fond Bulles ASMR (1 000 pièces) : des bulles irisées montent derrière le jeu, et tu peux les éclater d\'un clic sur le fond, avec un petit « pop » (idée de kingston)'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
     { id: '2026-10-24-infinity-rework', date: 'Oct 24, 2026', en: ['♾️ The Infinity skin was remade to match Singularity: dark space glass with a loop of light running through it, bright white digits that are easy to read, digits pulled around the loop while rolling, and the big ∞ stays visible the whole roll (idea by kaz)'], fr: ['♾️ Le skin Infinity a été refait pour être au niveau de Singularity : du verre spatial sombre traversé par une boucle de lumière, des chiffres blancs bien lisibles, entraînés autour de la boucle pendant le tirage, et le grand ∞ visible pendant tout le tirage (idée de kaz)'] },
@@ -4982,6 +4983,10 @@
       if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
+  // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>' };
+  // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
+  const WALL_REACT = { aether: 4500 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -4989,22 +4994,57 @@
     let layer = document.getElementById('wallpaper');
     if (!id) { if (layer) layer.remove(); document.documentElement.classList.remove('has-wall'); return; }
     if (!layer) { layer = document.createElement('div'); layer.id = 'wallpaper'; layer.setAttribute('aria-hidden', 'true'); document.body.prepend(layer); }
-    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = id === 'aether' ? '<i class="wpi-glow"></i><i class="wpi-spark"></i>' : '';
+    if (!layer.classList.contains(`wp-${id}`)) layer.innerHTML = WALL_LAYERS[id] || '';
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
+    if (id === 'bubbles' && !layer.querySelector('.wpb-b')) wallBubbles(layer);
   }
   // Fond Infinity (idée de Me Cojoni) : à la révélation, le fond prend la couleur de la rareté pendant quelques
   // secondes (data-react), puis se calme. Tout le visuel est en CSS ; ici on ne fait que poser et retirer l'attribut.
   let wallReactTimer = 0;
   function wallReact(tier) {
     const layer = document.getElementById('wallpaper');
-    if (!layer || !layer.classList.contains('wp-aether') || document.hidden) return;
+    const id = layer && Object.keys(WALL_REACT).find(w => layer.classList.contains(`wp-${w}`));
+    if (!id || document.hidden) return;
     clearTimeout(wallReactTimer);
     layer.removeAttribute('data-react');
     void layer.offsetWidth; // relance l'animation même si deux tirages de suite ont la même rareté
     layer.dataset.react = tier;
-    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), 4500);
+    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), WALL_REACT[id]);
   }
+
+  // Bulles ASMR (idée de kingston, 2026-10-24) : des bulles montent derrière le site et éclatent quand on clique dessus.
+  // Le calque garde pointer-events: none : on écoute les clics de la page sans jamais les bloquer (pas de
+  // preventDefault), et une bulle n'éclate que si le clic tombe sur le fond lui-même (body, le vide de #app, ou l'aperçu
+  // plein écran), jamais sur un bouton ou un panneau du jeu.
+  const BUBBLES = 14;
+  function wallBubble(b, delay) {
+    const r = Math.random;
+    b.style.cssText = `--x:${(2 + r() * 92).toFixed(1)}vw;--s:${Math.round(28 + r() * 62)}px;--d:${(14 + r() * 14).toFixed(1)}s;--w:${(2.4 + r() * 2.4).toFixed(1)}s;--dx:${(r() * 8 - 4).toFixed(1)}vw;--y:${Math.round(12 + r() * 76)};animation-delay:${delay.toFixed(1)}s`;
+  }
+  function wallBubbles(layer) {
+    for (let i = 0; i < BUBBLES; i++) { const b = document.createElement('i'); b.className = 'wpb-b'; wallBubble(b, -Math.random() * 28); layer.appendChild(b); }
+  }
+  document.addEventListener('pointerdown', e => {
+    const layer = document.getElementById('wallpaper');
+    if (!layer || !layer.classList.contains('wp-bubbles') || e.button > 0) return;
+    const t = e.target, root = document.documentElement;
+    if (!(t === document.body || t === root || t.id === 'app' || (root.classList.contains('wall-trying') && !t.closest('.wall-try-bar')))) return;
+    const hit = [...layer.querySelectorAll('.wpb-b:not(.gone)')].find(b => {
+      const r = b.getBoundingClientRect(), rad = r.width / 2;
+      return Math.hypot(e.clientX - (r.left + rad), e.clientY - (r.top + r.height / 2)) <= rad + 6;
+    });
+    if (!hit) return;
+    const r = hit.getBoundingClientRect(), pop = document.createElement('i');
+    pop.className = 'wpb-pop';
+    pop.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--s:${r.width}px`;
+    layer.appendChild(pop);
+    setTimeout(() => pop.remove(), 700);
+    hit.classList.add('gone');
+    Sound.play('bubblePop', { k: Math.floor(Math.random() * 6) });
+    // une nouvelle bulle repart du bas un peu plus tard (même élément : le nombre de bulles ne bouge pas)
+    setTimeout(() => { hit.classList.remove('gone'); wallBubble(hit, 0); hit.style.animation = 'none'; void hit.offsetWidth; hit.style.animation = ''; }, 900);
+  });
 
   function drawEmotes(state) {
     const grid = $('#d-emotes');

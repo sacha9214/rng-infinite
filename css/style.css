@@ -3925,6 +3925,44 @@ html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !imp
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
 #wallpaper.wp::before, #wallpaper.wp::after { will-change: transform, opacity; backface-visibility: hidden; }
 
+/* 🫧 Bulles ASMR (idée de kingston, 2026-10-24) : une lumière douce lavande et turquoise, un fin courant de petites
+   bulles (::before, ::after), et sur le vrai fond de grosses bulles irisées (.wpb-b, créées par app.js) qui montent en
+   ondulant. Un clic sur le fond en fait éclater une (.wpb-pop : un anneau et des gouttelettes), avec un petit « pop ».
+   Mouvement réduit / mode performance : les bulles restent posées à leur place, on peut toujours les éclater. */
+.wp-bubbles { background: radial-gradient(ellipse 60% 50% at 20% 20%, rgba(196, 181, 253, .35), transparent 70%), radial-gradient(ellipse 55% 45% at 85% 75%, rgba(94, 234, 212, .25), transparent 70%), linear-gradient(180deg, #1e1b4b 0%, #312e81 45%, #134e4a 100%); }
+.wp-bubbles::before, .wp-bubbles::after { left: 0; right: 0; top: 0; bottom: -320px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='320'><g fill='none' stroke='%23e0f2fe' stroke-width='1.2' opacity='.5'><circle cx='30' cy='290' r='4'/><circle cx='90' cy='200' r='2.5'/><circle cx='150' cy='260' r='5'/><circle cx='210' cy='120' r='3'/><circle cx='250' cy='230' r='2'/><circle cx='60' cy='60' r='3.5'/><circle cx='180' cy='30' r='2.5'/></g></svg>") 0 0 / 280px 320px repeat;
+  animation: wpb-stream 22s linear infinite; }
+.wp-bubbles::after { background-size: 410px 470px; opacity: .6; animation-duration: 34s; }
+@keyframes wpb-stream { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -320px, 0); } }
+/* l'aperçu de la boutique montre aussi deux grosses bulles */
+.wall-preview.wp-bubbles { background-image: radial-gradient(circle at 30% 50%, transparent 0 15px, rgba(196, 181, 253, .6) 16px, rgba(255, 255, 255, .8) 17px, transparent 18px), radial-gradient(circle at 72% 35%, transparent 0 10px, rgba(94, 234, 212, .6) 11px, rgba(255, 255, 255, .8) 12px, transparent 13px), radial-gradient(ellipse 60% 50% at 20% 20%, rgba(196, 181, 253, .35), transparent 70%), radial-gradient(ellipse 55% 45% at 85% 75%, rgba(94, 234, 212, .25), transparent 70%), linear-gradient(180deg, #1e1b4b 0%, #312e81 45%, #134e4a 100%); }
+/* les grosses bulles (vrai fond seulement) */
+#wallpaper .wpb-b { position: absolute; left: var(--x); top: 100%; width: var(--s); height: var(--s); pointer-events: none; will-change: transform;
+  animation: wpb-rise var(--d) linear infinite; }
+#wallpaper .wpb-b::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .95) 0 5%, rgba(255, 255, 255, 0) 13%), radial-gradient(circle at 68% 74%, rgba(255, 255, 255, .35) 0 4%, transparent 9%),
+    radial-gradient(circle, rgba(186, 230, 253, .05) 0 55%, rgba(167, 243, 208, .22) 64%, rgba(196, 181, 253, .45) 69%, rgba(251, 207, 232, .55) 71%, transparent 72%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+  animation: wpb-wobble var(--w) ease-in-out infinite alternate; }
+#wallpaper .wpb-b.gone { visibility: hidden; }
+@keyframes wpb-rise { from { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(var(--dx), -55vh, 0); } to { transform: translate3d(0, calc(-100vh - 100%), 0); } }
+@keyframes wpb-wobble { from { transform: scale(1.04, .96) rotate(-4deg); } to { transform: scale(.96, 1.04) rotate(4deg); } }
+/* l'éclatement */
+#wallpaper .wpb-pop { position: fixed; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); pointer-events: none; }
+#wallpaper .wpb-pop::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .85); animation: wpb-ring .35s ease-out both; }
+#wallpaper .wpb-pop::after { content: ''; position: absolute; inset: -30%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='%23e0f2fe'><circle cx='50' cy='8' r='3'/><circle cx='86' cy='26' r='2.5'/><circle cx='92' cy='62' r='3'/><circle cx='66' cy='92' r='2.4'/><circle cx='26' cy='90' r='3'/><circle cx='8' cy='56' r='2.4'/><circle cx='16' cy='20' r='2.8'/></g></svg>") center / contain no-repeat;
+  animation: wpb-drops .5s ease-out both; }
+@keyframes wpb-ring { from { transform: scale(.9); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+@keyframes wpb-drops { from { transform: scale(.55); opacity: 1; } to { transform: scale(1.15); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  #wallpaper .wpb-b, #wallpaper .wpb-b::before { animation: none !important; }
+  #wallpaper .wpb-b { transform: translate3d(0, calc(var(--y) * -1vh - 100%), 0); }
+  #wallpaper .wpb-pop::after { display: none; } }
+html.perf #wallpaper .wpb-b { transform: translate3d(0, calc(var(--y) * -1vh - 100%), 0); }
+html.perf #wallpaper .wpb-pop::after { display: none; }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
