@@ -526,5 +526,12 @@
     "emoji": "🌤️",
     "score": 25787,
     "family": "JET"
+  },
+  {
+    "id": "ODD_ABUNDANT",
+    "label": "Odd Abundant",
+    "desc": "An odd number smaller than the sum of its divisors (1,996 of them, the first is 945).",
+    "emoji": "🍇",
+    "score": 50100
   }
 ]
