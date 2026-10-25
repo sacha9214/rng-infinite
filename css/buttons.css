@@ -930,6 +930,17 @@
 .btn-roll.gen-greek:hover { animation: gen-grk-glint 1.2s ease-in-out infinite; }
 @keyframes gen-grk-glint { to { background-position: 0 0, 300% 0, 0 0, 0 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-greek:hover { animation: none; } }
+/* Fairy Dust (idée de R77, 2026-10-25) : velours violet semé de paillettes dorées ; au survol, elles scintillent. */
+.btn-roll.gen-fairydust { border: 2px solid #c4b5fd; border-radius: .8em; color: #fff7d6;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><g fill='%23fde68a'><path d='M7 4l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/><path d='M30 12l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/><circle cx='19' cy='8' r='.8'/><circle cx='36' cy='3' r='.6'/><circle cx='13' cy='16' r='.6'/></g></svg>") 0 0 / 2em 1em,
+    radial-gradient(ellipse 70% 80% at 50% 50%, rgba(244, 114, 182, .35), transparent 70%),
+    linear-gradient(160deg, #6d28d9, #4c1d95 55%, #2e1065);
+  text-shadow: 0 1px 0 #3b0764, 0 0 2px #3b0764, 0 0 .5em rgba(253, 224, 71, .7);
+  --gs: 0 .3em 0 #3b0764, 0 .5em 1em rgba(216, 180, 254, .35); --gs-h: 0 .34em 0 #3b0764, 0 .7em 1.4em rgba(253, 224, 71, .45); --gs-a: 0 .06em 0 #3b0764; }
+.btn-roll.gen-fairydust:hover { animation: gen-fdu-glint .9s ease-in-out infinite; }
+@keyframes gen-fdu-glint { 50% { background-position: .2em -.15em, 0 0, 0 0; filter: brightness(1.15); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-fairydust:hover { animation: none; } }
 @keyframes gen-sonic-run { to { background-position: -2.6em 50%, 0 100%, 0 0; } }
 /* UFO (idée de JBearr12, 2026-10-21) : un ciel de nuit, l'herbe en bas, un rayon vert qui descend au milieu. */
 .btn-roll.gen-ufo { border: 2px solid #84cc16; border-radius: 999px; color: #f7fee7;

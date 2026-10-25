@@ -2949,6 +2949,54 @@
     };
   };
 
+  // 🧚 Fairy Dust (2026-10-25, idée de R77) — une petite fée (une lueur dorée et sa traînée de paillettes) tourne autour
+  // de la carte pendant le tirage ; à chaque chiffre, elle donne un coup de baguette : une étoile à quatre branches
+  // s'allume derrière le chiffre et des paillettes en jaillissent (derrière la carte, jamais sur un chiffre). À la
+  // révélation, une gerbe qui grandit avec la rareté ; dès Mythic, une pluie d'or tombe autour de la carte.
+  SCENES.fairydust = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const GOLD = dark ? ['#fde68a', '#fff7d6', '#f9a8d4', '#e9d5ff'] : ['#d97706', '#c026d3', '#7c3aed', '#f59e0b'];
+    const add = dark ? 'lighter' : 'source-over';
+    const dust = particles(), stars = timed(), emit = emitter();
+    let speed = .8, ang = 0, rain = 0;
+    const star = (c, x, y, r, a) => { // étoile à quatre branches, fine
+      if (a <= .01) return; co.globalAlpha = Math.min(1, a); co.fillStyle = c; co.beginPath();
+      co.moveTo(x, y - r); co.quadraticCurveTo(x, y, x + r * .3, y); co.quadraticCurveTo(x, y, x, y + r); co.quadraticCurveTo(x, y, x - r * .3, y); co.quadraticCurveTo(x, y, x, y - r);
+      co.moveTo(x - r * .7, y); co.quadraticCurveTo(x, y, x, y - r * .22); co.quadraticCurveTo(x, y, x + r * .7, y); co.quadraticCurveTo(x, y, x, y + r * .22); co.quadraticCurveTo(x, y, x - r * .7, y); co.fill();
+    };
+    const burst = (x, y, s) => {
+      stars.add({ x, y, r: card.h * (.35 + .5 * s), life: .55 });
+      for (let i = Math.round((8 + 22 * s) * q); i > 0; i--) { const a = rnd(TAU), v = card.h * rnd(1, 2.5 + 3 * s); dust.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - card.h * .6, g: card.h * 1.6, drag: 1.6, max: rnd(.6, 1.2), size: card.h * rnd(.025, .05), c: pick(GOLD), tw: rnd(TAU) }); }
+    };
+    return {
+      frame(t, dt) {
+        // la fée : une lueur qui tourne autour de la carte sur une ellipse, et sa traînée
+        ang += dt * speed * 1.4; speed += (.8 - speed) * Math.min(1, dt * .7);
+        const fx = cx + Math.cos(ang) * (card.w / 2 + card.h * .25), fy = cy + Math.sin(ang) * (card.h / 2 + card.h * .2) + Math.sin(t * 7) * card.h * .04;
+        for (let n = emit((6 + 10 * speed) * q, dt); n > 0; n--) dust.add({ x: fx + rnd(-2, 2), y: fy + rnd(-2, 2), vx: rnd(-1, 1) * 6, vy: rnd(2, 10), g: card.h * .4, drag: 1, max: rnd(.6, 1.1), size: card.h * rnd(.02, .04), c: pick(GOLD), tw: rnd(TAU) });
+        if (rain > 0) { rain -= dt; for (let n = Math.round(rnd(0, 3) * q); n > 0; n--) dust.add({ x: cx + rnd(-.65, .65) * card.w, y: card.y - card.h * rnd(.2, .8), vx: rnd(-1, 1) * 4, vy: card.h * rnd(.6, 1.2), g: card.h * .5, drag: .2, max: rnd(1, 1.8), size: card.h * rnd(.025, .045), c: pick(GOLD), tw: rnd(TAU) }); }
+        dust.step(dt);
+        behind(env, () => {
+          co.globalCompositeOperation = add;
+          stars.run(dt, (s, k) => { const e = k < .15 ? k / .15 : 1 - (k - .15) / .85; star(dark ? '#fff7d6' : '#a21caf', s.x, s.y, s.r * (.6 + .6 * k), e); dot(co, dark ? '#fde68a' : '#f0abfc', s.x, s.y, s.r * .8, e * .6); });
+          dust.each((p, k) => { const tw = .5 + .5 * Math.sin(t * 18 + p.tw); star(p.c, p.x, p.y, p.size * (1.6 + 1.4 * tw), (1 - k) * (.45 + .55 * tw)); });
+          dot(co, dark ? '#fff7d6' : '#e879f9', fx, fy, card.h * .14, dark ? .9 : .7);
+          star(dark ? '#ffffff' : '#7e22ce', fx, fy, card.h * .09, 1);
+        });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; burst(p.x, p.y, o.last ? .8 : .35); speed = 2.4; },
+      build() { speed = 3; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { dust.add({ x: cx, y: card.y, vx: 0, vy: card.h * .3, g: card.h * .6, drag: 0, max: 1, size: card.h * .04, c: GOLD[0], tw: 0 }); return; } // une seule paillette, qui tombe
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) setTimeout(() => burst(cx + rnd(-.45, .45) * card.w, cy + rnd(-.3, .3) * card.h, .4 + .6 * p), i * 110);
+        if (p >= 1) rain = 2.2 + .6 * (ASCEND[tier] || 0);
+      },
+    };
+  };
+
   // 🏞️ Waterfall (2026-10-24, idée de JBearr12 et jjcoolcid1) — de la brume monte sans cesse du bassin au pied de la
   // carte ; chaque chiffre qui touche le bassin fait une éclaboussure (gouttes en arc) et une onde ; le dernier, plus
   // grosse. À la révélation, une gerbe d'embruns qui grandit avec la rareté et, dès Epic, un arc-en-ciel dans la brume
