@@ -105,6 +105,7 @@
     { id: 'fish', name: 'Floppy Fish', emoji: '🐟', price: 2100, desc: 'A goofy fish flops out of the pond for every digit, and a giant fish leaps over the card on Mythic rolls', idea: 'AnnJoe' }, // idée d'AnnJoe (2026-10-25)
     { id: 'axeman', name: 'Axe Thrower', emoji: '🪓', price: 1900, desc: 'A stick man throws a spinning axe into every wooden target, and celebrates when the roll is good', idea: 'jjcoolcid1' }, // idée de jjcoolcid1 (2026-10-25)
     { id: 'math', name: 'Math', emoji: '➗', price: 1200, desc: 'Chalk digits are written on a blackboard while math symbols float around; great rolls end with Q.E.D.', idea: 'sennybex1' }, // idée de sennybex1 (2026-10-25)
+    { id: 'greek', name: 'Greek', emoji: '🏛️', price: 2000, desc: 'Roman numerals spin on a marble column, then the real digit is chiselled into the stone', idea: 'kaz' }, // idée de kaz (2026-10-25)
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     // Wood carving : idée de jjcoolcid1 et JBearr12 (2026-10-25) — une lame taille chaque chiffre en creux dans une planche de pin.
     { id: 'woodcarving', name: 'Wood Carving', emoji: '🪵', price: 2000, desc: 'A knife carves every digit into a pine plank and wood shavings fly; rare rolls get a coat of golden varnish', idea: 'jjcoolcid1' },

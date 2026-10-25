@@ -3413,6 +3413,64 @@
       },
     };
   };
+  // 🏛️ Greek (2026-10-25, idée de kaz) — chaque coup de ciseau fait sauter des éclats de marbre et un nuage de poussière
+  // (derrière la carte : jamais sur un chiffre). À la révélation, une lueur dorée ; dès Epic, une couronne de laurier
+  // d'or s'ouvre autour de la carte ; dès Mythic, des rayons de soleil grec et une pluie de feuilles d'or.
+  SCENES.greek = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const chips = particles(), dust = particles(), leaves = particles(), glows = timed(), wreaths = timed();
+    const CHIP = dark ? ['#fafaf9', '#e7e5e4', '#d6d3d1'] : ['#a8a29e', '#78716c', '#d6d3d1'];
+    const GOLD = dark ? ['#fde68a', '#e9c46a', '#facc15'] : ['#ca8a04', '#b08d2a', '#a16207'];
+    const chisel = (x, y, s) => {
+      for (let i = Math.round((5 + 8 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(1.5, 3 + 3 * s); chips.add({ x: x + rnd(-1, 1) * card.h * .08, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 10, drag: .3, max: rnd(.4, .75), size: card.h * rnd(.018, .035), r: rnd(TAU), c: pick(CHIP) }); }
+      for (let i = Math.round(2 + 3 * s * q); i > 0; i--) dust.add({ x: x + rnd(-1, 1) * card.h * .15, y: y + rnd(-1, 1) * card.h * .1, vx: rnd(-1, 1) * 10, vy: -card.h * rnd(.1, .35), drag: .9, g: 0, max: rnd(.8, 1.4), size: card.h * rnd(.12, .22) });
+    };
+    // la couronne de laurier : deux branches de feuilles en ellipse qui poussent de bas en haut autour de la carte
+    const wreath = (w, k) => {
+      const grow = Math.min(1, k / .35), a = k > .7 ? (1 - k) / .3 : 1, rx = card.w * .5 + card.h * .45, ry = card.h * .5 + card.h * .45;
+      co.globalAlpha = a * .9;
+      for (const side of [-1, 1]) for (let i = 0; i < 11 * grow; i++) {
+        const t = Math.PI / 2 + side * (i / 11) * Math.PI * .82, x = cx + Math.cos(t) * rx, y = cy + Math.sin(t) * ry;
+        co.save(); co.translate(x, y); co.rotate(t + side * .9); co.fillStyle = GOLD[i % 3];
+        co.beginPath(); co.ellipse(0, 0, card.h * .11 * w.s, card.h * .045 * w.s, 0, 0, TAU); co.fill(); co.restore();
+      }
+    };
+    const glow = (g, k) => {
+      const a = Math.sin(Math.PI * k) * g.a, R = card.w * .5 + card.h * (.4 + .6 * k);
+      const gr = co.createRadialGradient(cx, cy, card.h * .3, cx, cy, R);
+      gr.addColorStop(0, dark ? 'rgba(253,230,138,.55)' : 'rgba(202,138,4,.35)'); gr.addColorStop(1, 'rgba(253,230,138,0)');
+      co.globalAlpha = a; co.fillStyle = gr; co.fillRect(cx - R, cy - R, R * 2, R * 2);
+      if (g.rays) {
+        co.globalAlpha = a * (dark ? .35 : .25); co.fillStyle = GOLD[0];
+        for (let i = 0; i < 12; i++) { const t = i / 12 * TAU + k * .6; co.beginPath(); co.moveTo(cx, cy); co.arc(cx, cy, R * 1.5, t, t + .12); co.closePath(); co.fill(); }
+      }
+    };
+    return {
+      frame(t, dt) {
+        chips.step(dt); dust.step(dt); leaves.step(dt);
+        behind(env, () => {
+          co.globalCompositeOperation = 'source-over';
+          glows.run(dt, glow);
+          dust.each((d, k) => dot(co, dark ? '#e7e5e4' : '#a8a29e', d.x, d.y, d.size * (1 + k), Math.sin(Math.PI * k) * (dark ? .25 : .3)));
+          chips.each((c, k) => { co.globalAlpha = 1 - k * k; co.fillStyle = c.c; co.save(); co.translate(c.x, c.y); co.rotate(c.r + k * 8); co.fillRect(-c.size, -c.size * .6, c.size * 2, c.size * 1.2); co.restore(); });
+        });
+        co.globalCompositeOperation = 'source-over';
+        wreaths.run(dt, wreath);
+        leaves.each((l, k) => { co.globalAlpha = 1 - k; co.fillStyle = l.c; co.save(); co.translate(l.x + Math.sin(l.life * 4 + l.r) * card.h * .1, l.y); co.rotate(Math.sin(l.life * 3 + l.r)); co.beginPath(); co.ellipse(0, 0, l.size, l.size * .4, 0, 0, TAU); co.fill(); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; chisel(p.x, p.y + card.h * .1, o.last ? .9 : .4); },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { dust.add({ x: cx, y: cy, vx: 0, vy: -10, drag: .5, g: 0, max: 1, size: card.h * .3 }); return; } // un peu de poussière
+        glows.add({ life: 1 + p, a: .5 + .5 * p, rays: p >= 1 });
+        if (p >= .6) wreaths.add({ delay: .1, life: 2.4 + p, s: p >= 1 ? 1.25 : 1 });
+        if (p >= 1) for (let i = Math.round(24 * q); i > 0; i--) leaves.add({ x: cx + rnd(-.7, .7) * card.w, y: card.y - rnd(0, 1) * card.h, vx: rnd(-1, 1) * 8, vy: card.h * rnd(.4, .9), g: 0, drag: 0, max: rnd(1.8, 3), size: card.h * rnd(.05, .08), r: rnd(TAU), c: pick(GOLD) });
+      },
+    };
+  };
+
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
