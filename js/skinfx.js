@@ -2780,6 +2780,71 @@
     };
   };
 
+  // 🎳 Bowling (2026-10-25, idée de JBearr12) — à chaque chiffre posé, une boule violette traverse la piste sous la
+  // carte de gauche à droite (elle tourne, ses trois trous défilent) et percute la quille : éclats blancs et rouges,
+  // petites quilles qui volent. La dernière boule est plus grosse. À la révélation, les quilles s'envolent autour de la
+  // carte (plus nombreuses avec la rareté) et dès Epic « STRIKE! » s'affiche au-dessus ; tirage raté : « GUTTER ».
+  SCENES.bowling = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const balls = timed(), pins = particles(), chips = particles(), words = timed();
+    const pin = (x, y, s, rot, a) => { // une petite quille blanche à bandes rouges
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      co.fillStyle = '#f8fafc'; co.strokeStyle = 'rgba(71,85,105,.8)'; co.lineWidth = 1;
+      co.beginPath(); co.ellipse(0, s * .55, s * .55, s * .9, 0, 0, TAU); co.fill(); co.stroke();
+      co.beginPath(); co.ellipse(0, -s * .75, s * .3, s * .45, 0, 0, TAU); co.fill(); co.stroke();
+      co.fillRect(-s * .22, -s * .5, s * .44, s * .5);
+      co.fillStyle = '#dc2626'; co.fillRect(-s * .26, -s * .38, s * .52, s * .1); co.fillRect(-s * .28, -s * .2, s * .56, s * .1);
+      co.restore();
+    };
+    const ball = (x, y, r, spin, a) => {
+      co.save(); co.globalAlpha = a;
+      const g = co.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+      g.addColorStop(0, '#c4b5fd'); g.addColorStop(.35, '#7c3aed'); g.addColorStop(1, '#2e1065');
+      co.fillStyle = g; co.beginPath(); co.arc(x, y, r, 0, TAU); co.fill();
+      co.fillStyle = '#1e1b4b';
+      for (const [dx, dy] of [[-.22, -.3], [.12, -.36], [-.02, .02]]) { const ca = Math.cos(spin), sa = Math.sin(spin), hx = dx * ca - dy * sa, hy = dx * sa + dy * ca; co.beginPath(); co.arc(x + hx * r, y + hy * r, r * .11, 0, TAU); co.fill(); }
+      co.restore();
+    };
+    const knock = (x, y, s) => {
+      for (let i = Math.round((8 + 12 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(2.5, 5 + 4 * s); chips.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .3, max: rnd(.4, .8), size: card.h * rnd(.02, .04), rot: rnd(TAU), spin: rnd(-14, 14), c: pick(['#ffffff', '#f1f5f9', '#dc2626', '#cbd5e1']) }); }
+    };
+    const fly = (x, y, n, power) => { for (let i = 0; i < n; i++) { const a = rnd(-Math.PI * .9, -Math.PI * .1), v = card.h * rnd(3, 4 + 4 * power); pins.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 9, drag: .2, max: rnd(.9, 1.4), size: card.h * rnd(.09, .14), rot: rnd(TAU), spin: rnd(-12, 12) }); } };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // la boule : elle roule le long du bas de la carte, du bord gauche jusqu'à la quille (k = .55), puis continue
+        balls.run(dt, (b, k) => {
+          const x0 = card.x - b.r * 2, x = x0 + (b.x - x0) * (k / .55), y = card.y + card.h - b.r * .6;
+          for (let i = 1; i <= 4; i++) ball(x - i * b.r * .5, y, b.r, 0, .1 * (5 - i) * (k < .9 ? 1 : (1 - k) * 10)); // traînée
+          ball(x, y, b.r, x / b.r, k < .9 ? 1 : (1 - k) * 10);
+          if (!b.hit && k >= .55) { b.hit = true; knock(b.x, y - b.r, b.s); fly(b.x, y - b.r, b.s > .7 ? 3 : 1, b.s); }
+        });
+        pins.step(dt); chips.step(dt);
+        pins.each((p, k) => pin(p.x, p.y, p.size, p.rot + p.spin * p.life, k < .8 ? 1 : (1 - k) * 5));
+        chips.each((c, k) => { co.save(); co.globalAlpha = 1 - k; co.translate(c.x, c.y); co.rotate(c.rot + c.spin * c.life); co.fillStyle = c.c; co.fillRect(-c.size, -c.size * .5, c.size * 2, c.size); co.restore(); });
+        words.run(dt, (w, k) => {
+          const pop = k < .15 ? outCubic(k / .15) * 1.15 : k < .25 ? 1.15 - .15 * (k - .15) / .1 : 1, a = k > .8 ? (1 - k) * 5 : 1;
+          text(co, w.s, cx, card.y - card.h * .38, card.h * w.size * pop, w.c, a);
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const s = o.last ? .9 : .5;
+        // la boule part maintenant et touche la quille vite : sa course entière dure moins qu'un chiffre
+        balls.add({ x: p.x, r: card.h * (o.last ? .28 : .21), s, life: .32 });
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { words.add({ s: 'GUTTER', size: .2, c: dark ? '#94a3b8' : '#64748b', life: 1.4 }); return; }
+        fly(cx, card.y + card.h * .2, Math.round((3 + 14 * p) * q), p);
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) knock(cx + rnd(-.45, .45) * card.w, card.y + card.h * .3, .6 + p);
+        if (p >= .6) words.add({ delay: .1, s: 'STRIKE!', size: .24 + .1 * p + .04 * (ASCEND[tier] || 0), c: p >= 1 ? '#facc15' : '#f97316', life: 1.8 + p });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
