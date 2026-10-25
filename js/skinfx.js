@@ -2187,6 +2187,81 @@
     };
   };
 
+  // 💥 Supernova (2026-10-25, idée de jjcoolcid1) — une étoile qui meurt au centre de la carte. Pendant le tirage, de
+  // la matière tombe vers le cœur, qui grossit et palpite (bleu → violet). Chaque chiffre posé envoie une petite onde de
+  // choc et quelques éclats. La révélation : le cœur s'effondre (élan), flash blanc, puis des ondes de choc bleue et
+  // violette partent de la carte avec des filaments d'éjecta ; dès Mythic, une deuxième onde et une nébuleuse qui reste
+  // un moment derrière la carte. Tirage raté : le cœur s'éteint en naine blanche, une bouffée violette. Matière : lumière.
+  SCENES.supernova = env => {
+    const { co, ci, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const rings = timed(), bits = particles(), infall = particles(), clouds = timed(), flashes = timed(), emit = emitter();
+    const BL = dark ? '#60a5fa' : '#2563eb', VI = dark ? '#a855f7' : '#7c3aed', IN = dark ? '#818cf8' : '#4f46e5', WH = dark ? '#eef2ff' : '#6366f1';
+    const add = dark ? 'lighter' : 'source-over';
+    let heat = .2, aim = .2, now = 0;
+    const ring = (x, y, r, c, life, delay = 0, width = 2) => rings.add({ x, y, r, c, life, delay, width });
+    const eject = (x, y, n, sp, life) => { for (let i = Math.round(n * q); i > 0; i--) { const a = rnd(TAU), v = sp * rnd(.5, 1); bits.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .75, drag: 2.2, g: 0, max: rnd(life * .6, life), c: pick([BL, VI, IN, WH]), w: rnd(1, 2.2) }); } };
+    return {
+      frame(t, dt) {
+        now = t;
+        heat += (aim - heat) * Math.min(1, dt * 5);
+        // dans la carte, sous les chiffres : le cœur de l'étoile et la matière qui y tombe
+        ci.globalCompositeOperation = add;
+        const pulse = 1 + .12 * Math.sin(t * 14) * Math.min(1, heat);
+        dot(ci, VI, w / 2, h / 2, h * (.55 + .5 * heat) * pulse, .35 + .3 * heat, h * (.45 + .3 * heat));
+        dot(ci, BL, w / 2, h / 2, h * (.3 + .3 * heat) * pulse, .4 + .3 * heat);
+        if (heat > .4) for (let i = emit(40 * q * heat, dt); i > 0; i--) { const a = rnd(TAU), d = w * rnd(.35, .6); infall.add({ x: w / 2 + Math.cos(a) * d, y: h / 2 + Math.sin(a) * d * .5, vx: -Math.cos(a) * d * 2.2, vy: -Math.sin(a) * d * 1.1, drag: 0, g: 0, max: .42, c: Math.random() < .5 ? BL : VI }); }
+        infall.step(dt);
+        infall.each((p, k) => line(ci, p.c, p.x, p.y, p.x - p.vx * .04, p.y - p.vy * .04, 1.4, Math.sin(Math.PI * k) * .7));
+        flashes.run(dt, (f, k) => dot(ci, '#ffffff', w / 2, h / 2, w * .7, (1 - k) * f.a, h * 1.2));
+        ci.globalCompositeOperation = 'source-over';
+        // derrière la carte : la nébuleuse qui reste après une grosse explosion
+        if (clouds.n) behind(env, () => {
+          co.globalCompositeOperation = add;
+          clouds.run(dt, (c, k) => {
+            const a = Math.sin(Math.PI * Math.min(1, k * 2.5)) * (k > .6 ? (1 - k) / .4 : 1) * (dark ? .55 : .4), R = card.w * (.6 + .5 * outCubic(k)) * c.s;
+            dot(co, BL, cx - R * .35, cy, R * .8, a, R * .45);
+            dot(co, VI, cx + R * .35, cy, R * .8, a, R * .45);
+            dot(co, IN, cx, cy, R * .5, a * .7, R * .55);
+          });
+        });
+        // autour : les ondes de choc (fines, elles ne cachent pas les chiffres) et l'éjecta
+        co.globalCompositeOperation = add;
+        rings.run(dt, (r, k) => {
+          const e = outCubic(k), R = r.r * (.2 + e);
+          co.globalAlpha = (1 - k) * .9; co.strokeStyle = r.c; co.lineWidth = r.width * (1 - k) + .6; co.shadowColor = r.c; co.shadowBlur = 10;
+          co.beginPath(); co.ellipse(r.x, r.y, R, R * .7, 0, 0, TAU); co.stroke();
+        });
+        co.shadowBlur = 0;
+        bits.step(dt);
+        bits.each((p, k) => line(co, p.c, p.x, p.y, p.x - p.vx * .05, p.y - p.vy * .05, p.w, 1 - k));
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const big = !!o.last;
+        ring(p.x, p.y, card.h * (big ? 1.1 : .7), big ? WH : BL, big ? .55 : .42, 0, big ? 2.6 : 1.8);
+        ring(p.x, p.y, card.h * (big ? .9 : .55), VI, big ? .55 : .42, .05, 1.4);
+        eject(p.x, p.y, big ? 14 : 7, card.h * (big ? 5 : 3.5), .5);
+        aim = Math.min(1.4, aim + .12);
+      },
+      build() { aim = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { aim = 0; ring(cx, cy, card.h * .6, VI, .8, 0, 1.2); return; } // naine blanche : ça s'éteint
+        aim = 1.6; // l'effondrement (élan)…
+        setTimeout(() => {
+          aim = .25; heat = .25;
+          flashes.add({ a: .45 + .45 * p, life: .35 });
+          const n = 2 + Math.round(2 * p) + (p >= 1 ? 2 : 0);
+          for (let i = 0; i < n; i++) ring(cx, cy, card.w * (.75 + .55 * p) * (1 + i * .16), [WH, BL, VI][i % 3], .75 + .5 * p, i * .08, 2.5 + 2.5 * p);
+          eject(cx, cy, 16 + 30 * p, card.w * (1.2 + 1.6 * p), .9);
+          if (p >= .6) clouds.add({ life: 1.8 + 1.4 * p + (ASCEND[tier] || 0) * .4, s: 1 + .2 * (ASCEND[tier] || 0) });
+        }, 120);
+      },
+    };
+  };
+
   SCENES.meteor = custom(pieces({ cols: ['#fde68a', '#fb923c', '#f97316', '#fef3c7'], shapes: ['spark', 'shard'], size: [1.4, 3.2], g: 600, spin: 5, glowc: '#fb923c', ring: '#f97316', drift: { rate: .5, from: 'around' } }), env => {
     const { co, ci, card, dark } = env, rocks = timed(), hits = timed(), waves = timed(), debris = particles();
     const FLY = .32; // durée du vol (s) : la météorite touche quand le chiffre se pose
