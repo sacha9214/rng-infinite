@@ -432,7 +432,8 @@ async function recordRoll(playerId, n, t) {
   const s = a.total;
   const periods = scopes(t);
   const wPeriods = periods.filter(p => p.period !== 'all');
-  const [worst, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId])]);
+  // clanof lu dans la même requête : l'XP du tirage compte pour le clan du joueur cette semaine (api/_clan.js).
+  const [worst, clanId, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ['HGET', 'clanof', playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId])]);
   const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length);
   const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
   const entry = JSON.stringify({ n, s, t });
@@ -458,6 +459,7 @@ async function recordRoll(playerId, n, t) {
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
+  if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
   let coins = 0;
   { const c = require('../js/shop.js').COINS[a.tier] || 0; writes.push(...eco('in:rolls', c, t)); coins = c;

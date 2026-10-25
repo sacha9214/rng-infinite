@@ -163,6 +163,10 @@
       const p = Store.player;
       return this.request('/api/discord', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, ...extra }) });
     },
+    // Clans (api/_clan.js, routés par /api/friends) : toujours en POST, le secret prouve qui joue.
+    clan(op = 'view', extra = {}) {
+      return this.friends('clan', undefined, { op, ...extra });
+    },
     friends(action = 'list', name, extra = {}) {
       const p = Store.player;
       return this.request('/api/friends', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, name, ...extra }) });
@@ -1679,6 +1683,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
     { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
     { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
     { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
@@ -3014,7 +3019,7 @@
       <section class="pf-hero">
         <div class="pf-id">
           <div class="pf-name">${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</div>
-          <div class="pf-tags">${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
+          <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
           <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : '<button class="btn add-friend" id="p-friend">👥 Add friend</button>'}</div>
         </div>
@@ -6180,6 +6185,7 @@
           <div class="discord-link" id="f-discord"></div>
           <div class="actions"><a class="btn-roll small" href="${profileHref(Store.player.name)}">Open my profile</a><button class="btn" id="f-settings">⚙️ Player &amp; settings</button></div>
         </div>` : ''}
+        <a class="panel cl-entry" href="#/clan"><span class="cl-emoji" aria-hidden="true">🏯</span><span><b>Clans</b><small>Team up, share a vault, chat and fight clan wars</small></span><span aria-hidden="true">›</span></a>
         <h2 class="panel-title" style="margin:1.4rem 0 .35rem">Friends</h2>
         <p class="panel-note profile-sub">Add players by name to follow their progress and jump into their duels.</p>
         <div class="panel">
@@ -6730,7 +6736,7 @@
         body.innerHTML = '<div class="room-code-box" id="room-lobby"></div>';
       }
       const host = d.players.find(p => p.host);
-      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}${me && me.host && !p.host ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('')
+      const seats = d.players.map(p => `<span class="badge-pill">${p.host ? '👑 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${p.clan ? ` [${esc(p.clan.tag)}]` : ''}${titleEmoji(p.title)}${topEmoji(p.top)}${p.me ? ' (you)' : ''}${me && me.host && !p.host ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('')
         + '<span class="badge-pill empty-seat">…</span>'.repeat(Math.max(0, d.size - d.players.length));
       // Places vides complétées par des bots après 2 min (idée d'Aussie Haüs, 2026-10-21) : choix de l'hôte, gardé sur son
       // appareil ; jamais dans un duel avec mise (le serveur le refuse aussi). Un bot à la fois, à chaque relecture du salon.
@@ -6919,7 +6925,7 @@
       // Sorti, ou bouton ✕ de l'hôte pour exclure un joueur pendant la partie (pas dans un duel avec mise).
       const out = p.out ? `<span class="out-chip">${p.out === 'kicked' ? '✕ removed' : '🚪 left'}</span>` : '';
       const kick = me && me.host && !p.me && !p.out && d.status === 'playing' && !d.stake ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
-      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -7055,7 +7061,7 @@
         : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
-          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
+          <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${p.clan ? ` [${esc(p.clan.tag)}]` : ''}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
           ${card}
           <div class="room-meta" id="rm-${j}">${a ? `${tierPill(a.tier)}<span class="ep-pill">${fmt(a.total)} XP</span>` : ''}</div>
           <div class="pill-row" id="rb-${j}">${a ? duelBadgesHTML(a, r.n[j]) : ''}</div>
@@ -7309,14 +7315,14 @@
     if (lbState.period === 'event') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -7326,7 +7332,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
@@ -7580,7 +7586,291 @@
   // Code caché n°2 (les deux autres : bas de la page d'aide, et le nombre 0 dans le vérificateur d'XP).
   try { console.log('%c🔑 You found a hidden code: CONSOLECAT', 'font: 700 14px monospace; color: #facc15; background: #111; padding: 6px 10px; border-radius: 6px'); } catch (e) { /* pas de console */ }
   try { paintWallpaper(); } catch (e) { /* jamais bloquant */ }
-  const ROUTES = { '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas };
+  // ---- Clans (api/_clan.js, par /api/friends ; idée de BIGBOIJONER69 et KMC, 2026-10-25) : créer ou rejoindre un clan,
+  // coffre commun, chat, classement de la semaine et guerres 5 contre 5. Tout est décidé par le serveur ; la page relit
+  // le chat et la guerre toutes les 5 s tant qu'elle est ouverte (sans toucher aux formulaires en cours).
+  const clanTagHTML = c => (c && c.tag ? `<span class="cl-tag cl-c-${esc(c.c || c.tagc || 'plain')}" title="Clan ${esc(c.tag)}" data-no-i18n>[${esc(c.tag)}]</span>` : '');
+  const CL_ROLE = { leader: '👑 Leader', officer: '⭐ Officer', member: 'Member' };
+  const CL_RANK = { member: 1, officer: 2, leader: 3 };
+  let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false;
+  function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
+  const clanErr = err => toast([400, 403, 404, 409, 422, 429].includes(err.status) ? err.message : 'Clans unavailable right now, try again');
+  const clanLeft = ms => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+  function renderClan() {
+    currentView = 'clan';
+    app.innerHTML = `
+      <div class="page cl-page">
+        <h1 class="page-title">🏯 Clans</h1>
+        <div class="cl-tabs" role="tablist">
+          <button class="cl-tabbtn" type="button" role="tab" data-cltab="mine">🛡️ My clan</button><button class="cl-tabbtn" type="button" role="tab" data-cltab="top">🏆 This week</button><button class="cl-tabbtn" type="button" role="tab" data-cltab="find">🔎 Find a clan</button>
+        </div>
+        <div id="cl-body" class="cl-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    app.querySelector('.cl-tabs').addEventListener('click', e => { const b = e.target.closest('[data-cltab]'); if (!b) return; clanTab = b.dataset.cltab; drawClanTab(); });
+    $('#cl-body').addEventListener('click', onClanClick);
+    $('#cl-body').addEventListener('submit', onClanSubmit);
+    if (!Store.player.name) { $('#cl-body').innerHTML = '<div class="empty">Roll once and pick a player name to join a clan.</div>'; return; }
+    drawClanTab();
+    stopClan();
+    clanTimer = setInterval(() => {
+      if (currentView !== 'clan' || !$('#cl-body')) { stopClan(); return; }
+      if (document.hidden || clanTab !== 'mine' || !clanState || !clanState.clan || clanBusy) return;
+      loadClanChat();
+      const w = clanState.clan.war;
+      if (w && (w.st === 'running' || w.st === 'pending')) Online.clan('view').then(d => { if (currentView === 'clan' && clanTab === 'mine') { clanState = d; drawClanWar(); } }).catch(() => {});
+    }, 5000);
+  }
+  function drawClanTab() {
+    document.querySelectorAll('.cl-tabbtn').forEach(b => { b.classList.toggle('on', b.dataset.cltab === clanTab); b.setAttribute('aria-selected', String(b.dataset.cltab === clanTab)); });
+    const body = $('#cl-body'); if (!body) return;
+    body.innerHTML = '<div class="empty">Loading…</div>';
+    if (clanTab === 'top') { Online.clan('top').then(drawClanTop).catch(() => { body.innerHTML = '<div class="empty">Clans unavailable right now, try again</div>'; }); return; }
+    if (clanTab === 'find') { drawClanFind(); return; }
+    Online.clan('view').then(d => { clanState = d; drawClanMine(); }).catch(() => { body.innerHTML = '<div class="empty">Clans unavailable right now, try again</div>'; });
+  }
+  const clanCard = (c, extra = '') => `<div class="cl-card cl-b-${esc(c.banner || 'slate')}"><span class="cl-emoji" aria-hidden="true">${esc(c.emoji || '🛡️')}</span><span class="cl-card-name"><b data-no-i18n>${esc(c.name)}</b> ${clanTagHTML(c)}<small>👥 <span data-no-i18n>${c.members}/${c.slots}</span>${c.xp != null ? ` · <span data-no-i18n>${compact(c.xp)}</span> XP` : ''}</small></span>${extra}</div>`;
+  function drawClanTop(d) {
+    const body = $('#cl-body'); if (!body || clanTab !== 'top') return;
+    const ends = clanLeft(d.end - Date.now());
+    body.innerHTML = `
+      <div class="panel">
+        <div class="panel-head"><h3 class="panel-title">Clan leaderboard</h3><span class="panel-note">Ends in <span data-no-i18n>${ends}</span></span></div>
+        <p class="panel-note cl-note">XP earned this week by all the members of each clan. The members of the #1 clan who rolled for it get the 🏯 Clan Champion title when the week ends (Monday 00:00 UTC).</p>
+        ${d.last ? `<p class="cl-last-week">🏯 Last week's champions: <b data-no-i18n>${esc(d.last.emoji)} ${esc(d.last.name)}</b> ${clanTagHTML(d.last)}</p>` : ''}
+        ${d.clans.length ? `<ol class="cl-top">${d.clans.map(c => `<li class="cl-top-row"><span class="cl-rank" data-no-i18n>#${c.rank}</span>${clanCard(c)}</li>`).join('')}</ol>` : '<div class="empty">No clan has earned XP this week yet.</div>'}
+      </div>`;
+  }
+  function drawClanFind(q = '') {
+    const body = $('#cl-body'); if (!body) return;
+    body.innerHTML = `
+      <div class="panel">
+        <form class="cl-row" id="cl-search"><input class="input" id="cl-q" maxlength="20" placeholder="Clan name or tag" autocomplete="off" spellcheck="false" aria-label="Clan name or tag" value="${esc(q)}"><button class="btn" type="submit">🔎 Search</button></form>
+        <div id="cl-found"><div class="empty">Loading…</div></div>
+      </div>`;
+    Online.clan('search', { q }).then(d => {
+      const box = $('#cl-found'); if (!box) return;
+      const mine = clanState && clanState.clan, asked = (clanState && clanState.asked) || [];
+      box.innerHTML = d.clans.length ? `<ul class="cl-list">${d.clans.map(c => `<li>${clanCard(c, mine ? '' : asked.includes(c.tag) ? '<span class="cl-pill">Asked</span>' : c.members >= c.slots ? '<span class="cl-pill">Full</span>' : `<button class="btn" type="button" data-cl="request" data-tag="${esc(c.tag)}">Ask to join</button>`)}</li>`).join('')}</ul>` : '<div class="empty">No clan found. Create yours!</div>';
+    }).catch(() => { const box = $('#cl-found'); if (box) box.innerHTML = '<div class="empty">Clans unavailable right now, try again</div>'; });
+  }
+  function drawClanMine() {
+    const body = $('#cl-body'), d = clanState; if (!body || clanTab !== 'mine' || !d) return;
+    clanChatSig = ''; clanWarSig = '';
+    if (!d.clan) {
+      const p = d.prices;
+      body.innerHTML = `
+        ${d.invites && d.invites.length ? `<div class="panel"><div class="panel-head"><h3 class="panel-title">📨 Invitations</h3></div><ul class="cl-list">${d.invites.map(c => `<li>${clanCard(c, `<span class="cl-actions"><button class="btn-roll small" type="button" data-cl="join" data-tag="${esc(c.tag)}">Join</button><button class="btn ghost" type="button" data-cl="ignore" data-tag="${esc(c.tag)}">Ignore</button></span>`)}</li>`).join('')}</ul></div>` : ''}
+        ${d.asked && d.asked.length ? `<div class="panel"><div class="panel-head"><h3 class="panel-title">⏳ Waiting for an answer</h3></div><ul class="cl-list">${d.asked.map(tag => `<li class="cl-asked">${clanTagHTML({ tag })}<button class="btn ghost" type="button" data-cl="unask" data-tag="${esc(tag)}">Cancel</button></li>`).join('')}</ul></div>` : ''}
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Join a clan</h3></div>
+          <p class="panel-note cl-note">Ask a clan to let you in, or get invited by its leader or an officer. You can be in one clan at a time.</p>
+          <div class="actions"><button class="btn" type="button" data-cl="tab-find">🔎 Find a clan</button></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3 class="panel-title">Create a clan</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.create)}</span></span></div>
+          <p class="panel-note cl-note">${p.slotsBase} members to start, up to ${p.slotsMax} with upgrades. You have 🪙 <span data-no-i18n>${fmt(d.me.coins || 0)}</span>.</p>
+          <form id="cl-create" class="cl-form">
+            <label class="cl-field"><span>Name</span><input class="input" id="cl-name" maxlength="20" minlength="3" placeholder="3 to 20 letters" autocomplete="off" spellcheck="false" required></label>
+            <label class="cl-field"><span>Tag</span><input class="input cl-tag-input" id="cl-tagin" maxlength="4" minlength="3" placeholder="ABC" autocomplete="off" spellcheck="false" required></label>
+            <div class="cl-field"><span>Emoji</span><div class="cl-emojis" id="cl-emojis">${d.emojis.map((e, i) => `<button type="button" class="cl-emo${i ? '' : ' on'}" data-emo="${esc(e)}" aria-label="${esc(e)}">${e}</button>`).join('')}</div></div>
+            <div class="actions"><button class="btn-roll small" type="submit"${(d.me.coins || 0) < p.create || (d.me.rolls || 0) < d.minRolls ? ' disabled' : ''}>Create for 🪙 <span data-no-i18n>${fmt(p.create)}</span></button></div>
+            ${(d.me.rolls || 0) < d.minRolls ? `<p class="panel-note">🔒 Clans unlock after ${d.minRolls} rolls</p>` : ''}
+          </form>
+        </div>`;
+      const tagIn = $('#cl-tagin'); if (tagIn) tagIn.addEventListener('input', () => { tagIn.value = tagIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+      return;
+    }
+    const c = d.clan, role = d.me.role, officer = CL_RANK[role] >= 2, leader = role === 'leader', p = d.prices;
+    const memberRow = m => {
+      const acts = [];
+      if (!m.me) {
+        if (leader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
+        if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
+        if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
+        if (leader || (role === 'officer' && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
+      }
+      return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span><a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
+    };
+    body.innerHTML = `
+      <div class="cl-banner cl-b-${esc(c.banner)}">
+        <span class="cl-emoji big" aria-hidden="true">${esc(c.emoji)}</span>
+        <div class="cl-banner-txt"><h2 data-no-i18n>${esc(c.name)}</h2><div>${clanTagHTML(c)} <span class="cl-role cl-r-${esc(role)}">${CL_ROLE[role]}</span></div></div>
+      </div>
+      <div class="tiles cl-tiles">
+        ${tile('Vault', `🪙 <span data-no-i18n>${fmt(c.vault)}</span>`, 'for upgrades and wars')}
+        ${tile('This week', c.rank ? `#${c.rank}` : '–', `<span data-no-i18n>${compact(c.xp)}</span> XP`)}
+        ${tile('Members', `<span data-no-i18n>${c.members.length}/${c.slots}</span>`, c.requests.length ? `📨 ${c.requests.length} waiting` : '&nbsp;')}
+        ${tile('Wars', `<span data-no-i18n>${c.wins}–${c.losses}</span>`, c.weekWins ? `🏯 ×${c.weekWins}` : 'won – lost')}
+      </div>
+      <div class="panel cl-war" id="cl-war"></div>
+      <div class="panel">
+        <div class="panel-head"><h3 class="panel-title">💬 Clan chat</h3></div>
+        <div class="dm-list cl-chat" id="cl-chat" aria-live="polite"><div class="empty">Loading…</div></div>
+        <form class="dm-form cl-chatform" id="cl-say"><input class="input" id="cl-text" maxlength="140" placeholder="Message to your clan…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3 class="panel-title">👥 Members</h3><span class="panel-note" data-no-i18n>${c.members.length}/${c.slots}</span></div>
+        ${officer && c.requests.length ? `<div class="cl-reqs"><b>📨 Asking to join</b><ul class="cl-list">${c.requests.map(n => `<li class="cl-asked"><span data-no-i18n>${esc(n)}</span><span class="cl-actions"><button class="btn" type="button" data-cl="accept" data-name="${esc(n)}">Accept</button><button class="btn ghost" type="button" data-cl="decline" data-name="${esc(n)}">Decline</button></span></li>`).join('')}</ul></div>` : ''}
+        ${officer ? `<form class="cl-row" id="cl-invite"><input class="input" id="cl-inv" maxlength="20" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name"><button class="btn" type="submit">📨 Invite</button></form>` : ''}
+        <ul class="cl-members">${c.members.map(memberRow).join('')}</ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3 class="panel-title">🪙 Vault</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(c.vault)}</span></span></div>
+        <p class="panel-note cl-note">Coins given to the vault stay in the clan: the leader and officers spend them on upgrades or put them at stake in wars. You have 🪙 <span data-no-i18n>${fmt(d.me.coins || 0)}</span>.</p>
+        <form class="cl-row" id="cl-donate"><input class="input" id="cl-amt" type="number" inputmode="numeric" min="${d.donate.min}" max="${d.donate.max}" step="1" value="100" aria-label="Amount"><button class="btn" type="submit">Donate</button></form>
+        ${officer ? `<div class="cl-upgrades">
+          <div class="cl-up"><b>🧱 Member slots</b><span class="panel-note" data-no-i18n>${c.slots}/${p.slotsMax}</span>${c.nextSlots ? `<button class="btn" type="button" data-cl="up-slots">+${p.slotStep} · 🪙 <span data-no-i18n>${fmt(c.nextSlots)}</span></button>` : '<span class="cl-pill">Max</span>'}</div>
+          <div class="cl-up"><b>🎨 Banner color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.banner)}</span></span><div class="cl-swatches">${d.banners.map(b => `<button type="button" class="cl-sw cl-b-${b}${b === c.banner ? ' on' : ''}" data-cl="up-banner" data-color="${b}" title="${b}" aria-label="${b}"></button>`).join('')}</div></div>
+          <div class="cl-up"><b>🏷️ Tag color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.tagc)}</span> · 🌈 <span data-no-i18n>${fmt(p.rainbow)}</span></span><div class="cl-swatches">${d.tagColors.map(t => `<button type="button" class="cl-sw cl-tsw${t === c.tagc ? ' on' : ''}" data-cl="up-tagc" data-color="${t}" title="${t}" aria-label="${t}"><span class="cl-tag cl-c-${t}" data-no-i18n>${esc(c.tag)}</span></button>`).join('')}</div></div>
+        </div>` : ''}
+        <details class="cl-log"><summary>Vault history</summary><ul>${c.log.map(clanLogLine).join('') || '<li class="muted">Nothing yet</li>'}</ul></details>
+      </div>
+      <div class="panel cl-danger">
+        ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
+      </div>`;
+    drawClanWar();
+    loadClanChat();
+  }
+  function clanLogLine(x) {
+    const n = `<b data-no-i18n>${esc(x.n || '')}</b>`, a = v => `<b class="mono" data-no-i18n>${fmt(Math.abs(v || 0))}</b>`, by = x.by ? ` <span class="muted">(<span data-no-i18n>${esc(x.by)}</span>)</span>` : '';
+    const when = `<i data-no-i18n>${new Date(x.t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</i>`;
+    const tag = x.x ? clanTagHTML({ tag: x.x }) : '';
+    const kind = String(x.x || '').split(':')[0];
+    const line = {
+      create: `🏯 ${n} <span>founded the clan</span>`, join: `👋 ${n} <span>joined</span>${by}`, leave: `🚪 ${n} <span>left</span>`, kick: `🥾 ${n} <span>was kicked</span>${by}`,
+      promote: `⭐ ${n} <span>is now an officer</span>${by}`, demote: `⬇️ ${n} <span>is a member again</span>${by}`, leader: `👑 ${n} <span>is the new leader</span>${by}`,
+      donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`,
+      buy: `${kind === 'slots' ? '🧱' : kind === 'banner' ? '🎨' : '🏷️'} ${n} <span>${kind === 'slots' ? 'bought 5 member slots' : kind === 'banner' ? 'changed the banner color' : 'changed the tag color'}</span> −${a(x.a)}`,
+      stake: `⚔️ ${n} <span>put coins at stake against</span> ${tag} −${a(x.a)}`, refund: `↩️ <span>War stake returned</span> +${a(x.a)}`,
+      won: `🏆 <span>Won the war against</span> ${tag} +${a(x.a)}`, lost: `💀 <span>Lost the war against</span> ${tag}`,
+    }[x.k] || '';
+    return line ? `<li>${line} ${when}</li>` : '';
+  }
+  function drawClanWar() {
+    const box = $('#cl-war'), d = clanState; if (!box || !d || !d.clan) return;
+    const c = d.clan, w = c.war, officer = CL_RANK[d.me.role] >= 2;
+    const picker = id => `<div class="cl-pick" id="${id}">${c.members.map(m => `<label class="cl-pickm"><input type="checkbox" value="${esc(m.name)}"><span data-no-i18n>${esc(m.name)}</span></label>`).join('')}</div>`;
+    let html;
+    if (!w || w.st === 'off') {
+      html = `<div class="panel-head"><h3 class="panel-title">⚔️ Clan war</h3></div>
+        <p class="panel-note cl-note">${d.war.size} against ${d.war.size}: each player gets ${d.war.rolls} server rolls over ${d.war.ms / 3600000} hours (missing rolls are made at the end). Highest total XP wins both stakes, minus ${Math.round(d.war.cut * 100)}%.</p>
+        ${c.past.length ? `<ul class="cl-past">${c.past.map(x => `<li>${x.won ? '🏆' : '💀'} ${clanTagHTML({ tag: x.vs })} <span data-no-i18n>${compact(x.us)} – ${compact(x.them)}</span> · 🪙 <span data-no-i18n>${fmt(x.stake)}</span></li>`).join('')}</ul>` : ''}
+        ${officer ? (c.members.length >= d.war.size ? `<form id="cl-challenge" class="cl-form">
+          <div class="cl-row"><input class="input cl-tag-input" id="cl-target" maxlength="4" placeholder="Their tag" autocomplete="off" spellcheck="false" aria-label="Their tag"><input class="input" id="cl-stake" type="number" inputmode="numeric" min="${d.war.min}" max="${d.war.max}" step="1" value="1000" aria-label="Stake"></div>
+          <p class="panel-note">Pick ${d.war.size} players:</p>${picker('cl-pick-a')}
+          <div class="actions"><button class="btn-roll small" type="submit">⚔️ Challenge</button></div></form>` : `<p class="panel-note">🔒 You need ${d.war.size} members for a war.</p>`) : ''}`;
+    } else if (w.st === 'pending') {
+      html = `<div class="panel-head"><h3 class="panel-title">⚔️ ${w.incoming ? 'War challenge!' : 'Challenge sent'}</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(w.stake)}</span></span></div>
+        <p class="cl-vs">${clanTagHTML(w.a)} <b data-no-i18n>${esc(w.a.name)}</b> <span class="muted">vs</span> ${clanTagHTML(w.b)} <b data-no-i18n>${esc(w.b.name)}</b></p>
+        <p class="panel-note">Expires in <span data-no-i18n>${clanLeft(w.expires - Date.now())}</span></p>
+        ${w.incoming && officer ? `<form id="cl-answer" class="cl-form"><p class="panel-note">Pick ${d.war.size} players to accept:</p>${picker('cl-pick-b')}<div class="actions"><button class="btn-roll small" type="submit">✅ Accept</button><button class="btn ghost" type="button" data-cl="war-no">Decline</button></div></form>` : ''}
+        ${!w.incoming && officer ? '<div class="actions"><button class="btn ghost" type="button" data-cl="war-no">Cancel the challenge</button></div>' : ''}`;
+    } else {
+      const mine = w.a.mine ? w.a : w.b, theirs = w.a.mine ? w.b : w.a, meP = mine.players.find(p => p.me);
+      const team = s => `<div class="cl-team${s.mine ? ' mine' : ''}"><div class="cl-team-head">${clanTagHTML(s)} <b class="mono" data-no-i18n>${compact(s.total)} XP</b></div><ol>${s.players.map(p => `<li${p.me ? ' class="me"' : ''}><span class="cl-pn" data-no-i18n>${esc(p.name)}</span><span class="cl-pr" data-no-i18n>${p.scores.length}/${w.rolls}</span><b class="mono" data-no-i18n>${compact(p.total)}</b></li>`).join('')}</ol></div>`;
+      const done = w.st === 'done';
+      html = `<div class="panel-head"><h3 class="panel-title">⚔️ ${done ? (w.won ? '🏆 War won!' : '💀 War lost') : 'War in progress'}</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(w.stake)}</span>${done ? '' : ` · Ends in <span data-no-i18n>${clanLeft(w.end - Date.now())}</span>`}</span></div>
+        <div class="cl-teams">${team(mine)}${team(theirs)}</div>
+        ${!done && meP ? `<div class="actions"><button class="btn-roll small" type="button" data-cl="war-roll"${meP.scores.length >= w.rolls ? ' disabled' : ''}>🎲 War roll <span data-no-i18n>${meP.scores.length}/${w.rolls}</span></button></div>${meP.rolls.length ? `<p class="cl-myrolls" data-no-i18n>${meP.rolls.map((n, i) => `${String(n).padStart(6, '0')} · ${compact(meP.scores[i])}`).join('  |  ')}</p>` : ''}` : ''}
+        ${!done && !meP ? '<p class="panel-note">Cheer for your team: their rolls show up here.</p>' : ''}`;
+    }
+    // La guerre se relit toutes les 5 s : on ne réécrit le cadre que s'il a changé et qu'aucun choix n'y est en cours.
+    if (html === clanWarSig || box.querySelector('input:checked, input:focus')) return;
+    clanWarSig = html; box.innerHTML = html;
+  }
+  function loadClanChat() {
+    return Online.clan('chat').then(drawClanChat).catch(() => {});
+  }
+  function drawClanChat(d) {
+    const list = $('#cl-chat'); if (!list) return;
+    const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
+    if (html === clanChatSig) return;
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    clanChatSig = html; list.innerHTML = html;
+    if (atBottom || !list.dataset.ready) list.scrollTop = list.scrollHeight;
+    list.dataset.ready = '1';
+  }
+  async function clanDo(op, extra = {}, btn) {
+    if (clanBusy) return null;
+    clanBusy = true; if (btn) btn.disabled = true;
+    try {
+      const d = await Online.clan(op, extra);
+      if (d && d.me) { clanState = d; if (d.me.coins != null) Store.setSetting('coins', d.me.coins); if (clanTab === 'mine') drawClanMine(); else if (clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); }
+      if (d && d.note) toast(d.note);
+      return d;
+    } catch (err) { clanErr(err); if (btn) btn.disabled = false; return null; }
+    finally { clanBusy = false; }
+  }
+  const clanPicked = id => [...document.querySelectorAll(`#${id} input:checked`)].map(x => x.value);
+  async function onClanClick(e) {
+    const emo = e.target.closest('[data-emo]');
+    if (emo) { document.querySelectorAll('.cl-emo').forEach(b => b.classList.toggle('on', b === emo)); return; }
+    const b = e.target.closest('[data-cl]'); if (!b) return;
+    const op = b.dataset.cl, name = b.dataset.name, tag = b.dataset.tag;
+    const T = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+    if (op === 'tab-find') { clanTab = 'find'; drawClanTab(); return; }
+    if (['request', 'join', 'ignore', 'unask'].includes(op)) { const d = await clanDo(op, { tag }, b); if (d && op === 'join') toast('Welcome to the clan!', 3000, 'achv'); if (d && op === 'request' && clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); return; }
+    if (['accept', 'decline', 'promote', 'demote'].includes(op)) { clanDo(op, { name }, b); return; }
+    if (op === 'kick' && confirm(T(`Kick ${name} from the clan?`))) { clanDo('kick', { name }, b); return; }
+    if (op === 'transfer' && confirm(T(`Make ${name} the clan leader? You will become an officer.`))) { clanDo('transfer', { name }, b); return; }
+    if (op === 'leave' && confirm(T('Leave the clan?'))) { clanDo('leave', {}, b); return; }
+    if (op === 'disband' && confirm(T('Disband the clan? The vault coins are lost and every member leaves.'))) { clanDo('disband', {}, b); return; }
+    if (op === 'up-slots' && confirm(T('Spend vault coins on 5 more member slots?'))) { clanDo('upgrade', { what: 'slots' }, b); return; }
+    if ((op === 'up-banner' || op === 'up-tagc') && !b.classList.contains('on') && confirm(T('Spend vault coins on this color?'))) { clanDo('upgrade', { what: op === 'up-banner' ? 'banner' : 'tagc', color: b.dataset.color }, b); return; }
+    if (op === 'war-no' && confirm(T('Call off this war? The stake goes back to the clan that sent it.'))) { clanDo('answer', { yes: false }, b); return; }
+    if (op === 'war-roll') {
+      if (clanBusy) return;
+      clanBusy = true; b.disabled = true;
+      try { const r = await Online.clan('warroll'); clanState = r.state; clanWarSig = ''; drawClanWar(); toast(`🎲 ${String(r.n).padStart(6, '0')} · +${fmt(r.s)} XP`, 2500, 'achv'); Sound.play('lock', { i: 2 }); }
+      catch (err) { clanErr(err); b.disabled = false; }
+      finally { clanBusy = false; }
+      return;
+    }
+    if (op === 'msg-report') { reportMessage(b, () => Online.clan('report', { t: Number(b.dataset.t) })); return; }
+    if (op === 'msg-del') { try { drawClanChat(await Online.clan('unsend', { t: Number(b.dataset.t) })); } catch (err) { clanErr(err); } return; }
+    if (op === 'msg-edit') {
+      const v = prompt(T('Edit your message'), b.dataset.text);
+      if (v == null || !v.trim() || v === b.dataset.text) return;
+      try { drawClanChat(await Online.clan('edit', { t: Number(b.dataset.t), text: v })); } catch (err) { clanErr(err); }
+    }
+  }
+  async function onClanSubmit(e) {
+    const f = e.target; e.preventDefault();
+    const btn = f.querySelector('button[type=submit], button:not([type])');
+    if (f.id === 'cl-search') { drawClanFind($('#cl-q').value.trim()); return; }
+    if (f.id === 'cl-create') {
+      const emoji = (document.querySelector('.cl-emo.on') || {}).dataset;
+      const d = await clanDo('create', { clanName: $('#cl-name').value.trim(), tag: $('#cl-tagin').value.trim(), emoji: emoji ? emoji.emo : undefined }, btn);
+      if (d && d.clan) { toast(`🏯 ${d.clan.name} is born!`, 3500, 'achv'); Sound.play('lock', { i: 5 }); }
+      return;
+    }
+    if (f.id === 'cl-invite') { const n = $('#cl-inv').value.trim(); if (!n) { toast('Enter a player name'); return; } clanDo('invite', { name: n }, btn); return; }
+    if (f.id === 'cl-donate') { const amount = Number($('#cl-amt').value); const d = await clanDo('donate', { amount }, btn); if (d) { toast(`🪙 ${fmt(amount)} → ${d.clan.tag}`, 2500, 'achv'); Sound.play('lock', { i: 3 }); } return; }
+    if (f.id === 'cl-say') {
+      const input = $('#cl-text'); if (!input.value.trim()) return;
+      btn.disabled = true;
+      try { drawClanChat(await Online.clan('say', { text: input.value })); input.value = ''; const l = $('#cl-chat'); if (l) l.scrollTop = l.scrollHeight; }
+      catch (err) { clanErr(err); }
+      btn.disabled = false; input.focus();
+      return;
+    }
+    if (f.id === 'cl-challenge') {
+      const team = clanPicked('cl-pick-a');
+      if (team.length !== clanState.war.size) { toast(`Pick ${clanState.war.size} players`); return; }
+      clanWarSig = '';
+      clanDo('challenge', { target: $('#cl-target').value.trim(), stake: Number($('#cl-stake').value), team }, btn);
+      return;
+    }
+    if (f.id === 'cl-answer') {
+      const team = clanPicked('cl-pick-b');
+      if (team.length !== clanState.war.size) { toast(`Pick ${clanState.war.size} players`); return; }
+      clanWarSig = '';
+      clanDo('answer', { yes: true, team }, btn);
+    }
+  }
+
+  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -7589,6 +7879,7 @@
     stopRoom();
     clearTimeout(hubTimer);
     stopTournament();
+    stopClan();
     clearTimeout(friendsTimer);
     closeModal();
     tip.hidden = true;
@@ -7596,7 +7887,7 @@
     if (key === 'player' && rest.length) renderProfile(decodeURIComponent(rest.join('/')));
     else if (key === 'room' && rest.length) renderRoom(rest[0]);
     else (ROUTES[key] || renderHome)();
-    const navKey = key === 'player' ? 'leaderboard' : key === 'room' || key === 'tournament' ? 'duel' : key;
+    const navKey = key === 'player' ? 'leaderboard' : key === 'room' || key === 'tournament' ? 'duel' : key === 'clan' ? 'friends' : key;
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navKey));
     window.scrollTo(0, 0);
   }

@@ -3566,4 +3566,228 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await post(boss, 'imSet', { name: 'Mango', on: false }); assert.equal((await post(mgr, 'imInbox')).status, 403);
 }
 
+// Clans (idée de BIGBOIJONER69 et KMC, 2026-10-25) : création, entrée, rôles, coffre, améliorations, chat, signalement,
+// classement de la semaine et guerres (vainqueur payé une seule fois).
+{
+  const Clan = require(path.join(ROOT, 'api/_clan.js')), friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Ach = require(path.join(ROOT, 'js/achievements.js')), ShopM = require(path.join(ROOT, 'js/shop.js'));
+  const mk = (i, name, coins = 0, rolls = 60) => {
+    const id = `ca11ca11ca11ca${i.toString(16).padStart(2, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', 'rolls', String(rolls), 'bonus', String(coins)], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const statsOf = id => { const flat = run([['HGETALL', `stats:${id}`]])[0].result, o = {}; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
+  const coins = who => ShopM.balance(statsOf(who.playerId));
+  const H = (who, op, extra = {}, now) => Clan.handle(who.playerId, { op, ...extra }, now);
+  const fails = async (p, status, msg) => { try { await p; } catch (err) { assert.equal(err.status, status, `${msg} : ${err.message}`); return err; } assert.fail(`${msg} : aurait dû échouer`); };
+  const ecoOut = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(run([['HGET', k, 'out:clans']])[0].result) || 0), 0); // toutes les dates (les guerres de test finissent dans 6 h)
+  const cidOf = who => run([['HGET', 'clanof', who.playerId]])[0].result;
+  const A = mk(1, 'Clanlead', 80000), B = mk(2, 'Clanbee', 20000), C = mk(3, 'Clancee', 500), D = mk(4, 'Clandee', 500), E = mk(5, 'Claneee', 500);
+  const poor = mk(6, 'Clanpoor', 9000), newbie = mk(7, 'Clannew', 50000, 5);
+  const F = mk(8, 'Foeleader', 60000), foes = [9, 10, 11, 12].map(i => mk(i, `Foe${i}`, 500)), outsider = mk(13, 'Clanoutsider', 500);
+
+  // Création : 10 000 pièces détruites, 30 tirages, nom et tag vérifiés, uniques.
+  await fails(H(poor, 'create', { clanName: 'Poor Clan', tag: 'POOR' }), 422, 'pas assez de pièces');
+  await fails(H(newbie, 'create', { clanName: 'New Clan', tag: 'NEWB' }), 422, 'moins de 30 tirages');
+  await fails(H(A, 'create', { clanName: 'Ab', tag: 'ABC' }), 422, 'nom trop court');
+  await fails(H(A, 'create', { clanName: 'Good Name', tag: 'ab' }), 422, 'tag trop court');
+  await fails(H(A, 'create', { clanName: 'Good Name', tag: 'A-BC' }), 422, 'tag invalide');
+  await fails(H(A, 'create', { clanName: 'Fuck squad', tag: 'NICE' }), 422, 'nom filtré');
+  const before = coins(A), out0 = ecoOut();
+  let v = await H(A, 'create', { clanName: 'Dice Lords', tag: 'dice', emoji: '🎲' });
+  assert.equal(v.clan.tag, 'DICE'); assert.equal(v.clan.emoji, '🎲'); assert.equal(v.me.role, 'leader'); assert.equal(v.clan.slots, 20);
+  assert.equal(coins(A), before - 10000, '10 000 pièces retirées'); assert.equal(ecoOut() - out0, 10000, 'détruites (eco out:clans)');
+  await fails(H(A, 'create', { clanName: 'Other', tag: 'OTHR' }), 409, 'un seul clan');
+  await fails(H(F, 'create', { clanName: 'dice lords', tag: 'FOES' }), 409, 'nom pris (sans majuscules)');
+  await fails(H(F, 'create', { clanName: 'Foes United', tag: 'DICE' }), 409, 'tag pris');
+  assert.equal(statsOf(F.playerId).spent, undefined, 'refus : rien de payé');
+  v = await H(F, 'create', { clanName: 'Foes United', tag: 'FOES' });
+  assert.equal(v.clan.name, 'Foes United');
+
+  // Invitation (par pseudo) et demande (par tag).
+  await fails(H(B, 'join', { tag: 'DICE' }), 404, 'pas invité');
+  v = await H(A, 'invite', { name: 'Clanbee' }); assert.equal(v.note, 'Invitation sent');
+  v = await H(B, 'view'); assert.deepEqual(v.invites.map(x => x.tag), ['DICE']);
+  v = await H(B, 'join', { tag: 'DICE' }); assert.equal(v.me.role, 'member'); assert.equal(v.clan.members.length, 2);
+  await fails(H(B, 'invite', { name: 'Clancee' }), 403, 'un membre n\'invite pas');
+  v = await H(C, 'request', { tag: 'DICE' }); assert.deepEqual(v.asked, ['DICE']);
+  v = await H(D, 'request', { tag: 'dice' });
+  v = await H(A, 'view'); assert.deepEqual(v.clan.requests.sort(), ['Clancee', 'Clandee']);
+  assert.deepEqual((await H(B, 'view')).clan.requests, [], 'un membre ne voit pas les demandes');
+  await H(A, 'accept', { name: 'Clancee' });
+  await H(A, 'decline', { name: 'Clandee' });
+  assert.equal((await H(D, 'view')).me.inClan, false); assert.deepEqual((await H(D, 'view')).asked, []);
+  await fails(H(C, 'request', { tag: 'FOES' }), 409, 'déjà dans un clan');
+  await fails(H(F, 'invite', { name: 'Clancee' }), 409, 'déjà dans un clan (invitation)');
+  // Demande puis invitation du même joueur : il entre tout de suite.
+  await H(D, 'request', { tag: 'DICE' }); v = await H(A, 'invite', { name: 'Clandee' }); assert.equal(v.note, 'Joined the clan');
+  await H(A, 'invite', { name: 'Claneee' }); await H(E, 'join', { tag: 'DICE' });
+  assert.equal((await H(A, 'view')).clan.members.length, 5);
+  assert.equal(run([['HGET', 'clantag', E.playerId]])[0].result, 'DICE|plain', 'tag montré à côté du nom');
+
+  // Rôles : promouvoir, un officier exclut un membre mais pas le chef, rétrograder, passer la main.
+  await fails(H(B, 'promote', { name: 'Clancee' }), 403, 'seul le chef promeut');
+  await H(A, 'promote', { name: 'Clanbee' });
+  assert.equal((await H(B, 'view')).me.role, 'officer');
+  await fails(H(B, 'kick', { name: 'Clanlead' }), 403, 'un officier n\'exclut pas le chef');
+  await H(B, 'kick', { name: 'Claneee' });
+  assert.equal((await H(E, 'view')).me.inClan, false); assert.equal(run([['HGET', 'clantag', E.playerId]])[0].result, null);
+  await H(B, 'invite', { name: 'Claneee' }); await H(E, 'join', { tag: 'DICE' });
+  await fails(H(C, 'kick', { name: 'Clandee' }), 403, 'un membre n\'exclut personne');
+  await fails(H(A, 'leave'), 422, 'le chef passe la main avant de partir');
+  await H(A, 'transfer', { name: 'Clanbee' });
+  assert.equal((await H(B, 'view')).me.role, 'leader'); assert.equal((await H(A, 'view')).me.role, 'officer');
+  await H(B, 'transfer', { name: 'Clanlead' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'promote', { name: 'Clanbee' });
+  assert.equal((await H(A, 'view')).me.role, 'leader'); assert.equal((await H(B, 'view')).me.role, 'officer');
+
+  // Coffre : dons (10 à 10 000, 10 par heure), le coffre ne revient jamais aux joueurs ; améliorations détruites.
+  await fails(H(C, 'donate', { amount: 5 }), 400, 'don trop petit');
+  await fails(H(C, 'donate', { amount: 20000 }), 400, 'don trop gros');
+  await fails(H(C, 'donate', { amount: 600 }), 422, 'pas assez de pièces');
+  await fails(H(C, 'donate', { amount: '100' }), 400, 'montant en texte refusé');
+  const cBefore = coins(C);
+  v = await H(C, 'donate', { amount: 100 }); assert.equal(v.clan.vault, 100); assert.equal(coins(C), cBefore - 100);
+  assert.equal(v.clan.log[0].k, 'donate'); assert.equal(v.clan.log[0].n, 'Clancee'); assert.equal(v.clan.log[0].a, 100);
+  for (let i = 0; i < 9; i++) await H(C, 'donate', { amount: 10 });
+  await fails(H(C, 'donate', { amount: 10 }), 429, '10 dons par heure');
+  await fails(H(C, 'upgrade', { what: 'slots' }), 403, 'un membre ne dépense pas le coffre');
+  await fails(H(A, 'upgrade', { what: 'slots' }), 422, 'coffre insuffisant');
+  for (let i = 0; i < 6; i++) await H(A, 'donate', { amount: 10000 });
+  const out1 = ecoOut();
+  v = await H(B, 'upgrade', { what: 'slots' }); assert.equal(v.clan.slots, 25); assert.equal(v.clan.vault, 60190 - 5000); assert.equal(v.clan.nextSlots, 10000);
+  assert.equal(ecoOut() - out1, 5000, 'places : pièces détruites');
+  v = await H(A, 'upgrade', { what: 'tagc', color: 'gold' }); assert.equal(v.clan.tagc, 'gold');
+  assert.equal(run([['HGET', 'clantag', C.playerId]])[0].result, 'DICE|gold', 'couleur du tag chez chaque membre');
+  v = await H(A, 'upgrade', { what: 'banner', color: 'purple' }); assert.equal(v.clan.banner, 'purple');
+  await fails(H(A, 'upgrade', { what: 'banner', color: 'purple' }), 422, 'même couleur');
+  await fails(H(A, 'upgrade', { what: 'banner', color: 'url(x)' }), 400, 'couleur inconnue');
+  assert.equal(v.clan.vault, 60190 - 5000 - 3000 - 2000);
+  for (let i = 0; i < 4; i++) await H(F, 'donate', { amount: 10000 });
+
+  // Chat : envoi filtré, modification (10 min, ses messages), suppression, signalement vers la page Owner.
+  v = await H(C, 'say', { text: 'gg fuck yeah' }); assert.equal(v.messages.at(-1).text, 'gg **** yeah');
+  await new Promise(r => setTimeout(r, 3));
+  v = await H(D, 'say', { text: 'hello clan' });
+  const tC = v.messages.find(m => m.name === 'Clancee').t, tD = v.messages.find(m => m.name === 'Clandee').t;
+  assert.equal(v.messages.find(m => m.name === 'Clandee').canEdit, true); assert.ok(!v.messages.find(m => m.name === 'Clancee').canEdit);
+  await fails(H(D, 'edit', { t: tC, text: 'hacked' }), 403, 'pas le message d\'un autre');
+  v = await H(D, 'edit', { t: tD, text: 'hello clan!' }); assert.equal(v.messages.find(m => m.t === tD).text, 'hello clan!'); assert.equal(v.messages.find(m => m.t === tD).edited, true);
+  await fails(H(D, 'edit', { t: tD, text: 'late' }, Date.now() + 11 * 60000), 422, 'fenêtre de 10 minutes');
+  await fails(H(C, 'report', { t: tC }), 422, 'pas son propre message');
+  assert.deepEqual(await H(D, 'report', { t: tC }), { reported: true });
+  const rep = run([['LRANGE', 'reports', '-1', '-1']])[0].result.map(x => JSON.parse(x))[0];
+  assert.equal(rep.where, 'clan chat'); assert.equal(rep.authorName, 'Clancee'); assert.equal(rep.text, 'gg **** yeah');
+  await fails(H(outsider, 'chat'), 422, 'hors du clan : pas de chat');
+  await fails(H(C, 'unsend', { t: tD }), 403, 'un membre ne supprime pas le message d\'un autre');
+  v = await H(B, 'unsend', { t: tC }); assert.ok(!v.messages.some(m => m.t === tC), 'un officier modère');
+  for (let i = 0; i < 20; i++) await H(E, 'say', { text: `spam ${i}` });
+  await fails(H(E, 'say', { text: 'one more' }), 429, '20 messages par minute');
+  // Par l'API publique (routée depuis /api/friends) : le même clan, sans identifiant de joueur.
+  const fr = await call(friendsApi, { method: 'POST', body: { playerId: A.playerId, secret: A.secret, action: 'clan', op: 'view' } });
+  assert.equal(fr.status, 200, JSON.stringify(fr.body)); assert.equal(fr.body.clan.tag, 'DICE');
+  const frc = await call(friendsApi, { method: 'POST', body: { playerId: A.playerId, secret: A.secret, action: 'clan', op: 'chat' } });
+  for (const who of [A, B, C, D, E, F]) { assert.ok(!JSON.stringify(fr.body).includes(who.playerId), 'aucun identifiant (vue)'); assert.ok(!JSON.stringify(frc.body).includes(who.playerId), 'aucun identifiant (chat)'); }
+  assert.equal((await call(friendsApi, { method: 'POST', body: { playerId: A.playerId, secret: '0'.repeat(32), action: 'clan', op: 'view' } })).status, 403);
+
+  // Classement de la semaine : l'XP des tirages des membres, puis le titre Clan Champion au changement de semaine.
+  const wk = Date.UTC(2031, 0, 8, 12), nextWk = wk + 7 * 86400000;
+  await lib.recordRoll(C.playerId, 999999, wk); await lib.recordRoll(D.playerId, 123456, wk + 5);
+  await lib.recordRoll(F.playerId, 500001, wk + 10);
+  const xpC = engine.scoreOf(999999), xpD = engine.scoreOf(123456);
+  const top = await Clan.board(wk);
+  assert.equal(top.clans[0].tag, 'DICE'); assert.equal(top.clans[0].xp, xpC + xpD); assert.equal(top.clans[1].tag, 'FOES');
+  assert.ok(!JSON.stringify(top).includes(C.playerId));
+  Clan._reset(); await Clan.settleWeek(nextWk); Clan._reset(); await Clan.settleWeek(nextWk); // deux fois : un seul titre
+  assert.equal(statsOf(C.playerId).clanWeekWins, '1'); assert.equal(statsOf(D.playerId).clanWeekWins, '1'); assert.equal(statsOf(A.playerId).clanWeekWins, undefined, 'n\'a pas roulé cette semaine-là');
+  assert.ok(Ach.unlocked(statsOf(C.playerId)).includes('clanchamp'));
+  assert.equal((await Clan.board(nextWk)).last.tag, 'DICE');
+  Clan._reset();
+
+  // Guerre 5 contre 5 : défi, mise prise dans les deux coffres, tirages partagés, fin, paiement unique.
+  const diceTeam = ['Clanlead', 'Clanbee', 'Clancee', 'Clandee', 'Claneee'], foeTeam = ['Foeleader', ...foes.map(f => f.name)];
+  await fails(H(A, 'challenge', { target: 'FOES', stake: 1000, team: diceTeam }), 422, 'FOES n\'a pas 5 membres');
+  for (const f of foes) { await H(F, 'invite', { name: f.name }); await H(f, 'join', { tag: 'FOES' }); }
+  await fails(H(C, 'challenge', { target: 'FOES', stake: 1000, team: diceTeam }), 403, 'un membre ne défie pas');
+  await fails(H(A, 'challenge', { target: 'FOES', stake: 50, team: diceTeam }), 400, 'mise trop petite');
+  await fails(H(A, 'challenge', { target: 'FOES', stake: 1000, team: [...diceTeam.slice(0, 4), 'Foe9'] }), 422, 'joueur hors du clan');
+  await fails(H(A, 'challenge', { target: 'FOES', stake: 1000, team: [...diceTeam.slice(0, 4), 'Clanlead'] }), 422, 'deux fois le même');
+  // Défi refusé : la mise revient une seule fois.
+  const vault0 = (await H(A, 'view')).clan.vault;
+  v = await H(A, 'challenge', { target: 'FOES', stake: 1000, team: diceTeam }); assert.equal(v.clan.vault, vault0 - 1000); assert.equal(v.clan.war.st, 'pending');
+  await fails(H(A, 'challenge', { target: 'FOES', stake: 1000, team: diceTeam }), 409, 'une guerre à la fois');
+  await fails(H(A, 'answer', { yes: true, team: diceTeam }), 422, 'le clan qui défie n\'accepte pas');
+  v = await H(F, 'answer', { yes: false }); assert.equal(v.clan.war, null);
+  assert.equal((await H(A, 'view')).clan.vault, vault0, 'mise rendue');
+  await fails(H(F, 'answer', { yes: false }), 404, 'déjà répondu');
+  assert.equal((await H(A, 'view')).clan.vault, vault0, 'pas de double remboursement');
+  // Défi accepté.
+  const foeVault0 = (await H(F, 'view')).clan.vault, t0 = Date.now();
+  await H(A, 'challenge', { target: 'FOES', stake: 2000, team: diceTeam }, t0);
+  v = await H(F, 'view'); assert.equal(v.clan.war.incoming, true); assert.equal(v.clan.war.a.tag, 'DICE');
+  await fails(H(F, 'answer', { yes: true, team: diceTeam }), 422, 'l\'équipe doit être du clan');
+  v = await H(F, 'answer', { yes: true, team: foeTeam }, t0 + 10);
+  assert.equal(v.clan.war.st, 'running'); assert.equal(v.clan.vault, foeVault0 - 2000);
+  await fails(H(F, 'answer', { yes: false }), 404, 'plus rien à refuser');
+  const bench = mk(14, 'Clanbench', 500); await H(A, 'invite', { name: 'Clanbench' }); await H(bench, 'join', { tag: 'DICE' });
+  await fails(H(bench, 'warroll', {}, t0 + 20), 422, 'pas dans l\'équipe');
+  let wr = await H(C, 'warroll', {}, t0 + 20);
+  assert.equal(wr.count, 1); assert.equal(wr.s, engine.scoreOf(wr.n));
+  // Tirage partagé : le vis-à-vis (Foe10, 3e de l'équipe) en a reçu un.
+  const vis = wr.state.clan.war.b.players[2];
+  assert.equal(vis.name, 'Foe10'); assert.equal(vis.rolls.length, 1); assert.equal(vis.auto, 1);
+  await fails(H(C, 'warroll', {}, t0 + 30), 429, 'délai entre deux tirages');
+  for (let k = 0; k < 4; k++) { run([['DEL', `warlock:${C.playerId}`]]); wr = await H(C, 'warroll', {}, t0 + 40 + k); }
+  run([['DEL', `warlock:${C.playerId}`]]);
+  await fails(H(C, 'warroll', {}, t0 + 100), 409, '5 tirages au plus');
+  await fails(H(A, 'disband', {}, t0 + 100), 422, 'pas de dissolution pendant une guerre');
+  // Fin de la fenêtre : tirages manquants faits par le serveur, vainqueur payé une seule fois (3 % détruits).
+  const diceVault = (await H(A, 'view', {}, t0 + 100)).clan.vault, foeVault = (await H(F, 'view', {}, t0 + 100)).clan.vault, out2 = ecoOut();
+  const end = t0 + 10 + Clan.WAR.ms + 1;
+  const [va, vf] = await Promise.all([H(A, 'view', {}, end), H(F, 'view', {}, end)]);
+  const wid = run([['LRANGE', `clanwars:${cidOf(A)}`, '-1', '-1']])[0].result[0];
+  const w = await Clan.loadWar(wid);
+  assert.equal(w.st, 'done');
+  for (const id of [...w.ta, ...w.tb]) assert.equal(w.rolls[id].s.length, 5, 'tous les tirages faits');
+  assert.equal(await Clan.payWar(w, end + 5), false, 'pas de second paiement');
+  await Clan.advanceWar(wid, end + 10);
+  const pot = 4000, cut = Math.floor(pot * 0.03), diceWon = w.w === w.a;
+  const va2 = (await H(A, 'view', {}, end + 20)).clan, vf2 = (await H(F, 'view', {}, end + 20)).clan;
+  assert.equal(va2.vault, diceVault + (diceWon ? pot - cut : 0)); assert.equal(vf2.vault, foeVault + (diceWon ? 0 : pot - cut));
+  assert.equal(ecoOut() - out2, cut, 'part de la maison détruite');
+  const sumOf = team => team.reduce((x, id) => x + w.rolls[id].s.reduce((p, q) => p + q, 0), 0);
+  if (sumOf(w.ta) !== sumOf(w.tb)) assert.equal(diceWon, sumOf(w.ta) > sumOf(w.tb), 'plus gros total gagne');
+  assert.equal(va2.war, null); assert.equal(va2.past[0].won, diceWon); assert.equal(va2.wins + vf2.wins, 1);
+  for (const who of [A, B, C, D, E, F]) assert.ok(!JSON.stringify([va, vf, va2, vf2]).includes(who.playerId), 'aucun identifiant (guerre)');
+  // Accepter et refuser au même moment : un seul passe (jamais la mise rendue ET prise).
+  {
+    const vA = (await H(A, 'view')).clan.vault, vF = (await H(F, 'view')).clan.vault;
+    await H(A, 'challenge', { target: 'FOES', stake: 500, team: diceTeam });
+    const res = await Promise.allSettled([H(F, 'answer', { yes: true, team: foeTeam }), H(A, 'answer', { yes: false })]);
+    const accepted = res[0].status === 'fulfilled';
+    assert.equal(res.filter(x => x.status === 'fulfilled').length, 1, 'un seul des deux');
+    const vA2 = (await H(A, 'view')).clan.vault, vF2 = (await H(F, 'view')).clan.vault;
+    assert.deepEqual([vA2, vF2], accepted ? [vA - 500, vF - 500] : [vA, vF]);
+    if (accepted) await H(A, 'view', {}, Date.now() + Clan.WAR.ms + 10); // finie
+  }
+
+  // Tags dans le classement et le profil.
+  const lbDay = await call(leaderboard, { url: `/api/leaderboard?period=day&me=${C.playerId}` });
+  assert.equal(lbDay.status, 200);
+  const pr = await call(profile, { url: '/api/profile?name=Clancee' });
+  assert.deepEqual(pr.body.clan, { name: 'Dice Lords', tag: 'DICE', emoji: '🎲', c: 'gold' });
+  const coinsLb = await call(leaderboard, { url: '/api/leaderboard?period=coins' });
+  assert.deepEqual(coinsLb.body.entries.find(e => e.name === 'Clanbee').clan, { tag: 'DICE', c: 'gold' });
+
+  // Partir, dissoudre : plus de clan, nom et tag libérés, coffre détruit.
+  await H(E, 'leave'); assert.equal((await H(E, 'view')).me.inClan, false);
+  await fails(H(B, 'disband'), 403, 'seul le chef dissout');
+  const out3 = ecoOut(), vaultLeft = (await H(A, 'view')).clan.vault;
+  v = await H(A, 'disband'); assert.equal(v.me.inClan, false);
+  assert.equal(ecoOut() - out3, vaultLeft, 'coffre détruit');
+  for (const who of [A, B, C, D]) assert.equal(cidOf(who), null);
+  assert.equal(run([['GET', 'clantagk:DICE']])[0].result, null);
+  await fails(H(C, 'create', { clanName: 'Dice Lords', tag: 'DICE' }), 422, 'nom libre, mais pas 10 000 pièces');
+  v = await H(B, 'create', { clanName: 'Dice Lords', tag: 'DICE' }); assert.equal(v.clan.tag, 'DICE', 'nom et tag réutilisables');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

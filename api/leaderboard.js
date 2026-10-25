@@ -72,6 +72,7 @@ async function migrateXp() {
 // tous les joueurs nommés et on garde le résultat une minute.
 const Shop = require('../js/shop.js');
 const { bestAwards } = require('./_rank');
+const { tagsOf } = require('./_clan');
 const COINS_CACHE = 'lbcache:coins', COINS_TTL_S = 60;
 async function coinsBoard(me) {
   let [cached] = await redis([['GET', COINS_CACHE]]);
@@ -90,7 +91,8 @@ async function coinsBoard(me) {
   const wanted = myIndex >= LIMIT ? [...top, all[myIndex]] : top;
   const marks = await bestAwards(wanted.map(x => x[0]));
   const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, coins: x[1], rolls: x[2], me: x[0] === me });
+  const clans = await tagsOf(wanted.map(x => x[0]));
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, coins: x[1], rolls: x[2], me: x[0] === me });
   return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
 }
 
@@ -104,7 +106,8 @@ async function eventBoard(me) {
   const wanted = outside ? [...rows, [me, Number(myScore)]] : rows;
   const marks = await bestAwards(wanted.map(x => x[0]));
   const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, count: x[1], done: x[1] >= ev.goal, me: x[0] === me });
+  const clans = await tagsOf(wanted.map(x => x[0]));
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], done: x[1] >= ev.goal, me: x[0] === me });
   return {
     period: 'event', event: { id: ev.id, emoji: ev.emoji, title: ev.title, desc: ev.desc, goal: ev.goal, reward: ev.reward, end: ev.end },
     entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null,
@@ -176,6 +179,7 @@ module.exports = async (req, res) => {
     const marks = await bestAwards(wanted, t);
 
     let details = [], names = [], counts = [], titles = [];
+    const clans = await tagsOf(wanted); // tag de clan à côté du nom (api/_clan.js)
     if (wanted.length) {
       [details, names, counts, titles] = await redis([
         ['HMGET', scope.best, ...wanted],
@@ -196,7 +200,7 @@ module.exports = async (req, res) => {
       if (!details[i]) return null;
       const d = JSON.parse(details[i]);
       const s = period === 'xp' ? (id in xpOf ? xpOf[id] : Number(myXp)) : d.s;
-      return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
+      return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, clan: clans[i] || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
     };
     const entries = ids.map((id, i) => toEntry(id, i, i + 1)).filter(Boolean);
     const mine = meOutsideTop ? toEntry(me, ids.length, Number(myRank) + 1) : null;

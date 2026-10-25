@@ -2,6 +2,7 @@
 // POST /api/friends { playerId, secret, action, name }                    → add | accept | decline | remove | cancel
 // POST /api/friends { playerId, secret, action: 'gift', name, amount }    → donne des pièces à un ami
 // POST /api/friends { playerId, secret, action: 'gifts' }                 → cadeaux reçus pas encore vus (puis vus), et messages non lus
+// POST /api/friends { playerId, secret, action: 'clan', op, … }         → clans (api/_clan.js)
 // POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
@@ -169,6 +170,8 @@ module.exports = async (req, res) => {
     if (!isPlayerId(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
     if (body.action === 'list') return send(res, 200, await state(playerId));
+    // Clans (api/_clan.js) : routés d'ici, api/ est déjà à 12 fonctions publiques.
+    if (body.action === 'clan') return send(res, 200, await require('./_clan').handle(playerId, body));
     if (body.action === 'gifts') {
       if (['active', 'afk'].includes(body.presence)) await redis([['HSET', 'presence', playerId, `${Date.now()}:${body.presence}`]]);
       const gifts = await unseenGifts(playerId);
