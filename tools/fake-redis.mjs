@@ -112,8 +112,10 @@ export function fakeRedis() {
       return l.slice(s, e + 1);
     },
     ZRANGEBYSCORE(k, min, max, ...opts) {
-      const lo = min === '-inf' ? -Infinity : Number(min), hi = max === '+inf' ? Infinity : Number(max);
-      let out = asc(k).filter(([, score]) => score >= lo && score <= hi).map(([m]) => m);
+      // Bornes exclusives « (123 » comme dans Redis (api/profile.js lit ainsi les tirages arrivés depuis sa dernière visite).
+      const bound = (v, inf) => (v === inf ? (inf === '-inf' ? -Infinity : Infinity) : Number(String(v).replace(/^\(/, '')));
+      const lo = bound(min, '-inf'), hi = bound(max, '+inf'), loX = String(min).startsWith('('), hiX = String(max).startsWith('(');
+      let out = asc(k).filter(([, score]) => (loX ? score > lo : score >= lo) && (hiX ? score < hi : score <= hi)).map(([m]) => m);
       const i = opts.map(String).map(o => o.toUpperCase()).indexOf('LIMIT');
       if (i >= 0) out = out.slice(Number(opts[i + 1]), Number(opts[i + 1]) + Number(opts[i + 2]));
       return out;
