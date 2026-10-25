@@ -182,6 +182,8 @@
     { id: 'western', name: 'Western', emoji: '🌵', price: 1100, desc: 'A desert sunset, a wooden fence and tumbleweeds rolling by' },
     // Idée de JBearr12 (2026-10-21) : un diner américain des années 50, la nuit.
     { id: 'diner', name: 'Diner', emoji: '🍔', price: 1000, desc: 'A 50s diner at night: neon sign, red stools and fresh coffee' },
+    // Idée de JBearr12 (2026-10-24) : une montagne avec le soleil, et la lune qui se lève sur les tirages Mythique et plus.
+    { id: 'summit', name: 'Summit', emoji: '🏔️', price: 4000, premium: true, idea: 'JBearr12', desc: 'Snowy mountains under the sun; on a Mythic+ roll night falls and the moon rises behind the peaks' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },

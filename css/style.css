@@ -3925,6 +3925,52 @@ html.perf #wallpaper::before, html.perf #wallpaper::after { animation: none !imp
 /* Calques animés gardés en mémoire et déplacés tels quels (sans ça, Sakura redessinait ses pétales à chaque image). */
 #wallpaper.wp::before, #wallpaper.wp::after { will-change: transform, opacity; backface-visibility: hidden; }
 
+/* 🏔️ Summit, fond légendaire (idée de JBearr12, 2026-10-24) : des montagnes enneigées sous un soleil de fin
+   d'après-midi. Ordre des calques : le ciel (fond), le soleil (::before), les calques du vrai fond (nuit, étoiles,
+   lune, nuages), puis les montagnes (::after) devant tout : la lune se lève DERRIÈRE les crêtes. À partir de Mythique,
+   app.js pose data-react pendant 9 s : le soleil se couche, la nuit tombe, les étoiles s'allument et la lune monte,
+   puis le jour revient. Mouvement réduit / mode performance : pas de lever, la nuit tombe en fondu et la lune est déjà là. */
+.wp-summit { background: radial-gradient(ellipse 50% 40% at 64% 44%, rgba(254, 240, 138, .55), transparent 70%), linear-gradient(180deg, #2563eb 0%, #60a5fa 30%, #bae6fd 58%, #fde68a 80%, #fdba74 100%); }
+.wp-summit::before { left: 64%; top: 44%; width: 22vmin; height: 22vmin; margin: -11vmin 0 0 -11vmin; border-radius: 50%;
+  background: radial-gradient(circle, #fffbeb 0%, #fde68a 42%, rgba(253, 186, 116, .55) 58%, transparent 71%);
+  animation: wps-sun 8s ease-in-out infinite alternate; }
+@keyframes wps-sun { from { transform: scale(1); opacity: .92; } to { transform: scale(1.07); opacity: 1; } }
+.wp-summit::after { inset: 0; z-index: 2; transition: filter 1.6s ease;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 600' preserveAspectRatio='xMidYMax slice'><path fill='%2394a3c8' opacity='.85' d='M0 380L120 300L220 340L360 230L470 310L600 250L720 320L860 200L980 300L1100 240L1240 320L1380 220L1500 300L1600 260V600H0Z'/><path fill='%23e0e7ff' opacity='.7' d='M360 230L335 252L350 250L362 260L376 249L388 252ZM860 200L832 228L848 224L862 236L876 225L892 230ZM1380 220L1352 246L1368 243L1382 254L1396 244L1410 248Z'/><path fill='%234b5d86' d='M0 450L160 330L260 400L420 250L560 420L700 300L820 380L980 210L1120 400L1260 300L1400 410L1600 320V600H0Z'/><path fill='%23f8fafc' d='M420 250L377 290L398 284L418 300L438 286L454 292ZM980 210L933 260L955 252L975 268L995 254L1017 260ZM160 330L135 349L150 346L162 356L174 346L186 350ZM1260 300L1232 322L1248 318L1262 330L1276 318L1290 322ZM700 300L676 318L690 316L702 326L714 316L726 319Z'/><path fill='%23334569' opacity='.6' d='M980 210L1017 260L1005 300L1050 340L1120 400ZM420 250L454 292L470 340L520 380L560 420Z'/><path fill='%231e293b' d='M0 520L200 440L380 500L560 430L760 520L940 460L1140 530L1320 450L1600 510V600H0Z'/><g fill='%230f172a'><path d='M70 520l16-48 16 48zM100 516l12-36 12 36zM470 486l14-42 14 42zM500 482l11-32 11 32zM880 494l15-44 15 44zM912 490l11-34 11 34zM1270 486l14-42 14 42zM1300 480l11-32 11 32zM1500 512l15-44 15 44zM640 500l12-36 12 36zM1060 516l13-38 13 38z'/></g></svg>") center bottom / cover no-repeat; }
+/* calques du vrai fond */
+#wallpaper.wp-summit i { position: absolute; pointer-events: none; }
+#wallpaper .wps-night { inset: 0; opacity: 0; background: linear-gradient(180deg, #020617 0%, #0b1a3d 55%, #1e1b4b 100%); }
+#wallpaper .wps-stars { inset: 0 0 30% 0; opacity: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='220'><g fill='%23fff'><circle cx='20' cy='30' r='1.2'/><circle cx='90' cy='160' r='.9'/><circle cx='170' cy='70' r='1.4'/><circle cx='130' cy='120' r='.8'/><circle cx='60' cy='100' r='1'/><circle cx='230' cy='190' r='1.1'/><circle cx='210' cy='20' r='.8'/></g></svg>") 0 0 / 260px 220px repeat; }
+#wallpaper .wps-moon { left: 24%; top: 16%; width: 15vmin; height: 15vmin; border-radius: 50%; opacity: 0; transform: translate3d(0, 55vh, 0);
+  background: radial-gradient(circle at 36% 40%, rgba(148, 163, 184, .5) 0 9%, transparent 10%), radial-gradient(circle at 62% 64%, rgba(148, 163, 184, .45) 0 13%, transparent 14%), radial-gradient(circle at 66% 30%, rgba(148, 163, 184, .35) 0 6%, transparent 7%), radial-gradient(circle at 40% 38%, #ffffff, #e2e8f0 60%, #cbd5e1);
+  box-shadow: 0 0 6vmin rgba(224, 231, 255, .55), 0 0 18vmin rgba(165, 180, 252, .3); }
+#wallpaper .wps-clouds { left: 0; right: -1400px; top: 12%; height: 160px; opacity: .85;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='160'><defs><filter id='b'><feGaussianBlur stdDeviation='6'/></filter></defs><g fill='%23ffffff' filter='url(%23b)' opacity='.8'><ellipse cx='160' cy='70' rx='110' ry='22'/><ellipse cx='210' cy='56' rx='60' ry='24'/><ellipse cx='700' cy='110' rx='140' ry='18'/><ellipse cx='760' cy='98' rx='60' ry='20'/><ellipse cx='1160' cy='50' rx='90' ry='16'/></g></svg>") 0 0 / 1400px 160px repeat-x;
+  animation: wps-clouds 140s linear infinite; }
+@keyframes wps-clouds { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1400px, 0, 0); } }
+.wall-preview.wp-summit::before { width: 4.2rem; height: 4.2rem; margin: -2.1rem 0 0 -2.1rem; }
+/* la nuit des tirages Mythique et plus */
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wps-night { animation: wps-night 9s ease-in-out both; }
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wps-stars { animation: wps-stars 9s ease-in-out both; }
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wps-moon { animation: wps-moon 9s cubic-bezier(.3, .6, .3, 1) both; }
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wps-clouds { opacity: .25; transition: opacity 1.5s; }
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"])::before { animation: wps-sunset 9s ease-in-out both; }
+#wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"])::after { filter: brightness(.42) saturate(.75) hue-rotate(10deg); }
+/* plus la rareté est haute, plus la lune brille */
+#wallpaper.wp-summit:is([data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wps-moon { box-shadow: 0 0 8vmin rgba(254, 249, 195, .8), 0 0 26vmin rgba(253, 224, 71, .35); }
+@keyframes wps-night { 0% { opacity: 0; } 22% { opacity: .92; } 82% { opacity: .92; } 100% { opacity: 0; } }
+@keyframes wps-stars { 0%, 18% { opacity: 0; } 35% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes wps-moon { 0%, 10% { opacity: 1; transform: translate3d(0, 55vh, 0); } 50%, 82% { opacity: 1; transform: translate3d(0, 0, 0); } 100% { opacity: 0; transform: translate3d(0, -4vh, 0); } }
+@keyframes wps-sunset { 0% { transform: translate3d(0, 0, 0); opacity: 1; } 25% { transform: translate3d(0, 40vh, 0); opacity: 0; } 80% { transform: translate3d(0, 40vh, 0); opacity: 0; } 100% { transform: translate3d(0, 0, 0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #wallpaper.wp-summit i, #wallpaper.wp-summit::before { animation: none !important; }
+  #wallpaper.wp-summit .wps-night, #wallpaper.wp-summit .wps-stars, #wallpaper.wp-summit .wps-moon { transform: none; transition: opacity 1.2s; }
+  #wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) :is(.wps-night, .wps-stars, .wps-moon) { opacity: .9; } }
+html.perf #wallpaper.wp-summit .wps-moon { transform: none; }
+html.perf #wallpaper.wp-summit::after { transition: none; }
+html.perf #wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) :is(.wps-night, .wps-stars, .wps-moon) { opacity: .9; }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
