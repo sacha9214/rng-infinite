@@ -3644,6 +3644,15 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   let v = await H(A, 'create', { clanName: 'Dice Lords', tag: 'dice', emoji: '🎲' });
   assert.equal(v.clan.tag, 'DICE'); assert.equal(v.clan.emoji, '🎲'); assert.equal(v.me.role, 'leader'); assert.equal(v.clan.slots, 20);
   assert.equal(coins(A), before - 10000, '10 000 pièces retirées'); assert.equal(ecoOut() - out0, 10000, 'détruites (eco out:clans)');
+  // Description (2026-10-25) : chef et officiers, 150 caractères, filtrée comme le chat global, visible dans Find a clan.
+  assert.equal(v.clan.desc, '', 'pas de description au départ');
+  v = await H(A, 'desc', { desc: '  We roll   every day!  ' }); assert.equal(v.clan.desc, 'We roll every day!');
+  assert.equal((await Clan.handle(outsider.playerId, { op: 'search', q: 'dice' })).clans[0].desc, 'We roll every day!');
+  await fails(H(A, 'desc', { desc: 'x'.repeat(151) }), 422, 'trop longue');
+  await fails(H(A, 'desc', { desc: 'join us at discord.gg/abc' }), 422, 'pas de lien');
+  await fails(H(A, 'desc', { desc: 'call me 06 12 34 56 78' }), 422, 'pas de numéro');
+  await fails(H(A, 'desc', { desc: 'fuck you all' }), 422, 'pas d\'insulte');
+  v = await H(A, 'desc', { desc: '' }); assert.equal(v.clan.desc, '', 'effacée');
   await fails(H(A, 'create', { clanName: 'Other', tag: 'OTHR' }), 409, 'un seul clan');
   await fails(H(F, 'create', { clanName: 'dice lords', tag: 'FOES' }), 409, 'nom pris (sans majuscules)');
   await fails(H(F, 'create', { clanName: 'Foes United', tag: 'DICE' }), 409, 'tag pris');
@@ -3835,6 +3844,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(run([['GET', 'clantagk:DICE']])[0].result, null);
   await fails(H(C, 'create', { clanName: 'Dice Lords', tag: 'DICE' }), 422, 'nom libre, mais pas 10 000 pièces');
   v = await H(B, 'create', { clanName: 'Dice Lords', tag: 'DICE' }); assert.equal(v.clan.tag, 'DICE', 'nom et tag réutilisables');
+}
+// Faux liens (2026-10-25) : un point suivi d'une espace n'est pas un domaine (« rollers. Be active » ≠ site .be).
+{
+  const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
+  for (const t of ['Chill clan for daily rollers. Be active', 'I won. It was cool', 'Sure. Me too', 'Nice. Us vs them']) assert.equal(checkMessage(t), t, `phrase normale : ${t}`);
+  for (const t of ['go to site.com', 'visit roll . com', 'rng dot com', 'mysite(dot)net', 'check foo.be']) assert.throws(() => checkMessage(t), /Links/, `lien : ${t}`);
 }
 // Chat global (api/_global.js, routé par /api/friends) : qui écrit, délai, filtres, signalements, modération, 100 messages.
 {

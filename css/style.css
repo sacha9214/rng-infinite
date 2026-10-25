@@ -6794,3 +6794,11 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .pr-tile { text-align: center; }
 .pr-badge { font-size: 2.4rem; line-height: 1; margin: .4rem 0 .2rem; filter: drop-shadow(0 4px 10px rgba(245, 158, 11, .35)); }
 .pr-left { display: block; font: 700 .72rem var(--font-sans); color: var(--prose-2); margin: .1rem 0 .4rem; }
+
+/* Description du clan (2026-10-25) : sous le nom dans la bannière et sur les cartes de Find a clan */
+.cl-desc { margin: .35rem 0 0; font-size: .86rem; line-height: 1.35; opacity: .9; overflow-wrap: anywhere; white-space: pre-line; }
+.cl-card-desc { display: block; margin-top: .2rem; font-size: .78rem; line-height: 1.3; color: var(--prose-2); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cl-descedit { margin: .6rem 0; }
+.cl-descedit > summary { cursor: pointer; font-size: .85rem; color: var(--prose-2); }
+.cl-desc-input { width: 100%; resize: vertical; min-height: 3.2rem; font: inherit; }
+.cl-field-wide { grid-column: 1 / -1; }
