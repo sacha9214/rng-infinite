@@ -8056,6 +8056,7 @@
       el.hidden = false; this.open = true;
       document.querySelectorAll('[data-gchat]').forEach(b => b.setAttribute('aria-expanded', 'true'));
       this.rev = null; // première lecture : la liste entière
+      this.dot(false);
       this.poll();
     },
     close() {
@@ -8070,11 +8071,31 @@
       try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last() })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
       if (this.open && !document.hidden) this.timer = setTimeout(() => this.poll(), 3000);
     },
+    // Point rouge sur 💬 (demandé par Sacha, 2026-10-25) : panneau fermé, un coup d'œil toutes les 30 s (onglet visible)
+    // compare le compteur de messages du serveur (rev) au dernier vu (gardé dans le navigateur, gcSeen). Réponse minuscule
+    // (« same ») quand rien n'a bougé. Le premier passage note simplement le compteur, sans point.
+    dot(on) { document.querySelectorAll('[data-gchat]').forEach(b => b.classList.toggle('unread', !!on)); },
+    seen(rev) { if (rev != null) try { localStorage.setItem('gcSeen', String(rev)); } catch (e) { /* stockage plein ou bloqué */ } },
+    peekRev: null, peekDel: 0, peekTimer: 0,
+    async peek() {
+      clearTimeout(this.peekTimer);
+      if (!this.open && !document.hidden) {
+        try {
+          const d = await Online.global('gcList', { rev: this.peekRev, del: this.peekDel, since: Date.now() });
+          this.peekRev = d.rev; this.peekDel = d.del;
+          let seen = null; try { seen = localStorage.getItem('gcSeen'); } catch (e) { seen = null; }
+          if (seen === null) this.seen(d.rev);
+          else if (!this.open) this.dot(Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)); // une suppression seule n'allume rien
+        } catch (err) { /* hors ligne : on réessaie plus tard */ }
+      }
+      this.peekTimer = setTimeout(() => this.peek(), 30000);
+    },
     last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
     list() { return this.el.querySelector('.gc-list'); },
     apply(d) {
       const before = JSON.stringify(this.me);
       this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
+      if (this.open) { this.seen(d.rev); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (d.same) return;
@@ -8132,6 +8153,8 @@
       } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
     },
   };
+  GChat.peek();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !GChat.open) GChat.peek(); });
   document.addEventListener('visibilitychange', () => { if (GChat.open && !document.hidden) GChat.poll(); });
   // Changer de page ferme le panneau : il couvrirait la droite de la page (et tout l'écran sur téléphone).
   window.addEventListener('hashchange', () => GChat.close());
