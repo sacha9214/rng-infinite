@@ -5470,3 +5470,69 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-quit { margin-top: .4rem; }
 
 .theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */
+/* ------------------------------------------------------------------ Rock Smash (idée de HSI, 2026-10-25) : le fond
+   d'une carrière (paroi brune, gravier en bas) ; chaque chiffre est enfermé dans un rocher de granit moucheté. Pendant
+   le tirage les rochers tremblent, rigides (matière dure : aucun écrasement mou) ; un chiffre qui se pose : le rocher
+   s'assombrit (élan), le poing frappe (flash, il s'enfonce d'un coup), il rebondit raide et reste fendu, et le chiffre
+   brille en ambre dans la fissure, comme un cristal. Le poing, les éclats et la poussière : js/skinfx.js. */
+.num-card.skin-rocksmash {
+  background:
+    /* gravier en bas */
+    radial-gradient(circle at 20% 60%, #78716c 0 .05em, transparent .06em) 0 100% / .4em .2em repeat-x,
+    radial-gradient(circle at 70% 40%, #57534e 0 .045em, transparent .055em) .1em 100% / .33em .22em repeat-x,
+    linear-gradient(180deg, transparent calc(100% - .22em), #44403c calc(100% - .22em)),
+    /* strates de la paroi */
+    repeating-linear-gradient(172deg, transparent 0 .35em, rgba(0, 0, 0, .12) .35em .38em, transparent .38em .7em),
+    radial-gradient(ellipse 70% 70% at 50% 40%, rgba(251, 191, 36, .1), transparent 75%),
+    linear-gradient(180deg, #6b5a4a, #4a3e33 60%, #2f2822);
+  border: 2px solid #292524; border-radius: .55rem;
+  box-shadow: inset 0 0 0 1px rgba(214, 211, 209, .12), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 14px rgba(245, 158, 11, .18), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .32em .4em .34em;
+}
+.skin-rocksmash .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 900; line-height: 1;
+  width: 1.12em; height: 1.3em; margin: 0 .02em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: 46% 54% 42% 58% / 56% 44% 58% 42%;
+  color: #fde68a; text-shadow: 0 0 .15em #f59e0b, 0 0 .4em rgba(245, 158, 11, .8), 0 .04em 0 #78350f;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .5) 0 .03em, transparent .04em) 0 0 / .23em .2em,
+    radial-gradient(circle at 60% 70%, rgba(28, 25, 23, .55) 0 .03em, transparent .04em) .05em .07em / .27em .25em,
+    radial-gradient(ellipse 60% 50% at 35% 28%, rgba(255, 255, 255, .35), transparent 70%),
+    linear-gradient(160deg, #a8a29e, #78716c 55%, #57534e);
+  box-shadow: inset -.06em -.08em .1em rgba(0, 0, 0, .45), inset .04em .05em .06em rgba(255, 255, 255, .25), 0 .07em .08em rgba(0, 0, 0, .55);
+}
+/* la fissure : un trait sombre en éclair, au bord lumineux, par-dessus la pierre, sous le chiffre */
+.skin-rocksmash .slot::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 46'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M20 0L17 9L23 15L16 24L22 31L18 46M17 9L8 6M23 15L33 12M16 24L5 27M22 31L35 35' stroke='%23f59e0b' stroke-opacity='.6' stroke-width='3.6'/><path d='M20 0L17 9L23 15L16 24L22 31L18 46M17 9L8 6M23 15L33 12M16 24L5 27M22 31L35 35' stroke='%231c1917' stroke-width='1.6'/></g></svg>") 50% 50% / 100% 100% no-repeat,
+    radial-gradient(ellipse 45% 50% at 50% 50%, rgba(251, 191, 36, .4), transparent 75%); }
+.skin-rocksmash .slot.ghost { opacity: .2; }
+.skin-rocksmash .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-rocksmash .slot.collapsed::before { display: none; }
+/* Pendant le tirage : un rocher intact (pas de fissure), le chiffre à peine deviné, il tremble par à-coups. */
+.skin-rocksmash .slot.spinning { color: rgba(41, 37, 36, .45); text-shadow: 0 .03em 0 rgba(255, 255, 255, .15); animation: rks-shake .12s steps(2) infinite; }
+.skin-rocksmash .slot.spinning::before { display: none; }
+.skin-rocksmash .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes rks-shake { 0% { transform: translate(-.025em, .01em) rotate(-1.5deg); } 100% { transform: translate(.025em, -.01em) rotate(1.5deg); } }
+/* Le coup : le rocher s'assombrit (élan), flash et il s'enfonce d'un coup, rebond raide, il se pose fendu. */
+.skin-rocksmash .slot.revealed { animation: rks-smash .5s backwards; }
+@keyframes rks-smash {
+  0% { transform: translateY(-.04em); filter: brightness(.7); animation-timing-function: ease-in; }
+  16% { transform: translateY(-.06em); filter: brightness(.6); }
+  24% { transform: translateY(.1em) scale(1.04, .94); filter: brightness(1.9); animation-timing-function: steps(1); }
+  34% { transform: translate(-.04em, .02em) rotate(-3deg); filter: brightness(1.4); }
+  44% { transform: translate(.035em, 0) rotate(2deg); filter: none; }
+  56% { transform: translate(-.015em, 0) rotate(-1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-rocksmash .slot { animation: none; } }
+/* Cadre de duel : une carrière poussiéreuse, des cailloux en bas ; 👊 cogne, 🪨 tremble. */
+.side-rocksmash { --side-border: #a8a29e; --side-glow: 0 0 16px rgba(245, 158, 11, .25); --side-ink: #92400e;
+  --side-bg: radial-gradient(ellipse 80% 40% at 50% 100%, rgba(120, 113, 108, .4), transparent 70%), radial-gradient(ellipse 60% 50% at 50% 40%, rgba(245, 158, 11, .1), transparent 70%), repeating-linear-gradient(172deg, transparent 0 14px, rgba(120, 113, 108, .12) 14px 16px);
+  --deco-a: '👊'; --deco-b: '🪨'; }
+.side-rocksmash::before { animation: rks-punch 1.6s ease-in infinite; }
+.side-rocksmash::after { animation: rks-rattle 1.6s steps(2) infinite; }
+@keyframes rks-punch { 0%, 55%, 100% { transform: none; } 70% { transform: translate(-3px, -3px) scale(.9); } 78% { transform: translate(5px, 4px) scale(1.2); } }
+@keyframes rks-rattle { 0%, 76%, 100% { transform: none; } 80% { transform: translateX(-2px) rotate(-6deg); } 88% { transform: translateX(2px) rotate(5deg); } }
+.room-stage.many .side-rocksmash::before, .room-stage.many .side-rocksmash::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-rocksmash::before, .side-rocksmash::after { animation: none; } }

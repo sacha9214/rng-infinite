@@ -908,3 +908,9 @@
 /* lames vues de la tranche : elles s'amincissent, le ciel apparaît entre elles */
 .btn-roll.gen-blinds:hover { background-image: repeating-linear-gradient(180deg, #f6ead0 0, #d9bf8d .06em, rgba(80, 56, 24, .55) .06em, transparent calc(.06em + 1px), transparent .32em), linear-gradient(180deg, #2563eb, #93c5fd); }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-sonic:hover, .btn-roll.gen-ufo:hover { animation: none; } }
+/* Rock Smash (idée de HSI, 2026-10-25) : une dalle de granit moucheté, une fissure ambre qui luit. */
+.btn-roll.gen-rocksmash { border: 2px solid #292524; border-radius: .7em .5em .8em .45em; color: #fef3c7;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .35) 0 1px, transparent 2px) 0 0 / .5em .45em, linear-gradient(115deg, transparent 47%, rgba(245, 158, 11, .7) 48.5%, transparent 50.5%), linear-gradient(160deg, #a8a29e, #78716c 55%, #57534e);
+  text-shadow: 0 0 .3em #f59e0b, 0 1px 0 #292524;
+  --gs: 0 .3em 0 #292524, 0 .5em 1em rgba(0, 0, 0, .35); --gs-h: 0 .34em 0 #292524, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #292524; }
+.btn-roll.gen-rocksmash:hover { filter: brightness(1.08); }
