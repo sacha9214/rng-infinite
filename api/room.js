@@ -340,7 +340,7 @@ async function view(room, me) {
     reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
     players: room.players.map((p, i) => ({
-      name: p.name, title: p.title || null, top: p.top || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host, out: room.h[`out:${p.id}`] || null,
+      name: p.name, title: p.title || null, top: p.top || null, clan: p.clan || null, skin: p.skin || null, bot: !!p.bot, me: p.id === me, host: p.id === room.host, out: room.h[`out:${p.id}`] || null,
       ready: status === 'playing' && !p.bot && readyFor(room, p) === k, wins: sc.wins[i], total: sc.totals[i],
     })),
     rounds: sc.list,
@@ -370,8 +370,9 @@ async function view(room, me) {
 // Titre et skin équipés d'un joueur au moment où il entre dans la salle (affichés à côté de son nom et sur ses cartes).
 // top : son meilleur badge Top 1 / 5 / 10 d'un mois passé ({ top, month }).
 async function seat(id, name) {
-  const [[title, skin], marks] = await Promise.all([redis([['HGET', 'titles', id], ['HGET', 'skins', id]]), bestAwards([id])]);
-  return { id, name, title: title || null, top: marks.get(id) || null, skin: Shop.resolve(skin) || null };
+  const [[title, skin, clan], marks] = await Promise.all([redis([['HGET', 'titles', id], ['HGET', 'skins', id], ['HGET', 'clantag', id]]), bestAwards([id])]);
+  // clan : tag de son clan à l'entrée (api/_clan.js), « TAG|couleur ».
+  return { id, name, title: title || null, top: marks.get(id) || null, skin: Shop.resolve(skin) || null, ...(clan ? { clan: { tag: String(clan).split('|')[0], c: String(clan).split('|')[1] || 'plain' } } : {}) };
 }
 
 // "Live now" : les 10 parties publiques les plus récemment actives, sans identifiant.

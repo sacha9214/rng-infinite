@@ -29,6 +29,14 @@ Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one
 - **Idea Managers** (10-23): players Sacha picks (Owner page → Idea Managers tab) review ideas on `#/ideas` with a verdict and a mandatory reason (20+ characters, server-checked). They see nothing else; Sacha sees their reviews in the Inbox and decides.
 - **Codes**: `EPITECH>42`, `SORRY404` (until Oct 29), `ICHI` (100 coins).
 
+- **Clans** (2026-10-25, branch `claude/clans`, not merged; idea by BIGBOIJONER69 and KMC): `#/clan` (entry card on
+  Profile & Friends), logic in `api/_clan.js` routed from `/api/friends` (`action: 'clan', op`). Create 10,000 coins
+  (destroyed, `eco out:clans`), invite/request, roles, vault (donations 10–10,000, 10/hour, never paid back to players),
+  upgrades (slots 20→40: 5k/10k/20k/40k; banner 2k; tag color 3k, rainbow 15k), clan chat (report → Reports, 10-min
+  edit), weekly clan XP counted in `recordRoll` (`clanxp:<week>`), Clan Champion title settled once per week
+  (`clanweek:done:<week>` NX), 5v5 wars (stake 100–50,000 from both vaults, 5 server rolls each over 6 h, shared rolls,
+  3% cut destroyed, `paid` HSETNX). Tags (`clantag` hash) on leaderboards, profiles and duel seats. Audit scripts take
+  `RNG_BASE` for another dev port. Not done: no nav tab (header width), no Discord announce, no war forfeits.
 - **Global chat** (2026-10-25, branch `claude/global-chat`, not merged): 💬 corner button (bottom-right on desktop, bottom row
   on phones) opens a panel. Everyone reads; writing needs a linked Google account + 100 rolls. 1 message / 5 s, 200 chars,
   last 100 kept (`gc:msgs`). Server filter (`api/_global.js`, routed from `api/friends.js` actions `gc…`) rejects links,

@@ -67,6 +67,8 @@
     // Idée d'Angelicide9 (2026-10-18) : des titres pour les pires raretés, et le pire tirage du mois.
     { id: 'garbageman', emoji: '🗑️', title: 'Garbage Collector', desc: 'Roll a Garbage (bottom 0.05%)', test: st => num(st['t:garbage']) >= 1 },
     { id: 'landwaster', emoji: '☣️', title: 'Land Waster', desc: 'Roll a Land waste, the worst score there is', test: st => num(st['t:landwaste']) >= 1 },
+    // Clans (idée de BIGBOIJONER69 et KMC, 2026-10-25) : membre du clan n°1 d'une semaine (XP gagnée cette semaine-là).
+    { id: 'clanchamp', emoji: '🏯', title: 'Clan Champion', desc: 'Earn XP for the #1 clan of a week', test: st => num(st.clanWeekWins) >= 1 },
     { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
     { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
     { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },

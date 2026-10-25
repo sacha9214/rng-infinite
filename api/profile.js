@@ -35,6 +35,10 @@ module.exports = async (req, res) => {
       ['HGET', 'skins', id], // skin équipé : le meilleur tirage s'affiche avec, en tête du profil
       ['HGET', statsKey(id), 'discordName'],
     ]);
+    // Clan du joueur (api/_clan.js) : tag, nom et emoji, affichés sous son nom.
+    const [cid] = await redis([['HGET', 'clanof', id]]);
+    const [cinfo] = cid ? await redis([['HMGET', `clan:${cid}`, 'name', 'tag', 'emoji', 'tagc']]) : [null];
+    const clan = cinfo && cinfo[1] ? { name: cinfo[0], tag: cinfo[1], emoji: cinfo[2], c: cinfo[3] || 'plain' } : null;
     const stats = await readStats(id);
     // Badges Top 1 / 5 / 10 des mois finis : tous, et le meilleur (rang, puis le plus récent) pour l'en-tête.
     const tops = await awardsOf(id);
@@ -111,7 +115,7 @@ module.exports = async (req, res) => {
       inventory: { skins: (ownedSkins || []).filter(k => k !== 'owner'), walls: ownedWalls || [] },
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé
-      title: title || null,
+      title: title || null, clan,
       top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
       questBest: Number(stats.qsBest) || 0,

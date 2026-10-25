@@ -3,7 +3,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = process.env.BASE || 'http://localhost:8124'; // BASE : autre port (plusieurs serveurs de dev en même temps)
+const B = process.env.RNG_BASE || process.env.BASE || 'http://localhost:8124'; // RNG_BASE ou BASE : autre port (plusieurs serveurs de dev)
 const widths = process.argv.slice(2).map(Number).filter(Boolean);
 const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const ctx = await browser.newContext({ viewport: { width: 375, height: 760 }, colorScheme: 'dark', locale: 'fr-FR' });
@@ -15,7 +15,7 @@ let bad = 0;
 for (const w of widths.length ? widths : [320, 360, 375, 414]) {
   await p.setViewportSize({ width: w, height: 760 });
   const line = [];
-  for (const hash of ['#/', '#/duel', '#/leaderboard', '#/badges', '#/stats', '#/history', '#/shop', '#/friends', '#/about']) {
+  for (const hash of ['#/', '#/duel', '#/leaderboard', '#/badges', '#/stats', '#/history', '#/shop', '#/friends', '#/clan', '#/about']) {
     await p.goto(B + '/' + hash); await p.waitForTimeout(hash === '#/shop' || hash === '#/badges' ? 1400 : 900);
     const r = await p.evaluate(() => { const over = document.documentElement.scrollWidth - innerWidth; const who = over > 0 ? [...document.querySelectorAll('.app *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 2).map(e => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').slice(0, 2).join('.')}`) : []; return { over, who }; });
     if (r.over > 0) bad++;
