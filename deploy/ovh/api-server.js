@@ -114,6 +114,10 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
 // n'a le jeu ouvert (api/_lever.js).
 const Lever = require(path.join(ROOT, 'api/_lever.js'));
 setInterval(() => { Lever.tick().catch(err => console.error('lever tick:', err.message)); }, 15000).unref();
+// Recalcul de l'XP à vie après un changement de badges (api/leaderboard.js) : quelques joueurs toutes les 5 s, en fond,
+// au lieu de gros passages pendant les visites du classement (lenteurs du 2026-10-25). Ne fait rien une fois fini.
+const { migrateXp } = require(path.join(ROOT, 'api/leaderboard.js'));
+setInterval(() => { migrateXp().catch(err => console.error('migrateXp:', err.message)); }, 5000).unref();
 // Discord : nouveautés publiées au démarrage, podium du jour à minuit UTC (api/_discord_tasks.js).
 require(path.join(ROOT, 'api/_discord_tasks.js')).start();
 
