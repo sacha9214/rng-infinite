@@ -4009,6 +4009,63 @@ html.perf #wallpaper.wp-summit:is([data-react="mythic"], [data-react="celestial"
 html.perf #wallpaper .wpb-b { transform: translate3d(0, calc(var(--y) * -1vh - 100%), 0); }
 html.perf #wallpaper .wpb-pop::after { display: none; }
 
+/* 🐋 Open Ocean, fond légendaire (idée d'AnnJoe, 2026-10-24) : l'océan ouvert, des rayons de lumière qui ondulent,
+   des dauphins et un requin qui passent (::after, une bande qui défile), et sur le vrai fond une baleine à bosse qui
+   traverse lentement l'écran et un requin dans l'autre sens. À la révélation, app.js pose data-react : la lumière de
+   la surface prend la couleur de la rareté, des bulles montent dès Anomaly, et un banc de dauphins file devant à
+   partir de Mythique. Seulement transform / opacity ; mouvement réduit et mode performance : tout reste immobile. */
+.wp-oceanic { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='160'><g fill='%23031526'><path d='M0 160V118q60-30 130-8t150-20 170 6 150-14 160 10 140 4V160z'/></g><g fill='none' stroke='%23052a3f' stroke-width='5' stroke-linecap='round'><path d='M120 120q-14-40 4-70t-4-46'/><path d='M140 118q14-30-2-58t6-44'/><path d='M610 124q-16-34 2-62t-6-40'/><path d='M628 124q12-26 0-50'/></g></svg>") 0 100% / 900px 160px repeat-x,
+    radial-gradient(ellipse 70% 30% at 50% -6%, rgba(165, 243, 252, .45), transparent 70%),
+    linear-gradient(180deg, #0e7490 0%, #0c4a6e 30%, #082f49 62%, #020c1b 100%); }
+.wp-oceanic::before { inset: -10% -20% 20% -20%; transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 85%); mask-image: linear-gradient(180deg, #000, transparent 85%);
+  background: linear-gradient(100deg, transparent 18%, rgba(186, 230, 253, .1) 21%, transparent 25%, transparent 38%, rgba(186, 230, 253, .14) 41%, transparent 45%, transparent 58%, rgba(186, 230, 253, .08) 60%, transparent 63%, transparent 74%, rgba(186, 230, 253, .12) 78%, transparent 82%);
+  animation: wpo-rays 11s ease-in-out infinite alternate; }
+@keyframes wpo-rays { from { transform: skewX(-6deg); opacity: .7; } to { transform: skewX(6deg); opacity: 1; } }
+/* la bande qui défile : un banc de dauphins, un requin, un banc de poissons (tous tournés vers la gauche) */
+.wp-oceanic::after { left: 0; right: -2400px; top: 26%; height: 260px; opacity: .8;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='260'><defs><path id='d' d='M2 26L14 22C24 14 40 10 58 10L66 1C68 0 70 1 69 4L70 12C92 14 108 20 118 26L132 16C135 15 136 17 135 19L128 30L136 42C137 44 134 45 132 43L118 34C100 40 80 42 60 38L54 46L50 37C34 34 20 30 8 30L2 28Z'/><path id='f' d='M0 4Q6 0 12 4L16 1V7L12 4Q6 8 0 4Z'/></defs><g fill='%23164e63'><use href='%23d' transform='translate(260 60)'/><use href='%23d' transform='translate(400 96) scale(.85)'/><use href='%23d' transform='translate(330 140) scale(.7)' opacity='.8'/></g><path fill='%230b2a3d' transform='translate(1250 120) scale(1.3)' d='M4 38C30 26 70 22 100 24L112 4C116 2 118 4 118 8L122 26C150 28 170 32 180 34L196 14C199 12 200 14 199 18L192 38L198 58C199 62 196 62 194 60L178 44C160 48 130 52 100 50L92 64L86 50C50 50 20 46 4 38Z'/><g fill='%23155e75' opacity='.75'><use href='%23f' x='1900' y='60'/><use href='%23f' x='1922' y='52'/><use href='%23f' x='1944' y='66'/><use href='%23f' x='1916' y='76'/><use href='%23f' x='1940' y='84'/><use href='%23f' x='1962' y='56'/><use href='%23f' x='1970' y='76'/><use href='%23f' x='1990' y='64'/><use href='%23f' x='1888' y='72'/></g></svg>") 0 0 / 2400px 260px repeat-x;
+  animation: wpo-strip 75s linear infinite; }
+@keyframes wpo-strip { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-2400px, 0, 0); } }
+.wall-preview.wp-oceanic { background-size: 360px 64px, auto, auto; }
+.wall-preview.wp-oceanic::after { top: 22%; height: 78px; right: -720px; background-size: 720px 78px; animation-name: wpo-strip-sm; animation-duration: 30s; }
+@keyframes wpo-strip-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-720px, 0, 0); } }
+/* une baleine dans l'aperçu (sur le vrai fond, c'est le calque .wpo-whale qui nage) */
+.wall-preview.wp-oceanic { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='160'><g fill='%23031526'><path d='M0 160V118q60-30 130-8t150-20 170 6 150-14 160 10 140 4V160z'/></g><g fill='%230a3048' transform='translate(150 30) scale(.75)'><path d='M8 52C20 34 60 26 110 28C170 30 220 40 252 50L284 28C292 26 296 30 292 36L276 58L294 80C298 86 292 90 284 86L250 66C210 80 150 86 100 82C55 78 22 70 8 52Z'/><path d='M96 74C110 92 140 104 168 106C150 96 128 84 118 74Z'/></g></svg>"), radial-gradient(ellipse 70% 30% at 50% -6%, rgba(165, 243, 252, .45), transparent 70%), linear-gradient(180deg, #0e7490 0%, #0c4a6e 30%, #082f49 62%, #020c1b 100%); }
+/* calques du vrai fond */
+#wallpaper.wp-oceanic i { position: absolute; left: 0; pointer-events: none; will-change: transform, translate; }
+#wallpaper :is(.wpo-whale, .wpo-shark, .wpo-pod) { background-position: center; background-size: contain; background-repeat: no-repeat; }
+#wallpaper .wpo-whale { top: 50%; width: min(72vw, 880px); aspect-ratio: 300 / 110; translate: 30vw 0; opacity: .9;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 110'><defs><linearGradient id='b' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23072a40'/><stop offset='1' stop-color='%23123f58'/></linearGradient></defs><g fill='url(%23b)'><path d='M8 52C20 34 60 26 110 28C170 30 220 40 252 50L284 28C292 26 296 30 292 36L276 58L294 80C298 86 292 90 284 86L250 66C210 80 150 86 100 82C55 78 22 70 8 52Z'/><path d='M96 74C110 92 140 104 168 106C150 96 128 84 118 74Z'/></g><g fill='none' stroke='%23295f78' stroke-width='1.2' stroke-linecap='round' opacity='.7'><path d='M24 62Q70 74 130 76'/><path d='M28 66Q74 78 120 80'/><path d='M36 70Q70 79 104 81'/></g><circle cx='40' cy='50' r='2' fill='%2367e8f9' opacity='.6'/><g fill='%2393c5fd' opacity='.25'><circle cx='30' cy='38' r='2'/><circle cx='60' cy='33' r='1.6'/><circle cx='84' cy='31' r='2.2'/></g></svg>");
+  animation: wpo-cross-left 95s linear -38s infinite, wpo-bob 9s ease-in-out infinite alternate; }
+#wallpaper .wpo-shark { top: 18%; width: min(30vw, 320px); aspect-ratio: 200 / 70; translate: 60vw 0; opacity: .75;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 70'><path fill='%23082236' transform='matrix(-1 0 0 1 200 0)' d='M4 38C30 26 70 22 100 24L112 4C116 2 118 4 118 8L122 26C150 28 170 32 180 34L196 14C199 12 200 14 199 18L192 38L198 58C199 62 196 62 194 60L178 44C160 48 130 52 100 50L92 64L86 50C50 50 20 46 4 38Z'/><g fill='none' stroke='%231e4f66' stroke-width='1' transform='matrix(-1 0 0 1 200 0)'><path d='M36 34v8M40 33v9M44 33v9'/></g></svg>");
+  animation: wpo-cross-right 38s linear -14s infinite, wpo-bob 5s ease-in-out infinite alternate; }
+@keyframes wpo-cross-left { from { translate: 100vw 0; } to { translate: -100% 0; } }
+@keyframes wpo-cross-right { from { translate: -100% 0; } to { translate: 100vw 0; } }
+@keyframes wpo-bob { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(2.5vh) rotate(-2deg); } }
+/* réactions */
+#wallpaper .wpo-glow { top: 0; width: 100%; height: 70%; opacity: 0; background: radial-gradient(ellipse 60% 55% at 50% 0%, rgba(var(--wr, 165, 243, 252), .6), rgba(var(--wr, 165, 243, 252), .12) 55%, transparent 80%); }
+#wallpaper .wpo-fizz { bottom: -60%; width: 100%; height: 100%; opacity: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='420'><g fill='none' stroke='%23cffafe' stroke-width='1.6' opacity='.75'><circle cx='40' cy='380' r='7'/><circle cx='60' cy='330' r='4'/><circle cx='46' cy='290' r='9'/><circle cx='150' cy='400' r='5'/><circle cx='170' cy='340' r='10'/><circle cx='160' cy='270' r='4'/><circle cx='260' cy='390' r='8'/><circle cx='280' cy='320' r='5'/><circle cx='266' cy='250' r='11'/><circle cx='350' cy='360' r='6'/><circle cx='370' cy='300' r='4'/><circle cx='90' cy='200' r='6'/><circle cx='220' cy='180' r='5'/><circle cx='330' cy='150' r='7'/><circle cx='120' cy='110' r='4'/><circle cx='250' cy='80' r='6'/></g></svg>") 0 0 / 400px 420px repeat; }
+#wallpaper .wpo-pod { top: 40%; width: min(60vw, 640px); aspect-ratio: 300 / 120; opacity: 0; translate: 100vw 0;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 120'><defs><path id='d' d='M2 26L14 22C24 14 40 10 58 10L66 1C68 0 70 1 69 4L70 12C92 14 108 20 118 26L132 16C135 15 136 17 135 19L128 30L136 42C137 44 134 45 132 43L118 34C100 40 80 42 60 38L54 46L50 37C34 34 20 30 8 30L2 28Z'/></defs><g fill='%232b7a96'><use href='%23d' transform='translate(4 10) rotate(-8 70 25)'/><use href='%23d' transform='translate(140 0) scale(.9) rotate(6 70 25)'/><use href='%23d' transform='translate(90 66) scale(.8) rotate(-4 70 25)'/></g></svg>"); }
+#wallpaper.wp-oceanic[data-react] .wpo-glow { animation: wpo-glow 4.4s ease-out both; }
+#wallpaper.wp-oceanic:is([data-react="landwaste"], [data-react="garbage"], [data-react="trash"], [data-react="common"]) .wpo-glow { animation-name: wpo-glow-soft; }
+#wallpaper.wp-oceanic:is([data-react="anomaly"], [data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpo-fizz { animation: wpo-fizz 4.4s ease-out both; }
+#wallpaper.wp-oceanic:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpo-pod { animation: wpo-pod 4.4s cubic-bezier(.3, .1, .4, 1) both; }
+@keyframes wpo-glow { 0% { opacity: 0; } 18% { opacity: .9; } 100% { opacity: 0; } }
+@keyframes wpo-glow-soft { 0% { opacity: 0; } 25% { opacity: .3; } 100% { opacity: 0; } }
+@keyframes wpo-fizz { 0% { opacity: 0; transform: translate3d(0, 0, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0, -110%, 0); } }
+@keyframes wpo-pod { 0% { opacity: 0; translate: 100vw 0; transform: translateY(6vh) rotate(4deg); } 12% { opacity: .95; } 55% { transform: translateY(-4vh) rotate(-3deg); } 85% { opacity: .95; } 100% { opacity: 0; translate: -100% 0; transform: translateY(2vh) rotate(2deg); } }
+/* mouvement réduit / mode performance : la baleine et le requin restent posés, la réaction n'est qu'un éclat de lumière */
+@media (prefers-reduced-motion: reduce) {
+  #wallpaper.wp-oceanic i { animation: none !important; }
+  #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; transition: opacity 1.2s; } }
+html.perf #wallpaper.wp-oceanic i { animation: none !important; }
+html.perf #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;

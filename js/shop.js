@@ -186,6 +186,8 @@
     { id: 'summit', name: 'Summit', emoji: '🏔️', price: 4000, premium: true, idea: 'JBearr12', desc: 'Snowy mountains under the sun; on a Mythic+ roll night falls and the moon rises behind the peaks' },
     // Idée de kingston (2026-10-24) : des bulles ASMR qu'on éclate en cliquant (sur le fond seulement, jamais sur le jeu).
     { id: 'bubbles', name: 'ASMR Bubbles', emoji: '🫧', price: 1000, idea: 'kingston', desc: 'Shiny bubbles float up behind the game; click the background to pop them' },
+    // Idée d'AnnJoe (2026-10-24) : un fond légendaire sous la mer, avec des baleines, des requins et des dauphins qui nagent.
+    { id: 'oceanic', name: 'Open Ocean', emoji: '🐋', price: 5000, premium: true, idea: 'AnnJoe', desc: 'Whales, sharks and dolphins swim by; rare rolls light up the water and Mythic+ rolls send a pod of dolphins racing past' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
