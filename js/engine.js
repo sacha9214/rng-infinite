@@ -341,6 +341,8 @@
     // Idée de MereTera (2026-10-22) : les chiffres de 10, 9, 8, 7, 6 (1, 0, 9, 8, 7, 6), une fois chacun, dans n'importe quel ordre.
     // Idée de CrazyMiner22 (2026-10-22) : 6741 ou 4167 n'importe où.
     BRAINROT_KING: c => c.s.includes('6741') || c.s.includes('4167'),
+    // Idée de CococoC (2026-10-25) : « Vortrox et Gina », 4992 ou 9249 n'importe où (couvre aussi les nombres Geometry Dash 554992…).
+    VORTROX_GINA: c => c.s.includes('4992') || c.s.includes('9249'),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
