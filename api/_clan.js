@@ -32,6 +32,15 @@ const { redis, eco, engine, readStats, statsKey, cleanName, nameKey, findPlayer,
 const Shop = require('../js/shop.js');
 const Reports = require('./_reports');
 const { cleanChat, MAX_CHARS } = require('./_chat');
+// Description du clan (demandée par Sacha, 2026-10-25, comme dans les grands jeux de clans) : 150 caractères, mêmes
+// filtres que le chat global (liens, insultes, infos personnelles), modifiable par le chef et les officiers.
+const DESC_MAX = 150;
+function checkDesc(raw) {
+  const text = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if ([...text].length > DESC_MAX) throw refuse(422, `Descriptions are ${DESC_MAX} characters at most`);
+  return require('./_global').checkMessage(text);
+}
 
 const CREATE_COST = 10000, MIN_ROLLS = 30;
 const SLOTS_BASE = 20, SLOTS_MAX = 40, SLOT_STEP = 5;
@@ -106,7 +115,7 @@ function checkTag(raw) {
 
 // ---------------------------------------------------------------- création, entrée, sortie
 async function create(me, body) {
-  const name = checkName(body.clanName), tag = checkTag(body.tag), emoji = EMOJIS.includes(body.emoji) ? body.emoji : EMOJIS[0];
+  const name = checkName(body.clanName), tag = checkTag(body.tag), emoji = EMOJIS.includes(body.emoji) ? body.emoji : EMOJIS[0], desc = checkDesc(body.desc);
   if (await clanOf(me)) throw refuse(409, 'You are already in a clan');
   return locked(`shop:${me}`, async () => {
     const st = await readStats(me), coins = Shop.balance(st), rolls = Number(st.rolls) || 0;
@@ -122,7 +131,7 @@ async function create(me, body) {
     if (Number(mine) !== 1) { await redis([['DEL', nk], ['DEL', tk]]); throw refuse(409, 'You are already in a clan'); }
     const t = Date.now(), [myName] = await redis([['HGET', 'names', me]]);
     await redis([
-      ['HSET', ckey(cid), 'name', name, 'tag', tag, 'emoji', emoji, 'leader', me, 'slots', SLOTS_BASE, 'vault', 0, 'banner', 'slate', 'tagc', 'plain', 't', t],
+      ['HSET', ckey(cid), 'name', name, 'tag', tag, 'emoji', emoji, 'leader', me, 'slots', SLOTS_BASE, 'vault', 0, 'banner', 'slate', 'tagc', 'plain', 't', t, 'desc', desc],
       ['HSET', mkey(cid), me, 'leader'], ['HSET', 'clantag', me, `${tag}|plain`], ['SADD', 'clans', cid],
       ['HINCRBY', statsKey(me), 'spent', CREATE_COST], ['HINCRBY', statsKey(me), 'clanSpent', CREATE_COST], ['DEL', invKey(me)],
       ...pushLog(cid, { k: 'create', n: myName || 'Player', a: 0, t }), ...eco('out:clans', CREATE_COST, t),
@@ -279,8 +288,8 @@ async function board(t = Date.now(), limit = 20) {
   const rows = [];
   for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const cids = [...rows.map(r => r[0]), ...(lastCid ? [lastCid] : [])];
-  const info = cids.length ? await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots'], ['HLEN', mkey(cid)]])) : [];
-  const card = i => { const [name, tag, emoji, banner, tagc, slots] = info[2 * i] || []; return tag ? { name, tag, emoji, banner, tagc, members: Number(info[2 * i + 1]) || 0, slots: Number(slots) || SLOTS_BASE } : null; };
+  const info = cids.length ? await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots', 'desc'], ['HLEN', mkey(cid)]])) : [];
+  const card = i => { const [name, tag, emoji, banner, tagc, slots, desc] = info[2 * i] || []; return tag ? { name, tag, emoji, desc: desc || '', banner, tagc, members: Number(info[2 * i + 1]) || 0, slots: Number(slots) || SLOTS_BASE } : null; };
   return {
     week, end: weekEnd(t),
     clans: rows.map((r, i) => (card(i) ? { rank: i + 1, xp: r[1], ...card(i) } : null)).filter(Boolean),
@@ -294,9 +303,9 @@ function weekEnd(t) { const d = new Date(t); d.setUTCHours(0, 0, 0, 0); d.setUTC
 async function search(q) {
   const [cids] = await redis([['SMEMBERS', 'clans']]);
   if (!cids || !cids.length) return [];
-  const info = await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots', 't'], ['HLEN', mkey(cid)], ['ZSCORE', xpKey(weekKey(Date.now())), cid]]));
+  const info = await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots', 't', 'desc'], ['HLEN', mkey(cid)], ['ZSCORE', xpKey(weekKey(Date.now())), cid]]));
   const needle = String(q || '').trim().toLowerCase();
-  return cids.map((cid, i) => { const [name, tag, emoji, banner, tagc, slots, t] = info[3 * i] || []; return tag ? { name, tag, emoji, banner, tagc, slots: Number(slots) || SLOTS_BASE, members: Number(info[3 * i + 1]) || 0, xp: Number(info[3 * i + 2]) || 0, t: Number(t) || 0 } : null; })
+  return cids.map((cid, i) => { const [name, tag, emoji, banner, tagc, slots, t, desc] = info[3 * i] || []; return tag ? { name, tag, emoji, desc: desc || '', banner, tagc, slots: Number(slots) || SLOTS_BASE, members: Number(info[3 * i + 1]) || 0, xp: Number(info[3 * i + 2]) || 0, t: Number(t) || 0 } : null; })
     .filter(c => c && (!needle || c.name.toLowerCase().includes(needle) || c.tag.toLowerCase().includes(needle)))
     .sort((a, b) => b.xp - a.xp || b.t - a.t).slice(0, 30).map(({ t, ...c }) => c);
 }
@@ -495,8 +504,8 @@ async function view(me, now = Date.now()) {
     // Sans clan : ses invitations, et les clans où il a demandé à entrer.
     const [inv] = await redis([['HGETALL', invKey(me)]]);
     const cids = []; for (let i = 0; i < (inv || []).length; i += 2) if (now - Number(inv[i + 1]) < INVITE_TTL * 1000) cids.push(inv[i]);
-    const info = cids.length ? await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots'], ['HLEN', mkey(cid)]])) : [];
-    out.invites = cids.map((cid, i) => { const [name, tag, emoji, banner, tagc, slots] = info[2 * i] || []; return tag ? { name, tag, emoji, banner, tagc, slots: Number(slots) || SLOTS_BASE, members: Number(info[2 * i + 1]) || 0 } : null; }).filter(Boolean);
+    const info = cids.length ? await redis(cids.flatMap(cid => [['HMGET', ckey(cid), 'name', 'tag', 'emoji', 'banner', 'tagc', 'slots', 'desc'], ['HLEN', mkey(cid)]])) : [];
+    out.invites = cids.map((cid, i) => { const [name, tag, emoji, banner, tagc, slots, desc] = info[2 * i] || []; return tag ? { name, tag, emoji, desc: desc || '', banner, tagc, slots: Number(slots) || SLOTS_BASE, members: Number(info[2 * i + 1]) || 0 } : null; }).filter(Boolean);
     const [reqs] = await redis([['SMEMBERS', `clanasked:${me}`]]);
     out.asked = [];
     if (reqs && reqs.length) {
@@ -531,7 +540,7 @@ async function view(me, now = Date.now()) {
   const st = await readStats(me);
   out.me = { inClan: true, role: c.members[me], coins: Shop.balance(st), rolls: Number(st.rolls) || 0 };
   out.clan = {
-    name: c.name, tag: c.tag, emoji: c.emoji, banner: c.banner || 'slate', tagc: c.tagc || 'plain', slots: c.slots, vault: c.vault,
+    name: c.name, tag: c.tag, emoji: c.emoji, desc: c.desc || '', banner: c.banner || 'slate', tagc: c.tagc || 'plain', slots: c.slots, vault: c.vault,
     wins: Number(c.wins) || 0, losses: Number(c.losses) || 0, weekWins: Number(c.weekWins) || 0,
     rank: rank === null ? null : Number(rank) + 1, xp: Number(score) || 0, nextSlots: c.slots < SLOTS_MAX ? slotPrice(c.slots) : null,
     members: ids.map((id, i) => ({ name: names[i] || 'Player', role: c.members[id], xp: Number(xps[i]) || 0, me: id === me, status: online(presence[i]) }))
@@ -650,6 +659,12 @@ async function handle(me, body, now = Date.now()) {
   }
   if (op === 'donate') { await donate(me, c, body.amount); return view(me); }
   if (op === 'upgrade') { await upgrade(me, c, body); return view(me); }
+  if (op === 'desc') {
+    need(c, me, 'officer');
+    const desc = checkDesc(body.desc);
+    await redis([desc ? ['HSET', ckey(c.cid), 'desc', desc] : ['HDEL', ckey(c.cid), 'desc']]);
+    return view(me);
+  }
   if (op === 'emoji') {
     need(c, me, 'officer');
     if (!EMOJIS.includes(body.emoji)) throw refuse(400, 'Unknown emoji');

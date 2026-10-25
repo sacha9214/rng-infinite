@@ -29,7 +29,11 @@ const LINK = 'Links aren\'t allowed in the chat';
 const TLD = 'com|net|org|gg|io|fr|xyz|ru|tv|me|co|app|link|ly|be|ch|ca|uk|de|es|it|info|biz|site|online|shop|store|live|fun|club|top|pro|dev|us|eu|cc|to|sh|ai|gl|bit';
 const LINK_RE = [
   /(?:https?:\/\/|www\.|\bhxxps?:)/i, // adresse complète
-  new RegExp(`\\b[a-z0-9-]{2,}\\s*(?:\\.|\\(dot\\)|\\[dot\\]|\\sdot\\s)\\s*(?:${TLD})\\b`, 'i'), // domaine (même « site dot com »)
+  // Domaine : « site.com » collé, ou « site dot com » / « site(dot)com ». Un point suivi d'une espace n'en est pas un
+  // (« daily rollers. Be active » était refusé comme un site .be, « I won. It was… » comme un .it : 2026-10-25), sauf
+  // devant les extensions qu'on ne trouve pas en début de phrase (« site . com »).
+  new RegExp(`\\b[a-z0-9-]{2,}(?:\\.|\\s*(?:\\(dot\\)|\\[dot\\])\\s*|\\sdot\\s)(?:${TLD})\\b`, 'i'),
+  /\b[a-z0-9-]{2,}\s*\.\s*(?:com|net|org|gg|io|xyz|ly|tk|ru|fr)\b/i,
   /\b(?:discord\.gg|discordapp|t\.me|bit\.ly|tinyurl)\b/i,
   /data:image|\.(?:png|jpe?g|gif|webp)\b/i, // pas d'image non plus
 ];

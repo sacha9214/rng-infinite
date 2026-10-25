@@ -1697,6 +1697,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-clan-desc', date: 'Oct 25, 2026', en: ['📝 Clans can now have a description: tell players what your clan is about. The leader and officers write it (150 characters, no links or personal info), and it shows in Find a clan.'], fr: ['📝 Les clans peuvent maintenant avoir une description pour dire de quoi parle ton clan. Le chef et les officiers l\'écrivent (150 caractères, sans liens ni infos perso), et elle s\'affiche dans Find a clan.'] },
     { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
     { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
     { id: '2026-10-25-economy', date: 'Oct 25, 2026', en: ['🪙 Coin balance: there were too many coins in the game, so skins were losing their value. Your XP, your luck and the leaderboards do not change', '🎲 Coins from rolls now depend on how many rolls you made today (UTC): your first 500 rolls pay full coins, rolls 501 to 2,000 pay 50%, and after that 20%. The rate shows under your coins after a roll', '🔥 Weekend Rush now gives +25% coins from rolls and quests (instead of ×2)', '✏️ Your first name is free; changing it now costs 5,000 coins', '👑 New Prestige tab in the Shop: three rare titles (Tycoon, Magnate, Coin Emperor) with a limited stock for the whole game'], fr: ['🪙 Équilibre des pièces : il y avait trop de pièces dans le jeu, les skins perdaient leur valeur. Ton XP, ta chance et les classements ne changent pas', '🎲 Les pièces des tirages dépendent maintenant du nombre de tirages faits aujourd\'hui (UTC) : tes 500 premiers tirages rapportent toutes leurs pièces, du 501e au 2 000e 50 %, et ensuite 20 %. Le taux s\'affiche sous tes pièces après un tirage', '🔥 Le Weekend Rush donne maintenant +25 % de pièces sur les tirages et les quêtes (au lieu de ×2)', '✏️ Ton premier pseudo est gratuit ; le changer coûte maintenant 5 000 pièces', '👑 Nouvel onglet Prestige dans la boutique : trois titres rares (Tycoon, Magnate, Coin Emperor) en stock limité pour tout le jeu'] },
@@ -7716,7 +7717,7 @@
     if (clanTab === 'find') { drawClanFind(); return; }
     Online.clan('view').then(d => { clanState = d; drawClanMine(); }).catch(() => { body.innerHTML = '<div class="empty">Clans unavailable right now, try again</div>'; });
   }
-  const clanCard = (c, extra = '') => `<div class="cl-card cl-b-${esc(c.banner || 'slate')}"><span class="cl-emoji" aria-hidden="true">${esc(c.emoji || '🛡️')}</span><span class="cl-card-name"><b data-no-i18n>${esc(c.name)}</b> ${clanTagHTML(c)}<small>👥 <span data-no-i18n>${c.members}/${c.slots}</span>${c.xp != null ? ` · <span data-no-i18n>${compact(c.xp)}</span> XP` : ''}</small></span>${extra}</div>`;
+  const clanCard = (c, extra = '') => `<div class="cl-card cl-b-${esc(c.banner || 'slate')}"><span class="cl-emoji" aria-hidden="true">${esc(c.emoji || '🛡️')}</span><span class="cl-card-name"><b data-no-i18n>${esc(c.name)}</b> ${clanTagHTML(c)}<small>👥 <span data-no-i18n>${c.members}/${c.slots}</span>${c.xp != null ? ` · <span data-no-i18n>${compact(c.xp)}</span> XP` : ''}</small>${c.desc ? `<span class="cl-card-desc" data-no-i18n>${esc(c.desc)}</span>` : ''}</span>${extra}</div>`;
   function drawClanTop(d) {
     const body = $('#cl-body'); if (!body || clanTab !== 'top') return;
     const ends = clanLeft(d.end - Date.now());
@@ -7760,6 +7761,7 @@
           <form id="cl-create" class="cl-form">
             <label class="cl-field"><span>Name</span><input class="input" id="cl-name" maxlength="20" minlength="3" placeholder="3 to 20 letters" autocomplete="off" spellcheck="false" required></label>
             <label class="cl-field"><span>Tag</span><input class="input cl-tag-input" id="cl-tagin" maxlength="4" minlength="3" placeholder="ABC" autocomplete="off" spellcheck="false" required></label>
+            <label class="cl-field cl-field-wide"><span>Description</span><textarea class="input cl-desc-input" id="cl-descin" maxlength="150" rows="2" placeholder="Tell players what your clan is about (optional)" spellcheck="true"></textarea></label>
             <div class="cl-field"><span>Emoji</span><div class="cl-emojis" id="cl-emojis">${d.emojis.map((e, i) => `<button type="button" class="cl-emo${i ? '' : ' on'}" data-emo="${esc(e)}" aria-label="${esc(e)}">${e}</button>`).join('')}</div></div>
             <div class="actions"><button class="btn-roll small" type="submit"${(d.me.coins || 0) < p.create || (d.me.rolls || 0) < d.minRolls ? ' disabled' : ''}>Create for 🪙 <span data-no-i18n>${fmt(p.create)}</span></button></div>
             ${(d.me.rolls || 0) < d.minRolls ? `<p class="panel-note">🔒 Clans unlock after ${d.minRolls} rolls</p>` : ''}
@@ -7782,8 +7784,11 @@
     body.innerHTML = `
       <div class="cl-banner cl-b-${esc(c.banner)}">
         <span class="cl-emoji big" aria-hidden="true">${esc(c.emoji)}</span>
-        <div class="cl-banner-txt"><h2 data-no-i18n>${esc(c.name)}</h2><div>${clanTagHTML(c)} <span class="cl-role cl-r-${esc(role)}">${CL_ROLE[role]}</span></div></div>
+        <div class="cl-banner-txt"><h2 data-no-i18n>${esc(c.name)}</h2><div>${clanTagHTML(c)} <span class="cl-role cl-r-${esc(role)}">${CL_ROLE[role]}</span></div>${c.desc ? `<p class="cl-desc" data-no-i18n>${esc(c.desc)}</p>` : ''}</div>
       </div>
+      ${officer ? `<details class="cl-descedit"><summary>✏️ ${c.desc ? 'Edit description' : 'Add a description'}</summary>
+        <form id="cl-descform" class="cl-form"><textarea class="input cl-desc-input" id="cl-descedit" maxlength="150" rows="2" placeholder="Tell players what your clan is about">${esc(c.desc || '')}</textarea>
+        <div class="actions"><button class="btn-roll small" type="submit">Save</button><span class="panel-note">150 characters · no links or personal info</span></div></form></details>` : ''}
       <div class="tiles cl-tiles">
         ${tile('Vault', `🪙 <span data-no-i18n>${fmt(c.vault)}</span>`, 'for upgrades and wars')}
         ${tile('This week', c.rank ? `#${c.rank}` : '–', `<span data-no-i18n>${compact(c.xp)}</span> XP`)}
@@ -7929,10 +7934,12 @@
     if (f.id === 'cl-search') { drawClanFind($('#cl-q').value.trim()); return; }
     if (f.id === 'cl-create') {
       const emoji = (document.querySelector('.cl-emo.on') || {}).dataset;
-      const d = await clanDo('create', { clanName: $('#cl-name').value.trim(), tag: $('#cl-tagin').value.trim(), emoji: emoji ? emoji.emo : undefined }, btn);
+      const d = await clanDo('create', { clanName: $('#cl-name').value.trim(), tag: $('#cl-tagin').value.trim(), emoji: emoji ? emoji.emo : undefined, desc: ($('#cl-descin') || {}).value || '' }, btn);
       if (d && d.clan) { toast(`🏯 ${d.clan.name} is born!`, 3500, 'achv'); Sound.play('lock', { i: 5 }); }
       return;
     }
+    // Description du clan (Sacha, 2026-10-25) : chef et officiers ; vide = effacée.
+    if (f.id === 'cl-descform') { const d = await clanDo('desc', { desc: $('#cl-descedit').value }, btn); if (d) toast('Description saved', 2000, 'achv'); return; }
     if (f.id === 'cl-invite') { const n = $('#cl-inv').value.trim(); if (!n) { toast('Enter a player name'); return; } clanDo('invite', { name: n }, btn); return; }
     if (f.id === 'cl-donate') { const amount = Number($('#cl-amt').value); const d = await clanDo('donate', { amount }, btn); if (d) { toast(`🪙 ${fmt(amount)} → ${d.clan.tag}`, 2500, 'achv'); Sound.play('lock', { i: 3 }); } return; }
     if (f.id === 'cl-say') {
