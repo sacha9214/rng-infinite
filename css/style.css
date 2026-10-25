@@ -5470,3 +5470,106 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-quit { margin-top: .4rem; }
 
 .theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */
+
+/* ------------------------------------------------------------------ Christmas (Noël 2026, limité ; idées de JBearr12 et
+   Angelicide9, 2026-10-25) : une nuit de Noël, deux sapins aux bords de la carte, une guirlande rouge et verte en haut ;
+   chaque chiffre est un cadeau. Pendant le tirage, les paquets sont fermés (couvercle, ruban, nœud) et on les secoue ;
+   il se pose : le paquet se tasse (élan), saute, le couvercle s'envole et le chiffre apparaît dans la boîte ouverte. */
+.num-card.skin-christmas {
+  background:
+    /* la neige au sol */
+    radial-gradient(ellipse 60% 100% at 25% 100%, #f8fafc 0 55%, transparent 57%) 0 100% / 100% .5em no-repeat,
+    radial-gradient(ellipse 55% 100% at 78% 100%, #e2e8f0 0 55%, transparent 57%) 0 100% / 100% .42em no-repeat,
+    /* les deux sapins, au bord gauche et au bord droit */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 64'><path d='M20 2l3 6h-6z' fill='%23fde047'/><path d='M20 6L6 26h7L3 42h9L0 58h40L28 42h9L27 26h7z' fill='%23166534'/><path d='M20 6L6 26h7L3 42h9L0 58h20z' fill='%2315803d'/><path d='M6 26q7 3 14-1q7 4 14 1M3 42q8 3 17-1q9 4 17 1M0 58q10 2 20-1q10 3 20 1' stroke='%23f1f5f9' stroke-width='2' fill='none' stroke-linecap='round'/><circle cx='15' cy='21' r='1.8' fill='%23ef4444'/><circle cx='25' cy='34' r='1.8' fill='%23fbbf24'/><circle cx='11' cy='49' r='1.8' fill='%23fbbf24'/><circle cx='29' cy='50' r='1.8' fill='%23ef4444'/><rect x='17' y='58' width='6' height='6' fill='%2378350f'/></svg>") .15em 100% / auto 92% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 64'><path d='M20 2l3 6h-6z' fill='%23fde047'/><path d='M20 6L6 26h7L3 42h9L0 58h40L28 42h9L27 26h7z' fill='%23166534'/><path d='M20 6L6 26h7L3 42h9L0 58h20z' fill='%2315803d'/><path d='M6 26q7 3 14-1q7 4 14 1M3 42q8 3 17-1q9 4 17 1M0 58q10 2 20-1q10 3 20 1' stroke='%23f1f5f9' stroke-width='2' fill='none' stroke-linecap='round'/><circle cx='25' cy='21' r='1.8' fill='%23fbbf24'/><circle cx='14' cy='34' r='1.8' fill='%23ef4444'/><circle cx='28' cy='48' r='1.8' fill='%23ef4444'/><circle cx='12' cy='51' r='1.8' fill='%23fbbf24'/><rect x='17' y='58' width='6' height='6' fill='%2378350f'/></svg>") calc(100% - .15em) 100% / auto 80% no-repeat,
+    /* la lueur chaude au centre, sous les cadeaux */
+    radial-gradient(ellipse 55% 60% at 50% 60%, rgba(251, 191, 36, .2), transparent 72%),
+    linear-gradient(180deg, #0b1a3a, #10284a 55%, #173b3a);
+  border: 2px solid #b91c1c; border-radius: .7rem;
+  box-shadow: inset 0 0 0 2px #fbbf24, inset 0 0 0 4px #15803d, inset 0 -.4em .6em rgba(0, 0, 0, .25), 0 0 16px rgba(239, 68, 68, .25), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .78em 1.5em .5em;
+}
+/* la guirlande : un fil qui ondule, une ampoule rouge et une verte par motif, allumées à tour de rôle */
+.num-card.skin-christmas::before { content: ''; position: absolute; left: .3em; right: .3em; top: .14em; height: .42em; z-index: 0; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 16'><path d='M0 3Q10 10 20 3Q30 10 40 3' stroke='%23052e16' stroke-width='1.4' fill='none'/><circle cx='10' cy='10' r='5.5' fill='%23ef4444' opacity='.35'/><rect x='8.6' y='5' width='2.8' height='2.4' fill='%23334155'/><ellipse cx='10' cy='10.4' rx='2.6' ry='3.4' fill='%23fca5a5'/><rect x='28.6' y='5' width='2.8' height='2.4' fill='%23334155'/><ellipse cx='30' cy='10.4' rx='2.4' ry='3.2' fill='%23166534'/></svg>") 0 0 / 1.6em 100% repeat-x;
+  animation: xmas-lights 1.4s steps(1) infinite; }
+@keyframes xmas-lights {
+  50% { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 16'><path d='M0 3Q10 10 20 3Q30 10 40 3' stroke='%23052e16' stroke-width='1.4' fill='none'/><rect x='8.6' y='5' width='2.8' height='2.4' fill='%23334155'/><ellipse cx='10' cy='10.4' rx='2.4' ry='3.2' fill='%237f1d1d'/><circle cx='30' cy='10' r='5.5' fill='%2322c55e' opacity='.35'/><rect x='28.6' y='5' width='2.8' height='2.4' fill='%23334155'/><ellipse cx='30' cy='10.4' rx='2.6' ry='3.4' fill='%2386efac'/></svg>"); }
+}
+/* le cadeau ouvert : du papier rouge (vert un sur deux) à pois, un ruban en bas, le bord intérieur sombre en haut */
+.skin-christmas .slot {
+  --paper: #c81e1e; --paper-2: #991b1b; --dots: rgba(255, 255, 255, .16); --ribbon: #fbbf24;
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .6em; font-weight: 900; line-height: 1;
+  width: 1.08em; height: 1.32em; margin: 0 .07em; padding: .1em 0 .06em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: .1em; color: #fffbeb;
+  -webkit-text-stroke: .03em rgba(41, 12, 4, .55);
+  text-shadow: 0 .05em 0 rgba(41, 12, 4, .7), 0 0 .25em rgba(253, 224, 71, .55);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0) 16%) 0 0 / 100% 100% no-repeat,
+    linear-gradient(180deg, transparent 85%, var(--ribbon) 85%, #fde68a 89%, var(--ribbon) 93%, transparent 93%) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle, var(--dots) 0 .05em, transparent .06em) 0 0 / .32em .32em,
+    linear-gradient(90deg, var(--paper-2), var(--paper) 30%, var(--paper) 70%, var(--paper-2));
+  box-shadow: inset 0 0 0 .03em rgba(0, 0, 0, .25), 0 .06em .1em rgba(0, 0, 0, .5);
+  transform-origin: 50% 100%;
+}
+.skin-christmas .slot:nth-child(2n) { --paper: #15803d; --paper-2: #14532d; --ribbon: #e2e8f0; }
+.skin-christmas .slot:nth-child(3n) { --dots: rgba(253, 224, 71, .22); }
+/* le couvercle (avec le ruban en croix) et le nœud : seulement quand le paquet est fermé */
+.skin-christmas .slot::before, .skin-christmas .slot::after { content: ''; position: absolute; pointer-events: none; opacity: 0; }
+.skin-christmas .slot::before { left: -.05em; right: -.05em; top: -.04em; bottom: 0; border-radius: .1em;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, .28) 22%, rgba(0, 0, 0, 0) 30%),
+    linear-gradient(90deg, transparent 42%, var(--ribbon) 42%, #fff7d6 50%, var(--ribbon) 58%, transparent 58%),
+    linear-gradient(180deg, transparent 46%, var(--ribbon) 46%, var(--ribbon) 58%, transparent 58%),
+    radial-gradient(circle, var(--dots) 0 .05em, transparent .06em) 0 0 / .32em .32em,
+    linear-gradient(90deg, var(--paper-2), var(--paper) 30%, var(--paper) 70%, var(--paper-2));
+  box-shadow: 0 .04em .08em rgba(0, 0, 0, .45); }
+.skin-christmas .slot::after { left: 50%; top: -.36em; width: .72em; height: .42em; margin-left: -.36em;
+  background:
+    radial-gradient(circle at 50% 70%, #fff7d6 0 .07em, var(--ribbon) .08em .11em, transparent .12em),
+    radial-gradient(ellipse 50% 42% at 26% 50%, transparent 38%, var(--ribbon) 40% 96%, transparent 100%),
+    radial-gradient(ellipse 50% 42% at 74% 50%, transparent 38%, var(--ribbon) 40% 96%, transparent 100%);
+  filter: drop-shadow(0 .03em 0 rgba(0, 0, 0, .4)); }
+.skin-christmas .slot.ghost { opacity: .18; }
+.skin-christmas .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; box-shadow: none; background: none; }
+.skin-christmas .slot.collapsed::before, .skin-christmas .slot.collapsed::after { display: none; }
+/* Pendant le tirage : les paquets sont fermés et on les secoue pour deviner ce qu'il y a dedans. */
+.skin-christmas .slot.spinning::before, .skin-christmas .slot.spinning::after { opacity: 1; }
+.skin-christmas .slot.spinning { opacity: 1; filter: none; color: transparent; animation: xmas-rattle .18s steps(2) infinite; }
+.skin-christmas .slot.spinning:nth-child(2n) { animation-delay: -.09s; }
+@keyframes xmas-rattle { 0% { transform: translateY(-.03em) rotate(-4deg); } 100% { transform: translateY(0) rotate(4deg); } }
+/* Il se pose : le paquet se tasse (élan), saute, le couvercle et le nœud s'envolent ; il retombe ouvert et rebondit. */
+.skin-christmas .slot.revealed { animation: xmas-jump .65s backwards; }
+.skin-christmas .slot.revealed::before { animation: xmas-lid .65s ease-out backwards; }
+.skin-christmas .slot.revealed::after { animation: xmas-bow .65s ease-out backwards; }
+@keyframes xmas-jump {
+  0% { transform: none; animation-timing-function: ease-in; }
+  16% { transform: scale(1.12, .82); animation-timing-function: cubic-bezier(.2, .9, .4, 1); }
+  40% { transform: translateY(-.2em) scale(.94, 1.1); filter: brightness(1.35); }
+  60% { transform: scale(1.08, .92); filter: none; }
+  80% { transform: scale(.98, 1.03); }
+  100% { transform: none; }
+}
+@keyframes xmas-lid {
+  0%, 16% { opacity: 1; transform: none; }
+  45% { opacity: 1; transform: translate(-.12em, -.9em) rotate(-22deg); }
+  70%, 100% { opacity: 0; transform: translate(-.24em, -1.5em) rotate(-40deg); }
+}
+@keyframes xmas-bow {
+  0%, 16% { opacity: 1; transform: none; }
+  45% { opacity: 1; transform: translate(.14em, -1em) rotate(30deg) scale(1.1); }
+  70%, 100% { opacity: 0; transform: translate(.3em, -1.6em) rotate(70deg); }
+}
+@media (prefers-reduced-motion: reduce) { .num-card.skin-christmas::before, .skin-christmas .slot, .skin-christmas .slot::before, .skin-christmas .slot::after { animation: none; } }
+/* Cadre de duel : une nuit de neige, une lueur rouge et verte ; 🎄 se balance, 🎁 sautille. */
+.side-christmas { --side-border: #dc2626; --side-glow: 0 0 16px rgba(34, 197, 94, .3); --side-ink: #16a34a;
+  --side-bg: radial-gradient(ellipse 80% 30% at 50% 108%, rgba(241, 245, 249, .5), transparent 70%), radial-gradient(ellipse 50% 45% at 12% 20%, rgba(239, 68, 68, .14), transparent 70%), radial-gradient(ellipse 50% 45% at 88% 20%, rgba(34, 197, 94, .14), transparent 70%), linear-gradient(180deg, rgba(11, 26, 58, .4), rgba(23, 59, 58, .2));
+  --deco-a: '🎄'; --deco-b: '🎁 ✨'; }
+.side-christmas::before { transform-origin: 50% 100%; animation: xmas-sway 2.4s ease-in-out infinite; }
+.side-christmas::after { animation: xmas-hop 1.8s ease-in-out infinite; }
+@keyframes xmas-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes xmas-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px) scale(1.06, .94); } 80% { transform: translateY(0) scale(1.04, .96); } }
+.room-stage.many .side-christmas::before, .room-stage.many .side-christmas::after, .room-stage.many .num-card.skin-christmas::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-christmas::before, .side-christmas::after { animation: none; } }
