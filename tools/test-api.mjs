@@ -3231,6 +3231,31 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(await T2.trashKing(Date.parse('2026-11-02T02:00:00Z')), null, 'seulement le 1er');
 }
 
+// Pièces du top 10 du mois (idée de furcoat0 et LwsBoi) : versées une seule fois, avec le badge, et annoncées.
+{
+  const rank = require(path.join(ROOT, 'api/_rank.js'));
+  const { readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const month = '2031-01', lb = `lb:month:${month}`, t = Date.parse('2031-02-01T00:10:00Z');
+  const ids = Array.from({ length: 12 }, (_, i) => (0x7c00 + i).toString(16).padStart(16, '0'));
+  run([['DEL', lb, `topawards:done:${month}`, `topcoins:${month}`], ...ids.flatMap((id, i) => [['DEL', `stats:${id}`, `gifts:${id}`], ['ZADD', lb, 1e9 - i, id]])]);
+  rank._reset();
+  await rank.settleMonth(t);
+  const bonus = async () => Promise.all(ids.map(async id => Number((await readStats(id)).bonus || 0)));
+  const want = [1000, 500, 500, 500, 500, 250, 250, 250, 250, 250, 0, 0];
+  assert.deepEqual(await bonus(), want, 'montants par place');
+  // Relance : ni le cache mémoire, ni le marqueur « done », ni un second appel direct ne repaient.
+  rank._reset(); run([['DEL', `topawards:done:${month}`]]);
+  await rank.settleMonth(t); await rank.settleMonth(t);
+  assert.equal(await rank.payCoins(ids, month, t), false, 'verrou NX');
+  assert.deepEqual(await bonus(), want, 'pas de double paiement');
+  // Le joueur est prévenu comme pour un cadeau, une seule fois.
+  const [raw] = run([['LRANGE', `gifts:${ids[2]}`, 0, -1]]).map(x => x.result);
+  assert.equal(raw.length, 1);
+  assert.deepEqual(JSON.parse(raw[0]), { f: '', a: 500, t, k: 'top', p: 3, m: month });
+  assert.equal(run([['LLEN', `gifts:${ids[10]}`]])[0].result, 0, 'rien hors du top 10');
+  rank._reset();
+}
+
 // Tournoi du jour (idée de PRISMA123, 2026-10-20) : inscriptions, tableau, tirages à part, tours, prix, titre Champion.
 {
   const TN = require(path.join(ROOT, 'api/_tournament.js'));

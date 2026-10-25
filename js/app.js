@@ -411,6 +411,8 @@
     const tip = award.top === 1 ? `First place on the monthly leaderboard · ${when}` : `Top ${award.top} on the monthly leaderboard · ${when}`;
     return `<span class="top-mark ${m[2]}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)}</span>`;
   };
+  // Pièces versées avec le badge (mêmes montants que REWARDS dans api/_rank.js).
+  const TOP_COINS = { 1: 1000, 5: 500, 10: 250 };
   const topEmoji = award => (award && TOP_MARKS[award.top] ? ` ${TOP_MARKS[award.top][0]}` : '');
   const titleHTML = id => {
     const a = id && Ach.byId.get(id);
@@ -1676,6 +1678,7 @@
     { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
     { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
     { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
+    { id: '2026-10-25-monthly-coins', date: 'Oct 25, 2026', en: ['🏆 The monthly leaderboard now pays coins too: when the month ends, 1st place gets 1,000 coins, 2nd to 5th 500 and 6th to 10th 250, on top of their Top 1 / 5 / 10 badge (idea by furcoat0 and LwsBoi)'], fr: ['🏆 Le classement du mois rapporte aussi des pièces : à la fin du mois, la 1re place gagne 1 000 pièces, les 2e à 5e 500 et les 6e à 10e 250, en plus de leur badge Top 1 / 5 / 10 (idée de furcoat0 et LwsBoi)'] },
     { id: '2026-10-24-waterfall-skin', date: 'Oct 24, 2026', en: ['🏞️ New skin: Waterfall (2,300 coins). A waterfall in a green valley carries every digit down into the pool with a splash, and rare rolls make a rainbow in the spray (ideas by JBearr12 and jjcoolcid1)'], fr: ['🏞️ Nouveau skin : Waterfall (2 300 pièces). Une cascade dans une vallée verte emporte chaque chiffre dans le bassin avec une éclaboussure, et les tirages rares font un arc-en-ciel dans les embruns (idées de JBearr12 et jjcoolcid1)'] },
     { id: '2026-10-24-dynamite-skin', date: 'Oct 24, 2026', en: ['🧨 New skin: Dynamite (2,500 coins). A crate of dynamite: every fuse burns down and each stick blows up to reveal its digit, and Mythic rolls end in a mushroom cloud (ideas by casmictechthing and ichi)'], fr: ['🧨 Nouveau skin : Dynamite (2 500 pièces). Une caisse de dynamite : chaque mèche brûle et chaque bâton explose pour révéler son chiffre, et les tirages Mythic finissent en champignon de fumée (idées de casmictechthing et ichi)'] },
     { id: '2026-10-24-infinity-rework', date: 'Oct 24, 2026', en: ['♾️ The Infinity skin was remade to match Singularity: dark space glass with a loop of light running through it, bright white digits that are easy to read, digits pulled around the loop while rolling, and the big ∞ stays visible the whole roll (idea by kaz)'], fr: ['♾️ Le skin Infinity a été refait pour être au niveau de Singularity : du verre spatial sombre traversé par une boucle de lumière, des chiffres blancs bien lisibles, entraînés autour de la boucle pendant le tirage, et le grand ∞ visible pendant tout le tirage (idée de kaz)'] },
@@ -6211,7 +6214,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && currentView === 'friends') checkGifts(); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {
@@ -6315,14 +6318,23 @@
   async function checkGifts() {
     if (!Store.player.name) return;
     try {
-      const r = await Online.friends('gifts');
+      announceGifts(await Online.friends('gifts'));
+    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
+  }
+  // Cadeaux reçus (amis) et pièces du classement du mois (kind: 'top'), déjà marqués vus par le serveur.
+  function announceGifts(r) {
+    {
       Messages.set(r.messages || 0);
       if (!r.gifts || !r.gifts.length) return;
       if (r.coins != null) Store.setSetting('coins', r.coins);
+      // Pièces du classement du mois : annoncées à part, une par une.
+      r.gifts.filter(g => g.kind === 'top').forEach(g => toast(`🏆 #${g.place} on the ${monthLabel(g.month)} monthly leaderboard: +${fmt(g.amount)} coins`, 8000, 'achv'));
+      r.gifts = r.gifts.filter(g => g.kind !== 'top');
+      if (!r.gifts.length) { Sound.play('lock', { i: 5 }); return; }
       const total = r.gifts.reduce((x, g) => x + g.amount, 0);
       toast(r.gifts.length === 1 ? `🎁 ${r.gifts[0].name} sent you ${fmt(total)} coins` : `🎁 ${r.gifts.length} gifts from your friends: +${fmt(total)} coins`, 6000, 'achv');
       Sound.play('lock', { i: 5 });
-    } catch (err) { /* hors ligne : ils seront annoncés la prochaine fois */ }
+    }
   }
   async function friendAction(action, name) {
     if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
@@ -7137,7 +7149,7 @@
     const name = Store.player.name;
     const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
     lbState.tab = lbTabOf(lbState.period);
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -7184,11 +7196,11 @@
     const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
     const days = Math.ceil((end - now.getTime()) / 86400000);
     const left = days <= 1 ? 'Ends today (midnight UTC)' : `Ends in ${days} days`;
-    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span></li>`;
+    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span><b class="mono" data-no-i18n>🪙 ${fmt(TOP_COINS[top])}</b></li>`;
     return `
       <aside class="lb-aside panel" aria-label="Monthly trophies">
         <div class="eyebrow">🏆 Monthly trophies</div>
-        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever.</p>
+        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever, and coins.</p>
         <ul class="lb-aside-list">${row(1, '1st place')}${row(5, '2nd to 5th')}${row(10, '6th to 10th')}</ul>
         <p class="lb-aside-foot"><b>${left}</b> · it shows next to your name on the leaderboard, your profile and in duels</p>
       </aside>`;

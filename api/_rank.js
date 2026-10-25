@@ -4,11 +4,16 @@
 // Remise paresseuse : la première requête du mois suivant fige le top 10 du mois fini (le classement du mois est
 // gardé 70 jours). topawards:<id> = { mois: top } ; topbest = { id: « top:mois » }, le meilleur badge de chacun,
 // montré à côté du nom (le meilleur rang, le plus récent à rang égal).
-const { redis } = require('./_lib');
+// Pièces du top 10 (idée de furcoat0 et LwsBoi, 2026-10-25) : 1re place 1 000, 2e à 5e 500, 6e à 10e 250, versées une
+// seule fois par mois (verrou topcoins:<mois> posé avec NX, comme le Trash King) ; le joueur est prévenu par la liste
+// gifts:<id> (k: 'top'), annoncée par le site comme un cadeau.
+const { redis, eco } = require('./_lib');
 
 const TOP_SIZE = 10;
 const BEST_KEY = 'topbest';
 const awardKey = id => `topawards:${id}`;
+const REWARDS = { 1: 1000, 5: 500, 10: 250 };
+const GIFTS_KEPT = 20, GIFTS_TTL = 30 * 86400; // mêmes valeurs que api/friends.js
 const markOf = place => (place === 1 ? 1 : place <= 5 ? 5 : place <= TOP_SIZE ? 10 : null);
 const prevMonth = t => { const d = new Date(t); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
 const parse = v => { if (!v) return null; const [top, month] = String(v).split(':'); return { top: Number(top), month }; };
@@ -31,10 +36,27 @@ async function settleMonth(t = Date.now()) {
         if (better(award, parse(bests[i]))) writes.push(['HSET', BEST_KEY, id, `${award.top}:${month}`]);
       });
       await redis(writes);
+      await payCoins(ids, month, t);
     }
     await redis([['SET', `topawards:done:${month}`, String(t)]]);
   }
   settled = month;
+}
+
+// Versement des pièces du top 10 : le verrou NX garantit un seul paiement, même si deux processus figent le mois.
+async function payCoins(ids, month, t = Date.now()) {
+  const [ok] = await redis([['SET', `topcoins:${month}`, String(t), 'NX', 'EX', 90 * 86400]]);
+  if (ok !== 'OK') return false;
+  const writes = [];
+  let total = 0;
+  ids.slice(0, TOP_SIZE).forEach((id, i) => {
+    const a = REWARDS[markOf(i + 1)];
+    total += a;
+    writes.push(['HINCRBY', `stats:${id}`, 'bonus', a], ['HINCRBY', `stats:${id}`, 'topCoins', a],
+      ['RPUSH', `gifts:${id}`, JSON.stringify({ f: '', a, t, k: 'top', p: i + 1, m: month })], ['LTRIM', `gifts:${id}`, -GIFTS_KEPT, -1], ['EXPIRE', `gifts:${id}`, GIFTS_TTL]);
+  });
+  await redis([...writes, ...eco('in:monthly', total, t)]);
+  return true;
 }
 
 // Map identifiant → { top, month } : le meilleur badge de chacun.
@@ -55,4 +77,4 @@ async function awardsOf(id, t = Date.now()) {
   return out.sort((a, b) => (a.month < b.month ? 1 : -1));
 }
 
-module.exports = { bestAwards, awardsOf, settleMonth, markOf, prevMonth, TOP_SIZE, _reset: () => { settled = ''; } };
+module.exports = { REWARDS, payCoins, bestAwards, awardsOf, settleMonth, markOf, prevMonth, TOP_SIZE, _reset: () => { settled = ''; } };
