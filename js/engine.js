@@ -293,6 +293,7 @@
     FULL_DAY: ['86400'], ONE_MILLION: ['1000000'],
     EXACT_852655: ['852655'], // idée de CococoC, acceptée par Sacha (2026-10-20)
     EXACT_82: ['82'], EXACT_92: ['92'], BRAINROT_KING_EXACT: ['676741', '674141'], // idées du 2026-10-22 (kaz, CococoC, CrazyMiner22)
+    EXACT_61: ['61'], EXACT_55: ['55'], // idées de schoolroller et qwertyuiop (2026-10-25)
     EXACT_99: ['99'], WYSI_EXACT: ['727'], // idées du 2026-10-24 (kaz, Phong254)
     CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
