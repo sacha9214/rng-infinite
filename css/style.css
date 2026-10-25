@@ -4066,6 +4066,36 @@ html.perf #wallpaper .wpb-pop::after { display: none; }
 html.perf #wallpaper.wp-oceanic i { animation: none !important; }
 html.perf #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; }
 
+/* 🏎️ Grand Prix (idée de YU CHUAN 23, 2026-10-24) : la ligne droite d'un circuit, vue de côté. Le fond : le ciel, la
+   tribune pleine, l'asphalte et l'herbe ; ::before, le vibreur rouge et blanc qui défile ; ::after, une bande avec deux
+   monoplaces qui passent en trombe (au premier plan). Sur le vrai fond, deux autres voitures plus loin, plus lentes.
+   Livrées inventées, numéros seulement : aucune écurie ni marque réelle. Mouvement réduit / mode performance : tout est arrêté. */
+.wp-racetrack { --wpf-stand: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='150'><rect y='40' width='600' height='110' fill='%23334155'/><path d='M0 40L600 20V30L0 50Z' fill='%23e2e8f0'/><g fill='%2364748b'><rect x='40' y='30' width='5' height='120'/><rect x='240' y='24' width='5' height='126'/><rect x='440' y='18' width='5' height='132'/></g><g opacity='.9'><g fill='%23f87171'><circle cx='20' cy='70' r='4'/><circle cx='130' cy='92' r='4'/><circle cx='260' cy='76' r='4'/><circle cx='390' cy='112' r='4'/><circle cx='520' cy='84' r='4'/></g><g fill='%23fde047'><circle cx='60' cy='104' r='4'/><circle cx='180' cy='66' r='4'/><circle cx='300' cy='120' r='4'/><circle cx='440' cy='72' r='4'/><circle cx='570' cy='126' r='4'/></g><g fill='%2393c5fd'><circle cx='90' cy='80' r='4'/><circle cx='220' cy='108' r='4'/><circle cx='340' cy='88' r='4'/><circle cx='480' cy='100' r='4'/><circle cx='30' cy='128' r='4'/></g><g fill='%23f8fafc'><circle cx='110' cy='124' r='4'/><circle cx='200' cy='88' r='4'/><circle cx='360' cy='64' r='4'/><circle cx='500' cy='120' r='4'/><circle cx='590' cy='94' r='4'/></g><g fill='%2386efac'><circle cx='150' cy='120' r='4'/><circle cx='280' cy='98' r='4'/><circle cx='410' cy='90' r='4'/><circle cx='550' cy='68' r='4'/><circle cx='70' cy='86' r='4'/></g></g><rect y='140' width='600' height='10' fill='%23475569'/><g fill='%23e2e8f0'><rect x='0' y='142' width='300' height='3'/></g></svg>");
+  background:
+    var(--wpf-stand) 0 50% / 600px 150px repeat-x,
+    linear-gradient(180deg, transparent 0 calc(50% + 74px), #0f172a calc(50% + 74px), #475569 calc(50% + 76px), #3f3f46 calc(50% + 80px), #27272a 86%, #e5e7eb 86%, #e5e7eb 86.6%, #16a34a 86.6%, #15803d 100%),
+    linear-gradient(180deg, #1d4ed8 0%, #60a5fa 40%, #fed7aa 100%); }
+/* le vibreur */
+.wp-racetrack::before { left: 0; right: -80px; bottom: calc(14% - 4px); height: 14px; z-index: 1;
+  background: repeating-linear-gradient(90deg, #dc2626 0 40px, #f8fafc 40px 80px);
+  animation: wpf-kerb .35s linear infinite; }
+@keyframes wpf-kerb { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-80px, 0, 0); } }
+/* les voitures du premier plan */
+.wp-racetrack::after { left: 0; right: -2400px; bottom: 16%; height: 96px; z-index: 2;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='96'><defs><g id='w'><circle r='15' fill='%23111'/><circle r='7' fill='%2394a3b8'/><circle r='2.5' fill='%23111'/></g><path id='b' d='M8 54L36 46L84 43L108 30H140L152 40L208 42L238 32H262V56L240 62H10Z'/></defs><g fill='none' stroke='%23ffffff' stroke-linecap='round' opacity='.5'><path d='M600 50H860M610 66H780M590 34H720' stroke-width='3'/><path d='M1840 50H2100M1850 66H2000M1830 34H1960' stroke-width='3'/></g><g transform='translate(300 6)'><use href='%23b' fill='%23dc2626'/><rect x='2' y='54' width='42' height='6' fill='%23111'/><rect x='240' y='14' width='24' height='8' fill='%23111'/><rect x='248' y='20' width='4' height='16' fill='%23111'/><path d='M84 43H200' stroke='%23fef08a' stroke-width='4'/><circle cx='124' cy='28' r='8' fill='%23fde047'/><path d='M114 26H134' stroke='%23111' stroke-width='3'/><text x='176' y='37' font-family='Arial' font-weight='900' font-size='16' fill='%23fff'>16</text><use href='%23w' x='60' y='62'/><use href='%23w' x='214' y='62'/></g><g transform='translate(1540 6)'><use href='%23b' fill='%2314b8a6'/><rect x='2' y='54' width='42' height='6' fill='%23111'/><rect x='240' y='14' width='24' height='8' fill='%23111'/><rect x='248' y='20' width='4' height='16' fill='%23111'/><path d='M84 43H200' stroke='%23111' stroke-width='4'/><circle cx='124' cy='28' r='8' fill='%23f8fafc'/><path d='M114 26H134' stroke='%23111' stroke-width='3'/><text x='176' y='37' font-family='Arial' font-weight='900' font-size='16' fill='%23111'>44</text><use href='%23w' x='60' y='62'/><use href='%23w' x='214' y='62'/></g></svg>") 0 0 / 2400px 96px repeat-x;
+  animation: wpf-cars 3.2s linear infinite; }
+@keyframes wpf-cars { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-2400px, 0, 0); } }
+.wall-preview.wp-racetrack { background-size: 240px 60px, auto, auto; background-position: 0 4px, 0 0, 0 0;
+  background-image: var(--wpf-stand), linear-gradient(180deg, transparent 0 64px, #475569 64px, #3f3f46 66px, #27272a 86%, #e5e7eb 86%, #e5e7eb 87%, #16a34a 87%, #15803d 100%), linear-gradient(180deg, #1d4ed8 0%, #60a5fa 40%, #fed7aa 100%); }
+.wall-preview.wp-racetrack::after { height: 32px; right: -800px; background-size: 800px 32px; animation-name: wpf-cars-sm; }
+.wall-preview.wp-racetrack::before { height: 6px; }
+@keyframes wpf-cars-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-800px, 0, 0); } }
+/* deux voitures plus loin, sur la trajectoire du fond (vrai fond seulement) */
+#wallpaper .wpf-far { position: absolute; left: 0; right: -2400px; top: calc(50% + 96px); height: 60px; pointer-events: none; opacity: .9;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='60'><defs><g id='w'><circle r='9' fill='%23111'/><circle r='4' fill='%2394a3b8'/></g><path id='b' d='M5 34L22 29L52 27L67 19H87L95 25L130 26L148 20H163V35L150 39H6Z'/></defs><g transform='translate(900 4)'><use href='%23b' fill='%23f97316'/><rect x='150' y='9' width='15' height='5' fill='%23111'/><circle cx='78' cy='18' r='5' fill='%23f8fafc'/><text x='108' y='24' font-family='Arial' font-weight='900' font-size='10' fill='%23111'>4</text><use href='%23w' x='38' y='39'/><use href='%23w' x='134' y='39'/></g><g transform='translate(2000 4)'><use href='%23b' fill='%232563eb'/><rect x='150' y='9' width='15' height='5' fill='%23111'/><circle cx='78' cy='18' r='5' fill='%23facc15'/><text x='108' y='24' font-family='Arial' font-weight='900' font-size='10' fill='%23fff'>27</text><use href='%23w' x='38' y='39'/><use href='%23w' x='134' y='39'/></g></svg>") 0 0 / 2400px 60px repeat-x;
+  animation: wpf-cars 5.5s linear infinite; }
+@media (prefers-reduced-motion: reduce) { #wallpaper .wpf-far { animation: none !important; } }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
