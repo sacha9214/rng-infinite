@@ -858,6 +858,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // ============================================================== 22. Caisses
   const openCase = (who, id) => call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'case', case: id } });
+  // Solde ramené sous le prix de la caisse : les pièces de quinn dépendent de ses tirages (au hasard), et un bon tirage
+  // lui donnait parfois assez pour l'ouvrir (test instable, 2026-10-25).
+  { const extra = (await coinsOf(quinn)) - (Shop.caseById.get('starter').price - 1); if (extra > 0) run([['HINCRBY', `stats:${quinn.playerId}`, 'spent', extra]]); }
   assert.equal((await openCase(quinn, 'starter')).status, 422, 'pas assez de pièces');
   assert.equal((await openCase(quinn, 'licorne')).status, 400);
   run([['HINCRBY', `stats:${quinn.playerId}`, 'bonus', 100000]]);
