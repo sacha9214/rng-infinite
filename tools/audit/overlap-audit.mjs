@@ -4,7 +4,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = 'http://localhost:8124';
+const B = process.env.BASE || 'http://localhost:8124'; // BASE : autre port (plusieurs serveurs de dev en même temps)
 // Une taille s'écrit « 390 » (hauteur par défaut) ou « 844x390 » (téléphone couché, petit portable).
 const widths = process.argv.slice(2).filter(a => /^\d+(x\d+)?$/.test(a));
 const HEIGHTS = {};

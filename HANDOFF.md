@@ -29,6 +29,14 @@ Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one
 - **Idea Managers** (10-23): players Sacha picks (Owner page → Idea Managers tab) review ideas on `#/ideas` with a verdict and a mandatory reason (20+ characters, server-checked). They see nothing else; Sacha sees their reviews in the Inbox and decides.
 - **Codes**: `EPITECH>42`, `SORRY404` (until Oct 29), `ICHI` (100 coins).
 
+- **Global chat** (2026-10-25, branch `claude/global-chat`, not merged): 💬 corner button (bottom-right on desktop, bottom row
+  on phones) opens a panel. Everyone reads; writing needs a linked Google account + 100 rolls. 1 message / 5 s, 200 chars,
+  last 100 kept (`gc:msgs`). Server filter (`api/_global.js`, routed from `api/friends.js` actions `gc…`) rejects links,
+  insults (the `_chat.js` list + spaced letters) and personal info (phone, e-mail, addresses, @handles, snap/insta/discord
+  invitations). Report → Reports tab (`where: 'global chat'`). Owner + **Moderators** (Owner page → Chat tab, by name)
+  delete and mute (1 h / 24 h / forever); the Chat tab lists mutes with Unmute (owner only). Polls every 3 s only while
+  the panel is open and the tab visible (`same: true` when nothing changed). Decision: changing page closes the panel.
+  Not done: clan tags (no `clanTag` helper exists yet); the filter is a list, so moderators remain necessary.
 - **Economy (2026-10-25, branch `claude/economy`, not merged)**: Weekend Rush is +25% (was x2); roll coins have daily
   diminishing returns (rolls 1-500 full, 501-2,000 50%, then 20%; counter `rc:<day>:<id>`, withheld part in
   `stats.rollCut`, subtracted by `Shop.earned`); renaming costs 5,000 coins (first name free, case-only free; rolls and

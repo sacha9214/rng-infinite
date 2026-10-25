@@ -282,6 +282,24 @@
     'Reply shown to the player (optional)': 'Réponse montrée au joueur (facultatif)', 'Status': 'Statut', 'This page is for the creator of the game.': 'Cette page est réservée au créateur du jeu.', 'Unavailable right now.': 'Indisponible pour le moment.',
     'Unavailable right now, try again': 'Indisponible pour le moment, réessaie', 'Owner only': 'Réservé à l\'Owner', 'Delete this suggestion?': 'Supprimer cette suggestion ?',
     'Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC.': 'Compteurs anonymes par jour, depuis le 6 oct. 2026 : pas de cookie, pas d\'adresse IP, rien sur l\'identité du visiteur. Une visite = le site ouvert dans un onglet. Jours en UTC.',
+    // chat global (2026-10-25)
+    'Global chat': 'Chat global', '💬 Global chat': '💬 Chat global', 'Be kind · no personal info': 'Sois gentil · pas d\'infos perso',
+    'No message yet. Say hi! 👋': 'Aucun message pour l\'instant. Dis bonjour ! 👋', 'Message options': 'Options du message', 'Options': 'Options',
+    '🚩 Report': '🚩 Signaler', '🗑️ Delete': '🗑️ Supprimer', '🔇 1 h': '🔇 1 h', '🔇 24 h': '🔇 24 h', '⛔ Forever': '⛔ Pour toujours',
+    'Write a message': 'Écris un message', '⚙️ Link Google': '⚙️ Associer Google',
+    'Pick a player name, link a Google account and make 100 rolls to write here.': 'Choisis un pseudo, associe un compte Google et fais 100 tirages pour écrire ici.',
+    '🔇 You can no longer write in the chat.': '🔇 Tu ne peux plus écrire dans le chat.',
+    'Delete this message?': 'Supprimer ce message ?', 'Mute this player and delete the message?': 'Rendre ce joueur muet et supprimer le message ?',
+    'Already reported': 'Déjà signalé', 'Reported: thank you!': 'Signalé : merci !', 'Message deleted': 'Message supprimé', 'Player muted': 'Joueur rendu muet',
+    'Chat moderators': 'Modérateurs du chat', 'they can delete messages and mute players in the global chat': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global',
+    'Muted players': 'Joueurs muets', 'Nobody is muted.': 'Personne n\'est muet.', '🔊 Unmute': '🔊 Rendre la parole', 'Unmuted': 'Parole rendue',
+    'Remove this moderator?': 'Retirer ce modérateur ?', 'forever': 'pour toujours',
+    'Messages are 200 characters at most': 'Les messages font 200 caractères au plus', 'Links aren\'t allowed in the chat': 'Les liens ne sont pas autorisés dans le chat',
+    'Let\'s keep the chat friendly: this message has a word that isn\'t allowed': 'Gardons le chat sympa : ce message contient un mot interdit',
+    'For your safety, don\'t share personal info (phone, e-mail, address or social media accounts)': 'Pour ta sécurité, ne partage pas d\'infos perso (téléphone, e-mail, adresse ou réseaux sociaux)',
+    'Link a Google account to write in the chat': 'Associe un compte Google pour écrire dans le chat', 'Wait 5 seconds between messages': 'Attends 5 secondes entre deux messages',
+    'You are muted for now': 'Tu es muet pour l\'instant', 'You can no longer write in the chat': 'Tu ne peux plus écrire dans le chat', 'Moderators only': 'Réservé aux modérateurs',
+    'Moderators cannot be muted': 'Un modérateur ne peut pas être rendu muet', 'You cannot mute yourself': 'Tu ne peux pas te rendre muet', 'Pick 1 h, 24 h or forever': 'Choisis 1 h, 24 h ou pour toujours',
     // économie (2026-10-25) : Weekend Rush +25 %, rendements décroissants, pseudo payant, Prestige, panneau Owner
     '🔥 +25% Weekend Rush': '🔥 +25 % Weekend Rush', 'Coin rate today: 100% for your first 500 rolls, then 50% until 2,000, then 20%. XP and luck never change. Resets at 00:00 UTC.': 'Taux de pièces aujourd\'hui : 100 % pour tes 500 premiers tirages, puis 50 % jusqu\'à 2 000, puis 20 %. L\'XP et la chance ne changent jamais. Remise à zéro à 00:00 UTC.',
     'Coin rate per day': 'Taux de pièces par jour', 'Rolls 1–500': 'Tirages 1 à 500', 'Rolls 501–2,000': 'Tirages 501 à 2 000', 'After 2,000 rolls': 'Après 2 000 tirages',
@@ -300,6 +318,11 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    [/^🔇 You are muted until (.+)\.$/, m => `🔇 Tu es muet jusqu'au ${m[1]}.`],
+    [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
+    [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
+    [/^Make (\d+) rolls to write in the chat \(you have (\d+)\)$/, m => `Fais ${m[1]} tirages pour écrire dans le chat (tu en as ${m[2]})`],
+    [/^([\d,]+) right now$/, m => `${nb(m[1])} en ce moment`], [/^until (.+)$/, m => `jusqu'au ${m[1]}`],
     [/^Free · needs (\d+) rolls · at least (\d+) players$/, m => `Gratuit · ${m[1]} tirages requis · ${m[2]} joueurs minimum`],
     [/^Cancelled: fewer than (\d+) players signed up$/, m => `Annulé : moins de ${m[1]} joueurs inscrits`],
     [/^Round (\d+)$/, m => `Tour ${m[1]}`], [/^Tournaments unlock after (\d+) rolls \(you have (\d+)\)$/, m => `Les tournois s'ouvrent après ${m[1]} tirages (tu en as ${m[2]})`],

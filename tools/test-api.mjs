@@ -3580,6 +3580,91 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await post(boss, 'imSet', { name: 'Mango', on: false }); assert.equal((await post(mgr, 'imInbox')).status, 403);
 }
 
+// Chat global (api/_global.js, routé par /api/friends) : qui écrit, délai, filtres, signalements, modération, 100 messages.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, { rolls = 150, google = true, extra = [] } = {}) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id], ...(google ? [['SET', `player:${id}:google`, `g-${tag}`]] : [])]); return { playerId: id, secret, name }; };
+  const boss = mk('c1', 'Chief', { extra: ['owner', '1'] }), kid = mk('c2', 'Kiddo'), pal = mk('c3', 'Pally'), modo = mk('c4', 'Modo');
+  const anon = mk('c5', 'NoGoogle', { google: false }), newbie = mk('c6', 'Newbie', { rolls: 99 });
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]); // lève le délai de 5 s sans attendre
+  // Lecture ouverte à tous, même sans joueur ; aucune info « me » alors.
+  let r = await gc(null, 'gcList'); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual(r.body.msgs, []); assert.equal(r.body.me, undefined);
+  r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } }); assert.equal(r.status, 200, 'visiteur inconnu du serveur : lit quand même'); assert.equal(r.body.me, undefined);
+  assert.equal(run([['GET', `player:${'7e1d'.repeat(4)}:secret`]])[0].result, null, 'lire ne crée aucun joueur');
+  assert.equal((await call(friendsApi, { method: 'POST', body: { action: 'gcSend', text: 'hi', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } })).status, 403);
+  // Éligibilité : Google + 100 tirages, expliqué au joueur.
+  r = await gc(anon, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason], [false, 'google']);
+  r = await gc(anon, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /Google/);
+  r = await gc(newbie, 'gcList'); assert.deepEqual([r.body.me.can, r.body.me.reason, r.body.me.rolls, r.body.me.need], [false, 'rolls', 99, 100]);
+  r = await gc(newbie, 'gcSend', { text: 'hello' }); assert.equal(r.status, 403); assert.match(r.body.error, /100 rolls/);
+  r = await gc(kid, 'gcSend', { text: 'Hello <b>everyone</b>!' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.msgs.length, 1); assert.deepEqual([r.body.msgs[0].name, r.body.msgs[0].text, r.body.msgs[0].mine], ['Kiddo', 'Hello <b>everyone</b>!', true]);
+  assert.ok(!JSON.stringify(r.body).includes(kid.playerId), 'aucun identifiant de joueur');
+  // Délai : un message toutes les 5 s.
+  r = await gc(kid, 'gcSend', { text: 'again' }); assert.equal(r.status, 429);
+  free(kid);
+  // Longueur et filtres : refusés avec une raison, jamais gardés.
+  const reject = async (text, re, what) => { free(kid); const x = await gc(kid, 'gcSend', { text }); assert.equal(x.status, 422, `${what} : « ${text} » → ${x.status}`); assert.match(x.body.error, re, what); };
+  await reject('x'.repeat(201), /200 characters/, 'trop long');
+  for (const t of ['you are a fucking idiot', 'sh1t', 'f u c k', 'n.i.g.g.e.r', 'espèce de connard', 'fils de pute']) await reject(t, /friendly/, 'insulte');
+  for (const t of ['call me 06 12 34 56 78', 'text +1 (555) 123-4567']) await reject(t, /personal info/, 'téléphone');
+  for (const t of ['my mail: kid.cool@gmail.com', 'kid (at) gmail (dot) com']) await reject(t, /personal info/, 'e-mail');
+  for (const t of ['I live at 12 Baker Street', "j'habite au 4 rue des Lilas", 'add me on snap', 'my insta is kidcool', '@kidcool99', 'discord: kidcool#1234', 'snapchat kidcool']) await reject(t, /personal info/, 'infos perso');
+  for (const t of ['go to freecoins.com', 'https://x.y/z', 'www.example.org', 'see site dot com', 'discord.gg/abc']) await reject(t, /Links/, 'lien');
+  for (const t of ['I got 999999 and 1000000 today!', 'gg, 3rd place', 'my number was 123456', 'join the RNG discord server', 'class assistant']) { free(kid); assert.equal((await gc(kid, 'gcSend', { text: t })).status, 200, `accepté : « ${t} »`); await wait(3); }
+  r = await gc(null, 'gcList'); assert.equal(r.body.msgs.length, 6, 'rien de refusé n\'a été gardé');
+  // Relecture bon marché : rien de neuf → « same » ; sinon seulement les nouveaux.
+  const { rev, del } = r.body, lastT = r.body.msgs.at(-1).t;
+  r = await gc(pal, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.same, true); assert.equal(r.body.msgs, undefined);
+  r = await gc(pal, 'gcSend', { text: 'hi Kiddo' }); assert.equal(r.status, 200);
+  r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.deepEqual(r.body.msgs.map(m => m.text), ['hi Kiddo']); assert.equal(r.body.full, false);
+  const palMsg = r.body.msgs[0];
+  // Signalement → liste « reports » (where: 'global chat'), un seul par message, pas le sien.
+  r = await gc(kid, 'gcReport', { id: palMsg.id }); assert.equal(r.status, 200); assert.equal(r.body.reported, true);
+  assert.equal((await gc(kid, 'gcReport', { id: palMsg.id })).body.already, true);
+  assert.equal((await gc(pal, 'gcReport', { id: palMsg.id })).status, 422, 'pas son propre message');
+  r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  assert.ok(r.body.reports.some(x => x.where === 'global chat' && x.text === 'hi Kiddo' && x.author === 'Pally'), JSON.stringify(r.body.reports.slice(0, 2)));
+  // Modération : un joueur ne supprime ni ne rend muet ; le rôle de Modérateur est donné par le créateur seul.
+  assert.equal((await gc(kid, 'gcDelete', { id: palMsg.id })).status, 403);
+  assert.equal((await gc(kid, 'gcMute', { id: palMsg.id, dur: '1h' })).status, 403);
+  assert.equal((await gc(kid, 'gcModSet', { name: 'Modo' })).status, 403, 'seul le créateur donne le rôle');
+  assert.equal((await gc(modo, 'gcAdmin')).status, 403);
+  r = await gc(boss, 'gcModSet', { name: 'Modo' }); assert.equal(r.status, 200); assert.deepEqual(r.body.mods, ['Modo']);
+  r = await gc(modo, 'gcList'); assert.equal(r.body.me.mod, true);
+  assert.equal((await gc(modo, 'gcModSet', { name: 'Kiddo' })).status, 403, 'un modérateur ne nomme personne');
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'Kiddo' })).status, 403);
+  r = await gc(modo, 'gcDelete', { id: palMsg.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === palMsg.id));
+  r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.full, true, 'après une suppression, la liste entière'); assert.equal(r.body.msgs.length, 6);
+  // Silence 1 h : le joueur voit jusqu'à quand ; ne peut plus écrire ; listé sur la page Owner ; levé par le créateur.
+  free(pal); r = await gc(pal, 'gcSend', { text: 'one more' }); const m2 = r.body.msgs.at(-1);
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '2h' })).status, 400);
+  r = await gc(modo, 'gcMute', { id: m2.id, dur: '1h' }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === m2.id), 'message retiré aussi');
+  r = await gc(pal, 'gcList'); assert.equal(r.body.me.reason, 'muted'); assert.ok(r.body.me.mutedUntil > Date.now() + 3500e3 && r.body.me.mutedUntil <= Date.now() + 3600e3);
+  free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'let me talk' })).status, 403);
+  r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by]), [['Pally', 'Modo']]);
+  assert.ok(!JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant sur la page Owner');
+  r = await gc(boss, 'gcUnmute', { name: 'Pally' }); assert.deepEqual(r.body.mutes, []);
+  free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'thanks' })).status, 200);
+  // Silence pour toujours, et un modérateur ne rend muet ni le créateur ni un autre modérateur.
+  free(kid); r = await gc(kid, 'gcSend', { text: 'bye' }); const m3 = r.body.msgs.at(-1);
+  await gc(boss, 'gcMute', { id: m3.id, dur: 'perm' });
+  r = await gc(kid, 'gcList'); assert.equal(r.body.me.mutedUntil, -1);
+  free(kid); r = await gc(kid, 'gcSend', { text: 'hello?' }); assert.equal(r.status, 403); assert.match(r.body.error, /no longer/);
+  free(boss); r = await gc(boss, 'gcSend', { text: 'Be nice everyone' }); const bm = r.body.msgs.at(-1);
+  assert.equal((await gc(modo, 'gcMute', { id: bm.id, dur: '24h' })).status, 403);
+  await gc(boss, 'gcUnmute', { name: 'Kiddo' });
+  // Rôle retiré : plus de modération.
+  await gc(boss, 'gcModSet', { name: 'Modo', on: false });
+  assert.equal((await gc(modo, 'gcDelete', { id: bm.id })).status, 403);
+  // Seuls les 100 derniers messages restent.
+  for (let i = 0; i < 105; i++) { free(kid); assert.equal((await gc(kid, 'gcSend', { text: `msg ${i}` })).status, 200); }
+  r = await gc(null, 'gcList'); assert.equal(r.body.msgs.length, 100); assert.equal(r.body.msgs.at(-1).text, 'msg 104'); assert.equal(r.body.msgs[0].text, 'msg 5');
+  assert.ok(r.body.msgs.every((m, i, a) => !i || m.t > a[i - 1].t), 'heures strictement croissantes');
+}
 
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
 // pseudo payant, Prestige.
