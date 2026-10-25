@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-23 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-10-25 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -8,6 +8,31 @@ The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Nod
 domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU overuse, which is why everything moved
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
+
+## Done on 2026-10-25 (all merged and deployed, PRs #22–#31)
+
+- **Player-idea update (#22)**: badges Exact 61/55, Odd Abundant (abundant AND odd, ~1 in 500, stays Anomaly-level:
+  Sacha's decision), Vortrox and Gina (4992/9249); monthly top-10 coins (1,000 / 500 / 250, first payout Nov 1);
+  18 skins (Christmas until Dec 26, Money, Bowling, Rock Smash, Cracked Screen, Castle, Chocolate, Floppy Fish, Axe
+  Thrower, Math, Supernova, Wood Carving, Shiny Diamond, Greek, DNA, Fairy Dust, Elemental, Divine Judgment) and 5
+  wallpapers (Open Ocean, Summit, ASMR Bubbles, Windy Beach, Grand Prix). Wallpaper `idea` authors get no 5% (Sacha:
+  no). Two diamond skins are fine (different names). 40 credited players answered; 54 done/refused ideas closed.
+- **Economy (#23)**: Weekend Rush +25% (was ×2); daily roll-coin tiers (1–500 full, 501–2,000 50%, then 20%; Common
+  rolls can pay 0 after roll 500); paid rename 5,000; Prestige titles (Tycoon 25k ×200, Magnate 60k ×100, Coin Emperor
+  150k ×25); Owner → Economy tab (supply, top-1% share, casino net). Coins granted by the owner are logged as `in:owner`.
+- **Global chat (#24, #26, #27)**: 100 rolls to write (no Google needed since #26), filters, reports, moderators,
+  mutes; red unread dot on 💬 (peek every 30 s while closed).
+- **Clans (#25)**: 10k to create, vault and upgrades (coins destroyed), clan chat, weekly title, 5v5 wars (3% cut).
+  Page `#/clan` (not in the top menu). No Discord announcements for clans yet.
+- **Google hint (#28)**: note under the Google button when a pop-up/ad blocker stops sign-in.
+- **Server speed (#29, #30, #31)**: profiles read only new rolls once cached (100k-roll profiles took ~7.7 s and
+  stalled everyone); profile totals of 2,000+ roll histories kept in Redis (`pagg:<id>`) across restarts; XP
+  recalculation after badge changes runs in batches of 3 every 5 s in the background; Badges tab uses
+  `/api/profile?lite=1` (fixes "Achievements unavailable"). Slow requests dropped from ~100+/min bursts to a few.
+- **Checked, not bugs**: zscepz's +330k casino profit is luck (Plinko High risk 1000× / Dice); every coin-spending
+  path is already serialized by the `shop:<id>` lock (no parallel-request exploit).
+- **Left**: the History page of a big player still reads the whole history; clan Discord announcements; the global
+  chat closes when changing page (Sacha to decide).
 
 ## Done recently (2026-10-20 → 2026-10-23)
 
