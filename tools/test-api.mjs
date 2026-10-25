@@ -289,6 +289,23 @@ run([['ZADD', `hist:${legacy}`, t0 + 4700, `${t0 + 4700}:777777`]]); // doublon 
 r = await call(profile, { url: '/api/profile?name=Emile' });
 assert.equal(r.body.rolls, 1);
 assert.deepEqual(r.body.best.map(x => x.n), [777777]);
+// Gros historique (2026-10-25) : les totaux du profil sont gardés dans Redis (pagg:<id>) pour survivre à un redémarrage,
+// et la visite suivante ne lit que les nouveaux tirages ; le résultat reste celui d'un calcul complet.
+{
+  const big = 'd'.repeat(16), zadd = ['ZADD', `hist:${big}`];
+  for (let i = 0; i < 2100; i++) zadd.push(t0 + i * 10, `${t0 + i * 10}:${(i * 7919) % 1000001}`);
+  run([['HSET', 'names', big, 'Bigroller'], zadd]);
+  const p1 = await call(profile, { url: '/api/profile?name=Bigroller' });
+  assert.equal(p1.body.rolls, 2100);
+  assert.ok(run([['GET', `pagg:${big}`]])[0].result, 'totaux gardés dans Redis');
+  run([['ZADD', `hist:${big}`, t0 + 99999, `${t0 + 99999}:777777`]]);
+  const p2 = await call(profile, { url: '/api/profile?name=Bigroller' });
+  const all = run([['ZRANGE', `hist:${big}`, 0, -1]])[0].result.map(m => Number(m.split(':')[1]));
+  assert.equal(p2.body.rolls, 2101, 'nouveau tirage ajouté');
+  assert.equal(p2.body.lifetime, all.reduce((x, n) => x + engine.scoreOf(n), 0), 'XP identique à un calcul complet');
+  assert.equal(engine.scoreOf(p2.body.best[0].n), Math.max(...all.map(n => engine.scoreOf(n))), 'meilleur tirage à jour');
+  run([['HDEL', 'names', big], ['DEL', `hist:${big}`, `pagg:${big}`]]); // ne gêne pas les tests de pseudos plus bas
+}
 assert.equal((await call(profile, { url: '/api/profile?name=Nobody' })).status, 404);
 assert.equal((await call(profile, { url: '/api/profile' })).status, 400);
 assert.equal((await call(profile, { method: 'POST' })).status, 405);

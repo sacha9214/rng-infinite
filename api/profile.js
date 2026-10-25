@@ -10,6 +10,7 @@ const { awardsOf } = require('./_rank');
 
 const BEST_LIMIT = 10;
 const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
+const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
@@ -27,6 +28,9 @@ module.exports = async (req, res) => {
     // bloquait Redis et le processus Node plusieurs secondes (et, l'historique étant plafonné, le cache ne servait plus
     // jamais). Si ses totaux sont déjà en mémoire, on ne lit que les tirages arrivés depuis (ZRANGEBYSCORE : le score
     // est l'heure du tirage) ; la lecture complète ne se fait qu'au premier passage, puis au plus toutes les 6 heures.
+    // Après un redémarrage (chaque déploiement), la mémoire est vide : les totaux sont aussi gardés dans Redis (pagg:<id>),
+    // sinon chaque gros profil recalculait ses 100 000 tirages juste après la mise à jour et ralentissait tout le monde.
+    if (!AGG.has(id)) { try { const [raw] = await redis([['GET', paggKey(id)]]); if (raw) AGG.set(id, JSON.parse(raw)); } catch (e) { /* recalculé */ } }
     const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
     const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize] = await redis([
       cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
@@ -111,8 +115,11 @@ module.exports = async (req, res) => {
     const lastT = rolls.length ? rolls[rolls.length - 1][0] : prev ? prev.lastT : null;
     if (count) {
       AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
-      AGG.set(id, { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst });
+      const agg = { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst };
+      AGG.set(id, agg);
       if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
+      // Gardé dans Redis seulement pour les gros historiques (ceux qui coûtent à recalculer), jusqu'au recalcul complet.
+      if (count >= PAGG_MIN) await redis([['SET', paggKey(id), JSON.stringify(agg), 'PX', Math.max(1000, agg.at + AGG_TTL_MS - Date.now())]]);
     }
 
     return send(res, 200, {

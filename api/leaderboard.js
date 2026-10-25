@@ -22,6 +22,7 @@ const MIGRATION = '6:' + require('node:crypto').createHash('sha256')
 // Remplissage unique pour les joueurs d'avant ces compteurs (2026-09-23), par lots, en quelques secondes au plus :
 // lb:xp (XP à vie) et count:all (tirages à vie). Les tirages suivants les incrémentent dans recordRoll ;
 // recalculer depuis l'historique donne les mêmes totaux. count:all ne descend jamais.
+const MIGRATE_BATCH = 3, MIGRATE_BUDGET_MS = 1500;
 async function migrateXp() {
   const [done] = await redis([['GET', MIGRATED]]);
   if (done === MIGRATION) return;
@@ -32,8 +33,12 @@ async function migrateXp() {
   const [named, ranked, finished] = await redis([['HKEYS', 'names'], ['ZRANGE', 'lb:all', 0, -1], ['SMEMBERS', `${MIGRATED}:ids`]]);
   const todo = [...new Set([...(named || []), ...(ranked || [])])].filter(id => !(finished || []).includes(id));
   const open = new Set(scopes(Date.now()).map(p => p.lb)); // périodes en cours (les mois finis gardent leurs trophées)
-  for (let i = 0; i < todo.length && Date.now() - start < 6000; i += 20) {
-    const batch = todo.slice(i, i + 20);
+  // Lenteurs (2026-10-25) : par lots de 20 historiques complets (jusqu'à 2 millions de tirages dans une seule demande à
+  // Redis) et 6 s de calcul à chaque visite du classement, le recalcul d'après un changement de badges ralentissait tout
+  // le serveur. Désormais 3 joueurs par lot et 1,5 s au plus par passage ; le serveur le relance aussi toutes les 5 s en
+  // fond (deploy/ovh/api-server.js), si bien qu'il avance doucement sans attendre les visites du classement.
+  for (let i = 0; i < todo.length && Date.now() - start < MIGRATE_BUDGET_MS; i += MIGRATE_BATCH) {
+    const batch = todo.slice(i, i + MIGRATE_BATCH);
     const [counts, oldBest, ...lists] = await redis([['HMGET', 'count:all', ...batch], ['HMGET', 'best:all', ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
     const writes = [];
     for (let j = 0; j < batch.length; j++) {
@@ -62,7 +67,7 @@ async function migrateXp() {
     }
     writes.push(['SADD', `${MIGRATED}:ids`, ...batch]);
     await redis(writes);
-    if (i + 20 >= todo.length) await redis([['SET', MIGRATED, MIGRATION], ['DEL', `${MIGRATED}:ids`]]);
+    if (i + MIGRATE_BATCH >= todo.length) await redis([['SET', MIGRATED, MIGRATION], ['DEL', `${MIGRATED}:ids`]]);
   }
   if (!todo.length) await redis([['SET', MIGRATED, MIGRATION], ['DEL', `${MIGRATED}:ids`]]);
   await redis([['DEL', `${MIGRATED}:lock`]]);
@@ -215,3 +220,4 @@ module.exports = async (req, res) => {
     return send(res, err.status || 500, { error: err.message });
   }
 };
+module.exports.migrateXp = migrateXp; // relancé en fond par deploy/ovh/api-server.js
