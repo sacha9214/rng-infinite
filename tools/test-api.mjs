@@ -306,6 +306,14 @@ assert.deepEqual(r.body.best.map(x => x.n), [777777]);
   assert.equal(engine.scoreOf(p2.body.best[0].n), Math.max(...all.map(n => engine.scoreOf(n))), 'meilleur tirage à jour');
   run([['HDEL', 'names', big], ['DEL', `hist:${big}`, `pagg:${big}`]]); // ne gêne pas les tests de pseudos plus bas
 }
+// ?lite=1 : succès et titre seulement, sans l'historique (onglet Badges, 2026-10-25).
+{
+  const full = await call(profile, { url: '/api/profile?name=Alice' }), lite = await call(profile, { url: '/api/profile?name=Alice&lite=1' });
+  assert.equal(lite.status, 200);
+  assert.deepEqual(lite.body.achievements, full.body.achievements);
+  assert.equal(lite.body.title, full.body.title);
+  assert.equal(lite.body.best, undefined, 'pas d\'historique en mode lite');
+}
 assert.equal((await call(profile, { url: '/api/profile?name=Nobody' })).status, 404);
 assert.equal((await call(profile, { url: '/api/profile' })).status, 400);
 assert.equal((await call(profile, { method: 'POST' })).status, 405);
