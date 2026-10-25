@@ -2,13 +2,14 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { statsKey, breathe, engine, redis, cleanName, findPlayer, historyKey, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { statsKey, breathe, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
 const { awardsOf } = require('./_rank');
 
 const BEST_LIMIT = 10;
+const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
@@ -22,8 +23,13 @@ module.exports = async (req, res) => {
     const id = await findPlayer(name);
     if (!id) return send(res, 404, { error: 'No player with this name' });
 
-    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName] = await redis([
-      ['ZRANGE', historyKey(id), 0, -1],
+    // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil
+    // bloquait Redis et le processus Node plusieurs secondes (et, l'historique étant plafonné, le cache ne servait plus
+    // jamais). Si ses totaux sont déjà en mémoire, on ne lit que les tirages arrivés depuis (ZRANGEBYSCORE : le score
+    // est l'heure du tirage) ; la lecture complète ne se fait qu'au premier passage, puis au plus toutes les 6 heures.
+    const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize] = await redis([
+      cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
       ['ZREVRANK', 'lb:all', id],
@@ -34,6 +40,7 @@ module.exports = async (req, res) => {
       ['SMEMBERS', `walls:${id}`],
       ['HGET', 'skins', id], // skin équipé : le meilleur tirage s'affiche avec, en tête du profil
       ['HGET', statsKey(id), 'discordName'],
+      ['ZCARD', historyKey(id)],
     ]);
     // Clan du joueur (api/_clan.js) : tag, nom et emoji, affichés sous son nom.
     const [cid] = await redis([['HGET', 'clanof', id]]);
@@ -62,24 +69,29 @@ module.exports = async (req, res) => {
       vsMe: me && me !== id ? h2h.get(me) || { w: 0, l: 0 } : null, // vu de ce joueur : w = ses victoires contre moi
     };
 
-    // Historique trié par date ; le meilleur tirage all-time y est ajouté s'il date d'avant l'historique serveur.
+    // Historique effacé ou remplacé depuis le dernier calcul : on repart de zéro.
+    // Aussi quand le meilleur tirage all-time avait été ajouté à la main (hors historique) : il faut le redédoublonner.
+    const prev = cached && !prev0.padded && Number(histSize) >= Math.min(prev0.size, HISTORY_CAP) ? prev0 : null;
+    let fresh = members || [];
+    if (cached && !prev) fresh = (await redis([['ZRANGE', historyKey(id), 0, -1]]))[0] || [];
+    // Premier calcul : le meilleur tirage all-time y est ajouté s'il date d'avant l'historique serveur.
     // Comparé par nombre seul : un vieux tirage envoyé par l'appareil porte l'heure de l'appareil, pas celle du serveur.
-    if (bestAll) {
+    let padded = false;
+    if (!prev && bestAll) {
       const d = JSON.parse(bestAll);
-      if (!members.some(m => m.endsWith(`:${d.n}`))) members.push(`${d.t}:${d.n}`);
+      if (!fresh.some(m => m.endsWith(`:${d.n}`))) { fresh.push(`${d.t}:${d.n}`); padded = true; }
     }
     // Les doublons d'un même tirage déjà en base (voir rollSet) ne comptent qu'une fois.
     const known = rollSet();
-    const rolls = members.map(m => m.split(':').map(Number)).sort((a, b) => a[0] - b[0]).filter(([t, n]) => known.add(n, t));
+    const rolls = fresh.map(m => m.split(':').map(Number)).sort((a, b) => a[0] - b[0]).filter(([t, n]) => known.add(n, t));
 
-    // ~70 µs par tirage : 5 s pour le plus gros historique (64 000 tirages, 2026-10-17). Les totaux d'un profil restent
-    // en mémoire ; à la visite suivante, seuls les nouveaux tirages sont analysés.
+    // ~70 µs par tirage : 7 s pour un historique plein (100 000 tirages). Les totaux restent en mémoire ; ensuite seuls
+    // les nouveaux tirages sont analysés, et les meilleurs / pires tirages sont tenus à jour au lieu d'être recalculés.
     const analyze = n => engine.analyze(n);
-    const prev = AGG.get(id), same = prev && rolls.length >= prev.count && prev.count > 0 && rolls[0][0] === prev.first && rolls[prev.count - 1][0] === prev.last;
-    let lifetime = same ? prev.lifetime : 0, percentileSum = same ? prev.percentileSum : 0;
-    const badges = same ? Object.fromEntries(Object.entries(prev.badges).map(([k, v]) => [k, v.slice()])) : {}, tiers = same ? { ...prev.tiers } : {};
+    let lifetime = prev ? prev.lifetime : 0, percentileSum = prev ? prev.percentileSum : 0;
+    const badges = prev ? Object.fromEntries(Object.entries(prev.badges).map(([k, v]) => [k, v.slice()])) : {}, tiers = prev ? { ...prev.tiers } : {};
     let step = 0;
-    for (const [, n] of same ? rolls.slice(prev.count) : rolls) {
+    for (const [, n] of rolls) {
       if (++step % 2000 === 0) await breathe(); // gros historique : laisse passer les autres demandes
       const a = analyze(n);
       lifetime += a.total;
@@ -90,24 +102,28 @@ module.exports = async (req, res) => {
         else badges[b] = [1, n];
       }
     }
-    if (rolls.length) {
-      AGG.set(id, { count: rolls.length, first: rolls[0][0], last: rolls[rolls.length - 1][0], lifetime, percentileSum, badges, tiers });
-      if (AGG.size > 300) AGG.delete(AGG.keys().next().value); // les plus anciens profils sortent de la mémoire
-    }
     const scored = rolls.map(([t, n]) => ({ n, s: engine.scoreOf(n), t }));
-    const best = scored.slice().sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT);
+    const best = [...(prev ? prev.best : []), ...scored].sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT);
     // Les 10 pires tirages (idée d'Angelicide9, 2026-10-17), le plus mauvais en premier.
-    const worst = scored.sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);
+    const worst = [...(prev ? prev.worst : []), ...scored].sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);
+    const count = (prev ? prev.count : 0) + rolls.length;
+    const since = prev ? prev.since : rolls.length ? rolls[0][0] : null;
+    const lastT = rolls.length ? rolls[rolls.length - 1][0] : prev ? prev.lastT : null;
+    if (count) {
+      AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
+      AGG.set(id, { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst });
+      if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
+    }
 
     return send(res, 200, {
       name: shownName || name,
-      rolls: rolls.length,
+      rolls: count,
       lifetime,
-      since: rolls.length ? rolls[0][0] : null,
-      last: rolls.length ? rolls[rolls.length - 1][0] : null,
+      since,
+      last: lastT,
       rank: rank === null ? null : Number(rank) + 1,
       // Chance = percentile moyen des tirages (50 attendu) ; tiers = nombre de tirages par rareté de carte.
-      luck: rolls.length ? Math.round((percentileSum / rolls.length) * 10) / 10 : null,
+      luck: count ? Math.round((percentileSum / count) * 10) / 10 : null,
       tiers,
       best,
       worst,

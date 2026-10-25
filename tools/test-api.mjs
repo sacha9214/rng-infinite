@@ -266,6 +266,11 @@ assert.ok(!JSON.stringify(r.body).includes(alice.playerId), 'aucun id dans le pr
   assert.equal(r2.body.lifetime, hist2.reduce((x, [n]) => x + engine.scoreOf(n), 0), 'XP à vie à jour');
   const b2 = hist2.flatMap(([n]) => engine.analyze(n).earnedIds);
   assert.equal(Object.values(r2.body.badges).reduce((x, [c]) => x + c, 0), b2.length, 'badges à jour');
+  // Lecture partielle (2026-10-25) : meilleurs et pires tirages identiques à un calcul complet.
+  const sc2 = hist2.map(([n, t]) => ({ n, s: engine.scoreOf(n), t }));
+  assert.deepEqual(r2.body.best.map(x => x.s), sc2.slice().sort((x, y) => y.s - x.s || x.t - y.t).slice(0, 10).map(x => x.s), 'meilleurs à jour');
+  assert.deepEqual(r2.body.worst.map(x => x.s), sc2.slice().sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10).map(x => x.s), 'pires à jour');
+  assert.equal(r2.body.since, hist2[0][1], 'premier tirage inchangé');
   assert.ok(extra.n >= 0);
 }
 
