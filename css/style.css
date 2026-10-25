@@ -5975,3 +5975,56 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes fsh-roll { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
 .room-stage.many .side-fish::before, .room-stage.many .side-fish::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-fish::before, .side-fish::after { animation: none; } }
+/* ------------------------------------------------------------------ Axe Thrower (idée de jjcoolcid1, 2026-10-25) : un
+   mur de planches sombres ; chaque chiffre est peint en rouge sur une rondelle de bois (cernes clairs, écorce brune),
+   une cible de lancer de hache. Pendant le tirage les cibles tournent sur leur clou, d'avant en arrière ; un chiffre
+   qui se pose : la cible se fige (élan), TCHAC, la hache la frappe de la gauche (secousse raide vers la droite,
+   éclat), elle vibre et s'arrête. Matière dure : aucun écrasement. Le bonhomme bâton et ses haches : js/skinfx.js. */
+.num-card.skin-axeman {
+  background:
+    /* clous et joints des planches */
+    linear-gradient(90deg, rgba(0, 0, 0, .5) .04em, transparent .04em) 0 0 / .9em 100%,
+    repeating-linear-gradient(90deg, rgba(255, 237, 213, .04) 0 2px, transparent 2px .3em),
+    radial-gradient(ellipse 70% 70% at 50% 50%, rgba(251, 191, 36, .12), transparent 75%),
+    linear-gradient(180deg, #4a3423, #3a2819 60%, #2a1c11);
+  border: 2px solid #1c120a; border-radius: .45rem;
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, .12), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 14px rgba(180, 83, 9, .2), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .32em .4em;
+}
+.skin-axeman .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 900; line-height: 1;
+  width: 1.18em; height: 1.18em; margin: 0 .02em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: 50%; color: #b91c1c; text-shadow: 0 .03em 0 rgba(255, 237, 213, .6);
+  background:
+    radial-gradient(circle, #f5deb3 0 12%, #d9b77f 13% 15%, #ecd0a0 16% 30%, #cfa66c 31% 33%, #e6c48f 34% 50%, #c99a5c 51% 53%, #dcb57d 54% 68%, #7c4a22 69% 76%, #4a2a12 77%);
+  box-shadow: inset 0 0 0 .03em rgba(0, 0, 0, .3), 0 .06em .08em rgba(0, 0, 0, .55);
+}
+.skin-axeman .slot.ghost { opacity: .2; }
+.skin-axeman .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : la cible tourne sur son clou, d'avant en arrière. */
+.skin-axeman .slot.spinning { color: rgba(185, 28, 28, .45); text-shadow: none; animation: axe-twirl .22s ease-in-out infinite alternate; }
+.skin-axeman .slot.spinning:nth-of-type(2n) { animation-direction: alternate-reverse; }
+@keyframes axe-twirl { from { transform: rotate(-35deg); } to { transform: rotate(35deg); } }
+/* Elle se fige (élan), TCHAC : secousse raide vers la droite avec un flash, elle vibre et s'arrête. */
+.skin-axeman .slot.revealed { animation: axe-thunk .5s backwards; }
+@keyframes axe-thunk {
+  0% { transform: rotate(-10deg) scale(.96); animation-timing-function: ease-in; }
+  20% { transform: rotate(-4deg) scale(.96); }
+  26% { transform: translateX(.1em) rotate(9deg); filter: brightness(1.5); animation-timing-function: steps(1); }
+  36% { transform: translateX(-.05em) rotate(-5deg); filter: none; }
+  46% { transform: translateX(.03em) rotate(3deg); }
+  58% { transform: translateX(-.015em) rotate(-1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-axeman .slot { animation: none; } }
+/* Cadre de duel : un stand de lancer en forêt, la lueur d'une lanterne ; 🪓 tournoie, 🎯 tremble. */
+.side-axeman { --side-border: #b45309; --side-glow: 0 0 16px rgba(180, 83, 9, .3); --side-ink: #9a3412;
+  --side-bg: linear-gradient(90deg, rgba(0, 0, 0, .18) 1px, transparent 1px) 0 0 / 26px 100%, radial-gradient(ellipse 60% 50% at 50% 40%, rgba(251, 191, 36, .14), transparent 70%), radial-gradient(ellipse 80% 40% at 50% 100%, rgba(74, 52, 35, .35), transparent 70%);
+  --deco-a: '🪓'; --deco-b: '🎯'; }
+.side-axeman::before { animation: axe-spin 1.8s ease-in-out infinite; }
+.side-axeman::after { animation: axe-quiver 1.8s steps(2) infinite; }
+@keyframes axe-spin { 0%, 50% { transform: none; } 80%, 100% { transform: rotate(360deg); } }
+@keyframes axe-quiver { 0%, 78%, 100% { transform: none; } 82% { transform: translateX(2px); } 90% { transform: translateX(-1px); } }
+.room-stage.many .side-axeman::before, .room-stage.many .side-axeman::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-axeman::before, .side-axeman::after { animation: none; } }

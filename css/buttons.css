@@ -962,3 +962,9 @@
   -webkit-text-stroke: .04em #0c2b45; text-shadow: 0 .06em 0 #0c2b45;
   --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(14, 165, 233, .35); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
 .btn-roll.gen-fish:hover { filter: brightness(1.08); }
+/* Axe Thrower (idée de jjcoolcid1, 2026-10-25) : des planches sombres, une rondelle de bois cible à gauche. */
+.btn-roll.gen-axeman { border: 2px solid #1c120a; border-radius: .45em; color: #fde68a;
+  background: radial-gradient(circle, #f5deb3 0 15%, #cfa66c 16% 30%, #ecd0a0 31% 50%, #7c4a22 51% 62%, transparent 63%) .3em 50% / 1.6em 1.6em no-repeat, linear-gradient(90deg, rgba(0, 0, 0, .45) 1px, transparent 1px) 0 0 / 1.2em 100%, linear-gradient(180deg, #5a4030, #3a2819);
+  text-shadow: 0 1px 0 #1c120a;
+  --gs: 0 .3em 0 #1c120a, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #1c120a, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #1c120a; }
+.btn-roll.gen-axeman:hover { filter: brightness(1.1); }

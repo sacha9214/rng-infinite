@@ -3108,6 +3108,74 @@
       },
     };
   };
+  // 🪓 Axe Thrower (2026-10-25, idée de jjcoolcid1) — un bonhomme bâton se tient à gauche de la carte. Il se balance
+  // en attendant ; à chaque chiffre posé, il arme le bras et lance une hache qui tournoie jusqu'à la cible et s'y plante
+  // (copeaux de bois) : les haches restent plantées en haut des cibles. Avant le dernier chiffre il trépigne. À la
+  // révélation il fait la fête (bras en l'air, sauts ; plus haut avec la rareté) ; dès Mythic, une volée de haches
+  // tourne autour de la carte. Tirage raté : il hausse les épaules.
+  SCENES.axeman = env => {
+    const { co, card, q, dark } = env;
+    const ink = dark ? '#e5e7eb' : '#1f2937';
+    const manX = card.x - card.h * .85, feet = card.y + card.h * 1.02, H = card.h * 1.25;
+    const flying = timed(), stuck = [], chips = particles(), volley = timed();
+    let throwT = 9, mood = 'idle', moodT = 0, power = 0, jitter = 0;
+    const axe = (x, y, ang, s, a = 1) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(ang);
+      co.strokeStyle = '#92400e'; co.lineWidth = Math.max(1.5, s * .12); co.lineCap = 'round';
+      co.beginPath(); co.moveTo(0, 0); co.lineTo(-s, 0); co.stroke(); // le manche ; la tête au bout (0, 0)
+      co.fillStyle = '#cbd5e1'; co.strokeStyle = '#334155'; co.lineWidth = 1;
+      co.beginPath(); co.moveTo(-s * .12, -s * .12); co.lineTo(s * .18, -s * .38); co.quadraticCurveTo(s * .3, 0, s * .18, s * .38); co.lineTo(-s * .12, s * .12); co.closePath(); co.fill(); co.stroke();
+      co.restore();
+    };
+    const hand = () => ({ x: manX + H * .22, y: feet - H * .82 });
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        throwT += dt; moodT += dt;
+        // le bonhomme : tête, corps, jambes, deux bras ; la pose dépend du moment
+        const bob = mood === 'party' ? Math.abs(Math.sin(moodT * 9)) * H * (.08 + .14 * power) : mood === 'wait' ? Math.abs(Math.sin(t * 16)) * H * .03 : Math.sin(t * 2.5) * H * .01;
+        const hipY = feet - H * .45 - bob, neckY = feet - H * .78 - bob, headY = neckY - H * .1, x = manX;
+        co.globalAlpha = 1; co.strokeStyle = ink; co.lineWidth = Math.max(2, H * .045); co.lineCap = 'round'; co.lineJoin = 'round';
+        co.beginPath(); co.arc(x, headY, H * .09, 0, TAU); co.stroke();
+        co.beginPath(); co.moveTo(x, neckY); co.lineTo(x, hipY); co.moveTo(x - H * .14, feet - bob * .3); co.lineTo(x, hipY); co.lineTo(x + H * .14, feet - bob * .3); co.stroke();
+        const sh = neckY + H * .06;
+        let la, ra; // angles des bras (0 = vers la droite)
+        if (mood === 'party') { la = -Math.PI * .7 + Math.sin(moodT * 12) * .3; ra = -Math.PI * .3 - Math.sin(moodT * 12) * .3; }
+        else if (mood === 'shrug') { la = -Math.PI * .85; ra = -Math.PI * .15; }
+        else { const k = throwT / .18; la = Math.PI * .65; ra = k < .5 ? -Math.PI * .9 : k < 1 ? lerp(-Math.PI * .9, .1, (k - .5) * 2) : .35; } // il arme, puis lance
+        const arm = a => { co.beginPath(); co.moveTo(x, sh); co.lineTo(x + Math.cos(a) * H * .3, sh + Math.sin(a) * H * .3); co.stroke(); };
+        arm(la); arm(ra);
+        if (mood === 'idle' && throwT > .25 && throwT < 9) axe(x + Math.cos(ra) * H * .3, sh + Math.sin(ra) * H * .3, -Math.PI / 2, card.h * .4, Math.min(1, (throwT - .25) * 4)); // une hache neuve en main
+        // les haches en vol : un arc, elles tournent vite, puis se plantent
+        flying.run(dt, (f, k) => {
+          const hx = lerp(f.x0, f.x1, k), hy = lerp(f.y0, f.y1, k) - Math.sin(Math.PI * k) * card.h * .6;
+          axe(hx, hy, f.spin + k * TAU * 2.5, card.h * .42);
+          if (!f.done && k > .95) { f.done = true; stuck.push({ x: f.x1, y: f.y1, ang: -Math.PI * .72 + rnd(-.15, .15), t: 0 });
+            for (let i = Math.round(8 * q); i > 0; i--) { const a = rnd(-Math.PI, 0), v = card.h * rnd(1.5, 3.5); chips.add({ x: f.x1, y: f.y1, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .3, max: rnd(.4, .7), size: card.h * rnd(.02, .04), rot: rnd(TAU), spin: rnd(-12, 12), c: pick(['#f5deb3', '#d9b77f', '#7c4a22']) }); } }
+        });
+        // les haches plantées : la tête dans le bois, le manche qui vibre un instant
+        for (const s of stuck) { s.t += dt; const wob = Math.exp(-s.t * 8) * Math.sin(s.t * 60) * .25; axe(s.x, s.y, s.ang + Math.PI + wob, card.h * .42); }
+        volley.run(dt, (v, k) => { const a = v.a0 + k * TAU * 1.2, r = card.w * .62, cx = card.x + card.w / 2, cy = card.y + card.h / 2; axe(cx + Math.cos(a) * r, cy + Math.sin(a) * r * .9, a * 3, card.h * .42, k > .85 ? (1 - k) / .15 : 1); });
+        chips.step(dt);
+        chips.each((p, k) => { co.save(); co.globalAlpha = 1 - k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .4, p.size * 2, p.size * .8); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const h = hand();
+        throwT = 0; mood = 'idle';
+        flying.add({ x0: h.x, y0: h.y - card.h * .3, x1: p.x - card.h * .1, y1: p.y - card.h * .3, spin: rnd(TAU), life: .22 + (p.x - card.x) / card.w * .12 });
+      },
+      build() { mood = 'wait'; },
+      reveal(tier) {
+        const P = POWER[tier] || 0;
+        moodT = 0; power = P;
+        if (!P) { mood = 'shrug'; return; }
+        mood = 'party';
+        if (P >= 1) for (let i = 0; i < 4 + (ASCEND[tier] || 0); i++) volley.add({ delay: i * .12, life: 1.6, a0: (i / 4) * TAU });
+      },
+    };
+  };
   // 🍩 Polygon Donut (2026-10-21, idée de PongonLOLZFan) — un vrai donut 3D en peu de polygones : un tore de 18 × 8
   // facettes, éclairé à plat (une teinte par triangle), glaçage rose sur le dessus avec ses vermicelles, pâte dorée
   // dessous. Il tourne lentement derrière les chiffres (calque intérieur, en retrait), plus vite pendant le tirage, et
