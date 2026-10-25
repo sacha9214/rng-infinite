@@ -5805,3 +5805,69 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes crk-pop { 0%, 60%, 100% { transform: scale(1); opacity: .8; } 70% { transform: scale(1.3); opacity: 1; } }
 .room-stage.many .side-cracked::before, .room-stage.many .side-cracked::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-cracked::before, .side-cracked::after { animation: none; } }
+/* ------------------------------------------------------------------ Medieval Castle (idée de BIGBOIJONER69, 2026-10-25) :
+   un rempart de pierres taillées, des créneaux en haut, une tringle de bois qui court sous eux. Chaque chiffre est
+   brodé en or sur une bannière à queue d'aronde, rouge et bleu en alternance, liseré doré. Pendant le tirage les
+   bannières claquent au vent (elles ondulent) ; un chiffre qui se pose : la bannière se roule vers le haut (élan), se
+   déroule d'un coup, dépasse et se balance avant de pendre droite. Torches, étincelles d'or et feu d'artifice :
+   js/skinfx.js. */
+.num-card.skin-castle {
+  background:
+    /* les créneaux en haut : merlons de pierre sur le ciel nocturne */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><path d='M0 10V0H7V5H13V0H20V10Z' fill='%2378716c'/><path d='M0 0H7V1H0ZM13 0H20V1H13Z' fill='%23a8a29e'/><path d='M7 5H13V6H7Z' fill='%2357534e'/></svg>") 0 0 / .7em .35em repeat-x,
+    /* la tringle de bois sous les créneaux */
+    linear-gradient(180deg, transparent .4em, #78350f .4em, #a16207 .46em, #451a03 .52em, transparent .52em),
+    /* l'appareil de pierres : joints sombres, blocs décalés */
+    repeating-linear-gradient(180deg, transparent 0 .34em, rgba(28, 25, 23, .65) .34em .37em),
+    linear-gradient(90deg, rgba(28, 25, 23, .55) .03em, transparent .03em) 0 0 / .7em .74em,
+    linear-gradient(90deg, rgba(28, 25, 23, .55) .03em, transparent .03em) .35em .37em / .7em .74em,
+    /* la lueur chaude des torches sur la pierre */
+    radial-gradient(ellipse 30% 70% at 0% 60%, rgba(251, 146, 60, .35), transparent 70%),
+    radial-gradient(ellipse 30% 70% at 100% 60%, rgba(251, 146, 60, .35), transparent 70%),
+    linear-gradient(180deg, #1e1b4b 0 .3em, #6b6560 .3em, #57524d 60%, #3f3b37);
+  border: 2px solid #292524; border-radius: .35rem;
+  box-shadow: inset 0 0 0 1px rgba(231, 229, 228, .12), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 14px rgba(251, 191, 36, .2), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .5em .45em .2em;
+}
+.skin-castle .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .58em; font-weight: 900; line-height: 1;
+  width: 1.05em; height: 1.6em; margin: 0 .03em; padding-bottom: .25em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: top;
+  color: #fde68a; text-shadow: 0 .04em 0 #78350f, 0 0 .2em rgba(251, 191, 36, .55);
+  --bn: #b91c1c; --bn-d: #7f1d1d;
+  background:
+    /* liseré doré tout le long des bords */
+    linear-gradient(90deg, #ca8a04 .06em, transparent .06em calc(100% - .06em), #ca8a04 calc(100% - .06em)),
+    /* plis du tissu */
+    linear-gradient(90deg, rgba(0, 0, 0, .25), rgba(255, 255, 255, .12) 30%, rgba(0, 0, 0, .1) 60%, rgba(255, 255, 255, .08) 80%, rgba(0, 0, 0, .25)),
+    linear-gradient(180deg, var(--bn), var(--bn-d));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  filter: drop-shadow(0 .05em .04em rgba(0, 0, 0, .5));
+  transform-origin: 50% 0;
+}
+.skin-castle .slot:nth-of-type(2n) { --bn: #1d4ed8; --bn-d: #1e3a8a; }
+.skin-castle .slot.ghost { opacity: .2; }
+.skin-castle .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; }
+/* Pendant le tirage : la bannière claque au vent. */
+.skin-castle .slot.spinning { color: rgba(253, 230, 138, .45); text-shadow: none; animation: cst-flap .26s ease-in-out infinite alternate; }
+.skin-castle .slot.spinning:nth-of-type(2n) { animation-delay: -.13s; }
+@keyframes cst-flap { from { transform: skewX(6deg) scaleX(.94); } to { transform: skewX(-6deg) scaleX(1.02); } }
+/* Elle se roule vers le haut (élan), se déroule d'un coup, dépasse, se balance et pend droite. */
+.skin-castle .slot.revealed { animation: cst-unfurl .7s backwards; }
+@keyframes cst-unfurl {
+  0% { transform: scaleY(.25); filter: brightness(.8); animation-timing-function: cubic-bezier(.2, .8, .3, 1.4); }
+  30% { transform: scaleY(1.12); filter: brightness(1.5) drop-shadow(0 0 .2em #fde68a); animation-timing-function: ease-in-out; }
+  48% { transform: scaleY(.97) rotate(4deg); filter: drop-shadow(0 .05em .04em rgba(0, 0, 0, .5)); }
+  68% { transform: rotate(-2.5deg); }
+  86% { transform: rotate(1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-castle .slot { animation: none; } }
+/* Cadre de duel : la nuit au-dessus des remparts, des créneaux en bas ; 🏰 fixe, 🚩 claque au vent. */
+.side-castle { --side-border: #ca8a04; --side-glow: 0 0 16px rgba(202, 138, 4, .3); --side-ink: #a16207;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><path d='M0 10V0H7V5H13V0H20V10Z' fill='%2378716c' fill-opacity='.4'/></svg>") 0 100% / 28px 14px repeat-x, radial-gradient(ellipse 70% 50% at 50% 0%, rgba(30, 27, 75, .35), transparent 70%), radial-gradient(ellipse 30% 40% at 8% 80%, rgba(251, 146, 60, .2), transparent 70%), radial-gradient(ellipse 30% 40% at 92% 80%, rgba(251, 146, 60, .2), transparent 70%);
+  --deco-a: '🏰'; --deco-b: '🚩'; }
+.side-castle::after { transform-origin: 0 100%; animation: cst-wave 1.6s ease-in-out infinite; }
+@keyframes cst-wave { 0%, 100% { transform: skewY(0) scaleX(1); } 50% { transform: skewY(-8deg) scaleX(.9); } }
+.room-stage.many .side-castle::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-castle::after { animation: none; } }

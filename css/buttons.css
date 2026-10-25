@@ -944,3 +944,9 @@
   text-shadow: -.04em 0 rgba(239, 68, 68, .7), .04em 0 rgba(34, 211, 238, .7);
   --gs: 0 .3em 0 #18181b, 0 .5em 1em rgba(56, 189, 248, .25); --gs-h: 0 .34em 0 #18181b, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #18181b; }
 .btn-roll.gen-cracked:hover { filter: brightness(1.12); }
+/* Medieval Castle (idée de BIGBOIJONER69, 2026-10-25) : un bloc de rempart, des créneaux en haut, texte doré. */
+.btn-roll.gen-castle { border: 2px solid #292524; border-radius: .3em; color: #fde68a;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'><path d='M0 10V0H7V5H13V0H20V10Z' fill='%23a8a29e'/></svg>") 0 0 / 1.4em .45em repeat-x, repeating-linear-gradient(180deg, transparent 0 .7em, rgba(28, 25, 23, .5) .7em .76em), linear-gradient(180deg, #78716c, #57534e);
+  padding-top: .5em; text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(251, 191, 36, .5);
+  --gs: 0 .3em 0 #292524, 0 .5em 1em rgba(202, 138, 4, .25); --gs-h: 0 .34em 0 #292524, 0 .7em 1.3em rgba(251, 191, 36, .4); --gs-a: 0 .06em 0 #292524; }
+.btn-roll.gen-castle:hover { filter: brightness(1.1); }
