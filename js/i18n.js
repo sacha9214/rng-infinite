@@ -326,6 +326,7 @@
     'No message yet. Say hi! 👋': 'Aucun message pour l\'instant. Dis bonjour ! 👋', 'Message options': 'Options du message', 'Options': 'Options',
     '🚩 Report': '🚩 Signaler', '🗑️ Delete': '🗑️ Supprimer', '🔇 1 h': '🔇 1 h', '🔇 24 h': '🔇 24 h', '⛔ Forever': '⛔ Pour toujours',
     'Write a message': 'Écris un message', '⚙️ Link Google': '⚙️ Associer Google',
+    'Nothing happens? Allow pop-ups or pause your ad blocker for this site, or use a password below.': 'Rien ne se passe ? Autorise les pop-ups ou mets ton bloqueur de pub en pause sur ce site, ou utilise un mot de passe plus bas.',
     'Pick a player name and make 100 rolls to write here.': 'Choisis un pseudo et fais 100 tirages pour écrire ici.',
     '🔇 You can no longer write in the chat.': '🔇 Tu ne peux plus écrire dans le chat.',
     'Delete this message?': 'Supprimer ce message ?', 'Mute this player and delete the message?': 'Rendre ce joueur muet et supprimer le message ?',
