@@ -822,6 +822,16 @@
   text-shadow: 0 1px 0 rgba(255, 251, 235, .6);
   --gs: 0 .3em 0 #450a0a, 0 .5em 1em rgba(220, 38, 38, .32); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.4em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #450a0a; }
 .btn-roll.gen-dynamite:hover { filter: brightness(1.08); }
+/* Shiny Diamond (idée de finnnnn, 2026-10-25) : velours noir, une rangée de facettes claires et sombres, un liseré
+   en or blanc ; au survol, les facettes s'allument. */
+.btn-roll.gen-shinydiamond { border: 2px solid #cbd5e1; border-radius: .5em; color: #f0f9ff;
+  background:
+    repeating-conic-gradient(from 11.25deg at 50% 50%, rgba(240, 249, 255, .14) 0 22.5deg, transparent 22.5deg 45deg),
+    radial-gradient(ellipse 70% 90% at 50% 0%, rgba(186, 230, 253, .3), transparent 70%),
+    linear-gradient(180deg, #2a2540, #0b0a12);
+  text-shadow: 0 0 6px rgba(186, 230, 253, .8);
+  --gs: 0 .3em 0 #475569, 0 .5em 1em rgba(186, 230, 253, .25); --gs-h: 0 .34em 0 #475569, 0 .7em 1.4em rgba(224, 242, 254, .5); --gs-a: 0 .06em 0 #475569; }
+.btn-roll.gen-shinydiamond:hover { filter: brightness(1.15) saturate(1.2); }
 /* Cursed Energy (idée d'Edward, 2026-10-20) : nuit violette, énergie qui remonte du bas, liseré d'aura. */
 .btn-roll.gen-cursed { border: 2px solid #6d28d9; border-radius: .6em; color: #ede9fe; background: radial-gradient(ellipse 70% 80% at 50% 130%, rgba(129, 140, 248, .6), transparent 70%), radial-gradient(ellipse 40% 60% at 15% 0%, rgba(168, 85, 247, .35), transparent 70%), linear-gradient(180deg, #1e1048, #0b0820); text-shadow: 0 0 .35em #a78bfa, 0 1px 0 #0a0518;
   --gs: 0 .3em 0 #1e1048, 0 .5em 1em rgba(124, 58, 237, .4); --gs-h: 0 .34em 0 #1e1048, 0 .7em 1.4em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #1e1048; }

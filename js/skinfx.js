@@ -2187,6 +2187,56 @@
     };
   };
 
+  // 💍 Shiny Diamond (2026-10-25, idée de finnnnn) — chaque pierre qui se pose fait « tink » : une étoile à 4 branches
+  // s'allume dessus et quelques éclats d'arc-en-ciel (le feu du diamant) jaillissent. À la révélation, un éventail de
+  // rayons spectraux derrière la carte et une pluie d'étincelles qui grandit avec la rareté ; matière dure, rien ne
+  // s'écrase. Tirage raté : une seule étincelle terne.
+  SCENES.shinydiamond = env => {
+    const { co, ci, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const FIRE = ['#fda4af', '#fde68a', '#86efac', '#7dd3fc', '#c4b5fd'];
+    const stars = timed(), rays = timed(), sparks = particles(), glows = timed();
+    // une étoile à 4 branches : deux traits fins croisés + un cœur blanc
+    const star = (c, x, y, r, a, rot) => {
+      for (let i = 0; i < 2; i++) { const ang = rot + i * Math.PI / 2, dx = Math.cos(ang) * r, dy = Math.sin(ang) * r; tail(c, '#ffffff', x - dx, y - dy, x, y, Math.max(1, r * .08), a); tail(c, '#ffffff', x + dx, y + dy, x, y, Math.max(1, r * .08), a); }
+      dot(c, '#ffffff', x, y, r * .35, a);
+    };
+    const shower = (x, y, n, v) => { for (let i = Math.round(n * q); i > 0; i--) { const a = rnd(TAU), s = card.h * rnd(.6, v); sparks.add({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: card.h * 1.5, drag: 1.6, max: rnd(.4, .8), size: card.h * rnd(.025, .05), c: pick(FIRE) }); } };
+    return {
+      frame(t, dt) {
+        behind(env, () => {
+          co.globalCompositeOperation = add;
+          rays.run(dt, (r, k) => godrays(co, dark ? '#e0f2fe' : '#7dd3fc', cx, cy, r.n, card.h * .4, card.h * r.s * outCubic(k * 2), r.rot + k * .6, card.h * .12, (1 - k) * (dark ? .55 : .5)));
+        });
+        co.globalCompositeOperation = add;
+        sparks.step(dt);
+        sparks.each((p, k) => { const tw = .5 + .5 * Math.sin(k * 30 + p.size); dot(co, p.c, p.x, p.y, p.size * 2.2, (1 - k) * tw); });
+        co.lineCap = 'round';
+        stars.run(dt, (s, k) => { const e = k < .25 ? k / .25 : 1 - (k - .25) / .75; star(co, s.x, s.y, s.r * (.6 + .4 * e), e * .95, s.rot + k * .5); });
+        ci.globalCompositeOperation = add;
+        glows.run(dt, (g, k) => dot(ci, '#e0f2fe', g.x, g.y, g.r, (1 - k) * .7));
+        ci.globalCompositeOperation = 'source-over';
+        co.globalCompositeOperation = 'source-over';
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        stars.add({ x: p.x + card.h * .12, y: p.y - card.h * .14, r: card.h * (o.last ? .55 : .38), rot: rnd(-.3, .3), life: .55 });
+        glows.add({ x: p.x - card.x, y: p.y - card.y, r: card.h * .35, life: .3 });
+        shower(p.x, p.y, o.last ? 8 : 4, 2.2);
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { sparks.add({ x: cx, y: card.y, vx: 0, vy: -card.h * .3, g: 0, drag: 1, max: .7, size: card.h * .03, c: '#94a3b8' }); return; }
+        rays.add({ n: 8 + Math.round(8 * p), s: 1 + 1.6 * p + .3 * (ASCEND[tier] || 0), rot: rnd(TAU), life: .9 + .8 * p });
+        stars.add({ x: card.x + card.w * .92, y: card.y + card.h * .12, r: card.h * (.5 + .5 * p), rot: 0, life: .8 });
+        if (p >= .6) stars.add({ x: card.x + card.w * .08, y: card.y + card.h * .88, r: card.h * (.4 + .4 * p), rot: .4, life: .9, delay: .12 });
+        shower(cx, cy, burst(p, 40, 6), 2.5 + 3 * p);
+      },
+    };
+  };
+
   SCENES.meteor = custom(pieces({ cols: ['#fde68a', '#fb923c', '#f97316', '#fef3c7'], shapes: ['spark', 'shard'], size: [1.4, 3.2], g: 600, spin: 5, glowc: '#fb923c', ring: '#f97316', drift: { rate: .5, from: 'around' } }), env => {
     const { co, ci, card, dark } = env, rocks = timed(), hits = timed(), waves = timed(), debris = particles();
     const FLY = .32; // durée du vol (s) : la météorite touche quand le chiffre se pose
