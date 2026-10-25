@@ -29,6 +29,13 @@ Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one
 - **Idea Managers** (10-23): players Sacha picks (Owner page → Idea Managers tab) review ideas on `#/ideas` with a verdict and a mandatory reason (20+ characters, server-checked). They see nothing else; Sacha sees their reviews in the Inbox and decides.
 - **Codes**: `EPITECH>42`, `SORRY404` (until Oct 29), `ICHI` (100 coins).
 
+- **Economy (2026-10-25, branch `claude/economy`, not merged)**: Weekend Rush is +25% (was x2); roll coins have daily
+  diminishing returns (rolls 1-500 full, 501-2,000 50%, then 20%; counter `rc:<day>:<id>`, withheld part in
+  `stats.rollCut`, subtracted by `Shop.earned`); renaming costs 5,000 coins (first name free, case-only free; rolls and
+  duels no longer rename); Shop > Prestige tab (Tycoon 25k x200, Magnate 60k x100, Coin Emperor 150k x25, hidden
+  achievements from `pr:<id>`, stock in `prestige:sold`); Owner > Economy: total supply (SCAN `stats:*`, cached 10 min
+  in `eco:supply`), top-1% share, casino net per day.
+
 ## To do, by priority
 
 1. **Watch the new tournament rules** on the first full day (2026-10-24): two brackets fill, shared rolls appear

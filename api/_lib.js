@@ -195,8 +195,16 @@ function nameKey(name) {
 }
 
 // Réserve un nom pour ce joueur et libère son ancien nom. Faux si un autre joueur l'a déjà.
-async function claimName(playerId, name) {
+// Changer de pseudo coûte des pièces depuis le 2026-10-25 (api/name.js) : sans opts.rename, un joueur qui a déjà un
+// pseudo garde le sien (un tirage, un duel envoyant un autre nom ne le change plus) ; seule la casse ou les espaces
+// (même nameKey) restent libres. Réponse : true (ce nom est le sien), false (pris), { kept: <pseudo actuel> } (gardé, rien ne change).
+async function claimName(playerId, name, opts = {}) {
   const key = `name:${nameKey(name)}`;
+  if (!opts.rename) {
+    const [prev, holder] = await redis([['HGET', 'names', playerId], ['GET', key]]);
+    if (holder && holder !== playerId) return false; // le nom d'un autre : refusé, comme avant
+    if (prev && nameKey(prev) !== nameKey(name)) return { kept: prev };
+  }
   const [, owner, previous] = await redis([['SET', key, playerId, 'NX'], ['GET', key], ['HGET', 'names', playerId]]);
   if (owner !== playerId) return false;
   if (previous === name) return true;
@@ -432,8 +440,11 @@ async function recordRoll(playerId, n, t) {
   const s = a.total;
   const periods = scopes(t);
   const wPeriods = periods.filter(p => p.period !== 'all');
-  const [worst, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId])]);
-  const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length);
+  // rc:<jour>:<id> : numéro de ce tirage dans la journée UTC (rendements décroissants des pièces, Shop.ROLL_TIERS).
+  const rcKey = `rc:${dayKey(t)}:${playerId}`;
+  const [worst, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId]), ['INCR', rcKey], ['EXPIRE', rcKey, 2 * 86400]]);
+  const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length, periods.length + wPeriods.length);
+  const dayRoll = Number(rest[periods.length + wPeriods.length]) || 1;
   const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
   const entry = JSON.stringify({ n, s, t });
   const writes = [
@@ -460,10 +471,13 @@ async function recordRoll(playerId, n, t) {
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
   let coins = 0;
-  { const c = require('../js/shop.js').COINS[a.tier] || 0; writes.push(...eco('in:rolls', c, t)); coins = c;
-    // Weekend Rush : la même somme une deuxième fois, en bonus (le solde des tirages se calcule sur les compteurs de rareté).
-    // rushBonus : la part du Weekend Rush dans « bonus » (sert aux tests et aux stats).
-    if (c && Events.rush(t)) { writes.push(['HINCRBY', statsKey(playerId), 'bonus', c], ['HINCRBY', statsKey(playerId), 'rushBonus', c], ...eco('in:weekend', c, t)); coins += c; } }
+  const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
+  { const full = Shop.COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll); writes.push(...eco('in:rolls', c, t)); coins = c;
+    // Rendements décroissants : la part non versée va dans rollCut (le solde se calcule sur les compteurs de rareté).
+    if (full > c) writes.push(['HINCRBY', statsKey(playerId), 'rollCut', full - c]);
+    // Weekend Rush : +25 % de ce qui est versé, en bonus. rushBonus : la part du Weekend Rush dans « bonus » (tests, stats).
+    const r = Events.rushBonus(c, t);
+    if (r) { writes.push(['HINCRBY', statsKey(playerId), 'bonus', r], ['HINCRBY', statsKey(playerId), 'rushBonus', r], ...eco('in:weekend', r, t)); coins += r; } }
   // Événement de la semaine (js/events.js) : un tirage qui obtient un badge du thème compte une fois.
   { const ev = Events.current(t); if (Events.counts(ev, a.earnedIds)) writes.push(['ZINCRBY', Events.key(ev), 1, playerId], ['EXPIRE', Events.key(ev), 60 * 86400]); }
   if (a.earnedIds.includes('DRASTIX')) writes.push(['HSET', statsKey(playerId), 'drastix', 1]);
@@ -513,7 +527,7 @@ async function recordRoll(playerId, n, t) {
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
-  return { s, coins, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
+  return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 
 // Tirages en attente de révélation. Un tirage de duel n'existe pour personne (historique, classement, stats, pièces,

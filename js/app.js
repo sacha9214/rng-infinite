@@ -83,7 +83,7 @@
     async request(pathname, options = {}) {
       const r = await this.send(pathname, options);
       // Au casino, le solde se met à jour à la fin de l'animation (showCoins), pour ne pas dévoiler le résultat avant.
-      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests)\b/.test(pathname) && currentView !== 'gamble') HdrCoins.set(r.coins);
+      if (r && typeof r.coins === 'number' && /^\/api\/(shop|quests|name)\b/.test(pathname) && currentView !== 'gamble') HdrCoins.set(r.coins);
       return r;
     },
     async send(pathname, options = {}) {
@@ -1097,7 +1097,7 @@
         <label for="set-name">Player name</label>
         <input class="input" id="set-name" maxlength="20" autocomplete="off" value="${esc(Store.player.name)}" placeholder="Player">
         <p class="field-error" id="set-name-error" hidden></p>
-        <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.</span>
+        <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.${Store.player.name ? ` Changing it costs 🪙 ${fmt(Shop.RENAME_PRICE)}.` : ''}</span>
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${googleAccountHTML()}
@@ -1124,6 +1124,8 @@
       name.addEventListener('change', async () => {
         const previous = Store.player.name;
         if (!name.value.trim() || name.value.trim() === previous) { name.value = previous; return; }
+        // Renommer coûte des pièces (2026-10-25) ; la casse ou les espaces seuls restent gratuits, comme sur le serveur.
+        if (previous && !sameName(previous, name.value) && !confirm(window.RNGI18n.t(`Change your name to "${name.value.trim()}" for ${fmt(Shop.RENAME_PRICE)} coins?`))) { name.value = previous; return; }
         const result = await saveName(name.value);
         if (result.ok) {
           nameError.hidden = true;
@@ -1294,7 +1296,7 @@
     slot.innerHTML = `
       <div class="quests-card">
         <div class="quests-head"><span class="eyebrow">Daily quests</span><span class="coins mono">🪙 ${fmt(state.coins)}</span></div>
-        ${state.rush ? `<div class="rush-banner">🔥 <b>Weekend Rush</b> · ×2 coins from rolls and quests · ends in ${Math.max(1, Math.floor((state.rush.end - Date.now()) / 3600000))} h</div>` : ''}
+        ${state.rush ? `<div class="rush-banner">🔥 <b>Weekend Rush</b> · +25% coins from rolls and quests · ends in ${Math.max(1, Math.floor((state.rush.end - Date.now()) / 3600000))} h</div>` : ''}
         ${state.event ? (() => { const ev = state.event, done = ev.progress >= ev.goal, left = Math.max(0, ev.end - Date.now());
           const leftTxt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
           return `<div class="quest event-quest${ev.claimed ? ' done' : ''}">
@@ -1441,6 +1443,8 @@
   // ---------------------------------------------------------------- tirage
   // Réserve le nom sur le serveur (un nom = un seul joueur). Serveur injoignable : on le garde localement,
   // le serveur tranchera au prochain tirage.
+  // Même clé que nameKey (api/_lib.js), en plus simple : sans accents, casse, espaces ni ponctuation.
+  const sameName = (a, b) => { const k = v => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); return k(a) === k(b); };
   async function saveName(raw) {
     const name = String(raw).trim().replace(/\s+/g, ' ').slice(0, 20);
     // Même règle que le serveur : alphabet latin (accents compris), chiffres, espaces et _ . - ' (pas de sosie en cyrillique).
@@ -1448,6 +1452,7 @@
     try {
       const data = await Online.claimName(name);
       Store.setPlayerName(data.name || name);
+      if (typeof data.coins === 'number') Store.setSetting('coins', data.coins);
       return { ok: true };
     } catch (err) {
       if (err.status === 409) {
@@ -1455,6 +1460,7 @@
         return { ok: false, error: `"${name}" is already taken. Pick another name${hint}.` };
       }
       if (err.status === 400) return { ok: false, error: 'That name is not valid.' };
+      if (err.status === 402 || err.status === 429) return { ok: false, error: `${err.message}.` };
       Store.setPlayerName(name);
       return { ok: true };
     }
@@ -1679,6 +1685,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-25-economy', date: 'Oct 25, 2026', en: ['🪙 Coin balance: there were too many coins in the game, so skins were losing their value. Your XP, your luck and the leaderboards do not change', '🎲 Coins from rolls now depend on how many rolls you made today (UTC): your first 500 rolls pay full coins, rolls 501 to 2,000 pay 50%, and after that 20%. The rate shows under your coins after a roll', '🔥 Weekend Rush now gives +25% coins from rolls and quests (instead of ×2)', '✏️ Your first name is free; changing it now costs 5,000 coins', '👑 New Prestige tab in the Shop: three rare titles (Tycoon, Magnate, Coin Emperor) with a limited stock for the whole game'], fr: ['🪙 Équilibre des pièces : il y avait trop de pièces dans le jeu, les skins perdaient leur valeur. Ton XP, ta chance et les classements ne changent pas', '🎲 Les pièces des tirages dépendent maintenant du nombre de tirages faits aujourd\'hui (UTC) : tes 500 premiers tirages rapportent toutes leurs pièces, du 501e au 2 000e 50 %, et ensuite 20 %. Le taux s\'affiche sous tes pièces après un tirage', '🔥 Le Weekend Rush donne maintenant +25 % de pièces sur les tirages et les quêtes (au lieu de ×2)', '✏️ Ton premier pseudo est gratuit ; le changer coûte maintenant 5 000 pièces', '👑 Nouvel onglet Prestige dans la boutique : trois titres rares (Tycoon, Magnate, Coin Emperor) en stock limité pour tout le jeu'] },
     { id: '2026-10-25-exact-61-55', date: 'Oct 25, 2026', en: ['🔢 New badges: 🧪 Exact 61 (idea by schoolroller) and 🖐️ Exact 55 (idea by qwertyuiop)'], fr: ['🔢 Nouveaux badges : 🧪 Exact 61 (idée de schoolroller) et 🖐️ Exact 55 (idée de qwertyuiop)'] },
     { id: '2026-10-25-odd-abundant', date: 'Oct 25, 2026', en: ['🍇 New badge: Odd Abundant, an odd number smaller than the sum of its divisors (only 1,996 of them, about 1 roll in 500; idea by JAKECisthebest)'], fr: ['🍇 Nouveau badge : Odd Abundant, un nombre impair plus petit que la somme de ses diviseurs (seulement 1 996, environ 1 tirage sur 500 ; idée de JAKECisthebest)'] },
     { id: '2026-10-25-vortrox-gina', date: 'Oct 25, 2026', en: ['💞 New badge: Vortrox and Gina, for numbers containing 4992 or 9249, Geometry Dash numbers like 554992 included (idea by CococoC)'], fr: ['💞 Nouveau badge : Vortrox and Gina, pour les nombres qui contiennent 4992 ou 9249, nombres Geometry Dash comme 554992 compris (idée de CococoC)'] },
@@ -2267,9 +2274,14 @@
   // Rien ne peut être sauté ; le menu reste verrouillé jusqu'à l'affichage de la rareté.
   // Pièces gagnées par le tirage (idée de jaxoncool43, 2026-10-24) : le serveur dit combien il a crédité, Weekend Rush
   // compris ; un serveur d'avant ce champ laisse le tarif de la rareté (Shop.COINS).
+  // Rendements décroissants (2026-10-25) : le serveur envoie aussi le taux du moment (rate) ; sous 100 %, une petite
+  // note le dit, avec le détail des paliers dans l'infobulle.
   function coinsTagHTML(online, tier) {
     const base = Shop.COINS[tier] || 0, got = typeof online.coins === 'number' ? online.coins : base;
-    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > base && base ? ' <i>🔥 ×2 Weekend Rush</i>' : ''}</div>`;
+    const rate = typeof online.rate === 'number' ? online.rate : 1, paid = Math.floor(base * rate);
+    const tiers = Shop.ROLL_TIERS || [], tip = `Coin rate today: 100% for your first ${fmt(tiers[0] ? tiers[0].upTo : 500)} rolls, then 50% until ${fmt(tiers[1] ? tiers[1].upTo : 2000)}, then 20%. XP and luck never change. Resets at 00:00 UTC.`;
+    const rateTag = rate < 1 ? ` <em class="r-rate" data-tip="${esc(tip)}">Coin rate today: ${Math.round(rate * 100)}%</em>` : '';
+    return `<div class="r-coins" id="r-coins" hidden>+🪙 ${fmt(got)} <span>${got === 1 ? 'coin' : 'coins'}</span>${got > paid && paid ? ' <i>🔥 +25% Weekend Rush</i>' : ''}${rateTag}</div>`;
   }
 
   function playReveal(ctx) {
@@ -3386,13 +3398,13 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades']];
+  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades'], ['prestige', '👑', 'Prestige']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
       <div class="page page-wide">
         <div class="g-head"><h1 class="page-title">Shop</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="d-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
-        <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}`)}">How much? ⓘ</span></p>
+        <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}<br><b>Coin rate per day</b><br>Rolls 1–500 · 100%<br>Rolls 501–2,000 · 50%<br>After 2,000 rolls · 20%`)}">How much? ⓘ</span></p>
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
@@ -3469,6 +3481,13 @@
           <div class="skin-grid sound-grid" id="d-sounds"></div>
         </div>
         </section>
+        <section class="shop-pane" data-shop-pane="prestige" hidden>
+        <div class="panel pr-panel">
+          <div class="panel-head"><h3 class="panel-title">Prestige</h3><span class="panel-note">rare titles · limited stock for the whole game · one each</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">Show off your coins: a prestige title appears next to your name on the leaderboards, your profile and in duels. When the stock runs out, nobody can buy it again.</p>
+          <div class="skin-grid pr-grid" id="d-prestige"><div class="empty">Loading…</div></div>
+        </div>
+        </section>
         <section class="shop-pane" data-shop-pane="buttons" hidden>
         <div class="panel" id="d-buttons-panel" hidden>
           <div class="panel-head"><h3 class="panel-title">Generate button</h3><span class="panel-note">only you see it · press one to try it</span></div>
@@ -3543,6 +3562,7 @@
     $('#d-coins').textContent = `🪙 ${fmt(state.coins)}`;
     drawButtons(state);
     drawEmotes(state);
+    drawPrestige(state);
     drawSounds(state);
     drawWalls(state);
     drawSpeed(state);
@@ -5078,6 +5098,37 @@
     setTimeout(() => { hit.classList.remove('gone'); wallBubble(hit, 0); hit.style.animation = 'none'; void hit.offsetWidth; hit.style.animation = ''; }, 900);
   });
 
+  // Prestige (Sacha, 2026-10-25) : trois titres chers en stock limité, pour retirer des pièces du jeu. Achat vérifié par
+  // le serveur (api/shop.js, action « prestige »), le titre est équipé aussitôt.
+  function drawPrestige(state) {
+    const grid = $('#d-prestige');
+    if (!grid) return;
+    const mine = id => (state.prestige || []).find(x => x.id === id) || { owned: false, left: 0 };
+    grid.innerHTML = Shop.PRESTIGE.map(p => { const m = mine(p.id); return `
+      <div class="skin-tile pr-tile${m.owned ? ' owned' : ''}">
+        <div class="pr-badge" aria-hidden="true">${p.emoji}</div>
+        <div class="skin-name"><b>${titleHTML(p.id) || esc(p.name)}</b><span>${esc(p.desc)}</span></div>
+        <span class="pr-left">${m.owned ? 'Yours' : m.left ? `${fmt(m.left)} of ${fmt(p.stock)} left` : 'Sold out'}</span>
+        ${m.owned ? '<span class="skin-state">Owned</span>' : m.left ? `<button class="btn${state.coins >= p.price ? '' : ' disabled'}" data-pr-buy="${p.id}">🪙 ${fmt(p.price)}</button>` : ''}
+      </div>`; }).join('');
+    grid.onclick = async ev => {
+      const btn = ev.target.closest('[data-pr-buy]');
+      if (!btn || btn.disabled) return;
+      const item = Shop.prestigeById.get(btn.dataset.prBuy);
+      if (state.coins < item.price) { toast(`${fmt(item.price - state.coins)} more coins needed for ${item.name}`); return; }
+      if (!confirm(window.RNGI18n.t(`Buy the ${item.name} title for ${fmt(item.price)} coins?`))) return;
+      btn.disabled = true;
+      try {
+        const next = await Online.shopAction('prestige', undefined, { item: item.id });
+        toast(`${item.name} is yours: the title is now on your name`);
+        drawShop(next);
+      } catch (err) {
+        btn.disabled = false;
+        toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
+      }
+    };
+  }
+
   function drawEmotes(state) {
     const grid = $('#d-emotes');
     if (!grid) return;
@@ -5861,17 +5912,21 @@
           <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
         <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
       // Économie
-      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin' };
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
       const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
       const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
       const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
+      // Masse monétaire et casino par jour (2026-10-25) : mises − gains = ce que le casino retire du jeu.
+      const casinoNet = d => (d.out.casino || 0) - (d.in.casino || 0), signed = n => `${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}`;
+      const net0 = E[0] ? tot(E[0].in) - tot(E[0].out) : 0;
       const flowBars = (title, obj, labels) => bars(title, Object.entries(obj).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(([name, count]) => ({ name, count })), n => labels[n] || n, 'last 14 days', tot(obj));
       const ecoHTML = `
         ${section('Coins', 'Coins created (in) and spent (out) every day. Gifts and duel stakes move coins between players and are not counted. If more coins come in than go out for long, skins lose their value.')}
+        ${X.supply ? kpis([kpi('Total supply', compact(X.supply.total), `held by ${fmt(X.supply.holders)} player${X.supply.holders === 1 ? '' : 's'} · updated every 10 min`), kpi('Held by the top 1%', `${Math.round(X.supply.top1 * 100)}%`, 'of all coins', X.supply.top1 > 0.5 ? 'warn' : ''), kpi('Net today', signed(net0), X.supply.total ? `${((net0 / X.supply.total) * 100).toFixed(1)}% of the supply` : '', net0 > 0 ? 'warn' : 'good'), kpi('Casino net, 7 days', signed(w7.reduce((x, d) => x + casinoNet(d), 0)), 'bets minus payouts')]) : ''}
         ${kpis([kpi('Created, 7 days', compact(in7), 'coins given to players'), kpi('Spent, 7 days', compact(out7), 'coins taken back by the game'), kpi('Net, 7 days', `${net7 >= 0 ? '+' : '−'}${compact(Math.abs(net7))}`, net7 > 0 ? 'more coins in the game' : 'fewer coins in the game', net7 > 0 ? 'warn' : 'good'), kpi('Spent / created', in7 ? `${Math.round((out7 / in7) * 100)}%` : '–', 'below 70% for long = inflation')])}
         ${ecoDays < 3 ? '<p class="panel-note">Counted since 18 Oct 2026: the numbers fill in over the next days.</p>' : ''}
         <div class="grid-2 stats-sep">${flowBars('Where coins come from', span(E, 'in'), LABEL_IN)}${flowBars('Where coins go', span(E, 'out'), LABEL_OUT)}</div>
-        ${panel('Day by day', 'coins in, out and the difference', table(['Day', 'In', 'Out', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${n > 0 ? 'o-down' : 'o-up'}">${n >= 0 ? '+' : '−'}${compact(Math.abs(n))}</span>`]; }), 'c4')).replace('class="panel"', 'class="panel stats-sep"')}`;
+        ${panel('Day by day', 'coins in, out, the casino alone and the difference', table(['Day', 'In', 'Out', 'Casino net', 'Net'], E.filter(x => tot(x.in) || tot(x.out)).map(x => { const n = tot(x.in) - tot(x.out), cn = casinoNet(x); return [x.day.slice(5), compact(tot(x.in)), compact(tot(x.out)), `<span class="${cn >= 0 ? 'o-up' : 'o-down'}" data-tip="${esc('Bets minus payouts: positive = the casino took coins out of the game')}">${signed(cn)}</span>`, `<span class="${n > 0 ? 'o-down' : 'o-up'}">${signed(n)}</span>`]; }), 'c5')).replace('class="panel"', 'class="panel stats-sep"')}`;
       // Ventes de la boutique
       const S = (X.sales || []).filter(x => !x.caseOnly || x.owners), KIND = { skins: '🎨', walls: '🖼️', buttons: '🔘', emotes: '😎', sounds: '🔊' };
       const topSales = S.slice().sort((x, y) => y.owners * y.price - x.owners * x.price);

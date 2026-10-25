@@ -229,7 +229,9 @@ for (const clash of ['sacha', ' SACHA ', 'Sâcha', 'Sa-cha!']) {
 db.delete(`cooldown:${bob.playerId}`);
 assert.equal((await call(roll, { method: 'POST', body: { ...bob, name: 'SACHA' } })).status, 409);
 assert.equal((await call(roll, { method: 'POST', body: bob })).status, 200);
-// Changer de nom libère l'ancien ; le classement affiche le nouveau.
+// Changer de nom libère l'ancien ; le classement affiche le nouveau. Renommer coûte Shop.RENAME_PRICE (2026-10-25) :
+// chacun reçoit juste de quoi payer (solde inchangé pour la suite des tests).
+run([['HINCRBY', `stats:${alice.playerId}`, 'bonus', 5000], ['HINCRBY', `stats:${bob.playerId}`, 'bonus', 5000]]);
 assert.equal((await setName(alice, 'Alice')).status, 200);
 assert.equal((await setName(bob, 'Sacha')).status, 200);
 r = await call(leaderboard, { url: '/api/leaderboard?period=all' });
@@ -1121,7 +1123,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(x.weekdays.length, 7); assert.equal(x.weekdays[0].name, 'Mon');
     assert.equal(x.economy.length, 14); assert.ok(x.economy[0].in.rolls > 0, 'les tirages du jour créent des pièces : ' + JSON.stringify(x.economy[0]));
     assert.ok(x.sales.some(i => i.kind === 'skins' && i.price > 0)); assert.ok(x.sales.some(i => i.kind === 'sounds' && i.id === 'arcade')); assert.equal(x.health.length, 7);
-    assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0); }
+    assert.ok(typeof x.newFeatures.discordLinks === 'number' && x.newFeatures.event.goal > 0);
+    // Masse monétaire (2026-10-25) : SCAN de stats:*, gardée 10 minutes dans eco:supply.
+    assert.ok(x.supply.total > 0 && x.supply.holders > 0 && x.supply.top1 > 0 && x.supply.top1 <= 1, JSON.stringify(x.supply));
+    assert.ok(run([['PTTL', 'eco:supply']])[0].result > 590000, 'en cache 10 min');
+    run([['HINCRBY', `stats:${boss.playerId}`, 'bonus', 777]]);
+    assert.equal((await site(boss, 'insights')).body.extra.supply.total, x.supply.total, 'relu depuis le cache');
+    run([['DEL', 'eco:supply']]);
+    assert.equal((await site(boss, 'insights')).body.extra.supply.total, x.supply.total + 777, 'recalculé une fois le cache parti'); }
   assert.equal(r.body.days.length, 30);
   assert.equal(r.body.days[0].day, today());
   assert.ok(r.body.days[0].visits >= 4 && r.body.week.refs.some(x => x.name === 'reddit.com' && x.count === 2));
@@ -1973,6 +1982,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
   for (const bad of [0, 'x', 5000, -5000]) assert.equal((await post(frank, 'fundAdd', { name: 'Frank', euros: bad })).status, 422);
   assert.equal((await post(frank, 'fundAdd', { name: 'Nobody Here', euros: 5 })).status, 404);
+  // Bob reprend son pseudo (payant depuis le 2026-10-25 : un tirage ne renomme plus) ; on lui donne de quoi payer.
+  run([['HINCRBY', `stats:${bob.playerId}`, 'bonus', Shop.RENAME_PRICE]]);
+  assert.equal((await setName(bob, bob.name)).status, 200);
   // Une contribution de 5 € pour Bob (pseudo écrit autrement) : total du mois, journal, skin et titre.
   r = await post(frank, 'fundAdd', { name: '  bob<script> ', euros: 5 });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -3171,10 +3183,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     const sat = await recordRoll(who.playerId, n, Date.parse('2026-10-24T12:00:00Z'));
     await new Promise(r => setTimeout(r, 3));
     const tue = await recordRoll(who.playerId, n, Date.parse('2026-10-27T12:00:00Z'));
-    assert.deepEqual([sat.coins, tue.coins], [Shop.COINS[tier] * 2, Shop.COINS[tier]]);
+    // Weekend Rush : +25 % (arrondi en dessous) depuis le 2026-10-25, au lieu de ×2.
+    assert.deepEqual([sat.coins, tue.coins], [Shop.COINS[tier] + Math.floor(Shop.COINS[tier] * 0.25), Shop.COINS[tier]]);
     db.delete(`cooldown:${who.playerId}`);
-    const r0 = await call(roll, { method: 'POST', body: who });
-    assert.equal(r0.body.coins, Shop.COINS[engine.analyze(r0.body.n).tier] * Events.rushMult(r0.body.t), JSON.stringify(r0.body)); }
+    const r0 = await call(roll, { method: 'POST', body: who }), c0 = Shop.COINS[engine.analyze(r0.body.n).tier];
+    assert.equal(r0.body.coins, c0 + Events.rushBonus(c0, r0.body.t), JSON.stringify(r0.body));
+    assert.equal(r0.body.rate, 1, 'premiers tirages du jour : plein tarif'); }
   run([['ZADD', key, ev.goal, who.playerId]]);
   let r = await claim(); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, ev.reward); assert.equal(r.body.event.claimed, true);
   assert.equal((await claim()).status, 422, 'une seule fois');
@@ -3564,6 +3578,106 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal((await post(guest, 'mark', { id: 'aaaaaaaaaaa1', status: 'planned' })).status, 403, 'ne change pas le statut'); }
   // Rôle retiré : plus d'accès.
   await post(boss, 'imSet', { name: 'Mango', on: false }); assert.equal((await post(mgr, 'imInbox')).status, 403);
+}
+
+
+// ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
+// pseudo payant, Prestige.
+{
+  const Shop = require(path.join(ROOT, 'js/shop.js')), Ev = require(path.join(ROOT, 'js/events.js'));
+  const { recordRoll } = require(path.join(ROOT, 'api/_lib.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), nameApi2 = require(path.join(ROOT, 'api/name.js'));
+  const field = (id, f) => Number(run([['HGET', `stats:${id}`, f]])[0].result) || 0;
+  const eco = (t, f) => Number(run([['HGET', `eco:${new Date(t).toISOString().slice(0, 10)}`, f]])[0].result) || 0;
+  const bal = id => { const f = run([['HGETALL', `stats:${id}`]])[0].result, o = {}; for (let k = 0; k < f.length; k += 2) o[f[k]] = f[k + 1]; return Shop.balance(o); };
+  const wait = () => new Promise(r => setTimeout(r, 3));
+
+  // 1. Paliers : 1–500 plein tarif, 501–2 000 à 50 %, au-delà 20 %, arrondi en dessous.
+  assert.deepEqual([1, 500, 501, 2000, 2001, 99999].map(Shop.rollRate), [1, 1, 0.5, 0.5, 0.2, 0.2]);
+  assert.deepEqual([Shop.rollPay(100, 1), Shop.rollPay(100, 501), Shop.rollPay(5, 501), Shop.rollPay(1, 501), Shop.rollPay(25, 2001), Shop.rollPay(1, 2001)], [100, 50, 2, 0, 5, 0]);
+  // Par le vrai recordRoll, un mardi (pas de Rush) : le compteur rc:<jour>:<id> est simulé à 500, 1 999, 2 000.
+  const dm = { playerId: 'd1'.repeat(8) }, TUE = Date.parse('2026-10-27T10:00:00Z');
+  let n = 0; while (engine.analyze(n).tier !== 'mythic') n++; // 100 pièces au plein tarif
+  const rc = `rc:2026-10-27:${dm.playerId}`;
+  const cases = [[0, 1, 100], [499, 1, 100], [500, 0.5, 50], [1999, 0.5, 50], [2000, 0.2, 20]];
+  let paidSum = 0, cutSum = 0; const ecoRolls0 = eco(TUE, 'in:rolls');
+  for (const [count, rate, coins] of cases) {
+    run([['SET', rc, String(count)]]); await wait();
+    const out = await recordRoll(dm.playerId, n, TUE + count);
+    assert.deepEqual([out.rate, out.coins, out.dayRoll], [rate, coins, count + 1], `tirage n° ${count + 1}`);
+    paidSum += coins; cutSum += 100 - coins;
+  }
+  assert.equal(field(dm.playerId, 'rollCut'), cutSum, 'la part retenue est notée dans rollCut');
+  assert.equal(bal(dm.playerId), paidSum, 'le solde ne compte que ce qui est versé');
+  assert.equal(eco(TUE, 'in:rolls') - ecoRolls0, paidSum, 'eco in:rolls = pièces réellement créées');
+  // L'XP n'est pas touchée : 5 tirages, 5 fois l'XP pleine.
+  assert.equal(field(dm.playerId, 'xpLife'), 5 * engine.analyze(n).total);
+  // Samedi, au-delà de 500 : le Rush (+25 %) s'applique à ce qui est versé.
+  const SAT = Date.parse('2026-10-31T10:00:00Z'), rcs = `rc:2026-10-31:${dm.playerId}`;
+  run([['SET', rcs, '700']]); await wait();
+  let out = await recordRoll(dm.playerId, n, SAT);
+  assert.deepEqual([out.rate, out.coins], [0.5, 50 + 12], '50 % puis +25 % arrondi en dessous');
+  // Par l'API : la réponse du tirage porte coins et rate.
+  const dr = { playerId: 'd2'.repeat(8), secret: 'd3'.repeat(16), name: 'Diminisher' };
+  run([['SET', `rc:${new Date(Date.now()).toISOString().slice(0, 10)}:${dr.playerId}`, '3000']]);
+  const rr = await call(roll, { method: 'POST', body: dr });
+  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], pay = Math.floor(full * 0.2);
+  assert.deepEqual([rr.body.rate, rr.body.coins], [0.2, pay + Ev.rushBonus(pay, rr.body.t)], JSON.stringify(rr.body));
+
+  // 2. Weekend Rush +25 % sur les quêtes : la récompense affichée le samedi.
+  assert.deepEqual([Ev.rushMult(SAT), Ev.rushMult(TUE), Ev.rushBonus(150, SAT), Ev.rushBonus(150, TUE), Ev.rushBonus(3, SAT)], [1.25, 1, 37, 0, 0]);
+  { const realNow = Date.now; Date.now = () => SAT;
+    try { const q = await call(require(path.join(ROOT, 'api/quests.js')), { url: `/api/quests?me=${dr.playerId}` });
+      const Quests = require(path.join(ROOT, 'js/quests.js'));
+      assert.ok(q.body.rush, 'Rush annoncé le samedi');
+      q.body.quests.forEach(x => { const base = Quests.POOL.find(y => y.id === x.id); if (base) assert.equal(x.reward, base.reward + Math.floor(base.reward * 0.25), x.id); });
+    } finally { Date.now = realNow; } }
+
+  // 3. Pseudo payant : le premier est gratuit, changer coûte 5 000 ; la casse seule reste gratuite ; un tirage sous un
+  // autre nom ne renomme plus.
+  const rn = { playerId: 'd4'.repeat(8), secret: 'd5'.repeat(16) };
+  const setN = name => call(nameApi2, { method: 'POST', body: { ...rn, name } });
+  assert.equal((await setN('Renamer')).status, 200, 'premier pseudo gratuit');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  assert.equal((await setN('RENAMER')).status, 200, 'casse seule : gratuit');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  let x = await setN('Renamer Two'); assert.equal(x.status, 402, 'sans les pièces : refusé'); assert.match(x.body.error, /5,000 coins/);
+  assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'RENAMER');
+  run([['HINCRBY', `stats:${rn.playerId}`, 'bonus', 6000]]);
+  assert.equal((await setN('Diminisher')).status, 409, 'nom d\'un autre : refusé sans payer');
+  assert.equal(field(rn.playerId, 'spent'), 0);
+  const ecoBefore = eco(Date.now(), 'out:rename');
+  x = await setN('Renamer Two'); assert.equal(x.status, 200); assert.deepEqual([x.body.paid, x.body.coins], [5000, 1000]);
+  assert.deepEqual([field(rn.playerId, 'spent'), bal(rn.playerId), eco(Date.now(), 'out:rename') - ecoBefore], [5000, 1000, 5000]);
+  assert.equal(run([['GET', 'name:renamer']])[0].result, null, 'l\'ancien nom est libéré');
+  db.delete(`cooldown:${rn.playerId}`);
+  assert.equal((await call(roll, { method: 'POST', body: { ...rn, name: 'Free Rename' } })).status, 200);
+  assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'Renamer Two', 'un tirage ne renomme pas gratuitement');
+  assert.equal(run([['GET', 'name:freerename']])[0].result, null, 'et ne réserve pas le nom');
+
+  // 4. Prestige : stock limité, un par joueur, titre débloqué et équipé, eco out:prestige.
+  const pr = { playerId: 'd6'.repeat(8), secret: 'd7'.repeat(16) };
+  run([['SET', `player:${pr.playerId}:secret`, crypto.createHash('sha256').update(pr.secret).digest('hex')]]);
+  const buy = item => call(shopApi, { method: 'POST', body: { ...pr, action: 'prestige', item } });
+  const tycoon = Shop.prestigeById.get('tycoon');
+  assert.ok(Shop.PRESTIGE.length === 3 && Shop.PRESTIGE.every(p => p.price >= 25000 && p.stock > 0));
+  assert.equal((await buy('nope')).status, 400);
+  x = await buy('tycoon'); assert.equal(x.status, 422); assert.match(x.body.error, /Not enough coins/);
+  run([['HINCRBY', `stats:${pr.playerId}`, 'bonus', tycoon.price + 10]]);
+  const pBefore = eco(Date.now(), 'out:prestige');
+  x = await buy('tycoon'); assert.equal(x.status, 200, JSON.stringify(x.body));
+  assert.deepEqual([x.body.coins, x.body.prestige.find(p => p.id === 'tycoon').owned, eco(Date.now(), 'out:prestige') - pBefore], [10, true, tycoon.price]);
+  assert.equal(x.body.prestige.find(p => p.id === 'tycoon').left, tycoon.stock - 1);
+  assert.equal(run([['HGET', 'titles', pr.playerId]])[0].result, 'tycoon', 'titre équipé');
+  assert.ok(require(path.join(ROOT, 'js/achievements.js')).unlocked({ 'pr:tycoon': 1 }).includes('tycoon'));
+  await new Promise(r => setTimeout(r, 3));
+  x = await buy('tycoon'); assert.equal(x.status, 200); assert.equal(x.body.coins, 10, 'acheté une seule fois');
+  // Épuisé : le stock ne descend jamais sous zéro et le joueur ne paie rien.
+  run([['HSET', 'prestige:sold', 'magnate', String(Shop.prestigeById.get('magnate').stock)], ['HINCRBY', `stats:${pr.playerId}`, 'bonus', 100000]]);
+  await new Promise(r => setTimeout(r, 3));
+  x = await buy('magnate'); assert.equal(x.status, 422); assert.match(x.body.error, /Sold out/);
+  assert.equal(Number(run([['HGET', 'prestige:sold', 'magnate']])[0].result), Shop.prestigeById.get('magnate').stock);
+  assert.equal(bal(pr.playerId), 100010);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
