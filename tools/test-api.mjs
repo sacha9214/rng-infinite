@@ -2927,6 +2927,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Les badges « contient un carré » : seul le plus grand compte, jamais sur le nombre entier.
   const ids = n => engine.analyze(n).earnedIds.filter(x => /^SQUARE_IN_/.test(x));
   assert.deepEqual(ids(815625), ['SQUARE_IN_5']); assert.deepEqual(ids(51449), ['SQUARE_IN_3']); assert.deepEqual(ids(144), []); assert.deepEqual(ids(907744), ['SQUARE_IN_4']);
+  // Leap Day (idée de qwertyuiop, 2026-10-26) : 0229AA avec AA multiple de 4, tiré comme 229AA → 25 nombres.
+  const leap = n => engine.analyze(n).earnedIds.includes('LEAP_DAY');
+  assert.ok(leap(22924) && leap(22996) && leap(22900), 'Leap Day manquant');
+  assert.ok(!leap(22925) && !leap(22898) && !leap(23000) && !leap(122924), 'Leap Day en trop');
 }
 
 // ================================================================ 56. Farce du créateur en duel : faux jackpot, visible seulement chez les autres
