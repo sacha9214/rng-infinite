@@ -7848,7 +7848,7 @@
         <div class="panel-head"><h3 class="panel-title">⭐ What officers can do</h3></div>
         <p class="panel-note cl-note">Only you can change this. You can always do everything.</p>
         <div class="cl-perms">${Object.keys(PERM_LABEL).map(k => `<label class="cl-perm"><input type="checkbox" data-cl="perm" data-perm="${k}"${c.perms && c.perms[k] === false ? '' : ' checked'}><span>${PERM_LABEL[k]}</span></label>`).join('')}</div>
-      </div>` : officer ? `<p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p>` : ''}
+      </div>` : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
       <div class="panel cl-danger">
         ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
       </div>`;
@@ -8131,7 +8131,7 @@
           const d = await Online.global('gcList', { rev: this.peekRev, del: this.peekDel, since: Date.now() });
           this.peekRev = d.rev; this.peekDel = d.del;
           let seen = null; try { seen = localStorage.getItem('gcSeen'); } catch (e) { seen = null; }
-          if (seen === null) this.seen(d.rev);
+          if (seen === null) { this.seen(d.rev); this.dot(this.mentioned(d.me)); } // 1re visite : rien, sauf une mention
           else if (!this.open) this.dot((Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)) || this.mentioned(d.me)); // une suppression seule n'allume rien
         } catch (err) { /* hors ligne : on réessaie plus tard */ }
       }
