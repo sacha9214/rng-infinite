@@ -3984,6 +3984,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   free(al); assert.equal((await gc(al, 'gcSend', { text: '@MentBeta you fucking idiot' })).status, 422);
   assert.equal(run([['GET', `gc:at:${ce.playerId}`]])[0].result, null);
 }
+// Alerte des amis (idée de Jguz01, 2026-10-26) : Celestial ou mieux → les amis le voient à leur relève des cadeaux,
+// depuis leur dernier « vu », par pseudo seulement ; pas les autres joueurs, pas les tirages ordinaires, pas sans bigSince.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const fr = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const lucky = mk('e7', 'BigLucky'), pal = mk('e8', 'BigPal'), stranger = mk('e9', 'BigStranger');
+  run([['SADD', `fr:${lucky.playerId}`, pal.playerId], ['SADD', `fr:${pal.playerId}`, lucky.playerId]]);
+  const find = (ok, from = 0) => { let n = from; while (!ok(engine.analyze(n).tier)) n++; return n; };
+  const nBig = find(t => t === 'celestial'), nSmall = find(t => t === 'rare');
+  const since = Date.now() - 1;
+  await lib.recordRoll(lucky.playerId, nSmall, Date.now());
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: since })).body.big, [], 'un Rare ne prévient personne');
+  await new Promise(r => setTimeout(r, 3));
+  const tBig = Date.now(); await lib.recordRoll(lucky.playerId, nBig, tBig);
+  let r = await fr(pal, 'gifts', { bigSince: since }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.big, [{ name: 'BigLucky', n: nBig, tier: 'celestial', t: tBig }]);
+  assert.ok(!JSON.stringify(r.body).includes(lucky.playerId), 'aucun identifiant');
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: tBig })).body.big, [], 'déjà vu');
+  assert.equal((await fr(pal, 'gifts')).body.big, undefined, 'alertes coupées : rien de lu');
+  assert.deepEqual((await fr(stranger, 'gifts', { bigSince: since })).body.big, [], 'pas un ami');
+  // Ami retiré : plus d'alerte, même déjà poussée.
+  run([['SREM', `fr:${pal.playerId}`, lucky.playerId]]);
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: since })).body.big, [], 'plus ami');
+  // Infinite (le top du jeu) aussi : tous les paliers à partir de Celestial.
+  assert.deepEqual([...lib.BIG_TIERS].sort(), ['celestial', 'divine', 'godlike', 'infinite']);
+}
 // Chat global : modifier (5 minutes, filtres rejoués, « edited ») et supprimer ses propres messages (idée de daddy finger, 2026-10-26).
 {
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));

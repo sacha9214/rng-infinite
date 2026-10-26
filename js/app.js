@@ -1097,6 +1097,23 @@
   const rollKey = () => Store.settings.rollKey || 'Space';
   const keyName = (code = rollKey()) => (code === 'Space' ? 'Space' : code.replace(/^Key|^Digit|^Numpad/, '').replace(/^Arrow/, '↕ '));
   const isRollKey = e => e.code === rollKey() || (rollKey() === 'Space' && e.key === ' ');
+  // Alerte des amis (idée de Jguz01, 2026-10-26) : un ami tire Celestial ou mieux → un toast, à la relève des cadeaux
+  // (chaque minute). Réglage « Friend alerts » (coupé = on ne demande rien au serveur). Dernière alerte vue : bigSeen ;
+  // la toute première fois, on part de maintenant (pas d'alertes d'avant).
+  function bigAlertSince() {
+    if (Store.settings.friendAlerts === 'off') return {};
+    let seen = 0; try { seen = Number(localStorage.getItem('bigSeen')) || 0; } catch (e) { seen = 0; }
+    if (!seen) { seen = Date.now(); try { localStorage.setItem('bigSeen', String(seen)); } catch (e) { /* stockage bloqué */ } }
+    return { bigSince: seen };
+  }
+  function announceBigRolls(rows) {
+    if (!rows.length || Store.settings.friendAlerts === 'off') return;
+    rows.forEach((r, i) => {
+      const tier = r.tier.charAt(0).toUpperCase() + r.tier.slice(1);
+      setTimeout(() => toast(`🌟 ${r.name} rolled ${tier === 'Infinite' ? 'an' : 'a'} ${tier} ${r.n}!`, 6000, 'achv'), i * 1500);
+    });
+    try { localStorage.setItem('bigSeen', String(Math.max(...rows.map(r => r.t)))); } catch (e) { /* stockage bloqué */ }
+  }
   function openSettings() {
     const s = Store.settings;
     const seg = (name, options, value, labels = {}) => `<div class="seg" data-seg="${name}">${options.map(o => `<button data-v="${o}" class="${o === value ? 'on' : ''}">${labels[o] || o}</button>`).join('')}</div>`;
@@ -1118,6 +1135,7 @@
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
       <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
+      ${Store.player.name ? `<div class="field"><label>Friend alerts</label>${seg('friendAlerts', ['on', 'off'], s.friendAlerts === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">A message when a friend rolls Celestial or better.</span></div>` : ''}
       ${Store.player.name ? `<div class="field"><label for="set-code">Redeem a code</label><form class="code-form" id="set-code-form"><input class="input" id="set-code" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE"><button class="btn" type="submit">Redeem</button></form><span class="panel-note">Got a code? Enter it to get its prize. Each code works once.</span></div>` : ''}
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
@@ -1697,6 +1715,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
     { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
     { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
     { id: '2026-10-26-clan-patron', date: 'Oct 26, 2026', en: ['🪙 New title: Clan Patron, for players who donated 10,000 coins in total to a clan vault (idea by PRISMA123).'], fr: ['🪙 Nouveau titre : Mécène de clan, pour les joueurs qui ont versé 10 000 pièces au total dans le coffre d\'un clan (idée de PRISMA123).'] },
@@ -6379,7 +6398,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {
