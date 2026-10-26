@@ -10,6 +10,21 @@
 
   // ---------------------------------------------------------------- dictionnaire (texte anglais exact → français)
   const FR = {
+    // photos de profil (2026-10-26, demandé par Sacha)
+    'Profile picture': 'Photo de profil', '📷 Choose a picture': '📷 Choisir une image', 'Zoom': 'Zoom', 'Send for review': 'Envoyer pour vérification',
+    'Don\'t use photos of yourself or personal info. The creator checks every picture.': 'N\'utilise pas de photo de toi ni d\'infos personnelles. Le créateur vérifie chaque image.',
+    'Waiting for review': 'En attente de vérification', 'Rejected': 'Refusée', 'Approved': 'Acceptée', 'No picture yet': 'Pas encore d\'image', 'Withdraw': 'Retirer',
+    '(your previous picture stays)': '(ton ancienne image reste)', '5 pictures a day: try again tomorrow.': '5 images par jour : réessaie demain.',
+    'inappropriate': 'inappropriée', 'personal info / real face': 'infos personnelles / vrai visage', 'brand or copyright': 'marque ou droits d\'auteur', 'low quality': 'mauvaise qualité', 'not allowed': 'non autorisée',
+    'This picture cannot be opened. Try a JPEG or PNG.': 'Impossible d\'ouvrir cette image. Essaie un JPEG ou un PNG.', 'Picture sent. The creator will check it soon.': 'Image envoyée. Le créateur va la vérifier bientôt.',
+    'The picture must be a square JPEG under 60 KB': 'L\'image doit être un JPEG carré de moins de 60 Ko', 'Choose a player name first': 'Choisis d\'abord un pseudo',
+    'You need 30 rolls to add a profile picture': 'Il faut 30 tirages pour ajouter une photo de profil', 'Too many pictures today, try again tomorrow': 'Trop d\'images aujourd\'hui, réessaie demain',
+    '🚩 Report picture': '🚩 Signaler l\'image', 'Report this profile picture': 'Signaler cette photo de profil', 'Report this profile picture to the creator?': 'Signaler cette photo de profil au créateur ?',
+    'Thanks, the creator will look at it': 'Merci, le créateur va regarder', 'No picture to report': 'Aucune image à signaler',
+    'Avatars': 'Avatars', 'Pictures to review': 'Images à vérifier', 'Current picture': 'Image actuelle', 'First picture': 'Première image', '✅ Approve': '✅ Accepter', '❌ Reject': '❌ Refuser',
+    'Approved pictures': 'Images acceptées', 'Search a name': 'Chercher un pseudo', 'Remove': 'Retirer', 'Recent decisions': 'Décisions récentes', 'the last 200': 'les 200 dernières',
+    'Nothing to review. 🎉': 'Rien à vérifier. 🎉', 'None yet.': 'Aucune pour l\'instant.', '🗑️ Remove picture': '🗑️ Retirer l\'image', 'Remove this profile picture?': 'Retirer cette photo de profil ?',
+    'Picture removed': 'Image retirée', 'Reason': 'Raison',
     // clans (idée de BIGBOIJONER69 et KMC, 2026-10-25)
     'Clans': 'Clans', 'My clan': 'Mon clan', 'This week': 'Cette semaine', 'Find a clan': 'Trouver un clan', 'Clan leaderboard': 'Classement des clans', 'Ends in': 'Fin dans',
     'XP earned this week by all the members of each clan. The members of the #1 clan who rolled for it get the 🏯 Clan Champion title when the week ends (Monday 00:00 UTC).': 'L\'XP gagnée cette semaine par tous les membres de chaque clan. Les membres du clan n°1 qui ont roulé pour lui reçoivent le titre 🏯 Clan Champion à la fin de la semaine (lundi 00:00 UTC).',

@@ -163,6 +163,11 @@
       const p = Store.player;
       return this.request('/api/site', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, ...extra }) });
     },
+    // Photo de profil (api/_avatar.js par /api/profile, 2026-10-26) : envoi, état, file du créateur.
+    avatar(op, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/profile', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'avatar', op, ...extra }) });
+    },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
     discord(action = 'state', extra = {}) {
       const p = Store.player;
@@ -229,6 +234,49 @@
     return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(down);
   };
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  // ---------------------------------------------------------------- photos de profil (demandé par Sacha, 2026-10-26)
+  // Seules les images acceptées par le créateur sont publiques : une carte nom → jeton (relue toutes les 5 min), puis
+  // l'image par jeton, en cache long. Sans image : l'initiale du joueur sur un rond coloré. Taille fixe (aucun saut).
+  const Avatars = {
+    map: {}, at: 0, busy: null,
+    url(tok) { return `${API_BASE || API_SAME}/api/profile?avatar=${tok}`; },
+    tok(name) { return name && Object.prototype.hasOwnProperty.call(this.map, name) ? this.map[name] : null; },
+    hue(name) { let h = 0; for (const c of String(name)) h = (h * 31 + c.codePointAt(0)) % 360; return h; },
+    html(name, cls = '') {
+      const n = String(name || '?'), t = this.tok(n), ini = esc((Array.from(n.trim())[0] || '?').toUpperCase());
+      return `<span class="av ${cls}" data-av="${esc(n)}" style="--av-h:${this.hue(n)}" aria-hidden="true"><i>${ini}</i>${t ? `<img alt="" loading="lazy" decoding="async" src="${this.url(t)}">` : ''}</span>`;
+    },
+    load(force) {
+      if (this.busy) return this.busy;
+      if (!force && Date.now() - this.at < 300000) return Promise.resolve();
+      this.at = Date.now();
+      this.busy = Online.request('/api/profile?avatars=1').then(d => { this.map = (d && d.map) || {}; this.paint(); }).catch(() => {}).finally(() => { this.busy = null; });
+      return this.busy;
+    },
+    // Met à jour les ronds déjà affichés (carte arrivée après le dessin de la page).
+    paint(root = document) {
+      root.querySelectorAll('.av[data-av]').forEach(el => {
+        const t = this.tok(el.dataset.av), img = el.querySelector('img');
+        if (!t) { if (img) img.remove(); return; }
+        if (img && img.getAttribute('src') === this.url(t)) return;
+        const i = img || document.createElement('img');
+        i.alt = ''; i.loading = 'lazy'; i.decoding = 'async'; i.src = this.url(t);
+        if (!img) el.appendChild(i);
+      });
+      syncHeaderAvatar();
+    },
+  };
+  // Image introuvable (retirée entre-temps) : l'initiale reste.
+  document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.parentElement && t.parentElement.classList.contains('av')) t.remove(); }, true);
+  // Bouton du joueur en haut à droite : sa photo acceptée à la place de l'icône.
+  function syncHeaderAvatar() {
+    const b = document.getElementById('player-btn'); if (!b) return;
+    const n = Store.player.name, t = Avatars.tok(n), svg = b.querySelector('svg');
+    let el = b.querySelector('.av');
+    if (!t) { if (el) el.remove(); if (svg) svg.style.display = ''; return; }
+    if (!el || el.dataset.av !== n) { if (el) el.remove(); b.insertAdjacentHTML('afterbegin', Avatars.html(n, 'av-xs')); }
+    if (svg) svg.style.display = 'none';
+  }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const plural = (k, word) => `${fmt(k)} ${word}${k === 1 ? '' : 's'}`;
   const precisePct = v => (v > 0 && v < .001 ? '<0.001' : v <= 0 ? '<0.001' : RNGEngine.formatPct(v));
@@ -1144,6 +1192,7 @@
         <span class="panel-note">Shown on the leaderboard. Each name belongs to one player only.${Store.player.name ? ` Changing it costs 🪙 ${fmt(Shop.RENAME_PRICE)}.` : ''}</span>
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
+      ${Store.player.name ? avatarFieldHTML() : ''}
       ${googleAccountHTML()}
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
@@ -1187,6 +1236,7 @@
       const googleOut = m.querySelector('#google-out');
       if (googleOut) googleOut.addEventListener('click', signOutGoogle);
       bindPassword(m);
+      bindAvatarField(m);
       m.querySelectorAll('[data-seg]').forEach(group => {
         group.addEventListener('click', e => {
           const btn = e.target.closest('button');
@@ -1254,6 +1304,77 @@
         toast('History cleared');
         route();
       });
+    });
+  }
+
+  // Photo de profil dans les réglages (2026-10-26) : recadrage carré au centre (zoom facultatif), réencodée en JPEG
+  // 256×256 sur un canvas, ce qui enlève les métadonnées (EXIF, position GPS) avant l'envoi. Personne ne la voit avant
+  // que le créateur l'accepte ; le joueur voit son état (en attente, acceptée, refusée et pourquoi).
+  const AV_SIDE = 256;
+  function avatarFieldHTML() {
+    return `<div class="field av-field"><label>Profile picture</label>
+      <div class="av-set">
+        <div class="av-pv" id="av-pv">${Avatars.html(Store.player.name, 'av-xl')}</div>
+        <div class="av-side">
+          <p class="av-status" id="av-status">Loading…</p>
+          <div class="av-btns" id="av-btns"><label class="btn small av-pick">📷 Choose a picture<input type="file" id="av-file" accept="image/*" hidden></label></div>
+          <div class="av-edit" id="av-edit" hidden>
+            <label class="av-zoom"><span>Zoom</span><input type="range" id="av-zoom" min="1" max="3" step="0.01" value="1"></label>
+            <div class="av-btns"><button class="btn small" id="av-send" type="button">Send for review</button><button class="btn ghost small" id="av-undo" type="button">Cancel</button></div>
+          </div>
+        </div>
+      </div>
+      <span class="panel-note">Don't use photos of yourself or personal info. The creator checks every picture.</span></div>`;
+  }
+  function bindAvatarField(m) {
+    const file = m.querySelector('#av-file'); if (!file) return;
+    const pv = m.querySelector('#av-pv'), status = m.querySelector('#av-status'), edit = m.querySelector('#av-edit'), zoom = m.querySelector('#av-zoom'), btns = m.querySelector('#av-btns');
+    let img = null, mine = null;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = AV_SIDE; canvas.className = 'av-canvas';
+    const draw = () => {
+      const c = canvas.getContext('2d'), w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h) / Number(zoom.value);
+      c.fillStyle = '#fff'; c.fillRect(0, 0, AV_SIDE, AV_SIDE); // fond blanc : les PNG transparents ne deviennent pas noirs
+      c.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, AV_SIDE, AV_SIDE);
+    };
+    const show = d => {
+      mine = d;
+      if (!status.isConnected) return;
+      const t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+      if (img) return;
+      pv.innerHTML = d.pending ? `<span class="av av-xl"><img alt="" src="${d.pending.img}"></span>` : d.approved ? `<span class="av av-xl"><img alt="" src="${(API_BASE || API_SAME) + d.approved.url}"></span>` : Avatars.html(Store.player.name, 'av-xl');
+      status.innerHTML = d.pending ? `⏳ <span>${t('Waiting for review')}</span>`
+        : d.rejected ? `❌ <span>${t('Rejected')}:</span> <b>${esc(t(d.rejected.reason))}</b>${d.approved ? ` <span class="panel-note">${t('(your previous picture stays)')}</span>` : ''}`
+        : d.approved ? `✅ <span>${t('Approved')}</span>` : `<span>${t('No picture yet')}</span>`;
+      btns.querySelectorAll('[data-av-withdraw]').forEach(x => x.remove());
+      if (d.pending) btns.insertAdjacentHTML('beforeend', `<button class="btn ghost small" type="button" data-av-withdraw>${t('Withdraw')}</button>`);
+      btns.querySelector('.av-pick').classList.toggle('disabled', !d.left);
+      if (!d.left) status.insertAdjacentHTML('beforeend', ` <span class="panel-note">${t('5 pictures a day: try again tomorrow.')}</span>`);
+    };
+    const fail = err => toast(err && err.status && err.status < 500 ? err.message : 'Unavailable right now, try again');
+    Online.avatar('mine').then(show).catch(() => { status.textContent = window.RNGI18n ? window.RNGI18n.t('Unavailable right now.') : 'Unavailable right now.'; });
+    file.addEventListener('change', () => {
+      const f = file.files[0]; file.value = '';
+      if (!f) return;
+      const url = URL.createObjectURL(f), im = new Image();
+      im.onload = () => { img = im; zoom.value = 1; draw(); pv.innerHTML = ''; const wrap = document.createElement('span'); wrap.className = 'av av-xl'; wrap.appendChild(canvas); pv.appendChild(wrap); edit.hidden = false; btns.hidden = true; URL.revokeObjectURL(url); };
+      im.onerror = () => { URL.revokeObjectURL(url); toast('This picture cannot be opened. Try a JPEG or PNG.'); };
+      im.src = url;
+    });
+    zoom.addEventListener('input', () => { if (img) draw(); });
+    const reset = () => { img = null; edit.hidden = true; btns.hidden = false; if (mine) show(mine); };
+    m.querySelector('#av-undo').addEventListener('click', reset);
+    m.querySelector('#av-send').addEventListener('click', async e => {
+      if (!img) return;
+      const btn = e.currentTarget; btn.disabled = true;
+      // Qualité ~0,8, baissée si l'image dépasse la limite du serveur (60 Ko).
+      let data = '';
+      for (const q of [0.8, 0.7, 0.6, 0.5, 0.4]) { data = canvas.toDataURL('image/jpeg', q); if (data.length * 0.75 < 58 * 1024) break; }
+      try { const d = await Online.avatar('upload', { img: data }); img = null; edit.hidden = true; btns.hidden = false; show(d); toast('Picture sent. The creator will check it soon.'); } catch (err) { fail(err); } finally { btn.disabled = false; }
+    });
+    btns.addEventListener('click', async e => {
+      if (!e.target.closest('[data-av-withdraw]')) return;
+      try { show(await Online.avatar('cancel')); } catch (err) { fail(err); }
     });
   }
 
@@ -1747,6 +1868,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-avatars', date: 'Oct 26, 2026', en: ['🖼️ Profile pictures: add one in ⚙️ Player & settings (after 30 rolls). The creator checks every picture before anyone else can see it, then it shows on your profile, the leaderboards, the global chat, your clan and your friends\' lists. Don\'t use photos of yourself or personal info (asked by kingston and JAKECisthebest).'], fr: ['🖼️ Photos de profil : ajoute la tienne dans ⚙️ Joueur et réglages (après 30 tirages). Le créateur vérifie chaque image avant que quiconque puisse la voir ; elle s\'affiche ensuite sur ton profil, les classements, le chat global, ton clan et la liste de tes amis. N\'utilise pas de photo de toi ni d\'infos personnelles (demandé par kingston et JAKECisthebest).'] },
     { id: '2026-10-26-roadmap', date: 'Oct 26, 2026', en: ['🗺️ Roadmap: a new page lists the player ideas that are planned and the ones added in the last 30 days. Open it from the 💡 ideas window or the About page (idea by Phong67).'], fr: ['🗺️ Feuille de route : une nouvelle page liste les idées de joueurs prévues et celles ajoutées ces 30 derniers jours. Ouvre-la depuis la fenêtre 💡 des idées ou la page À propos (idée de Phong67).'] },
     { id: '2026-10-26-announcements', date: 'Oct 26, 2026', en: ['📣 Announcements: news from the creator now appear at the top of 📰 What\'s new (with a red dot), and important ones pop up once when you come back (idea by jaxoncool43).'], fr: ['📣 Annonces : les messages du créateur apparaissent maintenant en haut de 📰 Nouveautés (avec un point rouge), et les plus importants s\'affichent une fois à ton retour (idée de jaxoncool43).'] },
     { id: '2026-10-26-evening-tournament', date: 'Oct 26, 2026', en: ['🌙 New evening tournament every day: sign up from 12:00 to 18:00 UTC (evening in Europe, morning and afternoon in the Americas), matches until 06:00 UTC. Same prizes, its own bracket, and you can play it on top of tournament 1 or 2. The tournament page shows every time in your own time zone (idea by Me Cojoni and Idea:Tournaments)'], fr: ['🌙 Nouveau tournoi du soir chaque jour : inscriptions de 12:00 à 18:00 UTC (le soir en Europe, le matin et l\'après-midi en Amérique), matchs jusqu\'à 06:00 UTC. Mêmes prix, son propre tableau, et tu peux le jouer en plus du tournoi 1 ou 2. La page du tournoi montre toutes les heures à ton heure locale (idée de Me Cojoni et Idea:Tournaments)'] },
@@ -3139,10 +3261,10 @@
     $('#p-body').innerHTML = `
       <section class="pf-hero">
         <div class="pf-id">
-          <div class="pf-name">${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</div>
+          <div class="pf-name">${Avatars.html(p.name, 'av-lg')}<span>${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</span></div>
           <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
-          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : '<button class="btn add-friend" id="p-friend">👥 Add friend</button>'}</div>
+          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}`}</div>
         </div>
         <div class="pf-best">
           ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
@@ -3198,6 +3320,12 @@
     };
     showTab(tab);
     $('#p-body').querySelector('.pf-tabs').addEventListener('click', e => { const b = e.target.closest('[data-ptab]'); if (b) showTab(b.dataset.ptab); });
+    const avReport = $('#p-av-report');
+    if (avReport) avReport.addEventListener('click', async () => {
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t('Report this profile picture to the creator?') : 'Report this profile picture to the creator?')) return;
+      avReport.disabled = true;
+      try { await Online.avatar('report', { name: p.name }); toast('Thanks, the creator will look at it'); } catch (err) { avReport.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
     const addFriend = $('#p-friend');
     if (addFriend) {
       addFriend.addEventListener('click', () => friendAction(addFriend.dataset.act || 'add', p.name).then(() => renderProfile(p.name)));
@@ -5663,7 +5791,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -6155,11 +6283,56 @@
       const row = r => `<div class="o-report${r.done ? ' done' : ''}">
         <div class="o-report-head">${who(r.author)}${r.against > 1 ? ` <span class="o-chip warn">${r.against} reports</span>` : ''}<span class="panel-note">${esc(r.where)} · ${relTime(r.msgT)} · reported by ${who(r.reporter)}</span></div>
         <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
-        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>`}</div>`;
+        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}`}</div>`;
       pane('reports').innerHTML = panel('Reported messages', `${fmt(open.length)} to look at · messages players reported from duel chats and private messages`,
         d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
     };
     Online.site('reports').then(drawReports).catch(err => { if (pane('reports')) pane('reports').innerHTML = denied(err); });
+    // ---- Photos de profil (api/_avatar.js, 2026-10-26) : à valider avant que quiconque les voie ; retrait possible ensuite.
+    let avQ = '';
+    const avImg = u => (API_BASE || API_SAME) + u;
+    const drawAvatars = d => {
+      const box = pane('avatars'); if (currentView !== 'owner' || !box) return;
+      badge('avatars', d.pending.length);
+      const reasons = Object.entries(d.reasons).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+      const ICON = { approved: '✅', rejected: '❌', removed: '🗑️' };
+      box.innerHTML = panel('Pictures to review', `${fmt(d.pending.length)} waiting · nobody else sees a picture before you approve it`,
+        d.pending.length ? d.pending.map(x => `<div class="av-q" data-key="${x.key}">
+          <img class="av-big" src="${x.img}" alt="">
+          <div class="av-q-side">
+            <div><b data-no-i18n>${esc(x.name)}</b> <span class="panel-note">${relTime(x.t)}</span></div>
+            ${x.prev ? `<div class="av-prev panel-note">Current picture <img src="${avImg(x.prev)}" alt=""></div>` : '<div class="panel-note">First picture</div>'}
+            <div class="av-moves"><button class="btn" data-av-ok>✅ Approve</button></div>
+            <div class="av-moves"><select class="input av-reason" aria-label="Reason">${reasons}</select><button class="btn ghost" data-av-no>❌ Reject</button></div>
+          </div></div>`).join('') : '<div class="empty">Nothing to review. 🎉</div>')
+        + panel('Approved pictures', `${fmt(d.total)} in total`, `<form class="av-search"><input class="input" name="q" type="search" placeholder="Search a name" value="${esc(avQ)}" autocomplete="off"><button class="btn">Search</button></form>
+          <div class="av-grid">${d.approved.map(a => `<div class="av-cell"><img src="${avImg(a.url)}" alt="" loading="lazy"><span data-no-i18n>${esc(a.name)}</span><button class="btn ghost small" data-av-rm="${esc(a.name)}">Remove</button></div>`).join('') || '<div class="empty">None yet.</div>'}</div>`)
+        + panel('Recent decisions', 'the last 200', d.log.length ? d.log.slice(0, 60).map(l => `<div class="av-log">${ICON[l.action] || '•'} <b data-no-i18n>${esc(l.name)}</b> <span class="panel-note">${esc(l.action)}${l.reason ? ` · ${esc(l.reason)}` : ''} · ${relTime(l.t)}</span></div>`).join('') : '<div class="empty">Nothing yet.</div>');
+    };
+    const avDo = (op, extra) => Online.avatar(op, { q: avQ, ...extra }).then(d => { drawAvatars(d); Avatars.load(true); return d; });
+    Online.avatar('queue').then(drawAvatars).catch(err => { if (pane('avatars')) pane('avatars').innerHTML = denied(err); });
+    // Écouteurs posés une seule fois (app reste le même élément d'une visite à l'autre de la page Owner).
+    if (!renderOwner.avBound) { renderOwner.avBound = true;
+    app.addEventListener('click', async e => {
+      if (currentView !== 'owner') return;
+      const ok = e.target.closest('[data-av-ok]'), no = e.target.closest('[data-av-no]'), rm = e.target.closest('[data-av-rm]');
+      if (!ok && !no && !rm) return;
+      const b = ok || no || rm;
+      if (rm && !confirm(window.RNGI18n ? window.RNGI18n.t('Remove this profile picture?') : 'Remove this profile picture?')) return;
+      b.disabled = true;
+      try {
+        if (rm) { await avDo('remove', { name: rm.dataset.avRm, reason: rm.dataset.avWhy || 'other' }); toast('Picture removed'); return; }
+        const q = b.closest('.av-q');
+        await avDo(ok ? 'approve' : 'reject', { key: q.dataset.key, reason: no ? q.querySelector('.av-reason').value : undefined });
+        toast(ok ? 'Approved' : 'Rejected');
+      } catch (err) { b.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
+    app.addEventListener('submit', e => {
+      const f = e.target.closest('.av-search'); if (!f || currentView !== 'owner') return;
+      e.preventDefault(); avQ = String(new FormData(f).get('q') || '').trim();
+      avDo('queue').catch(() => {});
+    });
+    }
     app.addEventListener('click', async e => {
       const b = e.target.closest('[data-report-done]'); if (!b || currentView !== 'owner') return;
       b.disabled = true;
@@ -6676,7 +6849,7 @@
         ${state.friends.length ? state.friends.map(f => `
           <div class="friend-row">
             <span class="live-dot fr-${f.room ? 'duel' : f.status || 'offline'}${f.room ? ' on' : ''}" title="${f.room ? 'In a duel' : f.status === 'online' ? 'Online' : f.status === 'afk' ? 'AFK' : 'Offline'}"></span>
-            <span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
+            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.status === 'online' ? '<b class="fr-st online">Online</b>' : f.status === 'afk' ? '<b class="fr-st afk">AFK</b>' : `Offline · ${f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}`}</span></span>
             <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
@@ -7549,14 +7722,14 @@
     if (lbState.period === 'event') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -7566,7 +7739,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who"><a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
@@ -7964,7 +8137,7 @@
         if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
         if (leader || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
       }
-      return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span><a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
+      return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span>${Avatars.html(m.name, 'av-sm')}<a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
     };
     body.innerHTML = `
       <div class="cl-banner cl-b-${esc(c.banner)}">
@@ -8163,6 +8336,7 @@
   const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
 
   function route() {
+    Avatars.load();
     if (session && !session.finished) session.cancel();
     FX.clear();
     clearTimeout(lbTimer);
@@ -8230,7 +8404,7 @@
     Music.sync();
   });
 
-  function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; }
+  function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; syncHeaderAvatar(); }
   Store.onChange(syncPlayer);
   $('#player-btn').addEventListener('click', openSettings);
   // ---------------------------------------------------------------- chat global (demandé par Sacha, 2026-10-25)
@@ -8327,7 +8501,7 @@
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
+          <div class="gc-meta">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
 ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
             ${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
           <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>

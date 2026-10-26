@@ -74,7 +74,7 @@ async function serve(req, res, params) {
   if (params.get('avatars') === '1') {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'public, max-age=30');
+    res.setHeader('Cache-Control', 'no-store'); // déjà gardée 30 s ici : une image acceptée apparaît vite
     return res.end(JSON.stringify({ map: await publicMap() }));
   }
   const tok = params.get('avatar');
