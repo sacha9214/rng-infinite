@@ -1697,6 +1697,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
     { id: '2026-10-26-clan-patron', date: 'Oct 26, 2026', en: ['🪙 New title: Clan Patron, for players who donated 10,000 coins in total to a clan vault (idea by PRISMA123).'], fr: ['🪙 Nouveau titre : Mécène de clan, pour les joueurs qui ont versé 10 000 pièces au total dans le coffre d\'un clan (idée de PRISMA123).'] },
     { id: '2026-10-26-clan-perms', date: 'Oct 26, 2026', en: ['⭐ Clan leaders can now choose what officers may do: invite and accept requests, kick members, spend the vault, start wars, edit the description (idea by kaz).'], fr: ['⭐ Les chefs de clan peuvent maintenant choisir ce que les officiers ont le droit de faire : inviter et accepter les demandes, exclure, dépenser le coffre, lancer des guerres, modifier la description (idée de kaz).'] },
     { id: '2026-10-25-clan-desc', date: 'Oct 25, 2026', en: ['📝 Clans can now have a description: tell players what your clan is about. The leader and officers write it (150 characters, no links or personal info), and it shows in Find a clan.'], fr: ['📝 Les clans peuvent maintenant avoir une description pour dire de quoi parle ton clan. Le chef et les officiers l\'écrivent (150 caractères, sans liens ni infos perso), et elle s\'affiche dans Find a clan.'] },
@@ -8111,17 +8112,31 @@
           this.peekRev = d.rev; this.peekDel = d.del;
           let seen = null; try { seen = localStorage.getItem('gcSeen'); } catch (e) { seen = null; }
           if (seen === null) this.seen(d.rev);
-          else if (!this.open) this.dot(Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)); // une suppression seule n'allume rien
+          else if (!this.open) this.dot((Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)) || this.mentioned(d.me)); // une suppression seule n'allume rien
         } catch (err) { /* hors ligne : on réessaie plus tard */ }
       }
       this.peekTimer = setTimeout(() => this.peek(), 30000);
+    },
+    // @mentions (idée de casmictechthing, 2026-10-26) : le serveur donne l'heure de ma dernière mention (lastAt) ; tant
+    // qu'elle est plus récente que la dernière vue (gcAtSeen), le point rouge reste, même si le message est arrivé avant.
+    mentioned(me) { if (!me || !me.lastAt) return false; let s = 0; try { s = Number(localStorage.getItem('gcAtSeen')) || 0; } catch (e) { s = 0; } return me.lastAt > s; },
+    seenAt(me) { if (me && me.lastAt) try { localStorage.setItem('gcAtSeen', String(me.lastAt)); } catch (e) { /* stockage bloqué */ } },
+    // Texte d'un message avec les @pseudo cités surlignés (seulement les joueurs que le serveur a reconnus).
+    textHTML(m) {
+      const at = (m.at || []).map(n => n.toLowerCase());
+      if (!at.length) return esc(m.text);
+      return String(m.text).split(/((?:^|(?<=[\s(]))@[\p{L}0-9_.\-']{2,20})/u).map(part => {
+        const name = part.startsWith('@') ? part.slice(1).replace(/[.\-']+$/, '') : null;
+        if (!name || !at.includes(name.toLowerCase())) return esc(part);
+        return `<b class="gc-at">@${esc(name)}</b>${esc(part.slice(1 + name.length))}`;
+      }).join('');
     },
     last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
     list() { return this.el.querySelector('.gc-list'); },
     apply(d) {
       const before = JSON.stringify(this.me);
       this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
-      if (this.open) { this.seen(d.rev); this.dot(false); }
+      if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (d.same) return;
@@ -8132,10 +8147,10 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}" data-id="${esc(m.id)}">
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
             ${!m.mine && signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
-          <p class="gc-text" data-no-i18n>${esc(m.text)}</p>
+          <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${me.mod ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
@@ -8145,7 +8160,7 @@
       const foot = this.el.querySelector('.gc-foot'), me = this.me;
       const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
       if (me && me.can) {
-        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message…" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
         return;
       }

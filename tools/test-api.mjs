@@ -3962,6 +3962,29 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(r.body.msgs.every((m, i, a) => !i || m.t > a[i - 1].t), 'heures strictement croissantes');
 }
 
+// Chat global : @mentions (idée de casmictechthing, 2026-10-26). Un @ d'un vrai joueur passe le filtre et est surligné,
+// le cité le voit (toMe, lastAt pour le point rouge) ; un @ inconnu reste refusé ; aucun identifiant ne sort.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const al = mk('a7', 'MentAlpha'), be = mk('a8', 'MentBeta'), ce = mk('a9', 'MentCee');
+  let r = await gc(be, 'gcList'); assert.equal(r.body.me.lastAt, 0, 'jamais cité');
+  r = await gc(al, 'gcSend', { text: 'gg @mentbeta, and @nobody99' }); assert.equal(r.status, 422, 'un @ inconnu reste un pseudo de réseau social'); assert.match(r.body.error, /personal info/);
+  free(al); r = await gc(al, 'gcSend', { text: 'gg @mentbeta! look @MentAlpha' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  let m = r.body.msgs.at(-1);
+  assert.equal(m.text, 'gg @mentbeta! look @MentAlpha', 'texte gardé tel quel'); assert.deepEqual(m.at, ['MentBeta'], 'pseudo exact, sans soi-même'); assert.ok(!m.toMe);
+  r = await gc(be, 'gcList'); m = r.body.msgs.at(-1); assert.equal(m.toMe, true, 'le cité le voit'); assert.equal(r.body.me.lastAt, m.t, 'heure de la dernière mention');
+  r = await gc(ce, 'gcList'); assert.ok(!r.body.msgs.at(-1).toMe); assert.equal(r.body.me.lastAt, 0);
+  // Même « same » (rien de neuf), lastAt suit : le point rouge s'allume pour un message arrivé avant l'ouverture.
+  r = await gc(be, 'gcList', { rev: r.body.rev, del: r.body.del, since: m.t }); assert.equal(r.body.same, true); assert.equal(r.body.me.lastAt, m.t);
+  for (const who of [al, be, ce]) assert.ok(!JSON.stringify(r.body).includes(who.playerId) && !JSON.stringify((await gc(ce, 'gcList')).body).includes(who.playerId), 'aucun identifiant');
+  // Une mention ne contourne pas les autres filtres.
+  free(al); assert.equal((await gc(al, 'gcSend', { text: '@MentBeta you fucking idiot' })).status, 422);
+  assert.equal(run([['GET', `gc:at:${ce.playerId}`]])[0].result, null);
+}
+
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
 // pseudo payant, Prestige.
 {

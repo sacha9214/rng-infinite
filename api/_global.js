@@ -11,7 +11,7 @@
 // (-1 = pour toujours) ; gc:mutes = { id: { until, n, by, t } } pour la page Owner ; gc:mods = les Modérateurs.
 // Aucun identifiant de joueur ne sort d'ici : les messages sont désignés par leur id, les joueurs par leur pseudo.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey } = require('./_lib');
+const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
 const { maskBad, shape, BLOCKED_SHAPES } = require('./_chat');
 
@@ -59,7 +59,7 @@ function rude(text) {
 }
 // Renvoie le texte nettoyé (une ligne) ou lève une erreur 422 qui explique au joueur pourquoi.
 function checkMessage(raw) {
-  const text = String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁯﻿]/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = normalize(raw);
   if (!text) throw refuse(422, 'Write a message first');
   if ([...text].length > MAX) throw refuse(422, `Messages are ${MAX} characters at most`);
   if (PERSONAL_RE[0].test(text)) throw refuse(422, SAFETY); // un e-mail avant les liens (il contient un domaine)
@@ -68,19 +68,55 @@ function checkMessage(raw) {
   if (rude(text)) throw refuse(422, RUDE);
   return text;
 }
+function normalize(raw) {
+  return String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁯﻿]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ---------------------------------------------------------------- @mentions (idée de casmictechthing, 2026-10-26)
+// « @pseudo » d'un joueur qui existe : surligné chez tout le monde, et le joueur cité voit un point rouge sur 💬.
+// Un @ qui ne correspond à aucun joueur reste refusé par le filtre (pseudos de réseaux sociaux). Pseudo sans espace,
+// 5 au plus par message, lu par GET name:<clé> (jamais la recherche lente de findPlayer). On garde l'id des cités
+// (m.at) pour savoir si le message est « pour moi », mais seuls les pseudos sortent d'ici (m.an).
+const MENTION_RE = /(^|[\s(])@([\p{L}0-9_.\-']{2,20})/gu, MAX_MENTIONS = 5, AT_TTL = 7 * 86400;
+const atKey = id => `gc:at:${id}`;
+const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+async function resolveMentions(text, me) {
+  const tokens = [...new Set([...text.matchAll(MENTION_RE)].map(m => m[2].replace(/[.\-']+$/, '')).filter(x => x.length >= 2))].slice(0, MAX_MENTIONS);
+  if (!tokens.length) return { ids: [], names: [], probe: text };
+  const ids = await redis(tokens.map(x => ['GET', `name:${nameKey(x)}`]));
+  const hit = tokens.map((x, i) => [x, ids[i]]).filter(([, id]) => id && isPlayerId(id));
+  const [names] = hit.length ? await redis([['HMGET', 'names', ...hit.map(h => h[1])]]) : [[]];
+  // Pour le filtre, « @Kiddo » d'un vrai joueur devient « Kiddo » : ce n'est pas un pseudo de réseau social.
+  let probe = text;
+  for (const [x] of hit) probe = probe.replace(new RegExp(`(^|[\\s(])@${reEsc(x)}`, 'giu'), (all, pre) => pre + x);
+  const out = { ids: [], names: [], probe };
+  hit.forEach(([, id], i) => { if (id !== me && !out.ids.includes(id)) { out.ids.push(id); out.names.push(names[i] || 'Player'); } });
+  return out;
+}
+// Texte vérifié + mentions résolues (envoi et modification).
+async function prepare(raw, me) {
+  const text = normalize(raw);
+  if ([...text].length > MAX) throw refuse(422, `Messages are ${MAX} characters at most`);
+  const at = await resolveMentions(text, me);
+  checkMessage(at.probe);
+  return { text, at };
+}
+const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'EX', String(AT_TTL)]);
 
 // ---------------------------------------------------------------- lecture
-const view = (m, me) => ({ id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x, ...(me && m.a === me ? { mine: true } : {}) });
+const view = (m, me) => ({ id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x,
+  ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
+  ...(me && Array.isArray(m.at) && m.at.includes(me) ? { toMe: true } : {}) });
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
 
 // Mon statut : puis-je écrire, et sinon pourquoi ; suis-je muet (jusqu'à quand) ; suis-je modérateur.
 async function meInfo(id, stats) {
-  const [google, mute] = await redis([['GET', `player:${id}:google`], ['GET', `gc:mute:${id}`]]);
+  const [google, mute, lastAt] = await redis([['GET', `player:${id}:google`], ['GET', `gc:mute:${id}`], ['GET', atKey(id)]]);
   const rolls = Number(stats.rolls) || 0, owner = Number(stats.owner) >= 1, mod = owner || stats.gcMod === '1';
   const mutedUntil = mute ? Number(mute) : 0;
   // Sacha (2026-10-25) : plus besoin de compte Google, seulement 100 tirages.
   const reason = mutedUntil ? 'muted' : rolls < MIN_ROLLS ? 'rolls' : null;
-  return { can: !reason, reason, rolls, need: MIN_ROLLS, google: !!google, mutedUntil, mod, owner };
+  return { can: !reason, reason, rolls, need: MIN_ROLLS, google: !!google, mutedUntil, mod, owner, lastAt: Number(lastAt) || 0 };
 }
 
 // Relecture toutes les 3 s : réponse minuscule quand rien n'a changé (« same »). Après une suppression, la liste entière.
@@ -100,15 +136,16 @@ async function post(me, stats, raw) {
   const info = await meInfo(me, stats);
   if (info.reason === 'muted') throw refuse(403, info.mutedUntil < 0 ? 'You can no longer write in the chat' : 'You are muted for now');
   if (info.reason === 'rolls') throw refuse(403, `Make ${MIN_ROLLS} rolls to write in the chat (you have ${info.rolls})`);
-  const text = checkMessage(raw);
+  const { text, at } = await prepare(raw, me);
+  if (!text) throw refuse(422, 'Write a message first');
   const [ok] = await redis([['SET', `gc:rl:${me}`, '1', 'PX', GAP_MS, 'NX']]);
   if (ok !== 'OK') throw refuse(429, 'Wait 5 seconds between messages');
   const [names, title] = await redis([['HMGET', 'names', me], ['HGET', 'titles', me]]), name = (names || [])[0];
   // Heure strictement croissante : « since » ne perd jamais un message écrit dans la même milliseconde.
   const [last] = await redis([['LINDEX', KEY, -1]]);
   const t = Math.max(Date.now(), ((parse(last) || {}).t || 0) + 1);
-  const m = { id: crypto.randomBytes(6).toString('hex'), a: me, n: name || 'Player', ti: title || null, t, x: text };
-  await redis([['RPUSH', KEY, JSON.stringify(m)], ['LTRIM', KEY, -KEEP, -1], ['SET', REV, t], ['HINCRBY', 'feat:gchat', dayKey(t), 1]]);
+  const m = { id: crypto.randomBytes(6).toString('hex'), a: me, n: name || 'Player', ti: title || null, t, x: text, ...(at.ids.length ? { at: at.ids, an: at.names } : {}) };
+  await redis([['RPUSH', KEY, JSON.stringify(m)], ['LTRIM', KEY, -KEEP, -1], ['SET', REV, t], ['HINCRBY', 'feat:gchat', dayKey(t), 1], ...mentionWrites(at.ids, t)]);
   return m;
 }
 
