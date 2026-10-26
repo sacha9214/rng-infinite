@@ -360,6 +360,12 @@
     'Title': 'Titre', 'Short announcement (500 characters max)': 'Annonce courte (500 caractères max.)', 'Important (shown once as a notification)': 'Important (affichée une fois en notification)',
     'Also post on Discord': 'Publier aussi sur Discord', '(no Discord channel set up: skipped)': '(aucun salon Discord configuré : ignoré)', '📣 Publish': '📣 Publier',
     'Published': 'Publiées', 'No announcement yet.': 'Aucune annonce pour l\'instant.', 'Delete this announcement?': 'Supprimer cette annonce ?',
+    // Feuille de route (idée de Phong67, 2026-10-26)
+    '🗺️ Roadmap': '🗺️ Feuille de route', 'Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.': 'Les idées de joueurs que le créateur prévoit de faire, et celles ajoutées ces 30 derniers jours. Tu en as une ? Envoie-la avec le bouton 💡.',
+    '🛠️ Planned': '🛠️ Prévues', '✅ Recently added': '✅ Ajoutées récemment', 'last 30 days': '30 derniers jours', 'Nothing planned right now.': 'Rien de prévu pour l\'instant.',
+    'Nothing added in the last 30 days.': 'Rien d\'ajouté ces 30 derniers jours.', 'idea by': 'idée de',
+    '🗺️ See the roadmap: planned and recently added ideas': '🗺️ Voir la feuille de route : idées prévues et ajoutées récemment',
+    '🗺️ Roadmap: the player ideas that are planned and the ones recently added': '🗺️ Feuille de route : les idées de joueurs prévues et celles ajoutées récemment',
     'Deleted': 'Supprimée', 'Published (not on Discord: no channel set up)': 'Publiée (pas sur Discord : aucun salon configuré)',
     'Messages are 200 characters at most': 'Les messages font 200 caractères au plus', 'Links aren\'t allowed in the chat': 'Les liens ne sont pas autorisés dans le chat',
     'Let\'s keep the chat friendly: this message has a word that isn\'t allowed': 'Gardons le chat sympa : ce message contient un mot interdit',
@@ -385,7 +391,7 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
-    [/^(\d+) of the last 20$/, m => `${m[1]} sur les 20 dernières`],
+    [/^(\d+) of the last 20$/, m => `${m[1]} sur les 20 dernières`], [/^(\d+) ideas?$/, m => `${m[1]} idée${m[1] === '1' ? '' : 's'}`],
     // clans
     [/^Pick (\d+) players:?$/, m => `Choisis ${m[1]} joueurs`], [/^Pick (\d+) players to accept:$/, m => `Choisis ${m[1]} joueurs pour accepter :`],
     [/^(\d+) members to start, up to (\d+) with upgrades\. You have$/, m => `${m[1]} membres au départ, jusqu'à ${m[2]} avec les améliorations. Tu as`],

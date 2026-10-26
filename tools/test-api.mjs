@@ -4199,4 +4199,51 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; }
 }
 
+// Feuille de route publique (idée de Phong67, 2026-10-26) : idées prévues et ajoutées depuis 30 jours, sans bugs, sans
+// refusées, sans identifiants, texte coupé et filtré comme le chat global ; doneAt noté quand le créateur passe en Added.
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js')), Roadmap = require(path.join(ROOT, 'api/_roadmap.js'));
+  const now = Date.now(), D = 86400000, pid = 'b7'.repeat(8);
+  const seed = (id, f) => run([['HSET', `sugg:${id}`, 't', f.t || now - 40 * D, 'pid', pid, 'name', f.name || 'Phong67', 'text', f.text, 'status', f.status, 'kind', f.kind || 'idea', ...(f.doneAt ? ['doneAt', f.doneAt] : []), ...(f.ownerAt ? ['ownerAt', f.ownerAt] : [])], ['ZADD', 'sugg:all', f.t || now - 40 * D, id]]);
+  seed('aa0000000001', { text: 'A roadmap page so we can see what is coming next', status: 'planned' });
+  seed('aa0000000002', { text: 'Add a dark mode for the casino', status: 'done', doneAt: now - 2 * D });
+  seed('aa0000000003', { text: 'Old idea added long ago', status: 'done', doneAt: now - 45 * D });
+  seed('aa0000000004', { text: 'Old idea, owner answered last week', status: 'done', ownerAt: now - 7 * D });
+  seed('aa0000000005', { text: 'The roll button is broken', status: 'planned', kind: 'bug' });
+  seed('aa0000000006', { text: 'Give me infinite luck please', status: 'declined' });
+  seed('aa0000000007', { text: 'Join my server at freecoins.com for skins', status: 'planned' });
+  seed('aa0000000008', { text: 'this game is shit, add more skins', status: 'planned' });
+  seed('aa0000000009', { text: 'word '.repeat(60), status: 'planned' });
+  seed('aa000000000a', { text: 'Fresh idea not triaged yet', status: 'new' });
+  Roadmap.reset();
+  let r = await call(siteApi, { method: 'POST', body: { action: 'roadmap' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const txt = list => list.map(x => x.text);
+  assert.ok(txt(r.body.planned).includes('A roadmap page so we can see what is coming next'));
+  assert.ok(!txt(r.body.planned).some(t => /broken|freecoins|shit/.test(t)), 'ni bug, ni lien, ni insulte');
+  const long = r.body.planned.find(x => x.text.startsWith('word'));
+  assert.ok(long && long.text.length <= 121 && long.text.endsWith('…'), 'texte coupé');
+  assert.deepEqual(txt(r.body.recent).filter(t => /dark mode|Old idea/.test(t)), ['Add a dark mode for the casino', 'Old idea, owner answered last week']);
+  const all = JSON.stringify(r.body);
+  assert.ok(!all.includes(pid) && !all.includes('aa0000000001') && !/luck|Fresh idea/.test(all), 'ni identifiant, ni refusée, ni non triée');
+  assert.equal(r.body.planned[0].name, 'Phong67');
+  // Cache de 5 minutes : une nouvelle idée prévue n'apparaît qu'après.
+  seed('aa000000000b', { text: 'Cached idea for later', status: 'planned', t: now });
+  r = await call(siteApi, { method: 'POST', body: { action: 'roadmap' } });
+  assert.ok(!JSON.stringify(r.body).includes('Cached idea'), 'servie depuis le cache');
+  Roadmap.reset();
+  r = await call(siteApi, { method: 'POST', body: { action: 'roadmap' } });
+  assert.ok(JSON.stringify(r.body).includes('Cached idea'));
+  // Passer une idée en Added note doneAt (une seule fois).
+  const boss = { playerId: 'b8'.repeat(8), secret: 'b9'.repeat(16) };
+  run([['SET', `player:${boss.playerId}:secret`, crypto.createHash('sha256').update(boss.secret).digest('hex')], ['HSET', `stats:${boss.playerId}`, 'v', '1', 'owner', '1']]);
+  r = await call(siteApi, { method: 'POST', body: { ...boss, action: 'mark', id: 'aa000000000a', status: 'done' } }); assert.equal(r.status, 200);
+  const at = Number(run([['HGET', 'sugg:aa000000000a', 'doneAt']])[0].result);
+  assert.ok(at >= now, 'doneAt noté');
+  await new Promise(res => setTimeout(res, 3));
+  await call(siteApi, { method: 'POST', body: { ...boss, action: 'mark', id: 'aa000000000a', status: 'done' } });
+  assert.equal(Number(run([['HGET', 'sugg:aa000000000a', 'doneAt']])[0].result), at, 'pas réécrit');
+  Roadmap.reset();
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

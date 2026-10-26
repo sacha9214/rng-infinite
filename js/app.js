@@ -1715,6 +1715,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-roadmap', date: 'Oct 26, 2026', en: ['🗺️ Roadmap: a new page lists the player ideas that are planned and the ones added in the last 30 days. Open it from the 💡 ideas window or the About page (idea by Phong67).'], fr: ['🗺️ Feuille de route : une nouvelle page liste les idées de joueurs prévues et celles ajoutées ces 30 derniers jours. Ouvre-la depuis la fenêtre 💡 des idées ou la page À propos (idée de Phong67).'] },
     { id: '2026-10-26-announcements', date: 'Oct 26, 2026', en: ['📣 Announcements: news from the creator now appear at the top of 📰 What\'s new (with a red dot), and important ones pop up once when you come back (idea by jaxoncool43).'], fr: ['📣 Annonces : les messages du créateur apparaissent maintenant en haut de 📰 Nouveautés (avec un point rouge), et les plus importants s\'affichent une fois à ton retour (idée de jaxoncool43).'] },
     { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
     { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
@@ -5533,6 +5534,7 @@
       <p class="panel-note" style="margin:-.3rem 0 .8rem">Your message goes straight to the creator of the game.</p>
       <div class="seg idea-kind" id="idea-kind" role="tablist"><button data-kind="idea" class="on">💡 Suggest an idea</button><button data-kind="bug">🐞 Report a bug</button></div>
       <p class="idea-warn" id="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
+      <p class="idea-roadmap"><a href="#/roadmap">🗺️ See the roadmap: planned and recently added ideas</a></p>
       <p class="idea-note">💛 <span>Thank you so much for all your ideas and reports! I get about a hundred every day and I'm making the game on my own, so answers and new features can take a little longer. Thanks for understanding!</span></p>
       <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your message"></textarea>
       <div class="idea-shot" id="idea-shot">
@@ -7537,6 +7539,25 @@
       </div>`;
   }
 
+  // Feuille de route publique (idée de Phong67, 2026-10-26) : idées prévues et ajoutées depuis 30 jours, lues dans la
+  // boîte à idées par le serveur (api/_roadmap.js) : pseudo et extrait court, jamais les bugs ni les idées refusées.
+  function renderRoadmap() {
+    currentView = 'roadmap';
+    app.innerHTML = `
+      <div class="page rm-page">
+        <h1 class="page-title">🗺️ Roadmap</h1>
+        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.</p>
+        <div id="rm-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    const item = x => `<li class="rm-item"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></li>`;
+    const section = (title, note, list, empty) => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'roadmap' }) }).then(d => {
+      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box) return;
+      box.innerHTML = section('🛠️ Planned', `${fmt(d.planned.length)} ideas`, d.planned, 'Nothing planned right now.')
+        + section('✅ Recently added', 'last 30 days', d.recent, 'Nothing added in the last 30 days.');
+    }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+  }
+
   function renderAbout() {
     currentView = 'about';
     const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.005% (about 50 numbers)'], ['godlike', 'top 0.005–0.001% (40 numbers)'], ['infinite', 'top 0.001% (about 10 numbers)']];
@@ -7551,6 +7572,7 @@
     app.innerHTML = `
       <div class="page prose">
         <h1 class="page-title">What is RNG∞?</h1>
+        <p class="rm-about"><a href="#/roadmap">🗺️ Roadmap: the player ideas that are planned and the ones recently added</a></p>
         <p>A random number game with no daily limit. Each roll draws a number from 0 to 1,000,000. The number is checked against ${Engine.badges.length} patterns — palindromes, primes, repeated digits, meme numbers, sequences and more — and every badge it earns is worth XP (experience points).</p>
         <button class="trailer-thumb" data-trailer aria-label="Watch the trailer">
           <img src="media/trailer-16x9.jpg" alt="RNG∞ trailer: a Mythic roll, 777777" width="1280" height="720" loading="lazy">
@@ -8089,7 +8111,7 @@
     }
   }
 
-  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas };
+  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -8320,6 +8342,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   $('#gear-btn').addEventListener('click', openSettings);
 
   document.addEventListener('click', e => {
+    // Feuille de route depuis la fenêtre des idées : déjà sur #/roadmap, l'adresse ne change pas ; on ferme quand même.
+    if (e.target.closest('.idea-roadmap a')) closeModal();
     // Lien vers une page du site (profil d'un joueur…) dans une ligne cliquable : la navigation l'emporte.
     if (e.target.closest('a[href^="#/"]')) return;
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
