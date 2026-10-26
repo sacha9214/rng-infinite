@@ -355,6 +355,12 @@
     'Chat moderators': 'Modérateurs du chat', 'they can delete messages and mute players in the global chat': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global',
     'Muted players': 'Joueurs muets', 'Nobody is muted.': 'Personne n\'est muet.', '🔊 Unmute': '🔊 Rendre la parole', 'Unmuted': 'Parole rendue',
     'Remove this moderator?': 'Retirer ce modérateur ?', 'forever': 'pour toujours',
+    // Annonces (idée de jaxoncool43, 2026-10-26)
+    'Announce': 'Annonces', 'New announcement': 'Nouvelle annonce', 'players see it at the top of 📰 What\'s new, with a red dot': 'les joueurs la voient en haut de 📰 Nouveautés, avec un point rouge',
+    'Title': 'Titre', 'Short announcement (500 characters max)': 'Annonce courte (500 caractères max.)', 'Important (shown once as a notification)': 'Important (affichée une fois en notification)',
+    'Also post on Discord': 'Publier aussi sur Discord', '(no Discord channel set up: skipped)': '(aucun salon Discord configuré : ignoré)', '📣 Publish': '📣 Publier',
+    'Published': 'Publiées', 'No announcement yet.': 'Aucune annonce pour l\'instant.', 'Delete this announcement?': 'Supprimer cette annonce ?',
+    'Deleted': 'Supprimée', 'Published (not on Discord: no channel set up)': 'Publiée (pas sur Discord : aucun salon configuré)',
     'Messages are 200 characters at most': 'Les messages font 200 caractères au plus', 'Links aren\'t allowed in the chat': 'Les liens ne sont pas autorisés dans le chat',
     'Let\'s keep the chat friendly: this message has a word that isn\'t allowed': 'Gardons le chat sympa : ce message contient un mot interdit',
     'For your safety, don\'t share personal info (phone, e-mail, address or social media accounts)': 'Pour ta sécurité, ne partage pas d\'infos perso (téléphone, e-mail, adresse ou réseaux sociaux)',
@@ -379,6 +385,7 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    [/^(\d+) of the last 20$/, m => `${m[1]} sur les 20 dernières`],
     // clans
     [/^Pick (\d+) players:?$/, m => `Choisis ${m[1]} joueurs`], [/^Pick (\d+) players to accept:$/, m => `Choisis ${m[1]} joueurs pour accepter :`],
     [/^(\d+) members to start, up to (\d+) with upgrades\. You have$/, m => `${m[1]} membres au départ, jusqu'à ${m[2]} avec les améliorations. Tu as`],

@@ -1715,6 +1715,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-announcements', date: 'Oct 26, 2026', en: ['📣 Announcements: news from the creator now appear at the top of 📰 What\'s new (with a red dot), and important ones pop up once when you come back (idea by jaxoncool43).'], fr: ['📣 Annonces : les messages du créateur apparaissent maintenant en haut de 📰 Nouveautés (avec un point rouge), et les plus importants s\'affichent une fois à ton retour (idée de jaxoncool43).'] },
     { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
     { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
     { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
@@ -2023,14 +2024,36 @@
     { id: '2026-10-07a', date: 'Oct 7, 2026', en: ['4 legendary skins with a full animated signature: Sakura, Storm, Dragon, Singularity', 'Preview any skin in the shop before buying', 'Every skin\'s animation now plays in duels', '8 animated emotes to buy', 'Chat in duels', 'Generate button skins'], fr: ['4 skins légendaires avec une signature animée : Sakura, Storm, Dragon, Singularity', 'Aperçu de chaque skin dans la boutique avant d\'acheter', 'L\'animation de chaque skin se joue en duel', '8 émotes animées à acheter', 'Chat dans les duels', 'Skins du bouton Générer'] },
     { id: '2026-10-06', date: 'Oct 6, 2026', en: ['Daily quests and login streak', 'Duels with a coin stake', 'Skin cases', 'Friends', 'French version of the game', 'Suggestion box'], fr: ['Quêtes du jour et série de connexion', 'Duels avec une mise en pièces', 'Caisses de skins', 'Amis', 'Version française du jeu', 'Boîte à idées'] },
   ];
-  const newsUnread = () => Store.settings.newsSeen !== UPDATES[0].id;
+  // Annonces du créateur (idée de jaxoncool43, 2026-10-26) : lues une fois au chargement (api/_announce.js), en tête
+  // de « What's new » ; une nouvelle annonce allume aussi le point rouge de 📰. Une annonce « important » jamais vue
+  // s'affiche une fois en notification (un clic ouvre la fenêtre).
+  let announcements = [];
+  const annUnread = () => !!announcements.length && Store.settings.annSeen !== announcements[0].id;
+  const newsUnread = () => Store.settings.newsSeen !== UPDATES[0].id || annUnread();
   function paintNewsDot() { const b = $('#news-btn'); if (b) b.classList.toggle('unread', newsUnread()); }
+  const annHTML = (a, fresh) => `<div class="news-item ann-item${a.important ? ' ann-important' : ''}"><div class="eyebrow">📣 ${esc(fullDate(a.t))}${fresh ? ' <span class="new-tag">NEW</span>' : ''}</div><h3 class="ann-title" data-no-i18n>${esc(a.title)}</h3><p class="ann-text" data-no-i18n>${esc(a.text)}</p></div>`;
   function openNews() {
     const fr = window.RNGI18n && window.RNGI18n.lang === 'fr';
-    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2><div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
-      <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && newsUnread() ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
+    const seenAnn = Store.settings.annSeen, seenAt = announcements.findIndex(a => a.id === seenAnn);
+    // NEW sur les annonces arrivées depuis la dernière ouverture (toutes si aucune n'a encore été vue).
+    const anns = announcements.slice(0, 5).map((a, i) => annHTML(a, seenAt === -1 ? true : i < seenAt)).join('');
+    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2>${anns ? `<div class="news-list ann-list">${anns}</div>` : ''}<div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
+      <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && Store.settings.newsSeen !== UPDATES[0].id ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
     Store.setSetting('newsSeen', UPDATES[0].id);
+    if (announcements.length) Store.setSetting('annSeen', announcements[0].id);
     paintNewsDot();
+  }
+  function loadAnnouncements() {
+    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'announcements' }) }).then(r => {
+      announcements = (r && Array.isArray(r.list) ? r.list : []).filter(a => a && a.id && a.title);
+      paintNewsDot();
+      // Seulement la plus récente des importantes, une seule fois par appareil, et si elle a moins de 14 jours.
+      const big = announcements.find(a => a.important);
+      if (big && Store.settings.annToast !== big.id && Date.now() - big.t < 14 * 86400000) {
+        Store.setSetting('annToast', big.id);
+        setTimeout(() => toast(`📣 ${big.title}`, 9000, 'ann', openNews), 1500);
+      }
+    }).catch(() => {});
   }
 
   // Revoir un tirage (le sien ou celui d'un autre) : la révélation complète rejouée avec mon skin, sans rien tirer ni
@@ -5604,7 +5627,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -6128,6 +6151,37 @@
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
+    });
+    // ---- Annonces (idée de jaxoncool43, 2026-10-26) : titre + texte (500 caractères), « important » = notification
+    // une fois chez chaque joueur, et Discord si le salon est configuré. Les 20 dernières, chacune supprimable.
+    const drawAnn = d => {
+      const box = pane('announce'); if (currentView !== 'owner' || !box) return;
+      const keep = box.querySelector('.ann-form') && !d.posted ? { t: box.querySelector('[name=title]').value, x: box.querySelector('[name=text]').value } : null;
+      box.innerHTML = panel('New announcement', 'players see it at the top of 📰 What\'s new, with a red dot', `
+          <form class="ann-form"><input class="input" name="title" maxlength="80" placeholder="Title" autocomplete="off" required>
+          <textarea class="input" name="text" maxlength="500" rows="4" placeholder="Short announcement (500 characters max)" required></textarea>
+          <div class="ann-opts"><label><input type="checkbox" name="important"> Important (shown once as a notification)</label>
+          <label><input type="checkbox" name="discord" checked> Also post on Discord${d.discordReady ? '' : ' <span class="panel-note">(no Discord channel set up: skipped)</span>'}</label></div>
+          <div class="ann-foot"><span class="panel-note mono" data-ann-count>0 / 500</span><button class="btn-roll small">📣 Publish</button></div></form>`)
+        + panel('Published', `${fmt(d.list.length)} of the last 20`, d.list.length ? d.list.map(a => `<div class="o-report ann-row"><div class="o-report-head"><b data-no-i18n>${a.important ? '❗ ' : ''}${esc(a.title)}</b><span class="panel-note">${relTime(a.t)}</span></div><p class="ann-text" data-no-i18n>${esc(a.text)}</p><button class="btn ghost small" data-ann-del="${esc(a.id)}">🗑️ Delete</button></div>`).join('') : '<div class="empty">No announcement yet.</div>');
+      if (keep) { box.querySelector('[name=title]').value = keep.t; box.querySelector('[name=text]').value = keep.x; }
+      guest(d.readOnly);
+    };
+    Online.site('annList').then(drawAnn).catch(err => { if (pane('announce')) pane('announce').innerHTML = denied(err); });
+    pane('announce').addEventListener('input', e => { const c = pane('announce').querySelector('[data-ann-count]'); if (c && e.target.name === 'text') c.textContent = `${e.target.value.length} / 500`; });
+    pane('announce').addEventListener('click', e => {
+      const del = e.target.closest('[data-ann-del]'); if (!del || currentView !== 'owner') return;
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t('Delete this announcement?') : 'Delete this announcement?')) return;
+      del.disabled = true;
+      Online.site('annDelete', { id: del.dataset.annDel }).then(d => { drawAnn(d); toast('Deleted'); }).catch(err => { del.disabled = false; toast(err.message || 'Unavailable right now, try again'); });
+    });
+    pane('announce').addEventListener('submit', e => {
+      const f = e.target.closest('.ann-form'); if (!f || currentView !== 'owner') return;
+      e.preventDefault();
+      const btn = f.querySelector('button'); btn.disabled = true;
+      Online.site('annAdd', { title: f.elements.title.value, text: f.elements.text.value, important: f.elements.important.checked, discord: f.elements.discord.checked })
+        .then(d => { drawAnn(d); toast(f.elements.discord.checked && !d.discord ? 'Published (not on Discord: no channel set up)' : 'Published'); announcements = d.list; paintNewsDot(); })
+        .catch(err => { btn.disabled = false; toast(err.message || 'Unavailable right now, try again'); });
     });
     const drawInbox = data => {
       const box = $('#o-inbox');
@@ -8416,6 +8470,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
   paintNewsDot();
+  loadAnnouncements();
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });

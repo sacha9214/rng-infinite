@@ -4159,4 +4159,44 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(bal(pr.playerId), 100010);
 }
 
+// Annonces du créateur (idée de jaxoncool43, 2026-10-26) : publiques en lecture, publiées et retirées par l'Owner
+// seulement, texte brut gardé tel quel (la page l'échappe), 20 au plus, Discord seulement si un salon existe.
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, extra = []) => { const id = tag.repeat(8), secret = (tag + 'e').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', ...extra]]); return { playerId: id, secret }; };
+  const boss = mk('a1', ['owner', '1']), kid = mk('a2');
+  const site = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  run([['DEL', 'ann:list']]);
+  let r = await site(null, 'announcements'); assert.equal(r.status, 200); assert.deepEqual(r.body.list, []);
+  r = await site(kid, 'annAdd', { title: 'Hi', text: 'hacked' }); assert.equal(r.status, 403, 'un joueur ne publie pas');
+  r = await site(kid, 'annList'); assert.equal(r.status, 403);
+  r = await site(boss, 'annAdd', { title: '', text: 'x' }); assert.equal(r.status, 422);
+  r = await site(boss, 'annAdd', { title: 'T', text: 'x'.repeat(501) }); assert.equal(r.status, 422);
+  r = await site(boss, 'annAdd', { title: '  Big   <b>news</b> ', text: 'Line 1\nLine <script>2</script>', important: true, discord: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.discord, false, 'pas de webhook : publiée dans le jeu seulement');
+  assert.deepEqual([r.body.list[0].title, r.body.list[0].text, r.body.list[0].important], ['Big <b>news</b>', 'Line 1\nLine <script>2</script>', true]);
+  const first = r.body.list[0].id;
+  for (let i = 0; i < 21; i++) await site(boss, 'annAdd', { title: `N${i}`, text: 'ok', discord: false });
+  r = await site(null, 'announcements'); assert.equal(r.body.list.length, 20); assert.equal(r.body.list[0].title, 'N20', 'la plus récente en tête');
+  assert.ok(!r.body.list.some(a => a.id === first), 'la plus ancienne est tombée');
+  const gone = r.body.list[3].id;
+  r = await site(kid, 'annDelete', { id: gone }); assert.equal(r.status, 403);
+  r = await site(boss, 'annDelete', { id: gone }); assert.equal(r.status, 200); assert.equal(r.body.list.length, 19); assert.ok(!r.body.list.some(a => a.id === gone));
+  assert.equal((await site(boss, 'annDelete', { id: 'zz' })).status, 400);
+  // Avec un salon Discord « announcements » (ou à défaut « updates ») : un message, sans mention de tout le monde.
+  const dPath = require.resolve(path.join(ROOT, 'api/_discord.js'));
+  delete require.cache[dPath];
+  process.env.RNG_DISCORD_CONFIG = JSON.stringify({ updates: 'https://x.invalid/up', roles: { updates: '222' } });
+  require(dPath); delete process.env.RNG_DISCORD_CONFIG;
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => { if (!String(u).startsWith('https://x.invalid/')) return realFetch(u, o); sent.push({ u, b: JSON.parse(o.body) }); return { ok: true }; };
+  try {
+    r = await site(boss, 'annAdd', { title: 'Hey @everyone', text: '**bold**', discord: true });
+    assert.equal(r.body.discord, true); assert.equal(sent.length, 1); assert.equal(sent[0].u, 'https://x.invalid/up');
+    assert.ok(!JSON.stringify(sent[0].b.embeds).includes('@everyone') && !sent[0].b.embeds[0].description.includes('**'));
+    assert.deepEqual(sent[0].b.allowed_mentions, { parse: [], roles: ['222'] });
+    await site(boss, 'annAdd', { title: 'Quiet', text: 'no discord', discord: false }); assert.equal(sent.length, 1, 'case décochée');
+  } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; }
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

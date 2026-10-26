@@ -99,6 +99,18 @@ function announceUpdate(entry) {
   });
 }
 
+// Annonce écrite par le créateur sur la page Owner (idée de jaxoncool43, 2026-10-26) : salon « announcements » s'il
+// existe, sinon celui des nouveautés. Renvoie false sans webhook (l'annonce reste publiée dans le jeu).
+function announceNews(entry) {
+  const url = cfg.announcements || cfg.updates;
+  if (!url) return false;
+  post(url, {
+    ...ping(cfg.announcements ? roles.announcements : roles.updates),
+    embeds: [{ title: `📣 ${clean(entry.title)}`.slice(0, 250), url: SITE, description: clean(entry.text).slice(0, 3900), color: entry.important ? 0xef4444 : 0x6366f1 }],
+  });
+  return true;
+}
+
 function announceRecap({ day, rows, rolls }) {
   if (!cfg.bigRolls || !rows.length) return;
   const medal = ['🥇', '🥈', '🥉'];
@@ -170,4 +182,4 @@ function announceTournament({ day, mode, champion, finalist, players }) {
   });
 }
 
-module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceNews, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
