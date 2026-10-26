@@ -287,6 +287,7 @@ async function settleWeek(t = Date.now()) {
       // Les membres qui ont roulé pour le clan cette semaine-là (même partis depuis) : titre Clan Champion.
       for (const id of ids || []) w.push(['HINCRBY', statsKey(id), 'clanWeekWins', 1]);
       await redis(w);
+      try { const [[cname, ctag]] = await redis([['HMGET', ckey(cid), 'name', 'tag']]); require('./_discord').announceClanWeek({ clan: `${cname || 'A clan'} [${ctag || '?'}]`, week, members: (ids || []).length }); } catch (e) { /* Discord facultatif */ }
     }
   }
   settledWeek = week;
@@ -457,6 +458,12 @@ async function payWar(w, now = Date.now()) {
     ...(aWar === w.wid ? [['HDEL', ckey(w.a), 'war']] : []), ...(bWar === w.wid ? [['HDEL', ckey(w.b), 'war']] : []),
     ...eco('out:clans', cut, now),
   ]);
+  // Annonce dans #⚔️・clan-wars (2026-10-26) : une seule fois, grâce au HSETNX « paid » plus haut.
+  try {
+    const [[winName], [loseName]] = await redis([['HMGET', ckey(win), 'name'], ['HMGET', ckey(lose), 'name']]);
+    const sa = sideTotal(w, w.ta), sb = sideTotal(w, w.tb);
+    require('./_discord').announceClanWar({ win: `${winName || 'A clan'} [${winTag || '?'}]`, lose: `${loseName || 'a clan'} [${loseTag || '?'}]`, prize: Number(winExists) ? prize : 0, scoreWin: win === w.a ? sa : sb, scoreLose: win === w.a ? sb : sa });
+  } catch (e) { /* Discord facultatif */ }
   return true;
 }
 

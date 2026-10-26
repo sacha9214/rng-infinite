@@ -740,6 +740,19 @@ module.exports = async (req, res) => {
       else {
         const writes = [];
         if (STATUSES.includes(body.status)) writes.push(['HSET', suggKey(id), 'status', body.status]);
+        // Idée qui passe en « Planned » ou « Added » : postée dans #🗺️・roadmap (2026-10-26), une fois par statut, texte
+        // filtré comme la page Roadmap (rien si le filtre la refuse ; jamais pour un bug).
+        if (body.status === 'planned' || body.status === 'done') {
+          const [was, kind, name, text, posted] = await redis([['HGET', suggKey(id), 'status'], ['HGET', suggKey(id), 'kind'], ['HGET', suggKey(id), 'name'], ['HGET', suggKey(id), 'text'], ['HGET', suggKey(id), `rm:${body.status}`]]);
+          if (was !== body.status && kind !== 'bug' && !posted) {
+            try {
+              const short = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+              require('./_global').checkMessage(short.length > 150 ? short.slice(0, 150) : short);
+              require('./_discord').announceRoadmap({ name: name || 'a player', text: short, status: body.status });
+              writes.push(['HSET', suggKey(id), `rm:${body.status}`, Date.now()]);
+            } catch (e) { /* filtré ou sans Discord : pas d'annonce */ }
+          }
+        }
         // Passée en Added pour la première fois : un point pour le titre Bug Hunter (bug) ou Contributor (idée).
         if (body.status === 'done') {
           const [was, kind, credited] = await redis([['HGET', suggKey(id), 'status'], ['HGET', suggKey(id), 'kind'], ['HGET', suggKey(id), 'credited']]);

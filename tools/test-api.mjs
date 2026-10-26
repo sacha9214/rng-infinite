@@ -3191,6 +3191,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; delete require.cache[tPath]; }
 }
 
+// Salons Discord du 2026-10-26 : tournois, guerres de clans, roadmap (webhooks et rôles 🔔 Tournaments / 🔔 Clans).
+{
+  const dPath = require.resolve(path.join(ROOT, 'api/_discord.js'));
+  delete require.cache[dPath];
+  process.env.RNG_DISCORD_CONFIG = JSON.stringify({ events: 'https://x.invalid/ev', tournaments: 'https://x.invalid/tn', clanWars: 'https://x.invalid/cw', roadmap: 'https://x.invalid/rm', roles: { tournaments: '444', clans: '555' } });
+  const D = require(dPath);
+  delete process.env.RNG_DISCORD_CONFIG;
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => { if (!String(u).startsWith('https://x.invalid/')) return realFetch(u, o); sent.push({ u, b: JSON.parse(o.body) }); return { ok: true }; };
+  try {
+    D.announceTournament({ day: '2026-10-26', mode: 'total', champion: 'Al', finalist: 'Bo', players: 8 });
+    let m = sent.pop(); assert.equal(m.u, 'https://x.invalid/tn', 'salon des tournois'); assert.deepEqual(m.b.allowed_mentions, { parse: [], roles: ['444'] });
+    D.announceClanWar({ win: 'Dice Lords [DICE]', lose: 'Foes [FOE]', prize: 970, scoreWin: 1200, scoreLose: 800 });
+    m = sent.pop(); assert.equal(m.u, 'https://x.invalid/cw'); assert.deepEqual(m.b.allowed_mentions, { parse: [], roles: ['555'] }); assert.match(m.b.embeds[0].description, /970/);
+    D.announceClanWeek({ clan: 'Dice Lords [DICE]', week: '2026-W43', members: 3 });
+    assert.match(sent.pop().b.embeds[0].title, /clan of the week/);
+    D.announceRoadmap({ name: 'Al@everyone', text: 'a *cool* idea', status: 'done' });
+    m = sent.pop(); assert.equal(m.u, 'https://x.invalid/rm'); assert.deepEqual(m.b.allowed_mentions, { parse: [] }); assert.ok(!m.b.embeds[0].description.includes('@everyone') && !m.b.embeds[0].description.includes('*cool*'));
+  } finally { globalThis.fetch = realFetch; delete require.cache[dPath]; }
+}
+
 // Lier son Discord (2026-10-17) : sans jeton de bot (hors VPS), état lisible et liaison refusée proprement ; rôles voulus
 // d'après les stats tenues par le serveur.
 {
