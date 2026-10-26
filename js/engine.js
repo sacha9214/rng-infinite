@@ -354,6 +354,9 @@
     ODD_ABUNDANT: c => c.n % 2 === 1 && c.n >= 945 && sumProperDivisors(c.n) > c.n,
     // Idée de CococoC (2026-10-25) : « Vortrox et Gina », 4992 ou 9249 n'importe où (couvre aussi les nombres Geometry Dash 554992…).
     VORTROX_GINA: c => c.s.includes('4992') || c.s.includes('9249'),
+    // Idée de qwertyuiop (2026-10-26) : un 29 février, lu MMJJAA = 0229AA (tiré comme 229AA, comme 061209 → 61209).
+    // AA multiple de 4 : 2000-2096 sont tous bissextiles (2000 l'est, 2100 non mais hors plage) → 25 nombres.
+    LEAP_DAY: c => c.n >= 22900 && c.n <= 22999 && c.n % 4 === 0,
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,

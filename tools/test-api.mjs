@@ -2491,6 +2491,13 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const [aliceName] = run([['HGET', 'names', alice.playerId]]).map(x => x.result);
   const board = async period => (await call(leaderboard, { url: `/api/leaderboard?period=${period}&me=${alice.playerId}` })).body;
   const prof = async name => (await call(profile, { url: `/api/profile?name=${encodeURIComponent(name)}` })).body;
+  // Un test plus haut avance l'horloge de quelques jours : fin octobre, elle passe au mois suivant et le mois en cours
+  // était déjà « fini » (badges remis trop tôt, test instable le 2026-10-26). On repart d'un mois en cours propre.
+  // (L'horloge des tests peut être en avance : le « mois précédent » est alors octobre, et ses meilleurs joueurs réels,
+  // Alice en tête, recevaient un badge. On le marque fini et on efface ces badges.)
+  { const d = new Date(Date.now()); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); const prev = d.toISOString().slice(0, 7);
+    rank._reset(); // le mois figé gardé en mémoire ne doit pas sauter la remise plus bas
+    run([['DEL', `topawards:done:${month}`], ['SET', `topawards:done:${prev}`, '1'], ['HDEL', 'topbest', alice.playerId, ...ids], ...[alice.playerId, ...ids].flatMap(id => [['HDEL', `topawards:${id}`, month], ['HDEL', `topawards:${id}`, prev]])]); }
   // Pendant le mois : aucun badge, même pour le 1er.
   let b = await board('month');
   assert.ok(b.entries[0].me, 'Alice est 1re');
@@ -2924,6 +2931,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Les badges « contient un carré » : seul le plus grand compte, jamais sur le nombre entier.
   const ids = n => engine.analyze(n).earnedIds.filter(x => /^SQUARE_IN_/.test(x));
   assert.deepEqual(ids(815625), ['SQUARE_IN_5']); assert.deepEqual(ids(51449), ['SQUARE_IN_3']); assert.deepEqual(ids(144), []); assert.deepEqual(ids(907744), ['SQUARE_IN_4']);
+  // Leap Day (idée de qwertyuiop, 2026-10-26) : 0229AA avec AA multiple de 4, tiré comme 229AA → 25 nombres.
+  const leap = n => engine.analyze(n).earnedIds.includes('LEAP_DAY');
+  assert.ok(leap(22924) && leap(22996) && leap(22900), 'Leap Day manquant');
+  assert.ok(!leap(22925) && !leap(22898) && !leap(23000) && !leap(122924), 'Leap Day en trop');
 }
 
 // ================================================================ 56. Farce du créateur en duel : faux jackpot, visible seulement chez les autres
@@ -3708,7 +3719,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await fails(H(C, 'donate', { amount: 10 }), 429, '10 dons par heure');
   await fails(H(C, 'upgrade', { what: 'slots' }), 403, 'un membre ne dépense pas le coffre');
   await fails(H(A, 'upgrade', { what: 'slots' }), 422, 'coffre insuffisant');
-  for (let i = 0; i < 6; i++) await H(A, 'donate', { amount: 10000 });
+  // Titre Clan Patron (idée de PRISMA123, 2026-10-26) : 10 000 pièces données au total.
+  assert.ok(!Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), 'pas encore donné');
+  await H(A, 'donate', { amount: 9990 }); assert.ok(!Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), '9 990 : pas encore');
+  await H(A, 'donate', { amount: 10 }); assert.ok(Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), '10 000 au total : titre');
+  for (let i = 0; i < 5; i++) await H(A, 'donate', { amount: 10000 });
   const out1 = ecoOut();
   v = await H(B, 'upgrade', { what: 'slots' }); assert.equal(v.clan.slots, 25); assert.equal(v.clan.vault, 60190 - 5000); assert.equal(v.clan.nextSlots, 10000);
   assert.equal(ecoOut() - out1, 5000, 'places : pièces détruites');
@@ -3719,6 +3734,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await fails(H(A, 'upgrade', { what: 'banner', color: 'url(x)' }), 400, 'couleur inconnue');
   assert.equal(v.clan.vault, 60190 - 5000 - 3000 - 2000);
   for (let i = 0; i < 4; i++) await H(F, 'donate', { amount: 10000 });
+
+  // Droits des officiers (idée de kaz, 2026-10-26) : tout permis par défaut, le chef seul les règle, vérifiés partout.
+  v = await H(B, 'view'); assert.deepEqual(v.clan.perms, { invite: true, kick: true, upgrade: true, war: true, edit: true }); assert.equal(v.me.can.kick, true);
+  assert.deepEqual((await H(C, 'view')).me.can, { invite: false, kick: false, upgrade: false, war: false, edit: false }, 'un membre ne peut rien');
+  await fails(H(B, 'perms', { perms: { kick: false } }), 403, 'seul le chef règle les droits');
+  v = await H(A, 'perms', { perms: { invite: false, kick: false, upgrade: false, war: false, edit: false, junk: false } });
+  assert.deepEqual(v.clan.perms, { invite: false, kick: false, upgrade: false, war: false, edit: false }); assert.equal(v.me.can.kick, true, 'le chef garde tout');
+  await fails(H(B, 'invite', { name: 'Clanoutsider' }), 403, 'invitation coupée');
+  await fails(H(B, 'accept', { name: 'Clanoutsider' }), 403, 'demandes coupées');
+  await fails(H(B, 'kick', { name: 'Claneee' }), 403, 'exclusion coupée');
+  await fails(H(B, 'upgrade', { what: 'banner', color: 'red' }), 403, 'coffre coupé');
+  await fails(H(B, 'challenge', { target: 'FOES', stake: 100, team: [] }), 403, 'guerre coupée');
+  await fails(H(B, 'answer', { yes: false }), 403, 'réponse de guerre coupée');
+  await fails(H(B, 'desc', { desc: 'hi' }), 403, 'description coupée');
+  await fails(H(B, 'emoji', { emoji: '🐉' }), 403, 'emoji coupé');
+  assert.deepEqual((await H(B, 'view')).clan.requests, [], 'sans le droit d\'inviter, pas de demandes affichées');
+  v = await H(A, 'perms', { perms: { invite: true, kick: true, upgrade: true, war: true, edit: true } });
+  assert.equal(run([['HGET', `clan:${cidOf(A)}`, 'perms']])[0].result, null, 'retour au défaut : champ effacé');
+  v = await H(B, 'emoji', { emoji: '🎲' }); assert.equal(v.me.can.edit, true);
 
   // Chat : envoi filtré, modification (10 min, ses messages), suppression, signalement vers la page Owner.
   v = await H(C, 'say', { text: 'gg fuck yeah' }); assert.equal(v.messages.at(-1).text, 'gg **** yeah');
@@ -3936,6 +3970,87 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(r.body.msgs.every((m, i, a) => !i || m.t > a[i - 1].t), 'heures strictement croissantes');
 }
 
+// Chat global : @mentions (idée de casmictechthing, 2026-10-26). Un @ d'un vrai joueur passe le filtre et est surligné,
+// le cité le voit (toMe, lastAt pour le point rouge) ; un @ inconnu reste refusé ; aucun identifiant ne sort.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const al = mk('a7', 'MentAlpha'), be = mk('a8', 'MentBeta'), ce = mk('a9', 'MentCee');
+  let r = await gc(be, 'gcList'); assert.equal(r.body.me.lastAt, 0, 'jamais cité');
+  r = await gc(al, 'gcSend', { text: 'gg @mentbeta, and @nobody99' }); assert.equal(r.status, 422, 'un @ inconnu reste un pseudo de réseau social'); assert.match(r.body.error, /personal info/);
+  free(al); r = await gc(al, 'gcSend', { text: 'gg @mentbeta! look @MentAlpha' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  let m = r.body.msgs.at(-1);
+  assert.equal(m.text, 'gg @mentbeta! look @MentAlpha', 'texte gardé tel quel'); assert.deepEqual(m.at, ['MentBeta'], 'pseudo exact, sans soi-même'); assert.ok(!m.toMe);
+  r = await gc(be, 'gcList'); m = r.body.msgs.at(-1); assert.equal(m.toMe, true, 'le cité le voit'); assert.equal(r.body.me.lastAt, m.t, 'heure de la dernière mention');
+  r = await gc(ce, 'gcList'); assert.ok(!r.body.msgs.at(-1).toMe); assert.equal(r.body.me.lastAt, 0);
+  // Même « same » (rien de neuf), lastAt suit : le point rouge s'allume pour un message arrivé avant l'ouverture.
+  r = await gc(be, 'gcList', { rev: r.body.rev, del: r.body.del, since: m.t }); assert.equal(r.body.same, true); assert.equal(r.body.me.lastAt, m.t);
+  for (const who of [al, be, ce]) assert.ok(!JSON.stringify(r.body).includes(who.playerId) && !JSON.stringify((await gc(ce, 'gcList')).body).includes(who.playerId), 'aucun identifiant');
+  // Une mention ne contourne pas les autres filtres.
+  free(al); assert.equal((await gc(al, 'gcSend', { text: '@MentBeta you fucking idiot' })).status, 422);
+  assert.equal(run([['GET', `gc:at:${ce.playerId}`]])[0].result, null);
+}
+// Alerte des amis (idée de Jguz01, 2026-10-26) : Celestial ou mieux → les amis le voient à leur relève des cadeaux,
+// depuis leur dernier « vu », par pseudo seulement ; pas les autres joueurs, pas les tirages ordinaires, pas sans bigSince.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const fr = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const lucky = mk('e7', 'BigLucky'), pal = mk('e8', 'BigPal'), stranger = mk('e9', 'BigStranger');
+  run([['SADD', `fr:${lucky.playerId}`, pal.playerId], ['SADD', `fr:${pal.playerId}`, lucky.playerId]]);
+  const find = (ok, from = 0) => { let n = from; while (!ok(engine.analyze(n).tier)) n++; return n; };
+  const nBig = find(t => t === 'celestial'), nSmall = find(t => t === 'rare');
+  const since = Date.now() - 1;
+  await lib.recordRoll(lucky.playerId, nSmall, Date.now());
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: since })).body.big, [], 'un Rare ne prévient personne');
+  await new Promise(r => setTimeout(r, 3));
+  const tBig = Date.now(); await lib.recordRoll(lucky.playerId, nBig, tBig);
+  let r = await fr(pal, 'gifts', { bigSince: since }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.big, [{ name: 'BigLucky', n: nBig, tier: 'celestial', t: tBig }]);
+  assert.ok(!JSON.stringify(r.body).includes(lucky.playerId), 'aucun identifiant');
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: tBig })).body.big, [], 'déjà vu');
+  assert.equal((await fr(pal, 'gifts')).body.big, undefined, 'alertes coupées : rien de lu');
+  assert.deepEqual((await fr(stranger, 'gifts', { bigSince: since })).body.big, [], 'pas un ami');
+  // Ami retiré : plus d'alerte, même déjà poussée.
+  run([['SREM', `fr:${pal.playerId}`, lucky.playerId]]);
+  assert.deepEqual((await fr(pal, 'gifts', { bigSince: since })).body.big, [], 'plus ami');
+  // Infinite (le top du jeu) aussi : tous les paliers à partir de Celestial.
+  assert.deepEqual([...lib.BIG_TIERS].sort(), ['celestial', 'divine', 'godlike', 'infinite']);
+}
+// Chat global : modifier (5 minutes, filtres rejoués, « edited ») et supprimer ses propres messages (idée de daddy finger, 2026-10-26).
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const ed = mk('b7', 'EditEd'), ot = mk('b8', 'EditOther');
+  free(ed); let r = await gc(ed, 'gcSend', { text: 'helo all' }); const mine = r.body.msgs.at(-1);
+  free(ot); r = await gc(ot, 'gcSend', { text: 'not yours' }); const theirs = r.body.msgs.at(-1);
+  assert.equal(r.body.editMs, 5 * 60000);
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'hello all' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const e1 = r.body.msgs.find(m => m.id === mine.id);
+  assert.deepEqual([e1.text, e1.edited, e1.t], ['hello all', true, mine.t], 'même id, même heure, marqué modifié');
+  assert.equal(r.body.msgs.filter(m => m.id === mine.id).length, 1, 'pas de doublon');
+  assert.ok(r.body.msgs.findIndex(m => m.id === mine.id) < r.body.msgs.findIndex(m => m.id === theirs.id), 'même place dans la liste');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'you fucking idiot' }); assert.equal(r.status, 422, 'filtres rejoués (insulte)');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'go to freecoins.com' }); assert.equal(r.status, 422, 'filtres rejoués (lien)');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'hi @EditOther' }); assert.equal(r.status, 200); assert.deepEqual(r.body.msgs.find(m => m.id === mine.id).at, ['EditOther'], 'mention ajoutée en modifiant');
+  assert.ok(Number(run([['GET', `gc:at:${ot.playerId}`]])[0].result) > 0, 'le cité est prévenu');
+  assert.equal((await gc(ed, 'gcEdit', { id: theirs.id, text: 'hacked' })).status, 403, 'pas le message d\'un autre');
+  // Fenêtre de 5 minutes : message vieilli à la main.
+  const raw = run([['LRANGE', 'gc:msgs', 0, -1]])[0].result, k = raw.findIndex(x => JSON.parse(x).id === mine.id);
+  run([['LSET', 'gc:msgs', k, JSON.stringify({ ...JSON.parse(raw[k]), t: Date.now() - 5 * 60000 - 1 })]]);
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'too late' }); assert.equal(r.status, 422); assert.match(r.body.error, /5 minutes/);
+  // Supprimer : le sien oui (même vieux), celui d'un autre non (sauf modérateur).
+  assert.equal((await gc(ed, 'gcDelete', { id: theirs.id })).status, 403);
+  assert.equal((await gc(ed, 'gcMute', { id: theirs.id, dur: '1h' })).status, 403, 'pas de silence pour autant');
+  r = await gc(ed, 'gcDelete', { id: mine.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === mine.id));
+  assert.ok(r.body.msgs.some(m => m.id === theirs.id));
+  assert.ok(!JSON.stringify(r.body).includes(ed.playerId) && !JSON.stringify(r.body).includes(ot.playerId), 'aucun identifiant');
+}
+
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
 // pseudo payant, Prestige.
 {
@@ -3949,7 +4064,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // 1. Paliers : 1–500 plein tarif, 501–2 000 à 50 %, au-delà 20 %, arrondi en dessous.
   assert.deepEqual([1, 500, 501, 2000, 2001, 99999].map(Shop.rollRate), [1, 1, 0.5, 0.5, 0.2, 0.2]);
-  assert.deepEqual([Shop.rollPay(100, 1), Shop.rollPay(100, 501), Shop.rollPay(5, 501), Shop.rollPay(1, 501), Shop.rollPay(25, 2001), Shop.rollPay(1, 2001)], [100, 50, 2, 0, 5, 0]);
+  assert.deepEqual([Shop.rollPay(100, 1, 'mythic'), Shop.rollPay(100, 501, 'mythic'), Shop.rollPay(5, 501, 'rare'), Shop.rollPay(1, 501, 'common'), Shop.rollPay(25, 2001, 'anomaly'), Shop.rollPay(1, 2001, 'common'), Shop.rollPay(3, 2001, 'trash'), Shop.rollPay(0, 2001, 'x')], [100, 50, 2, 1, 5, 1, 1, 0]);
+  // Celestial ou mieux : jamais réduit (2026-10-26, number 1, kaz, casmictechthing)
+  for (const tr of ['celestial', 'divine', 'godlike', 'infinite']) assert.equal(Shop.rollPay(Shop.COINS[tr], 3000, tr), Shop.COINS[tr], tr);
+  assert.equal(Shop.rollPay(Shop.COINS.mythic, 3000, 'mythic'), 20);
   // Par le vrai recordRoll, un mardi (pas de Rush) : le compteur rc:<jour>:<id> est simulé à 500, 1 999, 2 000.
   const dm = { playerId: 'd1'.repeat(8) }, TUE = Date.parse('2026-10-27T10:00:00Z');
   let n = 0; while (engine.analyze(n).tier !== 'mythic') n++; // 100 pièces au plein tarif
@@ -3967,6 +4085,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(eco(TUE, 'in:rolls') - ecoRolls0, paidSum, 'eco in:rolls = pièces réellement créées');
   // L'XP n'est pas touchée : 5 tirages, 5 fois l'XP pleine.
   assert.equal(field(dm.playerId, 'xpLife'), 5 * engine.analyze(n).total);
+  // Celestial au palier 20 % : versé en entier, rien dans rollCut (2026-10-26).
+  { const cx = { playerId: 'c7'.repeat(8) }; let m = 0; while (engine.analyze(m).tier !== 'celestial') m++;
+    run([['SET', `rc:2026-10-27:${cx.playerId}`, '5000']]); await wait();
+    const out = await recordRoll(cx.playerId, m, TUE + 9);
+    assert.deepEqual([out.rate, out.coins], [0.2, Shop.COINS.celestial], 'Celestial jamais réduit');
+    assert.equal(field(cx.playerId, 'rollCut'), 0, 'rien de retenu pour un Celestial'); }
   // Samedi, au-delà de 500 : le Rush (+25 %) s'applique à ce qui est versé.
   const SAT = Date.parse('2026-10-31T10:00:00Z'), rcs = `rc:2026-10-31:${dm.playerId}`;
   run([['SET', rcs, '700']]); await wait();
@@ -3976,7 +4100,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const dr = { playerId: 'd2'.repeat(8), secret: 'd3'.repeat(16), name: 'Diminisher' };
   run([['SET', `rc:${new Date(Date.now()).toISOString().slice(0, 10)}:${dr.playerId}`, '3000']]);
   const rr = await call(roll, { method: 'POST', body: dr });
-  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], pay = Math.floor(full * 0.2);
+  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], tr = engine.analyze(rr.body.n).tier, pay = Shop.rollPay(full, 3001, tr);
   assert.deepEqual([rr.body.rate, rr.body.coins], [0.2, pay + Ev.rushBonus(pay, rr.body.t)], JSON.stringify(rr.body));
 
   // 2. Weekend Rush +25 % sur les quêtes : la récompense affichée le samedi.

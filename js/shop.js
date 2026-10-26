@@ -46,13 +46,18 @@
     { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 7500, desc: 'A blade, a branch in bloom, a rising moon', premium: true },
     { id: 'storm', name: 'Storm', emoji: '⚡', price: 10000, desc: 'Lightning strikes every digit', premium: true },
     { id: 'dragon', name: 'Dragon', emoji: '🐉', price: 12500, desc: 'A dragon circles your number and forges it', premium: true },
+    // Idée de shadow2 Jr (2026-10-26) : légendaire, la Voie lactée tourne autour du nombre ; son cœur s'embrase dès Mythic.
+    { id: 'milkyway', name: 'Milky Way', emoji: '🌌', price: 13500, desc: 'The Milky Way spins around your number, every digit ignites like a star, and Mythic rolls set the galaxy core ablaze', premium: true, idea: 'shadow2 Jr' },
     // Idée de kaz (2026-10-25) : légendaire, les chiffres se posent tour à tour en roche, glace, feu et vent, et la carte
     // prend la matière de l'élément en cours.
     { id: 'elemental', name: 'Elemental', emoji: '🌀', price: 14000, desc: 'Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it', premium: true, idea: 'kaz' },
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
     // Idée de Gray alt (2026-10-25) : un tribunal céleste, une balance, un pilier de lumière qui frappe chaque chiffre ;
     // le verdict final sur les grandes raretés. Legendary, entre Singularity et Infinity.
-    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },
+    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },    // Idée de JBearr12 (2026-10-26) : une planche de BD, une bulle POW!/BAM! par chiffre, KA-BOOM! et des cases qui
+    // claquent sur les grandes raretés. Legendary. Identifiant comicbook : « comic » est déjà un bouton (BUTTONS).
+    { id: 'comicbook', name: 'Comic Book', emoji: '💥', price: 13000, desc: 'Every digit lands with a POW! in a halftone comic panel, and rare rolls end in a KA-BOOM! with panels slamming around your number', premium: true, idea: 'JBearr12' },
+
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé
@@ -97,6 +102,10 @@
     // Idée de Matthew (2026-10-21) : des ondes sonores qui portent les chiffres, un « boum » à chaque chiffre.
     { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms', idea: 'Matthew' },
     { id: 'money', name: 'Money', emoji: '💵', price: 1900, desc: 'A crisp 100 bill with gold-foil digits stamped one by one; coins rain down, and Mythic rolls make the gold melt', idea: 'JBearr12' }, // idée de JBearr12 et finnnnn (2026-10-25)
+    // Idée de finnnnn (2026-10-26) : un hot-dog dont les chiffres passent du ketchup à la moutarde, un filet sur deux.
+    { id: 'hotdog', name: 'Hot Dog', emoji: '🌭', price: 1700, desc: 'A grilled hot dog dressed digit by digit: every number is a drizzle that switches between ketchup and mustard', idea: 'finnnnn' },
+    // Idée de shadow2 (2026-10-26) : des fûts radioactifs, de la gelée verte qui luit, le grésillement d'un compteur Geiger.
+    { id: 'radioactive', name: 'Radioactive', emoji: '☢️', price: 2200, desc: 'Glowing green goo in a leaking hazard barrel: digits crackle like a Geiger counter and plop into place', idea: 'shadow2' },
     // Idée de R77 (2026-10-25) : une double hélice d'ADN qui tourne ; chaque chiffre est une paire de bases qui s'emboîte.
     { id: 'dna', name: 'DNA Helix', emoji: '🧬', price: 2400, desc: 'A glowing double helix twists behind the digits; every digit snaps in like a base pair', idea: 'R77' },
     // Idée de R77 (2026-10-25) : de la poussière de fée dorée qui fait apparaître chaque chiffre d'un coup de baguette.
@@ -107,6 +116,9 @@
     // la fenêtre donne sur un jardin au soleil, qui se couche (et la lune se lève) dès Mythic.
     { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises', idea: 'costoroll' },
     { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
+    { id: 'blackjack', name: 'Blackjack', emoji: '🃏', price: 3250, desc: 'The dealer shuffles at the side of a felt table, deals every digit face down and flips it over; great rolls hit BLACKJACK', idea: 'kaz' }, // idée de kaz (2026-10-26)
+    { id: 'rocket', name: 'Rocket', emoji: '🚀', price: 1200, desc: 'A rocket blasts off behind every digit and launches it into place; great rolls end in fireworks', idea: 'HSI' }, // idée de HSI (2026-10-26)
+    { id: 'sushi', name: 'Sushi', emoji: '🍣', price: 1200, desc: 'Every digit is a sushi roll that spins, then plops onto the board with a splash of soy; on a Mythic a giant roll bursts into rice', idea: 'Gray alt' }, // idée de Gray alt (2026-10-26)
     { id: 'bowling', name: 'Bowling', emoji: '🎳', price: 2000, desc: 'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE', idea: 'JBearr12' }, // idée de JBearr12 (2026-10-25)
     { id: 'rocksmash', name: 'Rock Smash', emoji: '🪨', price: 1600, desc: 'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone', idea: 'HSI' }, // idée de HSI (2026-10-25)
     { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)
@@ -159,7 +171,11 @@
   // dessous). Seules les pièces changent : l'XP, la chance et les classements restent les mêmes.
   const ROLL_TIERS = [{ upTo: 500, rate: 1 }, { upTo: 2000, rate: 0.5 }, { upTo: Infinity, rate: 0.2 }];
   const rollRate = k => ROLL_TIERS.find(x => k <= x.upTo).rate; // k = numéro du tirage dans la journée (1 = le premier)
-  const rollPay = (coins, k) => Math.floor(coins * rollRate(k));
+  // Adouci le 2026-10-26 (demandé par number 1, kaz et casmictechthing) : un tirage qui rapporte au moins 1 pièce en
+  // rapporte toujours au moins 1, et Celestial ou mieux n'est jamais réduit (100 % à tous les paliers).
+  const ROLL_FULL = ['celestial', 'divine', 'godlike', 'infinite'];
+  const rollPayAt = (coins, rate, tier) => ROLL_FULL.includes(tier) || rate >= 1 ? coins : coins >= 1 ? Math.max(1, Math.floor(coins * rate)) : 0;
+  const rollPay = (coins, k, tier) => rollPayAt(coins, rollRate(k), tier);
   // Changer de pseudo coûte des pièces (le premier pseudo reste gratuit).
   const RENAME_PRICE = 5000;
   // Prestige (Sacha, 2026-10-25) : trois titres de luxe, en quantité limitée (stock commun à tous les joueurs), un
@@ -211,6 +227,19 @@
     { id: 'racetrack', name: 'Grand Prix', emoji: '🏎️', price: 1100, idea: 'YU CHUAN 23', desc: 'Race cars scream down the main straight in front of a packed grandstand' },
     // Idée de 17black (2026-10-24) : une plage venteuse avec un parasol.
     { id: 'windybeach', name: 'Windy Beach', emoji: '🏖️', price: 900, idea: '17black', desc: 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by' },
+    // Idée d'ichi (2026-10-26) : un paysage japonais, cerisiers, portail torii et grande montagne enneigée (dessin
+    // générique, aucun lieu ni logo réel).
+    { id: 'japan', name: 'Spring Shrine', emoji: '⛩️', price: 1100, idea: 'ichi', desc: 'Cherry blossoms drift past a red shrine gate and a snowy mountain at dawn' },
+    // Idée de finnnnn (2026-10-26) : la façade d'une grande banque, avec des voitures de luxe qui passent devant
+    // (voitures inventées, aucune marque).
+    { id: 'bank', name: 'Grand Bank', emoji: '🏦', price: 1200, idea: 'finnnnn', desc: 'Fancy cars cruise past the columns of a grand bank at sunset' },
+    // Idée de finnnnn (2026-10-26) : une aire de jeux avec une balançoire, par une journée ensoleillée.
+    { id: 'playground', name: 'Playground', emoji: '🛝', price: 800, idea: 'finnnnn', desc: 'A sunny playground: a kid swings high next to the slide and the sandbox' },
+    // Idée de Sean (2026-10-26) : un ciel violet très sombre et une grille cyan lumineuse qui file vers l'horizon.
+    { id: 'cybervoid', name: 'Cyber Void', emoji: '🌐', price: 1100, idea: 'Sean', desc: 'A glowing cyan grid races toward the horizon under a deep purple sky' },
+    // Idée de .... (2026-10-26) : le fond de la mer ; sur un très bon tirage (Mythic+), un sous-marin plonge jusqu'au
+    // fond et lâche des bulles à la révélation.
+    { id: 'submarine', name: 'Deep Dive', emoji: '🔱', price: 4500, premium: true, idea: '....', desc: 'A yellow submarine patrols the deep; it dives during every roll, and a Mythic+ roll sends it crashing to the seabed in a burst of bubbles' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
@@ -339,7 +368,7 @@
   // joueur (champ idea), son auteur reçoit 5 % du prix en pièces. Créées en plus : l'acheteur paie le prix normal.
   const IDEA_SHARE = 0.05;
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
-  const api = { ROLL_TIERS, rollRate, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -435,6 +435,19 @@ const eco = (field, amount, t = Date.now()) => (amount ? [['HINCRBY', ecoKey(t),
 const WORST_LB = 'lb:worst', WORST_BEST = 'worst:all';
 // Poubelle par période (idée d'Angelicide9, 2026-10-18) : pire tirage du jour, de la semaine et du mois, à côté des meilleurs.
 const worstKeys = p => ({ lb: p.lb.replace(/^lb:/, 'lbw:'), best: p.best.replace(/^best:/, 'worstp:') });
+// Alerte des amis (idée de Jguz01, 2026-10-26) : un tirage Celestial ou mieux (top 0,1 %, donc rare) est poussé dans
+// la boîte bigin:<ami> de chaque ami, avec le pseudo seulement (jamais l'id). Les amis la lisent avec leur relève des
+// cadeaux (toutes les minutes, api/friends.js 'gifts'). 10 dernières gardées, un jour.
+const BIG_TIERS = new Set(['celestial', 'divine', 'godlike', 'infinite']), BIG_KEEP = 10, BIG_TTL = 86400;
+const bigKey = id => `bigin:${id}`;
+async function pushBigRoll(playerId, n, tier, t) {
+  const [friends, name] = await redis([['SMEMBERS', `fr:${playerId}`], ['HGET', 'names', playerId]]);
+  if (!name || !friends || !friends.length) return 0;
+  const row = JSON.stringify({ name, n, tier, t });
+  await redis(friends.flatMap(f => [['RPUSH', bigKey(f), row], ['LTRIM', bigKey(f), -BIG_KEEP, -1], ['EXPIRE', bigKey(f), BIG_TTL]]));
+  return friends.length;
+}
+
 async function recordRoll(playerId, n, t) {
   const a = engine.analyze(n);
   const s = a.total;
@@ -474,7 +487,7 @@ async function recordRoll(playerId, n, t) {
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
   let coins = 0;
   const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
-  { const full = Shop.COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll); writes.push(...eco('in:rolls', c, t)); coins = c;
+  { const full = Shop.COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll, a.tier); writes.push(...eco('in:rolls', c, t)); coins = c;
     // Rendements décroissants : la part non versée va dans rollCut (le solde se calcule sur les compteurs de rareté).
     if (full > c) writes.push(['HINCRBY', statsKey(playerId), 'rollCut', full - c]);
     // Weekend Rush : +25 % de ce qui est versé, en bonus. rushBonus : la part du Weekend Rush dans « bonus » (tests, stats).
@@ -506,6 +519,7 @@ async function recordRoll(playerId, n, t) {
   writes.push(['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)], ['ZCARD', historyKey(playerId)]);
   writes.push(['ZREVRANK', periods[0].lb, playerId]);
   const out = await redis(writes);
+  if (BIG_TIERS.has(a.tier)) await pushBigRoll(playerId, n, a.tier, t).catch(() => {}); // une alerte ratée ne bloque pas le tirage
   const dayRank = out[out.length - 1] === null ? null : Number(out[out.length - 1]) + 1;
   let stats = { ...toObject(out[out.length - 4]), badges: Number(out[out.length - 3]) };
 
@@ -554,7 +568,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { eco, worstKeys, breathe, WORST_LB, WORST_BEST,
+module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

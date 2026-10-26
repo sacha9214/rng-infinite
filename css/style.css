@@ -3810,6 +3810,20 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .wp-pumpkins::before { left: -50%; right: -50%; bottom: 40px; height: 160px; background: radial-gradient(ellipse 18% 40% at 20% 60%, rgba(226, 232, 240, .14), transparent 70%), radial-gradient(ellipse 22% 45% at 60% 50%, rgba(226, 232, 240, .12), transparent 70%), radial-gradient(ellipse 16% 35% at 90% 65%, rgba(226, 232, 240, .1), transparent 70%); animation: wp-fog 30s ease-in-out infinite alternate; }
 @keyframes wp-flicker { 0%, 100% { opacity: 1; } 45% { opacity: .82; } 50% { opacity: .95; } 70% { opacity: .86; } }
 @keyframes wp-fog { from { transform: translate3d(-12%, 0, 0); } to { transform: translate3d(12%, 0, 0); } }
+/* Pumpkin Patch (2026-10-26) : de temps en temps, une chauve-souris traverse l'écran en battant des ailes (une fois
+   toutes les ~26 s, le reste du temps hors champ). Pas d'animation en mouvement réduit ni en mode performance. */
+#wallpaper .wpp-bat { position: absolute; left: 0; top: 18%; width: 62px; height: 35px; pointer-events: none; opacity: 0;
+  animation: wpp-bat-fly 26s linear 4s infinite; will-change: transform; }
+#wallpaper .wpp-bat::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 26'><path fill='%23140a1c' d='M23 9c-1-2-1-4 0-5l1 2 1-2c1 1 1 3 0 5 3 0 5 2 5 4 3-5 9-9 16-8-3 3-4 7-4 11-2-2-5-2-7 0-2-2-5-2-6 1-1-1-3-1-4 2-1-3-3-3-4-2-1-3-4-3-6-1-2-2-5-2-7 0 0-4-1-8-4-11 7-1 13 3 16 8 0-2 2-4 3-4z'/><circle cx='21.5' cy='10' r='.8' fill='%23fb923c'/><circle cx='24.5' cy='10' r='.8' fill='%23fb923c'/></svg>") center / contain no-repeat;
+  filter: drop-shadow(0 0 1px rgba(253, 186, 116, .9)) drop-shadow(0 0 8px rgba(249, 115, 22, .6)); animation: wpp-bat-flap .22s ease-in-out infinite alternate; transform-origin: 50% 40%; }
+@keyframes wpp-bat-fly {
+  0% { opacity: 1; transform: translate3d(-60px, 0, 0); }
+  4% { transform: translate3d(25vw, -4vh, 0); } 8% { transform: translate3d(50vw, 3vh, 0); }
+  12% { transform: translate3d(75vw, -5vh, 0); } 16% { opacity: 1; transform: translate3d(calc(100vw + 60px), 1vh, 0); }
+  16.01%, 100% { opacity: 0; transform: translate3d(calc(100vw + 60px), 1vh, 0); } }
+@keyframes wpp-bat-flap { from { transform: scaleY(1); } to { transform: scaleY(-.35) translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { #wallpaper .wpp-bat { display: none; } }
+html.perf #wallpaper .wpp-bat { display: none; }
 
 /* 💻 Hacker (idée de JAKE, 2026-10-17) : des colonnes de code vert qui tombent, deux couches à deux vitesses. */
 .wp-hacker { background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22, 163, 74, .12), transparent 70%), linear-gradient(180deg, #020a04 0%, #000000 100%); }
@@ -3900,11 +3914,16 @@ html:not(.dark) #wallpaper[data-react]:is([data-react="landwaste"], [data-react=
 /* courant : la nébuleuse s'assombrit un peu ; rare / épique : vague de couleur ; mythique et + : éclats ; divine et + : explosion */
 #wallpaper[data-react] .wpi-glow { animation: wpi-dim 4.2s ease-out both; }
 #wallpaper:is([data-react="uncommon"], [data-react="rare"], [data-react="epic"]) .wpi-glow { animation: wpi-wave 4.2s ease-out both; }
-#wallpaper:is([data-react="anomaly"], [data-react="mythic"], [data-react="celestial"]) .wpi-glow { animation: wpi-wave-strong 4.4s ease-out both; }
-#wallpaper:is([data-react="anomaly"], [data-react="mythic"], [data-react="celestial"]) .wpi-spark { animation: wpi-sparkle 4.4s ease-out both; }
-#wallpaper:is([data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-glow { background: radial-gradient(ellipse 22% 16% at 50% 42%, rgba(255, 251, 235, .55), transparent 70%), radial-gradient(ellipse 60% 45% at 50% 42%, rgba(var(--wr), .6), rgba(var(--wr), .18) 55%, transparent 78%); animation: wpi-burst 4.4s cubic-bezier(.2, .7, .2, 1) both; }
-#wallpaper:is([data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-spark { animation: wpi-sparkle-burst 4.4s ease-out both; }
+#wallpaper:is([data-react="anomaly"], [data-react="mythic"]) .wpi-glow { animation: wpi-wave-strong 4.4s ease-out both; }
+#wallpaper:is([data-react="anomaly"], [data-react="mythic"]) .wpi-spark { animation: wpi-sparkle 4.4s ease-out both; }
+#wallpaper:is([data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-glow { background: radial-gradient(ellipse 22% 16% at 50% 42%, rgba(255, 251, 235, .55), transparent 70%), radial-gradient(ellipse 60% 45% at 50% 42%, rgba(var(--wr), .6), rgba(var(--wr), .18) 55%, transparent 78%); animation: wpi-burst 4.4s cubic-bezier(.2, .7, .2, 1) both; }
+#wallpaper:is([data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-spark { animation: wpi-sparkle-burst 4.4s ease-out both; }
 #wallpaper[data-react]::after { transition: opacity 1.5s; }
+/* Celestial ou mieux : le fond s'illumine fort (idée de shadow2, 2026-10-26) : l'explosion des Divine+
+   (au lieu de la simple vague), une lueur plus vive, et tout le bord de l'écran s'éclaire un instant (ombre intérieure). */
+#wallpaper.wp-aether:is([data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) { animation: wpi-lightup 4.4s ease-out both; }
+#wallpaper.wp-aether:is([data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpi-glow { filter: brightness(1.5) saturate(1.3); }
+@keyframes wpi-lightup { 0% { box-shadow: inset 0 0 0 0 rgba(var(--wr), 0); } 10% { box-shadow: inset 0 0 26vmax 10vmax rgba(var(--wr), .85); } 100% { box-shadow: inset 0 0 0 0 rgba(var(--wr), 0); } }
 @keyframes wpi-dim { 0% { opacity: 0; } 20% { opacity: .5; } 100% { opacity: 0; } }
 @keyframes wpi-wave { 0% { opacity: 0; transform: scale(.85); } 25% { opacity: .55; transform: scale(1); } 100% { opacity: 0; transform: scale(1.12); } }
 @keyframes wpi-wave-strong { 0% { opacity: 0; transform: scale(.8); } 18% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
@@ -4130,6 +4149,182 @@ html.perf #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; }
 @keyframes wpw-roll-x { from { translate: 105vw 0; } to { translate: -120% 0; } }
 @keyframes wpw-roll { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 @media (prefers-reduced-motion: reduce) { #wallpaper.wp-windybeach i { animation: none !important; } }
+
+/* ⛩️ Spring Shrine (idée d'ichi, 2026-10-26) : un paysage japonais à l'aube. Le fond : une branche de cerisier en haut à
+   gauche, puis tout le paysage dans un seul SVG (soleil, grande montagne enneigée, collines, pagode, lac) recadré
+   « slice » sur le bas, pour qu'un téléphone en portrait garde la montagne au centre. ::after, le portail torii posé
+   au bord du lac (toujours visible, même sur 320 px) ; ::before, les pétales qui tombent (une seule couche, cf. Sakura).
+   Sur le vrai fond, une bande de brume glisse devant la montagne. Dessin générique : aucun lieu ni logo réel.
+   Mouvement réduit / mode performance : tout est arrêté. */
+.wp-japan { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><g fill='none' stroke='%233f1d2b' stroke-linecap='round'><path d='M-10 36C70 46 150 84 250 96C300 101 330 112 350 124' stroke-width='11'/><path d='M346 122C362 132 376 142 388 152' stroke-width='5'/><path d='M140 74C170 110 182 150 172 196' stroke-width='6'/><path d='M250 96C262 70 290 56 320 52' stroke-width='5'/><path d='M60 44C70 70 90 90 118 100' stroke-width='4'/></g><g fill='%23f9a8d4'><circle cx='40' cy='30' r='14'/><circle cx='96' cy='52' r='13'/><circle cx='120' cy='96' r='12'/><circle cx='150' cy='70' r='15'/><circle cx='176' cy='118' r='12'/><circle cx='168' cy='170' r='13'/><circle cx='208' cy='86' r='14'/><circle cx='252' cy='106' r='13'/><circle cx='290' cy='60' r='14'/><circle cx='322' cy='50' r='11'/><circle cx='300' cy='120' r='12'/><circle cx='350' cy='138' r='13'/><circle cx='388' cy='150' r='12'/><circle cx='178' cy='196' r='10'/></g><g fill='%23fbcfe8'><circle cx='30' cy='42' r='10'/><circle cx='108' cy='44' r='9'/><circle cx='140' cy='82' r='10'/><circle cx='190' cy='100' r='9'/><circle cx='160' cy='150' r='9'/><circle cx='230' cy='96' r='10'/><circle cx='276' cy='70' r='9'/><circle cx='312' cy='128' r='9'/><circle cx='366' cy='144' r='9'/><circle cx='70' cy='36' r='9'/></g><g fill='%23fff' opacity='.9'><circle cx='42' cy='28' r='3'/><circle cx='150' cy='68' r='3'/><circle cx='208' cy='84' r='3'/><circle cx='290' cy='58' r='3'/><circle cx='350' cy='136' r='3'/><circle cx='168' cy='168' r='3'/><circle cx='96' cy='50' r='2.5'/><circle cx='252' cy='104' r='2.5'/></g></svg>") 0 0 / min(62%, 520px) auto no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='l' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23fbcfe8'/><stop offset='.45' stop-color='%23c4b5fd'/><stop offset='1' stop-color='%234c1d95'/></linearGradient><linearGradient id='m' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23818cf8'/><stop offset='1' stop-color='%235b4b8a'/></linearGradient></defs><circle cx='560' cy='360' r='112' fill='%23fb7185' opacity='.8'/><path d='M0 650L170 572L320 612L470 556L620 618L980 600L1140 548L1300 606L1450 560L1600 612V900H0Z' fill='%23c4b5fd' opacity='.6'/><path d='M250 680C480 570 640 340 742 252L858 252C960 340 1120 570 1350 680Z' fill='url(%23m)'/><path d='M800 252L858 252C960 340 1120 570 1350 680L800 680Z' fill='%231e1b4b' opacity='.14'/><path d='M742 252L858 252C900 284 928 312 948 336L918 328L900 354L878 324L856 358L832 326L808 356L786 324L764 352L742 326L712 342L652 338C690 302 720 270 742 252Z' fill='%23f8fafc'/><path d='M0 712Q200 650 420 696T860 686T1300 676T1600 690V900H0Z' fill='%234c3a6b'/><g fill='%232e1f4a' transform='translate(330 610)'><rect x='26' y='14' width='8' height='86'/><path d='M0 30L30 14L60 30Z M6 54L30 40L54 54Z M10 78L30 66L50 78Z M14 100L30 90L46 100Z'/></g><rect y='712' width='1600' height='188' fill='url(%23l)'/><g fill='%23fda4af' opacity='.65'><rect x='470' y='740' width='180' height='5' rx='2.5'/><rect x='500' y='760' width='120' height='4' rx='2'/><rect x='520' y='778' width='80' height='3' rx='1.5'/></g><g fill='%23fff' opacity='.35'><rect x='900' y='732' width='160' height='2' rx='1'/><rect x='200' y='790' width='220' height='2' rx='1'/><rect x='1180' y='808' width='200' height='2' rx='1'/></g><path d='M0 868Q300 836 600 856T1200 850T1600 856V900H0Z' fill='%232e1065'/></svg>") center bottom / 100% 100% no-repeat,
+    linear-gradient(180deg, #f9a8d4 0%, #fbcfe8 30%, #fde2e4 55%, #fed7aa 80%); }
+/* le portail, au bord du lac, avec son reflet */
+.wp-japan::after { right: 7%; bottom: 7%; width: min(30%, 250px); aspect-ratio: 200 / 260; z-index: 1;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 260'><g><path d='M4 28Q100 44 196 28L198 16Q100 32 2 16Z' fill='%231f1726'/><path d='M16 34Q100 48 184 34V46Q100 58 16 46Z' fill='%23dc2626'/><rect x='26' y='78' width='148' height='11' fill='%23dc2626'/><rect x='46' y='46' width='13' height='150' fill='%23dc2626'/><rect x='141' y='46' width='13' height='150' fill='%23dc2626'/><rect x='93' y='50' width='14' height='28' fill='%231f1726'/><rect x='43' y='184' width='19' height='14' fill='%231f1726'/><rect x='138' y='184' width='19' height='14' fill='%231f1726'/><rect x='46' y='46' width='4' height='138' fill='%23fca5a5' opacity='.5'/><rect x='141' y='46' width='4' height='138' fill='%23fca5a5' opacity='.5'/></g><g opacity='.28' transform='matrix(1 0 0 -.45 0 287)'><rect x='26' y='78' width='148' height='11' fill='%23dc2626'/><rect x='46' y='46' width='13' height='150' fill='%23dc2626'/><rect x='141' y='46' width='13' height='150' fill='%23dc2626'/><path d='M16 34Q100 48 184 34V46Q100 58 16 46Z' fill='%23dc2626'/></g></svg>") center bottom / contain no-repeat; }
+/* les pétales : une tuile qui descend en biais */
+.wp-japan::before { left: -300px; right: 0; top: -300px; bottom: 0; z-index: 2;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><g fill='%23ec4899' opacity='.75'><ellipse cx='40' cy='60' rx='6' ry='3.5' transform='rotate(30 40 60)'/><ellipse cx='210' cy='40' rx='5' ry='3' transform='rotate(-40 210 40)'/><ellipse cx='150' cy='230' rx='6' ry='3.5' transform='rotate(-20 150 230)'/></g><g fill='%23fff' opacity='.9'><ellipse cx='100' cy='140' rx='5' ry='3' transform='rotate(60 100 140)'/><ellipse cx='260' cy='170' rx='6' ry='3.5' transform='rotate(10 260 170)'/><ellipse cx='60' cy='260' rx='4' ry='2.5' transform='rotate(-50 60 260)'/></g><g fill='%23f9a8d4'><ellipse cx='240' cy='280' rx='5' ry='3' transform='rotate(40 240 280)'/><ellipse cx='180' cy='110' rx='4' ry='2.5'/></g></svg>") 0 0 / 300px 300px;
+  animation: wp-fall 14s linear infinite; }
+/* la brume devant la montagne (vrai fond seulement) */
+#wallpaper .wpj-mist { position: absolute; left: 0; right: -1600px; bottom: 24%; height: 16%; pointer-events: none; opacity: .55;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='120'><defs><filter id='b' x='-20%' y='-60%' width='140%' height='220%'><feGaussianBlur stdDeviation='14'/></filter></defs><g filter='url(%23b)' fill='%23fff'><ellipse cx='200' cy='70' rx='220' ry='18'/><ellipse cx='620' cy='56' rx='160' ry='14' opacity='.8'/><ellipse cx='1040' cy='74' rx='260' ry='16'/><ellipse cx='1420' cy='60' rx='150' ry='12' opacity='.7'/></g></svg>") 0 0 / 1600px 100% repeat-x;
+  animation: wpj-mist 90s linear infinite; }
+@keyframes wpj-mist { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1600px, 0, 0); } }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-japan i { animation: none !important; } }
+
+/* 🏦 Grand Bank (idée de finnnnn, 2026-10-26) : la façade d'une grande banque au soleil couchant, et des voitures de
+   luxe inventées qui passent devant. Le fond : le ciel, une ligne de tours au loin, la banque (colonnes, fronton avec
+   une pièce ∞ du jeu, portes et fenêtres éclairées), le trottoir et la route. ::after, la voie de devant (coupé doré,
+   limousine blanche, bolide rouge, berline ancienne) qui file vers la gauche ; ::before, la voie du fond, plus petite,
+   vers la droite. Aucune marque ni modèle réel. Mouvement réduit / mode performance : les voitures restent garées
+   (règles globales de .wp::before/::after). SVG source : générés par un petit script, encodés ici. */
+.wp-bank { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='6'><rect width='60' height='6' fill='%23fde68a'/></svg>") left 0 bottom 64px / 120px 4px repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600'><defs><linearGradient id='c' x1='0' x2='1'><stop offset='0' stop-color='%23d6cdb8'/><stop offset='.35' stop-color='%23fbf7ee'/><stop offset='1' stop-color='%23c9bfa6'/></linearGradient><radialGradient id='g' cx='.4' cy='.35'><stop offset='0' stop-color='%23fde68a'/><stop offset='.6' stop-color='%23eab308'/><stop offset='1' stop-color='%23a16207'/></radialGradient></defs><rect x='160' y='200' width='880' height='340' fill='%23cfc6b1'/><rect x='262' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='266' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='372' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='376' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='482' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='486' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='702' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='706' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='812' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='816' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='922' y='300' width='40' height='150' rx='20' fill='%233b2f1e'/><rect x='926' y='306' width='32' height='140' rx='16' fill='%23fcd34d' opacity='.9'/><rect x='556' y='320' width='88' height='200' fill='%23a16207'/><rect x='564' y='328' width='72' height='192' fill='%231c1917'/><rect x='598' y='328' width='4' height='192' fill='%23a16207'/><rect x='200' y='222' width='44' height='300' fill='url(%23c)'/><rect x='192' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='194' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='310' y='222' width='44' height='300' fill='url(%23c)'/><rect x='302' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='304' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='420' y='222' width='44' height='300' fill='url(%23c)'/><rect x='412' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='414' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='530' y='222' width='44' height='300' fill='url(%23c)'/><rect x='522' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='524' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='640' y='222' width='44' height='300' fill='url(%23c)'/><rect x='632' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='634' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='750' y='222' width='44' height='300' fill='url(%23c)'/><rect x='742' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='744' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='860' y='222' width='44' height='300' fill='url(%23c)'/><rect x='852' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='854' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='970' y='222' width='44' height='300' fill='url(%23c)'/><rect x='962' y='208' width='60' height='14' fill='%23e9e2d0'/><rect x='964' y='520' width='56' height='16' fill='%23d9d0bb'/><rect x='130' y='168' width='940' height='42' fill='%23e9e2d0'/><rect x='130' y='204' width='940' height='6' fill='%23c9bfa6'/><text x='600' y='198' text-anchor='middle' font-family='Georgia,serif' font-size='26' letter-spacing='14' fill='%236b5d3f'>GRAND BANK</text><path d='M110 170L600 36L1090 170Z' fill='%23efe8d8'/><path d='M180 158L600 52L1020 158Z' fill='%23e2d9c4'/><path d='M110 170L600 36L1090 170' fill='none' stroke='%23fbf7ee' stroke-width='6'/><circle cx='600' cy='116' r='36' fill='url(%23g)' stroke='%23854d0e' stroke-width='3'/><circle cx='600' cy='116' r='28' fill='none' stroke='%23854d0e' stroke-opacity='.5' stroke-width='2'/><text x='600' y='132' text-anchor='middle' font-family='Georgia,serif' font-size='44' font-weight='bold' fill='%23713f12'>&%238734;</text><rect x='120' y='536' width='960' height='16' fill='%23e2d9c4'/><rect x='90' y='552' width='1020' height='22' fill='%23d6cdb8'/><rect x='60' y='574' width='1080' height='26' fill='%23c9bfa6'/><g fill='%231f2937'><rect x='40' y='420' width='8' height='180'/><rect x='1152' y='420' width='8' height='180'/><rect x='30' y='592' width='28' height='8'/><rect x='1142' y='592' width='28' height='8'/></g><g fill='%23fde68a'><circle cx='44' cy='412' r='14'/><circle cx='1156' cy='412' r='14'/></g><g fill='%23fde68a' opacity='.25'><circle cx='44' cy='412' r='34'/><circle cx='1156' cy='412' r='34'/></g></svg>") center bottom 136px / auto min(54%, 560px) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='300'><g fill='%233b2a5a'><rect x='0' y='120' width='90' height='180'/><rect x='100' y='60' width='70' height='240'/><rect x='180' y='150' width='110' height='150'/><rect x='300' y='30' width='80' height='270'/><rect x='390' y='110' width='100' height='190'/><rect x='500' y='80' width='90' height='220'/></g><g fill='%23fcd34d' opacity='.5'><rect x='20' y='140' width='8' height='12'/><rect x='50' y='170' width='8' height='12'/><rect x='115' y='80' width='8' height='12'/><rect x='145' y='120' width='8' height='12'/><rect x='115' y='200' width='8' height='12'/><rect x='200' y='170' width='8' height='12'/><rect x='250' y='200' width='8' height='12'/><rect x='320' y='60' width='8' height='12'/><rect x='350' y='110' width='8' height='12'/><rect x='320' y='180' width='8' height='12'/><rect x='410' y='130' width='8' height='12'/><rect x='450' y='170' width='8' height='12'/><rect x='520' y='100' width='8' height='12'/><rect x='560' y='150' width='8' height='12'/><rect x='520' y='220' width='8' height='12'/><rect x='60' y='240' width='8' height='12'/><rect x='260' y='250' width='8' height='12'/><rect x='460' y='240' width='8' height='12'/></g></svg>") left 0 bottom 142px / auto min(56%, 560px) repeat-x,
+    linear-gradient(180deg, #e5e7eb 0, #cbd5e1 12px, #6b7280 12px, #6b7280 16px, #374151 16px, #1f2937) left 0 bottom 0 / 100% 142px no-repeat,
+    radial-gradient(ellipse 60% 40% at 50% 78%, rgba(253, 224, 71, .45), transparent 70%),
+    linear-gradient(180deg, #1e3a8a 0%, #6d28d9 34%, #f472b6 62%, #fbbf24 82%); }
+.wp-bank::after { left: 0; right: -2400px; bottom: 8px; height: 70px; z-index: 2;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='70'><defs><g id='w'><circle r='12' fill='%23111'/><circle r='6.5' fill='%23cbd5e1'/><circle r='2.5' fill='%23111'/></g></defs><g transform='translate(120 2) scale(1)'><path d='M8 48Q10 38 40 36L80 34L112 20L170 20L196 34L226 38Q236 42 234 52L8 54Z' fill='%23d4a017'/><path d='M118 23L168 23L188 34L104 34Z' fill='%230f172a' opacity='.85'/><path d='M14 46H228' stroke='%23fff' stroke-opacity='.5' stroke-width='1.5'/><rect x='8' y='40' width='9' height='4' rx='2' fill='%23fef08a'/><use href='%23w' x='52' y='54'/><use href='%23w' x='194' y='54'/></g><g transform='translate(700 2) scale(1)'><path d='M8 46Q10 36 30 34L70 32L92 20L262 20L282 32L306 36Q314 40 312 52L8 54Z' fill='%23f8fafc'/><g fill='%230f172a' opacity='.85'><path d='M96 23L140 23L140 33L80 33Z'/><rect x='146' y='23' width='44' height='10'/><rect x='196' y='23' width='44' height='10'/><path d='M246 23L260 23L276 33L246 33Z'/></g><path d='M14 44H306' stroke='%2394a3b8' stroke-width='1.5'/><rect x='8' y='40' width='9' height='4' rx='2' fill='%23fef08a'/><use href='%23w' x='50' y='54'/><use href='%23w' x='272' y='54'/></g><g transform='translate(1350 2) scale(1)'><path d='M8 50L28 38L88 30L128 15L178 15L214 30L232 34L234 52L8 54Z' fill='%23dc2626'/><path d='M100 29L130 18L168 18L186 29Z' fill='%230f172a' opacity='.85'/><path d='M40 42H200' stroke='%23fff' stroke-opacity='.35' stroke-width='2'/><rect x='8' y='42' width='10' height='4' rx='2' fill='%23fef08a'/><rect x='226' y='38' width='8' height='5' fill='%23ef4444'/><use href='%23w' x='54' y='54'/><use href='%23w' x='190' y='54'/></g><g transform='translate(1900 2) scale(1)'><path d='M10 52Q6 38 30 35L60 33Q70 14 110 12L150 12Q178 14 190 33L216 35Q234 38 232 52Z' fill='%23111827'/><path d='M74 32Q82 18 110 17L124 17V32ZM130 17L148 17Q170 18 180 32L130 32Z' fill='%23bae6fd' opacity='.55'/><path d='M12 46H230' stroke='%23e5e7eb' stroke-width='2'/><circle cx='16' cy='40' r='4' fill='%23fef08a'/><g><circle cx='54' cy='54' r='12' fill='%23111'/><circle cx='54' cy='54' r='8' fill='%23f8fafc'/><circle cx='54' cy='54' r='4' fill='%239ca3af'/><circle cx='190' cy='54' r='12' fill='%23111'/><circle cx='190' cy='54' r='8' fill='%23f8fafc'/><circle cx='190' cy='54' r='4' fill='%239ca3af'/></g></g></svg>") 0 0 / 2400px 70px repeat-x;
+  animation: wpk-left 14s linear infinite; }
+.wp-bank::before { left: -2400px; right: 0; bottom: 74px; height: 50px; z-index: 1; opacity: .9;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2400' height='50'><defs><g id='w'><circle r='12' fill='%23111'/><circle r='6.5' fill='%23cbd5e1'/><circle r='2.5' fill='%23111'/></g></defs><g transform='translate(300 2) scale(-0.7 0.7) translate(-240 0)'><path d='M8 50L28 38L88 30L128 15L178 15L214 30L232 34L234 52L8 54Z' fill='%232563eb'/><path d='M100 29L130 18L168 18L186 29Z' fill='%230f172a' opacity='.85'/><path d='M40 42H200' stroke='%23fff' stroke-opacity='.35' stroke-width='2'/><rect x='8' y='42' width='10' height='4' rx='2' fill='%23fef08a'/><rect x='226' y='38' width='8' height='5' fill='%23ef4444'/><use href='%23w' x='54' y='54'/><use href='%23w' x='190' y='54'/></g><g transform='translate(1000 2) scale(-0.7 0.7) translate(-240 0)'><path d='M10 52Q6 38 30 35L60 33Q70 14 110 12L150 12Q178 14 190 33L216 35Q234 38 232 52Z' fill='%23065f46'/><path d='M74 32Q82 18 110 17L124 17V32ZM130 17L148 17Q170 18 180 32L130 32Z' fill='%23bae6fd' opacity='.55'/><path d='M12 46H230' stroke='%23e5e7eb' stroke-width='2'/><circle cx='16' cy='40' r='4' fill='%23fef08a'/><g><circle cx='54' cy='54' r='12' fill='%23111'/><circle cx='54' cy='54' r='8' fill='%23f8fafc'/><circle cx='54' cy='54' r='4' fill='%239ca3af'/><circle cx='190' cy='54' r='12' fill='%23111'/><circle cx='190' cy='54' r='8' fill='%23f8fafc'/><circle cx='190' cy='54' r='4' fill='%239ca3af'/></g></g><g transform='translate(1700 2) scale(-0.7 0.7) translate(-240 0)'><path d='M8 48Q10 38 40 36L80 34L112 20L170 20L196 34L226 38Q236 42 234 52L8 54Z' fill='%237c3aed'/><path d='M118 23L168 23L188 34L104 34Z' fill='%230f172a' opacity='.85'/><path d='M14 46H228' stroke='%23fff' stroke-opacity='.5' stroke-width='1.5'/><rect x='8' y='40' width='9' height='4' rx='2' fill='%23fef08a'/><use href='%23w' x='52' y='54'/><use href='%23w' x='194' y='54'/></g></svg>") 0 0 / 2400px 50px repeat-x;
+  animation: wpk-right 20s linear infinite; }
+@keyframes wpk-left { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-2400px, 0, 0); } }
+@keyframes wpk-right { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(2400px, 0, 0); } }
+/* aperçu de la boutique : voitures à l'échelle de la petite carte */
+.wall-preview.wp-bank { background-position: left 0 bottom 12px, center bottom 26px, left 0 bottom 28px, left 0 bottom 0, 0 0, 0 0; background-size: 60px 2px, auto 62%, auto 60%, 100% 28px, auto, auto; }
+.wall-preview.wp-bank::after { bottom: 1px; height: 18px; right: -620px; background-size: 620px 18px; animation-name: wpk-left-sm; animation-duration: 9s; }
+.wall-preview.wp-bank::before { bottom: 14px; height: 12px; left: -620px; background-size: 620px 12px; animation-name: wpk-right-sm; animation-duration: 12s; }
+@keyframes wpk-left-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-620px, 0, 0); } }
+@keyframes wpk-right-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(620px, 0, 0); } }
+
+/* 🛝 Playground (idée de finnnnn, 2026-10-26) : une aire de jeux par une belle journée. Le fond : le ciel et le soleil,
+   des collines, l'herbe fleurie, un toboggan à gauche, un bac à sable au milieu et le portique (avec une balançoire
+   vide) à droite. ::after, la balançoire où un enfant se balance (rotation autour de la barre du portique, placée avec
+   les mêmes variables que le portique : --s, sa hauteur, et --dx, son décalage depuis le centre) ; ::before, les
+   rayons du soleil qui tournent lentement. Sur le vrai fond, des nuages passent. Mouvement réduit / mode performance :
+   la balançoire est immobile. */
+.wp-playground { --s: min(40vmin, 320px); --dx: min(27vw, 400px); --gy: 70px;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 240'><g stroke-linecap='round' stroke-width='9' stroke='%23ef4444'><path d='M22 238L52 20M82 238L52 20M218 238L248 20M278 238L248 20'/></g><g stroke='%23b91c1c' stroke-width='5'><path d='M34 150H70M230 150H266'/></g><rect x='36' y='12' width='228' height='14' rx='7' fill='%23facc15'/><rect x='36' y='12' width='228' height='5' rx='2.5' fill='%23fef08a'/><g stroke='%2364748b' stroke-width='2.5'><path d='M178 24V196M202 24V196'/></g><rect x='172' y='194' width='36' height='8' rx='3' fill='%2322c55e'/><ellipse cx='150' cy='238' rx='140' ry='5' fill='%2314532d' opacity='.25'/></svg>") left calc(50% + var(--dx)) bottom var(--gy) / auto var(--s) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 200'><g stroke='%230ea5e9' stroke-width='7' stroke-linecap='round'><path d='M40 198V40M80 198V40'/></g><g stroke='%2338bdf8' stroke-width='4'><path d='M40 70H80M40 100H80M40 130H80M40 160H80'/></g><rect x='32' y='34' width='56' height='10' rx='4' fill='%23facc15'/><path d='M36 34Q60 8 84 34' fill='none' stroke='%23ef4444' stroke-width='5'/><path d='M84 44C130 52 160 140 200 176Q216 188 250 190V198Q210 198 192 186C152 154 126 66 84 56Z' fill='%23a855f7'/><path d='M84 44C130 52 160 140 200 176Q216 188 250 190' fill='none' stroke='%23d8b4fe' stroke-width='3'/><ellipse cx='140' cy='198' rx='120' ry='4' fill='%2314532d' opacity='.25'/></svg>") left calc(50% - var(--dx)) bottom var(--gy) / auto calc(var(--s) * .8) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 70'><path d='M10 30L250 30L240 66L20 66Z' fill='%23b45309'/><path d='M18 30L242 30L236 54L24 54Z' fill='%23fcd34d'/><path d='M40 32Q80 22 130 30T220 32' fill='%23fde68a'/><path d='M150 34L170 18L186 34Z' fill='%23ef4444'/><rect x='66' y='30' width='22' height='16' rx='3' fill='%233b82f6'/><path d='M62 30H92' stroke='%231d4ed8' stroke-width='3'/></svg>") center bottom calc(var(--gy) * .3) / auto calc(var(--s) * .3) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='60'><g fill='%23fde047'><circle cx='30' cy='20' r='4'/><circle cx='210' cy='44' r='4'/></g><g fill='%23f9a8d4'><circle cx='120' cy='36' r='4'/><circle cx='330' cy='14' r='4'/></g><g fill='%23fff'><circle cx='80' cy='50' r='3.5'/><circle cx='270' cy='28' r='3.5'/><circle cx='370' cy='48' r='3.5'/></g><g stroke='%2316a34a' stroke-width='2' fill='none'><path d='M160 50l-4-10M163 50l3-11M250 54l-3-9M253 54l4-10M20 50l-3-9M23 50l4-10'/></g></svg>") left 0 bottom 6px / 400px 60px repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='120'><path d='M0 120V70Q100 20 220 60T460 50T680 40T800 70V120Z' fill='%2386efac'/><path d='M0 120V96Q140 66 300 92T560 86T800 96V120Z' fill='%234ade80'/><g fill='%2315803d'><circle cx='120' cy='54' r='18'/><circle cx='140' cy='48' r='22'/><rect x='134' y='60' width='6' height='20' fill='%2378350f'/><circle cx='600' cy='44' r='20'/><circle cx='620' cy='40' r='16'/><rect x='606' y='54' width='6' height='20' fill='%2378350f'/></g></svg>") left 0 bottom calc(var(--gy) + 60px) / 800px 120px repeat-x,
+    linear-gradient(180deg, #4ade80, #16a34a) left 0 bottom 0 / 100% calc(var(--gy) + 64px) no-repeat,
+    radial-gradient(circle at 84% 13%, #fffbeb 0 6vmin, rgba(254, 240, 138, .7) 7vmin, rgba(254, 240, 138, .2) 14vmin, transparent 24vmin),
+    linear-gradient(180deg, #0284c7 0%, #38bdf8 40%, #bae6fd 100%); }
+/* la balançoire : pivot au milieu du haut, sur la barre du portique (x 115 sur 300, y 20 sur 240) */
+.wp-playground::after { width: calc(var(--s) * 60 / 240); height: calc(var(--s) * 190 / 240); z-index: 1;
+  left: calc(50% + var(--dx) - var(--s) * 1.25 * 35 / 300 - var(--s) * 30 / 240); bottom: calc(var(--gy) + var(--s) * 30 / 240);
+  transform-origin: 50% 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 190'><g stroke='%2364748b' stroke-width='2.5'><path d='M18 0V170M42 0V170'/></g><path d='M40 168L56 174L58 186' fill='none' stroke='%231e3a8a' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><circle cx='58' cy='188' r='3.5' fill='%230f172a'/><rect x='22' y='128' width='18' height='42' rx='6' fill='%23f97316'/><path d='M26 140L18 132M36 140L42 132' stroke='%23f1c27d' stroke-width='4' stroke-linecap='round'/><circle cx='31' cy='116' r='11' fill='%23f1c27d'/><path d='M20 114Q22 102 32 103Q42 104 42 114Q36 108 28 110Q24 111 20 114Z' fill='%2378350f'/><circle cx='35' cy='117' r='1.4' fill='%231e293b'/><path d='M32 122Q35 124 38 121' stroke='%231e293b' stroke-width='1.2' fill='none'/><rect x='10' y='168' width='40' height='8' rx='3' fill='%232563eb'/></svg>") center top / 100% 100% no-repeat;
+  animation: wpp-swing 2.6s ease-in-out infinite alternate; }
+@keyframes wpp-swing { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+/* les rayons du soleil */
+.wp-playground::before { left: 84%; top: 13%; width: 70vmin; height: 70vmin; margin: -35vmin 0 0 -35vmin; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 255, 255, .22) 0 7deg, transparent 7deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 70%); mask-image: radial-gradient(circle, #000 20%, transparent 70%);
+  animation: wpp-rays 80s linear infinite; }
+@keyframes wpp-rays { to { transform: rotate(360deg); } }
+/* téléphone : le portique et le toboggan se rapprochent du centre pour rester entiers */
+@media (max-width: 600px) { .wp-playground { --s: min(34vmin, 200px); --dx: 28vw; --gy: 56px; } }
+/* aperçu de la boutique (carte de 6,5rem de haut) */
+.wall-preview.wp-playground { --s: 3.6rem; --dx: 30%; --gy: .9rem; }
+.wall-preview.wp-playground { background-position: left calc(50% + 4.2rem) bottom .9rem, left calc(50% - 4.2rem) bottom .9rem, center bottom .25rem, left 0 bottom 0, left 0 bottom 1.6rem, left 0 bottom 0, 0 0, 0 0;
+  background-size: auto 3.6rem, auto 2.9rem, auto 1.1rem, 200px 30px, 400px 60px, 100% 1.9rem, auto, auto; }
+.wall-preview.wp-playground::after { left: calc(50% + 4.2rem - 3.6rem * 1.25 * 35 / 300 - 3.6rem * 30 / 240); }
+.wall-preview.wp-playground::before { width: 9rem; height: 9rem; margin: -4.5rem 0 0 -4.5rem; }
+/* les nuages (vrai fond seulement) */
+#wallpaper .wpp-clouds { position: absolute; left: 0; right: -1600px; top: 6%; height: 200px; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='200'><g fill='%23fff'><g opacity='.95'><ellipse cx='160' cy='80' rx='70' ry='26'/><ellipse cx='210' cy='64' rx='46' ry='34'/><ellipse cx='120' cy='70' rx='36' ry='26'/></g><g opacity='.85'><ellipse cx='720' cy='130' rx='90' ry='24'/><ellipse cx='760' cy='112' rx='50' ry='32'/><ellipse cx='690' cy='116' rx='34' ry='22'/></g><g opacity='.9'><ellipse cx='1240' cy='60' rx='60' ry='20'/><ellipse cx='1270' cy='46' rx='36' ry='26'/></g></g></svg>") 0 0 / 1600px 200px repeat-x;
+  animation: wpp-clouds 140s linear infinite; }
+@keyframes wpp-clouds { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1600px, 0, 0); } }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-playground i { animation: none !important; } }
+
+/* 🌐 Cyber Void (idée de Sean, 2026-10-26) : un ciel violet presque noir, des montagnes en fil de fer sur l'horizon
+   et une grille cyan lumineuse qui file VERS l'horizon (à l'inverse de Synthwave, dont la grille vient vers nous).
+   Le fond : ciel, lueur de l'horizon et montagnes (un SVG étiré sur tout l'écran, traits à épaisseur fixe) ; ::before,
+   la grille en perspective, fondue près de l'horizon ; ::after, les étoiles qui scintillent. Sur le vrai fond, une
+   onde de lumière remonte la grille jusqu'à l'horizon toutes les quelques secondes. Mouvement réduit / mode
+   performance : tout est arrêté. */
+.wp-cybervoid { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' preserveAspectRatio='none'><polygon points='0,581 0,580 60,552 110,566 170,528 240,560 300,540 360,572 420,546 470,580 530,580 580,556 640,534 700,562 760,520 830,556 890,538 950,566 1000,548 1000,581' fill='%230b0420'/><polyline points='0,580 60,552 110,566 170,528 240,560 300,540 360,572 420,546 470,580 530,580 580,556 640,534 700,562 760,520 830,556 890,538 950,566 1000,548' fill='none' stroke='%2322d3ee' stroke-opacity='.7' stroke-width='1.5' vector-effect='non-scaling-stroke'/><g stroke='%2322d3ee' stroke-opacity='.22' stroke-width='1' vector-effect='non-scaling-stroke'><path d='M0 580L0 580'/><path d='M60 552L80 580'/><path d='M110 566L100 580'/><path d='M170 528L200 580'/><path d='M240 560L220 580'/><path d='M300 540L310 580'/><path d='M360 572L350 580'/><path d='M420 546L440 580'/><path d='M470 580L470 580'/><path d='M530 580L530 580'/><path d='M580 556L560 580'/><path d='M640 534L670 580'/><path d='M700 562L690 580'/><path d='M760 520L790 580'/><path d='M830 556L810 580'/><path d='M890 538L910 580'/><path d='M950 566L940 580'/><path d='M1000 548L1000 580'/></g></svg>") 0 0 / 100% 100% no-repeat,
+    radial-gradient(ellipse 60% 14% at 50% 58%, rgba(34, 211, 238, .5), transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 50%, rgba(168, 85, 247, .35), transparent 70%),
+    linear-gradient(180deg, #030008 0%, #0d0326 30%, #2a0b52 57.6%, #67e8f9 57.8%, #67e8f9 58.1%, #05010f 58.1%, #000 100%); }
+.wp-cybervoid::before { left: -60%; right: -60%; top: 58%; height: 110%; transform-origin: 50% 0;
+  background: repeating-linear-gradient(90deg, rgba(103, 232, 249, 1) 0 2px, rgba(34, 211, 238, .35) 2px 6px, transparent 6px 64px), repeating-linear-gradient(0deg, rgba(103, 232, 249, 1) 0 2px, rgba(34, 211, 238, .35) 2px 6px, transparent 6px 64px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%); mask-image: linear-gradient(180deg, transparent, #000 22%);
+  transform: perspective(320px) rotateX(72deg); animation: wpc-grid 1.4s linear infinite; }
+@keyframes wpc-grid { from { transform: perspective(320px) rotateX(72deg) translate3d(0, 64px, 0); } to { transform: perspective(320px) rotateX(72deg) translate3d(0, 0, 0); } }
+.wp-cybervoid::after { left: 0; right: 0; top: 0; height: 56%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><circle cx='165' cy='38' r='1.6' fill='%23e9d5ff'/><circle cx='24' cy='18' r='0.8' fill='%23a5f3fc'/><circle cx='298' cy='14' r='1' fill='%23fff'/><circle cx='44' cy='111' r='1.6' fill='%23fff'/><circle cx='123' cy='23' r='1.6' fill='%23fff'/><circle cx='289' cy='31' r='1' fill='%23e9d5ff'/><circle cx='298' cy='15' r='1.6' fill='%23fff'/><circle cx='113' cy='11' r='1' fill='%23a5f3fc'/><circle cx='214' cy='36' r='0.8' fill='%23e9d5ff'/><circle cx='157' cy='143' r='1' fill='%23fff'/><circle cx='297' cy='146' r='1' fill='%23a5f3fc'/><circle cx='49' cy='140' r='0.8' fill='%23e9d5ff'/><circle cx='30' cy='158' r='1' fill='%23a5f3fc'/><circle cx='272' cy='109' r='1.2' fill='%23a5f3fc'/><circle cx='299' cy='236' r='1.6' fill='%23a5f3fc'/><circle cx='153' cy='63' r='1' fill='%23e9d5ff'/><circle cx='124' cy='20' r='1.2' fill='%23e9d5ff'/><circle cx='253' cy='224' r='1.2' fill='%23e9d5ff'/><circle cx='229' cy='73' r='0.8' fill='%23fff'/><circle cx='262' cy='107' r='1' fill='%23a5f3fc'/><circle cx='77' cy='238' r='1.6' fill='%23a5f3fc'/><circle cx='20' cy='171' r='0.8' fill='%23e9d5ff'/></svg>") 0 0 / 320px 240px;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent);
+  animation: wp-twinkle 5s ease-in-out infinite; }
+/* l'onde qui remonte vers l'horizon (vrai fond seulement) : elle ralentit et s'efface en approchant */
+#wallpaper .wpc-pulse { position: absolute; left: 0; right: 0; top: 58%; height: 2px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #67e8f9 20%, #f0abfc 50%, #67e8f9 80%, transparent);
+  box-shadow: 0 0 12px 2px rgba(34, 211, 238, .7);
+  animation: wpc-pulse 5s cubic-bezier(.15, .6, .35, 1) infinite; }
+@keyframes wpc-pulse { 0% { transform: translate3d(0, 42vh, 0) scaleX(1.4); opacity: 0; } 8% { opacity: 1; } 70% { opacity: .8; } 100% { transform: translate3d(0, 0, 0) scaleX(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-cybervoid i { animation: none !important; } }
+
+/* 🔱 Deep Dive (idée de ...., 2026-10-26) : le fond de la mer, avec un sous-marin jaune. Le fond : l'eau qui
+   s'assombrit, le fond marin (rochers, algues, coraux, un coffre) recadré « slice » sur le bas ; ::before, les rayons
+   de lumière qui oscillent ; ::after, la neige marine qui descend. Sur le vrai fond, le sous-marin patrouille en haut.
+   Réaction aux tirages (js/app.js, wallDive + wallReact) : pendant CHAQUE tirage il commence à plonger (data-dive), sans
+   rien trahir de la rareté ; à la révélation, un Mythic+ l'envoie d'un coup jusqu'au fond, où il lâche une gerbe de
+   bulles dans une lueur de la couleur de la rareté ; sinon il remonte tranquillement. Mouvement réduit / mode
+   performance : le sous-marin reste en haut, la réaction n'est qu'une lueur. */
+.wp-submarine { --wpd-sub: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 140'><defs><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23fde047'/><stop offset='.55' stop-color='%23eab308'/><stop offset='1' stop-color='%23a16207'/></linearGradient><linearGradient id='b' x1='0' x2='1'><stop offset='0' stop-color='%23fef9c3' stop-opacity='.55'/><stop offset='1' stop-color='%23fef9c3' stop-opacity='0'/></linearGradient></defs><path d='M292 74L520 30V140L292 86Z' fill='url(%23b)'/><path d='M24 66L4 50L10 80L4 110L24 96Z' fill='%23ea580c'/><ellipse cx='6' cy='80' rx='3.5' ry='18' fill='%2357534e'/><path d='M20 80Q20 50 70 48L230 48Q286 52 292 80Q286 110 230 114L70 114Q20 112 20 80Z' fill='url(%23h)'/><path d='M40 96Q60 108 120 110L230 110Q270 108 284 94' fill='none' stroke='%23854d0e' stroke-width='3' stroke-opacity='.5'/><path d='M120 48L128 20Q130 14 138 14L178 14Q186 14 188 20L196 48Z' fill='url(%23h)'/><rect x='160' y='0' width='5' height='16' fill='%2378716c'/><rect x='160' y='0' width='16' height='5' fill='%2378716c'/><g fill='%230c4a6e' stroke='%23a16207' stroke-width='4'><circle cx='100' cy='80' r='10'/><circle cx='145' cy='80' r='10'/><circle cx='190' cy='80' r='10'/><circle cx='235' cy='80' r='10'/></g><g fill='%23fde68a' opacity='.85'><circle cx='102' cy='78' r='4'/><circle cx='147' cy='78' r='4'/><circle cx='192' cy='78' r='4'/><circle cx='237' cy='78' r='4'/></g><circle cx='288' cy='80' r='6' fill='%23fefce8'/><path d='M60 56Q120 50 200 52' stroke='%23fef9c3' stroke-width='4' stroke-linecap='round' opacity='.6'/></svg>");
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMax slice'><g fill='none' stroke-linecap='round' stroke-width='10'><path d='M180 800Q160 720 190 650T170 520' stroke='%23065f46'/><path d='M215 805Q240 730 210 670T235 560' stroke='%23047857'/><path d='M1380 810Q1360 740 1395 680T1375 580' stroke='%23065f46'/><path d='M1420 812Q1440 760 1415 700' stroke='%23047857'/><path d='M640 800Q630 760 650 720' stroke='%23065f46'/></g><path d='M0 790Q200 750 420 780T860 772T1300 760T1600 784V900H0Z' fill='%231e293b'/><path d='M0 820Q260 790 520 812T1040 806T1600 812V900H0Z' fill='%23334155'/><g fill='%230f172a'><path d='M300 820Q330 760 400 770Q450 790 440 822Z'/><path d='M1080 812Q1120 740 1200 756Q1250 780 1236 816Z'/><path d='M900 828Q910 806 940 808Q960 816 958 830Z'/></g><g fill='%23f97316' opacity='.85'><path d='M520 812q-6-30 6-40q-2 20 8 28q4-18 14-22q-6 18 0 34Z'/><path d='M1500 808q-8-26 4-38q0 18 8 24q2-16 12-20q-4 18 0 32Z'/></g><g fill='%23fde68a' opacity='.5'><circle cx='760' cy='842' r='3'/><circle cx='1300' cy='850' r='2.5'/><circle cx='120' cy='856' r='2.5'/></g><g transform='translate(700 790)'><rect x='0' y='16' width='70' height='34' rx='4' fill='%2378350f'/><path d='M0 18Q35-6 70 18Z' fill='%2392400e'/><rect x='30' y='20' width='10' height='12' fill='%23facc15'/></g></svg>") center bottom / 100% 100% no-repeat,
+    radial-gradient(ellipse 70% 30% at 50% -6%, rgba(125, 211, 252, .4), transparent 70%),
+    linear-gradient(180deg, #0369a1 0%, #075985 22%, #0c4a6e 45%, #082f49 70%, #020617 100%); }
+.wp-submarine::before { inset: -10% -20% 30% -20%; transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 85%); mask-image: linear-gradient(180deg, #000, transparent 85%);
+  background: linear-gradient(100deg, transparent 20%, rgba(186, 230, 253, .12) 23%, transparent 27%, transparent 44%, rgba(186, 230, 253, .1) 47%, transparent 51%, transparent 66%, rgba(186, 230, 253, .14) 69%, transparent 73%);
+  animation: wpd-rays 12s ease-in-out infinite alternate; }
+@keyframes wpd-rays { from { transform: skewX(-7deg); opacity: .7; } to { transform: skewX(7deg); opacity: 1; } }
+.wp-submarine::after { left: 0; right: 0; top: -300px; bottom: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><g fill='%23e0f2fe'><circle cx='231' cy='286' r='1.3' opacity='0.45'/><circle cx='260' cy='300' r='1' opacity='0.3'/><circle cx='262' cy='243' r='1.7' opacity='0.6'/><circle cx='95' cy='48' r='1.3' opacity='0.45'/><circle cx='72' cy='46' r='1.7' opacity='0.6'/><circle cx='21' cy='202' r='1.3' opacity='0.6'/><circle cx='80' cy='7' r='1.7' opacity='0.3'/><circle cx='30' cy='18' r='1' opacity='0.3'/><circle cx='15' cy='237' r='1.3' opacity='0.45'/><circle cx='100' cy='265' r='1' opacity='0.6'/><circle cx='150' cy='255' r='1' opacity='0.6'/><circle cx='43' cy='234' r='1.7' opacity='0.45'/><circle cx='208' cy='282' r='1' opacity='0.6'/><circle cx='130' cy='161' r='1' opacity='0.6'/><circle cx='147' cy='15' r='1' opacity='0.6'/><circle cx='55' cy='205' r='1' opacity='0.45'/><circle cx='197' cy='34' r='1' opacity='0.6'/><circle cx='0' cy='109' r='1' opacity='0.3'/><circle cx='240' cy='192' r='1.7' opacity='0.45'/><circle cx='214' cy='37' r='1.7' opacity='0.6'/><circle cx='101' cy='138' r='1.3' opacity='0.3'/><circle cx='159' cy='170' r='1' opacity='0.45'/><circle cx='60' cy='68' r='1' opacity='0.6'/><circle cx='51' cy='5' r='1' opacity='0.45'/><circle cx='249' cy='90' r='1.7' opacity='0.6'/><circle cx='96' cy='229' r='1.7' opacity='0.3'/></g></svg>") 0 0 / 300px 300px;
+  animation: wpd-snow 40s linear infinite; }
+@keyframes wpd-snow { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-60px, 300px, 0); } }
+/* aperçu de la boutique : le sous-marin est dessiné dans le fond (pas de calques dans les aperçus) */
+.wall-preview.wp-submarine { background: var(--wpd-sub) 12% 22% / 62% auto no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMax slice'><g fill='none' stroke-linecap='round' stroke-width='10'><path d='M180 800Q160 720 190 650T170 520' stroke='%23065f46'/><path d='M215 805Q240 730 210 670T235 560' stroke='%23047857'/><path d='M1380 810Q1360 740 1395 680T1375 580' stroke='%23065f46'/><path d='M1420 812Q1440 760 1415 700' stroke='%23047857'/><path d='M640 800Q630 760 650 720' stroke='%23065f46'/></g><path d='M0 790Q200 750 420 780T860 772T1300 760T1600 784V900H0Z' fill='%231e293b'/><path d='M0 820Q260 790 520 812T1040 806T1600 812V900H0Z' fill='%23334155'/><g fill='%230f172a'><path d='M300 820Q330 760 400 770Q450 790 440 822Z'/><path d='M1080 812Q1120 740 1200 756Q1250 780 1236 816Z'/><path d='M900 828Q910 806 940 808Q960 816 958 830Z'/></g><g fill='%23f97316' opacity='.85'><path d='M520 812q-6-30 6-40q-2 20 8 28q4-18 14-22q-6 18 0 34Z'/><path d='M1500 808q-8-26 4-38q0 18 8 24q2-16 12-20q-4 18 0 32Z'/></g><g fill='%23fde68a' opacity='.5'><circle cx='760' cy='842' r='3'/><circle cx='1300' cy='850' r='2.5'/><circle cx='120' cy='856' r='2.5'/></g><g transform='translate(700 790)'><rect x='0' y='16' width='70' height='34' rx='4' fill='%2378350f'/><path d='M0 18Q35-6 70 18Z' fill='%2392400e'/><rect x='30' y='20' width='10' height='12' fill='%23facc15'/></g></svg>") center bottom / 100% 100% no-repeat, linear-gradient(180deg, #0369a1 0%, #0c4a6e 45%, #020617 100%); }
+
+/* le sous-marin (vrai fond seulement) : il patrouille en haut (animation sur transform) ; la plongée passe par les
+   propriétés translate / rotate, en transition, pour ne jamais casser la patrouille */
+#wallpaper.wp-submarine i { position: absolute; pointer-events: none; }
+#wallpaper .wpd-sub { --w: min(50vw, 460px); left: 6%; top: 9%; width: var(--w); aspect-ratio: 520 / 140;
+  background: var(--wpd-sub) center / contain no-repeat;
+  translate: 0 0; rotate: 0deg; transition: translate 3s cubic-bezier(.4, 0, .3, 1), rotate 2s ease-in-out;
+  animation: wpd-patrol 16s ease-in-out infinite alternate; }
+@keyframes wpd-patrol { 0% { transform: translate3d(-3vw, 0, 0) rotate(-1deg); } 50% { transform: translate3d(5vw, 1.6vh, 0) rotate(1deg); } 100% { transform: translate3d(14vw, 0, 0) rotate(-.5deg); } }
+/* pendant le tirage : il pique du nez et descend lentement */
+#wallpaper.wp-submarine[data-dive] .wpd-sub { translate: 0 26vh; rotate: 7deg; transition: translate 7s cubic-bezier(.45, 0, .55, 1), rotate 1.2s ease-out; }
+/* Mythic+ : plongeon jusqu'au fond (bas de la coque à 88 % de l'écran), il se pose à plat */
+#wallpaper.wp-submarine[data-dive]:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpd-sub { translate: 0 calc(79vh - var(--w) * 114 / 520); rotate: 0deg;
+  transition: translate 1.1s cubic-bezier(.55, 0, .85, .4), rotate 1.1s ease-out; }
+/* la gerbe de bulles, accrochée au sous-marin */
+#wallpaper .wpd-burst { position: absolute; left: 0; width: 60%; bottom: 40%; height: 600px; opacity: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='600'><g fill='none' stroke='%23cffafe' stroke-width='2'><circle cx='87' cy='449' r='11' opacity='0.5'/><circle cx='222' cy='450' r='6' opacity='0.5'/><circle cx='158' cy='331' r='4' opacity='0.5'/><circle cx='115' cy='423' r='14' opacity='0.9'/><circle cx='71' cy='63' r='6' opacity='0.5'/><circle cx='246' cy='284' r='4' opacity='0.9'/><circle cx='188' cy='323' r='11' opacity='0.5'/><circle cx='58' cy='112' r='6' opacity='0.9'/><circle cx='144' cy='35' r='14' opacity='0.7'/><circle cx='210' cy='484' r='6' opacity='0.9'/><circle cx='267' cy='158' r='11' opacity='0.5'/><circle cx='98' cy='338' r='6' opacity='0.9'/><circle cx='147' cy='214' r='6' opacity='0.9'/><circle cx='120' cy='417' r='11' opacity='0.9'/><circle cx='60' cy='451' r='4' opacity='0.5'/><circle cx='75' cy='59' r='14' opacity='0.7'/><circle cx='142' cy='421' r='8' opacity='0.7'/><circle cx='271' cy='320' r='14' opacity='0.5'/><circle cx='55' cy='149' r='6' opacity='0.7'/><circle cx='57' cy='306' r='6' opacity='0.5'/><circle cx='28' cy='90' r='8' opacity='0.7'/><circle cx='248' cy='275' r='4' opacity='0.5'/><circle cx='110' cy='308' r='8' opacity='0.9'/><circle cx='87' cy='114' r='8' opacity='0.5'/><circle cx='250' cy='358' r='14' opacity='0.9'/><circle cx='91' cy='55' r='4' opacity='0.7'/><circle cx='203' cy='339' r='4' opacity='0.5'/><circle cx='58' cy='513' r='4' opacity='0.9'/><circle cx='179' cy='346' r='6' opacity='0.5'/><circle cx='58' cy='483' r='14' opacity='0.7'/><circle cx='42' cy='152' r='8' opacity='0.7'/><circle cx='63' cy='504' r='4' opacity='0.7'/><circle cx='35' cy='531' r='14' opacity='0.5'/><circle cx='215' cy='408' r='14' opacity='0.5'/></g></svg>") center bottom / 300px 600px repeat-x; }
+#wallpaper.wp-submarine[data-dive]:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpd-burst { animation: wpd-burst 3.6s cubic-bezier(.2, .6, .4, 1) .95s both; }
+@keyframes wpd-burst { 0% { opacity: 0; transform: translate3d(0, 12vh, 0) scale(.6); } 12% { opacity: 1; } 70% { opacity: .8; } 100% { opacity: 0; transform: translate3d(0, -32vh, 0) scale(1.1); } }
+/* la lueur du fond, de la couleur de la rareté (--wr, posée par data-react) */
+#wallpaper .wpd-glow { inset: 0; opacity: 0; background: radial-gradient(ellipse 55% 40% at 26% 92%, rgba(var(--wr, 165, 243, 252), .7), rgba(var(--wr, 165, 243, 252), .15) 55%, transparent 80%); }
+#wallpaper.wp-submarine:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpd-glow { animation: wpd-glow 5s ease-out .9s both; }
+@keyframes wpd-glow { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+/* mouvement réduit / mode performance : pas de plongée, juste la lueur */
+@media (prefers-reduced-motion: reduce) {
+  #wallpaper.wp-submarine i { animation: none !important; transition: none !important; translate: none !important; rotate: none !important; }
+  #wallpaper.wp-submarine:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpd-glow { opacity: .6; } }
+html.perf #wallpaper.wp-submarine i { translate: none !important; rotate: none !important; }
+html.perf #wallpaper.wp-submarine:is([data-react="mythic"], [data-react="celestial"], [data-react="divine"], [data-react="godlike"], [data-react="infinite"]) .wpd-glow { opacity: .6; }
 
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
@@ -6061,6 +6256,119 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes money-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.35); } }
 .room-stage.many .side-money::before, .room-stage.many .side-money::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-money::before, .side-money::after { animation: none; } }
+/* ------------------------------------------------------------------ Hot Dog (idée de finnnnn, 2026-10-26) : un hot-dog
+   vu de côté, pain doré en haut et en bas, une saucisse grillée (marques du gril) au milieu ; les chiffres sont des
+   filets de sauce, ketchup puis moutarde, un sur deux. Pendant le tirage, ils giclent en passant d'une sauce à l'autre ;
+   il se pose : le flacon presse (le chiffre s'étire), splotch (il s'écrase), il tremble puis se pose. Matière molle :
+   squash & stretch. Les zigzags de sauce dessinés sur la saucisse : js/skinfx.js (SCENES.hotdog). */
+.num-card.skin-hotdog {
+  background:
+    radial-gradient(ellipse 30% 12% at 30% 8%, rgba(255, 244, 214, .45), transparent 70%),
+    radial-gradient(ellipse 22% 9% at 72% 10%, rgba(255, 244, 214, .3), transparent 70%),
+    linear-gradient(180deg, #8a4a12 0, #c97a26 6%, #e6a54a 13%, #f3c47a 19%, #d9963f 24%, #b06a22 27%, transparent 27.5% 72.5%, #a8611d 73%, #d18c38 78%, #edbb6c 86%, #d39441 94%, #8a4a12 100%),
+    linear-gradient(180deg, #f6dfb0, #f0d29a);
+  border: 2px solid #7a3e10; border-radius: 1.4rem; color: #ef2b2b;
+  box-shadow: inset 0 0 0 2px rgba(255, 230, 180, .35), 0 0 14px rgba(239, 68, 68, .18), 0 8px 16px rgba(0, 0, 0, .4);
+}
+/* la saucisse : une gélule grillée, plus sombre aux bouts, marques du gril en biais, un reflet gras */
+.num-card.skin-hotdog::before {
+  content: ''; position: absolute; left: 2.5%; right: 2.5%; top: 21%; bottom: 21%; border-radius: 999px; pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(180deg, transparent 18%, rgba(255, 210, 170, .35) 24%, transparent 34%),
+    repeating-linear-gradient(115deg, transparent 0 1.5em, rgba(30, 8, 2, .7) 1.5em 1.78em, rgba(120, 50, 20, .4) 1.78em 1.9em, transparent 1.9em 2.1em),
+    radial-gradient(ellipse 52% 75% at 50% 45%, #a8482a, #8a3519 70%, #5c200c 100%);
+  box-shadow: inset 0 -.12em .2em rgba(40, 10, 2, .55), 0 .06em .1em rgba(60, 25, 5, .5);
+}
+.skin-hotdog .slot { position: relative; z-index: 1; font-weight: 900; color: #ff3a2f; -webkit-text-stroke: .035em #4a0606; paint-order: stroke fill;
+  text-shadow: 0 .05em 0 #4a0606, -.03em -.04em 0 rgba(255, 200, 190, .55), 0 .1em .12em rgba(0, 0, 0, .45); }
+.skin-hotdog .slot:nth-of-type(even) { color: #ffd21f; -webkit-text-stroke-color: #5a3a00; text-shadow: 0 .05em 0 #5a3a00, -.03em -.04em 0 rgba(255, 250, 210, .7), 0 .1em .12em rgba(0, 0, 0, .45); }
+.skin-hotdog .slot.ghost { opacity: .22; text-shadow: none; }
+/* Pendant le tirage : le chiffre gicle et passe du ketchup à la moutarde. */
+.skin-hotdog .slot.spinning { opacity: 1; animation: hd-squirt .24s steps(1) infinite; }
+.skin-hotdog .slot.spinning:nth-of-type(even) { animation-delay: -.12s; }
+@keyframes hd-squirt {
+  0% { color: #ff3a2f; -webkit-text-stroke-color: #4a0606; transform: scale(.92, 1.12) translateY(-.04em); }
+  25% { transform: scale(1.08, .92) translateY(.03em); }
+  50% { color: #ffd21f; -webkit-text-stroke-color: #5a3a00; transform: scale(.94, 1.1) translateY(-.03em); }
+  75% { transform: scale(1.1, .9) translateY(.04em); }
+}
+/* Il se pose : pressé hors du flacon (étiré, en haut), splotch (écrasé), il tremble comme une sauce épaisse. */
+.skin-hotdog .slot.revealed { transform-origin: 50% 90%; animation: hd-splat .6s backwards; }
+@keyframes hd-splat {
+  0% { transform: translateY(-.35em) scale(.55, 1.45); animation-timing-function: cubic-bezier(.55, 0, 1, .55); }
+  22% { transform: translateY(.02em) scale(1.4, .62); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  45% { transform: scale(.9, 1.12); }
+  66% { transform: scale(1.05, .96); }
+  84% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
+.skin-hotdog .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-hotdog .slot { animation: none; } }
+/* Cadre de duel : un stand de hot-dogs, nappe à carreaux rouges, lumière chaude ; 🌭 sautille, les sauces se balancent. */
+.side-hotdog { --side-border: #dc2626; --side-glow: 0 0 16px rgba(250, 204, 21, .3); --side-ink: #b91c1c;
+  --side-bg: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(250, 204, 21, .3), transparent 70%), repeating-conic-gradient(rgba(220, 38, 38, .14) 0 25%, transparent 0 50%) 0 0 / 22px 22px, linear-gradient(180deg, rgba(234, 179, 8, .12), rgba(185, 28, 28, .14));
+  --deco-a: '🌭'; --deco-b: '🍅 🌼'; }
+.side-hotdog::before { transform-origin: 50% 100%; animation: hd-hop 1.8s ease-in-out infinite; }
+.side-hotdog::after { animation: hd-sway 2.4s ease-in-out infinite; }
+@keyframes hd-hop { 0%, 55%, 100% { transform: none; } 65% { transform: translateY(-5px) scale(.94, 1.08); } 78% { transform: scale(1.08, .92); } 88% { transform: none; } }
+@keyframes hd-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+.room-stage.many .side-hotdog::before, .room-stage.many .side-hotdog::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-hotdog::before, .side-hotdog::after { animation: none; } }
+/* ------------------------------------------------------------------ Radioactive (idée de shadow2, 2026-10-26) : la paroi
+   d'un vieux fût d'acier (cerclages, rouille), bandes de danger jaune et noir en haut et en bas, une flaque de gelée
+   verte qui luit au fond ; les chiffres sont de la gelée radioactive, vert acide et lumineux. Pendant le tirage ils
+   grésillent comme un compteur Geiger (sauts secs, éclats) ; il se pose : la gelée se gonfle (élan), ploc (écrasée,
+   éclair vert), elle tremble puis se fige. Bulles, déclics, ondes et coulures : js/skinfx.js (SCENES.radioactive). */
+.num-card.skin-radioactive {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(132, 255, 60, .45), transparent 70%),
+    radial-gradient(ellipse 14% 22% at 18% 40%, rgba(146, 64, 14, .45), transparent 70%),
+    radial-gradient(ellipse 10% 16% at 84% 62%, rgba(146, 64, 14, .4), transparent 70%),
+    linear-gradient(90deg, transparent 0 22%, rgba(0, 0, 0, .35) 22% 23%, rgba(255, 255, 255, .08) 23% 24%, transparent 24% 76%, rgba(0, 0, 0, .35) 76% 77%, rgba(255, 255, 255, .08) 77% 78%, transparent 78%),
+    linear-gradient(90deg, #1f2a22, #34433a 30%, #2a362e 55%, #18221b);
+  border: 2px solid #facc15; border-radius: .4rem; color: #b6ff3c;
+  box-shadow: inset 0 0 0 2px #18181b, inset 0 -1.2em 1.4em -1em rgba(132, 255, 60, .35), 0 0 18px rgba(132, 255, 60, .35), 0 8px 16px rgba(0, 0, 0, .5);
+}
+/* les bandes de danger, en haut et en bas : un calque rayé dont on ne garde que les deux bords */
+.num-card.skin-radioactive::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(-45deg, #facc15 0 .22em, #18181b .22em .44em);
+  -webkit-mask: linear-gradient(180deg, #000 0 11%, transparent 11% 89%, #000 89%); mask: linear-gradient(180deg, #000 0 11%, transparent 11% 89%, #000 89%); }
+.skin-radioactive .slot { position: relative; z-index: 1; font-weight: 900; color: #d4ff6a; -webkit-text-stroke: .03em #14532d; paint-order: stroke fill;
+  text-shadow: 0 0 .08em #a3ff3c, 0 0 .3em rgba(132, 255, 60, .85), 0 0 .7em rgba(74, 222, 128, .45), 0 .05em 0 #052e16; }
+.skin-radioactive .slot.ghost { opacity: .2; text-shadow: none; }
+/* Pendant le tirage : le grésillement d'un compteur Geiger, des sauts secs et des éclats irréguliers. */
+.skin-radioactive .slot.spinning { opacity: 1; animation: rad-crackle .3s steps(1) infinite; }
+.skin-radioactive .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+.skin-radioactive .slot.spinning:nth-of-type(3n) { animation-delay: -.19s; }
+@keyframes rad-crackle {
+  0% { transform: translate(.02em, 0); filter: brightness(1); }
+  18% { transform: translate(-.03em, .02em) skewX(-6deg); filter: brightness(1.8) blur(.4px); }
+  30% { transform: none; filter: brightness(.7); }
+  52% { transform: translate(.03em, -.02em); filter: brightness(1.5); }
+  64% { transform: translate(-.01em, .01em) skewX(5deg); filter: brightness(.85) blur(.6px); }
+  82% { transform: translate(0, -.03em); filter: brightness(2); }
+}
+/* Il se pose : la gelée se gonfle (élan), ploc (écrasée, éclair vert), elle tremble puis se fige. */
+.skin-radioactive .slot.revealed { transform-origin: 50% 95%; animation: rad-plop .6s backwards; }
+@keyframes rad-plop {
+  0% { transform: scale(.7, 1.25) translateY(-.15em); filter: brightness(.6); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  20% { transform: scale(1.3, .7); filter: brightness(2.2) drop-shadow(0 0 .25em #a3ff3c); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  42% { transform: scale(.92, 1.1); filter: brightness(1.4); }
+  64% { transform: scale(1.04, .97); }
+  100% { transform: none; filter: none; }
+}
+.skin-radioactive .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-radioactive .slot { animation: none; } }
+/* Cadre de duel : un entrepôt de déchets, bandes de danger en bas, lueur verte ; ☢️ clignote, le fût tangue. */
+.side-radioactive { --side-border: #facc15; --side-glow: 0 0 18px rgba(132, 255, 60, .35); --side-ink: #65a30d; --side-ink-glow: 0 0 6px rgba(132, 255, 60, .6);
+  --side-bg: repeating-linear-gradient(-45deg, rgba(250, 204, 21, .3) 0 10px, rgba(24, 24, 27, .3) 10px 20px) bottom / 100% 10px no-repeat, radial-gradient(ellipse 80% 40% at 50% 110%, rgba(132, 255, 60, .35), transparent 70%), linear-gradient(180deg, rgba(31, 42, 34, .5), rgba(20, 83, 45, .25));
+  --deco-a: '☢️'; --deco-b: '🛢️ 🧪'; }
+.side-radioactive::before { animation: rad-blink 1.4s steps(1) infinite; }
+.side-radioactive::after { transform-origin: 50% 100%; animation: rad-rock 2.6s ease-in-out infinite; }
+@keyframes rad-blink { 0%, 60%, 80% { opacity: 1; filter: drop-shadow(0 0 4px #a3ff3c); } 70%, 90% { opacity: .45; filter: none; } }
+@keyframes rad-rock { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.room-stage.many .side-radioactive::before, .room-stage.many .side-radioactive::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-radioactive::before, .side-radioactive::after { animation: none; } }
 /* ------------------------------------------------------------------ Bowling (idée de JBearr12, 2026-10-25) : le bout
    d'une piste de bowling en érable ciré (lattes claires, reflet), les gouttières sombres en haut et en bas, les flèches
    de visée ; chaque chiffre est imprimé sur le ventre d'une quille blanche à deux bandes rouges. Pendant le tirage les
@@ -6118,6 +6426,197 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes bwl-shine { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.12); filter: brightness(1.3); } }
 .room-stage.many .side-bowling::before, .room-stage.many .side-bowling::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-bowling::before, .side-bowling::after { animation: none; } }
+/* ------------------------------------------------------------------ Blackjack (idée de kaz, 2026-10-26) : une table de
+   blackjack, feutre vert, un arc doré imprimé ; chaque chiffre est une carte à jouer (carton blanc, chiffre en sérif,
+   un pique noir ou un cœur rouge dans les coins). Pendant le tirage la place de la carte attend, face cachée, et frémit
+   pendant que le croupier mélange à gauche ; un chiffre qui se pose : la carte distribuée glisse face cachée (dos rouge),
+   claque à plat, se soulève, se retourne d'un coup sec et se pose. Le paquet, les jetons et « BLACKJACK! » :
+   js/skinfx.js (SCENES.blackjack). */
+.num-card.skin-blackjack {
+  background:
+    /* l'arc doré imprimé sur le feutre */
+    radial-gradient(ellipse 70% 120% at 50% -30%, transparent 78%, rgba(250, 204, 21, .5) 78.6% 79.6%, transparent 80.2%),
+    radial-gradient(ellipse 80% 90% at 50% 40%, rgba(255, 255, 255, .1), transparent 70%),
+    /* la trame du feutre */
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #15803d, #0f5f2e 70%, #0b4a24);
+  border: 3px solid #5b3311; border-radius: .7rem;
+  box-shadow: inset 0 0 0 1px #a16207, inset 0 0 1.2em rgba(0, 0, 0, .45), 0 0 14px rgba(34, 197, 94, .18), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .32em .4em;
+}
+.skin-blackjack .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .56em; font-weight: 800; line-height: 1;
+  font-family: Georgia, 'Times New Roman', serif;
+  width: 1.08em; height: 1.5em; margin: 0 .06em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .12em; color: var(--bjk-ink); background: var(--bjk-face);
+  --bjk-ink: #111827;
+  --bjk-face:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 1L8.8 5.6A2.1 2.1 0 0 1 5.6 7L6.4 9.4H3.6L4.4 7A2.1 2.1 0 0 1 1.2 5.6Z' fill='%23111827'/></svg>") .07em .07em / .26em .26em no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 9L8.8 4.4A2.1 2.1 0 0 0 5.6 3L6.4 .6H3.6L4.4 3A2.1 2.1 0 0 0 1.2 4.4Z' fill='%23111827'/></svg>") calc(100% - .07em) calc(100% - .07em) / .26em .26em no-repeat,
+    linear-gradient(160deg, #ffffff, #f8fafc 55%, #e2e8f0);
+  box-shadow: inset 0 0 0 .025em #cbd5e1, 0 .05em .08em rgba(0, 0, 0, .45);
+  transform-origin: 50% 60%;
+}
+/* une carte sur deux est un cœur rouge */
+.skin-blackjack .slot:nth-of-type(2n) {
+  --bjk-ink: #b91c1c;
+  --bjk-face:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 9L1.2 5A2.2 2.2 0 0 1 5 2.4A2.2 2.2 0 0 1 8.8 5Z' fill='%23b91c1c'/></svg>") .07em .07em / .26em .26em no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 1L1.2 5A2.2 2.2 0 0 0 5 7.6A2.2 2.2 0 0 0 8.8 5Z' fill='%23b91c1c'/></svg>") calc(100% - .07em) calc(100% - .07em) / .26em .26em no-repeat,
+    linear-gradient(160deg, #ffffff, #f8fafc 55%, #e2e8f0);
+}
+.skin-blackjack .slot.ghost { opacity: .18; }
+.skin-blackjack .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : la place attend une carte face cachée, qui frémit pendant le mélange. */
+.skin-blackjack .slot.spinning, .skin-blackjack .slot.spinning:nth-of-type(2n) {
+  color: transparent;
+  background: repeating-linear-gradient(45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), repeating-linear-gradient(-45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), #991b1b;
+  box-shadow: inset 0 0 0 .07em #fef2f2, inset 0 0 0 .1em #991b1b, 0 .05em .08em rgba(0, 0, 0, .45);
+  opacity: .9; animation: bjk-wait .2s ease-in-out infinite alternate;
+}
+.skin-blackjack .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; }
+@keyframes bjk-wait { from { transform: translateY(-.03em) rotate(-2.5deg) scale(.95); filter: brightness(.9); } to { transform: translateY(.03em) rotate(2.5deg) scale(.95); filter: brightness(1.1); } }
+/* La donne : la carte arrive en glissant face cachée (dos rouge), claque à plat, se soulève, se retourne d'un coup sec
+   (elle passe sur sa tranche) et se pose. Carton : un retournement net, pas d'écrasement mou. */
+.skin-blackjack .slot.revealed { animation: bjk-flip .62s backwards; }
+@keyframes bjk-flip {
+  0% { transform: translate(-.9em, -.5em) rotate(-24deg) scale(.9); color: transparent; box-shadow: inset 0 0 0 .07em #fef2f2, inset 0 0 0 .1em #991b1b, .1em .2em .2em rgba(0, 0, 0, .5);
+    background: repeating-linear-gradient(45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), repeating-linear-gradient(-45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), #b91c1c; animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  22% { transform: none; color: transparent; box-shadow: inset 0 0 0 .07em #fef2f2, inset 0 0 0 .1em #991b1b, 0 .03em .04em rgba(0, 0, 0, .5);
+    background: repeating-linear-gradient(45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), repeating-linear-gradient(-45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), #b91c1c; animation-timing-function: ease-in-out; }
+  34% { transform: translateY(-.14em) scale(1.06); color: transparent; box-shadow: inset 0 0 0 .07em #fef2f2, inset 0 0 0 .1em #991b1b, 0 .2em .2em rgba(0, 0, 0, .4);
+    background: repeating-linear-gradient(45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), repeating-linear-gradient(-45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), #b91c1c; animation-timing-function: ease-in; }
+  44% { transform: translateY(-.18em) scaleX(.04) scaleY(1.08); color: transparent; box-shadow: none;
+    background: repeating-linear-gradient(45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), repeating-linear-gradient(-45deg, rgba(254, 202, 202, .45) 0 .04em, transparent .04em .14em), #b91c1c; animation-timing-function: step-end; }
+  45% { transform: translateY(-.18em) scaleX(.04) scaleY(1.08); color: var(--bjk-ink); background: var(--bjk-face); filter: brightness(1.5); animation-timing-function: ease-out; }
+  58% { transform: translateY(-.1em) scale(1.1); filter: brightness(1.15) drop-shadow(0 0 .12em #fde047); }
+  76% { transform: translateY(.02em) scale(.98); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-blackjack .slot { animation: none; } }
+/* Cadre de duel : le feutre vert d'une table de casino, un arc doré ; 🃏 se retourne, 🪙 sautille. */
+.side-blackjack { --side-border: #a16207; --side-glow: 0 0 16px rgba(34, 197, 94, .3); --side-ink: #15803d;
+  --side-bg: radial-gradient(ellipse 70% 120% at 50% -30%, transparent 78%, rgba(250, 204, 21, .4) 78.6% 79.6%, transparent 80.2%), repeating-linear-gradient(45deg, rgba(0, 0, 0, .04) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(21, 128, 61, .35), rgba(11, 74, 36, .25));
+  --deco-a: '🃏'; --deco-b: '🪙 ♠️'; }
+.side-blackjack::before { animation: bjk-turn 2.4s ease-in-out infinite; }
+.side-blackjack::after { animation: bjk-hop 1.8s ease-in-out infinite; }
+@keyframes bjk-turn { 0%, 55%, 100% { transform: none; } 65% { transform: scaleX(.1); } 75% { transform: scaleX(1) rotate(-8deg); } 85% { transform: rotate(3deg); } }
+@keyframes bjk-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px); } 80% { transform: translateY(0); } 86% { transform: translateY(-2px); } }
+.room-stage.many .side-blackjack::before, .room-stage.many .side-blackjack::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-blackjack::before, .side-blackjack::after { animation: none; } }
+/* ------------------------------------------------------------------ Rocket (idée de HSI, 2026-10-26) : un ciel de
+   lancement la nuit (bleu profond, étoiles, la lueur orange du pas de tir en bas) ; les chiffres sont peints au pochoir
+   blanc sur la coque, éclairés d'orange par en dessous. Pendant le tirage ils filent vers le bas comme le décor vu d'une
+   fusée qui monte ; un chiffre qui se pose : il s'enfonce (allumage, flash orange), décolle d'un coup, dépasse et se pose.
+   La fusée qui traverse la carte à chaque chiffre et le feu d'artifice : js/skinfx.js (SCENES.rocket). */
+.num-card.skin-rocket {
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 30% 70%, #e0f2fe, transparent),
+    radial-gradient(1.4px 1.4px at 52% 14%, #fff, transparent), radial-gradient(1px 1px at 74% 40%, #fde68a, transparent),
+    radial-gradient(1px 1px at 90% 18%, #fff, transparent), radial-gradient(1px 1px at 84% 76%, #e0f2fe, transparent),
+    /* le pas de tir : une bande de hachures jaunes et noires en bas */
+    repeating-linear-gradient(-45deg, #facc15 0 .12em, #1f2937 .12em .24em) 0 100% / 100% .14em no-repeat,
+    /* les tours de lancement en treillis, sur les bords */
+    repeating-linear-gradient(45deg, rgba(148, 163, 184, .35) 0 1px, transparent 1px .22em) 0 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(-45deg, rgba(148, 163, 184, .35) 0 1px, transparent 1px .22em) 100% 0 / .32em 100% no-repeat,
+    /* la lueur du pas de tir */
+    radial-gradient(ellipse 60% 45% at 50% 115%, rgba(251, 146, 60, .55), rgba(234, 88, 12, .18) 55%, transparent 75%),
+    linear-gradient(180deg, #020617, #0b1a3a 55%, #1e1b4b);
+  border: 2px solid #334155; border-radius: .6rem; color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .25), inset 0 -.4em .8em rgba(251, 146, 60, .18), 0 0 16px rgba(251, 146, 60, .2), 0 10px 18px rgba(0, 0, 0, .5);
+}
+.skin-rocket .slot {
+  position: relative; z-index: 1; color: #f8fafc; font-weight: 900;
+  text-shadow: 0 .04em 0 #475569, 0 .08em .1em rgba(251, 146, 60, .75), 0 0 .3em rgba(251, 146, 60, .35);
+}
+.skin-rocket .slot.ghost { text-shadow: none; }
+/* Pendant le tirage : les chiffres défilent vers le bas, étirés, comme vus par le hublot. */
+.skin-rocket .slot.spinning { opacity: .75; color: #bae6fd; animation: rkt-rush .12s linear infinite; }
+.skin-rocket .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes rkt-rush { from { transform: translateY(-.22em) scaleY(1.25); filter: blur(.6px); } to { transform: translateY(.22em) scaleY(1.1); filter: blur(1px); } }
+/* L'allumage : il s'enfonce et tremble (élan), le moteur flashe, il décolle d'un coup, dépasse, retombe et se pose. */
+.skin-rocket .slot.revealed { animation: rkt-launch .6s backwards; }
+@keyframes rkt-launch {
+  0% { transform: translateY(.1em) scaleY(.88); filter: brightness(.8); animation-timing-function: linear; }
+  10% { transform: translate(-.02em, .14em) scale(1.04, .84); }
+  18% { transform: translate(.02em, .14em) scale(1.04, .84); filter: brightness(1.8) drop-shadow(0 .12em .1em #fb923c); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  38% { transform: translateY(-.26em) scale(.94, 1.12); filter: brightness(1.4) drop-shadow(0 .2em .12em #f97316); animation-timing-function: ease-in-out; }
+  62% { transform: translateY(.04em) scale(1.03, .97); filter: brightness(1.1); }
+  80% { transform: translateY(-.02em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-rocket .slot { animation: none; } }
+/* Cadre de duel : un ciel de nuit au-dessus du pas de tir ; 🚀 décolle en tremblant, ✨ scintille. */
+.side-rocket { --side-border: #f97316; --side-glow: 0 0 16px rgba(251, 146, 60, .32); --side-ink: #ea580c;
+  --side-bg: radial-gradient(1px 1px at 18% 20%, #fff, transparent), radial-gradient(1px 1px at 80% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 12%, #e0f2fe, transparent), radial-gradient(ellipse 70% 30% at 50% 108%, rgba(251, 146, 60, .35), transparent 70%), linear-gradient(180deg, rgba(2, 6, 23, .5), rgba(30, 27, 75, .25));
+  --deco-a: '🚀'; --deco-b: '✨ 🌙'; }
+.side-rocket::before { animation: rkt-hover 1.6s ease-in-out infinite; }
+.side-rocket::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes rkt-hover { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, -3px); } 50% { transform: translate(-1px, -6px); } 75% { transform: translate(1px, -3px); } }
+.room-stage.many .side-rocket::before, .room-stage.many .side-rocket::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-rocket::before, .side-rocket::after { animation: none; } }
+/* ------------------------------------------------------------------ Sushi (idée de Gray alt, 2026-10-26) : une planche
+   de service en bois clair (veinage, deux lattes), une feuille de bambou dessous ; chaque chiffre est une tranche de maki
+   vue de dessus : anneau d'algue, riz blanc granuleux, cœur de saumon, le chiffre posé sur le riz. Pendant le tirage les
+   makis tournent sur eux-mêmes ; un chiffre qui se pose : le maki tombe des baguettes, s'écrase (matière molle :
+   écrasement et étirement), rebondit et se pose. Sauce soja, riz et le maki géant des Mythic : js/skinfx.js. */
+.num-card.skin-sushi {
+  background:
+    /* la feuille de bambou qui dépasse en haut et en bas */
+    repeating-linear-gradient(90deg, #a3b860 0 .2em, #8aa04a .2em .22em) 0 0 / 100% .16em repeat-x,
+    repeating-linear-gradient(90deg, #a3b860 0 .2em, #8aa04a .2em .22em) 0 100% / 100% .16em repeat-x,
+    /* le veinage du bois */
+    repeating-radial-gradient(ellipse 140% 30% at 30% 55%, transparent 0 .3em, rgba(146, 64, 14, .12) .3em .34em),
+    linear-gradient(180deg, transparent 49.5%, rgba(120, 53, 15, .25) 49.5% 50.5%, transparent 50.5%),
+    linear-gradient(180deg, #f3d9a8, #e7c08a 60%, #d9a96c);
+  border: 2px solid #92400e; border-radius: .5rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 237, .4), inset 0 -.2em .5em rgba(120, 53, 15, .25), 0 0 14px rgba(251, 146, 60, .18), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .3em .42em;
+}
+.skin-sushi .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .56em; font-weight: 900; line-height: 1;
+  width: 1.32em; height: 1.32em; margin: 0 .03em; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  color: #1c1917; font-size: .52em; text-shadow: 0 0 .05em #fff, 0 0 .05em #fff, .03em .03em 0 #fff, -.03em -.03em 0 #fff;
+  background:
+    /* les grains de riz */
+    radial-gradient(ellipse .05em .09em at 30% 30%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .09em .05em at 70% 34%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .05em .09em at 26% 66%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .09em .05em at 72% 70%, #e7e5e4 60%, transparent 70%),
+    /* cœur de saumon, riz, anneau d'algue (luisant en haut à gauche) */
+    radial-gradient(circle at 50% 50%, #fb923c 0 24%, #fdba74 25% 28%, #fffdf8 30% 50%, #e7e5e4 54%, #2f4a2a 56% 62%, #1a2b18 64% 88%, #0b130b 92%),
+    #0b130b;
+  box-shadow: inset .05em .05em .06em rgba(255, 255, 255, .25), 0 .05em .06em rgba(69, 26, 3, .45);
+}
+.skin-sushi .slot.ghost { opacity: .18; }
+.skin-sushi .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : les makis tournent sur eux-mêmes, le chiffre n'est qu'un flou. */
+.skin-sushi .slot.spinning { opacity: 1; color: rgba(28, 25, 23, .35); animation: sshi-spin .32s linear infinite; }
+.skin-sushi .slot.spinning:nth-of-type(2n) { animation-direction: reverse; }
+@keyframes sshi-spin { to { transform: rotate(360deg); } }
+/* Le maki tombe des baguettes (étiré), s'écrase sur la planche, rebondit et se pose. Matière molle : écrasement franc. */
+.skin-sushi .slot.revealed { animation: sshi-plop .62s backwards; }
+@keyframes sshi-plop {
+  0% { transform: translateY(-.55em) scale(.86, 1.14) rotate(-20deg); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  26% { transform: translateY(.06em) scale(1.3, .7); filter: brightness(1.1); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  46% { transform: translateY(-.12em) scale(.9, 1.12); }
+  64% { transform: translateY(0) scale(1.08, .93); }
+  82% { transform: scale(.98, 1.02); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-sushi .slot { animation: none; } }
+/* Cadre de duel : un comptoir de bois clair et une lanterne rouge ; 🍣 sautille, 🥢 pince. */
+.side-sushi { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 146, 60, .28); --side-ink: #c2410c;
+  --side-bg: repeating-linear-gradient(90deg, rgba(243, 217, 168, .35) 0 14px, rgba(217, 169, 108, .35) 14px 16px) 0 100% / 100% 24% no-repeat, radial-gradient(ellipse 40% 50% at 85% 15%, rgba(239, 68, 68, .18), transparent 70%), linear-gradient(180deg, rgba(41, 37, 36, .25), rgba(120, 53, 15, .12));
+  --deco-a: '🍣'; --deco-b: '🥢 🍙'; }
+.side-sushi::before { animation: sshi-hop 1.8s ease-in-out infinite; }
+.side-sushi::after { transform-origin: 20% 80%; animation: sshi-pinch 2.2s ease-in-out infinite; }
+@keyframes sshi-hop { 0%, 60%, 100% { transform: none; } 68% { transform: translateY(-5px) scale(.94, 1.08); } 78% { transform: scale(1.1, .9); } 86% { transform: none; } }
+@keyframes sshi-pinch { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-10deg); } }
+.room-stage.many .side-sushi::before, .room-stage.many .side-sushi::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-sushi::before, .side-sushi::after { animation: none; } }
 /* ------------------------------------------------------------------ Rock Smash (idée de HSI, 2026-10-25) : le fond
    d'une carrière (paroi brune, gravier en bas) ; chaque chiffre est enfermé dans un rocher de granit moucheté. Pendant
    le tirage les rochers tremblent, rigides (matière dure : aucun écrasement mou) ; un chiffre qui se pose : le rocher
@@ -6802,3 +7301,11 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .cl-descedit > summary { cursor: pointer; font-size: .85rem; color: var(--prose-2); }
 .cl-desc-input { width: 100%; resize: vertical; min-height: 3.2rem; font: inherit; }
 .cl-field-wide { grid-column: 1 / -1; }
+/* Droits des officiers (idée de kaz, 2026-10-26) */
+.cl-perms { display: grid; gap: .35rem; }
+.cl-perm { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
+.cl-perm input { width: 1.1rem; height: 1.1rem; accent-color: var(--chart-accent); }
+/* @mentions du chat global (idée de casmictechthing, 2026-10-26) */
+.gc-at { color: var(--chart-accent); background: color-mix(in srgb, var(--chart-accent) 14%, transparent); border-radius: 4px; padding: 0 .15em; }
+.gc-tome { background: color-mix(in srgb, #f5b301 18%, var(--surface-dim)); box-shadow: inset 3px 0 0 #f5b301; }
+.gc-edited { font-size: .7rem; color: var(--prose-2); font-style: italic; } /* message modifié (idée de daddy finger, 2026-10-26) */
