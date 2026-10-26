@@ -211,6 +211,8 @@
     { id: 'racetrack', name: 'Grand Prix', emoji: '🏎️', price: 1100, idea: 'YU CHUAN 23', desc: 'Race cars scream down the main straight in front of a packed grandstand' },
     // Idée de 17black (2026-10-24) : une plage venteuse avec un parasol.
     { id: 'windybeach', name: 'Windy Beach', emoji: '🏖️', price: 900, idea: '17black', desc: 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by' },
+    // Idée de Sean (2026-10-26) : un ciel violet très sombre et une grille cyan lumineuse qui file vers l'horizon.
+    { id: 'cybervoid', name: 'Cyber Void', emoji: '🌐', price: 1100, idea: 'Sean', desc: 'A glowing cyan grid races toward the horizon under a deep purple sky' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
