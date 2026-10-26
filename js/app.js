@@ -6310,7 +6310,7 @@
         + panel('Recent decisions', 'the last 200', d.log.length ? d.log.slice(0, 60).map(l => `<div class="av-log">${ICON[l.action] || '•'} <b data-no-i18n>${esc(l.name)}</b> <span class="panel-note">${esc(l.action)}${l.reason ? ` · ${esc(l.reason)}` : ''} · ${relTime(l.t)}</span></div>`).join('') : '<div class="empty">Nothing yet.</div>');
     };
     const avDo = (op, extra) => Online.avatar(op, { q: avQ, ...extra }).then(d => { drawAvatars(d); Avatars.load(true); return d; });
-    Online.avatar('queue').then(drawAvatars).catch(err => { if (pane('avatars')) pane('avatars').innerHTML = denied(err); });
+    Online.avatar('queue').then(d => { drawAvatars(d); guest(d.readOnly); }).catch(err => { if (pane('avatars')) pane('avatars').innerHTML = denied(err); });
     // Écouteurs posés une seule fois (app reste le même élément d'une visite à l'autre de la page Owner).
     if (!renderOwner.avBound) { renderOwner.avBound = true;
     app.addEventListener('click', async e => {
@@ -6348,7 +6348,7 @@
           <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
         + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>');
     };
-    const chatRun = (action, extra) => Online.global(action, extra).then(drawChat);
+    const chatRun = (action, extra) => Online.global(action, extra).then(d => { drawChat(d); guest(d.readOnly); });
     chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
     // Écouteurs posés sur l'onglet lui-même (recréé à chaque visite de la page) : jamais en double.
     pane('chat').addEventListener('click', e => {

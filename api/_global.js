@@ -235,6 +235,8 @@ async function handle(body) {
   }
   // Réservé au créateur : silences en cours, lever un silence, donner ou retirer le rôle de Modérateur (par pseudo).
   if (['gcAdmin', 'gcUnmute', 'gcModSet'].includes(body.action)) {
+    // Lecture seule (viewer) : la liste des silences et des modérateurs, sans rien changer (2026-10-26).
+    if (!owner && body.action === 'gcAdmin' && require('./_lib').canViewOwner(stats)) return { ...(await ownerState()), readOnly: true };
     if (!owner) throw refuse(403, 'Owner only');
     if (body.action !== 'gcAdmin') {
       const who = await findPlayer(String(body.name || '').slice(0, 40));

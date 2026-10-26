@@ -114,6 +114,8 @@ const OWNER_EMAIL_SHA256 = process.env.OWNER_EMAIL_SHA256 || '15fcdda9573617a0e5
 // Comptes invités à consulter la page Owner sans rien pouvoir y changer (empreintes SHA-256 de leur e-mail Google, comme
 // pour le créateur). Retirer une empreinte d'ici retire l'accès : elle est revérifiée à chaque demande.
 const VIEWER_EMAILS_SHA256 = new Set((process.env.VIEWER_EMAILS_SHA256 || '34f4c34b6ef234e7f7bd0e326b51c73a293c8cc71ad1f5173f5bebbe6e9813a2').split(',').map(x => x.trim()).filter(Boolean));
+// Accès en lecture seule aux pages du créateur (e-mail Google connu, ou donné à la main : HSET stats:<id> viewerGrant 1).
+const canViewOwner = st => Number(st.owner) >= 1 || st.viewerGrant === '1' || (!!st.viewer && VIEWER_EMAILS_SHA256.has(st.viewer));
 
 // Noms : lettres de l'alphabet latin (accents compris), chiffres, espaces et _ . - ' seulement ; pas de sosies en
 // cyrillique ("Ѕасhа") ni de caractères invisibles. Les caractères de contrôle ne passent donc plus non plus.
@@ -575,5 +577,5 @@ module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_B
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
-  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, markFresh,
+  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
 };

@@ -7378,3 +7378,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .av-cell span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .av-log { padding: .3rem 0; border-top: 1px solid var(--outline); font-size: .85rem; overflow-wrap: anywhere; }
 .av-btns[hidden], .av-edit[hidden] { display: none; }
+
+/* Lecture seule (viewer) : pas de boutons d'action dans les onglets Avatars et Chat (2026-10-26) */
+.o-readonly [data-av-ok], .o-readonly [data-av-no], .o-readonly [data-av-rm], .o-readonly .av-moves, .o-readonly [data-gc-mod], .o-readonly [data-gc-unmute], .o-readonly .gc-mod-add { display: none !important; }
+.o-readonly .ann-form, .o-readonly [data-ann-del] { display: none !important; }
