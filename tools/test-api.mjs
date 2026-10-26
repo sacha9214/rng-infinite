@@ -2485,15 +2485,19 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const month = monthOf(Date.now()), lb = `lb:month:${month}`;
   const ids = Array.from({ length: 12 }, (_, i) => (0x5100 + i).toString(16).padStart(16, '0'));
   // Alice en tête du mois, puis onze joueurs factices ; le 12e reste hors du top 10.
-  // Badge d'un mois précédent effacé (2026-10-26) : en fin de mois, l'horloge avancée des tests plus haut passe au mois
-  // suivant et remettait à Alice un badge d'octobre, ce qui faisait échouer « rien avant la fin du mois » au hasard.
-  await rank.settleMonth(); run([['DEL', `topawards:${alice.playerId}`], ['HDEL', 'topbest', alice.playerId]]);
   run([['DEL', lb], ['ZADD', lb, 9e12, alice.playerId], ['HSET', `best:month:${month}`, alice.playerId, JSON.stringify({ n: 5, s: 9e12, t: Date.now() })], ...ids.flatMap((id, i) => [
     ['ZADD', lb, 1e9 - i, id], ['HSET', 'names', id, `Topper${i}`], ['HSET', `best:month:${month}`, id, JSON.stringify({ n: 5, s: 1e9 - i, t: Date.now() })],
   ])]);
   const [aliceName] = run([['HGET', 'names', alice.playerId]]).map(x => x.result);
   const board = async period => (await call(leaderboard, { url: `/api/leaderboard?period=${period}&me=${alice.playerId}` })).body;
   const prof = async name => (await call(profile, { url: `/api/profile?name=${encodeURIComponent(name)}` })).body;
+  // Un test plus haut avance l'horloge de quelques jours : fin octobre, elle passe au mois suivant et le mois en cours
+  // était déjà « fini » (badges remis trop tôt, test instable le 2026-10-26). On repart d'un mois en cours propre.
+  // (L'horloge des tests peut être en avance : le « mois précédent » est alors octobre, et ses meilleurs joueurs réels,
+  // Alice en tête, recevaient un badge. On le marque fini et on efface ces badges.)
+  { const d = new Date(Date.now()); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); const prev = d.toISOString().slice(0, 7);
+    rank._reset(); // le mois figé gardé en mémoire ne doit pas sauter la remise plus bas
+    run([['DEL', `topawards:done:${month}`], ['SET', `topawards:done:${prev}`, '1'], ['HDEL', 'topbest', alice.playerId, ...ids], ...[alice.playerId, ...ids].flatMap(id => [['HDEL', `topawards:${id}`, month], ['HDEL', `topawards:${id}`, prev]])]); }
   // Pendant le mois : aucun badge, même pour le 1er.
   let b = await board('month');
   assert.ok(b.entries[0].me, 'Alice est 1re');
