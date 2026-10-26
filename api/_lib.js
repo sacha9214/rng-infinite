@@ -127,6 +127,9 @@ const RATE_LIMIT = 300;
 const RATE_WINDOW_MS = 60000;
 const hits = new Map();
 function limited(req) {
+  // Images des photos de profil (GET ?avatar=…) : légères et mises en cache par le navigateur ; un classement en affiche
+  // des dizaines d'un coup, et toute une classe derrière la même IP dépassait la limite (2026-10-26).
+  if (req.method === 'GET' && /[?&]avatar=/.test(String(req.url || ''))) return false;
   const fwd = req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip']);
   const ip = fwd ? String(fwd).split(',')[0].trim() : '';
   if (!ip) return false;

@@ -7,6 +7,8 @@ const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
 const { awardsOf } = require('./_rank');
+// Photos de profil (2026-10-26, demandé par Sacha) : envoi, validation par le créateur et images, dans api/_avatar.js.
+const Avatar = require('./_avatar');
 
 const BEST_LIMIT = 10;
 const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
@@ -14,10 +16,12 @@ const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
+  if (req.method === 'POST' && (req.body || {}).action === 'avatar') return Avatar.handle(req, res);
   await flushDue();
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
+    if (params.has('avatar') || params.has('avatars')) return await Avatar.serve(req, res, params);
     const name = cleanName(params.get('name'));
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (!name) return send(res, 400, { error: 'Missing player name' });

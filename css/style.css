@@ -7334,3 +7334,47 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 
 /* Tuiles Rolls / Lifetime XP de Stats enveloppées pour y mettre les totaux du serveur (2026-10-26) */
 #st-rolls, #st-life { display: contents; }
+
+/* ---------------------------------------------------------------- photos de profil (2026-10-26, demandé par Sacha)
+   Rond de taille fixe : l'initiale sur une couleur tirée du nom, recouverte par l'image acceptée quand elle arrive
+   (aucun saut de mise en page). */
+.av { position: relative; flex: none; display: inline-grid; place-items: center; width: var(--av-s, 28px); height: var(--av-s, 28px); border-radius: 50%; overflow: hidden; vertical-align: middle;
+  background: hsl(var(--av-h, 220) 55% 46%); color: #fff; font: 800 calc(var(--av-s, 28px) * .46)/1 var(--font-sans); font-style: normal; box-shadow: 0 0 0 1px var(--outline); }
+.av i { font-style: normal; }
+.av img, .av canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.av.av-xs { --av-s: 20px; }
+.av.av-sm { --av-s: 26px; }
+.av.av-lg { --av-s: 56px; }
+.av.av-xl { --av-s: 96px; }
+.player-btn .av { margin-right: .1rem; }
+.lb-who .av, .cl-member .av { margin-right: .4rem; }
+.friend-row > .av { margin-right: .1rem; }
+.gc-meta .av { --av-s: 20px; }
+.pf-name { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.pf-name > span:not(.av) { min-width: 0; }
+@media (max-width: 420px) { .av.av-lg { --av-s: 44px; } .lb-who .av { --av-s: 22px; margin-right: .3rem; } }
+/* Réglages */
+.av-set { display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; margin: .3rem 0 .4rem; }
+.av-side { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: .45rem; }
+.av-status { margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.av-btns { display: flex; flex-wrap: wrap; gap: .4rem; }
+.av-pick { cursor: pointer; }
+.av-pick.disabled { opacity: .5; pointer-events: none; }
+.av-zoom { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.av-zoom input { flex: 1; min-width: 0; }
+/* Page Owner */
+.av-q { display: flex; gap: 1rem; flex-wrap: wrap; padding: .8rem 0; border-top: 1px solid var(--outline); }
+.av-big { width: 192px; height: 192px; max-width: 100%; border-radius: 14px; object-fit: cover; background: var(--outline); }
+.av-q-side { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
+.av-prev { display: flex; align-items: center; gap: .5rem; }
+.av-prev img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.av-moves { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.av-moves select { flex: 1 1 140px; min-width: 0; width: auto; }
+.av-search { display: flex; gap: .4rem; margin-bottom: .6rem; }
+.av-search input { flex: 1; min-width: 0; }
+.av-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .6rem; }
+.av-cell { display: flex; flex-direction: column; align-items: center; gap: .25rem; font-size: .8rem; min-width: 0; text-align: center; }
+.av-cell img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.av-cell span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-log { padding: .3rem 0; border-top: 1px solid var(--outline); font-size: .85rem; overflow-wrap: anywhere; }
+.av-btns[hidden], .av-edit[hidden] { display: none; }

@@ -9,6 +9,19 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Profile pictures (2026-10-26, branch `claude/avatars`, not merged)
+
+- Asked by Sacha (idea by kingston and JAKECisthebest). Logic in `api/_avatar.js`, routed from `/api/profile`
+  (POST `action: 'avatar'`, GET `?avatars=1` map name → token, GET `?avatar=<token>` image, immutable cache).
+- Upload from ⚙️ Player & settings (name + 30 rolls, 5/day): the browser crops to a 256×256 JPEG on a canvas (strips
+  EXIF); the server checks the JPEG structure, square ≤ 512, no APP1/EXIF, ≤ 60 KB. Stored as pending (`avp:<id>`),
+  invisible to everyone else until Sacha approves it on Owner → 🖼️ Avatars (reject with a reason, remove later,
+  last 200 decisions in `avlog`). Images are served by an opaque token (`avtok`), never by player id.
+- Shown on the header button, profile, leaderboards, global chat, clan members, friends. Report → Reports tab
+  (`where: 'avatar'`) with a Remove picture button.
+- Not done: no ban from uploading after repeated rejections; the dev/VPS rate limit (300 req/min/IP) also counts
+  avatar image requests (they are cached by the browser after the first load).
+
 ## Done on 2026-10-25 (all merged and deployed, PRs #22–#31)
 
 - **Player-idea update (#22)**: badges Exact 61/55, Odd Abundant (abundant AND odd, ~1 in 500, stays Anomaly-level:
