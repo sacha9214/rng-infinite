@@ -1057,3 +1057,9 @@
   text-shadow: .02em .02em 0 rgba(248, 250, 252, .4), 0 0 .2em rgba(248, 250, 252, .4);
   --gs: 0 .3em 0 #4a2a12, 0 .5em 1em rgba(31, 74, 55, .4); --gs-h: 0 .34em 0 #4a2a12, 0 .7em 1.3em rgba(74, 222, 128, .3); --gs-a: 0 .06em 0 #4a2a12; }
 .btn-roll.gen-math:hover { filter: brightness(1.12); }
+/* Rocket (idée de HSI, 2026-10-26) : un ciel de nuit, la lueur orange du pas de tir en bas. */
+.btn-roll.gen-rocket { border: 2px solid #f97316; border-radius: 999px; color: #f8fafc;
+  background: radial-gradient(1px 1px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 78% 25%, #fff, transparent), radial-gradient(ellipse 60% 60% at 50% 120%, rgba(251, 146, 60, .7), transparent 75%), linear-gradient(180deg, #0b1a3a, #1e1b4b);
+  text-shadow: 0 1px 0 #0f172a, 0 0 .4em rgba(251, 146, 60, .7);
+  --gs: 0 .3em 0 #7c2d12, 0 .5em 1em rgba(249, 115, 22, .3); --gs-h: 0 .34em 0 #7c2d12, 0 .7em 1.4em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #7c2d12; }
+.btn-roll.gen-rocket:hover { filter: brightness(1.1); }
