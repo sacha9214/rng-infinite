@@ -192,6 +192,7 @@
     'Spring Shrine': 'Sanctuaire de printemps', 'Cherry blossoms drift past a red shrine gate and a snowy mountain at dawn': 'Des pétales de cerisier passent devant un portail rouge et une montagne enneigée à l\'aube',
     'Grand Bank': 'Grande Banque', 'Fancy cars cruise past the columns of a grand bank at sunset': 'Des voitures de luxe passent devant les colonnes d\'une grande banque au coucher du soleil',
     'Playground': 'Aire de jeux', 'A sunny playground: a kid swings high next to the slide and the sandbox': 'Une aire de jeux au soleil : un enfant se balance à côté du toboggan et du bac à sable',
+    'Cyber Void': 'Cyber Néant', 'A glowing cyan grid races toward the horizon under a deep purple sky': 'Une grille cyan lumineuse file vers l\'horizon sous un ciel violet profond',
     'Windy Beach': 'Plage venteuse', 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by': 'Une plage un jour de vent : le parasol penche dans les rafales et un ballon roule',
     'Wallpaper Case': 'Caisse de fonds', 'An animated wallpaper worth 500 to 1,200 coins': 'Un fond animé valant 500 à 1 200 pièces', 'new wallpaper unlocked!': 'nouveau fond débloqué !', 'Use': 'Mettre',
     'The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.': 'La caisse de fonds marche pareil avec les fonds animés : tu possèdes déjà celui tiré ? Une partie du prix t\'est rendue aussi.',

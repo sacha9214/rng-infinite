@@ -4245,6 +4245,34 @@ html.perf #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; }
 @keyframes wpp-clouds { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1600px, 0, 0); } }
 @media (prefers-reduced-motion: reduce) { #wallpaper.wp-playground i { animation: none !important; } }
 
+/* 🌐 Cyber Void (idée de Sean, 2026-10-26) : un ciel violet presque noir, des montagnes en fil de fer sur l'horizon
+   et une grille cyan lumineuse qui file VERS l'horizon (à l'inverse de Synthwave, dont la grille vient vers nous).
+   Le fond : ciel, lueur de l'horizon et montagnes (un SVG étiré sur tout l'écran, traits à épaisseur fixe) ; ::before,
+   la grille en perspective, fondue près de l'horizon ; ::after, les étoiles qui scintillent. Sur le vrai fond, une
+   onde de lumière remonte la grille jusqu'à l'horizon toutes les quelques secondes. Mouvement réduit / mode
+   performance : tout est arrêté. */
+.wp-cybervoid { background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' preserveAspectRatio='none'><polygon points='0,581 0,580 60,552 110,566 170,528 240,560 300,540 360,572 420,546 470,580 530,580 580,556 640,534 700,562 760,520 830,556 890,538 950,566 1000,548 1000,581' fill='%230b0420'/><polyline points='0,580 60,552 110,566 170,528 240,560 300,540 360,572 420,546 470,580 530,580 580,556 640,534 700,562 760,520 830,556 890,538 950,566 1000,548' fill='none' stroke='%2322d3ee' stroke-opacity='.7' stroke-width='1.5' vector-effect='non-scaling-stroke'/><g stroke='%2322d3ee' stroke-opacity='.22' stroke-width='1' vector-effect='non-scaling-stroke'><path d='M0 580L0 580'/><path d='M60 552L80 580'/><path d='M110 566L100 580'/><path d='M170 528L200 580'/><path d='M240 560L220 580'/><path d='M300 540L310 580'/><path d='M360 572L350 580'/><path d='M420 546L440 580'/><path d='M470 580L470 580'/><path d='M530 580L530 580'/><path d='M580 556L560 580'/><path d='M640 534L670 580'/><path d='M700 562L690 580'/><path d='M760 520L790 580'/><path d='M830 556L810 580'/><path d='M890 538L910 580'/><path d='M950 566L940 580'/><path d='M1000 548L1000 580'/></g></svg>") 0 0 / 100% 100% no-repeat,
+    radial-gradient(ellipse 60% 14% at 50% 58%, rgba(34, 211, 238, .5), transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 50%, rgba(168, 85, 247, .35), transparent 70%),
+    linear-gradient(180deg, #030008 0%, #0d0326 30%, #2a0b52 57.6%, #67e8f9 57.8%, #67e8f9 58.1%, #05010f 58.1%, #000 100%); }
+.wp-cybervoid::before { left: -60%; right: -60%; top: 58%; height: 110%; transform-origin: 50% 0;
+  background: repeating-linear-gradient(90deg, rgba(103, 232, 249, 1) 0 2px, rgba(34, 211, 238, .35) 2px 6px, transparent 6px 64px), repeating-linear-gradient(0deg, rgba(103, 232, 249, 1) 0 2px, rgba(34, 211, 238, .35) 2px 6px, transparent 6px 64px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%); mask-image: linear-gradient(180deg, transparent, #000 22%);
+  transform: perspective(320px) rotateX(72deg); animation: wpc-grid 1.4s linear infinite; }
+@keyframes wpc-grid { from { transform: perspective(320px) rotateX(72deg) translate3d(0, 64px, 0); } to { transform: perspective(320px) rotateX(72deg) translate3d(0, 0, 0); } }
+.wp-cybervoid::after { left: 0; right: 0; top: 0; height: 56%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><circle cx='165' cy='38' r='1.6' fill='%23e9d5ff'/><circle cx='24' cy='18' r='0.8' fill='%23a5f3fc'/><circle cx='298' cy='14' r='1' fill='%23fff'/><circle cx='44' cy='111' r='1.6' fill='%23fff'/><circle cx='123' cy='23' r='1.6' fill='%23fff'/><circle cx='289' cy='31' r='1' fill='%23e9d5ff'/><circle cx='298' cy='15' r='1.6' fill='%23fff'/><circle cx='113' cy='11' r='1' fill='%23a5f3fc'/><circle cx='214' cy='36' r='0.8' fill='%23e9d5ff'/><circle cx='157' cy='143' r='1' fill='%23fff'/><circle cx='297' cy='146' r='1' fill='%23a5f3fc'/><circle cx='49' cy='140' r='0.8' fill='%23e9d5ff'/><circle cx='30' cy='158' r='1' fill='%23a5f3fc'/><circle cx='272' cy='109' r='1.2' fill='%23a5f3fc'/><circle cx='299' cy='236' r='1.6' fill='%23a5f3fc'/><circle cx='153' cy='63' r='1' fill='%23e9d5ff'/><circle cx='124' cy='20' r='1.2' fill='%23e9d5ff'/><circle cx='253' cy='224' r='1.2' fill='%23e9d5ff'/><circle cx='229' cy='73' r='0.8' fill='%23fff'/><circle cx='262' cy='107' r='1' fill='%23a5f3fc'/><circle cx='77' cy='238' r='1.6' fill='%23a5f3fc'/><circle cx='20' cy='171' r='0.8' fill='%23e9d5ff'/></svg>") 0 0 / 320px 240px;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent);
+  animation: wp-twinkle 5s ease-in-out infinite; }
+/* l'onde qui remonte vers l'horizon (vrai fond seulement) : elle ralentit et s'efface en approchant */
+#wallpaper .wpc-pulse { position: absolute; left: 0; right: 0; top: 58%; height: 2px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #67e8f9 20%, #f0abfc 50%, #67e8f9 80%, transparent);
+  box-shadow: 0 0 12px 2px rgba(34, 211, 238, .7);
+  animation: wpc-pulse 5s cubic-bezier(.15, .6, .35, 1) infinite; }
+@keyframes wpc-pulse { 0% { transform: translate3d(0, 42vh, 0) scaleX(1.4); opacity: 0; } 8% { opacity: 1; } 70% { opacity: .8; } 100% { transform: translate3d(0, 0, 0) scaleX(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-cybervoid i { animation: none !important; } }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
