@@ -171,10 +171,13 @@ function announceRush(end) {
 // Tournoi du jour terminé (api/_tournament.js) : le champion et le finaliste, dans le salon des événements.
 // Le mode du jour (idée de PRISMA123) est rappelé dans le message.
 const TOURNEY_MODES = { total: 'Total XP', best: 'Best Roll', bo3: 'Best of 3', lowest: 'Lowest Wins', badges: 'Badge Hunter' };
+// Salon #🏆・tournaments (2026-10-26) s'il existe, avec un ping pour les abonnés 🔔 Tournaments ; sinon #announcements.
 function announceTournament({ day, mode, champion, finalist, players, next = '00:00' }) {
-  if (!cfg.events) return;
+  const url = cfg.tournaments || cfg.events;
+  if (!url) return;
   const label = TOURNEY_MODES[mode] || TOURNEY_MODES.total;
-  post(cfg.events, {
+  post(url, {
+    ...(cfg.tournaments ? ping(roles.tournaments) : {}),
     embeds: [{
       title: `🏆 ${champion} wins the daily tournament!`,
       url: SITE,
@@ -184,4 +187,28 @@ function announceTournament({ day, mode, champion, finalist, players, next = '00
   });
 }
 
-module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceNews, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+// Guerre de clans finie (api/_clan.js payWar) et clan champion de la semaine : salon #⚔️・clan-wars, abonnés 🔔 Clans.
+function announceClanWar({ win, lose, prize, scoreWin, scoreLose }) {
+  if (!cfg.clanWars) return;
+  post(cfg.clanWars, {
+    ...ping(roles.clans),
+    embeds: [{ title: `⚔️ ${clean(win)} won a clan war!`, url: `${SITE}#/clan`, description: `**${clean(win)}** beat **${clean(lose)}** · ${scoreWin.toLocaleString('en-US')} XP to ${scoreLose.toLocaleString('en-US')} XP\n🪙 ${prize.toLocaleString('en-US')} coins go to the winners' vault.`, color: 0x22c55e }],
+  });
+}
+function announceClanWeek({ clan, week, members }) {
+  if (!cfg.clanWars) return;
+  post(cfg.clanWars, {
+    ...ping(roles.clans),
+    embeds: [{ title: `🏯 ${clean(clan)} is the clan of the week!`, url: `${SITE}#/clan`, description: `Week ${week}: most XP of all clans. ${members} member${members === 1 ? '' : 's'} who rolled for it get the 🏯 Clan Champion title.`, color: 0xeab308 }],
+  });
+}
+// Idée passée en « Planned » ou « Added » dans l'Inbox (api/site.js) : salon #🗺️・roadmap. Texte déjà filtré par l'appelant.
+function announceRoadmap({ name, text, status }) {
+  if (!cfg.roadmap) return;
+  post(cfg.roadmap, {
+    allowed_mentions: { parse: [] },
+    embeds: [{ title: status === 'done' ? `✅ Added to the game` : `🛠️ Planned`, url: `${SITE}#/roadmap`, description: `${clean(text)}\n— idea by **${clean(name)}**`, color: status === 'done' ? 0x22c55e : 0x6366f1 }],
+  });
+}
+
+module.exports = { announceClanWar, announceClanWeek, announceRoadmap, announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceNews, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
