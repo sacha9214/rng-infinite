@@ -1057,3 +1057,9 @@
   text-shadow: .02em .02em 0 rgba(248, 250, 252, .4), 0 0 .2em rgba(248, 250, 252, .4);
   --gs: 0 .3em 0 #4a2a12, 0 .5em 1em rgba(31, 74, 55, .4); --gs-h: 0 .34em 0 #4a2a12, 0 .7em 1.3em rgba(74, 222, 128, .3); --gs-a: 0 .06em 0 #4a2a12; }
 .btn-roll.gen-math:hover { filter: brightness(1.12); }
+/* Blackjack (idée de kaz, 2026-10-26) : le feutre vert d'une table, un liseré doré, un pique et un cœur aux bords. */
+.btn-roll.gen-blackjack { border: 2px solid #a16207; border-radius: .7rem; color: #fefce8;
+  background: radial-gradient(ellipse 70% 140% at 50% -40%, transparent 78%, rgba(250, 204, 21, .45) 79% 81%, transparent 82%), repeating-linear-gradient(45deg, rgba(0, 0, 0, .06) 0 1px, transparent 1px 3px), linear-gradient(180deg, #16a34a, #0f5f2e);
+  text-shadow: 0 1px 0 #052e16, 0 0 .3em rgba(0, 0, 0, .4);
+  --gs: 0 .3em 0 #5b3311, 0 .5em 1em rgba(22, 163, 74, .3); --gs-h: 0 .34em 0 #5b3311, 0 .7em 1.3em rgba(250, 204, 21, .35); --gs-a: 0 .06em 0 #5b3311; }
+.btn-roll.gen-blackjack:hover { filter: brightness(1.08); }
