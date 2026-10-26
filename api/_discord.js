@@ -102,10 +102,12 @@ function announceUpdate(entry) {
 // Annonce écrite par le créateur sur la page Owner (idée de jaxoncool43, 2026-10-26) : salon « announcements » s'il
 // existe, sinon celui des nouveautés. Renvoie false sans webhook (l'annonce reste publiée dans le jeu).
 function announceNews(entry) {
-  const url = cfg.announcements || cfg.updates;
+  // Le webhook du salon #📣・announcements s'appelle « events » dans discord.json (vu sur le serveur le 2026-10-26) :
+  // sans lui, les annonces partaient dans #🆕・updates. Les abonnés 🔔 Updates sont prévenus dans tous les cas.
+  const url = cfg.announcements || cfg.events || cfg.updates;
   if (!url) return false;
   post(url, {
-    ...ping(cfg.announcements ? roles.announcements : roles.updates),
+    ...ping(roles.announcements || roles.updates),
     embeds: [{ title: `📣 ${clean(entry.title)}`.slice(0, 250), url: SITE, description: clean(entry.text).slice(0, 3900), color: entry.important ? 0xef4444 : 0x6366f1 }],
   });
   return true;
