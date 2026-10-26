@@ -6061,6 +6061,61 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes money-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.35); } }
 .room-stage.many .side-money::before, .room-stage.many .side-money::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-money::before, .side-money::after { animation: none; } }
+/* ------------------------------------------------------------------ Radioactive (idée de shadow2, 2026-10-26) : la paroi
+   d'un vieux fût d'acier (cerclages, rouille), bandes de danger jaune et noir en haut et en bas, une flaque de gelée
+   verte qui luit au fond ; les chiffres sont de la gelée radioactive, vert acide et lumineux. Pendant le tirage ils
+   grésillent comme un compteur Geiger (sauts secs, éclats) ; il se pose : la gelée se gonfle (élan), ploc (écrasée,
+   éclair vert), elle tremble puis se fige. Bulles, déclics, ondes et coulures : js/skinfx.js (SCENES.radioactive). */
+.num-card.skin-radioactive {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(132, 255, 60, .45), transparent 70%),
+    radial-gradient(ellipse 14% 22% at 18% 40%, rgba(146, 64, 14, .45), transparent 70%),
+    radial-gradient(ellipse 10% 16% at 84% 62%, rgba(146, 64, 14, .4), transparent 70%),
+    linear-gradient(90deg, transparent 0 22%, rgba(0, 0, 0, .35) 22% 23%, rgba(255, 255, 255, .08) 23% 24%, transparent 24% 76%, rgba(0, 0, 0, .35) 76% 77%, rgba(255, 255, 255, .08) 77% 78%, transparent 78%),
+    linear-gradient(90deg, #1f2a22, #34433a 30%, #2a362e 55%, #18221b);
+  border: 2px solid #facc15; border-radius: .4rem; color: #b6ff3c;
+  box-shadow: inset 0 0 0 2px #18181b, inset 0 -1.2em 1.4em -1em rgba(132, 255, 60, .35), 0 0 18px rgba(132, 255, 60, .35), 0 8px 16px rgba(0, 0, 0, .5);
+}
+/* les bandes de danger, en haut et en bas : un calque rayé dont on ne garde que les deux bords */
+.num-card.skin-radioactive::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(-45deg, #facc15 0 .22em, #18181b .22em .44em);
+  -webkit-mask: linear-gradient(180deg, #000 0 11%, transparent 11% 89%, #000 89%); mask: linear-gradient(180deg, #000 0 11%, transparent 11% 89%, #000 89%); }
+.skin-radioactive .slot { position: relative; z-index: 1; font-weight: 900; color: #d4ff6a; -webkit-text-stroke: .03em #14532d; paint-order: stroke fill;
+  text-shadow: 0 0 .08em #a3ff3c, 0 0 .3em rgba(132, 255, 60, .85), 0 0 .7em rgba(74, 222, 128, .45), 0 .05em 0 #052e16; }
+.skin-radioactive .slot.ghost { opacity: .2; text-shadow: none; }
+/* Pendant le tirage : le grésillement d'un compteur Geiger, des sauts secs et des éclats irréguliers. */
+.skin-radioactive .slot.spinning { opacity: 1; animation: rad-crackle .3s steps(1) infinite; }
+.skin-radioactive .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+.skin-radioactive .slot.spinning:nth-of-type(3n) { animation-delay: -.19s; }
+@keyframes rad-crackle {
+  0% { transform: translate(.02em, 0); filter: brightness(1); }
+  18% { transform: translate(-.03em, .02em) skewX(-6deg); filter: brightness(1.8) blur(.4px); }
+  30% { transform: none; filter: brightness(.7); }
+  52% { transform: translate(.03em, -.02em); filter: brightness(1.5); }
+  64% { transform: translate(-.01em, .01em) skewX(5deg); filter: brightness(.85) blur(.6px); }
+  82% { transform: translate(0, -.03em); filter: brightness(2); }
+}
+/* Il se pose : la gelée se gonfle (élan), ploc (écrasée, éclair vert), elle tremble puis se fige. */
+.skin-radioactive .slot.revealed { transform-origin: 50% 95%; animation: rad-plop .6s backwards; }
+@keyframes rad-plop {
+  0% { transform: scale(.7, 1.25) translateY(-.15em); filter: brightness(.6); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  20% { transform: scale(1.3, .7); filter: brightness(2.2) drop-shadow(0 0 .25em #a3ff3c); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  42% { transform: scale(.92, 1.1); filter: brightness(1.4); }
+  64% { transform: scale(1.04, .97); }
+  100% { transform: none; filter: none; }
+}
+.skin-radioactive .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-radioactive .slot { animation: none; } }
+/* Cadre de duel : un entrepôt de déchets, bandes de danger en bas, lueur verte ; ☢️ clignote, le fût tangue. */
+.side-radioactive { --side-border: #facc15; --side-glow: 0 0 18px rgba(132, 255, 60, .35); --side-ink: #65a30d; --side-ink-glow: 0 0 6px rgba(132, 255, 60, .6);
+  --side-bg: repeating-linear-gradient(-45deg, rgba(250, 204, 21, .3) 0 10px, rgba(24, 24, 27, .3) 10px 20px) bottom / 100% 10px no-repeat, radial-gradient(ellipse 80% 40% at 50% 110%, rgba(132, 255, 60, .35), transparent 70%), linear-gradient(180deg, rgba(31, 42, 34, .5), rgba(20, 83, 45, .25));
+  --deco-a: '☢️'; --deco-b: '🛢️ 🧪'; }
+.side-radioactive::before { animation: rad-blink 1.4s steps(1) infinite; }
+.side-radioactive::after { transform-origin: 50% 100%; animation: rad-rock 2.6s ease-in-out infinite; }
+@keyframes rad-blink { 0%, 60%, 80% { opacity: 1; filter: drop-shadow(0 0 4px #a3ff3c); } 70%, 90% { opacity: .45; filter: none; } }
+@keyframes rad-rock { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.room-stage.many .side-radioactive::before, .room-stage.many .side-radioactive::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-radioactive::before, .side-radioactive::after { animation: none; } }
 /* ------------------------------------------------------------------ Bowling (idée de JBearr12, 2026-10-25) : le bout
    d'une piste de bowling en érable ciré (lattes claires, reflet), les gouttières sombres en haut et en bas, les flèches
    de visée ; chaque chiffre est imprimé sur le ventre d'une quille blanche à deux bandes rouges. Pendant le tirage les

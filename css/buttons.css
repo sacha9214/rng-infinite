@@ -928,6 +928,19 @@
 .btn-roll.gen-elemental:hover { animation: gen-el-cycle 1.6s linear infinite; }
 @keyframes gen-el-cycle { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-elemental:hover { animation: none; } }
+/* Radioactive (idée de shadow2, 2026-10-26) : un fût d'acier, bandes de danger, lettres de gelée verte qui luisent ;
+   au survol, la lueur grésille. */
+.btn-roll.gen-radioactive { border: 2px solid #facc15; border-radius: .4em; color: #d4ff6a;
+  background:
+    repeating-linear-gradient(-45deg, #facc15 0 6px, #18181b 6px 12px) top / 100% 5px no-repeat,
+    repeating-linear-gradient(-45deg, #facc15 0 6px, #18181b 6px 12px) bottom / 100% 5px no-repeat,
+    radial-gradient(ellipse 70% 60% at 50% 100%, rgba(132, 255, 60, .4), transparent 70%),
+    linear-gradient(90deg, #1f2a22, #34433a 40%, #18221b);
+  text-shadow: 0 0 3px #a3ff3c, 0 0 10px rgba(132, 255, 60, .8), 0 1px 0 #052e16;
+  --gs: 0 .3em 0 #0f1a12, 0 .5em 1em rgba(132, 255, 60, .3); --gs-h: 0 .34em 0 #0f1a12, 0 .7em 1.4em rgba(132, 255, 60, .55); --gs-a: 0 .06em 0 #0f1a12; }
+.btn-roll.gen-radioactive:hover { animation: gen-rad-crackle .3s steps(1) infinite; }
+@keyframes gen-rad-crackle { 0%, 60% { filter: brightness(1); } 30% { filter: brightness(1.35); } 80% { filter: brightness(1.15) saturate(1.3); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-radioactive:hover { animation: none; } }
 /* Waterfall (idée de JBearr12 et jjcoolcid1, 2026-10-24) : l'herbe en haut, un rideau d'eau, l'écume en bas ; au
    survol, l'eau coule. */
 .btn-roll.gen-waterfall { border: 2px solid #14532d; border-radius: .6em; color: #fff;

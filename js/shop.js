@@ -97,6 +97,8 @@
     // Idée de Matthew (2026-10-21) : des ondes sonores qui portent les chiffres, un « boum » à chaque chiffre.
     { id: 'sonic', name: 'Sonic Wave', emoji: '🔊', price: 2800, desc: 'Digits ride a glowing sound wave; every one lands with a shockwave, and the last one booms', idea: 'Matthew' },
     { id: 'money', name: 'Money', emoji: '💵', price: 1900, desc: 'A crisp 100 bill with gold-foil digits stamped one by one; coins rain down, and Mythic rolls make the gold melt', idea: 'JBearr12' }, // idée de JBearr12 et finnnnn (2026-10-25)
+    // Idée de shadow2 (2026-10-26) : des fûts radioactifs, de la gelée verte qui luit, le grésillement d'un compteur Geiger.
+    { id: 'radioactive', name: 'Radioactive', emoji: '☢️', price: 2200, desc: 'Glowing green goo in a leaking hazard barrel: digits crackle like a Geiger counter and plop into place', idea: 'shadow2' },
     // Idée de R77 (2026-10-25) : une double hélice d'ADN qui tourne ; chaque chiffre est une paire de bases qui s'emboîte.
     { id: 'dna', name: 'DNA Helix', emoji: '🧬', price: 2400, desc: 'A glowing double helix twists behind the digits; every digit snaps in like a base pair', idea: 'R77' },
     // Idée de R77 (2026-10-25) : de la poussière de fée dorée qui fait apparaître chaque chiffre d'un coup de baguette.
