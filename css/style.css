@@ -4202,6 +4202,49 @@ html.perf #wallpaper.wp-oceanic[data-react] .wpo-glow { opacity: .35; }
 @keyframes wpk-left-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-620px, 0, 0); } }
 @keyframes wpk-right-sm { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(620px, 0, 0); } }
 
+/* 🛝 Playground (idée de finnnnn, 2026-10-26) : une aire de jeux par une belle journée. Le fond : le ciel et le soleil,
+   des collines, l'herbe fleurie, un toboggan à gauche, un bac à sable au milieu et le portique (avec une balançoire
+   vide) à droite. ::after, la balançoire où un enfant se balance (rotation autour de la barre du portique, placée avec
+   les mêmes variables que le portique : --s, sa hauteur, et --dx, son décalage depuis le centre) ; ::before, les
+   rayons du soleil qui tournent lentement. Sur le vrai fond, des nuages passent. Mouvement réduit / mode performance :
+   la balançoire est immobile. */
+.wp-playground { --s: min(40vmin, 320px); --dx: min(27vw, 400px); --gy: 70px;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 240'><g stroke-linecap='round' stroke-width='9' stroke='%23ef4444'><path d='M22 238L52 20M82 238L52 20M218 238L248 20M278 238L248 20'/></g><g stroke='%23b91c1c' stroke-width='5'><path d='M34 150H70M230 150H266'/></g><rect x='36' y='12' width='228' height='14' rx='7' fill='%23facc15'/><rect x='36' y='12' width='228' height='5' rx='2.5' fill='%23fef08a'/><g stroke='%2364748b' stroke-width='2.5'><path d='M178 24V196M202 24V196'/></g><rect x='172' y='194' width='36' height='8' rx='3' fill='%2322c55e'/><ellipse cx='150' cy='238' rx='140' ry='5' fill='%2314532d' opacity='.25'/></svg>") left calc(50% + var(--dx)) bottom var(--gy) / auto var(--s) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 200'><g stroke='%230ea5e9' stroke-width='7' stroke-linecap='round'><path d='M40 198V40M80 198V40'/></g><g stroke='%2338bdf8' stroke-width='4'><path d='M40 70H80M40 100H80M40 130H80M40 160H80'/></g><rect x='32' y='34' width='56' height='10' rx='4' fill='%23facc15'/><path d='M36 34Q60 8 84 34' fill='none' stroke='%23ef4444' stroke-width='5'/><path d='M84 44C130 52 160 140 200 176Q216 188 250 190V198Q210 198 192 186C152 154 126 66 84 56Z' fill='%23a855f7'/><path d='M84 44C130 52 160 140 200 176Q216 188 250 190' fill='none' stroke='%23d8b4fe' stroke-width='3'/><ellipse cx='140' cy='198' rx='120' ry='4' fill='%2314532d' opacity='.25'/></svg>") left calc(50% - var(--dx)) bottom var(--gy) / auto calc(var(--s) * .8) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 70'><path d='M10 30L250 30L240 66L20 66Z' fill='%23b45309'/><path d='M18 30L242 30L236 54L24 54Z' fill='%23fcd34d'/><path d='M40 32Q80 22 130 30T220 32' fill='%23fde68a'/><path d='M150 34L170 18L186 34Z' fill='%23ef4444'/><rect x='66' y='30' width='22' height='16' rx='3' fill='%233b82f6'/><path d='M62 30H92' stroke='%231d4ed8' stroke-width='3'/></svg>") center bottom calc(var(--gy) * .3) / auto calc(var(--s) * .3) no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='60'><g fill='%23fde047'><circle cx='30' cy='20' r='4'/><circle cx='210' cy='44' r='4'/></g><g fill='%23f9a8d4'><circle cx='120' cy='36' r='4'/><circle cx='330' cy='14' r='4'/></g><g fill='%23fff'><circle cx='80' cy='50' r='3.5'/><circle cx='270' cy='28' r='3.5'/><circle cx='370' cy='48' r='3.5'/></g><g stroke='%2316a34a' stroke-width='2' fill='none'><path d='M160 50l-4-10M163 50l3-11M250 54l-3-9M253 54l4-10M20 50l-3-9M23 50l4-10'/></g></svg>") left 0 bottom 6px / 400px 60px repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='120'><path d='M0 120V70Q100 20 220 60T460 50T680 40T800 70V120Z' fill='%2386efac'/><path d='M0 120V96Q140 66 300 92T560 86T800 96V120Z' fill='%234ade80'/><g fill='%2315803d'><circle cx='120' cy='54' r='18'/><circle cx='140' cy='48' r='22'/><rect x='134' y='60' width='6' height='20' fill='%2378350f'/><circle cx='600' cy='44' r='20'/><circle cx='620' cy='40' r='16'/><rect x='606' y='54' width='6' height='20' fill='%2378350f'/></g></svg>") left 0 bottom calc(var(--gy) + 60px) / 800px 120px repeat-x,
+    linear-gradient(180deg, #4ade80, #16a34a) left 0 bottom 0 / 100% calc(var(--gy) + 64px) no-repeat,
+    radial-gradient(circle at 84% 13%, #fffbeb 0 6vmin, rgba(254, 240, 138, .7) 7vmin, rgba(254, 240, 138, .2) 14vmin, transparent 24vmin),
+    linear-gradient(180deg, #0284c7 0%, #38bdf8 40%, #bae6fd 100%); }
+/* la balançoire : pivot au milieu du haut, sur la barre du portique (x 115 sur 300, y 20 sur 240) */
+.wp-playground::after { width: calc(var(--s) * 60 / 240); height: calc(var(--s) * 190 / 240); z-index: 1;
+  left: calc(50% + var(--dx) - var(--s) * 1.25 * 35 / 300 - var(--s) * 30 / 240); bottom: calc(var(--gy) + var(--s) * 30 / 240);
+  transform-origin: 50% 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 190'><g stroke='%2364748b' stroke-width='2.5'><path d='M18 0V170M42 0V170'/></g><path d='M40 168L56 174L58 186' fill='none' stroke='%231e3a8a' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><circle cx='58' cy='188' r='3.5' fill='%230f172a'/><rect x='22' y='128' width='18' height='42' rx='6' fill='%23f97316'/><path d='M26 140L18 132M36 140L42 132' stroke='%23f1c27d' stroke-width='4' stroke-linecap='round'/><circle cx='31' cy='116' r='11' fill='%23f1c27d'/><path d='M20 114Q22 102 32 103Q42 104 42 114Q36 108 28 110Q24 111 20 114Z' fill='%2378350f'/><circle cx='35' cy='117' r='1.4' fill='%231e293b'/><path d='M32 122Q35 124 38 121' stroke='%231e293b' stroke-width='1.2' fill='none'/><rect x='10' y='168' width='40' height='8' rx='3' fill='%232563eb'/></svg>") center top / 100% 100% no-repeat;
+  animation: wpp-swing 2.6s ease-in-out infinite alternate; }
+@keyframes wpp-swing { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+/* les rayons du soleil */
+.wp-playground::before { left: 84%; top: 13%; width: 70vmin; height: 70vmin; margin: -35vmin 0 0 -35vmin; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 255, 255, .22) 0 7deg, transparent 7deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 70%); mask-image: radial-gradient(circle, #000 20%, transparent 70%);
+  animation: wpp-rays 80s linear infinite; }
+@keyframes wpp-rays { to { transform: rotate(360deg); } }
+/* téléphone : le portique et le toboggan se rapprochent du centre pour rester entiers */
+@media (max-width: 600px) { .wp-playground { --s: min(34vmin, 200px); --dx: 28vw; --gy: 56px; } }
+/* aperçu de la boutique (carte de 6,5rem de haut) */
+.wall-preview.wp-playground { --s: 3.6rem; --dx: 30%; --gy: .9rem; }
+.wall-preview.wp-playground { background-position: left calc(50% + 4.2rem) bottom .9rem, left calc(50% - 4.2rem) bottom .9rem, center bottom .25rem, left 0 bottom 0, left 0 bottom 1.6rem, left 0 bottom 0, 0 0, 0 0;
+  background-size: auto 3.6rem, auto 2.9rem, auto 1.1rem, 200px 30px, 400px 60px, 100% 1.9rem, auto, auto; }
+.wall-preview.wp-playground::after { left: calc(50% + 4.2rem - 3.6rem * 1.25 * 35 / 300 - 3.6rem * 30 / 240); }
+.wall-preview.wp-playground::before { width: 9rem; height: 9rem; margin: -4.5rem 0 0 -4.5rem; }
+/* les nuages (vrai fond seulement) */
+#wallpaper .wpp-clouds { position: absolute; left: 0; right: -1600px; top: 6%; height: 200px; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='200'><g fill='%23fff'><g opacity='.95'><ellipse cx='160' cy='80' rx='70' ry='26'/><ellipse cx='210' cy='64' rx='46' ry='34'/><ellipse cx='120' cy='70' rx='36' ry='26'/></g><g opacity='.85'><ellipse cx='720' cy='130' rx='90' ry='24'/><ellipse cx='760' cy='112' rx='50' ry='32'/><ellipse cx='690' cy='116' rx='34' ry='22'/></g><g opacity='.9'><ellipse cx='1240' cy='60' rx='60' ry='20'/><ellipse cx='1270' cy='46' rx='36' ry='26'/></g></g></svg>") 0 0 / 1600px 200px repeat-x;
+  animation: wpp-clouds 140s linear infinite; }
+@keyframes wpp-clouds { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1600px, 0, 0); } }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-playground i { animation: none !important; } }
+
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
 .wall-try-bar { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: .75rem;
