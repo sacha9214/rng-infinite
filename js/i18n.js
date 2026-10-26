@@ -48,7 +48,7 @@
     'This war is over': 'Cette guerre est finie', 'Finish your clan war first': 'Termine d\'abord ta guerre de clans', 'That is your clan': 'C\'est ton clan', 'Pick 5 different members': 'Choisis 5 membres différents',
     'Messages can be edited for 10 minutes': 'Un message se modifie pendant 10 minutes', 'You can only edit your own messages': 'Tu ne peux modifier que tes messages', 'You can only delete your own messages': 'Tu ne peux supprimer que tes messages',
     'This clan has too many requests waiting': 'Ce clan a trop de demandes en attente', 'This player has too many invitations': 'Ce joueur a trop d\'invitations', 'One purchase at a time': 'Un achat à la fois',
-    'Clan Champion': 'Champion de clan', 'Earn XP for the #1 clan of a week': 'Gagner de l\'XP pour le clan n°1 d\'une semaine', 'Clan': 'Clan',
+    'Clan Champion': 'Champion de clan', 'Clan Patron': 'Mécène de clan', 'Donate 10,000 coins in total to a clan vault': 'Verser 10 000 pièces au total dans le coffre d\'un clan', 'Earn XP for the #1 clan of a week': 'Gagner de l\'XP pour le clan n°1 d\'une semaine', 'Clan': 'Clan',
     // tournoi du jour
     'Tournament': 'Tournoi', '🏆 Tournament': '🏆 Tournoi', 'Daily tournament': 'Tournoi du jour', 'Sign-ups open': 'Inscriptions ouvertes', 'closes at': 'fermeture à',
     'In progress': 'En cours', 'Champion:': 'Champion :', 'Cancelled: not enough players': 'Annulé : pas assez de joueurs', 'My match': 'Mon match', 'Open': 'Ouvrir',

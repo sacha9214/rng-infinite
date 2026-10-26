@@ -3711,7 +3711,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await fails(H(C, 'donate', { amount: 10 }), 429, '10 dons par heure');
   await fails(H(C, 'upgrade', { what: 'slots' }), 403, 'un membre ne dépense pas le coffre');
   await fails(H(A, 'upgrade', { what: 'slots' }), 422, 'coffre insuffisant');
-  for (let i = 0; i < 6; i++) await H(A, 'donate', { amount: 10000 });
+  // Titre Clan Patron (idée de PRISMA123, 2026-10-26) : 10 000 pièces données au total.
+  assert.ok(!Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), 'pas encore donné');
+  await H(A, 'donate', { amount: 9990 }); assert.ok(!Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), '9 990 : pas encore');
+  await H(A, 'donate', { amount: 10 }); assert.ok(Ach.unlocked(statsOf(A.playerId)).includes('clanpatron'), '10 000 au total : titre');
+  for (let i = 0; i < 5; i++) await H(A, 'donate', { amount: 10000 });
   const out1 = ecoOut();
   v = await H(B, 'upgrade', { what: 'slots' }); assert.equal(v.clan.slots, 25); assert.equal(v.clan.vault, 60190 - 5000); assert.equal(v.clan.nextSlots, 10000);
   assert.equal(ecoOut() - out1, 5000, 'places : pièces détruites');
