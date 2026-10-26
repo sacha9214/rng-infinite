@@ -217,6 +217,68 @@
 .side-divine::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
 @keyframes dj-balance { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 
+/* ================================================================== 💥 Comic Book (idée de JBearr12, 2026-10-26)
+   Une case de bande dessinée : papier crème imprimé en trame (points magenta et cyan), un soleil de rayons jaunes
+   derrière les chiffres, un gros trait d'encre noire et une ombre portée franche. Les chiffres : du lettrage de titre,
+   jaune, cerné de noir, ombre rouge décalée. Pendant le tirage ils tremblent et penchent comme dessinés en mouvement
+   (lignes de vitesse) ; un chiffre qui se pose : il recule (élan), frappe en grossissant d'un coup (éclair blanc) puis
+   rebondit en place. Les bulles POW!/BAM! et le grand KA-BOOM! : js/skinfx.js (SCENES.comicbook). */
+.num-card.skin-comicbook {
+  background:
+    /* le soleil de rayons, derrière les chiffres */
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(250, 204, 21, .55) 0 9deg, transparent 9deg 18deg),
+    /* la trame : points magenta, puis cyan décalés */
+    radial-gradient(circle, rgba(236, 72, 153, .28) 0 .05em, transparent .06em) 0 0 / .2em .2em,
+    radial-gradient(circle, rgba(6, 182, 212, .22) 0 .04em, transparent .05em) .1em .1em / .2em .2em,
+    radial-gradient(ellipse 60% 70% at 50% 50%, #fff7d6, #fde68a 70%, #fbbf24);
+  border: 3px solid #0a0a0a; border-radius: .25rem; color: #facc15;
+  box-shadow: inset 0 0 0 2px #fffbeb, inset 0 0 0 4px #0a0a0a, 6px 6px 0 #0a0a0a, 0 0 22px rgba(236, 72, 153, .35), 0 12px 22px rgba(0, 0, 0, .5);
+  transform: rotate(-.6deg);
+}
+.skin-comicbook .slot {
+  position: relative; z-index: 1; font-family: Impact, 'Arial Black', 'Helvetica Neue', sans-serif; font-weight: 900;
+  color: #facc15; -webkit-text-stroke: .045em #0a0a0a; paint-order: stroke fill;
+  text-shadow: .06em .07em 0 #dc2626, .1em .11em 0 #0a0a0a;
+}
+.skin-comicbook .slot:nth-of-type(2n) { color: #fffbeb; }
+.skin-comicbook .slot.ghost { text-shadow: none; -webkit-text-stroke: .03em #0a0a0a; }
+/* Pendant le tirage : le chiffre tremble et penche d'une case à l'autre, une traînée de couleur derrière lui. */
+.skin-comicbook .slot.spinning { opacity: 1; color: #fde68a; animation: cmx-shake .16s steps(2, jump-none) infinite; }
+.skin-comicbook .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes cmx-shake {
+  from { transform: translate(-.04em, .02em) skewX(-12deg) rotate(-4deg); text-shadow: -.12em 0 0 rgba(6, 182, 212, .7), -.24em 0 0 rgba(6, 182, 212, .35); }
+  to { transform: translate(.04em, -.03em) skewX(10deg) rotate(4deg); text-shadow: .12em 0 0 rgba(236, 72, 153, .7), .24em 0 0 rgba(236, 72, 153, .35); }
+}
+/* L'impact : il recule et rapetisse (élan), POW — il grossit d'un coup, blanc d'éclair, penché — puis rebondit en place. */
+.skin-comicbook .slot.revealed { animation: cmx-pow .6s backwards; }
+@keyframes cmx-pow {
+  0% { transform: scale(.7) rotate(-14deg); animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  18% { transform: scale(.55) rotate(-18deg) translateY(.06em); animation-timing-function: cubic-bezier(.2, 1.4, .4, 1); }
+  34% { transform: scale(1.32) rotate(9deg); color: #ffffff; text-shadow: .1em .12em 0 #dc2626, .16em .18em 0 #0a0a0a; animation-timing-function: ease-out; }
+  52% { transform: scale(.9) rotate(-4deg); }
+  70% { transform: scale(1.06) rotate(2deg); }
+  86% { transform: scale(.98) rotate(-.5deg); }
+  100% { transform: none; }
+}
+/* L'éclat dessiné derrière le chiffre au moment du coup : une étoile à pointes jaune et rouge, cernée de noir. */
+.skin-comicbook .slot.revealed::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 1em; height: 1em; margin: -.5em 0 0 -.5em; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'><polygon points='0,-48 10,-22 34,-36 24,-10 48,-4 26,8 40,32 12,22 4,48 -8,24 -32,40 -24,12 -48,4 -24,-8 -38,-32 -12,-22' fill='%23fde047' stroke='%230a0a0a' stroke-width='4' stroke-linejoin='round'/><polygon points='0,-26 6,-12 20,-18 13,-4 26,0 13,6 20,18 6,12 0,26 -6,12 -20,18 -13,6 -26,0 -13,-4 -20,-18 -6,-12' fill='%23ef4444'/></svg>") 50% 50% / contain no-repeat;
+  transform: scale(0); animation: cmx-burst .6s ease-out backwards;
+}
+@keyframes cmx-burst { 0%, 22% { transform: scale(0) rotate(0); opacity: 1; } 36% { transform: scale(1.2) rotate(12deg); opacity: 1; } 60% { transform: scale(1) rotate(18deg); opacity: .7; } 100% { transform: scale(.5) rotate(24deg); opacity: 0; } }
+.skin-comicbook .slot.ghost.revealed::before { display: none; }
+@media (prefers-reduced-motion: reduce) { .skin-comicbook .slot, .skin-comicbook .slot::before { animation: none; } .skin-comicbook .slot.revealed::before { display: none; } }
+/* Cadre de duel : une planche de BD, trame et rayons ; 💥 explose en rythme, ✦ scintille. */
+.side-comicbook { --side-border: #0a0a0a; --side-glow: 4px 4px 0 #0a0a0a, 0 0 18px rgba(236, 72, 153, .35); --side-ink: #db2777; --side-ink-glow: 0 0 6px rgba(250, 204, 21, .8);
+  --side-bg: repeating-conic-gradient(from 0deg at 50% 45%, rgba(250, 204, 21, .16) 0 8deg, transparent 8deg 16deg), radial-gradient(circle, rgba(236, 72, 153, .18) 0 1.2px, transparent 1.6px) 0 0 / 7px 7px, linear-gradient(180deg, rgba(254, 243, 199, .2), rgba(251, 191, 36, .12));
+  --deco-a: '💥'; --deco-b: '✦'; }
+.side-comicbook::before { animation: cmx-throb 1.4s cubic-bezier(.3, 1.6, .5, 1) infinite; }
+.side-comicbook::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes cmx-throb { 0%, 55%, 100% { transform: scale(1) rotate(0); } 65% { transform: scale(1.3) rotate(-10deg); } 80% { transform: scale(.95) rotate(4deg); } }
+.room-stage.many .side-comicbook::before, .room-stage.many .side-comicbook::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-comicbook::before, .side-comicbook::after { animation: none; } }
+
 /* ================================================================== ♾️ Infinity — une boucle de lumière dans du verre
    Seulement dans la caisse Premium (0,5 %). Refait le 2026-10-24 pour être au niveau de Singularity (idée de kaz) :
    du verre spatial presque noir (le contraste d'abord), un ∞ de lumière irisé dans la carte, parcouru sans fin par une

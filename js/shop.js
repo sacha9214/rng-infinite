@@ -52,7 +52,10 @@
     { id: 'blackhole', name: 'Singularity', emoji: '🕳️', price: 15000, desc: 'Light bends around your number', premium: true },
     // Idée de Gray alt (2026-10-25) : un tribunal céleste, une balance, un pilier de lumière qui frappe chaque chiffre ;
     // le verdict final sur les grandes raretés. Legendary, entre Singularity et Infinity.
-    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },
+    { id: 'divine', name: 'Divine Judgment', emoji: '⚖️', price: 17500, desc: 'A heavenly tribunal weighs every digit, and a pillar of light strikes it into place; rare rolls get the final verdict', premium: true, idea: 'Gray alt' },    // Idée de JBearr12 (2026-10-26) : une planche de BD, une bulle POW!/BAM! par chiffre, KA-BOOM! et des cases qui
+    // claquent sur les grandes raretés. Legendary. Identifiant comicbook : « comic » est déjà un bouton (BUTTONS).
+    { id: 'comicbook', name: 'Comic Book', emoji: '💥', price: 13000, desc: 'Every digit lands with a POW! in a halftone comic panel, and rare rolls end in a KA-BOOM! with panels slamming around your number', premium: true, idea: 'JBearr12' },
+
     // Ajoutés le 2026-10-13 (suggestions de joueurs). Bakery : un skin de boutique comme les autres.
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé

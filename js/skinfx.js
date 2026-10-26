@@ -4457,6 +4457,106 @@
     };
   });
 
+  // 💥 Comic Book (2026-10-26, idée de JBearr12) — une planche de BD vivante. Pendant le tirage, des lignes de vitesse
+  // noires partent des bords de la carte (plus serrées avant le dernier chiffre). À chaque chiffre posé, une bulle
+  // d'onomatopée à pointes (POW!, BAM!, ZAP!…) éclate au-dessus de lui, en alternant les couleurs ; la dernière est plus
+  // grosse. À la révélation : un grand éclat KA-BOOM! derrière la carte, des rayons de trame, des éclats d'encre, et dès
+  // Mythic des cases de BD qui claquent autour du nombre avec « WHAM! » et « KRAK! » ; tirage raté : une bulle « meh… ».
+  SCENES.comicbook = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const pops = timed(), booms = timed(), panels = timed(), inks = particles();
+    const WORDS = ['POW!', 'BAM!', 'ZAP!', 'BIFF!', 'ZOK!', 'WHAM!'];
+    const FILLS = [['#fde047', '#ef4444'], ['#22d3ee', '#fde047'], ['#f472b6', '#fde047'], ['#ef4444', '#fde047']];
+    const INK = '#0a0a0a';
+    let speed = .4, revealed = false, n = 0;
+    // une étoile à pointes irrégulières, cernée d'encre noire, avec une ombre décalée
+    const star = (x, y, r, spikes, rot, fill, a, seed) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      const path = () => { co.beginPath(); for (let i = 0; i < spikes * 2; i++) { const rr = i % 2 ? r * (.55 + .08 * Math.sin(i * 3.1 + seed)) : r * (1 + .12 * Math.sin(i * 1.7 + seed)), an = i * Math.PI / spikes; co.lineTo(Math.cos(an) * rr, Math.sin(an) * rr * .8); } co.closePath(); };
+      co.translate(r * .08, r * .08); path(); co.fillStyle = INK; co.fill(); co.translate(-r * .08, -r * .08);
+      path(); co.fillStyle = fill; co.fill(); co.lineWidth = Math.max(1.5, r * .07); co.strokeStyle = INK; co.lineJoin = 'round'; co.stroke();
+      co.restore();
+    };
+    const word = (s, x, y, size, fill, a, rot) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      co.font = `900 ${size}px Impact, 'Arial Black', sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle';
+      co.lineJoin = 'round'; co.lineWidth = Math.max(2, size * .16); co.strokeStyle = INK; co.strokeText(s, 0, 0);
+      co.fillStyle = fill; co.fillText(s, 0, 0); co.restore();
+    };
+    const pop = k => (k < .18 ? outBack(k / .18) : 1) * (k > .8 ? 1 - (k - .8) / .2 * .3 : 1);
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        // les lignes de vitesse : des traits d'encre qui rayonnent depuis la carte, redessinés à chaque image (effet BD)
+        if (!revealed) {
+          const lines = Math.round((10 + 26 * speed) * q), a = dark ? .55 : .45;
+          behind(env, () => {
+            co.strokeStyle = dark ? '#f8fafc' : INK; co.lineCap = 'round';
+            for (let i = 0; i < lines; i++) {
+              const an = rnd(TAU), r0 = Math.hypot(card.w * .5 * Math.cos(an), card.h * .5 * Math.sin(an)) + rnd(4, 14), len = rnd(10, 26 + 40 * speed);
+              co.globalAlpha = a * rnd(.4, 1); co.lineWidth = rnd(.8, 2.2);
+              co.beginPath(); co.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0); co.lineTo(cx + Math.cos(an) * (r0 + len), cy + Math.sin(an) * (r0 + len)); co.stroke();
+            }
+          }, true);
+        }
+        // le grand KA-BOOM : un éclat géant derrière la carte, des rayons de trame autour
+        booms.run(dt, (b, k) => {
+          const s = k < .15 ? outBack(k / .15) : 1, a = k > .75 ? (1 - k) / .25 : 1;
+          behind(env, () => {
+            co.globalAlpha = a * .5; co.fillStyle = '#ec4899';
+            for (let i = 0; i < 16; i++) { const an = i * TAU / 16 + k * .3, L = card.w * (.7 + .5 * b.p) * s; co.beginPath(); co.moveTo(cx, cy); co.lineTo(cx + Math.cos(an - .06) * L, cy + Math.sin(an - .06) * L * .7); co.lineTo(cx + Math.cos(an + .06) * L, cy + Math.sin(an + .06) * L * .7); co.closePath(); co.fill(); }
+            star(cx, cy, card.w * (.42 + .3 * b.p) * s, 14, k * .2, '#fde047', a, 3);
+            star(cx, cy, card.w * (.3 + .2 * b.p) * s, 12, -k * .3, '#ef4444', a, 7);
+          }, true);
+          word(b.s, cx, card.y - card.h * .2, card.h * (.32 + .08 * b.p) * s, '#fde047', a, -.08);
+        });
+        // les cases qui claquent autour du nombre (Mythic et plus)
+        panels.run(dt, (p, k) => {
+          const e = k < .2 ? outBack(k / .2) : 1, a = k > .75 ? (1 - k) / .25 : 1, w = card.h * 1.2, h = card.h * .9;
+          const x = cx + p.side * (card.w * .5 + w * .62), y = cy + p.dy * card.h;
+          behind(env, () => {
+            co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(p.rot); co.scale(e, e);
+            co.fillStyle = INK; co.fillRect(-w / 2 + 4, -h / 2 + 4, w, h);
+            co.fillStyle = p.c; co.fillRect(-w / 2, -h / 2, w, h);
+            co.fillStyle = 'rgba(10,10,10,.18)'; for (let i = -w / 2 + 3; i < w / 2; i += 6) for (let j = -h / 2 + 3; j < h / 2; j += 6) { co.beginPath(); co.arc(i, j, 1.2, 0, TAU); co.fill(); }
+            co.lineWidth = 3; co.strokeStyle = INK; co.strokeRect(-w / 2, -h / 2, w, h);
+            co.restore();
+            word(p.s, x, y, card.h * .3 * e, '#ffffff', a, p.rot);
+          });
+        });
+        // les bulles de chaque chiffre, au-dessus de lui (jamais sur un chiffre)
+        pops.run(dt, (b, k) => {
+          // posée sur le bord haut de la carte, décalée vers la droite du chiffre : elle ne couvre que le cadre
+          const s = pop(k), a = k > .7 ? (1 - k) / .3 : 1, y = card.y - card.h * (.1 + .04 * b.big) - k * 6, x = b.x + card.h * .32;
+          star(x, y, card.h * (.4 + .12 * b.big) * s, 9, b.rot, b.f[0], a, b.seed);
+          word(b.s, x, y, card.h * (.24 + .06 * b.big) * s, b.f[1], a, b.rot * .5);
+        });
+        inks.step(dt);
+        inks.each((d, k) => { co.globalAlpha = 1 - k; co.fillStyle = d.c; co.beginPath(); co.arc(d.x, d.y, d.size * (1 - k * .5), 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const big = o.last ? 1 : 0;
+        pops.add({ x: p.x, s: big ? 'BOOM!' : WORDS[n % WORDS.length], f: FILLS[n % FILLS.length], rot: rnd(-.25, .25), seed: rnd(10), big, life: big ? .9 : .6 });
+        n++; speed = Math.min(1.2, speed + .08);
+      },
+      build() { speed = 1.3; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        revealed = true;
+        if (!p) { pops.add({ x: cx, s: 'meh…', f: ['#e5e7eb', '#475569'], rot: -.1, seed: 2, big: 0, life: 1.6 }); return; }
+        booms.add({ life: 1.6 + p + .4 * asc, p, s: p >= 1 ? 'KA-BOOM!' : p >= .6 ? 'KAPOW!' : 'POW!' });
+        for (let i = burst(p, 40 * q, 6); i > 0; i--) { const an = rnd(TAU), v = rnd(120, 260 + 260 * p); inks.add({ x: cx + Math.cos(an) * card.w * .4, y: cy + Math.sin(an) * card.h * .4, vx: Math.cos(an) * v, vy: Math.sin(an) * v * .7, g: 220, drag: 1.6, max: rnd(.5, 1), size: rnd(2, 5), c: pick(['#0a0a0a', '#ef4444', '#fde047', '#22d3ee', '#ec4899']) }); }
+        if (p >= 1) {
+          const list = [['WHAM!', -1, -.15, '#22d3ee'], ['KRAK!', 1, .15, '#f472b6'], ['ZOK!', -1, .9, '#fde047'], ['BLAM!', 1, -.9, '#4ade80']].slice(0, 2 + Math.min(2, asc));
+          list.forEach(([s, side, dy, c], i) => panels.add({ delay: .15 + i * .14, life: 2 + .4 * asc, s, side, dy, c, rot: side * rnd(.04, .1) }));
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
