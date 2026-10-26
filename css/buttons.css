@@ -1075,3 +1075,12 @@
   padding-left: 2.4em; text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(69, 26, 3, .6);
   --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(251, 146, 60, .25); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(251, 146, 60, .4); --gs-a: 0 .06em 0 #78350f; }
 .btn-roll.gen-sushi:hover { filter: brightness(1.08); }
+/* Comic Book (idée de JBearr12, 2026-10-26) — une case de BD : trame, rayons jaunes, trait d'encre et ombre franche. */
+.btn-roll.gen-comicbook {
+  overflow: hidden; border-radius: .3rem; border: 3px solid #0a0a0a; color: #facc15; -webkit-text-stroke: .04em #0a0a0a; paint-order: stroke fill;
+  font-family: Impact, 'Arial Black', sans-serif; letter-spacing: .04em;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(250, 204, 21, .6) 0 9deg, transparent 9deg 18deg), radial-gradient(circle, rgba(236, 72, 153, .3) 0 1.2px, transparent 1.6px) 0 0 / 6px 6px, linear-gradient(180deg, #fff7d6, #fbbf24);
+  text-shadow: .06em .07em 0 #dc2626, .1em .11em 0 #0a0a0a;
+  --gs: 5px 5px 0 #0a0a0a, 0 0 18px rgba(236, 72, 153, .3); --gs-h: 7px 7px 0 #0a0a0a, 0 0 28px rgba(236, 72, 153, .5); --gs-a: 1px 1px 0 #0a0a0a;
+}
+.btn-roll.gen-comicbook:hover { transform: rotate(-1.5deg) scale(1.03); }
