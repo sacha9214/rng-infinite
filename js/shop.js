@@ -108,6 +108,7 @@
     { id: 'blinds', name: 'Blinds', emoji: '🪟', price: 2900, desc: 'Venetian blinds snap open on neon-yellow digits in a sunny window; on a Mythic, the sun sets and the moon rises', idea: 'costoroll' },
     { id: 'ufo', name: 'UFO', emoji: '🛸', price: 3400, desc: 'A flying saucer beams every digit down onto the grass, then zips away', idea: 'JBearr12' },
     { id: 'blackjack', name: 'Blackjack', emoji: '🃏', price: 3250, desc: 'The dealer shuffles at the side of a felt table, deals every digit face down and flips it over; great rolls hit BLACKJACK', idea: 'kaz' }, // idée de kaz (2026-10-26)
+    { id: 'rocket', name: 'Rocket', emoji: '🚀', price: 1200, desc: 'A rocket blasts off behind every digit and launches it into place; great rolls end in fireworks', idea: 'HSI' }, // idée de HSI (2026-10-26)
     { id: 'bowling', name: 'Bowling', emoji: '🎳', price: 2000, desc: 'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE', idea: 'JBearr12' }, // idée de JBearr12 (2026-10-25)
     { id: 'rocksmash', name: 'Rock Smash', emoji: '🪨', price: 1600, desc: 'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone', idea: 'HSI' }, // idée de HSI (2026-10-25)
     { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)

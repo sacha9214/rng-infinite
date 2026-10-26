@@ -4555,6 +4555,83 @@
     };
   };
 
+  // 🚀 Rocket (2026-10-26, idée de HSI) — à chaque chiffre posé, une petite fusée s'allume derrière la carte (flash et
+  // fumée au pied), monte derrière le chiffre et ressort par le haut dans une traînée de flammes ; la dernière est plus
+  // grosse. À la révélation : des fusées de feu d'artifice partent au-dessus de la carte et éclatent (plus nombreuses et
+  // plus grandes avec la rareté) ; tirage raté : une fusée crachote, retombe et ne laisse qu'un nuage « FIZZLE ».
+  SCENES.rocket = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, ground = card.y + card.h + 8;
+    const rockets = timed(), smoke = particles(), sparks = particles(), shells = timed(), words = timed();
+    const FIRE = ['#fde68a', '#fb923c', '#f97316'], BURST = ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#c084fc', '#fb7185'];
+    const ship = (x, y, s, ang, a) => { // une fusée de dessin animé : corps blanc, nez et ailerons rouges, hublot bleu
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(ang);
+      const fl = s * (1.1 + .5 * Math.random()); // la flamme
+      const g = co.createLinearGradient(0, s * .9, 0, s * .9 + fl);
+      g.addColorStop(0, '#fff7cc'); g.addColorStop(.35, '#fb923c'); g.addColorStop(1, 'rgba(249,115,22,0)');
+      co.fillStyle = g; co.beginPath(); co.moveTo(-s * .26, s * .9); co.quadraticCurveTo(0, s * .9 + fl * 1.2, s * .26, s * .9); co.fill();
+      co.fillStyle = '#dc2626'; // ailerons
+      co.beginPath(); co.moveTo(-s * .3, s * .3); co.lineTo(-s * .62, s * .95); co.lineTo(-s * .3, s * .8); co.fill();
+      co.beginPath(); co.moveTo(s * .3, s * .3); co.lineTo(s * .62, s * .95); co.lineTo(s * .3, s * .8); co.fill();
+      const b = co.createLinearGradient(-s * .32, 0, s * .32, 0); b.addColorStop(0, '#cbd5e1'); b.addColorStop(.45, '#ffffff'); b.addColorStop(1, '#94a3b8');
+      co.fillStyle = b; co.beginPath(); co.moveTo(0, -s); co.quadraticCurveTo(s * .42, -s * .4, s * .3, s * .9); co.lineTo(-s * .3, s * .9); co.quadraticCurveTo(-s * .42, -s * .4, 0, -s); co.fill();
+      co.fillStyle = '#dc2626'; co.beginPath(); co.moveTo(0, -s); co.quadraticCurveTo(s * .3, -s * .62, s * .36, -s * .45); co.lineTo(-s * .36, -s * .45); co.quadraticCurveTo(-s * .3, -s * .62, 0, -s); co.fill();
+      co.fillStyle = '#38bdf8'; co.strokeStyle = '#334155'; co.lineWidth = Math.max(1, s * .06); co.beginPath(); co.arc(0, -s * .1, s * .14, 0, TAU); co.fill(); co.stroke();
+      co.restore();
+    };
+    const puff = (x, y, n, up) => { for (let i = Math.round(n * q); i > 0; i--) smoke.add({ x: x + rnd(-6, 6), y, vx: rnd(-50, 50), vy: up ? rnd(-30, -5) : rnd(-15, 20), drag: 1.6, g: -8, max: rnd(.7, 1.3), size: rnd(5, 11) }); };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        smoke.step(dt); sparks.step(dt);
+        // la fumée reste derrière la carte : elle ne voile jamais un chiffre
+        behind(env, () => smoke.each((m, k) => dot(co, dark ? '#cbd5e1' : '#94a3b8', m.x, m.y, m.size * (1 + 1.5 * k), (1 - k) * (dark ? .35 : .5))));
+        // les fusées : sous la carte, puis derrière elle, puis au-dessus et hors champ (accélération)
+        rockets.run(dt, (r, k) => {
+          const e = k * (.6 + .4 * k), y = lerp(card.y + card.h * .8, card.y - card.h * 2.4, e), x = r.x + Math.sin(k * 9) * 1.5;
+          if (r.fizzle) { // tirage raté : elle monte à peine, bascule et retombe
+            const yy = ground + r.s - Math.sin(Math.min(1, k * 1.4) * Math.PI) * card.h * .5;
+            ship(x + k * 30, yy, r.s, k * 2.2, k > .85 ? (1 - k) / .15 : 1);
+            if (Math.random() < .3) puff(x + k * 30, yy, 1, true);
+            return;
+          }
+          behind(env, () => {
+            for (let i = 1; i < 6; i++) dot(co, pick(FIRE), x, y + r.s * (1 + i * .5), r.s * (.5 - i * .06), .6 - i * .1);
+            ship(x, y, r.s, 0, 1);
+          });
+          if (!r.lit) { r.lit = true; puff(x, ground, 6 + 6 * r.big, false); }
+          if (Math.random() < .5) smoke.add({ x, y: y + r.s * 1.6, vx: rnd(-15, 15), vy: rnd(10, 30), drag: 2, g: -6, max: rnd(.5, .9), size: rnd(3, 6) });
+        });
+        // feu d'artifice : une fusée-traceur monte, puis éclate en une sphère d'étincelles qui retombent
+        shells.run(dt, (s, k) => {
+          if (k < .4) { const y = lerp(card.y + card.h * 1.6, s.y, outCubic(k / .4)); tail(co, s.c, s.x, y + 16, s.x, y, 2, 1); dot(co, '#fff7cc', s.x, y, 3, 1); return; }
+          if (!s.done) {
+            s.done = true;
+            for (let i = Math.round(s.n * q); i > 0; i--) { const a = rnd(TAU), v = rnd(.6, 1) * s.r; sparks.add({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 1.8, g: 60, max: rnd(.9, 1.5), size: rnd(1.6, 2.8), c: s.c }); }
+          }
+        });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((s, k) => { tail(co, s.c, s.x - s.vx * .05, s.y - s.vy * .05, s.x, s.y, s.size, 1 - k); dot(co, s.c, s.x, s.y, s.size * 2.2, (1 - k) * .8); });
+        co.globalCompositeOperation = 'source-over';
+        words.run(dt, (w, k) => text(co, w.s, cx, card.y - card.h * .4, card.h * w.size, w.c, k > .7 ? (1 - k) / .3 : Math.min(1, k * 6)));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        const big = o.last ? 1 : 0;
+        rockets.add({ x: p.x, s: card.h * (big ? .3 : .22), big, life: big ? .6 : .48 }); // elle sort par le haut quand le chiffre décolle
+      },
+      build() { puff(cx, ground, 10, false); },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { rockets.add({ x: cx, s: card.h * .24, fizzle: true, life: 1.2 }); words.add({ delay: .5, s: 'FIZZLE', size: .2, c: dark ? '#94a3b8' : '#64748b', life: 1.5 }); return; }
+        const n = 1 + Math.round(5 * p) + 2 * (ASCEND[tier] || 0);
+        for (let i = 0; i < n; i++) shells.add({ delay: i * .16, life: .9, x: cx + (i % 2 ? 1 : -1) * card.w * rnd(.55, 1), y: card.y + card.h * rnd(-.5, .6), r: card.h * (2.4 + 2.6 * p), n: 18 + 30 * p, c: pick(BURST) });
+        puff(cx, ground, 6 + 14 * p, false);
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

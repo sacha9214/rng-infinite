@@ -6216,6 +6216,57 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes bjk-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px); } 80% { transform: translateY(0); } 86% { transform: translateY(-2px); } }
 .room-stage.many .side-blackjack::before, .room-stage.many .side-blackjack::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-blackjack::before, .side-blackjack::after { animation: none; } }
+/* ------------------------------------------------------------------ Rocket (idée de HSI, 2026-10-26) : un ciel de
+   lancement la nuit (bleu profond, étoiles, la lueur orange du pas de tir en bas) ; les chiffres sont peints au pochoir
+   blanc sur la coque, éclairés d'orange par en dessous. Pendant le tirage ils filent vers le bas comme le décor vu d'une
+   fusée qui monte ; un chiffre qui se pose : il s'enfonce (allumage, flash orange), décolle d'un coup, dépasse et se pose.
+   La fusée qui traverse la carte à chaque chiffre et le feu d'artifice : js/skinfx.js (SCENES.rocket). */
+.num-card.skin-rocket {
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 30% 70%, #e0f2fe, transparent),
+    radial-gradient(1.4px 1.4px at 52% 14%, #fff, transparent), radial-gradient(1px 1px at 74% 40%, #fde68a, transparent),
+    radial-gradient(1px 1px at 90% 18%, #fff, transparent), radial-gradient(1px 1px at 84% 76%, #e0f2fe, transparent),
+    /* le pas de tir : une bande de hachures jaunes et noires en bas */
+    repeating-linear-gradient(-45deg, #facc15 0 .12em, #1f2937 .12em .24em) 0 100% / 100% .14em no-repeat,
+    /* les tours de lancement en treillis, sur les bords */
+    repeating-linear-gradient(45deg, rgba(148, 163, 184, .35) 0 1px, transparent 1px .22em) 0 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(-45deg, rgba(148, 163, 184, .35) 0 1px, transparent 1px .22em) 100% 0 / .32em 100% no-repeat,
+    /* la lueur du pas de tir */
+    radial-gradient(ellipse 60% 45% at 50% 115%, rgba(251, 146, 60, .55), rgba(234, 88, 12, .18) 55%, transparent 75%),
+    linear-gradient(180deg, #020617, #0b1a3a 55%, #1e1b4b);
+  border: 2px solid #334155; border-radius: .6rem; color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .25), inset 0 -.4em .8em rgba(251, 146, 60, .18), 0 0 16px rgba(251, 146, 60, .2), 0 10px 18px rgba(0, 0, 0, .5);
+}
+.skin-rocket .slot {
+  position: relative; z-index: 1; color: #f8fafc; font-weight: 900;
+  text-shadow: 0 .04em 0 #475569, 0 .08em .1em rgba(251, 146, 60, .75), 0 0 .3em rgba(251, 146, 60, .35);
+}
+.skin-rocket .slot.ghost { text-shadow: none; }
+/* Pendant le tirage : les chiffres défilent vers le bas, étirés, comme vus par le hublot. */
+.skin-rocket .slot.spinning { opacity: .75; color: #bae6fd; animation: rkt-rush .12s linear infinite; }
+.skin-rocket .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes rkt-rush { from { transform: translateY(-.22em) scaleY(1.25); filter: blur(.6px); } to { transform: translateY(.22em) scaleY(1.1); filter: blur(1px); } }
+/* L'allumage : il s'enfonce et tremble (élan), le moteur flashe, il décolle d'un coup, dépasse, retombe et se pose. */
+.skin-rocket .slot.revealed { animation: rkt-launch .6s backwards; }
+@keyframes rkt-launch {
+  0% { transform: translateY(.1em) scaleY(.88); filter: brightness(.8); animation-timing-function: linear; }
+  10% { transform: translate(-.02em, .14em) scale(1.04, .84); }
+  18% { transform: translate(.02em, .14em) scale(1.04, .84); filter: brightness(1.8) drop-shadow(0 .12em .1em #fb923c); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  38% { transform: translateY(-.26em) scale(.94, 1.12); filter: brightness(1.4) drop-shadow(0 .2em .12em #f97316); animation-timing-function: ease-in-out; }
+  62% { transform: translateY(.04em) scale(1.03, .97); filter: brightness(1.1); }
+  80% { transform: translateY(-.02em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-rocket .slot { animation: none; } }
+/* Cadre de duel : un ciel de nuit au-dessus du pas de tir ; 🚀 décolle en tremblant, ✨ scintille. */
+.side-rocket { --side-border: #f97316; --side-glow: 0 0 16px rgba(251, 146, 60, .32); --side-ink: #ea580c;
+  --side-bg: radial-gradient(1px 1px at 18% 20%, #fff, transparent), radial-gradient(1px 1px at 80% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 12%, #e0f2fe, transparent), radial-gradient(ellipse 70% 30% at 50% 108%, rgba(251, 146, 60, .35), transparent 70%), linear-gradient(180deg, rgba(2, 6, 23, .5), rgba(30, 27, 75, .25));
+  --deco-a: '🚀'; --deco-b: '✨ 🌙'; }
+.side-rocket::before { animation: rkt-hover 1.6s ease-in-out infinite; }
+.side-rocket::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes rkt-hover { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, -3px); } 50% { transform: translate(-1px, -6px); } 75% { transform: translate(1px, -3px); } }
+.room-stage.many .side-rocket::before, .room-stage.many .side-rocket::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-rocket::before, .side-rocket::after { animation: none; } }
 /* ------------------------------------------------------------------ Rock Smash (idée de HSI, 2026-10-25) : le fond
    d'une carrière (paroi brune, gravier en bas) ; chaque chiffre est enfermé dans un rocher de granit moucheté. Pendant
    le tirage les rochers tremblent, rigides (matière dure : aucun écrasement mou) ; un chiffre qui se pose : le rocher
