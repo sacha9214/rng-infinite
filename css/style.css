@@ -6118,6 +6118,67 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes bwl-shine { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.12); filter: brightness(1.3); } }
 .room-stage.many .side-bowling::before, .room-stage.many .side-bowling::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-bowling::before, .side-bowling::after { animation: none; } }
+/* ------------------------------------------------------------------ Sushi (idée de Gray alt, 2026-10-26) : une planche
+   de service en bois clair (veinage, deux lattes), une feuille de bambou dessous ; chaque chiffre est une tranche de maki
+   vue de dessus : anneau d'algue, riz blanc granuleux, cœur de saumon, le chiffre posé sur le riz. Pendant le tirage les
+   makis tournent sur eux-mêmes ; un chiffre qui se pose : le maki tombe des baguettes, s'écrase (matière molle :
+   écrasement et étirement), rebondit et se pose. Sauce soja, riz et le maki géant des Mythic : js/skinfx.js. */
+.num-card.skin-sushi {
+  background:
+    /* la feuille de bambou qui dépasse en haut et en bas */
+    repeating-linear-gradient(90deg, #a3b860 0 .2em, #8aa04a .2em .22em) 0 0 / 100% .16em repeat-x,
+    repeating-linear-gradient(90deg, #a3b860 0 .2em, #8aa04a .2em .22em) 0 100% / 100% .16em repeat-x,
+    /* le veinage du bois */
+    repeating-radial-gradient(ellipse 140% 30% at 30% 55%, transparent 0 .3em, rgba(146, 64, 14, .12) .3em .34em),
+    linear-gradient(180deg, transparent 49.5%, rgba(120, 53, 15, .25) 49.5% 50.5%, transparent 50.5%),
+    linear-gradient(180deg, #f3d9a8, #e7c08a 60%, #d9a96c);
+  border: 2px solid #92400e; border-radius: .5rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 237, .4), inset 0 -.2em .5em rgba(120, 53, 15, .25), 0 0 14px rgba(251, 146, 60, .18), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .3em .42em;
+}
+.skin-sushi .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .56em; font-weight: 900; line-height: 1;
+  width: 1.32em; height: 1.32em; margin: 0 .03em; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  color: #1c1917; font-size: .52em; text-shadow: 0 0 .05em #fff, 0 0 .05em #fff, .03em .03em 0 #fff, -.03em -.03em 0 #fff;
+  background:
+    /* les grains de riz */
+    radial-gradient(ellipse .05em .09em at 30% 30%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .09em .05em at 70% 34%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .05em .09em at 26% 66%, #e7e5e4 60%, transparent 70%),
+    radial-gradient(ellipse .09em .05em at 72% 70%, #e7e5e4 60%, transparent 70%),
+    /* cœur de saumon, riz, anneau d'algue (luisant en haut à gauche) */
+    radial-gradient(circle at 50% 50%, #fb923c 0 24%, #fdba74 25% 28%, #fffdf8 30% 50%, #e7e5e4 54%, #2f4a2a 56% 62%, #1a2b18 64% 88%, #0b130b 92%),
+    #0b130b;
+  box-shadow: inset .05em .05em .06em rgba(255, 255, 255, .25), 0 .05em .06em rgba(69, 26, 3, .45);
+}
+.skin-sushi .slot.ghost { opacity: .18; }
+.skin-sushi .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : les makis tournent sur eux-mêmes, le chiffre n'est qu'un flou. */
+.skin-sushi .slot.spinning { opacity: 1; color: rgba(28, 25, 23, .35); animation: sshi-spin .32s linear infinite; }
+.skin-sushi .slot.spinning:nth-of-type(2n) { animation-direction: reverse; }
+@keyframes sshi-spin { to { transform: rotate(360deg); } }
+/* Le maki tombe des baguettes (étiré), s'écrase sur la planche, rebondit et se pose. Matière molle : écrasement franc. */
+.skin-sushi .slot.revealed { animation: sshi-plop .62s backwards; }
+@keyframes sshi-plop {
+  0% { transform: translateY(-.55em) scale(.86, 1.14) rotate(-20deg); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  26% { transform: translateY(.06em) scale(1.3, .7); filter: brightness(1.1); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  46% { transform: translateY(-.12em) scale(.9, 1.12); }
+  64% { transform: translateY(0) scale(1.08, .93); }
+  82% { transform: scale(.98, 1.02); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-sushi .slot { animation: none; } }
+/* Cadre de duel : un comptoir de bois clair et une lanterne rouge ; 🍣 sautille, 🥢 pince. */
+.side-sushi { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 146, 60, .28); --side-ink: #c2410c;
+  --side-bg: repeating-linear-gradient(90deg, rgba(243, 217, 168, .35) 0 14px, rgba(217, 169, 108, .35) 14px 16px) 0 100% / 100% 24% no-repeat, radial-gradient(ellipse 40% 50% at 85% 15%, rgba(239, 68, 68, .18), transparent 70%), linear-gradient(180deg, rgba(41, 37, 36, .25), rgba(120, 53, 15, .12));
+  --deco-a: '🍣'; --deco-b: '🥢 🍙'; }
+.side-sushi::before { animation: sshi-hop 1.8s ease-in-out infinite; }
+.side-sushi::after { transform-origin: 20% 80%; animation: sshi-pinch 2.2s ease-in-out infinite; }
+@keyframes sshi-hop { 0%, 60%, 100% { transform: none; } 68% { transform: translateY(-5px) scale(.94, 1.08); } 78% { transform: scale(1.1, .9); } 86% { transform: none; } }
+@keyframes sshi-pinch { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-10deg); } }
+.room-stage.many .side-sushi::before, .room-stage.many .side-sushi::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-sushi::before, .side-sushi::after { animation: none; } }
 /* ------------------------------------------------------------------ Rock Smash (idée de HSI, 2026-10-25) : le fond
    d'une carrière (paroi brune, gravier en bas) ; chaque chiffre est enfermé dans un rocher de granit moucheté. Pendant
    le tirage les rochers tremblent, rigides (matière dure : aucun écrasement mou) ; un chiffre qui se pose : le rocher
