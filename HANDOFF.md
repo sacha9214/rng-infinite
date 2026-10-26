@@ -288,6 +288,10 @@ Ids in brackets are suggestion ids; Sacha answers the players after merging.
 - **Tournament shared rolls**: many players cannot be online all day; rolls are random anyway, so rolling for an
   absent player is fair and removes forfeits.
 - **Two tournaments instead of a bigger bracket**: 32 players already means 5 rounds in 12 hours.
+- **Evening tournament** (2026-10-26, asked by Me Cojoni and "Idea:Tournaments"): a third daily tournament (`<date>-e`),
+  sign-ups 12:00-18:00 UTC, rounds 18:00 -> 06:00 UTC next day, same mode and prizes, own bracket and payout. It is
+  separate from tournaments 1/2: a player may be in one of them AND in the evening one (`which: 3` on join/roll/view).
+  The "never in both" rule only applies between 1 and 2.
 - **5% to idea authors** (not 10%): rewards ideas without inflating coins much; coins are created, the buyer pays the
   normal price.
 - **Badge changes never take earned rewards away**, but upgrades can be migrated (only Mythic+ upgrades were, to keep

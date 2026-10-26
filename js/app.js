@@ -1717,6 +1717,7 @@
   const UPDATES = [
     { id: '2026-10-26-roadmap', date: 'Oct 26, 2026', en: ['🗺️ Roadmap: a new page lists the player ideas that are planned and the ones added in the last 30 days. Open it from the 💡 ideas window or the About page (idea by Phong67).'], fr: ['🗺️ Feuille de route : une nouvelle page liste les idées de joueurs prévues et celles ajoutées ces 30 derniers jours. Ouvre-la depuis la fenêtre 💡 des idées ou la page À propos (idée de Phong67).'] },
     { id: '2026-10-26-announcements', date: 'Oct 26, 2026', en: ['📣 Announcements: news from the creator now appear at the top of 📰 What\'s new (with a red dot), and important ones pop up once when you come back (idea by jaxoncool43).'], fr: ['📣 Annonces : les messages du créateur apparaissent maintenant en haut de 📰 Nouveautés (avec un point rouge), et les plus importants s\'affichent une fois à ton retour (idée de jaxoncool43).'] },
+    { id: '2026-10-26-evening-tournament', date: 'Oct 26, 2026', en: ['🌙 New evening tournament every day: sign up from 12:00 to 18:00 UTC (evening in Europe, morning and afternoon in the Americas), matches until 06:00 UTC. Same prizes, its own bracket, and you can play it on top of tournament 1 or 2. The tournament page shows every time in your own time zone (idea by Me Cojoni and Idea:Tournaments)'], fr: ['🌙 Nouveau tournoi du soir chaque jour : inscriptions de 12:00 à 18:00 UTC (le soir en Europe, le matin et l\'après-midi en Amérique), matchs jusqu\'à 06:00 UTC. Mêmes prix, son propre tableau, et tu peux le jouer en plus du tournoi 1 ou 2. La page du tournoi montre toutes les heures à ton heure locale (idée de Me Cojoni et Idea:Tournaments)'] },
     { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
     { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
     { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
@@ -7608,7 +7609,7 @@
   // ---------------------------------------------------------------- tournoi du jour (idée de PRISMA123, 2026-10-20)
   // Tableau à élimination directe joué en différé (règles dans api/_tournament.js). Les tirages de l'adversaire restent
   // cachés tant que ses tirages ou les tiens (3 ou 5 selon le mode du jour) ne sont pas faits.
-  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false, tnWhich = 0; // tnWhich : tournoi choisi (1 ou 2), 0 = le sien
+  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false, tnWhich = 0; // tnWhich : tournoi choisi (1, 2 ou 3 = celui du soir), 0 = le sien
   const tnClock = () => Date.now() + tnSkew;
   const tnCd = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':'); };
   const tnHour = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -7640,11 +7641,19 @@
   async function drawTourneyBanner(slot) {
     if (!slot || !Store.player.name) return;
     try {
-      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) tnBannerCache = { at: Date.now(), st: await loadTournament() };
+      // Tournoi du soir (Me Cojoni, 2026-10-26) : s'il n'y a rien à faire dans le tournoi par défaut, on regarde celui du soir.
+      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) {
+        let st = await loadTournament();
+        const idle = s => !(s.phase === 'signup' || (s.phase === 'running' && s.match && s.match.live && !s.match.bye && s.match.me.count < s.rolls));
+        if (idle(st) && st.which !== 3) { const e = await Online.tourney('view', { which: 3 }); if (!idle(e)) st = e; }
+        tnBannerCache = { at: Date.now(), st };
+      }
       const st = tnBannerCache.st, m = st.match;
       let text = '';
       const md = `<span class="tn-mode-chip">${tnMode(st).name}</span>`;
-      if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      if (st.phase === 'signup' && !st.joined && st.eve) text = `🌙 <b>Evening tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup' && st.eve) text = `🌙 <b>You're in the evening tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> ${md} · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
       if (!slot.isConnected) return;
@@ -7674,7 +7683,7 @@
       <div class="page page-wide tn-page">
         <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">🏆 Tournament</h1>
-        <p class="panel-note profile-sub">Two tournaments every day (32 players each, you can join one). Sign up before 12:00 UTC. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
+        <p class="panel-note profile-sub">Three tournaments every day (32 players each). Tournaments 1 and 2: sign up before 12:00 UTC (you can join one of them). Evening tournament: sign up from 12:00 to 18:00 UTC, matches until 06:00 UTC; you can join it too. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
         <div id="tn-body"><div class="empty">Loading…</div></div>
       </div>`;
     const refresh = async () => {
@@ -7700,12 +7709,17 @@
     const nm = p => `<span class="tn-name" data-no-i18n>${esc(p.name)}</span>`;
     // État du jour
     let status = '';
-    if (st.phase === 'signup') {
-      const can = Store.player.name && !st.joined && !st.mine && st.count < st.max;
+    // Heures du tournoi regardé, à l'heure du joueur (tournoi du soir : demandé par Me Cojoni, 2026-10-26).
+    const hours = `<p class="panel-note tn-hours">${st.eve ? '🌙 <b>Evening tournament</b>' : `🏆 <b>Tournament ${st.which || 1}</b>`} · <span>Sign-ups</span> <span class="mono">${tnHour(st.open)}–${tnHour(st.close)}</span> · <span>Matches</span> <span class="mono">${tnHour(st.close)}–${tnHour(st.end)}</span> <span>(your time)</span></p>`;
+    if (st.phase === 'soon') {
+      status = `<div class="tn-status"><div><div class="tn-big"><span>Sign-ups open in</span> <span class="mono" data-cd="${st.open}">${tnCd(st.open - now)}</span></div>
+        <div class="panel-note"><span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div></div>`;
+    } else if (st.phase === 'signup') {
+      const can = Store.player.name && !st.joined && (st.eve || !st.mine) && st.count < st.max;
       status = `<div class="tn-status">
           <div><div class="tn-big"><span>Sign-ups close in</span> <span class="mono" data-cd="${st.close}">${tnCd(st.close - now)}</span></div>
           <div class="panel-note"><span class="mono">${st.count}/${st.max}</span> · <span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div>
-          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : st.mine ? `<span class="tn-in">✓ <span>You're in tournament</span> ${st.mine}</span>` : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
+          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : st.mine && !st.eve ? `<span class="tn-in">✓ <span>You're in tournament</span> ${st.mine}</span>` : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
         </div>
         ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.me ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
     } else if (st.phase === 'running') {
@@ -7716,14 +7730,16 @@
       const res = st.result;
       status = `<div class="tn-podium"><div class="tn-champ">🏆 ${nm(res.champion)}</div>
         <div class="panel-note"><span>Final:</span> ${res.finalist ? nm(res.finalist) : '–'}${res.semis.length ? ` · <span>Semi-finals:</span> ${res.semis.map(nm).join(', ')}` : ''}</div>
-        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div>`;
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.next || st.end}">${tnCd((st.next || st.end) - now)}</span></div></div>`;
     } else {
       status = `<div class="tn-status"><div><div class="tn-big"><span>Cancelled: fewer than ${st.minPlayers} players signed up</span></div>
-        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div></div>`;
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.next || st.end}">${tnCd((st.next || st.end) - now)}</span></div></div></div>`;
     }
     if (st.prev) status += `<p class="panel-note tn-prev"><span>${st.prev.champions && st.prev.champions.length > 1 ? 'Yesterday\'s champions:' : 'Yesterday\'s champion:'}</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
     // Les deux tournois du jour : on regarde l'un ou l'autre (inscrit dans l'un, on ne peut pas entrer dans l'autre).
-    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">🏆 <span>Tournament</span> ${b.which} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
+    status = hours + status;
+    // Le tournoi du soir (3) est à part : on peut y être en plus d'un des deux premiers.
+    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">${b.eve ? '🌙 <span>Evening</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
     const mode = tnMode(st);
     status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
@@ -7786,7 +7802,7 @@
     const join = $('#tn-join');
     if (join) join.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; join.disabled = true;
-      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(`✓ Signed up for tournament ${tnState.which}`); tnWhich = 0; drawTournament(); }
+      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(tnState.which === 3 ? '✓ Signed up for the evening tournament' : `✓ Signed up for tournament ${tnState.which}`); tnWhich = tnState.which === 3 ? 3 : 0; drawTournament(); }
       catch (err) { toast(err.message, 3500, 'error'); join.disabled = false; }
       finally { tnBusy = false; }
     });
@@ -7794,7 +7810,7 @@
     if (rollBtn) rollBtn.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; rollBtn.disabled = true;
       try {
-        const r = await Online.tourney('roll');
+        const r = await Online.tourney('roll', { which: tnState.which });
         try { Sound.play('lock', { i: 3 }); } catch (e) { /* son facultatif */ }
         tnState = { ...r.state, prev: tnState.prev }; drawTournament();
         const last = document.querySelectorAll('.tn-side:first-child .tn-cards .num-card:not(.neutral)');

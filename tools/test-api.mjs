@@ -3455,13 +3455,71 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (let i = 0; i < 31; i++) await TN.signup(mk(51 + i), T3 + 3 * H + i);
   await refused(TN.signup(mk(95), T3 + 4 * H), 422, /full/);
   { const h = await TN.handle({ op: 'view', playerId: mk(50), secret: sec(50) }, T3 + 5 * H);
-    assert.deepEqual([h.which, h.mine, h.joined, h.count, h.both.map(b => b.count)], [2, 2, true, 32, [32, 32]], 'chacun voit son tournoi');
+    assert.deepEqual([h.which, h.mine, h.joined, h.count, h.both.map(b => b.count)], [2, 2, true, 32, [32, 32, 0]], 'chacun voit son tournoi');
     const h1 = await TN.handle({ op: 'view', playerId: mk(50), secret: sec(50), which: 1 }, T3 + 5 * H); assert.equal(h1.which, 2, 'inscrit au 2 : toujours le sien'); }
   // Choisir le second alors que le premier a de la place.
   { const D4 = '2030-04-01', T4 = Date.parse(`${D4}T00:00:00Z`); const j = await TN.signup(mk(96), T4 + H, 2); assert.equal(j.which, 2); assert.equal((await TN.signup(mk(97), T4 + H)).which, 1); }
   const big = await viewD(D3, null, T3 + 12 * H);
   assert.equal(big.size, 32); assert.equal(big.rounds.length, 5); assert.equal(big.rounds[0].matches.filter(m => m.bye).length, 0);
   assert.equal(big.rounds[4].end, T3 + 24 * H, 'fini à minuit');
+
+  // Tournoi du soir (demandé par Me Cojoni, 2026-10-26) : inscriptions 12:00-18:00 UTC, tours 18:00 → 06:00 le
+  // lendemain, son propre tableau et ses propres prix ; on peut y être en plus d'un tournoi du jour.
+  {
+    const D5 = '2030-05-01', T5 = Date.parse(`${D5}T00:00:00Z`), E5 = `${D5}-e`;
+    const eveTok = id => crypto.createHash('sha256').update(`tn:${E5}:${id}`).digest('hex').slice(0, 12);
+    const unE = k => { for (let i = 0; i < 100; i++) if (eveTok(pid(i)) === k) return pid(i); return k; };
+    const deE = x => JSON.parse(JSON.stringify(x), (k, val) => ((k === 'id' || k === 'w') && typeof val === 'string' ? unE(val) : val));
+    const day4 = [1, 2, 3, 4].map(i => mk(i)), eve5 = [3, 4, 5, 6, 7].map(i => mk(i));
+    for (const [i, id] of day4.entries()) await TN.signup(id, T5 + H + i);
+    // Fenêtre : pas avant 12:00, pas à 18:00.
+    await refused(TN.signup(eve5[0], T5 + 11 * H, 3), 422, /open at 12:00/);
+    await refused(TN.signup(eve5[0], T5 + 18 * H, 3), 422, /closed/);
+    await refused(TN.signup(mk(91, 29), T5 + 13 * H, 3), 422, /30 rolls/);
+    // Inscrits au tournoi 1 (pid 3 et 4) et au soir : permis.
+    for (const [i, id] of eve5.entries()) assert.deepEqual(((({ which, place }) => [which, place])(await TN.signup(id, T5 + 13 * H + i, 3))), [3, i + 1]);
+    await refused(TN.signup(eve5[0], T5 + 14 * H, 3), 409, /already/);
+    // Le tournoi du jour, lui, est fermé à 13:00 (même pour qui est au soir).
+    await refused(TN.signup(eve5[4], T5 + 13 * H, 1), 422, /closed/);
+    { const h = await TN.handle({ op: 'view', playerId: pid(3), secret: sec(3) }, T5 + 14 * H);
+      assert.deepEqual([h.which, h.mine, h.mineEve, h.both.map(b => b.count)], [1, 1, true, [4, 0, 5]], 'pid 3 : tournoi 1 et soir');
+      const he = await TN.handle({ op: 'view', playerId: pid(3), secret: sec(3), which: 3 }, T5 + 14 * H);
+      assert.deepEqual([he.which, he.eve, he.phase, he.joined, he.count, he.day], [3, true, 'signup', true, 5, E5]);
+      const h5 = await TN.handle({ op: 'view', playerId: pid(5), secret: sec(5) }, T5 + 14 * H);
+      assert.equal(h5.which, 3, 'inscrit au soir seulement : vue par défaut = le soir');
+      const soon = await TN.handle({ op: 'view', which: 3 }, T5 + 8 * H); assert.equal(soon.phase, 'soon', 'avant 12:00 : bientôt'); }
+    // 18:00 : tableau de 8, 3 tours de 4 h, fin à 06:00 le lendemain.
+    let ve = deE(await TN.view(E5, null, T5 + 18 * H + 1000));
+    assert.deepEqual([ve.phase, ve.size, ve.rounds.length, ve.round], ['running', 8, 3, 0]);
+    assert.equal(ve.rounds[0].start, T5 + 18 * H); assert.equal(ve.rounds[2].end, T5 + 30 * H, 'fini à 06:00 le lendemain');
+    assert.equal(ve.next, T5 + 36 * H, 'le suivant ouvre à 12:00');
+    // Un joueur des deux tournois tire dans celui du soir avec which: 3, sans toucher au tournoi 1.
+    const rm = ve.rounds[0].matches.find(m => !m.bye), ea = rm.a.id;
+    db.delete(`tnlock:${ea}`); const er = await TN.roll(ea, T5 + 19 * H, 3); assert.equal(er.count, 1);
+    assert.equal(JSON.parse(db.get(`tn:${E5}:rolls`).get(`0:${ea}`)).s.length, 1);
+    // Passage de minuit : à 02:00 le 2, le tournoi du soir en cours est encore celui du 1er (finale 02:00-06:00).
+    assert.equal(TN.eveAt(T5 + 26 * H), E5); assert.equal(TN.eveAt(T5 + 30 * H), `2030-05-02-e`);
+    // Prix : chaque tournoi une fois (le 1 après minuit, le soir après 06:00), relus plusieurs fois.
+    const all = [...new Set([...day4, ...eve5])], bonus = async () => Object.fromEntries(await Promise.all(all.map(async id => [id, Number((await readStats(id)).bonus || 0)])));
+    const b0 = await bonus(), eco0 = Number(db.get('eco:2030-05-02')?.get('in:tourney') || 0);
+    const late = await TN.handle({ op: 'view', which: 3 }, T5 + 26 * H);
+    assert.deepEqual([late.day, late.phase, late.round], [E5, 'running', 2]);
+    const fin5 = deE(late).rounds[2].matches[0];
+    db.delete(`tnlock:${fin5.a.id}`); assert.equal((await TN.roll(fin5.a.id, T5 + 26 * H + 1000, 3)).count, 1, 'tirage de finale après minuit');
+    await TN.tick(T5 + 25 * H); await TN.tick(T5 + 25 * H + 10);
+    assert.ok(db.get(`tn:${D5}`).get('paid'), 'tournoi 1 payé après minuit'); assert.ok(!db.get(`tn:${E5}`).get('paid'), 'soir pas encore payé');
+    const b1 = await bonus(); assert.equal(Object.values(b1).reduce((x, v) => x + v, 0) - Object.values(b0).reduce((x, v) => x + v, 0), 1000 + 400 + 300);
+    await TN.tick(T5 + 30 * H + 1000); await TN.tick(T5 + 31 * H); await TN.handle({ op: 'view', which: 3 }, T5 + 32 * H);
+    const b2 = await bonus(); assert.equal(Object.values(b2).reduce((x, v) => x + v, 0) - Object.values(b1).reduce((x, v) => x + v, 0), 1000 + 400 + 300, 'soir payé une seule fois');
+    assert.equal(Number(db.get('eco:2030-05-02').get('in:tourney')) - eco0, 2 * 1700);
+    const ed = deE(await TN.view(E5, null, T5 + 33 * H)); assert.equal(ed.phase, 'done');
+    assert.equal(b2[ed.result.champion.id] - b1[ed.result.champion.id], 1000);
+    // Le lendemain : le champion du soir rejoint ceux d'hier ; le nouveau soir est vide et ouvre à 12:00.
+    const nx = await TN.handle({ op: 'view' }, T5 + 33 * H);
+    assert.equal(nx.prev.champions.length, 2, 'champions d\'hier : tournoi 1 et soir');
+    assert.deepEqual(nx.both.map(b => b.count), [0, 0, 0]);
+    const ne = await TN.handle({ op: 'view', which: 3 }, T5 + 33 * H); assert.deepEqual([ne.day, ne.phase], ['2030-05-02-e', 'soon']);
+  }
 }
 
 // Modes du tournoi (idée de PRISMA123, 2026-10-21) : rotation par la date, mode figé à la création, 3 ou 5 tirages,
