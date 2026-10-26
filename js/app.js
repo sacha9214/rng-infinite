@@ -221,7 +221,13 @@
   // ---------------------------------------------------------------- utilitaires
   const $ = (sel, el = document) => el.querySelector(sel);
   const fmt = v => Math.round(v).toLocaleString('en-US');
-  const compact = v => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  // Arrondi vers le bas (jamais plus que la vraie valeur) : 14 950 pièces s'affichaient « 15K » (« coin bug » signalé sur
+  // Discord, 2026-10-26). On tronque à un chiffre après la virgule dans l'unité choisie, puis Intl met le K / M / B.
+  const compact = v => {
+    const n = Number(v) || 0, abs = Math.abs(n), unit = abs >= 1e9 ? 1e9 : abs >= 1e6 ? 1e6 : abs >= 1e3 ? 1e3 : 1;
+    const down = unit === 1 ? Math.trunc(n) : (Math.trunc((n / unit) * 10 + 1e-9) / 10) * unit;
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(down);
+  };
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const plural = (k, word) => `${fmt(k)} ${word}${k === 1 ? '' : 's'}`;
@@ -702,11 +708,11 @@
 
   // Partage d'un tirage : une carte en image (js/sharecard.js) à coller dans Discord, à télécharger ou à envoyer par la
   // feuille de partage du téléphone ; le texte d'avant reste proposé à côté.
-  function share(a) {
+  function share(a, owner = Store.player.name || '') {
     const rank = Engine.topLabel(a.percentile);
     const canvas = document.createElement('canvas');
     const data = {
-      str: a.str, tier: a.tier, rank: rank ? cap(rank.toLowerCase()) : '', xp: fmt(a.total), name: Store.player.name || '', host: 'rng-infinite.com',
+      str: a.str, tier: a.tier, rank: rank ? cap(rank.toLowerCase()) : '', xp: fmt(a.total), name: owner, host: 'rng-infinite.com',
       badges: a.groups.slice(0, 5).map(g => ({ emoji: g.badge.emoji, label: g.badge.label, tier: g.badge.tier })), more: Math.max(0, a.groups.length - 5),
     };
     const blobOf = () => new Promise(done => canvas.toBlob(done, 'image/png'));
@@ -1044,7 +1050,7 @@
         ${breakdownHTML(r[0], a)}
       </div>`, m => {
       m.querySelector('[data-share]').addEventListener('click', () => share(a));
-      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(r[0], `Your roll #${fmt(index + 1)}`));
+      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(r[0], `Your roll #${fmt(index + 1)}`, Store.player.name || ''));
       animateDigits(m, { stagger: 120 });
     });
   }
@@ -1696,7 +1702,9 @@
   }
 
   // Détail d'un nombre tiré par quelqu'un d'autre (classement, meilleur tirage du jour).
-  function openNumberModal(n, caption) {
+  // owner : le joueur qui a fait ce tirage (le partage affiche son nom, pas le mien : « Share bug » signalé sur Discord,
+  // 2026-10-26). Vide si on ne le connaît pas : la carte n'affiche alors aucun nom.
+  function openNumberModal(n, caption, owner = '') {
     const a = analysis(n);
     openModal(`
       <div class="result" data-tier="${a.tier}" style="padding-top:.2rem">
@@ -1707,7 +1715,7 @@
         <div class="result-actions"><button class="btn" data-rewatch>▶ Rewatch</button></div>
         ${breakdownHTML(n, a)}
       </div>`, m => {
-      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(n, caption || ''));
+      m.querySelector('[data-rewatch]').addEventListener('click', () => rewatch(n, caption || '', owner));
       animateDigits(m, { stagger: 120 });
     });
   }
@@ -2060,12 +2068,12 @@
 
   // Revoir un tirage (le sien ou celui d'un autre) : la révélation complète rejouée avec mon skin, sans rien tirer ni
   // enregistrer. Les badges se rejouent tous (pas de saut), l'XP à vie ne bouge pas.
-  function rewatch(n, caption) {
+  function rewatch(n, caption, owner = '') {
     if (session && !session.finished) { clientEvt('reveal_cut'); session.cancel(); }
     closeModal();
     const back = (session && session.replayBack) || location.hash;
     currentView = 'result';
-    session = playReveal({ n, a: analysis(n), previous: [], newIds: null, isFirst: false, lifetimeBefore: lifetimeEP(), index: -1, online: null, replay: { caption, back } });
+    session = playReveal({ n, a: analysis(n), previous: [], newIds: null, isFirst: false, lifetimeBefore: lifetimeEP(), index: -1, online: null, replay: { caption, back, owner } });
   }
 
   function todayCardHTML(entry, rollsToday, runners = []) {
@@ -2073,13 +2081,13 @@
     const pills = a.groups.slice(0, 7).map(g => `<span class="badge-pill" data-tier="${g.badge.tier}">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join('');
     const more = a.earnedIds.length - Math.min(7, a.groups.length);
     return `
-      <div class="feature-card" id="today-card" data-tier="${a.tier}" data-number="${entry.n}" data-caption="${esc(`Today's best · ${entry.name}`)}" style="cursor:pointer">
+      <div class="feature-card" id="today-card" data-tier="${a.tier}" data-number="${entry.n}" data-owner="${esc(entry.name)}" data-caption="${esc(`Today's best · ${entry.name}`)}" style="cursor:pointer">
         <div class="eyebrow">Today's best roll</div>
         <span class="num-card md" data-tier="${a.tier}">${a.str}</span>
         <div class="feature-meta">rolled by <a class="player-link" href="${profileHref(entry.name)}">${esc(entry.name)}</a>${entry.me ? ' (you)' : ''} ${titleHTML(entry.title)}</div>
         <div class="pill-row">${pills}${more > 0 ? `<span class="more">+${more} more</span>` : ''}</div>
         <div class="ep-big" style="display:inline-block;font-size:.85rem">${fmt(entry.s)} XP</div>
-        ${runners.length ? `<div class="today-podium">${runners.map((r, i) => { const b = analysis(r.n); return `<div class="today-podium-row" data-number="${r.n}" data-caption="${esc(`Today's #${i + 2} · ${r.name}`)}"><span>${['🥈', '🥉'][i]}</span><a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>${r.me ? ' <span class="muted">(you)</span>' : ''}<span class="num-card sm" data-tier="${b.tier}">${b.str}</span><span class="mono">${compact(r.s)} XP</span></div>`; }).join('')}</div>` : ''}
+        ${runners.length ? `<div class="today-podium">${runners.map((r, i) => { const b = analysis(r.n); return `<div class="today-podium-row" data-number="${r.n}" data-owner="${esc(r.name)}" data-caption="${esc(`Today's #${i + 2} · ${r.name}`)}"><span>${['🥈', '🥉'][i]}</span><a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>${r.me ? ' <span class="muted">(you)</span>' : ''}<span class="num-card sm" data-tier="${b.tier}">${b.str}</span><span class="mono">${compact(r.s)} XP</span></div>`; }).join('')}</div>` : ''}
         <div class="feature-meta" style="margin-bottom:0">${plural(rollsToday, 'roll')} today</div>
       </div>`;
   }
@@ -2543,10 +2551,10 @@
     });
 
     const runStep = s => { if (!s.done) { s.done = true; late = performance.now() - began - s.at > 250; s.run(false); } };
-    $('#r-share').addEventListener('click', () => share(a));
+    $('#r-share').addEventListener('click', () => share(a, ctx.replay ? ctx.replay.owner || '' : Store.player.name || ''));
     if (ctx.replay) {
       $('#r-back').addEventListener('click', () => { if (session) session.cancel(); session = null; if (location.hash === ctx.replay.back) route(); else location.hash = ctx.replay.back || '#/'; });
-      $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption); });
+      $('#r-replay').addEventListener('click', () => { if (session) session.cancel(); session = null; rewatch(n, ctx.replay.caption, ctx.replay.owner); });
     } else { $('#r-again').addEventListener('click', () => startRoll('again')); bindSoloAuto(); } // pas « true » : ce bouton ne doit pas couper un tirage auto en cours (jaxoncool43, kingston, 2026-10-23)
 
     steps.forEach(s => timers.push(setTimeout(() => runStep(s, false), s.at)));
@@ -3076,7 +3084,7 @@
     const rollRow = (x, k) => {
       const a = analysis(x.n);
       return `
-        <div class="record" data-number="${x.n}" data-caption="${esc(caption(x))}">
+        <div class="record" data-number="${x.n}" data-owner="${esc(p.name)}" data-caption="${esc(caption(x))}">
           <span class="rank">${k + 1}</span>
           <span class="num-card sm" data-tier="${a.tier}">${a.str}</span>
           <span class="grow">${a.groups.slice(0, 3).map(g => `${g.badge.emoji} ${esc(g.badge.label)}`).join(' · ')}</span>
@@ -3113,7 +3121,7 @@
         </div>
         <div class="pf-best">
           ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
-          <span class="num-card md skin-${esc(p.skin || 'classic')}" data-tier="${topRoll.tier}" data-number="${top.n}" data-caption="${esc(caption(top))}" style="cursor:pointer">${(() => { const lead = top.n ? topRoll.str.search(/[1-9]/) : topRoll.str.length - 1; return topRoll.str.split('').map((c, i) => `<span class="slot${i < lead ? ' ghost' : ''}">${c}</span>`).join(''); })()}</span>
+          <span class="num-card md skin-${esc(p.skin || 'classic')}" data-tier="${topRoll.tier}" data-number="${top.n}" data-owner="${esc(p.name)}" data-caption="${esc(caption(top))}" style="cursor:pointer">${(() => { const lead = top.n ? topRoll.str.search(/[1-9]/) : topRoll.str.length - 1; return topRoll.str.split('').map((c, i) => `<span class="slot${i < lead ? ' ghost' : ''}">${c}</span>`).join(''); })()}</span>
           <div class="pf-best-meta">${tierPill(topRoll.tier)}<b class="mono">${fmt(top.s)} XP</b></div>` : '<div class="empty">No rolls yet</div>'}
         </div>
         <div class="pf-stats">
@@ -3249,7 +3257,7 @@
     const rarest = p => Object.keys(p.badges).map(id => Engine.byId.get(id)).filter(Boolean).sort((x, y) => y.score - x.score)[0] || null;
     const day = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const bestCell = p => (p.best[0]
-      ? `<span class="mono" data-number="${p.best[0].n}" data-caption="${esc(`${p.name} · best roll`)}" style="cursor:pointer">${analysis(p.best[0].n).str}</span> · ${compact(p.best[0].s)} XP`
+      ? `<span class="mono" data-number="${p.best[0].n}" data-owner="${esc(p.name)}" data-caption="${esc(`${p.name} · best roll`)}" style="cursor:pointer">${analysis(p.best[0].n).str}</span> · ${compact(p.best[0].s)} XP`
       : '–');
     const rarestCell = p => { const b = rarest(p); return b ? `<span data-badge="${b.id}" style="cursor:pointer">${b.emoji} ${esc(b.label)}</span>` : '–'; };
     // [libellé, valeur comparée, affichage, sens] : 1 = plus haut gagne, -1 = plus bas gagne, 0 = pas de gagnant.
@@ -3290,7 +3298,7 @@
     };
     const top5 = p => p.best.slice(0, 5).map((x, k) => {
       const a = analysis(x.n);
-      return `<div class="record" data-number="${x.n}" data-caption="${esc(`${p.name} · ${fullDate(x.t)}`)}"><span class="rank">${k + 1}</span><span class="num-card sm" data-tier="${a.tier}">${a.str}</span><span class="grow"></span><span class="ep-pill">${compact(x.s)} XP</span></div>`;
+      return `<div class="record" data-number="${x.n}" data-owner="${esc(p.name)}" data-caption="${esc(`${p.name} · ${fullDate(x.t)}`)}"><span class="rank">${k + 1}</span><span class="num-card sm" data-tier="${a.tier}">${a.str}</span><span class="grow"></span><span class="ep-pill">${compact(x.s)} XP</span></div>`;
     }).join('') || '<div class="empty">No rolls yet.</div>';
 
     return `
@@ -7213,7 +7221,7 @@
     const mine = d.players.findIndex(p => p.me);
     const numberCard = (r, j, i) => {
       const a = analysis(r.n[j]);
-      return `<span class="num-card sm" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(`${d.players[j].name} · round ${i + 1}`)}" style="cursor:pointer">${a.str}</span>`;
+      return `<span class="num-card sm" data-tier="${a.tier}" data-number="${r.n[j]}" data-owner="${esc(d.players[j].name)}" data-caption="${esc(`${d.players[j].name} · round ${i + 1}`)}" style="cursor:pointer">${a.str}</span>`;
     };
     drawChat(d);
     // Longue partie : seules les 30 dernières manches sont affichées (la liste entière ralentirait la page).
@@ -7258,7 +7266,7 @@
       const a = r && !spinning && r.n[j] != null ? analysis(r.n[j]) : null; // arrivé en cours de partie : pas de nombre pour les manches d'avant
       const won = a && r.winner === j;
       const card = withLever(a
-        ? `<div class="num-card md${skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
+        ? `<div class="num-card md${skinClass(p.skin)}" data-tier="${a.tier}" data-number="${r.n[j]}" data-owner="${esc(p.name)}" data-caption="${esc(p.name)}" style="cursor:pointer">${slotsHTML(a.str)}</div>`
         : `<div class="num-card md neutral${spinning ? ' charging' : ''}${skinClass(p.skin)}" id="rc-${j}">${'??????'.split('').map(c => `<span class="slot${spinning ? ' spinning' : ''}">${spinning ? '0' : c}</span>`).join('')}</div>`, p.skin);
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
@@ -8374,7 +8382,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
     const number = e.target.closest('[data-number]');
-    if (number) { e.preventDefault(); openNumberModal(Number(number.dataset.number), number.dataset.caption || ''); return; }
+    if (number) { e.preventDefault(); openNumberModal(Number(number.dataset.number), number.dataset.caption || '', number.dataset.owner || ''); return; }
     const roll = e.target.closest('[data-roll]');
     if (roll) { e.preventDefault(); openRollModal(Number(roll.dataset.roll)); }
   });
