@@ -211,6 +211,9 @@
     { id: 'racetrack', name: 'Grand Prix', emoji: '🏎️', price: 1100, idea: 'YU CHUAN 23', desc: 'Race cars scream down the main straight in front of a packed grandstand' },
     // Idée de 17black (2026-10-24) : une plage venteuse avec un parasol.
     { id: 'windybeach', name: 'Windy Beach', emoji: '🏖️', price: 900, idea: '17black', desc: 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by' },
+    // Idée de finnnnn (2026-10-26) : la façade d'une grande banque, avec des voitures de luxe qui passent devant
+    // (voitures inventées, aucune marque).
+    { id: 'bank', name: 'Grand Bank', emoji: '🏦', price: 1200, idea: 'finnnnn', desc: 'Fancy cars cruise past the columns of a grand bank at sunset' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
