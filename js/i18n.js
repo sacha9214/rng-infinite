@@ -189,6 +189,7 @@
     'ASMR Bubbles': 'Bulles ASMR', 'Shiny bubbles float up behind the game; click the background to pop them': 'Des bulles irisées montent derrière le jeu ; clique sur le fond pour les éclater',
     'Open Ocean': 'Pleine mer', 'Whales, sharks and dolphins swim by; rare rolls light up the water and Mythic+ rolls send a pod of dolphins racing past': 'Des baleines, des requins et des dauphins passent ; les tirages rares illuminent l\'eau et les Mythic+ font filer un banc de dauphins',
     'Grand Prix': 'Grand Prix', 'Race cars scream down the main straight in front of a packed grandstand': 'Des monoplaces filent sur la ligne droite devant une tribune pleine',
+    'Playground': 'Aire de jeux', 'A sunny playground: a kid swings high next to the slide and the sandbox': 'Une aire de jeux au soleil : un enfant se balance à côté du toboggan et du bac à sable',
     'Windy Beach': 'Plage venteuse', 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by': 'Une plage un jour de vent : le parasol penche dans les rafales et un ballon roule',
     'Wallpaper Case': 'Caisse de fonds', 'An animated wallpaper worth 500 to 1,200 coins': 'Un fond animé valant 500 à 1 200 pièces', 'new wallpaper unlocked!': 'nouveau fond débloqué !', 'Use': 'Mettre',
     'The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.': 'La caisse de fonds marche pareil avec les fonds animés : tu possèdes déjà celui tiré ? Une partie du prix t\'est rendue aussi.',
