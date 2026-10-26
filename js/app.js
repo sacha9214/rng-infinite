@@ -547,6 +547,18 @@
   // XP à vie et nombre de tirages : seuls comptent ceux que le serveur a tirés (les mêmes qu'au classement). Un tirage
   // fait hors ligne (4e case à 1, voir Store.addRoll) reste dans l'historique, marqué, sans s'ajouter au total.
   const lifetimeEP = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : r[1]), 0);
+  // Totaux à vie du serveur (« Stats bug », 2026-10-26) : l'appareil ne garde pas tous les tirages et leur XP enregistrée
+  // date du tirage, d'où trois chiffres différents (accueil, Stats, classement). On montre ceux du serveur dès qu'on les a.
+  const ServerLife = {
+    at: 0, xp: null, rolls: null, busy: null,
+    async load() {
+      if (!Store.player.name) return null;
+      if (Date.now() - this.at < 60000 && this.xp != null) return this;
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      await this.busy;
+      return this.xp != null ? this : null;
+    },
+  };
   const countedRolls = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : 1), 0);
   // Passer les badges déjà obtenus : une récompense pour ceux qui ont assez tiré, éteinte par défaut.
   const SKIP_BADGES_AT = 500;
@@ -1260,7 +1272,19 @@
   const shareIcon = () => '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>';
 
   // ---------------------------------------------------------------- accueil
+  // Remplace les totaux de l'appareil par ceux du serveur (accueil et Stats), une fois la page dessinée.
+  async function fillServerLife() {
+    const life = await ServerLife.load();
+    if (!life) return;
+    const home = document.getElementById('home-life');
+    if (home) home.textContent = `${plural(life.rolls, 'roll')} · ${fmt(life.xp)} lifetime XP`;
+    const sr = document.getElementById('st-rolls'), sl = document.getElementById('st-life');
+    if (sr) { const v = sr.querySelector('.v'); if (v) v.textContent = fmt(life.rolls); }
+    if (sl) { const v = sl.querySelector('.v'), sub = sl.querySelector('.s'); if (v) v.textContent = compact(life.xp); if (sub && life.rolls) sub.textContent = `${fmt(life.xp / life.rolls)} XP per roll`; }
+  }
+
   function renderHome() {
+    setTimeout(fillServerLife, 0);
     currentView = 'home';
     const rolls = Store.rolls;
     const best = bestRollIndex();
@@ -1273,7 +1297,7 @@
           <p class="tagline">Infinite rolls. One number at a time. What will yours be?</p>
           <button class="btn-roll${genClass()}" id="roll-btn">Generate</button>
           <p class="hint">
-            ${rolls.length ? `${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP · ` : ''}
+            ${rolls.length ? `<span id="home-life">${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP</span> · ` : ''}
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>${esc(keyName())}</kbd>
           </p>
@@ -2838,6 +2862,7 @@
   const tile = (label, value, sub) => `<div class="tile"><div class="l">${label}</div><div class="v">${value}</div><div class="s">${sub}</div></div>`;
 
   function renderStats() {
+    setTimeout(fillServerLife, 0);
     currentView = 'stats';
     const N = Store.rolls.length;
     if (!N) {
@@ -2871,8 +2896,8 @@
       <div class="page page-wide">
         <h1 class="page-title">Stats</h1>
         <div class="tiles">
-          ${tile('Rolls', fmt(N), `${fmt(st.today)} today`)}
-          ${tile('Lifetime XP', compact(st.lifetime), `${fmt(st.lifetime / N)} XP per roll`)}
+          <span id="st-rolls">${tile('Rolls', fmt(N), `${fmt(st.today)} today`)}</span>
+          <span id="st-life">${tile('Lifetime XP', compact(st.lifetime), `${fmt(st.lifetime / N)} XP per roll`)}</span>
           ${tile('Median roll', fmt(st.median) + ' XP', `typical: ${fmt(window.SCORE_STATS.median)} XP`)}
           ${tile('Luck', st.luck.toFixed(1), `avg percentile · expected ${expectedLuck.toFixed(1)}`)}
           ${tile('Best roll', `<span data-roll="${bestI}" style="cursor:pointer">${Store.rolls[bestI][0]}</span>`, `${fmt(Store.rolls[bestI][1])} XP`)}
