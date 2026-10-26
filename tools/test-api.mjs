@@ -754,6 +754,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['SET', 'lb:xp:migrated', '5:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
   assert.equal(r.body.entries.find(e => e.name === 'Alice').s, xpFromHistory(alice), 'recalculé après un changement de badges');
+  // Historique plafonné (« Stats bug », 2026-10-26) : des tirages ne sont plus dans l'historique (count:all plus grand).
+  // Ils comptent à la moyenne des autres, et l'XP à vie ne baisse jamais.
+  {
+    const win = xpFromHistory(alice), n = run([['ZCARD', `hist:${alice.playerId}`]])[0].result, [cnt0] = run([['HGET', 'count:all', alice.playerId]]).map(x => x.result);
+    run([['SET', 'lb:xp:migrated', '5:00000000000b'], ['ZADD', 'lb:xp', 1, alice.playerId], ['HSET', 'count:all', alice.playerId, n * 2]]);
+    r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
+    assert.equal(r.body.entries.find(e => e.name === 'Alice').s, Math.round(win * 2), 'tirages sortis de l\'historique comptés à la moyenne');
+    run([['SET', 'lb:xp:migrated', '5:00000000000c'], ['ZADD', 'lb:xp', win * 5, alice.playerId]]);
+    r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
+    assert.equal(r.body.entries.find(e => e.name === 'Alice').s, win * 5, 'jamais en baisse');
+    run([['HSET', 'count:all', alice.playerId, cnt0 || n], ['ZADD', 'lb:xp', win, alice.playerId], ['HSET', `stats:${alice.playerId}`, 'xpLife', win]]);
+  }
   // Les meilleurs tirages aussi (tout le temps, et la période en cours) : un vieux score de meilleur tirage est corrigé.
   {
     const hist = run([['ZRANGE', `hist:${alice.playerId}`, 0, -1]])[0].result.map(m => m.split(':').map(Number));

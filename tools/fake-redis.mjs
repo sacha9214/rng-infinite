@@ -77,6 +77,7 @@ export function fakeRedis() {
       return added;
     },
     ZSCORE: (k, m) => (db.has(k) && db.get(k).has(m) ? String(db.get(k).get(m)) : null),
+    ZMSCORE: (k, ...ms) => ms.map(m => (db.has(k) && db.get(k).has(m) ? String(db.get(k).get(m)) : null)),
     ZCARD: k => (db.has(k) ? db.get(k).size : 0),
     ZCOUNT(k, min, max) { if (!db.has(k)) return 0; const lo = min === '-inf' ? -Infinity : Number(min), hi = max === '+inf' ? Infinity : Number(max); return [...db.get(k).values()].filter(s => Number(s) >= lo && Number(s) <= hi).length; },
     ZRANGE(k, a, b, ...opts) {

@@ -27,7 +27,10 @@ module.exports = async (req, res) => {
     // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).
     if (params.get('lite') === '1') {
       const [shown, liteTitle] = await redis([['HGET', 'names', id], ['HGET', 'titles', id]]);
-      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(await readStats(id)), title: liteTitle || null });
+      const lst = await readStats(id);
+      // xp / rolls : les totaux à vie tenus par le serveur, affichés à l'accueil et dans Stats à la place des totaux de
+      // l'appareil, qui ne gardent qu'une partie des tirages (« Stats bug » sur Discord, 2026-10-26).
+      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0 });
     }
 
     // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil

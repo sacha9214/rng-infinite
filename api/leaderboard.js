@@ -39,12 +39,19 @@ async function migrateXp() {
   // fond (deploy/ovh/api-server.js), si bien qu'il avance doucement sans attendre les visites du classement.
   for (let i = 0; i < todo.length && Date.now() - start < MIGRATE_BUDGET_MS; i += MIGRATE_BATCH) {
     const batch = todo.slice(i, i + MIGRATE_BATCH);
-    const [counts, oldBest, ...lists] = await redis([['HMGET', 'count:all', ...batch], ['HMGET', 'best:all', ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
+    const [counts, oldBest, oldXp, ...lists] = await redis([['HMGET', 'count:all', ...batch], ['HMGET', 'best:all', ...batch], ['ZMSCORE', XP_LB, ...batch], ...batch.map(id => ['ZRANGE', historyKey(id), 0, -1])]);
     const writes = [];
     for (let j = 0; j < batch.length; j++) {
       const id = batch[j];
       await breathe(); // un joueur à la fois : les tirages des autres passent pendant le recalcul
-      const { xp, rolls } = lifetimeTotals(lists[j]);
+      const { xp: windowXp, rolls } = lifetimeTotals(lists[j]);
+      // Historique plafonné (100 000 tirages) : les plus anciens n'y sont plus. Recalculer seulement sur ce qui reste
+      // faisait perdre leur XP (jsand : 126 095 tirages, retombé de ~3,2 à 2,7 milliards après le badge Leap Day,
+      // « Stats bug » sur Discord, 2026-10-26). Les tirages disparus comptent à la moyenne de ceux qui restent, et l'XP
+      // à vie ne descend jamais (rien de gagné n'est repris).
+      const total = Math.max(rolls, Number(counts[j]) || 0);
+      const estimate = rolls && total > rolls ? Math.round(windowXp + (total - rolls) * (windowXp / rolls)) : windowXp;
+      const xp = Math.max(estimate, Number(oldXp && oldXp[j]) || 0);
       if (xp > 0) writes.push(['ZADD', XP_LB, xp, id], ['HSET', statsKey(id), 'xpLife', xp]);
       if (rolls > Number(counts[j] || 0)) writes.push(['HSET', 'count:all', id, rolls]);
       // Meilleur tirage de chaque période encore ouverte, au barème actuel des badges.
