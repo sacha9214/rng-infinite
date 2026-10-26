@@ -102,6 +102,8 @@
     { id: 'money', name: 'Money', emoji: '💵', price: 1900, desc: 'A crisp 100 bill with gold-foil digits stamped one by one; coins rain down, and Mythic rolls make the gold melt', idea: 'JBearr12' }, // idée de JBearr12 et finnnnn (2026-10-25)
     // Idée de finnnnn (2026-10-26) : un hot-dog dont les chiffres passent du ketchup à la moutarde, un filet sur deux.
     { id: 'hotdog', name: 'Hot Dog', emoji: '🌭', price: 1700, desc: 'A grilled hot dog dressed digit by digit: every number is a drizzle that switches between ketchup and mustard', idea: 'finnnnn' },
+    // Idée de shadow2 (2026-10-26) : des fûts radioactifs, de la gelée verte qui luit, le grésillement d'un compteur Geiger.
+    { id: 'radioactive', name: 'Radioactive', emoji: '☢️', price: 2200, desc: 'Glowing green goo in a leaking hazard barrel: digits crackle like a Geiger counter and plop into place', idea: 'shadow2' },
     // Idée de R77 (2026-10-25) : une double hélice d'ADN qui tourne ; chaque chiffre est une paire de bases qui s'emboîte.
     { id: 'dna', name: 'DNA Helix', emoji: '🧬', price: 2400, desc: 'A glowing double helix twists behind the digits; every digit snaps in like a base pair', idea: 'R77' },
     // Idée de R77 (2026-10-25) : de la poussière de fée dorée qui fait apparaître chaque chiffre d'un coup de baguette.

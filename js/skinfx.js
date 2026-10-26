@@ -4471,6 +4471,64 @@
     };
   });
 
+  // ☢️ Radioactive (2026-10-26, idée de shadow2) — des bulles montent sans cesse dans la gelée verte au fond du fût ;
+  // chaque chiffre qui se pose fait crépiter le compteur Geiger (de petits éclats verts tout autour) et part en onde.
+  // À la révélation, des ondes de radiation qui grandissent avec la rareté ; dès Mythic, un grand trèfle de danger
+  // s'allume derrière la carte et la gelée coule sous le fût. Tirage raté : une seule bulle qui éclate, sans bruit.
+  SCENES.radioactive = custom(pieces({ cols: ['#a3ff3c', '#84cc16', '#d4ff6a'], shapes: ['drop', 'drop', 'bubble'], size: [2.4, 4.6], g: 640, spin: 0, up: true, glowc: '#84ff3c', ring: '#a3ff3c', drift: { rate: 2, from: 'bottom' } }), (env, { st }) => {
+    const { ci, co, w, h, card, q, dark } = env, bubbles = particles(), ticks = timed(), waves = timed(), drips = timed(), emit = emitter();
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const GOO = dark ? '#a3ff3c' : '#4d7c0f', EDGE = '#14532d';
+    let trefoil = 0, tref = 0;
+    return {
+      frame(t, dt) {
+        // les bulles dans la gelée (dans la carte, derrière les chiffres)
+        for (let n = emit((4 + 10 * st.heat) * q, dt); n > 0; n--) bubbles.add({ x: rnd(w * .06, w * .94), y: h * rnd(.85, 1), vx: 0, vy: -rnd(12, 30), max: rnd(.6, 1.4), size: rnd(1.2, 3.2) });
+        bubbles.step(dt);
+        ci.globalCompositeOperation = 'source-over'; ci.lineWidth = 1;
+        bubbles.each((b, k) => { ci.globalAlpha = Math.sin(Math.PI * k) * .8; ci.strokeStyle = '#d4ff6a'; ci.beginPath(); ci.arc(b.x + Math.sin(b.life * 9) * 1.5, b.y, b.size, 0, TAU); ci.stroke(); });
+        // le trèfle de danger : trois secteurs et un disque, derrière la carte
+        tref += (trefoil - tref) * Math.min(1, dt * 4); trefoil = Math.max(0, trefoil - dt * .12);
+        if (tref > .01) behind(env, () => {
+          const R = card.h * 1.25, a = tref * (dark ? .32 : .25) * (.85 + .15 * Math.sin(t * 9));
+          co.globalCompositeOperation = add; co.globalAlpha = a; co.fillStyle = GOO;
+          for (let i = 0; i < 3; i++) { const a0 = -Math.PI / 2 + i * TAU / 3 - Math.PI / 6 + t * .2; co.beginPath(); co.arc(cx, cy, R, a0, a0 + Math.PI / 3); co.arc(cx, cy, R * .3, a0 + Math.PI / 3, a0, true); co.closePath(); co.fill(); }
+          co.beginPath(); co.arc(cx, cy, R * .2, 0, TAU); co.fill();
+        });
+        // le crépitement du compteur : de petits traits verts qui s'allument et s'éteignent d'un coup
+        co.globalCompositeOperation = add;
+        ticks.run(dt, (k, u) => line(co, GOO, k.x, k.y, k.x + k.dx, k.y + k.dy, 1.6, (1 - u) * (u < .5 ? 1 : .4)));
+        waves.run(dt, (r, u) => { co.globalAlpha = (1 - u) * .8; co.strokeStyle = GOO; co.lineWidth = 1 + 3 * (1 - u) * r.wd; co.beginPath(); co.ellipse(r.x, r.y, r.r * outCubic(u) + 4, (r.r * outCubic(u) + 4) * r.k, 0, 0, TAU); co.stroke(); });
+        // la gelée qui coule sous le fût
+        co.globalCompositeOperation = 'source-over';
+        drips.run(dt, (d, u) => {
+          const y0 = card.y + card.h - 2, len = d.len * outCubic(Math.min(1, u / .6)), fade = u < .8 ? 1 : (1 - u) / .2;
+          co.globalAlpha = fade; co.lineCap = 'round';
+          co.strokeStyle = EDGE; co.lineWidth = d.w + 2; co.beginPath(); co.moveTo(d.x, y0); co.lineTo(d.x, y0 + len); co.stroke();
+          co.strokeStyle = '#a3ff3c'; co.lineWidth = d.w; co.beginPath(); co.moveTo(d.x, y0); co.lineTo(d.x, y0 + len); co.stroke();
+          co.fillStyle = '#a3ff3c'; co.beginPath(); co.arc(d.x, y0 + len, d.w * .9, 0, TAU); co.fill();
+          co.fillStyle = 'rgba(255,255,255,.7)'; co.beginPath(); co.arc(d.x - d.w * .3, y0 + len - d.w * .3, d.w * .25, 0, TAU); co.fill();
+        });
+        co.globalAlpha = 1;
+      },
+      lock(pt, o) {
+        if (o.ghost) return;
+        for (let i = Math.round((o.last ? 12 : 6) * q); i > 0; i--) { const a = rnd(TAU), r = card.h * rnd(.45, .8), l = rnd(3, 7); ticks.add({ delay: rnd(0, .18), life: rnd(.05, .1), x: pt.x + Math.cos(a) * r, y: pt.y + Math.sin(a) * r * .8, dx: Math.cos(a) * l, dy: Math.sin(a) * l }); }
+        waves.add({ x: pt.x, y: pt.y, r: card.h * (o.last ? .9 : .5), k: .8, wd: o.last ? 1.2 : .7, life: .45 });
+      },
+      reveal(tier, p) {
+        if (!p) { bubbles.add({ x: w / 2, y: h * .9, vx: 0, vy: -20, max: .8, size: 5 }); return; }
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) waves.add({ delay: i * .16, x: cx, y: cy, r: card.w * (.4 + .5 * p), k: card.h / card.w + .25, wd: .6 + p, life: .9 });
+        for (let i = Math.round(30 * p * q); i > 0; i--) { const a = rnd(TAU), r = card.w * rnd(.5, .9); ticks.add({ delay: rnd(0, .6), life: .08, x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * .5, dx: Math.cos(a) * 6, dy: Math.sin(a) * 6 }); }
+        if (p >= 1) {
+          const extra = ASCEND[tier] || 0;
+          trefoil = 1 + .3 * extra;
+          for (let i = 0; i < 4 + 2 * extra; i++) drips.add({ delay: .15 + i * .12 + rnd(0, .1), life: 2.6 + .4 * extra, x: card.x + card.w * rnd(.08, .92), w: card.h * rnd(.05, .08), len: card.h * rnd(.08, .18) }); // courtes : la rareté s'affiche juste sous la carte
+        }
+      },
+    };
+  });
+
   // 💵 Money (2026-10-25, idées de JBearr12 et finnnnn) — chaque chiffre tamponné fait sauter des pièces ; à la
   // révélation, une pluie de pièces qui grossit avec la rareté ; dès Mythic, l'or des chiffres fond : des coulures
   // dorées descendent sous chaque chiffre et gouttent sous le billet. Tirage raté : une seule pièce qui roule.
