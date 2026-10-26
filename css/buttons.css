@@ -928,6 +928,18 @@
 .btn-roll.gen-elemental:hover { animation: gen-el-cycle 1.6s linear infinite; }
 @keyframes gen-el-cycle { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-elemental:hover { animation: none; } }
+/* Hot Dog (idée de finnnnn, 2026-10-26) : un pain doré, une saucisse grillée au milieu, un zigzag ketchup et moutarde ;
+   au survol, la sauce coule. */
+.btn-roll.gen-hotdog { border: 2px solid #7a3e10; border-radius: 999px; color: #fff7e6;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 14px, rgba(255, 58, 47, .85) 14px 17px, transparent 17px 26px, rgba(255, 210, 31, .85) 26px 29px, transparent 29px 40px),
+    linear-gradient(180deg, #e6a54a 0 18%, #a8482a 30% 70%, #d18c38 82% 100%);
+  background-size: 40px 100%, 100% 100%;
+  text-shadow: 0 2px 0 #4a0606, 0 0 3px #4a0606;
+  --gs: 0 .3em 0 #6b3410, 0 .5em 1em rgba(239, 68, 68, .3); --gs-h: 0 .34em 0 #6b3410, 0 .7em 1.4em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #6b3410; }
+.btn-roll.gen-hotdog:hover { animation: gen-hotdog-drip 1.2s linear infinite; }
+@keyframes gen-hotdog-drip { to { background-position: 40px 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-hotdog:hover { animation: none; } }
 /* Waterfall (idée de JBearr12 et jjcoolcid1, 2026-10-24) : l'herbe en haut, un rideau d'eau, l'écume en bas ; au
    survol, l'eau coule. */
 .btn-roll.gen-waterfall { border: 2px solid #14532d; border-radius: .6em; color: #fff;

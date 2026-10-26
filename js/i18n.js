@@ -221,6 +221,7 @@
     'Six test tubes of coloured liquid; every digit lights up in its tube with a glassy clink, then fizzes': 'Six tubes à essai de liquides colorés ; chaque chiffre s\'allume dans son tube avec un tintement de verre, puis ça pétille',
     'A rider pulls a wheelie across the street, and every digit pops up in his wake': 'Un cycliste traverse la rue en wheelie, et chaque chiffre surgit dans son sillage',
     'A low-poly frosted donut spins behind faceted digits, and sprinkles bounce out on the reveal': 'Un donut glacé en polygones tourne derrière des chiffres à facettes, et des vermicelles rebondissent à la révélation',
+    'A grilled hot dog dressed digit by digit: every number is a drizzle that switches between ketchup and mustard': 'Un hot-dog grillé garni chiffre par chiffre : chaque nombre est un filet de sauce qui passe du ketchup à la moutarde',
     'A crisp 100 bill with gold-foil digits stamped one by one; coins rain down, and Mythic rolls make the gold melt': 'Un billet de 100 tout neuf aux chiffres en dorure, tamponnés un par un ; une pluie de pièces, et sur un tirage Mythic l\'or fond',
     'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE': 'Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE',
     'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone': 'Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue',

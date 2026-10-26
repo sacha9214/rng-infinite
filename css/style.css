@@ -6061,6 +6061,64 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes money-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.35); } }
 .room-stage.many .side-money::before, .room-stage.many .side-money::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-money::before, .side-money::after { animation: none; } }
+/* ------------------------------------------------------------------ Hot Dog (idée de finnnnn, 2026-10-26) : un hot-dog
+   vu de côté, pain doré en haut et en bas, une saucisse grillée (marques du gril) au milieu ; les chiffres sont des
+   filets de sauce, ketchup puis moutarde, un sur deux. Pendant le tirage, ils giclent en passant d'une sauce à l'autre ;
+   il se pose : le flacon presse (le chiffre s'étire), splotch (il s'écrase), il tremble puis se pose. Matière molle :
+   squash & stretch. Les zigzags de sauce dessinés sur la saucisse : js/skinfx.js (SCENES.hotdog). */
+.num-card.skin-hotdog {
+  background:
+    radial-gradient(ellipse 30% 12% at 30% 8%, rgba(255, 244, 214, .45), transparent 70%),
+    radial-gradient(ellipse 22% 9% at 72% 10%, rgba(255, 244, 214, .3), transparent 70%),
+    linear-gradient(180deg, #8a4a12 0, #c97a26 6%, #e6a54a 13%, #f3c47a 19%, #d9963f 24%, #b06a22 27%, transparent 27.5% 72.5%, #a8611d 73%, #d18c38 78%, #edbb6c 86%, #d39441 94%, #8a4a12 100%),
+    linear-gradient(180deg, #f6dfb0, #f0d29a);
+  border: 2px solid #7a3e10; border-radius: 1.4rem; color: #ef2b2b;
+  box-shadow: inset 0 0 0 2px rgba(255, 230, 180, .35), 0 0 14px rgba(239, 68, 68, .18), 0 8px 16px rgba(0, 0, 0, .4);
+}
+/* la saucisse : une gélule grillée, plus sombre aux bouts, marques du gril en biais, un reflet gras */
+.num-card.skin-hotdog::before {
+  content: ''; position: absolute; left: 2.5%; right: 2.5%; top: 21%; bottom: 21%; border-radius: 999px; pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(180deg, transparent 18%, rgba(255, 210, 170, .35) 24%, transparent 34%),
+    repeating-linear-gradient(115deg, transparent 0 1.5em, rgba(30, 8, 2, .7) 1.5em 1.78em, rgba(120, 50, 20, .4) 1.78em 1.9em, transparent 1.9em 2.1em),
+    radial-gradient(ellipse 52% 75% at 50% 45%, #a8482a, #8a3519 70%, #5c200c 100%);
+  box-shadow: inset 0 -.12em .2em rgba(40, 10, 2, .55), 0 .06em .1em rgba(60, 25, 5, .5);
+}
+.skin-hotdog .slot { position: relative; z-index: 1; font-weight: 900; color: #ff3a2f; -webkit-text-stroke: .035em #4a0606; paint-order: stroke fill;
+  text-shadow: 0 .05em 0 #4a0606, -.03em -.04em 0 rgba(255, 200, 190, .55), 0 .1em .12em rgba(0, 0, 0, .45); }
+.skin-hotdog .slot:nth-of-type(even) { color: #ffd21f; -webkit-text-stroke-color: #5a3a00; text-shadow: 0 .05em 0 #5a3a00, -.03em -.04em 0 rgba(255, 250, 210, .7), 0 .1em .12em rgba(0, 0, 0, .45); }
+.skin-hotdog .slot.ghost { opacity: .22; text-shadow: none; }
+/* Pendant le tirage : le chiffre gicle et passe du ketchup à la moutarde. */
+.skin-hotdog .slot.spinning { opacity: 1; animation: hd-squirt .24s steps(1) infinite; }
+.skin-hotdog .slot.spinning:nth-of-type(even) { animation-delay: -.12s; }
+@keyframes hd-squirt {
+  0% { color: #ff3a2f; -webkit-text-stroke-color: #4a0606; transform: scale(.92, 1.12) translateY(-.04em); }
+  25% { transform: scale(1.08, .92) translateY(.03em); }
+  50% { color: #ffd21f; -webkit-text-stroke-color: #5a3a00; transform: scale(.94, 1.1) translateY(-.03em); }
+  75% { transform: scale(1.1, .9) translateY(.04em); }
+}
+/* Il se pose : pressé hors du flacon (étiré, en haut), splotch (écrasé), il tremble comme une sauce épaisse. */
+.skin-hotdog .slot.revealed { transform-origin: 50% 90%; animation: hd-splat .6s backwards; }
+@keyframes hd-splat {
+  0% { transform: translateY(-.35em) scale(.55, 1.45); animation-timing-function: cubic-bezier(.55, 0, 1, .55); }
+  22% { transform: translateY(.02em) scale(1.4, .62); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  45% { transform: scale(.9, 1.12); }
+  66% { transform: scale(1.05, .96); }
+  84% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
+.skin-hotdog .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+@media (prefers-reduced-motion: reduce) { .skin-hotdog .slot { animation: none; } }
+/* Cadre de duel : un stand de hot-dogs, nappe à carreaux rouges, lumière chaude ; 🌭 sautille, les sauces se balancent. */
+.side-hotdog { --side-border: #dc2626; --side-glow: 0 0 16px rgba(250, 204, 21, .3); --side-ink: #b91c1c;
+  --side-bg: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(250, 204, 21, .3), transparent 70%), repeating-conic-gradient(rgba(220, 38, 38, .14) 0 25%, transparent 0 50%) 0 0 / 22px 22px, linear-gradient(180deg, rgba(234, 179, 8, .12), rgba(185, 28, 28, .14));
+  --deco-a: '🌭'; --deco-b: '🍅 🌼'; }
+.side-hotdog::before { transform-origin: 50% 100%; animation: hd-hop 1.8s ease-in-out infinite; }
+.side-hotdog::after { animation: hd-sway 2.4s ease-in-out infinite; }
+@keyframes hd-hop { 0%, 55%, 100% { transform: none; } 65% { transform: translateY(-5px) scale(.94, 1.08); } 78% { transform: scale(1.08, .92); } 88% { transform: none; } }
+@keyframes hd-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+.room-stage.many .side-hotdog::before, .room-stage.many .side-hotdog::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-hotdog::before, .side-hotdog::after { animation: none; } }
 /* ------------------------------------------------------------------ Bowling (idée de JBearr12, 2026-10-25) : le bout
    d'une piste de bowling en érable ciré (lattes claires, reflet), les gouttières sombres en haut et en bas, les flèches
    de visée ; chaque chiffre est imprimé sur le ventre d'une quille blanche à deux bandes rouges. Pendant le tirage les

@@ -4411,6 +4411,66 @@
     };
   });
 
+  // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
+  // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
+  // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le
+  // hot-dog d'un bout à l'autre. Tirage raté : une goutte de moutarde tombe à côté.
+  SCENES.hotdog = custom(pieces({ cols: ['#ff3a2f', '#ffd21f', '#e11d1d', '#f5b800'], shapes: ['drop'], size: [2.2, 4.2], g: 820, spin: 0, up: true, glowc: '#fbbf24', ring: '#ef4444', drift: { rate: .6, from: 'around' } }), (env, { st }) => {
+    const { ci, co, w, h, card, q, dark, el } = env, lines = [], steam = particles(), plops = particles(), emit = emitter();
+    // [sauce, bord sombre, reflet] : ketchup pour les chiffres impairs, moutarde pour les pairs (comme le CSS)
+    const SAUCE = [['#ff3a2f', '#6b0707', '#ffb4a8'], ['#ffd21f', '#6b4700', '#fff6c4']];
+    const slotIndex = x => { // rang du chiffre le plus proche (fantômes compris, comme :nth-of-type)
+      const slots = el ? [...el.querySelectorAll('.slot')] : [];
+      if (!slots.length) return 0;
+      const b = el.getBoundingClientRect(), k = card.w / (b.width || 1);
+      let best = 0, d = Infinity;
+      slots.forEach((s, i) => { const r = s.getBoundingClientRect(), dx = Math.abs(card.x + (r.left + r.width / 2 - b.left) * k - x); if (dx < d) { d = dx; best = i; } });
+      return best;
+    };
+    // un filet en zigzag, tracé au fur et à mesure (k de 0 à 1) : bord sombre, sauce, reflet
+    const drizzle = (L, k) => {
+      const upto = L.zig * clamp(k), pts = [];
+      const at = i => [L.x0 + (L.x1 - L.x0) * i / L.zig, L.y + (i % 2 ? L.amp : -L.amp) * (1 + .15 * Math.sin(i * 2.1 + L.seed))];
+      for (let i = 0; i <= Math.floor(upto); i++) pts.push(at(i));
+      const f = upto - Math.floor(upto);
+      if (f > 0) { const a = at(Math.floor(upto)), b = at(Math.floor(upto) + 1); pts.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]); }
+      if (pts.length < 2) return;
+      const [col, edge, hi] = SAUCE[L.c];
+      ci.lineCap = ci.lineJoin = 'round';
+      for (const [wk, c, dy] of [[1.4, edge, .12], [1, col, 0], [.32, hi, -.22]]) {
+        ci.globalAlpha = L.a; ci.strokeStyle = c; ci.lineWidth = L.wd * wk; ci.beginPath();
+        pts.forEach(([x, y], i) => (i ? ci.lineTo(x, y + L.wd * dy) : ci.moveTo(x, y + L.wd * dy))); ci.stroke();
+      }
+    };
+    return {
+      frame(t, dt) {
+        ci.globalCompositeOperation = 'source-over';
+        for (const L of lines) { L.t += dt; if (L.t > 0) drizzle(L, L.t / L.dur); }
+        // la vapeur : des bouffées qui montent du pain et s'élargissent
+        steam.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        steam.each((s, k) => dot(co, dark ? '#e5e7eb' : '#94a3b8', s.x + Math.sin(s.life * 2 + s.ph) * 8, s.y, s.size * (1 + 2.2 * k), Math.sin(Math.PI * k) * (dark ? .22 : .3)));
+        plops.step(dt);
+        co.globalCompositeOperation = 'source-over';
+        plops.each((p, k) => { co.globalAlpha = 1 - k * k; co.fillStyle = '#f5b800'; co.strokeStyle = '#6b4700'; co.lineWidth = 1; co.beginPath(); co.ellipse(p.x, p.y, 3.5, 5, 0, 0, TAU); co.fill(); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(pt, o) {
+        if (o.ghost) return;
+        const x = pt.x - card.x, sw = h * .5;
+        lines.push({ x0: x - sw * .55, x1: x + sw * .55, y: h * .5, amp: h * .2, zig: 3, wd: Math.max(2, h * .05), c: slotIndex(pt.x) % 2, t: 0, dur: .28, a: .7, seed: rnd(TAU) });
+      },
+      reveal(tier, p) {
+        if (!p) { plops.add({ x: card.x + card.w * rnd(.2, .8), y: card.y - 10, vx: rnd(-20, 20), vy: 20, g: 600, max: 1.1 }); return; }
+        for (let i = Math.round((4 + 26 * p) * q); i > 0; i--) steam.add({ x: card.x + rnd(.08, .92) * card.w, y: card.y + rnd(-4, 8), vx: rnd(-6, 6), vy: -rnd(25, 45 + 60 * p), drag: .4, max: rnd(1.2, 1.8 + 1.4 * p), size: rnd(5, 10), ph: rnd(TAU) });
+        if (p >= 1) {
+          const extra = ASCEND[tier] || 0;
+          [0, 1].forEach(c => lines.push({ x0: w * .05, x1: w * .95, y: h * (c ? .74 : .26), amp: h * .04, zig: 16 + 4 * extra, wd: Math.max(2, h * .04), c, t: -.15 - c * .25, dur: .9, a: .85, seed: rnd(TAU) }));
+        }
+      },
+    };
+  });
+
   // 💵 Money (2026-10-25, idées de JBearr12 et finnnnn) — chaque chiffre tamponné fait sauter des pièces ; à la
   // révélation, une pluie de pièces qui grossit avec la rareté ; dès Mythic, l'or des chiffres fond : des coulures
   // dorées descendent sous chaque chiffre et gouttent sous le billet. Tirage raté : une seule pièce qui roule.
