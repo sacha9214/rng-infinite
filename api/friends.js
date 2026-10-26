@@ -7,7 +7,7 @@
 // POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
-const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey } = require('./_lib');
+const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey } = require('./_lib');
 const Reports = require('./_reports');
 const Global = require('./_global');
 const Shop = require('../js/shop.js');
@@ -88,6 +88,17 @@ async function gift(me, other, raw) {
 }
 
 // Cadeaux reçus depuis la dernière fois (les plus anciens d'abord), marqués vus : le site les annonce une seule fois.
+// Gros tirages des amis plus récents que « since » (et de moins d'une heure : pas d'alerte périmée au retour), 5 au plus.
+// Seulement ceux qui sont encore amis (une amitié retirée entre-temps ne prévient plus).
+async function bigRolls(id, since) {
+  const [raw, friends] = await redis([['LRANGE', bigKey(id), 0, -1], ['SMEMBERS', frKey(id)]]);
+  const rows = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(r => r && r.t > since && Date.now() - r.t < 3600000);
+  if (!rows.length) return [];
+  const [ids] = await redis([['HMGET', 'names', ...(friends || []).concat('_')]]);
+  const names = new Set((ids || []).filter(Boolean));
+  return rows.filter(r => names.has(r.name)).slice(-5).map(r => ({ name: r.name, n: r.n, tier: r.tier, t: r.t }));
+}
+
 async function unseenGifts(id) {
   const [raw, seen] = await redis([['LRANGE', giftsKey(id), 0, -1], ['GET', giftSeenKey(id)]]);
   const rows = (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(r => r && r.t > (Number(seen) || 0));
@@ -180,7 +191,9 @@ module.exports = async (req, res) => {
       if (['active', 'afk'].includes(body.presence)) await redis([['HSET', 'presence', playerId, `${Date.now()}:${body.presence}`]]);
       const gifts = await unseenGifts(playerId);
       const [counts] = await redis([['HVALS', unreadKey(playerId)]]);
-      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0) });
+      // Gros tirages des amis depuis bigSince (idée de Jguz01, 2026-10-26) ; absent = alertes coupées dans les réglages.
+      const big = body.bigSince != null ? await bigRolls(playerId, Number(body.bigSince) || 0) : undefined;
+      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0), ...(big ? { big } : {}) });
     }
 
     const other = await findPlayer(cleanName(body.name));

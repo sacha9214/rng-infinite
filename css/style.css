@@ -6802,3 +6802,11 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .cl-descedit > summary { cursor: pointer; font-size: .85rem; color: var(--prose-2); }
 .cl-desc-input { width: 100%; resize: vertical; min-height: 3.2rem; font: inherit; }
 .cl-field-wide { grid-column: 1 / -1; }
+/* Droits des officiers (idée de kaz, 2026-10-26) */
+.cl-perms { display: grid; gap: .35rem; }
+.cl-perm { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
+.cl-perm input { width: 1.1rem; height: 1.1rem; accent-color: var(--chart-accent); }
+/* @mentions du chat global (idée de casmictechthing, 2026-10-26) */
+.gc-at { color: var(--chart-accent); background: color-mix(in srgb, var(--chart-accent) 14%, transparent); border-radius: 4px; padding: 0 .15em; }
+.gc-tome { background: color-mix(in srgb, #f5b301 18%, var(--surface-dim)); box-shadow: inset 3px 0 0 #f5b301; }
+.gc-edited { font-size: .7rem; color: var(--prose-2); font-style: italic; } /* message modifié (idée de daddy finger, 2026-10-26) */

@@ -97,6 +97,15 @@ function need(c, id, role) {
   if (!c) throw refuse(422, 'You are not in a clan');
   if (RANK[c.members[id]] < RANK[role]) throw refuse(403, role === 'leader' ? 'Only the clan leader can do this' : 'Only the leader and officers can do this');
 }
+// Droits des officiers (idée de kaz, 2026-10-26) : le chef choisit ce que ses officiers peuvent faire. Rangé dans
+// clan:<cid> (champ perms, JSON des droits retirés) ; par défaut tout est permis, comme avant. Le chef peut tout.
+const PERMS = ['invite', 'kick', 'upgrade', 'war', 'edit'];
+const permsOf = c => { const off = parse(c && c.perms) || {}; return Object.fromEntries(PERMS.map(k => [k, off[k] !== false])); };
+const can = (c, id, perm) => !!c && (c.members[id] === 'leader' || (c.members[id] === 'officer' && permsOf(c)[perm]));
+function needPerm(c, id, perm) {
+  need(c, id, 'officer');
+  if (!can(c, id, perm)) throw refuse(403, 'Your clan leader turned this off for officers');
+}
 const pushLog = (cid, entry) => [['RPUSH', logKey(cid), JSON.stringify({ ...entry, t: entry.t || Date.now() })], ['LTRIM', logKey(cid), -LOG_KEEP, -1]];
 
 // Nom et tag : nettoyés comme un pseudo, sans mot filtré par le chat (un tag « FUKK » ne passe pas non plus).
@@ -204,7 +213,7 @@ async function spendVault(cid, cost, entry, destroy, t = Date.now()) {
 }
 
 async function upgrade(me, c, body) {
-  need(c, me, 'officer');
+  needPerm(c, me, 'upgrade');
   const [myName] = await redis([['HGET', 'names', me]]), by = myName || 'Player';
   return locked(`clanlock:${c.cid}`, async () => {
     const now = await loadClan(c.cid);
@@ -351,7 +360,7 @@ async function closeWar(w, why, t = Date.now()) {
 }
 
 async function challenge(me, c, body, t = Date.now()) {
-  need(c, me, 'officer');
+  needPerm(c, me, 'war');
   const stake = body.stake;
   if (!Number.isInteger(stake) || stake < WAR.min || stake > WAR.max) throw refuse(400, `Stakes go from ${WAR.min} to ${fmt(WAR.max)} coins`);
   const tag = String(body.target || '').trim().toUpperCase();
@@ -383,7 +392,7 @@ async function challenge(me, c, body, t = Date.now()) {
 }
 
 async function answer(me, c, body, t = Date.now()) {
-  need(c, me, 'officer');
+  needPerm(c, me, 'war');
   const w = await loadWar(c.war);
   if (!w || w.st !== 'pending') throw refuse(404, 'No war to answer');
   if (body.yes === false) {
@@ -524,7 +533,7 @@ async function view(me, now = Date.now()) {
     redis([['ZREVRANK', xpKey(week), c.cid], ['ZSCORE', xpKey(week), c.cid]]), redis([['LRANGE', `clanwars:${c.cid}`, -5, -1]]),
   ]);
   const online = raw => { const [t, s] = String(raw || '').split(':'); return t && now - Number(t) <= 150000 ? (s === 'afk' ? 'afk' : 'online') : 'offline'; };
-  const officer = RANK[c.members[me]] >= RANK.officer;
+  const officer = can(c, me, 'invite');
   const reqIds = []; for (let i = 0; i < (reqFlat || []).length; i += 2) reqIds.push(reqFlat[i]);
   const [reqNames] = officer && reqIds.length ? await redis([['HMGET', 'names', ...reqIds]]) : [[]];
   const war = c.war ? await warView(await advanceWar(c.war, now), me, c.cid) : null;
@@ -538,7 +547,7 @@ async function view(me, now = Date.now()) {
     past.push({ vs: oTag || '???', won: w.w === c.cid, stake: w.stake, t: w.end, us: Number(w.a === c.cid ? w.sa : w.sb) || 0, them: Number(w.a === c.cid ? w.sb : w.sa) || 0 });
   }
   const st = await readStats(me);
-  out.me = { inClan: true, role: c.members[me], coins: Shop.balance(st), rolls: Number(st.rolls) || 0 };
+  out.me = { inClan: true, role: c.members[me], can: Object.fromEntries(PERMS.map(k => [k, can(c, me, k)])), coins: Shop.balance(st), rolls: Number(st.rolls) || 0 };
   out.clan = {
     name: c.name, tag: c.tag, emoji: c.emoji, desc: c.desc || '', banner: c.banner || 'slate', tagc: c.tagc || 'plain', slots: c.slots, vault: c.vault,
     wins: Number(c.wins) || 0, losses: Number(c.losses) || 0, weekWins: Number(c.weekWins) || 0,
@@ -547,7 +556,7 @@ async function view(me, now = Date.now()) {
       .sort((a, b) => RANK[b.role] - RANK[a.role] || b.xp - a.xp || a.name.localeCompare(b.name)),
     requests: officer ? reqIds.map((id, i) => reqNames[i] || 'Player') : [],
     log: (logRaw || []).map(parse).filter(Boolean).reverse(),
-    war, past,
+    war, past, perms: permsOf(c),
   };
   return out;
 }
@@ -600,7 +609,7 @@ async function handle(me, body, now = Date.now()) {
     return id;
   };
   if (op === 'invite') {
-    need(c, me, 'officer');
+    needPerm(c, me, 'invite');
     const id = await target();
     if (c.members[id]) throw refuse(409, 'Already in your clan');
     if (await clanOf(id)) throw refuse(409, 'This player is already in a clan');
@@ -614,7 +623,7 @@ async function handle(me, body, now = Date.now()) {
     return { ...(await view(me)), note: 'Invitation sent' };
   }
   if (op === 'accept' || op === 'decline') {
-    need(c, me, 'officer');
+    needPerm(c, me, 'invite');
     const id = await target();
     const [asked] = await redis([['HEXISTS', reqKey(c.cid), id]]);
     if (Number(asked) !== 1) throw refuse(404, 'This request is gone');
@@ -647,6 +656,7 @@ async function handle(me, body, now = Date.now()) {
       if (op === 'kick') {
         // Un officier exclut des membres ; le chef exclut n'importe qui.
         if (!(mine === 'leader' || (mine === 'officer' && theirs === 'member'))) throw refuse(403, mine === 'officer' ? 'Officers can only kick members' : 'Only the leader and officers can do this');
+        if (!can(now2, me, 'kick')) throw refuse(403, 'Your clan leader turned this off for officers');
         await removeMember(now2, id, 'kick', by);
         return;
       }
@@ -659,14 +669,22 @@ async function handle(me, body, now = Date.now()) {
   }
   if (op === 'donate') { await donate(me, c, body.amount); return view(me); }
   if (op === 'upgrade') { await upgrade(me, c, body); return view(me); }
+  if (op === 'perms') {
+    // Seul le chef règle les droits ; on ne garde que les droits retirés (défaut = tout permis).
+    need(c, me, 'leader');
+    const off = {};
+    for (const k of PERMS) if (body.perms && body.perms[k] === false) off[k] = false;
+    await redis([Object.keys(off).length ? ['HSET', ckey(c.cid), 'perms', JSON.stringify(off)] : ['HDEL', ckey(c.cid), 'perms'], ...pushLog(c.cid, { k: 'perms', n: by })]);
+    return view(me);
+  }
   if (op === 'desc') {
-    need(c, me, 'officer');
+    needPerm(c, me, 'edit');
     const desc = checkDesc(body.desc);
     await redis([desc ? ['HSET', ckey(c.cid), 'desc', desc] : ['HDEL', ckey(c.cid), 'desc']]);
     return view(me);
   }
   if (op === 'emoji') {
-    need(c, me, 'officer');
+    needPerm(c, me, 'edit');
     if (!EMOJIS.includes(body.emoji)) throw refuse(400, 'Unknown emoji');
     await redis([['HSET', ckey(c.cid), 'emoji', body.emoji]]);
     return view(me);
@@ -716,4 +734,4 @@ const rollWrites = (cid, playerId, s, t) => {
   return [['ZINCRBY', xpKey(week), s, cid], ['EXPIRE', xpKey(week), WEEK_TTL], ['HINCRBY', xpmKey(week, cid), playerId, s], ['EXPIRE', xpmKey(week, cid), WEEK_TTL]];
 };
 
-module.exports = { handle, tagsOf, rollWrites, settleWeek, advanceWar, payWar, loadWar, warWinner, board, CREATE_COST, SLOT_PRICES, WAR, DONATE, EDIT_MS, _reset: () => { settledWeek = ''; } };
+module.exports = { handle, PERMS, tagsOf, rollWrites, settleWeek, advanceWar, payWar, loadWar, warWinner, board, CREATE_COST, SLOT_PRICES, WAR, DONATE, EDIT_MS, _reset: () => { settledWeek = ''; } };

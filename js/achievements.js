@@ -69,6 +69,8 @@
     { id: 'landwaster', emoji: '☣️', title: 'Land Waster', desc: 'Roll a Land waste, the worst score there is', test: st => num(st['t:landwaste']) >= 1 },
     // Clans (idée de BIGBOIJONER69 et KMC, 2026-10-25) : membre du clan n°1 d'une semaine (XP gagnée cette semaine-là).
     { id: 'clanchamp', emoji: '🏯', title: 'Clan Champion', desc: 'Earn XP for the #1 clan of a week', test: st => num(st.clanWeekWins) >= 1 },
+    // Donateur de clan (idée de PRISMA123, 2026-10-26) : 10 000 pièces versées au coffre d'un clan, au total (stats.clanDonated).
+    { id: 'clanpatron', emoji: '🪙', title: 'Clan Patron', desc: 'Donate 10,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 10000 },
     { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
     { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
     { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },

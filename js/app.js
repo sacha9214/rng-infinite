@@ -1097,6 +1097,23 @@
   const rollKey = () => Store.settings.rollKey || 'Space';
   const keyName = (code = rollKey()) => (code === 'Space' ? 'Space' : code.replace(/^Key|^Digit|^Numpad/, '').replace(/^Arrow/, '↕ '));
   const isRollKey = e => e.code === rollKey() || (rollKey() === 'Space' && e.key === ' ');
+  // Alerte des amis (idée de Jguz01, 2026-10-26) : un ami tire Celestial ou mieux → un toast, à la relève des cadeaux
+  // (chaque minute). Réglage « Friend alerts » (coupé = on ne demande rien au serveur). Dernière alerte vue : bigSeen ;
+  // la toute première fois, on part de maintenant (pas d'alertes d'avant).
+  function bigAlertSince() {
+    if (Store.settings.friendAlerts === 'off') return {};
+    let seen = 0; try { seen = Number(localStorage.getItem('bigSeen')) || 0; } catch (e) { seen = 0; }
+    if (!seen) { seen = Date.now(); try { localStorage.setItem('bigSeen', String(seen)); } catch (e) { /* stockage bloqué */ } }
+    return { bigSince: seen };
+  }
+  function announceBigRolls(rows) {
+    if (!rows.length || Store.settings.friendAlerts === 'off') return;
+    rows.forEach((r, i) => {
+      const tier = r.tier.charAt(0).toUpperCase() + r.tier.slice(1);
+      setTimeout(() => toast(`🌟 ${r.name} rolled ${tier === 'Infinite' ? 'an' : 'a'} ${tier} ${r.n}!`, 6000, 'achv'), i * 1500);
+    });
+    try { localStorage.setItem('bigSeen', String(Math.max(...rows.map(r => r.t)))); } catch (e) { /* stockage bloqué */ }
+  }
   function openSettings() {
     const s = Store.settings;
     const seg = (name, options, value, labels = {}) => `<div class="seg" data-seg="${name}">${options.map(o => `<button data-v="${o}" class="${o === value ? 'on' : ''}">${labels[o] || o}</button>`).join('')}</div>`;
@@ -1118,6 +1135,7 @@
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
       <div class="field"><label>Performance mode</label>${seg('perf', ['on', 'off'], s.perf === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Fewer animations and effects, for tablets and devices that lag. Your rolls stay the same.</span></div>
       <div class="field"><label>Theme</label>${seg('theme', ['light', 'system', 'dark'], s.theme)}</div>
+      ${Store.player.name ? `<div class="field"><label>Friend alerts</label>${seg('friendAlerts', ['on', 'off'], s.friendAlerts === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">A message when a friend rolls Celestial or better.</span></div>` : ''}
       ${Store.player.name ? `<div class="field"><label for="set-code">Redeem a code</label><form class="code-form" id="set-code-form"><input class="input" id="set-code" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE"><button class="btn" type="submit">Redeem</button></form><span class="panel-note">Got a code? Enter it to get its prize. Each code works once.</span></div>` : ''}
       <div class="danger-zone">
         <button class="btn" id="set-export">Export history</button>
@@ -1697,6 +1715,11 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
+    { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
+    { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
+    { id: '2026-10-26-clan-patron', date: 'Oct 26, 2026', en: ['🪙 New title: Clan Patron, for players who donated 10,000 coins in total to a clan vault (idea by PRISMA123).'], fr: ['🪙 Nouveau titre : Mécène de clan, pour les joueurs qui ont versé 10 000 pièces au total dans le coffre d\'un clan (idée de PRISMA123).'] },
+    { id: '2026-10-26-clan-perms', date: 'Oct 26, 2026', en: ['⭐ Clan leaders can now choose what officers may do: invite and accept requests, kick members, spend the vault, start wars, edit the description (idea by kaz).'], fr: ['⭐ Les chefs de clan peuvent maintenant choisir ce que les officiers ont le droit de faire : inviter et accepter les demandes, exclure, dépenser le coffre, lancer des guerres, modifier la description (idée de kaz).'] },
     { id: '2026-10-25-clan-desc', date: 'Oct 25, 2026', en: ['📝 Clans can now have a description: tell players what your clan is about. The leader and officers write it (150 characters, no links or personal info), and it shows in Find a clan.'], fr: ['📝 Les clans peuvent maintenant avoir une description pour dire de quoi parle ton clan. Le chef et les officiers l\'écrivent (150 caractères, sans liens ni infos perso), et elle s\'affiche dans Find a clan.'] },
     { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
     { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
@@ -6375,7 +6398,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState() }).then(r => { this.set(r.messages || 0); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {
@@ -7770,14 +7793,17 @@
       const tagIn = $('#cl-tagin'); if (tagIn) tagIn.addEventListener('input', () => { tagIn.value = tagIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
       return;
     }
-    const c = d.clan, role = d.me.role, officer = CL_RANK[role] >= 2, leader = role === 'leader', p = d.prices;
+    const c = d.clan, role = d.me.role, leader = role === 'leader', p = d.prices;
+    // Droits des officiers réglés par le chef (idée de kaz, 2026-10-26) : le serveur dit ce que je peux faire.
+    const can = d.me.can || {}, officer = CL_RANK[role] >= 2;
+    const PERM_LABEL = { invite: '📨 Invite and accept requests', kick: '🥾 Kick members', upgrade: '🪙 Spend the vault on upgrades', war: '⚔️ Start and answer wars', edit: '✏️ Edit description and emoji' };
     const memberRow = m => {
       const acts = [];
       if (!m.me) {
         if (leader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
         if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
         if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
-        if (leader || (role === 'officer' && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
+        if (leader || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
       }
       return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span><a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
     };
@@ -7786,7 +7812,7 @@
         <span class="cl-emoji big" aria-hidden="true">${esc(c.emoji)}</span>
         <div class="cl-banner-txt"><h2 data-no-i18n>${esc(c.name)}</h2><div>${clanTagHTML(c)} <span class="cl-role cl-r-${esc(role)}">${CL_ROLE[role]}</span></div>${c.desc ? `<p class="cl-desc" data-no-i18n>${esc(c.desc)}</p>` : ''}</div>
       </div>
-      ${officer ? `<details class="cl-descedit"><summary>✏️ ${c.desc ? 'Edit description' : 'Add a description'}</summary>
+      ${can.edit ? `<details class="cl-descedit"><summary>✏️ ${c.desc ? 'Edit description' : 'Add a description'}</summary>
         <form id="cl-descform" class="cl-form"><textarea class="input cl-desc-input" id="cl-descedit" maxlength="150" rows="2" placeholder="Tell players what your clan is about">${esc(c.desc || '')}</textarea>
         <div class="actions"><button class="btn-roll small" type="submit">Save</button><span class="panel-note">150 characters · no links or personal info</span></div></form></details>` : ''}
       <div class="tiles cl-tiles">
@@ -7803,21 +7829,26 @@
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">👥 Members</h3><span class="panel-note" data-no-i18n>${c.members.length}/${c.slots}</span></div>
-        ${officer && c.requests.length ? `<div class="cl-reqs"><b>📨 Asking to join</b><ul class="cl-list">${c.requests.map(n => `<li class="cl-asked"><span data-no-i18n>${esc(n)}</span><span class="cl-actions"><button class="btn" type="button" data-cl="accept" data-name="${esc(n)}">Accept</button><button class="btn ghost" type="button" data-cl="decline" data-name="${esc(n)}">Decline</button></span></li>`).join('')}</ul></div>` : ''}
-        ${officer ? `<form class="cl-row" id="cl-invite"><input class="input" id="cl-inv" maxlength="20" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name"><button class="btn" type="submit">📨 Invite</button></form>` : ''}
+        ${can.invite && c.requests.length ? `<div class="cl-reqs"><b>📨 Asking to join</b><ul class="cl-list">${c.requests.map(n => `<li class="cl-asked"><span data-no-i18n>${esc(n)}</span><span class="cl-actions"><button class="btn" type="button" data-cl="accept" data-name="${esc(n)}">Accept</button><button class="btn ghost" type="button" data-cl="decline" data-name="${esc(n)}">Decline</button></span></li>`).join('')}</ul></div>` : ''}
+        ${can.invite ? `<form class="cl-row" id="cl-invite"><input class="input" id="cl-inv" maxlength="20" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name"><button class="btn" type="submit">📨 Invite</button></form>` : ''}
         <ul class="cl-members">${c.members.map(memberRow).join('')}</ul>
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">🪙 Vault</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(c.vault)}</span></span></div>
         <p class="panel-note cl-note">Coins given to the vault stay in the clan: the leader and officers spend them on upgrades or put them at stake in wars. You have 🪙 <span data-no-i18n>${fmt(d.me.coins || 0)}</span>.</p>
         <form class="cl-row" id="cl-donate"><input class="input" id="cl-amt" type="number" inputmode="numeric" min="${d.donate.min}" max="${d.donate.max}" step="1" value="100" aria-label="Amount"><button class="btn" type="submit">Donate</button></form>
-        ${officer ? `<div class="cl-upgrades">
+        ${can.upgrade ? `<div class="cl-upgrades">
           <div class="cl-up"><b>🧱 Member slots</b><span class="panel-note" data-no-i18n>${c.slots}/${p.slotsMax}</span>${c.nextSlots ? `<button class="btn" type="button" data-cl="up-slots">+${p.slotStep} · 🪙 <span data-no-i18n>${fmt(c.nextSlots)}</span></button>` : '<span class="cl-pill">Max</span>'}</div>
           <div class="cl-up"><b>🎨 Banner color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.banner)}</span></span><div class="cl-swatches">${d.banners.map(b => `<button type="button" class="cl-sw cl-b-${b}${b === c.banner ? ' on' : ''}" data-cl="up-banner" data-color="${b}" title="${b}" aria-label="${b}"></button>`).join('')}</div></div>
           <div class="cl-up"><b>🏷️ Tag color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.tagc)}</span> · 🌈 <span data-no-i18n>${fmt(p.rainbow)}</span></span><div class="cl-swatches">${d.tagColors.map(t => `<button type="button" class="cl-sw cl-tsw${t === c.tagc ? ' on' : ''}" data-cl="up-tagc" data-color="${t}" title="${t}" aria-label="${t}"><span class="cl-tag cl-c-${t}" data-no-i18n>${esc(c.tag)}</span></button>`).join('')}</div></div>
         </div>` : ''}
         <details class="cl-log"><summary>Vault history</summary><ul>${c.log.map(clanLogLine).join('') || '<li class="muted">Nothing yet</li>'}</ul></details>
       </div>
+      ${leader ? `<div class="panel">
+        <div class="panel-head"><h3 class="panel-title">⭐ What officers can do</h3></div>
+        <p class="panel-note cl-note">Only you can change this. You can always do everything.</p>
+        <div class="cl-perms">${Object.keys(PERM_LABEL).map(k => `<label class="cl-perm"><input type="checkbox" data-cl="perm" data-perm="${k}"${c.perms && c.perms[k] === false ? '' : ' checked'}><span>${PERM_LABEL[k]}</span></label>`).join('')}</div>
+      </div>` : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
       <div class="panel cl-danger">
         ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
       </div>`;
@@ -7832,7 +7863,7 @@
     const line = {
       create: `🏯 ${n} <span>founded the clan</span>`, join: `👋 ${n} <span>joined</span>${by}`, leave: `🚪 ${n} <span>left</span>`, kick: `🥾 ${n} <span>was kicked</span>${by}`,
       promote: `⭐ ${n} <span>is now an officer</span>${by}`, demote: `⬇️ ${n} <span>is a member again</span>${by}`, leader: `👑 ${n} <span>is the new leader</span>${by}`,
-      donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`,
+      donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`, perms: `⭐ ${n} <span>changed what officers can do</span>`,
       buy: `${kind === 'slots' ? '🧱' : kind === 'banner' ? '🎨' : '🏷️'} ${n} <span>${kind === 'slots' ? 'bought 5 member slots' : kind === 'banner' ? 'changed the banner color' : 'changed the tag color'}</span> −${a(x.a)}`,
       stake: `⚔️ ${n} <span>put coins at stake against</span> ${tag} −${a(x.a)}`, refund: `↩️ <span>War stake returned</span> +${a(x.a)}`,
       won: `🏆 <span>Won the war against</span> ${tag} +${a(x.a)}`, lost: `💀 <span>Lost the war against</span> ${tag}`,
@@ -7841,7 +7872,7 @@
   }
   function drawClanWar() {
     const box = $('#cl-war'), d = clanState; if (!box || !d || !d.clan) return;
-    const c = d.clan, w = c.war, officer = CL_RANK[d.me.role] >= 2;
+    const c = d.clan, w = c.war, officer = !!(d.me.can || {}).war;
     const picker = id => `<div class="cl-pick" id="${id}">${c.members.map(m => `<label class="cl-pickm"><input type="checkbox" value="${esc(m.name)}"><span data-no-i18n>${esc(m.name)}</span></label>`).join('')}</div>`;
     let html;
     if (!w || w.st === 'off') {
@@ -7903,6 +7934,11 @@
     const op = b.dataset.cl, name = b.dataset.name, tag = b.dataset.tag;
     const T = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
     if (op === 'tab-find') { clanTab = 'find'; drawClanTab(); return; }
+    if (op === 'perm') {
+      // Le chef coche ou décoche un droit : on envoie tout l'état des cases (idée de kaz, 2026-10-26).
+      const perms = Object.fromEntries([...document.querySelectorAll('[data-cl="perm"]')].map(x => [x.dataset.perm, x.checked]));
+      const d = await clanDo('perms', { perms }); if (d) toast('Officer rights saved', 2000, 'achv'); return;
+    }
     if (['request', 'join', 'ignore', 'unask'].includes(op)) { const d = await clanDo(op, { tag }, b); if (d && op === 'join') toast('Welcome to the clan!', 3000, 'achv'); if (d && op === 'request' && clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); return; }
     if (['accept', 'decline', 'promote', 'demote'].includes(op)) { clanDo(op, { name }, b); return; }
     if (op === 'kick' && confirm(T(`Kick ${name} from the clan?`))) { clanDo('kick', { name }, b); return; }
@@ -8095,18 +8131,32 @@
           const d = await Online.global('gcList', { rev: this.peekRev, del: this.peekDel, since: Date.now() });
           this.peekRev = d.rev; this.peekDel = d.del;
           let seen = null; try { seen = localStorage.getItem('gcSeen'); } catch (e) { seen = null; }
-          if (seen === null) this.seen(d.rev);
-          else if (!this.open) this.dot(Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)); // une suppression seule n'allume rien
+          if (seen === null) { this.seen(d.rev); this.dot(this.mentioned(d.me)); } // 1re visite : rien, sauf une mention
+          else if (!this.open) this.dot((Number(d.rev) > Number(seen) && Number(d.rev) !== Number(d.del)) || this.mentioned(d.me)); // une suppression seule n'allume rien
         } catch (err) { /* hors ligne : on réessaie plus tard */ }
       }
       this.peekTimer = setTimeout(() => this.peek(), 30000);
+    },
+    // @mentions (idée de casmictechthing, 2026-10-26) : le serveur donne l'heure de ma dernière mention (lastAt) ; tant
+    // qu'elle est plus récente que la dernière vue (gcAtSeen), le point rouge reste, même si le message est arrivé avant.
+    mentioned(me) { if (!me || !me.lastAt) return false; let s = 0; try { s = Number(localStorage.getItem('gcAtSeen')) || 0; } catch (e) { s = 0; } return me.lastAt > s; },
+    seenAt(me) { if (me && me.lastAt) try { localStorage.setItem('gcAtSeen', String(me.lastAt)); } catch (e) { /* stockage bloqué */ } },
+    // Texte d'un message avec les @pseudo cités surlignés (seulement les joueurs que le serveur a reconnus).
+    textHTML(m) {
+      const at = (m.at || []).map(n => n.toLowerCase());
+      if (!at.length) return esc(m.text);
+      return String(m.text).split(/((?:^|(?<=[\s(]))@[\p{L}0-9_.\-']{2,20})/u).map(part => {
+        const name = part.startsWith('@') ? part.slice(1).replace(/[.\-']+$/, '') : null;
+        if (!name || !at.includes(name.toLowerCase())) return esc(part);
+        return `<b class="gc-at">@${esc(name)}</b>${esc(part.slice(1 + name.length))}`;
+      }).join('');
     },
     last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
     list() { return this.el.querySelector('.gc-list'); },
     apply(d) {
       const before = JSON.stringify(this.me);
-      this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
-      if (this.open) { this.seen(d.rev); this.dot(false); }
+      this.rev = d.rev; this.del = d.del; this.max = d.max || 200; if (d.editMs) this.editMs = d.editMs;
+      if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (d.same) return;
@@ -8117,11 +8167,12 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}" data-id="${esc(m.id)}">
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-            ${!m.mine && signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
-          <p class="gc-text" data-no-i18n>${esc(m.text)}</p>
-          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${me.mod ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+${m.edited ? '<span class="gc-edited">edited</span>' : ''}
+            ${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
+          <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
     },
@@ -8130,7 +8181,7 @@
       const foot = this.el.querySelector('.gc-foot'), me = this.me;
       const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
       if (me && me.can) {
-        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message…" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
         return;
       }
@@ -8157,6 +8208,13 @@
       if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
       const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
       try {
+        // Modifier son message, 5 minutes (idée de daddy finger, 2026-10-26) : le serveur rejoue tous les filtres.
+        if (b.dataset.gc === 'edit') {
+          const m = this.msgs.find(x => x.id === id); if (!m) return;
+          const v = prompt(t('Edit your message'), m.text);
+          if (v == null || !v.trim() || v.trim() === m.text) return;
+          this.apply(await Online.global('gcEdit', { id, text: v })); toast('Message edited');
+        } else
         if (b.dataset.gc === 'report') { const r = await Online.global('gcReport', { id }); toast(r.already ? 'Already reported' : 'Reported: thank you!'); }
         else if (b.dataset.gc === 'delete') { if (!confirm(t('Delete this message?'))) return; this.apply(await Online.global('gcDelete', { id })); toast('Message deleted'); }
         else if (b.dataset.gc === 'mute') { if (!confirm(t('Mute this player and delete the message?'))) return; this.apply(await Online.global('gcMute', { id, dur: b.dataset.dur })); toast('Player muted'); }
