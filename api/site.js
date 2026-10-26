@@ -10,6 +10,9 @@
 //   stats                       (Owner) fréquentation des 30 derniers jours
 //   fund                        (Owner) contributions reçues ; fundAdd { name, euros } inscrit une contribution et donne
 //                               au joueur le skin et le titre Supporter ; fundSet { goal, url } règle l'objectif et le lien
+//   announcements               (sans compte) les 20 dernières annonces du créateur (api/_announce.js)
+//   annAdd { title, text, important, discord } · annDelete { id }   (Owner) publie ou retire une annonce
+//   roadmap                     (sans compte) idées prévues et ajoutées depuis 30 jours (api/_roadmap.js, 5 min de cache)
 //   insights                    (Owner) carte des visites, heures d'activité, casino par jeu, joueurs et économie
 // Fréquentation : uniquement des compteurs agrégés par jour (an:<jour>), sans identifiant, sans adresse IP, sans cookie.
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
@@ -17,6 +20,8 @@
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken } = require('./_lib');
 const Reports = require('./_reports');
+const Announce = require('./_announce');
+const Roadmap = require('./_roadmap');
 const { cleanImage } = require('./_chat');
 const Shop = require('../js/shop.js');
 
@@ -597,6 +602,10 @@ module.exports = async (req, res) => {
     }
     // Cagnotte du mois (total, objectif, lien) : public, sans joueur. Aucun nom de contributeur.
     if (body.action === 'fundInfo') return send(res, 200, await fundState());
+    // Annonces du créateur (idée de jaxoncool43, 2026-10-26) : publiques, sans joueur.
+    if (body.action === 'announcements') return send(res, 200, { list: await Announce.list() });
+    // Feuille de route publique (idée de Phong67, 2026-10-26).
+    if (body.action === 'roadmap') return send(res, 200, await Roadmap.roadmap());
     await flushDue();
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
@@ -697,14 +706,21 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
     // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
     if (body.action === 'imSet') {
       const who = await findPlayer(String(body.name || '').slice(0, 40));
       if (!who) return send(res, 404, { error: 'No player with this name' });
       await redis(body.on === false ? [['HDEL', statsKey(who), 'ideaManager'], ['SREM', 'im:all', who]] : [['HSET', statsKey(who), 'ideaManager', '1'], ['SADD', 'im:all', who]]);
       return send(res, 200, await imState(playerId, true));
+    }
+    // Annonces (onglet Announce de la page Owner) : publier, retirer, et la liste pour l'onglet.
+    if (['annAdd', 'annDelete', 'annList'].includes(body.action)) {
+      let out = {};
+      if (body.action === 'annAdd') { const r = await Announce.add({ title: body.title, text: body.text, important: body.important === true, discord: body.discord !== false }); out = { posted: r.entry.id, discord: r.discord }; }
+      if (body.action === 'annDelete') await Announce.remove(String(body.id || ''));
+      return send(res, 200, { ...out, list: await Announce.list(), readOnly: !isOwner, discordReady: require('./_discord').has('announcements') || require('./_discord').has('updates') });
     }
     const id = String(body.id || '');
     // Signalements de messages (api/_reports.js) : la liste, et « traité » pour le créateur.
@@ -727,6 +743,8 @@ module.exports = async (req, res) => {
         // Passée en Added pour la première fois : un point pour le titre Bug Hunter (bug) ou Contributor (idée).
         if (body.status === 'done') {
           const [was, kind, credited] = await redis([['HGET', suggKey(id), 'status'], ['HGET', suggKey(id), 'kind'], ['HGET', suggKey(id), 'credited']]);
+          // doneAt : quand elle est passée en Added (la feuille de route publique montre les 30 derniers jours).
+          if (was !== 'done') writes.push(['HSET', suggKey(id), 'doneAt', Date.now()]);
           if (was !== 'done' && !credited) writes.push(['HINCRBY', `stats:${pid}`, kind === 'bug' ? 'bugsFixed' : 'ideasAdded', 1], ['HSET', suggKey(id), 'credited', 1]);
         }
         // Réponse du créateur : un message de plus dans le fil ; le joueur verra un point rouge sur l'ampoule.

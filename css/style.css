@@ -2495,6 +2495,26 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 @keyframes news-pulse { 50% { transform: scale(1.25); } }
 .news-list { display: grid; gap: .9rem; max-height: 60vh; overflow-y: auto; }
 .news-item ul { margin: .3rem 0 0; padding-left: 1.1rem; font-size: .86rem; line-height: 1.5; }
+/* Annonces du créateur (idée de jaxoncool43, 2026-10-26) : en tête de What's new, et l'onglet Announce de la page Owner */
+.ann-list { max-height: none; overflow: visible; margin-bottom: .9rem; padding-bottom: .9rem; border-bottom: 1px solid var(--outline); }
+.ann-item { padding: .6rem .75rem; border-radius: .6rem; background: var(--surface); border-left: 3px solid #6366f1; }
+.ann-item.ann-important { border-left-color: #ef4444; }
+.ann-title { margin: .2rem 0 .25rem; font-size: .98rem; overflow-wrap: anywhere; }
+.ann-text { margin: 0; font-size: .86rem; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.ann-form { display: grid; gap: .5rem; }
+.ann-form textarea { resize: vertical; }
+.ann-opts { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font-size: .86rem; }
+.ann-foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.ann-row .ann-text { margin: .3rem 0 .4rem; }
+/* Feuille de route publique #/roadmap (idée de Phong67, 2026-10-26) */
+.rm-intro { margin: -.4rem 0 1rem; }
+.rm-panel { margin-bottom: 1rem; }
+.rm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.rm-item { padding: .55rem .7rem; border-radius: .55rem; background: var(--surface); border: 1px solid var(--outline); min-width: 0; }
+.rm-text { margin: 0 0 .25rem; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+.rm-by { font-size: .76rem; color: var(--muted, inherit); opacity: .8; }
+.idea-roadmap, .rm-about { margin: 0 0 .6rem; font-size: .86rem; }
+.idea-roadmap a, .rm-about a { font-weight: 600; }
 
 /* ------------------------------------------------------------------ Casino : onglets des jeux, mise, Crash, Mines, Plinko */
 .g-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin: .4rem 0 .8rem; }

@@ -15,7 +15,7 @@ let bad = 0;
 for (const w of widths.length ? widths : [320, 360, 375, 414]) {
   await p.setViewportSize({ width: w, height: 760 });
   const line = [];
-  for (const hash of ['#/', '#/duel', '#/leaderboard', '#/badges', '#/stats', '#/history', '#/shop', '#/friends', '#/clan', '#/about']) {
+  for (const hash of ['#/', '#/duel', '#/leaderboard', '#/badges', '#/stats', '#/history', '#/shop', '#/friends', '#/clan', '#/about', '#/roadmap']) {
     await p.goto(B + '/' + hash); await p.waitForTimeout(hash === '#/shop' || hash === '#/badges' ? 1400 : 900);
     const r = await p.evaluate(() => { const over = document.documentElement.scrollWidth - innerWidth; const who = over > 0 ? [...document.querySelectorAll('.app *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 2).map(e => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').slice(0, 2).join('.')}`) : []; return { over, who }; });
     if (r.over > 0) bad++;

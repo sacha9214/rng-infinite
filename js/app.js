@@ -1715,6 +1715,9 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-roadmap', date: 'Oct 26, 2026', en: ['🗺️ Roadmap: a new page lists the player ideas that are planned and the ones added in the last 30 days. Open it from the 💡 ideas window or the About page (idea by Phong67).'], fr: ['🗺️ Feuille de route : une nouvelle page liste les idées de joueurs prévues et celles ajoutées ces 30 derniers jours. Ouvre-la depuis la fenêtre 💡 des idées ou la page À propos (idée de Phong67).'] },
+    { id: '2026-10-26-announcements', date: 'Oct 26, 2026', en: ['📣 Announcements: news from the creator now appear at the top of 📰 What\'s new (with a red dot), and important ones pop up once when you come back (idea by jaxoncool43).'], fr: ['📣 Annonces : les messages du créateur apparaissent maintenant en haut de 📰 Nouveautés (avec un point rouge), et les plus importants s\'affichent une fois à ton retour (idée de jaxoncool43).'] },
+    { id: '2026-10-26-evening-tournament', date: 'Oct 26, 2026', en: ['🌙 New evening tournament every day: sign up from 12:00 to 18:00 UTC (evening in Europe, morning and afternoon in the Americas), matches until 06:00 UTC. Same prizes, its own bracket, and you can play it on top of tournament 1 or 2. The tournament page shows every time in your own time zone (idea by Me Cojoni and Idea:Tournaments)'], fr: ['🌙 Nouveau tournoi du soir chaque jour : inscriptions de 12:00 à 18:00 UTC (le soir en Europe, le matin et l\'après-midi en Amérique), matchs jusqu\'à 06:00 UTC. Mêmes prix, son propre tableau, et tu peux le jouer en plus du tournoi 1 ou 2. La page du tournoi montre toutes les heures à ton heure locale (idée de Me Cojoni et Idea:Tournaments)'] },
     { id: '2026-10-26-friend-alerts', date: 'Oct 26, 2026', en: ['🌟 Friend alerts: when one of your friends rolls a Celestial or better, a message pops up for you. Turn it off in ⚙️ Settings (idea by Jguz01).'], fr: ['🌟 Alertes d\'amis : quand un de tes amis tire un Celestial ou mieux, un message s\'affiche chez toi. Désactivable dans ⚙️ Réglages (idée de Jguz01).'] },
     { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
     { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
@@ -2023,14 +2026,36 @@
     { id: '2026-10-07a', date: 'Oct 7, 2026', en: ['4 legendary skins with a full animated signature: Sakura, Storm, Dragon, Singularity', 'Preview any skin in the shop before buying', 'Every skin\'s animation now plays in duels', '8 animated emotes to buy', 'Chat in duels', 'Generate button skins'], fr: ['4 skins légendaires avec une signature animée : Sakura, Storm, Dragon, Singularity', 'Aperçu de chaque skin dans la boutique avant d\'acheter', 'L\'animation de chaque skin se joue en duel', '8 émotes animées à acheter', 'Chat dans les duels', 'Skins du bouton Générer'] },
     { id: '2026-10-06', date: 'Oct 6, 2026', en: ['Daily quests and login streak', 'Duels with a coin stake', 'Skin cases', 'Friends', 'French version of the game', 'Suggestion box'], fr: ['Quêtes du jour et série de connexion', 'Duels avec une mise en pièces', 'Caisses de skins', 'Amis', 'Version française du jeu', 'Boîte à idées'] },
   ];
-  const newsUnread = () => Store.settings.newsSeen !== UPDATES[0].id;
+  // Annonces du créateur (idée de jaxoncool43, 2026-10-26) : lues une fois au chargement (api/_announce.js), en tête
+  // de « What's new » ; une nouvelle annonce allume aussi le point rouge de 📰. Une annonce « important » jamais vue
+  // s'affiche une fois en notification (un clic ouvre la fenêtre).
+  let announcements = [];
+  const annUnread = () => !!announcements.length && Store.settings.annSeen !== announcements[0].id;
+  const newsUnread = () => Store.settings.newsSeen !== UPDATES[0].id || annUnread();
   function paintNewsDot() { const b = $('#news-btn'); if (b) b.classList.toggle('unread', newsUnread()); }
+  const annHTML = (a, fresh) => `<div class="news-item ann-item${a.important ? ' ann-important' : ''}"><div class="eyebrow">📣 ${esc(fullDate(a.t))}${fresh ? ' <span class="new-tag">NEW</span>' : ''}</div><h3 class="ann-title" data-no-i18n>${esc(a.title)}</h3><p class="ann-text" data-no-i18n>${esc(a.text)}</p></div>`;
   function openNews() {
     const fr = window.RNGI18n && window.RNGI18n.lang === 'fr';
-    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2><div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
-      <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && newsUnread() ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
+    const seenAnn = Store.settings.annSeen, seenAt = announcements.findIndex(a => a.id === seenAnn);
+    // NEW sur les annonces arrivées depuis la dernière ouverture (toutes si aucune n'a encore été vue).
+    const anns = announcements.slice(0, 5).map((a, i) => annHTML(a, seenAt === -1 ? true : i < seenAt)).join('');
+    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2>${anns ? `<div class="news-list ann-list">${anns}</div>` : ''}<div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
+      <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && Store.settings.newsSeen !== UPDATES[0].id ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
     Store.setSetting('newsSeen', UPDATES[0].id);
+    if (announcements.length) Store.setSetting('annSeen', announcements[0].id);
     paintNewsDot();
+  }
+  function loadAnnouncements() {
+    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'announcements' }) }).then(r => {
+      announcements = (r && Array.isArray(r.list) ? r.list : []).filter(a => a && a.id && a.title);
+      paintNewsDot();
+      // Seulement la plus récente des importantes, une seule fois par appareil, et si elle a moins de 14 jours.
+      const big = announcements.find(a => a.important);
+      if (big && Store.settings.annToast !== big.id && Date.now() - big.t < 14 * 86400000) {
+        Store.setSetting('annToast', big.id);
+        setTimeout(() => toast(`📣 ${big.title}`, 9000, 'ann', openNews), 1500);
+      }
+    }).catch(() => {});
   }
 
   // Revoir un tirage (le sien ou celui d'un autre) : la révélation complète rejouée avec mon skin, sans rien tirer ni
@@ -5510,6 +5535,7 @@
       <p class="panel-note" style="margin:-.3rem 0 .8rem">Your message goes straight to the creator of the game.</p>
       <div class="seg idea-kind" id="idea-kind" role="tablist"><button data-kind="idea" class="on">💡 Suggest an idea</button><button data-kind="bug">🐞 Report a bug</button></div>
       <p class="idea-warn" id="idea-warn">🍀 <span>Luck will not be changed: the odds are the same for everyone and they stay that way, so please don't ask for more luck.</span></p>
+      <p class="idea-roadmap"><a href="#/roadmap">🗺️ See the roadmap: planned and recently added ideas</a></p>
       <p class="idea-note">💛 <span>Thank you so much for all your ideas and reports! I get about a hundred every day and I'm making the game on my own, so answers and new features can take a little longer. Thanks for understanding!</span></p>
       <textarea class="input idea-text" id="idea-text" maxlength="500" rows="4" placeholder="Your idea…" aria-label="Your message"></textarea>
       <div class="idea-shot" id="idea-shot">
@@ -5604,7 +5630,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -6128,6 +6154,37 @@
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
+    });
+    // ---- Annonces (idée de jaxoncool43, 2026-10-26) : titre + texte (500 caractères), « important » = notification
+    // une fois chez chaque joueur, et Discord si le salon est configuré. Les 20 dernières, chacune supprimable.
+    const drawAnn = d => {
+      const box = pane('announce'); if (currentView !== 'owner' || !box) return;
+      const keep = box.querySelector('.ann-form') && !d.posted ? { t: box.querySelector('[name=title]').value, x: box.querySelector('[name=text]').value } : null;
+      box.innerHTML = panel('New announcement', 'players see it at the top of 📰 What\'s new, with a red dot', `
+          <form class="ann-form"><input class="input" name="title" maxlength="80" placeholder="Title" autocomplete="off" required>
+          <textarea class="input" name="text" maxlength="500" rows="4" placeholder="Short announcement (500 characters max)" required></textarea>
+          <div class="ann-opts"><label><input type="checkbox" name="important"> Important (shown once as a notification)</label>
+          <label><input type="checkbox" name="discord" checked> Also post on Discord${d.discordReady ? '' : ' <span class="panel-note">(no Discord channel set up: skipped)</span>'}</label></div>
+          <div class="ann-foot"><span class="panel-note mono" data-ann-count>0 / 500</span><button class="btn-roll small">📣 Publish</button></div></form>`)
+        + panel('Published', `${fmt(d.list.length)} of the last 20`, d.list.length ? d.list.map(a => `<div class="o-report ann-row"><div class="o-report-head"><b data-no-i18n>${a.important ? '❗ ' : ''}${esc(a.title)}</b><span class="panel-note">${relTime(a.t)}</span></div><p class="ann-text" data-no-i18n>${esc(a.text)}</p><button class="btn ghost small" data-ann-del="${esc(a.id)}">🗑️ Delete</button></div>`).join('') : '<div class="empty">No announcement yet.</div>');
+      if (keep) { box.querySelector('[name=title]').value = keep.t; box.querySelector('[name=text]').value = keep.x; }
+      guest(d.readOnly);
+    };
+    Online.site('annList').then(drawAnn).catch(err => { if (pane('announce')) pane('announce').innerHTML = denied(err); });
+    pane('announce').addEventListener('input', e => { const c = pane('announce').querySelector('[data-ann-count]'); if (c && e.target.name === 'text') c.textContent = `${e.target.value.length} / 500`; });
+    pane('announce').addEventListener('click', e => {
+      const del = e.target.closest('[data-ann-del]'); if (!del || currentView !== 'owner') return;
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t('Delete this announcement?') : 'Delete this announcement?')) return;
+      del.disabled = true;
+      Online.site('annDelete', { id: del.dataset.annDel }).then(d => { drawAnn(d); toast('Deleted'); }).catch(err => { del.disabled = false; toast(err.message || 'Unavailable right now, try again'); });
+    });
+    pane('announce').addEventListener('submit', e => {
+      const f = e.target.closest('.ann-form'); if (!f || currentView !== 'owner') return;
+      e.preventDefault();
+      const btn = f.querySelector('button'); btn.disabled = true;
+      Online.site('annAdd', { title: f.elements.title.value, text: f.elements.text.value, important: f.elements.important.checked, discord: f.elements.discord.checked })
+        .then(d => { drawAnn(d); toast(f.elements.discord.checked && !d.discord ? 'Published (not on Discord: no channel set up)' : 'Published'); announcements = d.list; paintNewsDot(); })
+        .catch(err => { btn.disabled = false; toast(err.message || 'Unavailable right now, try again'); });
     });
     const drawInbox = data => {
       const box = $('#o-inbox');
@@ -7483,6 +7540,25 @@
       </div>`;
   }
 
+  // Feuille de route publique (idée de Phong67, 2026-10-26) : idées prévues et ajoutées depuis 30 jours, lues dans la
+  // boîte à idées par le serveur (api/_roadmap.js) : pseudo et extrait court, jamais les bugs ni les idées refusées.
+  function renderRoadmap() {
+    currentView = 'roadmap';
+    app.innerHTML = `
+      <div class="page rm-page">
+        <h1 class="page-title">🗺️ Roadmap</h1>
+        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.</p>
+        <div id="rm-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    const item = x => `<li class="rm-item"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></li>`;
+    const section = (title, note, list, empty) => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'roadmap' }) }).then(d => {
+      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box) return;
+      box.innerHTML = section('🛠️ Planned', `${fmt(d.planned.length)} ideas`, d.planned, 'Nothing planned right now.')
+        + section('✅ Recently added', 'last 30 days', d.recent, 'Nothing added in the last 30 days.');
+    }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+  }
+
   function renderAbout() {
     currentView = 'about';
     const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.005% (about 50 numbers)'], ['godlike', 'top 0.005–0.001% (40 numbers)'], ['infinite', 'top 0.001% (about 10 numbers)']];
@@ -7497,6 +7573,7 @@
     app.innerHTML = `
       <div class="page prose">
         <h1 class="page-title">What is RNG∞?</h1>
+        <p class="rm-about"><a href="#/roadmap">🗺️ Roadmap: the player ideas that are planned and the ones recently added</a></p>
         <p>A random number game with no daily limit. Each roll draws a number from 0 to 1,000,000. The number is checked against ${Engine.badges.length} patterns — palindromes, primes, repeated digits, meme numbers, sequences and more — and every badge it earns is worth XP (experience points).</p>
         <button class="trailer-thumb" data-trailer aria-label="Watch the trailer">
           <img src="media/trailer-16x9.jpg" alt="RNG∞ trailer: a Mythic roll, 777777" width="1280" height="720" loading="lazy">
@@ -7532,7 +7609,7 @@
   // ---------------------------------------------------------------- tournoi du jour (idée de PRISMA123, 2026-10-20)
   // Tableau à élimination directe joué en différé (règles dans api/_tournament.js). Les tirages de l'adversaire restent
   // cachés tant que ses tirages ou les tiens (3 ou 5 selon le mode du jour) ne sont pas faits.
-  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false, tnWhich = 0; // tnWhich : tournoi choisi (1 ou 2), 0 = le sien
+  let tnTimer = 0, tnTick = 0, tnSkew = 0, tnState = null, tnBusy = false, tnWhich = 0; // tnWhich : tournoi choisi (1, 2 ou 3 = celui du soir), 0 = le sien
   const tnClock = () => Date.now() + tnSkew;
   const tnCd = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(x => String(x).padStart(2, '0')).join(':'); };
   const tnHour = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -7564,11 +7641,19 @@
   async function drawTourneyBanner(slot) {
     if (!slot || !Store.player.name) return;
     try {
-      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) tnBannerCache = { at: Date.now(), st: await loadTournament() };
+      // Tournoi du soir (Me Cojoni, 2026-10-26) : s'il n'y a rien à faire dans le tournoi par défaut, on regarde celui du soir.
+      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) {
+        let st = await loadTournament();
+        const idle = s => !(s.phase === 'signup' || (s.phase === 'running' && s.match && s.match.live && !s.match.bye && s.match.me.count < s.rolls));
+        if (idle(st) && st.which !== 3) { const e = await Online.tourney('view', { which: 3 }); if (!idle(e)) st = e; }
+        tnBannerCache = { at: Date.now(), st };
+      }
       const st = tnBannerCache.st, m = st.match;
       let text = '';
       const md = `<span class="tn-mode-chip">${tnMode(st).name}</span>`;
-      if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      if (st.phase === 'signup' && !st.joined && st.eve) text = `🌙 <b>Evening tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup' && st.eve) text = `🌙 <b>You're in the evening tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> ${md} · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
       if (!slot.isConnected) return;
@@ -7598,7 +7683,7 @@
       <div class="page page-wide tn-page">
         <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">🏆 Tournament</h1>
-        <p class="panel-note profile-sub">Two tournaments every day (32 players each, you can join one). Sign up before 12:00 UTC. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
+        <p class="panel-note profile-sub">Three tournaments every day (32 players each). Tournaments 1 and 2: sign up before 12:00 UTC (you can join one of them). Evening tournament: sign up from 12:00 to 18:00 UTC, matches until 06:00 UTC; you can join it too. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
         <div id="tn-body"><div class="empty">Loading…</div></div>
       </div>`;
     const refresh = async () => {
@@ -7624,12 +7709,17 @@
     const nm = p => `<span class="tn-name" data-no-i18n>${esc(p.name)}</span>`;
     // État du jour
     let status = '';
-    if (st.phase === 'signup') {
-      const can = Store.player.name && !st.joined && !st.mine && st.count < st.max;
+    // Heures du tournoi regardé, à l'heure du joueur (tournoi du soir : demandé par Me Cojoni, 2026-10-26).
+    const hours = `<p class="panel-note tn-hours">${st.eve ? '🌙 <b>Evening tournament</b>' : `🏆 <b>Tournament ${st.which || 1}</b>`} · <span>Sign-ups</span> <span class="mono">${tnHour(st.open)}–${tnHour(st.close)}</span> · <span>Matches</span> <span class="mono">${tnHour(st.close)}–${tnHour(st.end)}</span> <span>(your time)</span></p>`;
+    if (st.phase === 'soon') {
+      status = `<div class="tn-status"><div><div class="tn-big"><span>Sign-ups open in</span> <span class="mono" data-cd="${st.open}">${tnCd(st.open - now)}</span></div>
+        <div class="panel-note"><span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div></div>`;
+    } else if (st.phase === 'signup') {
+      const can = Store.player.name && !st.joined && (st.eve || !st.mine) && st.count < st.max;
       status = `<div class="tn-status">
           <div><div class="tn-big"><span>Sign-ups close in</span> <span class="mono" data-cd="${st.close}">${tnCd(st.close - now)}</span></div>
           <div class="panel-note"><span class="mono">${st.count}/${st.max}</span> · <span>Free · needs ${st.minRolls} rolls · at least ${st.minPlayers} players</span></div></div>
-          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : st.mine ? `<span class="tn-in">✓ <span>You're in tournament</span> ${st.mine}</span>` : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
+          ${st.joined ? '<span class="tn-in">✓ You\'re in</span>' : st.mine && !st.eve ? `<span class="tn-in">✓ <span>You're in tournament</span> ${st.mine}</span>` : `<button class="btn-roll small" id="tn-join"${can ? '' : ' disabled'}>${st.count >= st.max ? 'Full' : 'Sign up'}</button>`}
         </div>
         ${st.entrants.length ? `<div class="tn-entrants">${st.entrants.map(e => `<span class="chip${e.me ? ' on' : ''}" data-no-i18n>${esc(e.name)}</span>`).join('')}</div>` : '<p class="panel-note">Nobody yet: be the first!</p>'}`;
     } else if (st.phase === 'running') {
@@ -7640,14 +7730,16 @@
       const res = st.result;
       status = `<div class="tn-podium"><div class="tn-champ">🏆 ${nm(res.champion)}</div>
         <div class="panel-note"><span>Final:</span> ${res.finalist ? nm(res.finalist) : '–'}${res.semis.length ? ` · <span>Semi-finals:</span> ${res.semis.map(nm).join(', ')}` : ''}</div>
-        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div>`;
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.next || st.end}">${tnCd((st.next || st.end) - now)}</span></div></div>`;
     } else {
       status = `<div class="tn-status"><div><div class="tn-big"><span>Cancelled: fewer than ${st.minPlayers} players signed up</span></div>
-        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.end}">${tnCd(st.end - now)}</span></div></div></div>`;
+        <div class="panel-note"><span>Next tournament opens in</span> <span class="mono" data-cd="${st.next || st.end}">${tnCd((st.next || st.end) - now)}</span></div></div></div>`;
     }
     if (st.prev) status += `<p class="panel-note tn-prev"><span>${st.prev.champions && st.prev.champions.length > 1 ? 'Yesterday\'s champions:' : 'Yesterday\'s champion:'}</span> <b data-no-i18n>${esc(st.prev.champion)}</b></p>`;
     // Les deux tournois du jour : on regarde l'un ou l'autre (inscrit dans l'un, on ne peut pas entrer dans l'autre).
-    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">🏆 <span>Tournament</span> ${b.which} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
+    status = hours + status;
+    // Le tournoi du soir (3) est à part : on peut y être en plus d'un des deux premiers.
+    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">${b.eve ? '🌙 <span>Evening</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
     const mode = tnMode(st);
     status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
@@ -7710,7 +7802,7 @@
     const join = $('#tn-join');
     if (join) join.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; join.disabled = true;
-      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(`✓ Signed up for tournament ${tnState.which}`); tnWhich = 0; drawTournament(); }
+      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(tnState.which === 3 ? '✓ Signed up for the evening tournament' : `✓ Signed up for tournament ${tnState.which}`); tnWhich = tnState.which === 3 ? 3 : 0; drawTournament(); }
       catch (err) { toast(err.message, 3500, 'error'); join.disabled = false; }
       finally { tnBusy = false; }
     });
@@ -7718,7 +7810,7 @@
     if (rollBtn) rollBtn.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; rollBtn.disabled = true;
       try {
-        const r = await Online.tourney('roll');
+        const r = await Online.tourney('roll', { which: tnState.which });
         try { Sound.play('lock', { i: 3 }); } catch (e) { /* son facultatif */ }
         tnState = { ...r.state, prev: tnState.prev }; drawTournament();
         const last = document.querySelectorAll('.tn-side:first-child .tn-cards .num-card:not(.neutral)');
@@ -8035,7 +8127,7 @@
     }
   }
 
-  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas };
+  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
 
   function route() {
     if (session && !session.finished) session.cancel();
@@ -8266,6 +8358,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   $('#gear-btn').addEventListener('click', openSettings);
 
   document.addEventListener('click', e => {
+    // Feuille de route depuis la fenêtre des idées : déjà sur #/roadmap, l'adresse ne change pas ; on ferme quand même.
+    if (e.target.closest('.idea-roadmap a')) closeModal();
     // Lien vers une page du site (profil d'un joueur…) dans une ligne cliquable : la navigation l'emporte.
     if (e.target.closest('a[href^="#/"]')) return;
     if (e.target.closest('[data-trailer]')) { e.preventDefault(); openTrailer(); return; }
@@ -8416,6 +8510,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   // Première visite (aucun tirage, pas de pseudo, pas un lien de duel) : les 3 écrans d'accueil.
   const brandNew = !Store.rolls.length && !Store.player.name;
   paintNewsDot();
+  loadAnnouncements();
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });

@@ -99,6 +99,18 @@ function announceUpdate(entry) {
   });
 }
 
+// Annonce écrite par le créateur sur la page Owner (idée de jaxoncool43, 2026-10-26) : salon « announcements » s'il
+// existe, sinon celui des nouveautés. Renvoie false sans webhook (l'annonce reste publiée dans le jeu).
+function announceNews(entry) {
+  const url = cfg.announcements || cfg.updates;
+  if (!url) return false;
+  post(url, {
+    ...ping(cfg.announcements ? roles.announcements : roles.updates),
+    embeds: [{ title: `📣 ${clean(entry.title)}`.slice(0, 250), url: SITE, description: clean(entry.text).slice(0, 3900), color: entry.important ? 0xef4444 : 0x6366f1 }],
+  });
+  return true;
+}
+
 function announceRecap({ day, rows, rolls }) {
   if (!cfg.bigRolls || !rows.length) return;
   const medal = ['🥇', '🥈', '🥉'];
@@ -157,17 +169,17 @@ function announceRush(end) {
 // Tournoi du jour terminé (api/_tournament.js) : le champion et le finaliste, dans le salon des événements.
 // Le mode du jour (idée de PRISMA123) est rappelé dans le message.
 const TOURNEY_MODES = { total: 'Total XP', best: 'Best Roll', bo3: 'Best of 3', lowest: 'Lowest Wins', badges: 'Badge Hunter' };
-function announceTournament({ day, mode, champion, finalist, players }) {
+function announceTournament({ day, mode, champion, finalist, players, next = '00:00' }) {
   if (!cfg.events) return;
   const label = TOURNEY_MODES[mode] || TOURNEY_MODES.total;
   post(cfg.events, {
     embeds: [{
       title: `🏆 ${champion} wins the daily tournament!`,
       url: SITE,
-      description: `Tournament of ${day} · mode **${label}**: **${champion}** beat **${finalist}** in the final (${players} players).\nSign-ups for the next one open at 00:00 UTC on ${SITE}`,
+      description: `Tournament of ${day} · mode **${label}**: **${champion}** beat **${finalist}** in the final (${players} players).\nSign-ups for the next one open at ${next} UTC on ${SITE}`,
       color: 0xeab308,
     }],
   });
 }
 
-module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
+module.exports = { announceTournament, announceRush, announceEvent, announceEventPodium, announceRoll, announceDuel, announceUpdate, announceNews, announceRecap, ANNOUNCED, enabled: () => !!cfg.bigRolls, has: k => !!cfg[k] };
