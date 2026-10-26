@@ -554,5 +554,12 @@
     "desc": "Contains \"4992\" or \"9249\".",
     "emoji": "💞",
     "score": 167224
+  },
+  {
+    "id": "LEAP_DAY",
+    "label": "Leap Day",
+    "desc": "Reads as February 29 of a leap year: 0229YY, like 022924 (rolled as 22924).",
+    "emoji": "🐸",
+    "score": 4000004
   }
 ]
