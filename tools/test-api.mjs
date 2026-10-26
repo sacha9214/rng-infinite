@@ -3949,7 +3949,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // 1. Paliers : 1–500 plein tarif, 501–2 000 à 50 %, au-delà 20 %, arrondi en dessous.
   assert.deepEqual([1, 500, 501, 2000, 2001, 99999].map(Shop.rollRate), [1, 1, 0.5, 0.5, 0.2, 0.2]);
-  assert.deepEqual([Shop.rollPay(100, 1), Shop.rollPay(100, 501), Shop.rollPay(5, 501), Shop.rollPay(1, 501), Shop.rollPay(25, 2001), Shop.rollPay(1, 2001)], [100, 50, 2, 0, 5, 0]);
+  assert.deepEqual([Shop.rollPay(100, 1, 'mythic'), Shop.rollPay(100, 501, 'mythic'), Shop.rollPay(5, 501, 'rare'), Shop.rollPay(1, 501, 'common'), Shop.rollPay(25, 2001, 'anomaly'), Shop.rollPay(1, 2001, 'common'), Shop.rollPay(3, 2001, 'trash'), Shop.rollPay(0, 2001, 'x')], [100, 50, 2, 1, 5, 1, 1, 0]);
+  // Celestial ou mieux : jamais réduit (2026-10-26, number 1, kaz, casmictechthing)
+  for (const tr of ['celestial', 'divine', 'godlike', 'infinite']) assert.equal(Shop.rollPay(Shop.COINS[tr], 3000, tr), Shop.COINS[tr], tr);
+  assert.equal(Shop.rollPay(Shop.COINS.mythic, 3000, 'mythic'), 20);
   // Par le vrai recordRoll, un mardi (pas de Rush) : le compteur rc:<jour>:<id> est simulé à 500, 1 999, 2 000.
   const dm = { playerId: 'd1'.repeat(8) }, TUE = Date.parse('2026-10-27T10:00:00Z');
   let n = 0; while (engine.analyze(n).tier !== 'mythic') n++; // 100 pièces au plein tarif
@@ -3967,6 +3970,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(eco(TUE, 'in:rolls') - ecoRolls0, paidSum, 'eco in:rolls = pièces réellement créées');
   // L'XP n'est pas touchée : 5 tirages, 5 fois l'XP pleine.
   assert.equal(field(dm.playerId, 'xpLife'), 5 * engine.analyze(n).total);
+  // Celestial au palier 20 % : versé en entier, rien dans rollCut (2026-10-26).
+  { const cx = { playerId: 'c7'.repeat(8) }; let m = 0; while (engine.analyze(m).tier !== 'celestial') m++;
+    run([['SET', `rc:2026-10-27:${cx.playerId}`, '5000']]); await wait();
+    const out = await recordRoll(cx.playerId, m, TUE + 9);
+    assert.deepEqual([out.rate, out.coins], [0.2, Shop.COINS.celestial], 'Celestial jamais réduit');
+    assert.equal(field(cx.playerId, 'rollCut'), 0, 'rien de retenu pour un Celestial'); }
   // Samedi, au-delà de 500 : le Rush (+25 %) s'applique à ce qui est versé.
   const SAT = Date.parse('2026-10-31T10:00:00Z'), rcs = `rc:2026-10-31:${dm.playerId}`;
   run([['SET', rcs, '700']]); await wait();
@@ -3976,7 +3985,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const dr = { playerId: 'd2'.repeat(8), secret: 'd3'.repeat(16), name: 'Diminisher' };
   run([['SET', `rc:${new Date(Date.now()).toISOString().slice(0, 10)}:${dr.playerId}`, '3000']]);
   const rr = await call(roll, { method: 'POST', body: dr });
-  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], pay = Math.floor(full * 0.2);
+  assert.equal(rr.status, 200); const full = Shop.COINS[engine.analyze(rr.body.n).tier], tr = engine.analyze(rr.body.n).tier, pay = Shop.rollPay(full, 3001, tr);
   assert.deepEqual([rr.body.rate, rr.body.coins], [0.2, pay + Ev.rushBonus(pay, rr.body.t)], JSON.stringify(rr.body));
 
   // 2. Weekend Rush +25 % sur les quêtes : la récompense affichée le samedi.
