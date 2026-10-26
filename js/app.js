@@ -1697,6 +1697,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-clan-perms', date: 'Oct 26, 2026', en: ['⭐ Clan leaders can now choose what officers may do: invite and accept requests, kick members, spend the vault, start wars, edit the description (idea by kaz).'], fr: ['⭐ Les chefs de clan peuvent maintenant choisir ce que les officiers ont le droit de faire : inviter et accepter les demandes, exclure, dépenser le coffre, lancer des guerres, modifier la description (idée de kaz).'] },
     { id: '2026-10-25-clan-desc', date: 'Oct 25, 2026', en: ['📝 Clans can now have a description: tell players what your clan is about. The leader and officers write it (150 characters, no links or personal info), and it shows in Find a clan.'], fr: ['📝 Les clans peuvent maintenant avoir une description pour dire de quoi parle ton clan. Le chef et les officiers l\'écrivent (150 caractères, sans liens ni infos perso), et elle s\'affiche dans Find a clan.'] },
     { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
     { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
@@ -7770,14 +7771,17 @@
       const tagIn = $('#cl-tagin'); if (tagIn) tagIn.addEventListener('input', () => { tagIn.value = tagIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
       return;
     }
-    const c = d.clan, role = d.me.role, officer = CL_RANK[role] >= 2, leader = role === 'leader', p = d.prices;
+    const c = d.clan, role = d.me.role, leader = role === 'leader', p = d.prices;
+    // Droits des officiers réglés par le chef (idée de kaz, 2026-10-26) : le serveur dit ce que je peux faire.
+    const can = d.me.can || {}, officer = CL_RANK[role] >= 2;
+    const PERM_LABEL = { invite: '📨 Invite and accept requests', kick: '🥾 Kick members', upgrade: '🪙 Spend the vault on upgrades', war: '⚔️ Start and answer wars', edit: '✏️ Edit description and emoji' };
     const memberRow = m => {
       const acts = [];
       if (!m.me) {
         if (leader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
         if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
         if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
-        if (leader || (role === 'officer' && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
+        if (leader || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
       }
       return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span><a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
     };
@@ -7786,7 +7790,7 @@
         <span class="cl-emoji big" aria-hidden="true">${esc(c.emoji)}</span>
         <div class="cl-banner-txt"><h2 data-no-i18n>${esc(c.name)}</h2><div>${clanTagHTML(c)} <span class="cl-role cl-r-${esc(role)}">${CL_ROLE[role]}</span></div>${c.desc ? `<p class="cl-desc" data-no-i18n>${esc(c.desc)}</p>` : ''}</div>
       </div>
-      ${officer ? `<details class="cl-descedit"><summary>✏️ ${c.desc ? 'Edit description' : 'Add a description'}</summary>
+      ${can.edit ? `<details class="cl-descedit"><summary>✏️ ${c.desc ? 'Edit description' : 'Add a description'}</summary>
         <form id="cl-descform" class="cl-form"><textarea class="input cl-desc-input" id="cl-descedit" maxlength="150" rows="2" placeholder="Tell players what your clan is about">${esc(c.desc || '')}</textarea>
         <div class="actions"><button class="btn-roll small" type="submit">Save</button><span class="panel-note">150 characters · no links or personal info</span></div></form></details>` : ''}
       <div class="tiles cl-tiles">
@@ -7803,21 +7807,26 @@
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">👥 Members</h3><span class="panel-note" data-no-i18n>${c.members.length}/${c.slots}</span></div>
-        ${officer && c.requests.length ? `<div class="cl-reqs"><b>📨 Asking to join</b><ul class="cl-list">${c.requests.map(n => `<li class="cl-asked"><span data-no-i18n>${esc(n)}</span><span class="cl-actions"><button class="btn" type="button" data-cl="accept" data-name="${esc(n)}">Accept</button><button class="btn ghost" type="button" data-cl="decline" data-name="${esc(n)}">Decline</button></span></li>`).join('')}</ul></div>` : ''}
-        ${officer ? `<form class="cl-row" id="cl-invite"><input class="input" id="cl-inv" maxlength="20" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name"><button class="btn" type="submit">📨 Invite</button></form>` : ''}
+        ${can.invite && c.requests.length ? `<div class="cl-reqs"><b>📨 Asking to join</b><ul class="cl-list">${c.requests.map(n => `<li class="cl-asked"><span data-no-i18n>${esc(n)}</span><span class="cl-actions"><button class="btn" type="button" data-cl="accept" data-name="${esc(n)}">Accept</button><button class="btn ghost" type="button" data-cl="decline" data-name="${esc(n)}">Decline</button></span></li>`).join('')}</ul></div>` : ''}
+        ${can.invite ? `<form class="cl-row" id="cl-invite"><input class="input" id="cl-inv" maxlength="20" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name"><button class="btn" type="submit">📨 Invite</button></form>` : ''}
         <ul class="cl-members">${c.members.map(memberRow).join('')}</ul>
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">🪙 Vault</h3><span class="panel-note">🪙 <span data-no-i18n>${fmt(c.vault)}</span></span></div>
         <p class="panel-note cl-note">Coins given to the vault stay in the clan: the leader and officers spend them on upgrades or put them at stake in wars. You have 🪙 <span data-no-i18n>${fmt(d.me.coins || 0)}</span>.</p>
         <form class="cl-row" id="cl-donate"><input class="input" id="cl-amt" type="number" inputmode="numeric" min="${d.donate.min}" max="${d.donate.max}" step="1" value="100" aria-label="Amount"><button class="btn" type="submit">Donate</button></form>
-        ${officer ? `<div class="cl-upgrades">
+        ${can.upgrade ? `<div class="cl-upgrades">
           <div class="cl-up"><b>🧱 Member slots</b><span class="panel-note" data-no-i18n>${c.slots}/${p.slotsMax}</span>${c.nextSlots ? `<button class="btn" type="button" data-cl="up-slots">+${p.slotStep} · 🪙 <span data-no-i18n>${fmt(c.nextSlots)}</span></button>` : '<span class="cl-pill">Max</span>'}</div>
           <div class="cl-up"><b>🎨 Banner color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.banner)}</span></span><div class="cl-swatches">${d.banners.map(b => `<button type="button" class="cl-sw cl-b-${b}${b === c.banner ? ' on' : ''}" data-cl="up-banner" data-color="${b}" title="${b}" aria-label="${b}"></button>`).join('')}</div></div>
           <div class="cl-up"><b>🏷️ Tag color</b><span class="panel-note">🪙 <span data-no-i18n>${fmt(p.tagc)}</span> · 🌈 <span data-no-i18n>${fmt(p.rainbow)}</span></span><div class="cl-swatches">${d.tagColors.map(t => `<button type="button" class="cl-sw cl-tsw${t === c.tagc ? ' on' : ''}" data-cl="up-tagc" data-color="${t}" title="${t}" aria-label="${t}"><span class="cl-tag cl-c-${t}" data-no-i18n>${esc(c.tag)}</span></button>`).join('')}</div></div>
         </div>` : ''}
         <details class="cl-log"><summary>Vault history</summary><ul>${c.log.map(clanLogLine).join('') || '<li class="muted">Nothing yet</li>'}</ul></details>
       </div>
+      ${leader ? `<div class="panel">
+        <div class="panel-head"><h3 class="panel-title">⭐ What officers can do</h3></div>
+        <p class="panel-note cl-note">Only you can change this. You can always do everything.</p>
+        <div class="cl-perms">${Object.keys(PERM_LABEL).map(k => `<label class="cl-perm"><input type="checkbox" data-cl="perm" data-perm="${k}"${c.perms && c.perms[k] === false ? '' : ' checked'}><span>${PERM_LABEL[k]}</span></label>`).join('')}</div>
+      </div>` : officer ? `<p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p>` : ''}
       <div class="panel cl-danger">
         ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
       </div>`;
@@ -7832,7 +7841,7 @@
     const line = {
       create: `🏯 ${n} <span>founded the clan</span>`, join: `👋 ${n} <span>joined</span>${by}`, leave: `🚪 ${n} <span>left</span>`, kick: `🥾 ${n} <span>was kicked</span>${by}`,
       promote: `⭐ ${n} <span>is now an officer</span>${by}`, demote: `⬇️ ${n} <span>is a member again</span>${by}`, leader: `👑 ${n} <span>is the new leader</span>${by}`,
-      donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`,
+      donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`, perms: `⭐ ${n} <span>changed what officers can do</span>`,
       buy: `${kind === 'slots' ? '🧱' : kind === 'banner' ? '🎨' : '🏷️'} ${n} <span>${kind === 'slots' ? 'bought 5 member slots' : kind === 'banner' ? 'changed the banner color' : 'changed the tag color'}</span> −${a(x.a)}`,
       stake: `⚔️ ${n} <span>put coins at stake against</span> ${tag} −${a(x.a)}`, refund: `↩️ <span>War stake returned</span> +${a(x.a)}`,
       won: `🏆 <span>Won the war against</span> ${tag} +${a(x.a)}`, lost: `💀 <span>Lost the war against</span> ${tag}`,
@@ -7841,7 +7850,7 @@
   }
   function drawClanWar() {
     const box = $('#cl-war'), d = clanState; if (!box || !d || !d.clan) return;
-    const c = d.clan, w = c.war, officer = CL_RANK[d.me.role] >= 2;
+    const c = d.clan, w = c.war, officer = !!(d.me.can || {}).war;
     const picker = id => `<div class="cl-pick" id="${id}">${c.members.map(m => `<label class="cl-pickm"><input type="checkbox" value="${esc(m.name)}"><span data-no-i18n>${esc(m.name)}</span></label>`).join('')}</div>`;
     let html;
     if (!w || w.st === 'off') {
@@ -7903,6 +7912,11 @@
     const op = b.dataset.cl, name = b.dataset.name, tag = b.dataset.tag;
     const T = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
     if (op === 'tab-find') { clanTab = 'find'; drawClanTab(); return; }
+    if (op === 'perm') {
+      // Le chef coche ou décoche un droit : on envoie tout l'état des cases (idée de kaz, 2026-10-26).
+      const perms = Object.fromEntries([...document.querySelectorAll('[data-cl="perm"]')].map(x => [x.dataset.perm, x.checked]));
+      const d = await clanDo('perms', { perms }); if (d) toast('Officer rights saved', 2000, 'achv'); return;
+    }
     if (['request', 'join', 'ignore', 'unask'].includes(op)) { const d = await clanDo(op, { tag }, b); if (d && op === 'join') toast('Welcome to the clan!', 3000, 'achv'); if (d && op === 'request' && clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); return; }
     if (['accept', 'decline', 'promote', 'demote'].includes(op)) { clanDo(op, { name }, b); return; }
     if (op === 'kick' && confirm(T(`Kick ${name} from the clan?`))) { clanDo('kick', { name }, b); return; }

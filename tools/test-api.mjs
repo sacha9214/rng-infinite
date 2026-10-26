@@ -3720,6 +3720,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(v.clan.vault, 60190 - 5000 - 3000 - 2000);
   for (let i = 0; i < 4; i++) await H(F, 'donate', { amount: 10000 });
 
+  // Droits des officiers (idée de kaz, 2026-10-26) : tout permis par défaut, le chef seul les règle, vérifiés partout.
+  v = await H(B, 'view'); assert.deepEqual(v.clan.perms, { invite: true, kick: true, upgrade: true, war: true, edit: true }); assert.equal(v.me.can.kick, true);
+  assert.deepEqual((await H(C, 'view')).me.can, { invite: false, kick: false, upgrade: false, war: false, edit: false }, 'un membre ne peut rien');
+  await fails(H(B, 'perms', { perms: { kick: false } }), 403, 'seul le chef règle les droits');
+  v = await H(A, 'perms', { perms: { invite: false, kick: false, upgrade: false, war: false, edit: false, junk: false } });
+  assert.deepEqual(v.clan.perms, { invite: false, kick: false, upgrade: false, war: false, edit: false }); assert.equal(v.me.can.kick, true, 'le chef garde tout');
+  await fails(H(B, 'invite', { name: 'Clanoutsider' }), 403, 'invitation coupée');
+  await fails(H(B, 'accept', { name: 'Clanoutsider' }), 403, 'demandes coupées');
+  await fails(H(B, 'kick', { name: 'Claneee' }), 403, 'exclusion coupée');
+  await fails(H(B, 'upgrade', { what: 'banner', color: 'red' }), 403, 'coffre coupé');
+  await fails(H(B, 'challenge', { target: 'FOES', stake: 100, team: [] }), 403, 'guerre coupée');
+  await fails(H(B, 'answer', { yes: false }), 403, 'réponse de guerre coupée');
+  await fails(H(B, 'desc', { desc: 'hi' }), 403, 'description coupée');
+  await fails(H(B, 'emoji', { emoji: '🐉' }), 403, 'emoji coupé');
+  assert.deepEqual((await H(B, 'view')).clan.requests, [], 'sans le droit d\'inviter, pas de demandes affichées');
+  v = await H(A, 'perms', { perms: { invite: true, kick: true, upgrade: true, war: true, edit: true } });
+  assert.equal(run([['HGET', `clan:${cidOf(A)}`, 'perms']])[0].result, null, 'retour au défaut : champ effacé');
+  v = await H(B, 'emoji', { emoji: '🎲' }); assert.equal(v.me.can.edit, true);
+
   // Chat : envoi filtré, modification (10 min, ses messages), suppression, signalement vers la page Owner.
   v = await H(C, 'say', { text: 'gg fuck yeah' }); assert.equal(v.messages.at(-1).text, 'gg **** yeah');
   await new Promise(r => setTimeout(r, 3));

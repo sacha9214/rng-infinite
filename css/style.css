@@ -6802,3 +6802,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .cl-descedit > summary { cursor: pointer; font-size: .85rem; color: var(--prose-2); }
 .cl-desc-input { width: 100%; resize: vertical; min-height: 3.2rem; font: inherit; }
 .cl-field-wide { grid-column: 1 / -1; }
+/* Droits des officiers (idée de kaz, 2026-10-26) */
+.cl-perms { display: grid; gap: .35rem; }
+.cl-perm { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
+.cl-perm input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent, #6d5dfc); }
