@@ -1697,6 +1697,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-wp-submarine', date: 'Oct 26, 2026', en: ['🔱 New legendary wallpaper Deep Dive (4,500 coins): a yellow submarine patrols the deep sea and dives during every roll; a Mythic+ roll sends it all the way to the seabed in a burst of bubbles (idea by ....)'], fr: ['🔱 Nouveau fond légendaire Grande Plongée (4 500 pièces) : un sous-marin jaune patrouille au fond de la mer et plonge pendant chaque tirage ; un tirage Mythic+ l\'envoie jusqu\'au fond dans une gerbe de bulles (idée de ....)'] },
     { id: '2026-10-25-clan-desc', date: 'Oct 25, 2026', en: ['📝 Clans can now have a description: tell players what your clan is about. The leader and officers write it (150 characters, no links or personal info), and it shows in Find a clan.'], fr: ['📝 Les clans peuvent maintenant avoir une description pour dire de quoi parle ton clan. Le chef et les officiers l\'écrivent (150 caractères, sans liens ni infos perso), et elle s\'affiche dans Find a clan.'] },
     { id: '2026-10-25-clans', date: 'Oct 25, 2026', en: ['🏯 Clans are here! Create one for 10,000 coins (name, tag and emoji) or join one by invitation or request. Share a vault, chat with your clan, buy more member slots and colors, climb the weekly clan leaderboard (the #1 clan earns the Clan Champion title) and fight 5 vs 5 clan wars for a stake. Your clan tag shows next to your name. Open it from Profile & Friends (idea by BIGBOIJONER69 and KMC)'], fr: ['🏯 Les clans arrivent ! Crées-en un pour 10 000 pièces (nom, tag et emoji) ou rejoins-en un sur invitation ou sur demande. Partagez un coffre, discutez dans le chat du clan, achetez des places et des couleurs, grimpez au classement des clans de la semaine (le clan n°1 gagne le titre Clan Champion) et menez des guerres de clans à 5 contre 5 avec une mise. Ton tag de clan s\'affiche à côté de ton pseudo. Ouvre-les depuis Profil & amis (idée de BIGBOIJONER69 et KMC)'] },
     { id: '2026-10-25-global-chat', date: 'Oct 25, 2026', en: ['💬 Global chat: press 💬 to talk with every player. Anyone can read; to write you need 100 rolls. Be kind: links, insults and personal info (phone, e-mail, address, social accounts) are blocked, and every message can be reported'], fr: ['💬 Chat global : appuie sur 💬 pour parler avec tous les joueurs. Tout le monde peut lire ; pour écrire, il faut 100 tirages. Sois gentil : liens, insultes et infos perso (téléphone, e-mail, adresse, réseaux sociaux) sont bloqués, et chaque message peut être signalé'] },
@@ -2312,6 +2313,7 @@
     const ascending = a.groups.slice().reverse();
     // Skin Owner (réservé au créateur, équipé depuis la boutique) : chiffres en rubis et signature en béryl rouge.
     const owner = Shop.resolve(Store.settings.skin) === 'owner';
+    wallDive(); // fond Deep Dive : le sous-marin plonge pendant le tirage
 
     app.innerHTML = `
       <div class="vignette" id="r-vignette"></div>
@@ -5052,9 +5054,9 @@
     };
   }
   // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
-  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>' };
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', submarine: '<i class="wpd-glow"></i><i class="wpd-sub"><b class="wpd-burst"></b></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>' };
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
-  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500 };
+  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500, submarine: 6500 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -5078,7 +5080,22 @@
     layer.removeAttribute('data-react');
     void layer.offsetWidth; // relance l'animation même si deux tirages de suite ont la même rareté
     layer.dataset.react = tier;
-    wallReactTimer = setTimeout(() => layer.removeAttribute('data-react'), WALL_REACT[id]);
+    // Deep Dive : sous Mythic, le sous-marin remonte tout de suite ; un Mythic+ reste au fond le temps de la réaction.
+    if (id === 'submarine' && !(TIER_RANK[tier] >= TIER_RANK.mythic)) layer.removeAttribute('data-dive');
+    wallReactTimer = setTimeout(() => { layer.removeAttribute('data-react'); layer.removeAttribute('data-dive'); }, WALL_REACT[id]);
+  }
+  // Fond Deep Dive (idée de ...., 2026-10-26) : le sous-marin commence à plonger pendant CHAQUE tirage (data-dive), pour
+  // ne rien trahir avant la révélation ; c'est wallReact qui décide ensuite (fond pour un Mythic+, sinon il remonte).
+  let wallDiveTimer = 0;
+  function wallDive() {
+    const layer = document.getElementById('wallpaper');
+    if (!layer || !layer.classList.contains('wp-submarine') || document.hidden) return;
+    clearTimeout(wallReactTimer);
+    layer.removeAttribute('data-react');
+    layer.dataset.dive = '1';
+    clearTimeout(wallDiveTimer);
+    // filet : un tirage quitté avant la révélation (ou un onglet caché à ce moment-là) ne laisse pas le sous-marin en bas
+    wallDiveTimer = setTimeout(() => { if (!layer.dataset.react) layer.removeAttribute('data-dive'); }, 25000);
   }
 
   // Bulles ASMR (idée de kingston, 2026-10-24) : des bulles montent derrière le site et éclatent quand on clique dessus.

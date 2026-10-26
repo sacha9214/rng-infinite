@@ -211,6 +211,9 @@
     { id: 'racetrack', name: 'Grand Prix', emoji: '🏎️', price: 1100, idea: 'YU CHUAN 23', desc: 'Race cars scream down the main straight in front of a packed grandstand' },
     // Idée de 17black (2026-10-24) : une plage venteuse avec un parasol.
     { id: 'windybeach', name: 'Windy Beach', emoji: '🏖️', price: 900, idea: '17black', desc: 'A beach on a windy day: the umbrella leans in the gusts and a beach ball rolls by' },
+    // Idée de .... (2026-10-26) : le fond de la mer ; sur un très bon tirage (Mythic+), un sous-marin plonge jusqu'au
+    // fond et lâche des bulles à la révélation.
+    { id: 'submarine', name: 'Deep Dive', emoji: '🔱', price: 4500, premium: true, idea: '....', desc: 'A yellow submarine patrols the deep; it dives during every roll, and a Mythic+ roll sends it crashing to the seabed in a burst of bubbles' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
