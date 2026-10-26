@@ -4041,6 +4041,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(pal, 'gcList'); assert.equal(r.body.me.reason, 'muted'); assert.ok(r.body.me.mutedUntil > Date.now() + 3500e3 && r.body.me.mutedUntil <= Date.now() + 3600e3);
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'let me talk' })).status, 403);
   r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by]), [['Pally', 'Modo']]);
+  // Lecture seule (viewerGrant, 2026-10-26) : voir les silences, sans pouvoir les lever.
+  run([['HSET', `stats:${kid.playerId}`, 'viewerGrant', '1']]);
+  r = await gc(kid, 'gcAdmin'); assert.equal(r.status, 200); assert.equal(r.body.readOnly, true); assert.equal(r.body.mutes.length, 1);
+  assert.equal((await gc(kid, 'gcUnmute', { name: 'Pally' })).status, 403, 'lecture seule : pas de levée');
+  assert.equal((await gc(kid, 'gcModSet', { name: 'Pally' })).status, 403);
+  run([['HDEL', `stats:${kid.playerId}`, 'viewerGrant']]);
   assert.ok(!JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant sur la page Owner');
   r = await gc(boss, 'gcUnmute', { name: 'Pally' }); assert.deepEqual(r.body.mutes, []);
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'thanks' })).status, 200);
@@ -4356,6 +4362,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   };
   const kid = mk('c1', 'PicKid', 40), noname = mk('c2', '', 40), newbie = mk('c3', 'PicNew', 5), other = mk('c4', 'PicOther', 50), boss = mk('c5', 'PicBoss', 10, true);
   const av = (who, op, extra = {}) => call(profile, { method: 'POST', body: { action: 'avatar', op, playerId: who.playerId, secret: who.secret, ...extra } });
+  // Lecture seule (viewerGrant, 2026-10-26) : la file se lit, rien ne se valide.
+  { const viewer = mk('c6', 'PicViewer', 10); run([['HSET', `stats:${viewer.playerId}`, 'viewerGrant', '1']]);
+    let q = await av(viewer, 'queue'); assert.equal(q.status, 200); assert.equal(q.body.readOnly, true);
+    assert.equal((await av(viewer, 'approve', { name: 'PicKid' })).status, 403, 'lecture seule : pas de validation');
+    assert.equal((await av(viewer, 'remove', { name: 'PicKid' })).status, 403);
+    assert.equal((await av(other, 'queue')).status, 403, 'un joueur normal ne voit rien'); }
   // GET brut : l'image n'est pas du JSON.
   const getRaw = url => new Promise(resolve => { const headers = {}; const res = { statusCode: 200, setHeader: (k, v) => { headers[k.toLowerCase()] = v; }, end: d => resolve({ status: res.statusCode, headers, data: d }) }; profile({ method: 'GET', url, headers: {} }, res); });
   const map = async () => { Avatar.resetCache(); return JSON.parse((await getRaw('/api/profile?avatars=1')).data).map; };

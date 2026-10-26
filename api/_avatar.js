@@ -209,6 +209,8 @@ async function handle(req, res) {
       if (!appr) return send(res, 404, { error: 'No picture to report' });
       return send(res, 200, await Reports.fileReport({ reporter: id, author, text: 'Profile picture', where: 'avatar', msgT: appr.t }));
     }
+    // Lecture seule (accès « viewer » donné par Sacha, 2026-10-26) : voir la file, sans valider ni refuser ni retirer.
+    if (op === 'queue' && !(Number(stats.owner) >= 1) && require('./_lib').canViewOwner(stats)) return send(res, 200, { ...(await queue(body.q)), readOnly: true });
     if (!(Number(stats.owner) >= 1)) return send(res, 403, { error: 'Owner only' }); // NaN quand le champ manque
     if (op === 'queue') return send(res, 200, await queue(body.q));
     if (op === 'approve' || op === 'reject') { await decide(op, body); return send(res, 200, await queue(body.q)); }
