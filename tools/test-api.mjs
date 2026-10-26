@@ -4337,4 +4337,96 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   Roadmap.reset();
 }
 
+// ---------------------------------------------------------------- photos de profil (api/_avatar.js, 2026-10-26)
+{
+  const Avatar = require(path.join(ROOT, 'api/_avatar.js'));
+  const siteA = require(path.join(ROOT, 'api/site.js'));
+  // JPEG minimal (structure seulement) : SOI, APP0 JFIF, SOF0 w×h, SOS, données, EOI.
+  const jpeg = ({ w = 256, h = 256, exif = false, pad = 400 } = {}) => {
+    const seg = (mk, data) => Buffer.concat([Buffer.from([0xff, mk, (data.length + 2) >> 8, (data.length + 2) & 255]), data]);
+    const sof = Buffer.from([8, h >> 8, h & 255, w >> 8, w & 255, 1, 1, 0x11, 0]);
+    return 'data:image/jpeg;base64,' + Buffer.concat([Buffer.from([0xff, 0xd8]), seg(0xe0, Buffer.from('JFIF\0\x01\x01\0\0\x01\0\x01\0\0', 'binary')),
+      ...(exif ? [seg(0xe1, Buffer.from('Exif\0\0GPS-here'))] : []), seg(0xc0, sof), seg(0xda, Buffer.from([1, 1, 0, 0, 63, 0])),
+      crypto.randomBytes(pad).map(b => (b === 0xff ? 0 : b)), Buffer.from([0xff, 0xd9])]).toString('base64');
+  };
+  const mk = (hex, name, rolls, owner = false) => {
+    const p = { playerId: ('a7' + hex).repeat(4), secret: ('a7' + hex).repeat(8), name };
+    run([['SET', `player:${p.playerId}:secret`, crypto.createHash('sha256').update(p.secret).digest('hex')], ['HSET', `stats:${p.playerId}`, 'v', '1', 'rolls', String(rolls), ...(owner ? ['owner', '1'] : [])], ...(name ? [['HSET', 'names', p.playerId, name], ['SET', `name:${name.toLowerCase()}`, p.playerId]] : [])]);
+    return p;
+  };
+  const kid = mk('c1', 'PicKid', 40), noname = mk('c2', '', 40), newbie = mk('c3', 'PicNew', 5), other = mk('c4', 'PicOther', 50), boss = mk('c5', 'PicBoss', 10, true);
+  const av = (who, op, extra = {}) => call(profile, { method: 'POST', body: { action: 'avatar', op, playerId: who.playerId, secret: who.secret, ...extra } });
+  // GET brut : l'image n'est pas du JSON.
+  const getRaw = url => new Promise(resolve => { const headers = {}; const res = { statusCode: 200, setHeader: (k, v) => { headers[k.toLowerCase()] = v; }, end: d => resolve({ status: res.statusCode, headers, data: d }) }; profile({ method: 'GET', url, headers: {} }, res); });
+  const map = async () => { Avatar.resetCache(); return JSON.parse((await getRaw('/api/profile?avatars=1')).data).map; };
+  // Validation de l'envoi.
+  assert.equal((await av(kid, 'upload', { img: 'data:image/png;base64,iVBORw0KGgo=' })).status, 422, 'pas un JPEG');
+  assert.equal((await av(kid, 'upload', { img: 'data:image/jpeg;base64,' + Buffer.from('<svg onload=alert(1)>'.repeat(20)).toString('base64') })).status, 422, 'faux JPEG');
+  assert.equal((await av(kid, 'upload', { img: jpeg({ pad: 70000 }) })).status, 422, 'trop lourd');
+  assert.equal((await av(kid, 'upload', { img: jpeg({ exif: true }) })).status, 422, 'EXIF refusé');
+  assert.equal((await av(kid, 'upload', { img: jpeg({ w: 300, h: 200 }) })).status, 422, 'pas carré');
+  assert.equal((await av(noname, 'upload', { img: jpeg() })).status, 403, 'sans nom');
+  assert.equal((await av(newbie, 'upload', { img: jpeg() })).status, 403, 'moins de 30 tirages');
+  let r = await av(kid, 'upload', { img: jpeg() });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.pending && r.body.pending.img.startsWith('data:image/jpeg;base64,') && !r.body.approved);
+  // Une seule en attente par joueur : le nouvel envoi remplace l'ancien.
+  await av(kid, 'upload', { img: jpeg() });
+  assert.equal(Number(run([['HLEN', 'avpq']])[0].result), 1, 'une seule en attente');
+  // Invisible pour les autres : rien dans la carte publique.
+  assert.deepEqual(await map(), {}, 'rien de public avant validation');
+  // File du créateur : réservée.
+  assert.equal((await av(other, 'queue')).status, 403);
+  assert.equal((await av(other, 'approve', { key: 'a'.repeat(20) })).status, 403);
+  r = await av(boss, 'queue');
+  assert.equal(r.status, 200); assert.equal(r.body.pending.length, 1); assert.equal(r.body.pending[0].name, 'PicKid');
+  const dump = JSON.stringify(r.body);
+  for (const p of [kid, other, boss]) assert.ok(!dump.includes(p.playerId), 'aucun identifiant');
+  // Validation : version 1, image servie par jeton avec un cache long.
+  r = await av(boss, 'approve', { key: r.body.pending[0].key });
+  assert.equal(r.status, 200); assert.equal(r.body.pending.length, 0); assert.equal(r.body.log[0].action, 'approved');
+  let m = await map(); assert.ok(/^[0-9a-f]{20}$/.test(m.PicKid), 'jeton public');
+  const tok1 = m.PicKid;
+  const img = await getRaw(`/api/profile?avatar=${tok1}`);
+  assert.equal(img.status, 200); assert.equal(img.headers['content-type'], 'image/jpeg'); assert.ok(/immutable/.test(img.headers['cache-control']));
+  assert.equal(img.data[0], 0xff); assert.equal(img.data[1], 0xd8);
+  assert.equal((await getRaw('/api/profile?avatar=' + 'b'.repeat(20))).status, 404);
+  assert.equal((await getRaw('/api/profile?avatar=' + kid.playerId)).status, 404, 'jamais par identifiant');
+  assert.equal(JSON.parse(run([['GET', `av:${kid.playerId}`]])[0].result).v, 1);
+  // Nouvelle image refusée : l'ancienne reste, le joueur voit la raison.
+  await new Promise(res => setTimeout(res, 3));
+  await av(kid, 'upload', { img: jpeg() });
+  r = await av(boss, 'queue'); assert.equal(r.body.pending[0].prev, `/api/profile?avatar=${tok1}`, 'ancienne image montrée');
+  assert.equal((await av(boss, 'reject', { key: r.body.pending[0].key, reason: 'nope' })).status, 422, 'raison obligatoire');
+  r = await av(boss, 'reject', { key: r.body.pending[0].key, reason: 'personal' }); assert.equal(r.status, 200);
+  r = await av(kid, 'mine');
+  assert.equal(r.body.rejected.reason, 'personal info / real face'); assert.ok(r.body.approved && !r.body.pending);
+  assert.equal((await map()).PicKid, tok1, 'ancienne image gardée');
+  // Une autre acceptée : version 2, nouveau jeton (cache), l'ancien jeton ne sert plus.
+  await new Promise(res => setTimeout(res, 3));
+  await av(kid, 'upload', { img: jpeg() });
+  r = await av(boss, 'queue'); await av(boss, 'approve', { key: r.body.pending[0].key });
+  m = await map(); assert.notEqual(m.PicKid, tok1);
+  assert.equal(JSON.parse(run([['GET', `av:${kid.playerId}`]])[0].result).v, 2, 'version augmentée');
+  assert.equal((await getRaw(`/api/profile?avatar=${tok1}`)).status, 404);
+  // Limite de 5 envois par jour (4 déjà faits).
+  assert.equal((await av(kid, 'upload', { img: jpeg() })).status, 200, '5e envoi');
+  assert.equal((await av(kid, 'upload', { img: jpeg() })).status, 429, '5 par jour');
+  // Signalement → Reports (where: 'avatar'), sans identifiant.
+  assert.equal((await av(kid, 'report', { name: 'PicKid' })).status, 422, 'pas soi-même');
+  assert.equal((await av(other, 'report', { name: 'PicOther' })).status, 404, 'pas d\'image');
+  r = await av(other, 'report', { name: 'PicKid' }); assert.equal(r.status, 200); assert.ok(r.body.reported);
+  r = await call(siteA, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  const rep = r.body.reports.find(x => x.where === 'avatar');
+  assert.ok(rep && rep.author === 'PicKid' && rep.reporter === 'PicOther');
+  assert.ok(!JSON.stringify(r.body).includes(kid.playerId));
+  // Retrait par le créateur.
+  assert.equal((await av(other, 'remove', { name: 'PicKid' })).status, 403);
+  r = await av(boss, 'remove', { name: 'PicKid', reason: 'inappropriate' }); assert.equal(r.status, 200);
+  assert.equal(r.body.log[0].action, 'removed'); assert.equal(r.body.approved.length, 0);
+  assert.deepEqual(await map(), {});
+  r = await av(kid, 'mine'); assert.ok(!r.body.approved); assert.equal(r.body.rejected.reason, 'inappropriate'); assert.equal(r.body.left, 0);
+  assert.equal((await call(profile, { method: 'POST', body: { action: 'avatar', op: 'mine', playerId: kid.playerId, secret: other.secret } })).status, 403, 'secret vérifié');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
