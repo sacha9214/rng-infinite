@@ -3083,6 +3083,80 @@
     };
   };
 
+  // 🌌 Milky Way (2026-10-26, idée de shadow2 Jr) — une galaxie spirale, vue un peu de biais, tourne autour du nombre
+  // (deux bras d'étoiles, de la poussière dorée près du centre, bleue au bout des bras), derrière la carte ; elle tourne
+  // plus vite à mesure que la tension monte. Chaque chiffre qui se pose reçoit une étoile filante venue d'un bras. À la
+  // révélation, les bras s'illuminent selon la rareté ; dès Mythic, le cœur de la galaxie s'embrase derrière la carte
+  // (un bulbe doré qui déborde, plus grand pour Divine, Godlike et Infinite). Tirage raté : la galaxie ralentit et pâlit.
+  SCENES.milkyway = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, add = dark ? 'lighter' : 'source-over';
+    const R = Math.max(card.w * .78, card.h * 2.2), TILT = .42;
+    // les étoiles des bras : rayon r (0 à 1), angle de base sur une spirale logarithmique, plus un peu de dispersion
+    const stars = Array.from({ length: Math.round(620 * q) }, (_, i) => {
+      const arm = i % 2, r = Math.pow(Math.random(), .8) * .95 + .05, a = arm * Math.PI + Math.log(r) * 2.6 + rnd(-.35, .35) * (1.2 - r);
+      return { r, a, s: rnd(.6, 1.8), c: r < .3 ? pick(['#fff7d6', '#fde68a', '#ffffff']) : pick(['#c7d2fe', '#a5b4fc', '#e9d5ff', '#ffffff', '#bfdbfe']), tw: rnd(TAU) };
+    });
+    const dust = Array.from({ length: Math.round(40 * q) }, (_, i) => { const r = rnd(.15, .9), arm = i % 2; return { r, a: arm * Math.PI + Math.log(r) * 2.6 + rnd(-.2, .2), c: r < .4 ? '#fde68a' : pick(['#818cf8', '#c084fc']) }; });
+    const shooters = timed(), flashes = timed(), rings = timed(), sparks = particles();
+    let spin = 0, heat = .3, target = .3, glow = 0, core = 0, coreTo = 0, dim = 1, asc = 0;
+    const pos = (r, a) => ({ x: cx + Math.cos(a) * r * R, y: cy + Math.sin(a) * r * R * TILT });
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 3);
+        spin += dt * (.12 + .5 * heat);
+        glow = Math.max(0, glow - dt * .5);
+        core += (coreTo - core) * Math.min(1, dt * 2.5); coreTo = Math.max(0, coreTo - dt * .08);
+        // dans la carte : la lueur du bulbe derrière les chiffres
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, '#fde68a', w / 2, h / 2, w * .35, (.06 + .08 * heat + .35 * core) * dim, h * .9);
+        behind(env, () => {
+          co.globalCompositeOperation = add;
+          // poussière : de grands nuages doux le long des bras
+          for (const d of dust) { const p = pos(d.r, d.a + spin); dot(co, d.c, p.x, p.y, R * .18 * (1.2 - d.r * .5), (dark ? .17 : .12) * (1 + glow) * dim, R * .18 * TILT * 1.3); }
+          // le bulbe central, très doux (plus fort quand le cœur s'embrase)
+          dot(co, dark ? '#fff1d0' : '#f59e0b', cx, cy, R * (.32 + .25 * core), ((dark ? .25 : .16) + .5 * core) * dim, R * (.32 + .25 * core) * .6);
+          // les étoiles des bras
+          for (const s of stars) {
+            const p = pos(s.r, s.a + spin), a = (.45 + .45 * Math.sin(t * 3 + s.tw)) * (dark ? 1 : .8) * (.7 + .6 * glow) * dim;
+            if (s.s > 1.5) dot(co, s.c, p.x, p.y, s.s * 2.6, a);
+            else { co.globalAlpha = Math.min(1, a); co.fillStyle = dark ? s.c : '#4338ca'; co.fillRect(p.x - s.s / 2, p.y - s.s / 2, s.s, s.s); }
+          }
+        });
+        // le cœur qui s'embrase : un bulbe doré et des rayons courts, jamais sous la carte (la rareté s'y affiche)
+        if (core > .02) behind(env, () => {
+          co.globalCompositeOperation = add;
+          dot(co, '#fff7e6', cx, cy, card.w * (.45 + .3 * core), core * .7 * dim, card.h * (1 + .8 * core));
+          godrays(co, dark ? '#fde68a' : '#d97706', cx, cy, 14 + 4 * asc, card.h * .5, card.w * (.5 + .2 * asc) * core, -spin * 2, 4, core * (dark ? .25 : .2));
+        }, true);
+        co.globalCompositeOperation = add;
+        flashes.run(dt, (f, k) => { dot(co, '#e0e7ff', f.x, f.y, f.s * (.4 + k), (1 - k) * .9); dot(co, '#ffffff', f.x, f.y, f.s * 1.6 * (1 - k), (1 - k) * .7, 1.5); dot(co, '#ffffff', f.x, f.y, 1.5, (1 - k) * .7, f.s * 1.6 * (1 - k)); });
+        // étoiles filantes : d'un point d'un bras jusqu'au haut du chiffre
+        shooters.run(dt, (s, k) => { const e = outCubic(k), x = lerp(s.x0, s.x1, e), y = lerp(s.y0, s.y1, e); tail(co, '#e0e7ff', x - (s.x1 - s.x0) * .18, y - (s.y1 - s.y0) * .18, x, y, 2, 1 - k * .5); dot(co, '#ffffff', x, y, 5, 1 - k * .3); });
+        rings.run(dt, (r, k) => { const e = outCubic(k); co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#c7d2fe' : '#6366f1'; co.lineWidth = 1 + 2.5 * (1 - k); co.beginPath(); co.ellipse(cx, cy, card.w * .55 + R * .6 * e, (card.w * .55 + R * .6 * e) * TILT, 0, 0, TAU); co.stroke(); });
+        sparks.step(dt);
+        sparks.each((s, k) => dot(co, s.c, s.x, s.y, s.size, 1 - k));
+        co.globalAlpha = 1; co.globalCompositeOperation = 'source-over';
+      },
+      lock(pt, o) {
+        if (o.ghost) return;
+        heat = Math.min(1.5, heat + .15);
+        const s = pick(stars), p = pos(s.r, s.a + spin), top = card.y + 4;
+        shooters.add({ x0: p.x, y0: Math.min(p.y, card.y - 20), x1: pt.x, y1: top, life: .3 });
+        flashes.add({ delay: .26, x: pt.x, y: top, s: card.h * (o.last ? .5 : .3), life: .4 });
+      },
+      build() { target = 1.4; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { target = .1; dim = .5; return; }
+        target = .35 + .4 * p; glow = .6 + 1.2 * p;
+        for (let i = 0; i < 1 + Math.round(2 * p); i++) rings.add({ delay: i * .15, life: 1 });
+        for (let i = burst(p, 50 * q, 6); i > 0; i--) { const s = pick(stars), q2 = pos(s.r, s.a + spin); sparks.add({ x: q2.x, y: q2.y, vx: (q2.x - cx) * .6, vy: (q2.y - cy) * .6, drag: 1.5, max: rnd(.5, 1.2), size: rnd(2, 4), c: s.c }); }
+        if (p >= 1) { asc = ASCEND[tier] || 0; coreTo = 1 + .35 * asc; }
+      },
+    };
+  };
+
   // ⚖️ Divine Judgment (2026-10-25, idée de Gray alt) — un tribunal céleste. Une gloire dorée rayonne derrière la carte,
   // une grande balance la surplombe (son fléau passe derrière la carte, les plateaux pendent de chaque côté) et pèse le
   // nombre : elle oscille pendant le tirage, de plus en plus fort avant le dernier chiffre. Chaque chiffre reçoit un pilier

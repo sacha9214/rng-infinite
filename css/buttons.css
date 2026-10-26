@@ -509,6 +509,25 @@
 .btn-roll.gen-blackhole:hover { letter-spacing: .14em; }
 .btn-roll.gen-blackhole:active { transform: scale(.94, .9); letter-spacing: .04em; }
 
+/* Milky Way (idée de shadow2 Jr, 2026-10-26) — la nuit profonde et la bande laiteuse en biais ; au survol, la bande
+   glisse comme le ciel qui tourne. */
+.btn-roll.gen-milkyway {
+  overflow: hidden; border-radius: .8rem; border: 2px solid #a5b4fc; color: #fff;
+  background:
+    linear-gradient(-14deg, transparent 47%, rgba(10, 6, 24, .5) 50%, transparent 54%),
+    linear-gradient(-14deg, transparent 20%, rgba(129, 140, 248, .3) 34%, rgba(255, 244, 222, .45) 50%, rgba(192, 132, 252, .3) 66%, transparent 80%),
+    radial-gradient(1px 1px at 15% 30%, #fff 99%, transparent), radial-gradient(1px 1px at 80% 70%, #fff 99%, transparent), radial-gradient(1px 1px at 60% 20%, #fff 99%, transparent),
+    linear-gradient(180deg, #0b0a24, #04030d);
+  background-size: 200% 100%, 200% 100%, auto, auto, auto, auto; background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+  text-shadow: 0 0 3px #fff, 0 0 10px rgba(129, 140, 248, .9);
+  --gs: 0 0 0 3px rgba(129, 140, 248, .2), 0 0 22px rgba(129, 140, 248, .45), 0 .5em 1em rgba(0, 0, 0, .55);
+  --gs-h: 0 0 0 3px rgba(129, 140, 248, .35), 0 0 38px rgba(192, 132, 252, .7), 0 .5em 1.1em rgba(0, 0, 0, .6);
+  --gs-a: 0 0 0 3px rgba(129, 140, 248, .25), 0 0 14px rgba(129, 140, 248, .5), inset 0 0 26px rgba(255, 244, 222, .35);
+}
+.btn-roll.gen-milkyway:hover { animation: gen-mw-drift 3s linear infinite; }
+@keyframes gen-mw-drift { to { background-position: 100% 0, 100% 0, 0 0, 0 0, 0 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-milkyway:hover { animation: none; } }
+
 /* Divine Judgment (idée de Gray alt, 2026-10-25) — nuit violette, gloire dorée d'en haut, colonnes de marbre ; au
    survol, la lumière s'intensifie. */
 .btn-roll.gen-divine {
