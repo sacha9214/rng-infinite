@@ -7572,7 +7572,9 @@
       else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> ${md} · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
       if (!slot.isConnected) return;
-      slot.innerHTML = text ? `<a class="tn-banner" href="#/tournament">${text}<span class="tn-banner-go">→</span></a>` : '';
+      // Texte dans un seul bloc qui peut passer à la ligne : en morceaux séparés dans le flex, il débordait sur téléphone
+      // (+32 px à 390 px, page d'accueil, 2026-10-26).
+      slot.innerHTML = text ? `<a class="tn-banner" href="#/tournament"><span class="tn-banner-txt">${text}</span><span class="tn-banner-go">→</span></a>` : '';
     } catch (err) { /* hors ligne : pas de bandeau */ }
   }
   // Carte du Duel : l'état du tournoi en une ligne, et le lien vers sa page.

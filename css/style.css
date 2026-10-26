@@ -5992,6 +5992,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   background: linear-gradient(90deg, color-mix(in srgb, #eab308 20%, transparent), color-mix(in srgb, #a855f7 14%, transparent)); border: 1px solid color-mix(in srgb, #eab308 55%, transparent); }
 .tn-banner:hover { border-color: #eab308; }
 .tn-banner-go { margin-left: auto; font-weight: 800; }
+.tn-banner { box-sizing: border-box; max-width: min(40rem, 100%); }
+.tn-banner-txt { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 
 /* Podium du jour sous le meilleur tirage (2026-10-22) */
 .today-podium { display: grid; gap: .35rem; margin: .7rem 0 .5rem; }
