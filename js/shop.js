@@ -46,6 +46,8 @@
     { id: 'sakura', name: 'Sakura', emoji: '🌸', price: 7500, desc: 'A blade, a branch in bloom, a rising moon', premium: true },
     { id: 'storm', name: 'Storm', emoji: '⚡', price: 10000, desc: 'Lightning strikes every digit', premium: true },
     { id: 'dragon', name: 'Dragon', emoji: '🐉', price: 12500, desc: 'A dragon circles your number and forges it', premium: true },
+    // Idée de shadow2 Jr (2026-10-26) : légendaire, la Voie lactée tourne autour du nombre ; son cœur s'embrase dès Mythic.
+    { id: 'milkyway', name: 'Milky Way', emoji: '🌌', price: 13500, desc: 'The Milky Way spins around your number, every digit ignites like a star, and Mythic rolls set the galaxy core ablaze', premium: true, idea: 'shadow2 Jr' },
     // Idée de kaz (2026-10-25) : légendaire, les chiffres se posent tour à tour en roche, glace, feu et vent, et la carte
     // prend la matière de l'élément en cours.
     { id: 'elemental', name: 'Elemental', emoji: '🌀', price: 14000, desc: 'Every digit lands as a new element, rock, ice, fire then wind, and the card turns into it', premium: true, idea: 'kaz' },
