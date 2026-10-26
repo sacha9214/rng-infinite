@@ -487,7 +487,7 @@ async function recordRoll(playerId, n, t) {
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
   let coins = 0;
   const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
-  { const full = Shop.COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll); writes.push(...eco('in:rolls', c, t)); coins = c;
+  { const full = Shop.COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll, a.tier); writes.push(...eco('in:rolls', c, t)); coins = c;
     // Rendements décroissants : la part non versée va dans rollCut (le solde se calcule sur les compteurs de rareté).
     if (full > c) writes.push(['HINCRBY', statsKey(playerId), 'rollCut', full - c]);
     // Weekend Rush : +25 % de ce qui est versé, en bonus. rushBonus : la part du Weekend Rush dans « bonus » (tests, stats).

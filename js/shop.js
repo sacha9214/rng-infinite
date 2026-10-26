@@ -159,7 +159,11 @@
   // dessous). Seules les pièces changent : l'XP, la chance et les classements restent les mêmes.
   const ROLL_TIERS = [{ upTo: 500, rate: 1 }, { upTo: 2000, rate: 0.5 }, { upTo: Infinity, rate: 0.2 }];
   const rollRate = k => ROLL_TIERS.find(x => k <= x.upTo).rate; // k = numéro du tirage dans la journée (1 = le premier)
-  const rollPay = (coins, k) => Math.floor(coins * rollRate(k));
+  // Adouci le 2026-10-26 (demandé par number 1, kaz et casmictechthing) : un tirage qui rapporte au moins 1 pièce en
+  // rapporte toujours au moins 1, et Celestial ou mieux n'est jamais réduit (100 % à tous les paliers).
+  const ROLL_FULL = ['celestial', 'divine', 'godlike', 'infinite'];
+  const rollPayAt = (coins, rate, tier) => ROLL_FULL.includes(tier) || rate >= 1 ? coins : coins >= 1 ? Math.max(1, Math.floor(coins * rate)) : 0;
+  const rollPay = (coins, k, tier) => rollPayAt(coins, rollRate(k), tier);
   // Changer de pseudo coûte des pièces (le premier pseudo reste gratuit).
   const RENAME_PRICE = 5000;
   // Prestige (Sacha, 2026-10-25) : trois titres de luxe, en quantité limitée (stock commun à tous les joueurs), un
@@ -339,7 +343,7 @@
   // joueur (champ idea), son auteur reçoit 5 % du prix en pièces. Créées en plus : l'acheteur paie le prix normal.
   const IDEA_SHARE = 0.05;
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
-  const api = { ROLL_TIERS, rollRate, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);
