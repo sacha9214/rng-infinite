@@ -6809,3 +6809,4 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* @mentions du chat global (idée de casmictechthing, 2026-10-26) */
 .gc-at { color: var(--chart-accent); background: color-mix(in srgb, var(--chart-accent) 14%, transparent); border-radius: 4px; padding: 0 .15em; }
 .gc-tome { background: color-mix(in srgb, #f5b301 18%, var(--surface-dim)); box-shadow: inset 3px 0 0 #f5b301; }
+.gc-edited { font-size: .7rem; color: var(--prose-2); font-style: italic; } /* message modifié (idée de daddy finger, 2026-10-26) */

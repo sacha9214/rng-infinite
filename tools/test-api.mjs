@@ -3984,6 +3984,37 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   free(al); assert.equal((await gc(al, 'gcSend', { text: '@MentBeta you fucking idiot' })).status, 422);
   assert.equal(run([['GET', `gc:at:${ce.playerId}`]])[0].result, null);
 }
+// Chat global : modifier (5 minutes, filtres rejoués, « edited ») et supprimer ses propres messages (idée de daddy finger, 2026-10-26).
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const ed = mk('b7', 'EditEd'), ot = mk('b8', 'EditOther');
+  free(ed); let r = await gc(ed, 'gcSend', { text: 'helo all' }); const mine = r.body.msgs.at(-1);
+  free(ot); r = await gc(ot, 'gcSend', { text: 'not yours' }); const theirs = r.body.msgs.at(-1);
+  assert.equal(r.body.editMs, 5 * 60000);
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'hello all' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const e1 = r.body.msgs.find(m => m.id === mine.id);
+  assert.deepEqual([e1.text, e1.edited, e1.t], ['hello all', true, mine.t], 'même id, même heure, marqué modifié');
+  assert.equal(r.body.msgs.filter(m => m.id === mine.id).length, 1, 'pas de doublon');
+  assert.ok(r.body.msgs.findIndex(m => m.id === mine.id) < r.body.msgs.findIndex(m => m.id === theirs.id), 'même place dans la liste');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'you fucking idiot' }); assert.equal(r.status, 422, 'filtres rejoués (insulte)');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'go to freecoins.com' }); assert.equal(r.status, 422, 'filtres rejoués (lien)');
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'hi @EditOther' }); assert.equal(r.status, 200); assert.deepEqual(r.body.msgs.find(m => m.id === mine.id).at, ['EditOther'], 'mention ajoutée en modifiant');
+  assert.ok(Number(run([['GET', `gc:at:${ot.playerId}`]])[0].result) > 0, 'le cité est prévenu');
+  assert.equal((await gc(ed, 'gcEdit', { id: theirs.id, text: 'hacked' })).status, 403, 'pas le message d\'un autre');
+  // Fenêtre de 5 minutes : message vieilli à la main.
+  const raw = run([['LRANGE', 'gc:msgs', 0, -1]])[0].result, k = raw.findIndex(x => JSON.parse(x).id === mine.id);
+  run([['LSET', 'gc:msgs', k, JSON.stringify({ ...JSON.parse(raw[k]), t: Date.now() - 5 * 60000 - 1 })]]);
+  r = await gc(ed, 'gcEdit', { id: mine.id, text: 'too late' }); assert.equal(r.status, 422); assert.match(r.body.error, /5 minutes/);
+  // Supprimer : le sien oui (même vieux), celui d'un autre non (sauf modérateur).
+  assert.equal((await gc(ed, 'gcDelete', { id: theirs.id })).status, 403);
+  assert.equal((await gc(ed, 'gcMute', { id: theirs.id, dur: '1h' })).status, 403, 'pas de silence pour autant');
+  r = await gc(ed, 'gcDelete', { id: mine.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === mine.id));
+  assert.ok(r.body.msgs.some(m => m.id === theirs.id));
+  assert.ok(!JSON.stringify(r.body).includes(ed.playerId) && !JSON.stringify(r.body).includes(ot.playerId), 'aucun identifiant');
+}
 
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
 // pseudo payant, Prestige.

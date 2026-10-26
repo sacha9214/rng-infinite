@@ -325,7 +325,7 @@
     'Global chat': 'Chat global', '💬 Global chat': '💬 Chat global', 'Be kind · no personal info': 'Sois gentil · pas d\'infos perso',
     'No message yet. Say hi! 👋': 'Aucun message pour l\'instant. Dis bonjour ! 👋', 'Message options': 'Options du message', 'Options': 'Options',
     '🚩 Report': '🚩 Signaler', '🗑️ Delete': '🗑️ Supprimer', '🔇 1 h': '🔇 1 h', '🔇 24 h': '🔇 24 h', '⛔ Forever': '⛔ Pour toujours',
-    'Write a message': 'Écris un message', 'Write a message… (@name to mention)': 'Écris un message… (@pseudo pour mentionner)', '⚙️ Link Google': '⚙️ Associer Google',
+    'Write a message': 'Écris un message', '✏️ Edit': '✏️ Modifier', 'Message edited': 'Message modifié', 'Messages can be edited for 5 minutes': 'Un message se modifie pendant 5 minutes', 'You can only edit your own messages': 'Tu ne peux modifier que tes messages', 'Write a message… (@name to mention)': 'Écris un message… (@pseudo pour mentionner)', '⚙️ Link Google': '⚙️ Associer Google',
     'Nothing happens? Allow pop-ups or pause your ad blocker for this site, or use a password below.': 'Rien ne se passe ? Autorise les pop-ups ou mets ton bloqueur de pub en pause sur ce site, ou utilise un mot de passe plus bas.',
     'Description': 'Description', 'Tell players what your clan is about (optional)': 'Dis aux joueurs de quoi parle ton clan (facultatif)',
     'Tell players what your clan is about': 'Dis aux joueurs de quoi parle ton clan', '✏️ Edit description': '✏️ Modifier la description',

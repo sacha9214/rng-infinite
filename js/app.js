@@ -1697,6 +1697,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-26-gc-edit', date: 'Oct 26, 2026', en: ['✏️ Global chat: you can now edit your messages for 5 minutes and delete them anytime (⋯ menu). Edited messages show "edited" (idea by daddy finger).'], fr: ['✏️ Chat global : tu peux maintenant modifier tes messages pendant 5 minutes et les supprimer quand tu veux (menu ⋯). Les messages modifiés affichent « modifié » (idée de daddy finger).'] },
     { id: '2026-10-26-gc-mentions', date: 'Oct 26, 2026', en: ['💬 Global chat: write @name to mention a player. Their name lights up, and they get a red dot on 💬 even if they were away (idea by casmictechthing).'], fr: ['💬 Chat global : écris @pseudo pour mentionner un joueur. Son pseudo est surligné, et il voit un point rouge sur 💬 même s\'il était absent (idée de casmictechthing).'] },
     { id: '2026-10-26-clan-patron', date: 'Oct 26, 2026', en: ['🪙 New title: Clan Patron, for players who donated 10,000 coins in total to a clan vault (idea by PRISMA123).'], fr: ['🪙 Nouveau titre : Mécène de clan, pour les joueurs qui ont versé 10 000 pièces au total dans le coffre d\'un clan (idée de PRISMA123).'] },
     { id: '2026-10-26-clan-perms', date: 'Oct 26, 2026', en: ['⭐ Clan leaders can now choose what officers may do: invite and accept requests, kick members, spend the vault, start wars, edit the description (idea by kaz).'], fr: ['⭐ Les chefs de clan peuvent maintenant choisir ce que les officiers ont le droit de faire : inviter et accepter les demandes, exclure, dépenser le coffre, lancer des guerres, modifier la description (idée de kaz).'] },
@@ -8135,7 +8136,7 @@
     list() { return this.el.querySelector('.gc-list'); },
     apply(d) {
       const before = JSON.stringify(this.me);
-      this.rev = d.rev; this.del = d.del; this.max = d.max || 200;
+      this.rev = d.rev; this.del = d.del; this.max = d.max || 200; if (d.editMs) this.editMs = d.editMs;
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
@@ -8149,9 +8150,10 @@
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           <div class="gc-meta"><a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-            ${!m.mine && signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
+${m.edited ? '<span class="gc-edited">edited</span>' : ''}
+            ${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
           <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
-          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${me.mod ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
     },
@@ -8187,6 +8189,13 @@
       if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
       const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
       try {
+        // Modifier son message, 5 minutes (idée de daddy finger, 2026-10-26) : le serveur rejoue tous les filtres.
+        if (b.dataset.gc === 'edit') {
+          const m = this.msgs.find(x => x.id === id); if (!m) return;
+          const v = prompt(t('Edit your message'), m.text);
+          if (v == null || !v.trim() || v.trim() === m.text) return;
+          this.apply(await Online.global('gcEdit', { id, text: v })); toast('Message edited');
+        } else
         if (b.dataset.gc === 'report') { const r = await Online.global('gcReport', { id }); toast(r.already ? 'Already reported' : 'Reported: thank you!'); }
         else if (b.dataset.gc === 'delete') { if (!confirm(t('Delete this message?'))) return; this.apply(await Online.global('gcDelete', { id })); toast('Message deleted'); }
         else if (b.dataset.gc === 'mute') { if (!confirm(t('Mute this player and delete the message?'))) return; this.apply(await Online.global('gcMute', { id, dur: b.dataset.dur })); toast('Player muted'); }

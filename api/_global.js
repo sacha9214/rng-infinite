@@ -104,9 +104,10 @@ async function prepare(raw, me) {
 const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'EX', String(AT_TTL)]);
 
 // ---------------------------------------------------------------- lecture
+const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
 const view = (m, me) => ({ id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x,
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
-  ...(me && Array.isArray(m.at) && m.at.includes(me) ? { toMe: true } : {}) });
+  ...(me && Array.isArray(m.at) && m.at.includes(me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}) });
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
 
 // Mon statut : puis-je écrire, et sinon pourquoi ; suis-je muet (jusqu'à quand) ; suis-je modérateur.
@@ -122,7 +123,7 @@ async function meInfo(id, stats) {
 // Relecture toutes les 3 s : réponse minuscule quand rien n'a changé (« same »). Après une suppression, la liste entière.
 async function list(body, me, stats) {
   const [rev, del] = await redis([['GET', REV], ['GET', DEL]]);
-  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS };
+  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS };
   if (me) out.me = await meInfo(me, stats);
   const since = Number(body.since) || 0, seenDel = Number(body.del) || 0;
   if (body.rev != null && Number(body.rev) === out.rev && seenDel === out.del) return { ...out, same: true };
@@ -147,6 +148,28 @@ async function post(me, stats, raw) {
   const m = { id: crypto.randomBytes(6).toString('hex'), a: me, n: name || 'Player', ti: title || null, t, x: text, ...(at.ids.length ? { at: at.ids, an: at.names } : {}) };
   await redis([['RPUSH', KEY, JSON.stringify(m)], ['LTRIM', KEY, -KEEP, -1], ['SET', REV, t], ['HINCRBY', 'feat:gchat', dayKey(t), 1], ...mentionWrites(at.ids, t)]);
   return m;
+}
+
+// Modifier son message (idée de daddy finger, 2026-10-26) : 5 minutes, tous les filtres repassent. Remplacé par sa
+// valeur (LINSERT puis LREM) et non par sa position : un message arrivé entre-temps décale les positions.
+async function edit(me, stats, id, raw) {
+  const info = await meInfo(me, stats);
+  if (info.reason === 'muted') throw refuse(403, 'You are muted for now');
+  const { entry, m } = await findMsg(id);
+  if (m.a !== me) throw refuse(403, 'You can only edit your own messages');
+  if (Date.now() - m.t >= EDIT_MS) throw refuse(422, 'Messages can be edited for 5 minutes');
+  const { text, at } = await prepare(raw, me);
+  if (!text) throw refuse(422, 'Write a message first');
+  if (text === m.x) return;
+  // Les cités déjà prévenus ne le sont pas une 2e fois ; seuls les nouveaux reçoivent le point rouge.
+  const fresh = at.ids.filter(x => !(m.at || []).includes(x));
+  const next = { ...m, x: text, e: 1 }; delete next.at; delete next.an;
+  if (at.ids.length) Object.assign(next, { at: at.ids, an: at.names });
+  const t = Date.now();
+  const [ins] = await redis([['LINSERT', KEY, 'BEFORE', entry, JSON.stringify(next)]]);
+  if (Number(ins) < 0) throw refuse(404, 'This message is gone');
+  // DEL bouge aussi : les autres relisent la liste entière (une relecture « since » ne voit pas une modification).
+  await redis([['LREM', KEY, 1, entry], ['SET', REV, t], ['SET', DEL, t], ...mentionWrites(fresh, t)]);
 }
 
 async function findMsg(id) {
@@ -201,9 +224,11 @@ async function handle(body) {
     const { m } = await findMsg(body.id);
     return Reports.fileReport({ reporter: me, author: m.a, text: m.x, where: 'global chat', msgT: m.t });
   }
+  if (body.action === 'gcEdit') { await edit(me, stats, String(body.id || ''), body.text); return list({}, me, stats); }
   if (['gcDelete', 'gcMute'].includes(body.action)) {
-    if (!mod) throw refuse(403, 'Moderators only');
     const { entry, m } = await findMsg(body.id);
+    // Supprimer son propre message (idée de daddy finger, 2026-10-26) ; le reste est réservé aux modérateurs.
+    if (!mod && !(body.action === 'gcDelete' && m.a === me)) throw refuse(403, 'Moderators only');
     if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''));
     await remove(entry);
     return list({}, me, stats);
@@ -222,4 +247,4 @@ async function handle(body) {
   throw refuse(400, 'Unknown action');
 }
 
-module.exports = { handle, checkMessage, KEEP, MAX, MIN_ROLLS };
+module.exports = { handle, checkMessage, KEEP, MAX, MIN_ROLLS, EDIT_MS };
