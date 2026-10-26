@@ -4457,6 +4457,104 @@
     };
   });
 
+  // 🃏 Blackjack (2026-10-26, idée de kaz) — le croupier tient le paquet à gauche de la carte et le mélange en continu
+  // pendant le tirage (les deux moitiés s'écartent et s'entrelacent, plus vite avant le dernier chiffre). À chaque chiffre
+  // posé, la carte du dessus part en arc par-dessus la table et tombe face cachée sur sa place ; la carte CSS prend le
+  // relais (elle se retourne). À la révélation : des jetons jaillissent (plus nombreux avec la rareté), dès Epic les cartes
+  // s'éventaillent autour du nombre, dès Mythic « BLACKJACK! » ; tirage raté : « BUST » et le paquet s'éparpille.
+  SCENES.blackjack = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const CH = Math.min(card.h * .62, 54), CW = CH * .7;
+    const deck = { x: card.x - CW * .5 - 26, y: card.y + card.h / 2 };
+    const deals = timed(), chips = particles(), flung = particles(), words = timed(), fans = timed();
+    let pace = 1, revealed = false, busted = false, phase = 0, left = 22;
+    const back = (x, y, rot, s, a) => { // une carte face cachée : dos rouge à croisillons, liseré blanc
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      const w = CW * s, h = CH * s;
+      co.fillStyle = '#fef2f2'; roundRect(co, -w / 2, -h / 2, w, h, w * .1); co.fill();
+      co.fillStyle = '#b91c1c'; roundRect(co, -w / 2 + w * .09, -h / 2 + w * .09, w * .82, h - w * .18, w * .06); co.fill();
+      co.strokeStyle = 'rgba(254,202,202,.55)'; co.lineWidth = Math.max(.6, w * .03); co.beginPath();
+      for (let i = -4; i <= 4; i++) { const o = i * w * .16; co.moveTo(-w * .41 + o, -h * .41); co.lineTo(w * .41 + o, h * .41); co.moveTo(w * .41 + o, -h * .41); co.lineTo(-w * .41 + o, h * .41); }
+      co.save(); co.beginPath(); co.rect(-w * .41, -h / 2 + w * .09, w * .82, h - w * .18); co.clip();
+      co.beginPath(); for (let i = -4; i <= 4; i++) { const o = i * w * .16; co.moveTo(-w * .41 + o, -h * .45); co.lineTo(w * .41 + o, h * .45); co.moveTo(w * .41 + o, -h * .45); co.lineTo(-w * .41 + o, h * .45); } co.stroke();
+      co.restore();
+      co.strokeStyle = 'rgba(15,23,42,.5)'; co.lineWidth = 1; roundRect(co, -w / 2, -h / 2, w, h, w * .1); co.stroke();
+      co.restore();
+    };
+    const chip = (x, y, r, rot, c, a) => { // un jeton de casino : disque, six encoches blanches, centre clair
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot); co.scale(1, .55 + .45 * Math.abs(Math.cos(rot * 1.7)));
+      co.fillStyle = c; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill();
+      co.fillStyle = '#ffffff'; for (let i = 0; i < 6; i++) { co.save(); co.rotate(i * TAU / 6); co.fillRect(-r * .14, -r, r * .28, r * .3); co.restore(); }
+      co.strokeStyle = 'rgba(255,255,255,.8)'; co.lineWidth = r * .1; co.beginPath(); co.arc(0, 0, r * .55, 0, TAU); co.stroke();
+      co.restore();
+    };
+    const CHIPS = ['#dc2626', '#2563eb', '#16a34a', '#111827', '#7c3aed', '#f59e0b'];
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        phase += dt * 2.6 * pace;
+        // le paquet : deux moitiés qui s'écartent, se soulèvent et retombent en s'entrelaçant (un mélange à l'américaine)
+        if (!busted) {
+          const k = revealed ? 0 : Math.sin(phase * Math.PI) ** 2, n = Math.max(2, Math.round(left / 3));
+          for (let i = 0; i < n; i++) back(deck.x - CW * .02 * i, deck.y + 3 - i * 1.2, 0, 1, 1); // la pile
+          if (k > .02) for (let i = 0; i < 4; i++) {
+            const side = i % 2 ? 1 : -1, lift = k * (CH * .32 - i * 3);
+            back(deck.x + side * k * CW * .48, deck.y - lift - n * 1.2, side * k * .38, 1, 1);
+          }
+          else back(deck.x, deck.y - n * 1.2, 0, 1, 1);
+        }
+        // les cartes distribuées : un arc du paquet jusqu'à leur place, en tournant, de plus en plus petites
+        deals.run(dt, (d, k) => {
+          const e = outCubic(k), x = lerp(deck.x, d.x, e), top = Math.min(deck.y, d.y) - card.h * .9;
+          const y = (1 - e) * (1 - e) * deck.y + 2 * (1 - e) * e * top + e * e * d.y;
+          back(x, y, (1 - e) * -1.1 + e * -.42, lerp(1, d.s, e), 1);
+        });
+        // l'éventail : quelques cartes qui s'ouvrent derrière la carte, de part et d'autre
+        behind(env, () => fans.run(dt, (f, k) => {
+          const open = outCubic(Math.min(1, k * 3)), a = k > .7 ? (1 - k) / .3 : 1;
+          for (let i = 0; i < f.n; i++) {
+            const u = (i / (f.n - 1)) - .5, ang = u * 2.2 * open;
+            back(cx + Math.sin(ang) * card.w * .5, card.y + card.h * .5 - Math.cos(ang) * card.h * .42, ang, .95, a * .95);
+          }
+        }));
+        chips.step(dt); flung.step(dt);
+        flung.each((c, k) => back(c.x, c.y, c.rot + c.spin * c.life, .8, k < .7 ? 1 : (1 - k) / .3));
+        // les jetons passent derrière la carte : ils ne cachent jamais un chiffre
+        behind(env, () => chips.each((c, k) => chip(c.x, c.y, c.r, c.rot + c.spin * c.life, c.c, k < .75 ? 1 : (1 - k) * 4)));
+        words.run(dt, (w, k) => {
+          const pop = k < .15 ? outCubic(k / .15) * 1.15 : k < .25 ? 1.15 - .15 * (k - .15) / .1 : 1, a = k > .8 ? (1 - k) * 5 : 1;
+          text(co, w.s, cx, card.y - card.h * .42, card.h * w.size * pop, w.c, a);
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        left = Math.max(2, left - 2);
+        // la carte se pose quand la carte CSS apparaît face cachée (22 % de ses 0,62 s)
+        deals.add({ x: p.x, y: p.y, s: Math.min(1, (card.h * .62) / CH), life: .14 });
+      },
+      build() { pace = 2.4; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        revealed = true; pace = .4;
+        if (!p) { // tirage raté : le paquet s'éparpille sur la table
+          busted = true;
+          for (let i = 0; i < 7; i++) flung.add({ x: deck.x, y: deck.y, vx: rnd(-40, 140), vy: rnd(-160, -60), g: 520, drag: .4, max: rnd(.9, 1.3), rot: rnd(-.4, .4), spin: rnd(-8, 8) });
+          words.add({ s: 'BUST', size: .22, c: dark ? '#94a3b8' : '#64748b', life: 1.4 });
+          return;
+        }
+        for (let i = burst(p, 40 * q, 3); i > 0; i--) {
+          const a = rnd(-Math.PI * .92, -Math.PI * .08), v = card.h * rnd(2.6, 4.5 + 4 * p);
+          chips.add({ x: cx + rnd(-.4, .4) * card.w, y: card.y + card.h * .2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 10, drag: .25, max: rnd(.9, 1.5), r: card.h * rnd(.09, .13), rot: rnd(TAU), spin: rnd(-9, 9), c: pick(CHIPS) });
+        }
+        if (p >= .6) fans.add({ delay: .05, life: 1.6 + p, n: p >= 1 ? 7 + 2 * (ASCEND[tier] || 0) : 5 });
+        if (p >= 1) words.add({ delay: .12, s: 'BLACKJACK!', size: .2 + .03 * (ASCEND[tier] || 0), c: '#facc15', life: 2.2 + .4 * (ASCEND[tier] || 0) });
+        else if (p >= .6) words.add({ delay: .12, s: '21!', size: .26, c: '#4ade80', life: 1.8 });
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
