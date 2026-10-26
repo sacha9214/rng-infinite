@@ -1069,3 +1069,9 @@
   text-shadow: 0 1px 0 #0f172a, 0 0 .4em rgba(251, 146, 60, .7);
   --gs: 0 .3em 0 #7c2d12, 0 .5em 1em rgba(249, 115, 22, .3); --gs-h: 0 .34em 0 #7c2d12, 0 .7em 1.4em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #7c2d12; }
 .btn-roll.gen-rocket:hover { filter: brightness(1.1); }
+/* Sushi (idée de Gray alt, 2026-10-26) : un maki vu de dessus, riz blanc et cœur de saumon sur une planche claire. */
+.btn-roll.gen-sushi { border: 2px solid #92400e; border-radius: 999px; color: #fffdf8;
+  background: radial-gradient(circle at 1.3em 50%, #fb923c 0 .22em, #fffdf8 .26em .6em, #1f2d1f .62em .78em, transparent .8em), linear-gradient(180deg, #e7c08a, #c98f4f);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #451a03, 0 0 .3em rgba(69, 26, 3, .6);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(251, 146, 60, .25); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(251, 146, 60, .4); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-sushi:hover { filter: brightness(1.08); }

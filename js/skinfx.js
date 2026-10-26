@@ -4632,6 +4632,64 @@
     };
   };
 
+  // 🍣 Sushi (2026-10-26, idée de Gray alt) — à chaque chiffre posé, une petite gerbe de sauce soja jaillit autour du
+  // maki (gouttes brunes, derrière la carte) ; la dernière est plus grosse. À la révélation : une flaque de soja qui
+  // éclabousse, plus forte avec la rareté ; dès Mythic, un maki géant tombe au-dessus de la carte, s'écrase et éclate en
+  // riz (grains blancs, morceaux de saumon et d'algue) ; tirage raté : un seul grain de riz tombe.
+  SCENES.sushi = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const drops = particles(), grains = particles(), giants = timed();
+    const SOY = dark ? ['#7c2d12', '#9a3412', '#451a03'] : ['#7c2d12', '#451a03', '#9a3412'];
+    const splash = (x, y, s) => {
+      for (let i = Math.round((6 + 16 * s) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(1.8, 3 + 4 * s); drops.add({ x: x + rnd(-1, 1) * card.h * .15, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 11, drag: .3, max: rnd(.45, .85), size: card.h * rnd(.025, .05 + .02 * s), c: pick(SOY) }); }
+    };
+    const rice = (x, y, n, power) => {
+      for (let i = Math.round(n * q); i > 0; i--) {
+        const a = rnd(TAU), v = card.h * rnd(1.5, 3 + 4 * power), kind = Math.random();
+        grains.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - card.h * 1.5, g: card.h * 9, drag: .5, max: rnd(1, 1.6), size: card.h * rnd(.03, .045), rot: rnd(TAU), spin: rnd(-10, 10), c: kind < .8 ? '#fffdf8' : kind < .92 ? '#fb923c' : '#1f2d1f' });
+      }
+    };
+    const maki = (x, y, r, sx, sy, a) => { // une tranche de maki vue de dessus
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.scale(sx, sy);
+      co.fillStyle = '#0b130b'; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill();
+      co.fillStyle = '#1f2d1f'; co.beginPath(); co.arc(0, 0, r * .92, 0, TAU); co.fill();
+      co.fillStyle = '#fffdf8'; co.beginPath(); co.arc(0, 0, r * .72, 0, TAU); co.fill();
+      co.fillStyle = '#e7e5e4'; for (let i = 0; i < 14; i++) { const an = i * 2.4, d = r * (.3 + (i % 3) * .12); co.beginPath(); co.ellipse(Math.cos(an) * d, Math.sin(an) * d, r * .05, r * .09, an, 0, TAU); co.fill(); }
+      co.fillStyle = '#fb923c'; co.beginPath(); co.arc(0, 0, r * .24, 0, TAU); co.fill();
+      co.fillStyle = 'rgba(255,255,255,.35)'; co.beginPath(); co.ellipse(-r * .4, -r * .5, r * .25, r * .1, -.6, 0, TAU); co.fill();
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        drops.step(dt); grains.step(dt);
+        // le maki géant : il tombe au-dessus de la carte, s'écrase, se gonfle et éclate en riz
+        giants.run(dt, (g, k) => {
+          const R = card.h * g.s, y0 = card.y - card.h * 2.2, yHit = card.y - R * .55;
+          if (k < .35) { const e = (k / .35) ** 2; maki(cx, lerp(y0, yHit, e), R, .9, 1.1, 1); return; }
+          if (k < .6) { const u = (k - .35) / .25, sq = Math.sin(u * Math.PI); maki(cx, yHit, R, 1 + .35 * sq, 1 - .3 * sq, 1); return; }
+          if (!g.burst) { g.burst = true; rice(cx, yHit, g.n, 1); splash(cx, card.y, 1.2); }
+        });
+        // le soja et le riz passent derrière la carte : ils ne cachent jamais un chiffre
+        behind(env, () => {
+          drops.each((d, k) => { co.globalAlpha = 1 - k * k; co.fillStyle = d.c; co.beginPath(); co.ellipse(d.x, d.y, d.size, d.size * 1.3, Math.atan2(d.vy, d.vx) + Math.PI / 2, 0, TAU); co.fill(); });
+          grains.each((g, k) => { co.save(); co.globalAlpha = k < .8 ? 1 : (1 - k) * 5; co.translate(g.x, g.y); co.rotate(g.rot + g.spin * g.life); co.fillStyle = g.c; co.strokeStyle = 'rgba(120,113,108,.6)'; co.lineWidth = .6; co.beginPath(); co.ellipse(0, 0, g.size * .55, g.size, 0, 0, TAU); co.fill(); co.stroke(); co.restore(); });
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.ghost) return; splash(p.x, p.y + card.h * .1, o.last ? .9 : .4); },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        if (!p) { grains.add({ x: cx, y: card.y - card.h * .3, vx: 0, vy: 0, g: card.h * 6, drag: 0, max: .9, size: card.h * .06, rot: .3, spin: 3, c: '#fffdf8' }); return; }
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) splash(cx + rnd(-.45, .45) * card.w, card.y + card.h * .5, .5 + .8 * p);
+        if (p >= .6) rice(cx, card.y, 10 + 20 * p, p);
+        if (p >= 1) giants.add({ delay: .1, life: 1, s: .5 + .08 * (ASCEND[tier] || 0), n: 60 + 30 * (ASCEND[tier] || 0) });
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
