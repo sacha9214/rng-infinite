@@ -57,7 +57,12 @@ const CHAT_KEEP = 100, CHAT_TTL = 7 * 86400, CHAT_PER_MIN = 20, CHAT_PER_DAY = 4
 const LOG_KEEP = 50, INVITE_TTL = 7 * 86400, MAX_REQUESTS = 30, MAX_INVITES = 20;
 const WAR = { size: 5, rolls: 5, ms: 6 * 3600000, pendingMs: 24 * 3600000, min: 100, max: 50000, cut: 0.03, lastCall: 5000, cooldown: 1500 };
 const WEEK_TTL = 40 * 86400;
-const RANK = { member: 1, officer: 2, leader: 3 };
+// Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers. Le chef nomme et retire les
+// co-chefs ; un co-chef fait tout ce que fait un officier (sans les droits que le chef peut couper aux officiers), et en
+// plus nomme, rétrograde et exclut les officiers et les membres. Il ne dissout pas, ne passe pas la main, ne touche pas
+// au chef ni aux autres co-chefs, et ne règle pas les droits des officiers.
+const RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
+const rankOf = (c, id) => RANK[c.members[id]] || 0;
 
 const refuse = (status, error) => Object.assign(new Error(error), { status });
 const fmt = v => Number(v).toLocaleString('en-US');
@@ -95,13 +100,15 @@ async function myClan(id) {
 }
 function need(c, id, role) {
   if (!c) throw refuse(422, 'You are not in a clan');
-  if (RANK[c.members[id]] < RANK[role]) throw refuse(403, role === 'leader' ? 'Only the clan leader can do this' : 'Only the leader and officers can do this');
+  if (rankOf(c, id) < RANK[role]) throw refuse(403, role === 'leader' ? 'Only the clan leader can do this' : role === 'coleader' ? 'Only the leader and co-leaders can do this' : 'Only the leader and officers can do this');
 }
 // Droits des officiers (idée de kaz, 2026-10-26) : le chef choisit ce que ses officiers peuvent faire. Rangé dans
 // clan:<cid> (champ perms, JSON des droits retirés) ; par défaut tout est permis, comme avant. Le chef peut tout.
 const PERMS = ['invite', 'kick', 'upgrade', 'war', 'edit'];
 const permsOf = c => { const off = parse(c && c.perms) || {}; return Object.fromEntries(PERMS.map(k => [k, off[k] !== false])); };
-const can = (c, id, perm) => !!c && (c.members[id] === 'leader' || (c.members[id] === 'officer' && permsOf(c)[perm]));
+const can = (c, id, perm) => !!c && (rankOf(c, id) >= RANK.coleader || (c.members[id] === 'officer' && permsOf(c)[perm]));
+// Modération du chat : un officier efface les messages des membres et des officiers, un co-chef aussi, le chef ceux de tous.
+const modOver = (c, me, author) => rankOf(c, me) >= RANK.officer && rankOf(c, author) < Math.max(RANK.coleader, rankOf(c, me));
 function needPerm(c, id, perm) {
   need(c, id, 'officer');
   if (!can(c, id, perm)) throw refuse(403, 'Your clan leader turned this off for officers');
@@ -250,11 +257,11 @@ async function chatView(me, c) {
   const ids = [...new Set(rows.map(m => m.s))];
   const [names] = ids.length ? await redis([['HMGET', 'names', ...ids]]) : [[]];
   const nameOf = Object.fromEntries(ids.map((id, i) => [id, names[i] || 'Player']));
-  const canMod = RANK[c.members[me]] >= RANK.officer, now = Date.now();
+  const now = Date.now();
   return {
     max: MAX_CHARS, editMs: EDIT_MS,
     messages: rows.map(m => ({ t: m.t, name: nameOf[m.s], role: c.members[m.s] || null, me: m.s === me, text: String(m.x || ''), ...(m.e ? { edited: true } : {}),
-      ...(m.s === me && now - m.t < EDIT_MS ? { canEdit: true } : {}), ...(m.s === me || (canMod && RANK[c.members[m.s]] !== RANK.leader) ? { canDelete: true } : {}) })),
+      ...(m.s === me && now - m.t < EDIT_MS ? { canEdit: true } : {}), ...(m.s === me || modOver(c, me, m.s) ? { canDelete: true } : {}) })),
   };
 }
 async function chatSend(me, c, raw) {
@@ -282,10 +289,14 @@ async function settleWeek(t = Date.now()) {
   if (first === 'OK') {
     const [top] = await redis([['ZREVRANGE', xpKey(week), 0, 0, 'WITHSCORES']]);
     if (top && top.length && Number(top[1]) > 0) {
-      const cid = top[0], [ids] = await redis([['HKEYS', xpmKey(week, cid)]]);
+      const cid = top[0], [flat] = await redis([['HGETALL', xpmKey(week, cid)]]), xpOf = toObject(flat), ids = Object.keys(xpOf);
       const w = [['HSET', 'clanweek', week, cid], ['HINCRBY', ckey(cid), 'weekWins', 1]];
       // Les membres qui ont roulé pour le clan cette semaine-là (même partis depuis) : titre Clan Champion.
       for (const id of ids || []) w.push(['HINCRBY', statsKey(id), 'clanWeekWins', 1]);
+      // Clan MVP (idée de PRISMA123, 2026-10-27) : celui qui a gagné le plus d'XP pour le clan n°1 cette semaine-là
+      // (égalité : le plus petit id, pour que deux processus choisissent le même). Titre gardé pour toujours, compté.
+      const mvp = ids.sort((a, b) => Number(xpOf[b]) - Number(xpOf[a]) || (a < b ? -1 : 1))[0];
+      if (mvp && Number(xpOf[mvp]) > 0) w.push(['HINCRBY', statsKey(mvp), 'clanMvp', 1], ['HSET', 'clanweek', `${week}:mvp`, mvp]);
       await redis(w);
       try { const [[cname, ctag]] = await redis([['HMGET', ckey(cid), 'name', 'tag']]); require('./_discord').announceClanWeek({ clan: `${cname || 'A clan'} [${ctag || '?'}]`, week, members: (ids || []).length }); } catch (e) { /* Discord facultatif */ }
     }
@@ -294,7 +305,8 @@ async function settleWeek(t = Date.now()) {
 }
 
 async function board(t = Date.now(), limit = 20) {
-  const week = weekKey(t), [flat, lastCid] = await redis([['ZREVRANGE', xpKey(week), 0, limit - 1, 'WITHSCORES'], ['HGET', 'clanweek', prevWeek(t)]]);
+  const week = weekKey(t), [flat, lastCid, lastMvp] = await redis([['ZREVRANGE', xpKey(week), 0, limit - 1, 'WITHSCORES'], ['HGET', 'clanweek', prevWeek(t)], ['HGET', 'clanweek', `${prevWeek(t)}:mvp`]]);
+  const [mvpName] = lastMvp ? await redis([['HGET', 'names', lastMvp]]) : [null];
   const rows = [];
   for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const cids = [...rows.map(r => r[0]), ...(lastCid ? [lastCid] : [])];
@@ -303,7 +315,7 @@ async function board(t = Date.now(), limit = 20) {
   return {
     week, end: weekEnd(t),
     clans: rows.map((r, i) => (card(i) ? { rank: i + 1, xp: r[1], ...card(i) } : null)).filter(Boolean),
-    last: lastCid ? card(rows.length) : null,
+    last: lastCid && card(rows.length) ? { ...card(rows.length), mvp: mvpName || null } : null, // mvp : pseudo du Clan MVP
   };
 }
 // Fin de la semaine ISO en cours (lundi suivant, 00:00 UTC).
@@ -661,16 +673,31 @@ async function handle(me, body, now = Date.now()) {
       if (!theirs) throw refuse(404, 'This player is not in your clan');
       const [name] = await redis([['HGET', 'names', id]]);
       if (op === 'kick') {
-        // Un officier exclut des membres ; le chef exclut n'importe qui.
-        if (!(mine === 'leader' || (mine === 'officer' && theirs === 'member'))) throw refuse(403, mine === 'officer' ? 'Officers can only kick members' : 'Only the leader and officers can do this');
+        // Un officier exclut des membres (si le chef le permet) ; un co-chef, des membres et des officiers ; le chef, n'importe qui.
+        if (mine === 'coleader' && theirs !== 'member' && theirs !== 'officer') throw refuse(403, 'Co-leaders can only kick officers and members');
+        if (!(mine === 'leader' || mine === 'coleader' || (mine === 'officer' && theirs === 'member'))) throw refuse(403, mine === 'officer' ? 'Officers can only kick members' : 'Only the leader and officers can do this');
         if (!can(now2, me, 'kick')) throw refuse(403, 'Your clan leader turned this off for officers');
         await removeMember(now2, id, 'kick', by);
         return;
       }
+      // Monter ou descendre d'un rang : membre ⇄ officier (chef ou co-chef), officier ⇄ co-chef (chef seulement).
+      if (op === 'promote') {
+        if (theirs === 'member') { need(now2, me, 'coleader'); await redis([['HSET', mkey(c.cid), id, 'officer'], ...pushLog(c.cid, { k: 'promote', n: name || 'Player', by })]); return; }
+        need(now2, me, 'leader');
+        if (theirs !== 'officer') throw refuse(422, 'Already a co-leader');
+        await redis([['HSET', mkey(c.cid), id, 'coleader'], ...pushLog(c.cid, { k: 'colead', n: name || 'Player', by })]);
+        return;
+      }
+      if (op === 'demote') {
+        if (theirs === 'officer') { need(now2, me, 'coleader'); await redis([['HSET', mkey(c.cid), id, 'member'], ...pushLog(c.cid, { k: 'demote', n: name || 'Player', by })]); return; }
+        need(now2, me, 'leader');
+        if (theirs !== 'coleader') throw refuse(422, 'Not an officer');
+        await redis([['HSET', mkey(c.cid), id, 'officer'], ...pushLog(c.cid, { k: 'uncolead', n: name || 'Player', by })]);
+        return;
+      }
       need(now2, me, 'leader');
-      if (op === 'promote') { if (theirs !== 'member') throw refuse(422, 'Already an officer'); await redis([['HSET', mkey(c.cid), id, 'officer'], ...pushLog(c.cid, { k: 'promote', n: name || 'Player', by })]); return; }
-      if (op === 'demote') { if (theirs !== 'officer') throw refuse(422, 'Not an officer'); await redis([['HSET', mkey(c.cid), id, 'member'], ...pushLog(c.cid, { k: 'demote', n: name || 'Player', by })]); return; }
-      await redis([['HSET', mkey(c.cid), id, 'leader'], ['HSET', mkey(c.cid), me, 'officer'], ['HSET', ckey(c.cid), 'leader', id], ...pushLog(c.cid, { k: 'leader', n: name || 'Player', by })]);
+      // Passer la main : l'ancien chef devient co-chef (le rang juste en dessous depuis le 2026-10-27).
+      await redis([['HSET', mkey(c.cid), id, 'leader'], ['HSET', mkey(c.cid), me, 'coleader'], ['HSET', ckey(c.cid), 'leader', id], ...pushLog(c.cid, { k: 'leader', n: name || 'Player', by })]);
     });
     return view(me);
   }
@@ -715,8 +742,7 @@ async function handle(me, body, now = Date.now()) {
       return chatView(me, c);
     }
     // Supprimer : son propre message, ou celui d'un membre pour un officier (jamais celui du chef).
-    const canMod = RANK[c.members[me]] >= RANK.officer && c.members[f.m.s] !== 'leader';
-    if (f.m.s !== me && !canMod) throw refuse(403, 'You can only delete your own messages');
+    if (f.m.s !== me && !modOver(c, me, f.m.s)) throw refuse(403, 'You can only delete your own messages');
     await redis([['LREM', chatKey(c.cid), 1, f.raw]]);
     return chatView(me, c);
   }
