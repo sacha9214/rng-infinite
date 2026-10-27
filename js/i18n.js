@@ -251,6 +251,7 @@
     'Every digit lands with a POW! in a halftone comic panel, and rare rolls end in a KA-BOOM! with panels slamming around your number': 'Chaque chiffre tombe avec un POW! dans une case de BD tramée, et les tirages rares finissent en KA-BOOM! avec des cases qui claquent autour de ton nombre',
     // Skins du 2026-10-27, lot B
     'Every digit is pitched in and lands with a thwack; a 0 turns into a baseball and a 1 into a bat, and Mythic rolls are a HOME RUN': 'Chaque chiffre est lancé comme une balle et claque en arrivant ; un 0 devient une balle de baseball et un 1 une batte, et les Mythic sont un HOME RUN',
+    'A race car drifts around your number and taps every digit into place; good rolls take a victory lap under the checkered flag': 'Une voiture de course dérape autour de ton nombre et pousse chaque chiffre à sa place ; les bons tirages font un tour d\'honneur sous le drapeau à damier',
     'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE': 'Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE',
     'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone': 'Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue',
     'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more': 'Un écran de téléphone qui bugue pendant le tirage ; chaque chiffre frappe la vitre et la fissure un peu plus',

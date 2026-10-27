@@ -5105,6 +5105,114 @@
     };
   };
 
+  // 🏎️ Race Car (2026-10-27, idée de whywhywaylon, demandée deux fois ; la dérive vient de logannn) — une monoplace rouge
+  // (livrée inventée, aucune écurie) fait des donuts au-dessus de la carte, en dérive, pneus fumants et traces de gomme ;
+  // à chaque chiffre elle plonge et tape de l'arrière le bord de la carte juste au-dessus de lui (étincelles) puis repart
+  // (« it drifts around the numbers and hits them to reveal them », logannn). À la révélation : un tour d'honneur autour
+  // de la carte, le drapeau à damier dès Epic, et dès Mythic des confettis à damier et VICTORY LAP! ; tirage raté : le
+  // moteur casse, fumée noire et DNF.
+  SCENES.racecar = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, L = H * .74, R = H * .42, CY = card.y - R - H * .24;
+    const smoke = particles(), sparks = particles(), checks = particles(), words = timed(), flags = timed(), marks = [];
+    let px = card.x + card.w * .08, pxTo = px, theta = Math.PI * .9, heat = .4, heatTo = .4, dive = null, lap = null, dnf = null, now = 0, enter = 0;
+    let car = { x: card.x - H * 2, y: CY, ang: 0 };
+    const drawCar = (x, y, ang) => { // vue de dessus, nez vers +x
+      co.save(); co.globalAlpha = 1; co.translate(x, y); co.rotate(ang);
+      const W = L * .52;
+      co.fillStyle = 'rgba(0,0,0,.28)'; co.beginPath(); co.ellipse(L * .02, W * .12, L * .55, W * .62, 0, 0, TAU); co.fill(); // ombre
+      // quatre gros pneus, cerclés de gris pour rester visibles sur une page sombre
+      co.strokeStyle = '#9ca3af'; co.lineWidth = Math.max(1, L * .025); co.fillStyle = '#18181b';
+      for (const [u, v] of [[-.3, -.52], [-.3, .52], [.28, -.48], [.28, .48]]) { roundRect(co, L * u - L * .12, W * v - W * .17, L * .24, W * .34, L * .04); co.fill(); co.stroke(); }
+      co.fillStyle = '#f8fafc'; co.fillRect(-L * .54, -W * .6, L * .1, W * 1.2); co.fillStyle = '#facc15'; co.fillRect(L * .42, -W * .56, L * .08, W * 1.12); // ailerons blanc et jaune
+      const g = co.createLinearGradient(0, -W * .32, 0, W * .32); g.addColorStop(0, '#fca5a5'); g.addColorStop(.45, '#dc2626'); g.addColorStop(1, '#7f1d1d');
+      co.fillStyle = g; co.beginPath(); co.moveTo(-L * .46, -W * .3); co.lineTo(L * .08, -W * .32); co.quadraticCurveTo(L * .44, -W * .14, L * .5, 0); co.quadraticCurveTo(L * .44, W * .14, L * .08, W * .32); co.lineTo(-L * .46, W * .3); co.closePath(); co.fill();
+      co.fillStyle = '#facc15'; co.fillRect(L * .1, -W * .05, L * .34, W * .1); // la bande jaune du capot
+      co.fillStyle = '#0f172a'; co.beginPath(); co.ellipse(-L * .08, 0, L * .12, W * .17, 0, 0, TAU); co.fill();
+      co.fillStyle = '#f8fafc'; co.beginPath(); co.arc(-L * .08, 0, W * .1, 0, TAU); co.fill(); // le casque
+      co.restore();
+    };
+    const puff = (x, y, n, black) => { for (let i = Math.round(n * q); i > 0; i--) smoke.add({ x: x + rnd(-3, 3), y: y + rnd(-3, 3), vx: rnd(-25, 25), vy: rnd(-30, 0), drag: 1.5, g: -10, max: rnd(.6, 1.2), size: H * rnd(.06, .12), black }); };
+    const hitSparks = (x, y, n) => { for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.4, 1.4); sparks.add({ x, y, vx: Math.cos(an) * rnd(80, 260), vy: Math.sin(an) * rnd(80, 220), drag: 2, g: 500, max: rnd(.25, .5), size: rnd(1.2, 2.2) }); } };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over'; co.lineCap = 'round';
+        heat += (heatTo - heat) * Math.min(1, dt * 3);
+        enter = Math.min(1, enter + dt * 2.2);
+        px += (pxTo - px) * Math.min(1, dt * 9);
+        let x, y, ang;
+        if (dnf) { // moteur cassé : elle ralentit, tousse et s'arrête
+          dnf.v *= Math.exp(-dt * 2.5); theta += dnf.v * dt;
+          x = px + Math.cos(theta) * R * 1.3; y = CY + Math.sin(theta) * R; ang = theta + Math.PI / 2 + .3;
+          if (Math.random() < .3) puff(x, y, 1, true);
+        } else if (lap) { // tour d'honneur autour de la carte, en dérive dans les virages
+          lap.t += dt; const k = clamp(lap.t / lap.life), s = lap.s0 + (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+          const b = grown(card, H * .4), a1 = along(b, s), a2 = along(b, s + .004);
+          x = a1.x; y = a1.y; ang = Math.atan2(a2.y - a1.y, a2.x - a1.x) + .45;
+          if (lap.t < .2) { const e = outCubic(lap.t / .2); x = lerp(lap.x, x, e); y = lerp(lap.y, y, e); }
+          if (k >= 1) { lap = null; pxTo = px = cx; theta = Math.PI / 2 + .3; }
+        } else { // donuts au-dessus de la case visée
+          theta += (6 + 6 * heat) * dt;
+          x = px + Math.cos(theta) * R * 1.3; y = CY + Math.sin(theta) * R; ang = theta + Math.PI / 2 + .55;
+          if (dive) { // plongée : l'arrière vient taper le bord de la carte au-dessus du chiffre
+            dive.t += dt; const k = dive.t / .42, d = k < .3 ? outCubic(k / .3) : 1 - outCubic((k - .3) / .7);
+            const hx = dive.x, hy = card.y - L * .24, flat = Math.round(ang / Math.PI) * Math.PI;
+            x = lerp(x, hx, d); y = lerp(y, hy, d); ang = lerp(ang, flat, d * .85);
+            if (k >= .3 && !dive.hit) { dive.hit = true; hitSparks(hx, card.y, dive.big ? 22 : 12); puff(hx, card.y - 4, dive.big ? 8 : 4); }
+            if (k >= 1) dive = null;
+          }
+          if (enter < 1) { const e = outCubic(enter); x = lerp(card.x - H * 2.2, x, e); y = lerp(CY, y, e); }
+        }
+        car = { x, y, ang };
+        // gomme : deux traces des roues arrière, qui s'effacent
+        const back = { x: x - Math.cos(ang) * L * .3, y: y - Math.sin(ang) * L * .3 }, side = { x: -Math.sin(ang) * L * .2, y: Math.cos(ang) * L * .2 };
+        if (!dnf || dnf.v > .8) { marks.push({ ax: back.x + side.x, ay: back.y + side.y, bx: back.x - side.x, by: back.y - side.y, t }); if (Math.random() < .45 + heat * .4) puff(back.x, back.y, 1); }
+        while (marks.length && t - marks[0].t > 1.4) marks.shift();
+        smoke.step(dt); sparks.step(dt); checks.step(dt);
+        behind(env, () => {
+          co.lineWidth = Math.max(1.5, L * .08);
+          co.strokeStyle = dark ? '#64748b' : '#1f2937';
+          for (let i = 1; i < marks.length; i++) { const m = marks[i], n = marks[i - 1]; if (Math.hypot(m.ax - n.ax, m.ay - n.ay) > L * .6) continue; co.globalAlpha = (1 - (t - m.t) / 1.4) * (dark ? .45 : .3); co.beginPath(); co.moveTo(n.ax, n.ay); co.lineTo(m.ax, m.ay); co.moveTo(n.bx, n.by); co.lineTo(m.bx, m.by); co.stroke(); }
+          smoke.each((m, k) => dot(co, m.black ? '#1f2937' : dark ? '#cbd5e1' : '#94a3b8', m.x, m.y, m.size * (1 + 2 * k), (1 - k) * (m.black ? .7 : dark ? .3 : .45)));
+        });
+        // le drapeau à damier, au bout de son mât, en haut à gauche de la carte (Epic et plus)
+        flags.run(dt, (f, k) => {
+          const a = k < .1 ? k / .1 : k > .85 ? (1 - k) / .15 : 1, fx = card.x - H * .2, fy = card.y - H * 1.25, fw = H * .8, fh = H * .5, n = 6, m = 4;
+          co.globalAlpha = a; co.strokeStyle = dark ? '#e2e8f0' : '#334155'; co.lineWidth = 2.5; co.beginPath(); co.moveTo(fx, fy - 3); co.lineTo(fx - H * .3, card.y - H * .1); co.stroke();
+          for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+            const u = i / n, wv = Math.sin(now * 10 - u * 5) * H * .07 * u;
+            co.fillStyle = (i + j) % 2 ? '#0b0b0f' : '#f8fafc'; co.fillRect(fx + u * fw, fy + j * fh / m + wv, fw / n + .6, fh / m + .6);
+          }
+        });
+        drawCar(x, y, ang);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((s, k) => { tail(co, '#f59e0b', s.x - s.vx * .03, s.y - s.vy * .03, s.x, s.y, s.size, 1 - k); dot(co, '#fde68a', s.x, s.y, s.size * 2, (1 - k) * .8); });
+        co.globalCompositeOperation = 'source-over';
+        checks.each((c, k) => { co.save(); co.translate(c.x, c.y); co.rotate(c.rot + k * c.spin); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = c.c; co.strokeStyle = '#64748b'; co.lineWidth = .6; co.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * .7); co.strokeRect(-c.size / 2, -c.size / 2, c.size, c.size * .7); co.restore(); });
+        words.run(dt, (w, k) => { const s = k < .15 ? outBack(k / .15) : 1; bWord(co, w.s, cx + card.w * .2, card.y - H * .62, H * w.size * s, w.c, '#0b0b0f', k > .75 ? (1 - k) / .25 : 1, -.05, "italic 900 SIZEpx 'Arial Black', Impact, system-ui, sans-serif"); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        pxTo = p.x;
+        if (o.ghost) return;
+        dive = { t: 0, x: p.x, big: o.last ? 1 : 0 };
+        heat = Math.min(1.3, heat + .12);
+      },
+      build() { heatTo = 1.3; puff(car.x, car.y, 8); },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        heatTo = .4; dive = null;
+        if (!p) { dnf = { v: 6 }; puff(car.x, car.y, 14, true); words.add({ delay: .5, life: 1.6, s: 'DNF', c: '#e2e8f0', size: .36 }); return; }
+        lap = { t: 0, life: 1.5 - .3 * p, s0: .06, x: car.x, y: car.y };
+        if (p >= .6) flags.add({ delay: .2, life: 2.4 + p + asc });
+        if (p >= 1) {
+          words.add({ delay: 1, life: 2 + .5 * asc, s: 'VICTORY LAP!', c: '#facc15', size: .28 });
+          for (let i = Math.round((50 + 30 * asc) * q); i > 0; i--) checks.add({ x: cx + rnd(-1, 1) * card.w * .7, y: card.y - H * rnd(1, 1.8), vx: rnd(-60, 60), vy: rnd(0, 60), g: 160, drag: 1.2, max: rnd(1.6, 2.6), size: H * rnd(.06, .1), rot: rnd(TAU), spin: rnd(-12, 12), c: Math.random() < .5 ? '#0b0b0f' : '#f8fafc' });
+        } else if (p >= .6) words.add({ delay: 1, life: 1.8, s: 'FASTEST LAP', c: '#ffffff', size: .24 });
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

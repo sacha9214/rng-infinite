@@ -7436,3 +7436,46 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes bsb-nod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-10deg); } }
 .room-stage.many .side-baseball::before, .room-stage.many .side-baseball::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-baseball::before, .side-baseball::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Race Car (idée de whywhywaylon, 2026-10-27 ; dérive :
+   logannn) : l'asphalte d'un circuit (grain, deux vibreurs rouges et blancs en haut et en bas, une colonne de damier
+   à gauche, comme la ligne d'arrivée) ; chiffres blancs en italique, cernés de noir et ombrés de rouge, comme un numéro
+   de course. Tirage : ils filent, étirés et flous ; un chiffre qui se pose : l'arrière de la monoplace le tape (flash,
+   il est poussé de biais), il vibre raide et se pose. Livrée inventée, aucune écurie ni marque. */
+.num-card.skin-racecar {
+  background:
+    repeating-linear-gradient(90deg, #dc2626 0 .3em, #f8fafc .3em .6em) 0 0 / 100% .12em no-repeat,
+    repeating-linear-gradient(90deg, #f8fafc 0 .3em, #dc2626 .3em .6em) 0 100% / 100% .12em no-repeat,
+    conic-gradient(#0b0b0f 25%, #f8fafc 0 50%, #0b0b0f 0 75%, #f8fafc 0) 0 0 / .2em .2em repeat-y,
+    radial-gradient(circle, rgba(255, 255, 255, .07) 0 .015em, transparent .025em) 0 0 / .09em .09em,
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(255, 255, 255, .06), transparent 70%),
+    linear-gradient(180deg, #3f3f46, #27272a 55%, #18181b);
+  border: 2px solid #0b0b0f; border-radius: .45rem; color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 0 14px rgba(220, 38, 38, .25), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-racecar .slot { position: relative; z-index: 1; color: #ffffff; font-weight: 900; font-style: italic;
+  text-shadow: .045em .045em 0 #dc2626, -.02em -.02em 0 #0b0b0f, .02em -.02em 0 #0b0b0f, -.02em .02em 0 #0b0b0f, .02em .02em 0 #0b0b0f; }
+.skin-racecar .slot.ghost { text-shadow: none; }
+.skin-racecar .slot.spinning { opacity: .7; color: #e5e7eb; animation: rcr-zoom .1s linear infinite; }
+.skin-racecar .slot.spinning:nth-of-type(2n) { animation-delay: -.05s; }
+@keyframes rcr-zoom { from { transform: translateX(.12em) scaleX(1.4); filter: blur(1px); } to { transform: translateX(-.12em) scaleX(1.2); filter: blur(1.4px); } }
+.skin-racecar .slot.revealed { animation: rcr-hit .6s backwards; }
+@keyframes rcr-hit {
+  0% { transform: translateY(-.1em) scale(.9) skewX(-14deg); filter: blur(.8px); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  16% { transform: translate(.07em, .08em) rotate(7deg); filter: brightness(1.7) drop-shadow(0 0 .1em #fbbf24); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  32% { transform: translate(-.04em, -.03em) rotate(-4deg); filter: none; }
+  50% { transform: translate(.02em, .01em) rotate(2deg); }
+  68% { transform: rotate(-1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-racecar .slot { animation: none; } }
+/* Cadre de duel : la piste et son vibreur en bas, la tribune en haut ; 🏎️ fait l'aller-retour, 🏁 s'agite. */
+.side-racecar { --side-border: #dc2626; --side-glow: 0 0 16px rgba(220, 38, 38, .3); --side-ink: #dc2626;
+  --side-bg: repeating-linear-gradient(90deg, rgba(220, 38, 38, .45) 0 16px, rgba(248, 250, 252, .45) 16px 32px) 0 100% / 100% 6px no-repeat, linear-gradient(180deg, transparent 72%, rgba(39, 39, 42, .35) 72%), radial-gradient(ellipse 70% 40% at 50% 0%, rgba(96, 165, 250, .18), transparent 70%);
+  --deco-a: '🏁'; --deco-b: '🏎️'; }
+.side-racecar::before { transform-origin: 0 100%; animation: rcr-wave .9s ease-in-out infinite alternate; }
+.side-racecar::after { animation: rcr-drive 2.4s cubic-bezier(.6, 0, .4, 1) infinite; }
+@keyframes rcr-wave { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+@keyframes rcr-drive { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-26px); } }
+.room-stage.many .side-racecar::before, .room-stage.many .side-racecar::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-racecar::before, .side-racecar::after { animation: none; } }
