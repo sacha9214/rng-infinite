@@ -361,7 +361,8 @@
   // Classic est le skin gratuit de départ : jamais rangé dans skins:<id>, il ne compte pas (PRISMA123 bloqué, 2026-10-22).
   const collectible = () => SKINS.filter(k => !k.until && k.id !== 'classic').map(k => k.id);
   // Badges de collection (idée de PRISMA123, 2026-10-22) : tous les boutons, toutes les émotes, tous les fonds hors limités.
-  const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id) };
+  const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id),
+    sounds: () => SOUNDS.filter(p => p.price && !p.until && !p.hidden).map(p => p.id) }; // Sound Collector (idée de dailycb, 2026-10-27)
   // Quelle clé ouvre quelle caisse (idée de keys, 2026-10-22) : une clé Premium ouvre aussi les caisses moins chères
   // (Starter, Fonds d'écran) ; l'Élite ne s'ouvre jamais avec une clé.
   // Part du créateur (idée de Gray alt, acceptée par Sacha à 5 %, 2026-10-22) : à chaque achat d'un skin né d'une idée de
