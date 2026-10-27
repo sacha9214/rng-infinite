@@ -1166,3 +1166,9 @@
   text-shadow: 0 1px 0 #fff;
   --gs: 0 .3em 0 #f472b6, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #f472b6, 0 .7em 1.3em rgba(236, 72, 153, .45); --gs-a: 0 .06em 0 #f472b6; }
 .btn-roll.gen-bullettrain:hover { filter: brightness(1.05); }
+/* Orbital Cannon (idée de LEVIATHAN, 2026-10-27) : un écran de visée, grille cyan et coins de cible. */
+.btn-roll.gen-orbital { border: 2px solid #22d3ee; border-radius: .35rem; color: #cffafe; font-family: var(--font-mono); letter-spacing: .06em;
+  background: linear-gradient(90deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, radial-gradient(ellipse 70% 90% at 50% 50%, #0f2a3d, #05090f);
+  text-shadow: 0 0 .3em #22d3ee;
+  --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
+.btn-roll.gen-orbital:hover { filter: brightness(1.15); }

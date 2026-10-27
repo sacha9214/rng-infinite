@@ -5578,6 +5578,116 @@
     };
   };
 
+  // 🛰️ Orbital Cannon (2026-10-27, idée de LEVIATHAN) — un écran de visée sombre, un satellite en orbite au-dessus de
+  // la carte. À chaque chiffre, un réticule se referme sur lui et un rayon tombe du ciel dessus (impact blanc, gerbe
+  // d'étincelles, brûlure qui rougeoit dans la carte) ; avant le dernier, le satellite se charge et des crochets de visée
+  // se referment sur toute la carte. À la révélation, un rayon géant s'abat sur le nombre, de la couleur de la rareté
+  // (gris Common, vert, bleu, violet, orange, rouge Mythic, cyan, or, blanc, arc-en-ciel Infinite), plus large et plus
+  // long avec elle, avec des ondes de choc ; tirage raté : le canon s'enraye (MISFIRE).
+  SCENES.orbital = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const beams = timed(), reticles = timed(), finale = timed(), shock = timed(), burns = timed(), words = timed(), sparks = particles(), motes = particles(), emit = emitter();
+    const COL = { trash: '#a16207', common: '#cbd5e1', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', anomaly: '#fb923c', mythic: '#f43f5e', celestial: '#67e8f9', divine: '#fde047', godlike: '#ffffff', infinite: null };
+    const sat = { x: cx, tx: cx, y: Math.max(26, card.y - H * 1.3) };
+    let charge = 0, chargeTo = 0, lockOn = 0, lockTo = 0, now = 0;
+    const add = dark ? 'lighter' : 'source-over';
+    const hue = t => RAINBOW[Math.floor(t * 6) % RAINBOW.length]; // Infinite : le rayon passe par toutes les couleurs
+    const colorOf = (b, t) => b.col || hue(t);
+    const drawSat = (x, y, s) => { // corps doré, deux panneaux solaires, antenne vers le bas
+      co.save(); co.translate(x, y); co.rotate(Math.sin(now * .8) * .05);
+      co.fillStyle = '#1e3a8a'; co.strokeStyle = '#93c5fd'; co.lineWidth = 1;
+      for (const e of [-1, 1]) { co.fillRect(e > 0 ? s * .42 : -s * 1.42, -s * .22, s, s * .44); co.strokeRect(e > 0 ? s * .42 : -s * 1.42, -s * .22, s, s * .44); co.beginPath(); for (let i = 1; i < 4; i++) { const xx = (e > 0 ? s * .42 : -s * 1.42) + i * s / 4; co.moveTo(xx, -s * .22); co.lineTo(xx, s * .22); } co.stroke(); }
+      co.fillStyle = '#94a3b8'; co.fillRect(-s * .42, -s * .04, s * .84, s * .08);
+      const g = co.createLinearGradient(-s * .35, 0, s * .35, 0); g.addColorStop(0, '#a16207'); g.addColorStop(.5, '#fde68a'); g.addColorStop(1, '#a16207');
+      co.fillStyle = g; roundRect(co, -s * .34, -s * .36, s * .68, s * .62, s * .08); co.fill();
+      co.fillStyle = '#475569'; co.beginPath(); co.moveTo(-s * .2, s * .26); co.lineTo(s * .2, s * .26); co.lineTo(s * .08, s * .48); co.lineTo(-s * .08, s * .48); co.closePath(); co.fill();
+      co.restore();
+    };
+    const column = (x, y0, y1, wd, col, core, a) => { // un rayon vertical : halo coloré, puis cœur blanc
+      if (a <= .01) return;
+      const g = co.createLinearGradient(x - wd, 0, x + wd, 0); g.addColorStop(0, col + '00'); g.addColorStop(.5, col); g.addColorStop(1, col + '00'); // transparent de la même couleur : pas de halo gris sur page claire
+      co.globalAlpha = a * .75; co.fillStyle = g; co.fillRect(x - wd, y0, wd * 2, y1 - y0);
+      co.globalAlpha = a; co.fillStyle = col; co.fillRect(x - core / 2, y0, core, y1 - y0); // le cœur à la couleur du rayon…
+      co.fillStyle = dark ? '#ffffff' : col; co.fillRect(x - core * .2, y0, core * .4, y1 - y0); // …et son fil blanc brûlant
+    };
+    const bracket = (x, y, bw, bh, col, a, lw = 2) => { // quatre coins de visée
+      if (a <= .01) return;
+      const c = Math.min(bw, bh) * .3; co.globalAlpha = a; co.strokeStyle = col; co.lineWidth = lw; co.beginPath();
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const px = x + sx * bw / 2, py = y + sy * bh / 2; co.moveTo(px, py - sy * c); co.lineTo(px, py); co.lineTo(px - sx * c, py); }
+      co.stroke();
+    };
+    const HUD = dark ? '#67e8f9' : '#0891b2';
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        charge += (chargeTo - charge) * Math.min(1, dt * 3); lockOn += (lockTo - lockOn) * Math.min(1, dt * 5);
+        sat.x += (sat.tx - sat.x) * Math.min(1, dt * 6);
+        const sx = sat.x + Math.sin(t * .9) * H * .15, sy = sat.y + Math.sin(t * 1.3) * 3;
+        // le satellite et sa lentille, plus brillante quand il se charge
+        drawSat(sx, sy, H * .28);
+        co.globalCompositeOperation = add;
+        dot(co, HUD, sx, sy + H * .1, H * (.08 + .3 * charge), .5 + .5 * charge);
+        if (charge > .05) for (let n = emit(40 * charge * q, dt); n > 0; n--) { const an = rnd(TAU), r = H * rnd(.6, 1.2); motes.add({ x: sx + Math.cos(an) * r, y: sy + Math.sin(an) * r, tx: sx, ty: sy + H * .1, max: rnd(.3, .5) }); }
+        motes.step(dt);
+        motes.each((m, k) => dot(co, HUD, lerp(m.x, m.tx, k * k), lerp(m.y, m.ty, k * k), 3, k));
+        co.globalCompositeOperation = 'source-over';
+        // les crochets de visée qui se referment sur toute la carte avant le dernier chiffre
+        if (lockOn > .02) { const g = (1 - lockOn) * H * .8 + H * .12; bracket(cx, cy, card.w + g * 2, card.h + g * 2, HUD, lockOn * (.6 + .4 * Math.sin(t * 20) ** 2), 2.5); }
+        // brûlures dans la carte, derrière les chiffres
+        burns.run(dt, (b, k) => { ci.globalCompositeOperation = 'lighter'; dot(ci, b.col, b.x, b.y, h * .45 * (1 - .4 * k), (1 - k) * .55); ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = (1 - k) * .5; ci.strokeStyle = '#fb923c'; ci.lineWidth = 1.5; ci.beginPath(); ci.ellipse(b.x, h - 4, h * .3 * (.5 + k), h * .06, 0, 0, TAU); ci.stroke(); ci.globalAlpha = 1; });
+        // réticules qui se referment, puis les rayons de chaque chiffre
+        reticles.run(dt, (r, k) => bracket(r.x, r.y, lerp(H * 1.3, H * .62, outCubic(k)), lerp(H * 1.5, H * .85, outCubic(k)), HUD, k < .8 ? 1 : (1 - k) / .2, 2));
+        co.globalCompositeOperation = add;
+        beams.run(dt, (b, k) => {
+          const a = k < .12 ? k / .12 : Math.pow(1 - (k - .12) / .88, 1.5), wd = H * (b.big ? .22 : .14) * (k < .12 ? .4 + .6 * k / .12 : 1 - .6 * k);
+          column(b.x, 0, b.y, wd, b.col, b.big ? 4 : 2.5, a);
+          dot(co, '#ffffff', b.x, b.y, H * (b.big ? .24 : .16) * (1 - k * .5), a * .7);
+          dot(co, b.col, b.x, b.y, H * 1.1, a * .6, H * .08); // reflet horizontal de l'impact
+          if (!b.hit) { b.hit = 1; for (let i = Math.round((b.big ? 26 : 12) * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.5, 1.5); sparks.add({ x: b.x, y: b.y + rnd(-4, 4), vx: Math.cos(an) * rnd(60, 240), vy: Math.sin(an) * rnd(60, 240), drag: 2, g: 380, max: rnd(.3, .6), size: rnd(1.2, 2.2), c: b.col }); } }
+        });
+        // le rayon géant de la révélation : derrière la carte (le nombre reste lisible), la carte s'illumine de l'intérieur
+        finale.run(dt, (f, k) => {
+          const col = colorOf(f, t), T = k * f.life, open = T < .1 ? T / .1 : 1, a = T < .1 ? .6 : k > .7 ? (1 - k) / .3 : 1;
+          const wd = (T < .1 ? H * .05 : lerp(f.wd, f.wd * .8, k)) * (1 + .06 * Math.sin(t * 50));
+          behind(env, () => { column(cx, 0, card.y + card.h + H * .4, wd * open + H * .05, col, Math.max(4, wd * .55 * open), a); });
+          if (T < .1) column(cx, 0, card.y, H * .06, '#ffffff', 2, 1); // le trait pilote, avant l'ouverture
+          ci.globalCompositeOperation = 'lighter'; dot(ci, col, w / 2, h / 2, Math.max(w, h) * .8, a * .5 * open, h * 1.2); ci.globalCompositeOperation = 'source-over';
+          if (!f.boom && T >= .1) { f.boom = 1; for (let i = 0; i < f.rings; i++) shock.add({ delay: i * .16, life: .9 + .2 * i, col, r: card.w * (.7 + .3 * i) }); for (let i = Math.round(f.sparks * q); i > 0; i--) { const an = rnd(TAU); sparks.add({ x: cx + Math.cos(an) * card.w * .4, y: card.y + card.h * (Math.random() < .5 ? 0 : 1), vx: Math.cos(an) * rnd(100, 380), vy: -rnd(40, 300), drag: 1.6, g: 260, max: rnd(.5, 1.1), size: rnd(1.4, 3), c: Math.random() < .5 ? '#ffffff' : col }); } }
+          if (f.asc && T > .1) godrays(co, col, cx, card.y + card.h * .5, 10 + 4 * f.asc, card.w * .55, card.w * (1 + .3 * f.asc), t * .4, H * .25, a * .25);
+        });
+        shock.run(dt, (s, k) => behind(env, () => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = s.col; co.lineWidth = 3 * (1 - k) + 1; co.beginPath(); co.ellipse(cx, card.y + card.h, s.r * outCubic(k) + H * .2, (s.r * outCubic(k) + H * .2) * .22, 0, 0, TAU); co.stroke(); }));
+        sparks.step(dt);
+        sparks.each((s, k) => { tail(co, s.c, s.x - s.vx * .03, s.y - s.vy * .03, s.x, s.y, s.size, 1 - k); dot(co, s.c, s.x, s.y, s.size * 2, (1 - k) * .7); });
+        co.globalCompositeOperation = 'source-over';
+        // le message du viseur, sur sa plaque sombre (lisible même devant le rayon), à gauche du rayon
+        words.run(dt, (wd, k) => {
+          const a = (k < .1 ? k / .1 : k > .7 ? (1 - k) / .3 : 1) * (Math.sin(t * 30) > -.6 ? 1 : .4), fs = H * .2, x = card.x - H * .1, y = card.y - H * .5;
+          co.font = `700 ${Math.round(fs)}px ui-monospace, 'SF Mono', Menlo, Consolas, monospace`; const tw = co.measureText(wd.s).width + fs;
+          co.globalAlpha = a * .85; co.fillStyle = '#05090f'; co.fillRect(x - tw, y - fs * .8, tw, fs * 1.6); co.globalAlpha = a; co.strokeStyle = HUD; co.lineWidth = 1.5; co.strokeRect(x - tw, y - fs * .8, tw, fs * 1.6);
+          co.fillStyle = wd.c; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText(wd.s, x - tw / 2, y);
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        sat.tx = p.x;
+        if (o.last) { lockTo = 0; chargeTo = .2; }
+        const col = o.ghost ? '#475569' : dark ? '#67e8f9' : '#0891b2';
+        if (!o.ghost) reticles.add({ x: p.x, y: p.y, life: .3 });
+        beams.add({ x: p.x, y: p.y, col, big: o.last ? 1 : 0, life: o.ghost ? .25 : o.last ? .55 : .4 });
+        const ip = bInner(env, p); burns.add({ x: ip.x, y: ip.y, col: o.ghost ? '#334155' : '#fb923c', life: o.ghost ? .4 : .9 });
+      },
+      build() { chargeTo = 1; lockTo = 1; sat.tx = cx; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        chargeTo = 0; lockTo = 0; sat.tx = cx;
+        if (!p) { beams.add({ x: cx + rnd(-10, 10), y: card.y - H * .3, col: '#64748b', life: .2 }); words.add({ delay: .2, life: 1.6, s: 'MISFIRE', c: '#94a3b8' }); return; }
+        finale.add({ life: .9 + 1.1 * p + .6 * asc, wd: card.w * (.32 + .4 * p) + H * .25 * asc, col: COL[tier] === undefined ? '#cbd5e1' : COL[tier], rings: 1 + Math.round(2 * p) + asc, sparks: 20 + 60 * p + 30 * asc, asc });
+        if (p >= 1) words.add({ delay: .3, life: 1.8 + .4 * asc, s: 'DIRECT HIT', c: COL[tier] || '#ffffff' });
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
