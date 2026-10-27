@@ -1142,3 +1142,9 @@
   padding-left: 1.6em; text-shadow: .06em .06em 0 #dc2626, 0 0 .2em rgba(0, 0, 0, .6);
   --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(220, 38, 38, .3); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(220, 38, 38, .45); --gs-a: 0 .06em 0 #7f1d1d; }
 .btn-roll.gen-racecar:hover { filter: brightness(1.12); }
+/* Domino (idée de kaz, 2026-10-27) : un domino noir laqué, trait du milieu, quelques points blancs. */
+.btn-roll.gen-domino { border: 2px solid #a16207; border-radius: .55rem; color: #fafaf9;
+  background: radial-gradient(circle at 1em 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at 1.6em 70%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1em) 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1.6em) 70%, #fafaf9 0 2.2px, transparent 2.8px), linear-gradient(160deg, #3f3f46, #111 45%, #0a0a0a);
+  padding-inline: 2.4em; text-shadow: 0 0 .25em rgba(250, 250, 249, .45);
+  --gs: 0 .3em 0 #5b3311, 0 .5em 1em rgba(22, 101, 52, .3); --gs-h: 0 .34em 0 #5b3311, 0 .7em 1.3em rgba(250, 204, 21, .3); --gs-a: 0 .06em 0 #5b3311; }
+.btn-roll.gen-domino:hover { filter: brightness(1.15); }

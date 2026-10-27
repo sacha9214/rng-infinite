@@ -5213,6 +5213,99 @@
     };
   };
 
+  // 🁫 Domino (2026-10-27, idée de kaz) — un sac de velours tombe à gauche de la carte et s'écrase (matière molle), des
+  // dominos en dégringolent ; à chaque chiffre, un domino saute du sac jusqu'à sa place, et ses points se retournent pour
+  // dessiner le chiffre (le points-en-chiffre est en CSS, .skin-domino). À la révélation : une rangée de dominos debout
+  // sur le haut de la carte tombe en cascade, plus longue avec la rareté ; DOMINO! dès Epic, et dès Mythic le sac éclate
+  // en pluie de dominos ; tirage raté : un seul domino bascule, clac.
+  SCENES.domino = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2;
+    const flying = timed(), tumble = particles(), dust = particles(), words = timed(), rows = timed();
+    const PIPS = [[], [[0, 0]], [[-1, -1], [1, 1]], [[-1, -1], [0, 0], [1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
+    const BX = card.x - H * .72, BASE = card.y + H * .98, BS = H * 1.05; // le sac : centre en x, sol, taille
+    const bag = { y: card.y - H * 2.6, vy: 0, landed: 0, sq: 0, shake: 0, gone: 0 };
+    let now = 0;
+    const face = (s, top, bot) => { // un domino vu de face, centré, hauteur s
+      const w = s * .5;
+      roundRect(co, -w / 2, -s / 2, w, s, s * .09); co.fillStyle = '#111111'; co.fill(); co.strokeStyle = '#d6d3d1'; co.lineWidth = Math.max(1, s * .05); co.stroke();
+      co.strokeStyle = '#57534e'; co.lineWidth = Math.max(.8, s * .03); co.beginPath(); co.moveTo(-w * .36, 0); co.lineTo(w * .36, 0); co.stroke();
+      co.fillStyle = '#fafaf9';
+      for (const [half, n] of [[-1, top], [1, bot]]) for (const [u, v] of PIPS[n]) { co.beginPath(); co.arc(u * w * .24, half * s * .25 + v * s * .12, Math.max(.8, s * .045), 0, TAU); co.fill(); }
+    };
+    const tile = (x, y, s, rot, a, top, bot) => { if (a <= .01) return; co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot); face(s, top, bot); co.restore(); };
+    const drawBag = (x, yb, s, sx, sy, rot) => { // sac de velours bordeaux, cordon doré, ouverture froncée
+      co.save(); co.translate(x, yb); co.rotate(rot); co.scale(sx, sy);
+      const w = s * .5, h = s * .82;
+      const g = co.createRadialGradient(-w * .35, -h * .55, s * .04, 0, -h * .35, s * .75); g.addColorStop(0, '#fb7185'); g.addColorStop(.45, '#be123c'); g.addColorStop(1, '#4c0519');
+      co.fillStyle = g; co.beginPath(); co.moveTo(-w * .3, -h * .78); co.bezierCurveTo(-w * 1.2, -h * .62, -w * 1.15, 0, -w * .55, 0); co.lineTo(w * .55, 0); co.bezierCurveTo(w * 1.15, 0, w * 1.2, -h * .62, w * .3, -h * .78); co.closePath(); co.fill();
+      co.strokeStyle = 'rgba(76,5,25,.55)'; co.lineWidth = Math.max(1, s * .02); // plis du velours
+      for (const u of [-.45, .1, .5]) { co.beginPath(); co.moveTo(w * u * .5, -h * .74); co.quadraticCurveTo(w * u * 1.2, -h * .4, w * u, -h * .08); co.stroke(); }
+      co.fillStyle = '#9f1239'; co.beginPath(); co.moveTo(-w * .3, -h * .78); co.quadraticCurveTo(-w * .7, -h * 1.02, -w * .45, -h * 1.06); co.quadraticCurveTo(0, -h * .92, w * .45, -h * 1.06); co.quadraticCurveTo(w * .7, -h * 1.02, w * .3, -h * .78); co.closePath(); co.fill();
+      co.fillStyle = '#111111'; co.beginPath(); co.ellipse(0, -h * .86, w * .3, h * .06, 0, 0, TAU); co.fill(); // l'ouverture
+      co.strokeStyle = '#facc15'; co.lineWidth = Math.max(1.4, s * .05); co.beginPath(); co.moveTo(-w * .34, -h * .78); co.quadraticCurveTo(0, -h * .7, w * .34, -h * .78); co.stroke();
+      co.beginPath(); co.moveTo(w * .15, -h * .74); co.quadraticCurveTo(w * .4, -h * .52, w * .26, -h * .34); co.stroke();
+      co.fillStyle = '#eab308'; co.beginPath(); co.arc(w * .26, -h * .32, s * .045, 0, TAU); co.fill();
+      co.globalAlpha = .35; co.fillStyle = '#ffffff'; co.beginPath(); co.ellipse(-w * .5, -h * .5, w * .12, h * .2, -.4, 0, TAU); co.fill(); co.globalAlpha = 1;
+      co.restore();
+    };
+    const mouth = () => ({ x: BX + Math.sin(now * 30) * bag.shake * 2, y: bag.y - BS * .82 * .9 });
+    const spill = n => { const m = mouth(); for (let i = Math.round(n * q); i > 0; i--) tumble.add({ x: m.x + rnd(-6, 6), y: m.y, vx: rnd(-90, 120), vy: -rnd(80, 220), g: H * 9, drag: .4, max: rnd(.7, 1.1), rot: rnd(TAU), spin: rnd(-10, 10), s: H * rnd(.3, .42), top: (Math.random() * 7) | 0, bot: (Math.random() * 7) | 0 }); };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        // le sac tombe, s'écrase sur le sol, rebondit à peine et laisse échapper quelques dominos
+        if (!bag.landed) { bag.vy += H * 22 * dt; bag.y += bag.vy * dt; if (bag.y >= BASE) { bag.y = BASE; bag.landed = 1; bag.sq = 1; spill(5); for (let i = Math.round(8 * q); i > 0; i--) dust.add({ x: BX + rnd(-1, 1) * BS * .4, y: BASE, vx: rnd(-60, 60), vy: -rnd(5, 30), drag: 2, g: 0, max: rnd(.5, .9), size: H * rnd(.06, .1) }); } }
+        bag.sq *= Math.exp(-dt * 7); bag.shake *= Math.exp(-dt * 5);
+        if (bag.burst) bag.gone = Math.min(1, bag.gone + dt * 2.5); // Mythic : le sac éclate (il gonfle et s'efface)
+        tumble.step(dt); dust.step(dt);
+        const wob = Math.sin(t * 38) * bag.sq, sx = 1 + .28 * wob, sy = 1 - .26 * wob;
+        if (bag.gone < 1) { co.globalAlpha = 1 - bag.gone; drawBag(BX + Math.sin(t * 30) * bag.shake * 2, bag.y, BS * (1 + bag.gone * .4), sx, sy, Math.sin(t * 24) * bag.shake * .06); co.globalAlpha = 1; }
+        behind(env, () => {
+          dust.each((d, k) => dot(co, dark ? '#a8a29e' : '#78716c', d.x, d.y, d.size * (1 + k), (1 - k) * .4));
+          tumble.each((d, k) => tile(d.x, d.y, d.s, d.rot + d.spin * d.life, Math.min(1, (1 - k) * 3), d.top, d.bot));
+        });
+        // les dominos qui sautent du sac jusqu'à leur case
+        flying.run(dt, (f, k) => {
+          const e = k, x = lerp(f.x0, f.x, e), y = lerp(f.y0, f.y, e) - Math.sin(e * Math.PI) * H * .9;
+          tile(x, y, H * (f.big ? .62 : .5) * (1 - .25 * e), (1 - outCubic(e)) * f.turns, 1, f.top, f.bot);
+        });
+        // la rangée qui tombe en cascade, debout sur le haut de la carte
+        rows.run(dt, (r, k) => {
+          const T = k * r.life, dh = H * .5, dw = dh * .5, a = T > r.life - .4 ? (r.life - T) / .4 : 1;
+          for (let i = 0; i < r.n; i++) {
+            const appear = clamp((T - i * .018) / .12); if (appear <= 0) continue;
+            const x = r.x0 + i * r.gap, start = .32 + i * r.step, f = clamp((T - start) / .16), last = i === r.n - 1;
+            const lean = last ? Math.PI / 2 : Math.asin(Math.min(1, (r.gap - dw * .1) / dh));
+            const ang = (f * f) * lean; // il bascule de plus en plus vite (pesanteur)
+            if (f >= 1 && !r.clack[i]) { r.clack[i] = 1; if (i % 3 === 0 || last) dust.add({ x: x + dh * Math.sin(ang), y: card.y - 2, vx: rnd(-20, 20), vy: -rnd(10, 30), drag: 2, g: 0, max: .5, size: H * .05 }); }
+            co.save(); co.globalAlpha = a; co.translate(x + dw / 2, card.y - 1); co.rotate(ang); co.translate(-dw / 2, -dh / 2); co.scale(1, appear);
+            face(dh, r.pips[i][0], r.pips[i][1]); co.restore();
+          }
+        });
+        words.run(dt, (w, k) => { const s = k < .15 ? outBack(k / .15) : 1; bWord(co, w.s, cx, card.y - H * 1.05, H * w.size * s, w.c, '#111111', k > .75 ? (1 - k) / .25 : 1, -.04); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        bag.shake = Math.min(1.2, bag.shake + .7);
+        if (o.ghost) return;
+        const m = mouth();
+        flying.add({ x0: m.x, y0: m.y, x: p.x, y: p.y, life: .17, turns: rnd(5, 8) * (Math.random() < .5 ? -1 : 1), top: (Math.random() * 7) | 0, bot: (Math.random() * 7) | 0, big: o.last ? 1 : 0 });
+      },
+      build() { bag.shake = 1.4; spill(3); },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        const rnd7 = () => (Math.random() * 7) | 0;
+        if (!p) { rows.add({ life: 1.6, n: 1, x0: cx - H * .1, gap: H * .3, step: 0, pips: [[1, 0]], clack: [] }); words.add({ delay: .6, life: 1.4, s: 'clack', c: dark ? '#a8a29e' : '#e7e5e4', size: .24 }); return; }
+        const n = Math.max(4, Math.round(5 + 13 * p) + 4 * asc), x0 = card.x + H * .05, gap = Math.max(H * .26, (card.w - H * .3) / (n - 1));
+        const m = Math.min(n, Math.floor((card.w - H * .1) / gap) + 1);
+        rows.add({ life: 1.6 + m * .06 + .8 * p, n: m, x0, gap, step: .06, pips: Array.from({ length: m }, () => [rnd7(), rnd7()]), clack: [] });
+        if (p >= .6) words.add({ delay: .5 + m * .06, life: 1.6 + p, s: 'DOMINO!', c: '#fafaf9', size: .3 });
+        if (p >= 1) { bag.shake = 2; spill(26 + 14 * asc); bag.burst = 1; for (let i = Math.round((30 + 20 * asc) * q); i > 0; i--) tumble.add({ x: cx + rnd(-1, 1) * (card.w * .5 + H), y: card.y - H * rnd(1.4, 2.4), vx: rnd(-30, 30), vy: rnd(0, 60), g: H * 6, drag: .3, max: rnd(1.2, 1.8), rot: rnd(TAU), spin: rnd(-8, 8), s: H * rnd(.3, .45), top: rnd7(), bot: rnd7() }); }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

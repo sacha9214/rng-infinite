@@ -7479,3 +7479,64 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes rcr-drive { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-26px); } }
 .room-stage.many .side-racecar::before, .room-stage.many .side-racecar::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-racecar::before, .side-racecar::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Domino (idée de kaz, 2026-10-27) : un tapis de jeu
+   vert dans son cadre de bois ; chaque chiffre est un domino noir laqué (biseau, trait du milieu, clou de laiton), et le
+   chiffre est fait de points blancs comme ceux d'un domino (« you see your number as the dots turn »). Tirage : les
+   points courent sur le domino ; un chiffre qui se pose : le domino tombe à plat en pivotant, claque sur le tapis
+   (matière dure : flash, rebond raide) et se pose. Sur les petites cartes (classements), chiffres pleins : des points
+   seraient illisibles. Le sac de velours et la cascade : js/skinfx.js. */
+.num-card.skin-domino {
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 35%, rgba(74, 222, 128, .2), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, .06) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #166534, #14532d 60%, #0f3d22);
+  border: 3px solid #7c4a1e; border-radius: .55rem; color: #fafaf9;
+  box-shadow: inset 0 0 0 2px #a16207, inset 0 .25em .5em rgba(0, 0, 0, .35), 0 0 14px rgba(250, 204, 21, .12), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .26em .36em;
+}
+.skin-domino .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .66em; font-weight: 900; line-height: 1;
+  width: .82em; height: 1.28em; margin: 0 .05em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  color: #ffffff; border-radius: .1em;
+  background: linear-gradient(160deg, #3f3f46, #111111 45%, #0a0a0a);
+  box-shadow: inset 0 0 0 .04em #2a2a2e, 0 .05em .06em rgba(0, 0, 0, .5);
+}
+/* La face du domino percée de petits trous ronds, posée sur le chiffre : on ne voit le chiffre qu'à travers les trous,
+   il est donc fait de points (pas de background-clip: text, que le fond du domino recouvrirait). */
+.skin-domino .slot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(160deg, #3f3f46, #111111 45%, #0a0a0a);
+  box-shadow: inset .03em .03em .02em rgba(255, 255, 255, .22);
+  -webkit-mask: radial-gradient(circle, transparent 0 .04em, #000 .05em) 0 0 / .1em .1em; mask: radial-gradient(circle, transparent 0 .04em, #000 .05em) 0 0 / .1em .1em; }
+/* le trait du milieu du domino, seulement sur les bords (au centre il couperait le chiffre) */
+.skin-domino .slot::before { content: ''; position: absolute; left: .06em; right: .06em; top: calc(50% - .5px); height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, #78716c 0 16%, transparent 16% 84%, #78716c 84%); }
+.num-card.sm.skin-domino .slot::after { display: none; }
+.skin-domino .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
+.skin-domino .slot.collapsed::after, .skin-domino .slot.collapsed::before { display: none; }
+.skin-domino .slot.spinning { color: rgba(250, 250, 249, .55); animation: dmn-rock .22s steps(2) infinite; }
+.skin-domino .slot.spinning::after { animation: dmn-shuffle .22s steps(2) infinite; }
+.skin-domino .slot.spinning:nth-of-type(2n), .skin-domino .slot.spinning:nth-of-type(2n)::after { animation-delay: -.11s; }
+@keyframes dmn-rock { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
+@keyframes dmn-shuffle { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: .05em .05em; mask-position: .05em .05em; } }
+.skin-domino .slot.revealed { animation: dmn-flip .6s backwards; }
+@keyframes dmn-flip {
+  0% { transform: perspective(3em) translateY(-.45em) rotateX(85deg) rotate(-20deg); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  28% { transform: perspective(3em) translateY(.03em) rotateX(0) rotate(0); filter: brightness(1.5) drop-shadow(0 0 .08em #fff); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: translateY(-.07em) rotate(-3deg); filter: none; }
+  56% { transform: translateY(0) rotate(1.5deg); }
+  72% { transform: translateY(-.015em) rotate(-.5deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-domino .slot, .skin-domino .slot::after { animation: none; } }
+/* Cadre de duel : le tapis vert d'une table de jeu ; 👜 tremble (les dominos dedans), les tuiles clignent. */
+.side-domino { --side-border: #a16207; --side-glow: 0 0 16px rgba(161, 98, 7, .3); --side-ink: #a16207;
+  --side-bg: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(22, 101, 52, .3), rgba(15, 61, 34, .2) 70%), repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 1px, transparent 1px 4px);
+  --deco-a: '👜'; --deco-b: '⬛⬜⬛'; }
+.side-domino::before { transform-origin: 50% 100%; animation: dmn-rattle 2s ease-in-out infinite; }
+.side-domino::after { animation: dmn-blink 2.4s steps(1) infinite; }
+@keyframes dmn-rattle { 0%, 70%, 100% { transform: rotate(0); } 74% { transform: rotate(-9deg); } 80% { transform: rotate(7deg); } 86% { transform: rotate(-4deg); } 92% { transform: rotate(2deg); } }
+@keyframes dmn-blink { 0%, 100% { opacity: .75; } 50% { opacity: .35; } }
+.room-stage.many .side-domino::before, .room-stage.many .side-domino::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-domino::before, .side-domino::after { animation: none; } }
