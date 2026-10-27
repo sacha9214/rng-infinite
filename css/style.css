@@ -7540,3 +7540,55 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes dmn-blink { 0%, 100% { opacity: .75; } 50% { opacity: .35; } }
 .room-stage.many .side-domino::before, .room-stage.many .side-domino::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-domino::before, .side-domino::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Lily Pads (idée de casmicgraything, 2026-10-27) :
+   une mare (eau vert sombre, reflet du ciel, rides) et six nénuphars, un par chiffre (feuille ronde encochée, nervures,
+   luisante) ; chiffres crème cernés de vert. Tirage : les feuilles dansent sur l'eau ; un chiffre qui se pose : l'eau
+   gonfle un instant (élan), la grenouille atterrit (la feuille plonge et s'écrase : matière molle), rebondit et se pose.
+   Le chiffre n'apparaît qu'à l'atterrissage. La grenouille, la mouche et les lotus : js/skinfx.js. */
+.num-card.skin-lilypad {
+  background:
+    radial-gradient(ellipse 30% 22% at 18% 22%, rgba(255, 255, 255, .16), transparent 70%),
+    repeating-radial-gradient(ellipse 120% 60% at 50% 125%, transparent 0 .24em, rgba(167, 243, 208, .08) .24em .27em),
+    linear-gradient(180deg, #134e4a, #115e59 50%, #0f3d3a);
+  border: 2px solid #166534; border-radius: .7rem; color: #fefce8;
+  box-shadow: inset 0 0 0 1px rgba(167, 243, 208, .2), inset 0 -.3em .6em rgba(0, 0, 0, .3), 0 0 14px rgba(34, 197, 94, .2), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .32em .4em;
+}
+.skin-lilypad .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .6em; font-weight: 900; line-height: 1;
+  width: 1.24em; height: 1.1em; margin: 0 .02em; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  color: #fefce8; text-shadow: 0 .05em 0 #14532d, 0 0 .1em #14532d, 0 0 .2em rgba(20, 83, 45, .9);
+  background:
+    conic-gradient(from 132deg at 50% 50%, #0f4c47 0 28deg, transparent 28deg),
+    repeating-conic-gradient(from 8deg at 50% 50%, rgba(20, 83, 45, .45) 0 1.6deg, transparent 1.6deg 30deg),
+    radial-gradient(circle at 40% 32%, #86efac, #22c55e 42%, #15803d 78%, #14532d);
+  box-shadow: 0 .07em .05em rgba(0, 0, 0, .35), inset 0 -.05em .08em rgba(20, 83, 45, .6);
+}
+.skin-lilypad .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
+.skin-lilypad .slot.spinning { color: rgba(254, 252, 232, .35); text-shadow: none; animation: lpd-bob .7s ease-in-out infinite alternate; }
+.skin-lilypad .slot.spinning:nth-of-type(2n) { animation-delay: -.35s; }
+.skin-lilypad .slot.spinning:nth-of-type(3n) { animation-delay: -.2s; }
+@keyframes lpd-bob { from { transform: translateY(-.04em) rotate(-7deg); } to { transform: translateY(.04em) rotate(7deg); } }
+.skin-lilypad .slot.revealed { animation: lpd-land .62s backwards; }
+@keyframes lpd-land {
+  0% { color: transparent; text-shadow: none; transform: none; }
+  30% { color: transparent; text-shadow: none; transform: translateY(-.05em) scale(1.04); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  42% { transform: translateY(.1em) scale(1.16, .8); filter: brightness(1.25); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  58% { transform: translateY(-.05em) scale(.94, 1.07); filter: none; }
+  74% { transform: translateY(.02em) scale(1.02, .98); }
+  88% { transform: translateY(-.008em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-lilypad .slot { animation: none; } }
+/* Cadre de duel : la mare au crépuscule, des rides sur l'eau ; 🐸 saute, 🍃 flotte. */
+.side-lilypad { --side-border: #16a34a; --side-glow: 0 0 16px rgba(34, 197, 94, .28); --side-ink: #15803d;
+  --side-bg: repeating-radial-gradient(ellipse 120% 50% at 50% 120%, transparent 0 14px, rgba(20, 184, 166, .12) 14px 16px), linear-gradient(180deg, rgba(19, 78, 74, .12), rgba(17, 94, 89, .3));
+  --deco-a: '🐸'; --deco-b: '🍃'; }
+.side-lilypad::before { animation: lpd-hop 1.8s cubic-bezier(.3, 0, .7, 1) infinite; }
+.side-lilypad::after { animation: lpd-float 3s ease-in-out infinite; }
+@keyframes lpd-hop { 0%, 55%, 100% { transform: translate(0, 0) scale(1); } 60% { transform: scale(1.1, .85); } 75% { transform: translate(6px, -9px) scale(.95, 1.1); } 90% { transform: translate(12px, 0) scale(1.08, .9); } }
+@keyframes lpd-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+.room-stage.many .side-lilypad::before, .room-stage.many .side-lilypad::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-lilypad::before, .side-lilypad::after { animation: none; } }

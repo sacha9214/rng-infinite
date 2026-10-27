@@ -5306,6 +5306,119 @@
     };
   };
 
+  // 🐸 Lily Pads (2026-10-27, idée de casmicgraything) — six nénuphars sur une mare (les cases, en CSS) et une grenouille
+  // qui attend sur une feuille à gauche de la carte ; à chaque chiffre elle saute par-dessus (« a frog jumps across each
+  // number as it reveals »), se pose sur le bord de la carte au-dessus de lui, le nénuphar plonge sous son poids et l'eau
+  // fait des ronds. Une mouche tourne au-dessus de la mare ; à la révélation la grenouille la gobe d'un coup de langue,
+  // des lotus s'ouvrent autour de la carte, des lucioles dès Epic, et dès Mythic un saut périlleux géant et RIBBIT! ;
+  // tirage raté : elle glisse et tombe dans l'eau, plouf.
+  SCENES.lilypad = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, S = H * .4;
+    const LEFT = { x: card.x - H * .62, y: card.y + H * .72 }, RIGHT = { x: card.x + card.w + H * .62, y: card.y + H * .72 };
+    const frog = { x: LEFT.x, y: LEFT.y, jump: null, crouch: 0, flip: 0, sink: 0 };
+    const rings = timed(), drops = particles(), lotus = timed(), bugs = particles(), words = timed(), tongue = timed(), emit = emitter();
+    const fly = { on: 1, x: 0, y: 0 };
+    let now = 0, glowBugs = 0;
+    const pad = (x, y, r, a) => { // une feuille de nénuphar vue de biais, encoche vers l'avant
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.scale(1, .42);
+      co.fillStyle = '#166534'; co.beginPath(); co.moveTo(0, 0); co.arc(0, 0, r, .35 + Math.PI / 2, Math.PI / 2 - .35 + TAU); co.closePath(); co.fill();
+      co.fillStyle = '#22c55e'; co.beginPath(); co.moveTo(0, 0); co.arc(0, -r * .08, r * .92, .4 + Math.PI / 2, Math.PI / 2 - .4 + TAU); co.closePath(); co.fill();
+      co.strokeStyle = 'rgba(20,83,45,.5)'; co.lineWidth = 1.4; for (let i = 0; i < 7; i++) { const an = Math.PI / 2 + .6 + i * .8; co.beginPath(); co.moveTo(0, -r * .08); co.lineTo(Math.cos(an) * r * .85, Math.sin(an) * r * .85); co.stroke(); }
+      co.restore();
+    };
+    const drawFrog = (x, y, s, sx, sy, rot, a) => { // y = sous les pattes
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot); co.scale(sx, sy);
+      co.fillStyle = '#15803d'; for (const e of [-1, 1]) { co.beginPath(); co.ellipse(e * s * .4, -s * .14, s * .22, s * .14, e * .35, 0, TAU); co.fill(); }
+      const g = co.createRadialGradient(-s * .12, -s * .52, s * .04, 0, -s * .34, s * .6); g.addColorStop(0, '#bbf7d0'); g.addColorStop(.45, '#4ade80'); g.addColorStop(1, '#15803d');
+      co.fillStyle = g; co.beginPath(); co.ellipse(0, -s * .33, s * .42, s * .32, 0, 0, TAU); co.fill();
+      co.fillStyle = '#ecfccb'; co.beginPath(); co.ellipse(0, -s * .2, s * .25, s * .15, 0, 0, TAU); co.fill();
+      for (const e of [-1, 1]) {
+        co.fillStyle = '#22c55e'; co.beginPath(); co.arc(e * s * .21, -s * .6, s * .15, 0, TAU); co.fill();
+        co.fillStyle = '#ffffff'; co.beginPath(); co.arc(e * s * .21, -s * .62, s * .105, 0, TAU); co.fill();
+        co.fillStyle = '#111827'; co.beginPath(); co.arc(e * s * .21 + s * .02, -s * .61, s * .055, 0, TAU); co.fill();
+      }
+      co.strokeStyle = '#14532d'; co.lineWidth = Math.max(1, s * .04); co.lineCap = 'round'; co.beginPath(); co.arc(0, -s * .44, s * .2, .3, Math.PI - .3); co.stroke();
+      co.fillStyle = '#f472b6'; co.globalAlpha = a * .5; for (const e of [-1, 1]) { co.beginPath(); co.arc(e * s * .3, -s * .36, s * .05, 0, TAU); co.fill(); } co.globalAlpha = a;
+      co.fillStyle = '#16a34a'; for (const e of [-1, 1]) { co.beginPath(); co.ellipse(e * s * .17, -s * .04, s * .09, s * .05, 0, 0, TAU); co.fill(); }
+      co.restore();
+    };
+    const lotusAt = (x, y, s, open, a) => { // fleur de lotus rose : pétales pointus qui s'ouvrent
+      if (a <= .01 || open <= .01) return;
+      const o = outBack(open);
+      co.save(); co.globalAlpha = a; co.translate(x, y);
+      for (let i = 0; i < 7; i++) { const an = -Math.PI / 2 + (i - 3) * .42 * o; co.save(); co.rotate(an + Math.PI / 2); co.fillStyle = i % 2 ? '#f9a8d4' : '#ec4899'; co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-s * .22, -s * .5, 0, -s * o); co.quadraticCurveTo(s * .22, -s * .5, 0, 0); co.fill(); co.restore(); }
+      co.fillStyle = '#fde047'; co.beginPath(); co.arc(0, -s * .12, s * .12, 0, TAU); co.fill();
+      co.restore();
+    };
+    const splash = (x, y, n, big) => { for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1, 1); drops.add({ x, y, vx: Math.cos(an) * rnd(30, 90 + 90 * big), vy: Math.sin(an) * rnd(80, 160 + 120 * big), g: H * 10, max: rnd(.35, .6), size: rnd(1.2, 2.4) }); } };
+    const ring = (p, big, delay = 0) => { const ip = bInner(env, p); rings.add({ x: ip.x, y: ip.y, r: H * (big ? 1 : .6), life: big ? 1.1 : .8, delay }); rings.add({ x: ip.x, y: ip.y, r: H * (big ? .7 : .4), life: .7, delay: delay + .12 }); };
+    const hop = (tx, ty, dur, height, flips = 0) => { frog.jump = { fx: frog.x, fy: frog.y, tx, ty, t: 0, dur, height, flips }; };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        // les deux feuilles hors de la carte : le départ et l'arrivée
+        behind(env, () => { pad(LEFT.x, LEFT.y + S * .05, H * .5, 1); pad(RIGHT.x, RIGHT.y + S * .05, H * .5, 1); });
+        // les ronds dans l'eau, dans la carte, derrière les chiffres
+        rings.run(dt, (r, k) => { ci.globalAlpha = (1 - k) * .75; ci.strokeStyle = '#d1fae5'; ci.lineWidth = 2 * (1 - k) + .6; ci.beginPath(); ci.ellipse(r.x, r.y, r.r * outCubic(k), r.r * .42 * outCubic(k), 0, 0, TAU); ci.stroke(); });
+        ci.globalAlpha = 1;
+        // lotus autour de la carte (révélation)
+        lotus.run(dt, (l, k) => behind(env, () => lotusAt(l.x, l.y, l.s, clamp(k * l.life / .5), k > .8 ? (1 - k) / .2 : 1)));
+        // la grenouille : accroupie (élan), en l'air (étirée), à l'atterrissage (écrasée), puis elle se pose
+        let sx = 1, sy = 1, rot = 0, a = 1;
+        frog.crouch *= Math.exp(-dt * 6);
+        if (frog.queued && !frog.jump && (frog.queued.at -= dt) <= 0) { const g = frog.queued; frog.queued = null; g.go(); }
+        if (frog.jump) {
+          const j = frog.jump; j.t += dt; const k = j.t / j.dur;
+          if (k < .18) { sy = 1 - .3 * (k / .18); sx = 1 + .15 * (k / .18); frog.x = j.fx; frog.y = j.fy; }
+          else if (k < 1) { const u = (k - .18) / .82; frog.x = lerp(j.fx, j.tx, u); frog.y = lerp(j.fy, j.ty, u) - Math.sin(u * Math.PI) * j.height; sy = 1.22; sx = .85; rot = j.flips * TAU * outCubic(u) + (j.tx > j.fx ? .25 : -.25) * Math.sin(u * Math.PI); }
+          else if (k < 1.5) { frog.x = j.tx; frog.y = j.ty; const u = (k - 1) / .5; sy = 1 - .3 * Math.sin(u * Math.PI) * (1 - u); sx = 1 + .2 * Math.sin(u * Math.PI) * (1 - u); if (!j.landed) { j.landed = 1; if (j.onLand) j.onLand(); } }
+          else { frog.jump = null; }
+        } else { sy = 1 - .12 * frog.crouch + Math.sin(t * 3) * .015; sx = 1 + .08 * frog.crouch; }
+        if (frog.sink) { frog.sink += dt; a = clamp(1 - frog.sink / .5); }
+        // la mouche : elle tourne au-dessus de la carte, puis se fait gober
+        if (fly.on) { fly.x = card.x + card.w * .75 + Math.cos(t * 2.3) * H * .5; fly.y = card.y - H * .95 + Math.sin(t * 4.6) * H * .18; co.globalAlpha = .6; co.fillStyle = '#e2e8f0'; const fl = Math.abs(Math.sin(t * 60)); co.beginPath(); co.ellipse(fly.x - 2.5, fly.y - 2, 2.5, 1.2 + 1.5 * fl, -.5, 0, TAU); co.ellipse(fly.x + 2.5, fly.y - 2, 2.5, 1.2 + 1.5 * fl, .5, 0, TAU); co.fill(); co.globalAlpha = 1; co.fillStyle = dark ? '#0f172a' : '#111827'; co.beginPath(); co.arc(fly.x, fly.y, 2.2, 0, TAU); co.fill(); }
+        tongue.run(dt, (g, k) => { const e = k < .5 ? outCubic(k * 2) : 1 - (k - .5) * 2, mx = frog.x, my = frog.y - S * .42, tx = lerp(mx, g.x, e), ty = lerp(my, g.y, e); co.globalAlpha = 1; co.strokeStyle = '#ec4899'; co.lineWidth = Math.max(2, S * .08); co.lineCap = 'round'; co.beginPath(); co.moveTo(mx, my); co.lineTo(tx, ty); co.stroke(); co.fillStyle = '#f472b6'; co.beginPath(); co.arc(tx, ty, S * .07, 0, TAU); co.fill(); if (k > .5) { fly.on = 0; co.fillStyle = '#111827'; co.beginPath(); co.arc(tx, ty, 2, 0, TAU); co.fill(); } });
+        const draw = () => drawFrog(frog.x, frog.y, S, sx, sy, rot, a);
+        if (frog.sink) behind(env, draw); else draw();
+        drops.step(dt);
+        co.fillStyle = dark ? '#a5f3fc' : '#0891b2';
+        drops.each((d, k) => { co.globalAlpha = 1 - k; co.beginPath(); co.arc(d.x, d.y, d.size, 0, TAU); co.fill(); });
+        // lucioles (Epic et plus)
+        if (glowBugs) for (let n = emit(glowBugs * 10 * q, dt); n > 0; n--) bugs.add({ x: cx + rnd(-1, 1) * (card.w * .5 + H), y: card.y + rnd(-.9, 1.2) * H, vx: rnd(-12, 12), vy: rnd(-22, -6), max: rnd(1.4, 2.4), seed: rnd(TAU) });
+        bugs.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        bugs.each((b, k) => { const tw = .5 + .5 * Math.sin(t * 8 + b.seed); dot(co, '#fde047', b.x + Math.sin(t * 2 + b.seed) * 6, b.y, 5 + 3 * tw, Math.sin(k * Math.PI) * (dark ? .9 : .7) * tw); });
+        co.globalCompositeOperation = 'source-over';
+        words.run(dt, (wd, k) => { const s = k < .15 ? outBack(k / .15) : 1; bWord(co, wd.s, cx, card.y - H * .85, H * wd.size * s, wd.c, '#14532d', k > .75 ? (1 - k) / .25 : 1, -.05); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) { ring(p, 0); return; }
+        const ty = card.y + 3;
+        hop(p.x, ty, .3, H * (o.last ? .75 : .5));
+        frog.jump.onLand = () => { ring(p, o.last); splash(p.x, card.y + 2, o.last ? 10 : 5, o.last ? 1 : 0); };
+      },
+      build() { frog.crouch = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        if (!p) { // elle glisse et tombe à l'eau, derrière la carte
+          hop(frog.x + H * .3, card.y + H * .9, .55, H * .2); frog.jump.onLand = () => { frog.sink = .01; ring({ x: frog.x, y: card.y + H * .8 }, 1); splash(frog.x, card.y + H * .2, 12, 1); };
+          words.add({ delay: .6, life: 1.4, s: 'plop', c: '#ccfbf1', size: .26 }); return;
+        }
+        tongue.add({ life: .3, x: fly.x, y: fly.y });
+        for (let i = 0; i < Math.round(3 + 9 * p) + 3 * asc; i++) { const a = along(card, (i + .5) / (Math.round(3 + 9 * p) + 3 * asc) + .05); lotus.add({ delay: .25 + i * .07, life: 2.4 + p + asc * .5, x: a.x, y: a.y + (a.y > card.y + card.h / 2 ? H * .15 : 0), s: H * rnd(.24, .34) }); }
+        if (p >= .6) glowBugs = .6 + .4 * p + .5 * asc;
+        if (p >= 1) {
+          const end = RIGHT;
+          frog.queued = { at: .45, go: () => { hop(end.x, end.y, 1.1, H * (1.5 + .3 * asc), 1); frog.jump.onLand = () => { for (let i = 0; i < 4; i++) ring({ x: card.x + card.w * (.15 + .23 * i), y: card.y + H * .6 }, 1, i * .1); splash(end.x, end.y, 16, 1); }; } };
+          words.add({ delay: 1.2, life: 2 + .4 * asc, s: 'RIBBIT!', c: '#bbf7d0', size: .3 });
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

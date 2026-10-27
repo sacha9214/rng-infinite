@@ -136,6 +136,7 @@
     { id: 'baseball', name: 'Baseball', emoji: '⚾', price: 1800, desc: 'Every digit is pitched in and lands with a thwack; a 0 turns into a baseball and a 1 into a bat, and Mythic rolls are a HOME RUN', idea: 'Kj13' }, // idée de Kj13 (finnnnn l'avait proposé aussi)
     { id: 'racecar', name: 'Race Car', emoji: '🏎️', price: 2400, desc: 'A race car drifts around your number and taps every digit into place; good rolls take a victory lap under the checkered flag', idea: 'whywhywaylon' }, // idée de whywhywaylon, dérive de logannn
     { id: 'domino', name: 'Domino', emoji: '🁫', price: 2200, desc: 'A velvet bag drops, dominoes tumble out and their dots turn into your digits; great rolls set off a domino chain', idea: 'kaz' }, // idée de kaz
+    { id: 'lilypad', name: 'Lily Pads', emoji: '🐸', price: 1500, desc: 'Six lily pads on a pond and a frog that hops onto every digit as it appears; Mythic rolls end in a giant leap', idea: 'casmicgraything' }, // idée de casmicgraything
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

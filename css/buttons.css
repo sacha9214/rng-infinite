@@ -1148,3 +1148,9 @@
   padding-inline: 2.4em; text-shadow: 0 0 .25em rgba(250, 250, 249, .45);
   --gs: 0 .3em 0 #5b3311, 0 .5em 1em rgba(22, 101, 52, .3); --gs-h: 0 .34em 0 #5b3311, 0 .7em 1.3em rgba(250, 204, 21, .3); --gs-a: 0 .06em 0 #5b3311; }
 .btn-roll.gen-domino:hover { filter: brightness(1.15); }
+/* Lily Pads (idée de casmicgraything, 2026-10-27) : une feuille de nénuphar sur l'eau verte de la mare. */
+.btn-roll.gen-lilypad { border: 2px solid #166534; border-radius: 999px; color: #fefce8;
+  background: radial-gradient(circle at 1.3em 50%, #86efac 0, #22c55e .4em, #15803d .62em, transparent .66em), linear-gradient(180deg, #115e59, #0f3d3a);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #14532d, 0 0 .3em rgba(20, 83, 45, .8);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .4); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-lilypad:hover { filter: brightness(1.1); }
