@@ -329,7 +329,10 @@ const carol = { playerId: 'd'.repeat(16), secret: '4'.repeat(32), name: 'Carol' 
 const dave = { playerId: 'e'.repeat(16), secret: '5'.repeat(32), name: 'Dave' };
 // À partir d'ici, horloge simulée qu'on avance à la main : les délais (8 s, 15 s, 30 s de présence) se comparent
 // toujours à la même horloge.
-let clock = 0;
+// Départ à 10:00 UTC (le jour même ou le lendemain) : la suite avance l'horloge de plusieurs heures, et lancée vers 22 h UTC
+// elle passait minuit au milieu d'un test (« les tirages du jour comptent déjà », bilan du casino du jour), 2026-10-27.
+const DAY_MS = 86400000, startAt = ((Number(process.env.TEST_START_HOUR || 10) * 3600000 - (realNow() % DAY_MS)) + DAY_MS) % DAY_MS;
+let clock = startAt;
 Date.now = () => realNow() + clock;
 const later = async (ms, fn) => { clock += ms; return fn(); };
 
@@ -1052,7 +1055,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(r.body).includes(w1.playerId) && !JSON.stringify(r.body).includes(w2.playerId), 'aucun id dans la salle');
   // Chacun a aussi gagné des pièces avec ses tirages du duel : on compare hors tirages (bonus − spent).
   // Hors Weekend Rush aussi : l'horloge des tests avance de plusieurs jours et peut tomber un samedi.
-  const net = who => { const [b, s2, rush] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent'], ['HGET', `stats:${who.playerId}`, 'rushBonus']]).map(x => Number(x.result) || 0); return b - s2 - rush; };
+  // Hors récompenses du mois (topCoins) : en fin de mois, l'horloge passe le 1er et le Top 1/5/10 est payé (2026-10-27).
+  const net = who => { const [b, s2, rush, top] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent'], ['HGET', `stats:${who.playerId}`, 'rushBonus'], ['HGET', `stats:${who.playerId}`, 'topCoins']]).map(x => Number(x.result) || 0); return b - s2 - rush - top; };
   assert.equal(net(stakedWinner), 2000 + 100, 'le gagnant récupère sa mise et prend celle de l\'autre');
   assert.equal(net(stakedLoser), 2000 - 100, 'le perdant perd sa mise');
   assert.equal(net(w1) + net(w2), 4000, 'aucune pièce créée ni détruite');
