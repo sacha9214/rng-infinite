@@ -942,6 +942,47 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.wall, null, 'gagné, pas affiché d\'office');
   r = await call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'wall', wall: r.body.walls[0] } });
   assert.equal(r.status, 200, 'un fond gagné se met comme un fond acheté');
+  // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
+  const bcase = Shop.caseById.get('buttons');
+  const bpool = Shop.casePool(bcase).map(b => b.id);
+  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.map(b => b.id).sort(), 'tous les boutons vendus à part');
+  assert.ok(bpool.includes('pickle'), 'le bouton Pickle (idée d\'Edward et de Dylanrulez123) est dedans');
+  const bev = Shop.caseOdds(bcase).reduce((x, o) => x + o.p * Shop.caseItem(bcase, o.id).price, 0);
+  assert.ok(bcase.price < bev && bcase.price / bev > 0.6 && bcase.price / bev < 0.85, `prix sous la valeur moyenne (${bcase.price} / ${bev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(bcase, 'arcade'), Shop.buttonById.get('arcade'), 'arcade : le bouton, pas le skin');
+  assert.deepEqual(['keycap', 'arcade', 'comic', 'hologram', 'royal'].map(id => Shop.caseRarity(bcase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  assert.equal(Shop.caseRarity(wcase, 'forest').name, 'Common', 'les fonds gardent leurs paliers');
+  for (const id of bpool) { const v = Shop.duplicateRefund(bcase, id); assert.ok(v >= bcase.price / 2 && v < bcase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('buttons') && !Shop.KEY_OPENS.starter.includes('buttons'), 'une clé Premium l\'ouvre');
+  const bobby = { playerId: 'c8'.repeat(8), secret: 'd8'.repeat(16), name: 'Bobby' };
+  assert.equal((await call(roll, { method: 'POST', body: bobby })).status, 200);
+  { const extra = (await coinsOf(bobby)) - (bcase.price - 1); if (extra > 0) run([['HINCRBY', `stats:${bobby.playerId}`, 'spent', extra]]); } // un bon premier tirage suffirait
+  assert.equal((await openCase(bobby, 'buttons')).status, 422, 'pas assez de pièces');
+  run([['HINCRBY', `stats:${bobby.playerId}`, 'bonus', 50000]]);
+  await new Promise(r => setTimeout(r, 20));
+  const bSkins = JSON.stringify((await call(shopApi, { url: `/api/shop?me=${bobby.playerId}` })).body.owned);
+  let bdups = 0, bnews = 0;
+  for (let i = 0; i < 40; i++) {
+    before = await coinsOf(bobby);
+    const [spent0, cases0] = run([['HGET', `stats:${bobby.playerId}`, 'spent'], ['HGET', `stats:${bobby.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(bobby, 'buttons');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(bpool.includes(r.body.won), 'un bouton de la caisse');
+    assert.ok(r.body.buttons.includes(r.body.won), 'ajouté aux boutons possédés');
+    assert.ok(run([['SISMEMBER', `btns:${bobby.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(bcase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - bcase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${bobby.playerId}`, 'spent'], ['HGET', `stats:${bobby.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [bcase.price - r.body.refund, 1, bcase.price - r.body.refund], 'spent, cases, eco');
+    r.body.duplicate ? bdups++ : bnews++;
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(bnews >= 4 && bnews <= bpool.length && bdups >= 1, `des nouveaux (${bnews}) et des doublons (${bdups})`);
+  assert.equal(JSON.stringify(r.body.owned), bSkins, 'aucun skin donné');
+  assert.deepEqual(r.body.walls || [], [], 'aucun fond donné');
+  r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'button', button: r.body.buttons[0] } });
+  assert.deepEqual([r.status, r.body.button], [200, r.body.buttons[0]], 'un bouton gagné s\'équipe comme un bouton acheté');
 
   // ============================================================== 23. Amis
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
@@ -1679,6 +1720,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     { const h = run([['HGET', `stats:${frank.playerId}`, 'gTeddy']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gTeddy'); }
     { const c = run([['HMGET', 'casino', 'r:teddy', 'b:teddy', 'w:teddy']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 203], 'compte de la maison par jeu'); }
     for (let k = 1; k <= G.TEDDY_MAX; k++) { const ev = (6 - k) / 6 * G.teddyMult(k); assert.ok(ev <= 0.97000001 && ev > 0.96, `teddy ${k} : ${ev}`); }
+  }
+  // Duck Race (idée de Deadshot, 2026-10-27) : six canards, le serveur tire tout l'ordre d'arrivée, une demande par course.
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    assert.deepEqual(G.DUCK_CHANCE, [30, 25, 18, 12, 10, 5]);
+    assert.deepEqual([0, 1, 2, 3, 4, 5].map(G.duckMult), [3.23, 3.88, 5.38, 8.08, 9.7, 19.4]);
+    for (let k = 0; k < 6; k++) { const ev = G.DUCK_CHANCE[k] / 100 * G.duckMult(k); assert.ok(ev <= 0.97000001 && ev > 0.96, `duck ${k} : ${ev}`); }
+    for (const d of [-1, 6, 1.5, 'x', null]) { assert.equal((await g(frank, 'duck', { bet: 100, duck: d })).status, 400, `canard ${d}`); await tick(); }
+    assert.equal((await g(frank, 'duck', { bet: 100 })).status, 400, 'sans canard'); await tick();
+    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'duck', { bet: bad, duck: 0 })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'duck', { bet: 100, duck: 0 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    // Tirage pondéré sans remise : u = 0 → le canard 0 gagne ; puis parmi les 70 restants, 69 → le dernier (canard 5)…
+    forced = [0, 69, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 100, duck: 0 });
+    assert.deepEqual([r.status, r.body.order, r.body.winner, r.body.won, r.body.mult, r.body.win, r.body.coins], [200, [0, 5, 1, 2, 3, 4], 0, true, 3.23, 323, 1223], JSON.stringify(r.body));
+    // u = 95 → l'outsider (canard 5, chances 95 à 99) gagne ; parié sur lui : ×19,40.
+    await tick(); forced = [95, 0, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 50, duck: 5 });
+    assert.deepEqual([r.body.order[0], r.body.won, r.body.win, r.body.coins], [5, true, 970, 2143]);
+    // u = 30 → le canard 1 gagne ; parié sur le 2 : perdu.
+    await tick(); forced = [30, 0, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 100, duck: 2 });
+    assert.deepEqual([r.body.order[0], r.body.won, r.body.win, r.body.coins, r.body.mult], [1, false, 0, 2043, 5.38]);
+    await tick();
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gDuck']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gDuck'); }
+    { const c = run([['HMGET', 'casino', 'r:duck', 'b:duck', 'w:duck']])[0].result.map(Number); assert.deepEqual(c, [3, 250, 1293], 'compte de la maison par jeu'); }
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes('const DUCK_W = [30, 25, 18, 12, 10, 5];') && src.includes('const dkCents = w => Math.floor(9700 / w + 1e-9);'), 'mêmes chances et multiplicateurs sur la page'); }
   }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
