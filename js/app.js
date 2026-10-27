@@ -602,7 +602,7 @@
     async load() {
       if (!Store.player.name) return null;
       if (Date.now() - this.at < 60000 && this.xp != null) return this;
-      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
       await this.busy;
       return this.xp != null ? this : null;
     },
@@ -1402,6 +1402,8 @@
     const sr = document.getElementById('st-rolls'), sl = document.getElementById('st-life');
     if (sr) { const v = sr.querySelector('.v'); if (v) v.textContent = fmt(life.rolls); }
     if (sl) { const v = sl.querySelector('.v'), sub = sl.querySelector('.s'); if (v) v.textContent = compact(life.xp); if (sub && life.rolls) sub.textContent = `${fmt(life.xp / life.rolls)} XP per roll`; }
+    // Nombres différents tirés (idée de jsand, 2026-10-27) : le compte du serveur remplace celui de l'appareil.
+    const su = document.getElementById('st-uniq'); if (su && life.uniq != null) su.textContent = uniqText(life.uniq);
   }
 
   function renderHome() {
@@ -1520,6 +1522,8 @@
             <span class="panel-note">${qs.doneToday ? 'All quests done today, come back tomorrow' : `Finish all ${state.quests.length} quests today (${claimed}/${state.quests.length}) for a bonus`}${qs.best ? ` · best: ${plural(qs.best, 'day')}` : ''}</span></span>
           ${qs.doneToday ? '<span class="quest-state">✓ Done</span>' : `<span class="quest-reward mono">+${fmt(qs.bonus)} 🪙</span>`}
         </div>`; })() : ''}
+        ${state.weekly ? weeklyQuestsHTML(state.weekly) : ''}
+        ${state.chest ? questChestHTML(state.chest) : ''}
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     // Sur grand écran, l'événement de la semaine passe sous la cagnotte (moins de choses empilées dans les quêtes).
@@ -1528,9 +1532,20 @@
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.tab = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
-      const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event]');
+      const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event], [data-wquest], [data-chest]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
+      // Quête de la semaine ou coffre des quêtes (idées de Tumored et Sean, 2026-10-27).
+      if (btn.dataset.wquest !== undefined || btn.dataset.chest !== undefined) {
+        const chest = btn.dataset.chest !== undefined;
+        try {
+          const next = await Online.questAction(chest ? 'chest' : 'wclaim', chest ? undefined : btn.dataset.wquest);
+          toast(chest ? `🎁 Quest chest opened! +${fmt(next.gained)} coins` : `🗓️ Weekly quest done! +${fmt(next.gained)} coins`, 4500, 'achv');
+          FX.celebrate(chest ? 'epic' : 'uncommon', slot); Sound.play('reveal', { small: 1 });
+          loadQuests(slot, next);
+        } catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       if (btn.dataset.event !== undefined) {
         try {
           const next = await Online.questAction('event');
@@ -1560,6 +1575,37 @@
         toast(err.status === 422 ? err.message : 'Quests unavailable right now, try again');
       }
     };
+  }
+
+  // Quêtes de la semaine (idée de Tumored, 2026-10-27) : 3 quêtes plus longues, changées le lundi 00:00 UTC.
+  function weeklyQuestsHTML(w) {
+    const left = Math.max(0, w.resetAt - Date.now());
+    const lt = left > 86400000 ? `New in ${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h` : `New in ${Math.max(1, Math.ceil(left / 3600000))} h`;
+    return `<div class="wq-head"><span class="eyebrow">🗓️ Weekly quests</span><span class="panel-note">${lt}</span></div>` + w.quests.map(q => {
+      const done = q.progress >= q.target;
+      return `
+          <div class="quest wq${q.claimed ? ' done' : ''}">
+            <span class="quest-emoji">${q.emoji}</span>
+            <span class="quest-text"><b>${esc(q.text)}</b>
+              <span class="quest-bar"><span style="width:${Math.min(100, (q.progress / q.target) * 100)}%"></span></span>
+              <span class="panel-note">${fmt(q.progress)} / ${fmt(q.target)}</span></span>
+            ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-wquest="${esc(q.id)}">+${fmt(q.reward)} 🪙</button>` : `<span class="quest-reward mono">${fmt(q.reward)} 🪙</span>`}
+          </div>`;
+    }).join('');
+  }
+  // Coffre des quêtes (idée de Sean, 2026-10-27) : jours où toutes les quêtes du jour ont été finies, coffres aux paliers.
+  function questChestHTML(ch) {
+    const next = ch.next, prev = [...ch.milestones].reverse().find(m => m.at <= ch.days), from = prev ? prev.at : 0;
+    const pct = next ? Math.min(100, ((ch.days - from) / Math.max(1, next.at - from)) * 100) : 100;
+    return `
+          <div class="quest qchest${ch.ready ? ' ready' : ''}">
+            <span class="quest-emoji">🎁</span>
+            <span class="quest-text"><b>Quest chest</b>
+              <span class="quest-bar"><span style="width:${pct}%"></span></span>
+              <span class="panel-note">${next ? `${fmt(ch.days)} / ${fmt(next.at)} days with all daily quests done` : `${fmt(ch.days)} days with all daily quests done`}</span>
+              <span class="qc-pips">${ch.milestones.map(m => `<span class="qc-pip mono${m.open ? ' open' : m.ready ? ' ready' : ''}" title="${m.at} days: ${fmt(m.coins)} coins">${m.open ? '✓ ' : ''}${m.at}</span>`).join('')}</span></span>
+            ${ch.ready ? `<button class="btn-roll small" data-chest>+${fmt(ch.coins)} 🪙</button>` : next ? `<span class="quest-reward mono">${fmt(next.coins)} 🪙</span>` : '<span class="quest-state">✓ All opened</span>'}
+          </div>`;
   }
 
   // Route des récompenses de niveau (2026-10-16) : du niveau d'avant jusqu'au prochain palier de 25, chaque niveau avec
@@ -2984,6 +3030,8 @@
   const legendHTML = (seriesLabel) => `<div class="legend"><span><i style="background:var(--chart-accent)"></i>${seriesLabel}</span><span><i class="line"></i>Expected</span></div>`;
   const tile = (label, value, sub) => `<div class="tile"><div class="l">${label}</div><div class="v">${value}</div><div class="s">${sub}</div></div>`;
 
+  // Nombres différents tirés (idée de jsand, 2026-10-27), sur les 1 000 001 possibles.
+  const uniqText = u => `${fmt(u)} (${(u / 10000.01).toFixed(u >= 10000 ? 1 : 3)}%)`;
   function renderStats() {
     setTimeout(fillServerLife, 0);
     currentView = 'stats';
@@ -3063,6 +3111,7 @@
             <div class="kv"><span class="k">Rolls since last Mythic or better</span><span class="v">${st.sinceMythic}</span></div>
             <div class="kv"><span class="k">Longest run without Rare+</span><span class="v">${fmt(st.longestDry)}</span></div>
             <div class="kv"><span class="k">Numbers rolled more than once</span><span class="v">${fmt(st.repeats)}</span></div>
+            <div class="kv"><span class="k">Different numbers rolled</span><span class="v" id="st-uniq" data-no-i18n>${uniqText(new Set(Store.rolls.map(r => Number(r[0]))).size)}</span></div>
             ${st.rarest ? `<div class="kv"><span class="k">Rarest badge found</span><span class="v" data-badge="${st.rarest}" style="cursor:pointer">${Engine.byId.get(st.rarest).emoji} ${oneIn(window.BADGE_ODDS[st.rarest])}</span></div>` : ''}
             <div class="kv"><span class="k">First roll</span><span class="v">${new Date(st.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
           </div>
@@ -3278,7 +3327,7 @@
           <div class="pf-stat"><span>All-time rank</span><b>${p.rank ? '#' + fmt(p.rank) : '–'}</b></div>
           <div class="pf-stat"><span>Badges</span><b>${found}<small>/${total}</small></b></div>
         </div>
-        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}</div>
+        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
       </section>
       <div class="lb-tabs pf-tabs" role="tablist" style="grid-template-columns:repeat(${TABS.length},1fr)">${TABS.map(([id, icon, label]) => `<button role="tab" data-ptab="${id}" class="${id === tab ? 'on' : ''}"><i aria-hidden="true">${icon}</i> ${label}</button>`).join('')}</div>
       <div class="pf-pane" data-pane="overview">
@@ -6171,7 +6220,7 @@
           <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
         <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
       // Économie
-      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', weekly: '🗓️ Weekly quests', chest: '🎁 Quest chests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
       const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
       const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
       const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
@@ -7627,9 +7676,9 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
+    const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
     lbState.tab = lbTabOf(lbState.period);
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -7637,7 +7686,7 @@
         <div class="lb-wrap">
           ${trophiesAsideHTML()}
           <div class="lb-card">
-            <div class="lb-tabs lb-tabs-5" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${lbState.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+            <div class="lb-tabs lb-tabs-${tabs.length}" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${lbState.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
             <div id="lb-list"><div class="empty">Loading…</div></div>
           </div>
         </div>
@@ -7697,7 +7746,7 @@
       return;
     }
     if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
-    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet' }[period];
+    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet', rolls: 'yet' }[period];
     const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
       return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
     // Poubelle : jour, semaine, mois ou tout le temps (idée d'Angelicide9, 2026-10-18).
@@ -7706,7 +7755,7 @@
     const spanBar = period === 'worst' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
     // Ma place, en tête de liste (idée de WpBejs, 2026-10-18 : voir son meilleur sur la Poubelle sans chercher).
     const me = data.entries.find(e => e.me) || data.mine;
-    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
+    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
     $('#lb-list').innerHTML = bestBar + spanBar + evHead + meBar + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
@@ -7726,6 +7775,14 @@
         <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
+      </div>`;
+    // Most rolls (idée de CrazyMiner22 et WpBejs, 2026-10-27) : tirages à vie, et l'XP à vie en petit.
+    if (lbState.period === 'rolls') return `
+      <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
+        <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-coins mono" title="Rolls">${fmt(e.count)}</span>
+        <span class="lb-rolls" title="Lifetime XP">${compactXp(e.xp)}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
@@ -8035,8 +8092,9 @@
   // coffre commun, chat, classement de la semaine et guerres 5 contre 5. Tout est décidé par le serveur ; la page relit
   // le chat et la guerre toutes les 5 s tant qu'elle est ouverte (sans toucher aux formulaires en cours).
   const clanTagHTML = c => (c && c.tag ? `<span class="cl-tag cl-c-${esc(c.c || c.tagc || 'plain')}" title="Clan ${esc(c.tag)}" data-no-i18n>[${esc(c.tag)}]</span>` : '');
-  const CL_ROLE = { leader: '👑 Leader', officer: '⭐ Officer', member: 'Member' };
-  const CL_RANK = { member: 1, officer: 2, leader: 3 };
+  // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
+  const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
+  const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
   let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false;
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
   const clanErr = err => toast([400, 403, 404, 409, 422, 429].includes(err.status) ? err.message : 'Clans unavailable right now, try again');
@@ -8081,7 +8139,8 @@
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">Clan leaderboard</h3><span class="panel-note">Ends in <span data-no-i18n>${ends}</span></span></div>
         <p class="panel-note cl-note">XP earned this week by all the members of each clan. The members of the #1 clan who rolled for it get the 🏯 Clan Champion title when the week ends (Monday 00:00 UTC).</p>
-        ${d.last ? `<p class="cl-last-week">🏯 Last week's champions: <b data-no-i18n>${esc(d.last.emoji)} ${esc(d.last.name)}</b> ${clanTagHTML(d.last)}</p>` : ''}
+        <p class="panel-note cl-note">🎖️ The member of the #1 clan who earned the most XP for it that week also gets the Clan MVP title.</p>
+        ${d.last ? `<p class="cl-last-week">🏯 Last week's champions: <b data-no-i18n>${esc(d.last.emoji)} ${esc(d.last.name)}</b> ${clanTagHTML(d.last)}${d.last.mvp ? ` <span class="cl-mvp">· 🎖️ <span>Clan MVP:</span> <a class="player-link" href="${profileHref(d.last.mvp)}" data-no-i18n>${esc(d.last.mvp)}</a></span>` : ''}</p>` : ''}
         ${d.clans.length ? `<ol class="cl-top">${d.clans.map(c => `<li class="cl-top-row"><span class="cl-rank" data-no-i18n>#${c.rank}</span>${clanCard(c)}</li>`).join('')}</ol>` : '<div class="empty">No clan has earned XP this week yet.</div>'}
       </div>`;
   }
@@ -8128,15 +8187,18 @@
     }
     const c = d.clan, role = d.me.role, leader = role === 'leader', p = d.prices;
     // Droits des officiers réglés par le chef (idée de kaz, 2026-10-26) : le serveur dit ce que je peux faire.
-    const can = d.me.can || {}, officer = CL_RANK[role] >= 2;
+    const can = d.me.can || {}, officer = CL_RANK[role] >= 2, coleader = CL_RANK[role] >= 3;
     const PERM_LABEL = { invite: '📨 Invite and accept requests', kick: '🥾 Kick members', upgrade: '🪙 Spend the vault on upgrades', war: '⚔️ Start and answer wars', edit: '✏️ Edit description and emoji' };
     const memberRow = m => {
       const acts = [];
       if (!m.me) {
-        if (leader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
-        if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
+        // Chef et co-chefs : membre ⇄ officier ; le chef seul : officier ⇄ co-chef, passer la main.
+        if (coleader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
+        if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make co-leader">🌟</button>`);
+        if (coleader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
+        if (leader && m.role === 'coleader') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to officer">⬇️</button>`);
         if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
-        if (leader || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
+        if (leader || (role === 'coleader' && ['officer', 'member'].includes(m.role)) || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
       }
       return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span>${Avatars.html(m.name, 'av-sm')}<a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
     };
@@ -8180,8 +8242,9 @@
       ${leader ? `<div class="panel">
         <div class="panel-head"><h3 class="panel-title">⭐ What officers can do</h3></div>
         <p class="panel-note cl-note">Only you can change this. You can always do everything.</p>
+        <p class="panel-note cl-note">🌟 Co-leaders can always do all of this, and also promote, demote and kick officers.</p>
         <div class="cl-perms">${Object.keys(PERM_LABEL).map(k => `<label class="cl-perm"><input type="checkbox" data-cl="perm" data-perm="${k}"${c.perms && c.perms[k] === false ? '' : ' checked'}><span>${PERM_LABEL[k]}</span></label>`).join('')}</div>
-      </div>` : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
+      </div>` : role === 'coleader' ? '<div class="panel"><p class="panel-note cl-note">🌟 Co-leaders can do everything officers can, even what the leader turned off for them, and also promote, demote and kick officers. Only the leader can disband the clan, pass the leadership or name co-leaders.</p></div>' : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
       <div class="panel cl-danger">
         ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
       </div>`;
@@ -8196,6 +8259,7 @@
     const line = {
       create: `🏯 ${n} <span>founded the clan</span>`, join: `👋 ${n} <span>joined</span>${by}`, leave: `🚪 ${n} <span>left</span>`, kick: `🥾 ${n} <span>was kicked</span>${by}`,
       promote: `⭐ ${n} <span>is now an officer</span>${by}`, demote: `⬇️ ${n} <span>is a member again</span>${by}`, leader: `👑 ${n} <span>is the new leader</span>${by}`,
+      colead: `🌟 ${n} <span>is now a co-leader</span>${by}`, uncolead: `⬇️ ${n} <span>is an officer again</span>${by}`,
       donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`, perms: `⭐ ${n} <span>changed what officers can do</span>`,
       buy: `${kind === 'slots' ? '🧱' : kind === 'banner' ? '🎨' : '🏷️'} ${n} <span>${kind === 'slots' ? 'bought 5 member slots' : kind === 'banner' ? 'changed the banner color' : 'changed the tag color'}</span> −${a(x.a)}`,
       stake: `⚔️ ${n} <span>put coins at stake against</span> ${tag} −${a(x.a)}`, refund: `↩️ <span>War stake returned</span> +${a(x.a)}`,
@@ -8241,7 +8305,7 @@
   function drawClanChat(d) {
     const list = $('#cl-chat'); if (!list) return;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
+    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
     if (html === clanChatSig) return;
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     clanChatSig = html; list.innerHTML = html;
@@ -8275,7 +8339,7 @@
     if (['request', 'join', 'ignore', 'unask'].includes(op)) { const d = await clanDo(op, { tag }, b); if (d && op === 'join') toast('Welcome to the clan!', 3000, 'achv'); if (d && op === 'request' && clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); return; }
     if (['accept', 'decline', 'promote', 'demote'].includes(op)) { clanDo(op, { name }, b); return; }
     if (op === 'kick' && confirm(T(`Kick ${name} from the clan?`))) { clanDo('kick', { name }, b); return; }
-    if (op === 'transfer' && confirm(T(`Make ${name} the clan leader? You will become an officer.`))) { clanDo('transfer', { name }, b); return; }
+    if (op === 'transfer' && confirm(T(`Make ${name} the clan leader? You will become a co-leader.`))) { clanDo('transfer', { name }, b); return; }
     if (op === 'leave' && confirm(T('Leave the clan?'))) { clanDo('leave', {}, b); return; }
     if (op === 'disband' && confirm(T('Disband the clan? The vault coins are lost and every member leaves.'))) { clanDo('disband', {}, b); return; }
     if (op === 'up-slots' && confirm(T('Spend vault coins on 5 more member slots?'))) { clanDo('upgrade', { what: 'slots' }, b); return; }
