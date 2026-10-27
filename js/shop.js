@@ -147,6 +147,14 @@
     // Idée de Jguz01 (2026-10-27 ; sur Discord, un bonhomme qui écrit les chiffres) : il passe en courant devant chaque chiffre.
     { id: 'stickman', name: 'Stickman', emoji: '🏃', price: 1600, desc: 'A doodled stick man sprints across a notebook page, and every digit gets written in marker as he runs past', idea: 'Jguz01' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
+    // Skins du 2026-10-27, lot B : idées de joueurs acceptées par Sacha.
+    { id: 'baseball', name: 'Baseball', emoji: '⚾', price: 1800, desc: 'Every digit is pitched in and lands with a thwack; a 0 turns into a baseball and a 1 into a bat, and Mythic rolls are a HOME RUN', idea: 'Kj13' }, // idée de Kj13 (finnnnn l'avait proposé aussi)
+    { id: 'racecar', name: 'Race Car', emoji: '🏎️', price: 2400, desc: 'A race car drifts around your number and taps every digit into place; good rolls take a victory lap under the checkered flag', idea: 'whywhywaylon' }, // idée de whywhywaylon, dérive de logannn
+    { id: 'domino', name: 'Domino', emoji: '🁫', price: 2200, desc: 'A velvet bag drops, dominoes tumble out and their dots turn into your digits; great rolls set off a domino chain', idea: 'kaz' }, // idée de kaz
+    { id: 'lilypad', name: 'Lily Pads', emoji: '🐸', price: 1500, desc: 'Six lily pads on a pond and a frog that hops onto every digit as it appears; Mythic rolls end in a giant leap', idea: 'casmicgraything' }, // idée de casmicgraything
+    { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
+    { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
+    { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

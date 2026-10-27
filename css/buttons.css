@@ -1175,3 +1175,47 @@
   background: linear-gradient(90deg, transparent 1.1em, rgba(239, 68, 68, .6) 1.1em 1.2em, transparent 1.2em), repeating-linear-gradient(180deg, transparent 0 .6em, rgba(96, 165, 250, .45) .6em .66em), #fdfbf3;
   --gs: 3px 4px 0 #1f2937; --gs-h: 4px 6px 0 #1f2937; --gs-a: 1px 1px 0 #1f2937; }
 .btn-roll.gen-stickman:hover { transform: rotate(-1deg) translateY(-1px); }
+
+/* ==== Skins du 2026-10-27, lot B ==== boutons assortis */
+/* Baseball (idée de Kj13, 2026-10-27) : le cuir crème d'une balle et ses coutures rouges sur les bords. */
+.btn-roll.gen-baseball { border: 2px solid #a8a29e; border-radius: 999px; color: #1e3a8a;
+  background: radial-gradient(ellipse 40% 140% at -8% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), radial-gradient(ellipse 40% 140% at 108% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), linear-gradient(180deg, #fbf8f1, #e5dcc6);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #78716c, 0 .5em 1em rgba(220, 38, 38, .2); --gs-h: 0 .34em 0 #78716c, 0 .7em 1.3em rgba(220, 38, 38, .35); --gs-a: 0 .06em 0 #78716c; }
+.btn-roll.gen-baseball:hover { filter: brightness(1.04); }
+/* Race Car (idée de whywhywaylon, 2026-10-27) : l'asphalte, un vibreur rouge et blanc dessous, un damier à gauche. */
+.btn-roll.gen-racecar { border: 2px solid #0b0b0f; border-radius: .5rem; color: #fff; font-style: italic;
+  background: repeating-linear-gradient(90deg, #dc2626 0 10px, #f8fafc 10px 20px) 0 100% / 100% 4px no-repeat, conic-gradient(#0b0b0f 25%, #f8fafc 0 50%, #0b0b0f 0 75%, #f8fafc 0) 0 0 / 10px 10px repeat-y, linear-gradient(180deg, #3f3f46, #18181b);
+  padding-left: 1.6em; text-shadow: .06em .06em 0 #dc2626, 0 0 .2em rgba(0, 0, 0, .6);
+  --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(220, 38, 38, .3); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(220, 38, 38, .45); --gs-a: 0 .06em 0 #7f1d1d; }
+.btn-roll.gen-racecar:hover { filter: brightness(1.12); }
+/* Domino (idée de kaz, 2026-10-27) : un domino noir laqué, trait du milieu, quelques points blancs. */
+.btn-roll.gen-domino { border: 2px solid #a16207; border-radius: .55rem; color: #fafaf9;
+  background: radial-gradient(circle at 1em 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at 1.6em 70%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1em) 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1.6em) 70%, #fafaf9 0 2.2px, transparent 2.8px), linear-gradient(160deg, #3f3f46, #111 45%, #0a0a0a);
+  padding-inline: 2.4em; text-shadow: 0 0 .25em rgba(250, 250, 249, .45);
+  --gs: 0 .3em 0 #5b3311, 0 .5em 1em rgba(22, 101, 52, .3); --gs-h: 0 .34em 0 #5b3311, 0 .7em 1.3em rgba(250, 204, 21, .3); --gs-a: 0 .06em 0 #5b3311; }
+.btn-roll.gen-domino:hover { filter: brightness(1.15); }
+/* Lily Pads (idée de casmicgraything, 2026-10-27) : une feuille de nénuphar sur l'eau verte de la mare. */
+.btn-roll.gen-lilypad { border: 2px solid #166534; border-radius: 999px; color: #fefce8;
+  background: radial-gradient(circle at 1.3em 50%, #86efac 0, #22c55e .4em, #15803d .62em, transparent .66em), linear-gradient(180deg, #115e59, #0f3d3a);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #14532d, 0 0 .3em rgba(20, 83, 45, .8);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .4); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-lilypad:hover { filter: brightness(1.1); }
+/* Ripple (idée de casmicgraything, 2026-10-27) : de l'eau profonde et deux ronds qui s'élargissent. */
+.btn-roll.gen-ripple { border: 2px solid #7dd3fc; border-radius: 999px; color: #ecfeff;
+  background: radial-gradient(ellipse 30% 60% at 50% 50%, transparent 60%, rgba(224, 242, 254, .45) 64%, transparent 70%), radial-gradient(ellipse 55% 110% at 50% 50%, transparent 72%, rgba(224, 242, 254, .25) 75%, transparent 80%), radial-gradient(ellipse 90% 120% at 50% 60%, #0e7490, #0c4a6e 70%, #082f49);
+  text-shadow: 0 1px 0 #082f49, 0 0 .3em rgba(103, 232, 249, .6);
+  --gs: 0 .3em 0 #082f49, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #082f49, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #082f49; }
+.btn-roll.gen-ripple:hover { filter: brightness(1.12); }
+/* Bullet Train (idée de yukitsunodaiscool, 2026-10-27) : le flanc blanc d'un train, sa bande bleue, le ciel rose derrière. */
+.btn-roll.gen-bullettrain { border: 2px solid #1d4ed8; border-radius: .6rem 2em 2em .6rem; color: #1e1b4b;
+  background: linear-gradient(180deg, transparent 68%, #1d4ed8 68% 80%, transparent 80%), linear-gradient(180deg, #ffffff, #e2e8f0 70%, #cbd5e1);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #f472b6, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #f472b6, 0 .7em 1.3em rgba(236, 72, 153, .45); --gs-a: 0 .06em 0 #f472b6; }
+.btn-roll.gen-bullettrain:hover { filter: brightness(1.05); }
+/* Orbital Cannon (idée de LEVIATHAN, 2026-10-27) : un écran de visée, grille cyan et coins de cible. */
+.btn-roll.gen-orbital { border: 2px solid #22d3ee; border-radius: .35rem; color: #cffafe; font-family: var(--font-mono); letter-spacing: .06em;
+  background: linear-gradient(90deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, radial-gradient(ellipse 70% 90% at 50% 50%, #0f2a3d, #05090f);
+  text-shadow: 0 0 .3em #22d3ee;
+  --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
+.btn-roll.gen-orbital:hover { filter: brightness(1.15); }
