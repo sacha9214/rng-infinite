@@ -5498,6 +5498,86 @@
     };
   };
 
+  // 🚄 Bullet Train (2026-10-27, idée de yukitsunodaiscool) — un ciel du soir sur un viaduc : un train à grande vitesse
+  // blanc et bleu file dans le bas de la carte (calque intérieur : il passe derrière les chiffres) et chaque chiffre
+  // surgit dans son sillage ; des pétales roses tombent autour de la carte et le passage du train les emporte. Avant le
+  // dernier chiffre, un phare approche ; à la révélation, un long train passe et soulève une tempête de pétales, et dès
+  // Mythic des mots japonais surgissent autour du nombre (すごい！, やった！, 神引き！…, « Japanese words pop up saying
+  // good roll and other compliments »).
+  SCENES.bullettrain = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, TY = h * .5, TH = h * .42;
+    const trains = [], petals = particles(), inner = particles(), streaks = particles(), words = timed(), emit = emitter(), emitIn = emitter(), emitS = emitter();
+    let wind = 0, lamp = 0, lampTo = 0, now = 0, storm = 0;
+    const JP = ['すごい！', 'やった！', '神引き！', '最高！', 'おめでとう！', 'いい引き！'];
+    const JPFONT = "900 SIZEpx 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', 'Noto Sans JP', 'Noto Sans CJK JP', system-ui, sans-serif";
+    const drawTrain = (c, nose, y, th, cars) => { // nose = x de la pointe ; le train s'étend vers la gauche
+      const carL = th * 3, noseL = th * 2.2, back = nose - noseL - cars * carL;
+      if (nose < -10 || back > w + 10) return;
+      const g = c.createLinearGradient(0, y, 0, y + th); g.addColorStop(0, '#ffffff'); g.addColorStop(.6, '#e2e8f0'); g.addColorStop(1, '#94a3b8');
+      c.globalAlpha = 1; c.fillStyle = g; c.beginPath(); c.moveTo(back, y + th * .12); c.lineTo(nose - noseL, y + th * .12); c.bezierCurveTo(nose - noseL * .35, y + th * .12, nose - th * .2, y + th * .5, nose, y + th * .88); c.lineTo(nose - th * .15, y + th); c.lineTo(back, y + th); c.closePath(); c.fill();
+      c.fillStyle = '#1d4ed8'; c.beginPath(); c.moveTo(back, y + th * .66); c.lineTo(nose - noseL * .5, y + th * .66); c.quadraticCurveTo(nose - th * .6, y + th * .7, nose - th * .25, y + th * .8); c.lineTo(nose - noseL * .5, y + th * .78); c.lineTo(back, y + th * .78); c.closePath(); c.fill();
+      c.fillStyle = '#1e293b'; c.fillRect(back, y + th * .3, nose - noseL - back, th * .2);
+      c.fillStyle = '#fde68a'; for (let x = back + th * .25; x < nose - noseL - th * .3; x += th * .62) c.fillRect(x, y + th * .33, th * .34, th * .14);
+      c.fillStyle = '#334155'; for (let i = 1; i <= cars; i++) c.fillRect(nose - noseL - i * carL, y + th * .12, 1.5, th * .88); // joints entre voitures
+      c.fillStyle = '#0f172a'; c.beginPath(); c.moveTo(nose - noseL * .95, y + th * .26); c.quadraticCurveTo(nose - noseL * .45, y + th * .27, nose - noseL * .32, y + th * .5); c.lineTo(nose - noseL * .95, y + th * .5); c.closePath(); c.fill();
+      dot(c, '#fef9c3', nose - th * .2, y + th * .8, th * .45, .9);
+    };
+    const petal = (c, x, y, s, rot, a) => { // un pétale de cerisier, encoché au bout
+      c.save(); c.globalAlpha = a; c.translate(x, y); c.rotate(rot); c.fillStyle = dark || c === ci ? '#f9a8d4' : '#f472b6'; // plus soutenu sur page claire
+      c.beginPath(); c.moveTo(0, -s); c.quadraticCurveTo(s * .9, -s * .2, 0, s); c.quadraticCurveTo(-s * .9, -s * .2, 0, -s); c.fill();
+      c.fillStyle = '#fbcfe8'; c.beginPath(); c.ellipse(0, -s * .1, s * .22, s * .5, 0, 0, TAU); c.fill();
+      c.restore();
+    };
+    const run = (noseAt, cars, speed) => { trains.push({ nose: noseAt, cars, v: speed }); wind = Math.max(wind, cars > 2 ? 1.6 : 1); };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        wind *= Math.exp(-dt * 2.2); storm *= Math.exp(-dt * .6);
+        lamp += (lampTo - lamp) * Math.min(1, dt * 4);
+        // pétales autour de la carte (derrière elle) et quelques-uns dans le ciel de la carte
+        for (let n = emit((5 + 30 * storm) * q, dt); n > 0; n--) petals.add({ x: rnd(card.x - H * 2, card.x + card.w + H * 1.5), y: card.y - H * rnd(1.2, 1.9), vx: rnd(-8, 12), vy: rnd(18, 40), max: rnd(3, 5), s: H * rnd(.05, .085), rot: rnd(TAU), spin: rnd(-3, 3), seed: rnd(TAU) });
+        for (let n = emitIn(1.5 * q, dt); n > 0; n--) inner.add({ x: rnd(0, w), y: -6, vx: rnd(-4, 8), vy: rnd(10, 20), max: rnd(3, 5), s: h * rnd(.04, .06), rot: rnd(TAU), spin: rnd(-2, 2), seed: rnd(TAU) });
+        const gust = p => { p.x += (wind * H * 3 + Math.sin(t * 1.7 + p.seed) * 10) * dt; p.rot += (p.spin + wind * 6) * dt; };
+        petals.step(dt); inner.step(dt); streaks.step(dt);
+        petals.each(gust); inner.each(gust);
+        behind(env, () => petals.each((p, k) => petal(co, p.x, p.y, p.s, p.rot, Math.min(1, (1 - k) * 4, k * 8) * (dark ? .85 : 1))), true);
+        inner.each((p, k) => petal(ci, p.x, p.y, p.s, p.rot, Math.min(1, (1 - k) * 4) * .7));
+        // le phare qui approche avant le dernier chiffre, au bout de la voie
+        if (lamp > .02) { ci.globalCompositeOperation = 'lighter'; dot(ci, '#fef9c3', w * .04, TY + TH * .8, TH * (1 + 2 * lamp), lamp * .8); dot(ci, '#fde68a', w * .04, TY + TH * .8, TH * .4, lamp); ci.globalCompositeOperation = 'source-over'; }
+        // les trains : dans la carte, sous les chiffres
+        for (let i = trains.length - 1; i >= 0; i--) { const tr = trains[i]; tr.nose += tr.v * dt; drawTrain(ci, tr.nose, TY, TH, tr.cars); if (tr.nose - TH * (2.2 + 3 * tr.cars) > w + 20) trains.splice(i, 1); }
+        ci.globalAlpha = 1;
+        // traits de vitesse de part et d'autre de la carte quand un train passe
+        for (let n = emitS(wind * 40 * q, dt); n > 0; n--) streaks.add({ x: card.x + rnd(-H * 1.4, card.w + H * .4), y: card.y + rnd(.15, 1) * H, vx: H * 9, vy: 0, max: .2, len: H * rnd(.4, 1) });
+        behind(env, () => { co.strokeStyle = dark ? '#e2e8f0' : '#64748b'; co.lineWidth = 1.2; streaks.each((s, k) => { co.globalAlpha = Math.sin(k * Math.PI) * .5; co.beginPath(); co.moveTo(s.x - s.len, s.y); co.lineTo(s.x, s.y); co.stroke(); }); }, true);
+        // les compliments japonais (Mythic et plus) : ils surgissent (élan, dépassement), flottent et s'effacent
+        words.run(dt, (wd, k) => { const s = k < .12 ? outBack(k / .12) : 1; bWord(co, wd.s, wd.x, wd.y - k * H * .25, H * wd.size * s, wd.c, '#831843', k > .78 ? (1 - k) / .22 : 1, wd.rot, JPFONT); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        if (o.last) lampTo = 0;
+        const ip = bInner(env, p), v = w * (o.last ? 3.6 : 3);
+        run(ip.x + v * .05, o.last ? 2 : 1, v); // la pointe vient de passer le chiffre : il surgit derrière elle
+      },
+      build() { lampTo = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        lampTo = 0;
+        if (!p) return;
+        run(-10, 3 + Math.round(2 * p), w * 2.4);
+        storm = .3 + 1.2 * p + .5 * asc;
+        for (let i = burst(p, 50 * q, 6); i > 0; i--) { const a = along(card, rnd()); petals.add({ x: a.x, y: a.y, vx: rnd(-40, 160), vy: rnd(-120, -20), drag: 1.5, max: rnd(1.5, 3), s: H * rnd(.05, .09), rot: rnd(TAU), spin: rnd(-6, 6), seed: rnd(TAU) }); }
+        if (p >= 1) {
+          const spots = [[-.62, -.55], [.62, -.6], [0, -.95], [-.85, .1], [.85, .15], [-.3, -1.25]];
+          const n = Math.min(JP.length, 3 + asc), order = JP.slice().sort(() => Math.random() - .5);
+          for (let i = 0; i < n; i++) { const [u, v] = spots[i]; words.add({ delay: .3 + i * .28, life: 2.2 + .3 * asc, s: order[i], x: cx + u * (card.w * .5 + H * .4), y: card.y + H * .5 + v * H, size: .34, rot: rnd(-.12, .12), c: ['#fdf2f8', '#fbcfe8', '#fde68a'][i % 3] }); }
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

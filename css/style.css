@@ -7636,3 +7636,44 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes rpl-roll { 0%, 100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-6px) rotate(-8deg); } }
 .room-stage.many .side-ripple::before, .room-stage.many .side-ripple::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-ripple::before, .side-ripple::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Bullet Train (idée de yukitsunodaiscool, 2026-10-27) :
+   un ciel du soir (lavande, rose, pêche), le soleil bas, une montagne enneigée au loin et le viaduc en bas de la carte ;
+   chiffres bleu nuit cernés de blanc (lisibles sur le ciel comme sur le train blanc qui passe derrière eux). Tirage :
+   ils sont soufflés, étirés à l'horizontale ; un chiffre qui se pose : il reste aplati derrière le train, puis surgit
+   dans son sillage, dépasse et se pose. Le train, les pétales et les mots japonais des Mythic : js/skinfx.js. */
+.num-card.skin-bullettrain {
+  background:
+    linear-gradient(180deg, transparent calc(100% - .13em), #475569 calc(100% - .13em) calc(100% - .1em), #94a3b8 calc(100% - .1em) calc(100% - .08em), #1e293b calc(100% - .08em)),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60' preserveAspectRatio='none'><path d='M0 60L30 44L55 50L100 14L140 46L170 38L200 48V60Z' fill='%237c6f9b' fill-opacity='.55'/><path d='M100 14L88 24L94 23L100 27L106 23L112 24Z' fill='%23fff' fill-opacity='.8'/></svg>") 50% 100% / 100% 72% no-repeat,
+    radial-gradient(circle at 80% 36%, #fff7ed 0 .16em, rgba(254, 215, 170, .55) .2em, transparent .6em),
+    linear-gradient(180deg, #c4b5fd 0%, #f9a8d4 46%, #fed7aa 100%);
+  border: 2px solid #1d4ed8; border-radius: .6rem; color: #1e1b4b;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35), 0 0 14px rgba(236, 72, 153, .22), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-bullettrain .slot { position: relative; z-index: 1; color: #1e1b4b; font-weight: 900;
+  text-shadow: .03em .03em 0 #fff, -.03em -.03em 0 #fff, .03em -.03em 0 #fff, -.03em .03em 0 #fff, 0 0 .12em rgba(255, 255, 255, .9); }
+.skin-bullettrain .slot.ghost { text-shadow: none; }
+.skin-bullettrain .slot.spinning { opacity: .6; animation: btr-gust .12s linear infinite; }
+.skin-bullettrain .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes btr-gust { from { transform: translateX(-.1em) scaleX(1.3); filter: blur(1px); } to { transform: translateX(.1em) scaleX(1.15); filter: blur(1.3px); } }
+.skin-bullettrain .slot.revealed { transform-origin: 50% 100%; animation: btr-pop .6s backwards; }
+@keyframes btr-pop {
+  0% { transform: translateY(.18em) scale(1.15, .2); filter: blur(1px); }
+  22% { transform: translateY(.18em) scale(1.15, .2); filter: blur(1px); animation-timing-function: cubic-bezier(.2, .8, .3, 1.2); }
+  40% { transform: translateY(-.14em) scale(.94, 1.14); filter: brightness(1.2); }
+  56% { transform: translateY(.03em) scale(1.04, .96); filter: none; }
+  72% { transform: translateY(-.015em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-bullettrain .slot { animation: none; } }
+/* Cadre de duel : le ciel du soir et le viaduc ; 🚄 file d'un bord à l'autre, 🌸 tombe en tournant. */
+.side-bullettrain { --side-border: #ec4899; --side-glow: 0 0 16px rgba(236, 72, 153, .28); --side-ink: #db2777;
+  --side-bg: linear-gradient(180deg, transparent calc(100% - 7px), rgba(71, 85, 105, .45) calc(100% - 7px)), linear-gradient(180deg, rgba(196, 181, 253, .22), rgba(249, 168, 212, .2) 55%, rgba(254, 215, 170, .22));
+  --deco-a: '🌸'; --deco-b: '🚄'; }
+.side-bullettrain::before { animation: btr-petal 2.6s ease-in-out infinite; }
+.side-bullettrain::after { animation: btr-dash 2.2s cubic-bezier(.7, 0, .3, 1) infinite; }
+@keyframes btr-petal { 0% { transform: translate(0, -4px) rotate(0); } 50% { transform: translate(5px, 4px) rotate(120deg); } 100% { transform: translate(0, -4px) rotate(360deg); } }
+@keyframes btr-dash { 0%, 30% { transform: translateX(-60px); opacity: 0; } 45% { opacity: .75; } 70%, 100% { transform: translateX(0); opacity: .75; } }
+.room-stage.many .side-bullettrain::before, .room-stage.many .side-bullettrain::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-bullettrain::before, .side-bullettrain::after { animation: none; } }

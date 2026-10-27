@@ -1160,3 +1160,9 @@
   text-shadow: 0 1px 0 #082f49, 0 0 .3em rgba(103, 232, 249, .6);
   --gs: 0 .3em 0 #082f49, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #082f49, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #082f49; }
 .btn-roll.gen-ripple:hover { filter: brightness(1.12); }
+/* Bullet Train (idée de yukitsunodaiscool, 2026-10-27) : le flanc blanc d'un train, sa bande bleue, le ciel rose derrière. */
+.btn-roll.gen-bullettrain { border: 2px solid #1d4ed8; border-radius: .6rem 2em 2em .6rem; color: #1e1b4b;
+  background: linear-gradient(180deg, transparent 68%, #1d4ed8 68% 80%, transparent 80%), linear-gradient(180deg, #ffffff, #e2e8f0 70%, #cbd5e1);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #f472b6, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #f472b6, 0 .7em 1.3em rgba(236, 72, 153, .45); --gs-a: 0 .06em 0 #f472b6; }
+.btn-roll.gen-bullettrain:hover { filter: brightness(1.05); }
