@@ -237,6 +237,10 @@ async function ownsPlayer(playerId, secret) {
 const historyKey = playerId => `hist:${playerId}`;
 const HISTORY_CAP = 100000;
 const XP_LB = 'lb:xp';
+// Classement « Most rolls » (idée de CrazyMiner22 et WpBejs, 2026-10-27) : id → nombre de tirages à vie (stats.rolls),
+// un membre par joueur comme lb:xp. Incrémenté à chaque tirage ; les anciens joueurs y sont versés par migrateRolls
+// (api/leaderboard.js).
+const ROLLS_LB = 'lb:rolls';
 
 // XP à vie et nombre de tirages recalculés depuis l'historique (mêmes doublons écartés que rebuildStats),
 // pour remplir lb:xp et count:all une fois (tirages faits avant le classement en ligne compris).
@@ -404,6 +408,11 @@ async function readStats(playerId) {
 // Compteurs du jour d'un joueur (voir js/quests.js), gardés 3 jours.
 const questKey = (day, playerId) => `q:${day}:${playerId}`;
 const QUEST_TTL = 3 * 86400;
+// Quêtes de la semaine (idée de Tumored, 2026-10-27) : compteurs de la semaine ISO d'un joueur (tirages, raretés Epic
+// et mieux, jours où toutes les quêtes du jour ont été finies), un hash de quelques champs par joueur actif, gardé 10 jours.
+const weekQuestKey = (week, playerId) => `qw:${week}:${playerId}`;
+const WEEK_QUEST_TTL = 10 * 86400;
+const WEEK_QUEST_TIERS = new Set(['epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite']);
 // Joueurs actifs d'un jour : hash identifiant → nombre de tirages ce jour-là, gardé 400 jours. Sert uniquement aux
 // totaux de la page Owner (actifs par jour, rétention par cohorte) ; jamais affiché par joueur.
 const actKey = day => `act:${day}`, ACT_TTL = 400 * 86400;
@@ -474,6 +483,7 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', statsKey(playerId), 'rolls', 1],
     // XP à vie (classement « Lifetime XP ») : la somme de tous ses tirages.
     ['ZINCRBY', XP_LB, s, playerId],
+    ['ZINCRBY', ROLLS_LB, 1, playerId],
     ['HINCRBY', statsKey(playerId), 'xpLife', s], // XP à vie dans les stats aussi : titres Centimillionaire / Billionaire
     ['HINCRBY', statsKey(playerId), `t:${a.tier}`, 1],
     // Compteurs du jour (quêtes) et dernière activité (liste d'amis).
@@ -481,6 +491,10 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', questKey(dayKey(t), playerId), 'xp', s],
     ['HINCRBY', questKey(dayKey(t), playerId), `t:${a.tier}`, 1],
     ['EXPIRE', questKey(dayKey(t), playerId), QUEST_TTL],
+    // Quêtes de la semaine : tirages et raretés Epic ou mieux (les seules que demandent les quêtes de la semaine).
+    ['HINCRBY', weekQuestKey(weekKey(t), playerId), 'rolls', 1],
+    ...(WEEK_QUEST_TIERS.has(a.tier) ? [['HINCRBY', weekQuestKey(weekKey(t), playerId), `t:${a.tier}`, 1]] : []),
+    ['EXPIRE', weekQuestKey(weekKey(t), playerId), WEEK_QUEST_TTL],
     ['ZADD', SEEN_KEY, t, playerId],
     // Activité par jour (page Owner : joueurs actifs, rétention) et date du tout premier tirage.
     ['HINCRBY', actKey(dayKey(t)), playerId, 1],
@@ -574,7 +588,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
-  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
+  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
