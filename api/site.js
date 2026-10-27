@@ -807,7 +807,8 @@ module.exports = async (req, res) => {
     }
     if (['fund', 'fundAdd', 'fundSet', 'fundAssign'].includes(body.action)) {
       const [raw, waiting] = await redis([['ZREVRANGE', FUND_LOG, 0, 49], ['HVALS', FUND_PENDING]]);
-      const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); });
+      // Date.now() comme les contributions (monthKey) : le test d'API, dont l'horloge avance de plusieurs jours, cassait en fin de mois (2026-10-27).
+      const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(Date.now()); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); });
       const totals = await redis(months.map(mo => ['HGETALL', fundKey(mo)]));
       return send(res, 200, { ...(await fundState()), readOnly: !isOwner, auto: !!process.env.KOFI_TOKEN || process.env.KOFI_RELAYED === '1', pending: (waiting || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => b.t - a.t), log: (raw || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean), months: months.map((mo, i) => ({ month: mo, cents: Number(toObject(totals[i]).cents) || 0, count: Number(toObject(totals[i]).count) || 0 })) });
     }
