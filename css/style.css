@@ -7382,3 +7382,54 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Lecture seule (viewer) : pas de boutons d'action dans les onglets Avatars et Chat (2026-10-26) */
 .o-readonly [data-av-ok], .o-readonly [data-av-no], .o-readonly [data-av-rm], .o-readonly .av-moves, .o-readonly [data-gc-mod], .o-readonly [data-gc-unmute], .o-readonly .gc-mod-add { display: none !important; }
 .o-readonly .ann-form, .o-readonly [data-ann-del] { display: none !important; }
+
+/* ---------------------------------------------------------------- chat global (2026-10-27) : réponses (idée de Niall),
+   emojis (Deadshot), grands tirages annoncés par le serveur (R77), message épinglé par le créateur (Big Sexy) */
+.gc-tools { margin-left: auto; display: inline-flex; align-items: center; gap: .1rem; }
+.gc-tools .gc-more { margin-left: 0; }
+.gc-quote { display: flex; gap: .35rem; align-items: baseline; width: 100%; min-width: 0; margin: .15rem 0 .1rem; padding: .2rem .5rem; border: 0; border-left: 3px solid var(--outline-strong); border-radius: 0 6px 6px 0; background: var(--surface-raised); color: var(--prose-2); font: inherit; font-size: .74rem; text-align: left; cursor: pointer; }
+.gc-quote:hover, .gc-quote:focus-visible { color: var(--prose); border-left-color: var(--chart-accent); }
+.gc-quote-name { flex: none; max-width: 45%; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-quote-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-quote-gone { font-style: italic; color: var(--prose-3); }
+.gc-flash { animation: gc-flash 1.4s ease-out; }
+@keyframes gc-flash { from { background: color-mix(in srgb, var(--chart-accent) 30%, transparent); } }
+/* Grand tirage : la matière de sa rareté (variables --t-* de [data-tier]), jamais confondu avec un message de joueur. */
+.gc-sys, .gc-msg.gc-sys:hover { background: linear-gradient(120deg, var(--t-from), var(--t-via) 55%, var(--t-to)); }
+.gc-sys { margin: .35rem 0; padding: .4rem .55rem; border: 1px solid var(--t-border); color: var(--t-text); box-shadow: 0 0 10px color-mix(in srgb, var(--t-border) 35%, transparent); }
+.gc-sys-line { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; margin: 0; font-size: .84rem; line-height: 1.35; min-width: 0; }
+.gc-sys .gc-name { color: inherit; }
+.gc-sys .gc-time { color: inherit; opacity: .75; }
+.gc-sys-num { border: 0; background: none; padding: 0; color: inherit; font: 800 .95rem var(--font-mono); letter-spacing: .02em; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.gc-sys .pill { font-size: .66rem; }
+/* Message épinglé : en haut de la liste ; replié sur une ligne sur téléphone (▾ pour tout lire). */
+.gc-pin { display: flex; align-items: flex-start; gap: .35rem; min-width: 0; padding: .4rem .6rem .4rem .7rem; border-bottom: 1px solid var(--outline); background: color-mix(in srgb, #f5b301 10%, var(--surface)); font-size: .8rem; }
+.gc-pin[hidden] { display: none; }
+.gc-pin-ic { flex: none; line-height: 1.5; }
+.gc-pin-body { flex: 1; min-width: 0; max-height: 8.5em; overflow-y: auto; border: 0; background: none; padding: 0; color: var(--prose); font: inherit; line-height: 1.45; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.gc-pin-label { margin-right: .2rem; font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); }
+.gc-pin .pill { font-size: .62rem; }
+.gc-pin-more, .gc-pin-x { flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--surface-raised); color: var(--prose-2); font-size: .9rem; line-height: 1; cursor: pointer; }
+.gc-pin-more:hover, .gc-pin-x:hover { color: var(--prose); }
+.gc-pin-more { display: none; }
+@media (max-width: 900px) {
+  .gc-pin-more { display: inline-block; }
+  .gc-pin.shut .gc-pin-body { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Réponse en cours et grille d'emojis, au-dessus du champ. */
+.gc-replying { display: flex; align-items: center; gap: .4rem; min-width: 0; margin: 0 0 .4rem; padding: .25rem .25rem .25rem .55rem; border-left: 3px solid var(--chart-accent); border-radius: 0 8px 8px 0; background: var(--surface-raised); color: var(--prose-2); font-size: .76rem; }
+.gc-replying[hidden] { display: none; }
+.gc-replying-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-emo-btn { flex: none; width: 40px; border: 1px solid var(--outline); border-radius: 10px; background: var(--surface); font-size: 1.15rem; line-height: 1; cursor: pointer; }
+.gc-emo-btn[aria-expanded="true"] { background: var(--surface-raised); border-color: var(--outline-strong); }
+.gc-emojis { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .1rem; max-height: 9.6rem; overflow-y: auto; margin: 0 0 .45rem; padding: .3rem; border: 1px solid var(--outline); border-radius: 10px; background: var(--surface-dim); }
+.gc-emojis[hidden] { display: none; }
+.gc-emojis button { min-width: 0; height: 36px; border: 0; border-radius: 8px; background: none; font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.gc-emojis button:hover, .gc-emojis button:focus-visible { background: var(--surface-raised); }
+/* « About me » (idée de Niall, 2026-10-27) : champ des réglages, ligne du profil, effacement par le créateur. */
+.bio-form { display: flex; gap: .4rem; }
+.bio-form .input { flex: 1; min-width: 0; text-align: left; text-transform: none; letter-spacing: 0; }
+.pf-bio { margin: .35rem 0 0; font-size: .92rem; line-height: 1.4; overflow-wrap: anywhere; }
+.pf-bio-edit { border: 0; background: none; padding: 0 .2rem; color: var(--prose-3); font: inherit; font-size: .78rem; cursor: pointer; }
+.pf-bio-edit:hover { color: var(--prose); }
+.o-readonly .bio-clear-form, .o-readonly [data-bio-clear] { display: none !important; }

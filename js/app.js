@@ -168,6 +168,11 @@
       const p = Store.player;
       return this.request('/api/profile', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'avatar', op, ...extra }) });
     },
+    // « About me » (idée de Niall, 2026-10-27 ; api/_bio.js par /api/profile) : écrire le sien, signaler, effacer (créateur).
+    bio(op, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/profile', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'bio', op, ...extra }) });
+    },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
     discord(action = 'state', extra = {}) {
       const p = Store.player;
@@ -1193,6 +1198,7 @@
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${Store.player.name ? avatarFieldHTML() : ''}
+      ${Store.player.name ? bioFieldHTML() : ''}
       ${googleAccountHTML()}
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
@@ -1237,6 +1243,7 @@
       if (googleOut) googleOut.addEventListener('click', signOutGoogle);
       bindPassword(m);
       bindAvatarField(m);
+      bindBioField(m);
       m.querySelectorAll('[data-seg]').forEach(group => {
         group.addEventListener('click', e => {
           const btn = e.target.closest('button');
@@ -1304,6 +1311,25 @@
         toast('History cleared');
         route();
       });
+    });
+  }
+
+  // « About me » dans les réglages (idée de Niall, 2026-10-27) : une ligne de 80 caractères montrée sur le profil. Le
+  // serveur (api/_bio.js) la passe au filtre du chat global ; un champ vide l'efface.
+  function bioFieldHTML() {
+    return `<div class="field"><label for="set-bio">About me</label>
+      <form class="bio-form" id="set-bio-form"><input class="input" id="set-bio" maxlength="80" autocomplete="off" placeholder="A few words about you" aria-label="About me" disabled><button class="btn" type="submit" disabled>Save</button></form>
+      <span class="panel-note">Shown on your profile. 80 characters, no links or personal info.</span></div>`;
+  }
+  function bindBioField(m) {
+    const form = m.querySelector('#set-bio-form'); if (!form) return;
+    const input = form.querySelector('#set-bio'), btn = form.querySelector('button');
+    Online.profile(Store.player.name, true).then(p => { input.value = p.bio || ''; }).catch(() => {}).finally(() => { input.disabled = false; btn.disabled = false; });
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); btn.disabled = true;
+      try { const r = await Online.bio('set', { text: input.value }); input.value = r.bio || ''; toast(r.bio ? 'About me saved' : 'About me removed'); }
+      catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); }
+      finally { btn.disabled = false; }
     });
   }
 
@@ -3264,8 +3290,9 @@
         <div class="pf-id">
           <div class="pf-name">${Avatars.html(p.name, 'av-lg')}<span>${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</span></div>
           <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
+          ${p.bio || me ? `<p class="pf-bio">${p.bio ? `<span data-no-i18n>${esc(p.bio)}</span>` : '<span class="muted">No "About me" yet.</span>'}${me ? ' <button type="button" class="pf-bio-edit" id="p-bio-edit">✏️ Edit</button>' : ''}</p>` : ''}
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
-          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}`}</div>
+          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}${Store.player.name && p.bio ? '<button class="btn ghost small" id="p-bio-report" title="Report this About me">🚩 Report About me</button>' : ''}`}</div>
         </div>
         <div class="pf-best">
           ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
@@ -3321,6 +3348,14 @@
     };
     showTab(tab);
     $('#p-body').querySelector('.pf-tabs').addEventListener('click', e => { const b = e.target.closest('[data-ptab]'); if (b) showTab(b.dataset.ptab); });
+    // « About me » (idée de Niall, 2026-10-27) : le sien se modifie dans les réglages ; celui d'un autre se signale.
+    const bioEdit = $('#p-bio-edit'); if (bioEdit) bioEdit.addEventListener('click', () => { openSettings(); const f = $('#set-bio'); if (f) f.scrollIntoView({ block: 'center' }); });
+    const bioReport = $('#p-bio-report');
+    if (bioReport) bioReport.addEventListener('click', async () => {
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t('Report this About me to the creator?') : 'Report this About me to the creator?')) return;
+      bioReport.disabled = true;
+      try { const r = await Online.bio('report', { name: p.name }); toast(r.already ? 'Already reported' : 'Thanks, the creator will look at it'); } catch (err) { bioReport.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
     const avReport = $('#p-av-report');
     if (avReport) avReport.addEventListener('click', async () => {
       if (!confirm(window.RNGI18n ? window.RNGI18n.t('Report this profile picture to the creator?') : 'Report this profile picture to the creator?')) return;
@@ -6284,11 +6319,17 @@
       const row = r => `<div class="o-report${r.done ? ' done' : ''}">
         <div class="o-report-head">${who(r.author)}${r.against > 1 ? ` <span class="o-chip warn">${r.against} reports</span>` : ''}<span class="panel-note">${esc(r.where)} · ${relTime(r.msgT)} · reported by ${who(r.reporter)}</span></div>
         <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
-        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}`}</div>`;
+        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}${r.where === 'about me' ? ` <button class="btn ghost small" data-bio-clear="${esc(r.author)}">🗑️ Clear About me</button>` : ''}`}</div>`;
       pane('reports').innerHTML = panel('Reported messages', `${fmt(open.length)} to look at · messages players reported from duel chats and private messages`,
         d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
     };
     Online.site('reports').then(drawReports).catch(err => { if (pane('reports')) pane('reports').innerHTML = denied(err); });
+    // « About me » signalé ou trouvé (idée de Niall, 2026-10-27) : le créateur l'efface, par pseudo (onglets Reports et Chat).
+    const clearBio = name => {
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t(`Clear the About me of ${name}?`) : `Clear the About me of ${name}?`)) return Promise.resolve(false);
+      return Online.bio('clear', { name }).then(() => { toast('About me cleared'); return true; }).catch(err => { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); return false; });
+    };
+    if (pane('reports')) pane('reports').addEventListener('click', e => { const b = e.target.closest('[data-bio-clear]'); if (b && currentView === 'owner') { b.disabled = true; clearBio(b.dataset.bioClear).then(ok => { if (!ok) b.disabled = false; }); } });
     // ---- Photos de profil (api/_avatar.js, 2026-10-26) : à valider avant que quiconque les voie ; retrait possible ensuite.
     let avQ = '';
     const avImg = u => (API_BASE || API_SAME) + u;
@@ -6347,7 +6388,8 @@
       box.innerHTML = panel('Chat moderators', 'they can delete messages and mute players in the global chat', `
           <div class="im-managers">${d.mods.map(n => `<span class="chip"><span data-no-i18n>${esc(n)}</span> <button class="im-x" data-gc-mod="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
           <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
-        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>');
+        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>')
+        + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'));
     };
     const chatRun = (action, extra) => Online.global(action, extra).then(d => { drawChat(d); guest(d.readOnly); });
     chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
@@ -6358,6 +6400,8 @@
       const rm = e.target.closest('[data-gc-mod]'); if (rm && confirm(window.RNGI18n ? window.RNGI18n.t('Remove this moderator?') : 'Remove this moderator?')) chatRun('gcModSet', { name: rm.dataset.gcMod, on: false }).catch(err => toast(err.message || 'Unavailable right now, try again'));
     });
     pane('chat').addEventListener('submit', e => {
+      const bf = e.target.closest('.bio-clear-form');
+      if (bf && currentView === 'owner') { e.preventDefault(); const n = bf.elements.name.value.trim(); if (n) clearBio(n).then(ok => { if (ok) bf.elements.name.value = ''; }); return; }
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
@@ -8415,19 +8459,21 @@
   // Les messages sont du texte échappé (esc), marqués data-no-i18n (pseudos : .player-link) : jamais de HTML d'un joueur, jamais traduits.
   const GChat = {
     open: false, timer: 0, msgs: [], rev: null, del: 0, me: null, busy: false, menu: null,
+    reply: null, pin: null, emojiOpen: false, // réponse en cours (Niall), message épinglé (Big Sexy), emojis (Deadshot), 2026-10-27
     el: null,
     mount() {
       if (this.el) return this.el;
       const el = document.createElement('section');
       el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
       el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+        <div class="gc-pin" hidden></div>
         <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
         <footer class="gc-foot"></footer>`;
       document.body.appendChild(el);
       el.querySelector('.gc-close').addEventListener('click', () => this.close());
       el.addEventListener('click', e => this.onClick(e));
       el.addEventListener('submit', e => { e.preventDefault(); this.send(); });
-      el.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
+      el.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (this.emojiOpen) this.toggleEmoji(false); else if (this.reply) this.setReply(null); else this.close(); });
       this.el = el;
       return el;
     },
@@ -8493,6 +8539,7 @@
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
+      if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
       if (d.same) return;
       this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
       this.drawList();
@@ -8501,24 +8548,97 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           <div class="gc-meta">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
 ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
-            ${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
-          <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
-          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+            <span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></div>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
+    },
+    // Grand tirage annoncé par le serveur (idée de R77, 2026-10-27) : aux couleurs de sa rareté, sans auteur ni texte libre ;
+    // ni réponse, ni signalement : seuls les modérateurs ont un menu (supprimer), et le créateur peut l'épingler.
+    group: n => String(n).padStart(6, '0').replace(/\B(?=(\d{3})+$)/g, ' '),
+    sysHTML(m, me, time) {
+      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}">
+          <p class="gc-sys-line"><span class="gc-sys-ic" aria-hidden="true">🎉</span> <a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a> <span>rolled</span> <button type="button" class="gc-sys-num mono" data-number="${Number(m.n)}" data-owner="${esc(m.name)}" data-no-i18n title="See its badges">${this.group(m.n)}</button> ${tierPill(m.tier)}
+            <time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
+            ${me.mod || me.owner ? '<span class="gc-tools"><button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button></span>' : ''}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${me.mod ? '<button data-gc="delete">🗑️ Delete</button>' : ''}${this.pinBtn(m, me)}</div>` : ''}
+        </div>`;
+    },
+    // Citation d'une réponse (idée de Niall, 2026-10-27) : un clic remonte à l'original s'il est encore chargé. Le serveur
+    // n'envoie jamais le texte d'un message supprimé (« deleted message »).
+    quoteHTML(re) {
+      return `<button type="button" class="gc-quote" data-gc-jump="${esc(re.id)}" title="Show the message"><span class="gc-quote-name" data-no-i18n>↩ ${esc(re.name)}</span>${re.gone ? '<span class="gc-quote-text gc-quote-gone">deleted message</span>' : `<span class="gc-quote-text" data-no-i18n>${esc(re.text)}</span>`}</button>`;
+    },
+    // Épingler (le créateur seul, idée de Big Sexy, 2026-10-27).
+    pinBtn(m, me) { return me.owner ? (this.pin && this.pin.id === m.id ? '<button data-gc="unpin">📌 Unpin</button>' : '<button data-gc="pin">📌 Pin</button>') : ''; },
+    // Bandeau épinglé en haut de la liste, pour tout le monde. Sur téléphone il se replie sur une ligne (▾ pour tout lire).
+    pinShut: null,
+    drawPin() {
+      const box = this.el && this.el.querySelector('.gc-pin'); if (!box) return;
+      const p = this.pin; box.hidden = !p;
+      if (!p) { box.innerHTML = ''; return; }
+      if (!this.pinShut || this.pinShut.id !== p.id) this.pinShut = { id: p.id, on: true };
+      const body = p.sys ? `🎉 <b data-no-i18n>${esc(p.name)}</b> <span>rolled</span> <b class="mono" data-no-i18n>${this.group(p.n)}</b> ${tierPill(p.tier)}`
+        : `<b class="gc-pin-name" data-no-i18n>${esc(p.name)}</b> <span data-no-i18n>${esc(p.text)}</span>`;
+      box.classList.toggle('shut', this.pinShut.on);
+      box.innerHTML = `<span class="gc-pin-ic" aria-hidden="true">📌</span>
+        <button type="button" class="gc-pin-body" data-gc-pin-go title="Pinned message"><span class="gc-pin-label">Pinned</span> ${body}</button>
+        <button type="button" class="gc-pin-more" data-gc-pin-more aria-expanded="${!this.pinShut.on}" aria-label="${this.pinShut.on ? 'Show all' : 'Show less'}" title="${this.pinShut.on ? 'Show all' : 'Show less'}">${this.pinShut.on ? '▾' : '▴'}</button>
+        ${(this.me || {}).owner ? '<button type="button" class="gc-pin-x" data-gc-unpin aria-label="Unpin" title="Unpin">×</button>' : ''}`;
+    },
+    // Remonter à un message (citation, épinglé) : seulement s'il est encore dans les 100 chargés.
+    jump(id) {
+      const box = this.list(), row = box.querySelector(`.gc-msg[data-id="${CSS.escape(String(id))}"]`);
+      if (!row) { toast('This message is no longer in the chat'); return; }
+      const top = box.scrollTop + row.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - row.offsetHeight) / 2;
+      box.scrollTo({ top: Math.max(0, top), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      row.classList.remove('gc-flash'); void row.offsetWidth; row.classList.add('gc-flash');
+    },
+    // Répondre : un bandeau « Replying to … » au-dessus du champ, × pour annuler.
+    setReply(r) {
+      this.reply = r;
+      const bar = this.el.querySelector('.gc-replying'); if (!bar) return;
+      bar.hidden = !r;
+      bar.innerHTML = r ? `<span class="gc-replying-text"><span>Replying to</span> <b data-no-i18n>${esc(r.name)}</b> <span class="gc-quote-text" data-no-i18n>${esc(r.text)}</span></span><button type="button" class="gc-pin-x" data-gc-unreply aria-label="Cancel the reply" title="Cancel the reply">×</button>` : '';
+      const input = this.el.querySelector('.gc-input');
+      if (r && input && !matchMedia('(pointer: coarse)').matches) input.focus();
+    },
+    // Emojis (idée de Deadshot, 2026-10-27) : une grille choisie à la main (pas d'emoji composé, pas de marque), insérés à
+    // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
+    EMOJIS: ['😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    toggleEmoji(on = !this.emojiOpen) {
+      this.emojiOpen = on;
+      const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');
+      if (grid) grid.hidden = !on;
+      if (btn) btn.setAttribute('aria-expanded', String(on));
+    },
+    insertEmoji(e) {
+      const i = this.el.querySelector('.gc-input'); if (!i) return;
+      if (i.value.length + e.length > (i.maxLength > 0 ? i.maxLength : 200)) { toast('Your message is full'); return; }
+      const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
+      i.value = i.value.slice(0, a) + e + i.value.slice(b);
+      const pos = a + e.length;
+      // Sur téléphone, pas de focus : le clavier cacherait la grille.
+      if (!matchMedia('(pointer: coarse)').matches) i.focus();
+      try { i.setSelectionRange(pos, pos); } catch (err) { /* champ caché */ }
     },
     // Pied du panneau : la zone d'écriture, ou pourquoi on ne peut pas écrire (Google, tirages, silence).
     drawFoot() {
       const foot = this.el.querySelector('.gc-foot'), me = this.me;
       const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
       if (me && me.can) {
-        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        foot.innerHTML = `<div class="gc-replying" hidden></div>
+          <div class="gc-emojis" hidden role="group" aria-label="Emoji">${this.EMOJIS.map(e => `<button type="button" data-emoji="${e}" aria-label="${e}">${e}</button>`).join('')}</div>
+          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
+        this.setReply(this.reply); this.toggleEmoji(this.emojiOpen);
         return;
       }
+      this.reply = null; this.emojiOpen = false;
       const why = !me || !Store.player.name ? 'Pick a player name and make 100 rolls to write here.'
         : me.reason === 'muted' ? (me.mutedUntil < 0 ? '🔇 You can no longer write in the chat.' : `🔇 You are muted until ${fullDate(me.mutedUntil)}.`)
         : me.reason === 'google' ? `To write here, link a Google account (⚙️ Settings) and make ${me.need} rolls.`
@@ -8530,18 +8650,33 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
       const text = input.value.trim(); if (!text) return;
       this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
       try {
-        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del }));
-        input.value = ''; this.list().scrollTop = this.list().scrollHeight;
-      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll(); }
+        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del, ...(this.reply ? { replyTo: this.reply.id } : {}) }));
+        input.value = ''; this.list().scrollTop = this.list().scrollHeight; this.setReply(null); this.toggleEmoji(false);
+      } catch (err) {
+        toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll();
+        if (err.status === 404 && this.reply) this.setReply(null); // l'original vient d'être supprimé : le message reste à envoyer
+      }
       finally { this.busy = false; btn.disabled = false; }
     },
     async onClick(e) {
+      // Citation, épinglé, emojis, réponse annulée (2026-10-27).
+      const jump = e.target.closest('[data-gc-jump]'); if (jump) { this.jump(jump.dataset.gcJump); return; }
+      if (e.target.closest('[data-gc-pin-go]')) { if (this.pin) this.jump(this.pin.id); return; }
+      if (e.target.closest('[data-gc-pin-more]')) { if (this.pinShut) this.pinShut.on = !this.pinShut.on; this.drawPin(); return; }
+      if (e.target.closest('[data-gc-unpin]')) { try { this.apply(await Online.global('gcUnpin')); toast('Unpinned'); } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); } return; }
+      if (e.target.closest('[data-gc-unreply]')) { this.setReply(null); return; }
+      const emo = e.target.closest('[data-emoji]'); if (emo) { this.insertEmoji(emo.dataset.emoji); return; }
+      if (e.target.closest('[data-gc-emoji]')) { this.toggleEmoji(); return; }
+      if (this.emojiOpen && !e.target.closest('.gc-emojis, .gc-input')) this.toggleEmoji(false);
       const menu = e.target.closest('[data-gc-menu]');
       if (menu) { const id = menu.closest('.gc-msg').dataset.id; this.menu = this.menu === id ? null : id; this.drawList(); return; }
       const b = e.target.closest('[data-gc]'); if (!b) return;
       if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
       const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+      // Répondre (idée de Niall, 2026-10-27) : le bandeau montre à qui ; le serveur garde la référence.
+      if (b.dataset.gc === 'reply') { const m = this.msgs.find(x => x.id === id); if (m && !m.sys) this.setReply({ id, name: m.name, text: m.text }); return; }
       try {
+        if (b.dataset.gc === 'pin' || b.dataset.gc === 'unpin') { this.apply(await Online.global(b.dataset.gc === 'pin' ? 'gcPin' : 'gcUnpin', { id })); toast(b.dataset.gc === 'pin' ? 'Pinned' : 'Unpinned'); } else
         // Modifier son message, 5 minutes (idée de daddy finger, 2026-10-26) : le serveur rejoue tous les filtres.
         if (b.dataset.gc === 'edit') {
           const m = this.msgs.find(x => x.id === id); if (!m) return;
