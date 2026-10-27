@@ -5592,6 +5592,67 @@
     };
   };
 
+  // 📜 Torn Paper (2026-10-27, idée de 17black) — à chaque chiffre posé, le kraft arraché de sa fenêtre s'envole en
+  // lambeaux (bords blancs fibreux, ils tournent et retombent), avec quelques fibres ; le dernier part en gros morceaux.
+  // Avant le dernier chiffre, le papier frémit : de petits copeaux de kraft voltigent. Révélation : tirage raté, un seul
+  // lambeau descend en se balançant comme une feuille ; sinon des confettis de papier ; dès Epic, des lambeaux jaillissent
+  // tout autour ; dès Mythic, l'emballage entier de la carte éclate en grands morceaux de kraft et une pluie de confettis
+  // de papier de couleur tombe en tournoyant.
+  SCENES.tornpaper = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const scraps = particles(), bits = particles(), confetti = particles(), leaves = particles();
+    const KRAFT = ['#d4ad74', '#c49a5f', '#b5874d', '#caa067'];
+    let t = 0, build = 0;
+    // un lambeau : un polygone irrégulier, bord blanc fibreux dessiné au trait
+    const shape = r => { const n = 6 + ((Math.random() * 4) | 0), pts = []; for (let i = 0; i < n; i++) { const a = (i / n) * TAU + rnd(-.25, .25), rr = r * rnd(.55, 1); pts.push([Math.cos(a) * rr, Math.sin(a) * rr * rnd(.6, 1)]); } return pts; };
+    const scrap = (list, x, y, vx, vy, r, extra = {}) => list.add({ x, y, vx, vy, g: 520, drag: 1.1, max: rnd(.9, 1.6), pts: shape(r), r, rot: rnd(TAU), spin: rnd(-9, 9), flip: rnd(6, 12), c: pick(KRAFT), ...extra });
+    const drawScrap = (s, k) => {
+      co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(s.x, s.y); co.rotate(s.rot + s.life * s.spin); co.scale(1, Math.max(.15, Math.abs(Math.cos(s.life * s.flip))));
+      co.beginPath(); s.pts.forEach(([x, y], i) => (i ? co.lineTo(x, y) : co.moveTo(x, y))); co.closePath();
+      co.fillStyle = s.c; co.fill(); co.lineJoin = 'round'; co.lineWidth = Math.max(1.2, s.r * .16); co.strokeStyle = '#fbf7ec'; co.stroke();
+      co.lineWidth = .8; co.strokeStyle = 'rgba(110,66,26,.5)'; co.stroke();
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        if (build && Math.random() < dt * 14 * q) bits.add({ x: cx + rnd(-.5, .5) * card.w, y: card.y + rnd(0, 1) * card.h, vx: rnd(-20, 20), vy: -rnd(20, 60), g: 120, drag: 1, max: rnd(.4, .8), size: rnd(1, 2), c: pick(KRAFT) });
+        scraps.step(dt); bits.step(dt); confetti.step(dt); leaves.step(dt);
+        scraps.each(drawScrap);
+        leaves.each((s, k) => { s.vx = Math.sin(s.life * 3) * card.h * .9; s.vy = card.h * .35; drawScrap(s, k); });
+        bits.each((b, k) => { co.globalAlpha = 1 - k; co.fillStyle = b.c; co.fillRect(b.x, b.y, b.size * 2, b.size * .6); });
+        confetti.each((c, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(c.x + Math.sin(t * 3 + c.ph) * 6, c.y); co.rotate(c.rot + c.life * c.spin); co.scale(Math.cos(c.life * c.flip), 1); co.fillStyle = c.c; co.fillRect(-c.size, -c.size * .35, c.size * 2, c.size * .7); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const f = o.last ? 1.5 : 1, n = o.ghost ? 1 : o.last ? 6 : 4;
+        // le papier part vers le haut et la droite, depuis le coin haut droit de la fenêtre
+        for (let i = 0; i < n; i++) scrap(scraps, p.x + card.h * .15, p.y - card.h * .2, rnd(30, 140) * f, -rnd(160, 300) * f, card.h * rnd(.09, .16) * (o.last ? 1.25 : 1));
+        for (let i = Math.round((o.ghost ? 2 : 6) * q); i > 0; i--) bits.add({ x: p.x + rnd(-6, 6), y: p.y - card.h * .2, vx: rnd(-60, 100), vy: -rnd(60, 200), g: 400, drag: 1, max: rnd(.4, .8), size: rnd(1, 2), c: Math.random() < .5 ? '#fbf7ec' : pick(KRAFT) });
+        if (o.last) build = 0;
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { scrap(leaves, cx + card.w * .3, card.y - card.h * .1, 0, 0, card.h * .1, { g: 0, drag: 0, max: 2.4, spin: 1.5, flip: 3 }); return; }
+        const COLS = ['#facc15', '#f472b6', '#22d3ee', '#fbf7ec', '#a3e635', '#fb923c'];
+        for (let i = burst(p, 70 * q, 8) + 30 * asc; i > 0; i--) confetti.add({ x: cx + rnd(-.7, .7) * card.w, y: card.y - card.h * rnd(.2, 1.4), vx: rnd(-20, 20), vy: rnd(20, 70), g: 30, drag: 1.2, max: rnd(1.6, 2.8), size: rnd(2.5, 4.5), rot: rnd(TAU), spin: rnd(-4, 4), flip: rnd(6, 12), ph: rnd(TAU), c: pick(COLS) });
+        if (p >= .6) for (let i = Math.round((6 + 10 * p) * q); i > 0; i--) { const a = rnd(TAU); scrap(scraps, cx + Math.cos(a) * card.w * .45, cy + Math.sin(a) * card.h * .45, Math.cos(a) * rnd(120, 260), Math.sin(a) * rnd(120, 260) - 120, card.h * rnd(.08, .14)); }
+        if (p >= 1) {
+          // l'emballage de la carte : de grands morceaux de kraft partent des quatre côtés
+          for (let i = Math.round((10 + 4 * asc) * q); i > 0; i--) {
+            const side = i % 4, u = Math.random();
+            const x = side === 0 ? card.x + u * card.w : side === 1 ? card.x + card.w : side === 2 ? card.x + u * card.w : card.x, y = side === 0 ? card.y : side === 1 ? card.y + u * card.h : side === 2 ? card.y + card.h : card.y + u * card.h;
+            const a = Math.atan2(y - cy, (x - cx) * .6);
+            scrap(scraps, x, y, Math.cos(a) * rnd(160, 320), Math.sin(a) * rnd(160, 320) - 100, card.h * rnd(.18, .3), { max: rnd(1.4, 2), drag: 1.6 });
+          }
+        }
+      },
+    };
+  };
+
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {

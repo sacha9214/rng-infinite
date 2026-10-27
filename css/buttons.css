@@ -1163,3 +1163,9 @@
   text-shadow: 0 0 .3em rgba(224, 242, 254, .8), 0 1px 0 #082f49;
   --gs: 0 .3em 0 #075985, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #075985, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #075985; }
 .btn-roll.gen-shipwake:hover { filter: brightness(1.1); }
+/* Torn Paper (idée de 17black, 2026-10-27) : du kraft déchiré en diagonale sur une affiche jaune. */
+.btn-roll.gen-tornpaper { border: 2px solid #8a5f2e; border-radius: .3rem; color: #111;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; letter-spacing: .04em;
+  background: linear-gradient(100deg, #c49a5f 0 18%, #fbf7ec 18.5% 20%, transparent 20.5% 80%, #fbf7ec 80.5% 82%, #c49a5f 82.5%), radial-gradient(circle, rgba(236, 72, 153, .3) 0 1px, transparent 1.5px) 0 0 / 6px 6px, linear-gradient(160deg, #fde047, #f59e0b);
+  --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #6b4423; }
+.btn-roll.gen-tornpaper:hover { filter: brightness(1.06); }

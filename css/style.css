@@ -7439,6 +7439,65 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes wake-jump { 0%, 55%, 100% { transform: none; } 70% { transform: translateY(-7px) rotate(-25deg); } 85% { transform: translateY(0) rotate(20deg); } }
 .room-stage.many .side-shipwake::before, .room-stage.many .side-shipwake::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-shipwake::before, .side-shipwake::after { animation: none; } }
+/* ------------------------------------------------------------------ Torn Paper (idée de 17black, 2026-10-27) : du papier
+   kraft brun (fibres, grain) collé sur une vieille affiche jaune ; chaque chiffre est imprimé en noir gras sur l'affiche,
+   dans une fenêtre déchirée au bord blanc fibreux. Pendant le tirage, chaque fenêtre est encore couverte de kraft : le
+   chiffre ne se devine qu'à travers le papier, qui bombe comme si on poussait dessous ; un chiffre qui se pose : le
+   papier est tiré vers le bas (l'élan), se déchire en diagonale d'un coin à l'autre (le coup), et le chiffre apparaît.
+   Les lambeaux qui s'envolent et les confettis de papier : js/skinfx.js (SCENES.tornpaper). */
+.num-card.skin-tornpaper {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .22  0 0 0 0 .1  0 0 0 .3 0'/></filter><rect width='80' height='80' filter='url(%23n)'/></svg>"),
+    repeating-linear-gradient(8deg, rgba(120, 72, 30, .08) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #d4ad74, #c49a5f 60%, #b5874d);
+  border: 2px solid #8a5f2e; border-radius: .25rem; color: #111;
+  box-shadow: inset 0 0 .6em rgba(110, 66, 26, .35), 0 0 14px rgba(250, 204, 21, .15), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .4em .5em;
+}
+.skin-tornpaper .slot {
+  --tear: polygon(4% 6%, 18% 0, 30% 5%, 44% 1%, 58% 6%, 72% 0, 86% 4%, 100% 2%, 96% 18%, 100% 34%, 95% 50%, 100% 66%, 96% 82%, 99% 100%, 84% 95%, 70% 100%, 56% 94%, 42% 100%, 28% 95%, 14% 100%, 0 97%, 4% 80%, 0 64%, 5% 48%, 0 32%, 4% 16%);
+  position: relative; z-index: 1; isolation: isolate; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.3em; margin: 0 .03em; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; color: #111;
+  clip-path: var(--tear); background: #fbf7ec;
+}
+.skin-tornpaper .slot:nth-of-type(2n) { --tear: polygon(0 3%, 14% 7%, 28% 0, 42% 5%, 56% 0, 70% 6%, 84% 1%, 98% 6%, 100% 20%, 95% 36%, 100% 52%, 96% 68%, 100% 84%, 97% 98%, 82% 100%, 68% 94%, 54% 99%, 40% 95%, 26% 100%, 12% 94%, 2% 100%, 0 84%, 5% 68%, 0 52%, 6% 36%, 1% 20%); }
+.skin-tornpaper .slot::before { content: ''; position: absolute; inset: .07em; z-index: -1; clip-path: var(--tear);
+  background: radial-gradient(circle, rgba(236, 72, 153, .32) 0 .03em, transparent .04em) 0 0 / .12em .12em, linear-gradient(160deg, #fde047, #facc15 60%, #f59e0b); }
+/* le kraft qui couvre la fenêtre (seulement pendant le tirage et pendant la déchirure) */
+.skin-tornpaper .slot::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255, 237, 213, .35), transparent 70%), repeating-linear-gradient(8deg, rgba(120, 72, 30, .1) 0 1px, transparent 1px 4px), linear-gradient(180deg, #d4ad74, #c49a5f 60%, #b5874d); }
+.skin-tornpaper .slot.ghost { opacity: .2; }
+.skin-tornpaper .slot.collapsed { width: 0; height: 0; margin: 0; background: none; }
+.skin-tornpaper .slot.collapsed::before, .skin-tornpaper .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le kraft couvre la fenêtre, le chiffre se devine à travers, le papier bombe. */
+.skin-tornpaper .slot.spinning { opacity: 1; }
+.skin-tornpaper .slot.spinning::after { opacity: .9; animation: torn-bulge .5s ease-in-out infinite alternate; }
+.skin-tornpaper .slot.spinning:nth-of-type(2n)::after { animation-delay: -.25s; }
+@keyframes torn-bulge { from { transform: scale(1); filter: brightness(1); } to { transform: scale(1.04, 1.06); filter: brightness(1.12); } }
+/* La déchirure : tiré vers le bas (l'élan), puis arraché en diagonale du coin haut droit vers le coin bas gauche. */
+.skin-tornpaper .slot.revealed::after { animation: torn-rip .5s backwards; }
+@keyframes torn-rip {
+  0% { opacity: .94; clip-path: polygon(0 0, 100% 0, 100% 0, 100% 100%, 0 100%); transform: none; animation-timing-function: ease-in; }
+  18% { opacity: .94; clip-path: polygon(0 0, 100% 0, 100% 0, 100% 100%, 0 100%); transform: translateY(.06em) scaleY(.96); animation-timing-function: steps(1); }
+  20% { opacity: .94; clip-path: polygon(0 0, 55% 0, 100% 45%, 100% 100%, 0 100%); transform: translateY(.03em); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { opacity: .94; clip-path: polygon(0 28%, 0 28%, 72% 100%, 72% 100%, 0 100%); transform: none; }
+  64% { opacity: .9; clip-path: polygon(0 82%, 0 82%, 18% 100%, 18% 100%, 0 100%); }
+  80% { opacity: 0; clip-path: polygon(0 100%, 0 100%, 0 100%, 0 100%, 0 100%); }
+  100% { opacity: 0; }
+}
+/* Le chiffre, lui, ne bouge qu'au coup : un petit sursaut quand le papier lâche. */
+.skin-tornpaper .slot.revealed { animation: torn-jolt .5s backwards; }
+@keyframes torn-jolt { 0%, 18% { transform: none; } 22% { transform: translateY(-.04em) scale(1.04); } 40% { transform: translateY(.015em); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-tornpaper .slot, .skin-tornpaper .slot::after { animation: none; } }
+/* Cadre de duel : un panneau de liège couvert de vieilles affiches déchirées ; ✂️ coupe, 📌 tient. */
+.side-tornpaper { --side-border: #a16207; --side-glow: 0 0 14px rgba(250, 204, 21, .22); --side-ink: #92400e;
+  --side-bg: linear-gradient(172deg, transparent 60%, rgba(250, 204, 21, .18) 60% 72%, transparent 72%), linear-gradient(8deg, transparent 18%, rgba(212, 173, 116, .25) 18% 34%, transparent 34%), radial-gradient(circle at 30% 40%, rgba(120, 72, 30, .18) 0 1px, transparent 2px) 0 0 / 9px 9px, linear-gradient(180deg, rgba(196, 154, 95, .25), rgba(181, 135, 77, .18));
+  --deco-a: '✂️'; --deco-b: '📌'; }
+.side-tornpaper::before { animation: torn-snip .7s steps(2) infinite; }
+.room-stage.many .side-tornpaper::before { animation: none; }
+@keyframes torn-snip { 0% { transform: rotate(0); } 100% { transform: rotate(-14deg); } }
+@media (prefers-reduced-motion: reduce) { .side-tornpaper::before { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }
