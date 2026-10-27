@@ -138,6 +138,8 @@
     { id: 'workshop', name: "Elves' Workshop", emoji: '🧝', price: 2400, desc: 'Six shadow elves stand behind a conveyor belt of wood scraps: each one smashes its hammer down and the digit appears with the hit', idea: 'costoroll' },
     // Idée de G8_floppa (2026-10-27) : tout est dans la neige et les chiffres en sortent.
     { id: 'snowreveal', name: 'Snow Reveal', emoji: '⛄', price: 1500, desc: 'Every digit is buried in fresh snow until the powder blows away, and Mythic rolls light up the northern lights', idea: 'G8_floppa' },
+    // Idée d'IXOLAF2 (2026-10-27) : un chiffre par tombe ; sur un grand tirage, une main sort des tombes (gentil, pas gore).
+    { id: 'graves', name: 'Graveyard', emoji: '🪦', price: 2100, desc: 'Every digit is carved on its own tombstone under a full moon; bats fly out, and on great rolls friendly green hands pop out of the graves', idea: 'IXOLAF2' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

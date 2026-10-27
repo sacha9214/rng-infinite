@@ -1151,3 +1151,9 @@
   text-shadow: 0 -1px 0 rgba(23, 47, 110, .5), 0 1px 0 #fff;
   --gs: 0 .3em 0 #93c5fd, 0 .5em 1em rgba(147, 197, 253, .35); --gs-h: 0 .34em 0 #93c5fd, 0 .7em 1.3em rgba(186, 230, 253, .6); --gs-a: 0 .06em 0 #93c5fd; }
 .btn-roll.gen-snowreveal:hover { filter: brightness(1.04); }
+/* Graveyard (idée d'IXOLAF2, 2026-10-27) : une nuit violette, la lune, une pierre tombale à gauche. */
+.btn-roll.gen-graves { border: 2px solid #6d28d9; border-radius: .6rem; color: #bbf7d0;
+  background: radial-gradient(ellipse .5em .62em at .95em 62%, #9ca3af 0 60%, transparent 62%) 0 0 / 100% 100% no-repeat, radial-gradient(circle at 88% 28%, #fef9c3 0 .3em, rgba(254, 249, 195, .3) .34em .6em, transparent .8em), linear-gradient(180deg, transparent 78%, #3b2a1e 78%), linear-gradient(180deg, #1c1340, #3b2a5e);
+  padding-left: 2em; text-shadow: 0 0 .35em #22c55e, 0 1px 0 #000;
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(134, 239, 172, .2); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(134, 239, 172, .4); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-graves:hover { filter: brightness(1.12); }

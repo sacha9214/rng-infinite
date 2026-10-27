@@ -5357,6 +5357,120 @@
     };
   };
 
+  // 🪦 Graveyard (2026-10-27, idée d'IXOLAF2) — une brume violette traîne au ras du sol, derrière les tombes et autour de
+  // la carte. À chaque chiffre posé, des mottes de terre sautent au pied de sa tombe (la dernière avec une lueur verte) ;
+  // avant le dernier, le sol tremble et une lueur verte pulse sous sa tombe. Révélation, gentille et pas gore : tirage
+  // raté, un petit nuage de poussière ; sinon une chauve-souris file devant la lune (plus avec la rareté) ; dès Epic, une
+  // ou deux mains vertes de dessin animé sortent de tombes au hasard et font coucou ; dès Mythic, une main sort de chaque
+  // tombe, et deux grandes mains de chaque côté de la carte ; dès Celestial, un petit fantôme monte derrière la carte.
+  SCENES.graves = env => {
+    const { ci, co, w, h, W, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const fog = [], clods = particles(), bats = particles(), hands = timed(), ghosts = timed(), glows = timed();
+    for (let i = 0; i < 7; i++) fog.push({ x: rnd(-.2, 1.2), y: rnd(.62, .95), r: rnd(.35, .6), v: rnd(.02, .05) * (i % 2 ? 1 : -1), ph: rnd(TAU) });
+    let t = 0, build = 0, shake = 0;
+    const ground = () => card.y + card.h - 2;
+    // Une main de dessin animé : paume verte, quatre doigts, pouce, manche violet déchiré ; (x, y) = poignet au sol.
+    const hand = (x, y, s, rot, wave, flip) => {
+      co.save(); co.translate(x, y); co.rotate(rot + wave); co.scale(flip ? -1 : 1, 1);
+      const OUT = '#14532d', SKIN = '#86efac', SH = '#4ade80';
+      co.lineJoin = 'round'; co.lineWidth = Math.max(1.2, s * .07); co.strokeStyle = OUT;
+      // manche
+      co.fillStyle = '#6d28d9'; co.beginPath(); co.moveTo(-s * .3, s * .1); co.lineTo(-s * .32, s * .9); co.lineTo(s * .32, s * .9); co.lineTo(s * .3, s * .1); co.lineTo(s * .18, s * .2); co.lineTo(s * .06, s * .06); co.lineTo(-s * .08, s * .2); co.lineTo(-s * .2, s * .05); co.closePath(); co.fill(); co.stroke();
+      // doigts (le majeur plus long), pouce, paume
+      co.fillStyle = SKIN;
+      [[-.2, .42], [-.07, .52], [.07, .5], [.2, .4]].forEach(([fx, fl]) => { roundRect(co, s * fx - s * .06, -s * (.3 + fl), s * .12, s * (fl + .1), s * .06); co.fill(); co.stroke(); });
+      co.beginPath(); co.ellipse(-s * .3, -s * .22, s * .07, s * .17, -.7, 0, TAU); co.fill(); co.stroke();
+      roundRect(co, -s * .27, -s * .34, s * .54, s * .46, s * .14); co.fill(); co.stroke();
+      co.fillStyle = SH; co.globalAlpha *= .6; co.beginPath(); co.ellipse(s * .08, -s * .08, s * .12, s * .08, 0, 0, TAU); co.fill();
+      co.restore();
+    };
+    const bat = (x, y, s, flap, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y);
+      const up = Math.sin(flap) * s * .5;
+      co.fillStyle = dark ? '#4c1d95' : '#2e1065'; co.strokeStyle = dark ? 'rgba(221,214,254,.85)' : 'rgba(46,16,101,.6)'; co.lineWidth = 1.2;
+      co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-s * .5, -up - s * .2, -s, -up); co.quadraticCurveTo(-s * .75, -up * .3 + s * .1, -s * .55, s * .12); co.quadraticCurveTo(-s * .3, 0, 0, s * .2);
+      co.quadraticCurveTo(s * .3, 0, s * .55, s * .12); co.quadraticCurveTo(s * .75, -up * .3 + s * .1, s, -up); co.quadraticCurveTo(s * .5, -up - s * .2, 0, 0); co.fill(); co.stroke();
+      co.beginPath(); co.arc(0, s * .05, s * .18, 0, TAU); co.fill();
+      co.fillStyle = '#fde047'; co.beginPath(); co.arc(-s * .07, s * .02, s * .04, 0, TAU); co.arc(s * .07, s * .02, s * .04, 0, TAU); co.fill();
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        shake = Math.max(0, shake - dt * 3);
+        // la brume dans la carte, derrière les tombes
+        ci.globalCompositeOperation = 'lighter';
+        for (const f of fog) { f.x += f.v * dt; if (f.x > 1.4) f.x = -.4; if (f.x < -.4) f.x = 1.4; dot(ci, '#a78bfa', f.x * w, f.y * h + Math.sin(t * .8 + f.ph) * 2, h * f.r, .16 + .1 * build, h * f.r * .45); }
+        // la lueur verte sous la tombe du dernier chiffre, pendant la tension
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        if (build && next) dot(ci, '#22c55e', next.x - card.x, h * .92, h * .5, .25 + .2 * Math.sin(t * 14), h * .25);
+        glows.run(dt, (g, k) => dot(ci, '#4ade80', g.x - card.x, h * .9, h * .55, (1 - k) * .55, h * .3));
+        ci.globalCompositeOperation = 'source-over';
+        // la brume autour de la carte, derrière elle
+        behind(env, () => {
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          for (let i = 0; i < 4; i++) dot(co, dark ? '#a78bfa' : '#c4b5fd', card.x + card.w * (i / 3) + Math.sin(t * .5 + i) * 12, ground() + 2, card.h * .55, (dark ? .16 : .3) + .1 * build, card.h * .2);
+          co.globalCompositeOperation = 'source-over';
+        });
+        // le petit fantôme (Celestial et plus) : il monte derrière la carte, ondule et fait coucou
+        ghosts.run(dt, (g, k) => {
+          const s = card.h * .55, y = card.y - card.h * .1 - outCubic(clamp(k * 2)) * card.h * .9 - Math.sin(t * 2.4) * 4, x = cx + Math.sin(t * 1.3) * card.h * .3, a = Math.min(1, k * 5, (1 - k) * 3) * .92;
+          behind(env, () => {
+            co.save(); co.globalAlpha = a; co.translate(x, y);
+            co.fillStyle = '#f8fafc'; co.strokeStyle = 'rgba(76,29,149,.5)'; co.lineWidth = 1.4;
+            co.beginPath(); co.arc(0, 0, s * .45, Math.PI, 0); co.lineTo(s * .45, s * .5);
+            for (let i = 0; i < 4; i++) { const x0 = s * .45 - (i + .5) * s * .225; co.quadraticCurveTo(x0, s * (.62 + .08 * Math.sin(t * 8 + i)), x0 - s * .1125, s * .5); }
+            co.lineTo(-s * .45, 0); co.closePath(); co.fill(); co.stroke();
+            co.fillStyle = '#1e1b4b'; co.beginPath(); co.ellipse(-s * .14, -s * .05, s * .06, s * .09, 0, 0, TAU); co.ellipse(s * .14, -s * .05, s * .06, s * .09, 0, 0, TAU); co.fill();
+            co.beginPath(); co.ellipse(0, s * .14, s * .07, s * .05, 0, 0, TAU); co.fill();
+            co.restore();
+          }, true);
+        });
+        // les mains : elles jaillissent du sol devant la tombe (coupées à la ligne du sol), font coucou, redescendent
+        hands.run(dt, (m, k) => {
+          const life = m.life, tt2 = k * life, up = tt2 < .3 ? outBack(tt2 / .3) : tt2 > life - .45 ? clamp((life - tt2) / .45) : 1;
+          if (!m.dug && tt2 > 0) { m.dug = true; for (let i = Math.round(6 * q); i > 0; i--) clods.add({ x: m.x + rnd(-m.s * .3, m.s * .3), y: m.ground, vx: rnd(-60, 60), vy: -rnd(60, 160), g: 700, drag: .3, max: rnd(.4, .8), size: rnd(1.5, 3) }); }
+          co.save(); co.beginPath(); co.rect(0, 0, W, m.ground); co.clip();
+          hand(m.x, m.ground + m.s * .95 - up * m.s * m.rise, m.s, m.rot, Math.sin(tt2 * 9 + m.ph) * .28 * clamp(tt2 * 3 - .6), m.flip);
+          co.restore();
+          if (m.mound) { co.globalAlpha = clamp(up * 3); co.fillStyle = '#3b2a1e'; co.beginPath(); co.ellipse(m.x, m.ground, m.s * .6, m.s * .16, 0, Math.PI, 0); co.fill(); co.fillStyle = '#5b3a24'; co.beginPath(); co.ellipse(m.x - m.s * .15, m.ground - m.s * .05, m.s * .2, m.s * .06, 0, Math.PI, 0); co.fill(); co.globalAlpha = 1; } // le monticule de terre d'où sort la grande main
+        });
+        // mottes de terre
+        clods.step(dt);
+        co.fillStyle = '#5b3a24';
+        clods.each((c, k) => { co.globalAlpha = Math.min(1, (1 - k) * 4); co.beginPath(); co.arc(c.x, c.y, c.size, 0, TAU); co.fill(); });
+        // chauves-souris
+        bats.step(dt);
+        bats.each((b, k) => bat(b.x, b.y + Math.sin(t * 6 + b.ph) * 4, b.s, t * 22 + b.ph, Math.min(1, k * 8, (1 - k) * 4)));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const n = Math.round((o.ghost ? 2 : o.last ? 12 : 6) * q);
+        for (let i = n; i > 0; i--) clods.add({ x: p.x + rnd(-1, 1) * card.h * .2, y: ground(), vx: rnd(-70, 70), vy: -rnd(70, 170) * (o.last ? 1.3 : 1), g: 700, drag: .3, max: rnd(.4, .8), size: rnd(1.4, 2.8) });
+        if (!o.ghost) glows.add({ x: p.x, life: o.last ? 1 : .5 });
+        if (o.last) build = 0;
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { for (let i = Math.round(6 * q); i > 0; i--) clods.add({ x: cx + rnd(-1, 1) * card.w * .3, y: ground(), vx: rnd(-20, 20), vy: -rnd(20, 60), g: 300, drag: 1, max: .7, size: rnd(1, 2) }); return; }
+        const nb = 1 + Math.round(3 * p) + 2 * asc;
+        for (let i = 0; i < nb; i++) { const dir = i % 2 ? -1 : 1; bats.add({ x: cx + rnd(-.3, .3) * card.w, y: card.y + card.h * .1, vx: dir * rnd(90, 170), vy: -rnd(70, 140), drag: .2, g: -10, max: rnd(1.6, 2.4), s: card.h * rnd(.18, .26), ph: rnd(TAU) }); }
+        if (p < .6) return;
+        const S = slotsA(env).filter(s => !s.gone && !s.ghost);
+        const pickHands = p >= 1 ? S : S.slice().sort(() => Math.random() - .5).slice(0, p >= .8 ? 2 : 1);
+        pickHands.forEach((s, i) => {
+          const room = Math.max(card.h * .14, ground() - (s.top + (s.bottom - s.top) * .72)); // de la place sous le chiffre gravé
+          hands.add({ delay: .1 + i * .12, life: 2.6 + asc * .4, x: s.x + rnd(-2, 2), ground: ground(), s: Math.min(s.w * 1.05, room * 1.3), rise: .78, rot: rnd(-.2, .2), ph: rnd(TAU), flip: i % 2 });
+        });
+        if (p >= 1) [-1, 1].forEach((side, i) => hands.add({ delay: .5 + i * .15, life: 2.8 + asc * .4, x: side < 0 ? card.x - card.h * .45 : card.x + card.w + card.h * .45, ground: ground() + 2, s: card.h * .8, rise: 1.15, rot: side * -.25, ph: i * 2, flip: side > 0, mound: true }));
+        if (asc >= 1) ghosts.add({ delay: .7, life: 4 + asc });
+      },
+    };
+  };
+
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {

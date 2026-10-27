@@ -7331,6 +7331,70 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes snw-waddle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
 .room-stage.many .side-snowreveal::before, .room-stage.many .side-snowreveal::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-snowreveal::before, .side-snowreveal::after { animation: none; } }
+/* ------------------------------------------------------------------ Graveyard (idée d'IXOLAF2, 2026-10-27) : un petit
+   cimetière la nuit (ciel violet, pleine lune, étoiles, brume au ras du sol, terre brune) ; chaque chiffre est gravé sur
+   sa propre pierre tombale de granit gris (moucheté, un peu de mousse, coins usés), avec une faible lueur verte au fond
+   de la gravure. Pendant le tirage, les pierres tremblent par à-coups (quelque chose frappe dessous) et la gravure
+   clignote vert ; un chiffre qui se pose : la pierre s'enfonce (l'élan), jaillit d'un coup raide (pierre : aucun
+   écrasement mou), la gravure s'allume vert puis s'apaise. Brume, mottes de terre, chauves-souris, et les mains qui
+   sortent des tombes sur les grands tirages : js/skinfx.js (SCENES.graves). */
+.num-card.skin-graves {
+  background:
+    linear-gradient(180deg, transparent calc(100% - .22em), #3b2a1e calc(100% - .22em), #24170f),
+    radial-gradient(ellipse 60% 30% at 28% 90%, rgba(196, 181, 253, .3), transparent 70%),
+    radial-gradient(ellipse 50% 26% at 78% 88%, rgba(196, 181, 253, .24), transparent 70%),
+    radial-gradient(circle at 91% 20%, #fef9c3 0 .15em, rgba(254, 249, 195, .32) .17em .32em, transparent .52em),
+    radial-gradient(1px 1px at 12% 16%, #fff, transparent), radial-gradient(1px 1px at 38% 9%, #e9d5ff, transparent), radial-gradient(1px 1px at 64% 20%, #fff, transparent), radial-gradient(1px 1px at 76% 8%, #e9d5ff, transparent),
+    linear-gradient(180deg, #1c1340, #2e1f5c 55%, #3b2a5e);
+  border: 2px solid #4c1d95; border-radius: .55rem;
+  box-shadow: inset 0 0 0 1px rgba(196, 181, 253, .15), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 16px rgba(134, 239, 172, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .3em .42em .2em;
+}
+.skin-graves .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 800; line-height: 1;
+  width: 1.08em; height: 1.72em; margin: 0 .04em; padding-bottom: .56em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: .54em .54em .05em .05em;
+  font-family: Georgia, 'Times New Roman', serif; color: #23252f;
+  text-shadow: 0 .035em 0 rgba(229, 231, 235, .5), 0 -.02em 0 rgba(0, 0, 0, .6), 0 0 .22em rgba(134, 239, 172, .5);
+  background:
+    radial-gradient(ellipse 38% 20% at 20% 96%, rgba(74, 124, 58, .8), transparent 75%),
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, .35) 0 .02em, transparent .03em) 0 0 / .17em .19em,
+    radial-gradient(circle at 60% 70%, rgba(17, 24, 39, .35) 0 .02em, transparent .03em) .05em .07em / .21em .17em,
+    linear-gradient(100deg, rgba(255, 255, 255, .2), transparent 42%),
+    linear-gradient(180deg, #a3a8b3, #737885 70%, #545a66);
+  box-shadow: inset -.06em -.04em .08em rgba(0, 0, 0, .45), inset .04em .05em .05em rgba(255, 255, 255, .28), 0 .05em 0 #24170f;
+}
+.skin-graves .slot:nth-of-type(2n) { border-radius: .2em .2em .05em .05em; height: 1.64em; }
+.skin-graves .slot:nth-of-type(3n) { border-radius: .54em .3em .05em .05em; }
+.skin-graves .slot.ghost { opacity: .22; }
+.skin-graves .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : la pierre tremble par à-coups, la gravure clignote vert. */
+.skin-graves .slot.spinning { opacity: 1; color: rgba(35, 37, 47, .4); text-shadow: 0 0 .25em rgba(134, 239, 172, .55); animation: grv-knock .5s steps(1) infinite; }
+.skin-graves .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
+.skin-graves .slot.spinning:nth-of-type(3n) { animation-delay: -.37s; }
+@keyframes grv-knock { 0%, 40%, 70%, 100% { transform: none; } 8% { transform: translate(-.02em, -.02em) rotate(-1.5deg); } 16% { transform: translate(.015em, 0) rotate(1deg); } 76% { transform: translateY(-.025em) rotate(1.5deg); } }
+/* La pierre s'enfonce (l'élan), jaillit d'un coup raide, la gravure s'allume vert, petit rebond rigide. */
+.skin-graves .slot.revealed { animation: grv-rise .55s backwards; }
+@keyframes grv-rise {
+  0% { transform: translateY(.14em); filter: brightness(.7); animation-timing-function: ease-in; }
+  18% { transform: translateY(.18em); filter: brightness(.6); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  32% { transform: translateY(-.08em); filter: brightness(1.15); text-shadow: 0 .035em 0 rgba(229, 231, 235, .5), 0 0 .2em #86efac, 0 0 .5em #22c55e; }
+  46% { transform: translateY(.02em) rotate(-1.5deg); }
+  60% { transform: rotate(1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-graves .slot { animation: none; } }
+/* Cadre de duel : une nuit violette, la lune, la brume au sol ; 🪦 vacille, 🦇 bat des ailes. */
+.side-graves { --side-border: #7c3aed; --side-glow: 0 0 16px rgba(134, 239, 172, .22); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(circle at 86% 16%, rgba(254, 249, 195, .7) 0 9px, rgba(254, 249, 195, .2) 10px 18px, transparent 26px), radial-gradient(ellipse 80% 22% at 50% 100%, rgba(196, 181, 253, .35), transparent 70%), linear-gradient(180deg, rgba(28, 19, 64, .35), rgba(59, 42, 94, .2));
+  --deco-a: '🪦'; --deco-b: '🦇'; }
+.side-graves::before { transform-origin: 50% 100%; animation: grv-tilt 2.6s ease-in-out infinite; }
+.side-graves::after { animation: grv-flap .5s steps(2) infinite; }
+@keyframes grv-tilt { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-7deg); } 86% { transform: rotate(4deg); } 92% { transform: rotate(0); } }
+@keyframes grv-flap { 0% { transform: scale(1, 1) translateY(0); } 100% { transform: scale(.7, 1.1) translateY(-2px); } }
+.room-stage.many .side-graves::before, .room-stage.many .side-graves::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-graves::before, .side-graves::after { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }
