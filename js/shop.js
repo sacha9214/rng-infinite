@@ -131,6 +131,21 @@
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     // Wood carving : idée de jjcoolcid1 et JBearr12 (2026-10-25) — une lame taille chaque chiffre en creux dans une planche de pin.
     { id: 'woodcarving', name: 'Wood Carving', emoji: '🪵', price: 2000, desc: 'A knife carves every digit into a pine plank and wood shavings fly; rare rolls get a coat of golden varnish', idea: 'jjcoolcid1' },
+    // ==== Skins du 2026-10-27, lot A (idées de joueurs ; scènes dans js/skinfx.js) ====
+    // Idée de 17black (2026-10-27) : des guirlandes de Noël qui clignotent puis s'allument pour révéler les chiffres.
+    { id: 'fairylights', name: 'Fairy Lights', emoji: '✨', price: 1800, desc: 'A string of old-fashioned bulbs hangs over a frosty window: every bulb flickers on to light up its digit, and great rolls set the whole string chasing', idea: '17black' },
+    // Idée de costoroll (2026-10-27) : six lutins derrière un tapis roulant de chutes de bois ; le chiffre apparaît au coup de marteau.
+    { id: 'workshop', name: "Elves' Workshop", emoji: '🧝', price: 2400, desc: 'Six shadow elves stand behind a conveyor belt of wood scraps: each one smashes its hammer down and the digit appears with the hit', idea: 'costoroll' },
+    // Idée de G8_floppa (2026-10-27) : tout est dans la neige et les chiffres en sortent.
+    { id: 'snowreveal', name: 'Snow Reveal', emoji: '⛄', price: 1500, desc: 'Every digit is buried in fresh snow until the powder blows away, and Mythic rolls light up the northern lights', idea: 'G8_floppa' },
+    // Idée d'IXOLAF2 (2026-10-27) : un chiffre par tombe ; sur un grand tirage, une main sort des tombes (gentil, pas gore).
+    { id: 'graves', name: 'Graveyard', emoji: '🪦', price: 2100, desc: 'Every digit is carved on its own tombstone under a full moon; bats fly out, and on great rolls friendly green hands pop out of the graves', idea: 'IXOLAF2' },
+    // Idée de 17black (2026-10-27) : un bateau passe et son sillage révèle les chiffres.
+    { id: 'shipwake', name: 'Ship Wake', emoji: '🚢', price: 2200, desc: 'A little tugboat sails across the sea and every digit rises in the foam of its wake; great rolls bring dolphins and a whale', idea: '17black' },
+    // Idée de 17black (2026-10-27) : du papier déchiré, et les chiffres dessous.
+    { id: 'tornpaper', name: 'Torn Paper', emoji: '📜', price: 1200, desc: 'Brown paper covers every digit until it rips away to show a bold number on a yellow poster; great rolls tear the whole wrapping apart', idea: '17black' },
+    // Idée de Jguz01 (2026-10-27 ; sur Discord, un bonhomme qui écrit les chiffres) : il passe en courant devant chaque chiffre.
+    { id: 'stickman', name: 'Stickman', emoji: '🏃', price: 1600, desc: 'A doodled stick man sprints across a notebook page, and every digit gets written in marker as he runs past', idea: 'Jguz01' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

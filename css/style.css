@@ -7634,6 +7634,392 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes grk-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
 .room-stage.many .side-greek::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-greek::after { animation: none; } }
+/* ==== Skins du 2026-10-27, lot A ==== (Fairy Lights, Elves' Workshop, Snow Reveal, Graveyard, Ship Wake, Torn Paper,
+   Stickman : idées de joueurs ; leurs scènes canvas sont dans js/skinfx.js, bloc « Skins du 2026-10-27, lot A ») */
+/* ------------------------------------------------------------------ Fairy Lights (idée de 17black, 2026-10-27) : une
+   vitre givrée la nuit (bleu nuit, givre aux coins, reflets flous de lumières lointaines, cadre de bois sombre) ; chaque
+   chiffre est en verre dépoli éteint, et prend la couleur de l'ampoule qui pend au-dessus de lui (rouge, vert, or, bleu,
+   rose, orange, en boucle). Pendant le tirage, les chiffres éteints grésillent ; un chiffre qui se pose : le filament
+   hésite (deux clignotements : l'élan), s'allume d'un coup (éclat) et la lueur se pose. La guirlande et ses ampoules,
+   allumées au même rythme, et la chenille lumineuse de la révélation : js/skinfx.js (SCENES.fairylights). */
+.num-card.skin-fairylights {
+  background:
+    radial-gradient(ellipse 26% 50% at 0 0, rgba(226, 232, 240, .34), rgba(226, 232, 240, .1) 55%, transparent 72%),
+    radial-gradient(ellipse 30% 46% at 100% 100%, rgba(226, 232, 240, .28), rgba(226, 232, 240, .08) 55%, transparent 72%),
+    radial-gradient(ellipse 16% 30% at 100% 0, rgba(226, 232, 240, .2), transparent 70%),
+    radial-gradient(circle at 16% 74%, rgba(251, 191, 36, .16) 0 .2em, transparent .42em),
+    radial-gradient(circle at 82% 30%, rgba(244, 114, 182, .14) 0 .18em, transparent .38em),
+    radial-gradient(circle at 58% 84%, rgba(56, 189, 248, .12) 0 .2em, transparent .4em),
+    linear-gradient(180deg, #0a0f24, #121a3a 58%, #1a1442);
+  border: 2px solid #2a1a0c; border-radius: .5rem; color: #e2e8f0;
+  box-shadow: inset 0 0 0 .1em #6b4423, inset 0 0 0 .14em #2a1a0c, inset 0 0 .9em rgba(0, 0, 0, .55), 0 0 18px rgba(251, 191, 36, .2), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-fairylights .slot { --fl: #fbbf24; position: relative; z-index: 1; font-weight: 800;
+  color: color-mix(in srgb, var(--fl) 42%, #fff);
+  text-shadow: 0 0 .05em #fff, 0 0 .14em var(--fl), 0 0 .34em var(--fl), 0 0 .7em color-mix(in srgb, var(--fl) 55%, transparent); }
+.skin-fairylights .slot:nth-of-type(6n+1) { --fl: #f87171; }
+.skin-fairylights .slot:nth-of-type(6n+2) { --fl: #4ade80; }
+.skin-fairylights .slot:nth-of-type(6n+3) { --fl: #fbbf24; }
+.skin-fairylights .slot:nth-of-type(6n+4) { --fl: #60a5fa; }
+.skin-fairylights .slot:nth-of-type(6n+5) { --fl: #f472b6; }
+.skin-fairylights .slot:nth-of-type(6n) { --fl: #fb923c; }
+.skin-fairylights .slot.ghost { opacity: .2; }
+/* Éteints pendant le tirage : verre dépoli gris-bleu, le filament grésille par à-coups. */
+.skin-fairylights .slot.spinning { opacity: 1; color: rgba(148, 163, 184, .42); text-shadow: 0 0 .1em rgba(148, 163, 184, .25); animation: fl-buzz .9s steps(1) infinite; }
+.skin-fairylights .slot.spinning:nth-of-type(2n) { animation-delay: -.37s; }
+.skin-fairylights .slot.spinning:nth-of-type(3n) { animation-delay: -.61s; }
+@keyframes fl-buzz { 0%, 100% { color: rgba(148, 163, 184, .42); } 12% { color: color-mix(in srgb, var(--fl) 30%, rgba(148, 163, 184, .5)); } 16% { color: rgba(148, 163, 184, .42); } 58% { color: rgba(148, 163, 184, .3); } 63% { color: color-mix(in srgb, var(--fl) 22%, rgba(148, 163, 184, .45)); } 68% { color: rgba(148, 163, 184, .42); } }
+/* L'allumage (0,55 s, comme l'ampoule du canvas) : deux hésitations du filament, l'éclat, la lueur qui se pose. */
+.skin-fairylights .slot.revealed { animation: fl-catch .55s backwards; }
+@keyframes fl-catch {
+  0% { color: rgba(148, 163, 184, .45); text-shadow: none; animation-timing-function: steps(1); }
+  8% { color: color-mix(in srgb, var(--fl) 42%, #fff); text-shadow: 0 0 .14em var(--fl), 0 0 .34em var(--fl); animation-timing-function: steps(1); }
+  14% { color: rgba(148, 163, 184, .5); text-shadow: none; animation-timing-function: steps(1); }
+  26% { color: color-mix(in srgb, var(--fl) 42%, #fff); text-shadow: 0 0 .14em var(--fl), 0 0 .34em var(--fl); animation-timing-function: steps(1); }
+  32% { color: color-mix(in srgb, var(--fl) 30%, rgba(148, 163, 184, .7)); text-shadow: 0 0 .1em var(--fl); animation-timing-function: steps(1); }
+  44% { color: #fff; transform: scale(1.08); text-shadow: 0 0 .06em #fff, 0 0 .2em var(--fl), 0 0 .5em var(--fl), 0 0 1em var(--fl); animation-timing-function: cubic-bezier(.2, .7, .3, 1); }
+  70% { transform: scale(.99); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-fairylights .slot { animation: none; } }
+/* Cadre de duel : une fenêtre la nuit, une guirlande en feston en haut ; 💡 se balance, ✨ scintille. */
+.side-fairylights { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 191, 36, .3); --side-ink: #d97706;
+  --side-bg: radial-gradient(circle at 12% 9%, rgba(248, 113, 113, .55) 0 3px, transparent 6px), radial-gradient(circle at 30% 13%, rgba(74, 222, 128, .55) 0 3px, transparent 6px), radial-gradient(circle at 50% 14%, rgba(251, 191, 36, .6) 0 3px, transparent 6px), radial-gradient(circle at 70% 13%, rgba(96, 165, 250, .55) 0 3px, transparent 6px), radial-gradient(circle at 88% 9%, rgba(244, 114, 182, .55) 0 3px, transparent 6px), radial-gradient(ellipse 60% 14% at 50% 0, transparent 70%, rgba(20, 83, 45, .5) 72% 76%, transparent 78%), linear-gradient(180deg, rgba(10, 15, 36, .32), rgba(26, 20, 66, .18));
+  --deco-a: '💡'; --deco-b: '✨ ❄️'; }
+.side-fairylights::before { transform-origin: 50% 0; animation: fl-sway 2.4s ease-in-out infinite; }
+.side-fairylights::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes fl-sway { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+.room-stage.many .side-fairylights::before, .room-stage.many .side-fairylights::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-fairylights::before, .side-fairylights::after { animation: none; } }
+/* ------------------------------------------------------------------ Elves' Workshop (idée de costoroll, 2026-10-27) :
+   un tapis roulant d'atelier (caoutchouc noir strié, rail d'acier et rouleaux en haut et en bas) ; chaque chiffre est
+   une chute de bois de pin, et le chiffre y est marqué au fer, brun brûlé. Pendant le tirage, les chutes défilent sur
+   le tapis en cahotant (pas encore de chiffre, seulement des traits de crayon) ; un chiffre qui se pose : le marteau du
+   lutin frappe (l'élan, c'est le marteau levé du canvas), la planchette s'enfonce d'un coup, le chiffre apparaît au
+   même instant dans un éclat, rebond raide (bois dur : aucun écrasement mou). Les six lutins en ombres chinoises, leurs
+   marteaux, les copeaux : js/skinfx.js (SCENES.workshop). */
+.num-card.skin-workshop {
+  background:
+    /* rails d'acier en haut et en bas, rouleaux (boulons) */
+    radial-gradient(circle, #d6d3d1 0 .035em, #57534e .045em, transparent .06em) .2em 0 / .55em .14em repeat-x,
+    radial-gradient(circle, #d6d3d1 0 .035em, #57534e .045em, transparent .06em) .2em 100% / .55em .14em repeat-x,
+    linear-gradient(180deg, #a8a29e, #57534e .14em, transparent .14em, transparent calc(100% - .14em), #57534e calc(100% - .14em), #a8a29e),
+    /* le tapis : stries de caoutchouc */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .06) 0 .04em, transparent .04em .2em),
+    radial-gradient(ellipse 70% 60% at 50% 30%, rgba(251, 191, 36, .14), transparent 75%),
+    linear-gradient(180deg, #292524, #1c1917 50%, #292524);
+  border: 2px solid #44403c; border-radius: .4rem; color: #3b1d0a;
+  box-shadow: inset 0 0 0 1px rgba(214, 211, 209, .12), inset 0 .25em .4em rgba(0, 0, 0, .45), 0 0 16px rgba(251, 191, 36, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .34em .44em;
+}
+/* Le tapis avance pendant le tirage : les stries filent vers la gauche. */
+.num-card.skin-workshop.charging { animation: charge 1.6s ease-in-out infinite, wsh-belt .45s linear infinite; }
+@keyframes wsh-belt { to { background-position: -.35em 0, -.35em 100%, 0 0, -.2em 0, 0 0, 0 0; } }
+.skin-workshop .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.28em; margin: 0 .035em; border-radius: .1em .14em .08em .12em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: Georgia, 'Times New Roman', serif; color: #3b1d0a;
+  text-shadow: 0 0 .04em #7c2d12, 0 .03em 0 rgba(255, 237, 213, .55), 0 0 .14em rgba(124, 45, 18, .35);
+  background:
+    /* veinage du pin et un nœud */
+    radial-gradient(ellipse .1em .07em at 72% 30%, #a16207 0 40%, rgba(161, 98, 7, .3) 60%, transparent 75%),
+    repeating-linear-gradient(176deg, rgba(146, 64, 14, .16) 0 .03em, transparent .03em .13em, rgba(146, 64, 14, .1) .13em .15em, transparent .15em .26em),
+    linear-gradient(90deg, rgba(120, 53, 15, .25), transparent 15%, transparent 85%, rgba(120, 53, 15, .3)),
+    linear-gradient(180deg, #f3d39b, #e6b874 60%, #d4a05a);
+  box-shadow: inset 0 .05em 0 rgba(255, 247, 237, .55), inset 0 -.06em .04em rgba(120, 53, 15, .35), 0 .07em .06em rgba(0, 0, 0, .55);
+}
+.skin-workshop .slot.ghost { opacity: .2; }
+.skin-workshop .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : la chute de bois avance sur le tapis en cahotant, le chiffre n'est qu'un trait de crayon. */
+.skin-workshop .slot.spinning { opacity: 1; color: rgba(87, 83, 78, .32); text-shadow: none; animation: wsh-ride .45s linear infinite; }
+.skin-workshop .slot.spinning:nth-of-type(2n) { animation-delay: -.2s; }
+.skin-workshop .slot.spinning:nth-of-type(3n) { animation-delay: -.32s; }
+@keyframes wsh-ride { 0% { transform: translateX(.12em) rotate(-2deg); } 30% { transform: translate(.04em, -.03em) rotate(1.5deg); } 60% { transform: translateX(-.04em) rotate(-1deg); } 100% { transform: translateX(-.12em) rotate(2deg); } }
+/* Le coup de marteau : la planchette s'enfonce d'un coup avec un éclat (le chiffre apparaît à cet instant), rebondit
+   raide, tremble et se pose. */
+.skin-workshop .slot.revealed { animation: wsh-hit .5s backwards; }
+@keyframes wsh-hit {
+  0% { transform: translateY(-.05em); color: rgba(87, 83, 78, .32); text-shadow: none; animation-timing-function: steps(1); }
+  6% { transform: translateY(.1em) scale(1.04, .95); color: #3b1d0a; text-shadow: 0 0 .04em #7c2d12, 0 .03em 0 rgba(255, 237, 213, .55), 0 0 .3em rgba(251, 146, 60, .8); filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  22% { transform: translateY(-.06em) rotate(-2deg); filter: brightness(1.1); }
+  36% { transform: translateY(0) rotate(1.5deg); filter: none; }
+  52% { transform: rotate(-.6deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-workshop .slot, .num-card.skin-workshop.charging { animation: none; } }
+/* Cadre de duel : le mur de l'atelier à la lueur d'une lampe, un établi en bas ; 🔨 tape, 🎁 sautille. */
+.side-workshop { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 191, 36, .28); --side-ink: #b45309;
+  --side-bg: linear-gradient(180deg, transparent 80%, rgba(161, 98, 7, .35) 80%, rgba(120, 53, 15, .3)), radial-gradient(ellipse 50% 45% at 50% 18%, rgba(251, 191, 36, .25), transparent 70%), repeating-linear-gradient(90deg, rgba(120, 53, 15, .1) 0 2px, transparent 2px 26px), linear-gradient(180deg, rgba(41, 37, 36, .22), rgba(120, 53, 15, .1));
+  --deco-a: '🔨'; --deco-b: '🎁 🪵'; }
+.side-workshop::before { transform-origin: 80% 80%; animation: wsh-tap 1.4s ease-in infinite; }
+.side-workshop::after { animation: wsh-hop 1.8s ease-in-out infinite; }
+@keyframes wsh-tap { 0%, 60%, 100% { transform: rotate(0); } 75% { transform: rotate(-35deg); } 82% { transform: rotate(12deg); } 90% { transform: rotate(0); } }
+@keyframes wsh-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px); } 80% { transform: translateY(0); } 86% { transform: translateY(-2px); } }
+.room-stage.many .side-workshop::before, .room-stage.many .side-workshop::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-workshop::before, .side-workshop::after { animation: none; } }
+/* ------------------------------------------------------------------ Snow Reveal (idée de G8_floppa, 2026-10-27) : un
+   champ de neige fraîche (blanc, paillettes, congères aux ombres bleutées) ; les chiffres sont creusés dans la neige,
+   en creux bleu (ombre en haut du creux, bourrelet blanc en bas), comme une empreinte. Pendant le tirage, ils sont
+   enfouis : de simples bosses floues sous la poudreuse, qui bougent avec le vent. Un chiffre qui se pose : la congère
+   gonfle (l'élan), la poudre s'envole d'un coup et le creux apparaît net (matière molle : un peu d'écrasement), puis se
+   pose. La poudre, les flocons, l'aurore boréale des grands tirages : js/skinfx.js (SCENES.snowreveal). */
+.num-card.skin-snowreveal {
+  background:
+    radial-gradient(circle at 20% 30%, #fff 0 .02em, transparent .035em) 0 0 / .5em .45em,
+    radial-gradient(circle at 70% 60%, rgba(125, 211, 252, .9) 0 .016em, transparent .03em) .2em .1em / .62em .5em,
+    radial-gradient(ellipse 55% 38% at 16% 110%, rgba(147, 197, 253, .5), transparent 70%),
+    radial-gradient(ellipse 50% 34% at 84% 106%, rgba(147, 197, 253, .42), transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% -14%, rgba(191, 219, 254, .6), transparent 70%),
+    linear-gradient(180deg, #eef3f9, #ffffff 40%, #eef4fb 75%, #d9e6f5);
+  border: 2px solid #a7c0df; border-radius: .9rem .75rem .7rem .9rem; color: #2f5d9e;
+  box-shadow: inset 0 .12em .2em rgba(255, 255, 255, .9), inset 0 -.18em .35em rgba(147, 197, 253, .35), 0 0 16px rgba(186, 230, 253, .35), 0 10px 18px rgba(15, 23, 42, .3);
+}
+.skin-snowreveal .slot { position: relative; z-index: 1; font-weight: 800; color: #3567ad;
+  text-shadow: 0 -.035em 0 rgba(23, 47, 110, .6), 0 .04em 0 #fff, 0 .07em .05em rgba(255, 255, 255, .95), 0 0 .14em rgba(96, 165, 250, .35); }
+.skin-snowreveal .slot.ghost { opacity: .22; }
+/* Enfouis pendant le tirage : des bosses de neige floues qui bougent avec le vent. */
+.skin-snowreveal .slot.spinning { opacity: 1; color: #e6edf6; text-shadow: 0 .045em .05em rgba(100, 116, 139, .45), 0 -.02em .03em #fff; filter: blur(.9px); animation: snw-drift .6s ease-in-out infinite alternate; }
+.skin-snowreveal .slot.spinning:nth-of-type(2n) { animation-delay: -.3s; }
+@keyframes snw-drift { from { transform: translateX(-.025em) scale(1.03, .97); } to { transform: translateX(.025em) scale(.97, 1.03); } }
+/* La congère gonfle, la poudre s'envole : le creux apparaît net, s'écrase un peu, se pose. */
+.skin-snowreveal .slot.revealed { animation: snw-dig .62s backwards; }
+@keyframes snw-dig {
+  0% { color: #e6edf6; text-shadow: 0 .045em .05em rgba(100, 116, 139, .45), 0 -.02em .03em #fff; filter: blur(.9px); transform: none; animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  18% { color: #f1f5f9; text-shadow: 0 .06em .07em rgba(100, 116, 139, .5), 0 -.02em .03em #fff; filter: blur(.7px); transform: translateY(-.04em) scale(1.12, 1.08); animation-timing-function: steps(1); }
+  24% { color: #3567ad; filter: none; transform: translateY(.03em) scale(.9, .94); text-shadow: 0 -.05em 0 rgba(23, 47, 110, .7), 0 .05em 0 #fff, 0 0 .3em rgba(125, 211, 252, .9); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  52% { transform: scale(1.04, 1.02); }
+  74% { transform: scale(.99, 1); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-snowreveal .slot { animation: none; } }
+/* Cadre de duel : une colline enneigée sous un ciel d'hiver ; ❄️ tombe en tournant, ⛄ se dandine. */
+.side-snowreveal { --side-border: #93c5fd; --side-glow: 0 0 16px rgba(186, 230, 253, .4); --side-ink: #3b82f6;
+  --side-bg: radial-gradient(ellipse 80% 40% at 30% 110%, rgba(255, 255, 255, .4), transparent 70%), radial-gradient(ellipse 70% 36% at 85% 108%, rgba(241, 245, 249, .32), transparent 70%), radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .45) 0 1.2px, transparent 2px) 0 0 / 34px 30px, linear-gradient(180deg, rgba(191, 219, 254, .18), rgba(224, 242, 254, .08));
+  --deco-a: '❄️'; --deco-b: '⛄'; }
+.side-snowreveal::before { animation: snw-fall 3s ease-in-out infinite; }
+.side-snowreveal::after { transform-origin: 50% 100%; animation: snw-waddle 2s ease-in-out infinite; }
+@keyframes snw-fall { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(4px) rotate(60deg); } }
+@keyframes snw-waddle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.room-stage.many .side-snowreveal::before, .room-stage.many .side-snowreveal::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-snowreveal::before, .side-snowreveal::after { animation: none; } }
+/* ------------------------------------------------------------------ Graveyard (idée d'IXOLAF2, 2026-10-27) : un petit
+   cimetière la nuit (ciel violet, pleine lune, étoiles, brume au ras du sol, terre brune) ; chaque chiffre est gravé sur
+   sa propre pierre tombale de granit gris (moucheté, un peu de mousse, coins usés), avec une faible lueur verte au fond
+   de la gravure. Pendant le tirage, les pierres tremblent par à-coups (quelque chose frappe dessous) et la gravure
+   clignote vert ; un chiffre qui se pose : la pierre s'enfonce (l'élan), jaillit d'un coup raide (pierre : aucun
+   écrasement mou), la gravure s'allume vert puis s'apaise. Brume, mottes de terre, chauves-souris, et les mains qui
+   sortent des tombes sur les grands tirages : js/skinfx.js (SCENES.graves). */
+.num-card.skin-graves {
+  background:
+    linear-gradient(180deg, transparent calc(100% - .22em), #3b2a1e calc(100% - .22em), #24170f),
+    radial-gradient(ellipse 60% 30% at 28% 90%, rgba(196, 181, 253, .3), transparent 70%),
+    radial-gradient(ellipse 50% 26% at 78% 88%, rgba(196, 181, 253, .24), transparent 70%),
+    radial-gradient(circle at 91% 20%, #fef9c3 0 .15em, rgba(254, 249, 195, .32) .17em .32em, transparent .52em),
+    radial-gradient(1px 1px at 12% 16%, #fff, transparent), radial-gradient(1px 1px at 38% 9%, #e9d5ff, transparent), radial-gradient(1px 1px at 64% 20%, #fff, transparent), radial-gradient(1px 1px at 76% 8%, #e9d5ff, transparent),
+    linear-gradient(180deg, #1c1340, #2e1f5c 55%, #3b2a5e);
+  border: 2px solid #4c1d95; border-radius: .55rem;
+  box-shadow: inset 0 0 0 1px rgba(196, 181, 253, .15), inset 0 -.3em .5em rgba(0, 0, 0, .35), 0 0 16px rgba(134, 239, 172, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .3em .42em .2em;
+}
+.skin-graves .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 800; line-height: 1;
+  width: 1.08em; height: 1.72em; margin: 0 .04em; padding-bottom: .56em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: .54em .54em .05em .05em;
+  font-family: Georgia, 'Times New Roman', serif; color: #23252f;
+  text-shadow: 0 .035em 0 rgba(229, 231, 235, .5), 0 -.02em 0 rgba(0, 0, 0, .6), 0 0 .22em rgba(134, 239, 172, .5);
+  background:
+    radial-gradient(ellipse 38% 20% at 20% 96%, rgba(74, 124, 58, .8), transparent 75%),
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, .35) 0 .02em, transparent .03em) 0 0 / .17em .19em,
+    radial-gradient(circle at 60% 70%, rgba(17, 24, 39, .35) 0 .02em, transparent .03em) .05em .07em / .21em .17em,
+    linear-gradient(100deg, rgba(255, 255, 255, .2), transparent 42%),
+    linear-gradient(180deg, #a3a8b3, #737885 70%, #545a66);
+  box-shadow: inset -.06em -.04em .08em rgba(0, 0, 0, .45), inset .04em .05em .05em rgba(255, 255, 255, .28), 0 .05em 0 #24170f;
+}
+.skin-graves .slot:nth-of-type(2n) { border-radius: .2em .2em .05em .05em; height: 1.64em; }
+.skin-graves .slot:nth-of-type(3n) { border-radius: .54em .3em .05em .05em; }
+.skin-graves .slot.ghost { opacity: .22; }
+.skin-graves .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : la pierre tremble par à-coups, la gravure clignote vert. */
+.skin-graves .slot.spinning { opacity: 1; color: rgba(35, 37, 47, .4); text-shadow: 0 0 .25em rgba(134, 239, 172, .55); animation: grv-knock .5s steps(1) infinite; }
+.skin-graves .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
+.skin-graves .slot.spinning:nth-of-type(3n) { animation-delay: -.37s; }
+@keyframes grv-knock { 0%, 40%, 70%, 100% { transform: none; } 8% { transform: translate(-.02em, -.02em) rotate(-1.5deg); } 16% { transform: translate(.015em, 0) rotate(1deg); } 76% { transform: translateY(-.025em) rotate(1.5deg); } }
+/* La pierre s'enfonce (l'élan), jaillit d'un coup raide, la gravure s'allume vert, petit rebond rigide. */
+.skin-graves .slot.revealed { animation: grv-rise .55s backwards; }
+@keyframes grv-rise {
+  0% { transform: translateY(.14em); filter: brightness(.7); animation-timing-function: ease-in; }
+  18% { transform: translateY(.18em); filter: brightness(.6); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  32% { transform: translateY(-.08em); filter: brightness(1.15); text-shadow: 0 .035em 0 rgba(229, 231, 235, .5), 0 0 .2em #86efac, 0 0 .5em #22c55e; }
+  46% { transform: translateY(.02em) rotate(-1.5deg); }
+  60% { transform: rotate(1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-graves .slot { animation: none; } }
+/* Cadre de duel : une nuit violette, la lune, la brume au sol ; 🪦 vacille, 🦇 bat des ailes. */
+.side-graves { --side-border: #7c3aed; --side-glow: 0 0 16px rgba(134, 239, 172, .22); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(circle at 86% 16%, rgba(254, 249, 195, .7) 0 9px, rgba(254, 249, 195, .2) 10px 18px, transparent 26px), radial-gradient(ellipse 80% 22% at 50% 100%, rgba(196, 181, 253, .35), transparent 70%), linear-gradient(180deg, rgba(28, 19, 64, .35), rgba(59, 42, 94, .2));
+  --deco-a: '🪦'; --deco-b: '🦇'; }
+.side-graves::before { transform-origin: 50% 100%; animation: grv-tilt 2.6s ease-in-out infinite; }
+.side-graves::after { animation: grv-flap .5s steps(2) infinite; }
+@keyframes grv-tilt { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-7deg); } 86% { transform: rotate(4deg); } 92% { transform: rotate(0); } }
+@keyframes grv-flap { 0% { transform: scale(1, 1) translateY(0); } 100% { transform: scale(.7, 1.1) translateY(-2px); } }
+.room-stage.many .side-graves::before, .room-stage.many .side-graves::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-graves::before, .side-graves::after { animation: none; } }
+/* ------------------------------------------------------------------ Ship Wake (idée de 17black, 2026-10-27) : la mer
+   vue d'en haut (bleu-vert profond, reflets de vagues, lumière qui joue) ; les chiffres sont écrits en écume blanche
+   aux bords mousseux. Pendant le tirage, ils sont sous l'eau : sombres, flous, ils ondulent. Un chiffre qui se pose :
+   l'étrave du bateau passe dessus, l'écume bouillonne d'un coup (éclat blanc, un peu gonflé : l'eau est molle) et le
+   chiffre remonte en surface, puis se pose. Le bateau, son sillage en V, les dauphins : js/skinfx.js (SCENES.shipwake). */
+.num-card.skin-shipwake {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><g fill='none' stroke='%23e0f2fe' stroke-opacity='.24' stroke-width='1.2' stroke-linecap='round'><path d='M2 6q4-3 8 0'/><path d='M22 15q4-3 8 0'/><path d='M28 4q3-2 6 0'/></g></svg>") 0 0 / 1.1em .55em,
+    radial-gradient(ellipse 60% 70% at 25% 20%, rgba(125, 211, 252, .3), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 85% 90%, rgba(8, 47, 73, .5), transparent 70%),
+    linear-gradient(160deg, #0e7490, #0c4a6e 55%, #082f49);
+  border: 2px solid #0369a1; border-radius: .6rem; color: #f0fdff;
+  box-shadow: inset 0 0 0 1px rgba(186, 230, 253, .2), inset 0 0 .8em rgba(8, 47, 73, .6), 0 0 16px rgba(56, 189, 248, .25), 0 10px 18px rgba(0, 0, 0, .45);
+}
+/* La houle avance pendant le tirage. */
+.num-card.skin-shipwake.charging { animation: charge 1.6s ease-in-out infinite, wake-swell 2.4s linear infinite; }
+@keyframes wake-swell { to { background-position: -1.1em .55em, 0 0, 0 0, 0 0; } }
+.skin-shipwake .slot { position: relative; z-index: 1; font-weight: 800; color: #f8feff;
+  text-shadow: .03em .02em .03em rgba(255, 255, 255, .75), -.03em -.02em .03em rgba(255, 255, 255, .75), 0 0 .12em rgba(224, 242, 254, .9), 0 .05em .1em rgba(8, 47, 73, .9); }
+.skin-shipwake .slot.ghost { opacity: .2; }
+/* Sous l'eau pendant le tirage : sombres, flous, ils ondulent. */
+.skin-shipwake .slot.spinning { opacity: 1; color: #1f8fb0; text-shadow: 0 0 .1em rgba(8, 47, 73, .6); filter: blur(1px); animation: wake-sway .7s ease-in-out infinite alternate; }
+.skin-shipwake .slot.spinning:nth-of-type(2n) { animation-delay: -.35s; }
+@keyframes wake-sway { from { transform: skewX(-7deg) translateY(.03em); } to { transform: skewX(7deg) translateY(-.03em); } }
+/* L'étrave passe : l'écume bouillonne d'un coup, le chiffre remonte, gonfle un peu et se pose. */
+.skin-shipwake .slot.revealed { animation: wake-surface .6s backwards; }
+@keyframes wake-surface {
+  0% { color: #1f8fb0; filter: blur(1px); transform: skewX(-6deg) scale(.92); animation-timing-function: steps(1); }
+  14% { color: #fff; filter: blur(.6px) brightness(1.3); transform: scale(1.2, 1.1); text-shadow: 0 0 .15em #fff, 0 0 .4em rgba(224, 242, 254, .9), 0 .05em .1em rgba(8, 47, 73, .9); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  36% { filter: none; transform: scale(.94, .97); }
+  58% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-shipwake .slot, .num-card.skin-shipwake.charging { animation: none; } }
+/* Cadre de duel : la mer, quelques vagues ; ⛵ tangue, 🐬 saute. */
+.side-shipwake { --side-border: #0284c7; --side-glow: 0 0 16px rgba(56, 189, 248, .3); --side-ink: #0369a1;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30'><g fill='none' stroke='%2338bdf8' stroke-opacity='.35' stroke-width='1.4' stroke-linecap='round'><path d='M4 10q6-5 12 0'/><path d='M34 22q6-5 12 0'/></g></svg>") 0 0 / 60px 30px, linear-gradient(180deg, rgba(14, 116, 144, .22), rgba(8, 47, 73, .2));
+  --deco-a: '⛵'; --deco-b: '🐬'; }
+.side-shipwake::before { transform-origin: 50% 100%; animation: wake-rock 2.2s ease-in-out infinite; }
+.side-shipwake::after { animation: wake-jump 2.6s ease-in-out infinite; }
+@keyframes wake-rock { 0%, 100% { transform: rotate(-7deg) translateY(0); } 50% { transform: rotate(7deg) translateY(-2px); } }
+@keyframes wake-jump { 0%, 55%, 100% { transform: none; } 70% { transform: translateY(-7px) rotate(-25deg); } 85% { transform: translateY(0) rotate(20deg); } }
+.room-stage.many .side-shipwake::before, .room-stage.many .side-shipwake::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-shipwake::before, .side-shipwake::after { animation: none; } }
+/* ------------------------------------------------------------------ Torn Paper (idée de 17black, 2026-10-27) : du papier
+   kraft brun (fibres, grain) collé sur une vieille affiche jaune ; chaque chiffre est imprimé en noir gras sur l'affiche,
+   dans une fenêtre déchirée au bord blanc fibreux. Pendant le tirage, chaque fenêtre est encore couverte de kraft : le
+   chiffre ne se devine qu'à travers le papier, qui bombe comme si on poussait dessous ; un chiffre qui se pose : le
+   papier est tiré vers le bas (l'élan), se déchire en diagonale d'un coin à l'autre (le coup), et le chiffre apparaît.
+   Les lambeaux qui s'envolent et les confettis de papier : js/skinfx.js (SCENES.tornpaper). */
+.num-card.skin-tornpaper {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .22  0 0 0 0 .1  0 0 0 .3 0'/></filter><rect width='80' height='80' filter='url(%23n)'/></svg>"),
+    repeating-linear-gradient(8deg, rgba(120, 72, 30, .08) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #d4ad74, #c49a5f 60%, #b5874d);
+  border: 2px solid #8a5f2e; border-radius: .25rem; color: #111;
+  box-shadow: inset 0 0 .6em rgba(110, 66, 26, .35), 0 0 14px rgba(250, 204, 21, .15), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .4em .5em;
+}
+.skin-tornpaper .slot {
+  --tear: polygon(4% 6%, 18% 0, 30% 5%, 44% 1%, 58% 6%, 72% 0, 86% 4%, 100% 2%, 96% 18%, 100% 34%, 95% 50%, 100% 66%, 96% 82%, 99% 100%, 84% 95%, 70% 100%, 56% 94%, 42% 100%, 28% 95%, 14% 100%, 0 97%, 4% 80%, 0 64%, 5% 48%, 0 32%, 4% 16%);
+  position: relative; z-index: 1; isolation: isolate; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.3em; margin: 0 .03em; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; color: #111;
+  clip-path: var(--tear); background: #fbf7ec;
+}
+.skin-tornpaper .slot:nth-of-type(2n) { --tear: polygon(0 3%, 14% 7%, 28% 0, 42% 5%, 56% 0, 70% 6%, 84% 1%, 98% 6%, 100% 20%, 95% 36%, 100% 52%, 96% 68%, 100% 84%, 97% 98%, 82% 100%, 68% 94%, 54% 99%, 40% 95%, 26% 100%, 12% 94%, 2% 100%, 0 84%, 5% 68%, 0 52%, 6% 36%, 1% 20%); }
+.skin-tornpaper .slot::before { content: ''; position: absolute; inset: .07em; z-index: -1; clip-path: var(--tear);
+  background: radial-gradient(circle, rgba(236, 72, 153, .32) 0 .03em, transparent .04em) 0 0 / .12em .12em, linear-gradient(160deg, #fde047, #facc15 60%, #f59e0b); }
+/* le kraft qui couvre la fenêtre (seulement pendant le tirage et pendant la déchirure) */
+.skin-tornpaper .slot::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(255, 237, 213, .35), transparent 70%), repeating-linear-gradient(8deg, rgba(120, 72, 30, .1) 0 1px, transparent 1px 4px), linear-gradient(180deg, #d4ad74, #c49a5f 60%, #b5874d); }
+.skin-tornpaper .slot.ghost { opacity: .2; }
+.skin-tornpaper .slot.collapsed { width: 0; height: 0; margin: 0; background: none; }
+.skin-tornpaper .slot.collapsed::before, .skin-tornpaper .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le kraft couvre la fenêtre, le chiffre se devine à travers, le papier bombe. */
+.skin-tornpaper .slot.spinning { opacity: 1; }
+.skin-tornpaper .slot.spinning::after { opacity: .9; animation: torn-bulge .5s ease-in-out infinite alternate; }
+.skin-tornpaper .slot.spinning:nth-of-type(2n)::after { animation-delay: -.25s; }
+@keyframes torn-bulge { from { transform: scale(1); filter: brightness(1); } to { transform: scale(1.04, 1.06); filter: brightness(1.12); } }
+/* La déchirure : tiré vers le bas (l'élan), puis arraché en diagonale du coin haut droit vers le coin bas gauche. */
+.skin-tornpaper .slot.revealed::after { animation: torn-rip .5s backwards; }
+@keyframes torn-rip {
+  0% { opacity: .94; clip-path: polygon(0 0, 100% 0, 100% 0, 100% 100%, 0 100%); transform: none; animation-timing-function: ease-in; }
+  18% { opacity: .94; clip-path: polygon(0 0, 100% 0, 100% 0, 100% 100%, 0 100%); transform: translateY(.06em) scaleY(.96); animation-timing-function: steps(1); }
+  20% { opacity: .94; clip-path: polygon(0 0, 55% 0, 100% 45%, 100% 100%, 0 100%); transform: translateY(.03em); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { opacity: .94; clip-path: polygon(0 28%, 0 28%, 72% 100%, 72% 100%, 0 100%); transform: none; }
+  64% { opacity: .9; clip-path: polygon(0 82%, 0 82%, 18% 100%, 18% 100%, 0 100%); }
+  80% { opacity: 0; clip-path: polygon(0 100%, 0 100%, 0 100%, 0 100%, 0 100%); }
+  100% { opacity: 0; }
+}
+/* Le chiffre, lui, ne bouge qu'au coup : un petit sursaut quand le papier lâche. */
+.skin-tornpaper .slot.revealed { animation: torn-jolt .5s backwards; }
+@keyframes torn-jolt { 0%, 18% { transform: none; } 22% { transform: translateY(-.04em) scale(1.04); } 40% { transform: translateY(.015em); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-tornpaper .slot, .skin-tornpaper .slot::after { animation: none; } }
+/* Cadre de duel : un panneau de liège couvert de vieilles affiches déchirées ; ✂️ coupe, 📌 tient. */
+.side-tornpaper { --side-border: #a16207; --side-glow: 0 0 14px rgba(250, 204, 21, .22); --side-ink: #92400e;
+  --side-bg: linear-gradient(172deg, transparent 60%, rgba(250, 204, 21, .18) 60% 72%, transparent 72%), linear-gradient(8deg, transparent 18%, rgba(212, 173, 116, .25) 18% 34%, transparent 34%), radial-gradient(circle at 30% 40%, rgba(120, 72, 30, .18) 0 1px, transparent 2px) 0 0 / 9px 9px, linear-gradient(180deg, rgba(196, 154, 95, .25), rgba(181, 135, 77, .18));
+  --deco-a: '✂️'; --deco-b: '📌'; }
+.side-tornpaper::before { animation: torn-snip .7s steps(2) infinite; }
+.room-stage.many .side-tornpaper::before { animation: none; }
+@keyframes torn-snip { 0% { transform: rotate(0); } 100% { transform: rotate(-14deg); } }
+@media (prefers-reduced-motion: reduce) { .side-tornpaper::before { animation: none; } }
+/* ------------------------------------------------------------------ Stickman (idée de Jguz01, 2026-10-27 ; sur Discord,
+   un bonhomme qui écrit les chiffres) : une page de cahier à spirale (papier crème, lignes bleues, marge rouge, trous
+   de la spirale en haut) ; les chiffres sont écrits au gros feutre noir, un peu penchés, comme à la main. Pendant le
+   tirage, ce ne sont que des esquisses au crayon gris qui tremblent (le trait « bout » comme dans un folioscope) ; un
+   chiffre qui se pose s'écrit de gauche à droite, au passage du bonhomme qui fonce devant lui, puis frétille et se pose.
+   Le bonhomme, ses traits de vitesse et ses célébrations : js/skinfx.js (SCENES.stickman). */
+.num-card.skin-stickman {
+  background:
+    /* trous de la spirale en haut */
+    radial-gradient(circle at 50% 55%, #44403c 0 .045em, #a8a29e .055em, transparent .07em) .12em 0 / .36em .2em repeat-x,
+    /* marge rouge */
+    linear-gradient(90deg, transparent .42em, rgba(239, 68, 68, .55) .42em .46em, transparent .46em),
+    /* lignes du cahier */
+    repeating-linear-gradient(180deg, transparent 0 .34em, rgba(96, 165, 250, .4) .34em .36em),
+    radial-gradient(ellipse 80% 70% at 30% 20%, #fffef9, transparent 80%),
+    linear-gradient(180deg, #fdfbf3, #f7f3e6);
+  border: 1px solid #d6d3d1; border-radius: .3rem; color: #111827;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), inset 0 -.2em .4em rgba(120, 113, 108, .12), 2px 3px 0 rgba(120, 113, 108, .35), 0 10px 18px rgba(0, 0, 0, .3);
+  padding: .55rem 1.2rem .5rem 1.5rem;
+}
+.skin-stickman .slot { position: relative; z-index: 1; width: .66em; color: #111827; font-weight: 700;
+  font-family: 'Marker Felt', 'Segoe Print', 'Chalkboard SE', 'Comic Sans MS', cursive; font-variant-numeric: normal;
+  text-shadow: 0 0 .02em rgba(17, 24, 39, .7), .01em .015em 0 rgba(17, 24, 39, .45); rotate: -3deg; }
+.skin-stickman .slot:nth-of-type(2n) { rotate: 2.5deg; translate: 0 .02em; }
+.skin-stickman .slot:nth-of-type(3n) { rotate: -1deg; translate: 0 -.02em; }
+.skin-stickman .slot.ghost { opacity: .2; }
+/* Pendant le tirage : une esquisse au crayon gris, le trait bout (trois positions, en saccades). */
+.skin-stickman .slot.spinning { opacity: 1; color: rgba(100, 116, 139, .5); text-shadow: .02em 0 0 rgba(100, 116, 139, .3); animation: stk-boil .27s steps(1) infinite; }
+.skin-stickman .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes stk-boil { 0% { transform: translate(.01em, 0) rotate(1deg); } 33% { transform: translate(-.015em, .01em) rotate(-1.5deg); } 66% { transform: translate(0, -.015em) rotate(.5deg) scale(1.02); } }
+/* Le chiffre s'écrit au feutre, de gauche à droite, au passage du bonhomme (penché par la vitesse), puis frétille. */
+.skin-stickman .slot.revealed { animation: stk-write .5s backwards; }
+@keyframes stk-write {
+  0% { clip-path: inset(-20% 100% -20% -20%); transform: skewX(-12deg); animation-timing-function: cubic-bezier(.3, .6, .4, 1); }
+  34% { clip-path: inset(-20% -20% -20% -20%); transform: skewX(-6deg) scale(1.06); animation-timing-function: ease-out; }
+  56% { transform: rotate(4deg) scale(.98); }
+  76% { transform: rotate(-2deg); }
+  100% { clip-path: inset(-20% -20% -20% -20%); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-stickman .slot { animation: none; } }
+/* Cadre de duel : une page de cahier ; ✏️ gribouille, 🏃 court sur place. */
+.side-stickman { --side-border: #94a3b8; --side-glow: 0 0 14px rgba(96, 165, 250, .2); --side-ink: #1f2937;
+  --side-bg: linear-gradient(90deg, transparent 18px, rgba(239, 68, 68, .35) 18px 20px, transparent 20px), repeating-linear-gradient(180deg, transparent 0 17px, rgba(96, 165, 250, .2) 17px 18px), linear-gradient(180deg, rgba(253, 251, 243, .16), rgba(247, 243, 230, .1));
+  --deco-a: '✏️'; --deco-b: '🏃'; }
+.side-stickman::before { animation: stk-scribble .6s steps(2) infinite; }
+.side-stickman::after { animation: stk-jog .4s steps(2) infinite; }
+@keyframes stk-scribble { 0% { transform: translate(0, 0) rotate(0); } 100% { transform: translate(3px, 1px) rotate(-8deg); } }
+@keyframes stk-jog { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+.room-stage.many .side-stickman::before, .room-stage.many .side-stickman::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-stickman::before, .side-stickman::after { animation: none; } }
 
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
