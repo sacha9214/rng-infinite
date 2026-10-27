@@ -2,7 +2,9 @@
 // POST /api/quests { playerId, secret, action: 'claim', quest }   → réclame la récompense d'une quête terminée
 // POST /api/quests { playerId, secret, action: 'daily' }          → réclame le bonus quotidien (série de jours)
 // Tout se lit sur les compteurs tenus par le serveur (q:<jour>:<id>) : rien ne se crédite depuis le site.
-const { eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, toObject, cors, send, flushDue } = require('./_lib');
+// POST /api/quests { playerId, secret, action: 'wclaim', quest } → réclame une quête de la semaine terminée
+// POST /api/quests { playerId, secret, action: 'chest' }          → ouvre les coffres de quêtes prêts
+const { eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, weekKey, weekQuestKey, WEEK_QUEST_TTL, toObject, cors, send, flushDue } = require('./_lib');
 const Quests = require('../js/quests.js');
 const Shop = require('../js/shop.js');
 const Events = require('../js/events.js');
@@ -21,6 +23,11 @@ async function eventState(id, now) {
 }
 
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
+// Fin de la semaine ISO en cours (lundi suivant, 00:00 UTC) : les quêtes de la semaine changent à ce moment-là.
+function weekEnd(t) { const d = new Date(t); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() + (8 - (d.getUTCDay() || 7))); return d.getTime(); }
+// Jours « tout fini » d'un joueur arrivé avant le coffre (2026-10-27) : on part de sa meilleure série de quêtes, qui en
+// compte au moins autant (les jours d'avant ne sont gardés nulle part ailleurs : q:<jour> expire en 3 jours).
+const seedDays = (id, st) => ['HSETNX', statsKey(id), 'qdays', Number(st.qsBest) || 0];
 
 async function state(id, now = Date.now()) {
   const day = dayKey(now);
@@ -30,9 +37,11 @@ async function state(id, now = Date.now()) {
     if (st0.lvlPaid === undefined) { const L0 = Quests.levelOf(st0.xpLife); await redis([['HSETNX', statsKey(id), 'lvlPaid', L0], ['HSETNX', statsKey(id), 'lvlStart', L0]]); }
     else if (st0.lvlStart === undefined) await redis([['HSETNX', statsKey(id), 'lvlStart', st0.lvlPaid]]); // arrivés avant ce champ : leur dernier niveau payé
   }
-  const [flat] = await redis([['HGETALL', questKey(day, id)]]);
-  const counters = toObject(flat);
+  const week = weekKey(now);
+  const [flat, wflat] = await redis([['HGETALL', questKey(day, id)], ['HGETALL', weekQuestKey(week, id)]]);
+  const counters = toObject(flat), wcounters = toObject(wflat);
   const stats = await readStats(id);
+  if (stats.qdays === undefined) { const [, seeded] = await redis([seedDays(id, stats), ['HGET', statsKey(id), 'qdays']]); stats.qdays = seeded; }
   const claimedToday = stats.streakDay === day;
   // Série affichée : celle en cours si le bonus d'hier ou d'aujourd'hui a été pris, sinon elle est retombée à 0.
   const alive = claimedToday || stats.streakDay === Quests.dayBefore(day);
@@ -58,6 +67,16 @@ async function state(id, now = Date.now()) {
       if (catchup && (catchup.coins || catchup.keys.length)) { coins += catchup.coins; keys = keys.concat(catchup.keys); }
       const due = pending.length + (catchup && (catchup.coins || catchup.keys.length) ? 1 : 0);
       return { level: L, xp: Number(stats.xpLife) || 0, from: Quests.xpForLevel(L), to: Quests.xpForLevel(L + 1), pending: due, coins, keys, next: Quests.levelReward(L + 1), catchup: catchup && (catchup.coins || catchup.keys.length) ? catchup : null, start };
+    })(),
+    // Quêtes de la semaine (idée de Tumored, 2026-10-27) : 3, changées le lundi 00:00 UTC.
+    weekly: {
+      week, resetAt: weekEnd(now),
+      quests: Quests.ofWeek(week).map(q => ({ id: q.id, emoji: q.emoji, text: q.text, target: q.target, reward: q.reward, progress: Quests.progress(q, wcounters), claimed: wcounters[`claimed:${q.id}`] === '1' })),
+    },
+    // Coffre des quêtes (idée de Sean, 2026-10-27) : jours « tout fini » à vie et coffres aux paliers.
+    chest: (() => {
+      const days = Number(stats.qdays) || 0, opened = Math.min(Quests.CHESTS.length, Number(stats.qchest) || 0), ready = Quests.chestsReady(days, opened);
+      return { days, opened, ready: ready.length, coins: ready.reduce((x, c) => x + c.coins, 0), next: Quests.CHESTS.find(c => c.at > days) || null, milestones: Quests.CHESTS.map((c, i) => ({ at: c.at, coins: c.coins, open: i < opened, ready: i >= opened && days >= c.at })) };
     })(),
     // Série de quêtes : jours de suite avec les 5 quêtes réclamées. Retombe à 0 si hier n'a pas été fini.
     questStreak: (() => {
@@ -104,13 +123,40 @@ module.exports = async (req, res) => {
         if (Number(firstAll) === 1) {
           const st = await readStats(playerId);
           const streak = st.qsDay === Quests.dayBefore(day) ? (Number(st.qs) || 0) + 1 : 1, bonus = Quests.allDoneReward(streak);
-          await redis([['HSET', statsKey(playerId), 'qs', streak, 'qsDay', day, 'qsBest', Math.max(streak, Number(st.qsBest) || 0)], ['HINCRBY', statsKey(playerId), 'bonus', bonus]]);
+          // + un jour « tout fini » pour le coffre des quêtes (à vie, compté d'abord depuis la meilleure série d'avant)
+          // et pour les quêtes de la semaine (2026-10-27). Le bonus « tout fini » passe aussi par l'économie (eco), il
+          // n'y était pas compté.
+          const wk = weekQuestKey(weekKey(Date.now()), playerId);
+          await redis([['HSET', statsKey(playerId), 'qs', streak, 'qsDay', day, 'qsBest', Math.max(streak, Number(st.qsBest) || 0)], ['HINCRBY', statsKey(playerId), 'bonus', bonus], ...eco('in:quests', bonus),
+            seedDays(playerId, st), ['HINCRBY', statsKey(playerId), 'qdays', 1], ['HINCRBY', wk, 'days', 1], ['EXPIRE', wk, WEEK_QUEST_TTL]]);
           allDone = { streak, bonus };
         }
       }
       return send(res, 200, { ...(await state(playerId)), gained: reward + (allDone ? allDone.bonus : 0), allDone });
     }
 
+    // Quête de la semaine (idée de Tumored, 2026-10-27) : une fois par quête et par semaine, le marqueur sert de verrou.
+    if (body.action === 'wclaim') {
+      const week = weekKey(Date.now()), quest = Quests.ofWeek(week).find(q => q.id === String(body.quest || ''));
+      if (!quest) return send(res, 400, { error: 'This quest is not available this week' });
+      const wk = weekQuestKey(week, playerId), [flat] = await redis([['HGETALL', wk]]);
+      if (Quests.progress(quest, toObject(flat)) < quest.target) return send(res, 422, { error: 'Quest not finished yet' });
+      const [first] = await redis([['HSETNX', wk, `claimed:${quest.id}`, 1], ['EXPIRE', wk, WEEK_QUEST_TTL]]);
+      if (Number(first) !== 1) return send(res, 422, { error: 'Reward already claimed' });
+      await redis([['HINCRBY', statsKey(playerId), 'bonus', quest.reward], ['HINCRBY', statsKey(playerId), 'wquestsDone', 1], ...eco('in:weekly', quest.reward)]);
+      return send(res, 200, { ...(await state(playerId)), gained: quest.reward });
+    }
+    // Coffres des quêtes (idée de Sean, 2026-10-27) : tous ceux qui sont prêts d'un coup, une seule fois chacun.
+    if (body.action === 'chest') {
+      const [lock] = await redis([['SET', `qchest:${playerId}`, '1', 'NX', 'PX', 5000]]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Already opening' });
+      try {
+        const st = await state(playerId), ch = st.chest;
+        if (!ch.ready) return send(res, 422, { error: 'No quest chest to open yet' });
+        await redis([['HSET', statsKey(playerId), 'qchest', ch.opened + ch.ready], ['HINCRBY', statsKey(playerId), 'bonus', ch.coins], ...eco('in:chest', ch.coins)]);
+        return send(res, 200, { ...(await state(playerId)), gained: ch.coins, chests: ch.ready });
+      } finally { await redis([['DEL', `qchest:${playerId}`]]); }
+    }
     if (body.action === 'level') {
       // Une réclamation à la fois (deux clics simultanés ne paient qu'une fois).
       const [lock] = await redis([['SET', `lvlclaim:${playerId}`, '1', 'NX', 'PX', 5000]]);

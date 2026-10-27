@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-25 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-10-27 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -9,7 +9,34 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
-## Trailer v2 (2026-10-26, branch `claude/trailer-v2`, not merged)
+## Player ideas batch (2026-10-27, branch `claude/ideas-2026-10-27`)
+
+Sacha approved a yes list from the 374 open inbox ideas + Discord #ideas ("do all the ones you said yes, nothing about
+the rest"). Built by 7 parallel agents, merged here. Ideas not on the yes list were left untouched in the inbox.
+
+- Badges (tools/source/custom.json, js/engine.js): Forever family (224/224224), 1987, 505, Beverly Hills (90210), 1738,
+  Around the Clock (24), Jumbo Jet Set (747747), Summer Break (104), Narcissistic, Silver Ratio (2414/24142), Quantum
+  Chaos; Leap Day reads 2902YY and YY0229. ~48,600 numbers changed tier: run `tools/rescore-worst.js --apply` on the
+  server after deploy; a migration for the ~980 new Mythic+ numbers is optional. `build.mjs` now writes
+  `data/badge-odds.json` and checks 96/96 (only the best badge of a custom family is subtracted).
+- `Engine.nextTier()` and the "X XP short of <tier>" line after a roll.
+- Titles: rarity collectors (server flags from `badges:<id>`, versioned by `colv`), coin-earned tiers, Sound Collector,
+  Shopaholic, Clan Benefactor/Pillar, Decabillionaire (earned at 10B XP, not a Prestige item), Clan MVP.
+- Global chat: replies (`gc:gone` keeps deleted/edited ids), emoji picker, big-roll system messages (Divine+, 15 s after
+  the roll, rate-limited, queue `gc:sysq`), owner pin. About me (`bio` hash, `api/_bio.js`, owner can clear, reportable).
+- Most rolls leaderboard (`lb:rolls`, backfilled by `migrateRolls` every 5 s), unique numbers (`SCARD nums:<id>`),
+  weekly quests (`qw:<week>:<id>`, `in:weekly`), quest chest (`stats.qdays`, `in:chest`), clan co-leader rank.
+  The "all quests done" bonus is now counted in the economy (`in:quests`).
+- Casino: Duck Race (`duck()` in api/_gamble.js, 97% RTP per duck), How to play modal on every game. Shop: Button Case
+  (a Premium key opens it too), Pickle button, Meme and Soft Taps sound packs.
+- 7 wallpapers (Comic Book, Black Hole, Rain to Rainbow, City Heights, Crystal Cave, Jungle, Lake): their CSS block was
+  generated, edit it by hand now. 14 skins in two blocks of js/skinfx.js ("lot A", "lot B"): 77 scenes in total.
+- Tests: the simulated clock now starts at 10:00 UTC (`TEST_START_HOUR` to override) and the duel coin check ignores
+  monthly awards; the suite used to fail near midnight UTC and at month end.
+- Known weak points (agents' own critique): Ship Wake / Stickman / elves are small on phones; Baseball's bat-for-1 is
+  hard to read; Torn Paper's tear is a straight wipe; the 🁫 Domino emoji may not render on some phones.
+
+## Trailer v2 (2026-10-26, merged in PR #43 and live)
 
 - Asked by Sacha: a new promo film replacing the 30 s one. `trailer/trailer.js` (38 s, 16:9 + 9:16, cuts `?cut=15` and
   `?cut=6`), soundtrack `tools/trailer-audio.mjs` (new cues: whip, hit, chat, coin, peg, card, roll, infinite impact;

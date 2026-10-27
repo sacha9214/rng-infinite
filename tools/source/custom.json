@@ -558,8 +558,130 @@
   {
     "id": "LEAP_DAY",
     "label": "Leap Day",
-    "desc": "Reads as February 29 of a leap year: 0229YY, like 022924 (rolled as 22924).",
+    "desc": "Reads as February 29 of a leap year: 0229YY, 2902YY or YY0229, like 022924 (rolled as 22924), 290224 or 240229.",
     "emoji": "🐸",
     "score": 4000004
+  },
+  {
+    "id": "FOREVER",
+    "label": "Forever",
+    "desc": "Contains \"224\": today, tomorrow and forever.",
+    "emoji": "💗",
+    "score": 25006,
+    "family": "FOREVER"
+  },
+  {
+    "id": "FOREVER_EXACT",
+    "label": "Exact Forever",
+    "desc": "Exactly 224: today, tomorrow and forever.",
+    "emoji": "💍",
+    "score": 100000100,
+    "family": "FOREVER"
+  },
+  {
+    "id": "FOREVER_AND_EVER",
+    "label": "Forever and Ever",
+    "desc": "Exactly 224224: forever and ever.",
+    "emoji": "💫",
+    "score": 100000100,
+    "family": "FOREVER"
+  },
+  {
+    "id": "YEAR_1987",
+    "label": "1987",
+    "desc": "Contains \"1987\", a retro year.",
+    "emoji": "📼",
+    "score": 333334,
+    "family": "YEAR_1987"
+  },
+  {
+    "id": "YEAR_1987_EXACT",
+    "label": "Exact 1987",
+    "desc": "Exactly 1987.",
+    "emoji": "📼",
+    "score": 100000100,
+    "family": "YEAR_1987"
+  },
+  {
+    "id": "FIVE_OH_FIVE",
+    "label": "505",
+    "desc": "Contains \"505\", like the song.",
+    "emoji": "🎧",
+    "score": 25132,
+    "family": "FIVE_OH_FIVE"
+  },
+  {
+    "id": "FIVE_OH_FIVE_EXACT",
+    "label": "Exact 505",
+    "desc": "Exactly 505.",
+    "emoji": "🎼",
+    "score": 100000100,
+    "family": "FIVE_OH_FIVE"
+  },
+  {
+    "id": "BEVERLY_HILLS",
+    "label": "Beverly Hills",
+    "desc": "Contains \"90210\", the famous Beverly Hills zip code.",
+    "emoji": "🌴",
+    "score": 5000005
+  },
+  {
+    "id": "SEVENTEEN_38",
+    "label": "1738",
+    "desc": "Contains \"1738\".",
+    "emoji": "🎤",
+    "score": 333334
+  },
+  {
+    "id": "AROUND_THE_CLOCK",
+    "label": "Around the Clock",
+    "desc": "Exactly 24: every hour of the day.",
+    "emoji": "🕛",
+    "score": 100000100
+  },
+  {
+    "id": "JUMBO_JET_SET",
+    "label": "Jumbo Jet Set",
+    "desc": "Exactly 747747: two jumbo jets.",
+    "emoji": "✈️",
+    "score": 100000100,
+    "family": "JET"
+  },
+  {
+    "id": "SUMMER_BREAK",
+    "label": "Summer Break",
+    "desc": "Exactly 104: the days of summer vacation.",
+    "emoji": "🏖️",
+    "score": 100000100
+  },
+  {
+    "id": "NARCISSISTIC",
+    "label": "Narcissistic",
+    "desc": "Each digit raised to the number of digits, all added up, gives the number back: 153 = 1³ + 5³ + 3³ (only 11 of them).",
+    "emoji": "🪞",
+    "score": 9090918
+  },
+  {
+    "id": "SILVER_RATIO_4",
+    "label": "Silver Ratio",
+    "desc": "Contains \"2414\": the silver ratio, 1 + √2 = 2.414…",
+    "emoji": "🥈",
+    "score": 333334,
+    "family": "SILVER_RATIO"
+  },
+  {
+    "id": "SILVER_RATIO_5",
+    "label": "Silver Ratio+",
+    "desc": "Contains \"24142\": 1 + √2 = 2.4142…",
+    "emoji": "🥈",
+    "score": 5000005,
+    "family": "SILVER_RATIO"
+  },
+  {
+    "id": "QUANTUM_CHAOS",
+    "label": "Quantum Chaos",
+    "desc": "A prime number of 4 digits or more where no digit repeats.",
+    "emoji": "⚛️",
+    "score": 7531
   }
 ]

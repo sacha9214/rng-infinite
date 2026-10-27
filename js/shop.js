@@ -131,7 +131,30 @@
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     // Wood carving : idée de jjcoolcid1 et JBearr12 (2026-10-25) — une lame taille chaque chiffre en creux dans une planche de pin.
     { id: 'woodcarving', name: 'Wood Carving', emoji: '🪵', price: 2000, desc: 'A knife carves every digit into a pine plank and wood shavings fly; rare rolls get a coat of golden varnish', idea: 'jjcoolcid1' },
+    // ==== Skins du 2026-10-27, lot A (idées de joueurs ; scènes dans js/skinfx.js) ====
+    // Idée de 17black (2026-10-27) : des guirlandes de Noël qui clignotent puis s'allument pour révéler les chiffres.
+    { id: 'fairylights', name: 'Fairy Lights', emoji: '✨', price: 1800, desc: 'A string of old-fashioned bulbs hangs over a frosty window: every bulb flickers on to light up its digit, and great rolls set the whole string chasing', idea: '17black' },
+    // Idée de costoroll (2026-10-27) : six lutins derrière un tapis roulant de chutes de bois ; le chiffre apparaît au coup de marteau.
+    { id: 'workshop', name: "Elves' Workshop", emoji: '🧝', price: 2400, desc: 'Six shadow elves stand behind a conveyor belt of wood scraps: each one smashes its hammer down and the digit appears with the hit', idea: 'costoroll' },
+    // Idée de G8_floppa (2026-10-27) : tout est dans la neige et les chiffres en sortent.
+    { id: 'snowreveal', name: 'Snow Reveal', emoji: '⛄', price: 1500, desc: 'Every digit is buried in fresh snow until the powder blows away, and Mythic rolls light up the northern lights', idea: 'G8_floppa' },
+    // Idée d'IXOLAF2 (2026-10-27) : un chiffre par tombe ; sur un grand tirage, une main sort des tombes (gentil, pas gore).
+    { id: 'graves', name: 'Graveyard', emoji: '🪦', price: 2100, desc: 'Every digit is carved on its own tombstone under a full moon; bats fly out, and on great rolls friendly green hands pop out of the graves', idea: 'IXOLAF2' },
+    // Idée de 17black (2026-10-27) : un bateau passe et son sillage révèle les chiffres.
+    { id: 'shipwake', name: 'Ship Wake', emoji: '🚢', price: 2200, desc: 'A little tugboat sails across the sea and every digit rises in the foam of its wake; great rolls bring dolphins and a whale', idea: '17black' },
+    // Idée de 17black (2026-10-27) : du papier déchiré, et les chiffres dessous.
+    { id: 'tornpaper', name: 'Torn Paper', emoji: '📜', price: 1200, desc: 'Brown paper covers every digit until it rips away to show a bold number on a yellow poster; great rolls tear the whole wrapping apart', idea: '17black' },
+    // Idée de Jguz01 (2026-10-27 ; sur Discord, un bonhomme qui écrit les chiffres) : il passe en courant devant chaque chiffre.
+    { id: 'stickman', name: 'Stickman', emoji: '🏃', price: 1600, desc: 'A doodled stick man sprints across a notebook page, and every digit gets written in marker as he runs past', idea: 'Jguz01' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
+    // Skins du 2026-10-27, lot B : idées de joueurs acceptées par Sacha.
+    { id: 'baseball', name: 'Baseball', emoji: '⚾', price: 1800, desc: 'Every digit is pitched in and lands with a thwack; a 0 turns into a baseball and a 1 into a bat, and Mythic rolls are a HOME RUN', idea: 'Kj13' }, // idée de Kj13 (finnnnn l'avait proposé aussi)
+    { id: 'racecar', name: 'Race Car', emoji: '🏎️', price: 2400, desc: 'A race car drifts around your number and taps every digit into place; good rolls take a victory lap under the checkered flag', idea: 'whywhywaylon' }, // idée de whywhywaylon, dérive de logannn
+    { id: 'domino', name: 'Domino', emoji: '🁫', price: 2200, desc: 'A velvet bag drops, dominoes tumble out and their dots turn into your digits; great rolls set off a domino chain', idea: 'kaz' }, // idée de kaz
+    { id: 'lilypad', name: 'Lily Pads', emoji: '🐸', price: 1500, desc: 'Six lily pads on a pond and a frog that hops onto every digit as it appears; Mythic rolls end in a giant leap', idea: 'casmicgraything' }, // idée de casmicgraything
+    { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
+    { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
+    { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -197,6 +220,10 @@
     // Idée de CrazyMiner22 (2026-10-21) : une caisse qui donne un fond d'écran (wall: true) au lieu d'un skin. Les fonds
     // normaux seulement (ni limités ni légendaires), poids 1 / prix comme les skins : valeur moyenne d'un tirage ≈ 812, caisse à 600 (0,74 : entre la Starter 0,70 et l'Elite 0,78).
     { id: 'wallpaper', name: 'Wallpaper Case', emoji: '🖼️', price: 600, desc: 'An animated wallpaper worth 500 to 1,200 coins', wall: true },
+    // Idée de shadow2 (demandée trois fois, 2026-10-27) : une caisse qui donne un bouton Generate (btn: true, BUTTONS),
+    // tous les boutons vendus à part, poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 429, caisse
+    // à 320 (0,75 : comme la caisse de fonds d'écran, 0,74). Doublon : même remboursement selon la rareté.
+    { id: 'buttons', name: 'Button Case', emoji: '🔘', price: 320, desc: 'A Generate button worth 150 to 2,200 coins', btn: true },
   ];
   const caseById = new Map(CASES.map(c => [c.id, c]));
   // Fonds d'écran animés (idée de MAYO, 2026-10-16) : changent tout l'arrière-plan du site, pour soi seul.
@@ -240,20 +267,39 @@
     // Idée de .... (2026-10-26) : le fond de la mer ; sur un très bon tirage (Mythic+), un sous-marin plonge jusqu'au
     // fond et lâche des bulles à la révélation.
     { id: 'submarine', name: 'Deep Dive', emoji: '🔱', price: 4500, premium: true, idea: '....', desc: 'A yellow submarine patrols the deep; it dives during every roll, and a Mythic+ roll sends it crashing to the seabed in a burst of bubbles' },
+    // Sept fonds d'idées de joueurs (2026-10-27). Les trois qui réagissent aux tirages sont légendaires (premium).
+    // Idée de JBearr12 (demandée deux fois) : une page de BD assortie au skin Comic Book (cases, trame, onomatopées).
+    { id: 'comicpage', name: 'Comic Book', emoji: '💥', price: 4500, premium: true, idea: 'JBearr12', desc: 'A comic page of halftone panels and speed lines; good rolls land a POW!, and Mythic+ rolls a giant KA-BOOM!' },
+    // Idée de Big Sexy et jjcoolcid1 : assorti au skin Singularity, un disque d'accrétion qui tourne plus vite selon la
+    // rareté, et la lumière aspirée dans le trou après chaque tirage (id « accretion » : « blackhole » est le skin).
+    { id: 'accretion', name: 'Black Hole', emoji: '🕳️', price: 5500, premium: true, idea: 'Big Sexy', desc: 'A black hole in the Milky Way: its glowing disk spins faster the rarer your roll, and every roll swirls light into it' },
+    // Idée d'ichi et JBearr12 : des gratte-ciel vus d'en haut, des lumières, un avion et un hélicoptère qui passent.
+    { id: 'city', name: 'City Heights', emoji: '🏙️', price: 1200, idea: 'ichi', desc: 'A skyline seen from the rooftops: windows flicker, beacons blink, a plane and a helicopter fly by' },
+    // Idée d'ichi : une jungle, feuilles en couches, lianes, rayons de soleil, un oiseau ou un papillon de temps en temps.
+    { id: 'jungle', name: 'Jungle', emoji: '🌴', price: 1000, idea: 'ichi', desc: 'Swaying leaves and vines, sunbeams through the canopy, and now and then a butterfly or a parrot' },
+    // Idée de sennybex1 et IXOLAF2 : une pluie calme ; sur un bon tirage le ciel se dégage et un arc-en-ciel apparaît.
+    { id: 'rainrainbow', name: 'Rain to Rainbow', emoji: '🌈', price: 4000, premium: true, idea: 'sennybex1', desc: 'Calm rain under grey clouds; a good roll clears the sky and brings out a rainbow, then the rain slowly comes back' },
+    // Idée de finnnnn : des cristaux lumineux dans une grotte, une vieille galerie de mine, une chauve-souris parfois.
+    { id: 'crystalcave', name: 'Crystal Cave', emoji: '💎', price: 1100, idea: 'finnnnn', desc: 'Glowing crystals deep in a cave by an old mineshaft, with dripping water and the odd bat' },
+    // Idée de randomguy : un lac calme où des poissons sautent de temps en temps, et plus rarement un dauphin.
+    { id: 'lake', name: 'Lake', emoji: '🏞️', price: 900, idea: 'randomguy', desc: 'A calm lake where fish jump now and then, and once in a while a dolphin' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
-  const caseOnly = c => (c.wall ? [] : SKINS.filter(s => s.caseOnly === c.id));
+  const caseOnly = c => (c.wall || c.btn ? [] : SKINS.filter(s => s.caseOnly === c.id));
   // Ce qu'une caisse donne : un skin, ou un fond d'écran pour la caisse de fonds (des identifiants existent dans les deux
-  // listes, comme galaxy ou sakura : toujours passer par la caisse).
-  const caseItem = (c, id) => (c && c.wall ? wallById : byId).get(id);
-  const casePool = c => c.wall ? WALLPAPERS.filter(w => !w.until && !w.premium).sort((a, b) => a.price - b.price) : SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
+  // listes, comme galaxy ou sakura : toujours passer par la caisse), ou un bouton pour la caisse de boutons.
+  const caseItem = (c, id) => (c && c.btn ? buttonById : c && c.wall ? wallById : byId).get(id);
+  const casePool = c => c.btn ? BUTTONS.filter(b => !b.until && !b.hidden).sort((a, b) => a.price - b.price)
+    : c.wall ? WALLPAPERS.filter(w => !w.until && !w.premium).sort((a, b) => a.price - b.price) : SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
   // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
   const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };
-  const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(rarityOf(skinId, c.wall) || RARITIES[0]).id] || .5));
+  // Rareté d'un lot dans sa caisse : skins, fonds d'écran ou boutons, chacun ses paliers.
+  const caseRarity = (c, id) => rarityOf(id, c && c.btn ? 'btn' : !!(c && c.wall));
+  const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(caseRarity(c, skinId) || RARITIES[0]).id] || .5));
   // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
   // viennent en dernier (les plus rares).
   function caseOdds(c) {
@@ -278,13 +324,22 @@
     { id: 'red', name: 'Epic', max: 2500, color: '#eb4b4b' },
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
-  const rarityOf = (id, wall) => (wall ? WALL_RARITIES : RARITIES).find(r => ((wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
+  // wall : true pour un fond d'écran, 'btn' pour un bouton (caisse de boutons), sinon un skin.
+  const rarityOf = (id, wall) => (wall === 'btn' ? BTN_RARITIES : wall ? WALL_RARITIES : RARITIES).find(r => ((wall === 'btn' ? buttonById : wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
   // Fonds d'écran : mêmes couleurs, paliers resserrés sur leurs prix (500 à 1 200).
   const WALL_RARITIES = [
     { id: 'blue', name: 'Common', max: 600, color: '#4b69ff' },
     { id: 'purple', name: 'Uncommon', max: 800, color: '#8847ff' },
     { id: 'pink', name: 'Rare', max: 1000, color: '#d32ce6' },
     { id: 'red', name: 'Epic', max: 1500, color: '#eb4b4b' },
+    { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
+  ];
+  // Boutons (caisse de boutons, idée de shadow2) : mêmes couleurs, paliers sur leurs prix (150 à 2 200).
+  const BTN_RARITIES = [
+    { id: 'blue', name: 'Common', max: 250, color: '#4b69ff' },
+    { id: 'purple', name: 'Uncommon', max: 500, color: '#8847ff' },
+    { id: 'pink', name: 'Rare', max: 900, color: '#d32ce6' },
+    { id: 'red', name: 'Epic', max: 1400, color: '#eb4b4b' },
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
 
@@ -295,6 +350,9 @@
     { id: 'keycap', name: 'Keycap', emoji: '⌨️', price: 150, desc: 'A chunky mechanical key' },
     { id: 'terminal', name: 'Terminal', emoji: '💻', price: 250, desc: 'Run the command yourself' },
     { id: 'arcade', name: 'Arcade', emoji: '🕹️', price: 350, desc: 'Big red cabinet button' },
+    // Idée d'Edward et de Dylanrulez123 (2026-10-27) : un cornichon bosselé qui s'écrase quand on appuie (son « squish »,
+    // js/sound.js). Les boutons ne versent pas de part au créateur (seuls les skins le font) : crédit en commentaire.
+    { id: 'pickle', name: 'Pickle', emoji: '🥒', price: 400, desc: 'A bumpy green pickle that squishes when pressed' },
     { id: 'ticket', name: 'Ticket', emoji: '🎟️', price: 450, desc: 'Tear off a raffle ticket' },
     // Pack ASMR (idée de JAKECisthebest, 2026-10-20) : chacun a son propre son de pression (js/sound.js).
     { id: 'thock', name: 'Thock', emoji: '🎹', price: 500, desc: 'A lubed mechanical key with a deep thock' },
@@ -342,6 +400,10 @@
     { id: 'drums', name: 'Drums', emoji: '🥁', price: 500, desc: 'Taps, toms and a cymbal crash' },
     { id: 'space', name: 'Space', emoji: '🛸', price: 650, desc: 'Soft synth zaps' },
     { id: 'glass', name: 'Glass', emoji: '🔔', price: 800, desc: 'Crystal chimes' },
+    // Idée de 17black (2026-10-27) : deux packs de plus, tout synthétisé (js/sound.js). « Soft Taps » plutôt qu'« ASMR » :
+    // le skin ASMR et le fond ASMR Bubbles portent déjà ce nom.
+    { id: 'meme', name: 'Meme', emoji: '🤡', price: 600, desc: 'Boings, honks, quacks and slide whistles' },
+    { id: 'taps', name: 'Soft Taps', emoji: '🪶', price: 450, desc: 'Soft taps, tiny clicks and gentle chimes' },
   ];
   const soundById = new Map(SOUNDS.map(p => [p.id, p]));
   // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
@@ -361,14 +423,16 @@
   // Classic est le skin gratuit de départ : jamais rangé dans skins:<id>, il ne compte pas (PRISMA123 bloqué, 2026-10-22).
   const collectible = () => SKINS.filter(k => !k.until && k.id !== 'classic').map(k => k.id);
   // Badges de collection (idée de PRISMA123, 2026-10-22) : tous les boutons, toutes les émotes, tous les fonds hors limités.
-  const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id) };
+  const collectibleSets = { buttons: () => BUTTONS.filter(b => !b.until && !b.hidden).map(b => b.id), emotes: () => EMOTES.filter(e => !e.until && !e.hidden).map(e => e.id), walls: () => WALLPAPERS.filter(w => !w.until && !w.hidden && w.price).map(w => w.id),
+    sounds: () => SOUNDS.filter(p => p.price && !p.until && !p.hidden).map(p => p.id) }; // Sound Collector (idée de dailycb, 2026-10-27)
   // Quelle clé ouvre quelle caisse (idée de keys, 2026-10-22) : une clé Premium ouvre aussi les caisses moins chères
   // (Starter, Fonds d'écran) ; l'Élite ne s'ouvre jamais avec une clé.
   // Part du créateur (idée de Gray alt, acceptée par Sacha à 5 %, 2026-10-22) : à chaque achat d'un skin né d'une idée de
   // joueur (champ idea), son auteur reçoit 5 % du prix en pièces. Créées en plus : l'acheteur paie le prix normal.
   const IDEA_SHARE = 0.05;
-  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper'] };
-  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, WALL_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  // La caisse de boutons (moins chère que la Premium) s'ouvre aussi avec une clé Premium (2026-10-27).
+  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons'] };
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

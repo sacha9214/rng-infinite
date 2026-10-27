@@ -721,6 +721,31 @@
 .btn-roll.small.gen-royal::before { left: .62em; }
 .btn-roll.small.gen-royal::after { right: .62em; }
 
+/* Pickle — un cornichon (idée d'Edward et de Dylanrulez123, 2026-10-27) : gélule vert olive, peau bosselée (petites
+   verrues claires, quelques taches sombres), reflet humide en haut. Appuyé, il s'écrase (plus large, plus bas) puis
+   rebondit en tremblotant comme une gelée ; son « squish » mouillé est dans js/sound.js (recette click). */
+.btn-roll.gen-pickle {
+  border-radius: 999px; border: 2px solid #3f6212; color: #f7fee7; letter-spacing: .12em;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(236, 252, 203, .55) 0 1.6px, transparent 2.4px) 0 0 / 15px 11px,
+    radial-gradient(circle at 70% 75%, rgba(217, 249, 157, .45) 0 1.3px, transparent 2.1px) 5px 3px / 13px 12px,
+    radial-gradient(circle at 50% 50%, rgba(26, 46, 5, .35) 0 1px, transparent 1.8px) 9px 6px / 23px 17px,
+    radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255, 255, 255, .35), transparent 70%),
+    linear-gradient(180deg, #a3c94a 0%, #6b9a2a 45%, #4d7c0f 80%, #3f6212 100%);
+  text-shadow: 0 1px 0 #365314, 0 -1px 0 rgba(255, 255, 255, .25), 0 2px 4px rgba(26, 46, 5, .5);
+  --gs: inset 0 2px 0 rgba(236, 252, 203, .5), inset 0 -.25em .4em rgba(26, 46, 5, .35), 0 .26em 0 #365314, 0 .5em .9em rgba(26, 46, 5, .4);
+  --gs-h: inset 0 2px 0 rgba(236, 252, 203, .6), inset 0 -.25em .4em rgba(26, 46, 5, .35), 0 .3em 0 #365314, 0 .62em 1.1em rgba(26, 46, 5, .45);
+  --gs-a: inset 0 2px 0 rgba(236, 252, 203, .35), inset 0 .25em .5em rgba(26, 46, 5, .45), 0 .05em 0 #365314, 0 .12em .3em rgba(26, 46, 5, .4);
+  transform-origin: 50% 100%;
+  transition: transform .45s cubic-bezier(.25, 1.9, .45, .8), box-shadow .2s ease, filter .2s ease;
+}
+/* Les deux bouts arrondis du cornichon, un peu plus foncés, et une goutte de saumure qui brille. */
+.btn-roll.gen-pickle::before { inset: 0; border-radius: inherit; background: radial-gradient(ellipse 14% 70% at 0% 50%, rgba(54, 83, 20, .55), transparent 80%), radial-gradient(ellipse 14% 70% at 100% 50%, rgba(54, 83, 20, .55), transparent 80%); }
+.btn-roll.gen-pickle::after { top: 14%; left: 18%; width: .5em; height: .3em; border-radius: 50%; background: rgba(255, 255, 255, .75); filter: blur(.4px); transform: rotate(-12deg); }
+.btn-roll.gen-pickle:hover { transform: translateY(-1px) scale(1.015, .99); filter: none; }
+.btn-roll.gen-pickle:active { transform: translateY(.2em) scale(1.1, .8); filter: saturate(1.15); transition: transform .06s ease-out, box-shadow .06s; }
+.btn-roll.gen-pickle { --edge: .26em; }
+
 /* Pack ASMR (idée de JAKECisthebest, 2026-10-20). Chacun a son propre son de pression (js/sound.js, recette click). */
 /* Thock — touche mécanique lubrifiée : capuchon fumé translucide, rétroéclairage pastel qui déborde dessous, course
    courte et sèche. Le son est grave et mat (le « thock »), pas le clic aigu de Keycap. */
@@ -1128,3 +1153,94 @@
   --gs: 5px 5px 0 #0a0a0a, 0 0 18px rgba(236, 72, 153, .3); --gs-h: 7px 7px 0 #0a0a0a, 0 0 28px rgba(236, 72, 153, .5); --gs-a: 1px 1px 0 #0a0a0a;
 }
 .btn-roll.gen-comicbook:hover { transform: rotate(-1.5deg) scale(1.03); }
+/* ==== Skins du 2026-10-27, lot A : boutons assortis ==== */
+/* Fairy Lights (idée de 17black, 2026-10-27) : une vitre de nuit, une guirlande d'ampoules en feston en haut. */
+.btn-roll.gen-fairylights { border: 2px solid #6b4423; border-radius: .6rem; color: #fff7e6;
+  background: radial-gradient(circle at 12% 22%, #f87171 0 .14em, transparent .3em), radial-gradient(circle at 30% 30%, #4ade80 0 .14em, transparent .3em), radial-gradient(circle at 50% 33%, #fbbf24 0 .14em, transparent .3em), radial-gradient(circle at 70% 30%, #60a5fa 0 .14em, transparent .3em), radial-gradient(circle at 88% 22%, #f472b6 0 .14em, transparent .3em), radial-gradient(ellipse 60% 30% at 50% 0, transparent 70%, rgba(22, 101, 52, .9) 72% 78%, transparent 80%), linear-gradient(180deg, #0a0f24, #1a1442);
+  text-shadow: 0 0 .3em #fbbf24, 0 1px 0 #000;
+  --gs: 0 .3em 0 #2a1a0c, 0 .5em 1em rgba(251, 191, 36, .25); --gs-h: 0 .34em 0 #2a1a0c, 0 .7em 1.4em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #2a1a0c; }
+.btn-roll.gen-fairylights:hover { animation: gen-fl-twinkle .9s steps(1) 1; }
+@keyframes gen-fl-twinkle { 0%, 100% { filter: none; } 20% { filter: brightness(1.25) saturate(1.3); } 40% { filter: brightness(.9); } 60% { filter: brightness(1.2); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-fairylights:hover { animation: none; } }
+/* Elves' Workshop (idée de costoroll, 2026-10-27) : un tapis roulant noir strié, une planchette de pin à gauche. */
+.btn-roll.gen-workshop { border: 2px solid #44403c; border-radius: .45em; color: #fde68a;
+  background: linear-gradient(180deg, #e6b874, #d4a05a) .45em 50% / 1.2em 1.3em no-repeat, repeating-linear-gradient(90deg, rgba(255, 255, 255, .07) 0 2px, transparent 2px 9px), linear-gradient(180deg, #a8a29e 0 3px, #292524 3px calc(100% - 3px), #a8a29e calc(100% - 3px));
+  padding-left: 2.2em; text-shadow: 0 1px 0 #000, 0 0 .3em rgba(251, 191, 36, .5);
+  --gs: 0 .3em 0 #1c1917, 0 .5em 1em rgba(251, 191, 36, .2); --gs-h: 0 .34em 0 #1c1917, 0 .7em 1.3em rgba(251, 191, 36, .4); --gs-a: 0 .06em 0 #1c1917; }
+.btn-roll.gen-workshop:hover { animation: gen-wsh-belt .5s linear infinite; }
+@keyframes gen-wsh-belt { to { background-position: .45em 50%, -9px 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-workshop:hover { animation: none; } }
+/* Snow Reveal (idée de G8_floppa, 2026-10-27) : de la neige fraîche, des paillettes, le texte creusé en bleu. */
+.btn-roll.gen-snowreveal { border: 2px solid #bfdbfe; border-radius: 999px; color: #2f5d9e;
+  background: radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 2px) 0 0 / 14px 12px, radial-gradient(ellipse 60% 50% at 20% 120%, rgba(147, 197, 253, .55), transparent 70%), linear-gradient(180deg, #ffffff, #e2ecf7);
+  text-shadow: 0 -1px 0 rgba(23, 47, 110, .5), 0 1px 0 #fff;
+  --gs: 0 .3em 0 #93c5fd, 0 .5em 1em rgba(147, 197, 253, .35); --gs-h: 0 .34em 0 #93c5fd, 0 .7em 1.3em rgba(186, 230, 253, .6); --gs-a: 0 .06em 0 #93c5fd; }
+.btn-roll.gen-snowreveal:hover { filter: brightness(1.04); }
+/* Graveyard (idée d'IXOLAF2, 2026-10-27) : une nuit violette, la lune, une pierre tombale à gauche. */
+.btn-roll.gen-graves { border: 2px solid #6d28d9; border-radius: .6rem; color: #bbf7d0;
+  background: radial-gradient(ellipse .5em .62em at .95em 62%, #9ca3af 0 60%, transparent 62%) 0 0 / 100% 100% no-repeat, radial-gradient(circle at 88% 28%, #fef9c3 0 .3em, rgba(254, 249, 195, .3) .34em .6em, transparent .8em), linear-gradient(180deg, transparent 78%, #3b2a1e 78%), linear-gradient(180deg, #1c1340, #3b2a5e);
+  padding-left: 2em; text-shadow: 0 0 .35em #22c55e, 0 1px 0 #000;
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(134, 239, 172, .2); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(134, 239, 172, .4); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-graves:hover { filter: brightness(1.12); }
+/* Ship Wake (idée de 17black, 2026-10-27) : la mer vue d'en haut, un sillage d'écume en V à gauche. */
+.btn-roll.gen-shipwake { border: 2px solid #0369a1; border-radius: 999px; color: #f0fdff;
+  background: linear-gradient(160deg, transparent 46%, rgba(240, 253, 255, .55) 49%, transparent 54%) 0 0 / 2.2em 50% no-repeat, linear-gradient(20deg, transparent 46%, rgba(240, 253, 255, .55) 49%, transparent 54%) 0 100% / 2.2em 50% no-repeat, linear-gradient(160deg, #0e7490, #0c4a6e 60%, #082f49);
+  text-shadow: 0 0 .3em rgba(224, 242, 254, .8), 0 1px 0 #082f49;
+  --gs: 0 .3em 0 #075985, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #075985, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #075985; }
+.btn-roll.gen-shipwake:hover { filter: brightness(1.1); }
+/* Torn Paper (idée de 17black, 2026-10-27) : du kraft déchiré en diagonale sur une affiche jaune. */
+.btn-roll.gen-tornpaper { border: 2px solid #8a5f2e; border-radius: .3rem; color: #111;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; letter-spacing: .04em;
+  background: linear-gradient(100deg, #c49a5f 0 18%, #fbf7ec 18.5% 20%, transparent 20.5% 80%, #fbf7ec 80.5% 82%, #c49a5f 82.5%), radial-gradient(circle, rgba(236, 72, 153, .3) 0 1px, transparent 1.5px) 0 0 / 6px 6px, linear-gradient(160deg, #fde047, #f59e0b);
+  --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #6b4423; }
+.btn-roll.gen-tornpaper:hover { filter: brightness(1.06); }
+/* Stickman (idée de Jguz01, 2026-10-27) : une page de cahier, lignes bleues et marge rouge, texte au feutre. */
+.btn-roll.gen-stickman { border: 2px solid #1f2937; border-radius: .35rem; color: #111827;
+  font-family: 'Marker Felt', 'Segoe Print', 'Chalkboard SE', 'Comic Sans MS', cursive;
+  background: linear-gradient(90deg, transparent 1.1em, rgba(239, 68, 68, .6) 1.1em 1.2em, transparent 1.2em), repeating-linear-gradient(180deg, transparent 0 .6em, rgba(96, 165, 250, .45) .6em .66em), #fdfbf3;
+  --gs: 3px 4px 0 #1f2937; --gs-h: 4px 6px 0 #1f2937; --gs-a: 1px 1px 0 #1f2937; }
+.btn-roll.gen-stickman:hover { transform: rotate(-1deg) translateY(-1px); }
+
+/* ==== Skins du 2026-10-27, lot B ==== boutons assortis */
+/* Baseball (idée de Kj13, 2026-10-27) : le cuir crème d'une balle et ses coutures rouges sur les bords. */
+.btn-roll.gen-baseball { border: 2px solid #a8a29e; border-radius: 999px; color: #1e3a8a;
+  background: radial-gradient(ellipse 40% 140% at -8% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), radial-gradient(ellipse 40% 140% at 108% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), linear-gradient(180deg, #fbf8f1, #e5dcc6);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #78716c, 0 .5em 1em rgba(220, 38, 38, .2); --gs-h: 0 .34em 0 #78716c, 0 .7em 1.3em rgba(220, 38, 38, .35); --gs-a: 0 .06em 0 #78716c; }
+.btn-roll.gen-baseball:hover { filter: brightness(1.04); }
+/* Race Car (idée de whywhywaylon, 2026-10-27) : l'asphalte, un vibreur rouge et blanc dessous, un damier à gauche. */
+.btn-roll.gen-racecar { border: 2px solid #0b0b0f; border-radius: .5rem; color: #fff; font-style: italic;
+  background: repeating-linear-gradient(90deg, #dc2626 0 10px, #f8fafc 10px 20px) 0 100% / 100% 4px no-repeat, conic-gradient(#0b0b0f 25%, #f8fafc 0 50%, #0b0b0f 0 75%, #f8fafc 0) 0 0 / 10px 10px repeat-y, linear-gradient(180deg, #3f3f46, #18181b);
+  padding-left: 1.6em; text-shadow: .06em .06em 0 #dc2626, 0 0 .2em rgba(0, 0, 0, .6);
+  --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(220, 38, 38, .3); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(220, 38, 38, .45); --gs-a: 0 .06em 0 #7f1d1d; }
+.btn-roll.gen-racecar:hover { filter: brightness(1.12); }
+/* Domino (idée de kaz, 2026-10-27) : un domino noir laqué, trait du milieu, quelques points blancs. */
+.btn-roll.gen-domino { border: 2px solid #a16207; border-radius: .55rem; color: #fafaf9;
+  background: radial-gradient(circle at 1em 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at 1.6em 70%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1em) 30%, #fafaf9 0 2.2px, transparent 2.8px), radial-gradient(circle at calc(100% - 1.6em) 70%, #fafaf9 0 2.2px, transparent 2.8px), linear-gradient(160deg, #3f3f46, #111 45%, #0a0a0a);
+  padding-inline: 2.4em; text-shadow: 0 0 .25em rgba(250, 250, 249, .45);
+  --gs: 0 .3em 0 #5b3311, 0 .5em 1em rgba(22, 101, 52, .3); --gs-h: 0 .34em 0 #5b3311, 0 .7em 1.3em rgba(250, 204, 21, .3); --gs-a: 0 .06em 0 #5b3311; }
+.btn-roll.gen-domino:hover { filter: brightness(1.15); }
+/* Lily Pads (idée de casmicgraything, 2026-10-27) : une feuille de nénuphar sur l'eau verte de la mare. */
+.btn-roll.gen-lilypad { border: 2px solid #166534; border-radius: 999px; color: #fefce8;
+  background: radial-gradient(circle at 1.3em 50%, #86efac 0, #22c55e .4em, #15803d .62em, transparent .66em), linear-gradient(180deg, #115e59, #0f3d3a);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #14532d, 0 0 .3em rgba(20, 83, 45, .8);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .4); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-lilypad:hover { filter: brightness(1.1); }
+/* Ripple (idée de casmicgraything, 2026-10-27) : de l'eau profonde et deux ronds qui s'élargissent. */
+.btn-roll.gen-ripple { border: 2px solid #7dd3fc; border-radius: 999px; color: #ecfeff;
+  background: radial-gradient(ellipse 30% 60% at 50% 50%, transparent 60%, rgba(224, 242, 254, .45) 64%, transparent 70%), radial-gradient(ellipse 55% 110% at 50% 50%, transparent 72%, rgba(224, 242, 254, .25) 75%, transparent 80%), radial-gradient(ellipse 90% 120% at 50% 60%, #0e7490, #0c4a6e 70%, #082f49);
+  text-shadow: 0 1px 0 #082f49, 0 0 .3em rgba(103, 232, 249, .6);
+  --gs: 0 .3em 0 #082f49, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #082f49, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #082f49; }
+.btn-roll.gen-ripple:hover { filter: brightness(1.12); }
+/* Bullet Train (idée de yukitsunodaiscool, 2026-10-27) : le flanc blanc d'un train, sa bande bleue, le ciel rose derrière. */
+.btn-roll.gen-bullettrain { border: 2px solid #1d4ed8; border-radius: .6rem 2em 2em .6rem; color: #1e1b4b;
+  background: linear-gradient(180deg, transparent 68%, #1d4ed8 68% 80%, transparent 80%), linear-gradient(180deg, #ffffff, #e2e8f0 70%, #cbd5e1);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #f472b6, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #f472b6, 0 .7em 1.3em rgba(236, 72, 153, .45); --gs-a: 0 .06em 0 #f472b6; }
+.btn-roll.gen-bullettrain:hover { filter: brightness(1.05); }
+/* Orbital Cannon (idée de LEVIATHAN, 2026-10-27) : un écran de visée, grille cyan et coins de cible. */
+.btn-roll.gen-orbital { border: 2px solid #22d3ee; border-radius: .35rem; color: #cffafe; font-family: var(--font-mono); letter-spacing: .06em;
+  background: linear-gradient(90deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, rgba(103, 232, 249, .12) 1px, transparent 1px) 0 0 / 10px 10px, radial-gradient(ellipse 70% 90% at 50% 50%, #0f2a3d, #05090f);
+  text-shadow: 0 0 .3em #22d3ee;
+  --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
+.btn-roll.gen-orbital:hover { filter: brightness(1.15); }

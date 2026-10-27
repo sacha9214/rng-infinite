@@ -168,6 +168,11 @@
       const p = Store.player;
       return this.request('/api/profile', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'avatar', op, ...extra }) });
     },
+    // « About me » (idée de Niall, 2026-10-27 ; api/_bio.js par /api/profile) : écrire le sien, signaler, effacer (créateur).
+    bio(op, extra = {}) {
+      const p = Store.player;
+      return this.request('/api/profile', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action: 'bio', op, ...extra }) });
+    },
     // Toujours en POST : le secret du joueur ne va jamais dans une adresse.
     discord(action = 'state', extra = {}) {
       const p = Store.player;
@@ -294,6 +299,15 @@
   const tierPill = tier => `<span class="pill" data-tier="${tier}">${TIER_LABEL[tier] || tier}</span>`;
 
   // "Top x %" / "Bottom x %" arrondi et coloré selon le percentile, comme l'écran de résultat d'origine.
+  // Sous l'XP d'un tirage : combien il manquait pour la rareté suivante (idée de daddy finger, 2026-10-27), avec les
+  // vrais seuils de la table des percentiles. Rien pour Infinite. Un seul nœud texte, pour la traduction (js/i18n.js).
+  function tierShortHTML(a) {
+    const nx = Engine.nextTier(a.total);
+    if (!nx) return '';
+    const name = TIER_LABEL[nx.tier] || nx.tier;
+    return `<div class="tier-short invisible" id="r-short" data-tier="${nx.tier}">↑ ${fmt(nx.short)} XP short of ${esc(name[0].toUpperCase() + name.slice(1))}</div>`;
+  }
+
   function percentileHTML(p) {
     // Jamais « <1 % » : sous 1 %, le chiffre exact (0,4 %, 0,05 %, 0,001 %).
     const text = p >= 50 ? `Top ${precisePct(100 - p)}%` : `Bottom ${precisePct(p)}%`;
@@ -602,7 +616,7 @@
     async load() {
       if (!Store.player.name) return null;
       if (Date.now() - this.at < 60000 && this.xp != null) return this;
-      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
       await this.busy;
       return this.xp != null ? this : null;
     },
@@ -1193,6 +1207,7 @@
       </div>
       ${Store.player.name ? `<div class="field"><a class="btn" href="${profileHref(Store.player.name)}" id="set-profile">My profile</a></div>` : ''}
       ${Store.player.name ? avatarFieldHTML() : ''}
+      ${Store.player.name ? bioFieldHTML() : ''}
       ${googleAccountHTML()}
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
@@ -1237,6 +1252,7 @@
       if (googleOut) googleOut.addEventListener('click', signOutGoogle);
       bindPassword(m);
       bindAvatarField(m);
+      bindBioField(m);
       m.querySelectorAll('[data-seg]').forEach(group => {
         group.addEventListener('click', e => {
           const btn = e.target.closest('button');
@@ -1304,6 +1320,25 @@
         toast('History cleared');
         route();
       });
+    });
+  }
+
+  // « About me » dans les réglages (idée de Niall, 2026-10-27) : une ligne de 80 caractères montrée sur le profil. Le
+  // serveur (api/_bio.js) la passe au filtre du chat global ; un champ vide l'efface.
+  function bioFieldHTML() {
+    return `<div class="field"><label for="set-bio">About me</label>
+      <form class="bio-form" id="set-bio-form"><input class="input" id="set-bio" maxlength="80" autocomplete="off" placeholder="A few words about you" aria-label="About me" disabled><button class="btn" type="submit" disabled>Save</button></form>
+      <span class="panel-note">Shown on your profile. 80 characters, no links or personal info.</span></div>`;
+  }
+  function bindBioField(m) {
+    const form = m.querySelector('#set-bio-form'); if (!form) return;
+    const input = form.querySelector('#set-bio'), btn = form.querySelector('button');
+    Online.profile(Store.player.name, true).then(p => { input.value = p.bio || ''; }).catch(() => {}).finally(() => { input.disabled = false; btn.disabled = false; });
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); btn.disabled = true;
+      try { const r = await Online.bio('set', { text: input.value }); input.value = r.bio || ''; toast(r.bio ? 'About me saved' : 'About me removed'); }
+      catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); }
+      finally { btn.disabled = false; }
     });
   }
 
@@ -1402,6 +1437,8 @@
     const sr = document.getElementById('st-rolls'), sl = document.getElementById('st-life');
     if (sr) { const v = sr.querySelector('.v'); if (v) v.textContent = fmt(life.rolls); }
     if (sl) { const v = sl.querySelector('.v'), sub = sl.querySelector('.s'); if (v) v.textContent = compact(life.xp); if (sub && life.rolls) sub.textContent = `${fmt(life.xp / life.rolls)} XP per roll`; }
+    // Nombres différents tirés (idée de jsand, 2026-10-27) : le compte du serveur remplace celui de l'appareil.
+    const su = document.getElementById('st-uniq'); if (su && life.uniq != null) su.textContent = uniqText(life.uniq);
   }
 
   function renderHome() {
@@ -1520,6 +1557,8 @@
             <span class="panel-note">${qs.doneToday ? 'All quests done today, come back tomorrow' : `Finish all ${state.quests.length} quests today (${claimed}/${state.quests.length}) for a bonus`}${qs.best ? ` · best: ${plural(qs.best, 'day')}` : ''}</span></span>
           ${qs.doneToday ? '<span class="quest-state">✓ Done</span>' : `<span class="quest-reward mono">+${fmt(qs.bonus)} 🪙</span>`}
         </div>`; })() : ''}
+        ${state.weekly ? weeklyQuestsHTML(state.weekly) : ''}
+        ${state.chest ? questChestHTML(state.chest) : ''}
         <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     // Sur grand écran, l'événement de la semaine passe sous la cagnotte (moins de choses empilées dans les quêtes).
@@ -1528,9 +1567,20 @@
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.tab = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
-      const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event]');
+      const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event], [data-wquest], [data-chest]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
+      // Quête de la semaine ou coffre des quêtes (idées de Tumored et Sean, 2026-10-27).
+      if (btn.dataset.wquest !== undefined || btn.dataset.chest !== undefined) {
+        const chest = btn.dataset.chest !== undefined;
+        try {
+          const next = await Online.questAction(chest ? 'chest' : 'wclaim', chest ? undefined : btn.dataset.wquest);
+          toast(chest ? `🎁 Quest chest opened! +${fmt(next.gained)} coins` : `🗓️ Weekly quest done! +${fmt(next.gained)} coins`, 4500, 'achv');
+          FX.celebrate(chest ? 'epic' : 'uncommon', slot); Sound.play('reveal', { small: 1 });
+          loadQuests(slot, next);
+        } catch (err) { btn.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       if (btn.dataset.event !== undefined) {
         try {
           const next = await Online.questAction('event');
@@ -1560,6 +1610,37 @@
         toast(err.status === 422 ? err.message : 'Quests unavailable right now, try again');
       }
     };
+  }
+
+  // Quêtes de la semaine (idée de Tumored, 2026-10-27) : 3 quêtes plus longues, changées le lundi 00:00 UTC.
+  function weeklyQuestsHTML(w) {
+    const left = Math.max(0, w.resetAt - Date.now());
+    const lt = left > 86400000 ? `New in ${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h` : `New in ${Math.max(1, Math.ceil(left / 3600000))} h`;
+    return `<div class="wq-head"><span class="eyebrow">🗓️ Weekly quests</span><span class="panel-note">${lt}</span></div>` + w.quests.map(q => {
+      const done = q.progress >= q.target;
+      return `
+          <div class="quest wq${q.claimed ? ' done' : ''}">
+            <span class="quest-emoji">${q.emoji}</span>
+            <span class="quest-text"><b>${esc(q.text)}</b>
+              <span class="quest-bar"><span style="width:${Math.min(100, (q.progress / q.target) * 100)}%"></span></span>
+              <span class="panel-note">${fmt(q.progress)} / ${fmt(q.target)}</span></span>
+            ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-wquest="${esc(q.id)}">+${fmt(q.reward)} 🪙</button>` : `<span class="quest-reward mono">${fmt(q.reward)} 🪙</span>`}
+          </div>`;
+    }).join('');
+  }
+  // Coffre des quêtes (idée de Sean, 2026-10-27) : jours où toutes les quêtes du jour ont été finies, coffres aux paliers.
+  function questChestHTML(ch) {
+    const next = ch.next, prev = [...ch.milestones].reverse().find(m => m.at <= ch.days), from = prev ? prev.at : 0;
+    const pct = next ? Math.min(100, ((ch.days - from) / Math.max(1, next.at - from)) * 100) : 100;
+    return `
+          <div class="quest qchest${ch.ready ? ' ready' : ''}">
+            <span class="quest-emoji">🎁</span>
+            <span class="quest-text"><b>Quest chest</b>
+              <span class="quest-bar"><span style="width:${pct}%"></span></span>
+              <span class="panel-note">${next ? `${fmt(ch.days)} / ${fmt(next.at)} days with all daily quests done` : `${fmt(ch.days)} days with all daily quests done`}</span>
+              <span class="qc-pips">${ch.milestones.map(m => `<span class="qc-pip mono${m.open ? ' open' : m.ready ? ' ready' : ''}" title="${m.at} days: ${fmt(m.coins)} coins">${m.open ? '✓ ' : ''}${m.at}</span>`).join('')}</span></span>
+            ${ch.ready ? `<button class="btn-roll small" data-chest>+${fmt(ch.coins)} 🪙</button>` : next ? `<span class="quest-reward mono">${fmt(next.coins)} 🪙</span>` : '<span class="quest-state">✓ All opened</span>'}
+          </div>`;
   }
 
   // Route des récompenses de niveau (2026-10-16) : du niveau d'avant jusqu'au prochain palier de 25, chaque niveau avec
@@ -1868,6 +1949,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-27-ideas', date: 'Oct 27, 2026', en: ['🎨 14 new skins from your ideas: Fairy Lights, Ship Wake and Torn Paper (ideas by 17black), Elves\' Workshop (costoroll), Snow Reveal (G8_floppa), Graveyard (IXOLAF2), Stickman (Jguz01), Baseball (Kj13), Race Car (whywhywaylon, drift by logannn), Domino (kaz), Lily Pads and Ripple (casmicgraything), Bullet Train (yukitsunodaiscool) and the Legendary Orbital Cannon (LEVIATHAN).', '🖼️ 7 new wallpapers: Comic Book (idea by JBearr12), Black Hole (Big Sexy and jjcoolcid1) and Rain to Rainbow (sennybex1 and IXOLAF2) react to your rolls; plus City Heights (ichi and JBearr12), Crystal Cave (finnnnn), Jungle (ichi) and Lake (randomguy).', '🏅 New badges: Forever (224, 224224), 1987, 505, Beverly Hills (90210), 1738, Around the Clock (24), Jumbo Jet Set (747747), Summer Break (104), Narcissistic numbers, Silver Ratio (2414) and Quantum Chaos; Leap Day now also reads 2902YY and YY0229 (ideas by daddy finger, costoroll, Miguel1, hghgghgg, Jaboom, jaxoncool43, shadow2, pilot56, WpBejs, CococoC, Kag, Phong254 and qwertyuiop).', '↑ After a roll, see how much XP you were short of the next rarity (idea by daddy finger).', '🏆 New titles: Common Collector, Uncommon Admirer, Rare Enthusiast, Epic Obtainer and Anomaly Hunter (idea by kaz), Piggy Bank, Money Maker and Coin Machine (logannn), Sound Collector and Shopaholic (dailycb), Clan Benefactor and Clan Pillar (Yentizx), Decabillionaire for 10 billion XP (Big Sexy).', '💬 Global chat: reply to a message with ↩ (idea by Niall), an emoji button (Deadshot), Divine, Godlike and Infinite rolls announced in the chat (R77), and the creator can pin a message (Big Sexy).', '📝 About me: write a short line about yourself in ⚙️ settings; it shows on your profile (idea by Niall).', '🎲 New leaderboard: Most rolls (idea by CrazyMiner22 and WpBejs). Your Stats page and profile also show how many different numbers you\'ve rolled (jsand).', '🗓️ Weekly quests: 3 bigger quests every week, new on Monday (idea by Tumored). 🎁 Quest chest: finish all your daily quests on 4, 10, 25, 50… days to open chests of coins (Sean).', '🌟 Clans get a Co-leader rank between the leader and the officers (idea by Yentizx and JAKECisthebest), and a 🎖️ Clan MVP title for the top XP earner of the #1 clan each week (PRISMA123).', '🦆 New casino game: Duck Race (idea by Deadshot). Pick one of 6 rubber ducks: the favourite wins often, the long shot pays up to 19.40×. Every casino game now has a ? button with simple rules (Ann joe).', '🔘 Button Case (idea by shadow2), a 🥒 Pickle button that squishes (Edward and Dylanrulez123), and two new sound packs, Meme and Soft Taps (17black).'], fr: ['🎨 14 nouveaux skins tirés de vos idées : Fairy Lights, Ship Wake et Torn Paper (idées de 17black), Elves\' Workshop (costoroll), Snow Reveal (G8_floppa), Graveyard (IXOLAF2), Stickman (Jguz01), Baseball (Kj13), Race Car (whywhywaylon, dérapage de logannn), Domino (kaz), Lily Pads et Ripple (casmicgraything), Bullet Train (yukitsunodaiscool) et le Legendary Orbital Cannon (LEVIATHAN).', '🖼️ 7 nouveaux fonds d\'écran : Comic Book (idée de JBearr12), Trou noir (Big Sexy et jjcoolcid1) et De la pluie à l\'arc-en-ciel (sennybex1 et IXOLAF2) réagissent à tes tirages ; et aussi Sur les toits (ichi et JBearr12), Grotte de cristal (finnnnn), Jungle (ichi) et Lac (randomguy).', '🏅 Nouveaux badges : Forever (224, 224224), 1987, 505, Beverly Hills (90210), 1738, Around the Clock (24), Jumbo Jet Set (747747), Summer Break (104), nombres narcissiques, nombre d\'argent (2414) et Quantum Chaos ; Leap Day lit aussi 2902AA et AA0229 (idées de daddy finger, costoroll, Miguel1, hghgghgg, Jaboom, jaxoncool43, shadow2, pilot56, WpBejs, CococoC, Kag, Phong254 et qwertyuiop).', '↑ Après un tirage, tu vois combien d\'XP il manquait pour la rareté suivante (idée de daddy finger).', '🏆 Nouveaux titres : Collectionneur Common, Admirateur Uncommon, Passionné de Rare, Conquérant Epic et Chasseur d\'Anomaly (idée de kaz), Tirelire, Faiseur de pièces et Machine à pièces (logannn), Collectionneur de sons et Accro du shopping (dailycb), Bienfaiteur et Pilier de clan (Yentizx), Décamilliardaire pour 10 milliards d\'XP (Big Sexy).', '💬 Chat global : réponds à un message avec ↩ (idée de Niall), un bouton emoji (Deadshot), les tirages Divine, Godlike et Infinite annoncés dans le chat (R77), et le créateur peut épingler un message (Big Sexy).', '📝 À propos de moi : écris une petite phrase sur toi dans ⚙️ réglages ; elle s\'affiche sur ton profil (idée de Niall).', '🎲 Nouveau classement : le plus de tirages (idée de CrazyMiner22 et WpBejs). Tes stats et ton profil montrent aussi combien de nombres différents tu as tirés (jsand).', '🗓️ Quêtes de la semaine : 3 grosses quêtes chaque semaine, renouvelées le lundi (idée de Tumored). 🎁 Coffre des quêtes : finis toutes tes quêtes du jour sur 4, 10, 25, 50… jours pour ouvrir des coffres de pièces (Sean).', '🌟 Les clans ont un rang de co-chef entre le chef et les officiers (idée de Yentizx et JAKECisthebest), et un titre 🎖️ MVP du clan pour celui qui rapporte le plus d\'XP au clan n°1 chaque semaine (PRISMA123).', '🦆 Nouveau jeu au casino : la Course de canards (idée de Deadshot). Choisis un des 6 canards en plastique : le favori gagne souvent, l\'outsider paie jusqu\'à 19,40×. Chaque jeu du casino a maintenant un bouton ? avec des règles simples (Ann joe).', '🔘 Caisse de boutons (idée de shadow2), un bouton 🥒 Cornichon qui s\'écrase (Edward et Dylanrulez123), et deux nouveaux packs de sons, Meme et Soft Taps (17black).'] },
     { id: '2026-10-26-trailer-v2', date: 'Oct 26, 2026', en: ['🎬 New trailer (▶ Watch the trailer on the home page): the legendary skins, living wallpapers, clans and 5v5 wars, the global chat, the three daily tournaments, the casino, Prestige titles and the roadmap of player ideas, and it ends on an Infinite roll.'], fr: ['🎬 Nouvelle bande-annonce (▶ Voir la bande-annonce sur l\'accueil) : les skins légendaires, les fonds animés, les clans et les guerres à 5 contre 5, le chat global, les trois tournois du jour, le casino, les titres Prestige et la feuille de route des idées de joueurs, et elle finit sur un tirage Infinite.'] },
     { id: '2026-10-26-avatars', date: 'Oct 26, 2026', en: ['🖼️ Profile pictures: add one in ⚙️ Player & settings (after 30 rolls). The creator checks every picture before anyone else can see it, then it shows on your profile, the leaderboards, the global chat, your clan and your friends\' lists. Don\'t use photos of yourself or personal info (asked by kingston and JAKECisthebest).'], fr: ['🖼️ Photos de profil : ajoute la tienne dans ⚙️ Joueur et réglages (après 30 tirages). Le créateur vérifie chaque image avant que quiconque puisse la voir ; elle s\'affiche ensuite sur ton profil, les classements, le chat global, ton clan et la liste de tes amis. N\'utilise pas de photo de toi ni d\'infos personnelles (demandé par kingston et JAKECisthebest).'] },
     { id: '2026-10-26-roadmap', date: 'Oct 26, 2026', en: ['🗺️ Roadmap: a new page lists the player ideas that are planned and the ones added in the last 30 days. Open it from the 💡 ideas window or the About page (idea by Phong67).'], fr: ['🗺️ Feuille de route : une nouvelle page liste les idées de joueurs prévues et celles ajoutées ces 30 derniers jours. Ouvre-la depuis la fenêtre 💡 des idées ou la page À propos (idée de Phong67).'] },
@@ -2543,6 +2625,7 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
+          ${tierShortHTML(a)}
           ${ctx.online && !ctx.replay ? coinsTagHTML(ctx.online, a.tier) : ''}
           ${ctx.previous.length && !ctx.replay ? `<div class="dup-tag" id="r-dup" hidden>🔁 Duplicate! <span>rolled ${plural(ctx.previous.length + 1, 'time')}</span></div>` : ''}
           <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
@@ -2676,7 +2759,7 @@
       // Compte Google associé avant que le bonus existe : il arrive avec ce tirage.
       if (ctx.online && ctx.online.googleBonus) setTimeout(() => { toast(`🪙 +${ctx.online.googleBonus} coins for linking your Google account`, 5000, 'achv'); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + ctx.online.googleBonus); }, 1200);
     });
-    step(REVEAL.stats, () => { show($('#r-meta'), 'pop-in'); const dup = $('#r-dup'); if (dup) { dup.hidden = false; dup.classList.add('pop-in'); } }); // « Duplicate! » (idée de MereTera, 2026-10-18)
+    step(REVEAL.stats, () => { show($('#r-meta'), 'pop-in'); { const sh = $('#r-short'); if (sh) show(sh, 'fade-in'); } const dup = $('#r-dup'); if (dup) { dup.hidden = false; dup.classList.add('pop-in'); } }); // « Duplicate! » (idée de MereTera, 2026-10-18)
     step(REVEAL.lifetimeShow, () => show($('#r-life'), 'fade-in'));
     step(REVEAL.lifetimePause, quick => {
       const delta = $('#r-life-delta');
@@ -2984,6 +3067,8 @@
   const legendHTML = (seriesLabel) => `<div class="legend"><span><i style="background:var(--chart-accent)"></i>${seriesLabel}</span><span><i class="line"></i>Expected</span></div>`;
   const tile = (label, value, sub) => `<div class="tile"><div class="l">${label}</div><div class="v">${value}</div><div class="s">${sub}</div></div>`;
 
+  // Nombres différents tirés (idée de jsand, 2026-10-27), sur les 1 000 001 possibles.
+  const uniqText = u => `${fmt(u)} (${(u / 10000.01).toFixed(u >= 10000 ? 1 : 3)}%)`;
   function renderStats() {
     setTimeout(fillServerLife, 0);
     currentView = 'stats';
@@ -3063,6 +3148,7 @@
             <div class="kv"><span class="k">Rolls since last Mythic or better</span><span class="v">${st.sinceMythic}</span></div>
             <div class="kv"><span class="k">Longest run without Rare+</span><span class="v">${fmt(st.longestDry)}</span></div>
             <div class="kv"><span class="k">Numbers rolled more than once</span><span class="v">${fmt(st.repeats)}</span></div>
+            <div class="kv"><span class="k">Different numbers rolled</span><span class="v" id="st-uniq" data-no-i18n>${uniqText(new Set(Store.rolls.map(r => Number(r[0]))).size)}</span></div>
             ${st.rarest ? `<div class="kv"><span class="k">Rarest badge found</span><span class="v" data-badge="${st.rarest}" style="cursor:pointer">${Engine.byId.get(st.rarest).emoji} ${oneIn(window.BADGE_ODDS[st.rarest])}</span></div>` : ''}
             <div class="kv"><span class="k">First roll</span><span class="v">${new Date(st.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
           </div>
@@ -3264,8 +3350,9 @@
         <div class="pf-id">
           <div class="pf-name">${Avatars.html(p.name, 'av-lg')}<span>${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</span></div>
           <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
+          ${p.bio || me ? `<p class="pf-bio">${p.bio ? `<span data-no-i18n>${esc(p.bio)}</span>` : '<span class="muted">No "About me" yet.</span>'}${me ? ' <button type="button" class="pf-bio-edit" id="p-bio-edit">✏️ Edit</button>' : ''}</p>` : ''}
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
-          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}`}</div>
+          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}${Store.player.name && p.bio ? '<button class="btn ghost small" id="p-bio-report" title="Report this About me">🚩 Report About me</button>' : ''}`}</div>
         </div>
         <div class="pf-best">
           ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
@@ -3278,7 +3365,7 @@
           <div class="pf-stat"><span>All-time rank</span><b>${p.rank ? '#' + fmt(p.rank) : '–'}</b></div>
           <div class="pf-stat"><span>Badges</span><b>${found}<small>/${total}</small></b></div>
         </div>
-        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}</div>
+        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
       </section>
       <div class="lb-tabs pf-tabs" role="tablist" style="grid-template-columns:repeat(${TABS.length},1fr)">${TABS.map(([id, icon, label]) => `<button role="tab" data-ptab="${id}" class="${id === tab ? 'on' : ''}"><i aria-hidden="true">${icon}</i> ${label}</button>`).join('')}</div>
       <div class="pf-pane" data-pane="overview">
@@ -3321,6 +3408,14 @@
     };
     showTab(tab);
     $('#p-body').querySelector('.pf-tabs').addEventListener('click', e => { const b = e.target.closest('[data-ptab]'); if (b) showTab(b.dataset.ptab); });
+    // « About me » (idée de Niall, 2026-10-27) : le sien se modifie dans les réglages ; celui d'un autre se signale.
+    const bioEdit = $('#p-bio-edit'); if (bioEdit) bioEdit.addEventListener('click', () => { openSettings(); const f = $('#set-bio'); if (f) f.scrollIntoView({ block: 'center' }); });
+    const bioReport = $('#p-bio-report');
+    if (bioReport) bioReport.addEventListener('click', async () => {
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t('Report this About me to the creator?') : 'Report this About me to the creator?')) return;
+      bioReport.disabled = true;
+      try { const r = await Online.bio('report', { name: p.name }); toast(r.already ? 'Already reported' : 'Thanks, the creator will look at it'); } catch (err) { bioReport.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
     const avReport = $('#p-av-report');
     if (avReport) avReport.addEventListener('click', async () => {
       if (!confirm(window.RNGI18n ? window.RNGI18n.t('Report this profile picture to the creator?') : 'Report this profile picture to the creator?')) return;
@@ -3664,7 +3759,7 @@
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
             // Caisse de fonds d'écran : ses lots se cherchent dans les fonds (Shop.caseItem), avec leurs propres raretés.
-            const item = id => Shop.caseItem(c, id), rar = id => Shop.rarityOf(id, c.wall);
+            const item = id => Shop.caseItem(c, id), rar = id => Shop.caseRarity(c, id);
             const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
             return `
             <div class="case-tile">
@@ -3678,6 +3773,7 @@
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Button Case gives a Generate button you can also buy in the Buttons tab, with the same refund for a button you already own.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -3962,14 +4058,29 @@
       </g>
     </svg>`;
   };
-  const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  // Duck Race (idée de Deadshot, 2026-10-27) : six canards en plastique, chacun sa chance de gagner et son gain. Mêmes
+  // chances et même calcul que le serveur (DUCK_CHANCE, duckCents dans api/_gamble.js ; vérifié par tools/test-api.mjs).
+  const DUCK_W = [30, 25, 18, 12, 10, 5];
+  const dkCents = w => Math.floor(9700 / w + 1e-9);
+  const DUCKS = [['Sunny', '#facc15'], ['Bubbles', '#38bdf8'], ['Minty', '#4ade80'], ['Rosie', '#f472b6'], ['Grape', '#a78bfa'], ['Blaze', '#fb923c']];
+  // Un canard de bain vu de profil, tourné vers l'arrivée (à droite) : la couleur vient de --dk (sur la ligne d'eau).
+  const duckSVG = () => `<svg class="dk-svg" viewBox="0 0 50 40" aria-hidden="true">
+      <ellipse class="dk-ripple" cx="23" cy="36.5" rx="19" ry="2.6"/>
+      <path class="dk-body" d="M3 15 L11 21 C8 30 14 36 24 36 C35 36 42 31 41 23 C40 19 35 19 31 21 C25 24 17 23 11 21 Z"/>
+      <path class="dk-wing" d="M15 26 C19 22 27 23 29 27 C26 31 19 31 15 26 Z"/>
+      <circle class="dk-body" cx="32" cy="12.5" r="8.5"/>
+      <path class="dk-beak" d="M39 11 C43 9.5 48 11 48 13.3 C48 15.6 43 16.6 39 15.4 Z"/>
+      <circle cx="34.5" cy="10.2" r="1.7" fill="#1f2937"/><circle cx="35" cy="9.6" r=".55" fill="#fff"/>
+      <ellipse cx="28.5" cy="8.6" rx="3" ry="1.5" fill="#fff" opacity=".45"/>
+    </svg>`;
+  const SUITS = ['♠', '♥', '♦', '♣'], RANKS =['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
   // Bandeau « en direct » du casino : tout l'argent qui y est passé (mises prises, gains versés, tous joueurs confondus
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -4023,7 +4134,40 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
+  // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
+  // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
+  const BETS_STD = 'Bets from 10 to 1,000 coins.';
+  const HOWTO = {
+    crash: { goal: 'Cash out before it crashes.', how: ['Press Start: the multiplier climbs from 1.00×.', 'Press Cash out whenever you like.', 'If it crashes before you cash out, you lose your bet.'], pays: ['You win your bet × the multiplier you cashed out at.', 'It can climb up to 500×, but it can also crash right away.'], bets: BETS_STD },
+    flip: { goal: 'Guess heads or tails, again and again.', how: ['Pick Heads or Tails: the coin flips.', 'Right: your win grows. Flip again, or cash out.', 'Wrong: you lose everything in play.'], pays: ['Each right guess multiplies your win by 1.9.', 'Up to 7 right guesses in a row: about 89×.'], bets: BETS_STD },
+    mines: { goal: 'Open safe tiles and stay away from the mines.', how: ['Choose how many mines hide in the 25 tiles, then press Start.', 'Open tiles one by one: each safe tile raises your payout.', 'Cash out whenever you like. Hit a mine and you lose your bet.'], pays: ['More mines means a bigger jump for every safe tile.', 'The most you can win is 250× your bet.'], bets: BETS_STD },
+    tower: { goal: 'Climb 8 floors without stepping on a bomb.', how: ['Choose Easy, Normal or Hard, then press Start.', 'On each floor, pick one tile: one tile per floor hides a bomb.', 'Every safe floor raises your payout. Cash out whenever you like.'], pays: ['Easy has 4 tiles per floor, Normal 3, Hard only 2 but the biggest payouts.', 'The ladder shows what each floor pays.'], bets: 'Bets from 10 to 1,000 coins, 100 at most on Hard.' },
+    keno: { goal: 'Pick numbers and hope they get drawn.', how: ['Pick 1 to 10 numbers out of 40.', 'Press Play: 10 numbers are drawn.', 'The more of your numbers come out, the more you win.'], pays: ['The table under the board shows what each number of hits pays.', 'Up to 1,000× your bet.'], bets: 'Bets from 10 to 100 coins.' },
+    dice: { goal: 'Guess where the 100-sided die lands.', how: ['Roll under: you win if the die lands below your target.', 'Roll over: you win if the die lands above your target.', 'Guess the die: pick one face of a 6-sided die.'], pays: ['The smaller your chance, the bigger the payout: it is shown before you roll.', 'Guessing the 6-sided die pays 5.82×.'], bets: BETS_STD },
+    teddy: { goal: 'Pull the confetti popper without making it go BOOM.', how: ['Press Start: one of the 6 chambers is loaded.', 'Every pull that just clicks raises your payout.', 'Cash out whenever you like. BOOM and you lose your bet.'], pays: ['The ladder shows what each click pays, up to 5.82× after 5 clicks.'], bets: BETS_STD },
+    duck: { goal: 'Pick the rubber duck that wins the race.', how: ['Pick one of the 6 ducks, then press Race.', 'The ducks paddle to the finish line: the first one across wins.', 'If your duck wins, you win. If not, you lose your bet.'], pays: ['Sunny is the favourite: wins 30% of races and pays 3.23×.', 'Blaze is the long shot: wins 5% of races and pays 19.40×.', 'Every duck shows its chance and its payout.'], bets: BETS_STD },
+    plinko: { goal: 'Drop balls and see where they land.', how: ['Press Drop: the ball bounces down the pegs.', 'The slot it lands in is your multiplier.', 'Drop as many balls as you like, even lots at once.'], pays: ['Normal: the edges pay up to 33×, the middle pays less than your bet.', 'High risk: up to 1,000× on the edges, but the middle pays almost nothing.'], bets: 'Bets from 1 to 1,000 coins per ball, 100 at most in High risk.' },
+    slots: { goal: 'Line up three of the same symbol.', how: ['Press Spin or pull the lever.', 'The three reels stop one after the other.'], pays: ['Three of a kind pays the most: 7 7 7 pays 250×.', 'Two 7s, two cherries or two lemons pay a little.', 'The full table is under the machine.'], bets: BETS_STD },
+    roulette: { goal: 'Guess where the ball stops.', how: ['Pick a chip, then click the bets you want: you can place several.', 'Press Spin: the ball lands on a number from 0 to 36.'], pays: ['Red, Black, Even, Odd, 1–18 or 19–36 pays 2×.', 'A group of 12 numbers pays 3×.', 'A single number pays 36×. The green 0 only pays a bet on 0.'], bets: 'Up to 1,000 coins per spin in total.' },
+    bj: { goal: 'Get closer to 21 than the dealer, without going over.', how: ['Cards 2 to 10 count their number, J Q K count 10, an Ace counts 1 or 11.', 'Hit to take a card, Stand to stop, Double to double your bet for one last card.', 'The dealer draws until 17 or more.'], pays: ['Win: 2×. Tie: your bet comes back.', 'Blackjack (21 with your first two cards): 2.5×.', 'Lucky bonuses: 7-7-7, or 21 with 5 cards or more.'], bets: BETS_STD },
+    btc: { goal: 'Buy crypto with coins and sell it when the price goes up.', how: ['The price is the real market price, live: 1 coin = 1 $.', 'Buy, wait, then sell: if the price went up, you get more coins back.', 'Leverage: bet on a rise (long) or a fall (short) with 2×, 3× or 5×.'], pays: ['Buying and selling each cost 1%.', 'With leverage, you can never lose more than your margin.'], bets: 'Trades from 10 to 50,000 coins. Game coins only: this is not real crypto.' },
+  };
+  function openHowTo(id) {
+    const h = HOWTO[id], tab = G_TABS.find(t => t[0] === id);
+    if (!h || !tab) return;
+    const list = items => `<ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    openModal(`
+      <div class="g-howto">
+        <h2>${tab[1]} ${esc(tab[2])}</h2>
+        <p class="g-howto-goal">🎯 ${esc(h.goal)}</p>
+        <h4>How to play</h4>${list(h.how)}
+        <h4>Payouts</h4>${list(h.pays)}
+        <h4>Bets</h4><p>${esc(h.bets)}</p>
+        <p class="g-howto-foot">Game coins only, no real money. The casino always keeps a small edge, so play for fun.</p>
+      </div>`);
+  }
   const gTabOrder = () => {
     const ids = G_TABS.map(t => t[0]), saved = Array.isArray(Store.settings.casinoOrder) ? Store.settings.casinoOrder.filter(id => ids.includes(id)) : [];
     return [...new Set(saved)].concat(ids.filter(id => !saved.includes(id)));
@@ -4115,6 +4259,17 @@
             <div class="actions cf-actions"><button class="btn-roll small" id="td-go">Start</button><button class="btn" id="td-cash" hidden></button></div>
             <p class="panel-note g-result" id="td-result"></p>
           </div>
+          <div class="panel g-game" data-game="duck">
+            <div class="panel-head"><h3 class="panel-title">Duck Race</h3><span class="panel-note">pick a rubber duck · the favourite wins often · the long shot pays the most</span></div>
+            <div class="dk-pond" id="dk-pond" data-state="idle">
+              ${DUCKS.map(([, c], k) => `<div class="dk-lane" data-lane="${k}" style="--dk:${c}"><span class="dk-num mono" data-no-i18n>${k + 1}</span><div class="dk-water"><span class="dk-duck"><span class="dk-bob" style="--bd:${-k * 230}ms">${duckSVG()}</span></span></div></div>`).join('')}
+              <div class="dk-pop" id="dk-pop" aria-live="polite"></div>
+            </div>
+            <div class="dk-picks" id="dk-picks" role="radiogroup" aria-label="Pick a duck">${DUCKS.map(([name, c], k) => `<button type="button" class="dk-pick" role="radio" aria-checked="false" data-duck="${k}" style="--dk:${c}"><span class="dk-icon">${duckSVG()}</span><b data-no-i18n>${name}</b><span class="mono dk-x" data-no-i18n>${(dkCents(DUCK_W[k]) / 100).toFixed(2)}×</span><i class="mono" data-no-i18n>${DUCK_W[k]}%</i></button>`).join('')}</div>
+            <div class="dk-stats"><span><i>Win chance</i><b class="mono" id="dk-chance"></b></span><span><i>Multiplier</i><b class="mono" id="dk-mult"></b></span><span><i>Payout</i><b class="mono" id="dk-pay"></b></span></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="dk-go">Race</button></div>
+            <p class="panel-note g-result" id="dk-result"></p>
+          </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
             <div class="sm-machine" id="sm-machine" data-state="idle">
@@ -4173,6 +4328,9 @@
       </div>`;
     drawHouse();
     drawCasinoTop(true);
+    // « ? » de chaque jeu (idée d'Ann joe) : posé à côté du titre, il ouvre les règles (HOWTO).
+    document.querySelectorAll('.g-game').forEach(p => { const t = p.querySelector('.panel-head .panel-title'); if (t && HOWTO[p.dataset.game]) t.insertAdjacentHTML('afterend', `<button type="button" class="g-help" data-help="${p.dataset.game}" aria-label="How to play" title="How to play">?</button>`); });
+    $('.g-stage').addEventListener('click', e => { const b = e.target.closest('[data-help]'); if (b) openHowTo(b.dataset.help); });
     $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); HdrCoins.set(c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
@@ -5011,6 +5169,74 @@
     $('#td-go').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle) teddyMove({ move: 'pull' }); else { $('#td-result').textContent = ''; teddyMove({ move: 'start', bet: Gamble.chip }); } });
     $('#td-cash').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle && g.pulls) teddyMove({ move: 'cash' }); });
     drawTeddy(null);
+    // ---- Duck Race (idée de Deadshot, api/_gamble.js) : le serveur a déjà tiré tout l'ordre d'arrivée ; ici la course
+    // est jouée d'après lui. Chaque canard a son heure d'arrivée (le 2e à un souffle du 1er, les autres de plus en plus
+    // loin) et des remous qui le font passer devant ou derrière en route, nuls au départ et à l'arrivée : l'ordre de
+    // passage de la ligne est toujours celui du serveur. La position suit le temps (jamais une valeur arrondie).
+    if (Gamble.dk == null) Gamble.dk = 0;
+    const dkLanes = () => [...document.querySelectorAll('#dk-pond .dk-lane')];
+    const dkRun = () => { const w = $('#dk-pond .dk-water'), d = $('#dk-pond .dk-duck'); return w && d ? Math.max(0, w.clientWidth - d.offsetWidth) : 0; };
+    const dkPlace = xs => { const run = dkRun(); document.querySelectorAll('#dk-pond .dk-duck').forEach((el, k) => { el.style.transform = `translateX(${(xs[k] * run).toFixed(2)}px)`; }); };
+    const dkPop = (text, kind) => { const p = $('#dk-pop'); p.textContent = text; p.dataset.kind = kind || ''; p.classList.remove('show'); void p.offsetWidth; if (text) p.classList.add('show'); };
+    const drawDuck = () => {
+      const k = Gamble.dk, cents = dkCents(DUCK_W[k]);
+      document.querySelectorAll('#dk-picks .dk-pick').forEach(b => { const on = Number(b.dataset.duck) === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); b.disabled = Gamble.busy; });
+      dkLanes().forEach((l, i) => l.classList.toggle('mine', i === k));
+      $('#dk-chance').textContent = `${DUCK_W[k]}%`;
+      $('#dk-mult').textContent = `${(cents / 100).toFixed(2)}×`;
+      $('#dk-pay').textContent = `🪙 ${fmt(Math.floor(Gamble.chip * cents / 100))}`;
+      if (!Gamble.busy) $('#dk-go').textContent = `Race · ${fmt(Gamble.chip)}`;
+      $('#dk-go').disabled = Gamble.busy;
+    };
+    const dkRace = order => new Promise(done => {
+      const rank = []; order.forEach((d, r) => { rank[d] = r; });
+      const T = 5400, gaps = [0, 110 + Math.random() * 190];
+      for (let r = 2; r < order.length; r++) gaps.push(gaps[r - 1] + 150 + Math.random() * 280);
+      const arrive = rank.map(r => T + gaps[r]);
+      // Remous : enveloppe sin² (nulle et plate au départ comme à l'arrivée), amplitude assez faible pour qu'un canard
+      // n'atteigne jamais la ligne avant son heure ni ne recule vraiment.
+      const wob = rank.map(() => ({ a: .045 + Math.random() * .03, f: 2 + Math.floor(Math.random() * 2), p: Math.random() * Math.PI * 2 }));
+      const ease = s => (s < .1 ? 5 * s * s : s - .05) / .95; // élan au départ, puis allure régulière
+      const pos = (k, t) => { const s = Math.min(1, t / arrive[k]), w = wob[k]; return Math.min(1, ease(s) + w.a * Math.pow(Math.sin(Math.PI * s), 2) * Math.sin(w.f * Math.PI * s + w.p)); };
+      const pond = $('#dk-pond'), t0 = performance.now(), end = Math.max(...arrive) + 250;
+      let crossed = 0, tense = false;
+      const frame = now => {
+        if (currentView !== 'gamble' || !pond.isConnected) { done(); return; }
+        const t = now - t0;
+        dkPlace(rank.map((r, k) => pos(k, t)));
+        if (!tense && t > T - 900) { tense = true; Sound.play('riser'); }
+        while (crossed < order.length && t >= arrive[order[crossed]]) { dkLanes()[order[crossed]].dataset.place = crossed + 1; if (!crossed) Sound.play('quack', { k: 2 }); crossed++; }
+        if (t < end) requestAnimationFrame(frame); else done();
+      };
+      requestAnimationFrame(frame);
+    });
+    $('#dk-picks').addEventListener('click', e => { const b = e.target.closest('[data-duck]'); if (!b || Gamble.busy) return; Gamble.dk = Number(b.dataset.duck); Sound.play('quack', { k: Gamble.dk }); drawDuck(); });
+    $('#dk-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true; drawDuck();
+      const pond = $('#dk-pond'), mine = Gamble.dk;
+      $('#dk-result').textContent = ''; dkPop('', '');
+      dkLanes().forEach(l => { delete l.dataset.place; l.classList.remove('win'); });
+      dkPlace(DUCK_W.map(() => 0));
+      pond.dataset.state = 'racing'; $('#dk-go').textContent = 'Racing…';
+      try {
+        const res = await gamble('duck', { bet: Gamble.chip, duck: mine });
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        if (!reducedMotion) { Sound.play('quack', { k: 0 }); dkPop('GO!', 'go'); await dkRace(res.order); }
+        else { const at = []; res.order.forEach((d, r) => { at[d] = 1 - r * .06; }); dkPlace(at); res.order.forEach((d, r) => { dkLanes()[d].dataset.place = r + 1; }); }
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        pond.dataset.state = 'done';
+        dkLanes()[res.winner].classList.add('win');
+        const name = DUCKS[res.winner][0];
+        dkPop(`${name} wins!`, res.won ? 'win' : 'lose');
+        say($('#dk-result'), res.win, res.bet, res.won ? `${name} wins · ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins` : `${name} wins · −${fmt(res.bet)}`);
+        if (res.won) { Sound.play(res.mult >= 8 ? 'tier' : 'reveal', res.mult >= 8 ? { tier: res.mult >= 19 ? 'mythic' : 'anomaly' } : { small: 1 }); FX.celebrate(res.mult >= 19 ? 'mythic' : res.mult >= 8 ? 'anomaly' : 'epic', pond); }
+        else Sound.play('lock', { i: 0, soft: 1 });
+        showCoins(res.coins);
+      } catch (err) { pond.dataset.state = 'idle'; fail(err); } finally { Gamble.busy = false; drawDuck(); }
+    });
+    drawDuck(); dkPlace(DUCK_W.map(() => 0));
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) drawDuck(); });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -5279,9 +5505,10 @@
     };
   }
   // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
-  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', pumpkins: '<i class="wpp-bat"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>', japan: '<i class="wpj-mist"></i>', playground: '<i class="wpp-clouds"></i>', cybervoid: '<i class="wpc-pulse"></i>', submarine: '<i class="wpd-glow"></i><i class="wpd-sub"><b class="wpd-burst"></b></i>' };
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', pumpkins: '<i class="wpp-bat"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>', japan: '<i class="wpj-mist"></i>', playground: '<i class="wpp-clouds"></i>', cybervoid: '<i class="wpc-pulse"></i>', submarine: '<i class="wpd-glow"></i><i class="wpd-sub"><b class="wpd-burst"></b></i>', comicpage: '<i class="wcm-page"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i><i class="wcm-flash"></i><i class="wcm-dots"></i><i class="wcm-pow"></i><i class="wcm-bam"></i><i class="wcm-boom"></i>', accretion: '<i class="wbh-glow"></i><i class="wbh-lens"></i><i class="wbh-hole"></i><i class="wbh-disc"><b><u></u></b><s></s></i><i class="wbh-hole wbh-top"></i><i class="wbh-flare"></i><i class="wbh-swoop"><b></b></i>', city: '<i class="wct-clouds"></i><i class="wct-flA"></i><i class="wct-flB"></i><i class="wct-beacons"></i><i class="wct-plane"></i><i class="wct-heli"><u></u><b></b></i>', jungle: '<i class="wjg-bl"></i><i class="wjg-br"><b></b></i><i class="wjg-tl"></i><i class="wjg-tr"><b></b></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-fly"><b><u></u></b></i><i class="wjg-bird"><b></b></i>', rainrainbow: '<i class="wrb-sky"></i><i class="wrb-rays"></i><i class="wrb-sun"></i><i class="wrb-bow2"></i><i class="wrb-bow"></i><i class="wrb-cl"></i><i class="wrb-cl"></i><i class="wrb-lit"></i><i class="wrb-rain"></i>', crystalcave: '<i class="wcc-lamp"></i><i class="wcc-drip"></i><i class="wcc-drip"></i><i class="wcc-bat"><b></b></i>', lake: '<i class="wlk-drop"></i><i class="wlk-drop"></i><i class="wlk-j wlk-f1"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-f2"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-dol"><b><u></u></b><s></s><s></s></i>' };
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
-  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500, submarine: 6500 };
+  // Comic Book, Black Hole et Rain to Rainbow (2026-10-27) : l'arc-en-ciel dure le plus longtemps, la pluie revient doucement.
+  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500, submarine: 6500, comicpage: 4200, accretion: 6500, rainrainbow: 15000 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -5573,12 +5800,14 @@
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
     // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
-    const wall = !!box.wall;
-    const won = Shop.caseItem(box, result.won), rarity = Shop.rarityOf(won.id, wall);
-    const look = (id, size) => wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
+    const wall = !!box.wall, btnCase = !!box.btn;
+    const won = Shop.caseItem(box, result.won), rarity = Shop.caseRarity(box, won.id);
+    // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
+    const look = (id, size) => btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
+      : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
       : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
-      const k = Shop.caseItem(box, id), r = Shop.rarityOf(id, wall);
+      const k = Shop.caseItem(box, id), r = Shop.caseRarity(box, id);
       return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji} ${esc(k.name)}</span></div>`;
     };
     openModal(`
@@ -5590,7 +5819,7 @@
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
           ${look(won.id, 'md')}
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
+          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
             ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
@@ -5619,7 +5848,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -5648,7 +5877,8 @@
       const equip = $('#case-equip');
       if (equip) equip.addEventListener('click', async () => {
         try {
-          if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
+          if (btnCase) { drawShop(await Online.shopAction('button', undefined, { button: won.id })); toast(`${won.emoji} ${won.name} button equipped`); }
+          else if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
           else { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); }
           closeModal();
         } catch (err) { toast('Shop unavailable right now, try again'); }
@@ -5931,7 +6161,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
@@ -6171,7 +6401,7 @@
           <span class="o-wd-bars"><i class="p" style="height:${(x.players / maxWP) * 100}%"></i><i class="r" style="height:${(x.rolls / maxWR) * 100}%"></i></span><em>${x.name}</em><b class="mono">${fmt(x.players)}</b></div>`).join('')}</div>
         <div class="o-legend"><span><i class="p"></i>Players</span><span><i class="r"></i>Rolls</span><span class="panel-note">weekend in orange</span></div>`) : '';
       // Économie
-      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
+      const E = X.economy || [], LABEL_IN = { rolls: '🎲 Rare rolls', quests: '📋 Quests', weekly: '🗓️ Weekly quests', chest: '🎁 Quest chests', daily: '🔥 Daily bonus', levels: '⭐ Levels', events: '🎯 Events', duels: '⚔️ Duels won', codes: '🔑 Codes', casino: '🎰 Casino payouts', crypto: '📈 Crypto sold', leverage: '📈 Leverage paid back', weekend: '🔥 Weekend Rush', other: '🎁 Other' }, LABEL_OUT = { skins: '🎨 Skins', cases: '📦 Cases', wallpapers: '🖼️ Wallpapers', buttons: '🔘 Buttons', emotes: '😎 Emotes', sounds: '🔊 Sound packs', upgrades: '⚡ Upgrades', casino: '🎰 Casino bets', crypto: '📈 Crypto bought', leverage: '📈 Leverage margin', rename: '✏️ Name changes', prestige: '👑 Prestige' };
       const tot = o => Object.values(o || {}).reduce((x, v) => x + v, 0);
       const span = (list, k) => { const out = {}; list.forEach(x => Object.entries(x[k]).forEach(([n, v]) => { out[n] = (out[n] || 0) + v; })); return out; };
       const w7 = E.slice(0, 7), in7 = tot(span(w7, 'in')), out7 = tot(span(w7, 'out')), net7 = in7 - out7, ecoDays = E.filter(x => tot(x.in) || tot(x.out)).length;
@@ -6284,11 +6514,17 @@
       const row = r => `<div class="o-report${r.done ? ' done' : ''}">
         <div class="o-report-head">${who(r.author)}${r.against > 1 ? ` <span class="o-chip warn">${r.against} reports</span>` : ''}<span class="panel-note">${esc(r.where)} · ${relTime(r.msgT)} · reported by ${who(r.reporter)}</span></div>
         <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
-        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}`}</div>`;
+        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}${r.where === 'about me' ? ` <button class="btn ghost small" data-bio-clear="${esc(r.author)}">🗑️ Clear About me</button>` : ''}`}</div>`;
       pane('reports').innerHTML = panel('Reported messages', `${fmt(open.length)} to look at · messages players reported from duel chats and private messages`,
         d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
     };
     Online.site('reports').then(drawReports).catch(err => { if (pane('reports')) pane('reports').innerHTML = denied(err); });
+    // « About me » signalé ou trouvé (idée de Niall, 2026-10-27) : le créateur l'efface, par pseudo (onglets Reports et Chat).
+    const clearBio = name => {
+      if (!confirm(window.RNGI18n ? window.RNGI18n.t(`Clear the About me of ${name}?`) : `Clear the About me of ${name}?`)) return Promise.resolve(false);
+      return Online.bio('clear', { name }).then(() => { toast('About me cleared'); return true; }).catch(err => { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); return false; });
+    };
+    if (pane('reports')) pane('reports').addEventListener('click', e => { const b = e.target.closest('[data-bio-clear]'); if (b && currentView === 'owner') { b.disabled = true; clearBio(b.dataset.bioClear).then(ok => { if (!ok) b.disabled = false; }); } });
     // ---- Photos de profil (api/_avatar.js, 2026-10-26) : à valider avant que quiconque les voie ; retrait possible ensuite.
     let avQ = '';
     const avImg = u => (API_BASE || API_SAME) + u;
@@ -6347,7 +6583,8 @@
       box.innerHTML = panel('Chat moderators', 'they can delete messages and mute players in the global chat', `
           <div class="im-managers">${d.mods.map(n => `<span class="chip"><span data-no-i18n>${esc(n)}</span> <button class="im-x" data-gc-mod="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
           <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
-        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>');
+        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div><button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button></div>`).join('') : '<div class="empty">Nobody is muted.</div>')
+        + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'));
     };
     const chatRun = (action, extra) => Online.global(action, extra).then(d => { drawChat(d); guest(d.readOnly); });
     chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
@@ -6358,6 +6595,8 @@
       const rm = e.target.closest('[data-gc-mod]'); if (rm && confirm(window.RNGI18n ? window.RNGI18n.t('Remove this moderator?') : 'Remove this moderator?')) chatRun('gcModSet', { name: rm.dataset.gcMod, on: false }).catch(err => toast(err.message || 'Unavailable right now, try again'));
     });
     pane('chat').addEventListener('submit', e => {
+      const bf = e.target.closest('.bio-clear-form');
+      if (bf && currentView === 'owner') { e.preventDefault(); const n = bf.elements.name.value.trim(); if (n) clearBio(n).then(ok => { if (ok) bf.elements.name.value = ''; }); return; }
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
@@ -7627,9 +7866,9 @@
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
+    const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
     lbState.tab = lbTabOf(lbState.period);
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => ({ xp: 'Total XP of every roll ever made', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -7637,7 +7876,7 @@
         <div class="lb-wrap">
           ${trophiesAsideHTML()}
           <div class="lb-card">
-            <div class="lb-tabs lb-tabs-5" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${lbState.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+            <div class="lb-tabs lb-tabs-${tabs.length}" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${lbState.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
             <div id="lb-list"><div class="empty">Loading…</div></div>
           </div>
         </div>
@@ -7697,7 +7936,7 @@
       return;
     }
     if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
-    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet' }[period];
+    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet', rolls: 'yet' }[period];
     const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
       return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
     // Poubelle : jour, semaine, mois ou tout le temps (idée d'Angelicide9, 2026-10-18).
@@ -7706,7 +7945,7 @@
     const spanBar = period === 'worst' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
     // Ma place, en tête de liste (idée de WpBejs, 2026-10-18 : voir son meilleur sur la Poubelle sans chercher).
     const me = data.entries.find(e => e.me) || data.mine;
-    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
+    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
     $('#lb-list').innerHTML = bestBar + spanBar + evHead + meBar + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
       : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
@@ -7726,6 +7965,14 @@
         <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
+      </div>`;
+    // Most rolls (idée de CrazyMiner22 et WpBejs, 2026-10-27) : tirages à vie, et l'XP à vie en petit.
+    if (lbState.period === 'rolls') return `
+      <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
+        <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-coins mono" title="Rolls">${fmt(e.count)}</span>
+        <span class="lb-rolls" title="Lifetime XP">${compactXp(e.xp)}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
@@ -8035,8 +8282,9 @@
   // coffre commun, chat, classement de la semaine et guerres 5 contre 5. Tout est décidé par le serveur ; la page relit
   // le chat et la guerre toutes les 5 s tant qu'elle est ouverte (sans toucher aux formulaires en cours).
   const clanTagHTML = c => (c && c.tag ? `<span class="cl-tag cl-c-${esc(c.c || c.tagc || 'plain')}" title="Clan ${esc(c.tag)}" data-no-i18n>[${esc(c.tag)}]</span>` : '');
-  const CL_ROLE = { leader: '👑 Leader', officer: '⭐ Officer', member: 'Member' };
-  const CL_RANK = { member: 1, officer: 2, leader: 3 };
+  // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
+  const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
+  const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
   let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false;
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
   const clanErr = err => toast([400, 403, 404, 409, 422, 429].includes(err.status) ? err.message : 'Clans unavailable right now, try again');
@@ -8081,7 +8329,8 @@
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">Clan leaderboard</h3><span class="panel-note">Ends in <span data-no-i18n>${ends}</span></span></div>
         <p class="panel-note cl-note">XP earned this week by all the members of each clan. The members of the #1 clan who rolled for it get the 🏯 Clan Champion title when the week ends (Monday 00:00 UTC).</p>
-        ${d.last ? `<p class="cl-last-week">🏯 Last week's champions: <b data-no-i18n>${esc(d.last.emoji)} ${esc(d.last.name)}</b> ${clanTagHTML(d.last)}</p>` : ''}
+        <p class="panel-note cl-note">🎖️ The member of the #1 clan who earned the most XP for it that week also gets the Clan MVP title.</p>
+        ${d.last ? `<p class="cl-last-week">🏯 Last week's champions: <b data-no-i18n>${esc(d.last.emoji)} ${esc(d.last.name)}</b> ${clanTagHTML(d.last)}${d.last.mvp ? ` <span class="cl-mvp">· 🎖️ <span>Clan MVP:</span> <a class="player-link" href="${profileHref(d.last.mvp)}" data-no-i18n>${esc(d.last.mvp)}</a></span>` : ''}</p>` : ''}
         ${d.clans.length ? `<ol class="cl-top">${d.clans.map(c => `<li class="cl-top-row"><span class="cl-rank" data-no-i18n>#${c.rank}</span>${clanCard(c)}</li>`).join('')}</ol>` : '<div class="empty">No clan has earned XP this week yet.</div>'}
       </div>`;
   }
@@ -8128,15 +8377,18 @@
     }
     const c = d.clan, role = d.me.role, leader = role === 'leader', p = d.prices;
     // Droits des officiers réglés par le chef (idée de kaz, 2026-10-26) : le serveur dit ce que je peux faire.
-    const can = d.me.can || {}, officer = CL_RANK[role] >= 2;
+    const can = d.me.can || {}, officer = CL_RANK[role] >= 2, coleader = CL_RANK[role] >= 3;
     const PERM_LABEL = { invite: '📨 Invite and accept requests', kick: '🥾 Kick members', upgrade: '🪙 Spend the vault on upgrades', war: '⚔️ Start and answer wars', edit: '✏️ Edit description and emoji' };
     const memberRow = m => {
       const acts = [];
       if (!m.me) {
-        if (leader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
-        if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
+        // Chef et co-chefs : membre ⇄ officier ; le chef seul : officier ⇄ co-chef, passer la main.
+        if (coleader && m.role === 'member') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make officer">⭐</button>`);
+        if (leader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="promote" data-name="${esc(m.name)}" title="Make co-leader">🌟</button>`);
+        if (coleader && m.role === 'officer') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to member">⬇️</button>`);
+        if (leader && m.role === 'coleader') acts.push(`<button class="cl-mini" type="button" data-cl="demote" data-name="${esc(m.name)}" title="Back to officer">⬇️</button>`);
         if (leader) acts.push(`<button class="cl-mini" type="button" data-cl="transfer" data-name="${esc(m.name)}" title="Make leader">👑</button>`);
-        if (leader || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
+        if (leader || (role === 'coleader' && ['officer', 'member'].includes(m.role)) || (role === 'officer' && can.kick && m.role === 'member')) acts.push(`<button class="cl-mini" type="button" data-cl="kick" data-name="${esc(m.name)}" title="Kick from the clan">✕</button>`);
       }
       return `<li class="cl-member${m.me ? ' me' : ''}"><span class="cl-dot ${esc(m.status)}" title="${m.status === 'online' ? 'Online' : m.status === 'afk' ? 'Away' : 'Offline'}"></span>${Avatars.html(m.name, 'av-sm')}<a class="cl-mname" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="cl-role cl-r-${esc(m.role)}">${CL_ROLE[m.role]}</span><span class="cl-mxp" data-no-i18n>${compact(m.xp)} XP</span>${acts.length ? `<span class="cl-macts">${acts.join('')}</span>` : ''}</li>`;
     };
@@ -8180,8 +8432,9 @@
       ${leader ? `<div class="panel">
         <div class="panel-head"><h3 class="panel-title">⭐ What officers can do</h3></div>
         <p class="panel-note cl-note">Only you can change this. You can always do everything.</p>
+        <p class="panel-note cl-note">🌟 Co-leaders can always do all of this, and also promote, demote and kick officers.</p>
         <div class="cl-perms">${Object.keys(PERM_LABEL).map(k => `<label class="cl-perm"><input type="checkbox" data-cl="perm" data-perm="${k}"${c.perms && c.perms[k] === false ? '' : ' checked'}><span>${PERM_LABEL[k]}</span></label>`).join('')}</div>
-      </div>` : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
+      </div>` : role === 'coleader' ? '<div class="panel"><p class="panel-note cl-note">🌟 Co-leaders can do everything officers can, even what the leader turned off for them, and also promote, demote and kick officers. Only the leader can disband the clan, pass the leadership or name co-leaders.</p></div>' : officer ? `<div class="panel"><p class="panel-note cl-note"><span>⭐ Officers can:</span> ${Object.keys(PERM_LABEL).filter(k => can[k]).map(k => `<span>${PERM_LABEL[k]}</span>`).join(' · ') || '<span>nothing more than members</span>'}</p></div>` : ''}
       <div class="panel cl-danger">
         ${leader ? `<button class="btn ghost" type="button" data-cl="disband">🗑️ Disband the clan</button>` : `<button class="btn ghost" type="button" data-cl="leave">🚪 Leave the clan</button>`}
       </div>`;
@@ -8196,6 +8449,7 @@
     const line = {
       create: `🏯 ${n} <span>founded the clan</span>`, join: `👋 ${n} <span>joined</span>${by}`, leave: `🚪 ${n} <span>left</span>`, kick: `🥾 ${n} <span>was kicked</span>${by}`,
       promote: `⭐ ${n} <span>is now an officer</span>${by}`, demote: `⬇️ ${n} <span>is a member again</span>${by}`, leader: `👑 ${n} <span>is the new leader</span>${by}`,
+      colead: `🌟 ${n} <span>is now a co-leader</span>${by}`, uncolead: `⬇️ ${n} <span>is an officer again</span>${by}`,
       donate: `🪙 ${n} <span>donated</span> ${a(x.a)}`, perms: `⭐ ${n} <span>changed what officers can do</span>`,
       buy: `${kind === 'slots' ? '🧱' : kind === 'banner' ? '🎨' : '🏷️'} ${n} <span>${kind === 'slots' ? 'bought 5 member slots' : kind === 'banner' ? 'changed the banner color' : 'changed the tag color'}</span> −${a(x.a)}`,
       stake: `⚔️ ${n} <span>put coins at stake against</span> ${tag} −${a(x.a)}`, refund: `↩️ <span>War stake returned</span> +${a(x.a)}`,
@@ -8241,7 +8495,7 @@
   function drawClanChat(d) {
     const list = $('#cl-chat'); if (!list) return;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
+    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
     if (html === clanChatSig) return;
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     clanChatSig = html; list.innerHTML = html;
@@ -8275,7 +8529,7 @@
     if (['request', 'join', 'ignore', 'unask'].includes(op)) { const d = await clanDo(op, { tag }, b); if (d && op === 'join') toast('Welcome to the clan!', 3000, 'achv'); if (d && op === 'request' && clanTab === 'find') drawClanFind(($('#cl-q') || {}).value || ''); return; }
     if (['accept', 'decline', 'promote', 'demote'].includes(op)) { clanDo(op, { name }, b); return; }
     if (op === 'kick' && confirm(T(`Kick ${name} from the clan?`))) { clanDo('kick', { name }, b); return; }
-    if (op === 'transfer' && confirm(T(`Make ${name} the clan leader? You will become an officer.`))) { clanDo('transfer', { name }, b); return; }
+    if (op === 'transfer' && confirm(T(`Make ${name} the clan leader? You will become a co-leader.`))) { clanDo('transfer', { name }, b); return; }
     if (op === 'leave' && confirm(T('Leave the clan?'))) { clanDo('leave', {}, b); return; }
     if (op === 'disband' && confirm(T('Disband the clan? The vault coins are lost and every member leaves.'))) { clanDo('disband', {}, b); return; }
     if (op === 'up-slots' && confirm(T('Spend vault coins on 5 more member slots?'))) { clanDo('upgrade', { what: 'slots' }, b); return; }
@@ -8415,19 +8669,21 @@
   // Les messages sont du texte échappé (esc), marqués data-no-i18n (pseudos : .player-link) : jamais de HTML d'un joueur, jamais traduits.
   const GChat = {
     open: false, timer: 0, msgs: [], rev: null, del: 0, me: null, busy: false, menu: null,
+    reply: null, pin: null, emojiOpen: false, // réponse en cours (Niall), message épinglé (Big Sexy), emojis (Deadshot), 2026-10-27
     el: null,
     mount() {
       if (this.el) return this.el;
       const el = document.createElement('section');
       el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
       el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+        <div class="gc-pin" hidden></div>
         <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
         <footer class="gc-foot"></footer>`;
       document.body.appendChild(el);
       el.querySelector('.gc-close').addEventListener('click', () => this.close());
       el.addEventListener('click', e => this.onClick(e));
       el.addEventListener('submit', e => { e.preventDefault(); this.send(); });
-      el.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
+      el.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (this.emojiOpen) this.toggleEmoji(false); else if (this.reply) this.setReply(null); else this.close(); });
       this.el = el;
       return el;
     },
@@ -8493,6 +8749,7 @@
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
+      if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
       if (d.same) return;
       this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
       this.drawList();
@@ -8501,24 +8758,97 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           <div class="gc-meta">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
 ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
-            ${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</div>
-          <p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
-          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}</div>` : ''}
+            <span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></div>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
+    },
+    // Grand tirage annoncé par le serveur (idée de R77, 2026-10-27) : aux couleurs de sa rareté, sans auteur ni texte libre ;
+    // ni réponse, ni signalement : seuls les modérateurs ont un menu (supprimer), et le créateur peut l'épingler.
+    group: n => String(n).padStart(6, '0').replace(/\B(?=(\d{3})+$)/g, ' '),
+    sysHTML(m, me, time) {
+      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}">
+          <p class="gc-sys-line"><span class="gc-sys-ic" aria-hidden="true">🎉</span> <a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a> <span>rolled</span> <button type="button" class="gc-sys-num mono" data-number="${Number(m.n)}" data-owner="${esc(m.name)}" data-no-i18n title="See its badges">${this.group(m.n)}</button> ${tierPill(m.tier)}
+            <time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
+            ${me.mod || me.owner ? '<span class="gc-tools"><button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button></span>' : ''}</p>
+          ${this.menu === m.id ? `<div class="gc-actions">${me.mod ? '<button data-gc="delete">🗑️ Delete</button>' : ''}${this.pinBtn(m, me)}</div>` : ''}
+        </div>`;
+    },
+    // Citation d'une réponse (idée de Niall, 2026-10-27) : un clic remonte à l'original s'il est encore chargé. Le serveur
+    // n'envoie jamais le texte d'un message supprimé (« deleted message »).
+    quoteHTML(re) {
+      return `<button type="button" class="gc-quote" data-gc-jump="${esc(re.id)}" title="Show the message"><span class="gc-quote-name" data-no-i18n>↩ ${esc(re.name)}</span>${re.gone ? '<span class="gc-quote-text gc-quote-gone">deleted message</span>' : `<span class="gc-quote-text" data-no-i18n>${esc(re.text)}</span>`}</button>`;
+    },
+    // Épingler (le créateur seul, idée de Big Sexy, 2026-10-27).
+    pinBtn(m, me) { return me.owner ? (this.pin && this.pin.id === m.id ? '<button data-gc="unpin">📌 Unpin</button>' : '<button data-gc="pin">📌 Pin</button>') : ''; },
+    // Bandeau épinglé en haut de la liste, pour tout le monde. Sur téléphone il se replie sur une ligne (▾ pour tout lire).
+    pinShut: null,
+    drawPin() {
+      const box = this.el && this.el.querySelector('.gc-pin'); if (!box) return;
+      const p = this.pin; box.hidden = !p;
+      if (!p) { box.innerHTML = ''; return; }
+      if (!this.pinShut || this.pinShut.id !== p.id) this.pinShut = { id: p.id, on: true };
+      const body = p.sys ? `🎉 <b data-no-i18n>${esc(p.name)}</b> <span>rolled</span> <b class="mono" data-no-i18n>${this.group(p.n)}</b> ${tierPill(p.tier)}`
+        : `<b class="gc-pin-name" data-no-i18n>${esc(p.name)}</b> <span data-no-i18n>${esc(p.text)}</span>`;
+      box.classList.toggle('shut', this.pinShut.on);
+      box.innerHTML = `<span class="gc-pin-ic" aria-hidden="true">📌</span>
+        <button type="button" class="gc-pin-body" data-gc-pin-go title="Pinned message"><span class="gc-pin-label">Pinned</span> ${body}</button>
+        <button type="button" class="gc-pin-more" data-gc-pin-more aria-expanded="${!this.pinShut.on}" aria-label="${this.pinShut.on ? 'Show all' : 'Show less'}" title="${this.pinShut.on ? 'Show all' : 'Show less'}">${this.pinShut.on ? '▾' : '▴'}</button>
+        ${(this.me || {}).owner ? '<button type="button" class="gc-pin-x" data-gc-unpin aria-label="Unpin" title="Unpin">×</button>' : ''}`;
+    },
+    // Remonter à un message (citation, épinglé) : seulement s'il est encore dans les 100 chargés.
+    jump(id) {
+      const box = this.list(), row = box.querySelector(`.gc-msg[data-id="${CSS.escape(String(id))}"]`);
+      if (!row) { toast('This message is no longer in the chat'); return; }
+      const top = box.scrollTop + row.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - row.offsetHeight) / 2;
+      box.scrollTo({ top: Math.max(0, top), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      row.classList.remove('gc-flash'); void row.offsetWidth; row.classList.add('gc-flash');
+    },
+    // Répondre : un bandeau « Replying to … » au-dessus du champ, × pour annuler.
+    setReply(r) {
+      this.reply = r;
+      const bar = this.el.querySelector('.gc-replying'); if (!bar) return;
+      bar.hidden = !r;
+      bar.innerHTML = r ? `<span class="gc-replying-text"><span>Replying to</span> <b data-no-i18n>${esc(r.name)}</b> <span class="gc-quote-text" data-no-i18n>${esc(r.text)}</span></span><button type="button" class="gc-pin-x" data-gc-unreply aria-label="Cancel the reply" title="Cancel the reply">×</button>` : '';
+      const input = this.el.querySelector('.gc-input');
+      if (r && input && !matchMedia('(pointer: coarse)').matches) input.focus();
+    },
+    // Emojis (idée de Deadshot, 2026-10-27) : une grille choisie à la main (pas d'emoji composé, pas de marque), insérés à
+    // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
+    EMOJIS: ['😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    toggleEmoji(on = !this.emojiOpen) {
+      this.emojiOpen = on;
+      const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');
+      if (grid) grid.hidden = !on;
+      if (btn) btn.setAttribute('aria-expanded', String(on));
+    },
+    insertEmoji(e) {
+      const i = this.el.querySelector('.gc-input'); if (!i) return;
+      if (i.value.length + e.length > (i.maxLength > 0 ? i.maxLength : 200)) { toast('Your message is full'); return; }
+      const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
+      i.value = i.value.slice(0, a) + e + i.value.slice(b);
+      const pos = a + e.length;
+      // Sur téléphone, pas de focus : le clavier cacherait la grille.
+      if (!matchMedia('(pointer: coarse)').matches) i.focus();
+      try { i.setSelectionRange(pos, pos); } catch (err) { /* champ caché */ }
     },
     // Pied du panneau : la zone d'écriture, ou pourquoi on ne peut pas écrire (Google, tirages, silence).
     drawFoot() {
       const foot = this.el.querySelector('.gc-foot'), me = this.me;
       const keep = foot.querySelector('.gc-input'), draft = keep ? keep.value : '', had = keep && document.activeElement === keep;
       if (me && me.can) {
-        foot.innerHTML = `<form class="gc-form"><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+        foot.innerHTML = `<div class="gc-replying" hidden></div>
+          <div class="gc-emojis" hidden role="group" aria-label="Emoji">${this.EMOJIS.map(e => `<button type="button" data-emoji="${e}" aria-label="${e}">${e}</button>`).join('')}</div>
+          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
+        this.setReply(this.reply); this.toggleEmoji(this.emojiOpen);
         return;
       }
+      this.reply = null; this.emojiOpen = false;
       const why = !me || !Store.player.name ? 'Pick a player name and make 100 rolls to write here.'
         : me.reason === 'muted' ? (me.mutedUntil < 0 ? '🔇 You can no longer write in the chat.' : `🔇 You are muted until ${fullDate(me.mutedUntil)}.`)
         : me.reason === 'google' ? `To write here, link a Google account (⚙️ Settings) and make ${me.need} rolls.`
@@ -8530,18 +8860,33 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
       const text = input.value.trim(); if (!text) return;
       this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
       try {
-        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del }));
-        input.value = ''; this.list().scrollTop = this.list().scrollHeight;
-      } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll(); }
+        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del, ...(this.reply ? { replyTo: this.reply.id } : {}) }));
+        input.value = ''; this.list().scrollTop = this.list().scrollHeight; this.setReply(null); this.toggleEmoji(false);
+      } catch (err) {
+        toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll();
+        if (err.status === 404 && this.reply) this.setReply(null); // l'original vient d'être supprimé : le message reste à envoyer
+      }
       finally { this.busy = false; btn.disabled = false; }
     },
     async onClick(e) {
+      // Citation, épinglé, emojis, réponse annulée (2026-10-27).
+      const jump = e.target.closest('[data-gc-jump]'); if (jump) { this.jump(jump.dataset.gcJump); return; }
+      if (e.target.closest('[data-gc-pin-go]')) { if (this.pin) this.jump(this.pin.id); return; }
+      if (e.target.closest('[data-gc-pin-more]')) { if (this.pinShut) this.pinShut.on = !this.pinShut.on; this.drawPin(); return; }
+      if (e.target.closest('[data-gc-unpin]')) { try { this.apply(await Online.global('gcUnpin')); toast('Unpinned'); } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); } return; }
+      if (e.target.closest('[data-gc-unreply]')) { this.setReply(null); return; }
+      const emo = e.target.closest('[data-emoji]'); if (emo) { this.insertEmoji(emo.dataset.emoji); return; }
+      if (e.target.closest('[data-gc-emoji]')) { this.toggleEmoji(); return; }
+      if (this.emojiOpen && !e.target.closest('.gc-emojis, .gc-input')) this.toggleEmoji(false);
       const menu = e.target.closest('[data-gc-menu]');
       if (menu) { const id = menu.closest('.gc-msg').dataset.id; this.menu = this.menu === id ? null : id; this.drawList(); return; }
       const b = e.target.closest('[data-gc]'); if (!b) return;
       if (b.dataset.gc === 'google') { this.close(); openSettings(); return; }
       const id = b.closest('.gc-msg').dataset.id, t = s => (window.RNGI18n ? window.RNGI18n.t(s) : s);
+      // Répondre (idée de Niall, 2026-10-27) : le bandeau montre à qui ; le serveur garde la référence.
+      if (b.dataset.gc === 'reply') { const m = this.msgs.find(x => x.id === id); if (m && !m.sys) this.setReply({ id, name: m.name, text: m.text }); return; }
       try {
+        if (b.dataset.gc === 'pin' || b.dataset.gc === 'unpin') { this.apply(await Online.global(b.dataset.gc === 'pin' ? 'gcPin' : 'gcUnpin', { id })); toast(b.dataset.gc === 'pin' ? 'Pinned' : 'Unpinned'); } else
         // Modifier son message, 5 minutes (idée de daddy finger, 2026-10-26) : le serveur rejoue tous les filtres.
         if (b.dataset.gc === 'edit') {
           const m = this.msgs.find(x => x.id === id); if (!m) return;
