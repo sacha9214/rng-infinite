@@ -721,6 +721,31 @@
 .btn-roll.small.gen-royal::before { left: .62em; }
 .btn-roll.small.gen-royal::after { right: .62em; }
 
+/* Pickle — un cornichon (idée d'Edward et de Dylanrulez123, 2026-10-27) : gélule vert olive, peau bosselée (petites
+   verrues claires, quelques taches sombres), reflet humide en haut. Appuyé, il s'écrase (plus large, plus bas) puis
+   rebondit en tremblotant comme une gelée ; son « squish » mouillé est dans js/sound.js (recette click). */
+.btn-roll.gen-pickle {
+  border-radius: 999px; border: 2px solid #3f6212; color: #f7fee7; letter-spacing: .12em;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(236, 252, 203, .55) 0 1.6px, transparent 2.4px) 0 0 / 15px 11px,
+    radial-gradient(circle at 70% 75%, rgba(217, 249, 157, .45) 0 1.3px, transparent 2.1px) 5px 3px / 13px 12px,
+    radial-gradient(circle at 50% 50%, rgba(26, 46, 5, .35) 0 1px, transparent 1.8px) 9px 6px / 23px 17px,
+    radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255, 255, 255, .35), transparent 70%),
+    linear-gradient(180deg, #a3c94a 0%, #6b9a2a 45%, #4d7c0f 80%, #3f6212 100%);
+  text-shadow: 0 1px 0 #365314, 0 -1px 0 rgba(255, 255, 255, .25), 0 2px 4px rgba(26, 46, 5, .5);
+  --gs: inset 0 2px 0 rgba(236, 252, 203, .5), inset 0 -.25em .4em rgba(26, 46, 5, .35), 0 .26em 0 #365314, 0 .5em .9em rgba(26, 46, 5, .4);
+  --gs-h: inset 0 2px 0 rgba(236, 252, 203, .6), inset 0 -.25em .4em rgba(26, 46, 5, .35), 0 .3em 0 #365314, 0 .62em 1.1em rgba(26, 46, 5, .45);
+  --gs-a: inset 0 2px 0 rgba(236, 252, 203, .35), inset 0 .25em .5em rgba(26, 46, 5, .45), 0 .05em 0 #365314, 0 .12em .3em rgba(26, 46, 5, .4);
+  transform-origin: 50% 100%;
+  transition: transform .45s cubic-bezier(.25, 1.9, .45, .8), box-shadow .2s ease, filter .2s ease;
+}
+/* Les deux bouts arrondis du cornichon, un peu plus foncés, et une goutte de saumure qui brille. */
+.btn-roll.gen-pickle::before { inset: 0; border-radius: inherit; background: radial-gradient(ellipse 14% 70% at 0% 50%, rgba(54, 83, 20, .55), transparent 80%), radial-gradient(ellipse 14% 70% at 100% 50%, rgba(54, 83, 20, .55), transparent 80%); }
+.btn-roll.gen-pickle::after { top: 14%; left: 18%; width: .5em; height: .3em; border-radius: 50%; background: rgba(255, 255, 255, .75); filter: blur(.4px); transform: rotate(-12deg); }
+.btn-roll.gen-pickle:hover { transform: translateY(-1px) scale(1.015, .99); filter: none; }
+.btn-roll.gen-pickle:active { transform: translateY(.2em) scale(1.1, .8); filter: saturate(1.15); transition: transform .06s ease-out, box-shadow .06s; }
+.btn-roll.gen-pickle { --edge: .26em; }
+
 /* Pack ASMR (idée de JAKECisthebest, 2026-10-20). Chacun a son propre son de pression (js/sound.js, recette click). */
 /* Thock — touche mécanique lubrifiée : capuchon fumé translucide, rétroéclairage pastel qui déborde dessous, course
    courte et sèche. Le son est grave et mat (le « thock »), pas le clic aigu de Keycap. */

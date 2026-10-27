@@ -141,10 +141,11 @@ module.exports = async (req, res) => {
         } else if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         // Caisse de fonds d'écran (idée de CrazyMiner22) : le fond gagné rejoint walls:<id>, comme un achat (buywall).
-        const duplicate = (box.wall ? st.walls : st.owned).includes(won);
+        // Caisse de boutons (idée de shadow2, 2026-10-27) : le bouton gagné rejoint btns:<id>, comme un achat (buybutton).
+        const duplicate = (box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
-        if (!duplicate) writes.push(['SADD', box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
+        if (!duplicate) writes.push(['SADD', box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
@@ -243,7 +244,7 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, duck: Gamble.duck, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
     if (GAMES[body.action]) {
       // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
