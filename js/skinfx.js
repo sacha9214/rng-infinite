@@ -5419,6 +5419,85 @@
     };
   };
 
+  // 💧 Ripple (2026-10-27, idée de casmicgraything) — de l'eau calme vue de dessus : pour chaque chiffre, une goutte tombe
+  // et touche l'eau juste sur lui, une couronne d'éclaboussures saute et des ronds s'élargissent dans la carte, derrière
+  // les chiffres ; avant le dernier, une grosse goutte gonfle au-dessus de lui. À la révélation : une grosse goutte au
+  // centre, des ronds plus nombreux avec la rareté, et dès Mythic une vague (« on mythics it causes a wave ») déferle
+  // derrière la carte, crête d'écume et embruns ; tirage raté : un petit plic.
+  SCENES.ripple = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2;
+    const drops = timed(), rings = timed(), crown = particles(), spray = particles(), waves = timed(), sheen = timed(), emit = emitter();
+    let hang = 0, hangTo = 0, now = 0;
+    const lastX = () => card.x + card.w - card.w / 12; // la case du dernier chiffre
+    const DROP = dark ? '#e0f2fe' : '#0ea5e9';
+    const drop = (x, y, r, stretch, a) => { // goutte en larme, reflet blanc
+      co.save(); co.globalAlpha = a; co.translate(x, y);
+      co.fillStyle = DROP; co.beginPath(); co.moveTo(0, -r * stretch * 1.8); co.bezierCurveTo(r * .9, -r * .6, r, r * .2, 0, r); co.bezierCurveTo(-r, r * .2, -r * .9, -r * .6, 0, -r * stretch * 1.8); co.fill();
+      co.fillStyle = 'rgba(255,255,255,.85)'; co.beginPath(); co.ellipse(-r * .32, -r * .1, r * .18, r * .3, -.3, 0, TAU); co.fill();
+      co.restore();
+    };
+    const ripple = (p, n, size, life = 1.1) => { const ip = p.inner ? p : bInner(env, p); for (let i = 0; i < n; i++) rings.add({ x: ip.x, y: ip.y, r: size * (1 - i * .12), life: life + i * .05, delay: i * .14 }); };
+    const splash = (x, y, n, big) => { for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-.9, .9); crown.add({ x: x + rnd(-3, 3), y, vx: Math.cos(an) * rnd(30, 80 + 120 * big), vy: Math.sin(an) * rnd(90, 170 + 200 * big), g: H * 11, max: rnd(.3, .55 + .3 * big), size: rnd(1.2, 2.2 + big) }); } };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        // l'eau vit : deux taches de lumière qui dérivent lentement dans la carte (caustiques)
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, '#7dd3fc', w * (.3 + .2 * Math.sin(t * .4)), h * (.4 + .2 * Math.sin(t * .53)), h * .9, .1);
+        dot(ci, '#99f6e4', w * (.7 + .15 * Math.sin(t * .37 + 2)), h * (.6 + .2 * Math.sin(t * .61 + 1)), h * .8, .08);
+        // les ronds : trois cercles par impact, aplatis (on voit l'eau de biais), clairs sur l'eau sombre
+        rings.run(dt, (r, k) => { const e = outCubic(k), a = (1 - k) * (1 - k); ci.globalAlpha = a; ci.strokeStyle = '#e0f2fe'; ci.lineWidth = 2.8 * (1 - k) + .7; ci.beginPath(); ci.ellipse(r.x, r.y, r.r * e, r.r * e * .55, 0, 0, TAU); ci.stroke(); ci.globalAlpha = a * .35; ci.strokeStyle = '#0c4a6e'; ci.beginPath(); ci.ellipse(r.x, r.y + 2, r.r * e * .96, r.r * e * .53, 0, 0, TAU); ci.stroke(); });
+        sheen.run(dt, (s, k) => { const x = lerp(-w * .3, w * 1.3, k); ci.globalAlpha = Math.sin(k * Math.PI) * .45; const g = ci.createLinearGradient(x - w * .2, 0, x + w * .2, 0); g.addColorStop(0, 'rgba(186,230,253,0)'); g.addColorStop(.5, s.c); g.addColorStop(1, 'rgba(186,230,253,0)'); ci.fillStyle = g; ci.fillRect(0, 0, w, h); });
+        ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = 1;
+        // la vague des Mythic : une crête qui déferle de gauche à droite derrière la carte, l'écume par-dessus
+        waves.run(dt, (wv, k) => {
+          const dir = wv.dir, span = card.w + H * 4, X = dir > 0 ? card.x - H * 2 + span * k : card.x + card.w + H * 2 - span * k, base = card.y + H * 1.05, top = card.y - H * wv.h * Math.sin(Math.min(1, k * 1.6) * Math.PI * .5) * (k > .8 ? (1 - k) / .2 : 1), half = H * 1.6;
+          behind(env, () => {
+            const g = co.createLinearGradient(0, top, 0, base); g.addColorStop(0, '#22d3ee'); g.addColorStop(.5, '#0284c7'); g.addColorStop(1, '#0c4a6e');
+            co.globalAlpha = .92; co.fillStyle = g; co.beginPath(); co.moveTo(X - dir * half * 2.2, base);
+            co.bezierCurveTo(X - dir * half * 1.2, base, X - dir * half * .6, top + H * .2, X, top); // dos de la vague
+            co.quadraticCurveTo(X + dir * half * .45, top - H * .05, X + dir * half * .4, top + H * .45); // la lèvre qui s'enroule
+            co.quadraticCurveTo(X + dir * half * .15, top + H * .3, X + dir * half * .3, base); co.closePath(); co.fill();
+            co.globalAlpha = .9; co.strokeStyle = '#f0f9ff'; co.lineWidth = Math.max(2, H * .07); co.lineCap = 'round'; co.beginPath(); co.moveTo(X - dir * half * .7, top + H * .25); co.quadraticCurveTo(X - dir * half * .2, top - H * .02, X + dir * half * .38, top + H * .1); co.stroke();
+          });
+          for (let n = emit(60 * q, dt); n > 0; n--) spray.add({ x: X + dir * rnd(0, H * .5), y: top + rnd(-4, 8), vx: dir * rnd(40, 160), vy: -rnd(60, 220), g: H * 7, drag: .6, max: rnd(.5, 1), size: rnd(1.2, 3) });
+          if (!wv.lit && k > .3) { wv.lit = 1; sheen.add({ life: .9, c: 'rgba(224,242,254,.9)' }); }
+        });
+        // la grosse goutte qui gonfle avant le dernier chiffre
+        hang += (hangTo - hang) * Math.min(1, dt * 4);
+        if (hang > .02) drop(lastX(), card.y - H * .62 + Math.sin(t * 9) * 1.5 * hang, H * .07 * (1 + hang * .7), 1 + .3 * Math.sin(t * 7), hang);
+        // les gouttes qui tombent, et leur impact
+        drops.run(dt, (d, k) => {
+          const y = lerp(card.y - H * 1.1, d.y, k * k);
+          tail(co, DROP, d.x, y - H * .5, d.x, y, H * .05, .25);
+          drop(d.x, y, H * (d.big ? .08 : .06), 1.6, 1);
+          if (k > .9 && !d.hit) { d.hit = 1; ripple(d, d.n, d.size); splash(d.x, d.y, d.big ? 16 : 8, d.big ? 1 : 0); }
+        });
+        crown.step(dt); spray.step(dt);
+        co.fillStyle = DROP;
+        crown.each((c, k) => { co.globalAlpha = 1 - k; co.beginPath(); co.arc(c.x, c.y, c.size, 0, TAU); co.fill(); });
+        co.fillStyle = dark ? '#f0f9ff' : '#38bdf8';
+        spray.each((c, k) => { co.globalAlpha = (1 - k) * .9; co.beginPath(); co.arc(c.x, c.y, c.size, 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) hangTo = hang = 0; // la grosse goutte se détache : c'est elle qui tombe
+        if (o.ghost) { ripple(p, 1, H * .35, .7); return; }
+        drops.add({ x: p.x, y: p.y, life: .12, n: o.last ? 3 : 2, size: H * (o.last ? 1 : .7), big: o.last ? 1 : 0 });
+      },
+      build() { hangTo = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        hangTo = 0;
+        if (!p) { drops.add({ x: cx, y: card.y + H * .5, life: .3, n: 1, size: H * .4, big: 0 }); return; }
+        drops.add({ x: cx, y: card.y + H * .5, life: .16, n: 2 + Math.round(4 * p), size: card.w * (.4 + .5 * p), big: 1 });
+        if (p >= .3) sheen.add({ delay: .2, life: .9, c: 'rgba(186,230,253,.8)' });
+        if (p >= 1) { waves.add({ delay: .25, life: 1.5, dir: 1, h: 1.1 + .25 * asc }); if (asc) waves.add({ delay: 1.2, life: 1.5, dir: -1, h: .9 + .25 * asc }); }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

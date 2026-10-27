@@ -1154,3 +1154,9 @@
   padding-left: 2.4em; text-shadow: 0 1px 0 #14532d, 0 0 .3em rgba(20, 83, 45, .8);
   --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .4); --gs-a: 0 .06em 0 #14532d; }
 .btn-roll.gen-lilypad:hover { filter: brightness(1.1); }
+/* Ripple (idée de casmicgraything, 2026-10-27) : de l'eau profonde et deux ronds qui s'élargissent. */
+.btn-roll.gen-ripple { border: 2px solid #7dd3fc; border-radius: 999px; color: #ecfeff;
+  background: radial-gradient(ellipse 30% 60% at 50% 50%, transparent 60%, rgba(224, 242, 254, .45) 64%, transparent 70%), radial-gradient(ellipse 55% 110% at 50% 50%, transparent 72%, rgba(224, 242, 254, .25) 75%, transparent 80%), radial-gradient(ellipse 90% 120% at 50% 60%, #0e7490, #0c4a6e 70%, #082f49);
+  text-shadow: 0 1px 0 #082f49, 0 0 .3em rgba(103, 232, 249, .6);
+  --gs: 0 .3em 0 #082f49, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #082f49, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #082f49; }
+.btn-roll.gen-ripple:hover { filter: brightness(1.12); }
