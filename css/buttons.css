@@ -1145,3 +1145,9 @@
 .btn-roll.gen-workshop:hover { animation: gen-wsh-belt .5s linear infinite; }
 @keyframes gen-wsh-belt { to { background-position: .45em 50%, -9px 0, 0 0; } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-workshop:hover { animation: none; } }
+/* Snow Reveal (idée de G8_floppa, 2026-10-27) : de la neige fraîche, des paillettes, le texte creusé en bleu. */
+.btn-roll.gen-snowreveal { border: 2px solid #bfdbfe; border-radius: 999px; color: #2f5d9e;
+  background: radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 2px) 0 0 / 14px 12px, radial-gradient(ellipse 60% 50% at 20% 120%, rgba(147, 197, 253, .55), transparent 70%), linear-gradient(180deg, #ffffff, #e2ecf7);
+  text-shadow: 0 -1px 0 rgba(23, 47, 110, .5), 0 1px 0 #fff;
+  --gs: 0 .3em 0 #93c5fd, 0 .5em 1em rgba(147, 197, 253, .35); --gs-h: 0 .34em 0 #93c5fd, 0 .7em 1.3em rgba(186, 230, 253, .6); --gs-a: 0 .06em 0 #93c5fd; }
+.btn-roll.gen-snowreveal:hover { filter: brightness(1.04); }

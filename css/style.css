@@ -7286,6 +7286,51 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes wsh-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px); } 80% { transform: translateY(0); } 86% { transform: translateY(-2px); } }
 .room-stage.many .side-workshop::before, .room-stage.many .side-workshop::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-workshop::before, .side-workshop::after { animation: none; } }
+/* ------------------------------------------------------------------ Snow Reveal (idée de G8_floppa, 2026-10-27) : un
+   champ de neige fraîche (blanc, paillettes, congères aux ombres bleutées) ; les chiffres sont creusés dans la neige,
+   en creux bleu (ombre en haut du creux, bourrelet blanc en bas), comme une empreinte. Pendant le tirage, ils sont
+   enfouis : de simples bosses floues sous la poudreuse, qui bougent avec le vent. Un chiffre qui se pose : la congère
+   gonfle (l'élan), la poudre s'envole d'un coup et le creux apparaît net (matière molle : un peu d'écrasement), puis se
+   pose. La poudre, les flocons, l'aurore boréale des grands tirages : js/skinfx.js (SCENES.snowreveal). */
+.num-card.skin-snowreveal {
+  background:
+    radial-gradient(circle at 20% 30%, #fff 0 .02em, transparent .035em) 0 0 / .5em .45em,
+    radial-gradient(circle at 70% 60%, rgba(125, 211, 252, .9) 0 .016em, transparent .03em) .2em .1em / .62em .5em,
+    radial-gradient(ellipse 55% 38% at 16% 110%, rgba(147, 197, 253, .5), transparent 70%),
+    radial-gradient(ellipse 50% 34% at 84% 106%, rgba(147, 197, 253, .42), transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% -14%, rgba(191, 219, 254, .6), transparent 70%),
+    linear-gradient(180deg, #eef3f9, #ffffff 40%, #eef4fb 75%, #d9e6f5);
+  border: 2px solid #a7c0df; border-radius: .9rem .75rem .7rem .9rem; color: #2f5d9e;
+  box-shadow: inset 0 .12em .2em rgba(255, 255, 255, .9), inset 0 -.18em .35em rgba(147, 197, 253, .35), 0 0 16px rgba(186, 230, 253, .35), 0 10px 18px rgba(15, 23, 42, .3);
+}
+.skin-snowreveal .slot { position: relative; z-index: 1; font-weight: 800; color: #3567ad;
+  text-shadow: 0 -.035em 0 rgba(23, 47, 110, .6), 0 .04em 0 #fff, 0 .07em .05em rgba(255, 255, 255, .95), 0 0 .14em rgba(96, 165, 250, .35); }
+.skin-snowreveal .slot.ghost { opacity: .22; }
+/* Enfouis pendant le tirage : des bosses de neige floues qui bougent avec le vent. */
+.skin-snowreveal .slot.spinning { opacity: 1; color: #e6edf6; text-shadow: 0 .045em .05em rgba(100, 116, 139, .45), 0 -.02em .03em #fff; filter: blur(.9px); animation: snw-drift .6s ease-in-out infinite alternate; }
+.skin-snowreveal .slot.spinning:nth-of-type(2n) { animation-delay: -.3s; }
+@keyframes snw-drift { from { transform: translateX(-.025em) scale(1.03, .97); } to { transform: translateX(.025em) scale(.97, 1.03); } }
+/* La congère gonfle, la poudre s'envole : le creux apparaît net, s'écrase un peu, se pose. */
+.skin-snowreveal .slot.revealed { animation: snw-dig .62s backwards; }
+@keyframes snw-dig {
+  0% { color: #e6edf6; text-shadow: 0 .045em .05em rgba(100, 116, 139, .45), 0 -.02em .03em #fff; filter: blur(.9px); transform: none; animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  18% { color: #f1f5f9; text-shadow: 0 .06em .07em rgba(100, 116, 139, .5), 0 -.02em .03em #fff; filter: blur(.7px); transform: translateY(-.04em) scale(1.12, 1.08); animation-timing-function: steps(1); }
+  24% { color: #3567ad; filter: none; transform: translateY(.03em) scale(.9, .94); text-shadow: 0 -.05em 0 rgba(23, 47, 110, .7), 0 .05em 0 #fff, 0 0 .3em rgba(125, 211, 252, .9); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  52% { transform: scale(1.04, 1.02); }
+  74% { transform: scale(.99, 1); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-snowreveal .slot { animation: none; } }
+/* Cadre de duel : une colline enneigée sous un ciel d'hiver ; ❄️ tombe en tournant, ⛄ se dandine. */
+.side-snowreveal { --side-border: #93c5fd; --side-glow: 0 0 16px rgba(186, 230, 253, .4); --side-ink: #3b82f6;
+  --side-bg: radial-gradient(ellipse 80% 40% at 30% 110%, rgba(255, 255, 255, .4), transparent 70%), radial-gradient(ellipse 70% 36% at 85% 108%, rgba(241, 245, 249, .32), transparent 70%), radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .45) 0 1.2px, transparent 2px) 0 0 / 34px 30px, linear-gradient(180deg, rgba(191, 219, 254, .18), rgba(224, 242, 254, .08));
+  --deco-a: '❄️'; --deco-b: '⛄'; }
+.side-snowreveal::before { animation: snw-fall 3s ease-in-out infinite; }
+.side-snowreveal::after { transform-origin: 50% 100%; animation: snw-waddle 2s ease-in-out infinite; }
+@keyframes snw-fall { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(4px) rotate(60deg); } }
+@keyframes snw-waddle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.room-stage.many .side-snowreveal::before, .room-stage.many .side-snowreveal::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-snowreveal::before, .side-snowreveal::after { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }

@@ -5255,6 +5255,108 @@
     };
   };
 
+  // ❄️ Snow Reveal (2026-10-27, idée de G8_floppa) — la neige tombe autour de la carte (derrière elle : un flocon ne
+  // passe jamais sur un chiffre) et sur la carte elle-même. À chaque chiffre posé, la poudreuse qui le couvrait s'envole
+  // en bouffées et en paillettes (plus fort pour le dernier) ; avant le dernier, le vent se lève et les flocons filent
+  // de côté. Révélation : tirage raté, un paquet de neige glisse du haut de la carte et tombe ; sinon un tourbillon de
+  // flocons ; dès Epic, des paillettes de givre ; dès Mythic, une aurore boréale ondule au-dessus de la carte, la neige
+  // redouble et de grands cristaux à six branches tombent en tournant.
+  SCENES.snowreveal = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const flakes = particles(), inner = particles(), powder = particles(), glints = particles(), crystals = particles(), swirl = particles(), clumps = timed(), auroras = timed();
+    const emit = emitter(), emitIn = emitter();
+    const FLAKE = dark ? '#f8fafc' : '#94a3b8', GLINT = dark ? '#e0f2fe' : '#38bdf8';
+    let t = 0, wind = 0, build = 0, heavy = 0;
+    const flake = (x, y, big) => flakes.add({ x, y, vx: 0, vy: rnd(18, 40) * (big ? 1.4 : 1), max: rnd(3, 5), size: rnd(1, 2.3) * (big ? 1.3 : 1), ph: rnd(TAU) });
+    const crystal = (c, x, y, r, rot, a) => { // un cristal à six branches, tracé au trait
+      c.save(); c.globalAlpha = a; c.translate(x, y); c.rotate(rot); c.lineCap = 'round';
+      for (const [col, wd] of [[dark ? 'rgba(14,165,233,.35)' : 'rgba(30,64,175,.35)', 3.2], [dark ? '#f0f9ff' : '#3b82f6', 1.4]]) {
+        c.strokeStyle = col; c.lineWidth = wd;
+        for (let i = 0; i < 6; i++) { c.rotate(TAU / 6); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -r); c.moveTo(0, -r * .55); c.lineTo(-r * .22, -r * .75); c.moveTo(0, -r * .55); c.lineTo(r * .22, -r * .75); c.stroke(); }
+      }
+      c.restore();
+    };
+    const glint = (c, x, y, s, a, col) => { line(c, col, x - s, y, x + s, y, 1, a); line(c, col, x, y - s, x, y + s, 1, a); dot(c, col, x, y, s * .8, a); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        wind += ((build ? 1 : .12) - wind) * Math.min(1, dt * 2);
+        heavy = Math.max(0, heavy - dt * .12);
+        // la neige autour de la carte, derrière elle
+        for (let n = emit((5 + 34 * heavy + 6 * build) * q, dt); n > 0; n--) flake(rnd(card.x - card.h * 1.2, card.x + card.w + card.h * .8), card.y - card.h * rnd(.4, 1.3), heavy > .3);
+        flakes.step(dt);
+        behind(env, () => {
+          co.fillStyle = FLAKE;
+          flakes.each((f, k) => { co.globalAlpha = Math.min(1, k * 8, (1 - k) * 3) * .9; f.x += wind * 90 * dt; co.beginPath(); co.arc(f.x + Math.sin(t * 1.7 + f.ph) * 5, f.y, f.size, 0, TAU); co.fill(); });
+          crystals.step(dt);
+          crystals.each((c, k) => crystal(co, c.x + Math.sin(t + c.ph) * 8, c.y, c.r, c.rot + t * c.spin, Math.min(1, k * 6, (1 - k) * 3)));
+        });
+        // sur la carte : quelques flocons bleu pâle, derrière les chiffres
+        for (let n = emitIn((6 + 10 * heavy) * q, dt); n > 0; n--) inner.add({ x: rnd(0, w), y: -3, vx: 0, vy: rnd(10, 22), max: rnd(2.5, 4), size: rnd(.8, 1.6), ph: rnd(TAU) });
+        inner.step(dt);
+        ci.fillStyle = '#bfdbfe';
+        inner.each((f, k) => { ci.globalAlpha = Math.min(1, (1 - k) * 3) * .9; f.x += wind * 60 * dt; ci.beginPath(); ci.arc(f.x + Math.sin(t * 2 + f.ph) * 3, f.y, f.size, 0, TAU); ci.fill(); });
+        ci.globalAlpha = 1;
+        // l'aurore boréale (Mythic et plus) : des rideaux de lumière qui ondulent au-dessus de la carte
+        auroras.run(dt, (a, k) => {
+          const A = Math.min(1, k * 4, (1 - k) * 2.5) * (dark ? .55 : .4), top = card.y - card.h * (1.5 + .3 * a.asc), bot = card.y + card.h * .2;
+          behind(env, () => {
+            co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+            const cols = dark ? ['#4ade80', '#2dd4bf', '#a78bfa'] : ['#16a34a', '#0d9488', '#7c3aed'], span = card.w + card.h * 2, n = Math.round(22 * Math.max(.7, q));
+            for (let i = 0; i < n; i++) {
+              const u = i / (n - 1), x = card.x - card.h + u * span, wav = Math.sin(u * 6 + t * 1.4) * card.h * .22 + Math.sin(u * 11 - t * 2.1) * card.h * .1;
+              const col = cols[(i + Math.floor(t * .5)) % 3], hh = (bot - top) * (.75 + .25 * Math.sin(u * 5 + t)), y = top + wav + hh * .5;
+              dot(co, col, x, y, span / n * 1.6, A * (.55 + .45 * Math.sin(u * 9 + t * 2.4)), hh * .55);
+              dot(co, '#ecfeff', x, y - hh * .18, span / n * .5, A * .25, hh * .3);
+            }
+            co.globalCompositeOperation = 'source-over';
+          }, true);
+        });
+        // le tourbillon (révélation) : des flocons qui tournent autour de la carte
+        swirl.step(dt);
+        behind(env, () => { co.fillStyle = FLAKE; swirl.each((f, k) => { const an = f.a + f.life * f.w, x = cx + Math.cos(an) * f.r * (1 + k * .3), y = card.y + card.h / 2 + Math.sin(an) * f.r * .45; co.globalAlpha = Math.min(1, k * 5, (1 - k) * 2); co.beginPath(); co.arc(x, y, f.size, 0, TAU); co.fill(); }); });
+        // la poudreuse qui s'envole d'un chiffre : des bouffées blanches au bord bleuté, puis des paillettes
+        powder.step(dt); glints.step(dt);
+        powder.each((p, k) => { const r = p.size * (1 + 1.6 * k), a = (1 - k) * .85; co.globalAlpha = a * .55; co.fillStyle = 'rgba(148,163,184,.6)'; co.beginPath(); co.arc(p.x + r * .12, p.y + r * .15, r, 0, TAU); co.fill(); co.globalAlpha = a; co.fillStyle = '#ffffff'; co.beginPath(); co.arc(p.x, p.y, r, 0, TAU); co.fill(); });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        glints.each((g, k) => glint(co, g.x, g.y, g.size * (1 - k * .5), (1 - k) * (.6 + .4 * Math.sin(t * 25 + g.x)), GLINT));
+        co.globalCompositeOperation = 'source-over';
+        // le paquet de neige (tirage raté) : il glisse sur le haut de la carte, bascule et tombe
+        clumps.run(dt, (c, k) => {
+          const r = card.h * .14, x0 = card.x + card.w * .55, x1 = card.x + card.w + r * .3;
+          let x, y, rot = 0;
+          if (k < .45) { const e = (k / .45) ** 2; x = lerp(x0, x1, e); y = card.y - r * .7; rot = e * 1.2; }
+          else { const e = (k - .45) / .55; x = x1 + e * card.h * .25; y = card.y - r * .7 + e * e * card.h * 1.6; rot = 1.2 + e * 3; if (e > .97 && !c.done) { c.done = true; } }
+          co.save(); co.globalAlpha = Math.min(1, (1 - k) * 8); co.translate(x, y); co.rotate(rot);
+          co.fillStyle = '#fff'; co.strokeStyle = dark ? 'rgba(148,163,184,.8)' : '#94a3b8'; co.lineWidth = 1.2;
+          co.beginPath(); co.arc(-r * .3, 0, r * .6, 0, TAU); co.arc(r * .3, -r * .1, r * .7, 0, TAU); co.arc(0, r * .25, r * .55, 0, TAU); co.fill(); co.stroke();
+          co.restore();
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const n = Math.round((o.ghost ? 4 : o.last ? 26 : 14) * q), f = o.last ? 1.4 : 1;
+        for (let i = n; i > 0; i--) powder.add({ x: p.x + rnd(-1, 1) * card.h * .2, y: p.y - card.h * rnd(.15, .35), vx: rnd(-80, 80) * f, vy: -rnd(150, 280) * f, drag: 3, g: 60, max: rnd(.45, .9), size: card.h * rnd(.035, .07) });
+        for (let i = Math.round((o.ghost ? 2 : o.last ? 14 : 6) * q); i > 0; i--) glints.add({ x: p.x + rnd(-1, 1) * card.h * .3, y: p.y + rnd(-.5, .2) * card.h, vx: rnd(-40, 40), vy: -rnd(20, 90), drag: 1.5, g: 30, max: rnd(.5, 1.1), size: rnd(2, 4) });
+        if (o.last) build = 0;
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { clumps.add({ delay: .15, life: 1.3 }); return; }
+        for (let i = Math.round((14 + 30 * p) * q); i > 0; i--) swirl.add({ a: rnd(TAU), w: rnd(2, 3.5) * (Math.random() < .5 ? 1 : -1), r: card.w * rnd(.55, .8), max: rnd(1.2, 2.2), size: rnd(1.2, 2.4), x: 0, y: 0, vx: 0, vy: 0 });
+        if (p >= .6) for (let i = burst(p, 40 * q, 6); i > 0; i--) glints.add({ x: cx + rnd(-.6, .6) * card.w, y: card.y + rnd(-.6, 1) * card.h, vx: rnd(-30, 30), vy: -rnd(10, 60), drag: 1, g: 20, max: rnd(.8, 1.6), size: rnd(2, 4.5) });
+        if (p >= 1) {
+          heavy = 1;
+          auroras.add({ life: 5 + 1.5 * asc, asc });
+          for (let i = 0; i < Math.round((5 + 3 * asc) * q) + 2; i++) crystals.add({ x: rnd(card.x - card.h * .9, card.x + card.w + card.h * .9), y: card.y - card.h * rnd(.6, 1.6), vx: 0, vy: rnd(22, 40), max: rnd(3.5, 5), r: card.h * rnd(.14, .24), rot: rnd(TAU), spin: rnd(-1, 1), ph: rnd(TAU) });
+        }
+      },
+    };
+  };
+
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {
