@@ -65,6 +65,13 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   for (let k = 1; k <= G.TEDDY_MAX; k++) { const r = (6 - k) / 6 * G.teddyMult(k); if (r > best) { best = r; how = `encaisser après ${k} clic(s)`; } }
   add('Teddy Roulette', best, how, '97 % des vraies chances, arrondi vers le bas');
 }
+// Duck Race (idée de Deadshot) : six canards, chacun sa chance de gagner ; parier sur un canard rend chance × multiplicateur.
+{
+  let best = 0, how = '';
+  G.DUCK_CHANCE.forEach((w, k) => { const r = w / 100 * G.duckMult(k); if (r > best) { best = r; how = `canard ${k + 1} (${w} % de chances, ×${G.duckMult(k)})`; } });
+  if (G.DUCK_CHANCE.reduce((x, w) => x + w, 0) !== 100) fail.push('Duck Race : les chances ne font pas 100 %');
+  add('Duck Race', best, how, '97 % des vraies chances, arrondi vers le bas');
+}
 // Crash : point = min(500, plancher(0,99 / (1 − u), 2 décimales)). Encaisser à m gagne si le point dépasse m.
 {
   let best = 0, how = '';
