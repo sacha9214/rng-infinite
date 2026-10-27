@@ -3794,8 +3794,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await fails(H(C, 'kick', { name: 'Clandee' }), 403, 'un membre n\'exclut personne');
   await fails(H(A, 'leave'), 422, 'le chef passe la main avant de partir');
   await H(A, 'transfer', { name: 'Clanbee' });
-  assert.equal((await H(B, 'view')).me.role, 'leader'); assert.equal((await H(A, 'view')).me.role, 'officer');
-  await H(B, 'transfer', { name: 'Clanlead' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'promote', { name: 'Clanbee' });
+  assert.equal((await H(B, 'view')).me.role, 'leader'); assert.equal((await H(A, 'view')).me.role, 'coleader', 'l\'ancien chef devient co-chef (2026-10-27)');
+  await H(B, 'transfer', { name: 'Clanlead' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'promote', { name: 'Clanbee' });
   assert.equal((await H(A, 'view')).me.role, 'leader'); assert.equal((await H(B, 'view')).me.role, 'officer');
 
   // Coffre : dons (10 à 10 000, 10 par heure), le coffre ne revient jamais aux joueurs ; améliorations détruites.
@@ -4439,6 +4439,169 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(await map(), {});
   r = await av(kid, 'mine'); assert.ok(!r.body.approved); assert.equal(r.body.rejected.reason, 'inappropriate'); assert.equal(r.body.left, 0);
   assert.equal((await call(profile, { method: 'POST', body: { action: 'avatar', op: 'mine', playerId: kid.playerId, secret: other.secret } })).status, 403, 'secret vérifié');
+}
+
+// ================================================================ Idées du 2026-10-27 : classement « Most rolls » (CrazyMiner22,
+// WpBejs), nombres différents (jsand), quêtes de la semaine (Tumored), coffre des quêtes (Sean), co-chef de clan (Yentizx,
+// JAKECisthebest) et Clan MVP (PRISMA123).
+{
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), qApi = require(path.join(ROOT, 'api/quests.js')), Q = require(path.join(ROOT, 'js/quests.js'));
+  const lib = require(path.join(ROOT, 'api/_lib.js')), ShopM = require(path.join(ROOT, 'js/shop.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const Clan = require(path.join(ROOT, 'api/_clan.js'));
+  const pause = () => new Promise(res => setTimeout(res, 3));
+  const mk = (i, name, fields = {}) => {
+    const id = `27ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', ...Object.entries(fields).flat().map(String)], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const statsOf = id => { const flat = run([['HGETALL', `stats:${id}`]])[0].result, o = {}; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
+  const ecoIn = field => [...db.keys()].filter(k => /^eco:\d{4}-/.test(k)).reduce((x, k) => x + (Number(run([['HGET', k, `in:${field}`]])[0].result) || 0), 0);
+  const qGet = who => call(qApi, { url: `/api/quests?me=${who.playerId}` });
+  const qPost = (who, action, extra = {}) => call(qApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  // Horloge : loin de minuit UTC (donc aussi du lundi 00:00), pour que le jour et la semaine ne changent pas pendant le bloc.
+  { const now = Date.now(), next = Date.parse(`${new Date(now).toISOString().slice(0, 10)}T00:00:00Z`) + 86400000; if (next - now < 20 * 60000) clock += next - now + 60000; }
+
+  // 1. Most rolls : les anciens joueurs versés une fois depuis stats.rolls (ou count:all), rejouable, puis chaque tirage.
+  const old1 = mk(1, 'Rollerold', { rolls: 500 }), old2 = mk(2, 'Rollercount'), old3 = mk(3, 'Rollerpart', { rolls: 10 });
+  run([['DEL', 'lb:rolls:migrated'], ['DEL', 'lb:rolls:cursor'], ['HSET', 'count:all', old1.playerId, 500], ['HSET', 'count:all', old2.playerId, 42], ['HSET', 'count:all', old3.playerId, 10], ['ZADD', 'lb:rolls', 3, old3.playerId]]);
+  for (let i = 0; i < 10 && !run([['GET', 'lb:rolls:migrated']])[0].result; i++) await lbApi.migrateRolls();
+  assert.ok(run([['GET', 'lb:rolls:migrated']])[0].result, 'versement fini');
+  const zr = id => Number(run([['ZSCORE', 'lb:rolls', id]])[0].result);
+  assert.deepEqual([zr(old1.playerId), zr(old2.playerId), zr(old3.playerId)], [500, 42, 10], 'stats.rolls, sinon count:all ; l\'écart seulement');
+  await lib.recordRoll(old3.playerId, 4242, Date.now());
+  assert.equal(zr(old3.playerId), 11, 'chaque tirage compte');
+  run([['DEL', 'lb:rolls:migrated']]); await lbApi.migrateRolls();
+  assert.equal(zr(old3.playerId), 11, 'rejoué : rien compté deux fois');
+  r = await call(lbApi, { url: `/api/leaderboard?period=rolls&me=${old3.playerId}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.period, 'rolls');
+  for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].count >= r.body.entries[i].count, 'du plus grand au plus petit');
+  const rowOf = name => r.body.entries.find(e => e.name === name);
+  assert.equal(rowOf('Rollerold').count, 500); assert.equal(rowOf('Rollerpart').count, 11); assert.ok(rowOf('Rollerpart').me);
+  assert.ok(!JSON.stringify(r.body).includes(old1.playerId), 'aucun identifiant');
+  // Hors du top 100 : sa ligne arrive à part, avec son rang.
+  run(Array.from({ length: 105 }, (_, i) => ['ZADD', 'lb:rolls', 100000 + i, `27ee${i.toString(16).padStart(12, '0')}`]));
+  r = await call(lbApi, { url: `/api/leaderboard?period=rolls&me=${old3.playerId}` });
+  assert.equal(r.body.entries.length, 100); assert.ok(r.body.mine && r.body.mine.me && r.body.mine.count === 11 && r.body.mine.rank > 100);
+  run(Array.from({ length: 105 }, (_, i) => ['ZREM', 'lb:rolls', `27ee${i.toString(16).padStart(12, '0')}`]));
+
+  // 2. Nombres différents tirés : SCARD de nums:<id> (Stats et profil) ; sans ce set, compté sur l'historique.
+  const uq = mk(4, 'Uniqueroller');
+  const t0 = Date.now();
+  await lib.recordRoll(uq.playerId, 123, t0); await lib.recordRoll(uq.playerId, 123, t0 + 3); await lib.recordRoll(uq.playerId, 456, t0 + 6);
+  r = await call(profile, { url: '/api/profile?name=Uniqueroller&lite=1' }); assert.equal(r.body.uniq, 2, 'lite : 2 nombres différents');
+  r = await call(profile, { url: '/api/profile?name=Uniqueroller' }); assert.equal(r.body.uniq, 2, 'profil : 2 nombres différents');
+  const nodv = mk(5, 'Oldhistory'); run([['HDEL', `stats:${nodv.playerId}`, 'dv'], ['ZADD', `hist:${nodv.playerId}`, t0, `${t0}:7`, t0 + 5000, `${t0 + 5000}:8`, t0 + 90000, `${t0 + 90000}:7`]]);
+  r = await call(profile, { url: '/api/profile?name=Oldhistory' }); assert.equal(r.body.uniq, 2, 'sans set : depuis l\'historique'); assert.equal(r.body.rolls, 3);
+  r = await call(profile, { url: '/api/profile?name=Oldhistory&lite=1' }); assert.equal(r.body.uniq, null, 'lite sans set : rien');
+
+  // 3. Quêtes de la semaine : 3, les mêmes pour tous, progression tenue par le serveur, une récompense chacune.
+  const wq = mk(6, 'Weeklyquester'), week = lib.weekKey(Date.now());
+  await lib.recordRoll(wq.playerId, 5, Date.now());
+  r = await qGet(wq); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.weekly.quests.map(q => q.id), Q.ofWeek(week).map(q => q.id)); assert.equal(r.body.weekly.week, week);
+  assert.deepEqual(new Set(Q.ofWeek(week).map(q => q.group)), new Set(['rolls', 'rarity', 'days']), 'une par groupe');
+  assert.equal(r.body.weekly.quests[0].progress, 1, 'le tirage compte');
+  const wEnd = r.body.weekly.resetAt;
+  assert.equal(new Date(wEnd).getUTCDay(), 1, 'un lundi'); assert.equal(wEnd % 86400000, 0, 'à 00:00 UTC');
+  assert.equal(lib.weekKey(wEnd - 1), week); assert.notEqual(lib.weekKey(wEnd), week, 'la semaine change à resetAt');
+  const tier5 = engine.cardTier(engine.scoreOf(5));
+  if (!['epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(tier5)) assert.equal(run([['HGET', `qw:${week}:${wq.playerId}`, `t:${tier5}`]])[0].result, null, 'raretés basses non comptées');
+  const wq0 = r.body.weekly.quests[0];
+  assert.equal((await qPost(wq, 'wclaim', { quest: wq0.id })).status, 422, 'pas finie');
+  assert.equal((await qPost(wq, 'wclaim', { quest: 'w-nope' })).status, 400);
+  assert.equal((await qPost({ ...wq, secret: '9'.repeat(32) }, 'wclaim', { quest: wq0.id })).status, 403);
+  run([['HSET', `qw:${week}:${wq.playerId}`, 'rolls', 1000, 't:mythic', 20, 'days', 5]]);
+  const coins0 = ShopM.balance(statsOf(wq.playerId)), eco0 = ecoIn('weekly');
+  let sum = 0;
+  for (const q of Q.ofWeek(week)) {
+    r = await qPost(wq, 'wclaim', { quest: q.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, q.reward); sum += q.reward;
+    assert.equal((await qPost(wq, 'wclaim', { quest: q.id })).status, 422, 'une seule fois');
+  }
+  assert.ok(r.body.weekly.quests.every(q => q.claimed));
+  assert.equal(ShopM.balance(statsOf(wq.playerId)), coins0 + sum, 'pièces créditées'); assert.equal(ecoIn('weekly') - eco0, sum, 'comptées dans l\'économie (in:weekly)');
+  assert.ok(sum >= 1000 && sum <= 1800, 'entre 1 000 et 1 800 par semaine');
+  // Deux réclamations en même temps : une seule payée.
+  run([['HDEL', `qw:${week}:${wq.playerId}`, `claimed:${wq0.id}`]]);
+  const both = await Promise.all([qPost(wq, 'wclaim', { quest: wq0.id }), qPost(wq, 'wclaim', { quest: wq0.id })]);
+  assert.deepEqual(both.map(x => x.status).sort(), [200, 422], 'deux clics : un seul paiement');
+
+  // 4. Jour « tout fini » : compte pour la semaine et pour le coffre (parti de la meilleure série d'avant), bonus dans l'éco.
+  const ad = mk(7, 'Alldoner', { qsBest: 9 }), today = new Date(Date.now()).toISOString().slice(0, 10);
+  run([['HSET', `q:${today}:${ad.playerId}`, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1, 'casino', 15, 'casinoBet', 500]]);
+  const ecoQ0 = ecoIn('quests'); let got = 0;
+  for (const q of Q.ofDay(today)) { r = await qPost(ad, 'claim', { quest: q.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); got += r.body.gained; }
+  assert.ok(r.body.allDone, 'tout fini');
+  assert.equal(ecoIn('quests') - ecoQ0, got, 'quêtes + bonus « tout fini » comptés dans l\'économie');
+  assert.equal(run([['HGET', `qw:${week}:${ad.playerId}`, 'days']])[0].result, '1', 'un jour pour la quête de la semaine');
+  assert.equal(statsOf(ad.playerId).qdays, '10', '9 (meilleure série d\'avant) + 1');
+  assert.deepEqual([r.body.chest.days, r.body.chest.ready, r.body.chest.coins], [10, 2, 750], 'coffres de 4 et 10 jours prêts');
+
+  // 5. Coffre des quêtes : paliers ouverts une fois chacun, tous ceux qui sont prêts d'un coup.
+  assert.deepEqual(Q.CHESTS.map(c => c.at), [4, 10, 25, 50, 100, 200, 365]);
+  const ch = mk(8, 'Chestopener', { qsBest: 30 });
+  r = await qGet(ch); assert.deepEqual([r.body.chest.days, r.body.chest.opened, r.body.chest.ready, r.body.chest.coins, r.body.chest.next.at], [30, 0, 3, 1750, 50], 'meilleure série de 30 : 3 coffres');
+  const c0 = ShopM.balance(statsOf(ch.playerId)), e0 = ecoIn('chest');
+  const two = await Promise.all([qPost(ch, 'chest'), qPost(ch, 'chest')]);
+  assert.deepEqual(two.map(x => x.status).sort(), [200, 429], 'deux clics : un seul coffre');
+  const okc = two.find(x => x.status === 200).body;
+  assert.deepEqual([okc.gained, okc.chests, okc.chest.opened, okc.chest.ready], [1750, 3, 3, 0]);
+  assert.equal(ShopM.balance(statsOf(ch.playerId)), c0 + 1750); assert.equal(ecoIn('chest') - e0, 1750, 'comptés dans l\'économie (in:chest)');
+  assert.equal((await qPost(ch, 'chest')).status, 422, 'rien à ouvrir');
+  assert.ok(okc.chest.milestones.slice(0, 3).every(m => m.open) && !okc.chest.milestones[3].open);
+  run([['HSET', `stats:${ch.playerId}`, 'qdays', 50]]);
+  r = await qPost(ch, 'chest'); assert.deepEqual([r.status, r.body.gained, r.body.chest.opened], [200, 2000, 4], '50 jours');
+  run([['HSET', `stats:${ch.playerId}`, 'qsBest', 400]]); r = await qGet(ch); assert.equal(r.body.chest.days, 50, 'le compteur posé ne repart pas de la série');
+
+  // 6. Co-chef : entre le chef et les officiers.
+  const L = mk(16, 'Coleadboss', { rolls: 60, bonus: 30000 }), X = mk(17, 'Coleadx', { rolls: 60 }), Y = mk(18, 'Coleady', { rolls: 60 }), Z = mk(19, 'Coleadz', { rolls: 60 }), M = mk(20, 'Coleadm', { rolls: 60 });
+  const H = (who, op, extra = {}, now) => Clan.handle(who.playerId, { op, ...extra }, now);
+  const fails = async (p, status, msg) => { try { await p; } catch (err) { assert.equal(err.status, status, `${msg} : ${err.message}`); return err; } assert.fail(`${msg} : aurait dû échouer`); };
+  await H(L, 'create', { clanName: 'Co Lead Crew', tag: 'COLD' });
+  for (const p of [X, Y, Z, M]) { await H(L, 'invite', { name: p.name }); await H(p, 'join', { tag: 'COLD' }); }
+  await H(L, 'promote', { name: 'Coleadx' }); assert.equal((await H(X, 'view')).me.role, 'officer');
+  let v = await H(L, 'promote', { name: 'Coleadx' }); assert.equal((await H(X, 'view')).me.role, 'coleader', 'officier → co-chef');
+  assert.equal(v.clan.log[0].k, 'colead');
+  assert.deepEqual(v.clan.members.map(m => m.role).slice(0, 2), ['leader', 'coleader'], 'trié par rang');
+  await fails(H(L, 'promote', { name: 'Coleadx' }), 422, 'déjà co-chef');
+  // Droits des officiers tous coupés : le co-chef garde tout.
+  await H(L, 'perms', { perms: { invite: false, kick: false, upgrade: false, war: false, edit: false } });
+  v = await H(X, 'view'); assert.deepEqual(v.me.can, { invite: true, kick: true, upgrade: true, war: true, edit: true }, 'le co-chef ignore les droits coupés');
+  await H(X, 'desc', { desc: 'Co-leaders rule' });
+  await H(X, 'promote', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.role, 'officer', 'le co-chef nomme des officiers');
+  await fails(H(X, 'promote', { name: 'Coleady' }), 403, 'seul le chef nomme les co-chefs');
+  await fails(H(Y, 'promote', { name: 'Coleadm' }), 403, 'un officier ne nomme personne');
+  await fails(H(Y, 'kick', { name: 'Coleadm' }), 403, 'droits d\'exclusion coupés pour les officiers');
+  await H(X, 'demote', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.role, 'member', 'le co-chef rétrograde les officiers');
+  await H(X, 'promote', { name: 'Coleady' });
+  await H(L, 'promote', { name: 'Coleadz' }); await H(L, 'promote', { name: 'Coleadz' }); assert.equal((await H(Z, 'view')).me.role, 'coleader');
+  await fails(H(X, 'kick', { name: 'Coleadz' }), 403, 'un co-chef n\'exclut pas un autre co-chef');
+  await fails(H(X, 'demote', { name: 'Coleadz' }), 403, 'ni ne le rétrograde');
+  await fails(H(X, 'kick', { name: 'Coleadboss' }), 403, 'ni le chef');
+  await fails(H(X, 'transfer', { name: 'Coleadm' }), 403, 'ne passe pas la main');
+  await fails(H(X, 'disband'), 403, 'ne dissout pas');
+  await fails(H(X, 'perms', { perms: {} }), 403, 'ne règle pas les droits');
+  // Chat : le co-chef modère officiers et membres, pas un autre co-chef ; un officier ne touche pas au co-chef.
+  await H(Z, 'say', { text: 'from z' }); await pause(); await H(Y, 'say', { text: 'from y' }); await pause(); v = await H(X, 'say', { text: 'from x' });
+  const tOf = name => v.messages.find(m => m.name === name).t;
+  assert.ok(!v.messages.find(m => m.name === 'Coleadz').canDelete && v.messages.find(m => m.name === 'Coleady').canDelete);
+  await fails(H(X, 'unsend', { t: tOf('Coleadz') }), 403, 'pas le message d\'un autre co-chef');
+  await fails(H(Y, 'unsend', { t: tOf('Coleadx') }), 403, 'l\'officier ne supprime pas le co-chef');
+  await H(X, 'unsend', { t: tOf('Coleady') }); await H(L, 'unsend', { t: tOf('Coleadz') });
+  await H(X, 'kick', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.inClan, false, 'le co-chef exclut un officier');
+  v = await H(L, 'demote', { name: 'Coleadz' }); assert.equal(v.clan.log[0].k, 'uncolead'); assert.equal((await H(Z, 'view')).me.role, 'officer', 'co-chef → officier');
+  await H(L, 'transfer', { name: 'Coleadm' });
+  assert.equal((await H(M, 'view')).me.role, 'leader'); assert.equal((await H(L, 'view')).me.role, 'coleader', 'l\'ancien chef devient co-chef');
+
+  // 7. Clan MVP : le plus gros apport d'XP du clan n°1 de la semaine, une fois par semaine, compté.
+  const wk = Date.UTC(2033, 2, 9, 12), nextWk = wk + 7 * 86400000;
+  await lib.recordRoll(X.playerId, 999999, wk); await lib.recordRoll(Z.playerId, 123456, wk + 5); await lib.recordRoll(L.playerId, 500001, wk + 10);
+  Clan._reset(); await Clan.settleWeek(nextWk); Clan._reset(); await Clan.settleWeek(nextWk);
+  assert.equal(statsOf(X.playerId).clanMvp, '1', 'MVP une seule fois'); assert.equal(statsOf(Z.playerId).clanMvp, undefined); assert.equal(statsOf(Z.playerId).clanWeekWins, '1');
+  assert.ok(Ach.unlocked(statsOf(X.playerId)).includes('clanmvp')); assert.ok(!Ach.unlocked(statsOf(Z.playerId)).includes('clanmvp'));
+  const last = (await Clan.board(nextWk)).last; assert.equal(last.tag, 'COLD'); assert.equal(last.mvp, 'Coleadx');
+  assert.ok(!JSON.stringify(last).includes(X.playerId));
+  r = await call(profile, { url: '/api/profile?name=Coleadx' }); assert.equal(r.body.clanMvp, 1);
+  Clan._reset();
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
