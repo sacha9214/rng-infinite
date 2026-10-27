@@ -240,6 +240,22 @@
     // Idée de .... (2026-10-26) : le fond de la mer ; sur un très bon tirage (Mythic+), un sous-marin plonge jusqu'au
     // fond et lâche des bulles à la révélation.
     { id: 'submarine', name: 'Deep Dive', emoji: '🔱', price: 4500, premium: true, idea: '....', desc: 'A yellow submarine patrols the deep; it dives during every roll, and a Mythic+ roll sends it crashing to the seabed in a burst of bubbles' },
+    // Sept fonds d'idées de joueurs (2026-10-27). Les trois qui réagissent aux tirages sont légendaires (premium).
+    // Idée de JBearr12 (demandée deux fois) : une page de BD assortie au skin Comic Book (cases, trame, onomatopées).
+    { id: 'comicpage', name: 'Comic Book', emoji: '💥', price: 4500, premium: true, idea: 'JBearr12', desc: 'A comic page of halftone panels and speed lines; good rolls land a POW!, and Mythic+ rolls a giant KA-BOOM!' },
+    // Idée de Big Sexy et jjcoolcid1 : assorti au skin Singularity, un disque d'accrétion qui tourne plus vite selon la
+    // rareté, et la lumière aspirée dans le trou après chaque tirage (id « accretion » : « blackhole » est le skin).
+    { id: 'accretion', name: 'Black Hole', emoji: '🕳️', price: 5500, premium: true, idea: 'Big Sexy', desc: 'A black hole in the Milky Way: its glowing disk spins faster the rarer your roll, and every roll swirls light into it' },
+    // Idée d'ichi et JBearr12 : des gratte-ciel vus d'en haut, des lumières, un avion et un hélicoptère qui passent.
+    { id: 'city', name: 'City Heights', emoji: '🏙️', price: 1200, idea: 'ichi', desc: 'A skyline seen from the rooftops: windows flicker, beacons blink, a plane and a helicopter fly by' },
+    // Idée d'ichi : une jungle, feuilles en couches, lianes, rayons de soleil, un oiseau ou un papillon de temps en temps.
+    { id: 'jungle', name: 'Jungle', emoji: '🌴', price: 1000, idea: 'ichi', desc: 'Swaying leaves and vines, sunbeams through the canopy, and now and then a butterfly or a parrot' },
+    // Idée de sennybex1 et IXOLAF2 : une pluie calme ; sur un bon tirage le ciel se dégage et un arc-en-ciel apparaît.
+    { id: 'rainrainbow', name: 'Rain to Rainbow', emoji: '🌈', price: 4000, premium: true, idea: 'sennybex1', desc: 'Calm rain under grey clouds; a good roll clears the sky and brings out a rainbow, then the rain slowly comes back' },
+    // Idée de finnnnn : des cristaux lumineux dans une grotte, une vieille galerie de mine, une chauve-souris parfois.
+    { id: 'crystalcave', name: 'Crystal Cave', emoji: '💎', price: 1100, idea: 'finnnnn', desc: 'Glowing crystals deep in a cave by an old mineshaft, with dripping water and the odd bat' },
+    // Idée de randomguy : un lac calme où des poissons sautent de temps en temps, et plus rarement un dauphin.
+    { id: 'lake', name: 'Lake', emoji: '🏞️', price: 900, idea: 'randomguy', desc: 'A calm lake where fish jump now and then, and once in a while a dolphin' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
