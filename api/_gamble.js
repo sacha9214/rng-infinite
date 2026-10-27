@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1, feed = true) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno', 'gDice', 'gTeddy'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno', 'gDice', 'gTeddy', 'gDuck'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -222,7 +222,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno', gDice: 'dice', gTeddy: 'teddy' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno', gDice: 'dice', gTeddy: 'teddy', gDuck: 'duck' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -514,6 +514,36 @@ async function teddy(id, body) {
   return showTeddy(g, (await wallet(id)).coins);
 }
 
+// Duck Race (idée de Deadshot, 2026-10-27) : six canards en plastique font la course sur l'eau. Le joueur en choisit un
+// et mise ; le serveur tire le vainqueur (crypto) selon la chance de chaque canard, puis l'ordre des suivants (pour
+// l'animation : une arrivée serrée). Comme aux courses : le favori gagne souvent et paie peu, l'outsider rarement et
+// paie beaucoup. Chances en centièmes (somme 100) ; multiplicateur = 97 % des vraies chances (0,97 × 100 / chance),
+// arrondi vers le bas au centième : 3,23 · 3,88 · 5,38 · 8,08 · 9,70 · 19,40, retour au plus 97 % pour chaque canard
+// (tools/house-audit.mjs). Une seule demande par course : rien n'est gardé entre deux.
+const DUCK_CHANCE = [30, 25, 18, 12, 10, 5];
+const duckCents = w => Math.floor(9700 / w + 1e-9);
+const duckMult = k => duckCents(DUCK_CHANCE[k]) / 100;
+// Tirage pondéré sans remise : le premier sorti gagne, les autres suivent dans l'ordre d'arrivée.
+function duckOrder() {
+  const left = DUCK_CHANCE.map((w, k) => k), order = [];
+  while (left.length) {
+    const total = left.reduce((x, k) => x + DUCK_CHANCE[k], 0);
+    let u = crypto.randomInt(0, total), at = 0;
+    while (u >= DUCK_CHANCE[left[at]]) u -= DUCK_CHANCE[left[at++]];
+    order.push(left.splice(at, 1)[0]);
+  }
+  return order;
+}
+async function duck(id, body) {
+  const pick = Number(body.duck);
+  if (body.duck === undefined || body.duck === null || body.duck === '' || !Number.isInteger(pick) || pick < 0 || pick >= DUCK_CHANCE.length) throw refuse(400, 'Pick a duck');
+  const bet = await debit(id, body.bet);
+  const order = duckOrder(), won = order[0] === pick, cents = duckCents(DUCK_CHANCE[pick]);
+  const win = won ? Math.floor(bet * cents / 100) : 0;
+  await credit(id, bet, win, 'gDuck');
+  return { bet, duck: pick, order, winner: order[0], mult: cents / 100, won, win, coins: (await wallet(id)).coins };
+}
+
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
@@ -562,4 +592,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, duck, duckMult, duckCents, DUCK_CHANCE, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

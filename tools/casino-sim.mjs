@@ -316,6 +316,24 @@ assert.ok(rtp > .85 && rtp < 1.1, `teddy ${rtp}`);
 for (let k = 1; k <= G.TEDDY_MAX; k++) { const ev = (6 - k) / 6 * G.teddyMult(k); assert.ok(ev <= .97000001 && ev > .96, `teddy ${k} : ${ev}`); }
 assert.equal(keys(), 0);
 
+// ---- Duck Race (idée de Deadshot) : canard et mise au hasard ; l'ordre d'arrivée est complet, le gain recalculé ici.
+// Chaque canard doit gagner à peu près selon sa chance (30 % pour le favori, 5 % pour l'outsider).
+const dkWins = [0, 0, 0, 0, 0, 0];
+const dkN = N * 2;
+rtp = await series('duck', '≤ 97 % pour chaque canard', async () => {
+  const bet = pick(BETS), duck = rnd(6);
+  const r = await G.duck(id, { bet, duck });
+  assert.deepEqual([...r.order].sort(), [0, 1, 2, 3, 4, 5], 'ordre d\'arrivée complet');
+  assert.equal(r.winner, r.order[0]); dkWins[r.winner]++;
+  assert.equal(r.win, r.winner === duck ? Math.floor(bet * Math.floor(9700 / G.DUCK_CHANCE[duck] + 1e-9) / 100) : 0, 'gain de la course');
+  return { bet, win: r.win };
+}, dkN);
+assert.ok(rtp > .85 && rtp < 1.1, `duck ${rtp}`);
+G.DUCK_CHANCE.forEach((w, k) => { const seen = dkWins[k] / dkN; assert.ok(Math.abs(seen - w / 100) < 0.02, `canard ${k} : ${seen} au lieu de ${w / 100}`); });
+for (let k = 0; k < 6; k++) { const ev = G.DUCK_CHANCE[k] / 100 * G.duckMult(k); assert.ok(ev <= .97000001 && ev > .96, `duck ${k} : ${ev}`); }
+for (const d of [-1, 6, 2.5, 'x', null, undefined]) await assert.rejects(G.duck(id, { bet: 100, duck: d }), /Pick a duck/);
+for (const bad of [0, 9, 1001, 10.5, '100']) await assert.rejects(G.duck(id, { bet: bad, duck: 0 }));
+
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;
 rtp = await series('crash', '≈ 99 % (moins l\'arrondi)', async () => {

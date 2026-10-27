@@ -3758,7 +3758,7 @@
           <div class="panel-head"><h3 class="panel-title">Cases</h3><span class="panel-note">a random skin · the pricier the skin, the rarer</span></div>
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
             // Caisse de fonds d'écran : ses lots se cherchent dans les fonds (Shop.caseItem), avec leurs propres raretés.
-            const item = id => Shop.caseItem(c, id), rar = id => Shop.rarityOf(id, c.wall);
+            const item = id => Shop.caseItem(c, id), rar = id => Shop.caseRarity(c, id);
             const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
             return `
             <div class="case-tile">
@@ -3772,6 +3772,7 @@
           }).join('')}</div>
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Button Case gives a Generate button you can also buy in the Buttons tab, with the same refund for a button you already own.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -4056,14 +4057,29 @@
       </g>
     </svg>`;
   };
-  const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  // Duck Race (idée de Deadshot, 2026-10-27) : six canards en plastique, chacun sa chance de gagner et son gain. Mêmes
+  // chances et même calcul que le serveur (DUCK_CHANCE, duckCents dans api/_gamble.js ; vérifié par tools/test-api.mjs).
+  const DUCK_W = [30, 25, 18, 12, 10, 5];
+  const dkCents = w => Math.floor(9700 / w + 1e-9);
+  const DUCKS = [['Sunny', '#facc15'], ['Bubbles', '#38bdf8'], ['Minty', '#4ade80'], ['Rosie', '#f472b6'], ['Grape', '#a78bfa'], ['Blaze', '#fb923c']];
+  // Un canard de bain vu de profil, tourné vers l'arrivée (à droite) : la couleur vient de --dk (sur la ligne d'eau).
+  const duckSVG = () => `<svg class="dk-svg" viewBox="0 0 50 40" aria-hidden="true">
+      <ellipse class="dk-ripple" cx="23" cy="36.5" rx="19" ry="2.6"/>
+      <path class="dk-body" d="M3 15 L11 21 C8 30 14 36 24 36 C35 36 42 31 41 23 C40 19 35 19 31 21 C25 24 17 23 11 21 Z"/>
+      <path class="dk-wing" d="M15 26 C19 22 27 23 29 27 C26 31 19 31 15 26 Z"/>
+      <circle class="dk-body" cx="32" cy="12.5" r="8.5"/>
+      <path class="dk-beak" d="M39 11 C43 9.5 48 11 48 13.3 C48 15.6 43 16.6 39 15.4 Z"/>
+      <circle cx="34.5" cy="10.2" r="1.7" fill="#1f2937"/><circle cx="35" cy="9.6" r=".55" fill="#fff"/>
+      <ellipse cx="28.5" cy="8.6" rx="3" ry="1.5" fill="#fff" opacity=".45"/>
+    </svg>`;
+  const SUITS = ['♠', '♥', '♦', '♣'], RANKS =['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
   // Bandeau « en direct » du casino : tout l'argent qui y est passé (mises prises, gains versés, tous joueurs confondus
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -4117,7 +4133,40 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
+  // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
+  // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
+  const BETS_STD = 'Bets from 10 to 1,000 coins.';
+  const HOWTO = {
+    crash: { goal: 'Cash out before it crashes.', how: ['Press Start: the multiplier climbs from 1.00×.', 'Press Cash out whenever you like.', 'If it crashes before you cash out, you lose your bet.'], pays: ['You win your bet × the multiplier you cashed out at.', 'It can climb up to 500×, but it can also crash right away.'], bets: BETS_STD },
+    flip: { goal: 'Guess heads or tails, again and again.', how: ['Pick Heads or Tails: the coin flips.', 'Right: your win grows. Flip again, or cash out.', 'Wrong: you lose everything in play.'], pays: ['Each right guess multiplies your win by 1.9.', 'Up to 7 right guesses in a row: about 89×.'], bets: BETS_STD },
+    mines: { goal: 'Open safe tiles and stay away from the mines.', how: ['Choose how many mines hide in the 25 tiles, then press Start.', 'Open tiles one by one: each safe tile raises your payout.', 'Cash out whenever you like. Hit a mine and you lose your bet.'], pays: ['More mines means a bigger jump for every safe tile.', 'The most you can win is 250× your bet.'], bets: BETS_STD },
+    tower: { goal: 'Climb 8 floors without stepping on a bomb.', how: ['Choose Easy, Normal or Hard, then press Start.', 'On each floor, pick one tile: one tile per floor hides a bomb.', 'Every safe floor raises your payout. Cash out whenever you like.'], pays: ['Easy has 4 tiles per floor, Normal 3, Hard only 2 but the biggest payouts.', 'The ladder shows what each floor pays.'], bets: 'Bets from 10 to 1,000 coins, 100 at most on Hard.' },
+    keno: { goal: 'Pick numbers and hope they get drawn.', how: ['Pick 1 to 10 numbers out of 40.', 'Press Play: 10 numbers are drawn.', 'The more of your numbers come out, the more you win.'], pays: ['The table under the board shows what each number of hits pays.', 'Up to 1,000× your bet.'], bets: 'Bets from 10 to 100 coins.' },
+    dice: { goal: 'Guess where the 100-sided die lands.', how: ['Roll under: you win if the die lands below your target.', 'Roll over: you win if the die lands above your target.', 'Guess the die: pick one face of a 6-sided die.'], pays: ['The smaller your chance, the bigger the payout: it is shown before you roll.', 'Guessing the 6-sided die pays 5.82×.'], bets: BETS_STD },
+    teddy: { goal: 'Pull the confetti popper without making it go BOOM.', how: ['Press Start: one of the 6 chambers is loaded.', 'Every pull that just clicks raises your payout.', 'Cash out whenever you like. BOOM and you lose your bet.'], pays: ['The ladder shows what each click pays, up to 5.82× after 5 clicks.'], bets: BETS_STD },
+    duck: { goal: 'Pick the rubber duck that wins the race.', how: ['Pick one of the 6 ducks, then press Race.', 'The ducks paddle to the finish line: the first one across wins.', 'If your duck wins, you win. If not, you lose your bet.'], pays: ['Sunny is the favourite: wins 30% of races and pays 3.23×.', 'Blaze is the long shot: wins 5% of races and pays 19.40×.', 'Every duck shows its chance and its payout.'], bets: BETS_STD },
+    plinko: { goal: 'Drop balls and see where they land.', how: ['Press Drop: the ball bounces down the pegs.', 'The slot it lands in is your multiplier.', 'Drop as many balls as you like, even lots at once.'], pays: ['Normal: the edges pay up to 33×, the middle pays less than your bet.', 'High risk: up to 1,000× on the edges, but the middle pays almost nothing.'], bets: 'Bets from 1 to 1,000 coins per ball, 100 at most in High risk.' },
+    slots: { goal: 'Line up three of the same symbol.', how: ['Press Spin or pull the lever.', 'The three reels stop one after the other.'], pays: ['Three of a kind pays the most: 7 7 7 pays 250×.', 'Two 7s, two cherries or two lemons pay a little.', 'The full table is under the machine.'], bets: BETS_STD },
+    roulette: { goal: 'Guess where the ball stops.', how: ['Pick a chip, then click the bets you want: you can place several.', 'Press Spin: the ball lands on a number from 0 to 36.'], pays: ['Red, Black, Even, Odd, 1–18 or 19–36 pays 2×.', 'A group of 12 numbers pays 3×.', 'A single number pays 36×. The green 0 only pays a bet on 0.'], bets: 'Up to 1,000 coins per spin in total.' },
+    bj: { goal: 'Get closer to 21 than the dealer, without going over.', how: ['Cards 2 to 10 count their number, J Q K count 10, an Ace counts 1 or 11.', 'Hit to take a card, Stand to stop, Double to double your bet for one last card.', 'The dealer draws until 17 or more.'], pays: ['Win: 2×. Tie: your bet comes back.', 'Blackjack (21 with your first two cards): 2.5×.', 'Lucky bonuses: 7-7-7, or 21 with 5 cards or more.'], bets: BETS_STD },
+    btc: { goal: 'Buy crypto with coins and sell it when the price goes up.', how: ['The price is the real market price, live: 1 coin = 1 $.', 'Buy, wait, then sell: if the price went up, you get more coins back.', 'Leverage: bet on a rise (long) or a fall (short) with 2×, 3× or 5×.'], pays: ['Buying and selling each cost 1%.', 'With leverage, you can never lose more than your margin.'], bets: 'Trades from 10 to 50,000 coins. Game coins only: this is not real crypto.' },
+  };
+  function openHowTo(id) {
+    const h = HOWTO[id], tab = G_TABS.find(t => t[0] === id);
+    if (!h || !tab) return;
+    const list = items => `<ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    openModal(`
+      <div class="g-howto">
+        <h2>${tab[1]} ${esc(tab[2])}</h2>
+        <p class="g-howto-goal">🎯 ${esc(h.goal)}</p>
+        <h4>How to play</h4>${list(h.how)}
+        <h4>Payouts</h4>${list(h.pays)}
+        <h4>Bets</h4><p>${esc(h.bets)}</p>
+        <p class="g-howto-foot">Game coins only, no real money. The casino always keeps a small edge, so play for fun.</p>
+      </div>`);
+  }
   const gTabOrder = () => {
     const ids = G_TABS.map(t => t[0]), saved = Array.isArray(Store.settings.casinoOrder) ? Store.settings.casinoOrder.filter(id => ids.includes(id)) : [];
     return [...new Set(saved)].concat(ids.filter(id => !saved.includes(id)));
@@ -4209,6 +4258,17 @@
             <div class="actions cf-actions"><button class="btn-roll small" id="td-go">Start</button><button class="btn" id="td-cash" hidden></button></div>
             <p class="panel-note g-result" id="td-result"></p>
           </div>
+          <div class="panel g-game" data-game="duck">
+            <div class="panel-head"><h3 class="panel-title">Duck Race</h3><span class="panel-note">pick a rubber duck · the favourite wins often · the long shot pays the most</span></div>
+            <div class="dk-pond" id="dk-pond" data-state="idle">
+              ${DUCKS.map(([, c], k) => `<div class="dk-lane" data-lane="${k}" style="--dk:${c}"><span class="dk-num mono" data-no-i18n>${k + 1}</span><div class="dk-water"><span class="dk-duck"><span class="dk-bob" style="--bd:${-k * 230}ms">${duckSVG()}</span></span></div></div>`).join('')}
+              <div class="dk-pop" id="dk-pop" aria-live="polite"></div>
+            </div>
+            <div class="dk-picks" id="dk-picks" role="radiogroup" aria-label="Pick a duck">${DUCKS.map(([name, c], k) => `<button type="button" class="dk-pick" role="radio" aria-checked="false" data-duck="${k}" style="--dk:${c}"><span class="dk-icon">${duckSVG()}</span><b data-no-i18n>${name}</b><span class="mono dk-x" data-no-i18n>${(dkCents(DUCK_W[k]) / 100).toFixed(2)}×</span><i class="mono" data-no-i18n>${DUCK_W[k]}%</i></button>`).join('')}</div>
+            <div class="dk-stats"><span><i>Win chance</i><b class="mono" id="dk-chance"></b></span><span><i>Multiplier</i><b class="mono" id="dk-mult"></b></span><span><i>Payout</i><b class="mono" id="dk-pay"></b></span></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="dk-go">Race</button></div>
+            <p class="panel-note g-result" id="dk-result"></p>
+          </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
             <div class="sm-machine" id="sm-machine" data-state="idle">
@@ -4267,6 +4327,9 @@
       </div>`;
     drawHouse();
     drawCasinoTop(true);
+    // « ? » de chaque jeu (idée d'Ann joe) : posé à côté du titre, il ouvre les règles (HOWTO).
+    document.querySelectorAll('.g-game').forEach(p => { const t = p.querySelector('.panel-head .panel-title'); if (t && HOWTO[p.dataset.game]) t.insertAdjacentHTML('afterend', `<button type="button" class="g-help" data-help="${p.dataset.game}" aria-label="How to play" title="How to play">?</button>`); });
+    $('.g-stage').addEventListener('click', e => { const b = e.target.closest('[data-help]'); if (b) openHowTo(b.dataset.help); });
     $('#g-top').addEventListener('click', e => { const b = e.target.closest('[data-top]'); if (!b) return; Gamble.top = b.dataset.top; $('#g-top').querySelectorAll('[data-top]').forEach(x => x.classList.toggle('on', x === b)); drawCasinoTop(false); });
     const showCoins = c => { if (c != null) { Gamble.coins = c; Store.setSetting('coins', c); HdrCoins.set(c); } if ($('#g-coins') && Gamble.coins != null) { $('#g-coins').textContent = `🪙 ${fmt(Gamble.coins)}`; } };
     if (Store.player.name) Online.shop().then(st => { if (currentView === 'gamble' && !Gamble.busy) showCoins(st.coins); }).catch(() => {});
@@ -5105,6 +5168,74 @@
     $('#td-go').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle) teddyMove({ move: 'pull' }); else { $('#td-result').textContent = ''; teddyMove({ move: 'start', bet: Gamble.chip }); } });
     $('#td-cash').addEventListener('click', () => { const g = Gamble.td; if (g && !g.done && !g.idle && g.pulls) teddyMove({ move: 'cash' }); });
     drawTeddy(null);
+    // ---- Duck Race (idée de Deadshot, api/_gamble.js) : le serveur a déjà tiré tout l'ordre d'arrivée ; ici la course
+    // est jouée d'après lui. Chaque canard a son heure d'arrivée (le 2e à un souffle du 1er, les autres de plus en plus
+    // loin) et des remous qui le font passer devant ou derrière en route, nuls au départ et à l'arrivée : l'ordre de
+    // passage de la ligne est toujours celui du serveur. La position suit le temps (jamais une valeur arrondie).
+    if (Gamble.dk == null) Gamble.dk = 0;
+    const dkLanes = () => [...document.querySelectorAll('#dk-pond .dk-lane')];
+    const dkRun = () => { const w = $('#dk-pond .dk-water'), d = $('#dk-pond .dk-duck'); return w && d ? Math.max(0, w.clientWidth - d.offsetWidth) : 0; };
+    const dkPlace = xs => { const run = dkRun(); document.querySelectorAll('#dk-pond .dk-duck').forEach((el, k) => { el.style.transform = `translateX(${(xs[k] * run).toFixed(2)}px)`; }); };
+    const dkPop = (text, kind) => { const p = $('#dk-pop'); p.textContent = text; p.dataset.kind = kind || ''; p.classList.remove('show'); void p.offsetWidth; if (text) p.classList.add('show'); };
+    const drawDuck = () => {
+      const k = Gamble.dk, cents = dkCents(DUCK_W[k]);
+      document.querySelectorAll('#dk-picks .dk-pick').forEach(b => { const on = Number(b.dataset.duck) === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); b.disabled = Gamble.busy; });
+      dkLanes().forEach((l, i) => l.classList.toggle('mine', i === k));
+      $('#dk-chance').textContent = `${DUCK_W[k]}%`;
+      $('#dk-mult').textContent = `${(cents / 100).toFixed(2)}×`;
+      $('#dk-pay').textContent = `🪙 ${fmt(Math.floor(Gamble.chip * cents / 100))}`;
+      if (!Gamble.busy) $('#dk-go').textContent = `Race · ${fmt(Gamble.chip)}`;
+      $('#dk-go').disabled = Gamble.busy;
+    };
+    const dkRace = order => new Promise(done => {
+      const rank = []; order.forEach((d, r) => { rank[d] = r; });
+      const T = 5400, gaps = [0, 110 + Math.random() * 190];
+      for (let r = 2; r < order.length; r++) gaps.push(gaps[r - 1] + 150 + Math.random() * 280);
+      const arrive = rank.map(r => T + gaps[r]);
+      // Remous : enveloppe sin² (nulle et plate au départ comme à l'arrivée), amplitude assez faible pour qu'un canard
+      // n'atteigne jamais la ligne avant son heure ni ne recule vraiment.
+      const wob = rank.map(() => ({ a: .045 + Math.random() * .03, f: 2 + Math.floor(Math.random() * 2), p: Math.random() * Math.PI * 2 }));
+      const ease = s => (s < .1 ? 5 * s * s : s - .05) / .95; // élan au départ, puis allure régulière
+      const pos = (k, t) => { const s = Math.min(1, t / arrive[k]), w = wob[k]; return Math.min(1, ease(s) + w.a * Math.pow(Math.sin(Math.PI * s), 2) * Math.sin(w.f * Math.PI * s + w.p)); };
+      const pond = $('#dk-pond'), t0 = performance.now(), end = Math.max(...arrive) + 250;
+      let crossed = 0, tense = false;
+      const frame = now => {
+        if (currentView !== 'gamble' || !pond.isConnected) { done(); return; }
+        const t = now - t0;
+        dkPlace(rank.map((r, k) => pos(k, t)));
+        if (!tense && t > T - 900) { tense = true; Sound.play('riser'); }
+        while (crossed < order.length && t >= arrive[order[crossed]]) { dkLanes()[order[crossed]].dataset.place = crossed + 1; if (!crossed) Sound.play('quack', { k: 2 }); crossed++; }
+        if (t < end) requestAnimationFrame(frame); else done();
+      };
+      requestAnimationFrame(frame);
+    });
+    $('#dk-picks').addEventListener('click', e => { const b = e.target.closest('[data-duck]'); if (!b || Gamble.busy) return; Gamble.dk = Number(b.dataset.duck); Sound.play('quack', { k: Gamble.dk }); drawDuck(); });
+    $('#dk-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true; drawDuck();
+      const pond = $('#dk-pond'), mine = Gamble.dk;
+      $('#dk-result').textContent = ''; dkPop('', '');
+      dkLanes().forEach(l => { delete l.dataset.place; l.classList.remove('win'); });
+      dkPlace(DUCK_W.map(() => 0));
+      pond.dataset.state = 'racing'; $('#dk-go').textContent = 'Racing…';
+      try {
+        const res = await gamble('duck', { bet: Gamble.chip, duck: mine });
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        if (!reducedMotion) { Sound.play('quack', { k: 0 }); dkPop('GO!', 'go'); await dkRace(res.order); }
+        else { const at = []; res.order.forEach((d, r) => { at[d] = 1 - r * .06; }); dkPlace(at); res.order.forEach((d, r) => { dkLanes()[d].dataset.place = r + 1; }); }
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        pond.dataset.state = 'done';
+        dkLanes()[res.winner].classList.add('win');
+        const name = DUCKS[res.winner][0];
+        dkPop(`${name} wins!`, res.won ? 'win' : 'lose');
+        say($('#dk-result'), res.win, res.bet, res.won ? `${name} wins · ${res.mult.toFixed(2)}× · you get ${fmt(res.win)} coins` : `${name} wins · −${fmt(res.bet)}`);
+        if (res.won) { Sound.play(res.mult >= 8 ? 'tier' : 'reveal', res.mult >= 8 ? { tier: res.mult >= 19 ? 'mythic' : 'anomaly' } : { small: 1 }); FX.celebrate(res.mult >= 19 ? 'mythic' : res.mult >= 8 ? 'anomaly' : 'epic', pond); }
+        else Sound.play('lock', { i: 0, soft: 1 });
+        showCoins(res.coins);
+      } catch (err) { pond.dataset.state = 'idle'; fail(err); } finally { Gamble.busy = false; drawDuck(); }
+    });
+    drawDuck(); dkPlace(DUCK_W.map(() => 0));
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) drawDuck(); });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -5668,12 +5799,14 @@
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
     // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
-    const wall = !!box.wall;
-    const won = Shop.caseItem(box, result.won), rarity = Shop.rarityOf(won.id, wall);
-    const look = (id, size) => wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
+    const wall = !!box.wall, btnCase = !!box.btn;
+    const won = Shop.caseItem(box, result.won), rarity = Shop.caseRarity(box, won.id);
+    // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
+    const look = (id, size) => btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
+      : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
       : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
-      const k = Shop.caseItem(box, id), r = Shop.rarityOf(id, wall);
+      const k = Shop.caseItem(box, id), r = Shop.caseRarity(box, id);
       return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji} ${esc(k.name)}</span></div>`;
     };
     openModal(`
@@ -5685,7 +5818,7 @@
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
           ${look(won.id, 'md')}
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
+          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
             ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
@@ -5714,7 +5847,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -5743,7 +5876,8 @@
       const equip = $('#case-equip');
       if (equip) equip.addEventListener('click', async () => {
         try {
-          if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
+          if (btnCase) { drawShop(await Online.shopAction('button', undefined, { button: won.id })); toast(`${won.emoji} ${won.name} button equipped`); }
+          else if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
           else { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); }
           closeModal();
         } catch (err) { toast('Shop unavailable right now, try again'); }
@@ -6026,7 +6160,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)

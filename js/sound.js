@@ -120,6 +120,45 @@
   const zap = (f, len = .32) => S.filter(S.osc(len, t => f * (1 + Math.exp(-t / .035)) * (1 + .012 * Math.sin(t * 38)), S.expo(len * .3, .004), ph => (2 / Math.PI) * Math.asin(Math.sin(ph))), 'lp', 2400);
   // Carillon (pack Glass) : cloche de cristal, la note deux octaves plus haut, partiels clairs et longs.
   const crystal = (f, d = .6) => S.sum(S.bell(f, d, 2.2), S.gain(S.osc(d * 3, () => f * 4.2, S.expo(d * .18, .001)), .12));
+  // ---- Coin-coin (Duck Race, idée de Deadshot, 2026-10-27 ; aussi dans le pack Meme) : une dent de scie nasale qui
+  // retombe, passée par deux formants (le « a » d'un canard). k décale la hauteur d'un demi-ton par cran.
+  const saw = ph => ((ph / Math.PI) % 2) - 1;
+  const quack = (k = 0, len = .17) => {
+    const f0 = 470 * Math.pow(2, k / 12);
+    const v = S.osc(len, t => f0 * (1.08 - .38 * t / len), t => Math.min(1, t / .012) * Math.pow(Math.max(0, 1 - t / len), 1.3), saw);
+    return S.sum(S.gain(S.filter(v, 'bp', 1250, 2.4), 1.3), S.gain(S.filter(v, 'bp', 700, 3), .9), S.gain(S.filter(v, 'lp', 400), .25));
+  };
+  // ---- Bouton Pickle (idée d'Edward et de Dylanrulez123, 2026-10-27) : un « squish » mouillé. Un bruit dont la bande
+  // descend très vite (la matière qui s'écrase), un « bloup » grave et une petite bulle qui éclate juste après.
+  const squish = (seed = 5) => {
+    const wet = S.shape(S.filter(S.noise(.17, seed), 'bp', t => 1900 * Math.exp(-t / .045) + 240, 3.2), t => Math.min(1, t / .006) * Math.exp(-t / .05));
+    const blub = S.osc(.15, t => 85 + 150 * Math.exp(-t / .03), S.expo(.04, .004));
+    const pop = S.delayed(S.shape(S.filter(S.noise(.03, seed + 1), 'bp', 2400, 2), S.expo(.005, .0005)), .085);
+    return S.sum(S.gain(wet, 1.7), S.gain(blub, .6), S.gain(pop, .3));
+  };
+  // ---- Pack Meme (idée de 17black, 2026-10-27) : des bruits de dessin animé, tous calculés ici (aucun échantillon,
+  // aucune mélodie connue) : « boing » de ressort, klaxon de clown, sifflet à coulisse et coin-coin.
+  // Boing : la note part haut, retombe, et tremblote comme un ressort qui vibre de moins en moins.
+  const boing = (f, len = .34) => S.osc(len, t => f * (1 + .6 * Math.exp(-t / .025)) * (1 + .12 * Math.sin(2 * Math.PI * 24 * t) * Math.exp(-t / .18)), S.expo(len * .35, .002), ph => Math.sin(ph) + .25 * Math.sin(2 * ph));
+  // Klaxon à poire : deux ondes saturées à peine désaccordées, qui montent en place, puis un filtre nasal.
+  const honk = (f, len = .2) => {
+    const sh = ph => Math.tanh(4 * Math.sin(ph)), amp = t => Math.min(1, t / .01) * Math.max(0, Math.min(1, (len - t) / .04));
+    const fr = d => t => f * d * (.9 + .1 * Math.min(1, t / .03));
+    return S.filter(S.filter(S.sum(S.osc(len, fr(1), amp, sh), S.osc(len, fr(1.007), amp, sh)), 'bp', 1100, 1.2), 'lp', 2500);
+  };
+  // Sifflet à coulisse : une note pure qui glisse de f0 à f1, un léger vibrato et un peu de souffle.
+  const slide = (f0, f1, len = .3) => {
+    const amp = t => Math.min(1, t / .02) * Math.max(0, Math.min(1, (len - t) / .06));
+    const tone = S.osc(len, t => (f0 + (f1 - f0) * Math.pow(Math.min(1, t / (len * .8)), .7)) * (1 + .015 * Math.sin(2 * Math.PI * 7 * t)), amp);
+    return S.sum(tone, S.gain(S.shape(S.filter(S.noise(len, 77), 'bp', f1, 6), amp), .12));
+  };
+  // ---- Pack Soft Taps (idée de 17black, 2026-10-27 ; nom choisi pour ne pas se confondre avec le skin ASMR ni le fond
+  // ASMR Bubbles) : des petits tapotements du bout des doigts sur du bois, des clics très doux et des carillons feutrés.
+  const tap = (f, seed) => S.sum(
+    S.shape(S.filter(S.noise(.06, seed), 'lp', 1300), S.expo(.012, .001)),
+    S.gain(S.osc(.2, () => f, S.expo(.045, .002)), .45),
+    S.gain(S.shape(S.filter(S.noise(.01, seed + 9), 'hp', 3000), S.expo(.0015, .0002)), .12));
+  const softChime = (f, d = .7) => S.filter(S.bell(f, d, .4), 'lp', 2800);
   const PACKS = {
     arcade: {
       lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
@@ -150,6 +189,22 @@
       level: .22,
       note: (n) => coin(n + 2, 1),
       miss: () => S.sum(S.gain(thud(), .8), S.delayed(S.gain(coin(0), .4), .02)), missLevel: .2,
+    },
+    // Meme : chaque chiffre a son bruit (boing, coin-coin, petit coup de sifflet), le dernier un coup de klaxon ; la
+    // rareté monte en coups de sifflet ; un raté, le sifflet qui dégringole et un klaxon grave.
+    meme: {
+      lock: (i, final) => final ? S.sum(S.gain(honk(S.note(i + 5)), .45), S.delayed(S.gain(boing(S.note(i + 7)), .4), .12))
+        : [() => boing(S.note(i + 5)), () => S.gain(quack(i * 2), .8), () => slide(S.note(i + 2), S.note(i + 7), .2)][i % 3](),
+      level: .3, tierGain: .6, // les coups de sifflet portent : la gerbe plus bas
+      note: (n, len) => slide(S.note(n + 3), S.note(n + 8), Math.max(.22, len * 4)),
+      miss: () => S.sum(slide(S.note(10), S.note(-2), .6), S.delayed(S.gain(honk(S.note(-3), .22), .7), .55)), missLevel: .12,
+    },
+    // Soft Taps : un tapotement par chiffre, un carillon feutré en plus sur le dernier ; la rareté en carillons doux.
+    taps: {
+      lock: (i, final) => final ? S.sum(tap(S.note(i + 5), 300 + i), S.delayed(S.gain(softChime(S.note(i + 10), .9), .55), .05)) : tap(S.note(i + 5), 300 + i),
+      level: .6, tierGain: .42, // tapotements discrets, carillons plus présents : la gerbe plus bas
+      note: (n, len) => softChime(S.note(n + 10), Math.max(.5, len * 5)),
+      miss: () => S.sum(S.shape(S.filter(S.noise(.12, 9), 'lp', 500), S.expo(.03, .003)), S.gain(S.osc(.2, t => 110 * (1 + .3 * Math.exp(-t / .02)), S.expo(.05, .003)), .5)), missLevel: .5,
     },
   };
   // Une gerbe de notes du pack, en montant (steps : leurs places dans la gamme).
@@ -184,12 +239,15 @@
     // Le fil casse : un « twang » aigu qui retombe.
     fishSnap: () => [[chip(1800, 220, .2, .125, 2.5), 0, FISH.snap, -.2, .06], [chip(3600, 3600, .012, .5, 1), 0, FISH.snap * .7, -.2, 0]],
     // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
+    // Duck Race : un canard choisi, le départ et le vainqueur (k : la hauteur).
+    quack: ({ k = 0 } = {}) => [[quack(k), 0, .3, 0, .12]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
     click: ({ look } = {}) => {
       if (look === 'thock') return [[thock(), 0, .18, 0, .08]];
       if (look === 'wax' || look === 'asmr') return [[wax(41), 0, .24, 0, .1]];
+      if (look === 'pickle') return [[squish(), 0, .22, 0, .1]];
       return [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]];
     },
     // Cliquetis des rouleaux (k : la variante). soft : en duel. last, de 1 à 8 : le dernier rouleau, de plus en plus grave et fort.

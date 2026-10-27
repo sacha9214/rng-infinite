@@ -2311,6 +2311,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* Caisse de fonds d'écran : des mini-aperçus de fonds dans la bande, un plus grand au résultat. */
 .wall-preview.case-wall { width: 100%; height: 4.3rem; margin: 0; align-self: stretch; }
 .wall-preview.case-wall.md { width: min(20rem, 100%); height: 9rem; margin: 0 auto; box-shadow: 0 0 0 2px var(--rar), 0 0 28px color-mix(in srgb, var(--rar) 60%, transparent); }
+/* Caisse de boutons (idée de shadow2, 2026-10-27) : un vrai bouton Generate en miniature dans chaque case de la bande,
+   inerte (aucun survol ni clic), et en taille normale au résultat. */
+.case-btn { display: grid; place-items: center; align-self: stretch; min-height: 3.6rem; pointer-events: none; }
+.case-btn .btn-roll { display: inline-block; font-size: .6rem; padding: .45rem .75rem; letter-spacing: .08em; white-space: nowrap; }
+.case-btn.md { min-height: 5.5rem; }
+.case-btn.md .btn-roll { font-size: 1.05rem; padding: .7rem 1.8rem; }
 .case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }
 .room-noreward { max-width: 30rem; margin: .2rem auto .6rem; text-align: center; }
 
@@ -5560,6 +5566,75 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .td-step.lit { background: rgba(16, 185, 129, .2); border-color: #34d399; box-shadow: 0 0 14px rgba(52, 211, 153, .45); }
 @media (max-width: 420px) { .td-step i { font-size: .58rem; } .td-step b { font-size: .74rem; } }
 @media (prefers-reduced-motion: reduce) { .td-drum, .td-ch, .td-splat { transition: none; } .td-scene .td-bear, .td-scene.pulling .td-cannon, .td-burst i { animation: none !important; } .td-pop.show { animation: none; opacity: 1; transform: translateX(-50%); } .td-pop.show[data-kind="click"] { opacity: 0; } }
+
+/* ---------------------------------------------------------------- Duck Race (idée de Deadshot, 2026-10-27)
+   Un bassin vu de dessus : six couloirs d'eau séparés par des lignes de flotteurs rouges et blancs, un ponton numéroté
+   au départ, une ligne à damier à l'arrivée. Chaque canard de bain flotte (il dodeline), pagaie plus vite pendant la
+   course en laissant un sillage, et le gagnant saute de joie. La scène garde ses couleurs d'eau dans les deux thèmes ;
+   les boutons de choix suivent le thème. La position des canards est posée par js/app.js (translateX) à chaque image. */
+.dk-pond { position: relative; max-width: 34rem; margin: 0 auto .7rem; padding: .3rem 0; border-radius: .9rem; overflow: hidden; border: 1px solid rgba(14, 116, 144, .55);
+  background: radial-gradient(ellipse 55% 35% at 25% 0%, rgba(255, 255, 255, .4), transparent 70%), repeating-linear-gradient(170deg, rgba(255, 255, 255, 0) 0 18px, rgba(255, 255, 255, .08) 18px 20px), linear-gradient(180deg, #67e8f9 0%, #22d3ee 35%, #0891b2 100%);
+  box-shadow: inset 0 0 26px rgba(8, 51, 68, .35); }
+.dk-lane { position: relative; display: flex; align-items: stretch; height: 2.55rem; transition: background-color .3s ease; }
+.dk-lane + .dk-lane::before { content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 4px; z-index: 1; border-radius: 2px; background: repeating-linear-gradient(90deg, #ef4444 0 7px, #fff 7px 14px); box-shadow: 0 1px 1px rgba(8, 51, 68, .35); pointer-events: none; }
+.dk-num { flex: none; display: grid; place-items: center; width: 1.7rem; font-size: .8rem; font-weight: 800; color: #083344; background: linear-gradient(90deg, #d6a46a, #b7864d); box-shadow: inset -2px 0 0 rgba(0, 0, 0, .15); }
+.dk-water { position: relative; flex: 1; margin-right: .95rem; }
+.dk-water::after { content: ''; position: absolute; top: 0; bottom: 0; right: -.6rem; width: .6rem; background: conic-gradient(#fff 25%, #111827 0 50%, #fff 0 75%, #111827 0) 0 0 / 6px 6px; opacity: .85; }
+.dk-duck { position: absolute; left: .15rem; top: 50%; width: 2.55rem; height: 2.05rem; margin-top: -1.1rem; z-index: 2; will-change: transform; }
+.dk-duck::before { content: ''; position: absolute; right: 78%; top: 72%; width: 0; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75)); transition: width .4s ease; }
+.dk-pond[data-state="racing"] .dk-duck::before { width: 2.4rem; }
+.dk-bob { display: block; width: 100%; height: 100%; transform-origin: 50% 85%; animation: dk-bob 1.2s ease-in-out var(--bd, 0s) infinite; }
+.dk-pond[data-state="racing"] .dk-bob { animation-duration: .36s; }
+@keyframes dk-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-2px) rotate(3deg); } }
+.dk-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.dk-body { fill: var(--dk); stroke: rgba(0, 0, 0, .3); stroke-width: 1; }
+.dk-wing { fill: rgba(0, 0, 0, .14); }
+.dk-beak { fill: #f97316; stroke: #9a3412; stroke-width: .8; }
+.dk-lane:nth-child(6) .dk-beak, .dk-pick:nth-child(6) .dk-beak { fill: #dc2626; stroke: #7f1d1d; }
+.dk-ripple { fill: rgba(255, 255, 255, .45); }
+.dk-lane.mine { background: rgba(255, 255, 255, .16); }
+.dk-lane.mine .dk-num { background: linear-gradient(90deg, #fde68a, #facc15); box-shadow: inset -4px 0 0 var(--dk); }
+.dk-lane[data-place="1"] { background: rgba(255, 255, 255, .3); box-shadow: inset 0 0 0 2px #facc15; }
+/* Arrivée : le ponton montre la médaille des trois premiers à la place du numéro. */
+.dk-lane[data-place="1"] .dk-num, .dk-lane[data-place="2"] .dk-num, .dk-lane[data-place="3"] .dk-num { font-size: 0; }
+.dk-lane[data-place="1"] .dk-num::after { content: '🥇'; font-size: 1rem; }
+.dk-lane[data-place="2"] .dk-num::after { content: '🥈'; font-size: 1rem; }
+.dk-lane[data-place="3"] .dk-num::after { content: '🥉'; font-size: 1rem; }
+.dk-lane.win .dk-bob { animation: dk-hop .5s cubic-bezier(.34, 1.56, .64, 1) 3; }
+@keyframes dk-hop { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-7px) rotate(-8deg); } }
+.dk-pop { position: absolute; left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%) scale(0); padding: .25rem .8rem; border-radius: 99px; font-weight: 900; font-size: 1.05rem; color: #083344; background: #fef9c3; box-shadow: 0 3px 0 #0e7490, 0 6px 18px rgba(8, 51, 68, .35); pointer-events: none; white-space: nowrap; opacity: 0; }
+.dk-pop[data-kind="win"] { color: #fff; background: linear-gradient(90deg, #22c55e, #16a34a); box-shadow: 0 3px 0 #14532d, 0 0 20px rgba(74, 222, 128, .6); }
+.dk-pop.show { animation: dk-pop-stay .45s cubic-bezier(.34, 1.56, .64, 1) forwards; }
+.dk-pop.show[data-kind="go"] { animation: dk-pop-go .9s cubic-bezier(.34, 1.56, .64, 1) forwards; }
+@keyframes dk-pop-stay { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes dk-pop-go { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+.dk-picks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .35rem; max-width: 34rem; margin: 0 auto .5rem; }
+.dk-pick { display: grid; justify-items: center; gap: .05rem; min-width: 0; padding: .3rem .15rem .3rem; border-radius: .6rem; background: var(--surface-raised); border: 1px solid var(--outline); color: var(--prose); font: inherit; line-height: 1.15; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease; }
+.dk-pick:hover:not(:disabled) { transform: translateY(-1px); }
+.dk-pick .dk-icon { display: block; width: 2.1rem; height: 1.7rem; }
+.dk-pick b { font-size: .76rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.dk-pick .dk-x { font-size: .8rem; font-weight: 800; }
+.dk-pick i { font-style: normal; font-size: .64rem; color: var(--muted); }
+.dk-pick.on { border-color: var(--dk); box-shadow: 0 0 0 2px var(--dk); background: color-mix(in srgb, var(--dk) 18%, var(--surface-raised)); }
+.dk-pick:disabled { cursor: default; }
+.dk-pick:disabled:not(.on) { opacity: .6; }
+.dk-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; max-width: 34rem; margin: 0 auto .3rem; }
+.dk-stats span { display: grid; justify-items: center; gap: .1rem; padding: .3rem .2rem; border-radius: .55rem; background: var(--surface-raised); border: 1px solid var(--outline); }
+.dk-stats i { font-style: normal; font-size: .66rem; color: var(--muted); text-align: center; }
+.dk-stats b { font-size: .88rem; color: var(--prose); }
+@media (max-width: 560px) { .dk-picks { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dk-lane { height: 2.3rem; } .dk-duck { width: 2.3rem; height: 1.85rem; margin-top: -1rem; } }
+@media (prefers-reduced-motion: reduce) { .dk-bob, .dk-lane.win .dk-bob { animation: none; } .dk-duck::before, .dk-lane { transition: none; } .dk-pop.show, .dk-pop.show[data-kind="go"] { animation: none; opacity: 1; transform: translate(-50%, -50%); } }
+
+/* « ? » des règles de chaque jeu du casino (idée d'Ann joe, 2026-10-27), à côté du titre ; la fenêtre des règles. */
+.g-game .panel-head .g-help { display: inline-grid; place-items: center; flex: none; width: 1.6rem; height: 1.6rem; margin-right: auto; padding: 0; align-self: center; border-radius: 50%; border: 1px solid var(--outline); background: var(--surface-raised); color: var(--prose); font: 800 .8rem/1 inherit; cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
+.g-game .panel-head .g-help:hover { transform: scale(1.08); border-color: var(--prose-3); }
+.g-howto { max-width: 30rem; }
+.g-howto h2 { margin: 0 2rem .2rem 0; font-size: 1.15rem; }
+.g-howto-goal { margin: .2rem 0 .6rem; font-weight: 700; }
+.g-howto h4 { margin: .75rem 0 .3rem; font-size: .7rem; letter-spacing: .07em; text-transform: uppercase; color: var(--prose-3); }
+.g-howto ul { display: grid; gap: .3rem; margin: 0; padding-left: 1.15rem; font-size: .9rem; line-height: 1.4; }
+.g-howto p { margin: 0; font-size: .9rem; }
+.g-howto .g-howto-foot { margin-top: .95rem; font-size: .74rem; color: var(--prose-3); }
 
 /* ------------------------------------------------------------------ Cursed Energy (idée d'Edward, 2026-10-20) : les
    chiffres sont de l'énergie condensée, bleu-violet, cernée d'encre noire ; derrière, un sceau original (cercles,
