@@ -1157,3 +1157,9 @@
   padding-left: 2em; text-shadow: 0 0 .35em #22c55e, 0 1px 0 #000;
   --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(134, 239, 172, .2); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(134, 239, 172, .4); --gs-a: 0 .06em 0 #2e1065; }
 .btn-roll.gen-graves:hover { filter: brightness(1.12); }
+/* Ship Wake (idée de 17black, 2026-10-27) : la mer vue d'en haut, un sillage d'écume en V à gauche. */
+.btn-roll.gen-shipwake { border: 2px solid #0369a1; border-radius: 999px; color: #f0fdff;
+  background: linear-gradient(160deg, transparent 46%, rgba(240, 253, 255, .55) 49%, transparent 54%) 0 0 / 2.2em 50% no-repeat, linear-gradient(20deg, transparent 46%, rgba(240, 253, 255, .55) 49%, transparent 54%) 0 100% / 2.2em 50% no-repeat, linear-gradient(160deg, #0e7490, #0c4a6e 60%, #082f49);
+  text-shadow: 0 0 .3em rgba(224, 242, 254, .8), 0 1px 0 #082f49;
+  --gs: 0 .3em 0 #075985, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #075985, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #075985; }
+.btn-roll.gen-shipwake:hover { filter: brightness(1.1); }

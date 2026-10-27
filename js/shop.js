@@ -140,6 +140,8 @@
     { id: 'snowreveal', name: 'Snow Reveal', emoji: '⛄', price: 1500, desc: 'Every digit is buried in fresh snow until the powder blows away, and Mythic rolls light up the northern lights', idea: 'G8_floppa' },
     // Idée d'IXOLAF2 (2026-10-27) : un chiffre par tombe ; sur un grand tirage, une main sort des tombes (gentil, pas gore).
     { id: 'graves', name: 'Graveyard', emoji: '🪦', price: 2100, desc: 'Every digit is carved on its own tombstone under a full moon; bats fly out, and on great rolls friendly green hands pop out of the graves', idea: 'IXOLAF2' },
+    // Idée de 17black (2026-10-27) : un bateau passe et son sillage révèle les chiffres.
+    { id: 'shipwake', name: 'Ship Wake', emoji: '🚢', price: 2200, desc: 'A little tugboat sails across the sea and every digit rises in the foam of its wake; great rolls bring dolphins and a whale', idea: '17black' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

@@ -7395,6 +7395,50 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes grv-flap { 0% { transform: scale(1, 1) translateY(0); } 100% { transform: scale(.7, 1.1) translateY(-2px); } }
 .room-stage.many .side-graves::before, .room-stage.many .side-graves::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-graves::before, .side-graves::after { animation: none; } }
+/* ------------------------------------------------------------------ Ship Wake (idée de 17black, 2026-10-27) : la mer
+   vue d'en haut (bleu-vert profond, reflets de vagues, lumière qui joue) ; les chiffres sont écrits en écume blanche
+   aux bords mousseux. Pendant le tirage, ils sont sous l'eau : sombres, flous, ils ondulent. Un chiffre qui se pose :
+   l'étrave du bateau passe dessus, l'écume bouillonne d'un coup (éclat blanc, un peu gonflé : l'eau est molle) et le
+   chiffre remonte en surface, puis se pose. Le bateau, son sillage en V, les dauphins : js/skinfx.js (SCENES.shipwake). */
+.num-card.skin-shipwake {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><g fill='none' stroke='%23e0f2fe' stroke-opacity='.24' stroke-width='1.2' stroke-linecap='round'><path d='M2 6q4-3 8 0'/><path d='M22 15q4-3 8 0'/><path d='M28 4q3-2 6 0'/></g></svg>") 0 0 / 1.1em .55em,
+    radial-gradient(ellipse 60% 70% at 25% 20%, rgba(125, 211, 252, .3), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 85% 90%, rgba(8, 47, 73, .5), transparent 70%),
+    linear-gradient(160deg, #0e7490, #0c4a6e 55%, #082f49);
+  border: 2px solid #0369a1; border-radius: .6rem; color: #f0fdff;
+  box-shadow: inset 0 0 0 1px rgba(186, 230, 253, .2), inset 0 0 .8em rgba(8, 47, 73, .6), 0 0 16px rgba(56, 189, 248, .25), 0 10px 18px rgba(0, 0, 0, .45);
+}
+/* La houle avance pendant le tirage. */
+.num-card.skin-shipwake.charging { animation: charge 1.6s ease-in-out infinite, wake-swell 2.4s linear infinite; }
+@keyframes wake-swell { to { background-position: -1.1em .55em, 0 0, 0 0, 0 0; } }
+.skin-shipwake .slot { position: relative; z-index: 1; font-weight: 800; color: #f8feff;
+  text-shadow: .03em .02em .03em rgba(255, 255, 255, .75), -.03em -.02em .03em rgba(255, 255, 255, .75), 0 0 .12em rgba(224, 242, 254, .9), 0 .05em .1em rgba(8, 47, 73, .9); }
+.skin-shipwake .slot.ghost { opacity: .2; }
+/* Sous l'eau pendant le tirage : sombres, flous, ils ondulent. */
+.skin-shipwake .slot.spinning { opacity: 1; color: #1f8fb0; text-shadow: 0 0 .1em rgba(8, 47, 73, .6); filter: blur(1px); animation: wake-sway .7s ease-in-out infinite alternate; }
+.skin-shipwake .slot.spinning:nth-of-type(2n) { animation-delay: -.35s; }
+@keyframes wake-sway { from { transform: skewX(-7deg) translateY(.03em); } to { transform: skewX(7deg) translateY(-.03em); } }
+/* L'étrave passe : l'écume bouillonne d'un coup, le chiffre remonte, gonfle un peu et se pose. */
+.skin-shipwake .slot.revealed { animation: wake-surface .6s backwards; }
+@keyframes wake-surface {
+  0% { color: #1f8fb0; filter: blur(1px); transform: skewX(-6deg) scale(.92); animation-timing-function: steps(1); }
+  14% { color: #fff; filter: blur(.6px) brightness(1.3); transform: scale(1.2, 1.1); text-shadow: 0 0 .15em #fff, 0 0 .4em rgba(224, 242, 254, .9), 0 .05em .1em rgba(8, 47, 73, .9); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  36% { filter: none; transform: scale(.94, .97); }
+  58% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-shipwake .slot, .num-card.skin-shipwake.charging { animation: none; } }
+/* Cadre de duel : la mer, quelques vagues ; ⛵ tangue, 🐬 saute. */
+.side-shipwake { --side-border: #0284c7; --side-glow: 0 0 16px rgba(56, 189, 248, .3); --side-ink: #0369a1;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30'><g fill='none' stroke='%2338bdf8' stroke-opacity='.35' stroke-width='1.4' stroke-linecap='round'><path d='M4 10q6-5 12 0'/><path d='M34 22q6-5 12 0'/></g></svg>") 0 0 / 60px 30px, linear-gradient(180deg, rgba(14, 116, 144, .22), rgba(8, 47, 73, .2));
+  --deco-a: '⛵'; --deco-b: '🐬'; }
+.side-shipwake::before { transform-origin: 50% 100%; animation: wake-rock 2.2s ease-in-out infinite; }
+.side-shipwake::after { animation: wake-jump 2.6s ease-in-out infinite; }
+@keyframes wake-rock { 0%, 100% { transform: rotate(-7deg) translateY(0); } 50% { transform: rotate(7deg) translateY(-2px); } }
+@keyframes wake-jump { 0%, 55%, 100% { transform: none; } 70% { transform: translateY(-7px) rotate(-25deg); } 85% { transform: translateY(0) rotate(20deg); } }
+.room-stage.many .side-shipwake::before, .room-stage.many .side-shipwake::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-shipwake::before, .side-shipwake::after { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }

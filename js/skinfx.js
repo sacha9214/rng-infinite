@@ -5471,6 +5471,127 @@
     };
   };
 
+  // ⛵ Ship Wake (2026-10-27, idée de 17black) — un petit remorqueur rouge, vu d'en haut, attend en dansant sur l'eau
+  // juste au-dessus du prochain chiffre (il le cache encore) ; quand le chiffre se pose, il met les gaz et file jusqu'au
+  // suivant : son sillage en V d'écume s'ouvre derrière lui (dans la carte, derrière les chiffres) et le chiffre remonte
+  // en surface dans l'écume (animation CSS wake-surface). Avant le dernier, son moteur tourne plus vite (remous). À la fin
+  // il sort à droite et attend. Révélation : tirage raté, le moteur cale (fumée noire) ; sinon deux coups de sirène
+  // (anneaux de vapeur) et il repart ; dès Epic, des dauphins sautent de chaque côté ; dès Mythic, il fait demi-tour en
+  // grand arc au-dessus de la carte en laissant un arc d'écume, et une baleine souffle son jet d'eau derrière la carte.
+  SCENES.shipwake = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const foam = particles(), foamOut = particles(), smoke = particles(), rings = timed(), dolphins = timed(), spouts = timed(), drops = particles();
+    let t = 0, build = 0, mode = 'sail', modeAt = 0, L = card.h * .5;
+    const boat = { x: card.x - card.h * 1.2, y: cy, tx: 0, v: 0, ang: 0, alpha: 1, path: null };
+    const draw = (x, y, ang, a) => { // le remorqueur vu d'en haut, l'avant vers +x
+      const B = L * .48;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(ang);
+      co.fillStyle = 'rgba(8,47,73,.35)'; co.beginPath(); co.ellipse(2, 3, L * .55, B * .62, 0, 0, TAU); co.fill(); // ombre sur l'eau
+      const hull = () => { co.beginPath(); co.moveTo(-L * .48, -B * .42); co.lineTo(L * .12, -B * .5); co.quadraticCurveTo(L * .45, -B * .42, L * .52, 0); co.quadraticCurveTo(L * .45, B * .42, L * .12, B * .5); co.lineTo(-L * .48, B * .42); co.quadraticCurveTo(-L * .56, 0, -L * .48, -B * .42); co.closePath(); };
+      hull(); co.fillStyle = '#dc2626'; co.fill(); co.lineWidth = Math.max(1.2, L * .05); co.strokeStyle = '#450a0a'; co.stroke();
+      co.save(); co.scale(.8, .72); hull(); co.restore(); co.fillStyle = '#e7c49a'; co.fill(); // le pont en bois
+      co.fillStyle = '#f8fafc'; roundRect(co, -L * .22, -B * .26, L * .34, B * .52, L * .05); co.fill(); co.strokeStyle = '#334155'; co.lineWidth = 1; co.stroke(); // la cabine
+      co.fillStyle = '#1e293b'; co.beginPath(); co.arc(-L * .3, 0, B * .17, 0, TAU); co.fill(); co.fillStyle = '#dc2626'; co.beginPath(); co.arc(-L * .3, 0, B * .09, 0, TAU); co.fill(); // la cheminée
+      co.fillStyle = '#facc15'; co.beginPath(); co.arc(L * .36, 0, B * .08, 0, TAU); co.fill(); // le feu de proue
+      co.restore();
+    };
+    // l'écume derrière le bateau : deux bords du V qui s'écartent, plus le bouillon au milieu
+    const churn = (x, y, ang, speed, inside) => {
+      const bx = x - Math.cos(ang) * L * .5, by = y - Math.sin(ang) * L * .5, nx = -Math.sin(ang), ny = Math.cos(ang), spread = Math.min(1, speed / (card.h * 4));
+      const list = inside ? foam : foamOut;
+      for (const side of [-1, 1]) list.add({ x: bx + nx * side * L * .2, y: by + ny * side * L * .2, vx: nx * side * card.h * (.35 + .5 * spread) - Math.cos(ang) * 10, vy: ny * side * card.h * (.35 + .5 * spread) - Math.sin(ang) * 10, drag: 2.2, max: rnd(1, 1.6), size: rnd(1.6, 2.8) });
+      list.add({ x: bx + rnd(-2, 2), y: by + rnd(-2, 2), vx: -Math.cos(ang) * 20, vy: -Math.sin(ang) * 20, drag: 2, max: rnd(.6, 1), size: rnd(2.4, 4) });
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        if (S.length > 1) L = Math.min(card.h * .66, (S[1].x - S[0].x) * 1.3);
+        let speed = 0;
+        if (boat.path) { // un trajet fixe (demi-tour du Mythic) : p(k) donne la position
+          const P = boat.path; P.k = Math.min(1, P.k + dt / P.d);
+          const [x, y] = P.at(P.k), [x2, y2] = P.at(Math.min(1, P.k + .01));
+          speed = Math.hypot(x - boat.x, y - boat.y) / Math.max(dt, 1e-3); boat.ang = Math.atan2(y2 - y, x2 - x); boat.x = x; boat.y = y;
+          if (P.k >= 1) { boat.path = null; mode = 'gone'; modeAt = t; }
+        } else {
+          if (mode === 'sail') boat.tx = next ? next.x + L * .12 : card.x + card.w + L * 1.1;
+          const d = boat.tx - boat.x;
+          boat.v = Math.abs(d) < .3 ? 0 : Math.sign(d) * Math.min(Math.abs(d) * 9, Math.max(card.h * .8, Math.abs(d) * 6));
+          boat.x += boat.v * dt; speed = Math.abs(boat.v);
+          boat.y += (cy + Math.sin(t * 2.2) * card.h * .03 - boat.y) * Math.min(1, dt * 4);
+          boat.ang += ((Math.sin(t * 1.7) * .06 - (boat.v > card.h * 2 ? .04 : 0)) - boat.ang) * Math.min(1, dt * 6);
+        }
+        if (mode === 'leave') boat.alpha = clamp((card.x + card.w + card.h * 2.4 - boat.x) / (card.h * .8));
+        if (mode === 'gone') { boat.alpha = clamp(1 - (t - modeAt) * 2); boat.tx = boat.x; }
+        // sillage : dans la carte quand le bateau est dessus, autour sinon
+        const inside = boat.x > card.x && boat.x < card.x + card.w && boat.y > card.y && boat.y < card.y + card.h;
+        if (speed > card.h * .6 && Math.random() < .9) churn(boat.x, boat.y, boat.ang, speed, inside);
+        else if (Math.random() < .12 + .5 * build) churn(boat.x, boat.y, boat.ang, card.h * (.2 + 1.5 * build), inside);
+        foam.step(dt); foamOut.step(dt);
+        foam.each((f, k) => dot(ci, '#f0fdff', f.x - card.x, f.y - card.y, f.size * (2.4 + k * 3), (1 - k) * .4));
+        ci.globalAlpha = 1;
+        behind(env, () => foamOut.each((f, k) => dot(co, dark ? '#bae6fd' : '#0ea5e9', f.x, f.y, f.size * (2.4 + k * 3), (1 - k) * (dark ? .4 : .45))), true);
+        // le jet de la baleine (Mythic), derrière la carte
+        spouts.run(dt, (s, k) => {
+          const up = k < .3 ? outCubic(k / .3) : 1, a = clamp((1 - k) * 3);
+          behind(env, () => {
+            co.globalAlpha = a * .9; co.fillStyle = '#1e3a5f';
+            co.beginPath(); co.ellipse(s.x, card.y + 3, card.h * .55, card.h * .16, 0, Math.PI, 0); co.fill();
+            co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+            for (let i = 0; i < 14; i++) { const u = i / 13, hh = card.h * 1.5 * up; dot(co, dark ? '#e0f2fe' : '#7dd3fc', s.x + Math.sin(u * 9 + t * 6) * 3 * u + (u > .7 ? (i % 2 ? 1 : -1) * (u - .7) * card.h * 1.2 : 0), card.y - u * hh, card.h * (.08 + .1 * u), a * .55); }
+            co.globalCompositeOperation = 'source-over';
+          }, true);
+          if (k > .25 && Math.random() < .5) drops.add({ x: s.x + rnd(-.4, .4) * card.h, y: card.y - card.h * 1.4, vx: rnd(-40, 40), vy: rnd(-30, 10), g: 300, drag: .3, max: rnd(.6, 1), size: rnd(1.2, 2.2) });
+        });
+        // les dauphins : un arc de chaque côté de la carte
+        dolphins.run(dt, (d, k) => {
+          const x = d.x + d.dir * (k - .5) * card.h * 1.1, y = card.y + card.h * .75 - Math.sin(k * Math.PI) * card.h * 1.1, ang = Math.atan2(-Math.cos(k * Math.PI) * Math.PI * card.h * 1.1, d.dir * card.h * 1.1);
+          if (!d.splash && k > .05) { d.splash = true; for (let i = 6; i > 0; i--) drops.add({ x, y: card.y + card.h * .75, vx: rnd(-50, 50), vy: -rnd(50, 140), g: 500, drag: .3, max: .6, size: rnd(1.2, 2) }); }
+          co.save(); co.globalAlpha = clamp((1 - k) * 6); co.translate(x, y); co.rotate(ang); if (d.dir < 0) co.scale(1, -1);
+          const s = card.h * .62;
+          co.fillStyle = '#6b9ac4'; co.strokeStyle = '#1e3a5f'; co.lineWidth = 1.2;
+          co.beginPath(); co.moveTo(s * .55, 0); co.quadraticCurveTo(s * .2, -s * .22, -s * .4, -s * .05); co.lineTo(-s * .58, -s * .16); co.lineTo(-s * .52, 0); co.lineTo(-s * .58, s * .16); co.lineTo(-s * .4, s * .05); co.quadraticCurveTo(s * .2, s * .18, s * .55, 0); co.closePath(); co.fill(); co.stroke();
+          co.beginPath(); co.moveTo(0, -s * .14); co.lineTo(-s * .12, -s * .3); co.lineTo(-s * .16, -s * .1); co.fill(); co.stroke();
+          co.fillStyle = '#e0f2fe'; co.beginPath(); co.ellipse(s * .12, s * .07, s * .3, s * .06, 0, 0, TAU); co.fill(); co.strokeStyle = '#1e3a5f'; co.beginPath(); co.arc(s * .44, s * .02, s * .07, .2, 1.4); co.stroke(); // ventre clair et sourire : un dauphin, pas un requin
+          co.fillStyle = '#0f172a'; co.beginPath(); co.arc(s * .32, -s * .04, s * .03, 0, TAU); co.fill();
+          co.restore();
+        });
+        drops.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#0284c7';
+        drops.each((d, k) => { co.globalAlpha = 1 - k; co.beginPath(); co.arc(d.x, d.y, d.size, 0, TAU); co.fill(); });
+        // fumée (moteur qui cale) et anneaux de sirène
+        smoke.step(dt);
+        smoke.each((s, k) => dot(co, dark ? '#475569' : '#1f2937', s.x, s.y, s.size * (1 + 2 * k), (1 - k) * .7));
+        rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#f8fafc' : '#64748b'; co.lineWidth = 1.5; co.beginPath(); co.arc(r.x, r.y - k * card.h * .3, card.h * (.06 + .2 * k), 0, TAU); co.stroke(); });
+        // le bateau, par-dessus : un rond d'eau sous lui quand il est hors de la carte
+        if (boat.alpha > 0) {
+          if (!inside) { co.globalAlpha = boat.alpha * (dark ? .5 : .35); co.fillStyle = '#0e7490'; co.beginPath(); co.ellipse(boat.x, boat.y, L * .75, L * .4, boat.ang, 0, TAU); co.fill(); }
+          draw(boat.x, boat.y, boat.ang, boat.alpha);
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; modeAt = t;
+        const fx = () => boat.x - Math.cos(boat.ang) * L * .3;
+        if (!p) { mode = 'stall'; for (let i = 0; i < 6; i++) smoke.add({ x: fx(), y: boat.y, vx: rnd(-15, 15), vy: -rnd(20, 50), drag: 1, g: -10, max: rnd(1, 1.6), size: card.h * rnd(.06, .1), delay: 0 }); return; }
+        for (let i = 0; i < 2; i++) rings.add({ delay: i * .3, life: .7, x: fx(), y: boat.y });
+        if (p >= .6) [-1, 1].forEach((dir, i) => dolphins.add({ delay: .3 + i * .35, life: .9, x: dir < 0 ? card.x - card.h * .55 : card.x + card.w + card.h * .55, dir: -dir }));
+        if (p >= 1) {
+          // demi-tour : il passe au-dessus de la carte de droite à gauche en grand arc, puis ressort à gauche
+          const P = [[boat.x, boat.y], [boat.x + card.h * 1.3, boat.y - card.h * 1.5], [cx + card.w * .2, card.y - card.h * .8], [card.x - card.h * 1.8, card.y - card.h * .55]];
+          const bez = k => [0, 1].map(j => { const u = 1 - k; return u * u * u * P[0][j] + 3 * u * u * k * P[1][j] + 3 * u * k * k * P[2][j] + k * k * k * P[3][j]; });
+          boat.path = { k: 0, d: 2.4, at: k => bez(outCubic(k * .85 + .15 * k * k) * .98 + .02 * k) };
+          mode = 'path';
+          spouts.add({ delay: .8, life: 2.2 + .5 * asc, x: cx + card.w * .25 });
+        } else { mode = 'leave'; boat.tx = card.x + card.w + card.h * 3; }
+      },
+    };
+  };
+
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {
