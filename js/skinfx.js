@@ -4982,6 +4982,138 @@
     };
   };
 
+  // ==== Skins du 2026-10-27, lot A ====
+  // Fairy Lights, Elves' Workshop, Snow Reveal, Graveyard, Ship Wake, Torn Paper et Stickman (idées de joueurs). Ces
+  // scènes suivent les cases elles-mêmes (un lutin, une ampoule, un bateau par chiffre) : slotsA lit leur position sur
+  // la carte (env.el) à chaque image, car la carte se resserre quand les zéros de tête s'effacent.
+  function slotsA(env) {
+    const el = env.el, out = [];
+    if (!el || !el.getBoundingClientRect) return out;
+    const r = el.getBoundingClientRect(), k = env.card.w / (r.width || env.card.w);
+    el.querySelectorAll('.slot').forEach((s, i) => {
+      const b = s.getBoundingClientRect(), cl = s.classList;
+      out.push({ i, x: env.card.x + (b.left - r.left + b.width / 2) * k, y: env.card.y + (b.top - r.top + b.height / 2) * k, w: b.width * k, top: env.card.y + (b.top - r.top) * k, bottom: env.card.y + (b.bottom - r.top) * k, on: cl.contains('revealed'), ghost: cl.contains('ghost'), gone: cl.contains('collapsed') || b.width < 2 });
+    });
+    return out;
+  }
+  // Mélange de deux couleurs (#rrggbb ou rgb(…) ; k = part de b).
+  const rgbA = c => (c[0] === '#' ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : c.match(/[\d.]+/g).slice(0, 3).map(Number));
+  const mixA = (a, b, k) => { const x = rgbA(a), y = rgbA(b); return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * clamp(k))).join(',')})`; };
+
+  // 💡 Fairy Lights (2026-10-27, idée de 17black) — une guirlande d'ampoules à l'ancienne pend au-dessus de la carte,
+  // une ampoule par chiffre et deux de chaque côté. Pendant le tirage, les ampoules éteintes grésillent ; à chaque
+  // chiffre posé, la sienne hésite (deux clignotements), s'allume d'un coup et éclaire le chiffre par en haut, au même
+  // rythme que l'animation CSS fl-catch. Avant le dernier chiffre, sa lampe grésille de plus en plus vite et les autres
+  // baissent. Révélation : une chenille lumineuse parcourt la guirlande (plus de passages avec la rareté) ; dès Epic,
+  // des paillettes dorées tombent ; dès Mythic, les couleurs tournent et deux guirlandes de plus descendent sur les
+  // côtés ; tirage raté : une ampoule claque et s'éteint.
+  SCENES.fairylights = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const HUES = ['#f87171', '#4ade80', '#fbbf24', '#60a5fa', '#f472b6', '#fb923c'];
+    const litAt = new Map(), sparked = new Set(), glitter = particles(), shards = particles(), chases = timed(), garlands = timed();
+    let t = 0, build = 0, dead = -1, deadAt = 0, rainbow = 0, dimAt = -9, revealed = false;
+    // Allumage : mêmes instants que fl-catch (0,55 s) — éteint, allumé, éteint, allumé, à moitié, l'éclat, la lueur.
+    const catchK = s => { const p = s / .55; return p < .08 ? .12 : p < .14 ? 1 : p < .26 ? .1 : p < .32 ? 1 : p < .44 ? .45 : p < .7 ? 1.35 - (p - .44) / .26 * .35 : 1; };
+    const WIRE = dark ? '#1f5132' : '#14532d';
+    // La guirlande : un feston entre deux points au-dessus de la carte, plus bas au milieu.
+    const wire = x => { const xl = card.x - card.h * 1.1, xr = card.x + card.w + card.h * 1.1, u = (x - xl) / (xr - xl); return card.y - card.h * .9 + card.h * .62 * 4 * u * (1 - u); };
+    const bulb = (x, col, k, s, ang, alive) => {
+      const y = wire(x);
+      const gx = x - Math.sin(ang) * s * .78, gy = y + Math.cos(ang) * s * .78;
+      if (k > .05 && alive) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, col, gx, gy, s * (1.5 + .9 * Math.min(1.3, k)), (dark ? .6 : .42) * Math.min(1.3, k)); co.globalCompositeOperation = 'source-over'; }
+      co.save(); co.translate(x, y); co.rotate(ang); co.globalAlpha = 1;
+      co.fillStyle = dark ? '#2f5e3e' : '#166534'; roundRect(co, -s * .17, -s * .04, s * .34, s * .38, s * .06); co.fill();
+      co.beginPath(); co.moveTo(-s * .22, s * .32); co.bezierCurveTo(-s * .44, s * .62, -s * .26, s * 1.08, 0, s * 1.18); co.bezierCurveTo(s * .26, s * 1.08, s * .44, s * .62, s * .22, s * .32); co.closePath();
+      co.fillStyle = alive ? mixA(mixA(col, '#0b1020', .62), col, Math.min(1, k)) : '#3f3f46'; co.fill();
+      co.lineWidth = Math.max(.8, s * .05); co.strokeStyle = 'rgba(15,23,42,.45)'; co.stroke();
+      if (alive && k > .2) { co.globalAlpha = Math.min(1, k) * .85; co.fillStyle = '#fffbea'; co.beginPath(); co.ellipse(0, s * .72, s * .1, s * .2, 0, 0, TAU); co.fill(); }
+      co.globalAlpha = .5; co.fillStyle = '#fff'; co.beginPath(); co.ellipse(-s * .13, s * .58, s * .05, s * .15, .3, 0, TAU); co.fill();
+      co.restore();
+      return { gx, gy };
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        const S = slotsA(env).filter(s => !s.gone), s0 = Math.max(7, card.h * .25);
+        const next = S.find(s => !s.on);
+        // Le fil (deux brins torsadés), d'un bout à l'autre.
+        const xl = card.x - card.h * 1.1, xr = card.x + card.w + card.h * 1.1;
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1; co.lineCap = 'round';
+        for (const ph of [0, Math.PI]) {
+          co.strokeStyle = WIRE; co.lineWidth = Math.max(1.3, card.h * .022); co.beginPath();
+          for (let x = xl; x <= xr + 1; x += 4) { const y = wire(x) + Math.sin(x * .45 + ph) * 1.1; x === xl ? co.moveTo(x, y) : co.lineTo(x, y); }
+          co.stroke();
+        }
+        // La liste des ampoules, de gauche à droite : deux avant la carte, une par case, deux après.
+        const L = [];
+        const first = S.length ? S[0].x : card.x, last = S.length ? S[S.length - 1].x : card.x + card.w, gap = S.length > 1 ? (last - first) / (S.length - 1) : card.h * .5;
+        L.push({ x: first - gap * 2.6, col: HUES[4], side: 1 }, { x: first - gap * 1.4, col: HUES[5], side: 1 });
+        S.forEach(s => L.push({ x: s.x, col: HUES[s.i % 6], s }));
+        L.push({ x: last + gap * 1.4, col: HUES[0], side: 1 }, { x: last + gap * 2.6, col: HUES[1], side: 1 });
+        // La chenille de la révélation : une bosse de lumière qui court le long de la guirlande.
+        const boost = new Array(L.length).fill(0);
+        chases.run(dt, (c, k) => { const pos = (k * c.passes) % 1 * (L.length + 3) - 1.5; for (let j = 0; j < L.length; j++) boost[j] = Math.max(boost[j], Math.exp(-((j - pos) ** 2) / 1.2) * c.p); });
+        rainbow = Math.max(0, rainbow - dt * .12);
+        const dim = clamp(1 - (t - dimAt) / .5) * .45;
+        L.forEach((b, j) => {
+          let k;
+          if (b.side) k = revealed ? .55 + .3 * Math.sin(t * 3 + j) : .18 + .06 * Math.sin(t * 9 + j * 2);
+          else if (b.s.on) { const at = litAt.has(b.s.i) ? litAt.get(b.s.i) : (litAt.set(b.s.i, t), t); k = catchK(t - at) * (b.s.ghost ? .35 : 1) * (1 - build * .3 - dim) + .04 * Math.sin(t * 6 + j); }
+          else { const buzz = next && b.s.i === next.i ? build : 0; k = .1 + .06 * Math.sin(t * 23 + j * 5) * Math.sin(t * 7.3 + j) + (Math.random() < .03 + .3 * buzz ? .3 + .6 * buzz : 0); }
+          k += boost[j];
+          let col = b.col;
+          if (rainbow > 0) col = HUES[(j + Math.floor(t * 5)) % 6];
+          const alive = !(b.s && b.s.i === dead);
+          if (!alive && t - deadAt < .12) k = 2; // l'ampoule claque : un éclair blanc avant le noir
+          const ang = .09 * Math.sin(t * 1.3 + j * .8) + (build ? .03 * Math.sin(t * 17 + j) : 0);
+          const g = bulb(b.x, alive || t - deadAt < .12 ? col : '#3f3f46', k, s0, ang, alive || t - deadAt < .12);
+          // La lumière tombe sur la vitre, derrière le chiffre.
+          if (b.s && alive && k > .2) { ci.globalCompositeOperation = 'lighter'; dot(ci, col, b.x - card.x, 0, card.h * .75, .32 * Math.min(1.3, k)); ci.globalCompositeOperation = 'source-over'; }
+          if (b.s && b.s.on && litAt.get(b.s.i) !== undefined) { const since = t - litAt.get(b.s.i); if (since > .24 && !sparked.has(b.s.i) && sparked.add(b.s.i)) for (let n = Math.round((b.s.i === S[S.length - 1].i ? 10 : 4) * q); n > 0; n--) glitter.add({ x: g.gx, y: g.gy, vx: rnd(-60, 60), vy: rnd(-90, -20), g: 160, drag: 1.5, max: rnd(.5, 1), size: rnd(1, 2), c: col }); }
+        });
+        // Les guirlandes de côté (Mythic et plus) : elles tombent du haut et se balancent à côté de la carte.
+        garlands.run(dt, (gq, k) => {
+          const drop = outBack(clamp(k * 4)), fade = clamp((1 - k) * 4);
+          for (const side of [-1, 1]) {
+            const x0 = side < 0 ? card.x - card.h * .55 : card.x + card.w + card.h * .55, y0 = card.y - card.h * 1.1, y1 = lerp(y0, card.y + card.h * 1.05, drop);
+            co.globalAlpha = fade; co.strokeStyle = WIRE; co.lineWidth = Math.max(1.3, card.h * .022);
+            co.beginPath(); co.moveTo(x0, y0); co.quadraticCurveTo(x0 + side * card.h * .35, (y0 + y1) / 2, x0, y1); co.stroke();
+            for (let n = 0; n < 4; n++) {
+              const u = (n + .5) / 4, y = lerp(y0, y1, u), x = x0 + side * card.h * .35 * 2 * u * (1 - u) * 2 * .5, col = HUES[(n + (side > 0 ? 3 : 0) + Math.floor(t * 6)) % 6];
+              co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, col, x, y + s0 * .6, s0 * 1.8, (dark ? .55 : .4) * fade); co.globalCompositeOperation = 'source-over';
+              co.globalAlpha = fade; co.fillStyle = col; co.beginPath(); co.ellipse(x, y + s0 * .6, s0 * .3, s0 * .45, 0, 0, TAU); co.fill();
+            }
+          }
+          co.globalAlpha = 1;
+        });
+        // Paillettes et éclats de verre
+        glitter.step(dt); shards.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        glitter.each((p, k) => { const a = (1 - k) * (.6 + .4 * Math.sin(t * 20 + p.x)); dot(co, p.c, p.x, p.y, p.size * 3, a); if (p.size > 1.6) { line(co, p.c, p.x - p.size * 2.5, p.y, p.x + p.size * 2.5, p.y, .8, a); line(co, p.c, p.x, p.y - p.size * 2.5, p.x, p.y + p.size * 2.5, .8, a); } });
+        co.globalCompositeOperation = 'source-over';
+        shards.each((p, k) => { co.globalAlpha = 1 - k; co.fillStyle = p.c; co.save(); co.translate(p.x, p.y); co.rotate(p.life * 9); co.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .6); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; dimAt = t; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        revealed = true; build = 0;
+        if (!p) { // une ampoule claque : éclair blanc, éclats de verre, puis plus rien
+          const S = slotsA(env).filter(s => !s.gone && !s.ghost);
+          const b = S.length ? pick(S) : null;
+          if (b) { dead = b.i; deadAt = t; const y = wire(b.x) + card.h * .2; for (let n = 6; n > 0; n--) shards.add({ x: b.x, y, vx: rnd(-40, 40), vy: rnd(-60, 10), g: 500, drag: .5, max: rnd(.5, .9), size: rnd(1.5, 3), c: pick(['#e2e8f0', '#94a3b8', HUES[b.i % 6]]) }); }
+          return;
+        }
+        chases.add({ life: 1.1 + 1.2 * p + .5 * asc, passes: 1 + Math.round(2 * p) + asc, p: .9 + .5 * p });
+        if (p >= .6) for (let n = burst(p, 60 * q, 6); n > 0; n--) glitter.add({ x: rnd(card.x - card.h, card.x + card.w + card.h), y: card.y - card.h * rnd(.5, 1.1), vx: rnd(-20, 20), vy: rnd(0, 40), g: 60, drag: .8, max: rnd(1.4, 2.6), size: rnd(1, 2.4), c: pick(['#fde68a', '#fbbf24', '#fff7ed']) });
+        if (p >= 1) { rainbow = 1 + .5 * asc; garlands.add({ delay: .2, life: 4 + asc }); }
+      },
+    };
+  };
+
+  // ==== fin du lot A ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

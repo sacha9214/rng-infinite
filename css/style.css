@@ -7162,7 +7162,63 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes grk-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
 .room-stage.many .side-greek::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-greek::after { animation: none; } }
-
+/* ==== Skins du 2026-10-27, lot A ==== (Fairy Lights, Elves' Workshop, Snow Reveal, Graveyard, Ship Wake, Torn Paper,
+   Stickman : idées de joueurs ; leurs scènes canvas sont dans js/skinfx.js, bloc « Skins du 2026-10-27, lot A ») */
+/* ------------------------------------------------------------------ Fairy Lights (idée de 17black, 2026-10-27) : une
+   vitre givrée la nuit (bleu nuit, givre aux coins, reflets flous de lumières lointaines, cadre de bois sombre) ; chaque
+   chiffre est en verre dépoli éteint, et prend la couleur de l'ampoule qui pend au-dessus de lui (rouge, vert, or, bleu,
+   rose, orange, en boucle). Pendant le tirage, les chiffres éteints grésillent ; un chiffre qui se pose : le filament
+   hésite (deux clignotements : l'élan), s'allume d'un coup (éclat) et la lueur se pose. La guirlande et ses ampoules,
+   allumées au même rythme, et la chenille lumineuse de la révélation : js/skinfx.js (SCENES.fairylights). */
+.num-card.skin-fairylights {
+  background:
+    radial-gradient(ellipse 26% 50% at 0 0, rgba(226, 232, 240, .34), rgba(226, 232, 240, .1) 55%, transparent 72%),
+    radial-gradient(ellipse 30% 46% at 100% 100%, rgba(226, 232, 240, .28), rgba(226, 232, 240, .08) 55%, transparent 72%),
+    radial-gradient(ellipse 16% 30% at 100% 0, rgba(226, 232, 240, .2), transparent 70%),
+    radial-gradient(circle at 16% 74%, rgba(251, 191, 36, .16) 0 .2em, transparent .42em),
+    radial-gradient(circle at 82% 30%, rgba(244, 114, 182, .14) 0 .18em, transparent .38em),
+    radial-gradient(circle at 58% 84%, rgba(56, 189, 248, .12) 0 .2em, transparent .4em),
+    linear-gradient(180deg, #0a0f24, #121a3a 58%, #1a1442);
+  border: 2px solid #2a1a0c; border-radius: .5rem; color: #e2e8f0;
+  box-shadow: inset 0 0 0 .1em #6b4423, inset 0 0 0 .14em #2a1a0c, inset 0 0 .9em rgba(0, 0, 0, .55), 0 0 18px rgba(251, 191, 36, .2), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-fairylights .slot { --fl: #fbbf24; position: relative; z-index: 1; font-weight: 800;
+  color: color-mix(in srgb, var(--fl) 42%, #fff);
+  text-shadow: 0 0 .05em #fff, 0 0 .14em var(--fl), 0 0 .34em var(--fl), 0 0 .7em color-mix(in srgb, var(--fl) 55%, transparent); }
+.skin-fairylights .slot:nth-of-type(6n+1) { --fl: #f87171; }
+.skin-fairylights .slot:nth-of-type(6n+2) { --fl: #4ade80; }
+.skin-fairylights .slot:nth-of-type(6n+3) { --fl: #fbbf24; }
+.skin-fairylights .slot:nth-of-type(6n+4) { --fl: #60a5fa; }
+.skin-fairylights .slot:nth-of-type(6n+5) { --fl: #f472b6; }
+.skin-fairylights .slot:nth-of-type(6n) { --fl: #fb923c; }
+.skin-fairylights .slot.ghost { opacity: .2; }
+/* Éteints pendant le tirage : verre dépoli gris-bleu, le filament grésille par à-coups. */
+.skin-fairylights .slot.spinning { opacity: 1; color: rgba(148, 163, 184, .42); text-shadow: 0 0 .1em rgba(148, 163, 184, .25); animation: fl-buzz .9s steps(1) infinite; }
+.skin-fairylights .slot.spinning:nth-of-type(2n) { animation-delay: -.37s; }
+.skin-fairylights .slot.spinning:nth-of-type(3n) { animation-delay: -.61s; }
+@keyframes fl-buzz { 0%, 100% { color: rgba(148, 163, 184, .42); } 12% { color: color-mix(in srgb, var(--fl) 30%, rgba(148, 163, 184, .5)); } 16% { color: rgba(148, 163, 184, .42); } 58% { color: rgba(148, 163, 184, .3); } 63% { color: color-mix(in srgb, var(--fl) 22%, rgba(148, 163, 184, .45)); } 68% { color: rgba(148, 163, 184, .42); } }
+/* L'allumage (0,55 s, comme l'ampoule du canvas) : deux hésitations du filament, l'éclat, la lueur qui se pose. */
+.skin-fairylights .slot.revealed { animation: fl-catch .55s backwards; }
+@keyframes fl-catch {
+  0% { color: rgba(148, 163, 184, .45); text-shadow: none; animation-timing-function: steps(1); }
+  8% { color: color-mix(in srgb, var(--fl) 42%, #fff); text-shadow: 0 0 .14em var(--fl), 0 0 .34em var(--fl); animation-timing-function: steps(1); }
+  14% { color: rgba(148, 163, 184, .5); text-shadow: none; animation-timing-function: steps(1); }
+  26% { color: color-mix(in srgb, var(--fl) 42%, #fff); text-shadow: 0 0 .14em var(--fl), 0 0 .34em var(--fl); animation-timing-function: steps(1); }
+  32% { color: color-mix(in srgb, var(--fl) 30%, rgba(148, 163, 184, .7)); text-shadow: 0 0 .1em var(--fl); animation-timing-function: steps(1); }
+  44% { color: #fff; transform: scale(1.08); text-shadow: 0 0 .06em #fff, 0 0 .2em var(--fl), 0 0 .5em var(--fl), 0 0 1em var(--fl); animation-timing-function: cubic-bezier(.2, .7, .3, 1); }
+  70% { transform: scale(.99); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-fairylights .slot { animation: none; } }
+/* Cadre de duel : une fenêtre la nuit, une guirlande en feston en haut ; 💡 se balance, ✨ scintille. */
+.side-fairylights { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 191, 36, .3); --side-ink: #d97706;
+  --side-bg: radial-gradient(circle at 12% 9%, rgba(248, 113, 113, .55) 0 3px, transparent 6px), radial-gradient(circle at 30% 13%, rgba(74, 222, 128, .55) 0 3px, transparent 6px), radial-gradient(circle at 50% 14%, rgba(251, 191, 36, .6) 0 3px, transparent 6px), radial-gradient(circle at 70% 13%, rgba(96, 165, 250, .55) 0 3px, transparent 6px), radial-gradient(circle at 88% 9%, rgba(244, 114, 182, .55) 0 3px, transparent 6px), radial-gradient(ellipse 60% 14% at 50% 0, transparent 70%, rgba(20, 83, 45, .5) 72% 76%, transparent 78%), linear-gradient(180deg, rgba(10, 15, 36, .32), rgba(26, 20, 66, .18));
+  --deco-a: '💡'; --deco-b: '✨ ❄️'; }
+.side-fairylights::before { transform-origin: 50% 0; animation: fl-sway 2.4s ease-in-out infinite; }
+.side-fairylights::after { animation: gold-sparkle 1.9s ease-in-out infinite; }
+@keyframes fl-sway { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+.room-stage.many .side-fairylights::before, .room-stage.many .side-fairylights::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-fairylights::before, .side-fairylights::after { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }

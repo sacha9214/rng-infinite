@@ -131,6 +131,9 @@
     { id: 'burger', name: 'Burger', emoji: '🍔', price: 1700, desc: 'Every digit drops a topping on the bun, and the top bun slams down to finish the burger', idea: 'jaxoncool43' }, // idée de jaxoncool43 (2026-10-23)
     // Wood carving : idée de jjcoolcid1 et JBearr12 (2026-10-25) — une lame taille chaque chiffre en creux dans une planche de pin.
     { id: 'woodcarving', name: 'Wood Carving', emoji: '🪵', price: 2000, desc: 'A knife carves every digit into a pine plank and wood shavings fly; rare rolls get a coat of golden varnish', idea: 'jjcoolcid1' },
+    // ==== Skins du 2026-10-27, lot A (idées de joueurs ; scènes dans js/skinfx.js) ====
+    // Idée de 17black (2026-10-27) : des guirlandes de Noël qui clignotent puis s'allument pour révéler les chiffres.
+    { id: 'fairylights', name: 'Fairy Lights', emoji: '✨', price: 1800, desc: 'A string of old-fashioned bulbs hangs over a frosty window: every bulb flickers on to light up its digit, and great rolls set the whole string chasing', idea: '17black' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

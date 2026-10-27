@@ -1128,3 +1128,12 @@
   --gs: 5px 5px 0 #0a0a0a, 0 0 18px rgba(236, 72, 153, .3); --gs-h: 7px 7px 0 #0a0a0a, 0 0 28px rgba(236, 72, 153, .5); --gs-a: 1px 1px 0 #0a0a0a;
 }
 .btn-roll.gen-comicbook:hover { transform: rotate(-1.5deg) scale(1.03); }
+/* ==== Skins du 2026-10-27, lot A : boutons assortis ==== */
+/* Fairy Lights (idée de 17black, 2026-10-27) : une vitre de nuit, une guirlande d'ampoules en feston en haut. */
+.btn-roll.gen-fairylights { border: 2px solid #6b4423; border-radius: .6rem; color: #fff7e6;
+  background: radial-gradient(circle at 12% 22%, #f87171 0 .14em, transparent .3em), radial-gradient(circle at 30% 30%, #4ade80 0 .14em, transparent .3em), radial-gradient(circle at 50% 33%, #fbbf24 0 .14em, transparent .3em), radial-gradient(circle at 70% 30%, #60a5fa 0 .14em, transparent .3em), radial-gradient(circle at 88% 22%, #f472b6 0 .14em, transparent .3em), radial-gradient(ellipse 60% 30% at 50% 0, transparent 70%, rgba(22, 101, 52, .9) 72% 78%, transparent 80%), linear-gradient(180deg, #0a0f24, #1a1442);
+  text-shadow: 0 0 .3em #fbbf24, 0 1px 0 #000;
+  --gs: 0 .3em 0 #2a1a0c, 0 .5em 1em rgba(251, 191, 36, .25); --gs-h: 0 .34em 0 #2a1a0c, 0 .7em 1.4em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #2a1a0c; }
+.btn-roll.gen-fairylights:hover { animation: gen-fl-twinkle .9s steps(1) 1; }
+@keyframes gen-fl-twinkle { 0%, 100% { filter: none; } 20% { filter: brightness(1.25) saturate(1.3); } 40% { filter: brightness(.9); } 60% { filter: brightness(1.2); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-fairylights:hover { animation: none; } }
