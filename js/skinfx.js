@@ -5653,6 +5653,125 @@
     };
   };
 
+  // 🏃 Stickman (2026-10-27, idée de Jguz01 ; sur Discord, un bonhomme qui écrit les chiffres) — un bonhomme en bâtons,
+  // dessiné au feutre comme dans un coin de cahier (pose changée 12 fois par seconde, trait qui « bout »), attend devant
+  // le prochain chiffre en trottinant sur place, accroupi (l'élan) ; quand le chiffre se pose, il fonce jusqu'au suivant
+  // avec des traits de vitesse, et le chiffre s'écrit derrière lui (animation CSS stk-write), puis il dérape. Avant le
+  // dernier chiffre il s'accroupit plus bas. Révélation : tirage raté, il trébuche et s'étale (étoiles qui tournent) ;
+  // sinon il lève le poing ; dès Epic, il saute bras en l'air et des étoiles au feutre surgissent ; dès Mythic, un salto,
+  // une couronne gribouillée sur le nombre ; dès Celestial, deux copains accourent pour danser avec lui.
+  SCENES.stickman = env => {
+    const { co, card, q, dark } = env;
+    const INK = '#111827', HALO = dark ? 'rgba(248,250,252,.92)' : 'rgba(255,255,255,.75)', HL = '#fde047';
+    const s = card.h * .68, feet = () => card.y + card.h - card.h * .07;
+    const dust = particles(), stars = timed(), crowns = timed(), lines = [];
+    const man = { x: card.x - s * 1.4, tx: card.x - s * 1.4, v: 0, ph: 0, crouch: .25, lean: 0, air: 0, vy: 0, flip: 0, fall: 0, arms: 0, run: true, amp: 1 };
+    const G = card.h * 22, jump = hmax => Math.sqrt(2 * G * hmax); // sauts à l'échelle de la carte
+    const pals = []; // les copains (Celestial et plus)
+    let t = 0, build = 0, mode = 'run', modeAt = 0, seed = 1, armsFor = 2;
+    const jit = k => (Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453 % 1) * s * .018; // le trait qui bout (même tremblé pour une pose)
+    // Un bonhomme : pieds en (x, y), échelle sc. m.run : il court (m.amp : ampleur de la foulée), m.ph : phase de course,
+    // m.arms : 1 un poing levé, 2 les deux bras en V ; m.air : hauteur du saut ; m.flip : salto ; m.fall : à plat ventre.
+    const draw = (m, x, y, sc) => {
+      const S2 = s * sc, lw = Math.max(2, S2 * .075);
+      co.save(); co.translate(x, y - m.air);
+      if (m.flip) { co.translate(0, -S2 * .5); co.rotate(m.flip); co.translate(0, S2 * .5); }
+      if (m.fall) co.rotate(m.fall * Math.PI / 2);
+      const cr = m.crouch, ph = Math.floor(m.ph / (TAU / 8)) * (TAU / 8); // 8 poses par foulée : le folioscope
+      const hip = [jit(1), -S2 * (.46 - .12 * cr)], neck = [hip[0] + Math.sin(m.lean) * S2 * .36 + jit(2), hip[1] - Math.cos(m.lean) * S2 * .36];
+      const head = [neck[0] + Math.sin(m.lean) * S2 * .13, neck[1] - S2 * .13];
+      const seg = (from, th, len) => [from[0] + Math.sin(th) * S2 * len, from[1] + Math.cos(th) * S2 * len];
+      const leg = a => {
+        let th, kb;
+        if (m.air > 2) { th = a ? .95 : .35; kb = 1.7; } // jambes repliées en l'air
+        else if (m.run) { th = Math.sin(ph + a) * .9 * m.amp; kb = (.4 + Math.max(0, Math.sin(ph + a + 1.4)) * 1.2) * m.amp; }
+        else { th = a ? .32 : -.32; kb = cr * .8; } // debout, jambes en A
+        const knee = seg(hip, th, .24); return [hip, knee, seg(knee, th - kb, .22 + jit(a * 3) / S2)];
+      };
+      const sho = [neck[0] + (hip[0] - neck[0]) * .18, neck[1] + (hip[1] - neck[1]) * .18];
+      const arm = a => {
+        const up = m.arms === 2 || (m.arms === 1 && !a);
+        if (up) { const th = Math.PI + (a ? -.5 : .5) + jit(a + 7) / S2; const el = seg(sho, th, .17); return [sho, el, seg(el, th, .16)]; }
+        if (m.run) { const th = -Math.sin(ph + (a ? Math.PI : 0)) * 1.1 * m.amp; const el = seg(sho, th, .17); return [sho, el, seg(el, th - 1.3, .15)]; }
+        const th = a ? .42 : -.42; const el = seg(sho, th, .17); return [sho, el, seg(el, th * .7, .16)];
+      };
+      const parts = [leg(0), leg(Math.PI), [neck, hip], arm(0), arm(1)];
+      co.lineCap = 'round'; co.lineJoin = 'round';
+      for (const [col, wd] of [[HALO, lw + 3.2], [INK, lw]]) {
+        co.strokeStyle = col; co.lineWidth = wd;
+        for (const pts of parts) { co.beginPath(); pts.forEach(([px, py], i) => (i ? co.lineTo(px, py) : co.moveTo(px, py))); co.stroke(); }
+        co.beginPath(); co.arc(head[0], head[1], S2 * .12, 0, TAU); co.stroke();
+      }
+      co.fillStyle = '#fffef9'; co.beginPath(); co.arc(head[0], head[1], S2 * .12 - lw / 2, 0, TAU); co.fill();
+      co.restore();
+    };
+    const doodleStar = (x, y, r, rot, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      co.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, an = -Math.PI / 2 + i * Math.PI / 5; co.lineTo(Math.cos(an) * rr + jit(i), Math.sin(an) * rr); } co.closePath();
+      co.fillStyle = HL; co.fill(); co.lineJoin = 'round'; co.strokeStyle = HALO; co.lineWidth = Math.max(2, r * .16) + 3; co.stroke(); co.strokeStyle = INK; co.lineWidth = Math.max(2, r * .16); co.stroke(); co.restore();
+    };
+    const puff = (x, y, n, dir) => { for (let i = Math.round(n * q); i > 0; i--) dust.add({ x: x + rnd(-4, 4), y: y - rnd(0, 3), vx: dir * rnd(10, 70), vy: -rnd(5, 40), drag: 3, max: rnd(.3, .6), size: rnd(2, 4) }); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        if (Math.floor(t * 12) !== Math.floor((t - dt) * 12)) seed = (seed * 9301 + 49297) % 233280; // 12 dessins par seconde
+        const S = slotsA(env).filter(x => !x.gone), next = S.find(x => !x.on);
+        // où il va : devant le prochain chiffre (légèrement à droite pour ne pas cacher celui d'avant), sinon hors de la carte
+        if (mode === 'run') man.tx = next ? next.x + s * .12 : card.x + card.w + s * .75;
+        const d = man.tx - man.x, wasV = man.v;
+        man.v = Math.abs(d) < .5 ? 0 : Math.sign(d) * Math.min(Math.abs(d) * 16, Math.max(s * 1.2, Math.abs(d) * 9));
+        man.x += man.v * dt;
+        if (Math.abs(wasV) > s * 3 && Math.abs(man.v) < s * 1.5) { puff(man.x + s * .1, feet(), 5, -1); man.lean = -.35; } // dérapage
+        const fast = Math.abs(man.v) > s * 2;
+        if (fast) { man.ph += Math.abs(man.v) * dt / (s * .22); man.amp = 1; man.lean += (.45 - man.lean) * Math.min(1, dt * 14); if (Math.random() < .4) lines.push({ x: man.x - s * .3, y: feet() - s * rnd(.25, .75), len: s * rnd(.5, 1.1), t }); }
+        else if (mode === 'run') { man.ph += dt * (9 + 14 * build); man.amp = .45 + .2 * build; man.lean += ((.12 + .1 * build) - man.lean) * Math.min(1, dt * 8); }
+        else man.lean += (0 - man.lean) * Math.min(1, dt * 8);
+        man.run = fast || (mode === 'run' && !!next) || mode === 'trip';
+        if (mode === 'party' && t - modeAt > armsFor) man.arms = 0; // il baisse les bras après la fête
+        man.crouch += ((mode === 'run' ? (Math.abs(man.v) > s * 2 ? .15 : .35 + .45 * build) : 0) - man.crouch) * Math.min(1, dt * 10);
+        // célébrations
+        man.vy -= G * dt; man.air = Math.max(0, man.air + man.vy * dt); if (man.air === 0 && man.vy < 0) { if (man.flip) { man.flip = 0; puff(man.x, feet(), 8, 1); puff(man.x, feet(), 8, -1); } man.vy = 0; }
+        if (man.flipping && man.air > 0) man.flip = Math.min(TAU, man.flip + dt * TAU / man.flipT); else if (man.flipping) man.flipping = false;
+        if (mode === 'trip') { const k = t - modeAt; if (k < .25) man.ph += dt * 10; else man.run = false; if (k > .25) { man.fall = Math.min(1, man.fall + dt * 6); if (man.fall === 1 && !man.landed) { man.landed = true; puff(man.x + s * .4, feet(), 10, 1); } } }
+        // traits de vitesse
+        co.lineCap = 'round';
+        for (let i = lines.length - 1; i >= 0; i--) { const L = lines[i], k = (t - L.t) / .25; if (k >= 1) { lines.splice(i, 1); continue; } co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#e5e7eb' : INK; co.lineWidth = Math.max(1.2, s * .03); co.beginPath(); co.moveTo(L.x - L.len * k * .3, L.y); co.lineTo(L.x - L.len, L.y); co.stroke(); }
+        co.globalAlpha = 1;
+        dust.step(dt);
+        dust.each((p, k) => { co.globalAlpha = (1 - k) * .7; co.strokeStyle = dark ? '#cbd5e1' : '#57534e'; co.lineWidth = 1.2; co.beginPath(); co.arc(p.x, p.y, p.size * (1 + k), 0, TAU); co.stroke(); });
+        crowns.run(dt, (c, k) => {
+          const e = outBack(clamp(k * 5)), a = clamp((1 - k) * 5), x = card.x + card.w / 2, y = card.y - 2, wdt = card.h * .62 * e, ht = card.h * .42 * e;
+          co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(Math.sin(t * 6) * .05);
+          co.beginPath(); co.moveTo(-wdt / 2, 0); co.lineTo(-wdt / 2 + jit(1), -ht); co.lineTo(-wdt / 4, -ht * .45); co.lineTo(jit(2), -ht * 1.1); co.lineTo(wdt / 4, -ht * .45); co.lineTo(wdt / 2, -ht + jit(3)); co.lineTo(wdt / 2, 0); co.closePath();
+          co.fillStyle = HL; co.fill(); co.lineJoin = 'round'; co.strokeStyle = HALO; co.lineWidth = Math.max(2, card.h * .04) + 3; co.stroke(); co.strokeStyle = INK; co.lineWidth = Math.max(2, card.h * .04); co.stroke();
+          co.restore();
+        });
+        stars.run(dt, (c, k) => doodleStar(c.x, c.y + Math.sin(t * 4 + c.x) * 2, card.h * c.r * outBack(clamp(k * 6)), c.rot + Math.sin(t * 5 + c.x) * .15, clamp((1 - k) * 5)));
+        // étoiles qui tournent au-dessus de sa tête (tirage raté)
+        if (mode === 'trip' && man.landed && t - modeAt < 2.6) for (let i = 0; i < 3; i++) { const an = t * 5 + i * TAU / 3; doodleStar(man.x + s * .62 + Math.cos(an) * s * .22, feet() - s * .2 + Math.sin(an) * s * .08, s * .09, an, clamp((2.6 - (t - modeAt)) * 2)); }
+        pals.forEach((pl, i) => { pl.x += (pl.tx - pl.x) * Math.min(1, dt * 5); pl.ph += dt * 14; if (Math.abs(pl.tx - pl.x) < 3) { pl.run = false; pl.arms = 2; pl.air = Math.abs(Math.sin(t * 7 + i * 1.3)) * s * .22; } draw(pl, pl.x, feet(), .85); });
+        draw(man, man.x, feet(), 1);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; modeAt = t;
+        // il est déjà sorti à droite de la carte : il réagit là
+        if (!p) { mode = 'trip'; man.tx = man.x; return; }
+        mode = 'party'; man.arms = p >= .6 ? 2 : 1; man.v = 0; armsFor = 1.6 + 1.6 * p + asc;
+        man.vy = jump(card.h * (p >= .6 ? .35 : .18));
+        if (p >= 1) { man.flipping = true; man.vy = jump(card.h * .75); man.flipT = 2 * man.vy / G * .9; crowns.add({ delay: .3, life: 3.4 + asc * .6 }); }
+        if (p >= .6) {
+          const n = 3 + Math.round(4 * p) + 2 * asc, spots = [];
+          for (let i = 0; i < n; i++) { const side = i % 2 ? 1 : -1; spots.push(side < 0 ? { x: card.x - card.h * rnd(.25, .9), y: card.y + card.h * rnd(-.6, .9) } : { x: card.x + card.w * rnd(.55, 1) + card.h * rnd(0, .8), y: card.y - card.h * rnd(.25, .8) }); } // à droite : au-dessus de lui
+          spots.forEach((c, i) => stars.add({ delay: .15 + i * .09, life: 2.4 + p, x: c.x, y: c.y, r: rnd(.13, .22), rot: rnd(-.4, .4) }));
+        }
+        if (asc >= 1) for (let i = 0; i < 2; i++) pals.push({ x: card.x - s * (2 + i), tx: card.x - s * (.55 + i * .6), ph: i, crouch: 0, lean: .2, air: 0, flip: 0, fall: 0, arms: 0, run: true, amp: 1 });
+      },
+    };
+  };
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {

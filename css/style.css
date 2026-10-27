@@ -7498,6 +7498,57 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-stage.many .side-tornpaper::before { animation: none; }
 @keyframes torn-snip { 0% { transform: rotate(0); } 100% { transform: rotate(-14deg); } }
 @media (prefers-reduced-motion: reduce) { .side-tornpaper::before { animation: none; } }
+/* ------------------------------------------------------------------ Stickman (idée de Jguz01, 2026-10-27 ; sur Discord,
+   un bonhomme qui écrit les chiffres) : une page de cahier à spirale (papier crème, lignes bleues, marge rouge, trous
+   de la spirale en haut) ; les chiffres sont écrits au gros feutre noir, un peu penchés, comme à la main. Pendant le
+   tirage, ce ne sont que des esquisses au crayon gris qui tremblent (le trait « bout » comme dans un folioscope) ; un
+   chiffre qui se pose s'écrit de gauche à droite, au passage du bonhomme qui fonce devant lui, puis frétille et se pose.
+   Le bonhomme, ses traits de vitesse et ses célébrations : js/skinfx.js (SCENES.stickman). */
+.num-card.skin-stickman {
+  background:
+    /* trous de la spirale en haut */
+    radial-gradient(circle at 50% 55%, #44403c 0 .045em, #a8a29e .055em, transparent .07em) .12em 0 / .36em .2em repeat-x,
+    /* marge rouge */
+    linear-gradient(90deg, transparent .42em, rgba(239, 68, 68, .55) .42em .46em, transparent .46em),
+    /* lignes du cahier */
+    repeating-linear-gradient(180deg, transparent 0 .34em, rgba(96, 165, 250, .4) .34em .36em),
+    radial-gradient(ellipse 80% 70% at 30% 20%, #fffef9, transparent 80%),
+    linear-gradient(180deg, #fdfbf3, #f7f3e6);
+  border: 1px solid #d6d3d1; border-radius: .3rem; color: #111827;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), inset 0 -.2em .4em rgba(120, 113, 108, .12), 2px 3px 0 rgba(120, 113, 108, .35), 0 10px 18px rgba(0, 0, 0, .3);
+  padding: .55rem 1.2rem .5rem 1.5rem;
+}
+.skin-stickman .slot { position: relative; z-index: 1; width: .66em; color: #111827; font-weight: 700;
+  font-family: 'Marker Felt', 'Segoe Print', 'Chalkboard SE', 'Comic Sans MS', cursive; font-variant-numeric: normal;
+  text-shadow: 0 0 .02em rgba(17, 24, 39, .7), .01em .015em 0 rgba(17, 24, 39, .45); rotate: -3deg; }
+.skin-stickman .slot:nth-of-type(2n) { rotate: 2.5deg; translate: 0 .02em; }
+.skin-stickman .slot:nth-of-type(3n) { rotate: -1deg; translate: 0 -.02em; }
+.skin-stickman .slot.ghost { opacity: .2; }
+/* Pendant le tirage : une esquisse au crayon gris, le trait bout (trois positions, en saccades). */
+.skin-stickman .slot.spinning { opacity: 1; color: rgba(100, 116, 139, .5); text-shadow: .02em 0 0 rgba(100, 116, 139, .3); animation: stk-boil .27s steps(1) infinite; }
+.skin-stickman .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes stk-boil { 0% { transform: translate(.01em, 0) rotate(1deg); } 33% { transform: translate(-.015em, .01em) rotate(-1.5deg); } 66% { transform: translate(0, -.015em) rotate(.5deg) scale(1.02); } }
+/* Le chiffre s'écrit au feutre, de gauche à droite, au passage du bonhomme (penché par la vitesse), puis frétille. */
+.skin-stickman .slot.revealed { animation: stk-write .5s backwards; }
+@keyframes stk-write {
+  0% { clip-path: inset(-20% 100% -20% -20%); transform: skewX(-12deg); animation-timing-function: cubic-bezier(.3, .6, .4, 1); }
+  34% { clip-path: inset(-20% -20% -20% -20%); transform: skewX(-6deg) scale(1.06); animation-timing-function: ease-out; }
+  56% { transform: rotate(4deg) scale(.98); }
+  76% { transform: rotate(-2deg); }
+  100% { clip-path: inset(-20% -20% -20% -20%); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-stickman .slot { animation: none; } }
+/* Cadre de duel : une page de cahier ; ✏️ gribouille, 🏃 court sur place. */
+.side-stickman { --side-border: #94a3b8; --side-glow: 0 0 14px rgba(96, 165, 250, .2); --side-ink: #1f2937;
+  --side-bg: linear-gradient(90deg, transparent 18px, rgba(239, 68, 68, .35) 18px 20px, transparent 20px), repeating-linear-gradient(180deg, transparent 0 17px, rgba(96, 165, 250, .2) 17px 18px), linear-gradient(180deg, rgba(253, 251, 243, .16), rgba(247, 243, 230, .1));
+  --deco-a: '✏️'; --deco-b: '🏃'; }
+.side-stickman::before { animation: stk-scribble .6s steps(2) infinite; }
+.side-stickman::after { animation: stk-jog .4s steps(2) infinite; }
+@keyframes stk-scribble { 0% { transform: translate(0, 0) rotate(0); } 100% { transform: translate(3px, 1px) rotate(-8deg); } }
+@keyframes stk-jog { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+.room-stage.many .side-stickman::before, .room-stage.many .side-stickman::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-stickman::before, .side-stickman::after { animation: none; } }
+
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }

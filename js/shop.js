@@ -144,6 +144,8 @@
     { id: 'shipwake', name: 'Ship Wake', emoji: '🚢', price: 2200, desc: 'A little tugboat sails across the sea and every digit rises in the foam of its wake; great rolls bring dolphins and a whale', idea: '17black' },
     // Idée de 17black (2026-10-27) : du papier déchiré, et les chiffres dessous.
     { id: 'tornpaper', name: 'Torn Paper', emoji: '📜', price: 1200, desc: 'Brown paper covers every digit until it rips away to show a bold number on a yellow poster; great rolls tear the whole wrapping apart', idea: '17black' },
+    // Idée de Jguz01 (2026-10-27 ; sur Discord, un bonhomme qui écrit les chiffres) : il passe en courant devant chaque chiffre.
+    { id: 'stickman', name: 'Stickman', emoji: '🏃', price: 1600, desc: 'A doodled stick man sprints across a notebook page, and every digit gets written in marker as he runs past', idea: 'Jguz01' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;

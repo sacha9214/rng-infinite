@@ -1169,3 +1169,9 @@
   background: linear-gradient(100deg, #c49a5f 0 18%, #fbf7ec 18.5% 20%, transparent 20.5% 80%, #fbf7ec 80.5% 82%, #c49a5f 82.5%), radial-gradient(circle, rgba(236, 72, 153, .3) 0 1px, transparent 1.5px) 0 0 / 6px 6px, linear-gradient(160deg, #fde047, #f59e0b);
   --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #6b4423; }
 .btn-roll.gen-tornpaper:hover { filter: brightness(1.06); }
+/* Stickman (idée de Jguz01, 2026-10-27) : une page de cahier, lignes bleues et marge rouge, texte au feutre. */
+.btn-roll.gen-stickman { border: 2px solid #1f2937; border-radius: .35rem; color: #111827;
+  font-family: 'Marker Felt', 'Segoe Print', 'Chalkboard SE', 'Comic Sans MS', cursive;
+  background: linear-gradient(90deg, transparent 1.1em, rgba(239, 68, 68, .6) 1.1em 1.2em, transparent 1.2em), repeating-linear-gradient(180deg, transparent 0 .6em, rgba(96, 165, 250, .45) .6em .66em), #fdfbf3;
+  --gs: 3px 4px 0 #1f2937; --gs-h: 4px 6px 0 #1f2937; --gs-a: 1px 1px 0 #1f2937; }
+.btn-roll.gen-stickman:hover { transform: rotate(-1deg) translateY(-1px); }
