@@ -3986,6 +3986,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const free = who => run([['DEL', `gc:rl:${who.playerId}`]]); // lève le délai de 5 s sans attendre
+  // Grands tirages des tests précédents (annoncés dans le chat depuis le 2026-10-27) : retirés, pour compter juste ici.
+  run([['DEL', 'gc:sysq']]);
   // Lecture ouverte à tous, même sans joueur ; aucune info « me » alors.
   let r = await gc(null, 'gcList'); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual(r.body.msgs, []); assert.equal(r.body.me, undefined);
   r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } }); assert.equal(r.status, 200, 'visiteur inconnu du serveur : lit quand même'); assert.equal(r.body.me, undefined);
@@ -4146,6 +4148,142 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(ed, 'gcDelete', { id: mine.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === mine.id));
   assert.ok(r.body.msgs.some(m => m.id === theirs.id));
   assert.ok(!JSON.stringify(r.body).includes(ed.playerId) && !JSON.stringify(r.body).includes(ot.playerId), 'aucun identifiant');
+}
+
+// Chat global (2026-10-27) : réponses (idée de Niall), emojis (Deadshot), grands tirages annoncés par le serveur (R77)
+// et message épinglé par le créateur (Big Sexy). Aucune citation ne montre un texte supprimé ; aucun identifiant ne sort.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const wait = () => new Promise(res => setTimeout(res, 3));
+  const A = mk('6a', 'ReplyAnn'), B = mk('6b', 'ReplyBen'), boss = mk('6c', 'PinBoss', ['owner', '1']), seer = mk('6d', 'PinSeer', ['viewerGrant', '1']), modo = mk('6f', 'PinModo', ['gcMod', '1']);
+  const lucky = mk('5a', 'LuckyDiv'), lucky2 = mk('5b', 'LuckyTwo'), hush = mk('5f', 'LuckyHush');
+  run([['DEL', 'gc:sysq', 'gc:sysrl', 'gc:pin']]);
+  const msgOf = async (id, who = null) => (await gc(who, 'gcList')).body.msgs.find(m => m.id === id);
+
+  // Réponse : référence { id, pseudo, ~60 caractères }, l'auteur cité est prévenu (toMe + point rouge).
+  free(A); let r = await gc(A, 'gcSend', { text: 'hello there friends' }); const o1 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'hi Ann!', replyTo: o1.id }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const rep1 = r.body.msgs.at(-1);
+  assert.deepEqual(rep1.re, { id: o1.id, name: 'ReplyAnn', text: 'hello there friends' });
+  assert.equal((await msgOf(rep1.id, A)).toMe, true, 'l\'auteur cité le voit');
+  assert.equal((await gc(A, 'gcList')).body.me.lastAt, rep1.t, 'point rouge pour l\'auteur cité');
+  assert.ok(!(await msgOf(rep1.id, B)).toMe);
+  free(A); r = await gc(A, 'gcSend', { text: 'me again', replyTo: o1.id }); const self = r.body.msgs.at(-1); await wait();
+  assert.ok(!(await msgOf(self.id, A)).toMe, 'se répondre ne prévient personne');
+  // Citation coupée à 60 caractères.
+  free(A); r = await gc(A, 'gcSend', { text: 'a'.repeat(30) + ' ' + 'b'.repeat(69) }); const long = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'ok', replyTo: long.id }); const rep2 = r.body.msgs.at(-1); await wait();
+  assert.equal([...rep2.re.text].length, 61); assert.ok(rep2.re.text.endsWith('…'));
+  // Original modifié : la citation suit ; supprimé : « deleted », sans le texte.
+  r = await gc(A, 'gcEdit', { id: o1.id, text: 'hello there everyone' }); assert.equal(r.status, 200);
+  assert.equal((await msgOf(rep1.id)).re.text, 'hello there everyone');
+  r = await gc(A, 'gcDelete', { id: o1.id }); assert.equal(r.status, 200);
+  r = await gc(null, 'gcList'); assert.deepEqual(r.body.msgs.find(m => m.id === rep1.id).re, { id: o1.id, name: 'ReplyAnn', gone: true });
+  assert.ok(!JSON.stringify(r.body).includes('hello there'), 'aucun texte supprimé dans la liste');
+  // Original sorti des 100 derniers (retiré à la main) : texte gardé ; modifié avant d'en sortir : sa nouvelle version.
+  free(A); r = await gc(A, 'gcSend', { text: 'first version' }); const o2 = r.body.msgs.at(-1); await wait();
+  free(A); r = await gc(A, 'gcSend', { text: 'old but fine' }); const o3 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'reply two', replyTo: o2.id }); const rep3 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'reply three', replyTo: o3.id }); const rep4 = r.body.msgs.at(-1); await wait();
+  await gc(A, 'gcEdit', { id: o2.id, text: 'second version' });
+  for (const id of [o2.id, o3.id]) { const raw = run([['LRANGE', 'gc:msgs', 0, -1]])[0].result; run([['LREM', 'gc:msgs', '1', raw.find(x => JSON.parse(x).id === id)]]); }
+  assert.ok(!run([['LRANGE', 'gc:msgs', 0, -1]])[0].result.some(x => [o2.id, o3.id].includes(JSON.parse(x).id)));
+  assert.equal((await msgOf(rep3.id)).re.text, 'second version'); assert.equal((await msgOf(rep4.id)).re.text, 'old but fine');
+  // Message parti ou inconnu : refusé.
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'hm', replyTo: o2.id })).status, 404);
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'hm', replyTo: 'zz' })).status, 400);
+
+  // Épinglé : le créateur seul ; tout le monde le voit (même sans joueur, même « same ») ; suit les modifications ; retiré
+  // avec le message.
+  free(A); r = await gc(A, 'gcSend', { text: 'pin me please' }); const p1 = r.body.msgs.at(-1); await wait();
+  for (const who of [A, modo, seer]) assert.equal((await gc(who, 'gcPin', { id: p1.id })).status, 403, `pas ${who.name}`);
+  r = await gc(boss, 'gcPin', { id: p1.id }); assert.equal(r.status, 200); assert.deepEqual([r.body.pin.id, r.body.pin.name, r.body.pin.text], [p1.id, 'ReplyAnn', 'pin me please']);
+  r = await gc(null, 'gcList'); assert.equal(r.body.pin.text, 'pin me please');
+  r = await gc(seer, 'gcList', { rev: r.body.rev, del: r.body.del, since: r.body.msgs.at(-1).t }); assert.equal(r.body.same, true); assert.equal(r.body.pin.id, p1.id, 'lecteur : le voit');
+  assert.ok(!JSON.stringify(r.body.pin).includes(A.playerId) && r.body.pin.mine === undefined);
+  await gc(A, 'gcEdit', { id: p1.id, text: 'pin me pretty please' });
+  assert.equal((await gc(null, 'gcList')).body.pin.text, 'pin me pretty please', 'l\'épinglé suit la modification');
+  r = await gc(boss, 'gcUnpin'); assert.equal(r.body.pin, null);
+  await gc(boss, 'gcPin', { id: p1.id }); await gc(modo, 'gcDelete', { id: p1.id });
+  assert.equal((await gc(null, 'gcList')).body.pin, null, 'message supprimé : plus épinglé');
+  assert.equal((await gc(boss, 'gcPin', { id: p1.id })).status, 404);
+
+  // Grands tirages : Divine ou mieux, décidé par le serveur, affiché 15 s plus tard (ici avancé à la main).
+  const find = (ok, from = 0) => { let n = from; while (!ok(engine.analyze(n).tier)) n++; return n; };
+  const nDiv = find(t => t === 'divine'), nCel = find(t => t === 'celestial'), nGod = find(t => t === 'godlike');
+  const queued = () => run([['ZRANGE', 'gc:sysq', '0', '-1']])[0].result;
+  const due = () => { for (const m of queued()) run([['ZADD', 'gc:sysq', String(Date.now() - 1), m]]); };
+  await lib.recordRoll(lucky.playerId, nCel, Date.now()); assert.deepEqual(queued(), [], 'Celestial : pas annoncé dans le chat');
+  await wait(); const tDiv = Date.now(); await lib.recordRoll(lucky.playerId, nDiv, tDiv);
+  assert.equal(queued().length, 1); assert.ok(Number(run([['ZSCORE', 'gc:sysq', queued()[0]]])[0].result) >= tDiv + 15000, 'après la révélation');
+  r = await gc(null, 'gcList'); assert.ok(!r.body.msgs.some(m => m.sys), 'pas avant son heure');
+  due(); r = await gc(B, 'gcList'); const sys = r.body.msgs.at(-1);
+  assert.deepEqual([sys.sys, sys.name, sys.n, sys.tier, sys.text, sys.title, sys.mine, sys.toMe], ['roll', 'LuckyDiv', nDiv, 'divine', undefined, undefined, undefined, undefined]);
+  assert.deepEqual(queued(), [], 'publié une seule fois'); assert.equal((await gc(null, 'gcList')).body.msgs.filter(m => m.sys).length, 1);
+  assert.ok(!JSON.stringify(r.body).includes(lucky.playerId), 'aucun identifiant');
+  assert.equal(run([['GET', `gc:at:${lucky.playerId}`]])[0].result, null, 'jamais une mention');
+  // Limites : un toutes les 30 s pour tout le chat, un toutes les 10 min par joueur ; pas pour un joueur muet.
+  await lib.recordRoll(lucky2.playerId, nGod, Date.now()); assert.deepEqual(queued(), [], '30 s entre deux annonces');
+  assert.equal(run([['GET', `gc:sysp:${lucky2.playerId}`]])[0].result, null, 'son tour n\'est pas consommé');
+  run([['DEL', 'gc:sysrl']]); await lib.recordRoll(lucky.playerId, nGod, Date.now()); assert.deepEqual(queued(), [], '10 min par joueur');
+  run([['DEL', 'gc:sysrl'], ['SET', `gc:mute:${hush.playerId}`, '-1']]); await lib.recordRoll(hush.playerId, nDiv, Date.now()); assert.deepEqual(queued(), [], 'muet : rien');
+  run([['DEL', `gc:mute:${hush.playerId}`, 'gc:sysrl']]); await lib.recordRoll(hush.playerId, nDiv, Date.now()); assert.equal(queued().length, 1);
+  run([['SET', `gc:mute:${hush.playerId}`, '-1']]); due(); r = await gc(null, 'gcList');
+  assert.ok(!r.body.msgs.some(m => m.sys && m.name === 'LuckyHush'), 'muet entre-temps : rien'); assert.deepEqual(queued(), []);
+  run([['DEL', `gc:mute:${hush.playerId}`]]);
+  // Ni réponse, ni signalement, ni modification, ni silence ; un modérateur peut le supprimer.
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'wow', replyTo: sys.id })).status, 422);
+  assert.equal((await gc(B, 'gcReport', { id: sys.id })).status, 422);
+  assert.equal((await gc(lucky, 'gcEdit', { id: sys.id, text: 'hacked' })).status, 403);
+  assert.equal((await gc(boss, 'gcMute', { id: sys.id, dur: '1h' })).status, 422);
+  assert.equal(run([['GET', `gc:mute:${lucky.playerId}`]])[0].result, null);
+  assert.equal((await gc(lucky, 'gcDelete', { id: sys.id })).status, 403, 'pas son message');
+  assert.equal((await gc(modo, 'gcDelete', { id: sys.id })).status, 200);
+
+  // Emojis : gardés tels quels (composés compris), comptés en caractères ; le liant invisible ne cache pas un mot.
+  free(A); r = await gc(A, 'gcSend', { text: 'gg 🎉🔥 👍🏽 ❤️ 👨‍👩‍👧 🏳️‍🌈' }); assert.equal(r.status, 200); assert.equal(r.body.msgs.at(-1).text, 'gg 🎉🔥 👍🏽 ❤️ 👨‍👩‍👧 🏳️‍🌈');
+  assert.equal(checkMessage('😀'.repeat(200)), '😀'.repeat(200)); assert.throws(() => checkMessage('😀'.repeat(201)), /200 characters/);
+  assert.throws(() => checkMessage('f‍u‍c‍k'), /friendly/); assert.equal(checkMessage('a‍😀'), 'a 😀');
+  run([['DEL', 'gc:sysq', 'gc:sysrl']]);
+}
+// « About me » (idée de Niall, 2026-10-27, api/_bio.js par /api/profile) : 80 caractères, même filtre que le chat,
+// montré sur le profil ; signalable ; effacé par le créateur seul.
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 10, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const bio = (who, op, extra = {}) => call(profile, { method: 'POST', body: { action: 'bio', op, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `bio:rl:${who.playerId}`]]);
+  const kid = mk('4a', 'BioKid'), other = mk('4b', 'BioOther'), boss = mk('4e', 'BioBoss', ['owner', '1']), seer = mk('4f', 'BioSeer', ['viewerGrant', '1']);
+  let r = await bio(kid, 'set', { text: '  I love rolling 🎲 and   duels ' }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  r = await call(profile, { url: '/api/profile?name=biokid' }); assert.equal(r.status, 200); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  r = await call(profile, { url: '/api/profile?name=BioKid&lite=1' }); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  assert.equal((await call(profile, { url: '/api/profile?name=BioOther' })).body.bio, null);
+  assert.equal((await bio(kid, 'set', { text: 'again' })).status, 429, 'une modification toutes les 10 s');
+  for (const [t, re] of [['x'.repeat(81), /80 characters/], ['go to freecoins.com', /Links/], ['you fucking idiot', /friendly/], ['add me on snap', /personal info/], ['call 06 12 34 56 78', /personal info/]]) { free(kid); r = await bio(kid, 'set', { text: t }); assert.equal(r.status, 422, t); assert.match(r.body.error, re, t); }
+  free(kid); assert.equal((await bio(kid, 'set', { text: 'x'.repeat(80) })).status, 200, '80 caractères : accepté');
+  assert.equal((await call(profile, { method: 'POST', body: { action: 'bio', op: 'set', playerId: kid.playerId, secret: other.secret, text: 'x' } })).status, 403, 'secret vérifié');
+  // Muet dans le chat : pas d'« About me » non plus.
+  run([['SET', `gc:mute:${other.playerId}`, '-1']]); assert.equal((await bio(other, 'set', { text: 'hello' })).status, 403); run([['DEL', `gc:mute:${other.playerId}`]]);
+  // Effacer le sien : texte vide.
+  free(kid); r = await bio(kid, 'set', { text: '' }); assert.equal(r.body.bio, null); assert.equal((await call(profile, { url: '/api/profile?name=BioKid' })).body.bio, null);
+  free(kid); await bio(kid, 'set', { text: 'Cool kid 😎' });
+  // Signalement → Reports (where: 'about me'), sans identifiant.
+  assert.equal((await bio(kid, 'report', { name: 'BioKid' })).status, 422, 'pas soi-même');
+  assert.equal((await bio(kid, 'report', { name: 'BioOther' })).status, 404, 'rien à signaler');
+  r = await bio(other, 'report', { name: 'BioKid' }); assert.equal(r.status, 200); assert.ok(r.body.reported);
+  r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  const rep = r.body.reports.find(x => x.where === 'about me'); assert.ok(rep && rep.author === 'BioKid' && rep.text === 'Cool kid 😎');
+  assert.ok(!JSON.stringify(r.body).includes(kid.playerId));
+  // Effacé par le créateur seul (ni un joueur, ni un lecteur).
+  for (const who of [other, seer]) assert.equal((await bio(who, 'clear', { name: 'BioKid' })).status, 403);
+  assert.equal((await bio(boss, 'clear', { name: 'Nobody Here' })).status, 404);
+  r = await bio(boss, 'clear', { name: 'biokid' }); assert.equal(r.status, 200); assert.equal(r.body.cleared, true);
+  assert.equal((await call(profile, { url: '/api/profile?name=BioKid' })).body.bio, null);
+  assert.equal((await bio(boss, 'clear', { name: 'BioKid' })).status, 404, 'déjà effacé');
 }
 
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,

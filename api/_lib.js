@@ -548,6 +548,8 @@ async function recordRoll(playerId, n, t) {
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
+  // Divine ou mieux : annoncé dans le chat global par le serveur, un peu plus tard (idée de R77, 2026-10-27 ; api/_global.js).
+  if (['divine', 'godlike', 'infinite'].includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t).catch(() => {});
   return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 

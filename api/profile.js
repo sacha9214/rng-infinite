@@ -9,7 +9,9 @@ const AGG = new Map();
 const { awardsOf } = require('./_rank');
 // Photos de profil (2026-10-26, demandé par Sacha) : envoi, validation par le créateur et images, dans api/_avatar.js.
 const Avatar = require('./_avatar');
+const Bio = require('./_bio');
 
+const bioText = raw => { try { const b = raw ? JSON.parse(raw) : null; return b && b.x ? b.x : null; } catch (e) { return null; } };
 const BEST_LIMIT = 10;
 const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
 const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
@@ -17,6 +19,8 @@ const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method === 'POST' && (req.body || {}).action === 'avatar') return Avatar.handle(req, res);
+  // « About me » (idée de Niall, 2026-10-27) : écrire le sien, signaler ou (créateur) effacer celui d'un autre.
+  if (req.method === 'POST' && (req.body || {}).action === 'bio') return Bio.handle(req, res);
   await flushDue();
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
@@ -30,11 +34,11 @@ module.exports = async (req, res) => {
     // ?lite=1 (onglet Badges : mes succès et mon titre) : sans l'historique, qui peut prendre plusieurs secondes à
     // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).
     if (params.get('lite') === '1') {
-      const [shown, liteTitle] = await redis([['HGET', 'names', id], ['HGET', 'titles', id]]);
+      const [shown, liteTitle, liteBio] = await redis([['HGET', 'names', id], ['HGET', 'titles', id], ['HGET', 'bio', id]]);
       const lst = await readStats(id);
       // xp / rolls : les totaux à vie tenus par le serveur, affichés à l'accueil et dans Stats à la place des totaux de
       // l'appareil, qui ne gardent qu'une partie des tirages (« Stats bug » sur Discord, 2026-10-26).
-      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0 });
+      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0, bio: bioText(liteBio) });
     }
 
     // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil
@@ -45,7 +49,7 @@ module.exports = async (req, res) => {
     // sinon chaque gros profil recalculait ses 100 000 tirages juste après la mise à jour et ralentissait tout le monde.
     if (!AGG.has(id)) { try { const [raw] = await redis([['GET', paggKey(id)]]); if (raw) AGG.set(id, JSON.parse(raw)); } catch (e) { /* recalculé */ } }
     const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
-    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize] = await redis([
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize, bioRaw] = await redis([
       cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
@@ -58,6 +62,7 @@ module.exports = async (req, res) => {
       ['HGET', 'skins', id], // skin équipé : le meilleur tirage s'affiche avec, en tête du profil
       ['HGET', statsKey(id), 'discordName'],
       ['ZCARD', historyKey(id)],
+      ['HGET', 'bio', id], // « About me » (idée de Niall, 2026-10-27, api/_bio.js)
     ]);
     // Clan du joueur (api/_clan.js) : tag, nom et emoji, affichés sous son nom.
     const [cid] = await redis([['HGET', 'clanof', id]]);
@@ -151,7 +156,7 @@ module.exports = async (req, res) => {
       inventory: { skins: (ownedSkins || []).filter(k => k !== 'owner'), walls: ownedWalls || [] },
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé
-      title: title || null, clan,
+      title: title || null, clan, bio: bioText(bioRaw),
       top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
       questBest: Number(stats.qsBest) || 0,
