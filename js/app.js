@@ -294,6 +294,15 @@
   const tierPill = tier => `<span class="pill" data-tier="${tier}">${TIER_LABEL[tier] || tier}</span>`;
 
   // "Top x %" / "Bottom x %" arrondi et coloré selon le percentile, comme l'écran de résultat d'origine.
+  // Sous l'XP d'un tirage : combien il manquait pour la rareté suivante (idée de daddy finger, 2026-10-27), avec les
+  // vrais seuils de la table des percentiles. Rien pour Infinite. Un seul nœud texte, pour la traduction (js/i18n.js).
+  function tierShortHTML(a) {
+    const nx = Engine.nextTier(a.total);
+    if (!nx) return '';
+    const name = TIER_LABEL[nx.tier] || nx.tier;
+    return `<div class="tier-short invisible" id="r-short" data-tier="${nx.tier}">↑ ${fmt(nx.short)} XP short of ${esc(name[0].toUpperCase() + name.slice(1))}</div>`;
+  }
+
   function percentileHTML(p) {
     // Jamais « <1 % » : sous 1 %, le chiffre exact (0,4 %, 0,05 %, 0,001 %).
     const text = p >= 50 ? `Top ${precisePct(100 - p)}%` : `Bottom ${precisePct(p)}%`;
@@ -2543,6 +2552,7 @@
           </div>${Shop.resolve(Store.settings.skin) === 'slots' ? LEVER : ''}</div>
           <div class="result-meta invisible" id="r-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
           <div class="ep-big pending" id="r-ep">??? XP</div>
+          ${tierShortHTML(a)}
           ${ctx.online && !ctx.replay ? coinsTagHTML(ctx.online, a.tier) : ''}
           ${ctx.previous.length && !ctx.replay ? `<div class="dup-tag" id="r-dup" hidden>🔁 Duplicate! <span>rolled ${plural(ctx.previous.length + 1, 'time')}</span></div>` : ''}
           <div class="lifetime invisible" id="r-life"${ctx.replay ? ' hidden' : ''}>
@@ -2676,7 +2686,7 @@
       // Compte Google associé avant que le bonus existe : il arrive avec ce tirage.
       if (ctx.online && ctx.online.googleBonus) setTimeout(() => { toast(`🪙 +${ctx.online.googleBonus} coins for linking your Google account`, 5000, 'achv'); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + ctx.online.googleBonus); }, 1200);
     });
-    step(REVEAL.stats, () => { show($('#r-meta'), 'pop-in'); const dup = $('#r-dup'); if (dup) { dup.hidden = false; dup.classList.add('pop-in'); } }); // « Duplicate! » (idée de MereTera, 2026-10-18)
+    step(REVEAL.stats, () => { show($('#r-meta'), 'pop-in'); { const sh = $('#r-short'); if (sh) show(sh, 'fade-in'); } const dup = $('#r-dup'); if (dup) { dup.hidden = false; dup.classList.add('pop-in'); } }); // « Duplicate! » (idée de MereTera, 2026-10-18)
     step(REVEAL.lifetimeShow, () => show($('#r-life'), 'fade-in'));
     step(REVEAL.lifetimePause, quick => {
       const delta = $('#r-life-delta');

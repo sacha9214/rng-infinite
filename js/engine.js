@@ -775,10 +775,24 @@
       return found < 0 ? 0 : percentiles[found][1];
     }
 
+    const tierOfPct = p => { for (const [limit, tier] of CARD_TIERS) if (p < limit) return tier; return 'infinite'; };
     function cardTier(total) {
-      const p = percentileOf(total);
-      for (const [limit, tier] of CARD_TIERS) if (p < limit) return tier;
-      return 'infinite';
+      return tierOfPct(percentileOf(total));
+    }
+
+    // Rareté suivante et XP qui manquait pour l'atteindre (idée de daddy finger, 2026-10-27) : la rareté ne change qu'aux
+    // scores de la table des percentiles, donc le seuil est la première entrée de la table d'une rareté au-dessus.
+    // null pour Infinite (rien au-dessus) ou sans table.
+    function nextTier(total) {
+      if (!pctKeys.length) return null;
+      const rank = TIER_ORDER.indexOf(cardTier(total));
+      let lo = 0, hi = pctKeys.length; // première clé > total
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (pctKeys[mid] <= total) lo = mid + 1; else hi = mid; }
+      for (let i = lo; i < percentiles.length; i++) {
+        const tier = tierOfPct(percentiles[i][1]);
+        if (TIER_ORDER.indexOf(tier) > rank) return { tier, at: pctKeys[i], short: pctKeys[i] - total };
+      }
+      return null;
     }
 
     // Analyse complète pour l'affichage.
@@ -837,7 +851,7 @@
       return null;
     }
 
-    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
+    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
   }
 
   function formatPct(v) {

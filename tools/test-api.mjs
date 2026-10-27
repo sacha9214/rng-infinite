@@ -4441,4 +4441,100 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await call(profile, { method: 'POST', body: { action: 'avatar', op: 'mine', playerId: kid.playerId, secret: other.secret } })).status, 403, 'secret vérifié');
 }
 
+// ================================================================ Badges des idées du 2026-10-27
+{
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  const scoring = (n, id) => engine.analyze(n).scoringIds.includes(id);
+  // Famille FOREVER (daddy finger) : seul le meilleur compte.
+  assert.ok(has(224, 'FOREVER_EXACT') && has(224224, 'FOREVER_AND_EVER') && has(31224, 'FOREVER'));
+  assert.ok(scoring(224224, 'FOREVER_AND_EVER') && !scoring(224224, 'FOREVER'), 'un seul badge de la famille compte');
+  assert.ok(!has(2224, 'FOREVER_EXACT') && !has(224225, 'FOREVER_AND_EVER'));
+  // Jumbo Jet Set dans la famille JET, avec Jumbo Jet.
+  assert.ok(scoring(747747, 'JUMBO_JET_SET') && !scoring(747747, 'JET_747'));
+  for (const [n, id] of [[1987, 'YEAR_1987_EXACT'], [519870, 'YEAR_1987'], [505, 'FIVE_OH_FIVE_EXACT'], [15050, 'FIVE_OH_FIVE'], [190210, 'BEVERLY_HILLS'],
+    [17380, 'SEVENTEEN_38'], [24, 'AROUND_THE_CLOCK'], [104, 'SUMMER_BREAK'], [124142, 'SILVER_RATIO_5'], [32414, 'SILVER_RATIO_4']]) assert.ok(has(n, id), `${id} sur ${n}`);
+  assert.ok(!has(240, 'AROUND_THE_CLOCK') && !has(1040, 'SUMMER_BREAK') && !scoring(124142, 'SILVER_RATIO_4'));
+  // Narcissiques (Kag) : la liste exacte, recalculée.
+  // Contexte réduit (n, s, L, d) : parcourir le million avec analyze() prendrait une minute.
+  const quick = id => { const ck = engine.byId.get(id).check, out = []; for (let n = 0; n <= 1000000; n++) { const s = String(n); if (ck({ n, s, L: s.length, d: [...s].map(Number) })) out.push(n); } return out; };
+  const narc = quick('NARCISSISTIC');
+  assert.deepEqual(narc, [153, 370, 371, 407, 1634, 8208, 9474, 54748, 92727, 93084, 548834]);
+  // Quantum Chaos (qwertyuiop) : premier, 4 chiffres ou plus, aucun chiffre répété.
+  assert.ok(has(1237, 'QUANTUM_CHAOS') && has(102359, 'QUANTUM_CHAOS'));
+  assert.ok(!has(1223, 'QUANTUM_CHAOS') && !has(1231, 'QUANTUM_CHAOS') && !has(1234, 'QUANTUM_CHAOS') && !has(137, 'QUANTUM_CHAOS'));
+  // Leap Day (Kag) : 0229AA, 2902AA, AA0229 avec AA multiple de 4 → 75 nombres, les 25 anciens restent.
+  const leap = quick('LEAP_DAY');
+  for (const n of [22924, 290224, 240229]) assert.ok(has(n, 'LEAP_DAY'));
+  assert.equal(leap.length, 75);
+  for (const n of [22900, 22924, 22996, 290200, 290224, 290296, 229, 40229, 240229, 960229]) assert.ok(leap.includes(n), `Leap Day ${n}`);
+  for (const n of [290201, 290300, 250229, 10229, 22925]) assert.ok(!leap.includes(n), `pas Leap Day ${n}`);
+}
+
+// ================================================================ Rareté suivante (XP qui manquait) et titres du 2026-10-27
+{
+  // nextTier : le seuil rendu fait passer à la rareté suivante, un XP de moins ne suffit pas ; rien pour Infinite.
+  const rankOf = t => engine.TIER_ORDER.indexOf(t);
+  for (const n of [0, 7, 13, 99, 1234, 22924, 54321, 123456, 500000, 777777, 999999, 1000000]) {
+    const total = engine.scoreOf(n), cur = engine.cardTier(total), nx = engine.nextTier(total);
+    if (cur === 'infinite') { assert.equal(nx, null, `rien au-dessus d'Infinite (${n})`); continue; }
+    assert.ok(nx && nx.short > 0 && nx.at === total + nx.short, `seuil de ${n}`);
+    assert.equal(rankOf(nx.tier), rankOf(cur) + 1, `rareté juste au-dessus pour ${n} (${cur} → ${nx.tier})`);
+    assert.equal(engine.cardTier(nx.at), nx.tier); assert.equal(engine.cardTier(nx.at - 1), cur);
+  }
+  assert.equal(engine.nextTier(engine.scoreOf(24)), null, '24 est Infinite');
+
+  const { COLLECTION_SETS, COLLECTION_VERSION, recordRoll, readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const unlocked = st => Ach.unlocked(st);
+  // Titres simples, lus sur les stats.
+  assert.ok(unlocked({ xpLife: 1e10 }).includes('decabillionaire') && !unlocked({ xpLife: 9999999999 }).includes('decabillionaire'));
+  assert.ok(unlocked({ clanDonated: 100000 }).includes('clanbenefactor') && !unlocked({ clanDonated: 99999 }).includes('clanbenefactor'));
+  assert.ok(unlocked({ clanDonated: 1000000 }).includes('clanpillar'));
+  // Pièces gagnées en jouant : tirages (après rendements décroissants) + duels + Weekend Rush ; ni casino ni cadeaux.
+  assert.ok(unlocked({ 't:common': 10000 }).includes('piggybank'), '10 000 Common = 10 000 pièces');
+  assert.ok(!unlocked({ 't:common': 10000, rollCut: 1 }).includes('piggybank'), 'la part retenue ne compte pas');
+  assert.ok(unlocked({ 't:common': 9000, rushBonus: 1000 }).includes('piggybank'), 'le Weekend Rush compte');
+  assert.ok(!unlocked({ bonus: 5e6, gWon: 5e6, giftIn: 1e6 }).includes('piggybank'), 'casino et cadeaux ne comptent pas');
+  assert.ok(unlocked({ 't:mythic': 1000 }).includes('moneymaker') && unlocked({ 't:mythic': 10000 }).includes('coinmachine'));
+
+  // Collections par rareté : jamais un badge plus rare que sa couleur (Important Birthday est Rare mais un seul nombre).
+  assert.deepEqual(Ach.COLLECT.map(([t]) => t), ['common', 'uncommon', 'rare', 'epic', 'anomaly']);
+  for (const id of ['IMPORTANT_BIRTHDAY', 'NATURAL_EXACT', 'RTX_5090_EXACT']) assert.ok(!COLLECTION_SETS.rare.includes(id), `${id} hors des Rare`);
+  for (const [t, ids] of Object.entries(COLLECTION_SETS)) { assert.ok(ids.length > 10, t); for (const id of ids) assert.ok(engine.byId.has(id)); }
+  assert.ok(COLLECTION_SETS.common.includes('ODD') && COLLECTION_SETS.anomaly.includes('NARCISSISTIC'));
+
+  const col = { playerId: 'd8'.repeat(8), secret: 'd9'.repeat(16), name: 'Collecty' };
+  db.delete(`cooldown:${col.playerId}`); assert.equal((await call(roll, { method: 'POST', body: col })).status, 200);
+  let st = await readStats(col.playerId);
+  assert.equal(st.colv, COLLECTION_VERSION, 'version posée');
+  assert.ok(!unlocked(st).includes('colcommon') || COLLECTION_SETS.common.every(id => run([['SISMEMBER', `badges:${col.playerId}`, id]])[0].result === 1));
+  // Ancien joueur qui a déjà tous les Common : obtenu à la première lecture après la mise à jour (version différente).
+  run([['SADD', `badges:${col.playerId}`, ...COLLECTION_SETS.common], ['HSET', `stats:${col.playerId}`, 'colv', 'old']]);
+  st = await readStats(col.playerId);
+  assert.ok(unlocked(st).includes('colcommon'), 'Common Collector');
+  // Un badge neuf venu d'un tirage complète les Uncommon (sans changement de version).
+  const last = COLLECTION_SETS.uncommon.find(id => { for (let n = 1000; n < 200000; n++) if (engine.analyze(n).earnedIds.includes(id)) return true; return false; });
+  let lastN = 1000; while (!engine.analyze(lastN).earnedIds.includes(last)) lastN++;
+  run([['SADD', `badges:${col.playerId}`, ...COLLECTION_SETS.uncommon.filter(id => id !== last)], ['SREM', `badges:${col.playerId}`, last]]);
+  st = await readStats(col.playerId); assert.ok(!unlocked(st).includes('coluncommon'), 'il en manque un');
+  const done = await recordRoll(col.playerId, lastN, Date.now());
+  assert.ok(done.achievements.includes('coluncommon'), `Uncommon Admirer avec ${last} (${lastN})`);
+  // Jamais retiré : un badge ajouté plus tard (nouvelle version) ne reprend rien.
+  run([['SREM', `badges:${col.playerId}`, last], ['HSET', `stats:${col.playerId}`, 'colv', 'old']]);
+  st = await readStats(col.playerId); assert.ok(unlocked(st).includes('coluncommon') && unlocked(st).includes('colcommon'));
+
+  // Sound Collector et Shopaholic : posés à la lecture de la boutique, pour les joueurs qui avaient déjà tout.
+  const Shop = require(path.join(ROOT, 'js/shop.js')), shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const shopState = () => call(shopApi, { url: `/api/shop?me=${col.playerId}` });
+  run([['SADD', `snds:${col.playerId}`, ...Shop.collectibleSets.sounds()]]);
+  assert.equal((await shopState()).status, 200);
+  st = await readStats(col.playerId); assert.ok(unlocked(st).includes('allsounds') && !unlocked(st).includes('shopaholic'));
+  run([['SADD', `skins:${col.playerId}`, ...Shop.collectible()], ['SADD', `btns:${col.playerId}`, ...Shop.collectibleSets.buttons()],
+    ['SADD', `emotes:${col.playerId}`, ...Shop.collectibleSets.emotes()], ['SADD', `walls:${col.playerId}`, ...Shop.collectibleSets.walls()],
+    ['HSET', `stats:${col.playerId}`, 'speedLv', Shop.SPEED.prices.length - 1]]);
+  await shopState(); st = await readStats(col.playerId); assert.ok(!unlocked(st).includes('shopaholic'), 'une amélioration manque');
+  run([['HSET', `stats:${col.playerId}`, 'speedLv', Shop.SPEED.prices.length]]);
+  await shopState(); st = await readStats(col.playerId); assert.ok(unlocked(st).includes('shopaholic'), 'tout possédé');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

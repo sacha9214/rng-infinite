@@ -446,6 +446,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .result-meta { display: flex; align-items: center; gap: .6rem; margin-top: 1rem; min-height: 1.5rem; font-size: .8rem; font-weight: 600; letter-spacing: .03em; }
 .result-meta .dot { color: var(--prose-3); }
 .result-meta .top { color: var(--t-accent); }
+/* XP qui manquait pour la rareté suivante (idée de daddy finger, 2026-10-27) : discret, sous l'XP. */
+.tier-short { margin-top: .4rem; max-width: 100%; padding: 0 .5rem; text-align: center; font: 600 .74rem var(--font-mono); letter-spacing: .02em; color: var(--prose-2); overflow-wrap: anywhere; }
 .fade-in { animation: fadein .45s ease both; }
 @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ep-big {
