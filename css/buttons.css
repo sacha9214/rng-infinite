@@ -1128,3 +1128,11 @@
   --gs: 5px 5px 0 #0a0a0a, 0 0 18px rgba(236, 72, 153, .3); --gs-h: 7px 7px 0 #0a0a0a, 0 0 28px rgba(236, 72, 153, .5); --gs-a: 1px 1px 0 #0a0a0a;
 }
 .btn-roll.gen-comicbook:hover { transform: rotate(-1.5deg) scale(1.03); }
+
+/* ==== Skins du 2026-10-27, lot B ==== boutons assortis */
+/* Baseball (idée de Kj13, 2026-10-27) : le cuir crème d'une balle et ses coutures rouges sur les bords. */
+.btn-roll.gen-baseball { border: 2px solid #a8a29e; border-radius: 999px; color: #1e3a8a;
+  background: radial-gradient(ellipse 40% 140% at -8% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), radial-gradient(ellipse 40% 140% at 108% 50%, transparent 70%, #dc2626 71% 74%, transparent 75%), linear-gradient(180deg, #fbf8f1, #e5dcc6);
+  text-shadow: 0 1px 0 #fff;
+  --gs: 0 .3em 0 #78716c, 0 .5em 1em rgba(220, 38, 38, .2); --gs-h: 0 .34em 0 #78716c, 0 .7em 1.3em rgba(220, 38, 38, .35); --gs-a: 0 .06em 0 #78716c; }
+.btn-roll.gen-baseball:hover { filter: brightness(1.04); }

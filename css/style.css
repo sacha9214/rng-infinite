@@ -7382,3 +7382,57 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Lecture seule (viewer) : pas de boutons d'action dans les onglets Avatars et Chat (2026-10-26) */
 .o-readonly [data-av-ok], .o-readonly [data-av-no], .o-readonly [data-av-rm], .o-readonly .av-moves, .o-readonly [data-gc-mod], .o-readonly [data-gc-unmute], .o-readonly .gc-mod-add { display: none !important; }
 .o-readonly .ann-form, .o-readonly [data-ann-del] { display: none !important; }
+
+/* ==== Skins du 2026-10-27, lot B ==== Baseball, Race Car, Domino, Lily Pads, Ripple, Bullet Train, Orbital Cannon.
+   Leurs scènes (balles, monoplace, sac de dominos, grenouille, gouttes, train, rayons) : js/skinfx.js, même lot. */
+/* ------------------------------------------------------------------ Baseball (idée de Kj13, 2026-10-27 ; finnnnn aussi) :
+   le cuir d'une balle de baseball (blanc crème, grain fin, reflet), deux coutures rouges en arc sur les côtés ; chiffres
+   à l'encre bleu marine. La scène change un 0 en balle (.bsb-ball) et un 1 en batte debout (.bsb-bat), idée de Kj13.
+   Tirage : les chiffres tournent comme une balle lancée ; un chiffre qui se pose : il arrive de la gauche en tournant,
+   claque (flash, choc rigide : matière dure, pas d'écrasement), recule d'un rien et se pose. */
+.num-card.skin-baseball {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 60'><path d='M1 -2C15 15 15 45 1 62' fill='none' stroke='%23b91c1c' stroke-width='.8'/><path d='M1 -2C15 15 15 45 1 62' fill='none' stroke='%23dc2626' stroke-width='4.4' stroke-dasharray='1.4 2.6'/></svg>") 0 50% / auto 100% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 60'><path d='M29 -2C15 15 15 45 29 62' fill='none' stroke='%23b91c1c' stroke-width='.8'/><path d='M29 -2C15 15 15 45 29 62' fill='none' stroke='%23dc2626' stroke-width='4.4' stroke-dasharray='1.4 2.6'/></svg>") 100% 50% / auto 100% no-repeat,
+    radial-gradient(ellipse 60% 80% at 32% 20%, rgba(255, 255, 255, .75), transparent 62%),
+    radial-gradient(circle at 30% 40%, rgba(120, 113, 108, .1) 0 .025em, transparent .035em) 0 0 / .16em .16em,
+    linear-gradient(180deg, #fbf8f1, #eee6d4 68%, #d8cdb5);
+  border: 2px solid #a8a29e; border-radius: .7rem; color: #1e3a8a;
+  box-shadow: inset 0 -.2em .5em rgba(120, 113, 108, .3), inset 0 0 0 1px rgba(255, 255, 255, .6), 0 0 14px rgba(220, 38, 38, .15), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-baseball .slot { position: relative; z-index: 1; color: #1e3a8a; font-weight: 900; text-shadow: 0 1px 0 rgba(255, 255, 255, .8), 0 -1px 0 rgba(30, 58, 138, .15); }
+.skin-baseball .slot.bsb-ball, .skin-baseball .slot.bsb-bat { color: transparent; text-shadow: none; }
+.skin-baseball .slot.bsb-ball { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><radialGradient id='g' cx='.35' cy='.32' r='.75'><stop offset='0' stop-color='%23fff'/><stop offset='.7' stop-color='%23efe9dc'/><stop offset='1' stop-color='%23c9c0ac'/></radialGradient></defs><circle cx='20' cy='20' r='17.5' fill='url(%23g)' stroke='%231e3a8a' stroke-width='3'/><path d='M9 7C15 14 15 26 9 33M31 7C25 14 25 26 31 33' fill='none' stroke='%23dc2626' stroke-width='2.6' stroke-dasharray='1.6 1.6'/></svg>") 50% 56% / .62em .62em no-repeat; }
+.skin-baseball .slot.bsb-bat { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 60'><defs><linearGradient id='w' x1='0' x2='1'><stop offset='0' stop-color='%238a5a2b'/><stop offset='.45' stop-color='%23e9c58a'/><stop offset='1' stop-color='%239a6630'/></linearGradient></defs><path d='M5.6 56V30C5.6 22 3 14 3 6C3 2 5 1 7 1S11 2 11 6C11 14 8.4 22 8.4 30V56Z' fill='url(%23w)' stroke='%231e3a8a' stroke-width='1.3'/><rect x='5.4' y='44' width='3.2' height='12' fill='%231f2937'/><ellipse cx='7' cy='57' rx='3.6' ry='1.8' fill='%231e3a8a'/></svg>") 50% 60% / .4em .86em no-repeat; }
+.skin-baseball .slot.spinning { color: rgba(30, 58, 138, .45); animation: bsb-spin .14s linear infinite; }
+.skin-baseball .slot.spinning:nth-of-type(2n) { animation-delay: -.07s; }
+@keyframes bsb-spin { from { transform: translateX(-.05em) rotate(-30deg); filter: blur(.4px); } to { transform: translateX(.05em) rotate(30deg); filter: blur(.9px); } }
+.skin-baseball .slot.revealed { animation: bsb-thwack .6s backwards; }
+@keyframes bsb-thwack {
+  0% { transform: translate(-.32em, -.22em) scale(.55) rotate(-220deg); filter: blur(1px); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  22% { transform: translate(.04em, 0) scale(1.16) rotate(0); filter: brightness(1.45) drop-shadow(0 0 .12em #fff); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  36% { transform: translate(-.03em, 0) scale(.96); filter: none; }
+  52% { transform: translate(.015em, 0) scale(1.02); }
+  72% { transform: scale(.995); }
+  100% { transform: none; }
+}
+.skin-baseball .slot.bsb-bat.revealed { transform-origin: 50% 90%; animation: bsb-stand .6s backwards; }
+@keyframes bsb-stand {
+  0% { transform: translateY(-.1em) rotate(-95deg); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  26% { transform: rotate(9deg); filter: brightness(1.3); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  44% { transform: rotate(-5deg); filter: none; }
+  62% { transform: rotate(2deg); }
+  80% { transform: rotate(-.8deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-baseball .slot { animation: none; } }
+/* Cadre de duel : un terrain le soir, bandes de gazon tondu, le losange de terre en bas ; ⚾ sautille, 🧢 hoche. */
+.side-baseball { --side-border: #dc2626; --side-glow: 0 0 16px rgba(220, 38, 38, .25); --side-ink: #1e3a8a;
+  --side-bg: radial-gradient(ellipse 55% 35% at 50% 108%, rgba(180, 120, 60, .4), transparent 70%), repeating-linear-gradient(90deg, rgba(34, 197, 94, .13) 0 22px, rgba(22, 163, 74, .2) 22px 44px), radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255, 255, 255, .12), transparent 70%);
+  --deco-a: '⚾'; --deco-b: '🧢'; }
+.side-baseball::before { animation: bsb-hop 1.6s cubic-bezier(.3, 0, .7, 1) infinite; }
+.side-baseball::after { transform-origin: 50% 100%; animation: bsb-nod 2.4s ease-in-out infinite; }
+@keyframes bsb-hop { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-7px) rotate(180deg); } 55% { transform: translateY(-7px) rotate(200deg); } }
+@keyframes bsb-nod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-10deg); } }
+.room-stage.many .side-baseball::before, .room-stage.many .side-baseball::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-baseball::before, .side-baseball::after { animation: none; } }

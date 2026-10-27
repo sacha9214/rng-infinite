@@ -249,6 +249,8 @@
     'A rocket blasts off behind every digit and launches it into place; great rolls end in fireworks': 'Une fusée décolle derrière chaque chiffre et le propulse à sa place ; les grands tirages finissent en feu d\'artifice',
     'Every digit is a sushi roll that spins, then plops onto the board with a splash of soy; on a Mythic a giant roll bursts into rice': 'Chaque chiffre est un maki qui tourne, puis tombe sur la planche dans une éclaboussure de soja ; sur un Mythic, un maki géant éclate en riz',
     'Every digit lands with a POW! in a halftone comic panel, and rare rolls end in a KA-BOOM! with panels slamming around your number': 'Chaque chiffre tombe avec un POW! dans une case de BD tramée, et les tirages rares finissent en KA-BOOM! avec des cases qui claquent autour de ton nombre',
+    // Skins du 2026-10-27, lot B
+    'Every digit is pitched in and lands with a thwack; a 0 turns into a baseball and a 1 into a bat, and Mythic rolls are a HOME RUN': 'Chaque chiffre est lancé comme une balle et claque en arrivant ; un 0 devient une balle de baseball et un 1 une batte, et les Mythic sont un HOME RUN',
     'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE': 'Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE',
     'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone': 'Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue',
     'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more': 'Un écran de téléphone qui bugue pendant le tirage ; chaque chiffre frappe la vitre et la fissure un peu plus',

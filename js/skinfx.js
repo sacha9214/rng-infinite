@@ -4982,6 +4982,129 @@
     };
   };
 
+  // ==== Skins du 2026-10-27, lot B ====
+  // Baseball, Race Car, Domino, Lily Pads, Ripple, Bullet Train, Orbital Cannon : idées de joueurs acceptées par Sacha.
+  // Texte épais cerné (annonces des scènes du lot : HOME RUN!, DNF, DOMINO!…). font : police canvas, SIZE remplacé.
+  const bWord = (c, s, x, y, size, fill, stroke, a, rot = 0, font = "900 SIZEpx 'Arial Black', Impact, system-ui, sans-serif") => {
+    if (a <= .01 || size < 2) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot);
+    c.font = font.replace('SIZE', Math.round(size)); c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    c.lineWidth = Math.max(2, size * .2); c.strokeStyle = stroke; c.strokeText(s, 0, 0);
+    c.fillStyle = fill; c.fillText(s, 0, 0); c.restore();
+  };
+  // La case (span.slot) qui se trouve au point p du calque extérieur : la plus proche en x (lock ne donne qu'un point).
+  const bSlotAt = (env, p) => {
+    const cr = env.el.getBoundingClientRect(), k = env.card.w / (cr.width || env.card.w);
+    let best = null, d = Infinity;
+    for (const s of env.el.querySelectorAll('.slot')) { const r = s.getBoundingClientRect(), dd = Math.abs(env.card.x + (r.left + r.width / 2 - cr.left) * k - p.x); if (dd < d) { d = dd; best = s; } }
+    return best;
+  };
+  // Point du calque intérieur (dans la carte, derrière les chiffres) qui correspond au point p du calque extérieur.
+  const bInner = (env, p) => { const b = (env.card.w - env.w) / 2; return { x: p.x - env.card.x - b, y: p.y - env.card.y - b }; };
+
+  // ⚾ Baseball (2026-10-27, idée de Kj13 ; finnnnn l'avait proposé aussi) — à chaque chiffre, une balle est lancée depuis
+  // la gauche et vient claquer sur lui (« each ball is thrown to the number », finnnnn) ; un 0 devient une balle de
+  // baseball et un 1 une batte debout (Kj13). Avant le dernier chiffre une batte se met en garde à droite de la carte ;
+  // à la révélation elle frappe : BASE HIT, DOUBLE!, TRIPLE!, et dès Mythic un HOME RUN! (la balle file au loin, feu
+  // d'artifice et flashs du stade) ; tirage raté : elle rate la balle, STRIKE!.
+  SCENES.baseball = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2;
+    const pitches = timed(), pops = timed(), swings = timed(), words = timed(), shells = timed(), bulbs = timed(), dust = particles(), sparks = particles();
+    const RED = '#dc2626', NAVY = '#1e3a8a', BURST = ['#f8fafc', '#ef4444', '#3b82f6', '#facc15'];
+    const P = { x: card.x + card.w + H * .55, y: card.y + H * .25 }, LEN = H * 1.15; // les mains du batteur (hors champ), la batte
+    let bat = 0, batTo = 0, batAng = -.85, swing = null, now = 0;
+    const ball = (x, y, r, rot, a) => { // cuir blanc ombré, deux coutures rouges
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      const g = co.createRadialGradient(-r * .35, -r * .35, r * .1, 0, 0, r); g.addColorStop(0, '#ffffff'); g.addColorStop(.7, '#f1ede4'); g.addColorStop(1, '#bdb5a3');
+      co.fillStyle = g; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill();
+      co.strokeStyle = RED; co.lineWidth = Math.max(1, r * .14); co.lineCap = 'round';
+      co.beginPath(); co.arc(-r * 1.3, 0, r * .9, -.72, .72); co.stroke(); co.beginPath(); co.arc(r * 1.3, 0, r * .9, Math.PI - .72, Math.PI + .72); co.stroke();
+      co.strokeStyle = 'rgba(30,41,59,.55)'; co.lineWidth = Math.max(.7, r * .08); co.beginPath(); co.arc(0, 0, r, 0, TAU); co.stroke();
+      co.restore();
+    };
+    const drawBat = (ang, a) => { // une batte en frêne : poignée gainée, pommeau, tonneau large (axe +x depuis les mains)
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a; co.translate(P.x, P.y); co.rotate(ang);
+      const L = LEN, wd = L * .075, g = co.createLinearGradient(0, -wd, 0, wd);
+      g.addColorStop(0, '#f6e0b0'); g.addColorStop(.45, '#d6a461'); g.addColorStop(1, '#8a5a2b');
+      co.fillStyle = g; co.strokeStyle = '#4a2c12'; co.lineWidth = Math.max(1, L * .018); co.lineJoin = 'round';
+      co.beginPath(); co.moveTo(-L * .04, -wd * .5); co.lineTo(L * .4, -wd * .45); co.quadraticCurveTo(L * .6, -wd * .55, L * .72, -wd); co.lineTo(L * .95, -wd); co.quadraticCurveTo(L * 1.01, 0, L * .95, wd); co.lineTo(L * .72, wd); co.quadraticCurveTo(L * .6, wd * .55, L * .4, wd * .45); co.lineTo(-L * .04, wd * .5); co.closePath(); co.fill(); co.stroke();
+      co.fillStyle = '#1f2937'; co.fillRect(0, -wd * .5, L * .22, wd);
+      co.fillStyle = '#4a2c12'; co.beginPath(); co.ellipse(-L * .05, 0, L * .03, wd * .85, 0, 0, TAU); co.fill();
+      co.globalAlpha = a * .5; co.fillStyle = '#ffffff'; co.fillRect(L * .5, -wd * .7, L * .4, wd * .22); // reflet du vernis
+      co.restore();
+    };
+    const puff = (x, y, n, big) => { for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.3, 1.3); dust.add({ x: x + rnd(-6, 6), y, vx: Math.cos(an) * rnd(30, 90 + 80 * big), vy: Math.sin(an) * rnd(20, 70), drag: 2.2, g: 40, max: rnd(.5, .9), size: H * rnd(.05, .09 + .05 * big) }); } };
+    const tip = ang => ({ x: P.x + Math.cos(ang) * LEN * .82, y: P.y + Math.sin(ang) * LEN * .82 });
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over'; co.lineCap = 'round';
+        dust.step(dt); sparks.step(dt);
+        behind(env, () => dust.each((d, k) => dot(co, dark ? '#d6c4a0' : '#a8875a', d.x, d.y, d.size * (1 + k), (1 - k) * .55)));
+        // la batte : elle se met en garde (petit balancement), puis le swing de la révélation
+        bat += (batTo - bat) * Math.min(1, dt * 6);
+        if (!swing) batAng = -.85 + Math.sin(t * 5) * .08 * bat;
+        swings.run(dt, (s, k) => {
+          const T = k * s.life;
+          // la balle lancée vers la batte (0 à 0,34 s), puis frappée (ou ratée)
+          const C = tip(-1.75), from = { x: card.x - H * 1.1, y: card.y - H * .55 };
+          const sw = clamp((T - .26) / .12); batAng = lerp(-.85, -2.5, outCubic(sw)) + (T > .38 ? Math.sin((T - .38) * 9) * .1 * Math.exp(-(T - .38) * 4) : 0);
+          if (T < .34) { const u = T / .34; ball(lerp(from.x, C.x, u), lerp(from.y, C.y, u) - Math.sin(u * Math.PI) * H * .25, H * .1, T * 30, 1); tail(co, '#ffffff', lerp(from.x, C.x, u - .25), lerp(from.y, C.y, u - .25), lerp(from.x, C.x, u), lerp(from.y, C.y, u) - Math.sin(u * Math.PI) * H * .25, H * .08, .35); return; }
+          if (s.miss) { const u = (T - .34) / .5; if (u < 1) ball(C.x + u * H * 2, C.y + u * H * .4, H * .1, T * 30, 1 - u); return; }
+          if (!s.hit) { s.hit = true; for (let i = Math.round((10 + 30 * s.p) * q); i > 0; i--) { const an = rnd(TAU), v = rnd(80, 200 + 260 * s.p); sparks.add({ x: C.x, y: C.y, vx: Math.cos(an) * v, vy: Math.sin(an) * v, drag: 2.4, g: 120, max: rnd(.3, .7), size: rnd(1.4, 2.6), c: pick(['#fde68a', '#ffffff', '#fbbf24']) }); } pops.add({ x: C.x, y: C.y, size: H * (.5 + .5 * s.p), life: .3 }); }
+          // la balle frappée : plus loin et plus haut avec la rareté ; un HOME RUN file au loin et rapetisse
+          const u = clamp((T - .34) / (.7 + .6 * s.p)), far = .5 + 1.6 * s.p;
+          const bx = C.x - u * H * 2.2 * far * (s.p >= 1 ? -.35 : 1), by = C.y - Math.sin(u * Math.PI * (s.p >= 1 ? .5 : 1)) * H * (.6 + 1.6 * s.p) - (s.p >= 1 ? u * H * .6 : 0);
+          if (u < 1) { ball(bx, by, H * .1 * (s.p >= 1 ? 1 - .8 * u : 1), T * 30, Math.min(1, (1 - u) * 4)); dot(co, '#ffffff', bx, by, H * .2, .25 * (1 - u)); }
+        });
+        drawBat(batAng, Math.min(bat, swing ? clamp((swing.until - t) / .3) : 1));
+        if (swing && t > swing.until) { swing = null; batTo = 0; bat = 0; }
+        // les lancers : de la gauche jusqu'au chiffre, qui claque en arrivant
+        pitches.run(dt, (b, k) => {
+          const x = lerp(b.x0, b.x, k), y = lerp(b.y0, b.y, k) - Math.sin(k * Math.PI) * H * .3, r = H * (b.big ? .13 : .1);
+          tail(co, dark ? '#e2e8f0' : '#64748b', lerp(b.x0, b.x, k - .35), lerp(b.y0, b.y, k - .35) - Math.sin((k - .35) * Math.PI) * H * .3, x, y, r * 1.1, .4);
+          ball(x, y, r, k * 14, 1);
+          if (k > .92 && !b.done) { b.done = true; pops.add({ x: b.x, y: b.y, size: H * (b.big ? .55 : .35), life: .28 }); puff(b.x, card.y + H, b.big ? 9 : 4, b.big); }
+        });
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        pops.run(dt, (o, k) => { co.globalAlpha = (1 - k) * .9; co.strokeStyle = dark ? '#ffffff' : NAVY; co.lineWidth = 2.5 * (1 - k) + .5; co.beginPath(); co.arc(o.x, o.y, o.size * (.4 + outCubic(k)), 0, TAU); co.stroke(); });
+        sparks.each((s, k) => dot(co, s.c, s.x, s.y, s.size * 2, 1 - k));
+        // feu d'artifice du HOME RUN, flashs d'appareils photo dans les tribunes
+        shells.run(dt, (s, k) => {
+          if (k < .35) { const y = lerp(card.y + H, s.y, outCubic(k / .35)); tail(co, s.c, s.x, y + 14, s.x, y, 2, 1); return; }
+          if (!s.done) { s.done = true; for (let i = Math.round(s.n * q); i > 0; i--) { const an = rnd(TAU), v = rnd(.6, 1) * s.r; sparks.add({ x: s.x, y: s.y, vx: Math.cos(an) * v, vy: Math.sin(an) * v, drag: 1.8, g: 60, max: rnd(.8, 1.4), size: rnd(1.4, 2.4), c: s.c }); } }
+        });
+        bulbs.run(dt, (b, k) => { const a = 1 - k; dot(co, '#ffffff', b.x, b.y, b.r * a, a); dot(co, '#ffffff', b.x, b.y, b.r * 2.4, a * .7, 1.2); dot(co, '#ffffff', b.x, b.y, 1.2, a * .7, b.r * 2.4); });
+        co.globalCompositeOperation = 'source-over';
+        words.run(dt, (w, k) => { const s = k < .15 ? outBack(k / .15) : 1; bWord(co, w.s, cx, card.y - H * .55 - k * 8, H * w.size * s, w.c, NAVY, k > .75 ? (1 - k) / .25 : 1, -.06); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        // un 0 devient une balle, un 1 une batte debout (pas les zéros de tête, qui restent discrets)
+        const el = !o.ghost && bSlotAt(env, p), d = el && el.textContent;
+        if (d === '0') el.classList.add('bsb-ball'); else if (d === '1') el.classList.add('bsb-bat');
+        if (o.ghost) return;
+        pitches.add({ x0: card.x - H * 1.2, y0: card.y - H * .45 + rnd(-.1, .1) * H, x: p.x, y: p.y, big: o.last ? 1 : 0, life: .13 });
+      },
+      build() { batTo = 1; puff(P.x, card.y + H, 5, 0); },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        batTo = 1; bat = Math.max(bat, .6);
+        const life = 1.4 + p;
+        swings.add({ life, p, miss: !p });
+        swing = { until: now + life }; // la batte s'efface à la fin du swing
+        if (!p) { words.add({ delay: .45, life: 1.5, s: 'STRIKE!', c: dark ? '#cbd5e1' : '#e2e8f0', size: .3 }); }
+        else words.add({ delay: .4, life: 1.6 + p, s: p >= 1 ? 'HOME RUN!' : p >= .6 ? 'TRIPLE!' : p >= .3 ? 'DOUBLE!' : 'BASE HIT', c: p >= 1 ? '#fde047' : '#ffffff', size: .28 + .1 * p });
+        if (p >= 1) {
+          for (let i = 0; i < 4 + 3 * asc; i++) shells.add({ delay: .7 + i * .18, life: .9, x: cx + (i % 2 ? 1 : -1) * card.w * rnd(.4, .95), y: card.y - H * rnd(.4, 1.3), r: H * (2.6 + .4 * asc), n: 26 + 6 * asc, c: pick(BURST) });
+          for (let i = 0; i < 14 + 6 * asc; i++) bulbs.add({ delay: .4 + rnd(0, 1.6), life: .16, x: cx + rnd(-1, 1) * (card.w * .5 + H * 1.6), y: card.y + rnd(-1.2, -.1) * H, r: rnd(2, 4) });
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
