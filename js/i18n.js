@@ -410,6 +410,18 @@
     'Changing your name costs 5,000 coins.': 'Changer de nom coûte 5 000 pièces.', 'Name change already in progress.': 'Changement de nom déjà en cours.',
     'Total supply': 'Masse de pièces', 'Held by the top 1%': 'Détenu par le top 1 %', 'of all coins': 'de toutes les pièces', 'Net today': 'Bilan aujourd\'hui', 'Casino net, 7 days': 'Bilan casino, 7 jours', 'bets minus payouts': 'mises moins gains', 'updated every 10 min': 'mis à jour toutes les 10 min',
     'Casino net': 'Bilan casino', 'coins in, out, the casino alone and the difference': 'pièces entrées, sorties, le casino seul et la différence', 'Bets minus payouts: positive = the casino took coins out of the game': 'Mises moins gains : positif = le casino a retiré des pièces du jeu', '✏️ Name changes': '✏️ Changements de nom', '👑 Prestige': '👑 Prestige',
+    // titres du 2026-10-27 (Big Sexy, kaz, logannn, dailycb, Yentizx)
+    'Decabillionaire': 'Décamilliardaire', 'Reach 10,000,000,000 lifetime XP': 'Atteins 10 000 000 000 d\'XP à vie',
+    'Common Collector': 'Collectionneur Common', 'Uncommon Admirer': 'Admirateur Uncommon', 'Rare Enthusiast': 'Passionné de Rare', 'Epic Obtainer': 'Conquérant Epic', 'Anomaly Hunter': 'Chasseur d\'Anomaly',
+    'Find every Common badge': 'Trouve tous les badges Common', 'Find every Uncommon badge': 'Trouve tous les badges Uncommon', 'Find every Rare badge': 'Trouve tous les badges Rare',
+    'Find every Epic badge': 'Trouve tous les badges Epic', 'Find every Anomaly badge': 'Trouve tous les badges Anomaly',
+    'Piggy Bank': 'Tirelire', 'Money Maker': 'Faiseur de pièces', 'Coin Machine': 'Machine à pièces',
+    'Earn 10,000 coins from rolls and duels': 'Gagne 10 000 pièces avec les tirages et les duels', 'Earn 100,000 coins from rolls and duels': 'Gagne 100 000 pièces avec les tirages et les duels',
+    'Earn 1,000,000 coins from rolls and duels': 'Gagne 1 000 000 de pièces avec les tirages et les duels',
+    'Sound Collector': 'Collectionneur de sons', 'Own every sound pack': 'Possède tous les packs de sons', 'Shopaholic': 'Accro du shopping',
+    'Own every skin, button, emote, wallpaper, sound pack and upgrade sold for coins (limited ones excepted)': 'Possède tous les skins, boutons, émotes, fonds, packs de sons et améliorations vendus en pièces (sauf les limités)',
+    'Clan Benefactor': 'Bienfaiteur de clan', 'Clan Pillar': 'Pilier de clan',
+    'Donate 100,000 coins in total to a clan vault': 'Verser 100 000 pièces au total dans le coffre d\'un clan', 'Donate 1,000,000 coins in total to a clan vault': 'Verser 1 000 000 de pièces au total dans le coffre d\'un clan',
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
   };
@@ -418,6 +430,8 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    // XP qui manquait pour la rareté suivante (idée de daddy finger, 2026-10-27) ; les raretés restent en anglais.
+    [/^([\d,]+) XP short of (.+)$/, m => `Il manquait ${nb(m[1])} XP pour ${m[2]}`],
     [/^(\d+) of the last 20$/, m => `${m[1]} sur les 20 dernières`], [/^(\d+) ideas?$/, m => `${m[1]} idée${m[1] === '1' ? '' : 's'}`],
     // clans
     [/^Pick (\d+) players:?$/, m => `Choisis ${m[1]} joueurs`], [/^Pick (\d+) players to accept:$/, m => `Choisis ${m[1]} joueurs pour accepter :`],

@@ -62,6 +62,15 @@ async function state(id) {
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   // Succès Coin Millionaire (idée d'A Dude, 2026-10-21) : posé une fois, la première fois que le solde atteint 1 000 000.
   if (!Number(stats.millionaire) && Shop.balance(stats) >= 1000000) await redis([['HSET', statsKey(id), 'millionaire', 1]]);
+  // Sound Collector et Shopaholic (idées de dailycb, 2026-10-27) : posés une fois, d'après ce qui vient d'être lu (aucune
+  // lecture en plus) ; ici plutôt qu'après chaque achat, pour que les joueurs qui avaient déjà tout les obtiennent aussi.
+  // Shopaholic : tout ce qui s'achète en pièces, possédé en même temps (hors limités et Prestige, en stock limité).
+  { const has = (list, set) => list.every(x => (set || []).includes(x)), w = [];
+    const allSounds = has(Shop.collectibleSets.sounds(), snds);
+    if (allSounds && !Number(stats.allSounds)) w.push('allSounds', 1);
+    if (!Number(stats.allShop) && allSounds && Shop.speedLevel(stats.speedLv) === Shop.SPEED.prices.length && has(Shop.collectible(), owned) &&
+      has(Shop.collectibleSets.buttons(), bought) && has(Shop.collectibleSets.emotes(), emotes) && has(Shop.collectibleSets.walls(), walls)) w.push('allShop', 1);
+    if (w.length) await redis([['HSET', statsKey(id), ...w]]); }
   const isOwner = Number(stats.owner) >= 1, isSupporter = Number(stats.supporter) >= 1, isFisher = Number(stats.collabFish) >= 1;
   // Un skin réservé (Owner, Supporter) ne se porte que si le joueur y a droit.
   const allowed = s => !Shop.byId.get(s).hidden || (s === 'owner' ? isOwner : s === 'supporter' ? isSupporter : s === 'fisher' ? isFisher : false);

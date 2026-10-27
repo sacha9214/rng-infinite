@@ -393,11 +393,27 @@ async function grantGoogleBonus(playerId) {
   return amount;
 }
 
+// Titres de collection par rareté (idée de kaz, 2026-10-27) : les badges à réunir pour chaque rareté, et une version
+// qui change avec eux (nouveau badge, rareté recalculée). badges:<id> est relu seulement quand un tirage apporte un
+// badge jamais vu, ou une fois par joueur quand la version change ; "col:<rareté>" posé n'est jamais retiré.
+const COLLECTION_SETS = Achievements.collectionSets(meta, require('../data/badge-odds.json'), engine.badgeTier);
+const COLLECTION_VERSION = crypto.createHash('sha256').update(JSON.stringify(COLLECTION_SETS)).digest('hex').slice(0, 10);
+const COLLECTION_TIER = new Map(Object.entries(COLLECTION_SETS).flatMap(([t, ids]) => ids.map(id => [id, t])));
+async function syncCollections(playerId, stats) {
+  const [owned] = await redis([['SMEMBERS', badgesKey(playerId)]]);
+  const done = Achievements.completeCollections(COLLECTION_SETS, owned).filter(t => !Number(stats[`col:${t}`]));
+  await redis([['HSET', statsKey(playerId), 'colv', COLLECTION_VERSION, ...done.flatMap(t => [`col:${t}`, 1])]]);
+  stats.colv = COLLECTION_VERSION;
+  for (const t of done) stats[`col:${t}`] = '1';
+  return stats;
+}
+
 async function readStats(playerId) {
   const [flat, count] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)]]);
   const stats = toObject(flat);
-  if (!stats.v) return rebuildStats(playerId);
-  return { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
+  if (!stats.v) return syncCollections(playerId, await rebuildStats(playerId));
+  const out = { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
+  return out.colv === COLLECTION_VERSION ? out : syncCollections(playerId, out);
 }
 
 // ---------------------------------------------------------------- quêtes, pièces offertes, mises de duel
@@ -487,6 +503,7 @@ async function recordRoll(playerId, n, t) {
     ['EXPIRE', actKey(dayKey(t)), ACT_TTL],
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
+  const badgeAt = a.earnedIds.length ? writes.length : -1; // SADD répond le nombre de badges jamais vus (titres de collection)
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
@@ -544,6 +561,9 @@ async function recordRoll(playerId, n, t) {
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
+  // Relu seulement si un badge neuf peut compléter une rareté pas encore obtenue.
+  const mayComplete = badgeAt >= 0 && Number(out[badgeAt]) > 0 && a.earnedIds.some(id => COLLECTION_TIER.has(id) && !Number(stats[`col:${COLLECTION_TIER.get(id)}`]));
+  if (stats.colv !== COLLECTION_VERSION || mayComplete) stats = await syncCollections(playerId, stats);
   // Nouveau record Mythic ou mieux d'un joueur qui a lié son Discord : son rôle de rareté suit (api/_discord_link.js).
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
@@ -579,5 +599,5 @@ module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_B
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
-  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
+  Achievements, statsKey, readStats, toObject, COLLECTION_SETS, COLLECTION_VERSION, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
 };

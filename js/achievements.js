@@ -11,6 +11,39 @@
   // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
   const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
   const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + num(st[`t:${t}`]), 0);
+  // Pièces gagnées en jouant (idée de logannn, 2026-10-27) : tirages (après rendements décroissants) + victoires de duel
+  // (Shop.earned) + Weekend Rush. Ni cadeaux, ni casino, ni crypto, ni pots de mise : ils ne font que déplacer des pièces,
+  // et le serveur ne garde pas le détail de tous (vente de crypto, pot reçu) ; ce total-là est exact pour tous les joueurs,
+  // anciens compris, et impossible à gonfler.
+  const shop = () => (typeof module === 'object' && module.exports ? require('./shop.js') : root.RNGShop);
+  const coinsEarned = st => Math.max(0, shop().earned(st) + num(st.rushBonus));
+
+  // Titres de collection par rareté de badge (idée de kaz, 2026-10-27). Le serveur pose "col:<rareté>" une fois que
+  // badges:<id> contient tous les badges de cette rareté (api/_lib.js syncCollections) ; jamais retiré ensuite.
+  // Au-delà d'Anomaly, impossible en pratique : ~1,2 million de tirages en moyenne pour tous les Mythic, ~4,8 millions
+  // pour tous les Celestial (un nombre exact chacun).
+  const COLLECT = [
+    ['common', 'colcommon', '🧺', 'Common Collector'], ['uncommon', 'coluncommon', '🌿', 'Uncommon Admirer'],
+    ['rare', 'colrare', '🔷', 'Rare Enthusiast'], ['epic', 'colepic', '🟣', 'Epic Obtainer'], ['anomaly', 'colanomaly', '🌋', 'Anomaly Hunter'],
+  ];
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  // Rareté qui compte pour la collection : la plus rare entre la couleur du badge et sa fréquence réelle (counts[id] =
+  // nombre de tirages de 0 à 1 000 000 qui l'obtiennent, data/badge-odds.json). Seuls quelques vieux badges perso valent
+  // moins que leur rareté (ex. Important Birthday, Rare mais un seul nombre) : ils comptent dans la rareté de leur fréquence.
+  function collectionSets(meta, counts, badgeTier) {
+    const sets = Object.fromEntries(COLLECT.map(([t]) => [t, []]));
+    for (const b of meta) {
+      const n = num(counts[b.id]);
+      const tier = badgeTier(n ? Math.max(b.score, (100 * 1000001) / n) : Infinity);
+      if (sets[tier]) sets[tier].push(b.id);
+    }
+    return sets;
+  }
+  // Raretés complètes pour une collection de badges (Set ou tableau d'identifiants).
+  const completeCollections = (sets, owned) => {
+    const has = owned instanceof Set ? owned : new Set(owned || []);
+    return COLLECT.map(([t]) => t).filter(t => sets[t].length && sets[t].every(id => has.has(id)));
+  };
 
   const LIST = [
     { id: 'rookie', emoji: '🎲', title: 'Rookie', desc: 'Make your first roll', test: st => num(st.rolls) >= 1 },
@@ -39,6 +72,16 @@
     // XP à vie (idée d'Avaneesh_17, 2026-10-16) : stats.xpLife, tenue à chaque tirage et recalculée avec le classement.
     { id: 'centimillionaire', emoji: '💎', title: 'Centimillionaire', desc: 'Reach 100,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e8 },
     { id: 'billionaire', emoji: '🏦', title: 'Billionaire', desc: 'Reach 1,000,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e9 },
+    // Palier suivant (demandé par Big Sexy, 2026-10-27, qui a passé le milliard).
+    { id: 'decabillionaire', emoji: '🪐', title: 'Decabillionaire', desc: 'Reach 10,000,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e10 },
+    ...COLLECT.map(([tier, id, emoji, title]) => ({ id, emoji, title, desc: `Find every ${cap(tier)} badge`, test: st => num(st[`col:${tier}`]) >= 1 })),
+    // Pièces gagnées en jouant (idée de logannn, 2026-10-27) ; Coin Millionaire, lui, compte le solde détenu d'un coup.
+    { id: 'piggybank', emoji: '🐷', title: 'Piggy Bank', desc: 'Earn 10,000 coins from rolls and duels', test: st => coinsEarned(st) >= 1e4 },
+    { id: 'moneymaker', emoji: '💸', title: 'Money Maker', desc: 'Earn 100,000 coins from rolls and duels', test: st => coinsEarned(st) >= 1e5 },
+    { id: 'coinmachine', emoji: '🏧', title: 'Coin Machine', desc: 'Earn 1,000,000 coins from rolls and duels', test: st => coinsEarned(st) >= 1e6 },
+    // Idées de dailycb (Discord #ideas, 2026-10-27) : tous les packs de sons, et tout ce qui s'achète en pièces.
+    { id: 'allsounds', emoji: '🎧', title: 'Sound Collector', desc: 'Own every sound pack', test: st => num(st.allSounds) >= 1 },
+    { id: 'shopaholic', emoji: '🛍️', title: 'Shopaholic', desc: 'Own every skin, button, emote, wallpaper, sound pack and upgrade sold for coins (limited ones excepted)', test: st => num(st.allShop) >= 1 },
     { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
     // Titre d'ancien : pour qui a joué en 2026 (premier tirage avant le 1er janvier 2027). Les joueurs d'avant le champ
@@ -71,6 +114,9 @@
     { id: 'clanchamp', emoji: '🏯', title: 'Clan Champion', desc: 'Earn XP for the #1 clan of a week', test: st => num(st.clanWeekWins) >= 1 },
     // Donateur de clan (idée de PRISMA123, 2026-10-26) : 10 000 pièces versées au coffre d'un clan, au total (stats.clanDonated).
     { id: 'clanpatron', emoji: '🪙', title: 'Clan Patron', desc: 'Donate 10,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 10000 },
+    // Paliers suivants (idée de Yentizx, 2026-10-27), même compteur.
+    { id: 'clanbenefactor', emoji: '🤝', title: 'Clan Benefactor', desc: 'Donate 100,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 100000 },
+    { id: 'clanpillar', emoji: '💠', title: 'Clan Pillar', desc: 'Donate 1,000,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 1000000 },
     { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
     { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
     { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },
@@ -92,7 +138,7 @@
   // Identifiants des succès débloqués, dans l'ordre de la liste.
   const unlocked = stats => LIST.filter(a => a.test(stats || {})).map(a => a.id);
 
-  const api = { LIST, byId, unlocked };
+  const api = { LIST, byId, unlocked, COLLECT, collectionSets, completeCollections, coinsEarned };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGAchievements = api;
 })(typeof window !== 'undefined' ? window : globalThis);
