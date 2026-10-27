@@ -9,6 +9,18 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Trailer v2 (2026-10-26, branch `claude/trailer-v2`, not merged)
+
+- Asked by Sacha: a new promo film replacing the 30 s one. `trailer/trailer.js` (38 s, 16:9 + 9:16, cuts `?cut=15` and
+  `?cut=6`), soundtrack `tools/trailer-audio.mjs` (new cues: whip, hit, chat, coin, peg, card, roll, infinite impact;
+  drop with a lead melody). Render: `node tools/trailer-render.mjs --pro` then `--pro --cut 15`.
+- Shot list: hook (only 10 numbers are Infinite) → Mythic roll 808808 + badges → legendary skins (Divine Judgment,
+  Comic Book, Milky Way, Christmas Morning, Infinity, real skinfx sequences) → Blackjack/Bowling/Dynamite → wallpapers
+  (Open Ocean, Deep Dive, Summit) → global chat (@mention, avatars, friend alert) → clans + 5v5 war → 3 tournaments +
+  bracket → casino (Plinko, Dice, Blackjack, in-game coins only) → Prestige titles → roadmap → 777777 Infinite → end card.
+- Made-up players (Nova, Pixel, Rex…) and drawn avatars only. The page still refuses any number that earns badge 235.
+- `media/trailer-*.mp4` are web encodes (two-pass, grain removed) of the `--pro` masters; posters are the 33.6 s frame.
+
 ## Profile pictures (2026-10-26, branch `claude/avatars`, not merged)
 
 - Asked by Sacha (idea by kingston and JAKECisthebest). Logic in `api/_avatar.js`, routed from `/api/profile`

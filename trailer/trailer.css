@@ -1,5 +1,6 @@
-/* RNG∞ — trailer : mise en page du plan (1920×1080 ou 1080×1920) par-dessus les styles du site (css/style.css).
-   Les cartes, badges, cadres de duel et lignes de classement sont ceux du site ; ici seulement le décor du film. */
+/* RNG∞ — trailer v2 (2026-10-26, demandé par Sacha) : mise en page du plan (1920×1080 ou 1080×1920) par-dessus les
+   styles du site (css/style.css, css/premium.css). Cartes, skins, panneaux du chat, des clans, des tournois, du casino,
+   de la boutique Prestige et de la feuille de route sont ceux du site ; ici seulement le décor et la typo du film. */
 
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 body::before { display: none; } /* vignette du site : le plan a la sienne */
@@ -39,7 +40,7 @@ body::before { display: none; } /* vignette du site : le plan a la sienne */
 }
 .sub.left { text-align: left; right: auto; }
 .sub b { color: #fff; font-weight: 700; }
-.sub .chip { display: inline-block; padding: .35em 1em; border-radius: 999px; background: rgba(10, 8, 14, .82); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+.sub .tchip { display: inline-block; padding: .35em 1em; border-radius: 999px; background: rgba(10, 8, 14, .82); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
 
 /* Marque discrète pendant tout le film. */
 .bug { position: absolute; z-index: 20; left: 56px; right: 56px; top: 44px; display: flex; justify-content: space-between; align-items: baseline; pointer-events: none; }
@@ -49,7 +50,7 @@ body::before { display: none; } /* vignette du site : le plan a la sienne */
 .tc { position: absolute; z-index: 40; left: 0; bottom: 0; padding: 10px 22px; font: 700 54px/1 var(--font-mono); color: #fff; background: rgba(0, 0, 0, .78); display: none; }
 .show-tc .tc { display: block; }
 
-/* ------------------------------------------------------------------ scène 1 : tirage, badges, skins */
+/* ------------------------------------------------------------------ tirage, badges */
 .stamp {
   font: 900 150px/1 var(--font-sans); letter-spacing: .05em; white-space: nowrap; padding: 0 .1em;
   background: linear-gradient(90deg, #fb7185, #e879f9 45%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -76,41 +77,6 @@ body::before { display: none; } /* vignette du site : le plan a la sienne */
 .wname { font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--prose-3); white-space: nowrap; }
 .wall-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(10, 8, 14, .82), rgba(10, 8, 14, .3) 75%); opacity: 0; }
 
-/* ------------------------------------------------------------------ scène 2 : duel */
-.duo { position: relative; display: flex; align-items: center; gap: 24px; }
-.fmt-v .duo { flex-direction: column; gap: 18px; }
-.dside { position: relative; }
-.dside .room-side { width: 300px; }
-.fmt-v .dside .room-side { width: 380px; }
-/* Le soulèvement du gagnant et l'effacement des perdants sont animés par le script (pas de saut). */
-#stage .room-side.won { transform: none; }
-.dvs { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; flex: none;
-  font: 900 20px/1 var(--font-sans); letter-spacing: .04em; color: #fff; background: #0a0a0a;
-  border: 2px solid #f43f5e; box-shadow: 0 0 16px rgba(244, 63, 94, .6), inset 0 0 10px rgba(244, 63, 94, .35); }
-.dside .react-layer { overflow: visible; z-index: 3; }
-.g10 { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.g10 .room-stage.many { display: flex; gap: 12px; }
-.g10 .room-side { width: 200px; flex: none; }
-.fmt-v .g10 .room-side { width: 250px; }
-.fmt-v .g10 .room-meta { display: none; }
-.fmt-v .g10 .room-stage.many .num-card.md { font-size: 1.9rem; }
-.g10 .room-meta { margin: .5rem 0 0; }
-.g10 .pill-row { display: none; }
-
-/* ------------------------------------------------------------------ scène 3 : classement */
-.lbx { width: 520px; margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .5); }
-.fmt-v .lbx { width: 440px; }
-.lbx .lb-tabs button { padding: .7rem .2rem; }
-.lbx-view { position: relative; overflow: hidden; }
-.lbx-list { position: absolute; left: 0; top: 0; width: 100%; }
-.lbx-list .lb-row { position: absolute; left: 0; top: 0; width: 100%; height: 50px; padding: 0 1rem; grid-template-columns: 2.5rem 1fr auto 7.6rem; gap: .6rem; background: var(--surface); border-top: 1px solid var(--outline); }
-.fmt-v .lbx-list .lb-row { padding: 0 .7rem; grid-template-columns: 2.2rem 1fr auto 6.9rem; gap: .45rem; }
-.lbx-list .lb-row.me { z-index: 2; border-top-color: transparent; border-radius: .5rem;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--chart-accent) 26%, var(--surface)), color-mix(in srgb, var(--chart-accent) 12%, var(--surface))); }
-.lbx-list .lb-row.me.first { background: linear-gradient(90deg, #4a3706, #2a2110 70%); }
-.lbx-list .lb-ep { color: var(--prose-2); }
-.lbx-list .lb-row.me .lb-ep { color: var(--ep-text); font-weight: 700; }
-
 /* ------------------------------------------------------------------ scène 4 : logo */
 .logo { font: 800 300px/1 var(--font-sans); letter-spacing: .08em; color: #fff; white-space: nowrap; }
 .fmt-v .logo { font-size: 236px; }
@@ -131,20 +97,100 @@ body::before { display: none; } /* vignette du site : le plan a la sienne */
 #hud .time { font-family: 'Space Mono', ui-monospace, monospace; min-width: 104px; text-align: right; }
 .export #hud { display: none; }
 
-/* Skins légendaires (mesure 12-14) : quatre cartes avec leur vraie séquence. */
-#sc-legend { z-index: 5; }
-.leg-back { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, #171326, #0a0a10 75%); }
-.leg { position: absolute; }
-.leg-in { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: 40px; transform-origin: 50% 50%; }
-.leg-in .card-stage { position: relative; }
-.leg-name { font: 800 22px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: #fde68a; text-shadow: 0 2px 10px rgba(0, 0, 0, .8); white-space: nowrap; }
 
-/* Émotes et chat par-dessus le duel. */
-#sc-social { z-index: 4; pointer-events: none; }
-.tr-emote { position: absolute; left: 0; top: 0; width: 170px; height: 170px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .5)); }
-.tr-emote .emote { width: 170px; height: 170px; }
-.tr-chat { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); display: grid; gap: 16px; justify-items: start; width: 880px; }
-.tr-msg { padding: 18px 30px; border-radius: 18px 18px 18px 4px; background: rgba(30, 30, 40, .92); border: 1px solid rgba(255, 255, 255, .14); color: #fff; font: 600 44px var(--font-sans); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); transform-origin: 0 100%; }
-.tr-msg b { margin-right: 16px; font-size: 28px; letter-spacing: .05em; text-transform: uppercase; color: #a5b4fc; }
-.tr-msg.me { justify-self: end; border-radius: 18px 18px 4px 18px; background: rgba(79, 70, 229, .92); transform-origin: 100% 100%; }
-.tr-msg.me b { color: #fde68a; }
+/* ------------------------------------------------------------------ typo du film */
+.claim .kick { display: block; margin: 0 0 .22em; line-height: 1; }
+.claim .kick-in { display: inline-block; padding: .3em .9em .26em; border-radius: 999px; font: 800 .26em/1 var(--font-mono); letter-spacing: .32em; color: #fff;
+  background: linear-gradient(90deg, #ec4899, #a855f7 55%, #22d3ee); box-shadow: 0 0 24px rgba(168, 85, 247, .55); }
+.claim.gold .kick-in { background: linear-gradient(90deg, #f59e0b, #f97316); box-shadow: 0 0 24px rgba(245, 158, 11, .5); }
+.claim.left .kick { text-align: left; }
+.claim { text-shadow: 0 6px 30px rgba(0, 0, 0, .55); }
+.sub.feat .tchip { padding: .3em .9em; }
+.sub.tagline { letter-spacing: .2em; color: rgba(255, 255, 255, .78); }
+.sub.tagline i { font-style: normal; color: #c084fc; margin: 0 .3em; }
+/* étalonnage commun : un léger voile froid dans les ombres et une vignette, sur tous les plans */
+.grade { z-index: 35; pointer-events: none; background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(8, 4, 20, .38)); mix-blend-mode: multiply; }
+
+/* ------------------------------------------------------------------ 0. accroche */
+.hk-a, .hk-b { text-align: center; white-space: nowrap; }
+.hk-num { font: 900 300px/1 var(--font-sans); letter-spacing: -.02em; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 10px 60px rgba(99, 102, 241, .45); }
+.hk-d { display: inline-block; text-align: center; }
+.hk-d.cm { color: #a78bfa; }
+.hk-word { margin-top: 18px; font: 800 64px/1 var(--font-mono); text-transform: uppercase; color: rgba(255, 255, 255, .8); }
+.hk-only { font: 800 70px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .85); margin-bottom: 22px; }
+.hk-only b { color: #fff; font-size: 1.25em; }
+.hk-inf { position: relative; font: 900 250px/1 var(--font-sans); text-transform: uppercase; }
+.hk-inf-t { background: linear-gradient(90deg, #ec4899, #a855f7, #3b82f6, #10b981, #eab308, #f97316); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 40px rgba(168, 85, 247, .6)); }
+.hk-shine { position: absolute; left: 0; top: 0; pointer-events: none; color: transparent; -webkit-background-clip: text; background-clip: text;
+  background: linear-gradient(100deg, transparent 0 42%, rgba(255, 255, 255, .95) 50%, transparent 58% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; }
+
+/* ------------------------------------------------------------------ skins */
+.sk-strip { position: absolute; inset: 0; }
+.sk-in { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.sk-in > .card-stage { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+.lt { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 22px; white-space: nowrap; transform: translate(-50%, 0);
+  font: 900 62px/1 var(--font-sans); letter-spacing: .02em; text-transform: uppercase; color: #fff; text-shadow: 0 4px 22px rgba(0, 0, 0, .7); }
+.lt .lt-em { font-size: .9em; }
+.lt .lt-tag { font: 800 26px/1 var(--font-mono); letter-spacing: .24em; padding: 12px 18px 10px; border-radius: 999px; color: #1c1406;
+  background: linear-gradient(90deg, #fde68a, #f59e0b); box-shadow: 0 0 22px rgba(245, 158, 11, .55); text-shadow: none; }
+.lt .lt-tag.lim { color: #fff; background: linear-gradient(90deg, #16a34a, #dc2626); box-shadow: 0 0 22px rgba(220, 38, 38, .45); }
+.lt.sm { font-size: 40px; gap: 14px; }
+.fmt-v .lt { font-size: 56px; }
+.fmt-v .lt.sm { font-size: 40px; }
+.lt.wl { top: auto; bottom: 120px; left: 50%; font-size: 72px; }
+.fmt-v .lt.wl { bottom: 300px; font-size: 70px; }
+
+/* ------------------------------------------------------------------ fonds d'écran */
+.wpbox { position: absolute; inset: 0; overflow: hidden; transform: translate(0, 0); }
+.wpbox > #wallpaper { z-index: 0; }
+
+/* ------------------------------------------------------------------ chat global */
+.tr-gc .gc-panel { position: relative; right: auto; bottom: auto; left: auto; top: auto; width: 380px; height: auto; max-height: none; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); }
+.tr-gc .gc-list { overflow: hidden; flex: none; }
+.tr-gc .av img, .tr-clan .av img, .tr-tn .av img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.tr-toast { position: relative; left: auto; right: auto; bottom: auto; top: auto; transform: none; white-space: nowrap; animation: none !important; }
+
+/* ------------------------------------------------------------------ clans */
+.tr-clan { width: 560px; }
+.tr-clan .cl-banner { margin: 0 0 .8rem; }
+.tr-clan .cl-war { margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+.tr-clan .cl-pn { display: inline-flex; align-items: center; gap: .35rem; }
+.tr-clan .tiles { margin: 0; }
+.k-stamp { position: absolute; left: 50%; top: 86%; padding: .1em .45em; border: 6px solid #fbbf24; border-radius: 14px; white-space: nowrap;
+  font: 900 54px/1.05 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; color: #fde68a; background: rgba(28, 20, 6, .82);
+  box-shadow: 0 0 40px rgba(251, 191, 36, .6), inset 0 0 20px rgba(251, 191, 36, .25); text-shadow: 0 0 18px rgba(251, 191, 36, .7); }
+
+/* ------------------------------------------------------------------ tournois */
+.tr-tn .panel { margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+.tr-tn .tn-bracket { width: 900px; }
+.fmt-v .tr-tn .tn-bracket { width: 760px; }
+.tr-tn .tn-which { margin: 0; }
+.tr-tn .tn-name { display: inline-flex; align-items: center; gap: .3rem; }
+.tr-tn .tn-podium { display: grid; gap: .3rem; justify-items: center; padding: .6rem; transform-origin: 50% 50%; }
+.tr-tn .tn-champ { display: inline-flex; align-items: center; gap: .35rem; font-weight: 800; color: #fde68a; }
+.tr-tn .tn-col { transition: none; }
+
+/* ------------------------------------------------------------------ casino */
+.cas-strip { position: absolute; inset: 0; }
+.tr-cas { width: 560px; }
+.tr-cas .panel { margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+.tr-cas .pk-board canvas { width: 520px; height: 360px; }
+.tr-cas .g-result { opacity: 0; font-weight: 700; color: #4ade80; }
+.tr-cas .pcard .pc-in { transition: none; }
+.tr-cas .bj-table { min-height: 0; }
+.bj-stamp { white-space: nowrap; font: 900 110px/1 var(--font-sans); letter-spacing: .02em; text-transform: uppercase; padding: 0 .1em;
+  background: linear-gradient(90deg, #fde68a, #f59e0b 60%, #fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 22px rgba(245, 158, 11, .6)) drop-shadow(0 6px 0 rgba(0, 0, 0, .4)); }
+#g-wallet .g-wallet { box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+
+/* ------------------------------------------------------------------ Prestige, feuille de route */
+.tr-pr .pr-grid { width: 760px; grid-template-columns: repeat(3, 1fr); }
+.fmt-v .tr-pr .pr-grid { width: 420px; grid-template-columns: 1fr; }
+.tr-pr .pr-tile { box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+.tr-rm { width: 520px; }
+.tr-rm .panel { margin: 0; box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+
+/* ------------------------------------------------------------------ tirage final */
+.stamp.inf { background: linear-gradient(90deg, #ec4899, #a855f7, #3b82f6, #10b981, #eab308, #f97316, #ec4899) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text;
+  color: transparent; filter: drop-shadow(0 0 30px rgba(255, 255, 255, .45)); text-transform: uppercase; font-size: 170px; }
