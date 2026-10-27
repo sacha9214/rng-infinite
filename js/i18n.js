@@ -10,6 +10,21 @@
 
   // ---------------------------------------------------------------- dictionnaire (texte anglais exact → français)
   const FR = {
+    // classement Most rolls, nombres différents, quêtes de la semaine, coffre des quêtes, co-chef et Clan MVP (2026-10-27)
+    'Most rolls': 'Le plus de tirages', 'Total number of rolls each player has made, duels included': 'Nombre total de tirages de chaque joueur, duels compris',
+    'Different numbers rolled': 'Nombres différents tirés',
+    'Weekly quests': 'Quêtes de la semaine', 'Quest chest': 'Coffre des quêtes', 'Quest chests': 'Coffres des quêtes', 'All opened': 'Tous ouverts',
+    'Make 400 rolls this week': 'Fais 400 tirages cette semaine', 'Make 700 rolls this week': 'Fais 700 tirages cette semaine', 'Make 1,000 rolls this week': 'Fais 1 000 tirages cette semaine',
+    'Roll 5 Anomaly or better': 'Tire 5 Anomaly ou mieux', 'Roll 15 Epic or better': 'Tire 15 Epic ou mieux', 'Roll 2 Mythic or better': 'Tire 2 Mythic ou mieux',
+    'Finish all daily quests on 3 days': 'Finis toutes les quêtes du jour sur 3 jours', 'Finish all daily quests on 4 days': 'Finis toutes les quêtes du jour sur 4 jours',
+    'Finish all daily quests on 5 days': 'Finis toutes les quêtes du jour sur 5 jours',
+    'This quest is not available this week': 'Cette quête n\'est pas disponible cette semaine', 'No quest chest to open yet': 'Aucun coffre de quêtes à ouvrir pour l\'instant', 'Already opening': 'Ouverture déjà en cours',
+    'Co-leader': 'Co-chef', 'Make co-leader': 'Nommer co-chef', 'Back to officer': 'Redevenir officier', 'is now a co-leader': 'est maintenant co-chef', 'is an officer again': 'redevient officier',
+    'Co-leaders can do everything officers can, even what the leader turned off for them, and also promote, demote and kick officers. Only the leader can disband the clan, pass the leadership or name co-leaders': 'Les co-chefs peuvent faire tout ce que font les officiers, même ce que le chef leur a retiré, et aussi nommer, rétrograder et exclure les officiers. Seul le chef peut dissoudre le clan, passer la main ou nommer des co-chefs',
+    'Co-leaders can always do all of this, and also promote, demote and kick officers': 'Les co-chefs peuvent toujours faire tout ça, et aussi nommer, rétrograder et exclure les officiers',
+    'Only the leader and co-leaders can do this': 'Seuls le chef et les co-chefs peuvent faire ça', 'Co-leaders can only kick officers and members': 'Les co-chefs ne peuvent exclure que des officiers et des membres', 'Already a co-leader': 'Déjà co-chef',
+    'Clan MVP': 'MVP du clan', 'Earn the most XP in the #1 clan of a week': 'Gagner le plus d\'XP dans le clan n°1 d\'une semaine',
+    'The member of the #1 clan who earned the most XP for it that week also gets the Clan MVP title': 'Le membre du clan n°1 qui lui a rapporté le plus d\'XP cette semaine-là reçoit aussi le titre MVP du clan',
     // photos de profil (2026-10-26, demandé par Sacha)
     'Profile picture': 'Photo de profil', '📷 Choose a picture': '📷 Choisir une image', 'Zoom': 'Zoom', 'Send for review': 'Envoyer pour vérification',
     'Don\'t use photos of yourself or personal info. The creator checks every picture.': 'N\'utilise pas de photo de toi ni d\'infos personnelles. Le créateur vérifie chaque image.',
@@ -432,6 +447,14 @@
   const P = [
     // XP qui manquait pour la rareté suivante (idée de daddy finger, 2026-10-27) ; les raretés restent en anglais.
     [/^([\d,]+) XP short of (.+)$/, m => `Il manquait ${nb(m[1])} XP pour ${m[2]}`],
+    // 2026-10-27 : quêtes de la semaine, coffre des quêtes, nombres différents, Clan MVP, co-chef
+    [/^New in (\d+) d (\d+) h$/, m => `Nouvelles dans ${m[1]} j ${m[2]} h`], [/^New in (\d+) h$/, m => `Nouvelles dans ${m[1]} h`],
+    [/^([\d,]+) \/ ([\d,]+) days with all daily quests done$/, m => `${nb(m[1])} / ${nb(m[2])} jours avec toutes les quêtes du jour finies`],
+    [/^([\d,]+) days? with all daily quests done$/, m => `${nb(m[1])} jour${s(m[1])} avec toutes les quêtes du jour finies`],
+    [/^(\d+) days: ([\d,]+) coins$/, m => `${m[1]} jours : ${nb(m[2])} pièces`],
+    [/^Weekly quest done! \+([\d,]+) coins$/, m => `Quête de la semaine finie ! +${nb(m[1])} pièces`], [/^Quest chest opened! \+([\d,]+) coins$/, m => `Coffre des quêtes ouvert ! +${nb(m[1])} pièces`],
+    [/^([\d,]+) different numbers?$/, m => `${nb(m[1])} nombre${s(m[1])} différent${s(m[1])}`], [/^Clan MVP ×([\d,]+)$/, m => `MVP du clan ×${m[1]}`],
+    [/^Make (.+) the clan leader\? You will become a co-leader\.$/, m => `Nommer ${m[1]} chef du clan ? Tu deviendras co-chef.`],
     [/^(\d+) of the last 20$/, m => `${m[1]} sur les 20 dernières`], [/^(\d+) ideas?$/, m => `${m[1]} idée${m[1] === '1' ? '' : 's'}`],
     // clans
     [/^Pick (\d+) players:?$/, m => `Choisis ${m[1]} joueurs`], [/^Pick (\d+) players to accept:$/, m => `Choisis ${m[1]} joueurs pour accepter :`],

@@ -7435,3 +7435,21 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .pf-bio-edit { border: 0; background: none; padding: 0 .2rem; color: var(--prose-3); font: inherit; font-size: .78rem; cursor: pointer; }
 .pf-bio-edit:hover { color: var(--prose); }
 .o-readonly .bio-clear-form, .o-readonly [data-bio-clear] { display: none !important; }
+
+/* Idées du 2026-10-27 : classement « Most rolls » (6 onglets : 3 + 3 sur téléphone), quêtes de la semaine (Tumored),
+   coffre des quêtes (Sean), co-chef de clan (Yentizx, JAKECisthebest), Clan MVP (PRISMA123). */
+.lb-tabs.lb-tabs-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 560px) { .lb-tabs.lb-tabs-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lb-tabs.lb-tabs-6 button { padding-block: .65rem; } }
+.wq-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-top: .6rem; padding-top: .55rem; border-top: 2px solid var(--outline); }
+.quest.wq .quest-bar > span { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+.quest.qchest .quest-bar > span { background: linear-gradient(90deg, #f59e0b, #facc15); }
+.quest.qchest.ready .quest-emoji { animation: qc-wiggle 1.4s ease-in-out infinite; }
+@keyframes qc-wiggle { 0%, 60%, 100% { transform: rotate(0); } 15% { transform: rotate(-14deg) scale(1.1); } 30% { transform: rotate(10deg) scale(1.1); } 45% { transform: rotate(-5deg); } }
+@media (prefers-reduced-motion: reduce) { .quest.qchest.ready .quest-emoji { animation: none; } }
+.qc-pips { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .1rem; }
+.qc-pip { min-width: 1.7rem; padding: .05rem .35rem; border-radius: 999px; font-size: .66rem; font-weight: 700; text-align: center; color: var(--prose-3); border: 1px solid var(--outline); background: var(--surface-raised); }
+.qc-pip.ready { color: var(--prose); border-color: #f59e0b; background: color-mix(in srgb, #f59e0b 22%, var(--surface)); }
+.qc-pip.open { color: var(--success); border-color: color-mix(in srgb, var(--success) 55%, var(--outline)); }
+.cl-r-coleader { background: color-mix(in srgb, #a855f7 20%, var(--surface)); color: var(--prose); }
+.cl-mvp { white-space: nowrap; }
+@media (max-width: 420px) { .lb-row-rolls .lb-rolls { display: none; } }

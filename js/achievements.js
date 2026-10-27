@@ -117,6 +117,9 @@
     // Paliers suivants (idée de Yentizx, 2026-10-27), même compteur.
     { id: 'clanbenefactor', emoji: '🤝', title: 'Clan Benefactor', desc: 'Donate 100,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 100000 },
     { id: 'clanpillar', emoji: '💠', title: 'Clan Pillar', desc: 'Donate 1,000,000 coins in total to a clan vault', test: st => num(st.clanDonated) >= 1000000 },
+    // Clan MVP (idée de PRISMA123, 2026-10-27) : le membre du clan n°1 qui a gagné le plus d'XP pour lui cette semaine-là
+    // (stats.clanMvp = nombre de fois, posé par settleWeek dans api/_clan.js).
+    { id: 'clanmvp', emoji: '🎖️', title: 'Clan MVP', desc: 'Earn the most XP in the #1 clan of a week', test: st => num(st.clanMvp) >= 1 },
     { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
     { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
     { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },
