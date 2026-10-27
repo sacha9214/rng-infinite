@@ -29,12 +29,19 @@ const totals = new Float64Array(SPAN);
 const originalTotals = new Float64Array(SPAN);
 
 const t0 = Date.now();
+// Part perso d'un tirage : dans une famille perso, seul le meilleur badge compte (avant le 2026-10-27, tous étaient
+// soustraits : 13, 25111 et 679999, à la fois Happy et Happy Prime, sortaient 699 XP trop bas → 93/96).
+for (const b of custom) if (b.family && Object.values(family).includes(b.family)) throw new Error(`Famille perso ${b.family} partagée avec un badge d'origine`);
 for (let n = 0; n < SPAN; n++) {
   let customPart = 0;
+  const bestFam = new Map();
   totals[n] = engine.scoreOf(n, b => {
     counts[index.get(b.id)]++;
-    if (CUSTOM_IDS.has(b.id)) customPart += b.score;
+    if (!CUSTOM_IDS.has(b.id)) return;
+    if (!b.family) customPart += b.score;
+    else if (!bestFam.has(b.family) || b.score > bestFam.get(b.family)) bestFam.set(b.family, b.score);
   });
+  for (const s of bestFam.values()) customPart += s;
   originalTotals[n] = totals[n] - customPart;
 }
 console.log(`Énumération : ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -131,5 +138,8 @@ fs.writeFileSync(path.join(ROOT, 'js/percentiles.js'),
 fs.mkdirSync(path.join(ROOT, 'data'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'data/badge-meta.json'), JSON.stringify(BADGE_META));
 fs.writeFileSync(path.join(ROOT, 'data/percentiles.json'), JSON.stringify(table));
+// Nombre de tirages qui obtiennent chaque badge : titres de collection par rareté (js/achievements.js collectionSets,
+// idée de kaz, 2026-10-27), pour ne jamais exiger un badge plus rare que sa couleur.
+fs.writeFileSync(path.join(ROOT, 'data/badge-odds.json'), JSON.stringify(Object.fromEntries(engine.badges.map((b, i) => [b.id, counts[i]]))));
 
 if (mismatches || knownOk !== Object.keys(KNOWN).length) process.exitCode = 1;

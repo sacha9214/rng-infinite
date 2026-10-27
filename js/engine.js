@@ -281,6 +281,11 @@
     MED_CHECK: '504', OVER_9000: '9001', PASSWORD: '12345', YEAR_2077: '2077', YEAR_2099: '2099', ROOT_TWO_4: '1414', ROOT_TWO_5: '14142',
     PLAYER_456: '456', // idée de R77 (2026-10-18) : le joueur le plus célèbre d'un jeu de survie en série
     HALVING: '8421', // idée de finnnnn (2026-10-18) : chaque chiffre est la moitié du précédent
+    // Idées du 2026-10-27 : daddy finger (224 « aujourd'hui, demain et pour toujours », famille FOREVER),
+    // costoroll et Miguel1 (1987), hghgghgg (505, un numéro de chanson), Jaboom (90210, un code postal),
+    // jaxoncool43 (1738), Phong254 (nombre d'argent 1 + √2 = 2,4142…, famille SILVER_RATIO comme les tranches de Pi).
+    FOREVER: '224', YEAR_1987: '1987', FIVE_OH_FIVE: '505', BEVERLY_HILLS: '90210', SEVENTEEN_38: '1738',
+    SILVER_RATIO_4: '2414', SILVER_RATIO_5: '24142',
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
@@ -295,6 +300,10 @@
     EXACT_82: ['82'], EXACT_92: ['92'], BRAINROT_KING_EXACT: ['676741', '674141'], // idées du 2026-10-22 (kaz, CococoC, CrazyMiner22)
     EXACT_61: ['61'], EXACT_55: ['55'], // idées de schoolroller et qwertyuiop (2026-10-25)
     EXACT_99: ['99'], WYSI_EXACT: ['727'], // idées du 2026-10-24 (kaz, Phong254)
+    // Idées du 2026-10-27 : daddy finger (224 et 224224), costoroll (1987), hghgghgg (505), shadow2 et pilot56 (24),
+    // WpBejs (747747, famille JET), CococoC (104 jours de vacances d'été).
+    FOREVER_EXACT: ['224'], FOREVER_AND_EVER: ['224224'], YEAR_1987_EXACT: ['1987'], FIVE_OH_FIVE_EXACT: ['505'],
+    AROUND_THE_CLOCK: ['24'], JUMBO_JET_SET: ['747747'], SUMMER_BREAK: ['104'],
     CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
@@ -356,7 +365,21 @@
     VORTROX_GINA: c => c.s.includes('4992') || c.s.includes('9249'),
     // Idée de qwertyuiop (2026-10-26) : un 29 février, lu MMJJAA = 0229AA (tiré comme 229AA, comme 061209 → 61209).
     // AA multiple de 4 : 2000-2096 sont tous bissextiles (2000 l'est, 2100 non mais hors plage) → 25 nombres.
-    LEAP_DAY: c => c.n >= 22900 && c.n <= 22999 && c.n % 4 === 0,
+    // Idée de Kag (2026-10-27) : aussi lu JJMMAA = 2902AA (290200-290296) et AAMMJJ = AA0229 (229, 40229… 960229) ;
+    // n'ajoute que des nombres (75 au lieu de 25), l'XP ne baisse pas.
+    LEAP_DAY: c => (c.n >= 22900 && c.n <= 22999 && c.n % 4 === 0) || (c.n >= 290200 && c.n <= 290299 && c.n % 4 === 0) ||
+      (c.n % 10000 === 229 && Math.floor(c.n / 10000) % 4 === 0),
+    // Idée de Kag (2026-10-27) : nombre narcissique, la somme de ses chiffres élevés chacun à la puissance « nombre de
+    // chiffres » redonne le nombre (153 = 1³ + 5³ + 3³). 11 nombres à 2 chiffres ou plus jusqu'à 1 000 000 (vérifié par calcul).
+    NARCISSISTIC: c => {
+      if (c.L < 2) return false;
+      let t = 0;
+      for (const v of c.d) t += Math.pow(v, c.L);
+      return t === c.n;
+    },
+    // Idée de qwertyuiop (2026-10-27) : premier ET sans chiffre répété, à partir de 4 chiffres (sous 4 chiffres presque
+    // tous les premiers n'ont déjà aucun doublon : le badge ne ferait que doubler Prime). 13 278 nombres, ~1 sur 75.
+    QUANTUM_CHAOS: c => c.L >= 4 && c.distinct === c.L && isPrime(c.n),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
