@@ -5112,6 +5112,149 @@
     };
   };
 
+  // 🔨 Elves' Workshop (2026-10-27, idée de costoroll) — six lutins en ombres chinoises, à contre-jour d'une lampe, se
+  // tiennent derrière le tapis roulant, un par chiffre (leur corps passe derrière la carte). Le lutin du prochain chiffre
+  // lève son marteau et attend en tremblant (l'élan) ; quand le chiffre se pose, le marteau s'abat d'un coup sur la
+  // planchette (traînée du coup, copeaux, sciure), au même instant que le chiffre apparaît. Avant le dernier chiffre, son
+  // lutin tremble plus fort et les autres se penchent pour voir. Révélation : tirage raté, les lutins baissent les bras ;
+  // sinon une ola de petits sauts ; dès Mythic, un roulement de marteaux, les bonnets volent et des confettis rouges,
+  // verts et or ; dès Divine, un paquet cadeau surgit derrière la carte et s'ouvre dans une gerbe d'étoiles.
+  SCENES.workshop = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const chips = particles(), dust = particles(), confetti = particles(), hats = particles(), gifts = timed();
+    const st = new Map(); // par case : { a (angle du bras), hitAt, hop, gone }
+    const INK = '#1c130d', RIM = dark ? 'rgba(251,191,36,.7)' : 'rgba(146,64,14,.45)';
+    let t = 0, build = 0, mood = '', moodAt = 0, rollUntil = -1;
+    const G = card.h * 20, hopV = hmax => Math.sqrt(2 * G * hmax); // petits sauts à l'échelle de la carte
+    const later = [], after = (d, fn) => later.push({ at: t + d, fn }); // en temps de scène (pas setTimeout : le trailer avance la scène lui-même)
+    const REST = -1.15, READY = -2.05, HIT = 1.72; // angles du bras (0 = vers la droite, positif = vers le bas)
+    // Un lutin : pieds cachés derrière la carte, la tête et le bonnet au-dessus ; v : variante (taille, bonnet à gauche
+    // ou à droite) pour qu'une rangée de six ne fasse pas une seule tache. Le bras et le marteau sont dessinés devant :
+    // au coup, la tête du marteau touche le haut de la planchette (tx, ty).
+    const elf = (x, base, u, a, hop, lean, alpha, hatless, smear, tx, ty, v) => {
+      const y = base - hop, z = v % 2 ? .93 : 1, side = v % 2 ? -1 : 1;
+      co.save(); co.globalAlpha = alpha;
+      behind(env, () => {
+        co.save(); co.translate(x, y); co.rotate(lean); co.scale(z, z); co.fillStyle = INK;
+        co.beginPath(); co.moveTo(-u * .3, u * 1.6); co.lineTo(-u * .24, -u * .58); co.quadraticCurveTo(0, -u * .74, u * .24, -u * .58); co.lineTo(u * .3, u * 1.6); co.closePath(); co.fill();
+        co.beginPath(); co.arc(0, -u * .95, u * .23, 0, TAU); co.fill();
+        co.beginPath(); co.moveTo(-u * .2, -u * 1); co.lineTo(-u * .42, -u * 1.16); co.lineTo(-u * .18, -u * .86); co.closePath(); co.fill();
+        co.beginPath(); co.moveTo(u * .2, -u * 1); co.lineTo(u * .42, -u * 1.16); co.lineTo(u * .18, -u * .86); co.closePath(); co.fill();
+        if (!hatless) {
+          const sw = Math.sin(t * 3 + x * .1) * .1, tipx = side * u * (.4 + sw), tipy = -u * 1.68;
+          co.beginPath(); co.moveTo(-u * .27, -u * 1.04); co.quadraticCurveTo(side * u * .02, -u * 2.05, tipx, tipy); co.quadraticCurveTo(side * u * .1, -u * 1.5, u * .27, -u * 1.04); co.closePath(); co.fill();
+          co.beginPath(); co.arc(tipx, tipy + u * .02, u * .09, 0, TAU); co.fill();
+          co.fillRect(-u * .3, -u * 1.09, u * .6, u * .09); // le revers du bonnet
+        }
+        // liseré de lumière (la lampe est derrière eux)
+        co.strokeStyle = RIM; co.lineWidth = Math.max(1, u * .05); co.beginPath(); co.arc(0, -u * .95, u * .23, Math.PI * 1.05, Math.PI * 1.55); co.stroke();
+        co.restore();
+      }, true);
+      const sx = x + u * .12, sy = y - u * .56, L = Math.hypot(tx - sx, ty - sy), hitA = Math.atan2(ty - sy, tx - sx);
+      const arm = (ang, al) => {
+        const k = ang >= 1.2 ? hitA / HIT : 1; // au coup, l'angle exact qui pose le marteau sur la planchette
+        ang *= k;
+        const hx = sx + Math.cos(ang) * L * .36, hy = sy + Math.sin(ang) * L * .36, ex = sx + Math.cos(ang) * L, ey = sy + Math.sin(ang) * L;
+        co.globalAlpha = alpha * al; co.strokeStyle = INK; co.lineCap = 'round';
+        co.lineWidth = Math.max(2.2, u * .13); co.beginPath(); co.moveTo(sx, sy); co.lineTo(hx, hy); co.stroke();
+        co.lineWidth = Math.max(1.4, u * .07); co.beginPath(); co.moveTo(hx, hy); co.lineTo(ex, ey); co.stroke();
+        co.save(); co.translate(ex, ey); co.rotate(ang + Math.PI / 2); co.fillStyle = INK; roundRect(co, -u * .22, -u * .12, u * .44, u * .24, u * .05); co.fill();
+        co.globalAlpha = alpha * al * .8; co.fillStyle = RIM; co.fillRect(-u * .2, -u * .12, u * .4, Math.max(1, u * .04)); co.restore();
+      };
+      if (smear) for (let k = 1; k <= 3; k++) arm(lerp(smear, a, k / 4), .16 * k);
+      arm(a, 1);
+      co.restore();
+    };
+    // un coup de marteau sur la case s (force f : 1 pour un chiffre, moins pour le roulement)
+    const hit = (s, f) => {
+      const e = st.get(s.i); if (e) e.hitAt = t;
+      const y = card.y + 2;
+      for (let n = Math.round((6 + 10 * f) * q); n > 0; n--) { const an = rnd(-Math.PI * .95, -Math.PI * .05); chips.add({ x: s.x + rnd(-4, 4), y, vx: Math.cos(an) * rnd(60, 180) * f, vy: Math.sin(an) * rnd(80, 240) * f, g: 700, drag: .6, max: rnd(.5, .9), size: rnd(1.5, 3), spin: rnd(-14, 14), r: rnd(TAU), c: pick(['#f3d39b', '#e6b874', '#d4a05a', '#fde7c0']) }); }
+      for (let n = Math.round(3 * f * q) + 1; n > 0; n--) dust.add({ x: s.x + rnd(-8, 8), y: y + rnd(-2, 2), vx: rnd(-30, 30), vy: rnd(-25, -5), drag: 2, max: rnd(.4, .7), size: rnd(3, 6) });
+    };
+    return {
+      frame(tt, dt) {
+        const was = t; t = tt;
+        for (let i = later.length - 1; i >= 0; i--) if (later[i].at <= t) later.splice(i, 1)[0].fn();
+        const S = slotsA(env), live = S.filter(s => !s.gone), next = live.find(s => !s.on);
+        const u = live.length > 1 ? Math.min(card.h * .56, (live[live.length - 1].x - live[0].x) / (live.length - 1) * 1.05) : card.h * .5;
+        // la lampe de l'atelier, derrière les lutins
+        behind(env, () => {
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          dot(co, '#f59e0b', cx, card.y - u * .9, card.w * .62, dark ? .5 : .38, card.h * .9);
+          dot(co, '#fde68a', cx, card.y - u * 1.1, card.w * .35, dark ? .35 : .25, card.h * .5);
+          co.globalCompositeOperation = 'source-over';
+        }, true);
+        S.forEach(s => {
+          let e = st.get(s.i);
+          if (!e) st.set(s.i, e = { a: REST, hitAt: -9, hop: 0, vh: 0, fade: 1, hat: false });
+          e.fade = s.gone ? Math.max(0, e.fade - dt * 4) : 1;
+          if (e.fade <= 0) return;
+          // le bras : levé pour le prochain chiffre, abattu au moment du coup, puis il revient
+          let target = REST, smear = 0;
+          const since = t - e.hitAt;
+          if (since < .05) { e.a = lerp(READY, HIT, (since / .05) ** 2); smear = READY; }
+          else if (since < .14) e.a = HIT;
+          else if (since < .5) target = REST;
+          else if (next && next.i === s.i) target = READY + Math.sin(t * (18 + 30 * build)) * (.05 + .1 * build);
+          if (mood === 'sad') target = .3; // bras ballants, le marteau pend sur le côté (jamais devant les chiffres)
+          if (mood === 'cheer' && t - moodAt > .1) target = READY + .2;
+          if (since >= .14) e.a += (target - e.a) * Math.min(1, dt * (since < .5 ? 9 : 12));
+          // le roulement de marteaux (Mythic) : chacun frappe à son tour
+          if (t < rollUntil && s.on && !s.ghost && Math.floor(t * 9 + s.i * 1.7) !== Math.floor(was * 9 + s.i * 1.7)) hit(s, .35);
+          // petits sauts (ola)
+          e.vh -= G * dt; e.hop = Math.max(0, e.hop + e.vh * dt); if (e.hop === 0) e.vh = Math.max(0, e.vh);
+          const lean = mood === 'sad' ? .12 * Math.sin(s.i) : build && next && next.i !== s.i ? clamp((next.x - s.x) / card.w, -1, 1) * .25 : 0;
+          elf(s.x, card.y + card.h * .05, u, e.a, e.hop, lean, e.fade * (s.ghost ? .55 : 1), e.hat, smear, s.x, s.top + 1, s.i);
+        });
+        // copeaux et sciure
+        chips.step(dt); dust.step(dt); confetti.step(dt); hats.step(dt);
+        dust.each((d, k) => dot(co, dark ? '#d6b98c' : '#a8825a', d.x, d.y, d.size * (1 + k), (1 - k) * .45));
+        chips.each((c, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = c.c; co.save(); co.translate(c.x, c.y); co.rotate(c.r + c.life * c.spin); co.fillRect(-c.size, -c.size * .35, c.size * 2, c.size * .7); co.restore(); });
+        confetti.each((c, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = c.c; co.save(); co.translate(c.x, c.y); co.rotate(c.life * c.spin); co.scale(1, Math.cos(c.life * 9 + c.r)); co.fillRect(-c.size, -c.size * .6, c.size * 2, c.size * 1.2); co.restore(); });
+        hats.each((c, k) => { co.globalAlpha = Math.min(1, (1 - k) * 4); co.save(); co.translate(c.x, c.y); co.rotate(c.life * c.spin); co.fillStyle = c.c; co.beginPath(); co.moveTo(-c.size * .5, c.size * .4); co.quadraticCurveTo(0, -c.size * 1.2, c.size * .6, -c.size * .7); co.quadraticCurveTo(c.size * .1, -c.size * .3, c.size * .5, c.size * .4); co.closePath(); co.fill(); co.fillStyle = '#f8fafc'; co.fillRect(-c.size * .55, c.size * .3, c.size * 1.1, c.size * .22); co.beginPath(); co.arc(c.size * .62, -c.size * .7, c.size * .16, 0, TAU); co.fill(); co.restore(); });
+        // le cadeau (Divine et plus) : il monte derrière la carte, le couvercle saute, gerbe d'étoiles
+        gifts.run(dt, (g, k) => {
+          const rise = outBack(clamp(k * 3)), s = card.h * .7, x = cx, y = card.y - s * .5 * rise + s * .2, open = clamp((k - .3) * 5);
+          behind(env, () => {
+            co.globalAlpha = clamp((1 - k) * 4);
+            if (open > 0) godrays(co, '#fde68a', x, y - s * .4, 12, s * .2, s * (1.2 + .8 * g.asc), t * .6, 7, open * .6);
+            co.globalAlpha = clamp((1 - k) * 4); co.fillStyle = '#dc2626'; co.fillRect(x - s * .45, y - s * .4, s * .9, s * .8);
+            co.fillStyle = '#fbbf24'; co.fillRect(x - s * .08, y - s * .4, s * .16, s * .8);
+            co.save(); co.translate(x + open * s * .6, y - s * .45 - open * s * .7); co.rotate(open * .8); co.fillStyle = '#b91c1c'; co.fillRect(-s * .5, -s * .1, s, s * .2); co.fillStyle = '#fbbf24'; co.fillRect(-s * .08, -s * .1, s * .16, s * .2); co.restore();
+          }, true);
+          if (open > 0 && !g.pop) { g.pop = true; for (let n = Math.round(40 * q); n > 0; n--) { const an = rnd(-Math.PI, 0); confetti.add({ x, y: y - s * .4, vx: Math.cos(an) * rnd(80, 260), vy: Math.sin(an) * rnd(120, 320), g: 420, drag: 1, max: rnd(1.2, 2), size: rnd(2, 3.5), spin: rnd(-10, 10), r: rnd(TAU), c: pick(['#fde68a', '#fbbf24', '#fff7ed']) }); } }
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const S = slotsA(env), s = S.reduce((b, x) => (Math.abs(x.x - p.x) < Math.abs(b.x - p.x) ? x : b), S[0] || { x: p.x, i: -1 });
+        if (s.i < 0) return;
+        if (o.last) build = 0;
+        hit(s, o.ghost ? .3 : o.last ? 1.4 : 1);
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; moodAt = t;
+        const S = slotsA(env).filter(s => !s.gone);
+        if (!p) { mood = 'sad'; const s = S[S.length - 1]; if (s) chips.add({ x: s.x, y: card.y, vx: 20, vy: -60, g: 500, drag: .3, max: 1, size: 2.5, spin: 6, r: 0, c: '#d4a05a' }); return; }
+        mood = 'cheer';
+        S.forEach((s, j) => after(j * .06, () => { const e = st.get(s.i); if (e && !e.hop) e.vh = hopV(card.h * (.1 + .12 * p)); }));
+        if (p >= .6) S.forEach((s, j) => after(.5 + j * .06, () => { const e = st.get(s.i); if (e && !e.hop) e.vh = hopV(card.h * (.12 + .12 * p)); }));
+        if (p >= 1) {
+          rollUntil = t + 1.1;
+          after(1.15, () => {
+            S.forEach((s, j) => { const e = st.get(s.i); if (!e || s.ghost) return; e.hat = true; e.vh = hopV(card.h * .3); hats.add({ x: s.x + card.h * .1, y: card.y - card.h * .75, vx: rnd(-50, 50), vy: -rnd(260, 380), g: 520, drag: .2, max: 1.6, size: card.h * .2, spin: rnd(-8, 8), c: INK }); });
+            for (let n = burst(1, 80 * q, 10) + 30 * asc; n > 0; n--) { const an = rnd(-Math.PI * .9, -Math.PI * .1); confetti.add({ x: cx + rnd(-.5, .5) * card.w, y: card.y - card.h * .3, vx: Math.cos(an) * rnd(60, 280), vy: Math.sin(an) * rnd(160, 380), g: 380, drag: 1, max: rnd(1.4, 2.4), size: rnd(2, 4), spin: rnd(-10, 10), r: rnd(TAU), c: pick(['#dc2626', '#16a34a', '#fbbf24', '#f8fafc']) }); }
+          });
+          if (asc >= 2) gifts.add({ delay: 1.3, life: 2.6, asc });
+        }
+      },
+    };
+  };
+
   // ==== fin du lot A ====
 
   function mount(stage, card, skin, o = {}) {

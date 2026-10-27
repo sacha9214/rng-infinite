@@ -7219,6 +7219,73 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes fl-sway { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 .room-stage.many .side-fairylights::before, .room-stage.many .side-fairylights::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-fairylights::before, .side-fairylights::after { animation: none; } }
+/* ------------------------------------------------------------------ Elves' Workshop (idée de costoroll, 2026-10-27) :
+   un tapis roulant d'atelier (caoutchouc noir strié, rail d'acier et rouleaux en haut et en bas) ; chaque chiffre est
+   une chute de bois de pin, et le chiffre y est marqué au fer, brun brûlé. Pendant le tirage, les chutes défilent sur
+   le tapis en cahotant (pas encore de chiffre, seulement des traits de crayon) ; un chiffre qui se pose : le marteau du
+   lutin frappe (l'élan, c'est le marteau levé du canvas), la planchette s'enfonce d'un coup, le chiffre apparaît au
+   même instant dans un éclat, rebond raide (bois dur : aucun écrasement mou). Les six lutins en ombres chinoises, leurs
+   marteaux, les copeaux : js/skinfx.js (SCENES.workshop). */
+.num-card.skin-workshop {
+  background:
+    /* rails d'acier en haut et en bas, rouleaux (boulons) */
+    radial-gradient(circle, #d6d3d1 0 .035em, #57534e .045em, transparent .06em) .2em 0 / .55em .14em repeat-x,
+    radial-gradient(circle, #d6d3d1 0 .035em, #57534e .045em, transparent .06em) .2em 100% / .55em .14em repeat-x,
+    linear-gradient(180deg, #a8a29e, #57534e .14em, transparent .14em, transparent calc(100% - .14em), #57534e calc(100% - .14em), #a8a29e),
+    /* le tapis : stries de caoutchouc */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .06) 0 .04em, transparent .04em .2em),
+    radial-gradient(ellipse 70% 60% at 50% 30%, rgba(251, 191, 36, .14), transparent 75%),
+    linear-gradient(180deg, #292524, #1c1917 50%, #292524);
+  border: 2px solid #44403c; border-radius: .4rem; color: #3b1d0a;
+  box-shadow: inset 0 0 0 1px rgba(214, 211, 209, .12), inset 0 .25em .4em rgba(0, 0, 0, .45), 0 0 16px rgba(251, 191, 36, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .34em .44em;
+}
+/* Le tapis avance pendant le tirage : les stries filent vers la gauche. */
+.num-card.skin-workshop.charging { animation: charge 1.6s ease-in-out infinite, wsh-belt .45s linear infinite; }
+@keyframes wsh-belt { to { background-position: -.35em 0, -.35em 100%, 0 0, -.2em 0, 0 0, 0 0; } }
+.skin-workshop .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .62em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.28em; margin: 0 .035em; border-radius: .1em .14em .08em .12em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: Georgia, 'Times New Roman', serif; color: #3b1d0a;
+  text-shadow: 0 0 .04em #7c2d12, 0 .03em 0 rgba(255, 237, 213, .55), 0 0 .14em rgba(124, 45, 18, .35);
+  background:
+    /* veinage du pin et un nœud */
+    radial-gradient(ellipse .1em .07em at 72% 30%, #a16207 0 40%, rgba(161, 98, 7, .3) 60%, transparent 75%),
+    repeating-linear-gradient(176deg, rgba(146, 64, 14, .16) 0 .03em, transparent .03em .13em, rgba(146, 64, 14, .1) .13em .15em, transparent .15em .26em),
+    linear-gradient(90deg, rgba(120, 53, 15, .25), transparent 15%, transparent 85%, rgba(120, 53, 15, .3)),
+    linear-gradient(180deg, #f3d39b, #e6b874 60%, #d4a05a);
+  box-shadow: inset 0 .05em 0 rgba(255, 247, 237, .55), inset 0 -.06em .04em rgba(120, 53, 15, .35), 0 .07em .06em rgba(0, 0, 0, .55);
+}
+.skin-workshop .slot.ghost { opacity: .2; }
+.skin-workshop .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : la chute de bois avance sur le tapis en cahotant, le chiffre n'est qu'un trait de crayon. */
+.skin-workshop .slot.spinning { opacity: 1; color: rgba(87, 83, 78, .32); text-shadow: none; animation: wsh-ride .45s linear infinite; }
+.skin-workshop .slot.spinning:nth-of-type(2n) { animation-delay: -.2s; }
+.skin-workshop .slot.spinning:nth-of-type(3n) { animation-delay: -.32s; }
+@keyframes wsh-ride { 0% { transform: translateX(.12em) rotate(-2deg); } 30% { transform: translate(.04em, -.03em) rotate(1.5deg); } 60% { transform: translateX(-.04em) rotate(-1deg); } 100% { transform: translateX(-.12em) rotate(2deg); } }
+/* Le coup de marteau : la planchette s'enfonce d'un coup avec un éclat (le chiffre apparaît à cet instant), rebondit
+   raide, tremble et se pose. */
+.skin-workshop .slot.revealed { animation: wsh-hit .5s backwards; }
+@keyframes wsh-hit {
+  0% { transform: translateY(-.05em); color: rgba(87, 83, 78, .32); text-shadow: none; animation-timing-function: steps(1); }
+  6% { transform: translateY(.1em) scale(1.04, .95); color: #3b1d0a; text-shadow: 0 0 .04em #7c2d12, 0 .03em 0 rgba(255, 237, 213, .55), 0 0 .3em rgba(251, 146, 60, .8); filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  22% { transform: translateY(-.06em) rotate(-2deg); filter: brightness(1.1); }
+  36% { transform: translateY(0) rotate(1.5deg); filter: none; }
+  52% { transform: rotate(-.6deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-workshop .slot, .num-card.skin-workshop.charging { animation: none; } }
+/* Cadre de duel : le mur de l'atelier à la lueur d'une lampe, un établi en bas ; 🔨 tape, 🎁 sautille. */
+.side-workshop { --side-border: #b45309; --side-glow: 0 0 16px rgba(251, 191, 36, .28); --side-ink: #b45309;
+  --side-bg: linear-gradient(180deg, transparent 80%, rgba(161, 98, 7, .35) 80%, rgba(120, 53, 15, .3)), radial-gradient(ellipse 50% 45% at 50% 18%, rgba(251, 191, 36, .25), transparent 70%), repeating-linear-gradient(90deg, rgba(120, 53, 15, .1) 0 2px, transparent 2px 26px), linear-gradient(180deg, rgba(41, 37, 36, .22), rgba(120, 53, 15, .1));
+  --deco-a: '🔨'; --deco-b: '🎁 🪵'; }
+.side-workshop::before { transform-origin: 80% 80%; animation: wsh-tap 1.4s ease-in infinite; }
+.side-workshop::after { animation: wsh-hop 1.8s ease-in-out infinite; }
+@keyframes wsh-tap { 0%, 60%, 100% { transform: rotate(0); } 75% { transform: rotate(-35deg); } 82% { transform: rotate(12deg); } 90% { transform: rotate(0); } }
+@keyframes wsh-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px); } 80% { transform: translateY(0); } 86% { transform: translateY(-2px); } }
+.room-stage.many .side-workshop::before, .room-stage.many .side-workshop::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-workshop::before, .side-workshop::after { animation: none; } }
 /* ---- Clans (#/clan, api/_clan.js ; idée de BIGBOIJONER69 et KMC, 2026-10-25). Préfixe cl-. Téléphone d'abord. */
 .cl-tag { display: inline-block; margin-left: .3rem; padding: 0 .3rem; border-radius: .3rem; font-family: var(--font-mono); font-size: .72em; font-weight: 800; letter-spacing: .04em; line-height: 1.5; vertical-align: .08em; white-space: nowrap; color: var(--cl-tc, var(--prose-2)); background: color-mix(in srgb, var(--cl-tc, var(--prose-3)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cl-tc, var(--prose-3)) 40%, transparent); }
 .cl-c-plain { --cl-tc: var(--prose-2); }

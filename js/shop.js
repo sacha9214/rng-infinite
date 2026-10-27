@@ -134,6 +134,8 @@
     // ==== Skins du 2026-10-27, lot A (idées de joueurs ; scènes dans js/skinfx.js) ====
     // Idée de 17black (2026-10-27) : des guirlandes de Noël qui clignotent puis s'allument pour révéler les chiffres.
     { id: 'fairylights', name: 'Fairy Lights', emoji: '✨', price: 1800, desc: 'A string of old-fashioned bulbs hangs over a frosty window: every bulb flickers on to light up its digit, and great rolls set the whole string chasing', idea: '17black' },
+    // Idée de costoroll (2026-10-27) : six lutins derrière un tapis roulant de chutes de bois ; le chiffre apparaît au coup de marteau.
+    { id: 'workshop', name: "Elves' Workshop", emoji: '🧝', price: 2400, desc: 'Six shadow elves stand behind a conveyor belt of wood scraps: each one smashes its hammer down and the digit appears with the hit', idea: 'costoroll' },
     { id: 'hellborn', name: 'HellBorn', emoji: '🌋', price: 4000, desc: 'Black volcanic stone with lava burning through the cracks' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
