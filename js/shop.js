@@ -158,6 +158,9 @@
     // ==== Skins du 2026-10-28 : idées de costoroll et casmicgraything (scènes dans js/skinfx.js) ====
     // Idée de costoroll (2026-10-28) : l'ombre de chaque chiffre dans une ampoule qui se fêle ; sur un Mythic, tout éclate.
     { id: 'lightbulb', name: 'Lightbulb', emoji: '💡', price: 1800, desc: 'Six glowing bulbs on a wooden desk: every bulb cracks open at the top to show its digit, and Mythic rolls make them all shatter at once', idea: 'costoroll' },
+    // Idée de casmicgraything (2026-10-28, avec costoroll et casmictechthing) : une courbe de bourse derrière les chiffres,
+    // qui s'effondre ou s'envole selon la rareté ; sur un Mythic, elle sort par le haut et il pleut de l'argent.
+    { id: 'stonks', name: 'Stonks', emoji: '📈', price: 1600, desc: 'A live stock chart runs behind your digits: bad rolls crash in red, good rolls rally in green, and Mythic rolls shoot off the chart in a rain of coins and bills', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

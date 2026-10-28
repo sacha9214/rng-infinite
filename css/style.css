@@ -8802,3 +8802,57 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes lbl-twinkle { 0%, 100% { transform: scale(.8) rotate(0); opacity: .5; } 50% { transform: scale(1.15) rotate(20deg); opacity: 1; } }
 .room-stage.many .side-lightbulb::before, .room-stage.many .side-lightbulb::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-lightbulb::before, .side-lightbulb::after { animation: none; } }
+/* ------------------------------------------------------------------ Stonks (idée de casmicgraything, avec costoroll et
+   casmictechthing, 2026-10-28) : l'écran d'un terminal de bourse (bleu nuit, quadrillage, graduations à droite) et une
+   courbe de cours derrière les chiffres ; les chiffres sont ceux d'un panneau de cotation (blancs, cernés de nuit pour
+   rester lisibles par-dessus la courbe). Pendant le tirage, ils clignotent vert / rouge comme un cours en direct ; un
+   chiffre qui se pose : il tombe d'un cran, sec (afficheur : rien de mou), éclair, puis se fige. La courbe vivante, les
+   bougies, le verdict (krach rouge ou envolée verte) et la pluie de pièces et de billets : js/skinfx.js (SCENES.stonks).
+   Après la révélation, la scène pose .stonk-up ou .stonk-down sur la carte (lueur verte ou rouge). */
+.num-card.skin-stonks {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M0 30 L10 27 L18 29 L27 22 L36 24 L45 17 L54 20 L63 13 L72 15 L82 8 L91 10 L100 4 L100 40 L0 40Z' fill='%2322c55e' fill-opacity='.13'/><path d='M0 30 L10 27 L18 29 L27 22 L36 24 L45 17 L54 20 L63 13 L72 15 L82 8 L91 10 L100 4' fill='none' stroke='%234ade80' stroke-opacity='.55' stroke-width='1.2' vector-effect='non-scaling-stroke'/></svg>") 0 0 / 100% 100% no-repeat,
+    linear-gradient(90deg, transparent calc(100% - .32em), rgba(148, 163, 184, .08) calc(100% - .32em)),
+    repeating-linear-gradient(180deg, transparent 0 .3em, rgba(148, 163, 184, .45) .3em calc(.3em + 1px), transparent calc(.3em + 1px) .6em) 100% 0 / .12em 100% no-repeat,
+    linear-gradient(90deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / .6em .6em,
+    linear-gradient(180deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / .6em .6em,
+    radial-gradient(ellipse 80% 70% at 50% 40%, #13213a, #0b1324 70%, #070c18);
+  border: 2px solid #1e3a5f; border-radius: .45rem; color: #f8fafc; padding: .5em .78em .46em .56em;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .12), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 14px rgba(56, 189, 248, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  transition: border-color .5s, box-shadow .5s;
+}
+/* la scène dessine la courbe vivante : la courbe fixe s'efface */
+.num-card.skin-stonks.has-fx { background-size: 0 0, auto, .12em 100%, .6em .6em, .6em .6em, auto; }
+.skin-stonks .slot { position: relative; z-index: 1; font-size: .86em; font-weight: 800; color: #f8fafc;
+  text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(148, 163, 184, .35); }
+.skin-stonks .slot.ghost { opacity: .2; }
+/* Pendant le tirage : un cours en direct, qui clignote vert et rouge en sautillant. */
+.skin-stonks .slot.spinning { opacity: 1; animation: stonk-quote .3s steps(1) infinite; }
+.skin-stonks .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+.skin-stonks .slot.spinning:nth-of-type(3n) { animation-delay: -.19s; }
+@keyframes stonk-quote { 0% { color: #4ade80; transform: translateY(-.03em); } 50% { color: #f87171; transform: translateY(.03em); } }
+/* Le chiffre se pose : il tombe d'un cran, sec, éclair blanc, et se fige. */
+.skin-stonks .slot.revealed { animation: stonk-tick .5s backwards; }
+@keyframes stonk-tick {
+  0% { transform: translateY(-.2em); color: #4ade80; animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  16% { transform: translateY(.04em); color: #fff; text-shadow: 0 0 .05em #0b1324, 0 0 .25em #fff, 0 0 .5em #38bdf8; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  30% { transform: translateY(-.02em); }
+  46% { transform: none; }
+  100% { transform: none; }
+}
+/* Le verdict du marché : lueur verte (hausse) ou rouge (baisse) autour des chiffres et sur le cadre. */
+.num-card.skin-stonks.stonk-up { border-color: #16a34a; box-shadow: inset 0 0 0 1px rgba(74, 222, 128, .25), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 18px rgba(34, 197, 94, .35), 0 10px 18px rgba(0, 0, 0, .45); }
+.num-card.skin-stonks.stonk-down { border-color: #b91c1c; box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .25), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 18px rgba(239, 68, 68, .35), 0 10px 18px rgba(0, 0, 0, .45); }
+.skin-stonks.stonk-up .slot:not(.ghost) { text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(74, 222, 128, .8); }
+.skin-stonks.stonk-down .slot:not(.ghost) { text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(248, 113, 113, .8); }
+@media (prefers-reduced-motion: reduce) { .skin-stonks .slot { animation: none; } }
+/* Cadre de duel : un écran de bourse quadrillé ; 📈 grimpe, 🪙 tourne. */
+.side-stonks { --side-border: #16a34a; --side-glow: 0 0 16px rgba(34, 197, 94, .28); --side-ink: #15803d;
+  --side-bg: linear-gradient(90deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(180deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(180deg, rgba(19, 33, 58, .3), rgba(7, 12, 24, .22));
+  --deco-a: '📈'; --deco-b: '🪙'; }
+.side-stonks::before { animation: stonk-climb 2.2s ease-in-out infinite; }
+.side-stonks::after { animation: stonk-flip 1.4s linear infinite; }
+@keyframes stonk-climb { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(2px, -4px) scale(1.08); } }
+@keyframes stonk-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.15); } 100% { transform: scaleX(1); } }
+.room-stage.many .side-stonks::before, .room-stage.many .side-stonks::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-stonks::before, .side-stonks::after { animation: none; } }

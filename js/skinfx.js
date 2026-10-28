@@ -6634,6 +6634,134 @@
     };
   };
 
+  // 📈 Stonks (2026-10-28, idée de casmicgraything, avec costoroll et casmictechthing) — l'écran d'un terminal de
+  // bourse : une courbe de cours en direct court derrière les chiffres (dans la carte), sa tête avance vers le prochain
+  // chiffre en hésitant (le marché ne sait pas encore), une bougie verte ou rouge se pose sous chaque chiffre qui se
+  // fige, et avant le dernier la courbe s'affole. Révélation : le verdict, selon la rareté. Tirage raté : krach, la
+  // courbe plonge sous l'écran en rouge ; Common : petite baisse rouge ; Uncommon et mieux : hausse verte, plus raide
+  // avec la rareté, et l'étiquette du gain au bout ; dès Mythic, la courbe crève le haut de l'écran, file au-dessus de la
+  // carte avec une flèche, et une pluie de pièces et de billets tombe (plus dense au-delà de Mythic). Les étiquettes
+  // ne sont que des nombres (« +64.0% ») : rien à traduire. Aucune marque, aucun vrai symbole boursier.
+  SCENES.stonks = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const el = env.el;
+    if (el) el.classList.remove('stonk-up', 'stonk-down');
+    const pts = [{ x: .03, y: .55 }], candles = [], coins = particles(), flashes = timed(), labels = timed(), seen = new Set();
+    let t = 0, build = 0, hx = .03, hy = .55, vy = 0, verdict = null, col = '#38bdf8', lastAdd = 0, redAt = -9;
+    const GREEN = '#22c55e', RED = '#ef4444';
+    const X = u => lerp(w * .03, w * .95, u), Y = v => lerp(h * .1, h * .9, v);
+    const money = (x, y, kind) => coins.add({ x, y, vx: rnd(-30, 30), vy: rnd(20, 70), g: kind ? card.h * 1.2 : card.h * 3.2, drag: kind ? 1.6 : .4, max: rnd(1.8, 2.6), kind, r: rnd(TAU), spin: rnd(-4, 4), flip: rnd(TAU), fs: rnd(5, 9), size: card.h * (kind ? rnd(.13, .17) : rnd(.08, .11)), seed: rnd(TAU) });
+    const drawMoney = (m, a) => {
+      co.save(); co.globalAlpha = a; co.translate(m.x + (m.kind ? Math.sin(t * 3 + m.seed) * card.h * .15 : 0), m.y); co.rotate(m.r);
+      const f = Math.cos(m.flip), s = m.size;
+      if (m.kind) { // un billet (vert, sans aucun vrai motif) qui flotte en se retournant
+        co.scale(1, Math.max(.15, Math.abs(f)));
+        co.fillStyle = f > 0 ? '#86efac' : '#4ade80'; co.strokeStyle = '#166534'; co.lineWidth = 1.2;
+        roundRect(co, -s * 1.1, -s * .5, s * 2.2, s, s * .08); co.fill(); co.stroke();
+        co.strokeStyle = 'rgba(22,101,52,.6)'; co.strokeRect(-s * .95, -s * .36, s * 1.9, s * .72);
+        co.fillStyle = '#15803d'; co.beginPath(); co.ellipse(0, 0, s * .28, s * .26, 0, 0, TAU); co.fill();
+        co.fillStyle = '#bbf7d0'; co.font = `900 ${Math.round(s * .42)}px system-ui, sans-serif`; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText('$', 0, s * .02);
+      } else { // une pièce d'or qui tourne sur elle-même
+        co.scale(Math.max(.12, Math.abs(f)), 1);
+        co.fillStyle = '#a16207'; co.beginPath(); co.arc(0, s * .12, s, 0, TAU); co.fill();
+        co.fillStyle = '#facc15'; co.beginPath(); co.arc(0, 0, s, 0, TAU); co.fill();
+        co.strokeStyle = '#ca8a04'; co.lineWidth = Math.max(1, s * .14); co.beginPath(); co.arc(0, 0, s * .66, 0, TAU); co.stroke();
+        co.fillStyle = '#fef9c3'; co.beginPath(); co.ellipse(-s * .35, -s * .35, s * .2, s * .12, -.7, 0, TAU); co.fill();
+      }
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        const S = slotsA(env).filter(s => !s.gone), on = S.filter(s => s.on).length, n = Math.max(1, S.length);
+        // nouvelles bougies : une par chiffre posé, sous lui (verte si le chiffre monte, rouge s'il baisse)
+        for (const s of S) if (s.on && !seen.has(s.i)) {
+          seen.add(s.i);
+          const ip = bInner(env, s), d = Number(s.ghost ? 0 : (el && el.querySelectorAll('.slot')[s.i] || {}).textContent) || 0;
+          candles.push({ x: ip.x / w, up: d >= 5, body: rnd(.12, .26), wick: rnd(.08, .14), mid: clamp(hy + rnd(-.08, .08), .3, .7), at: t, ghost: s.ghost });
+          flashes.add({ life: .4, x: X(hx), y: Y(hy) });
+          vy += (d >= 5 ? -1 : 1) * rnd(.9, 1.6);
+        }
+        // la tête de la courbe : elle avance vers le prochain chiffre en hésitant ; le verdict la mène au bout
+        if (!verdict) {
+          const target = .03 + .7 * Math.min(1, (on + .85) / n);
+          hx += (target - hx) * Math.min(1, dt * 1.6);
+          const jit = build ? 3.2 : 1;
+          vy += (rnd(-1, 1) * 16 * jit - (hy - .5) * 10 - vy * 2.2) * dt;
+          hy = clamp(hy + vy * dt * .5, .1, .9);
+        } else {
+          const v = verdict, k = clamp((t - v.at) / v.dur), e = v.p >= 1 ? k * k : outCubic(k);
+          hx = lerp(v.x0, v.x1, k); hy = lerp(v.y0, v.y1, e) + (v.p < 1 ? Math.sin(k * 23) * .025 * (1 - k) : 0);
+          if (k >= 1 && !v.done) { v.done = true; if (v.onEnd) v.onEnd(); }
+        }
+        if (t - lastAdd > .045) { lastAdd = t; pts.push({ x: hx, y: hy }); if (pts.length > 260) pts.splice(1, 1); }
+        const line = pts.concat({ x: hx, y: hy });
+        // krach : l'écran rougit un instant
+        if (t - redAt < .9) { ci.globalAlpha = .35 * (1 - (t - redAt) / .9) * (t - redAt < .15 || (t - redAt > .3 && t - redAt < .45) ? 1 : .5); ci.fillStyle = '#dc2626'; ci.fillRect(0, 0, w, h); ci.globalAlpha = 1; }
+        // bougies, derrière tout
+        for (const c of candles) {
+          const k = outCubic((t - c.at) / .25), x = X(c.x), cw = Math.max(4, w * .03), top = Y(c.mid - c.body / 2 * k), bot = Y(c.mid + c.body / 2 * k);
+          ci.globalAlpha = c.ghost ? .15 : .5; ci.fillStyle = ci.strokeStyle = c.up ? GREEN : RED; ci.lineWidth = 1.2;
+          ci.beginPath(); ci.moveTo(x, Y(c.mid - (c.body / 2 + c.wick) * k)); ci.lineTo(x, Y(c.mid + (c.body / 2 + c.wick) * k)); ci.stroke();
+          ci.fillRect(x - cw / 2, top, cw, Math.max(1, bot - top));
+        }
+        // l'aire sous la courbe, puis la courbe (halo, trait)
+        const pathLine = c => { c.beginPath(); line.forEach((p, i) => (i ? c.lineTo(X(p.x), Y(p.y)) : c.moveTo(X(p.x), Y(p.y)))); };
+        const g = ci.createLinearGradient(0, 0, 0, h); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '00');
+        pathLine(ci); ci.lineTo(X(hx), h); ci.lineTo(X(line[0].x), h); ci.closePath(); ci.globalAlpha = .7; ci.fillStyle = g; ci.fill();
+        ci.lineJoin = ci.lineCap = 'round';
+        pathLine(ci); ci.globalAlpha = .35; ci.strokeStyle = col; ci.lineWidth = Math.max(4, h * .07); ci.stroke();
+        pathLine(ci); ci.globalAlpha = .95; ci.lineWidth = Math.max(1.6, h * .028); ci.stroke();
+        // la tête : un point qui pulse
+        ci.globalCompositeOperation = 'lighter'; dot(ci, col, X(hx), Y(hy), h * .13 * (1 + .25 * Math.sin(t * 12)), .9); ci.globalCompositeOperation = 'source-over';
+        flashes.run(dt, (f, k) => { ci.globalAlpha = (1 - k) * .8; ci.strokeStyle = '#e0f2fe'; ci.lineWidth = 1.5; ci.beginPath(); ci.arc(f.x, f.y, h * (.05 + .25 * k), 0, TAU); ci.stroke(); });
+        ci.globalAlpha = 1;
+        // Mythic : la courbe sort de l'écran par le haut et file au-dessus de la carte, avec une flèche
+        if (verdict && verdict.p >= 1 && verdict.done) {
+          const k = clamp((t - verdict.end) / .5), ex = card.x + (card.w - w) / 2 + X(verdict.x1), ey = card.y, tx = ex + card.h * .5 * outCubic(k), ty = ey - card.h * (.2 + 1.1 * outCubic(k));
+          co.lineCap = 'round'; co.strokeStyle = dark ? '#4ade80' : '#16a34a';
+          co.globalAlpha = .35; co.lineWidth = Math.max(5, card.h * .1); co.beginPath(); co.moveTo(ex, ey + 2); co.lineTo(tx, ty); co.stroke();
+          co.globalAlpha = 1; co.lineWidth = Math.max(2.4, card.h * .045); co.beginPath(); co.moveTo(ex, ey + 2); co.lineTo(tx, ty); co.stroke();
+          const an = Math.atan2(ty - ey, tx - ex), A = card.h * .2;
+          co.fillStyle = co.strokeStyle; co.beginPath(); co.moveTo(tx + Math.cos(an) * A * .6, ty + Math.sin(an) * A * .6); co.lineTo(tx + Math.cos(an + 2.4) * A, ty + Math.sin(an + 2.4) * A); co.lineTo(tx + Math.cos(an - 2.4) * A, ty + Math.sin(an - 2.4) * A); co.closePath(); co.fill();
+          if (dark) { co.globalCompositeOperation = 'lighter'; dot(co, '#4ade80', tx, ty, card.h * .35, .5 + .2 * Math.sin(t * 9)); co.globalCompositeOperation = 'source-over'; }
+          // la pluie d'argent
+          if (verdict.rain > 0) { verdict.rain -= dt; const r = verdict.rate * dt; for (let i = Math.floor(r) + (Math.random() < r % 1 ? 1 : 0); i > 0; i--) money(rnd(card.x - card.h * .8, card.x + card.w + card.h * .8), card.y - card.h * rnd(1.2, 1.7), Math.random() < .4 ? 1 : 0); }
+        }
+        coins.step(dt);
+        coins.each((m, k) => { m.r += m.spin * dt * .3; m.flip += m.fs * dt; drawMoney(m, clamp((1 - k) * 5)); });
+        // l'étiquette du gain (ou de la perte) au bout de la courbe, au-dessus du coin de la carte
+        labels.run(dt, (l, k) => {
+          const s = k < .12 ? outBack(k / .12) : 1, a = k > .8 ? (1 - k) / .2 : 1, x = card.x + card.w - card.h * .3, y = card.y - card.h * .32;
+          co.save(); co.globalAlpha = a; co.translate(x, y); co.scale(s, s);
+          co.font = `800 ${Math.round(card.h * .26)}px ui-monospace, Menlo, monospace`; co.textAlign = 'center'; co.textBaseline = 'middle';
+          const tw = co.measureText(l.s).width + card.h * .2;
+          co.fillStyle = l.up ? '#14532d' : '#7f1d1d'; roundRect(co, -tw / 2, -card.h * .18, tw, card.h * .36, card.h * .08); co.fill();
+          co.strokeStyle = l.up ? '#4ade80' : '#f87171'; co.lineWidth = 1.5; co.stroke();
+          co.fillStyle = l.up ? '#bbf7d0' : '#fecaca'; co.fillText(l.s, 0, card.h * .01);
+          co.restore();
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        const up = p >= .25, crash = !p;
+        col = up ? GREEN : RED;
+        if (el) el.classList.add(up ? 'stonk-up' : 'stonk-down');
+        const y1 = crash ? 1.25 : p < .25 ? hy + .12 : p >= 1 ? -.08 : clamp(hy - (.12 + .5 * p), .1, .9);
+        verdict = { at: t, dur: crash ? .7 : p >= 1 ? .45 : .8, x0: hx, x1: p >= 1 ? .86 : .97, y0: hy, y1, p, rate: (14 + 10 * asc) * q, rain: 1.6 + .6 * asc };
+        verdict.end = t + verdict.dur;
+        const pct = crash ? -(70 + rnd(25)) : p < .25 ? -rnd(1, 4) : p >= 1 ? 420 * Math.pow(2.4, asc) : 4 + 160 * p * p + rnd(-1, 1) * 2;
+        const s = `${pct > 0 ? '▲ +' : '▼ '}${Math.abs(pct) >= 1000 ? Math.round(pct).toLocaleString('en-US') : pct.toFixed(1)}%`;
+        labels.add({ delay: verdict.dur * .7, life: 2.6 + p + asc * .5, s, up });
+        if (crash) { flashes.add({ life: .6, x: X(.97), y: h * .95 }); redAt = t + .45; }
+      },
+    };
+  };
+
   // ==== fin des skins du 2026-10-28 (costoroll, casmicgraything) ====
 
   function mount(stage, card, skin, o = {}) {
