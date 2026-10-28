@@ -448,6 +448,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .result-meta .top { color: var(--t-accent); }
 /* XP qui manquait pour la rareté suivante (idée de daddy finger, 2026-10-27) : discret, sous l'XP. */
 .tier-short { margin-top: .4rem; max-width: 100%; padding: 0 .5rem; text-align: center; font: 600 .74rem var(--font-mono); letter-spacing: .02em; color: var(--prose-2); overflow-wrap: anywhere; }
+/* Deux moitiés (rareté du dessus, rareté du dessous ; idée de Starharvest, 2026-10-28) : chacune reste entière, elles
+   passent l'une sous l'autre quand la ligne ne tient pas (téléphones) et le point qui les sépare disparaît alors. */
+.tier-short > span { display: inline-block; white-space: nowrap; }
+.tier-short > i { font-style: normal; color: var(--prose-3); }
+@media (max-width: 480px) { .tier-short > i { display: block; height: 0; overflow: hidden; } }
 .fade-in { animation: fadein .45s ease both; }
 @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ep-big {
@@ -3146,6 +3151,21 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 .solo-auto-box { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .3rem .7rem; }
 .solo-stop { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 700; color: var(--prose-3); }
 .solo-stop select { padding: .2rem .4rem; border: 1px solid var(--outline-mid); border-radius: .4rem; background: var(--surface); color: var(--prose); font: 700 .72rem var(--font-sans); }
+/* Badges qui arrêtent aussi le tirage auto (idée de CococoC, 2026-10-28) : un petit bouton à côté du choix, et sa fenêtre. */
+.solo-badges { display: inline-flex; align-items: center; gap: .25rem; padding: .2rem .5rem; border: 1px solid var(--outline-mid); border-radius: .4rem; background: var(--surface); color: var(--prose-2); font: 700 .72rem var(--font-sans); cursor: pointer; }
+.solo-badges.on { border-color: #818cf8; color: var(--prose); background: color-mix(in srgb, #818cf8 14%, var(--surface)); }
+.solo-badges:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.ab-search { width: 100%; margin-top: .3rem; }
+.ab-count { margin: .45rem 0 .3rem; }
+.ab-list { display: flex; flex-direction: column; gap: .25rem; max-height: min(50vh, 22rem); overflow-y: auto; overscroll-behavior: contain; padding-right: .15rem; }
+.ab-row { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 2.4rem; padding: .35rem .55rem; border: 1px solid var(--outline); border-radius: .5rem; background: var(--surface); color: var(--prose); font: 600 .82rem var(--font-sans); text-align: left; cursor: pointer; }
+.ab-row:hover:not(:disabled) { border-color: var(--outline-mid); }
+.ab-row[aria-pressed="true"] { border-color: #818cf8; background: color-mix(in srgb, #818cf8 16%, var(--surface)); }
+.ab-row[aria-pressed="true"]::after { content: '✓'; margin-left: .2rem; color: #6366f1; font-weight: 800; }
+.ab-row:disabled { opacity: .45; cursor: not-allowed; }
+.ab-emoji { flex: none; width: 1.4rem; text-align: center; }
+.ab-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ab-row .badge-pill { flex: none; font-size: .64rem; }
 .idea-warn { display: flex; gap: .45rem; margin: 0 0 .8rem; padding: .5rem .7rem; border: 1px solid rgba(251, 191, 36, .5); border-radius: .5rem; background: rgba(251, 191, 36, .1); font-size: .78rem; line-height: 1.4; color: var(--prose); }
 
 /* ------------------------------------------------------------------ HellBorn : basalte noir, lave dans les fissures.

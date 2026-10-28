@@ -811,6 +811,18 @@
       return null;
     }
 
+    // Rareté du dessous et marge au-dessus d'elle (idée de Starharvest, 2026-10-28, pour les mauvais tirages) : le plancher
+    // de la rareté actuelle est la première entrée de la table qui l'atteint ; total - above est dans la rareté du dessous,
+    // comme total + short est dans celle du dessus. null pour Land waste (rien en dessous) ou sans table.
+    function prevTier(total) {
+      if (!pctKeys.length) return null;
+      const rank = TIER_ORDER.indexOf(cardTier(total));
+      let lo = 0, hi = pctKeys.length - 1; // première entrée dont la rareté est au moins l'actuelle
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (TIER_ORDER.indexOf(tierOfPct(percentiles[mid][1])) >= rank) hi = mid; else lo = mid + 1; }
+      if (lo === 0 || pctKeys[lo] > total) return null;
+      return { tier: tierOfPct(percentiles[lo - 1][1]), at: pctKeys[lo], above: total - pctKeys[lo] + 1 };
+    }
+
     // Analyse complète pour l'affichage.
     function analyze(n) {
       const c = contextOf(n);
@@ -867,7 +879,7 @@
       return null;
     }
 
-    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
+    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, prevTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
   }
 
   function formatPct(v) {
