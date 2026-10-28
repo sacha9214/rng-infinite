@@ -8856,3 +8856,45 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes stonk-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.15); } 100% { transform: scaleX(1); } }
 .room-stage.many .side-stonks::before, .room-stage.many .side-stonks::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-stonks::before, .side-stonks::after { animation: none; } }
+/* ------------------------------------------------------------------ Chess (idée de casmicgraything, 2026-10-28) : un
+   échiquier de tournoi verni dans son cadre de noyer ; les cases passent du noir ébène à gauche au blanc ivoire à
+   droite (« a monochrome black-to-white scale across the digits ») ; les chiffres sont ivoire, cernés de brun noyer
+   pour ne jamais se fondre dans les cases. Pendant le tirage, ils battent comme une pendule d'échecs ; un chiffre qui
+   se pose : on le pose comme une pièce, « toc » (il descend, cogne, matière dure : petit rebond raide). Les pièces qui
+   bougent à chaque chiffre, les deux dames qui s'entrechoquent et « Checkmate! » : js/skinfx.js (SCENES.chess). */
+.num-card.skin-chess {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255, 255, 255, .14), transparent 70%),
+    conic-gradient(rgba(0, 0, 0, .3) 25%, rgba(255, 255, 255, .13) 0 50%, rgba(0, 0, 0, .3) 0 75%, rgba(255, 255, 255, .13) 0) 0 0 / .52em .52em,
+    linear-gradient(90deg, #0c0a09, #292524 18%, #78716c 50%, #d6d3d1 82%, #fafaf9);
+  border: 3px solid #5b3a1e; border-radius: .4rem; color: #fef3c7;
+  box-shadow: inset 0 0 0 2px #8b5a2b, inset 0 0 0 3px #3f2a14, inset 0 .25em .5em rgba(0, 0, 0, .3), 0 0 14px rgba(180, 120, 60, .18), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-chess .slot { position: relative; z-index: 1; font-weight: 900; color: #fef3c7;
+  text-shadow: .045em 0 0 #5b3a1e, -.045em 0 0 #5b3a1e, 0 .045em 0 #5b3a1e, 0 -.045em 0 #5b3a1e, .032em .032em 0 #5b3a1e, -.032em .032em 0 #5b3a1e, .032em -.032em 0 #5b3a1e, -.032em -.032em 0 #5b3a1e, 0 .09em .06em rgba(0, 0, 0, .55); }
+.skin-chess .slot.ghost { opacity: .25; }
+/* Pendant le tirage : la pendule bat, les chiffres pâles basculent d'un cran à chaque tic. */
+.skin-chess .slot.spinning { opacity: 1; color: rgba(254, 243, 199, .55); animation: chs-tick .5s steps(1) infinite; }
+.skin-chess .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes chs-tick { 0% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+/* Le chiffre est posé comme une pièce : il descend, cogne la case (éclair), petit rebond raide, posé. */
+.skin-chess .slot.revealed { animation: chs-place .55s backwards; }
+@keyframes chs-place {
+  0% { transform: translateY(-.4em) scale(1.12); filter: drop-shadow(0 .4em .08em rgba(0, 0, 0, .45)); animation-timing-function: cubic-bezier(.5, 0, 1, .55); }
+  30% { transform: none; filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: translateY(-.05em); filter: none; }
+  54% { transform: none; }
+  64% { transform: translateY(-.012em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-chess .slot { animation: none; } }
+/* Cadre de duel : un échiquier ; ♞ saute en L, ♛ se dresse. */
+.side-chess { --side-border: #8b5a2b; --side-glow: 0 0 16px rgba(180, 120, 60, .25); --side-ink: #8b5a2b;
+  --side-bg: conic-gradient(rgba(120, 113, 108, .2) 25%, transparent 0 50%, rgba(120, 113, 108, .2) 0 75%, transparent 0) 0 0 / 28px 28px, linear-gradient(90deg, rgba(12, 10, 9, .15), rgba(250, 250, 249, .08));
+  --deco-a: '♞'; --deco-b: '♛'; }
+.side-chess::before { animation: chs-hop 2.4s ease-in-out infinite; }
+.side-chess::after { animation: chs-rise 2s ease-in-out infinite; }
+@keyframes chs-hop { 0%, 55%, 100% { transform: none; } 70% { transform: translate(4px, -8px) rotate(-12deg); } 85% { transform: translate(8px, -2px); } }
+@keyframes chs-rise { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px) scale(1.08); } }
+.room-stage.many .side-chess::before, .room-stage.many .side-chess::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-chess::before, .side-chess::after { animation: none; } }

@@ -6762,6 +6762,166 @@
     };
   };
 
+  // ♞ Chess (2026-10-28, idée de casmicgraything) — des pièces d'échecs (silhouettes Staunton dessinées ici) attendent
+  // de chaque côté de la carte, les blancs à gauche, les noirs à droite. À chaque chiffre qui se pose, une pièce joue
+  // (blancs et noirs à tour de rôle) et vient se poser sur le bord de la carte au-dessus de lui, chacune à sa façon :
+  // le pion fait un pas, le cavalier saute haut en tournant, la tour glisse au ras, le fou file en diagonale, le roi
+  // avance posément ; « toc » à l'arrivée (petit nuage de poussière). Avant le dernier chiffre, la pièce suivante se
+  // soulève et tremble. Révélation : tirage raté, la dernière pièce noire posée se couche (elle abandonne) ; sinon une
+  // ola de petits sauts, des reflets dès Epic ; dès Mythic, les deux dames foncent l'une vers l'autre au-dessus de la
+  // carte, s'entrechoquent (éclair, étincelles), repartent en tournoyant, toutes les pièces sautent et « Checkmate! »
+  // s'affiche en haut (traduit) ; au-delà de Mythic, une pluie de petites cases noires et blanches.
+  SCENES.chess = env => {
+    const { co, card, q, dark } = env;
+    const later = [], dust = particles(), sparks = particles(), squares = particles(), words = timed(), bursts = timed();
+    let t = 0, build = 0, turn = 0, wave = -9, wavePow = 0, glintOn = 0;
+    const after = (d, fn) => later.push({ at: t + d, fn });
+    const H = () => card.h, PS = () => card.h * .56; // hauteur d'une pièce
+    const mk = (kind, side, j) => ({ kind, side, j, slot: -1, x: 0, y: 0, rot: 0, move: null, fall: 0, hop: 0, hopAt: -9 });
+    const W = ['pawn', 'knight', 'rook', 'bishop'].map((k, j) => mk(k, 'w', j)), B = ['pawn', 'bishop', 'king', 'knight'].map((k, j) => mk(k, 'b', j));
+    const queens = [];
+    // Silhouette d'une pièce, base en (0, 0), hauteur s vers le haut ; dir : sens du cavalier.
+    const shape = (kind, s, dir) => {
+      const c = co, m = (x, y) => c.moveTo(x * s * dir, -y * s), l = (x, y) => c.lineTo(x * s * dir, -y * s), qd = (cx, cy, x, y) => c.quadraticCurveTo(cx * s * dir, -cy * s, x * s * dir, -y * s);
+      c.beginPath();
+      // le pied, commun à toutes
+      m(-.34, 0); l(.34, 0); l(.34, .07); qd(.3, .13, .22, .14); l(-.22, .14); qd(-.3, .13, -.34, .07); c.closePath();
+      if (kind === 'pawn') { m(-.2, .14); qd(-.1, .3, -.09, .5); l(.09, .5); qd(.1, .3, .2, .14); c.closePath(); m(-.17, .5); l(.17, .5); l(.17, .55); l(-.17, .55); c.closePath(); c.moveTo(.15 * s, -.68 * s); c.arc(0, -.68 * s, .15 * s, 0, TAU); }
+      else if (kind === 'rook') { m(-.2, .14); l(-.17, .72); l(-.25, .74); l(-.25, .95); l(-.15, .95); l(-.15, .87); l(-.05, .87); l(-.05, .95); l(.05, .95); l(.05, .87); l(.15, .87); l(.15, .95); l(.25, .95); l(.25, .74); l(.17, .72); l(.2, .14); c.closePath(); }
+      else if (kind === 'bishop') { m(-.2, .14); qd(-.1, .3, -.09, .52); l(.09, .52); qd(.1, .3, .2, .14); c.closePath(); m(-.16, .52); l(.16, .52); l(.16, .57); l(-.16, .57); c.closePath(); m(0, .97); qd(.22, .82, .13, .6); l(-.13, .6); qd(-.22, .82, 0, .97); c.closePath(); c.moveTo(.06 * s, -1.03 * s); c.arc(0, -1.03 * s, .06 * s, 0, TAU); }
+      else if (kind === 'knight') { m(-.24, .14); l(-.2, .5); qd(-.24, .8, -.02, .93); l(.02, 1.04); l(.08, .92); qd(.24, .82, .33, .6); l(.33, .5); qd(.24, .44, .12, .5); qd(.06, .42, .22, .14); c.closePath(); }
+      else if (kind === 'king' || kind === 'queen') {
+        m(-.21, .14); qd(-.1, .32, -.1, .58); l(.1, .58); qd(.1, .32, .21, .14); c.closePath(); m(-.19, .58); l(.19, .58); l(.19, .63); l(-.19, .63); c.closePath();
+        if (kind === 'king') { m(-.13, .63); l(-.2, .86); l(.2, .86); l(.13, .63); c.closePath(); m(-.03, .86); l(-.03, .93); l(-.1, .93); l(-.1, .99); l(-.03, .99); l(-.03, 1.08); l(.03, 1.08); l(.03, .99); l(.1, .99); l(.1, .93); l(.03, .93); l(.03, .86); c.closePath(); }
+        else { m(-.13, .63); l(-.24, .9); l(-.12, .8); l(-.06, .95); l(0, .82); l(.06, .95); l(.12, .8); l(.24, .9); l(.13, .63); c.closePath(); for (const x of [-.24, -.06, .06, .24]) { c.moveTo((x * dir + .04) * s, -(x === -.24 || x === .24 ? .93 : .98) * s); c.arc(x * s * dir, -(x === -.24 || x === .24 ? .93 : .98) * s, .04 * s, 0, TAU); } c.moveTo(.05 * s, -1.02 * s); c.arc(0, -1.02 * s, .05 * s, 0, TAU); }
+      }
+    };
+    const draw = (p, x, y, s, rot, a, glint) => {
+      if (a <= .01) return;
+      const white = p.side === 'w', dir = white ? 1 : -1;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      shape(p.kind, s, dir);
+      const g = co.createLinearGradient(-s * .3, 0, s * .3, 0);
+      if (white) { g.addColorStop(0, '#fffdf7'); g.addColorStop(.6, '#efe6d2'); g.addColorStop(1, '#c9b892'); } else { g.addColorStop(0, '#57534e'); g.addColorStop(.4, '#292524'); g.addColorStop(1, '#0c0a09'); }
+      co.fillStyle = g; co.fill('nonzero'); co.lineJoin = 'round'; co.lineWidth = Math.max(1, s * .045); co.strokeStyle = white ? '#3f2a14' : (dark ? '#a8a29e' : '#1c1917'); co.stroke();
+      if (glint > 0) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#fff7d6', -s * .08, -s * .7, s * .22 * glint, .8 * glint); co.globalCompositeOperation = 'source-over'; }
+      co.restore();
+    };
+    // où se tient une pièce au repos : en file de chaque côté de la carte (posée au niveau du bas de la carte), ou sur
+    // le bord du haut de la carte, au-dessus de son chiffre
+    const home = (p, S) => {
+      if (p.slot >= 0) { const s = S.find(x => x.i === p.slot); if (s) return { x: s.x, y: card.y }; }
+      const list = p.side === 'w' ? W : B, k = list.filter(x => x.slot < 0 && !x.move).indexOf(p);
+      const off = card.h * (.34 + .4 * Math.max(0, k));
+      // sur un téléphone, la place manque à côté de la carte : seules les premières pièces de la file se montrent
+      return { x: p.side === 'w' ? card.x - off : card.x + card.w + off, y: card.y + card.h, hidden: k >= room(p.side) };
+    };
+    const room = side => { // combien de pièces tiennent entre la carte et le bord de l'écran
+      const r = env.el.getBoundingClientRect(), vw = root.innerWidth || 1e4, free = side === 'w' ? r.left : vw - r.right;
+      return Math.max(1, Math.min(4, Math.floor((free - card.h * .16) / (card.h * .4))));
+    };
+    const thud = (x, y, n) => { for (let i = Math.round(n * q) + 2; i > 0; i--) dust.add({ x: x + rnd(-.25, .25) * PS(), y, vx: rnd(-40, 40), vy: -rnd(5, 30), drag: 3, max: rnd(.35, .6), size: PS() * rnd(.08, .14) }); };
+    // le style de déplacement de chaque pièce : durée, hauteur du saut, rotation
+    const STYLE = { pawn: [.32, .35, 0], knight: [.5, 1.3, 1], rook: [.34, .12, 0], bishop: [.4, .7, 0], king: [.55, .4, 0] };
+    const play = (s, last) => {
+      const list = turn % 2 ? B : W;
+      let p = list.find(x => x.slot < 0 && !x.move) || (turn % 2 ? W : B).find(x => x.slot < 0 && !x.move);
+      turn++;
+      if (!p) return;
+      const S = slotsA(env), from = p.qx == null ? home(p, S) : { x: p.qx, y: home(p, S).y }, [dur, hh, spin] = STYLE[p.kind];
+      p.slot = s.i;
+      p.move = { from, at: t, dur: dur * (last ? 1.1 : 1), hh: card.h * hh * (last ? 1.3 : 1), spin: spin * (p.side === 'w' ? 1 : -1) };
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = later.length - 1; i >= 0; i--) if (later[i].at <= t) later.splice(i, 1)[0].fn();
+        const S = slotsA(env), next = S.find(s => !s.on && !s.gone);
+        const s = PS();
+        // poussière derrière les pièces
+        dust.step(dt);
+        dust.each((d, k) => dot(co, dark ? '#d6d3d1' : '#78716c', d.x, d.y, d.size * (1 + k), (1 - k) * .45));
+        const all = W.concat(B);
+        // ombres sous les pièces posées sur la carte
+        for (const p of all) { if (p.slot < 0 || p.move) continue; const hm = home(p, S); co.globalAlpha = .3; co.fillStyle = '#000'; co.beginPath(); co.ellipse(hm.x, hm.y, s * .36, s * .06, 0, 0, TAU); co.fill(); }
+        co.globalAlpha = 1;
+        all.forEach((p, n) => {
+          let hm = home(p, S), x = hm.x, y = hm.y, rot = 0;
+          if (p.slot < 0 && !p.move) { p.qx = p.qx == null ? x : lerp(p.qx, x, Math.min(1, dt * 8)); x = p.qx; } // la file se resserre en glissant
+          p.qa = clamp((p.qa == null ? (hm.hidden ? 0 : 1) : p.qa) + (hm.hidden ? -dt : dt) * 4);
+          if (p.move) {
+            const mv = p.move, k = clamp((t - mv.at) / mv.dur), e = p.kind === 'rook' ? outCubic(k) : k;
+            x = lerp(mv.from.x, hm.x, e); y = lerp(mv.from.y, hm.y, e) - Math.sin(k * Math.PI) * mv.hh;
+            rot = mv.spin * TAU * outCubic(k) + (p.kind === 'pawn' || p.kind === 'king' ? Math.sin(k * Math.PI) * .12 * (p.side === 'w' ? 1 : -1) : 0);
+            if (k >= 1) { p.move = null; thud(hm.x, hm.y, 4); p.hop = .5; p.hopAt = t; }
+          }
+          // petit rebond raide à l'arrivée, sauts de la révélation
+          const hk = (t - p.hopAt) / .28;
+          if (hk >= 0 && hk < 1) y -= Math.sin(hk * Math.PI) * card.h * .06 * p.hop;
+          const wk = (t - wave - n * .07) / .36;
+          if (p.slot >= 0 && wk > 0 && wk < 1) y -= Math.sin(wk * Math.PI) * card.h * .22 * wavePow;
+          // la pièce suivante se soulève et tremble avant le dernier chiffre
+          if (build && !p.move && p.slot < 0 && p === ((turn % 2 ? B : W).find(x => x.slot < 0 && !x.move))) { y -= card.h * .12; rot += Math.sin(t * 40) * .06; }
+          if (p.fall) { const fk = outCubic(clamp((t - p.fall) / .5)); rot += (p.side === 'w' ? -1 : 1) * Math.PI / 2 * fk; if (fk > .9 && !p.fell) { p.fell = 1; thud(x + (p.side === 'w' ? -1 : 1) * s * .5, y, 6); } }
+          draw(p, x, y, s, rot, p.qa, glintOn ? clamp(Math.sin((t - glintOn) * 3 + n)) : 0);
+        });
+        // les dames (Mythic) : elles foncent l'une vers l'autre, se heurtent, repartent en tournoyant
+        for (const qn of queens) {
+          const k = (t - qn.at) / .5, cx = card.x + card.w / 2, y0 = card.y - card.h * .95;
+          let x, y, rot;
+          if (k < 0) continue;
+          if (k < 1) { x = lerp(qn.x0, cx - qn.dir * s * .32, k * k); y = y0 - Math.sin(k * Math.PI) * card.h * .15; rot = qn.dir * .25 * k; }
+          else { const u = (t - qn.at - .5); x = cx - qn.dir * s * .32 - qn.dir * u * card.h * 3.2; y = y0 - u * card.h * 2.6 + u * u * card.h * 3.5; rot = qn.dir * (.25 - u * 9); }
+          draw(qn, x, y, s * 1.15, rot, clamp(1.6 - (t - qn.at - .5)), 0);
+        }
+        bursts.run(dt, (b, k) => {
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          dot(co, '#fff7d6', b.x, b.y, card.h * (.4 + 1.1 * outCubic(k)), (1 - k) * (dark ? 1 : .8));
+          for (let i = 0; i < 10; i++) { const an = i * TAU / 10 + .3, r0 = card.h * (.15 + .9 * outCubic(k)), r1 = r0 + card.h * .35 * (1 - k); line(co, dark ? '#fde68a' : '#d97706', b.x + Math.cos(an) * r0, b.y + Math.sin(an) * r0, b.x + Math.cos(an) * r1, b.y + Math.sin(an) * r1, 2, 1 - k); }
+          co.globalCompositeOperation = 'source-over';
+        });
+        sparks.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((p, k) => dot(co, dark ? '#fde68a' : '#f59e0b', p.x, p.y, 3, 1 - k));
+        co.globalCompositeOperation = 'source-over';
+        squares.step(dt);
+        squares.each((p, k) => { co.save(); co.globalAlpha = clamp((1 - k) * 4); co.translate(p.x, p.y); co.rotate(p.r + p.life * p.spin); co.fillStyle = p.c; co.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); co.strokeStyle = '#78716c'; co.lineWidth = .8; co.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size); co.restore(); });
+        words.run(dt, (wd, k) => { const sc = k < .14 ? outBack(k / .14) : 1; bWord(co, wd.s, card.x + card.w / 2, card.y - card.h * 1.4, card.h * .4 * sc, '#fde68a', '#3f2a14', k > .82 ? (1 - k) / .18 : 1, -.04, "900 SIZEpx Georgia, 'Times New Roman', serif"); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const s = bSlotAt(env, p); if (!s) return;
+        const i = [...env.el.querySelectorAll('.slot')].indexOf(s);
+        play({ i }, o.last);
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { // abandon : la dernière pièce noire posée se couche
+          const list = B.filter(x => x.slot >= 0), k = list[list.length - 1] || W.filter(x => x.slot >= 0).pop();
+          if (k) k.fall = t + .2;
+          return;
+        }
+        wave = t + .05; wavePow = .5 + .6 * p;
+        if (p >= .62) glintOn = t;
+        if (p < 1) return;
+        wave = t + .55; wavePow = 1.2;
+        const s = PS(), y = card.y - card.h * .95;
+        queens.push(Object.assign(mk('queen', 'w', 0), { at: t, x0: card.x - card.h * 2, dir: 1 }), Object.assign(mk('queen', 'b', 0), { at: t, x0: card.x + card.w + card.h * 2, dir: -1 }));
+        after(.5, () => {
+          const x = card.x + card.w / 2;
+          bursts.add({ life: .55, x, y: y - s * .5 });
+          for (let i = Math.round((26 + 14 * asc) * q); i > 0; i--) { const an = rnd(TAU), v = rnd(80, 260); sparks.add({ x, y: y - s * .5, vx: Math.cos(an) * v, vy: Math.sin(an) * v, g: card.h * 6, drag: 1, max: rnd(.5, 1) }); }
+        });
+        words.add({ delay: .62, life: 2.6 + .5 * asc, s: root.RNGI18n ? root.RNGI18n.t('Checkmate!') : 'Checkmate!' });
+        if (asc) for (let i = Math.round((20 + 16 * asc) * q); i > 0; i--) squares.add({ x: rnd(card.x - card.h, card.x + card.w + card.h), y: card.y - card.h * rnd(1.3, 2), vx: rnd(-20, 20), vy: rnd(10, 60), g: card.h * 2, drag: .8, max: rnd(1.6, 2.6), size: card.h * rnd(.08, .13), r: rnd(TAU), spin: rnd(-5, 5), c: i % 2 ? '#fafaf9' : '#1c1917' });
+      },
+    };
+  };
+
   // ==== fin des skins du 2026-10-28 (costoroll, casmicgraything) ====
 
   function mount(stage, card, skin, o = {}) {

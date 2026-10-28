@@ -161,6 +161,9 @@
     // Idée de casmicgraything (2026-10-28, avec costoroll et casmictechthing) : une courbe de bourse derrière les chiffres,
     // qui s'effondre ou s'envole selon la rareté ; sur un Mythic, elle sort par le haut et il pleut de l'argent.
     { id: 'stonks', name: 'Stonks', emoji: '📈', price: 1600, desc: 'A live stock chart runs behind your digits: bad rolls crash in red, good rolls rally in green, and Mythic rolls shoot off the chart in a rain of coins and bills', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-10-28) : un échiquier du noir au blanc, des pièces qui jouent à chaque chiffre ; sur un
+    // Mythic, deux dames s'entrechoquent et « Checkmate! ».
+    { id: 'chess', name: 'Chess', emoji: '♞', price: 2200, desc: 'Ivory digits on a black-to-white chessboard: a chess piece makes its move every time a digit lands, and on Mythic rolls two queens collide for a Checkmate!', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
