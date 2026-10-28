@@ -1266,3 +1266,10 @@
   background: radial-gradient(circle at 50% 100%, #22c55e 58%, transparent 62%) 0 -3px / 10px 9px repeat-x, radial-gradient(circle, rgba(146, 64, 14, .5) 0 1px, transparent 1.6px) 0 0 / 9px 8px, linear-gradient(180deg, #fcd34d, #f59e0b 60%, #d97706);
   --gs: 0 .3em 0 #0f766e, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #0f766e, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #0f766e; }
 .btn-roll.gen-taco:hover { filter: brightness(1.08); }
+/* Beach (idée de furcoat0, 2026-10-28 ; couleurs du fond Windy Beach) : la mer en haut, la ligne d'écume, le sable doré. */
+.btn-roll.gen-beach { border: 2px solid #0284c7; border-radius: .6rem; color: #7c3a0a;
+  font-family: 'Chalkboard SE', 'Comic Sans MS', 'Marker Felt', 'Trebuchet MS', cursive; font-weight: 700;
+  background: linear-gradient(180deg, #0284c7 0, #22d3ee 24%, #a5f3fc 30%, #ffffff 33%, #e2bc63 36%, #fde68a 55%, #fcd34d 100%);
+  text-shadow: 0 -1px 0 rgba(92, 45, 8, .5), 0 1px 0 rgba(255, 251, 235, .9);
+  --gs: 0 .3em 0 #b45309, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #b45309, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #b45309; }
+.btn-roll.gen-beach:hover { filter: brightness(1.06); }

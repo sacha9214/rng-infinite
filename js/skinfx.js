@@ -6853,6 +6853,159 @@
     };
   };
 
+
+  // 🏖️ Beach (2026-10-28, idée de furcoat0 ; assortie au fond Windy Beach) — dans la carte, des reflets de soleil
+  // scintillent sur la bande de mer. Un petit crabe orange marche de côté sur le bord haut de la carte (au ras de l'eau),
+  // au-dessus du prochain chiffre ; quand l'écume se retire d'un chiffre (animation CSS bch-recede), il lève les pinces,
+  // des bulles d'écume éclatent sur le sable et quelques gouttes sautent ; puis il file au suivant. Avant le dernier
+  // chiffre, il trépigne. Révélation : tirage raté, une vague le renverse sur le dos (il gigote, puis se remet) ; sinon il
+  // danse ; dès Epic, des gerbes d'eau et des scintillements ; dès Mythic, une grande vague turquoise scintillante se
+  // dresse derrière la carte (sa crête d'écume court de gauche à droite) et le soleil se couche derrière le nombre (lueur
+  // orange et rose, la mer de la carte rougeoie) ; dès Celestial, des mouettes passent.
+  SCENES.beach = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, SEA = h * .25; // hauteur de la bande de mer dans la carte (dégradé CSS : 25 %)
+    const drops = particles(), bubbles = timed(), waves = timed(), suns = timed(), gulls = timed(), glints = [];
+    for (let i = 0; i < 7; i++) glints.push({ x: rnd(.05, .95), y: rnd(.12, .8), ph: rnd(TAU), v: rnd(1.5, 3) });
+    const S = card.h * .5; // largeur du crabe
+    const crab = { x: card.x - S * 1.5, tx: 0, v: 0, claw: 0, flip: 0, dance: 0, dir: 1 };
+    let t = 0, build = 0, done = false;
+    const drawCrab = () => {
+      const s = S, walk = Math.abs(crab.v) > 4 ? t * 26 : build ? t * 40 : 0, up = crab.dance > 0 ? Math.abs(Math.sin(t * 9)) * s * .18 : 0;
+      const y = card.y + 2 - up;
+      co.save(); co.translate(crab.x, y + (crab.flip ? -s * .1 : 0)); if (crab.flip) co.scale(1, -1);
+      co.lineCap = 'round'; co.lineJoin = 'round'; co.strokeStyle = '#9a3412'; co.lineWidth = Math.max(1.2, s * .06);
+      // les pattes : trois de chaque côté, qui battent en décalé
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+        const ph = Math.sin(walk + i * 2.1 + (side > 0 ? 1 : 0)) * s * .06, x0 = side * s * (.22 + i * .07), y0 = s * .05;
+        co.beginPath(); co.moveTo(x0, y0); co.lineTo(side * s * (.42 + i * .1), s * (.12 + ph / s)); co.lineTo(side * s * (.5 + i * .1), s * (.28 + i * .02)); co.stroke();
+      }
+      // les pinces : bras qui se lèvent (claw de 0 à 1), pince ronde avec son encoche
+      const raise = Math.max(crab.claw, crab.dance > 0 ? .5 + .5 * Math.sin(t * 9) : 0);
+      for (const side of [-1, 1]) {
+        const ax = side * s * .3, ay = -s * .04, hx = side * s * (.46 + .06 * raise), hy = -s * (.12 + .32 * raise);
+        co.beginPath(); co.moveTo(ax, ay); co.quadraticCurveTo(side * s * .5, -s * .02, hx, hy); co.stroke();
+        const open = .35 + .3 * Math.abs(Math.sin(t * (raise > .2 ? 16 : 3)));
+        co.fillStyle = '#ef4444'; co.beginPath(); co.moveTo(hx, hy); co.arc(hx, hy, s * .15, -Math.PI / 2 + open, -Math.PI / 2 - open + TAU); co.closePath(); co.fill(); co.stroke();
+      }
+      // le corps, les yeux sur leurs tiges
+      co.fillStyle = '#f97316'; co.beginPath(); co.ellipse(0, 0, s * .32, s * .2, 0, 0, TAU); co.fill(); co.stroke();
+      co.fillStyle = 'rgba(255,237,213,.55)'; co.beginPath(); co.ellipse(-s * .06, -s * .07, s * .14, s * .05, 0, 0, TAU); co.fill();
+      for (const side of [-1, 1]) {
+        co.beginPath(); co.moveTo(side * s * .09, -s * .15); co.lineTo(side * s * .12, -s * .3); co.stroke();
+        co.fillStyle = '#fff'; co.beginPath(); co.arc(side * s * .12, -s * .32, s * .065, 0, TAU); co.fill(); co.stroke();
+        co.fillStyle = '#111'; co.beginPath(); co.arc(side * s * .12 + crab.dir * s * .02, -s * .32, s * .03, 0, TAU); co.fill();
+      }
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        // les reflets du soleil sur la mer de la carte (derrière les chiffres)
+        ci.globalCompositeOperation = 'lighter';
+        for (const g of glints) { const a = Math.max(0, Math.sin(t * g.v + g.ph)); dot(ci, '#ffffff', g.x * w, g.y * SEA, 2.2 + 2 * a, a * .8, 1.2 + a); }
+        ci.globalCompositeOperation = 'source-over';
+        // les bulles d'écume qui éclatent sur le sable, là où l'eau vient de se retirer
+        bubbles.run(dt, (b, k) => { ci.globalAlpha = (1 - k) * .9; ci.strokeStyle = '#ffffff'; ci.lineWidth = 1; ci.beginPath(); ci.arc(b.x, b.y - k * 3, b.r * (1 + k), 0, TAU); ci.stroke(); });
+        ci.globalAlpha = 1;
+        // le coucher de soleil (Mythic) : la mer de la carte rougeoie, une colonne de reflets dorés
+        suns.run(dt, (s, k) => {
+          const a = Math.min(1, k * 4, (1 - k) * 3);
+          const g = ci.createLinearGradient(0, 0, 0, SEA * 1.1); g.addColorStop(0, 'rgba(244,114,182,.55)'); g.addColorStop(.6, 'rgba(251,146,60,.5)'); g.addColorStop(1, 'rgba(251,146,60,0)');
+          ci.globalAlpha = a; ci.fillStyle = g; ci.fillRect(0, 0, w, SEA * 1.1);
+          ci.fillStyle = '#fde68a';
+          for (let i = 0; i < 5; i++) { const yy = SEA * (.2 + i * .15), ww = w * (.05 + .03 * Math.sin(t * 4 + i * 2)) * (1 - i * .1); ci.globalAlpha = a * (.8 - i * .1); ci.fillRect(w / 2 - ww / 2, yy, ww, 1.5); }
+          ci.globalAlpha = 1;
+          // derrière la carte : la lueur et le soleil qui descend derrière le nombre
+          behind(env, () => {
+            co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+            dot(co, '#fb923c', cx, card.y + card.h * .3, card.w * .75, a * (dark ? .55 : .4), card.h * 1.6);
+            dot(co, '#f472b6', cx - card.w * .3, card.y, card.w * .45, a * (dark ? .35 : .25), card.h);
+            co.globalCompositeOperation = 'source-over';
+            const r = card.h * .5, sy = card.y + card.h * (-.1 + .45 * clamp(k * 1.2));
+            const sg = co.createRadialGradient(cx, sy, 0, cx, sy, r); sg.addColorStop(0, '#fef3c7'); sg.addColorStop(.6, '#fdba74'); sg.addColorStop(1, '#fb923c');
+            co.globalAlpha = a; co.fillStyle = sg; co.beginPath(); co.arc(cx, sy, r, 0, TAU); co.fill();
+          }, true);
+        });
+        // la grande vague (Mythic) : elle se dresse derrière la carte, sa crête d'écume court de gauche à droite
+        waves.run(dt, (wv, k) => {
+          const rise = outCubic(clamp(k * 3)) * (1 - clamp((k - .72) * 3.6)), curlX = card.x - card.h * 2 + (card.w + card.h * 4) * clamp(k * 1.25);
+          if (rise <= .01) return;
+          // une bosse de houle autour de la carte : haute au milieu, retombée à zéro aux deux bouts (pas un mur d'eau)
+          const x0 = card.x - card.h * 1.9, x1 = card.x + card.w + card.h * 1.9, base = card.y + card.h * 1.05, top = (x) => {
+            const d = (x - curlX) / (card.h * .9), env2 = Math.pow(Math.sin(Math.PI * clamp((x - x0) / (x1 - x0))), .7);
+            return base - env2 * (base - card.y + rise * card.h * (wv.hgt + .08 * Math.sin(x * .06 + t * 3) + .3 * Math.exp(-d * d)) - card.h * .2);
+          };
+          behind(env, () => {
+            const g = co.createLinearGradient(0, card.y - card.h * wv.hgt, 0, base);
+            g.addColorStop(0, '#a5f3fc'); g.addColorStop(.3, '#22d3ee'); g.addColorStop(.7, 'rgba(2,132,199,.75)'); g.addColorStop(1, 'rgba(3,105,161,0)');
+            co.globalAlpha = .9 * Math.min(1, rise * 2); co.fillStyle = g; co.beginPath(); co.moveTo(x0, base);
+            for (let x = x0; x <= x1; x += 6) co.lineTo(x, top(x));
+            co.lineTo(x1, base); co.closePath(); co.fill();
+            // la crête d'écume et ses paquets de mousse
+            co.strokeStyle = '#ffffff'; co.lineWidth = Math.max(2, card.h * .07); co.lineJoin = 'round'; co.beginPath();
+            for (let x = x0; x <= x1; x += 6) (x === x0 ? co.moveTo(x, top(x)) : co.lineTo(x, top(x)));
+            co.stroke();
+            co.fillStyle = '#ffffff';
+            for (let x = x0 + 4; x <= x1; x += card.h * .22) { const y = top(x), near = Math.exp(-Math.pow((x - curlX) / (card.h * .9), 2)); co.globalAlpha = Math.min(1, rise * 2) * (.5 + .5 * near); co.beginPath(); co.arc(x, y - near * card.h * .06, card.h * (.04 + .06 * near), 0, TAU); co.fill(); }
+            // le scintillement : des éclats qui glissent sur la face de la vague
+            co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+            for (let i = 0; i < 18; i++) {
+              const x = x0 + ((i * 97.3 + t * card.h * 1.4) % (x1 - x0)), y = top(x) + card.h * (.15 + (i % 4) * .14), a = Math.max(0, Math.sin(t * 7 + i * 1.7)) * rise;
+              if (y > base - card.h * .15) continue;
+              dot(co, '#ffffff', x, y, card.h * .13, a, card.h * .035); dot(co, '#ffffff', x, y, card.h * .03, a, card.h * .1); // un éclat en croix
+            }
+            co.globalCompositeOperation = 'source-over';
+          }, true);
+          if (k > .2 && k < .8 && Math.random() < .6) drops.add({ x: curlX + rnd(-1, 1) * card.h * .3, y: top(curlX), vx: rnd(-40, 80), vy: -rnd(40, 140), g: 420, max: rnd(.5, .9), size: rnd(1.4, 2.6) });
+        });
+        // les mouettes (Celestial et plus) : deux arcs qui battent
+        gulls.run(dt, (gl, k) => {
+          const x = lerp(gl.x0, gl.x1, k), y = gl.y + Math.sin(k * 6) * card.h * .1, fl = Math.sin(t * 9 + gl.ph) * .5, s = gl.s;
+          co.globalAlpha = Math.min(1, k * 6, (1 - k) * 6); co.strokeStyle = dark ? '#f8fafc' : '#334155'; co.lineWidth = 2; co.lineCap = 'round';
+          co.beginPath(); co.moveTo(x - s, y - s * fl * .6); co.quadraticCurveTo(x - s * .5, y - s * (.5 + fl * .4), x, y); co.quadraticCurveTo(x + s * .5, y - s * (.5 + fl * .4), x + s, y - s * fl * .6); co.stroke();
+        });
+        co.globalAlpha = 1;
+        // les gouttes d'eau
+        drops.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#0284c7';
+        drops.each((d, k) => { co.globalAlpha = 1 - k; co.beginPath(); co.arc(d.x, d.y, d.size, 0, TAU); co.fill(); });
+        co.globalAlpha = 1;
+        // le crabe : il suit le prochain chiffre le long du bord haut, puis va attendre à droite
+        const SL = slotsA(env).filter(s => !s.gone), next = SL.find(s => !s.on);
+        crab.tx = !done && next ? next.x : card.x + card.w - S * .1;
+        const d = crab.tx - crab.x, v = Math.sign(d) * Math.min(Math.abs(d) * 8, card.h * 5);
+        crab.v = Math.abs(d) < .5 ? 0 : v; crab.x += crab.v * dt; if (Math.abs(crab.v) > 4) crab.dir = Math.sign(crab.v);
+        crab.claw = Math.max(0, crab.claw - dt * 2.2); crab.dance -= dt;
+        if (crab.flip) crab.flip = Math.max(0, crab.flip - dt);
+        drawCrab();
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) { build = 0; done = true; }
+        if (o.ghost) return;
+        crab.claw = 1;
+        // l'eau se retire (environ 0,15 s après la pose) : bulles d'écume sur le sable, autour du haut du chiffre
+        const x = p.x - card.x - (card.w - w) / 2, y = p.y - card.y - card.h * .22;
+        for (let i = Math.round((o.last ? 12 : 7) * q); i > 0; i--) bubbles.add({ delay: .12 + rnd(0, .25), life: rnd(.35, .6), x: x + rnd(-1, 1) * card.h * .3, y: y + rnd(-1, 1) * card.h * .1, r: rnd(1.2, 2.6) });
+        for (let i = Math.round((o.last ? 8 : 4) * q); i > 0; i--) drops.add({ x: p.x + rnd(-1, 1) * card.h * .2, y: card.y + 2, vx: rnd(-50, 50), vy: -rnd(60, 150), g: 500, max: rnd(.4, .7), size: rnd(1.2, 2.2) });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; done = true;
+        if (!p) { crab.flip = 1.6; for (let i = 0; i < 8; i++) drops.add({ x: crab.x + rnd(-1, 1) * S * .5, y: card.y, vx: rnd(-60, 60), vy: -rnd(60, 160), g: 500, max: .7, size: rnd(1.4, 2.4) }); return; }
+        crab.dance = 1.2 + 2 * p + asc;
+        if (p >= .6) for (let i = Math.round((10 + 20 * p) * q); i > 0; i--) { const side = i % 2 ? -1 : 1; drops.add({ x: side < 0 ? card.x + rnd(0, card.h * .3) : card.x + card.w - rnd(0, card.h * .3), y: card.y + card.h * rnd(0, .3), vx: side * rnd(40, 160), vy: -rnd(120, 260), g: 520, max: rnd(.6, 1), size: rnd(1.4, 2.8) }); }
+        if (p >= 1) {
+          waves.add({ delay: .1, life: 3.4 + .8 * asc, hgt: .45 + .1 * asc });
+          suns.add({ delay: 2, life: 5.5 + 1.5 * asc }); // le calme après la vague : le soleil se couche quand elle retombe
+        }
+        if (asc >= 1) for (let i = 0; i < 1 + asc; i++) gulls.add({ delay: .8 + i * .5, life: 3, x0: card.x - card.h * 2.5, x1: card.x + card.w + card.h * 2.5, y: card.y - card.h * (.05 - i * .12) + (i % 2) * card.h * .4, s: card.h * .22, ph: i * 2 });
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
