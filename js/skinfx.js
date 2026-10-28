@@ -6546,7 +6546,7 @@
       co.fillStyle = '#7f1d1d'; co.fillText(s, x + size * .1, y + size * .1); co.strokeText(s, x, y); co.fillStyle = fill; co.fillText(s, x, y); co.restore();
     };
     const pop = k => (k < .04 ? 2 : k < .08 ? 1.5 : k < .12 ? 1.18 : 1); // apparition en paliers, comme un vieux jeu
-    hopTo(post(), .5, card.h * .9);
+    hopTo(post(), .5, card.h * .2);
     return {
       frame(tt, dt) {
         t = tt;
@@ -6581,7 +6581,7 @@
         if (F.atk) {
           const A = F.atk; A.t += dt;
           if (A.t < A.stop) { F.pose = A.kind; F.x = A.fx; F.y = A.fy; }
-          else if (!F.hop) { F.atk = null; hopTo(goal, A.big ? .42 : .32, card.h * (A.big ? .9 : .55)); }
+          else if (!F.hop) { F.atk = null; hopTo(goal, A.big ? .4 : .3, card.h * (A.big ? .25 : .16)); } // sauts bas : au-dessus de la carte, il y a vite le haut de l'écran
         }
         if (F.hop) {
           const H = F.hop; H.k = Math.min(1, H.k + dt / H.d);
@@ -6652,7 +6652,7 @@
         const corner = { x: Math.min(card.x + card.w + ps * 9, env.W - ps * 8), y: card.y + card.h };
         const top = card.y - card.h * .4; // la place au-dessus de la carte est courte (menu du jeu, nom du joueur en duel)
         if (!p) { F.atk = null; F.hop = null; hopTo({ x: card.x + card.w - ps * 5, y: card.y }, .3, card.h * .3); F.dizzy = 3.5; words.add({ delay: .25, life: 1.6, s: 'MISS', x: cx, y: top, size: card.h * .26, c: '#cbd5e1', pop: true }); return; }
-        F.atk = null; F.face = -1; hopTo(corner, .45, card.h * .8, p >= .42 ? 'win' : 'idle');
+        F.atk = null; F.face = -1; hopTo(corner, .45, card.h * .3, p >= .42 ? 'win' : 'idle');
         if (p < 1) {
           const s = p >= .8 ? 'ULTRA!' : p >= .62 ? 'SUPER!' : p >= .42 ? 'GREAT!' : 'HIT!';
           hp = Math.max(.05, hp - .1 * p);
@@ -6686,7 +6686,7 @@
     const { ci, co, w, h, card, q, dark } = env;
     const H = card.h, cx = card.x + card.w / 2, add = dark ? 'lighter' : 'source-over';
     const shells = timed(), columns = timed(), flashes = timed(), rings = timed(), smokeRings = timed(), fireballs = timed(), drops = particles(), smoke = particles(), muzzle = timed();
-    const L = Math.min(H * 1.8, card.w * .5), wl = () => card.y - H * .16; // longueur du navire, ligne de flottaison (derrière le haut de la carte)
+    const L = Math.min(H * 1.7, card.w * .5), wl = () => card.y - H * .16; // longueur du navire, ligne de flottaison (derrière le haut de la carte)
     let t = 0, build = 0, sinceLock = 0, aim = null, done = false, recoil = 0, light = 0;
     const shipX = () => card.x + card.w * .2 + Math.sin(t * .23) * card.w * .05;
     const turretAt = (x0, k) => ({ x: x0 + L * k, y: wl() - L * .085 });
@@ -6701,7 +6701,7 @@
       // superstructures, cheminée, mât
       co.fillRect(x0 - L * .16, y - L * .16, L * .3, L * .1); co.fillRect(x0 - L * .08, y - L * .25, L * .16, L * .1); co.fillRect(x0 - L * .02, y - L * .33, L * .07, L * .09);
       co.fillRect(x0 - L * .24, y - L * .2, L * .07, L * .14); // la cheminée
-      co.fillRect(x0 + L * .01, y - L * .48, L * .012, L * .16); co.fillRect(x0 - L * .04, y - L * .42, L * .1, L * .01); // le mât et sa vergue
+      co.fillRect(x0 + L * .01, y - L * .42, L * .012, L * .1); co.fillRect(x0 - L * .04, y - L * .38, L * .1, L * .01); // le mât et sa vergue (court : peu de place au-dessus)
       // tourelles et canons (avant, arrière), pointés vers la cible
       for (const k of [.26, -.33]) {
         const tp = turretAt(x0, k), a = target ? elev(tp, target) : -.2, back = recoil * L * .05 * (k > 0 ? 1 : .6);
@@ -6715,7 +6715,7 @@
       // hublots et feu de mât
       co.fillStyle = '#fde68a'; co.globalAlpha = .9;
       for (let i = 0; i < 7; i++) co.fillRect(x0 - L * .38 + i * L * .12, y - L * .035, Math.max(1, L * .012), Math.max(1, L * .012));
-      co.globalCompositeOperation = add; dot(co, '#ef4444', x0 + L * .016, y - L * .49, L * .035, .5 + .5 * Math.sign(Math.sin(t * 3)));
+      co.globalCompositeOperation = add; dot(co, '#ef4444', x0 + L * .016, y - L * .43, L * .035, .5 + .5 * Math.sign(Math.sin(t * 3)));
       co.globalCompositeOperation = 'source-over';
       co.restore(); co.globalAlpha = 1;
     };
@@ -6804,6 +6804,8 @@
             }
           });
         }, true);
+        // le feu et la fumée s'effacent en fondu vers le bas au lieu d'être coupés net au bas de la carte
+        if (fireballs.n || smokeRings.n) behind(env, () => { const y1 = card.y + H + 8, y0 = y1 - H * .6, g = co.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)'); co.globalCompositeOperation = 'destination-out'; co.globalAlpha = 1; co.fillStyle = g; co.fillRect(0, y0, env.W, y1 - y0); co.globalCompositeOperation = 'source-over'; });
         // ---- devant : réticule, éclairs de bouche, obus, gouttes, ondes
         rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .7; co.strokeStyle = dark ? '#bae6fd' : '#0369a1'; co.lineWidth = 1.5; co.beginPath(); co.ellipse(r.x, r.y, r.r * outCubic(k), r.r * outCubic(k) * .22, 0, 0, TAU); co.stroke(); });
         if (next && !done) {
@@ -6907,9 +6909,9 @@
       waves.add({ x, y, r: r * 1.8, delay, life: .7 });
       glows.add({ x: x - card.x, y: y - card.y, r: r * 1.2, delay, life: .5 });
       // la fumée arrive après la boule de feu (on doit d'abord la voir), puis se dissipe en s'écartant
-      setTimeout(() => { for (let i = Math.round((10 + r / H * 8) * q); i > 0; i--) { const a = rnd(TAU), d = r * rnd(.2, .9); puffs.add({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * .6, vx: Math.cos(a) * r * rnd(.5, 1.1), vy: Math.sin(a) * r * .4 - H * .3, drag: 1.1, g: -H * .15, max: rnd(1.3, 2), size: r * rnd(.22, .34), c: pick(SM) }); } }, (delay + .22) * 1000);
+      setTimeout(() => { for (let i = Math.round(Math.min(26, 6 + r / H * 4) * q); i > 0; i--) { const a = rnd(TAU), d = r * rnd(.2, .9); puffs.add({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * .6, vx: Math.cos(a) * r * rnd(.5, 1.1), vy: Math.sin(a) * r * .4 - H * .3, drag: 1.1, g: -H * .15, max: rnd(1.3, 2), size: r * rnd(.22, .34), c: pick(SM) }); } }, (delay + .22) * 1000);
       setTimeout(() => {
-        for (let i = Math.round((8 + r / H * 6) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = H * rnd(3, 7); bits.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: H * 12, drag: .3, max: rnd(.6, 1.1), size: H * rnd(.03, .06), rot: rnd(TAU), spin: rnd(-14, 14), c: pick(['#fde047', '#fb923c', '#ef4444', '#ffffff']) }); }
+        for (let i = Math.round(Math.min(20, 6 + r / H * 3) * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = H * rnd(3, 7); bits.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: H * 12, drag: .3, max: rnd(.6, 1.1), size: H * rnd(.03, .06), rot: rnd(TAU), spin: rnd(-14, 14), c: pick(['#fde047', '#fb923c', '#ef4444', '#ffffff']) }); }
       }, delay * 1000);
     };
     return {
@@ -7023,7 +7025,9 @@
     const Ri = Math.min(H * 1.1, EW * .3); // rayon de l'iris
     const motes = particles(), dust = particles(), sparks = particles(), stars = [], arms = [], flares = timed(), rings = timed(), twinkles = timed(), emit = emitter();
     for (let i = 0; i < Math.round(46 * q) + 10; i++) { const a = rnd(TAU), r = Math.sqrt(Math.random()); stars.push({ x: Math.cos(a) * r * EW * .62, y: -Math.abs(Math.sin(a)) * r * H * 1.9 + H * .3, s: rnd(.6, 1.8), ph: rnd(TAU), on: rnd(.1, 1) }); }
+    const inEye = Array.from({ length: Math.round(40 * q) + 12 }, () => ({ x: rnd(-.48, .48) * EW, y: rnd(-1.1, .55) * H, s: rnd(.6, 1.6), ph: rnd(TAU) })); // les étoiles de la nébuleuse de l'œil
     for (let i = 0; i < Math.round(90 * q) + 20; i++) { const arm = i % 2, r = Math.pow(Math.random(), .7); arms.push({ r, a: arm * Math.PI + r * 4.2 + rnd(-.35, .35), s: rnd(.8, 2.2) * (1.2 - r * .5), c: pick(r < .3 ? ['#fef3c7', '#ffffff'] : ['#c4b5fd', '#67e8f9', '#f0abfc', '#ffffff']) }); }
+    const flareNow = []; // éclats de l'image en cours, redessinés devant la carte
     let t = 0, open = 0, openTo = .12, look = 0, lookTo = 0, dil = .5, dilTo = .5, spin = 0, spinV = .25, build = 0, dissolve = 0, glow = 0, locks = 0, blinkAt = 6, blink = 0, revealed = false, hue = 0, rainbow = false, asc = 0, sleepy = false, full = 0;
     const almond = (c, ox, oy, k = 1) => { // l'ouverture des paupières (paupière du haut plus bombée que celle du bas)
       const e = Math.max(.002, open * (1 - blink)) * k, y = Ey() - oy, hu = H * .98 * e * (1 + .12 * full), hl = H * .62 * e; // ~0,7 carte au-dessus : la place sous le menu est courte
@@ -7086,7 +7090,9 @@
             co.save(); almond(co, 0, 0); co.clip();
             const g = co.createRadialGradient(cx, ey, H * .3, cx, ey, EW * .5); g.addColorStop(0, '#4c1d95'); g.addColorStop(.6, '#312e81'); g.addColorStop(1, '#1e1b4b');
             co.globalAlpha = 1; co.fillStyle = g; co.fillRect(cx - EW / 2, ey - H * 3, EW, H * 4);
-            co.globalCompositeOperation = 'lighter'; dot(co, '#c4b5fd', cx - EW * .3, ey - H * .1, EW * .18, .35, H * .5); dot(co, '#67e8f9', cx + EW * .3, ey - H * .1, EW * .18, .25, H * .5); co.globalCompositeOperation = 'source-over';
+            co.globalCompositeOperation = 'lighter'; dot(co, '#c4b5fd', cx - EW * .3 + Math.sin(t * .4) * H * .2, ey - H * .1, EW * .18, .35, H * .5); dot(co, '#67e8f9', cx + EW * .3 - Math.sin(t * .4) * H * .2, ey - H * .1, EW * .18, .25, H * .5);
+            for (const st of inEye) dot(co, '#ffffff', cx + st.x, ey + st.y, st.s * 2.2, .35 + .45 * Math.sin(t * 2.2 + st.ph) ** 2);
+            co.globalCompositeOperation = 'source-over';
             iris(co, 0, 0, false);
             // le reflet de lumière (rend l'œil doux)
             co.globalAlpha = .75; co.fillStyle = '#ffffff'; co.beginPath(); co.ellipse(cx + look - Ri * .45, ey - Ri * .55, Ri * .12, Ri * .08, -.5, 0, TAU); co.fill();
@@ -7103,9 +7109,9 @@
           // les éclats (rayons, trait anamorphique) derrière la carte
           flares.run(dt, (f, k) => {
             const a = k < .1 ? k / .1 : Math.pow(1 - (k - .1) / .9, 1.4);
+            flareNow.push({ a, col: f.col });
             co.globalCompositeOperation = add;
             dot(co, '#ffffff', cx + look, ey, f.r * (.6 + .6 * k), a * .8);
-            dot(co, f.col, cx + look, ey, EW * .75, a * .7, H * .06); // le trait horizontal anamorphique
             if (f.rays) godrays(co, f.col, cx + look, ey, f.rays, Ri * .6, EW * .55, t * .3, H * .25, a * .35);
             co.globalCompositeOperation = 'source-over';
           });
@@ -7125,6 +7131,10 @@
         motes.each((m, k) => { const e = k * k; dot(co, m.c, lerp(m.x0, m.x1, e), lerp(m.y0, m.y1, e), m.s * (1.4 - e * .6), .9); });
         sparks.step(dt);
         sparks.each((s, k) => sparkle(co, s.x, s.y, s.size * (1 - k * .5), (1 - k), s.c));
+        // l'éclat cosmique, devant : un trait anamorphique sur le bord haut de la carte (au-dessus des chiffres) et une
+        // grande étoile au sommet de l'iris
+        for (const f of flareNow) { const y = card.y - H * .06; dot(co, f.col, cx, y, EW * .8 * (.6 + .4 * f.a), f.a * .9, H * .05); dot(co, '#ffffff', cx, y, EW * .35, f.a * .9, H * .025); sparkle(co, cx + look, Ey() - Ri * .82, H * (.35 + .5 * f.a), f.a, '#ffffff'); }
+        flareNow.length = 0;
         co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
       },
       lock(p, o) {
@@ -7141,7 +7151,7 @@
         const p = POWER[tier] || 0; asc = ASCEND[tier] || 0;
         revealed = true; build = 0; blinkAt = t + 5;
         if (!p) { sleepy = true; openTo = 0; dilTo = .5; return; } // il s'endort doucement
-        openTo = .85 + .15 * p; dilTo = .45; glow = 1;
+        openTo = p < 1 ? .7 + .15 * p : 1; dilTo = .45; glow = 1; // grand ouvert : seulement dès Mythic
         const col = asc >= 2 ? '#fde68a' : asc ? '#67e8f9' : '#c4b5fd';
         flares.add({ life: .9 + .8 * p, r: Ri * (1 + p), col, rays: p >= 1 ? 12 + 4 * asc : 0 });
         rings.add({ life: 1.2, r: EW * (.25 + .2 * p), col });
