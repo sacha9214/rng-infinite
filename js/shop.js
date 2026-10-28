@@ -160,6 +160,9 @@
     { id: 'graffiti', name: 'Graffiti', emoji: '🎨', price: 2200, desc: 'A spray can tags every digit on a brick wall in fat bubble letters that drip; Mythic rolls end in a burst of colour and a crown tag', idea: 'JBearr12' },
     // Idée de JBearr12 (2026-10-28) : chaque chiffre plié dans une feuille de papier ; les plis s'envolent en grues de papier dès Mythic.
     { id: 'origami', name: 'Origami', emoji: '🕊️', price: 2000, desc: 'Every digit is a sheet of coloured paper that folds open with a crisp snap; Mythic rolls turn the folds into paper cranes that fly away', idea: 'JBearr12' },
+    // Idée de sennybex1 (2026-10-28) : une fête des tacos ; chaque chiffre tombe comme une garniture. Il proposait une chance
+    // sur 10 et un drapeau : vendu comme un skin normal (prix proche de ses 700 pièces), et aucun drapeau réel (règle du jeu).
+    { id: 'taco', name: 'Taco', emoji: '🌮', price: 900, desc: 'A taco party: every digit drops into its own crunchy shell with salsa, cheese and lettuce bits; Mythic rolls make it rain tacos', idea: 'sennybex1' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

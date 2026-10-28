@@ -1260,3 +1260,9 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, .45);
   --gs: 0 .3em 0 #14533d, 0 .5em 1em rgba(20, 83, 61, .35); --gs-h: 0 .34em 0 #14533d, 0 .7em 1.3em rgba(110, 231, 183, .35); --gs-a: 0 .06em 0 #14533d; }
 .btn-roll.gen-origami:hover { filter: brightness(1.06); }
+/* Taco (idée de sennybex1, 2026-10-28) : une coque de taco dorée et mouchetée, une frange de salade en haut. */
+.btn-roll.gen-taco { border: 2px solid #92400e; border-radius: .8rem .8rem 1.6rem 1.6rem; color: #fff7ed;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; -webkit-text-stroke: .1em #7c2d12; paint-order: stroke fill;
+  background: radial-gradient(circle at 50% 100%, #22c55e 58%, transparent 62%) 0 -3px / 10px 9px repeat-x, radial-gradient(circle, rgba(146, 64, 14, .5) 0 1px, transparent 1.6px) 0 0 / 9px 8px, linear-gradient(180deg, #fcd34d, #f59e0b 60%, #d97706);
+  --gs: 0 .3em 0 #0f766e, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #0f766e, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #0f766e; }
+.btn-roll.gen-taco:hover { filter: brightness(1.08); }

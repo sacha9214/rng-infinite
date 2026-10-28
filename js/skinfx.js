@@ -6763,6 +6763,96 @@
     };
   };
 
+
+  // 🌮 Taco (2026-10-28, idée de sennybex1) — quand une garniture s'écrase dans sa coque (38 % de l'animation CSS
+  // taco-drop, 0,24 s après la pose), des bouts de garniture giclent : lanières de salade, bâtonnets de fromage, dés de
+  // tomate et d'oignon, qui tournent et retombent. Avant le dernier chiffre, la vapeur d'un taco tout chaud monte de la
+  // carte. Révélation : tirage raté, une seule feuille de salade descend tristement en se balançant ; sinon des
+  // confettis de fête et des garnitures ; dès Epic, deux tacos sautent des coins de la carte en faisant un salto ; dès
+  // Mythic, une pluie de tacos tombe en tournoyant derrière la carte (plus dense et plus longue au-delà).
+  SCENES.taco = env => {
+    const { co, card, q, dark } = env;
+    const cx = card.x + card.w / 2;
+    const bits = particles(), steam = particles(), confetti = particles(), leaves = particles(), tacos = particles(), pending = [], hops = timed();
+    const emit = emitter(), rain = emitter();
+    const PARTY = ['#f472b6', '#facc15', '#a78bfa', '#fb923c', '#22d3ee'];
+    let t = 0, build = 0, rainEnd = 0, rainRate = 0;
+    // un bout de garniture : salade (lanière verte ondulée), fromage (bâtonnet jaune), tomate (dé rouge), oignon (dé blanc)
+    const KINDS = [['leaf', '#4ade80'], ['leaf', '#22c55e'], ['cheese', '#facc15'], ['cheese', '#fde047'], ['dice', '#ef4444'], ['dice', '#dc2626'], ['dice', '#f8fafc']];
+    const fling = (x, y, n, up) => {
+      for (let i = Math.round(n * q); i > 0; i--) {
+        const [kind, c] = pick(KINDS);
+        bits.add({ x: x + rnd(-1, 1) * card.h * .12, y, vx: rnd(-1, 1) * card.h * 2.2, vy: -card.h * rnd(.6, 1) * up, g: card.h * 11, drag: .4, max: rnd(.55, .9), size: card.h * rnd(.06, .09), rot: rnd(TAU), spin: rnd(-12, 12), kind, c });
+      }
+    };
+    const drawBit = (b, k) => {
+      const s = b.size;
+      co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(b.x, b.y); co.rotate(b.rot + b.life * b.spin);
+      co.fillStyle = b.c; co.strokeStyle = 'rgba(59,29,10,.55)'; co.lineWidth = 1;
+      if (b.kind === 'leaf') { co.beginPath(); co.moveTo(-s * 1.4, 0); co.quadraticCurveTo(-s * .7, -s, 0, 0); co.quadraticCurveTo(s * .7, s, s * 1.4, 0); co.quadraticCurveTo(s * .7, s * .4, 0, s * .45); co.quadraticCurveTo(-s * .7, -s * .5, -s * 1.4, 0); co.fill(); co.stroke(); }
+      else if (b.kind === 'cheese') { co.fillRect(-s * 1.3, -s * .3, s * 2.6, s * .6); co.strokeRect(-s * 1.3, -s * .3, s * 2.6, s * .6); }
+      else { roundRect(co, -s * .6, -s * .6, s * 1.2, s * 1.2, s * .25); co.fill(); co.stroke(); }
+      co.restore();
+    };
+    // un taco vu de côté : la garniture qui dépasse en haut (salade, tomate, fromage) puis la coque en demi-lune dorée
+    const taco = (x, y, s, rot, a) => {
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      co.lineJoin = 'round'; co.lineWidth = Math.max(1, s * .05); co.strokeStyle = '#78350f';
+      co.fillStyle = '#22c55e';
+      for (let i = 0; i < 6; i++) { co.beginPath(); co.arc(-s * .4 + i * s * .16, -s * .06 - Math.sin((i / 5) * Math.PI) * s * .05, s * .11, 0, TAU); co.fill(); }
+      co.fillStyle = '#ef4444'; co.fillRect(-s * .2, -s * .24, s * .12, s * .12); co.fillRect(s * .12, -s * .26, s * .12, s * .12);
+      co.strokeStyle = '#fde047'; co.lineWidth = Math.max(1, s * .045); co.lineCap = 'round';
+      [[-.3, -.1, -.2, -.25], [0, -.1, .08, -.27], [.28, -.1, .36, -.24]].forEach(([a1, b1, a2, b2]) => { co.beginPath(); co.moveTo(s * a1, s * b1); co.lineTo(s * a2, s * b2); co.stroke(); });
+      co.lineCap = 'butt'; co.strokeStyle = '#78350f'; co.lineWidth = Math.max(1, s * .05);
+      const g = co.createLinearGradient(0, -s * .05, 0, s * .42); g.addColorStop(0, '#fcd34d'); g.addColorStop(1, '#d97706');
+      co.fillStyle = g; co.beginPath(); co.moveTo(-s * .5, -s * .04); co.ellipse(0, -s * .04, s * .5, s * .44, 0, Math.PI, 0, true); co.closePath(); co.fill(); co.stroke();
+      co.fillStyle = '#b45309'; [[-.22, .12], [.05, .26], [.24, .08], [-.05, .05]].forEach(([dx, dy]) => { co.beginPath(); co.arc(s * dx, s * dy, s * .03, 0, TAU); co.fill(); });
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        // les impacts en attente (le chiffre tombe d'abord : les garnitures giclent au moment où il touche la coque)
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const p = pending[i]; fling(p.x, p.y, p.n, p.up); pending.splice(i, 1); }
+        // la vapeur de la tension : de fines volutes au-dessus de la carte
+        if (build) for (let m = emit(10 * q, dt); m > 0; m--) steam.add({ x: card.x + card.w * rnd(.15, .85), y: card.y + card.h * .2, vx: rnd(-6, 6), vy: -card.h * rnd(.7, 1.1), drag: .3, g: -card.h * .2, max: rnd(.9, 1.4), size: card.h * rnd(.05, .08), ph: rnd(TAU) });
+        steam.step(dt);
+        steam.each((s, k) => { const r = s.size * (1 + k * 1.2); dot(co, dark ? '#f8fafc' : '#94a3b8', s.x + Math.sin(s.life * 5 + s.ph) * card.h * (.05 + .1 * k), s.y, r, Math.sin(Math.PI * k) * (dark ? .2 : .3), r * 2.6); });
+        // la pluie de tacos (Mythic) : ils tombent derrière la carte en tournoyant
+        if (t < rainEnd) for (let m = rain(rainRate * q, dt); m > 0; m--) tacos.add({ x: cx + rnd(-1, 1) * (card.w * .5 + card.h * 2.4), y: card.y - card.h * rnd(1.4, 2.2), vx: rnd(-20, 20), vy: card.h * rnd(.5, 1.5), g: card.h * 5, max: rnd(1.6, 2.2), size: card.h * rnd(.45, .75), rot: rnd(TAU), spin: rnd(-4, 4) });
+        tacos.step(dt);
+        if (tacos.n) behind(env, () => tacos.each((c, k) => taco(c.x, c.y, c.size, c.rot + c.life * c.spin, Math.min(1, (1 - k) * 4))));
+        // les deux tacos qui sautent des coins (Epic et plus) : un saut en cloche avec un salto, puis ils retombent
+        hops.run(dt, (h, k) => {
+          const x = h.x + h.dir * k * card.h * .55, y = card.y + card.h * .8 - Math.sin(k * Math.PI) * card.h * .75; // un petit saut : au-dessus, la barre du haut de la page
+          if (!h.splash && k > .9) { h.splash = true; fling(x, card.y + card.h * .75, 6, 1.4); }
+          taco(x, y, card.h * .7, h.dir * k * TAU, Math.min(1, (1 - k) * 8, k * 10));
+        });
+        confetti.step(dt);
+        confetti.each((c, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(c.x + Math.sin(t * 3 + c.ph) * 5, c.y); co.rotate(c.rot + c.life * c.spin); co.scale(Math.cos(c.life * c.flip), 1); co.fillStyle = c.c; co.fillRect(-c.size, -c.size * .5, c.size * 2, c.size); co.restore(); });
+        bits.step(dt); bits.each(drawBit);
+        leaves.step(dt);
+        leaves.each((l, k) => { l.vx = Math.sin(l.life * 2.6) * card.h * 1.1; l.vy = card.h * .35; drawBit(l, k * .7); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        pending.push({ at: t + .24, x: p.x, y: p.y + card.h * .18, n: o.ghost ? 1 : o.last ? 16 : 10, up: o.last ? 2.6 : 2 });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { leaves.add({ x: cx + card.w * .2, y: card.y - card.h * .3, vx: 0, vy: 0, max: 2.4, size: card.h * .09, rot: 0, spin: .8, kind: 'leaf', c: '#4ade80' }); return; }
+        for (let i = burst(p, 50 * q, 8) + 20 * asc; i > 0; i--) confetti.add({ x: cx + rnd(-.6, .6) * card.w, y: card.y + card.h * rnd(0, .6), vx: rnd(-1, 1) * card.h * 2.5, vy: -card.h * rnd(2, 4.5), g: card.h * 4, drag: 1.4, max: rnd(1.4, 2.4), size: card.h * rnd(.04, .07), rot: rnd(TAU), spin: rnd(-5, 5), flip: rnd(6, 12), ph: rnd(TAU), c: pick(PARTY) });
+        fling(cx, card.y + card.h * .4, 6 + 10 * p, 3);
+        if (p >= .6) [-1, 1].forEach((dir, i) => hops.add({ delay: .15 + i * .2, life: .9, x: dir < 0 ? card.x + card.h * .2 : card.x + card.w - card.h * .2, dir }));
+        if (p >= 1) { rainRate = 16 + 6 * asc; rainEnd = t + 2.4 + 1.2 * asc; }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
