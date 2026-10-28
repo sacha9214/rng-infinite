@@ -5019,7 +5019,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
   const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
   const mk = (i, name) => {
-    const id = `28ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    const id = `28ee${i.toString(16).padStart(12, '0')}`, secret = id + id;
     run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1'], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
     return { playerId: id, secret, name };
   };
@@ -5064,7 +5064,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await call(lbApi, { url: `/api/leaderboard?period=xp&me=${xa.playerId}` });
   assert.equal(r.body.span, 'all'); assert.equal(r.body.entries.find(e => e.name === 'Xpdaya').s, zs('lb:xp', xa.playerId), 'sans span : XP à vie');
   // Hors du top 100 du jour : ma ligne à part, avec mon XP du jour (pas celle à vie).
-  const dayK = lib.xpKey(pDay), fillers = Array.from({ length: 105 }, (_, i) => `28ee${i.toString(16).padStart(12, '0')}`);
+  const dayK = lib.xpKey(pDay), fillers = Array.from({ length: 105 }, (_, i) => `28ef${i.toString(16).padStart(12, '0')}`);
   run([...fillers.map((f, i) => ['ZADD', dayK, 1e12 + i, f]), ...fillers.map(f => ['HSET', pDay.best, f, JSON.stringify({ n: 1, s: 1, t: t0 })])]);
   r = await call(lbApi, { url: `/api/leaderboard?period=xp&span=day&me=${xa.playerId}` });
   assert.equal(r.body.entries.length, 100); assert.ok(r.body.mine && r.body.mine.me && r.body.mine.s === sum && r.body.mine.rank > 100, JSON.stringify(r.body.mine));
