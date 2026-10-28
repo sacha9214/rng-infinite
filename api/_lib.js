@@ -241,6 +241,52 @@ const XP_LB = 'lb:xp';
 // un membre par joueur comme lb:xp. Incrémenté à chaque tirage ; les anciens joueurs y sont versés par migrateRolls
 // (api/leaderboard.js).
 const ROLLS_LB = 'lb:rolls';
+// XP du jour, de la semaine et du mois (idée de qwertyuiop, 2026-10-28) : un sorted set par période ouverte
+// (lbx:day:<jour>, lbx:week:<semaine>, lbx:month:<mois>), score = XP gagnée dans la période, ZINCRBY à chaque tirage.
+// Durées courtes (jour 2 j, semaine 9 j, mois 35 j) : seule la période en cours s'affiche, la précédente reste lisible
+// le temps d'une éventuelle remise de prix ; ~95 octets par joueur actif de la période.
+const xpKey = p => p.lb.replace(/^lb:/, 'lbx:');
+const XP_TTL = { day: 2 * 86400, week: 9 * 86400, month: 35 * 86400 };
+// Classement « Median roll » (idée de Kag, 2026-10-28 : « highest median roll, min. 200 rolls »). Relire tout
+// l'historique pour une médiane exacte coûte trop (jusqu'à 100 000 tirages par joueur). Chaque joueur a donc un petit
+// histogramme med:<id> : 50 cases de 2 points de percentile (field = case, valeur = nombre de tirages), plus v=1 quand
+// il couvre tout son historique (rempli par migrateXp dans api/leaderboard.js, ou joueur neuf). Le percentile d'un tirage
+// au hasard est uniforme, donc chaque case se remplit à peu près également et une interpolation linéaire dans la case
+// de la médiane suffit : simulé, l'écart avec la médiane exacte est ~10 fois plus petit que le hasard lui-même
+// (0,6 % de l'XP à 200 tirages, 0,01 % à 100 000). Mémoire : ~300 octets par joueur (listpack), plus ~95 octets dans
+// lb:med pour ceux qui ont au moins 200 tirages. lb:med : score = percentile médian estimé (l'XP s'en déduit par la
+// table des percentiles, à l'affichage).
+const MED_LB = 'lb:med', MED_MIN = 200, MED_W = 2, MED_BUCKETS = 50;
+const medKey = id => `med:${id}`;
+const medBucket = pct => Math.min(MED_BUCKETS - 1, Math.max(0, Math.floor((Number(pct) || 0) / MED_W)));
+// HGETALL med:<id> → { counts: [50 cases], count, done }.
+function medHist(flat) {
+  const counts = new Array(MED_BUCKETS).fill(0);
+  let done = false;
+  for (let i = 0; i < (flat || []).length; i += 2) {
+    if (flat[i] === 'v') { done = true; continue; }
+    const b = Number(flat[i]);
+    if (Number.isInteger(b) && b >= 0 && b < MED_BUCKETS) counts[b] = Number(flat[i + 1]) || 0;
+  }
+  return { counts, count: counts.reduce((a, c) => a + c, 0), done };
+}
+// Percentile médian estimé (0 à 100, 4 décimales), null sans tirage.
+function medPct(counts) {
+  const total = counts.reduce((a, c) => a + c, 0), half = total / 2;
+  if (!total) return null;
+  let acc = 0;
+  for (let b = 0; b < counts.length; b++) {
+    if (counts[b] && acc + counts[b] >= half) return Math.round((b * MED_W + MED_W * (half - acc) / counts[b]) * 10000) / 10000;
+    acc += counts[b];
+  }
+  return 100;
+}
+// XP du tirage qui tombe à ce percentile : la plus haute entrée de la table dont le percentile ne dépasse pas p.
+function scoreAtPct(p) {
+  let lo = 0, hi = percentiles.length - 1, found = 0;
+  while (lo <= hi) { const mid = (lo + hi) >> 1; if (percentiles[mid][1] <= p) { found = mid; lo = mid + 1; } else hi = mid - 1; }
+  return percentiles.length ? percentiles[found][0] : 0;
+}
 
 // XP à vie et nombre de tirages recalculés depuis l'historique (mêmes doublons écartés que rebuildStats),
 // pour remplir lb:xp et count:all une fois (tirages faits avant le classement en ligne compris).
@@ -489,9 +535,12 @@ async function recordRoll(playerId, n, t) {
   // clanof lu dans la même requête : l'XP du tirage compte pour le clan du joueur cette semaine (api/_clan.js).
   // rc:<jour>:<id> : numéro de ce tirage dans la journée UTC (rendements décroissants des pièces, Shop.ROLL_TIERS).
   const rcKey = `rc:${dayKey(t)}:${playerId}`;
-  const [worst, clanId, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ['HGET', 'clanof', playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId]), ['INCR', rcKey], ['EXPIRE', rcKey, 2 * 86400]]);
+  const [worst, clanId, ...rest] = await redis([['ZSCORE', WORST_LB, playerId], ['HGET', 'clanof', playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', worstKeys(p).lb, playerId]), ['INCR', rcKey], ['EXPIRE', rcKey, 2 * 86400], ['HGETALL', medKey(playerId)]]);
   const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length, periods.length + wPeriods.length);
   const dayRoll = Number(rest[periods.length + wPeriods.length]) || 1;
+  // Histogramme de la médiane (idée de Kag, 2026-10-28), lu dans la même requête : ce tirage y est ajouté ici.
+  const med = medHist(rest[periods.length + wPeriods.length + 2]), medB = medBucket(a.percentile);
+  med.counts[medB]++; med.count++;
   const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
   const entry = JSON.stringify({ n, s, t });
   const writes = [
@@ -540,6 +589,16 @@ async function recordRoll(playerId, n, t) {
     writes.push(['INCR', p.total], ['HINCRBY', p.count, playerId, 1]);
     if (p.ttl) writes.push(['EXPIRE', p.total, p.ttl], ['EXPIRE', p.count, p.ttl]);
   }
+  // XP de la période (idée de qwertyuiop, 2026-10-28). La durée de vie n'est reposée qu'au premier tirage du jour de
+  // chaque joueur (rc:<jour> vaut 1) : la clé du jour, de la semaine ou du mois naît forcément d'un premier tirage du
+  // jour, et chaque joueur qui commence sa journée la prolonge ; 3 commandes de plus par tirage au lieu de 6.
+  for (const p of wPeriods) {
+    writes.push(['ZINCRBY', xpKey(p), s, playerId]);
+    if (dayRoll === 1) writes.push(['EXPIRE', xpKey(p), XP_TTL[p.period]]);
+  }
+  // Médiane : la case du tirage, et le classement dès 200 tirages si l'histogramme couvre tout l'historique.
+  writes.push(['HINCRBY', medKey(playerId), medB, 1]);
+  if (med.done && med.count >= MED_MIN) writes.push(['ZADD', MED_LB, medPct(med.counts), playerId]);
   // Classement Poubelle (idée d'un joueur, 2026-10-16) : le pire tirage de chaque joueur, de tous les temps.
   if (worst === null || s < Number(worst)) writes.push(['ZADD', WORST_LB, s, playerId], ['HSET', WORST_BEST, playerId, entry]);
   wPeriods.forEach((p, i) => {
@@ -568,6 +627,8 @@ async function recordRoll(playerId, n, t) {
   if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', statsKey(playerId), 'dayTop', 1]); stats.dayTop = 1; }
   if (!stats.v && Number(out[out.length - 2]) <= 1) { fix.push(['HSET', statsKey(playerId), 'v', STATS_VERSION]); stats.v = STATS_VERSION; }
   let uniqAt = -1;
+  // Joueur neuf (ce tirage est le seul de son historique) : son histogramme de médiane est complet d'emblée.
+  if (!med.done && Number(out[out.length - 2]) <= 1) fix.push(['HSET', medKey(playerId), 'v', 1]);
   if (stats.dv !== '1') {
     // Joueur d'avant ce compteur : ses doublons recomptés une fois depuis son historique (qui contient déjà ce tirage).
     const [members] = await redis([['ZRANGE', historyKey(playerId), 0, -1]]);
@@ -617,6 +678,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
+  xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,

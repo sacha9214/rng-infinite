@@ -752,7 +752,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^6:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^7:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
   // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
   run([['SET', 'lb:xp:migrated', '5:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
@@ -5011,6 +5011,117 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.status, 'playing', JSON.stringify(r.body));
   await roomPost(mate, 'ready', { code: mixRoom }); r = await later(0, () => roomPost(fast, 'ready', { code: mixRoom }));
   assert.equal(r.body.rounds.length, 1); assert.equal(r.body.rounds[0].pace, undefined, 'à plusieurs humains : rythme commun');
+}
+
+// ================================================================ Idées du 2026-10-28 : XP du jour / de la semaine / du mois
+// (qwertyuiop), classement Median roll (Kag), pain dans le chat global (Deadshot, G8_floppa).
+{
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
+  const mk = (i, name) => {
+    const id = `28ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1'], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const zs = (k, id) => { const v = run([['ZSCORE', k, id]])[0].result; return v === null ? null : Number(v); };
+  // Le faux Redis ignore EXPIRE : on regarde les commandes envoyées pendant un appel.
+  const sent = async fn => { const out = [], f0 = globalThis.fetch; globalThis.fetch = async (u, o) => { if (String(u).endsWith('/pipeline')) out.push(...JSON.parse(o.body)); return f0(u, o); }; try { await fn(); } finally { globalThis.fetch = f0; } return out; };
+  const expires = (cmds, k) => cmds.some(c => c[0] === 'EXPIRE' && c[1] === k);
+  // Horloge loin de minuit UTC, comme le bloc du 2026-10-27 : jour, semaine et mois ne changent pas pendant le bloc.
+  { const now = Date.now(), next = Date.parse(`${new Date(now).toISOString().slice(0, 10)}T00:00:00Z`) + 86400000; if (next - now < 20 * 60000) clock += next - now + 60000; }
+
+  // 1. XP de la période : somme des tirages de la période, une clé par jour / semaine / mois, avec une durée de vie.
+  const xa = mk(1, 'Xpdaya'), xb = mk(2, 'Xpdayb');
+  const t0 = Date.now(), nums = [123456, 777777, 4242], sum = nums.reduce((a, n) => a + engine.scoreOf(n), 0);
+  const [pDay, pWeek, pMonth] = lib.scopes(t0);
+  // Durée de vie posée au premier tirage du jour du joueur seulement (3 commandes de moins sur les suivants).
+  const first = await sent(() => lib.recordRoll(xa.playerId, nums[0], t0));
+  for (const p of [pDay, pWeek, pMonth]) assert.ok(first.some(c => c[0] === 'EXPIRE' && c[1] === lib.xpKey(p) && c[2] === String(lib.XP_TTL[p.period])), `durée de vie posée (${p.period})`);
+  const second = await sent(() => lib.recordRoll(xa.playerId, nums[1], t0 + 3));
+  assert.ok(![pDay, pWeek, pMonth].some(p => expires(second, lib.xpKey(p))), 'pas reposée au 2e tirage du jour');
+  await lib.recordRoll(xa.playerId, nums[2], t0 + 6);
+  await lib.recordRoll(xb.playerId, 999999, t0 + 20);
+  for (const p of [pDay, pWeek, pMonth]) assert.equal(zs(lib.xpKey(p), xa.playerId), sum, `XP de la période ${p.period} = somme des tirages`);
+  // Un tirage du lendemain va dans un autre jour ; une autre semaine ou un autre mois seulement si la date change de période.
+  const tNext = Date.UTC(2034, 0, 31, 23, 59, 59), tAfter = tNext + 2000; // 31 janvier → 1er février 2034
+  const c1 = await sent(() => lib.recordRoll(xa.playerId, 500000, tNext)), c2 = await sent(() => lib.recordRoll(xa.playerId, 600000, tAfter));
+  const [d1, , m1] = lib.scopes(tNext), [d2, , m2] = lib.scopes(tAfter);
+  assert.notEqual(lib.xpKey(d1), lib.xpKey(d2)); assert.notEqual(lib.xpKey(m1), lib.xpKey(m2));
+  assert.equal(zs(lib.xpKey(d1), xa.playerId), engine.scoreOf(500000)); assert.equal(zs(lib.xpKey(d2), xa.playerId), engine.scoreOf(600000));
+  assert.equal(zs(lib.xpKey(m2), xa.playerId), engine.scoreOf(600000), 'le mois suivant repart de zéro');
+  // Chaque clé naît d'un premier tirage du jour : elle a toujours une durée de vie.
+  assert.ok(expires(c1, lib.xpKey(d1)) && expires(c1, lib.xpKey(m1)) && expires(c2, lib.xpKey(d2)) && expires(c2, lib.xpKey(m2)));
+  // Classement : span=day|week|month, ma ligne, le meilleur tirage et le nombre de tirages de la période.
+  for (const span of ['day', 'week', 'month']) {
+    r = await call(lbApi, { url: `/api/leaderboard?period=xp&span=${span}&me=${xa.playerId}` });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.span, span);
+    const row = r.body.entries.find(e => e.name === 'Xpdaya');
+    assert.ok(row && row.me, `${span} : ma ligne`); assert.equal(row.s, sum); assert.equal(row.rolls, 3);
+    assert.equal(row.n, nums.reduce((b, n) => (engine.scoreOf(n) > engine.scoreOf(b) ? n : b)), 'meilleur tirage de la période');
+    for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].s >= r.body.entries[i].s, 'trié par XP');
+    assert.ok(!JSON.stringify(r.body).includes(xa.playerId), 'aucun identifiant');
+  }
+  r = await call(lbApi, { url: `/api/leaderboard?period=xp&me=${xa.playerId}` });
+  assert.equal(r.body.span, 'all'); assert.equal(r.body.entries.find(e => e.name === 'Xpdaya').s, zs('lb:xp', xa.playerId), 'sans span : XP à vie');
+  // Hors du top 100 du jour : ma ligne à part, avec mon XP du jour (pas celle à vie).
+  const dayK = lib.xpKey(pDay), fillers = Array.from({ length: 105 }, (_, i) => `28ee${i.toString(16).padStart(12, '0')}`);
+  run([...fillers.map((f, i) => ['ZADD', dayK, 1e12 + i, f]), ...fillers.map(f => ['HSET', pDay.best, f, JSON.stringify({ n: 1, s: 1, t: t0 })])]);
+  r = await call(lbApi, { url: `/api/leaderboard?period=xp&span=day&me=${xa.playerId}` });
+  assert.equal(r.body.entries.length, 100); assert.ok(r.body.mine && r.body.mine.me && r.body.mine.s === sum && r.body.mine.rank > 100, JSON.stringify(r.body.mine));
+  run([['ZREM', dayK, ...fillers], ['HDEL', pDay.best, ...fillers]]);
+
+  // 2. Median roll : histogramme med:<id> de 50 cases de percentile, classement dès 200 tirages.
+  const exactPct = list => { const ps = list.map(n => engine.percentileOf(engine.scoreOf(n))).sort((a, b) => a - b); return ps[Math.floor((ps.length - 1) / 2)]; };
+  // Joueur neuf : histogramme complet dès son premier tirage (v=1), absent du classement avant 200 tirages.
+  const md = mk(3, 'Medianroller'), mdNums = Array.from({ length: 200 }, (_, i) => (i * 7919 + 13) % 1000001);
+  let tm = t0 + 1000;
+  for (let i = 0; i < 199; i++) await lib.recordRoll(md.playerId, mdNums[i], (tm += 3));
+  assert.equal(run([['HGET', lib.medKey(md.playerId), 'v']])[0].result, '1', 'joueur neuf : histogramme complet');
+  assert.equal(zs(lib.MED_LB, md.playerId), null, '199 tirages : pas encore classé');
+  r = await call(lbApi, { url: `/api/leaderboard?period=median&me=${md.playerId}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.period, 'median');
+  assert.deepEqual([r.body.need, r.body.have], [200, 199], 'il manque 1 tirage');
+  await lib.recordRoll(md.playerId, mdNums[199], (tm += 3));
+  const h = lib.medHist(run([['HGETALL', lib.medKey(md.playerId)]])[0].result);
+  assert.equal(h.count, 200); assert.ok(h.done);
+  const est = zs(lib.MED_LB, md.playerId);
+  assert.ok(est !== null && Math.abs(est - exactPct(mdNums)) <= 2, `médiane estimée ${est} ≈ exacte ${exactPct(mdNums)}`);
+  // Joueur d'avant (historique sans histogramme) : ses tirages ne comptent pas tant que le remplissage n'est pas passé.
+  const old = mk(4, 'Medianold'), oldNums = Array.from({ length: 260 }, (_, i) => (i * 104729 + 99) % 1000001);
+  run([['ZADD', `hist:${old.playerId}`, ...oldNums.flatMap((n, i) => [t0 - 900000 + i * 1000, `${t0 - 900000 + i * 1000}:${n}`])],
+    ['ZADD', `hist:${old.playerId}`, t0 - 900000 + 500, `${t0 - 900000 + 500}:${oldNums[0]}`], // doublon d'un même tirage (même nombre, < 1 min)
+    ['HSET', lib.medKey(old.playerId), '25', '400']]); // vieux comptes partiels sans v
+  await lib.recordRoll(old.playerId, 31337, (tm += 3));
+  assert.equal(zs(lib.MED_LB, old.playerId), null, 'histogramme incomplet : pas classé');
+  run([['SET', 'lb:xp:migrated', '6:000000000000']]);
+  for (let i = 0; i < 20 && !/^7:/.test(run([['GET', 'lb:xp:migrated']])[0].result || ''); i++) await lbApi.migrateXp();
+  const ho = lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result);
+  assert.ok(ho.done, 'rempli depuis l\'historique'); assert.equal(ho.count, 261, 'historique sans doublon (260 + le tirage du jour)');
+  assert.ok(Math.abs(zs(lib.MED_LB, old.playerId) - exactPct([...oldNums, 31337])) <= 2, 'médiane de l\'historique');
+  assert.equal(lib.medHist(run([['HGETALL', lib.medKey(md.playerId)]])[0].result).count, 200, 'refait à l\'identique pour le joueur neuf');
+  // Ensuite chaque tirage s'ajoute et met à jour le classement.
+  const before = lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result).count;
+  await lib.recordRoll(old.playerId, 1000000, (tm += 3));
+  assert.equal(lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result).count, before + 1);
+  // Un joueur sous 200 tirages sort du classement au remplissage suivant (historique raccourci).
+  const few = mk(5, 'Medianfew'); run([['ZADD', `hist:${few.playerId}`, t0 - 5000, `${t0 - 5000}:42`], ['ZADD', lib.MED_LB, 50, few.playerId]]);
+  run([['SET', 'lb:xp:migrated', '6:000000000001']]);
+  for (let i = 0; i < 20 && !/^7:/.test(run([['GET', 'lb:xp:migrated']])[0].result || ''); i++) await lbApi.migrateXp();
+  assert.equal(zs(lib.MED_LB, few.playerId), null, 'moins de 200 : retiré');
+  // Classement : trié, XP du tirage médian lue dans la table, tirages à vie, aucun identifiant.
+  r = await call(lbApi, { url: `/api/leaderboard?period=median&me=${md.playerId}` });
+  for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].pct >= r.body.entries[i].pct, 'du plus haut au plus bas');
+  const mrow = r.body.entries.find(e => e.name === 'Medianroller');
+  assert.ok(mrow && mrow.me); assert.equal(mrow.med, lib.scoreAtPct(zs(lib.MED_LB, md.playerId))); assert.equal(mrow.count, 200);
+  assert.ok(r.body.entries.some(e => e.name === 'Medianold')); assert.ok(!r.body.entries.some(e => e.name === 'Medianfew'));
+  assert.equal(r.body.have, null, 'classé : rien à afficher en plus');
+  assert.ok(!JSON.stringify(r.body).includes(md.playerId) && !JSON.stringify(r.body).includes(old.playerId), 'aucun identifiant');
+  // Estimation : percentile → XP croissante, et percentile médian d'un histogramme connu.
+  assert.ok(lib.scoreAtPct(10) <= lib.scoreAtPct(50) && lib.scoreAtPct(50) <= lib.scoreAtPct(90));
+  { const c = new Array(50).fill(0); c[24] = 10; c[25] = 10; assert.equal(lib.medPct(c), 50); c[26] = 20; assert.equal(lib.medPct(c), 52); }
+
+  // 3. Pain dans le chat global : 🍞 🥖 🥐 passent le filtre tels quels.
+  assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
