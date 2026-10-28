@@ -8811,3 +8811,61 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes nj-quiver { 0%, 60%, 100% { transform: none; } 64% { transform: translateX(-2px) rotate(-4deg); } 68% { transform: translateX(2px) rotate(3deg); } 72% { transform: translateX(-1px); } 76% { transform: none; } }
 .room-stage.many .side-ninja::before, .room-stage.many .side-ninja::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-ninja::before, .side-ninja::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Scroll of Alchemy (idée de R77, 2026-10-28) : un
+   vieux parchemin (fibres, taches, bords roussis), enroulé à ses deux bouts ; les chiffres sont à l'encre brune avec un
+   reste de dorure. Au début du tirage, le parchemin se déroule depuis le milieu (alc-unroll, les rouleaux de
+   js/skinfx.js suivent le bord). Pendant le tirage, chaque case n'est qu'une rune d'or qui change (dessinée par la scène :
+   le chiffre est caché ; sans la scène, il clignote en or). Un chiffre qui se pose : il naît petit et flou dans l'or (la
+   rune s'effondre en lui), éclate en blanc doré (la transmutation), puis l'or refroidit en encre et se pose. La loupe,
+   les runes, le cercle de transmutation et le sceau de lumière : js/skinfx.js (SCENES.alchemy). */
+.num-card.skin-alchemy {
+  --alc-roll: radial-gradient(ellipse 50% 6% at 50% 2%, rgba(255, 255, 255, .5), transparent), linear-gradient(90deg, #8a5a2b, #d9b77c 30%, #f3dfb3 45%, #c99d61 70%, #6f4520);
+  background:
+    var(--alc-roll) 0 0 / .34em 100% no-repeat, var(--alc-roll) 100% 0 / .34em 100% no-repeat,
+    linear-gradient(90deg, rgba(60, 35, 10, .45), transparent .12em) .34em 0 / .5em 100% no-repeat,
+    linear-gradient(270deg, rgba(60, 35, 10, .45), transparent .12em) calc(100% - .34em) 0 / .5em 100% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .4  0 0 0 0 .25  0 0 0 0 .08  0 0 0 .26 0'/></filter><rect width='90' height='90' filter='url(%23n)'/></svg>"),
+    radial-gradient(ellipse .5em .3em at 22% 30%, rgba(146, 92, 30, .18), transparent 70%),
+    radial-gradient(ellipse .4em .25em at 74% 72%, rgba(146, 92, 30, .15), transparent 70%),
+    radial-gradient(ellipse 80% 90% at 50% 50%, transparent 55%, rgba(120, 70, 20, .32) 82%, rgba(80, 45, 12, .55)),
+    linear-gradient(180deg, #f4e4c0, #ead39f 55%, #dfc28a);
+  border: 1px solid #7c4a1e; border-radius: .3rem; color: #4a2c0a;
+  box-shadow: inset 0 0 .5em rgba(120, 70, 20, .3), 0 0 16px rgba(251, 191, 36, .2), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .32em .62em;
+}
+/* Le parchemin se déroule depuis le milieu quand le tirage commence (une seule fois : animation non répétée). */
+.num-card.skin-alchemy.charging { animation: charge 1.6s ease-in-out infinite, alc-unroll .7s cubic-bezier(.3, .8, .3, 1) backwards; }
+@keyframes alc-unroll { from { clip-path: inset(0 46% 0 46%); } to { clip-path: inset(0 0 0 0); } }
+.skin-alchemy .slot {
+  position: relative; z-index: 1; width: .64em;
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif; font-weight: 700; color: #4a2c0a;
+  text-shadow: 0 0 .07em rgba(217, 119, 6, .4), 0 .02em 0 rgba(255, 250, 235, .6);
+}
+.skin-alchemy .slot.ghost { opacity: .2; }
+/* Pendant le tirage : la scène dessine une rune à la place du chiffre ; sans elle (animations réduites, mode
+   performance), le chiffre clignote en or. */
+.skin-alchemy .slot.spinning { opacity: .75; color: #b7791f; animation: alc-flick .2s steps(2) infinite; }
+.num-card.skin-alchemy.has-fx .slot.spinning { color: transparent; text-shadow: none; animation: none; }
+html.perf .num-card.skin-alchemy.has-fx .slot.spinning { color: #b7791f; }
+@keyframes alc-flick { from { opacity: .45; } to { opacity: .85; } }
+/* La transmutation : petit et flou dans l'or, éclat blanc doré, l'or refroidit en encre, petit rebond. */
+.skin-alchemy .slot.revealed { animation: alc-transmute .66s backwards; }
+@keyframes alc-transmute {
+  0% { color: #f59e0b; transform: scale(.55); filter: blur(2px); text-shadow: 0 0 .15em #fde68a, 0 0 .35em #f59e0b; animation-timing-function: cubic-bezier(.3, 1.5, .5, 1); }
+  14% { color: #fffbeb; transform: scale(1.2); filter: blur(0) brightness(1.3); text-shadow: 0 0 .1em #fff, 0 0 .3em #fbbf24, 0 0 .6em #f59e0b; }
+  34% { color: #b45309; transform: scale(.96); filter: none; text-shadow: 0 0 .2em rgba(245, 158, 11, .7); }
+  58% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-alchemy .slot, .num-card.skin-alchemy.charging { animation: none; } }
+/* Cadre de duel : un vieux parchemin, un cercle de transmutation à peine visible ; ⚗️ bouillonne, ✨ scintille. */
+.side-alchemy { --side-border: #b7791f; --side-glow: 0 0 16px rgba(251, 191, 36, .25); --side-ink: #92400e;
+  --side-bg: radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(183, 121, 31, .22) 38px 40px, transparent 40px 52px, rgba(183, 121, 31, .18) 52px 53px, transparent 53px), radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, rgba(146, 92, 30, .2)), linear-gradient(180deg, rgba(244, 228, 192, .22), rgba(223, 194, 138, .16));
+  --deco-a: '⚗️'; --deco-b: '✨'; }
+.side-alchemy::before { transform-origin: 50% 100%; animation: alc-bubble 1.4s ease-in-out infinite; }
+.side-alchemy::after { animation: alc-twinkle 1.8s ease-in-out infinite; }
+@keyframes alc-bubble { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08, .94); } }
+@keyframes alc-twinkle { 0%, 100% { transform: scale(.8) rotate(0); opacity: .6; } 50% { transform: scale(1.15) rotate(20deg); opacity: 1; } }
+.room-stage.many .side-alchemy::before, .room-stage.many .side-alchemy::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-alchemy::before, .side-alchemy::after { animation: none; } }

@@ -6721,6 +6721,167 @@
     };
   };
 
+  // 📜 Scroll of Alchemy (2026-10-28, idée de R77) — au début du tirage, les deux rouleaux du parchemin s'écartent depuis
+  // le milieu (avec l'animation CSS alc-unroll) et leurs poignées de bois dépassent en haut et en bas. Chaque case
+  // encore cachée porte une rune d'or qui change sans cesse ; une loupe de laiton plane au-dessus de la prochaine case et
+  // la grossit. Un chiffre qui se pose : sa rune se défait en poussière d'or qui tourbillonne vers le centre (le chiffre
+  // CSS y naît, alc-transmute), un anneau d'or s'ouvre, et la loupe glisse vers la case suivante. Avant le dernier
+  // chiffre, la loupe tremble et aspire de la poussière d'or. À la fin, elle s'éloigne vers le haut. Révélation : tirage
+  // raté, la transmutation échoue (fumée grise) ; sinon de la poussière d'or monte des chiffres ; dès Epic, un cercle de
+  // transmutation se trace autour de la carte ; dès Mythic, une ronde de grandes runes flamboie autour du parchemin et un
+  // sceau de lumière descend et frappe le parchemin : il reste imprimé en or derrière les chiffres (arc-en-ciel à Infinite).
+  const ALC_RUNES = [ // runes d'or tracées au trait, dans un carré de côté 2 centré sur 0
+    c => { c.arc(0, 0, .8, 0, TAU); c.moveTo(.16, 0); c.arc(0, 0, .16, 0, TAU); }, // soleil
+    c => { c.arc(0, 0, .8, Math.PI * .35, Math.PI * 1.65); c.moveTo(.33, -.73); c.quadraticCurveTo(-.4, 0, .33, .73); }, // lune
+    c => { c.moveTo(0, -.85); c.lineTo(.8, .65); c.lineTo(-.8, .65); c.closePath(); }, // feu
+    c => { c.moveTo(0, .85); c.lineTo(.8, -.65); c.lineTo(-.8, -.65); c.closePath(); }, // eau
+    c => { c.moveTo(0, -.85); c.lineTo(.8, .65); c.lineTo(-.8, .65); c.closePath(); c.moveTo(-.65, .05); c.lineTo(.65, .05); }, // air
+    c => { c.moveTo(0, .85); c.lineTo(.8, -.65); c.lineTo(-.8, -.65); c.closePath(); c.moveTo(-.65, -.05); c.lineTo(.65, -.05); }, // terre
+    c => { c.moveTo(.42, -.25); c.arc(0, -.25, .42, 0, TAU); c.moveTo(0, .17); c.lineTo(0, .9); c.moveTo(-.3, .55); c.lineTo(.3, .55); c.moveTo(-.4, -.9); c.quadraticCurveTo(0, -.5, .4, -.9); }, // mercure
+    c => { c.arc(0, 0, .75, 0, TAU); c.moveTo(-.75, 0); c.lineTo(.75, 0); }, // sel
+    c => { c.moveTo(0, -.9); c.lineTo(.55, 0); c.lineTo(-.55, 0); c.closePath(); c.moveTo(0, 0); c.lineTo(0, .9); c.moveTo(-.4, .45); c.lineTo(.4, .45); }, // soufre
+    c => { c.moveTo(.45, -.35); c.arc(0, -.35, .45, 0, TAU); c.moveTo(0, .1); c.lineTo(0, .9); c.moveTo(-.35, .5); c.lineTo(.35, .5); }, // cuivre
+    c => { c.moveTo(.4, .2); c.arc(-.1, .2, .5, 0, TAU); c.moveTo(.25, -.15); c.lineTo(.8, -.75); c.moveTo(.35, -.75); c.lineTo(.8, -.75); c.lineTo(.8, -.3); }, // fer
+    c => { c.moveTo(-.3, -.9); c.lineTo(-.3, .9); c.moveTo(-.3, -.5); c.lineTo(.5, -.85); c.moveTo(-.3, -.05); c.lineTo(.5, -.4); }, // rune ancienne
+  ];
+  // le sceau : deux cercles, un triangle, un carré, des runes entre les cercles
+  function alcSigil(c, x, y, r, col, a, rot, width) {
+    if (a <= .01) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot); c.strokeStyle = col; c.lineWidth = width; c.lineJoin = 'round';
+    c.beginPath(); c.arc(0, 0, r, 0, TAU); c.moveTo(r * .78, 0); c.arc(0, 0, r * .78, 0, TAU); c.moveTo(r * .2, 0); c.arc(0, 0, r * .2, 0, TAU); c.stroke();
+    c.beginPath(); for (let i = 0; i < 3; i++) { const an = -Math.PI / 2 + (i * TAU) / 3; c.lineTo(Math.cos(an) * r * .78, Math.sin(an) * r * .78); } c.closePath(); c.stroke();
+    c.beginPath(); for (let i = 0; i < 4; i++) { const an = Math.PI / 4 + (i * TAU) / 4; c.lineTo(Math.cos(an) * r * .55, Math.sin(an) * r * .55); } c.closePath(); c.stroke();
+    c.lineWidth = width * .8;
+    for (let i = 0; i < 8; i++) { const an = (i * TAU) / 8 + .2; c.save(); c.translate(Math.cos(an) * r * .89, Math.sin(an) * r * .89); c.rotate(an + Math.PI / 2); c.scale(r * .07, r * .07); c.beginPath(); ALC_RUNES[i % ALC_RUNES.length](c); c.restore(); c.stroke(); }
+    c.restore();
+  }
+  SCENES.alchemy = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, add = dark ? 'lighter' : 'source-over', GOLD = dark ? '#fbbf24' : '#d97706', INK = '#b7791f';
+    const motes = particles(), dust = particles(), smoke = particles(), rings = timed(), circle = timed(), flare = timed(), seal = timed();
+    const runes = new Map(); // rune affichée par case : { k, next }
+    const lens = { x: card.x + card.w * .2, y: card.y + card.h / 2, a: 0, lift: 0, shake: 0, gone: false };
+    let now = 0, stamp = null, pull = 0;
+    const runeOf = i => { let r = runes.get(i); if (!r || now > r.next) { r = { k: (Math.random() * ALC_RUNES.length) | 0, next: now + rnd(.09, .16) }; runes.set(i, r); } return r.k; };
+    const drawRune = (c, k, x, y, r, col, lw, a) => { if (a <= .01) return; c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.scale(r, r); c.beginPath(); ALC_RUNES[k](c); c.restore(); c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke(); };
+    const rollW = () => Math.min(H * .34, card.w * .06); // largeur d'un rouleau (≈ .34em)
+    const unroll = () => outCubic(clamp(now / .7)) * .92 + .08;
+    const knob = (x, y, up) => { // la poignée de bois du rouleau, qui dépasse du parchemin
+      const w = rollW() * .62, h = H * .16;
+      co.fillStyle = '#5b3716'; roundRect(co, x - w / 2, up ? y - h : y, w, h, w * .4); co.fill();
+      co.fillStyle = '#d4a017'; co.fillRect(x - w * .62, up ? y - h * .3 : y, w * 1.24, h * .3);
+      co.globalAlpha = .4; co.fillStyle = '#fef3c7'; co.fillRect(x - w * .25, up ? y - h * .9 : y + h * .35, w * .16, h * .5); co.globalAlpha = 1;
+    };
+    const drawLens = (x, y, R, a, k) => {
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a;
+      // le manche, vers le bas à droite
+      const hx = Math.cos(.8) * R, hy = Math.sin(.8) * R;
+      co.lineCap = 'round'; co.strokeStyle = '#3f2410'; co.lineWidth = R * .32; co.beginPath(); co.moveTo(x + hx * 1.15, y + hy * 1.15); co.lineTo(x + hx * 2.2, y + hy * 2.2); co.stroke();
+      co.strokeStyle = '#d4a017'; co.lineWidth = R * .36; co.beginPath(); co.moveTo(x + hx * 1.05, y + hy * 1.05); co.lineTo(x + hx * 1.25, y + hy * 1.25); co.stroke(); co.lineCap = 'butt';
+      // le verre : légèrement teinté, la rune de la case grossie dedans
+      co.save(); co.beginPath(); co.arc(x, y, R, 0, TAU); co.clip();
+      if (k != null) { co.fillStyle = 'rgba(255,248,225,.55)'; co.fillRect(x - R, y - R, R * 2, R * 2); } // en s'éloignant, plus de verre teinté (il assombrissait le fond de la page)
+      if (k != null) { co.globalCompositeOperation = add; dot(co, '#fbbf24', x, y, R * .9, .5); co.globalCompositeOperation = 'source-over'; drawRune(co, k, x, y, R * .55, '#b45309', Math.max(2, R * .1), a); }
+      co.globalAlpha = a * .5; co.strokeStyle = '#ffffff'; co.lineWidth = R * .1; co.beginPath(); co.arc(x, y, R * .72, Math.PI * 1.1, Math.PI * 1.45); co.stroke();
+      co.restore();
+      // la monture en laiton
+      const g = co.createLinearGradient(x - R, y - R, x + R, y + R); g.addColorStop(0, '#fde68a'); g.addColorStop(.45, '#b7791f'); g.addColorStop(1, '#5b3716');
+      co.globalAlpha = a; co.strokeStyle = g; co.lineWidth = R * .17; co.beginPath(); co.arc(x, y, R, 0, TAU); co.stroke();
+      co.strokeStyle = 'rgba(40,20,5,.7)'; co.lineWidth = 1; co.beginPath(); co.arc(x, y, R * 1.085, 0, TAU); co.stroke();
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        // les runes des cases encore cachées, dans le parchemin (derrière les chiffres)
+        inC(env, cw0, c => {
+          for (const s of S) {
+            if (s.on) continue;
+            const k = runeOf(s.i), r = (s.bottom - s.top) * .3, pulse = s === next ? pull : 0;
+            c.globalCompositeOperation = 'source-over'; dot(c, '#fbbf24', s.x, s.y, r * (1.9 + pulse), .3 + .3 * pulse);
+            drawRune(c, k, s.x + rnd(-.4, .4) * pulse, s.y, r, s.ghost ? 'rgba(183,121,31,.35)' : INK, Math.max(1.4, r * .16), 1);
+          }
+          // le sceau imprimé (Mythic) : en or, derrière les chiffres
+          if (stamp) { const k = clamp((now - stamp.t) / 4), col = stamp.rainbow ? RAINBOW[Math.floor(now * 3) % RAINBOW.length] : '#d97706'; alcSigil(c, stamp.x, stamp.y, stamp.r, col, lerp(.55, .3, k), stamp.rot + now * .05, Math.max(1.5, H * .025)); }
+        });
+        // les deux rouleaux qui s'écartent, et leurs poignées
+        const u = unroll(), cx = card.x + card.w / 2, half = (card.w / 2 - rollW() / 2) * u;
+        for (const x of [cx - half, cx + half]) { knob(x, card.y, true); knob(x, card.y + card.h, false); }
+        // la loupe : au-dessus de la prochaine case, elle grossit sa rune
+        lens.shake = Math.max(0, lens.shake - dt * 2);
+        if (next && !lens.gone) { lens.x += (next.x - lens.x) * Math.min(1, dt * 9); lens.y += (next.y - H * .04 + Math.sin(now * 2.2) * H * .03 - lens.y) * Math.min(1, dt * 6); lens.a = Math.min(1, lens.a + dt * 3); }
+        else { lens.gone = true; lens.lift = Math.min(1, lens.lift + dt * 1.8); }
+        const R = H * .4 * (1 + lens.lift * .6), lx = lens.x + rnd(-1, 1) * lens.shake * 2 + lens.lift * H * .6, ly = lens.y + rnd(-1, 1) * lens.shake * 2 - lens.lift * H * 1.2;
+        if (pull && next && Math.random() < dt * 30 * q) { const an = rnd(TAU), d = H * rnd(.8, 1.3); motes.add({ x: lx + Math.cos(an) * d, y: ly + Math.sin(an) * d, tx: lx, ty: ly, max: rnd(.3, .5), spin: 0, size: rnd(1.2, 2.2) }); }
+        // la poussière d'or qui s'effondre dans un chiffre ou aspirée par la loupe
+        motes.step(dt); co.globalCompositeOperation = add;
+        motes.each((m, k) => { const e = k * k, an = m.spin * (1 - k); const x = m.tx + (m.x - m.tx) * (1 - e), y = m.ty + (m.y - m.ty) * (1 - e); dot(co, GOLD, m.tx + (x - m.tx) * Math.cos(an) - (y - m.ty) * Math.sin(an), m.ty + (x - m.tx) * Math.sin(an) + (y - m.ty) * Math.cos(an), m.size * 2.2, .9); });
+        rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = GOLD; co.lineWidth = 2 * (1 - k) + .6; co.beginPath(); co.arc(r.x, r.y, H * (.2 + .5 * outCubic(k)), 0, TAU); co.stroke(); dot(co, '#fde68a', r.x, r.y, H * .5 * (1 - k), (1 - k) * .55); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+        drawLens(lx, ly, R, lens.a * (1 - lens.lift) * (1 - lens.lift), next && !lens.gone ? runeOf(next.i) : null);
+        // la révélation : cercle de transmutation, ronde de runes, sceau qui descend
+        circle.run(dt, (e, k) => behind(env, () => {
+          const draw = clamp(k / .35), a = k > .7 ? (1 - k) / .3 : 1, rx = card.w / 2 + H * .45, ry = card.h / 2 + H * .5;
+          co.globalCompositeOperation = add; co.globalAlpha = a * .85; co.strokeStyle = GOLD; co.lineWidth = 2;
+          co.beginPath(); co.ellipse(cx, card.y + card.h / 2, rx, ry, 0, -Math.PI / 2, -Math.PI / 2 + TAU * draw); co.stroke();
+          co.beginPath(); co.ellipse(cx, card.y + card.h / 2, rx + H * .14, ry + H * .14, 0, Math.PI / 2, Math.PI / 2 + TAU * draw); co.stroke();
+          for (let i = 0; i < 8 && i / 8 < draw; i++) { const an = -Math.PI / 2 + (i * TAU) / 8; drawRune(co, (i * 5) % ALC_RUNES.length, cx + Math.cos(an) * (rx + H * .07), card.y + card.h / 2 + Math.sin(an) * (ry + H * .07), H * .06, GOLD, 1.4, a); }
+          co.globalCompositeOperation = 'source-over';
+        }, true)); // rien sous la carte : la rareté et l'XP s'y affichent
+        flare.run(dt, (f, k) => behind(env, () => {
+          const a = k < .15 ? k / .15 : k > .7 ? (1 - k) / .3 : 1, rx = card.w / 2 + H * .95, ry = card.h / 2 + H * .75;
+          co.globalCompositeOperation = add;
+          if (f.asc) godrays(co, f.col(now), cx, card.y + card.h / 2, 10 + 4 * f.asc, card.w * .5, card.w * (.9 + .25 * f.asc), now * .3, H * .3, a * .25);
+          for (let i = 0; i < f.n; i++) {
+            const an = (i * TAU) / f.n + now * .5, x = cx + Math.cos(an) * rx, y = card.y + card.h / 2 + Math.sin(an) * ry, fl = .6 + .4 * Math.sin(now * 9 + i * 1.7);
+            dot(co, f.col(now + i * .1), x, y, H * .4 * fl, a * .45);
+            drawRune(co, (i * 7) % ALC_RUNES.length, x, y, H * .17, dark ? '#fff7d6' : '#b45309', 2.2, a);
+          }
+          co.globalCompositeOperation = 'source-over';
+        }, true)); // rien sous la carte : la rareté et l'XP s'y affichent
+        seal.run(dt, (s, k) => {
+          const T = k * s.life, fall = clamp(T / .4), sc = lerp(2.6, 1, fall * fall), a = fall < 1 ? fall * .8 : clamp(1 - (T - .4) / .25) * .9;
+          co.globalCompositeOperation = add; alcSigil(co, cx, card.y + card.h / 2, H * .46 * sc, s.col(now), a, s.rot - (1 - fall) * 1.5, Math.max(2, H * .05) * sc * .6); co.globalCompositeOperation = 'source-over';
+          if (fall >= 1 && !s.hit) {
+            s.hit = 1; stamp = { x: cx, y: card.y + card.h / 2, r: H * .46, rot: s.rot, t: now, rainbow: s.rainbow };
+            rings.add({ life: .7, x: cx, y: card.y + card.h / 2 }); rings.add({ delay: .12, life: .9, x: cx, y: card.y + card.h / 2 });
+            for (let i = Math.round((30 + 20 * s.asc) * q); i > 0; i--) { const an = rnd(TAU), v = rnd(80, 260); dust.add({ x: cx + Math.cos(an) * card.w * .3, y: card.y + card.h / 2 + Math.sin(an) * H * .4, vx: Math.cos(an) * v, vy: Math.sin(an) * v * .6 - 40, drag: 2, g: -20, max: rnd(.8, 1.5), size: rnd(1.2, 2.6) }); }
+          }
+        });
+        dust.step(dt); smoke.step(dt);
+        co.globalCompositeOperation = add;
+        dust.each((d, k) => dot(co, k < .3 ? '#fef3c7' : GOLD, d.x, d.y, d.size * 2.4, (1 - k) * .9));
+        co.globalCompositeOperation = 'source-over';
+        smoke.each((s, k) => dot(co, dark ? '#9ca3af' : '#4b5563', s.x, s.y, s.size * (1 + 2.5 * k), (1 - k) * .55));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const s = slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - p.x) < Math.abs(b.x - p.x) ? z : b), null); if (!s) return;
+        const k = runes.get(s.i) ? runes.get(s.i).k : 0, r = (s.bottom - s.top) * .3;
+        if (o.last) { pull = 0; lens.shake = 0; }
+        if (o.ghost) { rings.add({ life: .35, x: s.x, y: s.y }); return; }
+        // la rune se défait : des grains d'or pris sur son tracé tourbillonnent jusqu'au centre
+        for (let i = Math.round((o.last ? 26 : 16) * q); i > 0; i--) { const an = rnd(TAU), d = r * rnd(.4, 1.1); motes.add({ x: s.x + Math.cos(an) * d * 1.6, y: s.y + Math.sin(an) * d * 1.6, tx: s.x, ty: s.y, max: rnd(.18, .3), spin: rnd(1.5, 3) * (Math.random() < .5 ? -1 : 1), size: rnd(1.2, 2.4) }); }
+        rings.add({ delay: .08, life: o.last ? .7 : .5, x: s.x, y: s.y });
+        void k;
+      },
+      build() { pull = 1; lens.shake = 1.5; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+        pull = 0;
+        if (!p) { for (let i = 0; i < 9; i++) smoke.add({ x: cx + rnd(-.3, .3) * card.w, y: cy, vx: rnd(-20, 20), vy: -rnd(30, 70), drag: 1, g: -10, max: rnd(1.2, 1.8), size: H * rnd(.1, .16) }); return; }
+        for (const s of slotsA(env)) if (!s.gone && !s.ghost) for (let i = Math.round((2 + 8 * p) * q); i > 0; i--) dust.add({ x: s.x + rnd(-.3, .3) * s.w, y: s.y + rnd(-.2, .3) * H, vx: rnd(-20, 20), vy: -rnd(40, 120), drag: 1.2, g: -30, max: rnd(.9, 1.6), size: rnd(1, 2.2) });
+        if (p >= .6) circle.add({ life: 2.4 + p });
+        if (p < 1) return;
+        const col = asc >= 3 ? tt => RAINBOW[Math.floor(tt * 4) % RAINBOW.length] : () => (dark ? '#fde68a' : '#d97706');
+        flare.add({ delay: .1, life: 2.4 + asc * .6, n: 10 + 4 * asc, asc, col });
+        seal.add({ delay: .6, life: .9, rot: rnd(TAU), asc, col, rainbow: asc >= 3 });
+      },
+    };
+  };
+
   // ==== fin du lot C ====
 
   function mount(stage, card, skin, o = {}) {
