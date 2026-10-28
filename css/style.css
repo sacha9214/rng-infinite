@@ -6986,6 +6986,51 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes axe-quiver { 0%, 78%, 100% { transform: none; } 82% { transform: translateX(2px); } 90% { transform: translateX(-1px); } }
 .room-stage.many .side-axeman::before, .room-stage.many .side-axeman::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-axeman::before, .side-axeman::after { animation: none; } }
+/* ------------------------------------------------------------------ Pixel Hop (2026-10-28, d'après l'animation pixel art
+   de 17black) : la carte est son écran rose, liseré noir en escalier puis bord rose pâle comme un autocollant. Les
+   chiffres tournent en gris par à-coups (compteur d'arcade) ; quand la mascotte saute dessus, le chiffre attend en l'air,
+   puis il est écrasé à sa place et devient noir. La mascotte, les rayons et les bandes sont dans js/skinfx.js. */
+.num-card.skin-pixelhop {
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, .07) 0 25%, transparent 0 50%) 0 0 / 8px 8px,
+    radial-gradient(ellipse 80% 90% at 50% 35%, #f8aac4, #f494b4 60%, #e9809f);
+  border: 0; border-radius: 0; color: #111111; padding: .3em .45em;
+  --ph-edge: 0 -4px #111, 0 4px #111, -4px 0 #111, 4px 0 #111;
+  --ph-ring: 0 -8px var(--ph-r), 0 8px var(--ph-r), -8px 0 var(--ph-r), 8px 0 var(--ph-r), -4px -4px var(--ph-r), 4px -4px var(--ph-r), -4px 4px var(--ph-r), 4px 4px var(--ph-r);
+  --ph-r: #ffd6e4;
+  box-shadow: var(--ph-edge), var(--ph-ring), 8px 12px rgba(0, 0, 0, .25);
+  margin: 8px;
+}
+/* Pendant le tirage, la lueur « charge » du jeu remplaçait le liseré en escalier : ici le bord clignote en deux temps. */
+.num-card.skin-pixelhop.charging { animation: ph-charge .5s steps(1) infinite; }
+@keyframes ph-charge { 0% { box-shadow: var(--ph-edge), 0 -8px #ffd6e4, 0 8px #ffd6e4, -8px 0 #ffd6e4, 8px 0 #ffd6e4, -4px -4px #ffd6e4, 4px -4px #ffd6e4, -4px 4px #ffd6e4, 4px 4px #ffd6e4, 8px 12px rgba(0, 0, 0, .25); }
+  50% { box-shadow: var(--ph-edge), 0 -8px #ffffff, 0 8px #ffffff, -8px 0 #ffffff, 8px 0 #ffffff, -4px -4px #ffffff, 4px -4px #ffffff, -4px 4px #ffffff, 4px 4px #ffffff, 8px 12px rgba(0, 0, 0, .25); } }
+.skin-pixelhop .slot { font-family: 'Press Start 2P', monospace; font-weight: 400; font-size: .56em; width: 1.08em; color: #111111; text-shadow: .08em .08em 0 rgba(255, 255, 255, .55); }
+.skin-pixelhop .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : gris, par à-coups de deux images (compteur d'arcade). */
+.skin-pixelhop .slot.spinning { color: #8f8189; text-shadow: none; animation: ph-tick .16s steps(2) infinite; }
+@keyframes ph-tick { from { transform: translateY(0); } to { transform: translateY(-.06em); } }
+/* Le chiffre posé : il reste gris en l'air pendant le saut, ÉCRASÉ quand la mascotte atterrit (à mi-animation), rebondit
+   d'un pixel et se pose — tout en escalier, comme un sprite. */
+.skin-pixelhop .slot.revealed { animation: ph-stomp .5s steps(1) backwards; }
+@keyframes ph-stomp {
+  0% { transform: translateY(-.18em); color: #8f8189; text-shadow: none; }
+  25% { transform: translateY(-.24em); color: #8f8189; text-shadow: none; }
+  50% { transform: translateY(.1em) scale(1.18, .66); color: #111111; }
+  62% { transform: translateY(-.05em) scale(.94, 1.1); }
+  76% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-pixelhop .slot { animation: none; } }
+/* Cadre de duel : un écran rose à damier ; le dé saute, l'étoile clignote. */
+.side-pixelhop { --side-border: #f494b4; --side-glow: 0 0 16px rgba(244, 148, 180, .35); --side-ink: #be185d;
+  --side-bg: repeating-conic-gradient(rgba(244, 148, 180, .12) 0 25%, transparent 0 50%) 0 0 / 16px 16px, radial-gradient(ellipse 70% 60% at 50% 40%, rgba(244, 148, 180, .22), transparent 70%);
+  --deco-a: '🎲'; --deco-b: '⭐'; }
+.side-pixelhop::before { animation: ph-hop 1.6s steps(4) infinite; }
+.side-pixelhop::after { animation: ph-blink 1.6s steps(1) infinite; }
+@keyframes ph-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-8px); } 80% { transform: translateY(-12px); } 90% { transform: translateY(-6px); } }
+@keyframes ph-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.room-stage.many .side-pixelhop::before, .room-stage.many .side-pixelhop::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-pixelhop::before, .side-pixelhop::after { animation: none; } }
 /* ------------------------------------------------------------------ Math (idée de sennybex1, 2026-10-25) : un tableau
    noir vert dans son cadre de bois, une rainure à craie en bas avec un bâton de craie, des traces d'effaçage et de
    vieilles formules à peine visibles (+ × ÷ π √ =). Les chiffres sont écrits à la craie (blancs, bords granuleux).

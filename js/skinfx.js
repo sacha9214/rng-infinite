@@ -3712,6 +3712,135 @@
       },
     };
   };
+  // 🎲 Pixel Hop (2026-10-28, d'après une animation pixel art de 17black) — la mascotte dé de RNG∞, en pixels, saute de
+  // chiffre en chiffre sur la carte rose et écrase chacun à sa place. Avant le dernier, elle s'accroupit et se charge
+  // d'étincelles ; elle bondit dessus : rayons rouges et bandes orange jaillissent (plus grands avec la rareté), puis elle
+  // saute à côté de la carte et lève le poing (au-dessus de la carte, il ne reste que ~40 px avant la barre de menu : les
+  // sauts sur les chiffres restent bas, la pose finale se fait à droite). Tirage raté : elle glisse et tombe sur le côté. Dans l'animation d'origine, c'était un personnage de dessin animé
+  // connu : remplacé par notre mascotte (même dé crème que les émotes, js/emotes.js).
+  const HOP = { // une lettre = un pixel : k encre, c crème, s ombre, w blanc, m bouche, p langue
+    die: ['.kkkkkkk.', 'kwwccccck', 'kwcccccck', 'kccckckck', 'kccckckck', 'kcccmmmck', 'ksssspssk', 'ksssssssk', '.kkkkkkk.'],
+    squash: ['.kkkkkkkkk.', 'kwwccccccck', 'kccccckckck', 'kccccckckck', 'kcccccmmmck', 'ksssssspssk', 'ksssssssssk', '.kkkkkkkkk.'],
+    stretch: ['.kkkkk.', 'kwwccck', 'kwcccck', 'kckckck', 'kckckck', 'kccccck', 'kccmcck', 'kccpcck', 'kccccck', 'ksssssk', '.kkkkk.'],
+    crouch: ['.kkkkkkkkk.', 'kwwccccccck', 'kccckkckkck', 'kccccckckck', 'kccccckkkck', 'ksssssssssk', 'ksssssssssk', '.kkkkkkkkk.'],
+    stand: ['..kkkkkkkkk..', '.kwwccccccck.', '.kwcccccccck.', '.kcckccckcck.', '.kcckccckcck.', 'wkccccccccckw', 'wkcccmmmccckw', '.kccccpcccck.', '.ksssssssssk.', '..kkkkkkkkk..', '...kk...kk...', '...kk...kk...', '..kkk...kkk..'],
+    win: ['..........www', '..........www', '..........www', '...........k.', '..kkkkkkkkkk.', '.kwwccccccck.', '.kwcccccccck.', '.kcckccckcck.', '.kckckckckck.', 'wkccccccccck.', 'wkccmmmmmcck.', '.kcccpppccck.', '.ksssssssssk.', '..kkkkkkkkk..', '...kk...kk...', '...kk...kk...', '..kkk...kkk..'],
+    sad: ['.kkkkkkk.', 'kwwccccck', 'kwcccccck', 'kcckckcck', 'kcckckcck', 'kccccccck', 'kccmmmcck', 'ksmsssmsk', '.kkkkkkk.'],
+  };
+  const HOPC = { k: '#231a14', c: '#fff6e6', s: '#ead9bd', w: '#ffffff', m: '#7a1f2b', p: '#ff7b8a' };
+  SCENES.pixelhop = env => {
+    const { co, card, q } = env;
+    const px = () => Math.max(2, Math.round(card.h / 17)); // la taille d'un pixel du dessin, d'après la hauteur de la carte
+    const snap = v => Math.round(v / px()) * px();
+    // un dessin centré en cx, posé sur `bottom` ; rot : couché sur le côté (tirage raté)
+    const sprite = (name, cx, bottom, rot = false, flip = false) => {
+      const rows = HOP[name], s = px(), R = rows.length, C = rows[0].length, w = (rot ? R : C) * s, h = (rot ? C : R) * s;
+      const x0 = snap(cx - w / 2), y0 = snap(bottom - h);
+      for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) {
+        const col = HOPC[rows[j][i]]; if (!col) continue;
+        co.fillStyle = col;
+        if (rot) co.fillRect(x0 + (R - 1 - j) * s, y0 + i * s, s, s); else co.fillRect(x0 + (flip ? C - 1 - i : i) * s, y0 + j * s, s, s);
+      }
+    };
+    const block = (x, y, c, a = 1, k = 1) => { co.globalAlpha = a; co.fillStyle = c; co.fillRect(snap(x), snap(y), px() * k, px() * k); co.globalAlpha = 1; };
+    // trait en escalier de pixels (les rayons de l'animation d'origine)
+    const pixLine = (x1, y1, x2, y2, c, a = 1) => { const s = px(), n = Math.max(1, Math.round(Math.hypot(x2 - x1, y2 - y1) / s)); co.globalAlpha = a; co.fillStyle = c; for (let i = 0; i <= n; i++) co.fillRect(snap(lerp(x1, x2, i / n)), snap(lerp(y1, y2, i / n)), s, s); co.globalAlpha = 1; };
+    const feet = () => card.y - px(); // les pieds sur le liseré de la carte
+    const ground = () => card.y + card.h + 2 * px(), side = () => card.x + card.w + 10 * px(); // la place de la pose finale, à droite
+    const sparks = particles(), dust = particles(), drops = particles(), rays = timed();
+    let x = card.x - card.h * 1.4, xs = 0, hop = { x0: x, x1: card.x + card.h * .35, t: 0, life: .42, hgt: card.h * .45 };
+    let mood = 'wait', moodT = 0, land = 0, power = 0, pending = null, stripes = null, t0 = 0;
+    const puff = (cx, n) => { for (let i = Math.round(n * q); i > 0; i--) { const d = i % 2 ? 1 : -1; dust.add({ x: cx + d * card.h * .25, y: feet() - px(), vx: d * card.h * rnd(1.2, 2.6), vy: -card.h * rnd(.4, 1.4), g: card.h * 9, drag: 2, max: rnd(.25, .4), c: pick(['#ffffff', '#fde68a', '#fbcfe8']) }); } };
+    const impact = tier => {
+      const P = POWER[tier] || 0, A = ASCEND[tier] || 0;
+      power = P; moodT = 0; pending = null;
+      xs = x;
+      if (!P) { mood = 'sad'; puff(x, 3); return; }
+      mood = 'win'; puff(x, 6);
+      const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+      // rayons rouges en escalier tout autour (or dès Epic, blanc au-delà du Mythic), en deux vagues pour les plus rares
+      for (let wave = 0; wave <= (A ? 1 : 0); wave++) for (let i = 0, n = Math.round((8 + 18 * P) * q); i < n; i++) {
+        let a = (i / n) * TAU + rnd(-.12, .12); if (Math.abs(Math.sin(a)) < .22) a += .5; // le couloir horizontal reste aux bandes
+        const r0 = Math.hypot(card.w / 2 * Math.cos(a), card.h / 2 * Math.sin(a)) + card.h * .2, L = card.h * (.5 + 1.5 * P) * rnd(.55, 1);
+        rays.add({ delay: wave * .32 + rnd(0, .06), life: .8 + .7 * P, a, r0, L, c: wave ? '#ffffff' : P >= .62 && i % 3 === 0 ? '#fbbf24' : '#dc0424', cx, cy });
+      }
+      stripes = { t: 0, P, life: 2.4 + 2 * P };
+      if (P >= .42) for (let i = Math.round(burst(P, 22, 6) * q); i > 0; i--) drops.add({ x: cx + rnd(-card.w / 2, card.w / 2), y: card.y + card.h, vx: rnd(-1, 1) * card.h, vy: -card.h * rnd(2, 5), g: card.h * 14, max: rnd(.9, 1.6), c: pick(['#fbbf24', '#f59e0b', '#fde68a']) });
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = 'source-over';
+        moodT += dt;
+        const s = px();
+        // les bandes orange et blanches qui sortent des deux côtés de la carte (signature de l'animation d'origine)
+        if (stripes) {
+          stripes.t += dt;
+          const k = stripes.t < .22 ? outCubic(stripes.t / .22) : stripes.t > stripes.life - .35 ? 1 - outCubic((stripes.t - stripes.life + .35) / .35) : 1;
+          if (stripes.t > stripes.life) stripes = null;
+          else {
+            const len = (env.W / 2 - card.w / 2) * (.45 + .55 * stripes.P) * k, y0 = snap(card.y + card.h / 2 - 2.5 * s);
+            ['#f97316', '#ffffff', '#f97316', '#ffffff', '#f97316'].forEach((c, r) => {
+              co.fillStyle = c; const wob = (r % 2) * s * ((t * 12 | 0) % 2);
+              co.fillRect(snap(card.x - len - wob), y0 + r * s, snap(len), s);
+              co.fillRect(snap(card.x + card.w), y0 + r * s, snap(len + wob), s);
+            });
+          }
+        }
+        rays.run(dt, (r, k) => {
+          const grow = clamp(k / .22), tail = clamp((k - .45) / .55), blink = k > .7 && ((t * 16 | 0) % 2);
+          if (blink) return;
+          const a0 = r.r0 + r.L * tail, a1 = r.r0 + r.L * grow;
+          pixLine(r.cx + Math.cos(r.a) * a0, r.cy + Math.sin(r.a) * a0, r.cx + Math.cos(r.a) * a1, r.cy + Math.sin(r.a) * a1, r.c);
+        });
+        drops.step(dt); drops.each((p, k) => { if (k > .75 && ((t * 14 | 0) % 2)) return; block(p.x, p.y, p.c); block(p.x, p.y - s, p.c, .6); });
+        dust.step(dt); dust.each((p, k) => block(p.x, p.y, p.c, 1 - k));
+        // la charge avant le dernier chiffre : des étincelles dorées convergent sur la mascotte
+        if (mood === 'charge') for (let i = Math.round(14 * q * dt * 6 + Math.random()); i > 0; i--) { const a = rnd(TAU), r = card.h * rnd(1, 1.8); sparks.add({ x: x + Math.cos(a) * r, y: feet() - card.h * .3 + Math.sin(a) * r * .6, vx: -Math.cos(a) * r / .35, vy: -Math.sin(a) * r * .6 / .35, max: .35, c: pick(['#fbbf24', '#fde68a', '#ffffff']) }); }
+        sparks.step(dt); sparks.each((p, k) => block(p.x, p.y, p.c, k < .2 ? k * 5 : 1));
+        // la mascotte
+        let name = 'die', y = feet(), cx = x, flip = false;
+        if (hop) {
+          hop.t += dt;
+          const k = clamp(hop.t / hop.life);
+          cx = x = lerp(hop.x0, hop.x1, k); y = feet() - Math.sin(Math.PI * k) * hop.hgt;
+          name = k < .5 ? 'stretch' : 'die';
+          if (Math.random() < .9 * q) sparks.add({ x: x - card.h * .3, y: y - card.h * rnd(.1, .5), vx: -card.h * 1.5, vy: 0, max: .22, c: pick(['#fbbf24', '#fde68a']) }); // traînée dorée
+          if (k >= 1) { const h = hop; hop = null; land = .1; puff(x, h.last ? 6 : 3); if (h.last) { if (pending) impact(pending); else { mood = 'landed'; moodT = 0; } } }
+        } else if (mood === 'charge') { name = 'crouch'; cx = x + ((t * 30 | 0) % 2 ? s : -s) * clamp(moodT * 2); }
+        else if (mood === 'win' || mood === 'sad') {
+          const J = .5, k = clamp(moodT / J);
+          cx = x = lerp(xs, side(), k); y = lerp(feet(), ground(), k) - Math.sin(Math.PI * k) * card.h * (.35 + .3 * power);
+          if (k < 1) name = k < .45 ? 'stretch' : 'die';
+          else {
+            if (moodT - dt < J) { puff(x, mood === 'win' ? 6 : 3); land = .12; }
+            if (mood === 'sad') { name = null; sprite('sad', x, y, true); if ((t * 3 | 0) % 2) block(x - card.h * .45, y - card.h * .75, '#7dd3fc'); }
+            else if (land > 0) { land -= dt; name = 'squash'; }
+            else { name = 'win'; const beat = (moodT - J) % 2.4; y -= beat < .3 ? Math.sin(Math.PI * beat / .3) * card.h * .3 : ((t * 2.6 | 0) % 2) * s; } // rebond de joie, et un saut toutes les 2,4 s
+          }
+        }
+        // Garbage / Land waste : le jeu n'appelle pas reveal ; la carte perd quand même « neutral » à la rareté (après les
+        // badges, plusieurs secondes après le dernier chiffre) : elle glisse alors de la carte. Un minuteur la faisait tomber
+        // avant un Mythic (les badges passent entre le dernier chiffre et la rareté).
+        else if (mood === 'landed' && !env.el.classList.contains('neutral')) { xs = x; mood = 'sad'; moodT = 0; }
+        else if (mood === 'landed') { // pendant les badges (plusieurs secondes) : elle regarde à gauche, à droite, et sautille
+          const beat = (moodT % 1.8); flip = moodT % 3.6 > 1.8;
+          y -= beat < .26 ? Math.sin(Math.PI * beat / .26) * card.h * .22 : ((t * 3 | 0) % 2) * s;
+          if (beat < .26) name = 'stretch'; else if (beat < .36) name = 'squash';
+        }
+        else { y -= ((t * 3 | 0) % 2) * s * (mood === 'wait' ? 1 : 0); } // elle piétine en attendant
+        if (land > 0 && name === 'die') { land -= dt; name = 'squash'; }
+        if (name) sprite(name, cx, y, false, flip);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        mood = 'hop'; moodT = 0;
+        hop = { x0: x, x1: p.x, t: 0, life: o.last ? .2 : .25, hgt: card.h * (o.last ? .5 : .3), last: !!o.last };
+      },
+      build() { if (!hop) { mood = 'charge'; moodT = 0; } else mood = 'charge'; },
+      reveal(tier) { if (hop && hop.last) pending = tier; else impact(tier); },
+    };
+  };
   // ➗ Math (2026-10-25, idée de sennybex1) — des symboles mathématiques (+ − × ÷ = π √ ∑ ∞ %) flottent lentement
   // autour du tableau, plus vite pendant le tirage. Chaque chiffre écrit lâche un petit nuage de poussière de craie et
   // fait sauter un symbole. À la révélation, les symboles jaillissent (plus nombreux avec la rareté) ;
