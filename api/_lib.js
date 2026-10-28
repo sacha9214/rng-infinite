@@ -237,6 +237,10 @@ async function ownsPlayer(playerId, secret) {
 const historyKey = playerId => `hist:${playerId}`;
 const HISTORY_CAP = 100000;
 const XP_LB = 'lb:xp';
+// Classement « Most rolls » (idée de CrazyMiner22 et WpBejs, 2026-10-27) : id → nombre de tirages à vie (stats.rolls),
+// un membre par joueur comme lb:xp. Incrémenté à chaque tirage ; les anciens joueurs y sont versés par migrateRolls
+// (api/leaderboard.js).
+const ROLLS_LB = 'lb:rolls';
 
 // XP à vie et nombre de tirages recalculés depuis l'historique (mêmes doublons écartés que rebuildStats),
 // pour remplir lb:xp et count:all une fois (tirages faits avant le classement en ligne compris).
@@ -393,17 +397,38 @@ async function grantGoogleBonus(playerId) {
   return amount;
 }
 
+// Titres de collection par rareté (idée de kaz, 2026-10-27) : les badges à réunir pour chaque rareté, et une version
+// qui change avec eux (nouveau badge, rareté recalculée). badges:<id> est relu seulement quand un tirage apporte un
+// badge jamais vu, ou une fois par joueur quand la version change ; "col:<rareté>" posé n'est jamais retiré.
+const COLLECTION_SETS = Achievements.collectionSets(meta, require('../data/badge-odds.json'), engine.badgeTier);
+const COLLECTION_VERSION = crypto.createHash('sha256').update(JSON.stringify(COLLECTION_SETS)).digest('hex').slice(0, 10);
+const COLLECTION_TIER = new Map(Object.entries(COLLECTION_SETS).flatMap(([t, ids]) => ids.map(id => [id, t])));
+async function syncCollections(playerId, stats) {
+  const [owned] = await redis([['SMEMBERS', badgesKey(playerId)]]);
+  const done = Achievements.completeCollections(COLLECTION_SETS, owned).filter(t => !Number(stats[`col:${t}`]));
+  await redis([['HSET', statsKey(playerId), 'colv', COLLECTION_VERSION, ...done.flatMap(t => [`col:${t}`, 1])]]);
+  stats.colv = COLLECTION_VERSION;
+  for (const t of done) stats[`col:${t}`] = '1';
+  return stats;
+}
+
 async function readStats(playerId) {
   const [flat, count] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)]]);
   const stats = toObject(flat);
-  if (!stats.v) return rebuildStats(playerId);
-  return { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
+  if (!stats.v) return syncCollections(playerId, await rebuildStats(playerId));
+  const out = { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
+  return out.colv === COLLECTION_VERSION ? out : syncCollections(playerId, out);
 }
 
 // ---------------------------------------------------------------- quêtes, pièces offertes, mises de duel
 // Compteurs du jour d'un joueur (voir js/quests.js), gardés 3 jours.
 const questKey = (day, playerId) => `q:${day}:${playerId}`;
 const QUEST_TTL = 3 * 86400;
+// Quêtes de la semaine (idée de Tumored, 2026-10-27) : compteurs de la semaine ISO d'un joueur (tirages, raretés Epic
+// et mieux, jours où toutes les quêtes du jour ont été finies), un hash de quelques champs par joueur actif, gardé 10 jours.
+const weekQuestKey = (week, playerId) => `qw:${week}:${playerId}`;
+const WEEK_QUEST_TTL = 10 * 86400;
+const WEEK_QUEST_TIERS = new Set(['epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite']);
 // Joueurs actifs d'un jour : hash identifiant → nombre de tirages ce jour-là, gardé 400 jours. Sert uniquement aux
 // totaux de la page Owner (actifs par jour, rétention par cohorte) ; jamais affiché par joueur.
 const actKey = day => `act:${day}`, ACT_TTL = 400 * 86400;
@@ -474,6 +499,7 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', statsKey(playerId), 'rolls', 1],
     // XP à vie (classement « Lifetime XP ») : la somme de tous ses tirages.
     ['ZINCRBY', XP_LB, s, playerId],
+    ['ZINCRBY', ROLLS_LB, 1, playerId],
     ['HINCRBY', statsKey(playerId), 'xpLife', s], // XP à vie dans les stats aussi : titres Centimillionaire / Billionaire
     ['HINCRBY', statsKey(playerId), `t:${a.tier}`, 1],
     // Compteurs du jour (quêtes) et dernière activité (liste d'amis).
@@ -481,12 +507,17 @@ async function recordRoll(playerId, n, t) {
     ['HINCRBY', questKey(dayKey(t), playerId), 'xp', s],
     ['HINCRBY', questKey(dayKey(t), playerId), `t:${a.tier}`, 1],
     ['EXPIRE', questKey(dayKey(t), playerId), QUEST_TTL],
+    // Quêtes de la semaine : tirages et raretés Epic ou mieux (les seules que demandent les quêtes de la semaine).
+    ['HINCRBY', weekQuestKey(weekKey(t), playerId), 'rolls', 1],
+    ...(WEEK_QUEST_TIERS.has(a.tier) ? [['HINCRBY', weekQuestKey(weekKey(t), playerId), `t:${a.tier}`, 1]] : []),
+    ['EXPIRE', weekQuestKey(weekKey(t), playerId), WEEK_QUEST_TTL],
     ['ZADD', SEEN_KEY, t, playerId],
     // Activité par jour (page Owner : joueurs actifs, rétention) et date du tout premier tirage.
     ['HINCRBY', actKey(dayKey(t)), playerId, 1],
     ['EXPIRE', actKey(dayKey(t)), ACT_TTL],
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
+  const badgeAt = a.earnedIds.length ? writes.length : -1; // SADD répond le nombre de badges jamais vus (titres de collection)
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
@@ -544,10 +575,15 @@ async function recordRoll(playerId, n, t) {
   if (fix.length) await redis(fix);
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
+  // Relu seulement si un badge neuf peut compléter une rareté pas encore obtenue.
+  const mayComplete = badgeAt >= 0 && Number(out[badgeAt]) > 0 && a.earnedIds.some(id => COLLECTION_TIER.has(id) && !Number(stats[`col:${COLLECTION_TIER.get(id)}`]));
+  if (stats.colv !== COLLECTION_VERSION || mayComplete) stats = await syncCollections(playerId, stats);
   // Nouveau record Mythic ou mieux d'un joueur qui a lié son Discord : son rôle de rareté suit (api/_discord_link.js).
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
+  // Divine ou mieux : annoncé dans le chat global par le serveur, un peu plus tard (idée de R77, 2026-10-27 ; api/_global.js).
+  if (['divine', 'godlike', 'infinite'].includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t).catch(() => {});
   return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 
@@ -574,8 +610,8 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
-  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
+  grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
   ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
-  Achievements, statsKey, readStats, toObject, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
+  Achievements, statsKey, readStats, toObject, COLLECTION_SETS, COLLECTION_VERSION, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
 };

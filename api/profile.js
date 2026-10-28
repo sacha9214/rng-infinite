@@ -9,14 +9,24 @@ const AGG = new Map();
 const { awardsOf } = require('./_rank');
 // Photos de profil (2026-10-26, demandé par Sacha) : envoi, validation par le créateur et images, dans api/_avatar.js.
 const Avatar = require('./_avatar');
+const Bio = require('./_bio');
 
+const bioText = raw => { try { const b = raw ? JSON.parse(raw) : null; return b && b.x ? b.x : null; } catch (e) { return null; } };
 const BEST_LIMIT = 10;
 const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
 const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
+// Nombres différents tirés (idée de jsand, 2026-10-27) : le set nums:<id> existe déjà (succès Déjà vu, api/_lib.js) ;
+// son SCARD est immédiat, sans relire l'historique. Il est exact depuis que le joueur a ce set (stats.dv, posé à son
+// premier tirage depuis le 2026-10-18, rempli alors depuis son historique) : seul un nombre tiré uniquement dans les
+// plus vieux tirages d'un historique déjà plafonné (HISTORY_CAP, 100 000) peut manquer. Joueur sans set (pas tiré
+// depuis) : compté sur son historique quand le profil le relit en entier (fallback), sinon rien.
+const uniqueOf = (st, scard, fallback) => (st.dv === '1' ? Number(scard) || 0 : fallback);
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method === 'POST' && (req.body || {}).action === 'avatar') return Avatar.handle(req, res);
+  // « About me » (idée de Niall, 2026-10-27) : écrire le sien, signaler ou (créateur) effacer celui d'un autre.
+  if (req.method === 'POST' && (req.body || {}).action === 'bio') return Bio.handle(req, res);
   await flushDue();
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
@@ -30,11 +40,12 @@ module.exports = async (req, res) => {
     // ?lite=1 (onglet Badges : mes succès et mon titre) : sans l'historique, qui peut prendre plusieurs secondes à
     // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).
     if (params.get('lite') === '1') {
-      const [shown, liteTitle] = await redis([['HGET', 'names', id], ['HGET', 'titles', id]]);
+      const [shown, liteTitle, liteBio] = await redis([['HGET', 'names', id], ['HGET', 'titles', id], ['HGET', 'bio', id]]);
       const lst = await readStats(id);
+      const [liteUniq] = await redis([['SCARD', `nums:${id}`]]);
       // xp / rolls : les totaux à vie tenus par le serveur, affichés à l'accueil et dans Stats à la place des totaux de
       // l'appareil, qui ne gardent qu'une partie des tirages (« Stats bug » sur Discord, 2026-10-26).
-      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0 });
+      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0, bio: bioText(liteBio), uniq: uniqueOf(lst, liteUniq, null) });
     }
 
     // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil
@@ -45,7 +56,7 @@ module.exports = async (req, res) => {
     // sinon chaque gros profil recalculait ses 100 000 tirages juste après la mise à jour et ralentissait tout le monde.
     if (!AGG.has(id)) { try { const [raw] = await redis([['GET', paggKey(id)]]); if (raw) AGG.set(id, JSON.parse(raw)); } catch (e) { /* recalculé */ } }
     const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
-    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize] = await redis([
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize, bioRaw] = await redis([
       cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
@@ -58,12 +69,14 @@ module.exports = async (req, res) => {
       ['HGET', 'skins', id], // skin équipé : le meilleur tirage s'affiche avec, en tête du profil
       ['HGET', statsKey(id), 'discordName'],
       ['ZCARD', historyKey(id)],
+      ['HGET', 'bio', id], // « About me » (idée de Niall, 2026-10-27, api/_bio.js)
     ]);
     // Clan du joueur (api/_clan.js) : tag, nom et emoji, affichés sous son nom.
     const [cid] = await redis([['HGET', 'clanof', id]]);
     const [cinfo] = cid ? await redis([['HMGET', `clan:${cid}`, 'name', 'tag', 'emoji', 'tagc']]) : [null];
     const clan = cinfo && cinfo[1] ? { name: cinfo[0], tag: cinfo[1], emoji: cinfo[2], c: cinfo[3] || 'plain' } : null;
     const stats = await readStats(id);
+    const [numsCount] = await redis([['SCARD', `nums:${id}`]]);
     // Badges Top 1 / 5 / 10 des mois finis : tous, et le meilleur (rang, puis le plus récent) pour l'en-tête.
     const tops = await awardsOf(id);
     const top = tops.slice().sort((a, b) => a.top - b.top || (a.month < b.month ? 1 : -1))[0] || null;
@@ -126,9 +139,11 @@ module.exports = async (req, res) => {
     const count = (prev ? prev.count : 0) + rolls.length;
     const since = prev ? prev.since : rolls.length ? rolls[0][0] : null;
     const lastT = rolls.length ? rolls[rolls.length - 1][0] : prev ? prev.lastT : null;
+    // Joueur sans set nums (voir uniqueOf) : compté sur l'historique relu en entier, gardé avec les totaux.
+    const uniqFull = prev ? (prev.uniq ?? null) : stats.dv === '1' ? null : new Set(rolls.map(([, n]) => n)).size;
     if (count) {
       AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
-      const agg = { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst };
+      const agg = { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
       AGG.set(id, agg);
       if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
       // Gardé dans Redis seulement pour les gros historiques (ceux qui coûtent à recalculer), jusqu'au recalcul complet.
@@ -151,10 +166,12 @@ module.exports = async (req, res) => {
       inventory: { skins: (ownedSkins || []).filter(k => k !== 'owner'), walls: ownedWalls || [] },
       badges,
       achievements, // succès débloqués (stats du serveur) et titre équipé
-      title: title || null, clan,
+      title: title || null, clan, bio: bioText(bioRaw),
       top, tops, // badges Top 1 / 5 / 10 gagnés à la fin d'un mois : { top, month }
       duels,
       questBest: Number(stats.qsBest) || 0,
+      uniq: uniqueOf(stats, numsCount, uniqFull), // nombres différents tirés (idée de jsand, 2026-10-27)
+      clanMvp: Number(stats.clanMvp) || 0, // semaines où il a été le MVP du clan n°1 (idée de PRISMA123, 2026-10-27)
       spent: Number(stats.spent) || 0, cases: Number(stats.cases) || 0, // pièces dépensées et caisses ouvertes (idée de PRISMA123, 2026-10-20)
       level: require('../js/quests.js').levelOf(stats.xpLife), // niveau du joueur (XP à vie) // meilleure série de jours avec toutes les quêtes finies
     });

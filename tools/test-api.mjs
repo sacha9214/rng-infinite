@@ -329,7 +329,10 @@ const carol = { playerId: 'd'.repeat(16), secret: '4'.repeat(32), name: 'Carol' 
 const dave = { playerId: 'e'.repeat(16), secret: '5'.repeat(32), name: 'Dave' };
 // À partir d'ici, horloge simulée qu'on avance à la main : les délais (8 s, 15 s, 30 s de présence) se comparent
 // toujours à la même horloge.
-let clock = 0;
+// Départ à 10:00 UTC (le jour même ou le lendemain) : la suite avance l'horloge de plusieurs heures, et lancée vers 22 h UTC
+// elle passait minuit au milieu d'un test (« les tirages du jour comptent déjà », bilan du casino du jour), 2026-10-27.
+const DAY_MS = 86400000, startAt = ((Number(process.env.TEST_START_HOUR || 10) * 3600000 - (realNow() % DAY_MS)) + DAY_MS) % DAY_MS;
+let clock = startAt;
 Date.now = () => realNow() + clock;
 const later = async (ms, fn) => { clock += ms; return fn(); };
 
@@ -942,6 +945,47 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.wall, null, 'gagné, pas affiché d\'office');
   r = await call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'wall', wall: r.body.walls[0] } });
   assert.equal(r.status, 200, 'un fond gagné se met comme un fond acheté');
+  // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
+  const bcase = Shop.caseById.get('buttons');
+  const bpool = Shop.casePool(bcase).map(b => b.id);
+  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.map(b => b.id).sort(), 'tous les boutons vendus à part');
+  assert.ok(bpool.includes('pickle'), 'le bouton Pickle (idée d\'Edward et de Dylanrulez123) est dedans');
+  const bev = Shop.caseOdds(bcase).reduce((x, o) => x + o.p * Shop.caseItem(bcase, o.id).price, 0);
+  assert.ok(bcase.price < bev && bcase.price / bev > 0.6 && bcase.price / bev < 0.85, `prix sous la valeur moyenne (${bcase.price} / ${bev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(bcase, 'arcade'), Shop.buttonById.get('arcade'), 'arcade : le bouton, pas le skin');
+  assert.deepEqual(['keycap', 'arcade', 'comic', 'hologram', 'royal'].map(id => Shop.caseRarity(bcase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  assert.equal(Shop.caseRarity(wcase, 'forest').name, 'Common', 'les fonds gardent leurs paliers');
+  for (const id of bpool) { const v = Shop.duplicateRefund(bcase, id); assert.ok(v >= bcase.price / 2 && v < bcase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('buttons') && !Shop.KEY_OPENS.starter.includes('buttons'), 'une clé Premium l\'ouvre');
+  const bobby = { playerId: 'c8'.repeat(8), secret: 'd8'.repeat(16), name: 'Bobby' };
+  assert.equal((await call(roll, { method: 'POST', body: bobby })).status, 200);
+  { const extra = (await coinsOf(bobby)) - (bcase.price - 1); if (extra > 0) run([['HINCRBY', `stats:${bobby.playerId}`, 'spent', extra]]); } // un bon premier tirage suffirait
+  assert.equal((await openCase(bobby, 'buttons')).status, 422, 'pas assez de pièces');
+  run([['HINCRBY', `stats:${bobby.playerId}`, 'bonus', 50000]]);
+  await new Promise(r => setTimeout(r, 20));
+  const bSkins = JSON.stringify((await call(shopApi, { url: `/api/shop?me=${bobby.playerId}` })).body.owned);
+  let bdups = 0, bnews = 0;
+  for (let i = 0; i < 40; i++) {
+    before = await coinsOf(bobby);
+    const [spent0, cases0] = run([['HGET', `stats:${bobby.playerId}`, 'spent'], ['HGET', `stats:${bobby.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(bobby, 'buttons');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(bpool.includes(r.body.won), 'un bouton de la caisse');
+    assert.ok(r.body.buttons.includes(r.body.won), 'ajouté aux boutons possédés');
+    assert.ok(run([['SISMEMBER', `btns:${bobby.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(bcase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - bcase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${bobby.playerId}`, 'spent'], ['HGET', `stats:${bobby.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [bcase.price - r.body.refund, 1, bcase.price - r.body.refund], 'spent, cases, eco');
+    r.body.duplicate ? bdups++ : bnews++;
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(bnews >= 4 && bnews <= bpool.length && bdups >= 1, `des nouveaux (${bnews}) et des doublons (${bdups})`);
+  assert.equal(JSON.stringify(r.body.owned), bSkins, 'aucun skin donné');
+  assert.deepEqual(r.body.walls || [], [], 'aucun fond donné');
+  r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'button', button: r.body.buttons[0] } });
+  assert.deepEqual([r.status, r.body.button], [200, r.body.buttons[0]], 'un bouton gagné s\'équipe comme un bouton acheté');
 
   // ============================================================== 23. Amis
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
@@ -1011,7 +1055,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(r.body).includes(w1.playerId) && !JSON.stringify(r.body).includes(w2.playerId), 'aucun id dans la salle');
   // Chacun a aussi gagné des pièces avec ses tirages du duel : on compare hors tirages (bonus − spent).
   // Hors Weekend Rush aussi : l'horloge des tests avance de plusieurs jours et peut tomber un samedi.
-  const net = who => { const [b, s2, rush] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent'], ['HGET', `stats:${who.playerId}`, 'rushBonus']]).map(x => Number(x.result) || 0); return b - s2 - rush; };
+  // Hors récompenses du mois (topCoins) : en fin de mois, l'horloge passe le 1er et le Top 1/5/10 est payé (2026-10-27).
+  const net = who => { const [b, s2, rush, top] = run([['HGET', `stats:${who.playerId}`, 'bonus'], ['HGET', `stats:${who.playerId}`, 'spent'], ['HGET', `stats:${who.playerId}`, 'rushBonus'], ['HGET', `stats:${who.playerId}`, 'topCoins']]).map(x => Number(x.result) || 0); return b - s2 - rush - top; };
   assert.equal(net(stakedWinner), 2000 + 100, 'le gagnant récupère sa mise et prend celle de l\'autre');
   assert.equal(net(stakedLoser), 2000 - 100, 'le perdant perd sa mise');
   assert.equal(net(w1) + net(w2), 4000, 'aucune pièce créée ni détruite');
@@ -1679,6 +1724,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     { const h = run([['HGET', `stats:${frank.playerId}`, 'gTeddy']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gTeddy'); }
     { const c = run([['HMGET', 'casino', 'r:teddy', 'b:teddy', 'w:teddy']])[0].result.map(Number); assert.deepEqual(c, [3, 210, 203], 'compte de la maison par jeu'); }
     for (let k = 1; k <= G.TEDDY_MAX; k++) { const ev = (6 - k) / 6 * G.teddyMult(k); assert.ok(ev <= 0.97000001 && ev > 0.96, `teddy ${k} : ${ev}`); }
+  }
+  // Duck Race (idée de Deadshot, 2026-10-27) : six canards, le serveur tire tout l'ordre d'arrivée, une demande par course.
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    assert.deepEqual(G.DUCK_CHANCE, [30, 25, 18, 12, 10, 5]);
+    assert.deepEqual([0, 1, 2, 3, 4, 5].map(G.duckMult), [3.23, 3.88, 5.38, 8.08, 9.7, 19.4]);
+    for (let k = 0; k < 6; k++) { const ev = G.DUCK_CHANCE[k] / 100 * G.duckMult(k); assert.ok(ev <= 0.97000001 && ev > 0.96, `duck ${k} : ${ev}`); }
+    for (const d of [-1, 6, 1.5, 'x', null]) { assert.equal((await g(frank, 'duck', { bet: 100, duck: d })).status, 400, `canard ${d}`); await tick(); }
+    assert.equal((await g(frank, 'duck', { bet: 100 })).status, 400, 'sans canard'); await tick();
+    for (const bad of [0, 5, 1001, 2.5, 'x']) { assert.equal((await g(frank, 'duck', { bet: bad, duck: 0 })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'duck', { bet: 100, duck: 0 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    // Tirage pondéré sans remise : u = 0 → le canard 0 gagne ; puis parmi les 70 restants, 69 → le dernier (canard 5)…
+    forced = [0, 69, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 100, duck: 0 });
+    assert.deepEqual([r.status, r.body.order, r.body.winner, r.body.won, r.body.mult, r.body.win, r.body.coins], [200, [0, 5, 1, 2, 3, 4], 0, true, 3.23, 323, 1223], JSON.stringify(r.body));
+    // u = 95 → l'outsider (canard 5, chances 95 à 99) gagne ; parié sur lui : ×19,40.
+    await tick(); forced = [95, 0, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 50, duck: 5 });
+    assert.deepEqual([r.body.order[0], r.body.won, r.body.win, r.body.coins], [5, true, 970, 2143]);
+    // u = 30 → le canard 1 gagne ; parié sur le 2 : perdu.
+    await tick(); forced = [30, 0, 0, 0, 0, 0];
+    r = await g(frank, 'duck', { bet: 100, duck: 2 });
+    assert.deepEqual([r.body.order[0], r.body.won, r.body.win, r.body.coins, r.body.mult], [1, false, 0, 2043, 5.38]);
+    await tick();
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gDuck']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gDuck'); }
+    { const c = run([['HMGET', 'casino', 'r:duck', 'b:duck', 'w:duck']])[0].result.map(Number); assert.deepEqual(c, [3, 250, 1293], 'compte de la maison par jeu'); }
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes('const DUCK_W = [30, 25, 18, 12, 10, 5];') && src.includes('const dkCents = w => Math.floor(9700 / w + 1e-9);'), 'mêmes chances et multiplicateurs sur la page'); }
   }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
@@ -3794,8 +3867,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await fails(H(C, 'kick', { name: 'Clandee' }), 403, 'un membre n\'exclut personne');
   await fails(H(A, 'leave'), 422, 'le chef passe la main avant de partir');
   await H(A, 'transfer', { name: 'Clanbee' });
-  assert.equal((await H(B, 'view')).me.role, 'leader'); assert.equal((await H(A, 'view')).me.role, 'officer');
-  await H(B, 'transfer', { name: 'Clanlead' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'promote', { name: 'Clanbee' });
+  assert.equal((await H(B, 'view')).me.role, 'leader'); assert.equal((await H(A, 'view')).me.role, 'coleader', 'l\'ancien chef devient co-chef (2026-10-27)');
+  await H(B, 'transfer', { name: 'Clanlead' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'demote', { name: 'Clanbee' }); await H(A, 'promote', { name: 'Clanbee' });
   assert.equal((await H(A, 'view')).me.role, 'leader'); assert.equal((await H(B, 'view')).me.role, 'officer');
 
   // Coffre : dons (10 à 10 000, 10 par heure), le coffre ne revient jamais aux joueurs ; améliorations détruites.
@@ -3986,6 +4059,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const free = who => run([['DEL', `gc:rl:${who.playerId}`]]); // lève le délai de 5 s sans attendre
+  // Grands tirages des tests précédents (annoncés dans le chat depuis le 2026-10-27) : retirés, pour compter juste ici.
+  run([['DEL', 'gc:sysq']]);
   // Lecture ouverte à tous, même sans joueur ; aucune info « me » alors.
   let r = await gc(null, 'gcList'); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual(r.body.msgs, []); assert.equal(r.body.me, undefined);
   r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', playerId: '7e1d'.repeat(4), secret: 'f'.repeat(32) } }); assert.equal(r.status, 200, 'visiteur inconnu du serveur : lit quand même'); assert.equal(r.body.me, undefined);
@@ -4146,6 +4221,142 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(ed, 'gcDelete', { id: mine.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === mine.id));
   assert.ok(r.body.msgs.some(m => m.id === theirs.id));
   assert.ok(!JSON.stringify(r.body).includes(ed.playerId) && !JSON.stringify(r.body).includes(ot.playerId), 'aucun identifiant');
+}
+
+// Chat global (2026-10-27) : réponses (idée de Niall), emojis (Deadshot), grands tirages annoncés par le serveur (R77)
+// et message épinglé par le créateur (Big Sexy). Aucune citation ne montre un texte supprimé ; aucun identifiant ne sort.
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 150, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const wait = () => new Promise(res => setTimeout(res, 3));
+  const A = mk('6a', 'ReplyAnn'), B = mk('6b', 'ReplyBen'), boss = mk('6c', 'PinBoss', ['owner', '1']), seer = mk('6d', 'PinSeer', ['viewerGrant', '1']), modo = mk('6f', 'PinModo', ['gcMod', '1']);
+  const lucky = mk('5a', 'LuckyDiv'), lucky2 = mk('5b', 'LuckyTwo'), hush = mk('5f', 'LuckyHush');
+  run([['DEL', 'gc:sysq', 'gc:sysrl', 'gc:pin']]);
+  const msgOf = async (id, who = null) => (await gc(who, 'gcList')).body.msgs.find(m => m.id === id);
+
+  // Réponse : référence { id, pseudo, ~60 caractères }, l'auteur cité est prévenu (toMe + point rouge).
+  free(A); let r = await gc(A, 'gcSend', { text: 'hello there friends' }); const o1 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'hi Ann!', replyTo: o1.id }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const rep1 = r.body.msgs.at(-1);
+  assert.deepEqual(rep1.re, { id: o1.id, name: 'ReplyAnn', text: 'hello there friends' });
+  assert.equal((await msgOf(rep1.id, A)).toMe, true, 'l\'auteur cité le voit');
+  assert.equal((await gc(A, 'gcList')).body.me.lastAt, rep1.t, 'point rouge pour l\'auteur cité');
+  assert.ok(!(await msgOf(rep1.id, B)).toMe);
+  free(A); r = await gc(A, 'gcSend', { text: 'me again', replyTo: o1.id }); const self = r.body.msgs.at(-1); await wait();
+  assert.ok(!(await msgOf(self.id, A)).toMe, 'se répondre ne prévient personne');
+  // Citation coupée à 60 caractères.
+  free(A); r = await gc(A, 'gcSend', { text: 'a'.repeat(30) + ' ' + 'b'.repeat(69) }); const long = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'ok', replyTo: long.id }); const rep2 = r.body.msgs.at(-1); await wait();
+  assert.equal([...rep2.re.text].length, 61); assert.ok(rep2.re.text.endsWith('…'));
+  // Original modifié : la citation suit ; supprimé : « deleted », sans le texte.
+  r = await gc(A, 'gcEdit', { id: o1.id, text: 'hello there everyone' }); assert.equal(r.status, 200);
+  assert.equal((await msgOf(rep1.id)).re.text, 'hello there everyone');
+  r = await gc(A, 'gcDelete', { id: o1.id }); assert.equal(r.status, 200);
+  r = await gc(null, 'gcList'); assert.deepEqual(r.body.msgs.find(m => m.id === rep1.id).re, { id: o1.id, name: 'ReplyAnn', gone: true });
+  assert.ok(!JSON.stringify(r.body).includes('hello there'), 'aucun texte supprimé dans la liste');
+  // Original sorti des 100 derniers (retiré à la main) : texte gardé ; modifié avant d'en sortir : sa nouvelle version.
+  free(A); r = await gc(A, 'gcSend', { text: 'first version' }); const o2 = r.body.msgs.at(-1); await wait();
+  free(A); r = await gc(A, 'gcSend', { text: 'old but fine' }); const o3 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'reply two', replyTo: o2.id }); const rep3 = r.body.msgs.at(-1); await wait();
+  free(B); r = await gc(B, 'gcSend', { text: 'reply three', replyTo: o3.id }); const rep4 = r.body.msgs.at(-1); await wait();
+  await gc(A, 'gcEdit', { id: o2.id, text: 'second version' });
+  for (const id of [o2.id, o3.id]) { const raw = run([['LRANGE', 'gc:msgs', 0, -1]])[0].result; run([['LREM', 'gc:msgs', '1', raw.find(x => JSON.parse(x).id === id)]]); }
+  assert.ok(!run([['LRANGE', 'gc:msgs', 0, -1]])[0].result.some(x => [o2.id, o3.id].includes(JSON.parse(x).id)));
+  assert.equal((await msgOf(rep3.id)).re.text, 'second version'); assert.equal((await msgOf(rep4.id)).re.text, 'old but fine');
+  // Message parti ou inconnu : refusé.
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'hm', replyTo: o2.id })).status, 404);
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'hm', replyTo: 'zz' })).status, 400);
+
+  // Épinglé : le créateur seul ; tout le monde le voit (même sans joueur, même « same ») ; suit les modifications ; retiré
+  // avec le message.
+  free(A); r = await gc(A, 'gcSend', { text: 'pin me please' }); const p1 = r.body.msgs.at(-1); await wait();
+  for (const who of [A, modo, seer]) assert.equal((await gc(who, 'gcPin', { id: p1.id })).status, 403, `pas ${who.name}`);
+  r = await gc(boss, 'gcPin', { id: p1.id }); assert.equal(r.status, 200); assert.deepEqual([r.body.pin.id, r.body.pin.name, r.body.pin.text], [p1.id, 'ReplyAnn', 'pin me please']);
+  r = await gc(null, 'gcList'); assert.equal(r.body.pin.text, 'pin me please');
+  r = await gc(seer, 'gcList', { rev: r.body.rev, del: r.body.del, since: r.body.msgs.at(-1).t }); assert.equal(r.body.same, true); assert.equal(r.body.pin.id, p1.id, 'lecteur : le voit');
+  assert.ok(!JSON.stringify(r.body.pin).includes(A.playerId) && r.body.pin.mine === undefined);
+  await gc(A, 'gcEdit', { id: p1.id, text: 'pin me pretty please' });
+  assert.equal((await gc(null, 'gcList')).body.pin.text, 'pin me pretty please', 'l\'épinglé suit la modification');
+  r = await gc(boss, 'gcUnpin'); assert.equal(r.body.pin, null);
+  await gc(boss, 'gcPin', { id: p1.id }); await gc(modo, 'gcDelete', { id: p1.id });
+  assert.equal((await gc(null, 'gcList')).body.pin, null, 'message supprimé : plus épinglé');
+  assert.equal((await gc(boss, 'gcPin', { id: p1.id })).status, 404);
+
+  // Grands tirages : Divine ou mieux, décidé par le serveur, affiché 15 s plus tard (ici avancé à la main).
+  const find = (ok, from = 0) => { let n = from; while (!ok(engine.analyze(n).tier)) n++; return n; };
+  const nDiv = find(t => t === 'divine'), nCel = find(t => t === 'celestial'), nGod = find(t => t === 'godlike');
+  const queued = () => run([['ZRANGE', 'gc:sysq', '0', '-1']])[0].result;
+  const due = () => { for (const m of queued()) run([['ZADD', 'gc:sysq', String(Date.now() - 1), m]]); };
+  await lib.recordRoll(lucky.playerId, nCel, Date.now()); assert.deepEqual(queued(), [], 'Celestial : pas annoncé dans le chat');
+  await wait(); const tDiv = Date.now(); await lib.recordRoll(lucky.playerId, nDiv, tDiv);
+  assert.equal(queued().length, 1); assert.ok(Number(run([['ZSCORE', 'gc:sysq', queued()[0]]])[0].result) >= tDiv + 15000, 'après la révélation');
+  r = await gc(null, 'gcList'); assert.ok(!r.body.msgs.some(m => m.sys), 'pas avant son heure');
+  due(); r = await gc(B, 'gcList'); const sys = r.body.msgs.at(-1);
+  assert.deepEqual([sys.sys, sys.name, sys.n, sys.tier, sys.text, sys.title, sys.mine, sys.toMe], ['roll', 'LuckyDiv', nDiv, 'divine', undefined, undefined, undefined, undefined]);
+  assert.deepEqual(queued(), [], 'publié une seule fois'); assert.equal((await gc(null, 'gcList')).body.msgs.filter(m => m.sys).length, 1);
+  assert.ok(!JSON.stringify(r.body).includes(lucky.playerId), 'aucun identifiant');
+  assert.equal(run([['GET', `gc:at:${lucky.playerId}`]])[0].result, null, 'jamais une mention');
+  // Limites : un toutes les 30 s pour tout le chat, un toutes les 10 min par joueur ; pas pour un joueur muet.
+  await lib.recordRoll(lucky2.playerId, nGod, Date.now()); assert.deepEqual(queued(), [], '30 s entre deux annonces');
+  assert.equal(run([['GET', `gc:sysp:${lucky2.playerId}`]])[0].result, null, 'son tour n\'est pas consommé');
+  run([['DEL', 'gc:sysrl']]); await lib.recordRoll(lucky.playerId, nGod, Date.now()); assert.deepEqual(queued(), [], '10 min par joueur');
+  run([['DEL', 'gc:sysrl'], ['SET', `gc:mute:${hush.playerId}`, '-1']]); await lib.recordRoll(hush.playerId, nDiv, Date.now()); assert.deepEqual(queued(), [], 'muet : rien');
+  run([['DEL', `gc:mute:${hush.playerId}`, 'gc:sysrl']]); await lib.recordRoll(hush.playerId, nDiv, Date.now()); assert.equal(queued().length, 1);
+  run([['SET', `gc:mute:${hush.playerId}`, '-1']]); due(); r = await gc(null, 'gcList');
+  assert.ok(!r.body.msgs.some(m => m.sys && m.name === 'LuckyHush'), 'muet entre-temps : rien'); assert.deepEqual(queued(), []);
+  run([['DEL', `gc:mute:${hush.playerId}`]]);
+  // Ni réponse, ni signalement, ni modification, ni silence ; un modérateur peut le supprimer.
+  free(B); assert.equal((await gc(B, 'gcSend', { text: 'wow', replyTo: sys.id })).status, 422);
+  assert.equal((await gc(B, 'gcReport', { id: sys.id })).status, 422);
+  assert.equal((await gc(lucky, 'gcEdit', { id: sys.id, text: 'hacked' })).status, 403);
+  assert.equal((await gc(boss, 'gcMute', { id: sys.id, dur: '1h' })).status, 422);
+  assert.equal(run([['GET', `gc:mute:${lucky.playerId}`]])[0].result, null);
+  assert.equal((await gc(lucky, 'gcDelete', { id: sys.id })).status, 403, 'pas son message');
+  assert.equal((await gc(modo, 'gcDelete', { id: sys.id })).status, 200);
+
+  // Emojis : gardés tels quels (composés compris), comptés en caractères ; le liant invisible ne cache pas un mot.
+  free(A); r = await gc(A, 'gcSend', { text: 'gg 🎉🔥 👍🏽 ❤️ 👨‍👩‍👧 🏳️‍🌈' }); assert.equal(r.status, 200); assert.equal(r.body.msgs.at(-1).text, 'gg 🎉🔥 👍🏽 ❤️ 👨‍👩‍👧 🏳️‍🌈');
+  assert.equal(checkMessage('😀'.repeat(200)), '😀'.repeat(200)); assert.throws(() => checkMessage('😀'.repeat(201)), /200 characters/);
+  assert.throws(() => checkMessage('f‍u‍c‍k'), /friendly/); assert.equal(checkMessage('a‍😀'), 'a 😀');
+  run([['DEL', 'gc:sysq', 'gc:sysrl']]);
+}
+// « About me » (idée de Niall, 2026-10-27, api/_bio.js par /api/profile) : 80 caractères, même filtre que le chat,
+// montré sur le profil ; signalable ; effacé par le créateur seul.
+{
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 10, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const bio = (who, op, extra = {}) => call(profile, { method: 'POST', body: { action: 'bio', op, playerId: who.playerId, secret: who.secret, ...extra } });
+  const free = who => run([['DEL', `bio:rl:${who.playerId}`]]);
+  const kid = mk('4a', 'BioKid'), other = mk('4b', 'BioOther'), boss = mk('4e', 'BioBoss', ['owner', '1']), seer = mk('4f', 'BioSeer', ['viewerGrant', '1']);
+  let r = await bio(kid, 'set', { text: '  I love rolling 🎲 and   duels ' }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  r = await call(profile, { url: '/api/profile?name=biokid' }); assert.equal(r.status, 200); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  r = await call(profile, { url: '/api/profile?name=BioKid&lite=1' }); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
+  assert.equal((await call(profile, { url: '/api/profile?name=BioOther' })).body.bio, null);
+  assert.equal((await bio(kid, 'set', { text: 'again' })).status, 429, 'une modification toutes les 10 s');
+  for (const [t, re] of [['x'.repeat(81), /80 characters/], ['go to freecoins.com', /Links/], ['you fucking idiot', /friendly/], ['add me on snap', /personal info/], ['call 06 12 34 56 78', /personal info/]]) { free(kid); r = await bio(kid, 'set', { text: t }); assert.equal(r.status, 422, t); assert.match(r.body.error, re, t); }
+  free(kid); assert.equal((await bio(kid, 'set', { text: 'x'.repeat(80) })).status, 200, '80 caractères : accepté');
+  assert.equal((await call(profile, { method: 'POST', body: { action: 'bio', op: 'set', playerId: kid.playerId, secret: other.secret, text: 'x' } })).status, 403, 'secret vérifié');
+  // Muet dans le chat : pas d'« About me » non plus.
+  run([['SET', `gc:mute:${other.playerId}`, '-1']]); assert.equal((await bio(other, 'set', { text: 'hello' })).status, 403); run([['DEL', `gc:mute:${other.playerId}`]]);
+  // Effacer le sien : texte vide.
+  free(kid); r = await bio(kid, 'set', { text: '' }); assert.equal(r.body.bio, null); assert.equal((await call(profile, { url: '/api/profile?name=BioKid' })).body.bio, null);
+  free(kid); await bio(kid, 'set', { text: 'Cool kid 😎' });
+  // Signalement → Reports (where: 'about me'), sans identifiant.
+  assert.equal((await bio(kid, 'report', { name: 'BioKid' })).status, 422, 'pas soi-même');
+  assert.equal((await bio(kid, 'report', { name: 'BioOther' })).status, 404, 'rien à signaler');
+  r = await bio(other, 'report', { name: 'BioKid' }); assert.equal(r.status, 200); assert.ok(r.body.reported);
+  r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  const rep = r.body.reports.find(x => x.where === 'about me'); assert.ok(rep && rep.author === 'BioKid' && rep.text === 'Cool kid 😎');
+  assert.ok(!JSON.stringify(r.body).includes(kid.playerId));
+  // Effacé par le créateur seul (ni un joueur, ni un lecteur).
+  for (const who of [other, seer]) assert.equal((await bio(who, 'clear', { name: 'BioKid' })).status, 403);
+  assert.equal((await bio(boss, 'clear', { name: 'Nobody Here' })).status, 404);
+  r = await bio(boss, 'clear', { name: 'biokid' }); assert.equal(r.status, 200); assert.equal(r.body.cleared, true);
+  assert.equal((await call(profile, { url: '/api/profile?name=BioKid' })).body.bio, null);
+  assert.equal((await bio(boss, 'clear', { name: 'BioKid' })).status, 404, 'déjà effacé');
 }
 
 // ================================================================ Économie (2026-10-25) : rendements décroissants, Weekend Rush +25 %,
@@ -4439,6 +4650,265 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(await map(), {});
   r = await av(kid, 'mine'); assert.ok(!r.body.approved); assert.equal(r.body.rejected.reason, 'inappropriate'); assert.equal(r.body.left, 0);
   assert.equal((await call(profile, { method: 'POST', body: { action: 'avatar', op: 'mine', playerId: kid.playerId, secret: other.secret } })).status, 403, 'secret vérifié');
+}
+
+// ================================================================ Badges des idées du 2026-10-27
+{
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  const scoring = (n, id) => engine.analyze(n).scoringIds.includes(id);
+  // Famille FOREVER (daddy finger) : seul le meilleur compte.
+  assert.ok(has(224, 'FOREVER_EXACT') && has(224224, 'FOREVER_AND_EVER') && has(31224, 'FOREVER'));
+  assert.ok(scoring(224224, 'FOREVER_AND_EVER') && !scoring(224224, 'FOREVER'), 'un seul badge de la famille compte');
+  assert.ok(!has(2224, 'FOREVER_EXACT') && !has(224225, 'FOREVER_AND_EVER'));
+  // Jumbo Jet Set dans la famille JET, avec Jumbo Jet.
+  assert.ok(scoring(747747, 'JUMBO_JET_SET') && !scoring(747747, 'JET_747'));
+  for (const [n, id] of [[1987, 'YEAR_1987_EXACT'], [519870, 'YEAR_1987'], [505, 'FIVE_OH_FIVE_EXACT'], [15050, 'FIVE_OH_FIVE'], [190210, 'BEVERLY_HILLS'],
+    [17380, 'SEVENTEEN_38'], [24, 'AROUND_THE_CLOCK'], [104, 'SUMMER_BREAK'], [124142, 'SILVER_RATIO_5'], [32414, 'SILVER_RATIO_4']]) assert.ok(has(n, id), `${id} sur ${n}`);
+  assert.ok(!has(240, 'AROUND_THE_CLOCK') && !has(1040, 'SUMMER_BREAK') && !scoring(124142, 'SILVER_RATIO_4'));
+  // Narcissiques (Kag) : la liste exacte, recalculée.
+  // Contexte réduit (n, s, L, d) : parcourir le million avec analyze() prendrait une minute.
+  const quick = id => { const ck = engine.byId.get(id).check, out = []; for (let n = 0; n <= 1000000; n++) { const s = String(n); if (ck({ n, s, L: s.length, d: [...s].map(Number) })) out.push(n); } return out; };
+  const narc = quick('NARCISSISTIC');
+  assert.deepEqual(narc, [153, 370, 371, 407, 1634, 8208, 9474, 54748, 92727, 93084, 548834]);
+  // Quantum Chaos (qwertyuiop) : premier, 4 chiffres ou plus, aucun chiffre répété.
+  assert.ok(has(1237, 'QUANTUM_CHAOS') && has(102359, 'QUANTUM_CHAOS'));
+  assert.ok(!has(1223, 'QUANTUM_CHAOS') && !has(1231, 'QUANTUM_CHAOS') && !has(1234, 'QUANTUM_CHAOS') && !has(137, 'QUANTUM_CHAOS'));
+  // Leap Day (Kag) : 0229AA, 2902AA, AA0229 avec AA multiple de 4 → 75 nombres, les 25 anciens restent.
+  const leap = quick('LEAP_DAY');
+  for (const n of [22924, 290224, 240229]) assert.ok(has(n, 'LEAP_DAY'));
+  assert.equal(leap.length, 75);
+  for (const n of [22900, 22924, 22996, 290200, 290224, 290296, 229, 40229, 240229, 960229]) assert.ok(leap.includes(n), `Leap Day ${n}`);
+  for (const n of [290201, 290300, 250229, 10229, 22925]) assert.ok(!leap.includes(n), `pas Leap Day ${n}`);
+}
+
+// ================================================================ Rareté suivante (XP qui manquait) et titres du 2026-10-27
+{
+  // nextTier : le seuil rendu fait passer à la rareté suivante, un XP de moins ne suffit pas ; rien pour Infinite.
+  const rankOf = t => engine.TIER_ORDER.indexOf(t);
+  for (const n of [0, 7, 13, 99, 1234, 22924, 54321, 123456, 500000, 777777, 999999, 1000000]) {
+    const total = engine.scoreOf(n), cur = engine.cardTier(total), nx = engine.nextTier(total);
+    if (cur === 'infinite') { assert.equal(nx, null, `rien au-dessus d'Infinite (${n})`); continue; }
+    assert.ok(nx && nx.short > 0 && nx.at === total + nx.short, `seuil de ${n}`);
+    assert.equal(rankOf(nx.tier), rankOf(cur) + 1, `rareté juste au-dessus pour ${n} (${cur} → ${nx.tier})`);
+    assert.equal(engine.cardTier(nx.at), nx.tier); assert.equal(engine.cardTier(nx.at - 1), cur);
+  }
+  assert.equal(engine.nextTier(engine.scoreOf(24)), null, '24 est Infinite');
+
+  const { COLLECTION_SETS, COLLECTION_VERSION, recordRoll, readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const unlocked = st => Ach.unlocked(st);
+  // Titres simples, lus sur les stats.
+  assert.ok(unlocked({ xpLife: 1e10 }).includes('decabillionaire') && !unlocked({ xpLife: 9999999999 }).includes('decabillionaire'));
+  assert.ok(unlocked({ clanDonated: 100000 }).includes('clanbenefactor') && !unlocked({ clanDonated: 99999 }).includes('clanbenefactor'));
+  assert.ok(unlocked({ clanDonated: 1000000 }).includes('clanpillar'));
+  // Pièces gagnées en jouant : tirages (après rendements décroissants) + duels + Weekend Rush ; ni casino ni cadeaux.
+  assert.ok(unlocked({ 't:common': 10000 }).includes('piggybank'), '10 000 Common = 10 000 pièces');
+  assert.ok(!unlocked({ 't:common': 10000, rollCut: 1 }).includes('piggybank'), 'la part retenue ne compte pas');
+  assert.ok(unlocked({ 't:common': 9000, rushBonus: 1000 }).includes('piggybank'), 'le Weekend Rush compte');
+  assert.ok(!unlocked({ bonus: 5e6, gWon: 5e6, giftIn: 1e6 }).includes('piggybank'), 'casino et cadeaux ne comptent pas');
+  assert.ok(unlocked({ 't:mythic': 1000 }).includes('moneymaker') && unlocked({ 't:mythic': 10000 }).includes('coinmachine'));
+
+  // Collections par rareté : jamais un badge plus rare que sa couleur (Important Birthday est Rare mais un seul nombre).
+  assert.deepEqual(Ach.COLLECT.map(([t]) => t), ['common', 'uncommon', 'rare', 'epic', 'anomaly']);
+  for (const id of ['IMPORTANT_BIRTHDAY', 'NATURAL_EXACT', 'RTX_5090_EXACT']) assert.ok(!COLLECTION_SETS.rare.includes(id), `${id} hors des Rare`);
+  for (const [t, ids] of Object.entries(COLLECTION_SETS)) { assert.ok(ids.length > 10, t); for (const id of ids) assert.ok(engine.byId.has(id)); }
+  assert.ok(COLLECTION_SETS.common.includes('ODD') && COLLECTION_SETS.anomaly.includes('NARCISSISTIC'));
+
+  const col = { playerId: 'd8'.repeat(8), secret: 'd9'.repeat(16), name: 'Collecty' };
+  db.delete(`cooldown:${col.playerId}`); assert.equal((await call(roll, { method: 'POST', body: col })).status, 200);
+  let st = await readStats(col.playerId);
+  assert.equal(st.colv, COLLECTION_VERSION, 'version posée');
+  assert.ok(!unlocked(st).includes('colcommon') || COLLECTION_SETS.common.every(id => run([['SISMEMBER', `badges:${col.playerId}`, id]])[0].result === 1));
+  // Ancien joueur qui a déjà tous les Common : obtenu à la première lecture après la mise à jour (version différente).
+  run([['SADD', `badges:${col.playerId}`, ...COLLECTION_SETS.common], ['HSET', `stats:${col.playerId}`, 'colv', 'old']]);
+  st = await readStats(col.playerId);
+  assert.ok(unlocked(st).includes('colcommon'), 'Common Collector');
+  // Un badge neuf venu d'un tirage complète les Uncommon (sans changement de version).
+  const last = COLLECTION_SETS.uncommon.find(id => { for (let n = 1000; n < 200000; n++) if (engine.analyze(n).earnedIds.includes(id)) return true; return false; });
+  let lastN = 1000; while (!engine.analyze(lastN).earnedIds.includes(last)) lastN++;
+  run([['SADD', `badges:${col.playerId}`, ...COLLECTION_SETS.uncommon.filter(id => id !== last)], ['SREM', `badges:${col.playerId}`, last]]);
+  st = await readStats(col.playerId); assert.ok(!unlocked(st).includes('coluncommon'), 'il en manque un');
+  const done = await recordRoll(col.playerId, lastN, Date.now());
+  assert.ok(done.achievements.includes('coluncommon'), `Uncommon Admirer avec ${last} (${lastN})`);
+  // Jamais retiré : un badge ajouté plus tard (nouvelle version) ne reprend rien.
+  run([['SREM', `badges:${col.playerId}`, last], ['HSET', `stats:${col.playerId}`, 'colv', 'old']]);
+  st = await readStats(col.playerId); assert.ok(unlocked(st).includes('coluncommon') && unlocked(st).includes('colcommon'));
+
+  // Sound Collector et Shopaholic : posés à la lecture de la boutique, pour les joueurs qui avaient déjà tout.
+  const Shop = require(path.join(ROOT, 'js/shop.js')), shopApi = require(path.join(ROOT, 'api/shop.js'));
+  const shopState = () => call(shopApi, { url: `/api/shop?me=${col.playerId}` });
+  run([['SADD', `snds:${col.playerId}`, ...Shop.collectibleSets.sounds()]]);
+  assert.equal((await shopState()).status, 200);
+  st = await readStats(col.playerId); assert.ok(unlocked(st).includes('allsounds') && !unlocked(st).includes('shopaholic'));
+  run([['SADD', `skins:${col.playerId}`, ...Shop.collectible()], ['SADD', `btns:${col.playerId}`, ...Shop.collectibleSets.buttons()],
+    ['SADD', `emotes:${col.playerId}`, ...Shop.collectibleSets.emotes()], ['SADD', `walls:${col.playerId}`, ...Shop.collectibleSets.walls()],
+    ['HSET', `stats:${col.playerId}`, 'speedLv', Shop.SPEED.prices.length - 1]]);
+  await shopState(); st = await readStats(col.playerId); assert.ok(!unlocked(st).includes('shopaholic'), 'une amélioration manque');
+  run([['HSET', `stats:${col.playerId}`, 'speedLv', Shop.SPEED.prices.length]]);
+  await shopState(); st = await readStats(col.playerId); assert.ok(unlocked(st).includes('shopaholic'), 'tout possédé');
+}
+
+// ================================================================ Idées du 2026-10-27 : classement « Most rolls » (CrazyMiner22,
+// WpBejs), nombres différents (jsand), quêtes de la semaine (Tumored), coffre des quêtes (Sean), co-chef de clan (Yentizx,
+// JAKECisthebest) et Clan MVP (PRISMA123).
+{
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), qApi = require(path.join(ROOT, 'api/quests.js')), Q = require(path.join(ROOT, 'js/quests.js'));
+  const lib = require(path.join(ROOT, 'api/_lib.js')), ShopM = require(path.join(ROOT, 'js/shop.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const Clan = require(path.join(ROOT, 'api/_clan.js'));
+  const pause = () => new Promise(res => setTimeout(res, 3));
+  const mk = (i, name, fields = {}) => {
+    const id = `27ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', ...Object.entries(fields).flat().map(String)], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const statsOf = id => { const flat = run([['HGETALL', `stats:${id}`]])[0].result, o = {}; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
+  const ecoIn = field => [...db.keys()].filter(k => /^eco:\d{4}-/.test(k)).reduce((x, k) => x + (Number(run([['HGET', k, `in:${field}`]])[0].result) || 0), 0);
+  const qGet = who => call(qApi, { url: `/api/quests?me=${who.playerId}` });
+  const qPost = (who, action, extra = {}) => call(qApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+  // Horloge : loin de minuit UTC (donc aussi du lundi 00:00), pour que le jour et la semaine ne changent pas pendant le bloc.
+  { const now = Date.now(), next = Date.parse(`${new Date(now).toISOString().slice(0, 10)}T00:00:00Z`) + 86400000; if (next - now < 20 * 60000) clock += next - now + 60000; }
+
+  // 1. Most rolls : les anciens joueurs versés une fois depuis stats.rolls (ou count:all), rejouable, puis chaque tirage.
+  const old1 = mk(1, 'Rollerold', { rolls: 500 }), old2 = mk(2, 'Rollercount'), old3 = mk(3, 'Rollerpart', { rolls: 10 });
+  run([['DEL', 'lb:rolls:migrated'], ['DEL', 'lb:rolls:cursor'], ['HSET', 'count:all', old1.playerId, 500], ['HSET', 'count:all', old2.playerId, 42], ['HSET', 'count:all', old3.playerId, 10], ['ZADD', 'lb:rolls', 3, old3.playerId]]);
+  for (let i = 0; i < 10 && !run([['GET', 'lb:rolls:migrated']])[0].result; i++) await lbApi.migrateRolls();
+  assert.ok(run([['GET', 'lb:rolls:migrated']])[0].result, 'versement fini');
+  const zr = id => Number(run([['ZSCORE', 'lb:rolls', id]])[0].result);
+  assert.deepEqual([zr(old1.playerId), zr(old2.playerId), zr(old3.playerId)], [500, 42, 10], 'stats.rolls, sinon count:all ; l\'écart seulement');
+  await lib.recordRoll(old3.playerId, 4242, Date.now());
+  assert.equal(zr(old3.playerId), 11, 'chaque tirage compte');
+  run([['DEL', 'lb:rolls:migrated']]); await lbApi.migrateRolls();
+  assert.equal(zr(old3.playerId), 11, 'rejoué : rien compté deux fois');
+  r = await call(lbApi, { url: `/api/leaderboard?period=rolls&me=${old3.playerId}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.period, 'rolls');
+  for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].count >= r.body.entries[i].count, 'du plus grand au plus petit');
+  const rowOf = name => r.body.entries.find(e => e.name === name);
+  assert.equal(rowOf('Rollerold').count, 500); assert.equal(rowOf('Rollerpart').count, 11); assert.ok(rowOf('Rollerpart').me);
+  assert.ok(!JSON.stringify(r.body).includes(old1.playerId), 'aucun identifiant');
+  // Hors du top 100 : sa ligne arrive à part, avec son rang.
+  run(Array.from({ length: 105 }, (_, i) => ['ZADD', 'lb:rolls', 100000 + i, `27ee${i.toString(16).padStart(12, '0')}`]));
+  r = await call(lbApi, { url: `/api/leaderboard?period=rolls&me=${old3.playerId}` });
+  assert.equal(r.body.entries.length, 100); assert.ok(r.body.mine && r.body.mine.me && r.body.mine.count === 11 && r.body.mine.rank > 100);
+  run(Array.from({ length: 105 }, (_, i) => ['ZREM', 'lb:rolls', `27ee${i.toString(16).padStart(12, '0')}`]));
+
+  // 2. Nombres différents tirés : SCARD de nums:<id> (Stats et profil) ; sans ce set, compté sur l'historique.
+  const uq = mk(4, 'Uniqueroller');
+  const t0 = Date.now();
+  await lib.recordRoll(uq.playerId, 123, t0); await lib.recordRoll(uq.playerId, 123, t0 + 3); await lib.recordRoll(uq.playerId, 456, t0 + 6);
+  r = await call(profile, { url: '/api/profile?name=Uniqueroller&lite=1' }); assert.equal(r.body.uniq, 2, 'lite : 2 nombres différents');
+  r = await call(profile, { url: '/api/profile?name=Uniqueroller' }); assert.equal(r.body.uniq, 2, 'profil : 2 nombres différents');
+  const nodv = mk(5, 'Oldhistory'); run([['HDEL', `stats:${nodv.playerId}`, 'dv'], ['ZADD', `hist:${nodv.playerId}`, t0, `${t0}:7`, t0 + 5000, `${t0 + 5000}:8`, t0 + 90000, `${t0 + 90000}:7`]]);
+  r = await call(profile, { url: '/api/profile?name=Oldhistory' }); assert.equal(r.body.uniq, 2, 'sans set : depuis l\'historique'); assert.equal(r.body.rolls, 3);
+  r = await call(profile, { url: '/api/profile?name=Oldhistory&lite=1' }); assert.equal(r.body.uniq, null, 'lite sans set : rien');
+
+  // 3. Quêtes de la semaine : 3, les mêmes pour tous, progression tenue par le serveur, une récompense chacune.
+  const wq = mk(6, 'Weeklyquester'), week = lib.weekKey(Date.now());
+  await lib.recordRoll(wq.playerId, 5, Date.now());
+  r = await qGet(wq); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.weekly.quests.map(q => q.id), Q.ofWeek(week).map(q => q.id)); assert.equal(r.body.weekly.week, week);
+  assert.deepEqual(new Set(Q.ofWeek(week).map(q => q.group)), new Set(['rolls', 'rarity', 'days']), 'une par groupe');
+  assert.equal(r.body.weekly.quests[0].progress, 1, 'le tirage compte');
+  const wEnd = r.body.weekly.resetAt;
+  assert.equal(new Date(wEnd).getUTCDay(), 1, 'un lundi'); assert.equal(wEnd % 86400000, 0, 'à 00:00 UTC');
+  assert.equal(lib.weekKey(wEnd - 1), week); assert.notEqual(lib.weekKey(wEnd), week, 'la semaine change à resetAt');
+  const tier5 = engine.cardTier(engine.scoreOf(5));
+  if (!['epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(tier5)) assert.equal(run([['HGET', `qw:${week}:${wq.playerId}`, `t:${tier5}`]])[0].result, null, 'raretés basses non comptées');
+  const wq0 = r.body.weekly.quests[0];
+  assert.equal((await qPost(wq, 'wclaim', { quest: wq0.id })).status, 422, 'pas finie');
+  assert.equal((await qPost(wq, 'wclaim', { quest: 'w-nope' })).status, 400);
+  assert.equal((await qPost({ ...wq, secret: '9'.repeat(32) }, 'wclaim', { quest: wq0.id })).status, 403);
+  run([['HSET', `qw:${week}:${wq.playerId}`, 'rolls', 1000, 't:mythic', 20, 'days', 5]]);
+  const coins0 = ShopM.balance(statsOf(wq.playerId)), eco0 = ecoIn('weekly');
+  let sum = 0;
+  for (const q of Q.ofWeek(week)) {
+    r = await qPost(wq, 'wclaim', { quest: q.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, q.reward); sum += q.reward;
+    assert.equal((await qPost(wq, 'wclaim', { quest: q.id })).status, 422, 'une seule fois');
+  }
+  assert.ok(r.body.weekly.quests.every(q => q.claimed));
+  assert.equal(ShopM.balance(statsOf(wq.playerId)), coins0 + sum, 'pièces créditées'); assert.equal(ecoIn('weekly') - eco0, sum, 'comptées dans l\'économie (in:weekly)');
+  assert.ok(sum >= 1000 && sum <= 1800, 'entre 1 000 et 1 800 par semaine');
+  // Deux réclamations en même temps : une seule payée.
+  run([['HDEL', `qw:${week}:${wq.playerId}`, `claimed:${wq0.id}`]]);
+  const both = await Promise.all([qPost(wq, 'wclaim', { quest: wq0.id }), qPost(wq, 'wclaim', { quest: wq0.id })]);
+  assert.deepEqual(both.map(x => x.status).sort(), [200, 422], 'deux clics : un seul paiement');
+
+  // 4. Jour « tout fini » : compte pour la semaine et pour le coffre (parti de la meilleure série d'avant), bonus dans l'éco.
+  const ad = mk(7, 'Alldoner', { qsBest: 9 }), today = new Date(Date.now()).toISOString().slice(0, 10);
+  run([['HSET', `q:${today}:${ad.playerId}`, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'duels', 3, 'duelWins', 1, 'casino', 15, 'casinoBet', 500]]);
+  const ecoQ0 = ecoIn('quests'); let got = 0;
+  for (const q of Q.ofDay(today)) { r = await qPost(ad, 'claim', { quest: q.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); got += r.body.gained; }
+  assert.ok(r.body.allDone, 'tout fini');
+  assert.equal(ecoIn('quests') - ecoQ0, got, 'quêtes + bonus « tout fini » comptés dans l\'économie');
+  assert.equal(run([['HGET', `qw:${week}:${ad.playerId}`, 'days']])[0].result, '1', 'un jour pour la quête de la semaine');
+  assert.equal(statsOf(ad.playerId).qdays, '10', '9 (meilleure série d\'avant) + 1');
+  assert.deepEqual([r.body.chest.days, r.body.chest.ready, r.body.chest.coins], [10, 2, 750], 'coffres de 4 et 10 jours prêts');
+
+  // 5. Coffre des quêtes : paliers ouverts une fois chacun, tous ceux qui sont prêts d'un coup.
+  assert.deepEqual(Q.CHESTS.map(c => c.at), [4, 10, 25, 50, 100, 200, 365]);
+  const ch = mk(8, 'Chestopener', { qsBest: 30 });
+  r = await qGet(ch); assert.deepEqual([r.body.chest.days, r.body.chest.opened, r.body.chest.ready, r.body.chest.coins, r.body.chest.next.at], [30, 0, 3, 1750, 50], 'meilleure série de 30 : 3 coffres');
+  const c0 = ShopM.balance(statsOf(ch.playerId)), e0 = ecoIn('chest');
+  const two = await Promise.all([qPost(ch, 'chest'), qPost(ch, 'chest')]);
+  assert.deepEqual(two.map(x => x.status).sort(), [200, 429], 'deux clics : un seul coffre');
+  const okc = two.find(x => x.status === 200).body;
+  assert.deepEqual([okc.gained, okc.chests, okc.chest.opened, okc.chest.ready], [1750, 3, 3, 0]);
+  assert.equal(ShopM.balance(statsOf(ch.playerId)), c0 + 1750); assert.equal(ecoIn('chest') - e0, 1750, 'comptés dans l\'économie (in:chest)');
+  assert.equal((await qPost(ch, 'chest')).status, 422, 'rien à ouvrir');
+  assert.ok(okc.chest.milestones.slice(0, 3).every(m => m.open) && !okc.chest.milestones[3].open);
+  run([['HSET', `stats:${ch.playerId}`, 'qdays', 50]]);
+  r = await qPost(ch, 'chest'); assert.deepEqual([r.status, r.body.gained, r.body.chest.opened], [200, 2000, 4], '50 jours');
+  run([['HSET', `stats:${ch.playerId}`, 'qsBest', 400]]); r = await qGet(ch); assert.equal(r.body.chest.days, 50, 'le compteur posé ne repart pas de la série');
+
+  // 6. Co-chef : entre le chef et les officiers.
+  const L = mk(16, 'Coleadboss', { rolls: 60, bonus: 30000 }), X = mk(17, 'Coleadx', { rolls: 60 }), Y = mk(18, 'Coleady', { rolls: 60 }), Z = mk(19, 'Coleadz', { rolls: 60 }), M = mk(20, 'Coleadm', { rolls: 60 });
+  const H = (who, op, extra = {}, now) => Clan.handle(who.playerId, { op, ...extra }, now);
+  const fails = async (p, status, msg) => { try { await p; } catch (err) { assert.equal(err.status, status, `${msg} : ${err.message}`); return err; } assert.fail(`${msg} : aurait dû échouer`); };
+  await H(L, 'create', { clanName: 'Co Lead Crew', tag: 'COLD' });
+  for (const p of [X, Y, Z, M]) { await H(L, 'invite', { name: p.name }); await H(p, 'join', { tag: 'COLD' }); }
+  await H(L, 'promote', { name: 'Coleadx' }); assert.equal((await H(X, 'view')).me.role, 'officer');
+  let v = await H(L, 'promote', { name: 'Coleadx' }); assert.equal((await H(X, 'view')).me.role, 'coleader', 'officier → co-chef');
+  assert.equal(v.clan.log[0].k, 'colead');
+  assert.deepEqual(v.clan.members.map(m => m.role).slice(0, 2), ['leader', 'coleader'], 'trié par rang');
+  await fails(H(L, 'promote', { name: 'Coleadx' }), 422, 'déjà co-chef');
+  // Droits des officiers tous coupés : le co-chef garde tout.
+  await H(L, 'perms', { perms: { invite: false, kick: false, upgrade: false, war: false, edit: false } });
+  v = await H(X, 'view'); assert.deepEqual(v.me.can, { invite: true, kick: true, upgrade: true, war: true, edit: true }, 'le co-chef ignore les droits coupés');
+  await H(X, 'desc', { desc: 'Co-leaders rule' });
+  await H(X, 'promote', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.role, 'officer', 'le co-chef nomme des officiers');
+  await fails(H(X, 'promote', { name: 'Coleady' }), 403, 'seul le chef nomme les co-chefs');
+  await fails(H(Y, 'promote', { name: 'Coleadm' }), 403, 'un officier ne nomme personne');
+  await fails(H(Y, 'kick', { name: 'Coleadm' }), 403, 'droits d\'exclusion coupés pour les officiers');
+  await H(X, 'demote', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.role, 'member', 'le co-chef rétrograde les officiers');
+  await H(X, 'promote', { name: 'Coleady' });
+  await H(L, 'promote', { name: 'Coleadz' }); await H(L, 'promote', { name: 'Coleadz' }); assert.equal((await H(Z, 'view')).me.role, 'coleader');
+  await fails(H(X, 'kick', { name: 'Coleadz' }), 403, 'un co-chef n\'exclut pas un autre co-chef');
+  await fails(H(X, 'demote', { name: 'Coleadz' }), 403, 'ni ne le rétrograde');
+  await fails(H(X, 'kick', { name: 'Coleadboss' }), 403, 'ni le chef');
+  await fails(H(X, 'transfer', { name: 'Coleadm' }), 403, 'ne passe pas la main');
+  await fails(H(X, 'disband'), 403, 'ne dissout pas');
+  await fails(H(X, 'perms', { perms: {} }), 403, 'ne règle pas les droits');
+  // Chat : le co-chef modère officiers et membres, pas un autre co-chef ; un officier ne touche pas au co-chef.
+  await H(Z, 'say', { text: 'from z' }); await pause(); await H(Y, 'say', { text: 'from y' }); await pause(); v = await H(X, 'say', { text: 'from x' });
+  const tOf = name => v.messages.find(m => m.name === name).t;
+  assert.ok(!v.messages.find(m => m.name === 'Coleadz').canDelete && v.messages.find(m => m.name === 'Coleady').canDelete);
+  await fails(H(X, 'unsend', { t: tOf('Coleadz') }), 403, 'pas le message d\'un autre co-chef');
+  await fails(H(Y, 'unsend', { t: tOf('Coleadx') }), 403, 'l\'officier ne supprime pas le co-chef');
+  await H(X, 'unsend', { t: tOf('Coleady') }); await H(L, 'unsend', { t: tOf('Coleadz') });
+  await H(X, 'kick', { name: 'Coleady' }); assert.equal((await H(Y, 'view')).me.inClan, false, 'le co-chef exclut un officier');
+  v = await H(L, 'demote', { name: 'Coleadz' }); assert.equal(v.clan.log[0].k, 'uncolead'); assert.equal((await H(Z, 'view')).me.role, 'officer', 'co-chef → officier');
+  await H(L, 'transfer', { name: 'Coleadm' });
+  assert.equal((await H(M, 'view')).me.role, 'leader'); assert.equal((await H(L, 'view')).me.role, 'coleader', 'l\'ancien chef devient co-chef');
+
+  // 7. Clan MVP : le plus gros apport d'XP du clan n°1 de la semaine, une fois par semaine, compté.
+  const wk = Date.UTC(2033, 2, 9, 12), nextWk = wk + 7 * 86400000;
+  await lib.recordRoll(X.playerId, 999999, wk); await lib.recordRoll(Z.playerId, 123456, wk + 5); await lib.recordRoll(L.playerId, 500001, wk + 10);
+  Clan._reset(); await Clan.settleWeek(nextWk); Clan._reset(); await Clan.settleWeek(nextWk);
+  assert.equal(statsOf(X.playerId).clanMvp, '1', 'MVP une seule fois'); assert.equal(statsOf(Z.playerId).clanMvp, undefined); assert.equal(statsOf(Z.playerId).clanWeekWins, '1');
+  assert.ok(Ach.unlocked(statsOf(X.playerId)).includes('clanmvp')); assert.ok(!Ach.unlocked(statsOf(Z.playerId)).includes('clanmvp'));
+  const last = (await Clan.board(nextWk)).last; assert.equal(last.tag, 'COLD'); assert.equal(last.mvp, 'Coleadx');
+  assert.ok(!JSON.stringify(last).includes(X.playerId));
+  r = await call(profile, { url: '/api/profile?name=Coleadx' }); assert.equal(r.body.clanMvp, 1);
+  Clan._reset();
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

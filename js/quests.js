@@ -79,7 +79,35 @@
     return { coins: Math.min(CATCHUP.coins, coins), keys: [...Array(Math.min(CATCHUP.starter, starter)).fill('starter'), ...Array(Math.min(CATCHUP.premium, premium)).fill('premium')] };
   };
 
-  const api = { POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
+  // Quêtes de la semaine (idée de Tumored, 2026-10-27) : 3 par semaine ISO (reset le lundi 00:00 UTC), une par groupe,
+  // les mêmes pour tous, lues sur les compteurs de la semaine (qw:<semaine>:<id>, tenus par le serveur : rolls, t:<rareté>
+  // pour Epic et mieux, days = jours où les 5 quêtes du jour ont été finies). Tumored proposait ~2 500 pièces pour
+  // « 5 Anomaly » : un Anomaly ou mieux sort 1 fois sur 20, soit ~100 tirages (15 min), plus que les pièces d'une journée
+  // de tirages ; on reste donc entre 300 et 700 par quête. Une semaine rapporte 1 000 à 1 800 pièces (~1 350 en moyenne),
+  // soit moins de 10 % de ce que gagne en tirages un joueur qui fait 500 tirages par jour (~4,7 pièces par tirage).
+  const WEEK_POOL = [
+    { id: 'w-roll400', group: 'rolls', emoji: '🎲', text: 'Make 400 rolls this week', target: 400, reward: 300, value: c => num(c.rolls) },
+    { id: 'w-roll700', group: 'rolls', emoji: '🎲', text: 'Make 700 rolls this week', target: 700, reward: 450, value: c => num(c.rolls) },
+    { id: 'w-roll1000', group: 'rolls', emoji: '🎲', text: 'Make 1,000 rolls this week', target: 1000, reward: 600, value: c => num(c.rolls) },
+    { id: 'w-anom5', group: 'rarity', emoji: '🌋', text: 'Roll 5 Anomaly or better', target: 5, reward: 300, value: c => atLeast(c, 'anomaly') },
+    { id: 'w-epic15', group: 'rarity', emoji: '🟪', text: 'Roll 15 Epic or better', target: 15, reward: 350, value: c => atLeast(c, 'epic') },
+    { id: 'w-myth2', group: 'rarity', emoji: '🔮', text: 'Roll 2 Mythic or better', target: 2, reward: 500, value: c => atLeast(c, 'mythic') },
+    { id: 'w-days3', group: 'days', emoji: '📅', text: 'Finish all daily quests on 3 days', target: 3, reward: 400, value: c => num(c.days) },
+    { id: 'w-days4', group: 'days', emoji: '📅', text: 'Finish all daily quests on 4 days', target: 4, reward: 550, value: c => num(c.days) },
+    { id: 'w-days5', group: 'days', emoji: '📅', text: 'Finish all daily quests on 5 days', target: 5, reward: 700, value: c => num(c.days) },
+  ];
+  const WEEK_GROUPS = ['rolls', 'rarity', 'days'];
+  const ofWeek = week => WEEK_GROUPS.map(g => { const list = WEEK_POOL.filter(q => q.group === g); return list[hash(`${week}:week:${g}`) % list.length]; });
+
+  // Coffre des quêtes (idée de Sean, 2026-10-27) : les jours où les 5 quêtes du jour ont été finies (stats.qdays, à vie,
+  // jamais remis à zéro) ouvrent des coffres aux paliers, une fois chacun (stats.qchest = coffres déjà ouverts).
+  // Un jour « tout fini » rapporte déjà ~250 pièces de quêtes + 50 à 300 de bonus ; les coffres ajoutent 20 250 pièces
+  // sur 365 jours finis, soit ~55 par jour fini (environ +15 %), étalées pour récompenser la régularité.
+  const CHESTS = [{ at: 4, coins: 250 }, { at: 10, coins: 500 }, { at: 25, coins: 1000 }, { at: 50, coins: 2000 }, { at: 100, coins: 3500 }, { at: 200, coins: 5000 }, { at: 365, coins: 8000 }];
+  // Coffres prêts à ouvrir : ceux d'après les déjà ouverts dont le palier est atteint.
+  const chestsReady = (days, opened) => CHESTS.slice(Math.max(0, num(opened))).filter(c => num(days) >= c.at);
+
+  const api = { WEEK_POOL, ofWeek, CHESTS, chestsReady, POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGQuests = api;
 })(typeof window !== 'undefined' ? window : globalThis);

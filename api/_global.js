@@ -10,6 +10,9 @@
 // changement ; gc:del = heure de la dernière suppression ; gc:rl:<id> = délai de 5 s ; gc:mute:<id> = fin du silence
 // (-1 = pour toujours) ; gc:mutes = { id: { until, n, by, t } } pour la page Owner ; gc:mods = les Modérateurs.
 // Aucun identifiant de joueur ne sort d'ici : les messages sont désignés par leur id, les joueurs par leur pseudo.
+// Ajouts du 2026-10-27 : réponses (r = { id, n, x } + ra = auteur cité, idée de Niall), grands tirages annoncés par le
+// serveur (sys: 'roll', idée de R77 ; file gc:sysq), message épinglé par le créateur (gc:pin, idée de Big Sexy) et
+// gc:gone = les 300 derniers messages supprimés ou modifiés (une citation ne montre jamais un texte retiré).
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
@@ -68,8 +71,15 @@ function checkMessage(raw) {
   if (rude(text)) throw refuse(422, RUDE);
   return text;
 }
+// Emojis (idée de Deadshot, 2026-10-27) : le « liant » invisible U+200D colle les emojis composés (👨‍👩‍👧, 🏳️‍🌈, ❤️‍🔥).
+// Il reste quand il est entre deux emojis ; partout ailleurs (entre des lettres, pour cacher un mot) il devient une espace.
+const PICTO = /^[\p{Extended_Pictographic}\u{FE0F}\u{1F3FB}-\u{1F3FF}]$/u;
+const charBefore = (s, i) => { const c = s.charCodeAt(i - 1); return c >= 0xdc00 && c <= 0xdfff ? s.slice(i - 2, i) : s.charAt(i - 1); };
+const charAfter = (s, i) => (i + 1 < s.length ? String.fromCodePoint(s.codePointAt(i + 1)) : '');
 function normalize(raw) {
-  return String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁯﻿]/g, ' ').replace(/\s+/g, ' ').trim();
+  const s = String(raw == null ? '' : raw);
+  return s.replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁯﻿]/g, (ch, i) => (ch === '‍' && PICTO.test(charBefore(s, i)) && PICTO.test(charAfter(s, i)) ? ch : ' '))
+    .replace(/\s+/g, ' ').trim();
 }
 
 // ---------------------------------------------------------------- @mentions (idée de casmictechthing, 2026-10-26)
@@ -105,10 +115,78 @@ const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'E
 
 // ---------------------------------------------------------------- lecture
 const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
-const view = (m, me) => ({ id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x,
+// Message du serveur (grand tirage) : pas d'auteur, pas de texte libre ; le site écrit la phrase (et la traduit).
+const view = (m, me, quote) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
+  id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x,
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
-  ...(me && Array.isArray(m.at) && m.at.includes(me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}) });
+  ...(me && ((Array.isArray(m.at) && m.at.includes(me)) || m.ra === me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}),
+  ...(m.r && quote ? { re: quote(m.r) } : {}) });
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
+
+// ---------------------------------------------------------------- réponses (idée de Niall, 2026-10-27)
+// Le message garde une petite référence { id, n: pseudo, x: ~60 premiers caractères }. À l'affichage, la citation suit
+// l'original : encore là → son texte actuel ; supprimé → « deleted » sans aucun texte ; modifié puis sorti des 100 →
+// sa nouvelle version (gc:gone). Le texte gardé ne sert que pour un original simplement trop ancien.
+const QUOTE = 60, GONE = 'gc:gone', GONE_KEEP = 300;
+const snip = x => { const c = [...String(x || '')]; return c.length > QUOTE ? `${c.slice(0, QUOTE).join('').trimEnd()}…` : c.join(''); };
+const goneWrites = rows => rows.length ? [['RPUSH', GONE, ...rows.map(r => JSON.stringify(r))], ['LTRIM', GONE, -GONE_KEEP, -1]] : [];
+async function quoter(msgs, all) {
+  const live = new Map(all.map(m => [m.id, m])), gone = new Map();
+  if (msgs.some(m => m.r && !live.has(m.r.id))) {
+    const [raw] = await redis([['LRANGE', GONE, 0, -1]]);
+    for (const g of (raw || []).map(parse).filter(Boolean)) gone.set(g.id, g); // le plus récent en dernier : il l'emporte
+  }
+  return r => {
+    const o = live.get(r.id);
+    if (o) return { id: r.id, name: o.n || 'Player', text: snip(o.x) };
+    const g = gone.get(r.id);
+    if (g && g.x == null) return { id: r.id, name: r.n || 'Player', gone: true };
+    return { id: r.id, name: r.n || 'Player', text: g ? g.x : r.x };
+  };
+}
+
+// ---------------------------------------------------------------- message épinglé (idée de Big Sexy, 2026-10-27)
+// Un seul, posé ou retiré par le créateur. Une copie (il reste épinglé même sorti des 100 derniers), suivie quand
+// l'original est modifié, retirée quand il est supprimé. Montré à tout le monde, lecteurs en lecture seule compris.
+const PIN = 'gc:pin';
+const pinCopy = m => { const c = { ...m }; delete c.a; delete c.at; delete c.ra; delete c.r; return c; };
+const pinView = raw => { const p = parse(raw); return p ? view(p, null) : null; };
+
+// ---------------------------------------------------------------- grands tirages (idée de R77, 2026-10-27)
+// Divine ou mieux (comme la mention 🔔 Big Rolls du Discord, api/_discord.js), décidé ici à partir du tirage du serveur
+// (api/_lib.js recordRoll). Annoncé 15 s plus tard (le joueur finit sa révélation avant que le chat la dévoile), au plus
+// un toutes les 30 s pour tout le chat et un toutes les 10 min par joueur ; jamais pour un joueur rendu muet.
+// La file gc:sysq (score = heure d'affichage) est vidée par la relecture du chat (list), sans requête en plus.
+const BIG = ['divine', 'godlike', 'infinite'], SYSQ = 'gc:sysq', SYS_DELAY = 15000, SYS_GAP = 30000, SYS_PLAYER_GAP = 10 * 60000;
+async function queueBigRoll(id, n, tier, t = Date.now()) {
+  if (!BIG.includes(tier) || !isPlayerId(id)) return false;
+  const [name, muted] = await redis([['HGET', 'names', id], ['GET', `gc:mute:${id}`]]);
+  if (!name || muted) return false;
+  const [mine] = await redis([['SET', `gc:sysp:${id}`, '1', 'PX', String(SYS_PLAYER_GAP), 'NX']]);
+  if (mine !== 'OK') return false;
+  const [all] = await redis([['SET', 'gc:sysrl', '1', 'PX', String(SYS_GAP), 'NX']]);
+  if (all !== 'OK') { await redis([['DEL', `gc:sysp:${id}`]]); return false; }
+  await redis([['ZADD', SYSQ, String(t + SYS_DELAY), JSON.stringify({ p: id, v: n, tr: tier, k: crypto.randomBytes(4).toString('hex') })]]);
+  return true;
+}
+async function flushSys(due) {
+  for (const member of due) {
+    const [claimed] = await redis([['ZREM', SYSQ, member]]);
+    if (Number(claimed) !== 1) continue; // un autre processus l'a pris
+    const e = parse(member); if (!e || !isPlayerId(e.p)) continue;
+    const [name, muted] = await redis([['HGET', 'names', e.p], ['GET', `gc:mute:${e.p}`]]);
+    if (!name || muted) continue; // rendu muet entre-temps
+    await append({ id: crypto.randomBytes(6).toString('hex'), sys: 'roll', n: name, v: Number(e.v), tr: e.tr });
+  }
+}
+// Ajoute un message en fin de liste. Heure strictement croissante : « since » ne perd jamais un message écrit dans la
+// même milliseconde.
+async function append(m, extra = () => []) { // extra(t) : écritures de plus, avec l'heure du message
+  const [last] = await redis([['LINDEX', KEY, -1]]);
+  m.t = Math.max(Date.now(), ((parse(last) || {}).t || 0) + 1);
+  await redis([['RPUSH', KEY, JSON.stringify(m)], ['LTRIM', KEY, -KEEP, -1], ['SET', REV, m.t], ...extra(m.t)]);
+  return m;
+}
 
 // Mon statut : puis-je écrire, et sinon pourquoi ; suis-je muet (jusqu'à quand) ; suis-je modérateur.
 async function meInfo(id, stats) {
@@ -121,32 +199,41 @@ async function meInfo(id, stats) {
 }
 
 // Relecture toutes les 3 s : réponse minuscule quand rien n'a changé (« same »). Après une suppression, la liste entière.
-async function list(body, me, stats) {
-  const [rev, del] = await redis([['GET', REV], ['GET', DEL]]);
-  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS };
+async function list(body, me, stats, again = false) {
+  const [rev, del, pin, due] = await redis([['GET', REV], ['GET', DEL], ['GET', PIN], ['ZRANGEBYSCORE', SYSQ, '-inf', String(Date.now()), 'LIMIT', '0', '5']]);
+  // Grand tirage arrivé à son heure : publié maintenant, puis relecture (une seule fois).
+  if (due && due.length && !again) { await flushSys(due); return list(body, me, stats, true); }
+  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS, pin: pinView(pin) };
   if (me) out.me = await meInfo(me, stats);
   const since = Number(body.since) || 0, seenDel = Number(body.del) || 0;
   if (body.rev != null && Number(body.rev) === out.rev && seenDel === out.del) return { ...out, same: true };
   const all = await readAll();
   const full = !since || seenDel !== out.del;
-  return { ...out, full, msgs: (full ? all : all.filter(m => m.t > since)).map(m => view(m, me)) };
+  const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all);
+  return { ...out, full, msgs: msgs.map(m => view(m, me, quote)) };
 }
 
 // ---------------------------------------------------------------- écriture
-async function post(me, stats, raw) {
+async function post(me, stats, raw, replyTo) {
   const info = await meInfo(me, stats);
   if (info.reason === 'muted') throw refuse(403, info.mutedUntil < 0 ? 'You can no longer write in the chat' : 'You are muted for now');
   if (info.reason === 'rolls') throw refuse(403, `Make ${MIN_ROLLS} rolls to write in the chat (you have ${info.rolls})`);
   const { text, at } = await prepare(raw, me);
   if (!text) throw refuse(422, 'Write a message first');
+  // Réponse (idée de Niall, 2026-10-27) : l'original doit encore être là, et ne pas être un message du serveur.
+  let r = null, ra = null;
+  if (replyTo) {
+    const { m: o } = await findMsg(String(replyTo));
+    if (o.sys) throw refuse(422, 'You cannot reply to this message');
+    r = { id: o.id, n: o.n || 'Player', x: snip(o.x) };
+    if (o.a && o.a !== me) ra = o.a; // l'auteur cité voit le point rouge, comme une @mention
+  }
   const [ok] = await redis([['SET', `gc:rl:${me}`, '1', 'PX', GAP_MS, 'NX']]);
   if (ok !== 'OK') throw refuse(429, 'Wait 5 seconds between messages');
   const [names, title] = await redis([['HMGET', 'names', me], ['HGET', 'titles', me]]), name = (names || [])[0];
-  // Heure strictement croissante : « since » ne perd jamais un message écrit dans la même milliseconde.
-  const [last] = await redis([['LINDEX', KEY, -1]]);
-  const t = Math.max(Date.now(), ((parse(last) || {}).t || 0) + 1);
-  const m = { id: crypto.randomBytes(6).toString('hex'), a: me, n: name || 'Player', ti: title || null, t, x: text, ...(at.ids.length ? { at: at.ids, an: at.names } : {}) };
-  await redis([['RPUSH', KEY, JSON.stringify(m)], ['LTRIM', KEY, -KEEP, -1], ['SET', REV, t], ['HINCRBY', 'feat:gchat', dayKey(t), 1], ...mentionWrites(at.ids, t)]);
+  const notify = ra && !at.ids.includes(ra) ? [...at.ids, ra] : at.ids;
+  const m = { id: crypto.randomBytes(6).toString('hex'), a: me, n: name || 'Player', ti: title || null, x: text, ...(at.ids.length ? { at: at.ids, an: at.names } : {}), ...(r ? { r, ...(ra ? { ra } : {}) } : {}) };
+  await append(m, t => [['HINCRBY', 'feat:gchat', dayKey(t), 1], ...mentionWrites(notify, t)]);
   return m;
 }
 
@@ -166,10 +253,12 @@ async function edit(me, stats, id, raw) {
   const next = { ...m, x: text, e: 1 }; delete next.at; delete next.an;
   if (at.ids.length) Object.assign(next, { at: at.ids, an: at.names });
   const t = Date.now();
-  const [ins] = await redis([['LINSERT', KEY, 'BEFORE', entry, JSON.stringify(next)]]);
+  const [ins, pin] = await redis([['LINSERT', KEY, 'BEFORE', entry, JSON.stringify(next)], ['GET', PIN]]);
   if (Number(ins) < 0) throw refuse(404, 'This message is gone');
   // DEL bouge aussi : les autres relisent la liste entière (une relecture « since » ne voit pas une modification).
-  await redis([['LREM', KEY, 1, entry], ['SET', REV, t], ['SET', DEL, t], ...mentionWrites(fresh, t)]);
+  // Les réponses à ce message citent sa nouvelle version (gc:gone), et l'épinglé la suit.
+  const pinned = (parse(pin) || {}).id === m.id ? [['SET', PIN, JSON.stringify(pinCopy(next))]] : [];
+  await redis([['LREM', KEY, 1, entry], ['SET', REV, t], ['SET', DEL, t], ...mentionWrites(fresh, t), ...goneWrites([{ id: m.id, x: snip(text) }]), ...pinned]);
 }
 
 async function findMsg(id) {
@@ -179,7 +268,12 @@ async function findMsg(id) {
   if (!entry) throw refuse(404, 'This message is gone');
   return { entry, m: parse(entry) };
 }
-async function remove(entry) { const t = Date.now(); await redis([['LREM', KEY, 1, entry], ['SET', REV, t], ['SET', DEL, t]]); }
+// Supprimé : plus aucune citation ne montre son texte (gc:gone), et il n'est plus épinglé.
+async function remove(entry) {
+  const t = Date.now(), m = parse(entry) || {};
+  const [pin] = await redis([['GET', PIN]]);
+  await redis([['LREM', KEY, 1, entry], ['SET', REV, t], ['SET', DEL, t], ...goneWrites([{ id: m.id }]), ...((parse(pin) || {}).id === m.id ? [['DEL', PIN]] : [])]);
+}
 
 // Silence : sur un message (on ne connaît jamais l'id de l'auteur côté site). Les modérateurs ne peuvent pas rendre
 // muet le créateur ni un autre modérateur. Le message est supprimé en même temps.
@@ -219,16 +313,25 @@ async function handle(body) {
   if (body.action === 'gcList') return list(body, me, stats);
   if (!me) throw refuse(400, 'Invalid player');
   const owner = Number(stats.owner) >= 1, mod = owner || stats.gcMod === '1';
-  if (body.action === 'gcSend') { await post(me, stats, body.text); return list({ since: body.since, del: body.del }, me, stats); }
+  if (body.action === 'gcSend') { await post(me, stats, body.text, body.replyTo); return list({ since: body.since, del: body.del }, me, stats); }
   if (body.action === 'gcReport') {
     const { m } = await findMsg(body.id);
+    if (m.sys) throw refuse(422, 'You cannot report this message'); // message du serveur
     return Reports.fileReport({ reporter: me, author: m.a, text: m.x, where: 'global chat', msgT: m.t });
+  }
+  // Épingler / désépingler (idée de Big Sexy, 2026-10-27) : le créateur seul (pas les modérateurs ni les lecteurs).
+  if (body.action === 'gcPin' || body.action === 'gcUnpin') {
+    if (!owner) throw refuse(403, 'Owner only');
+    if (body.action === 'gcUnpin') await redis([['DEL', PIN]]);
+    else { const { m } = await findMsg(body.id); await redis([['SET', PIN, JSON.stringify(pinCopy(m))]]); }
+    return list({}, me, stats);
   }
   if (body.action === 'gcEdit') { await edit(me, stats, String(body.id || ''), body.text); return list({}, me, stats); }
   if (['gcDelete', 'gcMute'].includes(body.action)) {
     const { entry, m } = await findMsg(body.id);
     // Supprimer son propre message (idée de daddy finger, 2026-10-26) ; le reste est réservé aux modérateurs.
     if (!mod && !(body.action === 'gcDelete' && m.a === me)) throw refuse(403, 'Moderators only');
+    if (body.action === 'gcMute' && m.sys) throw refuse(422, 'This message was posted by the game');
     if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''));
     await remove(entry);
     return list({}, me, stats);
@@ -249,4 +352,4 @@ async function handle(body) {
   throw refuse(400, 'Unknown action');
 }
 
-module.exports = { handle, checkMessage, KEEP, MAX, MIN_ROLLS, EDIT_MS };
+module.exports = { handle, checkMessage, queueBigRoll, BIG, KEEP, MAX, MIN_ROLLS, EDIT_MS };

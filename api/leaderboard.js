@@ -1,7 +1,7 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
+const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -78,6 +78,56 @@ async function migrateXp() {
   }
   if (!todo.length) await redis([['SET', MIGRATED, MIGRATION], ['DEL', `${MIGRATED}:ids`]]);
   await redis([['DEL', `${MIGRATED}:lock`]]);
+}
+
+// Classement « Most rolls » (idée de CrazyMiner22 et WpBejs, 2026-10-27) : lb:rolls est incrémenté à chaque tirage par
+// recordRoll ; les joueurs d'avant y sont versés une fois, en fond (toutes les 5 s, deploy/ovh/api-server.js), depuis le
+// compteur stats.rolls : aucun historique n'est relu (lenteurs du 2026-10-25), 300 joueurs par lecture groupée.
+// Sans danger à rejouer : on n'ajoute que l'écart entre stats.rolls et la valeur du classement (ZINCRBY), si bien qu'un
+// tirage fait pendant le versement n'est ni perdu ni compté deux fois. Les joueurs sont pris dans l'ordre de leur id
+// (lb:rolls:cursor = le dernier traité), tous ceux qui ont un compteur count:all (rempli par migrateXp pour chacun).
+const ROLLS_DONE = 'lb:rolls:migrated', ROLLS_CURSOR = 'lb:rolls:cursor', ROLLS_BATCH = 300;
+async function migrateRolls() {
+  const [done] = await redis([['GET', ROLLS_DONE]]);
+  if (done) return;
+  const [lock] = await redis([['SET', `${ROLLS_DONE}:lock`, '1', 'NX', 'PX', 20000]]);
+  if (lock !== 'OK') return;
+  try {
+    const start = Date.now();
+    const [ids, cursor] = await redis([['HKEYS', 'count:all'], ['GET', ROLLS_CURSOR]]);
+    const todo = (ids || []).filter(id => !cursor || id > cursor).sort();
+    for (let i = 0; i < todo.length && Date.now() - start < MIGRATE_BUDGET_MS; i += ROLLS_BATCH) {
+      const batch = todo.slice(i, i + ROLLS_BATCH);
+      // Même lecture groupée : compteur des stats, count:all (joueurs d'avant les stats) et valeur actuelle du classement.
+      const out = await redis([...batch.map(id => ['HGET', statsKey(id), 'rolls']), ['HMGET', 'count:all', ...batch], ['ZMSCORE', ROLLS_LB, ...batch]]);
+      const counts = out[batch.length] || [], ranked = out[batch.length + 1] || [];
+      const writes = [];
+      batch.forEach((id, j) => {
+        const want = Number(out[j]) || Number(counts[j]) || 0, gap = want - (Number(ranked[j]) || 0);
+        if (gap > 0) writes.push(['ZINCRBY', ROLLS_LB, gap, id]);
+      });
+      writes.push(['SET', ROLLS_CURSOR, batch[batch.length - 1]]);
+      await redis(writes);
+      await breathe();
+    }
+    const [last] = await redis([['GET', ROLLS_CURSOR]]);
+    if (!todo.length || last === todo[todo.length - 1]) await redis([['SET', ROLLS_DONE, String(Date.now())], ['DEL', ROLLS_CURSOR]]);
+  } finally {
+    await redis([['DEL', `${ROLLS_DONE}:lock`]]);
+  }
+}
+async function rollsBoard(me) {
+  await Promise.race([migrateRolls().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
+  const [flat, players, myRank, myCount, total] = await redis([['ZREVRANGE', ROLLS_LB, 0, LIMIT - 1, 'WITHSCORES'], ['ZCARD', ROLLS_LB], ['ZREVRANK', ROLLS_LB, me || '-'], ['ZSCORE', ROLLS_LB, me || '-'], ['GET', 'rolls:all']]);
+  const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
+  const outside = me && myRank !== null && Number(myRank) >= LIMIT;
+  const wanted = outside ? [...rows, [me, Number(myCount)]] : rows;
+  const marks = await bestAwards(wanted.map(x => x[0]));
+  const [names, titles, xps] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', XP_LB, ...wanted.map(x => x[0])]]) : [[], [], []];
+  const clans = await tagsOf(wanted.map(x => x[0]));
+  // count : tirages à vie ; xp : XP à vie (affichée en petit, pour l'XP moyenne par tirage).
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], xp: Number(xps && xps[i]) || 0, me: x[0] === me });
+  return { period: 'rolls', entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null, players: Number(players) || 0, rolls: Number(total) || 0, rollsToday: 0 };
 }
 
 // Classement des pièces : le solde n'est stocké nulle part (il se calcule depuis les stats), donc on le recalcule pour
@@ -159,10 +209,11 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
     if (period === 'event') return send(res, 200, await eventBoard(me));
+    if (period === 'rolls') return send(res, 200, await rollsBoard(me));
     const t = Date.now();
     // Recalcul après un changement de badges : en arrière-plan, la page attend 250 ms au plus (le classement Poubelle restait
     // bloqué plusieurs secondes sur « not loading » pendant le recalcul, signalé le 2026-10-17). Il avance par lots à
@@ -228,3 +279,4 @@ module.exports = async (req, res) => {
   }
 };
 module.exports.migrateXp = migrateXp; // relancé en fond par deploy/ovh/api-server.js
+module.exports.migrateRolls = migrateRolls; // idem : versement unique des anciens joueurs dans lb:rolls

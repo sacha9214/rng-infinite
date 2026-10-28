@@ -62,6 +62,15 @@ async function state(id) {
   // Le skin Owner n'appartient qu'au compte du créateur (stats.owner, posé à sa connexion Google) : ni achetable ni donné.
   // Succès Coin Millionaire (idée d'A Dude, 2026-10-21) : posé une fois, la première fois que le solde atteint 1 000 000.
   if (!Number(stats.millionaire) && Shop.balance(stats) >= 1000000) await redis([['HSET', statsKey(id), 'millionaire', 1]]);
+  // Sound Collector et Shopaholic (idées de dailycb, 2026-10-27) : posés une fois, d'après ce qui vient d'être lu (aucune
+  // lecture en plus) ; ici plutôt qu'après chaque achat, pour que les joueurs qui avaient déjà tout les obtiennent aussi.
+  // Shopaholic : tout ce qui s'achète en pièces, possédé en même temps (hors limités et Prestige, en stock limité).
+  { const has = (list, set) => list.every(x => (set || []).includes(x)), w = [];
+    const allSounds = has(Shop.collectibleSets.sounds(), snds);
+    if (allSounds && !Number(stats.allSounds)) w.push('allSounds', 1);
+    if (!Number(stats.allShop) && allSounds && Shop.speedLevel(stats.speedLv) === Shop.SPEED.prices.length && has(Shop.collectible(), owned) &&
+      has(Shop.collectibleSets.buttons(), bought) && has(Shop.collectibleSets.emotes(), emotes) && has(Shop.collectibleSets.walls(), walls)) w.push('allShop', 1);
+    if (w.length) await redis([['HSET', statsKey(id), ...w]]); }
   const isOwner = Number(stats.owner) >= 1, isSupporter = Number(stats.supporter) >= 1, isFisher = Number(stats.collabFish) >= 1;
   // Un skin réservé (Owner, Supporter) ne se porte que si le joueur y a droit.
   const allowed = s => !Shop.byId.get(s).hidden || (s === 'owner' ? isOwner : s === 'supporter' ? isSupporter : s === 'fisher' ? isFisher : false);
@@ -141,10 +150,11 @@ module.exports = async (req, res) => {
         } else if (st.coins < box.price) return send(res, 422, { error: `Not enough coins: ${box.price - st.coins} more needed` });
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         // Caisse de fonds d'écran (idée de CrazyMiner22) : le fond gagné rejoint walls:<id>, comme un achat (buywall).
-        const duplicate = (box.wall ? st.walls : st.owned).includes(won);
+        // Caisse de boutons (idée de shadow2, 2026-10-27) : le bouton gagné rejoint btns:<id>, comme un achat (buybutton).
+        const duplicate = (box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
-        if (!duplicate) writes.push(['SADD', box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
+        if (!duplicate) writes.push(['SADD', box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
@@ -243,7 +253,7 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, duck: Gamble.duck, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
     if (GAMES[body.action]) {
       // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
