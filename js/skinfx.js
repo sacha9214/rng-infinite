@@ -6922,6 +6922,143 @@
     };
   };
 
+  // 🌦️ Weather (2026-10-28, idée de casmicgraything) — une fenêtre de ciel par chiffre (les cases), du pire au meilleur
+  // temps : orage, pluie, vent, nuages, soleil, arc-en-ciel. La scène peint les ciels dans la carte, derrière les
+  // chiffres : brouillard qui tourne tant que le chiffre n'est pas posé, puis son temps arrive d'un coup (un éclair
+  // frappe, l'averse tombe, une rafale passe, les nuages entrent, le soleil se lève) ; au sixième, un arc-en-ciel se
+  // trace d'un bout à l'autre de la carte et déborde autour d'elle. Révélation : tirage raté, un ciel gris roule sur
+  // toutes les fenêtres et il pleut partout un moment ; sinon l'arc-en-ciel s'avive (un second arc dès Epic) ; dès
+  // Mythic, tous les temps éclatent en même temps (éclairs partout, averse, rafales, soleil qui clignote, .wth-chaos
+  // fait trembler les fenêtres), puis tout se calme sous un double arc-en-ciel et des étincelles.
+  SCENES.weather = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const el = env.el;
+    if (el) el.classList.remove('wth-chaos');
+    const B0 = (card.w - w) / 2, cw0 = card.w;
+    const SKY = [['#2e2a4f', '#16142b'], ['#3d4a5f', '#2c3748'], ['#4e7487', '#36586b'], ['#8094aa', '#a9b8c8'], ['#0ea5e9', '#7dd3fc'], ['#38bdf8', '#bae6fd']];
+    const BOW = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7'];
+    const st = new Map(), rain = particles(), gusts = particles(), sparks = particles(), bolts = timed(), flashes = timed(), emitRain = emitter(), emitGust = emitter();
+    let t = 0, build = 0, bow = 0, bowAt = -9, bow2 = 0, boost = 0, chaos = 0, gloom = 0, gloomAt = -9;
+    const later = [], after = (d, fn) => later.push({ at: t + d, fn }), outBolts = [];
+    const sx = () => w / (card.w - 2 * B0); // la toile intérieure est étirée quand la carte rétrécit
+    const inX = x => (x - card.x - B0) * sx(), inY = y => y - card.y - B0;
+    const cloud = (c, x, y, r, col, a) => { c.globalAlpha = a; c.fillStyle = col; c.beginPath(); c.arc(x - r * .9, y + r * .2, r * .55, 0, TAU); c.arc(x, y - r * .1, r * .8, 0, TAU); c.arc(x + r * .9, y + r * .25, r * .5, 0, TAU); c.rect(x - r * .9, y + r * .2, r * 1.8, r * .55); c.fill(); };
+    const strike = (pn, big) => { bolts.add({ life: big ? .3 : .22, pn, seed: rnd(1e3), big }); flashes.add({ life: .25, pn }); };
+    // l'arc-en-ciel : une demi-ellipse posée sous le bas de la carte, juste plus large qu'elle (ses pieds sortent de
+    // chaque côté), son sommet en haut de la carte
+    const rainbow = (c, cx, cy, rx, ry, band, sweep, a) => {
+      c.lineWidth = band; c.lineCap = 'butt';
+      BOW.forEach((col, i) => { c.globalAlpha = a; c.strokeStyle = col; c.beginPath(); c.ellipse(cx, cy, Math.max(1, rx - i * band), Math.max(1, ry - i * band), 0, Math.PI, Math.PI + Math.PI * clamp(sweep)); c.stroke(); });
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = later.length - 1; i >= 0; i--) if (later[i].at <= t) later.splice(i, 1)[0].fn();
+        const S = slotsA(env).filter(s => !s.gone), k6 = sx();
+        // les fenêtres
+        const panes = S.map(s => ({ s, kind: Math.min(5, s.i), x: inX(s.x - s.w / 2), y: inY(s.top), pw: s.w * k6, ph: s.bottom - s.top }));
+        for (const P of panes) {
+          const { s, kind, x, y, pw, ph } = P;
+          let e = st.get(s.i);
+          if (s.on && !e) {
+            e = { at: t, clouds: [0, 1].map(j => ({ u: rnd(), v: .2 + .3 * j, r: rnd(.2, .28), sp: rnd(.04, .08) * (j ? -1 : 1) })) };
+            st.set(s.i, e);
+            if (kind === 0) strike(s.i, 1);
+            if (kind === 1) for (let n = 0; n < 14; n++) rain.add({ pn: s.i, x: rnd(pw), y: rnd(-ph * .3, ph), vx: -ph * .5, vy: ph * 3.2, max: rnd(.5, .9) });
+            if (kind === 2) for (let n = 0; n < 4; n++) gusts.add({ pn: s.i, x: -rnd(pw), y: rnd(.15, .85) * ph, vx: pw * rnd(2.5, 4), vy: 0, max: .7, len: rnd(.4, .7) });
+            if (kind >= 5 && !bow) { bow = 1; bowAt = t; }
+          }
+          const arrive = e ? clamp((t - e.at) / .35) : 0, a0 = s.ghost ? .35 : 1;
+          ci.save(); roundRect(ci, x, y, pw, ph, Math.min(pw, ph) * .18); ci.clip();
+          // brouillard (pas encore de temps)
+          if (arrive < 1) {
+            const g = ci.createLinearGradient(0, y, 0, y + ph); g.addColorStop(0, '#64748b'); g.addColorStop(1, '#94a3b8');
+            ci.globalAlpha = a0; ci.fillStyle = g; ci.fillRect(x, y, pw, ph);
+            const spin = 1 + 2.5 * (build && !s.on ? 1 : 0);
+            for (let j = 0; j < 3; j++) dot(ci, '#e2e8f0', x + pw * (.5 + .45 * Math.sin(t * .9 * spin + j * 2.1 + s.i)), y + ph * (.3 + .25 * j + .1 * Math.cos(t * 1.3 * spin + j)), pw * .55, .35 * a0);
+          }
+          if (arrive > 0) {
+            ci.globalAlpha = a0 * arrive;
+            const sk = SKY[kind], g = ci.createLinearGradient(0, y, 0, y + ph); g.addColorStop(0, sk[0]); g.addColorStop(1, sk[1]);
+            ci.fillStyle = g; ci.fillRect(x, y, pw, ph);
+            const A = a0 * arrive;
+            if (kind === 0 && !chaos && Math.random() < dt * .7) strike(s.i, 0);
+            if (kind === 1 || chaos) for (let n = emitRain((chaos ? 90 : 40) * q * (kind === 1 || chaos ? 1 : 0) / Math.max(1, chaos ? panes.length : 1), dt); n > 0; n--) rain.add({ pn: s.i, x: rnd(pw * 1.3), y: -4, vx: -ph * .5, vy: ph * rnd(2.8, 3.6), max: rnd(.4, .6) });
+            if ((kind === 2 || chaos) && emitGust(chaos ? 6 : 2.2, dt)) gusts.add({ pn: s.i, x: -pw * .6, y: rnd(.15, .85) * ph, vx: pw * rnd(2.5, 4), vy: 0, max: .7, len: rnd(.4, .7) });
+            if (kind === 3 || chaos) for (const c of e.clouds) { const u = (((c.u + t * c.sp) % 1.6) + 1.6) % 1.6 - .3; cloud(ci, x + u * pw, y + c.v * ph, c.r * pw * 1.4, kind === 3 ? '#f1f5f9' : '#cbd5e1', A * (kind === 3 ? .9 : .7)); }
+            if (kind === 4 || kind === 5 || chaos) { // le soleil (et ses rayons qui tournent)
+              const sx0 = x + pw * .74, sy0 = y + ph * .2, rise = kind === 4 ? outBack(clamp((t - e.at) / .5)) : 1, r = pw * .2 * rise, blink = chaos ? (Math.sin(t * 30 + s.i) > 0 ? 1 : .4) : 1;
+              if (kind === 4 || chaos) {
+                ci.globalCompositeOperation = 'lighter'; dot(ci, '#fde047', sx0, sy0, r * 3.2 * (1 + boost * .6), .55 * A * blink); ci.globalCompositeOperation = 'source-over';
+                for (let j = 0; j < 8; j++) { const an = t * .8 + j * TAU / 8; line(ci, '#fde047', sx0 + Math.cos(an) * r * 1.3, sy0 + Math.sin(an) * r * 1.3, sx0 + Math.cos(an) * r * (1.9 + boost), sy0 + Math.sin(an) * r * (1.9 + boost), Math.max(1, pw * .04), A * .9 * blink); }
+                ci.globalAlpha = A; ci.fillStyle = '#fde047'; ci.beginPath(); ci.arc(sx0, sy0, Math.max(.1, r), 0, TAU); ci.fill();
+              }
+            }
+          }
+          ci.restore();
+          P.e = e;
+        }
+        const byI = new Map(panes.map(P => [P.s.i, P]));
+        // pluie, rafales, éclairs et flashs, chacun dans sa fenêtre
+        rain.step(dt); gusts.step(dt);
+        const inPane = (pn, fn) => { const P = byI.get(pn); if (!P) return; ci.save(); roundRect(ci, P.x, P.y, P.pw, P.ph, 3); ci.clip(); fn(P); ci.restore(); };
+        rain.each(r => inPane(r.pn, P => line(ci, '#bfdbfe', P.x + r.x, P.y + r.y, P.x + r.x + P.ph * .05, P.y + r.y - P.ph * .2, 1.2, P.s.ghost ? .25 : .7)));
+        gusts.each((g, k) => inPane(g.pn, P => { ci.globalAlpha = Math.sin(k * Math.PI) * (P.s.ghost ? .3 : .85); ci.strokeStyle = '#f8fafc'; ci.lineWidth = 1.3; ci.lineCap = 'round'; ci.beginPath(); const x0 = P.x + g.x, y0 = P.y + g.y, L = P.pw * g.len; ci.moveTo(x0 - L, y0); ci.quadraticCurveTo(x0 - L * .3, y0 - P.ph * .03, x0, y0); ci.arc(x0, y0 - P.ph * .05, P.ph * .05, Math.PI / 2, -Math.PI / 2 + .4, true); ci.stroke(); }));
+        flashes.run(dt, (f, k) => inPane(f.pn, P => { ci.globalAlpha = (1 - k) * .55; ci.fillStyle = '#ede9fe'; ci.fillRect(P.x, P.y, P.pw, P.ph); }));
+        bolts.run(dt, (b, k) => inPane(b.pn, P => { const a = k < .3 ? 1 : (1 - k) / .7, xs = P.x + P.pw * (.35 + .3 * Math.sin(b.seed)); bolt(ci, xs, P.y, xs + P.pw * .15 * Math.cos(b.seed), P.y + P.ph * (b.big ? .95 : .7), P.pw * .25, ['#a78bfa', '#e9d5ff', '#ffffff'], a * (P.s.ghost ? .3 : 1), Math.max(.6, P.pw / 40)); }));
+        ci.globalAlpha = 1;
+        // ciel gris du tirage raté : il roule par-dessus toutes les fenêtres, derrière les chiffres
+        if (gloom > 0) {
+          const k = clamp((t - gloomAt) / .6), out = clamp((t - gloomAt - 3) / 1.2), a = k * (1 - out);
+          if (out >= 1) gloom = 0;
+          ci.globalAlpha = .5 * a; ci.fillStyle = '#475569'; ci.fillRect(0, 0, w, h);
+          for (let j = 0; j < 5; j++) cloud(ci, lerp(-w * .3, w * (.1 + .2 * j), k) + Math.sin(t + j) * 4, h * (.12 + .08 * (j % 2)), h * .35, '#94a3b8', .85 * a);
+          if (a > .2) for (let n = emitRain(60 * q, dt); n > 0; n--) rain.add({ pn: -1, x: rnd(w), y: -4, vx: -h * .5, vy: h * 3, max: .5 });
+          rain.each(r => { if (r.pn === -1) line(ci, '#cbd5e1', r.x, r.y, r.x + h * .05, r.y - h * .2, 1.2, .6 * a); });
+          ci.globalAlpha = 1;
+        }
+        // l'arc-en-ciel, d'un bout à l'autre de la carte : dans la carte derrière les chiffres, et autour d'elle
+        if (bow > 0) {
+          const sweep = outCubic((t - bowAt) / .8), ccx = card.x + card.w / 2, band = card.h * .06, rx = card.w * .56, ry = card.h * .94, ccy = card.y + card.h * 1.04, fade = gloom ? .35 : 1;
+          const a = Math.min(1, .5 + .35 * boost) * fade, o2 = band * 8;
+          ci.save(); ci.translate(-(card.x + B0) * k6, -(card.y + B0)); ci.scale(k6, 1); rainbow(ci, ccx, ccy, rx, ry, band, sweep, a * .5); if (bow2) rainbow(ci, ccx, ccy, rx + o2, ry + o2, band * .8, sweep, a * .35 * bow2); ci.restore();
+          behind(env, () => { rainbow(co, ccx, ccy, rx, ry, band, sweep, a * (dark ? .6 : .75)); if (bow2) rainbow(co, ccx, ccy, rx + o2, ry + o2, band * .8, sweep, a * (dark ? .35 : .45) * bow2); });
+          co.globalAlpha = 1;
+        }
+        boost = Math.max(0, boost - dt * .5);
+        // étincelles (Mythic, après le calme)
+        sparks.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((p, k) => { const tw = .5 + .5 * Math.sin(t * 14 + p.seed); dot(co, p.c, p.x, p.y, 4 + 3 * tw, (1 - k) * tw); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+        // pendant le chaos, des éclairs autour de la carte aussi
+        if (chaos && Math.random() < dt * 6) { const x0 = rnd(card.x - card.h * .8, card.x + card.w + card.h * .8); outBolts.push({ x0, at: t, seed: rnd(1e3) }); }
+        for (let i = outBolts.length - 1; i >= 0; i--) { const b = outBolts[i], k = (t - b.at) / .25; if (k > 1) { outBolts.splice(i, 1); continue; } behind(env, () => bolt(co, b.x0, card.y - card.h * 1.2, b.x0 + card.h * .3 * Math.sin(b.seed), card.y - card.h * .05, card.h * .3, dark ? ['#a78bfa', '#e9d5ff', '#ffffff'] : ['#c4b5fd', '#7c3aed', '#4c1d95'], 1 - k, 1.1)); }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { gloom = 1; gloomAt = t; return; }
+        boost = .6 + .8 * p;
+        if (!bow) { bow = 1; bowAt = t; } // nombre court sans sixième fenêtre : l'arc-en-ciel vient quand même
+        if (p >= .62) bow2 = 1;
+        if (p < 1) return;
+        // Mythic et plus : tous les temps d'un coup, les fenêtres tremblent, puis le calme
+        chaos = 1; if (el) el.classList.add('wth-chaos');
+        const S = slotsA(env).filter(s => !s.gone);
+        S.forEach((s, j) => { strike(s.i, 1); later.push({ at: t + .35 + j * .07, fn: () => strike(s.i, 1) }); if (!st.has(s.i)) st.set(s.i, { at: t, clouds: [{ u: .2, v: .25, r: .24, sp: .07 }, { u: .9, v: .5, r: .22, sp: -.06 }] }); });
+        after(1.25 + .3 * asc, () => {
+          chaos = 0; if (el) el.classList.remove('wth-chaos');
+          boost = 1.6; bow2 = 1; bowAt = t - .2;
+          for (let n = Math.round((24 + 14 * asc) * q); n > 0; n--) sparks.add({ x: rnd(card.x - card.h * .6, card.x + card.w + card.h * .6), y: card.y + rnd(-1.1, .2) * card.h, vx: rnd(-10, 10), vy: rnd(-25, -5), max: rnd(1.2, 2.2), seed: rnd(TAU), c: pick(BOW) });
+        });
+      },
+    };
+  };
+
   // ==== fin des skins du 2026-10-28 (costoroll, casmicgraything) ====
 
   function mount(stage, card, skin, o = {}) {

@@ -8759,7 +8759,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   background: radial-gradient(ellipse 30% 40% at 50% 100%, #3f3f46 0 60%, transparent 70%), repeating-linear-gradient(170deg, #f1d38a 0 .045em, #a47a2c .045em .085em), #b8902f;
   box-shadow: 0 .05em .06em rgba(0, 0, 0, .55); }
 .skin-lightbulb .slot.ghost { opacity: .22; }
-.skin-lightbulb .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+.skin-lightbulb .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
 .skin-lightbulb .slot.collapsed::after { display: none; }
 /* Pendant le tirage : allumée à fond, l'ombre floue du chiffre dedans, l'ampoule tremble en bourdonnant. */
 .skin-lightbulb .slot.spinning { opacity: 1; color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8);
@@ -8826,6 +8826,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .skin-stonks .slot { position: relative; z-index: 1; font-size: .86em; font-weight: 800; color: #f8fafc;
   text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(148, 163, 184, .35); }
 .skin-stonks .slot.ghost { opacity: .2; }
+.skin-stonks .slot.collapsed { opacity: 0; } /* sinon l'opacité des zéros de tête l'emporte et le zéro replié déborde */
 /* Pendant le tirage : un cours en direct, qui clignote vert et rouge en sautillant. */
 .skin-stonks .slot.spinning { opacity: 1; animation: stonk-quote .3s steps(1) infinite; }
 .skin-stonks .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
@@ -8873,6 +8874,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .skin-chess .slot { position: relative; z-index: 1; font-weight: 900; color: #fef3c7;
   text-shadow: .045em 0 0 #5b3a1e, -.045em 0 0 #5b3a1e, 0 .045em 0 #5b3a1e, 0 -.045em 0 #5b3a1e, .032em .032em 0 #5b3a1e, -.032em .032em 0 #5b3a1e, .032em -.032em 0 #5b3a1e, -.032em -.032em 0 #5b3a1e, 0 .09em .06em rgba(0, 0, 0, .55); }
 .skin-chess .slot.ghost { opacity: .25; }
+.skin-chess .slot.collapsed { opacity: 0; }
 /* Pendant le tirage : la pendule bat, les chiffres pâles basculent d'un cran à chaque tic. */
 .skin-chess .slot.spinning { opacity: 1; color: rgba(254, 243, 199, .55); animation: chs-tick .5s steps(1) infinite; }
 .skin-chess .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
@@ -8898,3 +8900,65 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes chs-rise { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px) scale(1.08); } }
 .room-stage.many .side-chess::before, .room-stage.many .side-chess::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-chess::before, .side-chess::after { animation: none; } }
+/* ------------------------------------------------------------------ Weather (idée de casmicgraything, 2026-10-28) : la
+   bande de prévisions d'une appli météo, une fenêtre de ciel par chiffre, du pire au meilleur temps : orage, pluie,
+   vent, nuages, soleil, et arc-en-ciel sur la sixième (au-delà, toujours l'arc-en-ciel). Chiffres blancs cernés de
+   bleu nuit, lisibles sur tous les ciels. Au repos (boutique, duels), chaque fenêtre porte son petit symbole ; pendant
+   un tirage, la scène (js/skinfx.js, SCENES.weather) peint elle-même les ciels : brouillard tant que le chiffre n'est
+   pas posé, puis son temps qui arrive (éclair, averse, rafale, nuages, soleil, arc-en-ciel sur toute la carte).
+   Mythic et plus : .wth-chaos, tous les temps éclatent en même temps et les fenêtres tremblent, puis tout se calme.
+   (Différent de Storm et de Rainbow, qui ne sont pas touchés.) */
+.num-card.skin-weather {
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border: 2px solid #334155; border-radius: .55rem; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(186, 230, 253, .12), 0 0 14px rgba(125, 211, 252, .18), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .2em .26em;
+}
+.skin-weather .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.42em; margin: 0 .03em; padding-top: .1em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .2em; color: #fff;
+  text-shadow: .04em 0 0 #0f172a, -.04em 0 0 #0f172a, 0 .04em 0 #0f172a, 0 -.04em 0 #0f172a, .03em .03em 0 #0f172a, -.03em .03em 0 #0f172a, .03em -.03em 0 #0f172a, -.03em -.03em 0 #0f172a, 0 .07em .08em rgba(0, 0, 0, .5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), inset 0 -.1em .2em rgba(0, 0, 0, .18);
+  background: linear-gradient(180deg, #38bdf8, #bae6fd);
+}
+/* les six ciels, de l'orage au grand beau ; un petit symbole dans le coin */
+.skin-weather .slot:nth-of-type(1) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'><path d='M6 0L2 7h3l-2 5 6-8H6l2-4z' fill='%23facc15'/></svg>") 8% 6% / .3em .36em no-repeat, radial-gradient(ellipse 90% 40% at 50% 0, #4c4a6e, transparent 70%), linear-gradient(180deg, #2e2a4f, #1e1b3a 70%, #16142b); }
+.skin-weather .slot:nth-of-type(2) { background: repeating-linear-gradient(104deg, transparent 0 .13em, rgba(191, 219, 254, .38) .13em .15em, transparent .15em .26em), linear-gradient(180deg, #3d4a5f, #2c3748); }
+.skin-weather .slot:nth-of-type(3) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'><path d='M1 3h8a2 2 0 1 0-2-2M1 6h11a2 2 0 1 1-2 2' fill='none' stroke='white' stroke-opacity='.8' stroke-width='1.2' stroke-linecap='round'/></svg>") 10% 8% / .36em .26em no-repeat, linear-gradient(180deg, #4e7487, #36586b); }
+.skin-weather .slot:nth-of-type(4) { background: radial-gradient(circle at 22% 18%, #fff 0 .09em, transparent .1em), radial-gradient(circle at 34% 13%, #fff 0 .12em, transparent .13em), radial-gradient(ellipse 22% 9% at 30% 20%, #fff 60%, transparent 70%), linear-gradient(180deg, #8094aa, #a9b8c8); }
+.skin-weather .slot:nth-of-type(5) { background: radial-gradient(circle at 82% 16%, #fef08a 0 .11em, rgba(250, 204, 21, .55) .12em .2em, transparent .3em), linear-gradient(180deg, #0ea5e9, #7dd3fc); }
+.skin-weather .slot:nth-of-type(n+6) { background: radial-gradient(circle at 50% 118%, transparent 0 46%, rgba(168, 85, 247, .7) 46% 51%, rgba(59, 130, 246, .7) 51% 56%, rgba(34, 197, 94, .7) 56% 61%, rgba(250, 204, 21, .75) 61% 66%, rgba(249, 115, 22, .7) 66% 71%, rgba(239, 68, 68, .7) 71% 76%, transparent 76%), linear-gradient(180deg, #38bdf8, #bae6fd); }
+/* pendant un tirage, la scène peint les ciels : les fenêtres ne gardent que leur cadre */
+.num-card.skin-weather.has-fx .slot { background: none; }
+.skin-weather .slot.ghost { opacity: .3; }
+.skin-weather .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : dans le brouillard, pâles et flous, ils dérivent. */
+.skin-weather .slot.spinning { opacity: 1; color: rgba(255, 255, 255, .5); text-shadow: 0 0 .1em rgba(15, 23, 42, .6); filter: blur(.6px); animation: wth-drift .8s ease-in-out infinite alternate; }
+.skin-weather .slot.spinning:nth-of-type(2n) { animation-delay: -.4s; }
+@keyframes wth-drift { from { transform: translateX(-.03em); } to { transform: translateX(.03em); } }
+/* Le temps arrive : le chiffre sort du brouillard, gonfle un peu (de l'air, pas de la pierre) et se pose. */
+.skin-weather .slot.revealed { animation: wth-arrive .55s backwards; }
+@keyframes wth-arrive {
+  0% { transform: scale(.82); filter: blur(1.5px) brightness(.8); animation-timing-function: cubic-bezier(.3, 0, .8, .5); }
+  20% { transform: scale(1.14); filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: scale(.96); filter: none; }
+  64% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+/* Mythic et plus : tous les temps à la fois, les fenêtres tremblent, puis tout se calme. */
+.num-card.skin-weather.wth-chaos .slot { animation: wth-quake .11s steps(2) infinite; }
+.num-card.skin-weather.wth-chaos .slot:nth-of-type(2n) { animation-delay: -.05s; }
+@keyframes wth-quake { 0% { transform: translate(-.04em, .02em) rotate(-2deg); } 100% { transform: translate(.04em, -.02em) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .skin-weather .slot { animation: none !important; } }
+/* Cadre de duel : un ciel qui s'éclaircit de gauche à droite ; ⛈️ gronde, 🌈 brille. */
+.side-weather { --side-border: #38bdf8; --side-glow: 0 0 16px rgba(56, 189, 248, .28); --side-ink: #0284c7;
+  --side-bg: linear-gradient(90deg, rgba(46, 42, 79, .3), rgba(61, 74, 95, .22) 30%, rgba(128, 148, 170, .18) 60%, rgba(56, 189, 248, .2));
+  --deco-a: '⛈️'; --deco-b: '🌈'; }
+.side-weather::before { animation: wth-rumble 2.4s steps(1) infinite; }
+.side-weather::after { animation: wth-shine 2.2s ease-in-out infinite; }
+@keyframes wth-rumble { 0%, 70%, 100% { transform: none; filter: none; } 74% { transform: translateX(-2px); filter: brightness(1.8); } 78% { transform: translateX(2px); } 82% { transform: translateX(-1px); filter: brightness(1.4); } }
+@keyframes wth-shine { 0%, 100% { transform: scale(.92); filter: none; } 50% { transform: scale(1.08); filter: drop-shadow(0 0 4px #fde047); } }
+.room-stage.many .side-weather::before, .room-stage.many .side-weather::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-weather::before, .side-weather::after { animation: none; } }

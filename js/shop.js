@@ -164,6 +164,9 @@
     // Idée de casmicgraything (2026-10-28) : un échiquier du noir au blanc, des pièces qui jouent à chaque chiffre ; sur un
     // Mythic, deux dames s'entrechoquent et « Checkmate! ».
     { id: 'chess', name: 'Chess', emoji: '♞', price: 2200, desc: 'Ivory digits on a black-to-white chessboard: a chess piece makes its move every time a digit lands, and on Mythic rolls two queens collide for a Checkmate!', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-10-28) : six temps, un par chiffre, du pire au meilleur (orage, pluie, vent, nuages,
+    // soleil, arc-en-ciel) ; sur un Mythic, tous les temps éclatent à la fois, la carte tremble, puis tout se calme.
+    { id: 'weather', name: 'Weather', emoji: '🌦️', price: 2400, desc: 'Six windows of sky, from a thunderstorm to sunshine: each digit brings its weather, the last one a rainbow across the card, and Mythic rolls unleash every weather at once', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

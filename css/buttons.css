@@ -1265,3 +1265,10 @@
   text-shadow: .06em 0 0 #5b3a1e, -.06em 0 0 #5b3a1e, 0 .06em 0 #5b3a1e, 0 -.06em 0 #5b3a1e, 0 .1em .08em rgba(0, 0, 0, .5);
   --gs: 0 .3em 0 #3f2a14, 0 .5em 1em rgba(120, 80, 40, .3); --gs-h: 0 .34em 0 #3f2a14, 0 .7em 1.3em rgba(180, 120, 60, .4); --gs-a: 0 .06em 0 #3f2a14; }
 .btn-roll.gen-chess:hover { filter: brightness(1.12); }
+
+/* Weather (idée de casmicgraything, 2026-10-28) : un ciel qui passe de l'orage au grand beau, de gauche à droite. */
+.btn-roll.gen-weather { border: 2px solid #38bdf8; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 88% 30%, #fef08a 0 .3em, rgba(250, 204, 21, .45) .34em .6em, transparent .8em), linear-gradient(90deg, #1e1b3a, #3d4a5f 25%, #4e7487 45%, #8094aa 62%, #0ea5e9 80%, #7dd3fc);
+  text-shadow: 0 1px 0 #0f172a, 0 0 .3em rgba(15, 23, 42, .8);
+  --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
+.btn-roll.gen-weather:hover { filter: brightness(1.12); }
