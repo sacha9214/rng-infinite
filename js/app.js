@@ -2748,7 +2748,7 @@
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier, pack });
       if (skinFx) skinFx.reveal(a.tier);
-      wallReact(a.tier); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
+      wallReact(a.tier, n); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = `<kbd>${esc(keyName())}</kbd> to roll again · click a badge name for details`;
@@ -5505,10 +5505,11 @@
     };
   }
   // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
-  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', pumpkins: '<i class="wpp-bat"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>', japan: '<i class="wpj-mist"></i>', playground: '<i class="wpp-clouds"></i>', cybervoid: '<i class="wpc-pulse"></i>', submarine: '<i class="wpd-glow"></i><i class="wpd-sub"><b class="wpd-burst"></b></i>', comicpage: '<i class="wcm-page"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i><i class="wcm-flash"></i><i class="wcm-dots"></i><i class="wcm-pow"></i><i class="wcm-bam"></i><i class="wcm-boom"></i>', accretion: '<i class="wbh-glow"></i><i class="wbh-lens"></i><i class="wbh-hole"></i><i class="wbh-disc"><b><u></u></b><s></s></i><i class="wbh-hole wbh-top"></i><i class="wbh-flare"></i><i class="wbh-swoop"><b></b></i>', city: '<i class="wct-clouds"></i><i class="wct-flA"></i><i class="wct-flB"></i><i class="wct-beacons"></i><i class="wct-plane"></i><i class="wct-heli"><u></u><b></b></i>', jungle: '<i class="wjg-bl"></i><i class="wjg-br"><b></b></i><i class="wjg-tl"></i><i class="wjg-tr"><b></b></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-fly"><b><u></u></b></i><i class="wjg-bird"><b></b></i>', rainrainbow: '<i class="wrb-sky"></i><i class="wrb-rays"></i><i class="wrb-sun"></i><i class="wrb-bow2"></i><i class="wrb-bow"></i><i class="wrb-cl"></i><i class="wrb-cl"></i><i class="wrb-lit"></i><i class="wrb-rain"></i>', crystalcave: '<i class="wcc-lamp"></i><i class="wcc-drip"></i><i class="wcc-drip"></i><i class="wcc-bat"><b></b></i>', lake: '<i class="wlk-drop"></i><i class="wlk-drop"></i><i class="wlk-j wlk-f1"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-f2"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-dol"><b><u></u></b><s></s><s></s></i>' };
+  const WALL_LAYERS = { aether: '<i class="wpi-glow"></i><i class="wpi-spark"></i>', pumpkins: '<i class="wpp-bat"></i>', summit: '<i class="wps-night"></i><i class="wps-stars"></i><i class="wps-moon"></i><i class="wps-clouds"></i>', oceanic: '<i class="wpo-whale"></i><i class="wpo-shark"></i><i class="wpo-glow"></i><i class="wpo-fizz"></i><i class="wpo-pod"></i>', racetrack: '<i class="wpf-far"></i>', windybeach: '<i class="wpw-foam"></i><i class="wpw-ball"></i>', japan: '<i class="wpj-mist"></i>', playground: '<i class="wpp-clouds"></i>', cybervoid: '<i class="wpc-pulse"></i>', submarine: '<i class="wpd-glow"></i><i class="wpd-sub"><b class="wpd-burst"></b></i>', comicpage: '<i class="wcm-page"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i><i class="wcm-flash"></i><i class="wcm-dots"></i><i class="wcm-pow"></i><i class="wcm-bam"></i><i class="wcm-boom"></i>', accretion: '<i class="wbh-glow"></i><i class="wbh-lens"></i><i class="wbh-hole"></i><i class="wbh-disc"><b><u></u></b><s></s></i><i class="wbh-hole wbh-top"></i><i class="wbh-flare"></i><i class="wbh-swoop"><b></b></i>', city: '<i class="wct-clouds"></i><i class="wct-flA"></i><i class="wct-flB"></i><i class="wct-beacons"></i><i class="wct-plane"></i><i class="wct-heli"><u></u><b></b></i>', jungle: '<i class="wjg-bl"></i><i class="wjg-br"><b></b></i><i class="wjg-tl"></i><i class="wjg-tr"><b></b></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-vine"></i><i class="wjg-fly"><b><u></u></b></i><i class="wjg-bird"><b></b></i>', rainrainbow: '<i class="wrb-sky"></i><i class="wrb-rays"></i><i class="wrb-sun"></i><i class="wrb-bow2"></i><i class="wrb-bow"></i><i class="wrb-cl"></i><i class="wrb-cl"></i><i class="wrb-lit"></i><i class="wrb-rain"></i>', crystalcave: '<i class="wcc-lamp"></i><i class="wcc-drip"></i><i class="wcc-drip"></i><i class="wcc-bat"><b></b></i>', lake: '<i class="wlk-drop"></i><i class="wlk-drop"></i><i class="wlk-j wlk-f1"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-f2"><b><u></u></b><s></s><s></s></i><i class="wlk-j wlk-dol"><b><u></u></b><s></s><s></s></i>', zombiemoon: '<i class="wzm-z wzm-b"><b><u></u></b></i><i class="wzm-hand"><u></u></i><i class="wzm-z wzm-a"><b><u></u></b></i><i class="wzm-z wzm-c"><b><u></u></b></i>', bread: '<i class="wbr-orbit"><b><u></u></b><b><u></u></b><b><u></u></b><b><u></u></b></i><i class="wbr-loaf"><b><u></u></b></i><i class="wbr-crumbs"></i>' };
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Comic Book, Black Hole et Rain to Rainbow (2026-10-27) : l'arc-en-ciel dure le plus longtemps, la pluie revient doucement.
-  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500, submarine: 6500, comicpage: 4200, accretion: 6500, rainrainbow: 15000 };
+  // Spinning Bread (2026-10-28) : un coup de fouet à chaque tirage, plus de tours selon la rareté (fond normal, pas légendaire).
+  const WALL_REACT = { aether: 4500, summit: 9000, oceanic: 4500, submarine: 6500, comicpage: 4200, accretion: 6500, rainrainbow: 15000, bread: 3600 };
   // Le fond choisi, derrière tout le site (un calque fixe), dès le chargement grâce au dernier choix connu.
   function paintWallpaper(force) {
     const want = force || Store.settings.wall;
@@ -5520,12 +5521,15 @@
     layer.className = `wp wp-${id}`;
     document.documentElement.classList.add('has-wall');
     if (id === 'bubbles' && !layer.querySelector('.wpb-b')) wallBubbles(layer);
+    // fonds en JS (js/wallfx.js, 2026-10-28) : Your Last Rolls, The Fisher, Condensation ; sans effet pour les autres
+    if (window.RNGWallFX) RNGWallFX.mount(layer, id, { rolls: () => Store.rolls.slice(-10).map(r => r[0]) });
   }
   // Fond Infinity (idée de Me Cojoni) : à la révélation, le fond prend la couleur de la rareté pendant quelques
   // secondes (data-react), puis se calme. Tout le visuel est en CSS ; ici on ne fait que poser et retirer l'attribut.
   let wallReactTimer = 0;
-  function wallReact(tier) {
+  function wallReact(tier, n) {
     const layer = document.getElementById('wallpaper');
+    if (window.RNGWallFX) RNGWallFX.roll(tier, n, TIER_RANK[tier]); // fonds en JS (2026-10-28) : ils décident eux-mêmes
     const id = layer && Object.keys(WALL_REACT).find(w => layer.classList.contains(`wp-${w}`));
     if (!id || document.hidden) return;
     clearTimeout(wallReactTimer);
