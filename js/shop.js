@@ -189,6 +189,11 @@
     { id: 'taco', name: 'Taco', emoji: '🌮', price: 900, desc: 'A taco party: every digit drops into its own crunchy shell with salsa, cheese and lettuce bits; Mythic rolls make it rain tacos', idea: 'sennybex1' },
     // Idée de furcoat0 (2026-10-28) : une plage assortie au fond Windy Beach ; les vagues révèlent les chiffres écrits dans le sable.
     { id: 'beach', name: 'Beach', emoji: '🏖️', price: 1900, desc: 'A wave washes up the sand and pulls back to show every digit written in it while a little crab watches; Mythic rolls bring a big shimmering wave and a sunset', idea: 'furcoat0' },
+    // Skins du 2026-10-28, lot D : idées de 17black et de Gray alt acceptées par Sacha.
+    { id: 'fighter', name: 'Arcade Fighter', emoji: '🥊', price: 2400, desc: 'An 80s arcade fighting game: a pixel fighter kicks and punches every digit into place, and Mythic rolls end in a K.O.!', idea: '17black' }, // idée de 17black (2026-10-28)
+    { id: 'battleship', name: 'Battleship', emoji: '⚓', price: 2800, desc: 'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring', idea: '17black' }, // idée de 17black (2026-10-28)
+    { id: 'cone', name: 'Cone of Destiny', emoji: '🚧', price: 450, desc: 'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown', idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 450)
+    { id: 'observer', name: 'The Observer', emoji: '👁️', price: 10000, desc: 'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare', premium: true, idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 10 000)
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
