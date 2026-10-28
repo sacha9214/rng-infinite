@@ -7860,15 +7860,18 @@
   // tab : l'onglet affiché ; period : le classement demandé au serveur (« Best roll » regroupe jour, semaine, mois et
   // tout le temps derrière des boutons de période, comme la Poubelle ; demandé par Sacha le 2026-10-18).
   const lbState = { tab: 'best', period: 'day' };
-  const lbTabOf = period => (['day', 'week', 'month', 'all'].includes(period) ? 'best' : period);
+  // 'median' (idée de Kag, 2026-10-28) : un bouton de plus dans l'onglet Best roll, la barre d'onglets est déjà pleine.
+  const lbTabOf = period => (['day', 'week', 'month', 'all', 'median'].includes(period) ? 'best' : period);
   let lbTimer = 0;
 
   function renderLeaderboard() {
     currentView = 'leaderboard';
     const name = Store.player.name;
-    const tabs = [['best', '🏆 Best roll'], ['xp', 'Lifetime XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
+    // XP : jour, semaine, mois ou tout le temps (idée de qwertyuiop, 2026-10-28), d'où « XP » plutôt que « Lifetime XP ».
+    const tabs = [['best', '🏆 Best roll'], ['xp', '⭐ XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
     lbState.tab = lbTabOf(lbState.period);
-    const lbRule = () => ({ xp: 'Total XP of every roll ever made', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const xpRules = { day: 'XP earned today by each player · resets at midnight UTC', week: 'XP earned this week by each player · resets every Monday 00:00 UTC', month: 'XP earned this month by each player · resets on the 1st at 00:00 UTC' };
+    const lbRule = () => (lbState.period === 'xp' && xpRules[lbState.xpSpan]) || ({ xp: 'Total XP of every roll ever made', median: 'Median roll of each player with at least 200 rolls: half of their rolls score more, half score less', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
         <h1 class="page-title">Leaderboard</h1>
@@ -7890,6 +7893,7 @@
       const b = e.target.closest('[data-span]');
       if (!b) return;
       if (lbState.tab === 'best') { lbState.bestSpan = b.dataset.span; lbState.period = b.dataset.span; $('#lb-rule').textContent = lbRule(); }
+      else if (lbState.tab === 'xp') { lbState.xpSpan = b.dataset.span; $('#lb-rule').textContent = lbRule(); }
       else lbState.span = b.dataset.span;
       $('#lb-list').innerHTML = '<div class="empty">Loading…</div>';
       drawLeaderboard();
@@ -7928,27 +7932,34 @@
   async function drawLeaderboard() {
     clearTimeout(lbTimer);
     const period = lbState.period;
+    // Période choisie dans l'onglet (Poubelle, XP) : une réponse arrivée après un autre clic est ignorée.
+    const spanOf = () => (lbState.period === 'worst' ? lbState.span || 'all' : lbState.period === 'xp' ? lbState.xpSpan || 'all' : null);
+    const span = spanOf();
     let data;
     try {
-      data = await Online.leaderboard(period, period === 'worst' ? lbState.span || 'all' : null);
+      data = await Online.leaderboard(period, span);
     } catch (err) {
       if ($('#lb-list')) $('#lb-list').innerHTML = '<div class="empty">Leaderboard unavailable right now.</div>';
       return;
     }
-    if (currentView !== 'leaderboard' || period !== lbState.period || !$('#lb-list')) return;
-    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet', rolls: 'yet' }[period];
+    if (currentView !== 'leaderboard' || period !== lbState.period || span !== spanOf() || !$('#lb-list')) return;
+    const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet', rolls: 'yet' }[period === 'xp' && span !== 'all' ? span : period];
     const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
       return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
     // Poubelle : jour, semaine, mois ou tout le temps (idée d'Angelicide9, 2026-10-18).
     const SPANS = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time']];
-    const bestBar = lbState.tab === 'best' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${period === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
+    // Median roll (idée de Kag, 2026-10-28) : cinquième bouton du Best roll.
+    const bestBar = lbState.tab === 'best' ? `<div class="lb-spans">${[...SPANS, ['median', '📊 Median']].map(([k, l]) => `<button class="lb-span${period === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
+    const xpBar = period === 'xp' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${span === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
     const spanBar = period === 'worst' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
     // Ma place, en tête de liste (idée de WpBejs, 2026-10-18 : voir son meilleur sur la Poubelle sans chercher).
     const me = data.entries.find(e => e.me) || data.mine;
-    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>` : '';
-    $('#lb-list').innerHTML = bestBar + spanBar + evHead + meBar + (data.entries.length
+    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'median' ? ` · ${fmt(me.med)} XP` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>`
+      // Pas encore 200 tirages : combien il en manque pour entrer au classement de la médiane.
+      : period === 'median' && Number.isInteger(data.have) && Store.player.name ? `<div class="lb-me-bar">📍 <span>${plural(Math.max(1, data.need - data.have), 'more roll')} to join this board</span></div>` : '';
+    $('#lb-list').innerHTML = bestBar + xpBar + spanBar + evHead + meBar + (data.entries.length
       ? data.entries.map(lbRowHTML).join('') + (data.mine ? `<div class="lb-gap">···</div>${lbRowHTML(data.mine)}` : '')
-      : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : `No rolls ${when}, be the first!`}</div>`);
+      : `<div class="empty">${period === 'event' ? 'No matching roll yet this week, be the first!' : period === 'median' ? 'Nobody has 200 rolls yet, be the first!' : `No rolls ${when}, be the first!`}</div>`);
     if (lbState.scroll) { lbState.scroll = false; const card = $('.lb-card'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     // Rafraîchi seulement quand l'onglet est visible : un onglet oublié ne doit pas vider le quota gratuit de la base.
     if (!document.hidden) lbTimer = setTimeout(() => { if (currentView === 'leaderboard') drawLeaderboard(); }, 60000);
@@ -7974,6 +7985,14 @@
         <span class="lb-coins mono" title="Rolls">${fmt(e.count)}</span>
         <span class="lb-rolls" title="Lifetime XP">${compactXp(e.xp)}</span>
       </div>`;
+    // Median roll (idée de Kag, 2026-10-28) : XP du tirage médian (estimée), et le nombre de tirages en petit.
+    if (lbState.period === 'median') return `
+      <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
+        <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-coins mono" title="Median roll">${fmt(e.med)} XP</span>
+        <span class="lb-rolls">${plural(e.count, 'roll')}</span>
+      </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
@@ -7982,15 +8001,15 @@
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
     const a = analysis(e.n);
-    const xp = lbState.period === 'xp';
+    const xp = lbState.period === 'xp', xpSpan = xp && lbState.xpSpan && lbState.xpSpan !== 'all' ? lbState.xpSpan : null;
     const medal = { 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank];
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
         <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
-        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
-        <span class="num-card sm" data-tier="${a.tier}"${xp ? ' title="Best roll"' : ''}>${a.str}</span>
-        <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ' title="Lifetime XP"' : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
+        <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[xpSpan || lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
+        <span class="num-card sm" data-tier="${a.tier}"${xp ? ` title="${xpSpan ? 'Best roll of the period' : 'Best roll'}"` : ''}>${a.str}</span>
+        <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ` title="${xpSpan ? { day: 'XP today', week: 'XP this week', month: 'XP this month' }[xpSpan] : 'Lifetime XP'}"` : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
       </div>`;
   }
 
@@ -8819,7 +8838,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
     },
     // Emojis (idée de Deadshot, 2026-10-27) : une grille choisie à la main (pas d'emoji composé, pas de marque), insérés à
     // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
-    EMOJIS: ['😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    // Pain (Deadshot, G8_floppa, 2026-10-28) : tout le monde écrit « bread » dans le chat, donc 🍞 🥖 🥐 en tête.
+    EMOJIS: ['🍞', '🥖', '🥐', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
     toggleEmoji(on = !this.emojiOpen) {
       this.emojiOpen = on;
       const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');

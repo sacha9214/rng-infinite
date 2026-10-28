@@ -10,6 +10,13 @@
 
   // ---------------------------------------------------------------- dictionnaire (texte anglais exact → français)
   const FR = {
+    // XP du jour / de la semaine / du mois (qwertyuiop) et Median roll (Kag), 2026-10-28
+    '⭐ XP': '⭐ XP', '📊 Median': '📊 Médiane', 'XP today': 'XP du jour', 'XP this week': 'XP de la semaine', 'XP this month': 'XP du mois', 'Best roll of the period': 'Meilleur tirage de la période',
+    'XP earned today by each player · resets at midnight UTC': 'XP gagnée aujourd\'hui par chaque joueur · remise à zéro à minuit UTC',
+    'XP earned this week by each player · resets every Monday 00:00 UTC': 'XP gagnée cette semaine par chaque joueur · remise à zéro chaque lundi à 00:00 UTC',
+    'XP earned this month by each player · resets on the 1st at 00:00 UTC': 'XP gagnée ce mois-ci par chaque joueur · remise à zéro le 1er à 00:00 UTC',
+    'Median roll of each player with at least 200 rolls: half of their rolls score more, half score less': 'Tirage médian de chaque joueur d\'au moins 200 tirages : la moitié de ses tirages valent plus, l\'autre moitié moins',
+    'Nobody has 200 rolls yet, be the first!': 'Personne n\'a encore 200 tirages, sois le premier !',
     // classement Most rolls, nombres différents, quêtes de la semaine, coffre des quêtes, co-chef et Clan MVP (2026-10-27)
     'Most rolls': 'Le plus de tirages', 'Total number of rolls each player has made, duels included': 'Nombre total de tirages de chaque joueur, duels compris',
     'Different numbers rolled': 'Nombres différents tirés',
@@ -716,6 +723,8 @@
     [/^([\d,]+) more coins needed for (.+)$/, m => `Il manque ${nb(m[1])} pièces pour ${m[2]}`],
     [/^held by ([\d,]+) players?$/, m => `détenues par ${nb(m[1])} joueur${s(m[1])}`],
     [/^(-?[\d.]+)% of the supply$/, m => `${m[1].replace('.', ',')} % de la masse`],
+    // Median roll (idée de Kag, 2026-10-28)
+    [/^([\d,]+) more rolls? to join this board$/, m => `Encore ${nb(m[1])} tirage${s(m[1])} pour entrer dans ce classement`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte
