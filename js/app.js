@@ -3750,7 +3750,7 @@
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
           <div class="limited-banner" id="limited-banner"><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><b>🎃 HALLOWEEN EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · until October 31</span></div>
+          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Halloween only</span></div>
           <div class="skin-grid wall-grid" id="d-limited-walls"></div>
         </div>
         </section>
