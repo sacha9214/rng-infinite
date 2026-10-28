@@ -1262,3 +1262,9 @@
   text-shadow: 1px 0 0 #1c1917, -1px 0 0 #1c1917, 0 1px 0 #1c1917, 0 -1px 0 #1c1917, 2px 2px 0 #7c2d12;
   --gs: 0 .3em 0 #94a3b8, 0 .5em 1em rgba(96, 165, 250, .3); --gs-h: 0 .34em 0 #94a3b8, 0 .7em 1.3em rgba(96, 165, 250, .5); --gs-a: 0 .06em 0 #94a3b8; }
 .btn-roll.gen-windowcleaner:hover { filter: brightness(1.06); }
+/* Firework (idée de HSI, 2026-10-28) : un ciel de nuit, deux bouquets d'étincelles de part et d'autre du texte. */
+.btn-roll.gen-firework { border: 2px solid #4338ca; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 12% 45%, #fff 0 1.5px, rgba(244, 114, 182, .9) 2px, rgba(244, 114, 182, .25) .45em, transparent .7em), radial-gradient(circle at 88% 40%, #fff 0 1.5px, rgba(250, 204, 21, .9) 2px, rgba(250, 204, 21, .25) .45em, transparent .7em), repeating-conic-gradient(from 0deg at 12% 45%, rgba(244, 114, 182, .5) 0 4deg, transparent 4deg 30deg), linear-gradient(180deg, #060818, #2a1d55);
+  text-shadow: 0 0 .2em #f472b6, 0 0 .5em #c084fc;
+  --gs: 0 .3em 0 #1e1b4b, 0 .5em 1em rgba(244, 114, 182, .3); --gs-h: 0 .34em 0 #1e1b4b, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #1e1b4b; }
+.btn-roll.gen-firework:hover { filter: brightness(1.15); }

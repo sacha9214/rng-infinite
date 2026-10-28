@@ -8951,3 +8951,54 @@ html.perf .num-card.skin-alchemy.has-fx .slot.spinning { color: #b7791f; }
 @keyframes wc-drip { 0% { transform: translateY(-4px); opacity: 0; } 20% { opacity: 1; } 80% { transform: translateY(4px); opacity: 1; } 100% { transform: translateY(6px); opacity: 0; } }
 .room-stage.many .side-windowcleaner::before, .room-stage.many .side-windowcleaner::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-windowcleaner::before, .side-windowcleaner::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Firework (idée de HSI, 2026-10-28) : un ciel de
+   nuit au-dessus d'une ville endormie (toits sombres, quelques fenêtres allumées, un voile de fumée) ; chaque chiffre est
+   un bouquet d'étincelles d'une couleur à lui (rose, or, cyan, vert, violet, orange), cœur presque blanc et halo coloré.
+   Pendant le tirage, les chiffres ne sont que de la fumée grise qui dérive. Un chiffre qui se pose : rien pendant que la
+   bombe monte (l'élan, la scène de js/skinfx.js la lance depuis le bas), puis il éclate d'un coup en blanc, trop grand,
+   et se resserre à sa couleur (la détente). Les bombes, l'éclatement en forme de chiffre et le bouquet final :
+   js/skinfx.js (SCENES.firework). Différent de Rocket : ici ce sont les explosions qui dessinent les chiffres. */
+.num-card.skin-firework {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='40' preserveAspectRatio='none'><path d='M0 40V28h8v-6h10v10h6V18h12v14h8v-8h10v-6h8v16h10V22h12v10h8v-12h10v20z' fill='%23070a1a'/><g fill='%23fde68a' fill-opacity='.7'><rect x='29' y='22' width='2' height='2'/><rect x='62' y='28' width='2' height='2'/><rect x='94' y='26' width='2' height='2'/><rect x='12' y='30' width='2' height='2'/></g></svg>") 0 100% / 3.4em .55em repeat-x,
+    radial-gradient(ellipse 70% 30% at 50% 100%, rgba(148, 163, 184, .18), transparent 70%),
+    radial-gradient(1px 1px at 14% 22%, #fff, transparent), radial-gradient(1px 1px at 37% 12%, #c7d2fe, transparent), radial-gradient(1px 1px at 58% 28%, #fff, transparent),
+    radial-gradient(1px 1px at 81% 15%, #fde68a, transparent), radial-gradient(1px 1px at 92% 40%, #fff, transparent), radial-gradient(1px 1px at 6% 48%, #c7d2fe, transparent),
+    linear-gradient(180deg, #060818, #141a46 55%, #2a1d55);
+  border: 2px solid #312e81; border-radius: .6rem; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(165, 180, 252, .12), 0 0 18px rgba(244, 114, 182, .2), 0 10px 18px rgba(0, 0, 0, .5);
+}
+.skin-firework .slot { --fw: #f472b6; --fw-l: #fdf2f8; position: relative; z-index: 1;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; color: var(--fw-l);
+  text-shadow: 0 0 .03em #fff, 0 0 .1em var(--fw), 0 0 .24em var(--fw), 0 0 .45em var(--fw); }
+.skin-firework .slot:nth-of-type(6n+2) { --fw: #facc15; --fw-l: #fefce8; }
+.skin-firework .slot:nth-of-type(6n+3) { --fw: #22d3ee; --fw-l: #ecfeff; }
+.skin-firework .slot:nth-of-type(6n+4) { --fw: #4ade80; --fw-l: #f0fdf4; }
+.skin-firework .slot:nth-of-type(6n+5) { --fw: #c084fc; --fw-l: #faf5ff; }
+.skin-firework .slot:nth-of-type(6n) { --fw: #fb923c; --fw-l: #fff7ed; }
+.skin-firework .slot.ghost { opacity: .18; text-shadow: none; }
+/* Pendant le tirage : de la fumée grise qui dérive, à peine lisible. */
+.skin-firework .slot.spinning { opacity: .5; color: #64748b; text-shadow: 0 0 .12em rgba(148, 163, 184, .5); filter: blur(1px); animation: fw-smoke .9s ease-in-out infinite alternate; }
+.skin-firework .slot.spinning:nth-of-type(2n) { animation-delay: -.45s; }
+@keyframes fw-smoke { from { transform: translate(-.02em, .02em); } to { transform: translate(.02em, -.03em); } }
+/* L'éclatement : invisible pendant que la bombe monte, éclair blanc trop grand, il se resserre à sa couleur. */
+.skin-firework .slot.revealed { animation: fw-burst .72s backwards; }
+@keyframes fw-burst {
+  0%, 19% { opacity: 0; transform: scale(.3); filter: none; }
+  22% { opacity: 1; color: #fff; transform: scale(1.3); filter: brightness(2); text-shadow: 0 0 .1em #fff, 0 0 .3em var(--fw), 0 0 .7em var(--fw); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: scale(.94); filter: brightness(1.3); }
+  62% { transform: scale(1.03); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-firework .slot { animation: none; } }
+/* Cadre de duel : un ciel de nuit étoilé ; 🎆 éclate en grandissant, 🎇 crépite. */
+.side-firework { --side-border: #6366f1; --side-glow: 0 0 18px rgba(244, 114, 182, .3); --side-ink: #6366f1;
+  --side-bg: radial-gradient(circle at 18% 22%, rgba(244, 114, 182, .3) 0 2px, transparent 3px), radial-gradient(circle at 80% 30%, rgba(250, 204, 21, .3) 0 2px, transparent 3px), radial-gradient(circle at 60% 12%, rgba(34, 211, 238, .25) 0 2px, transparent 3px), radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .25) 0 1px, transparent 1.5px) 0 0 / 23px 19px, linear-gradient(180deg, rgba(20, 26, 70, .35), rgba(42, 29, 85, .25));
+  --deco-a: '🎆'; --deco-b: '🎇'; }
+.side-firework::before { animation: fw-pop 2s ease-out infinite; }
+.side-firework::after { animation: fw-crackle .3s steps(2) infinite; }
+@keyframes fw-pop { 0% { transform: scale(.5); opacity: .4; } 25% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: .7; } }
+@keyframes fw-crackle { from { filter: brightness(1); } to { filter: brightness(1.5) drop-shadow(0 0 3px #facc15); } }
+.room-stage.many .side-firework::before, .room-stage.many .side-firework::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-firework::before, .side-firework::after { animation: none; } }

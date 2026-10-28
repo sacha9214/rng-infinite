@@ -6999,6 +6999,128 @@
     };
   };
 
+  // 🎆 Firework (2026-10-28, idée de HSI) — un vrai feu d'artifice, sans fusée-vaisseau (c'est Rocket) : à chaque chiffre,
+  // une bombe part d'en bas avec sa traînée et monte jusqu'à la case (0,14 s, pendant que le chiffre CSS est encore caché),
+  // puis éclate : un éclair, une couronne d'étincelles, et une gerbe dont les étincelles filent se ranger sur la forme du
+  // chiffre (points pris sur le chiffre dessiné dans un petit canvas, FW_GLYPH) avant de retomber en paillettes ; la case
+  // s'illumine. Couleur par case, la même que le chiffre CSS. Avant le dernier chiffre, une fontaine crépite sous la case.
+  // Révélation : tirage raté, une bombe ratée monte mollement et fait pff (fumée) ; sinon quelques bombes (plus avec la
+  // rareté) ; dès Epic, des paillettes qui scintillent ; dès Mythic, le bouquet final : deux fontaines, un barrage de
+  // bombes, un anneau à la couleur de la rareté (arc-en-ciel à Infinite) et un grand saule doré qui retombe en rideau.
+  const FW_COL = ['#f472b6', '#facc15', '#22d3ee', '#4ade80', '#c084fc', '#fb923c'];
+  const FW_TIER = { common: '#e2e8f0', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', anomaly: '#fb923c', mythic: '#f43f5e', celestial: '#67e8f9', divine: '#fde047', godlike: '#ffffff' };
+  const FW_GLYPH = new Map(); // chiffre → points de sa forme, entre -0,5 et 0,5
+  function fwGlyph(ch) {
+    let pts = FW_GLYPH.get(ch);
+    if (pts) return pts;
+    pts = [];
+    try {
+      const W = 40, Hh = 56, cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+      const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.font = "900 54px 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif"; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, W / 2, Hh / 2 + 3);
+      const d = c.getImageData(0, 0, W, Hh).data;
+      for (let y = 2; y < Hh; y += 4) for (let x = 2; x < W; x += 4) if (d[(y * W + x) * 4 + 3] > 140) pts.push([x / W - .5, y / Hh - .5]);
+    } catch (e) { /* pas de canvas : une gerbe ronde seulement */ }
+    FW_GLYPH.set(ch, pts);
+    return pts;
+  }
+  SCENES.firework = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, add = dark ? 'lighter' : 'source-over';
+    const shells = [], shape = particles(), sparks = particles(), glitter = particles(), smoke = particles(), flashes = timed(), fountains = timed();
+    let now = 0, fizz = 0;
+    const slotAt = x => slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - x) < Math.abs(b.x - x) ? z : b), null);
+    // une bombe : elle monte de (x0, y0) à (x, y) en ralentissant, puis appelle burst
+    const launch = (x0, y0, x, y, life, burst, o = {}) => shells.push({ x0, y0, x, y, t: -(o.delay || 0), life, burst, col: o.col || '#fde68a', weak: o.weak });
+    const peony = (x, y, col, n, speed, o = {}) => {
+      for (let i = Math.round(n * q); i > 0; i--) { const an = (i / Math.round(n * q)) * TAU + rnd(-.08, .08), v = speed * rnd(.85, 1.1); sparks.add({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v, drag: o.drag || 2.6, g: o.g || 160, max: rnd(.7, 1.1) * (o.life || 1), size: o.size || rnd(1.4, 2.2), c: o.multi ? pick(FW_COL) : col, tail: o.tail || .035 }); }
+      flashes.add({ life: .3, x, y, r: speed * .25, c: col });
+    };
+    const digitBurst = (s, ch, col, big) => {
+      const pts = fwGlyph(ch), gw = s.w * 1.15, gh = (s.bottom - s.top) * .95;
+      for (const [u, v] of pts) shape.add({ x: s.x, y: s.y, vx: 0, vy: 0, fx: s.x + u * gw, fy: s.y + v * gh, max: rnd(1.05, 1.4) * (big ? 1.2 : 1), size: rnd(1.5, 2.2), c: Math.random() < .3 ? '#ffffff' : col, ph: rnd(TAU), i: s.i });
+      peony(s.x, s.y, col, big ? 22 : 14, H * (big ? 3.4 : 2.6));
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = add;
+        // les bombes qui montent, avec leur traînée
+        for (let i = shells.length - 1; i >= 0; i--) {
+          const s = shells[i]; s.t += dt; if (s.t < 0) continue;
+          const k = clamp(s.t / s.life), e = s.weak ? Math.sin(k * Math.PI / 2) * .8 : outCubic(k), x = lerp(s.x0, s.x, e), y = lerp(s.y0, s.y, e), pe = Math.max(0, e - .12), px = lerp(s.x0, s.x, pe), py = lerp(s.y0, s.y, pe);
+          line(co, s.weak ? '#94a3b8' : '#fde68a', px, py, x, y, 1.6, .5); dot(co, s.weak ? '#cbd5e1' : '#fff7d6', x, y, 4, 1);
+          if (Math.random() < .6) glitter.add({ x, y, vx: rnd(-15, 15), vy: rnd(10, 40), g: 80, max: rnd(.2, .45), size: rnd(.8, 1.4), c: '#fdba74', tw: 0 });
+          if (k >= 1) { shells.splice(i, 1); s.burst(x, y); }
+        }
+        // la fontaine avant le dernier chiffre
+        if (fizz) { const nxt = slotsA(env).find(z => !z.on && !z.gone); if (nxt) for (let n = Math.random() < dt * 60 * q ? 2 : 0; n > 0; n--) glitter.add({ x: nxt.x + rnd(-3, 3), y: card.y + card.h - 2, vx: rnd(-40, 40), vy: -rnd(80, 200), g: 300, drag: .5, max: rnd(.3, .6), size: rnd(.8, 1.5), c: pick(['#fde68a', '#ffffff', '#fdba74']), tw: 0 }); }
+        fountains.run(dt, (f, k) => { for (let n = Math.random() < dt * 90 * q ? 2 : 0; n > 0; n--) glitter.add({ x: f.x + rnd(-3, 3), y: f.y, vx: rnd(-50, 50) + f.lean * 40, vy: -rnd(160, 340) * (1 - k * .4), g: 420, drag: .4, max: rnd(.5, .9), size: rnd(1, 1.8), c: pick(['#fde68a', '#fef3c7', '#fb923c']), tw: 0 }); });
+        // éclairs : sur le ciel de la carte (le calque intérieur) et autour
+        flashes.run(dt, (f, k) => {
+          dot(co, '#ffffff', f.x, f.y, f.r * .5 * (1 - k), (1 - k) * .9);
+          dot(co, f.c, f.x, f.y, f.r * (1 + k), (1 - k) * .35);
+          inC(env, cw0, c => { c.globalCompositeOperation = 'lighter'; dot(c, f.c, f.x, f.y, H * 1.3, (1 - k) * .3); c.globalCompositeOperation = 'source-over'; });
+        });
+        co.globalCompositeOperation = add;
+        // les étincelles qui dessinent le chiffre : elles filent à leur place, scintillent, puis retombent
+        shape.step(dt);
+        shape.each((p, k) => {
+          // elles jaillissent plus loin que le chiffre (×1,7), puis se resserrent sur lui (×1,1) : on lit la forme
+          const T = p.life, go = outExpo(clamp(T / .2)) * lerp(1.7, 1.1, outCubic(clamp((T - .18) / .4))), fall = Math.max(0, T - .55);
+          const x = lerp(p.x, p.fx, go), y = lerp(p.y, p.fy, go) + fall * fall * H * 1.2, tw = T > .2 ? .6 + .4 * Math.sin(T * 30 + p.ph) : 1;
+          if (T < .2) line(co, p.c, lerp(p.x, p.fx, go * .7), lerp(p.y, p.fy, go * .7), x, y, 1.1, .6);
+          dot(co, p.c, x, y, p.size * 2.4, (k > .6 ? (1 - k) / .4 : 1) * tw);
+        });
+        // couronnes : étincelles avec une courte traînée
+        sparks.step(dt);
+        sparks.each((s, k) => { const a = k > .5 ? (1 - k) * 2 : 1; line(co, s.c, s.x - s.vx * s.tail, s.y - s.vy * s.tail, s.x, s.y, s.size * .8, a * .8); dot(co, s.c, s.x, s.y, s.size * 2, a); });
+        glitter.step(dt);
+        glitter.each((g, k) => dot(co, g.c, g.x, g.y, g.size * 2, (1 - k) * (g.tw ? (Math.sin(now * 40 + g.x) > 0 ? 1 : .15) : 1)));
+        co.globalCompositeOperation = 'source-over';
+        smoke.step(dt);
+        smoke.each((s, k) => dot(co, dark ? '#64748b' : '#94a3b8', s.x, s.y, s.size * (1 + k * 1.5), (1 - k) * s.a));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const s = slotAt(p.x); if (!s) return;
+        if (o.last) fizz = 0;
+        const el = env.el.querySelectorAll('.slot')[s.i], ch = el ? el.textContent : '8', col = FW_COL[s.i % FW_COL.length];
+        const x0 = s.x + rnd(-.2, .2) * H, y0 = card.y + card.h + H * .7;
+        if (o.ghost) { launch(x0, y0, s.x, s.y, .14, (x, y) => { peony(x, y, '#64748b', 6, H * 1.2, { life: .6 }); smoke.add({ x, y, vx: 0, vy: -8, max: 1, size: H * .2, a: .25 }); }, { weak: 1 }); return; }
+        launch(x0, y0, s.x, s.y, .14, (x, y) => { digitBurst(s, ch, col, o.last); smoke.add({ x, y, vx: rnd(-6, 6), vy: -10, max: 2.2, size: H * .3, a: dark ? .12 : .2 }); });
+      },
+      build() { fizz = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0, cx = card.x + card.w / 2;
+        fizz = 0;
+        // une bombe au-dessus de la carte, à une hauteur et une place au hasard
+        // Où éclater : la place visible autour de la carte (sur ordinateur, elle est collée au menu, le ciel est sur les
+        // côtés ; sur téléphone, elle prend toute la largeur, le ciel est au-dessus, souvent étroit).
+        let top = H, side = 0;
+        try { const r = env.el.getBoundingClientRect(); top = clamp((r.top - 52) / H, .15, 1.4); side = clamp(Math.min(r.left, root.innerWidth - r.right) / H, 0, 2.6); } catch (e) { /* valeurs par défaut */ }
+        const spot = () => side > 1.2 && (top < .6 || Math.random() < .6)
+          ? [Math.random() < .5 ? card.x - H * rnd(.4, side - .3) : card.x + card.w + H * rnd(.4, side - .3), card.y + H * rnd(-top * .8, .9)]
+          : [cx + rnd(-.55, .55) * card.w, card.y - H * rnd(top * .25, top * .95)];
+        const sky = (delay, col, n, speed, o = {}) => { const [x, y] = spot(); launch(x + rnd(-.2, .2) * H, card.y + card.h + H * .6, x, y, rnd(.35, .5), (bx, by) => { peony(bx, by, col, n, speed, o); smoke.add({ x: bx, y: by, vx: rnd(-8, 8), vy: -6, max: 2.5, size: H * .45, a: dark ? .1 : .16 }); }, { delay }); };
+        if (!p) { launch(cx, card.y + card.h + H * .6, cx + H * .2, card.y - H * .35, .7, (x, y) => { for (let i = 0; i < 3; i++) glitter.add({ x, y, vx: rnd(-25, 25), vy: rnd(-20, 10), g: 200, max: rnd(.6, 1), size: 1.4, c: '#fb923c', tw: 0 }); smoke.add({ x, y, vx: 0, vy: -10, max: 1.6, size: H * .3, a: .35 }); }, { weak: 1 }); return; }
+        const n = 1 + Math.round(4 * p);
+        for (let i = 0; i < n; i++) sky(.1 + i * .28, pick(FW_COL), 18 + 14 * p, H * (2.4 + 1.6 * p), { multi: i % 3 === 2 });
+        if (p >= .6) for (let i = Math.round((20 + 30 * p) * q); i > 0; i--) glitter.add({ x: cx + rnd(-.6, .6) * card.w, y: card.y - H * rnd(.2, 1.4), vx: rnd(-10, 10), vy: rnd(10, 40), g: 30, max: rnd(1.2, 2.2), size: rnd(1, 1.6), c: '#ffffff', tw: 1 });
+        if (p < 1) return;
+        // le bouquet final
+        const tc = FW_TIER[tier] || '#ffffff';
+        [-1, 1].forEach(e => fountains.add({ delay: .2, life: 2 + .4 * asc, x: e < 0 ? card.x - H * .3 : card.x + card.w + H * .3, y: card.y + card.h, lean: -e * .3 }));
+        for (let i = 0; i < 10 + 4 * asc; i++) sky(.5 + i * .12, Math.random() < .4 ? tc : pick(FW_COL), 26, H * rnd(3.2, 4.4), { multi: Math.random() < .3 });
+        // l'anneau à la couleur de la rareté
+        launch(cx, card.y + card.h + H * .6, cx, card.y - H * top * .7, .5, (x, y) => peony(x, y, tc, 36, H * 3.6, { drag: 1.8, g: 60, multi: asc >= 3, size: 2.2 }), { delay: 1.1 });
+        // le grand saule doré : des traînées qui retombent en rideau autour de la carte
+        launch(cx, card.y + card.h + H * .6, cx, card.y - H * top * .9, .6, (x, y) => {
+          for (let i = Math.round((50 + 20 * asc) * q); i > 0; i--) { const an = rnd(TAU), v = H * rnd(2, 3.4); sparks.add({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v * .7 - H * .4, drag: 1.4, g: 140, max: rnd(2, 2.8), size: rnd(1.2, 1.8), c: pick(['#fde68a', '#fbbf24', '#fef3c7']), tail: .18 }); }
+          flashes.add({ life: .5, x, y, r: H * 1.4, c: '#fbbf24' });
+        }, { delay: 2 });
+      },
+    };
+  };
+
   // ==== fin du lot C ====
 
   function mount(stage, card, skin, o = {}) {
