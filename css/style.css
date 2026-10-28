@@ -9261,3 +9261,298 @@ html.perf .num-card.skin-alchemy.has-fx .slot.spinning { color: #b7791f; }
 @keyframes fw-crackle { from { filter: brightness(1); } to { filter: brightness(1.5) drop-shadow(0 0 3px #facc15); } }
 .room-stage.many .side-firework::before, .room-stage.many .side-firework::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-firework::before, .side-firework::after { animation: none; } }
+
+/* ==== Skins du 2026-10-28, lot C ==== Graffiti, Origami, Taco, Beach (idées de joueurs ; scènes dans js/skinfx.js). */
+/* ------------------------------------------------------------------ Graffiti (idée de JBearr12, 2026-10-28) : un mur de
+   briques rouges (joints sombres, grain) ; chaque chiffre est une grosse lettre « bulle » peinte à la bombe : couleur
+   franche (une par case), contour noir épais, ombre portée noire, un halo de peinture pulvérisée derrière et des
+   coulures qui descendent. Pendant le tirage, ce ne sont que des esquisses à la craie blanche qui tremblent ; un chiffre
+   qui se pose : l'esquisse rentre un peu (la bombe arrive), la peinture jaillit d'un coup (floue, gonflée), se fige
+   nette, puis les coulures descendent. La bombe, la brume de peinture, l'explosion de couleurs et la couronne des grands
+   tirages : js/skinfx.js (SCENES.graffiti). Lettrage original, aucun vrai tag. */
+.num-card.skin-graffiti {
+  background:
+    radial-gradient(ellipse 45% 60% at 12% 30%, rgba(244, 114, 182, .16), transparent 70%),
+    radial-gradient(ellipse 40% 55% at 88% 75%, rgba(34, 211, 238, .14), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><rect width='44' height='22' fill='%23463530'/><g stroke='%23000' stroke-opacity='.25' stroke-width='1'><rect x='1' y='1' width='20' height='9' rx='1.2' fill='%238b3a2a'/><rect x='23' y='1' width='20' height='9' rx='1.2' fill='%237c3224'/><rect x='-10' y='12' width='20' height='9' rx='1.2' fill='%23843626'/><rect x='12' y='12' width='20' height='9' rx='1.2' fill='%2394402d'/><rect x='34' y='12' width='20' height='9' rx='1.2' fill='%23843626'/></g><g fill='%23fff' fill-opacity='.10'><rect x='2' y='2' width='18' height='1.4'/><rect x='24' y='2' width='18' height='1.4'/><rect x='13' y='13' width='18' height='1.4'/><rect x='0' y='13' width='9' height='1.4'/><rect x='35' y='13' width='9' height='1.4'/></g><g fill='%23000' fill-opacity='.18'><circle cx='6' cy='6' r='.7'/><circle cx='31' cy='4' r='.6'/><circle cx='17' cy='17' r='.7'/><circle cx='39' cy='18' r='.6'/><circle cx='26' cy='7' r='.5'/></g></svg>") 0 0 / 1.6em .8em,
+    #463530;
+  border: 2px solid #2b1d18; border-radius: .3rem; color: #a3e635;
+  box-shadow: inset 0 0 .7em rgba(0, 0, 0, .5), 0 0 14px rgba(244, 114, 182, .14), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .4rem 1rem .5rem;
+}
+.skin-graffiti .slot {
+  --paint: #a3e635; position: relative; z-index: 1; isolation: isolate; width: .74em; margin: 0 -.015em;
+  font-family: 'Arial Black', 'Segoe UI Black', Impact, system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: var(--paint); -webkit-text-stroke: .1em #111; paint-order: stroke fill;
+  text-shadow: .05em .06em 0 #111, .08em .1em 0 rgba(0, 0, 0, .3);
+  rotate: -6deg;
+}
+.skin-graffiti .slot:nth-of-type(6n+2) { --paint: #22d3ee; rotate: 5deg; translate: 0 -.04em; }
+.skin-graffiti .slot:nth-of-type(6n+3) { --paint: #f472b6; rotate: -3deg; translate: 0 .03em; }
+.skin-graffiti .slot:nth-of-type(6n+4) { --paint: #facc15; rotate: 6deg; }
+.skin-graffiti .slot:nth-of-type(6n+5) { --paint: #fb923c; rotate: -5deg; translate: 0 -.03em; }
+.skin-graffiti .slot:nth-of-type(6n) { --paint: #c084fc; rotate: 4deg; translate: 0 .02em; }
+/* le halo de peinture pulvérisée, derrière la lettre */
+.skin-graffiti .slot::before { content: ''; position: absolute; inset: .02em -.14em; z-index: -1; pointer-events: none; opacity: .32;
+  background: radial-gradient(closest-side, var(--paint), transparent); }
+/* les coulures : trois filets de la couleur de la lettre, avec leur goutte au bout */
+.skin-graffiti .slot::after { content: ''; position: absolute; left: .09em; width: .56em; top: 72%; height: .5em; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .035em .2em / .14em .14em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .07em 0 / .07em .27em no-repeat,
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .275em .34em / .13em .13em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .31em 0 / .06em .41em no-repeat,
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .44em .1em / .11em .11em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .47em 0 / .05em .16em no-repeat;
+  filter: drop-shadow(.025em .025em 0 #111); }
+.skin-graffiti .slot:nth-of-type(2n)::after { transform: scaleX(-1); }
+.skin-graffiti .slot.ghost { opacity: .2; }
+.skin-graffiti .slot.collapsed { width: 0; margin: 0; }
+.skin-graffiti .slot.collapsed::before, .skin-graffiti .slot.collapsed::after { display: none; }
+/* Pendant le tirage : une esquisse à la craie, contour seul, qui tremble par saccades. */
+.skin-graffiti .slot.spinning { opacity: 1; color: transparent; -webkit-text-stroke: .035em rgba(255, 255, 255, .7); text-shadow: none; animation: graf-sketch .24s steps(1) infinite; }
+.skin-graffiti .slot.spinning::before, .skin-graffiti .slot.spinning::after { opacity: 0; }
+.skin-graffiti .slot.spinning:nth-of-type(2n) { animation-delay: -.12s; }
+@keyframes graf-sketch { 0% { transform: translate(0, 0); } 33% { transform: translate(.015em, -.01em) rotate(1.5deg); } 66% { transform: translate(-.01em, .012em) rotate(-1deg); } }
+/* La bombe arrive (l'esquisse rentre), psssht : la peinture jaillit floue et gonflée, se fige nette, rebondit à peine. */
+.skin-graffiti .slot.revealed { animation: graf-spray .62s backwards; }
+@keyframes graf-spray {
+  0% { color: transparent; -webkit-text-stroke-color: rgba(255, 255, 255, .7); -webkit-text-stroke-width: .035em; text-shadow: none; transform: scale(1); animation-timing-function: ease-in; }
+  18% { color: transparent; -webkit-text-stroke-color: rgba(255, 255, 255, .7); -webkit-text-stroke-width: .035em; text-shadow: none; transform: scale(.9); animation-timing-function: steps(1); }
+  20% { color: var(--paint); -webkit-text-stroke-color: #111; -webkit-text-stroke-width: .06em; filter: blur(.05em) brightness(1.35); transform: scale(1.2); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  46% { filter: none; transform: scale(.96); }
+  68% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+.skin-graffiti .slot.revealed::before { animation: graf-mist .7s backwards; }
+@keyframes graf-mist { 0%, 18% { opacity: 0; transform: scale(.5); } 26% { opacity: .85; transform: scale(1.35); } 100% { opacity: .32; transform: none; } }
+.skin-graffiti .slot.revealed::after { animation: graf-drip 1.5s .32s ease-out backwards; }
+@keyframes graf-drip { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .skin-graffiti .slot, .skin-graffiti .slot::before, .skin-graffiti .slot::after { animation: none; } }
+/* Cadre de duel : un mur de briques ; 🎨 tremble comme une bombe qu'on secoue, ♛ (le tag couronne) clignote. */
+.side-graffiti { --side-border: #b4532a; --side-glow: 0 0 16px rgba(244, 114, 182, .22); --side-ink: #db2777;
+  --side-bg: radial-gradient(ellipse 40% 50% at 15% 25%, rgba(163, 230, 53, .2), transparent 70%), radial-gradient(ellipse 40% 50% at 85% 80%, rgba(34, 211, 238, .18), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><g fill='%23a3412c' fill-opacity='.28'><rect x='1' y='1' width='20' height='9' rx='1'/><rect x='23' y='1' width='20' height='9' rx='1'/><rect x='-10' y='12' width='20' height='9' rx='1'/><rect x='12' y='12' width='20' height='9' rx='1'/><rect x='34' y='12' width='20' height='9' rx='1'/></g></svg>") 0 0 / 44px 22px;
+  --deco-a: '🎨'; --deco-b: '♛'; }
+.side-graffiti::before { animation: graf-shake .5s ease-in-out infinite; }
+.side-graffiti::after { font-size: 1.3rem; color: #facc15; -webkit-text-stroke: 1px #111; animation: graf-blink 2.4s steps(1) infinite; }
+@keyframes graf-shake { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-3px) rotate(-8deg); } 80% { transform: translateY(2px) rotate(6deg); } 90% { transform: translateY(-2px); } }
+@keyframes graf-blink { 0%, 100% { opacity: .9; } 50% { opacity: .55; } }
+.room-stage.many .side-graffiti::before, .room-stage.many .side-graffiti::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-graffiti::before, .side-graffiti::after { animation: none; } }
+/* ------------------------------------------------------------------ Origami (idée de JBearr12, 2026-10-28) : un tapis
+   de découpe vert (quadrillage clair, ligne à 45°) ; chaque chiffre est imprimé sur un carré de papier de couleur (une
+   couleur par case), plié en deux facettes le long de la diagonale (la moitié haut gauche claire, la moitié bas droite
+   ombrée, le pli marqué d'un filet blanc), posé à plat avec son ombre. Pendant le tirage, un grand rabat (le dos blanc
+   du papier) couvre la moitié haut gauche du carré et frémit, et un coin corné est replié en haut à droite ; un chiffre
+   qui se pose : le rabat recule d'un cran (l'élan), se déplie d'un coup sec vers nous en s'assombrissant (il tourne
+   autour du pli) et disparaît, puis le coin corné se déplie à son tour et le carré claque à plat (papier : aucun
+   écrasement mou, un petit sursaut raide). Les éclats de papier et les grues des grands tirages : js/skinfx.js
+   (SCENES.origami). Rien de commun avec Torn Paper : ici on plie, on ne déchire pas. */
+.num-card.skin-origami {
+  background:
+    linear-gradient(32deg, transparent calc(50% - 1px), rgba(254, 249, 195, .22) 50%, transparent calc(50% + 1px)),
+    repeating-linear-gradient(90deg, rgba(220, 252, 231, .2) 0 1px, transparent 1px .5em),
+    repeating-linear-gradient(0deg, rgba(220, 252, 231, .2) 0 1px, transparent 1px .5em),
+    radial-gradient(ellipse 80% 70% at 30% 15%, #1f7a5c, transparent 80%),
+    #14533d;
+  border: 2px solid #0d3b2b; border-radius: .4rem; color: #1f1630;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .35), 0 0 14px rgba(110, 231, 183, .14), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .4rem .75rem;
+}
+.skin-origami .slot {
+  --kami: #f87171; --kami-d: #dc5050;
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; width: 1.02em; height: 1.24em; margin: 0 .05em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif; font-weight: 800; font-variant-numeric: normal; line-height: 1;
+  color: #1f1630; text-shadow: 0 .03em 0 rgba(255, 255, 255, .35);
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - .7px), rgba(255, 255, 255, .65) 50%, transparent calc(50% + .7px)),
+    linear-gradient(160deg, rgba(255, 255, 255, .28), transparent 45%),
+    linear-gradient(to bottom right, var(--kami) 0 50%, var(--kami-d) 50% 100%);
+  box-shadow: .03em .05em 0 rgba(0, 0, 0, .3), .06em .1em .14em rgba(0, 0, 0, .35);
+}
+.skin-origami .slot:nth-of-type(6n+2) { --kami: #fcd34d; --kami-d: #e5b622; }
+.skin-origami .slot:nth-of-type(6n+3) { --kami: #7dd3fc; --kami-d: #4cb2e0; }
+.skin-origami .slot:nth-of-type(6n+4) { --kami: #6ee7b7; --kami-d: #3ccb94; }
+.skin-origami .slot:nth-of-type(6n+5) { --kami: #f9a8d4; --kami-d: #e97cb7; }
+.skin-origami .slot:nth-of-type(6n) { --kami: #c4b5fd; --kami-d: #9f8bf3; }
+/* le grand rabat (dos blanc du papier, moitié haut gauche) et le coin corné (haut droit) : visibles pendant le tirage */
+.skin-origami .slot::before, .skin-origami .slot::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; backface-visibility: hidden; }
+.skin-origami .slot::before { clip-path: polygon(0 0, 100% 0, 0 100%); transform-origin: 50% 50%;
+  background: linear-gradient(to bottom right, #fffdf6, #ebe4d3 46%, #d6cdb8 50%); }
+.skin-origami .slot::after { clip-path: polygon(58% 0, 100% 0, 100% 42%); transform-origin: 79% 21%;
+  background: linear-gradient(to bottom left, #fffdf6 30%, #d6cdb8); }
+.skin-origami .slot.ghost { opacity: .2; }
+.skin-origami .slot.collapsed { width: 0; height: 0; margin: 0; background: none; box-shadow: none; }
+.skin-origami .slot.collapsed::before, .skin-origami .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le rabat couvre la moitié du carré et frémit, le chiffre défile à moitié caché. */
+.skin-origami .slot.spinning { opacity: 1; color: rgba(31, 22, 48, .5); }
+.skin-origami .slot.spinning::before { opacity: 1; animation: ori-flutter .5s ease-in-out infinite alternate; }
+.skin-origami .slot.spinning::after { opacity: 1; }
+.skin-origami .slot.spinning:nth-of-type(2n)::before { animation-delay: -.25s; }
+@keyframes ori-flutter { from { transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); } to { transform: perspective(2.4em) rotate3d(1, -1.2, 0, -24deg); filter: brightness(.94); } }
+/* Le pli : le rabat recule (l'élan), se déplie d'un coup sec en s'assombrissant, puis le coin corné, puis le carré claque. */
+.skin-origami .slot.revealed::before { animation: ori-unfold .6s backwards; }
+@keyframes ori-unfold {
+  0% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); animation-timing-function: ease-out; }
+  18% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 14deg); filter: brightness(1.04); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  52% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -89deg); filter: brightness(.62); }
+  53%, 100% { opacity: 0; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -95deg); }
+}
+.skin-origami .slot.revealed::after { animation: ori-ear .8s backwards; }
+@keyframes ori-ear {
+  0%, 46% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 0deg); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  70% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 89deg); filter: brightness(.6); }
+  71%, 100% { opacity: 0; transform: perspective(2em) rotate3d(1, 1.2, 0, 95deg); }
+}
+.skin-origami .slot.revealed { animation: ori-snap .86s backwards; }
+@keyframes ori-snap {
+  0%, 48% { transform: none; color: rgba(31, 22, 48, .5); }
+  54% { transform: scale(1.07); color: #1f1630; filter: brightness(1.12); }
+  64% { transform: scale(.98); }
+  76%, 100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-origami .slot, .skin-origami .slot::before, .skin-origami .slot::after { animation: none; } }
+/* Cadre de duel : le tapis de découpe ; une grue de papier bat des ailes, un bateau de papier tangue. */
+.side-origami { --side-border: #15803d; --side-glow: 0 0 14px rgba(110, 231, 183, .25); --side-ink: #15803d;
+  --side-bg: linear-gradient(32deg, transparent calc(50% - 1px), rgba(250, 204, 21, .25) 50%, transparent calc(50% + 1px)), repeating-linear-gradient(90deg, rgba(22, 101, 52, .14) 0 1px, transparent 1px 16px), repeating-linear-gradient(0deg, rgba(22, 101, 52, .14) 0 1px, transparent 1px 16px), linear-gradient(180deg, rgba(20, 83, 61, .22), rgba(20, 83, 61, .12));
+  --deco-a: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='28' viewBox='0 0 30 22'><polygon points='1,7 10,14 13,12' fill='%23dc5050'/><polygon points='28,2 25,5 18,13 16,12' fill='%23dc5050'/><polygon points='10,14 15,2 20,14 15,17' fill='%23fca5a5'/><polygon points='15,2 15,17 20,14' fill='%23f87171'/></svg>");
+  --deco-b: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='18' viewBox='0 0 28 18'><polygon points='1,9 27,9 22,17 6,17' fill='%234cb2e0'/><polygon points='14,1 14,9 6,9' fill='%23bae6fd'/><polygon points='14,1 22,9 14,9' fill='%237dd3fc'/></svg>"); }
+.side-origami::before { transform-origin: 50% 70%; animation: ori-flap .6s ease-in-out infinite alternate; }
+.side-origami::after { transform-origin: 50% 100%; animation: ori-rock 2.4s ease-in-out infinite; }
+@keyframes ori-flap { from { transform: scaleY(1); } to { transform: scaleY(.55) translateY(2px); } }
+@keyframes ori-rock { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg) translateY(-1px); } }
+.room-stage.many .side-origami::before, .room-stage.many .side-origami::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-origami::before, .side-origami::after { animation: none; } }
+/* ------------------------------------------------------------------ Taco (idée de sennybex1, 2026-10-28) : le mur d'un
+   stand de tacos un soir de fête (carrelage turquoise, une guirlande de fanions de toutes les couleurs en haut, un taco
+   dans chaque coin du bas) ; chaque chiffre est une garniture, rouge salsa, jaune fromage ou vert salade, cernée de
+   brun, posée dans sa petite coque de taco croustillante (coque dorée mouchetée, frange de salade). Aucun drapeau réel :
+   les fanions sont des triangles de couleurs vives, sans motif. Pendant le tirage, les chiffres sautent comme dans une
+   poêle chaude ; un chiffre qui se pose tombe du haut de la carte en s'étirant (l'élan), s'écrase dans sa coque qui
+   plie sous le choc (garniture molle : écrasement franc), rebondit et se pose. Les bouts de garniture qui giclent, la
+   fête et la pluie de tacos des grands tirages : js/skinfx.js (SCENES.taco). */
+.num-card.skin-taco {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='16'><path d='M0 2Q30 7 60 2' fill='none' stroke='%23fef3c7' stroke-width='1.2'/><polygon points='3,2.6 13,4.2 7,14' fill='%23f472b6'/><polygon points='18,4.6 28,5.4 22,15' fill='%23facc15'/><polygon points='33,5.4 43,4.6 39,15' fill='%23a78bfa'/><polygon points='48,4.2 58,2.6 52,14' fill='%23fb923c'/></svg>") 0 0 / 2.6em .7em repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26'><g fill='%2322c55e'><circle cx='6' cy='8' r='3.2'/><circle cx='11' cy='6.5' r='3.2'/><circle cx='17' cy='6' r='3.2'/><circle cx='23' cy='6' r='3.2'/><circle cx='29' cy='6.5' r='3.2'/><circle cx='34' cy='8' r='3.2'/></g><rect x='12' y='2' width='4.5' height='4.5' rx='1' fill='%23ef4444'/><rect x='25' y='1.5' width='4.5' height='4.5' rx='1' fill='%23ef4444'/><path d='M8 6l4-4M19 5l3-4M30 6l3-4' stroke='%23fde047' stroke-width='1.8' stroke-linecap='round'/><path d='M2 9A18 16 0 0 0 38 9Z' fill='%23f6b93b' stroke='%2392400e' stroke-width='1.6' stroke-linejoin='round'/><g fill='%23b45309'><circle cx='12' cy='15' r='1'/><circle cx='22' cy='19' r='1'/><circle cx='28' cy='13' r='1'/><circle cx='17' cy='12' r='.8'/></g></svg>") left -.12em bottom -.08em / 1.2em auto no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26'><g fill='%2322c55e'><circle cx='6' cy='8' r='3.2'/><circle cx='11' cy='6.5' r='3.2'/><circle cx='17' cy='6' r='3.2'/><circle cx='23' cy='6' r='3.2'/><circle cx='29' cy='6.5' r='3.2'/><circle cx='34' cy='8' r='3.2'/></g><rect x='14' y='1.5' width='4.5' height='4.5' rx='1' fill='%23ef4444'/><rect x='23' y='2' width='4.5' height='4.5' rx='1' fill='%23ef4444'/><path d='M9 6l4-4M20 5l3-4M28 6l4-4' stroke='%23fde047' stroke-width='1.8' stroke-linecap='round'/><path d='M2 9A18 16 0 0 0 38 9Z' fill='%23f6b93b' stroke='%2392400e' stroke-width='1.6' stroke-linejoin='round'/><g fill='%23b45309'><circle cx='13' cy='13' r='1'/><circle cx='20' cy='18' r='1'/><circle cx='27' cy='15' r='1'/></g></svg>") right -.12em bottom -.08em / 1.2em auto no-repeat,
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .07) 0 .05em, transparent .06em) 0 0 / .4em .4em,
+    linear-gradient(90deg, rgba(0, 0, 0, .12) 1px, transparent 1px) 0 0 / .8em .8em, linear-gradient(0deg, rgba(0, 0, 0, .12) 1px, transparent 1px) 0 0 / .8em .8em,
+    radial-gradient(ellipse 70% 80% at 50% 40%, #14b8a6, transparent 85%),
+    #0f766e;
+  border: 2px solid #134e4a; border-radius: .55rem; color: #ef4444;
+  box-shadow: inset 0 0 .6em rgba(4, 47, 46, .5), 0 0 14px rgba(250, 204, 21, .18), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .55em .95em .3em;
+}
+.skin-taco .slot {
+  --fill: #ef4444; position: relative; z-index: 1; width: .7em; margin: 0 .01em;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: var(--fill); -webkit-text-stroke: .09em #3b1d0a; paint-order: stroke fill; text-shadow: 0 .05em 0 #3b1d0a;
+}
+.skin-taco .slot:nth-of-type(3n+2) { --fill: #facc15; }
+.skin-taco .slot:nth-of-type(3n) { --fill: #4ade80; }
+/* la petite coque de taco sous le chiffre et sa frange de salade */
+.skin-taco .slot::before, .skin-taco .slot::after { content: ''; position: absolute; z-index: -1; pointer-events: none; transform-origin: 50% 100%; }
+.skin-taco .slot::before { left: -.05em; right: -.05em; bottom: .02em; height: .52em; border-radius: 0 0 .42em .42em / 0 0 .52em .52em;
+  background: radial-gradient(circle, rgba(146, 64, 14, .6) 0 .018em, transparent .028em) .02em .03em / .13em .11em, linear-gradient(180deg, #fcd34d, #f59e0b 60%, #d97706);
+  box-shadow: inset 0 .03em 0 rgba(255, 255, 255, .45), inset 0 -.03em .04em rgba(146, 64, 14, .5), 0 .025em 0 #78350f; }
+.skin-taco .slot::after { left: -.07em; right: -.07em; bottom: .5em; height: .11em; background: radial-gradient(circle at 50% 100%, #22c55e 58%, transparent 64%) 0 0 / .1em .1em repeat-x; }
+.skin-taco .slot.ghost { opacity: .2; }
+.skin-taco .slot.collapsed { width: 0; margin: 0; }
+.skin-taco .slot.collapsed::before, .skin-taco .slot.collapsed::after { display: none; }
+/* Pendant le tirage : les chiffres sautent comme dans une poêle chaude. */
+.skin-taco .slot.spinning { opacity: .8; animation: taco-hop .3s ease-in-out infinite alternate; }
+.skin-taco .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes taco-hop { from { transform: translateY(.03em) rotate(-6deg); } to { transform: translateY(-.13em) rotate(6deg); } }
+/* La garniture tombe en s'étirant, s'écrase dans sa coque (qui plie), rebondit et se pose. */
+.skin-taco .slot.revealed { animation: taco-drop .62s backwards; }
+@keyframes taco-drop {
+  0% { transform: translateY(-1.1em) scale(.85, 1.2); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  38% { transform: translateY(.06em) scale(1.28, .7); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  56% { transform: translateY(-.1em) scale(.92, 1.08); }
+  74% { transform: translateY(0) scale(1.04, .97); }
+  100% { transform: none; }
+}
+.skin-taco .slot.revealed::before, .skin-taco .slot.revealed::after { animation: taco-catch .62s backwards; }
+@keyframes taco-catch { 0%, 36% { transform: none; } 44% { transform: translateY(.05em) scaleY(.8); } 64% { transform: translateY(-.015em) scaleY(1.05); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-taco .slot, .skin-taco .slot::before, .skin-taco .slot::after { animation: none; } }
+/* Cadre de duel : l'auvent rayé d'un stand de tacos ; 🌮 saute, 🌶️ se tortille. */
+.side-taco { --side-border: #0d9488; --side-glow: 0 0 16px rgba(250, 204, 21, .25); --side-ink: #0f766e;
+  --side-bg: repeating-linear-gradient(90deg, rgba(244, 114, 182, .45) 0 18px, rgba(254, 243, 199, .45) 18px 36px) 0 0 / 100% 14px no-repeat, radial-gradient(ellipse 70% 40% at 50% 100%, rgba(250, 204, 21, .18), transparent 70%), linear-gradient(180deg, rgba(20, 184, 166, .2), rgba(15, 118, 110, .14));
+  --deco-a: '🌮'; --deco-b: '🌶️'; }
+.side-taco::before { top: 1.1rem; animation: taco-bounce 1.2s ease-in-out infinite; }
+.side-taco::after { animation: taco-wiggle 1.6s ease-in-out infinite; }
+@keyframes taco-bounce { 0%, 60%, 100% { transform: none; } 75% { transform: translateY(-6px) rotate(-12deg); } 88% { transform: translateY(0) scale(1.1, .9); } }
+@keyframes taco-wiggle { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+.room-stage.many .side-taco::before, .room-stage.many .side-taco::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-taco::before, .side-taco::after { animation: none; } }
+/* ------------------------------------------------------------------ Beach (idée de furcoat0, 2026-10-28) : assortie au
+   fond Windy Beach (mêmes bleus de mer, même écume, même sable doré) : une bande de mer en haut de la carte, la ligne
+   d'écume, le sable mouillé plus sombre juste dessous, puis le sable sec ; un coquillage rose et une étoile de mer dans
+   les coins. Chaque chiffre est écrit dans le sable avec un bâton : un sillon (ombre en haut, bord clair en bas).
+   Pendant le tirage, les vagues montent et redescendent sur le sable (une nappe d'eau derrière les chiffres) et les
+   chiffres, sous l'eau, sont flous et effacés ; un chiffre qui se pose : l'écume le recouvre et pousse encore un peu
+   (l'élan), puis se retire d'un coup vers la mer (le coup) et laisse le chiffre tout sombre de sable mouillé, qui
+   sèche (se pose). Le crabe, les bulles d'écume, la grande vague scintillante et le coucher de soleil des grands
+   tirages : js/skinfx.js (SCENES.beach). */
+.num-card.skin-beach {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'><path d='M10 17L1.5 7.5Q10-3 18.5 7.5Z' fill='%23fda4af' stroke='%23be123c' stroke-width='.9' stroke-linejoin='round'/><path d='M10 17L5 4.5M10 17V2.6M10 17l5-12.5' stroke='%23be123c' stroke-width='.7' fill='none'/><rect x='7.6' y='15.6' width='4.8' height='2.2' rx='.6' fill='%23fb7185' stroke='%23be123c' stroke-width='.6'/></svg>") left .12em bottom .1em / .5em auto no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1.5l2.4 5.6 6 .5-4.6 4 1.4 5.9L10 14.4l-5.2 3.1 1.4-5.9-4.6-4 6-.5Z' fill='%23fb923c' stroke='%23c2410c' stroke-width='.9' stroke-linejoin='round'/><g fill='%23fed7aa'><circle cx='10' cy='6' r='.8'/><circle cx='14' cy='9' r='.8'/><circle cx='6' cy='9' r='.8'/><circle cx='12.5' cy='13.5' r='.8'/><circle cx='7.5' cy='13.5' r='.8'/></g></svg>") right .12em bottom .12em / .55em auto no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='12' preserveAspectRatio='none'><path d='M0 6q8-6 16 0t16 0t16 0t16 0V12H0Z' fill='%23f0fdff' fill-opacity='.85'/><path d='M0 6q8-6 16 0t16 0t16 0t16 0' fill='none' stroke='%23ffffff' stroke-width='1.5'/></svg>") 0 23% / 1.6em .2em repeat-x,
+    radial-gradient(circle, rgba(146, 64, 14, .2) 0 .012em, transparent .02em) 0 0 / .11em .13em,
+    linear-gradient(180deg, #0369a1 0%, #0284c7 9%, #0ea5e9 15%, #22d3ee 21%, #a5f3fc 25%, #d6ad55 27%, #e2bc63 36%, #fde68a 50%, #fcd34d 86%, #f6c04a 100%);
+  border: 2px solid #0284c7; border-radius: .6rem; color: #8a4b0f;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3), inset 0 -.25em .5em rgba(217, 119, 6, .25), 0 0 16px rgba(56, 189, 248, .22), 0 10px 18px rgba(0, 0, 0, .35);
+  padding: .58em .85em .28em;
+}
+/* la nappe d'eau qui monte et redescend sur le sable pendant le tirage (derrière les chiffres) */
+.num-card.skin-beach::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 100%; z-index: 0; pointer-events: none; opacity: 0; transform: translateY(-62%);
+  background: linear-gradient(180deg, transparent 0 24%, rgba(34, 211, 238, .3) 32%, rgba(165, 243, 252, .5) 78%, rgba(255, 255, 255, .95) 86%, rgba(255, 255, 255, 0) 93%); transition: opacity .5s ease; }
+.num-card.skin-beach.charging::before { opacity: 1; animation: bch-wash 2.6s ease-in-out infinite; }
+@keyframes bch-wash { 0%, 100% { transform: translateY(-64%); } 45% { transform: translateY(-14%); } }
+.skin-beach .slot { position: relative; z-index: 1; width: .64em;
+  font-family: 'Chalkboard SE', 'Comic Sans MS', 'Marker Felt', 'Trebuchet MS', cursive; font-weight: 700; font-variant-numeric: normal;
+  color: #8a4b0f; text-shadow: 0 -.035em 0 rgba(92, 45, 8, .75), 0 .04em 0 rgba(255, 251, 235, .95), 0 .07em .05em rgba(255, 255, 255, .45); }
+/* l'écume qui recouvre le chiffre au moment où il se pose */
+.skin-beach .slot::after { content: ''; position: absolute; left: -.15em; right: -.15em; top: -.12em; bottom: -.04em; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, .9) 0 .025em, transparent .035em) 0 0 / .13em .11em, linear-gradient(180deg, rgba(165, 243, 252, .75), rgba(240, 253, 255, .92) 72%, #ffffff);
+  /* bord bas festonné, comme une langue d'écume */
+  -webkit-mask: radial-gradient(circle at 50% 0, #000 .07em, transparent .075em) 0 100% / .16em .1em repeat-x, linear-gradient(#000, #000) 0 0 / 100% calc(100% - .06em) no-repeat;
+  mask: radial-gradient(circle at 50% 0, #000 .07em, transparent .075em) 0 100% / .16em .1em repeat-x, linear-gradient(#000, #000) 0 0 / 100% calc(100% - .06em) no-repeat; }
+.skin-beach .slot.ghost { opacity: .2; }
+.skin-beach .slot.collapsed { width: 0; }
+.skin-beach .slot.collapsed::after { display: none; }
+/* Pendant le tirage : sous l'eau, flous, effacés, ils ondulent. */
+.skin-beach .slot.spinning { opacity: 1; color: rgba(146, 64, 14, .32); text-shadow: none; filter: blur(1.2px); animation: bch-ripple .7s ease-in-out infinite alternate; }
+.skin-beach .slot.spinning:nth-of-type(2n) { animation-delay: -.35s; }
+@keyframes bch-ripple { from { transform: skewX(-6deg) translateX(-.02em); } to { transform: skewX(6deg) translateX(.02em); } }
+/* L'écume pousse encore un peu (l'élan), se retire d'un coup vers la mer, le chiffre apparaît sombre et mouillé, puis sèche. */
+.skin-beach .slot.revealed::after { animation: bch-recede .62s backwards; }
+@keyframes bch-recede {
+  0% { opacity: 1; transform: translateY(-.1em); animation-timing-function: ease-out; }
+  22% { opacity: 1; transform: translateY(.08em); animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+  50% { opacity: .8; transform: translateY(-.85em) scaleY(.6); }
+  64%, 100% { opacity: 0; transform: translateY(-1.1em) scaleY(.4); }
+}
+.skin-beach .slot.revealed { animation: bch-write 1.1s backwards; }
+@keyframes bch-write {
+  0%, 16% { color: rgba(146, 64, 14, .32); filter: blur(1.2px); text-shadow: none; transform: none; }
+  30% { color: #4a2205; filter: none; transform: scale(1.06); text-shadow: 0 -.035em 0 rgba(40, 20, 4, .8), 0 .04em 0 rgba(255, 255, 255, .9), 0 0 .2em rgba(255, 255, 255, .7); }
+  44% { color: #4a2205; transform: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-beach .slot, .skin-beach .slot::after, .num-card.skin-beach.charging::before { animation: none; } }
+/* Cadre de duel : la plage du fond Windy Beach (ciel, mer, écume, sable) ; 🦀 marche de côté, 🐚 se balance. */
+.side-beach { --side-border: #0284c7; --side-glow: 0 0 16px rgba(56, 189, 248, .28); --side-ink: #0369a1;
+  --side-bg: linear-gradient(180deg, rgba(14, 165, 233, .22) 0%, rgba(125, 211, 252, .2) 30%, rgba(3, 105, 161, .25) 46%, rgba(34, 211, 238, .25) 56%, rgba(240, 253, 255, .5) 58%, rgba(253, 230, 138, .45) 61%, rgba(252, 211, 77, .45) 85%, rgba(245, 158, 11, .35) 100%);
+  --deco-a: '🦀'; --deco-b: '🐚'; }
+.dark .side-beach { --side-bg: linear-gradient(180deg, rgba(14, 165, 233, .3) 0%, rgba(3, 105, 161, .4) 46%, rgba(34, 211, 238, .35) 56%, rgba(240, 253, 255, .45) 58%, rgba(214, 173, 85, .5) 61%, rgba(180, 130, 40, .45) 100%); }
+.side-beach::before { top: auto; bottom: .5rem; animation: bch-crab 3.2s ease-in-out infinite; }
+.side-beach::after { transform-origin: 50% 100%; animation: bch-sway 2.4s ease-in-out infinite; }
+@keyframes bch-crab { 0%, 100% { transform: translateX(0); } 40%, 50% { transform: translateX(26px); } 45% { transform: translateX(26px) translateY(-3px); } }
+@keyframes bch-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+.room-stage.many .side-beach::before, .room-stage.many .side-beach::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-beach::before, .side-beach::after { animation: none; } }
