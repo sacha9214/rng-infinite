@@ -304,6 +304,7 @@
     // WpBejs (747747, famille JET), CococoC (104 jours de vacances d'été).
     FOREVER_EXACT: ['224'], FOREVER_AND_EVER: ['224224'], YEAR_1987_EXACT: ['1987'], FIVE_OH_FIVE_EXACT: ['505'],
     AROUND_THE_CLOCK: ['24'], JUMBO_JET_SET: ['747747'], SUMMER_BREAK: ['104'],
+    SO_CLOSE: ['97'], // idée de MAYO (2026-10-28) : exactement 97, « si près du but » (le mème des 97 %)
     CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
     RTX_5090_EXACT: ['5090'], GOLDEN_ERA: ['2016'], // badges perso : la carte graphique, l'âge d'or
@@ -380,6 +381,19 @@
     // Idée de qwertyuiop (2026-10-27) : premier ET sans chiffre répété, à partir de 4 chiffres (sous 4 chiffres presque
     // tous les premiers n'ont déjà aucun doublon : le badge ne ferait que doubler Prime). 13 278 nombres, ~1 sur 75.
     QUANTUM_CHAOS: c => c.L >= 4 && c.distinct === c.L && isPrime(c.n),
+    // Idée de Phong254 (2026-10-28) : les six chiffres lus en trois paires AB CD EF avec AB² + CD² = EF² (102426 :
+    // 10² + 24² = 26²). Lu sur 6 chiffres avec zéros de tête, comme Leap Day et 061209 : 30405 = 03 04 05, le triangle
+    // 3-4-5. Aucune paire nulle (00 ne fait pas de triangle, et 0² + x² = x² rendrait 1010 « pythagoricien »), donc il
+    // faut 5 ou 6 chiffres. Exactement 100 nombres (91 à 6 chiffres + 9 à 5 chiffres, vérifié par calcul).
+    PYTHAGOREAN: c => {
+      if (c.L < 5) return false;
+      const a = Math.floor(c.n / 10000), b = Math.floor(c.n / 100) % 100, e = c.n % 100;
+      return a > 0 && b > 0 && e > 0 && a * a + b * b === e * e;
+    },
+    // Idée de Kag (2026-10-28) : chaque chiffre est un chiffre premier (2, 3, 5, 7). Toutes longueurs, comme « Divisible
+    // by Three » (chaque chiffre divisible par 3, 4 096 nombres) : 2, 3, 5 et 7 seuls ne changent rien à la fréquence.
+    // 5 460 nombres (4 + 16 + 64 + 256 + 1 024 + 4 096), ~1 sur 183.
+    PRIME_DIGITS: c => c.d.every(v => v === 2 || v === 3 || v === 5 || v === 7),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
@@ -714,6 +728,8 @@
     CONSEC_PAIR_NEARBY: c => findConsecutivePairNearby(c.s),
     CONSEC_TRIPLE_CONTAINS: c => findConsecutiveRunAdjacent(c.s, 3),
     CONSEC_QUAD_CONTAINS: c => findConsecutiveRunAdjacent(c.s, 4),
+    // Les trois paires (2026-10-28) ; à 5 chiffres la première paire n'a que son chiffre visible (03 → 3).
+    PYTHAGOREAN: c => (c.L === 6 ? [[0, 1], [2, 3], [4, 5]] : [[0], [1, 2], [3, 4]]),
   };
   for (const [id, str] of Object.entries(CONTAINS)) HIGHLIGHTS[id] = c => { const i = c.s.indexOf(str); return [range(i, i + str.length)]; };
   for (const id of ['LUCKY_7']) HIGHLIGHTS[id] = c => [indicesOf(c.s, '7')];
@@ -795,6 +811,18 @@
       return null;
     }
 
+    // Rareté du dessous et marge au-dessus d'elle (idée de Starharvest, 2026-10-28, pour les mauvais tirages) : le plancher
+    // de la rareté actuelle est la première entrée de la table qui l'atteint ; total - above est dans la rareté du dessous,
+    // comme total + short est dans celle du dessus. null pour Land waste (rien en dessous) ou sans table.
+    function prevTier(total) {
+      if (!pctKeys.length) return null;
+      const rank = TIER_ORDER.indexOf(cardTier(total));
+      let lo = 0, hi = pctKeys.length - 1; // première entrée dont la rareté est au moins l'actuelle
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (TIER_ORDER.indexOf(tierOfPct(percentiles[mid][1])) >= rank) hi = mid; else lo = mid + 1; }
+      if (lo === 0 || pctKeys[lo] > total) return null;
+      return { tier: tierOfPct(percentiles[lo - 1][1]), at: pctKeys[lo], above: total - pctKeys[lo] + 1 };
+    }
+
     // Analyse complète pour l'affichage.
     function analyze(n) {
       const c = contextOf(n);
@@ -851,7 +879,7 @@
       return null;
     }
 
-    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
+    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, prevTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
   }
 
   function formatPct(v) {

@@ -4692,7 +4692,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(rankOf(nx.tier), rankOf(cur) + 1, `rareté juste au-dessus pour ${n} (${cur} → ${nx.tier})`);
     assert.equal(engine.cardTier(nx.at), nx.tier); assert.equal(engine.cardTier(nx.at - 1), cur);
   }
-  assert.equal(engine.nextTier(engine.scoreOf(24)), null, '24 est Infinite');
+  assert.equal(engine.nextTier(engine.scoreOf(1)), null, '1 est Infinite'); // 24 ne l'est plus depuis So Close (97), 2026-10-28
 
   const { COLLECTION_SETS, COLLECTION_VERSION, recordRoll, readStats } = require(path.join(ROOT, 'api/_lib.js'));
   const Ach = require(path.join(ROOT, 'js/achievements.js'));
@@ -4909,6 +4909,108 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(last).includes(X.playerId));
   r = await call(profile, { url: '/api/profile?name=Coleadx' }); assert.equal(r.body.clanMvp, 1);
   Clan._reset();
+}
+
+// ================================================================ Idées du 2026-10-28 : badges Pythagorean (Phong254),
+// Prime Digits (Kag) et So Close (MAYO), marge au-dessus de la rareté du dessous (Starharvest), titres « nombres
+// différents » (jsand), duels contre des bots au rythme du joueur (Lewis6767).
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Ach = require(path.join(ROOT, 'js/achievements.js')), Shop = require(path.join(ROOT, 'js/shop.js'));
+  const odds = require(path.join(ROOT, 'data/badge-odds.json'));
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  // 1. Badges : fréquences exactes (build.mjs), cas limites.
+  assert.deepEqual([odds.PYTHAGOREAN, odds.PRIME_DIGITS, odds.SO_CLOSE], [100, 5460, 1], 'nombres qui obtiennent chaque badge');
+  for (const n of [102426, 150817, 304050, 30405, 60810, 51213, 202129, 334455]) assert.ok(has(n, 'PYTHAGOREAN'), `${n} est pythagoricien`);
+  for (const n of [100010, 101010, 10101, 3045, 345, 0, 1000000, 102427, 240726]) assert.ok(!has(n, 'PYTHAGOREAN'), `${n} ne l'est pas`);
+  assert.deepEqual(engine.highlight('PYTHAGOREAN', 102426), [[0, 1], [2, 3], [4, 5]]);
+  assert.deepEqual(engine.highlight('PYTHAGOREAN', 30405), [[0], [1, 2], [3, 4]], '5 chiffres : 03 04 05');
+  for (const n of [2, 7, 23, 2357, 777777, 532752]) assert.ok(has(n, 'PRIME_DIGITS'), `${n} : chiffres premiers`);
+  for (const n of [0, 1, 4, 28, 2358, 1000000, 222221]) assert.ok(!has(n, 'PRIME_DIGITS'), `${n} : non`);
+  assert.ok(has(97, 'SO_CLOSE') && !has(970, 'SO_CLOSE') && !has(197, 'SO_CLOSE') && !has(98, 'SO_CLOSE'), 'exactement 97');
+  assert.equal(engine.byId.get('SO_CLOSE').score, 100000100, 'comme les autres badges exacts');
+
+  // 2. Rareté du dessous : total - above y tombe, total - above + 1 reste dans la rareté du tirage ; rien sous Land waste.
+  const rankOf = t => engine.TIER_ORDER.indexOf(t);
+  const found = {};
+  for (let n = 100000; n < 130000 && Object.keys(found).length < 5; n++) {
+    const t = engine.cardTier(engine.scoreOf(n));
+    if (['landwaste', 'garbage', 'trash', 'common', 'uncommon'].includes(t) && !found[t]) found[t] = n;
+  }
+  for (let n = 500000; !found.landwaste && n < 520000; n++) if (engine.cardTier(engine.scoreOf(n)) === 'landwaste') found.landwaste = n;
+  assert.deepEqual(Object.keys(found).sort(), ['common', 'garbage', 'landwaste', 'trash', 'uncommon']);
+  for (const [cur, n] of Object.entries(found)) {
+    const total = engine.scoreOf(n), pv = engine.prevTier(total);
+    if (cur === 'landwaste') { assert.equal(pv, null, 'rien sous Land waste'); continue; }
+    assert.ok(pv && pv.above > 0 && pv.at === total - pv.above + 1, `marge de ${n}`);
+    assert.equal(rankOf(pv.tier), rankOf(cur) - 1, `${cur} → ${pv.tier}`);
+    assert.equal(engine.cardTier(total - pv.above), pv.tier); assert.equal(engine.cardTier(total - pv.above + 1), cur);
+  }
+
+  // 3. Titres « nombres différents » : stats.uniq = SCARD nums:<id>, lu seulement quand le set est complet (dv).
+  const MILESTONES = { uniq100: 100, uniq500: 500, uniq1k: 1000, uniq5k: 5000, uniq10k: 10000, uniq50k: 50000, uniq100k: 100000 };
+  for (const [id, k] of Object.entries(MILESTONES)) assert.ok(Ach.byId.get(id).test({ uniq: k }) && !Ach.byId.get(id).test({ uniq: k - 1 }), id);
+  assert.ok(!Ach.unlocked({ uniq: 99 }).includes('uniq100') && !Ach.unlocked({ rolls: 5000, dups: 0 }).includes('uniq100'), 'jamais sans le compte');
+  const mk = (i, name, fields = []) => {
+    const id = `28ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const u = mk(1, 'Uniqtitle', ['dv', '1']);
+  run([['SADD', `nums:${u.playerId}`, ...Array.from({ length: 99 }, (_, i) => String(200000 + i))]]);
+  let st = await lib.readStats(u.playerId); assert.equal(st.uniq, 99); assert.ok(!Ach.unlocked(st).includes('uniq100'));
+  let done = await lib.recordRoll(u.playerId, 200050, Date.now()); // déjà tiré : toujours 99
+  assert.ok(!done.achievements.includes('uniq100'), 'un doublon ne compte pas');
+  await new Promise(res => setTimeout(res, 3));
+  done = await lib.recordRoll(u.playerId, 654321, Date.now());
+  assert.ok(done.achievements.includes('uniq100'), 'le 100e nombre différent débloque le titre');
+  st = await lib.readStats(u.playerId); assert.equal(st.uniq, 100); assert.equal(run([['HGET', `stats:${u.playerId}`, 'uniq']])[0].result, null, 'jamais écrit dans stats');
+  let r = await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq100' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.title, 'uniq100');
+  assert.equal((await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq500' } })).status, 422, 'pas encore 500');
+  // Ancien joueur sans set complet (pas de dv) : rien tant qu'il n'a pas tiré ; son premier tirage remplit le set
+  // depuis l'historique et le compte tout de suite.
+  const o = mk(2, 'Uniqold');
+  const t0 = Date.now() - 5000000;
+  run([['SADD', `nums:${o.playerId}`, ...Array.from({ length: 150 }, (_, i) => String(300000 + i))], ['ZADD', `hist:${o.playerId}`, ...Array.from({ length: 120 }, (_, i) => [t0 + i * 10, `${t0 + i * 10}:${400000 + i}`]).flat()]]);
+  st = await lib.readStats(o.playerId); assert.equal(st.uniq, undefined, 'set pas encore fiable'); assert.ok(!Ach.unlocked(st).includes('uniq100'));
+  done = await lib.recordRoll(o.playerId, 123457, Date.now());
+  assert.ok(done.achievements.includes('uniq100'), 'compté dès le premier tirage');
+  assert.equal((await lib.readStats(o.playerId)).uniq, Number(run([['SCARD', `nums:${o.playerId}`]])[0].result));
+
+  // 4. Duel contre des bots : la manche suit la vitesse achetée du joueur (round.pace), délai et révélation compris ;
+  // sans vitesse, ou à deux humains, le rythme commun reste. Les nombres et le gagnant ne changent pas de règle.
+  const fast = mk(3, 'Fastbotter', ['speedLv', String(Shop.SPEED.prices.length)]), slow = mk(4, 'Slowbotter'), mate = mk(5, 'Botmate');
+  const f = Shop.speedFactor(Shop.SPEED.prices.length); assert.equal(f, 0.5);
+  run([['DEL', `cooldown:${fast.playerId}`], ['DEL', `cooldown:${slow.playerId}`], ['DEL', `cooldown:${mate.playerId}`]]);
+  r = await roomPost(fast, 'create', { size: 2, mode: 'rounds', target: 3, bots: 1 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const fastRoom = r.body.code;
+  r = await later(0, () => roomPost(fast, 'ready', { code: fastRoom }));
+  let round = r.body.rounds[0];
+  assert.equal(round.pace, f, 'la manche porte le rythme du joueur');
+  assert.equal(r.body.nextAt, round.revealAt + 8000 * f);
+  const pttl = Number(run([['PTTL', `cooldown:${fast.playerId}`]])[0].result); assert.ok(pttl > 0 && pttl <= 8000 * f, `délai raccourci (${pttl} ms)`);
+  assert.equal(Number(run([['HGET', `room:${fastRoom}`, 'due']])[0].result), round.revealAt + Math.round(9700 * f), 'tirages appliqués à la fin de la révélation raccourcie');
+  for (const x of r.body.reacts) assert.ok(x.t > round.revealAt + 9700 * f, 'réactions des bots après la révélation');
+  assert.equal(round.s.length, 2); assert.deepEqual(round.s, round.n.map(n => engine.scoreOf(n)), 'XP comme d\'habitude');
+  // 2,5 s + 4 s plus tard (8 s × 0,5) : la manche suivante part déjà.
+  r = await later(2500 + 8000 * f, () => roomPost(fast, 'ready', { code: fastRoom }));
+  assert.equal(r.body.rounds.length, 2, 'manche suivante au rythme du joueur');
+  // Sans vitesse achetée : pas de pace, il faut toujours 8 s.
+  r = await roomPost(slow, 'create', { size: 2, mode: 'rounds', target: 3, bots: 1 });
+  const slowRoom = r.body.code;
+  r = await later(0, () => roomPost(slow, 'ready', { code: slowRoom }));
+  assert.equal(r.body.rounds[0].pace, undefined); assert.equal(r.body.nextAt, r.body.rounds[0].revealAt + 8000);
+  r = await later(2500 + 4000, () => roomPost(slow, 'ready', { code: slowRoom }));
+  assert.equal(r.body.rounds.length, 1, 'pas avant 8 s');
+  // Deux humains et un bot : rythme commun, même si l'un a la vitesse max.
+  run([['DEL', `cooldown:${fast.playerId}`], ['DEL', `cooldown:${mate.playerId}`]]);
+  await later(20000, async () => null);
+  r = await roomPost(fast, 'create', { size: 3, mode: 'rounds', target: 3 });
+  const mixRoom = r.body.code;
+  await roomPost(mate, 'join', { code: mixRoom }); r = await roomPost(fast, 'addBot', { code: mixRoom });
+  assert.equal(r.body.status, 'playing', JSON.stringify(r.body));
+  await roomPost(mate, 'ready', { code: mixRoom }); r = await later(0, () => roomPost(fast, 'ready', { code: mixRoom }));
+  assert.equal(r.body.rounds.length, 1); assert.equal(r.body.rounds[0].pace, undefined, 'à plusieurs humains : rythme commun');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

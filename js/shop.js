@@ -414,7 +414,8 @@
 
   // Vitesse du tirage : 5 niveaux achetés l'un après l'autre. Chaque niveau raccourcit toute la révélation en solo
   // (chiffres, badges, fin de séquence) et, côté serveur, le délai entre deux tirages (8 s au départ, 4 s au niveau 5).
-  // La révélation reste toujours un peu plus longue que ce délai. Les duels gardent leur rythme commun.
+  // La révélation reste toujours un peu plus longue que ce délai. Les duels gardent leur rythme commun, sauf contre des
+  // bots avec un seul humain : ils suivent sa vitesse (idée de Lewis6767, 2026-10-28, voir paceOf dans api/room.js).
   const SPEED = { factors: [1, .9, .8, .7, .6, .5], prices: [1000, 2500, 6000, 15000, 40000] };
   const speedLevel = v => Math.max(0, Math.min(SPEED.prices.length, Math.floor(Number(v) || 0)));
   const speedFactor = v => SPEED.factors[speedLevel(v)];

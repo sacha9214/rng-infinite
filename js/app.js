@@ -301,11 +301,15 @@
   // "Top x %" / "Bottom x %" arrondi et coloré selon le percentile, comme l'écran de résultat d'origine.
   // Sous l'XP d'un tirage : combien il manquait pour la rareté suivante (idée de daddy finger, 2026-10-27), avec les
   // vrais seuils de la table des percentiles. Rien pour Infinite. Un seul nœud texte, pour la traduction (js/i18n.js).
-  function tierShortHTML(a) {
-    const nx = Engine.nextTier(a.total);
-    if (!nx) return '';
-    const name = TIER_LABEL[nx.tier] || nx.tier;
-    return `<div class="tier-short invisible" id="r-short" data-tier="${nx.tier}">↑ ${fmt(nx.short)} XP short of ${esc(name[0].toUpperCase() + name.slice(1))}</div>`;
+  // Aussi dans le détail d'un ancien tirage (idée de Kag, 2026-10-28) : live = false, affiché tout de suite. Common et
+  // en dessous : aussi la marge au-dessus de la rareté du dessous (idée de Starharvest, 2026-10-28), sur la même ligne ;
+  // chaque moitié reste entière (sur un téléphone, elles passent l'une sous l'autre).
+  function tierShortHTML(a, live = true) {
+    const nx = Engine.nextTier(a.total), pv = TIER_RANK[a.tier] <= TIER_RANK.common && Engine.prevTier ? Engine.prevTier(a.total) : null;
+    if (!nx && !pv) return '';
+    const name = t => { const l = TIER_LABEL[t] || t; return esc(l[0].toUpperCase() + l.slice(1)); };
+    const parts = [nx && `<span>↑ ${fmt(nx.short)} XP short of ${name(nx.tier)}</span>`, pv && `<span>↓ ${fmt(pv.above)} XP above ${name(pv.tier)}</span>`].filter(Boolean);
+    return `<div class="tier-short${live ? ' invisible" id="r-short' : ''}" data-tier="${(nx || pv).tier}">${parts.join('<i aria-hidden="true"> · </i>')}</div>`;
   }
 
   function percentileHTML(p) {
@@ -719,6 +723,8 @@
       case 'OUROBOROS': { let k = 1; while (Math.pow(k, k) < n) k++; return `${k}${sup(k)}`; }
       case 'FEATHER': case 'HEAVY': case 'BLACKJACK': return `digit sum = ${sum}`;
       case 'SPY': return `sum ${sum} = product ${digits.reduce((a, b) => a * b, 1)}`;
+      // idée de Phong254 (2026-10-28) : les trois paires, « 10² + 24² = 26² »
+      case 'PYTHAGOREAN': { const v = [Math.floor(n / 10000), Math.floor(n / 100) % 100, n % 100]; return `${v[0]}² + ${v[1]}² = ${v[2]}²`; }
       case 'BALANCED': {
         const h = s.length / 2;
         const l = digits.slice(0, h).reduce((a, b) => a + b, 0);
@@ -1119,6 +1125,7 @@
         <div style="margin-top:.9rem"><span class="num-card lg" data-tier="${a.tier}">${a.str}</span></div>
         <div class="result-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
         <div class="ep-big">${fmt(a.total)} XP</div>
+        ${tierShortHTML(a, false)}
         ${occ.length > 1 ? `<p class="repeat-note">Rolled ${occ.length}× in your history: ${occ.map(i => `<a href="javascript:void 0" data-roll="${i}">#${fmt(i + 1)}</a>`).join(', ')}</p>` : ''}
         <div class="result-actions"><button class="btn" data-share>${shareIcon()} Share</button><button class="btn" data-rewatch>▶ Rewatch</button></div>
         ${breakdownHTML(r[0], a)}
@@ -1938,6 +1945,7 @@
         <div style="margin-top:.9rem"><span class="num-card lg" data-tier="${a.tier}">${a.str}</span></div>
         <div class="result-meta">${tierPill(a.tier)}<span class="dot">•</span>${percentileHTML(a.percentile)}</div>
         <div class="ep-big">${fmt(a.total)} XP</div>
+        ${tierShortHTML(a, false)}
         <div class="result-actions"><button class="btn" data-rewatch>▶ Rewatch</button></div>
         ${breakdownHTML(n, a)}
       </div>`, m => {
@@ -2351,18 +2359,63 @@
   // (Angelicide9) ; un seuil d'XP libre « xp:<n> » se tape à la main (WpBejs).
   const AUTO_LOW = ['trash', 'garbage', 'landwaste'];
   const STOP_OK = v => AUTO_STOPS.includes(v) || v === 'never' || AUTO_LOW.map(t => `low:${t}`).includes(v) || /^xp:[1-9]\d{0,9}$/.test(v);
+  // Badges qui arrêtent aussi le tirage auto (idée de CococoC, 2026-10-28) : 5 au plus, choisis dans une petite fenêtre
+  // avec recherche, gardés sur l'appareil (Store.settings.autoBadges). En plus du choix « stop on » : le tirage s'arrête
+  // sur la rareté / l'XP / le mauvais tirage choisi OU sur un de ces badges (même avec « Never stop »), jamais sur un
+  // badge qui n'a pas été choisi.
+  const AUTO_BADGES_MAX = 5;
+  const autoBadges = () => (Array.isArray(Store.settings.autoBadges) ? Store.settings.autoBadges.filter(id => Engine.byId.has(id)).slice(0, AUTO_BADGES_MAX) : []);
+  const autoBadgeHit = a => autoBadges().find(id => a.earnedIds.includes(id)) || null;
   // Le tirage arrête-t-il l'auto-roll ?
   const autoStops = a => {
+    if (autoBadgeHit(a)) return true;
     const st = autoStop();
     if (st === 'never') return false;
     if (st.startsWith('xp:')) return a.total >= Number(st.slice(3));
     if (st.startsWith('low:')) return TIER_RANK[a.tier] <= TIER_RANK[st.slice(4)];
     return TIER_RANK[a.tier] >= TIER_RANK[st];
   };
-  const stopToast = a => { const st = autoStop(); return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
+  const stopToast = a => { const hit = autoBadgeHit(a), b = hit && Engine.byId.get(hit); if (b) return `🎯 Auto-roll stopped on ${b.emoji} ${b.label}: enjoy it!`; const st = autoStop(); return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
   const autoStop = () => (STOP_OK(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
   const kfmt = x => (x >= 1e6 ? `${x / 1e6}M` : `${x / 1e3}K`);
-  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label></span>`;
+  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label>${autoBadgesBtnHTML()}</span>`;
+  const autoBadgesBtnHTML = () => { const k = autoBadges().length; return `<button type="button" class="solo-badges${k ? ' on' : ''}" id="solo-badges" title="Also stop auto-roll on badges you pick">🎯 <span>${k ? plural(k, 'badge') : 'Badges'}</span></button>`; };
+  // Fenêtre de choix des badges : recherche, 5 au plus, enregistré à chaque clic (le tirage auto attend tant qu'elle est ouverte).
+  function openAutoBadges() {
+    let picked = autoBadges();
+    const all = Engine.badges.slice().sort((x, y) => x.label.localeCompare(y.label));
+    const row = b => `<button type="button" class="ab-row" data-ab="${b.id}" aria-pressed="${picked.includes(b.id)}"${!picked.includes(b.id) && picked.length >= AUTO_BADGES_MAX ? ' disabled' : ''}><span class="ab-emoji">${b.emoji}</span><span class="ab-name" data-no-i18n>${esc(b.label)}</span><span class="badge-pill" data-tier="${b.tier}">${oneIn(window.BADGE_ODDS ? window.BADGE_ODDS[b.id] : 0)}</span></button>`;
+    openModal(`
+      <h2>🎯 Stop auto-roll on badges</h2>
+      <p class="panel-note">Auto-roll also stops on a roll that earns one of these badges, whatever you chose in "stop on". Pick up to ${AUTO_BADGES_MAX}.</p>
+      <input class="input ab-search" id="ab-q" type="search" placeholder="Search a badge…" autocomplete="off" aria-label="Search a badge">
+      <div class="ab-count panel-note" id="ab-count"></div>
+      <div class="ab-list" id="ab-list"></div>
+      <div class="actions"><button class="btn" id="ab-clear" type="button">Clear</button><button class="btn-roll small" id="ab-done" type="button">Done</button></div>`, m => {
+      const q = m.querySelector('#ab-q'), list = m.querySelector('#ab-list');
+      const draw = () => {
+        const term = q.value.trim().toLowerCase();
+        // Les badges choisis d'abord, puis ceux qui correspondent à la recherche (nom ou description).
+        const shown = all.filter(b => picked.includes(b.id)).concat(all.filter(b => !picked.includes(b.id) && (!term || b.label.toLowerCase().includes(term) || (b.desc || '').toLowerCase().includes(term))));
+        list.innerHTML = shown.length ? shown.map(row).join('') : '<div class="empty">No badge matches.</div>';
+        m.querySelector('#ab-count').textContent = `${picked.length} / ${AUTO_BADGES_MAX} picked`;
+        const btn = $('#solo-badges');
+        if (btn) { btn.outerHTML = autoBadgesBtnHTML(); $('#solo-badges').addEventListener('click', openAutoBadges); }
+      };
+      const save = () => { Store.setSetting('autoBadges', picked.slice()); draw(); };
+      q.addEventListener('input', draw);
+      list.addEventListener('click', e => {
+        const r = e.target.closest('[data-ab]'); if (!r || r.disabled) return;
+        const id = r.dataset.ab;
+        picked = picked.includes(id) ? picked.filter(x => x !== id) : picked.length < AUTO_BADGES_MAX ? [...picked, id] : picked;
+        save();
+      });
+      m.querySelector('#ab-clear').addEventListener('click', () => { picked = []; save(); });
+      m.querySelector('#ab-done').addEventListener('click', closeModal);
+      draw();
+      if (!matchMedia('(pointer: coarse)').matches) q.focus(); // pas de clavier qui surgit sur téléphone
+    });
+  }
   function stopSoloAuto() {
     SoloAuto.on = false;
     BgTimer.clear(SoloAuto.timer);
@@ -2375,6 +2428,8 @@
     // Retour sur l'accueil avec le tirage auto encore allumé (parti sur un autre onglet du jeu en plein tirage) : il
     // repart tout seul au lieu d'attendre un premier clic (signalé par MereTera le 2026-10-17).
     if (SoloAuto.on && currentView === 'home' && !rollPending) scheduleSoloAuto(900);
+    const pick = $('#solo-badges');
+    if (pick) pick.addEventListener('click', openAutoBadges);
     const stop = $('#solo-stop');
     if (stop) stop.addEventListener('change', () => {
       if (stop.value === 'xp:custom') {
@@ -5419,7 +5474,7 @@
         <div class="speed-text"><b>Level ${lv} / ${max}</b><span class="panel-note">${lv ? `reveal ${pct(lv)}% faster · ${wait(lv)} s between rolls` : `8 s between rolls`}</span></div>
         ${price === undefined ? '<span class="skin-state">Max level</span>' : `<button class="btn-roll small${state.coins >= price ? '' : ' disabled'}" id="d-speed-buy">Upgrade · 🪙 ${fmt(price)}</button>`}
       </div>
-      <p class="panel-note speed-note">${price === undefined ? 'Your rolls are as fast as they get. Duels keep their shared pace.' : `Next level: reveal ${pct(lv + 1)}% faster, ${wait(lv + 1)} s between rolls. Solo rolls only: duels keep their shared pace.`}</p>`;
+      <p class="panel-note speed-note">${price === undefined ? 'Your rolls are as fast as they get. Duels with other players keep their shared pace.' : `Next level: reveal ${pct(lv + 1)}% faster, ${wait(lv + 1)} s between rolls. Solo rolls and duels against bots: duels with other players keep their shared pace.`}</p>`;
     const btn = $('#d-speed-buy');
     if (btn) btn.onclick = async () => {
       if (state.coins < price) { toast(`${fmt(price - state.coins)} more coins needed for the next speed level`); return; }
@@ -7254,7 +7309,7 @@
     }
     if (!Room.data) {
       // Arrivée en cours de partie : les manches déjà finies s'affichent sans animation.
-      Room.shown = d.rounds.filter(r => r.revealAt - Room.offset + roundLength() < Date.now()).length;
+      Room.shown = d.rounds.filter(r => r.revealAt - Room.offset + roundLength(r) < Date.now()).length;
     }
     Room.data = d;
     drawRoom();
@@ -7334,8 +7389,9 @@
     }
   }
 
-  // Durée d'une révélation : les chiffres au rythme d'origine, puis l'XP et le gagnant de la manche.
-  const roundLength = () => REVEAL.digitStart + Array.from({ length: 5 }, (_, i) => digitDelay(i, 6)).reduce((x, y) => x + y, 0) + 1500;
+  // Durée d'une révélation : les chiffres au rythme d'origine, puis l'XP et le gagnant de la manche. Contre des bots, la
+  // manche suit la vitesse de tirage du joueur (r.pace, décidé par le serveur ; idée de Lewis6767, 2026-10-28).
+  const roundLength = r => (REVEAL.digitStart + Array.from({ length: 5 }, (_, i) => digitDelay(i, 6)).reduce((x, y) => x + y, 0) + 1500) * ((r && r.pace) || 1);
   const serverNow = () => Date.now() + Room.offset;
 
   // Score affiché : seulement les manches déjà révélées à l'écran.
@@ -7775,7 +7831,8 @@
     const timers = [];
     // Sons, plus discrets qu'en solo (encore plus à trois joueurs ou plus). Manche rattrapée en retard (rechargement,
     // onglet endormi) : tout tombe d'un coup, donc en silence.
-    const late = r.revealAt - Room.offset + REVEAL.digitStart - Date.now() < -250;
+    const pace = r.pace || 1; // contre des bots : la vitesse de tirage du joueur (voir roundLength)
+    const late = r.revealAt - Room.offset + REVEAL.digitStart * pace - Date.now() < -250;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     const size = sides.length <= 2 ? {} : { small: 1 };
     // La séquence de chaque skin se joue en duel comme en solo, sur la carte de son joueur (la signature du créateur
@@ -7794,9 +7851,9 @@
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
     }, 55);
     const at = (ms, fn) => timers.push(setTimeout(fn, Math.max(0, r.revealAt - Room.offset + ms - Date.now())));
-    let clock = REVEAL.digitStart;
+    let clock = REVEAL.digitStart * pace;
     for (let k = 0; k < slotCount; k++) {
-      if (k) clock += digitDelay(k - 1, slotCount);
+      if (k) clock += digitDelay(k - 1, slotCount) * pace;
       at(clock, () => {
         slots.forEach((list, j) => {
           list[k].textContent = padded[j][k];
@@ -7811,7 +7868,7 @@
       });
     }
     at(clock - Sound.LEAD, () => roomFx.forEach(fx => { if (fx) fx.build(Sound.LEAD); })); // la tension monte avant le dernier chiffre
-    at(clock + 600, () => {
+    at(clock + 600 * pace, () => {
       clearInterval(spin);
       keepMine();
       sfx('reveal', size);
@@ -7826,7 +7883,7 @@
         if (sides.length <= 2 || d.players[j].me || r.winner === j) FX.celebrate(x.a.tier, cards[j]);
       });
     });
-    if (faked >= 0) at(clock + 2800, () => {
+    if (faked >= 0) at(clock + 2800 * pace, () => {
       // la vérité : le vrai nombre reprend sa place, avec sa rareté et ses badges
       const x = real[faked], str = x.a.str.padStart(slotCount, '0');
       cards[faked].innerHTML = str.split('').map((c, k) => `<span class="slot${k < slotCount - x.a.str.length ? ' ghost' : ''}">${c}</span>`).join('');
@@ -7835,7 +7892,7 @@
       $(`#rb-${faked}`).innerHTML = duelBadgesHTML(x.a, x.n);
       prankReveal(pk.by);
     });
-    at(clock + 1500 + (faked >= 0 ? 2800 : 0), () => {
+    at(clock + (1500 + (faked >= 0 ? 2800 : 0)) * pace, () => {
       if (r.winner !== null) {
         const side = $(`#rs-${r.winner}`);
         side.classList.add('won');
@@ -7851,7 +7908,7 @@
       if (Room.shown < Room.data.rounds.length) playRound(Room.shown);
     });
     // Animation coupée (on quitte le duel) : le tirage est gardé quand même, à l'heure où il aurait été révélé.
-    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); clearRoomFx(); at(clock + 600, keepMine); } };
+    Room.anim = { cancel() { timers.forEach(clearTimeout); clearInterval(spin); Sound.stop(); clearRoomFx(); at(clock + 600 * pace, keepMine); } };
     drawRoom();
   }
 

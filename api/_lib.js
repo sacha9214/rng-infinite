@@ -413,12 +413,15 @@ async function syncCollections(playerId, stats) {
 }
 
 async function readStats(playerId) {
-  const [flat, count] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)]]);
+  const [flat, count, uniq] = await redis([['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)], ['SCARD', `nums:${playerId}`]]);
   const stats = toObject(flat);
-  if (!stats.v) return syncCollections(playerId, await rebuildStats(playerId));
+  if (!stats.v) return withUniq(await syncCollections(playerId, await rebuildStats(playerId)), uniq);
   const out = { ...(await splitTopTiers(playerId, stats)), badges: Number(count) };
-  return out.colv === COLLECTION_VERSION ? out : syncCollections(playerId, out);
+  return withUniq(out.colv === COLLECTION_VERSION ? out : await syncCollections(playerId, out), uniq);
 }
+// Nombres différents tirés (titres de jsand, 2026-10-28) : SCARD nums:<id>, seulement quand ce set est complet (stats.dv,
+// voir recordRoll et api/profile.js) ; jamais écrit dans stats:<id>, il se relit à chaque fois.
+const withUniq = (stats, scard) => (stats.dv === '1' ? Object.assign(stats, { uniq: Number(scard) || 0 }) : stats);
 
 // ---------------------------------------------------------------- quêtes, pièces offertes, mises de duel
 // Compteurs du jour d'un joueur (voir js/quests.js), gardés 3 jours.
@@ -551,7 +554,7 @@ async function recordRoll(playerId, n, t) {
   // Doublons (succès Déjà vu, idée de Lolha39, 2026-10-18) : nums:<id> = les nombres déjà tirés ; SADD répond 0 si
   // le nombre y était déjà.
   const dupAt = writes.length;
-  writes.push(['SADD', `nums:${playerId}`, n]);
+  writes.push(['SADD', `nums:${playerId}`, n], ['SCARD', `nums:${playerId}`]); // + nombres différents (titres de jsand, 2026-10-28)
   writes.push(['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)], ['ZCARD', historyKey(playerId)]);
   writes.push(['ZREVRANK', periods[0].lb, playerId]);
   const out = await redis(writes);
@@ -564,20 +567,24 @@ async function recordRoll(playerId, n, t) {
   if (s > Number(stats.best || 0)) { fix.push(['HSET', statsKey(playerId), 'best', s]); stats.best = s; }
   if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', statsKey(playerId), 'dayTop', 1]); stats.dayTop = 1; }
   if (!stats.v && Number(out[out.length - 2]) <= 1) { fix.push(['HSET', statsKey(playerId), 'v', STATS_VERSION]); stats.v = STATS_VERSION; }
+  let uniqAt = -1;
   if (stats.dv !== '1') {
     // Joueur d'avant ce compteur : ses doublons recomptés une fois depuis son historique (qui contient déjà ce tirage).
     const [members] = await redis([['ZRANGE', historyKey(playerId), 0, -1]]);
     const nums = (members || []).map(m => Number(String(m).split(':')[1])).filter(Number.isInteger), distinct = new Set(nums);
     fix.push(['HSET', statsKey(playerId), 'dups', nums.length - distinct.size, 'dv', 1]);
     if (distinct.size) fix.push(['SADD', `nums:${playerId}`, ...distinct]);
+    uniqAt = fix.length; fix.push(['SCARD', `nums:${playerId}`]); // set enfin complet : nombres différents relus juste après
     stats.dups = String(nums.length - distinct.size); stats.dv = '1';
   } else if (Number(out[dupAt]) === 0) { fix.push(['HINCRBY', statsKey(playerId), 'dups', 1]); stats.dups = String((Number(stats.dups) || 0) + 1); }
-  if (fix.length) await redis(fix);
+  const fixOut = fix.length ? await redis(fix) : [];
+  const uniq = uniqAt >= 0 ? fixOut[uniqAt] : out[dupAt + 1];
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
   // Relu seulement si un badge neuf peut compléter une rareté pas encore obtenue.
   const mayComplete = badgeAt >= 0 && Number(out[badgeAt]) > 0 && a.earnedIds.some(id => COLLECTION_TIER.has(id) && !Number(stats[`col:${COLLECTION_TIER.get(id)}`]));
   if (stats.colv !== COLLECTION_VERSION || mayComplete) stats = await syncCollections(playerId, stats);
+  withUniq(stats, uniq);
   // Nouveau record Mythic ou mieux d'un joueur qui a lié son Discord : son rôle de rareté suit (api/_discord_link.js).
   if (['mythic', 'celestial', 'divine', 'godlike', 'infinite'].includes(a.tier) && Number(stats.best) === s) redis([['HGET', statsKey(playerId), 'discord']]).then(([uid]) => uid && require('./_discord_link').syncRoles(playerId)).catch(() => {});
   // Grand tirage (Celestial ou mieux) : annoncé sur le Discord, en arrière-plan.
