@@ -8768,7 +8768,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   transform-origin: 50% 125%; animation: lbl-buzz .42s ease-in-out infinite alternate; }
 .skin-lightbulb .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
 .skin-lightbulb .slot.spinning:nth-of-type(3n) { animation-duration: .5s; }
-@keyframes lbl-buzz { 0% { transform: rotate(-1.8deg); } 45% { transform: rotate(.6deg) translateY(-.01em); filter: brightness(1.06); } 100% { transform: rotate(1.6deg); } }
+@keyframes lbl-buzz { 0% { transform: rotate(-1.8deg); } 45% { transform: rotate(.6deg) translateY(-.01em); } 100% { transform: rotate(1.6deg); } }
 /* La fêlure : petit choc raide, éclair, la lumière s'échappe (plus sombre un instant), le chiffre devient net. */
 .skin-lightbulb .slot.revealed { transform-origin: 50% 125%; animation: lbl-crack .62s backwards; }
 @keyframes lbl-crack {
