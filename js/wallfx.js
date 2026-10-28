@@ -148,7 +148,7 @@
    */
   SCENES.condensation = layer => {
     const FS = 1 / 6;
-    const fog = canvas(layer, 'wcd-fog', 1), beads = canvas(layer, 'wcd-beads', 1.5), drops = canvas(layer, 'wcd-drops', 1.5);
+    const fog = canvas(layer, 'wcd-fog', 1), beads = canvas(layer, 'wcd-beads', 1), drops = canvas(layer, 'wcd-drops', 1.5);
     const fg = fog.g, bg = beads.g, dg = drops.g;
     const mk = n => { const c = doc.createElement('canvas'); c.width = c.height = n; return c; };
     // une goutte : une petite lentille (bord bas sombre, centre clair), un reflet en haut à gauche, un éclat en bas
@@ -164,13 +164,32 @@
       gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(.6, 'rgba(0,0,0,.9)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }
     let W = 0, H = 0, dpr = 1, list = [], trail = [], wipes = [], refogT = 0, alive = true;
-    const eraseFog = (x, y, r) => { fg.globalCompositeOperation = 'destination-out'; fg.drawImage(brush, (x - r) * FS, (y - r) * FS, 2 * r * FS, 2 * r * FS); };
-    const eraseBeads = (x, y, r) => { bg.globalCompositeOperation = 'destination-out'; bg.drawImage(brush, (x - r) * dpr, (y - r) * dpr, 2 * r * dpr, 2 * r * dpr); };
-    const bead = (x, y, r) => { bg.globalCompositeOperation = 'source-over'; bg.drawImage(drop, (x - r) * dpr, (y - r) * dpr, 2 * r * dpr, 2 * r * dpr); };
+    // la buée aussi part en lot (toutes les 3 images) : c'est le canevas le plus cher à réafficher (agrandi 6 fois)
+    let fq = [], refog = 0;
+    const eraseFog = (x, y, r) => fq.push(x, y, r);
+    const flushFog = () => {
+      if (refog) { fg.globalCompositeOperation = 'source-over'; fg.fillStyle = `rgba(255,255,255,${Math.min(1, .022 * refog)})`; fg.fillRect(0, 0, fog.c.width, fog.c.height); refog = 0; }
+      fg.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < fq.length; i += 3) { const x = fq[i], y = fq[i + 1], r = fq[i + 2]; fg.drawImage(brush, (x - r) * FS, (y - r) * FS, 2 * r * FS, 2 * r * FS); }
+      fq = [];
+    };
+    // la micro-buée change peu : ses retouches attendent et partent en lot ~8 fois par seconde (un canevas plein écran
+    // modifié à chaque image coûtait cher à afficher), et elle se contente d'une densité 1
+    let bq = [], bqN = 0, bd = 1;
+    const eraseBeads = (x, y, r) => bq.push(0, x, y, r);
+    const bead = (x, y, r) => bq.push(1, x, y, r);
+    const flushBeads = () => {
+      for (let i = 0; i < bq.length; i += 4) {
+        const x = bq[i + 1], y = bq[i + 2], r = bq[i + 3];
+        bg.globalCompositeOperation = bq[i] ? 'source-over' : 'destination-out';
+        bg.drawImage(bq[i] ? drop : brush, (x - r) * bd, (y - r) * bd, 2 * r * bd, 2 * r * bd);
+      }
+      bq = [];
+    };
     const spawn = (x, y, r) => { list.push({ x, y, r, run: false, vy: 0, dx: 0, stop: 0, moved: 0, grow: rnd(.02, .14), at: rnd(4.8, 7) }); };
     function reset() {
-      W = innerWidth; H = innerHeight; dpr = Math.min(root.devicePixelRatio || 1, 1.5);
-      fog.fit(FS); beads.fit(); drops.fit();
+      W = innerWidth; H = innerHeight; dpr = Math.min(root.devicePixelRatio || 1, 1.5); bd = Math.min(root.devicePixelRatio || 1, 1);
+      fog.fit(FS); beads.fit(); drops.fit(); bq = []; fq = []; refog = 0;
       fg.setTransform(1, 0, 0, 1, 0, 0); bg.setTransform(1, 0, 0, 1, 0, 0);
       fg.globalCompositeOperation = 'source-over'; fg.fillStyle = '#fff'; fg.fillRect(0, 0, fog.c.width, fog.c.height);
       bg.globalCompositeOperation = 'source-over'; bg.clearRect(0, 0, beads.c.width, beads.c.height);
@@ -179,6 +198,7 @@
       for (let i = 0, n = W * H / 14000; i < n; i++) spawn(Math.random() * W, Math.random() * H, Math.random() < .08 ? rnd(4, 5) : rnd(1.2, 3.4));
       // quelques secondes de vitre déjà vécues : des traces, des gouttes de toutes les tailles
       for (let i = 0; i < 360; i++) step(1 / 30, true);
+      flushBeads(); flushFog();
     }
     const maxDrops = () => Math.round(W * H / 7000);
     function step(dt, warm) {
@@ -224,7 +244,7 @@
       list = list.filter(d => !d.dead && d.y - d.r < H + 4);
       // la buée revient, et la micro-buée se repose sur les vieilles traces
       refogT += dt;
-      if (refogT > .12) { refogT = 0; fg.globalCompositeOperation = 'source-over'; fg.fillStyle = 'rgba(255,255,255,.022)'; fg.fillRect(0, 0, fog.c.width, fog.c.height); }
+      if (refogT > .12) { refogT = 0; refog++; }
       for (let k = 2; k < trail.length; k += 3) trail[k] += dt;
       let drop0 = 0;
       for (let k = 0; k < trail.length; k += 3) {
@@ -238,6 +258,8 @@
       wipes = wipes.filter(w => w.p < 1);
     }
     function draw() {
+      if (++bqN % 8 === 0 || still()) flushBeads();
+      if (bqN % 3 === 0 || still()) flushFog();
       dg.setTransform(dpr, 0, 0, dpr, 0, 0);
       dg.clearRect(0, 0, W, H);
       for (const d of list) {
@@ -293,7 +315,7 @@
     let stillT = 0;
     return {
       alive: () => alive && fog.c.isConnected,
-      stop() { alive = false; lp.stop(); removeEventListener('resize', onResize); [fog, beads, drops].forEach(x => x.c.remove()); },
+      stop() { alive = false; lp.stop(); clearTimeout(stillT); clearTimeout(rt); removeEventListener('resize', onResize); [fog, beads, drops].forEach(x => x.c.remove()); },
       roll(tier, n, rank) {
         if (doc.hidden) return;
         if (rank >= 4) wipe(rank); else nudge(rank >= 2 ? 3 : 1);
@@ -596,7 +618,7 @@
     if (still()) lp.draw(); else lp.start();
     return {
       alive: () => alive && cv.c.isConnected,
-      stop() { alive = false; lp.stop(); removeEventListener('resize', onResize); cv.c.remove(); },
+      stop() { alive = false; lp.stop(); clearTimeout(rt); removeEventListener('resize', onResize); cv.c.remove(); },
       roll(tier, n, rank) {
         if (!(rank >= 4) || still()) return;
         boost = Math.max(boost, rank);
