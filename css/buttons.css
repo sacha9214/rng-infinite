@@ -1272,3 +1272,27 @@
   text-shadow: 0 1px 0 #0f172a, 0 0 .3em rgba(15, 23, 42, .8);
   --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
 .btn-roll.gen-weather:hover { filter: brightness(1.12); }
+/* Ninja (idée de casmictechthing, 2026-10-28) : une bûche de dojo, une tige de bambou tranchée en biais à gauche. */
+.btn-roll.gen-ninja { border: 2px solid #3b2412; border-radius: .45rem; color: #1c1208; font-weight: 800;
+  background: linear-gradient(160deg, transparent 0 48%, #ecfccb 48% 50%, transparent 50%) .6em 0 / .7em 100% no-repeat, linear-gradient(90deg, #365314, #84cc16 40%, #d9f99d 50%, #4d7c0f 80%) .6em 0 / .7em 100% no-repeat, linear-gradient(180deg, #2b1a0e 0 4px, transparent 4px calc(100% - 4px), #2b1a0e calc(100% - 4px)), repeating-linear-gradient(178deg, transparent 0 5px, rgba(120, 72, 30, .2) 5px 6px), linear-gradient(180deg, #c08a50, #ddb07a 45%, #b27e45);
+  padding-left: 2em; text-shadow: 0 1px 0 rgba(255, 236, 200, .6);
+  --gs: 0 .3em 0 #3b2412, 0 .5em 1em rgba(132, 204, 22, .2); --gs-h: 0 .34em 0 #3b2412, 0 .7em 1.3em rgba(132, 204, 22, .4); --gs-a: 0 .06em 0 #3b2412; }
+.btn-roll.gen-ninja:hover { filter: brightness(1.08); }
+/* Scroll of Alchemy (idée de R77, 2026-10-28) : un parchemin entre deux rouleaux, une rune d'or à gauche. */
+.btn-roll.gen-alchemy { border: 1px solid #7c4a1e; border-radius: .3rem; color: #4a2c0a; font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  background: radial-gradient(circle at 1.25em 50%, transparent 0 .32em, #b7791f .32em .4em, transparent .4em), linear-gradient(90deg, #8a5a2b, #f3dfb3 45%, #6f4520) 0 0 / .5em 100% no-repeat, linear-gradient(90deg, #8a5a2b, #f3dfb3 45%, #6f4520) 100% 0 / .5em 100% no-repeat, radial-gradient(ellipse 80% 90% at 50% 50%, transparent 55%, rgba(120, 70, 20, .35)), linear-gradient(180deg, #f4e4c0, #dfc28a);
+  padding-left: 2.1em; text-shadow: 0 0 .3em rgba(251, 191, 36, .6);
+  --gs: 0 .3em 0 #7c4a1e, 0 .5em 1em rgba(251, 191, 36, .25); --gs-h: 0 .34em 0 #7c4a1e, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #7c4a1e; }
+.btn-roll.gen-alchemy:hover { filter: brightness(1.06); }
+/* Window Cleaner (idée de Deadshot, 2026-10-28) : une vitre dans un cadre blanc, à moitié raclée en biais. */
+.btn-roll.gen-windowcleaner { border: 3px solid #f8fafc; border-radius: .3rem; color: #f6c945; font-family: Georgia, 'Bookman Old Style', serif; font-weight: 900;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .5) 36%, transparent 44%), linear-gradient(90deg, rgba(150, 137, 112, .75) 0 22%, #0f172a 22% 23.5%, transparent 23.5%), linear-gradient(180deg, #60a5fa, #bfdbfe);
+  text-shadow: 1px 0 0 #1c1917, -1px 0 0 #1c1917, 0 1px 0 #1c1917, 0 -1px 0 #1c1917, 2px 2px 0 #7c2d12;
+  --gs: 0 .3em 0 #94a3b8, 0 .5em 1em rgba(96, 165, 250, .3); --gs-h: 0 .34em 0 #94a3b8, 0 .7em 1.3em rgba(96, 165, 250, .5); --gs-a: 0 .06em 0 #94a3b8; }
+.btn-roll.gen-windowcleaner:hover { filter: brightness(1.06); }
+/* Firework (idée de HSI, 2026-10-28) : un ciel de nuit, deux bouquets d'étincelles de part et d'autre du texte. */
+.btn-roll.gen-firework { border: 2px solid #4338ca; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 12% 45%, #fff 0 1.5px, rgba(244, 114, 182, .9) 2px, rgba(244, 114, 182, .25) .45em, transparent .7em), radial-gradient(circle at 88% 40%, #fff 0 1.5px, rgba(250, 204, 21, .9) 2px, rgba(250, 204, 21, .25) .45em, transparent .7em), repeating-conic-gradient(from 0deg at 12% 45%, rgba(244, 114, 182, .5) 0 4deg, transparent 4deg 30deg), linear-gradient(180deg, #060818, #2a1d55);
+  text-shadow: 0 0 .2em #f472b6, 0 0 .5em #c084fc;
+  --gs: 0 .3em 0 #1e1b4b, 0 .5em 1em rgba(244, 114, 182, .3); --gs-h: 0 .34em 0 #1e1b4b, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #1e1b4b; }
+.btn-roll.gen-firework:hover { filter: brightness(1.15); }

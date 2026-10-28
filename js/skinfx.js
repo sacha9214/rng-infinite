@@ -7061,6 +7061,649 @@
 
   // ==== fin des skins du 2026-10-28 (costoroll, casmicgraything) ====
 
+  // ==== Skins du 2026-10-28, lot C ====
+  // Ninja, Scroll of Alchemy, Window Cleaner et Firework : idées de joueurs acceptées par Sacha. Ces scènes suivent les
+  // cases (slotsA) ; le calque intérieur (ci) garde sa taille de départ alors que la carte rétrécit quand les zéros de
+  // tête s'effacent (il est donc étiré en largeur) : inC dessine dedans avec les coordonnées du calque extérieur en
+  // compensant cet étirement, pour qu'un rond reste rond et qu'un dessin reste sous son chiffre. cw0 : largeur de départ.
+  function inC(env, cw0, fn) {
+    const { ci, card, w } = env, b = (cw0 - w) / 2;
+    ci.save(); ci.scale(w / Math.max(1, card.w - 2 * b), 1); ci.translate(-(card.x + b), -(card.y + b)); fn(ci); ci.restore();
+  }
+  // Étincelle à quatre branches (reflet de lame, éclat de vitre propre, paillette).
+  function twinkle(c, color, x, y, r, a, rot = 0) {
+    if (a <= .01 || r <= .3) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot); c.fillStyle = color;
+    c.beginPath();
+    for (let i = 0; i < 8; i++) { const an = (i * Math.PI) / 4, rr = i % 2 ? r * .16 : r; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+    c.closePath(); c.fill(); c.restore();
+  }
+
+  // 🥷 Ninja (2026-10-28, idée de casmictechthing ; le bambou tranché au sabre vient de Nero) — à chaque chiffre posé, un
+  // trait de lame blanc traverse la tige de bambou en biais (la coupe CSS nj-top / nj-stump est calée dessus, à 16 % de
+  // 0,62 s), des feuilles et des copeaux verts volent ; juste après, un shuriken (chiffres de rang pair, coin haut gauche)
+  // ou un kunaï (rang impair, coin bas droit) arrive de l'extérieur en tournoyant et se plante dans la bûche avec un
+  // tremblement qui s'amortit ; il y reste. Avant le dernier chiffre, un petit ninja passe la tête derrière la carte et
+  // un éclat brille sur la dernière tige. Révélation : le ninja surgit derrière le coin haut droit, une bulle donne son
+  // kaomoji, un par rareté (NJ_FACE, idée de casmictechthing : Common -_-, Mythic :), Celestial :D, Infinite 8D, Trash
+  // :c, Garbage :(, Landwaste >:( ; Garbage et Land waste arrivent par miss()) ; tirage raté, il s'affaisse et un
+  // shuriken tombe de la bûche ; dès Epic, il lance trois shuriken sur le bord de la carte ; dès Mythic, il fait un salto,
+  // un grand X de lame traverse la carte, une ronde de shuriken se plante tout autour et des feuilles pleuvent.
+  const NJ_FACE = { landwaste: '>:(', garbage: ':(', trash: ':c', common: '-_-', uncommon: '._.', rare: 'o_o', epic: ':o', anomaly: 'O_O', mythic: ':)', celestial: ':D', divine: '^o^', godlike: 'B)', infinite: '8D' };
+  SCENES.ninja = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h;
+    const stuck = [], flying = [], slashes = timed(), leaves = particles(), chips = particles(), drops = particles(), steam = particles();
+    const ninja = { up: 0, to: 0, flip: 0, flipT: -1, mood: 'calm', face: '', bubble: 0, bubbleTo: 0, until: Infinity };
+    let now = 0, glint = 0;
+    const STEEL = ['#f8fafc', '#94a3b8', '#334155'], GOLD = ['#fef3c7', '#eab308', '#713f12'];
+    // centre de la case i (les cases bougent quand la carte se resserre)
+    const slotOf = i => slotsA(env).find(s => s.i === i);
+    const nearest = x => { let best = null; for (const s of slotsA(env)) if (!best || Math.abs(s.x - x) < Math.abs(best.x - x)) best = s; return best; };
+    // où se plante l'arme d'une case : haut gauche (shuriken) ou bas droit (kunaï), dans l'écorce, hors du chiffre
+    const spot = (s, kind) => kind === 'star' ? { x: s.x - s.w * .46, y: card.y + H * .13 } : { x: s.x + s.w * .5, y: card.y + H - H * .14 };
+    const star = (x, y, r, rot, cols, a = 1) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      const path = () => { co.beginPath(); for (let i = 0; i < 8; i++) { const an = (i * Math.PI) / 4, rr = i % 2 ? r * .3 : r; co.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } co.closePath(); };
+      path(); const g = co.createLinearGradient(-r, -r, r, r); g.addColorStop(0, cols[0]); g.addColorStop(.5, cols[1]); g.addColorStop(1, cols[2]);
+      co.fillStyle = g; co.fill(); co.lineJoin = 'round'; co.lineWidth = Math.max(1, r * .1); co.strokeStyle = '#0f172a'; co.stroke();
+      co.strokeStyle = 'rgba(255,255,255,.6)'; co.lineWidth = Math.max(.6, r * .06); co.beginPath();
+      for (let i = 0; i < 8; i += 2) { const an = (i * Math.PI) / 4; co.moveTo(Math.cos(an) * r * .2, Math.sin(an) * r * .2); co.lineTo(Math.cos(an) * r * .85, Math.sin(an) * r * .85); }
+      co.stroke();
+      co.fillStyle = '#0f172a'; co.beginPath(); co.arc(0, 0, r * .17, 0, TAU); co.fill();
+      co.restore();
+    };
+    // kunaï : la pointe en (0, 0), tourné vers +x ; L = longueur totale
+    const kunai = (L, cols) => {
+      const g = co.createLinearGradient(0, -L * .12, 0, L * .12); g.addColorStop(0, cols[0]); g.addColorStop(.5, cols[1]); g.addColorStop(1, cols[2]);
+      co.lineJoin = 'round'; co.lineWidth = Math.max(1, L * .025); co.strokeStyle = '#0f172a';
+      co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-L * .2, -L * .14, -L * .44, -L * .035); co.lineTo(-L * .44, L * .035); co.quadraticCurveTo(-L * .2, L * .14, 0, 0); co.closePath();
+      co.fillStyle = g; co.fill(); co.stroke();
+      co.strokeStyle = 'rgba(255,255,255,.65)'; co.lineWidth = Math.max(.6, L * .012); co.beginPath(); co.moveTo(-L * .04, 0); co.lineTo(-L * .4, 0); co.stroke();
+      co.fillStyle = '#1f2937'; co.fillRect(-L * .82, -L * .04, L * .38, L * .08); co.strokeStyle = '#0f172a'; co.lineWidth = Math.max(1, L * .02); co.strokeRect(-L * .82, -L * .04, L * .38, L * .08);
+      co.strokeStyle = '#dc2626'; co.lineWidth = Math.max(1, L * .025); co.beginPath();
+      for (let u = .48; u < .8; u += .07) { co.moveTo(-L * u, -L * .04); co.lineTo(-L * (u + .045), L * .04); }
+      co.stroke();
+      co.strokeStyle = cols[1]; co.lineWidth = Math.max(1.2, L * .03); co.beginPath(); co.arc(-L * .9, 0, L * .075, 0, TAU); co.stroke();
+    };
+    // une arme : en vol (k < 1) ou plantée ; e.wob : tremblement qui s'amortit après l'impact
+    const weapon = (e, x, y) => {
+      const cols = e.gold ? GOLD : e.cols || STEEL, since = now - e.hit, wob = e.hit ? Math.sin(since * 48) * .22 * Math.exp(-since * 7) : 0;
+      if (e.kind === 'star') {
+        const r = H * e.r;
+        if (e.hit) { co.globalAlpha = .35; co.fillStyle = '#1c1208'; co.beginPath(); co.ellipse(x + r * .18, y + r * .22, r * .8, r * .55, 0, 0, TAU); co.fill(); co.globalAlpha = 1; }
+        star(x, y, r, e.rot + wob, cols, e.a == null ? 1 : e.a);
+      } else {
+        const L = H * e.r * 4.6;
+        co.save(); co.globalAlpha = e.a == null ? 1 : e.a; co.translate(x, y); co.rotate(e.dir + wob);
+        if (e.hit) { co.beginPath(); co.rect(-L * 1.2, -L, L * 1.2 - L * .02, L * 2); co.clip(); co.translate(L * .2, 0); } // la pointe est dans le bois
+        kunai(L, cols); co.restore();
+      }
+    };
+    const crack = (x, y, a, sz) => { co.globalAlpha = a * .7; co.strokeStyle = '#2b1a0e'; co.lineWidth = 1.2; co.beginPath(); for (let i = 0; i < 4; i++) { const an = i * 1.7 + .4; co.moveTo(x, y); co.lineTo(x + Math.cos(an) * sz, y + Math.sin(an) * sz * .6); } co.stroke(); co.globalAlpha = 1; };
+    const leaf = (l, k) => {
+      co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(l.x, l.y); co.rotate(l.rot + l.life * l.spin); co.scale(1, Math.max(.2, Math.abs(Math.cos(l.life * l.flip))));
+      co.fillStyle = l.c; co.beginPath(); co.ellipse(0, 0, l.size, l.size * .24, 0, 0, TAU); co.fill();
+      co.strokeStyle = 'rgba(20,40,5,.6)'; co.lineWidth = .8; co.beginPath(); co.moveTo(-l.size * .9, 0); co.lineTo(l.size * .9, 0); co.stroke();
+      co.restore();
+    };
+    const LEAF = ['#65a30d', '#84cc16', '#4d7c0f', '#a3e635'];
+    const addLeaf = (x, y, vx, vy, extra = {}) => leaves.add({ x, y, vx, vy, g: 140, drag: 2.2, max: rnd(1.1, 1.8), size: H * rnd(.1, .16), rot: rnd(TAU), spin: rnd(-4, 4), flip: rnd(4, 9), c: pick(LEAF), ...extra });
+    const throwAt = (kind, tx, ty, from, o = {}) => flying.push({ kind, tx, ty, fx: from.x, fy: from.y, t: -(o.delay || 0), life: o.life || .13, rot: rnd(TAU), dir: Math.atan2(ty - from.y, tx - from.x), r: o.r || (kind === 'star' ? .11 : .12), hit: 0, i: o.i, ex: o.ex, ey: o.ey, gold: o.gold, cols: o.cols });
+    // le petit ninja, la tête vue de face ; (x, y) : centre de la tête ; s : rayon
+    const drawNinja = (x, y, s, mood, rot) => {
+      co.save(); co.globalAlpha = 1; co.translate(x, y); co.rotate(rot);
+      co.fillStyle = '#1f2140'; co.beginPath(); co.ellipse(0, s * 1.35, s * .95, s * .7, 0, 0, TAU); co.fill(); // les épaules
+      co.beginPath(); co.arc(0, 0, s, 0, TAU); co.fill(); co.strokeStyle = '#0b0c1c'; co.lineWidth = Math.max(1, s * .06); co.stroke();
+      co.globalAlpha = .25; co.fillStyle = '#c7d2fe'; co.beginPath(); co.ellipse(-s * .4, -s * .5, s * .28, s * .16, -.6, 0, TAU); co.fill(); co.globalAlpha = 1;
+      // le bandeau rouge et ses deux pans qui flottent
+      const wave = Math.sin(now * 9) * s * .18;
+      co.fillStyle = '#dc2626'; co.fillRect(-s * .98, -s * .52, s * 1.96, s * .26);
+      co.strokeStyle = '#dc2626'; co.lineWidth = s * .16; co.lineCap = 'round';
+      co.beginPath(); co.moveTo(s * .85, -s * .4); co.quadraticCurveTo(s * 1.4, -s * .6 + wave, s * 1.85, -s * .35 - wave); co.moveTo(s * .85, -s * .38); co.quadraticCurveTo(s * 1.3, -s * .1 - wave, s * 1.75, s * .05 + wave); co.stroke(); co.lineCap = 'butt';
+      // la fente du visage et les yeux
+      co.fillStyle = '#f5d0a9'; roundRect(co, -s * .72, -s * .2, s * 1.44, s * .5, s * .22); co.fill();
+      co.strokeStyle = '#111827'; co.fillStyle = '#111827'; co.lineWidth = Math.max(1.2, s * .1); co.lineCap = 'round';
+      const ex = s * .32, ey = s * .05;
+      if (mood === 'happy') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey + s * .06, s * .14, Math.PI * 1.1, Math.PI * 1.9); co.stroke(); } }
+      else if (mood === 'sad') { for (const sx of [-1, 1]) { co.beginPath(); co.moveTo(sx * ex - s * .14, ey + s * .02); co.lineTo(sx * ex + s * .14, ey + s * .02); co.stroke(); } co.beginPath(); co.moveTo(-ex - s * .16, ey - s * .14); co.lineTo(-ex + s * .1, ey - s * .2); co.moveTo(ex + s * .16, ey - s * .14); co.lineTo(ex - s * .1, ey - s * .2); co.stroke(); }
+      else if (mood === 'angry') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey + s * .04, s * .07, 0, TAU); co.fill(); co.beginPath(); co.moveTo(sx * (ex + s * .17), ey - s * .16); co.lineTo(sx * (ex - s * .12), ey - s * .05); co.stroke(); } }
+      else if (mood === 'wow') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey, s * .11, 0, TAU); co.stroke(); } }
+      else for (const sx of [-1, 1]) { co.beginPath(); co.ellipse(sx * ex, ey, s * .07, s * .1, 0, 0, TAU); co.fill(); }
+      co.lineCap = 'butt'; co.restore();
+    };
+    // les mains qui s'agrippent au bord de la carte : en haut (il sort par le dessus) ou à droite (il sort de côté)
+    const hands = (x, y, s, a, side) => { co.globalAlpha = a; co.fillStyle = '#1f2140'; co.strokeStyle = '#0b0c1c'; co.lineWidth = 1; for (const sx of [-1, 1]) { co.beginPath(); if (side) co.ellipse(card.x + card.w - 1, y + sx * s * .8, s * .2, s * .26, 0, 0, TAU); else co.ellipse(x + sx * s * .8, card.y + 1, s * .26, s * .2, 0, 0, TAU); co.fill(); co.stroke(); } co.globalAlpha = 1; };
+    // la bulle à côté de la tête, à sa hauteur, la pointe vers elle ; dir : -1 à gauche, 1 à droite
+    const bubble = (hx, hy, s, text, k, dir) => {
+      const fs = Math.max(11, H * .3), sc = outBack(clamp(k)); if (sc <= .02) return;
+      co.save(); co.globalAlpha = 1; co.font = `800 ${Math.round(fs)}px ui-monospace, 'SF Mono', Menlo, Consolas, monospace`;
+      const tw = co.measureText(text).width, bw = tw + fs * .9, bh = fs * 1.5, gap = s * .45, e = -dir; // e : le côté de la bulle tourné vers la tête
+      co.translate(hx + dir * (s + gap), hy - bh * .1); co.scale(sc, sc); co.translate(dir * bw / 2, 0);
+      co.fillStyle = '#ffffff'; co.strokeStyle = '#111827'; co.lineWidth = 2; co.lineJoin = 'round';
+      co.beginPath(); co.moveTo(e * (bw / 2 - 2), -bh * .2); co.lineTo(e * (bw / 2 + gap * .9), bh * .12); co.lineTo(e * (bw / 2 - 2), bh * .22); co.closePath(); co.fill(); co.stroke();
+      roundRect(co, -bw / 2, -bh / 2, bw, bh, bh * .45); co.fill(); co.stroke();
+      co.fillRect(e > 0 ? bw / 2 - 4 : -bw / 2, -bh * .18, 4, bh * .38); // efface le trait à la base de la pointe
+      co.fillStyle = '#111827'; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText(text, 0, fs * .04);
+      co.restore();
+    };
+    // Où sort le ninja : par le dessus de la carte s'il y a la place sous le menu (téléphone), sinon par la droite
+    // (sur ordinateur, la carte est collée au menu et le haut de la scène est hors de l'écran).
+    const placeSide = () => { try { const r = env.el.getBoundingClientRect(); return r.top - 56 < H * 1.05 && root.innerWidth - r.right > H * 2.4; } catch (e) { return false; } };
+    // la réaction du ninja, commune à reveal et miss
+    const react = (tier, p, asc) => {
+      ninja.face = NJ_FACE[tier] || '-_-'; ninja.side = placeSide();
+      ninja.mood = tier === 'landwaste' ? 'angry' : !p ? 'sad' : p >= 1 ? 'happy' : p >= .6 ? 'wow' : 'calm';
+      ninja.to = p ? 1 : .8; ninja.bubbleTo = 1; ninja.bubbleAt = now + (p >= 1 ? .55 : .2); ninja.until = now + 3.6 + 1.2 * p + .6 * asc;
+      if (p >= 1) ninja.flipT = now;
+    };
+    const head = () => { // centre de la tête du ninja et taille, selon sa sortie et son élan
+      const s = H * .3;
+      if (ninja.side) return { s, x: card.x + card.w - s * 1.2 + ninja.up * s * 2.35, y: card.y + card.h * .45 };
+      return { s, x: card.x + card.w - H * .55, y: card.y + s * 1.1 - ninja.up * s * 2.3 };
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env);
+        // le ninja : monte, redescend après sa réaction ; salto au Mythic
+        if (now > ninja.until) { ninja.to = 0; ninja.bubbleTo = 0; }
+        ninja.up += (ninja.to - ninja.up) * Math.min(1, dt * (ninja.mood === 'sad' && ninja.to ? 3 : 9));
+        if (now >= (ninja.bubbleAt || 0)) ninja.bubble = ninja.bubbleTo ? Math.min(1, ninja.bubble + dt * 4) : Math.max(0, ninja.bubble - dt * 5);
+        const hd = head(), s = hd.s, nx = hd.x;
+        let ny = hd.y, rot = 0;
+        if (ninja.mood === 'angry' && ninja.up > .6 && Math.random() < dt * 9) steam.add({ x: nx + rnd(-.6, .6) * s, y: ny - s * .9, vx: rnd(-15, 15), vy: -rnd(30, 60), drag: .8, g: 0, max: rnd(.7, 1.1), size: H * .06 }); // colère (Land waste)
+        if (ninja.flipT >= 0) { const k = (now - ninja.flipT) / .6; if (k < 1) { ny -= Math.sin(k * Math.PI) * H * .9; rot = outCubic(k) * TAU; } }
+        if (ninja.up > .02) {
+          behind(env, () => drawNinja(nx, ny, s, ninja.mood, rot + (ninja.side ? .18 : 0)));
+          if (rot === 0 && ninja.up > .3) hands(nx, ny, s, clamp((ninja.up - .3) * 3), ninja.side);
+        }
+        // les vapeurs de colère (Land waste)
+        steam.step(dt); steam.each((p, k) => dot(co, dark ? '#e2e8f0' : '#64748b', p.x, p.y, p.size * (1 + k * 2), (1 - k) * .6));
+        if (ninja.bubble > 0 && ninja.face) bubble(nx, ny, s, ninja.face, ninja.bubble, ninja.side ? 1 : -1);
+        // les armes plantées : elles suivent leur case (ou le bord de la carte)
+        for (const e of stuck) {
+          let x, y;
+          if (e.i != null) { const sl = S.find(z => z.i === e.i); if (!sl || sl.gone) continue; const sp = spot(sl, e.kind); x = sp.x; y = sp.y; }
+          else { x = card.x + e.ex * card.w; y = card.y + e.ey * card.h; }
+          if (e.fall) { e.vy += 900 * dt; e.oy = (e.oy || 0) + e.vy * dt; e.rot += dt * 6; y += e.oy; e.a = clamp(1 - e.oy / (H * 1.5)); if (e.a <= 0) continue; }
+          else crack(x, y, 1, H * e.r * 1.5);
+          weapon(e, x, y);
+        }
+        // les armes en vol
+        for (let i = flying.length - 1; i >= 0; i--) {
+          const f = flying[i]; f.t += dt; if (f.t < 0) continue;
+          const k = clamp(f.t / f.life);
+          if (k >= 1) {
+            flying.splice(i, 1); f.hit = now; f.rot += rnd(-.4, .4); stuck.push(f);
+            for (let n = Math.round(5 * q); n > 0; n--) chips.add({ x: f.tx, y: f.ty, vx: -Math.cos(f.dir) * rnd(40, 140) + rnd(-50, 50), vy: -Math.sin(f.dir) * rnd(40, 140) - rnd(20, 80), g: 600, drag: .5, max: rnd(.35, .6), size: rnd(1, 2.2), c: pick(['#ddb07a', '#b27e45', '#6b4423']) });
+            continue;
+          }
+          const x = lerp(f.fx, f.tx, k), y = lerp(f.fy, f.ty, k);
+          line(co, dark ? 'rgba(226,232,240,.5)' : 'rgba(51,65,85,.35)', x - Math.cos(f.dir) * H * .5, y - Math.sin(f.dir) * H * .5, x, y, 1.2, 1);
+          weapon({ ...f, rot: f.rot + f.t * 30, hit: 0 }, x, y);
+        }
+        // traits de lame : un croissant blanc qui file d'un bout à l'autre, puis s'efface
+        slashes.run(dt, (sl, k) => {
+          const grow = clamp(k / .25), fade = k < .25 ? 1 : 1 - (k - .25) / .75, x2 = lerp(sl.x1, sl.x2, grow), y2 = lerp(sl.y1, sl.y2, grow);
+          const nx2 = -(sl.y2 - sl.y1), ny2 = sl.x2 - sl.x1, len = Math.hypot(nx2, ny2) || 1, ux = nx2 / len, uy = ny2 / len, mx = (sl.x1 + x2) / 2, my = (sl.y1 + y2) / 2, wd = sl.w * fade;
+          co.globalAlpha = fade * .45; co.fillStyle = sl.glow;
+          co.beginPath(); co.moveTo(sl.x1, sl.y1); co.quadraticCurveTo(mx + ux * wd * 2.4, my + uy * wd * 2.4, x2, y2); co.quadraticCurveTo(mx - ux * wd * .6, my - uy * wd * .6, sl.x1, sl.y1); co.fill();
+          co.globalAlpha = fade; co.fillStyle = '#ffffff';
+          co.beginPath(); co.moveTo(sl.x1, sl.y1); co.quadraticCurveTo(mx + ux * wd, my + uy * wd, x2, y2); co.quadraticCurveTo(mx, my, sl.x1, sl.y1); co.fill();
+          co.globalAlpha = 1;
+        });
+        // l'éclat sur la dernière tige, pendant la tension
+        if (glint) { const nxt = S.find(z => !z.on && !z.gone); if (nxt) twinkle(co, '#ffffff', nxt.x + nxt.w * .15, nxt.top + H * .12, H * (.12 + .08 * Math.sin(now * 16)), .9, now * 2); }
+        leaves.step(dt); chips.step(dt); drops.step(dt);
+        leaves.each(leaf);
+        chips.each((c, k) => { co.globalAlpha = 1 - k; co.fillStyle = c.c; co.fillRect(c.x, c.y, c.size * 1.8, c.size); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const sl = nearest(p.x); if (!sl) return;
+        const bh = (sl.bottom - sl.top) * 1.15, bw = sl.w * .76;
+        const y1 = sl.y + bh * .1, y2 = sl.y - bh * .1, ext = sl.w * .55; // la coupe : de 60 % à gauche à 40 % à droite de la tige
+        const slope = (y2 - y1) / bw;
+        slashes.add({ delay: .085, life: o.ghost ? .25 : .32, x1: sl.x - bw / 2 - ext, y1: y1 - slope * ext, x2: sl.x + bw / 2 + ext, y2: y2 + slope * ext, w: H * (o.last ? .1 : .07), glow: o.ghost ? '#94a3b8' : '#bae6fd' });
+        const n = o.ghost ? 1 : o.last ? 5 : 3;
+        for (let i = 0; i < n; i++) addLeaf(sl.x + rnd(-.3, .3) * sl.w, sl.y, rnd(-120, 120), -rnd(60, 180), { delay: 0 });
+        for (let i = Math.round((o.ghost ? 2 : 6) * q); i > 0; i--) chips.add({ x: sl.x + rnd(-.3, .3) * sl.w, y: sl.y, vx: rnd(-90, 90), vy: -rnd(40, 160), g: 500, drag: .6, max: rnd(.3, .6), size: rnd(1, 2), c: pick(['#84cc16', '#d9f99d', '#4d7c0f']) });
+        if (o.last) glint = 0;
+        if (o.ghost) return;
+        // l'arme : shuriken en haut à gauche ou kunaï en bas à droite, chacun son tour
+        const kind = sl.i % 2 ? 'kunai' : 'star', sp = spot(sl, kind);
+        const from = kind === 'star' ? { x: sp.x - H * 1.9, y: sp.y - H * 1.5 } : { x: sp.x + H * 2.1, y: sp.y + H * 1.1 };
+        throwAt(kind, sp.x, sp.y, from, { delay: .13, i: sl.i, r: o.last ? (kind === 'star' ? .13 : .14) : undefined });
+      },
+      build() { glint = 1; ninja.to = .42; ninja.mood = 'calm'; ninja.side = placeSide(); },
+      miss(tier) { glint = 0; react(tier, 0, 0); this.drop(); },
+      // tirage raté : un shuriken se décroche de la bûche et tombe
+      drop() { const e = stuck.filter(z => !z.fall).pop(); if (e) { e.fall = 1; e.vy = -60; } },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        glint = 0; react(tier, p, asc);
+        if (!p) { this.drop(); return; }
+        const hd = head(), from = { x: hd.x, y: hd.y };
+        for (let i = Math.round((3 + 8 * p) * q); i > 0; i--) addLeaf(card.x + rnd(0, 1) * card.w, card.y - H * rnd(.2, .8), rnd(-30, 30), rnd(-20, 30));
+        if (p >= .6) [[.18, 0], [0, .5], [.62, 1]].forEach(([ex, ey], i) => throwAt('star', card.x + ex * card.w, card.y + ey * card.h, from, { delay: .5 + i * .12, life: .16, ex, ey, r: .1 }));
+        if (p < 1) return;
+        // Mythic et plus : un grand X de lame, une ronde de shuriken tout autour, une pluie de feuilles
+        const glowC = asc >= 3 ? '#f0abfc' : asc ? '#fde68a' : '#bae6fd';
+        slashes.add({ delay: .2, life: .5, x1: card.x - H * .5, y1: card.y - H * .3, x2: card.x + card.w + H * .5, y2: card.y + card.h + H * .3, w: H * .16, glow: glowC });
+        slashes.add({ delay: .36, life: .5, x1: card.x + card.w + H * .5, y1: card.y - H * .3, x2: card.x - H * .5, y2: card.y + card.h + H * .3, w: H * .16, glow: glowC });
+        const n = 8 + 4 * asc, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+        for (let i = 0; i < n; i++) {
+          const pt = along({ x: card.x, y: card.y, w: card.w, h: card.h, r: card.r }, (i + .5) / n), ex = (pt.x - card.x) / card.w, ey = (pt.y - card.y) / card.h, an = Math.atan2(pt.y - cy, (pt.x - cx) * .5);
+          throwAt('star', pt.x, pt.y, { x: pt.x + Math.cos(an) * H * 1.6, y: pt.y + Math.sin(an) * H * 1.6 }, { delay: .7 + i * .05, life: .14, ex, ey, r: .1, gold: asc >= 1 && asc < 3, cols: asc >= 3 ? [pick(['#fbcfe8', '#bae6fd', '#bbf7d0', '#fef08a']), pick(RAINBOW), '#312e81'] : undefined });
+        }
+        for (let i = Math.round((26 + 14 * asc) * q); i > 0; i--) addLeaf(card.x + rnd(-.2, 1.2) * card.w, card.y - H * rnd(.6, 2), rnd(-20, 20), rnd(20, 60), { max: rnd(2, 3), delay: 0 });
+      },
+    };
+  };
+
+  // 📜 Scroll of Alchemy (2026-10-28, idée de R77) — au début du tirage, les deux rouleaux du parchemin s'écartent depuis
+  // le milieu (avec l'animation CSS alc-unroll) et leurs poignées de bois dépassent en haut et en bas. Chaque case
+  // encore cachée porte une rune d'or qui change sans cesse ; une loupe de laiton plane au-dessus de la prochaine case et
+  // la grossit. Un chiffre qui se pose : sa rune se défait en poussière d'or qui tourbillonne vers le centre (le chiffre
+  // CSS y naît, alc-transmute), un anneau d'or s'ouvre, et la loupe glisse vers la case suivante. Avant le dernier
+  // chiffre, la loupe tremble et aspire de la poussière d'or. À la fin, elle s'éloigne vers le haut. Révélation : tirage
+  // raté, la transmutation échoue (fumée grise) ; sinon de la poussière d'or monte des chiffres ; dès Epic, un cercle de
+  // transmutation se trace autour de la carte ; dès Mythic, une ronde de grandes runes flamboie autour du parchemin et un
+  // sceau de lumière descend et frappe le parchemin : il reste imprimé en or derrière les chiffres (arc-en-ciel à Infinite).
+  const ALC_RUNES = [ // runes d'or tracées au trait, dans un carré de côté 2 centré sur 0
+    c => { c.arc(0, 0, .8, 0, TAU); c.moveTo(.16, 0); c.arc(0, 0, .16, 0, TAU); }, // soleil
+    c => { c.arc(0, 0, .8, Math.PI * .35, Math.PI * 1.65); c.moveTo(.33, -.73); c.quadraticCurveTo(-.4, 0, .33, .73); }, // lune
+    c => { c.moveTo(0, -.85); c.lineTo(.8, .65); c.lineTo(-.8, .65); c.closePath(); }, // feu
+    c => { c.moveTo(0, .85); c.lineTo(.8, -.65); c.lineTo(-.8, -.65); c.closePath(); }, // eau
+    c => { c.moveTo(0, -.85); c.lineTo(.8, .65); c.lineTo(-.8, .65); c.closePath(); c.moveTo(-.65, .05); c.lineTo(.65, .05); }, // air
+    c => { c.moveTo(0, .85); c.lineTo(.8, -.65); c.lineTo(-.8, -.65); c.closePath(); c.moveTo(-.65, -.05); c.lineTo(.65, -.05); }, // terre
+    c => { c.moveTo(.42, -.25); c.arc(0, -.25, .42, 0, TAU); c.moveTo(0, .17); c.lineTo(0, .9); c.moveTo(-.3, .55); c.lineTo(.3, .55); c.moveTo(-.4, -.9); c.quadraticCurveTo(0, -.5, .4, -.9); }, // mercure
+    c => { c.arc(0, 0, .75, 0, TAU); c.moveTo(-.75, 0); c.lineTo(.75, 0); }, // sel
+    c => { c.moveTo(0, -.9); c.lineTo(.55, 0); c.lineTo(-.55, 0); c.closePath(); c.moveTo(0, 0); c.lineTo(0, .9); c.moveTo(-.4, .45); c.lineTo(.4, .45); }, // soufre
+    c => { c.moveTo(.45, -.35); c.arc(0, -.35, .45, 0, TAU); c.moveTo(0, .1); c.lineTo(0, .9); c.moveTo(-.35, .5); c.lineTo(.35, .5); }, // cuivre
+    c => { c.moveTo(.4, .2); c.arc(-.1, .2, .5, 0, TAU); c.moveTo(.25, -.15); c.lineTo(.8, -.75); c.moveTo(.35, -.75); c.lineTo(.8, -.75); c.lineTo(.8, -.3); }, // fer
+    c => { c.moveTo(-.3, -.9); c.lineTo(-.3, .9); c.moveTo(-.3, -.5); c.lineTo(.5, -.85); c.moveTo(-.3, -.05); c.lineTo(.5, -.4); }, // rune ancienne
+  ];
+  // le sceau : deux cercles, un triangle, un carré, des runes entre les cercles
+  function alcSigil(c, x, y, r, col, a, rot, width) {
+    if (a <= .01) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot); c.strokeStyle = col; c.lineWidth = width; c.lineJoin = 'round';
+    c.beginPath(); c.arc(0, 0, r, 0, TAU); c.moveTo(r * .78, 0); c.arc(0, 0, r * .78, 0, TAU); c.moveTo(r * .2, 0); c.arc(0, 0, r * .2, 0, TAU); c.stroke();
+    c.beginPath(); for (let i = 0; i < 3; i++) { const an = -Math.PI / 2 + (i * TAU) / 3; c.lineTo(Math.cos(an) * r * .78, Math.sin(an) * r * .78); } c.closePath(); c.stroke();
+    c.beginPath(); for (let i = 0; i < 4; i++) { const an = Math.PI / 4 + (i * TAU) / 4; c.lineTo(Math.cos(an) * r * .55, Math.sin(an) * r * .55); } c.closePath(); c.stroke();
+    c.lineWidth = width * .8;
+    for (let i = 0; i < 8; i++) { const an = (i * TAU) / 8 + .2; c.save(); c.translate(Math.cos(an) * r * .89, Math.sin(an) * r * .89); c.rotate(an + Math.PI / 2); c.scale(r * .07, r * .07); c.beginPath(); ALC_RUNES[i % ALC_RUNES.length](c); c.restore(); c.stroke(); }
+    c.restore();
+  }
+  SCENES.alchemy = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, add = dark ? 'lighter' : 'source-over', GOLD = dark ? '#fbbf24' : '#d97706', INK = '#b7791f';
+    const motes = particles(), dust = particles(), smoke = particles(), rings = timed(), circle = timed(), flare = timed(), seal = timed();
+    const runes = new Map(); // rune affichée par case : { k, next }
+    const lens = { x: card.x + card.w * .2, y: card.y + card.h / 2, a: 0, lift: 0, shake: 0, gone: false };
+    let now = 0, stamp = null, pull = 0;
+    const runeOf = i => { let r = runes.get(i); if (!r || now > r.next) { r = { k: (Math.random() * ALC_RUNES.length) | 0, next: now + rnd(.09, .16) }; runes.set(i, r); } return r.k; };
+    const drawRune = (c, k, x, y, r, col, lw, a) => { if (a <= .01) return; c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.scale(r, r); c.beginPath(); ALC_RUNES[k](c); c.restore(); c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke(); };
+    const rollW = () => Math.min(H * .34, card.w * .06); // largeur d'un rouleau (≈ .34em)
+    const unroll = () => outCubic(clamp(now / .7)) * .92 + .08;
+    const knob = (x, y, up) => { // la poignée de bois du rouleau, qui dépasse du parchemin
+      const w = rollW() * .62, h = H * .16;
+      co.fillStyle = '#5b3716'; roundRect(co, x - w / 2, up ? y - h : y, w, h, w * .4); co.fill();
+      co.fillStyle = '#d4a017'; co.fillRect(x - w * .62, up ? y - h * .3 : y, w * 1.24, h * .3);
+      co.globalAlpha = .4; co.fillStyle = '#fef3c7'; co.fillRect(x - w * .25, up ? y - h * .9 : y + h * .35, w * .16, h * .5); co.globalAlpha = 1;
+    };
+    const drawLens = (x, y, R, a, k) => {
+      if (a <= .01) return;
+      co.save(); co.globalAlpha = a;
+      // le manche, vers le bas à droite
+      const hx = Math.cos(.8) * R, hy = Math.sin(.8) * R;
+      co.lineCap = 'round'; co.strokeStyle = '#3f2410'; co.lineWidth = R * .32; co.beginPath(); co.moveTo(x + hx * 1.15, y + hy * 1.15); co.lineTo(x + hx * 2.2, y + hy * 2.2); co.stroke();
+      co.strokeStyle = '#d4a017'; co.lineWidth = R * .36; co.beginPath(); co.moveTo(x + hx * 1.05, y + hy * 1.05); co.lineTo(x + hx * 1.25, y + hy * 1.25); co.stroke(); co.lineCap = 'butt';
+      // le verre : légèrement teinté, la rune de la case grossie dedans
+      co.save(); co.beginPath(); co.arc(x, y, R, 0, TAU); co.clip();
+      if (k != null) { co.fillStyle = 'rgba(255,248,225,.55)'; co.fillRect(x - R, y - R, R * 2, R * 2); } // en s'éloignant, plus de verre teinté (il assombrissait le fond de la page)
+      if (k != null) { co.globalCompositeOperation = add; dot(co, '#fbbf24', x, y, R * .9, .5); co.globalCompositeOperation = 'source-over'; drawRune(co, k, x, y, R * .55, '#b45309', Math.max(2, R * .1), a); }
+      co.globalAlpha = a * .5; co.strokeStyle = '#ffffff'; co.lineWidth = R * .1; co.beginPath(); co.arc(x, y, R * .72, Math.PI * 1.1, Math.PI * 1.45); co.stroke();
+      co.restore();
+      // la monture en laiton
+      const g = co.createLinearGradient(x - R, y - R, x + R, y + R); g.addColorStop(0, '#fde68a'); g.addColorStop(.45, '#b7791f'); g.addColorStop(1, '#5b3716');
+      co.globalAlpha = a; co.strokeStyle = g; co.lineWidth = R * .17; co.beginPath(); co.arc(x, y, R, 0, TAU); co.stroke();
+      co.strokeStyle = 'rgba(40,20,5,.7)'; co.lineWidth = 1; co.beginPath(); co.arc(x, y, R * 1.085, 0, TAU); co.stroke();
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        // les runes des cases encore cachées, dans le parchemin (derrière les chiffres)
+        inC(env, cw0, c => {
+          for (const s of S) {
+            if (s.on) continue;
+            const k = runeOf(s.i), r = (s.bottom - s.top) * .3, pulse = s === next ? pull : 0;
+            c.globalCompositeOperation = 'source-over'; dot(c, '#fbbf24', s.x, s.y, r * (1.9 + pulse), .3 + .3 * pulse);
+            drawRune(c, k, s.x + rnd(-.4, .4) * pulse, s.y, r, s.ghost ? 'rgba(183,121,31,.35)' : INK, Math.max(1.4, r * .16), 1);
+          }
+          // le sceau imprimé (Mythic) : en or, derrière les chiffres
+          if (stamp) { const k = clamp((now - stamp.t) / 4), col = stamp.rainbow ? RAINBOW[Math.floor(now * 3) % RAINBOW.length] : '#d97706'; alcSigil(c, stamp.x, stamp.y, stamp.r, col, lerp(.55, .3, k), stamp.rot + now * .05, Math.max(1.5, H * .025)); }
+        });
+        // les deux rouleaux qui s'écartent, et leurs poignées
+        const u = unroll(), cx = card.x + card.w / 2, half = (card.w / 2 - rollW() / 2) * u;
+        for (const x of [cx - half, cx + half]) { knob(x, card.y, true); knob(x, card.y + card.h, false); }
+        // la loupe : au-dessus de la prochaine case, elle grossit sa rune
+        lens.shake = Math.max(0, lens.shake - dt * 2);
+        if (next && !lens.gone) { lens.x += (next.x - lens.x) * Math.min(1, dt * 9); lens.y += (next.y - H * .04 + Math.sin(now * 2.2) * H * .03 - lens.y) * Math.min(1, dt * 6); lens.a = Math.min(1, lens.a + dt * 3); }
+        else { lens.gone = true; lens.lift = Math.min(1, lens.lift + dt * 1.8); }
+        const R = H * .4 * (1 + lens.lift * .6), lx = lens.x + rnd(-1, 1) * lens.shake * 2 + lens.lift * H * .6, ly = lens.y + rnd(-1, 1) * lens.shake * 2 - lens.lift * H * 1.2;
+        if (pull && next && Math.random() < dt * 30 * q) { const an = rnd(TAU), d = H * rnd(.8, 1.3); motes.add({ x: lx + Math.cos(an) * d, y: ly + Math.sin(an) * d, tx: lx, ty: ly, max: rnd(.3, .5), spin: 0, size: rnd(1.2, 2.2) }); }
+        // la poussière d'or qui s'effondre dans un chiffre ou aspirée par la loupe
+        motes.step(dt); co.globalCompositeOperation = add;
+        motes.each((m, k) => { const e = k * k, an = m.spin * (1 - k); const x = m.tx + (m.x - m.tx) * (1 - e), y = m.ty + (m.y - m.ty) * (1 - e); dot(co, GOLD, m.tx + (x - m.tx) * Math.cos(an) - (y - m.ty) * Math.sin(an), m.ty + (x - m.tx) * Math.sin(an) + (y - m.ty) * Math.cos(an), m.size * 2.2, .9); });
+        rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = GOLD; co.lineWidth = 2 * (1 - k) + .6; co.beginPath(); co.arc(r.x, r.y, H * (.2 + .5 * outCubic(k)), 0, TAU); co.stroke(); dot(co, '#fde68a', r.x, r.y, H * .5 * (1 - k), (1 - k) * .55); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+        drawLens(lx, ly, R, lens.a * (1 - lens.lift) * (1 - lens.lift), next && !lens.gone ? runeOf(next.i) : null);
+        // la révélation : cercle de transmutation, ronde de runes, sceau qui descend
+        circle.run(dt, (e, k) => behind(env, () => {
+          const draw = clamp(k / .35), a = k > .7 ? (1 - k) / .3 : 1, rx = card.w / 2 + H * .45, ry = card.h / 2 + H * .5;
+          co.globalCompositeOperation = add; co.globalAlpha = a * .85; co.strokeStyle = GOLD; co.lineWidth = 2;
+          co.beginPath(); co.ellipse(cx, card.y + card.h / 2, rx, ry, 0, -Math.PI / 2, -Math.PI / 2 + TAU * draw); co.stroke();
+          co.beginPath(); co.ellipse(cx, card.y + card.h / 2, rx + H * .14, ry + H * .14, 0, Math.PI / 2, Math.PI / 2 + TAU * draw); co.stroke();
+          for (let i = 0; i < 8 && i / 8 < draw; i++) { const an = -Math.PI / 2 + (i * TAU) / 8; drawRune(co, (i * 5) % ALC_RUNES.length, cx + Math.cos(an) * (rx + H * .07), card.y + card.h / 2 + Math.sin(an) * (ry + H * .07), H * .06, GOLD, 1.4, a); }
+          co.globalCompositeOperation = 'source-over';
+        }, true)); // rien sous la carte : la rareté et l'XP s'y affichent
+        flare.run(dt, (f, k) => behind(env, () => {
+          const a = k < .15 ? k / .15 : k > .7 ? (1 - k) / .3 : 1, rx = card.w / 2 + H * .95, ry = card.h / 2 + H * .75;
+          co.globalCompositeOperation = add;
+          if (f.asc) godrays(co, f.col(now), cx, card.y + card.h / 2, 10 + 4 * f.asc, card.w * .5, card.w * (.9 + .25 * f.asc), now * .3, H * .3, a * .25);
+          for (let i = 0; i < f.n; i++) {
+            const an = (i * TAU) / f.n + now * .5, x = cx + Math.cos(an) * rx, y = card.y + card.h / 2 + Math.sin(an) * ry, fl = .6 + .4 * Math.sin(now * 9 + i * 1.7);
+            dot(co, f.col(now + i * .1), x, y, H * .4 * fl, a * .45);
+            drawRune(co, (i * 7) % ALC_RUNES.length, x, y, H * .17, dark ? '#fff7d6' : '#b45309', 2.2, a);
+          }
+          co.globalCompositeOperation = 'source-over';
+        }, true)); // rien sous la carte : la rareté et l'XP s'y affichent
+        seal.run(dt, (s, k) => {
+          const T = k * s.life, fall = clamp(T / .4), sc = lerp(2.6, 1, fall * fall), a = fall < 1 ? fall * .8 : clamp(1 - (T - .4) / .25) * .9;
+          co.globalCompositeOperation = add; alcSigil(co, cx, card.y + card.h / 2, H * .46 * sc, s.col(now), a, s.rot - (1 - fall) * 1.5, Math.max(2, H * .05) * sc * .6); co.globalCompositeOperation = 'source-over';
+          if (fall >= 1 && !s.hit) {
+            s.hit = 1; stamp = { x: cx, y: card.y + card.h / 2, r: H * .46, rot: s.rot, t: now, rainbow: s.rainbow };
+            rings.add({ life: .7, x: cx, y: card.y + card.h / 2 }); rings.add({ delay: .12, life: .9, x: cx, y: card.y + card.h / 2 });
+            for (let i = Math.round((30 + 20 * s.asc) * q); i > 0; i--) { const an = rnd(TAU), v = rnd(80, 260); dust.add({ x: cx + Math.cos(an) * card.w * .3, y: card.y + card.h / 2 + Math.sin(an) * H * .4, vx: Math.cos(an) * v, vy: Math.sin(an) * v * .6 - 40, drag: 2, g: -20, max: rnd(.8, 1.5), size: rnd(1.2, 2.6) }); }
+          }
+        });
+        dust.step(dt); smoke.step(dt);
+        co.globalCompositeOperation = add;
+        dust.each((d, k) => dot(co, k < .3 ? '#fef3c7' : GOLD, d.x, d.y, d.size * 2.4, (1 - k) * .9));
+        co.globalCompositeOperation = 'source-over';
+        smoke.each((s, k) => dot(co, dark ? '#9ca3af' : '#4b5563', s.x, s.y, s.size * (1 + 2.5 * k), (1 - k) * .55));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const s = slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - p.x) < Math.abs(b.x - p.x) ? z : b), null); if (!s) return;
+        const k = runes.get(s.i) ? runes.get(s.i).k : 0, r = (s.bottom - s.top) * .3;
+        if (o.last) { pull = 0; lens.shake = 0; }
+        if (o.ghost) { rings.add({ life: .35, x: s.x, y: s.y }); return; }
+        // la rune se défait : des grains d'or pris sur son tracé tourbillonnent jusqu'au centre
+        for (let i = Math.round((o.last ? 26 : 16) * q); i > 0; i--) { const an = rnd(TAU), d = r * rnd(.4, 1.1); motes.add({ x: s.x + Math.cos(an) * d * 1.6, y: s.y + Math.sin(an) * d * 1.6, tx: s.x, ty: s.y, max: rnd(.18, .3), spin: rnd(1.5, 3) * (Math.random() < .5 ? -1 : 1), size: rnd(1.2, 2.4) }); }
+        rings.add({ delay: .08, life: o.last ? .7 : .5, x: s.x, y: s.y });
+        void k;
+      },
+      build() { pull = 1; lens.shake = 1.5; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+        pull = 0;
+        if (!p) { for (let i = 0; i < 9; i++) smoke.add({ x: cx + rnd(-.3, .3) * card.w, y: cy, vx: rnd(-20, 20), vy: -rnd(30, 70), drag: 1, g: -10, max: rnd(1.2, 1.8), size: H * rnd(.1, .16) }); return; }
+        for (const s of slotsA(env)) if (!s.gone && !s.ghost) for (let i = Math.round((2 + 8 * p) * q); i > 0; i--) dust.add({ x: s.x + rnd(-.3, .3) * s.w, y: s.y + rnd(-.2, .3) * H, vx: rnd(-20, 20), vy: -rnd(40, 120), drag: 1.2, g: -30, max: rnd(.9, 1.6), size: rnd(1, 2.2) });
+        if (p >= .6) circle.add({ life: 2.4 + p });
+        if (p < 1) return;
+        const col = asc >= 3 ? tt => RAINBOW[Math.floor(tt * 4) % RAINBOW.length] : () => (dark ? '#fde68a' : '#d97706');
+        flare.add({ delay: .1, life: 2.4 + asc * .6, n: 10 + 4 * asc, asc, col });
+        seal.add({ delay: .6, life: .9, rot: rnd(TAU), asc, col, rainbow: asc >= 3 });
+      },
+    };
+  };
+
+  // 🧽 Window Cleaner (2026-10-28, idée de Deadshot) — de l'autre côté de la vitre, le laveur de carreaux : une silhouette
+  // bleu nuit (casquette, harnais, deux cordes qui montent hors du cadre) dessinée dans la carte, derrière les carreaux ;
+  // on la devine à travers la crasse et on la voit nette derrière les carreaux propres. Il frotte le haut du prochain
+  // carreau ; quand le chiffre se pose, sa raclette descend du haut en bas au rythme de l'animation CSS wc-wipe (de 18 %
+  // à 58 % de 0,62 s), deux gouttes glissent sous le carreau, puis il se laisse glisser jusqu'au carreau suivant en se
+  // balançant au bout de ses cordes. Avant le dernier chiffre, il frotte plus vite et des bulles de savon s'envolent.
+  // Révélation : tirage raté, il hausse les épaules et la pluie se met à tomber sur la vitre ; sinon il fait coucou et des
+  // éclats brillent aux coins des carreaux ; dès Epic, des bulles de savon s'envolent autour ; dès Mythic, toute la
+  // fenêtre étincelle : une grande bande de lumière balaie la vitre (deux, arc-en-ciel, au-delà) et des étoiles s'allument.
+  SCENES.windowcleaner = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, INK = 'rgba(15,23,42,.8)';
+    const OFF = H * .38; // il se tient un peu à gauche du carreau qu'il lave : sa tête ne cache pas le chiffre
+    const man = { x: card.x + card.w * .1, tx: null, sway: 0, scrub: 1, wipe: null, wave: 0, shrug: 0, up: 0, leaveAt: Infinity };
+    const drips = particles(), bubbles = particles(), rain = particles(), glints = timed(), sweeps = timed();
+    let now = 0, scrubFast = 0, raining = 0;
+    // la silhouette, dans la carte : (x, sy) = position de la raclette (sy : hauteur de la tête de raclette)
+    const drawMan = (c, x, sy, sw) => {
+      // grand, à bout de bras derrière la vitre : la tête occupe le haut d'un carreau, les épaules en couvrent presque deux
+      const top = card.y - man.up * man.up * H * 1.5, s = H, hy = top + s * .4, shy = hy + s * .3; // man.up : il remonte au bout de ses cordes, son travail fini
+      c.fillStyle = INK; c.strokeStyle = INK; c.lineCap = 'round'; c.lineJoin = 'round';
+      // les deux cordes, du haut de la fenêtre jusqu'au harnais
+      c.lineWidth = Math.max(1.2, s * .03); c.beginPath(); c.moveTo(x - s * .3 - sw * s * .3, card.y - 2); c.lineTo(x - s * .22, shy + s * .1); c.moveTo(x + s * .3 - sw * s * .3, card.y - 2); c.lineTo(x + s * .22, shy + s * .1); c.stroke();
+      // le corps (épaules arrondies), le cou, la tête, la casquette
+      c.beginPath(); c.moveTo(x - s * .48, top + s * 1.2); c.quadraticCurveTo(x - s * .5, shy, x - s * .2, shy - s * .04); c.lineTo(x + s * .2, shy - s * .04); c.quadraticCurveTo(x + s * .5, shy, x + s * .48, top + s * 1.2); c.closePath(); c.fill();
+      c.fillRect(x - s * .07, hy + s * .1, s * .14, s * .18);
+      c.beginPath(); c.arc(x, hy, s * .19, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(x, hy - s * .1, s * .2, s * .11, 0, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(x + s * .2, hy - s * .1, s * .14, s * .035, 0, 0, TAU); c.fill(); // casquette et visière
+      c.globalAlpha = .5; c.fillStyle = '#334155'; c.fillRect(x - s * .46, shy + s * .2, s * .92, s * .06); c.globalAlpha = 1; c.fillStyle = INK; // la sangle du harnais
+      // le bras qui tient la raclette (coude plié), ou le coucou, ou le haussement d'épaules
+      c.lineWidth = s * .11;
+      const sx = x + s * .34, sy0 = shy + s * .06;
+      if (man.shrug > 0) { c.beginPath(); for (const e of [-1, 1]) { c.moveTo(x + e * s * .34, sy0); c.lineTo(x + e * s * .55, sy0 - s * .05 - man.shrug * s * .1); c.lineTo(x + e * s * .62, sy0 - s * .25 * man.shrug); } c.stroke(); return; }
+      if (man.wave > 0) { const a = Math.sin(now * 14) * .5; c.beginPath(); c.moveTo(sx, sy0); c.lineTo(sx + s * .2, sy0 - s * .25); c.lineTo(sx + s * .2 + Math.sin(a) * s * .3, sy0 - s * .25 - Math.cos(a) * s * .3); c.stroke(); c.beginPath(); c.arc(sx + s * .2 + Math.sin(a) * s * .33, sy0 - s * .25 - Math.cos(a) * s * .33, s * .08, 0, TAU); c.fill(); return; }
+      const hx = man.x + OFF, hyH = sy + s * .2; // la main tient le manche sous la tête de raclette
+      c.beginPath(); c.moveTo(sx, sy0); c.quadraticCurveTo(sx + s * .3, (sy0 + hyH) / 2 + s * .12, hx, hyH); c.stroke();
+      c.beginPath(); c.arc(hx, hyH, s * .07, 0, TAU); c.fill();
+      c.lineWidth = s * .05; c.beginPath(); c.moveTo(hx, hyH); c.lineTo(hx, sy); c.stroke(); // le manche
+      c.lineWidth = s * .07; c.beginPath(); c.moveTo(hx - s * .25, sy); c.lineTo(hx + s * .25, sy); c.stroke(); // la tête de raclette
+    };
+    const bubble = (b, k) => {
+      const r = b.size * (1 + .15 * Math.sin(now * 5 + b.ph)), a = Math.min(1, (1 - k) * 3) * .85;
+      co.globalAlpha = a; co.strokeStyle = dark ? 'rgba(224,242,254,.9)' : 'rgba(37,99,235,.65)'; co.lineWidth = 1.2; co.beginPath(); co.arc(b.x, b.y, r, 0, TAU); co.stroke();
+      co.globalAlpha = a * .5; co.strokeStyle = pick(['#f0abfc', '#a5f3fc', '#fde68a']); co.beginPath(); co.arc(b.x, b.y, r * .8, Math.PI * 1.1, Math.PI * 1.6); co.stroke();
+      co.globalAlpha = a; co.fillStyle = '#ffffff'; co.beginPath(); co.arc(b.x - r * .35, b.y - r * .35, r * .18, 0, TAU); co.fill();
+    };
+    const blow = (x, y, n, spread = 1) => { for (let i = Math.round(n * q); i > 0; i--) bubbles.add({ x: x + rnd(-.3, .3) * H * spread, y: y + rnd(-.2, .2) * H, vx: rnd(-30, 30) * spread, vy: -rnd(20, 60), g: -15, drag: .6, max: rnd(1.4, 2.4), size: H * rnd(.05, .11), ph: rnd(TAU) }); };
+    const clipCard = fn => { co.save(); roundRect(co, card.x, card.y, card.w, card.h, card.r); co.clip(); fn(); co.restore(); };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        // il va vers le prochain carreau (ou sort par la droite à la fin) ; ses cordes le font se balancer
+        const goal = man.tx != null ? man.tx : next ? next.x - OFF : card.x + card.w + H * .6;
+        if (!man.wipe || now > man.wipe.t + .42) { const d = goal - man.x; man.x += d * Math.min(1, dt * 5); man.sway += (clamp(d / H, -1, 1) * .5 - man.sway) * Math.min(1, dt * 6); }
+        man.wave = Math.max(0, man.wave - dt * .5); man.shrug = Math.max(0, man.shrug - dt * .5);
+        if (now > (man.leaveAt || Infinity)) man.up = Math.min(1, (man.up || 0) + dt * .7);
+        const pane = S.reduce((b, z) => (!b || Math.abs(z.x - man.x - OFF) < Math.abs(b.x - man.x - OFF) ? z : b), null);
+        const ptop = pane ? pane.top + H * .1 : card.y + H * .25, pbot = pane ? pane.bottom - H * .08 : card.y + H * .8;
+        let sy = ptop + Math.abs(Math.sin(now * (scrubFast ? 22 : 7))) * H * .06;
+        if (man.wipe) { const k = (now - man.wipe.t) / .62; if (k < 1) sy = k < .18 ? ptop - H * .03 * Math.sin(k / .18 * Math.PI) : k < .58 ? lerp(ptop, pbot, (k - .18) / .4) : pbot - (k - .58) / .42 * (pbot - ptop) * .8; }
+        inC(env, cw0, c => drawMan(c, man.x + Math.sin(now * 1.6) * H * .02, sy, man.sway));
+        // gouttes qui glissent sous les carreaux, bulles, pluie
+        drips.step(dt); bubbles.step(dt); rain.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#3b82f6';
+        drips.each((d, k) => { co.globalAlpha = (1 - k) * .9; co.beginPath(); co.ellipse(d.x, d.y, d.size * .7, d.size * 1.2, 0, 0, TAU); co.fill(); });
+        bubbles.each(bubble);
+        if (raining) {
+          for (let n = Math.random() < dt * 70 * q ? 1 : 0; n > 0; n--) rain.add({ x: card.x + rnd(0, 1) * card.w, y: card.y - 4, vx: 0, vy: rnd(70, 140), g: 60, max: rnd(.5, .9), size: rnd(1.2, 2) });
+          raining = Math.max(0, raining - dt);
+        }
+        if (rain.n) clipCard(() => { co.strokeStyle = 'rgba(30,41,59,.55)'; co.fillStyle = 'rgba(30,41,59,.7)'; co.lineWidth = 1.8; rain.each((r, k) => { co.globalAlpha = 1 - k * .5; co.beginPath(); co.moveTo(r.x, r.y - r.size * 7); co.lineTo(r.x, r.y); co.stroke(); co.beginPath(); co.arc(r.x, r.y, r.size, 0, TAU); co.fill(); }); });
+        // les éclats et la grande bande de lumière
+        glints.run(dt, (g, k) => twinkle(co, g.c || '#ffffff', g.x, g.y, g.r * Math.sin(k * Math.PI), 1, k * 1.5));
+        sweeps.run(dt, (s, k) => clipCard(() => {
+          // la vitre propre étincelle : un éclair blanc, puis une large bande de lumière (et une fine plus vive) qui balaie
+          // la fenêtre de gauche à droite en semant des étoiles derrière elle
+          const e = k * k * (3 - 2 * k), x = lerp(card.x - H * 1.2, card.x + card.w + H * 1.2, e), wd = H * 1.1;
+          const c0 = s.rainbow ? RAINBOW[Math.floor(now * 8) % RAINBOW.length] : '#ffffff';
+          co.globalCompositeOperation = 'lighter';
+          if (k < .25) { co.globalAlpha = (1 - k / .25) * .35; co.fillStyle = '#ffffff'; co.fillRect(card.x, card.y, card.w, card.h); }
+          for (const [w2, a2] of [[wd, .55], [wd * .3, .95]]) {
+            const g = co.createLinearGradient(x - w2, card.y, x + w2, card.y + card.h * .5);
+            g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, c0); g.addColorStop(1, 'rgba(255,255,255,0)');
+            co.globalAlpha = a2 * Math.sin(Math.min(1, k * 1.15) * Math.PI); co.fillStyle = g; co.fillRect(card.x, card.y, card.w, card.h);
+          }
+          co.globalCompositeOperation = 'source-over';
+          if (x > card.x && x < card.x + card.w && Math.random() < dt * 22 * q) glints.add({ life: .5, x: x - rnd(0, H * .6), y: card.y + rnd(.1, .9) * card.h, r: H * rnd(.1, .2), c: s.rainbow ? pick(RAINBOW) : '#ffffff' });
+        }));
+        co.globalAlpha = 1;
+        if (scrubFast && next && Math.random() < dt * 5) blow(next.x, next.top + H * .1, 1, .5);
+      },
+      lock(p, o) {
+        const s = slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - p.x) < Math.abs(b.x - p.x) ? z : b), null); if (!s) return;
+        man.x = s.x - OFF; man.wipe = { t: now };
+        if (o.last) scrubFast = 0;
+        if (o.ghost) return;
+        for (let i = 0; i < 2; i++) drips.add({ delay: 0, x: s.x + rnd(-.3, .3) * s.w, y: s.bottom - 3, vx: 0, vy: rnd(10, 25), g: 30, max: rnd(.6, 1), size: rnd(1.4, 2.2) });
+        glints.add({ delay: .42, life: .4, x: s.x + s.w * .3, y: s.top + H * .14, r: H * .14 });
+      },
+      build() { scrubFast = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        scrubFast = 0; man.tx = card.x + card.w * .5 - OFF; man.leaveAt = now + 2.2;
+        if (!p) { man.shrug = 1; raining = 3.5; return; }
+        man.wave = 1;
+        const S = slotsA(env).filter(s => !s.gone && !s.ghost);
+        for (let i = Math.round((2 + 8 * p) * q) + 4 * asc; i > 0; i--) { const s = pick(S), cx = Math.random() < .5 ? -1 : 1; glints.add({ delay: rnd(0, 1 + p), life: .5, x: s.x + cx * s.w * .4, y: Math.random() < .5 ? s.top + 3 : s.bottom - 3, r: H * rnd(.1, .18) }); }
+        if (p >= .6) for (const e of [0, 1]) blow(card.x + e * card.w, card.y + card.h * .5, 5 + 5 * p, 1.2); // des bulles de chaque côté de la carte
+        if (p < 1) return;
+        sweeps.add({ delay: .15, life: 1.1 });
+        if (asc) sweeps.add({ delay: .9, life: 1.1, rainbow: asc >= 3 });
+        for (let i = Math.round((14 + 10 * asc) * q); i > 0; i--) { const out = Math.random() < .45; glints.add({ delay: rnd(.3, 2), life: .55, x: card.x + rnd(out ? -.1 : 0, out ? 1.1 : 1) * card.w, y: out ? card.y + (Math.random() < .5 ? -rnd(.1, .5) : 1 + rnd(.1, .3)) * card.h : card.y + rnd(.1, .9) * card.h, r: H * rnd(.1, .22), c: asc >= 3 ? pick(RAINBOW) : asc ? '#fef3c7' : '#ffffff' }); }
+      },
+    };
+  };
+
+  // 🎆 Firework (2026-10-28, idée de HSI) — un vrai feu d'artifice, sans fusée-vaisseau (c'est Rocket) : à chaque chiffre,
+  // une bombe part d'en bas avec sa traînée et monte jusqu'à la case (0,14 s, pendant que le chiffre CSS est encore caché),
+  // puis éclate : un éclair, une couronne d'étincelles, et une gerbe dont les étincelles filent se ranger sur la forme du
+  // chiffre (points pris sur le chiffre dessiné dans un petit canvas, FW_GLYPH) avant de retomber en paillettes ; la case
+  // s'illumine. Couleur par case, la même que le chiffre CSS. Avant le dernier chiffre, une fontaine crépite sous la case.
+  // Révélation : tirage raté, une bombe ratée monte mollement et fait pff (fumée) ; sinon quelques bombes (plus avec la
+  // rareté) ; dès Epic, des paillettes qui scintillent ; dès Mythic, le bouquet final : deux fontaines, un barrage de
+  // bombes, un anneau à la couleur de la rareté (arc-en-ciel à Infinite) et un grand saule doré qui retombe en rideau.
+  const FW_COL = ['#f472b6', '#facc15', '#22d3ee', '#4ade80', '#c084fc', '#fb923c'];
+  const FW_TIER = { common: '#e2e8f0', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', anomaly: '#fb923c', mythic: '#f43f5e', celestial: '#67e8f9', divine: '#fde047', godlike: '#ffffff' };
+  const FW_GLYPH = new Map(); // chiffre → points de sa forme, entre -0,5 et 0,5
+  function fwGlyph(ch) {
+    let pts = FW_GLYPH.get(ch);
+    if (pts) return pts;
+    pts = [];
+    try {
+      const W = 40, Hh = 56, cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+      const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.font = "900 54px 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif"; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, W / 2, Hh / 2 + 3);
+      const d = c.getImageData(0, 0, W, Hh).data;
+      for (let y = 2; y < Hh; y += 4) for (let x = 2; x < W; x += 4) if (d[(y * W + x) * 4 + 3] > 140) pts.push([x / W - .5, y / Hh - .5]);
+    } catch (e) { /* pas de canvas : une gerbe ronde seulement */ }
+    FW_GLYPH.set(ch, pts);
+    return pts;
+  }
+  SCENES.firework = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, add = dark ? 'lighter' : 'source-over';
+    const shells = [], shape = particles(), sparks = particles(), glitter = particles(), smoke = particles(), flashes = timed(), fountains = timed();
+    let now = 0, fizz = 0;
+    const slotAt = x => slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - x) < Math.abs(b.x - x) ? z : b), null);
+    // une bombe : elle monte de (x0, y0) à (x, y) en ralentissant, puis appelle burst
+    const launch = (x0, y0, x, y, life, burst, o = {}) => shells.push({ x0, y0, x, y, t: -(o.delay || 0), life, burst, col: o.col || '#fde68a', weak: o.weak });
+    const peony = (x, y, col, n, speed, o = {}) => {
+      for (let i = Math.round(n * q); i > 0; i--) { const an = (i / Math.round(n * q)) * TAU + rnd(-.08, .08), v = speed * rnd(.85, 1.1); sparks.add({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v, drag: o.drag || 2.6, g: o.g || 160, max: rnd(.7, 1.1) * (o.life || 1), size: o.size || rnd(1.4, 2.2), c: o.multi ? pick(FW_COL) : col, tail: o.tail || .035 }); }
+      flashes.add({ life: .3, x, y, r: speed * .25, c: col });
+    };
+    const digitBurst = (s, ch, col, big) => {
+      const pts = fwGlyph(ch), gw = s.w * 1.15, gh = (s.bottom - s.top) * .95;
+      for (const [u, v] of pts) shape.add({ x: s.x, y: s.y, vx: 0, vy: 0, fx: s.x + u * gw, fy: s.y + v * gh, max: rnd(1.05, 1.4) * (big ? 1.2 : 1), size: rnd(1.5, 2.2), c: Math.random() < .3 ? '#ffffff' : col, ph: rnd(TAU), i: s.i });
+      peony(s.x, s.y, col, big ? 22 : 14, H * (big ? 3.4 : 2.6));
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = add;
+        // les bombes qui montent, avec leur traînée
+        for (let i = shells.length - 1; i >= 0; i--) {
+          const s = shells[i]; s.t += dt; if (s.t < 0) continue;
+          const k = clamp(s.t / s.life), e = s.weak ? Math.sin(k * Math.PI / 2) * .8 : outCubic(k), x = lerp(s.x0, s.x, e), y = lerp(s.y0, s.y, e), pe = Math.max(0, e - .12), px = lerp(s.x0, s.x, pe), py = lerp(s.y0, s.y, pe);
+          line(co, s.weak ? '#94a3b8' : '#fde68a', px, py, x, y, 1.6, .5); dot(co, s.weak ? '#cbd5e1' : '#fff7d6', x, y, 4, 1);
+          if (Math.random() < .6) glitter.add({ x, y, vx: rnd(-15, 15), vy: rnd(10, 40), g: 80, max: rnd(.2, .45), size: rnd(.8, 1.4), c: '#fdba74', tw: 0 });
+          if (k >= 1) { shells.splice(i, 1); s.burst(x, y); }
+        }
+        // la fontaine avant le dernier chiffre
+        if (fizz) { const nxt = slotsA(env).find(z => !z.on && !z.gone); if (nxt) for (let n = Math.random() < dt * 60 * q ? 2 : 0; n > 0; n--) glitter.add({ x: nxt.x + rnd(-3, 3), y: card.y + card.h - 2, vx: rnd(-40, 40), vy: -rnd(80, 200), g: 300, drag: .5, max: rnd(.3, .6), size: rnd(.8, 1.5), c: pick(['#fde68a', '#ffffff', '#fdba74']), tw: 0 }); }
+        fountains.run(dt, (f, k) => { for (let n = Math.random() < dt * 90 * q ? 2 : 0; n > 0; n--) glitter.add({ x: f.x + rnd(-3, 3), y: f.y, vx: rnd(-50, 50) + f.lean * 40, vy: -rnd(160, 340) * (1 - k * .4), g: 420, drag: .4, max: rnd(.5, .9), size: rnd(1, 1.8), c: pick(['#fde68a', '#fef3c7', '#fb923c']), tw: 0 }); });
+        // éclairs : sur le ciel de la carte (le calque intérieur) et autour
+        flashes.run(dt, (f, k) => {
+          dot(co, '#ffffff', f.x, f.y, f.r * .5 * (1 - k), (1 - k) * .9);
+          dot(co, f.c, f.x, f.y, f.r * (1 + k), (1 - k) * .35);
+          inC(env, cw0, c => { c.globalCompositeOperation = 'lighter'; dot(c, f.c, f.x, f.y, H * 1.3, (1 - k) * .3); c.globalCompositeOperation = 'source-over'; });
+        });
+        co.globalCompositeOperation = add;
+        // les étincelles qui dessinent le chiffre : elles filent à leur place, scintillent, puis retombent
+        shape.step(dt);
+        shape.each((p, k) => {
+          // elles jaillissent plus loin que le chiffre (×1,7), puis se resserrent sur lui (×1,1) : on lit la forme
+          const T = p.life, go = outExpo(clamp(T / .2)) * lerp(1.7, 1.1, outCubic(clamp((T - .18) / .4))), fall = Math.max(0, T - .55);
+          const x = lerp(p.x, p.fx, go), y = lerp(p.y, p.fy, go) + fall * fall * H * 1.2, tw = T > .2 ? .6 + .4 * Math.sin(T * 30 + p.ph) : 1;
+          if (T < .2) line(co, p.c, lerp(p.x, p.fx, go * .7), lerp(p.y, p.fy, go * .7), x, y, 1.1, .6);
+          dot(co, p.c, x, y, p.size * 2.4, (k > .6 ? (1 - k) / .4 : 1) * tw);
+        });
+        // couronnes : étincelles avec une courte traînée
+        sparks.step(dt);
+        sparks.each((s, k) => { const a = k > .5 ? (1 - k) * 2 : 1; line(co, s.c, s.x - s.vx * s.tail, s.y - s.vy * s.tail, s.x, s.y, s.size * (dark ? .8 : 1.3), a * .8); dot(co, s.c, s.x, s.y, s.size * 2, a); if (!dark) { co.globalAlpha = a; co.fillStyle = s.c; co.fillRect(s.x - s.size * .7, s.y - s.size * .7, s.size * 1.4, s.size * 1.4); } }); // page claire : un cœur plein, le halo seul ne se voit pas sur du blanc
+        glitter.step(dt);
+        glitter.each((g, k) => dot(co, g.c, g.x, g.y, g.size * 2, (1 - k) * (g.tw ? (Math.sin(now * 40 + g.x) > 0 ? 1 : .15) : 1)));
+        co.globalCompositeOperation = 'source-over';
+        smoke.step(dt);
+        smoke.each((s, k) => dot(co, dark ? '#64748b' : '#94a3b8', s.x, s.y, s.size * (1 + k * 1.5), (1 - k) * s.a));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const s = slotAt(p.x); if (!s) return;
+        if (o.last) fizz = 0;
+        const el = env.el.querySelectorAll('.slot')[s.i], ch = el ? el.textContent : '8', col = FW_COL[s.i % FW_COL.length];
+        const x0 = s.x + rnd(-.2, .2) * H, y0 = card.y + card.h + H * .7;
+        if (o.ghost) { launch(x0, y0, s.x, s.y, .14, (x, y) => { peony(x, y, '#64748b', 6, H * 1.2, { life: .6 }); smoke.add({ x, y, vx: 0, vy: -8, max: 1, size: H * .2, a: .25 }); }, { weak: 1 }); return; }
+        launch(x0, y0, s.x, s.y, .14, (x, y) => { digitBurst(s, ch, col, o.last); smoke.add({ x, y, vx: rnd(-6, 6), vy: -10, max: 2.2, size: H * .3, a: dark ? .12 : .2 }); });
+      },
+      build() { fizz = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0, cx = card.x + card.w / 2;
+        fizz = 0;
+        // une bombe au-dessus de la carte, à une hauteur et une place au hasard
+        // Où éclater : la place visible autour de la carte (sur ordinateur, elle est collée au menu, le ciel est sur les
+        // côtés ; sur téléphone, elle prend toute la largeur, le ciel est au-dessus, souvent étroit).
+        let top = H, side = 0;
+        try { const r = env.el.getBoundingClientRect(); top = clamp((r.top - 52) / H, .15, 1.4); side = clamp(Math.min(r.left, root.innerWidth - r.right) / H, 0, 2.6); } catch (e) { /* valeurs par défaut */ }
+        const spot = () => side > 1.2 && (top < .6 || Math.random() < .6)
+          ? [Math.random() < .5 ? card.x - H * rnd(.4, side - .3) : card.x + card.w + H * rnd(.4, side - .3), card.y + H * rnd(-top * .8, .9)]
+          : [cx + rnd(-.55, .55) * card.w, card.y - H * rnd(top * .25, top * .95)];
+        const sky = (delay, col, n, speed, o = {}) => { const [x, y] = spot(); launch(x + rnd(-.2, .2) * H, card.y + card.h + H * .6, x, y, rnd(.35, .5), (bx, by) => { peony(bx, by, col, n, speed, o); smoke.add({ x: bx, y: by, vx: rnd(-8, 8), vy: -6, max: 2.5, size: H * .45, a: dark ? .1 : .16 }); }, { delay }); };
+        if (!p) { launch(cx, card.y + card.h + H * .6, cx + H * .2, card.y - H * .35, .7, (x, y) => { for (let i = 0; i < 3; i++) glitter.add({ x, y, vx: rnd(-25, 25), vy: rnd(-20, 10), g: 200, max: rnd(.6, 1), size: 1.4, c: '#fb923c', tw: 0 }); smoke.add({ x, y, vx: 0, vy: -10, max: 1.6, size: H * .3, a: .35 }); }, { weak: 1 }); return; }
+        const n = 1 + Math.round(4 * p);
+        for (let i = 0; i < n; i++) sky(.1 + i * .28, pick(FW_COL), 18 + 14 * p, H * (2.4 + 1.6 * p), { multi: i % 3 === 2 });
+        if (p >= .6) for (let i = Math.round((20 + 30 * p) * q); i > 0; i--) glitter.add({ x: cx + rnd(-.6, .6) * card.w, y: card.y - H * rnd(.2, 1.4), vx: rnd(-10, 10), vy: rnd(10, 40), g: 30, max: rnd(1.2, 2.2), size: rnd(1, 1.6), c: '#ffffff', tw: 1 });
+        if (p < 1) return;
+        // le bouquet final
+        const tc = FW_TIER[tier] || '#ffffff';
+        [-1, 1].forEach(e => fountains.add({ delay: .2, life: 2 + .4 * asc, x: e < 0 ? card.x - H * .3 : card.x + card.w + H * .3, y: card.y + card.h, lean: -e * .3 }));
+        for (let i = 0; i < 10 + 4 * asc; i++) sky(.5 + i * .12, Math.random() < .4 ? tc : pick(FW_COL), 26, H * rnd(3.2, 4.4), { multi: Math.random() < .3 });
+        // l'anneau à la couleur de la rareté
+        launch(cx, card.y + card.h + H * .6, cx, card.y - H * top * .7, .5, (x, y) => peony(x, y, tc, 36, H * 3.6, { drag: 1.8, g: 60, multi: asc >= 3, size: 2.2 }), { delay: 1.1 });
+        // le grand saule doré : des traînées qui retombent en rideau autour de la carte
+        launch(cx, card.y + card.h + H * .6, cx, card.y - H * top * .9, .6, (x, y) => {
+          for (let i = Math.round((50 + 20 * asc) * q); i > 0; i--) { const an = rnd(TAU), v = H * rnd(2, 3.4); sparks.add({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v * .7 - H * .4, drag: 1.4, g: 140, max: rnd(2, 2.8), size: rnd(1.2, 1.8), c: pick(['#fde68a', '#fbbf24', '#fef3c7']), tail: .18 }); }
+          flashes.add({ life: .5, x, y, r: H * 1.4, c: '#fbbf24' });
+        }, { delay: 2 });
+      },
+    };
+  };
+
+  // ==== fin du lot C ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
@@ -7134,7 +7777,8 @@
         }),
         build: guard(ms => scene.build(ms)),
         // Garbage et Land waste : pas de grand effet de révélation (« ça remue le couteau dans la plaie », A Dude 2026-10-18).
-        reveal: guard(tier => { if (tier === 'garbage' || tier === 'landwaste') { restSince = t + 1; return; } scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0) + 2 * (ASCEND[tier] || 0); }),
+        // miss(tier) : une scène peut quand même y réagir en petit (Ninja : son kaomoji, idée de casmictechthing 2026-10-28).
+        reveal: guard(tier => { if (tier === 'garbage' || tier === 'landwaste') { if (scene.miss) scene.miss(tier); restSince = t + (scene.miss ? 3 : 1); return; } scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0) + 2 * (ASCEND[tier] || 0); }),
         stop() { stopped = true; cancelAnimationFrame(raf); },
         // Mode manuel (o.manual, pour le trailer) : pas d'horloge ; l'appelant avance la scène lui-même, de dt secondes,
         // et obtient donc la même image pour le même instant.
