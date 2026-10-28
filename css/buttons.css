@@ -1244,3 +1244,31 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+
+/* Lightbulb (idée de costoroll, 2026-10-28) : une ampoule allumée à gauche, sur le mur tan, le bord du bureau en bas. */
+.btn-roll.gen-lightbulb { border: 2px solid #3b2a1a; border-radius: .7rem; color: #fff7d6;
+  background: radial-gradient(ellipse .55em .62em at 1.25em 46%, #fffbea 0, #fde68a 45%, #eab308 85%, transparent 92%) 0 0 / 100% 100% no-repeat, radial-gradient(ellipse 2.4em 1.6em at 1.25em 46%, rgba(253, 224, 71, .35), transparent 70%), linear-gradient(180deg, transparent 82%, #8a5528 82%), linear-gradient(180deg, #5e4631, #3f2e1f);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #3f2e1f, 0 0 .3em rgba(253, 224, 71, .6);
+  --gs: 0 .3em 0 #2a1d12, 0 .5em 1em rgba(253, 224, 71, .22); --gs-h: 0 .34em 0 #2a1d12, 0 .7em 1.3em rgba(253, 224, 71, .4); --gs-a: 0 .06em 0 #2a1d12; }
+.btn-roll.gen-lightbulb:hover { filter: brightness(1.12); }
+
+/* Stonks (idée de casmicgraything, 2026-10-28) : un écran de bourse quadrillé et une courbe verte qui grimpe. */
+.btn-roll.gen-stonks { border: 2px solid #16a34a; border-radius: .4rem; color: #f0fdf4;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M0 34 L14 30 L24 32 L36 24 L48 27 L60 18 L72 20 L86 9 L100 3' fill='none' stroke='%234ade80' stroke-opacity='.6' stroke-width='2' vector-effect='non-scaling-stroke'/></svg>") 0 0 / 100% 100% no-repeat, linear-gradient(90deg, rgba(148, 163, 184, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, rgba(148, 163, 184, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, #13213a, #070c18);
+  text-shadow: 0 1px 0 #000, 0 0 .3em rgba(74, 222, 128, .6);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-stonks:hover { filter: brightness(1.15); }
+
+/* Chess (idée de casmicgraything, 2026-10-28) : un échiquier du noir au blanc dans son cadre de noyer. */
+.btn-roll.gen-chess { border: 3px solid #5b3a1e; border-radius: .45rem; color: #fef3c7;
+  background: conic-gradient(rgba(0, 0, 0, .3) 25%, rgba(255, 255, 255, .13) 0 50%, rgba(0, 0, 0, .3) 0 75%, rgba(255, 255, 255, .13) 0) 0 0 / 12px 12px, linear-gradient(90deg, #0c0a09, #57534e 50%, #e7e5e4);
+  text-shadow: .06em 0 0 #5b3a1e, -.06em 0 0 #5b3a1e, 0 .06em 0 #5b3a1e, 0 -.06em 0 #5b3a1e, 0 .1em .08em rgba(0, 0, 0, .5);
+  --gs: 0 .3em 0 #3f2a14, 0 .5em 1em rgba(120, 80, 40, .3); --gs-h: 0 .34em 0 #3f2a14, 0 .7em 1.3em rgba(180, 120, 60, .4); --gs-a: 0 .06em 0 #3f2a14; }
+.btn-roll.gen-chess:hover { filter: brightness(1.12); }
+
+/* Weather (idée de casmicgraything, 2026-10-28) : un ciel qui passe de l'orage au grand beau, de gauche à droite. */
+.btn-roll.gen-weather { border: 2px solid #38bdf8; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 88% 30%, #fef08a 0 .3em, rgba(250, 204, 21, .45) .34em .6em, transparent .8em), linear-gradient(90deg, #1e1b3a, #3d4a5f 25%, #4e7487 45%, #8094aa 62%, #0ea5e9 80%, #7dd3fc);
+  text-shadow: 0 1px 0 #0f172a, 0 0 .3em rgba(15, 23, 42, .8);
+  --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
+.btn-roll.gen-weather:hover { filter: brightness(1.12); }

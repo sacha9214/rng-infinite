@@ -155,6 +155,18 @@
     { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
     { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
     { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
+    // ==== Skins du 2026-10-28 : idées de costoroll et casmicgraything (scènes dans js/skinfx.js) ====
+    // Idée de costoroll (2026-10-28) : l'ombre de chaque chiffre dans une ampoule qui se fêle ; sur un Mythic, tout éclate.
+    { id: 'lightbulb', name: 'Lightbulb', emoji: '💡', price: 1800, desc: 'Six glowing bulbs on a wooden desk: every bulb cracks open at the top to show its digit, and Mythic rolls make them all shatter at once', idea: 'costoroll' },
+    // Idée de casmicgraything (2026-10-28, avec costoroll et casmictechthing) : une courbe de bourse derrière les chiffres,
+    // qui s'effondre ou s'envole selon la rareté ; sur un Mythic, elle sort par le haut et il pleut de l'argent.
+    { id: 'stonks', name: 'Stonks', emoji: '📈', price: 1600, desc: 'A live stock chart runs behind your digits: bad rolls crash in red, good rolls rally in green, and Mythic rolls shoot off the chart in a rain of coins and bills', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-10-28) : un échiquier du noir au blanc, des pièces qui jouent à chaque chiffre ; sur un
+    // Mythic, deux dames s'entrechoquent et « Checkmate! ».
+    { id: 'chess', name: 'Chess', emoji: '♞', price: 2200, desc: 'Ivory digits on a black-to-white chessboard: a chess piece makes its move every time a digit lands, and on Mythic rolls two queens collide for a Checkmate!', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-10-28) : six temps, un par chiffre, du pire au meilleur (orage, pluie, vent, nuages,
+    // soleil, arc-en-ciel) ; sur un Mythic, tous les temps éclatent à la fois, la carte tremble, puis tout se calme.
+    { id: 'weather', name: 'Weather', emoji: '🌦️', price: 2400, desc: 'Six windows of sky, from a thunderstorm to sunshine: each digit brings its weather, the last one a rainbow across the card, and Mythic rolls unleash every weather at once', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

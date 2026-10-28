@@ -8743,3 +8743,242 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes orb-pulse { 0%, 100% { transform: scale(.9); filter: none; } 50% { transform: scale(1.12); filter: drop-shadow(0 0 4px #22d3ee); } }
 .room-stage.many .side-orbital::before, .room-stage.many .side-orbital::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-orbital::before, .side-orbital::after { animation: none; } }
+/* ------------------------------------------------------------------ Lightbulb (idée de costoroll, 2026-10-28) : six
+   ampoules à incandescence (verre dépoli en poire, culot à vis en laiton) posées sur un bureau en bois, contre un mur
+   tan foncé. Pendant le tirage, l'ombre du chiffre se cache dans l'ampoule allumée, très lumineuse, qui tremble en
+   bourdonnant. Un chiffre qui se pose : petit choc raide (verre : aucun écrasement mou), éclair, la lumière baisse
+   (jaune plus doux) et le chiffre devient net. La fêlure au sommet, les éclats et les halos sur le mur : js/skinfx.js
+   (SCENES.lightbulb). Mythic et plus : .lbl-surge (les ampoules forcent) puis .lbl-dead (tout éclate, verre gris, plus
+   de lumière ; les chiffres restent sombres sur gris, bien lisibles). */
+.num-card.skin-lightbulb {
+  background:
+    linear-gradient(180deg, rgba(255, 230, 170, .35), transparent 2px) 0 100% / 100% .3em no-repeat,
+    repeating-linear-gradient(176deg, transparent 0 .05em, rgba(60, 30, 10, .22) .05em .065em, transparent .065em .12em) 0 100% / 100% .3em no-repeat,
+    linear-gradient(180deg, #a86f3a, #8a5528 55%, #6b3f1c) 0 100% / 100% .3em no-repeat,
+    radial-gradient(ellipse 75% 60% at 50% 55%, rgba(253, 224, 71, .16), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px .34em),
+    linear-gradient(180deg, #5e4631, #4d3926 70%, #3f2e1f);
+  border: 2px solid #3b2a1a; border-radius: .5rem; color: #4a2c0f;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .12), inset 0 .3em .6em rgba(0, 0, 0, .3), 0 0 16px rgba(253, 224, 71, .14), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .26em .36em .12em;
+}
+.skin-lightbulb .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .64em; font-weight: 800; line-height: 1;
+  width: 1.1em; height: 1.42em; margin: 0 .07em .3em; padding-top: .16em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: 50% 50% 44% 44% / 58% 58% 42% 42%;
+  color: #4a2c0f; text-shadow: 0 .03em 0 rgba(255, 250, 230, .55);
+  background:
+    radial-gradient(ellipse 20% 14% at 31% 22%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 75%),
+    radial-gradient(circle at 50% 44%, #fffbea 0, #fde68a 42%, #f6c445 74%, #d4961b 100%);
+  box-shadow: inset 0 -.12em .2em rgba(146, 64, 14, .35), inset .05em .04em .08em rgba(255, 255, 255, .45), 0 0 .28em rgba(253, 224, 71, .5), 0 0 .7em rgba(251, 191, 36, .25);
+}
+/* le culot à vis en laiton, posé sur le bureau */
+.skin-lightbulb .slot::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: -.3em; height: .31em; pointer-events: none;
+  border-radius: .03em .03em .14em .14em;
+  background: radial-gradient(ellipse 30% 40% at 50% 100%, #3f3f46 0 60%, transparent 70%), repeating-linear-gradient(170deg, #f1d38a 0 .045em, #a47a2c .045em .085em), #b8902f;
+  box-shadow: 0 .05em .06em rgba(0, 0, 0, .55); }
+.skin-lightbulb .slot.ghost { opacity: .22; }
+.skin-lightbulb .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
+.skin-lightbulb .slot.collapsed::after { display: none; }
+/* Pendant le tirage : allumée à fond, l'ombre floue du chiffre dedans, l'ampoule tremble en bourdonnant. */
+.skin-lightbulb .slot.spinning { opacity: 1; color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8);
+  background: radial-gradient(ellipse 20% 14% at 31% 22%, #fff, rgba(255, 255, 255, 0) 75%), radial-gradient(circle at 50% 44%, #fff 0, #fff7c2 38%, #fde047 72%, #eab308 100%);
+  box-shadow: inset 0 -.1em .2em rgba(202, 138, 4, .35), 0 0 .4em #fde047, 0 0 1.1em rgba(250, 204, 21, .55);
+  transform-origin: 50% 125%; animation: lbl-buzz .42s ease-in-out infinite alternate; }
+.skin-lightbulb .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
+.skin-lightbulb .slot.spinning:nth-of-type(3n) { animation-duration: .5s; }
+@keyframes lbl-buzz { 0% { transform: rotate(-1.8deg); } 45% { transform: rotate(.6deg) translateY(-.01em); } 100% { transform: rotate(1.6deg); } }
+/* La fêlure : petit choc raide, éclair, la lumière s'échappe (plus sombre un instant), le chiffre devient net. */
+.skin-lightbulb .slot.revealed { transform-origin: 50% 125%; animation: lbl-crack .62s backwards; }
+@keyframes lbl-crack {
+  0% { color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8); filter: brightness(1.3); transform: none; animation-timing-function: steps(1); }
+  8% { color: #4a2c0f; filter: brightness(1.75); transform: translateY(-.05em) rotate(-3.5deg); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  24% { filter: brightness(1.1); transform: rotate(2.2deg); }
+  42% { filter: brightness(.86); transform: rotate(-1deg); }
+  64% { filter: brightness(1.04); transform: rotate(.4deg); }
+  100% { filter: none; transform: none; }
+}
+/* Mythic et plus, 1 : les ampoules forcent (trop de courant), elles tremblent et brillent… */
+.num-card.skin-lightbulb.lbl-surge .slot { transform-origin: 50% 125%; animation: lbl-surge .12s steps(2) infinite; }
+@keyframes lbl-surge { 0% { transform: rotate(-2.5deg) translateY(-.02em); filter: brightness(1.5); } 100% { transform: rotate(2.5deg); filter: brightness(1.25); } }
+/* … 2 : elles éclatent toutes ensemble et s'éteignent : verre gris, plus aucune lueur, chiffres gris foncé. Tirage
+   raté : une seule ampoule grille (.lbl-off). */
+.num-card.skin-lightbulb.lbl-dead .slot, .skin-lightbulb .slot.lbl-off {
+  color: #1f2937; text-shadow: 0 .03em 0 rgba(255, 255, 255, .45);
+  background: radial-gradient(ellipse 20% 14% at 31% 22%, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0) 75%), radial-gradient(circle at 50% 44%, #f3f4f6 0, #d1d5db 45%, #9ca3af 80%, #6b7280 100%);
+  box-shadow: inset 0 -.12em .2em rgba(31, 41, 55, .35), inset .05em .04em .08em rgba(255, 255, 255, .4);
+  animation: lbl-die .7s backwards; }
+@keyframes lbl-die { 0% { filter: brightness(2.4); transform: scale(1.04); } 12% { filter: brightness(.55); transform: none; } 24% { filter: brightness(1.35); } 38% { filter: brightness(.75); } 60% { filter: brightness(1.08); } 100% { filter: none; } }
+.num-card.skin-lightbulb.lbl-dead { box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .06), inset 0 .3em .6em rgba(0, 0, 0, .4), 0 10px 18px rgba(0, 0, 0, .45); }
+@media (prefers-reduced-motion: reduce) { .skin-lightbulb .slot { animation: none !important; } }
+/* Cadre de duel : un mur tan et un bureau ; 💡 grésille, ✨ scintille. */
+.side-lightbulb { --side-border: #b45309; --side-glow: 0 0 16px rgba(253, 224, 71, .3); --side-ink: #b45309;
+  --side-bg: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(253, 224, 71, .2), transparent 70%), linear-gradient(180deg, transparent 80%, rgba(138, 85, 40, .35) 80%), linear-gradient(180deg, rgba(94, 70, 49, .22), rgba(63, 46, 31, .18));
+  --deco-a: '💡'; --deco-b: '✨'; }
+.side-lightbulb::before { animation: lbl-flick 2.6s steps(1) infinite; }
+.side-lightbulb::after { animation: lbl-twinkle 1.8s ease-in-out infinite; }
+@keyframes lbl-flick { 0%, 60%, 66%, 72%, 100% { opacity: 1; filter: drop-shadow(0 0 4px #fde047); } 63%, 69% { opacity: .35; filter: none; } }
+@keyframes lbl-twinkle { 0%, 100% { transform: scale(.8) rotate(0); opacity: .5; } 50% { transform: scale(1.15) rotate(20deg); opacity: 1; } }
+.room-stage.many .side-lightbulb::before, .room-stage.many .side-lightbulb::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-lightbulb::before, .side-lightbulb::after { animation: none; } }
+/* ------------------------------------------------------------------ Stonks (idée de casmicgraything, avec costoroll et
+   casmictechthing, 2026-10-28) : l'écran d'un terminal de bourse (bleu nuit, quadrillage, graduations à droite) et une
+   courbe de cours derrière les chiffres ; les chiffres sont ceux d'un panneau de cotation (blancs, cernés de nuit pour
+   rester lisibles par-dessus la courbe). Pendant le tirage, ils clignotent vert / rouge comme un cours en direct ; un
+   chiffre qui se pose : il tombe d'un cran, sec (afficheur : rien de mou), éclair, puis se fige. La courbe vivante, les
+   bougies, le verdict (krach rouge ou envolée verte) et la pluie de pièces et de billets : js/skinfx.js (SCENES.stonks).
+   Après la révélation, la scène pose .stonk-up ou .stonk-down sur la carte (lueur verte ou rouge). */
+.num-card.skin-stonks {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M0 30 L10 27 L18 29 L27 22 L36 24 L45 17 L54 20 L63 13 L72 15 L82 8 L91 10 L100 4 L100 40 L0 40Z' fill='%2322c55e' fill-opacity='.13'/><path d='M0 30 L10 27 L18 29 L27 22 L36 24 L45 17 L54 20 L63 13 L72 15 L82 8 L91 10 L100 4' fill='none' stroke='%234ade80' stroke-opacity='.55' stroke-width='1.2' vector-effect='non-scaling-stroke'/></svg>") 0 0 / 100% 100% no-repeat,
+    linear-gradient(90deg, transparent calc(100% - .32em), rgba(148, 163, 184, .08) calc(100% - .32em)),
+    repeating-linear-gradient(180deg, transparent 0 .3em, rgba(148, 163, 184, .45) .3em calc(.3em + 1px), transparent calc(.3em + 1px) .6em) 100% 0 / .12em 100% no-repeat,
+    linear-gradient(90deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / .6em .6em,
+    linear-gradient(180deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / .6em .6em,
+    radial-gradient(ellipse 80% 70% at 50% 40%, #13213a, #0b1324 70%, #070c18);
+  border: 2px solid #1e3a5f; border-radius: .45rem; color: #f8fafc; padding: .5em .78em .46em .56em;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .12), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 14px rgba(56, 189, 248, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  transition: border-color .5s, box-shadow .5s;
+}
+/* la scène dessine la courbe vivante : la courbe fixe s'efface */
+.num-card.skin-stonks.has-fx { background-size: 0 0, auto, .12em 100%, .6em .6em, .6em .6em, auto; }
+.skin-stonks .slot { position: relative; z-index: 1; font-size: .86em; font-weight: 800; color: #f8fafc;
+  text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(148, 163, 184, .35); }
+.skin-stonks .slot.ghost { opacity: .2; }
+.skin-stonks .slot.collapsed { opacity: 0; } /* sinon l'opacité des zéros de tête l'emporte et le zéro replié déborde */
+/* Pendant le tirage : un cours en direct, qui clignote vert et rouge en sautillant. */
+.skin-stonks .slot.spinning { opacity: 1; animation: stonk-quote .3s steps(1) infinite; }
+.skin-stonks .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+.skin-stonks .slot.spinning:nth-of-type(3n) { animation-delay: -.19s; }
+@keyframes stonk-quote { 0% { color: #4ade80; transform: translateY(-.03em); } 50% { color: #f87171; transform: translateY(.03em); } }
+/* Le chiffre se pose : il tombe d'un cran, sec, éclair blanc, et se fige. */
+.skin-stonks .slot.revealed { animation: stonk-tick .5s backwards; }
+@keyframes stonk-tick {
+  0% { transform: translateY(-.2em); color: #4ade80; animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  16% { transform: translateY(.04em); color: #fff; text-shadow: 0 0 .05em #0b1324, 0 0 .25em #fff, 0 0 .5em #38bdf8; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  30% { transform: translateY(-.02em); }
+  46% { transform: none; }
+  100% { transform: none; }
+}
+/* Le verdict du marché : lueur verte (hausse) ou rouge (baisse) autour des chiffres et sur le cadre. */
+.num-card.skin-stonks.stonk-up { border-color: #16a34a; box-shadow: inset 0 0 0 1px rgba(74, 222, 128, .25), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 18px rgba(34, 197, 94, .35), 0 10px 18px rgba(0, 0, 0, .45); }
+.num-card.skin-stonks.stonk-down { border-color: #b91c1c; box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .25), inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 18px rgba(239, 68, 68, .35), 0 10px 18px rgba(0, 0, 0, .45); }
+.skin-stonks.stonk-up .slot:not(.ghost) { text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(74, 222, 128, .8); }
+.skin-stonks.stonk-down .slot:not(.ghost) { text-shadow: 0 0 .05em #0b1324, 0 0 .1em #0b1324, 0 .04em .02em #000, 0 0 .3em rgba(248, 113, 113, .8); }
+@media (prefers-reduced-motion: reduce) { .skin-stonks .slot { animation: none; } }
+/* Cadre de duel : un écran de bourse quadrillé ; 📈 grimpe, 🪙 tourne. */
+.side-stonks { --side-border: #16a34a; --side-glow: 0 0 16px rgba(34, 197, 94, .28); --side-ink: #15803d;
+  --side-bg: linear-gradient(90deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(180deg, rgba(148, 163, 184, .1) 1px, transparent 1px) 0 0 / 16px 16px, linear-gradient(180deg, rgba(19, 33, 58, .3), rgba(7, 12, 24, .22));
+  --deco-a: '📈'; --deco-b: '🪙'; }
+.side-stonks::before { animation: stonk-climb 2.2s ease-in-out infinite; }
+.side-stonks::after { animation: stonk-flip 1.4s linear infinite; }
+@keyframes stonk-climb { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(2px, -4px) scale(1.08); } }
+@keyframes stonk-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.15); } 100% { transform: scaleX(1); } }
+.room-stage.many .side-stonks::before, .room-stage.many .side-stonks::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-stonks::before, .side-stonks::after { animation: none; } }
+/* ------------------------------------------------------------------ Chess (idée de casmicgraything, 2026-10-28) : un
+   échiquier de tournoi verni dans son cadre de noyer ; les cases passent du noir ébène à gauche au blanc ivoire à
+   droite (« a monochrome black-to-white scale across the digits ») ; les chiffres sont ivoire, cernés de brun noyer
+   pour ne jamais se fondre dans les cases. Pendant le tirage, ils battent comme une pendule d'échecs ; un chiffre qui
+   se pose : on le pose comme une pièce, « toc » (il descend, cogne, matière dure : petit rebond raide). Les pièces qui
+   bougent à chaque chiffre, les deux dames qui s'entrechoquent et « Checkmate! » : js/skinfx.js (SCENES.chess). */
+.num-card.skin-chess {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255, 255, 255, .14), transparent 70%),
+    conic-gradient(rgba(0, 0, 0, .3) 25%, rgba(255, 255, 255, .13) 0 50%, rgba(0, 0, 0, .3) 0 75%, rgba(255, 255, 255, .13) 0) 0 0 / .52em .52em,
+    linear-gradient(90deg, #0c0a09, #292524 18%, #78716c 50%, #d6d3d1 82%, #fafaf9);
+  border: 3px solid #5b3a1e; border-radius: .4rem; color: #fef3c7;
+  box-shadow: inset 0 0 0 2px #8b5a2b, inset 0 0 0 3px #3f2a14, inset 0 .25em .5em rgba(0, 0, 0, .3), 0 0 14px rgba(180, 120, 60, .18), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-chess .slot { position: relative; z-index: 1; font-weight: 900; color: #fef3c7;
+  text-shadow: .045em 0 0 #5b3a1e, -.045em 0 0 #5b3a1e, 0 .045em 0 #5b3a1e, 0 -.045em 0 #5b3a1e, .032em .032em 0 #5b3a1e, -.032em .032em 0 #5b3a1e, .032em -.032em 0 #5b3a1e, -.032em -.032em 0 #5b3a1e, 0 .09em .06em rgba(0, 0, 0, .55); }
+.skin-chess .slot.ghost { opacity: .25; }
+.skin-chess .slot.collapsed { opacity: 0; }
+/* Pendant le tirage : la pendule bat, les chiffres pâles basculent d'un cran à chaque tic. */
+.skin-chess .slot.spinning { opacity: 1; color: rgba(254, 243, 199, .55); animation: chs-tick .5s steps(1) infinite; }
+.skin-chess .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes chs-tick { 0% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+/* Le chiffre est posé comme une pièce : il descend, cogne la case (éclair), petit rebond raide, posé. */
+.skin-chess .slot.revealed { animation: chs-place .55s backwards; }
+@keyframes chs-place {
+  0% { transform: translateY(-.4em) scale(1.12); filter: drop-shadow(0 .4em .08em rgba(0, 0, 0, .45)); animation-timing-function: cubic-bezier(.5, 0, 1, .55); }
+  30% { transform: none; filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: translateY(-.05em); filter: none; }
+  54% { transform: none; }
+  64% { transform: translateY(-.012em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-chess .slot { animation: none; } }
+/* Cadre de duel : un échiquier ; ♞ saute en L, ♛ se dresse. */
+.side-chess { --side-border: #8b5a2b; --side-glow: 0 0 16px rgba(180, 120, 60, .25); --side-ink: #8b5a2b;
+  --side-bg: conic-gradient(rgba(120, 113, 108, .2) 25%, transparent 0 50%, rgba(120, 113, 108, .2) 0 75%, transparent 0) 0 0 / 28px 28px, linear-gradient(90deg, rgba(12, 10, 9, .15), rgba(250, 250, 249, .08));
+  --deco-a: '♞'; --deco-b: '♛'; }
+.side-chess::before { animation: chs-hop 2.4s ease-in-out infinite; }
+.side-chess::after { animation: chs-rise 2s ease-in-out infinite; }
+@keyframes chs-hop { 0%, 55%, 100% { transform: none; } 70% { transform: translate(4px, -8px) rotate(-12deg); } 85% { transform: translate(8px, -2px); } }
+@keyframes chs-rise { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px) scale(1.08); } }
+.room-stage.many .side-chess::before, .room-stage.many .side-chess::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-chess::before, .side-chess::after { animation: none; } }
+/* ------------------------------------------------------------------ Weather (idée de casmicgraything, 2026-10-28) : la
+   bande de prévisions d'une appli météo, une fenêtre de ciel par chiffre, du pire au meilleur temps : orage, pluie,
+   vent, nuages, soleil, et arc-en-ciel sur la sixième (au-delà, toujours l'arc-en-ciel). Chiffres blancs cernés de
+   bleu nuit, lisibles sur tous les ciels. Au repos (boutique, duels), chaque fenêtre porte son petit symbole ; pendant
+   un tirage, la scène (js/skinfx.js, SCENES.weather) peint elle-même les ciels : brouillard tant que le chiffre n'est
+   pas posé, puis son temps qui arrive (éclair, averse, rafale, nuages, soleil, arc-en-ciel sur toute la carte).
+   Mythic et plus : .wth-chaos, tous les temps éclatent en même temps et les fenêtres tremblent, puis tout se calme.
+   (Différent de Storm et de Rainbow, qui ne sont pas touchés.) */
+.num-card.skin-weather {
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border: 2px solid #334155; border-radius: .55rem; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(186, 230, 253, .12), 0 0 14px rgba(125, 211, 252, .18), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .2em .26em;
+}
+.skin-weather .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.42em; margin: 0 .03em; padding-top: .1em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .2em; color: #fff;
+  text-shadow: .04em 0 0 #0f172a, -.04em 0 0 #0f172a, 0 .04em 0 #0f172a, 0 -.04em 0 #0f172a, .03em .03em 0 #0f172a, -.03em .03em 0 #0f172a, .03em -.03em 0 #0f172a, -.03em -.03em 0 #0f172a, 0 .07em .08em rgba(0, 0, 0, .5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), inset 0 -.1em .2em rgba(0, 0, 0, .18);
+  background: linear-gradient(180deg, #38bdf8, #bae6fd);
+}
+/* les six ciels, de l'orage au grand beau ; un petit symbole dans le coin */
+.skin-weather .slot:nth-of-type(1) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'><path d='M6 0L2 7h3l-2 5 6-8H6l2-4z' fill='%23facc15'/></svg>") 8% 6% / .3em .36em no-repeat, radial-gradient(ellipse 90% 40% at 50% 0, #4c4a6e, transparent 70%), linear-gradient(180deg, #2e2a4f, #1e1b3a 70%, #16142b); }
+.skin-weather .slot:nth-of-type(2) { background: repeating-linear-gradient(104deg, transparent 0 .13em, rgba(191, 219, 254, .38) .13em .15em, transparent .15em .26em), linear-gradient(180deg, #3d4a5f, #2c3748); }
+.skin-weather .slot:nth-of-type(3) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'><path d='M1 3h8a2 2 0 1 0-2-2M1 6h11a2 2 0 1 1-2 2' fill='none' stroke='white' stroke-opacity='.8' stroke-width='1.2' stroke-linecap='round'/></svg>") 10% 8% / .36em .26em no-repeat, linear-gradient(180deg, #4e7487, #36586b); }
+.skin-weather .slot:nth-of-type(4) { background: radial-gradient(circle at 22% 18%, #fff 0 .09em, transparent .1em), radial-gradient(circle at 34% 13%, #fff 0 .12em, transparent .13em), radial-gradient(ellipse 22% 9% at 30% 20%, #fff 60%, transparent 70%), linear-gradient(180deg, #8094aa, #a9b8c8); }
+.skin-weather .slot:nth-of-type(5) { background: radial-gradient(circle at 82% 16%, #fef08a 0 .11em, rgba(250, 204, 21, .55) .12em .2em, transparent .3em), linear-gradient(180deg, #0ea5e9, #7dd3fc); }
+.skin-weather .slot:nth-of-type(n+6) { background: radial-gradient(circle at 50% 118%, transparent 0 46%, rgba(168, 85, 247, .7) 46% 51%, rgba(59, 130, 246, .7) 51% 56%, rgba(34, 197, 94, .7) 56% 61%, rgba(250, 204, 21, .75) 61% 66%, rgba(249, 115, 22, .7) 66% 71%, rgba(239, 68, 68, .7) 71% 76%, transparent 76%), linear-gradient(180deg, #38bdf8, #bae6fd); }
+/* pendant un tirage, la scène peint les ciels : les fenêtres ne gardent que leur cadre */
+.num-card.skin-weather.has-fx .slot { background: none; }
+.skin-weather .slot.ghost { opacity: .3; }
+.skin-weather .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; background: none; box-shadow: none; }
+/* Pendant le tirage : dans le brouillard, pâles et flous, ils dérivent. */
+.skin-weather .slot.spinning { opacity: 1; color: rgba(255, 255, 255, .5); text-shadow: 0 0 .1em rgba(15, 23, 42, .6); filter: blur(.6px); animation: wth-drift .8s ease-in-out infinite alternate; }
+.skin-weather .slot.spinning:nth-of-type(2n) { animation-delay: -.4s; }
+@keyframes wth-drift { from { transform: translateX(-.03em); } to { transform: translateX(.03em); } }
+/* Le temps arrive : le chiffre sort du brouillard, gonfle un peu (de l'air, pas de la pierre) et se pose. */
+.skin-weather .slot.revealed { animation: wth-arrive .55s backwards; }
+@keyframes wth-arrive {
+  0% { transform: scale(.82); filter: blur(1.5px) brightness(.8); animation-timing-function: cubic-bezier(.3, 0, .8, .5); }
+  20% { transform: scale(1.14); filter: brightness(1.45); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  42% { transform: scale(.96); filter: none; }
+  64% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+/* Mythic et plus : tous les temps à la fois, les fenêtres tremblent, puis tout se calme. */
+.num-card.skin-weather.wth-chaos .slot { animation: wth-quake .11s steps(2) infinite; }
+.num-card.skin-weather.wth-chaos .slot:nth-of-type(2n) { animation-delay: -.05s; }
+@keyframes wth-quake { 0% { transform: translate(-.04em, .02em) rotate(-2deg); } 100% { transform: translate(.04em, -.02em) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .skin-weather .slot { animation: none !important; } }
+/* Cadre de duel : un ciel qui s'éclaircit de gauche à droite ; ⛈️ gronde, 🌈 brille. */
+.side-weather { --side-border: #38bdf8; --side-glow: 0 0 16px rgba(56, 189, 248, .28); --side-ink: #0284c7;
+  --side-bg: linear-gradient(90deg, rgba(46, 42, 79, .3), rgba(61, 74, 95, .22) 30%, rgba(128, 148, 170, .18) 60%, rgba(56, 189, 248, .2));
+  --deco-a: '⛈️'; --deco-b: '🌈'; }
+.side-weather::before { animation: wth-rumble 2.4s steps(1) infinite; }
+.side-weather::after { animation: wth-shine 2.2s ease-in-out infinite; }
+@keyframes wth-rumble { 0%, 70%, 100% { transform: none; filter: none; } 74% { transform: translateX(-2px); filter: brightness(1.8); } 78% { transform: translateX(2px); } 82% { transform: translateX(-1px); filter: brightness(1.4); } }
+@keyframes wth-shine { 0%, 100% { transform: scale(.92); filter: none; } 50% { transform: scale(1.08); filter: drop-shadow(0 0 4px #fde047); } }
+.room-stage.many .side-weather::before, .room-stage.many .side-weather::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-weather::before, .side-weather::after { animation: none; } }
