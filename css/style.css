@@ -8723,3 +8723,143 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes orb-pulse { 0%, 100% { transform: scale(.9); filter: none; } 50% { transform: scale(1.12); filter: drop-shadow(0 0 4px #22d3ee); } }
 .room-stage.many .side-orbital::before, .room-stage.many .side-orbital::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-orbital::before, .side-orbital::after { animation: none; } }
+
+/* ==== Skins du 2026-10-28, lot D ==== Arcade Fighter, Battleship (idées de 17black), Cone of Destiny (idée de Gray alt).
+   The Observer (Gray alt, premium) est dans css/premium.css. */
+/* ------------------------------------------------------------------ Arcade Fighter (idée de 17black, 2026-10-28) : l'écran
+   d'une borne d'arcade des années 80 (tube cathodique : lignes de balayage, coins assombris, une barre claire qui défile),
+   un décor de combat au crépuscule (ciel violet, toits en pixels, sol en dalles). Chiffres en police pixel, crème, avec
+   un relief orange et prune en escalier, comme un titre de jeu. Tirage : ils clignotent comme un écran de démo ; un
+   chiffre qui se pose : coup reçu (éclair blanc, arrêt sur image), recul par à-coups, retour en place (pas d'écrasement :
+   c'est un écran). Le combattant, les barres de vie, les étincelles et le K.O.! : js/skinfx.js (SCENES.fighter). */
+.num-card.skin-fighter {
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 80% 95% at 50% 50%, transparent 58%, rgba(5, 2, 15, .6)),
+    repeating-linear-gradient(90deg, #2c1656 0 .3em, #24114a .3em .6em) 0 100% / 100% 20% no-repeat,
+    linear-gradient(#140a26, #140a26) 0 80% / 100% 2px no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='12' shape-rendering='crispEdges'><path fill='%231c0d3a' d='M0 12V7h3V4h4v3h2V2h4v3h3v7zM16 12V6h5V3h2V1h2v2h2v4h4v5zM32 12V8h3V5h3v2h4V3h3v4h3v5z'/><path fill='%23fbbf24' fill-opacity='.7' d='M4 8h1v1H4zM10 4h1v1h-1zM18 8h1v1h-1zM24 5h1v1h-1zM36 9h1v1h-1zM43 6h1v1h-1z'/></svg>") 0 calc(80% - 1px) / 2.6em .65em repeat-x,
+    linear-gradient(180deg, #0c0620 0%, #24104d 38%, #5b1d6b 60%, #9c3a5a 74%, #c2563b 80%);
+  border: 3px solid #0b0716; border-radius: .45rem; color: #fff3b0;
+  box-shadow: 0 0 0 2px #3b3550, 0 0 0 5px #15121f, inset 0 0 .6em rgba(168, 85, 247, .35), 0 0 18px rgba(236, 72, 153, .3), 0 10px 18px rgba(0, 0, 0, .5);
+}
+/* La barre claire du tube cathodique qui descend lentement. */
+.num-card.skin-fighter::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0 42%, rgba(255, 255, 255, .07) 50%, transparent 58%) 0 0 / 100% 300%; animation: ftr-roll 4s linear infinite; }
+@keyframes ftr-roll { from { background-position: 0 100%; } to { background-position: 0 0; } }
+.skin-fighter .slot { position: relative; z-index: 1; font-family: 'Press Start 2P', monospace; font-weight: 400; font-size: .64em; width: 1.04em; color: #fff3b0;
+  text-shadow: .07em .07em 0 #f97316, .14em .14em 0 #6b1238, -1px 0 0 #140a26, 1px 0 0 #140a26, 0 -1px 0 #140a26, 0 1px 0 #140a26; }
+.skin-fighter .slot.ghost { opacity: .22; text-shadow: .07em .07em 0 #6b1238; }
+.skin-fighter .slot.collapsed { width: 0; }
+/* L'écran de démo : les chiffres clignotent et sautent d'un pixel. */
+.skin-fighter .slot.spinning { opacity: 1; color: #a5f3fc; text-shadow: .07em .07em 0 #1e3a8a; animation: ftr-attract .14s steps(2, jump-none) infinite; }
+.skin-fighter .slot.spinning:nth-of-type(2n) { animation-delay: -.07s; }
+@keyframes ftr-attract { from { opacity: .45; transform: translate(-1px, 0); } to { opacity: .95; transform: translate(1px, -1px); } }
+/* Le coup : éclair blanc figé (arrêt sur image), recul par à-coups vers la droite, retour en place. */
+.skin-fighter .slot.revealed { animation: ftr-hit .55s backwards; }
+@keyframes ftr-hit {
+  0% { transform: translate(-.06em, -.06em) scale(1.25); color: #fff; text-shadow: 0 0 .2em #fff, .07em .07em 0 #fde047; animation-timing-function: steps(1); }
+  16% { transform: translate(.16em, .02em) scale(1.05); color: #fff; animation-timing-function: steps(2); }
+  34% { transform: translate(.08em, 0); animation-timing-function: steps(2); }
+  52% { transform: translate(-.03em, 0); animation-timing-function: steps(1); }
+  70% { transform: translate(.015em, 0); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-fighter .slot, .num-card.skin-fighter::before { animation: none; } }
+/* Cadre de duel : le même écran (balayage, dalles violettes), une barre de vie et ROUND 1 en police pixel. */
+.side-fighter { --side-border: #a855f7; --side-glow: 0 0 16px rgba(236, 72, 153, .3); --side-ink: #f59e0b; --side-ink-glow: 2px 2px 0 rgba(107, 18, 56, .6);
+  --side-bg: repeating-linear-gradient(180deg, rgba(20, 10, 38, .1) 0 1px, transparent 1px 3px), linear-gradient(180deg, transparent 78%, rgba(76, 29, 149, .22) 78%), linear-gradient(180deg, rgba(36, 16, 77, .25), rgba(156, 58, 90, .18) 78%);
+  --deco-a: 'P1 ▮▮▮▮▮▯'; --deco-b: 'ROUND 1'; }
+.side-fighter::before, .side-fighter::after { font-family: 'Press Start 2P', monospace; font-size: .55rem; letter-spacing: .05em; }
+.side-fighter::after { animation: ftr-blink 1s steps(1) infinite; }
+@keyframes ftr-blink { 50% { opacity: .2; } }
+.room-stage.many .side-fighter::after, .room-stage.many .num-card.skin-fighter::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-fighter::after { animation: none; } }
+/* ------------------------------------------------------------------ Battleship (idée de 17black, 2026-10-28) : une mer au
+   crépuscule (ciel prune et orange, soleil à moitié couché sur l'horizon, un chemin de reflets dorés sur l'eau sombre).
+   Les chiffres sont peints comme les numéros de coque d'un navire : blanc cassé, gras, ombre portée marine. Tirage : ils
+   tanguent, à demi noyés dans la brume. Un chiffre qui se pose : caché le temps du vol de l'obus (filter, pas opacity :
+   les zéros de tête restent estompés), puis il jaillit de la gerbe d'eau (éclat blanc), retombe et flotte. Le navire,
+   le réticule, les obus, les gerbes et l'explosion : js/skinfx.js (SCENES.battleship). */
+.num-card.skin-battleship {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 3px, rgba(253, 186, 116, .2) 3px 4px) 50% 100% / 34% 52% no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 5px, rgba(148, 163, 184, .08) 5px 6px) 0 100% / 100% 52% no-repeat,
+    linear-gradient(180deg, #33456f, #1c2b4f 45%, #0e1a34) 0 100% / 100% 52% no-repeat,
+    radial-gradient(circle at 50% 48%, #ffe1a1 0 .3em, #ffb36b .34em, rgba(255, 140, 90, .45) .5em, transparent 1.1em),
+    linear-gradient(180deg, #241a46 0%, #5c3166 42%, #c4615e 82%, #f39a5b 100%) 0 0 / 100% 48% no-repeat, #f39a5b;
+  border: 2px solid #0e1a34; border-radius: .5rem; color: #f1f5f9;
+  box-shadow: inset 0 0 0 1px rgba(253, 186, 116, .25), inset 0 -.4em .6em rgba(8, 15, 35, .4), 0 0 16px rgba(251, 146, 60, .25), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-battleship .slot { position: relative; z-index: 1; font-weight: 900; color: #f1f5f9;
+  text-shadow: .05em .05em 0 #0b1226, -.02em -.02em 0 rgba(15, 23, 42, .5), 0 0 .25em rgba(15, 23, 42, .6); }
+.skin-battleship .slot.ghost { text-shadow: none; }
+/* Tirage : à demi noyés dans la brume, ils tanguent avec la houle. */
+.skin-battleship .slot.spinning { opacity: .6; color: #94a3b8; filter: blur(.6px); text-shadow: 0 0 .15em rgba(15, 23, 42, .8); animation: bsh-swell .6s ease-in-out infinite alternate; }
+.skin-battleship .slot.spinning:nth-of-type(2n) { animation-delay: -.3s; }
+@keyframes bsh-swell { from { transform: translateY(.05em) rotate(-3deg); } to { transform: translateY(-.04em) rotate(3deg); } }
+/* L'obus vole (chiffre caché), la gerbe le fait jaillir, il retombe et flotte. */
+.skin-battleship .slot.revealed { animation: bsh-rise .8s backwards; }
+@keyframes bsh-rise {
+  0%, 46% { transform: translateY(.3em) scale(.8); filter: opacity(0); }
+  50% { transform: translateY(-.14em) scale(1.12); filter: opacity(1) brightness(2.2) drop-shadow(0 0 .1em #fff); animation-timing-function: cubic-bezier(.3, .7, .4, 1); }
+  66% { transform: translateY(.05em) scale(.98); filter: brightness(1.2); }
+  80% { transform: translateY(-.02em) rotate(-1deg); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-battleship .slot { animation: none; } }
+/* Cadre de duel : le couchant sur la mer, deux lignes de vagues ; ⚓ se balance, 💥 pulse. */
+.side-battleship { --side-border: #ea580c; --side-glow: 0 0 16px rgba(251, 146, 60, .3); --side-ink: #c2410c;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30'><g fill='none' stroke='%2364748b' stroke-opacity='.35' stroke-width='1.4' stroke-linecap='round'><path d='M4 10q6-5 12 0'/><path d='M34 22q6-5 12 0'/></g></svg>") 0 100% / 60px 30px repeat-x, linear-gradient(180deg, rgba(92, 49, 102, .2), rgba(196, 97, 94, .18) 55%, rgba(28, 43, 79, .22) 56%);
+  --deco-a: '⚓'; --deco-b: '💥'; }
+.side-battleship::before { transform-origin: 50% 0; animation: bsh-sway 2.6s ease-in-out infinite; }
+.side-battleship::after { animation: bsh-pulse 1.8s ease-in-out infinite; }
+@keyframes bsh-sway { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+@keyframes bsh-pulse { 0%, 70%, 100% { transform: scale(.85); } 80% { transform: scale(1.25); } }
+.room-stage.many .side-battleship::before, .room-stage.many .side-battleship::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-battleship::before, .side-battleship::after { animation: none; } }
+/* ------------------------------------------------------------------ Cone of Destiny (idée de Gray alt, 2026-10-28) : la
+   matière d'un cône de chantier. Plastique orange brillant (un reflet en biais), deux bandes blanches rétroréfléchissantes
+   en haut et en bas (fines hachures qui brillent) ; chiffres noirs, gras et serrés comme au pochoir. Tirage : ils
+   culbutent, flous, comme le cône qui tourne en l'air. Un chiffre qui se pose : il tombe et fait « bonk » (écrasé un
+   instant, c'est du dessin animé), rebondit et se pose. Le cône, l'explosion démesurée et le cône impassible :
+   js/skinfx.js (SCENES.cone). */
+.num-card.skin-cone {
+  background:
+    linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, .26) 36%, transparent 44%),
+    repeating-linear-gradient(135deg, rgba(148, 163, 184, .55) 0 1px, transparent 1px 4px) 0 10% / 100% 10% no-repeat,
+    repeating-linear-gradient(135deg, rgba(148, 163, 184, .55) 0 1px, transparent 1px 4px) 0 90% / 100% 10% no-repeat,
+    linear-gradient(#f8fafc, #e2e8f0) 0 10% / 100% 10% no-repeat,
+    linear-gradient(#f8fafc, #e2e8f0) 0 90% / 100% 10% no-repeat,
+    linear-gradient(180deg, #ff8f33, #f26a0f 55%, #d4530a);
+  border: 2px solid #9a3412; border-radius: .55rem; color: #1c1917;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(124, 45, 18, .35), 0 0 14px rgba(249, 115, 22, .3), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-cone .slot { position: relative; z-index: 1; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; font-weight: 900; color: #1c1917;
+  text-shadow: 0 .04em 0 rgba(255, 237, 213, .45); }
+.skin-cone .slot.ghost { opacity: .22; }
+/* Tirage : ils culbutent et tournent un peu, comme le cône en l'air. */
+.skin-cone .slot.spinning { opacity: .65; color: #7c2d12; filter: blur(.5px); animation: cone-tumble .3s linear infinite; }
+.skin-cone .slot.spinning:nth-of-type(2n) { animation-direction: reverse; }
+@keyframes cone-tumble { 0% { transform: rotate(-14deg) translateY(-.04em); } 50% { transform: rotate(14deg) translateY(.04em); } 100% { transform: rotate(-14deg) translateY(-.04em); } }
+/* Bonk : il tombe d'en haut, s'écrase, rebondit, se pose. */
+.skin-cone .slot.revealed { animation: cone-bonk .6s backwards; }
+@keyframes cone-bonk {
+  0% { transform: translateY(-.4em) rotate(-25deg) scale(.9); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  28% { transform: translateY(.06em) scale(1.22, .78); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  48% { transform: translateY(-.12em) scale(.94, 1.08) rotate(3deg); animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  66% { transform: translateY(0) scale(1.06, .94); }
+  82% { transform: scale(.98, 1.02); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cone .slot { animation: none; } }
+/* Cadre de duel : des bandes de chantier orange et blanches en bas ; 🚧 se dandine, 💥 pulse. */
+.side-cone { --side-border: #f97316; --side-glow: 0 0 14px rgba(249, 115, 22, .3); --side-ink: #c2410c;
+  --side-bg: repeating-linear-gradient(135deg, rgba(249, 115, 22, .3) 0 10px, rgba(248, 250, 252, .25) 10px 20px) 0 100% / 100% 10px no-repeat, linear-gradient(180deg, rgba(249, 115, 22, .08), rgba(249, 115, 22, .16));
+  --deco-a: '🚧'; --deco-b: '💥'; }
+.side-cone::before { transform-origin: 50% 100%; animation: cone-waddle 1.4s ease-in-out infinite; }
+.side-cone::after { animation: cone-pop 2.2s ease-in-out infinite; }
+@keyframes cone-waddle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes cone-pop { 0%, 70%, 100% { transform: scale(.8); } 78% { transform: scale(1.4); } }
+.room-stage.many .side-cone::before, .room-stage.many .side-cone::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cone::before, .side-cone::after { animation: none; } }

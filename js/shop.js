@@ -155,6 +155,11 @@
     { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
     { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
     { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
+    // Skins du 2026-10-28, lot D : idées de 17black et de Gray alt acceptées par Sacha.
+    { id: 'fighter', name: 'Arcade Fighter', emoji: '🥊', price: 2400, desc: 'An 80s arcade fighting game: a pixel fighter kicks and punches every digit into place, and Mythic rolls end in a K.O.!', idea: '17black' }, // idée de 17black (2026-10-28)
+    { id: 'battleship', name: 'Battleship', emoji: '⚓', price: 2800, desc: 'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring', idea: '17black' }, // idée de 17black (2026-10-28)
+    { id: 'cone', name: 'Cone of Destiny', emoji: '🚧', price: 450, desc: 'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown', idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 450)
+    { id: 'observer', name: 'The Observer', emoji: '👁️', price: 10000, desc: 'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare', premium: true, idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 10 000)
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

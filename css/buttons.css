@@ -1244,3 +1244,29 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-10-28, lot D ==== boutons assortis */
+/* Arcade Fighter (idée de 17black, 2026-10-28) : l'écran de la borne, police pixel, une barre de vie jaune dessous. */
+.btn-roll.gen-fighter { border: 2px solid #0b0716; border-radius: .3rem; color: #fff3b0; font-family: 'Press Start 2P', var(--font-mono); font-weight: 400; letter-spacing: .04em;
+  background: linear-gradient(90deg, #facc15 0 62%, #ef4444 62% 74%, #4c1d24 74%) .6em calc(100% - .35em) / calc(100% - 1.2em) 4px no-repeat, repeating-linear-gradient(180deg, rgba(0, 0, 0, .25) 0 1px, transparent 1px 3px), linear-gradient(180deg, #24104d, #5b1d6b 70%, #9c3a5a);
+  text-shadow: 2px 2px 0 #f97316, 4px 4px 0 #6b1238;
+  --gs: 0 .3em 0 #3b3550, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #3b3550, 0 .7em 1.3em rgba(236, 72, 153, .5); --gs-a: 0 .06em 0 #3b3550; }
+.btn-roll.gen-fighter:hover { filter: brightness(1.15); }
+/* Battleship (idée de 17black, 2026-10-28) : le couchant en haut, la mer sombre en bas, un soleil sur l'horizon. */
+.btn-roll.gen-battleship { border: 2px solid #0e1a34; border-radius: .5rem; color: #f1f5f9; font-weight: 900;
+  background: radial-gradient(circle at 50% 52%, #ffe1a1 0 .35em, rgba(255, 140, 90, .45) .6em, transparent 1.2em), linear-gradient(180deg, transparent 52%, #1c2b4f 52%, #0e1a34), linear-gradient(180deg, #5c3166, #c4615e 80%, #f39a5b);
+  text-shadow: .06em .06em 0 #0b1226;
+  --gs: 0 .3em 0 #0e1a34, 0 .5em 1em rgba(251, 146, 60, .3); --gs-h: 0 .34em 0 #0e1a34, 0 .7em 1.3em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #0e1a34; }
+.btn-roll.gen-battleship:hover { filter: brightness(1.12); }
+/* Cone of Destiny (idée de Gray alt, 2026-10-28) : le plastique orange d'un cône et ses deux bandes blanches. */
+.btn-roll.gen-cone { border: 2px solid #9a3412; border-radius: .55rem; color: #1c1917; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; letter-spacing: .04em;
+  background: linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, .3) 36%, transparent 44%), linear-gradient(#f8fafc, #e2e8f0) 0 12% / 100% 14% no-repeat, linear-gradient(#f8fafc, #e2e8f0) 0 88% / 100% 14% no-repeat, linear-gradient(180deg, #ff8f33, #f26a0f 55%, #d4530a);
+  text-shadow: 0 1px 0 rgba(255, 237, 213, .5);
+  --gs: 0 .3em 0 #9a3412, 0 .5em 1em rgba(249, 115, 22, .3); --gs-h: 0 .34em 0 #9a3412, 0 .7em 1.3em rgba(249, 115, 22, .5); --gs-a: 0 .06em 0 #9a3412; }
+.btn-roll.gen-cone:hover { filter: brightness(1.08); }
+/* The Observer (idée de Gray alt, 2026-10-28) : la nuit cosmique, un iris violet et turquoise au centre, un liseré doré. */
+.btn-roll.gen-observer { border: 2px solid #b8892b; border-radius: 999px; color: #f5f3ff;
+  background: radial-gradient(circle at 20% 35%, #fff 0 1px, transparent 1.5px) 0 0 / 22px 16px, radial-gradient(ellipse 22% 70% at 50% 50%, rgba(5, 3, 15, .9) 0 30%, rgba(124, 58, 237, .55) 55%, rgba(14, 165, 183, .3) 80%, transparent 100%), radial-gradient(ellipse 80% 120% at 50% 50%, #1a0f3d, #05030f);
+  text-shadow: 0 0 .3em #c084fc, 0 0 .6em rgba(34, 211, 238, .5);
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-observer:hover { filter: brightness(1.15); }
