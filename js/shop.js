@@ -155,6 +155,9 @@
     { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
     { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
     { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
+    // ==== Skins du 2026-10-28, lot C (idées de joueurs ; scènes dans js/skinfx.js) ====
+    // Idée de JBearr12 (2026-10-28) : un mur de briques, chaque chiffre tagué à la bombe (brume, coulures) ; une couronne sur les grands tirages.
+    { id: 'graffiti', name: 'Graffiti', emoji: '🎨', price: 2200, desc: 'A spray can tags every digit on a brick wall in fat bubble letters that drip; Mythic rolls end in a burst of colour and a crown tag', idea: 'JBearr12' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

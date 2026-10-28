@@ -1244,3 +1244,13 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-10-28, lot C ==== */
+/* Graffiti (idée de JBearr12, 2026-10-28) : un mur de briques, le texte en lettres bulles vert acide cernées de noir. */
+.btn-roll.gen-graffiti { border: 2px solid #2b1d18; border-radius: .35rem; color: #a3e635;
+  font-family: 'Arial Black', 'Segoe UI Black', Impact, system-ui, sans-serif; letter-spacing: .03em; -webkit-text-stroke: .12em #111; paint-order: stroke fill;
+  background: radial-gradient(ellipse 30% 70% at 10% 50%, rgba(244, 114, 182, .35), transparent 70%), radial-gradient(ellipse 30% 70% at 92% 50%, rgba(34, 211, 238, .3), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><rect width='44' height='22' fill='%23463530'/><g fill='%238b3a2a'><rect x='1' y='1' width='20' height='9' rx='1'/><rect x='23' y='1' width='20' height='9' rx='1' fill='%237c3224'/><rect x='-10' y='12' width='20' height='9' rx='1'/><rect x='12' y='12' width='20' height='9' rx='1' fill='%2394402d'/><rect x='34' y='12' width='20' height='9' rx='1'/></g></svg>") 0 0 / 30px 15px, #463530;
+  text-shadow: .06em .07em 0 #111;
+  --gs: 0 .3em 0 #2b1d18, 0 .5em 1em rgba(244, 114, 182, .25); --gs-h: 0 .34em 0 #2b1d18, 0 .7em 1.3em rgba(163, 230, 53, .4); --gs-a: 0 .06em 0 #2b1d18; }
+.btn-roll.gen-graffiti:hover { filter: brightness(1.12) saturate(1.15); }

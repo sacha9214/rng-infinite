@@ -6480,6 +6480,180 @@
     };
   };
 
+  // ==== Skins du 2026-10-28, lot C ====
+  // Graffiti, Origami, Taco et Beach (idées de joueurs). Comme le lot A, ces scènes suivent les cases sur la carte
+  // (slotsA), qui se resserre quand les zéros de tête s'effacent.
+
+  // 🎨 Graffiti (2026-10-28, idée de JBearr12) — une bombe de peinture attend en haut à droite du prochain chiffre ;
+  // pendant la tension, on la secoue (l'élan) ; quand le chiffre se pose, psssht : un nuage de peinture part de la buse
+  // vers la lettre (la couleur de la case), éclabousse le mur de fines gouttelettes qui y restent, et la lettre jaillit
+  // (animation CSS graf-spray, au moment où la brume arrive). Puis elle passe au chiffre suivant et sort à droite.
+  // Révélation : tirage raté, la bombe est vide (pfft, trois gouttes grises) ; sinon des étincelles blanches taguées
+  // aux coins ; dès Epic, des éclaboussures de couleur autour de la carte ; dès Mythic, une explosion de peinture de
+  // toutes les couleurs et la bombe tague une couronne dorée posée sur le nombre ; dès Celestial, la couronne brille.
+  SCENES.graffiti = env => {
+    const { ci, co, card, q, dark } = env;
+    const PAINT = ['#a3e635', '#22d3ee', '#f472b6', '#facc15', '#fb923c', '#c084fc']; // les couleurs des cases (.skin-graffiti .slot:nth-of-type)
+    const cx = card.x + card.w / 2, S = card.h * .66; // S : hauteur de la bombe
+    const mist = particles(), drops = particles(), splats = timed(), stars = timed(), crowns = timed(), streaks = timed(), specks = [];
+    const can = { x: card.x - S * 1.5, y: card.y - S * .2, ang: -.6, col: PAINT[0], spray: 0, alpha: 1, tx: 0, ty: 0, path: null, shake: 0 };
+    let t = 0, build = 0, done = false;
+    const nozzle = () => ({ x: can.x + Math.sin(can.ang) * S * .58, y: can.y - Math.cos(can.ang) * S * .58 });
+    // la bombe : corps de la couleur en cours (reflet métallique), étiquette, épaule grise, buse noire ; la buse vers le haut
+    const drawCan = () => {
+      co.save(); co.globalAlpha = can.alpha; co.translate(can.x, can.y); co.rotate(can.ang);
+      co.lineJoin = 'round'; co.lineWidth = Math.max(1, S * .04); co.strokeStyle = '#111';
+      const g = co.createLinearGradient(-S * .2, 0, S * .2, 0);
+      g.addColorStop(0, '#1f2937'); g.addColorStop(.25, can.col); g.addColorStop(.42, '#ffffff'); g.addColorStop(.55, can.col); g.addColorStop(1, '#111827');
+      co.fillStyle = '#cbd5e1'; co.beginPath(); co.ellipse(0, -S * .38, S * .2, S * .1, 0, Math.PI, 0); co.fill(); co.stroke(); // l'épaule
+      co.fillStyle = '#e5e7eb'; co.fillRect(-S * .07, -S * .54, S * .14, S * .1); co.strokeRect(-S * .07, -S * .54, S * .14, S * .1); // le col
+      co.fillStyle = '#111'; co.fillRect(-S * .055, -S * .62, S * .11, S * .08); // la buse
+      roundRect(co, -S * .2, -S * .4, S * .4, S * .8, S * .05); co.fillStyle = g; co.fill(); co.stroke(); // le corps
+      co.fillStyle = 'rgba(255,255,255,.92)'; co.fillRect(-S * .2, -S * .08, S * .4, S * .22); // l'étiquette
+      co.fillStyle = can.col; co.beginPath(); co.moveTo(-S * .2, S * .1); co.lineTo(S * .2, -S * .04); co.lineTo(S * .2, S * .04); co.lineTo(-S * .2, S * .14); co.fill();
+      co.strokeRect(-S * .2, -S * .08, S * .4, S * .22);
+      co.restore();
+    };
+    // une éclaboussure : une tache ronde, des bosses autour et quelques gouttes projetées (formes tirées à sa création)
+    const makeSplat = (x, y, r, col, delay, life) => {
+      const bumps = [], n = 7 + ((Math.random() * 4) | 0);
+      for (let i = 0; i < n; i++) { const a = (i / n) * TAU + rnd(-.3, .3), far = Math.random() < .35; bumps.push({ a, d: r * (far ? rnd(1.3, 1.9) : rnd(.7, .95)), r: r * (far ? rnd(.1, .18) : rnd(.3, .45)) }); }
+      splats.add({ x, y, r, col, bumps, delay, life });
+    };
+    const drawSplat = (s, k) => {
+      const grow = outBack(clamp((k * s.life) / .18)), a = Math.min(1, (1 - k) * 4);
+      co.globalAlpha = a * .95; co.fillStyle = s.col;
+      co.beginPath(); co.arc(s.x, s.y, s.r * grow, 0, TAU); co.fill();
+      for (const b of s.bumps) { co.beginPath(); co.arc(s.x + Math.cos(b.a) * b.d * grow, s.y + Math.sin(b.a) * b.d * grow, b.r * grow, 0, TAU); co.fill(); }
+    };
+    // étoile de tag à quatre branches (blanche, contour noir)
+    const star = (x, y, r, a) => {
+      if (r <= .5 || a <= .01) return;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.beginPath();
+      for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * .28 : r, an = (i / 8) * TAU - Math.PI / 2; co.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+      co.closePath(); co.fillStyle = '#fff'; co.fill(); co.lineWidth = Math.max(1, r * .15); co.strokeStyle = '#111'; co.stroke(); co.restore();
+    };
+    // la couronne taguée, penchée contre le flanc gauche de la carte : contour noir épais, or, trois bijoux ; k (0 à 1) :
+    // la part déjà peinte, de gauche à droite. Jamais au-dessus de la carte : sur la page, la barre du haut n'est qu'à une
+    // trentaine de pixels et l'aurait coupée.
+    const CW = card.h, CH = card.h * .55, CR = -.22;
+    const crownPt = (lx, ly) => { const x0 = card.x - CW * 1.02, y0 = card.y + card.h * .8; return { x: x0 + lx * Math.cos(CR) - ly * Math.sin(CR), y: y0 + lx * Math.sin(CR) + ly * Math.cos(CR) }; };
+    const drawCrown = (k, a, glowing) => {
+      if (k <= 0 || a <= .01) return;
+      const o = crownPt(0, 0), mid = crownPt(CW / 2, -CH * .5);
+      if (glowing) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#facc15', mid.x, mid.y, CH * (1.6 + .15 * Math.sin(t * 5)), a * (dark ? .45 : .3)); co.globalCompositeOperation = 'source-over'; }
+      co.save(); co.globalAlpha = a; co.translate(o.x, o.y); co.rotate(CR);
+      co.beginPath(); co.rect(-CH * .4, -CH * 1.6, CH * .4 + (CW + CH * .3) * k, CH * 2.2); co.clip();
+      const P = [[0, 0], [0, -CH * .62], [CW * .25, -CH * .28], [CW * .5, -CH], [CW * .75, -CH * .28], [CW, -CH * .62], [CW, 0]];
+      co.lineJoin = 'round'; co.beginPath(); P.forEach(([x, y], i) => (i ? co.lineTo(x, y) : co.moveTo(x, y))); co.closePath();
+      co.fillStyle = '#111'; co.save(); co.translate(CH * .08, CH * .1); co.fill(); co.restore(); // ombre portée
+      co.fillStyle = '#facc15'; co.fill(); co.lineWidth = Math.max(2, CH * .12); co.strokeStyle = '#111'; co.stroke();
+      co.fillStyle = 'rgba(255,255,255,.6)'; co.fillRect(CW * .08, -CH * .5, CW * .05, CH * .38); // reflet
+      [[0, -CH * .62], [CW * .5, -CH], [CW, -CH * .62]].forEach(([x, y]) => { co.beginPath(); co.arc(x, y, CH * .12, 0, TAU); co.fillStyle = '#fff'; co.fill(); co.lineWidth = Math.max(1, CH * .07); co.stroke(); });
+      [[CW * .22, '#f472b6'], [CW * .5, '#22d3ee'], [CW * .78, '#a3e635']].forEach(([x, c]) => { co.beginPath(); co.arc(x, -CH * .17, CH * .1, 0, TAU); co.fillStyle = c; co.fill(); co.lineWidth = Math.max(1, CH * .06); co.stroke(); });
+      co.restore();
+    };
+    // un nuage de peinture : de la buse jusqu'au mur en 0,1 à 0,2 s, puis il s'étale sur place et s'efface
+    const sprayTo = (x, y, col, n, spread) => {
+      const nz = nozzle();
+      for (let i = Math.round(n * q); i > 0; i--) {
+        const tx = x + rnd(-spread, spread), ty = y + rnd(-spread, spread) * .8, life = rnd(.1, .2);
+        mist.add({ x: nz.x, y: nz.y, vx: (tx - nz.x) / life, vy: (ty - nz.y) / life, max: life + rnd(.15, .35), stop: life, size: card.h * rnd(.05, .12), c: col });
+      }
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        const SL = slotsA(env).filter(s => !s.gone), next = SL.find(s => !s.on);
+        // où va la bombe : en haut à droite du prochain chiffre, sinon sortie à droite (ou le trajet de la couronne)
+        if (can.path) {
+          const P = can.path; P.k = Math.min(1, P.k + dt / P.d);
+          const at = crownPt(P.k * CW, -CH * .45), above = crownPt(P.k * CW + CH * .4, -CH * 1.45);
+          can.tx = above.x; can.ty = above.y + Math.sin(P.k * 14) * CH * .08;
+          if (P.k < 1) sprayTo(at.x, at.y, '#facc15', 2, CH * .3);
+          if (P.k >= 1 && !P.end) { P.end = true; for (let i = 0; i < 4; i++) { const sp = crownPt(rnd(0, CW), -CH * rnd(.9, 1.5)); stars.add({ delay: i * .12, life: 1.4, x: sp.x, y: sp.y, r: card.h * rnd(.09, .14) }); } }
+          if (P.k >= 1 && t > P.leave) can.path = null;
+        } else if (!done && next) { can.tx = next.x + next.w * .8; can.ty = next.top - S * .12; }
+        else { can.tx = card.x + card.w + S * .9; can.ty = card.y + card.h * .15; }
+        const kk = Math.min(1, dt * (can.path ? 16 : 7));
+        can.x += (can.tx - can.x) * kk; can.y += (can.ty - can.y) * kk;
+        // la buse vise le chiffre (ou le bas de la couronne) ; secouée pendant la tension
+        const aimX = can.path ? can.x - S * .5 : next && !done ? next.x : can.x - S, aimY = can.path ? can.y + S : next && !done ? (next.top + next.bottom) / 2 : can.y + S;
+        let want = Math.atan2(aimX - can.x, -(aimY - can.y));
+        if (done && !can.path) want = -.35 + Math.sin(t * 1.5) * .05;
+        can.ang += (want - can.ang) * Math.min(1, dt * 9);
+        const shake = build ? Math.sin(t * 46) * S * .1 : Math.sin(t * 2.6) * S * .025;
+        can.y += shake - can.shake; can.shake = shake;
+        if (can.spray > 0) { can.spray -= dt; if (can.target) sprayTo(can.target.x, can.target.y, can.col, 2, card.h * .2); }
+        // les gouttelettes restées sur le mur (dans la carte, derrière les chiffres)
+        for (const s of specks) { const sl = SL.find(x => x.i === s.i); if (!sl) continue; ci.globalAlpha = s.a; ci.fillStyle = s.c; ci.beginPath(); ci.arc(sl.x - card.x + s.dx, (sl.top + sl.bottom) / 2 - card.y + s.dy, s.r, 0, TAU); ci.fill(); }
+        ci.globalAlpha = 1;
+        // l'explosion de couleurs (Mythic) et les éclaboussures, derrière la carte, jamais dessous (rareté, XP)
+        if (streaks.n || splats.n) behind(env, () => {
+          streaks.run(dt, (s, k2) => {
+            const g2 = outCubic(clamp(k2 * 4)), a = Math.min(1, (1 - k2) * 2.5);
+            co.globalAlpha = a * .95;
+            for (const r of s.rays) {
+              // une giclée en pointe : large près de la carte, effilée, et sa goutte un peu plus loin
+              const ca = Math.cos(r.a), sa = Math.sin(r.a), x1 = cx + ca * card.w * .42, y1 = card.y + card.h / 2 + sa * card.h * .42, L2 = r.len * g2;
+              co.fillStyle = r.c; co.beginPath(); co.moveTo(x1 - sa * r.w, y1 + ca * r.w);
+              co.quadraticCurveTo(x1 + ca * L2 * .5 - sa * r.w * .45, y1 + sa * L2 * .5 + ca * r.w * .45, x1 + ca * L2, y1 + sa * L2);
+              co.quadraticCurveTo(x1 + ca * L2 * .5 + sa * r.w * .45, y1 + sa * L2 * .5 - ca * r.w * .45, x1 + sa * r.w, y1 - ca * r.w); co.closePath(); co.fill();
+              co.beginPath(); co.arc(x1 + ca * L2 * 1.15, y1 + sa * L2 * 1.15, r.w * .45, 0, TAU); co.fill();
+            }
+          });
+          splats.run(dt, drawSplat);
+        }, true);
+        co.globalAlpha = 1;
+        // la brume de peinture qui file de la buse vers le mur, puis s'étale et s'efface
+        mist.step(dt);
+        mist.each((m, k2) => { if (m.life > m.stop) m.vx = m.vy = 0; dot(co, m.c, m.x, m.y, m.size * (1 + 2 * k2), (1 - k2) * .5); });
+        drops.step(dt);
+        drops.each((d, k2) => { co.globalAlpha = 1 - k2; co.fillStyle = d.c; co.beginPath(); co.ellipse(d.x, d.y, d.size * .7, d.size, 0, 0, TAU); co.fill(); });
+        crowns.run(dt, (c, k2) => drawCrown(Math.min(1, (k2 * c.life) / .95), Math.min(1, (1 - k2) * 5), c.glow));
+        stars.run(dt, (s, k2) => star(s.x, s.y, s.r * outBack(clamp(k2 * 5)) * (1 + .15 * Math.sin(t * 12)), Math.min(1, (1 - k2) * 3)));
+        drawCan();
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const SL = slotsA(env).filter(s => !s.gone);
+        let sl = SL[0];
+        for (const s of SL) if (Math.abs(s.x - p.x) < Math.abs(sl.x - p.x)) sl = s;
+        const col = sl ? PAINT[sl.i % 6] : PAINT[0];
+        can.col = col; can.target = { x: p.x, y: p.y };
+        if (o.ghost) { sprayTo(p.x, p.y, '#9ca3af', 4, card.h * .1); return; }
+        sprayTo(p.x, p.y, col, o.last ? 22 : 14, card.h * .22); can.spray = o.last ? .3 : .18;
+        // gouttelettes qui restent sur le mur autour de la lettre
+        if (sl && specks.length < 160) for (let i = Math.round((o.last ? 16 : 10) * q); i > 0; i--) { const a = rnd(TAU), d = card.h * rnd(.25, .5); specks.push({ i: sl.i, dx: Math.cos(a) * d * .7, dy: Math.sin(a) * d, r: rnd(.5, 1.4), c: col, a: rnd(.35, .7) }); }
+        if (o.last) { build = 0; done = true; }
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; done = true;
+        if (!p) { // la bombe est vide : pfft, un peu de gris, trois gouttes
+          const nz = nozzle();
+          for (let i = 0; i < 5; i++) mist.add({ x: nz.x, y: nz.y, vx: rnd(-30, 10), vy: rnd(-10, 20), drag: 3, max: .6, stop: 9, size: card.h * .08, c: '#6b7280' });
+          for (let i = 0; i < 3; i++) drops.add({ x: nz.x, y: nz.y, vx: 0, vy: -i * 40, g: 500, max: .7 + i * .15, size: card.h * .04, c: '#9ca3af' });
+          return;
+        }
+        const corners = [[card.x + card.h * .1, card.y + card.h * .05], [card.x + card.w - card.h * .1, card.y + card.h * .05], [card.x - card.h * .25, card.y + card.h * .6], [card.x + card.w + card.h * .25, card.y + card.h * .6]];
+        for (let i = 0; i < 1 + Math.round(3 * p); i++) { const [x, y] = corners[i % 4]; stars.add({ delay: .1 + i * .12, life: 1.6, x: x + rnd(-6, 6), y: y + rnd(-6, 6), r: card.h * rnd(.12, .18) }); }
+        if (p >= .6) for (let i = Math.round((5 + 8 * p) * q) + 4 * asc; i > 0; i--) { const left = i % 2, y = card.y + card.h * rnd(-.3, 1); makeSplat(left ? card.x - card.h * rnd(.15, .9) : card.x + card.w + card.h * rnd(.15, .9), y, card.h * rnd(.1, .22), pick(PAINT), rnd(0, .4), 2.6 + asc); }
+        if (p >= 1) {
+          const rays = [];
+          for (let i = Math.round(18 * q) + 5 * asc; i > 0; i--) rays.push({ a: rnd(TAU), len: card.h * rnd(.7, 1.6), w: card.h * rnd(.08, .16), c: pick(PAINT) });
+          streaks.add({ life: 2.6 + asc, rays });
+          for (let i = Math.round(10 * q) + 4 * asc; i > 0; i--) { const a = rnd(TAU); makeSplat(cx + Math.cos(a) * (card.w * .55 + card.h * .5), card.y + card.h / 2 + Math.sin(a) * card.h * 1.3, card.h * rnd(.15, .3), pick(PAINT), rnd(.05, .3), 3 + asc); }
+          // la couronne : la bombe vient au-dessus de la carte et la tague de gauche à droite
+          can.col = '#facc15';
+          can.path = { k: 0, d: .95, leave: t + 1.5 };
+          crowns.add({ life: 5 + 1.5 * asc, glow: asc >= 1 });
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

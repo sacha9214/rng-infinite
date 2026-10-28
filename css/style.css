@@ -8723,3 +8723,82 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes orb-pulse { 0%, 100% { transform: scale(.9); filter: none; } 50% { transform: scale(1.12); filter: drop-shadow(0 0 4px #22d3ee); } }
 .room-stage.many .side-orbital::before, .room-stage.many .side-orbital::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-orbital::before, .side-orbital::after { animation: none; } }
+
+/* ==== Skins du 2026-10-28, lot C ==== Graffiti, Origami, Taco, Beach (idées de joueurs ; scènes dans js/skinfx.js). */
+/* ------------------------------------------------------------------ Graffiti (idée de JBearr12, 2026-10-28) : un mur de
+   briques rouges (joints sombres, grain) ; chaque chiffre est une grosse lettre « bulle » peinte à la bombe : couleur
+   franche (une par case), contour noir épais, ombre portée noire, un halo de peinture pulvérisée derrière et des
+   coulures qui descendent. Pendant le tirage, ce ne sont que des esquisses à la craie blanche qui tremblent ; un chiffre
+   qui se pose : l'esquisse rentre un peu (la bombe arrive), la peinture jaillit d'un coup (floue, gonflée), se fige
+   nette, puis les coulures descendent. La bombe, la brume de peinture, l'explosion de couleurs et la couronne des grands
+   tirages : js/skinfx.js (SCENES.graffiti). Lettrage original, aucun vrai tag. */
+.num-card.skin-graffiti {
+  background:
+    radial-gradient(ellipse 45% 60% at 12% 30%, rgba(244, 114, 182, .16), transparent 70%),
+    radial-gradient(ellipse 40% 55% at 88% 75%, rgba(34, 211, 238, .14), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><rect width='44' height='22' fill='%23463530'/><g stroke='%23000' stroke-opacity='.25' stroke-width='1'><rect x='1' y='1' width='20' height='9' rx='1.2' fill='%238b3a2a'/><rect x='23' y='1' width='20' height='9' rx='1.2' fill='%237c3224'/><rect x='-10' y='12' width='20' height='9' rx='1.2' fill='%23843626'/><rect x='12' y='12' width='20' height='9' rx='1.2' fill='%2394402d'/><rect x='34' y='12' width='20' height='9' rx='1.2' fill='%23843626'/></g><g fill='%23fff' fill-opacity='.10'><rect x='2' y='2' width='18' height='1.4'/><rect x='24' y='2' width='18' height='1.4'/><rect x='13' y='13' width='18' height='1.4'/><rect x='0' y='13' width='9' height='1.4'/><rect x='35' y='13' width='9' height='1.4'/></g><g fill='%23000' fill-opacity='.18'><circle cx='6' cy='6' r='.7'/><circle cx='31' cy='4' r='.6'/><circle cx='17' cy='17' r='.7'/><circle cx='39' cy='18' r='.6'/><circle cx='26' cy='7' r='.5'/></g></svg>") 0 0 / 1.6em .8em,
+    #463530;
+  border: 2px solid #2b1d18; border-radius: .3rem; color: #a3e635;
+  box-shadow: inset 0 0 .7em rgba(0, 0, 0, .5), 0 0 14px rgba(244, 114, 182, .14), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .4rem 1rem .5rem;
+}
+.skin-graffiti .slot {
+  --paint: #a3e635; position: relative; z-index: 1; isolation: isolate; width: .74em; margin: 0 -.015em;
+  font-family: 'Arial Black', 'Segoe UI Black', Impact, system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: var(--paint); -webkit-text-stroke: .1em #111; paint-order: stroke fill;
+  text-shadow: .05em .06em 0 #111, .08em .1em 0 rgba(0, 0, 0, .3);
+  rotate: -6deg;
+}
+.skin-graffiti .slot:nth-of-type(6n+2) { --paint: #22d3ee; rotate: 5deg; translate: 0 -.04em; }
+.skin-graffiti .slot:nth-of-type(6n+3) { --paint: #f472b6; rotate: -3deg; translate: 0 .03em; }
+.skin-graffiti .slot:nth-of-type(6n+4) { --paint: #facc15; rotate: 6deg; }
+.skin-graffiti .slot:nth-of-type(6n+5) { --paint: #fb923c; rotate: -5deg; translate: 0 -.03em; }
+.skin-graffiti .slot:nth-of-type(6n) { --paint: #c084fc; rotate: 4deg; translate: 0 .02em; }
+/* le halo de peinture pulvérisée, derrière la lettre */
+.skin-graffiti .slot::before { content: ''; position: absolute; inset: .02em -.14em; z-index: -1; pointer-events: none; opacity: .32;
+  background: radial-gradient(closest-side, var(--paint), transparent); }
+/* les coulures : trois filets de la couleur de la lettre, avec leur goutte au bout */
+.skin-graffiti .slot::after { content: ''; position: absolute; left: .09em; width: .56em; top: 72%; height: .5em; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .035em .2em / .14em .14em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .07em 0 / .07em .27em no-repeat,
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .275em .34em / .13em .13em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .31em 0 / .06em .41em no-repeat,
+    radial-gradient(circle, var(--paint) 52%, transparent 60%) .44em .1em / .11em .11em no-repeat,
+    linear-gradient(var(--paint), var(--paint)) .47em 0 / .05em .16em no-repeat;
+  filter: drop-shadow(.025em .025em 0 #111); }
+.skin-graffiti .slot:nth-of-type(2n)::after { transform: scaleX(-1); }
+.skin-graffiti .slot.ghost { opacity: .2; }
+.skin-graffiti .slot.collapsed { width: 0; margin: 0; }
+.skin-graffiti .slot.collapsed::before, .skin-graffiti .slot.collapsed::after { display: none; }
+/* Pendant le tirage : une esquisse à la craie, contour seul, qui tremble par saccades. */
+.skin-graffiti .slot.spinning { opacity: 1; color: transparent; -webkit-text-stroke: .035em rgba(255, 255, 255, .7); text-shadow: none; animation: graf-sketch .24s steps(1) infinite; }
+.skin-graffiti .slot.spinning::before, .skin-graffiti .slot.spinning::after { opacity: 0; }
+.skin-graffiti .slot.spinning:nth-of-type(2n) { animation-delay: -.12s; }
+@keyframes graf-sketch { 0% { transform: translate(0, 0); } 33% { transform: translate(.015em, -.01em) rotate(1.5deg); } 66% { transform: translate(-.01em, .012em) rotate(-1deg); } }
+/* La bombe arrive (l'esquisse rentre), psssht : la peinture jaillit floue et gonflée, se fige nette, rebondit à peine. */
+.skin-graffiti .slot.revealed { animation: graf-spray .62s backwards; }
+@keyframes graf-spray {
+  0% { color: transparent; -webkit-text-stroke-color: rgba(255, 255, 255, .7); -webkit-text-stroke-width: .035em; text-shadow: none; transform: scale(1); animation-timing-function: ease-in; }
+  18% { color: transparent; -webkit-text-stroke-color: rgba(255, 255, 255, .7); -webkit-text-stroke-width: .035em; text-shadow: none; transform: scale(.9); animation-timing-function: steps(1); }
+  20% { color: var(--paint); -webkit-text-stroke-color: #111; -webkit-text-stroke-width: .06em; filter: blur(.05em) brightness(1.35); transform: scale(1.2); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  46% { filter: none; transform: scale(.96); }
+  68% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+.skin-graffiti .slot.revealed::before { animation: graf-mist .7s backwards; }
+@keyframes graf-mist { 0%, 18% { opacity: 0; transform: scale(.5); } 26% { opacity: .85; transform: scale(1.35); } 100% { opacity: .32; transform: none; } }
+.skin-graffiti .slot.revealed::after { animation: graf-drip 1.5s .32s ease-out backwards; }
+@keyframes graf-drip { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .skin-graffiti .slot, .skin-graffiti .slot::before, .skin-graffiti .slot::after { animation: none; } }
+/* Cadre de duel : un mur de briques ; 🎨 tremble comme une bombe qu'on secoue, ♛ (le tag couronne) clignote. */
+.side-graffiti { --side-border: #b4532a; --side-glow: 0 0 16px rgba(244, 114, 182, .22); --side-ink: #db2777;
+  --side-bg: radial-gradient(ellipse 40% 50% at 15% 25%, rgba(163, 230, 53, .2), transparent 70%), radial-gradient(ellipse 40% 50% at 85% 80%, rgba(34, 211, 238, .18), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><g fill='%23a3412c' fill-opacity='.28'><rect x='1' y='1' width='20' height='9' rx='1'/><rect x='23' y='1' width='20' height='9' rx='1'/><rect x='-10' y='12' width='20' height='9' rx='1'/><rect x='12' y='12' width='20' height='9' rx='1'/><rect x='34' y='12' width='20' height='9' rx='1'/></g></svg>") 0 0 / 44px 22px;
+  --deco-a: '🎨'; --deco-b: '♛'; }
+.side-graffiti::before { animation: graf-shake .5s ease-in-out infinite; }
+.side-graffiti::after { font-size: 1.3rem; color: #facc15; -webkit-text-stroke: 1px #111; animation: graf-blink 2.4s steps(1) infinite; }
+@keyframes graf-shake { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-3px) rotate(-8deg); } 80% { transform: translateY(2px) rotate(6deg); } 90% { transform: translateY(-2px); } }
+@keyframes graf-blink { 0%, 100% { opacity: .9; } 50% { opacity: .55; } }
+.room-stage.many .side-graffiti::before, .room-stage.many .side-graffiti::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-graffiti::before, .side-graffiti::after { animation: none; } }
