@@ -7072,7 +7072,7 @@
         });
         // couronnes : étincelles avec une courte traînée
         sparks.step(dt);
-        sparks.each((s, k) => { const a = k > .5 ? (1 - k) * 2 : 1; line(co, s.c, s.x - s.vx * s.tail, s.y - s.vy * s.tail, s.x, s.y, s.size * .8, a * .8); dot(co, s.c, s.x, s.y, s.size * 2, a); });
+        sparks.each((s, k) => { const a = k > .5 ? (1 - k) * 2 : 1; line(co, s.c, s.x - s.vx * s.tail, s.y - s.vy * s.tail, s.x, s.y, s.size * (dark ? .8 : 1.3), a * .8); dot(co, s.c, s.x, s.y, s.size * 2, a); if (!dark) { co.globalAlpha = a; co.fillStyle = s.c; co.fillRect(s.x - s.size * .7, s.y - s.size * .7, s.size * 1.4, s.size * 1.4); } }); // page claire : un cœur plein, le halo seul ne se voit pas sur du blanc
         glitter.step(dt);
         glitter.each((g, k) => dot(co, g.c, g.x, g.y, g.size * 2, (1 - k) * (g.tw ? (Math.sin(now * 40 + g.x) > 0 ? 1 : .15) : 1)));
         co.globalCompositeOperation = 'source-over';
