@@ -8855,20 +8855,20 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .skin-origami .slot.spinning:nth-of-type(2n)::before { animation-delay: -.25s; }
 @keyframes ori-flutter { from { transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); } to { transform: perspective(2.4em) rotate3d(1, -1.2, 0, -24deg); filter: brightness(.94); } }
 /* Le pli : le rabat recule (l'élan), se déplie d'un coup sec en s'assombrissant, puis le coin corné, puis le carré claque. */
-.skin-origami .slot.revealed::before { animation: ori-unfold .5s backwards; }
+.skin-origami .slot.revealed::before { animation: ori-unfold .6s backwards; }
 @keyframes ori-unfold {
   0% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); animation-timing-function: ease-out; }
   18% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 14deg); filter: brightness(1.04); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
   52% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -89deg); filter: brightness(.62); }
   53%, 100% { opacity: 0; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -95deg); }
 }
-.skin-origami .slot.revealed::after { animation: ori-ear .66s backwards; }
+.skin-origami .slot.revealed::after { animation: ori-ear .8s backwards; }
 @keyframes ori-ear {
   0%, 46% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 0deg); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
   70% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 89deg); filter: brightness(.6); }
   71%, 100% { opacity: 0; transform: perspective(2em) rotate3d(1, 1.2, 0, 95deg); }
 }
-.skin-origami .slot.revealed { animation: ori-snap .72s backwards; }
+.skin-origami .slot.revealed { animation: ori-snap .86s backwards; }
 @keyframes ori-snap {
   0%, 48% { transform: none; color: rgba(31, 22, 48, .5); }
   54% { transform: scale(1.07); color: #1f1630; filter: brightness(1.12); }
@@ -8979,7 +8979,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   font-family: 'Chalkboard SE', 'Comic Sans MS', 'Marker Felt', 'Trebuchet MS', cursive; font-weight: 700; font-variant-numeric: normal;
   color: #8a4b0f; text-shadow: 0 -.035em 0 rgba(92, 45, 8, .75), 0 .04em 0 rgba(255, 251, 235, .95), 0 .07em .05em rgba(255, 255, 255, .45); }
 /* l'écume qui recouvre le chiffre au moment où il se pose */
-.skin-beach .slot::after { content: ''; position: absolute; left: -.1em; right: -.1em; top: -.12em; bottom: -.04em; pointer-events: none; opacity: 0;
+.skin-beach .slot::after { content: ''; position: absolute; left: -.15em; right: -.15em; top: -.12em; bottom: -.04em; pointer-events: none; opacity: 0;
   background: radial-gradient(circle, rgba(255, 255, 255, .9) 0 .025em, transparent .035em) 0 0 / .13em .11em, linear-gradient(180deg, rgba(165, 243, 252, .75), rgba(240, 253, 255, .92) 72%, #ffffff);
   /* bord bas festonné, comme une langue d'écume */
   -webkit-mask: radial-gradient(circle at 50% 0, #000 .07em, transparent .075em) 0 100% / .16em .1em repeat-x, linear-gradient(#000, #000) 0 0 / 100% calc(100% - .06em) no-repeat;

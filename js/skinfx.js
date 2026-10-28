@@ -6736,7 +6736,7 @@
       lock(p, o) {
         const sl = slotOf(p);
         if (!sl) return;
-        if (!o.ghost) creases.add({ x: sl.x, w: sl.w * .9, top: sl.top + (sl.bottom - sl.top) * .05, bottom: sl.bottom - (sl.bottom - sl.top) * .05, life: .45, delay: .2 });
+        if (!o.ghost) creases.add({ x: sl.x, w: sl.w * .9, top: sl.top + (sl.bottom - sl.top) * .05, bottom: sl.bottom - (sl.bottom - sl.top) * .05, life: .45, delay: .4 }); // au moment où le carré claque (ori-snap, 48 % de 0,86 s)
         const col = KAMI[sl.i % 6][0];
         for (let i = o.ghost ? 1 : o.last ? 5 : 3; i > 0; i--) bits.add({ x: sl.x + rnd(-.3, .3) * sl.w, y: sl.top, vx: rnd(-1, 1) * card.h * 1.2, vy: -card.h * rnd(2, 3.4), g: card.h * 9, drag: .5, max: rnd(.6, 1), size: card.h * rnd(.05, .09), rot: rnd(TAU), spin: rnd(-10, 10), flip: rnd(8, 16), c: o.ghost ? '#94a3b8' : col });
         if (o.last) build = 0;
@@ -6745,7 +6745,7 @@
       reveal(tier) {
         const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
         build = 0;
-        if (!p) { balls.add({ life: 2.6, x: card.x + card.w * .7, ground: card.y + card.h - card.h * .12 }); return; }
+        if (!p) { balls.add({ life: 2.6, x: card.x + card.w * .55, ground: card.y - card.h * .12 }); return; } // elle roule sur le bord haut : jamais devant les chiffres
         // confettis de papier plié (peu dès Mythic : ce sont les grues qui comptent, et le jeu lance déjà ses confettis)
         for (let i = p >= 1 ? Math.round(8 * q) : burst(p, 34 * q, 6); i > 0; i--) { const c = pick(KAMI); bits.add({ x: cx + rnd(-.45, .45) * card.w, y: card.y + rnd(0, 1) * card.h, vx: rnd(-1, 1) * card.h * 3, vy: -card.h * rnd(2.5, 5), g: card.h * 6, drag: 1.2, max: rnd(1.2, 2), size: card.h * rnd(.06, .1), rot: rnd(TAU), spin: rnd(-6, 6), flip: rnd(6, 12), c: c[i % 2] }); }
         if (p >= .6 && p < 1) [-1, 1].forEach((side, i) => cranes.add({ delay: .15 + i * .2, life: 2.4, x0: side < 0 ? card.x : card.x + card.w, y0: card.y + card.h * .3, x1: side < 0 ? card.x - card.h * 2.8 : card.x + card.w + card.h * 2.8, y1: card.y + card.h * .1, arc: .35, s: card.h * .8, rate: 11, ph: i * 2, cols: KAMI[(i * 3) % 6], grow: true }));
