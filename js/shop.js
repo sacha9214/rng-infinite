@@ -322,9 +322,27 @@
     { id: 'crystalcave', name: 'Crystal Cave', emoji: '💎', price: 1100, idea: 'finnnnn', desc: 'Glowing crystals deep in a cave by an old mineshaft, with dripping water and the odd bat' },
     // Idée de randomguy : un lac calme où des poissons sautent de temps en temps, et plus rarement un dauphin.
     { id: 'lake', name: 'Lake', emoji: '🏞️', price: 900, idea: 'randomguy', desc: 'A calm lake where fish jump now and then, and once in a while a dolphin' },
+    // Quatre fonds d'idées de joueurs (2026-10-28) ; Zombie Moon est plus bas, avec les fonds d'Halloween. Comme avant,
+    // ceux qui réagissent à la rareté des tirages sont légendaires (premium) : The Fisher et Condensation. Spinning Bread
+    // reste un fond normal (une blague à petit prix) : il tourne seulement un peu plus vite après un tirage.
+    // Idée de kingston : un pêcheur sur un ponton qui attrape de temps en temps un poisson au hasard, certains rares
+    // (poisson doré, petite baleine, une botte pour rire). Purement visuel : un bon tirage fait mordre plus vite.
+    { id: 'fishing', name: 'The Fisher', emoji: '🎣', price: 4500, premium: true, idea: 'kingston', desc: 'A fisherman on a pier at dusk reels in a surprise now and then: a fish, an old boot, a golden fish or even a tiny whale; Epic+ rolls get a bite at once, Mythic+ rolls a golden catch' },
+    // Idée de G8_floppa : les 10 derniers nombres du joueur flottent doucement en fond, très pâles ; un nouveau tirage
+    // rejoint l'essaim (des nombres au hasard tant qu'il n'y en a pas 10).
+    { id: 'lastrolls', name: 'Your Last Rolls', emoji: '🔢', price: 1000, idea: 'G8_floppa', desc: 'Your last 10 numbers drift softly in the background, and every new roll joins them' },
+    // Idée de Cincent (« un pain qui tourne en basse qualité, pour les autres ») : le pain est la blague du chat global.
+    { id: 'bread', name: 'Spinning Bread', emoji: '🍞', price: 800, idea: 'Cincent', desc: 'A gloriously low-quality loaf of bread spins in the middle of the screen, with tiny breads in orbit; rolls make it spin faster' },
+    // Idée d'AnnJoe : de la buée sur une vitre froide, devant une ville la nuit sous la pluie ; les gouttes se forment,
+    // grossissent et coulent en laissant des traces claires. Un bon tirage essuie un arc sur la vitre.
+    { id: 'condensation', name: 'Condensation', emoji: '💧', price: 4000, premium: true, idea: 'AnnJoe', desc: 'A fogged-up window on a rainy night in the city: drops form, grow and run down in clear streaks; good rolls wipe a clear arc across the glass' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
+    // Idée de 17black (un fond « limité », 2026-10-28) : des zombies rigolos qui rampent et traînent les pieds sous la
+    // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 2 novembre inclus :
+    // il sort trois jours avant Halloween, on lui laisse le week-end d'après. 1 031 pièces, comme le skin Jack-o'-Lantern.
+    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · until November 2', until: '2026-11-03T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn ? [] : SKINS.filter(s => s.caseOnly === c.id));

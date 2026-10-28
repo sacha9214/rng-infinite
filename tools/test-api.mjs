@@ -945,6 +945,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.wall, null, 'gagné, pas affiché d\'office');
   r = await call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'wall', wall: r.body.walls[0] } });
   assert.equal(r.status, 200, 'un fond gagné se met comme un fond acheté');
+  // Cinq fonds de joueurs (2026-10-28) : The Fisher et Condensation légendaires (hors caisse), Your Last Rolls et
+  // Spinning Bread dans la caisse, Zombie Moon limité (onglet Limités, hors caisse, jusqu'au 2 novembre inclus).
+  {
+    const fresh = ['fishing', 'lastrolls', 'bread', 'condensation', 'zombiemoon'];
+    assert.ok(fresh.every(id => Shop.wallById.get(id) && Shop.wallById.get(id).idea), 'les cinq fonds existent, avec leur idée');
+    assert.ok(!fresh.some(id => Shop.byId.has(id)), 'aucun ne prend l\'identifiant d\'un skin (le skin Fisherman est « fisher »)');
+    assert.deepEqual(fresh.map(id => Shop.rarityOf(id, true).name), ['Legendary', 'Rare', 'Uncommon', 'Legendary', 'Epic']);
+    assert.ok(wpool.includes('lastrolls') && wpool.includes('bread'), 'les deux fonds normaux sont dans la caisse');
+    assert.ok(!wpool.includes('fishing') && !wpool.includes('condensation') && !wpool.includes('zombiemoon'), 'ni légendaires ni limité dans la caisse');
+    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-03T00:00:00Z');
+    const buyWall = id => call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'buywall', wall: id } });
+    for (const id of ['lastrolls', 'fishing', 'zombiemoon']) {
+      if (wpool.includes(id) && (await call(shopApi, { url: `/api/shop?me=${wally.playerId}` })).body.walls.includes(id)) continue; // déjà gagné dans la caisse
+      const item = Shop.wallById.get(id), c0 = await coinsOf(wally);
+      r = await buyWall(id);
+      if (item.until && Date.now() >= Date.parse(item.until)) { assert.equal(r.status, 422, 'Zombie Moon n\'est plus en vente'); continue; }
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.wall, id, 'acheté = affiché');
+      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
+    }
+  }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
   const bpool = Shop.casePool(bcase).map(b => b.id);
