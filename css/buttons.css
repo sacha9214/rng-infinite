@@ -1244,3 +1244,9 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+/* Ninja (idée de casmictechthing, 2026-10-28) : une bûche de dojo, une tige de bambou tranchée en biais à gauche. */
+.btn-roll.gen-ninja { border: 2px solid #3b2412; border-radius: .45rem; color: #1c1208; font-weight: 800;
+  background: linear-gradient(160deg, transparent 0 48%, #ecfccb 48% 50%, transparent 50%) .6em 0 / .7em 100% no-repeat, linear-gradient(90deg, #365314, #84cc16 40%, #d9f99d 50%, #4d7c0f 80%) .6em 0 / .7em 100% no-repeat, linear-gradient(180deg, #2b1a0e 0 4px, transparent 4px calc(100% - 4px), #2b1a0e calc(100% - 4px)), repeating-linear-gradient(178deg, transparent 0 5px, rgba(120, 72, 30, .2) 5px 6px), linear-gradient(180deg, #c08a50, #ddb07a 45%, #b27e45);
+  padding-left: 2em; text-shadow: 0 1px 0 rgba(255, 236, 200, .6);
+  --gs: 0 .3em 0 #3b2412, 0 .5em 1em rgba(132, 204, 22, .2); --gs-h: 0 .34em 0 #3b2412, 0 .7em 1.3em rgba(132, 204, 22, .4); --gs-a: 0 .06em 0 #3b2412; }
+.btn-roll.gen-ninja:hover { filter: brightness(1.08); }

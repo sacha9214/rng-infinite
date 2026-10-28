@@ -6480,6 +6480,249 @@
     };
   };
 
+  // ==== Skins du 2026-10-28, lot C ====
+  // Ninja, Scroll of Alchemy, Window Cleaner et Firework : idées de joueurs acceptées par Sacha. Ces scènes suivent les
+  // cases (slotsA) ; le calque intérieur (ci) garde sa taille de départ alors que la carte rétrécit quand les zéros de
+  // tête s'effacent (il est donc étiré en largeur) : inC dessine dedans avec les coordonnées du calque extérieur en
+  // compensant cet étirement, pour qu'un rond reste rond et qu'un dessin reste sous son chiffre. cw0 : largeur de départ.
+  function inC(env, cw0, fn) {
+    const { ci, card, w } = env, b = (cw0 - w) / 2;
+    ci.save(); ci.scale(w / Math.max(1, card.w - 2 * b), 1); ci.translate(-(card.x + b), -(card.y + b)); fn(ci); ci.restore();
+  }
+  // Étincelle à quatre branches (reflet de lame, éclat de vitre propre, paillette).
+  function twinkle(c, color, x, y, r, a, rot = 0) {
+    if (a <= .01 || r <= .3) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot); c.fillStyle = color;
+    c.beginPath();
+    for (let i = 0; i < 8; i++) { const an = (i * Math.PI) / 4, rr = i % 2 ? r * .16 : r; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+    c.closePath(); c.fill(); c.restore();
+  }
+
+  // 🥷 Ninja (2026-10-28, idée de casmictechthing ; le bambou tranché au sabre vient de Nero) — à chaque chiffre posé, un
+  // trait de lame blanc traverse la tige de bambou en biais (la coupe CSS nj-top / nj-stump est calée dessus, à 16 % de
+  // 0,62 s), des feuilles et des copeaux verts volent ; juste après, un shuriken (chiffres de rang pair, coin haut gauche)
+  // ou un kunaï (rang impair, coin bas droit) arrive de l'extérieur en tournoyant et se plante dans la bûche avec un
+  // tremblement qui s'amortit ; il y reste. Avant le dernier chiffre, un petit ninja passe la tête derrière la carte et
+  // un éclat brille sur la dernière tige. Révélation : le ninja surgit derrière le coin haut droit, une bulle donne son
+  // kaomoji, un par rareté (NJ_FACE, idée de casmictechthing : Common -_-, Mythic :), Celestial :D, Infinite 8D, Trash
+  // :c, Garbage :(, Landwaste >:( ; Garbage et Land waste arrivent par miss()) ; tirage raté, il s'affaisse et un
+  // shuriken tombe de la bûche ; dès Epic, il lance trois shuriken sur le bord de la carte ; dès Mythic, il fait un salto,
+  // un grand X de lame traverse la carte, une ronde de shuriken se plante tout autour et des feuilles pleuvent.
+  const NJ_FACE = { landwaste: '>:(', garbage: ':(', trash: ':c', common: '-_-', uncommon: '._.', rare: 'o_o', epic: ':o', anomaly: 'O_O', mythic: ':)', celestial: ':D', divine: '^o^', godlike: 'B)', infinite: '8D' };
+  SCENES.ninja = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h;
+    const stuck = [], flying = [], slashes = timed(), leaves = particles(), chips = particles(), drops = particles(), steam = particles();
+    const ninja = { up: 0, to: 0, flip: 0, flipT: -1, mood: 'calm', face: '', bubble: 0, bubbleTo: 0, until: Infinity };
+    let now = 0, glint = 0;
+    const STEEL = ['#f8fafc', '#94a3b8', '#334155'], GOLD = ['#fef3c7', '#eab308', '#713f12'];
+    // centre de la case i (les cases bougent quand la carte se resserre)
+    const slotOf = i => slotsA(env).find(s => s.i === i);
+    const nearest = x => { let best = null; for (const s of slotsA(env)) if (!best || Math.abs(s.x - x) < Math.abs(best.x - x)) best = s; return best; };
+    // où se plante l'arme d'une case : haut gauche (shuriken) ou bas droit (kunaï), dans l'écorce, hors du chiffre
+    const spot = (s, kind) => kind === 'star' ? { x: s.x - s.w * .46, y: card.y + H * .13 } : { x: s.x + s.w * .5, y: card.y + H - H * .14 };
+    const star = (x, y, r, rot, cols, a = 1) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      const path = () => { co.beginPath(); for (let i = 0; i < 8; i++) { const an = (i * Math.PI) / 4, rr = i % 2 ? r * .3 : r; co.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } co.closePath(); };
+      path(); const g = co.createLinearGradient(-r, -r, r, r); g.addColorStop(0, cols[0]); g.addColorStop(.5, cols[1]); g.addColorStop(1, cols[2]);
+      co.fillStyle = g; co.fill(); co.lineJoin = 'round'; co.lineWidth = Math.max(1, r * .1); co.strokeStyle = '#0f172a'; co.stroke();
+      co.strokeStyle = 'rgba(255,255,255,.6)'; co.lineWidth = Math.max(.6, r * .06); co.beginPath();
+      for (let i = 0; i < 8; i += 2) { const an = (i * Math.PI) / 4; co.moveTo(Math.cos(an) * r * .2, Math.sin(an) * r * .2); co.lineTo(Math.cos(an) * r * .85, Math.sin(an) * r * .85); }
+      co.stroke();
+      co.fillStyle = '#0f172a'; co.beginPath(); co.arc(0, 0, r * .17, 0, TAU); co.fill();
+      co.restore();
+    };
+    // kunaï : la pointe en (0, 0), tourné vers +x ; L = longueur totale
+    const kunai = (L, cols) => {
+      const g = co.createLinearGradient(0, -L * .12, 0, L * .12); g.addColorStop(0, cols[0]); g.addColorStop(.5, cols[1]); g.addColorStop(1, cols[2]);
+      co.lineJoin = 'round'; co.lineWidth = Math.max(1, L * .025); co.strokeStyle = '#0f172a';
+      co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-L * .2, -L * .14, -L * .44, -L * .035); co.lineTo(-L * .44, L * .035); co.quadraticCurveTo(-L * .2, L * .14, 0, 0); co.closePath();
+      co.fillStyle = g; co.fill(); co.stroke();
+      co.strokeStyle = 'rgba(255,255,255,.65)'; co.lineWidth = Math.max(.6, L * .012); co.beginPath(); co.moveTo(-L * .04, 0); co.lineTo(-L * .4, 0); co.stroke();
+      co.fillStyle = '#1f2937'; co.fillRect(-L * .82, -L * .04, L * .38, L * .08); co.strokeStyle = '#0f172a'; co.lineWidth = Math.max(1, L * .02); co.strokeRect(-L * .82, -L * .04, L * .38, L * .08);
+      co.strokeStyle = '#dc2626'; co.lineWidth = Math.max(1, L * .025); co.beginPath();
+      for (let u = .48; u < .8; u += .07) { co.moveTo(-L * u, -L * .04); co.lineTo(-L * (u + .045), L * .04); }
+      co.stroke();
+      co.strokeStyle = cols[1]; co.lineWidth = Math.max(1.2, L * .03); co.beginPath(); co.arc(-L * .9, 0, L * .075, 0, TAU); co.stroke();
+    };
+    // une arme : en vol (k < 1) ou plantée ; e.wob : tremblement qui s'amortit après l'impact
+    const weapon = (e, x, y) => {
+      const cols = e.gold ? GOLD : e.cols || STEEL, since = now - e.hit, wob = e.hit ? Math.sin(since * 48) * .22 * Math.exp(-since * 7) : 0;
+      if (e.kind === 'star') {
+        const r = H * e.r;
+        if (e.hit) { co.globalAlpha = .35; co.fillStyle = '#1c1208'; co.beginPath(); co.ellipse(x + r * .18, y + r * .22, r * .8, r * .55, 0, 0, TAU); co.fill(); co.globalAlpha = 1; }
+        star(x, y, r, e.rot + wob, cols, e.a == null ? 1 : e.a);
+      } else {
+        const L = H * e.r * 4.6;
+        co.save(); co.globalAlpha = e.a == null ? 1 : e.a; co.translate(x, y); co.rotate(e.dir + wob);
+        if (e.hit) { co.beginPath(); co.rect(-L * 1.2, -L, L * 1.2 - L * .02, L * 2); co.clip(); co.translate(L * .2, 0); } // la pointe est dans le bois
+        kunai(L, cols); co.restore();
+      }
+    };
+    const crack = (x, y, a, sz) => { co.globalAlpha = a * .7; co.strokeStyle = '#2b1a0e'; co.lineWidth = 1.2; co.beginPath(); for (let i = 0; i < 4; i++) { const an = i * 1.7 + .4; co.moveTo(x, y); co.lineTo(x + Math.cos(an) * sz, y + Math.sin(an) * sz * .6); } co.stroke(); co.globalAlpha = 1; };
+    const leaf = (l, k) => {
+      co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(l.x, l.y); co.rotate(l.rot + l.life * l.spin); co.scale(1, Math.max(.2, Math.abs(Math.cos(l.life * l.flip))));
+      co.fillStyle = l.c; co.beginPath(); co.ellipse(0, 0, l.size, l.size * .24, 0, 0, TAU); co.fill();
+      co.strokeStyle = 'rgba(20,40,5,.6)'; co.lineWidth = .8; co.beginPath(); co.moveTo(-l.size * .9, 0); co.lineTo(l.size * .9, 0); co.stroke();
+      co.restore();
+    };
+    const LEAF = ['#65a30d', '#84cc16', '#4d7c0f', '#a3e635'];
+    const addLeaf = (x, y, vx, vy, extra = {}) => leaves.add({ x, y, vx, vy, g: 140, drag: 2.2, max: rnd(1.1, 1.8), size: H * rnd(.1, .16), rot: rnd(TAU), spin: rnd(-4, 4), flip: rnd(4, 9), c: pick(LEAF), ...extra });
+    const throwAt = (kind, tx, ty, from, o = {}) => flying.push({ kind, tx, ty, fx: from.x, fy: from.y, t: -(o.delay || 0), life: o.life || .13, rot: rnd(TAU), dir: Math.atan2(ty - from.y, tx - from.x), r: o.r || (kind === 'star' ? .11 : .12), hit: 0, i: o.i, ex: o.ex, ey: o.ey, gold: o.gold, cols: o.cols });
+    // le petit ninja, la tête vue de face ; (x, y) : centre de la tête ; s : rayon
+    const drawNinja = (x, y, s, mood, rot) => {
+      co.save(); co.globalAlpha = 1; co.translate(x, y); co.rotate(rot);
+      co.fillStyle = '#1f2140'; co.beginPath(); co.ellipse(0, s * 1.35, s * .95, s * .7, 0, 0, TAU); co.fill(); // les épaules
+      co.beginPath(); co.arc(0, 0, s, 0, TAU); co.fill(); co.strokeStyle = '#0b0c1c'; co.lineWidth = Math.max(1, s * .06); co.stroke();
+      co.globalAlpha = .25; co.fillStyle = '#c7d2fe'; co.beginPath(); co.ellipse(-s * .4, -s * .5, s * .28, s * .16, -.6, 0, TAU); co.fill(); co.globalAlpha = 1;
+      // le bandeau rouge et ses deux pans qui flottent
+      const wave = Math.sin(now * 9) * s * .18;
+      co.fillStyle = '#dc2626'; co.fillRect(-s * .98, -s * .52, s * 1.96, s * .26);
+      co.strokeStyle = '#dc2626'; co.lineWidth = s * .16; co.lineCap = 'round';
+      co.beginPath(); co.moveTo(s * .85, -s * .4); co.quadraticCurveTo(s * 1.4, -s * .6 + wave, s * 1.85, -s * .35 - wave); co.moveTo(s * .85, -s * .38); co.quadraticCurveTo(s * 1.3, -s * .1 - wave, s * 1.75, s * .05 + wave); co.stroke(); co.lineCap = 'butt';
+      // la fente du visage et les yeux
+      co.fillStyle = '#f5d0a9'; roundRect(co, -s * .72, -s * .2, s * 1.44, s * .5, s * .22); co.fill();
+      co.strokeStyle = '#111827'; co.fillStyle = '#111827'; co.lineWidth = Math.max(1.2, s * .1); co.lineCap = 'round';
+      const ex = s * .32, ey = s * .05;
+      if (mood === 'happy') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey + s * .06, s * .14, Math.PI * 1.1, Math.PI * 1.9); co.stroke(); } }
+      else if (mood === 'sad') { for (const sx of [-1, 1]) { co.beginPath(); co.moveTo(sx * ex - s * .14, ey + s * .02); co.lineTo(sx * ex + s * .14, ey + s * .02); co.stroke(); } co.beginPath(); co.moveTo(-ex - s * .16, ey - s * .14); co.lineTo(-ex + s * .1, ey - s * .2); co.moveTo(ex + s * .16, ey - s * .14); co.lineTo(ex - s * .1, ey - s * .2); co.stroke(); }
+      else if (mood === 'angry') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey + s * .04, s * .07, 0, TAU); co.fill(); co.beginPath(); co.moveTo(sx * (ex + s * .17), ey - s * .16); co.lineTo(sx * (ex - s * .12), ey - s * .05); co.stroke(); } }
+      else if (mood === 'wow') { for (const sx of [-1, 1]) { co.beginPath(); co.arc(sx * ex, ey, s * .11, 0, TAU); co.stroke(); } }
+      else for (const sx of [-1, 1]) { co.beginPath(); co.ellipse(sx * ex, ey, s * .07, s * .1, 0, 0, TAU); co.fill(); }
+      co.lineCap = 'butt'; co.restore();
+    };
+    // les mains qui s'agrippent au bord de la carte : en haut (il sort par le dessus) ou à droite (il sort de côté)
+    const hands = (x, y, s, a, side) => { co.globalAlpha = a; co.fillStyle = '#1f2140'; co.strokeStyle = '#0b0c1c'; co.lineWidth = 1; for (const sx of [-1, 1]) { co.beginPath(); if (side) co.ellipse(card.x + card.w - 1, y + sx * s * .8, s * .2, s * .26, 0, 0, TAU); else co.ellipse(x + sx * s * .8, card.y + 1, s * .26, s * .2, 0, 0, TAU); co.fill(); co.stroke(); } co.globalAlpha = 1; };
+    // la bulle à côté de la tête, à sa hauteur, la pointe vers elle ; dir : -1 à gauche, 1 à droite
+    const bubble = (hx, hy, s, text, k, dir) => {
+      const fs = Math.max(11, H * .3), sc = outBack(clamp(k)); if (sc <= .02) return;
+      co.save(); co.globalAlpha = 1; co.font = `800 ${Math.round(fs)}px ui-monospace, 'SF Mono', Menlo, Consolas, monospace`;
+      const tw = co.measureText(text).width, bw = tw + fs * .9, bh = fs * 1.5, gap = s * .45, e = -dir; // e : le côté de la bulle tourné vers la tête
+      co.translate(hx + dir * (s + gap), hy - bh * .1); co.scale(sc, sc); co.translate(dir * bw / 2, 0);
+      co.fillStyle = '#ffffff'; co.strokeStyle = '#111827'; co.lineWidth = 2; co.lineJoin = 'round';
+      co.beginPath(); co.moveTo(e * (bw / 2 - 2), -bh * .2); co.lineTo(e * (bw / 2 + gap * .9), bh * .12); co.lineTo(e * (bw / 2 - 2), bh * .22); co.closePath(); co.fill(); co.stroke();
+      roundRect(co, -bw / 2, -bh / 2, bw, bh, bh * .45); co.fill(); co.stroke();
+      co.fillRect(e > 0 ? bw / 2 - 4 : -bw / 2, -bh * .18, 4, bh * .38); // efface le trait à la base de la pointe
+      co.fillStyle = '#111827'; co.textAlign = 'center'; co.textBaseline = 'middle'; co.fillText(text, 0, fs * .04);
+      co.restore();
+    };
+    // Où sort le ninja : par le dessus de la carte s'il y a la place sous le menu (téléphone), sinon par la droite
+    // (sur ordinateur, la carte est collée au menu et le haut de la scène est hors de l'écran).
+    const placeSide = () => { try { const r = env.el.getBoundingClientRect(); return r.top - 56 < H * 1.05 && root.innerWidth - r.right > H * 2.4; } catch (e) { return false; } };
+    // la réaction du ninja, commune à reveal et miss
+    const react = (tier, p, asc) => {
+      ninja.face = NJ_FACE[tier] || '-_-'; ninja.side = placeSide();
+      ninja.mood = tier === 'landwaste' ? 'angry' : !p ? 'sad' : p >= 1 ? 'happy' : p >= .6 ? 'wow' : 'calm';
+      ninja.to = p ? 1 : .8; ninja.bubbleTo = 1; ninja.bubbleAt = now + (p >= 1 ? .55 : .2); ninja.until = now + 3.6 + 1.2 * p + .6 * asc;
+      if (p >= 1) ninja.flipT = now;
+    };
+    const head = () => { // centre de la tête du ninja et taille, selon sa sortie et son élan
+      const s = H * .3;
+      if (ninja.side) return { s, x: card.x + card.w - s * 1.2 + ninja.up * s * 2.35, y: card.y + card.h * .45 };
+      return { s, x: card.x + card.w - H * .55, y: card.y + s * 1.1 - ninja.up * s * 2.3 };
+    };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env);
+        // le ninja : monte, redescend après sa réaction ; salto au Mythic
+        if (now > ninja.until) { ninja.to = 0; ninja.bubbleTo = 0; }
+        ninja.up += (ninja.to - ninja.up) * Math.min(1, dt * (ninja.mood === 'sad' && ninja.to ? 3 : 9));
+        if (now >= (ninja.bubbleAt || 0)) ninja.bubble = ninja.bubbleTo ? Math.min(1, ninja.bubble + dt * 4) : Math.max(0, ninja.bubble - dt * 5);
+        const hd = head(), s = hd.s, nx = hd.x;
+        let ny = hd.y, rot = 0;
+        if (ninja.mood === 'angry' && ninja.up > .6 && Math.random() < dt * 9) steam.add({ x: nx + rnd(-.6, .6) * s, y: ny - s * .9, vx: rnd(-15, 15), vy: -rnd(30, 60), drag: .8, g: 0, max: rnd(.7, 1.1), size: H * .06 }); // colère (Land waste)
+        if (ninja.flipT >= 0) { const k = (now - ninja.flipT) / .6; if (k < 1) { ny -= Math.sin(k * Math.PI) * H * .9; rot = outCubic(k) * TAU; } }
+        if (ninja.up > .02) {
+          behind(env, () => drawNinja(nx, ny, s, ninja.mood, rot + (ninja.side ? .18 : 0)));
+          if (rot === 0 && ninja.up > .3) hands(nx, ny, s, clamp((ninja.up - .3) * 3), ninja.side);
+        }
+        // les vapeurs de colère (Land waste)
+        steam.step(dt); steam.each((p, k) => dot(co, dark ? '#e2e8f0' : '#64748b', p.x, p.y, p.size * (1 + k * 2), (1 - k) * .6));
+        if (ninja.bubble > 0 && ninja.face) bubble(nx, ny, s, ninja.face, ninja.bubble, ninja.side ? 1 : -1);
+        // les armes plantées : elles suivent leur case (ou le bord de la carte)
+        for (const e of stuck) {
+          let x, y;
+          if (e.i != null) { const sl = S.find(z => z.i === e.i); if (!sl || sl.gone) continue; const sp = spot(sl, e.kind); x = sp.x; y = sp.y; }
+          else { x = card.x + e.ex * card.w; y = card.y + e.ey * card.h; }
+          if (e.fall) { e.vy += 900 * dt; e.oy = (e.oy || 0) + e.vy * dt; e.rot += dt * 6; y += e.oy; e.a = clamp(1 - e.oy / (H * 1.5)); if (e.a <= 0) continue; }
+          else crack(x, y, 1, H * e.r * 1.5);
+          weapon(e, x, y);
+        }
+        // les armes en vol
+        for (let i = flying.length - 1; i >= 0; i--) {
+          const f = flying[i]; f.t += dt; if (f.t < 0) continue;
+          const k = clamp(f.t / f.life);
+          if (k >= 1) {
+            flying.splice(i, 1); f.hit = now; f.rot += rnd(-.4, .4); stuck.push(f);
+            for (let n = Math.round(5 * q); n > 0; n--) chips.add({ x: f.tx, y: f.ty, vx: -Math.cos(f.dir) * rnd(40, 140) + rnd(-50, 50), vy: -Math.sin(f.dir) * rnd(40, 140) - rnd(20, 80), g: 600, drag: .5, max: rnd(.35, .6), size: rnd(1, 2.2), c: pick(['#ddb07a', '#b27e45', '#6b4423']) });
+            continue;
+          }
+          const x = lerp(f.fx, f.tx, k), y = lerp(f.fy, f.ty, k);
+          line(co, dark ? 'rgba(226,232,240,.5)' : 'rgba(51,65,85,.35)', x - Math.cos(f.dir) * H * .5, y - Math.sin(f.dir) * H * .5, x, y, 1.2, 1);
+          weapon({ ...f, rot: f.rot + f.t * 30, hit: 0 }, x, y);
+        }
+        // traits de lame : un croissant blanc qui file d'un bout à l'autre, puis s'efface
+        slashes.run(dt, (sl, k) => {
+          const grow = clamp(k / .25), fade = k < .25 ? 1 : 1 - (k - .25) / .75, x2 = lerp(sl.x1, sl.x2, grow), y2 = lerp(sl.y1, sl.y2, grow);
+          const nx2 = -(sl.y2 - sl.y1), ny2 = sl.x2 - sl.x1, len = Math.hypot(nx2, ny2) || 1, ux = nx2 / len, uy = ny2 / len, mx = (sl.x1 + x2) / 2, my = (sl.y1 + y2) / 2, wd = sl.w * fade;
+          co.globalAlpha = fade * .45; co.fillStyle = sl.glow;
+          co.beginPath(); co.moveTo(sl.x1, sl.y1); co.quadraticCurveTo(mx + ux * wd * 2.4, my + uy * wd * 2.4, x2, y2); co.quadraticCurveTo(mx - ux * wd * .6, my - uy * wd * .6, sl.x1, sl.y1); co.fill();
+          co.globalAlpha = fade; co.fillStyle = '#ffffff';
+          co.beginPath(); co.moveTo(sl.x1, sl.y1); co.quadraticCurveTo(mx + ux * wd, my + uy * wd, x2, y2); co.quadraticCurveTo(mx, my, sl.x1, sl.y1); co.fill();
+          co.globalAlpha = 1;
+        });
+        // l'éclat sur la dernière tige, pendant la tension
+        if (glint) { const nxt = S.find(z => !z.on && !z.gone); if (nxt) twinkle(co, '#ffffff', nxt.x + nxt.w * .15, nxt.top + H * .12, H * (.12 + .08 * Math.sin(now * 16)), .9, now * 2); }
+        leaves.step(dt); chips.step(dt); drops.step(dt);
+        leaves.each(leaf);
+        chips.each((c, k) => { co.globalAlpha = 1 - k; co.fillStyle = c.c; co.fillRect(c.x, c.y, c.size * 1.8, c.size); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const sl = nearest(p.x); if (!sl) return;
+        const bh = (sl.bottom - sl.top) * 1.15, bw = sl.w * .76;
+        const y1 = sl.y + bh * .1, y2 = sl.y - bh * .1, ext = sl.w * .55; // la coupe : de 60 % à gauche à 40 % à droite de la tige
+        const slope = (y2 - y1) / bw;
+        slashes.add({ delay: .085, life: o.ghost ? .25 : .32, x1: sl.x - bw / 2 - ext, y1: y1 - slope * ext, x2: sl.x + bw / 2 + ext, y2: y2 + slope * ext, w: H * (o.last ? .1 : .07), glow: o.ghost ? '#94a3b8' : '#bae6fd' });
+        const n = o.ghost ? 1 : o.last ? 5 : 3;
+        for (let i = 0; i < n; i++) addLeaf(sl.x + rnd(-.3, .3) * sl.w, sl.y, rnd(-120, 120), -rnd(60, 180), { delay: 0 });
+        for (let i = Math.round((o.ghost ? 2 : 6) * q); i > 0; i--) chips.add({ x: sl.x + rnd(-.3, .3) * sl.w, y: sl.y, vx: rnd(-90, 90), vy: -rnd(40, 160), g: 500, drag: .6, max: rnd(.3, .6), size: rnd(1, 2), c: pick(['#84cc16', '#d9f99d', '#4d7c0f']) });
+        if (o.last) glint = 0;
+        if (o.ghost) return;
+        // l'arme : shuriken en haut à gauche ou kunaï en bas à droite, chacun son tour
+        const kind = sl.i % 2 ? 'kunai' : 'star', sp = spot(sl, kind);
+        const from = kind === 'star' ? { x: sp.x - H * 1.9, y: sp.y - H * 1.5 } : { x: sp.x + H * 2.1, y: sp.y + H * 1.1 };
+        throwAt(kind, sp.x, sp.y, from, { delay: .13, i: sl.i, r: o.last ? (kind === 'star' ? .13 : .14) : undefined });
+      },
+      build() { glint = 1; ninja.to = .42; ninja.mood = 'calm'; ninja.side = placeSide(); },
+      miss(tier) { glint = 0; react(tier, 0, 0); this.drop(); },
+      // tirage raté : un shuriken se décroche de la bûche et tombe
+      drop() { const e = stuck.filter(z => !z.fall).pop(); if (e) { e.fall = 1; e.vy = -60; } },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        glint = 0; react(tier, p, asc);
+        if (!p) { this.drop(); return; }
+        const hd = head(), from = { x: hd.x, y: hd.y };
+        for (let i = Math.round((3 + 8 * p) * q); i > 0; i--) addLeaf(card.x + rnd(0, 1) * card.w, card.y - H * rnd(.2, .8), rnd(-30, 30), rnd(-20, 30));
+        if (p >= .6) [[.18, 0], [0, .5], [.62, 1]].forEach(([ex, ey], i) => throwAt('star', card.x + ex * card.w, card.y + ey * card.h, from, { delay: .5 + i * .12, life: .16, ex, ey, r: .1 }));
+        if (p < 1) return;
+        // Mythic et plus : un grand X de lame, une ronde de shuriken tout autour, une pluie de feuilles
+        const glowC = asc >= 3 ? '#f0abfc' : asc ? '#fde68a' : '#bae6fd';
+        slashes.add({ delay: .2, life: .5, x1: card.x - H * .5, y1: card.y - H * .3, x2: card.x + card.w + H * .5, y2: card.y + card.h + H * .3, w: H * .16, glow: glowC });
+        slashes.add({ delay: .36, life: .5, x1: card.x + card.w + H * .5, y1: card.y - H * .3, x2: card.x - H * .5, y2: card.y + card.h + H * .3, w: H * .16, glow: glowC });
+        const n = 8 + 4 * asc, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+        for (let i = 0; i < n; i++) {
+          const pt = along({ x: card.x, y: card.y, w: card.w, h: card.h, r: card.r }, (i + .5) / n), ex = (pt.x - card.x) / card.w, ey = (pt.y - card.y) / card.h, an = Math.atan2(pt.y - cy, (pt.x - cx) * .5);
+          throwAt('star', pt.x, pt.y, { x: pt.x + Math.cos(an) * H * 1.6, y: pt.y + Math.sin(an) * H * 1.6 }, { delay: .7 + i * .05, life: .14, ex, ey, r: .1, gold: asc >= 1 && asc < 3, cols: asc >= 3 ? [pick(['#fbcfe8', '#bae6fd', '#bbf7d0', '#fef08a']), pick(RAINBOW), '#312e81'] : undefined });
+        }
+        for (let i = Math.round((26 + 14 * asc) * q); i > 0; i--) addLeaf(card.x + rnd(-.2, 1.2) * card.w, card.y - H * rnd(.6, 2), rnd(-20, 20), rnd(20, 60), { max: rnd(2, 3), delay: 0 });
+      },
+    };
+  };
+
+  // ==== fin du lot C ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
@@ -6553,7 +6796,8 @@
         }),
         build: guard(ms => scene.build(ms)),
         // Garbage et Land waste : pas de grand effet de révélation (« ça remue le couteau dans la plaie », A Dude 2026-10-18).
-        reveal: guard(tier => { if (tier === 'garbage' || tier === 'landwaste') { restSince = t + 1; return; } scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0) + 2 * (ASCEND[tier] || 0); }),
+        // miss(tier) : une scène peut quand même y réagir en petit (Ninja : son kaomoji, idée de casmictechthing 2026-10-28).
+        reveal: guard(tier => { if (tier === 'garbage' || tier === 'landwaste') { if (scene.miss) scene.miss(tier); restSince = t + (scene.miss ? 3 : 1); return; } scene.reveal(tier); restSince = t + 4 + 4 * (POWER[tier] || 0) + 2 * (ASCEND[tier] || 0); }),
         stop() { stopped = true; cancelAnimationFrame(raf); },
         // Mode manuel (o.manual, pour le trailer) : pas d'horloge ; l'appelant avance la scène lui-même, de dt secondes,
         // et obtient donc la même image pour le même instant.

@@ -280,6 +280,8 @@
     'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave': 'Une goutte tombe sur chaque chiffre et fait des ronds dans l\'eau ; les Mythic soulèvent une vague',
     'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments': 'Un train à grande vitesse file sous les pétales de cerisier et chaque chiffre surgit dans son sillage ; les Mythic reçoivent des compliments en japonais',
     'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity': 'Un satellite tire un rayon sur chaque chiffre, puis un rayon géant frappe ton nombre, de la couleur de sa rareté',
+    // skins du 2026-10-28, lot C
+    'A blade slices the bamboo off every digit on a dojo log while shuriken and kunai thunk in, and a little ninja pulls a face that matches your rarity': 'Une lame tranche le bambou devant chaque chiffre sur une bûche de dojo pendant que shuriken et kunaïs s\'y plantent, et un petit ninja fait une tête selon ta rareté',
     'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE': 'Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE',
     'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone': 'Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue',
     'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more': 'Un écran de téléphone qui bugue pendant le tirage ; chaque chiffre frappe la vitre et la fissure un peu plus',

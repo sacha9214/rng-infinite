@@ -155,6 +155,10 @@
     { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
     { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
     { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
+    // ==== Skins du 2026-10-28, lot C (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de casmictechthing (2026-10-28) : une bûche-cible de dojo, un shuriken ou un kunaï se plante à chaque chiffre,
+    // et un kaomoji selon la rareté ; Nero avait proposé un bambou tranché au sabre (c'est lui qui découvre le chiffre).
+    { id: 'ninja', name: 'Ninja', emoji: '🥷', price: 2200, desc: 'A blade slices the bamboo off every digit on a dojo log while shuriken and kunai thunk in, and a little ninja pulls a face that matches your rarity', idea: 'casmictechthing' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
