@@ -155,6 +155,9 @@
     { id: 'ripple', name: 'Ripple', emoji: '💧', price: 1200, desc: 'A water drop falls on every digit and sends ripples across the water; Mythic rolls make a wave', idea: 'casmicgraything' }, // idée de casmicgraything
     { id: 'bullettrain', name: 'Bullet Train', emoji: '🚄', price: 2500, desc: 'A bullet train speeds by under falling cherry petals and every digit pops up in its wake; Mythic rolls get Japanese compliments', idea: 'yukitsunodaiscool' }, // idée de yukitsunodaiscool
     { id: 'orbital', name: 'Orbital Cannon', emoji: '🛰️', price: 3800, desc: 'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity', idea: 'LEVIATHAN' }, // idée de LEVIATHAN
+    // ==== Skins du 2026-10-28 : idées de costoroll et casmicgraything (scènes dans js/skinfx.js) ====
+    // Idée de costoroll (2026-10-28) : l'ombre de chaque chiffre dans une ampoule qui se fêle ; sur un Mythic, tout éclate.
+    { id: 'lightbulb', name: 'Lightbulb', emoji: '💡', price: 1800, desc: 'Six glowing bulbs on a wooden desk: every bulb cracks open at the top to show its digit, and Mythic rolls make them all shatter at once', idea: 'costoroll' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

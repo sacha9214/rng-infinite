@@ -8723,3 +8723,82 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes orb-pulse { 0%, 100% { transform: scale(.9); filter: none; } 50% { transform: scale(1.12); filter: drop-shadow(0 0 4px #22d3ee); } }
 .room-stage.many .side-orbital::before, .room-stage.many .side-orbital::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-orbital::before, .side-orbital::after { animation: none; } }
+/* ------------------------------------------------------------------ Lightbulb (idée de costoroll, 2026-10-28) : six
+   ampoules à incandescence (verre dépoli en poire, culot à vis en laiton) posées sur un bureau en bois, contre un mur
+   tan foncé. Pendant le tirage, l'ombre du chiffre se cache dans l'ampoule allumée, très lumineuse, qui tremble en
+   bourdonnant. Un chiffre qui se pose : petit choc raide (verre : aucun écrasement mou), éclair, la lumière baisse
+   (jaune plus doux) et le chiffre devient net. La fêlure au sommet, les éclats et les halos sur le mur : js/skinfx.js
+   (SCENES.lightbulb). Mythic et plus : .lbl-surge (les ampoules forcent) puis .lbl-dead (tout éclate, verre gris, plus
+   de lumière ; les chiffres restent sombres sur gris, bien lisibles). */
+.num-card.skin-lightbulb {
+  background:
+    linear-gradient(180deg, rgba(255, 230, 170, .35), transparent 2px) 0 100% / 100% .3em no-repeat,
+    repeating-linear-gradient(176deg, transparent 0 .05em, rgba(60, 30, 10, .22) .05em .065em, transparent .065em .12em) 0 100% / 100% .3em no-repeat,
+    linear-gradient(180deg, #a86f3a, #8a5528 55%, #6b3f1c) 0 100% / 100% .3em no-repeat,
+    radial-gradient(ellipse 75% 60% at 50% 55%, rgba(253, 224, 71, .16), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px .34em),
+    linear-gradient(180deg, #5e4631, #4d3926 70%, #3f2e1f);
+  border: 2px solid #3b2a1a; border-radius: .5rem; color: #4a2c0f;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .12), inset 0 .3em .6em rgba(0, 0, 0, .3), 0 0 16px rgba(253, 224, 71, .14), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .26em .36em .12em;
+}
+.skin-lightbulb .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .64em; font-weight: 800; line-height: 1;
+  width: 1.1em; height: 1.42em; margin: 0 .07em .3em; padding-top: .16em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  border-radius: 50% 50% 44% 44% / 58% 58% 42% 42%;
+  color: #4a2c0f; text-shadow: 0 .03em 0 rgba(255, 250, 230, .55);
+  background:
+    radial-gradient(ellipse 20% 14% at 31% 22%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 75%),
+    radial-gradient(circle at 50% 44%, #fffbea 0, #fde68a 42%, #f6c445 74%, #d4961b 100%);
+  box-shadow: inset 0 -.12em .2em rgba(146, 64, 14, .35), inset .05em .04em .08em rgba(255, 255, 255, .45), 0 0 .28em rgba(253, 224, 71, .5), 0 0 .7em rgba(251, 191, 36, .25);
+}
+/* le culot à vis en laiton, posé sur le bureau */
+.skin-lightbulb .slot::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: -.3em; height: .31em; pointer-events: none;
+  border-radius: .03em .03em .14em .14em;
+  background: radial-gradient(ellipse 30% 40% at 50% 100%, #3f3f46 0 60%, transparent 70%), repeating-linear-gradient(170deg, #f1d38a 0 .045em, #a47a2c .045em .085em), #b8902f;
+  box-shadow: 0 .05em .06em rgba(0, 0, 0, .55); }
+.skin-lightbulb .slot.ghost { opacity: .22; }
+.skin-lightbulb .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; background: none; box-shadow: none; }
+.skin-lightbulb .slot.collapsed::after { display: none; }
+/* Pendant le tirage : allumée à fond, l'ombre floue du chiffre dedans, l'ampoule tremble en bourdonnant. */
+.skin-lightbulb .slot.spinning { opacity: 1; color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8);
+  background: radial-gradient(ellipse 20% 14% at 31% 22%, #fff, rgba(255, 255, 255, 0) 75%), radial-gradient(circle at 50% 44%, #fff 0, #fff7c2 38%, #fde047 72%, #eab308 100%);
+  box-shadow: inset 0 -.1em .2em rgba(202, 138, 4, .35), 0 0 .4em #fde047, 0 0 1.1em rgba(250, 204, 21, .55);
+  transform-origin: 50% 125%; animation: lbl-buzz .42s ease-in-out infinite alternate; }
+.skin-lightbulb .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
+.skin-lightbulb .slot.spinning:nth-of-type(3n) { animation-duration: .5s; }
+@keyframes lbl-buzz { 0% { transform: rotate(-1.8deg); } 45% { transform: rotate(.6deg) translateY(-.01em); filter: brightness(1.06); } 100% { transform: rotate(1.6deg); } }
+/* La fêlure : petit choc raide, éclair, la lumière s'échappe (plus sombre un instant), le chiffre devient net. */
+.skin-lightbulb .slot.revealed { transform-origin: 50% 125%; animation: lbl-crack .62s backwards; }
+@keyframes lbl-crack {
+  0% { color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8); filter: brightness(1.3); transform: none; animation-timing-function: steps(1); }
+  8% { color: #4a2c0f; filter: brightness(1.75); transform: translateY(-.05em) rotate(-3.5deg); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  24% { filter: brightness(1.1); transform: rotate(2.2deg); }
+  42% { filter: brightness(.86); transform: rotate(-1deg); }
+  64% { filter: brightness(1.04); transform: rotate(.4deg); }
+  100% { filter: none; transform: none; }
+}
+/* Mythic et plus, 1 : les ampoules forcent (trop de courant), elles tremblent et brillent… */
+.num-card.skin-lightbulb.lbl-surge .slot { transform-origin: 50% 125%; animation: lbl-surge .12s steps(2) infinite; }
+@keyframes lbl-surge { 0% { transform: rotate(-2.5deg) translateY(-.02em); filter: brightness(1.5); } 100% { transform: rotate(2.5deg); filter: brightness(1.25); } }
+/* … 2 : elles éclatent toutes ensemble et s'éteignent : verre gris, plus aucune lueur, chiffres gris foncé. Tirage
+   raté : une seule ampoule grille (.lbl-off). */
+.num-card.skin-lightbulb.lbl-dead .slot, .skin-lightbulb .slot.lbl-off {
+  color: #1f2937; text-shadow: 0 .03em 0 rgba(255, 255, 255, .45);
+  background: radial-gradient(ellipse 20% 14% at 31% 22%, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0) 75%), radial-gradient(circle at 50% 44%, #f3f4f6 0, #d1d5db 45%, #9ca3af 80%, #6b7280 100%);
+  box-shadow: inset 0 -.12em .2em rgba(31, 41, 55, .35), inset .05em .04em .08em rgba(255, 255, 255, .4);
+  animation: lbl-die .7s backwards; }
+@keyframes lbl-die { 0% { filter: brightness(2.4); transform: scale(1.04); } 12% { filter: brightness(.55); transform: none; } 24% { filter: brightness(1.35); } 38% { filter: brightness(.75); } 60% { filter: brightness(1.08); } 100% { filter: none; } }
+.num-card.skin-lightbulb.lbl-dead { box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .06), inset 0 .3em .6em rgba(0, 0, 0, .4), 0 10px 18px rgba(0, 0, 0, .45); }
+@media (prefers-reduced-motion: reduce) { .skin-lightbulb .slot { animation: none !important; } }
+/* Cadre de duel : un mur tan et un bureau ; 💡 grésille, ✨ scintille. */
+.side-lightbulb { --side-border: #b45309; --side-glow: 0 0 16px rgba(253, 224, 71, .3); --side-ink: #b45309;
+  --side-bg: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(253, 224, 71, .2), transparent 70%), linear-gradient(180deg, transparent 80%, rgba(138, 85, 40, .35) 80%), linear-gradient(180deg, rgba(94, 70, 49, .22), rgba(63, 46, 31, .18));
+  --deco-a: '💡'; --deco-b: '✨'; }
+.side-lightbulb::before { animation: lbl-flick 2.6s steps(1) infinite; }
+.side-lightbulb::after { animation: lbl-twinkle 1.8s ease-in-out infinite; }
+@keyframes lbl-flick { 0%, 60%, 66%, 72%, 100% { opacity: 1; filter: drop-shadow(0 0 4px #fde047); } 63%, 69% { opacity: .35; filter: none; } }
+@keyframes lbl-twinkle { 0%, 100% { transform: scale(.8) rotate(0); opacity: .5; } 50% { transform: scale(1.15) rotate(20deg); opacity: 1; } }
+.room-stage.many .side-lightbulb::before, .room-stage.many .side-lightbulb::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-lightbulb::before, .side-lightbulb::after { animation: none; } }

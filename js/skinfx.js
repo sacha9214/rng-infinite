@@ -6480,6 +6480,162 @@
     };
   };
 
+  // ==== Skins du 2026-10-28 (Lightbulb, Stonks, Chess, Weather : idées de costoroll et casmicgraything) ====
+  // 💡 Lightbulb (2026-10-28, idée de costoroll) — six ampoules sur un bureau, contre un mur tan (les cases, en CSS).
+  // Chaque ampoule allumée jette un halo chaud sur le mur et une flaque de lumière sur le bureau (dans la carte, derrière
+  // les chiffres) ; pendant le tirage elles bourdonnent (le halo vacille). Un chiffre qui se pose : « tink », le verre
+  // se fêle au sommet (un trou dentelé et trois fêlures qui partent du trou, jamais sur le chiffre), quelques éclats
+  // sautent et retombent sur le bureau, une bouffée de lumière s'échappe par le trou et le halo baisse (« loses some
+  // light »). Avant le dernier chiffre, sa lampe grésille. Révélation : tirage raté, une ampoule grille (fumée, verre
+  // gris) ; sinon une vague de lumière parcourt la rangée, des reflets dès Rare ; dès Mythic, les ampoules forcent
+  // (.lbl-surge), puis éclatent toutes ensemble : éclair blanc, pluie d'éclats, le mur s'assombrit, verre gris (.lbl-dead),
+  // fumée ; au-delà de Mythic, une gerbe d'étincelles sort des culots.
+  SCENES.lightbulb = env => {
+    const { ci, co, card, q, dark } = env;
+    const el = env.el;
+    if (el) { el.classList.remove('lbl-dead', 'lbl-surge'); el.querySelectorAll('.lbl-off').forEach(s => s.classList.remove('lbl-off')); }
+    const st = new Map(), shards = particles(), puffs = particles(), smoke = particles(), sparks = particles(), waves = timed(), glints = timed(), flash = timed();
+    let t = 0, build = 0, dead = 0, deadAt = -9, off = -1, offAt = -9;
+    const later = [], after = (d, fn) => later.push({ at: t + d, fn }); // en temps de scène (le trailer avance la scène lui-même)
+    // Une fêlure, en fractions de la case (u : -0,5 à 0,5 de la largeur, v : 0 à 1 de la hauteur, depuis le sommet).
+    const mkCrack = () => {
+      const hole = [[-.2, .05], [-.13, .1 + rnd(.03)], [-.06, .07], [0, .13 + rnd(.03)], [.07, .08], [.13, .12 + rnd(.03)], [.2, .05], [.1, .015], [-.1, .015]];
+      const lines = [[[-.13, .11], [-.21, .15], [-.27, .2]], [[0, .14], [.03, .18], [.01, .21]], [[.13, .12], [.22, .15], [.28, .19]]].map(l => l.map(([u, v]) => [u + rnd(-.02, .02), v + rnd(-.015, .015)]));
+      const big = [[[-.2, .06], [-.33, .16], [-.4, .3], [-.44, .42]], [[.2, .06], [.34, .18], [.41, .3], [.45, .44]], [[-.22, .23], [-.34, .36]], [[.25, .21], [.37, .33]], [[-.38, .62], [-.3, .78], [-.33, .88]], [[.4, .64], [.31, .8]]];
+      return { hole, lines, big };
+    };
+    const at = (s, u, v) => [s.x + u * s.w, s.top + v * (s.bottom - s.top)];
+    const path = (s, pts, k = 1) => { // tracé partiel (k de 0 à 1 : la fêlure qui court)
+      const n = Math.max(1, (pts.length - 1) * clamp(k));
+      co.beginPath();
+      for (let i = 0; i <= Math.ceil(n); i++) { const j = Math.min(i, n), a = pts[Math.floor(j)], b = pts[Math.min(pts.length - 1, Math.floor(j) + 1)], f = j - Math.floor(j); const [x, y] = at(s, lerp(a[0], b[0], f), lerp(a[1], b[1], f)); i ? co.lineTo(x, y) : co.moveTo(x, y); }
+      co.stroke();
+    };
+    const drawCrack = (s, c, k, kBig, grey) => {
+      const lw = Math.max(1, s.w * .035);
+      co.save(); co.globalAlpha = s.ghost ? .3 : 1; co.lineJoin = co.lineCap = 'round';
+      // le trou au sommet : on voit l'intérieur, plus sombre
+      const hk = outCubic(clamp(k * 2.5)) * (kBig > 0 ? 1 + .35 * outCubic(kBig) : 1);
+      co.beginPath(); c.hole.forEach(([u, v], i) => { const [x, y] = at(s, u * hk, v * hk); i ? co.lineTo(x, y) : co.moveTo(x, y); }); co.closePath();
+      co.fillStyle = grey ? 'rgba(55,65,81,.85)' : 'rgba(120,53,15,.62)'; co.fill();
+      co.strokeStyle = 'rgba(255,251,235,.85)'; co.lineWidth = lw * .8; co.stroke();
+      co.strokeStyle = grey ? 'rgba(31,41,55,.8)' : 'rgba(91,58,18,.8)'; co.lineWidth = lw;
+      c.lines.forEach(l => path(s, l, k * 1.4 - .2));
+      if (kBig > 0) c.big.forEach(l => path(s, l, kBig));
+      co.translate(.8, .8); co.strokeStyle = 'rgba(255,255,255,.55)'; co.lineWidth = lw * .5;
+      c.lines.forEach(l => path(s, l, k * 1.4 - .2));
+      if (kBig > 0) c.big.forEach(l => path(s, l, kBig));
+      co.restore();
+    };
+    const pop = (s, n, big) => { // éclats de verre qui sautent du sommet
+      const [x, y] = at(s, 0, .06);
+      for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.1, 1.1) * (big ? 1.6 : 1); shards.add({ x: x + rnd(-.2, .2) * s.w, y: y + (big ? rnd(0, .6) * (s.bottom - s.top) : 0), vx: Math.cos(an) * rnd(40, big ? 230 : 110), vy: Math.sin(an) * rnd(80, big ? 300 : 190), g: card.h * 14, drag: .3, max: rnd(1.2, 2), size: rnd(1.5, big ? 4 : 3) * Math.max(.8, card.h / 80), r: rnd(TAU), spin: rnd(-16, 16), floor: s.bottom + (s.bottom - s.top) * .2 + rnd(-2, 2), x0: s.x - s.w * 4, x1: s.x + s.w * 4 }); }
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = later.length - 1; i >= 0; i--) if (later[i].at <= t) later.splice(i, 1)[0].fn();
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        const floor = S.length ? S[0].bottom + (S[0].bottom - S[0].top) * .2 : card.y + card.h * .9;
+        // nouvelles fêlures (un chiffre vient de se poser)
+        for (const s of S) if (s.on && !st.has(s.i)) {
+          st.set(s.i, { at: t, c: mkCrack() });
+          if (!s.ghost) { pop(s, 5, false); const [x, y] = at(s, 0, .02); puffs.add({ x, y, vx: 0, vy: -card.h * .5, drag: 1.5, max: .55, size: s.w * .8 }); }
+        }
+        // les vagues de lumière de la révélation
+        const boost = new Map();
+        waves.run(dt, (wv, k) => S.forEach((s, j) => { const d = k * (S.length + 2) - 1 - j; boost.set(s.i, (boost.get(s.i) || 0) + Math.max(0, 1 - Math.abs(d)) * wv.p); }));
+        // le mur s'assombrit quand tout est éteint
+        const black = dead ? clamp((t - deadAt) / .5) : 0;
+        if (black > 0) { ci.globalAlpha = .38 * black; ci.fillStyle = '#120b04'; ci.fillRect(0, 0, env.w, env.h); }
+        // halos sur le mur et flaques de lumière sur le bureau (derrière les chiffres)
+        ci.globalCompositeOperation = 'lighter';
+        for (const s of S) {
+          const e = st.get(s.i);
+          let L;
+          if (!s.on) L = (next && s.i === next.i && build ? .55 + (Math.random() < .5 ? .6 : 0) : .9) + .12 * Math.sin(t * 31 + s.i * 7) * Math.sin(t * 13 + s.i);
+          else { const k = (t - e.at) / .4; L = k < .15 ? 1.5 : lerp(1.1, .52, clamp(k)) + .03 * Math.sin(t * 5 + s.i); }
+          L += boost.get(s.i) || 0;
+          if (dead) L = t - deadAt < .08 ? 2.5 : 0;
+          if (s.i === off) L = t - offAt < .1 ? 2.2 : 0;
+          if (s.ghost) L *= .3;
+          const ip = bInner(env, { x: s.x, y: s.y }), fy = floor - card.y - (card.w - env.w) / 2;
+          dot(ci, '#fde68a', ip.x, ip.y, card.h * .7, .3 * L);
+          dot(ci, '#fbbf24', ip.x, fy + 2, s.w * 1.1, .4 * L, s.w * .22);
+        }
+        // l'éclair de l'éclatement : derrière les chiffres (dans la carte) et autour de la carte, jamais par-dessus
+        flash.run(dt, (f, k) => { const ip = bInner(env, f); dot(ci, '#ffffff', ip.x, ip.y, f.r, (1 - k) * .9); behind(env, () => { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, dark ? '#fef9c3' : '#facc15', f.x, f.y, f.r * 1.4, (1 - k) * (dark ? .5 : .35)); co.globalCompositeOperation = 'source-over'; }); });
+        ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = 1;
+        // bouffées de lumière qui s'échappent par le trou
+        puffs.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        puffs.each((p, k) => dot(co, dark ? '#fef08a' : '#facc15', p.x, p.y, p.size * (1 + k), (1 - k) * (dark ? .8 : .55)));
+        co.globalCompositeOperation = 'source-over';
+        // les fêlures
+        for (const s of S) { const e = st.get(s.i); if (e) drawCrack(s, e.c, (t - e.at) / .12, dead ? (t - deadAt) / .1 : 0, dead || s.i === off); }
+        // reflets (dès Rare) : petites étoiles sur le verre
+        glints.run(dt, (g, k) => { const s = S.find(x => x.i === g.i); if (!s) return; const [x, y] = at(s, -.22, .3), r = s.w * .35 * Math.sin(k * Math.PI); co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; line(co, dark ? '#fff' : '#fef9c3', x - r, y, x + r, y, 1.2, .9); line(co, dark ? '#fff' : '#fef9c3', x, y - r, x, y + r, 1.2, .9); dot(co, '#fff7d6', x, y, r * .6, .7); co.globalCompositeOperation = 'source-over'; });
+        // éclats : ils tombent, rebondissent sur le bureau et y restent un moment en scintillant
+        shards.step(dt);
+        shards.each((p, k) => {
+          if (p.x > p.x0 && p.x < p.x1 && p.y > p.floor && p.vy > 0) { p.y = p.floor; p.vy *= -.25; p.vx *= .5; p.spin *= .4; if (Math.abs(p.vy) < 20) { p.vy = 0; p.g = 0; p.vx *= .2; } }
+          p.r += p.spin * dt;
+          co.save(); co.globalAlpha = clamp((1 - k) * 4) * (dead ? .95 : .85); co.translate(p.x, p.y); co.rotate(p.r);
+          co.beginPath(); co.moveTo(0, -p.size); co.lineTo(p.size * .8, p.size * .5); co.lineTo(-p.size * .6, p.size * .7); co.closePath();
+          co.fillStyle = dead ? '#e5e7eb' : '#fef3c7'; co.fill(); co.strokeStyle = dead ? '#4b5563' : '#92400e'; co.lineWidth = .8; co.stroke();
+          co.restore();
+        });
+        // fumée (ampoule grillée, ou toutes après l'éclatement) et étincelles des culots
+        smoke.step(dt);
+        smoke.each((p, k) => dot(co, dark ? '#9ca3af' : '#6b7280', p.x + Math.sin(t * 2 + p.seed) * 5 * k, p.y, p.size * (1.4 + 3 * k), Math.sin(k * Math.PI) * (dark ? .3 : .38)));
+        sparks.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((p, k) => { dot(co, '#fb923c', p.x, p.y, 3.5, (1 - k)); dot(co, '#fff7ed', p.x, p.y, 1.3, 1 - k); });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) { if (o.last) build = 0; },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        const S = slotsA(env).filter(s => !s.gone && !s.ghost);
+        if (!p) { // une ampoule grille : éclair, puis verre gris et un filet de fumée
+          const s = S.length ? pick(S) : null;
+          if (!s) return;
+          off = s.i; offAt = t;
+          const node = el && el.querySelectorAll('.slot')[s.i]; if (node) node.classList.add('lbl-off');
+          const [x, y] = at(s, 0, .05);
+          for (let i = 0; i < 5; i++) smoke.add({ x: x + rnd(-3, 3), y, vx: rnd(-6, 6), vy: -rnd(18, 32), drag: .4, max: rnd(1.6, 2.4), size: s.w * .22, seed: rnd(TAU), delay: 0 });
+          return;
+        }
+        if (p < 1) {
+          waves.add({ life: .9 + .3 * p, p: .5 + .9 * p });
+          if (p >= .6) waves.add({ delay: .5, life: .9, p: .5 + .6 * p });
+          if (p >= .42) S.forEach((s, j) => glints.add({ delay: .15 + j * .09, life: .45, i: s.i }));
+          return;
+        }
+        // Mythic et plus : les ampoules forcent… puis éclatent toutes ensemble
+        if (el) el.classList.add('lbl-surge');
+        waves.add({ life: .45, p: 1.2 });
+        after(.42, () => {
+          if (el) { el.classList.remove('lbl-surge'); el.classList.add('lbl-dead'); }
+          dead = 1; deadAt = t;
+          const L = slotsA(env).filter(s => !s.gone);
+          L.forEach(s => {
+            const [x, y] = at(s, 0, .4);
+            flash.add({ life: .35, x, y, r: s.w * 1.6 });
+            if (s.ghost) return;
+            pop(s, 9 + 4 * asc, true);
+            for (let i = 0; i < 3; i++) smoke.add({ x: x + rnd(-4, 4), y: s.top, vx: rnd(-6, 6), vy: -rnd(14, 28), drag: .4, max: rnd(1.8, 2.8), size: s.w * .2, seed: rnd(TAU) });
+            if (asc) for (let i = Math.round((6 + 5 * asc) * q); i > 0; i--) sparks.add({ x: s.x + rnd(-.2, .2) * s.w, y: s.bottom + 2, vx: rnd(-90, 90), vy: -rnd(120, 260), g: card.h * 9, drag: .4, max: rnd(.6, 1.1) });
+          });
+        });
+      },
+    };
+  };
+
+  // ==== fin des skins du 2026-10-28 (costoroll, casmicgraything) ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

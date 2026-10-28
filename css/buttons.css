@@ -1244,3 +1244,10 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+
+/* Lightbulb (idée de costoroll, 2026-10-28) : une ampoule allumée à gauche, sur le mur tan, le bord du bureau en bas. */
+.btn-roll.gen-lightbulb { border: 2px solid #3b2a1a; border-radius: .7rem; color: #fff7d6;
+  background: radial-gradient(ellipse .55em .62em at 1.25em 46%, #fffbea 0, #fde68a 45%, #eab308 85%, transparent 92%) 0 0 / 100% 100% no-repeat, radial-gradient(ellipse 2.4em 1.6em at 1.25em 46%, rgba(253, 224, 71, .35), transparent 70%), linear-gradient(180deg, transparent 82%, #8a5528 82%), linear-gradient(180deg, #5e4631, #3f2e1f);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #3f2e1f, 0 0 .3em rgba(253, 224, 71, .6);
+  --gs: 0 .3em 0 #2a1d12, 0 .5em 1em rgba(253, 224, 71, .22); --gs-h: 0 .34em 0 #2a1d12, 0 .7em 1.3em rgba(253, 224, 71, .4); --gs-a: 0 .06em 0 #2a1d12; }
+.btn-roll.gen-lightbulb:hover { filter: brightness(1.12); }
