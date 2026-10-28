@@ -8802,3 +8802,88 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes graf-blink { 0%, 100% { opacity: .9; } 50% { opacity: .55; } }
 .room-stage.many .side-graffiti::before, .room-stage.many .side-graffiti::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-graffiti::before, .side-graffiti::after { animation: none; } }
+/* ------------------------------------------------------------------ Origami (idée de JBearr12, 2026-10-28) : un tapis
+   de découpe vert (quadrillage clair, ligne à 45°) ; chaque chiffre est imprimé sur un carré de papier de couleur (une
+   couleur par case), plié en deux facettes le long de la diagonale (la moitié haut gauche claire, la moitié bas droite
+   ombrée, le pli marqué d'un filet blanc), posé à plat avec son ombre. Pendant le tirage, un grand rabat (le dos blanc
+   du papier) couvre la moitié haut gauche du carré et frémit, et un coin corné est replié en haut à droite ; un chiffre
+   qui se pose : le rabat recule d'un cran (l'élan), se déplie d'un coup sec vers nous en s'assombrissant (il tourne
+   autour du pli) et disparaît, puis le coin corné se déplie à son tour et le carré claque à plat (papier : aucun
+   écrasement mou, un petit sursaut raide). Les éclats de papier et les grues des grands tirages : js/skinfx.js
+   (SCENES.origami). Rien de commun avec Torn Paper : ici on plie, on ne déchire pas. */
+.num-card.skin-origami {
+  background:
+    linear-gradient(32deg, transparent calc(50% - 1px), rgba(254, 249, 195, .22) 50%, transparent calc(50% + 1px)),
+    repeating-linear-gradient(90deg, rgba(220, 252, 231, .2) 0 1px, transparent 1px .5em),
+    repeating-linear-gradient(0deg, rgba(220, 252, 231, .2) 0 1px, transparent 1px .5em),
+    radial-gradient(ellipse 80% 70% at 30% 15%, #1f7a5c, transparent 80%),
+    #14533d;
+  border: 2px solid #0d3b2b; border-radius: .4rem; color: #1f1630;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .35), 0 0 14px rgba(110, 231, 183, .14), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .4rem .75rem;
+}
+.skin-origami .slot {
+  --kami: #f87171; --kami-d: #dc5050;
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; width: 1.02em; height: 1.24em; margin: 0 .05em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif; font-weight: 800; font-variant-numeric: normal; line-height: 1;
+  color: #1f1630; text-shadow: 0 .03em 0 rgba(255, 255, 255, .35);
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - .7px), rgba(255, 255, 255, .65) 50%, transparent calc(50% + .7px)),
+    linear-gradient(160deg, rgba(255, 255, 255, .28), transparent 45%),
+    linear-gradient(to bottom right, var(--kami) 0 50%, var(--kami-d) 50% 100%);
+  box-shadow: .03em .05em 0 rgba(0, 0, 0, .3), .06em .1em .14em rgba(0, 0, 0, .35);
+}
+.skin-origami .slot:nth-of-type(6n+2) { --kami: #fcd34d; --kami-d: #e5b622; }
+.skin-origami .slot:nth-of-type(6n+3) { --kami: #7dd3fc; --kami-d: #4cb2e0; }
+.skin-origami .slot:nth-of-type(6n+4) { --kami: #6ee7b7; --kami-d: #3ccb94; }
+.skin-origami .slot:nth-of-type(6n+5) { --kami: #f9a8d4; --kami-d: #e97cb7; }
+.skin-origami .slot:nth-of-type(6n) { --kami: #c4b5fd; --kami-d: #9f8bf3; }
+/* le grand rabat (dos blanc du papier, moitié haut gauche) et le coin corné (haut droit) : visibles pendant le tirage */
+.skin-origami .slot::before, .skin-origami .slot::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; backface-visibility: hidden; }
+.skin-origami .slot::before { clip-path: polygon(0 0, 100% 0, 0 100%); transform-origin: 50% 50%;
+  background: linear-gradient(to bottom right, #fffdf6, #ebe4d3 46%, #d6cdb8 50%); }
+.skin-origami .slot::after { clip-path: polygon(58% 0, 100% 0, 100% 42%); transform-origin: 79% 21%;
+  background: linear-gradient(to bottom left, #fffdf6 30%, #d6cdb8); }
+.skin-origami .slot.ghost { opacity: .2; }
+.skin-origami .slot.collapsed { width: 0; height: 0; margin: 0; background: none; box-shadow: none; }
+.skin-origami .slot.collapsed::before, .skin-origami .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le rabat couvre la moitié du carré et frémit, le chiffre défile à moitié caché. */
+.skin-origami .slot.spinning { opacity: 1; color: rgba(31, 22, 48, .5); }
+.skin-origami .slot.spinning::before { opacity: 1; animation: ori-flutter .5s ease-in-out infinite alternate; }
+.skin-origami .slot.spinning::after { opacity: 1; }
+.skin-origami .slot.spinning:nth-of-type(2n)::before { animation-delay: -.25s; }
+@keyframes ori-flutter { from { transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); } to { transform: perspective(2.4em) rotate3d(1, -1.2, 0, -24deg); filter: brightness(.94); } }
+/* Le pli : le rabat recule (l'élan), se déplie d'un coup sec en s'assombrissant, puis le coin corné, puis le carré claque. */
+.skin-origami .slot.revealed::before { animation: ori-unfold .5s backwards; }
+@keyframes ori-unfold {
+  0% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 0deg); animation-timing-function: ease-out; }
+  18% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, 14deg); filter: brightness(1.04); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  52% { opacity: 1; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -89deg); filter: brightness(.62); }
+  53%, 100% { opacity: 0; transform: perspective(2.4em) rotate3d(1, -1.2, 0, -95deg); }
+}
+.skin-origami .slot.revealed::after { animation: ori-ear .66s backwards; }
+@keyframes ori-ear {
+  0%, 46% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 0deg); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  70% { opacity: 1; transform: perspective(2em) rotate3d(1, 1.2, 0, 89deg); filter: brightness(.6); }
+  71%, 100% { opacity: 0; transform: perspective(2em) rotate3d(1, 1.2, 0, 95deg); }
+}
+.skin-origami .slot.revealed { animation: ori-snap .72s backwards; }
+@keyframes ori-snap {
+  0%, 48% { transform: none; color: rgba(31, 22, 48, .5); }
+  54% { transform: scale(1.07); color: #1f1630; filter: brightness(1.12); }
+  64% { transform: scale(.98); }
+  76%, 100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-origami .slot, .skin-origami .slot::before, .skin-origami .slot::after { animation: none; } }
+/* Cadre de duel : le tapis de découpe ; une grue de papier bat des ailes, un bateau de papier tangue. */
+.side-origami { --side-border: #15803d; --side-glow: 0 0 14px rgba(110, 231, 183, .25); --side-ink: #15803d;
+  --side-bg: linear-gradient(32deg, transparent calc(50% - 1px), rgba(250, 204, 21, .25) 50%, transparent calc(50% + 1px)), repeating-linear-gradient(90deg, rgba(22, 101, 52, .14) 0 1px, transparent 1px 16px), repeating-linear-gradient(0deg, rgba(22, 101, 52, .14) 0 1px, transparent 1px 16px), linear-gradient(180deg, rgba(20, 83, 61, .22), rgba(20, 83, 61, .12));
+  --deco-a: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='28' viewBox='0 0 30 22'><polygon points='1,7 10,14 13,12' fill='%23dc5050'/><polygon points='28,2 25,5 18,13 16,12' fill='%23dc5050'/><polygon points='10,14 15,2 20,14 15,17' fill='%23fca5a5'/><polygon points='15,2 15,17 20,14' fill='%23f87171'/></svg>");
+  --deco-b: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='18' viewBox='0 0 28 18'><polygon points='1,9 27,9 22,17 6,17' fill='%234cb2e0'/><polygon points='14,1 14,9 6,9' fill='%23bae6fd'/><polygon points='14,1 22,9 14,9' fill='%237dd3fc'/></svg>"); }
+.side-origami::before { transform-origin: 50% 70%; animation: ori-flap .6s ease-in-out infinite alternate; }
+.side-origami::after { transform-origin: 50% 100%; animation: ori-rock 2.4s ease-in-out infinite; }
+@keyframes ori-flap { from { transform: scaleY(1); } to { transform: scaleY(.55) translateY(2px); } }
+@keyframes ori-rock { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg) translateY(-1px); } }
+.room-stage.many .side-origami::before, .room-stage.many .side-origami::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-origami::before, .side-origami::after { animation: none; } }

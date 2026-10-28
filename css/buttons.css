@@ -1254,3 +1254,9 @@
   text-shadow: .06em .07em 0 #111;
   --gs: 0 .3em 0 #2b1d18, 0 .5em 1em rgba(244, 114, 182, .25); --gs-h: 0 .34em 0 #2b1d18, 0 .7em 1.3em rgba(163, 230, 53, .4); --gs-a: 0 .06em 0 #2b1d18; }
 .btn-roll.gen-graffiti:hover { filter: brightness(1.12) saturate(1.15); }
+/* Origami (idée de JBearr12, 2026-10-28) : une feuille de papier rose pliée en deux facettes, le coin haut droit corné. */
+.btn-roll.gen-origami { border: 0; border-radius: .15rem; color: #1f1630; font-weight: 800;
+  background: linear-gradient(225deg, #fffdf6 0 .55em, #d6cdb8 .58em, transparent .62em), linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(255, 255, 255, .7) 50%, transparent calc(50% + 1px)), linear-gradient(to bottom right, #f9a8d4 50%, #e97cb7 50%);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .45);
+  --gs: 0 .3em 0 #14533d, 0 .5em 1em rgba(20, 83, 61, .35); --gs-h: 0 .34em 0 #14533d, 0 .7em 1.3em rgba(110, 231, 183, .35); --gs-a: 0 .06em 0 #14533d; }
+.btn-roll.gen-origami:hover { filter: brightness(1.06); }

@@ -6654,6 +6654,115 @@
     };
   };
 
+
+  // 🕊️ Origami (2026-10-28, idée de JBearr12) — chaque chiffre posé claque à plat (animation CSS ori-unfold) : un filet
+  // de lumière file le long du pli du carré et deux ou trois petits triangles de papier de sa couleur sautent en
+  // tournoyant. Avant le dernier chiffre, des bouts de papier tournent autour de la carte comme pris dans un courant
+  // d'air. Révélation : tirage raté, une boule de papier froissé tombe et roule ; sinon des confettis de papier plié ;
+  // dès Epic, deux grues de papier s'envolent des coins ; dès Mythic, chaque carré devient une grue de sa couleur qui
+  // décolle de son chiffre et s'envole en vol groupé ; dès Celestial, une grande grue dorée tourne au-dessus de la carte.
+  SCENES.origami = env => {
+    const { co, card, q, dark } = env;
+    const KAMI = [['#f87171', '#dc5050'], ['#fcd34d', '#e5b622'], ['#7dd3fc', '#4cb2e0'], ['#6ee7b7', '#3ccb94'], ['#f9a8d4', '#e97cb7'], ['#c4b5fd', '#9f8bf3']]; // couleurs des cases (.skin-origami .slot:nth-of-type)
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+    const bits = particles(), creases = timed(), cranes = timed(), balls = timed(), gusts = particles();
+    let t = 0, build = 0;
+    const slotOf = p => { const SL = slotsA(env).filter(s => !s.gone); let b = SL[0]; for (const s of SL) if (Math.abs(s.x - p.x) < Math.abs(b.x - p.x)) b = s; return b; };
+    // un petit triangle de papier, deux faces (couleur / dos blanc) : il tourne sur lui-même (l'écrasement suit le cosinus)
+    const tri = (b, k) => {
+      const flip = Math.cos(b.life * b.flip), s = b.size;
+      co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(b.x, b.y); co.rotate(b.rot + b.life * b.spin); co.scale(1, Math.max(.12, Math.abs(flip)));
+      co.fillStyle = flip > 0 ? b.c : '#fffdf6'; co.beginPath(); co.moveTo(-s, s * .7); co.lineTo(s, s * .7); co.lineTo(0, -s * .8); co.closePath(); co.fill();
+      co.strokeStyle = 'rgba(0,0,0,.25)'; co.lineWidth = .8; co.stroke(); co.restore();
+    };
+    // une grue de papier vue de profil, bec vers +x : corps en losange, cou et queue en pointes, deux ailes dont la pointe
+    // monte et descend (fl de -1 à 1) ; facettes claires et ombrées, comme un vrai pli
+    const crane = (x, y, s, fl, cols, ang, a, flipX) => {
+      if (a <= .01 || s <= 1) return;
+      const [c1, c2] = cols;
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(ang); co.scale(flipX ? -s : s, s);
+      co.lineJoin = 'round'; co.lineWidth = .03; co.strokeStyle = 'rgba(15,23,42,.45)';
+      const poly = (pts, c) => { co.fillStyle = c; co.beginPath(); pts.forEach(([px, py], i) => (i ? co.lineTo(px, py) : co.moveTo(px, py))); co.closePath(); co.fill(); co.stroke(); };
+      const wy = -.05 - .85 * fl, wx = -.04 + .1 * fl;
+      poly([[-.12, -.04], [.14, -.04], [wx + .12, wy]], c2); // l'aile du fond, ombrée
+      poly([[-.62, -.52], [-.12, .02], [-.28, .06]], c2); // la queue
+      poly([[.6, -.56], [.15, .02], [.3, .06]], c1); // le cou
+      poly([[.6, -.56], [.76, -.5], [.58, -.48]], c2); // la tête et le bec
+      poly([[-.36, .02], [0, -.12], [.36, .02], [0, .16]], c1); // le corps
+      poly([[0, -.12], [.36, .02], [0, .16]], c2);
+      poly([[-.2, 0], [.16, 0], [wx, wy + .1]], c1); // l'aile de devant, claire
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        // le courant d'air de la tension : de petits bouts de papier tournent autour de la carte
+        if (build && Math.random() < dt * 22 * q) { const a = rnd(TAU); gusts.add({ x: cx + Math.cos(a) * card.w * .62, y: cy + Math.sin(a) * card.h * 1.1, vx: -Math.sin(a) * card.h * 3, vy: Math.cos(a) * card.h * 1.2, drag: .4, max: rnd(.5, .9), size: card.h * rnd(.05, .08), rot: rnd(TAU), spin: rnd(-8, 8), flip: rnd(8, 14), c: pick(KAMI)[0] }); }
+        gusts.step(dt); gusts.each(tri);
+        // le filet de lumière qui court le long du pli d'un carré, du coin bas gauche au coin haut droit
+        creases.run(dt, (c, k) => {
+          const u = outCubic(clamp(k * 1.6)), x1 = c.x - c.w / 2, y1 = c.bottom, x2 = c.x + c.w / 2, y2 = c.top;
+          const hx = lerp(x1, x2, u), hy = lerp(y1, y2, u);
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+          tail(co, '#ffffff', lerp(x1, x2, Math.max(0, u - .45)), lerp(y1, y2, Math.max(0, u - .45)), hx, hy, 1.6, (1 - k) * .9);
+          dot(co, '#ffffff', hx, hy, c.w * .22, (1 - k) * .7);
+          co.globalCompositeOperation = 'source-over';
+        });
+        bits.step(dt); bits.each(tri);
+        // la boule de papier froissé (tirage raté) : elle tombe du haut de la carte, rebondit et roule
+        balls.run(dt, (b, k) => {
+          const life = k * b.life, fall = Math.min(1, life / .5), x = b.x + Math.max(0, life - .5) * card.h * .9, y = life < .5 ? lerp(card.y - card.h * .6, b.ground, fall * fall) : b.ground - Math.abs(Math.sin((life - .5) * 7)) * card.h * .15 * Math.exp(-(life - .5) * 3);
+          const r = card.h * .14;
+          co.save(); co.globalAlpha = Math.min(1, (1 - k) * 4); co.translate(x, y); co.rotate(life * 5);
+          co.fillStyle = '#f5f0e3'; co.beginPath(); for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU, rr = r * (i % 2 ? .82 : 1); co.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } co.closePath(); co.fill();
+          co.strokeStyle = 'rgba(87,83,78,.6)'; co.lineWidth = 1; co.stroke();
+          co.beginPath(); co.moveTo(-r * .5, -r * .2); co.lineTo(r * .1, r * .1); co.lineTo(r * .4, -r * .4); co.moveTo(-r * .2, r * .5); co.lineTo(r * .1, r * .1); co.stroke();
+          co.restore();
+        });
+        // les grues : chacune suit sa trajectoire (départ au chiffre, montée en courbe, sortie), grandit au décollage
+        cranes.run(dt, (c, k) => {
+          const u = k, e = outCubic(clamp(u * 1.4));
+          const x = c.x0 + (c.x1 - c.x0) * e + Math.sin(u * 6 + c.ph) * card.h * .15, y = c.y0 + (c.y1 - c.y0) * e - Math.sin(u * Math.PI) * card.h * c.arc;
+          const s = c.s * (c.grow ? .35 + .65 * outBack(clamp(u * 4)) : 1), fl = Math.sin(t * c.rate + c.ph);
+          const a = Math.min(1, u * 12, (1 - u) * 4);
+          const draw = () => {
+            if (c.halo) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#fde68a', x, y, s * 1.4, a * (dark ? .5 : .3)); co.globalCompositeOperation = 'source-over'; }
+            crane(x, y + fl * s * .06, s, fl, c.cols, (c.x1 > c.x0 ? 1 : -1) * -.15 + Math.cos(u * 6 + c.ph) * .1, a, c.x1 < c.x0);
+          };
+          if (c.back) behind(env, draw, true); else draw(); // la grande grue dorée passe derrière la carte : les chiffres restent lisibles
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        const sl = slotOf(p);
+        if (!sl) return;
+        if (!o.ghost) creases.add({ x: sl.x, w: sl.w * .9, top: sl.top + (sl.bottom - sl.top) * .05, bottom: sl.bottom - (sl.bottom - sl.top) * .05, life: .45, delay: .2 });
+        const col = KAMI[sl.i % 6][0];
+        for (let i = o.ghost ? 1 : o.last ? 5 : 3; i > 0; i--) bits.add({ x: sl.x + rnd(-.3, .3) * sl.w, y: sl.top, vx: rnd(-1, 1) * card.h * 1.2, vy: -card.h * rnd(2, 3.4), g: card.h * 9, drag: .5, max: rnd(.6, 1), size: card.h * rnd(.05, .09), rot: rnd(TAU), spin: rnd(-10, 10), flip: rnd(8, 16), c: o.ghost ? '#94a3b8' : col });
+        if (o.last) build = 0;
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { balls.add({ life: 2.6, x: card.x + card.w * .7, ground: card.y + card.h - card.h * .12 }); return; }
+        // confettis de papier plié (peu dès Mythic : ce sont les grues qui comptent, et le jeu lance déjà ses confettis)
+        for (let i = p >= 1 ? Math.round(8 * q) : burst(p, 34 * q, 6); i > 0; i--) { const c = pick(KAMI); bits.add({ x: cx + rnd(-.45, .45) * card.w, y: card.y + rnd(0, 1) * card.h, vx: rnd(-1, 1) * card.h * 3, vy: -card.h * rnd(2.5, 5), g: card.h * 6, drag: 1.2, max: rnd(1.2, 2), size: card.h * rnd(.06, .1), rot: rnd(TAU), spin: rnd(-6, 6), flip: rnd(6, 12), c: c[i % 2] }); }
+        if (p >= .6 && p < 1) [-1, 1].forEach((side, i) => cranes.add({ delay: .15 + i * .2, life: 2.4, x0: side < 0 ? card.x : card.x + card.w, y0: card.y + card.h * .3, x1: side < 0 ? card.x - card.h * 2.8 : card.x + card.w + card.h * 2.8, y1: card.y + card.h * .1, arc: .35, s: card.h * .8, rate: 11, ph: i * 2, cols: KAMI[(i * 3) % 6], grow: true }));
+        if (p >= 1) {
+          // chaque carré devient une grue de sa couleur qui décolle du haut de son chiffre ; vol groupé sur les côtés, à la
+          // hauteur de la carte (au-dessus, la barre du haut de la page les couperait)
+          const SL = slotsA(env).filter(s => !s.gone && !s.ghost);
+          SL.forEach((s, i) => {
+            const right = i >= SL.length / 2, rank = right ? i - Math.floor(SL.length / 2) : Math.floor(SL.length / 2) - 1 - i;
+            cranes.add({ delay: .1 + i * .11, life: 2.8 + .4 * asc, x0: s.x, y0: s.top, x1: right ? card.x + card.w + card.h * (1.6 + rank * .5) : card.x - card.h * (1.6 + rank * .5), y1: card.y + card.h * (-.15 + (rank % 3) * .45), arc: .35 + (i % 2) * .15, s: card.h * .95, rate: 12 + i, ph: i * 1.3, cols: KAMI[s.i % 6], grow: true });
+          });
+          if (asc >= 1) cranes.add({ delay: .9, life: 4 + asc, x0: card.x - card.h * 1.6, y0: card.y + card.h * .2, x1: card.x + card.w + card.h * 1.8, y1: card.y + card.h * .1, arc: .35, s: card.h * (1 + .15 * asc), rate: 7, ph: 0, cols: ['#fde68a', '#d4a017'], halo: true, back: true });
+        }
+      },
+    };
+  };
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

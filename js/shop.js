@@ -158,6 +158,8 @@
     // ==== Skins du 2026-10-28, lot C (idées de joueurs ; scènes dans js/skinfx.js) ====
     // Idée de JBearr12 (2026-10-28) : un mur de briques, chaque chiffre tagué à la bombe (brume, coulures) ; une couronne sur les grands tirages.
     { id: 'graffiti', name: 'Graffiti', emoji: '🎨', price: 2200, desc: 'A spray can tags every digit on a brick wall in fat bubble letters that drip; Mythic rolls end in a burst of colour and a crown tag', idea: 'JBearr12' },
+    // Idée de JBearr12 (2026-10-28) : chaque chiffre plié dans une feuille de papier ; les plis s'envolent en grues de papier dès Mythic.
+    { id: 'origami', name: 'Origami', emoji: '🕊️', price: 2000, desc: 'Every digit is a sheet of coloured paper that folds open with a crisp snap; Mythic rolls turn the folds into paper cranes that fly away', idea: 'JBearr12' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
