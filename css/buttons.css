@@ -1120,6 +1120,17 @@
   text-shadow: 0 1px 0 #1c120a;
   --gs: 0 .3em 0 #1c120a, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #1c120a, 0 .7em 1.3em rgba(245, 158, 11, .4); --gs-a: 0 .06em 0 #1c120a; }
 .btn-roll.gen-axeman:hover { filter: brightness(1.1); }
+/* Pixel Hop (d'après l'animation de 17black, 2026-10-28) : le bouton est l'écran rose de la carte, bord noir et police
+   pixel, un petit dé crème à gauche ; il s'enfonce par crans (aucune transition), comme un bouton de borne. */
+.btn-roll.gen-pixelhop { font-family: 'Press Start 2P', var(--font-mono); font-weight: 400; letter-spacing: .04em;
+  font-size: clamp(.74rem, 2.9vw, 1rem); border-radius: 0; border: 3px solid #111111; color: #111111; text-shadow: 2px 2px 0 rgba(255, 255, 255, .6);
+  background: radial-gradient(circle, #231a14 45%, transparent 52%) .82em calc(50% - .08em) / .2em .2em no-repeat,
+    radial-gradient(circle, #231a14 45%, transparent 52%) 1.1em calc(50% - .08em) / .2em .2em no-repeat,
+    linear-gradient(#fff6e6, #fff6e6) .62em 50% / .8em .8em no-repeat, linear-gradient(#231a14, #231a14) .55em 50% / .94em .94em no-repeat, repeating-conic-gradient(rgba(255, 255, 255, .1) 0 25%, transparent 0 50%) 0 0 / 8px 8px, linear-gradient(180deg, #f8aac4, #e9809f);
+  padding-left: 2em; --gs: 5px 5px 0 #ffd6e4; --gs-h: 7px 7px 0 #ffd6e4; --gs-a: 1px 1px 0 #ffd6e4; transition: none; }
+.btn-roll.small.gen-pixelhop { font-size: .6rem; padding: .8rem 1.1rem .8rem 2.1rem; }
+.btn-roll.gen-pixelhop:hover { transform: translate(-2px, -2px); filter: none; }
+.btn-roll.gen-pixelhop:active { transform: translate(4px, 4px); filter: none; }
 /* Math (idée de sennybex1, 2026-10-25) : un petit tableau vert dans son cadre de bois, texte à la craie. */
 .btn-roll.gen-math { border: .18em solid #7c4a22; border-radius: .35em; color: #f8fafc;
   background: radial-gradient(ellipse 30% 40% at 25% 40%, rgba(255, 255, 255, .08), transparent 70%), linear-gradient(180deg, #1f4a37, #12301f);

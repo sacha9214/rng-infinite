@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-27 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-10-28 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -8,6 +8,23 @@ The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Nod
 domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU overuse, which is why everything moved
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
+
+## Pixel Hop skin (2026-10-28, branch `claude/pixelhop-skin`, PR not merged yet)
+
+17black sent a Pixilart screen recording (Discord): a pink pixel number pill, a character hopping along it and locking
+the digits of 600006 one by one, then red pixel rays and orange/white stripes. The character was a well-known cartoon
+platypus, so it is replaced by our own dice mascot (same cream die as `js/emotes.js`), drawn as pixel sprites.
+
+- `SCENES.pixelhop` in `js/skinfx.js` (sprites in `HOP`), `.skin-pixelhop` / `.side-pixelhop` in `css/style.css`,
+  `.btn-roll.gen-pixelhop` in `css/buttons.css`, shop entry (1,800 coins, `idea: '17black'`), update log entry, French desc.
+- Layout constraint: only ~40 px between the roll card and the menu bar, so hops on the digits stay low and the final
+  pose happens beside the card (right side).
+- Between the last digit and the rarity the badges play for several seconds: the mascot waits on the last digit.
+  Garbage/Land waste never call `reveal()`; the scene reads the card losing `.neutral` instead (a timer made it fall
+  over before a Mythic in the first draft).
+- The game's `.charging` glow replaces the card's box-shadow, so the skin has its own stepped `.charging` animation to
+  keep its pixel border during the roll.
+- Filmed with `tools/reveal-film.mjs --video --sound --crop` on 600006 (Mythic), 123651 (Epic) and 126076 (Trash).
 
 ## Player ideas batch (2026-10-27, branch `claude/ideas-2026-10-27`)
 
