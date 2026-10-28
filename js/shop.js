@@ -162,6 +162,8 @@
     // Idée de R77 (2026-10-28) : un parchemin qui se déroule, des runes dorées qui se changent en chiffres sous une loupe ;
     // dès Mythic, les runes flamboient et un sceau de lumière frappe le parchemin.
     { id: 'alchemy', name: 'Scroll of Alchemy', emoji: '📜', price: 2400, desc: 'An old scroll unrolls and glowing golden runes turn into your digits under a moving magnifying glass; Mythic rolls make the runes flare and stamp a seal of light', idea: 'R77' },
+    // Idée de Deadshot (2026-10-28) : une vitre sale, un laveur de carreaux de l'autre côté ; un coup de raclette par chiffre.
+    { id: 'windowcleaner', name: 'Window Cleaner', emoji: '🧽', price: 1800, desc: 'A window cleaner works behind a grimy window: every squeegee stroke wipes a pane clean to show a gold-leaf digit, and Mythic rolls make the whole window sparkle', idea: 'Deadshot' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

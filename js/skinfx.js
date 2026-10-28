@@ -6882,6 +6882,123 @@
     };
   };
 
+  // 🧽 Window Cleaner (2026-10-28, idée de Deadshot) — de l'autre côté de la vitre, le laveur de carreaux : une silhouette
+  // bleu nuit (casquette, harnais, deux cordes qui montent hors du cadre) dessinée dans la carte, derrière les carreaux ;
+  // on la devine à travers la crasse et on la voit nette derrière les carreaux propres. Il frotte le haut du prochain
+  // carreau ; quand le chiffre se pose, sa raclette descend du haut en bas au rythme de l'animation CSS wc-wipe (de 18 %
+  // à 58 % de 0,62 s), deux gouttes glissent sous le carreau, puis il se laisse glisser jusqu'au carreau suivant en se
+  // balançant au bout de ses cordes. Avant le dernier chiffre, il frotte plus vite et des bulles de savon s'envolent.
+  // Révélation : tirage raté, il hausse les épaules et la pluie se met à tomber sur la vitre ; sinon il fait coucou et des
+  // éclats brillent aux coins des carreaux ; dès Epic, des bulles de savon s'envolent autour ; dès Mythic, toute la
+  // fenêtre étincelle : une grande bande de lumière balaie la vitre (deux, arc-en-ciel, au-delà) et des étoiles s'allument.
+  SCENES.windowcleaner = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cw0 = card.w, INK = 'rgba(15,23,42,.8)';
+    const OFF = H * .38; // il se tient un peu à gauche du carreau qu'il lave : sa tête ne cache pas le chiffre
+    const man = { x: card.x + card.w * .1, tx: null, sway: 0, scrub: 1, wipe: null, wave: 0, shrug: 0, up: 0, leaveAt: Infinity };
+    const drips = particles(), bubbles = particles(), rain = particles(), glints = timed(), sweeps = timed();
+    let now = 0, scrubFast = 0, raining = 0;
+    // la silhouette, dans la carte : (x, sy) = position de la raclette (sy : hauteur de la tête de raclette)
+    const drawMan = (c, x, sy, sw) => {
+      // grand, à bout de bras derrière la vitre : la tête occupe le haut d'un carreau, les épaules en couvrent presque deux
+      const top = card.y - man.up * man.up * H * 1.5, s = H, hy = top + s * .4, shy = hy + s * .3; // man.up : il remonte au bout de ses cordes, son travail fini
+      c.fillStyle = INK; c.strokeStyle = INK; c.lineCap = 'round'; c.lineJoin = 'round';
+      // les deux cordes, du haut de la fenêtre jusqu'au harnais
+      c.lineWidth = Math.max(1.2, s * .03); c.beginPath(); c.moveTo(x - s * .3 - sw * s * .3, card.y - 2); c.lineTo(x - s * .22, shy + s * .1); c.moveTo(x + s * .3 - sw * s * .3, card.y - 2); c.lineTo(x + s * .22, shy + s * .1); c.stroke();
+      // le corps (épaules arrondies), le cou, la tête, la casquette
+      c.beginPath(); c.moveTo(x - s * .48, top + s * 1.2); c.quadraticCurveTo(x - s * .5, shy, x - s * .2, shy - s * .04); c.lineTo(x + s * .2, shy - s * .04); c.quadraticCurveTo(x + s * .5, shy, x + s * .48, top + s * 1.2); c.closePath(); c.fill();
+      c.fillRect(x - s * .07, hy + s * .1, s * .14, s * .18);
+      c.beginPath(); c.arc(x, hy, s * .19, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(x, hy - s * .1, s * .2, s * .11, 0, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(x + s * .2, hy - s * .1, s * .14, s * .035, 0, 0, TAU); c.fill(); // casquette et visière
+      c.globalAlpha = .5; c.fillStyle = '#334155'; c.fillRect(x - s * .46, shy + s * .2, s * .92, s * .06); c.globalAlpha = 1; c.fillStyle = INK; // la sangle du harnais
+      // le bras qui tient la raclette (coude plié), ou le coucou, ou le haussement d'épaules
+      c.lineWidth = s * .11;
+      const sx = x + s * .34, sy0 = shy + s * .06;
+      if (man.shrug > 0) { c.beginPath(); for (const e of [-1, 1]) { c.moveTo(x + e * s * .34, sy0); c.lineTo(x + e * s * .55, sy0 - s * .05 - man.shrug * s * .1); c.lineTo(x + e * s * .62, sy0 - s * .25 * man.shrug); } c.stroke(); return; }
+      if (man.wave > 0) { const a = Math.sin(now * 14) * .5; c.beginPath(); c.moveTo(sx, sy0); c.lineTo(sx + s * .2, sy0 - s * .25); c.lineTo(sx + s * .2 + Math.sin(a) * s * .3, sy0 - s * .25 - Math.cos(a) * s * .3); c.stroke(); c.beginPath(); c.arc(sx + s * .2 + Math.sin(a) * s * .33, sy0 - s * .25 - Math.cos(a) * s * .33, s * .08, 0, TAU); c.fill(); return; }
+      const hx = man.x + OFF, hyH = sy + s * .2; // la main tient le manche sous la tête de raclette
+      c.beginPath(); c.moveTo(sx, sy0); c.quadraticCurveTo(sx + s * .3, (sy0 + hyH) / 2 + s * .12, hx, hyH); c.stroke();
+      c.beginPath(); c.arc(hx, hyH, s * .07, 0, TAU); c.fill();
+      c.lineWidth = s * .05; c.beginPath(); c.moveTo(hx, hyH); c.lineTo(hx, sy); c.stroke(); // le manche
+      c.lineWidth = s * .07; c.beginPath(); c.moveTo(hx - s * .25, sy); c.lineTo(hx + s * .25, sy); c.stroke(); // la tête de raclette
+    };
+    const bubble = (b, k) => {
+      const r = b.size * (1 + .15 * Math.sin(now * 5 + b.ph)), a = Math.min(1, (1 - k) * 3) * .85;
+      co.globalAlpha = a; co.strokeStyle = dark ? 'rgba(224,242,254,.9)' : 'rgba(37,99,235,.65)'; co.lineWidth = 1.2; co.beginPath(); co.arc(b.x, b.y, r, 0, TAU); co.stroke();
+      co.globalAlpha = a * .5; co.strokeStyle = pick(['#f0abfc', '#a5f3fc', '#fde68a']); co.beginPath(); co.arc(b.x, b.y, r * .8, Math.PI * 1.1, Math.PI * 1.6); co.stroke();
+      co.globalAlpha = a; co.fillStyle = '#ffffff'; co.beginPath(); co.arc(b.x - r * .35, b.y - r * .35, r * .18, 0, TAU); co.fill();
+    };
+    const blow = (x, y, n, spread = 1) => { for (let i = Math.round(n * q); i > 0; i--) bubbles.add({ x: x + rnd(-.3, .3) * H * spread, y: y + rnd(-.2, .2) * H, vx: rnd(-30, 30) * spread, vy: -rnd(20, 60), g: -15, drag: .6, max: rnd(1.4, 2.4), size: H * rnd(.05, .11), ph: rnd(TAU) }); };
+    const clipCard = fn => { co.save(); roundRect(co, card.x, card.y, card.w, card.h, card.r); co.clip(); fn(); co.restore(); };
+    return {
+      frame(t, dt) {
+        now = t; co.globalCompositeOperation = 'source-over';
+        const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
+        // il va vers le prochain carreau (ou sort par la droite à la fin) ; ses cordes le font se balancer
+        const goal = man.tx != null ? man.tx : next ? next.x - OFF : card.x + card.w + H * .6;
+        if (!man.wipe || now > man.wipe.t + .42) { const d = goal - man.x; man.x += d * Math.min(1, dt * 5); man.sway += (clamp(d / H, -1, 1) * .5 - man.sway) * Math.min(1, dt * 6); }
+        man.wave = Math.max(0, man.wave - dt * .5); man.shrug = Math.max(0, man.shrug - dt * .5);
+        if (now > (man.leaveAt || Infinity)) man.up = Math.min(1, (man.up || 0) + dt * .7);
+        const pane = S.reduce((b, z) => (!b || Math.abs(z.x - man.x - OFF) < Math.abs(b.x - man.x - OFF) ? z : b), null);
+        const ptop = pane ? pane.top + H * .1 : card.y + H * .25, pbot = pane ? pane.bottom - H * .08 : card.y + H * .8;
+        let sy = ptop + Math.abs(Math.sin(now * (scrubFast ? 22 : 7))) * H * .06;
+        if (man.wipe) { const k = (now - man.wipe.t) / .62; if (k < 1) sy = k < .18 ? ptop - H * .03 * Math.sin(k / .18 * Math.PI) : k < .58 ? lerp(ptop, pbot, (k - .18) / .4) : pbot - (k - .58) / .42 * (pbot - ptop) * .8; }
+        inC(env, cw0, c => drawMan(c, man.x + Math.sin(now * 1.6) * H * .02, sy, man.sway));
+        // gouttes qui glissent sous les carreaux, bulles, pluie
+        drips.step(dt); bubbles.step(dt); rain.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#3b82f6';
+        drips.each((d, k) => { co.globalAlpha = (1 - k) * .9; co.beginPath(); co.ellipse(d.x, d.y, d.size * .7, d.size * 1.2, 0, 0, TAU); co.fill(); });
+        bubbles.each(bubble);
+        if (raining) {
+          for (let n = Math.random() < dt * 70 * q ? 1 : 0; n > 0; n--) rain.add({ x: card.x + rnd(0, 1) * card.w, y: card.y - 4, vx: 0, vy: rnd(70, 140), g: 60, max: rnd(.5, .9), size: rnd(1.2, 2) });
+          raining = Math.max(0, raining - dt);
+        }
+        if (rain.n) clipCard(() => { co.strokeStyle = 'rgba(30,41,59,.55)'; co.fillStyle = 'rgba(30,41,59,.7)'; co.lineWidth = 1.8; rain.each((r, k) => { co.globalAlpha = 1 - k * .5; co.beginPath(); co.moveTo(r.x, r.y - r.size * 7); co.lineTo(r.x, r.y); co.stroke(); co.beginPath(); co.arc(r.x, r.y, r.size, 0, TAU); co.fill(); }); });
+        // les éclats et la grande bande de lumière
+        glints.run(dt, (g, k) => twinkle(co, g.c || '#ffffff', g.x, g.y, g.r * Math.sin(k * Math.PI), 1, k * 1.5));
+        sweeps.run(dt, (s, k) => clipCard(() => {
+          // la vitre propre étincelle : un éclair blanc, puis une large bande de lumière (et une fine plus vive) qui balaie
+          // la fenêtre de gauche à droite en semant des étoiles derrière elle
+          const e = k * k * (3 - 2 * k), x = lerp(card.x - H * 1.2, card.x + card.w + H * 1.2, e), wd = H * 1.1;
+          const c0 = s.rainbow ? RAINBOW[Math.floor(now * 8) % RAINBOW.length] : '#ffffff';
+          co.globalCompositeOperation = 'lighter';
+          if (k < .25) { co.globalAlpha = (1 - k / .25) * .35; co.fillStyle = '#ffffff'; co.fillRect(card.x, card.y, card.w, card.h); }
+          for (const [w2, a2] of [[wd, .55], [wd * .3, .95]]) {
+            const g = co.createLinearGradient(x - w2, card.y, x + w2, card.y + card.h * .5);
+            g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, c0); g.addColorStop(1, 'rgba(255,255,255,0)');
+            co.globalAlpha = a2 * Math.sin(Math.min(1, k * 1.15) * Math.PI); co.fillStyle = g; co.fillRect(card.x, card.y, card.w, card.h);
+          }
+          co.globalCompositeOperation = 'source-over';
+          if (x > card.x && x < card.x + card.w && Math.random() < dt * 22 * q) glints.add({ life: .5, x: x - rnd(0, H * .6), y: card.y + rnd(.1, .9) * card.h, r: H * rnd(.1, .2), c: s.rainbow ? pick(RAINBOW) : '#ffffff' });
+        }));
+        co.globalAlpha = 1;
+        if (scrubFast && next && Math.random() < dt * 5) blow(next.x, next.top + H * .1, 1, .5);
+      },
+      lock(p, o) {
+        const s = slotsA(env).reduce((b, z) => (!b || Math.abs(z.x - p.x) < Math.abs(b.x - p.x) ? z : b), null); if (!s) return;
+        man.x = s.x - OFF; man.wipe = { t: now };
+        if (o.last) scrubFast = 0;
+        if (o.ghost) return;
+        for (let i = 0; i < 2; i++) drips.add({ delay: 0, x: s.x + rnd(-.3, .3) * s.w, y: s.bottom - 3, vx: 0, vy: rnd(10, 25), g: 30, max: rnd(.6, 1), size: rnd(1.4, 2.2) });
+        glints.add({ delay: .42, life: .4, x: s.x + s.w * .3, y: s.top + H * .14, r: H * .14 });
+      },
+      build() { scrubFast = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        scrubFast = 0; man.tx = card.x + card.w * .5 - OFF; man.leaveAt = now + 2.2;
+        if (!p) { man.shrug = 1; raining = 3.5; return; }
+        man.wave = 1;
+        const S = slotsA(env).filter(s => !s.gone && !s.ghost);
+        for (let i = Math.round((2 + 8 * p) * q) + 4 * asc; i > 0; i--) { const s = pick(S), cx = Math.random() < .5 ? -1 : 1; glints.add({ delay: rnd(0, 1 + p), life: .5, x: s.x + cx * s.w * .4, y: Math.random() < .5 ? s.top + 3 : s.bottom - 3, r: H * rnd(.1, .18) }); }
+        if (p >= .6) for (const e of [0, 1]) blow(card.x + e * card.w, card.y + card.h * .5, 5 + 5 * p, 1.2); // des bulles de chaque côté de la carte
+        if (p < 1) return;
+        sweeps.add({ delay: .15, life: 1.1 });
+        if (asc) sweeps.add({ delay: .9, life: 1.1, rainbow: asc >= 3 });
+        for (let i = Math.round((14 + 10 * asc) * q); i > 0; i--) { const out = Math.random() < .45; glints.add({ delay: rnd(.3, 2), life: .55, x: card.x + rnd(out ? -.1 : 0, out ? 1.1 : 1) * card.w, y: out ? card.y + (Math.random() < .5 ? -rnd(.1, .5) : 1 + rnd(.1, .3)) * card.h : card.y + rnd(.1, .9) * card.h, r: H * rnd(.1, .22), c: asc >= 3 ? pick(RAINBOW) : asc ? '#fef3c7' : '#ffffff' }); }
+      },
+    };
+  };
+
   // ==== fin du lot C ====
 
   function mount(stage, card, skin, o = {}) {

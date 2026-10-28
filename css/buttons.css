@@ -1256,3 +1256,9 @@
   padding-left: 2.1em; text-shadow: 0 0 .3em rgba(251, 191, 36, .6);
   --gs: 0 .3em 0 #7c4a1e, 0 .5em 1em rgba(251, 191, 36, .25); --gs-h: 0 .34em 0 #7c4a1e, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #7c4a1e; }
 .btn-roll.gen-alchemy:hover { filter: brightness(1.06); }
+/* Window Cleaner (idée de Deadshot, 2026-10-28) : une vitre dans un cadre blanc, à moitié raclée en biais. */
+.btn-roll.gen-windowcleaner { border: 3px solid #f8fafc; border-radius: .3rem; color: #f6c945; font-family: Georgia, 'Bookman Old Style', serif; font-weight: 900;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .5) 36%, transparent 44%), linear-gradient(90deg, rgba(150, 137, 112, .75) 0 22%, #0f172a 22% 23.5%, transparent 23.5%), linear-gradient(180deg, #60a5fa, #bfdbfe);
+  text-shadow: 1px 0 0 #1c1917, -1px 0 0 #1c1917, 0 1px 0 #1c1917, 0 -1px 0 #1c1917, 2px 2px 0 #7c2d12;
+  --gs: 0 .3em 0 #94a3b8, 0 .5em 1em rgba(96, 165, 250, .3); --gs-h: 0 .34em 0 #94a3b8, 0 .7em 1.3em rgba(96, 165, 250, .5); --gs-a: 0 .06em 0 #94a3b8; }
+.btn-roll.gen-windowcleaner:hover { filter: brightness(1.06); }
