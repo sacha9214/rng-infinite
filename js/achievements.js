@@ -1,7 +1,7 @@
 /* RNG∞ — succès et titres.
  * Pur JS, chargeable dans le navigateur (window.RNGAchievements) et dans Node (module.exports).
  * Chaque succès se lit sur les stats du joueur tenues par le serveur (stats:<id>) : un titre ne s'équipe que débloqué.
- * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, first (heure du premier tirage), dayTop, duelWins, flawless, bigWin, xpWin }
+ * stats = { rolls, 't:<rareté>', best, badges (nombre de badges différents), drastix, first (heure du premier tirage), dayTop, duelWins, flawless, bigWin, xpWin, uniq (nombres différents tirés, lu à part) }
  */
 (function (root) {
   'use strict';
@@ -123,6 +123,17 @@
     { id: 'trashking', emoji: '👑', title: 'Trash King', desc: 'Finish a month with the worst roll on the Trash leaderboard', test: st => num(st.trashKing) >= 1 },
     { id: 'dejavu', emoji: '🔁', title: 'Déjà Vu', desc: 'Roll 5 numbers you had already rolled', test: st => num(st.dups) >= 5 },
     { id: 'brokenrecord', emoji: '📀', title: 'Broken Record', desc: 'Roll 25 numbers you had already rolled', test: st => num(st.dups) >= 25 },
+    // Nombres différents tirés (idée de jsand, 2026-10-28) : stats.uniq = SCARD nums:<id>, ajouté par readStats et
+    // recordRoll (api/_lib.js). Il y a 1 000 001 nombres : ~1 000 tirages pour 1 000 nombres différents, ~10 500 pour
+    // 10 000, ~105 000 pour 100 000 (les doublons ralentissent la fin) ; les plus gros joueurs (~160 000 tirages)
+    // en ont ~150 000.
+    { id: 'uniq100', emoji: '🔍', title: 'Number Spotter', desc: 'Roll 100 different numbers', test: st => num(st.uniq) >= 100 },
+    { id: 'uniq500', emoji: '🧭', title: 'Explorer', desc: 'Roll 500 different numbers', test: st => num(st.uniq) >= 500 },
+    { id: 'uniq1k', emoji: '🗺️', title: 'Cartographer', desc: 'Roll 1,000 different numbers', test: st => num(st.uniq) >= 1000 },
+    { id: 'uniq5k', emoji: '🔭', title: 'Pathfinder', desc: 'Roll 5,000 different numbers', test: st => num(st.uniq) >= 5000 },
+    { id: 'uniq10k', emoji: '🌍', title: 'Globetrotter', desc: 'Roll 10,000 different numbers (1% of them all)', test: st => num(st.uniq) >= 10000 },
+    { id: 'uniq50k', emoji: '🛰️', title: 'Number Atlas', desc: 'Roll 50,000 different numbers (5% of them all)', test: st => num(st.uniq) >= 50000 },
+    { id: 'uniq100k', emoji: '🌌', title: 'One Tenth of Everything', desc: 'Roll 100,000 different numbers (10% of them all)', test: st => num(st.uniq) >= 100000 },
     { id: 'eventhunter', emoji: '🎯', title: 'Event Hunter', desc: 'Complete 3 weekly events', test: st => num(st.events) >= 3 },
     { id: 'codehunter', emoji: '🔑', title: 'Code Hunter', desc: 'Find the 3 secret codes hidden on the site', test: st => num(st.codehunter) >= 1 },
     { id: 'owner', emoji: '🛠️', title: 'Owner', desc: 'Made RNG∞', hidden: true, test: st => num(st.owner) >= 1 },

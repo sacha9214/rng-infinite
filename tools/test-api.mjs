@@ -752,7 +752,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const sorted = r.body.entries.map(e => e.s);
   assert.deepEqual(sorted, [...sorted].sort((x, y) => y - x), 'trié par XP à vie');
   assert.ok(r.body.entries.every(e => Number.isInteger(e.n) && e.s >= engine.scoreOf(e.n)), 'avec le meilleur tirage, jamais plus que le total');
-  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^6:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
+  assert.match(run([['GET', 'lb:xp:migrated']])[0].result, /^7:[0-9a-f]{12}$/, 'rempli une seule fois, à la version des règles des badges');
   // Règles des badges changées (nouvelle empreinte) : l'XP à vie est recalculée depuis l'historique, plus l'ancien total.
   run([['SET', 'lb:xp:migrated', '5:00000000000a'], ['ZADD', 'lb:xp', 1, alice.playerId]]);
   r = await call(leaderboard, { url: '/api/leaderboard?period=xp' });
@@ -945,6 +945,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.wall, null, 'gagné, pas affiché d\'office');
   r = await call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'wall', wall: r.body.walls[0] } });
   assert.equal(r.status, 200, 'un fond gagné se met comme un fond acheté');
+  // Cinq fonds de joueurs (2026-10-28) : The Fisher et Condensation légendaires (hors caisse), Your Last Rolls et
+  // Spinning Bread dans la caisse, Zombie Moon limité (onglet Limités, hors caisse, jusqu'au 2 novembre inclus).
+  {
+    const fresh = ['fishing', 'lastrolls', 'bread', 'condensation', 'zombiemoon'];
+    assert.ok(fresh.every(id => Shop.wallById.get(id) && Shop.wallById.get(id).idea), 'les cinq fonds existent, avec leur idée');
+    assert.ok(!fresh.some(id => Shop.byId.has(id)), 'aucun ne prend l\'identifiant d\'un skin (le skin Fisherman est « fisher »)');
+    assert.deepEqual(fresh.map(id => Shop.rarityOf(id, true).name), ['Legendary', 'Rare', 'Uncommon', 'Legendary', 'Epic']);
+    assert.ok(wpool.includes('lastrolls') && wpool.includes('bread'), 'les deux fonds normaux sont dans la caisse');
+    assert.ok(!wpool.includes('fishing') && !wpool.includes('condensation') && !wpool.includes('zombiemoon'), 'ni légendaires ni limité dans la caisse');
+    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-03T00:00:00Z');
+    const buyWall = id => call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'buywall', wall: id } });
+    for (const id of ['lastrolls', 'fishing', 'zombiemoon']) {
+      if (wpool.includes(id) && (await call(shopApi, { url: `/api/shop?me=${wally.playerId}` })).body.walls.includes(id)) continue; // déjà gagné dans la caisse
+      const item = Shop.wallById.get(id), c0 = await coinsOf(wally);
+      r = await buyWall(id);
+      if (item.until && Date.now() >= Date.parse(item.until)) { assert.equal(r.status, 422, 'Zombie Moon n\'est plus en vente'); continue; }
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.wall, id, 'acheté = affiché');
+      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
+    }
+  }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
   const bpool = Shop.casePool(bcase).map(b => b.id);
@@ -986,6 +1007,115 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(r.body.walls || [], [], 'aucun fond donné');
   r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'button', button: r.body.buttons[0] } });
   assert.deepEqual([r.status, r.body.button], [200, r.body.buttons[0]], 'un bouton gagné s\'équipe comme un bouton acheté');
+  // Boutons Power Core (idée de Sean) et Black Hole (idée de MattyFaux-Lucky), 2026-10-28 : vendus à part, dans la caisse.
+  assert.ok(bpool.includes('powercore') && bpool.includes('eventhorizon'));
+  assert.ok(!Shop.byId.has('eventhorizon') && Shop.byId.has('blackhole'), 'le bouton Black Hole ne prend pas l\'identifiant du skin Singularity');
+  assert.deepEqual(['powercore', 'eventhorizon'].map(id => Shop.caseRarity(bcase, id).name), ['Rare', 'Epic']);
+  { const css = fs.readFileSync(path.join(ROOT, 'css/buttons.css'), 'utf8'); for (const b of Shop.BUTTONS) assert.ok(css.includes(`.btn-roll.gen-${b.id} {`), `style du bouton ${b.id}`); }
+
+  // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : un pack de sons payant (SOUNDS) qui rejoint snds:<id>.
+  const scase = Shop.caseById.get('sounds');
+  const spool = Shop.casePool(scase).map(p => p.id);
+  assert.deepEqual([...spool].sort(), Shop.SOUNDS.filter(p => p.price).map(p => p.id).sort(), 'tous les packs payants');
+  assert.ok(spool.includes('clicky'), 'le pack Clicky (idées de Niall et de sennybex1) est dedans');
+  const sev = Shop.caseOdds(scase).reduce((x, o) => x + o.p * Shop.caseItem(scase, o.id).price, 0);
+  assert.ok(scase.price < sev && scase.price / sev > 0.7 && scase.price / sev < 0.8, `prix sous la valeur moyenne, comme les caisses de fonds et de boutons (${scase.price} / ${sev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(scase, 'arcade'), Shop.soundById.get('arcade'), 'arcade : le pack de sons, pas le bouton');
+  assert.deepEqual(['arcade', 'taps', 'clicky', 'space', 'glass'].map(id => Shop.caseRarity(scase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  for (const id of spool) { const v = Shop.duplicateRefund(scase, id); assert.ok(v >= scase.price / 2 && v < scase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('sounds') && !Shop.KEY_OPENS.starter.includes('sounds'), 'une clé Premium l\'ouvre');
+  const owners = () => { const o = {}; const flat = run([['HGETALL', 'owners']])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = Number(flat[i + 1]); return o; };
+  const sammy = { playerId: 'c9'.repeat(8), secret: 'da'.repeat(16), name: 'Sammy' };
+  assert.equal((await call(roll, { method: 'POST', body: sammy })).status, 200);
+  run([['HINCRBY', `stats:${sammy.playerId}`, 'bonus', 50000]]);
+  await new Promise(res => setTimeout(res, 20));
+  const sBefore = (await call(shopApi, { url: `/api/shop?me=${sammy.playerId}` })).body, own0 = owners();
+  let sdups = 0, snews = 0;
+  const gainedSnd = {};
+  for (let i = 0; i < 30; i++) {
+    before = await coinsOf(sammy);
+    const [spent0, cases0] = run([['HGET', `stats:${sammy.playerId}`, 'spent'], ['HGET', `stats:${sammy.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(sammy, 'sounds');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(spool.includes(r.body.won), 'un pack de la caisse');
+    assert.ok(r.body.sounds.includes(r.body.won), 'ajouté aux packs possédés');
+    assert.ok(run([['SISMEMBER', `snds:${sammy.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(scase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - scase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${sammy.playerId}`, 'spent'], ['HGET', `stats:${sammy.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [scase.price - r.body.refund, 1, scase.price - r.body.refund], 'spent, cases, eco');
+    if (r.body.duplicate) sdups++; else { snews++; gainedSnd[r.body.won] = 1; }
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(snews >= 4 && snews <= spool.length && sdups >= 1, `des nouveaux (${snews}) et des doublons (${sdups})`);
+  assert.deepEqual([r.body.owned, r.body.buttons, r.body.walls], [sBefore.owned, sBefore.buttons, sBefore.walls], 'ni skin, ni bouton, ni fond donné');
+  // Popularité : +1 par pack gagné pour la première fois, rien pour un doublon.
+  { const own1 = owners(); for (const id of spool) assert.equal((own1[`sounds:${id}`] || 0) - (own0[`sounds:${id}`] || 0), gainedSnd[id] || 0, `owners sounds:${id}`); }
+  r = await call(shopApi, { method: 'POST', body: { playerId: sammy.playerId, secret: sammy.secret, action: 'sound', sound: r.body.sounds[0] } });
+  assert.deepEqual([r.status, r.body.sound], [200, r.body.sounds[0]], 'un pack gagné se met en service comme un pack acheté');
+
+  // Part du créateur sur une caisse (2026-10-28, finnnnn ne touchait rien sur les skins tirés en caisse) : 5 % de ce que
+  // l'acheteur a payé pour la caisse quand un skin né d'une idée en sort pour la première fois ; rien pour un doublon,
+  // une caisse ouverte avec une clé, ni pour soi-même.
+  { const hot = Shop.byId.get('hotdog'), choc = Shop.byId.get('chocolate'), was = [hot.idea, choc.idea], draw = Shop.drawCase;
+    hot.idea = 'Sammy'; choc.idea = 'sammy'; // même pseudo à la casse près : retrouvé quand même
+    const roy = () => Number(run([['HGET', `stats:${sammy.playerId}`, 'royalty']])[0].result) || 0;
+    const ecoRoy = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(db.get(k)?.get?.('in:royalty')) || 0), 0);
+    const premium = Shop.caseById.get('premium');
+    try {
+      Shop.drawCase = () => 'hotdog';
+      const r0 = roy(), e0 = ecoRoy();
+      r = await openCase(bobby, 'premium'); assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'hotdog', false], JSON.stringify(r.body));
+      assert.equal(roy() - r0, Math.round(premium.price * Shop.IDEA_SHARE), '5 % du prix de la caisse');
+      assert.equal(ecoRoy() - e0, Math.round(premium.price * Shop.IDEA_SHARE), 'compté dans l\'économie (in:royalty)');
+      await new Promise(res => setTimeout(res, 20));
+      r = await openCase(bobby, 'premium'); assert.equal(r.body.duplicate, true);
+      assert.equal(roy() - r0, 45, 'rien pour un doublon');
+      Shop.drawCase = () => 'chocolate';
+      run([['HINCRBY', `stats:${bobby.playerId}`, 'key:premium', 1]]);
+      await new Promise(res => setTimeout(res, 20));
+      r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'case', case: 'premium', free: true } });
+      assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'chocolate', false]);
+      assert.equal(roy() - r0, 45, 'rien pour une caisse ouverte avec une clé');
+      Shop.drawCase = () => 'hotdog';
+      await new Promise(res => setTimeout(res, 20));
+      r = await openCase(sammy, 'premium'); assert.deepEqual([r.status, r.body.duplicate], [200, false]);
+      assert.equal(roy() - r0, 45, 'rien pour soi-même');
+    } finally { Shop.drawCase = draw; [hot.idea, choc.idea] = was; }
+  }
+
+  // Popularité (idée d'ann joe et de YU CHUAN 23, 2026-10-28) : chaque chemin qui donne un objet compte +1 une seule
+  // fois ; la lecture publique ne donne que des nombres, jamais qui.
+  { const olivy = { playerId: 'ca'.repeat(8), secret: 'db'.repeat(16), name: 'Olivy' };
+    assert.equal((await call(roll, { method: 'POST', body: olivy })).status, 200);
+    run([['HINCRBY', `stats:${olivy.playerId}`, 'bonus', 50000]]);
+    const post = async body => { await new Promise(res => setTimeout(res, 20)); return call(shopApi, { method: 'POST', body: { playerId: olivy.playerId, secret: olivy.secret, ...body } }); };
+    const o0 = owners();
+    for (const body of [{ action: 'buy', skin: 'neon' }, { action: 'buy', skin: 'neon' }, { action: 'buywall', wall: 'forest' }, { action: 'buywall', wall: 'forest' }, { action: 'buybutton', button: 'powercore' },
+      { action: 'buybutton', button: 'powercore' }, { action: 'buyemote', emote: 'gg' }, { action: 'buyemote', emote: 'gg' }, { action: 'buysound', sound: 'clicky' }, { action: 'buysound', sound: 'clicky' }]) {
+      r = await post(body); assert.equal(r.status, 200, JSON.stringify([body, r.body]));
+    }
+    const o1 = owners();
+    for (const k of ['skins:neon', 'walls:forest', 'buttons:powercore', 'emotes:gg', 'sounds:clicky']) assert.equal((o1[k] || 0) - (o0[k] || 0), 1, `${k} : +1, puis rien au deuxième achat`);
+    r = await call(shopApi, { url: '/api/shop?owners=1' });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.owners['buttons:powercore'], o1['buttons:powercore']);
+    assert.ok(!JSON.stringify(r.body).includes(olivy.playerId) && Object.values(r.body.owners).every(n => Number.isInteger(n) && n > 0), 'seulement des nombres');
+    assert.equal((await call(shopApi, { url: `/api/shop?me=${olivy.playerId}` })).body.royalty, 0, 'state : la part reçue (0 ici)');
+    assert.equal((await call(shopApi, { url: `/api/shop?me=${sammy.playerId}` })).body.royalty, 45, 'state : la part reçue par le créateur');
+    // Rattrapage (tools/backfill-owners.js) : essai à blanc sans écrire, puis --apply remplace le hash par le vrai compte.
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-owners.js'));
+    run([['HSET', 'owners', 'skins:neon', 999]]);
+    const counts = await backfill({ log: () => {} });
+    assert.equal(owners()['skins:neon'], 999, 'essai à blanc : rien écrit');
+    const holders = (prefix, id) => [...db.keys()].filter(k => new RegExp(`^${prefix}:[0-9a-f]{16}$`).test(k) && run([['SISMEMBER', k, id]])[0].result == 1).length;
+    assert.equal(counts['skins:neon'], holders('skins', 'neon'));
+    assert.equal(counts['sounds:clicky'], holders('snds', 'clicky'));
+    assert.equal(counts['buttons:powercore'], holders('btns', 'powercore'));
+    assert.ok(!Object.keys(counts).some(k => k === 'skins:owner' || k.endsWith(':licorne')), 'ni objets réservés ni identifiants inventés');
+    await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(owners(), counts, '--apply : le hash est remplacé'); }
 
   // ============================================================== 23. Amis
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
@@ -4692,7 +4822,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.equal(rankOf(nx.tier), rankOf(cur) + 1, `rareté juste au-dessus pour ${n} (${cur} → ${nx.tier})`);
     assert.equal(engine.cardTier(nx.at), nx.tier); assert.equal(engine.cardTier(nx.at - 1), cur);
   }
-  assert.equal(engine.nextTier(engine.scoreOf(24)), null, '24 est Infinite');
+  assert.equal(engine.nextTier(engine.scoreOf(1)), null, '1 est Infinite'); // 24 ne l'est plus depuis So Close (97), 2026-10-28
 
   const { COLLECTION_SETS, COLLECTION_VERSION, recordRoll, readStats } = require(path.join(ROOT, 'api/_lib.js'));
   const Ach = require(path.join(ROOT, 'js/achievements.js'));
@@ -4909,6 +5039,219 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(last).includes(X.playerId));
   r = await call(profile, { url: '/api/profile?name=Coleadx' }); assert.equal(r.body.clanMvp, 1);
   Clan._reset();
+}
+
+// ================================================================ Idées du 2026-10-28 : badges Pythagorean (Phong254),
+// Prime Digits (Kag) et So Close (MAYO), marge au-dessus de la rareté du dessous (Starharvest), titres « nombres
+// différents » (jsand), duels contre des bots au rythme du joueur (Lewis6767).
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Ach = require(path.join(ROOT, 'js/achievements.js')), Shop = require(path.join(ROOT, 'js/shop.js'));
+  const odds = require(path.join(ROOT, 'data/badge-odds.json'));
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  // 1. Badges : fréquences exactes (build.mjs), cas limites.
+  assert.deepEqual([odds.PYTHAGOREAN, odds.PRIME_DIGITS, odds.SO_CLOSE], [100, 5460, 1], 'nombres qui obtiennent chaque badge');
+  for (const n of [102426, 150817, 304050, 30405, 60810, 51213, 202129, 334455]) assert.ok(has(n, 'PYTHAGOREAN'), `${n} est pythagoricien`);
+  for (const n of [100010, 101010, 10101, 3045, 345, 0, 1000000, 102427, 240726]) assert.ok(!has(n, 'PYTHAGOREAN'), `${n} ne l'est pas`);
+  assert.deepEqual(engine.highlight('PYTHAGOREAN', 102426), [[0, 1], [2, 3], [4, 5]]);
+  assert.deepEqual(engine.highlight('PYTHAGOREAN', 30405), [[0], [1, 2], [3, 4]], '5 chiffres : 03 04 05');
+  for (const n of [2, 7, 23, 2357, 777777, 532752]) assert.ok(has(n, 'PRIME_DIGITS'), `${n} : chiffres premiers`);
+  for (const n of [0, 1, 4, 28, 2358, 1000000, 222221]) assert.ok(!has(n, 'PRIME_DIGITS'), `${n} : non`);
+  assert.ok(has(97, 'SO_CLOSE') && !has(970, 'SO_CLOSE') && !has(197, 'SO_CLOSE') && !has(98, 'SO_CLOSE'), 'exactement 97');
+  assert.equal(engine.byId.get('SO_CLOSE').score, 100000100, 'comme les autres badges exacts');
+
+  // 2. Rareté du dessous : total - above y tombe, total - above + 1 reste dans la rareté du tirage ; rien sous Land waste.
+  const rankOf = t => engine.TIER_ORDER.indexOf(t);
+  const found = {};
+  for (let n = 100000; n < 130000 && Object.keys(found).length < 5; n++) {
+    const t = engine.cardTier(engine.scoreOf(n));
+    if (['landwaste', 'garbage', 'trash', 'common', 'uncommon'].includes(t) && !found[t]) found[t] = n;
+  }
+  for (let n = 500000; !found.landwaste && n < 520000; n++) if (engine.cardTier(engine.scoreOf(n)) === 'landwaste') found.landwaste = n;
+  assert.deepEqual(Object.keys(found).sort(), ['common', 'garbage', 'landwaste', 'trash', 'uncommon']);
+  for (const [cur, n] of Object.entries(found)) {
+    const total = engine.scoreOf(n), pv = engine.prevTier(total);
+    if (cur === 'landwaste') { assert.equal(pv, null, 'rien sous Land waste'); continue; }
+    assert.ok(pv && pv.above > 0 && pv.at === total - pv.above + 1, `marge de ${n}`);
+    assert.equal(rankOf(pv.tier), rankOf(cur) - 1, `${cur} → ${pv.tier}`);
+    assert.equal(engine.cardTier(total - pv.above), pv.tier); assert.equal(engine.cardTier(total - pv.above + 1), cur);
+  }
+
+  // 3. Titres « nombres différents » : stats.uniq = SCARD nums:<id>, lu seulement quand le set est complet (dv).
+  const MILESTONES = { uniq100: 100, uniq500: 500, uniq1k: 1000, uniq5k: 5000, uniq10k: 10000, uniq50k: 50000, uniq100k: 100000 };
+  for (const [id, k] of Object.entries(MILESTONES)) assert.ok(Ach.byId.get(id).test({ uniq: k }) && !Ach.byId.get(id).test({ uniq: k - 1 }), id);
+  assert.ok(!Ach.unlocked({ uniq: 99 }).includes('uniq100') && !Ach.unlocked({ rolls: 5000, dups: 0 }).includes('uniq100'), 'jamais sans le compte');
+  const mk = (i, name, fields = []) => {
+    const id = `28ed${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const u = mk(1, 'Uniqtitle', ['dv', '1']);
+  run([['SADD', `nums:${u.playerId}`, ...Array.from({ length: 99 }, (_, i) => String(200000 + i))]]);
+  let st = await lib.readStats(u.playerId); assert.equal(st.uniq, 99); assert.ok(!Ach.unlocked(st).includes('uniq100'));
+  let done = await lib.recordRoll(u.playerId, 200050, Date.now()); // déjà tiré : toujours 99
+  assert.ok(!done.achievements.includes('uniq100'), 'un doublon ne compte pas');
+  await new Promise(res => setTimeout(res, 3));
+  done = await lib.recordRoll(u.playerId, 654321, Date.now());
+  assert.ok(done.achievements.includes('uniq100'), 'le 100e nombre différent débloque le titre');
+  st = await lib.readStats(u.playerId); assert.equal(st.uniq, 100); assert.equal(run([['HGET', `stats:${u.playerId}`, 'uniq']])[0].result, null, 'jamais écrit dans stats');
+  let r = await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq100' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.title, 'uniq100');
+  assert.equal((await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq500' } })).status, 422, 'pas encore 500');
+  // Ancien joueur sans set complet (pas de dv) : rien tant qu'il n'a pas tiré ; son premier tirage remplit le set
+  // depuis l'historique et le compte tout de suite.
+  const o = mk(2, 'Uniqold');
+  const t0 = Date.now() - 5000000;
+  run([['SADD', `nums:${o.playerId}`, ...Array.from({ length: 150 }, (_, i) => String(300000 + i))], ['ZADD', `hist:${o.playerId}`, ...Array.from({ length: 120 }, (_, i) => [t0 + i * 10, `${t0 + i * 10}:${400000 + i}`]).flat()]]);
+  st = await lib.readStats(o.playerId); assert.equal(st.uniq, undefined, 'set pas encore fiable'); assert.ok(!Ach.unlocked(st).includes('uniq100'));
+  done = await lib.recordRoll(o.playerId, 123457, Date.now());
+  assert.ok(done.achievements.includes('uniq100'), 'compté dès le premier tirage');
+  assert.equal((await lib.readStats(o.playerId)).uniq, Number(run([['SCARD', `nums:${o.playerId}`]])[0].result));
+
+  // 4. Duel contre des bots : la manche suit la vitesse achetée du joueur (round.pace), délai et révélation compris ;
+  // sans vitesse, ou à deux humains, le rythme commun reste. Les nombres et le gagnant ne changent pas de règle.
+  const fast = mk(3, 'Fastbotter', ['speedLv', String(Shop.SPEED.prices.length)]), slow = mk(4, 'Slowbotter'), mate = mk(5, 'Botmate');
+  const f = Shop.speedFactor(Shop.SPEED.prices.length); assert.equal(f, 0.5);
+  run([['DEL', `cooldown:${fast.playerId}`], ['DEL', `cooldown:${slow.playerId}`], ['DEL', `cooldown:${mate.playerId}`]]);
+  r = await roomPost(fast, 'create', { size: 2, mode: 'rounds', target: 3, bots: 1 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const fastRoom = r.body.code;
+  r = await later(0, () => roomPost(fast, 'ready', { code: fastRoom }));
+  let round = r.body.rounds[0];
+  assert.equal(round.pace, f, 'la manche porte le rythme du joueur');
+  assert.equal(r.body.nextAt, round.revealAt + 8000 * f);
+  const pttl = Number(run([['PTTL', `cooldown:${fast.playerId}`]])[0].result); assert.ok(pttl > 0 && pttl <= 8000 * f, `délai raccourci (${pttl} ms)`);
+  assert.equal(Number(run([['HGET', `room:${fastRoom}`, 'due']])[0].result), round.revealAt + Math.round(9700 * f), 'tirages appliqués à la fin de la révélation raccourcie');
+  for (const x of r.body.reacts) assert.ok(x.t > round.revealAt + 9700 * f, 'réactions des bots après la révélation');
+  assert.equal(round.s.length, 2); assert.deepEqual(round.s, round.n.map(n => engine.scoreOf(n)), 'XP comme d\'habitude');
+  // 2,5 s + 4 s plus tard (8 s × 0,5) : la manche suivante part déjà.
+  r = await later(2500 + 8000 * f, () => roomPost(fast, 'ready', { code: fastRoom }));
+  assert.equal(r.body.rounds.length, 2, 'manche suivante au rythme du joueur');
+  // Sans vitesse achetée : pas de pace, il faut toujours 8 s.
+  r = await roomPost(slow, 'create', { size: 2, mode: 'rounds', target: 3, bots: 1 });
+  const slowRoom = r.body.code;
+  r = await later(0, () => roomPost(slow, 'ready', { code: slowRoom }));
+  assert.equal(r.body.rounds[0].pace, undefined); assert.equal(r.body.nextAt, r.body.rounds[0].revealAt + 8000);
+  r = await later(2500 + 4000, () => roomPost(slow, 'ready', { code: slowRoom }));
+  assert.equal(r.body.rounds.length, 1, 'pas avant 8 s');
+  // Deux humains et un bot : rythme commun, même si l'un a la vitesse max.
+  run([['DEL', `cooldown:${fast.playerId}`], ['DEL', `cooldown:${mate.playerId}`]]);
+  await later(20000, async () => null);
+  r = await roomPost(fast, 'create', { size: 3, mode: 'rounds', target: 3 });
+  const mixRoom = r.body.code;
+  await roomPost(mate, 'join', { code: mixRoom }); r = await roomPost(fast, 'addBot', { code: mixRoom });
+  assert.equal(r.body.status, 'playing', JSON.stringify(r.body));
+  await roomPost(mate, 'ready', { code: mixRoom }); r = await later(0, () => roomPost(fast, 'ready', { code: mixRoom }));
+  assert.equal(r.body.rounds.length, 1); assert.equal(r.body.rounds[0].pace, undefined, 'à plusieurs humains : rythme commun');
+}
+
+// ================================================================ Idées du 2026-10-28 : XP du jour / de la semaine / du mois
+// (qwertyuiop), classement Median roll (Kag), pain dans le chat global (Deadshot, G8_floppa).
+{
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), lib = require(path.join(ROOT, 'api/_lib.js'));
+  const { checkMessage } = require(path.join(ROOT, 'api/_global.js'));
+  const mk = (i, name) => {
+    const id = `28ee${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1'], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  const zs = (k, id) => { const v = run([['ZSCORE', k, id]])[0].result; return v === null ? null : Number(v); };
+  // Le faux Redis ignore EXPIRE : on regarde les commandes envoyées pendant un appel.
+  const sent = async fn => { const out = [], f0 = globalThis.fetch; globalThis.fetch = async (u, o) => { if (String(u).endsWith('/pipeline')) out.push(...JSON.parse(o.body)); return f0(u, o); }; try { await fn(); } finally { globalThis.fetch = f0; } return out; };
+  const expires = (cmds, k) => cmds.some(c => c[0] === 'EXPIRE' && c[1] === k);
+  // Horloge loin de minuit UTC, comme le bloc du 2026-10-27 : jour, semaine et mois ne changent pas pendant le bloc.
+  { const now = Date.now(), next = Date.parse(`${new Date(now).toISOString().slice(0, 10)}T00:00:00Z`) + 86400000; if (next - now < 20 * 60000) clock += next - now + 60000; }
+
+  // 1. XP de la période : somme des tirages de la période, une clé par jour / semaine / mois, avec une durée de vie.
+  const xa = mk(1, 'Xpdaya'), xb = mk(2, 'Xpdayb');
+  const t0 = Date.now(), nums = [123456, 777777, 4242], sum = nums.reduce((a, n) => a + engine.scoreOf(n), 0);
+  const [pDay, pWeek, pMonth] = lib.scopes(t0);
+  // Durée de vie posée au premier tirage du jour du joueur seulement (3 commandes de moins sur les suivants).
+  const first = await sent(() => lib.recordRoll(xa.playerId, nums[0], t0));
+  for (const p of [pDay, pWeek, pMonth]) assert.ok(first.some(c => c[0] === 'EXPIRE' && c[1] === lib.xpKey(p) && c[2] === String(lib.XP_TTL[p.period])), `durée de vie posée (${p.period})`);
+  const second = await sent(() => lib.recordRoll(xa.playerId, nums[1], t0 + 3));
+  assert.ok(![pDay, pWeek, pMonth].some(p => expires(second, lib.xpKey(p))), 'pas reposée au 2e tirage du jour');
+  await lib.recordRoll(xa.playerId, nums[2], t0 + 6);
+  await lib.recordRoll(xb.playerId, 999999, t0 + 20);
+  for (const p of [pDay, pWeek, pMonth]) assert.equal(zs(lib.xpKey(p), xa.playerId), sum, `XP de la période ${p.period} = somme des tirages`);
+  // Un tirage du lendemain va dans un autre jour ; une autre semaine ou un autre mois seulement si la date change de période.
+  const tNext = Date.UTC(2034, 0, 31, 23, 59, 59), tAfter = tNext + 2000; // 31 janvier → 1er février 2034
+  const c1 = await sent(() => lib.recordRoll(xa.playerId, 500000, tNext)), c2 = await sent(() => lib.recordRoll(xa.playerId, 600000, tAfter));
+  const [d1, , m1] = lib.scopes(tNext), [d2, , m2] = lib.scopes(tAfter);
+  assert.notEqual(lib.xpKey(d1), lib.xpKey(d2)); assert.notEqual(lib.xpKey(m1), lib.xpKey(m2));
+  assert.equal(zs(lib.xpKey(d1), xa.playerId), engine.scoreOf(500000)); assert.equal(zs(lib.xpKey(d2), xa.playerId), engine.scoreOf(600000));
+  assert.equal(zs(lib.xpKey(m2), xa.playerId), engine.scoreOf(600000), 'le mois suivant repart de zéro');
+  // Chaque clé naît d'un premier tirage du jour : elle a toujours une durée de vie.
+  assert.ok(expires(c1, lib.xpKey(d1)) && expires(c1, lib.xpKey(m1)) && expires(c2, lib.xpKey(d2)) && expires(c2, lib.xpKey(m2)));
+  // Classement : span=day|week|month, ma ligne, le meilleur tirage et le nombre de tirages de la période.
+  for (const span of ['day', 'week', 'month']) {
+    r = await call(lbApi, { url: `/api/leaderboard?period=xp&span=${span}&me=${xa.playerId}` });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.span, span);
+    const row = r.body.entries.find(e => e.name === 'Xpdaya');
+    assert.ok(row && row.me, `${span} : ma ligne`); assert.equal(row.s, sum); assert.equal(row.rolls, 3);
+    assert.equal(row.n, nums.reduce((b, n) => (engine.scoreOf(n) > engine.scoreOf(b) ? n : b)), 'meilleur tirage de la période');
+    for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].s >= r.body.entries[i].s, 'trié par XP');
+    assert.ok(!JSON.stringify(r.body).includes(xa.playerId), 'aucun identifiant');
+  }
+  r = await call(lbApi, { url: `/api/leaderboard?period=xp&me=${xa.playerId}` });
+  assert.equal(r.body.span, 'all'); assert.equal(r.body.entries.find(e => e.name === 'Xpdaya').s, zs('lb:xp', xa.playerId), 'sans span : XP à vie');
+  // Hors du top 100 du jour : ma ligne à part, avec mon XP du jour (pas celle à vie).
+  const dayK = lib.xpKey(pDay), fillers = Array.from({ length: 105 }, (_, i) => `28ef${i.toString(16).padStart(12, '0')}`);
+  run([...fillers.map((f, i) => ['ZADD', dayK, 1e12 + i, f]), ...fillers.map(f => ['HSET', pDay.best, f, JSON.stringify({ n: 1, s: 1, t: t0 })])]);
+  r = await call(lbApi, { url: `/api/leaderboard?period=xp&span=day&me=${xa.playerId}` });
+  assert.equal(r.body.entries.length, 100); assert.ok(r.body.mine && r.body.mine.me && r.body.mine.s === sum && r.body.mine.rank > 100, JSON.stringify(r.body.mine));
+  run([['ZREM', dayK, ...fillers], ['HDEL', pDay.best, ...fillers]]);
+
+  // 2. Median roll : histogramme med:<id> de 50 cases de percentile, classement dès 200 tirages.
+  const exactPct = list => { const ps = list.map(n => engine.percentileOf(engine.scoreOf(n))).sort((a, b) => a - b); return ps[Math.floor((ps.length - 1) / 2)]; };
+  // Joueur neuf : histogramme complet dès son premier tirage (v=1), absent du classement avant 200 tirages.
+  const md = mk(3, 'Medianroller'), mdNums = Array.from({ length: 200 }, (_, i) => (i * 7919 + 13) % 1000001);
+  let tm = t0 + 1000;
+  for (let i = 0; i < 199; i++) await lib.recordRoll(md.playerId, mdNums[i], (tm += 3));
+  assert.equal(run([['HGET', lib.medKey(md.playerId), 'v']])[0].result, '1', 'joueur neuf : histogramme complet');
+  assert.equal(zs(lib.MED_LB, md.playerId), null, '199 tirages : pas encore classé');
+  r = await call(lbApi, { url: `/api/leaderboard?period=median&me=${md.playerId}` });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.period, 'median');
+  assert.deepEqual([r.body.need, r.body.have], [200, 199], 'il manque 1 tirage');
+  await lib.recordRoll(md.playerId, mdNums[199], (tm += 3));
+  const h = lib.medHist(run([['HGETALL', lib.medKey(md.playerId)]])[0].result);
+  assert.equal(h.count, 200); assert.ok(h.done);
+  const est = zs(lib.MED_LB, md.playerId);
+  assert.ok(est !== null && Math.abs(est - exactPct(mdNums)) <= 2, `médiane estimée ${est} ≈ exacte ${exactPct(mdNums)}`);
+  // Joueur d'avant (historique sans histogramme) : ses tirages ne comptent pas tant que le remplissage n'est pas passé.
+  const old = mk(4, 'Medianold'), oldNums = Array.from({ length: 260 }, (_, i) => (i * 104729 + 99) % 1000001);
+  run([['ZADD', `hist:${old.playerId}`, ...oldNums.flatMap((n, i) => [t0 - 900000 + i * 1000, `${t0 - 900000 + i * 1000}:${n}`])],
+    ['ZADD', `hist:${old.playerId}`, t0 - 900000 + 500, `${t0 - 900000 + 500}:${oldNums[0]}`], // doublon d'un même tirage (même nombre, < 1 min)
+    ['HSET', lib.medKey(old.playerId), '25', '400']]); // vieux comptes partiels sans v
+  await lib.recordRoll(old.playerId, 31337, (tm += 3));
+  assert.equal(zs(lib.MED_LB, old.playerId), null, 'histogramme incomplet : pas classé');
+  run([['SET', 'lb:xp:migrated', '6:000000000000']]);
+  for (let i = 0; i < 20 && !/^7:/.test(run([['GET', 'lb:xp:migrated']])[0].result || ''); i++) await lbApi.migrateXp();
+  const ho = lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result);
+  assert.ok(ho.done, 'rempli depuis l\'historique'); assert.equal(ho.count, 261, 'historique sans doublon (260 + le tirage du jour)');
+  assert.ok(Math.abs(zs(lib.MED_LB, old.playerId) - exactPct([...oldNums, 31337])) <= 2, 'médiane de l\'historique');
+  assert.equal(lib.medHist(run([['HGETALL', lib.medKey(md.playerId)]])[0].result).count, 200, 'refait à l\'identique pour le joueur neuf');
+  // Ensuite chaque tirage s'ajoute et met à jour le classement.
+  const before = lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result).count;
+  await lib.recordRoll(old.playerId, 1000000, (tm += 3));
+  assert.equal(lib.medHist(run([['HGETALL', lib.medKey(old.playerId)]])[0].result).count, before + 1);
+  // Un joueur sous 200 tirages sort du classement au remplissage suivant (historique raccourci).
+  const few = mk(5, 'Medianfew'); run([['ZADD', `hist:${few.playerId}`, t0 - 5000, `${t0 - 5000}:42`], ['ZADD', lib.MED_LB, 50, few.playerId]]);
+  run([['SET', 'lb:xp:migrated', '6:000000000001']]);
+  for (let i = 0; i < 20 && !/^7:/.test(run([['GET', 'lb:xp:migrated']])[0].result || ''); i++) await lbApi.migrateXp();
+  assert.equal(zs(lib.MED_LB, few.playerId), null, 'moins de 200 : retiré');
+  // Classement : trié, XP du tirage médian lue dans la table, tirages à vie, aucun identifiant.
+  r = await call(lbApi, { url: `/api/leaderboard?period=median&me=${md.playerId}` });
+  for (let i = 1; i < r.body.entries.length; i++) assert.ok(r.body.entries[i - 1].pct >= r.body.entries[i].pct, 'du plus haut au plus bas');
+  const mrow = r.body.entries.find(e => e.name === 'Medianroller');
+  assert.ok(mrow && mrow.me); assert.equal(mrow.med, lib.scoreAtPct(zs(lib.MED_LB, md.playerId))); assert.equal(mrow.count, 200);
+  assert.ok(r.body.entries.some(e => e.name === 'Medianold')); assert.ok(!r.body.entries.some(e => e.name === 'Medianfew'));
+  assert.equal(r.body.have, null, 'classé : rien à afficher en plus');
+  assert.ok(!JSON.stringify(r.body).includes(md.playerId) && !JSON.stringify(r.body).includes(old.playerId), 'aucun identifiant');
+  // Estimation : percentile → XP croissante, et percentile médian d'un histogramme connu.
+  assert.ok(lib.scoreAtPct(10) <= lib.scoreAtPct(50) && lib.scoreAtPct(50) <= lib.scoreAtPct(90));
+  { const c = new Array(50).fill(0); c[24] = 10; c[25] = 10; assert.equal(lib.medPct(c), 50); c[26] = 20; assert.equal(lib.medPct(c), 52); }
+
+  // 3. Pain dans le chat global : 🍞 🥖 🥐 passent le filtre tels quels.
+  assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

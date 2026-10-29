@@ -683,5 +683,26 @@
     "desc": "A prime number of 4 digits or more where no digit repeats.",
     "emoji": "⚛️",
     "score": 7531
+  },
+  {
+    "id": "PYTHAGOREAN",
+    "label": "Pythagorean",
+    "desc": "Read as three pairs AB CD EF, AB² + CD² = EF²: 102426 is 10² + 24² = 26². A 5-digit roll starts with 0, so 30405 is 3² + 4² = 5² (only 100 of them).",
+    "emoji": "📐",
+    "score": 1000001
+  },
+  {
+    "id": "PRIME_DIGITS",
+    "label": "Prime Digits",
+    "desc": "Every digit is a prime digit: 2, 3, 5 or 7.",
+    "emoji": "🧮",
+    "score": 18315
+  },
+  {
+    "id": "SO_CLOSE",
+    "label": "So Close",
+    "desc": "Exactly 97: so close to 100.",
+    "emoji": "🤏",
+    "score": 100000100
   }
 ]

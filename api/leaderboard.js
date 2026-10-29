@@ -1,7 +1,7 @@
-// GET /api/leaderboard?period=day|week|month|all|xp|coins&me=<playerId>
+// GET /api/leaderboard?period=day|week|month|all|xp|coins|worst|event|rolls|median&span=day|week|month|all&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue } = require('./_lib');
+const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue, rollSet, xpKey, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
@@ -15,7 +15,9 @@ const MIGRATED = 'lb:xp:migrated';
 // le badge Exact Spartan restait à son ancien score dans le classement (signalé par un joueur le 2026-10-16).
 // 5 : + l'XP à vie copiée dans les stats (stats.xpLife), pour les titres d'XP à vie.
 // 6 : + le pire tirage de tous les temps (classement Poubelle), rempli depuis l'historique.
-const MIGRATION = '6:' + require('node:crypto').createHash('sha256')
+// 7 : + l'histogramme de la médiane (med:<id>, classement Median roll, idée de Kag, 2026-10-28) : la même lecture de
+// l'historique sert aux deux, et un changement de badges (qui déplace les percentiles) le refait lui aussi.
+const MIGRATION = '7:' + require('node:crypto').createHash('sha256')
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
@@ -66,6 +68,14 @@ async function migrateXp() {
       let low = null;
       for (const m of lists[j] || []) { const [t, n] = m.split(':').map(Number), s = engine.scoreOf(n); if (!low || s < low.s) low = { n, s, t }; }
       if (low) writes.push(['ZADD', WORST_LB, low.s, id], ['HSET', WORST_BEST, id, JSON.stringify(low)]);
+      // Histogramme de la médiane, sans doublons (même règle que lifetimeTotals). Un tirage fait entre la lecture et
+      // l'écriture peut manquer ou compter deux fois : un tirage sur 200 et plus ne déplace pas la médiane.
+      const seen = rollSet(), med = medHist([]).counts;
+      for (const m of lists[j] || []) { const [t, n] = m.split(':').map(Number); if (seen.add(n, t)) med[medBucket(engine.percentileOf(engine.scoreOf(n)))]++; }
+      const medCount = med.reduce((x, c) => x + c, 0);
+      // Historique vide : pas de hash (son premier tirage le créera complet, voir recordRoll).
+      writes.push(['DEL', medKey(id)], ...(medCount ? [['HSET', medKey(id), 'v', 1, ...med.flatMap((c, b) => (c ? [b, c] : []))]] : []));
+      writes.push(medCount >= MED_MIN ? ['ZADD', MED_LB, medPct(med), id] : ['ZREM', MED_LB, id]);
       for (const { p, n, s, t } of tops.values()) {
         writes.push(['ZADD', p.lb, s, id], ['HSET', p.best, id, JSON.stringify({ n, s, t })]);
         if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
@@ -128,6 +138,27 @@ async function rollsBoard(me) {
   // count : tirages à vie ; xp : XP à vie (affichée en petit, pour l'XP moyenne par tirage).
   const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], xp: Number(xps && xps[i]) || 0, me: x[0] === me });
   return { period: 'rolls', entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null, players: Number(players) || 0, rolls: Number(total) || 0, rollsToday: 0 };
+}
+
+// Classement « Median roll » (idée de Kag, 2026-10-28) : lb:med (percentile médian estimé, tenu par recordRoll et
+// migrateXp depuis l'histogramme med:<id>, voir api/_lib.js), seulement les joueurs d'au moins 200 tirages.
+// med = XP du tirage médian (déduite du percentile par la table), count = tirages à vie (lb:rolls, une seule lecture).
+// Pas encore classé : need = 200 et have = ses tirages comptés, pour lui dire combien il en manque.
+async function medianBoard(me) {
+  await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
+  const [flat, players, myRank, myPct, myHist] = await redis([['ZREVRANGE', MED_LB, 0, LIMIT - 1, 'WITHSCORES'], ['ZCARD', MED_LB], ['ZREVRANK', MED_LB, me || '-'], ['ZSCORE', MED_LB, me || '-'], ['HGETALL', medKey(me || '-')]]);
+  const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
+  const outside = me && myRank !== null && Number(myRank) >= LIMIT;
+  const wanted = outside ? [...rows, [me, Number(myPct)]] : rows;
+  const marks = await bestAwards(wanted.map(x => x[0]));
+  const [names, titles, counts] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', ROLLS_LB, ...wanted.map(x => x[0])]]) : [[], [], []];
+  const clans = await tagsOf(wanted.map(x => x[0]));
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, med: scoreAtPct(x[1]), pct: Math.round(x[1] * 10) / 10, count: Number(counts && counts[i]) || 0, me: x[0] === me });
+  const mineHist = me && myRank === null ? medHist(myHist) : null;
+  return {
+    period: 'median', entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null,
+    need: MED_MIN, have: mineHist ? mineHist.count : null, players: Number(players) || 0, rolls: 0, rollsToday: 0,
+  };
 }
 
 // Classement des pièces : le solde n'est stocké nulle part (il se calcule depuis les stats), donc on le recalcule pour
@@ -209,22 +240,27 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls'].includes(params.get('period')) ? params.get('period') : 'day';
+    const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls', 'median'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));
     if (period === 'event') return send(res, 200, await eventBoard(me));
     if (period === 'rolls') return send(res, 200, await rollsBoard(me));
+    if (period === 'median') return send(res, 200, await medianBoard(me));
     const t = Date.now();
     // Recalcul après un changement de badges : en arrière-plan, la page attend 250 ms au plus (le classement Poubelle restait
     // bloqué plusieurs secondes sur « not loading » pendant le recalcul, signalé le 2026-10-17). Il avance par lots à
     // chaque demande et montre l'ancien classement en attendant.
-    if (period === 'xp' || period === 'all' || period === 'worst') await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
+    // span : day | week | month | all, pour la Poubelle et l'XP (XP du jour, de la semaine, du mois : idée de
+    // qwertyuiop, 2026-10-28 ; tout le temps par défaut).
+    const span = ['day', 'week', 'month'].includes(params.get('span')) ? params.get('span') : 'all';
+    if ((period === 'xp' && span === 'all') || period === 'all' || period === 'worst') await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
     // Poubelle : le plus petit score en tête (classement croissant).
     const low = period === 'worst';
-    // Poubelle : span = day | week | month | all (tout le temps par défaut).
-    const span = ['day', 'week', 'month'].includes(params.get('span')) ? params.get('span') : 'all';
-    const spanScope = span !== 'all' ? (() => { const p = scopes(t).find(x => x.period === span), k = worstKeys(p); return { period: 'worst', lb: k.lb, best: k.best, count: p.count, total: p.total }; })() : null;
-    const scope = period === 'worst' ? (spanScope || WORST_SCOPE) : period === 'xp' ? XP_SCOPE : scopes(t).find(p => p.period === period);
+    const spanP = span !== 'all' ? scopes(t).find(x => x.period === span) : null;
+    const spanScope = spanP && period === 'worst' ? (() => { const k = worstKeys(spanP); return { period: 'worst', lb: k.lb, best: k.best, count: spanP.count, total: spanP.total }; })() : null;
+    // XP de la période : le meilleur tirage et le nombre de tirages affichés sont ceux de la même période.
+    const xpSpanScope = spanP && period === 'xp' ? { period: 'xp', lb: xpKey(spanP), best: spanP.best, count: spanP.count, total: spanP.total } : null;
+    const scope = period === 'worst' ? (spanScope || WORST_SCOPE) : period === 'xp' ? (xpSpanScope || XP_SCOPE) : scopes(t).find(p => p.period === period);
     if (period === 'month') await seedMonth(scope, t);
 
     const [flat, rolls, rollsToday, players, myRank] = await redis([
@@ -258,7 +294,7 @@ module.exports = async (req, res) => {
     const xpOf = {};
     for (let i = 0; i < flat.length; i += 2) xpOf[flat[i]] = Number(flat[i + 1]);
     let myXp = null;
-    if (period === 'xp' && me && myRank !== null) [myXp] = await redis([['ZSCORE', XP_LB, me]]);
+    if (period === 'xp' && me && myRank !== null) [myXp] = await redis([['ZSCORE', scope.lb, me]]);
     const toEntry = (id, i, rank) => {
       if (!details[i]) return null;
       const d = JSON.parse(details[i]);
@@ -269,7 +305,7 @@ module.exports = async (req, res) => {
     const mine = meOutsideTop ? toEntry(me, ids.length, Number(myRank) + 1) : null;
 
     return send(res, 200, {
-      period, entries, mine, ...(period === "worst" ? { span } : {}),
+      period, entries, mine, ...(period === 'worst' || period === 'xp' ? { span } : {}),
       rolls: Number(rolls || 0),
       players: Number(players || 0),
       rollsToday: Number(rollsToday || 0),

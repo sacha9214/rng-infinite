@@ -70,19 +70,25 @@
   // Craquement plus naturel pour le skin ASMR (JAKECisthebest, 2026-10-22 : « plus naturel, comme dans les vidéos ASMR »).
   // Un vrai craquement n'a pas de note : ce sont des dizaines de micro-cassures de hauteur et de force très variées, à des
   // instants irréguliers (serrées quand la croûte cède, puis des miettes), plus le froissement sourd de la matière pressée.
+  // Plus croquant (demandé par cat, 2026-10-28 : « make the crunch more crunchy ») : la croûte cède d'abord en une salve
+  // serrée de cassures franches (attaque quasi instantanée, extinction en moins d'une milliseconde : c'est ce qui sonne
+  // « sec »), puis les miettes s'espacent ; dessous, un coup de dent bref et le craquement sourd de la matière, au lieu
+  // du long froissement mou. Mesuré : +0,5 dB seulement sur le chiffre entier (note comprise), toujours sous les autres skins.
   const crackle = (seed, n = 30, len = .2) => {
     let r = seed * 7919 + 13;
     const rand = () => ((r = (r * 16807) % 2147483647) / 2147483647);
-    const grains = [];
+    const grains = [], bite = Math.round(n * .4);
     let at = 0;
     for (let g = 0; g < n && at < len; g++) {
-      const snap = rand() < .18, d = snap ? .006 + .006 * rand() : .002 + .004 * rand();
-      const f = snap ? 1500 + 2500 * rand() : 2500 + 5500 * rand();
-      grains.push(S.delayed(S.gain(S.shape(S.filter(S.noise(d + .004, seed * 31 + g), 'bp', f, .8 + .6 * rand()), S.expo(d * .5, .0002)), snap ? .8 + .4 * rand() : .2 + .45 * rand()), at));
-      at += (.002 + .02 * rand()) * (1 + 3 * at / len); // de plus en plus espacées
+      const early = g < bite, snap = rand() < (early ? .6 : .2);
+      const d = snap ? .0025 + .002 * rand() : .0015 + .002 * rand(), f = snap ? 1800 + 2600 * rand() : 3000 + 2800 * rand();
+      const tau = snap ? .0005 + .0006 * rand() : .0003 + .0004 * rand();
+      grains.push(S.delayed(S.gain(S.shape(S.filter(S.noise(d + .003, seed * 31 + g), 'bp', f, 1.1 + .8 * rand()), S.expo(tau, .00004)), snap ? .9 + .4 * rand() : .25 + .4 * rand()), at));
+      at += early ? .0015 + .004 * rand() : (.004 + .018 * rand()) * (1 + 2 * at / len); // serrées, puis de plus en plus espacées
     }
-    const press = S.shape(S.filter(S.noise(.12, seed + 500), 'lp', 520), S.expo(.035, .004));
-    return S.sum(...grains, S.gain(press, .55));
+    const press = S.shape(S.filter(S.noise(.06, seed + 500), 'lp', 700), S.expo(.012, .002));
+    const body = S.shape(S.filter(S.noise(.1, seed + 501), 'bp', 1100, .9), S.expo(.02, .001));
+    return S.sum(...grains, S.gain(press, .4), S.gain(body, .3));
   };
   // Tintement de verre (skin Lab) : un tube à essai heurte le portoir. Trois partiels aigus inharmoniques qui s'éteignent
   // vite (un tube de verre sonne comme une petite barre libre) et un « tic » de contact très court. k fait varier la hauteur.
@@ -159,6 +165,28 @@
     S.gain(S.osc(.2, () => f, S.expo(.045, .002)), .45),
     S.gain(S.shape(S.filter(S.noise(.01, seed + 9), 'hp', 3000), S.expo(.0015, .0002)), .12));
   const softChime = (f, d = .7) => S.filter(S.bell(f, d, .4), 'lp', 2800);
+  // ---- Pack Clicky (idées de Niall : « un son de pop », et de sennybex1 : « un clic de clavier ou de souris »,
+  // 2026-10-28). Tout est calculé ici, aucun enregistrement.
+  // Touche mécanique : le « tic » très bref du ressort, le claquement de la touche en bas de course (bruit court), la
+  // coque en plastique qui résonne une fraction de seconde (accordée sur la note du chiffre : la montée reste), le coup
+  // sourd du boîtier, puis la touche qui remonte, plus discrète. up = 0 : touche morte, sans retour.
+  const clack = (f, seed, up = 1) => {
+    const tic = S.shape(S.filter(S.noise(.006, seed), 'bp', 4200, 2.2), S.expo(.0007, .0001));
+    const hit = S.shape(S.filter(S.noise(.03, seed + 1), 'bp', 2300, 1.3), S.expo(.004, .0002));
+    const shell = S.osc(.05, () => f, S.expo(.009, .0003));
+    const body = S.osc(.06, t => 150 + 90 * Math.exp(-t / .006), S.expo(.012, .0004));
+    const back = S.shape(S.filter(S.noise(.02, seed + 2), 'bp', 3000, 1.6), S.expo(.003, .0002));
+    return S.sum(S.gain(tic, .55), hit, S.gain(shell, .5), S.gain(body, .45), S.delayed(S.gain(back, .35 * up), .055 + .008 * (seed % 3)));
+  };
+  // Clic de souris : deux claquements secs, l'appui puis le relâchement (plus léger et un peu plus haut).
+  const mouseClick = (seed, f = 3400) => {
+    const snap = (s, ff, d) => S.sum(S.shape(S.filter(S.noise(.012, s), 'bp', ff, 3), S.expo(d, .0001)), S.gain(S.osc(.02, () => ff * .5, S.expo(d * 1.4, .0002)), .3));
+    return S.sum(snap(seed, f, .0012), S.delayed(S.gain(snap(seed + 1, f * 1.18, .0009), .55), .075));
+  };
+  // Pop doux : une bulle de bouche ; la note remonte vite jusqu'à sa hauteur (comme un petit bouchon) puis s'éteint,
+  // avec un souffle à peine audible à l'attaque.
+  const pop = (f, len = .1) => S.sum(S.osc(len, t => f * (.55 + .5 * Math.min(1, t / .022)), S.expo(len * .26, .0015)),
+    S.gain(S.shape(S.filter(S.noise(.01, Math.round(f)), 'bp', 1800, 1), S.expo(.002, .0002)), .25));
   const PACKS = {
     arcade: {
       lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
@@ -205,6 +233,14 @@
       level: .6, tierGain: .42, // tapotements discrets, carillons plus présents : la gerbe plus bas
       note: (n, len) => softChime(S.note(n + 10), Math.max(.5, len * 5)),
       miss: () => S.sum(S.shape(S.filter(S.noise(.12, 9), 'lp', 500), S.expo(.03, .003)), S.gain(S.osc(.2, t => 110 * (1 + .3 * Math.exp(-t / .02)), S.expo(.05, .003)), .5)), missLevel: .5,
+    },
+    // Clicky : une touche de clavier mécanique par chiffre ; au dernier, un clic de souris puis un pop ; la rareté monte
+    // en pops ; un raté, deux touches mortes qui retombent dans le grave.
+    clicky: {
+      lock: (i, final) => final ? S.sum(mouseClick(400 + i), S.delayed(S.gain(pop(S.note(i + 5)), .9), .13)) : clack(S.note(i + 10), 400 + i * 7),
+      level: .5, tierGain: .75, // des clics très brefs (crête haute, peu d'énergie) : niveaux mesurés contre Soft Taps et Coins
+      note: n => pop(S.note(n + 2)),
+      miss: () => S.sum(clack(S.note(2), 9, 0), S.delayed(S.gain(clack(S.note(-2), 19, 0), .8), .12)), missLevel: .22,
     },
   };
   // Une gerbe de notes du pack, en montant (steps : leurs places dans la gamme).

@@ -576,11 +576,27 @@
   --gs-a: 0 0 10px rgba(168, 85, 247, .45), inset 0 0 26px rgba(4, 2, 26, .85);
   animation: inf-turn 7s linear infinite;
 }
-.btn-roll.gen-infinity::after { content: '∞'; top: 50%; left: -30%; font-size: 2.6em; line-height: 1; margin-top: -.55em; color: transparent; opacity: 0;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, .7); text-shadow: 0 0 10px rgba(240, 171, 252, .9); }
+/* Le ∞ qui passe au survol glisse avec transform (calque sur toute la largeur du bouton : translateX(-30% → 110%)
+   = l'ancien left -30% → 110%). Il animait `left` : une mise en page complète à chaque image du survol (signalé par
+   MAYO, 2026-10-28 : « le bouton infinity lag »). */
+.btn-roll.gen-infinity::after { content: '∞'; top: 50%; left: 0; width: 100%; white-space: nowrap; text-align: left; font-size: 2.6em; line-height: 1; margin-top: -.55em; color: transparent; opacity: 0;
+  transform: translateX(-30%); -webkit-text-stroke: 1px rgba(255, 255, 255, .7); text-shadow: 0 0 10px rgba(240, 171, 252, .9); }
 .btn-roll.gen-infinity:hover::after { animation: gen-inf-pass 1.1s var(--ease-out) 1; }
-@keyframes gen-inf-pass { 0% { left: -30%; opacity: 0; } 25% { opacity: .9; } 100% { left: 110%; opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .btn-roll.gen-infinity, .btn-roll.gen-infinity:hover::after { animation: none; } }
+@keyframes gen-inf-pass { 0% { transform: translateX(-30%); opacity: 0; } 25% { opacity: .9; } 100% { transform: translateX(110%); opacity: 0; } }
+/* Le liseré qui tourne (MAYO, 2026-10-28) : animer --inf-a sur le bouton lui-même recalculait son style et repeignait
+   tout son fond (six dégradés, étoiles, halo flou de --gs) à chaque image. Le dégradé conique tournant passe sur un
+   calque à part (::before), réduit par un masque à l'anneau de 2 px du bord : seul cet anneau est repeint. Il faut
+   laisser ce calque déborder du padding sur le bord (overflow: clip + overflow-clip-margin) ; Safari ne le sait pas
+   encore, il garde l'ancienne animation. Le fond du bouton garde son conique, figé, sous l'anneau. */
+@supports (overflow-clip-margin: 2px) {
+  .btn-roll.gen-infinity { overflow: clip; overflow-clip-margin: 2px; animation: none; }
+  .btn-roll.gen-infinity::before { inset: -2px; padding: 2px; border-radius: inherit; z-index: 0; will-change: transform;
+    background: conic-gradient(from var(--inf-a), #22d3ee, #a855f7, #ec4899, #fbbf24, #a855f7, #22d3ee);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    animation: inf-turn 7s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-infinity, .btn-roll.gen-infinity::before, .btn-roll.gen-infinity:hover::after { animation: none; } }
 
 /* ------------------------------------------------------------------ vendus à part (BUTTONS) */
 
@@ -1244,3 +1260,177 @@
   text-shadow: 0 0 .3em #22d3ee;
   --gs: 0 .3em 0 #164e63, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #164e63, 0 .7em 1.3em rgba(34, 211, 238, .5); --gs-a: 0 .06em 0 #164e63; }
 .btn-roll.gen-orbital:hover { filter: brightness(1.15); }
+
+/* Lightbulb (idée de costoroll, 2026-10-28) : une ampoule allumée à gauche, sur le mur tan, le bord du bureau en bas. */
+.btn-roll.gen-lightbulb { border: 2px solid #3b2a1a; border-radius: .7rem; color: #fff7d6;
+  background: radial-gradient(ellipse .55em .62em at 1.25em 46%, #fffbea 0, #fde68a 45%, #eab308 85%, transparent 92%) 0 0 / 100% 100% no-repeat, radial-gradient(ellipse 2.4em 1.6em at 1.25em 46%, rgba(253, 224, 71, .35), transparent 70%), linear-gradient(180deg, transparent 82%, #8a5528 82%), linear-gradient(180deg, #5e4631, #3f2e1f);
+  padding-left: 2.4em; text-shadow: 0 1px 0 #3f2e1f, 0 0 .3em rgba(253, 224, 71, .6);
+  --gs: 0 .3em 0 #2a1d12, 0 .5em 1em rgba(253, 224, 71, .22); --gs-h: 0 .34em 0 #2a1d12, 0 .7em 1.3em rgba(253, 224, 71, .4); --gs-a: 0 .06em 0 #2a1d12; }
+.btn-roll.gen-lightbulb:hover { filter: brightness(1.12); }
+
+/* Stonks (idée de casmicgraything, 2026-10-28) : un écran de bourse quadrillé et une courbe verte qui grimpe. */
+.btn-roll.gen-stonks { border: 2px solid #16a34a; border-radius: .4rem; color: #f0fdf4;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M0 34 L14 30 L24 32 L36 24 L48 27 L60 18 L72 20 L86 9 L100 3' fill='none' stroke='%234ade80' stroke-opacity='.6' stroke-width='2' vector-effect='non-scaling-stroke'/></svg>") 0 0 / 100% 100% no-repeat, linear-gradient(90deg, rgba(148, 163, 184, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, rgba(148, 163, 184, .12) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(180deg, #13213a, #070c18);
+  text-shadow: 0 1px 0 #000, 0 0 .3em rgba(74, 222, 128, .6);
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(34, 197, 94, .25); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-stonks:hover { filter: brightness(1.15); }
+
+/* Chess (idée de casmicgraything, 2026-10-28) : un échiquier du noir au blanc dans son cadre de noyer. */
+.btn-roll.gen-chess { border: 3px solid #5b3a1e; border-radius: .45rem; color: #fef3c7;
+  background: conic-gradient(rgba(0, 0, 0, .3) 25%, rgba(255, 255, 255, .13) 0 50%, rgba(0, 0, 0, .3) 0 75%, rgba(255, 255, 255, .13) 0) 0 0 / 12px 12px, linear-gradient(90deg, #0c0a09, #57534e 50%, #e7e5e4);
+  text-shadow: .06em 0 0 #5b3a1e, -.06em 0 0 #5b3a1e, 0 .06em 0 #5b3a1e, 0 -.06em 0 #5b3a1e, 0 .1em .08em rgba(0, 0, 0, .5);
+  --gs: 0 .3em 0 #3f2a14, 0 .5em 1em rgba(120, 80, 40, .3); --gs-h: 0 .34em 0 #3f2a14, 0 .7em 1.3em rgba(180, 120, 60, .4); --gs-a: 0 .06em 0 #3f2a14; }
+.btn-roll.gen-chess:hover { filter: brightness(1.12); }
+
+/* Weather (idée de casmicgraything, 2026-10-28) : un ciel qui passe de l'orage au grand beau, de gauche à droite. */
+.btn-roll.gen-weather { border: 2px solid #38bdf8; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 88% 30%, #fef08a 0 .3em, rgba(250, 204, 21, .45) .34em .6em, transparent .8em), linear-gradient(90deg, #1e1b3a, #3d4a5f 25%, #4e7487 45%, #8094aa 62%, #0ea5e9 80%, #7dd3fc);
+  text-shadow: 0 1px 0 #0f172a, 0 0 .3em rgba(15, 23, 42, .8);
+  --gs: 0 .3em 0 #0c4a6e, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #0c4a6e, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #0c4a6e; }
+.btn-roll.gen-weather:hover { filter: brightness(1.12); }
+/* Ninja (idée de casmictechthing, 2026-10-28) : une bûche de dojo, une tige de bambou tranchée en biais à gauche. */
+.btn-roll.gen-ninja { border: 2px solid #3b2412; border-radius: .45rem; color: #1c1208; font-weight: 800;
+  background: linear-gradient(160deg, transparent 0 48%, #ecfccb 48% 50%, transparent 50%) .6em 0 / .7em 100% no-repeat, linear-gradient(90deg, #365314, #84cc16 40%, #d9f99d 50%, #4d7c0f 80%) .6em 0 / .7em 100% no-repeat, linear-gradient(180deg, #2b1a0e 0 4px, transparent 4px calc(100% - 4px), #2b1a0e calc(100% - 4px)), repeating-linear-gradient(178deg, transparent 0 5px, rgba(120, 72, 30, .2) 5px 6px), linear-gradient(180deg, #c08a50, #ddb07a 45%, #b27e45);
+  padding-left: 2em; text-shadow: 0 1px 0 rgba(255, 236, 200, .6);
+  --gs: 0 .3em 0 #3b2412, 0 .5em 1em rgba(132, 204, 22, .2); --gs-h: 0 .34em 0 #3b2412, 0 .7em 1.3em rgba(132, 204, 22, .4); --gs-a: 0 .06em 0 #3b2412; }
+.btn-roll.gen-ninja:hover { filter: brightness(1.08); }
+/* Scroll of Alchemy (idée de R77, 2026-10-28) : un parchemin entre deux rouleaux, une rune d'or à gauche. */
+.btn-roll.gen-alchemy { border: 1px solid #7c4a1e; border-radius: .3rem; color: #4a2c0a; font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  background: radial-gradient(circle at 1.25em 50%, transparent 0 .32em, #b7791f .32em .4em, transparent .4em), linear-gradient(90deg, #8a5a2b, #f3dfb3 45%, #6f4520) 0 0 / .5em 100% no-repeat, linear-gradient(90deg, #8a5a2b, #f3dfb3 45%, #6f4520) 100% 0 / .5em 100% no-repeat, radial-gradient(ellipse 80% 90% at 50% 50%, transparent 55%, rgba(120, 70, 20, .35)), linear-gradient(180deg, #f4e4c0, #dfc28a);
+  padding-left: 2.1em; text-shadow: 0 0 .3em rgba(251, 191, 36, .6);
+  --gs: 0 .3em 0 #7c4a1e, 0 .5em 1em rgba(251, 191, 36, .25); --gs-h: 0 .34em 0 #7c4a1e, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #7c4a1e; }
+.btn-roll.gen-alchemy:hover { filter: brightness(1.06); }
+/* Window Cleaner (idée de Deadshot, 2026-10-28) : une vitre dans un cadre blanc, à moitié raclée en biais. */
+.btn-roll.gen-windowcleaner { border: 3px solid #f8fafc; border-radius: .3rem; color: #f6c945; font-family: Georgia, 'Bookman Old Style', serif; font-weight: 900;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .5) 36%, transparent 44%), linear-gradient(90deg, rgba(150, 137, 112, .75) 0 22%, #0f172a 22% 23.5%, transparent 23.5%), linear-gradient(180deg, #60a5fa, #bfdbfe);
+  text-shadow: 1px 0 0 #1c1917, -1px 0 0 #1c1917, 0 1px 0 #1c1917, 0 -1px 0 #1c1917, 2px 2px 0 #7c2d12;
+  --gs: 0 .3em 0 #94a3b8, 0 .5em 1em rgba(96, 165, 250, .3); --gs-h: 0 .34em 0 #94a3b8, 0 .7em 1.3em rgba(96, 165, 250, .5); --gs-a: 0 .06em 0 #94a3b8; }
+.btn-roll.gen-windowcleaner:hover { filter: brightness(1.06); }
+/* Firework (idée de HSI, 2026-10-28) : un ciel de nuit, deux bouquets d'étincelles de part et d'autre du texte. */
+.btn-roll.gen-firework { border: 2px solid #4338ca; border-radius: 999px; color: #fff;
+  background: radial-gradient(circle at 12% 45%, #fff 0 1.5px, rgba(244, 114, 182, .9) 2px, rgba(244, 114, 182, .25) .45em, transparent .7em), radial-gradient(circle at 88% 40%, #fff 0 1.5px, rgba(250, 204, 21, .9) 2px, rgba(250, 204, 21, .25) .45em, transparent .7em), repeating-conic-gradient(from 0deg at 12% 45%, rgba(244, 114, 182, .5) 0 4deg, transparent 4deg 30deg), linear-gradient(180deg, #060818, #2a1d55);
+  text-shadow: 0 0 .2em #f472b6, 0 0 .5em #c084fc;
+  --gs: 0 .3em 0 #1e1b4b, 0 .5em 1em rgba(244, 114, 182, .3); --gs-h: 0 .34em 0 #1e1b4b, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #1e1b4b; }
+.btn-roll.gen-firework:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-10-28, lot C ==== */
+/* Graffiti (idée de JBearr12, 2026-10-28) : un mur de briques, le texte en lettres bulles vert acide cernées de noir. */
+.btn-roll.gen-graffiti { border: 2px solid #2b1d18; border-radius: .35rem; color: #a3e635;
+  font-family: 'Arial Black', 'Segoe UI Black', Impact, system-ui, sans-serif; letter-spacing: .03em; -webkit-text-stroke: .12em #111; paint-order: stroke fill;
+  background: radial-gradient(ellipse 30% 70% at 10% 50%, rgba(244, 114, 182, .35), transparent 70%), radial-gradient(ellipse 30% 70% at 92% 50%, rgba(34, 211, 238, .3), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='22'><rect width='44' height='22' fill='%23463530'/><g fill='%238b3a2a'><rect x='1' y='1' width='20' height='9' rx='1'/><rect x='23' y='1' width='20' height='9' rx='1' fill='%237c3224'/><rect x='-10' y='12' width='20' height='9' rx='1'/><rect x='12' y='12' width='20' height='9' rx='1' fill='%2394402d'/><rect x='34' y='12' width='20' height='9' rx='1'/></g></svg>") 0 0 / 30px 15px, #463530;
+  text-shadow: .06em .07em 0 #111;
+  --gs: 0 .3em 0 #2b1d18, 0 .5em 1em rgba(244, 114, 182, .25); --gs-h: 0 .34em 0 #2b1d18, 0 .7em 1.3em rgba(163, 230, 53, .4); --gs-a: 0 .06em 0 #2b1d18; }
+.btn-roll.gen-graffiti:hover { filter: brightness(1.12) saturate(1.15); }
+/* Origami (idée de JBearr12, 2026-10-28) : une feuille de papier rose pliée en deux facettes, le coin haut droit corné. */
+.btn-roll.gen-origami { border: 0; border-radius: .15rem; color: #1f1630; font-weight: 800;
+  background: linear-gradient(225deg, #fffdf6 0 .55em, #d6cdb8 .58em, transparent .62em), linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(255, 255, 255, .7) 50%, transparent calc(50% + 1px)), linear-gradient(to bottom right, #f9a8d4 50%, #e97cb7 50%);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .45);
+  --gs: 0 .3em 0 #14533d, 0 .5em 1em rgba(20, 83, 61, .35); --gs-h: 0 .34em 0 #14533d, 0 .7em 1.3em rgba(110, 231, 183, .35); --gs-a: 0 .06em 0 #14533d; }
+.btn-roll.gen-origami:hover { filter: brightness(1.06); }
+/* Taco (idée de sennybex1, 2026-10-28) : une coque de taco dorée et mouchetée, une frange de salade en haut. */
+.btn-roll.gen-taco { border: 2px solid #92400e; border-radius: .8rem .8rem 1.6rem 1.6rem; color: #fff7ed;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; -webkit-text-stroke: .1em #7c2d12; paint-order: stroke fill;
+  background: radial-gradient(circle at 50% 100%, #22c55e 58%, transparent 62%) 0 -3px / 10px 9px repeat-x, radial-gradient(circle, rgba(146, 64, 14, .5) 0 1px, transparent 1.6px) 0 0 / 9px 8px, linear-gradient(180deg, #fcd34d, #f59e0b 60%, #d97706);
+  --gs: 0 .3em 0 #0f766e, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #0f766e, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #0f766e; }
+.btn-roll.gen-taco:hover { filter: brightness(1.08); }
+/* Beach (idée de furcoat0, 2026-10-28 ; couleurs du fond Windy Beach) : la mer en haut, la ligne d'écume, le sable doré. */
+.btn-roll.gen-beach { border: 2px solid #0284c7; border-radius: .6rem; color: #7c3a0a;
+  font-family: 'Chalkboard SE', 'Comic Sans MS', 'Marker Felt', 'Trebuchet MS', cursive; font-weight: 700;
+  background: linear-gradient(180deg, #0284c7 0, #22d3ee 24%, #a5f3fc 30%, #ffffff 33%, #e2bc63 36%, #fde68a 55%, #fcd34d 100%);
+  text-shadow: 0 -1px 0 rgba(92, 45, 8, .5), 0 1px 0 rgba(255, 251, 235, .9);
+  --gs: 0 .3em 0 #b45309, 0 .5em 1em rgba(56, 189, 248, .3); --gs-h: 0 .34em 0 #b45309, 0 .7em 1.3em rgba(56, 189, 248, .45); --gs-a: 0 .06em 0 #b45309; }
+.btn-roll.gen-beach:hover { filter: brightness(1.06); }
+
+/* ==== Skins du 2026-10-28, lot D ==== boutons assortis */
+/* Arcade Fighter (idée de 17black, 2026-10-28) : l'écran de la borne, police pixel, une barre de vie jaune dessous. */
+.btn-roll.gen-fighter { border: 2px solid #0b0716; border-radius: .3rem; color: #fff3b0; font-family: 'Press Start 2P', var(--font-mono); font-weight: 400; letter-spacing: .04em;
+  background: linear-gradient(90deg, #facc15 0 62%, #ef4444 62% 74%, #4c1d24 74%) .6em calc(100% - .35em) / calc(100% - 1.2em) 4px no-repeat, repeating-linear-gradient(180deg, rgba(0, 0, 0, .25) 0 1px, transparent 1px 3px), linear-gradient(180deg, #24104d, #5b1d6b 70%, #9c3a5a);
+  text-shadow: 2px 2px 0 #f97316, 4px 4px 0 #6b1238;
+  --gs: 0 .3em 0 #3b3550, 0 .5em 1em rgba(236, 72, 153, .3); --gs-h: 0 .34em 0 #3b3550, 0 .7em 1.3em rgba(236, 72, 153, .5); --gs-a: 0 .06em 0 #3b3550; }
+.btn-roll.gen-fighter:hover { filter: brightness(1.15); }
+/* Battleship (idée de 17black, 2026-10-28) : le couchant en haut, la mer sombre en bas, un soleil sur l'horizon. */
+.btn-roll.gen-battleship { border: 2px solid #0e1a34; border-radius: .5rem; color: #f1f5f9; font-weight: 900;
+  background: radial-gradient(circle at 50% 52%, #ffe1a1 0 .35em, rgba(255, 140, 90, .45) .6em, transparent 1.2em), linear-gradient(180deg, transparent 52%, #1c2b4f 52%, #0e1a34), linear-gradient(180deg, #5c3166, #c4615e 80%, #f39a5b);
+  text-shadow: .06em .06em 0 #0b1226;
+  --gs: 0 .3em 0 #0e1a34, 0 .5em 1em rgba(251, 146, 60, .3); --gs-h: 0 .34em 0 #0e1a34, 0 .7em 1.3em rgba(251, 146, 60, .5); --gs-a: 0 .06em 0 #0e1a34; }
+.btn-roll.gen-battleship:hover { filter: brightness(1.12); }
+/* Cone of Destiny (idée de Gray alt, 2026-10-28) : le plastique orange d'un cône et ses deux bandes blanches. */
+.btn-roll.gen-cone { border: 2px solid #9a3412; border-radius: .55rem; color: #1c1917; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif; letter-spacing: .04em;
+  background: linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, .3) 36%, transparent 44%), linear-gradient(#f8fafc, #e2e8f0) 0 12% / 100% 14% no-repeat, linear-gradient(#f8fafc, #e2e8f0) 0 88% / 100% 14% no-repeat, linear-gradient(180deg, #ff8f33, #f26a0f 55%, #d4530a);
+  text-shadow: 0 1px 0 rgba(255, 237, 213, .5);
+  --gs: 0 .3em 0 #9a3412, 0 .5em 1em rgba(249, 115, 22, .3); --gs-h: 0 .34em 0 #9a3412, 0 .7em 1.3em rgba(249, 115, 22, .5); --gs-a: 0 .06em 0 #9a3412; }
+.btn-roll.gen-cone:hover { filter: brightness(1.08); }
+/* The Observer (idée de Gray alt, 2026-10-28) : la nuit cosmique, un iris violet et turquoise au centre, un liseré doré. */
+.btn-roll.gen-observer { border: 2px solid #b8892b; border-radius: 999px; color: #f5f3ff;
+  background: radial-gradient(circle at 20% 35%, #fff 0 1px, transparent 1.5px) 0 0 / 22px 16px, radial-gradient(ellipse 22% 70% at 50% 50%, rgba(5, 3, 15, .9) 0 30%, rgba(124, 58, 237, .55) 55%, rgba(14, 165, 183, .3) 80%, transparent 100%), radial-gradient(ellipse 80% 120% at 50% 50%, #1a0f3d, #05030f);
+  text-shadow: 0 0 .3em #c084fc, 0 0 .6em rgba(34, 211, 238, .5);
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(167, 139, 250, .55); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-observer:hover { filter: brightness(1.15); }
+
+/* Power Core (idée de Sean, 2026-10-28) : un lourd anneau de métal gris foncé autour d'une lentille de verre qui luit
+   rose vif ; au survol, de petits éclairs bleus crépitent autour du cadre ; au clic, la lentille s'enfonce dans le cadre
+   dans un éclair de lumière blanche. Éclairs et éclair blanc sont deux calques dont seuls l'opacité et le transform
+   changent : rien n'est repeint à chaque image (voir le bouton Infinity, signalé lent par MAYO le même jour). */
+.btn-roll.gen-powercore {
+  border: .3em solid transparent; border-radius: 999px; color: #fff; letter-spacing: .14em;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 22%, rgba(255, 255, 255, .42), transparent 70%) padding-box,
+    radial-gradient(ellipse 70% 120% at 50% 58%, #ff8ade 0%, #ec4899 32%, #9d174d 70%, #3b0a24 100%) padding-box,
+    radial-gradient(circle at 50% 0, rgba(255, 255, 255, .35), transparent 45%) border-box,
+    linear-gradient(180deg, #7a7a83 0%, #3f3f46 28%, #18181b 55%, #52525b 82%, #27272a 100%) border-box;
+  text-shadow: 0 0 .25em #fff, 0 0 .7em #ff4fd8, 0 1px 0 #500724;
+  --gs: inset 0 0 .7em rgba(59, 10, 36, .95), inset 0 .12em .2em rgba(255, 255, 255, .3), 0 0 0 1px #09090b, 0 .22em 0 #0c0c0f, 0 0 1em rgba(236, 72, 153, .45), 0 .5em 1em rgba(0, 0, 0, .5);
+  --gs-h: inset 0 0 .6em rgba(59, 10, 36, .9), inset 0 .12em .2em rgba(255, 255, 255, .35), 0 0 0 1px #09090b, 0 .26em 0 #0c0c0f, 0 0 1.5em rgba(236, 72, 153, .7), 0 0 .5em rgba(96, 165, 250, .35), 0 .6em 1.1em rgba(0, 0, 0, .55);
+  --gs-a: inset 0 0 1em rgba(59, 10, 36, .95), inset 0 .3em .45em rgba(0, 0, 0, .65), 0 0 0 1px #09090b, 0 .05em 0 #0c0c0f, 0 0 1.8em rgba(255, 255, 255, .6), 0 0 .9em rgba(236, 72, 153, .8);
+  --press: .17em; --edge: .26em;
+}
+/* L'éclair blanc du clic : il s'allume d'un coup quand on appuie et s'éteint en un quart de seconde. */
+.btn-roll.gen-powercore::before { inset: 0; border-radius: inherit; opacity: 0; transition: opacity .28s ease-out;
+  background: radial-gradient(ellipse 60% 90% at 50% 50%, #fff 0%, rgba(255, 255, 255, .85) 30%, rgba(253, 224, 255, .35) 60%, transparent 85%); }
+.btn-roll.gen-powercore:active::before { opacity: .92; transition-duration: .02s; }
+/* Les étincelles : six petits éclairs bleus posés sur le cadre (dessus, dessous, côtés), qui crépitent au survol. */
+.btn-roll.gen-powercore::after { inset: -.55em -.4em; opacity: 0; will-change: opacity, transform;
+  --pc-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 12'%3E%3Cpath d='M1 7L9 4L12 8L19 2L22 7L31 4' fill='none' stroke='%233b82f6' stroke-width='3.4' stroke-opacity='.45'/%3E%3Cpath d='M1 7L9 4L12 8L19 2L22 7L31 4' fill='none' stroke='%23dbeafe' stroke-width='1.5' stroke-linejoin='bevel'/%3E%3C/svg%3E");
+  --pc-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 28'%3E%3Cpath d='M6 1L3 9L8 12L2 19L7 21L4 27' fill='none' stroke='%233b82f6' stroke-width='3.4' stroke-opacity='.45'/%3E%3Cpath d='M6 1L3 9L8 12L2 19L7 21L4 27' fill='none' stroke='%23dbeafe' stroke-width='1.5' stroke-linejoin='bevel'/%3E%3C/svg%3E");
+  background: var(--pc-h) 20% 0 / 1.5em .56em no-repeat, var(--pc-h) 68% 0 / 1.2em .45em no-repeat, var(--pc-h) 38% 100% / 1.3em .5em no-repeat,
+    var(--pc-h) 86% 100% / 1.5em .56em no-repeat, var(--pc-v) 0 45% / .5em 1.15em no-repeat, var(--pc-v) 100% 60% / .5em 1.15em no-repeat; }
+.btn-roll.gen-powercore:hover::after { animation: gen-pc-crackle .42s steps(1) infinite; }
+.btn-roll.gen-powercore:disabled::after { animation: none; opacity: 0; }
+@keyframes gen-pc-crackle {
+  0% { opacity: 1; transform: none; } 18% { opacity: 0; } 30% { opacity: .85; transform: scaleX(-1); } 46% { opacity: .2; transform: scaleX(-1); }
+  58% { opacity: 1; transform: scale(-1, -1); } 74% { opacity: 0; } 86% { opacity: .7; transform: scaleY(-1); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-powercore:hover::after { animation: none; opacity: .75; } }
+
+/* Black Hole (idée de MattyFaux-Lucky, 2026-10-28), assorti au fond Black Hole et au skin Singularity : la lumière
+   s'enroule dans un disque d'accrétion vu de biais autour d'un cœur noir, et un arc de lumière déviée passe au-dessus
+   (la lentille gravitationnelle) ; enfoncé, le disque tourne bien plus vite et le bouton est aspiré vers son centre.
+   Les deux disques ne font que tourner (transform) ; le rapide ne fait qu'apparaître (opacité) : aucun saut de vitesse
+   et rien à repeindre à chaque image. Identifiant « eventhorizon » : « blackhole » est le skin Singularity. */
+.btn-roll.gen-eventhorizon {
+  overflow: hidden; border-radius: 999px; border: 1px solid rgba(253, 186, 116, .6); color: #fff7ed;
+  background:
+    radial-gradient(2em .78em at 50% 50%, #000 0 72%, transparent 100%),
+    radial-gradient(2.5em 1.05em at 50% 50%, transparent 78%, rgba(255, 237, 213, .85) 86%, transparent 95%),
+    radial-gradient(2.9em 1.65em at 50% 58%, transparent 80%, rgba(253, 186, 116, .5) 87%, transparent 96%),
+    radial-gradient(1px 1px at 9% 30%, #fff, transparent), radial-gradient(1px 1px at 91% 66%, #e0e7ff, transparent), radial-gradient(1px 1px at 22% 78%, #fde68a, transparent), radial-gradient(1px 1px at 80% 22%, #fff, transparent),
+    radial-gradient(ellipse 80% 140% at 50% 50%, #1e1b4b 0%, #0b0820 55%, #020108 100%);
+  text-shadow: 0 0 .2em #000, 0 0 .5em rgba(0, 0, 0, .9), 0 0 .8em rgba(251, 146, 60, .55);
+  --gs: 0 0 0 2px rgba(124, 58, 237, .25), 0 0 1.1em rgba(251, 146, 60, .4), 0 0 2.4em rgba(124, 58, 237, .25), 0 .45em 1em rgba(0, 0, 0, .6);
+  --gs-h: 0 0 0 2px rgba(124, 58, 237, .4), 0 0 1.6em rgba(251, 146, 60, .65), 0 0 3em rgba(124, 58, 237, .4), 0 .45em 1.1em rgba(0, 0, 0, .65);
+  --gs-a: 0 0 0 2px rgba(124, 58, 237, .3), 0 0 .6em rgba(251, 146, 60, .5), inset 0 0 1.4em #000;
+  transition: transform .22s var(--ease-snap), box-shadow .16s ease, letter-spacing .22s var(--ease-out), filter .16s ease;
+}
+.btn-roll.gen-eventhorizon::before, .btn-roll.gen-eventhorizon::after { left: 50%; top: 50%; width: 11em; height: 11em; margin: -5.5em 0 0 -5.5em; will-change: transform;
+  -webkit-mask: radial-gradient(circle, transparent 0 17%, #000 22% 38%, transparent 66%); mask: radial-gradient(circle, transparent 0 17%, #000 22% 38%, transparent 66%);
+  transform: scaleY(.3) rotate(0deg); }
+.btn-roll.gen-eventhorizon::before { animation: gen-eh-spin 7s linear infinite;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(253, 186, 116, .85) 8%, rgba(255, 247, 237, .95) 10%, rgba(251, 146, 60, .55) 17%, transparent 30%, rgba(167, 139, 250, .45) 42%, transparent 54%,
+    rgba(253, 186, 116, .8) 61%, rgba(255, 247, 237, .9) 63%, rgba(234, 88, 12, .45) 70%, transparent 80%, rgba(96, 165, 250, .4) 90%, transparent 100%); }
+.btn-roll.gen-eventhorizon::after { opacity: 0; transition: opacity .25s ease-out; animation: gen-eh-spin .55s linear infinite;
+  background: conic-gradient(from 90deg, transparent 0%, rgba(255, 255, 255, .95) 6%, rgba(253, 186, 116, .7) 14%, transparent 26%, rgba(255, 247, 237, .9) 52%, rgba(251, 146, 60, .6) 60%, transparent 74%, rgba(196, 181, 253, .6) 88%, transparent 100%); }
+.btn-roll.gen-eventhorizon:hover { letter-spacing: .13em; }
+.btn-roll.gen-eventhorizon:active { transform: scale(.94, .9); letter-spacing: .03em; }
+.btn-roll.gen-eventhorizon:active::after { opacity: 1; transition-duration: .06s; }
+@keyframes gen-eh-spin { from { transform: scaleY(.3) rotate(0deg); } to { transform: scaleY(.3) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-eventhorizon::before, .btn-roll.gen-eventhorizon::after { animation: none; } }

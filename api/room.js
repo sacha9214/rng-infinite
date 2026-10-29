@@ -40,6 +40,11 @@ const LEAD_MS = 2500; // délai avant la révélation commune : tout le monde a 
 const REVEAL_MS = 9700;
 const SEEN_EVERY_MS = 10000;
 const GAP_MS = 8000; // écart minimal entre deux manches, comme le délai entre deux tirages
+// Partie contre des bots avec un seul humain (idée de Lewis6767, 2026-10-28) : la manche suit sa vitesse de tirage
+// achetée (Shop.speedFactor, comme son délai entre deux tirages en solo) : révélation, écart entre manches et délai
+// raccourcis du même facteur, gardé dans la manche (round.pace) pour que l'écran suive. Les nombres, le gagnant et les
+// gains ne changent pas. À plusieurs humains, le rythme commun reste (pace absent = 1).
+const paceOf = r => Number(r && r.pace) || 1;
 const AUTO_MS = 15000; // la manche part toute seule 15 s après le premier joueur prêt
 const ABANDON_MS = 30000; // plus aucun joueur sur la page depuis 30 s : la partie s'arrête (sans gagnant ni stats)
 const TTL = 86400; // une salle est gardée un jour après sa dernière action
@@ -141,7 +146,7 @@ function score(room) {
     s.forEach((v, i) => { if (v > 0) totals[i] += v; });
     const winner = argmax(s);
     if (winner !== null) wins[winner]++;
-    return { t: r.t, revealAt: r.revealAt, n: r.n, s, winner };
+    return { t: r.t, revealAt: r.revealAt, n: r.n, s, winner, ...(r.pace ? { pace: r.pace } : {}) };
   });
   let done = false, winner = null;
   // Tous les autres sont sortis (partis ou exclus par l'hôte) : le dernier joueur encore là gagne par forfait.
@@ -206,15 +211,18 @@ async function advance(room, now = Date.now()) {
   const first = Number(room.h[`first:${k}`] || now);
   if (ready < humans(room).length && now < first + AUTO_MS) return room;
   const last = room.rounds[k - 1];
-  if (last && now < last.revealAt + GAP_MS) return room;
+  if (last && now < last.revealAt + GAP_MS * paceOf(last)) return room;
   // Un joueur prêt qui a tiré ailleurs il y a moins de 8 s (autre partie, tirage normal) : on attend son délai.
   // Sinon plusieurs parties en parallèle (contre des bots par exemple) multiplieraient ses tirages.
   const readyHumans = humans(room).filter(p => readyFor(room, p) === k);
-  const ttls = await redis(readyHumans.map(p => ['PTTL', `cooldown:${p.id}`]));
+  const solo = hasBots(room) && humans(room).length === 1 ? humans(room)[0] : null;
+  const ttls = await redis([...readyHumans.map(p => ['PTTL', `cooldown:${p.id}`]), ...(solo ? [['HGET', statsKey(solo.id), 'speedLv']] : [])]);
+  const pace = solo ? Shop.speedFactor(ttls.pop()) : 1;
   if (ttls.some(ms => Number(ms) > 0)) return room;
   const [lock] = await redis([['SET', `${roomKey(room.code)}:draw:${k}`, '1', 'NX', 'EX', TTL]]);
   if (lock !== 'OK') return (await load(room.code)) || room;
-  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, 1000001))) };
+  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, 1000001))), ...(pace < 1 ? { pace } : {}) };
+  const due = round.revealAt + Math.round(REVEAL_MS * pace);
   room.rounds.push(round);
   const outcome = await duelOutcome(room, now);
   // Tirages (et bilan du duel s'il se termine) appliqués seulement une fois la manche révélée : voir queueReveal.
@@ -223,17 +231,17 @@ async function advance(room, now = Date.now()) {
     ['RPUSH', roundsKey(room.code), JSON.stringify(round)],
     ...[roomKey(room.code), playersKey(room.code), roundsKey(room.code)].map(key => ['EXPIRE', key, TTL]),
     // Pas de tirage normal en parallèle pendant la manche.
-    ...humans(room).map(p => ['SET', `cooldown:${p.id}`, '1', 'PX', GAP_MS]),
+    ...humans(room).map(p => ['SET', `cooldown:${p.id}`, '1', 'PX', Math.round(GAP_MS * pace)]),
     ...touchLive(room, now),
     ...botReactions(room, round),
     ...(score(room).done ? [['ZREM', LIVE_KEY, room.code]] : []), // partie finie : sort de Live now tout de suite
-    queueReveal(round.revealAt + REVEAL_MS, { room: room.code, k, rolls, w: [...outcome.writes, ...questWrites(room, now, outcome.rewarded)],
+    queueReveal(due, { room: room.code, k, rolls, w: [...outcome.writes, ...questWrites(room, now, outcome.rewarded)],
       ...(score(room).done && stakeOf(room) ? { wager: { code: room.code, winner: score(room).winner === null ? null : room.players[score(room).winner].id } } : {}) }),
-    ['HSET', roomKey(room.code), 'due', round.revealAt + REVEAL_MS], // le sondage de la salle saura quand appliquer
+    ['HSET', roomKey(room.code), 'due', due], // le sondage de la salle saura quand appliquer
     ...(outcome.reward ? [['HSET', roomKey(room.code), 'reward', outcome.reward]] : []),
   ]);
   if (outcome.reward) room.h.reward = outcome.reward;
-  room.h.due = String(round.revealAt + REVEAL_MS);
+  room.h.due = String(due);
   return room;
 }
 
@@ -246,7 +254,7 @@ function botReactions(room, round) {
   room.players.forEach((p, i) => {
     if (!p.bot || crypto.randomInt(0, 100) >= 55) return;
     const e = s[i] === best ? pick(['laugh', 'cool', 'king']) : pick(['cry', 'angry', 'shock']);
-    out.push(['RPUSH', reactsKey(room.code), JSON.stringify({ t: round.revealAt + 10500 + crypto.randomInt(0, 1500), i, e })]);
+    out.push(['RPUSH', reactsKey(room.code), JSON.stringify({ t: round.revealAt + Math.round(10500 * paceOf(round)) + crypto.randomInt(0, 1500), i, e })]);
   });
   if (out.length) out.push(['LTRIM', reactsKey(room.code), -30, -1], ['EXPIRE', reactsKey(room.code), TTL]);
   return out;
@@ -347,7 +355,7 @@ async function view(room, me) {
     winner: sc.winner,
     // La manche part d'elle-même à autoAt (si quelqu'un est prêt), jamais avant nextAt (8 s après la précédente).
     autoAt: status === 'playing' && readyCount && readyCount < humans(room).length && first ? Number(first) + AUTO_MS : null,
-    nextAt: last ? last.revealAt + GAP_MS : 0,
+    nextAt: last ? last.revealAt + Math.round(GAP_MS * paceOf(last)) : 0,
     // Demandes d'entrée en cours de partie : l'hôte voit les noms, celui qui a demandé sait que c'est en attente.
     asks: me && me === room.host ? asksOf(room).map(a => a.name) : undefined,
     asked: me ? asksOf(room).some(a => a.id === me) : false,

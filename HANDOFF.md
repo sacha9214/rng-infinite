@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-27 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-10-29 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -8,6 +8,35 @@ The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Nod
 domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU overuse, which is why everything moved
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
+
+## Player ideas batch (2026-10-28, branch `claude/ideas-2026-10-28`)
+
+Sacha: "refuse all the no's with a friendly reply, then start the to-do list". 83 ideas were declined in the inbox
+(18 from 2026-10-28 and 65 from the 2026-10-27 triage); mixed ideas, "your call" ideas, Phong254's casino music,
+single-player poker and Gray alt's friend-coins exception stay open. Drastix235 got a one-off 300,000-coin creator
+gift (`stats.ownerGift`), asked by Sacha as an exception to the coin rule. Built by 8 parallel agents, merged here.
+
+- Badges: Pythagorean (100 numbers), Prime Digits, So Close (exact 97); `Engine.prevTier()`. **10,343 numbers change
+  tier** (97 → Godlike, 24 Infinite → Godlike, 224224 and 911911 Godlike → Divine): run `tools/rescore-worst.js --apply`
+  on the server after deploy. Unique-number titles (100 → 100k, from `nums:<id>`). Auto-roll can stop on up to 5 badges
+  (`Store.settings.autoBadges`). "XP short of" also in history and other players' roll detail; Common and worse show the
+  margin above the tier below. Bot duels follow the player's speed (`pace` from `speedLv`, api/room.js).
+- Leaderboards: XP per day / week / month (`lbx:*` zsets written in `recordRoll`, TTL set on the day's first roll) and
+  all time; Median roll (`med:<id>` histogram, `lb:med`, 200+ rolls). `MIGRATION` bumped to 7 in api/leaderboard.js:
+  the background `migrateXp` re-reads every history once after deploy to build the median histograms (watch the load).
+- 16 skins (lots A–D in js/skinfx.js, 109 skins in total) with buttons and duel frames; optional `scene.miss(tier)`
+  hook in `mount()`. 5 wallpapers in the new `js/wallfx.js` (canvas): The Fisher, Condensation, Your Last Rolls,
+  Spinning Bread (in the case, reacts to rolls), Zombie Moon (limited until 2026-11-03 00:00 UTC). `RNGWallFX._debug`
+  is still exported.
+- Shop: Clicky sound pack, Sound Case (`snd: true`, opened by a Premium key too), Power Core and Black Hole buttons
+  (`eventhorizon`, because `blackhole` is the Singularity skin); Button Case 320 → 350 (Sacha) to keep a 0.75
+  value ratio. Owned / not owned filter. Owner counts in the `owners` hash (`GET /api/shop?owners=1`, counts only):
+  run `node tools/backfill-owners.js --apply` on the server right after deploy. "Your creations" panel for idea authors.
+  **Behaviour change:** the first drop of an idea skin from a paid case now pays its author 5% of the case price
+  (reported by finnnnn: case drops paid nothing before). ASMR crunch, smoother Infinity border (Safari keeps the old
+  animation, untested), brighter Open Ocean.
+- Tests: the 2026-10-28 blocks use player ids `28ed…` (badges), `28ee…` (leaderboards) and `28ef…` (fillers).
+- Not checked by hand: the new sounds (recordings were made, nobody listened), Safari.
 
 ## Player ideas batch (2026-10-27, branch `claude/ideas-2026-10-27`)
 
