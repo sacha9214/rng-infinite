@@ -1957,6 +1957,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-29-menu', date: 'Oct 29, 2026', en: ['🧭 A clearer menu, with names on every screen: Roll, Shop, Battle (duels and tournaments), Leaderboard, Casino, Social (friends, clan and the global chat) and Me (your profile, badges, stats and history). Every page is still there, only easier to find', '👤 Your name at the top right now opens your profile; ⚙️ opens the settings', '🗺️ The roadmap is now also in What\'s new'], fr: ['🧭 Un menu plus clair, avec les noms sur tous les écrans : Jouer, Boutique, Combat (duels et tournois), Classement, Casino, Social (amis, clan et chat global) et Moi (ton profil, tes badges, tes stats et ton historique). Toutes les pages sont toujours là, juste plus faciles à trouver', '👤 Ton nom en haut à droite ouvre maintenant ton profil ; ⚙️ ouvre les réglages', '🗺️ La feuille de route est aussi dans les Nouveautés'] },
     { id: '2026-10-28-ideas', date: 'Oct 28, 2026', en: ['🎨 16 new skins from your ideas: Lightbulb (idea by costoroll), Stonks, Chess and Weather (casmicgraything), Ninja (casmictechthing), Scroll of Alchemy (R77), Window Cleaner (Deadshot), Firework (HSI), Graffiti and Origami (JBearr12), Taco (sennybex1), Beach (furcoat0), Arcade Fighter and Battleship (17black), Cone of Destiny and The Observer (Gray alt)', '🖼️ 5 new wallpapers: The Fisher (idea by kingston), Condensation (ann joe), Your Last Rolls (G8_floppa), Spinning Bread (Cincent) and the limited Zombie Moon, until November 2 (17black)', '📐 New badges: Pythagorean (idea by Phong254), Prime Digits (idea by Kag) and So Close, exactly 97 (idea by MAYO). Some numbers changed rarity with them; the rolls you already made keep their value', '🔢 New titles for the number of different numbers you rolled, from 100 to 100,000 (idea by jsand)', '🤖 Auto-roll can now also stop on up to 5 badges you pick (idea by CococoC)', '📊 XP leaderboards for today, this week, this month and all time (ideas by qwertyuiop and spookiedookie), and a Median roll leaderboard for players with 200+ rolls (idea by Kag)', '🔎 The XP you were short of now also shows when you open an old roll (idea by Kag), and Common rolls or worse also show how far they were above the rarity below (idea by Starharvest)', '🤖 Bot duels now follow your roll speed (idea by Lewis6767)', '🍞 Bread emojis first in the chat emoji picker (ideas by Deadshot and G8_floppa)', '🖱️ New sound pack: Clicky (550 coins): mechanical key clacks, mouse clicks and soft pops (ideas by Niall and sennybex1)', '🔊 New Sound Case (365 coins): a random roll sound pack, with a refund for one you already own (idea by shadow2 Jr)', '🔮 New buttons: Power Core (idea by Sean) and Black Hole (idea by MattyFaux-Lucky). The Button Case now costs 350 coins', '🗂️ Shop filter: show All, Owned only or Not owned yet (idea by Applepi)', '👥 The shop now shows how many players own each item, and creators see their items and their 5% share (ideas by ann joe and YU CHUAN 23)', '💡 Creators now also get their 5% share when one of their skins comes out of a paid case (reported by finnnnn)', '🧈 Crunchier ASMR crunch (idea by cat)', '♾️ Smoother Infinity skin and button (reported by MAYO)', '🐋 Brighter water and sea animals on Open Ocean (idea by ann joe)'], fr: ['🎨 16 nouveaux skins tirés de vos idées : Lightbulb (idée de costoroll), Stonks, Chess et Weather (casmicgraything), Ninja (casmictechthing), Scroll of Alchemy (R77), Window Cleaner (Deadshot), Firework (HSI), Graffiti et Origami (JBearr12), Taco (sennybex1), Beach (furcoat0), Arcade Fighter et Battleship (17black), Cone of Destiny et The Observer (Gray alt)', '🖼️ 5 nouveaux fonds d\'écran : Le Pêcheur (idée de kingston), Buée (ann joe), Tes derniers tirages (G8_floppa), Pain qui tourne (Cincent) et Lune des zombies, en édition limitée jusqu\'au 2 novembre (17black)', '📐 Nouveaux badges : Pythagorean (idée de Phong254), Prime Digits (idée de Kag) et So Close, exactement 97 (idée de MAYO). Certains nombres changent de rareté avec eux ; tes anciens tirages gardent leur valeur', '🔢 Nouveaux titres pour le nombre de nombres différents que tu as tirés, de 100 à 100 000 (idée de jsand)', '🤖 Le tirage auto peut aussi s\'arrêter sur 5 badges au choix (idée de CococoC)', '📊 Classements d\'XP du jour, de la semaine, du mois et de tous les temps (idées de qwertyuiop et spookiedookie), et un classement du tirage médian pour les joueurs à 200 tirages ou plus (idée de Kag)', '🔎 L\'XP qui te manquait s\'affiche aussi quand tu ouvres un ancien tirage (idée de Kag), et les tirages Common ou moins montrent aussi leur marge au-dessus de la rareté du dessous (idée de Starharvest)', '🤖 Les duels contre les bots suivent ta vitesse de tirage (idée de Lewis6767)', '🍞 Les emojis pain en premier dans le chat (idées de Deadshot et G8_floppa)', '🖱️ Nouveau pack de sons : Clicky (550 pièces) : touches de clavier mécanique, clics de souris et petits pops (idées de Niall et sennybex1)', '🔊 Nouvelle caisse de sons (365 pièces) : un pack de sons au hasard, remboursé en partie si tu l\'as déjà (idée de shadow2 Jr)', '🔮 Nouveaux boutons : Power Core (idée de Sean) et Black Hole (idée de MattyFaux-Lucky). La caisse de boutons passe à 350 pièces', '🗂️ Filtre dans la boutique : tout, possédés ou pas encore possédés (idée d\'Applepi)', '👥 La boutique montre combien de joueurs possèdent chaque objet, et les créateurs voient leurs objets et leur part de 5 % (idées d\'ann joe et de YU CHUAN 23)', '💡 Les créateurs touchent aussi leur part de 5 % quand un de leurs skins sort d\'une caisse payée (signalé par finnnnn)', '🧈 Le craquement du skin ASMR est plus croquant (idée de cat)', '♾️ Le skin et le bouton Infinity sont plus fluides (signalé par MAYO)', '🐋 Eau et animaux plus lumineux sur Open Ocean (idée d\'ann joe)'] },
     { id: '2026-10-27-ideas', date: 'Oct 27, 2026', en: ['🎨 14 new skins from your ideas: Fairy Lights, Ship Wake and Torn Paper (ideas by 17black), Elves\' Workshop (costoroll), Snow Reveal (G8_floppa), Graveyard (IXOLAF2), Stickman (Jguz01), Baseball (Kj13), Race Car (whywhywaylon, drift by logannn), Domino (kaz), Lily Pads and Ripple (casmicgraything), Bullet Train (yukitsunodaiscool) and the Legendary Orbital Cannon (LEVIATHAN).', '🖼️ 7 new wallpapers: Comic Book (idea by JBearr12), Black Hole (Big Sexy and jjcoolcid1) and Rain to Rainbow (sennybex1 and IXOLAF2) react to your rolls; plus City Heights (ichi and JBearr12), Crystal Cave (finnnnn), Jungle (ichi) and Lake (randomguy).', '🏅 New badges: Forever (224, 224224), 1987, 505, Beverly Hills (90210), 1738, Around the Clock (24), Jumbo Jet Set (747747), Summer Break (104), Narcissistic numbers, Silver Ratio (2414) and Quantum Chaos; Leap Day now also reads 2902YY and YY0229 (ideas by daddy finger, costoroll, Miguel1, hghgghgg, Jaboom, jaxoncool43, shadow2, pilot56, WpBejs, CococoC, Kag, Phong254 and qwertyuiop).', '↑ After a roll, see how much XP you were short of the next rarity (idea by daddy finger).', '🏆 New titles: Common Collector, Uncommon Admirer, Rare Enthusiast, Epic Obtainer and Anomaly Hunter (idea by kaz), Piggy Bank, Money Maker and Coin Machine (logannn), Sound Collector and Shopaholic (dailycb), Clan Benefactor and Clan Pillar (Yentizx), Decabillionaire for 10 billion XP (Big Sexy).', '💬 Global chat: reply to a message with ↩ (idea by Niall), an emoji button (Deadshot), Divine, Godlike and Infinite rolls announced in the chat (R77), and the creator can pin a message (Big Sexy).', '📝 About me: write a short line about yourself in ⚙️ settings; it shows on your profile (idea by Niall).', '🎲 New leaderboard: Most rolls (idea by CrazyMiner22 and WpBejs). Your Stats page and profile also show how many different numbers you\'ve rolled (jsand).', '🗓️ Weekly quests: 3 bigger quests every week, new on Monday (idea by Tumored). 🎁 Quest chest: finish all your daily quests on 4, 10, 25, 50… days to open chests of coins (Sean).', '🌟 Clans get a Co-leader rank between the leader and the officers (idea by Yentizx and JAKECisthebest), and a 🎖️ Clan MVP title for the top XP earner of the #1 clan each week (PRISMA123).', '🦆 New casino game: Duck Race (idea by Deadshot). Pick one of 6 rubber ducks: the favourite wins often, the long shot pays up to 19.40×. Every casino game now has a ? button with simple rules (Ann joe).', '🔘 Button Case (idea by shadow2), a 🥒 Pickle button that squishes (Edward and Dylanrulez123), and two new sound packs, Meme and Soft Taps (17black).'], fr: ['🎨 14 nouveaux skins tirés de vos idées : Fairy Lights, Ship Wake et Torn Paper (idées de 17black), Elves\' Workshop (costoroll), Snow Reveal (G8_floppa), Graveyard (IXOLAF2), Stickman (Jguz01), Baseball (Kj13), Race Car (whywhywaylon, dérapage de logannn), Domino (kaz), Lily Pads et Ripple (casmicgraything), Bullet Train (yukitsunodaiscool) et le Legendary Orbital Cannon (LEVIATHAN).', '🖼️ 7 nouveaux fonds d\'écran : Comic Book (idée de JBearr12), Trou noir (Big Sexy et jjcoolcid1) et De la pluie à l\'arc-en-ciel (sennybex1 et IXOLAF2) réagissent à tes tirages ; et aussi Sur les toits (ichi et JBearr12), Grotte de cristal (finnnnn), Jungle (ichi) et Lac (randomguy).', '🏅 Nouveaux badges : Forever (224, 224224), 1987, 505, Beverly Hills (90210), 1738, Around the Clock (24), Jumbo Jet Set (747747), Summer Break (104), nombres narcissiques, nombre d\'argent (2414) et Quantum Chaos ; Leap Day lit aussi 2902AA et AA0229 (idées de daddy finger, costoroll, Miguel1, hghgghgg, Jaboom, jaxoncool43, shadow2, pilot56, WpBejs, CococoC, Kag, Phong254 et qwertyuiop).', '↑ Après un tirage, tu vois combien d\'XP il manquait pour la rareté suivante (idée de daddy finger).', '🏆 Nouveaux titres : Collectionneur Common, Admirateur Uncommon, Passionné de Rare, Conquérant Epic et Chasseur d\'Anomaly (idée de kaz), Tirelire, Faiseur de pièces et Machine à pièces (logannn), Collectionneur de sons et Accro du shopping (dailycb), Bienfaiteur et Pilier de clan (Yentizx), Décamilliardaire pour 10 milliards d\'XP (Big Sexy).', '💬 Chat global : réponds à un message avec ↩ (idée de Niall), un bouton emoji (Deadshot), les tirages Divine, Godlike et Infinite annoncés dans le chat (R77), et le créateur peut épingler un message (Big Sexy).', '📝 À propos de moi : écris une petite phrase sur toi dans ⚙️ réglages ; elle s\'affiche sur ton profil (idée de Niall).', '🎲 Nouveau classement : le plus de tirages (idée de CrazyMiner22 et WpBejs). Tes stats et ton profil montrent aussi combien de nombres différents tu as tirés (jsand).', '🗓️ Quêtes de la semaine : 3 grosses quêtes chaque semaine, renouvelées le lundi (idée de Tumored). 🎁 Coffre des quêtes : finis toutes tes quêtes du jour sur 4, 10, 25, 50… jours pour ouvrir des coffres de pièces (Sean).', '🌟 Les clans ont un rang de co-chef entre le chef et les officiers (idée de Yentizx et JAKECisthebest), et un titre 🎖️ MVP du clan pour celui qui rapporte le plus d\'XP au clan n°1 chaque semaine (PRISMA123).', '🦆 Nouveau jeu au casino : la Course de canards (idée de Deadshot). Choisis un des 6 canards en plastique : le favori gagne souvent, l\'outsider paie jusqu\'à 19,40×. Chaque jeu du casino a maintenant un bouton ? avec des règles simples (Ann joe).', '🔘 Caisse de boutons (idée de shadow2), un bouton 🥒 Cornichon qui s\'écrase (Edward et Dylanrulez123), et deux nouveaux packs de sons, Meme et Soft Taps (17black).'] },
     { id: '2026-10-26-trailer-v2', date: 'Oct 26, 2026', en: ['🎬 New trailer (▶ Watch the trailer on the home page): the legendary skins, living wallpapers, clans and 5v5 wars, the global chat, the three daily tournaments, the casino, Prestige titles and the roadmap of player ideas, and it ends on an Infinite roll.'], fr: ['🎬 Nouvelle bande-annonce (▶ Voir la bande-annonce sur l\'accueil) : les skins légendaires, les fonds animés, les clans et les guerres à 5 contre 5, le chat global, les trois tournois du jour, le casino, les titres Prestige et la feuille de route des idées de joueurs, et elle finit sur un tirage Infinite.'] },
@@ -2285,7 +2286,7 @@
     const seenAnn = Store.settings.annSeen, seenAt = announcements.findIndex(a => a.id === seenAnn);
     // NEW sur les annonces arrivées depuis la dernière ouverture (toutes si aucune n'a encore été vue).
     const anns = announcements.slice(0, 5).map((a, i) => annHTML(a, seenAt === -1 ? true : i < seenAt)).join('');
-    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2>${anns ? `<div class="news-list ann-list">${anns}</div>` : ''}<div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
+    openModal(`<h2>${fr ? 'Nouveautés' : 'What\'s new'}</h2><p class="idea-roadmap"><a href="#/roadmap">🗺️ See the roadmap: planned and recently added ideas</a></p>${anns ? `<div class="news-list ann-list">${anns}</div>` : ''}<div class="news-list" data-no-i18n>${UPDATES.map((u, i) => `
       <div class="news-item"><div class="eyebrow">${u.date}${i === 0 && Store.settings.newsSeen !== UPDATES[0].id ? ' <span class="new-tag">NEW</span>' : ''}</div><ul>${(fr ? u.fr : u.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
     Store.setSetting('newsSeen', UPDATES[0].id);
     if (announcements.length) Store.setSetting('annSeen', announcements[0].id);
@@ -3342,7 +3343,7 @@
     const token = ++profileToken;
     app.innerHTML = `
       <div class="page page-wide">
-        <a class="back-link" href="#/leaderboard">← Leaderboard</a>
+        ${isMine(name) ? '' : '<a class="back-link" href="#/leaderboard">← Leaderboard</a>'}
         <h1 class="page-title" id="p-title">${esc(name)}</h1>
         <div id="p-body"><div class="empty">Loading…</div></div>
       </div>`;
@@ -3408,7 +3409,7 @@
           <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
           ${p.bio || me ? `<p class="pf-bio">${p.bio ? `<span data-no-i18n>${esc(p.bio)}</span>` : '<span class="muted">No "About me" yet.</span>'}${me ? ' <button type="button" class="pf-bio-edit" id="p-bio-edit">✏️ Edit</button>' : ''}</p>` : ''}
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
-          <div class="pf-actions">${me ? '<a class="btn" href="#/friends">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}${Store.player.name && p.bio ? '<button class="btn ghost small" id="p-bio-report" title="Report this About me">🚩 Report About me</button>' : ''}`}</div>
+          <div class="pf-actions">${me ? '<a class="btn" href="#/me">⚙️ Edit my profile</a>' : `<button class="btn add-friend" id="p-friend">👥 Add friend</button>${Store.player.name && Avatars.tok(p.name) ? '<button class="btn ghost small" id="p-av-report" title="Report this profile picture">🚩 Report picture</button>' : ''}${Store.player.name && p.bio ? '<button class="btn ghost small" id="p-bio-report" title="Report this About me">🚩 Report About me</button>' : ''}`}</div>
         </div>
         <div class="pf-best">
           ${topRoll ? `<div class="pf-best-label">Best roll ever</div>
@@ -4304,7 +4305,7 @@
     app.innerHTML = `
       <div class="page page-wide">
         <div id="tn-banner-slot"></div>
-        <div class="g-head"><h1 class="page-title">Gamble</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
+        <div class="g-head"><h1 class="page-title">Casino</h1><span class="g-wallet"><span class="eyebrow">Your coins</span><b class="mono" id="g-coins">${Store.settings.coins != null ? `🪙 ${fmt(Store.settings.coins)}` : '🪙 …'}</b></span></div>
         <p class="panel-note profile-sub">Play with the coins you earn in the game. No real money: coins cannot be bought or cashed out. Bets from ${fmt(10)} to ${fmt(1000)} coins, unlocked after 30 rolls.</p>
         <div class="g-live" id="g-live" hidden></div>
         <div class="g-tabs" id="g-tabs">${gTabsHTML(false)}</div>
@@ -6950,29 +6951,20 @@
 
   // ---------------------------------------------------------------- amis
   let friendsTimer = 0;
-  function renderFriends() {
-    currentView = 'friends';
+  // Page Me (menu regroupé, demandé par Sacha, 2026-10-29) : le résumé « My profile » qui était en haut de Profile &
+  // Friends (niveau et récompenses, XP, meilleur tirage, rang, lien Discord, réglages), à côté de Badges, Stats et History.
+  function renderMe() {
+    currentView = 'me';
     app.innerHTML = `
       <div class="page">
-        <h1 class="page-title">Profile &amp; Friends</h1>
+        <h1 class="page-title">My profile</h1>
         ${Store.player.name ? `<div class="panel me-panel" id="f-me">
-          <div class="panel-head"><h3 class="panel-title">My profile</h3><span class="panel-note" data-no-i18n>${esc(Store.player.name)}</span></div>
+          <div class="panel-head"><h3 class="panel-title">Summary</h3><span class="panel-note" data-no-i18n>${esc(Store.player.name)}</span></div>
           <div class="me-row" id="f-me-body"><div class="empty">Loading…</div></div>
           <div class="discord-link" id="f-discord"></div>
-          <div class="actions"><a class="btn-roll small" href="${profileHref(Store.player.name)}">Open my profile</a><button class="btn" id="f-settings">⚙️ Player &amp; settings</button></div>
-        </div>` : ''}
-        <a class="panel cl-entry" href="#/clan"><span class="cl-emoji" aria-hidden="true">🏯</span><span><b>Clans</b><small>Team up, share a vault, chat and fight clan wars</small></span><span aria-hidden="true">›</span></a>
-        <h2 class="panel-title" style="margin:1.4rem 0 .35rem">Friends</h2>
-        <p class="panel-note profile-sub">Add players by name to follow their progress and jump into their duels.</p>
-        <div class="panel">
-          <form class="duel-join" id="f-add">
-            <input class="input" id="f-name" maxlength="16" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name">
-            <button class="btn" type="submit">Add friend</button>
-          </form>
-        </div>
-        <div id="f-body"><div class="empty">Loading…</div></div>
+          <div class="actions"><a class="btn-roll small" href="${profileHref(Store.player.name)}">Open my public profile</a><button class="btn" id="f-settings">⚙️ Edit profile &amp; settings</button></div>
+        </div>` : `<div class="panel"><div class="empty">Roll once and pick a player name to start your profile.</div><div class="actions" style="display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap"><a class="btn-roll small" href="#/">Go roll</a><button class="btn" id="f-settings">⚙️ Settings</button></div></div>`}
       </div>`;
-    $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
     // Mon profil, en résumé (fusion des onglets Profil et Amis, 2026-10-16).
     if ($('#f-settings')) $('#f-settings').addEventListener('click', openSettings);
     if ($('#f-discord')) drawDiscordLink();
@@ -6995,6 +6987,23 @@
         document.addEventListener('rng:level', e => { if ($('#f-level')) { btn.classList.remove('ready'); $('#f-level-sub').textContent = '🛣️ See all rewards'; btn.onclick = () => openLevelRoad(e.detail.level); } }, { once: true });
       }).catch(() => {});
     }).catch(() => { const box = $('#f-me-body'); if (box) box.innerHTML = '<div class="empty">Roll once to start your profile.</div>'; });
+  }
+
+  function renderFriends() {
+    currentView = 'friends';
+    app.innerHTML = `
+      <div class="page">
+        <h1 class="page-title">Friends</h1>
+        <p class="panel-note profile-sub">Add players by name to follow their progress and jump into their duels.</p>
+        <div class="panel">
+          <form class="duel-join" id="f-add">
+            <input class="input" id="f-name" maxlength="16" placeholder="Player name" autocomplete="off" spellcheck="false" aria-label="Player name">
+            <button class="btn" type="submit">Add friend</button>
+          </form>
+        </div>
+        <div id="f-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
     $('#f-body').addEventListener('click', e => {
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
@@ -8285,7 +8294,6 @@
     tnState = null;
     app.innerHTML = `
       <div class="page page-wide tn-page">
-        <a class="back-link" href="#/duel">← Duel</a>
         <h1 class="page-title">🏆 Tournament</h1>
         <p class="panel-note profile-sub">Three tournaments every day (32 players each). Tournaments 1 and 2: sign up before 12:00 UTC (you can join one of them). Evening tournament: sign up from 12:00 to 18:00 UTC, matches until 06:00 UTC; you can join it too. No need to be online at the same time as your opponent: when one of you rolls, the server also rolls for the other, and anything left is rolled for both at the end of the round. The rules change every day (5 modes in turn). Tournament rolls don't count for XP, leaderboards, quests or coins.</p>
         <div id="tn-body"><div class="empty">Loading…</div></div>
@@ -8738,7 +8746,27 @@
     }
   }
 
-  const ROUTES = { clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
+  // ---------------------------------------------------------------- menu regroupé (demandé par Sacha, 2026-10-29)
+  // « now it's like hard to know where stuff are » : 7 entrées toujours écrites (Roll, Shop, Battle, Leaderboard, Casino,
+  // Social, Me) au lieu de 8 icônes muettes sous 1110 px. Les routes ne changent pas (#/shop, #/clan, #/player/Nom… marchent
+  // toujours) : chaque route appartient à une section, et les sections à plusieurs pages ont une rangée d'onglets (#subnav).
+  const SECTION_OF = { '': 'home', shop: 'shop', duel: 'battle', tournament: 'battle', room: 'battle', leaderboard: 'leaderboard', gamble: 'casino', friends: 'social', clan: 'social', me: 'me', badges: 'me', stats: 'me', history: 'me' };
+  const SUBNAV = {
+    battle: [['duel', '⚔️', 'Duels'], ['tournament', '🏆', 'Tournaments']],
+    social: [['friends', '👥', 'Friends'], ['clan', '🏯', 'Clan'], ['chat', '💬', 'Global chat']],
+    me: [['me', '👤', 'Profile'], ['badges', '🏅', 'Badges'], ['stats', '📊', 'Stats'], ['history', '🕘', 'History']],
+  };
+  const isMine = name => !!Store.player.name && String(name).toLowerCase() === Store.player.name.toLowerCase();
+  function drawSubnav(section, key) {
+    const el = $('#subnav');
+    const tabs = key !== 'room' && SUBNAV[section]; // une salle de duel est une partie en cours : pas d'onglets au-dessus
+    el.hidden = !tabs;
+    el.innerHTML = tabs ? tabs.map(([k, emoji, label]) => k === 'chat'
+      ? `<button type="button" class="subnav-tab" data-gchat aria-expanded="false"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`
+      : `<a class="subnav-tab${k === key ? ' active' : ''}" href="#/${k}"${k === key ? ' aria-current="page"' : ''}><i aria-hidden="true">${emoji}</i><span>${label}</span></a>`).join('') : '';
+  }
+
+  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
 
   function route() {
     Avatars.load();
@@ -8756,8 +8784,10 @@
     if (key === 'player' && rest.length) renderProfile(decodeURIComponent(rest.join('/')));
     else if (key === 'room' && rest.length) renderRoom(rest[0]);
     else (ROUTES[key] || renderHome)();
-    const navKey = key === 'player' ? 'leaderboard' : key === 'room' || key === 'tournament' ? 'duel' : key === 'clan' ? 'friends' : key;
-    document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navKey));
+    const mine = key === 'player' && isMine(decodeURIComponent(rest.join('/')));
+    const section = mine ? 'me' : SECTION_OF[key] || (key === 'player' ? 'leaderboard' : ROUTES[key] && key ? '' : 'home');
+    document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === section));
+    drawSubnav(section, mine ? 'me' : key);
     window.scrollTo(0, 0);
   }
 
@@ -8811,7 +8841,6 @@
 
   function syncPlayer() { $('#player-name').textContent = Store.player.name || 'Player'; syncHeaderAvatar(); }
   Store.onChange(syncPlayer);
-  $('#player-btn').addEventListener('click', openSettings);
   // ---------------------------------------------------------------- chat global (demandé par Sacha, 2026-10-25)
   // Un panneau ouvert par le bouton 💬 (coin en bas à droite ; en bas de page sur téléphone, comme les autres coins).
   // Tout le monde lit ; écrire demande Google + 100 tirages (vérifié par le serveur, api/_global.js, qui refuse aussi
@@ -9161,7 +9190,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
     const q = new URLSearchParams(location.hash.slice(1));
     let expected = null;
     try { expected = sessionStorage.getItem('rngDiscordState'); sessionStorage.removeItem('rngDiscordState'); } catch (e) { /* idem */ }
-    history.replaceState(null, '', location.pathname + location.search + '#/friends');
+    history.replaceState(null, '', location.pathname + location.search + '#/me');
     const token = q.get('access_token');
     if (token && expected && q.get('state') === expected && Store.player.id) {
       Online.discord('link', { accessToken: token })

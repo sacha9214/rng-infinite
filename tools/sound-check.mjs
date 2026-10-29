@@ -212,7 +212,7 @@ async function muting() {
   const on = await button(page);
   check(on.pressed === 'true' && on.setting === 'on' && m.peak > .02, 'remis en pleine révélation : le son revient', `crête ${db(m.peak)} dB`);
   await page.waitForFunction(() => !document.body.classList.contains('locked'), null, { timeout: 60000 });
-  await page.click('#player-btn');
+  await page.click('#gear-btn');
   const seg = await page.evaluate(() => [...document.querySelectorAll('[data-seg="sound"] button')].map(b => `${b.dataset.v}${b.classList.contains('on') ? '*' : ''}`).join(' '));
   await page.click('[data-seg="sound"] button[data-v="off"]');
   const after = await button(page);

@@ -9,6 +9,26 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Clearer menu (2026-10-29, branch `claude/clearer-layout`, not merged)
+
+Sacha: "now it's like hard to know where stuff are … do a version of the site that you think is easier to understand".
+He approved the plan (and "Gamble → Casino") before it was built. Nothing in the pages themselves changed: only how you
+reach them.
+
+- Top menu: 7 entries with their names on every screen (before: 8 icons with no name under 1110 px): Roll, Shop,
+  Battle, Leaderboard ("Top" on phones), Casino, Social, Me. Under 1080 px the menu is its own row under the bar, icon
+  above the name (`.nav` is now a direct child of `.topbar`, CSS block "menu regroupé" at the end of style.css).
+- Sections (`SECTION_OF` / `SUBNAV` / `drawSubnav` in js/app.js, `#subnav` in index.html): Battle = Duels · Tournaments,
+  Social = Friends · Clan · Global chat (opens the chat panel), Me = Profile · Badges · Stats · History. No tabs in a
+  duel room. Every old route still works (`#/friends`, `#/clan`, `#/tournament`, `#/player/Name`, `#/room/CODE`…).
+- New route `#/me` (`renderMe`): the "My profile" summary that was at the top of Profile & Friends (level and rewards,
+  XP, best roll, rank, Discord link, settings). The Discord OAuth return now lands on `#/me`. Own public profile
+  (`#/player/<me>`) highlights Me and has no "← Leaderboard" link.
+- The player button (top right) is now a link to `#/me`; ⚙️ opens the settings and is shown on phones too.
+  Gamble page title is "Casino" (route stays `#/gamble`). Roadmap link added to What's new.
+- Audits updated: overflow-check and overlap-audit include `#/me` and `#/tournament`; header-fit takes `RNG_BASE` and
+  reports `gap: "row2"` and cut labels; modal-audit and sound-check open the settings with `#gear-btn`.
+
 ## Player ideas batch (2026-10-28, branch `claude/ideas-2026-10-28`)
 
 Sacha: "refuse all the no's with a friendly reply, then start the to-do list". 83 ideas were declined in the inbox

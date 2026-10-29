@@ -303,9 +303,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .player-btn:hover { border-color: var(--outline-strong); }
 
 @media (max-width: 720px) {
-  .nav a span { display: none; }
-  .nav { margin-left: .2rem; }
-  .theme-switch, .sound-btn { display: none; } /* pas la place : thème et son se règlent dans « Player & settings » */
+  .theme-switch, .sound-btn:not(.gear-btn) { display: none; } /* pas la place : thème et son se règlent dans les réglages (⚙️, gardée depuis le menu regroupé) */
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -2233,7 +2231,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .friend-row > .player-link { flex: 1; }
 .friend-actions { display: flex; gap: .4rem; align-items: center; }
 .add-friend { font-size: .7rem; vertical-align: middle; margin-left: .5rem; }
-@media (max-width: 560px) { .nav a span { display: none; } }
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
 /* Pièces offertes à un ami (2026-10-13) : fenêtre « Give coins » ; sur téléphone, le bouton ne garde que 🎁. */
 .gift-presets { margin-bottom: .6rem; }
@@ -2372,7 +2369,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 /* En-tête : 7 onglets, c'est large. On retire dans l'ordre ce qui se règle aussi dans « Player & settings »
    (le thème), puis les libellés des onglets, pour que rien ne se chevauche entre 720 et 1180 px. */
 @media (max-width: 1280px) { .theme-switch { display: none; } .player-btn { max-width: 8rem; } }
-@media (max-width: 1110px) { .nav a span { display: none; } .nav { margin-left: .2rem; } }
 
 /* Téléphone : 7 onglets + langue + joueur doivent tenir sur 360 px de large ; en dessous, les onglets défilent
    plutôt que de pousser la page de côté. */
@@ -2380,9 +2376,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   .topbar { padding: .5rem .6rem; gap: .3rem; }
   .topbar-left { flex: 1; gap: .3rem; }
   .topbar-right { gap: .3rem; flex: none; }
-  .nav { margin-left: 0; gap: 0; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-  .nav::-webkit-scrollbar { display: none; }
-  .nav a { padding: .42rem .26rem; flex: none; }
   .player-btn { padding: 0 .5rem; }
   .player-btn span { display: none; }
   .lang-switch { gap: .05rem; }
@@ -2651,7 +2644,6 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 @media (max-width: 350px) {
   .topbar .icon-link { display: none; }
   .logo { letter-spacing: 0; font-size: .92rem; }
-  .nav a { padding: .42rem .17rem; }
   .topbar { padding-inline: .45rem; }
 }
 
@@ -5592,8 +5584,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .hdr-coins:hover { border-color: #eab308; }
 @media (max-width: 520px) { .hdr-coins { padding: 0 .1rem; border: 0; gap: .15rem; font-size: .7rem; } }
 /* Téléphone avec le solde en haut : un peu moins d'espace autour des onglets pour qu'ils tiennent tous. */
-@media (max-width: 560px) { .nav a { padding-inline: .2rem; } .topbar-right { gap: .22rem; } .player-btn { padding: 0 .4rem; } }
-@media (max-width: 380px) { .nav a { padding-inline: .15rem; } .lang-switch > span { display: none; } .hdr-coins { font-size: .66rem; } .topbar { padding-inline: .45rem; } }
+@media (max-width: 560px) { .topbar-right { gap: .22rem; } .player-btn { padding: 0 .4rem; } }
+@media (max-width: 380px) { .lang-switch > span { display: none; } .hdr-coins { font-size: .66rem; } .topbar { padding-inline: .45rem; } }
 
 /* « ~1 in N » à côté du Top x % (2026-10-20) */
 .one-in { opacity: .75; font-weight: 600; }
@@ -9962,3 +9954,43 @@ html.perf .num-card.skin-alchemy.has-fx .slot.spinning { color: #b7791f; }
 @keyframes cone-pop { 0%, 70%, 100% { transform: scale(.8); } 78% { transform: scale(1.4); } }
 .room-stage.many .side-cone::before, .room-stage.many .side-cone::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-cone::before, .side-cone::after { animation: none; } }
+
+/* ------------------------------------------------------------------ menu regroupé (demandé par Sacha, 2026-10-29)
+   7 entrées toujours écrites. Sous 1080 px (pseudo long + français), le menu passe sur sa propre ligne sous la barre : 7 colonnes égales, icône
+   au-dessus du nom (avant, 8 icônes sans nom sous 1110 px). Battle, Social et Me ont une rangée d'onglets (#subnav). */
+.nav { flex: 1; min-width: 0; }
+.nav .nav-short { display: none; }
+a.player-btn { text-decoration: none; color: inherit; }
+@media (max-width: 1079px) {
+  .topbar { flex-wrap: wrap; row-gap: .2rem; }
+  .topbar-left { flex: 1; }
+  .nav { order: 3; flex: 1 0 100%; margin: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .1rem; }
+  .nav a { flex-direction: column; justify-content: center; gap: .18rem; min-width: 0; padding: .32rem .05rem .28rem; font-size: .6rem; letter-spacing: 0; text-align: center; }
+  .nav a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav a svg { width: 17px; height: 17px; flex: none; }
+}
+@media (max-width: 560px) {
+  .nav .nav-long { display: none; } .nav .nav-short { display: inline; }
+  .nav a { text-transform: none; font-size: .62rem; font-weight: 700; } /* « Boutique » tient dans 1/7 de 320 px */
+}
+@media (max-width: 350px) { .topbar .nav { gap: 0; } .nav a { font-size: .58rem; padding-inline: 0; } }
+
+.subnav { position: relative; z-index: 1; display: flex; justify-content: center; gap: .4rem; max-width: 60rem; margin: 1rem auto 0; padding: 0 1rem; }
+.subnav[hidden] { display: none; }
+.subnav-tab { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .9rem; border: 1px solid var(--outline); border-radius: 999px; background: var(--surface); color: var(--prose-2); font-size: .74rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; text-decoration: none; white-space: nowrap; }
+.subnav-tab i { font-style: normal; }
+.subnav-tab:hover { border-color: var(--outline-strong); color: var(--prose); }
+.subnav-tab.active { background: var(--prose); border-color: var(--prose); color: var(--site-bg); }
+@media (max-width: 560px) {
+  .subnav { gap: .3rem; margin-top: .75rem; padding: 0 .6rem; }
+  .subnav-tab { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: .1rem; padding: .35rem .2rem; border-radius: .7rem; font-size: .62rem; letter-spacing: 0; }
+  .subnav-tab i { font-size: .95rem; line-height: 1.1; }
+  .subnav-tab span { max-width: 100%; }
+  .subnav-tab span { overflow: hidden; text-overflow: ellipsis; }
+}
+/* Tournoi à 320 px : « Tournament 1 / Tournament 2 / Evening » dépassait de 18 px (déjà le cas avant le menu regroupé) ;
+   les trois boutons se partagent la largeur et leur texte passe à la ligne. */
+@media (max-width: 400px) {
+  .tn-which { display: flex; width: 100%; }
+  .tn-which button { flex: 1 1 0; min-width: 0; padding-inline: .25rem; letter-spacing: 0; line-height: 1.25; }
+}
