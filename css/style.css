@@ -2317,6 +2317,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .case-btn .btn-roll { display: inline-block; font-size: .6rem; padding: .45rem .75rem; letter-spacing: .08em; white-space: nowrap; }
 .case-btn.md { min-height: 5.5rem; }
 .case-btn.md .btn-roll { font-size: 1.05rem; padding: .7rem 1.8rem; }
+/* Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur (grille de points). */
+.case-snd { display: grid; place-items: center; align-self: stretch; min-height: 3.6rem; border-radius: .6rem; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--prose) 18%, transparent) 1px, transparent 1.6px) 0 0 / 7px 7px, radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rar, #8847ff) 30%, transparent), transparent 70%); }
+.case-snd i { font-style: normal; font-size: 2rem; line-height: 1; }
+.case-snd.md { width: 9rem; min-height: 7rem; margin: 0 auto; box-shadow: 0 0 0 2px var(--rar), 0 0 28px color-mix(in srgb, var(--rar) 60%, transparent); }
+.case-snd.md i { font-size: 3.6rem; }
 .case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }
 .room-noreward { max-width: 30rem; margin: .2rem auto .6rem; text-align: center; }
 
@@ -2741,6 +2747,21 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .shop-tabs button.on i { filter: none; }
 .shop-pane > .panel + .panel { margin-top: 1rem; }
 .shop-more { grid-column: 1 / -1; margin: .4rem 0 0; text-align: center; }
+/* Filtre Possédés / Pas encore (idée d'Applepi, 2026-10-28) et nombre de joueurs qui ont chaque objet (idée d'ann joe
+   et de YU CHUAN 23). Une tuile filtrée est cachée par l'attribut hidden (.skin-tile est en flex : il faut le redire). */
+.shop-own { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; margin: -.4rem 0 .9rem; }
+.shop-own[hidden], .skin-tile[hidden], .shop-mine[hidden] { display: none; }
+.shop-own .panel-note { margin: 0; }
+.own-empty { grid-column: 1 / -1; }
+.own-count { display: block; margin-top: .2rem; font-size: .7rem; color: var(--prose-3); }
+.own-count:empty { display: none; }
+/* Vue du créateur : ses objets nés d'une idée, combien de joueurs les ont, ce que sa part lui a rapporté. */
+.shop-mine { margin: 0 0 1rem; }
+.mine-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .4rem; }
+.mine-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .6rem; padding: .5rem .7rem; border: 1px solid var(--outline); border-radius: .55rem; background: var(--surface-dim); }
+.mine-row b { flex: 1 1 auto; min-width: 0; }
+.mine-row .own-count { display: inline; margin: 0; font-weight: 700; color: var(--prose-2); }
+.mine-note { margin: .6rem 0 0; }
 @media (max-width: 560px) {
   .shop-tabs { gap: .3rem; }
   .shop-tabs button { flex-direction: column; gap: .2rem; padding: .55rem .1rem; font-size: .56rem; letter-spacing: 0; }

@@ -3735,6 +3735,59 @@
     drawTourneyTeaser();
   }
 
+  // Filtre des listes de la boutique (idée d'Applepi, 2026-10-28) : tout, ce qu'on a, ce qu'on n'a pas encore. Chaque
+  // tuile porte data-have (1 : possédé, ou gratuit) ; les onglets sans liste d'objets (caisses, vitesse, prestige) n'ont pas de filtre.
+  const SHOP_OWN = [['all', 'All'], ['owned', 'Owned only'], ['not', 'Not owned yet']];
+  const SHOP_OWN_TABS = ['limited', 'skins', 'buttons', 'emotes', 'sounds', 'walls'];
+  function applyOwnFilter() {
+    const mode = SHOP_OWN.some(([v]) => v === Store.settings.shopOwn) ? Store.settings.shopOwn : 'all';
+    document.querySelectorAll('#shop-own [data-own]').forEach(b => { b.classList.toggle('on', b.dataset.own === mode); b.setAttribute('aria-pressed', b.dataset.own === mode); });
+    app.querySelectorAll('.shop-pane .skin-grid').forEach(grid => {
+      const tiles = grid.querySelectorAll(':scope > [data-have]');
+      let shown = 0;
+      tiles.forEach(t => { const hide = mode === 'owned' ? t.dataset.have !== '1' : mode === 'not' ? t.dataset.have === '1' : false; t.hidden = hide; if (!hide) shown++; });
+      let note = grid.querySelector(':scope > .own-empty');
+      if (tiles.length && !shown) {
+        if (!note) { note = document.createElement('div'); note.className = 'empty own-empty'; grid.append(note); }
+        note.textContent = mode === 'owned' ? 'You don\'t own any of these yet' : 'You already own all of these';
+      } else if (note) note.remove();
+    });
+  }
+  // Popularité (idée d'ann joe et de YU CHUAN 23, 2026-10-28) : combien de joueurs possèdent chaque objet, jamais qui.
+  // Une lecture (GET /api/shop?owners=1, en cache 60 s sur le serveur) gardée deux minutes ici.
+  const Owners = {
+    data: null, at: 0, busy: null,
+    load() {
+      if (this.data && Date.now() - this.at < 120000) return Promise.resolve(this.data);
+      return this.busy || (this.busy = Online.request('/api/shop?owners=1').then(r => { this.data = (r && r.owners) || {}; this.at = Date.now(); return this.data; }).finally(() => { this.busy = null; }));
+    },
+  };
+  // 7 → « 7 owners », 1 234 → « 1.2k owners », 25 600 → « 26k owners » (les grands nombres arrondis).
+  const ownersLabel = n => `${n >= 9950 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : fmt(n)} owner${n === 1 ? '' : 's'}`;
+  const ownTag = (kind, id) => `<span class="own-count" data-own-key="${kind}:${id}"></span>`;
+  function paintOwners() {
+    const counts = Owners.data;
+    if (!counts) return;
+    app.querySelectorAll('.own-count[data-own-key]').forEach(el => { const n = counts[el.dataset.ownKey] || 0; el.textContent = n ? `👥 ${ownersLabel(n)}` : el.closest('#shop-mine') ? '👥 0 owners' : ''; });
+  }
+  // Vue du créateur (2026-10-28) : le joueur dont le pseudo est dans le champ idea d'objets du catalogue voit ses
+  // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins seulement : les
+  // fonds d'écran, boutons, émotes et sons ne versent pas de part).
+  const nameKey = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  function drawCreations(state) {
+    const box = $('#shop-mine');
+    if (!box) return;
+    const me = nameKey(Store.player.name);
+    const mine = me ? [...Shop.SKINS.filter(k => k.idea).map(k => ['skins', k]), ...Shop.WALLPAPERS.filter(w => w.idea).map(w => ['walls', w])].filter(([, x]) => nameKey(x.idea) === me) : [];
+    box.hidden = !mine.length;
+    if (!mine.length) return;
+    box.innerHTML = `
+      <div class="panel-head"><h3 class="panel-title">💡 Your creations</h3><span class="panel-note">items born from your ideas</span></div>
+      <div class="mine-list">${mine.map(([kind, x]) => `<div class="mine-row"><b>${x.emoji} <span data-no-i18n>${esc(x.name)}</span></b><span class="panel-note">${kind === 'skins' ? 'Skin' : 'Wallpaper'}</span><span class="own-count mono" data-own-key="${kind}:${x.id}">…</span></div>`).join('')}</div>
+      <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins, in the shop or for a case that gives one. Wallpapers do not pay a share.</span></p>`;
+    paintOwners();
+  }
+
   // Catégories de la boutique, dans l'ordre des onglets.
   const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades'], ['prestige', '👑', 'Prestige']];
   function renderShop() {
@@ -3745,6 +3798,8 @@
         <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}<br><b>Coin rate per day</b><br>Rolls 1–500 · 100%<br>Rolls 501–2,000 · 50%<br>After 2,000 rolls · 20%`)}">How much? ⓘ</span></p>
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
+        <div class="panel shop-mine" id="shop-mine" hidden></div>
+        <div class="shop-own" id="shop-own"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
@@ -3774,6 +3829,7 @@
           <p class="panel-note" style="margin:.6rem 0 0">Already own the skin you draw? Part of the case price comes back, more for rarer skins: 50% for a Common up to 90% for a Legendary. Coins only, no real money.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Button Case gives a Generate button you can also buy in the Buttons tab, with the same refund for a button you already own.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Sound Case gives a roll sound pack you can also buy in the Sounds tab, with the same refund for a pack you already own.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -3841,7 +3897,10 @@
       app.querySelectorAll('[data-shop-pane]').forEach(el => { el.hidden = el.dataset.shopPane !== tab; });
       app.querySelectorAll('[data-shop-tab]').forEach(el => { el.classList.toggle('on', el.dataset.shopTab === tab); el.setAttribute('aria-selected', el.dataset.shopTab === tab); });
       if (Store.settings.shopTab !== tab) Store.setSetting('shopTab', tab);
+      $('#shop-own').hidden = !SHOP_OWN_TABS.includes(tab);
     };
+    // Filtre Possédés / Pas encore (idée d'Applepi, 2026-10-28) : retenu sur cet appareil, comme l'onglet.
+    $('#shop-own').onclick = e => { const b = e.target.closest('[data-own]'); if (!b) return; Store.setSetting('shopOwn', b.dataset.own); applyOwnFilter(); };
     $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
     openTab(Store.settings.shopTab);
     drawSkip();
@@ -3905,6 +3964,7 @@
     drawSounds(state);
     drawWalls(state);
     drawSpeed(state);
+    drawCreations(state);
     const cases = $('#d-cases');
     // Clés de caisse gagnées avec les niveaux : un bouton « ouvrir gratuitement » sur la caisse correspondante.
     // Sa propre clé d'abord, sinon une clé plus haute qui l'ouvre aussi (une clé Premium ouvre Starter et Fonds).
@@ -3929,9 +3989,9 @@
         : k.until && Date.now() + Room.offset >= Date.parse(k.until) ? '<span class="skin-state">No longer for sale</span>'
         : `<button class="btn${state.coins >= k.price ? '' : ' disabled'}" data-skin-buy="${k.id}">🪙 ${fmt(k.price)}</button>`;
       return `
-        <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}">
+        <div class="skin-tile${equipped ? ' equipped' : ''}${k.premium ? ' premium' : ''}" data-have="${owned ? 1 : 0}">
           ${withLever(`<div class="num-card md${skinClass(k.id)}" data-tier="rare">${slotsHTML('235711')}</div>`, k.id)}
-          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${k.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(k.idea)}" data-no-i18n>${esc(k.idea)}</a></span>` : ''}</div>
+          <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${k.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(k.idea)}" data-no-i18n>${esc(k.idea)}</a></span>` : ''}${k.price ? ownTag('skins', k.id) : ''}</div>
           <div class="skin-actions">${k.id !== 'classic' ? `<button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>` : ''}${button}</div>
         </div>`;
     };
@@ -3939,7 +3999,7 @@
     const supporterTile = () => {
       const k = Shop.SUPPORTER, owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       return `
-        <div class="skin-tile supporter-tile${equipped ? ' equipped' : ''}">
+        <div class="skin-tile supporter-tile${equipped ? ' equipped' : ''}" data-have="${owned ? 1 : 0}">
           <div class="num-card md skin-supporter" data-tier="rare">${slotsHTML('235711')}</div>
           <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span></div>
           <div class="skin-actions"><button class="btn ghost" data-skin-preview="${k.id}" title="Preview">▶ Preview</button>${equipped ? '<span class="skin-state">Equipped</span>' : owned ? `<button class="btn" data-skin-equip="${k.id}">Equip</button>` : '<button class="btn" data-fund>💗 Contribute to get it</button>'}</div>
@@ -3950,7 +4010,7 @@
     const fisherTile = () => {
       const k = Shop.FISHER, owned = state.owned.includes(k.id), equipped = state.skin === k.id;
       return `
-        <div class="skin-tile fisher-tile${equipped ? ' equipped' : ''}">
+        <div class="skin-tile fisher-tile${equipped ? ' equipped' : ''}" data-have="${owned ? 1 : 0}">
           <div class="num-card md skin-fisher" data-tier="rare">${slotsHTML('235711')}</div>
           <div class="skin-name"><b>${k.emoji} ${esc(k.name)}</b><span>${esc(k.desc)}</span>${owned ? '' : `<ol class="fisher-steps">
             <li>${Store.player.google ? '<span class="fisher-done">✓ Signed in with Google on RNG∞</span>' : '<button class="btn ghost small" data-fish-google>Sign in with Google here</button>'}</li>
@@ -3984,6 +4044,9 @@
     const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
     { const ev = Date.parse('2026-11-01T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after October 31 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
+    applyOwnFilter();
+    paintOwners();
+    Owners.load().then(() => { if (currentView === 'shop') paintOwners(); }).catch(() => {});
     grid.onclick = premium.onclick = limited.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
@@ -5447,14 +5510,14 @@
     // Fonds d'Halloween : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui les ont.
     const onSale = w => !w.until || Date.now() < Date.parse(w.until);
     const wallTile = w => `
-      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}">
+      <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}" data-have="${owned.includes(w.id) ? 1 : 0}">
         <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
-        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span></div>
+        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
     if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
     grid.innerHTML = `
-      <div class="skin-tile wall-tile${on ? '' : ' equipped'}">
+      <div class="skin-tile wall-tile${on ? '' : ' equipped'}" data-have="1">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
         <div class="skin-name"><b>⬛ Original</b><span>The plain background</span></div>
         <div class="skin-actions">${on ? '<button class="btn" data-wall="none">Use</button>' : '<span class="skin-state">Equipped</span>'}</div>
@@ -5619,9 +5682,9 @@
     if (!grid) return;
     $('#d-emotes-panel').hidden = false;
     grid.innerHTML = Shop.EMOTES.filter(e => Emotes.has(e.id)).map(e => `
-      <div class="skin-tile emote-tile${state.emotes.includes(e.id) ? ' owned' : ''}">
+      <div class="skin-tile emote-tile${state.emotes.includes(e.id) ? ' owned' : ''}" data-have="${state.emotes.includes(e.id) ? 1 : 0}">
         ${emoteHTML(e.id)}
-        <div class="skin-name"><b data-no-i18n>${esc(e.name)}</b></div>
+        <div class="skin-name"><b data-no-i18n>${esc(e.name)}</b>${ownTag('emotes', e.id)}</div>
         ${state.emotes.includes(e.id) ? '<span class="skin-state">Owned</span>' : `<button class="btn${state.coins >= e.price ? '' : ' disabled'}" data-emote-buy="${e.id}">🪙 ${fmt(e.price)}</button>`}
       </div>`).join('');
     grid.onclick = async ev => {
@@ -5662,9 +5725,9 @@
     $('#d-sounds-panel').hidden = false;
     const mine = id => id === 'classic' || (state.sounds || []).includes(id), on = state.sound || 'classic';
     grid.innerHTML = Shop.SOUNDS.map(p => `
-      <div class="skin-tile sound-tile${mine(p.id) ? ' owned' : ''}${on === p.id ? ' equipped' : ''}">
+      <div class="skin-tile sound-tile${mine(p.id) ? ' owned' : ''}${on === p.id ? ' equipped' : ''}" data-have="${mine(p.id) ? 1 : 0}">
         <div class="sound-icon" aria-hidden="true">${p.emoji}</div>
-        <div class="skin-name"><b data-no-i18n>${esc(p.name)}</b><span>${esc(p.desc)}</span></div>
+        <div class="skin-name"><b data-no-i18n>${esc(p.name)}</b><span>${esc(p.desc)}</span>${p.price ? ownTag('sounds', p.id) : ''}</div>
         <button class="btn sound-play" data-sound-play="${p.id}" aria-label="Preview ${esc(p.name)}">▶ Preview</button>
         ${on === p.id ? '<span class="skin-state">In use</span>'
           : mine(p.id) ? `<button class="btn" data-sound-use="${p.id}">Use</button>`
@@ -5742,10 +5805,10 @@
     const grid = $('#d-buttons');
     if (!grid) return;
     $('#d-buttons-panel').hidden = false; // caché tant que la boutique n'a pas répondu (ou sans pseudo)
-    const tile = (look, choice, title, sub, action) => `
-      <div class="skin-tile gen-tile${state.button === choice ? ' equipped' : ''}">
+    const tile = (look, choice, title, sub, action, have = 1, extra = '') => `
+      <div class="skin-tile gen-tile${state.button === choice ? ' equipped' : ''}" data-have="${have}">
         <button type="button" class="btn-roll small${genClass(look)}" tabindex="-1" data-gen-try>Generate</button>
-        <div class="skin-name"><b>${title}</b><span>${sub}</span></div>
+        <div class="skin-name"><b>${title}</b><span>${sub}</span>${extra}</div>
         ${state.button === choice ? '<span class="skin-state">Equipped</span>' : action}
       </div>`;
     const equip = id => `<button class="btn" data-gen-equip="${id}">Equip</button>`;
@@ -5755,7 +5818,7 @@
     grid.innerHTML = [
       tile(state.skin, Shop.MATCH, '🔗 Match my skin', 'Follows the skin you have equipped', equip(Shop.MATCH)),
       ...Shop.BUTTONS.map(b => tile(b.id, b.id, `${b.emoji} ${esc(b.name)}`, esc(b.desc), state.buttons.includes(b.id) ? equip(b.id)
-        : `<button class="btn${state.coins >= b.price ? '' : ' disabled'}" data-gen-buy="${b.id}">🪙 ${fmt(b.price)}</button>`)),
+        : `<button class="btn${state.coins >= b.price ? '' : ' disabled'}" data-gen-buy="${b.id}">🪙 ${fmt(b.price)}</button>`, state.buttons.includes(b.id) ? 1 : 0, ownTag('buttons', b.id))),
       ...mine.map(k => tile(k.id, k.id, `${k.emoji} ${esc(k.name)}`, 'Comes with your skin', equip(k.id))),
     ].join('') + (locked ? `<p class="panel-note shop-more">🔒 ${locked} more buttons come with skins you do not own yet: every skin brings its own button.</p>` : '');
     grid.onclick = async e => {
@@ -5800,10 +5863,12 @@
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
     // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
-    const wall = !!box.wall, btnCase = !!box.btn;
+    const wall = !!box.wall, btnCase = !!box.btn, sndCase = !!box.snd;
     const won = Shop.caseItem(box, result.won), rarity = Shop.caseRarity(box, won.id);
     // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
-    const look = (id, size) => btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
+    // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur.
+    const look = (id, size) => sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
+      : btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
       : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
       : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
@@ -5819,9 +5884,10 @@
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
           ${look(won.id, 'md')}
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
+          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : sndCase ? 'new sound pack unlocked!' : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
-            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall ? 'Use' : 'Equip'}</button>`}
+            ${sndCase ? '<button class="btn ghost" id="case-listen">▶ Preview</button>' : ''}
+            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall || sndCase ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
           </div>
         </div>
@@ -5848,7 +5914,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn, #case-result .case-snd'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -5877,13 +5943,16 @@
       const equip = $('#case-equip');
       if (equip) equip.addEventListener('click', async () => {
         try {
-          if (btnCase) { drawShop(await Online.shopAction('button', undefined, { button: won.id })); toast(`${won.emoji} ${won.name} button equipped`); }
+          if (sndCase) { drawShop(await Online.shopAction('sound', undefined, { sound: won.id })); toast(`${won.emoji} ${won.name} sounds on`); }
+          else if (btnCase) { drawShop(await Online.shopAction('button', undefined, { button: won.id })); toast(`${won.emoji} ${won.name} button equipped`); }
           else if (wall) { const next = await Online.shopAction('wall', undefined, { wall: won.id }); drawShop(next); toast(`${won.emoji} ${won.name} on`); }
           else { drawShop(await Online.shopAction('equip', won.id)); toast(`${won.emoji} ${won.name} equipped`); }
           closeModal();
         } catch (err) { toast('Shop unavailable right now, try again'); }
       });
       $('#case-again').addEventListener('click', () => { closeModal(); openCase(box, result, btn); });
+      const listen = $('#case-listen');
+      if (listen) listen.addEventListener('click', () => previewSound(won.id));
     });
   }
 
