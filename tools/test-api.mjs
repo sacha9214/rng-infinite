@@ -986,6 +986,115 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(r.body.walls || [], [], 'aucun fond donné');
   r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'button', button: r.body.buttons[0] } });
   assert.deepEqual([r.status, r.body.button], [200, r.body.buttons[0]], 'un bouton gagné s\'équipe comme un bouton acheté');
+  // Boutons Power Core (idée de Sean) et Black Hole (idée de MattyFaux-Lucky), 2026-10-28 : vendus à part, dans la caisse.
+  assert.ok(bpool.includes('powercore') && bpool.includes('eventhorizon'));
+  assert.ok(!Shop.byId.has('eventhorizon') && Shop.byId.has('blackhole'), 'le bouton Black Hole ne prend pas l\'identifiant du skin Singularity');
+  assert.deepEqual(['powercore', 'eventhorizon'].map(id => Shop.caseRarity(bcase, id).name), ['Rare', 'Epic']);
+  { const css = fs.readFileSync(path.join(ROOT, 'css/buttons.css'), 'utf8'); for (const b of Shop.BUTTONS) assert.ok(css.includes(`.btn-roll.gen-${b.id} {`), `style du bouton ${b.id}`); }
+
+  // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : un pack de sons payant (SOUNDS) qui rejoint snds:<id>.
+  const scase = Shop.caseById.get('sounds');
+  const spool = Shop.casePool(scase).map(p => p.id);
+  assert.deepEqual([...spool].sort(), Shop.SOUNDS.filter(p => p.price).map(p => p.id).sort(), 'tous les packs payants');
+  assert.ok(spool.includes('clicky'), 'le pack Clicky (idées de Niall et de sennybex1) est dedans');
+  const sev = Shop.caseOdds(scase).reduce((x, o) => x + o.p * Shop.caseItem(scase, o.id).price, 0);
+  assert.ok(scase.price < sev && scase.price / sev > 0.7 && scase.price / sev < 0.8, `prix sous la valeur moyenne, comme les caisses de fonds et de boutons (${scase.price} / ${sev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(scase, 'arcade'), Shop.soundById.get('arcade'), 'arcade : le pack de sons, pas le bouton');
+  assert.deepEqual(['arcade', 'taps', 'clicky', 'space', 'glass'].map(id => Shop.caseRarity(scase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  for (const id of spool) { const v = Shop.duplicateRefund(scase, id); assert.ok(v >= scase.price / 2 && v < scase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('sounds') && !Shop.KEY_OPENS.starter.includes('sounds'), 'une clé Premium l\'ouvre');
+  const owners = () => { const o = {}; const flat = run([['HGETALL', 'owners']])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = Number(flat[i + 1]); return o; };
+  const sammy = { playerId: 'c9'.repeat(8), secret: 'da'.repeat(16), name: 'Sammy' };
+  assert.equal((await call(roll, { method: 'POST', body: sammy })).status, 200);
+  run([['HINCRBY', `stats:${sammy.playerId}`, 'bonus', 50000]]);
+  await new Promise(res => setTimeout(res, 20));
+  const sBefore = (await call(shopApi, { url: `/api/shop?me=${sammy.playerId}` })).body, own0 = owners();
+  let sdups = 0, snews = 0;
+  const gainedSnd = {};
+  for (let i = 0; i < 30; i++) {
+    before = await coinsOf(sammy);
+    const [spent0, cases0] = run([['HGET', `stats:${sammy.playerId}`, 'spent'], ['HGET', `stats:${sammy.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(sammy, 'sounds');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(spool.includes(r.body.won), 'un pack de la caisse');
+    assert.ok(r.body.sounds.includes(r.body.won), 'ajouté aux packs possédés');
+    assert.ok(run([['SISMEMBER', `snds:${sammy.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(scase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - scase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${sammy.playerId}`, 'spent'], ['HGET', `stats:${sammy.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [scase.price - r.body.refund, 1, scase.price - r.body.refund], 'spent, cases, eco');
+    if (r.body.duplicate) sdups++; else { snews++; gainedSnd[r.body.won] = 1; }
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(snews >= 4 && snews <= spool.length && sdups >= 1, `des nouveaux (${snews}) et des doublons (${sdups})`);
+  assert.deepEqual([r.body.owned, r.body.buttons, r.body.walls], [sBefore.owned, sBefore.buttons, sBefore.walls], 'ni skin, ni bouton, ni fond donné');
+  // Popularité : +1 par pack gagné pour la première fois, rien pour un doublon.
+  { const own1 = owners(); for (const id of spool) assert.equal((own1[`sounds:${id}`] || 0) - (own0[`sounds:${id}`] || 0), gainedSnd[id] || 0, `owners sounds:${id}`); }
+  r = await call(shopApi, { method: 'POST', body: { playerId: sammy.playerId, secret: sammy.secret, action: 'sound', sound: r.body.sounds[0] } });
+  assert.deepEqual([r.status, r.body.sound], [200, r.body.sounds[0]], 'un pack gagné se met en service comme un pack acheté');
+
+  // Part du créateur sur une caisse (2026-10-28, finnnnn ne touchait rien sur les skins tirés en caisse) : 5 % de ce que
+  // l'acheteur a payé pour la caisse quand un skin né d'une idée en sort pour la première fois ; rien pour un doublon,
+  // une caisse ouverte avec une clé, ni pour soi-même.
+  { const hot = Shop.byId.get('hotdog'), choc = Shop.byId.get('chocolate'), was = [hot.idea, choc.idea], draw = Shop.drawCase;
+    hot.idea = 'Sammy'; choc.idea = 'sammy'; // même pseudo à la casse près : retrouvé quand même
+    const roy = () => Number(run([['HGET', `stats:${sammy.playerId}`, 'royalty']])[0].result) || 0;
+    const ecoRoy = () => [...db.keys()].filter(k => k.startsWith('eco:')).reduce((x, k) => x + (Number(db.get(k)?.get?.('in:royalty')) || 0), 0);
+    const premium = Shop.caseById.get('premium');
+    try {
+      Shop.drawCase = () => 'hotdog';
+      const r0 = roy(), e0 = ecoRoy();
+      r = await openCase(bobby, 'premium'); assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'hotdog', false], JSON.stringify(r.body));
+      assert.equal(roy() - r0, Math.round(premium.price * Shop.IDEA_SHARE), '5 % du prix de la caisse');
+      assert.equal(ecoRoy() - e0, Math.round(premium.price * Shop.IDEA_SHARE), 'compté dans l\'économie (in:royalty)');
+      await new Promise(res => setTimeout(res, 20));
+      r = await openCase(bobby, 'premium'); assert.equal(r.body.duplicate, true);
+      assert.equal(roy() - r0, 45, 'rien pour un doublon');
+      Shop.drawCase = () => 'chocolate';
+      run([['HINCRBY', `stats:${bobby.playerId}`, 'key:premium', 1]]);
+      await new Promise(res => setTimeout(res, 20));
+      r = await call(shopApi, { method: 'POST', body: { playerId: bobby.playerId, secret: bobby.secret, action: 'case', case: 'premium', free: true } });
+      assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'chocolate', false]);
+      assert.equal(roy() - r0, 45, 'rien pour une caisse ouverte avec une clé');
+      Shop.drawCase = () => 'hotdog';
+      await new Promise(res => setTimeout(res, 20));
+      r = await openCase(sammy, 'premium'); assert.deepEqual([r.status, r.body.duplicate], [200, false]);
+      assert.equal(roy() - r0, 45, 'rien pour soi-même');
+    } finally { Shop.drawCase = draw; [hot.idea, choc.idea] = was; }
+  }
+
+  // Popularité (idée d'ann joe et de YU CHUAN 23, 2026-10-28) : chaque chemin qui donne un objet compte +1 une seule
+  // fois ; la lecture publique ne donne que des nombres, jamais qui.
+  { const olivy = { playerId: 'ca'.repeat(8), secret: 'db'.repeat(16), name: 'Olivy' };
+    assert.equal((await call(roll, { method: 'POST', body: olivy })).status, 200);
+    run([['HINCRBY', `stats:${olivy.playerId}`, 'bonus', 50000]]);
+    const post = async body => { await new Promise(res => setTimeout(res, 20)); return call(shopApi, { method: 'POST', body: { playerId: olivy.playerId, secret: olivy.secret, ...body } }); };
+    const o0 = owners();
+    for (const body of [{ action: 'buy', skin: 'neon' }, { action: 'buy', skin: 'neon' }, { action: 'buywall', wall: 'forest' }, { action: 'buywall', wall: 'forest' }, { action: 'buybutton', button: 'powercore' },
+      { action: 'buybutton', button: 'powercore' }, { action: 'buyemote', emote: 'gg' }, { action: 'buyemote', emote: 'gg' }, { action: 'buysound', sound: 'clicky' }, { action: 'buysound', sound: 'clicky' }]) {
+      r = await post(body); assert.equal(r.status, 200, JSON.stringify([body, r.body]));
+    }
+    const o1 = owners();
+    for (const k of ['skins:neon', 'walls:forest', 'buttons:powercore', 'emotes:gg', 'sounds:clicky']) assert.equal((o1[k] || 0) - (o0[k] || 0), 1, `${k} : +1, puis rien au deuxième achat`);
+    r = await call(shopApi, { url: '/api/shop?owners=1' });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.owners['buttons:powercore'], o1['buttons:powercore']);
+    assert.ok(!JSON.stringify(r.body).includes(olivy.playerId) && Object.values(r.body.owners).every(n => Number.isInteger(n) && n > 0), 'seulement des nombres');
+    assert.equal((await call(shopApi, { url: `/api/shop?me=${olivy.playerId}` })).body.royalty, 0, 'state : la part reçue (0 ici)');
+    assert.equal((await call(shopApi, { url: `/api/shop?me=${sammy.playerId}` })).body.royalty, 45, 'state : la part reçue par le créateur');
+    // Rattrapage (tools/backfill-owners.js) : essai à blanc sans écrire, puis --apply remplace le hash par le vrai compte.
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-owners.js'));
+    run([['HSET', 'owners', 'skins:neon', 999]]);
+    const counts = await backfill({ log: () => {} });
+    assert.equal(owners()['skins:neon'], 999, 'essai à blanc : rien écrit');
+    const holders = (prefix, id) => [...db.keys()].filter(k => new RegExp(`^${prefix}:[0-9a-f]{16}$`).test(k) && run([['SISMEMBER', k, id]])[0].result == 1).length;
+    assert.equal(counts['skins:neon'], holders('skins', 'neon'));
+    assert.equal(counts['sounds:clicky'], holders('snds', 'clicky'));
+    assert.equal(counts['buttons:powercore'], holders('btns', 'powercore'));
+    assert.ok(!Object.keys(counts).some(k => k === 'skins:owner' || k.endsWith(':licorne')), 'ni objets réservés ni identifiants inventés');
+    await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(owners(), counts, '--apply : le hash est remplacé'); }
 
   // ============================================================== 23. Amis
   const friendsApi = require(path.join(ROOT, 'api/friends.js'));
