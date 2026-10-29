@@ -2757,6 +2757,11 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .own-count:empty { display: none; }
 /* Vue du créateur : ses objets nés d'une idée, combien de joueurs les ont, ce que sa part lui a rapporté. */
 .shop-mine { margin: 0 0 1rem; }
+.shop-mine > summary { cursor: pointer; list-style: none; margin: 0; }
+.shop-mine > summary::-webkit-details-marker { display: none; }
+.shop-mine > summary .panel-title::after { content: ' ▸'; color: var(--prose-3); }
+.shop-mine[open] > summary { margin-bottom: .7rem; }
+.shop-mine[open] > summary .panel-title::after { content: ' ▾'; }
 .mine-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .4rem; }
 .mine-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .6rem; padding: .5rem .7rem; border: 1px solid var(--outline); border-radius: .55rem; background: var(--surface-dim); }
 .mine-row b { flex: 1 1 auto; min-width: 0; }

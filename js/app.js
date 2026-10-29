@@ -3772,7 +3772,7 @@
   }
   // Vue du créateur (2026-10-28) : le joueur dont le pseudo est dans le champ idea d'objets du catalogue voit ses
   // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins seulement : les
-  // fonds d'écran, boutons, émotes et sons ne versent pas de part).
+  // fonds d'écran, boutons, émotes et sons ne versent pas de part). Repliée par défaut : une ligne en haut de la boutique.
   const nameKey = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   function drawCreations(state) {
     const box = $('#shop-mine');
@@ -3782,8 +3782,8 @@
     box.hidden = !mine.length;
     if (!mine.length) return;
     box.innerHTML = `
-      <div class="panel-head"><h3 class="panel-title">💡 Your creations</h3><span class="panel-note">items born from your ideas</span></div>
-      <div class="mine-list">${mine.map(([kind, x]) => `<div class="mine-row"><b>${x.emoji} <span data-no-i18n>${esc(x.name)}</span></b><span class="panel-note">${kind === 'skins' ? 'Skin' : 'Wallpaper'}</span><span class="own-count mono" data-own-key="${kind}:${x.id}">…</span></div>`).join('')}</div>
+      <summary class="panel-head"><h3 class="panel-title">💡 Your creations</h3><span class="panel-note">items born from your ideas</span></summary>
+      <div class="mine-list">${mine.map(([kind, x]) => `<div class="mine-row"><b>${x.emoji} <span data-no-i18n>${esc(x.name)}</span></b><span class="panel-note">${kind === 'skins' ? 'Skin' : 'Wallpaper'}</span><span class="own-count" data-own-key="${kind}:${x.id}">…</span></div>`).join('')}</div>
       <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins, in the shop or for a case that gives one. Wallpapers do not pay a share.</span></p>`;
     paintOwners();
   }
@@ -3798,7 +3798,7 @@
         <p class="panel-note profile-sub">Earn coins by rolling, with the daily quests and by winning duels. <span class="case-odds" data-tip="${esc(`<b>Coins per roll</b><br>${Object.entries(Shop.COINS).map(([k, v]) => `${k[0].toUpperCase()}${k.slice(1)} · ${fmt(v)}`).join('<br>')}<br><b>Duel won</b> · +${Shop.DUEL_WIN_COINS}<br><b>Coin rate per day</b><br>Rolls 1–500 · 100%<br>Rolls 501–2,000 · 50%<br>After 2,000 rolls · 20%`)}">How much? ⓘ</span></p>
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
-        <div class="panel shop-mine" id="shop-mine" hidden></div>
+        <details class="panel shop-mine" id="shop-mine" hidden></details>
         <div class="shop-own" id="shop-own"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
