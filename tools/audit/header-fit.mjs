@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = 'http://localhost:8124';
+const B = process.env.RNG_BASE || process.env.BASE || 'http://localhost:8124';
 const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 const widths = process.argv.slice(2).map(Number);
 for (const locale of ['fr-FR', 'en-US']) {
@@ -17,7 +17,11 @@ for (const locale of ['fr-FR', 'en-US']) {
       const nav = document.querySelector('.nav'), first = document.querySelector('.topbar-right').firstElementChild;
       const visibleFirst = [...document.querySelector('.topbar-right').children].find(e => getComputedStyle(e).display !== 'none').getBoundingClientRect();
       const last = nav.lastElementChild.getBoundingClientRect();
-      return { pageOverflow: document.documentElement.scrollWidth - innerWidth, gap: Math.round(visibleFirst.left - last.right), navScroll: nav.scrollWidth - nav.clientWidth, labels: getComputedStyle(nav.querySelector('span')).display !== 'none' };
+      // Menu regroupé (2026-10-29) : sous 1000 px le menu passe sur sa propre ligne, l'écart avec la droite ne compte plus ;
+      // on vérifie alors qu'aucun libellé n'est coupé (cut).
+      const wrapped = nav.getBoundingClientRect().top >= document.querySelector('.topbar-right').getBoundingClientRect().bottom - 1;
+      const cut = [...nav.querySelectorAll('span')].filter(x => x.offsetWidth && x.scrollWidth > x.offsetWidth + 1).map(x => x.textContent);
+      return { pageOverflow: document.documentElement.scrollWidth - innerWidth, gap: wrapped ? 'row2' : Math.round(visibleFirst.left - last.right), navScroll: nav.scrollWidth - nav.clientWidth, labels: getComputedStyle(nav.querySelector('span')).display !== 'none', cut };
     });
     console.log(locale, w, JSON.stringify(r));
   }

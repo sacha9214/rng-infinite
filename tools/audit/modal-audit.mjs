@@ -3,10 +3,10 @@
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../.deps/package.json', import.meta.url));
 const { firefox } = require('playwright');
-const B = 'http://localhost:8124', SHOTS = process.argv[2];
+const B = process.env.RNG_BASE || process.env.BASE || 'http://localhost:8124', SHOTS = process.argv[2];
 const sizes = [[320, 568], [360, 640], [390, 780], [667, 375], [844, 390], [768, 900], [1280, 620], [1440, 900]];
-const modals = [['#/', '#news-btn'], ['#/', '[data-idea]'], ['#/', '[data-coffee]'], ['#/', '#player-btn'], ['#/history', '[data-roll]'], ['#/badges', '[data-badge]'],
-  ['#/shop', '[data-skin-preview]'], ['#/about', '[data-trailer]'], ['#/leaderboard', '[data-number], .lb-row [data-n], .lb-row button']];
+const modals = [['#/', '#news-btn'], ['#/', '[data-idea]'], ['#/', '[data-coffee]'], ['#/', '#gear-btn'], ['#/history', '[data-roll]'], ['#/badges', '[data-badge]'],
+  ['#/shop', '[data-skin-preview] >> visible=true'], ['#/about', '[data-trailer]'], ['#/leaderboard', '[data-number], .lb-row [data-n], .lb-row button']];
 const browser = await firefox.launch({ firefoxUserPrefs: { 'media.volume_scale': '0.0' } });
 let total = 0;
 for (const locale of ['fr-FR', 'en-US']) {

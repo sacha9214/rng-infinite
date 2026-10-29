@@ -10,6 +10,11 @@
 
   // ---------------------------------------------------------------- dictionnaire (texte anglais exact → français)
   const FR = {
+    // menu regroupé (demandé par Sacha, 2026-10-29) : Roll (déjà « Tirer »), Shop, Battle, Leaderboard (« Top » sur téléphone), Casino, Social, Me
+    'Battle': 'Combat', 'Top': 'Top', 'Social': 'Social', 'Me': 'Moi', 'Main menu': 'Menu principal', 'Section': 'Section',
+    'Tournaments': 'Tournois', 'Profile': 'Profil', 'Summary': 'Résumé', 'Open my public profile': 'Ouvrir mon profil public',
+    '⚙️ Edit profile & settings': '⚙️ Profil et réglages', 'Roll once and pick a player name to start your profile.': 'Fais un tirage et choisis un pseudo pour commencer ton profil.',
+    '⚙️ Settings': '⚙️ Réglages', 'Settings': 'Réglages',
     // XP du jour / de la semaine / du mois (qwertyuiop) et Median roll (Kag), 2026-10-28
     '⭐ XP': '⭐ XP', '📊 Median': '📊 Médiane', 'XP today': 'XP du jour', 'XP this week': 'XP de la semaine', 'XP this month': 'XP du mois', 'Best roll of the period': 'Meilleur tirage de la période',
     'XP earned today by each player · resets at midnight UTC': 'XP gagnée aujourd\'hui par chaque joueur · remise à zéro à minuit UTC',
