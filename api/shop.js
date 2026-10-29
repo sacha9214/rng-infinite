@@ -1,6 +1,7 @@
 // GET  /api/shop?me=<playerId>                                   → pièces, skins possédés, skin équipé
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
-// POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin, ou fond d'écran, tiré par le serveur)
+// GET  /api/shop?owners=1                                         → combien de joueurs possèdent chaque objet (public, en cache)
+// POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin, fond d'écran, bouton ou pack de sons, tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
 // POST /api/shop { playerId, secret, action: 'sound' | 'buysound', sound } → met en service ou achète un pack de sons
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
@@ -54,6 +55,31 @@ async function checkCollection(playerId) {
   if (w.length) await redis(w);
 }
 const usedCodesKey = id => `codes:${id}`;
+// Popularité (idée d'ann joe et de YU CHUAN 23, 2026-10-28) : un seul hash « owners », champ <genre>:<objet> = nombre
+// de joueurs qui possèdent l'objet (genres : skins, walls, buttons, emotes, sounds, les noms de la page Owner). Au plus
+// un champ par objet du catalogue (~230), jamais rien par joueur. +1 là où un objet entre dans un inventaire (achats et
+// caisses : ce sont les seuls chemins, les cadeaux entre amis ne donnent que des pièces), lu par GET /api/shop?owners=1.
+// Rattrapage des objets déjà possédés : tools/backfill-owners.js. Jamais qui possède quoi : seulement des nombres.
+const OWNERS = 'owners';
+const gained = (kind, id) => ['HINCRBY', OWNERS, `${kind}:${id}`, 1];
+const OWNERS_TTL = 60 * 1000;
+let ownersCache = { at: 0, data: null };
+async function ownerCounts() {
+  if (ownersCache.data && Date.now() - ownersCache.at < OWNERS_TTL) return ownersCache.data;
+  const [flat] = await redis([['HGETALL', OWNERS]]), data = {};
+  for (let i = 0; i < (flat || []).length; i += 2) { const n = Number(flat[i + 1]) || 0; if (n > 0) data[flat[i]] = n; }
+  ownersCache = { at: Date.now(), data };
+  return data;
+}
+// Part du créateur (5 %, Shop.IDEA_SHARE) : à chaque fois qu'un joueur dépense des pièces pour obtenir un skin né d'une
+// idée (champ idea) — achat direct, et depuis le 2026-10-28 aussi quand ce skin sort d'une caisse payée (finnnnn ne
+// touchait rien sur les skins tirés dans les caisses) : 5 % de ce que l'acheteur a payé (le prix du skin, ou celui de la
+// caisse). Jamais pour soi-même, rien pour une caisse ouverte avec une clé ; un nom introuvable ne bloque rien.
+async function payIdea(item, buyer, paid) {
+  if (!item || !item.idea || !(paid > 0)) return;
+  const author = await findPlayer(item.idea).catch(() => null), cut = Math.round(paid * Shop.IDEA_SHARE);
+  if (author && author !== buyer && cut > 0) await redis([['HINCRBY', statsKey(author), 'bonus', cut], ['HINCRBY', statsKey(author), 'royalty', cut], ...eco('in:royalty', cut)]);
+}
 const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash "wall" retient celui affiché
 
 async function state(id) {
@@ -84,6 +110,7 @@ async function state(id) {
   return {
     coins: Shop.balance(stats),
     earned: Shop.earned(stats),
+    royalty: Math.max(0, Number(stats.royalty) || 0), // pièces reçues comme créateur (part de 5 %), pour sa vue « Your creations »
     owned: skins,
     skin: equipped && Shop.byId.has(equipped) && allowed(equipped) ? equipped : 'classic',
     supporter: isSupporter,
@@ -116,6 +143,7 @@ module.exports = async (req, res) => {
       if (query.get('btc')) { const asset = Btc.assetOf(query.get('asset')); if (!asset) return send(res, 400, { error: 'Unknown coin' }); return send(res, 200, await Btc.view(isPlayerId(query.get('me')) ? query.get('me') : '', asset)); }
       if (query.get('casino') === 'top') return send(res, 200, await Gamble.board(isPlayerId(query.get('me')) ? query.get('me') : ''));
       if (query.get('casino')) return send(res, 200, await Gamble.house());
+      if (query.get('owners')) return send(res, 200, { owners: await ownerCounts() }); // en cache 60 s ici, et côté site
       const me = query.get('me');
       if (!isPlayerId(me)) return send(res, 400, { error: 'Invalid player' });
       return send(res, 200, await state(me));
@@ -151,12 +179,15 @@ module.exports = async (req, res) => {
         const won = Shop.drawCase(box, crypto.randomInt(0, 2 ** 32) / 2 ** 32);
         // Caisse de fonds d'écran (idée de CrazyMiner22) : le fond gagné rejoint walls:<id>, comme un achat (buywall).
         // Caisse de boutons (idée de shadow2, 2026-10-27) : le bouton gagné rejoint btns:<id>, comme un achat (buybutton).
-        const duplicate = (box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
+        // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : le pack gagné rejoint snds:<id>, comme un achat (buysound).
+        const duplicate = (box.snd ? st.sounds : box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
-        if (!duplicate) writes.push(['SADD', box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won]);
+        if (!duplicate) writes.push(['SADD', box.snd ? ownedSoundsKey(playerId) : box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won],
+          gained(box.snd ? 'sounds' : box.btn ? 'buttons' : box.wall ? 'walls' : 'skins', won));
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
+        if (!duplicate && !box.snd && !box.btn && !box.wall) await payIdea(Shop.byId.get(won), playerId, price);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -193,7 +224,7 @@ module.exports = async (req, res) => {
         const st = await state(playerId);
         if (!st.walls.includes(item.id)) {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
-          await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], ...eco('out:wallpapers', item.price)]);
+          await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], gained('walls', item.id), ...eco('out:wallpapers', item.price)]);
           await checkCollection(playerId);
         }
         await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché
@@ -213,7 +244,7 @@ module.exports = async (req, res) => {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:buttons', item.price),
-            ['SADD', ownedButtonsKey(playerId), item.id],
+            ['SADD', ownedButtonsKey(playerId), item.id], gained('buttons', item.id),
           ]);
           await checkCollection(playerId);
         }
@@ -243,7 +274,7 @@ module.exports = async (req, res) => {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:sounds', item.price),
-            ['SADD', ownedSoundsKey(playerId), item.id],
+            ['SADD', ownedSoundsKey(playerId), item.id], gained('sounds', item.id),
           ]);
         }
         await redis([['HSET', 'snd', playerId, item.id]]); // acheté = en service
@@ -301,7 +332,7 @@ module.exports = async (req, res) => {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', item.price], ...eco('out:emotes', item.price),
-            ['SADD', ownedEmotesKey(playerId), item.id],
+            ['SADD', ownedEmotesKey(playerId), item.id], gained('emotes', item.id),
           ]);
           await checkCollection(playerId);
         }
@@ -371,14 +402,10 @@ module.exports = async (req, res) => {
           if (st.coins < skin.price) return send(res, 422, { error: `Not enough coins: ${skin.price - st.coins} more needed` });
           await redis([
             ['HINCRBY', statsKey(playerId), 'spent', skin.price], ...eco('out:skins', skin.price),
-            ['SADD', ownedKey(playerId), skin.id],
+            ['SADD', ownedKey(playerId), skin.id], gained('skins', skin.id),
           ]);
           await checkCollection(playerId);
-          // 5 % pour le joueur qui a eu l'idée du skin (jamais pour soi-même) ; un nom introuvable ne bloque pas l'achat.
-          if (skin.idea) {
-            const author = await findPlayer(skin.idea).catch(() => null), cut = Math.round(skin.price * Shop.IDEA_SHARE);
-            if (author && author !== playerId && cut > 0) await redis([['HINCRBY', statsKey(author), 'bonus', cut], ['HINCRBY', statsKey(author), 'royalty', cut], ...eco('in:royalty', cut)]);
-          }
+          await payIdea(skin, playerId, skin.price); // 5 % pour le joueur qui a eu l'idée du skin
         }
         await redis([['HSET', 'skins', playerId, skin.id]]); // acheté = équipé
         return send(res, 200, await state(playerId));

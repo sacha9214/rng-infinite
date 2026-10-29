@@ -1770,18 +1770,29 @@
     let u = rnd(TAU), spd = 1.1, spdTo = 1.1, heat = 0, target = .4, core = 0, nebula = 1, fig = 0, figLife = 3, sweeping = false, swept = 0, sweepDur = 1, dim = 0;
     // Un tronçon du ∞, de u0 à u0 - len (vers l'arrière), en morceaux de couleur ; fall : la queue s'efface. Chaque
     // morceau est un seul tracé à bouts plats : pas de perles là où deux segments se recouvriraient.
+    // Sans traîne (fall = 0 : le filigrane, le ∞ tracé), alpha et largeur ne changent pas d'un morceau à l'autre : les
+    // morceaux voisins de même couleur sont réunis en un seul tracé. Le filigrane entier passait par ~28 morceaux tracés
+    // deux fois à chaque image ; il en reste ~13 (signalé par MAYO, 2026-10-28 : « le bouton infinity lag »).
     function stroke(u0, len, a, width, fall, shift) {
       const n = Math.max(6, Math.round(len * 18 * q)), step = len / n, per = 4;
       co.lineCap = 'butt'; co.lineJoin = 'round';
+      let open = false, col = '', al0 = 0, wd0 = 0;
+      const flush = () => {
+        if (!open) return;
+        co.strokeStyle = col;
+        co.globalAlpha = Math.min(1, al0 * (dark ? .16 : .1)); co.lineWidth = wd0 * 4.2; co.stroke();
+        co.globalAlpha = Math.min(1, al0); co.lineWidth = wd0; co.stroke();
+        open = false;
+      };
       for (let i0 = 0; i0 < n; i0 += per) {
         const k = (i0 + per / 2) / n, al = a * Math.pow(Math.max(0, 1 - k), fall), wd = width * (fall ? 1 - .6 * k : 1);
-        if (al <= .01) continue;
-        co.beginPath();
-        for (let i = i0; i <= Math.min(n, i0 + per); i++) { const pt = at(u0 - i * step); i === i0 ? co.moveTo(pt.x, pt.y) : co.lineTo(pt.x, pt.y); }
-        co.strokeStyle = hue(k * HUES.length * (len / TAU) * 2 + shift);
-        co.globalAlpha = Math.min(1, al * (dark ? .16 : .1)); co.lineWidth = wd * 4.2; co.stroke();
-        co.globalAlpha = Math.min(1, al); co.lineWidth = wd; co.stroke();
+        if (al <= .01) { flush(); continue; }
+        const c = hue(k * HUES.length * (len / TAU) * 2 + shift);
+        let i = i0 + 1;
+        if (fall || !open || c !== col) { flush(); co.beginPath(); const pt = at(u0 - i0 * step); co.moveTo(pt.x, pt.y); open = true; col = c; al0 = al; wd0 = wd; }
+        for (; i <= Math.min(n, i0 + per); i++) { const pt = at(u0 - i * step); co.lineTo(pt.x, pt.y); }
       }
+      flush();
       co.lineCap = 'round';
     }
     const shed = (pt, v, n) => { for (let i = n; i > 0; i--) { const a = rnd(TAU), sp = rnd(10, v); motes.add({ x: pt.x, y: pt.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, drag: 1.5, max: rnd(.6, 1.4), size: rnd(1.4, 3), c: pick(HUES.concat(WHITE)), tw: rnd(TAU) }); } };

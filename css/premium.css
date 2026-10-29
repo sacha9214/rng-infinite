@@ -413,8 +413,26 @@
 /* Petites cartes (caisses) et duels à 3 joueurs et plus : la nébuleuse s'immobilise. */
 .num-card.sm.skin-infinity::before, .room-stage.many .num-card.skin-infinity::before { animation: none; }
 .room-stage.many .num-card.skin-infinity { animation: none; }
+/* Le liseré qui tourne, sans tout repeindre (signalé par MAYO, 2026-10-28 : « le bouton infinity lag, mon jeu lag ») :
+   animer --inf-a sur la carte recalculait le style de la carte et de ses chiffres et repeignait tout son fond (étoiles,
+   ∞ en SVG, nébuleuse) à chaque image ; mesuré pendant et après un tirage, c'était l'essentiel du surcoût de ce skin.
+   Le dégradé conique tournant passe sur ::after, réduit par un masque à l'anneau du bord : seul cet anneau est repeint
+   (le conique du fond reste dessous, figé). overflow: clip + overflow-clip-margin laissent ce calque couvrir le bord ;
+   Safari ne connaît pas encore overflow-clip-margin : il garde l'ancienne animation. Pas sur les cartes à rareté
+   (data-tier : aperçu de la boutique, résultats de duel), dont ::after est le reflet de la rareté, ni sur les petites. */
+@supports (overflow-clip-margin: 2px) {
+  .num-card.skin-infinity:not([data-tier]):not(.sm) { overflow: clip; overflow-clip-margin: 2px; animation: none; }
+  .num-card.skin-infinity:not([data-tier]):not(.sm)::after {
+    inset: -2px; padding: 2px; border-radius: inherit; z-index: 2; opacity: 1; mix-blend-mode: normal; will-change: transform;
+    background: conic-gradient(from var(--inf-a), #22d3ee, #a855f7, #ec4899, #fbbf24, #a855f7, #22d3ee);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    animation: inf-turn 7s linear infinite;
+  }
+  .room-stage.many .num-card.skin-infinity:not([data-tier]):not(.sm)::after { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .num-card.skin-infinity, .num-card.skin-infinity::before, .skin-infinity .slot, .skin-infinity .slot.revealed::after { animation: none; }
+  .num-card.skin-infinity, .num-card.skin-infinity::before, .num-card.skin-infinity:not([data-tier]):not(.sm)::after, .skin-infinity .slot, .skin-infinity .slot.revealed::after { animation: none; }
 }
 
 /* Duels à 3 joueurs et plus : la pluie d'orage s'arrête (décor permanent). */
