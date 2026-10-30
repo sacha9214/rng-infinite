@@ -26,7 +26,7 @@
     { id: 'gold', name: 'Gold', emoji: '🥇', price: 1000, desc: 'Solid gold' },
     { id: 'matrix', name: 'Matrix', emoji: '🟩', price: 1200, desc: 'Falling green code' },
     { id: 'fire', name: 'Fire', emoji: '🔥', price: 1500, desc: 'Burning digits' },
-    { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Mythic or better and the sky takes its color', idea: 'Deadshot' }, // idée de Deadshot (2026-10-16)
+    { id: 'sky', name: 'Sky', emoji: '☁️', price: 1600, desc: 'Cloud digits; roll Anomaly or better and the sky takes its color', idea: 'Deadshot' }, // idée de Deadshot (2026-10-16)
     // Idée de Gunnar (2026-10-16, « heavenly ») : marbre et or, une auréole sur chaque chiffre.
     { id: 'heavenly', name: 'Heavenly', emoji: '😇', price: 2000, desc: 'White marble and gold leaf; every digit gets its halo', idea: 'MUSTARD' },
     { id: 'cards', name: 'Deck', emoji: '🃏', price: 1400, desc: 'Every digit is a card drawn from the deck', idea: 'GamblrGod' }, // idée de GamblrGod (2026-10-16)

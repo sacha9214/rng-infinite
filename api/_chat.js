@@ -18,7 +18,10 @@ youpin youtre chinetoque pouffiasse petasse trouduc bouffon bouffonne abruti abr
 mongolien attarde sucer suceuse viol violer violeur
 `.split(/\s+/).filter(Boolean));
 // Ceux-là sont masqués même collés à autre chose (ils ne se cachent dans aucun mot courant).
-const ANYWHERE = ['nigger', 'nigga', 'faggot', 'motherfuck', 'enculé', 'encule', 'salope', 'connard', 'fils de pute', 'filsdepute', 'nique ta', 'niquetamere', 'ta gueule'];
+// blowjob, handjob, rimjob (collés ou en deux mots) passaient tels quels : signalé par Yooooooooo (2026-10-30). « job »
+// seul reste un mot normal.
+const ANYWHERE = ['nigger', 'nigga', 'faggot', 'motherfuck', 'enculé', 'encule', 'salope', 'connard', 'fils de pute', 'filsdepute', 'nique ta', 'niquetamere', 'ta gueule',
+  'blow job', 'blowjob', 'hand job', 'handjob', 'rimjob'];
 
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', '@': 'a', $: 's', '!': 'i', '€': 'e' };
 const plain = s => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();

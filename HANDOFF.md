@@ -46,6 +46,10 @@ Open weakness, not changed: a chat mute is per account and a new account needs o
 
 After deploying: run `node tools/rescore-worst.js --apply` (rarity table changed).
 
+Later the same day (branch `claude/bug-reports-1030b`): the Sky skin gets its colour on Anomaly and Godlike too (Deadshot;
+Godlike was added after the skin and left the sky blue), and the chat filter masks blowjob / handjob / rimjob, joined
+or in two words (Yooooooooo). "job" alone stays allowed; "second hand jobs" is now masked too, an accepted false positive.
+
 ## Clearer menu (2026-10-29, branch `claude/clearer-layout`, not merged)
 
 Sacha: "now it's like hard to know where stuff are … do a version of the site that you think is easier to understand".

@@ -1548,6 +1548,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(cleanChat('sh1t!'), '****!', 'chiffres à la place des lettres, ponctuation gardée');
   assert.equal(cleanChat('sale connard'), 'sale *******');
   assert.equal(cleanChat('ta gueule stp'), '******** stp');
+  // Yooooooooo (2026-10-30) : les mots en « -job » passaient ; « job » seul reste permis.
+  for (const bad of ['blowjob', 'blow job', 'BLOW-JOB', 'handjob', 'hand job', 'rimjob']) assert.ok(!/job/i.test(cleanChat(`a ${bad} lol`)), `« ${bad} » doit être masqué`);
+  for (const ok of ['good job', 'my job is fun', 'jobs']) assert.equal(cleanChat(ok), ok, `« ${ok} » ne doit pas être touché`);
   for (const ok of ['pass the class', 'Scunthorpe united', "j'ai tiré 7175 !", 'my best is 777777', 'score: 1,234,567 XP', 'assassin', 'well played 🎉']) assert.equal(cleanChat(ok), ok, `« ${ok} » ne doit pas être touché`);
   assert.equal(cleanChat('go https://evil.com/x now'), 'go [link] now');
   assert.equal(cleanChat('join discord.gg/abc'), 'join [link]');

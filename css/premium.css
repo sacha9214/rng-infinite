@@ -714,8 +714,8 @@
 
 /* ------------------------------------------------------------------ Sky (idée de Deadshot) : un ciel d'été, des chiffres en
    nuage (blancs, bombés, ombrés de gris-bleu dessous). Pendant le tirage : de la brume qui dérive ; à la révélation, le nuage
-   se condense (matière molle : il s'écrase puis rebondit). Mythique ou mieux : le ciel et les nuages prennent la couleur de
-   la rareté (la scène, js/skinfx.js SCENES.sky, colore les nuages autour de la carte). */
+   se condense (matière molle : il s'écrase puis rebondit). Anomaly ou mieux : le ciel et les nuages prennent la couleur de
+   la rareté (la scène, js/skinfx.js SCENES.sky, colore les nuages autour de la carte). Anomaly aussi depuis le 2026-10-30. */
 .num-card.skin-sky {
   background:
     radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 250, 220, .85), transparent 70%),
@@ -738,6 +738,10 @@
 .skin-sky .slot.ghost, .skin-sky .slot.ghost.revealed { animation: none; opacity: .3; filter: none; }
 .skin-sky .slot.collapsed, .skin-sky .slot.collapsed.revealed { animation: none; opacity: 0; text-shadow: none; }
 /* Le ciel prend la couleur des grandes raretés. */
+/* Anomaly (aube orangée) et Godlike (coucher de soleil rose et or) : demandés par Deadshot, le créateur du skin
+   (2026-10-30) ; Godlike n'existait pas encore quand le skin est sorti, son ciel restait bleu. */
+.num-card.skin-sky[data-tier="anomaly"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 237, 213, .9), transparent 70%), linear-gradient(180deg, #ea580c 0%, #fb923c 55%, #ffedd5 100%); }
+.num-card.skin-sky[data-tier="godlike"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(254, 240, 138, .95), transparent 70%), linear-gradient(180deg, #e11d48 0%, #fb7185 50%, #fde68a 100%); }
 .num-card.skin-sky[data-tier="mythic"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 228, 240, .9), transparent 70%), linear-gradient(180deg, #db2777 0%, #f472b6 55%, #fbcfe8 100%); }
 .num-card.skin-sky[data-tier="celestial"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(224, 252, 255, .9), transparent 70%), linear-gradient(180deg, #0e7490 0%, #22d3ee 55%, #cffafe 100%); }
 .num-card.skin-sky[data-tier="divine"] { background: radial-gradient(ellipse 40% 55% at 10% 0%, rgba(255, 251, 220, .95), transparent 70%), linear-gradient(180deg, #ca8a04 0%, #facc15 55%, #fef9c3 100%); }
