@@ -145,9 +145,12 @@ async function sendDm(me, other, raw, rawImage) {
 // caché ou aucune action depuis 5 min) avec la relecture des messages ; presence = { id: "<heure>:<état>" }. Sans
 // signal depuis 150 s, l'ami est hors ligne.
 const PRESENCE_TTL = 150000, RANK = { online: 2, afk: 1, offline: 0 };
-function statusOf(raw) {
+// Un tirage récent (seen, écrit par le serveur à chaque tirage) vaut aussi signe de vie (signalé par kingston,
+// 2026-10-30 : « Offline · last roll just now » pendant que l'ami tirait) : le signal de la page part toutes les 60 s
+// et peut manquer (onglet en arrière-plan ralenti, requête refusée, tirage depuis un autre appareil).
+function statusOf(raw, seen = 0) {
   const [t, s] = String(raw || '').split(':');
-  if (!t || Date.now() - Number(t) > PRESENCE_TTL) return 'offline';
+  if (!t || Date.now() - Number(t) > PRESENCE_TTL) return Date.now() - Number(seen || 0) <= PRESENCE_TTL ? 'online' : 'offline';
   return s === 'afk' ? 'afk' : 'online';
 }
 
@@ -165,7 +168,7 @@ async function state(id) {
   const list = (friends || []).map((f, i) => ({
     name: nameOf(f), title: titles[all.indexOf(f)] || null,
     xp: Number(extra[i * 3] || 0), seen: Number(extra[i * 3 + 1] || 0), room: extra[i * 3 + 2] || null, unread: Number(unread[i] || 0),
-    status: statusOf(presence[i]),
+    status: statusOf(presence[i], extra[i * 3 + 1]),
   })).sort((a, b) => (b.room ? 1 : 0) - (a.room ? 1 : 0) || RANK[b.status] - RANK[a.status] || b.seen - a.seen);
   return { friends: list, incoming: (incoming || []).map(nameOf).sort(), outgoing: (outgoing || []).map(nameOf).sort(), max: MAX_FRIENDS, now: Date.now(), gift: await giftInfo(id) };
 }

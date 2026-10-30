@@ -82,9 +82,14 @@ async function trashKing(now = Date.now()) {
   const month = dayKey(now - 86400000).slice(0, 7);
   const [ok] = await redis([['SET', `award:trashking:${month}`, '1', 'NX', 'EX', 90 * 86400]]);
   if (ok !== 'OK') return null;
-  const [low] = await redis([['ZRANGE', `lbw:month:${month}`, 0, 0]]);
+  const key = `lbw:month:${month}`;
+  const [low] = await redis([['ZRANGE', key, 0, 0, 'WITHSCORES']]);
   if (!low || !low.length) return null;
-  await redis([['HINCRBY', `stats:${low[0]}`, 'trashKing', 1]]);
+  // Ex aequo (signalé par R77, 2026-10-30) : tous les joueurs au pire score du mois sont Trash King, pas seulement le
+  // premier dans l'ordre de Redis (l'identifiant du joueur).
+  const [tied] = await redis([['ZRANGEBYSCORE', key, low[1], low[1]]]);
+  const kings = tied && tied.length ? tied : [low[0]];
+  await redis(kings.map(id => ['HINCRBY', `stats:${id}`, 'trashKing', 1]));
   return low[0];
 }
 

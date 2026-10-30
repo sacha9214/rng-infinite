@@ -16,7 +16,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
@@ -462,6 +462,9 @@ module.exports = async (req, res) => {
           // Mise : chaque joueur déjà assis la paie (séquestre), et un remboursement de secours est programmé.
           ...(r.stake ? list.flatMap(p => [['HINCRBY', statsKey(p.id), 'spent', r.stake], ['HSET', roomKey(code), `paid:${p.id}`, r.stake]]) : []),
           ...(r.stake ? [queueReveal(Date.now() + STAKE_REFUND_MS, { wager: { code, winner: null } })] : []),
+          // Salon à mise : mises rendues ~1 min après que tout le monde est parti, sans attendre qu'on rouvre la salle
+          // (dylanbuckleyisjewish, 2026-10-30 ; voir lobbyCheck dans api/_lib.js).
+          ...(r.stake && !players ? [queueReveal(Date.now() + LOBBY_CHECK_MS, { lobby: code })] : []),
         ]);
         return code;
       }

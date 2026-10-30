@@ -19,6 +19,22 @@ const prevMonth = t => { const d = new Date(t); d.setUTCDate(1); d.setUTCMonth(d
 const parse = v => { if (!v) return null; const [top, month] = String(v).split(':'); return { top: Number(top), month }; };
 const better = (a, b) => !b || a.top < b.top || (a.top === b.top && a.month > b.month);
 
+// Top 10 avec places partagées (signalé par R77, 2026-10-30) : à score égal, même place et même badge (1, 1, 3…),
+// au lieu d'un ordre décidé par Redis sur l'identifiant. Les ex aequo de la 10e place entrent aussi.
+async function topOf(key) {
+  const [flat] = await redis([['ZREVRANGE', key, 0, TOP_SIZE - 1, 'WITHSCORES']]);
+  const ids = [], scores = [];
+  for (let i = 0; i < (flat || []).length; i += 2) { ids.push(flat[i]); scores.push(Number(flat[i + 1])); }
+  if (ids.length === TOP_SIZE) {
+    const last = scores[TOP_SIZE - 1];
+    const [tied] = await redis([['ZRANGEBYSCORE', key, last, last]]);
+    for (const id of tied || []) if (!ids.includes(id)) { ids.push(id); scores.push(last); }
+  }
+  const places = [];
+  scores.forEach((s, i) => { places.push(i && s === scores[i - 1] ? places[i - 1] : i + 1); });
+  return { ids, places };
+}
+
 let settled = ''; // dernier mois figé, gardé en mémoire : une seule lecture Redis par mois et par processus
 async function settleMonth(t = Date.now()) {
   const month = prevMonth(t);
@@ -26,17 +42,17 @@ async function settleMonth(t = Date.now()) {
   const [done] = await redis([['GET', `topawards:done:${month}`]]);
   if (!done) {
     // Les écritures sont idempotentes : deux requêtes simultanées donnent le même résultat.
-    const [ids] = await redis([['ZREVRANGE', `lb:month:${month}`, 0, TOP_SIZE - 1]]);
-    if (ids && ids.length) {
+    const { ids, places } = await topOf(`lb:month:${month}`);
+    if (ids.length) {
       const [bests] = await redis([['HMGET', BEST_KEY, ...ids]]);
       const writes = [];
       ids.forEach((id, i) => {
-        const award = { top: markOf(i + 1), month };
+        const award = { top: markOf(places[i]), month };
         writes.push(['HSET', awardKey(id), month, award.top]);
         if (better(award, parse(bests[i]))) writes.push(['HSET', BEST_KEY, id, `${award.top}:${month}`]);
       });
       await redis(writes);
-      await payCoins(ids, month, t);
+      await payCoins(ids, month, t, places);
     }
     await redis([['SET', `topawards:done:${month}`, String(t)]]);
   }
@@ -44,16 +60,17 @@ async function settleMonth(t = Date.now()) {
 }
 
 // Versement des pièces du top 10 : le verrou NX garantit un seul paiement, même si deux processus figent le mois.
-async function payCoins(ids, month, t = Date.now()) {
+async function payCoins(ids, month, t = Date.now(), places = ids.map((_, i) => i + 1)) {
   const [ok] = await redis([['SET', `topcoins:${month}`, String(t), 'NX', 'EX', 90 * 86400]]);
   if (ok !== 'OK') return false;
   const writes = [];
   let total = 0;
-  ids.slice(0, TOP_SIZE).forEach((id, i) => {
-    const a = REWARDS[markOf(i + 1)];
+  ids.forEach((id, i) => {
+    const a = REWARDS[markOf(places[i])];
+    if (!a) return;
     total += a;
     writes.push(['HINCRBY', `stats:${id}`, 'bonus', a], ['HINCRBY', `stats:${id}`, 'topCoins', a],
-      ['RPUSH', `gifts:${id}`, JSON.stringify({ f: '', a, t, k: 'top', p: i + 1, m: month })], ['LTRIM', `gifts:${id}`, -GIFTS_KEPT, -1], ['EXPIRE', `gifts:${id}`, GIFTS_TTL]);
+      ['RPUSH', `gifts:${id}`, JSON.stringify({ f: '', a, t, k: 'top', p: places[i], m: month })], ['LTRIM', `gifts:${id}`, -GIFTS_KEPT, -1], ['EXPIRE', `gifts:${id}`, GIFTS_TTL]);
   });
   await redis([...writes, ...eco('in:monthly', total, t)]);
   return true;

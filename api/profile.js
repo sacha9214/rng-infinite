@@ -2,7 +2,7 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { statsKey, breathe, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { statsKey, breathe, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, XP_LB, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
@@ -34,12 +34,19 @@ module.exports = async (req, res) => {
     if (params.has('avatar') || params.has('avatars')) return await Avatar.serve(req, res, params);
     const name = cleanName(params.get('name'));
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
-    if (!name) return send(res, 400, { error: 'Missing player name' });
-    const id = await findPlayer(name);
+    // ?lite=1 n'est demandé que pour soi-même (onglet Badges, accueil, Stats, bio) : le joueur est retrouvé par son id
+    // (me) avant son pseudo. Signalé par A Dude (2026-10-30) : un appareil dont le pseudo local n'est plus celui du
+    // serveur (pseudo changé ailleurs, ou gardé sur l'appareil quand le serveur n'a pas répondu, voir saveName) recevait
+    // un 404, et l'onglet Badges disait « Roll once to start… » à un joueur de 18 000 tirages ; si ce pseudo était
+    // pris par un autre, il montrait même les succès de l'autre.
+    const lite = params.get('lite') === '1';
+    const [meName] = lite && me ? await redis([['HGET', 'names', me]]) : [null];
+    if (!name && !meName) return send(res, 400, { error: 'Missing player name' });
+    const id = meName ? me : await findPlayer(name);
     if (!id) return send(res, 404, { error: 'No player with this name' });
     // ?lite=1 (onglet Badges : mes succès et mon titre) : sans l'historique, qui peut prendre plusieurs secondes à
     // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).
-    if (params.get('lite') === '1') {
+    if (lite) {
       const [shown, liteTitle, liteBio] = await redis([['HGET', 'names', id], ['HGET', 'titles', id], ['HGET', 'bio', id]]);
       const lst = await readStats(id);
       const [liteUniq] = await redis([['SCARD', `nums:${id}`]]);
@@ -56,7 +63,7 @@ module.exports = async (req, res) => {
     // sinon chaque gros profil recalculait ses 100 000 tirages juste après la mise à jour et ralentissait tout le monde.
     if (!AGG.has(id)) { try { const [raw] = await redis([['GET', paggKey(id)]]); if (raw) AGG.set(id, JSON.parse(raw)); } catch (e) { /* recalculé */ } }
     const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
-    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize, bioRaw] = await redis([
+    const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize, bioRaw, lbXp, countAll] = await redis([
       cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
       ['HGET', 'best:all', id],
@@ -70,6 +77,9 @@ module.exports = async (req, res) => {
       ['HGET', statsKey(id), 'discordName'],
       ['ZCARD', historyKey(id)],
       ['HGET', 'bio', id], // « About me » (idée de Niall, 2026-10-27, api/_bio.js)
+      // Totaux à vie du classement (voir lifeRolls plus bas) : XP à vie et nombre de tirages à vie.
+      ['ZSCORE', XP_LB, id],
+      ['HGET', 'count:all', id],
     ]);
     // Clan du joueur (api/_clan.js) : tag, nom et emoji, affichés sous son nom.
     const [cid] = await redis([['HGET', 'clanof', id]]);
@@ -150,16 +160,27 @@ module.exports = async (req, res) => {
       if (count >= PAGG_MIN) await redis([['SET', paggKey(id), JSON.stringify(agg), 'PX', Math.max(1000, agg.at + AGG_TTL_MS - Date.now())]]);
     }
 
+    // Totaux à vie (2026-10-30, signalé par jsand, kaz, Raynarr00 et LeSombre) : l'historique ne garde que les
+    // HISTORY_CAP (100 000) derniers tirages, donc le profil et la comparaison restaient bloqués à 99 999 tirages, et
+    // l'XP à vie y avait jusqu'à 2 milliards de moins qu'au classement. Tirages et XP à vie viennent maintenant des
+    // compteurs du classement (count:all et lb:xp, stats.rolls en secours) ; la chance, les meilleurs / pires tirages et
+    // les badges restent calculés sur les tirages relus (window).
+    const lifeRolls = Math.max(count, Number(countAll) || 0, Number(stats.rolls) || 0);
+    const lifeXp = Math.max(lifetime, Number(lbXp) || 0);
+    // Raretés : compteurs à vie des stats (t:<rareté>) quand l'historique ne couvre pas tous les tirages.
+    const lifeTiers = lifeRolls > count ? Object.fromEntries(engine.TIER_ORDER.map(k => [k, Math.max(tiers[k] || 0, Number(stats[`t:${k}`]) || 0)]).filter(([, v]) => v)) : tiers;
+
     return send(res, 200, {
       name: shownName || name,
-      rolls: count,
-      lifetime,
-      since,
+      rolls: lifeRolls,
+      lifetime: lifeXp,
+      window: count, // tirages relus dans l'historique (chance, meilleurs et pires tirages, badges)
+      since: Number(stats.first) && (!since || Number(stats.first) < since) ? Number(stats.first) : since, // premier tirage, même sorti de l'historique
       last: lastT,
       rank: rank === null ? null : Number(rank) + 1,
       // Chance = percentile moyen des tirages (50 attendu) ; tiers = nombre de tirages par rareté de carte.
       luck: count ? Math.round((percentileSum / count) * 10) / 10 : null,
-      tiers,
+      tiers: lifeTiers,
       best,
       worst,
       skin: Shop.resolve(skin) || 'classic', discord: discordName || null,

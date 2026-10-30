@@ -313,6 +313,10 @@ assert.deepEqual(r.body.best.map(x => x.n), [777777]);
   assert.deepEqual(lite.body.achievements, full.body.achievements);
   assert.equal(lite.body.title, full.body.title);
   assert.equal(lite.body.best, undefined, 'pas d\'historique en mode lite');
+  // Onglet Badges (A Dude, 2026-10-30) : retrouvé par l'id du joueur (me), même avec un ancien pseudo sur l'appareil.
+  const old = await call(profile, { url: `/api/profile?name=OldAliceName&lite=1&me=${alice.playerId}` });
+  assert.deepEqual([old.status, old.body.name, old.body.achievements], [200, 'Alice', full.body.achievements], 'lite retrouvé par l\'id');
+  assert.equal((await call(profile, { url: `/api/profile?name=OldAliceName&me=${alice.playerId}` })).status, 404, 'profil complet : toujours par le pseudo');
 }
 assert.equal((await call(profile, { url: '/api/profile?name=Nobody' })).status, 404);
 assert.equal((await call(profile, { url: '/api/profile' })).status, 400);
@@ -503,8 +507,19 @@ assert.equal((await call(roomApi, { method: 'PUT' })).status, 405);
 
 // Profil : raretés et chance pour la comparaison.
 r = await call(profile, { url: '/api/profile?name=Alice' });
-assert.equal(Object.values(r.body.tiers).reduce((x, y) => x + y, 0), r.body.rolls);
+// window : les tirages relus dans l'historique (stats.rolls a été gonflé à 60 plus haut pour ouvrir les duels).
+assert.equal(Object.values(r.body.tiers).reduce((x, y) => x + y, 0), r.body.window);
 assert.ok(r.body.luck >= 0 && r.body.luck <= 100);
+// Au-delà de l'historique plafonné (jsand, kaz, Raynarr00, LeSombre, 2026-10-30) : tirages et XP à vie du profil = ceux
+// du classement (count:all, lb:xp) ; la chance reste calculée sur les tirages relus (window).
+{
+  const [cnt, xp] = run([['HGET', 'count:all', alice.playerId], ['ZSCORE', 'lb:xp', alice.playerId]]).map(x => x.result);
+  run([['HSET', 'count:all', alice.playerId, Number(cnt) + 150000], ['ZADD', 'lb:xp', Number(xp) + 2e9, alice.playerId]]);
+  const big = await call(profile, { url: '/api/profile?name=Alice' });
+  assert.deepEqual([big.body.rolls, big.body.lifetime, big.body.window], [Number(cnt) + 150000, Number(xp) + 2e9, r.body.window], 'totaux à vie du classement');
+  assert.equal(big.body.luck, r.body.luck, 'chance inchangée');
+  run([['HSET', 'count:all', alice.playerId, cnt], ['ZADD', 'lb:xp', xp, alice.playerId]]);
+}
 
 // 13. Succès et titres : calculés sur les stats du serveur, un titre ne s'équipe que débloqué.
 const titleApi = require(path.join(ROOT, 'api/title.js'));
@@ -696,10 +711,10 @@ assert.equal(cleanName('  Sâcha_2.0  '), 'Sâcha_2.0');
 assert.notEqual(cleanName('Ѕасhа'), 'Sacha');
 assert.equal(cleanName('<b>Bob</b>🔥'), 'bBobb');
 
-// Limite par IP : au-delà de 300 requêtes par minute, 429 sans toucher à la base.
+// Limite par IP : au-delà de 900 requêtes par minute, 429 sans toucher à la base.
 const ipHeaders = { 'x-forwarded-for': '203.0.113.7' };
 let lastStatus = 0, before429 = calls;
-for (let i = 0; i < 301; i++) lastStatus = (await call(roomApi, { url: '/api/room?code=ZZZZZ', headers: ipHeaders })).status;
+for (let i = 0; i < 901; i++) lastStatus = (await call(roomApi, { url: '/api/room?code=ZZZZZ', headers: ipHeaders })).status;
 assert.equal(lastStatus, 429);
 const afterLimit = calls;
 assert.equal((await call(roomApi, { url: '/api/room?code=ZZZZZ', headers: ipHeaders })).status, 429);
@@ -1206,6 +1221,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(net(w1) + net(w2), 4000 - 500);
   await later(12 * 3600000 + 1000, () => call(leaderboard, { url: '/api/leaderboard?period=day' }));
   assert.equal(net(w1) + net(w2), 4000, 'remboursé sans que personne ne rouvre la salle');
+  // Salon à mise quitté avant le début (dylanbuckleyisjewish, 2026-10-30) : mise rendue ~1 min plus tard, pas 12 h.
+  const lb = () => call(leaderboard, { url: '/api/leaderboard?period=day' });
+  r = await roomPost(w1, 'create', { size: 2, stake: 500 });
+  const left = r.body.code;
+  await later(30000, lb);
+  assert.equal(net(w1) + net(w2), 4000 - 500, 'pas avant la vérification du salon');
+  await later(31000, lb);
+  assert.equal(net(w1) + net(w2), 4000, 'mise rendue 1 min après le départ de tous');
+  assert.equal((await roomGet(left)).body.status, 'abandoned');
+  // L'hôte attend toujours sur la page : rien n'est rendu, et un adversaire peut encore entrer.
+  r = await roomPost(w1, 'create', { size: 2, stake: 500 });
+  const waiting = r.body.code;
+  for (let i = 0; i < 5; i++) { await later(20000, () => roomGet(waiting, w1)); await lb(); }
+  assert.equal(net(w1) + net(w2), 4000 - 500, 'salon encore ouvert : mise gardée');
+  assert.equal((await roomPost(w2, 'join', { code: waiting })).body.status, 'playing', 'le salon attendait encore');
+  await roomPost(w1, 'quit', { code: waiting }); // forfait : w2 gagne le pot, la suite des tests repart à zéro
 }
 
 // ================================================================ 25. Anti-farm : victoires de duel sans enjeu
@@ -2993,6 +3024,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Présence (2026-10-21) : hors ligne sans signal, puis AFK, puis en ligne ; un signal trop vieux redevient hors ligne.
   {
     const status = async () => (await fr(ann, 'list')).body.friends.find(f => f.name === 'Benny').status;
+    // Un tirage récent compte comme signe de vie (kingston, 2026-10-30) : en ligne même sans signal de la page.
+    run([['ZADD', 'seen', Date.now() - 1000, ben.playerId]]); assert.equal(await status(), 'online', 'tirage il y a 1 s');
+    run([['ZADD', 'seen', Date.now() - 200000, ben.playerId]]);
     assert.equal(await status(), 'offline');
     await fr(ben, 'gifts', undefined, { presence: 'afk' }); assert.equal(await status(), 'afk');
     await fr(ben, 'gifts', undefined, { presence: 'active' }); assert.equal(await status(), 'online');
@@ -3548,6 +3582,37 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(JSON.parse(raw[0]), { f: '', a: 500, t, k: 'top', p: 3, m: month });
   assert.equal(run([['LLEN', `gifts:${ids[10]}`]])[0].result, 0, 'rien hors du top 10');
   rank._reset();
+}
+
+// Ex aequo (signalé par R77, 2026-10-30) : même score = même place au classement, même badge du mois, Trash King partagé.
+{
+  const rank = require(path.join(ROOT, 'api/_rank.js'));
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js'));
+  const T2 = require(path.join(ROOT, 'api/_discord_tasks.js'));
+  const { readStats, WORST_LB, WORST_BEST } = require(path.join(ROOT, 'api/_lib.js'));
+  const ids = Array.from({ length: 12 }, (_, i) => (0x7d00 + i).toString(16).padStart(16, '0'));
+  // Poubelle de tous les temps : deux joueurs à -5 (sous tout vrai score), un à -4 → places 1, 1, 3.
+  run([...ids.slice(0, 3).flatMap((id, i) => [['ZADD', WORST_LB, i < 2 ? -5 : -4, id], ['HSET', WORST_BEST, id, JSON.stringify({ n: 1, s: i < 2 ? -5 : -4, t: 1 })]])]);
+  const w = await call(lbApi, { url: '/api/leaderboard?period=worst' });
+  assert.deepEqual(w.body.entries.slice(0, 3).map(e => e.rank), [1, 1, 3], JSON.stringify(w.body.entries.slice(0, 3)));
+  run([['ZREM', WORST_LB, ...ids.slice(0, 3)], ['HDEL', WORST_BEST, ...ids.slice(0, 3)]]);
+  // Mois : 1er seul, 2e et 3e ex aequo (Top 5 tous les deux), et 11e à égalité avec le 10e (Top 10 et 250 pièces).
+  const month = '2031-03', lb = `lb:month:${month}`, t = Date.parse('2031-04-01T00:10:00Z');
+  const sc = [100, 90, 90, 80, 70, 60, 50, 40, 30, 20, 20, 10];
+  run([['DEL', lb, `topawards:done:${month}`, `topcoins:${month}`], ...ids.flatMap((id, i) => [['DEL', `stats:${id}`, `gifts:${id}`, `topawards:${id}`], ['ZADD', lb, sc[i], id]])]);
+  rank._reset();
+  await rank.settleMonth(t);
+  const bonus = await Promise.all(ids.map(async id => Number((await readStats(id)).bonus || 0)));
+  assert.deepEqual(bonus, [1000, 500, 500, 500, 500, 250, 250, 250, 250, 250, 250, 0], 'ex aequo payés pareil');
+  const [g2] = run([['LRANGE', `gifts:${ids[2]}`, 0, -1]]).map(x => x.result);
+  assert.equal(JSON.parse(g2[0]).p, 2, 'place partagée annoncée');
+  rank._reset();
+  // Trash King : les deux pires ex aequo du mois sont couronnés.
+  const now = Date.parse('2031-04-01T02:00:00Z');
+  run([['DEL', 'award:trashking:2031-03', 'lbw:month:2031-03'], ['ZADD', 'lbw:month:2031-03', 0, ids[0], 0, ids[1], 5, ids[2]]]);
+  assert.ok(await T2.trashKing(now));
+  const kings = await Promise.all(ids.slice(0, 3).map(async id => Number((await readStats(id)).trashKing || 0)));
+  assert.deepEqual(kings, [1, 1, 0]);
 }
 
 // Tournoi du jour (idée de PRISMA123, 2026-10-20) : inscriptions, tableau, tirages à part, tours, prix, titre Champion.

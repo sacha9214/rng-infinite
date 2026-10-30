@@ -162,6 +162,11 @@
 
     // Adopte le joueur renvoyé par la connexion Google (le même sur tous les appareils).
     setIdentity({ id, secret, google }) {
+      // Autre joueur sur cet appareil (signalé par costoroll, 2026-10-30) : un ami se connecte sur mon ordinateur (Google
+      // ou mot de passe), puis je me reconnecte ; ses tirages restaient mêlés aux miens (total, meilleurs tirages,
+      // Divines), car seul l'identifiant changeait. L'historique de l'appareil est celui du joueur actif : on le vide, et
+      // syncHistory recharge celui du compte depuis le serveur. Même joueur (premier lien Google) : rien n'est retiré.
+      if (id !== this.state.player.id) { this.state.rolls = []; this.packed = null; delete this.state.settings.coins; }
       Object.assign(this.state.player, { id, secret, google });
       this.save();
       this.emit();
@@ -170,6 +175,8 @@
     // Déconnexion : l'appareil repart avec un nouveau joueur anonyme ; le compte Google garde le sien.
     signOut() {
       this.state.player = { id: uid(), secret: uid() + uid(), name: '' };
+      // Les tirages et le solde du compte restent sur le serveur, pas sur l'appareil (costoroll, 2026-10-30).
+      this.state.rolls = []; this.packed = null; delete this.state.settings.coins;
       this.save();
       this.emit();
     },

@@ -124,8 +124,10 @@ const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 
 // CORS ouvert : le site est aussi servi depuis GitHub Pages. Renvoie true si la requête était un préflight.
 // Limite par adresse IP, gardée en mémoire par l'instance (sans toucher à la base) : un script qui bombarde l'API est
-// coupé avant d'épuiser le quota gratuit. 300 requêtes par minute et par IP, soit ~7 onglets de duel à la fois.
-const RATE_LIMIT = 300;
+// coupé avant d'épuiser le quota gratuit. 900 requêtes par minute et par IP (300 jusqu'au 2026-10-30) : une école ou une
+// famille partage une seule IP, et un seul onglet du Crash sondait 400 fois par minute ; MAYO voyait alors « Unavailable
+// right now. » dans le chat global et plus rien de public ne s'affichait (2026-10-30). Un script reste coupé.
+const RATE_LIMIT = 900;
 const RATE_WINDOW_MS = 60000;
 const hits = new Map();
 function limited(req) {
@@ -661,6 +663,21 @@ async function recordRoll(playerId, n, t) {
 // N'importe quelle requête d'API applique les entrées échues ; ZREM garantit qu'une seule l'applique.
 const PENDING_KEY = 'pending';
 const queueReveal = (due, entry) => ['ZADD', PENDING_KEY, due, JSON.stringify(entry)];
+// Salon de duel à mise quitté avant le début (signalé par dylanbuckleyisjewish, 2026-10-30 : « duel unavailable », et la
+// mise semblait perdue) : la mise n'était rendue que si quelqu'un rouvrait la salle (api/room.js checkAbandoned), sinon
+// par le filet de 12 h. Vérifié chaque minute tant que le salon attend : personne sur la page depuis 30 s (mêmes règles
+// que checkAbandoned) → salle arrêtée, mises rendues. Une partie commencée garde ses règles et son filet de 12 h.
+const LOBBY_CHECK_MS = 60000, LOBBY_IDLE_MS = 30000;
+async function lobbyCheck(code, now = Date.now()) {
+  const key = `room:${code}`;
+  const [flat] = await redis([['HGETALL', key]]);
+  const h = toObject(flat);
+  if (!h.host || h.started === '1' || h.ended === '1' || h.settled) return;
+  const last = Math.max(Number(h.created) || 0, ...Object.entries(h).filter(([k]) => k.startsWith('seen:')).map(([, v]) => Number(v) || 0));
+  if (now - last <= LOBBY_IDLE_MS) { await redis([queueReveal(now + LOBBY_CHECK_MS, { lobby: code })]); return; }
+  await redis([['HSET', key, 'ended', 1], ['ZREM', 'rooms:live', code]]);
+  await settleWager(code, null);
+}
 async function flushDue(now = Date.now()) {
   try {
     const [due] = await redis([['ZRANGEBYSCORE', PENDING_KEY, '-inf', now, 'LIMIT', 0, 20]]);
@@ -671,13 +688,14 @@ async function flushDue(now = Date.now()) {
       for (const [id, n, t] of entry.rolls || []) await recordRoll(id, n, t);
       if (entry.w && entry.w.length) await redis(entry.w);
       if (entry.wager) await settleWager(entry.wager.code, entry.wager.winner || null); // pot du duel, ou remboursement
+      if (entry.lobby) await lobbyCheck(entry.lobby, now);
     }
   } catch (err) {
     console.error('flushDue', err); // la requête en cours passe quand même ; la prochaine réessaiera
   }
 }
 
-module.exports = { bigKey, BIG_TIERS, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
+module.exports = { bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
