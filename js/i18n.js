@@ -153,7 +153,8 @@
     'Player id reset, roll again': 'Identifiant réinitialisé, retire', 'Session expired: sign in with Google again to get your player back': 'Session expirée : reconnecte-toi avec Google pour retrouver ton joueur',
     'Your lifetime XP': 'Ton XP à vie', 'coin': 'pièce', 'coins': 'pièces','Badge breakdown': 'Détail des badges', 'Total': 'Total', 'Rarity': 'Rareté', 'Family': 'Famille', 'First found': 'Trouvé le', 'Expected': 'Attendu',
     'You earned it': 'Tu l\'as obtenu', 'Not yet': 'Pas encore', 'not found': 'pas trouvé', 'Custom badge — not in the original game': 'Badge maison — absent du jeu d\'origine',
-    'Could not save — storage is full. Export your history from the player menu.': 'Sauvegarde impossible — stockage plein. Exporte ton historique depuis le menu joueur.',
+    'This device is out of space: your rolls still count on your account, but the history on this device stops here.': 'Cet appareil n\'a plus de place : tes tirages comptent toujours sur ton compte, mais l\'historique de cet appareil s\'arrête ici.',
+    'This device is out of space: this roll could not be kept.': 'Cet appareil n\'a plus de place : ce tirage n\'a pas pu être gardé.',
     // pseudo, réglages, compte
     'Choose your player name': 'Choisis ton pseudo', 'Your name': 'Ton pseudo', 'Player name': 'Pseudo', 'Save & roll': 'Enregistrer et tirer', 'Save': 'Enregistrer', 'Name saved': 'Pseudo enregistré',
     'That name is not valid.': 'Ce pseudo n\'est pas valide.', 'It appears on the leaderboard next to your best rolls. Each name belongs to one player only.': 'Il apparaît au classement à côté de tes meilleurs tirages. Chaque pseudo n\'appartient qu\'à un seul joueur.',
