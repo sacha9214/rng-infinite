@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-29 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-10-30 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -8,6 +8,43 @@ The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Nod
 domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU overuse, which is why everything moved
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
+
+## Bug reports sweep (2026-10-30, branch `claude/bug-reports-1030`)
+
+All 49 open bug reports in the inbox were checked against the code. Fixed (each comment names the reporter):
+
+- **Profiles past 100,000 rolls** (jsand, kaz, Raynarr00, LeSombre): `api/profile.js` takes the roll count from
+  `count:all`, lifetime XP from `lb:xp` and rarity counts from `stats.t:<tier>`; luck, best/worst and badges still come
+  from the last 100k rolls kept in `hist:<id>` (new `window` field).
+- **Two players on one device** (costoroll): `Store.setIdentity` / `signOut` empty the device's rolls when the player
+  changes; `syncHistory` reloads the account's own. Already-merged devices: Settings → Clear history, then reload.
+- **Badges tab "Roll once"** (A Dude): `?lite=1` finds the player by id (`me`), not by the name saved on the device.
+- **Menu pulled back to the roll** (Stepa, daddy finger, Chromebooks on slow school networks): a roll answer that
+  arrives after the player left the page is saved with a toast, no reveal.
+- **Big roll lost in a hidden tab** (ann Joe worst gamble): the away summary is kept on the device until shown.
+- **Auto-roll "presses but nothing"** (MereTera, Sean): two tabs or devices on one account share the 8 s server
+  cooldown; no click sound on a refused roll, and a toast after two refusals. Timers have a fallback.
+- **9 Infinites instead of 10** (kaz): `tools/build.mjs` dropped every second top score (0.0001 % step). 4 numbers
+  go up one rarity: 24 → Infinite, 224224 → Godlike, 10987 → Divine, one Mythic → Celestial. `js/percentiles.js` is
+  261 KB (was 193 KB).
+- **Leaderboard ties** (R77): equal scores share the rank, the monthly Top badges/coins and Trash King. Ties can pay a
+  reward more than once.
+- **Friends "Offline · last roll just now"** (kingston): a roll in the last 150 s counts as online.
+- **Duel score boxes swapped** (qwertyuiop), **"Leave the game" after the end**, **duel bets stuck 12 h** (lobbies
+  nobody is on for 30 s are refunded within a minute), real messages for 400/403 (dylanbuckleyisjewish).
+- **Crash cash-out lost** (GamblrGod): polling 150 → 300 ms (it alone exceeded the IP limit), cash-out retried ~1.8 s.
+- **IP rate limit 300 → 900/min** (MAYO saw "Unavailable right now"): schools and families share one IP.
+- **Other tournament greyed out** (casmicgraything), **Lake fish head first** (TibotyTWO), **Window Cleaner arm**
+  (Deadshot), **Workshop elves' heads** under the top bar (costoroll), **Battle tab → Duel** (idea by Kag).
+
+Not bugs (answers drafted): rarity moves after new badges (911911, 3435), 1234 Sequence (4) under Cascade, 1,000,000 is
+in range, Weekend Rush is UTC and +25 %, leading zeros, one Premium key shows on several cases, multi-device XP,
+ads/Shein (adware on the player's device). Ideas: RTX 5090 / Exact Natural / Important Birthday scores (Kag; balance
+call for Sacha, they are 1-in-a-million badges scored far below 100 M), stop auto-roll on quest claim, Tower variety.
+Need more info: GamblrGod "can't roll", colt −9 coins, PRISMA123 −60k, JUAN SEBASTIAN wrong sound, Edward skipped roll.
+Open weakness, not changed: a chat mute is per account and a new account needs only 100 rolls to chat.
+
+After deploying: run `node tools/rescore-worst.js --apply` (rarity table changed).
 
 ## Clearer menu (2026-10-29, branch `claude/clearer-layout`, not merged)
 

@@ -739,8 +739,8 @@
   // ---------------------------------------------------------------- raretés
   const BADGE_TIERS = [[1e3, 'common'], [1e4, 'uncommon'], [1e5, 'rare'], [1e6, 'epic'], [1e7, 'anomaly'], [1e8, 'mythic']];
   // Carte : au-dessus de Mythic (top 1 %), trois raretés découpent le sommet : Celestial (top 0,1 %, 900 nombres),
-  // Divine (top 0,01 %, 90 nombres) et Infinite (top 0,001 %, les 9 meilleurs nombres du jeu). Les badges vont jusqu'à
-  // Celestial : les badges d'un seul nombre (1 chance sur 1 000 000, 100 M d'XP et plus ; idée de Meretera, 2026-10-16).
+  // Divine (top 0,01 %, 90 nombres) et Infinite (top 0,001 %, les 10 meilleurs nombres du jeu ; seulement 9 du 27 au
+  // 30/10/2026, arrondi de tools/build.mjs signalé par kaz). Les badges vont jusqu'à Celestial : les badges d'un seul nombre (1 chance sur 1 000 000, 100 M d'XP et plus ; idée de Meretera, 2026-10-16).
   // Carrés parfaits par nombre de chiffres (16 à 99 856), pour les badges « contient un carré ».
   const SQUARES_BY_LEN = {};
   for (let r = 4; r * r < 100000; r++) { const q = String(r * r); (SQUARES_BY_LEN[q.length] = SQUARES_BY_LEN[q.length] || []).push(q); }

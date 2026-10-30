@@ -7493,12 +7493,17 @@
     // la silhouette, dans la carte : (x, sy) = position de la raclette (sy : hauteur de la tête de raclette)
     const drawMan = (c, x, sy, sw) => {
       // grand, à bout de bras derrière la vitre : la tête occupe le haut d'un carreau, les épaules en couvrent presque deux
-      const top = card.y - man.up * man.up * H * 1.5, s = H, hy = top + s * .4, shy = hy + s * .3; // man.up : il remonte au bout de ses cordes, son travail fini
+      const rise = man.up * man.up * H * 3, top = card.y - rise, s = H, hy = top + s * .4, shy = hy + s * .3; // man.up : il remonte au bout de ses cordes, son travail fini
+      sy -= rise; // la raclette monte avec lui (elle restait au carreau, le bras s'étirait : signalé par Deadshot, 2026-10-29)
       c.fillStyle = INK; c.strokeStyle = INK; c.lineCap = 'round'; c.lineJoin = 'round';
       // les deux cordes, du haut de la fenêtre jusqu'au harnais
       c.lineWidth = Math.max(1.2, s * .03); c.beginPath(); c.moveTo(x - s * .3 - sw * s * .3, card.y - 2); c.lineTo(x - s * .22, shy + s * .1); c.moveTo(x + s * .3 - sw * s * .3, card.y - 2); c.lineTo(x + s * .22, shy + s * .1); c.stroke();
       // le corps (épaules arrondies), le cou, la tête, la casquette
-      c.beginPath(); c.moveTo(x - s * .48, top + s * 1.2); c.quadraticCurveTo(x - s * .5, shy, x - s * .2, shy - s * .04); c.lineTo(x + s * .2, shy - s * .04); c.quadraticCurveTo(x + s * .5, shy, x + s * .48, top + s * 1.2); c.closePath(); c.fill();
+      // sous le bas de la vitre, le reste du corps (bassin et jambes) : quand il remonte, on ne voit plus un buste coupé
+      // net ; il monte assez haut pour sortir du cadre en entier
+      // (un seul tracé : l'encre est translucide, deux formes qui se chevauchent feraient une tache plus sombre)
+      c.beginPath(); c.moveTo(x - s * .28, top + s * 2.4); c.lineTo(x - s * .36, top + s * 1.75); c.lineTo(x - s * .48, top + s * 1.2); c.quadraticCurveTo(x - s * .5, shy, x - s * .2, shy - s * .04); c.lineTo(x + s * .2, shy - s * .04); c.quadraticCurveTo(x + s * .5, shy, x + s * .48, top + s * 1.2); c.lineTo(x + s * .36, top + s * 1.75); c.lineTo(x + s * .28, top + s * 2.4);
+      c.arc(x + s * .18, top + s * 2.4, s * .1, 0, Math.PI); c.lineTo(x + s * .08, top + s * 1.9); c.lineTo(x - s * .08, top + s * 1.9); c.lineTo(x - s * .08, top + s * 2.4); c.arc(x - s * .18, top + s * 2.4, s * .1, 0, Math.PI); c.closePath(); c.fill();
       c.fillRect(x - s * .07, hy + s * .1, s * .14, s * .18);
       c.beginPath(); c.arc(x, hy, s * .19, 0, TAU); c.fill();
       c.beginPath(); c.ellipse(x, hy - s * .1, s * .2, s * .11, 0, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(x + s * .2, hy - s * .1, s * .14, s * .035, 0, 0, TAU); c.fill(); // casquette et visière
@@ -7529,7 +7534,9 @@
         // il va vers le prochain carreau (ou sort par la droite à la fin) ; ses cordes le font se balancer
         const goal = man.tx != null ? man.tx : next ? next.x - OFF : card.x + card.w + H * .6;
         if (!man.wipe || now > man.wipe.t + .42) { const d = goal - man.x; man.x += d * Math.min(1, dt * 5); man.sway += (clamp(d / H, -1, 1) * .5 - man.sway) * Math.min(1, dt * 6); }
-        man.wave = Math.max(0, man.wave - dt * .5); man.shrug = Math.max(0, man.shrug - dt * .5);
+        // coucou (ou haussement d'épaules) jusqu'à ce qu'il soit sorti du cadre : avant, le bras retombait d'un coup sur
+        // la raclette juste avant qu'il remonte
+        man.wave = Math.max(0, man.wave - dt * .3); man.shrug = Math.max(0, man.shrug - dt * .3);
         if (now > (man.leaveAt || Infinity)) man.up = Math.min(1, (man.up || 0) + dt * .7);
         const pane = S.reduce((b, z) => (!b || Math.abs(z.x - man.x - OFF) < Math.abs(b.x - man.x - OFF) ? z : b), null);
         const ptop = pane ? pane.top + H * .1 : card.y + H * .25, pbot = pane ? pane.bottom - H * .08 : card.y + H * .8;

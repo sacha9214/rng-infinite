@@ -94,8 +94,12 @@ let lastPct = -1;
 for (let i = 0; i < SPAN; i++) {
   if (i > 0 && sorted[i] === sorted[i - 1]) continue;
   const pct = (100 * i) / SPAN;
-  const isTail = pct >= 99 || pct < 0.1; // les deux bouts : chaque score distinct (raretés Land waste, Garbage)
-  if (table.length === 0 || pct - lastPct >= (isTail ? 0.0001 : 0.01)) {
+  // Les deux bouts : chaque score distinct (raretés Land waste, Garbage, et Celestial à Infinite en haut). Avant le
+  // 2026-10-30, l'écart minimal était 0,0001 % ; or un nombre pèse 100 / 1 000 001 = 0,0000999999 %, donc une ligne sur
+  // deux sautait en haut : le rang pair ou impair décidait de la rareté (24, 10e nombre, tombé en Godlike ; 9 Infinite
+  // au lieu de 10, signalé par kaz).
+  const isTail = pct >= 99 || pct < 0.1;
+  if (table.length === 0 || isTail || pct - lastPct >= 0.01) {
     table.push([sorted[i], Math.round(pct * 10000) / 10000]);
     lastPct = pct;
   }

@@ -4827,7 +4827,9 @@ html:not(.dark) .wp-lake::after { background-image: url("data:image/svg+xml,<svg
    suit le saut en x, le poisson monte et redescend dedans en tournant */
 #wallpaper.wp-lake i { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; pointer-events: none; }
 #wallpaper .wlk-j b { position: absolute; left: calc(var(--s) * -.5); bottom: 0; width: var(--s); height: calc(var(--h) + var(--s)); overflow: hidden; animation: wlk-jx var(--d) linear var(--dl) infinite; }
-#wallpaper .wlk-j u { position: absolute; left: 0; bottom: calc(var(--s) * -.2); width: var(--s); height: calc(var(--s) * .4); background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40'><defs><linearGradient id='f' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%2394a3b8'/><stop offset='.5' stop-color='%23e2e8f0'/><stop offset='1' stop-color='%23f8fafc'/></linearGradient></defs><path fill='%2364748b' d='M30 12q10-12 26-8l-6 8zM40 30q6 8 16 6l-4-6z'/><path fill='url(%23f)' d='M6 20C6 20 20 4 50 6C70 8 82 16 86 20C82 24 70 32 50 34C20 36 6 20 6 20Z' transform='matrix(-1 0 0 1 100 0)'/><path fill='%2394a3b8' d='M14 20L0 6Q4 20 0 34Z' transform='matrix(-1 0 0 1 100 0)'/><circle cx='80' cy='17' r='2.2' fill='%230f172a'/><path d='M66 12q4 8 0 16' stroke='%2364748b' stroke-width='1.2' fill='none'/></svg>") center / contain no-repeat; opacity: 0; animation: wlk-jy var(--d) var(--dl) infinite; }
+/* le poisson regarde vers la droite, le sens du saut : la queue à gauche, l'œil et le nez à droite, nageoires vers
+   l'arrière (la queue était à droite, du côté de l'œil : il semblait sauter à reculons, signalé par TibotyTWO, 2026-10-29) */
+#wallpaper .wlk-j u { position: absolute; left: 0; bottom: calc(var(--s) * -.2); width: var(--s); height: calc(var(--s) * .4); background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40'><defs><linearGradient id='f' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%2394a3b8'/><stop offset='.5' stop-color='%23e2e8f0'/><stop offset='1' stop-color='%23f8fafc'/></linearGradient></defs><path fill='%2364748b' d='M30 12q10-12 26-8l-6 8zM40 30q6 8 16 6l-4-6z' transform='matrix(-1 0 0 1 92 0)'/><path fill='url(%23f)' d='M6 20C6 20 20 4 50 6C70 8 82 16 86 20C82 24 70 32 50 34C20 36 6 20 6 20Z'/><path fill='%2394a3b8' d='M14 20L0 6Q4 20 0 34Z'/><circle cx='80' cy='17' r='2.2' fill='%230f172a'/><path d='M66 12q4 8 0 16' stroke='%2364748b' stroke-width='1.2' fill='none'/></svg>") center / contain no-repeat; opacity: 0; animation: wlk-jy var(--d) var(--dl) infinite; }
 #wallpaper .wlk-j s { position: absolute; left: calc(var(--s) * -.8); top: calc(var(--s) * -.2); width: calc(var(--s) * 1.6); height: calc(var(--s) * .4); background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 30'><ellipse cx='60' cy='15' rx='56' ry='12' fill='none' stroke='%23f8fafc' stroke-width='2.4' opacity='.85'/><ellipse cx='60' cy='15' rx='34' ry='7' fill='none' stroke='%23f8fafc' stroke-width='1.6' opacity='.5'/><g fill='%23f8fafc'><circle cx='30' cy='6' r='2'/><circle cx='88' cy='4' r='2.4'/><circle cx='60' cy='2' r='1.6'/><circle cx='104' cy='9' r='1.4'/></g></svg>") center / contain no-repeat; opacity: 0; animation: wlk-ring-a var(--d) ease-out var(--dl) infinite; }
 #wallpaper .wlk-j s + s { left: calc(var(--dx) - var(--s) * .8); animation-name: wlk-ring-b; }
 #wallpaper .wlk-f1 { --x: 24%; --y: 72%; --s: min(14vmin, 110px); --h: min(20vmin, 160px); --dx: min(18vmin, 150px); --d: 13s; --dl: -4s; }
@@ -6768,6 +6770,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .tn-teaser-text b::before { content: '🏆 '; }
 .tn-teaser-line { font-size: .78rem; }
 .tn-status { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+/* L'autre tournoi du jour, fermé quand on est inscrit dans l'un (casmicgraything, 2026-10-30). */
+.tn-which button:disabled { opacity: .45; cursor: not-allowed; }
 .tn-big { font-size: 1.05rem; font-weight: 700; }
 .tn-big .mono { font-size: 1.2rem; color: var(--ep-text); }
 .tn-in { font-weight: 700; color: var(--success); }
@@ -6905,9 +6909,11 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .skin-idea a { color: inherit; font-weight: 700; }
 
 /* Wheelie : le cycliste roule au-dessus de la carte ; sur l'écran de tirage, la carte est collée sous la barre du haut et
-   il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place. */
-#card-stage .num-card.skin-wheelie { margin-top: 3.6rem; }
-@media (max-width: 560px) { #card-stage .num-card.skin-wheelie { margin-top: 3rem; } }
+   il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place.
+   Même chose pour les lutins d'Elves' Workshop : leurs têtes et leurs bonnets dépassent d'une hauteur de carte, la barre
+   du haut leur coupait la tête (« the elves got beheaded », costoroll, 2026-10-27). */
+#card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop { margin-top: 3.6rem; }
+@media (max-width: 560px) { #card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop { margin-top: 3rem; } }
 
 .prank-bar[hidden] { display: none; }
 
@@ -6947,6 +6953,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .out-chip { order: 9; margin-left: .3rem; padding: 0 .4rem; border-radius: 999px; background: var(--surface-raised); color: var(--prose-3); font-size: .68rem; font-weight: 700; white-space: nowrap; }
 .board-row .seat-kick { order: 10; }
 .room-quit { margin-top: .4rem; }
+/* .btn impose display: inline-flex : sans ça, « Leave the game » restait sous le résultat d'un duel fini (2026-10-30). */
+.room-quit[hidden] { display: none; }
 
 .theme-switch[hidden] { display: none !important; } /* remplacé par la roue crantée (#gear-btn) ; le thème se règle dans les réglages */
 

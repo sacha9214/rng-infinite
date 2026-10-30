@@ -615,12 +615,15 @@
   const lifetimeEP = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : r[1]), 0);
   // Totaux à vie du serveur (« Stats bug », 2026-10-26) : l'appareil ne garde pas tous les tirages et leur XP enregistrée
   // date du tirage, d'où trois chiffres différents (accueil, Stats, classement). On montre ceux du serveur dès qu'on les a.
+  // Pseudo de l'appareil resté à l'ancien (A Dude, 2026-10-30 : pseudo changé ailleurs, ou gardé ici quand le serveur
+  // n'a pas répondu) : le profil « lite » est retrouvé par l'id du joueur, et son pseudo remplace celui de l'appareil.
+  const syncName = p => { if (p && p.name && p.name !== Store.player.name) Store.setPlayerName(p.name); };
   const ServerLife = {
     at: 0, xp: null, rolls: null, busy: null,
     async load() {
       if (!Store.player.name) return null;
       if (Date.now() - this.at < 60000 && this.xp != null) return this;
-      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { syncName(p); this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
       await this.busy;
       return this.xp != null ? this : null;
     },
@@ -1814,6 +1817,7 @@
         body: JSON.stringify({ credential: response.credential, playerId: p.id, secret: p.secret }),
       });
       Store.setIdentity({ id: data.playerId, secret: data.secret, google: { email: data.email } });
+      Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
       if (data.name) Store.setPlayerName(data.name);
       closeModal();
       const restored = await syncHistory().catch(() => 0);
@@ -1909,6 +1913,7 @@
       try {
         const data = await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordLogin', name: f.get('name'), password: f.get('password') }) });
         Store.setIdentity({ id: data.playerId, secret: data.secret, google: null });
+        Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
         Store.setPlayerName(data.name);
         closeModal();
         const restored = await syncHistory().catch(() => 0);
@@ -1957,6 +1962,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-10-30-bugs', date: 'Oct 30, 2026', en: ['📊 Profiles and Compare now count all your rolls and lifetime XP, not just your last 100,000 (reported by jsand, kaz, Raynarr00 and LeSombre)', '👥 Switching players on the same device no longer mixes both histories (reported by costoroll)', '🏅 The Badges tab no longer says "Roll once" to players with an old name saved on their device (reported by A Dude)', '🧭 Opening another page while a roll is loading no longer pulls you back to the roll: a message shows your roll instead (reported by Stepa and daddy finger)', '🌙 A big roll made while the tab was hidden now stays on screen when you come back, even after a reload (reported by ann Joe worst gamble)', '🤖 Auto-roll now tells you when your account is already rolling in another tab or on another device (reported by MereTera and Sean)', '♾️ The 10 best numbers are all Infinite again: 24 had become Godlike by a rounding error (reported by kaz)', '🤝 Leaderboard ties now share the same place and the same monthly reward (reported by R77)', '🟢 Friends who are rolling now show as online (reported by kingston)', '⚔️ In a duel, the score boxes stay above the right player (reported by qwertyuiop)', '🪙 A duel bet comes back within about a minute if the duel never starts, and the duel page says why it cannot open (reported by dylanbuckleyisjewish)', '🚀 Crash: Cash out no longer fails when the game is busy (reported by GamblrGod)', '🏆 The tournament you are not in is greyed out instead of doing nothing (reported by casmicgraything)', '🐟 The Lake fish jump head first (reported by TibotyTWO), the Window Cleaner keeps his arm when he leaves (reported by Deadshot), and the Workshop elves keep their heads (reported by costoroll)', '⚔️ The Battle tab is now called Duel (idea by Kag)'], fr: ['📊 Les profils et la comparaison comptent maintenant tous tes tirages et toute ton XP à vie, pas seulement tes 100 000 derniers (signalé par jsand, kaz, Raynarr00 et LeSombre)', '👥 Changer de joueur sur le même appareil ne mélange plus les deux historiques (signalé par costoroll)', '🏅 L\'onglet Badges ne dit plus « Fais un tirage » aux joueurs dont l\'appareil gardait un ancien pseudo (signalé par A Dude)', '🧭 Ouvrir une autre page pendant qu\'un tirage charge ne te ramène plus au tirage : un message affiche ton tirage (signalé par Stepa et daddy finger)', '🌙 Un gros tirage fait pendant que l\'onglet était caché reste affiché quand tu reviens, même après un rechargement (signalé par ann Joe worst gamble)', '🤖 Le tirage auto te prévient quand ton compte tire déjà dans un autre onglet ou sur un autre appareil (signalé par MereTera et Sean)', '♾️ Les 10 meilleurs nombres sont de nouveau tous Infinite : 24 était passé Godlike par une erreur d\'arrondi (signalé par kaz)', '🤝 Les ex æquo du classement partagent la même place et la même récompense du mois (signalé par R77)', '🟢 Les amis en train de tirer apparaissent en ligne (signalé par kingston)', '⚔️ En duel, les cases de score restent au-dessus du bon joueur (signalé par qwertyuiop)', '🪙 Une mise de duel revient en une minute environ si le duel ne commence jamais, et la page dit pourquoi le duel ne s\'ouvre pas (signalé par dylanbuckleyisjewish)', '🚀 Crash : « Encaisser » n\'échoue plus quand le jeu est chargé (signalé par GamblrGod)', '🏆 Le tournoi où tu n\'es pas inscrit est grisé au lieu de ne rien faire (signalé par casmicgraything)', '🐟 Les poissons du Lac sautent la tête la première (signalé par TibotyTWO), le laveur de vitres garde son bras en partant (signalé par Deadshot) et les lutins de l\'Atelier gardent leur tête (signalé par costoroll)', '⚔️ L\'onglet Combat s\'appelle maintenant Duel (idée de Kag)'] },
     { id: '2026-10-30-storage', date: 'Oct 30, 2026', en: ['💾 Fixed "storage is full" for big histories: your device now keeps your rolls in a much smaller format, so about 400,000 rolls fit instead of 175,000. Every online roll always counted on your account anyway (reported by jonahfr)'], fr: ['💾 Corrigé : « stockage plein » pour les gros historiques. Ton appareil garde maintenant tes tirages dans un format bien plus petit : environ 400 000 tirages au lieu de 175 000. Chaque tirage en ligne a toujours compté sur ton compte (signalé par jonahfr)'] },
     { id: '2026-10-29-menu', date: 'Oct 29, 2026', en: ['🧭 A clearer menu, with names on every screen: Roll, Shop, Battle (duels and tournaments), Leaderboard, Casino, Social (friends, clan and the global chat) and Me (your profile, badges, stats and history). Every page is still there, only easier to find', '👤 Your name at the top right now opens your profile; ⚙️ opens the settings', '🗺️ The roadmap is now also in What\'s new'], fr: ['🧭 Un menu plus clair, avec les noms sur tous les écrans : Jouer, Boutique, Combat (duels et tournois), Classement, Casino, Social (amis, clan et chat global) et Moi (ton profil, tes badges, tes stats et ton historique). Toutes les pages sont toujours là, juste plus faciles à trouver', '👤 Ton nom en haut à droite ouvre maintenant ton profil ; ⚙️ ouvre les réglages', '🗺️ La feuille de route est aussi dans les Nouveautés'] },
     { id: '2026-10-28-ideas', date: 'Oct 28, 2026', en: ['🎨 16 new skins from your ideas: Lightbulb (idea by costoroll), Stonks, Chess and Weather (casmicgraything), Ninja (casmictechthing), Scroll of Alchemy (R77), Window Cleaner (Deadshot), Firework (HSI), Graffiti and Origami (JBearr12), Taco (sennybex1), Beach (furcoat0), Arcade Fighter and Battleship (17black), Cone of Destiny and The Observer (Gray alt)', '🖼️ 5 new wallpapers: The Fisher (idea by kingston), Condensation (ann joe), Your Last Rolls (G8_floppa), Spinning Bread (Cincent) and the limited Zombie Moon, until November 2 (17black)', '📐 New badges: Pythagorean (idea by Phong254), Prime Digits (idea by Kag) and So Close, exactly 97 (idea by MAYO). Some numbers changed rarity with them; the rolls you already made keep their value', '🔢 New titles for the number of different numbers you rolled, from 100 to 100,000 (idea by jsand)', '🤖 Auto-roll can now also stop on up to 5 badges you pick (idea by CococoC)', '📊 XP leaderboards for today, this week, this month and all time (ideas by qwertyuiop and spookiedookie), and a Median roll leaderboard for players with 200+ rolls (idea by Kag)', '🔎 The XP you were short of now also shows when you open an old roll (idea by Kag), and Common rolls or worse also show how far they were above the rarity below (idea by Starharvest)', '🤖 Bot duels now follow your roll speed (idea by Lewis6767)', '🍞 Bread emojis first in the chat emoji picker (ideas by Deadshot and G8_floppa)', '🖱️ New sound pack: Clicky (550 coins): mechanical key clacks, mouse clicks and soft pops (ideas by Niall and sennybex1)', '🔊 New Sound Case (365 coins): a random roll sound pack, with a refund for one you already own (idea by shadow2 Jr)', '🔮 New buttons: Power Core (idea by Sean) and Black Hole (idea by MattyFaux-Lucky). The Button Case now costs 350 coins', '🗂️ Shop filter: show All, Owned only or Not owned yet (idea by Applepi)', '👥 The shop now shows how many players own each item, and creators see their items and their 5% share (ideas by ann joe and YU CHUAN 23)', '💡 Creators now also get their 5% share when one of their skins comes out of a paid case (reported by finnnnn)', '🧈 Crunchier ASMR crunch (idea by cat)', '♾️ Smoother Infinity skin and button (reported by MAYO)', '🐋 Brighter water and sea animals on Open Ocean (idea by ann joe)'], fr: ['🎨 16 nouveaux skins tirés de vos idées : Lightbulb (idée de costoroll), Stonks, Chess et Weather (casmicgraything), Ninja (casmictechthing), Scroll of Alchemy (R77), Window Cleaner (Deadshot), Firework (HSI), Graffiti et Origami (JBearr12), Taco (sennybex1), Beach (furcoat0), Arcade Fighter et Battleship (17black), Cone of Destiny et The Observer (Gray alt)', '🖼️ 5 nouveaux fonds d\'écran : Le Pêcheur (idée de kingston), Buée (ann joe), Tes derniers tirages (G8_floppa), Pain qui tourne (Cincent) et Lune des zombies, en édition limitée jusqu\'au 2 novembre (17black)', '📐 Nouveaux badges : Pythagorean (idée de Phong254), Prime Digits (idée de Kag) et So Close, exactement 97 (idée de MAYO). Certains nombres changent de rareté avec eux ; tes anciens tirages gardent leur valeur', '🔢 Nouveaux titres pour le nombre de nombres différents que tu as tirés, de 100 à 100 000 (idée de jsand)', '🤖 Le tirage auto peut aussi s\'arrêter sur 5 badges au choix (idée de CococoC)', '📊 Classements d\'XP du jour, de la semaine, du mois et de tous les temps (idées de qwertyuiop et spookiedookie), et un classement du tirage médian pour les joueurs à 200 tirages ou plus (idée de Kag)', '🔎 L\'XP qui te manquait s\'affiche aussi quand tu ouvres un ancien tirage (idée de Kag), et les tirages Common ou moins montrent aussi leur marge au-dessus de la rareté du dessous (idée de Starharvest)', '🤖 Les duels contre les bots suivent ta vitesse de tirage (idée de Lewis6767)', '🍞 Les emojis pain en premier dans le chat (idées de Deadshot et G8_floppa)', '🖱️ Nouveau pack de sons : Clicky (550 pièces) : touches de clavier mécanique, clics de souris et petits pops (idées de Niall et sennybex1)', '🔊 Nouvelle caisse de sons (365 pièces) : un pack de sons au hasard, remboursé en partie si tu l\'as déjà (idée de shadow2 Jr)', '🔮 Nouveaux boutons : Power Core (idée de Sean) et Black Hole (idée de MattyFaux-Lucky). La caisse de boutons passe à 350 pièces', '🗂️ Filtre dans la boutique : tout, possédés ou pas encore possédés (idée d\'Applepi)', '👥 La boutique montre combien de joueurs possèdent chaque objet, et les créateurs voient leurs objets et leur part de 5 % (idées d\'ann joe et de YU CHUAN 23)', '💡 Les créateurs touchent aussi leur part de 5 % quand un de leurs skins sort d\'une caisse payée (signalé par finnnnn)', '🧈 Le craquement du skin ASMR est plus croquant (idée de cat)', '♾️ Le skin et le bouton Infinity sont plus fluides (signalé par MAYO)', '🐋 Eau et animaux plus lumineux sur Open Ocean (idée d\'ann joe)'] },
@@ -2352,7 +2358,7 @@
   // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
   // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
   // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
-  const SoloAuto = { on: false, timer: 0, shownAt: 0 };
+  const SoloAuto = { on: false, timer: 0, shownAt: 0, refused: 0 }; // refused : refus 429 d'affilée (voir startRoll)
   const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
@@ -2420,6 +2426,7 @@
     });
   }
   function stopSoloAuto() {
+    SoloAuto.refused = 0;
     SoloAuto.on = false;
     BgTimer.clear(SoloAuto.timer);
     const box = $('#solo-auto');
@@ -2446,6 +2453,7 @@
     });
     box.addEventListener('change', () => {
       SoloAuto.on = box.checked;
+      SoloAuto.refused = 0;
       BgTimer.clear(SoloAuto.timer);
       if (!SoloAuto.on) return;
       Sound.unlock();
@@ -2458,11 +2466,15 @@
     let w = null, seq = 0; const cbs = new Map();
     try {
       w = new Worker(URL.createObjectURL(new Blob(['onmessage=e=>setTimeout(()=>postMessage(e.data.id),e.data.ms)'], { type: 'text/javascript' })));
-      w.onmessage = e => { const f = cbs.get(e.data); cbs.delete(e.data); if (f) f(); };
+      w.onmessage = e => fire(e.data);
     } catch (e) { w = null; }
+    // Filet (tablettes du lycée de LeSombre, 2026-10-30) : un Worker refusé par l'appareil (politique d'école, extension)
+    // peut se créer sans erreur et ne jamais répondre : l'auto-roll resterait figé. Chaque minuteur part donc aussi en
+    // setTimeout : le premier des deux qui sonne gagne (onglet visible : le setTimeout ; onglet caché : le Worker).
+    function fire(id) { const c = cbs.get(id); if (!c) return; cbs.delete(id); clearTimeout(c.t); c.fn(); }
     return {
-      set(fn, ms) { if (!w) return setTimeout(fn, ms); const id = `b${++seq}`; cbs.set(id, fn); w.postMessage({ id, ms }); return id; },
-      clear(id) { if (typeof id === 'string') cbs.delete(id); else clearTimeout(id); },
+      set(fn, ms) { if (!w) return setTimeout(fn, ms); const id = `b${++seq}`; cbs.set(id, { fn, t: setTimeout(() => fire(id), ms) }); w.postMessage({ id, ms }); return id; },
+      clear(id) { if (typeof id === 'string') { const c = cbs.get(id); if (c) clearTimeout(c.t); cbs.delete(id); } else clearTimeout(id); },
     };
   })();
   // Signaler un message (chat des duels, messages entre amis) : confirmation, puis le bouton devient « Reported ».
@@ -2514,23 +2526,49 @@
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
-    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a };
+    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t: online.t };
     document.title = `(${BgRolls.count}) ${BgRolls.title}`;
     if (autoStops(a)) {
-      stopSoloAuto(); BgRolls.stopped = { n, a };
+      stopSoloAuto(); BgRolls.stopped = { n, a, t: online.t };
+      awaySave();
       document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
       return;
     }
+    awaySave();
     scheduleSoloAuto(1800);
+  }
+  // Un Godlike tiré onglet caché, vu seulement des jours plus tard dans l'historique (ann Joe worst gamble, 2026-10-30) :
+  // le résumé « pendant ton absence » ne vivait qu'en mémoire et 8 s à l'écran. Un onglet endormi ou fermé par le
+  // navigateur (économiseur de mémoire de Chrome, Chromebook) le perdait. On le garde sur l'appareil jusqu'à ce qu'il
+  // soit affiché, et un Mythic ou mieux reste 20 s et s'ouvre d'un toucher.
+  const AWAY_KEY = 'rng-away';
+  function awaySave() {
+    const { count, best, stopped } = BgRolls;
+    try { localStorage.setItem(AWAY_KEY, JSON.stringify({ count, best: best && best.t, stopped: stopped && stopped.t })); } catch (e) { /* stockage plein : le résumé en mémoire suffit */ }
+  }
+  function awayShow({ count, stopped, best }) {
+    try { localStorage.removeItem(AWAY_KEY); } catch (e) { /* idem */ }
+    const bestTxt = best && (!stopped || best.n !== stopped.n) ? ` · best: ${best.a.str} (${cap(best.a.tier)}, ${fmt(best.a.total)} XP)` : '';
+    const top = [stopped, best].filter(Boolean).sort((x, y) => y.a.total - x.a.total)[0];
+    const big = top && TIER_RANK[top.a.tier] >= TIER_RANK.mythic;
+    const index = top ? Store.rolls.findIndex(r => r[2] === top.t) : -1;
+    toast(stopped ? `✨ ${plural(count, 'roll')} while you were away. Auto-roll stopped on ${stopped.a.str} (${cap(stopped.a.tier)}, ${fmt(stopped.a.total)} XP)${bestTxt}`
+      : `🎲 ${plural(count, 'roll')} while you were away, all saved${bestTxt}`, big ? 20000 : 8000, stopped || big ? 'achv' : undefined, index >= 0 ? () => openRollModal(index) : null);
+  }
+  // Page rechargée avant le retour du joueur : on retrouve les tirages par leur heure dans l'historique de l'appareil.
+  function awayRestore() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(AWAY_KEY) || 'null'); } catch (e) { saved = null; }
+    if (!saved || !saved.count) return;
+    const find = t => { const r = t && Store.rolls.find(x => x[2] === t); return r ? { n: r[0], a: analysis(r[0]), t } : null; };
+    awayShow({ count: saved.count, stopped: find(saved.stopped), best: find(saved.best) });
   }
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) SoloAuto.shownAt = Date.now(); // retour sur l'onglet : on laisse voir l'écran avant le tirage suivant
     if (document.hidden || !BgRolls.count) return;
     const { count, stopped, best } = BgRolls;
     document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
-    const bestTxt = best && (!stopped || best.n !== stopped.n) ? ` · best: ${best.a.str} (${cap(best.a.tier)}, ${fmt(best.a.total)} XP)` : '';
-    toast(stopped ? `✨ ${plural(count, 'roll')} while you were away. Auto-roll stopped on ${stopped.a.str} (${cap(stopped.a.tier)}, ${fmt(stopped.a.total)} XP)${bestTxt}`
-      : `🎲 ${plural(count, 'roll')} while you were away, all saved${bestTxt}`, 8000, stopped ? 'achv' : undefined);
+    awayShow({ count, stopped, best });
     if (currentView === 'home') route(); // l'accueil et ses compteurs à jour
   });
   async function startRoll(force) {
@@ -2560,15 +2598,23 @@
         }
       }
     })();
-    Sound.play('click', { look: genClass().trim().slice(4) || undefined }); // son propre au bouton affiché (pack ASMR) ; après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
+    // Pas de « clic » quand l'auto-roll réessaie après un refus : on entendait le bouton sans voir de nombre (MereTera, 2026-10-30).
+    if (!(force === true && SoloAuto.refused)) Sound.play('click', { look: genClass().trim().slice(4) || undefined }); // son propre au bouton affiché (pack ASMR) ; après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
     try {
       online = await asked;
       n = online.n;
+      SoloAuto.refused = 0;
       // Pièces relues à la fin de la révélation seulement : avant, le compteur montait pendant l'animation et trahissait
       // un bon tirage avant le 2e chiffre (kingston, 2026-10-21).
     } catch (err) {
       if (err.status === 429 && SoloAuto.on) {
-        clientEvt('auto_429'); rollPending = false; buttons.forEach(b => { b.disabled = false; }); scheduleSoloAuto(1500); return; }
+        clientEvt('auto_429'); rollPending = false; buttons.forEach(b => { b.disabled = false; });
+        // Le serveur n'accepte qu'un tirage toutes les 8 s par compte : refusé deux fois d'affilée, c'est que le même compte
+        // tire déjà dans un autre onglet ou sur un autre appareil. On le dit une fois par série au lieu de réessayer en
+        // silence (« it presses the button but no number », MereTera ; « attend avant de démarrer », Sean ; tablettes
+        // du lycée, LeSombre ; 2026-10-30).
+        if (++SoloAuto.refused === 2) toast('Auto-roll is waiting: your account is already rolling in another tab or on another device', 5000);
+        scheduleSoloAuto(1500); return; }
       // Réseau ou serveur qui hoquette (pas de réponse, 5xx) : l'auto-roll reste allumé et réessaie dans 5 s, au lieu de
       // s'éteindre et de laisser le joueur croire à un plantage (signalé par un joueur le 2026-10-16).
       if (SoloAuto.on && (!err.status || err.status >= 500)) {
@@ -2601,6 +2647,11 @@
       toast('Server unreachable: this roll stays on your device and is not counted');
     }
     rollPending = false;
+    // Parti sur une autre page pendant que le serveur répondait (Shop, Casino…) : avant, la révélation remplaçait la
+    // page choisie et le joueur se retrouvait sur l'écran de tirage, l'adresse restant #/shop. Sur Chromebook avec un
+    // réseau d'école lent, la fenêtre dure des secondes, auto-roll ou pas (signalé par Stepa et daddy finger, 2026-10-30).
+    // Le tirage compte déjà sur le serveur : on le garde sans révélation et un message le montre (toucher = l'ouvrir).
+    if (currentView !== 'home' && currentView !== 'result') { keepRollAway(n, online); return; }
     if (session && !session.finished) session.cancel();
     closeModal();
     Collection.ensure();
@@ -2621,6 +2672,19 @@
       toast(online ? 'This device is out of space: your rolls still count on your account, but the history on this device stops here.' : 'This device is out of space: this roll could not be kept.');
     }
     session = playReveal({ n, a, previous, newIds: isFirst ? null : newIds, isFirst, lifetimeBefore, index, online });
+  }
+  // Tirage arrivé alors que le joueur a quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) : enregistré comme
+  // d'habitude, succès et quêtes compris, mais sans révélation ; l'auto-roll s'arrête comme en quittant la page.
+  function keepRollAway(n, online) {
+    if (SoloAuto.on) stopSoloAuto();
+    Collection.ensure();
+    const a = analysis(n);
+    Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
+    const index = Store.rolls.length - 1;
+    Collection.add(Store.rolls[index], index);
+    if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
+    const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
+    toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
   }
 
   let storageFullShown = false;
@@ -2800,6 +2864,9 @@
       $('#r-notes').innerHTML = notesHTML(ctx, a);
     });
     step(REVEAL.rarity, () => {
+      // Menu rendu tout de suite (2026-10-30, « I can't roll » de GamblrGod, menus morts sur Chromebook) : si un effet de
+      // skin, de fond ou de son plante plus bas, la page ne doit pas rester verrouillée jusqu'au tirage suivant.
+      document.body.classList.remove('locked');
       card.classList.remove('neutral');
       card.removeAttribute('title');
       if (!reducedMotion) card.classList.add(TIER_RANK[a.tier] >= TIER_RANK.anomaly ? 'shake' : 'reveal-pulse');
@@ -2818,7 +2885,6 @@
       show($('#r-actions'), 'fade-in');
       $('#r-hint').innerHTML = `<kbd>${esc(keyName())}</kbd> to roll again · click a badge name for details`;
       show($('#r-hint'), 'fade-in');
-      document.body.classList.remove('locked');
       canReroll = true;
       if (ctx.online) { noteAchievements(ctx.online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
       // Compte Google associé avant que le bonus existe : il arrive avec ce tirage.
@@ -3281,6 +3347,7 @@
       if (slot.isConnected) slot.innerHTML = `<div class="panel"><div class="empty">${err.status === 404 ? 'Roll once to start unlocking achievements and titles.' : 'Achievements unavailable right now.'}</div></div>`;
       return;
     }
+    syncName(p);
     if (!slot.isConnected || currentView !== 'badges') return;
     noteAchievements(p.achievements);
     slot.innerHTML = `${p.title ? `<p class="panel-note equipped-title">Equipped title: ${titleHTML(p.title)}</p>` : ''}${achievementsPanelHTML(p, true)}`;
@@ -5461,8 +5528,11 @@
     // Le retard s'adapte au réseau du joueur : le pire délai pour apprendre l'explosion est un intervalle de sondage plus
     // un aller-retour, donc retard = aller-retour mesuré + CR_POLL + marge (200 ms au moins). Fixé au départ de chaque
     // partie, pour que la fusée ne recule jamais. On paie toujours le temps affiché : ce retard ne coûte rien au joueur.
-    const CR_POLL = 150;
-    const crLag = () => Math.min(700, Math.max(200, (Gamble.crRtt || 160) + CR_POLL + 60));
+    // 300 ms et non 150 (GamblrGod, 2026-10-30 : « cash out, it kept going and I lost ») : 150 ms = 400 sondages par
+    // minute de vol, au-delà de la limite de 300 requêtes par minute et par IP (api/_lib.js). Après ~45 s de vol dans la
+    // minute, tout était refusé (429), « Cash out » compris : la fusée repartait et finissait par exploser.
+    const CR_POLL = 300;
+    const crLag = () => Math.min(900, Math.max(200, (Gamble.crRtt || 160) + CR_POLL + 60));
     const crRttSeen = ms => { Gamble.crRtt = Gamble.crRtt ? Math.max(ms, Gamble.crRtt * .8 + ms * .2) : ms; };
     const crElapsed = () => Math.max(0, Date.now() - Gamble.cr.t0 - Gamble.cr.lag);
     const runCrash = (st, resumed) => {
@@ -5490,7 +5560,8 @@
           move = { move: 'cash', ms };
         }
         let res;
-        for (let k = 0; ; k++) { try { const sent = Date.now(); res = await gamble('crash', move); crRttSeen(Date.now() - sent); break; } catch (err) { if (err.status !== 429 || k >= 4 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
+        // Jusqu'à ~1,8 s de nouvelles tentatives : avec le retard de l'affichage (≤ 0,9 s), la demande arrive sous les 3 s pendant lesquelles le serveur paie encore le temps du clic (CRASH_LATE_MS).
+        for (let k = 0; ; k++) { try { const sent = Date.now(); res = await gamble('crash', move); crRttSeen(Date.now() - sent); break; } catch (err) { if (err.status !== 429 || k >= 15 || move.move !== 'cash') throw err; await new Promise(r => setTimeout(r, 120)); } }
         if (res.done) endCrash(res); else runCrash(res);
       } catch (err) {
         if (err.status === 422 && Gamble.cr && /No game/.test(err.message)) resetCrash();
@@ -7253,7 +7324,8 @@
 
   function roomError(err, retry) {
     if (err.status === 409) { askName(retry, '', `"${Store.player.name}" is already taken by another player. Pick a new name.`); return; }
-    toast(err.status === 404 ? 'No duel with this code' : err.status === 422 ? err.message : 'Duel unavailable right now, try again');
+    // 400 / 403 (pas de pseudo, exclu par l'hôte…) : la vraie raison, pas « Duel unavailable » (dylanbuckleyisjewish, 2026-10-30).
+    toast(err.status === 404 ? 'No duel with this code' : [400, 403, 422].includes(err.status) ? err.message : 'Duel unavailable right now, try again');
   }
 
   // bots : nombre de bots pour une partie immédiate contre eux (0 = partie normale, on attend les joueurs).
@@ -7708,9 +7780,12 @@
 
     // Classement de la partie : manches gagnées (puis XP), ou barre de progression vers le palier d'XP.
     const { wins, totals } = shownScore();
-    const order = d.players.map((p, i) => i).sort((x, y) => (d.mode === 'xp' ? totals[y] - totals[x] : wins[y] - wins[x] || totals[y] - totals[x]));
-    setHTML($('#room-board'), order.map((i, k) => {
-      const p = d.players[i];
+    const ranked = d.players.map((p, i) => i).sort((x, y) => (d.mode === 'xp' ? totals[y] - totals[x] : wins[y] - wins[x] || totals[y] - totals[x]));
+    // À deux, les cases du score restent dans l'ordre des cartes (signalé par qwertyuiop, 2026-10-30) : triées par
+    // classement, elles passaient au-dessus de la carte de l'adversaire dès qu'il menait. Le rang reste affiché.
+    const order = d.players.length === 2 ? [0, 1] : ranked;
+    setHTML($('#room-board'), order.map(i => {
+      const p = d.players[i], k = ranked.indexOf(i);
       const metric = d.mode === 'xp'
         ? `<span class="xp-bar"><span style="width:${Math.min(100, (totals[i] / d.target) * 100)}%"></span></span><span class="mono">${compact(totals[i])} / ${compact(d.target)}</span>`
         : `<span class="mono board-wins">${wins[i]} / ${d.target}</span><span class="panel-note board-xp">${compact(totals[i])} XP</span>`;
@@ -8359,7 +8434,9 @@
     // Les deux tournois du jour : on regarde l'un ou l'autre (inscrit dans l'un, on ne peut pas entrer dans l'autre).
     status = hours + status;
     // Le tournoi du soir (3) est à part : on peut y être en plus d'un des deux premiers.
-    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}">${b.eve ? '🌙 <span>Evening</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
+    // Inscrit au tournoi 1 ou 2 : l'autre tournoi du jour reste fermé (le serveur montre toujours le sien) ; le bouton est
+    // grisé au lieu de ne rien faire au clic (casmicgraything, 2026-10-30).
+    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}"${!b.eve && st.mine && b.which !== st.mine ? ' disabled' : ''}>${b.eve ? '🌙 <span>Evening</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
     const mode = tnMode(st);
     status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
@@ -9252,6 +9329,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   const brandNew = !Store.rolls.length && !Store.player.name;
   paintNewsDot();
   loadAnnouncements();
+  setTimeout(awayRestore, 1200); // tirages faits onglet caché, page rechargée avant le retour (ann Joe worst gamble, 2026-10-30)
   QuestWatch.sync(true); // état des quêtes du jour, pour annoncer celles qui se terminent ensuite
   // Skin et bouton de tirage choisis sur un autre appareil : on les reprend au chargement (joueurs connus seulement).
   if (Store.player.name) Online.shop().then(applyShop).catch(() => { /* hors ligne : on garde ce que l'appareil connaît */ });

@@ -71,9 +71,10 @@ try {
   const bad = JSON.stringify({ verification_token: 'wrong', message_id: 'm2', type: 'Tip', amount: '3.00', currency: 'EUR' });
   assert.equal((await post('/api/site?kofi=1', new URLSearchParams({ data: bad }).toString(), 'application/x-www-form-urlencoded')).status, 401);
 
-  // 6. La limite par adresse IP voit l'adresse transmise par Caddy : 300 par minute, puis 429 ; une autre adresse passe.
+  // 6. La limite par adresse IP voit l'adresse transmise par Caddy : 900 par minute (300 avant le 2026-10-30), puis 429 ;
+  // une autre adresse passe.
   let last = 0;
-  for (let i = 0; i < 305; i++) last = (await get('/api/room?live=1', { 'X-Forwarded-For': '198.51.100.9' })).status;
+  for (let i = 0; i < 905; i++) last = (await get('/api/room?live=1', { 'X-Forwarded-For': '198.51.100.9' })).status;
   assert.equal(last, 429);
   assert.equal((await get('/api/room?live=1', { 'X-Forwarded-For': '198.51.100.10' })).status, 200);
 

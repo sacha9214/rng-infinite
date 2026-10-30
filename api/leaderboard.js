@@ -301,8 +301,20 @@ module.exports = async (req, res) => {
       const s = period === 'xp' ? (id in xpOf ? xpOf[id] : Number(myXp)) : d.s;
       return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, clan: clans[i] || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
     };
-    const entries = ids.map((id, i) => toEntry(id, i, i + 1)).filter(Boolean);
-    const mine = meOutsideTop ? toEntry(me, ids.length, Number(myRank) + 1) : null;
+    // Places partagées (signalé par R77, 2026-10-30) : deux joueurs au même score ont la même place (1, 1, 3), au lieu
+    // d'un ordre décidé par Redis sur l'identifiant du joueur. Place = 1 + nombre de joueurs strictement meilleurs.
+    const scoreAt = i => Number(flat[2 * i + 1]);
+    const places = [];
+    ids.forEach((id, i) => { places.push(i && scoreAt(i) === scoreAt(i - 1) ? places[i - 1] : i + 1); });
+    const entries = ids.map((id, i) => toEntry(id, i, places[i])).filter(Boolean);
+    let mine = null;
+    if (meOutsideTop) {
+      // Scores entiers (XP) : « strictement meilleur » = au moins s + 1 (ou au plus s - 1 en Poubelle).
+      const [mySc] = await redis([['ZSCORE', scope.lb, me]]);
+      const s = Number(mySc);
+      const [better] = await redis([low ? ['ZCOUNT', scope.lb, '-inf', s - 1] : ['ZCOUNT', scope.lb, s + 1, '+inf']]);
+      mine = toEntry(me, ids.length, Number(better) + 1);
+    }
 
     return send(res, 200, {
       period, entries, mine, ...(period === 'worst' || period === 'xp' ? { span } : {}),
