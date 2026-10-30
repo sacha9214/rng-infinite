@@ -4280,7 +4280,8 @@
   // rareté (rose, cyan, or, arc-en-ciel pour Infini) et la gardent jusqu'au tirage suivant.
   SCENES.sky = env => {
     const { co, ci, w, h, card, W, dark } = env;
-    const TINT = { mythic: [244, 114, 182], celestial: [103, 232, 249], divine: [253, 224, 71] };
+    // Anomaly et Godlike ajoutés (Deadshot, 2026-10-30) : Godlike, plus récente que le skin, laissait le ciel bleu.
+    const TINT = { anomaly: [251, 146, 60], mythic: [244, 114, 182], celestial: [103, 232, 249], divine: [253, 224, 71], godlike: [225, 29, 72] };
     const k = Math.min(1.3, card.h / 60);
     // Nuages au-dessus de la carte (ils dérivent et font le tour) et un de chaque côté (ils flottent sur place) : jamais
     // en dessous, où s'affichent la rareté et l'XP.
