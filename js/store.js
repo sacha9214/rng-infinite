@@ -27,6 +27,33 @@
     return set;
   }
 
+  // Historique compact (2026-10-30, signalé par jonahfr : « storage is full » vers 170 000 tirages, le navigateur garde
+  // ~5 millions de caractères). Au lieu de [123456,4321,1793238134225] (~29 caractères), chaque tirage s'écrit en base 36
+  // « nombre.XP.écart » avec l'écart en ms depuis le tirage précédent, « ! » à la fin s'il est hors ligne : ~13 caractères.
+  // Rangé dans « rz » ; « rolls » reste lu pour les anciennes sauvegardes (et par un vieil onglet encore ouvert).
+  const pack1 = (r, prev) => r[0].toString(36) + '.' + Math.round(r[1]).toString(36) + '.' + (r[2] - prev).toString(36) + (r[3] ? '!' : '');
+  function packRolls(rolls) {
+    const out = new Array(rolls.length);
+    let prev = 0;
+    for (let i = 0; i < rolls.length; i++) { out[i] = pack1(rolls[i], prev); prev = rolls[i][2]; }
+    return out.join(',');
+  }
+  function unpackRolls(s) {
+    const rolls = [];
+    if (!s) return rolls;
+    let prev = 0;
+    for (const part of s.split(',')) {
+      const off = part.endsWith('!');
+      const [a, b, c] = (off ? part.slice(0, -1) : part).split('.');
+      const t = prev + parseInt(c, 36);
+      prev = t;
+      const r = [parseInt(a, 36), parseInt(b, 36), t];
+      if (off) r.push(1);
+      rolls.push(r);
+    }
+    return rolls;
+  }
+
   function uid() {
     const bytes = new Uint8Array(8);
     try { crypto.getRandomValues(bytes); } catch (e) { for (let i = 0; i < 8; i++) bytes[i] = Math.floor(Math.random() * 256); }
@@ -56,7 +83,7 @@
         player: Object.assign(base.player, data.player),
         settings: Object.assign(base.settings, data.settings),
         scoreVersion: data.scoreVersion || null,
-        rolls: Array.isArray(data.rolls) ? data.rolls.filter(isValidRoll) : [],
+        rolls: (typeof data.rz === 'string' ? unpackRolls(data.rz) : Array.isArray(data.rolls) ? data.rolls : []).filter(isValidRoll),
       };
     } catch (e) {
       return defaults();
@@ -73,9 +100,23 @@
   const Store = {
     state: read(),
 
-    save() {
+    // Chaîne compacte déjà calculée : un tirage ajouté par addRoll ne fait qu'allonger la fin (200 000 tirages à
+    // réécrire à chaque tirage du tirage auto, sinon). Toute autre modification de l'historique la recalcule entière.
+    packed: null,
+
+    save(appended = false) {
+      const rolls = this.state.rolls;
+      const pk = this.packed;
+      let rz;
+      if (appended && pk && pk.rolls === rolls && pk.len === rolls.length - 1) {
+        const last = rolls[rolls.length - 1];
+        rz = pk.s + (pk.len ? ',' : '') + pack1(last, pk.len ? rolls[pk.len - 1][2] : 0);
+      } else {
+        rz = packRolls(rolls);
+      }
+      this.packed = { s: rz, len: rolls.length, rolls };
       try {
-        localStorage.setItem(KEY, JSON.stringify(this.state));
+        localStorage.setItem(KEY, JSON.stringify({ version: this.state.version, player: this.state.player, settings: this.state.settings, scoreVersion: this.state.scoreVersion, rz }));
         return true;
       } catch (e) {
         return false;
@@ -95,7 +136,7 @@
     addRoll(n, ep, t = Date.now(), offline = false) {
       const roll = offline ? [n, ep, t, 1] : [n, ep, t];
       this.state.rolls.push(roll);
-      const ok = this.save();
+      const ok = this.save(true);
       this.emit();
       return { roll, saved: ok };
     },
