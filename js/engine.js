@@ -286,6 +286,12 @@
     // jaxoncool43 (1738), Phong254 (nombre d'argent 1 + √2 = 2,4142…, famille SILVER_RATIO comme les tranches de Pi).
     FOREVER: '224', YEAR_1987: '1987', FIVE_OH_FIVE: '505', BEVERLY_HILLS: '90210', SEVENTEEN_38: '1738',
     SILVER_RATIO_4: '2414', SILVER_RATIO_5: '24142',
+    // Idées du 2026-11-01 : DandoriNinja (07, « o7 », un salut ; exactement 7 reste Seven), pilot56 (constante
+    // d'Euler-Mascheroni 0,57721…, famille EULER_GAMMA comme Silver Ratio ; 1729, le nombre de Ramanujan), KMC (13, le
+    // nombre qui porte malheur, XP basse comme Forty-One), Niall (338 = BEE à l'envers sur une calculatrice), Miguel1
+    // (707 = LOL à l'envers), Miguel2 (1969, les premiers pas sur la Lune).
+    O7: '07', EULER_GAMMA_4: '5772', EULER_GAMMA_5: '57721', TAXICAB: '1729', THIRTEEN: '13', BEE: '338', LOL: '707',
+    MOON_LANDING: '1969',
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {
@@ -304,6 +310,7 @@
     // WpBejs (747747, famille JET), CococoC (104 jours de vacances d'été).
     FOREVER_EXACT: ['224'], FOREVER_AND_EVER: ['224224'], YEAR_1987_EXACT: ['1987'], FIVE_OH_FIVE_EXACT: ['505'],
     AROUND_THE_CLOCK: ['24'], JUMBO_JET_SET: ['747747'], SUMMER_BREAK: ['104'],
+    FULL_CIRCLE: ['360'], // idée de CococoC (2026-11-01) : exactement 360, un tour complet (« Nailed it! »)
     SO_CLOSE: ['97'], // idée de MAYO (2026-10-28) : exactement 97, « si près du but » (le mème des 97 %)
     CYCLIC: ['142857'], // idée de JBearr12 (2026-10-24) : le nombre cyclique, 142857 × 2…6 n'en fait que tourner les chiffres
     EXACT_DRASTIX: ['235'], // demandé par Sacha (2026-10-20, signalé par CococoC)
@@ -329,6 +336,7 @@
     SEMI_CLEAN: '5', SEMI_CENTURY: '50', SEMI_MILLENNIUM: '500', SEMI_EPOCH: '5000', SEMI_EON: '50000',
     QUARTER_CENTURY: '25', THREE_QUARTER_CENTURY: '75',
     QUARTER_MILLENNIUM: '250', // idée de WpBejs (2026-10-24)
+    THREE_QUARTER_MILLENNIUM: '750', // idée de cri cri 3 (2026-11-01) : la paire de Quarter Millennium
     DOUBLE_NINE: '99', TRIPLE_NINE: '999', QUAD_NINE: '9999', QUINT_NINE: '99999',
   };
   const SINGLE_DIGIT_COUNT = {
@@ -394,6 +402,18 @@
     // by Three » (chaque chiffre divisible par 3, 4 096 nombres) : 2, 3, 5 et 7 seuls ne changent rien à la fréquence.
     // 5 460 nombres (4 + 16 + 64 + 256 + 1 024 + 4 096), ~1 sur 183.
     PRIME_DIGITS: c => c.d.every(v => v === 2 || v === 3 || v === 5 || v === 7),
+    // Idée de NATE_161 (2026-11-01) : la seconde moitié reprend la première avec chaque chiffre 1 plus bas (456345) ou
+    // 1 plus haut (123234), le même sens pour tous. Longueur paire ; 1 547 nombres (17 + 153 + 1 377), ~1 sur 650.
+    SHIFTED_ECHO: c => {
+      if (c.L < 2 || c.L % 2 !== 0) return false;
+      const h = c.L / 2, k = c.d[h] - c.d[0];
+      if (k !== 1 && k !== -1) return false;
+      for (let i = 1; i < h; i++) if (c.d[i + h] - c.d[i] !== k) return false;
+      return true;
+    },
+    // Idée de A Dude (2026-11-01) : premier ET palindrome (94049). 113 nombres (2, 3, 5, 7, 11, 15 à 3 chiffres,
+    // 93 à 5 chiffres ; aucun à 4 ou 6 chiffres, tous divisibles par 11).
+    PALINDROMIC_PRIME: c => isPalindrome(c.s) && isPrime(c.n),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
@@ -672,6 +692,7 @@
   const HIGHLIGHTS = {
     GROUNDED: ends, LIFTOFF: ends, EQUILIBRIUM: ends, GAP_ONE: ends, SANDWICH: ends,
     ECHO: c => [range(0, c.L / 2), range(c.L / 2, c.L)],
+    SHIFTED_ECHO: c => [range(0, c.L / 2), range(c.L / 2, c.L)], // idée de NATE_161 (2026-11-01)
     BALANCED: c => [range(0, c.L / 2), range(c.L / 2, c.L)],
     BOOKENDS: c => [[0, 1], [c.L - 2, c.L - 1]],
     MIRROR_BOOKENDS: c => [[0, 1], [c.L - 2, c.L - 1]],

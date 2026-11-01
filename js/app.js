@@ -1662,9 +1662,10 @@
     const rows = [];
     for (let L = from; L <= to; L++) {
       const r = Quests.levelReward(L), state = L <= paidUpTo ? 'paid' : L <= lv.level ? 'ready' : 'locked';
+      const ttl = Ach.byId.get(`lvl${L}`); // titre de niveau (idée de shadow2 Jr, 2026-11-01)
       rows.push(`<div class="road-step ${state}${r.key ? ` key-${r.key}` : ''}${L === lv.level + 1 ? ' next' : ''}">
         <span class="road-n">${fmt(L)}</span>
-        <span class="road-r">+${fmt(r.coins)} 🪙${r.key ? ` <b>${KEY[r.key][0]} ${KEY[r.key][1]}</b>` : ''}</span>
+        <span class="road-r">+${fmt(r.coins)} 🪙${r.key ? ` <b>${KEY[r.key][0]} ${KEY[r.key][1]}</b>` : ''}${ttl ? ` <b class="road-ttl">${ttl.emoji} ${ttl.title} title</b>` : ''}</span>
         <span class="road-x mono">${compact(Quests.xpForLevel(L))} XP</span>
         <span class="road-s">${state === 'paid' ? '✓' : state === 'ready' ? '🎁' : '🔒'}</span>
       </div>`);

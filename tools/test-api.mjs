@@ -5322,4 +5322,100 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
 }
 
+// ================================================================ Idées du 2026-11-01 (groupe D) : 11 badges, titres de
+// niveau (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries de jours (lnbBUChuoi_vn), Full Spectrum
+// (Pube puller), Odd Week (JBearr12). Joueurs 11d1….
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const Q = require(path.join(ROOT, 'js/quests.js')), Events = require(path.join(ROOT, 'js/events.js'));
+  const odds = require(path.join(ROOT, 'data/badge-odds.json'));
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  // 1. Badges : nombres qui les obtiennent (build.mjs) et XP = valeur naturelle 100 × 1 000 001 / nombre (sauf
+  // Three-Quarter Millennium : 100 750, la paire des 100 250 de Quarter Millennium).
+  const COUNTS = { FULL_CIRCLE: 1, O7: 38610, EULER_GAMMA_4: 300, EULER_GAMMA_5: 20, TAXICAB: 300, THIRTEEN: 49401, SHIFTED_ECHO: 1547,
+    PALINDROMIC_PRIME: 113, THREE_QUARTER_MILLENNIUM: 1000, BEE: 3999, LOL: 3979, MOON_LANDING: 300 };
+  for (const [id, k] of Object.entries(COUNTS)) {
+    assert.equal(odds[id], k, `${id} : ${k} nombres`);
+    assert.equal(engine.byId.get(id).score, id === 'THREE_QUARTER_MILLENNIUM' ? 100750 : Math.round((100 * 1000001) / k), `${id} : XP`);
+  }
+  assert.ok(has(360, 'FULL_CIRCLE') && !has(3600, 'FULL_CIRCLE') && !has(1360, 'FULL_CIRCLE'), 'exactement 360');
+  for (const n of [507, 1070, 7007, 707]) assert.ok(has(n, 'O7'), `${n} contient 07`);
+  for (const n of [7, 70, 770, 1000]) assert.ok(!has(n, 'O7'), `${n} : pas de 07`);
+  assert.deepEqual(engine.analyze(157721).scoringIds.filter(id => id.startsWith('EULER_GAMMA')), ['EULER_GAMMA_5'], 'famille : seul le meilleur compte');
+  assert.ok(has(157721, 'EULER_GAMMA_4') && has(5772, 'EULER_GAMMA_4') && !has(57720, 'EULER_GAMMA_5'));
+  assert.ok(has(1729, 'TAXICAB') && has(13, 'THIRTEEN') && has(913000, 'THIRTEEN') && !has(31, 'THIRTEEN'));
+  assert.ok(has(338, 'BEE') && !has(388, 'BEE') && has(707, 'LOL') && has(1969, 'MOON_LANDING') && has(301969, 'MOON_LANDING'));
+  assert.ok(has(1750, 'THREE_QUARTER_MILLENNIUM') && has(999750, 'THREE_QUARTER_MILLENNIUM') && !has(7500, 'THREE_QUARTER_MILLENNIUM'));
+  for (const n of [456345, 123234, 10, 98, 2132, 567678, 987876]) assert.ok(has(n, 'SHIFTED_ECHO'), `${n} est un écho décalé`);
+  for (const n of [456456, 456356, 12345, 123432, 1, 11]) assert.ok(!has(n, 'SHIFTED_ECHO'), `${n} n'est pas un écho décalé`);
+  assert.deepEqual(engine.highlight('SHIFTED_ECHO', 456345), [[0, 1, 2], [3, 4, 5]]);
+  for (const n of [2, 3, 11, 101, 94049, 98689]) assert.ok(has(n, 'PALINDROMIC_PRIME'), `${n} : premier palindrome`);
+  for (const n of [1, 121, 1001, 94048, 9449]) assert.ok(!has(n, 'PALINDROMIC_PRIME'), `${n} : non`);
+
+  // 2. Titres : seuils exacts.
+  const at = (id, st) => Ach.byId.get(id).test(st);
+  for (const L of [10, 25, 50, 100, 250]) assert.ok(at(`lvl${L}`, { xpLife: Q.xpForLevel(L) }) && !at(`lvl${L}`, { xpLife: Q.xpForLevel(L) - 1 }), `niveau ${L}`);
+  assert.equal(Ach.byId.get('lvl10').title, 'Level 10');
+  assert.ok(at('generous', { giftOut: 50000 }) && !at('generous', { giftOut: 49999 }) && !at('generous', { giftIn: 90000 }), 'donné, pas reçu');
+  assert.ok(at('uniqall', { uniq: 1000001 }) && !at('uniqall', { uniq: 1000000 }));
+  for (const [id, k] of [['streak30', 30], ['streak100', 100], ['streak365', 365]]) {
+    assert.ok(at(id, { streak: k }) && at(id, { streak: 1, streakBest: k }) && !at(id, { streak: k - 1, streakBest: k - 1 }), id);
+  }
+  const all = Object.fromEntries(Ach.SPECTRUM.map(t => [`t:${t}`, 1]));
+  assert.deepEqual(Ach.SPECTRUM, ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial']);
+  assert.ok(at('spectrum', all), 'une de chaque');
+  for (const t of Ach.SPECTRUM) assert.ok(!at('spectrum', { ...all, [`t:${t}`]: 0, 't:divine': 3, 't:garbage': 2 }), `il manque ${t}`);
+
+  const mk = (i, name, fields = []) => {
+    const id = `11d1${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  // 3. Generous par un vrai cadeau : giftOut monte à chaque cadeau, le titre s'équipe.
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const ga = mk(1, 'Generousgiver', ['rolls', '1000', 'bonus', '5000', 'giftOut', '49800']), gb = mk(2, 'Generousfriend', ['rolls', '1000']);
+  run([['SADD', `fr:${ga.playerId}`, gb.playerId], ['SADD', `fr:${gb.playerId}`, ga.playerId]]);
+  assert.ok(!Ach.unlocked(await lib.readStats(ga.playerId)).includes('generous'));
+  let r = await call(friendsApi, { method: 'POST', body: { playerId: ga.playerId, secret: ga.secret, action: 'gift', name: gb.name, amount: 200 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(Ach.unlocked(await lib.readStats(ga.playerId)).includes('generous'), '50 000 donnés');
+  assert.ok(!Ach.unlocked(await lib.readStats(gb.playerId)).includes('generous'), 'recevoir ne compte pas');
+  r = await call(titleApi, { method: 'POST', body: { playerId: ga.playerId, secret: ga.secret, title: 'generous' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal((await call(titleApi, { method: 'POST', body: { playerId: gb.playerId, secret: gb.secret, title: 'generous' } })).status, 422);
+
+  // 4. Séries : streakBest tenu au bonus quotidien, la série cassée garde le titre.
+  const questsApi = require(path.join(ROOT, 'api/quests.js'));
+  const daily = who => call(questsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'daily' } });
+  const save = clock;
+  const today = lib.dayKey(Date.now());
+  const sk = mk(3, 'Streakkeeper', ['rolls', '50', 'streak', '29', 'streakDay', Q.dayBefore(today)]);
+  assert.ok(!Ach.unlocked(await lib.readStats(sk.playerId)).includes('streak30'));
+  r = await daily(sk); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.daily.streak, 30);
+  let st = await lib.readStats(sk.playerId);
+  assert.deepEqual([Number(st.streak), Number(st.streakBest)], [30, 30]); assert.ok(Ach.unlocked(st).includes('streak30'));
+  clock += 3 * 86400000; // deux jours sautés : la série repart à 1
+  r = await daily(sk); assert.equal(r.body.daily.streak, 1);
+  st = await lib.readStats(sk.playerId);
+  assert.deepEqual([Number(st.streak), Number(st.streakBest)], [1, 30], 'la meilleure série reste');
+  assert.ok(Ach.unlocked(st).includes('streak30') && !Ach.unlocked(st).includes('streak100'), 'le titre reste après la série cassée');
+  // Ancien joueur (série cassée de 120 jours, pas encore de streakBest) : compté tout de suite, gardé au bonus suivant.
+  const old = mk(4, 'Streakveteran', ['rolls', '50', 'streak', '120', 'streakDay', '2026-09-01']);
+  assert.ok(Ach.unlocked(await lib.readStats(old.playerId)).includes('streak100'));
+  r = await daily(old); assert.equal(r.body.daily.streak, 1);
+  st = await lib.readStats(old.playerId); assert.equal(Number(st.streakBest), 120); assert.ok(Ach.unlocked(st).includes('streak100'));
+  clock = save;
+
+  // 5. Odd Week : ajoutée avant Meme Week (qui reste la dernière) : la semaine de lancement et les semaines 0 à 6 gardent
+  // leur thème, Odd Week tombe en semaine 7 (7 décembre 2026).
+  const keys = Events.THEMES.map(t => t.key);
+  assert.equal(keys[keys.length - 1], 'meme'); assert.equal(new Set(keys).size, keys.length);
+  const W = 7 * 86400000, w0 = Date.parse('2026-10-19T00:00:00Z');
+  assert.deepEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7].map(w => Events.current(w0 + w * W + 1000).key), ['meme', 'prime', 'happy', 'round', 'seq', 'mirror', 'fib', 'pal', 'odd']);
+  const odd = Events.THEMES.find(t => t.key === 'odd');
+  assert.deepEqual([odd.goal, odd.badges, odd.title], [200, ['ODD'], 'Odd Week']);
+  assert.ok(Events.counts(odd, engine.analyze(13579).earnedIds) && !Events.counts(odd, engine.analyze(2468).earnedIds));
+  assert.equal(Events.current(w0 + 7 * W).reward, Events.REWARD, 'récompense normale');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -14,6 +14,9 @@
     { key: 'mirror', example: '512215 is mirrored', emoji: '🪞', title: 'Mirror Week', goal: 22, badges: ['POCKET_MIRROR', 'MIRROR_BOOKENDS'], desc: 'Roll 22 mirrored numbers' },
     { key: 'fib', example: '11235 is a Fibonacci slice', emoji: '🐚', title: 'Fibonacci Week', goal: 2, badges: ['FIBONACCI', 'FIB_CONTAINS_3', 'FIB_CONTAINS_4', 'FIB_CONTAINS_5'], desc: 'Roll 2 Fibonacci numbers or slices (like 112 or 1123)' },
     { key: 'pal', example: '12321 reads the same both ways', emoji: '🔁', title: 'Palindrome Week', goal: 1, badges: ['PALINDROME'], desc: 'Roll a palindrome (reads the same both ways)' },
+    // Idée de JBearr12 (2026-11-01) : « Odd ball », un nombre impair sur deux, donc 200 pour ~400 tirages. Placé avant
+    // Meme Week, qui reste le dernier thème : la semaine -1 (lancement) et les semaines 0 à 6 gardent le leur.
+    { key: 'odd', example: '13579 is odd', emoji: '🧦', title: 'Odd Week', goal: 200, badges: ['ODD'], desc: 'Roll 200 odd numbers' },
     { key: 'meme', example: '142069 contains 69', emoji: '😂', title: 'Meme Week', goal: 22, badges: ['NICE', 'BOTANIST', 'DEVIL', 'LEET', 'HELL'], desc: 'Roll 22 meme numbers (69, 420, 666, 1337, 7734)' },
   ];
 

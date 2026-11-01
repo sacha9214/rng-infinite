@@ -3788,6 +3788,8 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .road-step.key-starter { background: linear-gradient(90deg, rgba(245, 158, 11, .12), var(--surface)); }
 .road-step.key-premium { background: linear-gradient(90deg, rgba(168, 85, 247, .2), var(--surface)); border-color: #a855f7; }
 @media (max-width: 420px) { .road-step { grid-template-columns: 2rem 1fr 1.4rem; } .road-x { display: none; } }
+/* titre de niveau sur la route (idée de shadow2 Jr, 2026-11-01) */
+.road-ttl { display: inline-block; margin-left: .25rem; padding: 0 .4rem; border-radius: 999px; font-size: .85em; background: rgba(14, 165, 233, .15); color: var(--prose); border: 1px solid rgba(14, 165, 233, .45); white-space: nowrap; }
 
 /* Onglet Profil & amis : mon profil en résumé en haut. */
 .me-panel .me-title { margin: -.2rem 0 .5rem; }

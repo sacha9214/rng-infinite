@@ -704,5 +704,91 @@
     "desc": "Exactly 97: so close to 100.",
     "emoji": "🤏",
     "score": 100000100
+  },
+  {
+    "id": "FULL_CIRCLE",
+    "label": "Full Circle",
+    "desc": "Exactly 360: a full turn. Nailed it!",
+    "emoji": "⭕",
+    "score": 100000100
+  },
+  {
+    "id": "O7",
+    "label": "o7",
+    "desc": "Contains \"07\": o7, a salute. He will be missed.",
+    "emoji": "🫡",
+    "score": 2590
+  },
+  {
+    "id": "EULER_GAMMA_4",
+    "label": "Euler's Gamma",
+    "desc": "Contains \"5772\": the Euler–Mascheroni constant, 0.5772…",
+    "emoji": "📐",
+    "score": 333334,
+    "family": "EULER_GAMMA"
+  },
+  {
+    "id": "EULER_GAMMA_5",
+    "label": "Euler's Gamma+",
+    "desc": "Contains \"57721\": the Euler–Mascheroni constant, 0.57721…",
+    "emoji": "📐",
+    "score": 5000005,
+    "family": "EULER_GAMMA"
+  },
+  {
+    "id": "TAXICAB",
+    "label": "Taxicab",
+    "desc": "Contains \"1729\": the smallest sum of two cubes in two ways (1³ + 12³ = 9³ + 10³).",
+    "emoji": "🚕",
+    "score": 333334
+  },
+  {
+    "id": "THIRTEEN",
+    "label": "Thirteen",
+    "desc": "Contains \"13\", the unlucky number.",
+    "emoji": "🐈‍⬛",
+    "score": 2024
+  },
+  {
+    "id": "SHIFTED_ECHO",
+    "label": "Shifted Echo",
+    "desc": "The second half is the first half with every digit 1 lower or 1 higher, like 456345.",
+    "emoji": "🔉",
+    "score": 64641
+  },
+  {
+    "id": "PALINDROMIC_PRIME",
+    "label": "Palindromic Prime",
+    "desc": "A prime that reads the same both ways, like 94049.",
+    "emoji": "💎",
+    "score": 884957
+  },
+  {
+    "id": "THREE_QUARTER_MILLENNIUM",
+    "label": "Three-Quarter Millennium",
+    "desc": "Ends in \"750\".",
+    "emoji": "⌛",
+    "score": 100750
+  },
+  {
+    "id": "BEE",
+    "label": "Bee",
+    "desc": "Contains \"338\": BEE, upside down on a calculator.",
+    "emoji": "🐝",
+    "score": 25006
+  },
+  {
+    "id": "LOL",
+    "label": "LOL",
+    "desc": "Contains \"707\": LOL, upside down on a calculator.",
+    "emoji": "😂",
+    "score": 25132
+  },
+  {
+    "id": "MOON_LANDING",
+    "label": "Moon Landing",
+    "desc": "Contains \"1969\": the year of the first steps on the Moon.",
+    "emoji": "🚀",
+    "score": 333334
   }
 ]
