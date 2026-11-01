@@ -580,6 +580,22 @@
     'they can delete messages and mute players in the global chat (5 min to 24 h; only you can mute forever)': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global (de 5 min à 24 h ; toi seul peux rendre muet pour toujours)',
     'Mute history': 'Historique des silences', 'mutes that ended or that you lifted, newest first': 'les silences finis ou levés, les plus récents en premier', 'No mute yet.': 'Aucun silence pour l\'instant.',
     'lifted by': 'levé par',
+    // Modérateurs du chat (Sacha, 2026-11-01)
+    '🛡️ Chat Moderator': '🛡️ Modérateur du chat', 'You help keep the global chat friendly for everyone. Sacha sees every mute and every deleted message, with your reason, and can lift a mute that wasn\'t fair.': 'Tu aides à garder le chat global sympa pour tout le monde. Sacha voit chaque silence et chaque message supprimé, avec ta raison, et peut lever un silence injuste.',
+    '📝 The rules': '📝 Les règles', 'Be fair.': 'Sois juste.', 'Act on what someone wrote, never because you don\'t like them or don\'t agree with them.': 'Agis sur ce que quelqu\'un a écrit, jamais parce que tu ne l\'aimes pas ou que tu n\'es pas d\'accord avec lui.',
+    'Start small.': 'Commence petit.', '5 or 10 minutes for spam or a first rude message, 1 hour if they keep going, 24 hours for something really bad (personal info, very mean, not OK for kids).': '5 ou 10 minutes pour du spam ou un premier message impoli, 1 heure s\'il continue, 24 heures pour quelque chose de vraiment grave (infos personnelles, très méchant, pas pour les enfants).',
+    'Not every message needs a mute.': 'Tous les messages ne méritent pas un silence.', 'A small mistake? Just delete it.': 'Une petite erreur ? Supprime-le, c\'est tout.',
+    'Always pick the right reason': 'Choisis toujours la bonne raison', ', and add details when they help Sacha understand.': ', et ajoute des détails quand ça aide Sacha à comprendre.',
+    'You can\'t mute the owner or another moderator. Only Sacha can mute forever.': 'Tu ne peux pas rendre muet le créateur ni un autre modérateur. Seul Sacha peut rendre muet pour toujours.',
+    'In the 💬 chat, press ⋯ on a message to delete it or mute its writer.': 'Dans le 💬 chat, appuie sur ⋯ sur un message pour le supprimer ou rendre muet son auteur.',
+    '🚩 Reported messages': '🚩 Messages signalés', '↻ Refresh': '↻ Actualiser', '✓ Nothing wrong': '✓ Rien à redire', 'Nothing to check right now. 🎉': 'Rien à vérifier pour l\'instant. 🎉',
+    'My last actions': 'Mes dernières actions', 'Sacha sees these too': 'Sacha les voit aussi', 'lifted by Sacha': 'levé par Sacha', 'This page is for chat moderators.': 'Cette page est pour les modérateurs du chat.',
+    'Marked as fine': 'Noté : rien à redire', 'This report was already handled': 'Ce signalement a déjà été traité', 'This report is about you': 'Ce signalement parle de toi',
+    'Moderators': 'Modérateurs', 'Chat moderator': 'Modérateur du chat', 'Moderator page': 'Page des modérateurs', '🛡️ Mod': '🛡️ Modo', 'moderator': 'modérateur', 'Remove the role': 'Retirer le rôle',
+    'they keep the global chat friendly: delete messages and mute players for 5 min to 24 h, always with a reason (only you can mute forever). They see the rules and the reported chat messages on their own page.': 'ils gardent le chat global sympa : ils suppriment des messages et rendent des joueurs muets de 5 min à 24 h, toujours avec une raison (toi seul peux rendre muet pour toujours). Ils voient les règles et les messages signalés sur leur propre page.',
+    'mutes': 'silences', 'deleted': 'supprimés', 'reports checked': 'signalements vérifiés', 'actions this week': 'actions cette semaine', 'Nobody yet. Give the role to a kind player you trust.': 'Personne pour l\'instant. Donne le rôle à un joueur gentil en qui tu as confiance.',
+    'What moderators did': 'Ce que les modérateurs ont fait', 'mutes and deleted messages, newest first: check the reason and the message': 'silences et messages supprimés, les plus récents en premier : vérifie la raison et le message',
+    'muted': 'rendu muet', 'message deleted': 'message supprimé', 'still muted': 'toujours muet', 'nothing wrong': 'rien à redire', 'player muted': 'joueur rendu muet',
     // Annonces (idée de jaxoncool43, 2026-10-26)
     'Announce': 'Annonces', 'New announcement': 'Nouvelle annonce', 'players see it at the top of 📰 What\'s new, with a red dot': 'les joueurs la voient en haut de 📰 Nouveautés, avec un point rouge',
     'Title': 'Titre', 'Short announcement (500 characters max)': 'Annonce courte (500 caractères max.)', 'Important (shown once as a notification)': 'Important (affichée une fois en notification)',
@@ -705,6 +721,9 @@
     [/^Your clan already has (\d+) member slots$/, m => `Ton clan a déjà ${m[1]} places`], [/^(.+) is born!$/, m => `${m[1]} est né !`],
     [/^Clear the About me of (.+)\?$/, m => `Effacer le « À propos de moi » de ${m[1]} ?`], // idée de Niall, 2026-10-27
     [/^🔇 You are muted until (.+)\.$/, m => `🔇 Tu es muet jusqu'au ${m[1]}.`],
+    [/^([\d,]+) to check · players reported them in the global chat$/, m => `${nb(m[1])} à vérifier · des joueurs les ont signalés dans le chat global`], // Modérateurs (2026-11-01)
+    [/^reported (\d+) times$/, m => `signalé ${m[1]} fois`], [/^([\d,]+) reports about this player$/, m => `${nb(m[1])} signalements sur ce joueur`],
+    [/^moderator since (.+)$/, m => `modérateur depuis le ${m[1]}`], [/^([\d,]+) lifted by you$/, m => `${nb(m[1])} levés par toi`],
     [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
     [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
     [/^Make (\d+) rolls to write in the chat \(you have (\d+)\)$/, m => `Fais ${m[1]} tirages pour écrire dans le chat (tu en as ${m[2]})`],

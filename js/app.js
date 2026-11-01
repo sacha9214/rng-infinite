@@ -2042,6 +2042,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-01-mods', date: 'Nov 1, 2026', en: ['🛡️ Chat moderators: players chosen by Sacha help keep the global chat friendly, and a 🛡️ shows next to their name. Use 🚩 Report on a message that isn\'t nice and a moderator will check it'], fr: ['🛡️ Modérateurs du chat : des joueurs choisis par Sacha aident à garder le chat global sympa, et un 🛡️ s\'affiche à côté de leur pseudo. Utilise 🚩 Signaler sur un message pas gentil et un modérateur le vérifiera'] },
     { id: '2026-11-01-chat', date: 'Nov 1, 2026', en: ['💬 The global chat box now grows as you type, so you can see your whole message before sending it', '🔇 Chat mutes now come in shorter lengths (5 or 10 minutes) and always with a reason, which the muted player can see'], fr: ['💬 La zone d\'écriture du chat global s\'agrandit pendant que tu tapes : tu vois tout ton message avant de l\'envoyer', '🔇 Les silences du chat peuvent maintenant être plus courts (5 ou 10 minutes) et ont toujours une raison, que le joueur muet peut voir'] },
     { id: '2026-11-01-avatar-price', date: 'Nov 1, 2026', en: ['🖼️ Profile pictures: your first one is still free; after that, a new picture costs 500 coins, given back if it is refused or you withdraw it (idea by MereTera)'], fr: ['🖼️ Photos de profil : la première reste gratuite ; ensuite, une nouvelle photo coûte 500 pièces, rendues si elle est refusée ou si tu la retires (idée de MereTera)'] },
     { id: '2026-11-01-ideas', date: 'Nov 1, 2026', en: ['🎨 12 new skins from your ideas: Mini Golf (idea by Kj13 and Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari (dylanbuckleyisjewish), Mining (number 1), Cat with a Meow sound pack (baby boy), Toaster (xenon), Billiards (Dylanrulez123), Pirate (casmicgraything), T-Rex (tmanrex), Birthday Cake (sennybex1) and Carnival, a ball-toss booth (jia jun)', '🤍 New skin: White Chocolate (idea by qwertyuiop). Singularity has a bolder event horizon (ichi), Lightbulb rounder bulbs (costoroll) and Infinity more sparkle (Me Cojoni)', '🖼️ 6 new wallpapers: Farm (idea by HSI), Keyboard ASMR, click the background for a soft thock (kingston), Thunderstorm and Solar System (finnnnn), Meteor Shower (Ggggssnoop) and Party (jia jun)', '🔘 New buttons: Cardboard Box, the cheapest one (idea by MAYO), Free Download (Yentizx), Bread, a bite per digit (MattyFaux-Lucky and MaxABGD), Last Roll (G8_floppa) and Bubble Wrap (Jguz01)', '🔊 New sound packs: Slime (idea by Ggggssnoop) and Boing (sennybex1). New emote: Hungry (Monokromati). New Emote Case (shadow2 Jr)', '🏅 New badges: Full Circle (idea by CococoC), Euler\'s Gamma and Taxicab (pilot56), Shifted Echo (NATE_161), Palindromic Prime (A Dude), Three-Quarter Millennium (cri cri 3), Bee (Niall), LOL (Miguel1) and Moon Landing (Miguel2). Some numbers change rarity with them; the rolls you already made keep their value', '⭐ New titles: Level 10 to 250 (idea by shadow2 Jr), Generous for 50,000 coins given to friends (PRISMA123), 100% for rolling every number (casmictechthing), daily streaks of 30, 100 and 365 days (lnbBUChuoi_vn) and Full Spectrum (Pube puller). Odd Week joins the weekly events (JBearr12)', '🌀 New casino game: Wheel, 0.7× at worst and up to 250× (ideas by How yz got sticky and Gray)', '🟢 See how many players are online, live at the bottom of every page, on the Roll page and in the chat (ideas by Thermonuclear Bomb, Jguz01 and KMC)', '🎲 Auto-roll keeps rolling while you browse the site (idea by kaz), and you see your rolls this session under the button (kingston)', '🔎 Shop: a search box (idea by Deadshot) and a rarity picker in skin previews (jia jun). Equip skins and wallpapers from your profile\'s Inventory (LEVIATHAN)', '📊 History filter for today, this week or this month and "XP above" for every rarity (ideas by qwertyuiop), a setting to hide the XP-to-next-rarity line (jsand), compare two numbers in the XP checker (CrazyMiner22), and Stats show your 1- to 6-digit numbers (Phong254)', '💬 Chat: emojis in friend and duel chats (idea by PRISMA123), clan tags in the global chat (R77), compact one-line messages and the Send button wears your Generate button (Idkwhatnamemyself), a soft ping when a friend writes (Sean), 🍳 in the emojis (MattyFaux-Lucky), secret codes hidden (R77) and proxy talk blocked (mateopotato)', '🪙 Duel stakes: type any amount from 1 to 1,000 (idea by dog). Password players can now sign out (Angelicide9)', 'Fixed: profile rarity counts now match Best rolls (reported by casmicgraything)'], fr: ['🎨 12 nouveaux skins tirés de vos idées : Mini Golf (idée de Kj13 et Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari (dylanbuckleyisjewish), Mining (number 1), Cat avec un pack de sons Meow (baby boy), Toaster (xenon), Billiards (Dylanrulez123), Pirate (casmicgraything), T-Rex (tmanrex), Birthday Cake (sennybex1) et Carnival, un stand de chamboule-tout (jia jun)', '🤍 Nouveau skin : Chocolat blanc (idée de qwertyuiop). Singularity a un horizon plus marqué (ichi), Lightbulb des ampoules plus rondes (costoroll) et Infinity scintille davantage (Me Cojoni)', '🖼️ 6 nouveaux fonds : Ferme (idée de HSI), Clavier ASMR, clique sur le fond pour un « thock » feutré (kingston), Orage et Système solaire (finnnnn), Pluie d\'étoiles filantes (Ggggssnoop) et Fête (jia jun)', '🔘 Nouveaux boutons : Carton, le moins cher (idée de MAYO), Téléchargement gratuit (Yentizx), Pain, une bouchée par chiffre (MattyFaux-Lucky et MaxABGD), Dernier tirage (G8_floppa) et Papier bulle (Jguz01)', '🔊 Nouveaux packs de sons : Slime (idée de Ggggssnoop) et Boing (sennybex1). Nouvelle émote : Affamé (Monokromati). Nouvelle caisse d\'émotes (shadow2 Jr)', '🏅 Nouveaux badges : Full Circle (idée de CococoC), Euler\'s Gamma et Taxicab (pilot56), Shifted Echo (NATE_161), Palindromic Prime (A Dude), Three-Quarter Millennium (cri cri 3), Bee (Niall), LOL (Miguel1) et Moon Landing (Miguel2). Certains nombres changent de rareté avec eux ; tes anciens tirages gardent leur valeur', '⭐ Nouveaux titres : Niveau 10 à 250 (idée de shadow2 Jr), Généreux pour 50 000 pièces données à des amis (PRISMA123), 100% pour avoir tiré tous les nombres (casmictechthing), séries de 30, 100 et 365 jours (lnbBUChuoi_vn) et Spectre complet (Pube puller). La Semaine impaire rejoint les événements de la semaine (JBearr12)', '🌀 Nouveau jeu au casino : la Roue, au pire 0,7× et jusqu\'à 250× (idées de How yz got sticky et de Gray)', '🟢 Le nombre de joueurs en ligne, en direct en bas de chaque page, sur l\'écran de tirage et dans le chat (idées de Thermonuclear Bomb, Jguz01 et KMC)', '🎲 Le tirage auto continue pendant que tu navigues sur le site (idée de kaz), et tu vois tes tirages de la session sous le bouton (kingston)', '🔎 Boutique : une recherche (idée de Deadshot) et un choix de rareté dans l\'aperçu des skins (jia jun). Équipe skins et fonds depuis l\'Inventaire de ton profil (LEVIATHAN)', '📊 Filtre de l\'historique pour aujourd\'hui, cette semaine ou ce mois et « XP au-dessus » pour toutes les raretés (idées de qwertyuiop), un réglage pour cacher la ligne d\'XP vers la rareté suivante (jsand), compare deux nombres dans le vérificateur d\'XP (CrazyMiner22), et les Stats montrent tes nombres de 1 à 6 chiffres (Phong254)', '💬 Chat : emojis dans les messages entre amis et en duel (idée de PRISMA123), tags de clan dans le chat global (R77), messages compacts sur une ligne et bouton Send aux couleurs de ton bouton Generate (Idkwhatnamemyself), un petit « ding » quand un ami t\'écrit (Sean), 🍳 dans les emojis (MattyFaux-Lucky), codes secrets cachés (R77) et proxys bloqués (mateopotato)', '🪙 Mises en duel : tape le montant de ton choix, de 1 à 1 000 (idée de dog). Les joueurs à mot de passe peuvent se déconnecter (Angelicide9)', 'Corrigé : les raretés du profil correspondent aux meilleurs tirages (signalé par casmicgraything)'] },
@@ -6586,12 +6587,70 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['mods', '🛡️', 'Moderators'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
   const IM_V = { yes: ['✅', 'Yes'], no: ['❌', 'No'], discuss: ['🤔', 'Discuss'], exists: ['♻️', 'Already exists'] };
   const imReviewsHTML = list => (list && list.length ? `<div class="im-reviews">${list.map(r => `<div class="im-review v-${r.verdict}"><b>${IM_V[r.verdict][0]} ${IM_V[r.verdict][1]}</b> <span class="panel-note">by <span data-no-i18n>${esc(r.by)}</span>${r.mine ? ' (you)' : ''}</span><p data-no-i18n>${esc(r.reason)}</p></div>`).join('')}</div>` : '');
+  // ---------------------------------------------------------------- Modérateurs du chat (demandé par Sacha, 2026-11-01)
+  // Comme les Idea Managers : des joueurs choisis par le créateur gardent le chat global gentil. Leur page : les règles,
+  // les messages signalés encore dans le chat (rien à faire, supprimer, ou rendre muet avec une raison) et leurs dernières
+  // actions. Le créateur voit tout sur la page Owner (onglet Moderators) et peut lever un silence.
+  function renderMod() {
+    currentView = 'mod';
+    app.innerHTML = `<div class="page page-wide"><h1 class="page-title">🛡️ Chat Moderator</h1>
+      <p class="panel-note profile-sub">You help keep the global chat friendly for everyone. Sacha sees every mute and every deleted message, with your reason, and can lift a mute that wasn't fair.</p>
+      <div class="panel im-howto">
+        <h3 class="panel-title">📝 The rules</h3>
+        <ol>
+          <li><b>Be fair.</b> Act on what someone wrote, never because you don't like them or don't agree with them.</li>
+          <li><b>Start small.</b> 5 or 10 minutes for spam or a first rude message, 1 hour if they keep going, 24 hours for something really bad (personal info, very mean, not OK for kids).</li>
+          <li><b>Not every message needs a mute.</b> A small mistake? Just delete it.</li>
+          <li><b>Always pick the right reason</b>, and add details when they help Sacha understand.</li>
+          <li>You can't mute the owner or another moderator. Only Sacha can mute forever.</li>
+        </ol>
+        <p class="panel-note">In the 💬 chat, press ⋯ on a message to delete it or mute its writer.</p>
+      </div>
+      <div id="mod-body"><div class="empty">Loading…</div></div></div>`;
+    const box = $('#mod-body'); let data = null, muting = null;
+    const WHY = Object.fromEntries(GChat.MUTE_WHY), DUR = Object.fromEntries(GChat.MUTE_DUR);
+    const draw = () => {
+      if (!data || !box.isConnected) return;
+      box.innerHTML = `<div class="panel"><div class="panel-head"><h3 class="panel-title">🚩 Reported messages</h3><span class="panel-note">${fmt(data.reports.length)} to check · players reported them in the global chat</span><button class="btn ghost small" data-mod-reload>↻ Refresh</button></div>
+          ${data.reports.length ? data.reports.map(r => `<div class="o-report mod-rep" data-id="${esc(r.id)}" data-msg="${esc(r.msgId)}">
+            <div class="o-report-head">${`<a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>`}${r.count > 1 ? ` <span class="o-chip warn">reported ${r.count} times</span>` : ''}${r.against > r.count ? ` <span class="panel-note">${fmt(r.against)} reports about this player</span>` : ''}<span class="panel-note">${relTime(r.msgT)}</span></div>
+            <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
+            <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
+            ${muting === r.id ? GChat.muteHTML({ owner: false }) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
+        <div class="panel"><div class="panel-head"><h3 class="panel-title">My last actions</h3><span class="panel-note">Sacha sees these too</span></div>
+          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : 'Message deleted'} · ${relTime(a.t)}${a.lift ? ' · <b>lifted by Sacha</b>' : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+    };
+    const load = (action = 'gcModPage', extra) => Online.global(action, extra).then(d => { data = d; draw(); }).catch(err => {
+      if (!data) box.innerHTML = `<div class="empty">${err.status === 403 ? 'This page is for chat moderators.' : 'Unavailable right now.'}</div>`;
+      else toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again');
+      throw err;
+    });
+    load().catch(() => {});
+    box.addEventListener('click', e => {
+      if (e.target.closest('[data-mod-reload]')) { load().catch(() => {}); return; }
+      const card = e.target.closest('.mod-rep'); if (!card) return;
+      const t = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
+      if (e.target.closest('[data-mod-ok]')) { load('gcReportOk', { id: card.dataset.id }).then(() => toast('Marked as fine')).catch(() => {}); return; }
+      if (e.target.closest('[data-mod-del]')) { if (confirm(t('Delete this message?'))) load('gcDelete', { id: card.dataset.msg, from: 'mod' }).then(() => toast('Message deleted')).catch(() => {}); return; }
+      if (e.target.closest('[data-mod-mute]')) { muting = muting === card.dataset.id ? null : card.dataset.id; draw(); return; }
+      if (e.target.closest('[data-gc="mutecancel"]')) { muting = null; draw(); }
+    });
+    box.addEventListener('submit', e => {
+      const f = e.target.closest('.gc-mute-form'); if (!f) return;
+      e.preventDefault();
+      const why = f.elements.why.value, note = f.elements.note.value.trim(), dur = (f.querySelector('[name=dur]:checked') || {}).value;
+      if (!why) { toast('Pick a reason'); f.elements.why.focus(); return; }
+      if (why === 'other' && !note) { toast('Say why in a few words'); f.elements.note.focus(); return; }
+      const card = f.closest('.mod-rep'), btn = f.querySelector('button:not([type])'); btn.disabled = true;
+      load('gcMute', { id: card.dataset.msg, dur, why, note, from: 'mod' }).then(() => { muting = null; draw(); toast('Player muted'); }).catch(() => { btn.disabled = false; });
+    });
+  }
   function renderIdeas() {
     currentView = 'ideas';
     app.innerHTML = `<div class="page page-wide"><h1 class="page-title">🧑‍⚖️ Idea Manager</h1>
@@ -7078,7 +7137,7 @@
       const row = r => `<div class="o-report${r.done ? ' done' : ''}">
         <div class="o-report-head">${who(r.author)}${r.against > 1 ? ` <span class="o-chip warn">${r.against} reports</span>` : ''}<span class="panel-note">${esc(r.where)} · ${relTime(r.msgT)} · reported by ${who(r.reporter)}</span></div>
         <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
-        ${r.done ? '<span class="panel-note">✓ Handled</span>' : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}${r.where === 'about me' ? ` <button class="btn ghost small" data-bio-clear="${esc(r.author)}">🗑️ Clear About me</button>` : ''}`}</div>`;
+        ${r.done ? `<span class="panel-note">✓ Handled${r.by ? ` by <span data-no-i18n>${esc(r.by.name)}</span> · ${{ ok: 'nothing wrong', deleted: 'message deleted', muted: 'player muted' }[r.by.act] || ''}` : ''}</span>` : d.readOnly ? '' : `<button class="btn ghost small" data-report-done="${r.id}">✓ Mark as handled</button>${r.where === 'avatar' ? ` <button class="btn ghost small" data-av-rm="${esc(r.author)}" data-av-why="inappropriate">🗑️ Remove picture</button>` : ''}${r.where === 'about me' ? ` <button class="btn ghost small" data-bio-clear="${esc(r.author)}">🗑️ Clear About me</button>` : ''}`}</div>`;
       pane('reports').innerHTML = panel('Reported messages', `${fmt(open.length)} to look at · messages players reported from duel chats and private messages`,
         d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
     };
@@ -7147,29 +7206,45 @@
       // Raison, note du modérateur et message en cause (Sacha, 2026-11-01) : de quoi juger si le silence était mérité.
       const DUR = { '5m': '5 min', '10m': '10 min', '1h': '1 h', '24h': '24 h', perm: 'forever' }, WHY = Object.fromEntries(GChat.MUTE_WHY);
       const why = m => `<div class="gc-mute-why">${m.d ? `<span class="chip">🔇 ${DUR[m.d] || esc(m.d)}</span>` : ''}${m.why ? `<b>${WHY[m.why] || esc(m.why)}</b>` : '<span class="panel-note">No reason given</span>'}${m.note ? ` · <span data-no-i18n>${esc(m.note)}</span>` : ''}</div>${m.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(m.text)}”</p>` : ''}`;
-      const mods = d.modMutes || {}, hist = d.history || [];
-      box.innerHTML = panel('Chat moderators', 'they can delete messages and mute players in the global chat (5 min to 24 h; only you can mute forever)', `
-          <div class="im-managers">${d.mods.map(n => `<span class="chip"><span data-no-i18n>${esc(n)}</span>${mods[n] ? ` <span class="panel-note">🔇 ${fmt(mods[n])}</span>` : ''} <button class="im-x" data-gc-mod="${esc(n)}" title="Remove">×</button></span>`).join('') || '<span class="panel-note">Nobody yet.</span>'}</div>
-          <form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>`)
-        + panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div>${why(m)}</div>${d.readOnly ? '' : `<button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button>`}</div>`).join('') : '<div class="empty">Nobody is muted.</div>')
+      const hist = d.history || [];
+      drawMods(d, why);
+      box.innerHTML = panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div>${why(m)}</div>${d.readOnly ? '' : `<button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button>`}</div>`).join('') : '<div class="empty">Nobody is muted.</div>')
         + panel('Mute history', 'mutes that ended or that you lifted, newest first', hist.length ? hist.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}${m.lift ? ` · <b>lifted by <span data-no-i18n>${esc(m.lift.by)}</span></b>` : ''}</span></div>${why(m)}</div></div>`).join('') : '<div class="empty">No mute yet.</div>')
         + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'));
     };
-    const chatRun = (action, extra) => Online.global(action, extra).then(d => { drawChat(d); guest(d.readOnly); });
-    chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); });
+    // ---- Modérateurs (Sacha, 2026-11-01), comme les Idea Managers : donner ou retirer le rôle, ce que chacun a fait
+    // (silences, suppressions, signalements traités, silences que tu as levés) et leurs dernières actions, filtrables.
+    let modFilter = '';
+    const drawMods = (d, why) => {
+      const box = pane('mods'); if (currentView !== 'owner' || !box) return;
+      const stats = d.modStats || [], acts = (d.actions || []).filter(a => !modFilter || a.by === modFilter);
+      box.innerHTML = panel('Chat moderators', 'they keep the global chat friendly: delete messages and mute players for 5 min to 24 h, always with a reason (only you can mute forever). They see the rules and the reported chat messages on their own page.', `
+          ${stats.length ? stats.map(m => `<div class="o-report mod-card"><div class="o-report-head">${who(m.name)}<span class="panel-note">${m.since ? `moderator since ${fullDate(m.since)}` : 'moderator'}</span>${d.readOnly ? '' : `<button class="im-x" data-gc-mod="${esc(m.name)}" title="Remove the role">×</button>`}</div>
+            <div class="mod-stats"><span><b>${fmt(m.mutes)}</b> mutes</span><span><b>${fmt(m.deletes)}</b> deleted</span><span><b>${fmt(m.reports)}</b> reports checked</span><span><b>${fmt(m.week)}</b> actions this week</span>${m.lifted ? `<span class="o-chip warn">${fmt(m.lifted)} lifted by you</span>` : ''}</div></div>`).join('') : '<div class="empty">Nobody yet. Give the role to a kind player you trust.</div>'}
+          ${d.readOnly ? '' : '<form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>'}`)
+        + panel('What moderators did', 'mutes and deleted messages, newest first: check the reason and the message', `
+          ${stats.length > 1 || modFilter ? `<div class="o-inbox-tabs">${['', ...new Set([...stats.map(m => m.name), ...(d.actions || []).map(a => a.by)])].map(n => `<button data-mod-filter="${esc(n)}" class="${n === modFilter ? 'on' : ''}"${n ? ' data-no-i18n' : ''}>${n ? esc(n) : 'All'}</button>`).join('')}</div>` : ''}
+          ${acts.length ? acts.map(a => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} ${who(a.name)}<span class="panel-note">${a.kind === 'mute' ? 'muted' : 'message deleted'} by <span data-no-i18n>${esc(a.by)}</span> · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift.by)}</span></b>` : a.active ? ' · <b>still muted</b>' : ''}</span></div>${a.kind === 'mute' ? why(a) : a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>${a.active && !d.readOnly ? `<button class="btn ghost small" data-gc-unmute="${esc(a.name)}">🔊 Unmute</button>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}`);
+    };
+    let chatData = null;
+    const chatRun = (action, extra) => Online.global(action, extra).then(d => { chatData = d; drawChat(d); guest(d.readOnly); });
+    chatRun('gcAdmin').catch(err => { if (pane('chat')) pane('chat').innerHTML = denied(err); if (pane('mods')) pane('mods').innerHTML = denied(err); });
     // Écouteurs posés sur l'onglet lui-même (recréé à chaque visite de la page) : jamais en double.
-    pane('chat').addEventListener('click', e => {
+    const chatClick = e => {
       if (currentView !== 'owner') return;
+      const mf = e.target.closest('[data-mod-filter]'); if (mf) { modFilter = mf.dataset.modFilter; if (chatData) drawChat(chatData); return; }
       const un = e.target.closest('[data-gc-unmute]'); if (un) { un.disabled = true; chatRun('gcUnmute', { name: un.dataset.gcUnmute }).then(() => toast('Unmuted')).catch(err => { un.disabled = false; toast(err.message || 'Unavailable right now, try again'); }); return; }
       const rm = e.target.closest('[data-gc-mod]'); if (rm && confirm(window.RNGI18n ? window.RNGI18n.t('Remove this moderator?') : 'Remove this moderator?')) chatRun('gcModSet', { name: rm.dataset.gcMod, on: false }).catch(err => toast(err.message || 'Unavailable right now, try again'));
-    });
-    pane('chat').addEventListener('submit', e => {
+    };
+    pane('chat').addEventListener('click', chatClick); pane('mods').addEventListener('click', chatClick);
+    const chatSubmit = e => {
       const bf = e.target.closest('.bio-clear-form');
       if (bf && currentView === 'owner') { e.preventDefault(); const n = bf.elements.name.value.trim(); if (n) clearBio(n).then(ok => { if (ok) bf.elements.name.value = ''; }); return; }
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
-    });
+    };
+    pane('chat').addEventListener('submit', chatSubmit); pane('mods').addEventListener('submit', chatSubmit);
     // ---- Annonces (idée de jaxoncool43, 2026-10-26) : titre + texte (500 caractères), « important » = notification
     // une fois chez chaque joueur, et Discord si le salon est configuré. Les 20 dernières, chacune supprimable.
     const drawAnn = d => {
@@ -9247,7 +9322,7 @@
       : `<a class="subnav-tab${k === key ? ' active' : ''}" href="#/${k}"${k === key ? ' aria-current="page"' : ''}><i aria-hidden="true">${emoji}</i><span>${label}</span></a>`).join('') : '';
   }
 
-  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, roadmap: renderRoadmap };
+  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, mod: renderMod, roadmap: renderRoadmap };
 
   function route() {
     Avatars.load();
@@ -9338,7 +9413,7 @@
       if (this.el) return this.el;
       const el = document.createElement('section');
       el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
-      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-online" hidden></span><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-online" hidden></span><span class="gc-note">Be kind · no personal info</span><a class="gc-modlink" href="#/mod" hidden title="Moderator page">🛡️ Mod</a><button class="gc-close" aria-label="Close" title="Close">×</button></header>
         <div class="gc-pin" hidden></div>
         <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
         <footer class="gc-foot"></footer>`;
@@ -9416,6 +9491,7 @@
       { const on = this.el && this.el.querySelector('.gc-online'); if (on) { on.hidden = !Number.isInteger(d.online); if (!on.hidden) on.textContent = `🟢 ${fmt(d.online)} online`; } } // Thermonuclear Bomb, 2026-11-01
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
+      { const ml = this.el && this.el.querySelector('.gc-modlink'); if (ml) ml.hidden = !(this.me && this.me.mod); } // page des Modérateurs (Sacha, 2026-11-01)
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
       if (d.same) return;
@@ -9432,7 +9508,7 @@
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="muteform">🔇 Mute…</button>'}` : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
