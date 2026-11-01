@@ -304,8 +304,12 @@
   // Aussi dans le détail d'un ancien tirage (idée de Kag, 2026-10-28) : live = false, affiché tout de suite. Common et
   // en dessous : aussi la marge au-dessus de la rareté du dessous (idée de Starharvest, 2026-10-28), sur la même ligne ;
   // chaque moitié reste entière (sur un téléphone, elles passent l'une sous l'autre).
+  // Marge au-dessus de la rareté du dessous pour toutes les raretés, plus seulement Common et pire (idée de qwertyuiop,
+  // 2026-11-01). Réglage « Show XP to next rarity » (idée de jsand, 2026-11-01) : coupé, la ligne ne s'affiche plus après
+  // un tirage (live) ; le détail d'un ancien tirage et le vérificateur d'XP la gardent.
   function tierShortHTML(a, live = true) {
-    const nx = Engine.nextTier(a.total), pv = TIER_RANK[a.tier] <= TIER_RANK.common && Engine.prevTier ? Engine.prevTier(a.total) : null;
+    if (live && Store.settings.tierLine === 'off') return '';
+    const nx = Engine.nextTier(a.total), pv = Engine.prevTier ? Engine.prevTier(a.total) : null;
     if (!nx && !pv) return '';
     const name = t => { const l = TIER_LABEL[t] || t; return esc(l[0].toUpperCase() + l.slice(1)); };
     const parts = [nx && `<span>↑ ${fmt(nx.short)} XP short of ${name(nx.tier)}</span>`, pv && `<span>↓ ${fmt(pv.above)} XP above ${name(pv.tier)}</span>`].filter(Boolean);
@@ -362,7 +366,8 @@
   // Bouton de tirage (« Generate », « Roll again », « Roll round ») : il porte le skin choisi dans la boutique, par
   // défaut celui du skin de nombre équipé (css/buttons.css). settings.button = bouton à afficher, calculé depuis la
   // boutique ; tant qu'elle n'a pas répondu sur cet appareil, on suit le skin connu.
-  const ROLL_BUTTONS = '#roll-btn, #r-again, #room-roll';
+  // .gc-send : le bouton Send du chat global porte aussi le bouton choisi (idée d'Idkwhatnamemyself, 2026-11-01).
+  const ROLL_BUTTONS = '#roll-btn, #r-again, #room-roll, .gc-send';
   const genClass = raw => {
     const id = Shop.resolve(raw === undefined ? Store.settings.button || Store.settings.skin : raw);
     return id && id !== 'classic' && (Shop.byId.has(id) || Shop.buttonById.has(id)) ? ` gen-${id}` : '';
@@ -374,6 +379,30 @@
       if (cls) b.classList.add(cls);
     });
   }
+  // Bouton Bread (idée de MattyFaux-Lucky, avec MaxABGD, 2026-11-01) : la miche perd une bouchée par chiffre révélé
+  // (n bouchées, de 0 à 6 ; css/buttons.css les dessine) et redevient entière au tirage suivant (n = 0).
+  const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
+  // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
+  // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
+  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${String(roll[0]).padStart(6, '0')}"` : '"------"');
+  Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
+  // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
+  // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
+  // est déjà joué par startRoll ; l'aperçu de la boutique (data-gen-try) joue le sien ici. L'aperçu du pain prend
+  // aussi une bouchée à chaque appui (entier à nouveau après la sixième), pour l'essayer avant de l'acheter.
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest && e.target.closest('.btn-roll.gen-bubblewrap, .btn-roll.gen-bread[data-gen-try]');
+    if (!b || b.disabled) return;
+    if (b.classList.contains('gen-bread')) { const n = (Number(b.dataset.bites) || 0) + 1; if (n > 6) delete b.dataset.bites; else b.dataset.bites = n; return; }
+    const full = Array.from({ length: 16 }, (_, i) => i).filter(i => b.style.getPropertyValue(`--b${i}`) !== '0');
+    if (!full.length) { for (let i = 0; i < 16; i++) b.style.removeProperty(`--b${i}`); return; } // feuille neuve
+    const i = full[Math.floor(Math.random() * full.length)];
+    b.style.setProperty(`--b${i}`, '0');
+    b.style.setProperty('--pop-x', `${6 + (i % 8) * 12.6 + (i >= 8 ? 6 : 0)}%`);
+    b.style.setProperty('--pop-y', i >= 8 ? '72%' : '30%');
+    b.classList.remove('bw-pop'); void b.offsetWidth; b.classList.add('bw-pop');
+    if (b.hasAttribute('data-gen-try')) Sound.play('click', { look: 'bubblewrap', k: i % 5 });
+  });
   // État de la boutique reçu du serveur : skin équipé et bouton de tirage, retenus sur l'appareil.
   function applyShop(state) {
     Store.setSetting('skin', state.skin);
@@ -1222,6 +1251,7 @@
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
+      <div class="field"><label>Show XP to next rarity</label>${seg('tierLine', ['on', 'off'], s.tierLine === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">The “↑ XP short of / ↓ XP above” line under the XP after a roll.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
@@ -1259,7 +1289,7 @@
       const googleSlot = m.querySelector('#google-btn');
       if (googleSlot) renderGoogleButton(googleSlot);
       const googleOut = m.querySelector('#google-out');
-      if (googleOut) googleOut.addEventListener('click', signOutGoogle);
+      if (googleOut) googleOut.addEventListener('click', () => signOutGoogle('google'));
       bindPassword(m);
       bindAvatarField(m);
       bindBioField(m);
@@ -1469,6 +1499,8 @@
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>${esc(keyName())}</kbd>
           </p>
+          ${sessRollsHTML()}
+          <p class="online-now" id="online-now" hidden></p>
           ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div><div id="event-side"></div></div>
@@ -1498,11 +1530,45 @@
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
+    loadOnlineNow($('#online-now'));
     drawTourneyBanner($('#tn-banner-slot'));
     loadQuests($('#quests-slot'));
     Fund.load();
     $('#room-join-form').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#room-code').value); });
   }
+
+  // « 🟢 N players online » (idée de Thermonuclear Bomb, 2026-11-01 ; aussi Jguz01 et KMC) : compté par le serveur
+  // (api/_online.js, 30 s de cache), rien sous 5 joueurs ni si le serveur ne répond pas.
+  const onlineText = n => `🟢 ${plural(n, 'player')} online`;
+  function loadOnlineNow(el) {
+    if (!el) return;
+    Online.request('/api/leaderboard?online=1').then(r => {
+      if (!el.isConnected || !r || !Number.isInteger(r.online)) return;
+      el.textContent = onlineText(r.online); el.hidden = false;
+    }).catch(() => {});
+  }
+
+  // Compteur en direct en bas de chaque page (demandé par Sacha, 2026-11-01) : le même nombre que « players online »,
+  // relu toutes les 30 s tant que l'onglet est visible (le serveur ne le recalcule pas plus souvent) et dès qu'on revient
+  // sur l'onglet. Caché sous 5 joueurs ou sans réponse du serveur, comme sur l'écran de tirage.
+  const LiveFoot = {
+    timer: null,
+    async tick() {
+      const foot = $('#site-foot');
+      if (!foot || document.hidden) return;
+      try {
+        const r = await Online.request('/api/leaderboard?online=1');
+        if (r && Number.isInteger(r.online)) { $('#sf-online').textContent = plural(r.online, 'player') + ' online'; foot.hidden = false; }
+        else foot.hidden = true;
+      } catch (e) { /* hors ligne : on garde le dernier nombre */ }
+    },
+    start() {
+      if (this.timer) return;
+      this.tick();
+      this.timer = setInterval(() => this.tick(), 30000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) this.tick(); });
+    },
+  };
 
   // ---------------------------------------------------------------- quêtes du jour et bonus quotidien (accueil)
   // 5 quêtes par jour, les mêmes pour tous ; la progression et les récompenses viennent du serveur. Les finir toutes fait
@@ -1662,9 +1728,10 @@
     const rows = [];
     for (let L = from; L <= to; L++) {
       const r = Quests.levelReward(L), state = L <= paidUpTo ? 'paid' : L <= lv.level ? 'ready' : 'locked';
+      const ttl = Ach.byId.get(`lvl${L}`); // titre de niveau (idée de shadow2 Jr, 2026-11-01)
       rows.push(`<div class="road-step ${state}${r.key ? ` key-${r.key}` : ''}${L === lv.level + 1 ? ' next' : ''}">
         <span class="road-n">${fmt(L)}</span>
-        <span class="road-r">+${fmt(r.coins)} 🪙${r.key ? ` <b>${KEY[r.key][0]} ${KEY[r.key][1]}</b>` : ''}</span>
+        <span class="road-r">+${fmt(r.coins)} 🪙${r.key ? ` <b>${KEY[r.key][0]} ${KEY[r.key][1]}</b>` : ''}${ttl ? ` <b class="road-ttl">${ttl.emoji} ${ttl.title} title</b>` : ''}</span>
         <span class="road-x mono">${compact(Quests.xpForLevel(L))} XP</span>
         <span class="road-s">${state === 'paid' ? '✓' : state === 'ready' ? '🎁' : '🔒'}</span>
       </div>`);
@@ -1864,8 +1931,11 @@
   }
 
   // Déconnexion : l'historique n'est retiré de cet appareil qu'une fois chaque tirage confirmé sur le compte.
-  async function signOutGoogle() {
-    if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+  // Aussi pour les joueurs à mot de passe (idée d'Angelicide9, 2026-11-01) : bouton montré seulement si le serveur
+  // confirme un mot de passe, sinon le joueur ne pourrait jamais revenir sur son compte.
+  async function signOutGoogle(how = 'google') {
+    if (how === 'google' && window.google && google.accounts) google.accounts.id.disableAutoSelect();
+    if (how === 'password' && !confirm(window.RNGI18n.t('Sign out? To come back, sign in with your player name and your password.'))) return;
     closeModal();
     try {
       await syncHistory();
@@ -1881,7 +1951,7 @@
     Store.clearRolls();
     Collection.built = false;
     Store.signOut();
-    toast('Signed out: your history is saved in your Google account');
+    toast(how === 'password' ? 'Signed out: sign in again with your name and password' : 'Signed out: your history is saved in your Google account');
     route();
   }
 
@@ -1894,16 +1964,22 @@
       <details class="pw-login"><summary>Sign in with a name and password</summary>
         <form class="pw-form" id="pw-login"><input class="input" name="name" autocomplete="username" maxlength="20" placeholder="Player name" aria-label="Player name" required><input class="input" type="password" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="btn">Sign in</button></form>
         <span class="panel-note">This device switches to that player. The player you use here now stays saved on the server under its name.</span>
-      </details></div>`;
+      </details>
+      <div class="pw-out" id="pw-out" hidden><button class="btn" id="pw-signout" type="button">Sign out</button><span class="panel-note">This device goes back to a new empty player. Your rolls and coins stay on your account.</span></div></div>`;
   }
   function bindPassword(m) {
     const state = m.querySelector('#pw-state'), set = m.querySelector('#pw-set'), login = m.querySelector('#pw-login'), p = Store.player;
-    if (p.name) Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => { if (r.has && state) state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); }).catch(() => {});
+    const out = m.querySelector('#pw-out');
+    if (p.name) Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => {
+      if (r.has && state) state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.');
+      if (r.has && out && !p.google) out.hidden = false; // compte Google : son propre bouton « Sign out » existe déjà
+    }).catch(() => {});
+    if (out) out.querySelector('#pw-signout').addEventListener('click', () => signOutGoogle('password'));
     if (set) set.addEventListener('submit', async e => {
       e.preventDefault();
       const f = new FormData(set);
       if (f.get('password') !== f.get('again')) { toast('The two passwords are different'); return; }
-      try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); toast('Password saved', 2500, 'achv'); }
+      try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); if (out && !p.google) out.hidden = false; toast('Password saved', 2500, 'achv'); }
       catch (err) { toast([403, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
     });
     if (login) login.addEventListener('submit', async e => {
@@ -1962,6 +2038,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-01-ideas', date: 'Nov 1, 2026', en: ['🎨 12 new skins from your ideas: Mini Golf (idea by Kj13 and Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari (dylanbuckleyisjewish), Mining (number 1), Cat with a Meow sound pack (baby boy), Toaster (xenon), Billiards (Dylanrulez123), Pirate (casmicgraything), T-Rex (tmanrex), Birthday Cake (sennybex1) and Carnival, a ball-toss booth (jia jun)', '🤍 New skin: White Chocolate (idea by qwertyuiop). Singularity has a bolder event horizon (ichi), Lightbulb rounder bulbs (costoroll) and Infinity more sparkle (Me Cojoni)', '🖼️ 6 new wallpapers: Farm (idea by HSI), Keyboard ASMR, click the background for a soft thock (kingston), Thunderstorm and Solar System (finnnnn), Meteor Shower (Ggggssnoop) and Party (jia jun)', '🔘 New buttons: Cardboard Box, the cheapest one (idea by MAYO), Free Download (Yentizx), Bread, a bite per digit (MattyFaux-Lucky and MaxABGD), Last Roll (G8_floppa) and Bubble Wrap (Jguz01)', '🔊 New sound packs: Slime (idea by Ggggssnoop) and Boing (sennybex1). New emote: Hungry (Monokromati). New Emote Case (shadow2 Jr)', '🏅 New badges: Full Circle (idea by CococoC), Euler\'s Gamma and Taxicab (pilot56), Shifted Echo (NATE_161), Palindromic Prime (A Dude), Three-Quarter Millennium (cri cri 3), Bee (Niall), LOL (Miguel1) and Moon Landing (Miguel2). Some numbers change rarity with them; the rolls you already made keep their value', '⭐ New titles: Level 10 to 250 (idea by shadow2 Jr), Generous for 50,000 coins given to friends (PRISMA123), 100% for rolling every number (casmictechthing), daily streaks of 30, 100 and 365 days (lnbBUChuoi_vn) and Full Spectrum (Pube puller). Odd Week joins the weekly events (JBearr12)', '🌀 New casino game: Wheel, 0.7× at worst and up to 250× (ideas by How yz got sticky and Gray)', '🟢 See how many players are online, live at the bottom of every page, on the Roll page and in the chat (ideas by Thermonuclear Bomb, Jguz01 and KMC)', '🎲 Auto-roll keeps rolling while you browse the site (idea by kaz), and you see your rolls this session under the button (kingston)', '🔎 Shop: a search box (idea by Deadshot) and a rarity picker in skin previews (jia jun). Equip skins and wallpapers from your profile\'s Inventory (LEVIATHAN)', '📊 History filter for today, this week or this month and "XP above" for every rarity (ideas by qwertyuiop), a setting to hide the XP-to-next-rarity line (jsand), compare two numbers in the XP checker (CrazyMiner22), and Stats show your 1- to 6-digit numbers (Phong254)', '💬 Chat: emojis in friend and duel chats (idea by PRISMA123), clan tags in the global chat (R77), compact one-line messages and the Send button wears your Generate button (Idkwhatnamemyself), a soft ping when a friend writes (Sean), 🍳 in the emojis (MattyFaux-Lucky), secret codes hidden (R77) and proxy talk blocked (mateopotato)', '🪙 Duel stakes: type any amount from 1 to 1,000 (idea by dog). Password players can now sign out (Angelicide9)', 'Fixed: profile rarity counts now match Best rolls (reported by casmicgraything)'], fr: ['🎨 12 nouveaux skins tirés de vos idées : Mini Golf (idée de Kj13 et Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari (dylanbuckleyisjewish), Mining (number 1), Cat avec un pack de sons Meow (baby boy), Toaster (xenon), Billiards (Dylanrulez123), Pirate (casmicgraything), T-Rex (tmanrex), Birthday Cake (sennybex1) et Carnival, un stand de chamboule-tout (jia jun)', '🤍 Nouveau skin : Chocolat blanc (idée de qwertyuiop). Singularity a un horizon plus marqué (ichi), Lightbulb des ampoules plus rondes (costoroll) et Infinity scintille davantage (Me Cojoni)', '🖼️ 6 nouveaux fonds : Ferme (idée de HSI), Clavier ASMR, clique sur le fond pour un « thock » feutré (kingston), Orage et Système solaire (finnnnn), Pluie d\'étoiles filantes (Ggggssnoop) et Fête (jia jun)', '🔘 Nouveaux boutons : Carton, le moins cher (idée de MAYO), Téléchargement gratuit (Yentizx), Pain, une bouchée par chiffre (MattyFaux-Lucky et MaxABGD), Dernier tirage (G8_floppa) et Papier bulle (Jguz01)', '🔊 Nouveaux packs de sons : Slime (idée de Ggggssnoop) et Boing (sennybex1). Nouvelle émote : Affamé (Monokromati). Nouvelle caisse d\'émotes (shadow2 Jr)', '🏅 Nouveaux badges : Full Circle (idée de CococoC), Euler\'s Gamma et Taxicab (pilot56), Shifted Echo (NATE_161), Palindromic Prime (A Dude), Three-Quarter Millennium (cri cri 3), Bee (Niall), LOL (Miguel1) et Moon Landing (Miguel2). Certains nombres changent de rareté avec eux ; tes anciens tirages gardent leur valeur', '⭐ Nouveaux titres : Niveau 10 à 250 (idée de shadow2 Jr), Généreux pour 50 000 pièces données à des amis (PRISMA123), 100% pour avoir tiré tous les nombres (casmictechthing), séries de 30, 100 et 365 jours (lnbBUChuoi_vn) et Spectre complet (Pube puller). La Semaine impaire rejoint les événements de la semaine (JBearr12)', '🌀 Nouveau jeu au casino : la Roue, au pire 0,7× et jusqu\'à 250× (idées de How yz got sticky et de Gray)', '🟢 Le nombre de joueurs en ligne, en direct en bas de chaque page, sur l\'écran de tirage et dans le chat (idées de Thermonuclear Bomb, Jguz01 et KMC)', '🎲 Le tirage auto continue pendant que tu navigues sur le site (idée de kaz), et tu vois tes tirages de la session sous le bouton (kingston)', '🔎 Boutique : une recherche (idée de Deadshot) et un choix de rareté dans l\'aperçu des skins (jia jun). Équipe skins et fonds depuis l\'Inventaire de ton profil (LEVIATHAN)', '📊 Filtre de l\'historique pour aujourd\'hui, cette semaine ou ce mois et « XP au-dessus » pour toutes les raretés (idées de qwertyuiop), un réglage pour cacher la ligne d\'XP vers la rareté suivante (jsand), compare deux nombres dans le vérificateur d\'XP (CrazyMiner22), et les Stats montrent tes nombres de 1 à 6 chiffres (Phong254)', '💬 Chat : emojis dans les messages entre amis et en duel (idée de PRISMA123), tags de clan dans le chat global (R77), messages compacts sur une ligne et bouton Send aux couleurs de ton bouton Generate (Idkwhatnamemyself), un petit « ding » quand un ami t\'écrit (Sean), 🍳 dans les emojis (MattyFaux-Lucky), codes secrets cachés (R77) et proxys bloqués (mateopotato)', '🪙 Mises en duel : tape le montant de ton choix, de 1 à 1 000 (idée de dog). Les joueurs à mot de passe peuvent se déconnecter (Angelicide9)', 'Corrigé : les raretés du profil correspondent aux meilleurs tirages (signalé par casmicgraything)'] },
     { id: '2026-11-01-christmas', date: 'Nov 1, 2026', en: ['🎄 The Christmas event is in the shop\'s Limited tab until December 25: three new skins, Snow Globe (idea by Gray alt), Gingerbread and Ugly Sweater, and three wallpapers, Snowy Village (idea by IXOLAF2), Cozy Fireplace and Sleigh Ride. Christmas Morning is there too', '🎃 Halloween is over: its skins and wallpapers left the shop, and the ones you bought are yours forever'], fr: ['🎄 L\'événement de Noël est dans l\'onglet Limités de la boutique jusqu\'au 25 décembre : trois nouveaux skins, Boule à neige (idée de Gray alt), Pain d\'épice et Pull moche, et trois fonds, Village enneigé (idée d\'IXOLAF2), Coin du feu et Balade en traîneau. Christmas Morning est là aussi', '🎃 Halloween est fini : ses skins et ses fonds ont quitté la boutique, et ceux que tu as achetés restent à toi pour toujours'] },
     { id: '2026-10-30-bugs2', date: 'Oct 30, 2026', en: ['☁️ The Sky skin now also takes the color of Anomaly and Godlike rolls: an orange dawn and a red-and-gold sunset (reported by Deadshot)', '💬 The chat filter now also hides a few rude words it missed (reported by Yooooooooo)'], fr: ['☁️ Le skin Sky prend aussi la couleur des tirages Anomaly et Godlike : une aube orange et un coucher de soleil rouge et or (signalé par Deadshot)', '💬 Le filtre du chat masque aussi quelques mots grossiers qui passaient (signalé par Yooooooooo)'] },
     { id: '2026-10-30-bugs', date: 'Oct 30, 2026', en: ['📊 Profiles and Compare now count all your rolls and lifetime XP, not just your last 100,000 (reported by jsand, kaz, Raynarr00 and LeSombre)', '👥 Switching players on the same device no longer mixes both histories (reported by costoroll)', '🏅 The Badges tab no longer says "Roll once" to players with an old name saved on their device (reported by A Dude)', '🧭 Opening another page while a roll is loading no longer pulls you back to the roll: a message shows your roll instead (reported by Stepa and daddy finger)', '🌙 A big roll made while the tab was hidden now stays on screen when you come back, even after a reload (reported by ann Joe worst gamble)', '🤖 Auto-roll now tells you when your account is already rolling in another tab or on another device (reported by MereTera and Sean)', '♾️ The 10 best numbers are all Infinite again: 24 had become Godlike by a rounding error (reported by kaz)', '🤝 Leaderboard ties now share the same place and the same monthly reward (reported by R77)', '🟢 Friends who are rolling now show as online (reported by kingston)', '⚔️ In a duel, the score boxes stay above the right player (reported by qwertyuiop)', '🪙 A duel bet comes back within about a minute if the duel never starts, and the duel page says why it cannot open (reported by dylanbuckleyisjewish)', '🚀 Crash: Cash out no longer fails when the game is busy (reported by GamblrGod)', '🏆 The tournament you are not in is greyed out instead of doing nothing (reported by casmicgraything)', '🐟 The Lake fish jump head first (reported by TibotyTWO), the Window Cleaner keeps his arm when he leaves (reported by Deadshot), and the Workshop elves keep their heads (reported by costoroll)', '⚔️ The Battle tab is now called Duel (idea by Kag)'], fr: ['📊 Les profils et la comparaison comptent maintenant tous tes tirages et toute ton XP à vie, pas seulement tes 100 000 derniers (signalé par jsand, kaz, Raynarr00 et LeSombre)', '👥 Changer de joueur sur le même appareil ne mélange plus les deux historiques (signalé par costoroll)', '🏅 L\'onglet Badges ne dit plus « Fais un tirage » aux joueurs dont l\'appareil gardait un ancien pseudo (signalé par A Dude)', '🧭 Ouvrir une autre page pendant qu\'un tirage charge ne te ramène plus au tirage : un message affiche ton tirage (signalé par Stepa et daddy finger)', '🌙 Un gros tirage fait pendant que l\'onglet était caché reste affiché quand tu reviens, même après un rechargement (signalé par ann Joe worst gamble)', '🤖 Le tirage auto te prévient quand ton compte tire déjà dans un autre onglet ou sur un autre appareil (signalé par MereTera et Sean)', '♾️ Les 10 meilleurs nombres sont de nouveau tous Infinite : 24 était passé Godlike par une erreur d\'arrondi (signalé par kaz)', '🤝 Les ex æquo du classement partagent la même place et la même récompense du mois (signalé par R77)', '🟢 Les amis en train de tirer apparaissent en ligne (signalé par kingston)', '⚔️ En duel, les cases de score restent au-dessus du bon joueur (signalé par qwertyuiop)', '🪙 Une mise de duel revient en une minute environ si le duel ne commence jamais, et la page dit pourquoi le duel ne s\'ouvre pas (signalé par dylanbuckleyisjewish)', '🚀 Crash : « Encaisser » n\'échoue plus quand le jeu est chargé (signalé par GamblrGod)', '🏆 Le tournoi où tu n\'es pas inscrit est grisé au lieu de ne rien faire (signalé par casmicgraything)', '🐟 Les poissons du Lac sautent la tête la première (signalé par TibotyTWO), le laveur de vitres garde son bras en partant (signalé par Deadshot) et les lutins de l\'Atelier gardent leur tête (signalé par costoroll)', '⚔️ L\'onglet Combat s\'appelle maintenant Duel (idée de Kag)'] },
@@ -2358,9 +2435,21 @@
   // Rien ne se saute : pendant la révélation, Espace est ignoré ; une fois la rareté affichée, il relance.
   let rollPending = false;
   // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
-  // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
-  // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
-  const SoloAuto = { on: false, timer: 0, shownAt: 0, refused: 0 }; // refused : refus 429 d'affilée (voir startRoll)
+  // Jamais gardé d'une visite à l'autre ; s'éteint sur un tirage hors ligne, en entrant dans un duel ou un tournoi, et
+  // s'arrête de lui-même sur la rareté choisie pour que le joueur la voie. Sur les autres pages du site (boutique,
+  // casino…), il continue sans révélation (idée de kaz, 2026-11-01), voir bgSoloRoll et autoAfterRoute.
+  const SoloAuto = { on: false, timer: 0, shownAt: 0, refused: 0, away: false }; // refused : refus 429 d'affilée (voir startRoll) ; away : message « keeps rolling » déjà montré
+  const onRollPage = () => currentView === 'home' || currentView === 'result';
+  // Pages où le tirage auto s'arrête : un duel ou un tournoi tire avec le même compte (délai de 8 s du serveur partagé).
+  const AUTO_HALT = ['room', 'tournament'];
+  // Tirages faits dans cet onglet (idée de kingston, 2026-11-01) : « N rolls this session » sous le bouton de tirage.
+  // sessionStorage : remis à zéro quand l'onglet se ferme, gardé si la page se recharge.
+  const SessionRolls = {
+    get n() { try { return Number(sessionStorage.getItem('rngSessRolls')) || 0; } catch (e) { return this.mem || 0; } },
+    bump() { const n = this.n + 1; this.mem = n; try { sessionStorage.setItem('rngSessRolls', String(n)); } catch (e) { /* stockage bloqué : en mémoire */ } const el = $('#sess-rolls'); if (el) { el.textContent = sessRollsText(n); el.hidden = false; } },
+  };
+  const sessRollsText = n => `🔥 ${plural(n, 'roll')} this session`;
+  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
   const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
@@ -2433,6 +2522,7 @@
     BgTimer.clear(SoloAuto.timer);
     const box = $('#solo-auto');
     if (box) box.checked = false;
+    paintAutoBadge();
   }
   function bindSoloAuto() {
     const box = $('#solo-auto');
@@ -2490,9 +2580,10 @@
     BgTimer.clear(SoloAuto.timer);
     SoloAuto.timer = BgTimer.set(() => {
       if (!SoloAuto.on) return;
-      if (currentView !== 'result' && currentView !== 'home') { stopSoloAuto(); return; }
-      // Onglet caché (demandé par Sacha, 2026-10-19) : on continue sans animation, voir bgSoloRoll.
-      if (document.hidden) { bgSoloRoll(); return; }
+      if (AUTO_HALT.includes(currentView)) { stopSoloAuto(); return; }
+      // Onglet caché (demandé par Sacha, 2026-10-19) ou autre page du site (idée de kaz, 2026-11-01) : on continue sans
+      // animation, voir bgSoloRoll ; une fenêtre ouverte sur une autre page n'arrête rien.
+      if (document.hidden || !onRollPage()) { bgSoloRoll(); return; }
       // Fenêtre ouverte : on attend sans rien tirer.
       if ($('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
       // Pause garantie : le dernier résultat reste visible au moins 1,8 s, quel que soit le chemin qui a programmé ce
@@ -2526,18 +2617,61 @@
     HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
+    SessionRolls.bump();
+    // Page visible (autre page du site) : succès et quêtes comme un tirage normal.
+    if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
+    if (noteBgRoll(n, a, online.t)) return;
+    // Revenu sur l'écran de tirage pendant que ce tirage partait : il est montré dans le résumé, la suite reprend là.
+    if (onRollPage() && !document.hidden) { flushAway(); scheduleSoloAuto(SOLO_PAUSE); return; }
+    scheduleSoloAuto(1800);
+  }
+  // Compte un tirage fait sans révélation (onglet caché ou autre page) ; true si le tirage auto s'arrête dessus.
+  function noteBgRoll(n, a, t) {
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
-    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t: online.t };
-    document.title = `(${BgRolls.count}) ${BgRolls.title}`;
+    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t };
+    if (document.hidden) document.title = `(${BgRolls.count}) ${BgRolls.title}`;
     if (autoStops(a)) {
-      stopSoloAuto(); BgRolls.stopped = { n, a, t: online.t };
+      stopSoloAuto(); BgRolls.stopped = { n, a, t };
       awaySave();
-      document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
-      return;
+      if (document.hidden) document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
+      else flushAway(); // sur une autre page, onglet visible : le joueur l'apprend tout de suite
+      return true;
     }
     awaySave();
-    scheduleSoloAuto(1800);
+    paintAutoBadge();
+    return false;
+  }
+  // Résumé « pendant ton absence » montré, compteurs remis à zéro.
+  function flushAway() {
+    if (!BgRolls.count) return;
+    const { count, stopped, best } = BgRolls;
+    if (BgRolls.title) document.title = BgRolls.title;
+    BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
+    awayShow({ count, stopped, best });
+    paintAutoBadge();
+  }
+  // Petit indicateur sur l'onglet « Roll » du menu quand le tirage auto tourne depuis une autre page : un point qui
+  // pulse et le nombre de tirages faits depuis qu'on est parti.
+  function paintAutoBadge() {
+    const link = document.querySelector('.nav a[data-route="home"]');
+    if (!link) return;
+    let dot = link.querySelector('.nav-auto');
+    if (!SoloAuto.on || onRollPage()) { if (dot) { dot.remove(); link.removeAttribute('title'); } return; }
+    if (!dot) { dot = document.createElement('b'); dot.className = 'nav-auto'; dot.setAttribute('data-no-i18n', ''); link.append(dot); }
+    dot.textContent = BgRolls.count ? compact(BgRolls.count) : '';
+    link.title = window.RNGI18n ? window.RNGI18n.t('Auto-roll is on: rolls keep coming while you browse') : 'Auto-roll is on: rolls keep coming while you browse';
+  }
+  // Après chaque changement de page : le tirage auto continue ailleurs (révélation coupée par route() : on reprogramme
+  // le suivant), s'arrête dans un duel ou un tournoi, et le résumé s'affiche au retour sur l'écran de tirage.
+  function autoAfterRoute() {
+    if (SoloAuto.on && AUTO_HALT.includes(currentView)) { stopSoloAuto(); toast('Auto-roll stopped: duels and tournaments use your rolls'); }
+    else if (SoloAuto.on && !onRollPage()) {
+      if (!SoloAuto.away) { SoloAuto.away = true; toast('🎲 Auto-roll keeps rolling while you browse · tap here to stop it', 6000, '', () => { stopSoloAuto(); paintAutoBadge(); toast('Auto-roll stopped'); }); }
+      if (!rollPending) scheduleSoloAuto(SOLO_PAUSE);
+    }
+    if (onRollPage()) { SoloAuto.away = false; if (!document.hidden) flushAway(); }
+    paintAutoBadge();
   }
   // Un Godlike tiré onglet caché, vu seulement des jours plus tard dans l'historique (ann Joe worst gamble, 2026-10-30) :
   // le résumé « pendant ton absence » ne vivait qu'en mémoire et 8 s à l'écran. Un onglet endormi ou fermé par le
@@ -2568,9 +2702,10 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) SoloAuto.shownAt = Date.now(); // retour sur l'onglet : on laisse voir l'écran avant le tirage suivant
     if (document.hidden || !BgRolls.count) return;
-    const { count, stopped, best } = BgRolls;
-    document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
-    awayShow({ count, stopped, best });
+    if (BgRolls.title) document.title = BgRolls.title;
+    // Encore sur une autre page avec le tirage auto en route : le résumé attend le retour sur l'écran de tirage.
+    if (!onRollPage() && SoloAuto.on) return;
+    flushAway();
     if (currentView === 'home') route(); // l'accueil et ses compteurs à jour
   });
   async function startRoll(force) {
@@ -2601,6 +2736,7 @@
       }
     })();
     // Pas de « clic » quand l'auto-roll réessaie après un refus : on entendait le bouton sans voir de nombre (MereTera, 2026-10-30).
+    breadBite(0); // Bread : entier pour ce tirage (MattyFaux-Lucky, MaxABGD, 2026-11-01)
     if (!(force === true && SoloAuto.refused)) Sound.play('click', { look: genClass().trim().slice(4) || undefined }); // son propre au bouton affiché (pack ASMR) ; après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
     try {
       online = await asked;
@@ -2666,6 +2802,7 @@
     const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
+    SessionRolls.bump();
     // Stockage plein : le tirage compte quand même sur le serveur ; l'export ne libère rien, on ne l'y renvoie plus, et le
     // message ne sort qu'une fois par visite (avant : à chaque tirage ; signalé par jonahfr, 2026-10-30).
     if (!saved && !storageFullShown) {
@@ -2673,18 +2810,23 @@
       clientEvt('storage_full');
       toast(online ? 'This device is out of space: your rolls still count on your account, but the history on this device stops here.' : 'This device is out of space: this roll could not be kept.');
     }
+    setLastRoll(Store.rolls[index - 1]); // Last Roll : sur l'écran de tirage, le nombre d'avant (G8_floppa, 2026-11-01)
     session = playReveal({ n, a, previous, newIds: isFirst ? null : newIds, isFirst, lifetimeBefore, index, online });
   }
   // Tirage arrivé alors que le joueur a quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) : enregistré comme
   // d'habitude, succès et quêtes compris, mais sans révélation ; l'auto-roll s'arrête comme en quittant la page.
+  // Tirage auto allumé (idée de kaz, 2026-11-01) : il ne s'arrête plus, le tirage rejoint le résumé « pendant ton absence ».
   function keepRollAway(n, online) {
-    if (SoloAuto.on) stopSoloAuto();
+    const auto = SoloAuto.on && !!online && !AUTO_HALT.includes(currentView);
+    if (SoloAuto.on && !auto) stopSoloAuto();
     Collection.ensure();
     const a = analysis(n);
     Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
+    SessionRolls.bump();
     if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
+    if (auto) { if (!noteBgRoll(n, a, online.t)) scheduleSoloAuto(SOLO_PAUSE); return; }
     const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
     toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
   }
@@ -2768,7 +2910,7 @@
             ${ctx.replay ? '<button class="btn" id="r-back">← Back</button><button class="btn" id="r-replay">↻ Replay</button>' : `<button class="btn-roll small${genClass()}" id="r-again">Roll again</button>`}
           </div>
           <p class="hint invisible" id="r-hint"></p>
-          ${ctx.replay ? '' : `<div class="solo-auto-row">${soloAutoHTML()}</div>`}
+          ${ctx.replay ? '' : `${sessRollsHTML()}<div class="solo-auto-row">${soloAutoHTML()}</div>`}
           <div id="r-notes" style="text-align:center"></div>
           <section class="breakdown" id="r-breakdown" hidden>
             <h2 class="section-title">Badge breakdown</h2>
@@ -2825,6 +2967,7 @@
       if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
       else if (pack) lk.pack = pack;
       sfx('lock', lk);
+      if (i >= lead) breadBite(i + 1 - lead); // Bread : une bouchée par vrai chiffre (MaxABGD, 2026-11-01)
       if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
@@ -2930,7 +3073,17 @@
   }
 
   // ---------------------------------------------------------------- historique
-  const histState = { q: '', tier: 'all', sort: 'new', limit: 100 };
+  const histState = { q: '', tier: 'all', sort: 'new', period: 'all', limit: 100 };
+  // Période de l'historique (idée de qwertyuiop, 2026-11-01) : aujourd'hui, cette semaine (depuis lundi), ce mois-ci, à
+  // l'heure de l'appareil ; avec le tri « Highest XP », ce sont les meilleurs tirages de la période.
+  const HIST_PERIODS = [['all', 'All time'], ['day', 'Today'], ['week', 'This week'], ['month', 'This month']];
+  function periodStart(period, now = new Date()) {
+    const d = new Date(now); d.setHours(0, 0, 0, 0);
+    if (period === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    else if (period === 'month') d.setDate(1);
+    else if (period !== 'day') return 0;
+    return d.getTime();
+  }
 
   function emptyStateHTML() {
     return `<div class="panel empty"><div style="font-size:2rem">🎲</div><p>No rolls yet.</p><a class="btn" href="#/">Go roll</a></div>`;
@@ -2953,6 +3106,7 @@
         <div class="toolbar">
           <input class="input grow" id="h-q" type="search" placeholder="Search a number, a badge or #roll…" value="${esc(histState.q)}">
           <select class="select" id="h-tier" aria-label="Rarity">${options(tierOptions, histState.tier)}</select>
+          <select class="select" id="h-period" aria-label="Period">${options(HIST_PERIODS, histState.period)}</select>
           <select class="select" id="h-sort" aria-label="Sort">${options(sortOptions, histState.sort)}</select>
           <button class="btn" id="h-compare" type="button" aria-pressed="false">⚖️ Compare</button>
         </div>
@@ -2964,6 +3118,7 @@
     $('#h-q').addEventListener('input', e => { histState.q = e.target.value; redraw(); });
     $('#h-tier').addEventListener('change', e => { histState.tier = e.target.value; redraw(); });
     $('#h-sort').addEventListener('change', e => { histState.sort = e.target.value; redraw(); });
+    $('#h-period').addEventListener('change', e => { histState.period = e.target.value; redraw(); });
     // Comparer deux tirages (idée de kingston, 2026-10-22) : mode « Compare », on clique deux lignes, une fenêtre les met
     // côte à côte (XP, écart, badges en commun et propres à chacun).
     let picked = [];
@@ -2988,25 +3143,33 @@
   }
 
   function openCompareModal(ia, ib) {
-    const side = i => { const r = Store.rolls[i], a = analysis(r[0]); return { i, n: r[0], a, ids: new Set(a.earnedIds) }; };
-    const A = side(ia), B = side(ib);
+    const side = i => { const r = Store.rolls[i], a = analysis(r[0]); return { label: `#${fmt(i + 1)}`, a, ids: new Set(a.earnedIds) }; };
+    compareModal(side(ia), side(ib));
+  }
+  // Fenêtre de comparaison : deux tirages de l'historique, ou deux nombres du vérificateur d'XP (sim = true : pas des
+  // tirages, dit en haut et sous chaque nombre, pour qu'une capture ne passe pas pour un vrai tirage).
+  function compareModal(A, B, sim = false) {
     const pill = id => { const b = Engine.byId.get(id); return b ? `<span class="badge-pill" data-tier="${b.tier}">${b.emoji} ${esc(b.label)}</span>` : ''; };
     const list = ids => (ids.length ? ids.sort((x, y) => (Engine.byId.get(y)?.score || 0) - (Engine.byId.get(x)?.score || 0)).map(pill).join(' ') : '<span class="panel-note">none</span>');
     const common = [...A.ids].filter(id => B.ids.has(id)), onlyA = [...A.ids].filter(id => !B.ids.has(id)), onlyB = [...B.ids].filter(id => !A.ids.has(id));
     const diff = A.a.total - B.a.total;
-    const card = x => `<div class="cmp-side"><span class="panel-note">#${fmt(x.i + 1)}</span><span class="num-card md" data-tier="${x.a.tier}">${x.a.str}</span><span class="badge-pill" data-tier="${x.a.tier}">${cap(x.a.tier)}</span><b class="mono">${fmt(x.a.total)} XP</b><span class="panel-note">${plural(x.ids.size, 'badge')}</span></div>`;
+    const name = x => (sim ? x.a.str : x.label);
+    const card = x => `<div class="cmp-side"><span class="panel-note">${esc(x.label)}</span><span class="num-card md${sim ? ' xc-sim-card' : ''}" data-tier="${x.a.tier}">${x.a.str}</span><span class="badge-pill" data-tier="${x.a.tier}">${cap(x.a.tier)}</span><b class="mono">${fmt(x.a.total)} XP</b><span class="panel-note">${plural(x.ids.size, 'badge')}</span></div>`;
     openModal(`
-      <h2>⚖️ Compare rolls</h2>
+      <h2>⚖️ ${sim ? 'Compare numbers' : 'Compare rolls'}</h2>
+      ${sim ? '<p class="panel-note" style="margin:-.3rem 0 0">Simulation · not a roll</p>' : ''}
       <div class="cmp-grid">${card(A)}<div class="cmp-vs">${diff === 0 ? '=' : diff > 0 ? '◀' : '▶'}<span class="panel-note">${diff === 0 ? 'same XP' : `${fmt(Math.abs(diff))} XP more`}</span></div>${card(B)}</div>
       <div class="cmp-badges"><div class="eyebrow">In common (${common.length})</div><div class="pill-row">${list(common)}</div></div>
-      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(A.i + 1)} (${onlyA.length})</div><div class="pill-row">${list(onlyA)}</div></div>
-      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(B.i + 1)} (${onlyB.length})</div><div class="pill-row">${list(onlyB)}</div></div>`);
+      <div class="cmp-badges"><div class="eyebrow">Only <span data-no-i18n>${esc(name(A))}</span> (${onlyA.length})</div><div class="pill-row">${list(onlyA)}</div></div>
+      <div class="cmp-badges"><div class="eyebrow">Only <span data-no-i18n>${esc(name(B))}</span> (${onlyB.length})</div><div class="pill-row">${list(onlyB)}</div></div>`);
   }
 
   function filteredRolls() {
     let items = Store.rolls.map((r, i) => ({ n: r[0], s: r[1], t: r[2], i, tier: Engine.cardTier(r[1]), off: !!r[3] }));
     if (histState.tier === 'rare+') items = items.filter(x => TIER_RANK[x.tier] >= 3);
     else if (histState.tier !== 'all') items = items.filter(x => x.tier === histState.tier);
+    const from = periodStart(histState.period);
+    if (from) items = items.filter(x => x.t >= from);
     const q = histState.q.trim().toLowerCase();
     if (q) {
       const digits = q.replace(/[\s,]/g, '');
@@ -3062,6 +3225,7 @@
     const sorted = scores.slice().sort((a, b) => a - b);
     const tierCounts = Object.fromEntries(TIERS_DESC.map(t => [t, 0]));
     const digitCounts = new Array(10).fill(0);
+    const lenCounts = new Array(8).fill(0); // nombres à 1, 2… 7 chiffres (idée de Phong254, 2026-11-01)
     const buckets = new Array(10).fill(0);
     let pctSum = 0, digitTotal = 0;
     let sinceRare = null, sinceEpic = null, sinceMythic = null, dry = 0, longestDry = 0;
@@ -3074,6 +3238,7 @@
       const s = String(r[0]);
       for (let k = 0; k < s.length; k++) digitCounts[s.charCodeAt(k) - 48]++;
       digitTotal += s.length;
+      lenCounts[s.length]++;
       buckets[Math.min(9, Math.floor(r[0] / 100000))]++;
       if (TIER_RANK[tier] >= 3) { sinceRare = i; dry = 0; } else { dry++; longestDry = Math.max(longestDry, dry); }
       if (TIER_RANK[tier] >= 4) sinceEpic = i;
@@ -3088,7 +3253,7 @@
     let repeats = 0;
     for (const list of Collection.seen.values()) if (list.length > 1) repeats++;
     return {
-      N, today, tierCounts, digitCounts, digitTotal, buckets, rarest, repeats, longestDry,
+      N, today, tierCounts, digitCounts, digitTotal, lenCounts, buckets, rarest, repeats, longestDry,
       lifetime: scores.reduce((a, b) => a + b, 0),
       median: sorted[Math.floor((N - 1) / 2)],
       luck: pctSum / N,
@@ -3269,6 +3434,12 @@
           </div>
         </div>
 
+        <div class="panel stats-sep">
+          <div class="panel-head"><h3 class="panel-title">Number of digits</h3><span class="panel-note">how many 1- to 6-digit numbers you rolled vs. expected</span></div>
+          ${digitLengthsHTML(st)}
+          <p class="panel-note st-len-note">Numbers that contain a digit or a sequence: search it in <a href="#/history">History</a>.</p>
+        </div>
+
         <div class="grid-2 stats-sep">
           <div class="panel">
             <div class="panel-head"><h3 class="panel-title">Top 10 rolls</h3></div>
@@ -3287,6 +3458,19 @@
           </div>
         </div>
       </div>`;
+  }
+
+  // Nombres de 1 à 6 chiffres tirés, contre l'attendu (idée de Phong254, 2026-11-01) : sur 1 000 001 nombres (0 à
+  // 1 000 000), 10 ont un chiffre (0 à 9), 90 deux, 900 trois… et un seul en a sept (1 000 000), montré s'il est sorti.
+  const LEN_SPAN = [0, 10, 90, 900, 9000, 90000, 900000, 1];
+  function digitLengthsHTML(st) {
+    const rows = [1, 2, 3, 4, 5, 6, ...(st.lenCounts[7] ? [7] : [])].map(k => {
+      const got = st.lenCounts[k], exp = (st.N * LEN_SPAN[k]) / 1000001;
+      const range = k === 7 ? '1,000,000' : `${fmt(k === 1 ? 0 : 10 ** (k - 1))} – ${fmt(10 ** k - 1)}`;
+      const ratio = exp ? got / exp : 0, tone = !got && exp < 1 ? '' : ratio >= 1.15 ? ' up' : ratio <= 0.85 ? ' down' : '';
+      return `<div class="kv st-len"><span class="k">${plural(k, 'digit')} <span class="muted mono">${range}</span></span><span class="v${tone}"><b class="mono">${fmt(got)}</b> <span class="muted">expected ≈ ${exp >= 10 ? fmt(Math.round(exp)) : exp.toFixed(exp >= 1 ? 1 : 2)}</span></span></div>`;
+    }).join('');
+    return `<div class="st-lens">${rows}</div>`;
   }
 
   // ---------------------------------------------------------------- collection
@@ -3309,7 +3493,7 @@
         <h1 class="page-title">Badges</h1>
         <div class="panel xc-panel">
           <div class="panel-head"><h3 class="panel-title">🔎 XP checker</h3><span class="panel-note">type any number to see its XP and badges · it is not a roll</span></div>
-          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><button class="btn">Check</button></form>
+          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><span class="xc-vs" aria-hidden="true">vs</span><input class="input mono xc-n2" id="xc-n2" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="compare (optional)" aria-label="Second number to compare with (optional)"><button class="btn">Check</button></form>
           <div id="xc-out"></div>
         </div>
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
@@ -3326,6 +3510,10 @@
       e.preventDefault();
       const raw = $('#xc-n').value.trim(), n = Number(raw);
       if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      // Deux nombres (idée de CrazyMiner22, 2026-11-01) : la même comparaison que History → Compare, marquée simulation.
+      const raw2 = $('#xc-n2').value.trim(), n2 = Number(raw2);
+      if (raw2 && (!/^\d{1,7}$/.test(raw2) || n2 > Engine.MAX_ROLL)) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      if (raw2) { const side = x => { const a = analysis(x); return { label: 'Simulation', a, ids: new Set(a.earnedIds) }; }; compareModal(side(n), side(n2), true); }
       const a = analysis(n), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
       $('#xc-out').innerHTML = `
         <div class="xc-result">
@@ -3527,11 +3715,11 @@
       <div class="pf-pane" data-pane="inventory" hidden>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">🎨 Skins</h3><span class="panel-note">${plural(invSkins.length, 'skin')}${p.skin && p.skin !== 'classic' && Shop.byId.has(p.skin) ? ` · wearing ${Shop.byId.get(p.skin).emoji} ${esc(Shop.byId.get(p.skin).name)}` : ''}</span></div>
-          ${invSkins.length ? `<div class="pf-inv">${invSkins.map(k => `<div class="pf-inv-item${k.id === p.skin ? ' on' : ''}" title="${esc(k.desc)}"><span class="num-card sm skin-${k.id}" data-tier="rare">${slotsHTML('777')}</span><b>${k.emoji} ${esc(k.name)}</b></div>`).join('')}</div>` : '<div class="empty">No skins yet.</div>'}
+          ${invSkins.length ? `<div class="pf-inv">${invSkins.map(k => `<div class="pf-inv-item${k.id === p.skin ? ' on' : ''}" title="${esc(k.desc)}"><span class="num-card sm skin-${k.id}" data-tier="rare">${slotsHTML('777')}</span><b>${k.emoji} ${esc(k.name)}</b>${me ? (k.id === p.skin ? '<span class="skin-state">Equipped</span>' : `<button class="btn small" data-inv-skin="${k.id}">Equip</button>`) : ''}</div>`).join('')}</div>` : '<div class="empty">No skins yet.</div>'}
         </div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">🖼️ Wallpapers</h3><span class="panel-note">${plural(invWalls.length, 'wallpaper')}</span></div>
-          ${invWalls.length ? `<div class="pf-inv">${invWalls.map(w => `<div class="pf-inv-item" title="${esc(w.desc)}"><span class="wall-preview wp wp-${w.id}" aria-hidden="true"></span><b>${w.emoji} ${esc(w.name)}</b></div>`).join('')}</div>` : '<div class="empty">No wallpapers yet.</div>'}
+          ${invWalls.length ? `<div class="pf-inv">${invWalls.map(w => `<div class="pf-inv-item${me && Store.settings.wall === w.id ? ' on' : ''}" title="${esc(w.desc)}"><span class="wall-preview wp wp-${w.id}" aria-hidden="true"></span><b>${w.emoji} ${esc(w.name)}</b>${me ? (Store.settings.wall === w.id ? '<button class="btn ghost small" data-inv-wall="none">Remove</button>' : `<button class="btn small" data-inv-wall="${w.id}">Use</button>`) : ''}</div>`).join('')}</div>` : '<div class="empty">No wallpapers yet.</div>'}
         </div>
       </div>`;
     const showTab = id => {
@@ -3571,6 +3759,22 @@
     if (me) noteAchievements(p.achievements);
     mountCollection(profileCollection(p.badges), collectionState);
     if (me) wireEquip($('#p-body'), () => renderProfile(p.name));
+    // Équiper depuis son propre inventaire (idée de LEVIATHAN, 2026-11-01) : mêmes actions que la boutique, puis le
+    // profil se redessine, toujours sur l'onglet Inventaire (onglet retenu pour la visite).
+    const invPane = $('#p-body').querySelector('[data-pane="inventory"]');
+    if (me && invPane) invPane.addEventListener('click', async e => {
+      const btn = e.target.closest('[data-inv-skin],[data-inv-wall]');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      try {
+        const skinId = btn.dataset.invSkin, wallId = btn.dataset.invWall;
+        const next = skinId ? await Online.shopAction('equip', skinId) : await Online.shopAction('wall', undefined, { wall: wallId });
+        applyShop(next);
+        const item = skinId ? Shop.byId.get(skinId) : Shop.wallById.get(wallId);
+        toast(skinId ? `${item.emoji} ${item.name} equipped` : wallId === 'none' ? 'Back to the original background' : `${item.emoji} ${item.name} on`);
+        renderProfile(p.name);
+      } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
+    });
   }
 
   // Grille des succès d'un joueur (profil, onglet Badges) ; chez soi, boutons pour équiper le titre d'un succès.
@@ -3736,6 +3940,8 @@
   const titleEmoji = id => (id && Ach.byId.get(id) && !Ach.byId.get(id).hidden ? ` ${Ach.byId.get(id).emoji}` : '');
   const goalText = d => (d.mode === 'xp' ? `first to ${compact(d.target)} XP` : `first to ${plural(d.target, 'round win')}`);
 
+  // Mise libre de 1 à 1 000 pièces (idée de dog, 2026-11-01), à côté des puces ; même plafond que le serveur (api/room.js).
+  const STAKE_MAX = Math.max(...Shop.STAKES);
   // Derniers réglages choisis, retenus sur l'appareil.
   function duelPrefs() {
     const d = Store.settings.duel || {};
@@ -3745,7 +3951,7 @@
       wins: Math.min(DUEL_WINS_MAX, Math.max(1, Math.round(Number(d.wins)) || 3)),
       xp: Number(d.xp) > 0 ? Math.min(DUEL_XP_MAX, Math.max(DUEL_XP_MIN, Math.round(Number(d.xp)))) : 50000,
       isPublic: d.isPublic !== false,
-      stake: Shop.STAKES.includes(Number(d.stake)) ? Number(d.stake) : 0,
+      stake: Number.isInteger(Number(d.stake)) && Number(d.stake) >= 0 && Number(d.stake) <= STAKE_MAX ? Number(d.stake) : 0,
       opp: d.opp === 'bots' ? 'bots' : 'friends',
     };
   }
@@ -3823,6 +4029,7 @@
         <div class="setup-step">
           <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
           ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
+          <div class="setup-line setup-custom"><span class="panel-note">or type your own</span><input class="input setup-input${Shop.STAKES.includes(p.stake) ? '' : ' on'}" data-type="stake" inputmode="numeric" maxlength="5" placeholder="e.g. 75" value="${Shop.STAKES.includes(p.stake) ? '' : p.stake}" aria-label="Coins to bet"><span class="panel-note">coins · 1 to ${fmt(STAKE_MAX)}</span></div>
           <p class="panel-note d-wallet" id="d-wallet">${Store.settings.coins != null ? `You have 🪙 ${fmt(Store.settings.coins)}` : ''}</p>
           <p class="panel-note setup-help">${p.stake
             ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves. Needs 30 rolls on your account.`
@@ -3856,9 +4063,9 @@
       const field = e.target.closest('[data-type]');
       if (!field) return;
       const p = duelPrefs(), key = field.dataset.type, n = parseAmount(field.value);
-      if (!Number.isFinite(n) || n <= 0) { if (field.value.trim()) toast(key === 'xp' ? 'Type an amount of XP, like 300k or 2m' : 'Type a number of rounds'); return drawSetup(); }
-      const [min, max] = key === 'xp' ? [DUEL_XP_MIN, DUEL_XP_MAX] : [1, DUEL_WINS_MAX], value = Math.min(max, Math.max(min, n));
-      if (value !== n) toast(key === 'xp' ? `Between ${compact(min)} and ${compact(max)} XP` : `Between ${min} and ${max} rounds`);
+      if (!Number.isFinite(n) || n <= 0) { if (field.value.trim()) toast(key === 'xp' ? 'Type an amount of XP, like 300k or 2m' : key === 'stake' ? 'Type a number of coins from 1 to 1,000' : 'Type a number of rounds'); return drawSetup(); }
+      const [min, max] = key === 'xp' ? [DUEL_XP_MIN, DUEL_XP_MAX] : key === 'stake' ? [1, STAKE_MAX] : [1, DUEL_WINS_MAX], value = Math.min(max, Math.max(min, Math.round(n)));
+      if (value !== n) toast(key === 'xp' ? `Between ${compact(min)} and ${compact(max)} XP` : key === 'stake' ? `A stake is 1 to ${fmt(max)} coins` : `Between ${min} and ${max} rounds`);
       Store.setSetting('duel', { ...p, [key]: value });
       drawSetup();
     };
@@ -3873,17 +4080,25 @@
   // tuile porte data-have (1 : possédé, ou gratuit) ; les onglets sans liste d'objets (caisses, vitesse, prestige) n'ont pas de filtre.
   const SHOP_OWN = [['all', 'All'], ['owned', 'Owned only'], ['not', 'Not owned yet']];
   const SHOP_OWN_TABS = ['limited', 'skins', 'buttons', 'emotes', 'sounds', 'walls'];
+  // Recherche dans la boutique (idée de Deadshot, 2026-11-01) : par nom, description ou auteur de l'idée, dans la langue
+  // affichée ; gardée tant que la page reste ouverte (pas sur l'appareil).
+  let shopQuery = '';
+  const foldText = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   function applyOwnFilter() {
     const mode = SHOP_OWN.some(([v]) => v === Store.settings.shopOwn) ? Store.settings.shopOwn : 'all';
+    const q = foldText(shopQuery.trim());
     document.querySelectorAll('#shop-own [data-own]').forEach(b => { b.classList.toggle('on', b.dataset.own === mode); b.setAttribute('aria-pressed', b.dataset.own === mode); });
     app.querySelectorAll('.shop-pane .skin-grid').forEach(grid => {
       const tiles = grid.querySelectorAll(':scope > [data-have]');
       let shown = 0;
-      tiles.forEach(t => { const hide = mode === 'owned' ? t.dataset.have !== '1' : mode === 'not' ? t.dataset.have === '1' : false; t.hidden = hide; if (!hide) shown++; });
+      tiles.forEach(t => {
+        const hide = (mode === 'owned' ? t.dataset.have !== '1' : mode === 'not' ? t.dataset.have === '1' : false) || (!!q && !foldText((t.querySelector('.skin-name') || t).textContent).includes(q));
+        t.hidden = hide; if (!hide) shown++;
+      });
       let note = grid.querySelector(':scope > .own-empty');
       if (tiles.length && !shown) {
         if (!note) { note = document.createElement('div'); note.className = 'empty own-empty'; grid.append(note); }
-        note.textContent = mode === 'owned' ? 'You don\'t own any of these yet' : 'You already own all of these';
+        note.textContent = q ? 'Nothing matches your search' : mode === 'owned' ? 'You don\'t own any of these yet' : 'You already own all of these';
       } else if (note) note.remove();
     });
   }
@@ -3933,7 +4148,7 @@
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
         <details class="panel shop-mine" id="shop-mine" hidden></details>
-        <div class="shop-own" id="shop-own"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
+        <div class="shop-own" id="shop-own"><input class="input shop-search" id="shop-q" type="search" placeholder="Search the shop…" aria-label="Search the shop" autocomplete="off" value="${esc(shopQuery)}"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
@@ -3949,7 +4164,7 @@
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
             // Caisse de fonds d'écran : ses lots se cherchent dans les fonds (Shop.caseItem), avec leurs propres raretés.
             const item = id => Shop.caseItem(c, id), rar = id => Shop.caseRarity(c, id);
-            const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
+            const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji || '🎭'} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>'); // les émotes n'ont pas d'emoji (caisse d'émotes)
             return `
             <div class="case-tile">
               <div class="case-box" aria-hidden="true">${c.emoji}</div>
@@ -3964,6 +4179,7 @@
           <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Button Case gives a Generate button you can also buy in the Buttons tab, with the same refund for a button you already own.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Sound Case gives a roll sound pack you can also buy in the Sounds tab, with the same refund for a pack you already own.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Emote Case gives a special duel emote you can also buy in the Emotes tab, with the same refund for an emote you already own.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -4036,6 +4252,7 @@
     // Filtre Possédés / Pas encore (idée d'Applepi, 2026-10-28) : retenu sur cet appareil, comme l'onglet.
     $('#shop-own').onclick = e => { const b = e.target.closest('[data-own]'); if (!b) return; Store.setSetting('shopOwn', b.dataset.own); applyOwnFilter(); };
     $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
+    $('#shop-q').addEventListener('input', e => { shopQuery = e.target.value; applyOwnFilter(); });
     openTab(Store.settings.shopTab);
     drawSkip();
     Fund.load();
@@ -4272,6 +4489,12 @@
       <circle cx="34.5" cy="10.2" r="1.7" fill="#1f2937"/><circle cx="35" cy="9.6" r=".55" fill="#fff"/>
       <ellipse cx="28.5" cy="8.6" rx="3" ry="1.5" fill="#fff" opacity=".45"/>
     </svg>`;
+  // Wheel (idée de How yz got sticky, 2026-11-01, et Multiplier Wheel de Gray, 2026-10-14) : les deux roues, case par
+  // case, copiées d'api/_gamble.js (vérifié par tools/test-api.mjs). 0 = l'étoile qui lance la roue bonus du centre.
+  const WHEEL_OUTER = [0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 2, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1.5, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.8, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7];
+  const WHEEL_INNER = [250, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 1.5, 5, 2, 3, 1.5, 20, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 5, 5, 2, 3, 1.5, 50, 2, 3, 1.5, 5, 3, 10, 2];
+  // Couleur de chaque multiplicateur : du gris (0,7×) à l'or (250×), la même sur la roue et dans la liste des chances.
+  const WHEEL_COLORS = { 0: '#fbbf24', 0.7: '#475569', 0.8: '#64748b', 1: '#0f766e', 1.5: '#2563eb', 2: '#7c3aed', 3: '#a21caf', 5: '#e11d48', 10: '#ea580c', 20: '#d97706', 50: '#eab308', 250: '#fde047' };
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS =['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
@@ -4279,7 +4502,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -4333,7 +4556,7 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
   // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
   // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
   // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
@@ -4347,6 +4570,7 @@
     dice: { goal: 'Guess where the 100-sided die lands.', how: ['Roll under: you win if the die lands below your target.', 'Roll over: you win if the die lands above your target.', 'Guess the die: pick one face of a 6-sided die.'], pays: ['The smaller your chance, the bigger the payout: it is shown before you roll.', 'Guessing the 6-sided die pays 5.82×.'], bets: BETS_STD },
     teddy: { goal: 'Pull the confetti popper without making it go BOOM.', how: ['Press Start: one of the 6 chambers is loaded.', 'Every pull that just clicks raises your payout.', 'Cash out whenever you like. BOOM and you lose your bet.'], pays: ['The ladder shows what each click pays, up to 5.82× after 5 clicks.'], bets: BETS_STD },
     duck: { goal: 'Pick the rubber duck that wins the race.', how: ['Pick one of the 6 ducks, then press Race.', 'The ducks paddle to the finish line: the first one across wins.', 'If your duck wins, you win. If not, you lose your bet.'], pays: ['Sunny is the favourite: wins 30% of races and pays 3.23×.', 'Blaze is the long shot: wins 5% of races and pays 19.40×.', 'Every duck shows its chance and its payout.'], bets: BETS_STD },
+    wheel: { goal: 'Spin the wheel and win its multiplier.', how: ['Pick your bet, then press Spin.', 'The big wheel stops on a multiplier: you get your bet × that number.', 'If it stops on the ★, the bonus wheel in the middle spins too.'], pays: ['The worst you can get is 0.7×: you never lose more than 30% of your bet.', 'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.', '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.'], bets: 'Bets from 1 to 1,000 coins.' },
     plinko: { goal: 'Drop balls and see where they land.', how: ['Press Drop: the ball bounces down the pegs.', 'The slot it lands in is your multiplier.', 'Drop as many balls as you like, even lots at once.'], pays: ['Normal: the edges pay up to 33×, the middle pays less than your bet.', 'High risk: up to 1,000× on the edges, but the middle pays almost nothing.'], bets: 'Bets from 1 to 1,000 coins per ball, 100 at most in High risk.' },
     slots: { goal: 'Line up three of the same symbol.', how: ['Press Spin or pull the lever.', 'The three reels stop one after the other.'], pays: ['Three of a kind pays the most: 7 7 7 pays 250×.', 'Two 7s, two cherries or two lemons pay a little.', 'The full table is under the machine.'], bets: BETS_STD },
     roulette: { goal: 'Guess where the ball stops.', how: ['Pick a chip, then click the bets you want: you can place several.', 'Press Spin: the ball lands on a number from 0 to 36.'], pays: ['Red, Black, Even, Odd, 1–18 or 19–36 pays 2×.', 'A group of 12 numbers pays 3×.', 'A single number pays 36×. The green 0 only pays a bet on 0.'], bets: 'Up to 1,000 coins per spin in total.' },
@@ -4468,6 +4692,13 @@
             <div class="dk-stats"><span><i>Win chance</i><b class="mono" id="dk-chance"></b></span><span><i>Multiplier</i><b class="mono" id="dk-mult"></b></span><span><i>Payout</i><b class="mono" id="dk-pay"></b></span></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="dk-go">Race</button></div>
             <p class="panel-note g-result" id="dk-result"></p>
+          </div>
+          <div class="panel g-game" data-game="wheel">
+            <div class="panel-head"><h3 class="panel-title">Wheel</h3><span class="panel-note">the worst is 0.7× · the ★ spins the bonus wheel · up to 250×</span></div>
+            <div class="gw-stage" id="gw-stage" data-state="idle"><canvas id="gw-canvas" width="520" height="520" role="img" aria-label="Wheel of multipliers"></canvas><b class="gw-hub mono" id="gw-hub" data-no-i18n>★</b></div>
+            <div class="gw-odds" id="gw-odds"></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="gw-go">Spin</button></div>
+            <p class="panel-note g-result" id="gw-result"></p>
           </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
@@ -4894,9 +5125,10 @@
     });
     // ---- onglets des jeux
     const showTab = id => {
-      // Les pièces de 1 et 5 n'existent qu'au Plinko : ailleurs elles disparaissent, et la mise remonte à 10.
+      // Les pièces de 1 et 5 n'existent qu'au Plinko et à la roue (mises dès 1 pièce) : ailleurs elles disparaissent, et
+      // la mise remonte à 10.
       $('#g-chips').dataset.game = id;
-      if (id !== 'plinko' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
+      if (id !== 'plinko' && id !== 'wheel' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
       const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
       if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
@@ -5436,6 +5668,101 @@
     });
     drawDuck(); dkPlace(DUCK_W.map(() => 0));
     $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) drawDuck(); });
+    // ---- Wheel (idée de How yz got sticky et de Gray, api/_gamble.js) : deux roues à cases égales l'une dans l'autre,
+    // la grande (50 cases) et la roue bonus du centre (40 cases), lancée par l'étoile ★. Le serveur a déjà tiré les cases ;
+    // ici les roues tournent jusqu'à elles (élan, longue décélération, petit rebond du clapet), une case par cran.
+    const gw = $('#gw-canvas').getContext('2d'), GC = 260, GW_OUT = (Math.PI * 2) / WHEEL_OUTER.length, GW_IN = (Math.PI * 2) / WHEEL_INNER.length;
+    const gwLabel = m => (m === 0 ? '★' : String(m));
+    Gamble.gwA = Gamble.gwA || 0; Gamble.gwB = Gamble.gwB || 0;
+    const drawWheelGame = (a, b, bonus) => {
+      gw.clearRect(0, 0, 520, 520);
+      const disc = (r, fill) => { gw.beginPath(); gw.arc(GC, GC, r, 0, Math.PI * 2); gw.fillStyle = fill; gw.fill(); };
+      // Cerclage de jeu télévisé : un anneau sombre et 25 ampoules, qui s'allument une sur deux pendant que ça tourne.
+      const rim = gw.createRadialGradient(GC, GC, 236, GC, GC, 259); rim.addColorStop(0, '#1e1b4b'); rim.addColorStop(.6, '#312e81'); rim.addColorStop(1, '#0f0c29');
+      disc(259, rim);
+      for (let k = 0; k < 25; k++) {
+        const t = k / 25 * Math.PI * 2, lit = (k + Math.floor(a / GW_OUT)) % 2 === 0;
+        gw.beginPath(); gw.arc(GC + Math.sin(t) * 248, GC - Math.cos(t) * 248, 4.2, 0, Math.PI * 2);
+        gw.fillStyle = lit ? '#fde68a' : '#78716c'; gw.fill();
+      }
+      const ring = (list, seg, r0, r1, rot, font, dim) => {
+        gw.save(); gw.translate(GC, GC); gw.rotate(rot);
+        list.forEach((m, i) => {
+          const a0 = i * seg - Math.PI / 2;
+          gw.beginPath(); gw.arc(0, 0, r1, a0, a0 + seg); gw.arc(0, 0, r0, a0 + seg, a0, true); gw.closePath();
+          gw.fillStyle = WHEEL_COLORS[m] || '#475569'; gw.fill();
+          gw.strokeStyle = 'rgba(15, 12, 41, .55)'; gw.lineWidth = 1.2; gw.stroke();
+          // Le chiffre suit le rayon, lisible de l'extérieur vers le centre.
+          gw.save(); gw.rotate(i * seg + seg / 2); gw.translate(0, -(r0 + r1) / 2); gw.rotate(Math.PI / 2);
+          gw.fillStyle = m === 250 || m === 50 || m === 0 ? '#1c1917' : '#fff'; gw.font = m >= 20 || m === 0 ? `900 ${font + 3}px Inter, sans-serif` : `700 ${font}px Inter, sans-serif`;
+          gw.textAlign = 'center'; gw.textBaseline = 'middle'; gw.fillText(gwLabel(m), 0, 1); gw.restore();
+        });
+        if (dim) { gw.beginPath(); gw.arc(0, 0, r1, 0, Math.PI * 2); gw.arc(0, 0, r0, 0, Math.PI * 2, true); gw.fillStyle = 'rgba(15, 12, 41, .5)'; gw.fill(); }
+        gw.restore();
+      };
+      ring(WHEEL_OUTER, GW_OUT, 172, 236, a, 15, false);
+      disc(172, '#0f0c29');
+      ring(WHEEL_INNER, GW_IN, 66, 166, b, 14, !bonus);
+      // Clapets fixes à midi, posés sur le bord extérieur de chaque roue : la case juste dessous est le résultat.
+      const flap = (y, w, h, col) => { gw.beginPath(); gw.moveTo(GC - w, y); gw.lineTo(GC + w, y); gw.lineTo(GC, y + h); gw.closePath(); gw.fillStyle = col; gw.fill(); gw.strokeStyle = '#0f0c29'; gw.lineWidth = 2.5; gw.stroke(); };
+      flap(GC - 254, 14, 34, '#f8fafc');
+      flap(GC - 174, 11, 26, bonus ? '#fde047' : '#94a3b8');
+    };
+    // Chances de chaque multiplicateur (grande roue + étoile × roue bonus), sous la roue : ce qu'on voit est la vraie chance.
+    const gwChance = m => WHEEL_OUTER.filter(x => x === m).length / WHEEL_OUTER.length + WHEEL_OUTER.filter(x => x === 0).length / WHEEL_OUTER.length * WHEEL_INNER.filter(x => x === m).length / WHEEL_INNER.length;
+    const gwOdds = p => (p >= 0.01 ? `${+(p * 100).toFixed(p < 0.1 ? 1 : 0)}%` : `1 in ${fmt(Math.round(1 / p))}`);
+    $('#gw-odds').innerHTML = [...new Set([...WHEEL_OUTER, ...WHEEL_INNER].filter(Boolean))].sort((x, y) => x - y)
+      .map(m => `<span class="gw-odd" style="--gw:${WHEEL_COLORS[m]}"><i aria-hidden="true"></i><b class="mono" data-no-i18n>${m}×</b><span class="mono" data-no-i18n>${gwOdds(gwChance(m))}</span></span>`).join('');
+    const gwLabelGo = () => { $('#gw-go').textContent = `Spin · ${fmt(Gamble.chip)}`; $('#gw-go').disabled = !!Gamble.busy; };
+    // Une roue tourne de « from » jusqu'à la case k (au hasard dans la case, jamais sur un bord) : 4 ou 5 tours, puis une
+    // longue décélération. Un cliquetis à chaque case qui passe sous le clapet.
+    const gwSpin = (from, list, seg, k, ms, paint) => new Promise(done => {
+      const target = -(k + 0.5 + (Math.random() - 0.5) * 0.6) * seg, base = from - (from % (Math.PI * 2));
+      const end = base + (4 + Math.floor(Math.random() * 2)) * Math.PI * 2 + ((target % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const t0 = performance.now(); let lastCell = Math.floor(from / seg), lastTick = 0;
+      const ease = u => 1 - Math.pow(1 - u, 4); // pas de dépassement : la roue ne revient jamais en arrière sur une autre case
+      const frame = now => {
+        if (currentView !== 'gamble' || !gw.canvas.isConnected) { done(end); return; }
+        const u = Math.min(1, (now - t0) / ms), x = from + (end - from) * ease(u);
+        paint(x);
+        const cell = Math.floor(x / seg);
+        if (cell !== lastCell && now - lastTick > 40) { Sound.tick({ k: cell % 12, soft: 1 }); lastTick = now; }
+        lastCell = cell;
+        if (u < 1) requestAnimationFrame(frame); else done(end);
+      };
+      requestAnimationFrame(frame);
+    });
+    const gwHub = (text, kind) => { const h = $('#gw-hub'); h.textContent = text; h.dataset.kind = kind || ''; };
+    drawWheelGame(Gamble.gwA, Gamble.gwB, false); gwLabelGo();
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) gwLabelGo(); });
+    $('#gw-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true; gwLabelGo();
+      const stage = $('#gw-stage');
+      $('#gw-result').textContent = ''; gwHub('…', ''); stage.dataset.state = 'spinning';
+      try {
+        const res = await gamble('wheel', { bet: Gamble.chip });
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        if (!reducedMotion) {
+          Gamble.gwA = await gwSpin(Gamble.gwA, WHEEL_OUTER, GW_OUT, res.outer, 3600, x => drawWheelGame(x, Gamble.gwB, false));
+          if (res.bonus && currentView === 'gamble') {
+            gwHub('★', 'bonus'); stage.dataset.state = 'bonus'; Sound.play('riser');
+            Gamble.gwB = await gwSpin(Gamble.gwB, WHEEL_INNER, GW_IN, res.inner, 3400, x => drawWheelGame(Gamble.gwA, x, true));
+          }
+        } else {
+          Gamble.gwA = -(res.outer + 0.5) * GW_OUT; if (res.bonus) Gamble.gwB = -(res.inner + 0.5) * GW_IN;
+          drawWheelGame(Gamble.gwA, Gamble.gwB, res.bonus);
+        }
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        stage.dataset.state = 'done';
+        gwHub(`${res.mult}×`, res.mult >= 50 ? 'jackpot' : res.mult > 1 ? 'win' : res.mult === 1 ? 'even' : 'lose');
+        say($('#gw-result'), res.win, res.bet, `${res.bonus ? '★ Bonus wheel · ' : ''}${res.mult}× · you get ${fmt(res.win)} coin${res.win === 1 ? '' : 's'}${res.win < res.bet ? ` (−${fmt(res.bet - res.win)})` : ''}`);
+        if (res.mult >= 5) { const tier = res.mult >= 250 ? 'godlike' : res.mult >= 50 ? 'mythic' : res.mult >= 10 ? 'anomaly' : 'epic'; Sound.play('tier', { tier }); FX.celebrate(res.mult >= 50 ? 'mythic' : res.mult >= 10 ? 'anomaly' : 'epic', stage); }
+        else if (res.mult > 1) Sound.play('reveal', { small: 1 });
+        else Sound.play('lock', { i: 0, soft: 1 });
+        showCoins(res.coins);
+      } catch (err) { stage.dataset.state = 'idle'; gwHub('★', ''); fail(err); } finally { Gamble.busy = false; gwLabelGo(); }
+    });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -5903,12 +6230,17 @@
 
   // Aperçu d'un skin avant l'achat : un tirage de démonstration (aucun nombre n'est tiré, rien n'est enregistré), au
   // rythme d'un vrai mais resserré, révélé comme un Mythic pour montrer toute la séquence. Rejouable.
+  // Choix de la rareté de l'aperçu (idée de jia jun, 2026-11-01) : certains skins se révèlent autrement sur un petit
+  // tirage ; Mythic reste le choix par défaut, gardé sur l'appareil.
+  const PREVIEW_TIERS = ['common', 'rare', 'mythic', 'divine'];
   function previewSkin(id) {
     const skin = Shop.byId.get(id);
     if (!skin) return;
+    let tier = PREVIEW_TIERS.includes(Store.settings.previewTier) ? Store.settings.previewTier : 'mythic';
     openModal(`
       <h2>${skin.emoji} ${esc(skin.name)}</h2>
-      <p class="panel-note" style="margin:-.3rem 0 0">Preview · shown as a Mythic roll, the strongest reveal</p>
+      <p class="panel-note" style="margin:-.3rem 0 0">Preview · nothing is rolled · shown as</p>
+      <div class="seg sp-tiers" id="sp-tiers" role="group" aria-label="Rarity of the preview">${PREVIEW_TIERS.map(t => `<button type="button" data-sp-tier="${t}" class="${t === tier ? 'on' : ''}" aria-pressed="${t === tier}">${cap(t)}</button>`).join('')}</div>
       <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
       <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button>${skin.supporter && !(Store.settings.skinsOwned || []).includes('supporter') ? '<button class="btn-roll small" data-fund>💗 Contribute to get it</button>' : ''}</div>
       ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}
@@ -5938,12 +6270,18 @@
         at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
         at(LOCKS[5] + 600, () => {
           clearInterval(spin);
-          card.classList.remove('neutral', 'charging'); card.dataset.tier = 'mythic';
-          if (fx) fx.reveal('mythic');
+          card.classList.remove('neutral', 'charging'); card.dataset.tier = tier;
+          if (fx) fx.reveal(tier);
           Sound.play('reveal', { small: 1 });
         });
       };
       m.querySelector('#sp-again').addEventListener('click', play);
+      m.querySelector('#sp-tiers').addEventListener('click', e => {
+        const b = e.target.closest('[data-sp-tier]'); if (!b) return;
+        tier = b.dataset.spTier; Store.setSetting('previewTier', tier);
+        m.querySelectorAll('[data-sp-tier]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+        play();
+      });
       play();
     });
   }
@@ -6012,17 +6350,19 @@
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
     // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
-    const wall = !!box.wall, btnCase = !!box.btn, sndCase = !!box.snd;
+    const wall = !!box.wall, btnCase = !!box.btn, sndCase = !!box.snd, emoCase = !!box.emo;
     const won = Shop.caseItem(box, result.won), rarity = Shop.caseRarity(box, won.id);
     // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
     // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur.
-    const look = (id, size) => sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
+    // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote animée, dessinée par js/emotes.js.
+    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="emote emote-svg">${Emotes.svg(id)}</span></div>`
+      : sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
       : btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
       : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
       : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
       const k = Shop.caseItem(box, id), r = Shop.caseRarity(box, id);
-      return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji} ${esc(k.name)}</span></div>`;
+      return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji || ''} ${esc(k.name)}</span></div>`;
     };
     openModal(`
       <div class="case-open" style="--rar:${rarity.color}">
@@ -6033,10 +6373,10 @@
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
           ${look(won.id, 'md')}
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : sndCase ? 'new sound pack unlocked!' : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
+          <p><b>${won.emoji || '🎭'} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : emoCase ? 'new emote unlocked! Use it in duels' : sndCase ? 'new sound pack unlocked!' : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
             ${sndCase ? '<button class="btn ghost" id="case-listen">▶ Preview</button>' : ''}
-            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall || sndCase ? 'Use' : 'Equip'}</button>`}
+            ${result.duplicate || emoCase ? '' : `<button class="btn-roll small" id="case-equip">${wall || sndCase ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
           </div>
         </div>
@@ -6063,7 +6403,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn, #case-result .case-snd'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn, #case-result .case-snd, #case-result .case-emo'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -6379,7 +6719,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
@@ -7158,7 +7498,7 @@
     count: 0, timer: 0,
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
-    set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
+    set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) { toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); dmPing(); } this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
     watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
@@ -7180,15 +7520,47 @@
     img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
     img.src = url;
   });
+  // Emojis du chat global aussi entre amis et dans le chat des duels (idée de PRISMA123, 2026-11-01 : « pour s'envoyer
+  // des emojis entre amis »). Même grille (GChat.EMOJIS), même bouton 😊, insérés à l'endroit du curseur. Le serveur garde
+  // les emojis tels quels (api/_chat.js cleanChat).
+  const EMO_BTN = '<button type="button" class="gc-emo-btn" data-emo-toggle aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button>';
+  const emoGridHTML = () => `<div class="gc-emojis emo-pop" hidden role="group" aria-label="Emoji">${GChat.EMOJIS.map(e => `<button type="button" data-emo-pick="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
+  function insertEmoji(i, e) {
+    if (!i || i.disabled) return;
+    if (i.value.length + e.length > (i.maxLength > 0 ? i.maxLength : 140)) { toast('Your message is full'); return; }
+    const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
+    i.value = i.value.slice(0, a) + e + i.value.slice(b);
+    if (!matchMedia('(pointer: coarse)').matches) i.focus(); // sur téléphone, le clavier cacherait la grille
+    try { i.setSelectionRange(a + e.length, a + e.length); } catch (err) { /* champ caché */ }
+  }
+  // Branche la grille d'un chat (root contient le bouton, la grille et le champ) ; rend show(on) pour la refermer.
+  function wireEmojis(root, input) {
+    const grid = () => root.querySelector('.emo-pop'), show = on => {
+      const g = grid(), b = root.querySelector('[data-emo-toggle]');
+      if (g) g.hidden = !on;
+      if (b) b.setAttribute('aria-expanded', String(on));
+    };
+    root.addEventListener('click', e => {
+      const pick = e.target.closest('[data-emo-pick]');
+      if (pick) { insertEmoji(input(), pick.dataset.emoPick); return; }
+      if (e.target.closest('[data-emo-toggle]')) { const g = grid(); show(!!g && g.hidden); return; }
+      if (grid() && !grid().hidden && !e.target.closest('.emo-pop, input')) show(false);
+    });
+    return show;
+  }
+  // Petit « ding » doux quand un ami t'écrit (idée de Sean, 2026-11-01) : avec le message en bas de l'écran, ou dans la
+  // conversation ouverte. Synthétisé (js/sound.js « ping ») ; muet quand le son du jeu est coupé (Sound.enable).
+  const dmPing = () => Sound.play('ping');
   function openChat(name) {
-    let poll = 0, sig = '';
+    let poll = 0, sig = '', lastThem = null;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     openModal(`
       <div class="dm-head"><h2>💬 <span data-no-i18n>${esc(name)}</span></h2><button class="btn ghost" id="dm-block"></button></div>
       <p class="panel-note dm-note">Only you two can read this. Messages are filtered and deleted after 7 days. Never share personal details.</p>
       <div class="dm-list" id="dm-list" aria-live="polite"><div class="empty">Loading…</div></div>
-      <form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot (you can also paste it with Ctrl/Cmd + V)">📷<input type="file" id="dm-file" accept="image/*" hidden></label><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
+      ${emoGridHTML()}<form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot (you can also paste it with Ctrl/Cmd + V)">📷<input type="file" id="dm-file" accept="image/*" hidden></label>${EMO_BTN}<input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
       const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
+      const emojis = wireEmojis(m, () => input);
       const imgs = new Map();
       // Une image choisie (📷), collée (Ctrl/Cmd + V) ou glissée dans la conversation part tout de suite.
       const sendImage = async f => {
@@ -7214,6 +7586,9 @@
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
         const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const them = d.messages.filter(x => !x.me).reduce((t, x) => Math.max(t, x.t), 0);
+        if (lastThem !== null && them > lastThem) dmPing();
+        lastThem = them;
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
@@ -7234,7 +7609,7 @@
         e.preventDefault();
         if (!input.value.trim()) return;
         const btn = form.querySelector('button'); btn.disabled = true;
-        try { draw(await Online.friends('message', name, { text: input.value })); input.value = ''; list.scrollTop = list.scrollHeight; }
+        try { draw(await Online.friends('message', name, { text: input.value })); input.value = ''; list.scrollTop = list.scrollHeight; emojis(false); }
         catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your message, try again'); }
         btn.disabled = false; input.focus();
       });
@@ -7526,7 +7901,7 @@
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
       $('#chat-hidden').innerHTML = hidden ? `${plural(hidden, 'player')} hidden · <button class="chat-show" data-chat-show>Show again</button>` : '';
       setHTML($('#chat-foot'), me
-        ? '<form class="chat-form" id="chat-form"><input class="input" id="chat-input" maxlength="140" autocomplete="off" enterkeyhint="send" placeholder="Write a message…" aria-label="Message"><button class="btn" type="submit">Send</button></form>'
+        ? `${emoGridHTML()}<form class="chat-form" id="chat-form">${EMO_BTN}<input class="input" id="chat-input" maxlength="140" autocomplete="off" enterkeyhint="send" placeholder="Write a message…" aria-label="Message"><button class="btn" type="submit">Send</button></form>`
         : '<p class="panel-note">Only players in this duel can write.</p>');
     }
     const last = chat.length ? chat[chat.length - 1] : null;
@@ -7761,12 +8136,13 @@
         Room.chatSig = '';
         drawChat(Room.data);
       });
+      const roomEmojis = wireEmojis($('#room-chat'), () => $('#chat-input')); // emojis (idée de PRISMA123, 2026-11-01)
       $('#room-chat').addEventListener('submit', async e => {
         e.preventDefault();
         const input = $('#chat-input'), text = input.value.trim();
         if (!text || input.disabled) return;
         input.disabled = true;
-        if (await sendChat(text)) input.value = '';
+        if (await sendChat(text)) { input.value = ''; roomEmojis(false); }
         input.disabled = false;
         input.focus();
       });
@@ -8874,6 +9250,7 @@
     clearTimeout(friendsTimer);
     closeModal();
     tip.hidden = true;
+    setLastRoll(Store.rolls[Store.rolls.length - 1]); // Last Roll : hors de l'écran de tirage, le dernier nombre tiré
     const [key, ...rest] = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
     if (key === 'player' && rest.length) renderProfile(decodeURIComponent(rest.join('/')));
     else if (key === 'room' && rest.length) renderRoom(rest[0]);
@@ -8882,6 +9259,7 @@
     const section = mine ? 'me' : SECTION_OF[key] || (key === 'player' ? 'leaderboard' : ROUTES[key] && key ? '' : 'home');
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === section));
     drawSubnav(section, mine ? 'me' : key);
+    autoAfterRoute(); // tirage auto sur les autres pages (idée de kaz, 2026-11-01)
     window.scrollTo(0, 0);
   }
 
@@ -8948,7 +9326,7 @@
       if (this.el) return this.el;
       const el = document.createElement('section');
       el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
-      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-online" hidden></span><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
         <div class="gc-pin" hidden></div>
         <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
         <footer class="gc-foot"></footer>`;
@@ -9019,6 +9397,7 @@
     apply(d) {
       const before = JSON.stringify(this.me);
       this.rev = d.rev; this.del = d.del; this.max = d.max || 200; if (d.editMs) this.editMs = d.editMs;
+      { const on = this.el && this.el.querySelector('.gc-online'); if (on) { on.hidden = !Number.isInteger(d.online); if (!on.hidden) on.textContent = `🟢 ${fmt(d.online)} online`; } } // Thermonuclear Bomb, 2026-11-01
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
@@ -9031,11 +9410,11 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // Une seule ligne « pseudo [TAG] titre : message » (idée d'Idkwhatnamemyself, 2026-11-01 : le pseudo et le texte
+      // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
+      // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          <div class="gc-meta">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-${m.edited ? '<span class="gc-edited">edited</span>' : ''}
-            <span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></div>
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
@@ -9093,7 +9472,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
     // Emojis (idée de Deadshot, 2026-10-27) : une grille choisie à la main (pas d'emoji composé, pas de marque), insérés à
     // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
     // Pain (Deadshot, G8_floppa, 2026-10-28) : tout le monde écrit « bread » dans le chat, donc 🍞 🥖 🥐 en tête.
-    EMOJIS: ['🍞', '🥖', '🥐', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    // 🍳 juste après le pain (idée de MattyFaux-Lucky, 2026-11-01).
+    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
     toggleEmoji(on = !this.emojiOpen) {
       this.emojiOpen = on;
       const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');
@@ -9117,7 +9497,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
       if (me && me.can) {
         foot.innerHTML = `<div class="gc-replying" hidden></div>
           <div class="gc-emojis" hidden role="group" aria-label="Emoji">${this.EMOJIS.map(e => `<button type="button" data-emoji="${e}" aria-label="${e}">${e}</button>`).join('')}</div>
-          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send${genClass()}">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
         this.setReply(this.reply); this.toggleEmoji(this.emojiOpen);
         return;
@@ -9347,6 +9727,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
   // Pièces offertes par un ami depuis la dernière visite (la page Amis s'en charge elle-même).
   if (Store.player.name && currentView !== 'friends') setTimeout(checkGifts, 1500);
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
+
+  LiveFoot.start();
 
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.
   // Envoyé : le site d'origine (pas l'adresse complète), ?ref= ou ?utm_source= s'il y en a, téléphone ou ordinateur,

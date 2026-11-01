@@ -188,7 +188,10 @@ module.exports = async (req, res) => {
       const stats = await readStats(playerId);
       const streak = Quests.nextStreak(day, stats.streakDay, stats.streak);
       const reward = Quests.dailyReward(streak);
-      await redis([['HSET', statsKey(playerId), 'streak', streak, 'streakDay', day], ['HINCRBY', statsKey(playerId), 'bonus', reward], ...eco('in:daily', reward)]);
+      // Meilleure série (titres de série, idée de lnbBUChuoi_vn, 2026-11-01) : la série d'avant compte aussi, même cassée,
+      // puisqu'elle n'est remise à 1 qu'ici.
+      const streakBest = Math.max(streak, Number(stats.streak) || 0, Number(stats.streakBest) || 0);
+      await redis([['HSET', statsKey(playerId), 'streak', streak, 'streakDay', day, 'streakBest', streakBest], ['HINCRBY', statsKey(playerId), 'bonus', reward], ...eco('in:daily', reward)]);
       return send(res, 200, { ...(await state(playerId)), gained: reward });
     }
     return send(res, 400, { error: 'Unknown action' });

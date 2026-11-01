@@ -133,6 +133,8 @@
     { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)
     { id: 'castle', name: 'Medieval Castle', emoji: '🏰', price: 2400, desc: 'Royal banners unfurl one by one on a stone castle wall lit by torches; rare rolls end in fireworks over the battlements', idea: 'BIGBOIJONER69' }, // idée de BIGBOIJONER69 (2026-10-25)
     { id: 'chocolate', name: 'Chocolate', emoji: '🍫', price: 1300, desc: 'A milk chocolate bar in gold foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with melted chocolate', idea: 'finnnnn' }, // idée de finnnnn (2026-10-25)
+    // Idée de qwertyuiop (2026-11-01, déjà demandée en #168) : la tablette de Chocolate en chocolat blanc, moins chère.
+    { id: 'whitechoc', name: 'White Chocolate', emoji: '🤍', price: 1000, desc: 'A white chocolate bar in pink and silver foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with berry sauce', idea: 'qwertyuiop' },
     { id: 'fish', name: 'Floppy Fish', emoji: '🐟', price: 2100, desc: 'A goofy fish flops out of the pond for every digit, and a giant fish leaps over the card on Mythic rolls', idea: 'AnnJoe' }, // idée d'AnnJoe (2026-10-25)
     { id: 'axeman', name: 'Axe Thrower', emoji: '🪓', price: 1900, desc: 'A stick man throws a spinning axe into every wooden target, and celebrates when the roll is good', idea: 'jjcoolcid1' }, // idée de jjcoolcid1 (2026-10-25)
     { id: 'math', name: 'Math', emoji: '➗', price: 1200, desc: 'Chalk digits are written on a blackboard while math symbols float around; great rolls end with Q.E.D.', idea: 'sennybex1' }, // idée de sennybex1 (2026-10-25)
@@ -203,6 +205,43 @@
     { id: 'battleship', name: 'Battleship', emoji: '⚓', price: 2800, desc: 'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring', idea: '17black' }, // idée de 17black (2026-10-28)
     { id: 'cone', name: 'Cone of Destiny', emoji: '🚧', price: 450, desc: 'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown', idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 450)
     { id: 'observer', name: 'The Observer', emoji: '👁️', price: 10000, desc: 'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare', premium: true, idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 10 000)
+    // ==== Skins du 2026-11-01, lot B2 (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de xenon (2026-11-01) : « Toaster font. the numbers are bread. » Chaque chiffre est une tranche de pain qui
+    // jaillit d'un grille-pain chromé, le chiffre grillé dessus ; dès Mythic, les tranches sortent dorées.
+    { id: 'toaster', name: 'Toaster', emoji: '🍞', price: 1300, desc: 'Every digit is a slice of bread that pops out of a chrome toaster with the number toasted in; Mythic rolls pop out golden toast', idea: 'xenon' },
+    // Idée de Dylanrulez123 (2026-11-01) : un skin de billard. Chaque chiffre est une bille numérotée que la queue envoie
+    // à sa place ; dès Mythic, un coup de maître en bandes touche toutes les billes.
+    { id: 'billiards', name: 'Billiards', emoji: '🎱', price: 2000, desc: 'Every digit is a numbered pool ball: the cue strikes, the ball rolls in and clicks into place, and Mythic rolls end with a trick shot off every cushion', idea: 'Dylanrulez123' },
+    // Idée de casmicgraything (2026-11-01) : un galion sur une mer qui roule ; un boulet de canon vise chaque chiffre (des
+    // caisses de bois, jamais des gens) ; dès Mythic, le galion vide coule dans une pluie de pièces d'or. Pas Battleship :
+    // un vieux voilier en plein jour, des caisses qui volent en éclats, de l'or.
+    { id: 'pirate', name: 'Pirate', emoji: '🏴‍☠️', price: 2400, desc: 'A pirate galleon rocks on a rolling sea and its cannon blasts a floating crate open for every digit; on Mythic rolls the empty ship sinks in a rain of gold coins', idea: 'casmicgraything' },
+    // Idée de tmanrex (2026-11-01) : « A T-rex skin, would be soo cool. » Un pied de T-Rex enfonce chaque chiffre de pierre
+    // dans le sol (nuage de poussière) ; dès Mythic, il rugit et la carte tremble.
+    { id: 'trex', name: 'T-Rex', emoji: '🦖', price: 2200, desc: 'A T-Rex stomps every stone digit into the ground in a puff of dust, and on Mythic rolls it lets out a roar that shakes the card', idea: 'tmanrex' },
+    // Idée de sennybex1 (2026-11-01, il proposait 2 000 pièces) : un gâteau d'anniversaire, des chiffres en glaçage de
+    // couleur et une bougie par chiffre ; dès Mythic, on souffle les bougies et les confettis volent.
+    { id: 'cake', name: 'Birthday Cake', emoji: '🎂', price: 2000, desc: 'Every digit is piped in colourful icing on a layer cake and its candle lights up; on Mythic rolls the candles blow out in a burst of confetti', idea: 'sennybex1' },
+    // Idée de jia jun (2026-11-01) : un stand de fête foraine. La version avec un pistolet a été refusée (pas d'armes) ;
+    // il a proposé une balle à lancer : une balle renverse la pile de boîtes de conserve devant chaque chiffre.
+    { id: 'carnival', name: 'Carnival', emoji: '🎪', price: 1800, desc: 'A carnival ball toss: a ball knocks down the stack of cans in front of every digit, and Mythic rolls light up the booth and win the big prize', idea: 'jia jun' },
+    // ==== Skins du 2026-11-01, lot A (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de Kj13 (2026-11-01) : du mini-golf, une balle puttée par chiffre ; fusionnée avec celle de Jguz01 (des
+    // chiffres en balles de golf sur un green, un beau parcours derrière). Trou en un et drapeau qui claque dès Mythic.
+    { id: 'golf', name: 'Mini Golf', emoji: '⛳', price: 2000, desc: 'Every digit is putted into its hole on a mini golf green, past a little windmill; Mythic rolls are a HOLE IN ONE with confetti and a waving flag', idea: 'Kj13' },
+    // Idée de kingston (2026-11-01) : un terrain de foot ; un ballon frappé dans le filet pour chaque chiffre, GOAL! dès Mythic.
+    { id: 'soccer', name: 'Soccer', emoji: '⚽', price: 1800, desc: 'Every digit is a shot that bulges the goal net; good rolls are a GOAL! and Mythic rolls bring the confetti', idea: 'kingston' },
+    // Idée de jjcoolcid1 (2026-11-01) : un ballon de basket rentre dans le panier à chaque chiffre ; dunk dès Mythic.
+    { id: 'basketball', name: 'Basketball', emoji: '🏀', price: 1800, desc: 'A ball swishes through the hoop for every digit on a hardwood court; Mythic rolls are a SLAM DUNK that shakes the rim', idea: 'jjcoolcid1' },
+    // Idée de dylanbuckleyisjewish (2026-11-01) : un skin animaux / safari ; une jeep, des animaux qui sortent des herbes, un lion qui rugit.
+    { id: 'safari', name: 'Safari', emoji: '🦒', price: 2200, desc: 'Animal-print digits hide in the savanna grass: a giraffe, an elephant or a zebra peeks out for each one, a jeep drives by, and Mythic rolls make the lion ROAR', idea: 'dylanbuckleyisjewish' },
+    // Idée de number 1 (2026-11-01, il proposait 3 000 pièces) : une grotte sombre, une lampe qui vacille, une pioche
+    // rouillée qui fait sauter un bloc de minerai de chaque chiffre ; le chiffre prend ce minerai. L'éclat final dépend de
+    // la rareté (du charbon sur un Common au diamant dès Mythic). Pas de textures en blocs (règle des marques).
+    { id: 'mining', name: 'Mining', emoji: '⛏️', price: 3000, desc: 'A rusty pickaxe chips the ore off every digit in a dark cave under one flickering lamp; each digit turns into the ore it was hiding, and the final blast goes from coal to diamonds with your rarity', idea: 'number 1' },
+    // Idée de baby boy (2026-11-01, autre compte : Daddy finger) : un pack chat ; un chat sort chaque chiffre d'une pelote
+    // de laine. Le pack de sons Meow va avec (SOUNDS) ; il le voulait à 15 000 pièces, vendu au prix normal des packs.
+    { id: 'cat', name: 'Cat', emoji: '🐱', price: 1800, desc: 'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts', idea: 'baby boy' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -272,7 +311,13 @@
     // tous les boutons vendus à part, poids 1 / prix comme les autres caisses. Doublon : même remboursement selon la rareté.
     // Sacha, 2026-10-29 : avec Power Core et Black Hole, la valeur moyenne d'un tirage passe de ≈ 429 à ≈ 469 ; la caisse
     // passe de 320 à 350 pour garder le même rapport prix / valeur (350 / 469 ≈ 0,75, comme la caisse de fonds, 0,74).
+    // 2026-11-01 : avec Free Download, Bread, Last Roll et Bubble Wrap (Cardboard Box reste dehors), la valeur moyenne passe
+    // de ≈ 469 à ≈ 482 ; le prix reste à 350, fixé par Sacha (350 / 482 ≈ 0,73).
     { id: 'buttons', name: 'Button Case', emoji: '🔘', price: 350, desc: 'A Generate button worth 150 to 2,200 coins', btn: true },
+    // Idée de shadow2 Jr (2026-11-01) : une caisse qui donne une émote spéciale (emo: true, EMOTES), toutes les émotes en
+    // vente, poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 538, caisse à 400 (0,74, comme les
+    // caisses de boutons et de sons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi.
+    { id: 'emotes', name: 'Emote Case', emoji: '🎭', price: 400, desc: 'A special duel emote worth 300 to 1,200 coins', emo: true },
     // Idée de shadow2 Jr (2026-10-28) : une caisse qui donne un pack de sons (snd: true, SOUNDS), tous les packs payants,
     // poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 490, caisse à 365 (0,745 : comme la caisse
     // de boutons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi (KEY_OPENS).
@@ -350,6 +395,21 @@
     // Idée d'AnnJoe : de la buée sur une vitre froide, devant une ville la nuit sous la pluie ; les gouttes se forment,
     // grossissent et coulent en laissant des traces claires. Un bon tirage essuie un arc sur la vitre.
     { id: 'condensation', name: 'Condensation', emoji: '💧', price: 4000, premium: true, idea: 'AnnJoe', desc: 'A fogged-up window on a rainy night in the city: drops form, grow and run down in clear streaks; good rolls wipe a clear arc across the glass' },
+    // Six fonds d'idées de joueurs (2026-11-01), dessinés en direct (js/wallfx.js). Comme avant, ceux qui réagissent à la
+    // rareté des tirages sont légendaires (premium) : Farm, Meteor Shower et Party. Les trois autres sont des fonds normaux
+    // (ils entrent dans la caisse de fonds) ; Keyboard ASMR tape le nombre tiré, quel qu'il soit, comme Your Last Rolls.
+    // Idée de HSI : une ferme par une journée ensoleillée, des animaux et une grange rouge au fond.
+    { id: 'farm', name: 'Farm', emoji: '🐄', price: 4500, premium: true, idea: 'HSI', desc: 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping' },
+    // Idée de kingston : un fond clavier, thème ASMR (le « thock » au clic ne sonne que si le son est activé).
+    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll' },
+    // Idée de finnnnn, assorti au skin Storm : un ou deux éclairs toutes les 10 s environ, un tonnerre doux, rien de fort.
+    { id: 'thunderstorm', name: 'Thunderstorm', emoji: '⛈️', price: 1000, idea: 'finnnnn', desc: 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder' },
+    // Idée de finnnnn : des astres qui tournent les uns autour des autres, comme le système solaire.
+    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past' },
+    // Idée de Ggggssnoop, assorti au skin Meteor : une pluie d'étoiles filantes.
+    { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
+    // Idée de jia jun : une fête d'anniversaire.
+    { id: 'party', name: 'Party', emoji: '🎈', price: 4000, premium: true, idea: 'jia jun', desc: 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
@@ -369,18 +429,19 @@
     { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
-  const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));
+  const caseOnly = c => (c.wall || c.btn || c.snd || c.emo ? [] : SKINS.filter(s => s.caseOnly === c.id));
   // Ce qu'une caisse donne : un skin, ou un fond d'écran pour la caisse de fonds (des identifiants existent dans les deux
   // listes, comme galaxy ou sakura : toujours passer par la caisse), ou un bouton pour la caisse de boutons.
-  const caseItem = (c, id) => (c && c.snd ? soundById : c && c.btn ? buttonById : c && c.wall ? wallById : byId).get(id);
-  const casePool = c => c.snd ? SOUNDS.filter(p => p.price && !p.until && !p.hidden).sort((a, b) => a.price - b.price)
-    : c.btn ? BUTTONS.filter(b => !b.until && !b.hidden).sort((a, b) => a.price - b.price)
+  const caseItem = (c, id) => (c && c.emo ? emoteById : c && c.snd ? soundById : c && c.btn ? buttonById : c && c.wall ? wallById : byId).get(id);
+  const casePool = c => c.emo ? EMOTES.filter(e => !e.until && !e.hidden).sort((a, b) => a.price - b.price)
+    : c.snd ? SOUNDS.filter(p => p.price && !p.until && !p.hidden).sort((a, b) => a.price - b.price)
+    : c.btn ? BUTTONS.filter(b => !b.until && !b.hidden && !b.noCase).sort((a, b) => a.price - b.price)
     : c.wall ? WALLPAPERS.filter(w => !w.until && !w.premium).sort((a, b) => a.price - b.price) : SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
   // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
   const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };
   // Rareté d'un lot dans sa caisse : skins, fonds d'écran ou boutons, chacun ses paliers.
-  const caseRarity = (c, id) => rarityOf(id, c && c.snd ? 'snd' : c && c.btn ? 'btn' : !!(c && c.wall));
+  const caseRarity = (c, id) => rarityOf(id, c && c.emo ? 'emo' : c && c.snd ? 'snd' : c && c.btn ? 'btn' : !!(c && c.wall));
   const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(caseRarity(c, skinId) || RARITIES[0]).id] || .5));
   // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
   // viennent en dernier (les plus rares).
@@ -407,7 +468,7 @@
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
   // wall : true pour un fond d'écran, 'btn' pour un bouton (caisse de boutons), 'snd' pour un pack de sons, sinon un skin.
-  const rarityOf = (id, wall) => (wall === 'snd' ? SND_RARITIES : wall === 'btn' ? BTN_RARITIES : wall ? WALL_RARITIES : RARITIES).find(r => ((wall === 'snd' ? soundById : wall === 'btn' ? buttonById : wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
+  const rarityOf = (id, wall) => (wall === 'emo' ? EMO_RARITIES : wall === 'snd' ? SND_RARITIES : wall === 'btn' ? BTN_RARITIES : wall ? WALL_RARITIES : RARITIES).find(r => ((wall === 'emo' ? emoteById : wall === 'snd' ? soundById : wall === 'btn' ? buttonById : wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
   // Fonds d'écran : mêmes couleurs, paliers resserrés sur leurs prix (500 à 1 200).
   const WALL_RARITIES = [
     { id: 'blue', name: 'Common', max: 600, color: '#4b69ff' },
@@ -433,10 +494,22 @@
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
 
+  // Émotes (caisse d'émotes, idée de shadow2 Jr, 2026-11-01) : mêmes couleurs, paliers sur leurs prix (300 à 1 200).
+  const EMO_RARITIES = [
+    { id: 'blue', name: 'Common', max: 300, color: '#4b69ff' },
+    { id: 'purple', name: 'Uncommon', max: 500, color: '#8847ff' },
+    { id: 'pink', name: 'Rare', max: 700, color: '#d32ce6' },
+    { id: 'red', name: 'Epic', max: 900, color: '#eb4b4b' },
+    { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
+  ];
+
   // Apparence du bouton qui lance un tirage (« Generate », « Roll again », « Roll round » en duel). Chaque skin de
   // nombre apporte le bouton assorti (même identifiant) ; ceux-ci se vendent à part et ne changent que le bouton.
   // Personne d'autre ne voit ton bouton : prix plus doux que les skins.
   const BUTTONS = [
+    // Idée de MAYO (2026-11-01) : le bouton le moins cher, un carton scotché qui se froisse quand on appuie. Hors de la caisse de boutons
+    // (noCase) : il vaut moins que la caisse elle-même, et même moins qu'un remboursement de doublon.
+    { id: 'cardboard', name: 'Cardboard Box', emoji: '📦', price: 100, desc: 'A taped-up cardboard box that crumples when you press it', idea: 'MAYO', noCase: true },
     { id: 'keycap', name: 'Keycap', emoji: '⌨️', price: 150, desc: 'A chunky mechanical key' },
     { id: 'terminal', name: 'Terminal', emoji: '💻', price: 250, desc: 'Run the command yourself' },
     { id: 'arcade', name: 'Arcade', emoji: '🕹️', price: 350, desc: 'Big red cabinet button' },
@@ -456,6 +529,17 @@
     // « eventhorizon » : « blackhole » est le skin Singularity). Pas de part pour les boutons : crédit en commentaire.
     { id: 'powercore', name: 'Power Core', emoji: '🔮', price: 800, desc: 'A pink glowing lens in a heavy metal ring; blue sparks crackle when you hover' },
     { id: 'eventhorizon', name: 'Black Hole', emoji: '🕳️', price: 1200, desc: 'Light swirls into a dark core, faster when you press' },
+    // Idées de joueurs du 2026-11-01 (les boutons ne versent pas de part : idea sert au crédit seulement).
+    // Yentizx : la parodie d'un faux bouton de téléchargement de site louche (flèches qui clignotent, pastille « 100% SAFE »).
+    // Inoffensif : il ne télécharge rien, il lance un tirage comme les autres.
+    { id: 'download', name: 'Free Download', emoji: '⬇️', price: 300, desc: 'A flashy green download button with blinking arrows. 100% safe, trust us', idea: 'Yentizx' },
+    // MattyFaux-Lucky (un bouton pain) et MaxABGD (une bouchée à chaque chiffre révélé, assorti au fond Spinning Bread) :
+    // la miche perd une bouchée par chiffre posé et redevient entière au tirage suivant (js/app.js, breadBite).
+    { id: 'bread', name: 'Bread', emoji: '🍞', price: 500, desc: 'A crusty loaf that loses a bite every time a digit is revealed, and is whole again for the next roll', idea: 'MattyFaux-Lucky' },
+    // G8_floppa : un petit écran LCD sur le bouton affiche ton nombre précédent (assorti au fond Your Last Rolls).
+    { id: 'lastroll', name: 'Last Roll', emoji: '📟', price: 600, desc: 'A little LCD on the button shows your previous number', idea: 'G8_floppa' },
+    // Jguz01 : du papier bulle, une bulle éclate (avec son « pop ») à chaque appui ; une feuille neuve quand tout a éclaté.
+    { id: 'bubblewrap', name: 'Bubble Wrap', emoji: '🫧', price: 1700, desc: 'A sheet of bubble wrap: one bubble pops with a satisfying sound every time you press', idea: 'Jguz01' },
   ];
   const buttonById = new Map(BUTTONS.map(b => [b.id, b]));
   const MATCH = 'match'; // choix par défaut : le bouton suit le skin équipé
@@ -481,6 +565,7 @@
     { id: 'spread', name: 'Money Spread', price: 1000 }, // idée de finnnnn (2026-10-24)
     { id: 'confused', name: 'Super confused', price: 800 }, // idée de finnnnn (2026-10-22)
     { id: 'mindblown', name: 'Mind blown', price: 1200 },
+    { id: 'hungry', name: 'Hungry', price: 500, idea: 'Monokromati' }, // idée de Monokromati (2026-11-01) : le dé bave, fourchette et couteau en main
   ];
   const emoteById = new Map(EMOTES.map(e => [e.id, e]));
 
@@ -502,6 +587,14 @@
     // Idées de Niall (un son de « pop ») et de sennybex1 (un clic de clavier ou de souris), 2026-10-28 : touches
     // mécaniques, clics de souris et pops, tout synthétisé (js/sound.js). Les packs ne versent pas de part : crédit ici.
     { id: 'clicky', name: 'Clicky', emoji: '🖱️', price: 550, desc: 'Mechanical key clacks, mouse clicks and soft pops' },
+    // Idées du 2026-11-01, tout synthétisé (js/sound.js) : Slime (Ggggssnoop : de la gelée qu'on écrase, des « splat »
+    // mouillés et des rebonds mous) et Boing (sennybex1 : un « boing » de ressort à chaque chiffre, un plus gros rebond
+    // pour les tirages rares). Pas de part pour les packs : idea sert au crédit.
+    { id: 'slime', name: 'Slime', emoji: '🟢', price: 500, desc: 'Squishy splats and wobbly slime bounces', idea: 'Ggggssnoop' },
+    { id: 'boing', name: 'Boing', emoji: '🪀', price: 450, desc: 'A springy boing on every digit, a bigger bounce on rare rolls', idea: 'sennybex1' },
+    // Idée de baby boy (2026-11-01) : un miaou à chaque chiffre, assorti au skin Cat. Il le voulait à 15 000 pièces ;
+    // vendu au prix normal des packs. Les packs ne versent pas de part : crédit ici.
+    { id: 'meow', name: 'Meow', emoji: '🐱', price: 500, desc: 'A little meow on every digit, a big one on the last, and purrs for rare rolls' },
   ];
   const soundById = new Map(SOUNDS.map(p => [p.id, p]));
   // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
@@ -531,8 +624,8 @@
   const IDEA_SHARE = 0.05;
   // La caisse de boutons (moins chère que la Premium) s'ouvre aussi avec une clé Premium (2026-10-27), la caisse de sons
   // aussi (2026-10-28).
-  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds'] };
-  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds', 'emotes'] }; // + émotes (2026-11-01)
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

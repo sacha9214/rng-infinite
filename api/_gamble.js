@@ -39,7 +39,7 @@ function ledger(id, game, bet, win, rounds = 1, feed = true) {
 }
 // Les totaux n'existaient pas avant le 2026-10-10 : au premier affichage, ils sont repris une fois des compteurs que
 // chaque joueur a depuis le début (gBet, gWon, et ses manches par jeu). Le marqueur posé en premier sert de verrou.
-const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno', 'gDice', 'gTeddy', 'gDuck'];
+const PLAYED = ['gSpins', 'gHands', 'gPlinko', 'gMines', 'gCrash', 'gFlips', 'gTower', 'gKeno', 'gDice', 'gTeddy', 'gDuck', 'gWheel'];
 async function seedHouse() {
   const [first] = await redis([['HSETNX', HOUSE_KEY, 'seeded', 1]]);
   if (Number(first) !== 1) return;
@@ -222,7 +222,7 @@ async function blackjack(id, body) {
 // quitte le serveur avant la fin : le chemin de la bille est tiré d'un coup, les mines et le point de crash restent
 // dans Redis tant que la manche dure.
 const u01 = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
-const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno', gDice: 'dice', gTeddy: 'teddy', gDuck: 'duck' }[counter], bet, win)]);
+const credit = (id, bet, win, counter) => redis([['HINCRBY', statsKey(id), 'bonus', win], ['HINCRBY', statsKey(id), counter, 1], ['HINCRBY', statsKey(id), 'gBet', bet], ['HINCRBY', statsKey(id), 'gWon', win], ...ledger(id, { gPlinko: 'plinko', gMines: 'mines', gCrash: 'crash', gSlots: 'slots', gFlips: 'flip', gTower: 'tower', gKeno: 'keno', gDice: 'dice', gTeddy: 'teddy', gDuck: 'duck', gWheel: 'wheel' }[counter], bet, win)]);
 async function debit(id, raw) {
   const bet = amount(raw);
   if (!bet) throw refuse(400, `Bet between ${MIN_BET} and ${MAX_BET} coins`);
@@ -544,6 +544,32 @@ async function duck(id, body) {
   return { bet, duck: pick, order, winner: order[0], mult: cents / 100, won, win, coins: (await wallet(id)).coins };
 }
 
+// Wheel (idée de How yz got sticky, 2026-11-01, et Multiplier Wheel de Gray, 2026-10-14) : une roue de multiplicateurs,
+// de 0,7× à 250×. Le joueur a demandé « au pire 0,7× » : on ne perd jamais plus de 30 % de sa mise, mais la plupart des
+// tours rendent 0,7×. Deux roues l'une dans l'autre, à cases égales (ce qu'on voit est la vraie chance de chaque case) :
+// la grande roue a 50 cases, dont une étoile ★ qui lance la roue bonus du centre (40 cases, 1 seule à 250×). 250× sort
+// donc une fois sur 2 000 tours. Retour : (49 cases de la grande roue + moyenne de la roue bonus) / 50 = 96,9 %
+// (tools/casino-sim.mjs, tools/house-audit.mjs). Mises de 1 à 1 000 pièces ; comme au Plinko, la fraction de pièce d'un
+// gain (1 pièce × 0,7) est jouée au hasard, pour que les petites mises rendent en moyenne autant que les grosses.
+// Les deux tables sont copiées telles quelles dans js/app.js (vérifié par tools/test-api.mjs). 0 = l'étoile.
+const WHEEL_OUTER = [0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 2, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1.5, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.8, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7];
+const WHEEL_INNER = [250, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 1.5, 5, 2, 3, 1.5, 20, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 5, 5, 2, 3, 1.5, 50, 2, 3, 1.5, 5, 3, 10, 2];
+const WHEEL_MIN = 1;
+// Retour théorique exact de la roue (pour les audits) : chaque case de la grande roue a 1 chance sur 50.
+const wheelRtp = () => (WHEEL_OUTER.reduce((x, m) => x + (m || WHEEL_INNER.reduce((a, b) => a + b, 0) / WHEEL_INNER.length), 0)) / WHEEL_OUTER.length;
+async function wheel(id, body) {
+  const bet = amount(body.bet, WHEEL_MIN);
+  if (!bet) throw refuse(400, `Bet between ${WHEEL_MIN} and ${MAX_BET} coins`);
+  await mustAfford(id, bet);
+  const outer = crypto.randomInt(0, WHEEL_OUTER.length), bonus = WHEEL_OUTER[outer] === 0;
+  const inner = bonus ? crypto.randomInt(0, WHEEL_INNER.length) : null, mult = bonus ? WHEEL_INNER[inner] : WHEEL_OUTER[outer];
+  const tenths = bet * Math.round(mult * 10); // gain en dixièmes de pièce, toujours entier
+  const win = Math.floor(tenths / 10) + (crypto.randomInt(0, 10) < tenths % 10 ? 1 : 0);
+  await redis([['HINCRBY', statsKey(id), 'spent', bet]]);
+  await credit(id, bet, win, 'gWheel');
+  return { bet, outer, inner, bonus, mult, win, coins: (await wallet(id)).coins };
+}
+
 // Crash : le multiplicateur monte (× e^(0,00007 · ms)) jusqu'à un point tiré au départ et gardé ici ; encaisser avant
 // qu'il n'explose. L'heure qui compte est celle du serveur à la réception de la demande.
 const crKey = id => `cr:${id}`, CRASH_RATE = 0.00007, CRASH_CAP = 500, CRASH_LATE_MS = 3000;
@@ -592,4 +618,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, duck, duckMult, duckCents, DUCK_CHANCE, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, duck, duckMult, duckCents, DUCK_CHANCE, wheel, wheelRtp, WHEEL_OUTER, WHEEL_INNER, WHEEL_MIN, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

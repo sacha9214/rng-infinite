@@ -334,6 +334,34 @@ for (let k = 0; k < 6; k++) { const ev = G.DUCK_CHANCE[k] / 100 * G.duckMult(k);
 for (const d of [-1, 6, 2.5, 'x', null, undefined]) await assert.rejects(G.duck(id, { bet: 100, duck: d }), /Pick a duck/);
 for (const bad of [0, 9, 1001, 10.5, '100']) await assert.rejects(G.duck(id, { bet: bad, duck: 0 }));
 
+// ---- Wheel (idée de How yz got sticky et de Gray, 2026-11-01) : mise au hasard, de 1 à 1 000 pièces. Chaque case de la
+// grande roue sort une fois sur 50, l'étoile lance la roue bonus ; le gain moyen suit 96,9 %, même avec 1 pièce.
+const wlOuter = new Array(G.WHEEL_OUTER.length).fill(0), wlN = N * 2;
+let wlBonus = 0;
+rtp = await series('wheel', '≈ 96,9 % (0,7× au pire)', async () => {
+  const bet = pick([1, 5, ...BETS]);
+  const r = await G.wheel(id, { bet });
+  wlOuter[r.outer]++;
+  assert.equal(r.bonus, G.WHEEL_OUTER[r.outer] === 0);
+  if (r.bonus) { wlBonus++; assert.equal(r.mult, G.WHEEL_INNER[r.inner]); } else { assert.equal(r.inner, null); assert.equal(r.mult, G.WHEEL_OUTER[r.outer]); }
+  const exact = bet * r.mult;
+  assert.ok(r.win === Math.floor(exact + 1e-9) || r.win === Math.ceil(exact - 1e-9), `gain ${r.win} pour ${bet} × ${r.mult}`);
+  return { bet, win: r.win };
+}, wlN);
+assert.ok(rtp > .85 && rtp < 1.1, `wheel ${rtp}`);
+wlOuter.forEach((n, k) => assert.ok(Math.abs(n / wlN - 1 / 50) < 0.012, `case ${k} : ${n / wlN}`));
+assert.ok(wlBonus > 0, 'la roue bonus a tourné');
+assert.ok(G.wheelRtp() <= .97000001 && G.wheelRtp() > .96, `wheel théorique ${G.wheelRtp()}`);
+// Petites mises : 1 pièce sur 0,7× rend 0,7 pièce en moyenne (la fraction jouée au hasard). Mesuré sur les cases 0,7×
+// seulement : le 250× rare ferait trop varier la moyenne générale pour un contrôle serré.
+{
+  let won = 0, n = 0; const M = 20000;
+  for (let i = 0; i < M; i++) { run([['HSET', key, 'bonus', 1e9]]); const r = await G.wheel(id, { bet: 1 }); if (r.mult === 0.7) { n++; won += r.win; } }
+  assert.ok(Math.abs(won / n - 0.7) < 0.02, `mise de 1 sur 0,7× : ${won / n}`);
+  report.push({ jeu: 'wheel à 1 pièce, case 0,7×', manches: n, 'retour mesuré': (100 * won / n).toFixed(2) + ' %', 'retour théorique': '70.00 %', 'plus gros gain': '' });
+}
+for (const bad of [0, 1001, 10.5, '100', -1]) await assert.rejects(G.wheel(id, { bet: bad }), /Bet between 1 and 1000/);
+
 // ---- Crash : encaissement visé à un multiplicateur au hasard ; l'heure d'arrivée est fournie au serveur
 let instant = 0, cashed = 0;
 rtp = await series('crash', '≈ 99 % (moins l\'arrondi)', async () => {

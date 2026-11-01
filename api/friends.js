@@ -191,7 +191,8 @@ module.exports = async (req, res) => {
     // Clans (api/_clan.js) : routés d'ici, api/ est déjà à 12 fonctions publiques.
     if (body.action === 'clan') return send(res, 200, await require('./_clan').handle(playerId, body));
     if (body.action === 'gifts') {
-      if (['active', 'afk'].includes(body.presence)) await redis([['HSET', 'presence', playerId, `${Date.now()}:${body.presence}`]]);
+      // presz (idée de Thermonuclear Bomb, 2026-11-01) : compteur « N players online », voir api/_online.js.
+      if (['active', 'afk'].includes(body.presence)) await redis([['HSET', 'presence', playerId, `${Date.now()}:${body.presence}`], ...require('./_online').presenceWrites(playerId, body.presence)]);
       const gifts = await unseenGifts(playerId);
       const [counts] = await redis([['HVALS', unreadKey(playerId)]]);
       // Gros tirages des amis depuis bigSince (idée de Jguz01, 2026-10-26) ; absent = alertes coupées dans les réglages.

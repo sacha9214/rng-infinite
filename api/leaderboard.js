@@ -240,6 +240,8 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'Use GET' });
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
+    // « N players online » sur l'écran de tirage (idée de Thermonuclear Bomb, 2026-11-01, api/_online.js) : null sous 5.
+    if (params.get('online') === '1') return send(res, 200, { online: await require('./_online').shown() });
     const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls', 'median'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     if (period === 'coins') return send(res, 200, await coinsBoard(me));

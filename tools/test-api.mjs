@@ -985,7 +985,13 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
   const bpool = Shop.casePool(bcase).map(b => b.id);
-  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.map(b => b.id).sort(), 'tous les boutons vendus à part');
+  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.filter(b => !b.noCase).map(b => b.id).sort(), 'tous les boutons vendus à part, sauf ceux marqués noCase');
+  // Boutons du 2026-11-01 : Cardboard Box (MAYO) reste hors de la caisse (100 pièces : moins que la caisse et qu'un
+  // remboursement de doublon) ; Free Download, Bread, Last Roll et Bubble Wrap y entrent.
+  assert.ok(!bpool.includes('cardboard') && Shop.buttonById.get('cardboard').price === 100 && Math.min(...Shop.BUTTONS.map(b => b.price)) === 100, 'Cardboard Box : le moins cher, hors caisse');
+  assert.ok(['download', 'bread', 'lastroll', 'bubblewrap'].every(id => bpool.includes(id)));
+  assert.equal(Shop.caseRarity(bcase, 'bubblewrap').name, 'Legendary');
+  assert.deepEqual(['cardboard', 'download', 'bread', 'lastroll', 'bubblewrap'].map(id => Shop.buttonById.get(id).idea), ['MAYO', 'Yentizx', 'MattyFaux-Lucky', 'G8_floppa', 'Jguz01']);
   assert.ok(bpool.includes('pickle'), 'le bouton Pickle (idée d\'Edward et de Dylanrulez123) est dedans');
   const bev = Shop.caseOdds(bcase).reduce((x, o) => x + o.p * Shop.caseItem(bcase, o.id).price, 0);
   assert.ok(bcase.price < bev && bcase.price / bev > 0.6 && bcase.price / bev < 0.85, `prix sous la valeur moyenne (${bcase.price} / ${bev.toFixed(0)})`);
@@ -1034,6 +1040,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const spool = Shop.casePool(scase).map(p => p.id);
   assert.deepEqual([...spool].sort(), Shop.SOUNDS.filter(p => p.price).map(p => p.id).sort(), 'tous les packs payants');
   assert.ok(spool.includes('clicky'), 'le pack Clicky (idées de Niall et de sennybex1) est dedans');
+  assert.ok(spool.includes('slime') && spool.includes('boing'), 'les packs Slime (Ggggssnoop) et Boing (sennybex1) aussi (2026-11-01)');
+  { const src = fs.readFileSync(path.join(ROOT, 'js/sound.js'), 'utf8'); for (const p of Shop.SOUNDS.filter(x => x.price)) assert.ok(new RegExp(`\n    ${p.id}: \{`).test(src), `recette du pack ${p.id} dans js/sound.js`); }
   const sev = Shop.caseOdds(scase).reduce((x, o) => x + o.p * Shop.caseItem(scase, o.id).price, 0);
   assert.ok(scase.price < sev && scase.price / sev > 0.7 && scase.price / sev < 0.8, `prix sous la valeur moyenne, comme les caisses de fonds et de boutons (${scase.price} / ${sev.toFixed(0)})`);
   assert.equal(Shop.caseItem(scase, 'arcade'), Shop.soundById.get('arcade'), 'arcade : le pack de sons, pas le bouton');
@@ -1070,6 +1078,52 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const own1 = owners(); for (const id of spool) assert.equal((own1[`sounds:${id}`] || 0) - (own0[`sounds:${id}`] || 0), gainedSnd[id] || 0, `owners sounds:${id}`); }
   r = await call(shopApi, { method: 'POST', body: { playerId: sammy.playerId, secret: sammy.secret, action: 'sound', sound: r.body.sounds[0] } });
   assert.deepEqual([r.status, r.body.sound], [200, r.body.sounds[0]], 'un pack gagné se met en service comme un pack acheté');
+
+  // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : une émote spéciale (EMOTES) qui rejoint emotes:<id>, comme buyemote.
+  const ecase = Shop.caseById.get('emotes');
+  const epool = Shop.casePool(ecase).map(e => e.id);
+  assert.deepEqual([...epool].sort(), Shop.EMOTES.map(e => e.id).sort(), 'toutes les émotes en vente');
+  assert.ok(epool.includes('hungry') && Shop.emoteById.get('hungry').idea === 'Monokromati', 'l\'émote Hungry (Monokromati) est dedans');
+  const eev = Shop.caseOdds(ecase).reduce((x, o) => x + o.p * Shop.caseItem(ecase, o.id).price, 0);
+  assert.ok(ecase.price < eev && ecase.price / eev > 0.7 && ecase.price / eev < 0.8, `prix sous la valeur moyenne, comme les autres caisses (${ecase.price} / ${eev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(ecase, 'gg'), Shop.emoteById.get('gg'));
+  assert.deepEqual(['gg', 'love', 'rage', 'money', 'mindblown'].map(id => Shop.caseRarity(ecase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  for (const id of epool) { const v = Shop.duplicateRefund(ecase, id); assert.ok(v >= ecase.price / 2 && v < ecase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('emotes') && !Shop.KEY_OPENS.starter.includes('emotes'), 'une clé Premium l\'ouvre');
+  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(E.has(id), `dessin de l'émote ${id} (js/emotes.js)`); }
+  const emma = { playerId: 'cb'.repeat(8), secret: 'dc'.repeat(16), name: 'Emmy' };
+  assert.equal((await call(roll, { method: 'POST', body: emma })).status, 200);
+  run([['HINCRBY', `stats:${emma.playerId}`, 'bonus', 50000]]);
+  await new Promise(res => setTimeout(res, 20));
+  const eBefore = (await call(shopApi, { url: `/api/shop?me=${emma.playerId}` })).body, eown0 = owners();
+  let edups = 0, enews = 0;
+  const gainedEmo = {};
+  for (let i = 0; i < 30; i++) {
+    before = await coinsOf(emma);
+    const [spent0, cases0] = run([['HGET', `stats:${emma.playerId}`, 'spent'], ['HGET', `stats:${emma.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(emma, 'emotes');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(epool.includes(r.body.won), 'une émote de la caisse');
+    assert.ok(r.body.emotes.includes(r.body.won), 'ajoutée aux émotes possédées');
+    assert.ok(run([['SISMEMBER', `emotes:${emma.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(ecase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - ecase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${emma.playerId}`, 'spent'], ['HGET', `stats:${emma.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [ecase.price - r.body.refund, 1, ecase.price - r.body.refund], 'spent, cases, eco');
+    if (r.body.duplicate) edups++; else { enews++; gainedEmo[r.body.won] = 1; }
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(enews >= 4 && enews <= epool.length && edups >= 1, `des nouvelles (${enews}) et des doublons (${edups})`);
+  assert.deepEqual([r.body.owned, r.body.buttons, r.body.walls, r.body.sounds], [eBefore.owned, eBefore.buttons, eBefore.walls, eBefore.sounds], 'ni skin, ni bouton, ni fond, ni son donné');
+  { const own1 = owners(); for (const id of epool) assert.equal((own1[`emotes:${id}`] || 0) - (eown0[`emotes:${id}`] || 0), gainedEmo[id] || 0, `owners emotes:${id}`); }
+  // Une émote gagnée ne se rachète pas : buyemote ne débite rien de plus.
+  { const won = r.body.emotes[0], c0 = await coinsOf(emma); r = await call(shopApi, { method: 'POST', body: { playerId: emma.playerId, secret: emma.secret, action: 'buyemote', emote: won } }); assert.equal(await coinsOf(emma), c0, 'déjà possédée : rien de débité'); }
+  // Une clé Premium ouvre aussi la caisse d'émotes.
+  run([['HSET', `stats:${emma.playerId}`, 'key:premium', 1]]);
+  r = await call(shopApi, { method: 'POST', body: { playerId: emma.playerId, secret: emma.secret, action: 'case', case: 'emotes', free: 'premium' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(Number(run([['HGET', `stats:${emma.playerId}`, 'key:premium']])[0].result), 0, 'la clé est consommée');
 
   // Part du créateur sur une caisse (2026-10-28, finnnnn ne touchait rien sur les skins tirés en caisse) : 5 % de ce que
   // l'acheteur a payé pour la caisse quand un skin né d'une idée en sort pour la première fois ; rien pour un doublon,
@@ -1176,7 +1230,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   clock += 9000; // délai entre deux tirages écoulé
   const c1 = await coinsOf(w1), c2 = await coinsOf(w2);
   assert.equal((await roomPost(poor, 'create', { size: 2, stake: 1000 })).status, 422, 'pas assez pour miser');
-  assert.equal((await roomPost(w1, 'create', { size: 2, stake: 77 })).body.stake, 0, 'mise hors liste = pas de mise');
+  // Mise libre de 1 à 1 000 (idée de dog, 2026-11-01) : hors limites, refusée (plus jamais changée en « pas de mise »).
+  for (const bad of [1001, 2.5, -5, 'abc', 1e9]) { const x = await roomPost(w1, 'create', { size: 2, stake: bad }); assert.equal(x.status, 422, `mise ${bad}`); assert.match(x.body.error, /from 1 to 1,000/); }
   assert.equal((await roomPost(w1, 'create', { size: 3, stake: 100, bots: 2 })).body.stake, 0, 'jamais de mise contre des bots');
   r = await roomPost(w1, 'create', { size: 2, stake: 100, mode: 'rounds', target: 1 });
   assert.deepEqual([r.status, r.body.stake, r.body.pot], [200, 100, 100], JSON.stringify(r.body));
@@ -1449,6 +1504,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const id of [...Shop.SKINS.map(k => k.id).filter(id => id !== 'classic'), 'owner', ...Shop.BUTTONS.map(b => b.id)]) {
     assert.ok(css.includes(`.btn-roll.gen-${id} {`), `style du bouton ${id} manquant dans css/buttons.css`);
   }
+}
+
+// White Chocolate (idée de qwertyuiop, 2026-11-01) : variante moins chère de Chocolate, avec son bouton, son cadre de
+// duel et sa scène ; elle entre dans la caisse Premium par son prix. Last Roll et Bread : leurs crochets dans js/app.js.
+{
+  const wc = Shop.byId.get('whitechoc');
+  assert.ok(wc && wc.idea === 'qwertyuiop' && wc.price < Shop.byId.get('chocolate').price, 'moins chère que Chocolate');
+  const style = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8'), fx = fs.readFileSync(path.join(ROOT, 'js/skinfx.js'), 'utf8');
+  assert.ok(style.includes('.num-card.skin-whitechoc {') && style.includes('.side-whitechoc {'), 'carte et cadre de duel');
+  assert.ok(fx.includes('SCENES.whitechoc = ') && fx.includes('SCENES.chocolate = '), 'les deux scènes existent');
+  assert.ok(Shop.casePool(Shop.caseById.get('premium')).some(k => k.id === 'whitechoc'));
+  const app = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+  assert.ok(app.includes('breadBite(i + 1 - lead)') && app.includes('breadBite(0)'), 'Bread : une bouchée par chiffre, entier au tirage suivant');
+  assert.ok(app.includes("setLastRoll(Store.rolls[index - 1])"), 'Last Roll : le nombre d\'avant sur l\'écran de tirage');
+  const btns = fs.readFileSync(path.join(ROOT, 'css/buttons.css'), 'utf8');
+  for (let n = 1; n <= 6; n++) assert.ok(btns.includes(`.btn-roll.gen-bread[data-bites="${n}"]`), `bouchée ${n}`);
+  for (let i = 0; i < 16; i++) assert.ok(btns.includes(`var(--b${i}, 1)`), `bulle ${i}`);
 }
 
 // ================================================================ 27b. Packs de sons du tirage (idée d'Angelicide9)
@@ -1917,6 +1989,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     { const h = run([['HGET', `stats:${frank.playerId}`, 'gDuck']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gDuck'); }
     { const c = run([['HMGET', 'casino', 'r:duck', 'b:duck', 'w:duck']])[0].result.map(Number); assert.deepEqual(c, [3, 250, 1293], 'compte de la maison par jeu'); }
     { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes('const DUCK_W = [30, 25, 18, 12, 10, 5];') && src.includes('const dkCents = w => Math.floor(9700 / w + 1e-9);'), 'mêmes chances et multiplicateurs sur la page'); }
+  }
+  // Wheel (idée de How yz got sticky et de Gray, 2026-11-01) : deux roues à cases égales, 0,7× au pire, 250× une fois sur
+  // 2 000 tours, retour 96,9 %. Mises de 1 à 1 000 ; la fraction de pièce est jouée au hasard (comme au Plinko).
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    assert.deepEqual([G.WHEEL_OUTER.length, G.WHEEL_INNER.length], [50, 40]);
+    assert.deepEqual([G.WHEEL_OUTER.filter(m => m === 0).length, Math.min(...G.WHEEL_OUTER.filter(Boolean), ...G.WHEEL_INNER), Math.max(...G.WHEEL_INNER)], [1, 0.7, 250], 'une étoile, de 0,7× à 250×');
+    assert.ok(G.wheelRtp() <= 0.97000001 && G.wheelRtp() > 0.96, `retour de la roue : ${G.wheelRtp()}`);
+    assert.ok([...G.WHEEL_OUTER, ...G.WHEEL_INNER].every(m => Number.isInteger(Math.round(m * 10)) && Math.abs(m * 10 - Math.round(m * 10)) < 1e-9), 'multiplicateurs au dixième');
+    for (const bad of [0, 1001, 2.5, 'x', -5]) { assert.equal((await g(frank, 'wheel', { bet: bad })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'wheel', { bet: 100 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    // Case 1 de la grande roue : 0,7× ; 100 × 0,7 = 70 tout rond (le tirage de la fraction ne change rien).
+    forced = [1, 9];
+    r = await g(frank, 'wheel', { bet: 100 });
+    assert.deepEqual([r.status, r.body.outer, r.body.inner, r.body.bonus, r.body.mult, r.body.win, r.body.coins], [200, 1, null, false, 0.7, 70, 970], JSON.stringify(r.body));
+    // L'étoile (case 0) puis la case 0 de la roue bonus : 250×.
+    await tick(); forced = [0, 0, 9];
+    r = await g(frank, 'wheel', { bet: 10 });
+    assert.deepEqual([r.body.bonus, r.body.inner, r.body.mult, r.body.win, r.body.coins], [true, 0, 250, 2500, 3460]);
+    // Mise de 1 pièce sur 0,7× : 7 dixièmes, la pièce est gagnée 7 fois sur 10 (tirage 0 à 6), perdue sinon.
+    await tick(); forced = [2, 6]; r = await g(frank, 'wheel', { bet: 1 }); assert.deepEqual([r.body.mult, r.body.win], [0.7, 1]);
+    await tick(); forced = [2, 7]; r = await g(frank, 'wheel', { bet: 1 }); assert.deepEqual([r.body.mult, r.body.win, r.body.coins], [0.7, 0, 3459]);
+    await tick();
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gWheel']])[0].result; assert.equal(Number(h), 4, 'compteur de manches gWheel'); }
+    { const c = run([['HMGET', 'casino', 'r:wheel', 'b:wheel', 'w:wheel']])[0].result.map(Number); assert.deepEqual(c, [4, 112, 2571], 'compte de la maison par jeu'); }
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes(`const WHEEL_OUTER = ${JSON.stringify(G.WHEEL_OUTER).replace(/,/g, ', ')};`) && src.includes(`const WHEEL_INNER = ${JSON.stringify(G.WHEEL_INNER).replace(/,/g, ', ')};`), 'mêmes roues sur la page'); }
   }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
@@ -5329,6 +5428,235 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // 3. Pain dans le chat global : 🍞 🥖 🥐 passent le filtre tels quels.
   assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
+}
+
+// ================================================================ Idées du 2026-11-01 (groupe D) : 9 badges, titres de
+// niveau (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries de jours (lnbBUChuoi_vn), Full Spectrum
+// (Pube puller), Odd Week (JBearr12). Joueurs 11d1….
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const Q = require(path.join(ROOT, 'js/quests.js')), Events = require(path.join(ROOT, 'js/events.js'));
+  const odds = require(path.join(ROOT, 'data/badge-odds.json'));
+  const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
+  // 1. Badges : nombres qui les obtiennent (build.mjs) et XP = valeur naturelle 100 × 1 000 001 / nombre (sauf
+  // Three-Quarter Millennium : 100 750, la paire des 100 250 de Quarter Millennium).
+  const COUNTS = { FULL_CIRCLE: 1, EULER_GAMMA_4: 300, EULER_GAMMA_5: 20, TAXICAB: 300, SHIFTED_ECHO: 1547,
+    PALINDROMIC_PRIME: 109, THREE_QUARTER_MILLENNIUM: 1000, BEE: 3999, LOL: 3979, MOON_LANDING: 300 };
+  for (const [id, k] of Object.entries(COUNTS)) {
+    assert.equal(odds[id], k, `${id} : ${k} nombres`);
+    assert.equal(engine.byId.get(id).score, id === 'THREE_QUARTER_MILLENNIUM' ? 100750 : Math.round((100 * 1000001) / k), `${id} : XP`);
+  }
+  assert.ok(has(360, 'FULL_CIRCLE') && !has(3600, 'FULL_CIRCLE') && !has(1360, 'FULL_CIRCLE'), 'exactement 360');
+  assert.deepEqual(engine.analyze(157721).scoringIds.filter(id => id.startsWith('EULER_GAMMA')), ['EULER_GAMMA_5'], 'famille : seul le meilleur compte');
+  assert.ok(has(157721, 'EULER_GAMMA_4') && has(5772, 'EULER_GAMMA_4') && !has(57720, 'EULER_GAMMA_5'));
+  assert.ok(has(1729, 'TAXICAB') && has(301729, 'TAXICAB') && !has(1279, 'TAXICAB'));
+  assert.ok(!engine.byId.has('O7') && !engine.byId.has('THIRTEEN'), '07 et 13 écartés par Sacha (2026-11-01)');
+  assert.ok(has(338, 'BEE') && !has(388, 'BEE') && has(707, 'LOL') && has(1969, 'MOON_LANDING') && has(301969, 'MOON_LANDING'));
+  assert.ok(has(1750, 'THREE_QUARTER_MILLENNIUM') && has(999750, 'THREE_QUARTER_MILLENNIUM') && !has(7500, 'THREE_QUARTER_MILLENNIUM'));
+  for (const n of [456345, 123234, 10, 98, 2132, 567678, 987876]) assert.ok(has(n, 'SHIFTED_ECHO'), `${n} est un écho décalé`);
+  for (const n of [456456, 456356, 12345, 123432, 1, 11]) assert.ok(!has(n, 'SHIFTED_ECHO'), `${n} n'est pas un écho décalé`);
+  assert.deepEqual(engine.highlight('SHIFTED_ECHO', 456345), [[0, 1, 2], [3, 4, 5]]);
+  for (const n of [11, 101, 94049, 98689]) assert.ok(has(n, 'PALINDROMIC_PRIME'), `${n} : premier palindrome`);
+  for (const n of [1, 2, 3, 5, 7, 121, 1001, 94048, 9449]) assert.ok(!has(n, 'PALINDROMIC_PRIME'), `${n} : non (un seul chiffre, ou pas premier)`);
+  // 24 reste Infinite (annoncé le 2026-10-30) : 3 ne passe plus devant ; toujours 10 nombres Infinite.
+  assert.equal(engine.analyze(24).tier, 'infinite', '24 reste Infinite');
+
+  // 2. Titres : seuils exacts.
+  const at = (id, st) => Ach.byId.get(id).test(st);
+  for (const L of [10, 25, 50, 100, 250]) assert.ok(at(`lvl${L}`, { xpLife: Q.xpForLevel(L) }) && !at(`lvl${L}`, { xpLife: Q.xpForLevel(L) - 1 }), `niveau ${L}`);
+  assert.equal(Ach.byId.get('lvl10').title, 'Level 10');
+  assert.ok(at('generous', { giftOut: 50000 }) && !at('generous', { giftOut: 49999 }) && !at('generous', { giftIn: 90000 }), 'donné, pas reçu');
+  assert.ok(at('uniqall', { uniq: 1000001 }) && !at('uniqall', { uniq: 1000000 }));
+  for (const [id, k] of [['streak30', 30], ['streak100', 100], ['streak365', 365]]) {
+    assert.ok(at(id, { streak: k }) && at(id, { streak: 1, streakBest: k }) && !at(id, { streak: k - 1, streakBest: k - 1 }), id);
+  }
+  const all = Object.fromEntries(Ach.SPECTRUM.map(t => [`t:${t}`, 1]));
+  assert.deepEqual(Ach.SPECTRUM, ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial']);
+  assert.ok(at('spectrum', all), 'une de chaque');
+  for (const t of Ach.SPECTRUM) assert.ok(!at('spectrum', { ...all, [`t:${t}`]: 0, 't:divine': 3, 't:garbage': 2 }), `il manque ${t}`);
+
+  const mk = (i, name, fields = []) => {
+    const id = `11d1${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  // 3. Generous par un vrai cadeau : giftOut monte à chaque cadeau, le titre s'équipe.
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const ga = mk(1, 'Generousgiver', ['rolls', '1000', 'bonus', '5000', 'giftOut', '49800']), gb = mk(2, 'Generousfriend', ['rolls', '1000']);
+  run([['SADD', `fr:${ga.playerId}`, gb.playerId], ['SADD', `fr:${gb.playerId}`, ga.playerId]]);
+  assert.ok(!Ach.unlocked(await lib.readStats(ga.playerId)).includes('generous'));
+  let r = await call(friendsApi, { method: 'POST', body: { playerId: ga.playerId, secret: ga.secret, action: 'gift', name: gb.name, amount: 200 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(Ach.unlocked(await lib.readStats(ga.playerId)).includes('generous'), '50 000 donnés');
+  assert.ok(!Ach.unlocked(await lib.readStats(gb.playerId)).includes('generous'), 'recevoir ne compte pas');
+  r = await call(titleApi, { method: 'POST', body: { playerId: ga.playerId, secret: ga.secret, title: 'generous' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal((await call(titleApi, { method: 'POST', body: { playerId: gb.playerId, secret: gb.secret, title: 'generous' } })).status, 422);
+
+  // 4. Séries : streakBest tenu au bonus quotidien, la série cassée garde le titre.
+  const questsApi = require(path.join(ROOT, 'api/quests.js'));
+  const daily = who => call(questsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'daily' } });
+  const save = clock;
+  const today = lib.dayKey(Date.now());
+  const sk = mk(3, 'Streakkeeper', ['rolls', '50', 'streak', '29', 'streakDay', Q.dayBefore(today)]);
+  assert.ok(!Ach.unlocked(await lib.readStats(sk.playerId)).includes('streak30'));
+  r = await daily(sk); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.daily.streak, 30);
+  let st = await lib.readStats(sk.playerId);
+  assert.deepEqual([Number(st.streak), Number(st.streakBest)], [30, 30]); assert.ok(Ach.unlocked(st).includes('streak30'));
+  clock += 3 * 86400000; // deux jours sautés : la série repart à 1
+  r = await daily(sk); assert.equal(r.body.daily.streak, 1);
+  st = await lib.readStats(sk.playerId);
+  assert.deepEqual([Number(st.streak), Number(st.streakBest)], [1, 30], 'la meilleure série reste');
+  assert.ok(Ach.unlocked(st).includes('streak30') && !Ach.unlocked(st).includes('streak100'), 'le titre reste après la série cassée');
+  // Ancien joueur (série cassée de 120 jours, pas encore de streakBest) : compté tout de suite, gardé au bonus suivant.
+  const old = mk(4, 'Streakveteran', ['rolls', '50', 'streak', '120', 'streakDay', '2026-09-01']);
+  assert.ok(Ach.unlocked(await lib.readStats(old.playerId)).includes('streak100'));
+  r = await daily(old); assert.equal(r.body.daily.streak, 1);
+  st = await lib.readStats(old.playerId); assert.equal(Number(st.streakBest), 120); assert.ok(Ach.unlocked(st).includes('streak100'));
+  clock = save;
+
+  // 5. Odd Week : ajoutée avant Meme Week (qui reste la dernière) : la semaine de lancement et les semaines 0 à 6 gardent
+  // leur thème, Odd Week tombe en semaine 7 (7 décembre 2026).
+  const keys = Events.THEMES.map(t => t.key);
+  assert.equal(keys[keys.length - 1], 'meme'); assert.equal(new Set(keys).size, keys.length);
+  const W = 7 * 86400000, w0 = Date.parse('2026-10-19T00:00:00Z');
+  assert.deepEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7].map(w => Events.current(w0 + w * W + 1000).key), ['meme', 'prime', 'happy', 'round', 'seq', 'mirror', 'fib', 'pal', 'odd']);
+  const odd = Events.THEMES.find(t => t.key === 'odd');
+  assert.deepEqual([odd.goal, odd.badges, odd.title], [200, ['ODD'], 'Odd Week']);
+  assert.ok(Events.counts(odd, engine.analyze(13579).earnedIds) && !Events.counts(odd, engine.analyze(2468).earnedIds));
+  assert.equal(Events.current(w0 + 7 * W).reward, Events.REWARD, 'récompense normale');
+}
+
+// ---------------------------------------------------------------- idées du 2026-11-01 (groupe F) : joueurs en ligne
+// (Thermonuclear Bomb, Jguz01, KMC) et raretés du profil d'accord avec Best rolls (casmicgraything). Joueurs 2f01….
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Onl = require(path.join(ROOT, 'api/_online.js'));
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), friendsApi = require(path.join(ROOT, 'api/friends.js')), profileApi = require(path.join(ROOT, 'api/profile.js'));
+  const mk = (i, name, fields = []) => {
+    const id = `2f01${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  // Horloge à part, en 2040 (après les dates des blocs d'avant, 2034 au plus) : leurs tirages et présences ne comptent pas.
+  const prevNow = Date.now; let now = Date.UTC(2040, 0, 15, 12);
+  Date.now = () => now;
+  try {
+    Onl._reset();
+    const online = async () => (await call(lbApi, { url: '/api/leaderboard?online=1' })).body.online;
+    const ping = (p, presence) => call(friendsApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action: 'gifts', presence } });
+    const ps = Array.from({ length: 7 }, (_, i) => mk(i + 1, `Onlinep${i + 1}`));
+    // 1. Personne : null (rien d'affiché). 3 pages actives + 1 onglet afk + 1 tirage = 4 : toujours caché (moins de 5).
+    assert.equal(await online(), null);
+    for (const p of ps.slice(0, 3)) assert.equal((await ping(p, 'active')).status, 200);
+    await ping(ps[3], 'afk');
+    await lib.recordRoll(ps[4].playerId, 424242, now);
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await Onl.count(), 4, 'actifs + tirage récent, pas l\'onglet afk');
+    assert.equal(await online(), null, 'sous 5 : caché');
+    // 2. Un 5e (un tirage) : affiché ; un joueur actif ET qui tire ne compte qu'une fois.
+    await lib.recordRoll(ps[0].playerId, 424243, now);
+    await lib.recordRoll(ps[5].playerId, 424244, now);
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 5);
+    // 3. En cache 30 s : un nouveau venu n'apparaît qu'au calcul suivant.
+    await ping(ps[6], 'active');
+    assert.equal(await online(), 5, 'en cache');
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 6);
+    // 4. Passé en afk : retiré tout de suite du zset ; au-delà de 150 s sans signe de vie, plus personne.
+    await ping(ps[6], 'afk');
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 5);
+    now += Onl.ONLINE_MS + 1;
+    assert.equal(await online(), null);
+    assert.equal(run([['ZCARD', Onl.PRES_Z]])[0].result, 0, 'les vieilles présences sont retirées');
+    // 5. Chat global : le même nombre dans la réponse de gcList (même « same »), sans aucun identifiant.
+    for (const p of ps.slice(0, 5)) await ping(p, 'active');
+    now += Onl.CACHE_MS + 1;
+    let r = await call(friendsApi, { method: 'POST', body: { action: 'gcList' } });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.online, 5);
+    r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', rev: r.body.rev, del: r.body.del } });
+    assert.ok(r.body.same && r.body.online === 5, 'aussi dans la réponse courte');
+    r = await call(lbApi, { url: '/api/leaderboard?online=1' });
+    assert.deepEqual(Object.keys(r.body), ['online']);
+    assert.ok(!ps.some(p => JSON.stringify(r.body).includes(p.playerId)));
+
+    // 6. Profil (casmicgraything) : historique complet, stats.rolls et t:godlike plus grands (doublon retiré, nombre passé
+    // de Godlike à Divine) : les raretés viennent de l'historique, comme Best rolls.
+    const cg = mk(20, 'Casmictest', ['rolls', '6', 't:godlike', '3', 't:divine', '0', 't:common', '2']);
+    const T = now - 3600000;
+    run([['ZADD', `hist:${cg.playerId}`, T, `${T}:97`, T + 1000, `${T + 1000}:224224`, T + 2000, `${T + 2000}:911911`, T + 3000, `${T + 3000}:123456`, T + 4000, `${T + 4000}:500001`,
+      T + 4500, `${T + 4500}:500001`], // le même tirage enregistré deux fois (même nombre, moins d'une minute)
+    ['HSET', 'count:all', cg.playerId, 6]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmictest' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.window, 5); assert.equal(r.body.rolls, 6, 'tirages à vie : toujours le compteur');
+    const bestTier = t => r.body.best.filter(x => engine.cardTier(x.s) === t).length;
+    assert.deepEqual([r.body.tiers.godlike, r.body.tiers.divine], [2, 1], JSON.stringify(r.body.tiers));
+    for (const t of ['godlike', 'divine', 'celestial']) assert.equal(r.body.tiers[t] || 0, bestTier(t), `${t} : même nombre que dans Best rolls`);
+    assert.equal(Object.values(r.body.tiers).reduce((x, y) => x + y, 0), r.body.window);
+    // 7. Totaux gardés dans Redis (pagg, ils survivent à un déploiement) calculés avec un autre barème : ignorés.
+    const cg2 = mk(21, 'Casmicpagg'), hist2 = [[T, 97], [T + 1000, 224224], [T + 2000, 911911]];
+    const oldAgg = { v: 'oldscale0000', at: now, padded: false, size: 3, count: 3, since: T, lastT: T + 2000, lifetime: 1, percentileSum: 150, badges: {}, tiers: { godlike: 3 }, best: hist2.map(([t, n]) => ({ n, s: engine.scoreOf(n), t })), worst: [], uniq: null };
+    run([['ZADD', `hist:${cg2.playerId}`, ...hist2.flatMap(([t, n]) => [t, `${t}:${n}`])], ['SET', `pagg:${cg2.playerId}`, JSON.stringify(oldAgg)]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmicpagg' });
+    assert.deepEqual([r.body.tiers.godlike, r.body.tiers.divine], [2, 1], 'pagg d\'un autre barème ignoré');
+    // Même barème : réutilisé tel quel (rien de nouveau dans l'historique depuis lastT).
+    const cg3 = mk(22, 'Casmicsame');
+    run([['ZADD', `hist:${cg3.playerId}`, ...hist2.flatMap(([t, n]) => [t, `${t}:${n}`])]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmicsame' });
+    assert.equal(r.body.tiers.godlike, 2);
+  } finally { Date.now = prevNow; Onl._reset(); }
+}
+
+// ================================================================ Groupe social du 2026-11-01
+{
+  const { cleanChat, hideCodes } = require(path.join(ROOT, 'api/_chat.js'));
+  const { checkMessage, offTopic } = require(path.join(ROOT, 'api/_global.js'));
+  // Codes du Code Hunter cachés (idée de R77) : écrits tels quels, espacés, en minuscules ou en chiffres ; jamais un mot voisin.
+  for (const t of ['code ROLLFOREVER', 'consolecat', 'Z E R O H E R O', 'c0ns0le-cat', 'roll forever!']) {
+    assert.ok(cleanChat(t).includes('[secret code]'), `caché : ${t} → ${cleanChat(t)}`);
+    assert.ok(!/rollforever|consolecat|zerohero/i.test(cleanChat(t).replace(/[^a-z]/gi, '')), `plus rien du code : ${t}`);
+    assert.ok(checkMessage(t).includes('[secret code]'), `caché dans le chat global : ${t}`);
+  }
+  for (const ok of ['console', 'roll for the win', 'zero', 'hero', 'my cat', 'SACHA']) assert.equal(hideCodes(ok), ok, `pas un code : ${ok}`);
+  { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(!src.includes('HUNT_CODES'), 'la liste des codes reste sur le serveur'); }
+  // Proxys et débloqueurs (idée de mateopotato) : refusés dans le chat global ; les phrases normales passent.
+  for (const t of ['use a proxy', 'PR0XY', 'p r o x y', 'croxyproxy', 'holy unblocker', 'unblocked games 66', 'get a VPN', 'how to bypass goguardian', 'securly', 'get around the school filter', 'tor browser']) {
+    assert.ok(offTopic(t), `proxy : ${t}`); assert.throws(() => checkMessage(t), /proxies, VPNs/, t);
+  }
+  for (const t of ['approximately 50%', 'my friend unblocked me', 'proximity', 'the epoxy skin', 'I will pass by later', 'filter coffee', 'my school blocked the game', 'Roxy', 'torn paper skin', 'go past the finish line']) {
+    assert.ok(!offTopic(t), `faux positif : ${t}`); assert.doesNotThrow(() => checkMessage(t), t);
+  }
+  // Chat global : le code est caché dans le message gardé, et le tag du clan suit le pseudo (idée de R77).
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 500], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const sa = mk('5a', 'Socialann'), sb = mk('5b', 'Socialbob');
+  run([['HSET', 'clantag', sa.playerId, 'SOCL|gold'], ['DEL', 'gc:sysq']]);
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  let r = await gc(sa, 'gcSend', { text: 'psst the code is ZEROHERO' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const mine = r.body.msgs.at(-1);
+  assert.equal(mine.text, 'psst the code is [secret code]'); assert.deepEqual(mine.clan, { tag: 'SOCL', c: 'gold' });
+  assert.ok(!JSON.stringify(run([['LRANGE', 'gc:msgs', 0, -1]])[0].result).includes('ZEROHERO'), 'jamais gardé');
+  r = await gc(sb, 'gcSend', { text: 'nice' }); assert.equal(r.body.msgs.at(-1).clan, undefined, 'sans clan : pas de tag');
+  assert.deepEqual(r.body.msgs.find(m => m.id === mine.id).clan, { tag: 'SOCL', c: 'gold' }, 'le tag se lit pour tout le monde');
+  assert.ok(!JSON.stringify(r.body).includes(sa.playerId), 'aucun identifiant');
+  run([['HDEL', 'clantag', sa.playerId]]);
+  r = await gc(sb, 'gcList'); assert.equal(r.body.msgs.find(m => m.id === mine.id).clan, undefined, 'le tag suit le clan d\'aujourd\'hui');
+  run([['DEL', `gc:rl:${sa.playerId}`]]);
+  r = await gc(sa, 'gcSend', { text: 'where can I find a proxy' }); assert.equal(r.status, 422); assert.match(r.body.error, /proxies/);
+  // Messages entre amis : le code est caché aussi (cleanChat).
+  run([['SADD', `fr:${sa.playerId}`, sb.playerId], ['SADD', `fr:${sb.playerId}`, sa.playerId]]);
+  r = await call(friendsApi, { method: 'POST', body: { action: 'message', name: 'Socialbob', text: 'try c o n s o l e c a t', playerId: sa.playerId, secret: sa.secret } });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.messages.at(-1).text, 'try [secret code]');
+  // Mise libre en duel (idée de dog) : 77 pièces, payées en entrant, gardées dans le pot.
+  const sc = mk('5c', 'Stakecat');
+  run([['HINCRBY', `stats:${sc.playerId}`, 'bonus', 500]]);
+  r = await roomPost(sc, 'create', { size: 2, stake: 77 });
+  assert.deepEqual([r.status, r.body.stake, r.body.pot], [200, 77, 77], JSON.stringify(r.body));
+  // 🍳 dans la grille d'emojis (idée de MattyFaux-Lucky), qui sert aussi entre amis et en duel (PRISMA123).
+  { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes("'🥐', '🍳'") && src.includes('wireEmojis(m, () => input)') && src.includes("wireEmojis($('#room-chat')"), 'emojis entre amis et en duel'); }
+  assert.equal(cleanChat('gm 🍳🍞'), 'gm 🍳🍞', 'les emojis passent le filtre des amis et des duels');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

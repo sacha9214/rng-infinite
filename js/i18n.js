@@ -33,6 +33,18 @@
     'Roll 100,000 different numbers (10% of them all)': 'Tire 100 000 nombres différents (10 % de tous)',
     'Number Spotter': 'Dénicheur de nombres', 'Explorer': 'Explorateur', 'Cartographer': 'Cartographe', 'Pathfinder': 'Éclaireur',
     'Globetrotter': 'Globe-trotteur', 'Number Atlas': 'Atlas des nombres', 'One Tenth of Everything': 'Un dixième de tout',
+    // titres du 2026-11-01 : niveaux (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries (lnbBUChuoi_vn),
+    // Full Spectrum (Pube puller) ; Odd Week (JBearr12). « Level 10 »… passe par la règle /^Level …$/ plus bas.
+    'Reach level 10': 'Atteins le niveau 10', 'Reach level 25': 'Atteins le niveau 25', 'Reach level 50': 'Atteins le niveau 50',
+    'Reach level 100': 'Atteins le niveau 100', 'Reach level 250': 'Atteins le niveau 250',
+    'Generous': 'Généreux', 'Give 50,000 coins to friends in total': 'Donne 50 000 pièces à des amis au total',
+    'Roll all 1,000,001 different numbers': 'Tire les 1 000 001 nombres différents',
+    'On Fire': 'En feu', 'Unstoppable': 'Inarrêtable', 'Whole Year': 'Une année entière',
+    'Claim the daily bonus 30 days in a row': 'Prends le bonus quotidien 30 jours de suite',
+    'Claim the daily bonus 100 days in a row': 'Prends le bonus quotidien 100 jours de suite',
+    'Claim the daily bonus 365 days in a row': 'Prends le bonus quotidien 365 jours de suite',
+    'Full Spectrum': 'Spectre complet', 'Roll at least one number of every rarity from Trash to Celestial': 'Tire au moins un nombre de chaque rareté, de Trash à Celestial',
+    'Odd Week': 'Semaine impaire', 'Roll 200 odd numbers': 'Tire 200 nombres impairs',
     // badges qui arrêtent le tirage auto (idée de CococoC, 2026-10-28)
     'Also stop auto-roll on badges you pick': 'Arrêter aussi le tirage auto sur des badges choisis', 'Stop auto-roll on badges': 'Arrêter le tirage auto sur des badges',
     'Auto-roll also stops on a roll that earns one of these badges, whatever you chose in "stop on". Pick up to 5.': 'Le tirage auto s\'arrête aussi sur un tirage qui obtient l\'un de ces badges, quel que soit ton choix dans « arrêt sur ». Choisis-en 5 au plus.',
@@ -261,6 +273,13 @@
     'The Fisher': 'Le Pêcheur', 'A fisherman on a pier at dusk reels in a surprise now and then: a fish, an old boot, a golden fish or even a tiny whale; Epic+ rolls get a bite at once, Mythic+ rolls a golden catch': 'Un pêcheur sur un ponton au crépuscule remonte une surprise de temps en temps : un poisson, une vieille botte, un poisson doré ou même une petite baleine ; les tirages Epic+ font mordre tout de suite, les Mythic+ donnent une prise dorée',
     'Your Last Rolls': 'Tes derniers tirages', 'Your last 10 numbers drift softly in the background, and every new roll joins them': 'Tes 10 derniers nombres flottent doucement en fond, et chaque nouveau tirage vient les rejoindre',
     'Spinning Bread': 'Pain qui tourne', 'A gloriously low-quality loaf of bread spins in the middle of the screen, with tiny breads in orbit; rolls make it spin faster': 'Une miche de pain en glorieuse basse qualité tourne au milieu de l\'écran, avec de petits pains en orbite ; les tirages la font tourner plus vite',
+    // six fonds de joueurs (2026-11-01)
+    'Farm': 'Ferme', 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping': 'Une ferme au soleil et sa grange rouge : les vaches broutent, les moutons et les poules se promènent et un tracteur passe ; les tirages Epic+ font chanter le coq, les Mythic+ font battre des ailes à toutes les poules',
+    'Keyboard ASMR': 'Clavier ASMR', 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll': 'Un clavier pastel tout doux dont les touches s\'enfoncent toutes seules ; clique sur le fond pour en presser une avec un « thock » feutré, et il tape chaque nombre que tu tires',
+    'Thunderstorm': 'Orage', 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder': 'De la pluie sous des nuages lourds, un éclair doux au loin toutes les dix secondes environ et un grondement de tonnerre bas et lointain',
+    'Solar System': 'Système solaire', 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past': 'Huit planètes tournent autour du soleil sur des orbites lumineuses, et de temps en temps une comète passe',
+    'Meteor Shower': 'Pluie d\'étoiles filantes', 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+': 'Des étoiles filantes traversent la nuit au-dessus des collines ; les tirages Rare+ déclenchent une pluie d\'étoiles filantes, plus fournie selon la rareté, avec des bolides sur les Mythic+',
+    'Party': 'Fête', 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti': 'Des ballons montent entre les guirlandes, les serpentins et les confettis ; les bons tirages font éclater un ballon, et les Mythic+ en éclatent plusieurs sous une pluie de confettis',
     'Condensation': 'Buée', 'A fogged-up window on a rainy night in the city: drops form, grow and run down in clear streaks; good rolls wipe a clear arc across the glass': 'Une vitre embuée un soir de pluie en ville : les gouttes se forment, grossissent et coulent en laissant des traces claires ; les bons tirages essuient un arc sur la vitre',
     'Zombie Moon': 'Lune des zombies', 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026': 'Des zombies rigolos traînent les pieds et rampent dans un cimetière brumeux sous la pleine lune · Halloween 2026',
     // événement de Noël (2026-11-01) : la boule à neige et le village enneigé
@@ -333,7 +352,22 @@
     'An 80s arcade fighting game: a pixel fighter kicks and punches every digit into place, and Mythic rolls end in a K.O.!': 'Un jeu de combat d\'arcade des années 80 : un combattant en pixels met chaque chiffre en place à coups de pied et de poing, et les tirages Mythic finissent par un K.O. !',
     'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring': 'Un cuirassé sur une mer au crépuscule vise chaque chiffre et fait feu ; chaque gerbe d\'obus révèle un chiffre, et les grands tirages finissent par une énorme explosion et un anneau de fumée',
     'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown': 'Un cône de chantier tourne en l\'air, puis une explosion ridiculement énorme… et quand la fumée se dissipe, ce n\'est qu\'un cône. Les tirages Mythic lui donnent une toute petite couronne',
+    // skins du 2026-11-01, lot A (idées de Kj13, Jguz01, kingston, jjcoolcid1, dylanbuckleyisjewish, number 1, baby boy)
+    'Every digit is putted into its hole on a mini golf green, past a little windmill; Mythic rolls are a HOLE IN ONE with confetti and a waving flag': 'Chaque chiffre est putté dans son trou sur un green de mini-golf, en passant devant un petit moulin ; les Mythic font un TROU EN UN avec des confettis et le drapeau qui claque au vent',
+    'Every digit is a shot that bulges the goal net; good rolls are a GOAL! and Mythic rolls bring the confetti': 'Chaque chiffre est un tir qui gonfle le filet du but ; les bons tirages font GOAL! et les Mythic font pleuvoir les confettis',
+    'A ball swishes through the hoop for every digit on a hardwood court; Mythic rolls are a SLAM DUNK that shakes the rim': 'Un ballon passe dans le panier pour chaque chiffre sur un parquet de basket ; les Mythic sont un SLAM DUNK qui fait trembler l\'arceau',
+    'Animal-print digits hide in the savanna grass: a giraffe, an elephant or a zebra peeks out for each one, a jeep drives by, and Mythic rolls make the lion ROAR': 'Des chiffres à pelage d\'animal se cachent dans les herbes de la savane : une girafe, un éléphant ou un zèbre sort la tête pour chacun, une jeep passe, et les Mythic font RUGIR le lion',
+    'A rusty pickaxe chips the ore off every digit in a dark cave under one flickering lamp; each digit turns into the ore it was hiding, and the final blast goes from coal to diamonds with your rarity': 'Une pioche rouillée fait sauter le minerai de chaque chiffre dans une grotte sombre, sous une seule lampe qui vacille ; chaque chiffre prend le minerai qu\'il cachait, et l\'explosion finale va du charbon aux diamants selon ta rareté',
+    'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts': 'Un chat sort chaque chiffre d\'une pelote de laine d\'un coup de patte, sur un coussin douillet ; les Mythic finissent par un grand MIAOU joyeux et une pluie de cœurs',
+    'A little meow on every digit, a big one on the last, and purrs for rare rolls': 'Un petit miaou à chaque chiffre, un grand au dernier, et des ronrons pour les tirages rares',
     'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare': 'Un œil cosmique géant s\'ouvre dans le ciel, des galaxies tournent dans sa pupille et tes chiffres apparaissent dans son regard ; les tirages Mythic l\'ouvrent en grand dans un éclat cosmique',
+    // skins du 2026-11-01, lot B2 (idées de xenon, Dylanrulez123, casmicgraything, tmanrex, sennybex1 et jia jun)
+    'Every digit is a slice of bread that pops out of a chrome toaster with the number toasted in; Mythic rolls pop out golden toast': 'Chaque chiffre est une tranche de pain qui jaillit d\'un grille-pain chromé, le nombre grillé dessus ; les tirages Mythic font sauter des toasts dorés',
+    'Every digit is a numbered pool ball: the cue strikes, the ball rolls in and clicks into place, and Mythic rolls end with a trick shot off every cushion': 'Chaque chiffre est une boule de billard numérotée : la queue frappe, la boule roule et se cale à sa place, et les tirages Mythic finissent par un coup de maître sur toutes les bandes',
+    'A pirate galleon rocks on a rolling sea and its cannon blasts a floating crate open for every digit; on Mythic rolls the empty ship sinks in a rain of gold coins': 'Un galion pirate tangue sur une mer agitée et son canon fait éclater une caisse flottante pour chaque chiffre ; sur les tirages Mythic, le navire vide coule sous une pluie de pièces d\'or',
+    'A T-Rex stomps every stone digit into the ground in a puff of dust, and on Mythic rolls it lets out a roar that shakes the card': 'Un T-Rex enfonce chaque chiffre de pierre dans le sol dans un nuage de poussière, et sur les tirages Mythic il pousse un rugissement qui fait trembler la carte',
+    'Every digit is piped in colourful icing on a layer cake and its candle lights up; on Mythic rolls the candles blow out in a burst of confetti': 'Chaque chiffre est dessiné en glaçage de couleur sur un gâteau à étages et sa bougie s\'allume ; sur les tirages Mythic, les bougies s\'éteignent d\'un souffle dans une pluie de confettis',
+    'A carnival ball toss: a ball knocks down the stack of cans in front of every digit, and Mythic rolls light up the booth and win the big prize': 'Un chamboule-tout de fête foraine : une balle renverse la pile de boîtes devant chaque chiffre, et les tirages Mythic illuminent le stand et gagnent le gros lot',
     'A satellite fires a beam on every digit, then a giant beam strikes your number in the color of its rarity':'Un satellite tire un rayon sur chaque chiffre, puis un rayon géant frappe ton nombre, de la couleur de sa rareté',
     'Every digit is a pin on a polished lane: a ball rolls in and knocks it down, and good rolls end in a STRIKE': 'Chaque chiffre est une quille sur une piste cirée : une boule arrive et la renverse, et les bons tirages finissent en STRIKE',
     'A fist smashes every boulder open, and a glowing digit shines inside the cracked stone': 'Un poing fracasse chaque rocher, et un chiffre lumineux brille dans la pierre fendue',
@@ -580,6 +614,53 @@
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
     'tap to see it': 'touche pour le voir', // Stepa et daddy finger, 2026-10-30
+    // boutique (2026-11-01) : boutons, packs de sons, émote Hungry, caisse d'émotes, skin White Chocolate
+    'A taped-up cardboard box that crumples when you press it': 'Un carton scotché qui se froisse quand tu appuies dessus',
+    'A flashy green download button with blinking arrows. 100% safe, trust us': 'Un bouton de téléchargement vert flashy avec des flèches qui clignotent. 100 % sûr, promis',
+    'A crusty loaf that loses a bite every time a digit is revealed, and is whole again for the next roll': 'Une miche croustillante qui perd une bouchée à chaque chiffre révélé, et redevient entière au tirage suivant',
+    'A little LCD on the button shows your previous number': 'Un petit écran LCD sur le bouton affiche ton nombre précédent',
+    'A sheet of bubble wrap: one bubble pops with a satisfying sound every time you press': 'Une feuille de papier bulle : une bulle éclate avec un pop satisfaisant à chaque appui',
+    'Squishy splats and wobbly slime bounces': 'Des splats tout mous et des rebonds de gelée qui tremblotent',
+    'A springy boing on every digit, a bigger bounce on rare rolls': 'Un boing de ressort à chaque chiffre, un plus gros rebond pour les tirages rares',
+    'Hungry': 'Affamé',
+    'Emote Case': 'Caisse d\'émotes', 'A special duel emote worth 300 to 1,200 coins': 'Une émote spéciale pour les duels d\'une valeur de 300 à 1 200 pièces',
+    'new emote unlocked! Use it in duels': 'nouvelle émote débloquée ! Utilise-la en duel',
+    'The Emote Case gives a special duel emote you can also buy in the Emotes tab, with the same refund for an emote you already own.': 'La caisse d\'émotes donne une émote spéciale pour les duels qu\'on peut aussi acheter dans l\'onglet Émotes, avec le même remboursement pour une émote que tu as déjà.',
+    'A white chocolate bar in pink and silver foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with berry sauce': 'Une tablette de chocolat blanc dans du papier rose et argent : les chiffres fondent pendant le tirage, puis chaque carré se fige d\'un coup ; les tirages Mythic coulent de coulis de fruits rouges',
+    // idées du 2026-11-01 (groupe F) : réglage de la ligne d'XP (jsand), déconnexion avec mot de passe (Angelicide9),
+    // rareté de l'aperçu (jia jun), recherche dans la boutique (Deadshot), période de l'historique (qwertyuiop),
+    // comparaison de deux nombres (CrazyMiner22), nombres de 1 à 6 chiffres (Phong254), tirage auto sur les autres pages (kaz)
+    'Show XP to next rarity': 'Afficher l\'XP vers la rareté suivante',
+    'The “↑ XP short of / ↓ XP above” line under the XP after a roll.': 'La ligne « ↑ il manquait / ↓ au-dessus de » sous l\'XP après un tirage.',
+    'Sign out? To come back, sign in with your player name and your password.': 'Se déconnecter ? Pour revenir, connecte-toi avec ton pseudo et ton mot de passe.',
+    'Signed out: sign in again with your name and password': 'Déconnecté : reconnecte-toi avec ton pseudo et ton mot de passe',
+    'This device goes back to a new empty player. Your rolls and coins stay on your account.': 'Cet appareil repart avec un nouveau joueur vide. Tes tirages et tes pièces restent sur ton compte.',
+    'Preview · nothing is rolled · shown as': 'Aperçu · rien n\'est tiré · montré comme', 'Rarity of the preview': 'Rareté de l\'aperçu',
+    'Search the shop…': 'Chercher dans la boutique…', 'Nothing matches your search': 'Rien ne correspond à ta recherche',
+    'All time': 'Depuis toujours', 'Period': 'Période',
+    'compare (optional)': 'comparer (facultatif)', 'Second number to compare with (optional)': 'Deuxième nombre à comparer (facultatif)',
+    'Compare numbers': 'Comparer les nombres', 'Simulation': 'Simulation', 'Only': 'Seulement',
+    'Number of digits': 'Nombre de chiffres', 'how many 1- to 6-digit numbers you rolled vs. expected': 'combien de nombres de 1 à 6 chiffres tu as tirés, face à l\'attendu',
+    'Numbers that contain a digit or a sequence: search it in': 'Les nombres qui contiennent un chiffre ou une suite : cherche-la dans',
+    'Auto-roll is on: rolls keep coming while you browse': 'Tirage auto allumé : les tirages continuent pendant que tu navigues',
+    'Auto-roll keeps rolling while you browse': 'Le tirage auto continue pendant que tu navigues', 'tap here to stop it': 'touche ici pour l\'arrêter',
+    'Auto-roll stopped': 'Tirage auto arrêté', 'Auto-roll stopped: duels and tournaments use your rolls': 'Tirage auto arrêté : les duels et les tournois utilisent tes tirages',
+    // groupe social du 2026-11-01 : filtre des proxys (mateopotato), mise libre en duel (dog), roue du casino (How yz got
+    // sticky et Gray)
+    'Let\'s keep the chat about the game: no proxies, VPNs or ways around school filters': 'Gardons le chat pour le jeu : pas de proxy, de VPN ni de moyens de contourner le filtre de l\'école',
+    'A stake is a whole number of coins from 1 to 1,000': 'Une mise est un nombre entier de pièces, de 1 à 1 000',
+    'coins · 1 to 1,000': 'pièces · de 1 à 1 000', 'e.g. 75': 'ex. 75', 'Coins to bet': 'Pièces à miser',
+    'Type a number of coins from 1 to 1,000': 'Tape un nombre de pièces de 1 à 1 000', 'A stake is 1 to 1,000 coins': 'Une mise va de 1 à 1 000 pièces',
+    'Wheel': 'Roue', 'Wheel of multipliers': 'Roue des multiplicateurs',
+    'the worst is 0.7× · the ★ spins the bonus wheel · up to 250×': 'au pire 0,7× · l\'étoile ★ lance la roue bonus · jusqu\'à 250×',
+    'Spin the wheel and win its multiplier.': 'Fais tourner la roue et gagne son multiplicateur.', '🎯 Spin the wheel and win its multiplier.': '🎯 Fais tourner la roue et gagne son multiplicateur.',
+    'Pick your bet, then press Spin.': 'Choisis ta mise, puis appuie sur Lancer.',
+    'The big wheel stops on a multiplier: you get your bet × that number.': 'La grande roue s\'arrête sur un multiplicateur : tu reçois ta mise × ce nombre.',
+    'If it stops on the ★, the bonus wheel in the middle spins too.': 'Si elle s\'arrête sur l\'étoile ★, la roue bonus du milieu tourne aussi.',
+    'The worst you can get is 0.7×: you never lose more than 30% of your bet.': 'Le pire résultat est 0,7× : tu ne perds jamais plus de 30 % de ta mise.',
+    'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.': 'La plupart des tours donnent 0,7×. La roue bonus paie de 1,5× à 250×.',
+    '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.': '250× sort environ une fois tous les 2 000 tours. La liste sous la roue montre chaque chance.',
+    'Bets from 1 to 1,000 coins.': 'Mises de 1 à 1 000 pièces.',
   };
 
   // ---------------------------------------------------------------- phrases à nombres (motif → traduction)
@@ -655,6 +736,7 @@
     [/^Cashed out at ×([\d.]+) · you get ([\d,]+) coins$/, m => `Encaissé à ×${m[1]} · tu reçois ${m[2]} pièces`],
     [/^Cash out · ([\d,]+)$/, m => `Encaisser · ${m[1]}`],
     [/^Level ([\d,]+)$/, m => `Niveau ${m[1]}`],
+    [/^(\S+) Level ([\d,]+) title$/, m => `${m[1]} titre Niveau ${m[2]}`], // route des niveaux (shadow2 Jr, 2026-11-01)
     [/^Claim \+([\d,]+) 🪙(.*)$/, m => `Réclamer +${m[1]} 🪙${m[2]}`],
     [/^🎁 ([\d,]+) rewards? to claim$/, m => `🎁 ${m[1]} récompense${s(m[1])} à réclamer`],
     [/^⭐ Level ([\d,]+)$/, m => `⭐ Niveau ${m[1]}`],
@@ -801,6 +883,12 @@
     [/^([\d,]+) more rolls? to join this board$/, m => `Encore ${nb(m[1])} tirage${s(m[1])} pour entrer dans ce classement`],
     // tirage arrivé après avoir quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) ; « · tap to see it » est dans FR
     [/^Roll saved: (\d+) \((.+), ([\d,]+) XP\)$/, m => `Tirage enregistré : ${m[1]} (${m[2]}, ${nb(m[3])} XP)`],
+    // idées du 2026-11-01 (groupe F) : tirages de la session (kingston), joueurs en ligne (Thermonuclear Bomb), chiffres (Phong254)
+    [/^([\d,]+) rolls? this session$/, m => `${nb(m[1])} tirage${s(m[1])} cette session`],
+    [/^([\d,]+) players? online$/, m => `${nb(m[1])} joueur${s(m[1])} en ligne`], [/^([\d,]+) online$/, m => `${nb(m[1])} en ligne`],
+    [/^(\d) digits?$/, m => `${m[1]} chiffre${s(m[1])}`], [/^expected ≈ ([\d,.]+)$/, m => `attendu ≈ ${nb(m[1]).replace('.', ',')}`],
+    // Wheel (idée de How yz got sticky et de Gray, 2026-11-01)
+    [/^(★ Bonus wheel · )?([\d.]+)× · you get ([\d,]+) coins?(?: \(−([\d,]+)\))?$/, m => `${m[1] ? '★ Roue bonus · ' : ''}${m[2].replace('.', ',')}× · tu reçois ${nb(m[3])} pièce${s(m[3])}${m[4] ? ` (−${nb(m[4])})` : ''}`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte

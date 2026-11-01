@@ -104,6 +104,25 @@
     const back = S.gain(S.shape(S.filter(S.noise(.02, 8), 'bp', 1100, 1.6), S.expo(.004, .0005)), .35);
     return S.sum(body, S.delayed(back, .07));
   };
+  // ---- Fond Keyboard ASMR (idée de kingston, 2026-11-01) : la touche qu'on enfonce en cliquant sur le fond. Un « thock »
+  // feutré et grave (une touche épaisse sur un clavier rembourré), un peu différent selon k (0 à 5) pour ne pas sonner
+  // en boucle ; big : la barre d'espace ou une grande touche, plus grave et plus longue. Le relâchement suit, plus léger.
+  const keyThock = (k, big) => {
+    const f = big ? 118 : 150 + k * 9, bp = big ? 520 : 640 + k * 55;
+    const body = S.sum(S.osc(big ? .16 : .11, t => f - 55 * Math.exp(-t / .018), S.expo(big ? .04 : .028, .0012)), S.gain(S.shape(S.filter(S.noise(.03, 60 + k), 'bp', bp, 1.4), S.expo(.007, .0006)), .6));
+    const lift = S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 1.5, 1.6), S.expo(.004, .0005)), .25);
+    return S.sum(body, S.delayed(lift, (big ? .085 : .07) + k * .004));
+  };
+  // ---- Fond Thunderstorm (idée de finnnnn, 2026-11-01) : un tonnerre lointain, « pas fort, plutôt calme ». Du bruit
+  // filtré très grave qui monte doucement, roule (deux ondulations lentes) et s'éteint en trois secondes ; une bande un peu
+  // plus haute (vers 380 Hz) pour qu'on l'entende aussi sur un téléphone. Normalisé : son niveau est celui de la recette.
+  const rumble = k => {
+    const dur = 3.4, low = S.filter(S.filter(S.noise(dur, 300 + k), 'lp', 170 + k * 25, .7), 'lp', 230, .7);
+    const mid = S.gain(S.filter(S.noise(dur, 310 + k), 'bp', 380 + k * 40, .9), .25);
+    const x = S.shape(S.sum(low, mid), t => Math.min(1, t / .35) * Math.exp(-t / 1.05) * (.72 + .28 * Math.sin(t * 5.3 + k) * Math.sin(t * 2.1 + 1)));
+    let m = 0; for (let i = 0; i < x.length; i++) m = Math.max(m, Math.abs(x[i]));
+    return S.gain(x, m ? .8 / m : 1);
+  };
   // ---- Packs de sons du tirage (idée d'Angelicide9, 2026-10-21 ; achetés dans la boutique, js/shop.js SOUNDS).
   // Chaque pack donne sa note à chaque chiffre (même place dans la gamme : la montée reste) et son propre son de rareté.
   // La rareté garde son escalade : un coup sec pour un raté, puis une, deux, trois notes ; à partir d'Epic, l'impact
@@ -187,7 +206,46 @@
   // avec un souffle à peine audible à l'attaque.
   const pop = (f, len = .1) => S.sum(S.osc(len, t => f * (.55 + .5 * Math.min(1, t / .022)), S.expo(len * .26, .0015)),
     S.gain(S.shape(S.filter(S.noise(.01, Math.round(f)), 'bp', 1800, 1), S.expo(.002, .0002)), .25));
+  // ---- Pack Slime (idée de Ggggssnoop, 2026-11-01) : de la gelée qu'on écrase. Splat : un bruit mouillé dont la bande
+  // retombe très vite (la matière qui s'étale) ; blorp : une note ronde qui glisse en place et tremble comme une gelée
+  // (vibrato rapide qui s'amortit), accordée sur le chiffre (la montée reste). Rien d'enregistré, rien d'emprunté.
+  const blorp = (f, len = .26) => S.osc(len, t => f * (1 + .35 * Math.exp(-t / .03)) * (1 + .06 * Math.sin(2 * Math.PI * 17 * t) * Math.exp(-t / .12)), S.expo(len * .3, .003), ph => Math.sin(ph) + .18 * Math.sin(3 * ph));
+  const splat = (seed, big = 0) => S.shape(S.filter(S.noise(.14 + .08 * big, seed), 'bp', t => 1500 * Math.exp(-t / (.035 + .02 * big)) + 220, 2.6), t => Math.min(1, t / .004) * Math.exp(-t / (.04 + .03 * big)));
+  // ---- Bouton Cardboard Box (idée de MAYO, 2026-11-01) : un « pof » sourd de carton écrasé et le froissement du carton.
+  const cardboard = () => S.sum(S.gain(S.osc(.12, t => 115 + 90 * Math.exp(-t / .012), S.expo(.028, .002)), .9), S.gain(wax(77, 9, .11, 1100), .7));
+  // ---- Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : une bulle de papier bulle qui éclate. Le claquement très sec
+  // (attaque instantanée, éteint en une milliseconde), l'air qui s'échappe, et le petit coup sourd du plastique. k : la
+  // bulle (de 0 à 4), pour que deux pressions de suite ne sonnent pas pareil.
+  const wrapPop = (k = 0) => {
+    const f = 1900 + (k % 5) * 170;
+    return S.sum(S.shape(S.filter(S.noise(.008, 50 + k), 'bp', f * 1.5, 1.2), S.expo(.0012, .0001)),
+      S.gain(S.shape(S.filter(S.noise(.05, 70 + k), 'bp', f * .6, 1.6), S.expo(.011, .001)), .55),
+      S.gain(S.osc(.05, t => 240 * (1 + Math.exp(-t / .004)), S.expo(.01, .001)), .45));
+  };
+  // ---- Pack Meow (idée de baby boy, 2026-11-01, assorti au skin Cat). Un miaulement synthétisé, aucun enregistrement :
+  // une voix en dent de scie (les cordes vocales) dont la hauteur monte puis retombe (« mi-aou »), passée par deux
+  // formants qui glissent du « i » au « a » puis au « ou » (la gueule qui s'ouvre et se referme), avec un léger vibrato
+  // et un souffle. f : la hauteur du chiffre (la montée de la gamme reste) ; len : court pour un « mew », long pour un « meow ».
+  const meow = (f, len = .2, seed = 3) => {
+    const amp = t => Math.min(1, t / .025) * Math.pow(Math.max(0, 1 - t / len), .7) * (.6 + .4 * Math.min(1, t / (len * .3)));
+    const pitch = t => { const u = t / len; return f * (.86 + .3 * Math.sin(Math.PI * Math.min(1, u * 1.25)) - .12 * u) * (1 + .018 * Math.sin(2 * Math.PI * 6 * t)); };
+    const v = S.osc(len, pitch, amp, saw);
+    const f1 = t => { const u = t / len; return 420 + 520 * Math.sin(Math.PI * Math.min(1, u * 1.1)); };
+    const f2 = t => { const u = t / len; return 2500 - 1500 * Math.pow(u, .8); };
+    const breath = S.shape(S.filter(S.noise(len, seed), 'bp', f2, 2), t => amp(t) * .5);
+    return S.sum(S.gain(S.filter(v, 'bp', f1, 2.2), 1.2), S.gain(S.filter(v, 'bp', f2, 3), .9), S.gain(S.filter(v, 'lp', 600), .15), S.gain(breath, .12));
+  };
+  // Ronron : un souffle grave qui bat 26 fois par seconde (le chat inspire et expire), pour les raretés et le raté.
+  const purr = (len = .7, seed = 8) => S.shape(S.filter(S.noise(len, seed), 'lp', 320), t => Math.min(1, t / .05) * Math.min(1, (len - t) / .15) * (.35 + .65 * Math.pow(Math.max(0, Math.sin(Math.PI * 26 * t)), 2)));
   const PACKS = {
+    // Meow : un petit « mew » par chiffre, un vrai « meow » au dernier ; la rareté monte en miaous ; un raté, un « mrrrow »
+    // grognon qui descend et un ronron vexé.
+    meow: {
+      lock: (i, final) => final ? meow(S.note(i + 6), .46, 30 + i) : meow(S.note(i + 7), .17, 20 + i),
+      level: .28, tierGain: .7,
+      note: (n, len) => meow(S.note(n + 6), Math.max(.18, len * 2.6), 40 + n),
+      miss: () => S.sum(meow(S.note(3), .55, 9), S.delayed(S.gain(purr(.6), 1.4), .35)), missLevel: .3,
+    },
     arcade: {
       lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
       level: .25,
@@ -242,6 +300,22 @@
       note: n => pop(S.note(n + 2)),
       miss: () => S.sum(clack(S.note(2), 9, 0), S.delayed(S.gain(clack(S.note(-2), 19, 0), .8), .12)), missLevel: .22,
     },
+    // Slime (idée de Ggggssnoop, 2026-11-01) : un splat et un blorp par chiffre ; au dernier, un gros splat et deux blorps
+    // qui rebondissent ; la rareté monte en blorps ; un raté, un gros splat qui retombe dans le grave.
+    slime: {
+      lock: (i, final) => final ? S.sum(S.gain(splat(60 + i, 1), 1.2), S.gain(blorp(S.note(i + 5), .4), .9), S.delayed(S.gain(blorp(S.note(i + 7), .3), .5), .14)) : S.sum(S.gain(splat(60 + i), .9), blorp(S.note(i + 5))),
+      level: .35,
+      note: (n, len) => blorp(S.note(n + 5), Math.max(.25, len * 4)),
+      miss: () => S.sum(S.gain(splat(91, 1), 1.4), S.gain(blorp(S.note(-5), .5), .8)), missLevel: .25,
+    },
+    // Boing (idée de sennybex1, 2026-11-01) : un « boing » de ressort par chiffre ; au dernier, il rebondit une deuxième
+    // fois, plus haut ; la rareté monte en boings de plus en plus hauts (la gerbe) ; un raté, un ressort qui s'affaisse.
+    boing: {
+      lock: (i, final) => final ? S.sum(boing(S.note(i + 5), .4), S.delayed(S.gain(boing(S.note(i + 10), .32), .65), .16)) : boing(S.note(i + 5)),
+      level: .29, tierGain: .7, // mesuré contre Meme et Coins (énergie par chiffre)
+      note: (n, len) => boing(S.note(n + 5), Math.max(.3, len * 4)),
+      miss: () => S.osc(.6, t => 330 * Math.exp(-t / .3) * (1 + .15 * Math.sin(2 * Math.PI * 14 * t) * Math.exp(-t / .3)), S.expo(.2, .004), ph => Math.sin(ph) + .25 * Math.sin(2 * ph)), missLevel: .22,
+    },
   };
   // Une gerbe de notes du pack, en montant (steps : leurs places dans la gamme).
   const flourish = (P, steps, level, dt = 0, gap = .08) => steps.map((n, k) => [P.note(n, gap), dt + k * gap, level * (P.tierGain || 1), ((k * 37) % 9) / 18 - .25, .4]);
@@ -277,13 +351,22 @@
     // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
     // Duck Race : un canard choisi, le départ et le vainqueur (k : la hauteur).
     quack: ({ k = 0 } = {}) => [[quack(k), 0, .3, 0, .12]],
+    // Un ami t'écrit (idée de Sean, 2026-11-01) : « ding-ding » feutré, deux carillons doux qui montent (si5 puis mi6),
+    // bas et courts, pour prévenir sans faire sursauter.
+    ping: () => [[softChime(S.note(12), .45), 0, .15, -.1, .3], [softChime(S.note(14), .6), .1, .12, .1, .35]],
+    // Fond Keyboard ASMR : une touche enfoncée au clic (k : la variante, big : barre d'espace). Fond Thunderstorm : le
+    // tonnerre lointain après un éclair (k : la variante, de 0 à 2), bas et un peu à gauche ou à droite.
+    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .2 : .17, ((k % 5) / 5 - .4) * .5, .06]],
+    thunder: ({ k = 0 }) => [[rumble(k), 0, .17, (k - 1) * .35, .45]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
-    click: ({ look } = {}) => {
+    click: ({ look, k = 0 } = {}) => {
       if (look === 'thock') return [[thock(), 0, .18, 0, .08]];
       if (look === 'wax' || look === 'asmr') return [[wax(41), 0, .24, 0, .1]];
       if (look === 'pickle') return [[squish(), 0, .22, 0, .1]];
+      if (look === 'cardboard') return [[cardboard(), 0, .24, 0, .08]]; // MAYO, 2026-11-01
+      if (look === 'bubblewrap') return [[wrapPop(k), 0, .38, 0, .06]]; // Jguz01, 2026-11-01
       return [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]];
     },
     // Cliquetis des rouleaux (k : la variante). soft : en duel. last, de 1 à 8 : le dernier rouleau, de plus en plus grave et fort.

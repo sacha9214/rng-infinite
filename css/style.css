@@ -2325,6 +2325,14 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .case-snd i { font-style: normal; font-size: 2rem; line-height: 1; }
 .case-snd.md { width: 9rem; min-height: 7rem; margin: 0 auto; box-shadow: 0 0 0 2px var(--rar), 0 0 28px color-mix(in srgb, var(--rar) 60%, transparent); }
 .case-snd.md i { font-size: 3.6rem; }
+/* Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote animée sur un halo de la couleur de sa rareté. Dans la
+   bande, elles restent immobiles (64 dessins animés à la fois) ; seule celle du résultat bouge. */
+.case-emo { display: grid; place-items: center; align-self: stretch; min-height: 3.6rem; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--rar, #8847ff) 32%, transparent), transparent 68%); }
+.case-emo .emote { width: 3.2rem; height: 3.2rem; }
+.case-emo.md { width: 9rem; min-height: 8rem; margin: 0 auto; border-radius: .8rem; box-shadow: 0 0 0 2px var(--rar), 0 0 28px color-mix(in srgb, var(--rar) 60%, transparent); }
+.case-emo.md .emote { width: 6.4rem; height: 6.4rem; }
+.case-emo.md .emote-svg .em { animation-play-state: running; }
 .case-rarity { display: block; width: max-content; margin: 0 auto .7rem; }
 .room-noreward { max-width: 30rem; margin: .2rem auto .6rem; text-align: center; }
 
@@ -3799,6 +3807,8 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .road-step.key-starter { background: linear-gradient(90deg, rgba(245, 158, 11, .12), var(--surface)); }
 .road-step.key-premium { background: linear-gradient(90deg, rgba(168, 85, 247, .2), var(--surface)); border-color: #a855f7; }
 @media (max-width: 420px) { .road-step { grid-template-columns: 2rem 1fr 1.4rem; } .road-x { display: none; } }
+/* titre de niveau sur la route (idée de shadow2 Jr, 2026-11-01) */
+.road-ttl { display: inline-block; margin-left: .25rem; padding: 0 .4rem; border-radius: 999px; font-size: .85em; background: rgba(14, 165, 233, .15); color: var(--prose); border: 1px solid rgba(14, 165, 233, .45); white-space: nowrap; }
 
 /* Onglet Profil & amis : mon profil en résumé en haut. */
 .me-panel .me-title { margin: -.2rem 0 .5rem; }
@@ -5369,6 +5379,74 @@ html:not(.dark) .wall-preview.wp-fishing { background: url("data:image/svg+xml,<
 @media (prefers-reduced-motion: reduce) { .wp-fishing::before { animation: none !important; } }
 
 /* fin des cinq fonds du 2026-10-28 */
+
+/* ------------------------------------------------------------------ Six fonds d'idées de joueurs (2026-11-01).
+   Ils sont dessinés en direct par js/wallfx.js (deux canevas : le décor, peint une fois, et ce qui bouge) ; ici : le ciel
+   ou le fond de chaque scène, ce qui dérive en CSS (nuages, étoiles), et l'aperçu de la boutique, une petite version fixe
+   en SVG dans ::after (que le vrai fond n'affiche pas). Sombre par défaut, html:not(.dark) pour le thème clair. */
+#wallpaper :is(.wfm-bg, .wfm-fg, .wkb-bg, .wkb-fg, .wts-bg, .wts-fg, .wss-bg, .wss-fg, .wms-bg, .wms-fg, .wpt-bg, .wpt-fg) { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#wallpaper:is(.wp-farm, .wp-keyboard, .wp-thunderstorm, .wp-solarsystem, .wp-meteorshower, .wp-party)::after { content: none; }
+.wall-preview:is(.wp-farm, .wp-keyboard, .wp-thunderstorm, .wp-solarsystem, .wp-meteorshower, .wp-party)::after { inset: 0; background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+
+/* 🐄 Farm (idée de HSI) : un ciel d'été et son soleil ; sombre, le soir qui tombe, le soleil couchant derrière les collines.
+   Des nuages qui glissent très lentement. */
+.wp-farm { background: radial-gradient(circle at 78% 50%, rgba(255, 176, 96, .55) 0, rgba(255, 140, 80, .2) 8%, transparent 24%), linear-gradient(180deg, #121a35 0%, #252a52 32%, #574466 47%, #8a5a5e 52%, #2a3e3c 56%); }
+html:not(.dark) .wp-farm { background: radial-gradient(circle at 80% 15%, #fffbe0 0, #fff3b0 3%, rgba(255, 243, 176, .45) 6%, transparent 15%), linear-gradient(180deg, #7fc3ee 0%, #a8d8f3 30%, #d4ecf5 48%, #e8f4ec 53%, #9ccf86 56%); }
+.wp-farm::before { left: 0; right: -1600px; top: 5%; height: 30%; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 300' preserveAspectRatio='none'><g fill='%23a39fc4' opacity='0.26'> <ellipse cx='190' cy='150' rx='110' ry='34'/><ellipse cx='240' cy='122' rx='66' ry='48'/><ellipse cx='160' cy='132' rx='52' ry='36'/> <ellipse cx='720' cy='92' rx='80' ry='24'/><ellipse cx='752' cy='72' rx='46' ry='34'/><ellipse cx='700' cy='80' rx='34' ry='24'/> <ellipse cx='1220' cy='176' rx='130' ry='36'/><ellipse cx='1280' cy='146' rx='74' ry='52'/><ellipse cx='1180' cy='154' rx='58' ry='40'/><ellipse cx='1340' cy='166' rx='46' ry='28'/> </g></svg>") repeat-x 0 0 / 1600px 100%; animation: wfm-clouds 260s linear infinite; }
+html:not(.dark) .wp-farm::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 300' preserveAspectRatio='none'><g fill='%23ffffff' opacity='0.92'> <ellipse cx='190' cy='150' rx='110' ry='34'/><ellipse cx='240' cy='122' rx='66' ry='48'/><ellipse cx='160' cy='132' rx='52' ry='36'/> <ellipse cx='720' cy='92' rx='80' ry='24'/><ellipse cx='752' cy='72' rx='46' ry='34'/><ellipse cx='700' cy='80' rx='34' ry='24'/> <ellipse cx='1220' cy='176' rx='130' ry='36'/><ellipse cx='1280' cy='146' rx='74' ry='52'/><ellipse cx='1180' cy='154' rx='58' ry='40'/><ellipse cx='1340' cy='166' rx='46' ry='28'/> </g></svg>"); }
+@keyframes wfm-clouds { to { transform: translate3d(-1600px, 0, 0); } }
+.wall-preview.wp-farm::before { top: 2%; height: 38%; right: -400px; background-size: 400px 100%; animation-name: wfm-clouds-sm; animation-duration: 60s; }
+@keyframes wfm-clouds-sm { to { transform: translate3d(-400px, 0, 0); } }
+.wall-preview.wp-farm { background: radial-gradient(circle at 74% 52%, rgba(255, 176, 96, .55) 0, transparent 22%), linear-gradient(180deg, #121a35 0%, #252a52 35%, #8a5a5e 55%); }
+html:not(.dark) .wall-preview.wp-farm { background: radial-gradient(circle at 84% 18%, #fffbe0 0, #fff3b0 6%, transparent 16%), linear-gradient(180deg, #7fc3ee 0%, #d4ecf5 55%); }
+.wall-preview.wp-farm::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMax slice'> <path d='M0 100V52 Q25 40 50 47 T100 44 T150 40 T200 46V100Z' fill='%232c4650'/> <path d='M0 100V58 Q40 50 80 56 T160 52 T200 56V100Z' fill='%23273f47'/> <rect y='60' width='200' height='40' fill='%23284636'/> <path d='M0 61 Q100 57 200 61' stroke='%2357503f' stroke-width='3' fill='none'/> <rect x='60' y='33' width='8' height='26' fill='%2368717c'/><path d='M60 33a4 4 0 0 1 8 0z' fill='%2368717c'/> <path d='M22 59V45l5-9 11-5 11 5 5 9v14z' fill='%237a2e2b'/><path d='M22 45l5-9 11-5 11 5 5 9' stroke='%23c9bfb2' stroke-width='1.4' fill='none' stroke-linejoin='round'/> <path d='M21 44l5.5-9.5 11.5-5.4 11.5 5.4 5.5 9.5' stroke='%2336272a' stroke-width='1' fill='none' stroke-linejoin='round' transform='translate(0 -1.3)'/> <rect x='32' y='48' width='12' height='11' fill='%23622422' stroke='%23c9bfb2' stroke-width='.9'/><path d='M32 48l12 11M44 48l-12 11' stroke='%23c9bfb2' stroke-width='.8'/> <rect x='35.5' y='37' width='5' height='4.4' fill='%23ffcf73' stroke='%23c9bfb2' stroke-width='.7'/> <rect y='75' width='200' height='2' fill='%23725c48'/><rect y='80' width='200' height='2' fill='%23725c48'/><rect x='4' y='72' width='2.4' height='13' fill='%23665140'/><rect x='18' y='72' width='2.4' height='13' fill='%23665140'/><rect x='32' y='72' width='2.4' height='13' fill='%23665140'/><rect x='46' y='72' width='2.4' height='13' fill='%23665140'/><rect x='60' y='72' width='2.4' height='13' fill='%23665140'/><rect x='74' y='72' width='2.4' height='13' fill='%23665140'/><rect x='88' y='72' width='2.4' height='13' fill='%23665140'/><rect x='102' y='72' width='2.4' height='13' fill='%23665140'/><rect x='116' y='72' width='2.4' height='13' fill='%23665140'/><rect x='130' y='72' width='2.4' height='13' fill='%23665140'/><rect x='144' y='72' width='2.4' height='13' fill='%23665140'/><rect x='158' y='72' width='2.4' height='13' fill='%23665140'/><rect x='172' y='72' width='2.4' height='13' fill='%23665140'/><rect x='186' y='72' width='2.4' height='13' fill='%23665140'/> <g transform='translate(140 95)'><rect x='-11' y='-14' width='20' height='8' rx='3' fill='%23cbc5be'/><ellipse cx='-4' cy='-11' rx='3.4' ry='2.4' fill='%23262322'/><path d='M-8 -7v7M-4 -7v7M3 -7v7M7 -7v7' stroke='%23cbc5be' stroke-width='1.5'/><rect x='8' y='-16' width='5' height='6' rx='2' fill='%23cbc5be'/><ellipse cx='12' cy='-10.5' rx='2' ry='1.5' fill='%23f2a9a9'/></g> <g transform='translate(176 95)'><g fill='%23cdc8bc'><circle cx='-4' cy='-8' r='4'/><circle cx='1' cy='-10' r='4.4'/><circle cx='5' cy='-7.5' r='3.8'/><circle cx='0' cy='-6' r='4'/></g><ellipse cx='9' cy='-9' rx='2.4' ry='3' fill='%233d3634'/><path d='M-3 -3v3M3 -3v3' stroke='%233d3634' stroke-width='1.2'/></g> </svg>"); }
+html:not(.dark) .wall-preview.wp-farm::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMax slice'> <path d='M0 100V52 Q25 40 50 47 T100 44 T150 40 T200 46V100Z' fill='%23a9d3ae'/> <path d='M0 100V58 Q40 50 80 56 T160 52 T200 56V100Z' fill='%2390c796'/> <rect y='60' width='200' height='40' fill='%238ccb72'/> <path d='M0 61 Q100 57 200 61' stroke='%23e6d3a6' stroke-width='3' fill='none'/> <rect x='60' y='33' width='8' height='26' fill='%23c9d1d8'/><path d='M60 33a4 4 0 0 1 8 0z' fill='%23c9d1d8'/> <path d='M22 59V45l5-9 11-5 11 5 5 9v14z' fill='%23c9473e'/><path d='M22 45l5-9 11-5 11 5 5 9' stroke='%23fff8ee' stroke-width='1.4' fill='none' stroke-linejoin='round'/> <path d='M21 44l5.5-9.5 11.5-5.4 11.5 5.4 5.5 9.5' stroke='%235f4237' stroke-width='1' fill='none' stroke-linejoin='round' transform='translate(0 -1.3)'/> <rect x='32' y='48' width='12' height='11' fill='%23a3352e' stroke='%23fff8ee' stroke-width='.9'/><path d='M32 48l12 11M44 48l-12 11' stroke='%23fff8ee' stroke-width='.8'/> <rect x='35.5' y='37' width='5' height='4.4' fill='%236a4436' stroke='%23fff8ee' stroke-width='.7'/> <rect y='75' width='200' height='2' fill='%23c99d6d'/><rect y='80' width='200' height='2' fill='%23c99d6d'/><rect x='4' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='18' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='32' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='46' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='60' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='74' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='88' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='102' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='116' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='130' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='144' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='158' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='172' y='72' width='2.4' height='13' fill='%23b98b5c'/><rect x='186' y='72' width='2.4' height='13' fill='%23b98b5c'/> <g transform='translate(140 95)'><rect x='-11' y='-14' width='20' height='8' rx='3' fill='%23fbf8f3'/><ellipse cx='-4' cy='-11' rx='3.4' ry='2.4' fill='%232f2b29'/><path d='M-8 -7v7M-4 -7v7M3 -7v7M7 -7v7' stroke='%23fbf8f3' stroke-width='1.5'/><rect x='8' y='-16' width='5' height='6' rx='2' fill='%23fbf8f3'/><ellipse cx='12' cy='-10.5' rx='2' ry='1.5' fill='%23f2a9a9'/></g> <g transform='translate(176 95)'><g fill='%23f8f4ea'><circle cx='-4' cy='-8' r='4'/><circle cx='1' cy='-10' r='4.4'/><circle cx='5' cy='-7.5' r='3.8'/><circle cx='0' cy='-6' r='4'/></g><ellipse cx='9' cy='-9' rx='2.4' ry='3' fill='%233d3634'/><path d='M-3 -3v3M3 -3v3' stroke='%233d3634' stroke-width='1.2'/></g> </svg>"); }
+
+/* ⌨️ Keyboard ASMR (idée de kingston) : un tapis de bureau doux, une lampe en haut à gauche. */
+.wp-keyboard { background: radial-gradient(ellipse 55% 45% at 16% 6%, rgba(167, 139, 250, .16), transparent 70%), radial-gradient(ellipse 85% 50% at 50% 100%, #2a2538 0%, transparent 72%), linear-gradient(180deg, #16141e 0%, #1c1926 100%); }
+html:not(.dark) .wp-keyboard { background: radial-gradient(ellipse 55% 45% at 16% 6%, rgba(255, 233, 196, .8), transparent 70%), radial-gradient(ellipse 85% 50% at 50% 100%, #ebe2f3 0%, transparent 72%), linear-gradient(180deg, #f8f4ef 0%, #f0e9f1 100%); }
+.wall-preview.wp-keyboard::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid meet'> <ellipse cx='100' cy='94' rx='92' ry='7' fill='%23000' opacity='0.45'/> <rect x='12' y='29' width='176' height='61' rx='5' fill='%232b2839'/><rect x='14.5' y='31.5' width='171' height='56' rx='2.5' fill='%23100e17'/><rect x='16.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23437868'/><rect x='27.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='37.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='48.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='58.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='69.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='79.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='90.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='100.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='111.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='121.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='132.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='142.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='153.1' y='33.6' width='19.8' height='9.3' rx='1.6' fill='%234e4666'/><rect x='174.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='16.6' y='44.1' width='14.6' height='9.3' rx='1.6' fill='%234e4666'/><rect x='32.4' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='42.9' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='53.4' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='63.9' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='74.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='84.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='95.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='105.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='116.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='126.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='137.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='147.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='158.3' y='44.1' width='14.6' height='9.3' rx='1.6' fill='%234e4666'/><rect x='174.1' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='16.6' y='54.6' width='17.2' height='9.3' rx='1.6' fill='%234e4666'/><rect x='35.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='45.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='56.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='66.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='77.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='87.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='98.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='108.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='119.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='129.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='140.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='150.5' y='54.6' width='22.4' height='9.3' rx='1.6' fill='%23437868'/><rect x='174.1' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='16.6' y='65.1' width='22.4' height='9.3' rx='1.6' fill='%234e4666'/><rect x='40.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='50.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='61.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='71.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='82.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='92.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='103.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='113.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='124.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='134.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23423d52'/><rect x='145.2' y='65.1' width='17.2' height='9.3' rx='1.6' fill='%234e4666'/><rect x='163.6' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%2371524c'/><rect x='174.1' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='16.6' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%234e4666'/><rect x='29.7' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%234e4666'/><rect x='42.9' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%234e4666'/><rect x='56.0' y='75.6' width='64.4' height='9.3' rx='1.6' fill='%23423d52'/><rect x='121.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='132.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='142.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%234e4666'/><rect x='153.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%2371524c'/><rect x='163.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%2371524c'/><rect x='174.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%2371524c'/></svg>"); background-position: center; background-size: contain; }
+html:not(.dark) .wall-preview.wp-keyboard::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid meet'> <ellipse cx='100' cy='94' rx='92' ry='7' fill='%23574070' opacity='0.16'/> <rect x='12' y='29' width='176' height='61' rx='5' fill='%23efe9f5'/><rect x='14.5' y='31.5' width='171' height='56' rx='2.5' fill='%23b3a8c6'/><rect x='16.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23bfe9d8'/><rect x='27.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='37.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='48.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='58.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='69.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='79.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='90.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='100.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='111.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='121.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='132.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='142.6' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='153.1' y='33.6' width='19.8' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='174.1' y='33.6' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='16.6' y='44.1' width='14.6' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='32.4' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='42.9' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='53.4' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='63.9' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='74.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='84.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='95.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='105.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='116.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='126.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='137.3' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='147.8' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='158.3' y='44.1' width='14.6' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='174.1' y='44.1' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='16.6' y='54.6' width='17.2' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='35.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='45.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='56.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='66.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='77.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='87.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='98.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='108.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='119.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='129.5' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='140.0' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='150.5' y='54.6' width='22.4' height='9.3' rx='1.6' fill='%23bfe9d8'/><rect x='174.1' y='54.6' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='16.6' y='65.1' width='22.4' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='40.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='50.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='61.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='71.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='82.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='92.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='103.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='113.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='124.2' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='134.7' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='145.2' y='65.1' width='17.2' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='163.6' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23fad2c1'/><rect x='174.1' y='65.1' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='16.6' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='29.7' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='42.9' y='75.6' width='11.9' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='56.0' y='75.6' width='64.4' height='9.3' rx='1.6' fill='%23fffbf3'/><rect x='121.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='132.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='142.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23dcd1f1'/><rect x='153.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23fad2c1'/><rect x='163.6' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23fad2c1'/><rect x='174.1' y='75.6' width='9.3' height='9.3' rx='1.6' fill='%23fad2c1'/></svg>"); }
+.wall-preview.wp-keyboard::before { left: 44%; top: 47%; width: 6%; height: 10%; border-radius: 3px; background: radial-gradient(circle, rgba(196, 181, 253, .9), transparent 70%); z-index: 1; opacity: 0; animation: wkb-tap 2.4s ease-out infinite; }
+@keyframes wkb-tap { 0%, 60%, 100% { opacity: 0; transform: translate3d(0, 0, 0); } 64% { opacity: 1; transform: translate3d(0, 1px, 0); } 78% { opacity: .4; transform: translate3d(0, 0, 0); } }
+
+/* ⛈️ Thunderstorm (idée de finnnnn) : la nuit d'orage ; clair, un après-midi d'orage gris. Nuages, pluie et éclairs : js. */
+.wp-thunderstorm { background: radial-gradient(ellipse 70% 25% at 50% 80%, rgba(71, 85, 105, .35), transparent 70%), linear-gradient(180deg, #0c111d 0%, #141b2b 40%, #1d2638 80%, #0b0f18 83%); }
+html:not(.dark) .wp-thunderstorm { background: radial-gradient(ellipse 70% 25% at 50% 80%, rgba(255, 255, 255, .35), transparent 70%), linear-gradient(180deg, #bcc4cf 0%, #d0d6de 40%, #e2e6eb 80%, #6b7775 83%); }
+.wall-preview.wp-thunderstorm { background: linear-gradient(180deg, #0c111d 0%, #1d2638 78%); }
+html:not(.dark) .wall-preview.wp-thunderstorm { background: linear-gradient(180deg, #a3adbb 0%, #d3d9e0 78%); }
+.wall-preview.wp-thunderstorm::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'> <g fill='%23202a40'><ellipse cx='30' cy='10' rx='50' ry='22'/><ellipse cx='95' cy='6' rx='55' ry='22'/><ellipse cx='165' cy='12' rx='55' ry='24'/></g> <g fill='%23121826' opacity='.85'><ellipse cx='60' cy='2' rx='45' ry='14'/><ellipse cx='140' cy='0' rx='50' ry='14'/></g> <path d='M150 26l-4 12 5 1-6 14 3 1-5 13' stroke='%23f0fbff' stroke-width='1.1' fill='none' opacity='.85' stroke-linejoin='round'/> <path d='M150 26l-4 12 5 1-6 14 3 1-5 13' stroke='%237dd3fc' stroke-width='3' fill='none' opacity='.25'/> <path d='M0 100V72 Q40 66 80 71 T160 68 T200 71V100Z' fill='%23111827'/><rect y='78' width='200' height='22' fill='%23090d16'/> <rect x='166' y='70' width='10' height='6' fill='%23111827'/><path d='M165 70l6-4.4 6 4.4z' fill='%23111827'/><rect x='168.5' y='72' width='2' height='2' fill='%23fcd34d'/> </svg>"); }
+html:not(.dark) .wall-preview.wp-thunderstorm::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'> <g fill='%238b96a7'><ellipse cx='30' cy='10' rx='50' ry='22'/><ellipse cx='95' cy='6' rx='55' ry='22'/><ellipse cx='165' cy='12' rx='55' ry='24'/></g> <g fill='%23707b8d' opacity='.85'><ellipse cx='60' cy='2' rx='45' ry='14'/><ellipse cx='140' cy='0' rx='50' ry='14'/></g> <path d='M150 26l-4 12 5 1-6 14 3 1-5 13' stroke='%23f0fbff' stroke-width='1.1' fill='none' opacity='.85' stroke-linejoin='round'/> <path d='M150 26l-4 12 5 1-6 14 3 1-5 13' stroke='%237dd3fc' stroke-width='3' fill='none' opacity='.25'/> <path d='M0 100V72 Q40 66 80 71 T160 68 T200 71V100Z' fill='%237b8786'/><rect y='78' width='200' height='22' fill='%2365716f'/> <rect x='166' y='70' width='10' height='6' fill='%237b8786'/><path d='M165 70l6-4.4 6 4.4z' fill='%237b8786'/><rect x='168.5' y='72' width='2' height='2' fill='%23fcd34d'/> </svg>"); }
+.wall-preview.wp-thunderstorm::before { inset: -20% -10%; opacity: .55; z-index: 1; background: repeating-linear-gradient(104deg, transparent 0 9px, rgba(186, 230, 253, .3) 9px 10px, transparent 10px 23px); animation: wts-rain .5s linear infinite; }
+@keyframes wts-rain { to { transform: translate3d(-8px, 32px, 0); } }
+html:not(.dark) .wall-preview.wp-thunderstorm::before { background: repeating-linear-gradient(104deg, transparent 0 9px, rgba(51, 65, 85, .25) 9px 10px, transparent 10px 23px); }
+
+/* 🪐 Solar System (idée de finnnnn) : l'espace et ses étoiles qui scintillent ; clair, une carte du ciel sur papier. */
+.wp-solarsystem { background: radial-gradient(ellipse 45% 35% at 50% 62%, rgba(76, 52, 140, .3), transparent 70%), radial-gradient(ellipse 70% 50% at 15% 8%, rgba(30, 58, 138, .28), transparent 70%), linear-gradient(180deg, #070a1a 0%, #0a0d22 100%); }
+.wall-preview.wp-solarsystem::before { inset: -10%; background-image: radial-gradient(1.4px 1.4px at 20px 30px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 90px 160px, #fff 50%, transparent 52%), radial-gradient(1.6px 1.6px at 130px 70px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 330px 200px, #fff 50%, transparent 52%), radial-gradient(1.2px 1.2px at 60px 210px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 300px 20px, #fff 50%, transparent 52%); background-size: 230px 230px, 310px 310px, 170px 170px, 410px 410px, 270px 270px, 350px 350px; opacity: .8; animation: wp-twinkle 5s ease-in-out infinite; }
+html:not(.dark) .wp-solarsystem { background: radial-gradient(ellipse 80% 75% at 50% 55%, transparent 55%, rgba(176, 150, 100, .22) 100%), repeating-linear-gradient(0deg, transparent 0 47px, rgba(59, 74, 107, .07) 47px 48px), repeating-linear-gradient(90deg, transparent 0 47px, rgba(59, 74, 107, .07) 47px 48px), linear-gradient(180deg, #faf5e8 0%, #f2ead6 100%); }
+html:not(.dark) .wall-preview.wp-solarsystem::before { background-image: radial-gradient(1.4px 1.4px at 20px 30px, #3b4a6b 50%, transparent 52%), radial-gradient(1px 1px at 90px 160px, #3b4a6b 50%, transparent 52%), radial-gradient(1.6px 1.6px at 130px 70px, #3b4a6b 50%, transparent 52%), radial-gradient(1px 1px at 330px 200px, #3b4a6b 50%, transparent 52%), radial-gradient(1.2px 1.2px at 60px 210px, #3b4a6b 50%, transparent 52%), radial-gradient(1px 1px at 300px 20px, #3b4a6b 50%, transparent 52%); background-size: 230px 230px, 310px 310px, 170px 170px, 410px 410px, 270px 270px, 350px 350px; opacity: .35; animation: none; }
+.wall-preview.wp-solarsystem::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'> <g fill='none' stroke='%23a5cdff' stroke-opacity='.25' stroke-width='.8'><ellipse cx='100' cy='58' rx='22' ry='8'/><ellipse cx='100' cy='58' rx='40' ry='14'/><ellipse cx='100' cy='58' rx='62' ry='22'/><ellipse cx='100' cy='58' rx='88' ry='31'/></g> <circle cx='100' cy='58' r='14' fill='%23ffb347' opacity='.25'/><circle cx='100' cy='58' r='7' fill='%23ffd56b'/><circle cx='80' cy='63' r='2' fill='%2386bdf3'/><circle cx='138' cy='52' r='2.4' fill='%23f0a07a'/><circle cx='42' cy='66' r='5' fill='%23eed6b3'/> <g><ellipse cx='176' cy='50' rx='8' ry='2.4' fill='none' stroke='%23e8d6a6' stroke-width='1.2'/><circle cx='176' cy='50' r='4' fill='%23f2e2b4'/></g> <path d='M150 14 L172 6' stroke='%23bfdbfe' stroke-width='2.4' stroke-linecap='round' opacity='.35'/><circle cx='150' cy='14' r='1.6' fill='%23fff'/> </svg>"); background-position: center; }
+html:not(.dark) .wall-preview.wp-solarsystem::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'> <g fill='none' stroke='%233b4a6b' stroke-opacity='.4' stroke-dasharray='2 3' stroke-width='.8'><ellipse cx='100' cy='58' rx='22' ry='8'/><ellipse cx='100' cy='58' rx='40' ry='14'/><ellipse cx='100' cy='58' rx='62' ry='22'/><ellipse cx='100' cy='58' rx='88' ry='31'/></g> <circle cx='100' cy='58' r='7' fill='%23f6b24a' stroke='%233b4a6b' stroke-width='.8'/><circle cx='80' cy='63' r='2' fill='%2386bdf3' stroke='%233b4a6b' stroke-width='.5'/><circle cx='138' cy='52' r='2.4' fill='%23f0a07a' stroke='%233b4a6b' stroke-width='.5'/><circle cx='42' cy='66' r='5' fill='%23eed6b3' stroke='%233b4a6b' stroke-width='.5'/> <g><ellipse cx='176' cy='50' rx='8' ry='2.4' fill='none' stroke='%23e8d6a6' stroke-width='1.2'/><circle cx='176' cy='50' r='4' fill='%23f2e2b4' stroke='%233b4a6b' stroke-width='.5'/></g> <path d='M150 14 L172 6' stroke='%233b4a6b' stroke-width='2.4' stroke-linecap='round' opacity='.35'/><circle cx='150' cy='14' r='1.6' fill='%233b4a6b'/> </svg>"); }
+
+/* ☄️ Meteor Shower (idée de Ggggssnoop) : une nuit claire, la Voie lactée en biais, la lueur d'une ville au loin ;
+   clair, l'heure bleue avant l'aube. Les étoiles filantes : js. */
+.wp-meteorshower { background: radial-gradient(ellipse 40% 25% at 66% 80%, rgba(251, 146, 60, .14), transparent 70%), linear-gradient(118deg, transparent 28%, rgba(165, 180, 252, .06) 40%, rgba(196, 181, 253, .1) 47%, rgba(165, 180, 252, .05) 54%, transparent 66%), linear-gradient(180deg, #03050f 0%, #0a1030 55%, #18204a 80%); }
+html:not(.dark) .wp-meteorshower { background: radial-gradient(ellipse 45% 25% at 66% 80%, rgba(253, 186, 116, .35), transparent 70%), linear-gradient(118deg, transparent 28%, rgba(255, 255, 255, .14) 45%, transparent 62%), linear-gradient(180deg, #9aa8da 0%, #bcc6ec 38%, #dcdff3 66%, #f6dcd2 80%); }
+.wall-preview.wp-meteorshower::before { inset: -10% -10% 15% -10%; background-image: radial-gradient(1.4px 1.4px at 20px 30px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 90px 160px, #fff 50%, transparent 52%), radial-gradient(1.6px 1.6px at 130px 70px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 330px 200px, #fff 50%, transparent 52%), radial-gradient(1.2px 1.2px at 60px 210px, #fff 50%, transparent 52%), radial-gradient(1px 1px at 300px 20px, #fff 50%, transparent 52%); background-size: 230px 230px, 310px 310px, 170px 170px, 410px 410px, 270px 270px, 350px 350px; animation: wp-twinkle 4.5s ease-in-out infinite; }
+html:not(.dark) .wall-preview.wp-meteorshower::before { opacity: .55; }
+.wall-preview.wp-meteorshower::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMax slice'> <path d='M0 100V80 Q30 74 60 78 T120 74 T200 78V100Z' fill='%230d1330'/> <g fill='%230d1330'><rect x='110' y='70' width='6' height='9'/><rect x='118' y='66' width='5' height='13'/><rect x='125' y='72' width='8' height='7'/><rect x='135' y='68' width='5' height='11'/></g> <g fill='%23fde047' opacity='.8'><rect x='111.5' y='72' width='1.2' height='1.4'/><rect x='119.5' y='68.5' width='1.2' height='1.4'/><rect x='127' y='74' width='1.2' height='1.4'/><rect x='136.5' y='71' width='1.2' height='1.4'/></g> <path d='M0 100V86 Q40 80 80 85 T160 82 T200 86V100Z' fill='%23090d22'/> <g fill='%23090d22'><path d='M20 88l4-12 4 12z'/><path d='M30 87l3-9 3 9z'/><path d='M168 86l4-13 4 13z'/><path d='M180 87l3-9 3 9z'/></g> <path d='M0 100V95 Q100 90 200 95V100Z' fill='%2305070f'/> <g stroke-linecap='round'><path d='M60 30 L38 44' stroke='%23bfdbfe' stroke-width='1.2' opacity='.6'/><path d='M150 18 L130 31' stroke='%23bfdbfe' stroke-width='1' opacity='.45'/></g> <circle cx='38' cy='44' r='1.3' fill='%23fff'/><circle cx='130' cy='31' r='1' fill='%23fff'/> </svg>"); }
+html:not(.dark) .wall-preview.wp-meteorshower::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMax slice'> <path d='M0 100V80 Q30 74 60 78 T120 74 T200 78V100Z' fill='%236f7fb3'/> <g fill='%236f7fb3'><rect x='110' y='70' width='6' height='9'/><rect x='118' y='66' width='5' height='13'/><rect x='125' y='72' width='8' height='7'/><rect x='135' y='68' width='5' height='11'/></g> <g fill='%23fde047' opacity='.8'><rect x='111.5' y='72' width='1.2' height='1.4'/><rect x='119.5' y='68.5' width='1.2' height='1.4'/><rect x='127' y='74' width='1.2' height='1.4'/><rect x='136.5' y='71' width='1.2' height='1.4'/></g> <path d='M0 100V86 Q40 80 80 85 T160 82 T200 86V100Z' fill='%235a6aa0'/> <g fill='%235a6aa0'><path d='M20 88l4-12 4 12z'/><path d='M30 87l3-9 3 9z'/><path d='M168 86l4-13 4 13z'/><path d='M180 87l3-9 3 9z'/></g> <path d='M0 100V95 Q100 90 200 95V100Z' fill='%2345538a'/> <g stroke-linecap='round'><path d='M60 30 L38 44' stroke='%233730a3' stroke-width='1.2' opacity='.6'/><path d='M150 18 L130 31' stroke='%233730a3' stroke-width='1' opacity='.45'/></g> <circle cx='38' cy='44' r='1.3' fill='%23fff'/><circle cx='130' cy='31' r='1' fill='%23fff'/> </svg>"); }
+
+/* 🎈 Party (idée de jia jun) : une salle de fête violette aux lumières floues ; clair, un mur rose pâle à pois. */
+.wp-party { background: radial-gradient(circle at 12% 32%, rgba(255, 107, 139, .16), transparent 18%), radial-gradient(circle at 86% 24%, rgba(90, 169, 255, .14), transparent 20%), radial-gradient(circle at 72% 80%, rgba(255, 216, 77, .1), transparent 22%), radial-gradient(circle at 24% 82%, rgba(180, 140, 255, .14), transparent 22%), linear-gradient(180deg, #1c1030 0%, #241238 60%, #1a0f2a 100%); }
+.wall-preview.wp-party::before { inset: 0; background-image: radial-gradient(circle at 40px 60px, rgba(255, 182, 213, .22) 0 5px, transparent 14px), radial-gradient(circle at 170px 120px, rgba(147, 197, 253, .18) 0 4px, transparent 12px), radial-gradient(circle at 300px 260px, rgba(253, 230, 138, .18) 0 5px, transparent 13px); background-size: 290px 290px, 370px 370px, 450px 450px; animation: wp-twinkle 6s ease-in-out infinite; }
+html:not(.dark) .wp-party { background: radial-gradient(circle, rgba(255, 143, 209, .14) 2.5px, transparent 3.5px) 0 0 / 36px 36px, radial-gradient(circle, rgba(90, 169, 255, .1) 2px, transparent 3px) 18px 18px / 36px 36px, linear-gradient(180deg, #fff7fb 0%, #fdeef6 100%); }
+html:not(.dark) .wall-preview.wp-party::before { content: none; }
+.wall-preview.wp-party::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'><path d='M0 10 Q50 26 100 10 Q150 26 200 10' fill='none' stroke='%23fff' stroke-opacity='.5' stroke-width='.8'/><path d='M3.7 12.3h8l-4 9z' fill='%23ff6b8b'/><path d='M19.1 15.7h8l-4 9z' fill='%23ffb547'/><path d='M34.5 17.6h8l-4 9z' fill='%234fd1a1'/><path d='M49.8 18.0h8l-4 9z' fill='%235aa9ff'/><path d='M65.2 16.8h8l-4 9z' fill='%23b48cff'/><path d='M80.6 14.2h8l-4 9z' fill='%23ff8fd1'/><path d='M96.0 10.0h8l-4 9z' fill='%23ffd84d'/><path d='M111.4 14.2h8l-4 9z' fill='%23ff6b8b'/><path d='M126.8 16.8h8l-4 9z' fill='%23ffb547'/><path d='M142.2 18.0h8l-4 9z' fill='%234fd1a1'/><path d='M157.5 17.6h8l-4 9z' fill='%235aa9ff'/><path d='M172.9 15.7h8l-4 9z' fill='%23b48cff'/><path d='M188.3 12.3h8l-4 9z' fill='%23ff8fd1'/><rect x='60' y='40' width='3' height='1.6' fill='%234fd1a1' transform='rotate(60 60 40)'/><rect x='80' y='70' width='3' height='1.6' fill='%235aa9ff' transform='rotate(20 80 70)'/><rect x='110' y='30' width='3' height='1.6' fill='%23ff6b8b' transform='rotate(50 110 30)'/><rect x='125' y='60' width='3' height='1.6' fill='%235aa9ff' transform='rotate(65 125 60)'/><rect x='95' y='85' width='3' height='1.6' fill='%23ff8fd1' transform='rotate(35 95 85)'/><rect x='140' y='40' width='3' height='1.6' fill='%23ff8fd1' transform='rotate(80 140 40)'/><rect x='70' y='55' width='3' height='1.6' fill='%23ffd84d' transform='rotate(40 70 55)'/><rect x='55' y='82' width='3' height='1.6' fill='%23b48cff' transform='rotate(25 55 82)'/><g transform='translate(22 52) scale(1)'><path d='M0 8 q-2 6 1 12' stroke='%23fff' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23ff6b8b'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(36 66) scale(0.9)'><path d='M0 8 q-2 6 1 12' stroke='%23fff' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%235aa9ff'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(168 48) scale(1)'><path d='M0 8 q-2 6 1 12' stroke='%23fff' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23b48cff'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(182 64) scale(0.9)'><path d='M0 8 q-2 6 1 12' stroke='%23fff' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23ffb547'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(150 74) scale(0.8)'><path d='M0 8 q-2 6 1 12' stroke='%23fff' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%234fd1a1'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g></svg>"); background-position: center; }
+html:not(.dark) .wall-preview.wp-party::after { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='xMidYMid slice'><path d='M0 10 Q50 26 100 10 Q150 26 200 10' fill='none' stroke='%23785070' stroke-opacity='.5' stroke-width='.8'/><path d='M3.7 12.3h8l-4 9z' fill='%23ff6b8b'/><path d='M19.1 15.7h8l-4 9z' fill='%23ffb547'/><path d='M34.5 17.6h8l-4 9z' fill='%234fd1a1'/><path d='M49.8 18.0h8l-4 9z' fill='%235aa9ff'/><path d='M65.2 16.8h8l-4 9z' fill='%23b48cff'/><path d='M80.6 14.2h8l-4 9z' fill='%23ff8fd1'/><path d='M96.0 10.0h8l-4 9z' fill='%23ffd84d'/><path d='M111.4 14.2h8l-4 9z' fill='%23ff6b8b'/><path d='M126.8 16.8h8l-4 9z' fill='%23ffb547'/><path d='M142.2 18.0h8l-4 9z' fill='%234fd1a1'/><path d='M157.5 17.6h8l-4 9z' fill='%235aa9ff'/><path d='M172.9 15.7h8l-4 9z' fill='%23b48cff'/><path d='M188.3 12.3h8l-4 9z' fill='%23ff8fd1'/><rect x='60' y='40' width='3' height='1.6' fill='%234fd1a1' transform='rotate(60 60 40)'/><rect x='80' y='70' width='3' height='1.6' fill='%235aa9ff' transform='rotate(20 80 70)'/><rect x='110' y='30' width='3' height='1.6' fill='%23ff6b8b' transform='rotate(50 110 30)'/><rect x='125' y='60' width='3' height='1.6' fill='%235aa9ff' transform='rotate(65 125 60)'/><rect x='95' y='85' width='3' height='1.6' fill='%23ff8fd1' transform='rotate(35 95 85)'/><rect x='140' y='40' width='3' height='1.6' fill='%23ff8fd1' transform='rotate(80 140 40)'/><rect x='70' y='55' width='3' height='1.6' fill='%23ffd84d' transform='rotate(40 70 55)'/><rect x='55' y='82' width='3' height='1.6' fill='%23b48cff' transform='rotate(25 55 82)'/><g transform='translate(22 52) scale(1)'><path d='M0 8 q-2 6 1 12' stroke='%235a465a' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23ff6b8b'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(36 66) scale(0.9)'><path d='M0 8 q-2 6 1 12' stroke='%235a465a' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%235aa9ff'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(168 48) scale(1)'><path d='M0 8 q-2 6 1 12' stroke='%235a465a' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23b48cff'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(182 64) scale(0.9)'><path d='M0 8 q-2 6 1 12' stroke='%235a465a' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%23ffb547'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g><g transform='translate(150 74) scale(0.8)'><path d='M0 8 q-2 6 1 12' stroke='%235a465a' stroke-opacity='.4' fill='none' stroke-width='.6'/><path d='M0 8C7 4 7 -8 0 -8S-7 4 0 8z' fill='%234fd1a1'/><ellipse cx='-2.2' cy='-3.5' rx='1' ry='2' fill='%23fff' opacity='.5'/></g></svg>"); }
+
+/* fin des six fonds du 2026-11-01 */
 
 /* Aperçu d'un fond d'écran : le contenu du site s'efface pour montrer le fond en plein écran, une barre reste en bas. */
 html.wall-trying body > *:not(#wallpaper):not(.wall-try-bar) { opacity: 0; pointer-events: none; transition: opacity .35s; }
@@ -8289,6 +8367,46 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes cho-twinkle { 0%, 100% { transform: scale(.85); opacity: .6; } 50% { transform: scale(1.2); opacity: 1; } }
 .room-stage.many .side-chocolate::before, .room-stage.many .side-chocolate::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-chocolate::before, .side-chocolate::after { animation: none; } }
+/* ------------------------------------------------------------------ White Chocolate (idée de qwertyuiop, 2026-11-01,
+   déjà demandée en #168) : la tablette de Chocolate en chocolat blanc. Carrés ivoire biseautés, chiffres moulés couleur
+   caramel (plus sombres que le carré : on les lit d'abord), papier rose et argent aux bouts. Même mouvement que
+   Chocolate (le chiffre fond, puis se fige d'un coup sec) ; miettes ivoire et, dès Mythic, un coulis de fruits rouges
+   (js/skinfx.js, SCENES.whitechoc). */
+.num-card.skin-whitechoc {
+  background:
+    linear-gradient(90deg, #db2777, #fbcfe8 20%, #f472b6 45%, #fdf2f8 70%, #be185d) 0 0 / .32em 100% no-repeat,
+    linear-gradient(90deg, #94a3b8, #f8fafc 30%, #cbd5e1 55%, #f1f5f9 80%, #64748b) 100% 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(170deg, rgba(255, 255, 255, .35) 0 .05em, transparent .05em .16em) 0 0 / .32em 100% no-repeat,
+    repeating-linear-gradient(10deg, rgba(255, 255, 255, .35) 0 .05em, transparent .05em .16em) 100% 0 / .32em 100% no-repeat,
+    linear-gradient(180deg, #cdb38a, #b89a6c);
+  border: 2px solid #8a6d45; border-radius: .45rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 250, 240, .35), 0 0 14px rgba(244, 114, 182, .22), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .14em .42em;
+}
+.skin-whitechoc .slot {
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .7em; font-weight: 900; line-height: 1;
+  width: 1.04em; height: 1.18em; margin: .05em .03em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .1em; color: #8a5f2c;
+  text-shadow: -.03em -.03em 0 #fffdf6, .05em .05em 0 #4f3416, .07em .08em .06em rgba(80, 50, 15, .35);
+  background: linear-gradient(145deg, #fffaf0, #f6e9cf 55%, #e8d3aa);
+  box-shadow: inset .06em .06em 0 rgba(255, 255, 255, .85), inset -.06em -.07em 0 rgba(160, 125, 75, .55), 0 .04em .05em rgba(60, 40, 15, .4);
+  transform-origin: 50% 100%;
+}
+.skin-whitechoc .slot.ghost { opacity: .3; }
+.skin-whitechoc .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-whitechoc .slot.spinning { color: rgba(164, 122, 69, .5); animation: cho-melt .3s ease-in-out infinite alternate; }
+.skin-whitechoc .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+.skin-whitechoc .slot.revealed { animation: cho-snap .5s backwards; }
+@media (prefers-reduced-motion: reduce) { .skin-whitechoc .slot { animation: none; } }
+/* Cadre de duel : un comptoir clair, papier rose en bas ; 🍓 oscille, ✨ scintille. */
+.side-whitechoc { --side-border: #f472b6; --side-glow: 0 0 16px rgba(244, 114, 182, .3); --side-ink: #be185d;
+  --side-bg: linear-gradient(90deg, rgba(244, 114, 182, .4), rgba(253, 242, 248, .5) 30%, rgba(203, 213, 225, .45) 60%, rgba(251, 207, 232, .45)) 0 100% / 100% 8px no-repeat, radial-gradient(ellipse 70% 60% at 50% 45%, rgba(246, 233, 207, .22), transparent 70%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(232, 211, 170, .25), transparent 70%);
+  --deco-a: '🍓'; --deco-b: '✨'; }
+.side-whitechoc::before { animation: cho-rock 2.2s ease-in-out infinite; }
+.side-whitechoc::after { animation: cho-twinkle 1.6s ease-in-out infinite; }
+.room-stage.many .side-whitechoc::before, .room-stage.many .side-whitechoc::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-whitechoc::before, .side-whitechoc::after { animation: none; } }
 /* ------------------------------------------------------------------ Floppy Fish (idée d'AnnJoe, 2026-10-25) : une mare
    d'un bleu vif, la ligne de l'eau ondulée au tiers du haut, un ciel clair au-dessus, des reflets qui ondulent, des
    nénuphars dans les coins. Chiffres blancs cernés de bleu marine, à moitié dans l'eau. Pendant le tirage ils flottent
@@ -9601,17 +9719,26 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 }
 .skin-lightbulb .slot {
   position: relative; z-index: 1; box-sizing: border-box; font-size: .64em; font-weight: 800; line-height: 1;
-  width: 1.1em; height: 1.42em; margin: 0 .07em .3em; padding-top: .16em;
+  /* Ampoules plus rondes, en poire comme 💡 (idée de costoroll, 2026-11-01) : un globe rond (la case), un col qui se
+     resserre (::before) puis le culot (::after). Avant : un œuf de 1,1 × 1,42. */
+  width: 1.2em; height: 1.2em; margin: 0 .05em .5em; padding-top: .02em;
   display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
-  border-radius: 50% 50% 44% 44% / 58% 58% 42% 42%;
+  border-radius: 50% 50% 50% 50% / 52% 52% 48% 48%;
   color: #4a2c0f; text-shadow: 0 .03em 0 rgba(255, 250, 230, .55);
   background:
     radial-gradient(ellipse 20% 14% at 31% 22%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 75%),
     radial-gradient(circle at 50% 44%, #fffbea 0, #fde68a 42%, #f6c445 74%, #d4961b 100%);
   box-shadow: inset 0 -.12em .2em rgba(146, 64, 14, .35), inset .05em .04em .08em rgba(255, 255, 255, .45), 0 0 .28em rgba(253, 224, 71, .5), 0 0 .7em rgba(251, 191, 36, .25);
 }
+/* le col de verre qui se resserre sous le globe (même verre, assombri sur les bords), jusqu'au culot */
+.skin-lightbulb .slot::before { content: ''; position: absolute; z-index: -1; left: 25%; right: 25%; bottom: -.21em; height: .33em; pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 93% 22%, 84% 52%, 80% 100%, 20% 100%, 16% 52%, 7% 22%);
+  background: linear-gradient(90deg, #c98a17, #f3bf3e 22%, #fbd96a 50%, #f3bf3e 78%, #c98a17); }
+.skin-lightbulb .slot.spinning::before { background: linear-gradient(90deg, #e0a810, #fde047 22%, #fff3a8 50%, #fde047 78%, #e0a810); }
+.num-card.skin-lightbulb.lbl-dead .slot::before, .skin-lightbulb .slot.lbl-off::before { background: linear-gradient(90deg, #6b7280, #9ca3af 22%, #c4c8ce 50%, #9ca3af 78%, #6b7280); }
+.skin-lightbulb .slot.collapsed::before { display: none; }
 /* le culot à vis en laiton, posé sur le bureau */
-.skin-lightbulb .slot::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: -.3em; height: .31em; pointer-events: none;
+.skin-lightbulb .slot::after { content: ''; position: absolute; left: 32%; right: 32%; bottom: -.5em; height: .31em; pointer-events: none;
   border-radius: .03em .03em .14em .14em;
   background: radial-gradient(ellipse 30% 40% at 50% 100%, #3f3f46 0 60%, transparent 70%), repeating-linear-gradient(170deg, #f1d38a 0 .045em, #a47a2c .045em .085em), #b8902f;
   box-shadow: 0 .05em .06em rgba(0, 0, 0, .55); }
@@ -9622,12 +9749,12 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .skin-lightbulb .slot.spinning { opacity: 1; color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8);
   background: radial-gradient(ellipse 20% 14% at 31% 22%, #fff, rgba(255, 255, 255, 0) 75%), radial-gradient(circle at 50% 44%, #fff 0, #fff7c2 38%, #fde047 72%, #eab308 100%);
   box-shadow: inset 0 -.1em .2em rgba(202, 138, 4, .35), 0 0 .4em #fde047, 0 0 1.1em rgba(250, 204, 21, .55);
-  transform-origin: 50% 125%; animation: lbl-buzz .42s ease-in-out infinite alternate; }
+  transform-origin: 50% 140%; animation: lbl-buzz .42s ease-in-out infinite alternate; }
 .skin-lightbulb .slot.spinning:nth-of-type(2n) { animation-delay: -.21s; }
 .skin-lightbulb .slot.spinning:nth-of-type(3n) { animation-duration: .5s; }
 @keyframes lbl-buzz { 0% { transform: rotate(-1.8deg); } 45% { transform: rotate(.6deg) translateY(-.01em); } 100% { transform: rotate(1.6deg); } }
 /* La fêlure : petit choc raide, éclair, la lumière s'échappe (plus sombre un instant), le chiffre devient net. */
-.skin-lightbulb .slot.revealed { transform-origin: 50% 125%; animation: lbl-crack .62s backwards; }
+.skin-lightbulb .slot.revealed { transform-origin: 50% 140%; animation: lbl-crack .62s backwards; }
 @keyframes lbl-crack {
   0% { color: transparent; text-shadow: 0 0 .07em rgba(120, 66, 8, .8); filter: brightness(1.3); transform: none; animation-timing-function: steps(1); }
   8% { color: #4a2c0f; filter: brightness(1.75); transform: translateY(-.05em) rotate(-3.5deg); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
@@ -9637,7 +9764,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   100% { filter: none; transform: none; }
 }
 /* Mythic et plus, 1 : les ampoules forcent (trop de courant), elles tremblent et brillent… */
-.num-card.skin-lightbulb.lbl-surge .slot { transform-origin: 50% 125%; animation: lbl-surge .12s steps(2) infinite; }
+.num-card.skin-lightbulb.lbl-surge .slot { transform-origin: 50% 140%; animation: lbl-surge .12s steps(2) infinite; }
 @keyframes lbl-surge { 0% { transform: rotate(-2.5deg) translateY(-.02em); filter: brightness(1.5); } 100% { transform: rotate(2.5deg); filter: brightness(1.25); } }
 /* … 2 : elles éclatent toutes ensemble et s'éteignent : verre gris, plus aucune lueur, chiffres gris foncé. Tirage
    raté : une seule ampoule grille (.lbl-off). */
@@ -10573,3 +10700,836 @@ a.player-btn { text-decoration: none; color: inherit; }
   .tn-which { display: flex; width: 100%; }
   .tn-which button { flex: 1 1 0; min-width: 0; padding-inline: .25rem; letter-spacing: 0; line-height: 1.25; }
 }
+
+/* ---------------------------------------------------------------- idées du 2026-11-01 (groupe F) */
+/* Tirages de la session (kingston) et joueurs en ligne (Thermonuclear Bomb) sous le bouton de tirage. */
+.sess-rolls, .online-now { margin: .45rem 0 0; font-size: .72rem; font-weight: 600; color: var(--prose-2); }
+.sess-rolls + .online-now { margin-top: .2rem; }
+.sess-rolls[hidden], .online-now[hidden] { display: none; }
+.result .sess-rolls { text-align: center; }
+/* Tirage auto sur les autres pages (kaz) : point qui pulse sur l'onglet Roll, avec le nombre de tirages faits. */
+.nav a[data-route="home"] { position: relative; }
+.nav-auto { position: absolute; top: 0; right: 0; min-width: .55rem; height: .55rem; padding: 0 .2rem; border-radius: 999px; background: #22c55e; color: #fff; font: 800 .5rem/.55rem var(--font-sans); text-align: center; box-shadow: 0 0 0 2px var(--site-bg); animation: nav-auto-pulse 1.4s ease-in-out infinite; pointer-events: none; }
+.nav-auto:not(:empty) { height: .8rem; line-height: .8rem; min-width: .8rem; }
+@keyframes nav-auto-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) { .nav-auto { animation: none; } }
+/* Chat global : « 🟢 N online » à côté du titre. */
+.gc-online { flex: none; font-size: .68rem; font-weight: 700; color: var(--prose-2); white-space: nowrap; }
+.gc-online[hidden] { display: none; }
+/* Réglages : se déconnecter d'un joueur à mot de passe (Angelicide9). */
+.pw-out { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .6rem; }
+.pw-out[hidden] { display: none; }
+.pw-out .panel-note { flex: 1 1 12rem; margin: 0; }
+/* Aperçu d'un skin : choix de la rareté (jia jun). */
+.sp-tiers { display: flex; width: fit-content; max-width: 100%; margin: .5rem auto 0; }
+.sp-tiers button { padding-inline: .6rem; }
+/* Recherche dans la boutique (Deadshot) : à gauche du filtre Possédés. */
+.shop-search { flex: 1 1 11rem; max-width: 18rem; min-width: 0; margin-right: auto; }
+@media (max-width: 640px) { .shop-search { flex-basis: 100%; max-width: none; margin-right: 0; } }
+/* Équiper depuis son inventaire (LEVIATHAN). */
+.pf-inv-item .btn { padding: .3rem .8rem; font-size: .72rem; }
+.pf-inv-item .skin-state { padding: .3rem 0; }
+/* Vérificateur d'XP : deuxième nombre à comparer (CrazyMiner22). */
+.xc-form { flex-wrap: wrap; align-items: center; }
+.xc-vs { font-size: .72rem; font-weight: 700; color: var(--prose-3); }
+.num-card.xc-sim-card { outline: 2px dashed var(--prose-3); outline-offset: 3px; }
+@media (max-width: 420px) { .xc-form .input { flex: 1 1 6rem; } }
+/* Stats : nombres de 1 à 6 chiffres (Phong254). */
+.st-lens { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); column-gap: 1.5rem; }
+.st-lens .kv:first-child { border-top: 0; }
+.st-len .k { display: flex; flex-wrap: wrap; gap: .1rem .4rem; }
+.st-len .v { text-align: right; white-space: nowrap; }
+.st-len .v.up b { color: var(--success); }
+.st-len .v.down b { color: #f97316; }
+.st-len .muted { font-weight: 500; }
+.st-len-note { margin: .6rem 0 0; }
+
+/* ==================================================================== Skins du 2026-11-01, lot B2 (idées de joueurs) */
+/* ------------------------------------------------------------------ Toaster (idée de xenon, 2026-11-01 : « Toaster font.
+   the numbers are bread. ») : un grille-pain chromé des années 50 devant un mur de carreaux menthe. Chaque chiffre est
+   une tranche de pain de mie (mie claire, croûte dorée) plantée dans la fente, le chiffre grillé dedans, brun foncé avec
+   un halo roussi. Pendant le tirage, les tranches sont enfoncées, la fente rougeoie et elles tressautent ; le chiffre
+   n'est qu'une ombre pâle (pas encore grillé). Un chiffre qui se pose : la tranche s'enfonce un peu plus (l'élan), JAILLIT
+   (le chiffre brunit pendant le saut), retombe dans la fente, rebondit et se pose. Dès Mythic, .tst-gold (posée par la
+   scène) : toutes les tranches deviennent des toasts dorés. Miettes, chaleur et pluie de toasts : js/skinfx.js. */
+.num-card.skin-toaster {
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 30%, rgba(255, 255, 255, .35), transparent 70%),
+    linear-gradient(90deg, rgba(15, 76, 70, .12) 1px, transparent 1px) 0 0 / .52em .52em,
+    linear-gradient(0deg, rgba(15, 76, 70, .12) 1px, transparent 1px) 0 0 / .52em .52em,
+    linear-gradient(180deg, #d9f2ee, #a7dcd3);
+  border: 2px solid #475569; border-radius: .6rem; color: #5c2a0a;
+  box-shadow: inset 0 0 .5em rgba(15, 76, 70, .25), 0 0 14px rgba(251, 146, 60, .15), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .26em .55em .4em;
+}
+/* le grille-pain : un bandeau chromé arrondi devant le bas des tranches, la fente sombre, le bouton du thermostat */
+.num-card.skin-toaster::before {
+  content: ''; position: absolute; z-index: 2; left: .1em; right: .1em; bottom: 0; height: .56em; pointer-events: none;
+  border-radius: .32em .32em 0 0; border-top: 1px solid #334155;
+  background:
+    radial-gradient(circle at calc(100% - .5em) 62%, #111827 0 .06em, #e2e8f0 .07em .12em, #475569 .13em, transparent .145em),
+    linear-gradient(90deg, transparent .3em, #1e293b .3em calc(100% - .3em), transparent calc(100% - .3em)) 0 0 / 100% .07em no-repeat,
+    linear-gradient(100deg, transparent 16%, rgba(255, 255, 255, .75) 22%, transparent 28%, transparent 64%, rgba(255, 255, 255, .4) 69%, transparent 74%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, .08) 0 1px, rgba(0, 0, 0, .05) 1px 2px),
+    linear-gradient(180deg, #f8fafc .08em, #cbd5e1 30%, #64748b 62%, #e2e8f0 80%, #94a3b8);
+  box-shadow: 0 -.04em .1em rgba(15, 23, 42, .4);
+}
+/* la fente rougeoie pendant le tirage */
+.num-card.skin-toaster.charging::before { box-shadow: 0 -.04em .1em rgba(15, 23, 42, .4), 0 -.1em .3em rgba(249, 115, 22, .7); animation: tst-glow .7s ease-in-out infinite alternate; }
+@keyframes tst-glow { from { filter: brightness(1); } to { filter: brightness(1.12) saturate(1.2); } }
+.skin-toaster .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .8em; height: 1.16em; margin: 0 .015em; padding-top: .1em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: bottom;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: #5c2a0a; text-shadow: 0 0 .05em #9a4a12, 0 0 .14em rgba(154, 74, 18, .55);
+}
+.skin-toaster .slot::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 50' preserveAspectRatio='none'><defs><radialGradient id='g' cx='.5' cy='.5' r='.6'><stop offset='0' stop-color='%23f2cf8f'/><stop offset='.7' stop-color='%23f8e3b3'/><stop offset='1' stop-color='%23fbe9c4'/></radialGradient></defs><path d='M7 19C1 18 0 6 9 4C15 1 25 1 31 4C40 6 39 18 33 19V47Q33 49 31 49H9Q7 49 7 47Z' fill='url(%23g)' stroke='%23b0662a' stroke-width='3.2' stroke-linejoin='round'/><path d='M9.5 17.5C5 16.5 4.5 8 10.5 6.5C16 4 24 4 29.5 6.5C35.5 8 35 16.5 30.5 17.5' fill='none' stroke='%23d99b55' stroke-width='1.2'/><g fill='%23e3bd80'><circle cx='14' cy='26' r='.9'/><circle cx='26' cy='31' r='1'/><circle cx='18' cy='40' r='.8'/><circle cx='28' cy='42' r='.7'/><circle cx='12' cy='35' r='.7'/><circle cx='23' cy='14' r='.8'/></g></svg>") 50% 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 .03em .02em rgba(69, 26, 3, .35));
+}
+.skin-toaster .slot.ghost { opacity: .2; }
+.skin-toaster .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-toaster .slot.collapsed::before { display: none; }
+/* Pendant le tirage : enfoncées dans la fente qui chauffe, les tranches tressautent ; le chiffre n'est pas encore grillé. */
+.skin-toaster .slot.spinning { opacity: 1; color: rgba(146, 64, 14, .32); text-shadow: none; animation: tst-cook .22s ease-in-out infinite alternate; }
+.skin-toaster .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+@keyframes tst-cook { from { transform: translateY(.44em); } to { transform: translateY(.4em) rotate(.6deg); } }
+/* Le pop : la tranche s'enfonce (l'élan), jaillit en grillant, retombe dans la fente, rebondit et se pose. */
+.skin-toaster .slot.revealed { animation: tst-pop .72s backwards; }
+@keyframes tst-pop {
+  0% { transform: translateY(.42em); color: rgba(146, 64, 14, .32); text-shadow: none; animation-timing-function: ease-in; }
+  12% { transform: translateY(.5em); color: rgba(146, 64, 14, .4); animation-timing-function: cubic-bezier(.15, .9, .3, 1); }
+  40% { transform: translateY(-.26em) rotate(-5deg); color: #7a3a10; }
+  58% { transform: translateY(.1em) rotate(1deg); animation-timing-function: cubic-bezier(.3, 1.4, .5, 1); }
+  74% { transform: translateY(-.06em); }
+  88% { transform: translateY(.02em); }
+  100% { transform: none; }
+}
+/* Dès Mythic : des toasts dorés (la scène pose .tst-gold à la révélation). */
+.num-card.skin-toaster.tst-gold .slot:not(.ghost) { color: #6b3a03; text-shadow: 0 0 .05em #b45309, 0 0 .2em rgba(253, 224, 71, .9); animation: tst-shine .9s ease-out; }
+.num-card.skin-toaster.tst-gold .slot:not(.ghost)::before { filter: drop-shadow(0 0 .08em rgba(253, 224, 71, .9)) drop-shadow(0 .03em .02em rgba(69, 26, 3, .35));
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 50' preserveAspectRatio='none'><defs><radialGradient id='g' cx='.4' cy='.35' r='.7'><stop offset='0' stop-color='%23fffbeb'/><stop offset='.35' stop-color='%23fde68a'/><stop offset='1' stop-color='%23f59e0b'/></radialGradient></defs><path d='M7 19C1 18 0 6 9 4C15 1 25 1 31 4C40 6 39 18 33 19V47Q33 49 31 49H9Q7 49 7 47Z' fill='url(%23g)' stroke='%23b45309' stroke-width='3.2' stroke-linejoin='round'/><path d='M9.5 17.5C5 16.5 4.5 8 10.5 6.5C16 4 24 4 29.5 6.5C35.5 8 35 16.5 30.5 17.5' fill='none' stroke='%23fffbeb' stroke-width='1.4' stroke-opacity='.8'/></svg>"); }
+@keyframes tst-shine { 0% { transform: none; filter: brightness(1); } 30% { transform: translateY(-.12em) scale(1.08); filter: brightness(1.5); } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-toaster .slot, .num-card.skin-toaster::before { animation: none; } }
+/* Cadre de duel : une cuisine rétro (carreaux menthe, plan de travail en damier) ; 🍞 saute, 🧈 fond doucement. */
+.side-toaster { --side-border: #94a3b8; --side-glow: 0 0 16px rgba(251, 146, 60, .25); --side-ink: #b45309;
+  --side-bg: conic-gradient(rgba(15, 23, 42, .22) 0 25%, rgba(248, 250, 252, .3) 0 50%, rgba(15, 23, 42, .22) 0 75%, rgba(248, 250, 252, .3) 0) 0 100% / 16px 16px repeat-x, linear-gradient(90deg, rgba(13, 148, 136, .12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(0deg, rgba(13, 148, 136, .12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(180deg, rgba(167, 220, 211, .25), rgba(253, 186, 116, .14));
+  --deco-a: '🍞'; --deco-b: '🧈'; }
+.side-toaster::before { animation: tst-hop 1.8s ease-in-out infinite; }
+.side-toaster::after { transform-origin: 50% 100%; animation: tst-melt 2.4s ease-in-out infinite; }
+@keyframes tst-hop { 0%, 55%, 100% { transform: none; } 62% { transform: translateY(2px); } 74% { transform: translateY(-9px) rotate(-14deg); } 88% { transform: translateY(0) rotate(4deg); } }
+@keyframes tst-melt { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.1, .9); } }
+.room-stage.many .side-toaster::before, .room-stage.many .side-toaster::after, .room-stage.many .num-card.skin-toaster::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-toaster::before, .side-toaster::after { animation: none; } }
+/* ------------------------------------------------------------------ Billiards (idée de Dylanrulez123, 2026-11-01) : un
+   coin de table de billard (feutre vert sous la lampe, bande de bois verni avec ses mouches nacrées, deux poches noires).
+   Chaque chiffre est imprimé dans la pastille blanche d'une bille numérotée : pleines et rayées en alternance, couleurs
+   classiques, reflet de la lampe. Matière dure : aucun écrasement, des chocs secs. Pendant le tirage, les billes roulent
+   sur place (la pastille et son chiffre défilent sous le reflet fixe). Un chiffre qui se pose : la bille arrive en
+   roulant d'en bas à gauche (frappée par la queue), cogne sa place (éclair, petit recul), se cale. La queue, la bille
+   blanche et le coup de maître : js/skinfx.js (SCENES.billiards). */
+.num-card.skin-billiards {
+  border: .16em solid transparent; border-radius: .55rem; color: #111;
+  background:
+    radial-gradient(circle at 0 0, #050505 0 .2em, #1c1917 .2em .24em, transparent .25em) padding-box,
+    radial-gradient(circle at 100% 0, #050505 0 .2em, #1c1917 .2em .24em, transparent .25em) padding-box,
+    radial-gradient(circle at 0 100%, #050505 0 .2em, #1c1917 .2em .24em, transparent .25em) padding-box,
+    radial-gradient(circle at 100% 100%, #050505 0 .2em, #1c1917 .2em .24em, transparent .25em) padding-box,
+    radial-gradient(ellipse 55% 75% at 50% 42%, rgba(187, 247, 208, .3), transparent 72%) padding-box,
+    repeating-radial-gradient(circle at 30% 30%, rgba(0, 0, 0, .05) 0 1px, transparent 1px 3px) padding-box,
+    linear-gradient(180deg, #16893f, #0f6d33 62%, #0a5427) padding-box,
+    radial-gradient(circle, #fef3c7 0 1.5px, transparent 2px) 6.25% 0 / 12.5% .16em repeat-x border-box,
+    radial-gradient(circle, #fef3c7 0 1.5px, transparent 2px) 6.25% 100% / 12.5% .16em repeat-x border-box,
+    linear-gradient(180deg, #8a4b22, #5c2d10 50%, #7a3f19) border-box;
+  box-shadow: inset 0 0 0 .05em #08401f, inset 0 .1em .35em rgba(0, 0, 0, .45), 0 0 0 1px #2b1408, 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .28em .34em;
+}
+.skin-billiards .slot {
+  --ball: #facc15; --ball-d: #a16207;
+  --base: radial-gradient(circle at 40% 34%, var(--ball), var(--ball-d) 88%);
+  position: relative; z-index: 1; box-sizing: border-box; font-size: .54em; width: 1.6em; height: 1.6em; margin: .02em .05em; border-radius: 50%; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; padding-top: .04em;
+  font-family: 'Arial Black', 'Arial Rounded MT Bold', system-ui, sans-serif; font-weight: 900; line-height: 1; font-variant-numeric: normal;
+  color: #111; text-shadow: 0 0 0 transparent;
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255, 255, 255, .95) 0 .07em, rgba(255, 255, 255, .45) .14em, transparent .4em) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(0, 0, 0, .3)) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle, #fffdf7 0 .5em, #e7e5e4 .52em, transparent .55em) 0 0 / 100% 100% no-repeat,
+    var(--base) 0 0 / 100% 100% no-repeat;
+  box-shadow: .05em .12em .1em rgba(0, 0, 0, .5);
+}
+/* billes rayées : une bande de couleur sur fond blanc */
+.skin-billiards .slot:nth-of-type(2n) { --base: linear-gradient(180deg, #f8fafc 0 23%, var(--ball) 23% 77%, #f8fafc 77%); }
+.skin-billiards .slot:nth-of-type(6n+2) { --ball: #2563eb; --ball-d: #1e3a8a; }
+.skin-billiards .slot:nth-of-type(6n+3) { --ball: #ef4444; --ball-d: #991b1b; }
+.skin-billiards .slot:nth-of-type(6n+4) { --ball: #8b5cf6; --ball-d: #4c1d95; }
+.skin-billiards .slot:nth-of-type(6n+5) { --ball: #fb923c; --ball-d: #c2410c; }
+.skin-billiards .slot:nth-of-type(6n) { --ball: #22c55e; --ball-d: #166534; }
+.skin-billiards .slot.ghost { opacity: .2; }
+.skin-billiards .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : les billes roulent sur place, la pastille et son chiffre défilent sous le reflet de la lampe. */
+.skin-billiards .slot.spinning { opacity: 1; color: transparent; animation: bil-roll .26s linear infinite; }
+.skin-billiards .slot.spinning:nth-of-type(2n) { animation-duration: .32s; animation-delay: -.1s; }
+@keyframes bil-roll {
+  from { background-position: 0 0, 0 0, -1.3em 0, 0 0; text-shadow: -1.3em 0 0 #111; }
+  to { background-position: 0 0, 0 0, 1.3em 0, 0 0; text-shadow: 1.3em 0 0 #111; }
+}
+/* Le coup : la bille arrive en roulant d'en bas à gauche, cogne sa place (éclair, petit recul) et se cale. */
+.skin-billiards .slot.revealed { animation: bil-in .6s backwards; }
+@keyframes bil-in {
+  0% { transform: translate(-1.1em, 1.3em); color: transparent; text-shadow: -1.3em 0 0 #111; background-position: 0 0, 0 0, -1.3em 0, 0 0; animation-timing-function: linear; }
+  24% { transform: translate(-.58em, .69em); color: transparent; text-shadow: 1.3em 0 0 #111; background-position: 0 0, 0 0, 1.3em 0, 0 0; }
+  24.1% { text-shadow: -1.3em 0 0 #111; background-position: 0 0, 0 0, -1.3em 0, 0 0; animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  48% { transform: translate(.1em, -.1em); color: transparent; text-shadow: 0 0 0 #111; background-position: 0 0, 0 0, 0 0, 0 0; filter: brightness(1); }
+  49% { color: #111; text-shadow: 0 0 0 transparent; filter: brightness(1.6); }
+  64% { transform: translate(-.05em, .04em); filter: brightness(1.1); }
+  80% { transform: translate(.015em, -.01em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-billiards .slot { animation: none; } }
+/* Cadre de duel : le feutre et la bande de bois ; 🎱 roule, 🏆 brille. */
+.side-billiards { --side-border: #8a4b22; --side-glow: 0 0 16px rgba(34, 197, 94, .25); --side-ink: #15803d;
+  --side-bg: linear-gradient(180deg, rgba(138, 75, 34, .45) 0 7px, transparent 7px calc(100% - 7px), rgba(138, 75, 34, .45) calc(100% - 7px)), radial-gradient(ellipse 60% 55% at 50% 45%, rgba(134, 239, 172, .2), transparent 70%), linear-gradient(180deg, rgba(22, 137, 63, .2), rgba(10, 84, 39, .2));
+  --deco-a: '🎱'; --deco-b: '🏆'; }
+.side-billiards::before { animation: bil-ball 2.6s ease-in-out infinite; }
+.side-billiards::after { animation: bil-shine 1.8s ease-in-out infinite; }
+@keyframes bil-ball { 0%, 100% { transform: translateX(0) rotate(0); } 45%, 55% { transform: translateX(14px) rotate(360deg); } }
+@keyframes bil-shine { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.12); filter: brightness(1.3); } }
+.room-stage.many .side-billiards::before, .room-stage.many .side-billiards::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-billiards::before, .side-billiards::after { animation: none; } }
+/* ------------------------------------------------------------------ Pirate (idée de casmicgraything, 2026-11-01) : une mer
+   des Caraïbes en plein jour (ciel clair, eau turquoise, rangées d'écume), un galion à l'horizon, un cadre de cordage.
+   Les chiffres sont peints comme le nom d'un vieux navire : lettres à empattements couleur os, cernées de brun goudron.
+   Pendant le tirage, chaque chiffre est caché dans une caisse de bois qui flotte et tangue (le chiffre défile au pochoir
+   sur ses planches) et les vagues glissent. Un chiffre qui se pose : le boulet vole (la caisse tangue encore), la caisse
+   vole en éclats et le chiffre en jaillit (éclair blanc, rebond raide), puis se pose. Différent de Battleship : un vieux
+   voilier, le jour, des caisses (jamais des gens) et de l'or. Le galion, le canon, les éclats et le naufrage doré dès
+   Mythic : js/skinfx.js (SCENES.pirate). */
+.num-card.skin-pirate {
+  border: .14em solid transparent; border-radius: .45rem; color: #fef3c7;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='12'><path d='M0 8Q5 2 10 8T20 8T30 8T40 8' fill='none' stroke='%23f0f9ff' stroke-opacity='.5' stroke-width='1.6'/></svg>") 0 62% / 1.2em .36em repeat-x padding-box,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='12'><path d='M0 8Q5 2 10 8T20 8T30 8T40 8' fill='none' stroke='%23f0f9ff' stroke-opacity='.35' stroke-width='1.6'/></svg>") .5em 88% / 1.6em .46em repeat-x padding-box,
+    radial-gradient(ellipse 34% 22% at 74% 46%, rgba(254, 249, 195, .5), transparent 70%) padding-box,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 30'><g fill='%230c4a6e' fill-opacity='.62'><path d='M2 20H38L33 28H8Z'/><path d='M30 20L33 15H38V20Z'/><rect x='12' y='4' width='1.2' height='17'/><rect x='22' y='1' width='1.2' height='20'/><path d='M14 6Q20 10.5 14 18Z'/><path d='M24 3Q32 9 24 18Z'/><path d='M11 7Q5 12 11 17Z'/><path d='M23 0H29L28 3H23Z'/></g><circle cx='26' cy='1.5' r='.8' fill='%23e0f2fe'/></svg>") .25em calc(36% - .02em) / auto .78em no-repeat padding-box,
+    linear-gradient(180deg, #7dd3fc 0, #e0f2fe 36%, #0ea5b7 36%, #0e7490 70%, #155e75) padding-box,
+    repeating-linear-gradient(45deg, #d6a35c 0 3px, #8a5a24 3px 5px, #b8843f 5px 7px) border-box;
+  box-shadow: inset 0 0 .4em rgba(8, 47, 73, .45), 0 0 14px rgba(250, 204, 21, .18), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .26em .7em .24em;
+}
+/* pendant le tirage, les rangées d'écume glissent */
+.num-card.skin-pirate.charging { animation: prt-sea 2.4s linear infinite; }
+@keyframes prt-sea {
+  from { background-position: 0 62%, .5em 88%, 74% 46%, .25em calc(36% - .02em), 0 0, 0 0; }
+  to { background-position: 2.4em 62%, -2.7em 88%, 74% 46%, .25em calc(36% - .02em), 0 0, 0 0; }
+}
+.skin-pirate .slot {
+  position: relative; z-index: 1; width: .7em; margin: 0 .01em;
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', 'Times New Roman', serif; font-weight: 900; font-variant-numeric: lining-nums;
+  color: #fef3c7; -webkit-text-stroke: .07em #2b1607; paint-order: stroke fill; text-shadow: .03em .07em 0 #082f49;
+}
+/* la caisse qui flotte : planches, cadre et croisillon, à moitié dans l'eau */
+.skin-pirate .slot.spinning::before, .skin-pirate .slot.revealed::before {
+  content: ''; position: absolute; z-index: -1; left: .02em; right: .02em; top: .14em; bottom: .1em; pointer-events: none;
+  border: .055em solid #4a2610; border-radius: .05em;
+  background: linear-gradient(45deg, transparent 43%, #5b3014 43% 57%, transparent 57%), repeating-linear-gradient(180deg, #c58a4a 0 .19em, #8d5a2b .19em .21em), #b77b3e;
+  box-shadow: inset 0 0 .06em rgba(0, 0, 0, .5), 0 .05em 0 rgba(8, 47, 73, .5);
+}
+.skin-pirate .slot.ghost { opacity: .22; }
+/* Pendant le tirage : la caisse tangue sur les vagues, le chiffre défile au pochoir sur ses planches. */
+.skin-pirate .slot.spinning { opacity: 1; color: rgba(43, 22, 7, .75); -webkit-text-stroke: 0; text-shadow: none; animation: prt-bob .9s ease-in-out infinite alternate; }
+.skin-pirate .slot.spinning:nth-of-type(2n) { animation-delay: -.45s; }
+@keyframes prt-bob { from { transform: translateY(.03em) rotate(-5deg); } to { transform: translateY(-.04em) rotate(4deg); } }
+/* Le boulet vole (la caisse tangue encore), elle vole en éclats, le chiffre en jaillit et se pose. */
+.skin-pirate .slot.revealed { animation: prt-burst .76s backwards; }
+.skin-pirate .slot.revealed::before { animation: prt-crate .76s forwards; }
+@keyframes prt-crate { 0%, 38% { opacity: 1; transform: rotate(-4deg); } 43% { opacity: 0; transform: scale(1.4) rotate(10deg); } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes prt-burst {
+  0%, 39% { color: transparent; -webkit-text-stroke-color: transparent; text-shadow: none; transform: translateY(.03em) rotate(-4deg); filter: brightness(1); }
+  44% { color: #ffffff; -webkit-text-stroke-color: #2b1607; text-shadow: .03em .07em 0 #082f49; transform: translateY(-.14em) scale(1.28) rotate(-6deg); filter: brightness(1.5); animation-timing-function: cubic-bezier(.3, .8, .4, 1); }
+  60% { color: #fef3c7; transform: translateY(.03em) scale(.95) rotate(2deg); filter: brightness(1); }
+  78% { transform: translateY(-.02em) scale(1.02) rotate(-1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-pirate .slot, .skin-pirate .slot::before, .num-card.skin-pirate.charging { animation: none; } }
+/* Cadre de duel : la mer et l'écume en bas, un cordage en haut ; 🏴‍☠️ flotte au vent, 🪙 tourne. */
+.side-pirate { --side-border: #b8843f; --side-glow: 0 0 16px rgba(14, 165, 183, .3); --side-ink: #0e7490;
+  --side-bg: repeating-linear-gradient(45deg, rgba(214, 163, 92, .55) 0 3px, rgba(138, 90, 36, .55) 3px 6px) 0 0 / 100% 6px no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='12'><path d='M0 8Q5 2 10 8T20 8T30 8T40 8' fill='none' stroke='%230e7490' stroke-opacity='.35' stroke-width='1.6'/></svg>") 0 calc(100% - 6px) / 30px 9px repeat-x, linear-gradient(180deg, rgba(125, 211, 252, .16), rgba(14, 165, 183, .2) 70%, rgba(21, 94, 117, .24));
+  --deco-a: '🏴‍☠️'; --deco-b: '🪙'; }
+.side-pirate::before { transform-origin: 0 50%; animation: prt-flag 1.6s ease-in-out infinite; }
+.side-pirate::after { animation: prt-coin 1.8s linear infinite; }
+@keyframes prt-flag { 0%, 100% { transform: skewY(-6deg) scaleX(.94); } 50% { transform: skewY(6deg) scaleX(1); } }
+@keyframes prt-coin { 0% { transform: scaleX(1); } 50% { transform: scaleX(.15); } 100% { transform: scaleX(1); } }
+.room-stage.many .side-pirate::before, .room-stage.many .side-pirate::after, .room-stage.many .num-card.skin-pirate.charging { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-pirate::before, .side-pirate::after { animation: none; } }
+/* ------------------------------------------------------------------ T-Rex (idée de tmanrex, 2026-11-01 : « A T-rex skin,
+   would be soo cool. ») : un soir préhistorique (ciel orange et rose, un volcan qui fume à l'horizon, des fougères dans
+   les coins, une bande de terre battue en bas). Chaque chiffre est taillé dans la pierre (dégradé gris moucheté, cerné
+   de noir) : matière dure, aucun écrasement. Pendant le tirage, le sol gronde : les chiffres tremblent par saccades. Un
+   chiffre qui se pose : le pied du T-Rex s'abat (js/skinfx.js), le chiffre apparaît sous le choc, enfoncé dans le sol,
+   vacille et se redresse. Dès Mythic, .rex-roar (posée par la scène) : le rugissement fait trembler toute la carte. */
+.num-card.skin-trex {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><g fill='none' stroke='%23166534' stroke-width='1.6' stroke-linecap='round'><path d='M2 30Q6 14 20 4'/><path d='M5 23l-4-3M7 19l-4-4M9.5 15.5l-3-5M12.5 12l-2-5M15.5 9l-1-5M6 22l5 0M8.5 18l5-1M11 14.5l5-2M14 11l4-2.5'/></g></svg>") left -.1em bottom .1em / .95em auto no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><g fill='none' stroke='%23166534' stroke-width='1.6' stroke-linecap='round' transform='matrix(-1 0 0 1 30 0)'><path d='M2 30Q6 14 20 4'/><path d='M5 23l-4-3M7 19l-4-4M9.5 15.5l-3-5M12.5 12l-2-5M15.5 9l-1-5M6 22l5 0M8.5 18l5-1M11 14.5l5-2M14 11l4-2.5'/></g></svg>") right -.1em bottom .1em / .95em auto no-repeat,
+    linear-gradient(180deg, transparent calc(100% - .3em), #8a5a2b calc(100% - .3em), #6b4220 calc(100% - .16em), #4a2c14),
+    radial-gradient(circle, rgba(120, 53, 15, .35) 0 1px, transparent 1.5px) 0 calc(100% - .02em) / .3em .25em repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'><path d='M0 30L22 6H34L60 30Z' fill='%237c2d12' fill-opacity='.55'/><path d='M22 6Q28 2 34 6L31 9Q28 7 25 9Z' fill='%23f97316' fill-opacity='.8'/><g fill='%2378716c' fill-opacity='.35'><circle cx='29' cy='-1' r='3'/><circle cx='33' cy='-5' r='4'/></g></svg>") 78% calc(100% - .3em) / 1.9em auto no-repeat,
+    radial-gradient(ellipse 40% 30% at 78% 70%, rgba(251, 113, 33, .35), transparent 70%),
+    linear-gradient(180deg, #f97316, #fb7185 52%, #fcd34d);
+  border: 2px solid #3f2a14; border-radius: .5rem;
+  box-shadow: inset 0 0 .5em rgba(124, 45, 18, .35), 0 0 14px rgba(249, 115, 22, .2), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .26em .75em .22em;
+}
+.skin-trex .slot {
+  position: relative; z-index: 1; width: .68em; margin: 0 .01em;
+  font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: transparent; -webkit-text-stroke: .045em #1c1917; text-shadow: none;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, .35) 0 .025em, transparent .035em) 0 0 / .21em .19em,
+    radial-gradient(circle, rgba(41, 37, 36, .45) 0 .025em, transparent .035em) .09em .07em / .26em .23em,
+    linear-gradient(180deg, #f5f5f4 8%, #a8a29e 55%, #78716c 92%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: opacity(1) brightness(1) drop-shadow(0 .06em 0 #1c1917);
+}
+.skin-trex .slot.ghost { opacity: .22; }
+/* Pendant le tirage : le sol gronde, les pierres tremblent par saccades (matière dure : aucun écrasement). */
+.skin-trex .slot.spinning { opacity: .75; color: transparent; filter: opacity(1) brightness(.8) drop-shadow(0 .06em 0 #1c1917) blur(.5px); animation: rex-rumble .1s steps(2) infinite; }
+.skin-trex .slot.spinning:nth-of-type(2n) { animation-delay: -.05s; }
+@keyframes rex-rumble { from { transform: translate(-.02em, .01em); } to { transform: translate(.02em, -.015em) rotate(1deg); } }
+/* Le pied s'abat : le chiffre apparaît sous le choc, enfoncé dans le sol, vacille et se redresse. */
+.skin-trex .slot.revealed { animation: rex-stomp .72s backwards; }
+@keyframes rex-stomp {
+  0%, 25% { transform: translateY(-.2em); filter: opacity(0) brightness(1) drop-shadow(0 .06em 0 #1c1917); }
+  27% { transform: translateY(.16em); filter: opacity(1) brightness(1.35) drop-shadow(0 .06em 0 #1c1917); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  46% { transform: translateY(.08em) rotate(-3deg); filter: opacity(1) brightness(1) drop-shadow(0 .06em 0 #1c1917); }
+  62% { transform: translateY(.1em) rotate(2deg); }
+  80% { transform: translateY(.03em) rotate(-.5deg); }
+  100% { transform: none; }
+}
+/* Dès Mythic : le rugissement secoue toute la carte (posée puis retirée par la scène). */
+.num-card.skin-trex.rex-roar { animation: rex-quake .08s steps(2) 12; }
+@keyframes rex-quake { from { transform: translate(-3px, 1px) rotate(-.6deg); } to { transform: translate(3px, -2px) rotate(.6deg); } }
+@media (prefers-reduced-motion: reduce) { .skin-trex .slot, .num-card.skin-trex.rex-roar { animation: none; } }
+/* Cadre de duel : la jungle du soir et le sol de terre ; 🦖 piétine, 🌋 fume. */
+.side-trex { --side-border: #c2410c; --side-glow: 0 0 16px rgba(249, 115, 22, .3); --side-ink: #9a3412;
+  --side-bg: linear-gradient(180deg, transparent calc(100% - 12px), rgba(138, 90, 43, .45) calc(100% - 12px)), radial-gradient(ellipse 50% 40% at 85% 100%, rgba(249, 115, 22, .22), transparent 70%), linear-gradient(180deg, rgba(249, 115, 22, .16), rgba(251, 113, 133, .14) 55%, rgba(22, 101, 52, .14));
+  --deco-a: '🦖'; --deco-b: '🌋'; }
+.side-trex::before { transform-origin: 50% 100%; animation: rex-walk 1.4s ease-in-out infinite; }
+.side-trex::after { transform-origin: 50% 100%; animation: rex-puff 2.2s ease-in-out infinite; }
+@keyframes rex-walk { 0%, 100% { transform: translateY(0) rotate(-4deg); } 25% { transform: translateY(-4px) rotate(0); } 50% { transform: translateY(0) rotate(4deg); } 75% { transform: translateY(-4px) rotate(0); } }
+@keyframes rex-puff { 0%, 70%, 100% { transform: none; } 78% { transform: scale(1.18, .88); } 88% { transform: scale(.94, 1.06); } }
+.room-stage.many .side-trex::before, .room-stage.many .side-trex::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-trex::before, .side-trex::after { animation: none; } }
+/* ------------------------------------------------------------------ Birthday Cake (idée de sennybex1, 2026-11-01 : « a
+   birthday cake skin that includes candles and colorful numbers ») : un gâteau au chocolat à étages (deux couches de
+   crème), un glaçage rose qui coule en gouttes sur le bord, des vermicelles, devant le mur sombre d'une fête. Chaque
+   chiffre est dessiné à la poche à douille en glaçage de couleur (rose, bleu, vert, jaune, violet, orange), cerné de
+   blanc ; une bougie rayée de la même couleur est plantée au-dessus, sur le glaçage. Pendant le tirage, le glaçage
+   gigote (la poche qu'on presse) et les bougies sont éteintes. Un chiffre qui se pose : il sort de la douille en
+   s'écrasant (matière molle), rebondit et se pose, et sa bougie s'allume (étincelle, puis flamme qui vacille). Dès
+   Mythic, .cak-blown (posée par la scène) : un grand souffle couche et éteint toutes les flammes, de la fumée monte, des
+   confettis volent, puis les bougies se rallument d'elles-mêmes. */
+.num-card.skin-cake {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='8'><g stroke-width='1.6' stroke-linecap='round'><path d='M3 3l2 1' stroke='%2338bdf8'/><path d='M10 5l2-1' stroke='%23facc15'/><path d='M16 2l1 2' stroke='%2322c55e'/><path d='M20 5l2 0' stroke='%23ffffff'/></g></svg>") 0 .62em / 1.1em .3em repeat-x,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='11'><path d='M0 0H24V4Q21 4 20.5 7Q20 9.6 18.6 9.6Q17.2 9.6 16.8 7Q16.4 4 13 4Q10 4 9.6 8.4Q9.2 11 7.8 11Q6.4 11 6 8.4Q5.6 4 3 4Q0 4 0 4Z' fill='%23f9a8d4'/><path d='M0 1.4H24' stroke='%23fdf2f8' stroke-width='1.2'/></svg>") 0 .58em / 1.25em .58em repeat-x,
+    linear-gradient(180deg, transparent 63%, rgba(253, 230, 138, .8) 63% 66%, transparent 66% 86%, rgba(253, 230, 138, .8) 86% 89%, transparent 89%),
+    radial-gradient(circle, rgba(253, 224, 71, .5) 0 1px, transparent 1.5px) 0 0 / .5em .3em,
+    linear-gradient(180deg, #2e1065 0, #4c1d95 .6em, #7c4a2a .6em, #5b3218);
+  border: 2px solid #3b1d0a; border-radius: .55rem;
+  box-shadow: inset 0 -.15em .3em rgba(0, 0, 0, .3), 0 0 14px rgba(244, 114, 182, .25), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: 0 .55em .18em;
+}
+.skin-cake .slot {
+  --ice: #f472b6;
+  position: relative; z-index: 1; box-sizing: border-box; width: .7em; height: 1.72em; margin: 0 .02em;
+  display: inline-flex; align-items: flex-end; justify-content: center; vertical-align: bottom; transform-origin: 50% 100%;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal; line-height: 1.05;
+  color: var(--ice); -webkit-text-stroke: .1em #fff; paint-order: stroke fill; text-shadow: 0 .06em 0 rgba(46, 16, 101, .45);
+}
+.skin-cake .slot:nth-of-type(6n+2) { --ice: #38bdf8; }
+.skin-cake .slot:nth-of-type(6n+3) { --ice: #4ade80; }
+.skin-cake .slot:nth-of-type(6n+4) { --ice: #facc15; }
+.skin-cake .slot:nth-of-type(6n+5) { --ice: #a78bfa; }
+.skin-cake .slot:nth-of-type(6n) { --ice: #fb923c; }
+/* la bougie rayée plantée dans le glaçage, et sa flamme */
+.skin-cake .slot::after, .skin-cake .slot::before { content: ''; position: absolute; left: 50%; pointer-events: none; }
+.skin-cake .slot::after { top: .2em; height: .44em; width: .09em; margin-left: -.045em; border-radius: .02em;
+  background: repeating-linear-gradient(-55deg, #fff 0 .035em, var(--ice) .035em .085em); box-shadow: inset -.02em 0 0 rgba(0, 0, 0, .15); }
+.skin-cake .slot::before { top: -.02em; height: .24em; width: .15em; margin-left: -.075em; transform-origin: 50% 100%;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(ellipse 42% 45% at 50% 70%, #fff 0 32%, #fde047 58%, #f97316 92%);
+  box-shadow: 0 0 .16em .07em rgba(253, 186, 116, .7); animation: cak-flicker 1.1s ease-in-out infinite alternate; }
+@keyframes cak-flicker { 0% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(.9, 1.12) rotate(2deg); } 100% { transform: scale(1.05, .95) rotate(-1deg); } }
+.skin-cake .slot.ghost::before, .skin-cake .slot.ghost::after { visibility: hidden; }
+.skin-cake .slot.collapsed { width: 0; margin: 0; }
+.skin-cake .slot.collapsed::before, .skin-cake .slot.collapsed::after { display: none; }
+/* Pendant le tirage : le glaçage gigote, les bougies attendent, éteintes. */
+.skin-cake .slot.spinning { opacity: .85; color: var(--ice); animation: cak-squeeze .26s ease-in-out infinite alternate; }
+.skin-cake .slot.spinning:nth-of-type(2n) { animation-delay: -.13s; }
+.skin-cake .slot.spinning::before { opacity: 0; animation: none; }
+@keyframes cak-squeeze { from { transform: scale(1.05, .95); } to { transform: scale(.96, 1.04); } }
+/* Le chiffre sort de la douille en s'écrasant, rebondit et se pose ; puis la bougie s'allume. */
+.skin-cake .slot.revealed { animation: cak-pipe .62s backwards; }
+@keyframes cak-pipe {
+  0% { transform: scale(.25, .12); animation-timing-function: cubic-bezier(.3, .9, .4, 1); }
+  32% { transform: scale(1.2, .78); }
+  50% { transform: scale(.9, 1.12); }
+  68% { transform: scale(1.05, .96); }
+  84% { transform: scale(.98, 1.02); }
+  100% { transform: none; }
+}
+.skin-cake .slot.revealed::before { animation: cak-light .7s backwards, cak-flicker 1.1s .7s ease-in-out infinite alternate; }
+@keyframes cak-light { 0%, 45% { opacity: 0; transform: scale(.2); } 56% { opacity: 1; transform: scale(1.6, 1.8); } 74% { transform: scale(.85, .9); } 100% { opacity: 1; transform: none; } }
+/* Dès Mythic : un grand souffle couche et éteint les flammes, puis elles se rallument. */
+.num-card.skin-cake.cak-blown .slot::before { animation: cak-blow 2.6s ease-in-out both; }
+@keyframes cak-blow { 0% { opacity: 1; transform: none; } 10% { opacity: 1; transform: rotate(-55deg) scale(.9, .6); } 20%, 78% { opacity: 0; transform: rotate(-70deg) scale(.2); } 88% { opacity: 1; transform: scale(1.5, 1.7); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-cake .slot, .skin-cake .slot::before { animation: none !important; } }
+.room-stage.many .skin-cake .slot:not(.revealed)::before, .room-stage.many .skin-cake .slot.revealed::before { animation: none; }
+/* Cadre de duel : une fête (guirlande de fanions pastel en haut, confettis) ; 🎂 brille, 🎈 flotte. */
+.side-cake { --side-border: #f472b6; --side-glow: 0 0 16px rgba(244, 114, 182, .3); --side-ink: #be185d;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='16'><path d='M0 2Q30 7 60 2' fill='none' stroke='%23a78bfa' stroke-width='1'/><polygon points='3,2.6 13,4.2 7,13' fill='%23f9a8d4'/><polygon points='18,4.6 28,5.4 22,14' fill='%237dd3fc'/><polygon points='33,5.4 43,4.6 39,14' fill='%23fde047'/><polygon points='48,4.2 58,2.6 52,13' fill='%2386efac'/></svg>") 0 0 / 60px 16px repeat-x, radial-gradient(circle, rgba(244, 114, 182, .3) 0 1.5px, transparent 2px) 0 0 / 23px 19px, radial-gradient(circle, rgba(56, 189, 248, .28) 0 1.5px, transparent 2px) 9px 11px / 29px 23px, linear-gradient(180deg, rgba(167, 139, 250, .16), rgba(244, 114, 182, .14));
+  --deco-a: '🎂'; --deco-b: '🎈'; }
+.side-cake::before { animation: cak-glow 1.6s ease-in-out infinite; }
+.side-cake::after { animation: cak-float 2.4s ease-in-out infinite; }
+@keyframes cak-glow { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.1); filter: brightness(1.25); } }
+@keyframes cak-float { 0%, 100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-6px) rotate(5deg); } }
+.room-stage.many .side-cake::before, .room-stage.many .side-cake::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cake::before, .side-cake::after { animation: none; } }
+/* ------------------------------------------------------------------ Carnival (idée de jia jun, 2026-11-01) : un stand de
+   chamboule-tout. La version avec un pistolet a été refusée (pas d'armes) ; jia jun a proposé une balle à lancer. Un
+   auvent rayé rouge et blanc festonné en haut, le fond du stand en planches bleu nuit sous une lumière chaude, deux
+   rangées d'ampoules sur les côtés, l'étagère de bois en bas. Les chiffres sont peints comme les lettres d'un stand de
+   fête (jaune, cernés de rouge, ombre portée). Pendant le tirage, une pile de trois boîtes de conserve est posée devant
+   chaque chiffre et vacille ; les ampoules clignotent en chenillard. Un chiffre qui se pose : la balle arrive (la pile
+   tient encore), la pile disparaît (les boîtes volent : js/skinfx.js) et le chiffre bondit, puis se pose. Dès Mythic,
+   .crn-win (posée par la scène) : toutes les ampoules s'emballent et le gros lot tombe (une rosette dorée). */
+.num-card.skin-carnival {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='9'><path d='M0 0H10V5Q5 10 0 5Z' fill='%23dc2626'/><path d='M10 0H20V5Q15 10 10 5Z' fill='%23fef2f2'/></svg>") 0 0 / 1em .42em repeat-x,
+    linear-gradient(180deg, #7f1d1d 0 .05em, transparent .05em) ,
+    linear-gradient(180deg, transparent calc(100% - .2em), #c2782f calc(100% - .2em), #92400e calc(100% - .08em), #6b2f0a),
+    radial-gradient(ellipse 65% 60% at 50% 50%, rgba(253, 224, 71, .28), transparent 72%),
+    repeating-linear-gradient(90deg, #1e3a8a 0 .55em, #172f6e .55em .58em);
+  border: 2px solid #78350f; border-radius: .45rem;
+  box-shadow: inset 0 0 .45em rgba(15, 23, 42, .5), 0 0 16px rgba(250, 204, 21, .25), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .44em .62em .24em;
+}
+/* les ampoules des côtés : une sur deux allumée ; elles avancent en chenillard pendant le tirage */
+.num-card.skin-carnival::before {
+  content: ''; position: absolute; z-index: 2; top: .46em; bottom: .24em; left: .1em; right: .1em; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 25%, #fffbeb 0 .03em, #fde047 .05em, rgba(253, 224, 71, .35) .08em, transparent .1em) 0 0 / .2em .4em repeat-y,
+    radial-gradient(circle at 50% 75%, #a16207 0 .04em, transparent .05em) 0 0 / .2em .4em repeat-y,
+    radial-gradient(circle at 50% 25%, #fffbeb 0 .03em, #fde047 .05em, rgba(253, 224, 71, .35) .08em, transparent .1em) 100% 0 / .2em .4em repeat-y,
+    radial-gradient(circle at 50% 75%, #a16207 0 .04em, transparent .05em) 100% 0 / .2em .4em repeat-y;
+}
+.num-card.skin-carnival.charging::before { animation: crn-chase .36s steps(1) infinite; }
+.num-card.skin-carnival.crn-win::before { animation: crn-chase .12s steps(1) 18; }
+@keyframes crn-chase { 0% { background-position: 0 0, 0 0, 100% 0, 100% 0; } 50% { background-position: 0 .2em, 0 -.2em, 100% .2em, 100% -.2em; } }
+.skin-carnival .slot {
+  position: relative; z-index: 1; width: .68em; margin: 0 .01em;
+  font-family: 'Rockwell Extra Bold', Rockwell, 'Arial Black', Impact, sans-serif; font-weight: 900; font-variant-numeric: lining-nums;
+  color: #fde047; -webkit-text-stroke: .08em #b91c1c; paint-order: stroke fill; text-shadow: .05em .07em 0 #0f172a;
+}
+/* la pile de trois boîtes de conserve devant le chiffre (pendant le tirage et au début de la pose) */
+.skin-carnival .slot.spinning::before, .skin-carnival .slot.revealed::before {
+  content: ''; position: absolute; z-index: 2; left: -.08em; right: -.08em; bottom: -.04em; height: 1.04em; pointer-events: none; transform-origin: 50% 100%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 28'><defs><linearGradient id='m' x1='0' x2='1'><stop offset='0' stop-color='%2364748b'/><stop offset='.35' stop-color='%23f1f5f9'/><stop offset='.6' stop-color='%23cbd5e1'/><stop offset='1' stop-color='%23475569'/></linearGradient></defs><g stroke='%23334155' stroke-width='.8'><rect x='1' y='14.5' width='13' height='13' rx='1' fill='url(%23m)'/><rect x='16' y='14.5' width='13' height='13' rx='1' fill='url(%23m)'/><rect x='8.5' y='1' width='13' height='13' rx='1' fill='url(%23m)'/></g><g fill='%23ef4444'><rect x='1.4' y='18.5' width='12.2' height='5'/><rect x='16.4' y='18.5' width='12.2' height='5'/><rect x='8.9' y='5' width='12.2' height='5'/></g><g fill='%23facc15'><circle cx='7.5' cy='21' r='1.3'/><circle cx='22.5' cy='21' r='1.3'/><circle cx='15' cy='7.5' r='1.3'/></g></svg>") 50% 100% / contain no-repeat;
+  filter: drop-shadow(0 .04em .02em rgba(0, 0, 0, .5));
+}
+.skin-carnival .slot.ghost { opacity: .22; }
+/* Pendant le tirage : la pile vacille devant le chiffre, qui défile derrière. */
+.skin-carnival .slot.spinning { opacity: 1; color: rgba(253, 224, 71, .55); -webkit-text-stroke-color: rgba(185, 28, 28, .55); text-shadow: none; }
+.skin-carnival .slot.spinning::before { animation: crn-wobble .5s ease-in-out infinite alternate; }
+.skin-carnival .slot.spinning:nth-of-type(2n)::before { animation-delay: -.25s; }
+@keyframes crn-wobble { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+/* La balle arrive, la pile tombe, le chiffre bondit et se pose. */
+.skin-carnival .slot.revealed { animation: crn-pop .7s backwards; }
+.skin-carnival .slot.revealed::before { animation: crn-knock .7s forwards; }
+@keyframes crn-knock { 0%, 35% { opacity: 1; transform: none; } 38% { opacity: 0; transform: translateY(-.08em) rotate(14deg); } 100% { opacity: 0; transform: rotate(14deg); } }
+@keyframes crn-pop {
+  0%, 36% { transform: translateY(.05em) scale(.92); color: rgba(253, 224, 71, .55); -webkit-text-stroke-color: rgba(185, 28, 28, .55); text-shadow: none; filter: brightness(1); }
+  42% { transform: translateY(-.16em) scale(1.26); color: #fef9c3; -webkit-text-stroke-color: #b91c1c; text-shadow: .05em .07em 0 #0f172a; filter: brightness(1.5); animation-timing-function: cubic-bezier(.3, .8, .4, 1); }
+  60% { transform: translateY(.03em) scale(.95); color: #fde047; filter: brightness(1); }
+  78% { transform: translateY(-.02em) scale(1.03); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-carnival .slot, .skin-carnival .slot::before, .num-card.skin-carnival::before { animation: none; } }
+/* Cadre de duel : l'auvent rayé en haut, la lumière chaude du stand ; 🎪 se balance, 🥫 vacille. */
+.side-carnival { --side-border: #dc2626; --side-glow: 0 0 16px rgba(250, 204, 21, .3); --side-ink: #b91c1c;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='9'><path d='M0 0H10V5Q5 10 0 5Z' fill='%23dc2626' fill-opacity='.55'/><path d='M10 0H20V5Q15 10 10 5Z' fill='%23fef2f2' fill-opacity='.55'/></svg>") 0 0 / 28px 13px repeat-x, radial-gradient(ellipse 60% 50% at 50% 50%, rgba(253, 224, 71, .16), transparent 70%), linear-gradient(180deg, rgba(30, 58, 138, .14), rgba(30, 58, 138, .2));
+  --deco-a: '🎪'; --deco-b: '🥫'; }
+.side-carnival::before { transform-origin: 50% 0; animation: crn-sway 2.2s ease-in-out infinite; }
+.side-carnival::after { transform-origin: 50% 100%; animation: crn-tip 1.8s ease-in-out infinite; }
+@keyframes crn-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes crn-tip { 0%, 60%, 100% { transform: none; } 70% { transform: rotate(-16deg); } 82% { transform: rotate(8deg); } 92% { transform: rotate(-3deg); } }
+.room-stage.many .side-carnival::before, .room-stage.many .side-carnival::after, .room-stage.many .num-card.skin-carnival::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-carnival::before, .side-carnival::after { animation: none; } }
+
+/* ==== Skins du 2026-11-01, lot A ==== Mini Golf (Kj13 et Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari
+   (dylanbuckleyisjewish), Mining (number 1), Cat (baby boy). Leurs scènes : js/skinfx.js, même lot. */
+/* ------------------------------------------------------------------ Mini Golf (idée de Kj13, 2026-11-01 ; Jguz01 voulait
+   des chiffres en balles de golf sur un green) : un green de mini-golf tondu en bandes, bordé d'une lisse en bois, un petit
+   drapeau rouge dans le coin. Chaque chiffre est une balle blanche posée dans son trou (le creux sombre dessous).
+   Tirage : les chiffres roulent sur le green. Un chiffre qui se pose : il arrive en roulant de la gauche, freine au bord
+   du trou, y plonge un instant (le « cloc ») et ressort à sa place. Matière dure : pas d'écrasement. */
+.num-card.skin-golf {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 26'><path d='M3 25V2' stroke='%23e2e8f0' stroke-width='1.4'/><path d='M3.6 2.2L14 5.6 3.6 9.4Z' fill='%23ef4444' stroke='%23991b1b' stroke-width='.6' stroke-linejoin='round'/><ellipse cx='3' cy='25' rx='2.6' ry='.9' fill='%23052e16' fill-opacity='.7'/></svg>") right .25em top .12em / .34em auto no-repeat,
+    radial-gradient(ellipse 70% 90% at 40% 10%, rgba(255, 255, 255, .22), transparent 60%),
+    radial-gradient(circle, rgba(5, 46, 22, .22) 0 .012em, transparent .02em) 0 0 / .09em .07em,
+    repeating-linear-gradient(90deg, #4ade80 0 .9em, #22c55e .9em 1.8em),
+    #22c55e;
+  border: .14em solid #92400e; border-radius: .55rem; color: #f8fafc;
+  box-shadow: inset 0 0 0 2px #fbbf24, inset 0 .12em .4em rgba(20, 83, 45, .55), inset 0 -.2em .4em rgba(20, 83, 45, .35), 0 0 16px rgba(34, 197, 94, .22), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-golf .slot { position: relative; z-index: 1; width: .64em; font-weight: 900; color: #f8fafc;
+  text-shadow: 0 .045em 0 #cbd5e1, 0 .08em .02em rgba(5, 46, 22, .55), 0 0 .12em rgba(255, 255, 255, .35); }
+/* le trou sous chaque chiffre (derrière lui) */
+.skin-golf .slot::after { content: ''; position: absolute; z-index: -1; left: 50%; bottom: -.01em; width: .46em; height: .13em; margin-left: -.23em; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, #022c12 0 55%, #14532d 70%, rgba(20, 83, 45, 0) 100%); box-shadow: 0 .015em 0 rgba(255, 255, 255, .35); }
+.skin-golf .slot.ghost { opacity: .18; }
+.skin-golf .slot.collapsed { width: 0; }
+.skin-golf .slot.collapsed::after { display: none; }
+.num-card.sm.skin-golf { border-width: 2px; background-size: 0 0, auto, auto, auto, auto; }
+.num-card.sm.skin-golf .slot::after { display: none; }
+.skin-golf .slot.spinning { color: rgba(248, 250, 252, .55); text-shadow: 0 .05em .02em rgba(5, 46, 22, .4); animation: glf-roll .2s linear infinite; }
+.skin-golf .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; }
+@keyframes glf-roll { from { transform: translateX(-.05em) rotate(-14deg); filter: blur(.5px); } to { transform: translateX(.05em) rotate(14deg); filter: blur(1px); } }
+.skin-golf .slot.revealed { animation: glf-putt .66s backwards; }
+@keyframes glf-putt {
+  0% { transform: translateX(-.7em) rotate(-300deg) scale(.86); filter: blur(1px); animation-timing-function: cubic-bezier(.15, .7, .35, 1); }
+  42% { transform: translateX(.03em) rotate(6deg); filter: none; animation-timing-function: ease-in; }
+  52% { transform: translateX(0) translateY(.1em) scale(.94); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  66% { transform: translateY(-.06em) scale(1.04); filter: brightness(1.25); }
+  80% { transform: translateY(.015em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-golf .slot { animation: none; } }
+/* Cadre de duel : un beau parcours (Jguz01) : ciel, collines tondues, un lac au loin ; ⛳ claque au vent, 🏌️ se balance. */
+.side-golf { --side-border: #16a34a; --side-glow: 0 0 16px rgba(34, 197, 94, .28); --side-ink: #166534;
+  --side-bg: radial-gradient(ellipse 60% 22% at 25% 100%, rgba(34, 197, 94, .45), transparent 70%), radial-gradient(ellipse 70% 30% at 85% 104%, rgba(22, 163, 74, .45), transparent 70%), radial-gradient(ellipse 30% 6% at 62% 72%, rgba(56, 189, 248, .35), transparent 80%), linear-gradient(180deg, rgba(125, 211, 252, .28) 0%, rgba(186, 230, 253, .16) 55%, rgba(134, 239, 172, .3) 70%, rgba(74, 222, 128, .35) 100%);
+  --deco-a: '⛳'; --deco-b: '🏌️'; }
+.side-golf::before { transform-origin: 20% 100%; animation: glf-flag 1.6s ease-in-out infinite; }
+.side-golf::after { transform-origin: 50% 100%; animation: glf-swing 2.6s ease-in-out infinite; }
+@keyframes glf-flag { 0%, 100% { transform: skewY(0); } 50% { transform: skewY(-8deg) scaleX(1.06); } }
+@keyframes glf-swing { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-14deg); } 78% { transform: rotate(10deg); } }
+.room-stage.many .side-golf::before, .room-stage.many .side-golf::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-golf::before, .side-golf::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Soccer (idée de kingston, 2026-11-01) : on regarde le
+   fond d'un but un soir de match : poteaux et barre blancs, le filet en losanges tendu derrière les chiffres, une bande
+   de pelouse en bas. Chiffres blancs épais cernés de vert nuit.
+   Tirage : le filet ondule (la carte en .charging) et les chiffres tremblent, flous. Un chiffre qui se pose : un tir
+   arrive de face (grand, flou), s'enfonce dans le filet (il recule et s'aplatit un peu, le filet le retient), rebondit
+   et se pose. Le ballon et le filet qui se creuse : js/skinfx.js (SCENES.soccer). */
+.num-card.skin-soccer {
+  background:
+    linear-gradient(180deg, transparent 80%, rgba(21, 128, 61, .95) 80%, #15803d 90%, #166534),
+    repeating-linear-gradient(45deg, rgba(248, 250, 252, .3) 0 1px, transparent 1px .16em),
+    repeating-linear-gradient(-45deg, rgba(248, 250, 252, .3) 0 1px, transparent 1px .16em),
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255, 255, 255, .22), transparent 70%),
+    linear-gradient(180deg, #0f172a, #1e3a5f 70%, #14532d);
+  border: .13em solid #f8fafc; border-bottom: 2px solid #166534; border-radius: .25rem .25rem .4rem .4rem; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .5), inset .12em .12em .3em rgba(0, 0, 0, .55), 0 0 18px rgba(248, 250, 252, .18), 0 10px 18px rgba(0, 0, 0, .4);
+}
+.num-card.skin-soccer.charging { animation: scr-net 1.1s ease-in-out infinite alternate; }
+@keyframes scr-net { from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 0, .05em .03em, -.05em .03em, 0 0, 0 0; } }
+.room-stage.many .num-card.skin-soccer.charging { animation: none; }
+.skin-soccer .slot { position: relative; z-index: 1; width: .7em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: #fff;
+  text-shadow: .035em .035em 0 #052e16, -.02em -.02em 0 #052e16, .02em -.02em 0 #052e16, -.02em .02em 0 #052e16, 0 0 .2em rgba(255, 255, 255, .3); }
+.skin-soccer .slot.ghost { opacity: .18; }
+.skin-soccer .slot.collapsed { width: 0; }
+.skin-soccer .slot.spinning { color: rgba(255, 255, 255, .5); text-shadow: none; animation: scr-jitter .16s ease-in-out infinite alternate; }
+.skin-soccer .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes scr-jitter { from { transform: translateY(-.03em) scale(.96); filter: blur(.6px); } to { transform: translateY(.03em) scale(1.04); filter: blur(1.1px); } }
+.skin-soccer .slot.revealed { animation: scr-shot .6s backwards; }
+@keyframes scr-shot {
+  0% { transform: translate(.1em, .35em) scale(2.3); filter: blur(2px); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  26% { transform: scale(.82, .78) translateY(-.03em); filter: brightness(1.4); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  44% { transform: scale(1.1); filter: none; }
+  62% { transform: scale(.97); }
+  80% { transform: scale(1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-soccer .slot, .num-card.skin-soccer.charging { animation: none; } }
+/* Cadre de duel : la pelouse tondue en bandes et le rond central ; ⚽ rebondit devant le but 🥅. */
+.side-soccer { --side-border: #f8fafc; --side-glow: 0 0 16px rgba(34, 197, 94, .3); --side-ink: #166534;
+  --side-bg: radial-gradient(circle at 50% 100%, transparent 0 34%, rgba(248, 250, 252, .45) 34.5% 35.5%, transparent 36%), linear-gradient(90deg, transparent calc(50% - 1px), rgba(248, 250, 252, .3) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)), repeating-linear-gradient(90deg, rgba(34, 197, 94, .16) 0 26px, rgba(22, 163, 74, .26) 26px 52px);
+  --deco-a: '🥅'; --deco-b: '⚽'; }
+:root:not(.dark) .side-soccer { --side-border: #16a34a; }
+.side-soccer::after { animation: scr-bounce 1.4s cubic-bezier(.3, 0, .7, 1) infinite; }
+@keyframes scr-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-12px) rotate(180deg); } }
+.room-stage.many .side-soccer::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-soccer::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Basketball (idée de jjcoolcid1, 2026-11-01) : un
+   parquet de salle en érable vernis (lattes, reflet), la raquette peinte en orange et l'arc blanc de la ligne des
+   lancers francs. Chiffres en cuir de ballon orange cernés de noir (les coutures).
+   Tirage : les chiffres dribblent (matière caoutchouc : ils s'écrasent un peu en touchant le parquet). Un chiffre qui se
+   pose : il tombe du panier (la scène le fait passer dans un arceau), s'écrase sur le parquet, rebondit et se pose. */
+.num-card.skin-basketball {
+  background:
+    radial-gradient(ellipse 34% 62% at 50% 112%, transparent 0 88%, rgba(255, 255, 255, .85) 89% 93%, transparent 94%),
+    linear-gradient(90deg, transparent 33%, rgba(234, 88, 12, .34) 33% 67%, transparent 67%) 0 100% / 100% 36% no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, .4), transparent 34%),
+    repeating-linear-gradient(90deg, rgba(120, 53, 15, .3) 0 1px, transparent 1px .42em),
+    repeating-linear-gradient(90deg, #e9b77c 0 .42em, #dfa765 .42em .84em, #edc28c .84em 1.26em),
+    #e3ad6f;
+  border: .1em solid #7c2d12; border-radius: .5rem; color: #ea580c;
+  box-shadow: inset 0 0 0 2px rgba(255, 237, 213, .45), inset 0 -.2em .4em rgba(124, 45, 18, .3), 0 0 16px rgba(249, 115, 22, .25), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-basketball .slot { position: relative; z-index: 1; width: .7em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: #f97316;
+  text-shadow: .03em 0 0 #1c1917, -.03em 0 0 #1c1917, 0 .03em 0 #1c1917, 0 -.03em 0 #1c1917, .02em .02em 0 #1c1917, -.02em -.02em 0 #1c1917, 0 .09em .05em rgba(67, 20, 7, .35); }
+.skin-basketball .slot.ghost { opacity: .18; }
+.skin-basketball .slot.collapsed { width: 0; }
+.skin-basketball .slot.spinning { color: rgba(249, 115, 22, .6); text-shadow: 0 .05em .04em rgba(67, 20, 7, .3); transform-origin: 50% 100%; animation: bkb-dribble .26s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+.skin-basketball .slot.spinning:nth-of-type(2n) { animation-delay: -.13s; }
+@keyframes bkb-dribble { from { transform: translateY(-.14em); filter: blur(.4px); } 80% { transform: translateY(.04em) scale(1, 1); } to { transform: translateY(.06em) scale(1.1, .86); filter: blur(.8px); } }
+.skin-basketball .slot.revealed { transform-origin: 50% 100%; animation: bkb-swish .66s backwards; }
+@keyframes bkb-swish {
+  0% { transform: translateY(-.75em) scale(.78); filter: blur(.8px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  30% { transform: translateY(0) scale(1.14, .82); filter: brightness(1.3); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  52% { transform: translateY(-.15em) scale(.95, 1.06); filter: none; animation-timing-function: cubic-bezier(.6, 0, 1, .6); }
+  68% { transform: translateY(0) scale(1.05, .95); animation-timing-function: ease-out; }
+  84% { transform: translateY(-.025em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-basketball .slot { animation: none; } }
+/* Cadre de duel : le parquet et la raquette ; 🏀 dribble, ⛹️ saute. */
+.side-basketball { --side-border: #ea580c; --side-glow: 0 0 16px rgba(249, 115, 22, .3); --side-ink: #9a3412;
+  --side-bg: radial-gradient(ellipse 30% 40% at 50% 100%, transparent 0 90%, rgba(255, 255, 255, .5) 91% 95%, transparent 96%), linear-gradient(90deg, transparent 32%, rgba(234, 88, 12, .2) 32% 68%, transparent 68%) 0 100% / 100% 40% no-repeat, repeating-linear-gradient(90deg, rgba(217, 160, 95, .22) 0 18px, rgba(194, 130, 70, .2) 18px 36px);
+  --deco-a: '🏀'; --deco-b: '⛹️'; }
+.side-basketball::before { animation: bkb-ball 1s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+.side-basketball::after { animation: bkb-jump 2.2s ease-in-out infinite; }
+@keyframes bkb-ball { from { transform: translateY(0); } to { transform: translateY(10px) scale(1.1, .88); } }
+@keyframes bkb-jump { 0%, 55%, 100% { transform: translateY(0); } 70% { transform: translateY(-9px); } }
+.room-stage.many .side-basketball::before, .room-stage.many .side-basketball::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-basketball::before, .side-basketball::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Safari (idée de dylanbuckleyisjewish, 2026-11-01) :
+   la savane au couchant (ciel orange, soleil bas, herbes sèches ; l'acacia est dans le cadre de duel). Chiffres :
+   pelages : zèbre, girafe et léopard, à tour de rôle, cernés de brun foncé pour rester lisibles.
+   Tirage : les chiffres se cachent dans les herbes (ils s'enfoncent et ondulent). Un chiffre qui se pose : il se tasse
+   (l'animal se ramasse), bondit hors des herbes et retombe en place. Les animaux qui pointent la tête, la jeep et le lion
+   des grands tirages : js/skinfx.js (SCENES.safari). */
+.num-card.skin-safari {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 12' preserveAspectRatio='none'><path d='M0 12V7l2-5 1 5 2-6 2 6 1-4 2 5 2-6 1 5 2-4 2 5 1-6 2 6 2-5 1 4 2-6 2 6 1-5 2 5 2-4 1 5 2-6 2 6 1-5 2 4 2-5 2 6 1-5 2 5 2-6 1 6 2-4 2 5 1-6 2 6V12Z' fill='%2378350f' fill-opacity='.85'/></svg>") 0 100% / 2.4em .3em repeat-x,
+    radial-gradient(circle at 90% 84%, #fdba74 0 .15em, rgba(253, 186, 116, .55) .19em, rgba(251, 146, 60, .22) .34em, transparent .6em),
+    linear-gradient(180deg, #7c2d12 0%, #9a3412 30%, #c2410c 58%, #f97316 76%, #fbbf24 83%, #a16207 86%, #713f12 100%);
+  border: 2px solid #92400e; border-radius: .6rem; color: #fef3c7;
+  box-shadow: inset 0 0 0 1px rgba(255, 237, 213, .4), inset 0 -.2em .4em rgba(120, 53, 15, .4), 0 0 16px rgba(245, 158, 11, .25), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-safari .slot { position: relative; z-index: 1; width: .66em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: transparent;
+  background: repeating-linear-gradient(105deg, #1c1917 0 .055em, #fafaf9 .055em .11em); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.025em 0 0 #422006) drop-shadow(-.025em 0 0 #422006) drop-shadow(0 .025em 0 #422006) drop-shadow(0 -.025em 0 #422006) drop-shadow(0 .06em .03em rgba(66, 32, 6, .45)); }
+.skin-safari .slot:nth-of-type(3n+2) { background: radial-gradient(circle, #9a3412 0 .055em, transparent .062em) 0 0 / .16em .16em, radial-gradient(circle, #b45309 0 .045em, transparent .052em) .08em .08em / .16em .16em, #fde68a; -webkit-background-clip: text; background-clip: text; }
+.skin-safari .slot:nth-of-type(3n) { background: radial-gradient(circle, #f59e0b 0 .022em, #1c1917 .028em .046em, transparent .052em) 0 0 / .15em .15em, radial-gradient(circle, #1c1917 0 .02em, transparent .026em) .075em .075em / .15em .15em, #fbbf24; -webkit-background-clip: text; background-clip: text; }
+/* en tout petit (profils, listes), les pelages deviennent de la bouillie : une seule couleur crème */
+.num-card.sm.skin-safari .slot { background: #fef3c7; -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 1px #422006); }
+.skin-safari .slot.ghost { opacity: .2; }
+.skin-safari .slot.collapsed { width: 0; }
+.skin-safari .slot.spinning { opacity: .75; transform-origin: 50% 100%; animation: saf-hide .5s ease-in-out infinite alternate; }
+.skin-safari .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes saf-hide { from { transform: translateY(.22em) skewX(-6deg) scaleY(.8); } to { transform: translateY(.3em) skewX(6deg) scaleY(.74); } }
+.skin-safari .slot.revealed { transform-origin: 50% 100%; animation: saf-peek .68s backwards; }
+@keyframes saf-peek {
+  0% { transform: translateY(.34em) scaleY(.7); animation-timing-function: ease-out; }
+  20% { transform: translateY(.38em) scale(1.06, .6); animation-timing-function: cubic-bezier(.3, 1.5, .6, 1); }
+  48% { transform: translateY(-.16em) scale(.94, 1.1); }
+  66% { transform: translateY(.02em) scale(1.04, .96); }
+  84% { transform: translateY(-.015em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-safari .slot { animation: none; } }
+/* Cadre de duel : la savane au coucher du soleil, un acacia ; 🦒 broute en hochant la tête, 🐘 balance la trompe. */
+.side-safari { --side-border: #d97706; --side-glow: 0 0 16px rgba(245, 158, 11, .3); --side-ink: #92400e;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26'><path d='M19 26V14M19 15l-6-4M19 14l7-5' stroke='%2378350f' stroke-width='1.6' fill='none' stroke-opacity='.45'/><path d='M2 10Q8 3 19 5Q30 2 38 9Q30 12 20 10Q10 13 2 10Z' fill='%2378350f' fill-opacity='.45'/></svg>") right 18% bottom 18% / 70px auto no-repeat, radial-gradient(circle at 30% 62%, rgba(254, 243, 199, .55) 0 14px, transparent 40px), linear-gradient(180deg, rgba(245, 158, 11, .25), rgba(251, 146, 60, .22) 50%, rgba(253, 230, 138, .3) 74%, rgba(180, 120, 40, .35) 76%, rgba(146, 64, 14, .3));
+  --deco-a: '🦒'; --deco-b: '🐘'; }
+.side-safari::before { transform-origin: 50% 100%; animation: saf-graze 2.8s ease-in-out infinite; }
+.side-safari::after { transform-origin: 30% 30%; animation: saf-trunk 2.2s ease-in-out infinite; }
+@keyframes saf-graze { 0%, 100% { transform: rotate(0); } 40%, 60% { transform: rotate(12deg) translateY(2px); } }
+@keyframes saf-trunk { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+.room-stage.many .side-safari::before, .room-stage.many .side-safari::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-safari::before, .side-safari::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Mining (idée de number 1, 2026-11-01) : la paroi d'une
+   grotte sombre (roche brune, fissures, grain), éclairée par une seule lampe à huile accrochée en haut à gauche, qui
+   vacille (le ::before de la carte). Chaque chiffre est un filon de minerai serti dans la roche : la scène lui donne au
+   hasard le minerai du bloc qu'elle vient de faire sauter (.mne-coal … .mne-diamond) ; sans scène (duels, mouvement
+   réduit), chaque place garde un minerai fixe. Pas de textures en blocs : des pierres lisses et des reflets.
+   Tirage : les chiffres sont encore de la roche grise qui tremble sous les coups. Un chiffre qui se pose : la roche
+   tremble (l'élan), éclate dans un flash (le coup de pioche) et le minerai apparaît, se pose d'un rien. */
+.num-card.skin-mining {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><path d='M0 30L14 26 22 31 40 24M70 0L66 9 74 15 71 24M96 40L100 31 112 28 120 30M46 40L50 33 44 27' fill='none' stroke='%23000' stroke-opacity='.55' stroke-width='1.1'/><path d='M0 31L14 27 22 32 40 25M70 1L66 10 74 16 71 25' fill='none' stroke='%23a8a29e' stroke-opacity='.18' stroke-width='.6'/></svg>") 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at 30% 40%, rgba(120, 113, 108, .35) 0 .04em, transparent .07em) 0 0 / .31em .27em,
+    radial-gradient(circle at 70% 60%, rgba(0, 0, 0, .45) 0 .05em, transparent .08em) 0 0 / .23em .29em,
+    radial-gradient(ellipse 60% 50% at 30% 40%, #57534e, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 70%, #44403c, transparent 70%),
+    linear-gradient(160deg, #3f3a36, #292524 55%, #1c1917);
+  border: 2px solid #0c0a09; border-radius: .45rem; color: #a8a29e;
+  box-shadow: inset 0 0 .6em rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(168, 162, 158, .12), 0 0 14px rgba(251, 191, 36, .14), 0 10px 18px rgba(0, 0, 0, .45);
+}
+/* la lampe à huile et sa lumière chaude, qui vacille */
+.num-card.skin-mining::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 22'><path d='M7 0V4' stroke='%2357534e' stroke-width='1.2'/><path d='M3 6H11L10 17H4Z' fill='%23fbbf24' fill-opacity='.35' stroke='%2378350f' stroke-width='1'/><ellipse cx='7' cy='12' rx='1.6' ry='3' fill='%23fff7ad'/><rect x='2.5' y='4.5' width='9' height='2' rx='.6' fill='%2378350f'/><rect x='3' y='17' width='8' height='2.2' rx='.6' fill='%2378350f'/></svg>") left .16em top 0 / .32em auto no-repeat,
+    radial-gradient(ellipse 48% 110% at 5% 8%, rgba(251, 191, 36, .36), rgba(217, 119, 6, .1) 50%, transparent 78%);
+  animation: mne-flicker 2.7s steps(1) infinite; }
+@keyframes mne-flicker { 0%, 100% { opacity: 1; } 8% { opacity: .78; } 10% { opacity: .95; } 34% { opacity: .86; } 36% { opacity: 1; } 61% { opacity: .7; } 63% { opacity: .9; } 65% { opacity: .82; } 67% { opacity: 1; } 88% { opacity: .9; } }
+.room-stage.many .num-card.skin-mining::before { animation: none; }
+.num-card.sm.skin-mining::before { background-size: 0 0, auto; animation: none; }
+.skin-mining .slot { position: relative; z-index: 1; width: .64em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900;
+  --ore: #d6d3d1; --glint: #fafaf9; color: var(--ore);
+  text-shadow: 0 -.03em 0 var(--glint), 0 .04em 0 rgba(0, 0, 0, .9), 0 0 .18em color-mix(in srgb, var(--ore) 55%, transparent); }
+/* le minerai de chaque place, sans scène (duels) ; la scène pose une classe .mne-<minerai> qui l'emporte */
+.skin-mining .slot:nth-of-type(6n+1) { --ore: #fbbf24; --glint: #fef9c3; }
+.skin-mining .slot:nth-of-type(6n+2) { --ore: #34d399; --glint: #d1fae5; }
+.skin-mining .slot:nth-of-type(6n+3) { --ore: #e8c4a8; --glint: #fff7ed; }
+.skin-mining .slot:nth-of-type(6n+4) { --ore: #67e8f9; --glint: #ecfeff; }
+.skin-mining .slot:nth-of-type(6n+5) { --ore: #fb923c; --glint: #ffedd5; }
+.skin-mining .slot:nth-of-type(6n) { --ore: #c084fc; --glint: #f3e8ff; }
+.skin-mining .slot.mne-coal { --ore: #a8a29e; --glint: #f5f5f4; }
+.skin-mining .slot.mne-iron { --ore: #e8c4a8; --glint: #fff7ed; }
+.skin-mining .slot.mne-copper { --ore: #fb923c; --glint: #ffedd5; }
+.skin-mining .slot.mne-gold { --ore: #fbbf24; --glint: #fef9c3; }
+.skin-mining .slot.mne-ruby { --ore: #fb7185; --glint: #ffe4e6; }
+.skin-mining .slot.mne-emerald { --ore: #34d399; --glint: #d1fae5; }
+.skin-mining .slot.mne-amethyst { --ore: #c084fc; --glint: #f3e8ff; }
+.skin-mining .slot.mne-diamond { --ore: #67e8f9; --glint: #ffffff; }
+.skin-mining .slot.ghost { opacity: .2; }
+.skin-mining .slot.collapsed { width: 0; }
+.skin-mining .slot.spinning { color: #57534e; text-shadow: 0 -.03em 0 rgba(168, 162, 158, .35), 0 .04em 0 rgba(0, 0, 0, .9); animation: mne-chip .12s steps(2) infinite; }
+.skin-mining .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes mne-chip { from { transform: translate(-.015em, .01em); } to { transform: translate(.015em, -.01em); } }
+.skin-mining .slot.revealed { animation: mne-strike .6s backwards; }
+@keyframes mne-strike {
+  0% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(-.02em); }
+  8% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(.025em); }
+  16% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(-.02em) scale(.97); animation-timing-function: steps(1); }
+  22% { color: #fff; text-shadow: 0 0 .25em #fff, 0 0 .5em var(--ore); transform: scale(1.12); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  40% { transform: scale(.98); }
+  60% { transform: scale(1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-mining .slot { animation: none; } .num-card.skin-mining::before { animation: none; } }
+/* Cadre de duel : la roche de la grotte et la lueur de la lampe ; ⛏️ frappe, 💎 scintille. */
+.side-mining { --side-border: #78716c; --side-glow: 0 0 16px rgba(251, 191, 36, .2); --side-ink: #b45309;
+  --side-bg: radial-gradient(ellipse 50% 70% at 0% 0%, rgba(251, 191, 36, .28), transparent 70%), radial-gradient(circle at 30% 40%, rgba(87, 83, 78, .14) 0 3px, transparent 6px) 0 0 / 23px 19px, radial-gradient(circle at 70% 60%, rgba(28, 25, 23, .14) 0 4px, transparent 7px) 0 0 / 31px 27px, linear-gradient(160deg, rgba(87, 83, 78, .3), rgba(41, 37, 36, .35));
+  --deco-a: '⛏️'; --deco-b: '💎'; }
+.side-mining::before { transform-origin: 80% 80%; animation: mne-swing 1.3s cubic-bezier(.6, 0, .4, 1) infinite; }
+.side-mining::after { animation: mne-glint 2.4s ease-in-out infinite; }
+@keyframes mne-swing { 0%, 100% { transform: rotate(-30deg); } 45% { transform: rotate(-34deg); } 60% { transform: rotate(14deg); } 70% { transform: rotate(6deg); } }
+@keyframes mne-glint { 0%, 100% { filter: none; transform: scale(1); } 50% { filter: brightness(1.6) drop-shadow(0 0 4px #67e8f9); transform: scale(1.12); } }
+.room-stage.many .side-mining::before, .room-stage.many .side-mining::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-mining::before, .side-mining::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Cat (idée de baby boy, 2026-11-01) : un coussin de
+   velours lavande capitonné (boutons, couture en pointillés), et des chiffres en laine : des brins torsadés en biais, rose
+   framboise, bleu canard ou orange à tour de rôle, cernés de fil foncé.
+   Tirage : les chiffres sont des pelotes emmêlées qui roulent (ils tournent et se dandinent). Un chiffre qui se pose :
+   un coup de patte le chasse d'en haut à droite, il s'écrase mollement (la laine est molle : écrasement permis), rebondit
+   et se pose. Le chat qui guette au bord de la carte et ses coups de patte : js/skinfx.js (SCENES.cat). */
+.num-card.skin-cat {
+  background:
+    radial-gradient(circle, #6d28d9 0 .028em, rgba(109, 40, 217, .4) .04em, transparent .06em) .35em .3em / .7em .6em,
+    radial-gradient(circle, rgba(255, 255, 255, .5) 0 .1em, transparent .3em) .35em .3em / .7em .6em,
+    radial-gradient(ellipse 70% 90% at 35% 15%, rgba(255, 255, 255, .45), transparent 65%),
+    linear-gradient(180deg, #ddd6fe, #c4b5fd 60%, #a78bfa);
+  border: 2px solid #7c3aed; border-radius: .9rem; color: #db2777;
+  outline: 2px dashed rgba(255, 255, 255, .7); outline-offset: -.22em;
+  box-shadow: inset 0 -.25em .5em rgba(91, 33, 182, .35), inset 0 .1em .3em rgba(255, 255, 255, .6), 0 0 16px rgba(167, 139, 250, .3), 0 10px 18px rgba(0, 0, 0, .3);
+}
+.num-card.sm.skin-cat { outline-width: 1px; outline-offset: -3px; }
+.skin-cat .slot { position: relative; z-index: 1; width: .64em; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; color: transparent;
+  background: repeating-linear-gradient(55deg, #f472b6 0 .035em, #db2777 .035em .06em, #9d174d .06em .075em); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.025em 0 0 #500724) drop-shadow(-.025em 0 0 #500724) drop-shadow(0 .025em 0 #500724) drop-shadow(0 -.025em 0 #500724) drop-shadow(0 .06em .03em rgba(76, 29, 149, .45)); }
+.skin-cat .slot:nth-of-type(3n+2) { background: repeating-linear-gradient(55deg, #2dd4bf 0 .035em, #0d9488 .035em .06em, #134e4a .06em .075em); -webkit-background-clip: text; background-clip: text; }
+.skin-cat .slot:nth-of-type(3n) { background: repeating-linear-gradient(55deg, #fdba74 0 .035em, #f97316 .035em .06em, #9a3412 .06em .075em); -webkit-background-clip: text; background-clip: text; }
+.num-card.sm.skin-cat .slot { filter: drop-shadow(0 0 1px #500724); }
+.skin-cat .slot.ghost { opacity: .2; }
+.skin-cat .slot.collapsed { width: 0; }
+.skin-cat .slot.spinning { opacity: .7; animation: cat-tangle .3s ease-in-out infinite alternate; }
+.skin-cat .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes cat-tangle { from { transform: rotate(-24deg) scale(.88); } to { transform: rotate(24deg) scale(1.02, .94); } }
+.skin-cat .slot.revealed { transform-origin: 50% 90%; animation: cat-bat .66s backwards; }
+@keyframes cat-bat {
+  0% { transform: translate(.35em, -.55em) rotate(60deg) scale(.6); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  32% { transform: translate(0, 0) rotate(-4deg) scale(1.18, .8); animation-timing-function: cubic-bezier(.2, .9, .4, 1); }
+  52% { transform: translateY(-.08em) rotate(3deg) scale(.93, 1.08); }
+  70% { transform: rotate(-1deg) scale(1.03, .97); }
+  86% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cat .slot { animation: none; } }
+/* Cadre de duel : le coussin capitonné ; 🐱 cligne des yeux, 🧶 roule. */
+.side-cat { --side-border: #8b5cf6; --side-glow: 0 0 16px rgba(167, 139, 250, .32); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(circle, rgba(109, 40, 217, .35) 0 2px, transparent 3px) 14px 12px / 28px 24px, radial-gradient(circle, rgba(255, 255, 255, .1) 0 5px, transparent 12px) 14px 12px / 28px 24px, linear-gradient(180deg, rgba(196, 181, 253, .25), rgba(167, 139, 250, .3));
+  --deco-a: '🐱'; --deco-b: '🧶'; }
+.side-cat::before { animation: cat-blink 3.4s steps(1) infinite; }
+.side-cat::after { animation: cat-roll 2.6s ease-in-out infinite; }
+@keyframes cat-blink { 0%, 100% { transform: scaleY(1); } 90% { transform: scaleY(.25); } 93% { transform: scaleY(1); } }
+@keyframes cat-roll { 0%, 100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-24px) rotate(-300deg); } }
+.room-stage.many .side-cat::before, .room-stage.many .side-cat::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cat::before, .side-cat::after { animation: none; } }
+
+/* ---- Chat global en une ligne « pseudo [TAG] titre : message » (idée d'Idkwhatnamemyself, 2026-11-01). L'heure et
+   les boutons flottent à droite ; le texte coule dessous sur toute la largeur, même à 320 px. */
+.gc-line { margin: 0; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
+.gc-side { float: right; display: inline-flex; align-items: center; gap: .1rem; margin: 0 0 0 .35rem; line-height: 1.2; }
+.gc-side .gc-tools { margin-left: 0; }
+.gc-side .gc-more { padding: .05rem .3rem; }
+.gc-who { font-size: .8rem; }
+.gc-line .av { --av-s: 20px; margin-right: .3rem; }
+.gc-line .gc-name { display: inline-block; max-width: 12em; vertical-align: bottom; }
+.gc-line .cl-tag { margin-left: .25rem; }
+.gc-line .title-pill { margin-left: .3rem; }
+.gc-line .title-owner { font-size: .62rem; margin-left: .3rem; }
+.gc-colon { margin: 0 .05rem 0 .1rem; font-weight: 800; color: var(--prose-2); }
+.gc-line .gc-edited { margin-left: .2rem; }
+/* Grille d'emojis aussi entre amis et dans le chat des duels (idée de PRISMA123, 2026-11-01). */
+.dm-form .gc-emo-btn, .chat-form .gc-emo-btn { align-self: stretch; }
+.emo-pop { margin: .55rem 0 0; }
+#chat-foot .emo-pop { margin-bottom: 0; }
+
+/* ---- Casino : Wheel (idée de How yz got sticky et de Gray, 2026-11-01). La roue est dessinée à plat (pas de 3D au-dessus
+   des boutons) ; le moyeu au centre affiche le résultat. */
+.gchips[data-game="wheel"] .gchip.pk-only { display: inline-block; }
+.g-game[data-game="wheel"] .actions { display: flex; }
+.gw-stage { position: relative; width: min(100%, 22rem); aspect-ratio: 1; margin: .2rem auto .7rem; }
+.gw-stage canvas { display: block; width: 100%; height: 100%; filter: drop-shadow(0 8px 18px rgba(15, 12, 41, .35)); }
+.gw-hub { position: absolute; left: 50%; top: 50%; width: 24%; aspect-ratio: 1; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4338ca, #1e1b4b 70%); color: #fde68a; border: 3px solid #fbbf24; font-size: clamp(.95rem, 4.6vw, 1.3rem); font-weight: 900; letter-spacing: -.02em; box-shadow: 0 0 0 3px rgba(15, 12, 41, .6), inset 0 2px 6px rgba(255, 255, 255, .25); pointer-events: none; }
+.gw-hub[data-kind="win"] { color: #fff; background: radial-gradient(circle at 35% 30%, #22c55e, #14532d 75%); border-color: #86efac; }
+.gw-hub[data-kind="even"] { color: #fff; background: radial-gradient(circle at 35% 30%, #0d9488, #134e4a 75%); border-color: #5eead4; }
+.gw-hub[data-kind="lose"] { color: #e2e8f0; background: radial-gradient(circle at 35% 30%, #64748b, #1e293b 75%); border-color: #94a3b8; }
+.gw-hub[data-kind="jackpot"], .gw-hub[data-kind="bonus"] { color: #1c1917; background: radial-gradient(circle at 35% 30%, #fef08a, #f59e0b 75%); border-color: #fff7ed; animation: gw-glow 1s ease-in-out infinite alternate; }
+@keyframes gw-glow { from { box-shadow: 0 0 0 3px rgba(15, 12, 41, .6), 0 0 6px #fbbf24; } to { box-shadow: 0 0 0 3px rgba(15, 12, 41, .6), 0 0 26px #fde047; } }
+.gw-odds { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; max-width: 34rem; margin: 0 auto .4rem; }
+.gw-odd { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface-raised); font-size: .72rem; color: var(--prose-2); }
+.gw-odd i { width: .65rem; height: .65rem; border-radius: 50%; background: var(--gw); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
+.gw-odd b { color: var(--prose); }
+/* Téléphones étroits : le champ des messages entre amis garde sa place à côté de 📷, 😊 et Send. */
+@media (max-width: 420px) {
+  .dm-form { gap: .3rem; }
+  .dm-form .dm-pic { padding: 0 .45rem; }
+  .dm-form .gc-emo-btn { width: 36px; }
+  .dm-form .btn-roll.small { padding-inline: .9rem; }
+}
+/* Bouton Send du chat global habillé du bouton choisi : même hauteur que le champ, jamais plus large qu'il ne faut. */
+.gc-form .gc-send { flex: none; max-width: 45%; margin-bottom: 0; white-space: nowrap; }
+
+/* Joueurs actifs en direct, en bas de chaque page (demandé par Sacha, 2026-11-01). Dans le flux de la page, pas fixé :
+   il ne cache jamais un bouton ; les marges laissent la place aux boutons ronds des coins. */
+.site-foot { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 0 auto; padding: .4rem 4.2rem 1.6rem; color: var(--muted); font: 700 .78rem var(--font-mono); letter-spacing: .02em; }
+.site-foot[hidden] { display: none; }
+.sf-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); animation: sf-pulse 2s ease-out infinite; flex: none; }
+.sf-tag { padding: .05rem .4rem; border-radius: .35rem; border: 1px solid rgba(34, 197, 94, .45); color: #16a34a; font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; }
+.dark .sf-tag { color: #4ade80; }
+#sf-online, .sf-tag { white-space: nowrap; }
+@media (max-width: 560px) { .site-foot { padding-inline: 1rem; } }
+@keyframes sf-pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); } 70% { box-shadow: 0 0 0 .45rem rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }

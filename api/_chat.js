@@ -38,8 +38,24 @@ function cleanChat(raw) {
   // Pas de lien (hameçonnage, pub) ni de longue suite de chiffres (numéro de téléphone) : les nombres du jeu ont 7 chiffres au plus.
   text = text.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '[link]').replace(/\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|fr|xyz|ru|tv|me|co|app|link|ly)\b\S*/gi, '[link]');
   text = text.replace(/(?:\d[\s.\-]?){9,}/g, '[number] ');
-  return maskBad(text).replace(/\s+/g, ' ').trim();
+  return hideCodes(maskBad(text)).replace(/\s+/g, ' ').trim();
 }
+
+// Codes secrets du Code Hunter cachés dans le chat (idée de R77, 2026-11-01 : « ça gâcherait le plaisir de les
+// chercher »). La liste vient du serveur (les codes « hunt » d'api/shop.js), jamais du site. Comme le bouton Redeem
+// ignore majuscules et espaces, on reconnaît aussi « Roll Forever », « z.e.r.o hero », « c0ns0lecat ». Remplacés par
+// « [secret code] » dans le chat global, le chat de clan, les messages entre amis et le chat des duels.
+const CODE_LEET = { a: 'a4@', e: 'e3€', i: 'i1!|l', l: 'l1|i', o: 'o0', s: 's5$', t: 't7' };
+let codeRes = null;
+function codePatterns() {
+  if (codeRes) return codeRes;
+  let codes = [];
+  try { codes = require('./shop').HUNT_CODES || []; } catch (e) { codes = []; }
+  codeRes = codes.map(code => new RegExp(code.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(.)\1+/g, '$1').split('')
+    .map(c => `[${(CODE_LEET[c] || c).replace(/[\]\\^-]/g, '\\$&')}]+`).join('[\\s._*\'"-]*'), 'giu'));
+  return codeRes;
+}
+const hideCodes = text => codePatterns().reduce((t, re) => t.replace(re, '[secret code]'), String(text));
 
 // Insultes masquées par des astérisques (chat des duels, messages entre amis, et test du chat global qui refuse tout
 // message que ce masque change : api/_global.js).
@@ -67,4 +83,4 @@ function cleanImage(raw, max = 200000) {
   return buf.length > 100 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? `data:image/jpeg;base64,${m[1]}` : null;
 }
 
-module.exports = { cleanChat, cleanImage, maskBad, shape, BLOCKED_SHAPES, MAX_CHARS };
+module.exports = { cleanChat, cleanImage, maskBad, hideCodes, shape, BLOCKED_SHAPES, MAX_CHARS };

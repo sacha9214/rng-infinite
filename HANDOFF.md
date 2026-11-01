@@ -9,6 +9,36 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Player ideas update (2026-11-01, branch `claude/ideas-2026-11-01`)
+
+402 new ideas were sorted (`integration-review/ideas-2026-11-01.md`, untracked): 71 for this update, 70 for later,
+105 no, 107 already in the game, 28 duplicates, 19 questions (Sacha still has to answer: Phong254's casino music, Gray
+as Idea Manager, a Pride skin, a coin price for profile picture changes, Exact 41). Replies to players are drafted in
+that file but not sent.
+
+Built by 7 agents in parallel worktrees, merged here with `git merge-file --union` and checked by hand:
+- 13 skins (Mini Golf, Soccer, Basketball, Safari, Mining, Cat, Toaster, Billiards, Pirate, T-Rex, Birthday Cake,
+  Carnival, White Chocolate), touch-ups to Singularity, Lightbulb and Infinity; 6 wallpapers (Farm, Keyboard ASMR,
+  Thunderstorm, Solar System, Meteor Shower, Party; Farm, Meteor Shower and Party are legendary).
+- Buttons Cardboard Box, Free Download, Bread, Last Roll, Bubble Wrap; sound packs Slime, Boing, Meow; emote Hungry;
+  an Emote Case. The Button Case stays at 350 (Sacha's price) although its average value rose to ~482.
+- 9 badges (Thirteen and o7 were dropped by Sacha: they moved 72k numbers). 35,672 numbers change tier (24,657 down);
+  only 360 (Anomaly → Divine) and 10987 (Divine → Celestial) move among Infinite/Godlike/Divine. Palindromic Prime
+  starts at 2 digits so 24 stays Infinite. **Run `node tools/rescore-worst.js --apply` after deploy.**
+- Titles: levels 10–250, Generous (uses the existing `giftOut` counter), 100%, streaks 30/100/365 (`streakBest`),
+  Full Spectrum. Odd Week in the event rotation (first on Dec 7).
+- The Wheel casino game (96.9 % return, bets 1–1,000 like Plinko).
+- Quality of life: session counter, shop search, preview rarity picker, equip from Inventory, History period filter,
+  digit-length stats, XP-above for every tier and a setting to hide it, compare in the XP checker, sign out for
+  password players, auto-roll keeps going on other pages, "N players online" on the Roll page, in the chat and live in
+  a footer at the bottom of every page (asked by Sacha; hidden under 5 players, refreshed every 30 s).
+- Chat: emoji picker in friend/duel chat, clan tags, compact lines, Send button styled, friend ping, secret codes
+  hidden (note: the phrase "roll forever" is one of them), proxy/unblocker talk refused. Duel stake: any 1–1,000.
+- Fixed: profile rarity counts mixed old and new rarities (casmicgraything).
+
+Known: `tools/casino-sim.mjs` fails about 1 run in 6 on the old blackjack "double without coins" assertion
+(line ~429, untouched since 2026-10-10); rerun it.
+
 ## Christmas event (2026-11-01, branch `claude/christmas-event`)
 
 Asked by Sacha: Halloween out of the Limited tab, Christmas in, with as much as Halloween had. The Limited tab icon,
