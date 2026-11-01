@@ -23,7 +23,7 @@ await new Promise(r => relay.listen(0, '127.0.0.1', r));
 
 const PORT = 18787;
 const child = spawn(process.execPath, [path.join(ROOT, 'deploy/ovh/api-server.js')], {
-  env: { ...process.env, PORT: String(PORT), RNG_REDIS_URL: `http://127.0.0.1:${relay.address().port}`, RNG_REDIS_TOKEN: 'test-token', KOFI_TOKEN: 'kofi-test' },
+  env: { ...process.env, PORT: String(PORT), RNG_REDIS_URL: `http://127.0.0.1:${relay.address().port}`, RNG_REDIS_TOKEN: 'test-token', KOFI_TOKEN: 'kofi-test', RNG_REDIS_DIRECT: 'off' }, // faux relais seulement (la connexion directe : tools/test-resp.mjs)
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let log = '';

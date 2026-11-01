@@ -33,8 +33,19 @@ const REDIS_TOKEN = process.env.RNG_REDIS_TOKEN || process.env.KV_REST_API_TOKEN
 // lieu de 2 (mesuré le 2026-10-17, tous les tirages ralentis). Vers Upstash / HTTPS, on garde la connexion ouverte.
 const LOCAL_RELAY = /^http:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(String(REDIS_URL || ''));
 
+// Connexion directe à Redis sur le VPS (api/_resp.js, 2026-11-01) : sans le relais HTTP, un appel coûte une écriture
+// sur une connexion déjà ouverte. Si Redis refuse la connexion (rien n'a été envoyé), on repasse par le relais.
+const DIRECT = process.env.RNG_REDIS_DIRECT && process.env.RNG_REDIS_DIRECT !== 'off' ? require('./_resp').createClient(process.env.RNG_REDIS_DIRECT) : null;
+const unwrap = rows => rows.map(r => {
+  if (r.error) throw new Error(r.error);
+  return r.result;
+});
+
 // Exécute une liste de commandes Redis en un seul aller-retour (API REST d'Upstash).
 async function redis(commands) {
+  if (DIRECT) {
+    try { return unwrap(await DIRECT.pipeline(commands.map(c => c.map(String)))); } catch (err) { if (!err.unsent || !REDIS_URL) throw err; }
+  }
   if (!REDIS_URL || !REDIS_TOKEN) throw Object.assign(new Error('Leaderboard database is not configured'), { status: 503 });
   const res = await fetch(`${REDIS_URL}/pipeline`, {
     method: 'POST',
@@ -42,10 +53,7 @@ async function redis(commands) {
     body: JSON.stringify(commands.map(c => c.map(String))),
   });
   if (!res.ok) throw new Error(`Redis HTTP ${res.status}`);
-  return (await res.json()).map(r => {
-    if (r.error) throw new Error(r.error);
-    return r.result;
-  });
+  return unwrap(await res.json());
 }
 
 // Le jour change à minuit UTC, comme sur le site d'origine.

@@ -190,10 +190,10 @@
       const p = Store.player;
       return this.request('/api/name', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name, src: (() => { try { return localStorage.getItem('rng-first-src') || ''; } catch (e) { return ''; } })() }) });
     },
-    // Sans "add" : renvoie tout l'historique du compte. Avec "add" : y verse ces tirages.
-    history(add, fetchAll = true) {
+    // Sans "add" : renvoie tout l'historique du compte (ou, avec since, les tirages faits après). Avec "add" : y verse ces tirages.
+    history(add, fetchAll = true, since) {
       const p = Store.player;
-      return this.request('/api/history', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll }) });
+      return this.request('/api/history', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll, ...(since ? { since } : {}) }) });
     },
   };
 
@@ -1907,20 +1907,32 @@
   // Synchronise l'historique avec le serveur, dans les deux sens : récupère les tirages faits sur d'autres appareils
   // (compte Google), puis envoie ceux que seul cet appareil connaît. Les stats, badges et l'XP total en découlent.
   // Sans Google aussi : le profil public du joueur (clic sur son nom au classement) inclut ses tirages hors ligne.
+  // Serveur plus fluide (Sacha, 2026-11-01) : à chaque visite, seulement les tirages faits depuis le dernier tirage
+  // compté que cet appareil connaît (since) ; l'historique entier (jusqu'à 100 000 tirages) une fois par jour et par
+  // joueur, et à chaque connexion (nouvel identifiant : pas encore de date).
+  const FULL_SYNC_MS = 86400000;
+  const fullKey = () => `histFull:${Store.player.id}`;
   let syncing = null;
   function syncHistory() {
     if (!Store.player.google && !Store.player.name) return Promise.resolve(0);
     if (!syncing) {
       syncing = (async () => {
         try {
-          const server = await Online.history();
+          let lastFull = 0; try { lastFull = Number(localStorage.getItem(fullKey())) || 0; } catch (e) { lastFull = 0; }
+          let since = 0;
+          if (Date.now() - lastFull < FULL_SYNC_MS) for (let i = Store.rolls.length - 1; i >= 0; i--) if (!Store.rolls[i][3]) { since = Store.rolls[i][2]; break; }
+          const server = await Online.history(undefined, true, since || undefined);
+          const part = !!(since && server.since === since); // un ancien serveur renvoie tout : traité comme une lecture complète
           const onServer = Store.rollSet(server.rolls);
+          // Lecture partielle : on ne juge que les tirages nettement plus récents (une minute de marge, voir rollSet).
+          const after = part ? since + 60000 : -Infinity;
           // Les tirages déjà marqués hors ligne ont été proposés au serveur, qui ne les prend plus : inutile d'y revenir.
-          const localOnly = Store.rolls.filter(r => !r[3] && !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
+          const localOnly = Store.rolls.filter(r => r[2] > after && !r[3] && !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
           const added = Store.mergeRolls(server.rolls, n => Engine.scoreOf(n));
           for (let i = 0; i < localOnly.length; i += 2000) await Online.history(localOnly.slice(i, i + 2000), false);
+          if (!part) try { localStorage.setItem(fullKey(), String(Date.now())); } catch (e) { /* stockage bloqué : tout relire la prochaine fois */ }
           // L'XP affiché ne compte que les tirages présents sur le compte : c'est le même total qu'au classement.
-          const marked = Store.markOffline(onServer);
+          const marked = Store.markOffline(onServer, undefined, undefined, after);
           if (added || marked) {
             Collection.built = false;
             if (currentView !== 'result' && !$('#modal-root').firstChild) route();
@@ -7058,10 +7070,10 @@
       const NF = X.newFeatures || {};
       const serverHTML = `
         ${section('Server health', 'Counted by the game server on the VPS: every request, the slow ones (more than 2 seconds) and the errors. Today is still filling up.')}
-        ${kpis([kpi('Requests today', fmt(h0.req || 0), `${fmt(H.slice(1).reduce((x, d) => x + d.req, 0))} the 6 days before`), kpi('Slow requests', `${slowPct.toFixed(slowPct < 1 ? 2 : 1)}%`, `${fmt(h0.slow || 0)} over 2 s today`, slowPct > 1 ? 'warn' : 'good'), kpi('Errors', fmt(h0.err || 0), 'server errors today', h0.err ? 'warn' : 'good'), kpi('Version online', `<span data-no-i18n>${esc(h0.version || '–')}</span>`, `running for ${upTxt}`)])}
+        ${kpis([kpi('Requests today', fmt(h0.req || 0), `${fmt(H.slice(1).reduce((x, d) => x + d.req, 0))} the 6 days before`), kpi('Slow requests', `${slowPct.toFixed(slowPct < 1 ? 2 : 1)}%`, `${fmt(h0.slow || 0)} over 2 s today`, slowPct > 1 ? 'warn' : 'good'), kpi('Errors', fmt(h0.err || 0), 'server errors today', h0.err ? 'warn' : 'good'), kpi('Refused (too many requests)', fmt(h0.r429 || 0), 'players or schools over the limit today', h0.r429 > 100 ? 'warn' : 'good'), kpi('Longest freeze', h0.lagMax >= 1000 ? `${(h0.lagMax / 1000).toFixed(1)} s` : `${fmt(h0.lagMax || 0)} ms`, `${fmt(h0.lag500 || 0)} minutes with a freeze over 0.5 s`, h0.lagMax > 1000 ? 'warn' : 'good'), kpi('Version online', `<span data-no-i18n>${esc(h0.version || '–')}</span>`, `running for ${upTxt}`)])}
         ${!H.some(x => x.req) ? '<p class="panel-note">Counted since 18 Oct 2026: the numbers appear within a minute of the next requests.</p>' : ''}
         <div class="grid-2 stats-sep">
-          ${panel('Last 7 days', 'requests, slow ones and errors', table(['Day', 'Requests', 'Slow', 'Errors'], H.filter(x => x.req).map(x => [x.day.slice(5), fmt(x.req), `${fmt(x.slow)} <em class="o-share">${pct(x.slow, x.req)}</em>`, fmt(x.err)]), 'c4'))}
+          ${panel('Last 7 days', 'requests, slow ones and errors', table(['Day', 'Requests', 'Slow', 'Errors', 'Refused'], H.filter(x => x.req).map(x => [x.day.slice(5), fmt(x.req), `${fmt(x.slow)} <em class="o-share">${pct(x.slow, x.req)}</em>`, fmt(x.err), fmt(x.r429 || 0)]), 'c5'))}
           ${panel('Slowest pages today', 'slowest single answer per API route', table(['Route', 'Requests', 'Slow', 'Slowest'], routesToday.slice(0, 10).map(([r, v]) => [`<span data-no-i18n>${esc(r)}</span>`, fmt(v.req), fmt(v.slow), `<span class="${v.max > 2000 ? 'o-down' : ''}">${v.max >= 1000 ? `${(v.max / 1000).toFixed(1)} s` : `${v.max} ms`}</span>`]), 'c4'))}
         </div>
         ${section('New features', 'Are players using what came out recently?')}

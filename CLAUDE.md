@@ -19,8 +19,9 @@ project, indexed by the kind of action that triggers them) before any non-trivia
   endpoints. Production runs them all in one Node process on the VPS (`deploy/ovh/api-server.js`, systemd `rng-api`,
   `127.0.0.1:8787`). Keep the number of public files in `api/` (no `_`) at **12 or fewer** (old Vercel Hobby limit,
   still used as a fallback): new endpoints go in `api/_name.js` and are routed from an existing handler.
-- **Database**: Redis on the VPS, reached through an Upstash-compatible REST relay (`deploy/ovh/redis-relay.py`).
-  Code calls `redis([[cmd, ...args], ...])` from `api/_lib.js` (one pipeline per call).
+- **Database**: Redis on the VPS. The API server connects to it directly (`api/_resp.js`, persistent sockets, enabled
+  by `RNG_REDIS_DIRECT`, set by `deploy/ovh/api-server.js`); the Upstash-compatible REST relay (`deploy/ovh/redis-relay.py`)
+  is the fallback and serves the tools. Code calls `redis([[cmd, ...args], ...])` from `api/_lib.js` (one pipeline per call).
 - **Hosting**: Caddy on an OVH VPS serves the static files from `/home/emma/rng-infinite` and proxies `/api/*`.
   DNS stays at Vercel. Discord bot announcements come from `api/_discord*.js`.
 
@@ -53,6 +54,7 @@ node tools/build.mjs              # after ANY badge change (~15 s): regenerates 
 node tools/stamp.mjs              # before EVERY commit that touches js/ or css/ (cache-buster in index.html)
 node tools/test-api.mjs           # main test suite, must end with "OK —"
 node tools/test-server.mjs        # API server over real HTTP
+node tools/test-resp.mjs          # direct Redis connection (api/_resp.js) vs the relay, on a real local redis-server
 node tools/casino-sim.mjs         # casino EV checks (house edge ~3%)
 node tools/house-audit.mjs        # best-strategy audit: the house must win every game
 node tools/e2e-duel.mjs <dir>     # real browser + real API: duel chat and owner buttons

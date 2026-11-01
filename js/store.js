@@ -201,9 +201,11 @@
     // Après lecture de l'historique du compte : un tirage absent du serveur est « hors ligne » (non compté), un tirage
     // présent ne l'est pas. Les tout récents sont laissés tels quels : le serveur n'enregistre un tirage de duel qu'à
     // la fin de sa révélation. Renvoie le nombre de tirages dont la marque a changé.
-    markOffline(onServer, graceMs = 120000, now = Date.now()) {
+    // after : seuls les tirages plus récents sont jugés (lecture partielle de l'historique, 2026-11-01).
+    markOffline(onServer, graceMs = 120000, now = Date.now(), after = -Infinity) {
       let changed = 0;
       for (const r of this.state.rolls) {
+        if (r[2] <= after) continue;
         const counted = onServer.has(r[0], r[2]);
         if (counted && r[3]) { r.length = 3; changed++; }
         else if (!counted && !r[3] && now - r[2] > graceMs) { r[3] = 1; changed++; }

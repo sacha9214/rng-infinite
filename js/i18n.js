@@ -581,6 +581,8 @@
     'Mute history': 'Historique des silences', 'mutes that ended or that you lifted, newest first': 'les silences finis ou levés, les plus récents en premier', 'No mute yet.': 'Aucun silence pour l\'instant.',
     'lifted by': 'levé par',
     '🗑️ Delete…': '🗑️ Supprimer…', '🗑️ Delete this message: why?': '🗑️ Supprimer ce message : pourquoi ?', // raison des suppressions (Sacha, 2026-11-01)
+    // Santé du serveur (2026-11-01)
+    'Refused (too many requests)': 'Refusées (trop de requêtes)', 'players or schools over the limit today': 'joueurs ou écoles au-dessus de la limite aujourd\'hui', 'Longest freeze': 'Plus long gel', 'Refused': 'Refusées',
     // Modérateurs du chat (Sacha, 2026-11-01)
     '🛡️ Chat Moderator': '🛡️ Modérateur du chat', 'You help keep the global chat friendly for everyone. Sacha sees every mute and every deleted message, with your reason, and can lift a mute that wasn\'t fair.': 'Tu aides à garder le chat global sympa pour tout le monde. Sacha voit chaque silence et chaque message supprimé, avec ta raison, et peut lever un silence injuste.',
     '📝 The rules': '📝 Les règles', 'Be fair.': 'Sois juste.', 'Act on what someone wrote, never because you don\'t like them or don\'t agree with them.': 'Agis sur ce que quelqu\'un a écrit, jamais parce que tu ne l\'aimes pas ou que tu n\'es pas d\'accord avec lui.',
@@ -724,6 +726,7 @@
     [/^🔇 You are muted until (.+)\.$/, m => `🔇 Tu es muet jusqu'au ${m[1]}.`],
     [/^([\d,]+) to check · players reported them in the global chat$/, m => `${nb(m[1])} à vérifier · des joueurs les ont signalés dans le chat global`], // Modérateurs (2026-11-01)
     [/^reported (\d+) times$/, m => `signalé ${m[1]} fois`], [/^([\d,]+) reports about this player$/, m => `${nb(m[1])} signalements sur ce joueur`],
+    [/^([\d,]+) minutes with a freeze over 0\.5 s$/, m => `${nb(m[1])} minutes avec un gel de plus de 0,5 s`], // santé du serveur (2026-11-01)
     [/^moderator since (.+)$/, m => `modérateur depuis le ${m[1]}`], [/^([\d,]+) lifted by you$/, m => `${nb(m[1])} levés par toi`],
     [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
     [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
