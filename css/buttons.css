@@ -1434,3 +1434,43 @@
 .btn-roll.gen-eventhorizon:active::after { opacity: 1; transition-duration: .06s; }
 @keyframes gen-eh-spin { from { transform: scaleY(.3) rotate(0deg); } to { transform: scaleY(.3) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .btn-roll.gen-eventhorizon::before, .btn-roll.gen-eventhorizon::after { animation: none; } }
+
+/* ==== Skins du 2026-11-01, lot B2 ==== boutons assortis */
+/* Toaster (idée de xenon, 2026-11-01) : une tranche de pain de mie (coins du haut arrondis, croûte dorée), texte grillé. */
+.btn-roll.gen-toaster { border: 2px solid #9a4f1c; border-radius: 1.6rem 1.6rem .55rem .55rem; color: #5c2a0a;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: radial-gradient(circle, #e3bd80 0 1px, transparent 1.6px) 0 0 / 13px 11px, radial-gradient(ellipse 70% 80% at 50% 55%, #f2cf8f, #f8e3b3 70%, #fbe9c4);
+  box-shadow: inset 0 0 0 .18em #d99b55, inset 0 0 .6em rgba(154, 74, 18, .3);
+  text-shadow: 0 0 .06em #9a4a12, 0 0 .2em rgba(154, 74, 18, .45);
+  --gs: 0 .3em 0 #64748b, 0 .5em 1em rgba(251, 146, 60, .3); --gs-h: 0 .34em 0 #64748b, 0 .7em 1.3em rgba(251, 146, 60, .45); --gs-a: 0 .06em 0 #64748b; }
+.btn-roll.gen-toaster:hover { filter: brightness(1.05) saturate(1.1); }
+/* Billiards (idée de Dylanrulez123, 2026-11-01) : le feutre vert dans sa bande de bois verni, texte blanc. */
+.btn-roll.gen-billiards { border: .2em solid transparent; border-radius: .6rem; color: #f8fafc;
+  background: radial-gradient(ellipse 60% 80% at 50% 40%, rgba(187, 247, 208, .3), transparent 72%) padding-box, linear-gradient(180deg, #16893f, #0a5427) padding-box, radial-gradient(circle, #fef3c7 0 1.5px, transparent 2px) 0 0 / 14% .2em repeat-x border-box, radial-gradient(circle, #fef3c7 0 1.5px, transparent 2px) 0 100% / 14% .2em repeat-x border-box, linear-gradient(180deg, #8a4b22, #5c2d10) border-box;
+  text-shadow: 0 .06em 0 #052e16;
+  --gs: 0 .3em 0 #3b1d0a, 0 .5em 1em rgba(34, 197, 94, .3); --gs-h: 0 .34em 0 #3b1d0a, 0 .7em 1.3em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #3b1d0a; }
+.btn-roll.gen-billiards:hover { filter: brightness(1.1); }
+/* Pirate (idée de casmicgraything, 2026-11-01) : une planche de pont dans un cadre de cordage, lettres couleur os. */
+.btn-roll.gen-pirate { border: .2em solid transparent; border-radius: .5rem; color: #fef3c7; font-family: Georgia, 'Times New Roman', serif; font-weight: 900;
+  background: repeating-linear-gradient(180deg, #8a5426 0 .5em, #6b3f1c .5em .56em) padding-box, repeating-linear-gradient(45deg, #d6a35c 0 3px, #8a5a24 3px 5px, #b8843f 5px 7px) border-box;
+  -webkit-text-stroke: .06em #2b1607; paint-order: stroke fill; text-shadow: .04em .07em 0 #082f49;
+  --gs: 0 .3em 0 #0e7490, 0 .5em 1em rgba(14, 165, 183, .35); --gs-h: 0 .34em 0 #0e7490, 0 .7em 1.3em rgba(250, 204, 21, .4); --gs-a: 0 .06em 0 #0e7490; }
+.btn-roll.gen-pirate:hover { filter: brightness(1.12); }
+/* T-Rex (idée de tmanrex, 2026-11-01) : une dalle de pierre mouchetée, texte gravé. */
+.btn-roll.gen-trex { border: 2px solid #44403c; border-radius: .7rem .9rem .6rem 1rem; color: #292524; font-family: 'Arial Black', Impact, system-ui, sans-serif;
+  background: radial-gradient(circle, rgba(41, 37, 36, .3) 0 1px, transparent 1.6px) 0 0 / 9px 8px, radial-gradient(circle, rgba(255, 255, 255, .35) 0 1px, transparent 1.6px) 4px 3px / 11px 10px, linear-gradient(180deg, #e7e5e4, #a8a29e 60%, #78716c);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .6), 0 -1px 0 rgba(0, 0, 0, .25);
+  --gs: 0 .3em 0 #7c2d12, 0 .5em 1em rgba(249, 115, 22, .35); --gs-h: 0 .34em 0 #7c2d12, 0 .7em 1.3em rgba(249, 115, 22, .5); --gs-a: 0 .06em 0 #7c2d12; }
+.btn-roll.gen-trex:hover { filter: brightness(1.06); }
+/* Birthday Cake (idée de sennybex1, 2026-11-01) : un glaçage rose qui coule sur le chocolat, des vermicelles. */
+.btn-roll.gen-cake { border: 2px solid #3b1d0a; border-radius: .7rem; color: #fff; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='11'><path d='M0 0H24V4Q21 4 20.5 7Q20 9.6 18.6 9.6Q17.2 9.6 16.8 7Q16.4 4 13 4Q10 4 9.6 8.4Q9.2 11 7.8 11Q6.4 11 6 8.4Q5.6 4 3 4Q0 4 0 4Z' fill='%23f9a8d4'/></svg>") 0 0 / 30px 14px repeat-x, linear-gradient(180deg, transparent 70%, #fde68a 70% 76%, transparent 76%), linear-gradient(180deg, #7c4a2a, #5b3218);
+  -webkit-text-stroke: .08em #db2777; paint-order: stroke fill;
+  --gs: 0 .3em 0 #9d174d, 0 .5em 1em rgba(244, 114, 182, .35); --gs-h: 0 .34em 0 #9d174d, 0 .7em 1.3em rgba(244, 114, 182, .5); --gs-a: 0 .06em 0 #9d174d; }
+.btn-roll.gen-cake:hover { filter: brightness(1.1); }
+/* Carnival (idée de jia jun, 2026-11-01) : l'auvent rayé du stand, le fond bleu nuit, des lettres jaunes de fête foraine. */
+.btn-roll.gen-carnival { border: 2px solid #78350f; border-radius: .45rem; color: #fde047; font-family: 'Rockwell Extra Bold', Rockwell, 'Arial Black', Impact, sans-serif; font-weight: 900;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='9'><path d='M0 0H10V5Q5 10 0 5Z' fill='%23dc2626'/><path d='M10 0H20V5Q15 10 10 5Z' fill='%23fef2f2'/></svg>") 0 0 / 26px 12px repeat-x, radial-gradient(ellipse 60% 70% at 50% 60%, rgba(253, 224, 71, .3), transparent 72%), linear-gradient(180deg, #1e3a8a, #172f6e);
+  -webkit-text-stroke: .07em #b91c1c; paint-order: stroke fill; text-shadow: .05em .07em 0 #0f172a;
+  --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(250, 204, 21, .35); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(250, 204, 21, .5); --gs-a: 0 .06em 0 #7f1d1d; }
+.btn-roll.gen-carnival:hover { filter: brightness(1.12); }

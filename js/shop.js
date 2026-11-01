@@ -194,6 +194,26 @@
     { id: 'battleship', name: 'Battleship', emoji: '⚓', price: 2800, desc: 'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring', idea: '17black' }, // idée de 17black (2026-10-28)
     { id: 'cone', name: 'Cone of Destiny', emoji: '🚧', price: 450, desc: 'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown', idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 450)
     { id: 'observer', name: 'The Observer', emoji: '👁️', price: 10000, desc: 'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare', premium: true, idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 10 000)
+    // ==== Skins du 2026-11-01, lot B2 (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de xenon (2026-11-01) : « Toaster font. the numbers are bread. » Chaque chiffre est une tranche de pain qui
+    // jaillit d'un grille-pain chromé, le chiffre grillé dessus ; dès Mythic, les tranches sortent dorées.
+    { id: 'toaster', name: 'Toaster', emoji: '🍞', price: 1300, desc: 'Every digit is a slice of bread that pops out of a chrome toaster with the number toasted in; Mythic rolls pop out golden toast', idea: 'xenon' },
+    // Idée de Dylanrulez123 (2026-11-01) : un skin de billard. Chaque chiffre est une bille numérotée que la queue envoie
+    // à sa place ; dès Mythic, un coup de maître en bandes touche toutes les billes.
+    { id: 'billiards', name: 'Billiards', emoji: '🎱', price: 2000, desc: 'Every digit is a numbered pool ball: the cue strikes, the ball rolls in and clicks into place, and Mythic rolls end with a trick shot off every cushion', idea: 'Dylanrulez123' },
+    // Idée de casmicgraything (2026-11-01) : un galion sur une mer qui roule ; un boulet de canon vise chaque chiffre (des
+    // caisses de bois, jamais des gens) ; dès Mythic, le galion vide coule dans une pluie de pièces d'or. Pas Battleship :
+    // un vieux voilier en plein jour, des caisses qui volent en éclats, de l'or.
+    { id: 'pirate', name: 'Pirate', emoji: '🏴‍☠️', price: 2400, desc: 'A pirate galleon rocks on a rolling sea and its cannon blasts a floating crate open for every digit; on Mythic rolls the empty ship sinks in a rain of gold coins', idea: 'casmicgraything' },
+    // Idée de tmanrex (2026-11-01) : « A T-rex skin, would be soo cool. » Un pied de T-Rex enfonce chaque chiffre de pierre
+    // dans le sol (nuage de poussière) ; dès Mythic, il rugit et la carte tremble.
+    { id: 'trex', name: 'T-Rex', emoji: '🦖', price: 2200, desc: 'A T-Rex stomps every stone digit into the ground in a puff of dust, and on Mythic rolls it lets out a roar that shakes the card', idea: 'tmanrex' },
+    // Idée de sennybex1 (2026-11-01, il proposait 2 000 pièces) : un gâteau d'anniversaire, des chiffres en glaçage de
+    // couleur et une bougie par chiffre ; dès Mythic, on souffle les bougies et les confettis volent.
+    { id: 'cake', name: 'Birthday Cake', emoji: '🎂', price: 2000, desc: 'Every digit is piped in colourful icing on a layer cake and its candle lights up; on Mythic rolls the candles blow out in a burst of confetti', idea: 'sennybex1' },
+    // Idée de jia jun (2026-11-01) : un stand de fête foraine. La version avec un pistolet a été refusée (pas d'armes) ;
+    // il a proposé une balle à lancer : une balle renverse la pile de boîtes de conserve devant chaque chiffre.
+    { id: 'carnival', name: 'Carnival', emoji: '🎪', price: 1800, desc: 'A carnival ball toss: a ball knocks down the stack of cans in front of every digit, and Mythic rolls light up the booth and win the big prize', idea: 'jia jun' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
