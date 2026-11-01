@@ -79,7 +79,8 @@ module.exports = async (req, res) => {
       if (uid) await redis([['HDEL', statsKey(playerId), 'discord', 'discordName'], ['HDEL', linkKey, uid]]);
       return send(res, 200, { linked: false, username: null, available: true });
     }
-    if (action === 'sync') return send(res, 200, { linked: !!uid, username: uname || null, available: true, ...(await syncRoles(playerId)) });
+    // Giveaway gagné avant d'avoir lié son Discord (api/_giveaway.js, 2026-11-01) : le skin arrive ici.
+    if (action === 'sync') { const prize = uid ? await require('./_giveaway').claim(uid, playerId) : null; return send(res, 200, { linked: !!uid, username: uname || null, available: true, ...(await syncRoles(playerId)), ...(prize ? { prize } : {}) }); }
     if (action !== 'link') return send(res, 400, { error: 'Unknown action' });
     const token = String(body.accessToken || '');
     if (!/^[A-Za-z0-9._-]{10,200}$/.test(token)) return send(res, 400, { error: 'Missing Discord authorization' });
@@ -92,10 +93,14 @@ module.exports = async (req, res) => {
     // Ajout au serveur (portée guilds.join) ; déjà membre : Discord répond 204, rien à faire.
     try { await dc('PUT', `/guilds/${GUILD}/members/${user.id}`, { body: { access_token: token } }); } catch (e) { /* pas grave : il pourra rejoindre par le lien */ }
     const roles = await syncRoles(playerId);
-    return send(res, 200, { linked: true, username: user.username, available: true, ...roles });
+    const prize = await require('./_giveaway').claim(user.id, playerId); // giveaway gagné avant de lier (2026-11-01)
+    return send(res, 200, { linked: true, username: user.username, available: true, ...roles, ...(prize ? { prize } : {}) });
   } catch (err) {
     return send(res, err.status && err.status < 600 ? (err.status >= 500 ? 502 : err.status) : 500, { error: err.message });
   }
 };
 module.exports.syncRoles = syncRoles;
+module.exports.dc = dc; // pour api/_giveaway.js
+module.exports.GUILD = GUILD;
+module.exports.hasBot = () => !!BOT;
 module.exports.wanted = wanted;

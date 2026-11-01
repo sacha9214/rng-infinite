@@ -9,6 +9,20 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Discord giveaways (2026-11-01, branch `claude/discord-giveaways`)
+
+Asked by Sacha, to bring players to the Discord: free skin giveaways. His choices: anyone on the Discord can enter,
+and he starts each one himself.
+- **Owner → 🎁 Giveaways**: pick a skin (any paid shop skin) and a length (1, 24, 48 or 72 h; 24 by default), press
+  Start. The first one creates the 🎁 GIVEAWAYS category and the read-only 🎁・giveaways channel (members can only react).
+- The bot posts an embed and adds 🎉; members enter by reacting 🎉. Bot REST API only (reactions are read at the end):
+  no gateway, no interactions endpoint, nothing to set in the Developer Portal.
+- `api/_giveaway.js`: `deploy/ovh/api-server.js` calls `tick()` every minute; a finished giveaway is drawn once (lock),
+  winner by `crypto.randomInt`. Linked players who already own the skin are left out. Linked winner: the skin is added
+  (`skins:<id>`) and announced. Unlinked winner: `gw:claim` keeps the prize 7 days; linking (or "Update my roles")
+  in Me grants it and the site shows a toast.
+- Update-log entry added: it is also posted automatically in 🆕・updates on deploy.
+
 ## Smoother server (2026-11-01, branch `claude/server-speed`)
 
 Asked by Sacha: make the server as smooth as possible, fewer failed requests. Measured on the VPS (read only):

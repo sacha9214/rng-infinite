@@ -707,14 +707,24 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList', 'gwList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
     // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
     if (body.action === 'imSet') {
       const who = await findPlayer(String(body.name || '').slice(0, 40));
       if (!who) return send(res, 404, { error: 'No player with this name' });
       await redis(body.on === false ? [['HDEL', statsKey(who), 'ideaManager'], ['SREM', 'im:all', who]] : [['HSET', statsKey(who), 'ideaManager', '1'], ['SADD', 'im:all', who]]);
       return send(res, 200, await imState(playerId, true));
+    }
+    // Giveaways sur le Discord (api/_giveaway.js, Sacha, 2026-11-01) : la liste, et en lancer un (créateur seulement).
+    if (body.action === 'gwList' || body.action === 'gwStart') {
+      const Giveaway = require('./_giveaway');
+      let started = null;
+      if (body.action === 'gwStart') {
+        if (!require('./_discord_link').hasBot()) return send(res, 503, { error: 'The Discord bot is only on the VPS' });
+        try { started = (await Giveaway.start(body.skin, body.hours)).id; } catch (e) { return send(res, e.status || 502, { error: e.status ? e.message : `Discord refused: ${e.message}` }); }
+      }
+      return send(res, 200, { ...(await Giveaway.ownerState()), readOnly: !isOwner, ...(started ? { started } : {}) });
     }
     // Annonces (onglet Announce de la page Owner) : publier, retirer, et la liste pour l'onglet.
     if (['annAdd', 'annDelete', 'annList'].includes(body.action)) {

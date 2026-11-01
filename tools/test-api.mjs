@@ -5729,4 +5729,60 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(cleanChat('gm 🍳🍞'), 'gm 🍳🍞', 'les emojis passent le filtre des amis et des duels');
 }
 
+// Giveaways du Discord (api/_giveaway.js, Sacha, 2026-11-01) : un faux Discord (aucun appel réseau) ; tirage, skin
+// donné au gagnant lié, lot gardé 7 jours pour un gagnant pas encore lié, ceux qui ont déjà le skin écartés.
+{
+  const Giveaway = require(path.join(ROOT, 'api/_giveaway.js')), Link = require(path.join(ROOT, 'api/_discord_link.js'));
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mk = (tag, name, extra = []) => { const id = tag.repeat(8), secret = (tag + 'e').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 500, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const boss = mk('a7', 'GwBoss', ['owner', '1']), owns = mk('a8', 'HasNeon'), winner = mk('a9', 'Lucky7'), late = mk('b7', 'LateLinker');
+  run([['SADD', `skins:${owns.playerId}`, 'neon'], ['HSET', 'discord:links', 'd-owns', owns.playerId, 'd-win', winner.playerId]]);
+  let reactors = [], posted = [], made = [];
+  const realDc = Link.dc, realHas = Link.hasBot;
+  Link.hasBot = () => true;
+  Link.dc = async (method, p, { body } = {}) => {
+    posted.push([method, p, body]);
+    if (method === 'GET' && p.endsWith('/channels')) return made.slice();
+    if (method === 'GET' && p === '/users/@me') return { id: 'bot1' };
+    if (method === 'POST' && p.endsWith('/channels')) { const c = { id: body.type === 4 ? 'cat1' : 'ch1', type: body.type, name: body.name }; made.push(c); return c; }
+    if (method === 'POST' && p.endsWith('/messages')) return { id: `m${posted.length}` };
+    if (method === 'GET' && p.includes('/reactions/')) return /after=0/.test(p) ? reactors.map(id => ({ id, bot: id === 'bot1' })) : [];
+    return null;
+  };
+  const site = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  assert.equal((await site(winner, 'gwStart', { skin: 'neon' })).status, 403, 'créateur seulement');
+  assert.equal((await site(boss, 'gwStart', { skin: 'classic' })).status, 400, 'un skin gratuit ne se gagne pas');
+  let r = await site(boss, 'gwStart', { skin: 'neon', hours: 24 });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.list[0].status, 'open');
+  const ch = posted.filter(([m, p]) => m === 'POST' && p.endsWith('/channels'));
+  assert.deepEqual(ch.map(([, , b]) => b.name), ['🎁 GIVEAWAYS', '🎁・giveaways'], 'catégorie et salon créés');
+  assert.ok(posted.some(([m, p]) => m === 'PUT' && p.includes(encodeURIComponent('🎉'))), 'le bot ajoute 🎉');
+  const g1 = JSON.parse(run([['HGET', 'gw:item', r.body.started]])[0].result);
+  assert.equal(await Giveaway.tick(g1.ends - 1000), 0, 'pas encore fini');
+  // Fini : le bot, celui qui a déjà Neon et un inconnu… seul Lucky7 (lié, sans Neon) et l'inconnu peuvent gagner.
+  reactors = ['bot1', 'd-owns', 'd-win'];
+  assert.equal(await Giveaway.tick(g1.ends + 1000), 1);
+  assert.equal(run([['SISMEMBER', `skins:${winner.playerId}`, 'neon']])[0].result, 1, 'skin donné au gagnant lié');
+  assert.equal(await Giveaway.tick(g1.ends + 2000), 0, 'tiré une seule fois');
+  assert.ok(posted.some(([m, p, b]) => m === 'POST' && p.endsWith('/messages') && b.content && b.content.includes('<@d-win>')), 'gagnant annoncé');
+  // Gagnant pas encore lié : le skin l'attend 7 jours, et arrive quand il lie son Discord.
+  posted = []; r = await site(boss, 'gwStart', { skin: 'lcd', hours: 1 });
+  const g2 = JSON.parse(run([['HGET', 'gw:item', r.body.started]])[0].result);
+  assert.ok(!posted.some(([m, p]) => m === 'POST' && p.endsWith('/channels')), 'salon déjà créé');
+  reactors = ['d-late'];
+  await Giveaway.tick(g2.ends + 1);
+  assert.ok(run([['HGET', 'gw:claim', 'd-late']])[0].result, 'lot gardé');
+  assert.deepEqual(await Giveaway.claim('d-late', late.playerId), { skin: 'lcd', name: 'LCD', emoji: '📟' });
+  assert.equal(run([['SISMEMBER', `skins:${late.playerId}`, 'lcd']])[0].result, 1);
+  assert.equal(await Giveaway.claim('d-late', late.playerId), null, 'une seule fois');
+  // Personne ne peut gagner (tous ont déjà le skin) : pas de gagnant.
+  r = await site(boss, 'gwStart', { skin: 'neon', hours: 1 }); const g3 = JSON.parse(run([['HGET', 'gw:item', r.body.started]])[0].result);
+  reactors = ['d-owns', 'd-win'];
+  await Giveaway.tick(g3.ends + 1);
+  r = await site(boss, 'gwList');
+  assert.deepEqual(r.body.list.map(g => [g.skin, g.status, g.winner]).sort(), [['lcd', 'done', 'LateLinker'], ['neon', 'done', 'Lucky7'], ['neon', 'void', null]]); // même milliseconde possible : comparés triés
+  assert.ok(!JSON.stringify(r.body).includes(winner.playerId), 'aucun identifiant');
+  Link.dc = realDc; Link.hasBot = realHas;
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
