@@ -286,12 +286,10 @@
     // jaxoncool43 (1738), Phong254 (nombre d'argent 1 + √2 = 2,4142…, famille SILVER_RATIO comme les tranches de Pi).
     FOREVER: '224', YEAR_1987: '1987', FIVE_OH_FIVE: '505', BEVERLY_HILLS: '90210', SEVENTEEN_38: '1738',
     SILVER_RATIO_4: '2414', SILVER_RATIO_5: '24142',
-    // Idées du 2026-11-01 : DandoriNinja (07, « o7 », un salut ; exactement 7 reste Seven), pilot56 (constante
-    // d'Euler-Mascheroni 0,57721…, famille EULER_GAMMA comme Silver Ratio ; 1729, le nombre de Ramanujan), KMC (13, le
-    // nombre qui porte malheur, XP basse comme Forty-One), Niall (338 = BEE à l'envers sur une calculatrice), Miguel1
-    // (707 = LOL à l'envers), Miguel2 (1969, les premiers pas sur la Lune).
-    O7: '07', EULER_GAMMA_4: '5772', EULER_GAMMA_5: '57721', TAXICAB: '1729', THIRTEEN: '13', BEE: '338', LOL: '707',
-    MOON_LANDING: '1969',
+    // Idées du 2026-11-01 : pilot56 (constante d'Euler-Mascheroni 0,57721…, famille EULER_GAMMA comme Silver Ratio ;
+    // 1729, le nombre de Ramanujan), Niall (338 = BEE à l'envers sur une calculatrice), Miguel1 (707 = LOL à l'envers),
+    // Miguel2 (1969, les premiers pas sur la Lune). « 13 » et « 07 » écartés par Sacha : trop de nombres changeaient de rareté.
+    EULER_GAMMA_4: '5772', EULER_GAMMA_5: '57721', TAXICAB: '1729', BEE: '338', LOL: '707', MOON_LANDING: '1969',
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
   };
   const EXACT = {

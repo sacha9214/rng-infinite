@@ -713,13 +713,6 @@
     "score": 100000100
   },
   {
-    "id": "O7",
-    "label": "o7",
-    "desc": "Contains \"07\": o7, a salute. He will be missed.",
-    "emoji": "🫡",
-    "score": 2590
-  },
-  {
     "id": "EULER_GAMMA_4",
     "label": "Euler's Gamma",
     "desc": "Contains \"5772\": the Euler–Mascheroni constant, 0.5772…",
@@ -741,13 +734,6 @@
     "desc": "Contains \"1729\": the smallest sum of two cubes in two ways (1³ + 12³ = 9³ + 10³).",
     "emoji": "🚕",
     "score": 333334
-  },
-  {
-    "id": "THIRTEEN",
-    "label": "Thirteen",
-    "desc": "Contains \"13\", the unlucky number.",
-    "emoji": "🐈‍⬛",
-    "score": 2024
   },
   {
     "id": "SHIFTED_ECHO",

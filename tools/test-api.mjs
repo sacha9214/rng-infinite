@@ -5322,7 +5322,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
 }
 
-// ================================================================ Idées du 2026-11-01 (groupe D) : 11 badges, titres de
+// ================================================================ Idées du 2026-11-01 (groupe D) : 9 badges, titres de
 // niveau (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries de jours (lnbBUChuoi_vn), Full Spectrum
 // (Pube puller), Odd Week (JBearr12). Joueurs 11d1….
 {
@@ -5332,18 +5332,17 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const has = (n, id) => engine.analyze(n).earnedIds.includes(id);
   // 1. Badges : nombres qui les obtiennent (build.mjs) et XP = valeur naturelle 100 × 1 000 001 / nombre (sauf
   // Three-Quarter Millennium : 100 750, la paire des 100 250 de Quarter Millennium).
-  const COUNTS = { FULL_CIRCLE: 1, O7: 38610, EULER_GAMMA_4: 300, EULER_GAMMA_5: 20, TAXICAB: 300, THIRTEEN: 49401, SHIFTED_ECHO: 1547,
+  const COUNTS = { FULL_CIRCLE: 1, EULER_GAMMA_4: 300, EULER_GAMMA_5: 20, TAXICAB: 300, SHIFTED_ECHO: 1547,
     PALINDROMIC_PRIME: 113, THREE_QUARTER_MILLENNIUM: 1000, BEE: 3999, LOL: 3979, MOON_LANDING: 300 };
   for (const [id, k] of Object.entries(COUNTS)) {
     assert.equal(odds[id], k, `${id} : ${k} nombres`);
     assert.equal(engine.byId.get(id).score, id === 'THREE_QUARTER_MILLENNIUM' ? 100750 : Math.round((100 * 1000001) / k), `${id} : XP`);
   }
   assert.ok(has(360, 'FULL_CIRCLE') && !has(3600, 'FULL_CIRCLE') && !has(1360, 'FULL_CIRCLE'), 'exactement 360');
-  for (const n of [507, 1070, 7007, 707]) assert.ok(has(n, 'O7'), `${n} contient 07`);
-  for (const n of [7, 70, 770, 1000]) assert.ok(!has(n, 'O7'), `${n} : pas de 07`);
   assert.deepEqual(engine.analyze(157721).scoringIds.filter(id => id.startsWith('EULER_GAMMA')), ['EULER_GAMMA_5'], 'famille : seul le meilleur compte');
   assert.ok(has(157721, 'EULER_GAMMA_4') && has(5772, 'EULER_GAMMA_4') && !has(57720, 'EULER_GAMMA_5'));
-  assert.ok(has(1729, 'TAXICAB') && has(13, 'THIRTEEN') && has(913000, 'THIRTEEN') && !has(31, 'THIRTEEN'));
+  assert.ok(has(1729, 'TAXICAB') && has(301729, 'TAXICAB') && !has(1279, 'TAXICAB'));
+  assert.ok(!engine.byId.has('O7') && !engine.byId.has('THIRTEEN'), '07 et 13 écartés par Sacha (2026-11-01)');
   assert.ok(has(338, 'BEE') && !has(388, 'BEE') && has(707, 'LOL') && has(1969, 'MOON_LANDING') && has(301969, 'MOON_LANDING'));
   assert.ok(has(1750, 'THREE_QUARTER_MILLENNIUM') && has(999750, 'THREE_QUARTER_MILLENNIUM') && !has(7500, 'THREE_QUARTER_MILLENNIUM'));
   for (const n of [456345, 123234, 10, 98, 2132, 567678, 987876]) assert.ok(has(n, 'SHIFTED_ECHO'), `${n} est un écho décalé`);
