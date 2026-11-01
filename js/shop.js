@@ -194,6 +194,23 @@
     { id: 'battleship', name: 'Battleship', emoji: '⚓', price: 2800, desc: 'A battleship on a sea at dusk locks onto every digit and fires; each shell splash reveals a digit, and great rolls end in a huge blast and a smoke ring', idea: '17black' }, // idée de 17black (2026-10-28)
     { id: 'cone', name: 'Cone of Destiny', emoji: '🚧', price: 450, desc: 'A traffic cone spins in the air, then a ridiculously huge explosion… and when the smoke clears, it is just a cone. Mythic rolls give it a tiny crown', idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 450)
     { id: 'observer', name: 'The Observer', emoji: '👁️', price: 10000, desc: 'A giant cosmic eye opens in the sky, galaxies turn in its pupil and your digits appear in its gaze; Mythic rolls open it wide in a cosmic flare', premium: true, idea: 'Gray alt' }, // idée de Gray alt (2026-10-28, prix proposé : 10 000)
+    // ==== Skins du 2026-11-01, lot A (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de Kj13 (2026-11-01) : du mini-golf, une balle puttée par chiffre ; fusionnée avec celle de Jguz01 (des
+    // chiffres en balles de golf sur un green, un beau parcours derrière). Trou en un et drapeau qui claque dès Mythic.
+    { id: 'golf', name: 'Mini Golf', emoji: '⛳', price: 2000, desc: 'Every digit is putted into its hole on a mini golf green, past a little windmill; Mythic rolls are a HOLE IN ONE with confetti and a waving flag', idea: 'Kj13' },
+    // Idée de kingston (2026-11-01) : un terrain de foot ; un ballon frappé dans le filet pour chaque chiffre, GOAL! dès Mythic.
+    { id: 'soccer', name: 'Soccer', emoji: '⚽', price: 1800, desc: 'Every digit is a shot that bulges the goal net; good rolls are a GOAL! and Mythic rolls bring the confetti', idea: 'kingston' },
+    // Idée de jjcoolcid1 (2026-11-01) : un ballon de basket rentre dans le panier à chaque chiffre ; dunk dès Mythic.
+    { id: 'basketball', name: 'Basketball', emoji: '🏀', price: 1800, desc: 'A ball swishes through the hoop for every digit on a hardwood court; Mythic rolls are a SLAM DUNK that shakes the rim', idea: 'jjcoolcid1' },
+    // Idée de dylanbuckleyisjewish (2026-11-01) : un skin animaux / safari ; une jeep, des animaux qui sortent des herbes, un lion qui rugit.
+    { id: 'safari', name: 'Safari', emoji: '🦒', price: 2200, desc: 'Animal-print digits hide in the savanna grass: a giraffe, an elephant or a zebra peeks out for each one, a jeep drives by, and Mythic rolls make the lion ROAR', idea: 'dylanbuckleyisjewish' },
+    // Idée de number 1 (2026-11-01, il proposait 3 000 pièces) : une grotte sombre, une lampe qui vacille, une pioche
+    // rouillée qui fait sauter un bloc de minerai de chaque chiffre ; le chiffre prend ce minerai. L'éclat final dépend de
+    // la rareté (du charbon sur un Common au diamant dès Mythic). Pas de textures en blocs (règle des marques).
+    { id: 'mining', name: 'Mining', emoji: '⛏️', price: 3000, desc: 'A rusty pickaxe chips the ore off every digit in a dark cave under one flickering lamp; each digit turns into the ore it was hiding, and the final blast goes from coal to diamonds with your rarity', idea: 'number 1' },
+    // Idée de baby boy (2026-11-01, autre compte : Daddy finger) : un pack chat ; un chat sort chaque chiffre d'une pelote
+    // de laine. Le pack de sons Meow va avec (SOUNDS) ; il le voulait à 15 000 pièces, vendu au prix normal des packs.
+    { id: 'cat', name: 'Cat', emoji: '🐱', price: 1800, desc: 'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts', idea: 'baby boy' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -483,6 +500,9 @@
     // Idées de Niall (un son de « pop ») et de sennybex1 (un clic de clavier ou de souris), 2026-10-28 : touches
     // mécaniques, clics de souris et pops, tout synthétisé (js/sound.js). Les packs ne versent pas de part : crédit ici.
     { id: 'clicky', name: 'Clicky', emoji: '🖱️', price: 550, desc: 'Mechanical key clacks, mouse clicks and soft pops' },
+    // Idée de baby boy (2026-11-01) : un miaou à chaque chiffre, assorti au skin Cat. Il le voulait à 15 000 pièces ;
+    // vendu au prix normal des packs. Les packs ne versent pas de part : crédit ici.
+    { id: 'meow', name: 'Meow', emoji: '🐱', price: 500, desc: 'A little meow on every digit, a big one on the last, and purrs for rare rolls' },
   ];
   const soundById = new Map(SOUNDS.map(p => [p.id, p]));
   // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
