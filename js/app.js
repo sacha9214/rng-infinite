@@ -6607,13 +6607,13 @@
           <li><b>Be fair.</b> Act on what someone wrote, never because you don't like them or don't agree with them.</li>
           <li><b>Start small.</b> 5 or 10 minutes for spam or a first rude message, 1 hour if they keep going, 24 hours for something really bad (personal info, very mean, not OK for kids).</li>
           <li><b>Not every message needs a mute.</b> A small mistake? Just delete it.</li>
-          <li><b>Always pick the right reason</b>, and add details when they help Sacha understand.</li>
+          <li><b>Always pick the right reason</b> when you delete or mute, and add details when they help Sacha understand.</li>
           <li>You can't mute the owner or another moderator. Only Sacha can mute forever.</li>
         </ol>
         <p class="panel-note">In the 💬 chat, press ⋯ on a message to delete it or mute its writer.</p>
       </div>
       <div id="mod-body"><div class="empty">Loading…</div></div></div>`;
-    const box = $('#mod-body'); let data = null, muting = null;
+    const box = $('#mod-body'); let data = null, muting = null, mkind = 'mute';
     const WHY = Object.fromEntries(GChat.MUTE_WHY), DUR = Object.fromEntries(GChat.MUTE_DUR);
     const draw = () => {
       if (!data || !box.isConnected) return;
@@ -6621,10 +6621,10 @@
           ${data.reports.length ? data.reports.map(r => `<div class="o-report mod-rep" data-id="${esc(r.id)}" data-msg="${esc(r.msgId)}">
             <div class="o-report-head">${`<a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>`}${r.count > 1 ? ` <span class="o-chip warn">reported ${r.count} times</span>` : ''}${r.against > r.count ? ` <span class="panel-note">${fmt(r.against)} reports about this player</span>` : ''}<span class="panel-note">${relTime(r.msgT)}</span></div>
             <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
-            <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
-            ${muting === r.id ? GChat.muteHTML({ owner: false }) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
+            <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete…</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
+            ${muting === r.id ? GChat.muteHTML({ owner: false }, mkind) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">My last actions</h3><span class="panel-note">Sacha sees these too</span></div>
-          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : 'Message deleted'} · ${relTime(a.t)}${a.lift ? ' · <b>lifted by Sacha</b>' : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ' · <b>lifted by Sacha</b>' : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
     };
     const load = (action = 'gcModPage', extra) => Online.global(action, extra).then(d => { data = d; draw(); }).catch(err => {
       if (!data) box.innerHTML = `<div class="empty">${err.status === 403 ? 'This page is for chat moderators.' : 'Unavailable right now.'}</div>`;
@@ -6637,8 +6637,9 @@
       const card = e.target.closest('.mod-rep'); if (!card) return;
       const t = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
       if (e.target.closest('[data-mod-ok]')) { load('gcReportOk', { id: card.dataset.id }).then(() => toast('Marked as fine')).catch(() => {}); return; }
-      if (e.target.closest('[data-mod-del]')) { if (confirm(t('Delete this message?'))) load('gcDelete', { id: card.dataset.msg, from: 'mod' }).then(() => toast('Message deleted')).catch(() => {}); return; }
-      if (e.target.closest('[data-mod-mute]')) { muting = muting === card.dataset.id ? null : card.dataset.id; draw(); return; }
+      const open = kind => { muting = muting === card.dataset.id && mkind === kind ? null : card.dataset.id; mkind = kind; draw(); };
+      if (e.target.closest('[data-mod-del]')) { open('delete'); return; } // une raison, comme pour un silence (Sacha, 2026-11-01)
+      if (e.target.closest('[data-mod-mute]')) { open('mute'); return; }
       if (e.target.closest('[data-gc="mutecancel"]')) { muting = null; draw(); }
     });
     box.addEventListener('submit', e => {
@@ -6647,8 +6648,8 @@
       const why = f.elements.why.value, note = f.elements.note.value.trim(), dur = (f.querySelector('[name=dur]:checked') || {}).value;
       if (!why) { toast('Pick a reason'); f.elements.why.focus(); return; }
       if (why === 'other' && !note) { toast('Say why in a few words'); f.elements.note.focus(); return; }
-      const card = f.closest('.mod-rep'), btn = f.querySelector('button:not([type])'); btn.disabled = true;
-      load('gcMute', { id: card.dataset.msg, dur, why, note, from: 'mod' }).then(() => { muting = null; draw(); toast('Player muted'); }).catch(() => { btn.disabled = false; });
+      const card = f.closest('.mod-rep'), del = f.dataset.kind === 'delete', btn = f.querySelector('button:not([type])'); btn.disabled = true;
+      load(del ? 'gcDelete' : 'gcMute', { id: card.dataset.msg, ...(del ? {} : { dur }), why, note, from: 'mod' }).then(() => { muting = null; draw(); toast(del ? 'Message deleted' : 'Player muted'); }).catch(() => { btn.disabled = false; });
     });
   }
   function renderIdeas() {
@@ -7224,7 +7225,7 @@
           ${d.readOnly ? '' : '<form class="im-add gc-mod-add"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">Give the role</button></form>'}`)
         + panel('What moderators did', 'mutes and deleted messages, newest first: check the reason and the message', `
           ${stats.length > 1 || modFilter ? `<div class="o-inbox-tabs">${['', ...new Set([...stats.map(m => m.name), ...(d.actions || []).map(a => a.by)])].map(n => `<button data-mod-filter="${esc(n)}" class="${n === modFilter ? 'on' : ''}"${n ? ' data-no-i18n' : ''}>${n ? esc(n) : 'All'}</button>`).join('')}</div>` : ''}
-          ${acts.length ? acts.map(a => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} ${who(a.name)}<span class="panel-note">${a.kind === 'mute' ? 'muted' : 'message deleted'} by <span data-no-i18n>${esc(a.by)}</span> · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift.by)}</span></b>` : a.active ? ' · <b>still muted</b>' : ''}</span></div>${a.kind === 'mute' ? why(a) : a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>${a.active && !d.readOnly ? `<button class="btn ghost small" data-gc-unmute="${esc(a.name)}">🔊 Unmute</button>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}`);
+          ${acts.length ? acts.map(a => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} ${who(a.name)}<span class="panel-note">${a.kind === 'mute' ? 'muted' : 'message deleted'} by <span data-no-i18n>${esc(a.by)}</span> · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift.by)}</span></b>` : a.active ? ' · <b>still muted</b>' : ''}</span></div>${why(a)}</div>${a.active && !d.readOnly ? `<button class="btn ghost small" data-gc-unmute="${esc(a.name)}">🔊 Unmute</button>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}`);
     };
     let chatData = null;
     const chatRun = (action, extra) => Online.global(action, extra).then(d => { chatData = d; drawChat(d); guest(d.readOnly); });
@@ -9407,7 +9408,7 @@
   const GChat = {
     open: false, timer: 0, msgs: [], rev: null, del: 0, me: null, busy: false, menu: null,
     reply: null, pin: null, emojiOpen: false, // réponse en cours (Niall), message épinglé (Big Sexy), emojis (Deadshot), 2026-10-27
-    muting: null, stale: false, // formulaire de silence ouvert sur ce message (Sacha, 2026-11-01) : la liste attend qu'il se ferme
+    muting: null, muteKind: 'mute', stale: false, // formulaire de silence ouvert sur ce message (Sacha, 2026-11-01) : la liste attend qu'il se ferme
     el: null,
     mount() {
       if (this.el) return this.el;
@@ -9509,7 +9510,7 @@
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
           ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
-          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="muteform">🔇 Mute…</button>'}` : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me) : ''}` : ''}
+          ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
     },
@@ -9517,22 +9518,23 @@
     // Owner. « Pour toujours » reste au créateur : les modérateurs ne bannissent pas.
     MUTE_DUR: [['5m', '5 min'], ['10m', '10 min'], ['1h', '1 h'], ['24h', '24 h']],
     MUTE_WHY: [['spam', 'Spam or flooding'], ['rude', 'Rude words'], ['mean', 'Mean to someone'], ['personal', 'Personal info'], ['inappropriate', 'Not OK for kids'], ['other', 'Other']],
-    muteHTML(me) {
-      const durs = me.owner ? [...this.MUTE_DUR, ['perm', 'Forever']] : this.MUTE_DUR;
-      return `<form class="gc-mute-form"><fieldset class="gc-mute-durs"><legend>Mute for</legend>${durs.map(([v, l], i) => `<label><input type="radio" name="dur" value="${v}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>
+    // kind = 'delete' : supprimer le message d'un autre joueur demande aussi une raison (Sacha, 2026-11-01), sans durée.
+    muteHTML(me, kind = 'mute') {
+      const durs = me.owner ? [...this.MUTE_DUR, ['perm', 'Forever']] : this.MUTE_DUR, del = kind === 'delete';
+      return `<form class="gc-mute-form" data-kind="${del ? 'delete' : 'mute'}">${del ? '<p class="gc-mute-title">🗑️ Delete this message: why?</p>' : `<fieldset class="gc-mute-durs"><legend>Mute for</legend>${durs.map(([v, l], i) => `<label><input type="radio" name="dur" value="${v}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>`}
           <select class="select" name="why" required aria-label="Reason"><option value="">Reason…</option>${this.MUTE_WHY.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
           <input class="input" name="note" maxlength="120" placeholder="Details for the owner (optional)" autocomplete="off">
-          <div class="gc-mute-go"><button type="button" class="btn ghost small" data-gc="mutecancel">Cancel</button><button class="btn small">🔇 Mute</button></div></form>`;
+          <div class="gc-mute-go"><button type="button" class="btn ghost small" data-gc="mutecancel">Cancel</button><button class="btn small">${del ? '🗑️ Delete' : '🔇 Mute'}</button></div></form>`;
     },
     closeMute() { this.muting = null; this.drawList(); },
     async muteSend(f) {
       const why = f.elements.why.value, note = f.elements.note.value.trim(), dur = (f.querySelector('[name=dur]:checked') || {}).value;
       if (!why) { toast('Pick a reason'); f.elements.why.focus(); return; }
       if (why === 'other' && !note) { toast('Say why in a few words'); f.elements.note.focus(); return; }
-      const id = this.muting, btn = f.querySelector('button:not([type])'); btn.disabled = true;
+      const id = this.muting, del = f.dataset.kind === 'delete', btn = f.querySelector('button:not([type])'); btn.disabled = true;
       try {
-        const d = await Online.global('gcMute', { id, dur, why, note });
-        this.muting = null; this.menu = null; this.apply(d); this.drawList(); toast('Player muted');
+        const d = await Online.global(del ? 'gcDelete' : 'gcMute', del ? { id, why, note } : { id, dur, why, note });
+        this.muting = null; this.menu = null; this.apply(d); this.drawList(); toast(del ? 'Message deleted' : 'Player muted');
       } catch (err) { btn.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
     },
     // Hauteur du champ : celle du texte, entre 1 et 4 lignes.
@@ -9669,7 +9671,7 @@
         } else
         if (b.dataset.gc === 'report') { const r = await Online.global('gcReport', { id }); toast(r.already ? 'Already reported' : 'Reported: thank you!'); }
         else if (b.dataset.gc === 'delete') { if (!confirm(t('Delete this message?'))) return; this.apply(await Online.global('gcDelete', { id })); toast('Message deleted'); }
-        else if (b.dataset.gc === 'muteform') { this.muting = this.muting === id ? null : id; this.stale = false; this.drawList(); const f = this.list().querySelector('.gc-mute-form'); if (f) f.scrollIntoView({ block: 'nearest' }); return; }
+        else if (b.dataset.gc === 'muteform' || b.dataset.gc === 'delform') { const kind = b.dataset.gc === 'delform' ? 'delete' : 'mute'; this.muting = this.muting === id && this.muteKind === kind ? null : id; this.muteKind = kind; this.stale = false; this.drawList(); const f = this.list().querySelector('.gc-mute-form'); if (f) f.scrollIntoView({ block: 'nearest' }); return; }
         else if (b.dataset.gc === 'mutecancel') { this.closeMute(); return; }
         this.menu = null; this.muting = null; this.drawList();
       } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }

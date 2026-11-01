@@ -580,12 +580,13 @@
     'they can delete messages and mute players in the global chat (5 min to 24 h; only you can mute forever)': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global (de 5 min à 24 h ; toi seul peux rendre muet pour toujours)',
     'Mute history': 'Historique des silences', 'mutes that ended or that you lifted, newest first': 'les silences finis ou levés, les plus récents en premier', 'No mute yet.': 'Aucun silence pour l\'instant.',
     'lifted by': 'levé par',
+    '🗑️ Delete…': '🗑️ Supprimer…', '🗑️ Delete this message: why?': '🗑️ Supprimer ce message : pourquoi ?', // raison des suppressions (Sacha, 2026-11-01)
     // Modérateurs du chat (Sacha, 2026-11-01)
     '🛡️ Chat Moderator': '🛡️ Modérateur du chat', 'You help keep the global chat friendly for everyone. Sacha sees every mute and every deleted message, with your reason, and can lift a mute that wasn\'t fair.': 'Tu aides à garder le chat global sympa pour tout le monde. Sacha voit chaque silence et chaque message supprimé, avec ta raison, et peut lever un silence injuste.',
     '📝 The rules': '📝 Les règles', 'Be fair.': 'Sois juste.', 'Act on what someone wrote, never because you don\'t like them or don\'t agree with them.': 'Agis sur ce que quelqu\'un a écrit, jamais parce que tu ne l\'aimes pas ou que tu n\'es pas d\'accord avec lui.',
     'Start small.': 'Commence petit.', '5 or 10 minutes for spam or a first rude message, 1 hour if they keep going, 24 hours for something really bad (personal info, very mean, not OK for kids).': '5 ou 10 minutes pour du spam ou un premier message impoli, 1 heure s\'il continue, 24 heures pour quelque chose de vraiment grave (infos personnelles, très méchant, pas pour les enfants).',
     'Not every message needs a mute.': 'Tous les messages ne méritent pas un silence.', 'A small mistake? Just delete it.': 'Une petite erreur ? Supprime-le, c\'est tout.',
-    'Always pick the right reason': 'Choisis toujours la bonne raison', ', and add details when they help Sacha understand.': ', et ajoute des détails quand ça aide Sacha à comprendre.',
+    'Always pick the right reason': 'Choisis toujours la bonne raison', 'when you delete or mute, and add details when they help Sacha understand.': 'quand tu supprimes ou rends muet, et ajoute des détails quand ça aide Sacha à comprendre.',
     'You can\'t mute the owner or another moderator. Only Sacha can mute forever.': 'Tu ne peux pas rendre muet le créateur ni un autre modérateur. Seul Sacha peut rendre muet pour toujours.',
     'In the 💬 chat, press ⋯ on a message to delete it or mute its writer.': 'Dans le 💬 chat, appuie sur ⋯ sur un message pour le supprimer ou rendre muet son auteur.',
     '🚩 Reported messages': '🚩 Messages signalés', '↻ Refresh': '↻ Actualiser', '✓ Nothing wrong': '✓ Rien à redire', 'Nothing to check right now. 🎉': 'Rien à vérifier pour l\'instant. 🎉',
