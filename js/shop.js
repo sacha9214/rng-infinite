@@ -70,6 +70,10 @@
     { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', idea: 'Deadshot' },
     // Noël (idées de JBearr12 et Angelicide9, 2026-10-25) : Legendary limité, en vente jusqu'au 26 décembre (until).
     { id: 'christmas', name: 'Christmas Morning', emoji: '🎄', price: 2512, desc: 'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26', until: '2026-12-26T00:00:00Z', idea: 'JBearr12' },
+    // Noël (événement de Noël, 2026-11-01) : une boule à neige, limitée comme Christmas Morning (jusqu'au 26 décembre,
+    // jamais dans une caisse). Les chiffres sont figés dans l'eau sous le verre ; plus la rareté est haute, plus il y a
+    // de paillettes dans la neige (js/skinfx.js).
+    { id: 'snowglobe', name: 'Snow Globe', emoji: '🔮', price: 1225, idea: 'Gray alt', desc: 'Digits frozen in a glass snow globe: shake it to roll, watch the snow settle; rarer rolls stir up more glitter · until December 26', until: '2026-12-26T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -348,6 +352,10 @@
     // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse). Prévu jusqu'au 2 novembre,
     // retiré le 1er novembre avec tout Halloween pour laisser la place à Noël (demandé par Sacha, 2026-11-01). 1 031 pièces.
     { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
+    // Fond de Noël (événement de Noël, 2026-11-01) : un petit village sous la neige, fenêtres allumées et cheminées qui
+    // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
+    // d'IXOLAF2 (idée de 3 joueurs) : il touche sa part.
+    { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));

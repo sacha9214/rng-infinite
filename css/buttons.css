@@ -962,6 +962,19 @@
   text-shadow: 0 1px 0 #450a0a, 0 0 3px #450a0a, 0 0 .4em rgba(69, 10, 10, .9);
   --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(239, 68, 68, .3); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(34, 197, 94, .45); --gs-a: 0 .06em 0 #14532d; }
 .btn-roll.gen-christmas:hover { filter: brightness(1.08); }
+/* Snow Globe (événement de Noël, 2026-11-01) : de l'eau bleu nuit sous le verre, de la neige qui tombe, un reflet
+   courbe en haut à gauche et le filet doré du socle en bas ; au survol, la neige tombe (on a secoué la boule). */
+.btn-roll.gen-snowglobe { border: 2px solid rgba(219, 234, 254, .8); border-bottom: 4px solid #5a3416; border-radius: .8em .8em .35em .35em; color: #f8fbff;
+  background:
+    radial-gradient(ellipse 30% 70% at 12% 0%, rgba(255, 255, 255, .28), transparent 70%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g fill='white'><circle cx='6' cy='8' r='1.5' opacity='.8'/><circle cx='22' cy='4' r='1' opacity='.6'/><circle cx='31' cy='19' r='1.6' opacity='.75'/><circle cx='13' cy='26' r='1.1' opacity='.6'/><circle cx='35' cy='34' r='.9' opacity='.5'/><circle cx='21' cy='36' r='1.3' opacity='.7'/></g></svg>") 0 0 / 22px 22px,
+    linear-gradient(180deg, transparent calc(100% - 3px), #f3cf7a calc(100% - 3px)),
+    linear-gradient(180deg, #1f5596, #143a70 60%, #0d2a54);
+  text-shadow: 0 1px 0 #0c2a52, 0 0 3px #0c2a52, 0 0 .5em rgba(186, 230, 253, .7);
+  --gs: 0 .3em 0 #3a200c, 0 .5em 1em rgba(125, 211, 252, .3); --gs-h: 0 .34em 0 #3a200c, 0 .7em 1.4em rgba(186, 230, 253, .5); --gs-a: 0 .06em 0 #3a200c; }
+.btn-roll.gen-snowglobe:hover { animation: gen-snowglobe-fall 1.4s linear infinite; }
+@keyframes gen-snowglobe-fall { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 0, 0 22px, 0 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-roll.gen-snowglobe:hover { animation: none; } }
 /* Money (idées de JBearr12 et finnnnn, 2026-10-25) : un billet vert pâle à double cadre, texte doré. */
 .btn-roll.gen-money { border: 2px solid #2f5d3a; border-radius: .35em; color: #fde68a;
   background: repeating-radial-gradient(ellipse 60% 90% at 50% 50%, transparent 0 4px, rgba(47, 93, 58, .12) 4px 5px), linear-gradient(180deg, #4d7c57, #2f5d3a);
