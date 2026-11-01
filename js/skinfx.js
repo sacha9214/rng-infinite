@@ -4497,6 +4497,144 @@
     };
   });
 
+  // 🔮 Snow Globe (événement de Noël, 2026-11-01) — tout reste dans le verre : la neige tourne dans l'eau derrière les
+  // chiffres (un tourbillon tant qu'on secoue la boule, qui se calme à chaque chiffre posé), puis retombe lentement.
+  // Avant le dernier chiffre, la boule est remuée une dernière fois. La révélation soulève des paillettes du fond de la
+  // neige, qui redescendent en scintillant : quelques-unes pour un Common, argent puis or selon la rareté, une nuée
+  // irisée pour un Mythic (et encore plus au-delà) ; dès Epic, le verre s'éclaire doucement autour de la carte.
+  SCENES.snowglobe = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const cx = card.x + card.w / 2, cy = card.y + card.h / 2, floor = h * .72; // la neige au sol commence vers 72 % de la hauteur
+    let heat = 1.3, target = .9, glow = 0;
+    const flakes = Array.from({ length: Math.round(Math.min(110, Math.max(30, (w * h) / 700)) * q) }, () => ({ x: rnd(w), y: rnd(-4, floor), z: rnd(.35, 1), ph: rnd(TAU) }));
+    const glit = particles(), sparks = timed();
+    const GLIT = [['#ffffff', '#e2e8f0'], ['#ffffff', '#e2e8f0', '#fde68a'], ['#fde68a', '#fbbf24', '#ffffff', '#a5f3fc'], ['#fde68a', '#fbbf24', '#f0abfc', '#a5f3fc', '#ffffff']];
+    return {
+      frame(t, dt) {
+        heat += (target - heat) * Math.min(1, dt * 1.6);
+        glow = Math.max(0, glow - dt * .35);
+        // la neige : un tourbillon autour du centre (en coordonnées normalisées : des ellipses qui épousent la boule)
+        // plus la chute ; vite, elle s'étire en traînées
+        const om = 3.2 * heat;
+        ci.globalCompositeOperation = 'source-over'; ci.lineCap = 'round'; ci.fillStyle = ci.strokeStyle = '#ffffff';
+        for (const f of flakes) {
+          const u = (f.x - w / 2) / (w / 2), v = (f.y - h * .45) / (h / 2);
+          const vx = -v * (w / 2) * om * f.z * .5 + Math.sin(t * 1.3 + f.ph) * 6 * f.z;
+          const vy = u * (h / 2) * om * f.z + (10 + 16 * f.z) * Math.max(.15, 1 - heat * .8);
+          f.x += vx * dt; f.y += vy * dt;
+          if (f.y > floor + 4 && heat < .5) { f.y = rnd(-6, 0); f.x = rnd(w); }
+          if (f.y > h + 4) f.y = -4; else if (f.y < -6) f.y = h * rnd(.2, .6);
+          if (f.x < -4) f.x += w + 8; else if (f.x > w + 4) f.x -= w + 8;
+          const r = .7 + 1.5 * f.z, a = (.35 + .5 * f.z) * (f.y > floor ? Math.max(0, 1 - (f.y - floor) / 8) : 1);
+          if (a <= .02) continue;
+          ci.globalAlpha = a;
+          const sp = Math.hypot(vx, vy);
+          if (sp > 60) { ci.lineWidth = r * 1.6; ci.beginPath(); ci.moveTo(f.x, f.y); ci.lineTo(f.x - vx * .025, f.y - vy * .025); ci.stroke(); }
+          else { ci.beginPath(); ci.arc(f.x, f.y, r, 0, TAU); ci.fill(); }
+        }
+        // les paillettes : des éclats plats qui tournent sur eux-mêmes et n'accrochent la lumière que de face
+        glit.step(dt);
+        glit.each((g, k) => {
+          const x = g.x + Math.sin(t * 1.4 + g.ph) * 5, b = Math.pow(Math.abs(Math.cos(g.ph + t * g.spin)), 6);
+          const a = Math.min(1, k * 8, (1 - k) * 3);
+          ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = a * (.45 + .55 * b); ci.fillStyle = g.c;
+          ci.save(); ci.translate(x, g.y); ci.rotate(g.ph + t * g.spin * .5); ci.fillRect(-g.size, -g.size * .45, g.size * 2, g.size * .9); ci.restore();
+          if (b > .5) { ci.globalCompositeOperation = 'lighter'; dot(ci, g.c, x, g.y, g.size * 4.5 * b, a * b * .8); }
+        });
+        ci.globalCompositeOperation = 'source-over';
+        // dehors : seulement la lueur du verre (rien ne sort de la boule) et, au-delà du Mythic, des reflets sur le dôme
+        if (glow > .01) { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, dark ? '#bae6fd' : '#38bdf8', cx, cy, card.w * .75, glow * (dark ? .32 : .16), card.h * 1.5); }
+        sparks.run(dt, (s, k) => { const p2 = along(card, s.s), a = Math.sin(Math.PI * k); co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#ffffff', p2.x, p2.y, 9 * a, a * .9); dot(co, '#bae6fd', p2.x, p2.y, 2.2, a * .9, 14 * a); dot(co, '#bae6fd', p2.x, p2.y, 14 * a, a * .9, 2.2); });
+        co.globalCompositeOperation = 'source-over';
+      },
+      // chaque chiffre posé calme un peu la neige ; le dernier la laisse retomber
+      lock(p, o) { target = o.last ? 0 : Math.max(.25, target - (o.ghost ? .04 : .12)); },
+      build() { target = 1; heat = Math.max(heat, .9); },
+      reveal(tier) {
+        const p = POWER[tier], up = ASCEND[tier] || 0;
+        if (!p) return;
+        const cols = GLIT[p >= .8 ? 3 : p >= .62 ? 2 : p >= .25 ? 1 : 0];
+        heat = Math.max(heat, .25 + .45 * p); target = 0;
+        for (let i = Math.round((6 + 150 * Math.pow(p, 1.3) + 70 * up) * q); i > 0; i--) {
+          glit.add({ x: rnd(w * .08, w * .92), y: floor + rnd(-4, 6), vx: rnd(-1, 1) * w * (.1 + .2 * p), vy: -rnd(.4, 1.1) * h * (1.6 + 1.2 * p), g: h * .14, drag: 2.4,
+            max: rnd(3.5, 5.5) + 3 * p + up, size: rnd(.9, 1.9) * (1 + .25 * p), c: pick(cols), ph: rnd(TAU), spin: rnd(1.5, 4) });
+        }
+        if (p >= .62) glow = .5 + .5 * p + .25 * up;
+        if (p >= 1) for (let i = 0; i < 6 + 4 * up; i++) sparks.add({ delay: rnd(.1, 1.8 + up), life: .6, s: rnd(-.25, .25) });
+      },
+    };
+  };
+
+  // 🍪 Gingerbread (événement de Noël, 2026-11-01) — chaque biscuit qui se pose lâche quelques miettes, puis, quand la
+  // douille a fini de passer (CSS, ~0,25 s), une étincelle de sucre éclate sur son épaule. À la révélation, des
+  // vermicelles de sucre jaillissent de la plaque : rouges, verts et blancs, dorés dès Epic ; dès Mythic, une pluie de
+  // vermicelles dorés tombe doucement sur la plaque pendant deux secondes.
+  SCENES.gingerbread = custom(pieces({ cols: ['#c8793a', '#a35a25', '#e0a86a', '#8f4a1f'], shapes: ['crumb', 'crumb', 'square'], size: [1.4, 3], g: 680, spin: 6, up: true, glowc: '#fcd34d', ring: '#fde68a', drift: { rate: .8, from: 'around' } }), (env, { cx, st }) => {
+    const { co, card, q, dark } = env, sparks = timed(), sugar = particles(), emit = emitter();
+    const GOLD = ['#fbbf24', '#fde68a', '#f59e0b', '#fcd34d'], CANDY = ['#ef4444', '#22c55e', '#fffaf0', '#f472b6'];
+    // étoile de sucre à quatre branches, blanche au cœur, cernée d'or sur page claire (sinon le blanc disparaît)
+    const twinkle = (x, y, s, a, rot) => {
+      co.save(); co.translate(x, y); co.rotate(rot); co.globalAlpha = Math.min(1, a);
+      co.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? s * .2 : s, ang = (i * Math.PI) / 4; co.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); } co.closePath();
+      co.fillStyle = '#fffbeb'; co.fill(); co.strokeStyle = dark ? 'rgba(253,230,138,.9)' : '#d97706'; co.lineWidth = 1; co.stroke();
+      co.restore();
+    };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.run(dt, (s, k) => dot(co, s.gold ? '#fbbf24' : '#fff7d6', s.x, s.y, s.size * 2.2, (1 - k) * (dark ? .5 : .3)));
+        co.globalCompositeOperation = 'source-over';
+        sparks.run(0, (s, k) => twinkle(s.x, s.y, s.size * (k < .3 ? outCubic(k / .3) * 1.25 : 1.25 - .55 * (k - .3) / .7), k < .3 ? 1 : (1 - k) / .7, s.rot + k * 1.4));
+        if (st.revealed && st.p >= 1 && st.since < 2.2) for (let n = emit(55 * q, dt); n > 0; n--) sugar.add({ x: rnd(card.x - 30, card.x + card.w + 30), y: card.y - rnd(10, 60), vx: rnd(-14, 14), vy: rnd(50, 120), g: 120, drag: .3, max: rnd(1.6, 2.4), c: pick(GOLD), rot: rnd(TAU), vr: rnd(-5, 5) });
+        sugar.step(dt);
+        sugar.each((p, k) => { co.save(); co.translate(p.x, p.y); co.rotate(p.rot + p.vr * p.life); co.globalAlpha = 1 - k * k; SHAPES.sprinkle(co, p, 2.4); co.restore(); });
+      },
+      lock(p, o) { if (!o.ghost) sparks.add({ delay: .24, life: .5, x: p.x + card.h * .2, y: p.y - card.h * .28, size: card.h * (o.last ? .2 : .14), rot: rnd(TAU) }); },
+      reveal(tier, p) {
+        if (!p) return;
+        const gold = p >= .6;
+        for (let i = burst(p, 70 * q, 5); i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.1, 1.1), v = rnd(140, 260 + 260 * p); sugar.add({ x: cx + rnd(-card.w * .4, card.w * .4), y: card.y + card.h * .35, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 620, drag: .6, max: rnd(.9, 1.4 + p), c: gold && Math.random() < .7 ? pick(GOLD) : pick(CANDY), rot: rnd(TAU), vr: rnd(-9, 9) }); }
+        if (gold) for (let i = 2 + Math.round(4 * p); i > 0; i--) sparks.add({ delay: rnd(0, .5), life: .6, x: rnd(card.x, card.x + card.w), y: card.y + rnd(-card.h * .2, card.h * .9), size: card.h * rnd(.12, .22), rot: rnd(TAU), gold: true });
+      },
+    };
+  });
+
+  // 🧶 Ugly Sweater (événement de Noël, 2026-11-01) — chaque chiffre qui se pose lâche quelques bouts de laine (crème,
+  // rouge, vert) ; dès Epic, les paillettes cousues dans la bande (même place que le CSS : au cœur des flocons, une
+  // toutes les 12 mailles) scintillent chacune à son tour et une pluie de paillettes jaillit ; dès Mythic, des reflets
+  // courent le long du fil d'or ; au-delà (Celestial+), les paillettes brillent plus souvent.
+  SCENES.sweater = custom(pieces({ cols: ['#fdf3d8', '#fdf3d8', '#dc2626', '#16a34a'], shapes: ['sprinkle'], size: [1.3, 2.4], g: 420, spin: 6, up: true, glowc: '#9b1c1c', ring: '#fef3c7', drift: { rate: .5, from: 'around' } }), (env, { cx }) => {
+    const { ci, co, w, card, q, dark, el } = env, glints = timed(), shower = particles(), SEQ = ['#fbbf24', '#e5e7eb', '#fde68a', '#f472b6'];
+    const stitch = () => (parseFloat(getComputedStyle(el).fontSize) || 40) * .08; // --st : une maille, en pixels
+    let level = 0, asc = 0; // 0 : rien ; 1 : paillettes (Epic+) ; 2 : + fil d'or (Mythic+)
+    const sparkle = (c, x, y, r, a) => { dot(c, '#fffbeb', x, y, r * .45, a); line(c, '#fffbeb', x - r, y, x + r, y, 1, a * .8); line(c, '#fffbeb', x, y - r, x, y + r, 1, a * .8); };
+    return {
+      frame(t, dt) {
+        if (level) {
+          const s = stitch(), y = 3.5 * s;
+          // une paillette au hasard s'allume (plus souvent au-delà du Mythic)
+          if (Math.random() < dt * (1.6 + 1.4 * asc)) { const n = Math.max(1, Math.floor(w / (12 * s))), k = Math.floor(rnd(n)); glints.add({ x: (2.5 + 12 * k) * s, y, life: .45, r: s * rnd(2.2, 3.4) }); }
+          ci.globalCompositeOperation = 'lighter';
+          glints.run(dt, (g, k) => sparkle(ci, g.x, g.y, g.r * Math.sin(Math.PI * k), Math.sin(Math.PI * k)));
+          if (level > 1) for (let i = 0; i < 3; i++) { // reflets qui courent sur les deux rangs de fil d'or
+            const x = ((t * (60 + 20 * i) + i * w / 3) % (w + 40)) - 20;
+            dot(ci, '#fffbeb', x, .5 * s, s * 2.2, .55); dot(ci, '#fffbeb', w - x, 6.5 * s, s * 2.2, .45);
+          }
+        }
+        co.globalCompositeOperation = 'source-over';
+        shower.step(dt);
+        shower.each((p, k) => { co.save(); co.translate(p.x, p.y); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = p.c; SHAPES.coin(co, p, p.size); co.restore(); });
+      },
+      lock() {},
+      reveal(tier, p) {
+        level = p >= 1 ? 2 : p >= .6 ? 1 : 0;
+        asc = ASCEND[tier] || 0;
+        if (!level) return;
+        for (let i = burst(p, 46 * q, 8) + asc * 10; i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.2, 1.2), v = rnd(120, 260 + 200 * p); shower.add({ x: cx + rnd(-card.w * .4, card.w * .4), y: card.y + rnd(0, card.h * .3), vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 620, drag: .9, max: rnd(1.1, 1.9), size: rnd(2.2, 3.6), rot: rnd(TAU), c: dark ? pick(SEQ) : pick(['#d97706', '#9ca3af', '#f59e0b', '#db2777']) }); }
+      },
+    };
+  });
+
   // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
   // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
   // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le

@@ -969,7 +969,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.deepEqual(fresh.map(id => Shop.rarityOf(id, true).name), ['Legendary', 'Rare', 'Uncommon', 'Legendary', 'Epic']);
     assert.ok(wpool.includes('lastrolls') && wpool.includes('bread'), 'les deux fonds normaux sont dans la caisse');
     assert.ok(!wpool.includes('fishing') && !wpool.includes('condensation') && !wpool.includes('zombiemoon'), 'ni légendaires ni limité dans la caisse');
-    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-03T00:00:00Z');
+    // Retiré le 1er novembre avec le reste d'Halloween, pour l'événement de Noël (demandé par Sacha, 2026-11-01).
+    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-01T00:00:00Z');
     const buyWall = id => call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'buywall', wall: id } });
     for (const id of ['lastrolls', 'fishing', 'zombiemoon']) {
       if (wpool.includes(id) && (await call(shopApi, { url: `/api/shop?me=${wally.playerId}` })).body.walls.includes(id)) continue; // déjà gagné dans la caisse
@@ -3171,6 +3172,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const shopApi = require(path.join(ROOT, 'api/shop.js')), Shop = require(path.join(ROOT, 'js/shop.js'));
   const h = Shop.byId.get('haunted'); assert.equal(h.price, 666); assert.ok(h.until);
   for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'haunted'), `pas dans ${c.id}`);
+  // événement de Noël (2026-11-01) : la boule à neige et le village enneigé, limités au 26 décembre, jamais en caisse
+  assert.equal(Shop.byId.get('snowglobe').until, '2026-12-26T00:00:00Z'); assert.equal(Shop.wallById.get('snowvillage').until, '2026-12-26T00:00:00Z');
+  for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'snowglobe' || s.id === 'snowvillage'), `Noël pas dans ${c.id}`);
+  assert.ok(!Shop.collectible().includes('snowglobe') && !Shop.collectibleSets.walls().includes('snowvillage'), 'hors collections');
+  // Événement de Noël (2026-11-01) : Gingerbread et Cozy Fireplace, limités jusqu'au 26 décembre, jamais en caisse.
+  assert.equal(Shop.byId.get('gingerbread').price, 1100); assert.equal(Shop.byId.get('gingerbread').until, '2026-12-26T00:00:00Z');
+  assert.equal(Shop.wallById.get('fireplace').price, 1224); assert.equal(Shop.wallById.get('fireplace').until, '2026-12-26T00:00:00Z');
+  for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'gingerbread' || s.id === 'fireplace'), `Noël pas dans ${c.id}`);
   const buyer = { playerId: '9a'.repeat(8), secret: '9b'.repeat(16), name: 'Spooky' };
   db.delete(`cooldown:${buyer.playerId}`); assert.equal((await call(roll, { method: 'POST', body: buyer })).status, 200);
   run([['HINCRBY', `stats:${buyer.playerId}`, 'bonus', 5000]]);

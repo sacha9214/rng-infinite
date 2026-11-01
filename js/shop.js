@@ -70,6 +70,15 @@
     { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', idea: 'Deadshot' },
     // Noël (idées de JBearr12 et Angelicide9, 2026-10-25) : Legendary limité, en vente jusqu'au 26 décembre (until).
     { id: 'christmas', name: 'Christmas Morning', emoji: '🎄', price: 2512, desc: 'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26', until: '2026-12-26T00:00:00Z', idea: 'JBearr12' },
+    // Noël (événement de Noël, 2026-11-01) : une boule à neige, limitée comme Christmas Morning (jusqu'au 26 décembre,
+    // jamais dans une caisse). Les chiffres sont figés dans l'eau sous le verre ; plus la rareté est haute, plus il y a
+    // de paillettes dans la neige (js/skinfx.js).
+    { id: 'snowglobe', name: 'Snow Globe', emoji: '🔮', price: 1225, idea: 'Gray alt', desc: 'Digits frozen in a glass snow globe: shake it to roll, watch the snow settle; rarer rolls stir up more glitter · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Noël (événement de Noël, 2026-11-01) : des biscuits en pain d'épices, glace royale pochée à la révélation ; limité,
+    // jamais dans une caisse (until), gardé pour toujours par ceux qui l'ont acheté.
+    { id: 'gingerbread', name: 'Gingerbread', emoji: '🍪', price: 1100, desc: 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Noël (événement de Noël, 2026-11-01) : un pull de Noël tricoté, chiffres en laine crème ; limité jusqu'au 26 décembre.
+    { id: 'sweater', name: 'Ugly Sweater', emoji: '🧶', price: 999, desc: 'Your digits get knitted row by row in cream wool on a festive red sweater with snowflakes, trees and a pom-pom; rare rolls get sequins and tinsel · until December 26', until: '2026-12-26T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -345,9 +354,19 @@
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
     // Idée de 17black (un fond « limité », 2026-10-28) : des zombies rigolos qui rampent et traînent les pieds sous la
-    // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 2 novembre inclus :
-    // il sort trois jours avant Halloween, on lui laisse le week-end d'après. 1 031 pièces, comme le skin Jack-o'-Lantern.
-    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · until November 2', until: '2026-11-03T00:00:00Z' },
+    // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse). Prévu jusqu'au 2 novembre,
+    // retiré le 1er novembre avec tout Halloween pour laisser la place à Noël (demandé par Sacha, 2026-11-01). 1 031 pièces.
+    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
+    // Fond de Noël (événement de Noël, 2026-11-01) : un petit village sous la neige, fenêtres allumées et cheminées qui
+    // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
+    // d'IXOLAF2 (idée de 3 joueurs) : il touche sa part.
+    { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Fond de Noël (événement de Noël, 2026-11-01) : un salon, une cheminée qui crépite en bas de l'écran, des chaussettes
+    // sur le manteau et la neige derrière la fenêtre. Limité (onglet Limités, hors caisse) jusqu'au 26 décembre.
+    { id: 'fireplace', name: 'Cozy Fireplace', emoji: '🔥', price: 1224, desc: 'A crackling fire, stockings on the mantel and snow at the window · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Fond de Noël (événement de Noël, 2026-11-01) : un traîneau tiré par des rennes traverse le ciel étoilé toutes les
+    // ~20 s. Limité comme les fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 26 décembre.
+    { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));

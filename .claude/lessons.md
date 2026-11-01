@@ -101,3 +101,9 @@
 - Was: Sacha had to delete the suggestion so the player would not see it, and said "plus jamais".
 - Check: before any reply batch, for each id read `HGET sugg:<id> status` and `LRANGE sugg:<id>:msgs 0 -1`; if the status is `declined` or the thread already has an owner message (`f: 'o'`), do not change it to done/planned and do not promise anything: list it to Sacha and wait. Also re-read this conversation for every idea Sacha refused before proposing it. The replies script refuses these by itself unless SACHA_OK=1.
 - Seen: 1
+
+### Resolving merge conflicts between parallel agent branches (add/add in css/, js/skinfx.js, js/shop.js)
+- Did: 2026-11-01, merging the Gingerbread branch into claude/christmas-event, resolved every diff3 conflict with a script that kept "ours" plus the "theirs" lines absent from base AND absent from ours, and committed after `node --check` printed BAD for js/skinfx.js (the loop did not stop the commit).
+- Was: lines that legitimately appear in both blocks (`};`, `}`, `  background:`, `100% { … }`) were dropped from theirs: js/skinfx.js no longer parsed and css/style.css lost 9 closing braces; test-api still said OK because it never loads skinfx or CSS.
+- Check: resolve add/add conflicts with `git merge-file -p --union ours base theirs` per file (never dedupe against ours), then diff the result against both parents for lines that edit a base line (union keeps both versions of an edited line: pick one by hand). Gate the commit: `node --check` every js file and count `{`/`}` in every touched CSS file, chained with `&&` so a failure stops the commit.
+- Seen: 1
