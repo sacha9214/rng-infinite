@@ -11100,3 +11100,312 @@ a.player-btn { text-decoration: none; color: inherit; }
 @keyframes crn-tip { 0%, 60%, 100% { transform: none; } 70% { transform: rotate(-16deg); } 82% { transform: rotate(8deg); } 92% { transform: rotate(-3deg); } }
 .room-stage.many .side-carnival::before, .room-stage.many .side-carnival::after, .room-stage.many .num-card.skin-carnival::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-carnival::before, .side-carnival::after { animation: none; } }
+
+/* ==== Skins du 2026-11-01, lot A ==== Mini Golf (Kj13 et Jguz01), Soccer (kingston), Basketball (jjcoolcid1), Safari
+   (dylanbuckleyisjewish), Mining (number 1), Cat (baby boy). Leurs scènes : js/skinfx.js, même lot. */
+/* ------------------------------------------------------------------ Mini Golf (idée de Kj13, 2026-11-01 ; Jguz01 voulait
+   des chiffres en balles de golf sur un green) : un green de mini-golf tondu en bandes, bordé d'une lisse en bois, un petit
+   drapeau rouge dans le coin. Chaque chiffre est une balle blanche posée dans son trou (le creux sombre dessous).
+   Tirage : les chiffres roulent sur le green. Un chiffre qui se pose : il arrive en roulant de la gauche, freine au bord
+   du trou, y plonge un instant (le « cloc ») et ressort à sa place. Matière dure : pas d'écrasement. */
+.num-card.skin-golf {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 26'><path d='M3 25V2' stroke='%23e2e8f0' stroke-width='1.4'/><path d='M3.6 2.2L14 5.6 3.6 9.4Z' fill='%23ef4444' stroke='%23991b1b' stroke-width='.6' stroke-linejoin='round'/><ellipse cx='3' cy='25' rx='2.6' ry='.9' fill='%23052e16' fill-opacity='.7'/></svg>") right .25em top .12em / .34em auto no-repeat,
+    radial-gradient(ellipse 70% 90% at 40% 10%, rgba(255, 255, 255, .22), transparent 60%),
+    radial-gradient(circle, rgba(5, 46, 22, .22) 0 .012em, transparent .02em) 0 0 / .09em .07em,
+    repeating-linear-gradient(90deg, #4ade80 0 .9em, #22c55e .9em 1.8em),
+    #22c55e;
+  border: .14em solid #92400e; border-radius: .55rem; color: #f8fafc;
+  box-shadow: inset 0 0 0 2px #fbbf24, inset 0 .12em .4em rgba(20, 83, 45, .55), inset 0 -.2em .4em rgba(20, 83, 45, .35), 0 0 16px rgba(34, 197, 94, .22), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-golf .slot { position: relative; z-index: 1; width: .64em; font-weight: 900; color: #f8fafc;
+  text-shadow: 0 .045em 0 #cbd5e1, 0 .08em .02em rgba(5, 46, 22, .55), 0 0 .12em rgba(255, 255, 255, .35); }
+/* le trou sous chaque chiffre (derrière lui) */
+.skin-golf .slot::after { content: ''; position: absolute; z-index: -1; left: 50%; bottom: -.01em; width: .46em; height: .13em; margin-left: -.23em; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, #022c12 0 55%, #14532d 70%, rgba(20, 83, 45, 0) 100%); box-shadow: 0 .015em 0 rgba(255, 255, 255, .35); }
+.skin-golf .slot.ghost { opacity: .18; }
+.skin-golf .slot.collapsed { width: 0; }
+.skin-golf .slot.collapsed::after { display: none; }
+.num-card.sm.skin-golf { border-width: 2px; background-size: 0 0, auto, auto, auto, auto; }
+.num-card.sm.skin-golf .slot::after { display: none; }
+.skin-golf .slot.spinning { color: rgba(248, 250, 252, .55); text-shadow: 0 .05em .02em rgba(5, 46, 22, .4); animation: glf-roll .2s linear infinite; }
+.skin-golf .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; }
+@keyframes glf-roll { from { transform: translateX(-.05em) rotate(-14deg); filter: blur(.5px); } to { transform: translateX(.05em) rotate(14deg); filter: blur(1px); } }
+.skin-golf .slot.revealed { animation: glf-putt .66s backwards; }
+@keyframes glf-putt {
+  0% { transform: translateX(-.7em) rotate(-300deg) scale(.86); filter: blur(1px); animation-timing-function: cubic-bezier(.15, .7, .35, 1); }
+  42% { transform: translateX(.03em) rotate(6deg); filter: none; animation-timing-function: ease-in; }
+  52% { transform: translateX(0) translateY(.1em) scale(.94); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  66% { transform: translateY(-.06em) scale(1.04); filter: brightness(1.25); }
+  80% { transform: translateY(.015em); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-golf .slot { animation: none; } }
+/* Cadre de duel : un beau parcours (Jguz01) : ciel, collines tondues, un lac au loin ; ⛳ claque au vent, 🏌️ se balance. */
+.side-golf { --side-border: #16a34a; --side-glow: 0 0 16px rgba(34, 197, 94, .28); --side-ink: #166534;
+  --side-bg: radial-gradient(ellipse 60% 22% at 25% 100%, rgba(34, 197, 94, .45), transparent 70%), radial-gradient(ellipse 70% 30% at 85% 104%, rgba(22, 163, 74, .45), transparent 70%), radial-gradient(ellipse 30% 6% at 62% 72%, rgba(56, 189, 248, .35), transparent 80%), linear-gradient(180deg, rgba(125, 211, 252, .28) 0%, rgba(186, 230, 253, .16) 55%, rgba(134, 239, 172, .3) 70%, rgba(74, 222, 128, .35) 100%);
+  --deco-a: '⛳'; --deco-b: '🏌️'; }
+.side-golf::before { transform-origin: 20% 100%; animation: glf-flag 1.6s ease-in-out infinite; }
+.side-golf::after { transform-origin: 50% 100%; animation: glf-swing 2.6s ease-in-out infinite; }
+@keyframes glf-flag { 0%, 100% { transform: skewY(0); } 50% { transform: skewY(-8deg) scaleX(1.06); } }
+@keyframes glf-swing { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-14deg); } 78% { transform: rotate(10deg); } }
+.room-stage.many .side-golf::before, .room-stage.many .side-golf::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-golf::before, .side-golf::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Soccer (idée de kingston, 2026-11-01) : on regarde le
+   fond d'un but un soir de match : poteaux et barre blancs, le filet en losanges tendu derrière les chiffres, une bande
+   de pelouse en bas. Chiffres blancs épais cernés de vert nuit.
+   Tirage : le filet ondule (la carte en .charging) et les chiffres tremblent, flous. Un chiffre qui se pose : un tir
+   arrive de face (grand, flou), s'enfonce dans le filet (il recule et s'aplatit un peu, le filet le retient), rebondit
+   et se pose. Le ballon et le filet qui se creuse : js/skinfx.js (SCENES.soccer). */
+.num-card.skin-soccer {
+  background:
+    linear-gradient(180deg, transparent 80%, rgba(21, 128, 61, .95) 80%, #15803d 90%, #166534),
+    repeating-linear-gradient(45deg, rgba(248, 250, 252, .3) 0 1px, transparent 1px .16em),
+    repeating-linear-gradient(-45deg, rgba(248, 250, 252, .3) 0 1px, transparent 1px .16em),
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255, 255, 255, .22), transparent 70%),
+    linear-gradient(180deg, #0f172a, #1e3a5f 70%, #14532d);
+  border: .13em solid #f8fafc; border-bottom: 2px solid #166534; border-radius: .25rem .25rem .4rem .4rem; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .5), inset .12em .12em .3em rgba(0, 0, 0, .55), 0 0 18px rgba(248, 250, 252, .18), 0 10px 18px rgba(0, 0, 0, .4);
+}
+.num-card.skin-soccer.charging { animation: scr-net 1.1s ease-in-out infinite alternate; }
+@keyframes scr-net { from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 0, .05em .03em, -.05em .03em, 0 0, 0 0; } }
+.room-stage.many .num-card.skin-soccer.charging { animation: none; }
+.skin-soccer .slot { position: relative; z-index: 1; width: .7em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: #fff;
+  text-shadow: .035em .035em 0 #052e16, -.02em -.02em 0 #052e16, .02em -.02em 0 #052e16, -.02em .02em 0 #052e16, 0 0 .2em rgba(255, 255, 255, .3); }
+.skin-soccer .slot.ghost { opacity: .18; }
+.skin-soccer .slot.collapsed { width: 0; }
+.skin-soccer .slot.spinning { color: rgba(255, 255, 255, .5); text-shadow: none; animation: scr-jitter .16s ease-in-out infinite alternate; }
+.skin-soccer .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes scr-jitter { from { transform: translateY(-.03em) scale(.96); filter: blur(.6px); } to { transform: translateY(.03em) scale(1.04); filter: blur(1.1px); } }
+.skin-soccer .slot.revealed { animation: scr-shot .6s backwards; }
+@keyframes scr-shot {
+  0% { transform: translate(.1em, .35em) scale(2.3); filter: blur(2px); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  26% { transform: scale(.82, .78) translateY(-.03em); filter: brightness(1.4); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  44% { transform: scale(1.1); filter: none; }
+  62% { transform: scale(.97); }
+  80% { transform: scale(1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-soccer .slot, .num-card.skin-soccer.charging { animation: none; } }
+/* Cadre de duel : la pelouse tondue en bandes et le rond central ; ⚽ rebondit devant le but 🥅. */
+.side-soccer { --side-border: #f8fafc; --side-glow: 0 0 16px rgba(34, 197, 94, .3); --side-ink: #166534;
+  --side-bg: radial-gradient(circle at 50% 100%, transparent 0 34%, rgba(248, 250, 252, .45) 34.5% 35.5%, transparent 36%), linear-gradient(90deg, transparent calc(50% - 1px), rgba(248, 250, 252, .3) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)), repeating-linear-gradient(90deg, rgba(34, 197, 94, .16) 0 26px, rgba(22, 163, 74, .26) 26px 52px);
+  --deco-a: '🥅'; --deco-b: '⚽'; }
+:root:not(.dark) .side-soccer { --side-border: #16a34a; }
+.side-soccer::after { animation: scr-bounce 1.4s cubic-bezier(.3, 0, .7, 1) infinite; }
+@keyframes scr-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-12px) rotate(180deg); } }
+.room-stage.many .side-soccer::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-soccer::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Basketball (idée de jjcoolcid1, 2026-11-01) : un
+   parquet de salle en érable vernis (lattes, reflet), la raquette peinte en orange et l'arc blanc de la ligne des
+   lancers francs. Chiffres en cuir de ballon orange cernés de noir (les coutures).
+   Tirage : les chiffres dribblent (matière caoutchouc : ils s'écrasent un peu en touchant le parquet). Un chiffre qui se
+   pose : il tombe du panier (la scène le fait passer dans un arceau), s'écrase sur le parquet, rebondit et se pose. */
+.num-card.skin-basketball {
+  background:
+    radial-gradient(ellipse 34% 62% at 50% 112%, transparent 0 88%, rgba(255, 255, 255, .85) 89% 93%, transparent 94%),
+    linear-gradient(90deg, transparent 33%, rgba(234, 88, 12, .34) 33% 67%, transparent 67%) 0 100% / 100% 36% no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, .4), transparent 34%),
+    repeating-linear-gradient(90deg, rgba(120, 53, 15, .3) 0 1px, transparent 1px .42em),
+    repeating-linear-gradient(90deg, #e9b77c 0 .42em, #dfa765 .42em .84em, #edc28c .84em 1.26em),
+    #e3ad6f;
+  border: .1em solid #7c2d12; border-radius: .5rem; color: #ea580c;
+  box-shadow: inset 0 0 0 2px rgba(255, 237, 213, .45), inset 0 -.2em .4em rgba(124, 45, 18, .3), 0 0 16px rgba(249, 115, 22, .25), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-basketball .slot { position: relative; z-index: 1; width: .7em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: #f97316;
+  text-shadow: .03em 0 0 #1c1917, -.03em 0 0 #1c1917, 0 .03em 0 #1c1917, 0 -.03em 0 #1c1917, .02em .02em 0 #1c1917, -.02em -.02em 0 #1c1917, 0 .09em .05em rgba(67, 20, 7, .35); }
+.skin-basketball .slot.ghost { opacity: .18; }
+.skin-basketball .slot.collapsed { width: 0; }
+.skin-basketball .slot.spinning { color: rgba(249, 115, 22, .6); text-shadow: 0 .05em .04em rgba(67, 20, 7, .3); transform-origin: 50% 100%; animation: bkb-dribble .26s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+.skin-basketball .slot.spinning:nth-of-type(2n) { animation-delay: -.13s; }
+@keyframes bkb-dribble { from { transform: translateY(-.14em); filter: blur(.4px); } 80% { transform: translateY(.04em) scale(1, 1); } to { transform: translateY(.06em) scale(1.1, .86); filter: blur(.8px); } }
+.skin-basketball .slot.revealed { transform-origin: 50% 100%; animation: bkb-swish .66s backwards; }
+@keyframes bkb-swish {
+  0% { transform: translateY(-.75em) scale(.78); filter: blur(.8px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  30% { transform: translateY(0) scale(1.14, .82); filter: brightness(1.3); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  52% { transform: translateY(-.15em) scale(.95, 1.06); filter: none; animation-timing-function: cubic-bezier(.6, 0, 1, .6); }
+  68% { transform: translateY(0) scale(1.05, .95); animation-timing-function: ease-out; }
+  84% { transform: translateY(-.025em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-basketball .slot { animation: none; } }
+/* Cadre de duel : le parquet et la raquette ; 🏀 dribble, ⛹️ saute. */
+.side-basketball { --side-border: #ea580c; --side-glow: 0 0 16px rgba(249, 115, 22, .3); --side-ink: #9a3412;
+  --side-bg: radial-gradient(ellipse 30% 40% at 50% 100%, transparent 0 90%, rgba(255, 255, 255, .5) 91% 95%, transparent 96%), linear-gradient(90deg, transparent 32%, rgba(234, 88, 12, .2) 32% 68%, transparent 68%) 0 100% / 100% 40% no-repeat, repeating-linear-gradient(90deg, rgba(217, 160, 95, .22) 0 18px, rgba(194, 130, 70, .2) 18px 36px);
+  --deco-a: '🏀'; --deco-b: '⛹️'; }
+.side-basketball::before { animation: bkb-ball 1s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+.side-basketball::after { animation: bkb-jump 2.2s ease-in-out infinite; }
+@keyframes bkb-ball { from { transform: translateY(0); } to { transform: translateY(10px) scale(1.1, .88); } }
+@keyframes bkb-jump { 0%, 55%, 100% { transform: translateY(0); } 70% { transform: translateY(-9px); } }
+.room-stage.many .side-basketball::before, .room-stage.many .side-basketball::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-basketball::before, .side-basketball::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Safari (idée de dylanbuckleyisjewish, 2026-11-01) :
+   la savane au couchant (ciel orange, soleil bas, herbes sèches ; l'acacia est dans le cadre de duel). Chiffres :
+   pelages : zèbre, girafe et léopard, à tour de rôle, cernés de brun foncé pour rester lisibles.
+   Tirage : les chiffres se cachent dans les herbes (ils s'enfoncent et ondulent). Un chiffre qui se pose : il se tasse
+   (l'animal se ramasse), bondit hors des herbes et retombe en place. Les animaux qui pointent la tête, la jeep et le lion
+   des grands tirages : js/skinfx.js (SCENES.safari). */
+.num-card.skin-safari {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 12' preserveAspectRatio='none'><path d='M0 12V7l2-5 1 5 2-6 2 6 1-4 2 5 2-6 1 5 2-4 2 5 1-6 2 6 2-5 1 4 2-6 2 6 1-5 2 5 2-4 1 5 2-6 2 6 1-5 2 4 2-5 2 6 1-5 2 5 2-6 1 6 2-4 2 5 1-6 2 6V12Z' fill='%2378350f' fill-opacity='.85'/></svg>") 0 100% / 2.4em .3em repeat-x,
+    radial-gradient(circle at 90% 84%, #fdba74 0 .15em, rgba(253, 186, 116, .55) .19em, rgba(251, 146, 60, .22) .34em, transparent .6em),
+    linear-gradient(180deg, #7c2d12 0%, #9a3412 30%, #c2410c 58%, #f97316 76%, #fbbf24 83%, #a16207 86%, #713f12 100%);
+  border: 2px solid #92400e; border-radius: .6rem; color: #fef3c7;
+  box-shadow: inset 0 0 0 1px rgba(255, 237, 213, .4), inset 0 -.2em .4em rgba(120, 53, 15, .4), 0 0 16px rgba(245, 158, 11, .25), 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-safari .slot { position: relative; z-index: 1; width: .66em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900; color: transparent;
+  background: repeating-linear-gradient(105deg, #1c1917 0 .055em, #fafaf9 .055em .11em); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.025em 0 0 #422006) drop-shadow(-.025em 0 0 #422006) drop-shadow(0 .025em 0 #422006) drop-shadow(0 -.025em 0 #422006) drop-shadow(0 .06em .03em rgba(66, 32, 6, .45)); }
+.skin-safari .slot:nth-of-type(3n+2) { background: radial-gradient(circle, #9a3412 0 .055em, transparent .062em) 0 0 / .16em .16em, radial-gradient(circle, #b45309 0 .045em, transparent .052em) .08em .08em / .16em .16em, #fde68a; -webkit-background-clip: text; background-clip: text; }
+.skin-safari .slot:nth-of-type(3n) { background: radial-gradient(circle, #f59e0b 0 .022em, #1c1917 .028em .046em, transparent .052em) 0 0 / .15em .15em, radial-gradient(circle, #1c1917 0 .02em, transparent .026em) .075em .075em / .15em .15em, #fbbf24; -webkit-background-clip: text; background-clip: text; }
+/* en tout petit (profils, listes), les pelages deviennent de la bouillie : une seule couleur crème */
+.num-card.sm.skin-safari .slot { background: #fef3c7; -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 1px #422006); }
+.skin-safari .slot.ghost { opacity: .2; }
+.skin-safari .slot.collapsed { width: 0; }
+.skin-safari .slot.spinning { opacity: .75; transform-origin: 50% 100%; animation: saf-hide .5s ease-in-out infinite alternate; }
+.skin-safari .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes saf-hide { from { transform: translateY(.22em) skewX(-6deg) scaleY(.8); } to { transform: translateY(.3em) skewX(6deg) scaleY(.74); } }
+.skin-safari .slot.revealed { transform-origin: 50% 100%; animation: saf-peek .68s backwards; }
+@keyframes saf-peek {
+  0% { transform: translateY(.34em) scaleY(.7); animation-timing-function: ease-out; }
+  20% { transform: translateY(.38em) scale(1.06, .6); animation-timing-function: cubic-bezier(.3, 1.5, .6, 1); }
+  48% { transform: translateY(-.16em) scale(.94, 1.1); }
+  66% { transform: translateY(.02em) scale(1.04, .96); }
+  84% { transform: translateY(-.015em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-safari .slot { animation: none; } }
+/* Cadre de duel : la savane au coucher du soleil, un acacia ; 🦒 broute en hochant la tête, 🐘 balance la trompe. */
+.side-safari { --side-border: #d97706; --side-glow: 0 0 16px rgba(245, 158, 11, .3); --side-ink: #92400e;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26'><path d='M19 26V14M19 15l-6-4M19 14l7-5' stroke='%2378350f' stroke-width='1.6' fill='none' stroke-opacity='.45'/><path d='M2 10Q8 3 19 5Q30 2 38 9Q30 12 20 10Q10 13 2 10Z' fill='%2378350f' fill-opacity='.45'/></svg>") right 18% bottom 18% / 70px auto no-repeat, radial-gradient(circle at 30% 62%, rgba(254, 243, 199, .55) 0 14px, transparent 40px), linear-gradient(180deg, rgba(245, 158, 11, .25), rgba(251, 146, 60, .22) 50%, rgba(253, 230, 138, .3) 74%, rgba(180, 120, 40, .35) 76%, rgba(146, 64, 14, .3));
+  --deco-a: '🦒'; --deco-b: '🐘'; }
+.side-safari::before { transform-origin: 50% 100%; animation: saf-graze 2.8s ease-in-out infinite; }
+.side-safari::after { transform-origin: 30% 30%; animation: saf-trunk 2.2s ease-in-out infinite; }
+@keyframes saf-graze { 0%, 100% { transform: rotate(0); } 40%, 60% { transform: rotate(12deg) translateY(2px); } }
+@keyframes saf-trunk { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+.room-stage.many .side-safari::before, .room-stage.many .side-safari::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-safari::before, .side-safari::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Mining (idée de number 1, 2026-11-01) : la paroi d'une
+   grotte sombre (roche brune, fissures, grain), éclairée par une seule lampe à huile accrochée en haut à gauche, qui
+   vacille (le ::before de la carte). Chaque chiffre est un filon de minerai serti dans la roche : la scène lui donne au
+   hasard le minerai du bloc qu'elle vient de faire sauter (.mne-coal … .mne-diamond) ; sans scène (duels, mouvement
+   réduit), chaque place garde un minerai fixe. Pas de textures en blocs : des pierres lisses et des reflets.
+   Tirage : les chiffres sont encore de la roche grise qui tremble sous les coups. Un chiffre qui se pose : la roche
+   tremble (l'élan), éclate dans un flash (le coup de pioche) et le minerai apparaît, se pose d'un rien. */
+.num-card.skin-mining {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><path d='M0 30L14 26 22 31 40 24M70 0L66 9 74 15 71 24M96 40L100 31 112 28 120 30M46 40L50 33 44 27' fill='none' stroke='%23000' stroke-opacity='.55' stroke-width='1.1'/><path d='M0 31L14 27 22 32 40 25M70 1L66 10 74 16 71 25' fill='none' stroke='%23a8a29e' stroke-opacity='.18' stroke-width='.6'/></svg>") 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at 30% 40%, rgba(120, 113, 108, .35) 0 .04em, transparent .07em) 0 0 / .31em .27em,
+    radial-gradient(circle at 70% 60%, rgba(0, 0, 0, .45) 0 .05em, transparent .08em) 0 0 / .23em .29em,
+    radial-gradient(ellipse 60% 50% at 30% 40%, #57534e, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 70%, #44403c, transparent 70%),
+    linear-gradient(160deg, #3f3a36, #292524 55%, #1c1917);
+  border: 2px solid #0c0a09; border-radius: .45rem; color: #a8a29e;
+  box-shadow: inset 0 0 .6em rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(168, 162, 158, .12), 0 0 14px rgba(251, 191, 36, .14), 0 10px 18px rgba(0, 0, 0, .45);
+}
+/* la lampe à huile et sa lumière chaude, qui vacille */
+.num-card.skin-mining::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 22'><path d='M7 0V4' stroke='%2357534e' stroke-width='1.2'/><path d='M3 6H11L10 17H4Z' fill='%23fbbf24' fill-opacity='.35' stroke='%2378350f' stroke-width='1'/><ellipse cx='7' cy='12' rx='1.6' ry='3' fill='%23fff7ad'/><rect x='2.5' y='4.5' width='9' height='2' rx='.6' fill='%2378350f'/><rect x='3' y='17' width='8' height='2.2' rx='.6' fill='%2378350f'/></svg>") left .16em top 0 / .32em auto no-repeat,
+    radial-gradient(ellipse 48% 110% at 5% 8%, rgba(251, 191, 36, .36), rgba(217, 119, 6, .1) 50%, transparent 78%);
+  animation: mne-flicker 2.7s steps(1) infinite; }
+@keyframes mne-flicker { 0%, 100% { opacity: 1; } 8% { opacity: .78; } 10% { opacity: .95; } 34% { opacity: .86; } 36% { opacity: 1; } 61% { opacity: .7; } 63% { opacity: .9; } 65% { opacity: .82; } 67% { opacity: 1; } 88% { opacity: .9; } }
+.room-stage.many .num-card.skin-mining::before { animation: none; }
+.num-card.sm.skin-mining::before { background-size: 0 0, auto; animation: none; }
+.skin-mining .slot { position: relative; z-index: 1; width: .64em; font-family: 'Arial Black', Impact, system-ui, sans-serif; font-weight: 900;
+  --ore: #d6d3d1; --glint: #fafaf9; color: var(--ore);
+  text-shadow: 0 -.03em 0 var(--glint), 0 .04em 0 rgba(0, 0, 0, .9), 0 0 .18em color-mix(in srgb, var(--ore) 55%, transparent); }
+/* le minerai de chaque place, sans scène (duels) ; la scène pose une classe .mne-<minerai> qui l'emporte */
+.skin-mining .slot:nth-of-type(6n+1) { --ore: #fbbf24; --glint: #fef9c3; }
+.skin-mining .slot:nth-of-type(6n+2) { --ore: #34d399; --glint: #d1fae5; }
+.skin-mining .slot:nth-of-type(6n+3) { --ore: #e8c4a8; --glint: #fff7ed; }
+.skin-mining .slot:nth-of-type(6n+4) { --ore: #67e8f9; --glint: #ecfeff; }
+.skin-mining .slot:nth-of-type(6n+5) { --ore: #fb923c; --glint: #ffedd5; }
+.skin-mining .slot:nth-of-type(6n) { --ore: #c084fc; --glint: #f3e8ff; }
+.skin-mining .slot.mne-coal { --ore: #a8a29e; --glint: #f5f5f4; }
+.skin-mining .slot.mne-iron { --ore: #e8c4a8; --glint: #fff7ed; }
+.skin-mining .slot.mne-copper { --ore: #fb923c; --glint: #ffedd5; }
+.skin-mining .slot.mne-gold { --ore: #fbbf24; --glint: #fef9c3; }
+.skin-mining .slot.mne-ruby { --ore: #fb7185; --glint: #ffe4e6; }
+.skin-mining .slot.mne-emerald { --ore: #34d399; --glint: #d1fae5; }
+.skin-mining .slot.mne-amethyst { --ore: #c084fc; --glint: #f3e8ff; }
+.skin-mining .slot.mne-diamond { --ore: #67e8f9; --glint: #ffffff; }
+.skin-mining .slot.ghost { opacity: .2; }
+.skin-mining .slot.collapsed { width: 0; }
+.skin-mining .slot.spinning { color: #57534e; text-shadow: 0 -.03em 0 rgba(168, 162, 158, .35), 0 .04em 0 rgba(0, 0, 0, .9); animation: mne-chip .12s steps(2) infinite; }
+.skin-mining .slot.spinning:nth-of-type(2n) { animation-delay: -.06s; }
+@keyframes mne-chip { from { transform: translate(-.015em, .01em); } to { transform: translate(.015em, -.01em); } }
+.skin-mining .slot.revealed { animation: mne-strike .6s backwards; }
+@keyframes mne-strike {
+  0% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(-.02em); }
+  8% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(.025em); }
+  16% { color: #57534e; text-shadow: 0 .04em 0 rgba(0, 0, 0, .9); transform: translateX(-.02em) scale(.97); animation-timing-function: steps(1); }
+  22% { color: #fff; text-shadow: 0 0 .25em #fff, 0 0 .5em var(--ore); transform: scale(1.12); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  40% { transform: scale(.98); }
+  60% { transform: scale(1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-mining .slot { animation: none; } .num-card.skin-mining::before { animation: none; } }
+/* Cadre de duel : la roche de la grotte et la lueur de la lampe ; ⛏️ frappe, 💎 scintille. */
+.side-mining { --side-border: #78716c; --side-glow: 0 0 16px rgba(251, 191, 36, .2); --side-ink: #b45309;
+  --side-bg: radial-gradient(ellipse 50% 70% at 0% 0%, rgba(251, 191, 36, .28), transparent 70%), radial-gradient(circle at 30% 40%, rgba(87, 83, 78, .14) 0 3px, transparent 6px) 0 0 / 23px 19px, radial-gradient(circle at 70% 60%, rgba(28, 25, 23, .14) 0 4px, transparent 7px) 0 0 / 31px 27px, linear-gradient(160deg, rgba(87, 83, 78, .3), rgba(41, 37, 36, .35));
+  --deco-a: '⛏️'; --deco-b: '💎'; }
+.side-mining::before { transform-origin: 80% 80%; animation: mne-swing 1.3s cubic-bezier(.6, 0, .4, 1) infinite; }
+.side-mining::after { animation: mne-glint 2.4s ease-in-out infinite; }
+@keyframes mne-swing { 0%, 100% { transform: rotate(-30deg); } 45% { transform: rotate(-34deg); } 60% { transform: rotate(14deg); } 70% { transform: rotate(6deg); } }
+@keyframes mne-glint { 0%, 100% { filter: none; transform: scale(1); } 50% { filter: brightness(1.6) drop-shadow(0 0 4px #67e8f9); transform: scale(1.12); } }
+.room-stage.many .side-mining::before, .room-stage.many .side-mining::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-mining::before, .side-mining::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Cat (idée de baby boy, 2026-11-01) : un coussin de
+   velours lavande capitonné (boutons, couture en pointillés), et des chiffres en laine : des brins torsadés en biais, rose
+   framboise, bleu canard ou orange à tour de rôle, cernés de fil foncé.
+   Tirage : les chiffres sont des pelotes emmêlées qui roulent (ils tournent et se dandinent). Un chiffre qui se pose :
+   un coup de patte le chasse d'en haut à droite, il s'écrase mollement (la laine est molle : écrasement permis), rebondit
+   et se pose. Le chat qui guette au bord de la carte et ses coups de patte : js/skinfx.js (SCENES.cat). */
+.num-card.skin-cat {
+  background:
+    radial-gradient(circle, #6d28d9 0 .028em, rgba(109, 40, 217, .4) .04em, transparent .06em) .35em .3em / .7em .6em,
+    radial-gradient(circle, rgba(255, 255, 255, .5) 0 .1em, transparent .3em) .35em .3em / .7em .6em,
+    radial-gradient(ellipse 70% 90% at 35% 15%, rgba(255, 255, 255, .45), transparent 65%),
+    linear-gradient(180deg, #ddd6fe, #c4b5fd 60%, #a78bfa);
+  border: 2px solid #7c3aed; border-radius: .9rem; color: #db2777;
+  outline: 2px dashed rgba(255, 255, 255, .7); outline-offset: -.22em;
+  box-shadow: inset 0 -.25em .5em rgba(91, 33, 182, .35), inset 0 .1em .3em rgba(255, 255, 255, .6), 0 0 16px rgba(167, 139, 250, .3), 0 10px 18px rgba(0, 0, 0, .3);
+}
+.num-card.sm.skin-cat { outline-width: 1px; outline-offset: -3px; }
+.skin-cat .slot { position: relative; z-index: 1; width: .64em; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; color: transparent;
+  background: repeating-linear-gradient(55deg, #f472b6 0 .035em, #db2777 .035em .06em, #9d174d .06em .075em); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.025em 0 0 #500724) drop-shadow(-.025em 0 0 #500724) drop-shadow(0 .025em 0 #500724) drop-shadow(0 -.025em 0 #500724) drop-shadow(0 .06em .03em rgba(76, 29, 149, .45)); }
+.skin-cat .slot:nth-of-type(3n+2) { background: repeating-linear-gradient(55deg, #2dd4bf 0 .035em, #0d9488 .035em .06em, #134e4a .06em .075em); -webkit-background-clip: text; background-clip: text; }
+.skin-cat .slot:nth-of-type(3n) { background: repeating-linear-gradient(55deg, #fdba74 0 .035em, #f97316 .035em .06em, #9a3412 .06em .075em); -webkit-background-clip: text; background-clip: text; }
+.num-card.sm.skin-cat .slot { filter: drop-shadow(0 0 1px #500724); }
+.skin-cat .slot.ghost { opacity: .2; }
+.skin-cat .slot.collapsed { width: 0; }
+.skin-cat .slot.spinning { opacity: .7; animation: cat-tangle .3s ease-in-out infinite alternate; }
+.skin-cat .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes cat-tangle { from { transform: rotate(-24deg) scale(.88); } to { transform: rotate(24deg) scale(1.02, .94); } }
+.skin-cat .slot.revealed { transform-origin: 50% 90%; animation: cat-bat .66s backwards; }
+@keyframes cat-bat {
+  0% { transform: translate(.35em, -.55em) rotate(60deg) scale(.6); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  32% { transform: translate(0, 0) rotate(-4deg) scale(1.18, .8); animation-timing-function: cubic-bezier(.2, .9, .4, 1); }
+  52% { transform: translateY(-.08em) rotate(3deg) scale(.93, 1.08); }
+  70% { transform: rotate(-1deg) scale(1.03, .97); }
+  86% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cat .slot { animation: none; } }
+/* Cadre de duel : le coussin capitonné ; 🐱 cligne des yeux, 🧶 roule. */
+.side-cat { --side-border: #8b5cf6; --side-glow: 0 0 16px rgba(167, 139, 250, .32); --side-ink: #7c3aed;
+  --side-bg: radial-gradient(circle, rgba(109, 40, 217, .35) 0 2px, transparent 3px) 14px 12px / 28px 24px, radial-gradient(circle, rgba(255, 255, 255, .1) 0 5px, transparent 12px) 14px 12px / 28px 24px, linear-gradient(180deg, rgba(196, 181, 253, .25), rgba(167, 139, 250, .3));
+  --deco-a: '🐱'; --deco-b: '🧶'; }
+.side-cat::before { animation: cat-blink 3.4s steps(1) infinite; }
+.side-cat::after { animation: cat-roll 2.6s ease-in-out infinite; }
+@keyframes cat-blink { 0%, 100% { transform: scaleY(1); } 90% { transform: scaleY(.25); } 93% { transform: scaleY(1); } }
+@keyframes cat-roll { 0%, 100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-24px) rotate(-300deg); } }
+.room-stage.many .side-cat::before, .room-stage.many .side-cat::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cat::before, .side-cat::after { animation: none; } }

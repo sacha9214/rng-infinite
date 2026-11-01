@@ -203,7 +203,30 @@
       S.gain(S.shape(S.filter(S.noise(.05, 70 + k), 'bp', f * .6, 1.6), S.expo(.011, .001)), .55),
       S.gain(S.osc(.05, t => 240 * (1 + Math.exp(-t / .004)), S.expo(.01, .001)), .45));
   };
+  // ---- Pack Meow (idée de baby boy, 2026-11-01, assorti au skin Cat). Un miaulement synthétisé, aucun enregistrement :
+  // une voix en dent de scie (les cordes vocales) dont la hauteur monte puis retombe (« mi-aou »), passée par deux
+  // formants qui glissent du « i » au « a » puis au « ou » (la gueule qui s'ouvre et se referme), avec un léger vibrato
+  // et un souffle. f : la hauteur du chiffre (la montée de la gamme reste) ; len : court pour un « mew », long pour un « meow ».
+  const meow = (f, len = .2, seed = 3) => {
+    const amp = t => Math.min(1, t / .025) * Math.pow(Math.max(0, 1 - t / len), .7) * (.6 + .4 * Math.min(1, t / (len * .3)));
+    const pitch = t => { const u = t / len; return f * (.86 + .3 * Math.sin(Math.PI * Math.min(1, u * 1.25)) - .12 * u) * (1 + .018 * Math.sin(2 * Math.PI * 6 * t)); };
+    const v = S.osc(len, pitch, amp, saw);
+    const f1 = t => { const u = t / len; return 420 + 520 * Math.sin(Math.PI * Math.min(1, u * 1.1)); };
+    const f2 = t => { const u = t / len; return 2500 - 1500 * Math.pow(u, .8); };
+    const breath = S.shape(S.filter(S.noise(len, seed), 'bp', f2, 2), t => amp(t) * .5);
+    return S.sum(S.gain(S.filter(v, 'bp', f1, 2.2), 1.2), S.gain(S.filter(v, 'bp', f2, 3), .9), S.gain(S.filter(v, 'lp', 600), .15), S.gain(breath, .12));
+  };
+  // Ronron : un souffle grave qui bat 26 fois par seconde (le chat inspire et expire), pour les raretés et le raté.
+  const purr = (len = .7, seed = 8) => S.shape(S.filter(S.noise(len, seed), 'lp', 320), t => Math.min(1, t / .05) * Math.min(1, (len - t) / .15) * (.35 + .65 * Math.pow(Math.max(0, Math.sin(Math.PI * 26 * t)), 2)));
   const PACKS = {
+    // Meow : un petit « mew » par chiffre, un vrai « meow » au dernier ; la rareté monte en miaous ; un raté, un « mrrrow »
+    // grognon qui descend et un ronron vexé.
+    meow: {
+      lock: (i, final) => final ? meow(S.note(i + 6), .46, 30 + i) : meow(S.note(i + 7), .17, 20 + i),
+      level: .28, tierGain: .7,
+      note: (n, len) => meow(S.note(n + 6), Math.max(.18, len * 2.6), 40 + n),
+      miss: () => S.sum(meow(S.note(3), .55, 9), S.delayed(S.gain(purr(.6), 1.4), .35)), missLevel: .3,
+    },
     arcade: {
       lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
       level: .25,

@@ -1668,3 +1668,42 @@
   -webkit-text-stroke: .07em #b91c1c; paint-order: stroke fill; text-shadow: .05em .07em 0 #0f172a;
   --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(250, 204, 21, .35); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(250, 204, 21, .5); --gs-a: 0 .06em 0 #7f1d1d; }
 .btn-roll.gen-carnival:hover { filter: brightness(1.12); }
+
+/* ==== Skins du 2026-11-01, lot A ==== boutons assortis */
+/* Mini Golf (idée de Kj13 et Jguz01, 2026-11-01) : le green tondu en bandes, la lisse en bois, un trou à droite. */
+.btn-roll.gen-golf { border: 3px solid #92400e; border-radius: .6rem; color: #fff; font-weight: 900;
+  background: radial-gradient(ellipse .55em .22em at calc(100% - .9em) 70%, #022c12 0 60%, transparent 70%), radial-gradient(ellipse 70% 90% at 40% 0%, rgba(255, 255, 255, .25), transparent 60%), repeating-linear-gradient(90deg, #4ade80 0 1.1em, #22c55e 1.1em 2.2em);
+  box-shadow: inset 0 0 0 2px #fbbf24; text-shadow: 0 2px 0 #14532d;
+  --gs: inset 0 0 0 2px #fbbf24, 0 .3em 0 #713f12, 0 .5em 1em rgba(34, 197, 94, .3); --gs-h: inset 0 0 0 2px #fbbf24, 0 .34em 0 #713f12, 0 .7em 1.3em rgba(34, 197, 94, .45); --gs-a: inset 0 0 0 2px #fbbf24, 0 .06em 0 #713f12; }
+.btn-roll.gen-golf:hover { filter: brightness(1.06); }
+/* Soccer (idée de kingston, 2026-11-01) : le filet du but derrière, la barre blanche, la pelouse dessous. */
+.btn-roll.gen-soccer { border: 3px solid #f8fafc; border-bottom-color: #15803d; border-radius: .35rem; color: #fff; font-family: 'Arial Black', Impact, system-ui, sans-serif;
+  background: repeating-linear-gradient(45deg, rgba(248, 250, 252, .25) 0 1px, transparent 1px 9px), repeating-linear-gradient(-45deg, rgba(248, 250, 252, .25) 0 1px, transparent 1px 9px), linear-gradient(180deg, #0f172a, #1e3a5f 72%, #15803d 72%, #166534);
+  text-shadow: 2px 2px 0 #052e16;
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(248, 250, 252, .2); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(248, 250, 252, .3); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-soccer:hover { filter: brightness(1.12); }
+/* Basketball (idée de jjcoolcid1, 2026-11-01) : le cuir orange du ballon et ses coutures noires. */
+.btn-roll.gen-basketball { border: 2px solid #1c1917; border-radius: 999px; color: #fff7ed; font-family: 'Arial Black', Impact, system-ui, sans-serif;
+  background: linear-gradient(90deg, transparent calc(50% - 1.5px), #1c1917 calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)), radial-gradient(ellipse 30% 140% at -6% 50%, transparent 82%, #1c1917 84% 88%, transparent 90%), radial-gradient(ellipse 30% 140% at 106% 50%, transparent 82%, #1c1917 84% 88%, transparent 90%), radial-gradient(circle, rgba(124, 45, 18, .3) 0 1px, transparent 1.5px) 0 0 / 5px 5px, radial-gradient(ellipse 80% 120% at 35% 10%, #fdba74, #f97316 55%, #c2410c);
+  text-shadow: 0 2px 0 #431407, 0 0 4px #431407;
+  --gs: 0 .3em 0 #7c2d12, 0 .5em 1em rgba(249, 115, 22, .3); --gs-h: 0 .34em 0 #7c2d12, 0 .7em 1.3em rgba(249, 115, 22, .45); --gs-a: 0 .06em 0 #7c2d12; }
+.btn-roll.gen-basketball:hover { filter: brightness(1.06); }
+/* Safari (idée de dylanbuckleyisjewish, 2026-11-01) : le ciel du couchant, un acacia, des rayures de zèbre au bord. */
+.btn-roll.gen-safari { border: 2px solid #431407; border-radius: .6rem; color: #fef3c7; font-family: 'Arial Black', Impact, system-ui, sans-serif;
+  background: repeating-linear-gradient(105deg, #1c1917 0 5px, #fafaf9 5px 10px) 0 0 / .55em 100% no-repeat, repeating-linear-gradient(105deg, #1c1917 0 5px, #fafaf9 5px 10px) 100% 0 / .55em 100% no-repeat, linear-gradient(180deg, #9a3412, #c2410c 50%, #f97316 78%, #a16207 80%, #713f12);
+  padding-inline: 1.7em; text-shadow: 0 2px 0 #431407;
+  --gs: 0 .3em 0 #431407, 0 .5em 1em rgba(245, 158, 11, .3); --gs-h: 0 .34em 0 #431407, 0 .7em 1.3em rgba(245, 158, 11, .45); --gs-a: 0 .06em 0 #431407; }
+.btn-roll.gen-safari:hover { filter: brightness(1.1); }
+/* Mining (idée de number 1, 2026-11-01) : la roche sombre, des éclats de minerai, la lueur de la lampe à gauche. */
+.btn-roll.gen-mining { border: 2px solid #0c0a09; border-radius: .45rem; color: #fde68a; font-family: 'Arial Black', Impact, system-ui, sans-serif;
+  background: radial-gradient(circle at 18% 70%, #67e8f9 0 2px, transparent 3px), radial-gradient(circle at 82% 30%, #fbbf24 0 2px, transparent 3px), radial-gradient(circle at 66% 78%, #34d399 0 1.5px, transparent 2.5px), radial-gradient(circle at 34% 22%, #c084fc 0 1.5px, transparent 2.5px),
+    radial-gradient(ellipse 50% 120% at 0% 0%, rgba(251, 191, 36, .4), transparent 70%), linear-gradient(160deg, #44403c, #292524 60%, #1c1917);
+  text-shadow: 0 -1px 0 #fff7ad, 0 2px 0 #000, 0 0 .4em rgba(251, 191, 36, .5);
+  --gs: 0 .3em 0 #0c0a09, 0 .5em 1em rgba(251, 191, 36, .2); --gs-h: 0 .34em 0 #0c0a09, 0 .7em 1.3em rgba(251, 191, 36, .35); --gs-a: 0 .06em 0 #0c0a09; }
+.btn-roll.gen-mining:hover { filter: brightness(1.15); }
+/* Cat (idée de baby boy, 2026-11-01) : le coussin lavande capitonné, sa couture, et du texte en laine rose. */
+.btn-roll.gen-cat { border: 2px solid #7c3aed; border-radius: 999px; color: #9d174d; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900;
+  background: radial-gradient(circle, #6d28d9 0 1.5px, transparent 2.5px) 10px 8px / 22px 18px, linear-gradient(180deg, #ede9fe, #c4b5fd 70%, #a78bfa);
+  outline: 2px dashed rgba(255, 255, 255, .75); outline-offset: -6px; text-shadow: 0 1px 0 #fce7f3;
+  --gs: 0 .3em 0 #5b21b6, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #5b21b6, 0 .7em 1.3em rgba(167, 139, 250, .5); --gs-a: 0 .06em 0 #5b21b6; }
+.btn-roll.gen-cat:hover { filter: brightness(1.05); }

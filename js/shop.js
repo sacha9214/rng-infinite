@@ -225,6 +225,23 @@
     // Idée de jia jun (2026-11-01) : un stand de fête foraine. La version avec un pistolet a été refusée (pas d'armes) ;
     // il a proposé une balle à lancer : une balle renverse la pile de boîtes de conserve devant chaque chiffre.
     { id: 'carnival', name: 'Carnival', emoji: '🎪', price: 1800, desc: 'A carnival ball toss: a ball knocks down the stack of cans in front of every digit, and Mythic rolls light up the booth and win the big prize', idea: 'jia jun' },
+    // ==== Skins du 2026-11-01, lot A (idées de joueurs acceptées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de Kj13 (2026-11-01) : du mini-golf, une balle puttée par chiffre ; fusionnée avec celle de Jguz01 (des
+    // chiffres en balles de golf sur un green, un beau parcours derrière). Trou en un et drapeau qui claque dès Mythic.
+    { id: 'golf', name: 'Mini Golf', emoji: '⛳', price: 2000, desc: 'Every digit is putted into its hole on a mini golf green, past a little windmill; Mythic rolls are a HOLE IN ONE with confetti and a waving flag', idea: 'Kj13' },
+    // Idée de kingston (2026-11-01) : un terrain de foot ; un ballon frappé dans le filet pour chaque chiffre, GOAL! dès Mythic.
+    { id: 'soccer', name: 'Soccer', emoji: '⚽', price: 1800, desc: 'Every digit is a shot that bulges the goal net; good rolls are a GOAL! and Mythic rolls bring the confetti', idea: 'kingston' },
+    // Idée de jjcoolcid1 (2026-11-01) : un ballon de basket rentre dans le panier à chaque chiffre ; dunk dès Mythic.
+    { id: 'basketball', name: 'Basketball', emoji: '🏀', price: 1800, desc: 'A ball swishes through the hoop for every digit on a hardwood court; Mythic rolls are a SLAM DUNK that shakes the rim', idea: 'jjcoolcid1' },
+    // Idée de dylanbuckleyisjewish (2026-11-01) : un skin animaux / safari ; une jeep, des animaux qui sortent des herbes, un lion qui rugit.
+    { id: 'safari', name: 'Safari', emoji: '🦒', price: 2200, desc: 'Animal-print digits hide in the savanna grass: a giraffe, an elephant or a zebra peeks out for each one, a jeep drives by, and Mythic rolls make the lion ROAR', idea: 'dylanbuckleyisjewish' },
+    // Idée de number 1 (2026-11-01, il proposait 3 000 pièces) : une grotte sombre, une lampe qui vacille, une pioche
+    // rouillée qui fait sauter un bloc de minerai de chaque chiffre ; le chiffre prend ce minerai. L'éclat final dépend de
+    // la rareté (du charbon sur un Common au diamant dès Mythic). Pas de textures en blocs (règle des marques).
+    { id: 'mining', name: 'Mining', emoji: '⛏️', price: 3000, desc: 'A rusty pickaxe chips the ore off every digit in a dark cave under one flickering lamp; each digit turns into the ore it was hiding, and the final blast goes from coal to diamonds with your rarity', idea: 'number 1' },
+    // Idée de baby boy (2026-11-01, autre compte : Daddy finger) : un pack chat ; un chat sort chaque chiffre d'une pelote
+    // de laine. Le pack de sons Meow va avec (SOUNDS) ; il le voulait à 15 000 pièces, vendu au prix normal des packs.
+    { id: 'cat', name: 'Cat', emoji: '🐱', price: 1800, desc: 'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts', idea: 'baby boy' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -560,6 +577,9 @@
     // pour les tirages rares). Pas de part pour les packs : idea sert au crédit.
     { id: 'slime', name: 'Slime', emoji: '🟢', price: 500, desc: 'Squishy splats and wobbly slime bounces', idea: 'Ggggssnoop' },
     { id: 'boing', name: 'Boing', emoji: '🪀', price: 450, desc: 'A springy boing on every digit, a bigger bounce on rare rolls', idea: 'sennybex1' },
+    // Idée de baby boy (2026-11-01) : un miaou à chaque chiffre, assorti au skin Cat. Il le voulait à 15 000 pièces ;
+    // vendu au prix normal des packs. Les packs ne versent pas de part : crédit ici.
+    { id: 'meow', name: 'Meow', emoji: '🐱', price: 500, desc: 'A little meow on every digit, a big one on the last, and purrs for rare rolls' },
   ];
   const soundById = new Map(SOUNDS.map(p => [p.id, p]));
   // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
