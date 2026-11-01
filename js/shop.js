@@ -345,9 +345,9 @@
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
     // Idée de 17black (un fond « limité », 2026-10-28) : des zombies rigolos qui rampent et traînent les pieds sous la
-    // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 2 novembre inclus :
-    // il sort trois jours avant Halloween, on lui laisse le week-end d'après. 1 031 pièces, comme le skin Jack-o'-Lantern.
-    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · until November 2', until: '2026-11-03T00:00:00Z' },
+    // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse). Prévu jusqu'au 2 novembre,
+    // retiré le 1er novembre avec tout Halloween pour laisser la place à Noël (demandé par Sacha, 2026-11-01). 1 031 pièces.
+    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));

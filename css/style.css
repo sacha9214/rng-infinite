@@ -3661,6 +3661,17 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .limited-banner i:nth-of-type(2) { animation-delay: -2s; top: 30%; } .limited-banner i:nth-of-type(3) { animation-delay: -4s; top: 60%; }
 @keyframes banner-bat { from { left: -5%; transform: translateY(0); } 50% { transform: translateY(-8px); } to { left: 105%; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .limited-banner i { animation: none; display: none; } }
+/* Noël (demandé par Sacha, 2026-11-01) : nuit bleue, sapin et rouge, des flocons qui tombent au lieu des chauves-souris. */
+.limited-banner.xmas { border-color: rgba(248, 250, 252, .55); box-shadow: 0 0 26px rgba(56, 189, 248, .28);
+  background: radial-gradient(ellipse 60% 120% at 100% 100%, rgba(220, 38, 38, .55), transparent 70%), radial-gradient(ellipse 45% 140% at 0% 100%, rgba(22, 101, 52, .75), transparent 72%), linear-gradient(160deg, #0b1e3f, #12325c 60%, #0f3d2e); }
+.limited-banner.xmas b { text-shadow: 0 0 12px rgba(186, 230, 253, .85), 0 2px 0 rgba(127, 29, 29, .6); }
+.limited-banner.xmas span { color: #e0f2fe; }
+.limited-banner.xmas i { top: -1.2rem; left: 8%; font-size: .85rem; opacity: .8; animation: banner-snow 7s linear infinite; }
+.limited-banner.xmas i:nth-of-type(2) { left: 27%; top: -1.2rem; font-size: .65rem; animation-duration: 9s; animation-delay: -3s; }
+.limited-banner.xmas i:nth-of-type(3) { left: 48%; top: -1.2rem; font-size: 1rem; animation-duration: 8s; animation-delay: -6s; }
+.limited-banner.xmas i:nth-of-type(4) { left: 69%; font-size: .7rem; animation-duration: 10s; animation-delay: -1.5s; }
+.limited-banner.xmas i:nth-of-type(5) { left: 90%; font-size: .9rem; animation-duration: 7.5s; animation-delay: -4.5s; }
+@keyframes banner-snow { from { transform: translate(0, 0) rotate(0); } 50% { transform: translate(10px, 3rem) rotate(120deg); } to { transform: translate(-6px, 6.5rem) rotate(240deg); } }
 
 /* Duel : sur un grand écran, le chat passe en colonne à droite, toujours visible pendant la partie. */
 @media (min-width: 1100px) {

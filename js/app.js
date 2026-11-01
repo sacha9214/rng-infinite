@@ -3922,7 +3922,7 @@
   }
 
   // Catégories de la boutique, dans l'ordre des onglets.
-  const SHOP_TABS = [['limited', '🎃', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades'], ['prestige', '👑', 'Prestige']];
+  const SHOP_TABS = [['limited', '🎄', 'Limited'], ['skins', '🎨', 'Skins'], ['buttons', '🔘', 'Buttons'], ['emotes', '😎', 'Emotes'], ['sounds', '🔊', 'Sounds'], ['walls', '🖼️', 'Wallpapers'], ['cases', '📦', 'Cases'], ['speed', '⚡', 'Upgrades'], ['prestige', '👑', 'Prestige']];
   function renderShop() {
     currentView = 'shop';
     app.innerHTML = `
@@ -3936,9 +3936,9 @@
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
-          <div class="limited-banner" id="limited-banner"><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><i aria-hidden="true">🦇</i><b>🎃 HALLOWEEN EVENT</b><span id="limited-left"></span></div>
+          <div class="limited-banner xmas" id="limited-banner"><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><b>🎄 CHRISTMAS EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Halloween only</span></div>
+          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Christmas only</span></div>
           <div class="skin-grid wall-grid" id="d-limited-walls"></div>
         </div>
         </section>
@@ -4175,7 +4175,9 @@
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
     const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
     const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
-    { const ev = Date.parse('2026-11-01T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after October 31 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
+    // Bannière de l'événement en cours : Noël (demandé par Sacha, 2026-11-01), en vente jusqu'au 25 décembre inclus ; avant,
+    // Halloween (jusqu'au 31 octobre).
+    { const ev = Date.parse('2026-12-26T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after December 25 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
     applyOwnFilter();
     paintOwners();
@@ -5644,7 +5646,8 @@
     const grid = $('#d-walls'), limitedGrid = $('#d-limited-walls');
     if (!grid) return;
     const owned = state.walls || [], on = state.wall || null;
-    // Fonds d'Halloween : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui les ont.
+    // Fonds limités (Halloween, puis Noël) : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui
+    // les ont.
     const onSale = w => !w.until || Date.now() < Date.parse(w.until);
     const wallTile = w => `
       <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}" data-have="${owned.includes(w.id) ? 1 : 0}">
