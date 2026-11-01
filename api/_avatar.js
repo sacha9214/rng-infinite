@@ -11,8 +11,12 @@
 //   av:<id>     acceptée : { img, v, tok, t }          v = version (cache), tok = jeton public de l'image
 //   avpub       hash id → tok ;  avtok : hash tok → id  (les images se servent par jeton, jamais par identifiant)
 //   avr:<id>    dernier refus { reason, t } (30 jours) ;  avn:<id>:<jour> envois du jour ;  avlog : 200 dernières décisions
+// Prix (idée de MereTera, décision de Sacha, 2026-11-01) : gratuit tant que le joueur n'a pas de photo acceptée, puis
+// Shop.AVATAR_PRICE pièces par nouvelle photo, payées à l'envoi (champ paid de avp:<id>) et rendues si la photo est
+// refusée ou retirée. Remplacer une photo en attente déjà payée ne coûte rien de plus (le paiement passe à la nouvelle).
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, findPlayer, send } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, findPlayer, send, statsKey, eco } = require('./_lib');
+const Shop = require('../js/shop.js');
 const Reports = require('./_reports');
 
 const MAX_BYTES = 60 * 1024, PER_DAY = 5, MIN_ROLLS = 30, LOG_KEEP = 200, MAX_SIDE = 512;
@@ -108,6 +112,8 @@ async function mine(id) {
     approved: appr ? { url: url(appr.tok), t: appr.t } : null,
     rejected: rej && (!appr || rej.t >= appr.t) && (!pend || rej.t >= pend.t) ? { reason: rej.reason, t: rej.t } : null,
     left: Math.max(0, PER_DAY - (Number(n) || 0)), minRolls: MIN_ROLLS,
+    // Ce que coûtera le prochain envoi : 0 sans photo acceptée, ou si une photo payée attend déjà (elle sera remplacée).
+    price: appr && !(pend && pend.paid) ? Shop.AVATAR_PRICE : 0,
   };
 }
 
@@ -117,18 +123,30 @@ async function upload(id, stats, img) {
   const [name] = await redis([['HGET', 'names', id]]);
   if (!name) throw refuse(403, 'Choose a player name first');
   if ((Number(stats.rolls) || 0) < MIN_ROLLS) throw refuse(403, `You need ${MIN_ROLLS} rolls to add a profile picture`);
-  const day = dayKey(Date.now());
-  const [n] = await redis([['INCR', `avn:${id}:${day}`], ['EXPIRE', `avn:${id}:${day}`, 2 * 86400]]);
-  if (Number(n) > PER_DAY) throw refuse(429, 'Too many pictures today, try again tomorrow');
-  const [old] = await redis([['GET', `avp:${id}`]]);
-  const prev = parse(old);
-  const pk = crypto.randomBytes(10).toString('hex');
-  await redis([
-    ...(prev ? [['HDEL', 'avpq', prev.pk]] : []),
-    ['SET', `avp:${id}`, JSON.stringify({ img: buf.toString('base64'), t: Date.now(), pk })],
-    ['HSET', 'avpq', pk, id],
-  ]);
+  // Verrou : deux envois en même temps ne paient pas deux fois.
+  const [lock] = await redis([['SET', `avpay:${id}`, '1', 'PX', 5000, 'NX']]);
+  if (lock !== 'OK') throw refuse(429, 'A picture is already being sent');
+  try {
+    const [old, appr] = await redis([['GET', `avp:${id}`], ['GET', `av:${id}`]]);
+    const prev = parse(old);
+    const carried = prev && Number(prev.paid) > 0 ? Number(prev.paid) : 0;
+    const price = appr && !carried ? Shop.AVATAR_PRICE : 0;
+    if (price && Shop.balance(stats) < price) throw refuse(402, `A new profile picture costs ${price.toLocaleString('en-US')} coins`);
+    const day = dayKey(Date.now());
+    const [n] = await redis([['INCR', `avn:${id}:${day}`], ['EXPIRE', `avn:${id}:${day}`, 2 * 86400]]);
+    if (Number(n) > PER_DAY) throw refuse(429, 'Too many pictures today, try again tomorrow');
+    const pk = crypto.randomBytes(10).toString('hex');
+    await redis([
+      ...(prev ? [['HDEL', 'avpq', prev.pk]] : []),
+      ['SET', `avp:${id}`, JSON.stringify({ img: buf.toString('base64'), t: Date.now(), pk, ...(carried + price ? { paid: carried + price } : {}) })],
+      ['HSET', 'avpq', pk, id],
+      ...(price ? [['HINCRBY', statsKey(id), 'spent', price], ...eco('out:avatar', price)] : []),
+    ]);
+    return price;
+  } finally { await redis([['DEL', `avpay:${id}`]]); }
 }
+// Rend ce qu'une photo en attente avait coûté (refusée ou retirée).
+const refundWrites = (id, pend) => (pend && Number(pend.paid) > 0 ? [['HINCRBY', statsKey(id), 'spent', -Number(pend.paid)], ...eco('out:avatar', -Number(pend.paid))] : []);
 
 async function queue(q) {
   const [flat, rawLog, pubFlat] = await redis([['HGETALL', 'avpq'], ['LRANGE', 'avlog', -LOG_KEEP, -1], ['HGETALL', 'avpub']]);
@@ -169,7 +187,7 @@ async function decide(op, body) {
   } else {
     const code = Object.prototype.hasOwnProperty.call(REASONS, body.reason) ? body.reason : null;
     if (!code) throw refuse(422, 'Choose a reason');
-    await redis([['DEL', `avp:${id}`], ['HDEL', 'avpq', pk], ['SET', `avr:${id}`, JSON.stringify({ reason: REASONS[code], t: Date.now() }), 'EX', 30 * 86400]]);
+    await redis([['DEL', `avp:${id}`], ['HDEL', 'avpq', pk], ['SET', `avr:${id}`, JSON.stringify({ reason: REASONS[code], t: Date.now() }), 'EX', 30 * 86400], ...refundWrites(id, pend)]);
     await log('rejected', id, { reason: REASONS[code] });
   }
   resetCache();
@@ -196,11 +214,11 @@ async function handle(req, res) {
     const op = String(body.op || '');
     if (op === 'mine') return send(res, 200, await mine(id));
     const stats = await readStats(id);
-    if (op === 'upload') { await upload(id, stats, body.img); return send(res, 200, { ...(await mine(id)), sent: true }); }
+    if (op === 'upload') { const paid = await upload(id, stats, body.img); return send(res, 200, { ...(await mine(id)), sent: true, paid, coins: Shop.balance(stats) - paid }); }
     if (op === 'cancel') {
       const [p] = await redis([['GET', `avp:${id}`]]); const pend = parse(p);
-      if (pend) await redis([['DEL', `avp:${id}`], ['HDEL', 'avpq', pend.pk]]);
-      return send(res, 200, await mine(id));
+      if (pend) await redis([['DEL', `avp:${id}`], ['HDEL', 'avpq', pend.pk], ...refundWrites(id, pend)]);
+      return send(res, 200, { ...(await mine(id)), refunded: pend && Number(pend.paid) > 0 ? Number(pend.paid) : 0, coins: Shop.balance(stats) + (pend && Number(pend.paid) > 0 ? Number(pend.paid) : 0) });
     }
     if (op === 'report') {
       const author = await findPlayer(cleanName(body.name));

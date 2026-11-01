@@ -9,6 +9,14 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Profile picture price (2026-11-01, branch `claude/avatar-price`)
+
+Sacha's answers to the open questions: Gray is now an Idea Manager; Phong254 was asked to send his casino track (it
+would play on the casino page only); no Pride skin (the Rainbow skin exists); no Exact 41. MereTera's idea, decided by
+Sacha: the first approved profile picture stays free, then each new one costs `Shop.AVATAR_PRICE` (500) coins, paid
+when sent (`paid` in `avp:<id>`, eco `out:avatar`) and refunded if rejected or withdrawn. Replacing a paid pending
+picture costs nothing more. MereTera's idea (`sugg:2f8cd25cd6fe`) gets its "Added" reply once this is live.
+
 ## Player ideas update (2026-11-01, branch `claude/ideas-2026-11-01`)
 
 402 new ideas were sorted (`integration-review/ideas-2026-11-01.md`, untracked): 71 for this update, 70 for later,
