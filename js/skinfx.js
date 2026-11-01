@@ -4599,6 +4599,42 @@
     };
   });
 
+  // 🧶 Ugly Sweater (événement de Noël, 2026-11-01) — chaque chiffre qui se pose lâche quelques bouts de laine (crème,
+  // rouge, vert) ; dès Epic, les paillettes cousues dans la bande (même place que le CSS : au cœur des flocons, une
+  // toutes les 12 mailles) scintillent chacune à son tour et une pluie de paillettes jaillit ; dès Mythic, des reflets
+  // courent le long du fil d'or ; au-delà (Celestial+), les paillettes brillent plus souvent.
+  SCENES.sweater = custom(pieces({ cols: ['#fdf3d8', '#fdf3d8', '#dc2626', '#16a34a'], shapes: ['sprinkle'], size: [1.3, 2.4], g: 420, spin: 6, up: true, glowc: '#9b1c1c', ring: '#fef3c7', drift: { rate: .5, from: 'around' } }), (env, { cx }) => {
+    const { ci, co, w, card, q, dark, el } = env, glints = timed(), shower = particles(), SEQ = ['#fbbf24', '#e5e7eb', '#fde68a', '#f472b6'];
+    const stitch = () => (parseFloat(getComputedStyle(el).fontSize) || 40) * .08; // --st : une maille, en pixels
+    let level = 0, asc = 0; // 0 : rien ; 1 : paillettes (Epic+) ; 2 : + fil d'or (Mythic+)
+    const sparkle = (c, x, y, r, a) => { dot(c, '#fffbeb', x, y, r * .45, a); line(c, '#fffbeb', x - r, y, x + r, y, 1, a * .8); line(c, '#fffbeb', x, y - r, x, y + r, 1, a * .8); };
+    return {
+      frame(t, dt) {
+        if (level) {
+          const s = stitch(), y = 3.5 * s;
+          // une paillette au hasard s'allume (plus souvent au-delà du Mythic)
+          if (Math.random() < dt * (1.6 + 1.4 * asc)) { const n = Math.max(1, Math.floor(w / (12 * s))), k = Math.floor(rnd(n)); glints.add({ x: (2.5 + 12 * k) * s, y, life: .45, r: s * rnd(2.2, 3.4) }); }
+          ci.globalCompositeOperation = 'lighter';
+          glints.run(dt, (g, k) => sparkle(ci, g.x, g.y, g.r * Math.sin(Math.PI * k), Math.sin(Math.PI * k)));
+          if (level > 1) for (let i = 0; i < 3; i++) { // reflets qui courent sur les deux rangs de fil d'or
+            const x = ((t * (60 + 20 * i) + i * w / 3) % (w + 40)) - 20;
+            dot(ci, '#fffbeb', x, .5 * s, s * 2.2, .55); dot(ci, '#fffbeb', w - x, 6.5 * s, s * 2.2, .45);
+          }
+        }
+        co.globalCompositeOperation = 'source-over';
+        shower.step(dt);
+        shower.each((p, k) => { co.save(); co.translate(p.x, p.y); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = p.c; SHAPES.coin(co, p, p.size); co.restore(); });
+      },
+      lock() {},
+      reveal(tier, p) {
+        level = p >= 1 ? 2 : p >= .6 ? 1 : 0;
+        asc = ASCEND[tier] || 0;
+        if (!level) return;
+        for (let i = burst(p, 46 * q, 8) + asc * 10; i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.2, 1.2), v = rnd(120, 260 + 200 * p); shower.add({ x: cx + rnd(-card.w * .4, card.w * .4), y: card.y + rnd(0, card.h * .3), vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 620, drag: .9, max: rnd(1.1, 1.9), size: rnd(2.2, 3.6), rot: rnd(TAU), c: dark ? pick(SEQ) : pick(['#d97706', '#9ca3af', '#f59e0b', '#db2777']) }); }
+      },
+    };
+  });
+
   // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
   // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
   // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le
