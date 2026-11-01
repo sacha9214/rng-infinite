@@ -969,7 +969,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.deepEqual(fresh.map(id => Shop.rarityOf(id, true).name), ['Legendary', 'Rare', 'Uncommon', 'Legendary', 'Epic']);
     assert.ok(wpool.includes('lastrolls') && wpool.includes('bread'), 'les deux fonds normaux sont dans la caisse');
     assert.ok(!wpool.includes('fishing') && !wpool.includes('condensation') && !wpool.includes('zombiemoon'), 'ni légendaires ni limité dans la caisse');
-    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-03T00:00:00Z');
+    // Retiré le 1er novembre avec le reste d'Halloween, pour l'événement de Noël (demandé par Sacha, 2026-11-01).
+    assert.equal(Shop.wallById.get('zombiemoon').until, '2026-11-01T00:00:00Z');
     const buyWall = id => call(shopApi, { method: 'POST', body: { playerId: wally.playerId, secret: wally.secret, action: 'buywall', wall: id } });
     for (const id of ['lastrolls', 'fishing', 'zombiemoon']) {
       if (wpool.includes(id) && (await call(shopApi, { url: `/api/shop?me=${wally.playerId}` })).body.walls.includes(id)) continue; // déjà gagné dans la caisse
