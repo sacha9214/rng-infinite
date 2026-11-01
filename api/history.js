@@ -1,7 +1,10 @@
-// POST /api/history  { playerId, secret, add?: [[nombre, timestamp], ...], fetch?: false }
+// POST /api/history  { playerId, secret, add?: [[nombre, timestamp], ...], fetch?: false, since?: timestamp }
 // Historique complet d'un joueur, pour le retrouver sur tous ses appareils (joueurs connectés avec Google).
 // Les tirages faits en ligne y sont ajoutés par /api/roll ; "add" y verse ceux que seul l'appareil connaissait
 // (hors ligne, ou d'avant la synchronisation). Réponse : tous les tirages, du plus ancien au plus récent.
+// « since » (2026-11-01, serveur plus fluide demandé par Sacha) : seulement les tirages faits après cette heure. Le site
+// envoyait tout l'historique à chaque visite (jusqu'à 100 000 tirages, ~2,5 Mo) : Redis bloqué jusqu'à 0,1 s à chaque
+// fois et le serveur occupé à encoder ; il ne demande plus que les nouveaux, et tout une fois par jour.
 const { redis, ownsPlayer, historyKey, HISTORY_CAP, rollSet, statsKey, cors, send, flushDue } = require('./_lib');
 
 const MAX_ADD = 5000; // par requête ; le site découpe au-delà
@@ -45,12 +48,14 @@ module.exports = async (req, res) => {
     }
     if (body.fetch === false) return send(res, 200, { stored: Number(stored) });
 
-    const [members] = await redis([['ZRANGE', key, 0, -1]]);
-    const rolls = members.map(m => {
+    const since = Number(body.since);
+    const part = Number.isInteger(since) && since >= MIN_T && since <= maxT;
+    const [members] = await redis([part ? ['ZRANGEBYSCORE', key, `(${since}`, '+inf'] : ['ZRANGE', key, 0, -1]]);
+    const rolls = (members || []).map(m => {
       const [t, n] = m.split(':').map(Number);
       return [n, t];
     });
-    return send(res, 200, { stored: Number(stored), rolls });
+    return send(res, 200, { stored: Number(stored), rolls, ...(part ? { since } : {}) });
   } catch (err) {
     return send(res, err.status || 500, { error: err.message });
   }

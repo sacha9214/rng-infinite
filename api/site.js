@@ -341,8 +341,9 @@ async function extraInsights(ids, now) {
   const hdays = Array.from({ length: 7 }, (_, i) => dayKey(now - i * DAY_MS));
   const hr = await redis(hdays.map(d => ['HGETALL', `health:${d}`]));
   const health = hdays.map((day, i) => { const h = toObject(hr[i]), routes = {};
-    for (const [k, v] of Object.entries(h)) { const m = k.match(/^(req|slow|max):(.+)$/); if (m) { routes[m[2]] = routes[m[2]] || { req: 0, slow: 0, max: 0 }; routes[m[2]][m[1]] = Number(v) || 0; } }
-    return { day, req: Number(h.req) || 0, slow: Number(h.slow) || 0, err: Number(h.err) || 0, version: h.version || null, started: Number(h.started) || null, routes }; });
+    for (const [k, v] of Object.entries(h)) { const m = k.match(/^(req|slow|max|r429):(.+)$/); if (m && m[2] !== 'lag') { routes[m[2]] = routes[m[2]] || { req: 0, slow: 0, max: 0, r429: 0 }; routes[m[2]][m[1]] = Number(v) || 0; } }
+    // 429 (trop de requêtes) et gels du processus (2026-11-01, voir deploy/ovh/api-server.js).
+    return { day, req: Number(h.req) || 0, slow: Number(h.slow) || 0, err: Number(h.err) || 0, r429: Number(h.r429) || 0, lagMax: Number(h['max:lag']) || 0, lag500: Number(h.lag500) || 0, version: h.version || null, started: Number(h.started) || null, routes }; });
   // Nouvelles fonctions : comptes Discord liés, événement de la semaine, doublons.
   const ev = Events.current(now), evKey = Events.key(ev);
   const [links, evPlayers, evDone, evClaimed] = await redis([['HLEN', 'discord:links'], ['ZCARD', evKey], ['ZCOUNT', evKey, ev.goal, '+inf'], ['SCARD', `${evKey}:claimed`]]);

@@ -118,20 +118,34 @@ module.exports = async (req, res) => {
     };
 
     // Historique effacé ou remplacé depuis le dernier calcul : on repart de zéro.
-    // Aussi quand le meilleur tirage all-time avait été ajouté à la main (hors historique) : il faut le redédoublonner.
-    const prev = cached && !prev0.padded && Number(histSize) >= Math.min(prev0.size, HISTORY_CAP) ? prev0 : null;
+    // Le meilleur tirage d'avant l'historique ajouté à la main (padded) ne bloque plus la lecture des seuls nouveaux
+    // tirages (2026-11-01) : ces profils relisaient leurs 100 000 tirages à chaque visite (~7 s de calcul chacun). Le
+    // tirage ajouté est gardé (pad) ; un nouveau tirage du même nombre prend sa place, comme au recalcul complet. Les
+    // totaux d'avant ce changement (padded sans pad) sont recalculés une dernière fois.
+    const prev = cached && (!prev0.padded || prev0.pad) && Number(histSize) >= Math.min(prev0.size, HISTORY_CAP) ? prev0 : null;
     let fresh = members || [];
     if (cached && !prev) fresh = (await redis([['ZRANGE', historyKey(id), 0, -1]]))[0] || [];
     // Premier calcul : le meilleur tirage all-time y est ajouté s'il date d'avant l'historique serveur.
     // Comparé par nombre seul : un vieux tirage envoyé par l'appareil porte l'heure de l'appareil, pas celle du serveur.
-    let padded = false;
+    let padded = prev ? !!prev.padded : false, pad = prev ? prev.pad || null : null;
     if (!prev && bestAll) {
       const d = JSON.parse(bestAll);
-      if (!fresh.some(m => m.endsWith(`:${d.n}`))) { fresh.push(`${d.t}:${d.n}`); padded = true; }
+      if (!fresh.some(m => m.endsWith(`:${d.n}`))) { fresh.push(`${d.t}:${d.n}`); padded = true; pad = [d.t, d.n]; }
     }
     // Les doublons d'un même tirage déjà en base (voir rollSet) ne comptent qu'une fois.
+    // Lecture des seuls nouveaux tirages : le tirage ajouté à la main compte comme déjà vu (un doublon de lui, envoyé
+    // avec l'heure de l'appareil, est écarté) ; un vrai nouveau tirage du même nombre prend sa place (pas de 2e compte).
     const known = rollSet();
-    const rolls = fresh.map(m => m.split(':').map(Number)).sort((a, b) => a[0] - b[0]).filter(([t, n]) => known.add(n, t));
+    if (prev && pad) known.add(pad[1], pad[0]);
+    let rolls = fresh.map(m => m.split(':').map(Number)).sort((a, b) => a[0] - b[0]).filter(([t, n]) => known.add(n, t));
+    // Le nombre ajouté à la main apparaît dans l'historique : le recalcul complet ne l'ajouterait plus et compterait ce
+    // tirage à sa place. Doublon du même tirage (déjà écarté juste au-dessus) ou vrai nouveau tirage (retiré ici) : le
+    // total ne bouge pas, et l'ajout à la main s'arrête là.
+    if (prev && pad && fresh.some(m => m.endsWith(`:${pad[1]}`))) {
+      const twin = fresh.some(m => { const [t, n] = m.split(':').map(Number); return n === pad[1] && Math.abs(t - pad[0]) <= 60000; });
+      if (!twin) { const i = rolls.findIndex(([, n]) => n === pad[1]); if (i >= 0) rolls = rolls.filter((_, j) => j !== i); }
+      padded = false; pad = null;
+    }
 
     // ~70 µs par tirage : 7 s pour un historique plein (100 000 tirages). Les totaux restent en mémoire ; ensuite seuls
     // les nouveaux tirages sont analysés, et les meilleurs / pires tirages sont tenus à jour au lieu d'être recalculés.
@@ -156,12 +170,14 @@ module.exports = async (req, res) => {
     const worst = [...(prev ? prev.worst : []), ...scored].sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);
     const count = (prev ? prev.count : 0) + rolls.length;
     const since = prev ? prev.since : rolls.length ? rolls[0][0] : null;
-    const lastT = rolls.length ? rolls[rolls.length - 1][0] : prev ? prev.lastT : null;
+    // Heure du dernier tirage LU (doublons écartés compris) : sinon ils étaient relus et comptés à la visite suivante.
+    const readT = fresh.reduce((x, m) => Math.max(x, Number(String(m).split(':')[0]) || 0), 0);
+    const lastT = Math.max(readT, rolls.length ? rolls[rolls.length - 1][0] : 0, prev ? prev.lastT || 0 : 0) || null;
     // Joueur sans set nums (voir uniqueOf) : compté sur l'historique relu en entier, gardé avec les totaux.
     const uniqFull = prev ? (prev.uniq ?? null) : stats.dv === '1' ? null : new Set(rolls.map(([, n]) => n)).size;
     if (count) {
       AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
-      const agg = { v: SCORE_V, at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
+      const agg = { v: SCORE_V, at: prev ? prev.at : Date.now(), padded, pad, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
       AGG.set(id, agg);
       if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
       // Gardé dans Redis seulement pour les gros historiques (ceux qui coûtent à recalculer), jusqu'au recalcul complet.

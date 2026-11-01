@@ -14,6 +14,9 @@ const MAX_BODY = 256 * 1024;
 // La base : le relais local, avec son jeton lu dans le fichier que lui-même utilise (jamais écrit ailleurs).
 // À faire avant de charger les fonctions : api/_lib.js lit ces variables au chargement.
 if (!process.env.RNG_REDIS_URL) process.env.RNG_REDIS_URL = 'http://127.0.0.1:7379';
+// Connexion directe à Redis (api/_resp.js, 2026-11-01) : le relais HTTP ne sert plus qu'en secours (et aux outils).
+// RNG_REDIS_DIRECT=off dans le service pour revenir au relais seul.
+if (process.env.RNG_REDIS_DIRECT === undefined) process.env.RNG_REDIS_DIRECT = '127.0.0.1:6379';
 if (!process.env.RNG_REDIS_TOKEN && process.env.RNG_REDIS_TOKEN_FILE) {
   process.env.RNG_REDIS_TOKEN = fs.readFileSync(process.env.RNG_REDIS_TOKEN_FILE, 'utf8').trim();
 }
@@ -51,11 +54,18 @@ async function readBody(req) {
 // Santé du serveur pour la page Owner (2026-10-18) : requêtes, lentes (> 2 s), erreurs 5xx et la plus lente, par jour et
 // par route, comptées en mémoire et écrites une fois par minute dans health:<jour> (rien de plus à chaque requête).
 const health = new Map(); // champ → nombre ; « max:<route> » → ms (le plus grand)
+// Aussi (2026-11-01) : les refus « trop de requêtes » (429, par route) et les gels du processus. Un calcul long bloque
+// toutes les autres requêtes : lagMax = le plus long gel du jour (ms), lag500 = minutes avec un gel de plus d'une 1/2 s.
+const loopDelay = require('node:perf_hooks').monitorEventLoopDelay({ resolution: 20 });
+loopDelay.enable();
 const bump = (k, v = 1) => health.set(k, (health.get(k) || 0) + v);
 let flushing = false;
 async function flushHealth() {
   if (!health.size || flushing) return;
   flushing = true;
+  const lag = Math.round(loopDelay.max / 1e6); loopDelay.reset();
+  if (lag > 0) health.set('max:lag', Math.max(lag, health.get('max:lag') || 0));
+  if (lag > 500) bump('lag500');
   const day = new Date().toISOString().slice(0, 10), key = `health:${day}`, items = [...health];
   health.clear();
   try {
@@ -83,12 +93,14 @@ const server = http.createServer(async (req, res) => {
     if (!err.status) console.error(`${req.method} ${pathname}: ${err.stack || err}`);
     reply(res, err.status || 500, { error: err.status ? err.message : 'Server error' });
   } finally {
-    const ms = Date.now() - started, route = pathname.startsWith('/api/') ? pathname.slice(5) : 'other';
+    // Adresses inconnues (robots qui cherchent des failles : /api/.env, /api/v1/config…) comptées ensemble.
+    const ms = Date.now() - started, route = pathname.startsWith('/api/') ? (API[pathname.slice(5)] ? pathname.slice(5) : 'unknown') : 'other';
     if (ms > 2000) console.warn(`slow: ${req.method} ${pathname} ${ms} ms`);
     if (pathname !== '/health' && pathname !== '/api/health') {
       bump('req'); bump(`req:${route}`);
       if (ms > 2000) { bump('slow'); bump(`slow:${route}`); }
       if (res.statusCode >= 500) bump('err');
+      if (res.statusCode === 429) { bump('r429'); bump(`r429:${route}`); }
       if (ms > (health.get(`max:${route}`) || 0)) health.set(`max:${route}`, ms);
     }
   }

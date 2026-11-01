@@ -213,6 +213,12 @@ assert.equal(r.body.stored, 0);
 run([['ZADD', `hist:${alice.playerId}`, t0, `${t0}:42`, t0 + 1, `${t0 + 1}:1337`, t0 + 120000, `${t0 + 120000}:42`]]);
 r = await call(history, { method: 'POST', body: aliceTab });
 assert.ok(r.body.rolls.every((x, k, all) => k === 0 || all[k - 1][1] <= x[1]), 'du plus ancien au plus récent');
+// Seulement les nouveaux (since, 2026-11-01) : les tirages faits après cette heure, et since renvoyé (lecture partielle).
+{ const all = r.body.rolls, cut = all[all.length - 3][1];
+  const part = await call(history, { method: 'POST', body: { ...aliceTab, since: cut } });
+  assert.deepEqual(part.body.rolls, all.filter(([, t]) => t > cut)); assert.equal(part.body.since, cut);
+  const bad = await call(history, { method: 'POST', body: { ...aliceTab, since: 'yesterday' } });
+  assert.equal(bad.body.rolls.length, all.length, 'since illisible : tout'); assert.equal(bad.body.since, undefined); }
 
 assert.equal((await call(history, { method: 'POST', body: { ...aliceTab, secret: '9'.repeat(32) } })).status, 403);
 assert.equal((await call(history, { method: 'POST', body: { playerId: 'nope', secret: 'x' } })).status, 400);
@@ -289,6 +295,10 @@ run([['ZADD', `hist:${legacy}`, t0 + 4700, `${t0 + 4700}:777777`]]); // doublon 
 r = await call(profile, { url: '/api/profile?name=Emile' });
 assert.equal(r.body.rolls, 1);
 assert.deepEqual(r.body.best.map(x => x.n), [777777]);
+// Lecture des seuls nouveaux tirages (2026-11-01) : un vrai nouveau 777777 plus tard compte, comme au recalcul complet.
+run([['ZADD', `hist:${legacy}`, t0 + 86400000, `${t0 + 86400000}:777777`]]);
+r = await call(profile, { url: '/api/profile?name=Emile' });
+assert.equal(r.body.rolls, 2, 'nouveau tirage du même nombre compté');
 // Gros historique (2026-10-25) : les totaux du profil sont gardés dans Redis (pagg:<id>) pour survivre à un redémarrage,
 // et la visite suivante ne lit que les nouveaux tirages ; le résultat reste celui d'un calcul complet.
 {

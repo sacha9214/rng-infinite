@@ -9,6 +9,28 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Smoother server (2026-11-01, branch `claude/server-speed`)
+
+Asked by Sacha: make the server as smooth as possible, fewer failed requests. Measured on the VPS (read only):
+~2.9 million requests a day (2.1 million rolls), 0.15–0.3% over 2 s, a few up to 43 s; Redis itself is fast
+(~830 ops/s, microseconds per command), but every call went through the Python relay, which opened a new thread and
+a new Redis connection each time (143 million connections in 38 days): ~1 ms per call, ~7 ms when 20 arrive at once.
+Redis' slow log was full of `ZRANGE hist:<id> 0 -1` (whole 100,000-roll histories, up to 96 ms each, blocking Redis).
+- `api/_resp.js`: direct RESP connection (pool of 4 persistent sockets, resumable parser, same answers as the relay,
+  same deny-list). `deploy/ovh/api-server.js` turns it on (`RNG_REDIS_DIRECT=127.0.0.1:6379`); if Redis refuses the
+  connection (nothing sent) the call goes through the relay. To go back: `Environment=RNG_REDIS_DIRECT=off` in the
+  `rng-api` unit, or revert. Tested by `tools/test-resp.mjs` (identical results; 2,000 calls 17 ms vs 721 ms locally;
+  200 simultaneous rolls fine, the relay reset connections under the same burst).
+- `/api/history` takes `since`: the site now downloads only rolls newer than its last counted roll on each visit, and
+  the whole history once a day per player (`histFull:<id>` in localStorage) and at sign-in.
+- Profiles: big players whose best roll predates the history (`padded`) re-read all 100,000 rolls on every visit
+  (~7 s of CPU). They now take the incremental path; the added roll is kept as `pad` so counts match a full recompute.
+  `lastT` now advances past skipped duplicates (they were re-read and counted at the next visit).
+- Health (Owner → Server): refused requests (429) per day and per route, the longest event-loop freeze and minutes
+  with a freeze over 0.5 s; unknown `/api/*` paths (vulnerability scanners) are counted as `unknown`.
+- Not changed (Sacha's call, needs sudo): Redis saves a snapshot every minute (`save 60 10000`) *and* keeps an AOF;
+  each snapshot forks a 1 GB process (~40 ms freeze). `save ""` with AOF alone would remove that.
+
 ## Chat moderators section (2026-11-01, branch `claude/chat-moderators`)
 
 Asked by Sacha: a section like the Idea Managers, for chat moderators, so he can see whether they mute fairly.
