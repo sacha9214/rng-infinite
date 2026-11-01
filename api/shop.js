@@ -285,7 +285,7 @@ module.exports = async (req, res) => {
       }
     }
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
-    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, duck: Gamble.duck, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
+    const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, duck: Gamble.duck, wheel: Gamble.wheel, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
     if (GAMES[body.action]) {
       // Deux demandes du même joueur peuvent se croiser sans faute de sa part : le sondage d'une manche de Crash et
       // son clic « Cash out », ou les trois reprises de partie à l'ouverture de la page. La seconde attend donc son
@@ -419,3 +419,6 @@ module.exports = async (req, res) => {
     return send(res, err.status || 500, { error: err.message });
   }
 };
+// Codes du Code Hunter, pour les cacher dans les chats (api/_chat.js hideCodes, idée de R77, 2026-11-01) : lus ici, côté
+// serveur seulement, jamais envoyés au site.
+module.exports.HUNT_CODES = HUNT;

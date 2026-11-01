@@ -16,7 +16,7 @@
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
-const { maskBad, shape, BLOCKED_SHAPES } = require('./_chat');
+const { maskBad, hideCodes, shape, BLOCKED_SHAPES } = require('./_chat');
 
 const KEY = 'gc:msgs', REV = 'gc:rev', DEL = 'gc:del', MUTES = 'gc:mutes', MODS = 'gc:mods';
 const KEEP = 100, MAX = 200, GAP_MS = 5000, MIN_ROLLS = 100;
@@ -60,7 +60,20 @@ function rude(text) {
   for (const m of text.matchAll(SPACED)) if (BLOCKED_SHAPES.has(shape(m[1].replace(/[\s._*-]+/g, '')))) return true;
   return false;
 }
+// Proxys et « débloqueurs » (idée de mateopotato, 2026-11-01) : sur les ordinateurs de l'école, une page qui parle de
+// proxy, de VPN ou de contourner le filtre se fait bloquer, et le jeu avec. Comparé sur la forme des mots (api/_chat.js
+// shape : « pr0xy », « VPN », « p r o x y » compris). « proxy » et « unblocker » le sont même collés (« croxyproxy »),
+// mais jamais dans « approximately » ; « unblocked » seul reste permis (débloquer un ami), seulement « unblocked games ».
+const PROXY = 'Let\'s keep the chat about the game: no proxies, VPNs or ways around school filters';
+const PROXY_WORDS = /proxy|proxie|unblocker/;
+const PROXY_RE = / (?:vpns?|bypas\w*|unblocked games?|games? unblocked|goguardian|securly|blocksi|iboss|linewize|fortiguard|contentkeper|hidester|ultrasurf|psiphon|tor browser|lightsped (?:filter|systems)|(?:schol|web|content) (?:filter|blocker)s?|(?:get|go|getting|going) (?:past|around) (?:the |my |our )?(?:schol |web )?(?:filter|blocker|block)s?) /;
+function offTopic(text) {
+  const words = (String(text).match(/[\p{L}0-9@$!€]+/gu) || []).map(shape).filter(Boolean);
+  for (const m of String(text).matchAll(SPACED)) words.push(shape(m[1].replace(/[\s._*-]+/g, '')));
+  return words.some(w => PROXY_WORDS.test(w)) || PROXY_RE.test(` ${words.join(' ')} `);
+}
 // Renvoie le texte nettoyé (une ligne) ou lève une erreur 422 qui explique au joueur pourquoi.
+// Les codes secrets du Code Hunter sont cachés (« [secret code] », idée de R77, 2026-11-01), pas refusés.
 function checkMessage(raw) {
   const text = normalize(raw);
   if (!text) throw refuse(422, 'Write a message first');
@@ -69,7 +82,8 @@ function checkMessage(raw) {
   if (LINK_RE.some(re => re.test(text))) throw refuse(422, LINK);
   if (PERSONAL_RE.some(re => re.test(text))) throw refuse(422, SAFETY);
   if (rude(text)) throw refuse(422, RUDE);
-  return text;
+  if (offTopic(text)) throw refuse(422, PROXY);
+  return hideCodes(text);
 }
 // Emojis (idée de Deadshot, 2026-10-27) : le « liant » invisible U+200D colle les emojis composés (👨‍👩‍👧, 🏳️‍🌈, ❤️‍🔥).
 // Il reste quand il est entre deux emojis ; partout ailleurs (entre des lettres, pour cacher un mot) il devient une espace.
@@ -105,7 +119,7 @@ async function resolveMentions(text, me) {
 }
 // Texte vérifié + mentions résolues (envoi et modification).
 async function prepare(raw, me) {
-  const text = normalize(raw);
+  const text = hideCodes(normalize(raw)); // codes du Code Hunter cachés avant tout (idée de R77, 2026-11-01)
   if ([...text].length > MAX) throw refuse(422, `Messages are ${MAX} characters at most`);
   const at = await resolveMentions(text, me);
   checkMessage(at.probe);
@@ -116,11 +130,18 @@ const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'E
 // ---------------------------------------------------------------- lecture
 const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
 // Message du serveur (grand tirage) : pas d'auteur, pas de texte libre ; le site écrit la phrase (et la traduit).
-const view = (m, me, quote) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
-  id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x,
+const view = (m, me, quote, tags) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
+  id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x, ...(tags && tags.get(m.a) ? { clan: tags.get(m.a) } : {}),
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
   ...(me && ((Array.isArray(m.at) && m.at.includes(me)) || m.ra === me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}),
   ...(m.r && quote ? { re: quote(m.r) } : {}) });
+// Tag du clan de l'auteur à côté de son pseudo (idée de R77, 2026-11-01) : lu à chaque lecture (HMGET clantag, une seule
+// commande pour tous les auteurs), donc toujours celui d'aujourd'hui ; jamais l'identifiant du joueur, seulement le tag.
+async function clanTags(msgs) {
+  const ids = [...new Set(msgs.filter(m => !m.sys && isPlayerId(m.a)).map(m => m.a))];
+  const tags = await require('./_clan').tagsOf(ids);
+  return new Map(ids.map((id, i) => [id, tags[i]]).filter(([, t]) => t && t.tag));
+}
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
 
 // ---------------------------------------------------------------- réponses (idée de Niall, 2026-10-27)
@@ -210,8 +231,8 @@ async function list(body, me, stats, again = false) {
   if (body.rev != null && Number(body.rev) === out.rev && seenDel === out.del) return { ...out, same: true };
   const all = await readAll();
   const full = !since || seenDel !== out.del;
-  const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all);
-  return { ...out, full, msgs: msgs.map(m => view(m, me, quote)) };
+  const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all), tags = await clanTags(msgs);
+  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags)) };
 }
 
 // ---------------------------------------------------------------- écriture
@@ -353,4 +374,4 @@ async function handle(body) {
   throw refuse(400, 'Unknown action');
 }
 
-module.exports = { handle, checkMessage, queueBigRoll, BIG, KEEP, MAX, MIN_ROLLS, EDIT_MS };
+module.exports = { handle, checkMessage, offTopic, queueBigRoll, BIG, KEEP, MAX, MIN_ROLLS, EDIT_MS };

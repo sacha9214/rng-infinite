@@ -332,6 +332,9 @@
     // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
     // Duck Race : un canard choisi, le départ et le vainqueur (k : la hauteur).
     quack: ({ k = 0 } = {}) => [[quack(k), 0, .3, 0, .12]],
+    // Un ami t'écrit (idée de Sean, 2026-11-01) : « ding-ding » feutré, deux carillons doux qui montent (si5 puis mi6),
+    // bas et courts, pour prévenir sans faire sursauter.
+    ping: () => [[softChime(S.note(12), .45), 0, .15, -.1, .3], [softChime(S.note(14), .6), .1, .12, .1, .35]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.

@@ -72,6 +72,16 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   if (G.DUCK_CHANCE.reduce((x, w) => x + w, 0) !== 100) fail.push('Duck Race : les chances ne font pas 100 %');
   add('Duck Race', best, how, '97 % des vraies chances, arrondi vers le bas');
 }
+// Wheel (idée de How yz got sticky et de Gray, 2026-11-01) : aucun choix à faire, une seule stratégie ; chaque case de la
+// grande roue 1/50, l'étoile × la moyenne de la roue bonus (40 cases). Les fractions de pièce sont tirées au hasard :
+// le retour est exact, quelle que soit la mise.
+{
+  const inner = G.WHEEL_INNER.reduce((x, m) => x + m, 0) / G.WHEEL_INNER.length;
+  const r = G.WHEEL_OUTER.reduce((x, m) => x + (m === 0 ? inner : m), 0) / G.WHEEL_OUTER.length;
+  if (Math.abs(r - G.wheelRtp()) > 1e-12) fail.push('Wheel : le calcul du serveur et celui de l\'audit diffèrent');
+  if (Math.min(...G.WHEEL_OUTER.filter(m => m > 0), ...G.WHEEL_INNER) < 0.7) fail.push('Wheel : une case sous 0,7×');
+  add('Wheel', r, `toute mise (250× : 1 sur ${G.WHEEL_OUTER.length * G.WHEEL_INNER.length})`, 'au pire 0,7× ; étoile 1/50 → roue bonus 1,5× à 250×');
+}
 // Crash : point = min(500, plancher(0,99 / (1 − u), 2 décimales)). Encaisser à m gagne si le point dépasse m.
 {
   let best = 0, how = '';

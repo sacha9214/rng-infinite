@@ -23,7 +23,7 @@ for (const locale of ['fr-FR', 'en-US']) {
   // une salle de duel contre un bot, pour auditer aussi cette page
   await p.goto(B + '/#/duel'); await p.waitForSelector('#d-go'); await p.locator('[data-pref="opp"][data-v="bots"]').click(); await p.locator('#d-go').click(); await p.waitForURL(/#\/room\//); const room = new URL(p.url()).hash;
   const pages = [['#/', null], ['#/duel', null], [room, null], ['#/leaderboard', null], ['#/leaderboard', '[data-tab="coins"]'], ['#/badges', null], ['#/stats', null], ['#/history', null], ['#/shop', null], ['#/friends', null], ['#/clan', null], ['#/me', null], ['#/tournament', null], ['#/about', null],
-    ['#/gamble', '[data-game-tab="crash"]'], ['#/gamble', '[data-game-tab="mines"]'], ['#/gamble', '[data-game-tab="plinko"]'], ['#/gamble', '[data-game-tab="roulette"]'], ['#/gamble', '[data-game-tab="bj"]']];
+    ['#/gamble', '[data-game-tab="crash"]'], ['#/gamble', '[data-game-tab="mines"]'], ['#/gamble', '[data-game-tab="plinko"]'], ['#/gamble', '[data-game-tab="roulette"]'], ['#/gamble', '[data-game-tab="bj"]'], ['#/gamble', '[data-game-tab="wheel"]']];
   for (const w of widths.length ? widths : [320, 360, 390, 414, 600, 768, 1024, 1180, 1280, 1440, 1920]) {
     await p.setViewportSize({ width: Math.floor(w), height: HEIGHTS[w] || (w < 700 ? 780 : 900) });
     for (const [hash, click] of pages) {
