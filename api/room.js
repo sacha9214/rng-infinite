@@ -84,9 +84,17 @@ function rules(body) {
     ? (Number.isFinite(Number(body.target)) && Number(body.target) > 0 ? Math.min(XP_MAX, Math.max(XP_MIN, Math.round(Number(body.target)))) : XP_TARGETS[1])
     : Math.min(MAX_WINS, Math.max(1, Math.round(Number(body.target) || 3)));
   // Mise en pièces (0 = aucune) : chacun la paie en entrant, le gagnant prend le pot.
-  const stake = Shop.STAKES.includes(Number(body.stake)) ? Number(body.stake) : 0;
+  // N'importe quel nombre entier de 1 à 1 000 (idée de dog, 2026-11-01), plus seulement les montants des puces ; une
+  // mise hors limites est refusée (create), jamais changée en silence. -1 = mise invalide.
+  const stake = stakeValue(body.stake);
   return { size, mode, target, stake, isPublic: body.public !== false };
 }
+const STAKE_MAX = Math.max(...Shop.STAKES);
+const stakeValue = raw => {
+  if (raw === undefined || raw === null || raw === '' || raw === 0 || raw === '0' || raw === false) return 0;
+  const v = Number(raw);
+  return Number.isInteger(v) && v >= 1 && v <= STAKE_MAX ? v : -1;
+};
 const STAKE_REFUND_MS = 12 * 3600000; // filet : une salle à mise jamais réglée est remboursée au bout de 12 h
 const stakeOf = room => Number(room.h.stake) || 0;
 const potOf = room => Object.entries(room.h).filter(([k]) => k.startsWith('paid:')).reduce((x, [, v]) => x + (Number(v) || 0), 0);
@@ -479,6 +487,7 @@ module.exports = async (req, res) => {
         for (let i = 0; i < bots; i++) players.push(makeBot(players.map(p => p.name)));
       }
       const r = bots ? { ...rules(body), isPublic: false, stake: 0 } : rules(body); // pas de mise contre des bots
+      if (r.stake < 0) return send(res, 422, { error: `A stake is a whole number of coins from 1 to ${STAKE_MAX.toLocaleString('en-US')}` });
       const refused = r.stake ? await stakeRefusal(playerId, r.stake) : null;
       if (refused) return send(res, 422, { error: refused });
       const code = await createRoom(r, players);

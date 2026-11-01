@@ -1175,7 +1175,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   clock += 9000; // délai entre deux tirages écoulé
   const c1 = await coinsOf(w1), c2 = await coinsOf(w2);
   assert.equal((await roomPost(poor, 'create', { size: 2, stake: 1000 })).status, 422, 'pas assez pour miser');
-  assert.equal((await roomPost(w1, 'create', { size: 2, stake: 77 })).body.stake, 0, 'mise hors liste = pas de mise');
+  // Mise libre de 1 à 1 000 (idée de dog, 2026-11-01) : hors limites, refusée (plus jamais changée en « pas de mise »).
+  for (const bad of [1001, 2.5, -5, 'abc', 1e9]) { const x = await roomPost(w1, 'create', { size: 2, stake: bad }); assert.equal(x.status, 422, `mise ${bad}`); assert.match(x.body.error, /from 1 to 1,000/); }
   assert.equal((await roomPost(w1, 'create', { size: 3, stake: 100, bots: 2 })).body.stake, 0, 'jamais de mise contre des bots');
   r = await roomPost(w1, 'create', { size: 2, stake: 100, mode: 'rounds', target: 1 });
   assert.deepEqual([r.status, r.body.stake, r.body.pot], [200, 100, 100], JSON.stringify(r.body));
@@ -1916,6 +1917,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     { const h = run([['HGET', `stats:${frank.playerId}`, 'gDuck']])[0].result; assert.equal(Number(h), 3, 'compteur de manches gDuck'); }
     { const c = run([['HMGET', 'casino', 'r:duck', 'b:duck', 'w:duck']])[0].result.map(Number); assert.deepEqual(c, [3, 250, 1293], 'compte de la maison par jeu'); }
     { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes('const DUCK_W = [30, 25, 18, 12, 10, 5];') && src.includes('const dkCents = w => Math.floor(9700 / w + 1e-9);'), 'mêmes chances et multiplicateurs sur la page'); }
+  }
+  // Wheel (idée de How yz got sticky et de Gray, 2026-11-01) : deux roues à cases égales, 0,7× au pire, 250× une fois sur
+  // 2 000 tours, retour 96,9 %. Mises de 1 à 1 000 ; la fraction de pièce est jouée au hasard (comme au Plinko).
+  {
+    const G = require('../api/_gamble.js');
+    await tick(); await setCoins(frank, 1000);
+    assert.deepEqual([G.WHEEL_OUTER.length, G.WHEEL_INNER.length], [50, 40]);
+    assert.deepEqual([G.WHEEL_OUTER.filter(m => m === 0).length, Math.min(...G.WHEEL_OUTER.filter(Boolean), ...G.WHEEL_INNER), Math.max(...G.WHEEL_INNER)], [1, 0.7, 250], 'une étoile, de 0,7× à 250×');
+    assert.ok(G.wheelRtp() <= 0.97000001 && G.wheelRtp() > 0.96, `retour de la roue : ${G.wheelRtp()}`);
+    assert.ok([...G.WHEEL_OUTER, ...G.WHEEL_INNER].every(m => Number.isInteger(Math.round(m * 10)) && Math.abs(m * 10 - Math.round(m * 10)) < 1e-9), 'multiplicateurs au dixième');
+    for (const bad of [0, 1001, 2.5, 'x', -5]) { assert.equal((await g(frank, 'wheel', { bet: bad })).status, 400, `mise ${bad}`); await tick(); }
+    await setCoins(frank, 50); assert.equal((await g(frank, 'wheel', { bet: 100 })).status, 422, 'pas assez de pièces'); await tick(); await setCoins(frank, 1000);
+    // Case 1 de la grande roue : 0,7× ; 100 × 0,7 = 70 tout rond (le tirage de la fraction ne change rien).
+    forced = [1, 9];
+    r = await g(frank, 'wheel', { bet: 100 });
+    assert.deepEqual([r.status, r.body.outer, r.body.inner, r.body.bonus, r.body.mult, r.body.win, r.body.coins], [200, 1, null, false, 0.7, 70, 970], JSON.stringify(r.body));
+    // L'étoile (case 0) puis la case 0 de la roue bonus : 250×.
+    await tick(); forced = [0, 0, 9];
+    r = await g(frank, 'wheel', { bet: 10 });
+    assert.deepEqual([r.body.bonus, r.body.inner, r.body.mult, r.body.win, r.body.coins], [true, 0, 250, 2500, 3460]);
+    // Mise de 1 pièce sur 0,7× : 7 dixièmes, la pièce est gagnée 7 fois sur 10 (tirage 0 à 6), perdue sinon.
+    await tick(); forced = [2, 6]; r = await g(frank, 'wheel', { bet: 1 }); assert.deepEqual([r.body.mult, r.body.win], [0.7, 1]);
+    await tick(); forced = [2, 7]; r = await g(frank, 'wheel', { bet: 1 }); assert.deepEqual([r.body.mult, r.body.win, r.body.coins], [0.7, 0, 3459]);
+    await tick();
+    { const h = run([['HGET', `stats:${frank.playerId}`, 'gWheel']])[0].result; assert.equal(Number(h), 4, 'compteur de manches gWheel'); }
+    { const c = run([['HMGET', 'casino', 'r:wheel', 'b:wheel', 'w:wheel']])[0].result.map(Number); assert.deepEqual(c, [4, 112, 2571], 'compte de la maison par jeu'); }
+    { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes(`const WHEEL_OUTER = ${JSON.stringify(G.WHEEL_OUTER).replace(/,/g, ', ')};`) && src.includes(`const WHEEL_INNER = ${JSON.stringify(G.WHEEL_INNER).replace(/,/g, ', ')};`), 'mêmes roues sur la page'); }
   }
   await tick(); await setCoins(frank, 1162);
   // Crash : point tiré à 2,00 (u = 0,505). Encaissé à ×1,41 après 5 s ; puis une manche laissée exploser.
@@ -5320,6 +5348,56 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
 
   // 3. Pain dans le chat global : 🍞 🥖 🥐 passent le filtre tels quels.
   assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
+}
+
+// ================================================================ Groupe social du 2026-11-01
+{
+  const { cleanChat, hideCodes } = require(path.join(ROOT, 'api/_chat.js'));
+  const { checkMessage, offTopic } = require(path.join(ROOT, 'api/_global.js'));
+  // Codes du Code Hunter cachés (idée de R77) : écrits tels quels, espacés, en minuscules ou en chiffres ; jamais un mot voisin.
+  for (const t of ['code ROLLFOREVER', 'consolecat', 'Z E R O H E R O', 'c0ns0le-cat', 'roll forever!']) {
+    assert.ok(cleanChat(t).includes('[secret code]'), `caché : ${t} → ${cleanChat(t)}`);
+    assert.ok(!/rollforever|consolecat|zerohero/i.test(cleanChat(t).replace(/[^a-z]/gi, '')), `plus rien du code : ${t}`);
+    assert.ok(checkMessage(t).includes('[secret code]'), `caché dans le chat global : ${t}`);
+  }
+  for (const ok of ['console', 'roll for the win', 'zero', 'hero', 'my cat', 'SACHA']) assert.equal(hideCodes(ok), ok, `pas un code : ${ok}`);
+  { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(!src.includes('HUNT_CODES'), 'la liste des codes reste sur le serveur'); }
+  // Proxys et débloqueurs (idée de mateopotato) : refusés dans le chat global ; les phrases normales passent.
+  for (const t of ['use a proxy', 'PR0XY', 'p r o x y', 'croxyproxy', 'holy unblocker', 'unblocked games 66', 'get a VPN', 'how to bypass goguardian', 'securly', 'get around the school filter', 'tor browser']) {
+    assert.ok(offTopic(t), `proxy : ${t}`); assert.throws(() => checkMessage(t), /proxies, VPNs/, t);
+  }
+  for (const t of ['approximately 50%', 'my friend unblocked me', 'proximity', 'the epoxy skin', 'I will pass by later', 'filter coffee', 'my school blocked the game', 'Roxy', 'torn paper skin', 'go past the finish line']) {
+    assert.ok(!offTopic(t), `faux positif : ${t}`); assert.doesNotThrow(() => checkMessage(t), t);
+  }
+  // Chat global : le code est caché dans le message gardé, et le tag du clan suit le pseudo (idée de R77).
+  const friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const mk = (tag, name) => { const id = tag.repeat(8), secret = (tag + 'd').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 500], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const sa = mk('5a', 'Socialann'), sb = mk('5b', 'Socialbob');
+  run([['HSET', 'clantag', sa.playerId, 'SOCL|gold'], ['DEL', 'gc:sysq']]);
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...extra } });
+  let r = await gc(sa, 'gcSend', { text: 'psst the code is ZEROHERO' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const mine = r.body.msgs.at(-1);
+  assert.equal(mine.text, 'psst the code is [secret code]'); assert.deepEqual(mine.clan, { tag: 'SOCL', c: 'gold' });
+  assert.ok(!JSON.stringify(run([['LRANGE', 'gc:msgs', 0, -1]])[0].result).includes('ZEROHERO'), 'jamais gardé');
+  r = await gc(sb, 'gcSend', { text: 'nice' }); assert.equal(r.body.msgs.at(-1).clan, undefined, 'sans clan : pas de tag');
+  assert.deepEqual(r.body.msgs.find(m => m.id === mine.id).clan, { tag: 'SOCL', c: 'gold' }, 'le tag se lit pour tout le monde');
+  assert.ok(!JSON.stringify(r.body).includes(sa.playerId), 'aucun identifiant');
+  run([['HDEL', 'clantag', sa.playerId]]);
+  r = await gc(sb, 'gcList'); assert.equal(r.body.msgs.find(m => m.id === mine.id).clan, undefined, 'le tag suit le clan d\'aujourd\'hui');
+  run([['DEL', `gc:rl:${sa.playerId}`]]);
+  r = await gc(sa, 'gcSend', { text: 'where can I find a proxy' }); assert.equal(r.status, 422); assert.match(r.body.error, /proxies/);
+  // Messages entre amis : le code est caché aussi (cleanChat).
+  run([['SADD', `fr:${sa.playerId}`, sb.playerId], ['SADD', `fr:${sb.playerId}`, sa.playerId]]);
+  r = await call(friendsApi, { method: 'POST', body: { action: 'message', name: 'Socialbob', text: 'try c o n s o l e c a t', playerId: sa.playerId, secret: sa.secret } });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.messages.at(-1).text, 'try [secret code]');
+  // Mise libre en duel (idée de dog) : 77 pièces, payées en entrant, gardées dans le pot.
+  const sc = mk('5c', 'Stakecat');
+  run([['HINCRBY', `stats:${sc.playerId}`, 'bonus', 500]]);
+  r = await roomPost(sc, 'create', { size: 2, stake: 77 });
+  assert.deepEqual([r.status, r.body.stake, r.body.pot], [200, 77, 77], JSON.stringify(r.body));
+  // 🍳 dans la grille d'emojis (idée de MattyFaux-Lucky), qui sert aussi entre amis et en duel (PRISMA123).
+  { const src = require('node:fs').readFileSync(new URL('../js/app.js', import.meta.url), 'utf8'); assert.ok(src.includes("'🥐', '🍳'") && src.includes('wireEmojis(m, () => input)') && src.includes("wireEmojis($('#room-chat')"), 'emojis entre amis et en duel'); }
+  assert.equal(cleanChat('gm 🍳🍞'), 'gm 🍳🍞', 'les emojis passent le filtre des amis et des duels');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

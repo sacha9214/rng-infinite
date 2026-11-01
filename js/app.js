@@ -362,7 +362,8 @@
   // Bouton de tirage (« Generate », « Roll again », « Roll round ») : il porte le skin choisi dans la boutique, par
   // défaut celui du skin de nombre équipé (css/buttons.css). settings.button = bouton à afficher, calculé depuis la
   // boutique ; tant qu'elle n'a pas répondu sur cet appareil, on suit le skin connu.
-  const ROLL_BUTTONS = '#roll-btn, #r-again, #room-roll';
+  // .gc-send : le bouton Send du chat global porte aussi le bouton choisi (idée d'Idkwhatnamemyself, 2026-11-01).
+  const ROLL_BUTTONS = '#roll-btn, #r-again, #room-roll, .gc-send';
   const genClass = raw => {
     const id = Shop.resolve(raw === undefined ? Store.settings.button || Store.settings.skin : raw);
     return id && id !== 'classic' && (Shop.byId.has(id) || Shop.buttonById.has(id)) ? ` gen-${id}` : '';
@@ -3735,6 +3736,8 @@
   const titleEmoji = id => (id && Ach.byId.get(id) && !Ach.byId.get(id).hidden ? ` ${Ach.byId.get(id).emoji}` : '');
   const goalText = d => (d.mode === 'xp' ? `first to ${compact(d.target)} XP` : `first to ${plural(d.target, 'round win')}`);
 
+  // Mise libre de 1 à 1 000 pièces (idée de dog, 2026-11-01), à côté des puces ; même plafond que le serveur (api/room.js).
+  const STAKE_MAX = Math.max(...Shop.STAKES);
   // Derniers réglages choisis, retenus sur l'appareil.
   function duelPrefs() {
     const d = Store.settings.duel || {};
@@ -3744,7 +3747,7 @@
       wins: Math.min(DUEL_WINS_MAX, Math.max(1, Math.round(Number(d.wins)) || 3)),
       xp: Number(d.xp) > 0 ? Math.min(DUEL_XP_MAX, Math.max(DUEL_XP_MIN, Math.round(Number(d.xp)))) : 50000,
       isPublic: d.isPublic !== false,
-      stake: Shop.STAKES.includes(Number(d.stake)) ? Number(d.stake) : 0,
+      stake: Number.isInteger(Number(d.stake)) && Number(d.stake) >= 0 && Number(d.stake) <= STAKE_MAX ? Number(d.stake) : 0,
       opp: d.opp === 'bots' ? 'bots' : 'friends',
     };
   }
@@ -3822,6 +3825,7 @@
         <div class="setup-step">
           <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
           ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
+          <div class="setup-line setup-custom"><span class="panel-note">or type your own</span><input class="input setup-input${Shop.STAKES.includes(p.stake) ? '' : ' on'}" data-type="stake" inputmode="numeric" maxlength="5" placeholder="e.g. 75" value="${Shop.STAKES.includes(p.stake) ? '' : p.stake}" aria-label="Coins to bet"><span class="panel-note">coins · 1 to ${fmt(STAKE_MAX)}</span></div>
           <p class="panel-note d-wallet" id="d-wallet">${Store.settings.coins != null ? `You have 🪙 ${fmt(Store.settings.coins)}` : ''}</p>
           <p class="panel-note setup-help">${p.stake
             ? `Each player pays 🪙 ${fmt(p.stake)} when joining. The winner takes the pot of 🪙 ${fmt(p.stake * p.size)}. Refunded on a draw or if everyone leaves. Needs 30 rolls on your account.`
@@ -3855,9 +3859,9 @@
       const field = e.target.closest('[data-type]');
       if (!field) return;
       const p = duelPrefs(), key = field.dataset.type, n = parseAmount(field.value);
-      if (!Number.isFinite(n) || n <= 0) { if (field.value.trim()) toast(key === 'xp' ? 'Type an amount of XP, like 300k or 2m' : 'Type a number of rounds'); return drawSetup(); }
-      const [min, max] = key === 'xp' ? [DUEL_XP_MIN, DUEL_XP_MAX] : [1, DUEL_WINS_MAX], value = Math.min(max, Math.max(min, n));
-      if (value !== n) toast(key === 'xp' ? `Between ${compact(min)} and ${compact(max)} XP` : `Between ${min} and ${max} rounds`);
+      if (!Number.isFinite(n) || n <= 0) { if (field.value.trim()) toast(key === 'xp' ? 'Type an amount of XP, like 300k or 2m' : key === 'stake' ? 'Type a number of coins from 1 to 1,000' : 'Type a number of rounds'); return drawSetup(); }
+      const [min, max] = key === 'xp' ? [DUEL_XP_MIN, DUEL_XP_MAX] : key === 'stake' ? [1, STAKE_MAX] : [1, DUEL_WINS_MAX], value = Math.min(max, Math.max(min, Math.round(n)));
+      if (value !== n) toast(key === 'xp' ? `Between ${compact(min)} and ${compact(max)} XP` : key === 'stake' ? `A stake is 1 to ${fmt(max)} coins` : `Between ${min} and ${max} rounds`);
       Store.setSetting('duel', { ...p, [key]: value });
       drawSetup();
     };
@@ -4269,6 +4273,12 @@
       <circle cx="34.5" cy="10.2" r="1.7" fill="#1f2937"/><circle cx="35" cy="9.6" r=".55" fill="#fff"/>
       <ellipse cx="28.5" cy="8.6" rx="3" ry="1.5" fill="#fff" opacity=".45"/>
     </svg>`;
+  // Wheel (idée de How yz got sticky, 2026-11-01, et Multiplier Wheel de Gray, 2026-10-14) : les deux roues, case par
+  // case, copiées d'api/_gamble.js (vérifié par tools/test-api.mjs). 0 = l'étoile qui lance la roue bonus du centre.
+  const WHEEL_OUTER = [0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 2, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1.5, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.8, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 1, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7];
+  const WHEEL_INNER = [250, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 1.5, 5, 2, 3, 1.5, 20, 2, 3, 1.5, 5, 2, 3, 1.5, 10, 2, 3, 5, 5, 2, 3, 1.5, 50, 2, 3, 1.5, 5, 3, 10, 2];
+  // Couleur de chaque multiplicateur : du gris (0,7×) à l'or (250×), la même sur la roue et dans la liste des chances.
+  const WHEEL_COLORS = { 0: '#fbbf24', 0.7: '#475569', 0.8: '#64748b', 1: '#0f766e', 1.5: '#2563eb', 2: '#7c3aed', 3: '#a21caf', 5: '#e11d48', 10: '#ea580c', 20: '#d97706', 50: '#eab308', 250: '#fde047' };
   const SUITS = ['♠', '♥', '♦', '♣'], RANKS =['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Une carte : recto (deux index et la couleur en grand) et verso ; `fresh` la fait glisser depuis le sabot et se retourner.
   const cardHTML = (c, fresh, i = 0) => `<span class="pcard${c ? (c.s === 1 || c.s === 2 ? ' red' : '') : ' down'}${fresh ? ' deal' : ''}" style="--i:${i}" data-no-i18n><span class="pc-in"><span class="pc-front">${c ? `<b>${RANKS[c.r]}<i>${SUITS[c.s]}</i></b><em>${c.r > 10 ? RANKS[c.r] : SUITS[c.s]}</em><b class="low">${RANKS[c.r]}<i>${SUITS[c.s]}</i></b>` : ''}</span><span class="pc-back"></span></span></span>`;
@@ -4276,7 +4286,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -4330,7 +4340,7 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
   // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
   // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
   // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
@@ -4344,6 +4354,7 @@
     dice: { goal: 'Guess where the 100-sided die lands.', how: ['Roll under: you win if the die lands below your target.', 'Roll over: you win if the die lands above your target.', 'Guess the die: pick one face of a 6-sided die.'], pays: ['The smaller your chance, the bigger the payout: it is shown before you roll.', 'Guessing the 6-sided die pays 5.82×.'], bets: BETS_STD },
     teddy: { goal: 'Pull the confetti popper without making it go BOOM.', how: ['Press Start: one of the 6 chambers is loaded.', 'Every pull that just clicks raises your payout.', 'Cash out whenever you like. BOOM and you lose your bet.'], pays: ['The ladder shows what each click pays, up to 5.82× after 5 clicks.'], bets: BETS_STD },
     duck: { goal: 'Pick the rubber duck that wins the race.', how: ['Pick one of the 6 ducks, then press Race.', 'The ducks paddle to the finish line: the first one across wins.', 'If your duck wins, you win. If not, you lose your bet.'], pays: ['Sunny is the favourite: wins 30% of races and pays 3.23×.', 'Blaze is the long shot: wins 5% of races and pays 19.40×.', 'Every duck shows its chance and its payout.'], bets: BETS_STD },
+    wheel: { goal: 'Spin the wheel and win its multiplier.', how: ['Pick your bet, then press Spin.', 'The big wheel stops on a multiplier: you get your bet × that number.', 'If it stops on the ★, the bonus wheel in the middle spins too.'], pays: ['The worst you can get is 0.7×: you never lose more than 30% of your bet.', 'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.', '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.'], bets: 'Bets from 1 to 1,000 coins.' },
     plinko: { goal: 'Drop balls and see where they land.', how: ['Press Drop: the ball bounces down the pegs.', 'The slot it lands in is your multiplier.', 'Drop as many balls as you like, even lots at once.'], pays: ['Normal: the edges pay up to 33×, the middle pays less than your bet.', 'High risk: up to 1,000× on the edges, but the middle pays almost nothing.'], bets: 'Bets from 1 to 1,000 coins per ball, 100 at most in High risk.' },
     slots: { goal: 'Line up three of the same symbol.', how: ['Press Spin or pull the lever.', 'The three reels stop one after the other.'], pays: ['Three of a kind pays the most: 7 7 7 pays 250×.', 'Two 7s, two cherries or two lemons pay a little.', 'The full table is under the machine.'], bets: BETS_STD },
     roulette: { goal: 'Guess where the ball stops.', how: ['Pick a chip, then click the bets you want: you can place several.', 'Press Spin: the ball lands on a number from 0 to 36.'], pays: ['Red, Black, Even, Odd, 1–18 or 19–36 pays 2×.', 'A group of 12 numbers pays 3×.', 'A single number pays 36×. The green 0 only pays a bet on 0.'], bets: 'Up to 1,000 coins per spin in total.' },
@@ -4465,6 +4476,13 @@
             <div class="dk-stats"><span><i>Win chance</i><b class="mono" id="dk-chance"></b></span><span><i>Multiplier</i><b class="mono" id="dk-mult"></b></span><span><i>Payout</i><b class="mono" id="dk-pay"></b></span></div>
             <div class="actions" style="justify-content:center"><button class="btn-roll small" id="dk-go">Race</button></div>
             <p class="panel-note g-result" id="dk-result"></p>
+          </div>
+          <div class="panel g-game" data-game="wheel">
+            <div class="panel-head"><h3 class="panel-title">Wheel</h3><span class="panel-note">the worst is 0.7× · the ★ spins the bonus wheel · up to 250×</span></div>
+            <div class="gw-stage" id="gw-stage" data-state="idle"><canvas id="gw-canvas" width="520" height="520" role="img" aria-label="Wheel of multipliers"></canvas><b class="gw-hub mono" id="gw-hub" data-no-i18n>★</b></div>
+            <div class="gw-odds" id="gw-odds"></div>
+            <div class="actions" style="justify-content:center"><button class="btn-roll small" id="gw-go">Spin</button></div>
+            <p class="panel-note g-result" id="gw-result"></p>
           </div>
           <div class="panel g-game" data-game="slots">
             <div class="panel-head"><h3 class="panel-title">Slots</h3><span class="panel-note">three of a kind pays the most · 7 7 7 pays 250×</span></div>
@@ -4891,9 +4909,10 @@
     });
     // ---- onglets des jeux
     const showTab = id => {
-      // Les pièces de 1 et 5 n'existent qu'au Plinko : ailleurs elles disparaissent, et la mise remonte à 10.
+      // Les pièces de 1 et 5 n'existent qu'au Plinko et à la roue (mises dès 1 pièce) : ailleurs elles disparaissent, et
+      // la mise remonte à 10.
       $('#g-chips').dataset.game = id;
-      if (id !== 'plinko' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
+      if (id !== 'plinko' && id !== 'wheel' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
       const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
       if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
@@ -5433,6 +5452,101 @@
     });
     drawDuck(); dkPlace(DUCK_W.map(() => 0));
     $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) drawDuck(); });
+    // ---- Wheel (idée de How yz got sticky et de Gray, api/_gamble.js) : deux roues à cases égales l'une dans l'autre,
+    // la grande (50 cases) et la roue bonus du centre (40 cases), lancée par l'étoile ★. Le serveur a déjà tiré les cases ;
+    // ici les roues tournent jusqu'à elles (élan, longue décélération, petit rebond du clapet), une case par cran.
+    const gw = $('#gw-canvas').getContext('2d'), GC = 260, GW_OUT = (Math.PI * 2) / WHEEL_OUTER.length, GW_IN = (Math.PI * 2) / WHEEL_INNER.length;
+    const gwLabel = m => (m === 0 ? '★' : String(m));
+    Gamble.gwA = Gamble.gwA || 0; Gamble.gwB = Gamble.gwB || 0;
+    const drawWheelGame = (a, b, bonus) => {
+      gw.clearRect(0, 0, 520, 520);
+      const disc = (r, fill) => { gw.beginPath(); gw.arc(GC, GC, r, 0, Math.PI * 2); gw.fillStyle = fill; gw.fill(); };
+      // Cerclage de jeu télévisé : un anneau sombre et 25 ampoules, qui s'allument une sur deux pendant que ça tourne.
+      const rim = gw.createRadialGradient(GC, GC, 236, GC, GC, 259); rim.addColorStop(0, '#1e1b4b'); rim.addColorStop(.6, '#312e81'); rim.addColorStop(1, '#0f0c29');
+      disc(259, rim);
+      for (let k = 0; k < 25; k++) {
+        const t = k / 25 * Math.PI * 2, lit = (k + Math.floor(a / GW_OUT)) % 2 === 0;
+        gw.beginPath(); gw.arc(GC + Math.sin(t) * 248, GC - Math.cos(t) * 248, 4.2, 0, Math.PI * 2);
+        gw.fillStyle = lit ? '#fde68a' : '#78716c'; gw.fill();
+      }
+      const ring = (list, seg, r0, r1, rot, font, dim) => {
+        gw.save(); gw.translate(GC, GC); gw.rotate(rot);
+        list.forEach((m, i) => {
+          const a0 = i * seg - Math.PI / 2;
+          gw.beginPath(); gw.arc(0, 0, r1, a0, a0 + seg); gw.arc(0, 0, r0, a0 + seg, a0, true); gw.closePath();
+          gw.fillStyle = WHEEL_COLORS[m] || '#475569'; gw.fill();
+          gw.strokeStyle = 'rgba(15, 12, 41, .55)'; gw.lineWidth = 1.2; gw.stroke();
+          // Le chiffre suit le rayon, lisible de l'extérieur vers le centre.
+          gw.save(); gw.rotate(i * seg + seg / 2); gw.translate(0, -(r0 + r1) / 2); gw.rotate(Math.PI / 2);
+          gw.fillStyle = m === 250 || m === 50 || m === 0 ? '#1c1917' : '#fff'; gw.font = m >= 20 || m === 0 ? `900 ${font + 3}px Inter, sans-serif` : `700 ${font}px Inter, sans-serif`;
+          gw.textAlign = 'center'; gw.textBaseline = 'middle'; gw.fillText(gwLabel(m), 0, 1); gw.restore();
+        });
+        if (dim) { gw.beginPath(); gw.arc(0, 0, r1, 0, Math.PI * 2); gw.arc(0, 0, r0, 0, Math.PI * 2, true); gw.fillStyle = 'rgba(15, 12, 41, .5)'; gw.fill(); }
+        gw.restore();
+      };
+      ring(WHEEL_OUTER, GW_OUT, 172, 236, a, 15, false);
+      disc(172, '#0f0c29');
+      ring(WHEEL_INNER, GW_IN, 66, 166, b, 14, !bonus);
+      // Clapets fixes à midi, posés sur le bord extérieur de chaque roue : la case juste dessous est le résultat.
+      const flap = (y, w, h, col) => { gw.beginPath(); gw.moveTo(GC - w, y); gw.lineTo(GC + w, y); gw.lineTo(GC, y + h); gw.closePath(); gw.fillStyle = col; gw.fill(); gw.strokeStyle = '#0f0c29'; gw.lineWidth = 2.5; gw.stroke(); };
+      flap(GC - 254, 14, 34, '#f8fafc');
+      flap(GC - 174, 11, 26, bonus ? '#fde047' : '#94a3b8');
+    };
+    // Chances de chaque multiplicateur (grande roue + étoile × roue bonus), sous la roue : ce qu'on voit est la vraie chance.
+    const gwChance = m => WHEEL_OUTER.filter(x => x === m).length / WHEEL_OUTER.length + WHEEL_OUTER.filter(x => x === 0).length / WHEEL_OUTER.length * WHEEL_INNER.filter(x => x === m).length / WHEEL_INNER.length;
+    const gwOdds = p => (p >= 0.01 ? `${+(p * 100).toFixed(p < 0.1 ? 1 : 0)}%` : `1 in ${fmt(Math.round(1 / p))}`);
+    $('#gw-odds').innerHTML = [...new Set([...WHEEL_OUTER, ...WHEEL_INNER].filter(Boolean))].sort((x, y) => x - y)
+      .map(m => `<span class="gw-odd" style="--gw:${WHEEL_COLORS[m]}"><i aria-hidden="true"></i><b class="mono" data-no-i18n>${m}×</b><span class="mono" data-no-i18n>${gwOdds(gwChance(m))}</span></span>`).join('');
+    const gwLabelGo = () => { $('#gw-go').textContent = `Spin · ${fmt(Gamble.chip)}`; $('#gw-go').disabled = !!Gamble.busy; };
+    // Une roue tourne de « from » jusqu'à la case k (au hasard dans la case, jamais sur un bord) : 4 ou 5 tours, puis une
+    // longue décélération. Un cliquetis à chaque case qui passe sous le clapet.
+    const gwSpin = (from, list, seg, k, ms, paint) => new Promise(done => {
+      const target = -(k + 0.5 + (Math.random() - 0.5) * 0.6) * seg, base = from - (from % (Math.PI * 2));
+      const end = base + (4 + Math.floor(Math.random() * 2)) * Math.PI * 2 + ((target % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const t0 = performance.now(); let lastCell = Math.floor(from / seg), lastTick = 0;
+      const ease = u => 1 - Math.pow(1 - u, 4); // pas de dépassement : la roue ne revient jamais en arrière sur une autre case
+      const frame = now => {
+        if (currentView !== 'gamble' || !gw.canvas.isConnected) { done(end); return; }
+        const u = Math.min(1, (now - t0) / ms), x = from + (end - from) * ease(u);
+        paint(x);
+        const cell = Math.floor(x / seg);
+        if (cell !== lastCell && now - lastTick > 40) { Sound.tick({ k: cell % 12, soft: 1 }); lastTick = now; }
+        lastCell = cell;
+        if (u < 1) requestAnimationFrame(frame); else done(end);
+      };
+      requestAnimationFrame(frame);
+    });
+    const gwHub = (text, kind) => { const h = $('#gw-hub'); h.textContent = text; h.dataset.kind = kind || ''; };
+    drawWheelGame(Gamble.gwA, Gamble.gwB, false); gwLabelGo();
+    $('#g-chips').addEventListener('click', () => { if (!Gamble.busy) gwLabelGo(); });
+    $('#gw-go').addEventListener('click', async () => {
+      if (Gamble.busy) return;
+      Gamble.busy = true; gwLabelGo();
+      const stage = $('#gw-stage');
+      $('#gw-result').textContent = ''; gwHub('…', ''); stage.dataset.state = 'spinning';
+      try {
+        const res = await gamble('wheel', { bet: Gamble.chip });
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        if (!reducedMotion) {
+          Gamble.gwA = await gwSpin(Gamble.gwA, WHEEL_OUTER, GW_OUT, res.outer, 3600, x => drawWheelGame(x, Gamble.gwB, false));
+          if (res.bonus && currentView === 'gamble') {
+            gwHub('★', 'bonus'); stage.dataset.state = 'bonus'; Sound.play('riser');
+            Gamble.gwB = await gwSpin(Gamble.gwB, WHEEL_INNER, GW_IN, res.inner, 3400, x => drawWheelGame(Gamble.gwA, x, true));
+          }
+        } else {
+          Gamble.gwA = -(res.outer + 0.5) * GW_OUT; if (res.bonus) Gamble.gwB = -(res.inner + 0.5) * GW_IN;
+          drawWheelGame(Gamble.gwA, Gamble.gwB, res.bonus);
+        }
+        if (currentView !== 'gamble') { Store.setSetting('coins', res.coins); return; }
+        stage.dataset.state = 'done';
+        gwHub(`${res.mult}×`, res.mult >= 50 ? 'jackpot' : res.mult > 1 ? 'win' : res.mult === 1 ? 'even' : 'lose');
+        say($('#gw-result'), res.win, res.bet, `${res.bonus ? '★ Bonus wheel · ' : ''}${res.mult}× · you get ${fmt(res.win)} coin${res.win === 1 ? '' : 's'}${res.win < res.bet ? ` (−${fmt(res.bet - res.win)})` : ''}`);
+        if (res.mult >= 5) { const tier = res.mult >= 250 ? 'godlike' : res.mult >= 50 ? 'mythic' : res.mult >= 10 ? 'anomaly' : 'epic'; Sound.play('tier', { tier }); FX.celebrate(res.mult >= 50 ? 'mythic' : res.mult >= 10 ? 'anomaly' : 'epic', stage); }
+        else if (res.mult > 1) Sound.play('reveal', { small: 1 });
+        else Sound.play('lock', { i: 0, soft: 1 });
+        showCoins(res.coins);
+      } catch (err) { stage.dataset.state = 'idle'; gwHub('★', ''); fail(err); } finally { Gamble.busy = false; gwLabelGo(); }
+    });
     // ---- pile ou face « double ou rien » (api/_gamble.js) : la pièce tourne pendant que le serveur répond, puis se pose
     // sur le côté tiré. Gagné : on encaisse ou on relance pour doubler encore (×1,96 par lancer gagné, 8 au plus).
     const CF_MULT = k => Math.floor(Math.pow(1.9, k) * 100) / 100, CF_MAX = 7; // mêmes valeurs que api/_gamble.js
@@ -6371,7 +6485,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
@@ -7150,7 +7264,7 @@
     count: 0, timer: 0,
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
-    set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
+    set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) { toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); dmPing(); } this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
     watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
@@ -7172,15 +7286,47 @@
     img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
     img.src = url;
   });
+  // Emojis du chat global aussi entre amis et dans le chat des duels (idée de PRISMA123, 2026-11-01 : « pour s'envoyer
+  // des emojis entre amis »). Même grille (GChat.EMOJIS), même bouton 😊, insérés à l'endroit du curseur. Le serveur garde
+  // les emojis tels quels (api/_chat.js cleanChat).
+  const EMO_BTN = '<button type="button" class="gc-emo-btn" data-emo-toggle aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button>';
+  const emoGridHTML = () => `<div class="gc-emojis emo-pop" hidden role="group" aria-label="Emoji">${GChat.EMOJIS.map(e => `<button type="button" data-emo-pick="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
+  function insertEmoji(i, e) {
+    if (!i || i.disabled) return;
+    if (i.value.length + e.length > (i.maxLength > 0 ? i.maxLength : 140)) { toast('Your message is full'); return; }
+    const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
+    i.value = i.value.slice(0, a) + e + i.value.slice(b);
+    if (!matchMedia('(pointer: coarse)').matches) i.focus(); // sur téléphone, le clavier cacherait la grille
+    try { i.setSelectionRange(a + e.length, a + e.length); } catch (err) { /* champ caché */ }
+  }
+  // Branche la grille d'un chat (root contient le bouton, la grille et le champ) ; rend show(on) pour la refermer.
+  function wireEmojis(root, input) {
+    const grid = () => root.querySelector('.emo-pop'), show = on => {
+      const g = grid(), b = root.querySelector('[data-emo-toggle]');
+      if (g) g.hidden = !on;
+      if (b) b.setAttribute('aria-expanded', String(on));
+    };
+    root.addEventListener('click', e => {
+      const pick = e.target.closest('[data-emo-pick]');
+      if (pick) { insertEmoji(input(), pick.dataset.emoPick); return; }
+      if (e.target.closest('[data-emo-toggle]')) { const g = grid(); show(!!g && g.hidden); return; }
+      if (grid() && !grid().hidden && !e.target.closest('.emo-pop, input')) show(false);
+    });
+    return show;
+  }
+  // Petit « ding » doux quand un ami t'écrit (idée de Sean, 2026-11-01) : avec le message en bas de l'écran, ou dans la
+  // conversation ouverte. Synthétisé (js/sound.js « ping ») ; muet quand le son du jeu est coupé (Sound.enable).
+  const dmPing = () => Sound.play('ping');
   function openChat(name) {
-    let poll = 0, sig = '';
+    let poll = 0, sig = '', lastThem = null;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     openModal(`
       <div class="dm-head"><h2>💬 <span data-no-i18n>${esc(name)}</span></h2><button class="btn ghost" id="dm-block"></button></div>
       <p class="panel-note dm-note">Only you two can read this. Messages are filtered and deleted after 7 days. Never share personal details.</p>
       <div class="dm-list" id="dm-list" aria-live="polite"><div class="empty">Loading…</div></div>
-      <form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot (you can also paste it with Ctrl/Cmd + V)">📷<input type="file" id="dm-file" accept="image/*" hidden></label><input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
+      ${emoGridHTML()}<form class="dm-form" id="dm-form"><label class="btn ghost dm-pic" title="Send an image or a screenshot (you can also paste it with Ctrl/Cmd + V)">📷<input type="file" id="dm-file" accept="image/*" hidden></label>${EMO_BTN}<input class="input" id="dm-text" maxlength="140" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>`, m => {
       const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
+      const emojis = wireEmojis(m, () => input);
       const imgs = new Map();
       // Une image choisie (📷), collée (Ctrl/Cmd + V) ou glissée dans la conversation part tout de suite.
       const sendImage = async f => {
@@ -7206,6 +7352,9 @@
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
         const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        const them = d.messages.filter(x => !x.me).reduce((t, x) => Math.max(t, x.t), 0);
+        if (lastThem !== null && them > lastThem) dmPing();
+        lastThem = them;
         if (html === sig) return;
         const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
         sig = html; list.innerHTML = html;
@@ -7226,7 +7375,7 @@
         e.preventDefault();
         if (!input.value.trim()) return;
         const btn = form.querySelector('button'); btn.disabled = true;
-        try { draw(await Online.friends('message', name, { text: input.value })); input.value = ''; list.scrollTop = list.scrollHeight; }
+        try { draw(await Online.friends('message', name, { text: input.value })); input.value = ''; list.scrollTop = list.scrollHeight; emojis(false); }
         catch (err) { toast([403, 422, 429].includes(err.status) ? err.message : 'Could not send your message, try again'); }
         btn.disabled = false; input.focus();
       });
@@ -7518,7 +7667,7 @@
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
       $('#chat-hidden').innerHTML = hidden ? `${plural(hidden, 'player')} hidden · <button class="chat-show" data-chat-show>Show again</button>` : '';
       setHTML($('#chat-foot'), me
-        ? '<form class="chat-form" id="chat-form"><input class="input" id="chat-input" maxlength="140" autocomplete="off" enterkeyhint="send" placeholder="Write a message…" aria-label="Message"><button class="btn" type="submit">Send</button></form>'
+        ? `${emoGridHTML()}<form class="chat-form" id="chat-form">${EMO_BTN}<input class="input" id="chat-input" maxlength="140" autocomplete="off" enterkeyhint="send" placeholder="Write a message…" aria-label="Message"><button class="btn" type="submit">Send</button></form>`
         : '<p class="panel-note">Only players in this duel can write.</p>');
     }
     const last = chat.length ? chat[chat.length - 1] : null;
@@ -7753,12 +7902,13 @@
         Room.chatSig = '';
         drawChat(Room.data);
       });
+      const roomEmojis = wireEmojis($('#room-chat'), () => $('#chat-input')); // emojis (idée de PRISMA123, 2026-11-01)
       $('#room-chat').addEventListener('submit', async e => {
         e.preventDefault();
         const input = $('#chat-input'), text = input.value.trim();
         if (!text || input.disabled) return;
         input.disabled = true;
-        if (await sendChat(text)) input.value = '';
+        if (await sendChat(text)) { input.value = ''; roomEmojis(false); }
         input.disabled = false;
         input.focus();
       });
@@ -9023,11 +9173,11 @@
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
       const me = this.me || {}, signed = !!Store.player.name;
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // Une seule ligne « pseudo [TAG] titre : message » (idée d'Idkwhatnamemyself, 2026-11-01 : le pseudo et le texte
+      // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
+      // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          <div class="gc-meta">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${titleHTML(m.title)}<time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-${m.edited ? '<span class="gc-edited">edited</span>' : ''}
-            <span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></div>
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-text" data-no-i18n>${this.textHTML(m)}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? `<button data-gc="delete">🗑️ Delete</button>${m.mine ? '' : '<button data-gc="mute" data-dur="1h">🔇 1 h</button><button data-gc="mute" data-dur="24h">🔇 24 h</button><button data-gc="mute" data-dur="perm">⛔ Forever</button>'}` : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
@@ -9085,7 +9235,8 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
     // Emojis (idée de Deadshot, 2026-10-27) : une grille choisie à la main (pas d'emoji composé, pas de marque), insérés à
     // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
     // Pain (Deadshot, G8_floppa, 2026-10-28) : tout le monde écrit « bread » dans le chat, donc 🍞 🥖 🥐 en tête.
-    EMOJIS: ['🍞', '🥖', '🥐', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    // 🍳 juste après le pain (idée de MattyFaux-Lucky, 2026-11-01).
+    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
     toggleEmoji(on = !this.emojiOpen) {
       this.emojiOpen = on;
       const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');
@@ -9109,7 +9260,7 @@ ${m.edited ? '<span class="gc-edited">edited</span>' : ''}
       if (me && me.can) {
         foot.innerHTML = `<div class="gc-replying" hidden></div>
           <div class="gc-emojis" hidden role="group" aria-label="Emoji">${this.EMOJIS.map(e => `<button type="button" data-emoji="${e}" aria-label="${e}">${e}</button>`).join('')}</div>
-          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send">Send</button></form>`;
+          <form class="gc-form"><button type="button" class="gc-emo-btn" data-gc-emoji aria-label="Emoji" title="Emoji" aria-expanded="false">😊</button><input class="input gc-input" maxlength="${this.max || 200}" placeholder="Write a message… (@name to mention)" aria-label="Write a message" autocomplete="off" enterkeyhint="send"><button class="btn-roll small gc-send${genClass()}">Send</button></form>`;
         const i = foot.querySelector('.gc-input'); i.value = draft; if (had) i.focus();
         this.setReply(this.reply); this.toggleEmoji(this.emojiOpen);
         return;

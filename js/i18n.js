@@ -571,6 +571,22 @@
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
     'tap to see it': 'touche pour le voir', // Stepa et daddy finger, 2026-10-30
+    // groupe social du 2026-11-01 : filtre des proxys (mateopotato), mise libre en duel (dog), roue du casino (How yz got
+    // sticky et Gray)
+    'Let\'s keep the chat about the game: no proxies, VPNs or ways around school filters': 'Gardons le chat pour le jeu : pas de proxy, de VPN ni de moyens de contourner le filtre de l\'école',
+    'A stake is a whole number of coins from 1 to 1,000': 'Une mise est un nombre entier de pièces, de 1 à 1 000',
+    'coins · 1 to 1,000': 'pièces · de 1 à 1 000', 'e.g. 75': 'ex. 75', 'Coins to bet': 'Pièces à miser',
+    'Type a number of coins from 1 to 1,000': 'Tape un nombre de pièces de 1 à 1 000', 'A stake is 1 to 1,000 coins': 'Une mise va de 1 à 1 000 pièces',
+    'Wheel': 'Roue', 'Wheel of multipliers': 'Roue des multiplicateurs',
+    'the worst is 0.7× · the ★ spins the bonus wheel · up to 250×': 'au pire 0,7× · l\'étoile ★ lance la roue bonus · jusqu\'à 250×',
+    'Spin the wheel and win its multiplier.': 'Fais tourner la roue et gagne son multiplicateur.', '🎯 Spin the wheel and win its multiplier.': '🎯 Fais tourner la roue et gagne son multiplicateur.',
+    'Pick your bet, then press Spin.': 'Choisis ta mise, puis appuie sur Lancer.',
+    'The big wheel stops on a multiplier: you get your bet × that number.': 'La grande roue s\'arrête sur un multiplicateur : tu reçois ta mise × ce nombre.',
+    'If it stops on the ★, the bonus wheel in the middle spins too.': 'Si elle s\'arrête sur l\'étoile ★, la roue bonus du milieu tourne aussi.',
+    'The worst you can get is 0.7×: you never lose more than 30% of your bet.': 'Le pire résultat est 0,7× : tu ne perds jamais plus de 30 % de ta mise.',
+    'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.': 'La plupart des tours donnent 0,7×. La roue bonus paie de 1,5× à 250×.',
+    '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.': '250× sort environ une fois tous les 2 000 tours. La liste sous la roue montre chaque chance.',
+    'Bets from 1 to 1,000 coins.': 'Mises de 1 à 1 000 pièces.',
   };
 
   // ---------------------------------------------------------------- phrases à nombres (motif → traduction)
@@ -791,6 +807,8 @@
     [/^([\d,]+) more rolls? to join this board$/, m => `Encore ${nb(m[1])} tirage${s(m[1])} pour entrer dans ce classement`],
     // tirage arrivé après avoir quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) ; « · tap to see it » est dans FR
     [/^Roll saved: (\d+) \((.+), ([\d,]+) XP\)$/, m => `Tirage enregistré : ${m[1]} (${m[2]}, ${nb(m[3])} XP)`],
+    // Wheel (idée de How yz got sticky et de Gray, 2026-11-01)
+    [/^(★ Bonus wheel · )?([\d.]+)× · you get ([\d,]+) coins?(?: \(−([\d,]+)\))?$/, m => `${m[1] ? '★ Roue bonus · ' : ''}${m[2].replace('.', ',')}× · tu reçois ${nb(m[3])} pièce${s(m[3])}${m[4] ? ` (−${nb(m[4])})` : ''}`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte
