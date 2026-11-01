@@ -187,6 +187,22 @@
   // avec un souffle à peine audible à l'attaque.
   const pop = (f, len = .1) => S.sum(S.osc(len, t => f * (.55 + .5 * Math.min(1, t / .022)), S.expo(len * .26, .0015)),
     S.gain(S.shape(S.filter(S.noise(.01, Math.round(f)), 'bp', 1800, 1), S.expo(.002, .0002)), .25));
+  // ---- Pack Slime (idée de Ggggssnoop, 2026-11-01) : de la gelée qu'on écrase. Splat : un bruit mouillé dont la bande
+  // retombe très vite (la matière qui s'étale) ; blorp : une note ronde qui glisse en place et tremble comme une gelée
+  // (vibrato rapide qui s'amortit), accordée sur le chiffre (la montée reste). Rien d'enregistré, rien d'emprunté.
+  const blorp = (f, len = .26) => S.osc(len, t => f * (1 + .35 * Math.exp(-t / .03)) * (1 + .06 * Math.sin(2 * Math.PI * 17 * t) * Math.exp(-t / .12)), S.expo(len * .3, .003), ph => Math.sin(ph) + .18 * Math.sin(3 * ph));
+  const splat = (seed, big = 0) => S.shape(S.filter(S.noise(.14 + .08 * big, seed), 'bp', t => 1500 * Math.exp(-t / (.035 + .02 * big)) + 220, 2.6), t => Math.min(1, t / .004) * Math.exp(-t / (.04 + .03 * big)));
+  // ---- Bouton Cardboard Box (idée de MAYO, 2026-11-01) : un « pof » sourd de carton écrasé et le froissement du carton.
+  const cardboard = () => S.sum(S.gain(S.osc(.12, t => 115 + 90 * Math.exp(-t / .012), S.expo(.028, .002)), .9), S.gain(wax(77, 9, .11, 1100), .7));
+  // ---- Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : une bulle de papier bulle qui éclate. Le claquement très sec
+  // (attaque instantanée, éteint en une milliseconde), l'air qui s'échappe, et le petit coup sourd du plastique. k : la
+  // bulle (de 0 à 4), pour que deux pressions de suite ne sonnent pas pareil.
+  const wrapPop = (k = 0) => {
+    const f = 1900 + (k % 5) * 170;
+    return S.sum(S.shape(S.filter(S.noise(.008, 50 + k), 'bp', f * 1.5, 1.2), S.expo(.0012, .0001)),
+      S.gain(S.shape(S.filter(S.noise(.05, 70 + k), 'bp', f * .6, 1.6), S.expo(.011, .001)), .55),
+      S.gain(S.osc(.05, t => 240 * (1 + Math.exp(-t / .004)), S.expo(.01, .001)), .45));
+  };
   const PACKS = {
     arcade: {
       lock: (i, final) => final ? S.sum(chip(S.note(i + 5), S.note(i + 5), .07, .25, 1.2), S.delayed(chip(S.note(i + 10), S.note(i + 10), .12, .25, 1.5), .07)) : chip(S.note(i + 5), S.note(i + 5), .09, .25, 1.6),
@@ -242,6 +258,22 @@
       note: n => pop(S.note(n + 2)),
       miss: () => S.sum(clack(S.note(2), 9, 0), S.delayed(S.gain(clack(S.note(-2), 19, 0), .8), .12)), missLevel: .22,
     },
+    // Slime (idée de Ggggssnoop, 2026-11-01) : un splat et un blorp par chiffre ; au dernier, un gros splat et deux blorps
+    // qui rebondissent ; la rareté monte en blorps ; un raté, un gros splat qui retombe dans le grave.
+    slime: {
+      lock: (i, final) => final ? S.sum(S.gain(splat(60 + i, 1), 1.2), S.gain(blorp(S.note(i + 5), .4), .9), S.delayed(S.gain(blorp(S.note(i + 7), .3), .5), .14)) : S.sum(S.gain(splat(60 + i), .9), blorp(S.note(i + 5))),
+      level: .35,
+      note: (n, len) => blorp(S.note(n + 5), Math.max(.25, len * 4)),
+      miss: () => S.sum(S.gain(splat(91, 1), 1.4), S.gain(blorp(S.note(-5), .5), .8)), missLevel: .25,
+    },
+    // Boing (idée de sennybex1, 2026-11-01) : un « boing » de ressort par chiffre ; au dernier, il rebondit une deuxième
+    // fois, plus haut ; la rareté monte en boings de plus en plus hauts (la gerbe) ; un raté, un ressort qui s'affaisse.
+    boing: {
+      lock: (i, final) => final ? S.sum(boing(S.note(i + 5), .4), S.delayed(S.gain(boing(S.note(i + 10), .32), .65), .16)) : boing(S.note(i + 5)),
+      level: .29, tierGain: .7, // mesuré contre Meme et Coins (énergie par chiffre)
+      note: (n, len) => boing(S.note(n + 5), Math.max(.3, len * 4)),
+      miss: () => S.osc(.6, t => 330 * Math.exp(-t / .3) * (1 + .15 * Math.sin(2 * Math.PI * 14 * t) * Math.exp(-t / .3)), S.expo(.2, .004), ph => Math.sin(ph) + .25 * Math.sin(2 * ph)), missLevel: .22,
+    },
   };
   // Une gerbe de notes du pack, en montant (steps : leurs places dans la gamme).
   const flourish = (P, steps, level, dt = 0, gap = .08) => steps.map((n, k) => [P.note(n, gap), dt + k * gap, level * (P.tierGain || 1), ((k * 37) % 9) / 18 - .25, .4]);
@@ -280,10 +312,12 @@
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
-    click: ({ look } = {}) => {
+    click: ({ look, k = 0 } = {}) => {
       if (look === 'thock') return [[thock(), 0, .18, 0, .08]];
       if (look === 'wax' || look === 'asmr') return [[wax(41), 0, .24, 0, .1]];
       if (look === 'pickle') return [[squish(), 0, .22, 0, .1]];
+      if (look === 'cardboard') return [[cardboard(), 0, .24, 0, .08]]; // MAYO, 2026-11-01
+      if (look === 'bubblewrap') return [[wrapPop(k), 0, .38, 0, .06]]; // Jguz01, 2026-11-01
       return [[S.tick(3, .6), 0, .25, 0, .1], [S.tick(4, .2), .05, .18, 0, .1]];
     },
     // Cliquetis des rouleaux (k : la variante). soft : en duel. last, de 1 à 8 : le dernier rouleau, de plus en plus grave et fort.

@@ -133,6 +133,8 @@
     { id: 'cracked', name: 'Cracked Screen', emoji: '📱', price: 1500, desc: 'A phone screen that glitches while it rolls; every digit hits the glass and cracks it a little more', idea: 'KMC' }, // idée de KMC (2026-10-25)
     { id: 'castle', name: 'Medieval Castle', emoji: '🏰', price: 2400, desc: 'Royal banners unfurl one by one on a stone castle wall lit by torches; rare rolls end in fireworks over the battlements', idea: 'BIGBOIJONER69' }, // idée de BIGBOIJONER69 (2026-10-25)
     { id: 'chocolate', name: 'Chocolate', emoji: '🍫', price: 1300, desc: 'A milk chocolate bar in gold foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with melted chocolate', idea: 'finnnnn' }, // idée de finnnnn (2026-10-25)
+    // Idée de qwertyuiop (2026-11-01, déjà demandée en #168) : la tablette de Chocolate en chocolat blanc, moins chère.
+    { id: 'whitechoc', name: 'White Chocolate', emoji: '🤍', price: 1000, desc: 'A white chocolate bar in pink and silver foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with berry sauce', idea: 'qwertyuiop' },
     { id: 'fish', name: 'Floppy Fish', emoji: '🐟', price: 2100, desc: 'A goofy fish flops out of the pond for every digit, and a giant fish leaps over the card on Mythic rolls', idea: 'AnnJoe' }, // idée d'AnnJoe (2026-10-25)
     { id: 'axeman', name: 'Axe Thrower', emoji: '🪓', price: 1900, desc: 'A stick man throws a spinning axe into every wooden target, and celebrates when the roll is good', idea: 'jjcoolcid1' }, // idée de jjcoolcid1 (2026-10-25)
     { id: 'math', name: 'Math', emoji: '➗', price: 1200, desc: 'Chalk digits are written on a blackboard while math symbols float around; great rolls end with Q.E.D.', idea: 'sennybex1' }, // idée de sennybex1 (2026-10-25)
@@ -272,7 +274,13 @@
     // tous les boutons vendus à part, poids 1 / prix comme les autres caisses. Doublon : même remboursement selon la rareté.
     // Sacha, 2026-10-29 : avec Power Core et Black Hole, la valeur moyenne d'un tirage passe de ≈ 429 à ≈ 469 ; la caisse
     // passe de 320 à 350 pour garder le même rapport prix / valeur (350 / 469 ≈ 0,75, comme la caisse de fonds, 0,74).
+    // 2026-11-01 : avec Free Download, Bread, Last Roll et Bubble Wrap (Cardboard Box reste dehors), la valeur moyenne passe
+    // de ≈ 469 à ≈ 482 ; le prix reste à 350, fixé par Sacha (350 / 482 ≈ 0,73).
     { id: 'buttons', name: 'Button Case', emoji: '🔘', price: 350, desc: 'A Generate button worth 150 to 2,200 coins', btn: true },
+    // Idée de shadow2 Jr (2026-11-01) : une caisse qui donne une émote spéciale (emo: true, EMOTES), toutes les émotes en
+    // vente, poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 538, caisse à 400 (0,74, comme les
+    // caisses de boutons et de sons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi.
+    { id: 'emotes', name: 'Emote Case', emoji: '🎭', price: 400, desc: 'A special duel emote worth 300 to 1,200 coins', emo: true },
     // Idée de shadow2 Jr (2026-10-28) : une caisse qui donne un pack de sons (snd: true, SOUNDS), tous les packs payants,
     // poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 490, caisse à 365 (0,745 : comme la caisse
     // de boutons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi (KEY_OPENS).
@@ -369,18 +377,19 @@
     { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
-  const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));
+  const caseOnly = c => (c.wall || c.btn || c.snd || c.emo ? [] : SKINS.filter(s => s.caseOnly === c.id));
   // Ce qu'une caisse donne : un skin, ou un fond d'écran pour la caisse de fonds (des identifiants existent dans les deux
   // listes, comme galaxy ou sakura : toujours passer par la caisse), ou un bouton pour la caisse de boutons.
-  const caseItem = (c, id) => (c && c.snd ? soundById : c && c.btn ? buttonById : c && c.wall ? wallById : byId).get(id);
-  const casePool = c => c.snd ? SOUNDS.filter(p => p.price && !p.until && !p.hidden).sort((a, b) => a.price - b.price)
-    : c.btn ? BUTTONS.filter(b => !b.until && !b.hidden).sort((a, b) => a.price - b.price)
+  const caseItem = (c, id) => (c && c.emo ? emoteById : c && c.snd ? soundById : c && c.btn ? buttonById : c && c.wall ? wallById : byId).get(id);
+  const casePool = c => c.emo ? EMOTES.filter(e => !e.until && !e.hidden).sort((a, b) => a.price - b.price)
+    : c.snd ? SOUNDS.filter(p => p.price && !p.until && !p.hidden).sort((a, b) => a.price - b.price)
+    : c.btn ? BUTTONS.filter(b => !b.until && !b.hidden && !b.noCase).sort((a, b) => a.price - b.price)
     : c.wall ? WALLPAPERS.filter(w => !w.until && !w.premium).sort((a, b) => a.price - b.price) : SKINS.filter(s => !s.caseOnly && !s.until && s.price >= c.min && s.price <= c.max).concat(caseOnly(c));
   // Doublon : une part du prix de la caisse revient, selon la rareté du skin tiré (de la moitié pour un Common à
   // 90 % pour un Legendary). Toujours moins que le prix de la caisse.
   const DUPLICATE_REFUND = { blue: .5, purple: .55, pink: .65, red: .75, gold: .9 };
   // Rareté d'un lot dans sa caisse : skins, fonds d'écran ou boutons, chacun ses paliers.
-  const caseRarity = (c, id) => rarityOf(id, c && c.snd ? 'snd' : c && c.btn ? 'btn' : !!(c && c.wall));
+  const caseRarity = (c, id) => rarityOf(id, c && c.emo ? 'emo' : c && c.snd ? 'snd' : c && c.btn ? 'btn' : !!(c && c.wall));
   const duplicateRefund = (c, skinId) => Math.round(c.price * (DUPLICATE_REFUND[(caseRarity(c, skinId) || RARITIES[0]).id] || .5));
   // Chances de chaque skin d'une caisse (somme = 1), pour l'affichage et pour le tirage. Les skins réservés à la caisse
   // viennent en dernier (les plus rares).
@@ -407,7 +416,7 @@
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
   // wall : true pour un fond d'écran, 'btn' pour un bouton (caisse de boutons), 'snd' pour un pack de sons, sinon un skin.
-  const rarityOf = (id, wall) => (wall === 'snd' ? SND_RARITIES : wall === 'btn' ? BTN_RARITIES : wall ? WALL_RARITIES : RARITIES).find(r => ((wall === 'snd' ? soundById : wall === 'btn' ? buttonById : wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
+  const rarityOf = (id, wall) => (wall === 'emo' ? EMO_RARITIES : wall === 'snd' ? SND_RARITIES : wall === 'btn' ? BTN_RARITIES : wall ? WALL_RARITIES : RARITIES).find(r => ((wall === 'emo' ? emoteById : wall === 'snd' ? soundById : wall === 'btn' ? buttonById : wall ? wallById : byId).get(id) || { price: 0 }).price <= r.max);
   // Fonds d'écran : mêmes couleurs, paliers resserrés sur leurs prix (500 à 1 200).
   const WALL_RARITIES = [
     { id: 'blue', name: 'Common', max: 600, color: '#4b69ff' },
@@ -433,10 +442,22 @@
     { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
   ];
 
+  // Émotes (caisse d'émotes, idée de shadow2 Jr, 2026-11-01) : mêmes couleurs, paliers sur leurs prix (300 à 1 200).
+  const EMO_RARITIES = [
+    { id: 'blue', name: 'Common', max: 300, color: '#4b69ff' },
+    { id: 'purple', name: 'Uncommon', max: 500, color: '#8847ff' },
+    { id: 'pink', name: 'Rare', max: 700, color: '#d32ce6' },
+    { id: 'red', name: 'Epic', max: 900, color: '#eb4b4b' },
+    { id: 'gold', name: 'Legendary', max: Infinity, color: '#ffd700' },
+  ];
+
   // Apparence du bouton qui lance un tirage (« Generate », « Roll again », « Roll round » en duel). Chaque skin de
   // nombre apporte le bouton assorti (même identifiant) ; ceux-ci se vendent à part et ne changent que le bouton.
   // Personne d'autre ne voit ton bouton : prix plus doux que les skins.
   const BUTTONS = [
+    // Idée de MAYO (2026-11-01) : le bouton le moins cher, un carton scotché qui se froisse quand on appuie. Hors de la caisse de boutons
+    // (noCase) : il vaut moins que la caisse elle-même, et même moins qu'un remboursement de doublon.
+    { id: 'cardboard', name: 'Cardboard Box', emoji: '📦', price: 100, desc: 'A taped-up cardboard box that crumples when you press it', idea: 'MAYO', noCase: true },
     { id: 'keycap', name: 'Keycap', emoji: '⌨️', price: 150, desc: 'A chunky mechanical key' },
     { id: 'terminal', name: 'Terminal', emoji: '💻', price: 250, desc: 'Run the command yourself' },
     { id: 'arcade', name: 'Arcade', emoji: '🕹️', price: 350, desc: 'Big red cabinet button' },
@@ -456,6 +477,17 @@
     // « eventhorizon » : « blackhole » est le skin Singularity). Pas de part pour les boutons : crédit en commentaire.
     { id: 'powercore', name: 'Power Core', emoji: '🔮', price: 800, desc: 'A pink glowing lens in a heavy metal ring; blue sparks crackle when you hover' },
     { id: 'eventhorizon', name: 'Black Hole', emoji: '🕳️', price: 1200, desc: 'Light swirls into a dark core, faster when you press' },
+    // Idées de joueurs du 2026-11-01 (les boutons ne versent pas de part : idea sert au crédit seulement).
+    // Yentizx : la parodie d'un faux bouton de téléchargement de site louche (flèches qui clignotent, pastille « 100% SAFE »).
+    // Inoffensif : il ne télécharge rien, il lance un tirage comme les autres.
+    { id: 'download', name: 'Free Download', emoji: '⬇️', price: 300, desc: 'A flashy green download button with blinking arrows. 100% safe, trust us', idea: 'Yentizx' },
+    // MattyFaux-Lucky (un bouton pain) et MaxABGD (une bouchée à chaque chiffre révélé, assorti au fond Spinning Bread) :
+    // la miche perd une bouchée par chiffre posé et redevient entière au tirage suivant (js/app.js, breadBite).
+    { id: 'bread', name: 'Bread', emoji: '🍞', price: 500, desc: 'A crusty loaf that loses a bite every time a digit is revealed, and is whole again for the next roll', idea: 'MattyFaux-Lucky' },
+    // G8_floppa : un petit écran LCD sur le bouton affiche ton nombre précédent (assorti au fond Your Last Rolls).
+    { id: 'lastroll', name: 'Last Roll', emoji: '📟', price: 600, desc: 'A little LCD on the button shows your previous number', idea: 'G8_floppa' },
+    // Jguz01 : du papier bulle, une bulle éclate (avec son « pop ») à chaque appui ; une feuille neuve quand tout a éclaté.
+    { id: 'bubblewrap', name: 'Bubble Wrap', emoji: '🫧', price: 1700, desc: 'A sheet of bubble wrap: one bubble pops with a satisfying sound every time you press', idea: 'Jguz01' },
   ];
   const buttonById = new Map(BUTTONS.map(b => [b.id, b]));
   const MATCH = 'match'; // choix par défaut : le bouton suit le skin équipé
@@ -481,6 +513,7 @@
     { id: 'spread', name: 'Money Spread', price: 1000 }, // idée de finnnnn (2026-10-24)
     { id: 'confused', name: 'Super confused', price: 800 }, // idée de finnnnn (2026-10-22)
     { id: 'mindblown', name: 'Mind blown', price: 1200 },
+    { id: 'hungry', name: 'Hungry', price: 500, idea: 'Monokromati' }, // idée de Monokromati (2026-11-01) : le dé bave, fourchette et couteau en main
   ];
   const emoteById = new Map(EMOTES.map(e => [e.id, e]));
 
@@ -502,6 +535,11 @@
     // Idées de Niall (un son de « pop ») et de sennybex1 (un clic de clavier ou de souris), 2026-10-28 : touches
     // mécaniques, clics de souris et pops, tout synthétisé (js/sound.js). Les packs ne versent pas de part : crédit ici.
     { id: 'clicky', name: 'Clicky', emoji: '🖱️', price: 550, desc: 'Mechanical key clacks, mouse clicks and soft pops' },
+    // Idées du 2026-11-01, tout synthétisé (js/sound.js) : Slime (Ggggssnoop : de la gelée qu'on écrase, des « splat »
+    // mouillés et des rebonds mous) et Boing (sennybex1 : un « boing » de ressort à chaque chiffre, un plus gros rebond
+    // pour les tirages rares). Pas de part pour les packs : idea sert au crédit.
+    { id: 'slime', name: 'Slime', emoji: '🟢', price: 500, desc: 'Squishy splats and wobbly slime bounces', idea: 'Ggggssnoop' },
+    { id: 'boing', name: 'Boing', emoji: '🪀', price: 450, desc: 'A springy boing on every digit, a bigger bounce on rare rolls', idea: 'sennybex1' },
   ];
   const soundById = new Map(SOUNDS.map(p => [p.id, p]));
   // Pack réellement joué : le choix s'il est possédé (Classic l'est toujours), sinon Classic.
@@ -531,8 +569,8 @@
   const IDEA_SHARE = 0.05;
   // La caisse de boutons (moins chère que la Premium) s'ouvre aussi avec une clé Premium (2026-10-27), la caisse de sons
   // aussi (2026-10-28).
-  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds'] };
-  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds', 'emotes'] }; // + émotes (2026-11-01)
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

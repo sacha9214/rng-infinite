@@ -180,14 +180,15 @@ module.exports = async (req, res) => {
         // Caisse de fonds d'écran (idée de CrazyMiner22) : le fond gagné rejoint walls:<id>, comme un achat (buywall).
         // Caisse de boutons (idée de shadow2, 2026-10-27) : le bouton gagné rejoint btns:<id>, comme un achat (buybutton).
         // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : le pack gagné rejoint snds:<id>, comme un achat (buysound).
-        const duplicate = (box.snd ? st.sounds : box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
+        // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote gagnée rejoint emotes:<id>, comme un achat (buyemote).
+        const duplicate = (box.emo ? st.emotes : box.snd ? st.sounds : box.btn ? st.buttons : box.wall ? st.walls : st.owned).includes(won);
         const refund = duplicate ? (price ? Shop.duplicateRefund(box, won) : Math.round(Shop.duplicateRefund(box, won) / 2)) : 0; // gratuite : moitié du remboursement, en pièces
         const writes = [['HINCRBY', statsKey(playerId), 'spent', price - refund], ['HINCRBY', statsKey(playerId), 'cases', 1], ...eco('out:cases', price - refund)];
-        if (!duplicate) writes.push(['SADD', box.snd ? ownedSoundsKey(playerId) : box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won],
-          gained(box.snd ? 'sounds' : box.btn ? 'buttons' : box.wall ? 'walls' : 'skins', won));
+        if (!duplicate) writes.push(['SADD', box.emo ? ownedEmotesKey(playerId) : box.snd ? ownedSoundsKey(playerId) : box.btn ? ownedButtonsKey(playerId) : box.wall ? ownedWallsKey(playerId) : ownedKey(playerId), won],
+          gained(box.emo ? 'emotes' : box.snd ? 'sounds' : box.btn ? 'buttons' : box.wall ? 'walls' : 'skins', won));
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
-        if (!duplicate && !box.snd && !box.btn && !box.wall) await payIdea(Shop.byId.get(won), playerId, price);
+        if (!duplicate && !box.emo && !box.snd && !box.btn && !box.wall) await payIdea(Shop.byId.get(won), playerId, price);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

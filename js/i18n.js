@@ -592,6 +592,19 @@
     // divers
     'Loading…': 'Chargement…', 'Home': 'Accueil', 'Invalid player': 'Joueur invalide', 'This player id belongs to someone else': 'Cet identifiant appartient à quelqu\'un d\'autre', 'Too fast, wait for the reveal to finish': 'Trop vite, attends la fin de la révélation',
     'tap to see it': 'touche pour le voir', // Stepa et daddy finger, 2026-10-30
+    // boutique (2026-11-01) : boutons, packs de sons, émote Hungry, caisse d'émotes, skin White Chocolate
+    'A taped-up cardboard box that crumples when you press it': 'Un carton scotché qui se froisse quand tu appuies dessus',
+    'A flashy green download button with blinking arrows. 100% safe, trust us': 'Un bouton de téléchargement vert flashy avec des flèches qui clignotent. 100 % sûr, promis',
+    'A crusty loaf that loses a bite every time a digit is revealed, and is whole again for the next roll': 'Une miche croustillante qui perd une bouchée à chaque chiffre révélé, et redevient entière au tirage suivant',
+    'A little LCD on the button shows your previous number': 'Un petit écran LCD sur le bouton affiche ton nombre précédent',
+    'A sheet of bubble wrap: one bubble pops with a satisfying sound every time you press': 'Une feuille de papier bulle : une bulle éclate avec un pop satisfaisant à chaque appui',
+    'Squishy splats and wobbly slime bounces': 'Des splats tout mous et des rebonds de gelée qui tremblotent',
+    'A springy boing on every digit, a bigger bounce on rare rolls': 'Un boing de ressort à chaque chiffre, un plus gros rebond pour les tirages rares',
+    'Hungry': 'Affamé',
+    'Emote Case': 'Caisse d\'émotes', 'A special duel emote worth 300 to 1,200 coins': 'Une émote spéciale pour les duels d\'une valeur de 300 à 1 200 pièces',
+    'new emote unlocked! Use it in duels': 'nouvelle émote débloquée ! Utilise-la en duel',
+    'The Emote Case gives a special duel emote you can also buy in the Emotes tab, with the same refund for an emote you already own.': 'La caisse d\'émotes donne une émote spéciale pour les duels qu\'on peut aussi acheter dans l\'onglet Émotes, avec le même remboursement pour une émote que tu as déjà.',
+    'A white chocolate bar in pink and silver foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with berry sauce': 'Une tablette de chocolat blanc dans du papier rose et argent : les chiffres fondent pendant le tirage, puis chaque carré se fige d\'un coup ; les tirages Mythic coulent de coulis de fruits rouges',
   };
 
   // ---------------------------------------------------------------- phrases à nombres (motif → traduction)

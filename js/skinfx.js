@@ -1586,8 +1586,11 @@
           co.strokeStyle = ORANGE; co.globalAlpha = glowA * .5; co.lineWidth = 6; ellipse(RX * .7 * squeeze, RY * .6 * squeeze, Math.PI, TAU, 0, -RY * .34 * squeeze); co.stroke();
           co.strokeStyle = HOT; co.globalAlpha = glowA * .85; co.lineWidth = 1.5; ellipse(RX * .7 * squeeze, RY * .6 * squeeze, Math.PI, TAU, 0, -RY * .34 * squeeze); co.stroke();
           co.strokeStyle = ORANGE; co.globalAlpha = glowA * .28; co.lineWidth = 5; ellipse(RX * .62 * squeeze, RY * .5 * squeeze, 0, Math.PI, 0, RY * .36 * squeeze); co.stroke();
-          co.strokeStyle = ORANGE; co.globalAlpha = glowA * .4; co.lineWidth = 8; ellipse(RX * .92 * squeeze, RY * .92 * squeeze); co.stroke();
-          co.strokeStyle = HOT; co.globalAlpha = glowA; co.lineWidth = 1.5 + (revealed ? p : 0); ellipse(RX * .92 * squeeze, RY * .92 * squeeze); co.stroke();
+          // Horizon plus marqué (idée d'ichi, 2026-11-01 : « make the event horizon bolder ») : un halo large et doux, un
+          // anneau orange épais, puis le fil presque blanc au milieu, plus épais qu'avant (1,5 → 3,2 px) et plus lumineux.
+          co.strokeStyle = ORANGE; co.globalAlpha = Math.min(1, glowA * .3); co.lineWidth = 18; ellipse(RX * .92 * squeeze, RY * .92 * squeeze); co.stroke();
+          co.strokeStyle = ORANGE; co.globalAlpha = Math.min(1, glowA * .75); co.lineWidth = 8; ellipse(RX * .92 * squeeze, RY * .92 * squeeze); co.stroke();
+          co.strokeStyle = HOT; co.globalAlpha = Math.min(1, glowA * 1.35); co.lineWidth = 3.2 + (revealed ? p * 1.4 : 0); ellipse(RX * .92 * squeeze, RY * .92 * squeeze); co.stroke();
           if (revealed && banged) { const fade = Math.max(0, Math.min(1, 4 + 4 * p - since)); co.strokeStyle = BLUEW; co.globalAlpha = fade * (.5 + .3 * Math.sin(t * 6)); co.lineWidth = 1; ellipse(RX * 1.02, RY * 1.02); co.stroke(); } // l'anneau d'Einstein
         }, revealed && since > .5);
         // Le disque : chaque grain file sur son orbite, d'autant plus vite qu'il est près.
@@ -1764,9 +1767,15 @@
     const A = Math.min(card.w / 2 + Math.min(150, card.h * 1.6 + 30), W / 2 - 34), KY = Math.min(1.1, (card.h * .5 + Math.max(16, card.h * .42)) / (A * .3536));
     const at = u => { const sn = Math.sin(u), d = 1 + sn * sn; return { x: cx + (A * Math.cos(u)) / d, y: cy + (KY * A * sn * Math.cos(u)) / d }; };
     const hue = k => HUES[(((Math.floor(k) % HUES.length) + HUES.length) % HUES.length)];
-    const stars = Array.from({ length: Math.round(34 * q) }, () => ({ x: rnd(), y: rnd(), r: rnd(.6, 1.7), tw: rnd(TAU), sp: rnd(1.2, 3.4), c: pick(['#ffffff', '#ffffff', '#a5f3fc', '#f5d0fe', '#fde68a']) }));
+    const stars = Array.from({ length: Math.round(46 * q) }, () => ({ x: rnd(), y: rnd(), r: rnd(.6, 1.9), tw: rnd(TAU), sp: rnd(1.2, 3.4), c: pick(['#ffffff', '#ffffff', '#a5f3fc', '#f5d0fe', '#fde68a']) }));
     const clouds = [['#ec4899', '#7c3aed', .25, .4, 0], ['#22d3ee', '#3b82f6', .75, .6, 2.1], ['#7c3aed', '#ec4899', .5, .5, 4.2], ['#fbbf24', '#22d3ee', .4, .2, 5.3]].map(([c0, c1, x, y, ph]) => ({ c0, c1, x, y, ph }));
     const motes = particles(), flares = timed(), rings = timed();
+    // Plus d'éclat, pour que le skin le plus rare se distingue (idée de Me Cojoni, 2026-11-01 : « before was sparkly…
+    // now it seems just another one ») : des étincelles en croix qui s'allument et s'éteignent tout le long du ∞ et
+    // autour de la carte, et une poussière scintillante semée par l'étincelle qui court. Dessinées avec dot() (une image
+    // déjà prête par couleur) : quelques dizaines de drawImage par image, rien de plus.
+    const glitter = Array.from({ length: Math.round(28 * q) }, (_, i) => ({ u: rnd(TAU), off: rnd(-22, 22), ph: rnd(TAU), sp: rnd(1.6, 3.2), size: rnd(6, 13), c: i % 3 ? '#ffffff' : pick(HUES) }));
+    const sparkle = (x, y, r, a, c) => { dot(co, c, x, y, r * .9, a * .4); dot(co, WHITE, x, y, r * 1.6, a, Math.max(.8, r * .12)); dot(co, WHITE, x, y, Math.max(.8, r * .12), a, r * 1.6); dot(co, '#ffffff', x, y, r * .25, a); };
     let u = rnd(TAU), spd = 1.1, spdTo = 1.1, heat = 0, target = .4, core = 0, nebula = 1, fig = 0, figLife = 3, sweeping = false, swept = 0, sweepDur = 1, dim = 0;
     // Un tronçon du ∞, de u0 à u0 - len (vers l'arrière), en morceaux de couleur ; fall : la queue s'efface. Chaque
     // morceau est un seul tracé à bouts plats : pas de perles là où deux segments se recouvriraient.
@@ -1814,7 +1823,7 @@
         for (const st of stars) {
           const a = Math.pow(.5 + .5 * Math.sin(t * st.sp + st.tw), 3) * (.4 + .6 * Math.min(1, nebula)) * (1 - .8 * dim), x = st.x * w, y = st.y * h;
           dot(ci, st.c, x, y, st.r * 2.4, a);
-          if (st.r > 1.35) { dot(ci, '#ffffff', x, y, st.r * 5, a * .7, .6); dot(ci, '#ffffff', x, y, .6, a * .7, st.r * 5); }
+          if (st.r > 1.2) { dot(ci, '#ffffff', x, y, st.r * 6, a * .85, .6); dot(ci, '#ffffff', x, y, .6, a * .85, st.r * 6); } // croix plus longues (2026-11-01)
         }
         if (core > 0) dot(ci, '#ffffff', w / 2, h / 2, w * .45, core * .45);
         // Autour : le ∞ en filigrane, l'étincelle et sa traînée (ou la comète de la révélation), derrière la carte.
@@ -1835,10 +1844,21 @@
           if (sweeping) stroke(u, Math.min(TAU, swept), 1, 2.6, .25, t * 1.2);
           else stroke(u, .8 + .7 * Math.min(1, heat), (.55 + .45 * Math.min(1, heat)) * (1 - .8 * dim), 1.6 + 1.2 * Math.min(1, heat), 1.6, t * .8);
         });
+        // les étincelles en croix le long du ∞ (derrière la carte), plus vives quand la tension monte ou que le ∞ est tracé
+        const shine = (.75 + .35 * Math.min(1, heat) + .6 * fig) * (1 - .85 * dim);
+        behind(env, () => {
+          for (const g of glitter) {
+            const k = Math.sin(t * g.sp + g.ph);
+            if (k <= .25) continue;
+            const pt = at(g.u), n = at(g.u + .02), nx = -(n.y - pt.y), ny = n.x - pt.x, nl = Math.hypot(nx, ny) || 1;
+            sparkle(pt.x + nx / nl * g.off, pt.y + ny / nl * g.off, g.size * (.6 + .4 * k), Math.pow((k - .25) / .75, 2) * shine, g.c);
+          }
+        });
         const head = at(u), behindCard = Math.abs(head.x - cx) < card.w / 2 && Math.abs(head.y - cy) < card.h / 2;
+        if (!sweeping && !behindCard && Math.random() < dt * 22 * q * (1 - .85 * dim)) shed(head, 22, 1); // poussière d'étoiles derrière l'étincelle
         if (!behindCard) { dot(co, WHITE, head.x, head.y, 4 + 5 * Math.min(1, heat) + (sweeping ? 6 : 0), .9 * (1 - .8 * dim)); dot(co, hue(t * 2), head.x, head.y, 12 + 10 * Math.min(1, heat) + (sweeping ? 14 : 0), .5 * (1 - .8 * dim)); }
         motes.step(dt);
-        motes.each((m, k) => dot(co, m.c, m.x, m.y, m.size * (1 + .5 * Math.sin(t * 9 + m.tw)), (1 - k) * (.55 + .45 * Math.sin(t * 13 + m.tw))));
+        motes.each((m, k) => { const a = (1 - k) * (.55 + .45 * Math.sin(t * 13 + m.tw)); dot(co, m.c, m.x, m.y, m.size * (1 + .5 * Math.sin(t * 9 + m.tw)), a); if (m.size > 2.3 && a > .5) sparkle(m.x, m.y, m.size * 1.6, a * .8, m.c); });
         flares.run(dt, (f, k) => {
           const a = 1 - outCubic(k), r = f.size * (.5 + .7 * outExpo(k));
           dot(co, f.c, f.x, f.y, r * .9, a * .7);
@@ -3562,11 +3582,12 @@
   // brillant ; le dernier, plus. À la révélation, des morceaux de chocolat et des confettis de papier doré sautent
   // autour de la tablette (plus avec la rareté) ; dès Mythic, du chocolat fondu coule du haut de la carte en grosses
   // gouttes rondes qui s'allongent (seulement sur le bord, les chiffres restent lisibles). Tirage raté : une miette.
-  SCENES.chocolate = env => {
+  // White Chocolate (idée de qwertyuiop, 2026-11-01) : la même scène, avec des miettes ivoire, du papier rose et
+  // argent, et un coulis de fruits rouges au lieu du chocolat fondu (Mythic). La fabrique reçoit la palette.
+  const chocolateScene = (CHOC, GOLD, DRIP, DRIP_HI, DRIP_TOP, GLINT) => env => {
     const { co, card, q, dark } = env;
     const cx = card.x + card.w / 2;
     const crumbs = particles(), foil = particles(), glints = timed(), drips = timed();
-    const CHOC = ['#7b3f1c', '#5e2e12', '#a0592c', '#3b1d0c'], GOLD = ['#fde68a', '#ca8a04', '#fef3c7', '#b45309'];
     const crumb = (x, y, n, s) => { for (let i = Math.round(n * q); i > 0; i--) { const a = rnd(-Math.PI * .95, -Math.PI * .05), v = card.h * rnd(1.5, 3 + 3 * s); crumbs.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: card.h * 12, drag: .3, max: rnd(.5, .9), size: card.h * rnd(.02, .045) * (1 + s * .5), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(CHOC) }); } };
     return {
       frame(t, dt) {
@@ -3574,16 +3595,16 @@
         // les coulures, sur le bord du haut : une bande, puis des gouttes qui s'allongent et pendent
         drips.run(dt, (d, k) => {
           const grow = outCubic(Math.min(1, k / .5)), a = k > .8 ? (1 - k) * 5 : 1, top = card.y - 2;
-          co.globalAlpha = a; co.fillStyle = '#9a552a';
+          co.globalAlpha = a; co.fillStyle = DRIP;
           roundRect(co, card.x, top, card.w, card.h * .1 * grow, 4); co.fill();
-          for (const g of d.g) { const len = card.h * g.l * grow, x = card.x + card.w * g.x; co.fillRect(x - g.w / 2, top, g.w, len); co.beginPath(); co.arc(x, top + len, g.w * .75, 0, TAU); co.fill(); co.fillStyle = 'rgba(247,210,168,.55)'; co.fillRect(x - g.w * .3, top + 2, g.w * .18, len * .8); co.fillStyle = '#9a552a'; }
-          co.fillStyle = 'rgba(222,160,110,.5)'; co.fillRect(card.x + 4, top + 1, card.w - 8, 2);
+          for (const g of d.g) { const len = card.h * g.l * grow, x = card.x + card.w * g.x; co.fillRect(x - g.w / 2, top, g.w, len); co.beginPath(); co.arc(x, top + len, g.w * .75, 0, TAU); co.fill(); co.fillStyle = DRIP_HI; co.fillRect(x - g.w * .3, top + 2, g.w * .18, len * .8); co.fillStyle = DRIP; }
+          co.fillStyle = DRIP_TOP; co.fillRect(card.x + 4, top + 1, card.w - 8, 2);
         });
         crumbs.step(dt); foil.step(dt);
         crumbs.each((p, k) => { co.save(); co.globalAlpha = 1 - k * k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .8, p.size * 2, p.size * 1.6); co.restore(); });
         foil.each((p, k) => { co.save(); co.globalAlpha = 1 - k * k; co.translate(p.x, p.y); co.rotate(p.rot + p.spin * p.life); co.scale(Math.cos(p.life * 10 + p.rot), 1); co.fillStyle = p.c; co.fillRect(-p.size, -p.size * .6, p.size * 2, p.size * 1.2); co.restore(); });
         co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
-        glints.run(dt, (g, k) => { const a = Math.sin(Math.PI * k); dot(co, '#ffffff', g.x, g.y, g.r * .3, a); dot(co, '#fde68a', g.x, g.y, g.r, a * .5, g.r * .15); dot(co, '#fde68a', g.x, g.y, g.r * .15, a * .5, g.r); });
+        glints.run(dt, (g, k) => { const a = Math.sin(Math.PI * k); dot(co, '#ffffff', g.x, g.y, g.r * .3, a); dot(co, GLINT, g.x, g.y, g.r, a * .5, g.r * .15); dot(co, GLINT, g.x, g.y, g.r * .15, a * .5, g.r); });
         co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
       },
       lock(p, o) {
@@ -3602,6 +3623,8 @@
       },
     };
   };
+  SCENES.chocolate = chocolateScene(['#7b3f1c', '#5e2e12', '#a0592c', '#3b1d0c'], ['#fde68a', '#ca8a04', '#fef3c7', '#b45309'], '#9a552a', 'rgba(247,210,168,.55)', 'rgba(222,160,110,.5)', '#fde68a');
+  SCENES.whitechoc = chocolateScene(['#fbf3e2', '#efdcb8', '#e6cf9f', '#fff9ec'], ['#f9a8d4', '#e5e7eb', '#fbcfe8', '#cbd5e1'], '#be185d', 'rgba(251,207,232,.6)', 'rgba(244,114,182,.55)', '#fbcfe8');
   // 🐟 Floppy Fish (2026-10-25, idée d'AnnJoe) — à chaque chiffre posé, un poisson rigolo (orange, gros œil qui louche,
   // bouche ronde) jaillit de la mare à côté du chiffre, fait un saut en arc en gigotant et replonge de l'autre côté :
   // éclaboussure à la sortie et à l'entrée. Le dernier saute plus haut. À la révélation, plusieurs poissons sautent
@@ -6679,14 +6702,14 @@
     };
     const pop = (s, n, big) => { // éclats de verre qui sautent du sommet
       const [x, y] = at(s, 0, .06);
-      for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.1, 1.1) * (big ? 1.6 : 1); shards.add({ x: x + rnd(-.2, .2) * s.w, y: y + (big ? rnd(0, .6) * (s.bottom - s.top) : 0), vx: Math.cos(an) * rnd(40, big ? 230 : 110), vy: Math.sin(an) * rnd(80, big ? 300 : 190), g: card.h * 14, drag: .3, max: rnd(1.2, 2), size: rnd(1.5, big ? 4 : 3) * Math.max(.8, card.h / 80), r: rnd(TAU), spin: rnd(-16, 16), floor: s.bottom + (s.bottom - s.top) * .2 + rnd(-2, 2), x0: s.x - s.w * 4, x1: s.x + s.w * 4 }); }
+      for (let i = Math.round(n * q); i > 0; i--) { const an = -Math.PI / 2 + rnd(-1.1, 1.1) * (big ? 1.6 : 1); shards.add({ x: x + rnd(-.2, .2) * s.w, y: y + (big ? rnd(0, .6) * (s.bottom - s.top) : 0), vx: Math.cos(an) * rnd(40, big ? 230 : 110), vy: Math.sin(an) * rnd(80, big ? 300 : 190), g: card.h * 14, drag: .3, max: rnd(1.2, 2), size: rnd(1.5, big ? 4 : 3) * Math.max(.8, card.h / 80), r: rnd(TAU), spin: rnd(-16, 16), floor: s.bottom + (s.bottom - s.top) * .4 + rnd(-2, 2), x0: s.x - s.w * 4, x1: s.x + s.w * 4 }); }
     };
     return {
       frame(tt, dt) {
         t = tt;
         for (let i = later.length - 1; i >= 0; i--) if (later[i].at <= t) later.splice(i, 1)[0].fn();
         const S = slotsA(env).filter(s => !s.gone), next = S.find(s => !s.on);
-        const floor = S.length ? S[0].bottom + (S[0].bottom - S[0].top) * .2 : card.y + card.h * .9;
+        const floor = S.length ? S[0].bottom + (S[0].bottom - S[0].top) * .4 : card.y + card.h * .9; // globe rond + col + culot (2026-11-01)
         // nouvelles fêlures (un chiffre vient de se poser)
         for (const s of S) if (s.on && !st.has(s.i)) {
           st.set(s.i, { at: t, c: mkCrack() });

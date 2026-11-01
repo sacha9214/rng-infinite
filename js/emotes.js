@@ -95,6 +95,26 @@
         <path d="M34 36 L46 34" fill="none" ${S} stroke-width="3.6"/><path d="M55 40 Q61 34 67 39" fill="none" ${S} stroke-width="3.6"/>
         <path d="M38 62 l4 -3 l4 3 l4 -3 l4 3 l4 -3 l4 3" fill="none" ${S} stroke-width="3.2"/></g>
       ${[[17, 30, 22, 0], [84, 26, 19, .5], [80, 50, 14, 1]].map(([x, y, f, d]) => `<text class="em em-float" style="animation-delay:${d}s" x="${x}" y="${y}" text-anchor="middle" font-size="${f}" font-weight="900" font-family="system-ui, sans-serif" fill="#fde047" stroke="${INK}" stroke-width="1.8" paint-order="stroke">?</text>`).join('')}`),
+    // Hungry (idée de Monokromati, 2026-11-01) : les yeux brillants levés vers le repas, la bouche ouverte, la langue
+    // qui pend, un filet de bave qui s'allonge et une goutte qui tombe ; il tient une fourchette et un couteau qu'il
+    // tape à tour de rôle sur la table (en avant, devant le dé : on les voit en entier).
+    hungry: () => wrap(`${badge('#ea580c', '#fed7aa')}
+      <g class="em em-bounce">${cube()}
+        ${[40, 60].map(x => `<circle cx="${x}" cy="44" r="7" fill="#fff" ${S} stroke-width="3"/><circle cx="${x + .6}" cy="41.5" r="3.4" fill="${INK}"/><circle cx="${x + 1.8}" cy="40" r="1.3" fill="#fff"/><circle cx="${x - .6}" cy="43.6" r=".7" fill="#fff"/>`).join('')}
+        <path d="M33 33 Q39 29 45 33" fill="none" ${S} stroke-width="3"/><path d="M55 33 Q61 29 67 33" fill="none" ${S} stroke-width="3"/>
+        <path d="M38 55 Q50 72 62 55 Z" fill="#7a1f2b" ${S} stroke-width="3"/>
+        <path d="M44 60 Q50 74 56 60 Q50 63 44 60 Z" fill="#ff7b8a" ${S} stroke-width="2.4"/>
+        <path class="em em-drool" d="M59 59 C61 64 60.5 69 59.6 73 C58.6 69 58 64 59 59 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="1.4"/></g>
+      <path class="em em-drip" d="M59.6 74 C62 78 62.4 80.5 59.6 82 C56.8 80.5 57.2 78 59.6 74 Z" fill="#7dd3fc" ${S} stroke-width="2"/>
+      <g class="em em-chop">
+        <rect x="13" y="50" width="6" height="32" rx="3" fill="#cbd5e1" ${S} stroke-width="2.6"/>
+        <path d="M9 22 V36 Q9 44 16 44 Q23 44 23 36 V22" fill="none" ${S} stroke-width="2.6"/>
+        <path d="M9 22 V36 Q9 44 16 44 Q23 44 23 36 V22 M13.7 22 V34 M18.3 22 V34" fill="none" stroke="#e2e8f0" stroke-width="1.6" stroke-linecap="round"/>
+        <rect x="14" y="42" width="4" height="10" fill="#cbd5e1" ${S} stroke-width="2.2"/></g>
+      <g class="em em-chop" style="animation-delay:.6s">
+        <rect x="81" y="54" width="6" height="28" rx="3" fill="#92400e" ${S} stroke-width="2.6"/>
+        <path d="M81 55 V26 Q81 20 87 18 Q91 28 89 40 Q88 50 87 55 Z" fill="#e2e8f0" ${S} stroke-width="2.6"/>
+        <path d="M84 24 V50" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/></g>`),
   };
 
   const cache = new Map();

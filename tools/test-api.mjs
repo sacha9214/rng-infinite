@@ -985,7 +985,13 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
   const bpool = Shop.casePool(bcase).map(b => b.id);
-  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.map(b => b.id).sort(), 'tous les boutons vendus à part');
+  assert.deepEqual([...bpool].sort(), Shop.BUTTONS.filter(b => !b.noCase).map(b => b.id).sort(), 'tous les boutons vendus à part, sauf ceux marqués noCase');
+  // Boutons du 2026-11-01 : Cardboard Box (MAYO) reste hors de la caisse (100 pièces : moins que la caisse et qu'un
+  // remboursement de doublon) ; Free Download, Bread, Last Roll et Bubble Wrap y entrent.
+  assert.ok(!bpool.includes('cardboard') && Shop.buttonById.get('cardboard').price === 100 && Math.min(...Shop.BUTTONS.map(b => b.price)) === 100, 'Cardboard Box : le moins cher, hors caisse');
+  assert.ok(['download', 'bread', 'lastroll', 'bubblewrap'].every(id => bpool.includes(id)));
+  assert.equal(Shop.caseRarity(bcase, 'bubblewrap').name, 'Legendary');
+  assert.deepEqual(['cardboard', 'download', 'bread', 'lastroll', 'bubblewrap'].map(id => Shop.buttonById.get(id).idea), ['MAYO', 'Yentizx', 'MattyFaux-Lucky', 'G8_floppa', 'Jguz01']);
   assert.ok(bpool.includes('pickle'), 'le bouton Pickle (idée d\'Edward et de Dylanrulez123) est dedans');
   const bev = Shop.caseOdds(bcase).reduce((x, o) => x + o.p * Shop.caseItem(bcase, o.id).price, 0);
   assert.ok(bcase.price < bev && bcase.price / bev > 0.6 && bcase.price / bev < 0.85, `prix sous la valeur moyenne (${bcase.price} / ${bev.toFixed(0)})`);
@@ -1034,6 +1040,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const spool = Shop.casePool(scase).map(p => p.id);
   assert.deepEqual([...spool].sort(), Shop.SOUNDS.filter(p => p.price).map(p => p.id).sort(), 'tous les packs payants');
   assert.ok(spool.includes('clicky'), 'le pack Clicky (idées de Niall et de sennybex1) est dedans');
+  assert.ok(spool.includes('slime') && spool.includes('boing'), 'les packs Slime (Ggggssnoop) et Boing (sennybex1) aussi (2026-11-01)');
+  { const src = fs.readFileSync(path.join(ROOT, 'js/sound.js'), 'utf8'); for (const p of Shop.SOUNDS.filter(x => x.price)) assert.ok(new RegExp(`\n    ${p.id}: \{`).test(src), `recette du pack ${p.id} dans js/sound.js`); }
   const sev = Shop.caseOdds(scase).reduce((x, o) => x + o.p * Shop.caseItem(scase, o.id).price, 0);
   assert.ok(scase.price < sev && scase.price / sev > 0.7 && scase.price / sev < 0.8, `prix sous la valeur moyenne, comme les caisses de fonds et de boutons (${scase.price} / ${sev.toFixed(0)})`);
   assert.equal(Shop.caseItem(scase, 'arcade'), Shop.soundById.get('arcade'), 'arcade : le pack de sons, pas le bouton');
@@ -1070,6 +1078,52 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const own1 = owners(); for (const id of spool) assert.equal((own1[`sounds:${id}`] || 0) - (own0[`sounds:${id}`] || 0), gainedSnd[id] || 0, `owners sounds:${id}`); }
   r = await call(shopApi, { method: 'POST', body: { playerId: sammy.playerId, secret: sammy.secret, action: 'sound', sound: r.body.sounds[0] } });
   assert.deepEqual([r.status, r.body.sound], [200, r.body.sounds[0]], 'un pack gagné se met en service comme un pack acheté');
+
+  // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : une émote spéciale (EMOTES) qui rejoint emotes:<id>, comme buyemote.
+  const ecase = Shop.caseById.get('emotes');
+  const epool = Shop.casePool(ecase).map(e => e.id);
+  assert.deepEqual([...epool].sort(), Shop.EMOTES.map(e => e.id).sort(), 'toutes les émotes en vente');
+  assert.ok(epool.includes('hungry') && Shop.emoteById.get('hungry').idea === 'Monokromati', 'l\'émote Hungry (Monokromati) est dedans');
+  const eev = Shop.caseOdds(ecase).reduce((x, o) => x + o.p * Shop.caseItem(ecase, o.id).price, 0);
+  assert.ok(ecase.price < eev && ecase.price / eev > 0.7 && ecase.price / eev < 0.8, `prix sous la valeur moyenne, comme les autres caisses (${ecase.price} / ${eev.toFixed(0)})`);
+  assert.equal(Shop.caseItem(ecase, 'gg'), Shop.emoteById.get('gg'));
+  assert.deepEqual(['gg', 'love', 'rage', 'money', 'mindblown'].map(id => Shop.caseRarity(ecase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
+  for (const id of epool) { const v = Shop.duplicateRefund(ecase, id); assert.ok(v >= ecase.price / 2 && v < ecase.price, `remboursement ${id}`); }
+  assert.ok(Shop.KEY_OPENS.premium.includes('emotes') && !Shop.KEY_OPENS.starter.includes('emotes'), 'une clé Premium l\'ouvre');
+  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(E.has(id), `dessin de l'émote ${id} (js/emotes.js)`); }
+  const emma = { playerId: 'cb'.repeat(8), secret: 'dc'.repeat(16), name: 'Emmy' };
+  assert.equal((await call(roll, { method: 'POST', body: emma })).status, 200);
+  run([['HINCRBY', `stats:${emma.playerId}`, 'bonus', 50000]]);
+  await new Promise(res => setTimeout(res, 20));
+  const eBefore = (await call(shopApi, { url: `/api/shop?me=${emma.playerId}` })).body, eown0 = owners();
+  let edups = 0, enews = 0;
+  const gainedEmo = {};
+  for (let i = 0; i < 30; i++) {
+    before = await coinsOf(emma);
+    const [spent0, cases0] = run([['HGET', `stats:${emma.playerId}`, 'spent'], ['HGET', `stats:${emma.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    const eco0 = ecoCases();
+    r = await openCase(emma, 'emotes');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.ok(epool.includes(r.body.won), 'une émote de la caisse');
+    assert.ok(r.body.emotes.includes(r.body.won), 'ajoutée aux émotes possédées');
+    assert.ok(run([['SISMEMBER', `emotes:${emma.playerId}`, r.body.won]])[0].result == 1);
+    assert.equal(r.body.refund, r.body.duplicate ? Shop.duplicateRefund(ecase, r.body.won) : 0, 'doublon : selon la rareté');
+    assert.equal(r.body.coins, before - ecase.price + r.body.refund);
+    const [spent1, cases1] = run([['HGET', `stats:${emma.playerId}`, 'spent'], ['HGET', `stats:${emma.playerId}`, 'cases']]).map(x => Number(x.result) || 0);
+    assert.deepEqual([spent1 - spent0, cases1 - cases0, ecoCases() - eco0], [ecase.price - r.body.refund, 1, ecase.price - r.body.refund], 'spent, cases, eco');
+    if (r.body.duplicate) edups++; else { enews++; gainedEmo[r.body.won] = 1; }
+    await new Promise(res => setTimeout(res, 3));
+  }
+  assert.ok(enews >= 4 && enews <= epool.length && edups >= 1, `des nouvelles (${enews}) et des doublons (${edups})`);
+  assert.deepEqual([r.body.owned, r.body.buttons, r.body.walls, r.body.sounds], [eBefore.owned, eBefore.buttons, eBefore.walls, eBefore.sounds], 'ni skin, ni bouton, ni fond, ni son donné');
+  { const own1 = owners(); for (const id of epool) assert.equal((own1[`emotes:${id}`] || 0) - (eown0[`emotes:${id}`] || 0), gainedEmo[id] || 0, `owners emotes:${id}`); }
+  // Une émote gagnée ne se rachète pas : buyemote ne débite rien de plus.
+  { const won = r.body.emotes[0], c0 = await coinsOf(emma); r = await call(shopApi, { method: 'POST', body: { playerId: emma.playerId, secret: emma.secret, action: 'buyemote', emote: won } }); assert.equal(await coinsOf(emma), c0, 'déjà possédée : rien de débité'); }
+  // Une clé Premium ouvre aussi la caisse d'émotes.
+  run([['HSET', `stats:${emma.playerId}`, 'key:premium', 1]]);
+  r = await call(shopApi, { method: 'POST', body: { playerId: emma.playerId, secret: emma.secret, action: 'case', case: 'emotes', free: 'premium' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(Number(run([['HGET', `stats:${emma.playerId}`, 'key:premium']])[0].result), 0, 'la clé est consommée');
 
   // Part du créateur sur une caisse (2026-10-28, finnnnn ne touchait rien sur les skins tirés en caisse) : 5 % de ce que
   // l'acheteur a payé pour la caisse quand un skin né d'une idée en sort pour la première fois ; rien pour un doublon,
@@ -1449,6 +1503,23 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const id of [...Shop.SKINS.map(k => k.id).filter(id => id !== 'classic'), 'owner', ...Shop.BUTTONS.map(b => b.id)]) {
     assert.ok(css.includes(`.btn-roll.gen-${id} {`), `style du bouton ${id} manquant dans css/buttons.css`);
   }
+}
+
+// White Chocolate (idée de qwertyuiop, 2026-11-01) : variante moins chère de Chocolate, avec son bouton, son cadre de
+// duel et sa scène ; elle entre dans la caisse Premium par son prix. Last Roll et Bread : leurs crochets dans js/app.js.
+{
+  const wc = Shop.byId.get('whitechoc');
+  assert.ok(wc && wc.idea === 'qwertyuiop' && wc.price < Shop.byId.get('chocolate').price, 'moins chère que Chocolate');
+  const style = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8'), fx = fs.readFileSync(path.join(ROOT, 'js/skinfx.js'), 'utf8');
+  assert.ok(style.includes('.num-card.skin-whitechoc {') && style.includes('.side-whitechoc {'), 'carte et cadre de duel');
+  assert.ok(fx.includes('SCENES.whitechoc = ') && fx.includes('SCENES.chocolate = '), 'les deux scènes existent');
+  assert.ok(Shop.casePool(Shop.caseById.get('premium')).some(k => k.id === 'whitechoc'));
+  const app = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+  assert.ok(app.includes('breadBite(i + 1 - lead)') && app.includes('breadBite(0)'), 'Bread : une bouchée par chiffre, entier au tirage suivant');
+  assert.ok(app.includes("setLastRoll(Store.rolls[index - 1])"), 'Last Roll : le nombre d\'avant sur l\'écran de tirage');
+  const btns = fs.readFileSync(path.join(ROOT, 'css/buttons.css'), 'utf8');
+  for (let n = 1; n <= 6; n++) assert.ok(btns.includes(`.btn-roll.gen-bread[data-bites="${n}"]`), `bouchée ${n}`);
+  for (let i = 0; i < 16; i++) assert.ok(btns.includes(`var(--b${i}, 1)`), `bulle ${i}`);
 }
 
 // ================================================================ 27b. Packs de sons du tirage (idée d'Angelicide9)
