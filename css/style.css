@@ -5026,6 +5026,130 @@ html.dark #wallpaper .wzm-hand u { filter: brightness(.75); }
 html.perf #wallpaper.wp-zombiemoon :is(i, b, u) { animation: none !important; }
 html.perf #wallpaper .wzm-z { transform: translate3d(18vw, 0, 0); } html.perf #wallpaper .wzm-b { transform: translate3d(70vw, 0, 0) scaleX(-1); } html.perf #wallpaper .wzm-c { transform: translate3d(42vw, 0, 0); }
 
+/* 🔥 Cozy Fireplace (événement de Noël, 2026-11-01, fond limité) : un salon le soir de Noël. En bas de l'écran, une
+   cheminée en briques, un feu qui crépite (flammes qui lèchent, braises, étincelles qui montent), trois chaussettes
+   au manteau qui se balancent à peine ; à gauche, une fenêtre aux rideaux rouges où la neige tombe sur des sapins.
+   Le milieu de l'écran reste un mur calme (c'est là qu'est l'interface) : la fenêtre est à gauche, la cheminée en bas
+   à droite ; au milieu, il n'y a que la lueur du feu qui respire très doucement.
+   Le fond : le mur (papier peint rayé) et le parquet ; ::before, la lueur du feu sur la pièce. Calques du vrai fond
+   (app.js, WALL_LAYERS.fireplace) : .wfp-win (la fenêtre) et .wfp-fp (la cheminée, tout en % de sa hauteur --H).
+   Thème clair : un mur crème, une neige de jour derrière la vitre. */
+.wp-fireplace {
+  --wfp-floor: min(9vh, 80px);
+  /* la cheminée : sa hauteur, sa marge à droite, et le milieu du foyer (pour la lueur et son reflet sur le parquet) */
+  --H: min(34vh, 320px, 72vw); --wfp-r: max(3vw, 16px); --wfp-cx: calc(100% - var(--wfp-r) - var(--H) * .625);
+  --wfp-flame: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 80'><defs><linearGradient id='g' x1='0' y1='1' x2='0' y2='0'><stop offset='0' stop-color='%23e8370e'/><stop offset='.45' stop-color='%23ff8a1c'/><stop offset='.8' stop-color='%23ffc24a'/><stop offset='1' stop-color='%23ffe39a' stop-opacity='.6'/></linearGradient></defs><path d='M20 80C7 80 1 68 4 55C6 45 12 40 12 28C17 34 19 38 19 30C19 20 24 10 22 0C30 10 36 24 36 40C38 34 37 28 35 24C40 34 40 46 38 56C36 70 31 80 20 80Z' fill='url(%23g)'/></svg>");
+  --wfp-core: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 80'><defs><linearGradient id='g' x1='0' y1='1' x2='0' y2='0'><stop offset='0' stop-color='%23ffd24a'/><stop offset='.6' stop-color='%23fff2b8'/><stop offset='1' stop-color='%23fffbe6' stop-opacity='.5'/></linearGradient></defs><path d='M20 80C9 80 6 70 8 60C10 50 15 46 16 34C19 40 21 42 21 36C21 28 24 22 24 14C30 24 33 36 32 50C32 64 30 80 20 80Z' fill='url(%23g)'/></svg>");
+  background:
+    /* le parquet : lames, joints, reflet chaud au pied du feu */
+    radial-gradient(ellipse calc(var(--H) * 1.1) 100% at var(--wfp-cx) 0, rgba(255, 140, 50, .22), transparent 70%) 0 100% / 100% var(--wfp-floor) no-repeat,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .28) 0 2px, transparent 2px 140px) 0 100% / 100% var(--wfp-floor) no-repeat,
+    linear-gradient(180deg, #2a170c 0 3px, #4a2c18 3px, #3a2213) 0 100% / 100% var(--wfp-floor) no-repeat,
+    /* la plinthe */
+    linear-gradient(#1a0f09, #1a0f09) 0 calc(100% - var(--wfp-floor)) / 100% 10px no-repeat,
+    /* le papier peint : de fines rayures et un petit motif de feuilles, très discret */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><g fill='%23f5c08a' opacity='.05'><path d='M30 18c3 4 3 8 0 12c-3-4-3-8 0-12z'/><path d='M0 48c3 4 3 8 0 12c-3-4-3-8 0-12zM60 48c3 4 3 8 0 12c-3-4-3-8 0-12z'/></g></svg>"),
+    repeating-linear-gradient(90deg, rgba(255, 220, 180, .022) 0 2px, transparent 2px 30px),
+    linear-gradient(180deg, #160d0a 0%, #24140e 55%, #331c12 100%);
+}
+html:not(.dark) .wp-fireplace {
+  background:
+    radial-gradient(ellipse calc(var(--H) * 1.1) 100% at var(--wfp-cx) 0, rgba(255, 150, 60, .25), transparent 70%) 0 100% / 100% var(--wfp-floor) no-repeat,
+    repeating-linear-gradient(90deg, rgba(90, 50, 20, .25) 0 2px, transparent 2px 140px) 0 100% / 100% var(--wfp-floor) no-repeat,
+    linear-gradient(180deg, #8a5a35 0 3px, #c4925f 3px, #b07f50) 0 100% / 100% var(--wfp-floor) no-repeat,
+    linear-gradient(#f8f1e6, #e9dccb) 0 calc(100% - var(--wfp-floor)) / 100% 10px no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><g fill='%239a3412' opacity='.06'><path d='M30 18c3 4 3 8 0 12c-3-4-3-8 0-12z'/><path d='M0 48c3 4 3 8 0 12c-3-4-3-8 0-12zM60 48c3 4 3 8 0 12c-3-4-3-8 0-12z'/></g></svg>"),
+    repeating-linear-gradient(90deg, rgba(150, 90, 40, .035) 0 2px, transparent 2px 30px),
+    linear-gradient(180deg, #f6eee2 0%, #f0e3cf 60%, #e8d4b8 100%);
+}
+/* la lueur du feu sur la pièce : fixe (un calque plein écran qui palpite coûtait un tiers des images par seconde) ;
+   ce sont les braises et les flammes qui vacillent */
+.wp-fireplace::before { left: 0; right: 0; bottom: 0; height: 80%;
+  background: radial-gradient(ellipse calc(var(--H) * 2.6) 85% at var(--wfp-cx) 100%, rgba(255, 130, 40, .26), rgba(255, 100, 20, .08) 55%, transparent 78%); }
+html:not(.dark) .wp-fireplace::before { background: radial-gradient(ellipse calc(var(--H) * 2.6) 85% at var(--wfp-cx) 100%, rgba(255, 150, 60, .2), rgba(255, 120, 40, .06) 55%, transparent 78%); }
+@keyframes wfp-breathe { 0%, 100% { opacity: .85; } 30% { opacity: 1; } 45% { opacity: .78; } 70% { opacity: .95; } }
+
+/* La fenêtre : la vitre (.wfp-sky, le ciel, les sapins au loin, deux couches de neige) sous le cadre et les rideaux
+   (::after). Les flocons sont une tuile haute comme la vitre qui descend d'une vitre entière : la boucle ne se voit pas. */
+#wallpaper .wfp-win { position: absolute; left: 5vw; top: 13vh; width: min(22vw, 300px); aspect-ratio: 140 / 130; }
+/* téléphone : plus petite, dans le coin, à côté du « ?????? » plutôt que dessous */
+@media (orientation: portrait) { #wallpaper .wfp-win { left: 2vw; top: 11vh; width: min(26vw, 200px); } }
+#wallpaper .wfp-win::after { content: ''; position: absolute; inset: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 130'><rect x='2' y='3' width='136' height='3' rx='1.5' fill='%233f2a1d'/><path fill-rule='evenodd' d='M18 8H122V116H18ZM26 14V110H114V14Z' fill='%23efe6d8'/><path d='M18 8H122V10H20V116H18Z' fill='%23fff' opacity='.5'/><rect x='68' y='14' width='4' height='96' fill='%23efe6d8'/><rect x='26' y='60' width='88' height='4' fill='%23efe6d8'/><path d='M26 110V105Q31 101 37 104T50 102T62 104T68 103V110ZM72 110V104Q78 101 84 104T97 102T108 104T114 103V110ZM26 60Q34 57 42 59T60 58T68 59ZM72 60Q80 57 90 59T106 58T114 59Z' fill='%23fff'/><rect x='12' y='114' width='116' height='7' rx='2' fill='%23e3d6c4'/><rect x='12' y='121' width='116' height='3' fill='%23000' opacity='.2'/><path d='M2 6H31Q26 40 31 68Q22 76 25 126H2Z' fill='%23991b1b'/><path d='M8 8Q6 60 8 124M16 8Q13 40 17 68M16 76Q14 100 16 124' stroke='%237f1d1d' stroke-width='2' fill='none'/><path d='M138 6H109Q114 40 109 68Q118 76 115 126H138Z' fill='%23991b1b'/><path d='M132 8Q134 60 132 124M124 8Q127 40 123 68M124 76Q126 100 124 124' stroke='%237f1d1d' stroke-width='2' fill='none'/><rect x='18' y='66' width='15' height='5' rx='2.5' fill='%23fbbf24'/><rect x='107' y='66' width='15' height='5' rx='2.5' fill='%23fbbf24'/></svg>") center / 100% 100% no-repeat; }
+html.dark #wallpaper .wfp-win::after { filter: brightness(.55) saturate(.9); }
+#wallpaper .wfp-sky { position: absolute; left: 18.57%; top: 10.77%; width: 62.86%; height: 73.85%; overflow: hidden;
+  background: linear-gradient(180deg, #0b1530, #1c3358 70%, #2b4670); }
+html:not(.dark) #wallpaper .wfp-sky { background: linear-gradient(180deg, #8ea3bf, #b9c7d9 70%, #d3dce8); }
+/* au loin : des collines enneigées et des sapins (plus sombres la nuit) */
+#wallpaper .wfp-sky::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 88 40' preserveAspectRatio='none'><path d='M0 22Q20 14 44 20T88 18V40H0Z' fill='%23e8eef5'/><g fill='%231f4a3a'><path d='M10 24l5-14l5 14z'/><path d='M14 26l4-10l4 10z' opacity='.8'/><path d='M60 22l6-17l6 17z'/><path d='M70 23l4-11l4 11z' opacity='.8'/><path d='M36 24l3-8l3 8z' opacity='.7'/></g><path d='M0 30Q30 24 60 30T88 28V40H0Z' fill='%23f8fafc'/></svg>") center bottom / 100% 100% no-repeat; }
+html.dark #wallpaper .wfp-sky::before { filter: brightness(.62) saturate(.8); }
+#wallpaper .wfp-sky b { position: absolute; left: -4%; right: -4%; top: -100%; height: 200%; will-change: transform; }
+#wallpaper .wfp-sky b:nth-child(1) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='%23fff' opacity='.75'><circle cx='8' cy='12' r='1'/><circle cx='30' cy='4' r='.8'/><circle cx='52' cy='20' r='1.1'/><circle cx='78' cy='9' r='.9'/><circle cx='92' cy='34' r='1'/><circle cx='18' cy='42' r='.9'/><circle cx='44' cy='55' r='1'/><circle cx='66' cy='46' r='.8'/><circle cx='86' cy='68' r='1.1'/><circle cx='6' cy='74' r='.8'/><circle cx='34' cy='86' r='1'/><circle cx='58' cy='92' r='.9'/><circle cx='74' cy='82' r='.8'/><circle cx='24' cy='64' r='.7'/></g></svg>") 0 0 / auto 50%;
+  animation: wfp-snow 16s linear infinite; }
+#wallpaper .wfp-sky b:nth-child(2) { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='%23fff'><circle cx='14' cy='18' r='2'/><circle cx='62' cy='8' r='1.7'/><circle cx='40' cy='40' r='2.2'/><circle cx='84' cy='46' r='1.8'/><circle cx='22' cy='72' r='1.9'/><circle cx='70' cy='80' r='2.1'/><circle cx='50' cy='94' r='1.6'/></g></svg>") 0 0 / auto 50%;
+  animation: wfp-snow 9s linear -4s infinite; }
+/* une seule animation par couche (une deuxième, sur translate, faisait tout repeindre) : la neige descend en ondulant */
+@keyframes wfp-snow { 0% { transform: translate3d(0, 0, 0); } 25% { transform: translate3d(2.5%, 12.5%, 0); } 50% { transform: translate3d(0, 25%, 0); } 75% { transform: translate3d(-2.5%, 37.5%, 0); } 100% { transform: translate3d(0, 50%, 0); } }
+
+/* La cheminée : tout est en % de --H (sa hauteur) ; elle repose sur le parquet, en bas à droite, loin de l'interface
+   (au milieu, le texte posé sur le fond passait sur les flammes). Téléphone : plus petite, dans le coin. */
+@media (orientation: portrait) { .wp-fireplace { --H: min(24vh, 58vw); --wfp-r: 2vw; } }
+#wallpaper .wfp-fp { position: absolute; right: var(--wfp-r); bottom: calc(var(--wfp-floor) - var(--H) * .07); width: calc(var(--H) * 1.25); height: var(--H);
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'><defs><pattern id='b' width='36' height='18' patternUnits='userSpaceOnUse'><rect width='36' height='18' fill='%23733220'/><rect x='1' y='1' width='16' height='7.5' rx='1' fill='%23a14a2e'/><rect x='19' y='1' width='16' height='7.5' rx='1' fill='%23944329'/><rect x='-8' y='10' width='16' height='7.5' rx='1' fill='%239b452b'/><rect x='10' y='10' width='16' height='7.5' rx='1' fill='%23a85234'/><rect x='28' y='10' width='16' height='7.5' rx='1' fill='%238c3c24'/></pattern><radialGradient id='f' cx='.5' cy='1' r='.95'><stop offset='0' stop-color='%23a33a0e'/><stop offset='.45' stop-color='%23401608'/><stop offset='1' stop-color='%23120704'/></radialGradient></defs><rect x='48' y='92' width='304' height='206' fill='url(%23b)'/><path d='M120 298V174Q120 144 150 144H250Q280 144 280 174V298Z' fill='%23675649'/><path d='M128 298V176Q128 152 152 152H248Q272 152 272 176V298Z' fill='url(%23f)'/><rect x='26' y='294' width='348' height='24' rx='3' fill='%23786b60'/><rect x='26' y='294' width='348' height='5' rx='2' fill='%239c8f83'/><rect x='34' y='94' width='332' height='9' fill='%23000' opacity='.3'/><rect x='52' y='94' width='16' height='20' fill='%234a2612'/><rect x='332' y='94' width='16' height='20' fill='%234a2612'/><rect x='20' y='72' width='360' height='23' rx='3' fill='%235c3018'/><rect x='20' y='72' width='360' height='6' rx='3' fill='%238a5530'/><rect x='66' y='48' width='10' height='24' rx='2' fill='%23fef3c7'/><path d='M71 35q5 7 0 12q-5-5 0-12z' fill='%23fbbf24'/><rect x='82' y='57' width='9' height='15' rx='2' fill='%23fde68a'/><path d='M86.5 45q4 6 0 10q-4-4 0-10z' fill='%23fbbf24'/><rect x='300' y='52' width='28' height='20' fill='%23166534'/><rect x='312' y='52' width='4' height='20' fill='%23fbbf24'/><rect x='298' y='48' width='32' height='6' fill='%2315803d'/><path d='M314 48q-8-8-10-2q2 4 10 2q8-8 10-2q-2 4-10 2z' fill='%23fbbf24'/><rect x='334' y='58' width='18' height='14' fill='%23b91c1c'/><rect x='341' y='58' width='4' height='14' fill='%23fef3c7'/><path d='M22 97Q66 111 110 99T200 99T290 99T378 97' fill='none' stroke='%2314532d' stroke-width='9' stroke-linecap='round'/><path d='M22 97Q66 111 110 99T200 99T290 99T378 97' fill='none' stroke='%23237a45' stroke-width='4' stroke-dasharray='2 5' stroke-linecap='round'/><g fill='%23dc2626'><circle cx='48' cy='104' r='3.2'/><circle cx='154' cy='104' r='3.2'/><circle cx='246' cy='104' r='3.2'/><circle cx='352' cy='104' r='3.2'/></g><g fill='%23fbbf24'><circle cx='92' cy='104' r='2.6'/><circle cx='200' cy='100' r='2.6'/><circle cx='308' cy='104' r='2.6'/></g></svg>") center / 100% 100% no-repeat; }
+/* (pas de filtre sur .wfp-fp : il obligeait à repeindre toute la cheminée à chaque image des flammes, 60 → 35 i/s) */
+#wallpaper .wfp-fp i { position: absolute; }
+/* les braises au fond du foyer (une lueur qui palpite) */
+#wallpaper .wfp-ember { left: 31%; width: 38%; bottom: 7%; height: 34%; background: radial-gradient(ellipse 50% 45% at 50% 95%, rgba(255, 150, 40, .85), rgba(255, 80, 20, .35) 50%, transparent 75%); animation: wfp-pulse 1.9s ease-in-out infinite; }
+@keyframes wfp-pulse { 0%, 100% { opacity: .75; } 40% { opacity: 1; } 60% { opacity: .85; } }
+/* les flammes : chacune lèche à son rythme (étirement, penchée) depuis sa base */
+#wallpaper .wfp-fl { bottom: 12%; transform-origin: 50% 100%; background: var(--wfp-flame) center bottom / 100% 100% no-repeat; animation: wfp-lick var(--t) ease-in-out var(--d) infinite; will-change: transform; }
+#wallpaper .wfp-fl.a { left: 35%; width: 11%; height: 24%; --t: 1.1s; --d: -.3s; }
+#wallpaper .wfp-fl.b { left: 43.5%; width: 13%; height: 33%; --t: .9s; --d: -.6s; }
+#wallpaper .wfp-fl.c { left: 53%; width: 11%; height: 26%; --t: 1.25s; --d: -.1s; transform: scaleX(-1); }
+#wallpaper .wfp-fl.k { left: 45%; width: 10%; height: 20%; --t: .7s; --d: -.2s; background-image: var(--wfp-core); }
+@keyframes wfp-lick { 0%, 100% { transform: scale(1, 1) skewX(0); } 25% { transform: scale(.92, 1.1) skewX(-5deg); } 50% { transform: scale(1.06, .9) skewX(3deg); } 75% { transform: scale(.96, 1.05) skewX(-2deg); } }
+#wallpaper .wfp-fl.c { animation-name: wfp-lick-r; }
+@keyframes wfp-lick-r { 0%, 100% { transform: scaleX(-1); } 25% { transform: scale(-.92, 1.1) skewX(5deg); } 50% { transform: scale(-1.06, .9) skewX(-3deg); } 75% { transform: scale(-.96, 1.05) skewX(2deg); } }
+/* les bûches, devant le pied des flammes */
+#wallpaper .wfp-logs { left: 32%; width: 36%; bottom: 7.5%; height: 11%;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 44'><ellipse cx='75' cy='40' rx='62' ry='4' fill='%23ff7a1a' opacity='.8'/><g transform='rotate(-7 75 28)'><rect x='6' y='18' width='136' height='17' rx='8.5' fill='%234a2a12'/><rect x='10' y='19' width='128' height='4' rx='2' fill='%23704219'/><ellipse cx='136' cy='26.5' rx='6' ry='8.5' fill='%23c48b55'/><ellipse cx='136' cy='26.5' rx='3' ry='4.5' fill='none' stroke='%23946035' stroke-width='1.2'/></g><g transform='rotate(8 75 30)'><rect x='8' y='22' width='134' height='17' rx='8.5' fill='%23583116'/><rect x='12' y='23' width='126' height='4' rx='2' fill='%237d4a1d'/><ellipse cx='14' cy='30.5' rx='6' ry='8.5' fill='%23cf9660'/><ellipse cx='14' cy='30.5' rx='3' ry='4.5' fill='none' stroke='%239c6538' stroke-width='1.2'/><path d='M50 36h30M90 34h18' stroke='%23ff8a1c' stroke-width='1.6' stroke-linecap='round' opacity='.85'/></g></svg>") center / 100% 100% no-repeat; }
+/* les étincelles : elles montent du feu en zigzag et s'éteignent avant le haut du foyer */
+#wallpaper .wfp-sp { left: var(--x); bottom: 20%; width: max(2px, calc(var(--H) * .009)); aspect-ratio: 1; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 4px 1px rgba(255, 150, 40, .9); opacity: 0;
+  animation: wfp-spark var(--t) ease-out var(--d) infinite; }
+#wallpaper .wfp-sp.s1 { --x: 44%; --t: 2.6s; --d: -.4s; --dx: -12px; }
+#wallpaper .wfp-sp.s2 { --x: 50%; --t: 3.1s; --d: -1.9s; --dx: 10px; }
+#wallpaper .wfp-sp.s3 { --x: 55%; --t: 2.3s; --d: -1.1s; --dx: -6px; }
+#wallpaper .wfp-sp.s4 { --x: 47%; --t: 3.6s; --d: -2.8s; --dx: 14px; }
+#wallpaper .wfp-sp.s5 { --x: 52%; --t: 2.9s; --d: -.9s; --dx: -16px; }
+@keyframes wfp-spark {
+  0% { opacity: 0; transform: translate3d(0, 0, 0); }
+  8% { opacity: 1; }
+  40% { transform: translate3d(var(--dx), calc(var(--H) * -.12), 0); }
+  70% { opacity: .8; }
+  100% { opacity: 0; transform: translate3d(calc(var(--dx) * -.5), calc(var(--H) * -.24), 0); }
+}
+/* les chaussettes accrochées au manteau, qui se balancent à peine (la chaleur du feu) */
+#wallpaper .wfp-st { top: 30.2%; width: 10%; height: 19.5%; margin-left: -3.5%; transform-origin: 40% 0; background: var(--img) center top / 100% 100% no-repeat; animation: wfp-sway var(--t) ease-in-out var(--d) infinite alternate; }
+#wallpaper .wfp-st.a { left: 27.5%; --t: 4.2s; --d: -1s; --img: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 54'><path d='M5 10V34Q5 47 17 47H26Q33 47 33 40Q33 33 26 33H22V10Z' fill='%23b91c1c'/><path d='M5 34Q5 47 17 47V40Q11 40 11 34Z' fill='%23fef3c7' opacity='.9'/><path d='M26 33Q33 33 33 40Q33 47 26 47Z' fill='%23fef3c7' opacity='.9'/><rect x='2' y='1' width='24' height='11' rx='3' fill='%23f8fafc'/><path d='M14 1V-3' stroke='%23f8fafc' stroke-width='2'/></svg>"); }
+#wallpaper .wfp-st.b { left: 50%; --t: 5s; --d: -2.4s; --img: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 54'><path d='M5 10V34Q5 47 17 47H26Q33 47 33 40Q33 33 26 33H22V10Z' fill='%23166534'/><path d='M5 18H22M5 26H22' stroke='%23dc2626' stroke-width='3'/><rect x='2' y='1' width='24' height='11' rx='3' fill='%23f8fafc'/></svg>"); }
+#wallpaper .wfp-st.c { left: 72.5%; --t: 4.6s; --d: -.3s; --img: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 54'><path d='M5 10V34Q5 47 17 47H26Q33 47 33 40Q33 33 26 33H22V10Z' fill='%23b91c1c'/><circle cx='12' cy='22' r='2' fill='%23fef3c7'/><circle cx='18' cy='30' r='2' fill='%23fef3c7'/><circle cx='11' cy='38' r='2' fill='%23fef3c7'/><circle cx='24' cy='40' r='2' fill='%23fef3c7'/><rect x='2' y='1' width='24' height='11' rx='3' fill='%23f8fafc'/></svg>"); }
+@keyframes wfp-sway { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+/* L'aperçu de la boutique (sans les calques) : la cheminée, ses flammes et la fenêtre réduites dans la vignette. */
+.wall-preview.wp-fireplace { background:
+    var(--wfp-core) 47.5% 84% / auto 26% no-repeat, var(--wfp-flame) 50% 86% / auto 40% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 130'><rect x='18' y='8' width='104' height='108' fill='%23efe6d8'/><rect x='26' y='14' width='88' height='96' fill='%231c3358'/><path d='M26 110V100Q60 92 114 100V110Z' fill='%23e8eef5'/><g fill='%23fff'><circle cx='40' cy='30' r='2.5'/><circle cx='90' cy='24' r='2'/><circle cx='60' cy='60' r='2.5'/><circle cx='100' cy='70' r='2'/><circle cx='44' cy='84' r='2'/></g><rect x='68' y='14' width='4' height='96' fill='%23efe6d8'/><rect x='26' y='60' width='88' height='4' fill='%23efe6d8'/><path d='M2 6H31Q26 40 31 68Q22 76 25 126H2ZM138 6H109Q114 40 109 68Q118 76 115 126H138Z' fill='%23991b1b'/></svg>") 6% 22% / auto 52% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'><rect x='48' y='92' width='304' height='206' fill='%238f3f27'/><path d='M120 298V174Q120 144 150 144H250Q280 144 280 174V298Z' fill='%23675649'/><path d='M128 298V176Q128 152 152 152H248Q272 152 272 176V298Z' fill='%23240c05'/><rect x='26' y='294' width='348' height='24' rx='3' fill='%23786b60'/><rect x='20' y='72' width='360' height='23' rx='3' fill='%235c3018'/><path d='M22 97Q66 111 110 99T200 99T290 99T378 97' fill='none' stroke='%2314532d' stroke-width='9' stroke-linecap='round'/><path d='M100 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32zM190 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32zM280 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32z' fill='%23b91c1c'/><rect x='150' y='270' width='100' height='14' rx='7' fill='%234a2a12'/></svg>") 50% 100% / auto 92% no-repeat,
+    linear-gradient(180deg, #24140e, #331c12 78%, #4a2c18 78%); }
+html:not(.dark) .wall-preview.wp-fireplace { background:
+    var(--wfp-core) 47.5% 84% / auto 26% no-repeat, var(--wfp-flame) 50% 86% / auto 40% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 130'><rect x='18' y='8' width='104' height='108' fill='%23efe6d8'/><rect x='26' y='14' width='88' height='96' fill='%239fb1c8'/><path d='M26 110V100Q60 92 114 100V110Z' fill='%23f8fafc'/><g fill='%23fff'><circle cx='40' cy='30' r='2.5'/><circle cx='90' cy='24' r='2'/><circle cx='60' cy='60' r='2.5'/><circle cx='100' cy='70' r='2'/><circle cx='44' cy='84' r='2'/></g><rect x='68' y='14' width='4' height='96' fill='%23efe6d8'/><rect x='26' y='60' width='88' height='4' fill='%23efe6d8'/><path d='M2 6H31Q26 40 31 68Q22 76 25 126H2ZM138 6H109Q114 40 109 68Q118 76 115 126H138Z' fill='%23b91c1c'/></svg>") 6% 22% / auto 52% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'><rect x='48' y='92' width='304' height='206' fill='%23a14a2e'/><path d='M120 298V174Q120 144 150 144H250Q280 144 280 174V298Z' fill='%23675649'/><path d='M128 298V176Q128 152 152 152H248Q272 152 272 176V298Z' fill='%23240c05'/><rect x='26' y='294' width='348' height='24' rx='3' fill='%23948779'/><rect x='20' y='72' width='360' height='23' rx='3' fill='%236b3a1e'/><path d='M22 97Q66 111 110 99T200 99T290 99T378 97' fill='none' stroke='%23166534' stroke-width='9' stroke-linecap='round'/><path d='M100 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32zM190 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32zM280 100v34q0 10 10 10h12q6 0 6-6t-6-6h-6v-32z' fill='%23dc2626'/><rect x='150' y='270' width='100' height='14' rx='7' fill='%235a3416'/></svg>") 50% 100% / auto 92% no-repeat,
+    linear-gradient(180deg, #f6eee2, #f0e3cf 78%, #c4925f 78%); }
+.wall-preview.wp-fireplace::before { animation: wfp-breathe 2.4s ease-in-out infinite; background: radial-gradient(ellipse 60% 75% at 50% 100%, rgba(255, 130, 40, .3), transparent 78%); }
+@media (prefers-reduced-motion: reduce) { .wp-fireplace::before, #wallpaper.wp-fireplace :is(i, b) { animation: none !important; } }
+html.perf .wp-fireplace::before, html.perf #wallpaper.wp-fireplace :is(i, b) { animation: none !important; }
+
 /* 💧 Condensation, fond légendaire (idée d'AnnJoe, 2026-10-28) : une vitre embuée devant une ville floue sous la pluie,
    la nuit (thème sombre) ou un jour gris (thème clair). Le décor derrière la vitre est ici (des halos de lumière déjà
    flous : aucun filtre de flou à calculer) ; la buée, la micro-buée et les gouttes sont trois canevas posés par
@@ -7060,6 +7184,111 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes xmas-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-5px) scale(1.06, .94); } 80% { transform: translateY(0) scale(1.04, .96); } }
 .room-stage.many .side-christmas::before, .room-stage.many .side-christmas::after, .room-stage.many .num-card.skin-christmas::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-christmas::before, .side-christmas::after { animation: none; } }
+
+/* ------------------------------------------------------------------ Gingerbread (événement de Noël, 2026-11-01, limité) :
+   chaque chiffre est un biscuit en pain d'épices (pâte cuite brun chaud, bord plus cuit et gonflé, mie grumeleuse),
+   cerné d'un trait de glace royale blanche, avec deux pastilles de sucre ; la carte est une plaque de cuisson garnie de
+   papier sulfurisé fariné. Pendant le tirage, la pâte est crue et des emporte-pièces (étoile, cœur, sapin, bonhomme)
+   s'y enfoncent tour à tour ; il se pose : le biscuit se tasse (élan), la poche à douille passe le long du chiffre et
+   la glace apparaît d'un trait, une étincelle de sucre éclate, il rebondit et se pose.
+   Miettes, étincelles et vermicelles (dorés dès Epic, pluie dorée dès Mythic) : js/skinfx.js (SCENES.gingerbread). */
+.num-card.skin-gingerbread {
+  background:
+    /* farine saupoudrée */
+    radial-gradient(circle, rgba(255, 255, 255, .7) 0 1px, transparent 1.6px) 0 0 / 23px 17px,
+    radial-gradient(circle, rgba(255, 255, 255, .5) 0 .8px, transparent 1.4px) 9px 6px / 31px 29px,
+    /* plis du papier sulfurisé */
+    linear-gradient(103deg, transparent 31%, rgba(150, 105, 50, .12) 32%, transparent 34%),
+    linear-gradient(-11deg, transparent 60%, rgba(150, 105, 50, .1) 61%, transparent 63%),
+    linear-gradient(84deg, transparent 72%, rgba(255, 255, 255, .35) 73%, transparent 75%),
+    radial-gradient(ellipse 75% 85% at 50% 40%, #fbf2de, #f1e0bf 68%, #e2c899);
+  border: 3px solid #3f3f46; border-radius: .6rem;
+  /* le rebord de la plaque : acier clair, puis sombre, et l'ombre du papier dans le creux */
+  box-shadow: inset 0 0 0 3px #a1a1aa, inset 0 0 0 5px #52525b, inset 0 0 14px 5px rgba(130, 85, 40, .35), 0 0 0 1px #18181b, 0 0 18px rgba(217, 119, 6, .25), 0 10px 18px rgba(0, 0, 0, .4);
+}
+.skin-gingerbread .slot {
+  /* Space Mono (déjà chargée) : ses chiffres n'ont pas de contours qui se chevauchent ; avec Inter, la glace (le
+     contour du texte) dessinait des traits en travers du 1 et du 4. */
+  position: relative; z-index: 1; font-family: var(--font-mono); font-weight: 700; width: .68em; color: transparent;
+  background:
+    /* deux pastilles de sucre, sur la barre du haut et celle du bas */
+    radial-gradient(circle at 50% 24%, #fca5a5 0 .018em, #dc2626 .024em .05em, #7f1d1d .056em, transparent .062em),
+    radial-gradient(circle at 50% 80%, #bbf7d0 0 .018em, #16a34a .024em .05em, #14532d .056em, transparent .062em),
+    /* la mie : petits creux plus foncés, grains de sucre plus clairs */
+    radial-gradient(circle, rgba(80, 35, 8, .5) 0 .012em, transparent .022em) 0 0 / .11em .13em,
+    radial-gradient(circle, rgba(255, 224, 178, .4) 0 .01em, transparent .02em) .05em .06em / .09em .1em,
+    /* la pâte cuite : plus claire au sommet bombé */
+    linear-gradient(180deg, #d58a4a 0%, #bd6c32 40%, #9c5222 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .045em #fffaf0;
+  /* le bord du biscuit (la pâte déborde de la glace), son épaisseur cuite, son ombre sur le papier */
+  filter: drop-shadow(.045em 0 0 #a35a25) drop-shadow(-.045em 0 0 #a35a25) drop-shadow(0 .045em 0 #a35a25) drop-shadow(0 -.045em 0 #a35a25)
+    drop-shadow(0 .05em 0 #6b3412) drop-shadow(0 .06em .05em rgba(70, 35, 10, .45));
+}
+.skin-gingerbread .slot.ghost { opacity: .22; }
+/* en petit (historique, listes) : un trait de glace plus fin et seulement l'épaisseur du biscuit, sinon tout se mélange */
+.num-card.sm.skin-gingerbread .slot { -webkit-text-stroke-width: .035em; filter: drop-shadow(0 .07em 0 #6b3412); }
+.skin-gingerbread .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-gingerbread .slot::before, .skin-gingerbread .slot::after { content: ''; position: absolute; pointer-events: none; opacity: 0; }
+.skin-gingerbread .slot.collapsed::before, .skin-gingerbread .slot.collapsed::after { display: none; }
+/* Pendant le tirage : de la pâte crue, pâle et sans glace ; un emporte-pièce en métal change de forme et appuie. */
+.skin-gingerbread .slot.spinning {
+  opacity: 1; -webkit-text-stroke: .02em rgba(146, 84, 38, .55);
+  background: radial-gradient(circle, rgba(150, 90, 40, .25) 0 .012em, transparent .022em) 0 0 / .11em .13em, linear-gradient(180deg, #f0cf9f, #e3b67c);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.04em 0 0 #d9a868) drop-shadow(-.04em 0 0 #d9a868) drop-shadow(0 .05em 0 #b98146) drop-shadow(0 .04em .04em rgba(70, 35, 10, .3));
+  animation: gb-press .16s ease-in-out infinite alternate;
+}
+.skin-gingerbread .slot.spinning:nth-child(2n) { animation-delay: -.08s; }
+.skin-gingerbread .slot.spinning::before { opacity: .9; left: -.08em; right: -.08em; top: .02em; bottom: .02em; z-index: 1;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40'><g fill='none' stroke-linejoin='round'><g id='c'><path d='M20 6L23.8 15.7L34.3 16.4L26.2 23L28.8 33.1L20 27.5L11.2 33.1L13.8 23L5.7 16.4L16.2 15.7Z'/><path transform='translate(40 0)' d='M20 33C6 23 5 11 13.5 9.5C17.5 9 19.5 11.5 20 14C20.5 11.5 22.5 9 26.5 9.5C35 11 34 23 20 33Z'/><path transform='translate(80 0)' d='M20 4L30 17H25.5L33 29H22V35H18V29H7L14.5 17H10Z'/><path transform='translate(120 0)' d='M20 5A5 5 0 1 1 19.9 5ZM14 16H26L33 19.5L31.5 23L26 21L27 35H22L20 28L18 35H13L14 21L8.5 23L7 19.5Z'/></g></g><use href='%23c' fill='none' stroke='%2352525b' stroke-width='4'/><use href='%23c' fill='none' stroke='%23e4e4e7' stroke-width='1.8'/></svg>") 0 50% / 400% auto no-repeat;
+  animation: gb-cutter .32s steps(4, jump-none) infinite; }
+/* chaque chiffre a son propre emporte-pièce à un instant donné (sinon les six changent de forme ensemble) */
+.skin-gingerbread .slot.spinning:nth-child(2n)::before { animation-delay: -.08s; }
+.skin-gingerbread .slot.spinning:nth-child(3n)::before { animation-delay: -.16s; }
+.skin-gingerbread .slot.spinning:nth-child(5n)::before { animation-delay: -.24s; }
+@keyframes gb-press { from { transform: none; } to { transform: scale(1.05, .93) translateY(.03em); } }
+@keyframes gb-cutter { from { background-position: 0 50%; } to { background-position: 100% 50%; } }
+/* Il se pose : élan (il se tasse), la douille passe d'un trait, la glace blanchit, l'étincelle de sucre éclate. */
+.skin-gingerbread .slot.revealed { animation: gb-squash .65s backwards; }
+.skin-gingerbread .slot.revealed::after { left: 50%; top: .08em; width: .2em; height: .2em; margin-left: -.1em; border-radius: 50%; z-index: 2;
+  background: radial-gradient(circle, #fff 0 30%, rgba(255, 250, 235, .8) 45%, transparent 70%);
+  animation: gb-pipe .65s linear backwards; }
+/* l'étincelle de sucre est dessinée par js/skinfx.js : ici, le filtre du chiffre lui collait un bord de pâte */
+@keyframes gb-squash {
+  /* la glace : pas de trait au départ (biscuit nu), puis un trait crème qui blanchit en séchant */
+  0% { transform: none; -webkit-text-stroke-width: 0; animation-timing-function: ease-in; }
+  10% { transform: scale(1.1, .86) translateY(.05em); -webkit-text-stroke-width: 0; -webkit-text-stroke-color: #f3dcc0; animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  24% { -webkit-text-stroke-width: .055em; }
+  36% { transform: scale(.96, 1.06) translateY(-.04em); -webkit-text-stroke-color: #fff; -webkit-text-stroke-width: .045em; }
+  62% { transform: scale(1.03, .97); }
+  80% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
+@keyframes gb-pipe {
+  0%, 8% { opacity: 0; transform: scale(.5); }
+  11% { opacity: 1; transform: translate(-.1em, 0); }
+  19% { transform: translate(.14em, .2em); }
+  27% { transform: translate(-.13em, .45em); }
+  35% { opacity: 1; transform: translate(.08em, .66em); }
+  40%, 100% { opacity: 0; transform: translate(0, .7em) scale(.3); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-gingerbread .slot, .skin-gingerbread .slot::before, .skin-gingerbread .slot::after { animation: none; } }
+/* Cadre de duel : une cuisine chaude (carreaux vichy, lueur du four), un bord de glace festonné en haut ;
+   🍪 se dandine, ✨ scintille. */
+.side-gingerbread { --side-border: #b45309; --side-glow: 0 0 16px rgba(217, 119, 6, .3), inset 0 0 0 2px rgba(255, 250, 240, .55); --side-ink: #b45309;
+  --side-bg: radial-gradient(circle at 50% 0, rgba(255, 250, 240, .9) 0 5px, transparent 5.5px) 0 0 / 14px 10px repeat-x,
+    linear-gradient(180deg, rgba(255, 250, 240, .85) 0 3px, transparent 3px),
+    radial-gradient(ellipse 80% 45% at 50% 110%, rgba(249, 115, 22, .25), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(185, 28, 28, .08) 0 9px, transparent 9px 18px), repeating-linear-gradient(90deg, rgba(185, 28, 28, .08) 0 9px, transparent 9px 18px),
+    linear-gradient(180deg, rgba(180, 83, 9, .14), rgba(120, 53, 15, .1));
+  --deco-a: '🍪'; --deco-b: '🥛 ✨'; }
+.side-gingerbread::before { animation: gb-wobble 2.6s ease-in-out infinite; }
+.side-gingerbread::after { animation: gb-twinkle 2s ease-in-out infinite; }
+@keyframes gb-wobble { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg) translateY(-1px); } }
+@keyframes gb-twinkle { 0%, 100% { opacity: .75; } 50% { opacity: .45; } }
+.room-stage.many .side-gingerbread::before, .room-stage.many .side-gingerbread::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-gingerbread::before, .side-gingerbread::after { animation: none; } }
 
 /* ------------------------------------------------------------------ Money (idées de JBearr12 et finnnnn, 2026-10-25) :
    un billet de 100 générique (aucune vraie monnaie, aucun portrait : un sceau étoilé et « 100 » dans des médaillons),
