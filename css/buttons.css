@@ -978,6 +978,7 @@
 /* Gingerbread (événement de Noël, 2026-11-01) : un grand biscuit en pain d'épices, une ligne de glace en zigzag près du
    bord et deux pastilles de sucre ; le texte est écrit à la glace blanche. */
 .btn-roll.gen-gingerbread { border: 2px solid #6b3412; border-radius: .6em; color: #fffaf0;
+  background:
     radial-gradient(circle at 8% 50%, #dc2626 0 4px, #7f1d1d 4.5px 5px, transparent 5.5px),
     radial-gradient(circle at 92% 50%, #16a34a 0 4px, #14532d 4.5px 5px, transparent 5.5px),
     linear-gradient(135deg, transparent 33%, #fffaf0 33% 41%, transparent 41%) 0 3px / 10px 6px repeat-x,

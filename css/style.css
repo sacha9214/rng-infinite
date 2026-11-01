@@ -5140,6 +5140,7 @@ html:not(.dark) .wp-fireplace {
   background: radial-gradient(ellipse calc(var(--H) * 2.6) 85% at var(--wfp-cx) 100%, rgba(255, 130, 40, .26), rgba(255, 100, 20, .08) 55%, transparent 78%); }
 html:not(.dark) .wp-fireplace::before { background: radial-gradient(ellipse calc(var(--H) * 2.6) 85% at var(--wfp-cx) 100%, rgba(255, 150, 60, .2), rgba(255, 120, 40, .06) 55%, transparent 78%); }
 @keyframes wfp-breathe { 0%, 100% { opacity: .85; } 30% { opacity: 1; } 45% { opacity: .78; } 70% { opacity: .95; } }
+
 /* La fenêtre : la vitre (.wfp-sky, le ciel, les sapins au loin, deux couches de neige) sous le cadre et les rideaux
    (::after). Les flocons sont une tuile haute comme la vitre qui descend d'une vitre entière : la boucle ne se voit pas. */
 #wallpaper .wfp-win { position: absolute; left: 5vw; top: 13vh; width: min(22vw, 300px); aspect-ratio: 140 / 130; }
@@ -5162,6 +5163,7 @@ html.dark #wallpaper .wfp-sky::before { filter: brightness(.62) saturate(.8); }
   animation: wfp-snow 9s linear -4s infinite; }
 /* une seule animation par couche (une deuxième, sur translate, faisait tout repeindre) : la neige descend en ondulant */
 @keyframes wfp-snow { 0% { transform: translate3d(0, 0, 0); } 25% { transform: translate3d(2.5%, 12.5%, 0); } 50% { transform: translate3d(0, 25%, 0); } 75% { transform: translate3d(-2.5%, 37.5%, 0); } 100% { transform: translate3d(0, 50%, 0); } }
+
 /* La cheminée : tout est en % de --H (sa hauteur) ; elle repose sur le parquet, en bas à droite, loin de l'interface
    (au milieu, le texte posé sur le fond passait sur les flammes). Téléphone : plus petite, dans le coin. */
 @media (orientation: portrait) { .wp-fireplace { --H: min(24vh, 58vw); --wfp-r: 2vw; } }
@@ -5219,6 +5221,7 @@ html:not(.dark) .wall-preview.wp-fireplace { background:
 .wall-preview.wp-fireplace::before { animation: wfp-breathe 2.4s ease-in-out infinite; background: radial-gradient(ellipse 60% 75% at 50% 100%, rgba(255, 130, 40, .3), transparent 78%); }
 @media (prefers-reduced-motion: reduce) { .wp-fireplace::before, #wallpaper.wp-fireplace :is(i, b) { animation: none !important; } }
 html.perf .wp-fireplace::before, html.perf #wallpaper.wp-fireplace :is(i, b) { animation: none !important; }
+
 /* 💧 Condensation, fond légendaire (idée d'AnnJoe, 2026-10-28) : une vitre embuée devant une ville floue sous la pluie,
    la nuit (thème sombre) ou un jour gris (thème clair). Le décor derrière la vitre est ici (des halos de lumière déjà
    flous : aucun filtre de flou à calculer) ; la buée, la micro-buée et les gouttes sont trois canevas posés par
@@ -7368,6 +7371,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
    la glace apparaît d'un trait, une étincelle de sucre éclate, il rebondit et se pose.
    Miettes, étincelles et vermicelles (dorés dès Epic, pluie dorée dès Mythic) : js/skinfx.js (SCENES.gingerbread). */
 .num-card.skin-gingerbread {
+  background:
     /* farine saupoudrée */
     radial-gradient(circle, rgba(255, 255, 255, .7) 0 1px, transparent 1.6px) 0 0 / 23px 17px,
     radial-gradient(circle, rgba(255, 255, 255, .5) 0 .8px, transparent 1.4px) 9px 6px / 31px 29px,
@@ -7379,10 +7383,12 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   border: 3px solid #3f3f46; border-radius: .6rem;
   /* le rebord de la plaque : acier clair, puis sombre, et l'ombre du papier dans le creux */
   box-shadow: inset 0 0 0 3px #a1a1aa, inset 0 0 0 5px #52525b, inset 0 0 14px 5px rgba(130, 85, 40, .35), 0 0 0 1px #18181b, 0 0 18px rgba(217, 119, 6, .25), 0 10px 18px rgba(0, 0, 0, .4);
+}
 .skin-gingerbread .slot {
   /* Space Mono (déjà chargée) : ses chiffres n'ont pas de contours qui se chevauchent ; avec Inter, la glace (le
      contour du texte) dessinait des traits en travers du 1 et du 4. */
   position: relative; z-index: 1; font-family: var(--font-mono); font-weight: 700; width: .68em; color: transparent;
+  background:
     /* deux pastilles de sucre, sur la barre du haut et celle du bas */
     radial-gradient(circle at 50% 24%, #fca5a5 0 .018em, #dc2626 .024em .05em, #7f1d1d .056em, transparent .062em),
     radial-gradient(circle at 50% 80%, #bbf7d0 0 .018em, #16a34a .024em .05em, #14532d .056em, transparent .062em),
@@ -7396,6 +7402,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   /* le bord du biscuit (la pâte déborde de la glace), son épaisseur cuite, son ombre sur le papier */
   filter: drop-shadow(.045em 0 0 #a35a25) drop-shadow(-.045em 0 0 #a35a25) drop-shadow(0 .045em 0 #a35a25) drop-shadow(0 -.045em 0 #a35a25)
     drop-shadow(0 .05em 0 #6b3412) drop-shadow(0 .06em .05em rgba(70, 35, 10, .45));
+}
 .skin-gingerbread .slot.ghost { opacity: .22; }
 /* en petit (historique, listes) : un trait de glace plus fin et seulement l'épaisseur du biscuit, sinon tout se mélange */
 .num-card.sm.skin-gingerbread .slot { -webkit-text-stroke-width: .035em; filter: drop-shadow(0 .07em 0 #6b3412); }
@@ -7409,6 +7416,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   -webkit-background-clip: text; background-clip: text;
   filter: drop-shadow(.04em 0 0 #d9a868) drop-shadow(-.04em 0 0 #d9a868) drop-shadow(0 .05em 0 #b98146) drop-shadow(0 .04em .04em rgba(70, 35, 10, .3));
   animation: gb-press .16s ease-in-out infinite alternate;
+}
 .skin-gingerbread .slot.spinning:nth-child(2n) { animation-delay: -.08s; }
 .skin-gingerbread .slot.spinning::before { opacity: .9; left: -.08em; right: -.08em; top: .02em; bottom: .02em; z-index: 1;
   background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40'><g fill='none' stroke-linejoin='round'><g id='c'><path d='M20 6L23.8 15.7L34.3 16.4L26.2 23L28.8 33.1L20 27.5L11.2 33.1L13.8 23L5.7 16.4L16.2 15.7Z'/><path transform='translate(40 0)' d='M20 33C6 23 5 11 13.5 9.5C17.5 9 19.5 11.5 20 14C20.5 11.5 22.5 9 26.5 9.5C35 11 34 23 20 33Z'/><path transform='translate(80 0)' d='M20 4L30 17H25.5L33 29H22V35H18V29H7L14.5 17H10Z'/><path transform='translate(120 0)' d='M20 5A5 5 0 1 1 19.9 5ZM14 16H26L33 19.5L31.5 23L26 21L27 35H22L20 28L18 35H13L14 21L8.5 23L7 19.5Z'/></g></g><use href='%23c' fill='none' stroke='%2352525b' stroke-width='4'/><use href='%23c' fill='none' stroke='%23e4e4e7' stroke-width='1.8'/></svg>") 0 50% / 400% auto no-repeat;
@@ -7433,6 +7441,8 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   36% { transform: scale(.96, 1.06) translateY(-.04em); -webkit-text-stroke-color: #fff; -webkit-text-stroke-width: .045em; }
   62% { transform: scale(1.03, .97); }
   80% { transform: scale(.99, 1.01); }
+  100% { transform: none; }
+}
 @keyframes gb-pipe {
   0%, 8% { opacity: 0; transform: scale(.5); }
   11% { opacity: 1; transform: translate(-.1em, 0); }
@@ -7440,6 +7450,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   27% { transform: translate(-.13em, .45em); }
   35% { opacity: 1; transform: translate(.08em, .66em); }
   40%, 100% { opacity: 0; transform: translate(0, .7em) scale(.3); }
+}
 @media (prefers-reduced-motion: reduce) { .skin-gingerbread .slot, .skin-gingerbread .slot::before, .skin-gingerbread .slot::after { animation: none; } }
 /* Cadre de duel : une cuisine chaude (carreaux vichy, lueur du four), un bord de glace festonné en haut ;
    🍪 se dandine, ✨ scintille. */
@@ -7456,6 +7467,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 @keyframes gb-twinkle { 0%, 100% { opacity: .75; } 50% { opacity: .45; } }
 .room-stage.many .side-gingerbread::before, .room-stage.many .side-gingerbread::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-gingerbread::before, .side-gingerbread::after { animation: none; } }
+
 /* ------------------------------------------------------------------ Money (idées de JBearr12 et finnnnn, 2026-10-25) :
    un billet de 100 générique (aucune vraie monnaie, aucun portrait : un sceau étoilé et « 100 » dans des médaillons),
    papier vert pâle, guilloches, double cadre ; les chiffres sont de la dorure à chaud. Pendant le tirage ils défilent

@@ -4578,18 +4578,27 @@
       co.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? s * .2 : s, ang = (i * Math.PI) / 4; co.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); } co.closePath();
       co.fillStyle = '#fffbeb'; co.fill(); co.strokeStyle = dark ? 'rgba(253,230,138,.9)' : '#d97706'; co.lineWidth = 1; co.stroke();
       co.restore();
+    };
+    return {
+      frame(t, dt) {
         co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
         sparks.run(dt, (s, k) => dot(co, s.gold ? '#fbbf24' : '#fff7d6', s.x, s.y, s.size * 2.2, (1 - k) * (dark ? .5 : .3)));
+        co.globalCompositeOperation = 'source-over';
         sparks.run(0, (s, k) => twinkle(s.x, s.y, s.size * (k < .3 ? outCubic(k / .3) * 1.25 : 1.25 - .55 * (k - .3) / .7), k < .3 ? 1 : (1 - k) / .7, s.rot + k * 1.4));
         if (st.revealed && st.p >= 1 && st.since < 2.2) for (let n = emit(55 * q, dt); n > 0; n--) sugar.add({ x: rnd(card.x - 30, card.x + card.w + 30), y: card.y - rnd(10, 60), vx: rnd(-14, 14), vy: rnd(50, 120), g: 120, drag: .3, max: rnd(1.6, 2.4), c: pick(GOLD), rot: rnd(TAU), vr: rnd(-5, 5) });
         sugar.step(dt);
         sugar.each((p, k) => { co.save(); co.translate(p.x, p.y); co.rotate(p.rot + p.vr * p.life); co.globalAlpha = 1 - k * k; SHAPES.sprinkle(co, p, 2.4); co.restore(); });
+      },
       lock(p, o) { if (!o.ghost) sparks.add({ delay: .24, life: .5, x: p.x + card.h * .2, y: p.y - card.h * .28, size: card.h * (o.last ? .2 : .14), rot: rnd(TAU) }); },
       reveal(tier, p) {
+        if (!p) return;
         const gold = p >= .6;
         for (let i = burst(p, 70 * q, 5); i > 0; i--) { const a = -Math.PI / 2 + rnd(-1.1, 1.1), v = rnd(140, 260 + 260 * p); sugar.add({ x: cx + rnd(-card.w * .4, card.w * .4), y: card.y + card.h * .35, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 620, drag: .6, max: rnd(.9, 1.4 + p), c: gold && Math.random() < .7 ? pick(GOLD) : pick(CANDY), rot: rnd(TAU), vr: rnd(-9, 9) }); }
         if (gold) for (let i = 2 + Math.round(4 * p); i > 0; i--) sparks.add({ delay: rnd(0, .5), life: .6, x: rnd(card.x, card.x + card.w), y: card.y + rnd(-card.h * .2, card.h * .9), size: card.h * rnd(.12, .22), rot: rnd(TAU), gold: true });
+      },
+    };
   });
+
   // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
   // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
   // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le
