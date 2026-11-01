@@ -33,6 +33,18 @@
     'Roll 100,000 different numbers (10% of them all)': 'Tire 100 000 nombres différents (10 % de tous)',
     'Number Spotter': 'Dénicheur de nombres', 'Explorer': 'Explorateur', 'Cartographer': 'Cartographe', 'Pathfinder': 'Éclaireur',
     'Globetrotter': 'Globe-trotteur', 'Number Atlas': 'Atlas des nombres', 'One Tenth of Everything': 'Un dixième de tout',
+    // titres du 2026-11-01 : niveaux (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries (lnbBUChuoi_vn),
+    // Full Spectrum (Pube puller) ; Odd Week (JBearr12). « Level 10 »… passe par la règle /^Level …$/ plus bas.
+    'Reach level 10': 'Atteins le niveau 10', 'Reach level 25': 'Atteins le niveau 25', 'Reach level 50': 'Atteins le niveau 50',
+    'Reach level 100': 'Atteins le niveau 100', 'Reach level 250': 'Atteins le niveau 250',
+    'Generous': 'Généreux', 'Give 50,000 coins to friends in total': 'Donne 50 000 pièces à des amis au total',
+    'Roll all 1,000,001 different numbers': 'Tire les 1 000 001 nombres différents',
+    'On Fire': 'En feu', 'Unstoppable': 'Inarrêtable', 'Whole Year': 'Une année entière',
+    'Claim the daily bonus 30 days in a row': 'Prends le bonus quotidien 30 jours de suite',
+    'Claim the daily bonus 100 days in a row': 'Prends le bonus quotidien 100 jours de suite',
+    'Claim the daily bonus 365 days in a row': 'Prends le bonus quotidien 365 jours de suite',
+    'Full Spectrum': 'Spectre complet', 'Roll at least one number of every rarity from Trash to Celestial': 'Tire au moins un nombre de chaque rareté, de Trash à Celestial',
+    'Odd Week': 'Semaine impaire', 'Roll 200 odd numbers': 'Tire 200 nombres impairs',
     // badges qui arrêtent le tirage auto (idée de CococoC, 2026-10-28)
     'Also stop auto-roll on badges you pick': 'Arrêter aussi le tirage auto sur des badges choisis', 'Stop auto-roll on badges': 'Arrêter le tirage auto sur des badges',
     'Auto-roll also stops on a roll that earns one of these badges, whatever you chose in "stop on". Pick up to 5.': 'Le tirage auto s\'arrête aussi sur un tirage qui obtient l\'un de ces badges, quel que soit ton choix dans « arrêt sur ». Choisis-en 5 au plus.',
@@ -655,6 +667,7 @@
     [/^Cashed out at ×([\d.]+) · you get ([\d,]+) coins$/, m => `Encaissé à ×${m[1]} · tu reçois ${m[2]} pièces`],
     [/^Cash out · ([\d,]+)$/, m => `Encaisser · ${m[1]}`],
     [/^Level ([\d,]+)$/, m => `Niveau ${m[1]}`],
+    [/^(\S+) Level ([\d,]+) title$/, m => `${m[1]} titre Niveau ${m[2]}`], // route des niveaux (shadow2 Jr, 2026-11-01)
     [/^Claim \+([\d,]+) 🪙(.*)$/, m => `Réclamer +${m[1]} 🪙${m[2]}`],
     [/^🎁 ([\d,]+) rewards? to claim$/, m => `🎁 ${m[1]} récompense${s(m[1])} à réclamer`],
     [/^⭐ Level ([\d,]+)$/, m => `⭐ Niveau ${m[1]}`],
