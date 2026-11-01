@@ -74,6 +74,9 @@
     // jamais dans une caisse). Les chiffres sont figés dans l'eau sous le verre ; plus la rareté est haute, plus il y a
     // de paillettes dans la neige (js/skinfx.js).
     { id: 'snowglobe', name: 'Snow Globe', emoji: '🔮', price: 1225, idea: 'Gray alt', desc: 'Digits frozen in a glass snow globe: shake it to roll, watch the snow settle; rarer rolls stir up more glitter · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Noël (événement de Noël, 2026-11-01) : des biscuits en pain d'épices, glace royale pochée à la révélation ; limité,
+    // jamais dans une caisse (until), gardé pour toujours par ceux qui l'ont acheté.
+    { id: 'gingerbread', name: 'Gingerbread', emoji: '🍪', price: 1100, desc: 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26', until: '2026-12-26T00:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -356,6 +359,9 @@
     // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
     // d'IXOLAF2 (idée de 3 joueurs) : il touche sa part.
     { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Fond de Noël (événement de Noël, 2026-11-01) : un salon, une cheminée qui crépite en bas de l'écran, des chaussettes
+    // sur le manteau et la neige derrière la fenêtre. Limité (onglet Limités, hors caisse) jusqu'au 26 décembre.
+    { id: 'fireplace', name: 'Cozy Fireplace', emoji: '🔥', price: 1224, desc: 'A crackling fire, stockings on the mantel and snow at the window · until December 26', until: '2026-12-26T00:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn || c.snd ? [] : SKINS.filter(s => s.caseOnly === c.id));
