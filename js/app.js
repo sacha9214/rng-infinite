@@ -1548,6 +1548,28 @@
     }).catch(() => {});
   }
 
+  // Compteur en direct en bas de chaque page (demandé par Sacha, 2026-11-01) : le même nombre que « players online »,
+  // relu toutes les 30 s tant que l'onglet est visible (le serveur ne le recalcule pas plus souvent) et dès qu'on revient
+  // sur l'onglet. Caché sous 5 joueurs ou sans réponse du serveur, comme sur l'écran de tirage.
+  const LiveFoot = {
+    timer: null,
+    async tick() {
+      const foot = $('#site-foot');
+      if (!foot || document.hidden) return;
+      try {
+        const r = await Online.request('/api/leaderboard?online=1');
+        if (r && Number.isInteger(r.online)) { $('#sf-online').textContent = plural(r.online, 'player') + ' online'; foot.hidden = false; }
+        else foot.hidden = true;
+      } catch (e) { /* hors ligne : on garde le dernier nombre */ }
+    },
+    start() {
+      if (this.timer) return;
+      this.tick();
+      this.timer = setInterval(() => this.tick(), 30000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) this.tick(); });
+    },
+  };
+
   // ---------------------------------------------------------------- quêtes du jour et bonus quotidien (accueil)
   // 5 quêtes par jour, les mêmes pour tous ; la progression et les récompenses viennent du serveur. Les finir toutes fait
   // monter la série de quêtes, avec un bonus « tout fini » (js/quests.js).
@@ -9704,6 +9726,8 @@
   // Pièces offertes par un ami depuis la dernière visite (la page Amis s'en charge elle-même).
   if (Store.player.name && currentView !== 'friends') setTimeout(checkGifts, 1500);
   if (brandNew && !Store.settings.onboarded && currentView === 'home') setTimeout(() => { if (currentView === 'home' && !$('#modal-root').firstChild) openIntro(); }, 350);
+
+  LiveFoot.start();
 
   // Fréquentation : une balise anonyme par visite (une fois par onglet), pour savoir d'où viennent les joueurs.
   // Envoyé : le site d'origine (pas l'adresse complète), ?ref= ou ?utm_source= s'il y en a, téléphone ou ordinateur,

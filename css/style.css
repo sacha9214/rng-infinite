@@ -11454,3 +11454,14 @@ a.player-btn { text-decoration: none; color: inherit; }
 }
 /* Bouton Send du chat global habillé du bouton choisi : même hauteur que le champ, jamais plus large qu'il ne faut. */
 .gc-form .gc-send { flex: none; max-width: 45%; margin-bottom: 0; white-space: nowrap; }
+
+/* Joueurs actifs en direct, en bas de chaque page (demandé par Sacha, 2026-11-01). Dans le flux de la page, pas fixé :
+   il ne cache jamais un bouton ; les marges laissent la place aux boutons ronds des coins. */
+.site-foot { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 0 auto; padding: .4rem 4.2rem 1.6rem; color: var(--muted); font: 700 .78rem var(--font-mono); letter-spacing: .02em; }
+.site-foot[hidden] { display: none; }
+.sf-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); animation: sf-pulse 2s ease-out infinite; flex: none; }
+.sf-tag { padding: .05rem .4rem; border-radius: .35rem; border: 1px solid rgba(34, 197, 94, .45); color: #16a34a; font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; }
+.dark .sf-tag { color: #4ade80; }
+#sf-online, .sf-tag { white-space: nowrap; }
+@media (max-width: 560px) { .site-foot { padding-inline: 1rem; } }
+@keyframes sf-pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); } 70% { box-shadow: 0 0 0 .45rem rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
