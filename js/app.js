@@ -2054,6 +2054,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-01-giveaways', date: 'Nov 1, 2026', en: ['🎁 Free skin giveaways on the RNG∞ Discord! Join the server (💬 Discord button), react 🎉 on a giveaway in 🎁・giveaways, and one winner gets the skin. Link your Discord in Me → 🔗 Link my Discord to receive it automatically'], fr: ['🎁 Des skins à gagner sur le Discord de RNG∞ ! Rejoins le serveur (bouton 💬 Discord), réagis 🎉 sur un giveaway dans 🎁・giveaways, et un gagnant reçoit le skin. Lie ton Discord dans Moi → 🔗 Link my Discord pour le recevoir tout seul'] },
     { id: '2026-11-01-mods', date: 'Nov 1, 2026', en: ['🛡️ Chat moderators: players chosen by Sacha help keep the global chat friendly, and a 🛡️ shows next to their name. Use 🚩 Report on a message that isn\'t nice and a moderator will check it'], fr: ['🛡️ Modérateurs du chat : des joueurs choisis par Sacha aident à garder le chat global sympa, et un 🛡️ s\'affiche à côté de leur pseudo. Utilise 🚩 Signaler sur un message pas gentil et un modérateur le vérifiera'] },
     { id: '2026-11-01-chat', date: 'Nov 1, 2026', en: ['💬 The global chat box now grows as you type, so you can see your whole message before sending it', '🔇 Chat mutes now come in shorter lengths (5 or 10 minutes) and always with a reason, which the muted player can see'], fr: ['💬 La zone d\'écriture du chat global s\'agrandit pendant que tu tapes : tu vois tout ton message avant de l\'envoyer', '🔇 Les silences du chat peuvent maintenant être plus courts (5 ou 10 minutes) et ont toujours une raison, que le joueur muet peut voir'] },
     { id: '2026-11-01-avatar-price', date: 'Nov 1, 2026', en: ['🖼️ Profile pictures: your first one is still free; after that, a new picture costs 500 coins, given back if it is refused or you withdraw it (idea by MereTera)'], fr: ['🖼️ Photos de profil : la première reste gratuite ; ensuite, une nouvelle photo coûte 500 pièces, rendues si elle est refusée ou si tu la retires (idée de MereTera)'] },
@@ -6599,7 +6600,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['mods', '🛡️', 'Moderators'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['mods', '🛡️', 'Moderators'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['giveaway', '🎁', 'Giveaways'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -7288,6 +7289,32 @@
       Online.site('annAdd', { title: f.elements.title.value, text: f.elements.text.value, important: f.elements.important.checked, discord: f.elements.discord.checked })
         .then(d => { drawAnn(d); toast(f.elements.discord.checked && !d.discord ? 'Published (not on Discord: no channel set up)' : 'Published'); announcements = d.list; paintNewsDot(); })
         .catch(err => { btn.disabled = false; toast(err.message || 'Unavailable right now, try again'); });
+    });
+    // ---- Giveaways sur le Discord (api/_giveaway.js, demandé par Sacha, 2026-11-01) : choisir un skin, le bot le met en
+    // jeu dans 🎁・giveaways, on participe en réagissant 🎉, et un gagnant est tiré par le serveur à la fin.
+    const drawGw = d => {
+      const box = pane('giveaway'); if (currentView !== 'owner' || !box) return;
+      const skins = d.skins.slice().sort((a, b) => a.name.localeCompare(b.name));
+      const state = g => (g.status === 'open' ? `<span>ends</span> ${fullDate(g.ends)}` : g.status === 'void' ? 'no winner' : g.winner ? `<span>won by</span> ${who(g.winner)}` : 'winner has 7 days to link Discord');
+      box.innerHTML = panel('New giveaway', 'the bot posts it in 🎁・giveaways on Discord; members join by reacting 🎉 and the game server picks one winner at the end', d.readOnly ? '' : `
+          ${d.ready ? '' : '<p class="panel-note">⚠️ The Discord bot only runs on the VPS: starting a giveaway works on rng-infinite.com, not here.</p>'}
+          ${d.channel ? '' : '<p class="panel-note">The first giveaway creates the 🎁 GIVEAWAYS category and its read-only 🎁・giveaways channel.</p>'}
+          <form class="gaw-form"><select class="select" name="skin" required aria-label="Skin"><option value="">Pick a skin…</option>${skins.map(s => `<option value="${esc(s.id)}">${s.emoji} ${esc(s.name)} · ${fmt(s.price)} coins</option>`).join('')}</select>
+          <select class="select" name="hours" aria-label="Length">${d.hours.map(h => `<option value="${h}"${h === 24 ? ' selected' : ''}>${h === 1 ? '1 hour' : `${h} hours`}</option>`).join('')}</select>
+          <button class="btn-roll small">🎁 Start the giveaway</button></form>`)
+        + panel('Giveaways', `${fmt(d.list.length)} recent`, d.list.length ? d.list.map(g => `<div class="o-report gaw-row"><div class="o-report-head"><b>${g.emoji} <span data-no-i18n>${esc(g.name)}</span></b><span class="panel-note">${relTime(g.t)} · ${state(g)}${g.entries != null ? ` · ${plural(g.entries, 'entry')}` : ''}</span><a class="btn ghost small" href="${esc(g.link)}" target="_blank" rel="noopener">Open on Discord</a></div></div>`).join('') : '<div class="empty">No giveaway yet.</div>');
+      guest(d.readOnly);
+    };
+    Online.site('gwList').then(drawGw).catch(err => { if (pane('giveaway')) pane('giveaway').innerHTML = denied(err); });
+    pane('giveaway').addEventListener('submit', e => {
+      const f = e.target.closest('.gaw-form'); if (!f || currentView !== 'owner') return;
+      e.preventDefault();
+      const opt = f.elements.skin.selectedOptions[0];
+      if (!f.elements.skin.value || !confirm(`${window.RNGI18n ? window.RNGI18n.t('Post this giveaway on Discord?') : 'Post this giveaway on Discord?'}\n${opt.textContent}`)) return;
+      const btn = f.querySelector('button'); btn.disabled = true;
+      Online.site('gwStart', { skin: f.elements.skin.value, hours: Number(f.elements.hours.value) })
+        .then(d => { drawGw(d); toast('Giveaway posted on Discord 🎉'); })
+        .catch(err => { btn.disabled = false; toast(err.message || 'Unavailable right now, try again', 5000); });
     });
     const drawInbox = data => {
       const box = $('#o-inbox');
@@ -9772,6 +9799,11 @@
     try { sessionStorage.setItem('rngDiscordState', state); } catch (e) { /* sans stockage : refusé au retour */ }
     location.href = `https://discord.com/oauth2/authorize?client_id=${DISCORD.app}&response_type=token&scope=${encodeURIComponent('identify guilds.join')}&redirect_uri=${encodeURIComponent(location.origin + '/')}&state=${state}`;
   }
+  // Skin gagné dans un giveaway du Discord avant d'avoir lié son compte (api/_giveaway.js, 2026-11-01).
+  function giveawayPrize(p) {
+    if (!p) return;
+    setTimeout(() => { toast(`🎁 You won the ${p.emoji} ${p.name} skin in a Discord giveaway: it's in your Shop!`, 7000, 'achv'); Sound.play('lock', { i: 5 }); }, 1500);
+  }
   async function drawDiscordLink() {
     const box = $('#f-discord');
     if (!box) return;
@@ -9789,6 +9821,7 @@
       try {
         const r = await Online.discord(b.dataset.dl);
         toast(b.dataset.dl === 'unlink' ? 'Discord unlinked' : r.inGuild === false ? 'Join the RNG∞ Discord first, then update your roles' : `Roles updated: ${(r.roles || []).join(', ')}`);
+        giveawayPrize(r.prize);
       } catch (err) { toast(err.message || 'Discord is not answering, try again'); }
       drawDiscordLink();
     };
@@ -9802,7 +9835,7 @@
     const token = q.get('access_token');
     if (token && expected && q.get('state') === expected && Store.player.id) {
       Online.discord('link', { accessToken: token })
-        .then(r => { toast(`🎉 Discord linked as ${r.username}${r.roles && r.roles.length ? ` · roles: ${r.roles.join(', ')}` : ''}`, 6000, 'achv'); drawDiscordLink(); })
+        .then(r => { toast(`🎉 Discord linked as ${r.username}${r.roles && r.roles.length ? ` · roles: ${r.roles.join(', ')}` : ''}`, 6000, 'achv'); drawDiscordLink(); giveawayPrize(r.prize); })
         .catch(err => toast(err.message || 'Could not link Discord, try again', 5000));
     } else if (q.get('error')) toast('Discord link cancelled');
   }

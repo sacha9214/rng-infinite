@@ -11563,3 +11563,9 @@ a.player-btn { text-decoration: none; color: inherit; }
 #sf-online, .sf-tag { white-space: nowrap; }
 @media (max-width: 560px) { .site-foot { padding-inline: 1rem; } }
 @keyframes sf-pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); } 70% { box-shadow: 0 0 0 .45rem rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+/* Giveaways du Discord sur la page Owner (Sacha, 2026-11-01) ; « gaw- » : « gw- » est déjà la roue du casino. */
+.gaw-form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.gaw-form .select { min-width: 0; max-width: 100%; }
+.gaw-form select[name=skin] { flex: 1 1 14rem; }
+.gaw-row .o-report-head .btn { margin-left: auto; }

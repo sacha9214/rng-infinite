@@ -581,6 +581,13 @@
     'Mute history': 'Historique des silences', 'mutes that ended or that you lifted, newest first': 'les silences finis ou levés, les plus récents en premier', 'No mute yet.': 'Aucun silence pour l\'instant.',
     'lifted by': 'levé par',
     '🗑️ Delete…': '🗑️ Supprimer…', '🗑️ Delete this message: why?': '🗑️ Supprimer ce message : pourquoi ?', // raison des suppressions (Sacha, 2026-11-01)
+    // Giveaways du Discord (Sacha, 2026-11-01)
+    'Giveaways': 'Giveaways', 'New giveaway': 'Nouveau giveaway', 'the bot posts it in 🎁・giveaways on Discord; members join by reacting 🎉 and the game server picks one winner at the end': 'le bot le publie dans 🎁・giveaways sur Discord ; les membres participent en réagissant 🎉 et le serveur du jeu tire un gagnant à la fin',
+    '⚠️ The Discord bot only runs on the VPS: starting a giveaway works on rng-infinite.com, not here.': '⚠️ Le bot Discord ne tourne que sur le VPS : lancer un giveaway marche sur rng-infinite.com, pas ici.',
+    'The first giveaway creates the 🎁 GIVEAWAYS category and its read-only 🎁・giveaways channel.': 'Le premier giveaway crée la catégorie 🎁 GIVEAWAYS et son salon 🎁・giveaways en lecture seule.',
+    'Pick a skin…': 'Choisis un skin…', '1 hour': '1 heure', '🎁 Start the giveaway': '🎁 Lancer le giveaway', 'No giveaway yet.': 'Aucun giveaway pour l\'instant.', 'Open on Discord': 'Ouvrir sur Discord',
+    'no winner': 'pas de gagnant', 'winner has 7 days to link Discord': 'le gagnant a 7 jours pour lier Discord', 'Post this giveaway on Discord?': 'Publier ce giveaway sur Discord ?', 'Giveaway posted on Discord 🎉': 'Giveaway publié sur Discord 🎉',
+    'The Discord bot is only on the VPS': 'Le bot Discord n\'est que sur le VPS', 'Pick a skin from the shop': 'Choisis un skin de la boutique', 'won by': 'gagné par', 'ends': 'se termine le',
     // Santé du serveur (2026-11-01)
     'Refused (too many requests)': 'Refusées (trop de requêtes)', 'players or schools over the limit today': 'joueurs ou écoles au-dessus de la limite aujourd\'hui', 'Longest freeze': 'Plus long gel', 'Refused': 'Refusées',
     // Modérateurs du chat (Sacha, 2026-11-01)
@@ -727,7 +734,9 @@
     [/^([\d,]+) to check · players reported them in the global chat$/, m => `${nb(m[1])} à vérifier · des joueurs les ont signalés dans le chat global`], // Modérateurs (2026-11-01)
     [/^reported (\d+) times$/, m => `signalé ${m[1]} fois`], [/^([\d,]+) reports about this player$/, m => `${nb(m[1])} signalements sur ce joueur`],
     [/^([\d,]+) minutes with a freeze over 0\.5 s$/, m => `${nb(m[1])} minutes avec un gel de plus de 0,5 s`], // santé du serveur (2026-11-01)
-    [/^moderator since (.+)$/, m => `modérateur depuis le ${m[1]}`], [/^([\d,]+) lifted by you$/, m => `${nb(m[1])} levés par toi`],
+    [/^moderator since (.+)$/, m => `modérateur depuis le ${m[1]}`],
+    [/^🎁 You won the (.+) skin in a Discord giveaway: it's in your Shop!$/, m => `🎁 Tu as gagné le skin ${m[1]} dans un giveaway Discord : il est dans ta boutique !`], // giveaways (2026-11-01)
+    [/^(\d+) hours$/, m => `${m[1]} heures`], [/^([\d,]+) recent$/, m => `${nb(m[1])} récents`], [/^([\d,]+) lifted by you$/, m => `${nb(m[1])} levés par toi`],
     [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
     [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
     [/^Make (\d+) rolls to write in the chat \(you have (\d+)\)$/, m => `Fais ${m[1]} tirages pour écrire dans le chat (tu en as ${m[2]})`],
