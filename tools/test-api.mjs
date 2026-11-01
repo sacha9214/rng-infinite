@@ -4922,12 +4922,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await getRaw('/api/profile?avatar=' + 'b'.repeat(20))).status, 404);
   assert.equal((await getRaw('/api/profile?avatar=' + kid.playerId)).status, 404, 'jamais par identifiant');
   assert.equal(JSON.parse(run([['GET', `av:${kid.playerId}`]])[0].result).v, 1);
+  // Prix (idée de MereTera, 2026-11-01) : la première photo était gratuite ; la suivante coûte Shop.AVATAR_PRICE, refusée
+  // sans les pièces (sans compter dans les 5 envois du jour), rendue si la photo est refusée ou retirée.
+  const spentOf = who => Number(run([['HGET', `stats:${who.playerId}`, 'spent']])[0].result) || 0;
+  assert.equal((await av(kid, 'mine')).body.price, Shop.AVATAR_PRICE, 'prix annoncé');
+  assert.equal((await av(kid, 'upload', { img: jpeg() })).status, 402, 'pas assez de pièces');
+  assert.equal(spentOf(kid), 0, 'rien payé');
+  run([['HSET', `stats:${kid.playerId}`, 'bonus', String(5 * Shop.AVATAR_PRICE)]]);
   // Nouvelle image refusée : l'ancienne reste, le joueur voit la raison.
   await new Promise(res => setTimeout(res, 3));
-  await av(kid, 'upload', { img: jpeg() });
+  r = await av(kid, 'upload', { img: jpeg() });
+  assert.equal(r.body.paid, Shop.AVATAR_PRICE); assert.equal(spentOf(kid), Shop.AVATAR_PRICE, 'payée à l\'envoi');
+  assert.equal(r.body.price, 0, 'remplacer une photo payée en attente ne coûte rien de plus');
   r = await av(boss, 'queue'); assert.equal(r.body.pending[0].prev, `/api/profile?avatar=${tok1}`, 'ancienne image montrée');
   assert.equal((await av(boss, 'reject', { key: r.body.pending[0].key, reason: 'nope' })).status, 422, 'raison obligatoire');
   r = await av(boss, 'reject', { key: r.body.pending[0].key, reason: 'personal' }); assert.equal(r.status, 200);
+  assert.equal(spentOf(kid), 0, 'refusée : pièces rendues');
   r = await av(kid, 'mine');
   assert.equal(r.body.rejected.reason, 'personal info / real face'); assert.ok(r.body.approved && !r.body.pending);
   assert.equal((await map()).PicKid, tok1, 'ancienne image gardée');
@@ -4937,10 +4947,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await av(boss, 'queue'); await av(boss, 'approve', { key: r.body.pending[0].key });
   m = await map(); assert.notEqual(m.PicKid, tok1);
   assert.equal(JSON.parse(run([['GET', `av:${kid.playerId}`]])[0].result).v, 2, 'version augmentée');
+  assert.equal(spentOf(kid), Shop.AVATAR_PRICE, 'acceptée : payée');
   assert.equal((await getRaw(`/api/profile?avatar=${tok1}`)).status, 404);
   // Limite de 5 envois par jour (4 déjà faits).
   assert.equal((await av(kid, 'upload', { img: jpeg() })).status, 200, '5e envoi');
   assert.equal((await av(kid, 'upload', { img: jpeg() })).status, 429, '5 par jour');
+  assert.equal(spentOf(kid), 2 * Shop.AVATAR_PRICE, 'le 6e envoi refusé ne coûte rien');
+  r = await av(kid, 'cancel'); assert.equal(r.body.refunded, Shop.AVATAR_PRICE, 'retirée : pièces rendues');
+  assert.equal(spentOf(kid), Shop.AVATAR_PRICE);
   // Signalement → Reports (where: 'avatar'), sans identifiant.
   assert.equal((await av(kid, 'report', { name: 'PicKid' })).status, 422, 'pas soi-même');
   assert.equal((await av(other, 'report', { name: 'PicOther' })).status, 404, 'pas d\'image');
