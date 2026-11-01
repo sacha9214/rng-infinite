@@ -5333,7 +5333,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // 1. Badges : nombres qui les obtiennent (build.mjs) et XP = valeur naturelle 100 × 1 000 001 / nombre (sauf
   // Three-Quarter Millennium : 100 750, la paire des 100 250 de Quarter Millennium).
   const COUNTS = { FULL_CIRCLE: 1, EULER_GAMMA_4: 300, EULER_GAMMA_5: 20, TAXICAB: 300, SHIFTED_ECHO: 1547,
-    PALINDROMIC_PRIME: 113, THREE_QUARTER_MILLENNIUM: 1000, BEE: 3999, LOL: 3979, MOON_LANDING: 300 };
+    PALINDROMIC_PRIME: 109, THREE_QUARTER_MILLENNIUM: 1000, BEE: 3999, LOL: 3979, MOON_LANDING: 300 };
   for (const [id, k] of Object.entries(COUNTS)) {
     assert.equal(odds[id], k, `${id} : ${k} nombres`);
     assert.equal(engine.byId.get(id).score, id === 'THREE_QUARTER_MILLENNIUM' ? 100750 : Math.round((100 * 1000001) / k), `${id} : XP`);
@@ -5348,8 +5348,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const n of [456345, 123234, 10, 98, 2132, 567678, 987876]) assert.ok(has(n, 'SHIFTED_ECHO'), `${n} est un écho décalé`);
   for (const n of [456456, 456356, 12345, 123432, 1, 11]) assert.ok(!has(n, 'SHIFTED_ECHO'), `${n} n'est pas un écho décalé`);
   assert.deepEqual(engine.highlight('SHIFTED_ECHO', 456345), [[0, 1, 2], [3, 4, 5]]);
-  for (const n of [2, 3, 11, 101, 94049, 98689]) assert.ok(has(n, 'PALINDROMIC_PRIME'), `${n} : premier palindrome`);
-  for (const n of [1, 121, 1001, 94048, 9449]) assert.ok(!has(n, 'PALINDROMIC_PRIME'), `${n} : non`);
+  for (const n of [11, 101, 94049, 98689]) assert.ok(has(n, 'PALINDROMIC_PRIME'), `${n} : premier palindrome`);
+  for (const n of [1, 2, 3, 5, 7, 121, 1001, 94048, 9449]) assert.ok(!has(n, 'PALINDROMIC_PRIME'), `${n} : non (un seul chiffre, ou pas premier)`);
+  // 24 reste Infinite (annoncé le 2026-10-30) : 3 ne passe plus devant ; toujours 10 nombres Infinite.
+  assert.equal(engine.analyze(24).tier, 'infinite', '24 reste Infinite');
 
   // 2. Titres : seuils exacts.
   const at = (id, st) => Ach.byId.get(id).test(st);

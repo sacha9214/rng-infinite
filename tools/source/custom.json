@@ -745,9 +745,9 @@
   {
     "id": "PALINDROMIC_PRIME",
     "label": "Palindromic Prime",
-    "desc": "A prime that reads the same both ways, like 94049.",
+    "desc": "A prime of 2 or more digits that reads the same both ways, like 94049.",
     "emoji": "💎",
-    "score": 884957
+    "score": 917432
   },
   {
     "id": "THREE_QUARTER_MILLENNIUM",

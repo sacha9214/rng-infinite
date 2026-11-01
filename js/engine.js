@@ -409,9 +409,10 @@
       for (let i = 1; i < h; i++) if (c.d[i + h] - c.d[i] !== k) return false;
       return true;
     },
-    // Idée de A Dude (2026-11-01) : premier ET palindrome (94049). 113 nombres (2, 3, 5, 7, 11, 15 à 3 chiffres,
-    // 93 à 5 chiffres ; aucun à 4 ou 6 chiffres, tous divisibles par 11).
-    PALINDROMIC_PRIME: c => isPalindrome(c.s) && isPrime(c.n),
+    // Idée de A Dude (2026-11-01) : premier ET palindrome (94049), à partir de 2 chiffres. 109 nombres (11, 15 à 3
+    // chiffres, 93 à 5 chiffres ; aucun à 4 ou 6 chiffres, tous divisibles par 11). Sans 2, 3, 5 et 7 (2026-11-01) : un
+    // seul chiffre se lit forcément pareil dans les deux sens, et 3 serait passé devant 24, annoncé Infinite le 2026-10-30.
+    PALINDROMIC_PRIME: c => c.L >= 2 && isPalindrome(c.s) && isPrime(c.n),
     COUNTDOWN_SCRAMBLED: c => c.s.length === 6 && [...c.s].sort().join('') === '016789',
     PALINDROME: c => isPalindrome(c.s),
     POCKET_MIRROR: c => findPocketMirror(c.s) !== null,
