@@ -395,6 +395,21 @@
     // Idée d'AnnJoe : de la buée sur une vitre froide, devant une ville la nuit sous la pluie ; les gouttes se forment,
     // grossissent et coulent en laissant des traces claires. Un bon tirage essuie un arc sur la vitre.
     { id: 'condensation', name: 'Condensation', emoji: '💧', price: 4000, premium: true, idea: 'AnnJoe', desc: 'A fogged-up window on a rainy night in the city: drops form, grow and run down in clear streaks; good rolls wipe a clear arc across the glass' },
+    // Six fonds d'idées de joueurs (2026-11-01), dessinés en direct (js/wallfx.js). Comme avant, ceux qui réagissent à la
+    // rareté des tirages sont légendaires (premium) : Farm, Meteor Shower et Party. Les trois autres sont des fonds normaux
+    // (ils entrent dans la caisse de fonds) ; Keyboard ASMR tape le nombre tiré, quel qu'il soit, comme Your Last Rolls.
+    // Idée de HSI : une ferme par une journée ensoleillée, des animaux et une grange rouge au fond.
+    { id: 'farm', name: 'Farm', emoji: '🐄', price: 4500, premium: true, idea: 'HSI', desc: 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping' },
+    // Idée de kingston : un fond clavier, thème ASMR (le « thock » au clic ne sonne que si le son est activé).
+    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll' },
+    // Idée de finnnnn, assorti au skin Storm : un ou deux éclairs toutes les 10 s environ, un tonnerre doux, rien de fort.
+    { id: 'thunderstorm', name: 'Thunderstorm', emoji: '⛈️', price: 1000, idea: 'finnnnn', desc: 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder' },
+    // Idée de finnnnn : des astres qui tournent les uns autour des autres, comme le système solaire.
+    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past' },
+    // Idée de Ggggssnoop, assorti au skin Meteor : une pluie d'étoiles filantes.
+    { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
+    // Idée de jia jun : une fête d'anniversaire.
+    { id: 'party', name: 'Party', emoji: '🎈', price: 4000, premium: true, idea: 'jia jun', desc: 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
