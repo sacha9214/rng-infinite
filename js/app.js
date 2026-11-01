@@ -374,6 +374,30 @@
       if (cls) b.classList.add(cls);
     });
   }
+  // Bouton Bread (idée de MattyFaux-Lucky, avec MaxABGD, 2026-11-01) : la miche perd une bouchée par chiffre révélé
+  // (n bouchées, de 0 à 6 ; css/buttons.css les dessine) et redevient entière au tirage suivant (n = 0).
+  const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
+  // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
+  // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
+  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${String(roll[0]).padStart(6, '0')}"` : '"------"');
+  Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
+  // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
+  // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
+  // est déjà joué par startRoll ; l'aperçu de la boutique (data-gen-try) joue le sien ici. L'aperçu du pain prend
+  // aussi une bouchée à chaque appui (entier à nouveau après la sixième), pour l'essayer avant de l'acheter.
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest && e.target.closest('.btn-roll.gen-bubblewrap, .btn-roll.gen-bread[data-gen-try]');
+    if (!b || b.disabled) return;
+    if (b.classList.contains('gen-bread')) { const n = (Number(b.dataset.bites) || 0) + 1; if (n > 6) delete b.dataset.bites; else b.dataset.bites = n; return; }
+    const full = Array.from({ length: 16 }, (_, i) => i).filter(i => b.style.getPropertyValue(`--b${i}`) !== '0');
+    if (!full.length) { for (let i = 0; i < 16; i++) b.style.removeProperty(`--b${i}`); return; } // feuille neuve
+    const i = full[Math.floor(Math.random() * full.length)];
+    b.style.setProperty(`--b${i}`, '0');
+    b.style.setProperty('--pop-x', `${6 + (i % 8) * 12.6 + (i >= 8 ? 6 : 0)}%`);
+    b.style.setProperty('--pop-y', i >= 8 ? '72%' : '30%');
+    b.classList.remove('bw-pop'); void b.offsetWidth; b.classList.add('bw-pop');
+    if (b.hasAttribute('data-gen-try')) Sound.play('click', { look: 'bubblewrap', k: i % 5 });
+  });
   // État de la boutique reçu du serveur : skin équipé et bouton de tirage, retenus sur l'appareil.
   function applyShop(state) {
     Store.setSetting('skin', state.skin);
@@ -2600,6 +2624,7 @@
       }
     })();
     // Pas de « clic » quand l'auto-roll réessaie après un refus : on entendait le bouton sans voir de nombre (MereTera, 2026-10-30).
+    breadBite(0); // Bread : entier pour ce tirage (MattyFaux-Lucky, MaxABGD, 2026-11-01)
     if (!(force === true && SoloAuto.refused)) Sound.play('click', { look: genClass().trim().slice(4) || undefined }); // son propre au bouton affiché (pack ASMR) ; après l'envoi de la demande : au tout premier tirage, ouvrir la sortie audio bloque la page ~0,1 s
     try {
       online = await asked;
@@ -2672,6 +2697,7 @@
       clientEvt('storage_full');
       toast(online ? 'This device is out of space: your rolls still count on your account, but the history on this device stops here.' : 'This device is out of space: this roll could not be kept.');
     }
+    setLastRoll(Store.rolls[index - 1]); // Last Roll : sur l'écran de tirage, le nombre d'avant (G8_floppa, 2026-11-01)
     session = playReveal({ n, a, previous, newIds: isFirst ? null : newIds, isFirst, lifetimeBefore, index, online });
   }
   // Tirage arrivé alors que le joueur a quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) : enregistré comme
@@ -2824,6 +2850,7 @@
       if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
       else if (pack) lk.pack = pack;
       sfx('lock', lk);
+      if (i >= lead) breadBite(i + 1 - lead); // Bread : une bouchée par vrai chiffre (MaxABGD, 2026-11-01)
       if (skinFx) skinFx.lock(el, { ghost: i < lead, last: i === slotCount - 1 });
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
@@ -3948,7 +3975,7 @@
           <div class="case-grid" id="d-cases">${Shop.CASES.map(c => {
             // Caisse de fonds d'écran : ses lots se cherchent dans les fonds (Shop.caseItem), avec leurs propres raretés.
             const item = id => Shop.caseItem(c, id), rar = id => Shop.caseRarity(c, id);
-            const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>');
+            const odds = Shop.caseOdds(c).map(o => `<span style="color:${rar(o.id).color}">■</span> ${item(o.id).emoji || '🎭'} ${item(o.id).name} · ${(o.p * 100).toFixed(1)}%`).join('<br>'); // les émotes n'ont pas d'emoji (caisse d'émotes)
             return `
             <div class="case-tile">
               <div class="case-box" aria-hidden="true">${c.emoji}</div>
@@ -3963,6 +3990,7 @@
           <p class="panel-note" style="margin:.3rem 0 0">The Wallpaper Case works the same way with animated wallpapers: already own the one you draw? Part of the price comes back too.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Button Case gives a Generate button you can also buy in the Buttons tab, with the same refund for a button you already own.</p>
           <p class="panel-note" style="margin:.3rem 0 0">The Sound Case gives a roll sound pack you can also buy in the Sounds tab, with the same refund for a pack you already own.</p>
+          <p class="panel-note" style="margin:.3rem 0 0">The Emote Case gives a special duel emote you can also buy in the Emotes tab, with the same refund for an emote you already own.</p>
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="skins" hidden>
@@ -6004,17 +6032,19 @@
     const rarest = pool[pool.length - 1].id;
     if (result.won !== rarest && Math.random() < 0.55) strip[WIN + 1] = rarest;
     // Caisse de fonds d'écran (idée de CrazyMiner22) : la bande montre des aperçus de fonds au lieu de cartes de nombre.
-    const wall = !!box.wall, btnCase = !!box.btn, sndCase = !!box.snd;
+    const wall = !!box.wall, btnCase = !!box.btn, sndCase = !!box.snd, emoCase = !!box.emo;
     const won = Shop.caseItem(box, result.won), rarity = Shop.caseRarity(box, won.id);
     // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
     // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur.
-    const look = (id, size) => sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
+    // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote animée, dessinée par js/emotes.js.
+    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="emote emote-svg">${Emotes.svg(id)}</span></div>`
+      : sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
       : btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
       : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
       : `<div class="num-card ${size}${skinClass(id)}" data-tier="${size === 'md' ? (result.duplicate ? 'common' : 'epic') : 'rare'}">${slotsHTML(size === 'md' ? '235711' : '777')}</div>`;
     const cell = id => {
       const k = Shop.caseItem(box, id), r = Shop.caseRarity(box, id);
-      return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji} ${esc(k.name)}</span></div>`;
+      return `<div class="case-cell" style="--rar:${r.color}">${look(id, 'sm')}<span>${k.emoji || ''} ${esc(k.name)}</span></div>`;
     };
     openModal(`
       <div class="case-open" style="--rar:${rarity.color}">
@@ -6025,10 +6055,10 @@
           <div class="case-glow" aria-hidden="true"></div>
           <div class="case-rarity">${rarity.name}</div>
           ${look(won.id, 'md')}
-          <p><b>${won.emoji} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : sndCase ? 'new sound pack unlocked!' : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
+          <p><b>${won.emoji || '🎭'} ${esc(won.name)}</b> — ${result.duplicate ? `you already own it: 🪙 ${fmt(result.refund)} refunded` : emoCase ? 'new emote unlocked! Use it in duels' : sndCase ? 'new sound pack unlocked!' : btnCase ? 'new button unlocked!' : wall ? 'new wallpaper unlocked!' : 'new skin unlocked!'}</p>
           <div class="room-buttons">
             ${sndCase ? '<button class="btn ghost" id="case-listen">▶ Preview</button>' : ''}
-            ${result.duplicate ? '' : `<button class="btn-roll small" id="case-equip">${wall || sndCase ? 'Use' : 'Equip'}</button>`}
+            ${result.duplicate || emoCase ? '' : `<button class="btn-roll small" id="case-equip">${wall || sndCase ? 'Use' : 'Equip'}</button>`}
             <button class="btn" id="case-again">Open another · 🪙 ${fmt(box.price)}</button>
           </div>
         </div>
@@ -6055,7 +6085,7 @@
           $('#case-result').hidden = false;
           const big = ['red', 'gold'].includes(rarity.id);
           Sound.play(result.duplicate ? 'reveal' : big ? 'win' : 'reveal', { small: !big });
-          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn, #case-result .case-snd'));
+          if (!result.duplicate || big) FX.celebrate(big ? 'mythic' : 'epic', $('#case-result .num-card, #case-result .wall-preview, #case-result .case-btn, #case-result .case-snd, #case-result .case-emo'));
           sync();
         }, reducedMotion ? 0 : 650);
       };
@@ -8866,6 +8896,7 @@
     clearTimeout(friendsTimer);
     closeModal();
     tip.hidden = true;
+    setLastRoll(Store.rolls[Store.rolls.length - 1]); // Last Roll : hors de l'écran de tirage, le dernier nombre tiré
     const [key, ...rest] = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
     if (key === 'player' && rest.length) renderProfile(decodeURIComponent(rest.join('/')));
     else if (key === 'room' && rest.length) renderRoom(rest[0]);
