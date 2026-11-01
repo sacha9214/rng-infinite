@@ -571,6 +571,15 @@
     'Chat moderators': 'Modérateurs du chat', 'they can delete messages and mute players in the global chat': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global',
     'Muted players': 'Joueurs muets', 'Nobody is muted.': 'Personne n\'est muet.', '🔊 Unmute': '🔊 Rendre la parole', 'Unmuted': 'Parole rendue',
     'Remove this moderator?': 'Retirer ce modérateur ?', 'forever': 'pour toujours',
+    // Silences avec raison (Sacha, 2026-11-01)
+    '🔇 Mute…': '🔇 Rendre muet…', 'Mute for': 'Muet pendant', '5 min': '5 min', '10 min': '10 min', '1 h': '1 h', '24 h': '24 h', 'Forever': 'Pour toujours',
+    'Reason…': 'Raison…', 'Spam or flooding': 'Spam ou flood', 'Rude words': 'Gros mots', 'Mean to someone': 'Méchant avec quelqu\'un', 'Personal info': 'Infos personnelles',
+    'Not OK for kids': 'Pas pour les enfants', 'Other': 'Autre', 'Details for the owner (optional)': 'Détails pour le créateur (facultatif)', '🔇 Mute': '🔇 Rendre muet',
+    'Pick a reason': 'Choisis une raison', 'Say why in a few words': 'Dis pourquoi en quelques mots', 'Pick how long the mute lasts': 'Choisis combien de temps dure le silence',
+    'Only the owner can mute forever': 'Seul le créateur peut rendre muet pour toujours', 'Reason:': 'Raison :', 'No reason given': 'Aucune raison donnée',
+    'they can delete messages and mute players in the global chat (5 min to 24 h; only you can mute forever)': 'ils peuvent supprimer des messages et rendre des joueurs muets dans le chat global (de 5 min à 24 h ; toi seul peux rendre muet pour toujours)',
+    'Mute history': 'Historique des silences', 'mutes that ended or that you lifted, newest first': 'les silences finis ou levés, les plus récents en premier', 'No mute yet.': 'Aucun silence pour l\'instant.',
+    'lifted by': 'levé par',
     // Annonces (idée de jaxoncool43, 2026-10-26)
     'Announce': 'Annonces', 'New announcement': 'Nouvelle annonce', 'players see it at the top of 📰 What\'s new, with a red dot': 'les joueurs la voient en haut de 📰 Nouveautés, avec un point rouge',
     'Title': 'Titre', 'Short announcement (500 characters max)': 'Annonce courte (500 caractères max.)', 'Important (shown once as a notification)': 'Important (affichée une fois en notification)',
