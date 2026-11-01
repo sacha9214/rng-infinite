@@ -5322,4 +5322,86 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(checkMessage('🍞 bread 🥖🥐'), '🍞 bread 🥖🥐');
 }
 
+// ---------------------------------------------------------------- idées du 2026-11-01 (groupe F) : joueurs en ligne
+// (Thermonuclear Bomb, Jguz01, KMC) et raretés du profil d'accord avec Best rolls (casmicgraything). Joueurs 2f01….
+{
+  const lib = require(path.join(ROOT, 'api/_lib.js')), Onl = require(path.join(ROOT, 'api/_online.js'));
+  const lbApi = require(path.join(ROOT, 'api/leaderboard.js')), friendsApi = require(path.join(ROOT, 'api/friends.js')), profileApi = require(path.join(ROOT, 'api/profile.js'));
+  const mk = (i, name, fields = []) => {
+    const id = `2f01${i.toString(16).padStart(12, '0')}`, secret = id + id;
+    run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'tv', '2', 'gv', '1', 'dv', '1', ...fields], ['HSET', 'names', id, name], ['SET', `name:${lib.nameKey(name)}`, id]]);
+    return { playerId: id, secret, name };
+  };
+  // Horloge à part, en 2040 (après les dates des blocs d'avant, 2034 au plus) : leurs tirages et présences ne comptent pas.
+  const prevNow = Date.now; let now = Date.UTC(2040, 0, 15, 12);
+  Date.now = () => now;
+  try {
+    Onl._reset();
+    const online = async () => (await call(lbApi, { url: '/api/leaderboard?online=1' })).body.online;
+    const ping = (p, presence) => call(friendsApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action: 'gifts', presence } });
+    const ps = Array.from({ length: 7 }, (_, i) => mk(i + 1, `Onlinep${i + 1}`));
+    // 1. Personne : null (rien d'affiché). 3 pages actives + 1 onglet afk + 1 tirage = 4 : toujours caché (moins de 5).
+    assert.equal(await online(), null);
+    for (const p of ps.slice(0, 3)) assert.equal((await ping(p, 'active')).status, 200);
+    await ping(ps[3], 'afk');
+    await lib.recordRoll(ps[4].playerId, 424242, now);
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await Onl.count(), 4, 'actifs + tirage récent, pas l\'onglet afk');
+    assert.equal(await online(), null, 'sous 5 : caché');
+    // 2. Un 5e (un tirage) : affiché ; un joueur actif ET qui tire ne compte qu'une fois.
+    await lib.recordRoll(ps[0].playerId, 424243, now);
+    await lib.recordRoll(ps[5].playerId, 424244, now);
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 5);
+    // 3. En cache 30 s : un nouveau venu n'apparaît qu'au calcul suivant.
+    await ping(ps[6], 'active');
+    assert.equal(await online(), 5, 'en cache');
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 6);
+    // 4. Passé en afk : retiré tout de suite du zset ; au-delà de 150 s sans signe de vie, plus personne.
+    await ping(ps[6], 'afk');
+    now += Onl.CACHE_MS + 1;
+    assert.equal(await online(), 5);
+    now += Onl.ONLINE_MS + 1;
+    assert.equal(await online(), null);
+    assert.equal(run([['ZCARD', Onl.PRES_Z]])[0].result, 0, 'les vieilles présences sont retirées');
+    // 5. Chat global : le même nombre dans la réponse de gcList (même « same »), sans aucun identifiant.
+    for (const p of ps.slice(0, 5)) await ping(p, 'active');
+    now += Onl.CACHE_MS + 1;
+    let r = await call(friendsApi, { method: 'POST', body: { action: 'gcList' } });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.online, 5);
+    r = await call(friendsApi, { method: 'POST', body: { action: 'gcList', rev: r.body.rev, del: r.body.del } });
+    assert.ok(r.body.same && r.body.online === 5, 'aussi dans la réponse courte');
+    r = await call(lbApi, { url: '/api/leaderboard?online=1' });
+    assert.deepEqual(Object.keys(r.body), ['online']);
+    assert.ok(!ps.some(p => JSON.stringify(r.body).includes(p.playerId)));
+
+    // 6. Profil (casmicgraything) : historique complet, stats.rolls et t:godlike plus grands (doublon retiré, nombre passé
+    // de Godlike à Divine) : les raretés viennent de l'historique, comme Best rolls.
+    const cg = mk(20, 'Casmictest', ['rolls', '6', 't:godlike', '3', 't:divine', '0', 't:common', '2']);
+    const T = now - 3600000;
+    run([['ZADD', `hist:${cg.playerId}`, T, `${T}:97`, T + 1000, `${T + 1000}:224224`, T + 2000, `${T + 2000}:911911`, T + 3000, `${T + 3000}:123456`, T + 4000, `${T + 4000}:500001`,
+      T + 4500, `${T + 4500}:500001`], // le même tirage enregistré deux fois (même nombre, moins d'une minute)
+    ['HSET', 'count:all', cg.playerId, 6]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmictest' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.window, 5); assert.equal(r.body.rolls, 6, 'tirages à vie : toujours le compteur');
+    const bestTier = t => r.body.best.filter(x => engine.cardTier(x.s) === t).length;
+    assert.deepEqual([r.body.tiers.godlike, r.body.tiers.divine], [2, 1], JSON.stringify(r.body.tiers));
+    for (const t of ['godlike', 'divine', 'celestial']) assert.equal(r.body.tiers[t] || 0, bestTier(t), `${t} : même nombre que dans Best rolls`);
+    assert.equal(Object.values(r.body.tiers).reduce((x, y) => x + y, 0), r.body.window);
+    // 7. Totaux gardés dans Redis (pagg, ils survivent à un déploiement) calculés avec un autre barème : ignorés.
+    const cg2 = mk(21, 'Casmicpagg'), hist2 = [[T, 97], [T + 1000, 224224], [T + 2000, 911911]];
+    const oldAgg = { v: 'oldscale0000', at: now, padded: false, size: 3, count: 3, since: T, lastT: T + 2000, lifetime: 1, percentileSum: 150, badges: {}, tiers: { godlike: 3 }, best: hist2.map(([t, n]) => ({ n, s: engine.scoreOf(n), t })), worst: [], uniq: null };
+    run([['ZADD', `hist:${cg2.playerId}`, ...hist2.flatMap(([t, n]) => [t, `${t}:${n}`])], ['SET', `pagg:${cg2.playerId}`, JSON.stringify(oldAgg)]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmicpagg' });
+    assert.deepEqual([r.body.tiers.godlike, r.body.tiers.divine], [2, 1], 'pagg d\'un autre barème ignoré');
+    // Même barème : réutilisé tel quel (rien de nouveau dans l'historique depuis lastT).
+    const cg3 = mk(22, 'Casmicsame');
+    run([['ZADD', `hist:${cg3.playerId}`, ...hist2.flatMap(([t, n]) => [t, `${t}:${n}`])]]);
+    r = await call(profileApi, { url: '/api/profile?name=Casmicsame' });
+    assert.equal(r.body.tiers.godlike, 2);
+  } finally { Date.now = prevNow; Onl._reset(); }
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
