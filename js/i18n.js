@@ -605,6 +605,24 @@
     'new emote unlocked! Use it in duels': 'nouvelle émote débloquée ! Utilise-la en duel',
     'The Emote Case gives a special duel emote you can also buy in the Emotes tab, with the same refund for an emote you already own.': 'La caisse d\'émotes donne une émote spéciale pour les duels qu\'on peut aussi acheter dans l\'onglet Émotes, avec le même remboursement pour une émote que tu as déjà.',
     'A white chocolate bar in pink and silver foil: digits melt while it rolls, then every square snaps into shape; Mythic rolls drip with berry sauce': 'Une tablette de chocolat blanc dans du papier rose et argent : les chiffres fondent pendant le tirage, puis chaque carré se fige d\'un coup ; les tirages Mythic coulent de coulis de fruits rouges',
+    // idées du 2026-11-01 (groupe F) : réglage de la ligne d'XP (jsand), déconnexion avec mot de passe (Angelicide9),
+    // rareté de l'aperçu (jia jun), recherche dans la boutique (Deadshot), période de l'historique (qwertyuiop),
+    // comparaison de deux nombres (CrazyMiner22), nombres de 1 à 6 chiffres (Phong254), tirage auto sur les autres pages (kaz)
+    'Show XP to next rarity': 'Afficher l\'XP vers la rareté suivante',
+    'The “↑ XP short of / ↓ XP above” line under the XP after a roll.': 'La ligne « ↑ il manquait / ↓ au-dessus de » sous l\'XP après un tirage.',
+    'Sign out? To come back, sign in with your player name and your password.': 'Se déconnecter ? Pour revenir, connecte-toi avec ton pseudo et ton mot de passe.',
+    'Signed out: sign in again with your name and password': 'Déconnecté : reconnecte-toi avec ton pseudo et ton mot de passe',
+    'This device goes back to a new empty player. Your rolls and coins stay on your account.': 'Cet appareil repart avec un nouveau joueur vide. Tes tirages et tes pièces restent sur ton compte.',
+    'Preview · nothing is rolled · shown as': 'Aperçu · rien n\'est tiré · montré comme', 'Rarity of the preview': 'Rareté de l\'aperçu',
+    'Search the shop…': 'Chercher dans la boutique…', 'Nothing matches your search': 'Rien ne correspond à ta recherche',
+    'All time': 'Depuis toujours', 'Period': 'Période',
+    'compare (optional)': 'comparer (facultatif)', 'Second number to compare with (optional)': 'Deuxième nombre à comparer (facultatif)',
+    'Compare numbers': 'Comparer les nombres', 'Simulation': 'Simulation', 'Only': 'Seulement',
+    'Number of digits': 'Nombre de chiffres', 'how many 1- to 6-digit numbers you rolled vs. expected': 'combien de nombres de 1 à 6 chiffres tu as tirés, face à l\'attendu',
+    'Numbers that contain a digit or a sequence: search it in': 'Les nombres qui contiennent un chiffre ou une suite : cherche-la dans',
+    'Auto-roll is on: rolls keep coming while you browse': 'Tirage auto allumé : les tirages continuent pendant que tu navigues',
+    'Auto-roll keeps rolling while you browse': 'Le tirage auto continue pendant que tu navigues', 'tap here to stop it': 'touche ici pour l\'arrêter',
+    'Auto-roll stopped': 'Tirage auto arrêté', 'Auto-roll stopped: duels and tournaments use your rolls': 'Tirage auto arrêté : les duels et les tournois utilisent tes tirages',
   };
 
   // ---------------------------------------------------------------- phrases à nombres (motif → traduction)
@@ -827,6 +845,10 @@
     [/^([\d,]+) more rolls? to join this board$/, m => `Encore ${nb(m[1])} tirage${s(m[1])} pour entrer dans ce classement`],
     // tirage arrivé après avoir quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) ; « · tap to see it » est dans FR
     [/^Roll saved: (\d+) \((.+), ([\d,]+) XP\)$/, m => `Tirage enregistré : ${m[1]} (${m[2]}, ${nb(m[3])} XP)`],
+    // idées du 2026-11-01 (groupe F) : tirages de la session (kingston), joueurs en ligne (Thermonuclear Bomb), chiffres (Phong254)
+    [/^([\d,]+) rolls? this session$/, m => `${nb(m[1])} tirage${s(m[1])} cette session`],
+    [/^([\d,]+) players? online$/, m => `${nb(m[1])} joueur${s(m[1])} en ligne`], [/^([\d,]+) online$/, m => `${nb(m[1])} en ligne`],
+    [/^(\d) digits?$/, m => `${m[1]} chiffre${s(m[1])}`], [/^expected ≈ ([\d,.]+)$/, m => `attendu ≈ ${nb(m[1]).replace('.', ',')}`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte

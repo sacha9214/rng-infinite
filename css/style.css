@@ -10632,3 +10632,46 @@ a.player-btn { text-decoration: none; color: inherit; }
   .tn-which { display: flex; width: 100%; }
   .tn-which button { flex: 1 1 0; min-width: 0; padding-inline: .25rem; letter-spacing: 0; line-height: 1.25; }
 }
+
+/* ---------------------------------------------------------------- idées du 2026-11-01 (groupe F) */
+/* Tirages de la session (kingston) et joueurs en ligne (Thermonuclear Bomb) sous le bouton de tirage. */
+.sess-rolls, .online-now { margin: .45rem 0 0; font-size: .72rem; font-weight: 600; color: var(--prose-2); }
+.sess-rolls + .online-now { margin-top: .2rem; }
+.sess-rolls[hidden], .online-now[hidden] { display: none; }
+.result .sess-rolls { text-align: center; }
+/* Tirage auto sur les autres pages (kaz) : point qui pulse sur l'onglet Roll, avec le nombre de tirages faits. */
+.nav a[data-route="home"] { position: relative; }
+.nav-auto { position: absolute; top: 0; right: 0; min-width: .55rem; height: .55rem; padding: 0 .2rem; border-radius: 999px; background: #22c55e; color: #fff; font: 800 .5rem/.55rem var(--font-sans); text-align: center; box-shadow: 0 0 0 2px var(--site-bg); animation: nav-auto-pulse 1.4s ease-in-out infinite; pointer-events: none; }
+.nav-auto:not(:empty) { height: .8rem; line-height: .8rem; min-width: .8rem; }
+@keyframes nav-auto-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) { .nav-auto { animation: none; } }
+/* Chat global : « 🟢 N online » à côté du titre. */
+.gc-online { flex: none; font-size: .68rem; font-weight: 700; color: var(--prose-2); white-space: nowrap; }
+.gc-online[hidden] { display: none; }
+/* Réglages : se déconnecter d'un joueur à mot de passe (Angelicide9). */
+.pw-out { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .6rem; }
+.pw-out[hidden] { display: none; }
+.pw-out .panel-note { flex: 1 1 12rem; margin: 0; }
+/* Aperçu d'un skin : choix de la rareté (jia jun). */
+.sp-tiers { display: flex; width: fit-content; max-width: 100%; margin: .5rem auto 0; }
+.sp-tiers button { padding-inline: .6rem; }
+/* Recherche dans la boutique (Deadshot) : à gauche du filtre Possédés. */
+.shop-search { flex: 1 1 11rem; max-width: 18rem; min-width: 0; margin-right: auto; }
+@media (max-width: 640px) { .shop-search { flex-basis: 100%; max-width: none; margin-right: 0; } }
+/* Équiper depuis son inventaire (LEVIATHAN). */
+.pf-inv-item .btn { padding: .3rem .8rem; font-size: .72rem; }
+.pf-inv-item .skin-state { padding: .3rem 0; }
+/* Vérificateur d'XP : deuxième nombre à comparer (CrazyMiner22). */
+.xc-form { flex-wrap: wrap; align-items: center; }
+.xc-vs { font-size: .72rem; font-weight: 700; color: var(--prose-3); }
+.num-card.xc-sim-card { outline: 2px dashed var(--prose-3); outline-offset: 3px; }
+@media (max-width: 420px) { .xc-form .input { flex: 1 1 6rem; } }
+/* Stats : nombres de 1 à 6 chiffres (Phong254). */
+.st-lens { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); column-gap: 1.5rem; }
+.st-lens .kv:first-child { border-top: 0; }
+.st-len .k { display: flex; flex-wrap: wrap; gap: .1rem .4rem; }
+.st-len .v { text-align: right; white-space: nowrap; }
+.st-len .v.up b { color: var(--success); }
+.st-len .v.down b { color: #f97316; }
+.st-len .muted { font-weight: 500; }
+.st-len-note { margin: .6rem 0 0; }

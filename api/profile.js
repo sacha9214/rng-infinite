@@ -15,6 +15,14 @@ const bioText = raw => { try { const b = raw ? JSON.parse(raw) : null; return b 
 const BEST_LIMIT = 10;
 const AGG_TTL_MS = 6 * 3600 * 1000; // recalcul complet au plus toutes les 6 h (badges changés entre-temps, etc.)
 const paggKey = id => `pagg:${id}`, PAGG_MIN = 2000;
+// Version du barème (badges, table des raretés, moteur) : des totaux gardés (pagg:<id>, jusqu'à 6 h, ils survivent à un
+// déploiement) calculés avec un autre barème ne sont pas réutilisés. Sinon, juste après un changement de raretés, le
+// compteur « Rare rolls » gardait les anciennes raretés alors que les meilleurs tirages, eux, sont relus au barème du
+// jour (signalé par casmicgraything, 2026-11-01 : 3 Godlike comptés, 2 dans Best rolls).
+const SCORE_V = require('node:crypto').createHash('sha256')
+  .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
+  .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/percentiles.json')))
+  .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 // Nombres différents tirés (idée de jsand, 2026-10-27) : le set nums:<id> existe déjà (succès Déjà vu, api/_lib.js) ;
 // son SCARD est immédiat, sans relire l'historique. Il est exact depuis que le joueur a ce set (stats.dv, posé à son
 // premier tirage depuis le 2026-10-18, rempli alors depuis son historique) : seul un nombre tiré uniquement dans les
@@ -62,7 +70,7 @@ module.exports = async (req, res) => {
     // Après un redémarrage (chaque déploiement), la mémoire est vide : les totaux sont aussi gardés dans Redis (pagg:<id>),
     // sinon chaque gros profil recalculait ses 100 000 tirages juste après la mise à jour et ralentissait tout le monde.
     if (!AGG.has(id)) { try { const [raw] = await redis([['GET', paggKey(id)]]); if (raw) AGG.set(id, JSON.parse(raw)); } catch (e) { /* recalculé */ } }
-    const prev0 = AGG.get(id), cached = prev0 && Date.now() - prev0.at < AGG_TTL_MS;
+    const prev0 = AGG.get(id), cached = prev0 && prev0.v === SCORE_V && Date.now() - prev0.at < AGG_TTL_MS;
     const [members, shownName, bestAll, rank, title, h2hFlat, ownedSkins, ownedWalls, skin, discordName, histSize, bioRaw, lbXp, countAll] = await redis([
       cached ? ['ZRANGEBYSCORE', historyKey(id), `(${prev0.lastT}`, '+inf'] : ['ZRANGE', historyKey(id), 0, -1],
       ['HGET', 'names', id],
@@ -153,7 +161,7 @@ module.exports = async (req, res) => {
     const uniqFull = prev ? (prev.uniq ?? null) : stats.dv === '1' ? null : new Set(rolls.map(([, n]) => n)).size;
     if (count) {
       AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
-      const agg = { at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
+      const agg = { v: SCORE_V, at: prev ? prev.at : Date.now(), padded, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
       AGG.set(id, agg);
       if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
       // Gardé dans Redis seulement pour les gros historiques (ceux qui coûtent à recalculer), jusqu'au recalcul complet.
@@ -167,8 +175,15 @@ module.exports = async (req, res) => {
     // les badges restent calculés sur les tirages relus (window).
     const lifeRolls = Math.max(count, Number(countAll) || 0, Number(stats.rolls) || 0);
     const lifeXp = Math.max(lifetime, Number(lbXp) || 0);
-    // Raretés : compteurs à vie des stats (t:<rareté>) quand l'historique ne couvre pas tous les tirages.
-    const lifeTiers = lifeRolls > count ? Object.fromEntries(engine.TIER_ORDER.map(k => [k, Math.max(tiers[k] || 0, Number(stats[`t:${k}`]) || 0)]).filter(([, v]) => v)) : tiers;
+    // Raretés : compteurs à vie des stats (t:<rareté>) seulement quand l'historique est plafonné (HISTORY_CAP) et ne
+    // couvre donc pas tous les tirages. Avant, il suffisait que count:all ou stats.rolls dépasse d'un seul tirage les
+    // tirages relus (doublons retirés par rollSet, tirages d'avant l'historique du serveur…), et les compteurs
+    // t:<rareté> gardent la rareté du jour du tirage (rien n'est repris) : un 911911 tiré Godlike avant le 2026-10-28
+    // y reste Godlike alors qu'il est Divine aujourd'hui. Le profil montrait alors 3 Godlike et 2 seulement dans Best
+    // rolls (casmicgraything, 2026-11-01). Historique complet : les raretés viennent des mêmes tirages que Best rolls,
+    // au barème du jour.
+    const capped = Number(histSize) >= HISTORY_CAP;
+    const lifeTiers = capped && lifeRolls > count ? Object.fromEntries(engine.TIER_ORDER.map(k => [k, Math.max(tiers[k] || 0, Number(stats[`t:${k}`]) || 0)]).filter(([, v]) => v)) : tiers;
 
     return send(res, 200, {
       name: shownName || name,

@@ -204,6 +204,7 @@ async function list(body, me, stats, again = false) {
   // Grand tirage arrivé à son heure : publié maintenant, puis relecture (une seule fois).
   if (due && due.length && !again) { await flushSys(due); return list(body, me, stats, true); }
   const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS, pin: pinView(pin) };
+  out.online = await require('./_online').shown(); // « N online » en tête du chat (Thermonuclear Bomb, 2026-11-01) ; null sous 5
   if (me) out.me = await meInfo(me, stats);
   const since = Number(body.since) || 0, seenDel = Number(body.del) || 0;
   if (body.rev != null && Number(body.rev) === out.rev && seenDel === out.del) return { ...out, same: true };

@@ -304,8 +304,12 @@
   // Aussi dans le détail d'un ancien tirage (idée de Kag, 2026-10-28) : live = false, affiché tout de suite. Common et
   // en dessous : aussi la marge au-dessus de la rareté du dessous (idée de Starharvest, 2026-10-28), sur la même ligne ;
   // chaque moitié reste entière (sur un téléphone, elles passent l'une sous l'autre).
+  // Marge au-dessus de la rareté du dessous pour toutes les raretés, plus seulement Common et pire (idée de qwertyuiop,
+  // 2026-11-01). Réglage « Show XP to next rarity » (idée de jsand, 2026-11-01) : coupé, la ligne ne s'affiche plus après
+  // un tirage (live) ; le détail d'un ancien tirage et le vérificateur d'XP la gardent.
   function tierShortHTML(a, live = true) {
-    const nx = Engine.nextTier(a.total), pv = TIER_RANK[a.tier] <= TIER_RANK.common && Engine.prevTier ? Engine.prevTier(a.total) : null;
+    if (live && Store.settings.tierLine === 'off') return '';
+    const nx = Engine.nextTier(a.total), pv = Engine.prevTier ? Engine.prevTier(a.total) : null;
     if (!nx && !pv) return '';
     const name = t => { const l = TIER_LABEL[t] || t; return esc(l[0].toUpperCase() + l.slice(1)); };
     const parts = [nx && `<span>↑ ${fmt(nx.short)} XP short of ${name(nx.tier)}</span>`, pv && `<span>↓ ${fmt(pv.above)} XP above ${name(pv.tier)}</span>`].filter(Boolean);
@@ -1246,6 +1250,7 @@
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
+      <div class="field"><label>Show XP to next rarity</label>${seg('tierLine', ['on', 'off'], s.tierLine === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">The “↑ XP short of / ↓ XP above” line under the XP after a roll.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
@@ -1283,7 +1288,7 @@
       const googleSlot = m.querySelector('#google-btn');
       if (googleSlot) renderGoogleButton(googleSlot);
       const googleOut = m.querySelector('#google-out');
-      if (googleOut) googleOut.addEventListener('click', signOutGoogle);
+      if (googleOut) googleOut.addEventListener('click', () => signOutGoogle('google'));
       bindPassword(m);
       bindAvatarField(m);
       bindBioField(m);
@@ -1493,6 +1498,8 @@
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>${esc(keyName())}</kbd>
           </p>
+          ${sessRollsHTML()}
+          <p class="online-now" id="online-now" hidden></p>
           ${soloAutoHTML()}
           <button class="btn ghost trailer-btn" data-trailer>${playIcon()} Watch the trailer</button>
           <div class="home-row"><div id="quests-slot"></div><div data-fund-slot></div><div id="event-side"></div></div>
@@ -1522,10 +1529,22 @@
     const pick = $('#pick-name');
     if (pick) pick.addEventListener('click', openSettings);
     loadTodayCard($('#today-slot'));
+    loadOnlineNow($('#online-now'));
     drawTourneyBanner($('#tn-banner-slot'));
     loadQuests($('#quests-slot'));
     Fund.load();
     $('#room-join-form').addEventListener('submit', e => { e.preventDefault(); joinRoom($('#room-code').value); });
+  }
+
+  // « 🟢 N players online » (idée de Thermonuclear Bomb, 2026-11-01 ; aussi Jguz01 et KMC) : compté par le serveur
+  // (api/_online.js, 30 s de cache), rien sous 5 joueurs ni si le serveur ne répond pas.
+  const onlineText = n => `🟢 ${plural(n, 'player')} online`;
+  function loadOnlineNow(el) {
+    if (!el) return;
+    Online.request('/api/leaderboard?online=1').then(r => {
+      if (!el.isConnected || !r || !Number.isInteger(r.online)) return;
+      el.textContent = onlineText(r.online); el.hidden = false;
+    }).catch(() => {});
   }
 
   // ---------------------------------------------------------------- quêtes du jour et bonus quotidien (accueil)
@@ -1889,8 +1908,11 @@
   }
 
   // Déconnexion : l'historique n'est retiré de cet appareil qu'une fois chaque tirage confirmé sur le compte.
-  async function signOutGoogle() {
-    if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+  // Aussi pour les joueurs à mot de passe (idée d'Angelicide9, 2026-11-01) : bouton montré seulement si le serveur
+  // confirme un mot de passe, sinon le joueur ne pourrait jamais revenir sur son compte.
+  async function signOutGoogle(how = 'google') {
+    if (how === 'google' && window.google && google.accounts) google.accounts.id.disableAutoSelect();
+    if (how === 'password' && !confirm(window.RNGI18n.t('Sign out? To come back, sign in with your player name and your password.'))) return;
     closeModal();
     try {
       await syncHistory();
@@ -1906,7 +1928,7 @@
     Store.clearRolls();
     Collection.built = false;
     Store.signOut();
-    toast('Signed out: your history is saved in your Google account');
+    toast(how === 'password' ? 'Signed out: sign in again with your name and password' : 'Signed out: your history is saved in your Google account');
     route();
   }
 
@@ -1919,16 +1941,22 @@
       <details class="pw-login"><summary>Sign in with a name and password</summary>
         <form class="pw-form" id="pw-login"><input class="input" name="name" autocomplete="username" maxlength="20" placeholder="Player name" aria-label="Player name" required><input class="input" type="password" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="btn">Sign in</button></form>
         <span class="panel-note">This device switches to that player. The player you use here now stays saved on the server under its name.</span>
-      </details></div>`;
+      </details>
+      <div class="pw-out" id="pw-out" hidden><button class="btn" id="pw-signout" type="button">Sign out</button><span class="panel-note">This device goes back to a new empty player. Your rolls and coins stay on your account.</span></div></div>`;
   }
   function bindPassword(m) {
     const state = m.querySelector('#pw-state'), set = m.querySelector('#pw-set'), login = m.querySelector('#pw-login'), p = Store.player;
-    if (p.name) Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => { if (r.has && state) state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); }).catch(() => {});
+    const out = m.querySelector('#pw-out');
+    if (p.name) Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => {
+      if (r.has && state) state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.');
+      if (r.has && out && !p.google) out.hidden = false; // compte Google : son propre bouton « Sign out » existe déjà
+    }).catch(() => {});
+    if (out) out.querySelector('#pw-signout').addEventListener('click', () => signOutGoogle('password'));
     if (set) set.addEventListener('submit', async e => {
       e.preventDefault();
       const f = new FormData(set);
       if (f.get('password') !== f.get('again')) { toast('The two passwords are different'); return; }
-      try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); toast('Password saved', 2500, 'achv'); }
+      try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); if (out && !p.google) out.hidden = false; toast('Password saved', 2500, 'achv'); }
       catch (err) { toast([403, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
     });
     if (login) login.addEventListener('submit', async e => {
@@ -2383,9 +2411,21 @@
   // Rien ne se saute : pendant la révélation, Espace est ignoré ; une fois la rareté affichée, il relance.
   let rollPending = false;
   // Tirage auto en solo : relance toute seule à la fin de chaque révélation, tant que l'interrupteur est allumé.
-  // Jamais gardé d'une visite à l'autre ; s'éteint en quittant l'écran de tirage, sur un tirage hors ligne, et
-  // s'arrête de lui-même sur un Mythic ou mieux pour que le joueur le voie.
-  const SoloAuto = { on: false, timer: 0, shownAt: 0, refused: 0 }; // refused : refus 429 d'affilée (voir startRoll)
+  // Jamais gardé d'une visite à l'autre ; s'éteint sur un tirage hors ligne, en entrant dans un duel ou un tournoi, et
+  // s'arrête de lui-même sur la rareté choisie pour que le joueur la voie. Sur les autres pages du site (boutique,
+  // casino…), il continue sans révélation (idée de kaz, 2026-11-01), voir bgSoloRoll et autoAfterRoute.
+  const SoloAuto = { on: false, timer: 0, shownAt: 0, refused: 0, away: false }; // refused : refus 429 d'affilée (voir startRoll) ; away : message « keeps rolling » déjà montré
+  const onRollPage = () => currentView === 'home' || currentView === 'result';
+  // Pages où le tirage auto s'arrête : un duel ou un tournoi tire avec le même compte (délai de 8 s du serveur partagé).
+  const AUTO_HALT = ['room', 'tournament'];
+  // Tirages faits dans cet onglet (idée de kingston, 2026-11-01) : « N rolls this session » sous le bouton de tirage.
+  // sessionStorage : remis à zéro quand l'onglet se ferme, gardé si la page se recharge.
+  const SessionRolls = {
+    get n() { try { return Number(sessionStorage.getItem('rngSessRolls')) || 0; } catch (e) { return this.mem || 0; } },
+    bump() { const n = this.n + 1; this.mem = n; try { sessionStorage.setItem('rngSessRolls', String(n)); } catch (e) { /* stockage bloqué : en mémoire */ } const el = $('#sess-rolls'); if (el) { el.textContent = sessRollsText(n); el.hidden = false; } },
+  };
+  const sessRollsText = n => `🔥 ${plural(n, 'roll')} this session`;
+  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
   const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
@@ -2458,6 +2498,7 @@
     BgTimer.clear(SoloAuto.timer);
     const box = $('#solo-auto');
     if (box) box.checked = false;
+    paintAutoBadge();
   }
   function bindSoloAuto() {
     const box = $('#solo-auto');
@@ -2515,9 +2556,10 @@
     BgTimer.clear(SoloAuto.timer);
     SoloAuto.timer = BgTimer.set(() => {
       if (!SoloAuto.on) return;
-      if (currentView !== 'result' && currentView !== 'home') { stopSoloAuto(); return; }
-      // Onglet caché (demandé par Sacha, 2026-10-19) : on continue sans animation, voir bgSoloRoll.
-      if (document.hidden) { bgSoloRoll(); return; }
+      if (AUTO_HALT.includes(currentView)) { stopSoloAuto(); return; }
+      // Onglet caché (demandé par Sacha, 2026-10-19) ou autre page du site (idée de kaz, 2026-11-01) : on continue sans
+      // animation, voir bgSoloRoll ; une fenêtre ouverte sur une autre page n'arrête rien.
+      if (document.hidden || !onRollPage()) { bgSoloRoll(); return; }
       // Fenêtre ouverte : on attend sans rien tirer.
       if ($('#modal-root').firstChild) { scheduleSoloAuto(1000); return; }
       // Pause garantie : le dernier résultat reste visible au moins 1,8 s, quel que soit le chemin qui a programmé ce
@@ -2551,18 +2593,61 @@
     HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
+    SessionRolls.bump();
+    // Page visible (autre page du site) : succès et quêtes comme un tirage normal.
+    if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
+    if (noteBgRoll(n, a, online.t)) return;
+    // Revenu sur l'écran de tirage pendant que ce tirage partait : il est montré dans le résumé, la suite reprend là.
+    if (onRollPage() && !document.hidden) { flushAway(); scheduleSoloAuto(SOLO_PAUSE); return; }
+    scheduleSoloAuto(1800);
+  }
+  // Compte un tirage fait sans révélation (onglet caché ou autre page) ; true si le tirage auto s'arrête dessus.
+  function noteBgRoll(n, a, t) {
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
-    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t: online.t };
-    document.title = `(${BgRolls.count}) ${BgRolls.title}`;
+    if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t };
+    if (document.hidden) document.title = `(${BgRolls.count}) ${BgRolls.title}`;
     if (autoStops(a)) {
-      stopSoloAuto(); BgRolls.stopped = { n, a, t: online.t };
+      stopSoloAuto(); BgRolls.stopped = { n, a, t };
       awaySave();
-      document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
-      return;
+      if (document.hidden) document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
+      else flushAway(); // sur une autre page, onglet visible : le joueur l'apprend tout de suite
+      return true;
     }
     awaySave();
-    scheduleSoloAuto(1800);
+    paintAutoBadge();
+    return false;
+  }
+  // Résumé « pendant ton absence » montré, compteurs remis à zéro.
+  function flushAway() {
+    if (!BgRolls.count) return;
+    const { count, stopped, best } = BgRolls;
+    if (BgRolls.title) document.title = BgRolls.title;
+    BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
+    awayShow({ count, stopped, best });
+    paintAutoBadge();
+  }
+  // Petit indicateur sur l'onglet « Roll » du menu quand le tirage auto tourne depuis une autre page : un point qui
+  // pulse et le nombre de tirages faits depuis qu'on est parti.
+  function paintAutoBadge() {
+    const link = document.querySelector('.nav a[data-route="home"]');
+    if (!link) return;
+    let dot = link.querySelector('.nav-auto');
+    if (!SoloAuto.on || onRollPage()) { if (dot) { dot.remove(); link.removeAttribute('title'); } return; }
+    if (!dot) { dot = document.createElement('b'); dot.className = 'nav-auto'; dot.setAttribute('data-no-i18n', ''); link.append(dot); }
+    dot.textContent = BgRolls.count ? compact(BgRolls.count) : '';
+    link.title = window.RNGI18n ? window.RNGI18n.t('Auto-roll is on: rolls keep coming while you browse') : 'Auto-roll is on: rolls keep coming while you browse';
+  }
+  // Après chaque changement de page : le tirage auto continue ailleurs (révélation coupée par route() : on reprogramme
+  // le suivant), s'arrête dans un duel ou un tournoi, et le résumé s'affiche au retour sur l'écran de tirage.
+  function autoAfterRoute() {
+    if (SoloAuto.on && AUTO_HALT.includes(currentView)) { stopSoloAuto(); toast('Auto-roll stopped: duels and tournaments use your rolls'); }
+    else if (SoloAuto.on && !onRollPage()) {
+      if (!SoloAuto.away) { SoloAuto.away = true; toast('🎲 Auto-roll keeps rolling while you browse · tap here to stop it', 6000, '', () => { stopSoloAuto(); paintAutoBadge(); toast('Auto-roll stopped'); }); }
+      if (!rollPending) scheduleSoloAuto(SOLO_PAUSE);
+    }
+    if (onRollPage()) { SoloAuto.away = false; if (!document.hidden) flushAway(); }
+    paintAutoBadge();
   }
   // Un Godlike tiré onglet caché, vu seulement des jours plus tard dans l'historique (ann Joe worst gamble, 2026-10-30) :
   // le résumé « pendant ton absence » ne vivait qu'en mémoire et 8 s à l'écran. Un onglet endormi ou fermé par le
@@ -2593,9 +2678,10 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) SoloAuto.shownAt = Date.now(); // retour sur l'onglet : on laisse voir l'écran avant le tirage suivant
     if (document.hidden || !BgRolls.count) return;
-    const { count, stopped, best } = BgRolls;
-    document.title = BgRolls.title; BgRolls.count = 0; BgRolls.stopped = null; BgRolls.best = null;
-    awayShow({ count, stopped, best });
+    if (BgRolls.title) document.title = BgRolls.title;
+    // Encore sur une autre page avec le tirage auto en route : le résumé attend le retour sur l'écran de tirage.
+    if (!onRollPage() && SoloAuto.on) return;
+    flushAway();
     if (currentView === 'home') route(); // l'accueil et ses compteurs à jour
   });
   async function startRoll(force) {
@@ -2692,6 +2778,7 @@
     const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
+    SessionRolls.bump();
     // Stockage plein : le tirage compte quand même sur le serveur ; l'export ne libère rien, on ne l'y renvoie plus, et le
     // message ne sort qu'une fois par visite (avant : à chaque tirage ; signalé par jonahfr, 2026-10-30).
     if (!saved && !storageFullShown) {
@@ -2704,14 +2791,18 @@
   }
   // Tirage arrivé alors que le joueur a quitté l'écran de tirage (Stepa et daddy finger, 2026-10-30) : enregistré comme
   // d'habitude, succès et quêtes compris, mais sans révélation ; l'auto-roll s'arrête comme en quittant la page.
+  // Tirage auto allumé (idée de kaz, 2026-11-01) : il ne s'arrête plus, le tirage rejoint le résumé « pendant ton absence ».
   function keepRollAway(n, online) {
-    if (SoloAuto.on) stopSoloAuto();
+    const auto = SoloAuto.on && !!online && !AUTO_HALT.includes(currentView);
+    if (SoloAuto.on && !auto) stopSoloAuto();
     Collection.ensure();
     const a = analysis(n);
     Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
+    SessionRolls.bump();
     if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
+    if (auto) { if (!noteBgRoll(n, a, online.t)) scheduleSoloAuto(SOLO_PAUSE); return; }
     const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
     toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
   }
@@ -2795,7 +2886,7 @@
             ${ctx.replay ? '<button class="btn" id="r-back">← Back</button><button class="btn" id="r-replay">↻ Replay</button>' : `<button class="btn-roll small${genClass()}" id="r-again">Roll again</button>`}
           </div>
           <p class="hint invisible" id="r-hint"></p>
-          ${ctx.replay ? '' : `<div class="solo-auto-row">${soloAutoHTML()}</div>`}
+          ${ctx.replay ? '' : `${sessRollsHTML()}<div class="solo-auto-row">${soloAutoHTML()}</div>`}
           <div id="r-notes" style="text-align:center"></div>
           <section class="breakdown" id="r-breakdown" hidden>
             <h2 class="section-title">Badge breakdown</h2>
@@ -2958,7 +3049,17 @@
   }
 
   // ---------------------------------------------------------------- historique
-  const histState = { q: '', tier: 'all', sort: 'new', limit: 100 };
+  const histState = { q: '', tier: 'all', sort: 'new', period: 'all', limit: 100 };
+  // Période de l'historique (idée de qwertyuiop, 2026-11-01) : aujourd'hui, cette semaine (depuis lundi), ce mois-ci, à
+  // l'heure de l'appareil ; avec le tri « Highest XP », ce sont les meilleurs tirages de la période.
+  const HIST_PERIODS = [['all', 'All time'], ['day', 'Today'], ['week', 'This week'], ['month', 'This month']];
+  function periodStart(period, now = new Date()) {
+    const d = new Date(now); d.setHours(0, 0, 0, 0);
+    if (period === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    else if (period === 'month') d.setDate(1);
+    else if (period !== 'day') return 0;
+    return d.getTime();
+  }
 
   function emptyStateHTML() {
     return `<div class="panel empty"><div style="font-size:2rem">🎲</div><p>No rolls yet.</p><a class="btn" href="#/">Go roll</a></div>`;
@@ -2981,6 +3082,7 @@
         <div class="toolbar">
           <input class="input grow" id="h-q" type="search" placeholder="Search a number, a badge or #roll…" value="${esc(histState.q)}">
           <select class="select" id="h-tier" aria-label="Rarity">${options(tierOptions, histState.tier)}</select>
+          <select class="select" id="h-period" aria-label="Period">${options(HIST_PERIODS, histState.period)}</select>
           <select class="select" id="h-sort" aria-label="Sort">${options(sortOptions, histState.sort)}</select>
           <button class="btn" id="h-compare" type="button" aria-pressed="false">⚖️ Compare</button>
         </div>
@@ -2992,6 +3094,7 @@
     $('#h-q').addEventListener('input', e => { histState.q = e.target.value; redraw(); });
     $('#h-tier').addEventListener('change', e => { histState.tier = e.target.value; redraw(); });
     $('#h-sort').addEventListener('change', e => { histState.sort = e.target.value; redraw(); });
+    $('#h-period').addEventListener('change', e => { histState.period = e.target.value; redraw(); });
     // Comparer deux tirages (idée de kingston, 2026-10-22) : mode « Compare », on clique deux lignes, une fenêtre les met
     // côte à côte (XP, écart, badges en commun et propres à chacun).
     let picked = [];
@@ -3016,25 +3119,33 @@
   }
 
   function openCompareModal(ia, ib) {
-    const side = i => { const r = Store.rolls[i], a = analysis(r[0]); return { i, n: r[0], a, ids: new Set(a.earnedIds) }; };
-    const A = side(ia), B = side(ib);
+    const side = i => { const r = Store.rolls[i], a = analysis(r[0]); return { label: `#${fmt(i + 1)}`, a, ids: new Set(a.earnedIds) }; };
+    compareModal(side(ia), side(ib));
+  }
+  // Fenêtre de comparaison : deux tirages de l'historique, ou deux nombres du vérificateur d'XP (sim = true : pas des
+  // tirages, dit en haut et sous chaque nombre, pour qu'une capture ne passe pas pour un vrai tirage).
+  function compareModal(A, B, sim = false) {
     const pill = id => { const b = Engine.byId.get(id); return b ? `<span class="badge-pill" data-tier="${b.tier}">${b.emoji} ${esc(b.label)}</span>` : ''; };
     const list = ids => (ids.length ? ids.sort((x, y) => (Engine.byId.get(y)?.score || 0) - (Engine.byId.get(x)?.score || 0)).map(pill).join(' ') : '<span class="panel-note">none</span>');
     const common = [...A.ids].filter(id => B.ids.has(id)), onlyA = [...A.ids].filter(id => !B.ids.has(id)), onlyB = [...B.ids].filter(id => !A.ids.has(id));
     const diff = A.a.total - B.a.total;
-    const card = x => `<div class="cmp-side"><span class="panel-note">#${fmt(x.i + 1)}</span><span class="num-card md" data-tier="${x.a.tier}">${x.a.str}</span><span class="badge-pill" data-tier="${x.a.tier}">${cap(x.a.tier)}</span><b class="mono">${fmt(x.a.total)} XP</b><span class="panel-note">${plural(x.ids.size, 'badge')}</span></div>`;
+    const name = x => (sim ? x.a.str : x.label);
+    const card = x => `<div class="cmp-side"><span class="panel-note">${esc(x.label)}</span><span class="num-card md${sim ? ' xc-sim-card' : ''}" data-tier="${x.a.tier}">${x.a.str}</span><span class="badge-pill" data-tier="${x.a.tier}">${cap(x.a.tier)}</span><b class="mono">${fmt(x.a.total)} XP</b><span class="panel-note">${plural(x.ids.size, 'badge')}</span></div>`;
     openModal(`
-      <h2>⚖️ Compare rolls</h2>
+      <h2>⚖️ ${sim ? 'Compare numbers' : 'Compare rolls'}</h2>
+      ${sim ? '<p class="panel-note" style="margin:-.3rem 0 0">Simulation · not a roll</p>' : ''}
       <div class="cmp-grid">${card(A)}<div class="cmp-vs">${diff === 0 ? '=' : diff > 0 ? '◀' : '▶'}<span class="panel-note">${diff === 0 ? 'same XP' : `${fmt(Math.abs(diff))} XP more`}</span></div>${card(B)}</div>
       <div class="cmp-badges"><div class="eyebrow">In common (${common.length})</div><div class="pill-row">${list(common)}</div></div>
-      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(A.i + 1)} (${onlyA.length})</div><div class="pill-row">${list(onlyA)}</div></div>
-      <div class="cmp-badges"><div class="eyebrow">Only #${fmt(B.i + 1)} (${onlyB.length})</div><div class="pill-row">${list(onlyB)}</div></div>`);
+      <div class="cmp-badges"><div class="eyebrow">Only <span data-no-i18n>${esc(name(A))}</span> (${onlyA.length})</div><div class="pill-row">${list(onlyA)}</div></div>
+      <div class="cmp-badges"><div class="eyebrow">Only <span data-no-i18n>${esc(name(B))}</span> (${onlyB.length})</div><div class="pill-row">${list(onlyB)}</div></div>`);
   }
 
   function filteredRolls() {
     let items = Store.rolls.map((r, i) => ({ n: r[0], s: r[1], t: r[2], i, tier: Engine.cardTier(r[1]), off: !!r[3] }));
     if (histState.tier === 'rare+') items = items.filter(x => TIER_RANK[x.tier] >= 3);
     else if (histState.tier !== 'all') items = items.filter(x => x.tier === histState.tier);
+    const from = periodStart(histState.period);
+    if (from) items = items.filter(x => x.t >= from);
     const q = histState.q.trim().toLowerCase();
     if (q) {
       const digits = q.replace(/[\s,]/g, '');
@@ -3090,6 +3201,7 @@
     const sorted = scores.slice().sort((a, b) => a - b);
     const tierCounts = Object.fromEntries(TIERS_DESC.map(t => [t, 0]));
     const digitCounts = new Array(10).fill(0);
+    const lenCounts = new Array(8).fill(0); // nombres à 1, 2… 7 chiffres (idée de Phong254, 2026-11-01)
     const buckets = new Array(10).fill(0);
     let pctSum = 0, digitTotal = 0;
     let sinceRare = null, sinceEpic = null, sinceMythic = null, dry = 0, longestDry = 0;
@@ -3102,6 +3214,7 @@
       const s = String(r[0]);
       for (let k = 0; k < s.length; k++) digitCounts[s.charCodeAt(k) - 48]++;
       digitTotal += s.length;
+      lenCounts[s.length]++;
       buckets[Math.min(9, Math.floor(r[0] / 100000))]++;
       if (TIER_RANK[tier] >= 3) { sinceRare = i; dry = 0; } else { dry++; longestDry = Math.max(longestDry, dry); }
       if (TIER_RANK[tier] >= 4) sinceEpic = i;
@@ -3116,7 +3229,7 @@
     let repeats = 0;
     for (const list of Collection.seen.values()) if (list.length > 1) repeats++;
     return {
-      N, today, tierCounts, digitCounts, digitTotal, buckets, rarest, repeats, longestDry,
+      N, today, tierCounts, digitCounts, digitTotal, lenCounts, buckets, rarest, repeats, longestDry,
       lifetime: scores.reduce((a, b) => a + b, 0),
       median: sorted[Math.floor((N - 1) / 2)],
       luck: pctSum / N,
@@ -3297,6 +3410,12 @@
           </div>
         </div>
 
+        <div class="panel stats-sep">
+          <div class="panel-head"><h3 class="panel-title">Number of digits</h3><span class="panel-note">how many 1- to 6-digit numbers you rolled vs. expected</span></div>
+          ${digitLengthsHTML(st)}
+          <p class="panel-note st-len-note">Numbers that contain a digit or a sequence: search it in <a href="#/history">History</a>.</p>
+        </div>
+
         <div class="grid-2 stats-sep">
           <div class="panel">
             <div class="panel-head"><h3 class="panel-title">Top 10 rolls</h3></div>
@@ -3315,6 +3434,19 @@
           </div>
         </div>
       </div>`;
+  }
+
+  // Nombres de 1 à 6 chiffres tirés, contre l'attendu (idée de Phong254, 2026-11-01) : sur 1 000 001 nombres (0 à
+  // 1 000 000), 10 ont un chiffre (0 à 9), 90 deux, 900 trois… et un seul en a sept (1 000 000), montré s'il est sorti.
+  const LEN_SPAN = [0, 10, 90, 900, 9000, 90000, 900000, 1];
+  function digitLengthsHTML(st) {
+    const rows = [1, 2, 3, 4, 5, 6, ...(st.lenCounts[7] ? [7] : [])].map(k => {
+      const got = st.lenCounts[k], exp = (st.N * LEN_SPAN[k]) / 1000001;
+      const range = k === 7 ? '1,000,000' : `${fmt(k === 1 ? 0 : 10 ** (k - 1))} – ${fmt(10 ** k - 1)}`;
+      const ratio = exp ? got / exp : 0, tone = !got && exp < 1 ? '' : ratio >= 1.15 ? ' up' : ratio <= 0.85 ? ' down' : '';
+      return `<div class="kv st-len"><span class="k">${plural(k, 'digit')} <span class="muted mono">${range}</span></span><span class="v${tone}"><b class="mono">${fmt(got)}</b> <span class="muted">expected ≈ ${exp >= 10 ? fmt(Math.round(exp)) : exp.toFixed(exp >= 1 ? 1 : 2)}</span></span></div>`;
+    }).join('');
+    return `<div class="st-lens">${rows}</div>`;
   }
 
   // ---------------------------------------------------------------- collection
@@ -3337,7 +3469,7 @@
         <h1 class="page-title">Badges</h1>
         <div class="panel xc-panel">
           <div class="panel-head"><h3 class="panel-title">🔎 XP checker</h3><span class="panel-note">type any number to see its XP and badges · it is not a roll</span></div>
-          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><button class="btn">Check</button></form>
+          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><span class="xc-vs" aria-hidden="true">vs</span><input class="input mono xc-n2" id="xc-n2" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="compare (optional)" aria-label="Second number to compare with (optional)"><button class="btn">Check</button></form>
           <div id="xc-out"></div>
         </div>
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
@@ -3354,6 +3486,10 @@
       e.preventDefault();
       const raw = $('#xc-n').value.trim(), n = Number(raw);
       if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      // Deux nombres (idée de CrazyMiner22, 2026-11-01) : la même comparaison que History → Compare, marquée simulation.
+      const raw2 = $('#xc-n2').value.trim(), n2 = Number(raw2);
+      if (raw2 && (!/^\d{1,7}$/.test(raw2) || n2 > Engine.MAX_ROLL)) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      if (raw2) { const side = x => { const a = analysis(x); return { label: 'Simulation', a, ids: new Set(a.earnedIds) }; }; compareModal(side(n), side(n2), true); }
       const a = analysis(n), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
       $('#xc-out').innerHTML = `
         <div class="xc-result">
@@ -3555,11 +3691,11 @@
       <div class="pf-pane" data-pane="inventory" hidden>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">🎨 Skins</h3><span class="panel-note">${plural(invSkins.length, 'skin')}${p.skin && p.skin !== 'classic' && Shop.byId.has(p.skin) ? ` · wearing ${Shop.byId.get(p.skin).emoji} ${esc(Shop.byId.get(p.skin).name)}` : ''}</span></div>
-          ${invSkins.length ? `<div class="pf-inv">${invSkins.map(k => `<div class="pf-inv-item${k.id === p.skin ? ' on' : ''}" title="${esc(k.desc)}"><span class="num-card sm skin-${k.id}" data-tier="rare">${slotsHTML('777')}</span><b>${k.emoji} ${esc(k.name)}</b></div>`).join('')}</div>` : '<div class="empty">No skins yet.</div>'}
+          ${invSkins.length ? `<div class="pf-inv">${invSkins.map(k => `<div class="pf-inv-item${k.id === p.skin ? ' on' : ''}" title="${esc(k.desc)}"><span class="num-card sm skin-${k.id}" data-tier="rare">${slotsHTML('777')}</span><b>${k.emoji} ${esc(k.name)}</b>${me ? (k.id === p.skin ? '<span class="skin-state">Equipped</span>' : `<button class="btn small" data-inv-skin="${k.id}">Equip</button>`) : ''}</div>`).join('')}</div>` : '<div class="empty">No skins yet.</div>'}
         </div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">🖼️ Wallpapers</h3><span class="panel-note">${plural(invWalls.length, 'wallpaper')}</span></div>
-          ${invWalls.length ? `<div class="pf-inv">${invWalls.map(w => `<div class="pf-inv-item" title="${esc(w.desc)}"><span class="wall-preview wp wp-${w.id}" aria-hidden="true"></span><b>${w.emoji} ${esc(w.name)}</b></div>`).join('')}</div>` : '<div class="empty">No wallpapers yet.</div>'}
+          ${invWalls.length ? `<div class="pf-inv">${invWalls.map(w => `<div class="pf-inv-item${me && Store.settings.wall === w.id ? ' on' : ''}" title="${esc(w.desc)}"><span class="wall-preview wp wp-${w.id}" aria-hidden="true"></span><b>${w.emoji} ${esc(w.name)}</b>${me ? (Store.settings.wall === w.id ? '<button class="btn ghost small" data-inv-wall="none">Remove</button>' : `<button class="btn small" data-inv-wall="${w.id}">Use</button>`) : ''}</div>`).join('')}</div>` : '<div class="empty">No wallpapers yet.</div>'}
         </div>
       </div>`;
     const showTab = id => {
@@ -3599,6 +3735,22 @@
     if (me) noteAchievements(p.achievements);
     mountCollection(profileCollection(p.badges), collectionState);
     if (me) wireEquip($('#p-body'), () => renderProfile(p.name));
+    // Équiper depuis son propre inventaire (idée de LEVIATHAN, 2026-11-01) : mêmes actions que la boutique, puis le
+    // profil se redessine, toujours sur l'onglet Inventaire (onglet retenu pour la visite).
+    const invPane = $('#p-body').querySelector('[data-pane="inventory"]');
+    if (me && invPane) invPane.addEventListener('click', async e => {
+      const btn = e.target.closest('[data-inv-skin],[data-inv-wall]');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      try {
+        const skinId = btn.dataset.invSkin, wallId = btn.dataset.invWall;
+        const next = skinId ? await Online.shopAction('equip', skinId) : await Online.shopAction('wall', undefined, { wall: wallId });
+        applyShop(next);
+        const item = skinId ? Shop.byId.get(skinId) : Shop.wallById.get(wallId);
+        toast(skinId ? `${item.emoji} ${item.name} equipped` : wallId === 'none' ? 'Back to the original background' : `${item.emoji} ${item.name} on`);
+        renderProfile(p.name);
+      } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
+    });
   }
 
   // Grille des succès d'un joueur (profil, onglet Badges) ; chez soi, boutons pour équiper le titre d'un succès.
@@ -3901,17 +4053,25 @@
   // tuile porte data-have (1 : possédé, ou gratuit) ; les onglets sans liste d'objets (caisses, vitesse, prestige) n'ont pas de filtre.
   const SHOP_OWN = [['all', 'All'], ['owned', 'Owned only'], ['not', 'Not owned yet']];
   const SHOP_OWN_TABS = ['limited', 'skins', 'buttons', 'emotes', 'sounds', 'walls'];
+  // Recherche dans la boutique (idée de Deadshot, 2026-11-01) : par nom, description ou auteur de l'idée, dans la langue
+  // affichée ; gardée tant que la page reste ouverte (pas sur l'appareil).
+  let shopQuery = '';
+  const foldText = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   function applyOwnFilter() {
     const mode = SHOP_OWN.some(([v]) => v === Store.settings.shopOwn) ? Store.settings.shopOwn : 'all';
+    const q = foldText(shopQuery.trim());
     document.querySelectorAll('#shop-own [data-own]').forEach(b => { b.classList.toggle('on', b.dataset.own === mode); b.setAttribute('aria-pressed', b.dataset.own === mode); });
     app.querySelectorAll('.shop-pane .skin-grid').forEach(grid => {
       const tiles = grid.querySelectorAll(':scope > [data-have]');
       let shown = 0;
-      tiles.forEach(t => { const hide = mode === 'owned' ? t.dataset.have !== '1' : mode === 'not' ? t.dataset.have === '1' : false; t.hidden = hide; if (!hide) shown++; });
+      tiles.forEach(t => {
+        const hide = (mode === 'owned' ? t.dataset.have !== '1' : mode === 'not' ? t.dataset.have === '1' : false) || (!!q && !foldText((t.querySelector('.skin-name') || t).textContent).includes(q));
+        t.hidden = hide; if (!hide) shown++;
+      });
       let note = grid.querySelector(':scope > .own-empty');
       if (tiles.length && !shown) {
         if (!note) { note = document.createElement('div'); note.className = 'empty own-empty'; grid.append(note); }
-        note.textContent = mode === 'owned' ? 'You don\'t own any of these yet' : 'You already own all of these';
+        note.textContent = q ? 'Nothing matches your search' : mode === 'owned' ? 'You don\'t own any of these yet' : 'You already own all of these';
       } else if (note) note.remove();
     });
   }
@@ -3961,7 +4121,7 @@
         <div data-fund-slot></div>
         <div class="shop-tabs" id="shop-tabs" role="tablist">${SHOP_TABS.map(([id, emoji, label]) => `<button role="tab" data-shop-tab="${id}"><i aria-hidden="true">${emoji}</i><span>${label}</span></button>`).join('')}</div>
         <details class="panel shop-mine" id="shop-mine" hidden></details>
-        <div class="shop-own" id="shop-own"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
+        <div class="shop-own" id="shop-own"><input class="input shop-search" id="shop-q" type="search" placeholder="Search the shop…" aria-label="Search the shop" autocomplete="off" value="${esc(shopQuery)}"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
@@ -4065,6 +4225,7 @@
     // Filtre Possédés / Pas encore (idée d'Applepi, 2026-10-28) : retenu sur cet appareil, comme l'onglet.
     $('#shop-own').onclick = e => { const b = e.target.closest('[data-own]'); if (!b) return; Store.setSetting('shopOwn', b.dataset.own); applyOwnFilter(); };
     $('#shop-tabs').onclick = e => { const b = e.target.closest('[data-shop-tab]'); if (b) openTab(b.dataset.shopTab); };
+    $('#shop-q').addEventListener('input', e => { shopQuery = e.target.value; applyOwnFilter(); });
     openTab(Store.settings.shopTab);
     drawSkip();
     Fund.load();
@@ -5932,12 +6093,17 @@
 
   // Aperçu d'un skin avant l'achat : un tirage de démonstration (aucun nombre n'est tiré, rien n'est enregistré), au
   // rythme d'un vrai mais resserré, révélé comme un Mythic pour montrer toute la séquence. Rejouable.
+  // Choix de la rareté de l'aperçu (idée de jia jun, 2026-11-01) : certains skins se révèlent autrement sur un petit
+  // tirage ; Mythic reste le choix par défaut, gardé sur l'appareil.
+  const PREVIEW_TIERS = ['common', 'rare', 'mythic', 'divine'];
   function previewSkin(id) {
     const skin = Shop.byId.get(id);
     if (!skin) return;
+    let tier = PREVIEW_TIERS.includes(Store.settings.previewTier) ? Store.settings.previewTier : 'mythic';
     openModal(`
       <h2>${skin.emoji} ${esc(skin.name)}</h2>
-      <p class="panel-note" style="margin:-.3rem 0 0">Preview · shown as a Mythic roll, the strongest reveal</p>
+      <p class="panel-note" style="margin:-.3rem 0 0">Preview · nothing is rolled · shown as</p>
+      <div class="seg sp-tiers" id="sp-tiers" role="group" aria-label="Rarity of the preview">${PREVIEW_TIERS.map(t => `<button type="button" data-sp-tier="${t}" class="${t === tier ? 'on' : ''}" aria-pressed="${t === tier}">${cap(t)}</button>`).join('')}</div>
       <div class="skin-preview"><div class="card-stage" id="sp-stage"></div></div>
       <div class="actions" style="justify-content:center"><button class="btn" id="sp-again">↻ Replay</button>${skin.supporter && !(Store.settings.skinsOwned || []).includes('supporter') ? '<button class="btn-roll small" data-fund>💗 Contribute to get it</button>' : ''}</div>
       ${skin.supporter ? '<p class="panel-note" style="text-align:center;margin:.6rem 0 0">A thank-you for contributing to the server fund. Only a look: no coins, no advantage.</p>' : ''}
@@ -5967,12 +6133,18 @@
         at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
         at(LOCKS[5] + 600, () => {
           clearInterval(spin);
-          card.classList.remove('neutral', 'charging'); card.dataset.tier = 'mythic';
-          if (fx) fx.reveal('mythic');
+          card.classList.remove('neutral', 'charging'); card.dataset.tier = tier;
+          if (fx) fx.reveal(tier);
           Sound.play('reveal', { small: 1 });
         });
       };
       m.querySelector('#sp-again').addEventListener('click', play);
+      m.querySelector('#sp-tiers').addEventListener('click', e => {
+        const b = e.target.closest('[data-sp-tier]'); if (!b) return;
+        tier = b.dataset.spTier; Store.setSetting('previewTier', tier);
+        m.querySelectorAll('[data-sp-tier]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+        play();
+      });
       play();
     });
   }
@@ -8914,6 +9086,7 @@
     const section = mine ? 'me' : SECTION_OF[key] || (key === 'player' ? 'leaderboard' : ROUTES[key] && key ? '' : 'home');
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === section));
     drawSubnav(section, mine ? 'me' : key);
+    autoAfterRoute(); // tirage auto sur les autres pages (idée de kaz, 2026-11-01)
     window.scrollTo(0, 0);
   }
 
@@ -8980,7 +9153,7 @@
       if (this.el) return this.el;
       const el = document.createElement('section');
       el.className = 'gc-panel'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Global chat');
-      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
+      el.innerHTML = `<header class="gc-head"><h2 class="gc-title">💬 Global chat</h2><span class="gc-online" hidden></span><span class="gc-note">Be kind · no personal info</span><button class="gc-close" aria-label="Close" title="Close">×</button></header>
         <div class="gc-pin" hidden></div>
         <div class="gc-list" aria-live="polite"><div class="empty">Loading…</div></div>
         <footer class="gc-foot"></footer>`;
@@ -9051,6 +9224,7 @@
     apply(d) {
       const before = JSON.stringify(this.me);
       this.rev = d.rev; this.del = d.del; this.max = d.max || 200; if (d.editMs) this.editMs = d.editMs;
+      { const on = this.el && this.el.querySelector('.gc-online'); if (on) { on.hidden = !Number.isInteger(d.online); if (!on.hidden) on.textContent = `🟢 ${fmt(d.online)} online`; } } // Thermonuclear Bomb, 2026-11-01
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
