@@ -9,6 +9,21 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Christmas event (2026-11-01, branch `claude/christmas-event`)
+
+Asked by Sacha: Halloween out of the Limited tab, Christmas in, with as much as Halloween had. The Limited tab icon,
+banner (night blue, falling snowflakes) and countdown now point to December 25 (`until: '2026-12-26T00:00:00Z'`).
+Zombie Moon was due to end on November 2 and left with the rest of Halloween on November 1. Owners keep everything.
+
+New limited items (never in a case, 5% share where an idea is credited):
+- Skins: Snow Globe (1,225, idea Gray alt), Gingerbread (1,100), Ugly Sweater (999), plus Christmas Morning (2,512,
+  JBearr12, already live). Each has a Generate button and a duel frame.
+- Wallpapers: Snowy Village (777, credited to IXOLAF2, whose "Snowy Cabin" asked for the same), Cozy Fireplace (1,224),
+  Sleigh Ride (1,031).
+Built by three agents in parallel worktrees, each following the rng-skin-design skill (captures in the session
+scratchpad). Merging them: use `git merge-file --union` per conflicted file and fix edited lines by hand (see
+.claude/lessons.md).
+
 ## Bug reports sweep (2026-10-30, branch `claude/bug-reports-1030`)
 
 All 49 open bug reports in the inbox were checked against the code. Fixed (each comment names the reporter):
