@@ -104,6 +104,25 @@
     const back = S.gain(S.shape(S.filter(S.noise(.02, 8), 'bp', 1100, 1.6), S.expo(.004, .0005)), .35);
     return S.sum(body, S.delayed(back, .07));
   };
+  // ---- Fond Keyboard ASMR (idée de kingston, 2026-11-01) : la touche qu'on enfonce en cliquant sur le fond. Un « thock »
+  // feutré et grave (une touche épaisse sur un clavier rembourré), un peu différent selon k (0 à 5) pour ne pas sonner
+  // en boucle ; big : la barre d'espace ou une grande touche, plus grave et plus longue. Le relâchement suit, plus léger.
+  const keyThock = (k, big) => {
+    const f = big ? 118 : 150 + k * 9, bp = big ? 520 : 640 + k * 55;
+    const body = S.sum(S.osc(big ? .16 : .11, t => f - 55 * Math.exp(-t / .018), S.expo(big ? .04 : .028, .0012)), S.gain(S.shape(S.filter(S.noise(.03, 60 + k), 'bp', bp, 1.4), S.expo(.007, .0006)), .6));
+    const lift = S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 1.5, 1.6), S.expo(.004, .0005)), .25);
+    return S.sum(body, S.delayed(lift, (big ? .085 : .07) + k * .004));
+  };
+  // ---- Fond Thunderstorm (idée de finnnnn, 2026-11-01) : un tonnerre lointain, « pas fort, plutôt calme ». Du bruit
+  // filtré très grave qui monte doucement, roule (deux ondulations lentes) et s'éteint en trois secondes ; une bande un peu
+  // plus haute (vers 380 Hz) pour qu'on l'entende aussi sur un téléphone. Normalisé : son niveau est celui de la recette.
+  const rumble = k => {
+    const dur = 3.4, low = S.filter(S.filter(S.noise(dur, 300 + k), 'lp', 170 + k * 25, .7), 'lp', 230, .7);
+    const mid = S.gain(S.filter(S.noise(dur, 310 + k), 'bp', 380 + k * 40, .9), .25);
+    const x = S.shape(S.sum(low, mid), t => Math.min(1, t / .35) * Math.exp(-t / 1.05) * (.72 + .28 * Math.sin(t * 5.3 + k) * Math.sin(t * 2.1 + 1)));
+    let m = 0; for (let i = 0; i < x.length; i++) m = Math.max(m, Math.abs(x[i]));
+    return S.gain(x, m ? .8 / m : 1);
+  };
   // ---- Packs de sons du tirage (idée d'Angelicide9, 2026-10-21 ; achetés dans la boutique, js/shop.js SOUNDS).
   // Chaque pack donne sa note à chaque chiffre (même place dans la gamme : la montée reste) et son propre son de rareté.
   // La rareté garde son escalade : un coup sec pour un raté, puis une, deux, trois notes ; à partir d'Epic, l'impact
@@ -277,6 +296,10 @@
     // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
     // Duck Race : un canard choisi, le départ et le vainqueur (k : la hauteur).
     quack: ({ k = 0 } = {}) => [[quack(k), 0, .3, 0, .12]],
+    // Fond Keyboard ASMR : une touche enfoncée au clic (k : la variante, big : barre d'espace). Fond Thunderstorm : le
+    // tonnerre lointain après un éclair (k : la variante, de 0 à 2), bas et un peu à gauche ou à droite.
+    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .2 : .17, ((k % 5) / 5 - .4) * .5, .06]],
+    thunder: ({ k = 0 }) => [[rumble(k), 0, .17, (k - 1) * .35, .45]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
     // look : le bouton affiché ; les boutons du pack ASMR ont leur propre son, au même niveau que le clic habituel.
