@@ -313,12 +313,17 @@ async function remove(entry) {
 // Silence : sur un message (on ne connaît jamais l'id de l'auteur côté site). Les modérateurs ne peuvent pas rendre
 // muet le créateur ni un autre modérateur. Le message est supprimé en même temps (son texte reste dans gc:mutelog).
 // Raison obligatoire, note libre facultative (obligatoire pour « other »), passée au même nettoyage que les messages.
-async function mute(byId, m, dur, why, rawNote, owner) {
-  if (!(dur in MUTE_MS)) throw refuse(400, 'Pick how long the mute lasts');
-  if (dur === 'perm' && !owner) throw refuse(403, 'Only the owner can mute forever');
+// Raison obligatoire (silence, et suppression du message d'un autre joueur) ; la note n'est lue que par le créateur.
+function checkWhy(why, rawNote) {
   if (!MUTE_WHY.includes(why)) throw refuse(400, 'Pick a reason');
   const note = [...normalize(rawNote)].slice(0, NOTE_MAX).join('');
   if (why === 'other' && !note) throw refuse(400, 'Say why in a few words');
+  return note;
+}
+async function mute(byId, m, dur, why, rawNote, owner) {
+  if (!(dur in MUTE_MS)) throw refuse(400, 'Pick how long the mute lasts');
+  if (dur === 'perm' && !owner) throw refuse(403, 'Only the owner can mute forever');
+  const note = checkWhy(why, rawNote);
   if (m.a === byId) throw refuse(422, 'You cannot mute yourself');
   const [st, byName] = await Promise.all([readStats(m.a), redis([['HGET', 'names', byId]])]);
   if (Number(st.owner) >= 1 || st.gcMod === '1') throw refuse(403, 'Moderators cannot be muted');
@@ -363,7 +368,7 @@ async function ownerState() {
   }).sort((a, b) => a.name.localeCompare(b.name));
   // Dernières actions de modération, silences et suppressions mêlés, les plus récentes d'abord.
   const actions = [...log.map(e => ({ kind: 'mute', name: e.n || 'Player', ...pub(e), ...(e.lift ? { lift: e.lift } : {}), active: !!(e.k && live.get(e.p) === e.k) })),
-    ...dels.map(e => ({ kind: 'delete', name: e.n || 'Player', by: e.by, t: e.t, text: e.x || null }))].sort((a, b) => b.t - a.t).slice(0, 100);
+    ...dels.map(e => ({ kind: 'delete', name: e.n || 'Player', by: e.by, t: e.t, text: e.x || null, why: e.why || null, note: e.note || null }))].sort((a, b) => b.t - a.t).slice(0, 100);
   return {
     mutes: rows.map((r, i) => ({ name: names[i] || r.n || 'Player', ...pub(r) })).sort((a, b) => b.t - a.t),
     history: log.filter(e => !(e.k && live.get(e.p) === e.k)).slice(0, 100).map(e => ({ name: e.n || 'Player', ...pub(e), ...(e.lift ? { lift: e.lift } : {}) })),
@@ -387,7 +392,7 @@ async function modPage(me) {
   }
   const isMine = e => (e.bi ? e.bi === me : e.by === myName);
   const mine = [...(logRaw || []).map(parse).filter(e => e && isMine(e)).map(e => ({ kind: 'mute', t: e.t, name: e.n || 'Player', d: e.d || null, why: e.why || null, note: e.note || null, text: e.x || null, ...(e.lift ? { lift: true } : {}) })),
-    ...(delRaw || []).map(parse).filter(e => e && isMine(e)).map(e => ({ kind: 'delete', t: e.t, name: e.n || 'Player', text: e.x || null }))].sort((a, b) => b.t - a.t).slice(0, 30);
+    ...(delRaw || []).map(parse).filter(e => e && isMine(e)).map(e => ({ kind: 'delete', t: e.t, name: e.n || 'Player', text: e.x || null, why: e.why || null, note: e.note || null }))].sort((a, b) => b.t - a.t).slice(0, 30);
   return { reports, mine };
 }
 // Les signalements ouverts qui visent ce message sont traités du même coup (Owner : « traité par Modo »).
@@ -430,11 +435,14 @@ async function handle(body) {
     // Supprimer son propre message (idée de daddy finger, 2026-10-26) ; le reste est réservé aux modérateurs.
     if (!mod && !(body.action === 'gcDelete' && m.a === me)) throw refuse(403, 'Moderators only');
     if (body.action === 'gcMute' && m.sys) throw refuse(422, 'This message was posted by the game');
+    // Supprimer le message d'un autre joueur demande une raison, comme un silence (Sacha, 2026-11-01) ; pas son propre
+    // message, ni une annonce du jeu.
+    const other = m.a !== me && !m.sys, delNote = body.action === 'gcDelete' && other ? checkWhy(String(body.why || ''), body.note) : '';
     if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''), String(body.why || ''), body.note, owner);
     await remove(entry);
-    if (m.a !== me && !m.sys) {
-      // Suppression par un modérateur : notée (gc:dellog), pour que le créateur voie aussi ce qui a été retiré.
-      if (body.action === 'gcDelete') { const [name] = await redis([['HGET', 'names', me]]); await redis([['RPUSH', DELLOG, JSON.stringify({ t: Date.now(), by: name || 'Moderator', bi: me, n: m.n, x: m.x })], ['LTRIM', DELLOG, -LOG_KEEP, -1]]); }
+    if (other) {
+      // Suppression par un modérateur : notée (gc:dellog) avec sa raison, pour que le créateur voie ce qui a été retiré.
+      if (body.action === 'gcDelete') { const [name] = await redis([['HGET', 'names', me]]); await redis([['RPUSH', DELLOG, JSON.stringify({ t: Date.now(), by: name || 'Moderator', bi: me, n: m.n, x: m.x, why: String(body.why), ...(delNote ? { note: delNote } : {}) })], ['LTRIM', DELLOG, -LOG_KEEP, -1]]); }
       await settleReports(m, me, body.action === 'gcMute' ? 'muted' : 'deleted');
     }
     return body.from === 'mod' ? modPage(me) : list({}, me, stats);

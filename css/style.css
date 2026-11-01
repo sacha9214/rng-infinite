@@ -9228,6 +9228,7 @@ textarea.gc-input::placeholder { white-space: nowrap; overflow: hidden; text-ove
 .gc-mute-durs input:checked + span { border-color: var(--prose); color: var(--prose); box-shadow: inset 0 0 0 1px var(--prose); }
 .gc-mute-durs input:focus-visible + span { outline: 2px solid var(--outline-strong); outline-offset: 1px; }
 .gc-mute-form .select, .gc-mute-form .input { width: 100%; min-width: 0; text-align: left; text-transform: none; letter-spacing: 0; }
+.gc-mute-title { margin: 0; font-size: .78rem; font-weight: 700; color: var(--prose-2); }
 .gc-mute-go { display: flex; justify-content: flex-end; gap: .4rem; }
 .gc-mute-go .btn { margin: 0; }
 .gc-mute-main { flex: 1; min-width: 0; }

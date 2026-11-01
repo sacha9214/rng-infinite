@@ -23,6 +23,9 @@ Asked by Sacha: a section like the Idea Managers, for chat moderators, so he can
   muting a reported message settles its reports (`reports:by` in `api/_reports.js`: by, act ok/deleted/muted), shown
   on the Owner Reports tab as "Handled by Modo · …". `gc:modsince` = when the role was given. Log entries keep `bi`
   (moderator id) server-side only. Messages by moderators carry `mod: true` (🛡️ next to the name).
+- Follow-up (branch `claude/delete-reason`): deleting another player's message now needs a reason too (same list
+  and note as mutes, `checkWhy` in `api/_global.js`); own messages and game announcements don't. The reason shows in
+  "What moderators did" and on the moderator page.
 
 ## Chat mutes with reasons (2026-11-01, branch `claude/chat-mutes`)
 

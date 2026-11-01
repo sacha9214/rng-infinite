@@ -4413,7 +4413,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(modo, 'gcList'); assert.equal(r.body.me.mod, true);
   assert.equal((await gc(modo, 'gcModSet', { name: 'Kiddo' })).status, 403, 'un modérateur ne nomme personne');
   assert.equal((await gc(modo, 'gcUnmute', { name: 'Kiddo' })).status, 403);
-  r = await gc(modo, 'gcDelete', { id: palMsg.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === palMsg.id));
+  // Supprimer le message d'un autre demande une raison (Sacha, 2026-11-01).
+  assert.equal((await gc(modo, 'gcDelete', { id: palMsg.id })).status, 400, 'suppression sans raison');
+  assert.equal((await gc(modo, 'gcDelete', { id: palMsg.id, why: 'other' })).status, 400, 'other sans note');
+  r = await gc(modo, 'gcDelete', { id: palMsg.id, why: 'rude', note: 'test delete' }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === palMsg.id));
   r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.full, true, 'après une suppression, la liste entière'); assert.equal(r.body.msgs.length, 6);
   // Silence 1 h : le joueur voit jusqu'à quand ; ne peut plus écrire ; listé sur la page Owner ; levé par le créateur.
   free(pal); r = await gc(pal, 'gcSend', { text: 'one more' }); const m2 = r.body.msgs.at(-1);
@@ -4471,15 +4474,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!JSON.stringify(r.body).includes('NoGoogle') && !JSON.stringify(r.body).includes(pal.playerId), 'ni qui a signalé, ni identifiant');
   assert.equal((await gc(modo, 'gcReportOk', { id: 'ffffffffffff' })).status, 404);
   r = await gc(modo, 'gcReportOk', { id: r.body.reports[0].id }); assert.deepEqual(r.body.reports.map(x => x.text), ['you are all so slow']);
-  r = await gc(modo, 'gcDelete', { id: slow.id, from: 'mod' }); assert.deepEqual(r.body.reports, [], 'supprimé : signalements traités');
-  assert.deepEqual(r.body.mine.slice(0, 1).map(a => [a.kind, a.name, a.text]), [['delete', 'Pally', 'you are all so slow']]);
+  r = await gc(modo, 'gcDelete', { id: slow.id, why: 'mean', from: 'mod' }); assert.deepEqual(r.body.reports, [], 'supprimé : signalements traités');
+  assert.deepEqual(r.body.mine.slice(0, 1).map(a => [a.kind, a.name, a.text, a.why]), [['delete', 'Pally', 'you are all so slow', 'mean']]);
   r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
   const gcRep = r.body.reports.filter(x => x.where === 'global chat' && ['hi all', 'you are all so slow'].includes(x.text));
   assert.deepEqual(gcRep.map(x => [x.text, x.done, x.by && x.by.name, x.by && x.by.act]).sort(), [['hi all', true, 'Modo', 'ok'], ['you are all so slow', true, 'Modo', 'deleted'], ['you are all so slow', true, 'Modo', 'deleted']]);
   assert.ok(r.body.reports.some(x => x.text === 'hello from a mod' && !x.done), 'le signalement qui vise un modérateur reste pour le créateur');
   r = await gc(boss, 'gcAdmin'); const ms = r.body.modStats.find(x => x.name === 'Modo');
   assert.deepEqual([ms.mutes, ms.deletes, ms.reports, ms.lifted], [2, 2, 4, 1], JSON.stringify(ms)); assert.ok(ms.since > 0 && ms.week === 4);
-  assert.deepEqual(r.body.actions.slice(0, 1).map(a => [a.kind, a.name, a.by, a.text]), [['delete', 'Pally', 'Modo', 'you are all so slow']]);
+  assert.deepEqual(r.body.actions.slice(0, 1).map(a => [a.kind, a.name, a.by, a.text, a.why]), [['delete', 'Pally', 'Modo', 'you are all so slow', 'mean']]);
+  assert.ok(r.body.actions.some(a => a.kind === 'delete' && a.why === 'rude' && a.note === 'test delete'), 'raison et note de la 1re suppression');
   assert.ok(!JSON.stringify(r.body).includes(modo.playerId) && !JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant');
   // Rôle retiré : plus de modération.
   await gc(boss, 'gcModSet', { name: 'Modo', on: false });
@@ -4629,7 +4633,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await gc(A, 'gcEdit', { id: p1.id, text: 'pin me pretty please' });
   assert.equal((await gc(null, 'gcList')).body.pin.text, 'pin me pretty please', 'l\'épinglé suit la modification');
   r = await gc(boss, 'gcUnpin'); assert.equal(r.body.pin, null);
-  await gc(boss, 'gcPin', { id: p1.id }); await gc(modo, 'gcDelete', { id: p1.id });
+  await gc(boss, 'gcPin', { id: p1.id }); await gc(modo, 'gcDelete', { id: p1.id, why: 'spam' });
   assert.equal((await gc(null, 'gcList')).body.pin, null, 'message supprimé : plus épinglé');
   assert.equal((await gc(boss, 'gcPin', { id: p1.id })).status, 404);
 
