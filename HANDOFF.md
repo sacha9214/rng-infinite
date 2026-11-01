@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-10-30 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of every session.
 
 ## Current state
 
@@ -8,6 +8,20 @@ The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Nod
 domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU overuse, which is why everything moved
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
+
+## Chat mutes with reasons (2026-11-01, branch `claude/chat-mutes`)
+
+Asked by Sacha: moderators mute for a time, with a reason Sacha can check on the Owner page, and never ban.
+- `api/_global.js`: durations `5m`, `10m`, `1h`, `24h`; `perm` (forever) is now **owner only**. A reason is required
+  (`spam`, `rude`, `mean`, `personal`, `inappropriate`, `other`; `other` needs a note). The mute record keeps the
+  duration, reason, note (120 chars) and the deleted message text. Every mute is also pushed to `gc:mutelog` (last
+  200; it keeps the player id `p` server-side only). Unmuting from the Owner page marks the log entry `lift: { by, t }`.
+- `gcAdmin` now returns `history` (mutes that ended or were lifted, newest first) and `modMutes` (mutes per moderator).
+- The muted player sees the reason under "You are muted until…", never the moderator's note.
+- Chat UI: "🔇 Mute…" opens a small form (duration chips, reason, note). The list stops redrawing while it is open.
+- The chat box is now a `<textarea>` that grows to 4 lines (Enter sends, line breaks become spaces): long messages
+  scrolled out of the one-line field before. The duel keyboard shortcuts now ignore textareas and selects.
+- Old mutes made before this change have no reason; they show "No reason given".
 
 ## Profile picture price (2026-11-01, branch `claude/avatar-price`)
 

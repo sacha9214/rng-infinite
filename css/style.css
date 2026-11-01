@@ -9212,6 +9212,27 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .gc-input { flex: 1; min-width: 0; text-align: left; text-transform: none; letter-spacing: 0; }
 .gc-why { margin: 0 0 .35rem; font-size: .78rem; color: var(--prose-2); line-height: 1.35; }
 .gc-mute-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+/* Champ du chat sur plusieurs lignes (Sacha, 2026-11-01) : il grandit avec le texte, 4 lignes au plus (GChat.fit). */
+textarea.gc-input { display: block; height: 2.1rem; min-height: 2.1rem; max-height: 6rem; padding: .45rem .65rem; line-height: 1.3; resize: none; overflow-y: auto; }
+.gc-form { align-items: flex-end; }
+.gc-form .gc-emo-btn { height: 2.1rem; }
+textarea.gc-input:placeholder-shown { overflow: hidden; }
+textarea.gc-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Silence avec raison (Sacha, 2026-11-01) : formulaire sous le menu d'un message, et sa trace sur la page Owner. */
+.gc-mute-form { display: grid; gap: .4rem; margin-top: .45rem; padding: .55rem; border: 1px solid var(--outline); border-radius: 10px; background: var(--surface-raised); }
+.gc-mute-durs { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0; padding: 0; border: 0; min-width: 0; }
+.gc-mute-durs legend { float: left; margin-right: .3rem; padding: 0; font-size: .74rem; font-weight: 700; color: var(--prose-2); line-height: 1.7rem; }
+.gc-mute-durs label { position: relative; cursor: pointer; }
+.gc-mute-durs input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.gc-mute-durs span { display: inline-block; border: 1px solid var(--outline); border-radius: 999px; padding: .25rem .6rem; font-size: .72rem; font-weight: 700; color: var(--prose-2); background: var(--surface); }
+.gc-mute-durs input:checked + span { border-color: var(--prose); color: var(--prose); box-shadow: inset 0 0 0 1px var(--prose); }
+.gc-mute-durs input:focus-visible + span { outline: 2px solid var(--outline-strong); outline-offset: 1px; }
+.gc-mute-form .select, .gc-mute-form .input { width: 100%; min-width: 0; text-align: left; text-transform: none; letter-spacing: 0; }
+.gc-mute-go { display: flex; justify-content: flex-end; gap: .4rem; }
+.gc-mute-go .btn { margin: 0; }
+.gc-mute-main { flex: 1; min-width: 0; }
+.gc-mute-why { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .3rem; font-size: .8rem; }
+.gc-mute-msg { margin: .3rem 0 0; padding: .3rem .55rem; border-left: 3px solid var(--outline-mid); font-size: .8rem; color: var(--prose-2); overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .gc-panel { left: 0; right: 0; bottom: 0; width: auto; height: min(78vh, 600px); height: min(78dvh, 600px); border-radius: 16px 16px 0 0; border-bottom: 0; }
 }

@@ -4406,7 +4406,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(r.body.reports.some(x => x.where === 'global chat' && x.text === 'hi Kiddo' && x.author === 'Pally'), JSON.stringify(r.body.reports.slice(0, 2)));
   // Modération : un joueur ne supprime ni ne rend muet ; le rôle de Modérateur est donné par le créateur seul.
   assert.equal((await gc(kid, 'gcDelete', { id: palMsg.id })).status, 403);
-  assert.equal((await gc(kid, 'gcMute', { id: palMsg.id, dur: '1h' })).status, 403);
+  assert.equal((await gc(kid, 'gcMute', { id: palMsg.id, dur: '1h', why: 'spam' })).status, 403);
   assert.equal((await gc(kid, 'gcModSet', { name: 'Modo' })).status, 403, 'seul le créateur donne le rôle');
   assert.equal((await gc(modo, 'gcAdmin')).status, 403);
   r = await gc(boss, 'gcModSet', { name: 'Modo' }); assert.equal(r.status, 200); assert.deepEqual(r.body.mods, ['Modo']);
@@ -4417,11 +4417,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(kid, 'gcList', { rev, del, since: lastT }); assert.equal(r.body.full, true, 'après une suppression, la liste entière'); assert.equal(r.body.msgs.length, 6);
   // Silence 1 h : le joueur voit jusqu'à quand ; ne peut plus écrire ; listé sur la page Owner ; levé par le créateur.
   free(pal); r = await gc(pal, 'gcSend', { text: 'one more' }); const m2 = r.body.msgs.at(-1);
-  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '2h' })).status, 400);
-  r = await gc(modo, 'gcMute', { id: m2.id, dur: '1h' }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === m2.id), 'message retiré aussi');
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '2h', why: 'spam' })).status, 400);
+  // Raison obligatoire, « other » demande une note ; « pour toujours » réservé au créateur (Sacha, 2026-11-01).
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '1h' })).status, 400, 'sans raison');
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '1h', why: 'because' })).status, 400, 'raison inconnue');
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: '1h', why: 'other', note: '   ' })).status, 400, 'other sans note');
+  assert.equal((await gc(modo, 'gcMute', { id: m2.id, dur: 'perm', why: 'spam' })).status, 403, 'un modérateur ne bannit pas');
+  r = await gc(modo, 'gcMute', { id: m2.id, dur: '1h', why: 'spam', note: 'posted the same thing 6 times' }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === m2.id), 'message retiré aussi');
   r = await gc(pal, 'gcList'); assert.equal(r.body.me.reason, 'muted'); assert.ok(r.body.me.mutedUntil > Date.now() + 3500e3 && r.body.me.mutedUntil <= Date.now() + 3600e3);
+  assert.equal(r.body.me.muteWhy, 'spam', 'le joueur voit la raison'); assert.ok(!JSON.stringify(r.body.me).includes('6 times'), 'mais pas la note');
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'let me talk' })).status, 403);
-  r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by]), [['Pally', 'Modo']]);
+  r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by, x.d, x.why, x.note, x.text]), [['Pally', 'Modo', '1h', 'spam', 'posted the same thing 6 times', 'one more']]);
+  assert.deepEqual(r.body.history, [], 'un silence en cours n\'est pas dans l\'historique'); assert.deepEqual(r.body.modMutes, { Modo: 1 });
   // Lecture seule (viewerGrant, 2026-10-26) : voir les silences, sans pouvoir les lever.
   run([['HSET', `stats:${kid.playerId}`, 'viewerGrant', '1']]);
   r = await gc(kid, 'gcAdmin'); assert.equal(r.status, 200); assert.equal(r.body.readOnly, true); assert.equal(r.body.mutes.length, 1);
@@ -4430,14 +4437,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HDEL', `stats:${kid.playerId}`, 'viewerGrant']]);
   assert.ok(!JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant sur la page Owner');
   r = await gc(boss, 'gcUnmute', { name: 'Pally' }); assert.deepEqual(r.body.mutes, []);
+  // Levé par le créateur : l'historique le garde, avec qui l'a levé.
+  assert.deepEqual(r.body.history.map(x => [x.name, x.by, x.why, x.text, x.lift && x.lift.by]), [['Pally', 'Modo', 'spam', 'one more', 'Chief']]);
+  assert.ok(!JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant dans l\'historique');
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'thanks' })).status, 200);
+  // Silence de 5 min : il finit tout seul et passe dans l'historique, sans « levé par ».
+  free(pal); r = await gc(pal, 'gcSend', { text: 'spam spam' }); const m5 = r.body.msgs.at(-1);
+  r = await gc(modo, 'gcMute', { id: m5.id, dur: '5m', why: 'other', note: 'flooding' }); assert.equal(r.status, 200);
+  r = await gc(pal, 'gcList'); assert.ok(r.body.me.mutedUntil > Date.now() + 290e3 && r.body.me.mutedUntil <= Date.now() + 300e3);
+  run([['DEL', `gc:mute:${pal.playerId}`]]); // comme si les 5 minutes étaient passées (la clé expire seule)
+  { const rec = JSON.parse(run([['HGET', 'gc:mutes', pal.playerId]])[0].result); rec.until = Date.now() - 1; run([['HSET', 'gc:mutes', pal.playerId, JSON.stringify(rec)]]); }
+  r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes, []);
+  assert.deepEqual(r.body.history.map(x => [x.d, x.why, x.note, !!x.lift]), [['5m', 'other', 'flooding', false], ['1h', 'spam', 'posted the same thing 6 times', true]]);
+  assert.deepEqual(r.body.modMutes, { Modo: 2 });
+  free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'sorry' })).status, 200);
   // Silence pour toujours, et un modérateur ne rend muet ni le créateur ni un autre modérateur.
   free(kid); r = await gc(kid, 'gcSend', { text: 'bye' }); const m3 = r.body.msgs.at(-1);
-  await gc(boss, 'gcMute', { id: m3.id, dur: 'perm' });
+  assert.equal((await gc(boss, 'gcMute', { id: m3.id, dur: 'perm', why: 'rude' })).status, 200);
   r = await gc(kid, 'gcList'); assert.equal(r.body.me.mutedUntil, -1);
   free(kid); r = await gc(kid, 'gcSend', { text: 'hello?' }); assert.equal(r.status, 403); assert.match(r.body.error, /no longer/);
   free(boss); r = await gc(boss, 'gcSend', { text: 'Be nice everyone' }); const bm = r.body.msgs.at(-1);
-  assert.equal((await gc(modo, 'gcMute', { id: bm.id, dur: '24h' })).status, 403);
+  assert.equal((await gc(modo, 'gcMute', { id: bm.id, dur: '24h', why: 'spam' })).status, 403);
   await gc(boss, 'gcUnmute', { name: 'Kiddo' });
   // Rôle retiré : plus de modération.
   await gc(boss, 'gcModSet', { name: 'Modo', on: false });
@@ -4523,7 +4543,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(ed, 'gcEdit', { id: mine.id, text: 'too late' }); assert.equal(r.status, 422); assert.match(r.body.error, /5 minutes/);
   // Supprimer : le sien oui (même vieux), celui d'un autre non (sauf modérateur).
   assert.equal((await gc(ed, 'gcDelete', { id: theirs.id })).status, 403);
-  assert.equal((await gc(ed, 'gcMute', { id: theirs.id, dur: '1h' })).status, 403, 'pas de silence pour autant');
+  assert.equal((await gc(ed, 'gcMute', { id: theirs.id, dur: '1h', why: 'spam' })).status, 403, 'pas de silence pour autant');
   r = await gc(ed, 'gcDelete', { id: mine.id }); assert.equal(r.status, 200); assert.ok(!r.body.msgs.some(m => m.id === mine.id));
   assert.ok(r.body.msgs.some(m => m.id === theirs.id));
   assert.ok(!JSON.stringify(r.body).includes(ed.playerId) && !JSON.stringify(r.body).includes(ot.playerId), 'aucun identifiant');
@@ -4618,7 +4638,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   free(B); assert.equal((await gc(B, 'gcSend', { text: 'wow', replyTo: sys.id })).status, 422);
   assert.equal((await gc(B, 'gcReport', { id: sys.id })).status, 422);
   assert.equal((await gc(lucky, 'gcEdit', { id: sys.id, text: 'hacked' })).status, 403);
-  assert.equal((await gc(boss, 'gcMute', { id: sys.id, dur: '1h' })).status, 422);
+  assert.equal((await gc(boss, 'gcMute', { id: sys.id, dur: '1h', why: 'spam' })).status, 422);
   assert.equal(run([['GET', `gc:mute:${lucky.playerId}`]])[0].result, null);
   assert.equal((await gc(lucky, 'gcDelete', { id: sys.id })).status, 403, 'pas son message');
   assert.equal((await gc(modo, 'gcDelete', { id: sys.id })).status, 200);

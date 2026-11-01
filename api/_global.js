@@ -13,14 +13,19 @@
 // Ajouts du 2026-10-27 : réponses (r = { id, n, x } + ra = auteur cité, idée de Niall), grands tirages annoncés par le
 // serveur (sys: 'roll', idée de R77 ; file gc:sysq), message épinglé par le créateur (gc:pin, idée de Big Sexy) et
 // gc:gone = les 300 derniers messages supprimés ou modifiés (une citation ne montre jamais un texte retiré).
+// Silences courts et raison obligatoire (demandé par Sacha, 2026-11-01) : 5 min, 10 min, 1 h ou 24 h pour les modérateurs,
+// « pour toujours » réservé au créateur (les modérateurs ne bannissent pas). Chaque silence garde sa raison, la note du
+// modérateur et le message en cause, et entre dans gc:mutelog (les 200 derniers) : la page Owner les montre pour juger
+// si le silence était mérité. Le joueur muet voit la raison, jamais la note.
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
 const { maskBad, hideCodes, shape, BLOCKED_SHAPES } = require('./_chat');
 
-const KEY = 'gc:msgs', REV = 'gc:rev', DEL = 'gc:del', MUTES = 'gc:mutes', MODS = 'gc:mods';
+const KEY = 'gc:msgs', REV = 'gc:rev', DEL = 'gc:del', MUTES = 'gc:mutes', MODS = 'gc:mods', MUTELOG = 'gc:mutelog', LOG_KEEP = 200;
 const KEEP = 100, MAX = 200, GAP_MS = 5000, MIN_ROLLS = 100;
-const MUTE_MS = { '1h': 3600e3, '24h': 86400e3, perm: -1 };
+const MUTE_MS = { '5m': 300e3, '10m': 600e3, '1h': 3600e3, '24h': 86400e3, perm: -1 };
+const MUTE_WHY = ['spam', 'rude', 'mean', 'personal', 'inappropriate', 'other'], NOTE_MAX = 120;
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const refuse = (status, error) => Object.assign(new Error(error), { status });
 const parse = x => { try { return JSON.parse(x); } catch (e) { return null; } };
@@ -211,12 +216,12 @@ async function append(m, extra = () => []) { // extra(t) : écritures de plus, a
 
 // Mon statut : puis-je écrire, et sinon pourquoi ; suis-je muet (jusqu'à quand) ; suis-je modérateur.
 async function meInfo(id, stats) {
-  const [google, mute, lastAt] = await redis([['GET', `player:${id}:google`], ['GET', `gc:mute:${id}`], ['GET', atKey(id)]]);
+  const [google, mute, lastAt, rec] = await redis([['GET', `player:${id}:google`], ['GET', `gc:mute:${id}`], ['GET', atKey(id)], ['HGET', MUTES, id]]);
   const rolls = Number(stats.rolls) || 0, owner = Number(stats.owner) >= 1, mod = owner || stats.gcMod === '1';
-  const mutedUntil = mute ? Number(mute) : 0;
+  const mutedUntil = mute ? Number(mute) : 0, muteWhy = mutedUntil ? (parse(rec) || {}).why || null : null;
   // Sacha (2026-10-25) : plus besoin de compte Google, seulement 100 tirages.
   const reason = mutedUntil ? 'muted' : rolls < MIN_ROLLS ? 'rolls' : null;
-  return { can: !reason, reason, rolls, need: MIN_ROLLS, google: !!google, mutedUntil, mod, owner, lastAt: Number(lastAt) || 0 };
+  return { can: !reason, reason, rolls, need: MIN_ROLLS, google: !!google, mutedUntil, ...(muteWhy ? { muteWhy } : {}), mod, owner, lastAt: Number(lastAt) || 0 };
 }
 
 // Relecture toutes les 3 s : réponse minuscule quand rien n'a changé (« same »). Après une suppression, la liste entière.
@@ -298,28 +303,54 @@ async function remove(entry) {
 }
 
 // Silence : sur un message (on ne connaît jamais l'id de l'auteur côté site). Les modérateurs ne peuvent pas rendre
-// muet le créateur ni un autre modérateur. Le message est supprimé en même temps.
-async function mute(byId, m, dur) {
-  if (!(dur in MUTE_MS)) throw refuse(400, 'Pick 1 h, 24 h or forever');
+// muet le créateur ni un autre modérateur. Le message est supprimé en même temps (son texte reste dans gc:mutelog).
+// Raison obligatoire, note libre facultative (obligatoire pour « other »), passée au même nettoyage que les messages.
+async function mute(byId, m, dur, why, rawNote, owner) {
+  if (!(dur in MUTE_MS)) throw refuse(400, 'Pick how long the mute lasts');
+  if (dur === 'perm' && !owner) throw refuse(403, 'Only the owner can mute forever');
+  if (!MUTE_WHY.includes(why)) throw refuse(400, 'Pick a reason');
+  const note = [...normalize(rawNote)].slice(0, NOTE_MAX).join('');
+  if (why === 'other' && !note) throw refuse(400, 'Say why in a few words');
   if (m.a === byId) throw refuse(422, 'You cannot mute yourself');
   const [st, byName] = await Promise.all([readStats(m.a), redis([['HGET', 'names', byId]])]);
   if (Number(st.owner) >= 1 || st.gcMod === '1') throw refuse(403, 'Moderators cannot be muted');
-  const ms = MUTE_MS[dur], now = Date.now(), until = ms < 0 ? -1 : now + ms;
+  const ms = MUTE_MS[dur], now = Date.now(), until = ms < 0 ? -1 : now + ms, k = crypto.randomBytes(5).toString('hex');
+  const rec = { until, n: m.n, by: byName[0] || 'Moderator', t: now, d: dur, why, ...(note ? { note } : {}), x: m.x, k };
   await redis([
     ms < 0 ? ['SET', `gc:mute:${m.a}`, '-1'] : ['SET', `gc:mute:${m.a}`, String(until), 'PX', String(ms)],
-    ['HSET', MUTES, m.a, JSON.stringify({ until, n: m.n, by: byName[0] || 'Moderator', t: now })],
+    ['HSET', MUTES, m.a, JSON.stringify(rec)],
+    ['RPUSH', MUTELOG, JSON.stringify({ ...rec, p: m.a })], ['LTRIM', MUTELOG, -LOG_KEEP, -1],
   ]);
 }
+// Silence levé par le créateur : noté dans l'historique (remplacé par sa valeur, comme edit, jamais par sa position).
+async function unmute(who, byId) {
+  const [rec, log, byName] = await redis([['HGET', MUTES, who], ['LRANGE', MUTELOG, 0, -1], ['HGET', 'names', byId]]);
+  await redis([['DEL', `gc:mute:${who}`], ['HDEL', MUTES, who]]);
+  const k = (parse(rec) || {}).k, entry = k && (log || []).find(x => (parse(x) || {}).k === k);
+  if (!entry) return;
+  const [ins] = await redis([['LINSERT', MUTELOG, 'BEFORE', entry, JSON.stringify({ ...parse(entry), lift: { by: byName || 'Owner', t: Date.now() } })]]);
+  if (Number(ins) > 0) await redis([['LREM', MUTELOG, 1, entry]]);
+}
 
-// Page Owner : silences en cours (les expirés sont retirés au passage) et modérateurs, par pseudo.
+// Page Owner : silences en cours (les expirés sont retirés au passage), historique et modérateurs, par pseudo.
+// Aucun identifiant ne sort : l'historique garde p (l'auteur) pour savoir si le silence court encore, puis l'oublie.
 async function ownerState() {
-  const [h, mods] = await redis([['HGETALL', MUTES], ['SMEMBERS', MODS]]);
+  const [h, mods, logRaw] = await redis([['HGETALL', MUTES], ['SMEMBERS', MODS], ['LRANGE', MUTELOG, 0, -1]]);
   const flat = h || [], rows = [], now = Date.now(), gone = [];
   for (let i = 0; i < flat.length; i += 2) { const r = parse(flat[i + 1]); if (!r || (r.until > 0 && r.until <= now)) gone.push(flat[i]); else rows.push({ id: flat[i], ...r }); }
   if (gone.length) await redis([['HDEL', MUTES, ...gone]]);
   const names = rows.length ? (await redis([['HMGET', 'names', ...rows.map(r => r.id)]]))[0] || [] : [];
   const modNames = (mods || []).length ? (await redis([['HMGET', 'names', ...mods]]))[0] || [] : [];
-  return { mutes: rows.map((r, i) => ({ name: names[i] || r.n || 'Player', until: r.until, by: r.by, t: r.t })).sort((a, b) => b.t - a.t), mods: modNames.filter(Boolean).sort() };
+  const live = new Map(rows.map(r => [r.id, r.k]));
+  const log = (logRaw || []).map(parse).filter(Boolean).reverse();
+  const counts = {};
+  for (const e of log) counts[e.by] = (counts[e.by] || 0) + 1;
+  const pub = r => ({ until: r.until, by: r.by, t: r.t, d: r.d || null, why: r.why || null, note: r.note || null, text: r.x || null });
+  return {
+    mutes: rows.map((r, i) => ({ name: names[i] || r.n || 'Player', ...pub(r) })).sort((a, b) => b.t - a.t),
+    history: log.filter(e => !(e.k && live.get(e.p) === e.k)).slice(0, 100).map(e => ({ name: e.n || 'Player', ...pub(e), ...(e.lift ? { lift: e.lift } : {}) })),
+    mods: modNames.filter(Boolean).sort(), modMutes: counts,
+  };
 }
 
 // ---------------------------------------------------------------- point d'entrée (depuis api/friends.js)
@@ -354,7 +385,7 @@ async function handle(body) {
     // Supprimer son propre message (idée de daddy finger, 2026-10-26) ; le reste est réservé aux modérateurs.
     if (!mod && !(body.action === 'gcDelete' && m.a === me)) throw refuse(403, 'Moderators only');
     if (body.action === 'gcMute' && m.sys) throw refuse(422, 'This message was posted by the game');
-    if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''));
+    if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''), String(body.why || ''), body.note, owner);
     await remove(entry);
     return list({}, me, stats);
   }
@@ -366,7 +397,7 @@ async function handle(body) {
     if (body.action !== 'gcAdmin') {
       const who = await findPlayer(String(body.name || '').slice(0, 40));
       if (!who) throw refuse(404, 'No player with this name');
-      if (body.action === 'gcUnmute') await redis([['DEL', `gc:mute:${who}`], ['HDEL', MUTES, who]]);
+      if (body.action === 'gcUnmute') await unmute(who, me);
       else await redis(body.on === false ? [['HDEL', statsKey(who), 'gcMod'], ['SREM', MODS, who]] : [['HSET', statsKey(who), 'gcMod', '1'], ['SADD', MODS, who]]);
     }
     return ownerState();
