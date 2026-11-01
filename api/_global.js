@@ -17,12 +17,18 @@
 // « pour toujours » réservé au créateur (les modérateurs ne bannissent pas). Chaque silence garde sa raison, la note du
 // modérateur et le message en cause, et entre dans gc:mutelog (les 200 derniers) : la page Owner les montre pour juger
 // si le silence était mérité. Le joueur muet voit la raison, jamais la note.
+// Section Modérateurs (Sacha, 2026-11-01), comme les Idea Managers : 🛡️ à côté de leur pseudo dans le chat, une page
+// #/mod (règles, signalements du chat global à traiter, leurs dernières actions) et, sur la page Owner, ce que chacun a
+// fait (silences, suppressions dans gc:dellog, signalements traités, silences levés par le créateur) pour le juger.
+// gc:modsince = { id: heure où le rôle a été donné }. Les entrées des journaux gardent bi (l'id du modérateur), jamais
+// renvoyé : les pseudos changent, l'id non.
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
 const { maskBad, hideCodes, shape, BLOCKED_SHAPES } = require('./_chat');
 
 const KEY = 'gc:msgs', REV = 'gc:rev', DEL = 'gc:del', MUTES = 'gc:mutes', MODS = 'gc:mods', MUTELOG = 'gc:mutelog', LOG_KEEP = 200;
+const DELLOG = 'gc:dellog', MODSINCE = 'gc:modsince', WEEK = 7 * 86400e3;
 const KEEP = 100, MAX = 200, GAP_MS = 5000, MIN_ROLLS = 100;
 const MUTE_MS = { '5m': 300e3, '10m': 600e3, '1h': 3600e3, '24h': 86400e3, perm: -1 };
 const MUTE_WHY = ['spam', 'rude', 'mean', 'personal', 'inappropriate', 'other'], NOTE_MAX = 120;
@@ -135,8 +141,9 @@ const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'E
 // ---------------------------------------------------------------- lecture
 const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
 // Message du serveur (grand tirage) : pas d'auteur, pas de texte libre ; le site écrit la phrase (et la traduit).
-const view = (m, me, quote, tags) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
+const view = (m, me, quote, tags, mods) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
   id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x, ...(tags && tags.get(m.a) ? { clan: tags.get(m.a) } : {}),
+  ...(mods && mods.has(m.a) ? { mod: true } : {}), // 🛡️ Modérateur du chat (Sacha, 2026-11-01)
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
   ...(me && ((Array.isArray(m.at) && m.at.includes(me)) || m.ra === me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}),
   ...(m.r && quote ? { re: quote(m.r) } : {}) });
@@ -237,7 +244,8 @@ async function list(body, me, stats, again = false) {
   const all = await readAll();
   const full = !since || seenDel !== out.del;
   const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all), tags = await clanTags(msgs);
-  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags)) };
+  const [modIds] = await redis([['SMEMBERS', MODS]]), mods = new Set(modIds || []);
+  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags, mods)) };
 }
 
 // ---------------------------------------------------------------- écriture
@@ -319,7 +327,7 @@ async function mute(byId, m, dur, why, rawNote, owner) {
   await redis([
     ms < 0 ? ['SET', `gc:mute:${m.a}`, '-1'] : ['SET', `gc:mute:${m.a}`, String(until), 'PX', String(ms)],
     ['HSET', MUTES, m.a, JSON.stringify(rec)],
-    ['RPUSH', MUTELOG, JSON.stringify({ ...rec, p: m.a })], ['LTRIM', MUTELOG, -LOG_KEEP, -1],
+    ['RPUSH', MUTELOG, JSON.stringify({ ...rec, p: m.a, bi: byId })], ['LTRIM', MUTELOG, -LOG_KEEP, -1],
   ]);
 }
 // Silence levé par le créateur : noté dans l'historique (remplacé par sa valeur, comme edit, jamais par sa position).
@@ -335,22 +343,59 @@ async function unmute(who, byId) {
 // Page Owner : silences en cours (les expirés sont retirés au passage), historique et modérateurs, par pseudo.
 // Aucun identifiant ne sort : l'historique garde p (l'auteur) pour savoir si le silence court encore, puis l'oublie.
 async function ownerState() {
-  const [h, mods, logRaw] = await redis([['HGETALL', MUTES], ['SMEMBERS', MODS], ['LRANGE', MUTELOG, 0, -1]]);
+  const [h, mods, logRaw, delRaw, since] = await redis([['HGETALL', MUTES], ['SMEMBERS', MODS], ['LRANGE', MUTELOG, 0, -1], ['LRANGE', DELLOG, 0, -1], ['HGETALL', MODSINCE]]);
   const flat = h || [], rows = [], now = Date.now(), gone = [];
   for (let i = 0; i < flat.length; i += 2) { const r = parse(flat[i + 1]); if (!r || (r.until > 0 && r.until <= now)) gone.push(flat[i]); else rows.push({ id: flat[i], ...r }); }
   if (gone.length) await redis([['HDEL', MUTES, ...gone]]);
   const names = rows.length ? (await redis([['HMGET', 'names', ...rows.map(r => r.id)]]))[0] || [] : [];
-  const modNames = (mods || []).length ? (await redis([['HMGET', 'names', ...mods]]))[0] || [] : [];
+  const modIds = mods || [], modNames = modIds.length ? (await redis([['HMGET', 'names', ...modIds]]))[0] || [] : [];
   const live = new Map(rows.map(r => [r.id, r.k]));
-  const log = (logRaw || []).map(parse).filter(Boolean).reverse();
-  const counts = {};
-  for (const e of log) counts[e.by] = (counts[e.by] || 0) + 1;
+  const log = (logRaw || []).map(parse).filter(Boolean).reverse(), dels = (delRaw || []).map(parse).filter(Boolean).reverse();
   const pub = r => ({ until: r.until, by: r.by, t: r.t, d: r.d || null, why: r.why || null, note: r.note || null, text: r.x || null });
+  // Ce que chaque modérateur a fait (Sacha, 2026-11-01) : par id, ou par pseudo pour les silences d'avant cet ajout.
+  const handled = await Reports.handledCounts(), sinceMap = new Map();
+  for (let i = 0; i < (since || []).length; i += 2) sinceMap.set(since[i], Number(since[i + 1]) || 0);
+  const isBy = (e, id, name) => (e.bi ? e.bi === id : e.by === name);
+  const modStats = modIds.map((id, i) => ({ id, name: modNames[i] })).filter(x => x.name).map(({ id, name }) => {
+    const mm = log.filter(e => isBy(e, id, name)), dd = dels.filter(e => isBy(e, id, name));
+    return { name, since: sinceMap.get(id) || null, mutes: mm.length, week: mm.filter(e => now - e.t < WEEK).length + dd.filter(e => now - e.t < WEEK).length,
+      deletes: dd.length, reports: handled[id] || 0, lifted: mm.filter(e => e.lift).length };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  // Dernières actions de modération, silences et suppressions mêlés, les plus récentes d'abord.
+  const actions = [...log.map(e => ({ kind: 'mute', name: e.n || 'Player', ...pub(e), ...(e.lift ? { lift: e.lift } : {}), active: !!(e.k && live.get(e.p) === e.k) })),
+    ...dels.map(e => ({ kind: 'delete', name: e.n || 'Player', by: e.by, t: e.t, text: e.x || null }))].sort((a, b) => b.t - a.t).slice(0, 100);
   return {
     mutes: rows.map((r, i) => ({ name: names[i] || r.n || 'Player', ...pub(r) })).sort((a, b) => b.t - a.t),
     history: log.filter(e => !(e.k && live.get(e.p) === e.k)).slice(0, 100).map(e => ({ name: e.n || 'Player', ...pub(e), ...(e.lift ? { lift: e.lift } : {}) })),
-    mods: modNames.filter(Boolean).sort(), modMutes: counts,
+    mods: modStats.map(x => x.name), modStats, actions,
   };
+}
+
+// ---------------------------------------------------------------- page des Modérateurs (Sacha, 2026-11-01)
+// Signalements du chat global encore ouverts dont le message est toujours là (on agit dessus : supprimer, rendre muet,
+// ou « rien à faire »), jamais ceux qui visent le modérateur lui-même ; et ses 30 dernières actions.
+async function modPage(me) {
+  const [open, all, [myName], [logRaw, delRaw]] = await Promise.all([Reports.openGlobal(), readAll(), redis([['HGET', 'names', me]]), redis([['LRANGE', MUTELOG, 0, -1], ['LRANGE', DELLOG, 0, -1]])]);
+  const byKey = new Map(all.filter(m => !m.sys).map(m => [`${m.a}:${m.t}`, m])), seen = new Set();
+  const reports = [];
+  for (const r of open.reverse()) { // le plus récent d'abord ; un message signalé plusieurs fois n'apparaît qu'une fois
+    const m = byKey.get(`${r.author}:${r.msgT}`);
+    if (!m || m.a === me) continue;
+    if (seen.has(m.id)) { reports.find(x => x.msgId === m.id).count += 1; continue; }
+    seen.add(m.id);
+    reports.push({ id: r.id, t: r.t, msgId: m.id, msgT: m.t, name: m.n || 'Player', text: m.x, against: r.against, count: 1 });
+  }
+  const isMine = e => (e.bi ? e.bi === me : e.by === myName);
+  const mine = [...(logRaw || []).map(parse).filter(e => e && isMine(e)).map(e => ({ kind: 'mute', t: e.t, name: e.n || 'Player', d: e.d || null, why: e.why || null, note: e.note || null, text: e.x || null, ...(e.lift ? { lift: true } : {}) })),
+    ...(delRaw || []).map(parse).filter(e => e && isMine(e)).map(e => ({ kind: 'delete', t: e.t, name: e.n || 'Player', text: e.x || null }))].sort((a, b) => b.t - a.t).slice(0, 30);
+  return { reports, mine };
+}
+// Les signalements ouverts qui visent ce message sont traités du même coup (Owner : « traité par Modo »).
+async function settleReports(m, me, act) {
+  const open = (await Reports.openGlobal()).filter(r => r.author === m.a && r.msgT === m.t);
+  if (!open.length) return;
+  const [name] = await redis([['HGET', 'names', me]]);
+  await Reports.markHandled(open.map(r => r.id), me, name, act);
 }
 
 // ---------------------------------------------------------------- point d'entrée (depuis api/friends.js)
@@ -387,7 +432,26 @@ async function handle(body) {
     if (body.action === 'gcMute' && m.sys) throw refuse(422, 'This message was posted by the game');
     if (body.action === 'gcMute') await mute(me, m, String(body.dur || ''), String(body.why || ''), body.note, owner);
     await remove(entry);
-    return list({}, me, stats);
+    if (m.a !== me && !m.sys) {
+      // Suppression par un modérateur : notée (gc:dellog), pour que le créateur voie aussi ce qui a été retiré.
+      if (body.action === 'gcDelete') { const [name] = await redis([['HGET', 'names', me]]); await redis([['RPUSH', DELLOG, JSON.stringify({ t: Date.now(), by: name || 'Moderator', bi: me, n: m.n, x: m.x })], ['LTRIM', DELLOG, -LOG_KEEP, -1]]); }
+      await settleReports(m, me, body.action === 'gcMute' ? 'muted' : 'deleted');
+    }
+    return body.from === 'mod' ? modPage(me) : list({}, me, stats);
+  }
+  // Page des Modérateurs : lecture, et « rien à faire » sur un signalement (le message reste).
+  if (body.action === 'gcModPage' || body.action === 'gcReportOk') {
+    if (!mod) throw refuse(403, 'Moderators only');
+    if (body.action === 'gcReportOk') {
+      const r = (await Reports.openGlobal()).find(x => x.id === String(body.id || ''));
+      if (!r) throw refuse(404, 'This report was already handled');
+      if (r.author === me) throw refuse(403, 'This report is about you');
+      // Tous les signalements du même message partent ensemble.
+      const same = (await Reports.openGlobal()).filter(x => x.author === r.author && x.msgT === r.msgT).map(x => x.id);
+      const [name] = await redis([['HGET', 'names', me]]);
+      await Reports.markHandled(same, me, name, 'ok');
+    }
+    return modPage(me);
   }
   // Réservé au créateur : silences en cours, lever un silence, donner ou retirer le rôle de Modérateur (par pseudo).
   if (['gcAdmin', 'gcUnmute', 'gcModSet'].includes(body.action)) {
@@ -398,7 +462,7 @@ async function handle(body) {
       const who = await findPlayer(String(body.name || '').slice(0, 40));
       if (!who) throw refuse(404, 'No player with this name');
       if (body.action === 'gcUnmute') await unmute(who, me);
-      else await redis(body.on === false ? [['HDEL', statsKey(who), 'gcMod'], ['SREM', MODS, who]] : [['HSET', statsKey(who), 'gcMod', '1'], ['SADD', MODS, who]]);
+      else await redis(body.on === false ? [['HDEL', statsKey(who), 'gcMod'], ['SREM', MODS, who], ['HDEL', MODSINCE, who]] : [['HSET', statsKey(who), 'gcMod', '1'], ['SADD', MODS, who], ['HSETNX', MODSINCE, who, String(Date.now())]]);
     }
     return ownerState();
   }

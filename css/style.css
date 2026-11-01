@@ -9233,6 +9233,14 @@ textarea.gc-input::placeholder { white-space: nowrap; overflow: hidden; text-ove
 .gc-mute-main { flex: 1; min-width: 0; }
 .gc-mute-why { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .3rem; font-size: .8rem; }
 .gc-mute-msg { margin: .3rem 0 0; padding: .3rem .55rem; border-left: 3px solid var(--outline-mid); font-size: .8rem; color: var(--prose-2); overflow-wrap: anywhere; }
+/* Modérateurs du chat (Sacha, 2026-11-01) : 🛡️ après le pseudo, lien vers leur page dans l'en-tête, fiches sur la page Owner. */
+.gc-modtag { margin-left: .2rem; font-size: .72rem; }
+.gc-modlink { flex: none; margin-left: auto; padding: .15rem .5rem; border: 1px solid var(--outline); border-radius: 999px; color: var(--prose-2); font-size: .72rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.gc-modlink:hover, .gc-modlink:focus-visible { color: var(--prose); border-color: var(--outline-strong); }
+.gc-modlink[hidden] { display: none; }
+.mod-card .o-report-head .im-x { margin-left: auto; }
+.mod-stats { display: flex; flex-wrap: wrap; gap: .35rem .9rem; margin-top: .35rem; font-size: .8rem; color: var(--prose-2); }
+.mod-stats b { color: var(--prose); }
 @media (max-width: 900px) {
   .gc-panel { left: 0; right: 0; bottom: 0; width: auto; height: min(78vh, 600px); height: min(78dvh, 600px); border-radius: 16px 16px 0 0; border-bottom: 0; }
 }

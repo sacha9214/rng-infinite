@@ -9,6 +9,21 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Chat moderators section (2026-11-01, branch `claude/chat-moderators`)
+
+Asked by Sacha: a section like the Idea Managers, for chat moderators, so he can see whether they mute fairly.
+- **Owner → 🛡️ Moderators** (new tab; the moderators box left the Chat tab): give or remove the role, a card per
+  moderator (since when, mutes, deleted messages, reports checked, actions this week, mutes Sacha lifted), and "What
+  moderators did": every mute and deleted message with the reason and the message, filterable by moderator, with Unmute
+  on mutes still running.
+- **#/mod** (moderators and owner; link "🛡️ Mod" in the chat header): the rules, the reported global-chat messages
+  still in the chat (✓ Nothing wrong / 🗑️ Delete / 🔇 Mute…), and their last 30 actions. They never see who reported,
+  nor reports about themselves.
+- Server (`api/_global.js`): `gcModPage`, `gcReportOk`; moderator deletes go to `gc:dellog` (last 200); deleting or
+  muting a reported message settles its reports (`reports:by` in `api/_reports.js`: by, act ok/deleted/muted), shown
+  on the Owner Reports tab as "Handled by Modo · …". `gc:modsince` = when the role was given. Log entries keep `bi`
+  (moderator id) server-side only. Messages by moderators carry `mod: true` (🛡️ next to the name).
+
 ## Chat mutes with reasons (2026-11-01, branch `claude/chat-mutes`)
 
 Asked by Sacha: moderators mute for a time, with a reason Sacha can check on the Owner page, and never ban.

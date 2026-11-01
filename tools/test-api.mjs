@@ -4428,7 +4428,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.me.muteWhy, 'spam', 'le joueur voit la raison'); assert.ok(!JSON.stringify(r.body.me).includes('6 times'), 'mais pas la note');
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'let me talk' })).status, 403);
   r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes.map(x => [x.name, x.by, x.d, x.why, x.note, x.text]), [['Pally', 'Modo', '1h', 'spam', 'posted the same thing 6 times', 'one more']]);
-  assert.deepEqual(r.body.history, [], 'un silence en cours n\'est pas dans l\'historique'); assert.deepEqual(r.body.modMutes, { Modo: 1 });
+  assert.deepEqual(r.body.history, [], 'un silence en cours n\'est pas dans l\'historique'); assert.deepEqual(r.body.modStats.map(x => [x.name, x.mutes]), [['Modo', 1]]);
   // Lecture seule (viewerGrant, 2026-10-26) : voir les silences, sans pouvoir les lever.
   run([['HSET', `stats:${kid.playerId}`, 'viewerGrant', '1']]);
   r = await gc(kid, 'gcAdmin'); assert.equal(r.status, 200); assert.equal(r.body.readOnly, true); assert.equal(r.body.mutes.length, 1);
@@ -4449,7 +4449,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   { const rec = JSON.parse(run([['HGET', 'gc:mutes', pal.playerId]])[0].result); rec.until = Date.now() - 1; run([['HSET', 'gc:mutes', pal.playerId, JSON.stringify(rec)]]); }
   r = await gc(boss, 'gcAdmin'); assert.deepEqual(r.body.mutes, []);
   assert.deepEqual(r.body.history.map(x => [x.d, x.why, x.note, !!x.lift]), [['5m', 'other', 'flooding', false], ['1h', 'spam', 'posted the same thing 6 times', true]]);
-  assert.deepEqual(r.body.modMutes, { Modo: 2 });
+  assert.deepEqual(r.body.modStats.map(x => [x.name, x.mutes]), [['Modo', 2]]);
   free(pal); assert.equal((await gc(pal, 'gcSend', { text: 'sorry' })).status, 200);
   // Silence pour toujours, et un modérateur ne rend muet ni le créateur ni un autre modérateur.
   free(kid); r = await gc(kid, 'gcSend', { text: 'bye' }); const m3 = r.body.msgs.at(-1);
@@ -4459,6 +4459,28 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   free(boss); r = await gc(boss, 'gcSend', { text: 'Be nice everyone' }); const bm = r.body.msgs.at(-1);
   assert.equal((await gc(modo, 'gcMute', { id: bm.id, dur: '24h', why: 'spam' })).status, 403);
   await gc(boss, 'gcUnmute', { name: 'Kiddo' });
+  // Section Modérateurs (Sacha, 2026-11-01) : 🛡️ dans le chat, page des signalements, journal et bilan sur la page Owner.
+  free(modo); r = await gc(modo, 'gcSend', { text: 'hello from a mod' }); const modMsg = r.body.msgs.at(-1);
+  assert.equal(modMsg.mod, true, '🛡️ sur les messages du modérateur'); assert.ok(!r.body.msgs.filter(m => m.name === 'Pally').some(m => m.mod));
+  free(pal); r = await gc(pal, 'gcSend', { text: 'you are all so slow' }); const slow = r.body.msgs.at(-1);
+  free(kid); r = await gc(kid, 'gcSend', { text: 'hi all' }); const hiAll = r.body.msgs.at(-1);
+  await gc(kid, 'gcReport', { id: slow.id }); await gc(anon, 'gcReport', { id: slow.id }); await gc(pal, 'gcReport', { id: hiAll.id }); await gc(kid, 'gcReport', { id: modMsg.id });
+  assert.equal((await gc(kid, 'gcModPage')).status, 403, 'réservé aux modérateurs');
+  r = await gc(modo, 'gcModPage'); assert.equal(r.status, 200);
+  assert.deepEqual(r.body.reports.map(x => [x.name, x.text, x.count]), [['Kiddo', 'hi all', 1], ['Pally', 'you are all so slow', 2]], 'pas le signalement qui le vise');
+  assert.ok(!JSON.stringify(r.body).includes('NoGoogle') && !JSON.stringify(r.body).includes(pal.playerId), 'ni qui a signalé, ni identifiant');
+  assert.equal((await gc(modo, 'gcReportOk', { id: 'ffffffffffff' })).status, 404);
+  r = await gc(modo, 'gcReportOk', { id: r.body.reports[0].id }); assert.deepEqual(r.body.reports.map(x => x.text), ['you are all so slow']);
+  r = await gc(modo, 'gcDelete', { id: slow.id, from: 'mod' }); assert.deepEqual(r.body.reports, [], 'supprimé : signalements traités');
+  assert.deepEqual(r.body.mine.slice(0, 1).map(a => [a.kind, a.name, a.text]), [['delete', 'Pally', 'you are all so slow']]);
+  r = await call(siteApi, { method: 'POST', body: { action: 'reports', playerId: boss.playerId, secret: boss.secret } });
+  const gcRep = r.body.reports.filter(x => x.where === 'global chat' && ['hi all', 'you are all so slow'].includes(x.text));
+  assert.deepEqual(gcRep.map(x => [x.text, x.done, x.by && x.by.name, x.by && x.by.act]).sort(), [['hi all', true, 'Modo', 'ok'], ['you are all so slow', true, 'Modo', 'deleted'], ['you are all so slow', true, 'Modo', 'deleted']]);
+  assert.ok(r.body.reports.some(x => x.text === 'hello from a mod' && !x.done), 'le signalement qui vise un modérateur reste pour le créateur');
+  r = await gc(boss, 'gcAdmin'); const ms = r.body.modStats.find(x => x.name === 'Modo');
+  assert.deepEqual([ms.mutes, ms.deletes, ms.reports, ms.lifted], [2, 2, 4, 1], JSON.stringify(ms)); assert.ok(ms.since > 0 && ms.week === 4);
+  assert.deepEqual(r.body.actions.slice(0, 1).map(a => [a.kind, a.name, a.by, a.text]), [['delete', 'Pally', 'Modo', 'you are all so slow']]);
+  assert.ok(!JSON.stringify(r.body).includes(modo.playerId) && !JSON.stringify(r.body).includes(pal.playerId), 'aucun identifiant');
   // Rôle retiré : plus de modération.
   await gc(boss, 'gcModSet', { name: 'Modo', on: false });
   assert.equal((await gc(modo, 'gcDelete', { id: bm.id })).status, 403);
