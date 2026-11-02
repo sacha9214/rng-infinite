@@ -2,6 +2,15 @@
 
 Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of every session.
 
+
+## No more roll freezes during big profiles (2026-11-02, branch `claude/profile-no-freeze`)
+
+Sacha: "why does auto-roll take so much time / latency". Production log (3 h): 23 rolls over 2 s (median 2.4 s, up to
+8 s), always at the same second as a `GET /api/profile` of a big player (7-8 s). The profile replays up to 100,000
+rolls and only yielded every 2,000 analyses (~0.15 s blocks); a roll does several Redis round trips and waited behind
+each block. Now `breather(5)` (api/_lib.js) yields after 5 ms of work: in a benchmark, a roll made during a 100,000-roll
+profile went from 1.7 s median to 55 ms, the profile itself takes the same time. (The 41 s roll in the log was a
+client that gave up, "Error: aborted".)
 ## Current state
 
 The game is live on https://rng-infinite.com, served by the OVH VPS (Caddy + Node API + Redis). Vercel only keeps the

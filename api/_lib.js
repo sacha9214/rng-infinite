@@ -37,6 +37,11 @@ const engineOf = mode => (isHard(mode) ? hardEngine() : engine);
 const hardKey = k => `h${k}`;
 // Laisse passer les autres demandes pendant un long calcul (à appeler toutes les quelques milliers d'itérations).
 const breathe = () => new Promise(done => setImmediate(done));
+// Pause au temps plutôt qu'au nombre (Sacha, 2026-11-02 : « pourquoi le tirage auto est si lent ») : le serveur relevait
+// des tirages de 2 à 8 s aux mêmes secondes qu'un gros profil (7-8 s de calcul, une pause toutes les 2 000 analyses,
+// soit ~0,15 s pendant lesquelles rien d'autre ne passe ; un tirage, qui fait plusieurs allers-retours avec Redis,
+// attendait derrière chacune). breather(ms)() rend la main dès que ms millisecondes de calcul sont passées.
+const breather = (ms = 15) => { let since = Date.now(); return async () => { if (Date.now() - since < ms) return; await breathe(); since = Date.now(); }; };
 
 // Variables posées par l'intégration Upstash Redis de Vercel (noms KV_* ou UPSTASH_*).
 // Base de données : notre Redis sur le VPS (RNG_REDIS_*, voir deploy/ovh) en priorité, sinon Upstash (variables de
@@ -783,7 +788,7 @@ async function flushDue(now = Date.now()) {
 }
 
 module.exports = { hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
-  bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, WORST_LB, WORST_BEST,
+  bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
