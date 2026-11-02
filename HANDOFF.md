@@ -7,6 +7,13 @@ Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of 
 
 
 
+
+## Hard rolls and clan XP (2026-11-02, branch `claude/hard-clan-xp`)
+
+Sacha: hard rolls count for the clan, but only at the Normal value of their rarity. `normalTierMin(tier)` (api/_lib.js)
+= the smallest Normal score of that rarity (from the Normal percentile table): Common 2,315, Rare 16,411, Mythic
+315,754, Divine 25,017,717, Infinite 112,726,134. `recordHardRoll` passes it to `Clan.rollWrites` instead of the hard XP.
+
 ## Duel Normal / Hard choice + Divine unlock (2026-11-02, branch `claude/duel-mode`)
 
 Sacha: duels get a "1 · Normal or Hard?" step at creation (`duelPrefs().level`, defaults to the current mode, Normal when

@@ -5899,6 +5899,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}` }); assert.equal(r.body.hardOpen, false);
   run([['HSET', `stats:${hk.playerId}`, 't:divine', '1']]); // son premier Divine (Divine ou mieux, Sacha 2026-11-02)
   r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}` }); assert.equal(r.body.hardOpen, true);
+  run([['HSET', 'clanof', hk.playerId, 'hardclan']]); // dans un clan : XP du clan = minimum normal de la rareté
   // Tirage en mode difficile.
   r = await call(roll, { method: 'POST', body: { ...hk, mode: 'hard' } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -5906,6 +5907,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const a = H.analyze(r.body.n);
   assert.equal(r.body.s, a.total, 'XP au barème difficile');
   assert.equal(r.body.coins, Shop.HARD_COINS[a.tier], 'pièces du mode difficile');
+  { const wk = Lib.weekKey(r.body.t), min = Lib.normalTierMin(a.tier);
+    assert.ok(min > 0 && Lib.normalTierMin('infinite') > Lib.normalTierMin('mythic'), 'minimums par rareté');
+    assert.equal(Number(run([['ZSCORE', `clanxp:${wk}`, 'hardclan']])[0].result), min, `clan : ${min} (minimum normal de ${a.tier}), pas ${a.total}`);
+    assert.equal(Number(run([['HGET', `clanxpm:${wk}:hardclan`, hk.playerId]])[0].result), min);
+    run([['HDEL', 'clanof', hk.playerId], ['DEL', `clanxp:${wk}`, `clanxpm:${wk}:hardclan`]]); }
   let st = stOf(hk.playerId);
   assert.deepEqual([st['h:rolls'], st['h:xp'], st[`h:t:${a.tier}`], st.xpLife, st.rolls], ['1', String(a.total), '1', String(a.total), undefined], 'compteurs à part, XP à vie commune');
   assert.equal(Shop.balance(st), Shop.HARD_COINS[a.tier] + Shop.COINS.divine, 'le solde compte les raretés du mode difficile');
