@@ -7,6 +7,12 @@
 
   const KEY = 'rnginf.v1';
   const MAX_ROLL = 1000000;
+  // Mode difficile (Sacha, 2026-11-02) : ses tirages (0 à 9 999 999 999) ont leur propre historique, rangé à part sous
+  // KEY_HARD avec le même format compact. Store.rolls est toujours l'historique du mode choisi (settings.mode) : les pages
+  // (History, Stats, Badges…) montrent ainsi le mode en cours sans rien changer.
+  const KEY_HARD = 'rnginf.hard';
+  const HARD_MAX = 9999999999;
+  const maxOf = mode => (mode === 'hard' ? HARD_MAX : MAX_ROLL);
 
   // Un même tirage peut porter l'heure du serveur ou, enregistré par une ancienne version du site, celle de l'appareil
   // (quelques dixièmes de seconde d'écart) : même nombre à moins d'une minute = même tirage.
@@ -83,17 +89,27 @@
         player: Object.assign(base.player, data.player),
         settings: Object.assign(base.settings, data.settings),
         scoreVersion: data.scoreVersion || null,
-        rolls: (typeof data.rz === 'string' ? unpackRolls(data.rz) : Array.isArray(data.rolls) ? data.rolls : []).filter(isValidRoll),
+        rolls: (typeof data.rz === 'string' ? unpackRolls(data.rz) : Array.isArray(data.rolls) ? data.rolls : []).filter(r => isValidRoll(r)),
       };
     } catch (e) {
       return defaults();
     }
   }
+  function readHard() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY_HARD) || 'null') || {};
+      return { scoreVersion: data.scoreVersion || null, rolls: (typeof data.rz === 'string' ? unpackRolls(data.rz) : []).filter(r => isValidRoll(r, HARD_MAX)), packed: null };
+    } catch (e) {
+      return { scoreVersion: null, rolls: [], packed: null };
+    }
+  }
 
-  function isValidRoll(r) {
-    return Array.isArray(r) && Number.isInteger(r[0]) && r[0] >= 0 && r[0] <= MAX_ROLL &&
+  function isValidRoll(r, max = MAX_ROLL) {
+    return Array.isArray(r) && Number.isInteger(r[0]) && r[0] >= 0 && r[0] <= max &&
       Number.isFinite(r[1]) && Number.isFinite(r[2]);
   }
+  // Chaîne compacte d'un historique, recalculée seulement s'il a changé depuis la dernière fois.
+  const rzOf = c => (c.packed && c.packed.rolls === c.rolls && c.packed.len === c.rolls.length ? c.packed.s : (c.packed = { s: packRolls(c.rolls), len: c.rolls.length, rolls: c.rolls }).s);
 
   const listeners = new Set();
 
@@ -103,6 +119,11 @@
     // Chaîne compacte déjà calculée : un tirage ajouté par addRoll ne fait qu'allonger la fin (200 000 tirages à
     // réécrire à chaque tirage du tirage auto, sinon). Toute autre modification de l'historique la recalcule entière.
     packed: null,
+    // Historique de l'autre mode, gardé en mémoire (modes : 'normal' | 'hard').
+    other: null, hardDirty: false,
+
+    get mode() { return this.state.mode || 'normal'; },
+    maxRoll() { return maxOf(this.mode); },
 
     save(appended = false) {
       const rolls = this.state.rolls;
@@ -115,12 +136,37 @@
         rz = packRolls(rolls);
       }
       this.packed = { s: rz, len: rolls.length, rolls };
+      const hard = this.mode === 'hard', o = this.other;
+      // Le mode normal reste dans KEY (anciennes versions du site comprises) ; le mode difficile va dans KEY_HARD.
+      const normal = hard ? { rz: o ? rzOf(o) : '', scoreVersion: o ? o.scoreVersion : null } : { rz, scoreVersion: this.state.scoreVersion };
       try {
-        localStorage.setItem(KEY, JSON.stringify({ version: this.state.version, player: this.state.player, settings: this.state.settings, scoreVersion: this.state.scoreVersion, rz }));
+        localStorage.setItem(KEY, JSON.stringify({ version: this.state.version, player: this.state.player, settings: this.state.settings, scoreVersion: normal.scoreVersion, rz: normal.rz }));
+        if (hard) localStorage.setItem(KEY_HARD, JSON.stringify({ scoreVersion: this.state.scoreVersion, rz }));
+        else if (this.hardDirty) localStorage.setItem(KEY_HARD, JSON.stringify({ scoreVersion: o ? o.scoreVersion : null, rz: o ? rzOf(o) : '' }));
+        this.hardDirty = false;
         return true;
       } catch (e) {
         return false;
       }
+    },
+
+    // Passe au mode normal ou difficile : Store.rolls devient l'historique de ce mode. Renvoie true s'il a changé.
+    useMode(mode) {
+      mode = mode === 'hard' ? 'hard' : 'normal';
+      if (mode === this.mode && this.state.settings.mode === mode) return false;
+      const cur = { rolls: this.state.rolls, scoreVersion: this.state.scoreVersion, packed: this.packed };
+      const next = this.other || (mode === 'hard' ? readHard() : { rolls: [], scoreVersion: null, packed: null });
+      this.other = cur;
+      this.state.rolls = next.rolls; this.state.scoreVersion = next.scoreVersion; this.packed = next.packed;
+      this.state.mode = mode; this.state.settings.mode = mode;
+      this.save();
+      this.emit();
+      return true;
+    },
+    // Vide les deux historiques (autre joueur sur l'appareil, déconnexion).
+    clearBoth() {
+      this.state.rolls = []; this.packed = null;
+      this.other = { rolls: [], scoreVersion: null, packed: null }; this.hardDirty = true;
     },
 
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
@@ -166,7 +212,7 @@
       // ou mot de passe), puis je me reconnecte ; ses tirages restaient mêlés aux miens (total, meilleurs tirages,
       // Divines), car seul l'identifiant changeait. L'historique de l'appareil est celui du joueur actif : on le vide, et
       // syncHistory recharge celui du compte depuis le serveur. Même joueur (premier lien Google) : rien n'est retiré.
-      if (id !== this.state.player.id) { this.state.rolls = []; this.packed = null; delete this.state.settings.coins; }
+      if (id !== this.state.player.id) { this.clearBoth(); delete this.state.settings.coins; }
       Object.assign(this.state.player, { id, secret, google });
       this.save();
       this.emit();
@@ -176,7 +222,7 @@
     signOut() {
       this.state.player = { id: uid(), secret: uid() + uid(), name: '' };
       // Les tirages et le solde du compte restent sur le serveur, pas sur l'appareil (costoroll, 2026-10-30).
-      this.state.rolls = []; this.packed = null; delete this.state.settings.coins;
+      this.clearBoth(); delete this.state.settings.coins;
       this.save();
       this.emit();
     },
@@ -185,9 +231,9 @@
     mergeRolls(entries, scoreOf) {
       const known = rollSet(this.state.rolls.map(r => [r[0], r[2]]));
       let added = 0;
-      for (const [n, t] of entries) {
+      for (const [n, t, s] of entries) { // s : XP envoyée par le serveur (mode difficile), sinon recalculée
         if (!known.add(n, t)) continue;
-        this.state.rolls.push([n, scoreOf(n), t]);
+        this.state.rolls.push([n, Number.isFinite(s) ? s : scoreOf(n), t]);
         added++;
       }
       if (added) {
@@ -264,7 +310,7 @@
       const seen = new Set(this.state.rolls.map(r => r[2] + ':' + r[0]));
       let added = 0;
       for (const r of incoming) {
-        if (!Array.isArray(r) || !Number.isInteger(r[0]) || r[0] < 0 || r[0] > MAX_ROLL || !Number.isFinite(r[2])) continue;
+        if (!Array.isArray(r) || !Number.isInteger(r[0]) || r[0] < 0 || r[0] > this.maxRoll() || !Number.isFinite(r[2])) continue;
         const key = r[2] + ':' + r[0];
         if (seen.has(key)) continue;
         seen.add(key);
@@ -277,6 +323,9 @@
       return added;
     },
   };
+
+  // Toujours ouvert en mode normal ; le site repasse en mode difficile (useMode) une fois ses données chargées.
+  Store.state.mode = 'normal';
 
   root.Store = Store;
 })(window);

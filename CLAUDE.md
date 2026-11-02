@@ -51,6 +51,7 @@ project, indexed by the kind of action that triggers them) before any non-trivia
 node tools/dev.mjs                # site + API + in-memory Redis on http://localhost:8124 (no account needed)
 python3 -m http.server 8123       # static site only (no API: rolls, shop and duels will not work)
 node tools/build.mjs              # after ANY badge change (~15 s): regenerates meta + percentiles, validates 233/233 and 96/96
+node tools/build-hard.mjs         # then, for hard mode (~1 h on all cores): data/hard-*.json + js/hard-data.js
 node tools/stamp.mjs              # before EVERY commit that touches js/ or css/ (cache-buster in index.html)
 node tools/test-api.mjs           # main test suite, must end with "OK —"
 node tools/test-server.mjs        # API server over real HTTP
@@ -88,8 +89,12 @@ Gate publishing on the tests: start the command with `set -e -o pipefail &&` (a 
 
 ## Game rules that are decisions, not bugs
 
-- **Luck never changes.** No luck potions, no paid speed, no boosts, no 7-digit numbers. Odds are never changed after
-  the fact (it would rewrite everyone's old rolls).
+- **Luck never changes.** No luck potions, no paid speed, no boosts. Normal mode stays 0 to 1,000,000 (no 7-digit numbers
+  there). Odds are never changed after the fact (it would rewrite everyone's old rolls).
+- **Hard mode** (Sacha, 2026-11-02) is a separate mode: 0 to 9,999,999,999, its own stats, history, badges, leaderboards,
+  duels and tournament (Redis keys prefixed `h`, stats fields `h:`), shared coins, XP/level, skins, quests, achievements
+  and chat. Its data comes from `node tools/build-hard.mjs` (~1 h, sampling with a fixed seed: rerun only after a badge
+  change, never to "reroll" odds). It must keep the same average coins and XP per roll as Normal mode (`test-api` checks).
 - **Coins are only earned in the game.** No buying coins, no free codes on request, no unlimited transfers (friend
   gifts exist: 10–500 coins, 1,000/day). The casino must keep a house edge (`casino-sim`, `house-audit`).
 - **Nothing that was earned is taken back.** When a badge change lowers a roll's value, old stats stay.

@@ -1,11 +1,14 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins|worst|event|rolls|median&span=day|week|month|all&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
-const { worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue, rollSet, xpKey, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct } = require('./_lib');
+const { hardPeriods, hardKey, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue, rollSet, xpKey, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct } = require('./_lib');
 
 const LIMIT = 100;
 const XP_SCOPE = { period: 'xp', lb: XP_LB, best: 'best:all', count: 'count:all', total: 'rolls:all' };
 const WORST_SCOPE = { period: 'worst', lb: WORST_LB, best: WORST_BEST, count: 'count:all', total: 'rolls:all' };
+// Mode difficile (Sacha, 2026-11-02) : des classements à part, mêmes formes (clés « h… », voir api/_lib.js hardPeriods).
+const H_XP_SCOPE = { period: 'xp', lb: H_XP_LB, best: 'hbest:all', count: 'hcount:all', total: 'hrolls:all' };
+const H_WORST_SCOPE = { period: 'worst', lb: H_WORST_LB, best: H_WORST_BEST, count: 'hcount:all', total: 'hrolls:all' };
 const MIGRATED = 'lb:xp:migrated';
 // 1 : XP à vie ; 2 : + nombre de tirages à vie (count:all ne comptait que depuis le 2026-09-21) ;
 // 3 : la version suit d'elle-même les règles des badges (empreinte de data/badge-meta.json et de js/engine.js). Un badge
@@ -126,14 +129,15 @@ async function migrateRolls() {
     await redis([['DEL', `${ROLLS_DONE}:lock`]]);
   }
 }
-async function rollsBoard(me) {
-  await Promise.race([migrateRolls().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
-  const [flat, players, myRank, myCount, total] = await redis([['ZREVRANGE', ROLLS_LB, 0, LIMIT - 1, 'WITHSCORES'], ['ZCARD', ROLLS_LB], ['ZREVRANK', ROLLS_LB, me || '-'], ['ZSCORE', ROLLS_LB, me || '-'], ['GET', 'rolls:all']]);
+async function rollsBoard(me, hard = false) {
+  if (!hard) await Promise.race([migrateRolls().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
+  const LB = hard ? H_ROLLS_LB : ROLLS_LB, XLB = hard ? H_XP_LB : XP_LB;
+  const [flat, players, myRank, myCount, total] = await redis([['ZREVRANGE', LB, 0, LIMIT - 1, 'WITHSCORES'], ['ZCARD', LB], ['ZREVRANK', LB, me || '-'], ['ZSCORE', LB, me || '-'], ['GET', hard ? 'hrolls:all' : 'rolls:all']]);
   const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const outside = me && myRank !== null && Number(myRank) >= LIMIT;
   const wanted = outside ? [...rows, [me, Number(myCount)]] : rows;
   const marks = await bestAwards(wanted.map(x => x[0]));
-  const [names, titles, xps] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', XP_LB, ...wanted.map(x => x[0])]]) : [[], [], []];
+  const [names, titles, xps] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', XLB, ...wanted.map(x => x[0])]]) : [[], [], []];
   const clans = await tagsOf(wanted.map(x => x[0]));
   // count : tirages à vie ; xp : XP à vie (affichée en petit, pour l'XP moyenne par tirage).
   const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], xp: Number(xps && xps[i]) || 0, me: x[0] === me });
@@ -244,7 +248,11 @@ module.exports = async (req, res) => {
     if (params.get('online') === '1') return send(res, 200, { online: await require('./_online').shown() });
     const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls', 'median'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
-    if (period === 'coins') return send(res, 200, await coinsBoard(me));
+    const hard = params.get('mode') === 'hard';
+    if (period === 'coins') return send(res, 200, await coinsBoard(me)); // pièces : communes aux deux modes
+    // Ni événement de la semaine ni médiane en mode difficile : un classement vide, sans erreur.
+    if (hard && (period === 'event' || period === 'median')) return send(res, 200, { period, mode: 'hard', entries: [], mine: null, players: 0, rolls: 0, rollsToday: 0 });
+    if (hard && period === 'rolls') return send(res, 200, { ...(await rollsBoard(me, true)), mode: 'hard' });
     if (period === 'event') return send(res, 200, await eventBoard(me));
     if (period === 'rolls') return send(res, 200, await rollsBoard(me));
     if (period === 'median') return send(res, 200, await medianBoard(me));
@@ -255,20 +263,21 @@ module.exports = async (req, res) => {
     // span : day | week | month | all, pour la Poubelle et l'XP (XP du jour, de la semaine, du mois : idée de
     // qwertyuiop, 2026-10-28 ; tout le temps par défaut).
     const span = ['day', 'week', 'month'].includes(params.get('span')) ? params.get('span') : 'all';
-    if ((period === 'xp' && span === 'all') || period === 'all' || period === 'worst') await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
+    if (!hard && ((period === 'xp' && span === 'all') || period === 'all' || period === 'worst')) await Promise.race([migrateXp().catch(() => {}), new Promise(done => setTimeout(done, 250))]);
     // Poubelle : le plus petit score en tête (classement croissant).
     const low = period === 'worst';
-    const spanP = span !== 'all' ? scopes(t).find(x => x.period === span) : null;
-    const spanScope = spanP && period === 'worst' ? (() => { const k = worstKeys(spanP); return { period: 'worst', lb: k.lb, best: k.best, count: spanP.count, total: spanP.total }; })() : null;
+    const periods = hard ? hardPeriods(t) : scopes(t);
+    const spanP = span !== 'all' ? periods.find(x => x.period === span) : null;
+    const spanScope = spanP && period === 'worst' ? (() => { const k = hard ? spanP.worst : worstKeys(spanP); return { period: 'worst', lb: k.lb, best: k.best, count: spanP.count, total: spanP.total }; })() : null;
     // XP de la période : le meilleur tirage et le nombre de tirages affichés sont ceux de la même période.
-    const xpSpanScope = spanP && period === 'xp' ? { period: 'xp', lb: xpKey(spanP), best: spanP.best, count: spanP.count, total: spanP.total } : null;
-    const scope = period === 'worst' ? (spanScope || WORST_SCOPE) : period === 'xp' ? (xpSpanScope || XP_SCOPE) : scopes(t).find(p => p.period === period);
-    if (period === 'month') await seedMonth(scope, t);
+    const xpSpanScope = spanP && period === 'xp' ? { period: 'xp', lb: hard ? spanP.xp : xpKey(spanP), best: spanP.best, count: spanP.count, total: spanP.total } : null;
+    const scope = period === 'worst' ? (spanScope || (hard ? H_WORST_SCOPE : WORST_SCOPE)) : period === 'xp' ? (xpSpanScope || (hard ? H_XP_SCOPE : XP_SCOPE)) : periods.find(p => p.period === period);
+    if (period === 'month' && !hard) await seedMonth(scope, t);
 
     const [flat, rolls, rollsToday, players, myRank] = await redis([
       [low ? 'ZRANGE' : 'ZREVRANGE', scope.lb, 0, LIMIT - 1, 'WITHSCORES'],
       ['GET', scope.total],
-      ['GET', `rolls:day:${dayKey(t)}`],
+      ['GET', `${hard ? 'h' : ''}rolls:day:${dayKey(t)}`],
       ['ZCARD', scope.lb],
       [low ? 'ZRANK' : 'ZREVRANK', scope.lb, me || '-'],
     ]);
@@ -319,7 +328,7 @@ module.exports = async (req, res) => {
     }
 
     return send(res, 200, {
-      period, entries, mine, ...(period === 'worst' || period === 'xp' ? { span } : {}),
+      period, entries, mine, ...(period === 'worst' || period === 'xp' ? { span } : {}), ...(hard ? { mode: 'hard' } : {}),
       rolls: Number(rolls || 0),
       players: Number(players || 0),
       rollsToday: Number(rollsToday || 0),

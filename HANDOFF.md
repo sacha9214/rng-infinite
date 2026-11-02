@@ -9,6 +9,41 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Hard mode (2026-11-02, branch `claude/hard-mode`, based on `claude/chat-reactions`)
+
+Sacha: "under RNG∞, Normal or Hard mode; hard mode has 10 digits instead of 6; adapt everything to make it fair; not
+the same leaderboards". His choices: rarer tiers that pay more; separate stats + badge collection, duels + tournament;
+shared coins, skins, XP/level, quests, achievements, chat.
+
+- **Engine** (`js/engine.js`): `createEngine(meta, pct, { hard: true })` = 0..9,999,999,999, `HARD_CARD_TIERS` (every
+  tier above Common 10× rarer), 52-bit `roll()`. Primes and divisors go through a sieve (same answers, checked on all
+  1,000,001 normal numbers; ODD_ABUNDANT was 0.4 ms per 10-digit number). Fibonacci uses a list (5n² overflowed 2^53),
+  POWER_OF_TWO no longer uses 32-bit `&`.
+- **Data** (`tools/build-hard.mjs`, ~1 h on 10 cores): exact counts up to 7 digits, fixed-seed samples for 8/9/10
+  digits; badge XP = 100 × 10^10 / count (same rule as normal), rare-in-sample badges extrapolated from 6→7 digits,
+  then every score scaled so the expected XP per roll equals normal mode (shared levels). Writes `data/hard-*.json`
+  and `js/hard-data.js` (loaded by the site only when a player switches to Hard; `<script type="text/plain" id="hard-data">`
+  in index.html just carries the stamped URL).
+- **Coins**: `Shop.HARD_COINS` (Uncommon 15 … Infinite 45,000), counted from `h:t:<tier>` in `Shop.earned`. `test-api`
+  checks the average per roll is within 3% of normal mode.
+- **Server**: `recordHardRoll` in `api/_lib.js` (keys `hhist:`, `hbadges:`, `hlb:*`, `hbest:*`, `hcount:*`, `hrolls:*`,
+  `hlbx:*`, `hlb:worst`, `hlbw:*`; stats fields `h:rolls`, `h:xp`, `h:best`, `h:first`, `h:t:*`; shared `xpLife`, quests,
+  clan XP, `rc:<day>` diminishing returns, cooldown). `hhist` members are `t:n:s` (XP stored: no re-analysis).
+  `/api/roll` `mode:'hard'`, `/api/leaderboard?mode=hard` (no event/median), `/api/history` `mode:'hard'` → `[n,t,s]`,
+  `/api/profile?mode=hard` (own light profile), duels `create {hard:true}` (room hash `hard=1`), tournament `which: 4`
+  (`<day>-h`, same hours as tournament 1). Big rolls tagged hard in chat, Discord and friend alerts.
+- **Site**: `Mode` + `Engines` at the top of `js/app.js` (`Engine` is a Proxy to the current mode's engine; page
+  globals BADGE_ODDS/TIER_ODDS/… swapped). `Store` keeps two histories (`rnginf.v1` normal, `rnginf.hard`). Switch under
+  the logo (`#mode-switch`), blocked during a roll/auto-roll/duel; opening a duel of the other mode switches mode.
+  10-digit cards shrink (`.num-card:has(> .slot:nth-child(10))`); 10 digits reveal in the same total time as 6.
+- **Monthly trophies**: both modes settle their own top 10 (`api/_rank.js`); a hard trophy's month is `AAAA-MM-h` in
+  `topawards:<id>` / `topbest`, the badge shows "· Normal" or "· 🔥 Hard" (Sacha's request).
+- **Real data (build of 2026-11-02, 10 cores, ~70 min)**: tier odds Uncommon 2.50%, Rare 1.50%, Epic 0.50%, Anomaly
+  0.41%, Mythic 0.085%, Celestial 0.0091%, Divine 0.00046%, Godlike 0.00040%, Infinite 0.000098%; expected XP 32,622
+  scaled ×0.987 to the normal 32,194. All 125 skins checked with a 10-digit reveal at 375 px (no overflow, no error).
+- **Not done / ideas**: no weekly event or median board in hard mode; the client rebuilds the hard badge collection from
+  local rolls (0.2 ms per roll: slow after ~50k hard rolls).
+
 ## Emoji reactions on chat messages (2026-11-02, branch `claude/chat-reactions`)
 
 Sacha: "react with emoji to someone's chat, like WhatsApp". His choices: all four chats, 6 fixed emojis.

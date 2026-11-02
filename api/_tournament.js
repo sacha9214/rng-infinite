@@ -35,7 +35,7 @@
 //     tableau et son propre versement. Il est à part : un joueur peut être dans un tournoi du jour (1 ou 2) ET dans
 //     celui du soir. La règle « jamais dans les deux » ne vaut qu'entre 1 et 2 (même tableau horaire, même places).
 const crypto = require('node:crypto');
-const { redis, engine, eco, readStats, statsKey, toObject, ownsPlayer, dayKey } = require('./_lib');
+const { redis, engine, hardEngine, HARD_MAX, eco, readStats, statsKey, toObject, ownsPlayer, dayKey } = require('./_lib');
 const Discord = require('./_discord');
 
 const MIN_ROLLS = 30, MIN_PLAYERS = 4, MAX_PLAYERS = 32, ROLLS = 5;
@@ -57,6 +57,12 @@ const EVE_OPEN_MS = 12 * 3600000, EVE_SIGNUP_MS = 6 * 3600000;
 // Tournoi du soir « en cours » à `now` : celui de la veille tant que ses tours durent (jusqu'à 06:00), sinon celui du jour.
 const eveAt = now => { const d = dayKey(now); return now < Date.parse(`${d}T00:00:00Z`) + EVE_OPEN_MS + EVE_SIGNUP_MS + DAY_MS / 2 - DAY_MS ? eveOf(dayKey(now - DAY_MS)) : eveOf(d); };
 const refuse = (status, error) => Object.assign(new Error(error), { status });
+// Tournoi du mode difficile (Sacha, 2026-11-02 : duels et tournoi à part) : « tid » = la date suivie de « -h ». Mêmes
+// heures que le tournoi du jour, même mode du jour, mêmes prix, nombres à 10 chiffres. À part des autres : un joueur peut
+// y être en plus d'un tournoi du jour et de celui du soir. Ses tirages portent h: 1 (badges comptés au barème difficile).
+const hardOf = day => `${day}-h`, isHardT = tid => String(tid).endsWith('-h');
+const tEngine = tid => (isHardT(tid) ? hardEngine() : engine);
+const draw = tid => { const n = crypto.randomInt(0, isHardT(tid) ? HARD_MAX + 1 : 1000001); return [n, tEngine(tid).analyze(n).total]; };
 
 function times(day, size) {
   const d0 = Date.parse(`${dateOf(day)}T00:00:00Z`), eve = isEve(day);
@@ -93,7 +99,7 @@ const doneOf = (x, n = ROLLS) => !!x && x.s.length >= n;
 const sum = x => (x ? x.s.reduce((a, b) => a + b, 0) : 0);
 const top = x => (x && x.s.length ? Math.max(...x.s) : 0);
 // Badges différents sur tous les tirages (recalculés depuis les nombres : rien de plus à stocker).
-const badgeCount = x => (x ? new Set(x.n.flatMap(n => engine.analyze(n).groups.map(g => g.badge.id))).size : 0);
+const badgeCount = x => (x ? new Set(x.n.flatMap(n => (x.h ? hardEngine() : engine).analyze(n).groups.map(g => g.badge.id))).size : 0);
 // Duels gagnés en « Best of 3 » : tirage 1 contre tirage 1, etc.
 const duels = (x, y) => (x && y ? x.s.filter((v, i) => i < y.s.length && v > y.s[i]).length : 0);
 // Chiffre affiché du mode (null : pas calculable sans l'adversaire).
@@ -183,9 +189,9 @@ async function fillRound(t, r, at) {
   for (let i = 0; i < p.length; i += 2) {
     if (!p[i] || !p[i + 1]) continue;
     for (const id of [p[i], p[i + 1]]) {
-      const x = t.rolls[`${r}:${id}`] || { n: [], s: [] };
+      const x = t.rolls[`${r}:${id}`] || { n: [], s: [], ...(isHardT(t.day) ? { h: 1 } : {}) };
       if (x.s.length >= t.N) continue;
-      while (x.s.length < t.N) { const n = crypto.randomInt(0, 1000001); x.n.push(n); x.s.push(engine.analyze(n).total); x.auto = (x.auto || 0) + 1; }
+      while (x.s.length < t.N) { const [n, s] = draw(t.day); x.n.push(n); x.s.push(s); x.auto = (x.auto || 0) + 1; }
       x.t = at;
       w.push(['HSET', rollsKey(t.day), `${r}:${id}`, JSON.stringify(x)]);
     }
@@ -208,7 +214,7 @@ async function payout(t, now) {
   const gifts = [[champion, PRIZES.champion], [finalist, PRIZES.finalist], ...semis.map(id => [id, PRIZES.semi])].filter(([id]) => id);
   const total = gifts.reduce((x, [, v]) => x + v, 0);
   await redis([...gifts.map(([id, v]) => ['HINCRBY', statsKey(id), 'bonus', v]), ['HINCRBY', statsKey(champion), 'tourneyWins', 1], ...eco('in:tourney', total, now)]);
-  if (finalist) redis([['HMGET', 'names', champion, finalist]]).then(([names]) => Discord.announceTournament({ day: dateOf(t.day) + (t.day.endsWith('-2') ? ' (tournament 2)' : isEve(t.day) ? ' (evening tournament)' : ''), next: isEve(t.day) ? '12:00' : '00:00', mode: t.mode, champion: names[0] || 'Player', finalist: names[1] || 'Player', players: t.slots.filter(Boolean).length })).catch(() => {});
+  if (finalist) redis([['HMGET', 'names', champion, finalist]]).then(([names]) => Discord.announceTournament({ day: dateOf(t.day) + (t.day.endsWith('-2') ? ' (tournament 2)' : isEve(t.day) ? ' (evening tournament)' : isHardT(t.day) ? ' (hard mode tournament)' : ''), next: isEve(t.day) ? '12:00' : '00:00', mode: t.mode, champion: names[0] || 'Player', finalist: names[1] || 'Player', players: t.slots.filter(Boolean).length })).catch(() => {});
   return true;
 }
 
@@ -235,8 +241,22 @@ async function signupEve(playerId, now) {
   throw refuse(422, `The evening tournament is full (${MAX_PLAYERS} players)`);
 }
 
+async function signupHard(playerId, now) {
+  const day = hardOf(dayKey(now)), tm = times(day, 0);
+  if (now >= tm.close) throw refuse(422, 'Sign-ups for today\'s hard mode tournament are closed (they open at 00:00 UTC)');
+  const st = await readStats(playerId), rolls = (Number(st.rolls) || 0) + (Number(st['h:rolls']) || 0);
+  if (rolls < MIN_ROLLS) throw refuse(422, `Tournaments unlock after ${MIN_ROLLS} rolls (you have ${rolls})`);
+  const [added] = await redis([['ZADD', inKey(day), 'NX', now, playerId], ['EXPIRE', inKey(day), TTL], ['HSETNX', key(day), 'mode', modeOf(day)], ['EXPIRE', key(day), TTL]]);
+  if (Number(added) !== 1) throw refuse(409, 'You are already signed up');
+  const [rank] = await redis([['ZRANK', inKey(day), playerId]]);
+  if (Number(rank) < MAX_PLAYERS) return { ok: true, place: Number(rank) + 1, tid: day, which: 4 };
+  await redis([['ZREM', inKey(day), playerId]]);
+  throw refuse(422, `Today's hard mode tournament is full (${MAX_PLAYERS} players)`);
+}
+
 async function signup(playerId, now = Date.now(), which = 1) {
   if (Number(which) === 3) return signupEve(playerId, now);
+  if (Number(which) === 4) return signupHard(playerId, now);
   const date = dayKey(now), tm = times(date, 0);
   if (now >= tm.close) throw refuse(422, 'Sign-ups for today\'s tournament are closed (they open at 00:00 UTC)');
   const st = await readStats(playerId), rolls = Number(st.rolls) || 0;
@@ -265,7 +285,7 @@ async function signup(playerId, now = Date.now(), which = 1) {
 
 // Un tirage de tournoi : tiré par le serveur et gardé dans le tournoi seulement.
 async function roll(playerId, now = Date.now(), which = 0) {
-  const day = Number(which) === 3 ? eveAt(now) : await tidOf(playerId, dayKey(now)), t = await advance(day, now), r = currentRound(t, now);
+  const day = Number(which) === 3 ? eveAt(now) : Number(which) === 4 ? hardOf(dayKey(now)) : await tidOf(playerId, dayKey(now)), t = await advance(day, now), r = currentRound(t, now);
   if (r < 0) throw refuse(422, 'No tournament round is being played right now');
   const p = playersOf(t, r) || [], i = p.indexOf(playerId);
   if (i < 0) throw refuse(422, 'You have no match in this round');
@@ -279,16 +299,16 @@ async function roll(playerId, now = Date.now(), which = 0) {
   if (lock !== 'OK') throw refuse(429, 'Too fast, wait for the reveal to finish');
   const [raw] = await redis([['HGET', rollsKey(day), field]]);
   if (done(raw)) throw refuse(409, `Your ${N} rolls are done`);
-  const mine = raw ? JSON.parse(raw) : { n: [], s: [] };
-  const n = crypto.randomInt(0, 1000001), s = engine.analyze(n).total;
+  const mine = raw ? JSON.parse(raw) : { n: [], s: [], ...(isHardT(day) ? { h: 1 } : {}) };
+  const [n, s] = draw(day);
   mine.n.push(n); mine.s.push(s);
   if (mine.s.length === N) mine.t = now;
   // Tirage partagé : l'adversaire en reçoit un aussi s'il en a moins (tiré par le serveur, marqué « auto »).
   const ofield = `${r}:${p[i ^ 1]}`, [oraw] = await redis([['HGET', rollsKey(day), ofield]]);
-  const theirs = oraw ? JSON.parse(oraw) : { n: [], s: [] }, w = [['HSET', rollsKey(day), field, JSON.stringify(mine)]];
+  const theirs = oraw ? JSON.parse(oraw) : { n: [], s: [], ...(isHardT(day) ? { h: 1 } : {}) }, w = [['HSET', rollsKey(day), field, JSON.stringify(mine)]];
   if (theirs.s.length < mine.s.length) {
-    const on = crypto.randomInt(0, 1000001);
-    theirs.n.push(on); theirs.s.push(engine.analyze(on).total); theirs.auto = (theirs.auto || 0) + 1;
+    const [on, os] = draw(day);
+    theirs.n.push(on); theirs.s.push(os); theirs.auto = (theirs.auto || 0) + 1;
     if (theirs.s.length === N) theirs.t = now;
     w.push(['HSET', rollsKey(day), ofield, JSON.stringify(theirs)]);
   }
@@ -364,7 +384,7 @@ async function tidOf(playerId, date) {
 
 // Tournois d'hier (terminés à minuit) et d'aujourd'hui : appelé par le tic du VPS pour verser les prix sans attendre.
 async function tick(now = Date.now()) {
-  for (const date of [dayKey(now - DAY_MS), dayKey(now)]) for (const tid of [...tidsOf(date), eveOf(date)]) await advance(tid, now);
+  for (const date of [dayKey(now - DAY_MS), dayKey(now)]) for (const tid of [...tidsOf(date), eveOf(date), hardOf(date)]) await advance(tid, now);
 }
 
 // Point d'entrée depuis /api/room : { action: 'tourney', op: 'view' | 'join' | 'roll', playerId?, secret?, day? }.
@@ -374,6 +394,17 @@ async function handle(body, now = Date.now()) {
   const valid = /^[0-9a-f]{16}$/.test(playerId) && /^[0-9a-f]{32}$/.test(secret);
   const me = valid && (await ownsPlayer(playerId, secret)) ? playerId : null;
   const today = dayKey(now), yesterday = dayKey(now - DAY_MS);
+  // Tournoi du mode difficile (which: 4) : vu seul, sans les tournois du mode normal.
+  if (op === 'view' && Number(body.which) === 4) {
+    const date = body.day === 'prev' ? yesterday : today, tid = hardOf(date);
+    const out = await view(tid, me, now), [c, mineIn] = await redis([['ZCARD', inKey(tid)], ['ZSCORE', inKey(tid), me || '-']]);
+    Object.assign(out, { which: 4, hard: true, mine: mineIn !== null ? 4 : 0, mineEve: false, both: [{ which: 4, count: Math.min(Number(c) || 0, MAX_PLAYERS), hard: true }] });
+    if (date === today) {
+      const prev = await advance(hardOf(yesterday), now);
+      if (prev.h.paid) { const pd = podium(prev), [names] = await redis([['HMGET', 'names', pd.champion]]); out.prev = { day: yesterday, champion: names[0] || 'Player', champions: [names[0] || 'Player'] }; }
+    }
+    return out;
+  }
   if (op === 'view') {
     const date = body.day === 'prev' ? yesterday : today, tids = tidsOf(date);
     // Tournoi du soir : celui en cours (la veille jusqu'à 06:00), ou celui d'avant pour day: 'prev'.
@@ -414,4 +445,4 @@ async function handle(body, now = Date.now()) {
   throw refuse(400, 'Unknown tournament action');
 }
 
-module.exports = { tidsOf, eveOf, eveAt, handle, view, advance, signup, roll, tick, seed, winner, times, modeOf, rollsOf, MODES, MODE_ORDER, PRIZES, MIN_ROLLS, ROLLS, MAX_PLAYERS };
+module.exports = { hardOf, isHardT, tidsOf, eveOf, eveAt, handle, view, advance, signup, roll, tick, seed, winner, times, modeOf, rollsOf, MODES, MODE_ORDER, PRIZES, MIN_ROLLS, ROLLS, MAX_PLAYERS };

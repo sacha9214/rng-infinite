@@ -8,6 +8,11 @@
 
   // Pièces par tirage selon la rareté de la carte (Trash rapporte un peu plus que Common : lot de consolation).
   const COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, godlike: 2500, infinite: 5000 };
+  // Mode difficile (Sacha, 2026-11-02 : « plus rare, mais qui rapporte plus ») : au-dessus de Common chaque rareté est 10 fois
+  // plus rare qu'en mode normal (js/engine.js HARD_CARD_TIERS) et paie à peu près 10 fois plus ; Common, lui, arrive bien
+  // plus souvent. Réglé sur les vraies cotes (data/hard-odds.json) pour que la moyenne par tirage reste celle du mode
+  // normal : vérifié par tools/test-api.mjs (écart de moins de 3 %). Compteurs à part dans les stats : h:t:<rareté>.
+  const HARD_COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 15, rare: 45, epic: 90, anomaly: 225, mythic: 900, celestial: 2700, divine: 9000, godlike: 22500, infinite: 45000 };
   const DUEL_WIN_COINS = 25;
   // Pièces offertes une seule fois à un joueur qui associe son compte Google (il retrouve alors son joueur partout).
   const GOOGLE_BONUS = 150;
@@ -271,7 +276,7 @@
   const rankedWins = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
   // rollCut : les pièces de tirage retenues par les rendements décroissants (voir ROLL_TIERS) ; le solde se calcule sur
   // les compteurs de rareté, la part non versée est donc soustraite ici.
-  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]), 0) + DUEL_WIN_COINS * rankedWins(st) - num(st.rollCut);
+  const earned = st => Object.entries(COINS).reduce((x, [tier, v]) => x + v * num(st[`t:${tier}`]) + HARD_COINS[tier] * num(st[`h:t:${tier}`]), 0) + DUEL_WIN_COINS * rankedWins(st) - num(st.rollCut);
   // Solde = pièces gagnées en jouant + pièces reçues (quêtes, bonus quotidien, pots de duel, remboursements : champ
   // "bonus") − pièces dépensées (skins, caisses, mises de duel : champ "spent").
   const balance = st => earned(st) + num(st.bonus) - num(st.spent);
@@ -628,7 +633,7 @@
   // La caisse de boutons (moins chère que la Premium) s'ouvre aussi avec une clé Premium (2026-10-27), la caisse de sons
   // aussi (2026-10-28).
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds', 'emotes'] }; // + émotes (2026-11-01)
-  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, AVATAR_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, AVATAR_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, HARD_COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

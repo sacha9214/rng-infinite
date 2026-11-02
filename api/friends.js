@@ -97,7 +97,7 @@ async function bigRolls(id, since) {
   if (!rows.length) return [];
   const [ids] = await redis([['HMGET', 'names', ...(friends || []).concat('_')]]);
   const names = new Set((ids || []).filter(Boolean));
-  return rows.filter(r => names.has(r.name)).slice(-5).map(r => ({ name: r.name, n: r.n, tier: r.tier, t: r.t }));
+  return rows.filter(r => names.has(r.name)).slice(-5).map(r => ({ name: r.name, n: r.n, tier: r.tier, t: r.t, ...(r.h ? { h: 1 } : {}) }));
 }
 
 async function unseenGifts(id) {

@@ -47,21 +47,23 @@ function post(url, body, file) {
 // Mention d'un rôle d'abonnement (choisi par le joueur à l'arrivée sur le serveur), et seulement celui-là.
 const ping = role => (role ? { content: `<@&${role}>`, allowed_mentions: { parse: [], roles: [role] } } : { allowed_mentions: { parse: [] } });
 
-function announceRoll({ name, n, a }) {
-  if (!engine) try { engine = require('./_lib').engine; } catch (e) { /* sans rang */ }
+function announceRoll({ name, n, a, hard = false }) { // hard : tirage du mode difficile, 10 chiffres (2026-11-02)
+  let eng = engine;
+  if (!eng) try { engine = require('./_lib').engine; eng = engine; } catch (e) { /* sans rang */ }
+  if (hard) try { eng = require('./_lib').hardEngine(); } catch (e) { eng = null; }
   if (!cfg.bigRolls || !ANNOUNCED.includes(a.tier)) return;
-  const look = LOOK[a.tier], number = String(n).padStart(6, '0');
+  const look = LOOK[a.tier], number = String(n).padStart(hard ? 10 : 6, '0');
   const badges = (a.groups || []).slice(0, 4).map(g => `${g.badge.emoji} ${g.badge.label}`).join(' · ');
   // Carte image, la même que le bouton « Share » du site (api/_discord_card.js) ; sans elle, le texte seul.
   const png = Card.render({
-    str: a.str, tier: a.tier, rank: (engine && engine.topLabel ? cap((engine.topLabel(a.percentile) || '').toLowerCase()) : ''),
+    str: a.str, tier: a.tier, rank: (eng && eng.topLabel ? cap((eng.topLabel(a.percentile) || '').toLowerCase()) : ''),
     xp: a.total.toLocaleString('en-US'), name: String(name || ''), host: 'rng-infinite.com',
     badges: (a.groups || []).slice(0, 5).map(g => ({ emoji: g.badge.emoji, label: g.badge.label, tier: g.badge.tier })), more: Math.max(0, (a.groups || []).length - 5),
   });
   post(cfg.bigRolls, {
     ...(PINGED.includes(a.tier) ? ping(roles.bigRolls) : { allowed_mentions: { parse: [] } }),
     embeds: [{
-      title: `${look.emoji} ${look.title}`,
+      title: `${look.emoji} ${look.title}${hard ? ' · 🔥 Hard mode' : ''}`,
       url: `${SITE}/#/player/${encodeURIComponent(name || '')}`,
       description: `**${clean(name) || 'A player'}** rolled **\`${number}\`** · ${a.total.toLocaleString('en-US')} XP${png ? '' : badges ? `\n${badges}` : ''}`,
       color: look.color,
