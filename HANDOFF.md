@@ -3,6 +3,19 @@
 Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of every session.
 
 
+
+## Visitor countries on the VPS (2026-11-02, branch `claude/geoip`)
+
+Sacha: "13,000 visits from no location" on the Owner traffic page. Since the site moved to the VPS (2026-10-21) no
+request carries Vercel's `x-vercel-ip-country`, so every visit was counted as `ZZ` (the Vercel copy now answers 402).
+- `api/_geo.js`: country from the free DB-IP "IP to Country Lite" database (CC BY 4.0, credit on the Owner traffic
+  panel), only when the Vercel header is missing. The IP is used for the lookup and never stored. Binary file
+  `~/geo/dbip-country.bin` (~10 MB, loads in ~0.2 s, reloaded when it changes); without it, `ZZ` as before.
+- `tools/geoip-pack.mjs` converts the CSV (parsing it in the server took ~3 s of blocking and ~400 MB).
+- `deploy/ovh/geoip-update.sh [--install]`: downloads the month's file (or last month's), packs it, `--install` adds
+  a crontab line for emma (3rd of each month, 04:17 UTC). No sudo.
+- Not back: the map dots (they need the much bigger city database). Visits before the fix stay `ZZ` (no IP was kept).
+
 ## No more roll freezes during big profiles (2026-11-02, branch `claude/profile-no-freeze`)
 
 Sacha: "why does auto-roll take so much time / latency". Production log (3 h): 23 rolls over 2 s (median 2.4 s, up to

@@ -6912,7 +6912,7 @@
       const peak = localHours.indexOf(Math.max(...localHours));
       const today = st.days[0], byDay = new Map(R.series.map(x => [x.day, x]));
       pane('traffic').innerHTML = `
-        <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC. The map counts visits per square of about 100 km, never per player.</p>
+        <p class="panel-note profile-sub">Anonymous daily counters, since 6 Oct 2026: no cookie, no IP address, nothing about who the visitor is. A visit = the site opened in a browser tab. Days in UTC. The map counts visits per square of about 100 km, never per player. Countries since 2 Nov 2026: <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a> (CC BY 4.0).</p>
         <div class="tiles">
           ${tile('Visits today', fmt(today.visits), `${fmt(today.uniq)} devices · ${fmt(today.fresh)} new`)}
           ${tile('Visits, 7 days', fmt(sum(week, 'visits')), trend(sum(week, 'visits'), sum(prevWeek, 'visits')))}
