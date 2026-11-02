@@ -31,13 +31,14 @@ function hardEngine() {
 }
 const HARD_MAX = 9999999999;
 const isHard = mode => mode === 'hard';
-// Mode difficile verrouillé (idée des joueurs, choix de Sacha, 2026-11-02) : ouvert après un premier Godlike ou Infinite
-// en mode normal (t:godlike, t:infinite). Les tirages déjà faits en mode difficile restent (rien n'est repris).
-const HARD_LOCKED = 'Hard mode unlocks after your first Godlike or Infinite roll in Normal mode';
-const hardOpen = st => (Number(st['t:godlike']) || 0) + (Number(st['t:infinite']) || 0) > 0;
+// Mode difficile verrouillé (idée des joueurs, choix de Sacha, 2026-11-02) : ouvert après un tirage Divine ou mieux en
+// mode normal (t:divine, t:godlike, t:infinite ; d'abord Godlike, abaissé à Divine le soir même par Sacha). Les tirages
+// déjà faits en mode difficile restent (rien n'est repris).
+const HARD_LOCKED = 'Hard mode unlocks after a Divine or higher roll in Normal mode';
+const hardOpen = st => ['divine', 'godlike', 'infinite'].some(t => (Number(st[`t:${t}`]) || 0) > 0);
 async function checkHardOpen(id) {
-  const [g, i] = await redis([['HGET', statsKey(id), 't:godlike'], ['HGET', statsKey(id), 't:infinite']]);
-  if (!hardOpen({ 't:godlike': g, 't:infinite': i })) throw Object.assign(new Error(HARD_LOCKED), { status: 403, locked: true });
+  const [d, g, i] = await redis([['HMGET', statsKey(id), 't:divine', 't:godlike', 't:infinite']]).then(([v]) => v || []);
+  if (!hardOpen({ 't:divine': d, 't:godlike': g, 't:infinite': i })) throw Object.assign(new Error(HARD_LOCKED), { status: 403, locked: true });
 }
 const engineOf = mode => (isHard(mode) ? hardEngine() : engine);
 // Clés du mode difficile : celles du mode normal précédées de « h » (hlb:day:<jour>, hbest:…, hhist:<id>, hlb:xp…) ;
