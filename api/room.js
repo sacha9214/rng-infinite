@@ -16,7 +16,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { engineOf, checkHardOpen, HARD_MAX, hardEngine, eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const { wallet, wallets, engineOf, checkHardOpen, HARD_MAX, hardEngine, eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
@@ -235,6 +235,14 @@ async function advance(room, now = Date.now()) {
   if (ttls.some(ms => Number(ms) > 0)) return room;
   const [lock] = await redis([['SET', `${roomKey(room.code)}:draw:${k}`, '1', 'NX', 'EX', TTL]]);
   if (lock !== 'OK') return (await load(room.code)) || room;
+  // Délai pris pour de bon (SET NX), pas seulement lu (audit de sécurité, 2026-11-02 : vingt duels contre des bots lancés
+  // ensemble voyaient tous le délai libre et tiraient tous, 8 fois plus vite que permis). Pris ailleurs entre-temps : la
+  // manche attend, et la salle relâche ce qu'elle avait pris.
+  const got = await redis(readyHumans.map(p => ['SET', `cooldown:${p.id}`, '1', 'PX', Math.round(GAP_MS * pace), 'NX']));
+  if (got.some(x => x !== 'OK')) {
+    await redis([['DEL', `${roomKey(room.code)}:draw:${k}`], ...readyHumans.filter((p, i) => got[i] === 'OK').map(p => ['DEL', `cooldown:${p.id}`])]);
+    return room;
+  }
   const top = room.h.hard === '1' ? HARD_MAX + 1 : 1000001;
   const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, top))), ...(pace < 1 ? { pace } : {}) };
   const due = round.revealAt + Math.round(REVEAL_MS * pace);
@@ -496,9 +504,14 @@ module.exports = async (req, res) => {
       }
       const r = bots ? { ...rules(body), isPublic: false, stake: 0 } : rules(body); // pas de mise contre des bots
       if (r.stake < 0) return send(res, 422, { error: `A stake is a whole number of coins from 1 to ${STAKE_MAX.toLocaleString('en-US')}` });
-      const refused = r.stake ? await stakeRefusal(playerId, r.stake) : null;
-      if (refused) return send(res, 422, { error: refused });
-      const code = await createRoom(r, players);
+      // Mise : solde vérifié et payé sous le verrou du porte-monnaie (audit de sécurité, 2026-11-02 : dix créations en même
+      // temps passaient toutes avec le solde d'une seule).
+      const made = await (r.stake ? wallet(playerId, async () => {
+        const refused = await stakeRefusal(playerId, r.stake);
+        return refused ? { refused } : { code: await createRoom(r, players) };
+      }) : createRoom(r, players).then(c => ({ code: c })));
+      if (made.refused) return send(res, 422, { error: made.refused });
+      const code = made.code;
       if (!code) return send(res, 503, { error: 'Could not create a duel, try again' });
       // Duel public ouvert : annoncé sur le Discord avec le lien pour rejoindre (pas les parties contre des bots).
       if (!bots && r.isPublic) Discord.announceDuel({ host: name, code, mode: r.mode, target: r.target, size: r.size, stake: r.stake });
@@ -519,21 +532,28 @@ module.exports = async (req, res) => {
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
       if (room.h[`kick:${playerId}`]) return send(res, 403, { error: 'The host removed you from this duel' });
       const stake = stakeOf(room);
-      const refused = stake ? await stakeRefusal(playerId, stake) : null;
-      if (refused) return send(res, 422, { error: refused });
-      // Une place à la fois : le marqueur de membre évite les doublons, le compteur évite de dépasser la taille.
-      const [isNew] = await redis([['HSETNX', roomKey(code), `m:${playerId}`, 1]]);
-      if (Number(isNew) !== 1) return send(res, 200, await view((await load(code)) || room, playerId));
-      const [count] = await redis([['HINCRBY', roomKey(code), 'count', 1]]);
-      if (Number(count) > room.size) {
-        await redis([['HINCRBY', roomKey(code), 'count', -1], ['HDEL', roomKey(code), `m:${playerId}`]]);
-        return send(res, 422, { error: 'This duel is full' });
-      }
-      const writes = [['RPUSH', playersKey(code), JSON.stringify(await seat(playerId, name))], ['HSET', roomKey(code), `seen:${playerId}`, Date.now()], ...touchLive(room)];
-      if (stake) writes.push(['HINCRBY', statsKey(playerId), 'spent', stake], ['HSET', roomKey(code), `paid:${playerId}`, stake]); // mise sous séquestre
-      if (Number(count) === room.size) writes.push(['HSET', roomKey(code), 'started', 1]); // complet : la partie commence
-      await redis(writes);
+      // Mise : vérifiée et payée sous le verrou du porte-monnaie (audit de sécurité, 2026-11-02 : un compte à 1 000 pièces
+      // rejoignait dix duels à 1 000 en même temps, et son solde tombait à -9 000).
+      const joined = await (stake ? wallet(playerId, () => seatIn(stake)) : seatIn(0));
+      if (joined.error) return send(res, joined.status, { error: joined.error });
       return send(res, 200, await view(await load(code), playerId));
+      async function seatIn(stake) {
+        const refused = stake ? await stakeRefusal(playerId, stake) : null;
+        if (refused) return { status: 422, error: refused };
+        // Une place à la fois : le marqueur de membre évite les doublons, le compteur évite de dépasser la taille.
+        const [isNew] = await redis([['HSETNX', roomKey(code), `m:${playerId}`, 1]]);
+        if (Number(isNew) !== 1) return {};
+        const [count] = await redis([['HINCRBY', roomKey(code), 'count', 1]]);
+        if (Number(count) > room.size) {
+          await redis([['HINCRBY', roomKey(code), 'count', -1], ['HDEL', roomKey(code), `m:${playerId}`]]);
+          return { status: 422, error: 'This duel is full' };
+        }
+        const writes = [['RPUSH', playersKey(code), JSON.stringify(await seat(playerId, name))], ['HSET', roomKey(code), `seen:${playerId}`, Date.now()], ...touchLive(room)];
+        if (stake) writes.push(['HINCRBY', statsKey(playerId), 'spent', stake], ['HSET', roomKey(code), `paid:${playerId}`, stake]); // mise sous séquestre
+        if (Number(count) === room.size) writes.push(['HSET', roomKey(code), 'started', 1]); // complet : la partie commence
+        await redis(writes);
+        return {};
+      }
     }
 
     // Exclure un joueur du salon (demandé par Sacha, 2026-10-22) : l'hôte seulement, avant le début de la partie. La
@@ -591,6 +611,8 @@ module.exports = async (req, res) => {
       if (member) return send(res, 200, await view(room, playerId));
       if (room.h[`kick:${playerId}`]) return send(res, 403, { error: 'The host removed you from this duel' });
       if (!room.started) return send(res, 422, { error: 'This duel has not started: join it instead' });
+      // Duel difficile : il faut l'avoir débloqué, aussi pour entrer en cours de partie (audit de sécurité, 2026-11-02).
+      if (room.h.hard === '1') { try { await checkHardOpen(playerId); } catch (err) { return send(res, err.status, { error: err.message, locked: true }); } }
       if (stakeOf(room)) return send(res, 422, { error: 'This duel has a stake: nobody can join once it has started' });
       if (score(room).done) return send(res, 422, { error: 'This duel is over' });
       if (room.players.length >= MAX_PLAYERS) return send(res, 422, { error: 'This duel is full' });
@@ -607,6 +629,7 @@ module.exports = async (req, res) => {
         return send(res, 200, await view(await load(code), playerId));
       }
       if (score(room).done) return send(res, 422, { error: 'This duel is over' });
+      if (room.h.hard === '1') { try { await checkHardOpen(ask.id); } catch (err) { return send(res, err.status, { error: `${ask.name || 'This player'} has not unlocked Hard mode yet`, locked: true }); } }
       // Une place à la fois, comme pour join : marqueur de membre, puis compteur borné.
       const [isNew] = await redis([['HSETNX', roomKey(code), `m:${ask.id}`, 1]]);
       if (Number(isNew) === 1) {
@@ -775,12 +798,17 @@ module.exports = async (req, res) => {
       if (!score(room).done) return send(res, 422, { error: 'This duel is not over yet' });
       let next = room.h.next || null;
       if (!next) {
+        const rules2 = stake => ({ size: room.players.length, mode: room.mode, target: room.target, stake, isPublic: room.h.public === '1', hard: room.h.hard === '1' });
         let stake = stakeOf(room);
-        if (stake) {
-          const coins = await Promise.all(room.players.map(p => coinsOf(p.id)));
-          if (coins.some(c => c < stake)) stake = 0; // quelqu'un ne peut plus suivre : revanche sans mise
-        }
-        const code2 = await createRoom({ size: room.players.length, mode: room.mode, target: room.target, stake, isPublic: room.h.public === '1', hard: room.h.hard === '1' }, room.players);
+        // Revanche avec mise (audit de sécurité, 2026-11-02) : un joueur parti, ou pas revu depuis une minute, ne paie pas
+        // une mise qu'il n'a pas acceptée : la revanche se joue alors sans mise. Soldes vérifiés et mises payées sous le
+        // verrou de chaque porte-monnaie.
+        const now = Date.now(), people = room.players.filter(p => !p.bot);
+        if (stake && people.some(p => isOut(room, p) || now - (Number(room.h[`seen:${p.id}`]) || 0) > 60000)) stake = 0;
+        const code2 = stake ? await wallets(people.map(p => p.id), async () => {
+          const coins = await Promise.all(people.map(p => coinsOf(p.id)));
+          return createRoom(rules2(coins.some(c => c < stake) ? 0 : stake), room.players); // quelqu'un ne peut plus suivre : sans mise
+        }) : await createRoom(rules2(0), room.players);
         if (!code2) return send(res, 503, { error: 'Could not create a duel, try again' });
         const [won] = await redis([['HSETNX', roomKey(code), 'next', code2]]);
         if (Number(won) === 1) {

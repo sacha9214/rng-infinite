@@ -32,6 +32,7 @@ function v6(s) {
   if (s.split('::').length > 2) return null;
   const hs = head ? head.split(':') : [], ts = tail !== undefined && tail ? tail.split(':') : [];
   if (tail === undefined && hs.length !== 8) return null;
+  if (hs.length + ts.length > (tail === undefined ? 8 : 7)) return null; // trop de groupes : adresse invalide
   const groups = tail === undefined ? hs : [...hs, ...Array(8 - hs.length - ts.length).fill('0'), ...ts];
   if (groups.length !== 8 || groups.some(g => !/^[0-9a-f]{1,4}$/i.test(g))) return null;
   let n = 0n;

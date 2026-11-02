@@ -209,6 +209,9 @@ module.exports = async (req, res) => {
     if (other === playerId) return send(res, 422, { error: 'That is you' });
 
     if (body.action === 'add') {
+      // 30 demandes de comptes jetables bloquaient les vraies (audit de sécurité, 2026-11-02) : 10 tirages pour en envoyer.
+      const [r1, r2] = await redis([['HGET', `stats:${playerId}`, 'rolls'], ['HGET', `stats:${playerId}`, 'h:rolls']]);
+      if ((Number(r1) || 0) + (Number(r2) || 0) < 10) return send(res, 403, { error: 'Make 10 rolls to send friend requests' });
       const [isFriend, theyAsked, mine, pending] = await redis([
         ['SISMEMBER', frKey(playerId), other], ['SISMEMBER', inKey(playerId), other], ['SCARD', frKey(playerId)], ['SCARD', outKey(playerId)],
       ]);

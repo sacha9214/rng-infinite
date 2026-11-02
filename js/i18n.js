@@ -172,6 +172,12 @@
     'That name is not valid.': 'Ce pseudo n\'est pas valide.', 'It appears on the leaderboard next to your best rolls. Each name belongs to one player only.': 'Il apparaît au classement à côté de tes meilleurs tirages. Chaque pseudo n\'appartient qu\'à un seul joueur.',
     'Shown on the leaderboard. Each name belongs to one player only.': 'Affiché au classement. Chaque pseudo n\'appartient qu\'à un seul joueur.', 'This name is already taken, pick another one': 'Ce pseudo est déjà pris, choisis-en un autre',
     'React': 'Réagir',
+    // Audit de sécurité (2026-11-02)
+    'Make 10 rolls to send friend requests': 'Fais 10 tirages pour envoyer des demandes d\'amis', 'Make 20 rolls to report a message': 'Fais 20 tirages pour signaler un message',
+    'Make 30 rolls to attach images': 'Fais 30 tirages pour joindre des images', 'Too many images today: send your idea without images': 'Trop d\'images aujourd\'hui : envoie ton idée sans image',
+    "Use plain letters in your name (accents are fine), digits, spaces and _ . - '": "Utilise des lettres simples dans ton pseudo (les accents sont permis), des chiffres, des espaces et _ . - '",
+    "Only the owner can remove a moderator's message": 'Seul le créateur peut supprimer le message d\'un modérateur', 'Busy, try again': 'Occupé, réessaie',
+    '🛡️ Safety update: friend requests now need 10 rolls, reporting a message 20 rolls and attaching images to an idea 30 rolls, so throwaway accounts can\'t spam them. New names use plain letters (accents are fine), so nobody can copy someone else\'s name with look-alike letters': '🛡️ Mise à jour de sécurité : envoyer une demande d\'ami demande maintenant 10 tirages, signaler un message 20 tirages et joindre des images à une idée 30 tirages, pour que les comptes jetables ne puissent plus en abuser. Les nouveaux pseudos utilisent des lettres simples (les accents sont permis) : personne ne peut plus copier le pseudo d\'un autre avec des lettres qui se ressemblent',
     // Mode difficile (Sacha, 2026-11-02)
     '1 · Normal or Hard?': '1 · Normal ou difficile ?', 'Numbers from 0 to 1,000,000': 'Des nombres de 0 à 1 000 000', '10-digit numbers, rarities 50× rarer': 'Des nombres à 10 chiffres, des raretés 50 fois plus rares', '🔒 Unlocks after a Divine or higher roll': '🔒 Se débloque après un tirage Divine ou mieux',
     '2 · Who do you play against?': '2 · Contre qui tu joues ?', '3 · How many players?': '3 · Combien de joueurs ?', '4 · How do you win?': '4 · Comment on gagne ?', '5 · Who can join?': '5 · Qui peut rejoindre ?', '6 · Play for coins?': '6 · Jouer des pièces ?', '🔥 Hard ·': '🔥 Difficile ·',
@@ -729,6 +735,7 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    [/^(.+) has not unlocked Hard mode yet$/, m => `${m[1]} n'a pas encore débloqué le mode difficile`],
     // Mode difficile (2026-11-02) : compteurs de l'accueil et alertes d'amis.
     [/^🏆 #(\d+) on the (.+) (hard|normal) mode monthly leaderboard: \+([\d,]+) coins$/, m => `🏆 ${m[1]}e du classement du mois de ${m[2]} en mode ${m[3] === 'hard' ? 'difficile' : 'normal'} : +${nb(m[4])} pièces`],
     [/^([\d,]+) hard rolls? · ([\d,]+) XP in hard mode$/, m => `${nb(m[1])} tirage${m[1] === '1' ? '' : 's'} difficile${m[1] === '1' ? '' : 's'} · ${nb(m[2])} XP en mode difficile`],

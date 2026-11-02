@@ -298,6 +298,13 @@ async function roll(playerId, now = Date.now(), which = 0) {
   // Le verrou sert aussi de délai : deux tirages du même joueur ne se croisent jamais (lecture puis écriture).
   const [lock] = await redis([['SET', `tnlock:${playerId}`, '1', 'PX', COOLDOWN_MS, 'NX']]);
   if (lock !== 'OK') throw refuse(429, 'Too fast, wait for the reveal to finish');
+  // Verrou du match (audit de sécurité, 2026-11-02) : les deux joueurs d'un match lisent et réécrivent les deux fiches ;
+  // tirant au même instant, l'un effaçait le tirage de l'autre. Un seul tirage par match à la fois.
+  const mkey = `tnmatch:${day}:${r}:${i >> 1}`;
+  let mlock = null;
+  for (let tries = 0; tries < 20 && mlock !== 'OK'; tries++) { if (tries) await new Promise(res => setTimeout(res, 50)); [mlock] = await redis([['SET', mkey, '1', 'PX', 3000, 'NX']]); }
+  if (mlock !== 'OK') throw refuse(429, 'Too fast, try again');
+  try {
   const [raw] = await redis([['HGET', rollsKey(day), field]]);
   if (done(raw)) throw refuse(409, `Your ${N} rolls are done`);
   const mine = raw ? JSON.parse(raw) : { n: [], s: [], ...(isHardT(day) ? { h: 1 } : {}) };
@@ -315,6 +322,7 @@ async function roll(playerId, now = Date.now(), which = 0) {
   }
   await redis([...w, ['EXPIRE', rollsKey(day), TTL]]);
   return { n, s, count: mine.s.length, total: sum(mine), mode: t.mode };
+  } finally { await redis([['DEL', mkey]]); }
 }
 
 // État du tournoi d'un jour, tel que le voit `me` (null : public). Les tirages d'un match du tour en cours restent

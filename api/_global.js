@@ -131,7 +131,11 @@ async function resolveMentions(text, me) {
 }
 // Texte vérifié + mentions résolues (envoi et modification).
 async function prepare(raw, me) {
-  const text = hideCodes(normalize(raw)); // codes du Code Hunter cachés avant tout (idée de R77, 2026-11-01)
+  // Longueur vérifiée AVANT de cacher les codes (audit de sécurité, 2026-11-02) : les expressions de hideCodes prenaient
+  // 23 s sur 120 000 « r » et bloquaient tout le serveur.
+  const plain = normalize(String(raw || '').slice(0, MAX * 8));
+  if ([...plain].length > MAX) throw refuse(422, `Messages are ${MAX} characters at most`);
+  const text = hideCodes(plain); // codes du Code Hunter cachés avant tout (idée de R77, 2026-11-01)
   if ([...text].length > MAX) throw refuse(422, `Messages are ${MAX} characters at most`);
   const at = await resolveMentions(text, me);
   checkMessage(at.probe);
@@ -331,7 +335,7 @@ function checkWhy(why, rawNote) {
   return note;
 }
 async function mute(byId, m, dur, why, rawNote, owner) {
-  if (!(dur in MUTE_MS)) throw refuse(400, 'Pick how long the mute lasts');
+  if (!Object.hasOwn(MUTE_MS, dur)) throw refuse(400, 'Pick how long the mute lasts'); // pas « constructor » (audit, 2026-11-02)
   if (dur === 'perm' && !owner) throw refuse(403, 'Only the owner can mute forever');
   const note = checkWhy(why, rawNote);
   if (m.a === byId) throw refuse(422, 'You cannot mute yourself');
@@ -455,6 +459,12 @@ async function handle(body) {
     const { entry, m } = await findMsg(body.id);
     // Supprimer son propre message (idée de daddy finger, 2026-10-26) ; le reste est réservé aux modérateurs.
     if (!mod && !(body.action === 'gcDelete' && m.a === me)) throw refuse(403, 'Moderators only');
+    // Un modérateur ne supprime pas le message du créateur ni d'un autre modérateur, comme pour les silences (audit de
+    // sécurité, 2026-11-02) ; le créateur, lui, peut tout supprimer.
+    if (body.action === 'gcDelete' && !owner && m.a && m.a !== me && !m.sys) {
+      const [isMod, isOwner] = await redis([['SISMEMBER', MODS, m.a], ['HGET', statsKey(m.a), 'owner']]);
+      if (Number(isMod) === 1 || Number(isOwner) >= 1) throw refuse(403, 'Only the owner can remove a moderator\'s message');
+    }
     if (body.action === 'gcMute' && m.sys) throw refuse(422, 'This message was posted by the game');
     // Supprimer le message d'un autre joueur demande une raison, comme un silence (Sacha, 2026-11-01) ; pas son propre
     // message, ni une annonce du jeu.

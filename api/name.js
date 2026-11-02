@@ -3,7 +3,7 @@
 // espaces ni ponctuation). Changer de nom libère l'ancien.
 // Depuis le 2026-10-25 (Sacha, pour retirer des pièces du jeu) : le premier pseudo est gratuit, le changer coûte
 // Shop.RENAME_PRICE pièces (eco 'out:rename'). Changer seulement la casse ou les espaces reste gratuit.
-const { claimPlayer, claimName, cleanName, cors, send, redis, statsKey, readStats, nameKey, eco } = require('./_lib');
+const { wallet, claimPlayer, claimName, cleanName, cors, send, redis, statsKey, readStats, nameKey, eco } = require('./_lib');
 const Shop = require('../js/shop.js');
 // Lien d'arrivée (?ref=…, par exemple ?ref=pechadophin pour la collab) : gardé par la page dès la première visite et
 // envoyé avec le premier pseudo. Le joueur est alors compté pour cette source (page Owner > Traffic), une seule fois.
@@ -27,17 +27,17 @@ module.exports = async (req, res) => {
       // Nom déjà pris : refusé avant de parler de prix.
       const [holder] = await redis([['GET', `name:${nameKey(name)}`]]);
       if (holder && holder !== playerId) return send(res, 409, { error: 'This name is already taken' });
-      // Verrou : deux demandes en même temps ne paient pas deux fois (ni ne passent avec un seul paiement).
-      const [lock] = await redis([['SET', `rename:${playerId}`, '1', 'PX', 5000, 'NX']]);
-      if (lock !== 'OK') return send(res, 429, { error: 'Name change already in progress' });
-      try {
+      // Verrou du porte-monnaie, le même que la boutique (audit de sécurité, 2026-11-02 : un changement de pseudo et un
+      // achat en même temps passaient tous les deux avec un seul solde).
+      const out = await wallet(playerId, async () => {
         const st = await readStats(playerId);
-        if (Shop.balance(st) < Shop.RENAME_PRICE) return send(res, 402, { error: `Changing your name costs ${Shop.RENAME_PRICE.toLocaleString('en-US')} coins` });
+        if (Shop.balance(st) < Shop.RENAME_PRICE) return [402, { error: `Changing your name costs ${Shop.RENAME_PRICE.toLocaleString('en-US')} coins` }];
         // Le nom d'abord (il peut être pris), le paiement ensuite : un refus ne coûte rien.
-        if (!(await claimName(playerId, name, { rename: true }))) return send(res, 409, { error: 'This name is already taken' });
+        if (!(await claimName(playerId, name, { rename: true }))) return [409, { error: 'This name is already taken' }];
         await redis([['HINCRBY', statsKey(playerId), 'spent', Shop.RENAME_PRICE], ['HINCRBY', statsKey(playerId), 'renames', 1], ...eco('out:rename', Shop.RENAME_PRICE)]);
-        return send(res, 200, { name, paid: Shop.RENAME_PRICE, coins: Shop.balance(st) - Shop.RENAME_PRICE });
-      } finally { await redis([['DEL', `rename:${playerId}`]]); }
+        return [200, { name, paid: Shop.RENAME_PRICE, coins: Shop.balance(st) - Shop.RENAME_PRICE }];
+      }, 'Name change already in progress');
+      return send(res, out[0], out[1]);
     }
     if (!(await claimName(playerId, name))) return send(res, 409, { error: 'This name is already taken' });
     const src = srcTag(body.src);

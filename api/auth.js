@@ -94,6 +94,9 @@ module.exports = async (req, res) => {
         ['SET', accountKey, candidate, 'NX'],
         ['GET', accountKey],
         ['SET', `player:${candidate}:google`, google.sub, 'NX'],
+        // Secret principal réservé (audit de sécurité, 2026-11-02) : sans lui, n'importe qui connaissant l'identifiant
+        // prenait le compte avec un secret inventé. Personne ne connaît celui-ci ; l'appareil reçoit un secret d'appareil.
+        ['SET', `player:${candidate}:secret`, crypto.createHash('sha256').update(crypto.randomBytes(32)).digest('hex'), 'NX'],
       ]);
       playerId = winner;
       await markFresh(playerId); // joueur neuf (sans historique) : pas de reconstruction à tromper

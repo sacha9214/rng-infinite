@@ -30,9 +30,15 @@ function trigger(p, P) {
   return null;
 }
 
+// Marque « fermée » posée AVANT d'effacer la position (audit de sécurité, 2026-11-02) : une modification (edit) lue juste
+// avant une fermeture réécrivait la position fermée, qui se faisait payer une 2e fois. Une position marquée n'est plus
+// jamais payée, et la copie ressuscitée est effacée.
+const doneKey = (id, posId) => `levdone:${id}:${posId}`;
 async function close(id, posId, P, why) {
   const [raw] = await redis([['HGET', posKey(id), posId]]);
   if (!raw) return null;
+  const [first] = await redis([['SET', doneKey(id, posId), '1', 'NX', 'EX', 30 * 86400]]);
+  if (first !== 'OK') { await redis([['HDEL', posKey(id), posId]]); return null; } // déjà fermée une fois
   const [gone] = await redis([['HDEL', posKey(id), posId]]);
   if (Number(gone) !== 1) return null; // déjà fermée ailleurs
   const p = JSON.parse(raw), payout = why === 'liquidated' ? 0 : Math.max(0, Math.floor(equity(p, P)));
@@ -115,6 +121,9 @@ async function act(id, body) {
     p.sl = level(body.sl); p.tp = level(body.tp);
     checkLevels(p);
     await redis([['HSET', posKey(id), posId, JSON.stringify(p)]]);
+    // Fermée pendant la modification : la copie réécrite est retirée tout de suite.
+    const [done] = await redis([['EXISTS', doneKey(id, posId)]]);
+    if (Number(done) === 1) await redis([['HDEL', posKey(id), posId]]);
     return view(id);
   }
   throw refuse(400, 'Unknown move');
@@ -129,4 +138,4 @@ function checkLevels(p) {
 }
 const fmtP = v => (v >= 1000 ? Math.round(v).toLocaleString('en-US') : v.toFixed(2));
 
-module.exports = { act, tick, view, equity, liqPrice, trigger, LEVERAGES, FEE, MAINTENANCE, OPEN };
+module.exports = { act, tick, view, equity, liqPrice, trigger, LEVERAGES, FEE, MAINTENANCE, OPEN, _close: close };
