@@ -239,6 +239,41 @@
     return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(down);
   };
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  // ---------------------------------------------------------------- réactions emoji (demandé par Sacha, 2026-11-02)
+  // « Réagir avec un emoji comme sur WhatsApp » : chat global, messages entre amis, chat des duels, chat du clan.
+  // 6 emojis fixes (api/_react.js) ; une réaction par joueur et par message, toucher la sienne l'enlève.
+  // Chaque chat s'inscrit (Rx.on) avec send(clé, emoji) → promesse, et redraw() ; le message porte data-rx-scope et
+  // data-rx-key. La barre des 6 emojis s'ouvre par le bouton 🙂+ et se ferme au clic ailleurs ou avec Échap.
+  const Rx = {
+    EMOJIS: ['👍', '❤️', '😂', '😮', '😢', '🔥'],
+    open: null, scopes: {}, busy: false,
+    on(scope, h) { this.scopes[scope] = h; },
+    attrs(scope, key) { return `data-rx-scope="${scope}" data-rx-key="${esc(key)}"`; },
+    addBtn(scope, key, cls = '') { return `<button type="button" class="rx-add${cls ? ` ${cls}` : ''}" data-rx-open aria-label="React" title="React" aria-expanded="${this.open === `${scope}:${key}`}"><span aria-hidden="true">🙂</span><b aria-hidden="true">+</b></button>`; },
+    // La rangée sous le message : les réactions (le survol dit qui), puis la barre si elle est ouverte ici.
+    row(scope, key, list, can) {
+      list = list || [];
+      const open = can && this.open === `${scope}:${key}`;
+      if (!list.length && !open) return '';
+      const pills = list.map(r => { const more = r.n - (r.who || []).length; const who = `${(r.who || []).join(', ')}${more > 0 ? ` +${more}` : ''}`; return `<button type="button" class="rx-pill${r.mine ? ' mine' : ''}" ${can ? `data-rx="${r.e}"` : 'disabled'} aria-pressed="${!!r.mine}" title="${esc(who)}" aria-label="${r.e} ${r.n}: ${esc(who)}"><span aria-hidden="true">${r.e}</span><b>${fmt(r.n)}</b></button>`; }).join('');
+      const bar = open ? `<span class="rx-bar" role="group" aria-label="React">${this.EMOJIS.map(e => `<button type="button" data-rx="${e}" class="${list.some(r => r.mine && r.e === e) ? 'mine' : ''}" aria-label="${e}">${e}</button>`).join('')}</span>` : '';
+      return `<span class="rx" data-no-i18n>${pills}${bar}</span>`;
+    },
+    close() { if (!this.open) return; const scope = this.open.split(':')[0]; this.open = null; const h = this.scopes[scope]; if (h) h.redraw(); },
+    async click(e) {
+      const box = e.target.closest('[data-rx-scope]'), opener = e.target.closest('[data-rx-open]'), pick = e.target.closest('[data-rx]');
+      if (!box || (!opener && !pick)) { if (this.open && !e.target.closest('.rx-bar')) setTimeout(() => this.close()); return; } // après le clic : il garde sa cible
+      e.preventDefault(); e.stopPropagation();
+      const scope = box.dataset.rxScope, key = box.dataset.rxKey, h = this.scopes[scope]; if (!h) return;
+      if (opener) { const id = `${scope}:${key}`, was = this.open; this.open = was === id ? null : id; if (was && was.split(':')[0] !== scope) { const o = this.scopes[was.split(':')[0]]; if (o) o.redraw(); } h.redraw(); return; }
+      if (this.busy) return;
+      this.busy = true; this.open = null;
+      try { await h.send(key, pick.dataset.rx); } catch (err) { h.redraw(); toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+      finally { this.busy = false; }
+    },
+  };
+  document.addEventListener('click', e => Rx.click(e), true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && Rx.open) Rx.close(); });
   // ---------------------------------------------------------------- photos de profil (demandé par Sacha, 2026-10-26)
   // Seules les images acceptées par le créateur sont publiques : une carte nom → jeton (relue toutes les 5 min), puis
   // l'image par jeton, en cache long. Sans image : l'initiale du joueur sur un rond coloré. Taille fixe (aucun saut).
@@ -2054,6 +2089,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-02-reactions', date: 'Nov 2, 2026', en: ['🙂 React to messages with an emoji, like in your phone\'s messages: tap 🙂+ next to a message in the global chat, your friends\' chats, duels or your clan, and pick 👍 ❤️ 😂 😮 😢 or 🔥. Tap your reaction again to remove it, and hover a reaction to see who sent it'], fr: ['🙂 Réagis aux messages avec un emoji, comme dans les messages de ton téléphone : touche 🙂+ à côté d\'un message dans le chat global, les chats avec tes amis, les duels ou ton clan, et choisis 👍 ❤️ 😂 😮 😢 ou 🔥. Touche ta réaction à nouveau pour l\'enlever, et survole une réaction pour voir qui l\'a envoyée'] },
     { id: '2026-11-01-giveaways', date: 'Nov 1, 2026', en: ['🎁 Free skin giveaways on the RNG∞ Discord! Join the server (💬 Discord button), react 🎉 on a giveaway in 🎁・giveaways, and one winner gets the skin. Link your Discord in Me → 🔗 Link my Discord to receive it automatically'], fr: ['🎁 Des skins à gagner sur le Discord de RNG∞ ! Rejoins le serveur (bouton 💬 Discord), réagis 🎉 sur un giveaway dans 🎁・giveaways, et un gagnant reçoit le skin. Lie ton Discord dans Moi → 🔗 Link my Discord pour le recevoir tout seul'] },
     { id: '2026-11-01-mods', date: 'Nov 1, 2026', en: ['🛡️ Chat moderators: players chosen by Sacha help keep the global chat friendly, and a 🛡️ shows next to their name. Use 🚩 Report on a message that isn\'t nice and a moderator will check it'], fr: ['🛡️ Modérateurs du chat : des joueurs choisis par Sacha aident à garder le chat global sympa, et un 🛡️ s\'affiche à côté de leur pseudo. Utilise 🚩 Signaler sur un message pas gentil et un modérateur le vérifiera'] },
     { id: '2026-11-01-chat', date: 'Nov 1, 2026', en: ['💬 The global chat box now grows as you type, so you can see your whole message before sending it', '🔇 Chat mutes now come in shorter lengths (5 or 10 minutes) and always with a reason, which the muted player can see'], fr: ['💬 La zone d\'écriture du chat global s\'agrandit pendant que tu tapes : tu vois tout ton message avant de l\'envoyer', '🔇 Les silences du chat peuvent maintenant être plus courts (5 ou 10 minutes) et ont toujours une raison, que le joueur muet peut voir'] },
@@ -7688,6 +7724,7 @@
       const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
       const emojis = wireEmojis(m, () => input);
       const imgs = new Map();
+      let dmLast = null; // dernière réponse, pour redessiner quand la barre des réactions s'ouvre
       // Une image choisie (📷), collée (Ctrl/Cmd + V) ou glissée dans la conversation part tout de suite.
       const sendImage = async f => {
         if (!f || !/^image\//.test(f.type)) { if (f) toast('Pick an image'); return; }
@@ -7711,7 +7748,8 @@
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        dmLast = d; const rxCan = !d.blocked;
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}" ${Rx.attrs('dm', x.t)}>${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}${Rx.row('dm', x.t, x.rx, rxCan)}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${rxCan ? ` · ${Rx.addBtn('dm', x.t)}` : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         const them = d.messages.filter(x => !x.me).reduce((t, x) => Math.max(t, x.t), 0);
         if (lastThem !== null && them > lastThem) dmPing();
         lastThem = them;
@@ -7727,6 +7765,7 @@
         if (atBottom || !list.dataset.ready) list.scrollTop = list.scrollHeight;
         list.dataset.ready = '1';
       };
+      Rx.on('dm', { send: async (t, emoji) => draw(await Online.friends('react', name, { t: Number(t), emoji })), redraw: () => { if (m.isConnected && dmLast) draw(dmLast); } });
       const load = () => Online.friends('messages', name).then(d => { if (m.isConnected) draw(d); }).catch(() => {});
       const loop = () => { if (!m.isConnected) { clearInterval(poll); checkGifts(); if (currentView === 'friends') drawFriends(); return; } if (!document.hidden) load(); };
       poll = setInterval(loop, 4000);
@@ -8016,12 +8055,12 @@
     if (!list || !d) return;
     const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
     const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
-    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}`; // un message modifié redessine aussi
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}`; // un message modifié (ou une réaction) redessine aussi
     if (sig !== Room.chatSig) {
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
+        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -8038,6 +8077,7 @@
     }
   }
 
+  Rx.on('duel', { send: async (t, emoji) => { const token = Room.token, sent = Date.now(); applyRoom(await Online.roomAction('chatReact', Room.code, { t: Number(t), emoji }), token, sent, Date.now()); }, redraw: () => { Room.chatSig = ''; drawChat(Room.data); } });
   async function sendChat(text) {
     const token = Room.token, sent = Date.now();
     Room.chatAt = sent;
@@ -9039,7 +9079,8 @@
   // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
   const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
   const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
-  let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false;
+  let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false, clanChatLast = null;
+  Rx.on('clan', { send: async (t, emoji) => drawClanChat(await Online.clan('react', { t: Number(t), emoji })), redraw: () => { if (clanChatLast) drawClanChat(clanChatLast); } });
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
   const clanErr = err => toast([400, 403, 404, 409, 422, 429].includes(err.status) ? err.message : 'Clans unavailable right now, try again');
   const clanLeft = ms => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
@@ -9249,7 +9290,8 @@
   function drawClanChat(d) {
     const list = $('#cl-chat'); if (!list) return;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
+    clanChatLast = d;
+    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}" ${Rx.attrs('clan', x.t)}>${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span>${Rx.row('clan', x.t, x.rx, true)}<i>${time(x.t)}${x.edited ? ' · edited' : ''} · ${Rx.addBtn('clan', x.t)}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
     if (html === clanChatSig) return;
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     clanChatSig = html; list.innerHTML = html;
@@ -9487,7 +9529,7 @@
     async poll() {
       clearTimeout(this.timer);
       if (!this.open || document.hidden) return;
-      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last() })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
+      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last(), rxrev: this.rxrev == null ? -1 : this.rxrev })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
       if (this.open && !document.hidden) this.timer = setTimeout(() => this.poll(), 3000);
     },
     // Point rouge sur 💬 (demandé par Sacha, 2026-10-25) : panneau fermé, un coup d'œil toutes les 30 s (onglet visible)
@@ -9534,7 +9576,10 @@
       { const ml = this.el && this.el.querySelector('.gc-modlink'); if (ml) ml.hidden = !(this.me && this.me.mod); } // page des Modérateurs (Sacha, 2026-11-01)
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
-      if (d.same) return;
+      // Réactions (Sacha, 2026-11-02) : envoyées seulement quand elles ont changé (rxrev).
+      const rxNew = d.rx && JSON.stringify(d.rx) !== JSON.stringify(this.rx);
+      if (d.rx) { this.rx = d.rx; this.rxrev = d.rxrev; }
+      if (d.same) { if (rxNew) this.drawList(); return; }
       this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
       this.drawList();
     },
@@ -9542,13 +9587,14 @@
       if (this.muting && this.list().querySelector('.gc-mute-form')) { this.stale = true; return; } // ne pas effacer le formulaire
       this.stale = false;
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-      const me = this.me || {}, signed = !!Store.player.name;
+      const me = this.me || {}, signed = !!Store.player.name, rxCan = signed && me.reason !== 'muted', rx = this.rx || {};
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       // Une seule ligne « pseudo [TAG] titre : message » (idée d'Idkwhatnamemyself, 2026-11-01 : le pseudo et le texte
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time, rxCan) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}" ${Rx.attrs('gc', m.id)}>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${Rx.row('gc', m.id, rx[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
@@ -9581,11 +9627,12 @@
     // Grand tirage annoncé par le serveur (idée de R77, 2026-10-27) : aux couleurs de sa rareté, sans auteur ni texte libre ;
     // ni réponse, ni signalement : seuls les modérateurs ont un menu (supprimer), et le créateur peut l'épingler.
     group: n => String(n).padStart(6, '0').replace(/\B(?=(\d{3})+$)/g, ' '),
-    sysHTML(m, me, time) {
-      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}">
+    sysHTML(m, me, time, rxCan) {
+      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}" ${Rx.attrs('gc', m.id)}>
           <p class="gc-sys-line"><span class="gc-sys-ic" aria-hidden="true">🎉</span> <a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a> <span>rolled</span> <button type="button" class="gc-sys-num mono" data-number="${Number(m.n)}" data-owner="${esc(m.name)}" data-no-i18n title="See its badges">${this.group(m.n)}</button> ${tierPill(m.tier)}
             <time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-            ${me.mod || me.owner ? '<span class="gc-tools"><button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button></span>' : ''}</p>
+            ${rxCan || me.mod || me.owner ? `<span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.mod || me.owner ? '<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>' : ''}</span>` : ''}</p>
+          ${Rx.row('gc', m.id, (this.rx || {})[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${me.mod ? '<button data-gc="delete">🗑️ Delete</button>' : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`;
     },
@@ -9716,6 +9763,7 @@
       } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
     },
   };
+  Rx.on('gc', { send: async (id, emoji) => GChat.apply(await Online.global('gcReact', { id, emoji, rev: GChat.rev, del: GChat.del, since: GChat.last() })), redraw: () => { if (GChat.el && GChat.open) GChat.drawList(); } });
   GChat.peek();
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !GChat.open) GChat.peek(); });
   document.addEventListener('visibilitychange', () => { if (GChat.open && !document.hidden) GChat.poll(); });

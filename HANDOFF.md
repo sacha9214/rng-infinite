@@ -9,6 +9,22 @@ domain's DNS (Vercel Pro was cancelled; the Hobby team was paused once for CPU o
 to the VPS on 2026-10-22). About a hundred player ideas and bug reports arrive every day through the 💡 button;
 Sacha triages them on the Owner page (`#/owner`, Inbox tab) and answers each one.
 
+## Emoji reactions on chat messages (2026-11-02, branch `claude/chat-reactions`)
+
+Sacha: "react with emoji to someone's chat, like WhatsApp". His choices: all four chats, 6 fixed emojis.
+
+- `api/_react.js`: shared helper. 👍 ❤️ 😂 😮 😢 🔥 only, one reaction per player and message (another replaces it,
+  the same removes it). One hash per chat, field `<message>|<player>` = emoji index (no lost update when two players
+  react at once). Stale fields are pruned on the next reaction; the hash expires with the chat. 300 ms between reactions.
+- Global chat: `gcReact` (a name and not muted; the 100-roll rule is only for writing). `rx:gc`, `gc:rxrev` (counter):
+  `gcList` sends `rx` only when the client's `rxrev` differs (or on a full list); the closed-panel peek never gets it.
+- Friends: `react` in `/api/friends` (friends both ways, nobody blocked), `rx:dm:<a>:<b>`, message = its time.
+- Duels: `chatReact` in `/api/room` (seated players), `room:<code>:rx`. Clan: op `react`, `clanrx:<cid>` (deleted
+  with the clan).
+- UI: `Rx` in `js/app.js` (one capture click listener, each chat registers `send` + `redraw`); 🙂+ opens the bar,
+  pills under the message, hover shows who. CSS prefix `rx-`. Duel messages are now wrapped in `.chat-item`.
+- Tested: `test-api` (all four chats), real browser on the dev server for all four, 375 px light theme.
+
 ## Discord giveaways (2026-11-01, branch `claude/discord-giveaways`)
 
 Asked by Sacha, to bring players to the Discord: free skin giveaways. His choices: anyone on the Discord can enter,

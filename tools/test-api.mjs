@@ -1660,6 +1660,19 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Vu par quelqu'un d'autre : le message est là, sans « me ».
   r = await call(roomApi, { url: `/api/room?code=${code}&me=${alice.playerId}` });
   assert.deepEqual(r.body.chat.map(c => [c.name, c.me, c.m]), [['Frank', false, 'Hello there, **** this [link]']]);
+  // Réactions emoji aux messages (Sacha, 2026-11-02, api/_react.js) : les joueurs assis, 6 emojis, toucher la sienne l'enlève.
+  {
+    const t0 = r.body.chat[0].t, rxFree = who => run([['DEL', `rx:rl:${who.playerId}`]]);
+    assert.equal((await roomPost(alice, 'chatReact', { code, t: t0, emoji: '👍' })).status, 422, 'un spectateur ne réagit pas');
+    assert.equal((await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🍆' })).status, 400, 'emoji hors liste');
+    let x = await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.chat[0].rx, [{ e: '🔥', n: 1, mine: true, who: ['Frank'] }]);
+    assert.equal((await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' })).status, 429, 'pas deux réactions coup sur coup');
+    x = await call(roomApi, { url: `/api/room?code=${code}&me=${alice.playerId}` }); assert.deepEqual(x.body.chat[0].rx, [{ e: '🔥', n: 1, mine: false, who: ['Frank'] }], 'vu par un spectateur');
+    rxFree(frank); x = await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' }); assert.equal(x.body.chat[0].rx, undefined, 'toucher la sienne l\'enlève');
+    rxFree(frank); assert.equal((await roomPost(frank, 'chatReact', { code, t: 123, emoji: '🔥' })).status, 404, 'message inconnu');
+    assert.ok(!JSON.stringify(x.body.chat).includes(frank.playerId), 'aucun identifiant');
+  }
   // Rafale : 12 messages par 30 s au plus, même en respectant l'écart entre deux messages.
   let statuses = [];
   for (let k = 0; k < 13; k++) await later(1300, async () => statuses.push((await say(frank, `message ${k}`)).status));
@@ -3081,6 +3094,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await fr(ben, 'gifts')).body.messages, 0);
   r = await fr(ben, 'message', 'Annie', { text: 'gg on your 777777!' }); assert.deepEqual(r.body.messages.map(m => [m.me, m.text]), [[false, 'hey you ******* legend, see [link]'], [true, 'gg on your 777777!']]);
   assert.ok(!JSON.stringify(r.body).includes(ann.playerId) && !JSON.stringify(r.body).includes(ben.playerId), 'aucun identifiant');
+  // Réactions emoji (Sacha, 2026-11-02) : une par joueur et par message, en choisir une autre la remplace.
+  {
+    const t0 = r.body.messages[0].t, rxFree = who => run([['DEL', `rx:rl:${who.playerId}`]]);
+    let x = await fr(ben, 'react', 'Annie', { t: t0, emoji: '😂' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.messages[0].rx, [{ e: '😂', n: 1, mine: true, who: ['Benny'] }]);
+    x = await fr(ann, 'react', 'Benny', { t: t0, emoji: '😂' }); assert.deepEqual(x.body.messages[0].rx, [{ e: '😂', n: 2, mine: true, who: ['Benny', 'Annie'] }]);
+    rxFree(ann); x = await fr(ann, 'react', 'Benny', { t: t0, emoji: '❤️' });
+    assert.deepEqual(x.body.messages[0].rx, [{ e: '❤️', n: 1, mine: true, who: ['Annie'] }, { e: '😂', n: 1, mine: false, who: ['Benny'] }], 'remplacée, pas ajoutée');
+    rxFree(ann); assert.equal((await fr(ann, 'react', 'Benny', { t: 42, emoji: '❤️' })).status, 404, 'message inconnu');
+    assert.ok(!JSON.stringify(x.body).includes(ann.playerId) && !JSON.stringify(x.body).includes(ben.playerId), 'aucun identifiant');
+    run([['DEL', `rx:rl:${ann.playerId}`], ['DEL', `rx:rl:${ben.playerId}`]]);
+  }
   // Annie signale le message de Benny ; elle ne peut pas signaler le sien ; la page Owner les voit, sans identifiant.
   {
     const theirs = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => !m.me), mine = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => m.me);
@@ -4239,6 +4264,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await new Promise(r => setTimeout(r, 3));
   v = await H(D, 'say', { text: 'hello clan' });
   const tC = v.messages.find(m => m.name === 'Clancee').t, tD = v.messages.find(m => m.name === 'Clandee').t;
+  // Réactions emoji (Sacha, 2026-11-02).
+  v = await H(C, 'react', { t: tD, emoji: '👍' }); assert.deepEqual(v.messages.find(m => m.t === tD).rx, [{ e: '👍', n: 1, mine: true, who: ['Clancee'] }]);
+  v = await H(D, 'chat'); assert.equal(v.messages.find(m => m.t === tD).rx[0].mine, false);
+  await fails(H(D, 'react', { t: 5, emoji: '👍' }), 404, 'message inconnu');
   assert.equal(v.messages.find(m => m.name === 'Clandee').canEdit, true); assert.ok(!v.messages.find(m => m.name === 'Clancee').canEdit);
   await fails(H(D, 'edit', { t: tC, text: 'hacked' }), 403, 'pas le message d\'un autre');
   v = await H(D, 'edit', { t: tD, text: 'hello clan!' }); assert.equal(v.messages.find(m => m.t === tD).text, 'hello clan!'); assert.equal(v.messages.find(m => m.t === tD).edited, true);
@@ -4389,6 +4418,21 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(kid, 'gcSend', { text: 'Hello <b>everyone</b>!' }); assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.msgs.length, 1); assert.deepEqual([r.body.msgs[0].name, r.body.msgs[0].text, r.body.msgs[0].mine], ['Kiddo', 'Hello <b>everyone</b>!', true]);
   assert.ok(!JSON.stringify(r.body).includes(kid.playerId), 'aucun identifiant de joueur');
+  // Réactions emoji (Sacha, 2026-11-02) : un pseudo suffit (pas besoin des 100 tirages) ; renvoyées seulement quand elles
+  // ont changé (rxrev), jamais au coup d'œil du point rouge.
+  {
+    const id0 = r.body.msgs[0].id;
+    let x = await gc(newbie, 'gcReact', { id: id0, emoji: '🔥' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.rx[id0], [{ e: '🔥', n: 1, mine: true, who: ['Newbie'] }]);
+    const { rev, del, rxrev } = x.body;
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now(), rxrev }); assert.equal(x.body.same, true); assert.equal(x.body.rx, undefined, 'rien de neuf');
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now(), rxrev: rxrev - 1 }); assert.equal(x.body.same, true); assert.deepEqual(x.body.rx[id0], [{ e: '🔥', n: 1, mine: false, who: ['Newbie'] }]);
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now() }); assert.equal(x.body.rx, undefined, 'coup d\'œil : pas de réactions');
+    assert.equal((await gc(null, 'gcReact', { id: id0, emoji: '🔥' })).status, 400);
+    assert.equal((await gc(kid, 'gcReact', { id: 'ffffffffffff', emoji: '🔥' })).status, 404);
+    assert.equal((await gc(kid, 'gcReact', { id: id0, emoji: 'lol' })).status, 400);
+    assert.ok(!JSON.stringify(x.body).includes(newbie.playerId), 'aucun identifiant');
+  }
   // Délai : un message toutes les 5 s.
   r = await gc(kid, 'gcSend', { text: 'again' }); assert.equal(r.status, 429);
   free(kid);

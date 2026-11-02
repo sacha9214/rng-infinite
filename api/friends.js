@@ -10,6 +10,7 @@
 const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey } = require('./_lib');
 const Reports = require('./_reports');
 const Global = require('./_global');
+const React = require('./_react');
 const Shop = require('../js/shop.js');
 const { MIN_ROLLS } = require('./_gamble');
 const { cleanChat, cleanImage, MAX_CHARS } = require('./_chat');
@@ -116,9 +117,12 @@ const DM_KEEP = 100, DM_TTL = 7 * 86400, DM_PER_MIN = 20, DM_PER_DAY = 400;
 // dm:<a>:<b>:img:<heure>, effacé avec le message ou au bout de 7 jours comme lui. 30 images par jour et par joueur.
 const DM_IMG_PER_DAY = 30, dmImgKey = (a, b, t) => `${dmKey(a, b)}:img:${t}`;
 const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`, unreadKey = id => `dmu:${id}`, blockKey = id => `dmblock:${id}`;
+// Réactions emoji (api/_react.js, Sacha 2026-11-02) : rx:<clé du fil>, message désigné par son heure.
+const dmRxKey = (a, b) => `rx:${dmKey(a, b)}`;
 async function dmThread(me, other) {
-  const [raw, iBlocked] = await redis([['LRANGE', dmKey(me, other), 0, -1], ['SISMEMBER', blockKey(me), other], ['HDEL', unreadKey(me), other]]);
-  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0, ...(m.e ? { edited: true } : {}), ...(m.img ? { img: true } : {}) }; } catch (e) { return null; } }).filter(Boolean);
+  const [raw, iBlocked, , rxFlat] = await redis([['LRANGE', dmKey(me, other), 0, -1], ['SISMEMBER', blockKey(me), other], ['HDEL', unreadKey(me), other], ['HGETALL', dmRxKey(me, other)]]);
+  const rx = await React.views(rxFlat || [], me);
+  const messages = (raw || []).map(x => { try { const m = JSON.parse(x); return { me: m.s === me, text: String(m.x || ''), t: Number(m.t) || 0, ...(m.e ? { edited: true } : {}), ...(m.img ? { img: true } : {}), ...(rx.has(String(m.t)) ? { rx: rx.get(String(m.t)) } : {}) }; } catch (e) { return null; } }).filter(Boolean);
   return { messages, blocked: Number(iBlocked) === 1, max: MAX_CHARS };
 }
 async function sendDm(me, other, raw, rawImage) {
@@ -234,6 +238,15 @@ module.exports = async (req, res) => {
       return send(res, 200, await state(playerId));
     }
     if (body.action === 'messages') return send(res, 200, await dmThread(playerId, other));
+    // Réagir à un message du fil (Sacha, 2026-11-02) : seulement entre amis, et pas si l'un a bloqué l'autre.
+    if (body.action === 'react') {
+      const [mine, theirs, b1, b2, raw] = await redis([['SISMEMBER', frKey(playerId), other], ['SISMEMBER', frKey(other), playerId], ['SISMEMBER', blockKey(other), playerId], ['SISMEMBER', blockKey(playerId), other], ['LRANGE', dmKey(playerId, other), 0, -1]]);
+      if (Number(mine) !== 1 || Number(theirs) !== 1 || Number(b1) === 1 || Number(b2) === 1) return send(res, 403, { error: 'You can only react to your friends' });
+      const live = new Set((raw || []).map(x => { try { return String(JSON.parse(x).t); } catch (e) { return ''; } }));
+      try { await React.toggle(dmRxKey(playerId, other), String(Number(body.t)), playerId, body.emoji, { live, ttl: DM_TTL }); }
+      catch (err) { return send(res, err.status || 500, { error: err.message }); }
+      return send(res, 200, await dmThread(playerId, other));
+    }
     // Supprimer un de ses propres messages (idée d'Ann Joe NO.1 gambler, 2026-10-22) : retrouvé par son heure.
     if (body.action === 'unsend') {
       const key = dmKey(playerId, other);

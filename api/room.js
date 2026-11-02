@@ -20,6 +20,7 @@ const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBB
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
+const React = require('./_react');
 const Reports = require('./_reports');
 const { bestAwards } = require('./_rank');
 const Tournament = require('./_tournament');
@@ -70,6 +71,7 @@ const playersKey = code => `room:${code}:players`;
 const roundsKey = code => `room:${code}:rounds`;
 const reactsKey = code => `room:${code}:reacts`;
 const chatKey = code => `room:${code}:chat`; // les derniers messages du chat { t, i (index du joueur), m }
+const rxKey = code => `room:${code}:rx`; // réactions emoji aux messages du chat (api/_react.js, Sacha 2026-11-02)
 const LIVE_KEY = 'rooms:live'; // parties publiques, score = dernière activité
 const LIVE_MS = 10 * 60000; // une partie sans activité depuis 10 min sort de la liste
 const isCode = code => /^[A-Z2-9]{5}$/.test(code);
@@ -123,9 +125,9 @@ const touchLive = (room, now = Date.now()) => (room.h.public === '1' ? [['ZADD',
 // premier prêt), la liste ordonnée des joueurs { id, name, title }, les manches { t, revealAt, n: [un nombre par joueur] }
 // et les dernières réactions { t, i (index du joueur), e }.
 async function load(code) {
-  const [flat, players, rounds, reacts, chat] = await redis([
+  const [flat, players, rounds, reacts, chat, rx] = await redis([
     ['HGETALL', roomKey(code)], ['LRANGE', playersKey(code), 0, -1], ['LRANGE', roundsKey(code), 0, -1], ['LRANGE', reactsKey(code), -20, -1],
-    ['LRANGE', chatKey(code), -CHAT_SHOWN, -1],
+    ['LRANGE', chatKey(code), -CHAT_SHOWN, -1], ['HGETALL', rxKey(code)],
   ]);
   const h = {};
   for (let i = 0; i < (flat || []).length; i += 2) h[flat[i]] = flat[i + 1];
@@ -135,6 +137,7 @@ async function load(code) {
     players: (players || []).map(p => JSON.parse(p)), rounds: (rounds || []).map(r => JSON.parse(r)),
     reacts: (reacts || []).map(r => JSON.parse(r)),
     chat: (chat || []).map(c => JSON.parse(c)),
+    rx: rx || [],
   };
 }
 
@@ -344,7 +347,7 @@ function asksOf(room, now = Date.now()) {
 }
 
 async function view(room, me) {
-  const sc = score(room);
+  const sc = score(room), rx = await React.views(room.rx || [], me);
   const k = room.rounds.length;
   const status = sc.done ? 'done' : room.h.ended === '1' ? 'abandoned' : !room.started ? 'lobby' : 'playing';
   const readyCount = humans(room).filter(p => readyFor(room, p) === k).length;
@@ -377,7 +380,7 @@ async function view(room, me) {
       .map(r => ({ t: r.t, name: room.players[r.i].name, e: r.e })),
     ...(() => { let ps = null; try { ps = room.h.psound ? JSON.parse(room.h.psound) : null; } catch (e) { ps = null; } return ps && Date.now() - ps.t < 10000 && ps.from !== me && (ps.to === 'all' || ps.to === me) ? { psound: { t: ps.t, kind: ps.kind, by: ps.by } } : {}; })(),
     // Le chat : les derniers messages, déjà filtrés à l'écriture. Jamais d'identifiant : le pseudo, et si c'est moi.
-    chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m, ...(c.e ? { edited: true } : {}) })),
+    chat: room.chat.filter(c => room.players[c.i] && c.t <= Date.now()).map(c => ({ t: c.t, name: room.players[c.i].name, bot: !!room.players[c.i].bot, me: room.players[c.i].id === me, m: c.m, ...(c.e ? { edited: true } : {}), ...(rx.has(String(c.t)) ? { rx: rx.get(String(c.t)) } : {}) })),
     achievements: status === 'done' && room.players.some(p => p.id === me) ? Achievements.unlocked(await readStats(me)) : undefined,
     now: Date.now(),
   };
@@ -668,6 +671,15 @@ module.exports = async (req, res) => {
       await redis([['RPUSH', chatKey(code), JSON.stringify(message)], ['LTRIM', chatKey(code), -CHAT_KEPT, -1], ['EXPIRE', chatKey(code), TTL]]);
       room.chat.push(message);
       return send(res, 200, await view(room, playerId));
+    }
+    // Réagir à un message du chat (Sacha, 2026-11-02, api/_react.js) : les joueurs assis, comme pour écrire.
+    if (body.action === 'chatReact') {
+      if (!member) return send(res, 422, { error: 'Only players in this duel can react' });
+      const [raw] = await redis([['LRANGE', chatKey(code), 0, -1]]);
+      const live = new Set((raw || []).map(x => { try { return String(JSON.parse(x).t); } catch (e) { return ''; } }));
+      try { await React.toggle(rxKey(code), String(Number(body.t)), playerId, body.emoji, { live, ttl: TTL }); }
+      catch (err) { return send(res, err.status || 500, { error: err.message }); }
+      return send(res, 200, await view(await load(code), playerId));
     }
     // Supprimer un de ses propres messages du chat (2026-10-22) : retrouvé par son heure et la place du joueur.
     if (body.action === 'unsay') {
