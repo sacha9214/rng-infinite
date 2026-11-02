@@ -699,6 +699,15 @@ async function recordRoll(playerId, n, t) {
 // rareté et tous les classements (clés « h… »). Communs aux deux modes : l'XP à vie et le niveau (xpLife), les pièces
 // (Shop.HARD_COINS, mêmes rendements décroissants et même compteur du jour rc:<jour>), les quêtes, les succès, le clan.
 // Pas d'événement de la semaine ni de classement de la médiane en mode difficile.
+// XP de clan d'un tirage difficile (Sacha, 2026-11-02) : la rareté compte, pas l'XP du mode difficile (elle peut dépasser
+// 100 milliards et écraserait la course des clans). Un tirage difficile rapporte au clan le minimum de sa rareté en mode
+// normal : un Infinite difficile vaut le plus petit Infinite normal (~113 millions), un Mythic le plus petit Mythic.
+// Calculé une fois depuis la table du mode normal (première entrée de chaque rareté).
+let tierMins = null;
+function normalTierMin(tier) {
+  if (!tierMins) { tierMins = {}; for (const [score] of percentiles) { const tr = engine.cardTier(score); if (!(tr in tierMins) || score < tierMins[tr]) tierMins[tr] = score; } }
+  return tierMins[tier] || 0;
+}
 const hardPeriods = t => scopes(t).map(p => ({ ...p, xp: hardKey(xpKey(p)), worst: { lb: hardKey(worstKeys(p).lb), best: hardKey(worstKeys(p).best) }, lb: hardKey(p.lb), best: hardKey(p.best), count: hardKey(p.count), total: hardKey(p.total) }));
 const H_XP_LB = hardKey(XP_LB), H_ROLLS_LB = hardKey(ROLLS_LB), H_WORST_LB = hardKey(WORST_LB), H_WORST_BEST = hardKey(WORST_BEST);
 const hardHistoryKey = id => hardKey(historyKey(id)), hardBadgesKey = id => hardKey(badgesKey(id));
@@ -723,7 +732,7 @@ async function recordHardRoll(playerId, n, t) {
     ['ZADD', SEEN_KEY, t, playerId], ['HINCRBY', actKey(dayKey(t)), playerId, 1], ['EXPIRE', actKey(dayKey(t)), ACT_TTL], ['HSETNX', sk, 'first', t],
   ];
   if (a.earnedIds.length) writes.push(['SADD', hardBadgesKey(playerId), ...a.earnedIds]);
-  if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
+  if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, normalTierMin(a.tier), t)); // le minimum normal de sa rareté
   let coins = 0;
   const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
   { const full = Shop.HARD_COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll, a.tier); writes.push(...eco('in:rolls', c, t), ...eco('in:hard', c, t)); coins = c;
@@ -796,7 +805,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
+module.exports = { normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
   bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
