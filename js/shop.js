@@ -8,10 +8,10 @@
 
   // Pièces par tirage selon la rareté de la carte (Trash rapporte un peu plus que Common : lot de consolation).
   const COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 2, rare: 5, epic: 10, anomaly: 25, mythic: 100, celestial: 300, divine: 1000, godlike: 2500, infinite: 5000 };
-  // Mode difficile (Sacha, 2026-11-02 : « plus rare, mais qui rapporte plus ») : au-dessus de Common chaque rareté est 10 fois
-  // plus rare qu'en mode normal (js/engine.js HARD_CARD_TIERS) et paie à peu près 10 fois plus ; Common, lui, arrive bien
-  // plus souvent. Réglé sur les vraies cotes (data/hard-odds.json) pour que la moyenne par tirage reste celle du mode
-  // normal : vérifié par tools/test-api.mjs (écart de moins de 3 %). Compteurs à part dans les stats : h:t:<rareté>.
+  // Mode difficile (Sacha, 2026-11-02) : d'abord « plus rare, mais qui rapporte plus » (raretés 10 fois plus rares, pièces
+  // ~9 fois plus grosses, même moyenne que le mode normal) ; le soir même, raretés 50 fois plus rares avec ces mêmes pièces
+  // (« plus dur pour de vrai ») : ~37 % des pièces du mode normal par tirage (tools/test-api.mjs le vérifie).
+  // Compteurs à part dans les stats : h:t:<rareté>.
   const HARD_COINS = { landwaste: 300, garbage: 50, trash: 3, common: 1, uncommon: 15, rare: 45, epic: 90, anomaly: 225, mythic: 900, celestial: 2700, divine: 9000, godlike: 22500, infinite: 45000 };
   const DUEL_WIN_COINS = 25;
   // Pièces offertes une seule fois à un joueur qui associe son compte Google (il retrouve alors son joueur partout).

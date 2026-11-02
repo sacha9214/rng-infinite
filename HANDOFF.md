@@ -5,6 +5,14 @@ Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of 
 
 
 
+
+## Hard mode 50× rarer (2026-11-02, branch `claude/hard-50x`)
+
+Sacha, the same evening: "make it actually harder: higher XP needed for the rarities". `HARD_CARD_TIERS` now makes every
+tier above Common **50×** rarer than Normal (was 10×): Uncommon 0.50%, Mythic 0.018%, Infinite 1 in 5 million. Same
+`HARD_COINS`, so Hard pays ~37% of Normal's coins per roll; XP per roll unchanged. Tier odds recomputed from the stored
+table (`data/hard-odds.json`, `js/hard-data.js`), no rebuild. Hard rarities already counted today (`h:t:*`) stay.
+
 ## Hard mode lock (2026-11-02, branch `claude/hard-lock`)
 
 Players' idea, Sacha's go: Hard mode opens after the first **Godlike or Infinite** roll in Normal mode (`t:godlike` +
