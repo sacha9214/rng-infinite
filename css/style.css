@@ -11569,3 +11569,23 @@ a.player-btn { text-decoration: none; color: inherit; }
 .gaw-form .select { min-width: 0; max-width: 100%; }
 .gaw-form select[name=skin] { flex: 1 1 14rem; }
 .gaw-row .o-report-head .btn { margin-left: auto; }
+
+/* Réactions emoji sous les messages (Sacha, 2026-11-02) : chat global, amis, duels, clan. « rx- » : préfixe libre. */
+.rx { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; margin-top: .25rem; }
+.rx-pill { display: inline-flex; align-items: center; gap: .2rem; min-height: 1.6rem; padding: .05rem .45rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--prose); font: inherit; font-size: .78rem; line-height: 1; cursor: pointer; }
+.rx-pill b { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rx-pill.mine { border-color: var(--chart-accent); background: color-mix(in srgb, var(--chart-accent) 16%, var(--surface)); }
+.rx-pill:hover:not(:disabled) { border-color: var(--prose-3); }
+.rx-pill:disabled { cursor: default; }
+.rx-bar { display: inline-flex; gap: .1rem; padding: .15rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface-raised, var(--surface)); box-shadow: 0 4px 14px rgb(0 0 0 / .15); animation: rx-pop .16s var(--ease-out, ease-out) backwards; }
+.rx-bar button { border: 0; background: none; border-radius: 999px; width: 2rem; height: 2rem; font-size: 1.15rem; line-height: 1; cursor: pointer; transition: transform .12s ease; }
+.rx-bar button:hover, .rx-bar button:focus-visible { transform: scale(1.22); }
+.rx-bar button.mine { background: color-mix(in srgb, var(--chart-accent) 20%, transparent); }
+@keyframes rx-pop { from { opacity: 0; transform: scale(.85); } }
+.rx-add { display: inline-flex; align-items: center; border: 0; background: none; padding: 0 .15rem; color: inherit; font: inherit; font-size: .8rem; line-height: 1; cursor: pointer; opacity: .65; }
+.rx-add b { font-size: .7em; margin-left: -.05rem; }
+.rx-add:hover, .rx-add:focus-visible, .rx-add[aria-expanded="true"] { opacity: 1; }
+.gc-tools .rx-add { font-size: .85rem; }
+.dm-msg i .rx-add { font-size: .78rem; vertical-align: -.05rem; }
+.dm-msg.me .rx { justify-content: flex-end; }
+.chat-item .rx { margin: .1rem 0 .2rem; }

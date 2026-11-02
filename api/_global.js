@@ -25,6 +25,7 @@
 const crypto = require('node:crypto');
 const { redis, ownsPlayer, readStats, statsKey, findPlayer, dayKey, nameKey } = require('./_lib');
 const Reports = require('./_reports');
+const React = require('./_react');
 const { maskBad, hideCodes, shape, BLOCKED_SHAPES } = require('./_chat');
 
 const KEY = 'gc:msgs', REV = 'gc:rev', DEL = 'gc:del', MUTES = 'gc:mutes', MODS = 'gc:mods', MUTELOG = 'gc:mutelog', LOG_KEEP = 200;
@@ -155,6 +156,9 @@ async function clanTags(msgs) {
   return new Map(ids.map((id, i) => [id, tags[i]]).filter(([, t]) => t && t.tag));
 }
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
+// Réactions emoji (api/_react.js) : { id du message: [{ e, n, mine, who }] } pour les messages encore là.
+const RX = 'rx:gc', RXREV = 'gc:rxrev';
+async function rxOf(all, me) { return Object.fromEntries(await React.views(await React.read(RX), me, new Set(all.map(m => m.id)))); }
 
 // ---------------------------------------------------------------- réponses (idée de Niall, 2026-10-27)
 // Le message garde une petite référence { id, n: pseudo, x: ~60 premiers caractères }. À l'affichage, la citation suit
@@ -233,19 +237,25 @@ async function meInfo(id, stats) {
 
 // Relecture toutes les 3 s : réponse minuscule quand rien n'a changé (« same »). Après une suppression, la liste entière.
 async function list(body, me, stats, again = false) {
-  const [rev, del, pin, due] = await redis([['GET', REV], ['GET', DEL], ['GET', PIN], ['ZRANGEBYSCORE', SYSQ, '-inf', String(Date.now()), 'LIMIT', '0', '5']]);
+  const [rev, del, pin, due, rxrev] = await redis([['GET', REV], ['GET', DEL], ['GET', PIN], ['ZRANGEBYSCORE', SYSQ, '-inf', String(Date.now()), 'LIMIT', '0', '5'], ['GET', RXREV]]);
   // Grand tirage arrivé à son heure : publié maintenant, puis relecture (une seule fois).
   if (due && due.length && !again) { await flushSys(due); return list(body, me, stats, true); }
-  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS, pin: pinView(pin) };
+  const out = { rev: Number(rev) || 0, del: Number(del) || 0, max: MAX, gap: GAP_MS, editMs: EDIT_MS, pin: pinView(pin), rxrev: Number(rxrev) || 0 };
   out.online = await require('./_online').shown(); // « N online » en tête du chat (Thermonuclear Bomb, 2026-11-01) ; null sous 5
   if (me) out.me = await meInfo(me, stats);
   const since = Number(body.since) || 0, seenDel = Number(body.del) || 0;
-  if (body.rev != null && Number(body.rev) === out.rev && seenDel === out.del) return { ...out, same: true };
+  // Réactions (Sacha, 2026-11-02) : toutes celles des messages chargés, seulement quand elles ont bougé depuis la
+  // dernière relecture (gc:rxrev, compteur) ou avec une liste entière. Le coup d'œil du point rouge ne les demande pas.
+  const wantRx = (body.rxrev != null && Number(body.rxrev) !== out.rxrev);
+  const same = body.rev != null && Number(body.rev) === out.rev && seenDel === out.del;
+  if (same && !wantRx) return { ...out, same: true };
   const all = await readAll();
   const full = !since || seenDel !== out.del;
+  const rx = wantRx || (full && body.rxrev != null) ? await rxOf(all, me) : null;
+  if (same) return { ...out, same: true, rx };
   const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all), tags = await clanTags(msgs);
   const [modIds] = await redis([['SMEMBERS', MODS]]), mods = new Set(modIds || []);
-  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags, mods)) };
+  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags, mods)), ...(rx ? { rx } : {}) };
 }
 
 // ---------------------------------------------------------------- écriture
@@ -428,6 +438,17 @@ async function handle(body) {
     if (body.action === 'gcUnpin') await redis([['DEL', PIN]]);
     else { const { m } = await findMsg(body.id); await redis([['SET', PIN, JSON.stringify(pinCopy(m))]]); }
     return list({}, me, stats);
+  }
+  // Réagir à un message (Sacha, 2026-11-02) : un pseudo et pas muet ; une annonce de grand tirage aussi (🔥).
+  if (body.action === 'gcReact') {
+    const info = await meInfo(me, stats);
+    if (info.reason === 'muted') throw refuse(403, 'You are muted for now');
+    const [name] = await redis([['HGET', 'names', me]]);
+    if (!name) throw refuse(403, 'Pick a player name first');
+    const all = await readAll();
+    await React.toggle(RX, String(body.id || ''), me, body.emoji, { live: new Set(all.map(m => m.id)) });
+    await redis([['INCR', RXREV]]);
+    return list({ rev: body.rev, del: body.del, since: body.since, rxrev: -1 }, me, stats);
   }
   if (body.action === 'gcEdit') { await edit(me, stats, String(body.id || ''), body.text); return list({}, me, stats); }
   if (['gcDelete', 'gcMute'].includes(body.action)) {
