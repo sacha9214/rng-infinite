@@ -147,7 +147,11 @@ async function recordVisit(req, body) {
   if (tooManyBeacons(req)) return;
   const day = dayKey(Date.now());
   const ref = host(body.ref) || 'direct', src = tag(body.src);
-  const country = /^[A-Z]{2}$/.test(String(req.headers['x-vercel-ip-country'] || '')) ? req.headers['x-vercel-ip-country'] : 'ZZ';
+  // Pays : l'en-tête de Vercel s'il y est, sinon la base DB-IP du VPS (api/_geo.js, depuis le 2026-11-02 : sur le VPS,
+  // toutes les visites tombaient dans « ZZ »). L'adresse (posée par Caddy) ne sert qu'à ça et n'est gardée nulle part.
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const vercel = String(req.headers['x-vercel-ip-country'] || '');
+  const country = /^[A-Z]{2}$/.test(vercel) ? vercel : (await require('./_geo').country(ip).catch(() => null)) || 'ZZ';
   const fields = ['visits', `ref:${ref}`, `c:${country}`, `d:${body.mobile ? 'mobile' : 'desktop'}`, `l:${body.lang === 'fr' ? 'fr' : 'en'}`, `h:${String(new Date(Date.now()).getUTCHours()).padStart(2, "0")}`];
   // Case de la carte : latitude et longitude arrondies au degré. Absentes (test local, adresse inconnue) : rien.
   const lat = Number(req.headers['x-vercel-ip-latitude']), lon = Number(req.headers['x-vercel-ip-longitude']);

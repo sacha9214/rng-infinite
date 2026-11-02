@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 // Teste les fonctions /api sans Vercel ni Upstash ni Google : fetch est remplacé par un faux Redis en mémoire
 // et par de fausses clés Google.
 //   node tools/test-api.mjs
@@ -2282,6 +2283,24 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(Object.keys(geo).every(k => /^-?\d{1,2},-?\d{1,3}$/.test(k)), 'des cases entières seulement');
   assert.ok(!JSON.stringify(run([['HGETALL', `ang:${day}`], ['HGETALL', `an:${day}`]])).includes('9.9.9'), 'aucune adresse IP stockée');
   { const hh = String(new Date(Date.now()).getUTCHours()).padStart(2, '0'); assert.ok(Number(run([['HGET', `an:${day}`, `h:${hh}`]])[0].result) >= 5, 'heure de la visite comptée'); }
+  // Pays sans Vercel (Sacha, 2026-11-02 : sur le VPS, toutes les visites tombaient dans « ZZ ») : base DB-IP convertie
+  // par tools/geoip-pack.mjs (api/_geo.js). Ici une mini base de test ; l'en-tête de Vercel, s'il y est, passe d'abord.
+  {
+    const Geo = require(path.join(ROOT, 'api/_geo.js'));
+    const csv = ['0.0.0.0,0.255.255.255,ZZ', '5.5.0.0,5.5.255.255,JP', '7.0.0.0,7.255.255.255,BR', '2a01:cb00::,2a01:cbff:ffff:ffff:ffff:ffff:ffff:ffff,FR'].join('\n');
+    const file = path.join(os.tmpdir(), `rng-geo-${process.pid}.bin`);
+    fs.writeFileSync(file, Geo.pack(Geo.parse(csv)));
+    process.env.RNG_GEOIP = file; Geo._reset();
+    assert.deepEqual(await Promise.all(['5.5.1.2', '7.1.1.1', '2a01:cb00:12::1', '::ffff:5.5.9.9', '6.6.6.6', '0.1.2.3', 'nope'].map(ip => Geo.country(ip))), ['JP', 'BR', 'FR', 'JP', null, null, null]);
+    const cc = c => Number(run([['HGET', `an:${day}`, `c:${c}`]])[0].result) || 0;
+    const [jp, br, zz] = [cc('JP'), cc('BR'), cc('ZZ')];
+    await post({ action: 'visit' }, { 'x-forwarded-for': '5.5.3.4, 10.0.0.1' });
+    await post({ action: 'visit' }, { 'x-forwarded-for': '7.7.7.7', 'x-vercel-ip-country': 'CH' }); // Vercel d'abord
+    await post({ action: 'visit' }, { 'x-forwarded-for': '6.6.6.6' }); // hors base : inconnu
+    assert.deepEqual([cc('JP') - jp, cc('BR') - br, cc('ZZ') - zz], [1, 0, 1]);
+    assert.ok(!JSON.stringify(run([['HGETALL', `an:${day}`]])).includes('5.5.3.4'), 'aucune adresse IP stockée');
+    delete process.env.RNG_GEOIP; Geo._reset(); fs.unlinkSync(file);
+  }
   // Réservé au créateur.
   r = await post({ action: 'insights', playerId: frank.playerId, secret: frank.secret }); assert.equal(r.status, 403);
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
