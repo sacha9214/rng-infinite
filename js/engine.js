@@ -787,11 +787,12 @@
   // Land waste : aucun tirage n'est plus mauvais (le pire score, 73 nombres) ; Garbage : moins de 0,04 % plus mauvais
   // (les 3 pires scores, 471 nombres). Idée d'un joueur, 2026-10-16.
   const CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.995, 'divine'], [99.999, 'godlike']];
-  // Mode difficile (Sacha, 2026-11-02) : de 0 à 9 999 999 999, et chaque rareté au-dessus de Common 10 fois plus rare
-  // (choix de Sacha : « plus rare, mais qui rapporte plus » ; les pièces suivent, voir js/shop.js HARD_COINS).
+  // Mode difficile (Sacha, 2026-11-02) : de 0 à 9 999 999 999. Chaque rareté au-dessus de Common est 50 fois plus rare
+  // qu'en mode normal (d'abord 10 fois, avec des pièces 9 fois plus grosses ; puis Sacha, le soir même : « plus dur pour
+  // de vrai, 50 fois », pièces inchangées : le mode difficile rapporte ~40 % des pièces du mode normal par tirage).
   // Le bas (Land waste, Garbage, Trash) garde les mêmes seuils.
   const HARD_MAX = 9999999999;
-  const HARD_CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [95, 'common'], [97.5, 'uncommon'], [99, 'rare'], [99.5, 'epic'], [99.9, 'anomaly'], [99.99, 'mythic'], [99.999, 'celestial'], [99.9995, 'divine'], [99.9999, 'godlike']];
+  const HARD_CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [99, 'common'], [99.5, 'uncommon'], [99.8, 'rare'], [99.9, 'epic'], [99.98, 'anomaly'], [99.998, 'mythic'], [99.9998, 'celestial'], [99.9999, 'divine'], [99.99998, 'godlike']];
   const TIER_ORDER = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
 
   function badgeTier(score) {

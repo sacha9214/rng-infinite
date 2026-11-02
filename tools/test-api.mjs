@@ -5887,9 +5887,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const normalTiers = JSON.parse(/TIER_ODDS = (\{[^;]+\});/.exec(fs.readFileSync(path.join(ROOT, 'js/percentiles.js'), 'utf8'))[1]);
   const ev = (tiers, coins) => Object.entries(tiers).reduce((x, [t, p]) => x + p * coins[t], 0);
   const evN = ev(normalTiers, Shop.COINS), evH = ev(odds.tiers, Shop.HARD_COINS);
-  assert.ok(Math.abs(evH / evN - 1) < 0.03, `pièces moyennes : ${evH.toFixed(3)} (difficile) contre ${evN.toFixed(3)} (normal)`);
+  // Raretés 50 fois plus rares avec les mêmes pièces (Sacha, 2026-11-02, « plus dur pour de vrai ») : ~37 % du mode normal.
+  assert.ok(evH / evN > 0.3 && evH / evN < 0.45, `pièces moyennes : ${evH.toFixed(3)} (difficile) contre ${evN.toFixed(3)} (normal)`);
   const tail = (tiers, from) => engine.TIER_ORDER.slice(engine.TIER_ORDER.indexOf(from)).reduce((x, t) => x + tiers[t], 0);
-  assert.ok(Math.abs(tail(odds.tiers, 'mythic') / tail(normalTiers, 'mythic') - 0.1) < 0.03, 'Mythic ou mieux : 10 fois plus rare');
+  for (const t of ['uncommon', 'mythic', 'infinite']) assert.ok(Math.abs(tail(normalTiers, t) / tail(odds.tiers, t) / 50 - 1) < 0.1, `${t} ou mieux : 50 fois plus rare`);
   // Verrou (idée des joueurs, 2026-11-02) : pas de mode difficile avant un Godlike ou un Infinite du mode normal.
   r = await call(roll, { method: 'POST', body: { ...hk, mode: 'hard' } });
   assert.deepEqual([r.status, r.body.locked], [403, true], 'verrouillé');

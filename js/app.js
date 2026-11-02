@@ -1580,7 +1580,7 @@
       <div class="page">
         <section class="hero">
           <div class="qmarks${Mode.hard ? ' hard' : ''}" aria-hidden="true">${'?'.repeat(Mode.digits()).split('').map(c => `<span>${c}</span>`).join('')}</div>
-          <p class="tagline">${Mode.hard ? '🔥 Hard mode: 10-digit numbers. Rarities are 10× rarer and pay about 10× more.' : 'Infinite rolls. One number at a time. What will yours be?'}</p>
+          <p class="tagline">${Mode.hard ? '🔥 Hard mode: 10-digit numbers. Every rarity is 50× rarer: a Hard Infinite is 1 in 5 million.' : 'Infinite rolls. One number at a time. What will yours be?'}</p>
           <button class="btn-roll${genClass()}" id="roll-btn">Generate</button>
           <p class="hint">
             ${rolls.length ? `<span id="home-life">${Mode.hard ? `${plural(countedRolls(), 'hard roll')} · ${fmt(lifetimeEP())} XP in hard mode` : `${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP`}</span> · ` : ''}
@@ -2046,7 +2046,7 @@
     const locked = hardLocked() && !Mode.hard;
     h.classList.toggle('locked', locked);
     h.innerHTML = locked ? '<span aria-hidden="true">🔒</span> Hard' : '🔥 Hard';
-    h.title = locked ? `🔒 ${window.RNGI18n ? window.RNGI18n.t(HARD_LOCK_MSG) : HARD_LOCK_MSG}` : 'Hard mode: 10-digit numbers, rarer rarities that pay more, its own leaderboards';
+    h.title = locked ? `🔒 ${window.RNGI18n ? window.RNGI18n.t(HARD_LOCK_MSG) : HARD_LOCK_MSG}` : 'Hard mode: 10-digit numbers, rarities 50 times rarer, its own leaderboards';
     h.setAttribute('aria-label', locked ? `Hard mode, locked: ${HARD_LOCK_MSG}` : 'Hard mode');
   }
   // Réponse du serveur sur le verrou (profil « lite », refus 403 d'un tirage) : gardée, et le cadenas suit.
@@ -2067,7 +2067,7 @@
     if (!ok) { toast('Hard mode could not load: check your connection and try again'); return; }
     Collection.built = false; ServerLife.at = 0; ServerLife.xp = null;
     drawModeSwitch();
-    if (mode === 'hard' && !Store.settings.hardSeen) { Store.setSetting('hardSeen', 1); toast('🔥 Hard mode: 10-digit numbers, rarer rarities that pay more, and its own leaderboards', 6000); }
+    if (mode === 'hard' && !Store.settings.hardSeen) { Store.setSetting('hardSeen', 1); toast('🔥 Hard mode: 10-digit numbers, rarities 50 times rarer, and its own leaderboards', 6000); }
     else toast(mode === 'hard' ? '🔥 Hard mode' : 'Normal mode');
     route();
     syncHistory().catch(() => {});
@@ -2186,6 +2186,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-02-hard-50', date: 'Nov 2, 2026', en: ['🔥 Hard mode is now really hard: every rarity above Common is 50 times rarer than in Normal mode (it was 10 times). A Hard Mythic is about 1 in 5,500 and a Hard Infinite about 1 in 5 million. The coins per rarity stay the same, so Hard mode is a true challenge, not the fastest way to earn coins'], fr: ['🔥 Le mode difficile est maintenant vraiment difficile : chaque rareté au-dessus de Common est 50 fois plus rare qu\'en mode normal (c\'était 10 fois). Un Mythic difficile, c\'est environ 1 sur 5 500, et un Infinite difficile environ 1 sur 5 millions. Les pièces par rareté ne changent pas : le mode difficile est un vrai défi, pas le moyen le plus rapide de gagner des pièces'] },
     { id: '2026-11-02-hard-lock', date: 'Nov 2, 2026', en: ['🔒 Hard mode now unlocks after your first Godlike or Infinite roll in Normal mode (idea from players). Until then, the Hard button shows a padlock: hover or tap it to see what you need. Hard rolls you already made stay yours'], fr: ['🔒 Le mode difficile se débloque maintenant après ton premier Godlike ou Infinite en mode normal (idée des joueurs). D\'ici là, le bouton Difficile montre un cadenas : survole-le ou touche-le pour voir ce qu\'il faut. Tes tirages déjà faits en mode difficile restent à toi'] },
     { id: '2026-11-02-hard', date: 'Nov 2, 2026', en: ['🔥 Hard mode! Switch between Normal and Hard under the RNG∞ logo. Hard mode rolls a 10-digit number (0 to 9,999,999,999). Every rarity above Common is 10 times rarer, and pays about 10 times more coins, so on average you earn the same coins and XP as in Normal mode. Badges are worth what they are worth among 10 billion numbers', '🏆 Hard mode has its own leaderboards, history, stats, badge collection, duels and daily tournament. Your coins, skins, level, quests, achievements and the chat are the same in both modes'], fr: ['🔥 Mode difficile ! Passe de Normal à Difficile sous le logo RNG∞. Le mode difficile tire un nombre à 10 chiffres (de 0 à 9 999 999 999). Chaque rareté au-dessus de Common est 10 fois plus rare et rapporte environ 10 fois plus de pièces : en moyenne, tu gagnes autant de pièces et d\'XP qu\'en mode normal. Les badges valent ce qu\'ils valent parmi 10 milliards de nombres', '🏆 Le mode difficile a ses propres classements, historique, stats, collection de badges, duels et tournoi du jour. Tes pièces, tes skins, ton niveau, tes quêtes, tes succès et le chat sont les mêmes dans les deux modes'] },
     { id: '2026-11-02-reactions', date: 'Nov 2, 2026', en: ['🙂 React to messages with an emoji, like in your phone\'s messages: tap 🙂+ next to a message in the global chat, your friends\' chats, duels or your clan, and pick 👍 ❤️ 😂 😮 😢 or 🔥. Tap your reaction again to remove it, and hover a reaction to see who sent it'], fr: ['🙂 Réagis aux messages avec un emoji, comme dans les messages de ton téléphone : touche 🙂+ à côté d\'un message dans le chat global, les chats avec tes amis, les duels ou ton clan, et choisis 👍 ❤️ 😂 😮 😢 ou 🔥. Touche ta réaction à nouveau pour l\'enlever, et survole une réaction pour voir qui l\'a envoyée'] },
