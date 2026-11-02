@@ -2034,10 +2034,10 @@
 
   // Interrupteur Normal / Hard sous le logo (Sacha, 2026-11-02). Pas pendant un tirage ni dans un duel : le tirage en
   // cours appartient à son mode. Tout ce qui dépend des tirages de l'appareil est recalculé pour le nouveau mode.
-  // Verrou (idée des joueurs, Sacha 2026-11-02) : le mode difficile s'ouvre au premier Godlike ou Infinite du mode normal.
+  // Verrou (idée des joueurs, Sacha 2026-11-02) : le mode difficile s'ouvre au premier Divine ou mieux du mode normal.
   // Le serveur décide (api/_lib.js checkHardOpen) ; le site garde sa réponse (settings.hardOpen, profil « lite ») pour
   // le cadenas 🔒 et son message au survol, ou au toucher sur téléphone.
-  const HARD_LOCK_MSG = 'Hard mode unlocks after your first Godlike or Infinite roll in Normal mode';
+  const HARD_LOCK_MSG = 'Hard mode unlocks after a Divine or higher roll in Normal mode';
   const hardLocked = () => Store.settings.hardOpen !== true;
   function drawModeSwitch() {
     const box = document.getElementById('mode-switch'); if (!box) return;
@@ -2054,6 +2054,9 @@
     if (typeof open !== 'boolean' || open === (Store.settings.hardOpen === true)) return;
     Store.setSetting('hardOpen', open);
     drawModeSwitch();
+    // Encore en mode difficile sans y avoir droit (joueur d'avant le verrou) : retour au mode normal, sauf en plein tirage
+    // ou dans un duel (un duel difficile se regarde toujours).
+    if (!open && Mode.hard && currentView !== 'room' && currentView !== 'result' && !rollPending && !SoloAuto.on) { toast(`🔒 ${HARD_LOCK_MSG}`, 6000); switchMode('normal'); }
     if (open && Store.settings.hardSeenOpen !== 1) { Store.setSetting('hardSeenOpen', 1); toast('🔓 Hard mode unlocked! Switch to 🔥 Hard under the logo', 7000, 'achv'); }
   }
   async function switchMode(mode) {
@@ -2187,7 +2190,7 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-11-02-hard-50', date: 'Nov 2, 2026', en: ['🔥 Hard mode is now really hard: every rarity above Common is 50 times rarer than in Normal mode (it was 10 times). A Hard Mythic is about 1 in 5,500 and a Hard Infinite about 1 in 5 million. The coins per rarity stay the same, so Hard mode is a true challenge, not the fastest way to earn coins'], fr: ['🔥 Le mode difficile est maintenant vraiment difficile : chaque rareté au-dessus de Common est 50 fois plus rare qu\'en mode normal (c\'était 10 fois). Un Mythic difficile, c\'est environ 1 sur 5 500, et un Infinite difficile environ 1 sur 5 millions. Les pièces par rareté ne changent pas : le mode difficile est un vrai défi, pas le moyen le plus rapide de gagner des pièces'] },
-    { id: '2026-11-02-hard-lock', date: 'Nov 2, 2026', en: ['🔒 Hard mode now unlocks after your first Godlike or Infinite roll in Normal mode (idea from players). Until then, the Hard button shows a padlock: hover or tap it to see what you need. Hard rolls you already made stay yours'], fr: ['🔒 Le mode difficile se débloque maintenant après ton premier Godlike ou Infinite en mode normal (idée des joueurs). D\'ici là, le bouton Difficile montre un cadenas : survole-le ou touche-le pour voir ce qu\'il faut. Tes tirages déjà faits en mode difficile restent à toi'] },
+    { id: '2026-11-02-hard-lock', date: 'Nov 2, 2026', en: ['🔒 Hard mode now unlocks after a Divine or higher roll in Normal mode (idea from players). Until then, the Hard button shows a padlock: hover or tap it to see what you need. Hard rolls you already made stay yours', '⚔️ Duels: pick Normal or 🔥 Hard when you create one. Only players who unlocked Hard mode can join a Hard duel'], fr: ['🔒 Le mode difficile se débloque maintenant après un tirage Divine ou mieux en mode normal (idée des joueurs). D\'ici là, le bouton Difficile montre un cadenas : survole-le ou touche-le pour voir ce qu\'il faut. Tes tirages déjà faits en mode difficile restent à toi', '⚔️ Duels : choisis Normal ou 🔥 Difficile en créant un duel. Seuls les joueurs qui ont débloqué le mode difficile peuvent rejoindre un duel difficile'] },
     { id: '2026-11-02-hard', date: 'Nov 2, 2026', en: ['🔥 Hard mode! Switch between Normal and Hard under the RNG∞ logo. Hard mode rolls a 10-digit number (0 to 9,999,999,999). Every rarity above Common is 10 times rarer, and pays about 10 times more coins, so on average you earn the same coins and XP as in Normal mode. Badges are worth what they are worth among 10 billion numbers', '🏆 Hard mode has its own leaderboards, history, stats, badge collection, duels and daily tournament. Your coins, skins, level, quests, achievements and the chat are the same in both modes'], fr: ['🔥 Mode difficile ! Passe de Normal à Difficile sous le logo RNG∞. Le mode difficile tire un nombre à 10 chiffres (de 0 à 9 999 999 999). Chaque rareté au-dessus de Common est 10 fois plus rare et rapporte environ 10 fois plus de pièces : en moyenne, tu gagnes autant de pièces et d\'XP qu\'en mode normal. Les badges valent ce qu\'ils valent parmi 10 milliards de nombres', '🏆 Le mode difficile a ses propres classements, historique, stats, collection de badges, duels et tournoi du jour. Tes pièces, tes skins, ton niveau, tes quêtes, tes succès et le chat sont les mêmes dans les deux modes'] },
     { id: '2026-11-02-reactions', date: 'Nov 2, 2026', en: ['🙂 React to messages with an emoji, like in your phone\'s messages: tap 🙂+ next to a message in the global chat, your friends\' chats, duels or your clan, and pick 👍 ❤️ 😂 😮 😢 or 🔥. Tap your reaction again to remove it, and hover a reaction to see who sent it'], fr: ['🙂 Réagis aux messages avec un emoji, comme dans les messages de ton téléphone : touche 🙂+ à côté d\'un message dans le chat global, les chats avec tes amis, les duels ou ton clan, et choisis 👍 ❤️ 😂 😮 😢 ou 🔥. Touche ta réaction à nouveau pour l\'enlever, et survole une réaction pour voir qui l\'a envoyée'] },
     { id: '2026-11-01-giveaways', date: 'Nov 1, 2026', en: ['🎁 Free skin giveaways on the RNG∞ Discord! Join the server (💬 Discord button), react 🎉 on a giveaway in 🎁・giveaways, and one winner gets the skin. Link your Discord in Me → 🔗 Link my Discord to receive it automatically'], fr: ['🎁 Des skins à gagner sur le Discord de RNG∞ ! Rejoins le serveur (bouton 💬 Discord), réagis 🎉 sur un giveaway dans 🎁・giveaways, et un gagnant reçoit le skin. Lie ton Discord dans Moi → 🔗 Link my Discord pour le recevoir tout seul'] },
@@ -3211,8 +3214,8 @@
       finished = true;
       SoloAuto.shownAt = Date.now();
       if (ctx.online) HdrCoins.soon(300);
-      // Premier Godlike ou Infinite du mode normal : le mode difficile s'ouvre, annoncé une fois la révélation finie.
-      if (ctx.online && !ctx.replay && !Mode.hard && (a.tier === 'godlike' || a.tier === 'infinite')) setHardOpen(true);
+      // Premier Divine ou mieux du mode normal : le mode difficile s'ouvre, annoncé une fois la révélation finie.
+      if (ctx.online && !ctx.replay && !Mode.hard && ['divine', 'godlike', 'infinite'].includes(a.tier)) setHardOpen(true);
       if (SoloAuto.on && !ctx.replay) {
         if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
@@ -4130,6 +4133,8 @@
       isPublic: d.isPublic !== false,
       stake: Number.isInteger(Number(d.stake)) && Number(d.stake) >= 0 && Number(d.stake) <= STAKE_MAX ? Number(d.stake) : 0,
       opp: d.opp === 'bots' ? 'bots' : 'friends',
+      // Duel normal ou difficile (Sacha, 2026-11-02), au choix à la création ; par défaut le mode en cours.
+      level: hardLocked() ? 'normal' : d.level === 'hard' || d.level === 'normal' ? d.level : Mode.name,
     };
   }
 
@@ -4141,8 +4146,8 @@
     if (Store.player.name) Online.shop().then(st => { applyShop(st); const w = $('#d-wallet'); if (w) w.textContent = `You have 🪙 ${fmt(st.coins)}`; }).catch(() => {});
     app.innerHTML = `
       <div class="page page-wide">
-        <h1 class="page-title">Duel${Mode.hard ? ' <span class="hard-chip">🔥 Hard mode</span>' : ''}</h1>
-        <p class="panel-note profile-sub">${Mode.hard ? 'Hard mode duels: 10-digit numbers for everyone. Duel rolls count in your hard mode history and leaderboards. Switch to Normal under the logo for a normal duel.' : 'Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard.'}</p>
+        <h1 class="page-title">Duel</h1>
+        <p class="panel-note profile-sub">Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard. Pick Normal or 🔥 Hard when you create a duel: Hard duels use 10-digit numbers and count in your Hard mode history.</p>
         <div class="panel tn-teaser" id="d-tourney"><span class="panel-note">🏆 Loading the tournament…</span></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Live now</h3><span class="panel-note">public games · watch or join without a code</span></div>
@@ -4172,20 +4177,28 @@
       const stepper = (key, value, min, max, typed) => `<div class="stepper"><button data-step="${key}" data-d="-1"${value <= min ? ' disabled' : ''} aria-label="Less">−</button>${typed ? `<input class="mono step-input" data-type="${key}" inputmode="numeric" maxlength="3" value="${value}" aria-label="Rounds to win">` : `<b class="mono">${value}</b>`}<button data-step="${key}" data-d="1"${value >= max ? ' disabled' : ''} aria-label="More">+</button></div>`;
       const chips = (key, values, current, label) => `<div class="chips-row">${values.map(v => `<button class="chip${v === current ? ' on' : ''}" data-pref="${key}" data-v="${v}">${label(v)}</button>`).join('')}</div>`;
       const others = p.size - 1;
+      const hardTxt = hardLocked() ? '🔒 Unlocks after a Divine or higher roll' : '10-digit numbers, rarities 50× rarer';
       $('#d-setup').innerHTML = `
         <div class="setup-step">
-          <div class="setup-q">1 · Who do you play against?</div>
+          <div class="setup-q">1 · Normal or Hard?</div>
+          <div class="choice-row">
+            ${choice('level', 'normal', p.level !== 'hard', '🎲', 'Normal', 'Numbers from 0 to 1,000,000')}
+            ${choice('level', 'hard', p.level === 'hard' && !hardLocked(), hardLocked() ? '🔒' : '🔥', 'Hard', hardTxt)}
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-q">2 · Who do you play against?</div>
           <div class="choice-row">
             ${choice('opp', 'friends', !bots, '👥', 'Other players', 'You get a code to share')}
             ${choice('opp', 'bots', bots, '🤖', 'Bots', 'Starts right away')}
           </div>
         </div>
         <div class="setup-step">
-          <div class="setup-q">2 · How many players?</div>
+          <div class="setup-q">3 · How many players?</div>
           <div class="setup-line">${stepper('size', p.size, 2, 10)}<span class="panel-note">You + ${bots ? plural(others, 'bot') : plural(others, 'opponent')}</span></div>
         </div>
         <div class="setup-step">
-          <div class="setup-q">3 · How do you win?</div>
+          <div class="setup-q">4 · How do you win?</div>
           <div class="choice-row">
             ${choice('mode', 'rounds', p.mode !== 'xp', '🏁', 'Rounds', 'The highest roll wins the round')}
             ${choice('mode', 'xp', p.mode === 'xp', '⚡', 'XP race', 'Every roll adds up')}
@@ -4197,14 +4210,14 @@
         </div>
         ${bots ? '' : `
         <div class="setup-step">
-          <div class="setup-q">4 · Who can join?</div>
+          <div class="setup-q">5 · Who can join?</div>
           <div class="choice-row">
             ${choice('isPublic', 'true', p.isPublic, '🌍', 'Everyone', 'Listed in Live now')}
             ${choice('isPublic', 'false', !p.isPublic, '🔒', 'Only with the code', 'Hidden from the list')}
           </div>
         </div>
         <div class="setup-step">
-          <div class="setup-q">5 · Play for coins? <span class="panel-note">optional</span></div>
+          <div class="setup-q">6 · Play for coins? <span class="panel-note">optional</span></div>
           ${chips('stake', Shop.STAKES, p.stake, v => (v ? `🪙 ${fmt(v)}` : 'No stake'))}
           <div class="setup-line setup-custom"><span class="panel-note">or type your own</span><input class="input setup-input${Shop.STAKES.includes(p.stake) ? '' : ' on'}" data-type="stake" inputmode="numeric" maxlength="5" placeholder="e.g. 75" value="${Shop.STAKES.includes(p.stake) ? '' : p.stake}" aria-label="Coins to bet"><span class="panel-note">coins · 1 to ${fmt(STAKE_MAX)}</span></div>
           <p class="panel-note d-wallet" id="d-wallet">${Store.settings.coins != null ? `You have 🪙 ${fmt(Store.settings.coins)}` : ''}</p>
@@ -4213,7 +4226,7 @@
             : 'Just for fun: nobody pays anything.'}</p>
         </div>`}
         <div class="setup-summary">
-          <span>${plural(p.size, 'player')} · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })}${bots ? ' · against bots' : ` · ${p.isPublic ? 'public' : 'private'}${p.stake ? ` · 🪙 ${fmt(p.stake)} each` : ''}`}</span>
+          <span>${p.level === 'hard' && !hardLocked() ? '🔥 Hard · ' : ''}${plural(p.size, 'player')} · ${goalText({ mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins })}${bots ? ' · against bots' : ` · ${p.isPublic ? 'public' : 'private'}${p.stake ? ` · 🪙 ${fmt(p.stake)} each` : ''}`}</span>
           <button class="btn-roll small" id="d-go">${bots ? `🤖 Start vs ${plural(others, 'bot')}` : '⚔️ Create the duel'}</button>
         </div>
         ${bots ? '<p class="panel-note setup-help">Against bots your rolls count as usual, but not duel wins, rivalries or duel achievements.</p>' : ''}`;
@@ -4231,7 +4244,9 @@
       const btn = e.target.closest('[data-pref]');
       if (!btn) return;
       const key = btn.dataset.pref, v = btn.dataset.v;
-      const value = key === 'mode' || key === 'opp' ? v : key === 'isPublic' ? v === 'true' : Number(v);
+      // Duel difficile pas encore débloqué : on dit ce qu'il faut, sans le choisir.
+      if (key === 'level' && v === 'hard' && hardLocked()) { toast(`🔒 ${HARD_LOCK_MSG}`, 5000); return; }
+      const value = key === 'mode' || key === 'opp' || key === 'level' ? v : key === 'isPublic' ? v === 'true' : Number(v);
       Store.setSetting('duel', { ...p, [key]: value });
       drawSetup();
     });
@@ -8003,7 +8018,7 @@
     if (!Store.player.name) { askName(() => createRoom(bots)); return; }
     const p = duelPrefs();
     try {
-      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots, stake: bots ? 0 : p.stake, ...(Mode.hard ? { hard: true } : {}) }); // duel du mode en cours
+      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots, stake: bots ? 0 : p.stake, ...(p.level === 'hard' && !hardLocked() ? { hard: true } : {}) }); // duel normal ou difficile, choisi à la création
       location.hash = roomHref(d.code);
     } catch (err) {
       roomError(err, () => createRoom(bots));

@@ -6,6 +6,14 @@ Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of 
 
 
 
+
+## Duel Normal / Hard choice + Divine unlock (2026-11-02, branch `claude/duel-mode`)
+
+Sacha: duels get a "1 · Normal or Hard?" step at creation (`duelPrefs().level`, defaults to the current mode, Normal when
+locked); only players who unlocked Hard mode can create or join a Hard duel (server `checkHardOpen`). The unlock is now
+**Divine or higher** in Normal mode (`t:divine`, `t:godlike`, `t:infinite`), was Godlike. A player still in Hard mode
+when the server says locked is sent back to Normal (not during a roll or in a duel).
+
 ## Hard mode 50× rarer (2026-11-02, branch `claude/hard-50x`)
 
 Sacha, the same evening: "make it actually harder: higher XP needed for the rarities". `HARD_CARD_TIERS` now makes every
