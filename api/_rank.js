@@ -7,7 +7,11 @@
 // Pièces du top 10 (idée de furcoat0 et LwsBoi, 2026-10-25) : 1re place 1 000, 2e à 5e 500, 6e à 10e 250, versées une
 // seule fois par mois (verrou topcoins:<mois> posé avec NX, comme le Trash King) ; le joueur est prévenu par la liste
 // gifts:<id> (k: 'top'), annoncée par le site comme un cadeau.
+// Mode difficile (Sacha, 2026-11-02 : « le badge du mois doit dire mode difficile ou mode normal ») : son classement du
+// mois (hlb:month:<mois>) a ses propres badges et ses propres pièces. Un badge du mode difficile porte le mois suivi de
+// « -h » (« 2026-11-h ») dans topawards:<id> et topbest ; sans suffixe, c'est le mode normal (tous les anciens badges).
 const { redis, eco } = require('./_lib');
+const MODES = [{ suffix: '', lb: month => `lb:month:${month}` }, { suffix: '-h', lb: month => `hlb:month:${month}` }];
 
 const TOP_SIZE = 10;
 const BEST_KEY = 'topbest';
@@ -17,7 +21,7 @@ const GIFTS_KEPT = 20, GIFTS_TTL = 30 * 86400; // mêmes valeurs que api/friends
 const markOf = place => (place === 1 ? 1 : place <= 5 ? 5 : place <= TOP_SIZE ? 10 : null);
 const prevMonth = t => { const d = new Date(t); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
 const parse = v => { if (!v) return null; const [top, month] = String(v).split(':'); return { top: Number(top), month }; };
-const better = (a, b) => !b || a.top < b.top || (a.top === b.top && a.month > b.month);
+const better = (a, b) => !b || a.top < b.top || (a.top === b.top && a.month.slice(0, 7) > b.month.slice(0, 7));
 
 // Top 10 avec places partagées (signalé par R77, 2026-10-30) : à score égal, même place et même badge (1, 1, 3…),
 // au lieu d'un ordre décidé par Redis sur l'identifiant. Les ex aequo de la 10e place entrent aussi.
@@ -39,22 +43,24 @@ let settled = ''; // dernier mois figé, gardé en mémoire : une seule lecture 
 async function settleMonth(t = Date.now()) {
   const month = prevMonth(t);
   if (settled === month) return;
-  const [done] = await redis([['GET', `topawards:done:${month}`]]);
-  if (!done) {
+  for (const mode of MODES) {
+    const tag = `${month}${mode.suffix}`; // mois du badge : « 2026-10 » (normal) ou « 2026-10-h » (difficile)
+    const [done] = await redis([['GET', `topawards:done:${tag}`]]);
+    if (done) continue;
     // Les écritures sont idempotentes : deux requêtes simultanées donnent le même résultat.
-    const { ids, places } = await topOf(`lb:month:${month}`);
+    const { ids, places } = await topOf(mode.lb(month));
     if (ids.length) {
       const [bests] = await redis([['HMGET', BEST_KEY, ...ids]]);
       const writes = [];
       ids.forEach((id, i) => {
-        const award = { top: markOf(places[i]), month };
-        writes.push(['HSET', awardKey(id), month, award.top]);
-        if (better(award, parse(bests[i]))) writes.push(['HSET', BEST_KEY, id, `${award.top}:${month}`]);
+        const award = { top: markOf(places[i]), month: tag };
+        writes.push(['HSET', awardKey(id), tag, award.top]);
+        if (better(award, parse(bests[i]))) writes.push(['HSET', BEST_KEY, id, `${award.top}:${tag}`]);
       });
       await redis(writes);
-      await payCoins(ids, month, t, places);
+      await payCoins(ids, tag, t, places);
     }
-    await redis([['SET', `topawards:done:${month}`, String(t)]]);
+    await redis([['SET', `topawards:done:${tag}`, String(t)]]);
   }
   settled = month;
 }

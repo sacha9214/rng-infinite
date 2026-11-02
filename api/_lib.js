@@ -19,6 +19,22 @@ const engine = createEngine(meta, percentiles);
     return v >= 0 ? v : (memo[n] = raw(n));
   };
 }
+// Mode difficile (demandé par Sacha, 2026-11-02) : tirages de 0 à 9 999 999 999, données de tools/build-hard.mjs, chargées
+// à la première demande (le serveur démarre même sans elles : le mode difficile répond alors 503).
+let HARD = null;
+function hardEngine() {
+  if (HARD) return HARD;
+  const fs = require('node:fs'), path = require('node:path'), dir = path.join(__dirname, '../data');
+  if (!fs.existsSync(path.join(dir, 'hard-meta.json'))) throw Object.assign(new Error('Hard mode is not ready yet'), { status: 503 });
+  HARD = createEngine(require('../data/hard-meta.json'), require('../data/hard-percentiles.json'), { hard: true });
+  return HARD;
+}
+const HARD_MAX = 9999999999;
+const isHard = mode => mode === 'hard';
+const engineOf = mode => (isHard(mode) ? hardEngine() : engine);
+// Clés du mode difficile : celles du mode normal précédées de « h » (hlb:day:<jour>, hbest:…, hhist:<id>, hlb:xp…) ;
+// stats:<id> garde ses champs à part, préfixés « h: » (h:rolls, h:xp, h:best, h:t:<rareté>, h:first).
+const hardKey = k => `h${k}`;
 // Laisse passer les autres demandes pendant un long calcul (à appeler toutes les quelques milliers d'itérations).
 const breathe = () => new Promise(done => setImmediate(done));
 // Pause au temps plutôt qu'au nombre (Sacha, 2026-11-02 : « pourquoi le tirage auto est si lent ») : le serveur relevait
@@ -534,10 +550,10 @@ const worstKeys = p => ({ lb: p.lb.replace(/^lb:/, 'lbw:'), best: p.best.replace
 // cadeaux (toutes les minutes, api/friends.js 'gifts'). 10 dernières gardées, un jour.
 const BIG_TIERS = new Set(['celestial', 'divine', 'godlike', 'infinite']), BIG_KEEP = 10, BIG_TTL = 86400;
 const bigKey = id => `bigin:${id}`;
-async function pushBigRoll(playerId, n, tier, t) {
+async function pushBigRoll(playerId, n, tier, t, hard = false) {
   const [friends, name] = await redis([['SMEMBERS', `fr:${playerId}`], ['HGET', 'names', playerId]]);
   if (!name || !friends || !friends.length) return 0;
-  const row = JSON.stringify({ name, n, tier, t });
+  const row = JSON.stringify({ name, n, tier, t, ...(hard ? { h: 1 } : {}) });
   await redis(friends.flatMap(f => [['RPUSH', bigKey(f), row], ['LTRIM', bigKey(f), -BIG_KEEP, -1], ['EXPIRE', bigKey(f), BIG_TTL]]));
   return friends.length;
 }
@@ -670,6 +686,69 @@ async function recordRoll(playerId, n, t) {
   return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 
+// Tirage du mode difficile (Sacha, 2026-11-02). Séparés du mode normal : historique, badges, meilleur tirage, compteurs de
+// rareté et tous les classements (clés « h… »). Communs aux deux modes : l'XP à vie et le niveau (xpLife), les pièces
+// (Shop.HARD_COINS, mêmes rendements décroissants et même compteur du jour rc:<jour>), les quêtes, les succès, le clan.
+// Pas d'événement de la semaine ni de classement de la médiane en mode difficile.
+const hardPeriods = t => scopes(t).map(p => ({ ...p, xp: hardKey(xpKey(p)), worst: { lb: hardKey(worstKeys(p).lb), best: hardKey(worstKeys(p).best) }, lb: hardKey(p.lb), best: hardKey(p.best), count: hardKey(p.count), total: hardKey(p.total) }));
+const H_XP_LB = hardKey(XP_LB), H_ROLLS_LB = hardKey(ROLLS_LB), H_WORST_LB = hardKey(WORST_LB), H_WORST_BEST = hardKey(WORST_BEST);
+const hardHistoryKey = id => hardKey(historyKey(id)), hardBadgesKey = id => hardKey(badgesKey(id));
+async function recordHardRoll(playerId, n, t) {
+  const a = hardEngine().analyze(n), s = a.total;
+  const periods = hardPeriods(t), wPeriods = periods.filter(p => p.period !== 'all');
+  const rcKey = `rc:${dayKey(t)}:${playerId}`;
+  const [worst, clanId, ...rest] = await redis([['ZSCORE', H_WORST_LB, playerId], ['HGET', 'clanof', playerId], ...periods.map(p => ['ZSCORE', p.lb, playerId]), ...wPeriods.map(p => ['ZSCORE', p.worst.lb, playerId]), ['INCR', rcKey], ['EXPIRE', rcKey, 2 * 86400]]);
+  const current = rest.slice(0, periods.length), worstNow = rest.slice(periods.length, periods.length + wPeriods.length);
+  const dayRoll = Number(rest[periods.length + wPeriods.length]) || 1;
+  const improved = periods.filter((p, i) => current[i] === null || s > Number(current[i]));
+  const entry = JSON.stringify({ n, s, t });
+  const sk = statsKey(playerId), qk = questKey(dayKey(t), playerId), wk = weekQuestKey(weekKey(t), playerId);
+  const writes = [
+    // « heure:nombre:XP » : l'XP gardée évite de réanalyser 100 000 nombres à 10 chiffres (~0,2 ms chacun) au profil.
+    ['ZADD', hardHistoryKey(playerId), t, `${t}:${n}:${s}`], ['ZREMRANGEBYRANK', hardHistoryKey(playerId), 0, -(HISTORY_CAP + 1)],
+    ['HINCRBY', sk, 'h:rolls', 1], ['HINCRBY', sk, 'h:xp', s], ['HINCRBY', sk, `h:t:${a.tier}`, 1], ['HSETNX', sk, 'h:first', t],
+    ['HINCRBY', sk, 'xpLife', s], // niveau commun aux deux modes
+    ['ZINCRBY', H_XP_LB, s, playerId], ['ZINCRBY', H_ROLLS_LB, 1, playerId],
+    ['HINCRBY', qk, 'rolls', 1], ['HINCRBY', qk, 'xp', s], ['HINCRBY', qk, `t:${a.tier}`, 1], ['EXPIRE', qk, QUEST_TTL],
+    ['HINCRBY', wk, 'rolls', 1], ...(WEEK_QUEST_TIERS.has(a.tier) ? [['HINCRBY', wk, `t:${a.tier}`, 1]] : []), ['EXPIRE', wk, WEEK_QUEST_TTL],
+    ['ZADD', SEEN_KEY, t, playerId], ['HINCRBY', actKey(dayKey(t)), playerId, 1], ['EXPIRE', actKey(dayKey(t)), ACT_TTL], ['HSETNX', sk, 'first', t],
+  ];
+  if (a.earnedIds.length) writes.push(['SADD', hardBadgesKey(playerId), ...a.earnedIds]);
+  if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
+  let coins = 0;
+  const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
+  { const full = Shop.HARD_COINS[a.tier] || 0, c = Shop.rollPay(full, dayRoll, a.tier); writes.push(...eco('in:rolls', c, t), ...eco('in:hard', c, t)); coins = c;
+    if (full > c) writes.push(['HINCRBY', sk, 'rollCut', full - c]);
+    const r = Events.rushBonus(c, t);
+    if (r) { writes.push(['HINCRBY', sk, 'bonus', r], ['HINCRBY', sk, 'rushBonus', r], ...eco('in:weekend', r, t)); coins += r; } }
+  for (const p of periods) {
+    writes.push(['INCR', p.total], ['HINCRBY', p.count, playerId, 1]);
+    if (p.ttl) writes.push(['EXPIRE', p.total, p.ttl], ['EXPIRE', p.count, p.ttl]);
+  }
+  for (const p of wPeriods) { writes.push(['ZINCRBY', p.xp, s, playerId]); if (dayRoll === 1) writes.push(['EXPIRE', p.xp, XP_TTL[p.period]]); }
+  if (worst === null || s < Number(worst)) writes.push(['ZADD', H_WORST_LB, s, playerId], ['HSET', H_WORST_BEST, playerId, entry]);
+  wPeriods.forEach((p, i) => {
+    if (worstNow[i] !== null && s >= Number(worstNow[i])) return;
+    writes.push(['ZADD', p.worst.lb, s, playerId], ['HSET', p.worst.best, playerId, entry], ['EXPIRE', p.worst.lb, p.ttl], ['EXPIRE', p.worst.best, p.ttl]);
+  });
+  for (const p of improved) {
+    writes.push(['ZADD', p.lb, s, playerId], ['HSET', p.best, playerId, entry]);
+    if (p.ttl) writes.push(['EXPIRE', p.lb, p.ttl], ['EXPIRE', p.best, p.ttl]);
+  }
+  writes.push(['HGETALL', sk], ['SCARD', badgesKey(playerId)], ['SCARD', hardBadgesKey(playerId)], ['ZREVRANK', periods[0].lb, playerId]);
+  const out = await redis(writes);
+  const dayRank = out[out.length - 1] === null ? null : Number(out[out.length - 1]) + 1;
+  const stats = { ...toObject(out[out.length - 4]), badges: Number(out[out.length - 3]), hbadges: Number(out[out.length - 2]) };
+  const fix = [];
+  if (s > Number(stats['h:best'] || 0)) { fix.push(['HSET', sk, 'h:best', s]); stats['h:best'] = String(s); }
+  if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', sk, 'dayTop', 1]); stats.dayTop = 1; } // Daily King, commun
+  if (fix.length) await redis(fix);
+  if (BIG_TIERS.has(a.tier)) await pushBigRoll(playerId, n, a.tier, t, true).catch(() => {});
+  if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a, hard: true })).catch(() => {});
+  if (['divine', 'godlike', 'infinite'].includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t, true).catch(() => {});
+  return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
+}
+
 // Tirages en attente de révélation. Un tirage de duel n'existe pour personne (historique, classement, stats, pièces,
 // succès) tant que sa révélation n'est pas finie à l'écran : sinon un 2e onglet ouvert sur History la gâche.
 // Chaque entrée = { rolls: [[id, n, t]…], w: [commandes Redis] }, score = heure de révélation complète.
@@ -698,7 +777,7 @@ async function flushDue(now = Date.now()) {
       const [claimed] = await redis([['ZREM', PENDING_KEY, member]]);
       if (Number(claimed) !== 1) continue;
       const entry = JSON.parse(member);
-      for (const [id, n, t] of entry.rolls || []) await recordRoll(id, n, t);
+      for (const [id, n, t, mode] of entry.rolls || []) await (isHard(mode) ? recordHardRoll(id, n, t) : recordRoll(id, n, t));
       if (entry.w && entry.w.length) await redis(entry.w);
       if (entry.wager) await settleWager(entry.wager.code, entry.wager.winner || null); // pot du duel, ou remboursement
       if (entry.lobby) await lobbyCheck(entry.lobby, now);
@@ -708,7 +787,8 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
+module.exports = { hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
+  bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,

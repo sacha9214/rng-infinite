@@ -8,11 +8,19 @@
   const MAX_ROLL = 1000000;
 
   // ---------------------------------------------------------------- helpers numériques
+  // Mode difficile (Sacha, 2026-11-02 : nombres à 10 chiffres) : les tests passent par les nombres premiers jusqu'à
+  // 100 000 (crible fait une fois, à la première demande) au lieu de tous les impairs ; mêmes réponses, 3 à 30 fois
+  // plus vite sur un nombre à 10 chiffres (ODD_ABUNDANT coûtait 0,4 ms par tirage).
+  let PRIMES = null;
+  function primes() {
+    if (PRIMES) return PRIMES;
+    const LIM = 100000, sieve = new Uint8Array(LIM + 1), out = [];
+    for (let i = 2; i <= LIM; i++) { if (sieve[i]) continue; out.push(i); for (let j = i * i; j <= LIM; j += i) sieve[j] = 1; }
+    return (PRIMES = out);
+  }
   function isPrime(n) {
     if (n < 2) return false;
-    if (n < 4) return true;
-    if (n % 2 === 0 || n % 3 === 0) return false;
-    for (let i = 5; i * i <= n; i += 6) if (n % i === 0 || n % (i + 2) === 0) return false;
+    for (const p of primes()) { if (p * p > n) return true; if (n % p === 0) return n === p; }
     return true;
   }
   // Nombre heureux : en remplaçant le nombre par la somme des carrés de ses chiffres, on finit par tomber sur 1.
@@ -33,7 +41,10 @@
     while (p < n) p *= base;
     return p === n;
   }
-  const isFibonacci = n => isSquare(5 * n * n + 4) || isSquare(5 * n * n - 4);
+  // Liste plutôt que la formule 5n² ± 4 : au-delà de 4 millions, 5n² dépasse la précision exacte des nombres de JS.
+  const FIBS = new Set([0, 1]);
+  for (let a = 1, b = 2; b <= 1e11; [a, b] = [b, a + b]) FIBS.add(b);
+  const isFibonacci = n => FIBS.has(n);
   function isPronic(n) { const k = Math.round((Math.sqrt(1 + 4 * n) - 1) / 2); return k * (k + 1) === n; }
   function isPalindrome(s) {
     for (let i = 0, j = s.length - 1; i < j; i++, j--) if (s[i] !== s[j]) return false;
@@ -349,10 +360,18 @@
   const STROBO = { 0: '0', 1: '1', 6: '9', 8: '8', 9: '6' };
 
   // Somme des diviseurs propres de n (n impair : seuls les diviseurs impairs comptent, on saute les pairs).
+  // Par la décomposition en facteurs premiers : σ(n) = Π (p^(e+1) − 1) / (p − 1), puis σ(n) − n.
   function sumProperDivisors(n) {
-    let sum = 1;
-    for (let i = 3; i * i <= n; i += 2) if (n % i === 0) { sum += i; if (i * i !== n) sum += n / i; }
-    return sum;
+    let rest = n, sigma = 1;
+    for (const p of primes()) {
+      if (p * p > rest) break;
+      if (rest % p) continue;
+      let pk = 1, part = 1;
+      while (rest % p === 0) { rest /= p; pk *= p; part += pk; }
+      sigma *= part;
+    }
+    if (rest > 1) sigma *= rest + 1;
+    return sigma - n;
   }
 
   // ---------------------------------------------------------------- checks : id -> (ctx) => bool
@@ -556,7 +575,7 @@
     SQUARE_IN_4: c => biggestSquareInside(c.s) === 4, SQUARE_IN_5: c => biggestSquareInside(c.s) === 5,
     CUBE: c => isCube(c.n),
     FIBONACCI: c => isFibonacci(c.n),
-    POWER_OF_TWO: c => c.n > 0 && (c.n & (c.n - 1)) === 0,
+    POWER_OF_TWO: c => isPowerOf(c.n, 2), // pas de « & » : il coupe à 32 bits (mode difficile)
     POWER_OF_THREE: c => isPowerOf(c.n, 3),
     POWER_OF_FIVE: c => isPowerOf(c.n, 5),
     POWER_OF_SEVEN: c => isPowerOf(c.n, 7),
@@ -768,6 +787,11 @@
   // Land waste : aucun tirage n'est plus mauvais (le pire score, 73 nombres) ; Garbage : moins de 0,04 % plus mauvais
   // (les 3 pires scores, 471 nombres). Idée d'un joueur, 2026-10-16.
   const CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [50, 'common'], [75, 'uncommon'], [90, 'rare'], [95, 'epic'], [99, 'anomaly'], [99.9, 'mythic'], [99.99, 'celestial'], [99.995, 'divine'], [99.999, 'godlike']];
+  // Mode difficile (Sacha, 2026-11-02) : de 0 à 9 999 999 999, et chaque rareté au-dessus de Common 10 fois plus rare
+  // (choix de Sacha : « plus rare, mais qui rapporte plus » ; les pièces suivent, voir js/shop.js HARD_COINS).
+  // Le bas (Land waste, Garbage, Trash) garde les mêmes seuils.
+  const HARD_MAX = 9999999999;
+  const HARD_CARD_TIERS = [[0.001, 'landwaste'], [0.04, 'garbage'], [1, 'trash'], [95, 'common'], [97.5, 'uncommon'], [99, 'rare'], [99.5, 'epic'], [99.9, 'anomaly'], [99.99, 'mythic'], [99.999, 'celestial'], [99.9995, 'divine'], [99.9999, 'godlike']];
   const TIER_ORDER = ['landwaste', 'garbage', 'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
 
   function badgeTier(score) {
@@ -776,7 +800,9 @@
   }
 
   // ---------------------------------------------------------------- moteur
-  function createEngine(meta, percentiles) {
+  // opts.hard : moteur du mode difficile (données de tools/build-hard.mjs, raretés HARD_CARD_TIERS, tirages à 10 chiffres).
+  function createEngine(meta, percentiles, opts = {}) {
+    const hard = !!opts.hard, MAX = hard ? HARD_MAX : MAX_ROLL, TIERS = hard ? HARD_CARD_TIERS : CARD_TIERS;
     const badges = meta.map(b => {
       const check = CHECKS[b.id];
       if (!check) throw new Error('Badge sans check : ' + b.id);
@@ -811,7 +837,7 @@
       return found < 0 ? 0 : percentiles[found][1];
     }
 
-    const tierOfPct = p => { for (const [limit, tier] of CARD_TIERS) if (p < limit) return tier; return 'infinite'; };
+    const tierOfPct = p => { for (const [limit, tier] of TIERS) if (p < limit) return tier; return 'infinite'; };
     function cardTier(total) {
       return tierOfPct(percentileOf(total));
     }
@@ -879,15 +905,22 @@
       return groups;
     }
 
-    // Tirage uniforme sur [0, 1 000 000] via crypto (rejet pour éviter le biais du modulo).
+    // Tirage uniforme sur [0, MAX] via crypto (rejet pour éviter le biais du modulo). Au-delà de 2³² (mode difficile),
+    // deux mots de 32 bits font un entier de 52 bits.
     function roll() {
-      const span = MAX_ROLL + 1;
+      const span = MAX + 1;
       const cryptoObj = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
       if (!cryptoObj) return Math.floor(Math.random() * span);
-      const limit = Math.floor(0x100000000 / span) * span;
-      const buf = new Uint32Array(1);
-      do { cryptoObj.getRandomValues(buf); } while (buf[0] >= limit);
-      return buf[0] % span;
+      if (span <= 0x100000000) {
+        const limit = Math.floor(0x100000000 / span) * span;
+        const buf = new Uint32Array(1);
+        do { cryptoObj.getRandomValues(buf); } while (buf[0] >= limit);
+        return buf[0] % span;
+      }
+      const W = 2 ** 52, limit = Math.floor(W / span) * span, buf = new Uint32Array(2);
+      let x;
+      do { cryptoObj.getRandomValues(buf); x = (buf[0] % 0x100000) * 0x100000000 + buf[1]; } while (x >= limit);
+      return x % span;
     }
 
     function topLabel(percentile) {
@@ -899,7 +932,7 @@
       return null;
     }
 
-    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, prevTier, badgeTier, roll, topLabel, MAX_ROLL, TIER_ORDER };
+    return { badges, byId, analyze, scoreOf, highlight, percentileOf, cardTier, nextTier, prevTier, badgeTier, roll, topLabel, MAX_ROLL: MAX, hard, digits: String(MAX).length, TIER_ORDER };
   }
 
   function formatPct(v) {
@@ -909,7 +942,7 @@
     return v <= 0 ? '<0.001' : v.toFixed(3);
   }
 
-  const api = { createEngine, MAX_ROLL, TIER_ORDER, badgeTier, formatPct };
+  const api = { createEngine, MAX_ROLL, HARD_MAX, HARD_CARD_TIERS, TIER_ORDER, badgeTier, formatPct };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);

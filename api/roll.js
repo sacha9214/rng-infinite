@@ -1,8 +1,8 @@
-// POST /api/roll  { playerId, secret, name, nonce? }
+// POST /api/roll  { playerId, secret, name, nonce?, mode? }   mode 'hard' : mode difficile, de 0 à 9 999 999 999 (2026-11-02)
 // Le serveur tire le nombre (personne ne peut choisir son 1337), calcule l'XP avec le moteur du site,
 // puis met à jour le meilleur tirage du joueur pour le jour, la semaine et tous les temps.
 const crypto = require('node:crypto');
-const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, flushDue, statsKey, grantGoogleBonus } = require('./_lib');
+const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, recordHardRoll, hardEngine, HARD_MAX, flushDue, statsKey, grantGoogleBonus } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 // Une révélation dure au moins ~10 s : 8 s minimum entre deux tirages ne gêne jamais un vrai joueur.
@@ -30,7 +30,10 @@ module.exports = async (req, res) => {
     if (!(await claimName(playerId, name))) return send(res, 409, { error: 'This name is already taken, pick another one' });
 
     const nonce = /^[0-9a-f]{16,32}$/.test(String(body.nonce || '')) ? String(body.nonce) : '';
-    // Délai entre deux tirages : 8 s, raccourci par le niveau de vitesse acheté dans la boutique (js/shop.js).
+    const hard = body.mode === 'hard';
+    if (hard) hardEngine(); // données absentes : 503 avant de prendre le délai d'attente
+    // Délai entre deux tirages : 8 s, raccourci par le niveau de vitesse acheté dans la boutique (js/shop.js). Le même pour
+    // les deux modes : passer de l'un à l'autre ne fait jamais tirer plus vite.
     // Dans la même lecture : ce joueur a-t-il un compte Google sans avoir reçu son bonus (comptes associés avant le
     // 2026-10-11) ? Il le reçoit alors à son prochain tirage, sans avoir à se reconnecter.
     const [level, linked, hadBonus, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ['GET', `player:${playerId}:google`], ['HGET', statsKey(playerId), 'googleBonus'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
@@ -38,11 +41,11 @@ module.exports = async (req, res) => {
     const [cooldown] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX']]);
     if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish' });
 
-    const n = crypto.randomInt(0, 1000001);
+    const n = hard ? crypto.randomInt(0, HARD_MAX + 1) : crypto.randomInt(0, 1000001);
     const t = Date.now();
-    const { s, coins, rate, dayRoll, bestToday, dayRank, achievements } = await recordRoll(playerId, n, t);
+    const { s, coins, rate, dayRoll, bestToday, dayRank, achievements } = await (hard ? recordHardRoll : recordRoll)(playerId, n, t);
     // rate / dayRoll : taux des pièces de tirage du moment (rendements décroissants), affiché discrètement sous les pièces.
-    const result = { n, s, t, coins, rate, dayRoll, bestToday, dayRank, achievements };
+    const result = { n, s, t, coins, rate, dayRoll, bestToday, dayRank, achievements, ...(hard ? { mode: 'hard' } : {}) };
     if (linked && !hadBonus) { const bonus = await grantGoogleBonus(playerId); if (bonus) result.googleBonus = bonus; }
     if (nonce) await redis([['SET', nonceKey(playerId, nonce), JSON.stringify(result), 'EX', NONCE_TTL_S]]);
     return send(res, 200, result);

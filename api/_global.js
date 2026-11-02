@@ -142,7 +142,7 @@ const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'E
 // ---------------------------------------------------------------- lecture
 const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
 // Message du serveur (grand tirage) : pas d'auteur, pas de texte libre ; le site écrit la phrase (et la traduit).
-const view = (m, me, quote, tags, mods) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr } : {
+const view = (m, me, quote, tags, mods) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr, ...(m.h ? { hard: true } : {}) } : {
   id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x, ...(tags && tags.get(m.a) ? { clan: tags.get(m.a) } : {}),
   ...(mods && mods.has(m.a) ? { mod: true } : {}), // 🛡️ Modérateur du chat (Sacha, 2026-11-01)
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
@@ -195,7 +195,7 @@ const pinView = raw => { const p = parse(raw); return p ? view(p, null) : null; 
 // un toutes les 30 s pour tout le chat et un toutes les 10 min par joueur ; jamais pour un joueur rendu muet.
 // La file gc:sysq (score = heure d'affichage) est vidée par la relecture du chat (list), sans requête en plus.
 const BIG = ['divine', 'godlike', 'infinite'], SYSQ = 'gc:sysq', SYS_DELAY = 15000, SYS_GAP = 30000, SYS_PLAYER_GAP = 10 * 60000;
-async function queueBigRoll(id, n, tier, t = Date.now()) {
+async function queueBigRoll(id, n, tier, t = Date.now(), hard = false) { // hard : tirage du mode difficile (2026-11-02)
   if (!BIG.includes(tier) || !isPlayerId(id)) return false;
   const [name, muted] = await redis([['HGET', 'names', id], ['GET', `gc:mute:${id}`]]);
   if (!name || muted) return false;
@@ -203,7 +203,7 @@ async function queueBigRoll(id, n, tier, t = Date.now()) {
   if (mine !== 'OK') return false;
   const [all] = await redis([['SET', 'gc:sysrl', '1', 'PX', String(SYS_GAP), 'NX']]);
   if (all !== 'OK') { await redis([['DEL', `gc:sysp:${id}`]]); return false; }
-  await redis([['ZADD', SYSQ, String(t + SYS_DELAY), JSON.stringify({ p: id, v: n, tr: tier, k: crypto.randomBytes(4).toString('hex') })]]);
+  await redis([['ZADD', SYSQ, String(t + SYS_DELAY), JSON.stringify({ p: id, v: n, tr: tier, ...(hard ? { h: 1 } : {}), k: crypto.randomBytes(4).toString('hex') })]]);
   return true;
 }
 async function flushSys(due) {
@@ -213,7 +213,7 @@ async function flushSys(due) {
     const e = parse(member); if (!e || !isPlayerId(e.p)) continue;
     const [name, muted] = await redis([['HGET', 'names', e.p], ['GET', `gc:mute:${e.p}`]]);
     if (!name || muted) continue; // rendu muet entre-temps
-    await append({ id: crypto.randomBytes(6).toString('hex'), sys: 'roll', n: name, v: Number(e.v), tr: e.tr });
+    await append({ id: crypto.randomBytes(6).toString('hex'), sys: 'roll', n: name, v: Number(e.v), tr: e.tr, ...(e.h ? { h: 1 } : {}) });
   }
 }
 // Ajoute un message en fin de liste. Heure strictement croissante : « since » ne perd jamais un message écrit dans la

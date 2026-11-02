@@ -16,7 +16,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const { engineOf, HARD_MAX, hardEngine, eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
@@ -89,8 +89,11 @@ function rules(body) {
   // N'importe quel nombre entier de 1 à 1 000 (idée de dog, 2026-11-01), plus seulement les montants des puces ; une
   // mise hors limites est refusée (create), jamais changée en silence. -1 = mise invalide.
   const stake = stakeValue(body.stake);
-  return { size, mode, target, stake, isPublic: body.public !== false };
+  // Duel du mode difficile (Sacha, 2026-11-02) : nombres à 10 chiffres, comptés dans les stats et classements « hard ».
+  return { size, mode, target, stake, isPublic: body.public !== false, hard: body.hard === true };
 }
+const modeOf = room => (room.h.hard === '1' ? 'hard' : 'normal');
+const scorer = room => engineOf(modeOf(room));
 const STAKE_MAX = Math.max(...Shop.STAKES);
 const stakeValue = raw => {
   if (raw === undefined || raw === null || raw === '' || raw === 0 || raw === '0' || raw === false) return 0;
@@ -153,7 +156,7 @@ function score(room) {
   const wins = Array(count).fill(0), totals = Array(count).fill(0);
   const list = room.rounds.map(r => {
     // Pas de nombre (arrivé après cette manche, ou sorti de la partie) : -1, ne gagne jamais la manche.
-    const s = room.players.map((p, i) => (r.n[i] == null ? -1 : engine.scoreOf(r.n[i])));
+    const E = scorer(room), s = room.players.map((p, i) => (r.n[i] == null ? -1 : E.scoreOf(r.n[i])));
     s.forEach((v, i) => { if (v > 0) totals[i] += v; });
     const winner = argmax(s);
     if (winner !== null) wins[winner]++;
@@ -232,12 +235,13 @@ async function advance(room, now = Date.now()) {
   if (ttls.some(ms => Number(ms) > 0)) return room;
   const [lock] = await redis([['SET', `${roomKey(room.code)}:draw:${k}`, '1', 'NX', 'EX', TTL]]);
   if (lock !== 'OK') return (await load(room.code)) || room;
-  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, 1000001))), ...(pace < 1 ? { pace } : {}) };
+  const top = room.h.hard === '1' ? HARD_MAX + 1 : 1000001;
+  const round = { t: now, revealAt: now + LEAD_MS, n: room.players.map(p => (isOut(room, p) ? null : crypto.randomInt(0, top))), ...(pace < 1 ? { pace } : {}) };
   const due = round.revealAt + Math.round(REVEAL_MS * pace);
   room.rounds.push(round);
   const outcome = await duelOutcome(room, now);
   // Tirages (et bilan du duel s'il se termine) appliqués seulement une fois la manche révélée : voir queueReveal.
-  const rolls = room.players.map((p, i) => [p.id, round.n[i], round.t]).filter((x, i) => !room.players[i].bot && x[1] != null);
+  const rolls = room.players.map((p, i) => [p.id, round.n[i], round.t, modeOf(room)]).filter((x, i) => !room.players[i].bot && x[1] != null);
   await redis([
     ['RPUSH', roundsKey(room.code), JSON.stringify(round)],
     ...[roomKey(room.code), playersKey(room.code), roundsKey(room.code)].map(key => ['EXPIRE', key, TTL]),
@@ -259,7 +263,7 @@ async function advance(room, now = Date.now()) {
 // Réactions des bots, datées juste après la révélation (le site ne les montre qu'à cette heure-là) :
 // 🔥 ou 🎉 pour le gagnant de la manche, 😭 💀 ou 😱 sinon, pas à chaque fois.
 function botReactions(room, round) {
-  const s = round.n.map(n => engine.scoreOf(n));
+  const E = scorer(room), s = round.n.map(n => (n == null ? -1 : E.scoreOf(n)));
   const best = Math.max(...s);
   const out = [];
   room.players.forEach((p, i) => {
@@ -354,7 +358,7 @@ async function view(room, me) {
   const first = room.h[`first:${k}`];
   const last = room.rounds[k - 1];
   return {
-    code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room),
+    code: room.code, status, size: room.size, mode: room.mode, target: room.target, public: room.h.public === '1', bots: hasBots(room), ...(room.h.hard === '1' ? { hard: true } : {}),
     kicked: !!me && !!room.h[`kick:${me}`], // ce joueur a été exclu par l'hôte
     reward: room.h.reward || null, // 'ok' ou la raison pour laquelle la victoire n'a pas été récompensée
     stake: stakeOf(room), pot: potOf(room), settled: !room.h.settled ? null : room.h.settled === 'refund' ? 'refund' : 'paid', // jamais d'identifiant
@@ -408,7 +412,7 @@ async function liveRooms(now = Date.now()) {
     if (h.ended === '1' || now - lastSeen({ h, players }) > ABANDON_MS) return null; // désertée
     return {
       code, status: h.started === '1' ? 'playing' : 'lobby', size: Number(h.size), count: players.length,
-      mode: h.mode, target: Number(h.target), round: Number(out[i * 3 + 2] || 0),
+      mode: h.mode, target: Number(h.target), round: Number(out[i * 3 + 2] || 0), ...(h.hard === '1' ? { hard: true } : {}),
       host: (players.find(p => p.id === h.host) || players[0]).name, players: players.map(p => p.name),
     };
   }).filter(Boolean);
@@ -463,7 +467,7 @@ module.exports = async (req, res) => {
         if (Number(created) !== 1) continue;
         const list = players || [await seat(playerId, name)];
         await redis([
-          ['HSET', roomKey(code), 'size', players ? list.length : r.size, 'mode', r.mode, 'target', r.target, 'stake', r.stake || 0, 'created', Date.now(),
+          ['HSET', roomKey(code), 'size', players ? list.length : r.size, 'mode', r.mode, 'target', r.target, 'stake', r.stake || 0, 'created', Date.now(), 'hard', r.hard ? 1 : 0,
             'count', list.length, 'started', players ? 1 : 0, 'public', r.isPublic ? 1 : 0, ...list.flatMap(p => [`m:${p.id}`, 1]),
             ...list.filter(p => !p.bot).flatMap(p => [`seen:${p.id}`, Date.now()])],
           ['RPUSH', playersKey(code), ...list.map(p => JSON.stringify(p))],
@@ -483,6 +487,7 @@ module.exports = async (req, res) => {
     }
 
     if (body.action === 'create') {
+      if (body.hard === true) hardEngine(); // données du mode difficile absentes : 503
       const bots = Math.min(MAX_PLAYERS - 1, Math.max(0, Math.round(Number(body.bots) || 0)));
       let players = null;
       if (bots) {
@@ -720,7 +725,8 @@ module.exports = async (req, res) => {
       const target = room.players.find(p => !p.bot && p.id !== playerId && String(p.name).toLowerCase() === String(body.target || '').toLowerCase());
       const n = Number(body.n);
       if (!target) return send(res, 400, { error: 'Pick a player in this duel' });
-      if (!Number.isInteger(n) || n < 0 || n > 1000000) return send(res, 400, { error: 'Pick a number from 0 to 1,000,000' });
+      const nMax = room.h.hard === '1' ? HARD_MAX : 1000000;
+      if (!Number.isInteger(n) || n < 0 || n > nMax) return send(res, 400, { error: `Pick a number from 0 to ${nMax.toLocaleString('en-US')}` });
       const prank = { round: room.rounds.length, by: me ? me.name : 'Owner', from: playerId, to: target.id, n };
       await redis([['HSET', roomKey(code), 'prank', JSON.stringify(prank)]]);
       room.h.prank = JSON.stringify(prank); room.h.pranks = String(used);
@@ -772,7 +778,7 @@ module.exports = async (req, res) => {
           const coins = await Promise.all(room.players.map(p => coinsOf(p.id)));
           if (coins.some(c => c < stake)) stake = 0; // quelqu'un ne peut plus suivre : revanche sans mise
         }
-        const code2 = await createRoom({ size: room.players.length, mode: room.mode, target: room.target, stake, isPublic: room.h.public === '1' }, room.players);
+        const code2 = await createRoom({ size: room.players.length, mode: room.mode, target: room.target, stake, isPublic: room.h.public === '1', hard: room.h.hard === '1' }, room.players);
         if (!code2) return send(res, 503, { error: 'Could not create a duel, try again' });
         const [won] = await redis([['HSETNX', roomKey(code), 'next', code2]]);
         if (Number(won) === 1) {
