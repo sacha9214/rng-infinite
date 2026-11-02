@@ -89,8 +89,10 @@ module.exports = async (req, res) => {
       // xp / rolls : les totaux à vie tenus par le serveur, affichés à l'accueil et dans Stats à la place des totaux de
       // l'appareil, qui ne gardent qu'une partie des tirages (« Stats bug » sur Discord, 2026-10-26).
       // Mode difficile : tirages et XP de ce mode (h:rolls, h:xp) ; les succès sont communs.
-      if (params.get('mode') === 'hard') return send(res, 200, { mode: 'hard', name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst['h:xp']) || 0, rolls: Number(lst['h:rolls']) || 0, bio: bioText(liteBio), uniq: null, level: require('../js/quests.js').levelOf(lst.xpLife) });
-      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0, bio: bioText(liteBio), uniq: uniqueOf(lst, liteUniq, null) });
+      // hardOpen : mode difficile débloqué (premier Godlike ou Infinite en mode normal, 2026-11-02).
+      const open = require('./_lib').hardOpen(lst);
+      if (params.get('mode') === 'hard') return send(res, 200, { mode: 'hard', name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst['h:xp']) || 0, rolls: Number(lst['h:rolls']) || 0, bio: bioText(liteBio), uniq: null, level: require('../js/quests.js').levelOf(lst.xpLife), hardOpen: open });
+      return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0, bio: bioText(liteBio), uniq: uniqueOf(lst, liteUniq, null), hardOpen: open });
     }
 
     // Mode difficile (Sacha, 2026-11-02) : son propre profil, calculé sur hhist:<id> (l'XP de chaque tirage y est gardée).

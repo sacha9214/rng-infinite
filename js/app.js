@@ -113,7 +113,7 @@
         const raw = await res.text();
         let body = {};
         try { body = raw ? JSON.parse(raw) : {}; } catch (e) { if (res.ok) throw new Error('Bad response from the server'); }
-        if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status });
+        if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status, ...(body.locked ? { locked: true } : {}) });
         return body;
       } catch (err) {
         // Échec réseau (TypeError) : rien n'est arrivé au serveur. Un délai dépassé, lui, a pu être traité.
@@ -736,7 +736,7 @@
     async load() {
       if (!Store.player.name) return null;
       if (Date.now() - this.at < 60000 && this.xp != null) return this;
-      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { syncName(p); this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { syncName(p); setHardOpen(p.hardOpen); this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
       await this.busy;
       return this.xp != null ? this : null;
     },
@@ -2034,12 +2034,31 @@
 
   // Interrupteur Normal / Hard sous le logo (Sacha, 2026-11-02). Pas pendant un tirage ni dans un duel : le tirage en
   // cours appartient à son mode. Tout ce qui dépend des tirages de l'appareil est recalculé pour le nouveau mode.
+  // Verrou (idée des joueurs, Sacha 2026-11-02) : le mode difficile s'ouvre au premier Godlike ou Infinite du mode normal.
+  // Le serveur décide (api/_lib.js checkHardOpen) ; le site garde sa réponse (settings.hardOpen, profil « lite ») pour
+  // le cadenas 🔒 et son message au survol, ou au toucher sur téléphone.
+  const HARD_LOCK_MSG = 'Hard mode unlocks after your first Godlike or Infinite roll in Normal mode';
+  const hardLocked = () => Store.settings.hardOpen !== true;
   function drawModeSwitch() {
     const box = document.getElementById('mode-switch'); if (!box) return;
     box.querySelectorAll('[data-mode]').forEach(b => { const on = b.dataset.mode === Mode.name; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+    const h = box.querySelector('[data-mode="hard"]'); if (!h) return;
+    const locked = hardLocked() && !Mode.hard;
+    h.classList.toggle('locked', locked);
+    h.innerHTML = locked ? '<span aria-hidden="true">🔒</span> Hard' : '🔥 Hard';
+    h.title = locked ? `🔒 ${window.RNGI18n ? window.RNGI18n.t(HARD_LOCK_MSG) : HARD_LOCK_MSG}` : 'Hard mode: 10-digit numbers, rarer rarities that pay more, its own leaderboards';
+    h.setAttribute('aria-label', locked ? `Hard mode, locked: ${HARD_LOCK_MSG}` : 'Hard mode');
+  }
+  // Réponse du serveur sur le verrou (profil « lite », refus 403 d'un tirage) : gardée, et le cadenas suit.
+  function setHardOpen(open) {
+    if (typeof open !== 'boolean' || open === (Store.settings.hardOpen === true)) return;
+    Store.setSetting('hardOpen', open);
+    drawModeSwitch();
+    if (open && Store.settings.hardSeenOpen !== 1) { Store.setSetting('hardSeenOpen', 1); toast('🔓 Hard mode unlocked! Switch to 🔥 Hard under the logo', 7000, 'achv'); }
   }
   async function switchMode(mode) {
     if (mode === Mode.name) return;
+    if (mode === 'hard' && hardLocked()) { toast(`🔒 ${HARD_LOCK_MSG}`, 5000); return; }
     if (rollPending || (session && !session.finished) || SoloAuto.on) { toast('Finish your roll first (and stop auto-roll)'); return; }
     if (currentView === 'room') { toast('Leave the duel first'); return; }
     const box = document.getElementById('mode-switch'); if (box) box.setAttribute('aria-busy', 'true');
@@ -2167,6 +2186,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-02-hard-lock', date: 'Nov 2, 2026', en: ['🔒 Hard mode now unlocks after your first Godlike or Infinite roll in Normal mode (idea from players). Until then, the Hard button shows a padlock: hover or tap it to see what you need. Hard rolls you already made stay yours'], fr: ['🔒 Le mode difficile se débloque maintenant après ton premier Godlike ou Infinite en mode normal (idée des joueurs). D\'ici là, le bouton Difficile montre un cadenas : survole-le ou touche-le pour voir ce qu\'il faut. Tes tirages déjà faits en mode difficile restent à toi'] },
     { id: '2026-11-02-hard', date: 'Nov 2, 2026', en: ['🔥 Hard mode! Switch between Normal and Hard under the RNG∞ logo. Hard mode rolls a 10-digit number (0 to 9,999,999,999). Every rarity above Common is 10 times rarer, and pays about 10 times more coins, so on average you earn the same coins and XP as in Normal mode. Badges are worth what they are worth among 10 billion numbers', '🏆 Hard mode has its own leaderboards, history, stats, badge collection, duels and daily tournament. Your coins, skins, level, quests, achievements and the chat are the same in both modes'], fr: ['🔥 Mode difficile ! Passe de Normal à Difficile sous le logo RNG∞. Le mode difficile tire un nombre à 10 chiffres (de 0 à 9 999 999 999). Chaque rareté au-dessus de Common est 10 fois plus rare et rapporte environ 10 fois plus de pièces : en moyenne, tu gagnes autant de pièces et d\'XP qu\'en mode normal. Les badges valent ce qu\'ils valent parmi 10 milliards de nombres', '🏆 Le mode difficile a ses propres classements, historique, stats, collection de badges, duels et tournoi du jour. Tes pièces, tes skins, ton niveau, tes quêtes, tes succès et le chat sont les mêmes dans les deux modes'] },
     { id: '2026-11-02-reactions', date: 'Nov 2, 2026', en: ['🙂 React to messages with an emoji, like in your phone\'s messages: tap 🙂+ next to a message in the global chat, your friends\' chats, duels or your clan, and pick 👍 ❤️ 😂 😮 😢 or 🔥. Tap your reaction again to remove it, and hover a reaction to see who sent it'], fr: ['🙂 Réagis aux messages avec un emoji, comme dans les messages de ton téléphone : touche 🙂+ à côté d\'un message dans le chat global, les chats avec tes amis, les duels ou ton clan, et choisis 👍 ❤️ 😂 😮 😢 ou 🔥. Touche ta réaction à nouveau pour l\'enlever, et survole une réaction pour voir qui l\'a envoyée'] },
     { id: '2026-11-01-giveaways', date: 'Nov 1, 2026', en: ['🎁 Free skin giveaways on the RNG∞ Discord! Join the server (💬 Discord button), react 🎉 on a giveaway in 🎁・giveaways, and one winner gets the skin. Link your Discord in Me → 🔗 Link my Discord to receive it automatically'], fr: ['🎁 Des skins à gagner sur le Discord de RNG∞ ! Rejoins le serveur (bouton 💬 Discord), réagis 🎉 sur un giveaway dans 🎁・giveaways, et un gagnant reçoit le skin. Lie ton Discord dans Moi → 🔗 Link my Discord pour le recevoir tout seul'] },
@@ -2896,6 +2916,12 @@
         scheduleSoloAuto(5000); return;
       }
       if (SoloAuto.on) stopSoloAuto();
+      // Mode difficile pas encore débloqué (le serveur le dit, 2026-11-02) : retour au mode normal, l'identité reste.
+      if (err.locked) {
+        rollPending = false; buttons.forEach(b => { b.disabled = false; });
+        setHardOpen(false); toast(`🔒 ${HARD_LOCK_MSG}`, 5000); switchMode('normal');
+        return;
+      }
       if (err.status === 409) {
         rollPending = false;
         buttons.forEach(b => { b.disabled = false; });
@@ -3184,6 +3210,8 @@
       finished = true;
       SoloAuto.shownAt = Date.now();
       if (ctx.online) HdrCoins.soon(300);
+      // Premier Godlike ou Infinite du mode normal : le mode difficile s'ouvre, annoncé une fois la révélation finie.
+      if (ctx.online && !ctx.replay && !Mode.hard && (a.tier === 'godlike' || a.tier === 'infinite')) setHardOpen(true);
       if (SoloAuto.on && !ctx.replay) {
         if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
@@ -10008,7 +10036,8 @@
   syncPlayer();
   // Mode difficile choisi la dernière fois (Sacha, 2026-11-02) : ses données d'abord, puis la première page ; données
   // introuvables (hors ligne) : le site s'ouvre en mode normal.
-  (Store.settings.mode === 'hard' ? Mode.set('hard').then(ok => { if (!ok) Store.setSetting('mode', 'normal'); }) : Promise.resolve()).then(() => {
+  (Store.settings.mode === 'hard' && !hardLocked() ? Mode.set('hard').then(ok => { if (!ok) Store.setSetting('mode', 'normal'); }) : Promise.resolve()).then(() => {
+    ServerLife.load().catch(() => {}); // le verrou du mode difficile (hardOpen) arrive avec le profil
     drawModeSwitch();
     route();
     syncHistory().catch(() => {});

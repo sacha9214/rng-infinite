@@ -5890,6 +5890,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(Math.abs(evH / evN - 1) < 0.03, `pièces moyennes : ${evH.toFixed(3)} (difficile) contre ${evN.toFixed(3)} (normal)`);
   const tail = (tiers, from) => engine.TIER_ORDER.slice(engine.TIER_ORDER.indexOf(from)).reduce((x, t) => x + tiers[t], 0);
   assert.ok(Math.abs(tail(odds.tiers, 'mythic') / tail(normalTiers, 'mythic') - 0.1) < 0.03, 'Mythic ou mieux : 10 fois plus rare');
+  // Verrou (idée des joueurs, 2026-11-02) : pas de mode difficile avant un Godlike ou un Infinite du mode normal.
+  r = await call(roll, { method: 'POST', body: { ...hk, mode: 'hard' } });
+  assert.deepEqual([r.status, r.body.locked], [403, true], 'verrouillé');
+  assert.match(r.body.error, /Godlike or Infinite/);
+  assert.equal(run([['GET', `cooldown:${hk.playerId}`]])[0].result, null, 'un refus ne prend pas le délai');
+  r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}` }); assert.equal(r.body.hardOpen, false);
+  run([['HSET', `stats:${hk.playerId}`, 't:godlike', '1']]); // son premier Godlike
+  r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}` }); assert.equal(r.body.hardOpen, true);
   // Tirage en mode difficile.
   r = await call(roll, { method: 'POST', body: { ...hk, mode: 'hard' } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -5899,7 +5907,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(r.body.coins, Shop.HARD_COINS[a.tier], 'pièces du mode difficile');
   let st = stOf(hk.playerId);
   assert.deepEqual([st['h:rolls'], st['h:xp'], st[`h:t:${a.tier}`], st.xpLife, st.rolls], ['1', String(a.total), '1', String(a.total), undefined], 'compteurs à part, XP à vie commune');
-  assert.equal(Shop.balance(st), Shop.HARD_COINS[a.tier], 'le solde compte les raretés du mode difficile');
+  assert.equal(Shop.balance(st), Shop.HARD_COINS[a.tier] + Shop.COINS.godlike, 'le solde compte les raretés du mode difficile');
   assert.equal(run([['ZSCORE', 'hlb:all', hk.playerId]])[0].result, String(a.total));
   assert.equal(run([['ZSCORE', 'lb:all', hk.playerId]])[0].result, null, 'rien dans les classements du mode normal');
   assert.match(run([['ZRANGE', `hhist:${hk.playerId}`, 0, -1]])[0].result[0], new RegExp(`^\\d+:${r.body.n}:${a.total}$`));
@@ -5929,10 +5937,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}&mode=hard` });
   assert.deepEqual([r.body.rolls, r.body.xp], [1, a.total]);
   // Duel du mode difficile : nombres à 10 chiffres, et le tirage révélé va dans les stats du mode difficile.
-  run([['HSET', `stats:${nk.playerId}`, 'v', '1', 'rolls', '50'], ['SET', `player:${nk.playerId}:secret`, crypto.createHash('sha256').update(nk.secret).digest('hex')]]);
+  run([['HSET', `stats:${nk.playerId}`, 'v', '1', 'rolls', '50'], ['SET', `player:${nk.playerId}:secret`, crypto.createHash('sha256').update(nk.secret).digest('hex')], ['HSET', 'names', nk.playerId, 'Normy']]);
+  // Verrouillé : ni créer ni rejoindre un duel du mode difficile, ni le tournoi difficile.
+  r = await call(roomApi2, { method: 'POST', body: { ...nk, action: 'create', size: 2, hard: true } }); assert.deepEqual([r.status, r.body.locked], [403, true]);
   r = await call(roomApi2, { method: 'POST', body: { ...hk, action: 'create', size: 2, bots: 1, hard: true } });
   assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.hard, true);
   const code = r.body.code;
+  { const h2 = await call(roomApi2, { method: 'POST', body: { ...hk, action: 'create', size: 2, hard: true } }); const j2 = await call(roomApi2, { method: 'POST', body: { ...nk, action: 'join', code: h2.body.code } }); assert.deepEqual([j2.status, j2.body.locked], [403, true], 'rejoindre : verrouillé'); }
+  await assert.rejects(require(path.join(ROOT, 'api/_tournament.js')).signup(nk.playerId, Date.parse(`${Lib.dayKey(Date.now())}T01:00:00Z`), 4), /Godlike or Infinite/);
   r = await call(roomApi2, { method: 'POST', body: { ...hk, action: 'ready', code } });
   const round = r.body.rounds && r.body.rounds[0];
   if (round && Array.isArray(round.n)) for (const n of round.n) if (n != null) assert.ok(n <= 9999999999);

@@ -35,7 +35,7 @@
 //     tableau et son propre versement. Il est à part : un joueur peut être dans un tournoi du jour (1 ou 2) ET dans
 //     celui du soir. La règle « jamais dans les deux » ne vaut qu'entre 1 et 2 (même tableau horaire, même places).
 const crypto = require('node:crypto');
-const { redis, engine, hardEngine, HARD_MAX, eco, readStats, statsKey, toObject, ownsPlayer, dayKey } = require('./_lib');
+const { redis, engine, hardEngine, checkHardOpen, HARD_MAX, eco, readStats, statsKey, toObject, ownsPlayer, dayKey } = require('./_lib');
 const Discord = require('./_discord');
 
 const MIN_ROLLS = 30, MIN_PLAYERS = 4, MAX_PLAYERS = 32, ROLLS = 5;
@@ -244,6 +244,7 @@ async function signupEve(playerId, now) {
 async function signupHard(playerId, now) {
   const day = hardOf(dayKey(now)), tm = times(day, 0);
   if (now >= tm.close) throw refuse(422, 'Sign-ups for today\'s hard mode tournament are closed (they open at 00:00 UTC)');
+  await checkHardOpen(playerId); // mode difficile verrouillé avant un Godlike ou Infinite (2026-11-02)
   const st = await readStats(playerId), rolls = (Number(st.rolls) || 0) + (Number(st['h:rolls']) || 0);
   if (rolls < MIN_ROLLS) throw refuse(422, `Tournaments unlock after ${MIN_ROLLS} rolls (you have ${rolls})`);
   const [added] = await redis([['ZADD', inKey(day), 'NX', now, playerId], ['EXPIRE', inKey(day), TTL], ['HSETNX', key(day), 'mode', modeOf(day)], ['EXPIRE', key(day), TTL]]);

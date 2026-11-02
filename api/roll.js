@@ -2,7 +2,7 @@
 // Le serveur tire le nombre (personne ne peut choisir son 1337), calcule l'XP avec le moteur du site,
 // puis met à jour le meilleur tirage du joueur pour le jour, la semaine et tous les temps.
 const crypto = require('node:crypto');
-const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, recordHardRoll, hardEngine, HARD_MAX, flushDue, statsKey, grantGoogleBonus } = require('./_lib');
+const { redis, cleanName, cors, send, claimPlayer, claimName, recordRoll, recordHardRoll, hardEngine, checkHardOpen, HARD_MAX, flushDue, statsKey, grantGoogleBonus } = require('./_lib');
 const Shop = require('../js/shop.js');
 
 // Une révélation dure au moins ~10 s : 8 s minimum entre deux tirages ne gêne jamais un vrai joueur.
@@ -31,7 +31,7 @@ module.exports = async (req, res) => {
 
     const nonce = /^[0-9a-f]{16,32}$/.test(String(body.nonce || '')) ? String(body.nonce) : '';
     const hard = body.mode === 'hard';
-    if (hard) hardEngine(); // données absentes : 503 avant de prendre le délai d'attente
+    if (hard) { hardEngine(); await checkHardOpen(playerId); } // données absentes : 503 ; pas encore de Godlike : 403
     // Délai entre deux tirages : 8 s, raccourci par le niveau de vitesse acheté dans la boutique (js/shop.js). Le même pour
     // les deux modes : passer de l'un à l'autre ne fait jamais tirer plus vite.
     // Dans la même lecture : ce joueur a-t-il un compte Google sans avoir reçu son bonus (comptes associés avant le
@@ -50,6 +50,6 @@ module.exports = async (req, res) => {
     if (nonce) await redis([['SET', nonceKey(playerId, nonce), JSON.stringify(result), 'EX', NONCE_TTL_S]]);
     return send(res, 200, result);
   } catch (err) {
-    return send(res, err.status || 500, { error: err.message });
+    return send(res, err.status || 500, { error: err.message, ...(err.locked ? { locked: true } : {}) });
   }
 };
