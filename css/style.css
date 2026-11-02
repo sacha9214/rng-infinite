@@ -11612,3 +11612,6 @@ a.player-btn { text-decoration: none; color: inherit; }
 .qmarks.hard span:nth-child(7) { animation-delay: .9s; } .qmarks.hard span:nth-child(8) { animation-delay: 1.05s; }
 .qmarks.hard span:nth-child(9) { animation-delay: 1.2s; } .qmarks.hard span:nth-child(10) { animation-delay: 1.35s; }
 .top-mark.hard { box-shadow: inset 0 0 0 1px rgb(234 88 12 / .55); }
+/* Mode difficile verrouillé jusqu'au premier Godlike ou Infinite (2026-11-02) : cadenas, message au survol (title). */
+.mode-switch [data-mode="hard"].locked { opacity: .6; cursor: help; }
+.mode-switch [data-mode="hard"].locked:hover { opacity: .85; }

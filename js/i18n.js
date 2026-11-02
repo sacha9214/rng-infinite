@@ -173,6 +173,9 @@
     'Shown on the leaderboard. Each name belongs to one player only.': 'Affiché au classement. Chaque pseudo n\'appartient qu\'à un seul joueur.', 'This name is already taken, pick another one': 'Ce pseudo est déjà pris, choisis-en un autre',
     'React': 'Réagir',
     // Mode difficile (Sacha, 2026-11-02)
+    'Hard mode unlocks after your first Godlike or Infinite roll in Normal mode': 'Le mode difficile se débloque après ton premier Godlike ou Infinite en mode normal',
+    '🔒 Hard mode unlocks after your first Godlike or Infinite roll in Normal mode': '🔒 Le mode difficile se débloque après ton premier Godlike ou Infinite en mode normal',
+    '🔓 Hard mode unlocked! Switch to 🔥 Hard under the logo': '🔓 Mode difficile débloqué ! Passe en 🔥 Difficile sous le logo',
     'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month, the year and the mode (Normal or 🔥 Hard), plus 🪙 1,000 · 500 · 250 coins': 'Le meilleur tirage de chaque joueur · à la fin du mois, les 10 premiers gagnent un badge permanent 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 avec le mois, l\'année et le mode (Normal ou 🔥 Difficile), plus 🪙 1 000 · 500 · 250 pièces',
     'to earn a badge with the month, the year and the mode, kept forever, and coins.': 'pour gagner un badge avec le mois, l\'année et le mode, gardé pour toujours, et des pièces.', 'Normal mode': 'Mode normal', '(🔥 Hard mode)': '(🔥 mode difficile)', '(Normal mode)': '(mode normal)',
     '🔥 Hard': '🔥 Difficile', '🔥 Hard mode': '🔥 Mode difficile', 'Game mode': 'Mode de jeu', 'Hard mode': 'Mode difficile', 'Normal mode': 'Mode normal',

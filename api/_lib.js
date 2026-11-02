@@ -31,6 +31,14 @@ function hardEngine() {
 }
 const HARD_MAX = 9999999999;
 const isHard = mode => mode === 'hard';
+// Mode difficile verrouillé (idée des joueurs, choix de Sacha, 2026-11-02) : ouvert après un premier Godlike ou Infinite
+// en mode normal (t:godlike, t:infinite). Les tirages déjà faits en mode difficile restent (rien n'est repris).
+const HARD_LOCKED = 'Hard mode unlocks after your first Godlike or Infinite roll in Normal mode';
+const hardOpen = st => (Number(st['t:godlike']) || 0) + (Number(st['t:infinite']) || 0) > 0;
+async function checkHardOpen(id) {
+  const [g, i] = await redis([['HGET', statsKey(id), 't:godlike'], ['HGET', statsKey(id), 't:infinite']]);
+  if (!hardOpen({ 't:godlike': g, 't:infinite': i })) throw Object.assign(new Error(HARD_LOCKED), { status: 403, locked: true });
+}
 const engineOf = mode => (isHard(mode) ? hardEngine() : engine);
 // Clés du mode difficile : celles du mode normal précédées de « h » (hlb:day:<jour>, hbest:…, hhist:<id>, hlb:xp…) ;
 // stats:<id> garde ses champs à part, préfixés « h: » (h:rolls, h:xp, h:best, h:t:<rareté>, h:first).
@@ -787,7 +795,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
+module.exports = { HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
   bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,

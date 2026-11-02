@@ -4,6 +4,17 @@ Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of 
 
 
 
+
+## Hard mode lock (2026-11-02, branch `claude/hard-lock`)
+
+Players' idea, Sacha's go: Hard mode opens after the first **Godlike or Infinite** roll in Normal mode (`t:godlike` +
+`t:infinite` > 0). Enforced on the server (`checkHardOpen` in api/_lib.js: `/api/roll` mode hard, creating or joining a
+hard duel, the hard tournament sign-up; 403 with `locked: true`, which the site never treats as a stolen id). The lite
+profile returns `hardOpen`; the site keeps it in `settings.hardOpen`, shows 🔒 on the Hard button with the rule on
+hover (title) or on tap (toast), and unlocks right after the reveal of a first Godlike/Infinite.
+At launch 36 players had already rolled in Hard mode (662 rolls), 11 of them with a Godlike or Infinite: the other 25
+keep their hard rolls, history and leaderboard spots, but cannot roll in Hard again until they unlock it.
+
 ## Visitor countries on the VPS (2026-11-02, branch `claude/geoip`)
 
 Sacha: "13,000 visits from no location" on the Owner traffic page. Since the site moved to the VPS (2026-10-21) no

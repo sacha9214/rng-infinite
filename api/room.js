@@ -16,7 +16,7 @@
 // ils tirent comme tout le monde et réagissent après chaque manche. Une partie avec des bots ne compte ni en victoires
 // de duel ni en face-à-face (sinon on farmerait) ; les tirages des humains, eux, comptent comme des tirages normaux.
 const crypto = require('node:crypto');
-const { engineOf, HARD_MAX, hardEngine, eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
+const { engineOf, checkHardOpen, HARD_MAX, hardEngine, eco, engine, redis, cleanName, claimPlayer, claimName, queueReveal, LOBBY_CHECK_MS, readStats, statsKey, questKey, QUEST_TTL, dayKey, settleWager, Achievements, cors, send, flushDue } = require('./_lib');
 const Discord = require('./_discord');
 const Shop = require('../js/shop.js');
 const { cleanChat } = require('./_chat');
@@ -487,7 +487,7 @@ module.exports = async (req, res) => {
     }
 
     if (body.action === 'create') {
-      if (body.hard === true) hardEngine(); // données du mode difficile absentes : 503
+      if (body.hard === true) { hardEngine(); try { await checkHardOpen(playerId); } catch (err) { return send(res, err.status, { error: err.message, locked: true }); } } // données absentes : 503 ; verrouillé : 403
       const bots = Math.min(MAX_PLAYERS - 1, Math.max(0, Math.round(Number(body.bots) || 0)));
       let players = null;
       if (bots) {
@@ -514,6 +514,8 @@ module.exports = async (req, res) => {
 
     if (body.action === 'join') {
       if (member) return send(res, 200, await view(room, playerId));
+      // Duel du mode difficile : seulement pour qui l'a débloqué (on peut toujours regarder).
+      if (room.h.hard === '1') { try { await checkHardOpen(playerId); } catch (err) { return send(res, err.status, { error: err.message, locked: true }); } }
       if (room.started) return send(res, 422, { error: 'This duel has already started' });
       if (room.h[`kick:${playerId}`]) return send(res, 403, { error: 'The host removed you from this duel' });
       const stake = stakeOf(room);
