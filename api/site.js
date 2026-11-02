@@ -42,7 +42,9 @@ function siteVersion() {
 const CLIENT_EVENTS = ['offline_roll', 'reveal_cut', 'storage_full', 'id_reset', 'bg_error', 'auto_429'];
 const suggKey = id => `sugg:${id}`, byPlayer = id => `sugg:by:${id}`;
 // Texte libre : on retire les caractères de contrôle et on borne la longueur ; l'affichage l'échappe côté site.
-const cleanText = (raw, max) => String(raw || '').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
+// Coupé AVANT les expressions régulières (audit de sécurité, 2026-11-02) : « [ \t]+\n » sur 250 000 espaces prenait
+// 33 s et bloquait tout le serveur.
+const cleanText = (raw, max) => String(raw || '').slice(0, max * 2 + 100).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 
 // Conversation d'une suggestion : sugg:<id>:msgs, une liste de { f: 'o' (créateur) | 'p' (joueur), x: texte, t }.
 // Les suggestions d'avant le 2026-10-12 n'avaient qu'une réponse (champ « reply ») : elle ouvre alors le fil.
@@ -150,12 +152,15 @@ async function recordVisit(req, body) {
   // Pays : l'en-tête de Vercel s'il y est, sinon la base DB-IP du VPS (api/_geo.js, depuis le 2026-11-02 : sur le VPS,
   // toutes les visites tombaient dans « ZZ »). L'adresse (posée par Caddy) ne sert qu'à ça et n'est gardée nulle part.
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const vercel = String(req.headers['x-vercel-ip-country'] || '');
+  // Les en-têtes x-vercel-* ne valent que sur Vercel (VERCEL=1) : sur le VPS, n'importe quel visiteur pouvait les envoyer
+  // et inventer des pays ou des points sur la carte (audit de sécurité, 2026-11-02).
+  const onVercel = !!process.env.VERCEL;
+  const vercel = onVercel ? String(req.headers['x-vercel-ip-country'] || '') : '';
   const country = /^[A-Z]{2}$/.test(vercel) ? vercel : (await require('./_geo').country(ip).catch(() => null)) || 'ZZ';
   const fields = ['visits', `ref:${ref}`, `c:${country}`, `d:${body.mobile ? 'mobile' : 'desktop'}`, `l:${body.lang === 'fr' ? 'fr' : 'en'}`, `h:${String(new Date(Date.now()).getUTCHours()).padStart(2, "0")}`];
   // Case de la carte : latitude et longitude arrondies au degré. Absentes (test local, adresse inconnue) : rien.
   const lat = Number(req.headers['x-vercel-ip-latitude']), lon = Number(req.headers['x-vercel-ip-longitude']);
-  const cell = req.headers['x-vercel-ip-latitude'] && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? `${Math.round(lat)},${Math.round(lon)}` : '';
+  const cell = onVercel && req.headers['x-vercel-ip-latitude'] && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? `${Math.round(lat)},${Math.round(lon)}` : '';
   if (body.daily) fields.push('uniq');
   if (body.first) fields.push('new');
   if (src) fields.push(`src:${src}`);
@@ -681,6 +686,15 @@ module.exports = async (req, res) => {
       const shots = raw.map(cleanShot);
       if (shots.some(s => !s)) return send(res, 422, { error: 'This screenshot could not be read: try another image' });
       if (shots.reduce((x, s) => x + s.length, 0) > SHOTS_TOTAL) return send(res, 422, { error: 'These images are too big together: remove one' });
+      // Images (audit de sécurité, 2026-11-02 : des comptes jetables remplissaient la mémoire de Redis, 12 Mo en 0,15 s) :
+      // 30 tirages au moins, et 40 Mo d'images au plus par jour pour tout le site.
+      if (shots.length) {
+        const st = await readStats(playerId);
+        if ((Number(st.rolls) || 0) + (Number(st['h:rolls']) || 0) < 30) return send(res, 403, { error: 'Make 30 rolls to attach images' });
+        const bytes = shots.reduce((x, s) => x + s.length, 0);
+        const [used] = await redis([['HINCRBY', `shots:bytes:${day}`, 'b', bytes], ['EXPIRE', `shots:bytes:${day}`, 2 * 86400]]);
+        if (Number(used) > 40e6) { await redis([['HINCRBY', `shots:bytes:${day}`, 'b', -bytes]]); return send(res, 429, { error: 'Too many images today: send your idea without images' }); }
+      }
       const id = crypto.randomBytes(6).toString('hex'), t = Date.now();
       await redis([
         ['HSET', suggKey(id), 't', t, 'pid', playerId, 'name', name, 'text', text, 'status', 'new', 'lang', body.lang === 'fr' ? 'fr' : 'en', 'kind', bug ? 'bug' : 'idea', 'shot', shots.length ? '1' : '0', 'shots', shots.length],

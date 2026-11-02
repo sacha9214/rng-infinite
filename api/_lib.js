@@ -44,6 +44,22 @@ const engineOf = mode => (isHard(mode) ? hardEngine() : engine);
 // Clés du mode difficile : celles du mode normal précédées de « h » (hlb:day:<jour>, hbest:…, hhist:<id>, hlb:xp…) ;
 // stats:<id> garde ses champs à part, préfixés « h: » (h:rolls, h:xp, h:best, h:t:<rareté>, h:first).
 const hardKey = k => `h${k}`;
+// Porte-monnaie (audit de sécurité, 2026-11-02) : toute dépense « vérifier le solde, puis payer » passe sous le même
+// verrou shop:<id> que la boutique. Sans lui, dix demandes envoyées ensemble (mises de duel, changement de pseudo, photo,
+// achat) voyaient toutes le même solde et passaient toutes : le solde devenait négatif, et une partie truquée entre deux
+// comptes créait des pièces. Jeton propre : on ne relâche jamais le verrou d'un autre.
+async function wallet(id, fn, busy = 'Busy, try again') {
+  const key = `shop:${id}`, token = crypto.randomBytes(8).toString('hex');
+  let lock = null;
+  for (let tries = 0; tries < 30 && lock !== 'OK'; tries++) {
+    if (tries) await new Promise(r => setTimeout(r, 60));
+    [lock] = await redis([['SET', key, token, 'PX', 8000, 'NX']]);
+  }
+  if (lock !== 'OK') throw Object.assign(new Error(busy), { status: 429 });
+  try { return await fn(); } finally { const [cur] = await redis([['GET', key]]); if (cur === token) await redis([['DEL', key]]); }
+}
+// Plusieurs porte-monnaie (revanche avec mise) : toujours dans le même ordre, deux revanches ne s'attendent jamais.
+const wallets = (ids, fn) => [...new Set(ids)].sort().reduceRight((next, id) => () => wallet(id, next), fn)();
 // Laisse passer les autres demandes pendant un long calcul (à appeler toutes les quelques milliers d'itérations).
 const breathe = () => new Promise(done => setImmediate(done));
 // Pause au temps plutôt qu'au nombre (Sacha, 2026-11-02 : « pourquoi le tirage auto est si lent ») : le serveur relevait
@@ -171,18 +187,23 @@ const hits = new Map();
 function limited(req) {
   // Images des photos de profil (GET ?avatar=…) : légères et mises en cache par le navigateur ; un classement en affiche
   // des dizaines d'un coup, et toute une classe derrière la même IP dépassait la limite (2026-10-26).
-  if (req.method === 'GET' && /[?&]avatar=/.test(String(req.url || ''))) return false;
+  // Seulement les vraies images (audit de sécurité, 2026-11-02 : ajouter « &avatar= » à n'importe quelle adresse
+  // passait la limite).
+  if (req.method === 'GET' && /^\/api\/profile\?avatar=[0-9a-f]{20}$/.test(String(req.url || ''))) return false;
   const fwd = req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip']);
-  const ip = fwd ? String(fwd).split(',')[0].trim() : '';
-  if (!ip) return false;
+  const raw = fwd ? String(fwd).split(',')[0].trim() : '';
+  if (!raw) return false;
+  // IPv6 : compté par /64 (audit de sécurité, 2026-11-02 : une box reçoit des milliards d'adresses, changer d'adresse à
+  // chaque requête passait la limite). Table bornée : passé 20 000 adresses, on repart de zéro au lieu de tout parcourir.
+  const ip = raw.includes(':') ? raw.toLowerCase().split(':').slice(0, 4).join(':') : raw;
   const now = Date.now();
+  if (hits.size > 20000) hits.clear();
   let h = hits.get(ip);
   if (!h || now - h.start > RATE_WINDOW_MS) {
     h = { start: now, count: 0 };
     hits.set(ip, h);
   }
   h.count++;
-  if (hits.size > 5000) for (const [k, v] of hits) if (now - v.start > RATE_WINDOW_MS) hits.delete(k);
   return h.count > RATE_LIMIT;
 }
 
@@ -214,15 +235,21 @@ function send(res, status, body) {
 
 // Le premier appel réserve l'identifiant ; ensuite seul le détenteur d'un de ses secrets peut agir sous cet id
 // (secret d'origine, ou secret d'un appareil connecté avec Google).
+// Un identifiant déjà lié à Google ou qui a des secrets d'appareil n'est jamais « créé » par le premier secret venu
+// (audit de sécurité, 2026-11-02) : un joueur créé par la connexion Google n'avait pas de secret principal, et la
+// première requête avec son identifiant et n'importe quel secret prenait le compte.
 async function claimPlayer(playerId, secret) {
   const hash = sha256(secret);
-  const [created, owner, member] = await redis([
-    ['SET', `player:${playerId}:secret`, hash, 'NX'],
+  const [owner, member, google, devices] = await redis([
     ['GET', `player:${playerId}:secret`],
     ['SISMEMBER', `player:${playerId}:secrets`, hash],
+    ['GET', `player:${playerId}:google`],
+    ['SCARD', `player:${playerId}:secrets`],
   ]);
+  if (owner !== null || google !== null || Number(devices) > 0) return owner === hash || Number(member) === 1;
+  const [created, now] = await redis([['SET', `player:${playerId}:secret`, hash, 'NX'], ['GET', `player:${playerId}:secret`]]);
   if (created === 'OK') await markFresh(playerId);
-  return owner === hash || Number(member) === 1;
+  return now === hash;
 }
 
 // Joueur neuf, sans historique : ses stats partent de zéro, déjà "vérifiées". Seuls les anciens joueurs (d'avant les
@@ -243,8 +270,16 @@ function nameKey(name) {
 // Changer de pseudo coûte des pièces depuis le 2026-10-25 (api/name.js) : sans opts.rename, un joueur qui a déjà un
 // pseudo garde le sien (un tirage, un duel envoyant un autre nom ne le change plus) ; seule la casse ou les espaces
 // (même nameKey) restent libres. Réponse : true (ce nom est le sien), false (pris), { kept: <pseudo actuel> } (gardé, rien ne change).
+// Lettres qui imitent d'autres lettres (audit de sécurité, 2026-11-02) : « Sɑcha » (ɑ latin) passait pour « Sacha ».
+// Un nouveau pseudo n'a que des lettres qui redeviennent a-z sans leurs accents (é, ü, ñ restent permis), des chiffres,
+// des espaces et _ . - '. Les pseudos déjà pris restent tels quels (1 joueur sur 2 261 le 2026-11-02).
+const lookalike = name => [...String(name)].some(ch => !/[0-9 _.\-']/.test(ch) && !/^[A-Za-z]+$/.test(ch.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')));
 async function claimName(playerId, name, opts = {}) {
   const key = `name:${nameKey(name)}`;
+  if (lookalike(name)) {
+    const [mine] = await redis([['HGET', 'names', playerId]]);
+    if (mine !== name) throw Object.assign(new Error("Use plain letters in your name (accents are fine), digits, spaces and _ . - '"), { status: 422 });
+  }
   if (!opts.rename) {
     const [prev, holder] = await redis([['HGET', 'names', playerId], ['GET', key]]);
     if (holder && holder !== playerId) return false; // le nom d'un autre : refusé, comme avant
@@ -805,7 +840,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
+module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
   bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,

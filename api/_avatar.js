@@ -15,7 +15,7 @@
 // Shop.AVATAR_PRICE pièces par nouvelle photo, payées à l'envoi (champ paid de avp:<id>) et rendues si la photo est
 // refusée ou retirée. Remplacer une photo en attente déjà payée ne coûte rien de plus (le paiement passe à la nouvelle).
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, findPlayer, send, statsKey, eco } = require('./_lib');
+const { wallet, redis, ownsPlayer, readStats, dayKey, cleanName, findPlayer, send, statsKey, eco } = require('./_lib');
 const Shop = require('../js/shop.js');
 const Reports = require('./_reports');
 
@@ -123,10 +123,10 @@ async function upload(id, stats, img) {
   const [name] = await redis([['HGET', 'names', id]]);
   if (!name) throw refuse(403, 'Choose a player name first');
   if ((Number(stats.rolls) || 0) < MIN_ROLLS) throw refuse(403, `You need ${MIN_ROLLS} rolls to add a profile picture`);
-  // Verrou : deux envois en même temps ne paient pas deux fois.
-  const [lock] = await redis([['SET', `avpay:${id}`, '1', 'PX', 5000, 'NX']]);
-  if (lock !== 'OK') throw refuse(429, 'A picture is already being sent');
-  try {
+  // Verrou du porte-monnaie (audit de sécurité, 2026-11-02 : le même que la boutique, sinon une photo et un achat en même
+  // temps passaient tous les deux), et solde relu sous ce verrou.
+  return wallet(id, async () => {
+    stats = await readStats(id);
     const [old, appr] = await redis([['GET', `avp:${id}`], ['GET', `av:${id}`]]);
     const prev = parse(old);
     const carried = prev && Number(prev.paid) > 0 ? Number(prev.paid) : 0;
@@ -143,7 +143,7 @@ async function upload(id, stats, img) {
       ...(price ? [['HINCRBY', statsKey(id), 'spent', price], ...eco('out:avatar', price)] : []),
     ]);
     return price;
-  } finally { await redis([['DEL', `avpay:${id}`]]); }
+  }, 'A picture is already being sent');
 }
 // Rend ce qu'une photo en attente avait coûté (refusée ou retirée).
 const refundWrites = (id, pend) => (pend && Number(pend.paid) > 0 ? [['HINCRBY', statsKey(id), 'spent', -Number(pend.paid)], ...eco('out:avatar', -Number(pend.paid))] : []);
@@ -216,9 +216,13 @@ async function handle(req, res) {
     const stats = await readStats(id);
     if (op === 'upload') { const paid = await upload(id, stats, body.img); return send(res, 200, { ...(await mine(id)), sent: true, paid, coins: Shop.balance(stats) - paid }); }
     if (op === 'cancel') {
+      // Rendu une seule fois (audit de sécurité, 2026-11-02 : 30 retraits en même temps remboursaient jusqu'à 4 fois) :
+      // seul celui dont le DEL efface vraiment la photo rembourse.
       const [p] = await redis([['GET', `avp:${id}`]]); const pend = parse(p);
-      if (pend) await redis([['DEL', `avp:${id}`], ['HDEL', 'avpq', pend.pk], ...refundWrites(id, pend)]);
-      return send(res, 200, { ...(await mine(id)), refunded: pend && Number(pend.paid) > 0 ? Number(pend.paid) : 0, coins: Shop.balance(stats) + (pend && Number(pend.paid) > 0 ? Number(pend.paid) : 0) });
+      const [gone] = pend ? await redis([['DEL', `avp:${id}`]]) : [0];
+      const refunded = Number(gone) === 1 && Number(pend.paid) > 0 ? Number(pend.paid) : 0;
+      if (Number(gone) === 1) await redis([['HDEL', 'avpq', pend.pk], ...refundWrites(id, pend)]);
+      return send(res, 200, { ...(await mine(id)), refunded, coins: Shop.balance(stats) + refunded });
     }
     if (op === 'report') {
       const author = await findPlayer(cleanName(body.name));

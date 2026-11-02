@@ -8,6 +8,30 @@ Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of 
 
 
 
+
+## Security audit (2026-11-02, branch `claude/security-fixes`)
+
+Sacha asked for a pentest. Three local-only passes (economy, accounts/permissions, new features/DoS), every finding
+re-run against the fixed code with the original attack scripts.
+- **Account takeover (high):** Google sign-in created players without `player:<id>:secret`, so the first request with
+  that id and any secret owned it. `auth.js` now reserves a random main secret; `claimPlayer` never creates a secret
+  for an id that has `:google` or device secrets (also protects older Google-only players).
+- **Coins (high/medium):** shared `wallet(id, fn)` lock (`shop:<id>`, own token) in api/_lib.js for duel stakes (create,
+  join, rematch via `wallets`), rename, avatar upload. Avatar cancel refunds only when its DEL removes the picture.
+  Leverage `close` sets `levdone:<id>:<pos>` NX before HDEL (an `edit` could revive a closed position). Duels reserve
+  `cooldown:<id>` with SET NX (parallel bot duels rolled 8× faster). Staked rematch is unstaked if a player left or was
+  not seen for 60 s.
+- **Freezes (high):** suggestion text cut before regexes (250k spaces = 33 s), global chat length checked before
+  `hideCodes` (120k chars = 23 s).
+- **Other:** hard duel `ask`/`accept` check the unlock; tournament rolls lock per match; `x-vercel-*` headers only on
+  Vercel; IPv6 rate limit per /64 and bounded map; `&avatar=` exemption only for real avatar URLs; look-alike letters
+  refused in new names; moderators can't delete the owner's or other mods' messages; `Object.hasOwn` for mute durations;
+  images on ideas need 30 rolls (40 MB/day site cap); reporting needs a name and 20 rolls; friend requests 10 rolls.
+- **For Sacha (needs sudo):** `bash ~/rng-infinite/deploy/ovh/harden-caddy.sh` hides `*.md` and `roblox/` from the
+  public site and adds HSTS, nosniff, X-Frame-Options SAMEORIGIN, Referrer-Policy and Permissions-Policy.
+- **Not done (low):** 500 replies on crafted JSON (`{"toString":null}`) still count as errors; password-login lockout by
+  8 wrong guesses; hard profile is not cached.
+
 ## Hard rolls and clan XP (2026-11-02, branch `claude/hard-clan-xp`)
 
 Sacha: hard rolls count for the clan, but only at the Normal value of their rarity. `normalTierMin(tier)` (api/_lib.js)

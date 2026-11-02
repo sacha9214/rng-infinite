@@ -14,6 +14,10 @@ const refuse = (status, error) => Object.assign(new Error(error), { status });
 
 async function fileReport({ reporter, author, text, where, msgT }) {
   if (!author || author === reporter) throw refuse(422, 'You cannot report this message');
+  // Des comptes jetables poussaient les vrais signalements hors des 500 gardés (audit de sécurité, 2026-11-02) : signaler
+  // demande un pseudo et 20 tirages.
+  const [rname, rolls, hrolls] = await redis([['HGET', 'names', reporter], ['HGET', `stats:${reporter}`, 'rolls'], ['HGET', `stats:${reporter}`, 'h:rolls']]);
+  if (!rname || (Number(rolls) || 0) + (Number(hrolls) || 0) < 20) throw refuse(403, 'Make 20 rolls to report a message');
   const now = Date.now(), day = dayKey(now);
   const [fresh, n] = await redis([
     ['SADD', `reported:${reporter}`, `${author}:${msgT}`], ['INCR', `reportn:${reporter}:${day}`],

@@ -9,7 +9,7 @@ const { redis } = require('./_lib');
 const KEY = 'ann:list', KEEP = 20, TITLE_MAX = 80, TEXT_MAX = 500;
 const refuse = (status, error) => Object.assign(new Error(error), { status });
 const clean = (raw, max, oneLine) => {
-  let s = String(raw || '').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '');
+  let s = String(raw || '').slice(0, 4000).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '');
   s = oneLine ? s.replace(/\s+/g, ' ') : s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
   return s.trim();
 };

@@ -1203,6 +1203,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const fr = (who, action, name) => call(friendsApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, name } });
   assert.equal((await call(friendsApi, { url: '/api/friends' })).status, 405, 'jamais en GET (le secret ne va pas dans une adresse)');
   assert.equal((await fr({ ...quinn, secret: '9'.repeat(32) }, 'list')).status, 403);
+  run([['HINCRBY', `stats:${quinn.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${carol.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${dave.playerId}`, 'h:rolls', 10]]); // 10 tirages pour envoyer des demandes d'amis (audit de sécurité, 2026-11-02)
   assert.equal((await fr(quinn, 'add', 'Personne Dutout')).status, 404);
   assert.equal((await fr(quinn, 'add', 'Quinn')).status, 422, 'pas soi-même');
   r = await fr(quinn, 'add', 'alice');
@@ -1411,8 +1412,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(!(await site(alice, 'mine')).body.mine.some(x => x.id === first.id), 'supprimée aussi chez le joueur');
   assert.equal((await site(boss, 'delete', { id: first.id })).status, 404);
 
-  // Fréquentation : compteurs anonymes du jour.
+  // Fréquentation : compteurs anonymes du jour. Les en-têtes x-vercel-* ne comptent que sur Vercel (VERCEL=1).
   db.delete(`an:${today()}`);
+  process.env.VERCEL = '1';
   const visit = (extra, headers = {}) => site(null, 'visit', extra, { 'x-forwarded-for': '203.0.113.9', ...headers });
   assert.equal((await visit({ ref: 'www.Reddit.com', src: 'Discord', lang: 'fr', first: true, daily: true, mobile: true }, { 'x-vercel-ip-country': 'FR' })).status, 200);
   await visit({ ref: 'reddit.com', daily: true }, { 'x-vercel-ip-country': 'FR' });
@@ -1423,6 +1425,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual([an['ref:reddit.com'], an['ref:direct'], an['src:discord']], [2, 2, 1], 'origine normalisée ; origine invalide = direct');
   assert.deepEqual([an['c:FR'], an['c:US'], an['c:ZZ'], an['d:mobile'], an['d:desktop'], an['l:fr'], an['l:en']], [2, 1, 1, 1, 3, 1, 3]);
   assert.ok(!Object.keys(an).some(k => /script|bad/.test(k)), 'rien d\'inventé ne passe');
+  delete process.env.VERCEL;
   assert.ok(!JSON.stringify(an).includes('203.0.113'), 'aucune adresse IP stockée');
   // Pas plus de 60 balises par adresse et par heure (large : tout un collège peut partager la même adresse).
   for (let i = 0; i < 80; i++) await visit({ ref: 'spam.example' });
@@ -1684,6 +1687,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Signalement (api/_reports.js) : un spectateur signale un message de Frank ; pas son propre message, pas un faux.
   {
     const first = r.body.chat[0];
+    // Signaler demande un pseudo et 20 tirages (audit de sécurité, 2026-11-02) : un compte neuf est refusé.
+    { const nb = { playerId: '9d'.repeat(8), secret: '9d2'.repeat(11).slice(0, 32) }; run([['SET', `player:${nb.playerId}:secret`, crypto.createHash('sha256').update(nb.secret).digest('hex')], ['HSET', 'names', nb.playerId, 'Nobody9']]);
+      const Rp = require(path.join(ROOT, 'api/_reports.js')); await assert.rejects(Rp.fileReport({ reporter: nb.playerId, author: alice.playerId, text: 'x', where: 'test', msgT: 1 }), /20 rolls/); }
+    run([['HINCRBY', `stats:${alice.playerId}`, 'h:rolls', 20]]);
     const rep = t => roomPost(alice, 'report', { code, t });
     let x = await rep(first.t); assert.equal(x.status, 200, JSON.stringify(x.body)); assert.equal(x.body.reported, true);
     assert.equal((await rep(first.t)).body.already, true, 'une seule fois');
@@ -2272,6 +2279,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const post = (body, headers = {}) => call(siteApi, { method: 'POST', body, headers });
   const day = new Date(Date.now()).toISOString().slice(0, 10);
   // Visites avec la position donnée par l'hébergeur : seule la case arrondie au degré est comptée, sans rien d'autre.
+  process.env.VERCEL = '1'; // ces en-têtes ne valent que sur Vercel (audit de sécurité, 2026-11-02)
   const paris = { 'x-vercel-ip-country': 'FR', 'x-vercel-ip-latitude': '48.8566', 'x-vercel-ip-longitude': '2.3522', 'x-forwarded-for': '9.9.9.1' };
   const g0 = Number(run([['HGET', `ang:${day}`, '49,2']])[0].result) || 0;
   await post({ action: 'visit', lang: 'fr' }, paris); await post({ action: 'visit', lang: 'fr' }, paris);
@@ -2298,9 +2306,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     await post({ action: 'visit' }, { 'x-forwarded-for': '7.7.7.7', 'x-vercel-ip-country': 'CH' }); // Vercel d'abord
     await post({ action: 'visit' }, { 'x-forwarded-for': '6.6.6.6' }); // hors base : inconnu
     assert.deepEqual([cc('JP') - jp, cc('BR') - br, cc('ZZ') - zz], [1, 0, 1]);
+    // Sur le VPS (pas VERCEL), un en-tête x-vercel-* envoyé par le visiteur ne compte pas (audit de sécurité, 2026-11-02).
+    delete process.env.VERCEL;
+    const [ch, lat0] = [cc('CH'), Number(run([['HLEN', `ang:${day}`]])[0].result)];
+    await post({ action: 'visit' }, { 'x-forwarded-for': '7.7.7.8', 'x-vercel-ip-country': 'CH', 'x-vercel-ip-latitude': '46', 'x-vercel-ip-longitude': '7' });
+    assert.deepEqual([cc('CH') - ch, cc('BR') - br, Number(run([['HLEN', `ang:${day}`]])[0].result) - lat0], [0, 1, 0], 'en-têtes inventés ignorés');
+    process.env.VERCEL = '1';
     assert.ok(!JSON.stringify(run([['HGETALL', `an:${day}`]])).includes('5.5.3.4'), 'aucune adresse IP stockée');
     delete process.env.RNG_GEOIP; Geo._reset(); fs.unlinkSync(file);
   }
+  delete process.env.VERCEL;
   // Réservé au créateur.
   r = await post({ action: 'insights', playerId: frank.playerId, secret: frank.secret }); assert.equal(r.status, 403);
   run([['HSET', `stats:${frank.playerId}`, 'owner', '1']]);
@@ -2787,6 +2802,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 400], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
   run([['HINCRBY', `stats:${g3.playerId}`, 'bonus', 3000]]); // riche, mais un seul tirage
   // Amis : Gfgiver ↔ Gfgetter, Gfnewbie ↔ Gfgetter, Gfhelper ↔ Gfgetter, Gfextra ↔ Gfgetter. Gfstranger a seulement demandé.
+  run([['HINCRBY', `stats:${g1.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g3.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g4.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g5.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g6.playerId}`, 'h:rolls', 10]]); // 10 tirages pour envoyer des demandes d'amis (audit de sécurité, 2026-11-02)
   for (const g of [g1, g3, g5, g6]) { await fr(g, 'add', { name: 'Gfgetter' }); await fr(g2, 'accept', { name: g.name }); }
   await fr(g4, 'add', { name: 'Gfgetter' });
   const day = new Date(Date.now()).toISOString().slice(0, 10);
@@ -3100,6 +3116,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   for (const p of [ann, ben, cid]) { db.delete(`cooldown:${p.playerId}`); assert.equal((await call(roll, { method: 'POST', body: p })).status, 200); }
   // Pas encore amis : impossible d'écrire, même avec une demande en attente.
   assert.equal((await fr(ann, 'message', 'Benny', { text: 'hi' })).status, 403);
+  run([['HINCRBY', `stats:${ann.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${ben.playerId}`, 'h:rolls', 10]]); // 10 tirages pour envoyer des demandes d'amis (audit de sécurité, 2026-11-02)
   await fr(ann, 'add', 'Benny'); assert.equal((await fr(ann, 'message', 'Benny', { text: 'hi' })).status, 403, 'demande pas encore acceptée');
   await fr(ben, 'accept', 'Annie');
   // Amis : le message passe, nettoyé par le filtre du chat, et Benny a un message non lu.
@@ -3128,6 +3145,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Annie signale le message de Benny ; elle ne peut pas signaler le sien ; la page Owner les voit, sans identifiant.
   {
     const theirs = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => !m.me), mine = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => m.me);
+    run([['HINCRBY', `stats:${ann.playerId}`, 'h:rolls', 20]]);
     let x = await fr(ann, 'report', 'Benny', { t: theirs.t }); assert.equal(x.status, 200, JSON.stringify(x.body)); assert.equal(x.body.reported, true);
     if (mine.t !== theirs.t) assert.equal((await fr(ann, 'report', 'Benny', { t: mine.t })).status, 404, 'pas son propre message'); // même milliseconde possible ici
     const siteApi = require(path.join(ROOT, 'api/site.js'));
@@ -4778,6 +4796,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const bio = (who, op, extra = {}) => call(profile, { method: 'POST', body: { action: 'bio', op, playerId: who.playerId, secret: who.secret, ...extra } });
   const free = who => run([['DEL', `bio:rl:${who.playerId}`]]);
   const kid = mk('4a', 'BioKid'), other = mk('4b', 'BioOther'), boss = mk('4e', 'BioBoss', ['owner', '1']), seer = mk('4f', 'BioSeer', ['viewerGrant', '1']);
+  run([['HINCRBY', `stats:${other.playerId}`, 'h:rolls', 20]]); // signaler demande 20 tirages (audit de sécurité, 2026-11-02)
   let r = await bio(kid, 'set', { text: '  I love rolling 🎲 and   duels ' }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
   r = await call(profile, { url: '/api/profile?name=biokid' }); assert.equal(r.status, 200); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
   r = await call(profile, { url: '/api/profile?name=BioKid&lite=1' }); assert.equal(r.body.bio, 'I love rolling 🎲 and duels');
@@ -5962,6 +5981,54 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['HINCRBY', `stats:${hk.playerId}`, 'h:rolls', 40]]); // 30 tirages, les deux modes comptés
   const j = await T.signup(hk.playerId, day0, 4); assert.equal(j.tid, `${Lib.dayKey(day0)}-h`); assert.equal(j.which, 4);
   const v = await T.handle({ op: 'view', which: 4, ...hk }, day0); assert.equal(v.hard, true); assert.equal(v.mine, 4);
+}
+
+// Audit de sécurité (2026-11-02) : chaque trou trouvé reste fermé.
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const nameApi = require(path.join(ROOT, 'api/name.js')), friendsApi = require(path.join(ROOT, 'api/friends.js')), siteApi = require(path.join(ROOT, 'api/site.js'));
+  const mkP = (tag, name, rolls = 150, extra = []) => { const id = tag.repeat(8), secret = (tag + 'e').repeat(11).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  // 1. Joueur créé par Google sans secret principal : personne ne le prend avec un secret inventé.
+  const gid = 'ba'.repeat(8);
+  run([['SET', `player:${gid}:google`, 'sub-123'], ['SADD', `player:${gid}:secrets`, crypto.createHash('sha256').update('d'.repeat(32)).digest('hex')]]);
+  assert.equal(await Lib.claimPlayer(gid, 'a'.repeat(32)), false, 'secret inventé refusé');
+  assert.equal(run([['GET', `player:${gid}:secret`]])[0].result, null, 'rien de posé');
+  assert.equal(await Lib.claimPlayer(gid, 'd'.repeat(32)), true, 'le vrai appareil reste reconnu');
+  // 2. Pseudos qui imitent d'autres lettres.
+  const nk = { playerId: crypto.randomBytes(8).toString('hex'), secret: crypto.randomBytes(16).toString('hex') }; // joueur neuf
+  r = await call(nameApi, { method: 'POST', body: { ...nk, name: 'Sɑcha' } }); assert.equal(r.status, 422, JSON.stringify(r.body));
+  r = await call(nameApi, { method: 'POST', body: { ...nk, name: 'Élodie' } }); assert.equal(r.status, 200, 'les accents restent permis');
+  // 3. Chat global : un très long message est refusé tout de suite (il bloquait le serveur 23 s).
+  const talker = mkP('e4', 'Talker7');
+  let t0 = Date.now(); r = await call(friendsApi, { method: 'POST', body: { ...talker, action: 'gcSend', text: 'r'.repeat(120000) } });
+  assert.equal(r.status, 422); assert.ok(Date.now() - t0 < 1000, `refusé vite (${Date.now() - t0} ms)`);
+  // 4. Suggestion de 250 000 espaces : refusée tout de suite (33 s avant).
+  t0 = Date.now(); r = await call(siteApi, { method: 'POST', body: { ...talker, action: 'suggest', name: 'Talker7', text: ' '.repeat(250000) } });
+  assert.equal(r.status, 422); assert.ok(Date.now() - t0 < 1000, `refusé vite (${Date.now() - t0} ms)`);
+  // 5. Un modérateur ne supprime pas le message du créateur.
+  const ownerP = mkP('e5', 'Owner7', 150, ['owner', '1']), modP = mkP('e6', 'Mod7', 150, ['gcMod', '1']);
+  run([['SADD', 'gc:mods', modP.playerId], ['DEL', `gc:rl:${ownerP.playerId}`]]);
+  r = await call(friendsApi, { method: 'POST', body: { ...ownerP, action: 'gcSend', text: 'hello from the owner' } });
+  const omsg = r.body.msgs.at(-1);
+  r = await call(friendsApi, { method: 'POST', body: { ...modP, action: 'gcDelete', id: omsg.id, why: 'spam' } }); assert.equal(r.status, 403);
+  r = await call(friendsApi, { method: 'POST', body: { ...modP, action: 'gcMute', id: omsg.id, dur: 'constructor', why: 'spam' } }); assert.equal(r.status, 400, 'durée inventée');
+  // 6. Photo retirée deux fois : remboursée une seule fois.
+  run([['SET', `avp:${talker.playerId}`, JSON.stringify({ img: 'x', t: 1, pk: 'pk7', paid: 500 })], ['HSET', 'avpq', 'pk7', talker.playerId], ['HSET', `stats:${talker.playerId}`, 'spent', 500]]);
+  const prof = require(path.join(ROOT, 'api/profile.js'));
+  const cancels = await Promise.all([1, 2, 3].map(() => call(prof, { method: 'POST', body: { ...talker, action: 'avatar', op: 'cancel' } })));
+  assert.deepEqual(cancels.map(c => c.body.refunded).sort(), [0, 0, 500]);
+  assert.equal(run([['HGET', `stats:${talker.playerId}`, 'spent']])[0].result, '0');
+  // 7. Position à effet de levier fermée puis réécrite : jamais payée deux fois.
+  const Lever = require(path.join(ROOT, 'api/_lever.js'));
+  if (Lever._close) {
+    const pos = { id: 'p7', a: 'btc', side: 'long', lev: 2, m: 100, entry: 100, t: 1 };
+    run([['HSET', `pos:${talker.playerId}`, 'p7', JSON.stringify(pos)]]);
+    const b0 = Number(run([['HGET', `stats:${talker.playerId}`, 'bonus']])[0].result || 0);
+    assert.ok(await Lever._close(talker.playerId, 'p7', 110, 'manual'));
+    run([['HSET', `pos:${talker.playerId}`, 'p7', JSON.stringify(pos)]]); // « edit » qui ressuscite la position
+    assert.equal(await Lever._close(talker.playerId, 'p7', 110, 'manual'), null, 'pas de 2e paiement');
+    assert.ok(Number(run([['HGET', `stats:${talker.playerId}`, 'bonus']])[0].result) - b0 > 0);
+  }
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
