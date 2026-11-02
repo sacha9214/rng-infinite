@@ -171,6 +171,27 @@
     'Choose your player name': 'Choisis ton pseudo', 'Your name': 'Ton pseudo', 'Player name': 'Pseudo', 'Save & roll': 'Enregistrer et tirer', 'Save': 'Enregistrer', 'Name saved': 'Pseudo enregistré',
     'That name is not valid.': 'Ce pseudo n\'est pas valide.', 'It appears on the leaderboard next to your best rolls. Each name belongs to one player only.': 'Il apparaît au classement à côté de tes meilleurs tirages. Chaque pseudo n\'appartient qu\'à un seul joueur.',
     'Shown on the leaderboard. Each name belongs to one player only.': 'Affiché au classement. Chaque pseudo n\'appartient qu\'à un seul joueur.', 'This name is already taken, pick another one': 'Ce pseudo est déjà pris, choisis-en un autre',
+    'React': 'Réagir',
+    // Mode difficile (Sacha, 2026-11-02)
+    'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month, the year and the mode (Normal or 🔥 Hard), plus 🪙 1,000 · 500 · 250 coins': 'Le meilleur tirage de chaque joueur · à la fin du mois, les 10 premiers gagnent un badge permanent 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 avec le mois, l\'année et le mode (Normal ou 🔥 Difficile), plus 🪙 1 000 · 500 · 250 pièces',
+    'to earn a badge with the month, the year and the mode, kept forever, and coins.': 'pour gagner un badge avec le mois, l\'année et le mode, gardé pour toujours, et des pièces.', 'Normal mode': 'Mode normal', '(🔥 Hard mode)': '(🔥 mode difficile)', '(Normal mode)': '(mode normal)',
+    '🔥 Hard': '🔥 Difficile', '🔥 Hard mode': '🔥 Mode difficile', 'Game mode': 'Mode de jeu', 'Hard mode': 'Mode difficile', 'Normal mode': 'Mode normal',
+    'Normal mode: numbers from 0 to 1,000,000': 'Mode normal : des nombres de 0 à 1 000 000',
+    'Hard mode: 10-digit numbers, rarer rarities that pay more, its own leaderboards': 'Mode difficile : des nombres à 10 chiffres, des raretés plus rares qui rapportent plus, ses propres classements',
+    'Finish your roll first (and stop auto-roll)': 'Termine d\'abord ton tirage (et arrête le tirage auto)', 'Leave the duel first': 'Quitte d\'abord le duel',
+    'Hard mode could not load: check your connection and try again': 'Le mode difficile n\'a pas pu se charger : vérifie ta connexion et réessaie',
+    '🔥 Hard mode: 10-digit numbers, rarer rarities that pay more, and its own leaderboards': '🔥 Mode difficile : des nombres à 10 chiffres, des raretés plus rares qui rapportent plus, et ses propres classements',
+    '🔥 Hard mode duel: switched to Hard mode': '🔥 Duel en mode difficile : passage en mode difficile', 'Normal mode duel: switched to Normal mode': 'Duel en mode normal : passage en mode normal',
+    'This is a Hard mode roll: switch to 🔥 Hard to open it': 'C\'est un tirage du mode difficile : passe en 🔥 Difficile pour l\'ouvrir',
+    'This is a Normal mode roll: switch to Normal to open it': 'C\'est un tirage du mode normal : passe en Normal pour l\'ouvrir',
+    '🔥 Hard mode: 10-digit numbers. Rarities are 10× rarer and pay about 10× more.': '🔥 Mode difficile : des nombres à 10 chiffres. Les raretés sont 10 fois plus rares et rapportent environ 10 fois plus.',
+    'Hard mode duels: 10-digit numbers for everyone. Duel rolls count in your hard mode history and leaderboards. Switch to Normal under the logo for a normal duel.': 'Duels du mode difficile : des nombres à 10 chiffres pour tout le monde. Les tirages de duel comptent dans ton historique et tes classements du mode difficile. Passe en Normal sous le logo pour un duel normal.',
+    '🔥 Hard mode tournament': '🔥 Tournoi du mode difficile', 'You\'re in today\'s hard mode tournament': 'Tu es inscrit au tournoi du mode difficile', '✓ Signed up for the hard mode tournament': '✓ Inscrit au tournoi du mode difficile',
+    'Hard mode is not ready yet': 'Le mode difficile n\'est pas encore prêt', 'Sign-ups for today\'s hard mode tournament are closed (they open at 00:00 UTC)': 'Les inscriptions au tournoi du mode difficile sont fermées (elles ouvrent à 00:00 UTC)',
+    'Today\'s hard mode tournament is full (32 players)': 'Le tournoi du mode difficile est complet (32 joueurs)',
+    'Unknown reaction': 'Réaction inconnue',
+    'Only players in this duel can react': 'Seuls les joueurs de ce duel peuvent réagir',
+    'You can only react to your friends': 'Tu ne peux réagir qu\'aux messages de tes amis',
     'Pick a player name first': 'Choisis d\'abord un pseudo', 'Account': 'Compte', 'Sign out': 'Se déconnecter', 'Signed in with Google as': 'Connecté avec Google :', 'your Google account': 'ton compte Google', 'your account': 'ton compte',
     'or sign in to keep your player on every device': 'ou connecte-toi pour garder ton joueur sur tous tes appareils', ', or sign in with Google if it is yours': ', ou connecte-toi avec Google si c\'est le tien',
     'Google sign-in could not load': 'La connexion Google n\'a pas pu se charger', 'Google sign-in failed, try again': 'Connexion Google échouée, réessaie', 'Google sign-in is unavailable right now.': 'Connexion Google indisponible pour le moment.',
@@ -702,6 +723,10 @@
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
   const P = [
+    // Mode difficile (2026-11-02) : compteurs de l'accueil et alertes d'amis.
+    [/^🏆 #(\d+) on the (.+) (hard|normal) mode monthly leaderboard: \+([\d,]+) coins$/, m => `🏆 ${m[1]}e du classement du mois de ${m[2]} en mode ${m[3] === 'hard' ? 'difficile' : 'normal'} : +${nb(m[4])} pièces`],
+    [/^([\d,]+) hard rolls? · ([\d,]+) XP in hard mode$/, m => `${nb(m[1])} tirage${m[1] === '1' ? '' : 's'} difficile${m[1] === '1' ? '' : 's'} · ${nb(m[2])} XP en mode difficile`],
+    [/^🌟 (.+) rolled an? (\w+) (\d+) in 🔥 Hard mode!$/, m => `🌟 ${m[1]} a tiré un ${m[2]} ${m[3]} en 🔥 mode difficile !`],
     // XP qui manquait pour la rareté suivante (idée de daddy finger, 2026-10-27) ; les raretés restent en anglais.
     [/^([\d,]+) XP short of (.+)$/, m => `Il manquait ${nb(m[1])} XP pour ${m[2]}`],
     // marge au-dessus de la rareté du dessous, pour les mauvais tirages (idée de Starharvest, 2026-10-28)

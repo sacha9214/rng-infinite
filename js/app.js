@@ -2,7 +2,53 @@
 (function () {
   'use strict';
 
-  const Engine = RNGEngine.createEngine(window.BADGE_META, window.SCORE_PERCENTILES);
+  // Mode difficile (demandé par Sacha, 2026-11-02 : « Normal ou Hard sous RNG∞, 10 chiffres au lieu de 6 ») : deux moteurs,
+  // et Engine renvoie toujours celui du mode choisi. Les données du mode difficile (js/hard-data.js, ~150 Ko) ne se
+  // chargent qu'au premier passage en mode difficile ; les tables lues par les pages (window.BADGE_ODDS, TIER_ODDS,
+  // SCORE_STATS, DIGIT_ODDS, SCORE_PERCENTILES, BADGE_META) sont échangées avec le mode.
+  const NORMAL_DATA = { BADGE_META: window.BADGE_META, BADGE_ODDS: window.BADGE_ODDS, SCORE_PERCENTILES: window.SCORE_PERCENTILES, TIER_ODDS: window.TIER_ODDS, SCORE_STATS: window.SCORE_STATS, DIGIT_ODDS: window.DIGIT_ODDS };
+  const Engines = { normal: RNGEngine.createEngine(window.BADGE_META, window.SCORE_PERCENTILES), hard: null };
+  let modeNow = 'normal';
+  const Engine = new Proxy({}, { get: (_, k) => Engines[modeNow][k] });
+  const Mode = {
+    data: null, loading: null,
+    get hard() { return modeNow === 'hard'; },
+    get name() { return modeNow; },
+    digits() { return modeNow === 'hard' ? 10 : 6; },
+    pad(n) { return String(n).padStart(this.digits(), '0'); },
+    load() {
+      if (this.data) return Promise.resolve(this.data);
+      if (window.HARD_DATA) return Promise.resolve(this.ready(window.HARD_DATA));
+      if (!this.loading) {
+        this.loading = new Promise((resolve, reject) => {
+          const src = (document.getElementById('hard-data') || {}).getAttribute ? document.getElementById('hard-data').getAttribute('src') : 'js/hard-data.js';
+          const el = document.createElement('script');
+          el.src = src; el.async = true;
+          el.onload = () => (window.HARD_DATA ? resolve(this.ready(window.HARD_DATA)) : reject(new Error('Hard mode data missing')));
+          el.onerror = () => { this.loading = null; reject(new Error('Hard mode data unavailable')); };
+          document.head.appendChild(el);
+        });
+      }
+      return this.loading;
+    },
+    ready(d) {
+      this.data = { BADGE_META: d.meta, BADGE_ODDS: d.odds, SCORE_PERCENTILES: d.percentiles, TIER_ODDS: d.tiers, SCORE_STATS: d.stats, DIGIT_ODDS: d.digits };
+      Engines.hard = RNGEngine.createEngine(d.meta, d.percentiles, { hard: true });
+      return this.data;
+    },
+    // Passe au mode demandé (données chargées d'abord) ; false si c'est impossible (hors ligne au premier passage).
+    async set(mode) {
+      mode = mode === 'hard' ? 'hard' : 'normal';
+      if (mode === 'hard') { try { await this.load(); } catch (e) { return false; } }
+      modeNow = mode;
+      Object.assign(window, mode === 'hard' ? this.data : NORMAL_DATA);
+      document.documentElement.classList.toggle('mode-hard', mode === 'hard');
+      Store.useMode(mode);
+      // Valeurs des badges du mode difficile changées depuis le dernier passage : XP des tirages gardés recalculée.
+      if (mode === 'hard') { let h = 0; for (const b of this.data.BADGE_META) for (const ch of b.id + b.score) h = (h * 31 + ch.charCodeAt(0)) | 0; Store.rescore(n => Engines.hard.scoreOf(n), `h${h}`); }
+      return true;
+    },
+  };
   const TIERS_DESC = ['infinite', 'godlike', 'divine', 'celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common', 'trash', 'garbage', 'landwaste'];
   const TIER_RANK = { landwaste: -2, garbage: -1, trash: 0, common: 1, uncommon: 2, rare: 3, epic: 4, anomaly: 5, mythic: 6, celestial: 7, divine: 8, godlike: 9, infinite: 10 };
   const TIER_EMOJI = { landwaste: '☣️', garbage: '🗑️', trash: '🟫', common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', anomaly: '🟧', mythic: '🟥', celestial: '💠', divine: '🌟', godlike: '⚜️', infinite: '♾️' };
@@ -102,7 +148,7 @@
     // nonce : le même pour chaque nouvelle tentative d'un même tirage (le serveur renvoie alors le tirage déjà fait).
     roll(nonce) {
       const p = Store.player;
-      return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, nonce }) });
+      return this.request('/api/roll', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, nonce, ...(Mode.hard ? { mode: 'hard' } : {}) }) });
     },
     // Chat global (api/_global.js par /api/friends) : le joueur s'identifie s'il en a un, la lecture marche sans.
     global(action, extra = {}) {
@@ -120,11 +166,12 @@
       const p = Store.player;
       return this.request('/api/room', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name: p.name, action, code, ...extra }) });
     },
-    leaderboard(period, span) {
-      return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}`);
+    // mode : 'hard' pour les classements et le profil du mode difficile (par défaut : le mode en cours).
+    leaderboard(period, span, mode = Mode.name) {
+      return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
-    profile(name, lite) {
-      return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}${lite ? '&lite=1' : ''}`);
+    profile(name, lite, mode = Mode.name) {
+      return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}${lite ? '&lite=1' : ''}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
     shop() {
       return this.request(`/api/shop?me=${Store.player.id}`);
@@ -193,7 +240,7 @@
     // Sans "add" : renvoie tout l'historique du compte (ou, avec since, les tirages faits après). Avec "add" : y verse ces tirages.
     history(add, fetchAll = true, since) {
       const p = Store.player;
-      return this.request('/api/history', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll, ...(since ? { since } : {}) }) });
+      return this.request('/api/history', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll, ...(since ? { since } : {}), ...(Mode.hard ? { mode: 'hard' } : {}) }) });
     },
   };
 
@@ -239,6 +286,41 @@
     return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(down);
   };
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  // ---------------------------------------------------------------- réactions emoji (demandé par Sacha, 2026-11-02)
+  // « Réagir avec un emoji comme sur WhatsApp » : chat global, messages entre amis, chat des duels, chat du clan.
+  // 6 emojis fixes (api/_react.js) ; une réaction par joueur et par message, toucher la sienne l'enlève.
+  // Chaque chat s'inscrit (Rx.on) avec send(clé, emoji) → promesse, et redraw() ; le message porte data-rx-scope et
+  // data-rx-key. La barre des 6 emojis s'ouvre par le bouton 🙂+ et se ferme au clic ailleurs ou avec Échap.
+  const Rx = {
+    EMOJIS: ['👍', '❤️', '😂', '😮', '😢', '🔥'],
+    open: null, scopes: {}, busy: false,
+    on(scope, h) { this.scopes[scope] = h; },
+    attrs(scope, key) { return `data-rx-scope="${scope}" data-rx-key="${esc(key)}"`; },
+    addBtn(scope, key, cls = '') { return `<button type="button" class="rx-add${cls ? ` ${cls}` : ''}" data-rx-open aria-label="React" title="React" aria-expanded="${this.open === `${scope}:${key}`}"><span aria-hidden="true">🙂</span><b aria-hidden="true">+</b></button>`; },
+    // La rangée sous le message : les réactions (le survol dit qui), puis la barre si elle est ouverte ici.
+    row(scope, key, list, can) {
+      list = list || [];
+      const open = can && this.open === `${scope}:${key}`;
+      if (!list.length && !open) return '';
+      const pills = list.map(r => { const more = r.n - (r.who || []).length; const who = `${(r.who || []).join(', ')}${more > 0 ? ` +${more}` : ''}`; return `<button type="button" class="rx-pill${r.mine ? ' mine' : ''}" ${can ? `data-rx="${r.e}"` : 'disabled'} aria-pressed="${!!r.mine}" title="${esc(who)}" aria-label="${r.e} ${r.n}: ${esc(who)}"><span aria-hidden="true">${r.e}</span><b>${fmt(r.n)}</b></button>`; }).join('');
+      const bar = open ? `<span class="rx-bar" role="group" aria-label="React">${this.EMOJIS.map(e => `<button type="button" data-rx="${e}" class="${list.some(r => r.mine && r.e === e) ? 'mine' : ''}" aria-label="${e}">${e}</button>`).join('')}</span>` : '';
+      return `<span class="rx" data-no-i18n>${pills}${bar}</span>`;
+    },
+    close() { if (!this.open) return; const scope = this.open.split(':')[0]; this.open = null; const h = this.scopes[scope]; if (h) h.redraw(); },
+    async click(e) {
+      const box = e.target.closest('[data-rx-scope]'), opener = e.target.closest('[data-rx-open]'), pick = e.target.closest('[data-rx]');
+      if (!box || (!opener && !pick)) { if (this.open && !e.target.closest('.rx-bar')) setTimeout(() => this.close()); return; } // après le clic : il garde sa cible
+      e.preventDefault(); e.stopPropagation();
+      const scope = box.dataset.rxScope, key = box.dataset.rxKey, h = this.scopes[scope]; if (!h) return;
+      if (opener) { const id = `${scope}:${key}`, was = this.open; this.open = was === id ? null : id; if (was && was.split(':')[0] !== scope) { const o = this.scopes[was.split(':')[0]]; if (o) o.redraw(); } h.redraw(); return; }
+      if (this.busy) return;
+      this.busy = true; this.open = null;
+      try { await h.send(key, pick.dataset.rx); } catch (err) { h.redraw(); toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+      finally { this.busy = false; }
+    },
+  };
+  document.addEventListener('click', e => Rx.click(e), true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && Rx.open) Rx.close(); });
   // ---------------------------------------------------------------- photos de profil (demandé par Sacha, 2026-10-26)
   // Seules les images acceptées par le créateur sont publiques : une carte nom → jeton (relue toutes les 5 min), puis
   // l'image par jeton, en cache long. Sans image : l'initiale du joueur sur un rond coloré. Taille fixe (aucun saut).
@@ -384,7 +466,7 @@
   const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
   // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
   // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
-  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${String(roll[0]).padStart(6, '0')}"` : '"------"');
+  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
   Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
   // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
   // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
@@ -518,12 +600,13 @@
     const txt = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(fr ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
     return txt.charAt(0).toUpperCase() + txt.slice(1);
   };
+  // Mode du badge (Sacha, 2026-11-02 : « dire mode difficile ou mode normal ») : « 2026-10-h » = mode difficile.
   const topHTML = award => {
     const m = award && TOP_MARKS[award.top];
-    if (!m || !/^\d{4}-\d{2}$/.test(award.month || '')) return '';
-    const when = monthLabel(award.month);
-    const tip = award.top === 1 ? `First place on the monthly leaderboard · ${when}` : `Top ${award.top} on the monthly leaderboard · ${when}`;
-    return `<span class="top-mark ${m[2]}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)}</span>`;
+    if (!m || !/^\d{4}-\d{2}(-h)?$/.test(award.month || '')) return '';
+    const hard = award.month.endsWith('-h'), when = monthLabel(award.month.slice(0, 7)), mode = hard ? '🔥 Hard' : 'Normal';
+    const tip = `${award.top === 1 ? 'First place' : `Top ${award.top}`} on the ${hard ? 'hard mode' : 'normal mode'} monthly leaderboard · ${when}`;
+    return `<span class="top-mark ${m[2]}${hard ? ' hard' : ''}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)} · ${mode}</span>`;
   };
   // Pièces versées avec le badge (mêmes montants que REWARDS dans api/_rank.js).
   const TOP_COINS = { 1: 1000, 5: 500, 10: 250 };
@@ -604,8 +687,9 @@
   const questDelta = (score, tier) => ({ rolls: 1, xp: score, [`t:${tier}`]: 1 });
 
   // Analyses mises en cache : un nombre donne toujours le même résultat.
-  const cache = new Map();
+  const caches = { normal: new Map(), hard: new Map() }; // un par mode : le même nombre n'a pas le même score
   function analysis(n) {
+    const cache = caches[modeNow];
     let a = cache.get(n);
     if (!a) {
       a = Engine.analyze(n);
@@ -1229,7 +1313,7 @@
     if (!rows.length || Store.settings.friendAlerts === 'off') return;
     rows.forEach((r, i) => {
       const tier = r.tier.charAt(0).toUpperCase() + r.tier.slice(1);
-      setTimeout(() => toast(`🌟 ${r.name} rolled ${tier === 'Infinite' ? 'an' : 'a'} ${tier} ${r.n}!`, 6000, 'achv'), i * 1500);
+      setTimeout(() => toast(`🌟 ${r.name} rolled ${tier === 'Infinite' ? 'an' : 'a'} ${tier} ${r.n}${r.h ? ' in 🔥 Hard mode' : ''}!`, 6000, 'achv'), i * 1500);
     });
     try { localStorage.setItem('bigSeen', String(Math.max(...rows.map(r => r.t)))); } catch (e) { /* stockage bloqué */ }
   }
@@ -1477,7 +1561,7 @@
     const life = await ServerLife.load();
     if (!life) return;
     const home = document.getElementById('home-life');
-    if (home) home.textContent = `${plural(life.rolls, 'roll')} · ${fmt(life.xp)} lifetime XP`;
+    if (home) home.textContent = Mode.hard ? `${plural(life.rolls, 'hard roll')} · ${fmt(life.xp)} XP in hard mode` : `${plural(life.rolls, 'roll')} · ${fmt(life.xp)} lifetime XP`;
     const sr = document.getElementById('st-rolls'), sl = document.getElementById('st-life');
     if (sr) { const v = sr.querySelector('.v'); if (v) v.textContent = fmt(life.rolls); }
     if (sl) { const v = sl.querySelector('.v'), sub = sl.querySelector('.s'); if (v) v.textContent = compact(life.xp); if (sub && life.rolls) sub.textContent = `${fmt(life.xp / life.rolls)} XP per roll`; }
@@ -1495,11 +1579,11 @@
     app.innerHTML = `
       <div class="page">
         <section class="hero">
-          <div class="qmarks" aria-hidden="true">${'??????'.split('').map(c => `<span>${c}</span>`).join('')}</div>
-          <p class="tagline">Infinite rolls. One number at a time. What will yours be?</p>
+          <div class="qmarks${Mode.hard ? ' hard' : ''}" aria-hidden="true">${'?'.repeat(Mode.digits()).split('').map(c => `<span>${c}</span>`).join('')}</div>
+          <p class="tagline">${Mode.hard ? '🔥 Hard mode: 10-digit numbers. Rarities are 10× rarer and pay about 10× more.' : 'Infinite rolls. One number at a time. What will yours be?'}</p>
           <button class="btn-roll${genClass()}" id="roll-btn">Generate</button>
           <p class="hint">
-            ${rolls.length ? `<span id="home-life">${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP</span> · ` : ''}
+            ${rolls.length ? `<span id="home-life">${Mode.hard ? `${plural(countedRolls(), 'hard roll')} · ${fmt(lifetimeEP())} XP in hard mode` : `${plural(countedRolls(), 'roll')} · ${fmt(lifetimeEP())} lifetime XP`}</span> · ` : ''}
             ${name ? `playing as <b>${esc(name)}</b> · ` : '<a href="javascript:void 0" id="pick-name">pick a name</a> · '}
             press <kbd>${esc(keyName())}</kbd>
           </p>
@@ -1911,7 +1995,7 @@
   // compté que cet appareil connaît (since) ; l'historique entier (jusqu'à 100 000 tirages) une fois par jour et par
   // joueur, et à chaque connexion (nouvel identifiant : pas encore de date).
   const FULL_SYNC_MS = 86400000;
-  const fullKey = () => `histFull:${Store.player.id}`;
+  const fullKey = () => `histFull:${Store.player.id}${Mode.hard ? ":hard" : ""}`;
   let syncing = null;
   function syncHistory() {
     if (!Store.player.google && !Store.player.name) return Promise.resolve(0);
@@ -1921,7 +2005,9 @@
           let lastFull = 0; try { lastFull = Number(localStorage.getItem(fullKey())) || 0; } catch (e) { lastFull = 0; }
           let since = 0;
           if (Date.now() - lastFull < FULL_SYNC_MS) for (let i = Store.rolls.length - 1; i >= 0; i--) if (!Store.rolls[i][3]) { since = Store.rolls[i][2]; break; }
+          const mode = Mode.name;
           const server = await Online.history(undefined, true, since || undefined);
+          if (Mode.name !== mode) return 0; // mode changé pendant la lecture : ces tirages sont ceux de l'autre mode
           const part = !!(since && server.since === since); // un ancien serveur renvoie tout : traité comme une lecture complète
           const onServer = Store.rollSet(server.rolls);
           // Lecture partielle : on ne juge que les tirages nettement plus récents (une minute de marge, voir rollSet).
@@ -1929,7 +2015,7 @@
           // Les tirages déjà marqués hors ligne ont été proposés au serveur, qui ne les prend plus : inutile d'y revenir.
           const localOnly = Store.rolls.filter(r => r[2] > after && !r[3] && !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
           const added = Store.mergeRolls(server.rolls, n => Engine.scoreOf(n));
-          for (let i = 0; i < localOnly.length; i += 2000) await Online.history(localOnly.slice(i, i + 2000), false);
+          if (mode !== 'hard') for (let i = 0; i < localOnly.length; i += 2000) await Online.history(localOnly.slice(i, i + 2000), false);
           if (!part) try { localStorage.setItem(fullKey(), String(Date.now())); } catch (e) { /* stockage bloqué : tout relire la prochaine fois */ }
           // L'XP affiché ne compte que les tirages présents sur le compte : c'est le même total qu'au classement.
           const marked = Store.markOffline(onServer, undefined, undefined, after);
@@ -1945,6 +2031,33 @@
     }
     return syncing;
   }
+
+  // Interrupteur Normal / Hard sous le logo (Sacha, 2026-11-02). Pas pendant un tirage ni dans un duel : le tirage en
+  // cours appartient à son mode. Tout ce qui dépend des tirages de l'appareil est recalculé pour le nouveau mode.
+  function drawModeSwitch() {
+    const box = document.getElementById('mode-switch'); if (!box) return;
+    box.querySelectorAll('[data-mode]').forEach(b => { const on = b.dataset.mode === Mode.name; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+  }
+  async function switchMode(mode) {
+    if (mode === Mode.name) return;
+    if (rollPending || (session && !session.finished) || SoloAuto.on) { toast('Finish your roll first (and stop auto-roll)'); return; }
+    if (currentView === 'room') { toast('Leave the duel first'); return; }
+    const box = document.getElementById('mode-switch'); if (box) box.setAttribute('aria-busy', 'true');
+    const ok = await Mode.set(mode);
+    if (box) box.removeAttribute('aria-busy');
+    if (!ok) { toast('Hard mode could not load: check your connection and try again'); return; }
+    Collection.built = false; ServerLife.at = 0; ServerLife.xp = null;
+    drawModeSwitch();
+    if (mode === 'hard' && !Store.settings.hardSeen) { Store.setSetting('hardSeen', 1); toast('🔥 Hard mode: 10-digit numbers, rarer rarities that pay more, and its own leaderboards', 6000); }
+    else toast(mode === 'hard' ? '🔥 Hard mode' : 'Normal mode');
+    route();
+    syncHistory().catch(() => {});
+  }
+  document.addEventListener('click', e => { const b = e.target.closest('#mode-switch [data-mode]'); if (b) switchMode(b.dataset.mode); });
+  document.addEventListener('keydown', e => {
+    const b = e.target.closest && e.target.closest('#mode-switch [data-mode]'); if (!b || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault(); const next = b.dataset.mode === 'hard' ? 'normal' : 'hard'; switchMode(next).then(() => { const n = document.querySelector(`#mode-switch [data-mode="${next}"]`); if (n) n.focus(); });
+  });
 
   // Déconnexion : l'historique n'est retiré de cet appareil qu'une fois chaque tirage confirmé sur le compte.
   // Aussi pour les joueurs à mot de passe (idée d'Angelicide9, 2026-11-01) : bouton montré seulement si le serveur
@@ -2054,6 +2167,8 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-02-hard', date: 'Nov 2, 2026', en: ['🔥 Hard mode! Switch between Normal and Hard under the RNG∞ logo. Hard mode rolls a 10-digit number (0 to 9,999,999,999). Every rarity above Common is 10 times rarer, and pays about 10 times more coins, so on average you earn the same coins and XP as in Normal mode. Badges are worth what they are worth among 10 billion numbers', '🏆 Hard mode has its own leaderboards, history, stats, badge collection, duels and daily tournament. Your coins, skins, level, quests, achievements and the chat are the same in both modes'], fr: ['🔥 Mode difficile ! Passe de Normal à Difficile sous le logo RNG∞. Le mode difficile tire un nombre à 10 chiffres (de 0 à 9 999 999 999). Chaque rareté au-dessus de Common est 10 fois plus rare et rapporte environ 10 fois plus de pièces : en moyenne, tu gagnes autant de pièces et d\'XP qu\'en mode normal. Les badges valent ce qu\'ils valent parmi 10 milliards de nombres', '🏆 Le mode difficile a ses propres classements, historique, stats, collection de badges, duels et tournoi du jour. Tes pièces, tes skins, ton niveau, tes quêtes, tes succès et le chat sont les mêmes dans les deux modes'] },
+    { id: '2026-11-02-reactions', date: 'Nov 2, 2026', en: ['🙂 React to messages with an emoji, like in your phone\'s messages: tap 🙂+ next to a message in the global chat, your friends\' chats, duels or your clan, and pick 👍 ❤️ 😂 😮 😢 or 🔥. Tap your reaction again to remove it, and hover a reaction to see who sent it'], fr: ['🙂 Réagis aux messages avec un emoji, comme dans les messages de ton téléphone : touche 🙂+ à côté d\'un message dans le chat global, les chats avec tes amis, les duels ou ton clan, et choisis 👍 ❤️ 😂 😮 😢 ou 🔥. Touche ta réaction à nouveau pour l\'enlever, et survole une réaction pour voir qui l\'a envoyée'] },
     { id: '2026-11-01-giveaways', date: 'Nov 1, 2026', en: ['🎁 Free skin giveaways on the RNG∞ Discord! Join the server (💬 Discord button), react 🎉 on a giveaway in 🎁・giveaways, and one winner gets the skin. Link your Discord in Me → 🔗 Link my Discord to receive it automatically'], fr: ['🎁 Des skins à gagner sur le Discord de RNG∞ ! Rejoins le serveur (bouton 💬 Discord), réagis 🎉 sur un giveaway dans 🎁・giveaways, et un gagnant reçoit le skin. Lie ton Discord dans Moi → 🔗 Link my Discord pour le recevoir tout seul'] },
     { id: '2026-11-01-mods', date: 'Nov 1, 2026', en: ['🛡️ Chat moderators: players chosen by Sacha help keep the global chat friendly, and a 🛡️ shows next to their name. Use 🚩 Report on a message that isn\'t nice and a moderator will check it'], fr: ['🛡️ Modérateurs du chat : des joueurs choisis par Sacha aident à garder le chat global sympa, et un 🛡️ s\'affiche à côté de leur pseudo. Utilise 🚩 Signaler sur un message pas gentil et un modérateur le vérifiera'] },
     { id: '2026-11-01-chat', date: 'Nov 1, 2026', en: ['💬 The global chat box now grows as you type, so you can see your whole message before sending it', '🔇 Chat mutes now come in shorter lengths (5 or 10 minutes) and always with a reason, which the muted player can see'], fr: ['💬 La zone d\'écriture du chat global s\'agrandit pendant que tu tapes : tu vois tout ton message avant de l\'envoyer', '🔇 Les silences du chat peuvent maintenant être plus courts (5 ou 10 minutes) et ont toujours une raison, que le joueur muet peut voir'] },
@@ -2746,7 +2861,7 @@
         try {
           const r = await Online.roll(nonce);
           // Pas de nombre valide : on redemande le même tirage (le serveur renvoie celui déjà fait grâce au nonce).
-          if (!Number.isInteger(r.n) || r.n < 0 || r.n > 1000000) throw new Error('Bad roll from the server');
+          if (!Number.isInteger(r.n) || r.n < 0 || r.n > Engine.MAX_ROLL || (r.mode === 'hard') !== Mode.hard) throw new Error('Bad roll from the server');
           return r;
         } catch (err) {
           if (err.status === 409 || err.status === 429 || err.status === 403 || attempt >= 2) throw err;
@@ -2900,7 +3015,8 @@
     // Niveau de vitesse acheté dans la boutique : toute la révélation raccourcit, chiffres compris (un rewatch aussi).
     const kd = Shop.speedFactor(Store.settings.speedLv);
     const k = speed.base * kd, kb = speed.badges * kd;
-    const slotCount = Math.max(6, a.str.length);
+    // Mode difficile : 10 chiffres, révélés au même rythme total que 6 (sinon moins de tirages, donc de pièces, par heure).
+    const slotCount = Math.max(Mode.digits(), a.str.length), digitK = slotCount > 7 ? 6 / slotCount : 1;
     const padded = a.str.padStart(slotCount, '0');
     const lead = slotCount - a.str.length;
     const ascending = a.groups.slice().reverse();
@@ -2950,7 +3066,7 @@
     const step = (delay, run, factor = k) => { clock += delay * factor; steps.push({ at: clock, run, done: false }); };
     const show = (el, cls) => { el.classList.remove('invisible'); if (cls && !reducedMotion) el.classList.add(cls); };
     // Sons : une étape en retard (onglet endormi puis réveillé, tout tombe d'un coup) se joue sans le sien.
-    const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount) * kd;
+    const began = performance.now(), lastWait = digitDelay(slotCount - 2, slotCount) * kd * digitK;
     let late = false, lastFrom = 0;
     const sfx = (type, o) => { if (!late) Sound.play(type, o); };
     // Pack de sons acheté (boutique, onglet Sounds) : il change la note des chiffres et le son de la rareté. Les skins dont
@@ -2992,7 +3108,7 @@
       replay($('#card-stage'), 'thump'); // sur le conteneur : la carte garde ses propres animations (lueur, tremblement)
     };
     step(REVEAL.digitStart, revealDigit(0), kd);
-    for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), kd);
+    for (let i = 1; i < slotCount; i++) step(digitDelay(i - 1, slotCount), revealDigit(i), kd * digitK);
     steps.push({ at: clock - Sound.LEAD, run: () => { sfx('riser'); if (skinFx) skinFx.build(Sound.LEAD); }, done: false }); // montée de tension, coupée juste avant le dernier chiffre
     step(0, quick => {
       clearInterval(spin);
@@ -3245,7 +3361,8 @@
     const sorted = scores.slice().sort((a, b) => a - b);
     const tierCounts = Object.fromEntries(TIERS_DESC.map(t => [t, 0]));
     const digitCounts = new Array(10).fill(0);
-    const lenCounts = new Array(8).fill(0); // nombres à 1, 2… 7 chiffres (idée de Phong254, 2026-11-01)
+    const lenCounts = new Array(11).fill(0); // nombres à 1, 2… 7 chiffres (idée de Phong254, 2026-11-01), 10 en mode difficile
+    const span = Engine.MAX_ROLL + 1, width = Mode.hard ? 1e9 : 100000; // 10 tranches : 100 000 (normal) ou 1 milliard (difficile)
     const buckets = new Array(10).fill(0);
     let pctSum = 0, digitTotal = 0;
     let sinceRare = null, sinceEpic = null, sinceMythic = null, dry = 0, longestDry = 0;
@@ -3259,7 +3376,7 @@
       for (let k = 0; k < s.length; k++) digitCounts[s.charCodeAt(k) - 48]++;
       digitTotal += s.length;
       lenCounts[s.length]++;
-      buckets[Math.min(9, Math.floor(r[0] / 100000))]++;
+      buckets[Math.min(9, Math.floor(r[0] / width))]++;
       if (TIER_RANK[tier] >= 3) { sinceRare = i; dry = 0; } else { dry++; longestDry = Math.max(longestDry, dry); }
       if (TIER_RANK[tier] >= 4) sinceEpic = i;
       if (TIER_RANK[tier] >= TIER_RANK.mythic) sinceMythic = i;
@@ -3409,13 +3526,14 @@
       tickFormat: v => (v * 100).toFixed(0) + '%',
       tips: digitShares.map((v, d) => `<b>Digit ${d}</b><br>${pctStr(v)} of your digits (${fmt(st.digitCounts[d])})<br>expected ${pctStr(window.DIGIT_ODDS[d])}`),
     });
-    const bucketExp = st.buckets.map((_, k) => (N * (k === 9 ? 100001 : 100000)) / 1000001);
+    const W = Mode.hard ? 1e9 : 100000, SP = Engine.MAX_ROLL + 1;
+    const bucketExp = st.buckets.map((_, k) => (N * (k === 9 ? SP - 9 * W : W)) / SP);
     const bucketSVG = barChartSVG({
-      labels: st.buckets.map((_, k) => (k === 0 ? '0' : k + '00K')),
+      labels: st.buckets.map((_, k) => (k === 0 ? '0' : Mode.hard ? `${k}B` : k + '00K')),
       values: st.buckets,
       expected: bucketExp,
       tickFormat: v => compact(v),
-      tips: st.buckets.map((c, k) => `<b>${fmt(k * 100000)} – ${fmt(k === 9 ? 1000000 : (k + 1) * 100000 - 1)}</b><br>${plural(c, 'roll')} · expected ≈ ${bucketExp[k].toFixed(1)}`),
+      tips: st.buckets.map((c, k) => `<b>${fmt(k * W)} – ${fmt(k === 9 ? SP - 1 : (k + 1) * W - 1)}</b><br>${plural(c, 'roll')} · expected ≈ ${bucketExp[k].toFixed(1)}`),
     });
 
     app.innerHTML = `
@@ -3482,11 +3600,14 @@
 
   // Nombres de 1 à 6 chiffres tirés, contre l'attendu (idée de Phong254, 2026-11-01) : sur 1 000 001 nombres (0 à
   // 1 000 000), 10 ont un chiffre (0 à 9), 90 deux, 900 trois… et un seul en a sept (1 000 000), montré s'il est sorti.
+  // Mode difficile : 1 à 10 chiffres, sur 10 000 000 000 nombres.
   const LEN_SPAN = [0, 10, 90, 900, 9000, 90000, 900000, 1];
+  const HARD_LEN_SPAN = [0, 10, 90, 900, 9000, 90000, 900000, 9e6, 9e7, 9e8, 9e9];
   function digitLengthsHTML(st) {
-    const rows = [1, 2, 3, 4, 5, 6, ...(st.lenCounts[7] ? [7] : [])].map(k => {
-      const got = st.lenCounts[k], exp = (st.N * LEN_SPAN[k]) / 1000001;
-      const range = k === 7 ? '1,000,000' : `${fmt(k === 1 ? 0 : 10 ** (k - 1))} – ${fmt(10 ** k - 1)}`;
+    const hard = Mode.hard, SPAN = hard ? HARD_LEN_SPAN : LEN_SPAN, total = Engine.MAX_ROLL + 1;
+    const rows = (hard ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5, 6, ...(st.lenCounts[7] ? [7] : [])]).map(k => {
+      const got = st.lenCounts[k], exp = (st.N * SPAN[k]) / total;
+      const range = k === 7 && !hard ? '1,000,000' : `${fmt(k === 1 ? 0 : 10 ** (k - 1))} – ${fmt(10 ** k - 1)}`;
       const ratio = exp ? got / exp : 0, tone = !got && exp < 1 ? '' : ratio >= 1.15 ? ' up' : ratio <= 0.85 ? ' down' : '';
       return `<div class="kv st-len"><span class="k">${plural(k, 'digit')} <span class="muted mono">${range}</span></span><span class="v${tone}"><b class="mono">${fmt(got)}</b> <span class="muted">expected ≈ ${exp >= 10 ? fmt(Math.round(exp)) : exp.toFixed(exp >= 1 ? 1 : 2)}</span></span></div>`;
     }).join('');
@@ -3513,7 +3634,7 @@
         <h1 class="page-title">Badges</h1>
         <div class="panel xc-panel">
           <div class="panel-head"><h3 class="panel-title">🔎 XP checker</h3><span class="panel-note">type any number to see its XP and badges · it is not a roll</span></div>
-          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="e.g. 112358" aria-label="Number to check"><span class="xc-vs" aria-hidden="true">vs</span><input class="input mono xc-n2" id="xc-n2" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="compare (optional)" aria-label="Second number to compare with (optional)"><button class="btn">Check</button></form>
+          <form id="xc-form" class="xc-form"><input class="input mono" id="xc-n" inputmode="numeric" autocomplete="off" maxlength="${Mode.hard ? 10 : 7}" placeholder="e.g. ${Mode.hard ? 1123581321 : 112358}" aria-label="Number to check"><span class="xc-vs" aria-hidden="true">vs</span><input class="input mono xc-n2" id="xc-n2" inputmode="numeric" autocomplete="off" maxlength="${Mode.hard ? 10 : 7}" placeholder="compare (optional)" aria-label="Second number to compare with (optional)"><button class="btn">Check</button></form>
           <div id="xc-out"></div>
         </div>
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
@@ -3529,16 +3650,16 @@
     $('#xc-form').addEventListener('submit', e => {
       e.preventDefault();
       const raw = $('#xc-n').value.trim(), n = Number(raw);
-      if (!/^\d{1,7}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      if (!/^\d{1,10}$/.test(raw) || n > Engine.MAX_ROLL) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
       // Deux nombres (idée de CrazyMiner22, 2026-11-01) : la même comparaison que History → Compare, marquée simulation.
       const raw2 = $('#xc-n2').value.trim(), n2 = Number(raw2);
-      if (raw2 && (!/^\d{1,7}$/.test(raw2) || n2 > Engine.MAX_ROLL)) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
+      if (raw2 && (!/^\d{1,10}$/.test(raw2) || n2 > Engine.MAX_ROLL)) { toast(`Type a whole number from 0 to ${fmt(Engine.MAX_ROLL)}`); return; }
       if (raw2) { const side = x => { const a = analysis(x); return { label: 'Simulation', a, ids: new Set(a.earnedIds) }; }; compareModal(side(n), side(n2), true); }
       const a = analysis(n), secret = n === 0 ? '<p class="xc-secret" data-no-i18n>🔑 ZEROHERO</p>' : '';
       $('#xc-out').innerHTML = `
         <div class="xc-result">
           <span class="xc-sim">Simulation · not a roll</span>
-          <div class="xc-num mono" data-no-i18n>${(() => { const full = String(n).padStart(6, '0'), lead = n ? full.search(/[1-9]/) : 5; return `<span class="xc-ghost">${full.slice(0, lead)}</span>${full.slice(lead)}`; })()}</div>
+          <div class="xc-num mono" data-no-i18n>${(() => { const full = Mode.pad(n), lead = n ? full.search(/[1-9]/) : full.length - 1; return `<span class="xc-ghost">${full.slice(0, lead)}</span>${full.slice(lead)}`; })()}</div>
           <div class="xc-meta"><span class="badge-pill" data-tier="${a.tier}">${esc(a.tier)}</span><b class="mono">${fmt(a.total)} XP</b>${percentileHTML(a.percentile)}</div>
           ${secret}<div class="pill-row xc-badges">${a.groups.length ? a.groups.map(g => `<span class="badge-pill" data-tier="${g.badge.tier}" data-badge="${g.badge.id}" style="cursor:pointer">${g.badge.emoji} ${esc(g.badge.label)}</span>`).join(' ') : '<span class="panel-note">No badge</span>'}</div>
         </div>`;
@@ -3629,15 +3750,22 @@
     app.innerHTML = `
       <div class="page page-wide">
         ${isMine(name) ? '' : '<a class="back-link" href="#/leaderboard">← Leaderboard</a>'}
-        <h1 class="page-title" id="p-title">${esc(name)}</h1>
+        <h1 class="page-title" id="p-title">${esc(name)}${Mode.hard ? ' <span class="hard-chip">🔥 Hard mode</span>' : ''}</h1>
         <div id="p-body"><div class="empty">Loading…</div></div>
       </div>`;
     // Mon propre profil, calculé de la même façon, pour la comparaison (inutile sur ma page).
     const self = Store.player.name;
-    const minePromise = self && self.toLowerCase() !== name.toLowerCase() ? Online.profile(self).catch(() => null) : Promise.resolve(null);
+    // Mode difficile (Sacha, 2026-11-02) : le profil commun (skin, succès, clan, bio, duels, niveau…) avec, à la place des
+    // chiffres du mode normal, ceux du mode difficile (tirages, XP, chance, raretés, meilleurs et pires tirages, badges).
+    const fetchP = async who => {
+      if (!Mode.hard) return Online.profile(who, false, 'normal');
+      const [base, h] = await Promise.all([Online.profile(who, false, 'normal'), Online.profile(who, false, 'hard')]);
+      return { ...base, rolls: h.rolls, lifetime: h.lifetime, window: h.window, since: h.since, last: h.last, rank: h.rank, luck: h.luck, tiers: h.tiers, best: h.best, worst: h.worst, badges: h.badges, uniq: null, hard: true };
+    };
+    const minePromise = self && self.toLowerCase() !== name.toLowerCase() ? fetchP(self).catch(() => null) : Promise.resolve(null);
     let p, mine;
     try {
-      [p, mine] = await Promise.all([Online.profile(name), minePromise]);
+      [p, mine] = await Promise.all([fetchP(name), minePromise]);
     } catch (err) {
       if (token === profileToken && currentView === 'profile') {
         $('#p-body').innerHTML = `<div class="empty">${err.status === 404 ? `No player called “${esc(name)}”.` : 'Profile unavailable right now.'}</div>`;
@@ -3984,8 +4112,8 @@
     if (Store.player.name) Online.shop().then(st => { applyShop(st); const w = $('#d-wallet'); if (w) w.textContent = `You have 🪙 ${fmt(st.coins)}`; }).catch(() => {});
     app.innerHTML = `
       <div class="page page-wide">
-        <h1 class="page-title">Duel</h1>
-        <p class="panel-note profile-sub">Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard.</p>
+        <h1 class="page-title">Duel${Mode.hard ? ' <span class="hard-chip">🔥 Hard mode</span>' : ''}</h1>
+        <p class="panel-note profile-sub">${Mode.hard ? 'Hard mode duels: 10-digit numbers for everyone. Duel rolls count in your hard mode history and leaderboards. Switch to Normal under the logo for a normal duel.' : 'Everyone rolls at the same time and all numbers are revealed together, digit by digit. Duel rolls are normal rolls: they stay in your history and count on the leaderboard.'}</p>
         <div class="panel tn-teaser" id="d-tourney"><span class="panel-note">🏆 Loading the tournament…</span></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Live now</h3><span class="panel-note">public games · watch or join without a code</span></div>
@@ -4299,7 +4427,7 @@
       return `
         <div class="live-row">
           <span class="live-dot${r.status === 'playing' ? ' on' : ''}"></span>
-          <span class="live-info"><b>${esc(r.host)}'s game</b>
+          <span class="live-info"><b>${esc(r.host)}'s game</b>${r.hard ? ' <span class="gc-hardtag">🔥 Hard</span>' : ''}
             <span class="panel-note">${r.count}/${r.size} players · ${goalText(r)} · ${r.status === 'lobby' ? 'waiting for players' : `round ${r.round + 1}`}</span>
             <span class="live-players">${r.players.map(esc).join(', ')}</span></span>
           ${action}
@@ -7522,7 +7650,7 @@
     // Mon profil, en résumé (fusion des onglets Profil et Amis, 2026-10-16).
     if ($('#f-settings')) $('#f-settings').addEventListener('click', openSettings);
     if ($('#f-discord')) drawDiscordLink();
-    if (Store.player.name) Online.profile(Store.player.name).then(p => {
+    if (Store.player.name) Online.profile(Store.player.name, false, 'normal').then(p => { // résumé commun aux deux modes
       const box = $('#f-me-body'); if (!box) return;
       const t = p.title ? titleHTML(p.title) : '';
       box.innerHTML = `
@@ -7688,6 +7816,7 @@
       const list = m.querySelector('#dm-list'), input = m.querySelector('#dm-text'), form = m.querySelector('#dm-form'), block = m.querySelector('#dm-block'), file = m.querySelector('#dm-file');
       const emojis = wireEmojis(m, () => input);
       const imgs = new Map();
+      let dmLast = null; // dernière réponse, pour redessiner quand la barre des réactions s'ouvre
       // Une image choisie (📷), collée (Ctrl/Cmd + V) ou glissée dans la conversation part tout de suite.
       const sendImage = async f => {
         if (!f || !/^image\//.test(f.type)) { if (f) toast('Pick an image'); return; }
@@ -7711,7 +7840,8 @@
         block.textContent = d.blocked ? 'Unblock' : '🚫 Block';
         block.dataset.blocked = d.blocked ? '1' : '';
         input.disabled = d.blocked; input.placeholder = d.blocked ? 'You blocked this player' : 'Write a message…';
-        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
+        dmLast = d; const rxCan = !d.blocked;
+        const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}" ${Rx.attrs('dm', x.t)}>${x.img ? `<img class="dm-img" data-dm-img="${x.t}" alt="Image" title="Click to enlarge">` : ''}${x.text ? `<span data-no-i18n>${esc(x.text)}</span>` : ''}${Rx.row('dm', x.t, x.rx, rxCan)}<i>${time(x.t)}${x.edited ? ' · edited' : ''}${rxCan ? ` · ${Rx.addBtn('dm', x.t)}` : ''}${x.me ? ` · <button class="dm-report" data-dm-edit="${x.t}" data-text="${esc(x.text)}" title="Edit this message">Edit</button> · <button class="dm-report" data-dm-unsend="${x.t}" title="Delete this message">Delete</button>` : ` · <button class="dm-report" data-dm-report="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi!</div>';
         const them = d.messages.filter(x => !x.me).reduce((t, x) => Math.max(t, x.t), 0);
         if (lastThem !== null && them > lastThem) dmPing();
         lastThem = them;
@@ -7727,6 +7857,7 @@
         if (atBottom || !list.dataset.ready) list.scrollTop = list.scrollHeight;
         list.dataset.ready = '1';
       };
+      Rx.on('dm', { send: async (t, emoji) => draw(await Online.friends('react', name, { t: Number(t), emoji })), redraw: () => { if (m.isConnected && dmLast) draw(dmLast); } });
       const load = () => Online.friends('messages', name).then(d => { if (m.isConnected) draw(d); }).catch(() => {});
       const loop = () => { if (!m.isConnected) { clearInterval(poll); checkGifts(); if (currentView === 'friends') drawFriends(); return; } if (!document.hidden) load(); };
       poll = setInterval(loop, 4000);
@@ -7774,7 +7905,7 @@
       if (!r.gifts || !r.gifts.length) return;
       if (r.coins != null) Store.setSetting('coins', r.coins);
       // Pièces du classement du mois : annoncées à part, une par une.
-      r.gifts.filter(g => g.kind === 'top').forEach(g => toast(`🏆 #${g.place} on the ${monthLabel(g.month)} monthly leaderboard: +${fmt(g.amount)} coins`, 8000, 'achv'));
+      r.gifts.filter(g => g.kind === 'top').forEach(g => toast(`🏆 #${g.place} on the ${monthLabel(String(g.month).slice(0, 7))} ${String(g.month).endsWith('-h') ? 'hard mode' : 'normal mode'} monthly leaderboard: +${fmt(g.amount)} coins`, 8000, 'achv'));
       r.gifts = r.gifts.filter(g => g.kind !== 'top');
       if (!r.gifts.length) { Sound.play('lock', { i: 5 }); return; }
       const total = r.gifts.reduce((x, g) => x + g.amount, 0);
@@ -7843,7 +7974,7 @@
     if (!Store.player.name) { askName(() => createRoom(bots)); return; }
     const p = duelPrefs();
     try {
-      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots, stake: bots ? 0 : p.stake });
+      const d = await Online.roomAction('create', null, { size: p.size, mode: p.mode, target: p.mode === 'xp' ? p.xp : p.wins, public: p.isPublic, bots, stake: bots ? 0 : p.stake, ...(Mode.hard ? { hard: true } : {}) }); // duel du mode en cours
       location.hash = roomHref(d.code);
     } catch (err) {
       roomError(err, () => createRoom(bots));
@@ -7970,6 +8101,20 @@
 
   function applyRoom(d, token, sent, got) {
     if (token !== Room.token || currentView !== 'room') return;
+    // Duel d'un autre mode (lien reçu, partie publique) : le site passe dans le mode du duel, dont le barème note ses tirages.
+    if (!!d.hard !== Mode.hard) {
+      if (!Room.switching) {
+        Room.switching = true;
+        Mode.set(d.hard ? 'hard' : 'normal').then(ok => {
+          Room.switching = false;
+          if (!ok) { toast('Hard mode could not load: check your connection and try again'); location.hash = '#/duel'; return; }
+          Collection.built = false; ServerLife.at = 0; ServerLife.xp = null; drawModeSwitch();
+          toast(d.hard ? '🔥 Hard mode duel: switched to Hard mode' : 'Normal mode duel: switched to Normal mode');
+          applyRoom(d, token, sent, got);
+        });
+      }
+      return;
+    }
     // Décalage avec l'horloge du serveur, pris sur l'échange le plus rapide (comme NTP).
     if (got - sent <= Room.rtt) {
       Room.rtt = got - sent;
@@ -8016,12 +8161,12 @@
     if (!list || !d) return;
     const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
     const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
-    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}`; // un message modifié redessine aussi
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}`; // un message modifié (ou une réaction) redessine aussi
     if (sig !== Room.chatSig) {
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>`).join('')
+        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -8038,6 +8183,7 @@
     }
   }
 
+  Rx.on('duel', { send: async (t, emoji) => { const token = Room.token, sent = Date.now(); applyRoom(await Online.roomAction('chatReact', Room.code, { t: Number(t), emoji }), token, sent, Date.now()); }, redraw: () => { Room.chatSig = ''; drawChat(Room.data); } });
   async function sendChat(text) {
     const token = Room.token, sent = Date.now();
     Room.chatAt = sent;
@@ -8215,13 +8361,13 @@
           <p class="panel-note" style="margin:-.3rem 0 .8rem">On the next round, their own card rolls and lands on this number (rarity, XP, badges, confetti), then their real roll comes back. Nothing real changes.</p>
           <form id="prank-form" class="prank-form">
             <label class="lev-field"><span>Who</span><select class="input" name="target">${others.map(p => `<option value="${esc(p.name)}" data-no-i18n>${esc(p.name)}</option>`).join('')}</select></label>
-            <label class="lev-field"><span>Number they will see</span><input class="input mono" name="n" type="number" min="0" max="1000000" value="777777" required></label>
+            <label class="lev-field"><span>Number they will see</span><input class="input mono" name="n" type="number" min="0" max="${Engine.MAX_ROLL}" value="777777" required></label>
             <div class="chips-row">${['777777', '999999', '000000', '1000000', '123456', '69420'].map(v => `<button type="button" class="chip" data-pn="${v}" data-no-i18n>${v}</button>`).join('')}</div>
             <p class="panel-note" id="prank-preview"></p>
             <div class="actions"><button class="btn-roll small">Arm the prank</button></div>
           </form>`, m => {
           const f = m.querySelector('#prank-form'), input = f.elements.n, prev = m.querySelector('#prank-preview');
-          const show = () => { const v = Number(input.value); if (Number.isInteger(v) && v >= 0 && v <= 1000000) { const a = analysis(v); prev.innerHTML = `They will see <b class="mono" data-no-i18n>${a.str.padStart(6, '0')}</b> · ${tierPill(a.tier)} · ${fmt(a.total)} XP`; } else prev.textContent = 'From 0 to 1,000,000'; };
+          const show = () => { const v = Number(input.value); if (Number.isInteger(v) && v >= 0 && v <= Engine.MAX_ROLL) { const a = analysis(v); prev.innerHTML = `They will see <b class="mono" data-no-i18n>${Mode.pad(a.str)}</b> · ${tierPill(a.tier)} · ${fmt(a.total)} XP`; } else prev.textContent = `From 0 to ${fmt(Engine.MAX_ROLL)}`; };
           m.querySelector('.chips-row').addEventListener('click', e => { const c = e.target.closest('[data-pn]'); if (c) { input.value = Number(c.dataset.pn); show(); } });
           input.addEventListener('input', show); show();
           f.addEventListener('submit', async e => {
@@ -8485,7 +8631,7 @@
     // monde, sur le nombre choisi (rareté, XP, badges, confettis), puis reprend le vrai tirage avant l'annonce du gagnant.
     const real = sides.slice(), pk = d.prank && d.prank.round === i && d.players[d.prank.i] ? d.prank : null, faked = pk ? pk.i : -1;
     if (faked >= 0) { const fa = analysis(pk.n); sides[faked] = { n: pk.n, s: fa.total, a: fa }; }
-    const slotCount = Math.max(6, ...sides.map(x => x.a.str.length));
+    const slotCount = Math.max(d.hard ? 10 : 6, ...sides.map(x => x.a.str.length)), digitK = slotCount > 7 ? 6 / slotCount : 1; // duel du mode difficile : 10 chiffres, même durée
     stage.innerHTML = stageHTML(r, true);
     Room.skinSig = skinSig(d);
     const cards = sides.map((x, j) => $(`#rc-${j}`));
@@ -8530,7 +8676,7 @@
     const at = (ms, fn) => timers.push(setTimeout(fn, Math.max(0, r.revealAt - Room.offset + ms - Date.now())));
     let clock = REVEAL.digitStart * pace;
     for (let k = 0; k < slotCount; k++) {
-      if (k) clock += digitDelay(k - 1, slotCount) * pace;
+      if (k) clock += digitDelay(k - 1, slotCount) * pace * digitK;
       at(clock, () => {
         slots.forEach((list, j) => {
           list[k].textContent = padded[j][k];
@@ -8602,13 +8748,16 @@
     currentView = 'leaderboard';
     const name = Store.player.name;
     // XP : jour, semaine, mois ou tout le temps (idée de qwertyuiop, 2026-10-28), d'où « XP » plutôt que « Lifetime XP ».
-    const tabs = [['best', '🏆 Best roll'], ['xp', '⭐ XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ['event', '🎯 Event']];
+    // Mode difficile (Sacha, 2026-11-02) : ses propres classements et trophées du mois, sans événement de la semaine ;
+    // les pièces sont communes aux deux modes.
+    const tabs = [['best', '🏆 Best roll'], ['xp', '⭐ XP'], ['rolls', '🎲 Most rolls'], ['coins', 'Coins'], ['worst', '🗑️ Trash'], ...(Mode.hard ? [] : [['event', '🎯 Event']])];
+    if (Mode.hard && ['event', 'median'].includes(lbState.period)) lbState.period = 'day';
     lbState.tab = lbTabOf(lbState.period);
     const xpRules = { day: 'XP earned today by each player · resets at midnight UTC', week: 'XP earned this week by each player · resets every Monday 00:00 UTC', month: 'XP earned this month by each player · resets on the 1st at 00:00 UTC' };
-    const lbRule = () => (lbState.period === 'xp' && xpRules[lbState.xpSpan]) || ({ xp: 'Total XP of every roll ever made', median: 'Median roll of each player with at least 200 rolls: half of their rolls score more, half score less', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month and year, plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
+    const lbRule = () => (lbState.period === 'xp' && xpRules[lbState.xpSpan]) || ({ xp: 'Total XP of every roll ever made', median: 'Median roll of each player with at least 200 rolls: half of their rolls score more, half score less', rolls: 'Total number of rolls each player has made, duels included', coins: 'Coins each player holds right now · refreshed every minute', worst: 'Worst single roll per player, of all time · the lowest XP comes first', event: 'Rolls that matched this week\'s event theme · resets every Monday 00:00 UTC', month: 'Best single roll per player · when the month ends, the top 10 earn a permanent badge 👑 Top 1 · 🥈 Top 5 · 🥉 Top 10 with the month, the year and the mode (Normal or 🔥 Hard), plus 🪙 1,000 · 500 · 250 coins' }[lbState.period] || 'Best single roll per player · days reset at midnight UTC');
     app.innerHTML = `
       <div class="page">
-        <h1 class="page-title">Leaderboard</h1>
+        <h1 class="page-title">Leaderboard${Mode.hard ? ' <span class="hard-chip">🔥 Hard mode</span>' : ''}</h1>
         <div id="today-slot"></div>
         <div class="lb-wrap">
           ${trophiesAsideHTML()}
@@ -8653,11 +8802,12 @@
     const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
     const days = Math.ceil((end - now.getTime()) / 86400000);
     const left = days <= 1 ? 'Ends today (midnight UTC)' : `Ends in ${days} days`;
-    const row = (top, who) => `<li>${topHTML({ top, month })}<span>${who}</span><b class="mono" data-no-i18n>🪙 ${fmt(TOP_COINS[top])}</b></li>`;
+    const tag = Mode.hard ? `${month}-h` : month; // trophées du mode en cours (le mode difficile a les siens)
+    const row = (top, who) => `<li>${topHTML({ top, month: tag })}<span>${who}</span><b class="mono" data-no-i18n>🪙 ${fmt(TOP_COINS[top])}</b></li>`;
     return `
       <aside class="lb-aside panel" aria-label="Monthly trophies">
         <div class="eyebrow">🏆 Monthly trophies</div>
-        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> to earn a badge with the month and year, kept forever, and coins.</p>
+        <p class="lb-aside-lead">Finish the month in the top 10 of <b>This month</b> <b>${Mode.hard ? '(🔥 Hard mode)' : '(Normal mode)'}</b> to earn a badge with the month, the year and the mode, kept forever, and coins.</p>
         <ul class="lb-aside-list">${row(1, '1st place')}${row(5, '2nd to 5th')}${row(10, '6th to 10th')}</ul>
         <p class="lb-aside-foot"><b>${left}</b> · it shows next to your name on the leaderboard, your profile and in duels</p>
       </aside>`;
@@ -8668,7 +8818,7 @@
     const period = lbState.period;
     // Période choisie dans l'onglet (Poubelle, XP) : une réponse arrivée après un autre clic est ignorée.
     const spanOf = () => (lbState.period === 'worst' ? lbState.span || 'all' : lbState.period === 'xp' ? lbState.xpSpan || 'all' : null);
-    const span = spanOf();
+    const span = spanOf(), mode = Mode.name;
     let data;
     try {
       data = await Online.leaderboard(period, span);
@@ -8676,19 +8826,19 @@
       if ($('#lb-list')) $('#lb-list').innerHTML = '<div class="empty">Leaderboard unavailable right now.</div>';
       return;
     }
-    if (currentView !== 'leaderboard' || period !== lbState.period || span !== spanOf() || !$('#lb-list')) return;
+    if (currentView !== 'leaderboard' || period !== lbState.period || span !== spanOf() || mode !== Mode.name || !$('#lb-list')) return;
     const when = { day: 'today', week: 'this week', month: 'this month', all: 'yet', xp: 'yet', coins: 'yet', rolls: 'yet' }[period === 'xp' && span !== 'all' ? span : period];
     const evHead = period === 'event' && data.event ? (() => { const e = data.event, left = Math.max(0, e.end - Date.now()), lt = left > 86400000 ? `${Math.floor(left / 86400000)} d ${Math.floor(left / 3600000) % 24} h left` : `${Math.max(1, Math.floor(left / 3600000))} h left`;
       return `<div class="lb-event-head"><span class="lb-event-emoji">${e.emoji}</span><span><b>${esc(e.title)}</b><span class="panel-note">${esc(e.desc)} · reach ${e.goal} for 🪙 ${fmt(e.reward)} · ${lt}</span></span></div>`; })() : '';
     // Poubelle : jour, semaine, mois ou tout le temps (idée d'Angelicide9, 2026-10-18).
     const SPANS = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All-time']];
     // Median roll (idée de Kag, 2026-10-28) : cinquième bouton du Best roll.
-    const bestBar = lbState.tab === 'best' ? `<div class="lb-spans">${[...SPANS, ['median', '📊 Median']].map(([k, l]) => `<button class="lb-span${period === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
+    const bestBar = lbState.tab === 'best' ? `<div class="lb-spans">${[...SPANS, ...(Mode.hard ? [] : [['median', '📊 Median']])].map(([k, l]) => `<button class="lb-span${period === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
     const xpBar = period === 'xp' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${span === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>` : '';
     const spanBar = period === 'worst' ? `<div class="lb-spans">${SPANS.map(([k, l]) => `<button class="lb-span${(lbState.span || 'all') === k ? ' on' : ''}" data-span="${k}">${l}</button>`).join('')}</div>${(lbState.span || 'all') === 'month' ? '<p class="panel-note lb-span-note">👑 The worst roll of the month earns the <b>Trash King</b> title when the month ends</p>' : ''}` : '';
     // Ma place, en tête de liste (idée de WpBejs, 2026-10-18 : voir son meilleur sur la Poubelle sans chercher).
     const me = data.entries.find(e => e.me) || data.mine;
-    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'median' ? ` · ${fmt(me.med)} XP` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${String(me.n).padStart(6, '0')}</span> · ${fmt(me.s)} XP`}</div>`
+    const meBar = me && period !== 'coins' ? `<div class="lb-me-bar">📍 Your spot: <b>#${fmt(me.rank)}</b>${period === 'event' ? '' : period === 'rolls' ? ` · ${plural(me.count, 'roll')}` : period === 'median' ? ` · ${fmt(me.med)} XP` : period === 'xp' ? ` · ${fmt(me.s)} XP` : ` · <span class="mono">${Mode.pad(me.n)}</span> · ${fmt(me.s)} XP`}</div>`
       // Pas encore 200 tirages : combien il en manque pour entrer au classement de la médiane.
       : period === 'median' && Number.isInteger(data.have) && Store.player.name ? `<div class="lb-me-bar">📍 <span>${plural(Math.max(1, data.need - data.have), 'more roll')} to join this board</span></div>` : '';
     $('#lb-list').innerHTML = bestBar + xpBar + spanBar + evHead + meBar + (data.entries.length
@@ -8838,7 +8988,8 @@
   const tnScore = (st, p) => (p.score === undefined || p.score === null ? `${fmt(p.total)} XP` : `${fmt(p.score)} ${tnUnit(st, p.score)}`);
   function stopTournament() { clearTimeout(tnTimer); clearInterval(tnTick); tnTimer = 0; tnTick = 0; }
   async function loadTournament() {
-    const st = await Online.tourney('view', tnWhich ? { which: tnWhich } : {});
+    // Mode difficile : son tournoi à lui (which 4, nombres à 10 chiffres), seul.
+    const st = await Online.tourney('view', Mode.hard ? { which: 4 } : tnWhich ? { which: tnWhich } : {});
     tnSkew = st.now - Date.now();
     return st;
   }
@@ -8849,19 +9000,19 @@
     if (!slot || !Store.player.name) return;
     try {
       // Tournoi du soir (Me Cojoni, 2026-10-26) : s'il n'y a rien à faire dans le tournoi par défaut, on regarde celui du soir.
-      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000) {
+      if (!tnBannerCache || Date.now() - tnBannerCache.at > 60000 || tnBannerCache.mode !== Mode.name) {
         let st = await loadTournament();
         const idle = s => !(s.phase === 'signup' || (s.phase === 'running' && s.match && s.match.live && !s.match.bye && s.match.me.count < s.rolls));
-        if (idle(st) && st.which !== 3) { const e = await Online.tourney('view', { which: 3 }); if (!idle(e)) st = e; }
-        tnBannerCache = { at: Date.now(), st };
+        if (idle(st) && st.which !== 3 && !Mode.hard) { const e = await Online.tourney('view', { which: 3 }); if (!idle(e)) st = e; }
+        tnBannerCache = { at: Date.now(), st, mode: Mode.name };
       }
       const st = tnBannerCache.st, m = st.match;
       let text = '';
       const md = `<span class="tn-mode-chip">${tnMode(st).name}</span>`;
       if (st.phase === 'signup' && !st.joined && st.eve) text = `🌙 <b>Evening tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
-      else if (st.phase === 'signup' && !st.joined) text = `🏆 <b>Daily tournament</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
+      else if (st.phase === 'signup' && !st.joined) text = `🏆 <b>${st.hard ? '🔥 Hard mode tournament' : 'Daily tournament'}</b> ${md} · sign up before <span class="mono">${tnHour(st.close)}</span> · <span class="mono">${st.count}/${st.max}</span> players · 🪙 ${fmt(st.prizes.champion)} to win`;
       else if (st.phase === 'signup' && st.eve) text = `🌙 <b>You're in the evening tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
-      else if (st.phase === 'signup') text = `🏆 <b>You're in today's tournament</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
+      else if (st.phase === 'signup') text = `🏆 <b>${st.hard ? 'You\'re in today\'s hard mode tournament' : 'You\'re in today\'s tournament'}</b> ${md} · matches start at <span class="mono">${tnHour(st.close)}</span>`;
       else if (st.phase === 'running' && m && m.live && !m.bye && m.me.count < st.rolls) text = `🏆 <b>Your tournament match is ready!</b> ${md} · <span class="mono">${m.me.count}/${st.rolls}</span> rolls`;
       if (!slot.isConnected) return;
       // Texte dans un seul bloc qui peut passer à la ligne : en morceaux séparés dans le flex, il débordait sur téléphone
@@ -8947,7 +9098,7 @@
     // Le tournoi du soir (3) est à part : on peut y être en plus d'un des deux premiers.
     // Inscrit au tournoi 1 ou 2 : l'autre tournoi du jour reste fermé (le serveur montre toujours le sien) ; le bouton est
     // grisé au lieu de ne rien faire au clic (casmicgraything, 2026-10-30).
-    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}"${!b.eve && st.mine && b.which !== st.mine ? ' disabled' : ''}>${b.eve ? '🌙 <span>Evening</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
+    if (st.both) status = `<div class="seg tn-which">${st.both.map(b => `<button data-tn-which="${b.which}" class="${b.which === st.which ? 'on' : ''}"${!b.eve && st.mine && b.which !== st.mine ? ' disabled' : ''}>${b.eve ? '🌙 <span>Evening</span>' : b.hard ? '🔥 <span>Hard mode</span>' : `🏆 <span>Tournament</span> ${b.which}`} <span class="mono">${b.count}/${st.max}</span></button>`).join('')}</div>` + status;
     const mode = tnMode(st);
     status = `<div class="tn-mode"><span class="tn-mode-label">Today's mode</span><b class="tn-mode-name">${mode.name}</b><span class="panel-note tn-mode-rule">${mode.rule}</span></div>` + status;
 
@@ -9010,7 +9161,7 @@
     const join = $('#tn-join');
     if (join) join.addEventListener('click', async () => {
       if (tnBusy) return; tnBusy = true; join.disabled = true;
-      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(tnState.which === 3 ? '✓ Signed up for the evening tournament' : `✓ Signed up for tournament ${tnState.which}`); tnWhich = tnState.which === 3 ? 3 : 0; drawTournament(); }
+      try { tnState = { ...(await Online.tourney('join', { which: tnState.which })), prev: tnState.prev }; toast(tnState.which === 3 ? '✓ Signed up for the evening tournament' : tnState.which === 4 ? '✓ Signed up for the hard mode tournament' : `✓ Signed up for tournament ${tnState.which}`); tnWhich = tnState.which === 3 ? 3 : 0; drawTournament(); }
       catch (err) { toast(err.message, 3500, 'error'); join.disabled = false; }
       finally { tnBusy = false; }
     });
@@ -9039,7 +9190,8 @@
   // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
   const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
   const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
-  let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false;
+  let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false, clanChatLast = null;
+  Rx.on('clan', { send: async (t, emoji) => drawClanChat(await Online.clan('react', { t: Number(t), emoji })), redraw: () => { if (clanChatLast) drawClanChat(clanChatLast); } });
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
   const clanErr = err => toast([400, 403, 404, 409, 422, 429].includes(err.status) ? err.message : 'Clans unavailable right now, try again');
   const clanLeft = ms => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
@@ -9249,7 +9401,8 @@
   function drawClanChat(d) {
     const list = $('#cl-chat'); if (!list) return;
     const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}">${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span><i>${time(x.t)}${x.edited ? ' · edited' : ''}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
+    clanChatLast = d;
+    const html = d.messages.length ? d.messages.map(x => `<p class="dm-msg ${x.me ? 'me' : 'them'}" ${Rx.attrs('clan', x.t)}>${x.me ? '' : `<b class="cl-from" data-no-i18n>${esc(x.name)}${x.role === 'leader' ? ' 👑' : x.role === 'coleader' ? ' 🌟' : x.role === 'officer' ? ' ⭐' : ''}</b>`}<span data-no-i18n>${esc(x.text)}</span>${Rx.row('clan', x.t, x.rx, true)}<i>${time(x.t)}${x.edited ? ' · edited' : ''} · ${Rx.addBtn('clan', x.t)}${x.canEdit ? ` · <button class="dm-report" data-cl="msg-edit" data-t="${x.t}" data-text="${esc(x.text)}">Edit</button>` : ''}${x.canDelete ? ` · <button class="dm-report" data-cl="msg-del" data-t="${x.t}">Delete</button>` : ''}${x.me ? '' : ` · <button class="dm-report" data-cl="msg-report" data-t="${x.t}" title="Report this message to the creator of the game">Report</button>`}</i></p>`).join('') : '<div class="empty">No message yet. Say hi to your clan!</div>';
     if (html === clanChatSig) return;
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     clanChatSig = html; list.innerHTML = html;
@@ -9487,7 +9640,7 @@
     async poll() {
       clearTimeout(this.timer);
       if (!this.open || document.hidden) return;
-      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last() })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
+      try { this.apply(await Online.global('gcList', { rev: this.rev, del: this.del, since: this.last(), rxrev: this.rxrev == null ? -1 : this.rxrev })); } catch (err) { if (!this.msgs.length) this.list().innerHTML = '<div class="empty">Unavailable right now.</div>'; }
       if (this.open && !document.hidden) this.timer = setTimeout(() => this.poll(), 3000);
     },
     // Point rouge sur 💬 (demandé par Sacha, 2026-10-25) : panneau fermé, un coup d'œil toutes les 30 s (onglet visible)
@@ -9534,7 +9687,10 @@
       { const ml = this.el && this.el.querySelector('.gc-modlink'); if (ml) ml.hidden = !(this.me && this.me.mod); } // page des Modérateurs (Sacha, 2026-11-01)
       if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
-      if (d.same) return;
+      // Réactions (Sacha, 2026-11-02) : envoyées seulement quand elles ont changé (rxrev).
+      const rxNew = d.rx && JSON.stringify(d.rx) !== JSON.stringify(this.rx);
+      if (d.rx) { this.rx = d.rx; this.rxrev = d.rxrev; }
+      if (d.same) { if (rxNew) this.drawList(); return; }
       this.msgs = d.full ? d.msgs : [...this.msgs, ...d.msgs.filter(m => m.t > this.last())].slice(-100);
       this.drawList();
     },
@@ -9542,13 +9698,14 @@
       if (this.muting && this.list().querySelector('.gc-mute-form')) { this.stale = true; return; } // ne pas effacer le formulaire
       this.stale = false;
       const box = this.list(), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-      const me = this.me || {}, signed = !!Store.player.name;
+      const me = this.me || {}, signed = !!Store.player.name, rxCan = signed && me.reason !== 'muted', rx = this.rx || {};
       const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       // Une seule ligne « pseudo [TAG] titre : message » (idée d'Idkwhatnamemyself, 2026-11-01 : le pseudo et le texte
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
-      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}">
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+      box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time, rxCan) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}" ${Rx.attrs('gc', m.id)}>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${Rx.row('gc', m.id, rx[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
       if (stick) box.scrollTop = box.scrollHeight;
@@ -9580,12 +9737,13 @@
     fit(i) { i.value = i.value.replace(/[\r\n]+/g, ' '); i.style.height = 'auto'; i.style.height = `${Math.min(i.scrollHeight + 2, 96)}px`; },
     // Grand tirage annoncé par le serveur (idée de R77, 2026-10-27) : aux couleurs de sa rareté, sans auteur ni texte libre ;
     // ni réponse, ni signalement : seuls les modérateurs ont un menu (supprimer), et le créateur peut l'épingler.
-    group: n => String(n).padStart(6, '0').replace(/\B(?=(\d{3})+$)/g, ' '),
-    sysHTML(m, me, time) {
-      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}">
-          <p class="gc-sys-line"><span class="gc-sys-ic" aria-hidden="true">🎉</span> <a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a> <span>rolled</span> <button type="button" class="gc-sys-num mono" data-number="${Number(m.n)}" data-owner="${esc(m.name)}" data-no-i18n title="See its badges">${this.group(m.n)}</button> ${tierPill(m.tier)}
+    group: (n, hard) => String(n).padStart(hard ? 10 : 6, '0').replace(/\B(?=(\d{3})+$)/g, ' '), // hard : grand tirage du mode difficile
+    sysHTML(m, me, time, rxCan) {
+      return `<div class="gc-msg gc-sys" data-id="${esc(m.id)}" data-tier="${esc(m.tier)}" ${Rx.attrs('gc', m.id)}>
+          <p class="gc-sys-line"><span class="gc-sys-ic" aria-hidden="true">🎉</span> <a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a> <span>rolled</span> <button type="button" class="gc-sys-num mono" data-number="${Number(m.n)}" data-owner="${esc(m.name)}" data-no-i18n title="See its badges" data-hard="${m.hard ? 1 : 0}">${this.group(m.n, m.hard)}</button> ${tierPill(m.tier)}${m.hard ? ' <span class="gc-hardtag" title="Hard mode">🔥 Hard</span>' : ''}
             <time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time>
-            ${me.mod || me.owner ? '<span class="gc-tools"><button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button></span>' : ''}</p>
+            ${rxCan || me.mod || me.owner ? `<span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.mod || me.owner ? '<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>' : ''}</span>` : ''}</p>
+          ${Rx.row('gc', m.id, (this.rx || {})[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${me.mod ? '<button data-gc="delete">🗑️ Delete</button>' : ''}${this.pinBtn(m, me)}</div>` : ''}
         </div>`;
     },
@@ -9603,7 +9761,7 @@
       const p = this.pin; box.hidden = !p;
       if (!p) { box.innerHTML = ''; return; }
       if (!this.pinShut || this.pinShut.id !== p.id) this.pinShut = { id: p.id, on: true };
-      const body = p.sys ? `🎉 <b data-no-i18n>${esc(p.name)}</b> <span>rolled</span> <b class="mono" data-no-i18n>${this.group(p.n)}</b> ${tierPill(p.tier)}`
+      const body = p.sys ? `🎉 <b data-no-i18n>${esc(p.name)}</b> <span>rolled</span> <b class="mono" data-no-i18n>${this.group(p.n, p.hard)}</b> ${tierPill(p.tier)}`
         : `<b class="gc-pin-name" data-no-i18n>${esc(p.name)}</b> <span data-no-i18n>${esc(p.text)}</span>`;
       box.classList.toggle('shut', this.pinShut.on);
       box.innerHTML = `<span class="gc-pin-ic" aria-hidden="true">📌</span>
@@ -9716,6 +9874,7 @@
       } catch (err) { toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
     },
   };
+  Rx.on('gc', { send: async (id, emoji) => GChat.apply(await Online.global('gcReact', { id, emoji, rev: GChat.rev, del: GChat.del, since: GChat.last() })), redraw: () => { if (GChat.el && GChat.open) GChat.drawList(); } });
   GChat.peek();
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !GChat.open) GChat.peek(); });
   document.addEventListener('visibilitychange', () => { if (GChat.open && !document.hidden) GChat.poll(); });
@@ -9742,6 +9901,8 @@
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
     const number = e.target.closest('[data-number]');
+    // Tirage d'un autre mode (grand tirage du chat global) : ses badges et son XP ne se lisent qu'avec son propre barème.
+    if (number && number.dataset.hard !== undefined && (number.dataset.hard === '1') !== Mode.hard) { e.preventDefault(); toast(number.dataset.hard === '1' ? 'This is a Hard mode roll: switch to 🔥 Hard to open it' : 'This is a Normal mode roll: switch to Normal to open it'); return; }
     if (number) { e.preventDefault(); openNumberModal(Number(number.dataset.number), number.dataset.caption || '', number.dataset.owner || ''); return; }
     const roll = e.target.closest('[data-roll]');
     if (roll) { e.preventDefault(); openRollModal(Number(roll.dataset.roll)); }
@@ -9845,8 +10006,13 @@
   applyTheme();
   applySound();
   syncPlayer();
-  route();
-  syncHistory().catch(() => {});
+  // Mode difficile choisi la dernière fois (Sacha, 2026-11-02) : ses données d'abord, puis la première page ; données
+  // introuvables (hors ligne) : le site s'ouvre en mode normal.
+  (Store.settings.mode === 'hard' ? Mode.set('hard').then(ok => { if (!ok) Store.setSetting('mode', 'normal'); }) : Promise.resolve()).then(() => {
+    drawModeSwitch();
+    route();
+    syncHistory().catch(() => {});
+  });
 
   // Nouvelle version en ligne (demandé par Sacha, 2026-10-22) : la page relit la version au serveur toutes les 5 min et au retour sur
   // l'onglet, compare le tampon de js/app.js avec le sien, et se recharge seule à un moment sans risque (rien en cours :

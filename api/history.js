@@ -5,7 +5,7 @@
 // « since » (2026-11-01, serveur plus fluide demandé par Sacha) : seulement les tirages faits après cette heure. Le site
 // envoyait tout l'historique à chaque visite (jusqu'à 100 000 tirages, ~2,5 Mo) : Redis bloqué jusqu'à 0,1 s à chaque
 // fois et le serveur occupé à encoder ; il ne demande plus que les nouveaux, et tout une fois par jour.
-const { redis, ownsPlayer, historyKey, HISTORY_CAP, rollSet, statsKey, cors, send, flushDue } = require('./_lib');
+const { redis, ownsPlayer, historyKey, hardHistoryKey, HISTORY_CAP, rollSet, statsKey, cors, send, flushDue } = require('./_lib');
 
 const MAX_ADD = 5000; // par requête ; le site découpe au-delà
 const MIN_T = Date.UTC(2024, 0, 1);
@@ -21,7 +21,9 @@ module.exports = async (req, res) => {
     if (!/^[0-9a-f]{16}$/.test(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
 
-    const key = historyKey(playerId);
+    // mode 'hard' : l'historique du mode difficile (hhist:<id>, Sacha 2026-11-02), en lecture seulement.
+    const hard = body.mode === 'hard';
+    const key = hard ? hardHistoryKey(playerId) : historyKey(playerId);
     const maxT = Date.now() + 86400000;
     const valid = (Array.isArray(body.add) ? body.add.slice(0, MAX_ADD) : []).filter(r =>
       Array.isArray(r) && Number.isInteger(r[0]) && r[0] >= 0 && r[0] <= 1000000 &&
@@ -51,9 +53,10 @@ module.exports = async (req, res) => {
     const since = Number(body.since);
     const part = Number.isInteger(since) && since >= MIN_T && since <= maxT;
     const [members] = await redis([part ? ['ZRANGEBYSCORE', key, `(${since}`, '+inf'] : ['ZRANGE', key, 0, -1]]);
+    // Mode difficile : [nombre, heure, XP] (l'XP est gardée dans l'historique, voir api/_lib.js recordHardRoll).
     const rolls = (members || []).map(m => {
-      const [t, n] = m.split(':').map(Number);
-      return [n, t];
+      const [t, n, s] = m.split(':').map(Number);
+      return hard ? [n, t, s] : [n, t];
     });
     return send(res, 200, { stored: Number(stored), rolls, ...(part ? { since } : {}) });
   } catch (err) {

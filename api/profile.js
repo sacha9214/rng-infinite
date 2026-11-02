@@ -2,7 +2,7 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { statsKey, breathe, breather, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, XP_LB, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { hardEngine, hardHistoryKey, hardBadgesKey, H_XP_LB, statsKey, breathe, breather, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, XP_LB, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
@@ -29,6 +29,34 @@ const SCORE_V = require('node:crypto').createHash('sha256')
 // plus vieux tirages d'un historique déjà plafonné (HISTORY_CAP, 100 000) peut manquer. Joueur sans set (pas tiré
 // depuis) : compté sur son historique quand le profil le relit en entier (fallback), sinon rien.
 const uniqueOf = (st, scard, fallback) => (st.dv === '1' ? Number(scard) || 0 : fallback);
+
+// Profil du mode difficile : tirages, XP, chance, raretés, 10 meilleurs et 10 pires tirages, badges trouvés, rang.
+// Rien n'est réanalysé : l'XP vient de l'historique, la rareté de la table (percentileOf, une recherche dichotomique).
+async function hardProfile(id, name) {
+  const E = hardEngine();
+  const [members, shownName, rank, flat, owned, xp, countAll] = await redis([['ZRANGE', hardHistoryKey(id), 0, -1], ['HGET', 'names', id], ['ZREVRANK', 'hlb:all', id], ['HGETALL', statsKey(id)], ['SMEMBERS', hardBadgesKey(id)], ['ZSCORE', H_XP_LB, id], ['HGET', 'hcount:all', id]]);
+  const st = {}; for (let i = 0; i + 1 < (flat || []).length; i += 2) st[flat[i]] = flat[i + 1];
+  const scored = [];
+  let pctSum = 0, step = 0;
+  const pause = breather(5); // les autres demandes passent pendant un gros historique
+  for (const m of members || []) {
+    if ((++step & 255) === 0) await pause();
+    const [t, n, s0] = m.split(':').map(Number), s = Number.isFinite(s0) ? s0 : E.scoreOf(n);
+    pctSum += E.percentileOf(s);
+    scored.push({ n, s, t });
+  }
+  const withTier = x => ({ ...x, tier: E.cardTier(x.s) });
+  const best = scored.slice().sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT).map(withTier);
+  const worst = scored.slice().sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10).map(withTier);
+  const tiers = Object.fromEntries(E.TIER_ORDER.map(k => [k, Number(st[`h:t:${k}`]) || 0]).filter(([, v]) => v));
+  return {
+    mode: 'hard', name: shownName || name,
+    rolls: Math.max(Number(st['h:rolls']) || 0, Number(countAll) || 0, scored.length), lifetime: Math.max(Number(xp) || 0, Number(st['h:xp']) || 0),
+    window: scored.length, since: Number(st['h:first']) || (scored.length ? scored[0].t : null), last: scored.length ? scored[scored.length - 1].t : null,
+    rank: rank === null ? null : Number(rank) + 1, luck: scored.length ? Math.round((pctSum / scored.length) * 10) / 10 : null,
+    tiers, best, worst, badges: Object.fromEntries((owned || []).map(b => [b, [1, null]])), // badges trouvés (le compte par badge n'est pas gardé)
+  };
+}
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
@@ -60,8 +88,13 @@ module.exports = async (req, res) => {
       const [liteUniq] = await redis([['SCARD', `nums:${id}`]]);
       // xp / rolls : les totaux à vie tenus par le serveur, affichés à l'accueil et dans Stats à la place des totaux de
       // l'appareil, qui ne gardent qu'une partie des tirages (« Stats bug » sur Discord, 2026-10-26).
+      // Mode difficile : tirages et XP de ce mode (h:rolls, h:xp) ; les succès sont communs.
+      if (params.get('mode') === 'hard') return send(res, 200, { mode: 'hard', name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst['h:xp']) || 0, rolls: Number(lst['h:rolls']) || 0, bio: bioText(liteBio), uniq: null, level: require('../js/quests.js').levelOf(lst.xpLife) });
       return send(res, 200, { name: shown || name, achievements: Achievements.unlocked(lst), title: liteTitle || null, xp: Number(lst.xpLife) || 0, rolls: Number(lst.rolls) || 0, bio: bioText(liteBio), uniq: uniqueOf(lst, liteUniq, null) });
     }
+
+    // Mode difficile (Sacha, 2026-11-02) : son propre profil, calculé sur hhist:<id> (l'XP de chaque tirage y est gardée).
+    if (params.get('mode') === 'hard') return send(res, 200, await hardProfile(id, name));
 
     // Lenteurs du serveur (2026-10-25) : relire les 100 000 tirages d'un gros joueur à chaque visite de son profil
     // bloquait Redis et le processus Node plusieurs secondes (et, l'historique étant plafonné, le cache ne servait plus

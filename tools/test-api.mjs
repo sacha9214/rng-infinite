@@ -1661,6 +1661,19 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Vu par quelqu'un d'autre : le message est là, sans « me ».
   r = await call(roomApi, { url: `/api/room?code=${code}&me=${alice.playerId}` });
   assert.deepEqual(r.body.chat.map(c => [c.name, c.me, c.m]), [['Frank', false, 'Hello there, **** this [link]']]);
+  // Réactions emoji aux messages (Sacha, 2026-11-02, api/_react.js) : les joueurs assis, 6 emojis, toucher la sienne l'enlève.
+  {
+    const t0 = r.body.chat[0].t, rxFree = who => run([['DEL', `rx:rl:${who.playerId}`]]);
+    assert.equal((await roomPost(alice, 'chatReact', { code, t: t0, emoji: '👍' })).status, 422, 'un spectateur ne réagit pas');
+    assert.equal((await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🍆' })).status, 400, 'emoji hors liste');
+    let x = await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.chat[0].rx, [{ e: '🔥', n: 1, mine: true, who: ['Frank'] }]);
+    assert.equal((await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' })).status, 429, 'pas deux réactions coup sur coup');
+    x = await call(roomApi, { url: `/api/room?code=${code}&me=${alice.playerId}` }); assert.deepEqual(x.body.chat[0].rx, [{ e: '🔥', n: 1, mine: false, who: ['Frank'] }], 'vu par un spectateur');
+    rxFree(frank); x = await roomPost(frank, 'chatReact', { code, t: t0, emoji: '🔥' }); assert.equal(x.body.chat[0].rx, undefined, 'toucher la sienne l\'enlève');
+    rxFree(frank); assert.equal((await roomPost(frank, 'chatReact', { code, t: 123, emoji: '🔥' })).status, 404, 'message inconnu');
+    assert.ok(!JSON.stringify(x.body.chat).includes(frank.playerId), 'aucun identifiant');
+  }
   // Rafale : 12 messages par 30 s au plus, même en respectant l'écart entre deux messages.
   let statuses = [];
   for (let k = 0; k < 13; k++) await later(1300, async () => statuses.push((await say(frank, `message ${k}`)).status));
@@ -3100,6 +3113,18 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await fr(ben, 'gifts')).body.messages, 0);
   r = await fr(ben, 'message', 'Annie', { text: 'gg on your 777777!' }); assert.deepEqual(r.body.messages.map(m => [m.me, m.text]), [[false, 'hey you ******* legend, see [link]'], [true, 'gg on your 777777!']]);
   assert.ok(!JSON.stringify(r.body).includes(ann.playerId) && !JSON.stringify(r.body).includes(ben.playerId), 'aucun identifiant');
+  // Réactions emoji (Sacha, 2026-11-02) : une par joueur et par message, en choisir une autre la remplace.
+  {
+    const t0 = r.body.messages[0].t, rxFree = who => run([['DEL', `rx:rl:${who.playerId}`]]);
+    let x = await fr(ben, 'react', 'Annie', { t: t0, emoji: '😂' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.messages[0].rx, [{ e: '😂', n: 1, mine: true, who: ['Benny'] }]);
+    x = await fr(ann, 'react', 'Benny', { t: t0, emoji: '😂' }); assert.deepEqual(x.body.messages[0].rx, [{ e: '😂', n: 2, mine: true, who: ['Benny', 'Annie'] }]);
+    rxFree(ann); x = await fr(ann, 'react', 'Benny', { t: t0, emoji: '❤️' });
+    assert.deepEqual(x.body.messages[0].rx, [{ e: '❤️', n: 1, mine: true, who: ['Annie'] }, { e: '😂', n: 1, mine: false, who: ['Benny'] }], 'remplacée, pas ajoutée');
+    rxFree(ann); assert.equal((await fr(ann, 'react', 'Benny', { t: 42, emoji: '❤️' })).status, 404, 'message inconnu');
+    assert.ok(!JSON.stringify(x.body).includes(ann.playerId) && !JSON.stringify(x.body).includes(ben.playerId), 'aucun identifiant');
+    run([['DEL', `rx:rl:${ann.playerId}`], ['DEL', `rx:rl:${ben.playerId}`]]);
+  }
   // Annie signale le message de Benny ; elle ne peut pas signaler le sien ; la page Owner les voit, sans identifiant.
   {
     const theirs = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => !m.me), mine = (await fr(ann, 'messages', 'Benny')).body.messages.find(m => m.me);
@@ -3724,6 +3749,28 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   rank._reset();
 }
 
+// Trophées du mois du mode difficile (Sacha, 2026-11-02) : leur propre top 10 et leurs propres pièces ; chaque badge dit
+// son mode (« 2031-05-h » = difficile, sans suffixe = normal).
+{
+  const rank = require(path.join(ROOT, 'api/_rank.js'));
+  const { readStats } = require(path.join(ROOT, 'api/_lib.js'));
+  const month = '2031-05', t = Date.parse('2031-06-01T00:10:00Z');
+  const ids = Array.from({ length: 3 }, (_, i) => (0x7e00 + i).toString(16).padStart(16, '0'));
+  run([['DEL', `lb:month:${month}`, `hlb:month:${month}`, `topawards:done:${month}`, `topawards:done:${month}-h`, `topcoins:${month}`, `topcoins:${month}-h`], ...ids.flatMap(id => [['DEL', `stats:${id}`, `gifts:${id}`, `topawards:${id}`], ['HDEL', 'topbest', id]]),
+    ['ZADD', `lb:month:${month}`, 50, ids[0]], ['ZADD', `hlb:month:${month}`, 90, ids[1], 80, ids[0]]]);
+  rank._reset();
+  await rank.settleMonth(t);
+  const bonus = await Promise.all(ids.map(async id => Number((await readStats(id)).bonus || 0)));
+  assert.deepEqual(bonus, [1500, 1000, 0], 'les deux classements paient : normal 1er + difficile 2e, et difficile 1er');
+  assert.deepEqual(await rank.awardsOf(ids[0], t), [{ top: 5, month: `${month}-h` }, { top: 1, month }], 'un badge par mode');
+  assert.deepEqual(await rank.awardsOf(ids[1], t), [{ top: 1, month: `${month}-h` }]);
+  const marks = await rank.bestAwards(ids, t);
+  assert.deepEqual([marks.get(ids[0]), marks.get(ids[1])], [{ top: 1, month }, { top: 1, month: `${month}-h` }]);
+  const [g] = run([['LRANGE', `gifts:${ids[1]}`, 0, -1]]).map(x => x.result);
+  assert.deepEqual(JSON.parse(g[0]), { f: '', a: 1000, t, k: 'top', p: 1, m: `${month}-h` });
+  rank._reset();
+}
+
 // Ex aequo (signalé par R77, 2026-10-30) : même score = même place au classement, même badge du mois, Trash King partagé.
 {
   const rank = require(path.join(ROOT, 'api/_rank.js'));
@@ -4258,6 +4305,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await new Promise(r => setTimeout(r, 3));
   v = await H(D, 'say', { text: 'hello clan' });
   const tC = v.messages.find(m => m.name === 'Clancee').t, tD = v.messages.find(m => m.name === 'Clandee').t;
+  // Réactions emoji (Sacha, 2026-11-02).
+  v = await H(C, 'react', { t: tD, emoji: '👍' }); assert.deepEqual(v.messages.find(m => m.t === tD).rx, [{ e: '👍', n: 1, mine: true, who: ['Clancee'] }]);
+  v = await H(D, 'chat'); assert.equal(v.messages.find(m => m.t === tD).rx[0].mine, false);
+  await fails(H(D, 'react', { t: 5, emoji: '👍' }), 404, 'message inconnu');
   assert.equal(v.messages.find(m => m.name === 'Clandee').canEdit, true); assert.ok(!v.messages.find(m => m.name === 'Clancee').canEdit);
   await fails(H(D, 'edit', { t: tC, text: 'hacked' }), 403, 'pas le message d\'un autre');
   v = await H(D, 'edit', { t: tD, text: 'hello clan!' }); assert.equal(v.messages.find(m => m.t === tD).text, 'hello clan!'); assert.equal(v.messages.find(m => m.t === tD).edited, true);
@@ -4408,6 +4459,21 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(kid, 'gcSend', { text: 'Hello <b>everyone</b>!' }); assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.msgs.length, 1); assert.deepEqual([r.body.msgs[0].name, r.body.msgs[0].text, r.body.msgs[0].mine], ['Kiddo', 'Hello <b>everyone</b>!', true]);
   assert.ok(!JSON.stringify(r.body).includes(kid.playerId), 'aucun identifiant de joueur');
+  // Réactions emoji (Sacha, 2026-11-02) : un pseudo suffit (pas besoin des 100 tirages) ; renvoyées seulement quand elles
+  // ont changé (rxrev), jamais au coup d'œil du point rouge.
+  {
+    const id0 = r.body.msgs[0].id;
+    let x = await gc(newbie, 'gcReact', { id: id0, emoji: '🔥' }); assert.equal(x.status, 200, JSON.stringify(x.body));
+    assert.deepEqual(x.body.rx[id0], [{ e: '🔥', n: 1, mine: true, who: ['Newbie'] }]);
+    const { rev, del, rxrev } = x.body;
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now(), rxrev }); assert.equal(x.body.same, true); assert.equal(x.body.rx, undefined, 'rien de neuf');
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now(), rxrev: rxrev - 1 }); assert.equal(x.body.same, true); assert.deepEqual(x.body.rx[id0], [{ e: '🔥', n: 1, mine: false, who: ['Newbie'] }]);
+    x = await gc(kid, 'gcList', { rev, del, since: Date.now() }); assert.equal(x.body.rx, undefined, 'coup d\'œil : pas de réactions');
+    assert.equal((await gc(null, 'gcReact', { id: id0, emoji: '🔥' })).status, 400);
+    assert.equal((await gc(kid, 'gcReact', { id: 'ffffffffffff', emoji: '🔥' })).status, 404);
+    assert.equal((await gc(kid, 'gcReact', { id: id0, emoji: 'lol' })).status, 400);
+    assert.ok(!JSON.stringify(x.body).includes(newbie.playerId), 'aucun identifiant');
+  }
   // Délai : un message toutes les 5 s.
   r = await gc(kid, 'gcSend', { text: 'again' }); assert.equal(r.status, 429);
   free(kid);
@@ -5802,6 +5868,81 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(r.body.list.map(g => [g.skin, g.status, g.winner]).sort(), [['lcd', 'done', 'LateLinker'], ['neon', 'done', 'Lucky7'], ['neon', 'void', null]]); // même milliseconde possible : comparés triés
   assert.ok(!JSON.stringify(r.body).includes(winner.playerId), 'aucun identifiant');
   Link.dc = realDc; Link.hasBot = realHas;
+}
+
+// Mode difficile (Sacha, 2026-11-02) : tirages à 10 chiffres, stats et classements à part, pièces et XP à vie communes.
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js')), Shop = require(path.join(ROOT, 'js/shop.js')), Ach = require(path.join(ROOT, 'js/achievements.js'));
+  const H = Lib.hardEngine(), profileApi = require(path.join(ROOT, 'api/profile.js')), roomApi2 = require(path.join(ROOT, 'api/room.js'));
+  const hk = { playerId: '9e'.repeat(8), secret: '9e1'.repeat(11).slice(0, 32), name: 'Hardy' }, nk = { playerId: '9f'.repeat(8), secret: '9f1'.repeat(11).slice(0, 32), name: 'Normy' };
+  const stOf = id => { const f = run([['HGETALL', `stats:${id}`]])[0].result; const o = {}; for (let i = 0; i < f.length; i += 2) o[f[i]] = f[i + 1]; return o; };
+  // Moteur : 10 chiffres, raretés du mode difficile, tirage uniforme jusqu'à 9 999 999 999.
+  assert.equal(H.MAX_ROLL, 9999999999); assert.equal(H.digits, 10);
+  for (let i = 0; i < 2000; i++) { const n = H.roll(); assert.ok(Number.isInteger(n) && n >= 0 && n <= 9999999999); }
+  // Même XP moyenne attendue que le mode normal (règle de fréquence + facteur, voir tools/build-hard.mjs).
+  const odds = require(path.join(ROOT, 'data/hard-odds.json'));
+  const normalStats = JSON.parse(/SCORE_STATS = (\{[^;]+\});/.exec(fs.readFileSync(path.join(ROOT, 'js/percentiles.js'), 'utf8'))[1]);
+  assert.ok(Math.abs(odds.stats.mean / normalStats.mean - 1) < 0.15, `XP moyenne : ${odds.stats.mean} contre ${normalStats.mean}`);
+  // Pièces : même moyenne par tirage dans les deux modes (écart de moins de 3 %), raretés 10 fois plus rares au-dessus de Common.
+  const normalTiers = JSON.parse(/TIER_ODDS = (\{[^;]+\});/.exec(fs.readFileSync(path.join(ROOT, 'js/percentiles.js'), 'utf8'))[1]);
+  const ev = (tiers, coins) => Object.entries(tiers).reduce((x, [t, p]) => x + p * coins[t], 0);
+  const evN = ev(normalTiers, Shop.COINS), evH = ev(odds.tiers, Shop.HARD_COINS);
+  assert.ok(Math.abs(evH / evN - 1) < 0.03, `pièces moyennes : ${evH.toFixed(3)} (difficile) contre ${evN.toFixed(3)} (normal)`);
+  const tail = (tiers, from) => engine.TIER_ORDER.slice(engine.TIER_ORDER.indexOf(from)).reduce((x, t) => x + tiers[t], 0);
+  assert.ok(Math.abs(tail(odds.tiers, 'mythic') / tail(normalTiers, 'mythic') - 0.1) < 0.03, 'Mythic ou mieux : 10 fois plus rare');
+  // Tirage en mode difficile.
+  r = await call(roll, { method: 'POST', body: { ...hk, mode: 'hard' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.mode, 'hard'); assert.ok(r.body.n >= 0 && r.body.n <= 9999999999);
+  const a = H.analyze(r.body.n);
+  assert.equal(r.body.s, a.total, 'XP au barème difficile');
+  assert.equal(r.body.coins, Shop.HARD_COINS[a.tier], 'pièces du mode difficile');
+  let st = stOf(hk.playerId);
+  assert.deepEqual([st['h:rolls'], st['h:xp'], st[`h:t:${a.tier}`], st.xpLife, st.rolls], ['1', String(a.total), '1', String(a.total), undefined], 'compteurs à part, XP à vie commune');
+  assert.equal(Shop.balance(st), Shop.HARD_COINS[a.tier], 'le solde compte les raretés du mode difficile');
+  assert.equal(run([['ZSCORE', 'hlb:all', hk.playerId]])[0].result, String(a.total));
+  assert.equal(run([['ZSCORE', 'lb:all', hk.playerId]])[0].result, null, 'rien dans les classements du mode normal');
+  assert.match(run([['ZRANGE', `hhist:${hk.playerId}`, 0, -1]])[0].result[0], new RegExp(`^\\d+:${r.body.n}:${a.total}$`));
+  // Un seul délai pour les deux modes : passer de l'un à l'autre ne fait pas tirer plus vite.
+  assert.equal((await call(roll, { method: 'POST', body: hk })).status, 429);
+  db.delete(`cooldown:${hk.playerId}`);
+  r = await call(roll, { method: 'POST', body: hk }); assert.equal(r.status, 200); assert.equal(r.body.mode, undefined);
+  st = stOf(hk.playerId); assert.equal(st.rolls, '1'); assert.equal(st['h:rolls'], '1');
+  assert.equal(Number(st.xpLife), a.total + r.body.s, 'XP à vie : les deux modes');
+  // Succès communs : les tirages des deux modes comptent.
+  assert.ok(Ach.unlocked({ 'h:rolls': '100' }).includes('regular'));
+  assert.ok(Ach.unlocked({ 'h:t:mythic': '1' }).includes('mythic'));
+  // Classements du mode difficile : à part.
+  r = await call(leaderboard, { url: `/api/leaderboard?period=day&mode=hard&me=${hk.playerId}` });
+  assert.equal(r.body.mode, 'hard'); assert.equal(r.body.entries.length, 1); assert.equal(r.body.entries[0].name, 'Hardy'); assert.ok(r.body.entries[0].n >= 0);
+  for (const q of ['xp', 'worst', 'rolls', 'month', 'week', 'all']) { const x = await call(leaderboard, { url: `/api/leaderboard?period=${q}&mode=hard&me=${hk.playerId}` }); assert.equal(x.status, 200, q); assert.ok(x.body.entries.some(e => e.me), `${q} : Hardy y est`); }
+  r = await call(leaderboard, { url: `/api/leaderboard?period=xp&span=day&mode=hard&me=${hk.playerId}` }); assert.equal(r.body.entries[0].s, a.total);
+  r = await call(leaderboard, { url: '/api/leaderboard?period=event&mode=hard' }); assert.deepEqual(r.body.entries, []);
+  r = await call(leaderboard, { url: `/api/leaderboard?period=day&me=${hk.playerId}` }); assert.ok(!r.body.entries.some(e => e.name === 'Hardy' && e.n === a.number), 'le classement normal ne montre que le tirage normal');
+  // Historique et profil du mode difficile.
+  r = await call(history, { method: 'POST', body: { ...hk, mode: 'hard' } });
+  assert.equal(r.body.rolls.length, 1); assert.deepEqual(r.body.rolls[0].slice(0, 1).concat(r.body.rolls[0][2]), [a.number, a.total]);
+  r = await call(profileApi, { url: `/api/profile?name=Hardy&mode=hard` });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.mode, r.body.rolls, r.body.lifetime, r.body.best[0].n, r.body.best[0].tier, r.body.rank], ['hard', 1, a.total, a.number, a.tier, 1]);
+  assert.ok(Object.keys(r.body.badges).length === a.earnedIds.length);
+  r = await call(profileApi, { url: `/api/profile?name=Hardy&lite=1&me=${hk.playerId}&mode=hard` });
+  assert.deepEqual([r.body.rolls, r.body.xp], [1, a.total]);
+  // Duel du mode difficile : nombres à 10 chiffres, et le tirage révélé va dans les stats du mode difficile.
+  run([['HSET', `stats:${nk.playerId}`, 'v', '1', 'rolls', '50'], ['SET', `player:${nk.playerId}:secret`, crypto.createHash('sha256').update(nk.secret).digest('hex')]]);
+  r = await call(roomApi2, { method: 'POST', body: { ...hk, action: 'create', size: 2, bots: 1, hard: true } });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.hard, true);
+  const code = r.body.code;
+  r = await call(roomApi2, { method: 'POST', body: { ...hk, action: 'ready', code } });
+  const round = r.body.rounds && r.body.rounds[0];
+  if (round && Array.isArray(round.n)) for (const n of round.n) if (n != null) assert.ok(n <= 9999999999);
+  // Tournoi du mode difficile : à part (which 4).
+  const T = require(path.join(ROOT, 'api/_tournament.js'));
+  const day0 = Date.parse(`${Lib.dayKey(Date.now())}T01:00:00Z`);
+  await assert.rejects(T.signup(hk.playerId, day0, 4), /30 rolls/);
+  run([['HINCRBY', `stats:${hk.playerId}`, 'h:rolls', 40]]); // 30 tirages, les deux modes comptés
+  const j = await T.signup(hk.playerId, day0, 4); assert.equal(j.tid, `${Lib.dayKey(day0)}-h`); assert.equal(j.which, 4);
+  const v = await T.handle({ op: 'view', which: 4, ...hk }, day0); assert.equal(v.hard, true); assert.equal(v.mine, 4);
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

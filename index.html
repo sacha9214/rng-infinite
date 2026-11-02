@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Press+Start+2P&family=Graduate&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=204d0d78e5">
+  <link rel="stylesheet" href="css/style.css?v=51ee7a11bc">
   <link rel="stylesheet" href="css/premium.css?v=c25d43a454">
   <link rel="stylesheet" href="css/buttons.css?v=c7f2bc5407">
   <script>
@@ -30,10 +30,17 @@
 <body>
   <header class="topbar">
     <div class="topbar-left">
-      <a href="#/" class="logo">RNG∞</a>
-      <a href="#/about" class="icon-link" title="How it works" aria-label="How it works">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-      </a>
+      <div class="topbar-brand">
+        <a href="#/" class="logo">RNG∞</a>
+        <a href="#/about" class="icon-link" title="How it works" aria-label="How it works">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </a>
+      </div>
+      <!-- Mode difficile (demandé par Sacha, 2026-11-02) : sous le logo, Normal ou Hard (10 chiffres, classements à part). -->
+      <div class="mode-switch" id="mode-switch" role="radiogroup" aria-label="Game mode">
+        <button type="button" data-mode="normal" role="radio" aria-checked="true" title="Normal mode: numbers from 0 to 1,000,000">Normal</button>
+        <button type="button" data-mode="hard" role="radio" aria-checked="false" tabindex="-1" title="Hard mode: 10-digit numbers, rarer rarities that pay more, its own leaderboards">🔥 Hard</button>
+      </div>
     </div>
     <!-- Menu regroupé (demandé par Sacha, 2026-10-29) : 7 entrées toujours écrites ; Duel, Social et Me ont leurs onglets (#subnav).
          « Battle » renommé « Duel » (idée de Kag, 2026-10-30) : le mot du jeu partout ailleurs ; Tournaments reste un onglet dessous. -->
@@ -123,19 +130,21 @@
   <script src="js/badge-meta.js?v=f37ccefdda"></script>
   <script src="js/percentiles.js?v=ec729d5180"></script>
   <script src="js/config.js?v=d439b8fdc7"></script>
-  <script src="js/engine.js?v=6cd57bfee5"></script>
-  <script src="js/shop.js?v=5e0ec5a817"></script>
+  <script src="js/engine.js?v=461d42af71"></script>
+  <script src="js/shop.js?v=d172b69095"></script>
   <script src="js/sharecard.js?v=2075d748b2"></script>
   <script src="js/emotes.js?v=6bc0f9fc91"></script>
   <script src="js/quests.js?v=2eaceadb2c"></script>
-  <script src="js/i18n.js?v=100f0a8064"></script>
-  <script src="js/achievements.js?v=587de665d2"></script>
-  <script src="js/store.js?v=d89a5534db"></script>
+  <script src="js/i18n.js?v=12178e6722"></script>
+  <script src="js/achievements.js?v=160a6220cb"></script>
+  <script src="js/store.js?v=6cfb91fb3c"></script>
   <script src="js/synth.js?v=9c48da3eb3"></script>
   <script src="js/sound.js?v=179a626ca5"></script>
   <script src="js/skinfx.js?v=e57c9428f6"></script>
   <script src="js/fishing.js?v=42cb161b3a"></script>
   <script src="js/wallfx.js?v=64515a6bc0"></script>
-  <script src="js/app.js?v=458c00d631"></script>
+  <!-- Données du mode difficile : jamais lues ici (type text/plain), chargées par js/app.js au premier passage en Hard. -->
+  <script type="text/plain" id="hard-data" src="js/hard-data.js?v=1f20a84d13"></script>
+  <script src="js/app.js?v=1517fc36a5"></script>
 </body>
 </html>

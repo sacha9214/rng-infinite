@@ -32,6 +32,7 @@ const { redis, eco, engine, readStats, statsKey, cleanName, nameKey, findPlayer,
 const Shop = require('../js/shop.js');
 const Reports = require('./_reports');
 const { cleanChat, MAX_CHARS } = require('./_chat');
+const React = require('./_react');
 // Description du clan (demandée par Sacha, 2026-10-25, comme dans les grands jeux de clans) : 150 caractères, mêmes
 // filtres que le chat global (liens, insultes, infos personnelles), modifiable par le chef et les officiers.
 const DESC_MAX = 150;
@@ -185,7 +186,7 @@ async function disband(c, t = Date.now()) {
   const ids = Object.keys(c.members);
   await redis([
     ...ids.flatMap(id => [['HDEL', 'clanof', id], ['HDEL', 'clantag', id]]),
-    ['DEL', ckey(c.cid)], ['DEL', mkey(c.cid)], ['DEL', reqKey(c.cid)], ['DEL', chatKey(c.cid)], ['DEL', logKey(c.cid)],
+    ['DEL', ckey(c.cid)], ['DEL', mkey(c.cid)], ['DEL', reqKey(c.cid)], ['DEL', chatKey(c.cid)], ['DEL', rxKey(c.cid)], ['DEL', logKey(c.cid)],
     ['DEL', `clanname:${nameKey(c.name)}`], ['DEL', `clantagk:${c.tag}`], ['SREM', 'clans', c.cid], ['ZREM', xpKey(weekKey(t)), c.cid],
     ...eco('out:clans', c.vault, t), // le coffre restant disparaît avec le clan
   ]);
@@ -251,8 +252,11 @@ async function upgrade(me, c, body) {
 }
 
 // ---------------------------------------------------------------- chat du clan (mêmes règles que api/friends.js)
+// Réactions emoji (api/_react.js, Sacha 2026-11-02) : clanrx:<cid>, message désigné par son heure.
+const rxKey = cid => `clanrx:${cid}`;
 async function chatView(me, c) {
-  const [raw] = await redis([['LRANGE', chatKey(c.cid), 0, -1]]);
+  const [raw, rxFlat] = await redis([['LRANGE', chatKey(c.cid), 0, -1], ['HGETALL', rxKey(c.cid)]]);
+  const rx = await React.views(rxFlat || [], me);
   const rows = (raw || []).map(parse).filter(Boolean);
   const ids = [...new Set(rows.map(m => m.s))];
   const [names] = ids.length ? await redis([['HMGET', 'names', ...ids]]) : [[]];
@@ -261,7 +265,7 @@ async function chatView(me, c) {
   return {
     max: MAX_CHARS, editMs: EDIT_MS,
     messages: rows.map(m => ({ t: m.t, name: nameOf[m.s], role: c.members[m.s] || null, me: m.s === me, text: String(m.x || ''), ...(m.e ? { edited: true } : {}),
-      ...(m.s === me && now - m.t < EDIT_MS ? { canEdit: true } : {}), ...(m.s === me || modOver(c, me, m.s) ? { canDelete: true } : {}) })),
+      ...(m.s === me && now - m.t < EDIT_MS ? { canEdit: true } : {}), ...(m.s === me || modOver(c, me, m.s) ? { canDelete: true } : {}), ...(rx.has(String(m.t)) ? { rx: rx.get(String(m.t)) } : {}) })),
   };
 }
 async function chatSend(me, c, raw) {
@@ -726,6 +730,12 @@ async function handle(me, body, now = Date.now()) {
   // Chat du clan.
   if (op === 'chat') return chatView(me, c);
   if (op === 'say') { await chatSend(me, c, body.text); return chatView(me, c); }
+  if (op === 'react') {
+    const [raw] = await redis([['LRANGE', chatKey(c.cid), 0, -1]]);
+    const live = new Set((raw || []).map(x => String((parse(x) || {}).t)));
+    await React.toggle(rxKey(c.cid), String(Number(body.t)), me, body.emoji, { live, ttl: CHAT_TTL });
+    return chatView(me, c);
+  }
   if (op === 'edit' || op === 'unsend' || op === 'report') {
     const f = await findMsg(c, body.t);
     if (!f || !f.m) throw refuse(404, 'This message is gone');

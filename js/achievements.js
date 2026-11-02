@@ -10,7 +10,11 @@
   const num = v => Number(v) || 0;
   // Victoires de duel qui comptent pour les succès : sans celles « sans enjeu » (anti-farm, champ duelUnpaid).
   const ranked = st => Math.max(0, num(st.duelWins) - num(st.duelUnpaid));
-  const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + num(st[`t:${t}`]), 0);
+  // Mode difficile (Sacha, 2026-11-02 : succès partagés entre les deux modes) : ses tirages comptent aussi, rangés à part
+  // dans les stats (h:rolls, h:t:<rareté>, h:best). Badges, collections, doublons et nombres différents restent au mode normal.
+  const rollsOf = st => num(st.rolls) + num(st['h:rolls']);
+  const tierOf = (st, t) => num(st[`t:${t}`]) + num(st[`h:t:${t}`]);
+  const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + tierOf(st, t), 0);
   // Pièces gagnées en jouant (idée de logannn, 2026-10-27) : tirages (après rendements décroissants) + victoires de duel
   // (Shop.earned) + Weekend Rush. Ni cadeaux, ni casino, ni crypto, ni pots de mise : ils ne font que déplacer des pièces,
   // et le serveur ne garde pas le détail de tous (vente de crypto, pot reçu) ; ce total-là est exact pour tous les joueurs,
@@ -57,20 +61,20 @@
   };
 
   const LIST = [
-    { id: 'rookie', emoji: '🎲', title: 'Rookie', desc: 'Make your first roll', test: st => num(st.rolls) >= 1 },
-    { id: 'regular', emoji: '🔁', title: 'Regular', desc: 'Make 100 rolls', test: st => num(st.rolls) >= 100 },
-    { id: 'addict', emoji: '🌀', title: 'Addict', desc: 'Make 1,000 rolls', test: st => num(st.rolls) >= 1000 },
-    { id: 'nolife', emoji: '🧟', title: 'No Life', desc: 'Make 10,000 rolls', test: st => num(st.rolls) >= 10000 },
+    { id: 'rookie', emoji: '🎲', title: 'Rookie', desc: 'Make your first roll', test: st => rollsOf(st) >= 1 },
+    { id: 'regular', emoji: '🔁', title: 'Regular', desc: 'Make 100 rolls', test: st => rollsOf(st) >= 100 },
+    { id: 'addict', emoji: '🌀', title: 'Addict', desc: 'Make 1,000 rolls', test: st => rollsOf(st) >= 1000 },
+    { id: 'nolife', emoji: '🧟', title: 'No Life', desc: 'Make 10,000 rolls', test: st => rollsOf(st) >= 10000 },
     { id: 'connoisseur', emoji: '🖼️', title: 'Collectible Connoisseur', desc: 'Own every skin (limited ones excepted)', test: st => num(st.connoisseur) >= 1 }, // idée de kaz (2026-10-20)
     { id: 'allbuttons', emoji: '🔘', title: 'Button Masher', desc: 'Own every Generate button (limited ones excepted)', test: st => num(st.allButtons) >= 1 }, // idée de PRISMA123 (2026-10-22)
     { id: 'allemotes', emoji: '😎', title: 'Emote Lord', desc: 'Own every special emote', test: st => num(st.allEmotes) >= 1 },
     { id: 'allwalls', emoji: '🖼️', title: 'Interior Designer', desc: 'Own every wallpaper (limited ones excepted)', test: st => num(st.allWalls) >= 1 },
     { id: 'coinmillionaire', emoji: '🤑', title: 'Coin Millionaire', desc: 'Hold 1,000,000 coins at once', test: st => num(st.millionaire) >= 1 }, // idée d'A Dude (2026-10-21)
-    { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => num(st.rolls) >= 100000 }, // idée de PRISMA123 (2026-10-20)
-    { id: 'unemployking', emoji: '🛋️', title: 'The King Of Unemployment', desc: 'Make 1,000,000 rolls', test: st => num(st.rolls) >= 1000000 }, // idée d'A Dude (2026-10-22)
-    { id: 'unemploygod', emoji: '🛐', title: 'The God Of Unemployment', desc: 'Make 10,000,000 rolls', test: st => num(st.rolls) >= 10000000 },
+    { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => rollsOf(st) >= 100000 }, // idée de PRISMA123 (2026-10-20)
+    { id: 'unemployking', emoji: '🛋️', title: 'The King Of Unemployment', desc: 'Make 1,000,000 rolls', test: st => rollsOf(st) >= 1000000 }, // idée d'A Dude (2026-10-22)
+    { id: 'unemploygod', emoji: '🛐', title: 'The God Of Unemployment', desc: 'Make 10,000,000 rolls', test: st => rollsOf(st) >= 10000000 },
     { id: 'cardshark', emoji: '🃏', title: 'Card Shark', desc: 'Get 100 blackjacks in the casino', test: st => num(st.gNaturals) >= 100 }, // idée de Dylanrulez123 (2026-10-20)
-    { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => num(st['t:trash']) >= 1 },
+    { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => tierOf(st, 'trash') >= 1 },
     { id: 'lucky', emoji: '🍀', title: 'Lucky', desc: 'Roll a Rare or better', test: st => atLeast(st, 'rare') >= 1 },
     { id: 'blessed', emoji: '✨', title: 'Blessed', desc: 'Roll an Epic or better', test: st => atLeast(st, 'epic') >= 1 },
     { id: 'anomaly', emoji: '🌋', title: 'Anomaly', desc: 'Roll an Anomaly or better', test: st => atLeast(st, 'anomaly') >= 1 },
@@ -79,8 +83,8 @@
     { id: 'celestial', emoji: '🌠', title: 'Celestial', desc: 'Roll a Celestial or better (top 0.1%)', test: st => atLeast(st, 'celestial') >= 1 },
     { id: 'godlike', emoji: '⚜️', title: 'Godlike', desc: 'Roll a Godlike or better (top 0.005%)', test: st => atLeast(st, 'godlike') >= 1 },
     { id: 'divine', emoji: '👼', title: 'Divine', desc: 'Roll a Divine or better (top 0.01%)', test: st => atLeast(st, 'divine') >= 1 },
-    { id: 'spectrum', emoji: '🌈', title: 'Full Spectrum', desc: 'Roll at least one number of every rarity from Trash to Celestial', test: st => SPECTRUM.every(t => num(st[`t:${t}`]) >= 1) },
-    { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the ~10 best numbers in the game)', test: st => num(st['t:infinite']) >= 1 },
+    { id: 'spectrum', emoji: '🌈', title: 'Full Spectrum', desc: 'Roll at least one number of every rarity from Trash to Celestial', test: st => SPECTRUM.every(t => tierOf(st, t) >= 1) },
+    { id: 'infinite', emoji: '♾️', title: 'Infinite', desc: 'Roll an Infinite (top 0.001%: one of the ~10 best numbers in the game)', test: st => tierOf(st, 'infinite') >= 1 },
     // XP à vie (idée d'Avaneesh_17, 2026-10-16) : stats.xpLife, tenue à chaque tirage et recalculée avec le classement.
     { id: 'centimillionaire', emoji: '💎', title: 'Centimillionaire', desc: 'Reach 100,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e8 },
     { id: 'billionaire', emoji: '🏦', title: 'Billionaire', desc: 'Reach 1,000,000,000 lifetime XP', test: st => num(st.xpLife) >= 1e9 },
@@ -95,11 +99,11 @@
     // Idées de dailycb (Discord #ideas, 2026-10-27) : tous les packs de sons, et tout ce qui s'achète en pièces.
     { id: 'allsounds', emoji: '🎧', title: 'Sound Collector', desc: 'Own every sound pack', test: st => num(st.allSounds) >= 1 },
     { id: 'shopaholic', emoji: '🛍️', title: 'Shopaholic', desc: 'Own every skin, button, emote, wallpaper, sound pack and upgrade sold for coins (limited ones excepted)', test: st => num(st.allShop) >= 1 },
-    { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => num(st.best) >= 1000000 },
+    { id: 'millionaire', emoji: '💰', title: 'Millionaire', desc: 'Roll a number worth 1,000,000 XP or more', test: st => Math.max(num(st.best), num(st['h:best'])) >= 1000000 },
     { id: 'drastix', emoji: '💥', title: 'Drastix Fan', desc: 'Earn the Drastix badge (a number containing 235)', test: st => num(st.drastix) >= 1 },
     // Titre d'ancien : pour qui a joué en 2026 (premier tirage avant le 1er janvier 2027). Les joueurs d'avant le champ
     // « first » ont forcément commencé en 2026 (le jeu date de 2026).
-    { id: 'year2026', emoji: '📅', title: '2026', desc: 'Play in 2026', test: st => num(st.rolls) >= 1 && num(st.first) < Date.UTC(2027, 0, 1) },
+    { id: 'year2026', emoji: '📅', title: '2026', desc: 'Play in 2026', test: st => rollsOf(st) >= 1 && num(st.first) < Date.UTC(2027, 0, 1) },
     { id: 'collector', emoji: '📦', title: 'Collector', desc: 'Find 50 different badges', test: st => num(st.badges) >= 50 },
     { id: 'hoarder', emoji: '🗄️', title: 'Hoarder', desc: 'Find 100 different badges', test: st => num(st.badges) >= 100 },
     { id: 'completionist', emoji: '🏛️', title: 'Completionist', desc: 'Find 150 different badges', test: st => num(st.badges) >= 150 },
@@ -121,8 +125,8 @@
     { id: 'bughunter', emoji: '🐛', title: 'Bug Hunter', desc: 'Report a bug that gets fixed', test: st => num(st.bugsFixed) >= 1 },
     { id: 'contributor', emoji: '💡', title: 'Contributor', desc: 'Send an idea that gets added to the game', test: st => num(st.ideasAdded) >= 1 },
     // Idée d'Angelicide9 (2026-10-18) : des titres pour les pires raretés, et le pire tirage du mois.
-    { id: 'garbageman', emoji: '🗑️', title: 'Garbage Collector', desc: 'Roll a Garbage (bottom 0.05%)', test: st => num(st['t:garbage']) >= 1 },
-    { id: 'landwaster', emoji: '☣️', title: 'Land Waster', desc: 'Roll a Land waste, the worst score there is', test: st => num(st['t:landwaste']) >= 1 },
+    { id: 'garbageman', emoji: '🗑️', title: 'Garbage Collector', desc: 'Roll a Garbage (bottom 0.05%)', test: st => tierOf(st, 'garbage') >= 1 },
+    { id: 'landwaster', emoji: '☣️', title: 'Land Waster', desc: 'Roll a Land waste, the worst score there is', test: st => tierOf(st, 'landwaste') >= 1 },
     // Clans (idée de BIGBOIJONER69 et KMC, 2026-10-25) : membre du clan n°1 d'une semaine (XP gagnée cette semaine-là).
     { id: 'clanchamp', emoji: '🏯', title: 'Clan Champion', desc: 'Earn XP for the #1 clan of a week', test: st => num(st.clanWeekWins) >= 1 },
     // Donateur de clan (idée de PRISMA123, 2026-10-26) : 10 000 pièces versées au coffre d'un clan, au total (stats.clanDonated).
