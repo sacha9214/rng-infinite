@@ -325,7 +325,9 @@
     // Idée de shadow2 Jr (2026-11-01) : une caisse qui donne une émote spéciale (emo: true, EMOTES), toutes les émotes en
     // vente, poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 538, caisse à 400 (0,74, comme les
     // caisses de boutons et de sons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi.
-    { id: 'emotes', name: 'Emote Case', emoji: '🎭', price: 400, desc: 'A special duel emote worth 300 to 1,200 coins', emo: true },
+    // 2026-11-03 : les cinq émotes en image (300 à 450) font tomber la valeur moyenne à ≈ 461 ; caisse à 350 pour rester
+    // à 0,76 (à 400, elle serait passée à 0,87, moins avantageuse que les autres caisses).
+    { id: 'emotes', name: 'Emote Case', emoji: '🎭', price: 350, desc: 'A special duel emote worth 300 to 1,200 coins', emo: true },
     // Idée de shadow2 Jr (2026-10-28) : une caisse qui donne un pack de sons (snd: true, SOUNDS), tous les packs payants,
     // poids 1 / prix comme les autres caisses : valeur moyenne d'un tirage ≈ 490, caisse à 365 (0,745 : comme la caisse
     // de boutons). Doublon : même remboursement selon la rareté ; une clé Premium l'ouvre aussi (KEY_OPENS).
@@ -574,6 +576,14 @@
     { id: 'confused', name: 'Super confused', price: 800 }, // idée de finnnnn (2026-10-22)
     { id: 'mindblown', name: 'Mind blown', price: 1200 },
     { id: 'hungry', name: 'Hungry', price: 500, idea: 'Monokromati' }, // idée de Monokromati (2026-11-01) : le dé bave, fourchette et couteau en main
+    // Émotes en image (Sacha, 2026-11-03) : la mascotte des six de base, dessinée avec ChatGPT d'après elles
+    // (img/emotes/<id>.png, 192 px). img: true → le site montre l'image, pas un dessin de js/emotes.js. Fixes, donc moins
+    // chères que les animées. Pas de GG, Zzz ni Clown en image : leurs versions animées sont déjà vendues.
+    { id: 'salty', name: 'Salty', price: 300, img: true },
+    { id: 'think', name: 'Hmm', price: 300, img: true },
+    { id: 'pray', name: 'Praying', price: 350, img: true },
+    { id: 'ko', name: 'K.O.', price: 400, img: true },
+    { id: 'onfire', name: 'On fire', price: 450, img: true },
   ];
   const emoteById = new Map(EMOTES.map(e => [e.id, e]));
 

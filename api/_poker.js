@@ -22,7 +22,7 @@
 // « poker ») ; la commission et les gains du bot y apparaissent donc tout seuls.
 'use strict';
 const crypto = require('node:crypto');
-const { redis, wallet, readStats, statsKey, queueReveal, findPlayer, cleanName, toObject } = require('./_lib');
+const { redis, wallet, readStats, statsKey, queueReveal, findPlayer, cleanName, toObject, dayKey } = require('./_lib');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
 const H = require('./_holdem');
@@ -37,6 +37,11 @@ const AWAY_MS = 12000; // l'adversaire ne sonde plus depuis 12 s : affiché « a
 const NEXT_MS = { bot: 3500, friend: 5000 }; // résultat affiché avant la main suivante
 const BOT_THINK = [700, 1700]; // le bot « réfléchit » un peu : on voit son coup arriver
 const INVITE_S = 600, TABLE_S = 86400, LAST_S = 3600, OVER_S = 120, LOG_KEPT = 14;
+// Tables entre amis : perdre exprès ferait passer des pièces d'un compte à l'autre sans les limites des cadeaux
+// (api/friends.js : 300 tirages, 1 000 pièces par jour). Mêmes 300 tirages, et au plus 2 500 pièces de caves par jour
+// et par joueur aux tables entre amis (comptées quand la partie commence, pour les deux joueurs). Le bot n'est pas limité.
+const FRIEND_ROLLS = 300, FRIEND_DAY = 2500;
+const friendDayKey = now => `pkday:${dayKey(now)}`;
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOT_NAMES = ['Robo', 'Ace Bot', 'Bluffy', 'Chipper', 'Deuce', 'Nano', 'Byte'];
 
@@ -255,7 +260,8 @@ async function lobby(id, now) {
   const tables = all.length ? await redis(all.map(x => ['GET', tableKey(x.code)])) : [];
   const invites = all.filter((x, k) => { try { return JSON.parse(tables[k]).status === 'wait'; } catch (e) { return false; } }).slice(-5).map(x => ({ code: x.code, name: x.name, buyin: x.buyin }));
   let lastMatch = null; try { lastMatch = last ? JSON.parse(last) : null; } catch (e) { /* illisible */ }
-  return { idle: true, invites, last: lastMatch, buyins: BUYINS, botMax: BOT_MAX, minRolls: Gamble.MIN_ROLLS, rake: H.RAKE, coins: Shop.balance(await readStats(id)) };
+  const [used] = await redis([['HGET', friendDayKey(now), id]]);
+  return { idle: true, invites, last: lastMatch, buyins: BUYINS, botMax: BOT_MAX, minRolls: Gamble.MIN_ROLLS, rake: H.RAKE, coins: Shop.balance(await readStats(id)), friend: { rolls: FRIEND_ROLLS, day: FRIEND_DAY, left: Math.max(0, FRIEND_DAY - (Number(used) || 0)) } };
 }
 
 // ---------------------------------------------------------------- entrer à une table
@@ -267,7 +273,7 @@ async function newCode() {
   }
 }
 // Sous le verrou du porte-monnaie du joueur : une seule table à la fois, 30 tirages, assez de pièces.
-async function mayBuyIn(id, buyin) {
+async function mayBuyIn(id, buyin, friend = false, now = Date.now()) {
   const [cur] = await redis([['GET', seatKey(id)]]);
   if (cur) {
     const [raw] = await redis([['GET', tableKey(cur)]]);
@@ -278,7 +284,18 @@ async function mayBuyIn(id, buyin) {
   if (rolls < Gamble.MIN_ROLLS) throw refuse(422, `Gamble unlocks after ${Gamble.MIN_ROLLS} rolls (you have ${rolls})`);
   const coins = Shop.balance(st);
   if (coins < buyin) throw refuse(422, `Not enough coins: ${buyin - coins} more needed`);
+  if (friend) {
+    if (rolls < FRIEND_ROLLS) throw refuse(422, `Poker with friends unlocks after ${FRIEND_ROLLS} rolls (you have ${rolls})`);
+    await friendRoom(id, buyin, now, 'You');
+  }
 }
+// Reste du jour pour les caves entre amis ; who = « You » ou le pseudo de l'hôte, pour le message.
+async function friendRoom(id, buyin, now, who) {
+  const [used] = await redis([['HGET', friendDayKey(now), id]]);
+  const left = Math.max(0, FRIEND_DAY - (Number(used) || 0));
+  if (buyin > left) throw refuse(422, `${who === 'You' ? 'You' : who} can only put ${left} more coins on friend tables today (${FRIEND_DAY} a day)`);
+}
+const friendDayWrites = (t, now) => [...t.seats.map(x => ['HINCRBY', friendDayKey(now), x.id, t.buyin]), ['EXPIRE', friendDayKey(now), 2 * 86400]];
 const nameOf = async id => (await redis([['HGET', 'names', id]]))[0] || 'Player';
 const buyInWrites = (t, id, now, i) => [['HINCRBY', statsKey(id), 'spent', t.buyin], ['SET', seatKey(id), t.code, 'EX', TABLE_S], ['DEL', lastKey(id)], ['HSET', seenKey(t.code), i, now]];
 function newTable(code, buyin, now, host, bot) {
@@ -314,7 +331,7 @@ async function create(id, body, now) {
   const buyin = buyinOf(body.buyin);
   if (!buyin) throw refuse(400, `Buy-in: ${BUYINS.join(', ')} coins`);
   return wallet(id, async () => {
-    await mayBuyIn(id, buyin);
+    await mayBuyIn(id, buyin, true, now);
     const code = await newCode();
     const t = newTable(code, buyin, now, { id, name: await nameOf(id), stack: buyin, to: 0, at: now }, false);
     const inv = body.name ? await inviteWrites(t, id, body.name, now) : [];
@@ -345,12 +362,13 @@ async function join(id, body, now) {
     if (!t || t.status === 'over') { await redis([['HDEL', inviteKey(id), code]]); throw refuse(404, 'This table is gone'); }
     if (seatOf(t, id) >= 0) return view(t, seatOf(t, id), now);
     if (t.bot || t.status !== 'wait' || t.seats[1]) throw refuse(422, 'This table is full');
-    await mayBuyIn(id, t.buyin);
+    await mayBuyIn(id, t.buyin, true, now);
+    await friendRoom(t.seats[0].id, t.buyin, now, t.seats[0].name); // l'hôte a pu jouer ailleurs depuis l'ouverture
     t.seats[1] = { id, name: await nameOf(id), stack: t.buyin, to: 0, at: now };
     t.status = 'play';
     log(t, { s: 1, m: 'join' });
     deal(t, now);
-    await save(t, [...buyInWrites(t, id, now, 1), ['HDEL', inviteKey(id), code], ...(t.invited || []).filter(x => x.id !== id).map(x => ['HDEL', inviteKey(x.id), code])]);
+    await save(t, [...buyInWrites(t, id, now, 1), ...friendDayWrites(t, now), ['HDEL', inviteKey(id), code], ...(t.invited || []).filter(x => x.id !== id).map(x => ['HDEL', inviteKey(x.id), code])]);
     return view(t, 1, now);
   }));
 }

@@ -726,7 +726,7 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['imSet', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!['imSet', 'recoverCode', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
     if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList', 'gwList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
     // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
     if (body.action === 'imSet') {
@@ -734,6 +734,18 @@ module.exports = async (req, res) => {
       if (!who) return send(res, 404, { error: 'No player with this name' });
       await redis(body.on === false ? [['HDEL', statsKey(who), 'ideaManager'], ['SREM', 'im:all', who]] : [['HSET', statsKey(who), 'ideaManager', '1'], ['SADD', 'im:all', who]]);
       return send(res, 200, await imState(playerId, true));
+    }
+    // Code de récupération (2026-11-03) : un joueur sans Google ni mot de passe perd son compte quand son appareil efface
+    // ses données (Deadshot, CMC_Nate / Naet_161 : Chromebooks d'école, autre réseau). Le créateur, après avoir vérifié
+    // que c'est bien lui (Discord…), crée un code à usage unique valable 7 jours ; le joueur le tape dans ⚙️ Réglages et
+    // son appareil reprend le compte (api/auth.js, recoverLogin). Créer un nouveau code annule le précédent.
+    if (body.action === 'recoverCode') {
+      const who = await findPlayer(String(body.name || '').slice(0, 40));
+      if (!who) return send(res, 404, { error: 'No player with this name' });
+      const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', code = Array.from({ length: 10 }, () => ABC[crypto.randomInt(ABC.length)]).join('');
+      const [old, name] = await redis([['GET', `recover:id:${who}`], ['HGET', 'names', who]]);
+      await redis([...(old ? [['DEL', `recover:${old}`]] : []), ['SET', `recover:${code}`, who, 'EX', 7 * 86400], ['SET', `recover:id:${who}`, code, 'EX', 7 * 86400]]);
+      return send(res, 200, { code, name: name || body.name, days: 7 });
     }
     // Giveaways sur le Discord (api/_giveaway.js, Sacha, 2026-11-01) : la liste, et en lancer un (créateur seulement).
     if (body.action === 'gwList' || body.action === 'gwStart') {

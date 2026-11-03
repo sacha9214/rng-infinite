@@ -1101,7 +1101,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(['gg', 'love', 'rage', 'money', 'mindblown'].map(id => Shop.caseRarity(ecase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
   for (const id of epool) { const v = Shop.duplicateRefund(ecase, id); assert.ok(v >= ecase.price / 2 && v < ecase.price, `remboursement ${id}`); }
   assert.ok(Shop.KEY_OPENS.premium.includes('emotes') && !Shop.KEY_OPENS.starter.includes('emotes'), 'une clé Premium l\'ouvre');
-  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(E.has(id), `dessin de l'émote ${id} (js/emotes.js)`); }
+  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(Shop.emoteById.get(id).img ? fs.existsSync(path.join(ROOT, `img/emotes/${id}.png`)) : E.has(id), `dessin de l'émote ${id} (js/emotes.js ou img/emotes/${id}.png)`); }
   const emma = { playerId: 'cb'.repeat(8), secret: 'dc'.repeat(16), name: 'Emmy' };
   assert.equal((await call(roll, { method: 'POST', body: emma })).status, 200);
   run([['HINCRBY', `stats:${emma.playerId}`, 'bonus', 50000]]);
@@ -1624,6 +1624,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: '🦄' })).status, 400));
   // Catalogue : identifiants distincts des émotes de base.
   assert.ok(Shop.EMOTES.every(e => !Shop.BASE_EMOTES.includes(e.id) && e.price > 0));
+  // Émotes en image (2026-11-03) : un fichier carré de 192 px chacune, comme les six de base ; elles se vendent et partent en duel.
+  for (const e of Shop.EMOTES.filter(x => x.img)) {
+    const png = fs.readFileSync(path.join(ROOT, `img/emotes/${e.id}.png`));
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [192, 192], `img/emotes/${e.id}.png en 192 × 192`);
+  }
+  await setCoins(frank, 1000);
+  r = await buy(frank, 'salty');
+  assert.deepEqual([r.status, r.body.emotes], [200, ['gg', 'salty']], JSON.stringify(r.body));
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: 'salty' })).status, 200, 'émote en image achetée : elle part'));
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: 'onfire' })).status, 403, 'pas achetée : refusée'));
 }
 
 // ================================================================ 29. Chat des duels : joueurs assis seulement, filtré, limité en débit
@@ -3427,6 +3437,26 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['DEL', `pwfail:${u.playerId}`], ['SET', 'pwip:203.0.113.50', 30]]); assert.equal((await pw({ action: 'passwordLogin', name: 'Passy', password: 'correct horse' })).status, 429, 'trop d\'essais depuis cette adresse');
   run([['DEL', 'pwip:203.0.113.50']]);
   assert.equal((await pw({ action: 'passwordState', ...u })).body.has, true);
+
+  // Code de récupération (2026-11-03) : créé par le créateur seulement, à usage unique, il rend le joueur à l'appareil.
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const lost = { playerId: '5f'.repeat(8), secret: '6f'.repeat(16), name: 'Lostkid' };
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: lost })).status, 200);
+  const code = who => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'recoverCode', name: who.target } });
+  assert.equal((await code({ ...u, target: 'Lostkid' })).status, 403, 'pas pour un joueur');
+  run([['HSET', `stats:${u.playerId}`, 'owner', '1']]);
+  assert.equal((await code({ ...u, target: 'Nobody Here' })).status, 404);
+  const c1 = (await code({ ...u, target: 'lostkid' })).body, c2 = (await code({ ...u, target: 'Lostkid' })).body;
+  run([['HDEL', `stats:${u.playerId}`, 'owner']]);
+  assert.ok(/^[A-Z2-9]{10}$/.test(c2.code) && c2.name === 'Lostkid' && c2.days === 7, JSON.stringify(c2));
+  assert.equal((await pw({ action: 'recoverLogin', code: c1.code })).status, 401, 'un nouveau code annule l\'ancien');
+  r = await pw({ action: 'recoverLogin', code: ` ${c2.code.slice(0, 5).toLowerCase()}-${c2.code.slice(5)} ` }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.playerId, lost.playerId); assert.equal(r.body.name, 'Lostkid');
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: { playerId: lost.playerId, secret: r.body.secret, name: 'Lostkid' } })).status, 200, 'le nouvel appareil tire sous l\'ancien joueur');
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: lost })).status, 200, 'l\'ancien appareil aussi');
+  assert.equal((await pw({ action: 'recoverLogin', code: c2.code })).status, 401, 'une seule fois');
+  assert.equal((await pw({ action: 'recoverLogin', code: 'short' })).status, 401);
+  run([['DEL', 'pwip:203.0.113.50']]);
 }
 
 // ================================================================ 58. Code SPOOKYMONTH : 300 pièces + titre Spooky, jusqu'au 1er novembre
@@ -6215,7 +6245,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(await coinsOf(pb), b0 - 1000 + pbTab.seats[0].cashed, 'table abandonnée : le tapis revient');
 
   // 3c. Entre amis : invitation, refus d'un inconnu, rejoindre, cartes cachées, minuterie, conservation des pièces.
-  const fa = mkP('c3', 'PokerCat'), fb = mkP('c4', 'PokerDan'), fc = mkP('c5', 'PokerEve');
+  const fa = mkP('c3', 'PokerCat', 20000, 400), fb = mkP('c4', 'PokerDan', 20000, 400), fc = mkP('c5', 'PokerEve', 20000, 400);
   run([['SADD', `fr:${fa.playerId}`, fb.playerId], ['SADD', `fr:${fb.playerId}`, fa.playerId]]);
   r = await pk(fa, { op: 'create', buyin: 250, name: 'PokerEve' }); assert.equal(r.status, 403, 'seulement ses amis');
   const fa0 = await coinsOf(fa), fb0 = await coinsOf(fb), houseF0 = casino();
@@ -6300,6 +6330,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await pk(pn, { op: 'bot', buyin: 100 }); assert.equal(r.status, 422); assert.match(r.body.error, /30 rolls/);
   const pp = mkP('c8', 'PokerPoor', 50);
   r = await pk(pp, { op: 'bot', buyin: 100 }); assert.equal(r.status, 422); assert.match(r.body.error, /Not enough coins/);
+
+  // 3e. Tables entre amis : 300 tirages et 2 500 pièces de caves par jour et par joueur (sinon perdre exprès ferait
+  // passer des pièces sans les limites des cadeaux). Le bot n'est pas concerné.
+  const ga = mkP('c9', 'PokerGus', 20000, 400), gb = mkP('ca', 'PokerHal', 20000, 400), gn = mkP('cb', 'PokerIda', 20000, 150);
+  run([['SADD', `fr:${ga.playerId}`, gb.playerId, gn.playerId], ['SADD', `fr:${gb.playerId}`, ga.playerId], ['SADD', `fr:${gn.playerId}`, ga.playerId]]);
+  r = await pk(gn, { op: 'create', buyin: 100, name: 'PokerGus' }); assert.equal(r.status, 422); assert.match(r.body.error, /300 rolls/);
+  r = await pk(gn, { op: 'bot', buyin: 100 }); assert.equal(r.status, 200, 'le bot reste à 30 tirages'); await pk(gn, { op: 'leave' });
+  r = await pk(ga, { op: 'create', buyin: 2500 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const gcode = r.body.code;
+  r = await pk(gn, { op: 'join', code: gcode }); assert.equal(r.status, 422, 'rejoindre aussi : 300 tirages');
+  r = await pk(gb, { op: 'join', code: gcode }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const day = run([['HGETALL', `pkday:${new Date(Date.now()).toISOString().slice(0, 10)}`]])[0].result;
+  assert.ok(day.includes(ga.playerId) && day.includes(gb.playerId), 'compté pour les deux joueurs');
+  await pk(ga, { op: 'leave' }); await pk(ga, { op: 'ack' }); await pk(gb, { op: 'ack' });
+  r = await pk(ga, { op: 'create', buyin: 100 }); assert.equal(r.status, 422, 'plus de place aujourd\'hui'); assert.match(r.body.error, /0 more coins/);
+  r = await pk(ga, { op: 'bot', buyin: 1000 }); assert.equal(r.status, 200, 'le bot reste ouvert'); await pk(ga, { op: 'leave' });
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

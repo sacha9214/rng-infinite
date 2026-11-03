@@ -435,6 +435,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .slot.revealed { animation: pop .28s ease-out; }
 .slot.ghost { opacity: .18; }
 .slot.collapsed { width: 0; opacity: 0; }
+/* Un zéro de tête replié reste invisible quel que soit le skin : les règles « .skin-x .slot.ghost { opacity: .18 } »,
+   plus précises, lui rendaient son opacité et un 0 dépassait à côté des chiffres (Christmas Morning : randomguy, «....»,
+   2026-11). !important : les animations des skins ne peuvent pas le rallumer non plus. */
+.num-card .slot.collapsed { opacity: 0 !important; overflow: hidden; }
 @keyframes pop { 0% { transform: translateY(-6px) scale(1.25); } 100% { transform: none; } }
 .num-card.shake { animation: shake .5s ease; }
 @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(3px); } 30%, 50%, 70% { transform: translateX(-5px); } 40%, 60% { transform: translateX(5px); } }
@@ -966,8 +970,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
   box-shadow: inset 0 0 0 1px rgba(147, 197, 253, .55), 0 0 .5em rgba(59, 130, 246, .35);
 }
 @keyframes owner-sheen { 0%, 70% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-.lb-who { display: flex; align-items: center; min-width: 0; }
-.lb-who .lb-name { flex: 0 1 auto; }
+.lb-who { display: flex; align-items: center; min-width: 0; overflow: hidden; }
+/* Le pseudo passe d'abord (qwertyuiop, 2026-11-02 : « on ne voit plus le nom ») : il ne rétrécit plus jusqu'à zéro
+   devant le tag de clan, le titre et le badge Top : il garde toute la place à côté de l'avatar (fini par … si besoin),
+   et ce qui ne tient plus après lui sort de la case (.lb-who coupe ce qui dépasse). */
+.lb-who > .av { flex-shrink: 0; }
+.lb-who .lb-name { flex: 0 0 auto; max-width: calc(100% - var(--av-s, 26px) - .45rem); }
+.lb-who > :not(.lb-name):not(.av) { flex-shrink: 0; }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .5rem; }
 .ach { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); }
 .ach.locked { opacity: .5; }
@@ -2406,7 +2415,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .chat-msg { display: flex; align-items: baseline; gap: .5rem; font-size: .84rem; line-height: 1.35; animation: chat-in .22s var(--ease-out) backwards; }
 .chat-name { flex: none; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--prose-2); }
 .chat-msg.mine .chat-name { color: var(--ep-text, var(--prose)); }
-.chat-text { min-width: 0; overflow-wrap: anywhere; }
+/* Le texte garde au moins 8rem : avec 🙂+, Edit et Delete à côté, il tombait à une lettre par ligne sur téléphone
+   (Idkwhatnamemyself, 2026-11-03). Les boutons passent à la ligne suivante quand la place manque. */
+.chat-msg { flex-wrap: wrap; row-gap: 0; }
+.chat-text { flex: 1 1 8rem; min-width: 0; overflow-wrap: anywhere; }
 .chat-hide, .chat-show { flex: none; margin-left: auto; border: 0; background: none; padding: 0 .2rem; font: inherit; font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--prose-3); cursor: pointer; }
 .chat-hide { opacity: 0; transition: opacity .15s ease; }
 .chat-msg:hover .chat-hide, .chat-hide:focus-visible { opacity: 1; }
@@ -3122,7 +3134,7 @@ button.o-chip { cursor: pointer; }
 .lb-aside .eyebrow { margin-bottom: .4rem; }
 .lb-aside-lead { margin: 0 0 .7rem; font-size: .84rem; line-height: 1.45; color: var(--prose-2); }
 .lb-aside-list { list-style: none; margin: 0 0 .7rem; padding: 0; display: grid; gap: .45rem; }
-.lb-aside-list li { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-size: .8rem; font-weight: 700; color: var(--prose-2); }
+.lb-aside-list li { display: flex; flex-wrap: wrap; row-gap: .15rem; align-items: center; justify-content: space-between; gap: .6rem; font-size: .8rem; font-weight: 700; color: var(--prose-2); } /* à la ligne à 320 px : la pastille avec le mode dépassait d'1 px (2026-11-03) */
 .lb-aside-list .top-mark { margin-left: 0; font-size: .74rem; }
 .lb-aside-foot { margin: 0; font-size: .76rem; line-height: 1.45; color: var(--prose-3); }
 .lb-aside-foot b { color: var(--prose); }
@@ -11612,6 +11624,8 @@ a.player-btn { text-decoration: none; color: inherit; }
 .qmarks.hard span:nth-child(7) { animation-delay: .9s; } .qmarks.hard span:nth-child(8) { animation-delay: 1.05s; }
 .qmarks.hard span:nth-child(9) { animation-delay: 1.2s; } .qmarks.hard span:nth-child(10) { animation-delay: 1.35s; }
 .top-mark.hard { box-shadow: inset 0 0 0 1px rgb(234 88 12 / .55); }
+/* Pastille réduite des lignes de classement : l'emoji seul (2026-11-03). */
+.top-mark.compact { padding: .05rem .3rem; gap: 0; flex-shrink: 0; box-shadow: none; }
 /* Mode difficile verrouillé jusqu'au premier Godlike ou Infinite (2026-11-02) : cadenas, message au survol (title). */
 .mode-switch [data-mode="hard"].locked { opacity: .6; cursor: help; }
 .mode-switch [data-mode="hard"].locked:hover { opacity: .85; }

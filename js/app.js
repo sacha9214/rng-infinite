@@ -370,6 +370,9 @@
   const pctStr = p => {
     const v = p * 100;
     if (v === 0) return '0%';
+    // Sous 0,0001 % (Infinite du mode difficile, 1 sur ~10 millions), toFixed(4) donnait « 0.0000 » puis « 0.% »
+    // (jsand, 2026-11-03) : deux chiffres significatifs à la place (0.0000099%).
+    if (v < 0.0001) return `${Number(v.toPrecision(2)).toFixed(Math.min(20, 1 - Math.floor(Math.log10(v)))).replace(/(\.\d*?[1-9])0+$/, '$1')}%`;
     if (v < 0.01) return v.toFixed(4).replace(/0+$/, '') + '%';
     if (v < 1) return v.toFixed(2) + '%';
     return v.toFixed(1) + '%';
@@ -601,11 +604,15 @@
     return txt.charAt(0).toUpperCase() + txt.slice(1);
   };
   // Mode du badge (Sacha, 2026-11-02 : « dire mode difficile ou mode normal ») : « 2026-10-h » = mode difficile.
-  const topHTML = award => {
+  // compact : dans les lignes des classements, seulement l'emoji (et 🔥 en mode difficile), le reste dans l'info-bulle.
+  // La pastille entière (« Top 10 · Oct 2026 · Normal ») recouvrait le nom, les pièces et l'XP de la ligne (Alt, infinity,
+  // qwertyuiop, 2026-11-03).
+  const topHTML = (award, compact = false) => {
     const m = award && TOP_MARKS[award.top];
     if (!m || !/^\d{4}-\d{2}(-h)?$/.test(award.month || '')) return '';
     const hard = award.month.endsWith('-h'), when = monthLabel(award.month.slice(0, 7)), mode = hard ? '🔥 Hard' : 'Normal';
     const tip = `${award.top === 1 ? 'First place' : `Top ${award.top}`} on the ${hard ? 'hard mode' : 'normal mode'} monthly leaderboard · ${when}`;
+    if (compact) return `<span class="top-mark ${m[2]}${hard ? ' hard' : ''} compact" title="${esc(tip)}" aria-label="${esc(tip)}" data-no-i18n>${m[0]}${hard ? '🔥' : ''}</span>`;
     return `<span class="top-mark ${m[2]}${hard ? ' hard' : ''}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)} · ${mode}</span>`;
   };
   // Pièces versées avec le badge (mêmes montants que REWARDS dans api/_rank.js).
@@ -732,19 +739,36 @@
   // n'a pas répondu) : le profil « lite » est retrouvé par l'id du joueur, et son pseudo remplace celui de l'appareil.
   const syncName = p => { if (p && p.name && p.name !== Store.player.name) Store.setPlayerName(p.name); };
   const ServerLife = {
-    at: 0, xp: null, rolls: null, busy: null,
+    // mode : celui des totaux gardés. Sans lui, passer de Normal à Hard dans la minute montrait les tirages et l'XP de
+    // l'autre mode (jsand, 2026-11-03 : « Total rolls et l'historique sont des nombres complètement différents »).
+    at: 0, xp: null, rolls: null, busy: null, mode: null,
     async load() {
       if (!Store.player.name) return null;
-      if (Date.now() - this.at < 60000 && this.xp != null) return this;
-      if (!this.busy) this.busy = Online.profile(Store.player.name, true).then(p => { syncName(p); setHardOpen(p.hardOpen); this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
+      if (Date.now() - this.at < 60000 && this.xp != null && this.mode === Mode.name) return this;
+      if (this.busy && this.busyMode !== Mode.name) this.busy = null;
+      const mode = this.busyMode = Mode.name;
+      if (!this.busy) this.busy = Online.profile(Store.player.name, true, mode).then(p => { syncName(p); setHardOpen(p.hardOpen); if (mode !== Mode.name) return; this.xp = p.xp; this.rolls = p.rolls; this.uniq = p.uniq; this.mode = mode; this.at = Date.now(); }).catch(() => {}).finally(() => { this.busy = null; });
       await this.busy;
-      return this.xp != null ? this : null;
+      return this.xp != null && this.mode === Mode.name ? this : null;
     },
+  };
+  // XP à vie montrée après un tirage : le total du serveur, plus les tirages faits depuis sa lecture. Au-delà de 100 000
+  // tirages, l'appareil ne garde que les derniers : lifetimeEP() restait bloqué vers 3,2 milliards pendant le tirage auto
+  // (kaz, 2026-11-02). Sans total du serveur (hors ligne, pas de pseudo), la somme de l'appareil comme avant.
+  const lifeXP = () => {
+    const L = ServerLife;
+    if (L.xp == null || L.mode !== Mode.name) return lifetimeEP();
+    let x = L.xp;
+    for (let i = Store.rolls.length - 1; i >= 0 && Store.rolls[i][2] > L.at; i--) if (!Store.rolls[i][3]) x += Store.rolls[i][1];
+    return Math.max(x, lifetimeEP());
   };
   const countedRolls = () => Store.rolls.reduce((acc, r) => acc + (r[3] ? 0 : 1), 0);
   // Passer les badges déjà obtenus : une récompense pour ceux qui ont assez tiré, éteinte par défaut.
   const SKIP_BADGES_AT = 500;
-  const skipBadgesOn = () => Store.settings.skipBadges === 'on' && countedRolls() >= SKIP_BADGES_AT;
+  // Tirages des deux modes : en mode difficile, Store.rolls ne contient que ceux du mode difficile, et le réglage se
+  // reverrouillait à la sortie du mode difficile (Jacksonw, 2026-11-03). Store.other = l'historique de l'autre mode.
+  const skipRolls = () => countedRolls() + (Store.other && Store.other.rolls ? Store.other.rolls.reduce((acc, r) => acc + (r[3] ? 0 : 1), 0) : 0);
+  const skipBadgesOn = () => Store.settings.skipBadges === 'on' && skipRolls() >= SKIP_BADGES_AT;
 
   function bestRollIndex() {
     let best = -1;
@@ -1281,7 +1305,7 @@
           ${family.map(f => `<span class="badge-pill" data-tier="${f.tier}" data-badge="${f.id}" style="cursor:pointer;${f.id === id ? 'font-weight:700' : ''}">${f.emoji} ${esc(f.label)}</span>`).join(' ')}
         </span></div>
         <p class="panel-note" style="margin:.2rem 0 0">Only the highest-scoring badge of a family counts toward XP; the others show as “earned”.</p>` : ''}
-      ${countedRolls() >= SKIP_BADGES_AT ? `<div class="kv"><span class="k">Skip known badges</span><span class="v"><button class="btn ghost small" id="bm-full">${(Store.settings.fullBadges || []).includes(id) ? '⭐ Always shown in full' : '⏩ Skipped when known'}</button></span></div>` : ''}
+      ${skipRolls() >= SKIP_BADGES_AT ? `<div class="kv"><span class="k">Skip known badges</span><span class="v"><button class="btn ghost small" id="bm-full">${(Store.settings.fullBadges || []).includes(id) ? '⭐ Always shown in full' : '⏩ Skipped when known'}</button></span></div>` : ''}
       ${holders.length ? `<div class="eyebrow" style="margin:1.1rem 0 .6rem">Your rolls with this badge${e.count > holders.length ? ` (latest ${holders.length})` : ''}</div>
         <div class="pill-row" style="justify-content:flex-start">${holders.map(i => `<button class="num-card sm" data-tier="${Engine.cardTier(Store.rolls[i][1])}" data-roll="${i}">${Store.rolls[i][0]}</button>`).join('')}</div>` : ''}
     `, m => {
@@ -1344,7 +1368,7 @@
       ${googleAccountHTML()}
       ${passwordHTML()}
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
-      <div class="field"><label>Skip known badges</label>${countedRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(countedRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
+      <div class="field"><label>Skip known badges</label>${skipRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(skipRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
       <div class="field"><label>Show XP to next rarity</label>${seg('tierLine', ['on', 'off'], s.tierLine === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">The “↑ XP short of / ↓ XP above” line under the XP after a roll.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
@@ -2126,6 +2150,10 @@
         <form class="pw-form" id="pw-login"><input class="input" name="name" autocomplete="username" maxlength="20" placeholder="Player name" aria-label="Player name" required><input class="input" type="password" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="btn">Sign in</button></form>
         <span class="panel-note">This device switches to that player. The player you use here now stays saved on the server under its name.</span>
       </details>
+      <details class="pw-login"><summary>Lost your player? Use a recovery code</summary>
+        <form class="pw-form" id="pw-recover"><input class="input mono" name="code" autocomplete="off" autocapitalize="characters" maxlength="14" placeholder="Code from the creator" aria-label="Recovery code" required><button class="btn" type="submit">Recover</button></form>
+        <span class="panel-note">Ask the creator on Discord with your old player name: he sends you a one-time code.</span>
+      </details>
       <div class="pw-out" id="pw-out" hidden><button class="btn" id="pw-signout" type="button">Sign out</button><span class="panel-note">This device goes back to a new empty player. Your rolls and coins stay on your account.</span></div></div>`;
   }
   function bindPassword(m) {
@@ -2143,21 +2171,25 @@
       try { await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'setPassword', playerId: p.id, secret: p.secret, password: f.get('password') }) }); set.reset(); state.textContent = window.RNGI18n.t('✓ You have a password: sign in on another device with your name and it. You can change it below.'); if (out && !p.google) out.hidden = false; toast('Password saved', 2500, 'achv'); }
       catch (err) { toast([403, 422].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
     });
-    if (login) login.addEventListener('submit', async e => {
-      e.preventDefault();
-      const f = new FormData(login), btn = login.querySelector('button');
-      btn.disabled = true;
-      try {
-        const data = await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordLogin', name: f.get('name'), password: f.get('password') }) });
-        Store.setIdentity({ id: data.playerId, secret: data.secret, google: null });
-        Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
-        Store.setPlayerName(data.name);
-        closeModal();
-        const restored = await syncHistory().catch(() => 0);
-        toast(`Signed in as ${data.name}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`, 3500, 'achv');
-        route();
-      } catch (err) { btn.disabled = false; toast([401, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
-    });
+    // Code de récupération (2026-11-03) : même suite qu'une connexion par mot de passe.
+    const recover = m.querySelector('#pw-recover');
+    if (login) login.addEventListener('submit', e => signInWith(e, login, f => ({ action: 'passwordLogin', name: f.get('name'), password: f.get('password') })));
+    if (recover) recover.addEventListener('submit', e => signInWith(e, recover, f => ({ action: 'recoverLogin', code: f.get('code') })));
+  }
+  async function signInWith(e, form, bodyOf) {
+    e.preventDefault();
+    const f = new FormData(form), btn = form.querySelector('button');
+    btn.disabled = true;
+    try {
+      const data = await Online.request('/api/auth', { method: 'POST', body: JSON.stringify(bodyOf(f)) });
+      Store.setIdentity({ id: data.playerId, secret: data.secret, google: null });
+      Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
+      Store.setPlayerName(data.name);
+      closeModal();
+      const restored = await syncHistory().catch(() => 0);
+      toast(`Signed in as ${data.name}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`, 3500, 'achv');
+      route();
+    } catch (err) { btn.disabled = false; toast([401, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
   }
 
   // Aide sous le bouton Google (Sacha, 2026-10-25) : un bloqueur de pub ou de pop-ups empêche la fenêtre de Google de
@@ -2200,6 +2232,8 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-11-03-poker', date: 'Nov 3, 2026', en: ['🃏 New in the Casino: Poker! Texas Hold\'em, 1 vs 1. Play the bot right away, or invite a friend to your table (or share its code). Pick a buy-in from 100 to 5,000 coins and play until someone runs out of chips; leave whenever you like and you cash out your chips. The bot plays fair: it never sees your cards. The house keeps 5% of every pot'], fr: ['🃏 Nouveau au casino : le Poker ! Texas Hold\'em, 1 contre 1. Joue tout de suite contre le bot, ou invite un ami à ta table (ou partage son code). Choisis une cave de 100 à 5 000 pièces et jouez jusqu\'à ce que l\'un n\'ait plus de jetons ; pars quand tu veux et tu encaisses tes jetons. Le bot joue loyalement : il ne voit jamais tes cartes. La maison garde 5 % de chaque pot'] },
+    { id: '2026-11-03-bugs', date: 'Nov 3, 2026', en: ['🏆 Leaderboards: the monthly Top badge is now a small 👑/🥈/🥉 next to the name (🔥 for Hard), so it no longer covers names, coins and XP (reported by Alt, infinity and qwertyuiop)', '💬 Chat: your message no longer stays in the box after sending (reported by Niall, randomguy, Jacksonw and Idkwhatnamemyself), and duel chat messages no longer squeeze into one letter per line (Idkwhatnamemyself)', '🏅 Badges tab: badges are grouped by how rare they really are, like the collection titles. Exact Natural, Exact RTX 5090 and Important Birthday (one number each) are now with the Celestial badges, and Epic Obtainer counts the same badges you see in the Epic group (reported by Thermonuclear Bomb and Trial)', '🗼 Tower: the multipliers shown before you start are now the real ones (reported by infinity)', '0️⃣ Leading zeros no longer peek out next to your number at the end of a roll (reported by randomguy)', '⏩ Skip known badges counts your Normal and Hard rolls together, so it stays unlocked in Hard mode (reported by Jacksonw)', '🔥 Hard mode: your roll count and XP no longer show the Normal mode numbers for a minute after switching, and Infinite odds show as 0.00001% instead of "0.%" (reported by jsand)', '📈 Past 100,000 rolls, your lifetime XP keeps going up after each roll (reported by kaz)', '📦 Clicking outside a case while it opens now skips to your prize instead of closing it (reported by Ben good)', '⌨️ Keyboard ASMR wallpaper: typing on your real keyboard presses the keys too, with their sound (reported by LEVIATHAN)', '🔐 Lost your player because your device was wiped? Ask the creator for a recovery code and enter it in ⚙️ Settings. Players with 300+ rolls and no password get a reminder to set one (reported by Deadshot, CMC_Nate and Naet_161)'], fr: ['🏆 Classements : le badge Top du mois devient un petit 👑/🥈/🥉 à côté du pseudo (🔥 en Hard), il ne cache plus les pseudos, les pièces et l\'XP (signalé par Alt, infinity et qwertyuiop)', '💬 Chat : ton message ne reste plus dans la zone d\'écriture après l\'envoi (signalé par Niall, randomguy, Jacksonw et Idkwhatnamemyself), et les messages du chat des duels ne s\'écrasent plus en une lettre par ligne (Idkwhatnamemyself)', '🏅 Onglet Badges : les badges sont rangés selon leur vraie rareté, comme les titres de collection. Exact Natural, Exact RTX 5090 et Important Birthday (un seul nombre chacun) passent avec les Celestial, et Conquérant Epic compte les mêmes badges que le groupe Epic (signalé par Thermonuclear Bomb et Trial)', '🗼 Tour : les multiplicateurs affichés avant de commencer sont les vrais (signalé par infinity)', '0️⃣ Les zéros de tête ne dépassent plus à côté de ton nombre à la fin d\'un tirage (signalé par randomguy)', '⏩ Passer les badges connus compte tes tirages Normal et Hard ensemble : il reste débloqué en mode difficile (signalé par Jacksonw)', '🔥 Mode difficile : ton nombre de tirages et ton XP ne montrent plus ceux du mode normal pendant une minute après le changement, et les chances d\'un Infinite s\'affichent 0,00001 % au lieu de « 0.% » (signalé par jsand)', '📈 Au-delà de 100 000 tirages, ton XP à vie continue de monter après chaque tirage (signalé par kaz)', '📦 Cliquer à côté d\'une caisse pendant son ouverture passe directement au gain au lieu de la fermer (signalé par Ben good)', '⌨️ Fond Keyboard ASMR : taper sur ton vrai clavier enfonce aussi les touches, avec leur son (signalé par LEVIATHAN)', '🔐 Joueur perdu parce que ton appareil a été effacé ? Demande un code de récupération au créateur et entre-le dans ⚙️ Réglages. Les joueurs de 300 tirages ou plus sans mot de passe reçoivent un rappel pour en choisir un (signalé par Deadshot, CMC_Nate et Naet_161)'] },
+    { id: '2026-11-03-emotes', date: 'Nov 3, 2026', en: ['😤 5 new duel emotes in the Shop: Salty, Hmm, Praying, K.O. and On fire, the same dice as the free reactions, from 300 to 450 coins. They can also drop from the Emote Case, which now costs 350 coins instead of 400'], fr: ['😤 5 nouvelles émotes de duel dans la boutique : Salty, Hmm, Praying, K.O. et On fire, le même dé que les réactions gratuites, de 300 à 450 pièces. On peut aussi les gagner dans la caisse d\'émotes, qui coûte maintenant 350 pièces au lieu de 400'] },
     { id: '2026-11-02-safety', date: 'Nov 2, 2026', en: ['🛡️ Safety update: friend requests now need 10 rolls, reporting a message 20 rolls and attaching images to an idea 30 rolls, so throwaway accounts can\'t spam them. New names use plain letters (accents are fine), so nobody can copy someone else\'s name with look-alike letters'], fr: ['🛡️ Mise à jour de sécurité : envoyer une demande d\'ami demande maintenant 10 tirages, signaler un message 20 tirages et joindre des images à une idée 30 tirages, pour que les comptes jetables ne puissent plus en abuser. Les nouveaux pseudos utilisent des lettres simples (les accents sont permis) : personne ne peut plus copier le pseudo d\'un autre avec des lettres qui se ressemblent'] },
     { id: '2026-11-02-hard-clan', date: 'Nov 2, 2026', en: ['🛡️ Clans: Hard mode rolls now count for your clan\'s weekly XP, at the Normal mode value of their rarity. A Hard Infinite gives your clan the XP of the smallest Normal Infinite, a Hard Mythic the smallest Normal Mythic, so Hard players help without flooding the clan race'], fr: ['🛡️ Clans : les tirages du mode difficile comptent pour l\'XP de la semaine de ton clan, à la valeur de leur rareté en mode normal. Un Infinite difficile rapporte à ton clan l\'XP du plus petit Infinite normal, un Mythic difficile celle du plus petit Mythic normal : les joueurs du mode difficile aident sans écraser la course des clans'] },
     { id: '2026-11-02-duel-mode', date: 'Nov 2, 2026', en: ['⚔️ Duels: choose Normal or 🔥 Hard when you create a duel. Hard duels use 10-digit numbers and count in your Hard mode history. Only players who unlocked Hard mode can join one', '🔓 Hard mode is easier to unlock: any Divine or higher roll in Normal mode now opens it (it was Godlike or Infinite)'], fr: ['⚔️ Duels : choisis Normal ou 🔥 Difficile en créant un duel. Les duels difficiles utilisent des nombres à 10 chiffres et comptent dans ton historique du mode difficile. Seuls les joueurs qui ont débloqué le mode difficile peuvent les rejoindre', '🔓 Le mode difficile est plus facile à débloquer : n\'importe quel tirage Divine ou mieux en mode normal l\'ouvre maintenant (c\'était Godlike ou Infinite)'] },
@@ -2976,7 +3010,7 @@
     const previous = (Collection.seen.get(n) || []).slice();
     const newIds = new Set(a.earnedIds.filter(id => !Collection.badges.has(id)));
     const isFirst = Store.rolls.length === 0;
-    const lifetimeBefore = lifetimeEP();
+    const lifetimeBefore = lifeXP();
     // Le tirage est enregistré avant l'animation : quitter la page ne permet pas de relancer.
     const { saved } = Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
@@ -3755,10 +3789,23 @@
     drawCollection(src, state);
   }
 
+  // Rangement de la collection par rareté réelle (fréquence), comme les titres Rare Enthusiast, Epic Obtainer…
+  // (Achievements.collectionSets) : la couleur de 6 vieux badges est plus commune que leur fréquence (Exact Natural, Exact
+  // RTX 5090 et Important Birthday, un seul nombre chacun, étaient dans Rare). L'onglet affichait « Epic 51/51 » alors que
+  // le titre attendait aussi Current Year et RTX 5090, rangés dans Rare (Thermonuclear Bomb et Trial, 2026-11-02).
+  // En mode difficile, les badges gardent leur couleur (les titres de collection ne comptent que le mode normal).
+  // window.BADGE_ODDS = la probabilité d'un badge (nombres qui l'obtiennent / 1 000 001) ; le serveur lit les nombres
+  // eux-mêmes (data/badge-odds.json) : 100 × 1 000 001 / nombres = 100 / probabilité.
+  const collTier = b => {
+    const p = Mode.hard ? 0 : Number(window.BADGE_ODDS && window.BADGE_ODDS[b.id]) || 0;
+    if (!p) return b.tier;
+    const t = Engine.badgeTier(Math.max(b.score, 100 / p));
+    return Engine.TIER_ORDER.indexOf(t) > Engine.TIER_ORDER.indexOf(b.tier) ? t : b.tier;
+  };
   function drawCollection(src, state) {
     const q = state.q.trim().toLowerCase();
     const blocks = ['celestial', 'mythic', 'anomaly', 'epic', 'rare', 'uncommon', 'common'].map(tier => {
-      const all = Engine.badges.filter(b => b.tier === tier);
+      const all = Engine.badges.filter(b => collTier(b) === tier);
       const foundInTier = all.filter(b => src.get(b.id)).length;
       const list = all
         .filter(b => state.filter === 'all' || (state.filter === 'found') === !!src.get(b.id))
@@ -3776,7 +3823,7 @@
 
   function collTileHTML(b, e) {
     return `
-      <button class="coll${e ? '' : ' missing'}"${e ? ` data-tier="${b.tier}"` : ''} data-badge="${b.id}">
+      <button class="coll${e ? '' : ' missing'}"${e ? ` data-tier="${collTier(b)}"` : ''} data-badge="${b.id}">
         <span class="top"><span class="emoji">${b.emoji}</span><span class="name">${esc(b.label)}</span><span class="ep-pill">${compact(b.score)}</span></span>
         <span class="desc">${esc(b.desc)}</span>
         <span class="foot">${e
@@ -4126,11 +4173,15 @@
   // Les six de base sont des images ; les émotes spéciales (achetées dans la boutique) sont dessinées et animées en
   // SVG (js/emotes.js). Tout le monde les voit, seuls ceux qui les possèdent peuvent les envoyer.
   const Emotes = window.RNGEmotes || { svg: () => '', has: () => false };
+  // Émotes de la boutique en image (img: true, 2026-11-03) : même rendu que les six de base.
+  const emoteImg = id => !!(Shop.emoteById.get(id) || {}).img;
+  const emoteReady = id => Emotes.has(id) || emoteImg(id);
   const emoteHTML = (id, cls = '') => (EMOTE_LABELS[id]
     ? `<img class="emote${cls}" src="img/emotes/${id}.png" alt="${EMOTE_LABELS[id]}" draggable="false">`
+    : emoteImg(id) ? `<img class="emote${cls}" src="img/emotes/${id}.png" alt="${esc(Shop.emoteById.get(id).name)}" draggable="false" data-no-i18n>`
     : Emotes.has(id) ? `<span class="emote emote-svg${cls}" role="img" aria-label="${esc((Shop.emoteById.get(id) || {}).name || id)}" data-no-i18n>${Emotes.svg(id)}</span>`
     : esc(id)); // ancienne réaction en emoji (salles d'avant les emotes)
-  const myEmotes = () => (Store.settings.emotes || []).filter(e => Shop.emoteById.has(e) && Emotes.has(e));
+  const myEmotes = () => (Store.settings.emotes || []).filter(e => Shop.emoteById.has(e) && emoteReady(e));
   const titleEmoji = id => (id && Ach.byId.get(id) && !Ach.byId.get(id).hidden ? ` ${Ach.byId.get(id).emoji}` : '');
   const goalText = d => (d.mode === 'xp' ? `first to ${compact(d.target)} XP` : `first to ${plural(d.target, 'round win')}`);
 
@@ -4420,8 +4471,8 @@
         </section>
         <section class="shop-pane" data-shop-pane="emotes" hidden>
         <div class="panel" id="d-emotes-panel" hidden>
-          <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
-          <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
+          <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">reactions for your duels · everyone sees them</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. Buy any of these once and it joins your reaction bar in every duel.</p>
           <div class="skin-grid emote-grid" id="d-emotes"></div>
         </div>
         </section>
@@ -5145,6 +5196,7 @@
         <div class="pkr-modes">
           <div class="pkr-mode"><h4>🤖 Play the bot</h4><p class="panel-note">Starts right away. The bot plays fair: it never sees your cards.</p><button class="btn-roll small" data-pkr="bot">Sit down · 🪙 ${fmt(PKR.buyin)}</button></div>
           <div class="pkr-mode"><h4>👥 Play a friend</h4>
+            ${st.friend ? `<p class="panel-note">Needs ${fmt(st.friend.rolls)} rolls · up to 🪙 ${fmt(st.friend.day)} of buy-ins a day (🪙 ${fmt(st.friend.left)} left today), like gifts</p>` : ''}
             ${friends.length ? `<div class="pkr-row"><select class="input" id="pkr-friend" aria-label="Friend">${friends.map(f => `<option value="${esc(f.name)}" data-no-i18n>${f.status === 'online' ? '🟢 ' : ''}${esc(f.name)}</option>`).join('')}</select><button class="btn" data-pkr="create" data-with="1">Invite · 🪙 ${fmt(PKR.buyin)}</button></div>` : '<p class="panel-note">Add friends in Social to invite them, or share a table code.</p>'}
             <button class="btn ghost" data-pkr="create">Open a table with a code</button>
             <form class="pkr-row" id="pkr-join"><input class="input mono" id="pkr-code" maxlength="6" placeholder="Table code" autocomplete="off" spellcheck="false" aria-label="Table code"><button class="btn" type="submit">Join</button></form>
@@ -5801,8 +5853,10 @@
     // ---- tour (api/_gamble.js) : 8 étages, une bombe par étage parmi 4, 3 ou 2 cases. Le serveur ne dévoile les bombes
     // qu'à la fin ; d'ici là on ne connaît que les cases choisies. Les multiplicateurs de chaque étage sont affichés à côté.
     const TW_TILES = { easy: 4, normal: 3, hard: 2 };
-    // Même calcul que le serveur (towerMult), pour afficher l'échelle avant la première partie.
-    const twLadder = n => { const out = []; let x = 0.99; for (let i = 0; i < 8; i++) { x *= n / (n - 1); out.push(Math.min(250, Math.floor(x * 100) / 100)); } return out; };
+    // Même calcul que le serveur (towerMult dans api/_gamble.js : marge 0,97 sur Hard, 0,94 sur Easy et Normal, plafond
+    // 250), pour afficher l'échelle avant la première partie. L'ancien 0,99 montrait 9,88× au lieu de 9,38× en Easy
+    // (signalé par infinity, 2026-11-03).
+    const twLadder = n => { const out = []; let x = n > 2 ? 0.94 : 0.97; for (let i = 0; i < 8; i++) { x *= n / (n - 1); out.push(Math.min(250, Math.floor(x * 100) / 100)); } return out; };
     const drawTower = (g, fresh) => {
       Gamble.tw = g;
       const live = g && !g.idle && !g.done, n = g && g.tiles ? g.tiles : TW_TILES[Gamble.twLevel];
@@ -6346,7 +6400,7 @@
   function drawSkip() {
     const box = $('#d-skip');
     if (!box) return;
-    const rolls = countedRolls(), open = rolls >= SKIP_BADGES_AT, on = Store.settings.skipBadges === 'on';
+    const rolls = skipRolls(), open = rolls >= SKIP_BADGES_AT, on = Store.settings.skipBadges === 'on';
     box.innerHTML = `
       <div class="speed-row">
         <div class="up-progress"><span class="quest-bar"><span style="width:${Math.min(100, (rolls / SKIP_BADGES_AT) * 100)}%"></span></span><span class="panel-note mono">${fmt(Math.min(rolls, SKIP_BADGES_AT))} / ${fmt(SKIP_BADGES_AT)} rolls</span></div>
@@ -6581,7 +6635,7 @@
     const grid = $('#d-emotes');
     if (!grid) return;
     $('#d-emotes-panel').hidden = false;
-    grid.innerHTML = Shop.EMOTES.filter(e => Emotes.has(e.id)).map(e => `
+    grid.innerHTML = Shop.EMOTES.filter(e => emoteReady(e.id)).map(e => `
       <div class="skin-tile emote-tile${state.emotes.includes(e.id) ? ' owned' : ''}" data-have="${state.emotes.includes(e.id) ? 1 : 0}">
         ${emoteHTML(e.id)}
         <div class="skin-name"><b data-no-i18n>${esc(e.name)}</b>${ownTag('emotes', e.id)}</div>
@@ -6779,7 +6833,7 @@
     // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
     // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur.
     // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote animée, dessinée par js/emotes.js.
-    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="emote emote-svg">${Emotes.svg(id)}</span></div>`
+    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true">${emoteImg(id) ? emoteHTML(id) : `<span class="emote emote-svg">${Emotes.svg(id)}</span>`}</div>`
       : sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
       : btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
       : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
@@ -6810,13 +6864,13 @@
       const pitch = cells[1].offsetLeft - cells[0].offsetLeft, half = reel.clientWidth / 2;
       // Arrêt quelque part dans la case gagnée, pas pile au centre : parfois tout près du voisin.
       const end = target.offsetLeft + target.offsetWidth / 2 - half + (Math.random() - 0.5) * target.offsetWidth * 0.82;
-      let raf = 0, done = false, lastIndex = -1, synced = false;
+      let raf = 0, done = false, lastIndex = -1, synced = false, stoppedAt = 0;
       // Le Shop (solde, skins possédés) suit le résultat même si la fenêtre est fermée pendant l'animation : sinon le
       // solde affiché restait l'ancien et faisait croire que la caisse était gratuite (signalé par JBearr12, 2026-10-20).
       const sync = () => { if (synced) return; synced = true; if (currentView === 'shop') drawShop(result); };
       const finish = () => {
         if (done) return;
-        done = true;
+        done = true; stoppedAt = performance.now();
         cancelAnimationFrame(raf);
         el.style.transform = `translateX(${-end}px)`;
         reel.classList.add('stopped');
@@ -6833,6 +6887,13 @@
       };
       // Passer l'animation (idée d'Applepi, 2026-10-20) : la bande s'arrête tout de suite sur le skin gagné.
       $('#case-skip').addEventListener('click', finish);
+      // Un clic à côté de la fenêtre la fermait en pleine ouverture, sans montrer le gain (Ben good, 2026-11-02) : pendant
+      // la bande et une seconde après le résultat, il fait comme Skip. La croix ferme toujours.
+      const backdrop = el.closest('.modal-backdrop');
+      if (backdrop) backdrop.addEventListener('click', e => {
+        if (e.target !== backdrop || (done && performance.now() - stoppedAt > (reducedMotion ? 1000 : 1650))) return;
+        e.stopImmediatePropagation(); finish();
+      }, true);
       if (reducedMotion) finish();
       else {
         const DURATION = 6400, t0 = performance.now();
@@ -7628,7 +7689,9 @@
       drawMods(d, why);
       box.innerHTML = panel('Muted players', `${fmt(d.mutes.length)} right now`, d.mutes.length ? d.mutes.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">${until(m.until)} · by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}</span></div>${why(m)}</div>${d.readOnly ? '' : `<button class="btn ghost small" data-gc-unmute="${esc(m.name)}">🔊 Unmute</button>`}</div>`).join('') : '<div class="empty">Nobody is muted.</div>')
         + panel('Mute history', 'mutes that ended or that you lifted, newest first', hist.length ? hist.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}${m.lift ? ` · <b>lifted by <span data-no-i18n>${esc(m.lift.by)}</span></b>` : ''}</span></div>${why(m)}</div></div>`).join('') : '<div class="empty">No mute yet.</div>')
-        + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'));
+        + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'))
+        // Code de récupération (2026-11-03) : pour un joueur qui a perdu son compte (appareil effacé, ni Google ni mot de passe).
+        + (d.readOnly ? '' : panel('Account recovery', 'a one-time code (7 days) that gives a lost player back to whoever types it in ⚙️ Settings. Only send it after checking it is really them.', '<form class="im-add recover-form"><input class="input" name="name" placeholder="Old player name" maxlength="20" autocomplete="off"><button class="btn">🔑 Create a code</button></form><p class="panel-note mono" id="recover-out" data-no-i18n></p>'));
     };
     // ---- Modérateurs (Sacha, 2026-11-01), comme les Idea Managers : donner ou retirer le rôle, ce que chacun a fait
     // (silences, suppressions, signalements traités, silences que tu as levés) et leurs dernières actions, filtrables.
@@ -7658,6 +7721,12 @@
     const chatSubmit = e => {
       const bf = e.target.closest('.bio-clear-form');
       if (bf && currentView === 'owner') { e.preventDefault(); const n = bf.elements.name.value.trim(); if (n) clearBio(n).then(ok => { if (ok) bf.elements.name.value = ''; }); return; }
+      const rf = e.target.closest('.recover-form');
+      if (rf && currentView === 'owner') {
+        e.preventDefault(); const n = rf.elements.name.value.trim(); if (!n) return;
+        Online.site('recoverCode', { name: n }).then(r => { const o = $('#recover-out'); if (o) o.textContent = `${r.name}: ${r.code} (${r.days} days, one use)`; }).catch(err => toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'));
+        return;
+      }
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;
       e.preventDefault(); const n = f.elements.name.value.trim(); if (!n) return;
       chatRun('gcModSet', { name: n, on: true }).then(() => toast('Role given')).catch(err => toast(err.message || 'Unavailable right now, try again'));
@@ -8309,7 +8378,7 @@
 
   function renderRoom(code) {
     currentView = 'room';
-    REACTIONS.forEach(id => { new Image().src = `img/emotes/${id}.png`; });
+    REACTIONS.concat(Shop.EMOTES.filter(e => e.img).map(e => e.id)).forEach(id => { new Image().src = `img/emotes/${id}.png`; });
     stopRoom();
     Object.assign(Room, { code: code.toUpperCase(), data: null, shown: 0, rtt: Infinity, view: null, sig: '', changedAt: Date.now(), reactSeen: new Set(), achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' });
     // Le tirage auto vaut pour une partie : une autre salle (ou la revanche) repart éteint.
@@ -8727,7 +8796,7 @@
       // Sorti, ou bouton ✕ de l'hôte pour exclure un joueur pendant la partie (pas dans un duel avec mise).
       const out = p.out ? `<span class="out-chip">${p.out === 'kicked' ? '✕ removed' : '🚪 left'}</span>` : '';
       const kick = me && me.host && !p.me && !p.out && d.status === 'playing' && !d.stake ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
-      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top, true)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -9133,7 +9202,7 @@
     if (lbState.period === 'event') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
       </div>`;
@@ -9141,7 +9210,7 @@
     if (lbState.period === 'rolls') return `
       <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono" title="Rolls">${fmt(e.count)}</span>
         <span class="lb-rolls" title="Lifetime XP">${compactXp(e.xp)}</span>
       </div>`;
@@ -9149,14 +9218,14 @@
     if (lbState.period === 'median') return `
       <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono" title="Median roll">${fmt(e.med)} XP</span>
         <span class="lb-rolls">${plural(e.count, 'roll')}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -9166,7 +9235,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[xpSpan || lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ` title="${xpSpan ? 'Best roll of the period' : 'Best roll'}"` : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ` title="${xpSpan ? { day: 'XP today', week: 'XP this week', month: 'XP this month' }[xpSpan] : 'Lifetime XP'}"` : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
@@ -10108,8 +10177,14 @@
       const text = input.value.trim(); if (!text) return;
       this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
       try {
-        this.apply(await Online.global('gcSend', { text, since: this.last(), del: this.del, ...(this.reply ? { replyTo: this.reply.id } : {}) }));
-        input.value = ''; this.fit(input); this.list().scrollTop = this.list().scrollHeight; this.setReply(null); this.toggleEmoji(false);
+        const d = await Online.global('gcSend', { text, since: this.last(), del: this.del, ...(this.reply ? { replyTo: this.reply.id } : {}) });
+        // Le message restait dans la zone d'écriture (Niall, randomguy, Jacksonw, Idkwhatnamemyself, 2026-11) : une
+        // actualisation du chat pendant l'envoi redessine le pied (drawFoot) avec un nouveau champ qui reprend le brouillon,
+        // et seul l'ancien champ, déjà retiré de la page, était vidé. On vide le champ affiché, s'il contient encore ce texte.
+        this.apply(d);
+        const cur = this.el.querySelector('.gc-input') || input;
+        if (cur.value.trim() === text) { cur.value = ''; this.fit(cur); }
+        this.list().scrollTop = this.list().scrollHeight; this.setReply(null); this.toggleEmoji(false);
       } catch (err) {
         toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll();
         if (err.status === 404 && this.reply) this.setReply(null); // l'original vient d'être supprimé : le message reste à envoyer
@@ -10289,7 +10364,22 @@
     drawModeSwitch();
     route();
     syncHistory().catch(() => {});
+    setTimeout(backupNudge, 20000);
   });
+
+  // Rappel de sauvegarde (2026-11-03) : un joueur sans Google ni mot de passe n'existe que sur cet appareil ; des
+  // Chromebooks d'école effacent leurs données, et Deadshot, CMC_Nate et Naet_161 ont perdu leur compte. Au plus une
+  // fois par semaine, à partir de 300 tirages, un message propose de choisir un mot de passe (clic : les réglages).
+  function backupNudge() {
+    const p = Store.player, KEY = 'rnginf.nudge';
+    if (p.google || !p.name || Store.rolls.length < 300) return;
+    try { if (Date.now() - Number(localStorage.getItem(KEY) || 0) < 7 * 86400000) return; } catch (e) { return; }
+    Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => {
+      if (r.has) return;
+      try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* stockage plein */ }
+      toast('🔐 Your player only lives on this device. Set a password in ⚙️ Settings so you never lose it (tap here)', 9000, '', openSettings);
+    }).catch(() => {});
+  }
 
   // Nouvelle version en ligne (demandé par Sacha, 2026-10-22) : la page relit la version au serveur toutes les 5 min et au retour sur
   // l'onglet, compare le tampon de js/app.js avec le sien, et se recharge seule à un moment sans risque (rien en cours :
