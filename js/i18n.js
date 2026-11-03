@@ -729,12 +729,66 @@
     'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.': 'La plupart des tours donnent 0,7×. La roue bonus paie de 1,5× à 250×.',
     '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.': '250× sort environ une fois tous les 2 000 tours. La liste sous la roue montre chaque chance.',
     'Bets from 1 to 1,000 coins.': 'Mises de 1 à 1 000 pièces.',
+    // Poker du casino (demandé par Sacha, 2026-11-03)
+    'Poker': 'Poker', 'Texas Hold\'em · 1 vs 1 · against the bot or a friend': 'Texas Hold\'em · 1 contre 1 · contre le bot ou un ami',
+    'Make the best 5-card hand, or make the other player fold.': 'Fais la meilleure main de 5 cartes, ou pousse l\'autre joueur à se coucher.',
+    'You get 2 cards only you can see. 5 shared cards come in the middle: 3, then 1, then 1.': 'Tu reçois 2 cartes que toi seul vois. 5 cartes communes arrivent au milieu : 3, puis 1, puis 1.',
+    'Each round: Check, Bet or Raise, Call, or Fold (give up the hand).': 'À chaque tour : Check (parole), Miser ou Relancer, Suivre, ou Se coucher (abandonner la main).',
+    'At the end, the best 5 cards out of your 2 and the 5 shared ones win the pot.': 'À la fin, les 5 meilleures cartes parmi tes 2 et les 5 communes gagnent le pot.',
+    'Play the bot right away, or invite a friend: you each have 30 seconds to play.': 'Joue tout de suite contre le bot, ou invite un ami : chacun a 30 secondes pour jouer.',
+    'The winner of each hand takes the pot, minus 5% for the house.': 'Le gagnant de chaque main prend le pot, moins 5 % pour la maison.',
+    'Leave whenever you like: you cash out the chips in front of you.': 'Pars quand tu veux : tu encaisses les jetons devant toi.',
+    'Hands from best to worst: royal flush, straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card.': 'Mains de la meilleure à la moins bonne : quinte flush royale, quinte flush, carré, full, couleur, quinte, brelan, double paire, paire, carte haute.',
+    'Buy-ins from 100 to 5,000 coins, blinds 1% and 2% of the buy-in.': 'Caves de 100 à 5 000 pièces, blindes à 1 % et 2 % de la cave.',
+    'invites you to a poker table': 't\'invite à une table de poker', 'Last match': 'Dernier match', 'Buy-in': 'Cave',
+    'Play the bot': 'Jouer contre le bot', 'Starts right away. The bot plays fair: it never sees your cards.': 'Ça commence tout de suite. Le bot joue loyalement : il ne voit jamais tes cartes.',
+    'Sit down': 'S\'asseoir', 'Play a friend': 'Jouer contre un ami', 'Add friends in Social to invite them, or share a table code.': 'Ajoute des amis dans Social pour les inviter, ou partage un code de table.',
+    'Open a table with a code': 'Ouvrir une table avec un code', 'Table code': 'Code de la table', 'Friend': 'Ami',
+    'Both players buy in the same amount. Play hands until someone runs out of chips or leaves: leaving cashes out your chips. The house keeps 5% of every pot.': 'Les deux joueurs paient la même cave. On joue des mains jusqu\'à ce que l\'un n\'ait plus de jetons ou parte : partir encaisse tes jetons. La maison garde 5 % de chaque pot.',
+    'Copy code': 'Copier le code', 'Waiting for': 'En attente de', 'Waiting for a friend to join with this code': 'En attente d\'un ami qui rejoint avec ce code',
+    'Dealer: small blind, speaks first before the flop': 'Donneur : petite blinde, parle en premier avant le flop', 'away': 'absent',
+    'Split pot': 'Pot partagé', 'You folded': 'Tu t\'es couché', 'folded': 's\'est couché',
+    'You are out of chips': 'Tu n\'as plus de jetons', 'is out of chips': 'n\'a plus de jetons', 'You left the table': 'Tu as quitté la table', 'left the table': 'a quitté la table',
+    'You timed out twice': 'Tu as dépassé le temps deux fois', 'timed out twice': 'a dépassé le temps deux fois', 'Table closed: nobody played for 2 minutes': 'Table fermée : personne n\'a joué pendant 2 minutes',
+    'Match over': 'Match terminé', 'you cash out': 'tu encaisses', 'Play the bot again': 'Rejouer contre le bot', 'Back to the lobby': 'Retour au salon',
+    'Fold': 'Se coucher', 'Pot': 'Pot', 'All-in': 'Tapis', '½ pot': '½ pot', 'Raise amount': 'Montant de la relance',
+    'Next hand': 'Main suivante', 'Next hand in a moment': 'Main suivante dans un instant', 'Leave': 'Partir', 'cash out': 'encaisser',
+    'You fold': 'Tu te couches', 'You check': 'Tu fais check', 'You joined': 'Tu as rejoint la table', 'You left (timed out twice)': 'Tu es parti (temps dépassé deux fois)', 'You ran out of time': 'Tu as dépassé le temps',
+    'folds': 'se couche', 'checks': 'fait check', 'joined the table': 'a rejoint la table', 'left (timed out twice)': 'est parti (temps dépassé deux fois)', 'ran out of time': 'a dépassé le temps',
+    'Leave the table? Your hand in play is folded.': 'Quitter la table ? Ta main en cours est couchée.', 'Leave the table?': 'Quitter la table ?', 'You cash out your chips.': 'Tu encaisses tes jetons.',
+    'Code copied': 'Code copié', 'Enter a table code': 'Entre un code de table', 'Royal Flush': 'Quinte flush royale',
+    'You are already at a poker table': 'Tu es déjà à une table de poker', 'Not your turn': 'Ce n\'est pas ton tour', 'You can only invite your friends': 'Tu ne peux inviter que tes amis',
+    'This table is gone': 'Cette table n\'existe plus', 'This table is full': 'Cette table est complète', 'Wait for the next hand': 'Attends la main suivante',
+    'You cannot check: call, raise or fold': 'Tu ne peux pas faire check : suis, relance ou couche-toi', 'You cannot raise now': 'Tu ne peux pas relancer maintenant',
+    'The next hand starts by itself': 'La main suivante part toute seule', 'You are not at a poker table': 'Tu n\'es pas à une table de poker',
+    'At most 5 invitations per table': '5 invitations au plus par table', 'The game already started': 'La partie a déjà commencé',
   };
 
   // ---------------------------------------------------------------- phrases à nombres (motif → traduction)
   const s = n => (Number(String(n).replace(/[^\d.]/g, '')) === 1 ? '' : 's');
   const nb = n => String(n).replace(/,/g, ' '); // 1,000 → 1 000 (espace fine insécable)
+  // Poker : valeurs des cartes en français (« Paire de rois », « Carré d'as »).
+  const PK1 = { Two: 'deux', Three: 'trois', Four: 'quatre', Five: 'cinq', Six: 'six', Seven: 'sept', Eight: 'huit', Nine: 'neuf', Ten: 'dix', Jack: 'valet', Queen: 'dame', King: 'roi', Ace: 'as' };
+  const PKN = { Twos: 'deux', Threes: 'trois', Fours: 'quatre', Fives: 'cinq', Sixes: 'six', Sevens: 'sept', Eights: 'huit', Nines: 'neuf', Tens: 'dix', Jacks: 'valets', Queens: 'dames', Kings: 'rois', Aces: 'as' };
+  const pkDe = w => (/^[aeiou]/.test(w) ? `d'${w}` : `de ${w}`);
   const P = [
+    // Poker (2026-11-03) : noms des mains (« Two Pair, Kings and Sevens »), coups, montants.
+    [/^Straight Flush, (\w+) high$/, m => `Quinte flush hauteur ${PK1[m[1]] || m[1]}`], [/^Four of a Kind, (\w+)$/, m => `Carré ${pkDe(PKN[m[1]] || m[1])}`],
+    [/^Full House, (\w+) full of (\w+)$/, m => `Full aux ${PKN[m[1]] || m[1]} par les ${PKN[m[2]] || m[2]}`], [/^Flush, (\w+) high$/, m => `Couleur hauteur ${PK1[m[1]] || m[1]}`],
+    [/^Straight, (\w+) high$/, m => `Quinte hauteur ${PK1[m[1]] || m[1]}`], [/^Three of a Kind, (\w+)$/, m => `Brelan ${pkDe(PKN[m[1]] || m[1])}`],
+    [/^Two Pair, (\w+) and (\w+)$/, m => `Double paire, ${PKN[m[1]] || m[1]} et ${PKN[m[2]] || m[2]}`], [/^Pair of (\w+)$/, m => `Paire ${pkDe(PKN[m[1]] || m[1])}`],
+    [/^High Card, (\w+)$/, m => `Carte haute, ${PK1[m[1]] || m[1]}`], [/^(\w+) kicker$/, m => `kicker ${PK1[m[1]] || m[1]}`],
+    [/^You call ([\d,]+)$/, m => `Tu suis ${nb(m[1])}`], [/^You bet ([\d,]+)$/, m => `Tu mises ${nb(m[1])}`], [/^You raise to ([\d,]+)$/, m => `Tu relances à ${nb(m[1])}`], [/^You win ([\d,]+)$/, m => `Tu gagnes ${nb(m[1])}`],
+    [/^calls ([\d,]+)$/, m => `suit ${nb(m[1])}`], [/^bets ([\d,]+)$/, m => `mise ${nb(m[1])}`], [/^raises to ([\d,]+)$/, m => `relance à ${nb(m[1])}`], [/^wins ([\d,]+)$/, m => `gagne ${nb(m[1])}`],
+    [/^Split pot: ([\d,]+) each$/, m => `Pot partagé : ${nb(m[1])} chacun`], [/^Hand #([\d,]+)$/, m => `Main n° ${nb(m[1])}`],
+    [/^Call ([\d,]+)$/, m => `Suivre ${nb(m[1])}`], [/^Bet ([\d,]+)$/, m => `Miser ${nb(m[1])}`], [/^Raise to ([\d,]+)$/, m => `Relancer à ${nb(m[1])}`], [/^All-in ([\d,]+)$/, m => `Tapis ${nb(m[1])}`],
+    [/^Blinds ([\d,]+) \/ ([\d,]+)$/, m => `Blindes ${nb(m[1])} / ${nb(m[2])}`], [/^blinds ([\d,]+) \/ ([\d,]+)$/, m => `blindes ${nb(m[1])} / ${nb(m[2])}`],
+    [/^[Bb]uy-in 🪙 ([\d,]+)$/, m => `cave 🪙 ${nb(m[1])}`], [/^Pot 🪙 ([\d,]+)$/, m => `Pot 🪙 ${nb(m[1])}`], [/^You win 🪙 ([\d,]+)$/, m => `Tu gagnes 🪙 ${nb(m[1])}`],
+    [/^wins 🪙 ([\d,]+)$/, m => `gagne 🪙 ${nb(m[1])}`], [/^🪙 ([\d,]+) each$/, m => `🪙 ${nb(m[1])} chacun`], [/^house 5%: 🪙 ([\d,]+)$/, m => `maison 5 % : 🪙 ${nb(m[1])}`],
+    [/^Sit down · 🪙 ([\d,]+)$/, m => `S'asseoir · 🪙 ${nb(m[1])}`], [/^Invite · 🪙 ([\d,]+)$/, m => `Inviter · 🪙 ${nb(m[1])}`], [/^get 🪙 ([\d,]+) back$/, m => `récupérer 🪙 ${nb(m[1])}`],
+    [/^Play the bot again · 🪙 ([\d,]+)$/, m => `Rejouer contre le bot · 🪙 ${nb(m[1])}`], [/^Next hand in (\d+) s$/, m => `Main suivante dans ${m[1]} s`],
+    [/^Raise to between (\d+) and (\d+)$/, m => `Relance entre ${m[1]} et ${m[2]}`], [/^Buy-in: ([\d, ]+) coins$/, m => `Cave : ${m[1]} pièces`],
+    [/^🃏 (.+) invites you to play poker · tap to join$/, m => `🃏 ${m[1]} t'invite à jouer au poker · touche pour rejoindre`],
     [/^(.+) has not unlocked Hard mode yet$/, m => `${m[1]} n'a pas encore débloqué le mode difficile`],
     // Mode difficile (2026-11-02) : compteurs de l'accueil et alertes d'amis.
     [/^🏆 #(\d+) on the (.+) (hard|normal) mode monthly leaderboard: \+([\d,]+) coins$/, m => `🏆 ${m[1]}e du classement du mois de ${m[2]} en mode ${m[3] === 'hard' ? 'difficile' : 'normal'} : +${nb(m[4])} pièces`],

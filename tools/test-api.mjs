@@ -6031,4 +6031,275 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   }
 }
 
+// Poker du casino (demandé par Sacha, 2026-11-03) : évaluateur, déroulé d'une main, tables contre le bot et entre amis.
+{
+  const H = require(path.join(ROOT, 'api/_holdem.js'));
+  const Poker = require(path.join(ROOT, 'api/_poker.js'));
+  const Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const Shop = require(path.join(ROOT, 'js/shop.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const RK = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10, J: 11, Q: 12, K: 13, A: 14 }, SU = { s: 0, h: 1, d: 2, c: 3 };
+  const cards = str => str.split(' ').map(x => ((RK[x[0]] - 2) << 2) | SU[x[1]]);
+  const sc = str => H.score(cards(str)), name = str => H.describe(sc(str));
+  // 1. Évaluateur : noms et ordre des mains.
+  assert.equal(name('As Ks Qs Js Ts 2d 3c'), 'Royal Flush');
+  assert.equal(name('5s 4s 3s 2s As Kd Qd'), 'Straight Flush, Five high');
+  assert.equal(name('Qh Qd Qc Qs 2d 3h 9c'), 'Four of a Kind, Queens');
+  assert.equal(name('Kh Kd Kc 7s 7d 2c 3h'), 'Full House, Kings full of Sevens');
+  assert.equal(name('Kh Kd Kc 7s 7d 7c 3h'), 'Full House, Kings full of Sevens', 'deux brelans : le second fait la paire');
+  assert.equal(name('Ah Kh 2h 7h 9h Qs Js'), 'Flush, Ace high');
+  assert.equal(name('Ah 2d 3c 4s 5h Kd Kc'), 'Straight, Five high', 'la roue A-2-3-4-5');
+  assert.equal(name('Ts Jd Qc Ks Ad 2h 2c'), 'Straight, Ace high');
+  assert.equal(name('9h 9d 9c 4s 2d Kh Jc'), 'Three of a Kind, Nines');
+  assert.equal(name('Kh Kd 7c 7s 2d 2h 9c'), 'Two Pair, Kings and Sevens');
+  assert.equal(name('Th Td 4c 8s 2d Jh 9c'), 'Pair of Tens');
+  assert.equal(name('Ah 3d 6c 8s Td Jh 9c'), 'High Card, Ace');
+  const order = ['Ah 3d 6c 8s Td Jh 9c', 'Th Td 4c 8s 2d Jh 9c', 'Kh Kd 7c 7s 2d 2h 9c', '9h 9d 9c 4s 2d Kh Jc', 'Ah 2d 3c 4s 5h Kd Kc', 'Ts Jd Qc Ks Ad 2h 2c', 'Ah Kh 2h 7h 9h Qs Js', 'Kh Kd Kc 7s 7d 2c 3h', 'Qh Qd Qc Qs 2d 3h 9c', '5s 4s 3s 2s As Kd Qd', 'As Ks Qs Js Ts 2d 3c'];
+  for (let k = 1; k < order.length; k++) assert.ok(sc(order[k]) > sc(order[k - 1]), `${order[k]} > ${order[k - 1]}`);
+  assert.ok(sc('2h 3d 4c 5s 6h Kd 9c') > sc('Ah 2d 3c 4s 5h Kd 9c'), 'la roue est la plus petite quinte');
+  assert.ok(sc('Ah Kh 2h 7h 9h Qs Js') > sc('9c Tc Jh Qs Kd 2h 3c'), 'couleur > quinte');
+  assert.ok(sc('Kh Kd Kc 7s 7d 2c 3h') > sc('Qh Qd Qc As Ad 2c 3h'), 'full : le brelan d\'abord');
+  assert.ok(sc('Kh Kd Kc 8s 8d 2c 3h') > sc('Kc Ks Kh 7s 7d 2c 3h'), 'full : puis la paire');
+  assert.ok(sc('Ah Ad Ac 9s 2h Kd 7c') > sc('Ah Ad Ac 9s 2h Qd 7c'), 'brelan : la carte d\'accompagnement');
+  assert.ok(sc('Kh Kd 7c 7s 2d 2h 9c') > sc('Kh Kd 7c 7s 2d 2h 3c'), 'trois paires : la 3e paire ne compte pas, la plus haute carte restante oui');
+  assert.equal(sc('Ac Kc 2c 2s 7h 8h 9h'), sc('As Kd 2d 2h 7c 8c 9c'), 'mêmes valeurs : égalité exacte (pot partagé)');
+  assert.ok(sc('Ah Kd Qc Js 9h 3c 2d') > sc('Ah Kd Qc Js 8h 3c 2d'), 'carte haute : la 5e carte départage');
+  assert.equal(sc('Ah Kd Qc Js 9h 3c 2d'), sc('Ah Kd Qc Js 9h 4c 2d'), 'la 6e et la 7e carte ne comptent pas');
+  assert.deepEqual(H.best5(cards('Kh Kd 7c 7s 2d 2h 9c')).sort((a, b) => a - b), cards('Kh Kd 7c 7s 9c').sort((a, b) => a - b));
+  {
+    // Même nom de main : le site dit ce qui départage (« Queen kicker »).
+    const t = { sb: 1, bb: 2, btn: 0, seats: [{ stack: 50 }, { stack: 50 }], hand: null };
+    H.newHand(t, n => n - 1);
+    const top = cards('Ts 4d Td 3d 8s 4c 2h 5h'), used = [...top, ...cards('6d Qh 3c 7s')];
+    t.hand.deck = [...Array(52).keys()].filter(c => !used.includes(c)).concat(top); // tableau 2h 4c 8s Td Ts
+    t.hand.hole = [cards('6d Qh'), cards('3c 7s')];
+    H.act(t, 0, 'allin'); H.act(t, 1, 'call');
+    assert.equal(t.hand.res.w, 0); assert.deepEqual(t.hand.res.desc, ['Pair of Tens', 'Pair of Tens']); assert.equal(t.hand.res.kick, 'Queen kicker');
+  }
+
+  // 2. Déroulé d'une main (moteur seul, paquet choisi) : tapis inégaux, mise non suivie rendue, tableau qui sort tout seul.
+  {
+    // Siège 0 a 300, siège 1 a 1 000 ; siège 0 au bouton (petite blind 5, grosse blind 10).
+    const t = { sb: 5, bb: 10, btn: 0, seats: [{ stack: 300 }, { stack: 1000 }], hand: null };
+    H.newHand(t, n => n - 1);
+    const h = t.hand;
+    assert.equal(h.turn, 0, 'avant le flop, le bouton parle en premier');
+    assert.deepEqual(h.bet, [5, 10]);
+    assert.throws(() => H.act(t, 1, 'call'), /Not your turn/);
+    assert.throws(() => H.act(t, 0, 'raise', 15), /Raise to between 20 and 300/, 'relance minimale : 2 × la grosse blind');
+    H.act(t, 0, 'allin');
+    assert.equal(h.bet[0], 300); assert.equal(t.seats[0].stack, 0);
+    // Siège 1 relance à tapis : il ne peut pas mettre plus que les 300 que l'autre peut suivre.
+    const op = H.options(t, 1);
+    assert.equal(op.canRaise, false, 'rien à relancer contre un tapis');
+    H.act(t, 1, 'call');
+    assert.equal(h.done, true, 'tapis suivi : tableau sorti jusqu\'à la rivière et abattage');
+    assert.equal(h.board.length, 5);
+    assert.equal(h.res.pot, 600); assert.equal(h.res.rake, 30, '5 % du pot');
+    assert.equal(t.seats[0].stack + t.seats[1].stack, 1300 - 30, 'rien ne se crée');
+    assert.ok(h.res.shown && h.res.desc.length === 2);
+  }
+  {
+    // Le gros tapis mise plus que le petit ne peut suivre : l'excédent revient sans commission.
+    const t = { sb: 5, bb: 10, btn: 1, seats: [{ stack: 1000 }, { stack: 120 }], hand: null };
+    H.newHand(t, n => n - 1);
+    H.act(t, 1, 'call'); H.act(t, 0, 'check'); // flop
+    assert.equal(t.hand.street, 1); assert.equal(t.hand.turn, 0, 'après le flop, celui qui n\'a pas le bouton parle en premier');
+    assert.equal(H.options(t, 0).maxTo, 110, 'pas de mise plus grosse que ce que l\'autre peut suivre');
+    H.act(t, 0, 'raise', 50); H.act(t, 1, 'allin');
+    assert.equal(t.hand.bet[1], 110);
+    H.act(t, 0, 'call');
+    assert.equal(t.hand.done, true); assert.equal(t.hand.res.pot, 240); assert.equal(t.hand.res.rake, 12);
+    assert.equal(t.seats[0].stack + t.seats[1].stack, 1120 - 12);
+  }
+  {
+    // Un joueur se couche face à une relance : sa part va au gagnant, la relance non suivie revient sans commission.
+    const t = { sb: 10, bb: 20, btn: 0, seats: [{ stack: 1000 }, { stack: 1000 }], hand: null };
+    H.newHand(t, n => n - 1);
+    H.act(t, 0, 'raise', 60); H.act(t, 1, 'raise', 200); H.act(t, 0, 'fold');
+    assert.equal(t.hand.res.pot, 120, 'pot = 60 + 60, les 140 non suivis rendus'); assert.equal(t.hand.res.rake, 6);
+    assert.equal(t.hand.res.shown, false, 'pas d\'abattage, les cartes restent cachées');
+    assert.deepEqual([t.seats[0].stack, t.seats[1].stack], [940, 1054]);
+    // Pot partagé : le jeton impair à celui qui n'a pas le bouton.
+    const s = { sb: 1, bb: 2, btn: 0, seats: [{ stack: 100 }, { stack: 100 }], hand: null };
+    H.newHand(s, n => n - 1);
+    // Paquet choisi : les cartes sortent par la fin (brûlée, flop, brûlée, turn, brûlée, river).
+    const top = cards('Ts 4d Js 3d Qs Ks As 2d'), used = [...top, ...cards('2h 3h 2c 3c')];
+    const h = s.hand; h.deck = [...Array(52).keys()].filter(c => !used.includes(c)).concat(top);
+    h.hole = [cards('2h 3h'), cards('2c 3c')];
+    H.act(s, 0, 'raise', 11); H.act(s, 1, 'call');
+    for (let k = 0; k < 3; k++) { H.act(s, 1, 'check'); H.act(s, 0, 'check'); }
+    assert.equal(h.done, true); assert.equal(h.res.w, -1, 'quinte flush royale au tableau : égalité');
+    assert.equal(h.res.pot, 22); assert.equal(h.res.rake, 1); assert.deepEqual(h.res.win, [10, 11]);
+  }
+
+  // 3. Tables : joueurs avec des pièces (bonus) et assez de tirages.
+  const mkP = (tag, nm, coins = 20000, rolls = 150) => { const id = tag.repeat(8), secret = (tag + 'f').repeat(11).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, 'bonus', coins], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+  const coinsOf = async p => Shop.balance(await Lib.readStats(p.playerId));
+  const pk = (p, extra) => call(shopApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action: 'poker', ...extra } });
+  const casino = () => { const f = run([['HGETALL', 'casino']])[0].result || []; const o = {}; for (let i = 0; i < f.length; i += 2) o[f[i]] = Number(f[i + 1]); return o; };
+  const noIds = (body, ...ps) => ps.forEach(p => assert.ok(!JSON.stringify(body).includes(p.playerId), 'aucun identifiant de joueur'));
+
+  // 3a. Contre le bot, par l'API (routage par api/shop.js) : cave débitée, cartes du bot cachées, jeu, départ.
+  const pa = mkP('c1', 'PokerAnn');
+  const before = await coinsOf(pa), house0 = casino();
+  r = await pk(pa, { op: 'state' });
+  assert.equal(r.status, 200); assert.equal(r.body.idle, true); assert.deepEqual(r.body.buyins, [100, 250, 500, 1000, 2500, 5000]);
+  r = await pk(pa, { op: 'bot', buyin: 750 }); assert.equal(r.status, 400, 'cave hors liste refusée');
+  r = await pk(pa, { op: 'bot', buyin: 500 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(await coinsOf(pa), before - 500, 'cave débitée');
+  assert.equal(r.body.bot, true); assert.equal(r.body.hand.mine.length, 2); assert.equal(r.body.hand.theirs, undefined, 'cartes du bot cachées');
+  assert.equal(r.body.me.stack + r.body.me.bet + r.body.opp.stack + r.body.opp.bet, 1000);
+  noIds(r.body, pa);
+  r = await pk(pa, { op: 'bot', buyin: 100 }); assert.equal(r.status, 422, 'une table à la fois');
+  const code = run([['GET', `pkp:${pa.playerId}`]])[0].result;
+  assert.ok(/^[A-Z2-9]{6}$/.test(code));
+  // On joue une vingtaine de mains en suivant tout (le temps avance : le bot répond, la main suivante arrive).
+  let now = Date.now();
+  let st = await Poker.handle(pa.playerId, { op: 'state' }, now);
+  let played = 0, showed = 0;
+  for (let k = 0; k < 400 && st.status === 'play' && played < 20; k++) {
+    if (st.hand && !st.hand.done && st.hand.turn === 'me') {
+      if (st.hand.theirs) throw new Error('cartes du bot montrées pendant la main');
+      // Check, ou suivre une petite mise ; sinon se coucher (le match dure : le tapis ne part pas d'un coup).
+      st = await Poker.handle(pa.playerId, { op: 'act', move: st.hand.op.canCheck ? 'check' : st.hand.op.toCall <= 2 * st.bb ? 'call' : 'fold' }, now);
+    } else {
+      if (st.hand && st.hand.done) { played++; if (st.hand.res.shown) { showed++; assert.equal(st.hand.theirs.length, 2); assert.ok(st.hand.res.desc.me && st.hand.res.desc.opp); } }
+      now += 4000;
+      st = await Poker.handle(pa.playerId, { op: st.hand && st.hand.done && k % 2 ? 'next' : 'state' }, now);
+    }
+  }
+  assert.ok(played >= 5, `des mains jouées (${played})`);
+  assert.ok(showed >= 1, 'au moins un abattage');
+  // Jouer quand ce n'est pas son tour : refusé.
+  if (st.status === 'play') {
+    while (st.status === 'play' && st.hand && (st.hand.done || st.hand.turn === 'me')) { if (st.hand.done) { now += 4000; st = await Poker.handle(pa.playerId, { op: 'next' }, now); } else st = await Poker.handle(pa.playerId, { op: 'act', move: 'call' }, now); }
+    if (st.status === 'play' && st.hand.turn === 'opp') await assert.rejects(Poker.handle(pa.playerId, { op: 'act', move: 'call' }, now), /Not your turn/);
+  }
+  assert.equal(st.status, 'play', 'toujours assis (petites mises seulement)');
+  r = await pk(pa, { op: 'leave' });
+  assert.equal(r.status, 200); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.reason, 'leave');
+  const cash = r.body.over.cash;
+  assert.equal(await coinsOf(pa), before - 500 + cash, 'tapis rendu');
+  const house1 = casino();
+  assert.equal(house1['b:poker'] - (house0['b:poker'] || 0), 500); assert.equal(house1['w:poker'] - (house0['w:poker'] || 0), cash, 'comptes du casino : cave misée, tapis gagné');
+  r = await pk(pa, { op: 'state' }); assert.equal(r.body.status, 'over', 'le match fini reste affiché');
+  r = await pk(pa, { op: 'ack' }); assert.equal(r.body.idle, true); assert.equal(r.body.last.cash, cash, 'résultat du dernier match');
+  assert.equal(run([['GET', `pkp:${pa.playerId}`]])[0].result, null);
+
+  // 3b. Plusieurs demandes en même temps : une seule table, une seule cave ; un seul coup joué.
+  const pb = mkP('c2', 'PokerBen');
+  const b0 = await coinsOf(pb), rake0 = Number(run([['HGET', 'pkstats', 'rake']])[0].result || 0);
+  const sits = await Promise.all(Array.from({ length: 6 }, () => pk(pb, { op: 'bot', buyin: 1000 })));
+  assert.equal(sits.filter(x => x.status === 200).length, 1, JSON.stringify(sits.map(x => x.status)));
+  assert.equal(await coinsOf(pb), b0 - 1000, 'débitée une seule fois');
+  now = Date.now();
+  st = await Poker.handle(pb.playerId, { op: 'state' }, now);
+  for (let k = 0; k < 20 && !(st.hand && !st.hand.done && st.hand.turn === 'me'); k++) { now += 4000; st = await Poker.handle(pb.playerId, { op: 'next' }, now); }
+  assert.equal(st.hand.turn, 'me');
+  const potBefore = st.hand.pot;
+  const acts = await Promise.all(Array.from({ length: 8 }, () => Poker.handle(pb.playerId, { op: 'act', move: 'raise', to: st.hand.op.minTo }, now).then(() => 200, e => e.status)));
+  assert.equal(acts.filter(x => x === 200).length, 1, `un seul coup accepté (${acts})`);
+  const after = await Poker.handle(pb.playerId, { op: 'state' }, now);
+  assert.ok(after.hand.pot > potBefore);
+  const tab = JSON.parse(run([['GET', `pk:${run([['GET', `pkp:${pb.playerId}`]])[0].result}`]])[0].result);
+  const rakeB = Number(run([['HGET', 'pkstats', 'rake']])[0].result || 0) - rake0;
+  assert.equal(tab.seats[0].stack + tab.seats[1].stack + tab.hand.put[0] + tab.hand.put[1] + rakeB, 2000, 'jetons sur la table + commission = 2 caves');
+  // Table abandonnée (personne depuis 2 min) : réglée par la file pending, le joueur encaisse.
+  const pbCode = run([['GET', `pkp:${pb.playerId}`]])[0].result;
+  await Lib.flushDue(Date.now() + 5 * 60000);
+  const pbTab = JSON.parse(run([['GET', `pk:${pbCode}`]])[0].result);
+  assert.equal(pbTab.status, 'over'); assert.equal(pbTab.over.reason, 'idle');
+  r = await pk(pb, { op: 'state' }); assert.equal(r.body.over.reason, 'idle');
+  assert.equal(await coinsOf(pb), b0 - 1000 + pbTab.seats[0].cashed, 'table abandonnée : le tapis revient');
+
+  // 3c. Entre amis : invitation, refus d'un inconnu, rejoindre, cartes cachées, minuterie, conservation des pièces.
+  const fa = mkP('c3', 'PokerCat'), fb = mkP('c4', 'PokerDan'), fc = mkP('c5', 'PokerEve');
+  run([['SADD', `fr:${fa.playerId}`, fb.playerId], ['SADD', `fr:${fb.playerId}`, fa.playerId]]);
+  r = await pk(fa, { op: 'create', buyin: 250, name: 'PokerEve' }); assert.equal(r.status, 403, 'seulement ses amis');
+  const fa0 = await coinsOf(fa), fb0 = await coinsOf(fb), houseF0 = casino();
+  r = await pk(fa, { op: 'create', buyin: 250, name: 'PokerDan' });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.status, 'wait'); assert.deepEqual(r.body.invited, ['PokerDan']);
+  const fcode = r.body.code;
+  assert.equal(await coinsOf(fa), fa0 - 250);
+  r = await pk(fb, { op: 'state' });
+  assert.deepEqual(r.body.invites, [{ code: fcode, name: 'PokerCat', buyin: 250 }]); noIds(r.body, fa);
+  r = await call(friendsApi, { method: 'POST', body: { playerId: fb.playerId, secret: fb.secret, action: 'gifts' } });
+  assert.deepEqual(r.body.poker, [{ code: fcode, name: 'PokerCat', buyin: 250 }], 'alerte d\'invitation dans la relève');
+  // Deux joueurs veulent la place en même temps (Dan invité, Eve avec le code) : un seul s'assoit.
+  const fe0 = await coinsOf(fc);
+  const joins = await Promise.all([pk(fb, { op: 'join', code: fcode }), pk(fc, { op: 'join', code: fcode })]);
+  assert.equal(joins.filter(x => x.status === 200).length, 1, JSON.stringify(joins.map(x => x.body)));
+  const seated = joins[0].status === 200 ? fb : fc, outside = seated === fb ? fc : fb;
+  assert.equal((await coinsOf(outside)) - (outside === fb ? fb0 : fe0), 0, 'celui qui n\'a pas eu la place ne paie rien');
+  const g0 = seated === fb ? fb0 : fe0;
+  assert.equal(await coinsOf(seated), g0 - 250);
+  now = Date.now();
+  let A = await Poker.handle(fa.playerId, { op: 'state' }, now), B = await Poker.handle(seated.playerId, { op: 'state' }, now);
+  assert.equal(A.status, 'play'); assert.equal(A.opp.name, seated.name); assert.equal(B.opp.name, 'PokerCat');
+  noIds(A, seated); noIds(B, fa);
+  assert.equal(A.hand.theirs, undefined); assert.equal(B.hand.theirs, undefined, 'cartes de l\'ami cachées');
+  assert.notDeepEqual(A.hand.mine, B.hand.mine);
+  const [first, second] = A.hand.turn === 'me' ? [fa, seated] : [seated, fa];
+  await assert.rejects(Poker.handle(second.playerId, { op: 'act', move: 'call' }, now), /Not your turn/, 'hors de son tour');
+  await Poker.handle(first.playerId, { op: 'act', move: 'call' }, now);
+  await Poker.handle(second.playerId, { op: 'act', move: 'check' }, now); // flop
+  let S2 = await Poker.handle(second.playerId, { op: 'state' }, now);
+  assert.equal(S2.hand.street, 1); assert.equal(S2.hand.board.length, 3); assert.equal(S2.hand.turn, 'me', 'après le flop : la grosse blind parle');
+  assert.ok(S2.hand.left > 25000 && S2.hand.left <= 30000, 'minuterie de 30 s');
+  // Pas de réponse : check automatique au bout de 30 s, puis une deuxième fois : il quitte, tout le monde encaisse.
+  now += 31000;
+  let F1 = await Poker.handle(first.playerId, { op: 'state' }, now);
+  assert.equal(F1.log.at(-2).m, 'timeout'); assert.equal(F1.hand.turn, 'me');
+  await Poker.handle(first.playerId, { op: 'act', move: 'check' }, now); // turn
+  now += 31000;
+  F1 = await Poker.handle(first.playerId, { op: 'state' }, now);
+  assert.equal(F1.status, 'over'); assert.equal(F1.over.reason, 'timeout');
+  r = await pk(second, { op: 'state' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.reason, 'timeout'); assert.equal(r.body.over.mine, true, 'c\'est lui qui est parti');
+  r = await pk(first, { op: 'state' }); assert.equal(r.body.over.mine, false);
+  const houseF1 = casino(), rakeF = (houseF1['b:poker'] - houseF0['b:poker']) - (houseF1['w:poker'] - houseF0['w:poker']);
+  assert.ok(rakeF >= 0);
+  assert.equal((await coinsOf(fa)) + (await coinsOf(seated)) + rakeF, fa0 + g0, 'pièces des deux amis + commission = avant');
+  // Partir en pleine main : la main est couchée, l'autre la gagne ; chacun encaisse.
+  r = await pk(fa, { op: 'create', buyin: 100 }); const c2 = r.body.code;
+  r = await pk(seated, { op: 'join', code: c2 }); assert.equal(r.status, 200);
+  const sum0 = (await coinsOf(fa)) + (await coinsOf(seated)), h0 = casino();
+  r = await pk(fa, { op: 'leave' });
+  assert.equal(r.body.status, 'over'); assert.equal(r.body.over.reason, 'leave'); assert.equal(r.body.over.mine, true);
+  r = await pk(seated, { op: 'state' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.reason, 'leave'); assert.equal(r.body.over.mine, false);
+  r = await pk(seated, { op: 'ack' }); assert.equal(r.body.idle, true); assert.equal(r.body.last.reason, 'leave'); assert.equal(r.body.last.mine, false);
+  const h1 = casino(), rk = (h1['b:poker'] - h0['b:poker']) - (h1['w:poker'] - h0['w:poker']);
+  assert.equal((await coinsOf(fa)) + (await coinsOf(seated)) + rk, sum0 + 200, 'rien de créé en partant');
+  // Table qui attend son ami, abandonnée : annulée et remboursée en entier (hors comptes du casino).
+  const fa1 = await coinsOf(fa), h2 = casino();
+  r = await pk(fa, { op: 'create', buyin: 1000 }); assert.equal(await coinsOf(fa), fa1 - 1000);
+  await Lib.flushDue(Date.now() + 3 * 60000);
+  assert.equal(await coinsOf(fa), fa1, 'remboursée'); assert.equal(casino()['b:poker'], h2['b:poker']);
+  // Annuler soi-même pendant l'attente : remboursé aussi, l'invitation disparaît.
+  r = await pk(fa, { op: 'create', buyin: 100, name: 'PokerDan' }); const c3 = r.body.code;
+  r = await pk(fa, { op: 'leave' }); assert.equal(await coinsOf(fa), fa1);
+  r = await pk(fb, { op: 'state' }); assert.ok(!r.body.invites.some(x => x.code === c3));
+  r = await pk(fb, { op: 'join', code: c3 }); assert.equal(r.status, 404);
+
+  // 3d. Jusqu'au tapis vide contre le bot (tapis à chaque coup) : match fini, l'argent de la maison reste juste.
+  const pz = mkP('c6', 'PokerZed');
+  const z0 = await coinsOf(pz);
+  await pk(pz, { op: 'bot', buyin: 100 });
+  now = Date.now();
+  st = await Poker.handle(pz.playerId, { op: 'state' }, now);
+  for (let k = 0; k < 600 && st.status === 'play'; k++) {
+    if (st.hand && !st.hand.done && st.hand.turn === 'me') st = await Poker.handle(pz.playerId, { op: 'act', move: 'allin' }, now);
+    else { now += 4000; st = await Poker.handle(pz.playerId, { op: 'state' }, now); }
+  }
+  assert.equal(st.status, 'over'); assert.equal(st.over.reason, 'bust');
+  assert.ok(st.over.cash === 0 || st.over.cash > 150, `tapis vide d'un côté (${st.over.cash})`);
+  assert.equal(await coinsOf(pz), z0 - 100 + st.over.cash);
+  // Petit joueur : pas assez de tirages.
+  const pn = mkP('c7', 'PokerNew', 5000, 10);
+  r = await pk(pn, { op: 'bot', buyin: 100 }); assert.equal(r.status, 422); assert.match(r.body.error, /30 rolls/);
+  const pp = mkP('c8', 'PokerPoor', 50);
+  r = await pk(pp, { op: 'bot', buyin: 100 }); assert.equal(r.status, 422); assert.match(r.body.error, /Not enough coins/);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

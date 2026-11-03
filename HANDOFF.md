@@ -1,6 +1,26 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-11-03 by Claude (poker branch). Update this file at the end of every session.
+
+## Casino poker (2026-11-03, branch `worktree-agent-ab61d6c2c093d9b4d`)
+
+Sacha: "in casino, add a poker table so you can play against bot or against your friend to bet your money".
+- **Game:** Texas Hold'em heads-up No-Limit, casino tab "Poker". `api/_holdem.js` = pure engine (7-card evaluator,
+  hand flow, uncalled bets returned, auto run-out on all-in, split pots, 5% rake on every pot) + the bot.
+  `api/_poker.js` = tables in Redis (`pk:<code>` JSON, lock `pkl:<code>`, presence `pks:<code>`, seat pointer
+  `pkp:<id>`, invites `pkinv:<id>`, last match `pklast:<id>`, totals `pkstats`), routed from `api/shop.js`
+  (`action: 'poker'`, ops state/bot/create/invite/join/decline/act/next/leave/ack). No new public api file.
+- **Money:** buy-in 100–5,000 (blinds 1%/2%), debited under `wallet()` (`spent`), stack paid back at cash-out
+  (`bonus`) + `ledger(id, 'poker', buyin, cashout, hands)`. Rake and bot winnings show up as house profit.
+  A table nobody polled for 2 min is finished (current hand played out as timeouts) and cashed out by the `pending`
+  queue (`flushDue` → `Poker.check`). A waiting table is refunded in full. Friend tables: 30 s per action, timeout =
+  check else fold, two in a row = leave. A finished table stays visible 2 min (`op 'ack'` returns to the lobby).
+- **Bot:** sees only `botView` (own cards, board, bets). Monte-Carlo equity vs the range it reads from the player's
+  past actions, pot odds incl. rake, random bluffs/leads. Tuned with `node tools/poker-sim.mjs` (knobs `P` in
+  `_holdem.js`, `POKER_TUNE='{…}'` to try values): all 15 strategies lose at buy-ins 100, 1,000 and 5,000.
+- **Open question for Sacha:** friend tables let two accounts move coins (chip dumping), beyond the 1,000/day gift cap.
+  Today the only guard is 30 rolls (as asked). Possible fix: a daily cap on net coins won at friend tables, or the
+  300-roll gift requirement for friend tables.
 
 
 

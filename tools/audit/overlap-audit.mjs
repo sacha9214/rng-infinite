@@ -23,12 +23,16 @@ for (const locale of ['fr-FR', 'en-US']) {
   // une salle de duel contre un bot, pour auditer aussi cette page
   await p.goto(B + '/#/duel'); await p.waitForSelector('#d-go'); await p.locator('[data-pref="opp"][data-v="bots"]').click(); await p.locator('#d-go').click(); await p.waitForURL(/#\/room\//); const room = new URL(p.url()).hash;
   const pages = [['#/', null], ['#/duel', null], [room, null], ['#/leaderboard', null], ['#/leaderboard', '[data-tab="coins"]'], ['#/badges', null], ['#/stats', null], ['#/history', null], ['#/shop', null], ['#/friends', null], ['#/clan', null], ['#/me', null], ['#/tournament', null], ['#/about', null],
-    ['#/gamble', '[data-game-tab="crash"]'], ['#/gamble', '[data-game-tab="mines"]'], ['#/gamble', '[data-game-tab="plinko"]'], ['#/gamble', '[data-game-tab="roulette"]'], ['#/gamble', '[data-game-tab="bj"]'], ['#/gamble', '[data-game-tab="wheel"]']];
+    ['#/gamble', '[data-game-tab="crash"]'], ['#/gamble', '[data-game-tab="mines"]'], ['#/gamble', '[data-game-tab="plinko"]'], ['#/gamble', '[data-game-tab="roulette"]'], ['#/gamble', '[data-game-tab="bj"]'], ['#/gamble', '[data-game-tab="wheel"]'],
+    // Poker (2026-11-03) : le salon, puis la table contre le bot (le 3e élément s'assoit si on ne l'est pas encore).
+    ['#/gamble', '[data-game-tab="poker"]'], ['#/gamble', '[data-game-tab="poker"]', '[data-pkr="bot"]']];
   for (const w of widths.length ? widths : [320, 360, 390, 414, 600, 768, 1024, 1180, 1280, 1440, 1920]) {
     await p.setViewportSize({ width: Math.floor(w), height: HEIGHTS[w] || (w < 700 ? 780 : 900) });
-    for (const [hash, click] of pages) {
+    for (const [hash, click, then] of pages) {
       await p.goto(B + '/' + hash); await p.waitForTimeout(hash === '#/shop' || hash === '#/badges' ? 1500 : 900);
       if (click) { await p.locator(click).click().catch(() => {}); await p.waitForTimeout(500); }
+      // Le clic peut faire défiler la page : on remonte, sinon la barre du haut « recouvre » ce qui passe dessous.
+      if (then) { await p.locator(then).click({ timeout: 1500 }).catch(() => {}); await p.waitForTimeout(1200); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(150); }
       const found = await p.evaluate(() => {
         const out = [], vw = innerWidth, name = e => `${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}.${String(e.className && e.className.baseVal === undefined ? e.className : '').split(' ').filter(Boolean).slice(0, 2).join('.')}`;
         const visible = e => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return r.width > 1 && r.height > 1 && s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > .05; };
