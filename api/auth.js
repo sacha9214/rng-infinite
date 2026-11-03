@@ -2,6 +2,7 @@
 // POST /api/auth  { action: 'setPassword', playerId, secret, password }   → mot de passe pour son pseudo
 // POST /api/auth  { action: 'passwordLogin', name, password }             → se connecter avec pseudo + mot de passe
 // POST /api/auth  { action: 'passwordState', playerId, secret }          → a-t-il déjà un mot de passe ?
+// POST /api/auth  { action: 'recoverLogin', code }                        → reprendre son joueur avec un code du créateur
 // Connexion Google : relie le compte Google à un joueur et donne à cet appareil un secret pour tirer sous ce joueur.
 // Le même compte Google retrouve donc son joueur (et ses places au classement) sur n'importe quel appareil.
 const crypto = require('node:crypto');
@@ -39,6 +40,17 @@ async function passwords(req, body) {
   const ip = String((req.headers && req.headers['x-forwarded-for']) || '').split(',')[0].trim() || 'unknown';
   const [ipFails] = await redis([['GET', `pwip:${ip}`]]);
   if (Number(ipFails) >= IP_MAX) return [429, { error: 'Too many tries: wait 15 minutes' }];
+  // Code de récupération donné par le créateur (api/site.js, recoverCode, 2026-11-03) : à usage unique. GET puis DEL
+  // dans le même envoi : si deux appareils tapent le code en même temps, seul celui dont le DEL a effacé la clé l'utilise.
+  if (body.action === 'recoverLogin') {
+    const code = String(body.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^[A-Z0-9]{10}$/.test(code)) { await redis([['INCR', `pwip:${ip}`], ['EXPIRE', `pwip:${ip}`, FAIL_WINDOW_S]]); return [401, { error: 'This code is wrong or expired' }]; }
+    const [id, gone] = await redis([['GET', `recover:${code}`], ['DEL', `recover:${code}`]]);
+    if (!id || Number(gone) !== 1) { await redis([['INCR', `pwip:${ip}`], ['EXPIRE', `pwip:${ip}`, FAIL_WINDOW_S]]); return [401, { error: 'This code is wrong or expired' }]; }
+    const secret = crypto.randomBytes(16).toString('hex');
+    const [, name] = await redis([['SADD', `player:${id}:secrets`, sha256(secret)], ['HGET', 'names', id], ['DEL', `recover:id:${id}`]]);
+    return [200, { playerId: id, secret, name: name || '' }];
+  }
   const wrong = async id => { await redis([['INCR', `pwip:${ip}`], ['EXPIRE', `pwip:${ip}`, FAIL_WINDOW_S], ...(id ? [['INCR', `pwfail:${id}`], ['EXPIRE', `pwfail:${id}`, FAIL_WINDOW_S]] : [])]); return [401, { error: 'Wrong name or password' }]; };
   const name = cleanName(body.name), playerId = name ? await findPlayer(name) : null;
   if (!playerId || !pw) return wrong(null);
@@ -56,7 +68,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST' });
   {
     const early = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    if (['setPassword', 'passwordLogin', 'passwordState'].includes(early.action)) {
+    if (['setPassword', 'passwordLogin', 'passwordState', 'recoverLogin'].includes(early.action)) {
       try { const [status, out] = await passwords(req, early); return send(res, status, out); } catch (err) { return send(res, err.status || 500, { error: err.message }); }
     }
   }

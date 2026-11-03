@@ -1115,6 +1115,19 @@
       if (st.S.still) { key.p = 1; st.redraw(); setTimeout(() => { key.p = 0; active.delete(key); st.redraw(); }, 150); }
     };
     doc.addEventListener('pointerdown', onDown);
+    // Les vraies touches aussi (LEVIATHAN, 2026-11-02 : « pas de son quand on appuie sur les touches ») : la touche
+    // correspondante s'enfonce avec son « thock ». Jamais pendant qu'on écrit (chat, champ de texte, raccourcis Ctrl/Cmd).
+    const KEYMAP = { ' ': space, Backspace: back, Enter: enter, Escape: byLabel('Esc'), Tab: byLabel('Tab'), Delete: byLabel('Del'), CapsLock: byLabel('Caps'), Shift: byLabel('Shift'), Control: byLabel('Ctrl'), Alt: byLabel('Alt'), ArrowUp: byLabel('↑'), ArrowDown: byLabel('↓'), ArrowLeft: byLabel('←'), ArrowRight: byLabel('→'), PageUp: byLabel('PgUp'), PageDown: byLabel('PgDn'), End: byLabel('End') };
+    const onKey = e => {
+      if (e.repeat || e.metaKey || e.ctrlKey || !layer.classList.contains('wp-keyboard')) return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const key = KEYMAP[e.key] || (e.key && e.key.length === 1 ? byLabel(e.key.toUpperCase()) : null);
+      if (!key) return;
+      press(key, true);
+      if (st.S.still) { key.p = 1; st.redraw(); setTimeout(() => { key.p = 0; active.delete(key); st.redraw(); }, 150); }
+    };
+    doc.addEventListener('keydown', onKey);
     const st = stage(layer, 'wkb', {
       lazy: true,
       layout(S) {
@@ -1179,7 +1192,7 @@
         queue.push({ key: enter, at: t + .12 });
         nextBurst = t + 2.2;
       },
-      stop() { doc.removeEventListener('pointerdown', onDown); },
+      stop() { doc.removeEventListener('pointerdown', onDown); doc.removeEventListener('keydown', onKey); },
       debug(S, what) { if (what === 'type') { burst(S); } if (what && what.at) { const key = keyAt(what.at[0], what.at[1]); if (key) press(key, true); return key && key.label; } return { active: active.size }; },
     });
     return st;

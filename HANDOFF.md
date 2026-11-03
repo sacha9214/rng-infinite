@@ -21,6 +21,52 @@ Zzz and Clown are already sold, and players paid for them. The site shows `img: 
 
 
 
+## Bug reports sweep (2026-11-03, branch `claude/bug-reports-1103`)
+
+All 57 open bug reports in the inbox were read (screenshots included) and checked. Fixed (each comment names the reporter):
+
+- **Leaderboard rows** (Alt, infinity, qwertyuiop ×2): the monthly Top chip ("Top 10 · Oct 2026 · Normal", too long since
+  hard mode) covered names, coins and XP. In rows it is now the emoji only (`topHTML(award, true)`, 🔥 for hard), the
+  full text stays in the tooltip, on profiles and in the trophies box. Names come first in `.lb-who` (ellipsis), the
+  rest is clipped. The trophies box wraps at 320 px (it overflowed by 1 px before).
+- **Message stays in the chat box** (Niall, randomguy, Jacksonw, Idkwhatnamemyself): a chat refresh during the send
+  redrew the footer with a new textarea holding the draft; only the detached one was cleared. `GChat.send` now clears
+  the textarea on screen if it still holds the sent text.
+- **Duel chat one letter per line** (Idkwhatnamemyself): 🙂+, Edit and Delete squeezed `.chat-text`; it now keeps 8rem
+  and the buttons wrap.
+- **Badges tab vs collection titles** (Thermonuclear Bomb, Trial): the tab grouped by colour, the titles by real odds
+  (`Achievements.collectionSets`). The tab now uses the same rule (`collTier`, checked equal to the server sets): Exact
+  Natural / Exact RTX 5090 / Important Birthday move to Celestial, Current Year and RTX 5090 to Epic, Natural to Rare.
+- **Tower shows wrong multipliers before playing** (infinity): the client used a 0.99 edge; now 0.94 / 0.97 like the server.
+- **Leading zero peeks out after the reveal** (randomguy, "....", Christmas Morning and every skin with its own
+  `.slot.ghost` opacity): `.num-card .slot.collapsed { opacity: 0 !important }`.
+- **Skip known badges re-locked in Hard** (Jacksonw): counts both modes (`skipRolls`).
+- **Hard mode totals** (jsand): `ServerLife` cached rolls/XP for 60 s without the mode, so switching showed the other
+  mode's numbers; Infinite odds showed "0.%" (`pctStr` under 0.0001 %).
+- **Lifetime XP stuck past 100k rolls** (kaz): the after-roll counter is the server total + rolls since (`lifeXP`).
+- **Case closes on outside click** (Ben good): during the reel (and ~1 s after) a backdrop click = Skip.
+- **Keyboard ASMR** (LEVIATHAN): real keystrokes press the matching key with its sound (never while typing in a field).
+- **Lost accounts** (Deadshot, CMC_Nate / Naet_161; 8 `id_reset` on 11-02): no code wipes an identity; their devices
+  lost local storage (school Chromebooks) and they had no Google or password. New: **Owner → Chat tab → Account
+  recovery** creates a one-time code (7 days, `recover:<code>`), the player types it in ⚙️ Settings ("Lost your player?")
+  and the device gets a new secret for the old id (`api/auth.js` `recoverLogin`, IP-limited like passwords). Check it's
+  really them first (Discord). Deadshot's old account (5,010 rolls) is intact. Players with 300+ rolls and no
+  password/Google get a weekly toast to set a password.
+
+Checked, not bugs (answers to send): 75k rolls without an Infinite is ~47 % likely (Big Sexy); 3 is Godlike (Idk…);
+a skin preview is not a roll (000001, Idk…); blackjack pays 3:2, two aces are not a blackjack (Mace_67); 0 has no
+Century badge (it does not end in 00, Liam123456); a 100M XP roll can be Celestial, tiers come from the percentile of
+the total (GamblrGod); 1,769 XP is "10 XP above Land waste" by design (lnbBUChuoi); trash ties share 1st place since
+10-30 as R77 asked, so many players can be 1st (TibotyTWO, R77's 11-02 report likely from an old page); profile tops
+and badges come from the last 100k rolls kept (jsand, documented 10-30); duels work (6,050 coins of wins on 11-03,
+e2e test passes) so IXOLAF2 needs details; casino losses are the house edge (Liconc); Fwm's frozen wallpaper on a work
+laptop is the OS "reduce motion" setting. Need more info: PRISMA123 level-75 key (claims pay every pending level's
+key; his account shows level 160, nothing missing we can see), PRISMA123 "profile unavailable" (before the 11-02 profile
+speed fix), Kag 4 vs 3 Godlikes (t:godlike = 4 on the server), Jacksonw negative duel points, Thermonuclear Bomb's
+disappearing 💡 button, Edward skipped roll, GamblrGod can't roll, JUAN SEBASTIAN wrong sound, colt −9 coins.
+Ideas, not bugs: Nine to five exact containing "925" (family change = rarity recompute, Sacha's call), Exact Natural /
+RTX 5090 / Important Birthday scores (Kag, Trial), quest claim stops auto-roll (shadow2), Tower variety (JULIO_3020).
+
 ## Security audit (2026-11-02, branch `claude/security-fixes`)
 
 Sacha asked for a pentest. Three local-only passes (economy, accounts/permissions, new features/DoS), every finding
