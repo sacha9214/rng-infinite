@@ -2222,6 +2222,7 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-11-03-bugs', date: 'Nov 3, 2026', en: ['🏆 Leaderboards: the monthly Top badge is now a small 👑/🥈/🥉 next to the name (🔥 for Hard), so it no longer covers names, coins and XP (reported by Alt, infinity and qwertyuiop)', '💬 Chat: your message no longer stays in the box after sending (reported by Niall, randomguy, Jacksonw and Idkwhatnamemyself), and duel chat messages no longer squeeze into one letter per line (Idkwhatnamemyself)', '🏅 Badges tab: badges are grouped by how rare they really are, like the collection titles. Exact Natural, Exact RTX 5090 and Important Birthday (one number each) are now with the Celestial badges, and Epic Obtainer counts the same badges you see in the Epic group (reported by Thermonuclear Bomb and Trial)', '🗼 Tower: the multipliers shown before you start are now the real ones (reported by infinity)', '0️⃣ Leading zeros no longer peek out next to your number at the end of a roll (reported by randomguy)', '⏩ Skip known badges counts your Normal and Hard rolls together, so it stays unlocked in Hard mode (reported by Jacksonw)', '🔥 Hard mode: your roll count and XP no longer show the Normal mode numbers for a minute after switching, and Infinite odds show as 0.00001% instead of "0.%" (reported by jsand)', '📈 Past 100,000 rolls, your lifetime XP keeps going up after each roll (reported by kaz)', '📦 Clicking outside a case while it opens now skips to your prize instead of closing it (reported by Ben good)', '⌨️ Keyboard ASMR wallpaper: typing on your real keyboard presses the keys too, with their sound (reported by LEVIATHAN)', '🔐 Lost your player because your device was wiped? Ask the creator for a recovery code and enter it in ⚙️ Settings. Players with 300+ rolls and no password get a reminder to set one (reported by Deadshot, CMC_Nate and Naet_161)'], fr: ['🏆 Classements : le badge Top du mois devient un petit 👑/🥈/🥉 à côté du pseudo (🔥 en Hard), il ne cache plus les pseudos, les pièces et l\'XP (signalé par Alt, infinity et qwertyuiop)', '💬 Chat : ton message ne reste plus dans la zone d\'écriture après l\'envoi (signalé par Niall, randomguy, Jacksonw et Idkwhatnamemyself), et les messages du chat des duels ne s\'écrasent plus en une lettre par ligne (Idkwhatnamemyself)', '🏅 Onglet Badges : les badges sont rangés selon leur vraie rareté, comme les titres de collection. Exact Natural, Exact RTX 5090 et Important Birthday (un seul nombre chacun) passent avec les Celestial, et Conquérant Epic compte les mêmes badges que le groupe Epic (signalé par Thermonuclear Bomb et Trial)', '🗼 Tour : les multiplicateurs affichés avant de commencer sont les vrais (signalé par infinity)', '0️⃣ Les zéros de tête ne dépassent plus à côté de ton nombre à la fin d\'un tirage (signalé par randomguy)', '⏩ Passer les badges connus compte tes tirages Normal et Hard ensemble : il reste débloqué en mode difficile (signalé par Jacksonw)', '🔥 Mode difficile : ton nombre de tirages et ton XP ne montrent plus ceux du mode normal pendant une minute après le changement, et les chances d\'un Infinite s\'affichent 0,00001 % au lieu de « 0.% » (signalé par jsand)', '📈 Au-delà de 100 000 tirages, ton XP à vie continue de monter après chaque tirage (signalé par kaz)', '📦 Cliquer à côté d\'une caisse pendant son ouverture passe directement au gain au lieu de la fermer (signalé par Ben good)', '⌨️ Fond Keyboard ASMR : taper sur ton vrai clavier enfonce aussi les touches, avec leur son (signalé par LEVIATHAN)', '🔐 Joueur perdu parce que ton appareil a été effacé ? Demande un code de récupération au créateur et entre-le dans ⚙️ Réglages. Les joueurs de 300 tirages ou plus sans mot de passe reçoivent un rappel pour en choisir un (signalé par Deadshot, CMC_Nate et Naet_161)'] },
+    { id: '2026-11-03-emotes', date: 'Nov 3, 2026', en: ['😤 5 new duel emotes in the Shop: Salty, Hmm, Praying, K.O. and On fire, the same dice as the free reactions, from 300 to 450 coins. They can also drop from the Emote Case, which now costs 350 coins instead of 400'], fr: ['😤 5 nouvelles émotes de duel dans la boutique : Salty, Hmm, Praying, K.O. et On fire, le même dé que les réactions gratuites, de 300 à 450 pièces. On peut aussi les gagner dans la caisse d\'émotes, qui coûte maintenant 350 pièces au lieu de 400'] },
     { id: '2026-11-02-safety', date: 'Nov 2, 2026', en: ['🛡️ Safety update: friend requests now need 10 rolls, reporting a message 20 rolls and attaching images to an idea 30 rolls, so throwaway accounts can\'t spam them. New names use plain letters (accents are fine), so nobody can copy someone else\'s name with look-alike letters'], fr: ['🛡️ Mise à jour de sécurité : envoyer une demande d\'ami demande maintenant 10 tirages, signaler un message 20 tirages et joindre des images à une idée 30 tirages, pour que les comptes jetables ne puissent plus en abuser. Les nouveaux pseudos utilisent des lettres simples (les accents sont permis) : personne ne peut plus copier le pseudo d\'un autre avec des lettres qui se ressemblent'] },
     { id: '2026-11-02-hard-clan', date: 'Nov 2, 2026', en: ['🛡️ Clans: Hard mode rolls now count for your clan\'s weekly XP, at the Normal mode value of their rarity. A Hard Infinite gives your clan the XP of the smallest Normal Infinite, a Hard Mythic the smallest Normal Mythic, so Hard players help without flooding the clan race'], fr: ['🛡️ Clans : les tirages du mode difficile comptent pour l\'XP de la semaine de ton clan, à la valeur de leur rareté en mode normal. Un Infinite difficile rapporte à ton clan l\'XP du plus petit Infinite normal, un Mythic difficile celle du plus petit Mythic normal : les joueurs du mode difficile aident sans écraser la course des clans'] },
     { id: '2026-11-02-duel-mode', date: 'Nov 2, 2026', en: ['⚔️ Duels: choose Normal or 🔥 Hard when you create a duel. Hard duels use 10-digit numbers and count in your Hard mode history. Only players who unlocked Hard mode can join one', '🔓 Hard mode is easier to unlock: any Divine or higher roll in Normal mode now opens it (it was Godlike or Infinite)'], fr: ['⚔️ Duels : choisis Normal ou 🔥 Difficile en créant un duel. Les duels difficiles utilisent des nombres à 10 chiffres et comptent dans ton historique du mode difficile. Seuls les joueurs qui ont débloqué le mode difficile peuvent les rejoindre', '🔓 Le mode difficile est plus facile à débloquer : n\'importe quel tirage Divine ou mieux en mode normal l\'ouvre maintenant (c\'était Godlike ou Infinite)'] },
@@ -4161,11 +4162,15 @@
   // Les six de base sont des images ; les émotes spéciales (achetées dans la boutique) sont dessinées et animées en
   // SVG (js/emotes.js). Tout le monde les voit, seuls ceux qui les possèdent peuvent les envoyer.
   const Emotes = window.RNGEmotes || { svg: () => '', has: () => false };
+  // Émotes de la boutique en image (img: true, 2026-11-03) : même rendu que les six de base.
+  const emoteImg = id => !!(Shop.emoteById.get(id) || {}).img;
+  const emoteReady = id => Emotes.has(id) || emoteImg(id);
   const emoteHTML = (id, cls = '') => (EMOTE_LABELS[id]
     ? `<img class="emote${cls}" src="img/emotes/${id}.png" alt="${EMOTE_LABELS[id]}" draggable="false">`
+    : emoteImg(id) ? `<img class="emote${cls}" src="img/emotes/${id}.png" alt="${esc(Shop.emoteById.get(id).name)}" draggable="false" data-no-i18n>`
     : Emotes.has(id) ? `<span class="emote emote-svg${cls}" role="img" aria-label="${esc((Shop.emoteById.get(id) || {}).name || id)}" data-no-i18n>${Emotes.svg(id)}</span>`
     : esc(id)); // ancienne réaction en emoji (salles d'avant les emotes)
-  const myEmotes = () => (Store.settings.emotes || []).filter(e => Shop.emoteById.has(e) && Emotes.has(e));
+  const myEmotes = () => (Store.settings.emotes || []).filter(e => Shop.emoteById.has(e) && emoteReady(e));
   const titleEmoji = id => (id && Ach.byId.get(id) && !Ach.byId.get(id).hidden ? ` ${Ach.byId.get(id).emoji}` : '');
   const goalText = d => (d.mode === 'xp' ? `first to ${compact(d.target)} XP` : `first to ${plural(d.target, 'round win')}`);
 
@@ -4455,8 +4460,8 @@
         </section>
         <section class="shop-pane" data-shop-pane="emotes" hidden>
         <div class="panel" id="d-emotes-panel" hidden>
-          <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">animated reactions for your duels · everyone sees them</span></div>
-          <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.</p>
+          <div class="panel-head"><h3 class="panel-title">Emotes</h3><span class="panel-note">reactions for your duels · everyone sees them</span></div>
+          <p class="panel-note" style="margin-top:-.3rem">The six classic emotes are free. Buy any of these once and it joins your reaction bar in every duel.</p>
           <div class="skin-grid emote-grid" id="d-emotes"></div>
         </div>
         </section>
@@ -6400,7 +6405,7 @@
     const grid = $('#d-emotes');
     if (!grid) return;
     $('#d-emotes-panel').hidden = false;
-    grid.innerHTML = Shop.EMOTES.filter(e => Emotes.has(e.id)).map(e => `
+    grid.innerHTML = Shop.EMOTES.filter(e => emoteReady(e.id)).map(e => `
       <div class="skin-tile emote-tile${state.emotes.includes(e.id) ? ' owned' : ''}" data-have="${state.emotes.includes(e.id) ? 1 : 0}">
         ${emoteHTML(e.id)}
         <div class="skin-name"><b data-no-i18n>${esc(e.name)}</b>${ownTag('emotes', e.id)}</div>
@@ -6598,7 +6603,7 @@
     // Caisse de boutons (idée de shadow2, 2026-10-27) : la bande montre de vrais boutons Generate, inertes.
     // Caisse de sons (idée de shadow2 Jr, 2026-10-28) : l'icône du pack sur une plaque de haut-parleur.
     // Caisse d'émotes (idée de shadow2 Jr, 2026-11-01) : l'émote animée, dessinée par js/emotes.js.
-    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="emote emote-svg">${Emotes.svg(id)}</span></div>`
+    const look = (id, size) => emoCase ? `<div class="case-emo${size === 'md' ? ' md' : ''}" aria-hidden="true">${emoteImg(id) ? emoteHTML(id) : `<span class="emote emote-svg">${Emotes.svg(id)}</span>`}</div>`
       : sndCase ? `<div class="case-snd${size === 'md' ? ' md' : ''}" aria-hidden="true"><i>${Shop.soundById.get(id).emoji}</i></div>`
       : btnCase ? `<div class="case-btn${size === 'md' ? ' md' : ''}" aria-hidden="true"><span class="btn-roll small${genClass(id)}">Generate</span></div>`
       : wall ? `<div class="wall-preview wp wp-${id} case-wall${size === 'md' ? ' md' : ''}" aria-hidden="true"></div>`
@@ -8143,7 +8148,7 @@
 
   function renderRoom(code) {
     currentView = 'room';
-    REACTIONS.forEach(id => { new Image().src = `img/emotes/${id}.png`; });
+    REACTIONS.concat(Shop.EMOTES.filter(e => e.img).map(e => e.id)).forEach(id => { new Image().src = `img/emotes/${id}.png`; });
     stopRoom();
     Object.assign(Room, { code: code.toUpperCase(), data: null, shown: 0, rtt: Infinity, view: null, sig: '', changedAt: Date.now(), reactSeen: new Set(), achNoted: false, chatSeen: 0, chatAt: 0, chatSig: '' });
     // Le tirage auto vaut pour une partie : une autre salle (ou la revanche) repart éteint.
