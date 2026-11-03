@@ -513,8 +513,8 @@
     'Only players in this duel can write.': 'Seuls les joueurs de ce duel peuvent écrire.', 'Only players in this duel can write': 'Seuls les joueurs de ce duel peuvent écrire', 'No message yet. Say hi!': 'Aucun message pour l\'instant. Dis bonjour !',
     'Hide': 'Masquer', 'Hide this player\'s messages': 'Masquer les messages de ce joueur', 'Show again': 'Réafficher', 'Slow down a little': 'Doucement, pas si vite', 'Message not sent': 'Message non envoyé', 'Write something first': 'Écris d\'abord quelque chose',
     // Émotes spéciales (boutique, duel)
-    'Emotes': 'Émotes', 'animated reactions for your duels': 'des réactions animées pour tes duels', 'everyone sees them': 'tout le monde les voit', 'Owned': 'Possédée',
-    'The six classic emotes are free. These ones move: buy one once and it joins your reaction bar in every duel.': 'Les six émotes classiques sont gratuites. Celles-ci bougent : achètes-en une une fois, elle rejoint ta barre de réactions dans tous les duels.',
+    'Emotes': 'Émotes', 'reactions for your duels': 'des réactions pour tes duels', 'everyone sees them': 'tout le monde les voit', 'Owned': 'Possédée',
+    'The six classic emotes are free. Buy any of these once and it joins your reaction bar in every duel.': 'Les six émotes classiques sont gratuites. Achète une de celles-ci une fois : elle rejoint ta barre de réactions dans tous les duels.',
     'Buy this emote first': 'Achète d\'abord cette émote', 'Unknown emote': 'Émote inconnue',
     // Boutons de tirage (boutique)
     'Generate button': 'Bouton Générer', 'only you see it': 'toi seul le vois', 'press one to try it': 'appuie dessus pour l\'essayer',

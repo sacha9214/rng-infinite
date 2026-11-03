@@ -1,6 +1,18 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-01 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-11-03 by Sacha (with Claude). Update this file at the end of every session.
+
+## Image emotes in the shop (2026-11-03, branch `claude/dice-emotes`)
+
+Sacha had ChatGPT draw new emotes in the style of the six free ones (glossy 3D dice, octagonal frame, gold crown).
+Five are sold as **image emotes** (`img: true` in `Shop.EMOTES`, files `img/emotes/<id>.png`, 192 × 192): Salty 300,
+Hmm 300, Praying 350, K.O. 400, On fire 450. GG, Sleepy and Clown were drawn too but left out on purpose: animated GG,
+Zzz and Clown are already sold, and players paid for them. The site shows `img: true` emotes as images
+(`emoteImg` / `emoteReady` in app.js: shop tiles, duel bar, bubbles, Emote Case); the server needed no change.
+- **Emote Case 400 → 350:** the cheaper emotes lower its average prize to ≈ 461 (weights are 1 / price); at 400 it would
+  have been 0.87 of its value, worse than every other case (rule: 0.7–0.8, checked by test-api).
+- Shop wording no longer says every bought emote "moves".
+- Tested: test-api OK; in the browser (dev server): buy, duel bar, reaction bubble, case strip and a case win, French text.
 
 
 

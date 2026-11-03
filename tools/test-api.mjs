@@ -1101,7 +1101,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual(['gg', 'love', 'rage', 'money', 'mindblown'].map(id => Shop.caseRarity(ecase, id).name), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
   for (const id of epool) { const v = Shop.duplicateRefund(ecase, id); assert.ok(v >= ecase.price / 2 && v < ecase.price, `remboursement ${id}`); }
   assert.ok(Shop.KEY_OPENS.premium.includes('emotes') && !Shop.KEY_OPENS.starter.includes('emotes'), 'une clé Premium l\'ouvre');
-  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(E.has(id), `dessin de l'émote ${id} (js/emotes.js)`); }
+  { require(path.join(ROOT, 'js/emotes.js')); const E = globalThis.RNGEmotes; /* pas de module.exports : il se pose sur globalThis */ for (const id of epool) assert.ok(Shop.emoteById.get(id).img ? fs.existsSync(path.join(ROOT, `img/emotes/${id}.png`)) : E.has(id), `dessin de l'émote ${id} (js/emotes.js ou img/emotes/${id}.png)`); }
   const emma = { playerId: 'cb'.repeat(8), secret: 'dc'.repeat(16), name: 'Emmy' };
   assert.equal((await call(roll, { method: 'POST', body: emma })).status, 200);
   run([['HINCRBY', `stats:${emma.playerId}`, 'bonus', 50000]]);
@@ -1624,6 +1624,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: '🦄' })).status, 400));
   // Catalogue : identifiants distincts des émotes de base.
   assert.ok(Shop.EMOTES.every(e => !Shop.BASE_EMOTES.includes(e.id) && e.price > 0));
+  // Émotes en image (2026-11-03) : un fichier carré de 192 px chacune, comme les six de base ; elles se vendent et partent en duel.
+  for (const e of Shop.EMOTES.filter(x => x.img)) {
+    const png = fs.readFileSync(path.join(ROOT, `img/emotes/${e.id}.png`));
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [192, 192], `img/emotes/${e.id}.png en 192 × 192`);
+  }
+  await setCoins(frank, 1000);
+  r = await buy(frank, 'salty');
+  assert.deepEqual([r.status, r.body.emotes], [200, ['gg', 'salty']], JSON.stringify(r.body));
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: 'salty' })).status, 200, 'émote en image achetée : elle part'));
+  await later(1000, async () => assert.equal((await roomPost(frank, 'react', { code, emoji: 'onfire' })).status, 403, 'pas achetée : refusée'));
 }
 
 // ================================================================ 29. Chat des duels : joueurs assis seulement, filtré, limité en débit
