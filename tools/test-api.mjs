@@ -3427,6 +3427,26 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   run([['DEL', `pwfail:${u.playerId}`], ['SET', 'pwip:203.0.113.50', 30]]); assert.equal((await pw({ action: 'passwordLogin', name: 'Passy', password: 'correct horse' })).status, 429, 'trop d\'essais depuis cette adresse');
   run([['DEL', 'pwip:203.0.113.50']]);
   assert.equal((await pw({ action: 'passwordState', ...u })).body.has, true);
+
+  // Code de récupération (2026-11-03) : créé par le créateur seulement, à usage unique, il rend le joueur à l'appareil.
+  const siteApi = require(path.join(ROOT, 'api/site.js'));
+  const lost = { playerId: '5f'.repeat(8), secret: '6f'.repeat(16), name: 'Lostkid' };
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: lost })).status, 200);
+  const code = who => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'recoverCode', name: who.target } });
+  assert.equal((await code({ ...u, target: 'Lostkid' })).status, 403, 'pas pour un joueur');
+  run([['HSET', `stats:${u.playerId}`, 'owner', '1']]);
+  assert.equal((await code({ ...u, target: 'Nobody Here' })).status, 404);
+  const c1 = (await code({ ...u, target: 'lostkid' })).body, c2 = (await code({ ...u, target: 'Lostkid' })).body;
+  run([['HDEL', `stats:${u.playerId}`, 'owner']]);
+  assert.ok(/^[A-Z2-9]{10}$/.test(c2.code) && c2.name === 'Lostkid' && c2.days === 7, JSON.stringify(c2));
+  assert.equal((await pw({ action: 'recoverLogin', code: c1.code })).status, 401, 'un nouveau code annule l\'ancien');
+  r = await pw({ action: 'recoverLogin', code: ` ${c2.code.slice(0, 5).toLowerCase()}-${c2.code.slice(5)} ` }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.playerId, lost.playerId); assert.equal(r.body.name, 'Lostkid');
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: { playerId: lost.playerId, secret: r.body.secret, name: 'Lostkid' } })).status, 200, 'le nouvel appareil tire sous l\'ancien joueur');
+  db.delete(`cooldown:${lost.playerId}`); assert.equal((await call(roll, { method: 'POST', body: lost })).status, 200, 'l\'ancien appareil aussi');
+  assert.equal((await pw({ action: 'recoverLogin', code: c2.code })).status, 401, 'une seule fois');
+  assert.equal((await pw({ action: 'recoverLogin', code: 'short' })).status, 401);
+  run([['DEL', 'pwip:203.0.113.50']]);
 }
 
 // ================================================================ 58. Code SPOOKYMONTH : 300 pièces + titre Spooky, jusqu'au 1er novembre
