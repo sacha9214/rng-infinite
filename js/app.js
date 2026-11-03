@@ -1333,6 +1333,16 @@
     if (!seen) { seen = Date.now(); try { localStorage.setItem('bigSeen', String(seen)); } catch (e) { /* stockage bloqué */ } }
     return { bigSince: seen };
   }
+  // Invitation à une table de poker (api/_poker.js, demandé par Sacha, 2026-11-03), lue avec la relève des cadeaux :
+  // un message cliquable qui ouvre l'onglet Poker du casino, une seule fois par invitation sur cet appareil.
+  const pokerSeen = new Set();
+  function announcePoker(list) {
+    const fresh = list.filter(x => !pokerSeen.has(x.code));
+    fresh.forEach(x => pokerSeen.add(x.code));
+    if (!fresh.length || (currentView === 'gamble' && Gamble.tab === 'poker')) return;
+    const x = fresh[fresh.length - 1];
+    toast(`🃏 ${x.name} invites you to play poker · tap to join`, 7000, 'achv', () => { Gamble.tab = 'poker'; if (currentView === 'gamble') renderGamble(); else location.hash = '#/gamble'; });
+  }
   function announceBigRolls(rows) {
     if (!rows.length || Store.settings.friendAlerts === 'off') return;
     rows.forEach((r, i) => {
@@ -2221,6 +2231,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-03-poker', date: 'Nov 3, 2026', en: ['🃏 New in the Casino: Poker! Texas Hold\'em, 1 vs 1. Play the bot right away, or invite a friend to your table (or share its code). Pick a buy-in from 100 to 5,000 coins and play until someone runs out of chips; leave whenever you like and you cash out your chips. The bot plays fair: it never sees your cards. The house keeps 5% of every pot'], fr: ['🃏 Nouveau au casino : le Poker ! Texas Hold\'em, 1 contre 1. Joue tout de suite contre le bot, ou invite un ami à ta table (ou partage son code). Choisis une cave de 100 à 5 000 pièces et jouez jusqu\'à ce que l\'un n\'ait plus de jetons ; pars quand tu veux et tu encaisses tes jetons. Le bot joue loyalement : il ne voit jamais tes cartes. La maison garde 5 % de chaque pot'] },
     { id: '2026-11-03-bugs', date: 'Nov 3, 2026', en: ['🏆 Leaderboards: the monthly Top badge is now a small 👑/🥈/🥉 next to the name (🔥 for Hard), so it no longer covers names, coins and XP (reported by Alt, infinity and qwertyuiop)', '💬 Chat: your message no longer stays in the box after sending (reported by Niall, randomguy, Jacksonw and Idkwhatnamemyself), and duel chat messages no longer squeeze into one letter per line (Idkwhatnamemyself)', '🏅 Badges tab: badges are grouped by how rare they really are, like the collection titles. Exact Natural, Exact RTX 5090 and Important Birthday (one number each) are now with the Celestial badges, and Epic Obtainer counts the same badges you see in the Epic group (reported by Thermonuclear Bomb and Trial)', '🗼 Tower: the multipliers shown before you start are now the real ones (reported by infinity)', '0️⃣ Leading zeros no longer peek out next to your number at the end of a roll (reported by randomguy)', '⏩ Skip known badges counts your Normal and Hard rolls together, so it stays unlocked in Hard mode (reported by Jacksonw)', '🔥 Hard mode: your roll count and XP no longer show the Normal mode numbers for a minute after switching, and Infinite odds show as 0.00001% instead of "0.%" (reported by jsand)', '📈 Past 100,000 rolls, your lifetime XP keeps going up after each roll (reported by kaz)', '📦 Clicking outside a case while it opens now skips to your prize instead of closing it (reported by Ben good)', '⌨️ Keyboard ASMR wallpaper: typing on your real keyboard presses the keys too, with their sound (reported by LEVIATHAN)', '🔐 Lost your player because your device was wiped? Ask the creator for a recovery code and enter it in ⚙️ Settings. Players with 300+ rolls and no password get a reminder to set one (reported by Deadshot, CMC_Nate and Naet_161)'], fr: ['🏆 Classements : le badge Top du mois devient un petit 👑/🥈/🥉 à côté du pseudo (🔥 en Hard), il ne cache plus les pseudos, les pièces et l\'XP (signalé par Alt, infinity et qwertyuiop)', '💬 Chat : ton message ne reste plus dans la zone d\'écriture après l\'envoi (signalé par Niall, randomguy, Jacksonw et Idkwhatnamemyself), et les messages du chat des duels ne s\'écrasent plus en une lettre par ligne (Idkwhatnamemyself)', '🏅 Onglet Badges : les badges sont rangés selon leur vraie rareté, comme les titres de collection. Exact Natural, Exact RTX 5090 et Important Birthday (un seul nombre chacun) passent avec les Celestial, et Conquérant Epic compte les mêmes badges que le groupe Epic (signalé par Thermonuclear Bomb et Trial)', '🗼 Tour : les multiplicateurs affichés avant de commencer sont les vrais (signalé par infinity)', '0️⃣ Les zéros de tête ne dépassent plus à côté de ton nombre à la fin d\'un tirage (signalé par randomguy)', '⏩ Passer les badges connus compte tes tirages Normal et Hard ensemble : il reste débloqué en mode difficile (signalé par Jacksonw)', '🔥 Mode difficile : ton nombre de tirages et ton XP ne montrent plus ceux du mode normal pendant une minute après le changement, et les chances d\'un Infinite s\'affichent 0,00001 % au lieu de « 0.% » (signalé par jsand)', '📈 Au-delà de 100 000 tirages, ton XP à vie continue de monter après chaque tirage (signalé par kaz)', '📦 Cliquer à côté d\'une caisse pendant son ouverture passe directement au gain au lieu de la fermer (signalé par Ben good)', '⌨️ Fond Keyboard ASMR : taper sur ton vrai clavier enfonce aussi les touches, avec leur son (signalé par LEVIATHAN)', '🔐 Joueur perdu parce que ton appareil a été effacé ? Demande un code de récupération au créateur et entre-le dans ⚙️ Réglages. Les joueurs de 300 tirages ou plus sans mot de passe reçoivent un rappel pour en choisir un (signalé par Deadshot, CMC_Nate et Naet_161)'] },
     { id: '2026-11-03-emotes', date: 'Nov 3, 2026', en: ['😤 5 new duel emotes in the Shop: Salty, Hmm, Praying, K.O. and On fire, the same dice as the free reactions, from 300 to 450 coins. They can also drop from the Emote Case, which now costs 350 coins instead of 400'], fr: ['😤 5 nouvelles émotes de duel dans la boutique : Salty, Hmm, Praying, K.O. et On fire, le même dé que les réactions gratuites, de 300 à 450 pièces. On peut aussi les gagner dans la caisse d\'émotes, qui coûte maintenant 350 pièces au lieu de 400'] },
     { id: '2026-11-02-safety', date: 'Nov 2, 2026', en: ['🛡️ Safety update: friend requests now need 10 rolls, reporting a message 20 rolls and attaching images to an idea 30 rolls, so throwaway accounts can\'t spam them. New names use plain letters (accents are fine), so nobody can copy someone else\'s name with look-alike letters'], fr: ['🛡️ Mise à jour de sécurité : envoyer une demande d\'ami demande maintenant 10 tirages, signaler un message 20 tirages et joindre des images à une idée 30 tirages, pour que les comptes jetables ne puissent plus en abuser. Les nouveaux pseudos utilisent des lettres simples (les accents sont permis) : personne ne peut plus copier le pseudo d\'un autre avec des lettres qui se ressemblent'] },
@@ -4748,7 +4759,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { poker: '🃏', crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -4802,7 +4813,7 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['poker', '🃏', 'Poker'], ['btc', '📈', 'Crypto']];
   // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
   // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
   // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
@@ -4821,6 +4832,8 @@
     slots: { goal: 'Line up three of the same symbol.', how: ['Press Spin or pull the lever.', 'The three reels stop one after the other.'], pays: ['Three of a kind pays the most: 7 7 7 pays 250×.', 'Two 7s, two cherries or two lemons pay a little.', 'The full table is under the machine.'], bets: BETS_STD },
     roulette: { goal: 'Guess where the ball stops.', how: ['Pick a chip, then click the bets you want: you can place several.', 'Press Spin: the ball lands on a number from 0 to 36.'], pays: ['Red, Black, Even, Odd, 1–18 or 19–36 pays 2×.', 'A group of 12 numbers pays 3×.', 'A single number pays 36×. The green 0 only pays a bet on 0.'], bets: 'Up to 1,000 coins per spin in total.' },
     bj: { goal: 'Get closer to 21 than the dealer, without going over.', how: ['Cards 2 to 10 count their number, J Q K count 10, an Ace counts 1 or 11.', 'Hit to take a card, Stand to stop, Double to double your bet for one last card.', 'The dealer draws until 17 or more.'], pays: ['Win: 2×. Tie: your bet comes back.', 'Blackjack (21 with your first two cards): 2.5×.', 'Lucky bonuses: 7-7-7, or 21 with 5 cards or more.'], bets: BETS_STD },
+    // Poker (demandé par Sacha, 2026-11-03) : chiffres d'api/_poker.js et api/_holdem.js.
+    poker: { goal: 'Make the best 5-card hand, or make the other player fold.', how: ['You get 2 cards only you can see. 5 shared cards come in the middle: 3, then 1, then 1.', 'Each round: Check, Bet or Raise, Call, or Fold (give up the hand).', 'At the end, the best 5 cards out of your 2 and the 5 shared ones win the pot.', 'Play the bot right away, or invite a friend: you each have 30 seconds to play.'], pays: ['The winner of each hand takes the pot, minus 5% for the house.', 'Leave whenever you like: you cash out the chips in front of you.', 'Hands from best to worst: royal flush, straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card.'], bets: 'Buy-ins from 100 to 5,000 coins, blinds 1% and 2% of the buy-in.' },
     btc: { goal: 'Buy crypto with coins and sell it when the price goes up.', how: ['The price is the real market price, live: 1 coin = 1 $.', 'Buy, wait, then sell: if the price went up, you get more coins back.', 'Leverage: bet on a rise (long) or a fall (short) with 2×, 3× or 5×.'], pays: ['Buying and selling each cost 1%.', 'With leverage, you can never lose more than your margin.'], bets: 'Trades from 10 to 50,000 coins. Game coins only: this is not real crypto.' },
   };
   function openHowTo(id) {
@@ -4990,6 +5003,10 @@
             <div class="actions" id="bj-actions"></div>
             <p class="panel-note g-result" id="bj-result"></p>
           </div>
+          <div class="panel g-game" data-game="poker">
+            <div class="panel-head"><h3 class="panel-title">Poker</h3><span class="panel-note">Texas Hold'em · 1 vs 1 · against the bot or a friend</span></div>
+            <div id="pkr-body"><div class="empty">Loading…</div></div>
+          </div>
           <div class="panel g-game" data-game="btc">
             <div class="panel-head"><h3 class="panel-title">Crypto</h3><span class="panel-note">the real price, live · 1 coin = 1 $</span></div>
             <div id="btc-body"><div class="empty">Loading…</div></div>
@@ -5149,6 +5166,217 @@
         if (h.bonus) { Sound.play('reveal', {}); FX.celebrate('epic', $('#bj-table')); }
         else if (h.done && (h.result === 'win' || h.result === 'blackjack')) { Sound.play('reveal', { small: 1 }); FX.celebrate(h.result === 'blackjack' ? 'epic' : 'uncommon', $('#bj-table')); }
       } catch (err) { fail(err); } finally { Gamble.busy = false; }
+    });
+    // ---- poker (demandé par Sacha, 2026-11-03) : Texas Hold'em à deux, contre le bot ou un ami (api/_poker.js). Tout
+    // se décide sur le serveur ; la page sonde la table tant que l'onglet Poker est ouvert (vite quand le bot joue).
+    const PKR = Gamble.pkr || (Gamble.pkr = { buyin: 500, st: null, lobby: null, over: null, sig: '', timer: 0, busy: false, raise: 0, seen: { n: 0, mine: 0, board: 0, theirs: false }, friends: null, friendsAt: 0, clock: 0 });
+    const pkrBody = $('#pkr-body');
+    const pkrK = n => (n >= 1000 ? `${n % 1000 ? (n / 1000).toFixed(1) : n / 1000}K` : String(n));
+    const pkrCard = (c, fresh, i, cls = '') => cardHTML(c, fresh, i).replace('<span class="pcard', `<span class="pcard${cls ? ` ${cls}` : ''}`);
+    const pkrSame = (a, b) => a.r === b.r && a.s === b.s;
+    // Une ligne du journal : le pseudo à part (jamais traduit), puis le coup.
+    const PKR_ME = { fold: 'You fold', check: 'You check', join: 'You joined', leave: 'You left the table', gone: 'You left (timed out twice)', timeout: 'You ran out of time' };
+    const PKR_THEY = { fold: 'folds', check: 'checks', join: 'joined the table', leave: 'left the table', gone: 'left (timed out twice)', timeout: 'ran out of time' };
+    const pkrLine = (e, st) => {
+      const a = e.a != null ? fmt(e.a) : '', tail = e.d ? ` · ${e.d}` : '';
+      if (e.m === 'hand') return `Hand #${a}`;
+      if (e.m === 'split') return `Split pot: ${a} each`;
+      if (e.s === 'me') return esc(({ call: `You call ${a}`, bet: `You bet ${a}`, raise: `You raise to ${a}`, win: `You win ${a}` }[e.m] || PKR_ME[e.m] || '') + tail);
+      return `<b data-no-i18n>${esc(st.opp ? st.opp.name : '')}</b> ${esc(({ call: `calls ${a}`, bet: `bets ${a}`, raise: `raises to ${a}`, win: `wins ${a}` }[e.m] || PKR_THEY[e.m] || '') + tail)}`;
+    };
+    const pkrAv = s => (s.bot ? '<span class="av pkr-av pkr-bot" aria-hidden="true"><i>🤖</i></span>' : Avatars.html(s.name, 'pkr-av'));
+    // Salon : invitations, cave, contre le bot ou contre un ami (liste d'amis, ou code de table).
+    const pkrLobbyHTML = st => {
+      const bb = 2 * Math.max(1, Math.round(PKR.buyin / 100)), friends = PKR.friends || [];
+      const last = st.last ? `<p class="pkr-last panel-note">Last match${st.last.vs ? ` vs <b data-no-i18n>${esc(st.last.vs)}</b>` : ''}: <b class="mono ${st.last.net >= 0 ? 'pkr-up' : 'pkr-down'}">${st.last.net >= 0 ? '+' : '−'}${fmt(Math.abs(st.last.net))}</b></p>` : '';
+      return `<div class="pkr-lobby">
+        ${(st.invites || []).map(x => `<div class="pkr-invite"><span>📨 <b data-no-i18n>${esc(x.name)}</b> invites you to a poker table</span><span class="mono">🪙 ${fmt(x.buyin)}</span><span class="pkr-row"><button class="btn-roll small" data-pkr="join" data-code="${esc(x.code)}">Join</button><button class="btn ghost" data-pkr="decline" data-code="${esc(x.code)}">Decline</button></span></div>`).join('')}
+        ${last}
+        <div class="pkr-buyin"><span class="eyebrow">Buy-in</span><div class="seg" role="group" aria-label="Buy-in">${(st.buyins || [100, 250, 500, 1000, 2500, 5000]).map(v => `<button data-pkr="buyin" data-v="${v}" class="${v === PKR.buyin ? 'on' : ''}" data-no-i18n>${pkrK(v)}</button>`).join('')}</div><span class="panel-note">Blinds ${fmt(bb / 2)} / ${fmt(bb)}</span></div>
+        <div class="pkr-modes">
+          <div class="pkr-mode"><h4>🤖 Play the bot</h4><p class="panel-note">Starts right away. The bot plays fair: it never sees your cards.</p><button class="btn-roll small" data-pkr="bot">Sit down · 🪙 ${fmt(PKR.buyin)}</button></div>
+          <div class="pkr-mode"><h4>👥 Play a friend</h4>
+            ${st.friend ? `<p class="panel-note">Needs ${fmt(st.friend.rolls)} rolls · up to 🪙 ${fmt(st.friend.day)} of buy-ins a day (🪙 ${fmt(st.friend.left)} left today), like gifts</p>` : ''}
+            ${friends.length ? `<div class="pkr-row"><select class="input" id="pkr-friend" aria-label="Friend">${friends.map(f => `<option value="${esc(f.name)}" data-no-i18n>${f.status === 'online' ? '🟢 ' : ''}${esc(f.name)}</option>`).join('')}</select><button class="btn" data-pkr="create" data-with="1">Invite · 🪙 ${fmt(PKR.buyin)}</button></div>` : '<p class="panel-note">Add friends in Social to invite them, or share a table code.</p>'}
+            <button class="btn ghost" data-pkr="create">Open a table with a code</button>
+            <form class="pkr-row" id="pkr-join"><input class="input mono" id="pkr-code" maxlength="6" placeholder="Table code" autocomplete="off" spellcheck="false" aria-label="Table code"><button class="btn" type="submit">Join</button></form>
+          </div>
+        </div>
+        <p class="panel-note pkr-rules">Both players buy in the same amount. Play hands until someone runs out of chips or leaves: leaving cashes out your chips. The house keeps 5% of every pot.</p>
+      </div>`;
+    };
+    const pkrWaitHTML = st => `<div class="pkr-wait">
+        <span class="eyebrow">Table code</span><b class="pkr-code" data-no-i18n>${esc(st.code)}</b>
+        <button class="btn" data-pkr="copy">📋 Copy code</button>
+        <p>${st.invited && st.invited.length ? `Waiting for <b data-no-i18n>${esc(st.invited.join(', '))}</b>…` : 'Waiting for a friend to join with this code…'}</p>
+        <p class="panel-note">Buy-in 🪙 ${fmt(st.buyin)} · blinds ${fmt(st.sb)} / ${fmt(st.bb)}</p>
+        ${PKR.friends && PKR.friends.length ? `<div class="pkr-row"><select class="input" id="pkr-friend" aria-label="Friend">${PKR.friends.map(f => `<option value="${esc(f.name)}" data-no-i18n>${f.status === 'online' ? '🟢 ' : ''}${esc(f.name)}</option>`).join('')}</select><button class="btn" data-pkr="invite">📨 Invite</button></div>` : ''}
+        <button class="btn ghost" data-pkr="leave">Cancel · get 🪙 ${fmt(st.buyin)} back</button>
+      </div>`;
+    const PKR_OVER = { bust: ['You are out of chips', '{opp} is out of chips!'], leave: ['You left the table', '{opp} left the table'], timeout: ['You timed out twice', '{opp} timed out twice'], idle: ['Table closed: nobody played for 2 minutes', 'Table closed: nobody played for 2 minutes'] };
+    const pkrTableHTML = st => {
+      const h = st.hand, me = st.me, opp = st.opp || { name: '…', stack: 0 }, done = !h || h.done, res = h && h.res;
+      const n = h ? `${st.code}#${h.n}` : '', seen = PKR.seen.n === n ? PKR.seen : { n, mine: 0, board: 0, theirs: false };
+      const best = res && res.best ? res.best : null, shown = !!(res && res.shown);
+      const mark = c => (best ? (best.some(b => pkrSame(b, c)) ? 'pkr-hl' : 'pkr-dim') : '');
+      const mine = h ? h.mine.map((c, i) => pkrCard(c, i >= seen.mine, i, mark(c))).join('') : '';
+      const theirs = h ? (h.theirs ? h.theirs.map((c, i) => pkrCard(c, !seen.theirs, i, mark(c))).join('') : [0, 1].map(i => pkrCard(null, seen.mine === 0, i)).join('')) : '';
+      const board = h ? [0, 1, 2, 3, 4].map(k => (h.board[k] ? pkrCard(h.board[k], k >= seen.board, k - seen.board, mark(h.board[k])) : '<span class="pkr-slot" aria-hidden="true"></span>')).join('') : '';
+      const turn = h && !h.done ? h.turn : null;
+      const timer = side => (turn === side && h.left != null ? `<span class="pkr-timer" aria-hidden="true"><i style="--from:${(h.left / 30000).toFixed(3)};animation-duration:${h.left}ms"></i></span>` : '');
+      const seat = (s, side, cardsHTML, desc) => `<div class="pkr-seat pkr-${side}${turn === side ? ' pkr-turn' : ''}${res && res.w === side ? ' pkr-won' : ''}">
+          <div class="pkr-id">${pkrAv(s)}<span class="pkr-name"><b data-no-i18n>${esc(s.name)}</b>${s.btn ? '<span class="pkr-dealer" title="Dealer: small blind, speaks first before the flop">D</span>' : ''}${s.away ? '<span class="pkr-away">away</span>' : ''}</span><span class="pkr-stack mono">🪙 ${fmt(s.stack)}</span></div>
+          <div class="pkr-hole">${cardsHTML}</div>
+          ${desc ? `<span class="pkr-desc">${esc(desc)}</span>` : ''}
+          ${s.bet ? `<span class="pkr-bet mono" data-no-i18n>${fmt(s.bet)}</span>` : ''}
+          ${timer(side)}
+        </div>`;
+      let result = '';
+      if (res) {
+        const oppWon = res.pot - res.rake - res.won;
+        const head = res.w === 'me' ? `You win 🪙 ${fmt(res.won)}` : res.w === 'opp' ? `<b data-no-i18n>${esc(opp.name)}</b> wins 🪙 ${fmt(oppWon)}` : `Split pot · 🪙 ${fmt(res.won)} each`;
+        const why = res.fold === 'me' ? 'You folded' : res.fold === 'opp' ? `<b data-no-i18n>${esc(opp.name)}</b> folded` : shown && res.w !== 'split' ? esc(res.desc[res.w] + (res.kick ? ` · ${res.kick}` : '')) : shown ? esc(res.desc.me) : '';
+        result = `<div class="pkr-result${res.w === 'me' ? ' win' : ''}"><b>${head}</b><small>${why}${res.rake ? `${why ? ' · ' : ''}house 5%: 🪙 ${fmt(res.rake)}` : ''}</small></div>`;
+      }
+      const op = h && h.op;
+      let actions = '';
+      if (st.status === 'over') {
+        const o = st.over, txt = (PKR_OVER[o.reason] || PKR_OVER.leave)[o.mine || (o.reason === 'bust' && me.stack === 0) ? 0 : 1];
+        actions = `<div class="pkr-over"><b>${esc(txt.split('{opp}')[0])}${txt.includes('{opp}') ? `<span data-no-i18n>${esc(opp.name)}</span>${esc(txt.split('{opp}')[1])}` : ''}</b>
+          <span>Match over · you cash out <b class="mono">🪙 ${fmt(o.cash)}</b> <b class="mono ${o.net >= 0 ? 'pkr-up' : 'pkr-down'}">(${o.net >= 0 ? '+' : '−'}${fmt(Math.abs(o.net))})</b></span>
+          <span class="pkr-row">${st.bot ? `<button class="btn-roll small" data-pkr="again">Play the bot again · 🪙 ${fmt(st.buyin)}</button>` : ''}<button class="btn" data-pkr="lobby">Back to the lobby</button></span></div>`;
+      } else if (op) {
+        const cur = me.bet + op.toCall, potCall = h.pot + op.toCall;
+        const want = Math.min(op.maxTo, Math.max(op.minTo, PKR.raise || op.minTo));
+        PKR.raise = want;
+        actions = `<div class="pkr-actions">
+            ${op.canCheck ? '' : '<button class="btn ghost" data-pkr="fold">Fold</button>'}
+            <button class="btn" data-pkr="${op.canCheck ? 'check' : 'call'}"${op.canCheck ? ' data-no-i18n' : ''}>${op.canCheck ? 'Check' : op.toCall >= me.stack ? `All-in ${fmt(op.toCall)}` : `Call ${fmt(op.toCall)}`}</button>
+            ${op.canRaise ? `<button class="btn-roll small" data-pkr="raise" id="pkr-raise-btn">${pkrRaiseLabel(want, cur, op)}</button>` : ''}
+          </div>
+          ${op.canRaise && op.maxTo > op.minTo ? `<div class="pkr-raise"><input type="range" id="pkr-slider" min="${op.minTo}" max="${op.maxTo}" step="1" value="${want}" aria-label="Raise amount" data-cur="${cur}">
+            <span class="pkr-quick">${[['half', '½ pot', Math.round(cur + potCall / 2)], ['pot', 'Pot', Math.round(cur + potCall)], ['max', 'All-in', op.maxTo]].map(([id, label, v]) => `<button class="chip" data-pkr="size" data-v="${Math.min(op.maxTo, Math.max(op.minTo, v))}">${label}</button>`).join('')}</span></div>` : ''}`;
+      } else if (h && h.done) {
+        actions = `<div class="pkr-actions">${st.bot ? '<button class="btn-roll small" data-pkr="next">Next hand</button>' : ''}<span class="panel-note pkr-secs" data-secs="next">Next hand in a moment…</span></div>`;
+      } else if (h) {
+        actions = `<div class="pkr-actions"><span class="panel-note">Waiting for <b data-no-i18n>${esc(opp.name)}</b>…</span><span class="panel-note mono pkr-secs" data-secs="turn"></span></div>`;
+      }
+      const lines = (st.log || []).filter(e => e.m !== 'hand').slice(-3).reverse();
+      return `<div class="pkr-felt" data-street="${h ? h.street : 0}">
+          ${seat(opp, 'opp', theirs, shown ? res.desc.opp : '')}
+          <div class="pkr-mid"><span class="pkr-pot mono">Pot 🪙 ${fmt(h ? h.pot : 0)}</span><div class="pkr-board">${board}</div>${result}</div>
+          ${seat(me, 'me', mine, shown ? res.desc.me : '')}
+        </div>
+        <div class="pkr-log" aria-live="polite">${lines.map(e => `<span>${pkrLine(e, st)}</span>`).join('')}</div>
+        ${actions}
+        <div class="pkr-foot"><span class="panel-note">${h ? `Hand #${fmt(h.n)} · ` : ''}blinds ${fmt(st.sb)} / ${fmt(st.bb)} · buy-in 🪙 ${fmt(st.buyin)}</span>${st.status === 'play' ? `<button class="btn ghost small" data-pkr="leave">Leave · cash out</button>` : ''}</div>`;
+    };
+    const pkrRaiseLabel = (to, cur, op) => (to >= op.maxTo ? `All-in ${fmt(to)}` : cur === 0 ? `Bet ${fmt(to)}` : `Raise to ${fmt(to)}`);
+    // Compte à rebours (tour de l'adversaire, main suivante) sans tout redessiner.
+    const pkrClock = () => {
+      clearInterval(PKR.clock);
+      const st = PKR.st, at = Date.now();
+      if (!st || !st.hand) return;
+      const tick = () => {
+        if (!pkrBody.isConnected) { clearInterval(PKR.clock); return; }
+        const el = pkrBody.querySelector('.pkr-secs'); if (!el) return;
+        const left = el.dataset.secs === 'next' ? st.hand.next : st.hand.left;
+        if (left == null) { el.textContent = ''; return; }
+        const s = Math.max(0, Math.ceil((left - (Date.now() - at)) / 1000));
+        el.textContent = el.dataset.secs === 'next' ? `Next hand in ${s} s` : `${s} s`;
+      };
+      tick(); PKR.clock = setInterval(tick, 500);
+    };
+    const pkrSounds = (st, prev) => {
+      const h = st.hand;
+      if (!h) return;
+      const key = `${st.code}#${h.n}`, seen = PKR.seen.n === key ? PKR.seen : { n: key, mine: 0, board: 0, theirs: false }; // une main = table + numéro
+      const fresh = (seen.mine ? 0 : 2) + Math.max(0, h.board.length - seen.board) + (h.theirs && !seen.theirs ? 2 : 0);
+      for (let k = 0; k < Math.min(fresh, 5); k++) Sound.play('lock', { i: k, soft: 1 }, k * 0.11);
+      const pb = prev && prev.me && prev.opp && prev.hand && prev.code === st.code && prev.hand.n === h.n ? (prev.me.bet + prev.opp.bet) : 0, nb = (st.me.bet || 0) + ((st.opp && st.opp.bet) || 0);
+      if (!fresh && nb > pb) Sound.play('tick', { k: 3, soft: 1 });
+      if (h.done && h.res && h.res.w === 'me' && !(prev && prev.hand && prev.code === st.code && prev.hand.n === h.n && prev.hand.done)) {
+        Sound.play('reveal', { small: 1 });
+        if (h.res.won >= 20 * st.bb) FX.celebrate('uncommon', pkrBody.querySelector('.pkr-me') || pkrBody);
+      }
+    };
+    function pkrDraw(st, force) {
+      if (!st) return;
+      if (st.idle) { PKR.lobby = st; if (st.coins != null) showCoins(st.coins); }
+      if (st.status === 'over' && !PKR.over) {
+        PKR.over = st;
+        Online.shop().then(s => showCoins(s.coins)).catch(() => {});
+        if (st.over.net > 0 && st.over.reason === 'bust') { Sound.play('reveal', {}); setTimeout(() => FX.celebrate('epic', pkrBody), 50); }
+      }
+      if (st.status === 'play' || st.status === 'wait') PKR.over = null;
+      const show = st.idle && PKR.over ? PKR.over : st, prev = PKR.st;
+      PKR.st = show;
+      if (currentView !== 'gamble' || !pkrBody.isConnected) return;
+      const sig = JSON.stringify(show, (k, v) => (k === 'left' || k === 'next' || k === 'coins' ? undefined : v)) + PKR.buyin + (PKR.friends ? PKR.friends.length : 0);
+      if (!force && sig === PKR.sig) return;
+      PKR.sig = sig;
+      const keep = document.activeElement && document.activeElement.id === 'pkr-code' ? document.activeElement.value : null;
+      if (!show.idle && show.status === 'play') pkrSounds(show, prev);
+      pkrBody.innerHTML = show.idle ? pkrLobbyHTML(show) : show.status === 'wait' ? pkrWaitHTML(show) : pkrTableHTML(show);
+      if (keep != null && $('#pkr-code')) { $('#pkr-code').value = keep; $('#pkr-code').focus(); }
+      if (show.hand) PKR.seen = { n: `${show.code}#${show.hand.n}`, mine: show.hand.mine.length, board: show.hand.board.length, theirs: !!show.hand.theirs };
+      Avatars.paint(pkrBody);
+      pkrClock();
+    }
+    // Sondage : 0,6 s quand le bot va jouer ou qu'une main finit contre lui, 1,5 s à table entre amis, 5 s au salon ou
+    // onglet caché. S'arrête quand on quitte l'onglet Poker ou la page.
+    const pkrDelay = st => (document.hidden ? 5000 : !st || st.idle ? 5000 : st.status === 'wait' ? 2500 : st.status !== 'play' ? 5000 : st.bot && st.hand && (st.hand.done || st.hand.turn === 'opp') ? 600 : 1500);
+    const pkrPoll = delay => { clearTimeout(PKR.timer); PKR.timer = setTimeout(pkrLoad, delay == null ? pkrDelay(PKR.over ? PKR.lobby : PKR.st) : delay); };
+    async function pkrLoad() {
+      clearTimeout(PKR.timer);
+      if (currentView !== 'gamble' || Gamble.tab !== 'poker' || !pkrBody.isConnected || !Store.player.name) return;
+      if (!PKR.busy) { try { pkrDraw(await gamble('poker', { op: 'state' })); } catch (err) { /* hors ligne : on réessaie au prochain tour */ } }
+      pkrPoll();
+    }
+    // Amis pour les invitations (api/friends.js), relus au plus une fois par minute.
+    const pkrFriends = async () => {
+      if (PKR.friends && Date.now() - PKR.friendsAt < 60000) return;
+      try { const d = await Online.friends('list'); PKR.friends = d.friends || []; PKR.friendsAt = Date.now(); if (PKR.st && (PKR.st.idle || PKR.st.status === 'wait')) pkrDraw(PKR.st, true); } catch (err) { /* sans la liste : le code de table reste possible */ }
+    };
+    Gamble.pkrStart = () => { if (!Store.player.name) { pkrBody.innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; } if (PKR.st) pkrDraw(PKR.st, true); pkrFriends(); pkrLoad(); };
+    Gamble.pkrStop = () => { clearTimeout(PKR.timer); clearInterval(PKR.clock); };
+    pkrBody.addEventListener('input', e => {
+      if (e.target.id !== 'pkr-slider' || !PKR.st || !PKR.st.hand || !PKR.st.hand.op) return;
+      PKR.raise = Number(e.target.value);
+      const b = $('#pkr-raise-btn'); if (b) b.textContent = pkrRaiseLabel(PKR.raise, Number(e.target.dataset.cur), PKR.st.hand.op);
+    });
+    pkrBody.addEventListener('submit', e => { if (e.target.id !== 'pkr-join') return; e.preventDefault(); const code = $('#pkr-code').value.trim(); if (!code) { toast('Enter a table code'); return; } pkrSend({ op: 'join', code }); });
+    async function pkrSend(extra, btn) {
+      if (PKR.busy) return;
+      PKR.busy = true; if (btn) btn.disabled = true;
+      try {
+        const st = await gamble('poker', extra);
+        if (['bot', 'create', 'join', 'again'].includes(extra.op)) { PKR.over = null; PKR.raise = 0; Online.shop().then(s => showCoins(s.coins)).catch(() => {}); }
+        if (extra.op === 'act') { PKR.raise = 0; if (extra.move === 'fold') Sound.play('tick', { k: 0, soft: 1 }); }
+        pkrDraw(st, true);
+      } catch (err) { fail(err); if (btn) btn.disabled = false; pkrLoad(); return; } finally { PKR.busy = false; }
+      pkrPoll();
+    }
+    pkrBody.addEventListener('click', e => {
+      const b = e.target.closest('[data-pkr]');
+      if (!b || PKR.busy) return;
+      const op = b.dataset.pkr;
+      if (op === 'buyin') { PKR.buyin = Number(b.dataset.v); pkrDraw(PKR.st, true); return; }
+      if (op === 'lobby') { PKR.over = null; return pkrSend({ op: 'ack' }, b); }
+      if (op === 'size') { const s = $('#pkr-slider'); if (s) { s.value = b.dataset.v; s.dispatchEvent(new Event('input', { bubbles: true })); } return; }
+      if (op === 'copy') { navigator.clipboard.writeText(PKR.st.code).then(() => toast('Code copied'), () => toast(PKR.st.code)); return; }
+      if (op === 'leave' && PKR.st && PKR.st.status === 'play') {
+        const live = PKR.st.hand && !PKR.st.hand.done, t = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
+        if (!confirm(`${t(live ? 'Leave the table? Your hand in play is folded.' : 'Leave the table?')} ${t('You cash out your chips.')}`)) return;
+      }
+      const sel = $('#pkr-friend');
+      if (op === 'bot') return pkrSend({ op: 'bot', buyin: PKR.buyin }, b);
+      if (op === 'again') return pkrSend({ op: 'bot', buyin: PKR.st.buyin }, b);
+      if (op === 'create') return pkrSend({ op: 'create', buyin: PKR.buyin, ...(b.dataset.with && sel ? { name: sel.value } : {}) }, b);
+      if (op === 'invite') return sel ? pkrSend({ op: 'invite', name: sel.value }, b) : undefined;
+      if (op === 'join' || op === 'decline') return pkrSend({ op, code: b.dataset.code }, b);
+      if (op === 'leave' || op === 'next') return pkrSend({ op }, b);
+      if (['fold', 'check', 'call', 'raise'].includes(op)) return pkrSend({ op: 'act', move: op, ...(op === 'raise' ? { to: PKR.raise || (PKR.st.hand.op && PKR.st.hand.op.minTo) } : {}) }, b);
     });
     // ---- bitcoin : vrai prix (api/_btc.js), relu toutes les 20 s tant que l'onglet est ouvert
     const btcFmt = sats => (sats / 1e8).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
@@ -5375,8 +5603,10 @@
       // la mise remonte à 10.
       $('#g-chips').dataset.game = id;
       if (id !== 'plinko' && id !== 'wheel' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
-      const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc';
+      const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc' || id === 'poker'; // le poker a ses caves
       if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
+      Gamble.tab = id;
+      if (id === 'poker') Gamble.pkrStart(); else Gamble.pkrStop();
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
     // Mode « Reorder » : chaque onglet a ses flèches ◀ ▶ (au doigt comme à la souris) et se glisse-dépose sur ordinateur.
     let editing = false, dragId = null;
@@ -7033,7 +7263,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip', poker: '🃏 Poker' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
@@ -7868,7 +8098,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) { toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); dmPing(); } this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.poker) announcePoker(r.poker); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {

@@ -201,7 +201,9 @@ module.exports = async (req, res) => {
       const [counts] = await redis([['HVALS', unreadKey(playerId)]]);
       // Gros tirages des amis depuis bigSince (idée de Jguz01, 2026-10-26) ; absent = alertes coupées dans les réglages.
       const big = body.bigSince != null ? await bigRolls(playerId, Number(body.bigSince) || 0) : undefined;
-      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0), ...(big ? { big } : {}) });
+      // Invitations à une table de poker (api/_poker.js, 2026-11-03) : pseudo de l'ami et code de la table, rien d'autre.
+      const poker = await require('./_poker').invitesFor(playerId);
+      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0), ...(big ? { big } : {}), ...(poker.length ? { poker } : {}) });
     }
 
     const other = await findPlayer(cleanName(body.name));

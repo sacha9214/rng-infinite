@@ -834,6 +834,8 @@ async function flushDue(now = Date.now()) {
       if (entry.w && entry.w.length) await redis(entry.w);
       if (entry.wager) await settleWager(entry.wager.code, entry.wager.winner || null); // pot du duel, ou remboursement
       if (entry.lobby) await lobbyCheck(entry.lobby, now);
+      // Table de poker (api/_poker.js) : abandonnée depuis 2 min, réglée et encaissée ; sinon revue dans une minute.
+      if (entry.poker) await require('./_poker').check(entry.poker, now);
     }
   } catch (err) {
     console.error('flushDue', err); // la requête en cours passe quand même ; la prochaine réessaiera

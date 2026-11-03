@@ -65,7 +65,8 @@ async function house() {
 // Classement du casino, depuis toujours : plus gros gagnants (net = gagné − misé), plus gros perdants, plus gros
 // parieurs (total misé). Calculé depuis les compteurs de chaque joueur (gBet, gWon, manches par jeu) et gardé une
 // minute : la page peut le demander souvent sans relire toutes les fiches à chaque fois.
-const BOARD_KEY = 'casino:board', BOARD_TTL_S = 60, BOARD_TOP = 10, ROUND_FIELDS = [...PLAYED, 'gSlots'];
+// gPoker : mains de poker jouées (api/_poker.js, 2026-11-03), comptées comme des manches.
+const BOARD_KEY = 'casino:board', BOARD_TTL_S = 60, BOARD_TOP = 10, ROUND_FIELDS = [...PLAYED, 'gSlots', 'gPoker'];
 async function board(me) {
   const [raw] = await redis([['GET', BOARD_KEY]]);
   let data = null;
@@ -618,4 +619,4 @@ async function crash(id, body, at) {
   return { done: true, result: 'cash', mult, point: g.point, bet: g.bet, win, coins: (await wallet(id)).coins };
 }
 
-module.exports = { coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, duck, duckMult, duckCents, DUCK_CHANCE, wheel, wheelRtp, WHEEL_OUTER, WHEEL_INNER, WHEEL_MIN, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };
+module.exports = { ledger, coinflip, flipMult, FLIP_MULT, FLIP_MAX, BONUS, bonusKind, PLINKO_HIGH, PLINKO_HIGH_MAX, SIDE, sideWins, MINES_CAP, PLINKO_MIN, PLINKO_BALLS, slots, SLOT_REEL, SLOT_PAYS, slotMult, crashPeek, MAX_BETS, house, board, roulette, blackjack, plinko, mines, tower, towerMult, TOWER_EDGE, TOWER_EDGE_SOFT, TOWER_HARD_MAX, keno, kenoWin, dice, diceCents, diceMult, diceCover, DICE_D6, DICE_MIN_W, DICE_MAX_W, teddy, teddyMult, TEDDY_CHAMBERS, TEDDY_MAX, duck, duckMult, duckCents, DUCK_CHANCE, wheel, wheelRtp, WHEEL_OUTER, WHEEL_INNER, WHEEL_MIN, KENO_MAX_BET, KENO_PAYS, KENO_CAP, KENO_NUMBERS, KENO_DRAWN, TOWER_LEVELS, TOWER_FLOORS, crash, PLINKO, minesMult, MIN_BET, MAX_BET, MIN_ROLLS, RED: [...RED] };

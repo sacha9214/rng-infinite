@@ -58,6 +58,7 @@ node tools/test-server.mjs        # API server over real HTTP
 node tools/test-resp.mjs          # direct Redis connection (api/_resp.js) vs the relay, on a real local redis-server
 node tools/casino-sim.mjs         # casino EV checks (house edge ~3%)
 node tools/house-audit.mjs        # best-strategy audit: the house must win every game
+node tools/poker-sim.mjs          # poker bot vs 15 scripted strategies: every one must lose (rerun after touching api/_holdem.js)
 node tools/e2e-duel.mjs <dir>     # real browser + real API: duel chat and owner buttons
 node tools/skin-preview.mjs <id>  # contact sheet of a skin (see the rng-skin-design skill)
 ```
