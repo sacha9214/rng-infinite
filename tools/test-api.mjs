@@ -6554,6 +6554,88 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     // Places : de 2 à 6, rien d'autre.
     r = await pk(q3, { op: 'create', buyin: 100, seats: 9 }); assert.equal(r.body.max, 2, 'valeur hors limites : 2'); await pk(q3, { op: 'leave' });
   }
+  {
+    // Tables ouvertes (Sacha, 2026-11-04) : n'importe qui s'assoit, jusqu'à 6, avec la somme de son choix.
+    const mkO = (k, nm, old = true) => { const id = `0e1${k.toString(16)}`.repeat(4), secret = `0e1${k.toString(16)}f`.repeat(8).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 400, 'bonus', 20000, 'first', old ? Date.now() - 10 * 86400000 : Date.now() - 3600000], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+    const O = [0, 1, 2].map(k => mkO(k, `Open${k}`)), [o0, o1, o2] = O, onew = mkO(3, 'OpenNew', false);
+    const dayKeyNow = `pkday:${new Date(Date.now()).toISOString().slice(0, 10)}`, openSet = () => run([['SMEMBERS', 'pkopen']])[0].result || [];
+    const coins0 = await Promise.all(O.map(coinsOf)), h0 = casino();
+    r = await pk(o0, { op: 'state' });
+    assert.equal(r.body.open.stakes.length, 3); assert.deepEqual(r.body.open.stakes[1], { sb: 5, bb: 10, min: 200, max: 1000 }); assert.deepEqual(r.body.open.tables, []);
+    r = await pk(onew, { op: 'open', stake: 1, buyin: 500 }); assert.equal(r.status, 422); assert.equal(r.body.error, 'Open poker tables unlock 3 days after your first roll (3 days left)');
+    for (const [stake, buyin] of [[1, 150], [1, 1001], [1, 250.5], [9, 500]]) { r = await pk(o0, { op: 'open', stake, buyin }); assert.equal(r.status, 400, `${stake}/${buyin} refusé`); }
+    // Seul à la table : pas de main, on attend un autre joueur ; la cave choisie est débitée et compte dans le plafond.
+    r = await pk(o0, { op: 'open', stake: 1, buyin: 500 });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.open, true); assert.equal(r.body.status, 'play'); assert.equal(r.body.max, 6); assert.equal(r.body.players, 1);
+    assert.equal(r.body.hand, undefined); assert.equal(r.body.buyin, 500); assert.equal(r.body.host, false); assert.equal(r.body.bb, 10);
+    const ocode = r.body.code;
+    assert.equal(await coinsOf(o0), coins0[0] - 500); assert.equal(Number(run([['HGET', dayKeyNow, o0.playerId]])[0].result), 500);
+    assert.deepEqual(openSet(), [ocode]);
+    r = await pk(o0, { op: 'invite', name: 'Open1' }); assert.equal(r.status, 422, 'pas d\'invitation : la table est dans la liste');
+    // Les autres la voient dans la liste (pseudos seulement) ; le deuxième arrive avec une autre somme : la main part.
+    r = await pk(o1, { op: 'state' }); assert.deepEqual(r.body.open.tables, [{ code: ocode, stake: 1, players: 1, max: 6, names: ['Open0'] }]); noIds(r.body, o0);
+    r = await pk(o1, { op: 'open', stake: 1, buyin: 1000 });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.code, ocode, 'la table qui a une place'); assert.equal(r.body.buyin, 1000);
+    assert.equal(r.body.hand.n, 1); assert.equal(r.body.hand.mine.length, 2);
+    let now = Date.now();
+    const tab = () => JSON.parse(run([['GET', `pk:${ocode}`]])[0].result);
+    const onTable = t => t.seats.reduce((x, s) => x + (s ? s.stack : 0), 0) + (t.hand && !t.hand.done ? t.hand.put.reduce((x, v) => x + v, 0) : 0);
+    assert.equal(onTable(tab()), 1500, 'deux caves différentes sur la table');
+    // Un troisième s'assoit par le code, en pleine main : il joue la suivante.
+    r = await pk(o2, { op: 'join', code: ocode }); assert.equal(r.status, 400, 'il faut choisir sa somme');
+    r = await pk(o2, { op: 'join', code: ocode, buyin: 300 }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.me.out, true); assert.equal(r.body.players, 3);
+    const stateOf = p => Poker.handle(p.playerId, { op: 'state' }, now);
+    const playUntil = async (ps, stop) => {
+      for (let k = 0; k < 300; k++) {
+        const vs = await Promise.all(ps.map(stateOf));
+        if (stop(vs)) return vs;
+        const who = vs.findIndex(v => v.status === 'play' && v.hand && !v.hand.done && v.hand.turn === 'me');
+        if (who < 0) { now += 6000; continue; }
+        await Poker.handle(ps[who].playerId, { op: 'act', move: vs[who].hand.op.canCheck ? 'check' : 'call' }, now);
+      }
+      throw new Error('table ouverte bloquée');
+    };
+    let vs = await playUntil(O, v => v[2].hand && v[2].hand.n >= 2 && v[2].hand.mine.length === 2);
+    assert.equal(vs[0].seats.length, 6); for (const v of vs) assert.ok(!O.some(p => JSON.stringify(v).includes(p.playerId)), 'aucun identifiant');
+    vs = await playUntil(O, v => v[0].hand && v[0].hand.n >= 4 && v[0].hand.done);
+    // Open1 part : il encaisse son tapis, son gain se compte sur ses 1 000 apportés ; la table continue.
+    r = await pk(o1, { op: 'leave' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.table, true); assert.equal(r.body.buyin, 1000);
+    assert.equal(r.body.over.net, r.body.over.cash - 1000);
+    r = await pk(o1, { op: 'ack' }); assert.equal(r.body.idle, true); assert.equal(r.body.last.buyin, 1000);
+    assert.equal(tab().status, 'play');
+    // Open2 ferme la page : 45 s plus tard, il est encaissé avant la main suivante ; Open0, seul, attend sans main.
+    for (let k = 0; k < 60 && tab().seats.some(s => s && s.name === 'Open2'); k++) {
+      const v = await stateOf(o0);
+      if (v.hand && !v.hand.done && v.hand.turn === 'me') await Poker.handle(o0.playerId, { op: 'act', move: v.hand.op.canCheck ? 'check' : 'call' }, now);
+      else now += 16000;
+    }
+    assert.ok(!tab().seats.some(s => s && s.name === 'Open2'), 'parti au bout de 45 s'); assert.ok(tab().log.some(e => e.m === 'away'));
+    r = await Poker.handle(o2.playerId, { op: 'state' }, now); assert.equal(r.status, 'over'); assert.equal(r.over.mine, true); assert.equal(r.over.reason, 'away'); assert.equal(r.buyin, 300);
+    for (let k = 0; k < 10 && (tab().hand || {}).done === false; k++) { const v = await stateOf(o0); if (v.hand && !v.hand.done && v.hand.turn === 'me') await Poker.handle(o0.playerId, { op: 'act', move: 'check' }, now); now += 6000; }
+    now += 6000; let v0 = await stateOf(o0);
+    assert.equal(v0.status, 'play'); assert.equal(v0.hand, undefined, 'seul : pas de main'); assert.equal(v0.players, 1); assert.equal(tab().status, 'play');
+    // Il part : table vide, fermée et retirée de la liste. Aucune pièce créée.
+    await Poker.handle(o0.playerId, { op: 'leave' }, now); await Poker.handle(o2.playerId, { op: 'ack' }, now); await pk(o0, { op: 'ack' });
+    assert.equal(tab().status, 'over'); assert.deepEqual(openSet(), []);
+    r = await pk(o0, { op: 'state' }); assert.deepEqual(r.body.open.tables, []);
+    const h1 = casino(), rk = (h1['b:poker'] - h0['b:poker']) - (h1['w:poker'] - h0['w:poker']), coins1 = await Promise.all(O.map(coinsOf));
+    assert.ok(rk > 0, 'commission prise'); assert.equal(h1['b:poker'] - h0['b:poker'], 1800, 'comptes du casino : la somme de chacun');
+    assert.equal(coins1.reduce((x, v) => x + v, 0) + rk, coins0.reduce((x, v) => x + v, 0), 'pièces + commission = avant');
+    assert.equal(Number(run([['HGET', dayKeyNow, o1.playerId]])[0].result), 1000);
+    // Plafond du jour commun aux tables entre amis et ouvertes.
+    run([['HSET', dayKeyNow, o0.playerId, 2400]]);
+    r = await pk(o0, { op: 'open', stake: 0, buyin: 200 }); assert.equal(r.status, 422); assert.match(r.body.error, /only put 100 more coins on tables with other players/);
+    // Six places : le septième ouvre une deuxième table ; la file pending règle les deux tables abandonnées.
+    const S = [0, 1, 2, 3, 4, 5, 6].map(k => mkO(8 + k, `Seat${k}`)), sc0 = await Promise.all(S.map(coinsOf)), h2 = casino();
+    const codes = [];
+    for (const p of S) { r = await pk(p, { op: 'open', stake: 0, buyin: 40 + codes.length }); assert.equal(r.status, 200, JSON.stringify(r.body)); codes.push(r.body.code); }
+    assert.equal(new Set(codes.slice(0, 6)).size, 1, 'les six premiers à la même table'); assert.notEqual(codes[6], codes[0], 'le septième : une nouvelle table');
+    r = await pk(o1, { op: 'state' }); assert.deepEqual(r.body.open.tables.map(x => x.players), [6, 1]);
+    await Lib.flushDue(Date.now() + 5 * 60000);
+    assert.deepEqual(openSet(), [], 'tables abandonnées retirées');
+    const h3 = casino(), rk3 = (h3['b:poker'] - h2['b:poker']) - (h3['w:poker'] - h2['w:poker']), sc1 = await Promise.all(S.map(coinsOf));
+    assert.equal(sc1.reduce((x, v) => x + v, 0) + rk3, sc0.reduce((x, v) => x + v, 0), 'table ouverte abandonnée : tout revient');
+  }
 }
 
 // ================================================================ Fermes de bots (jonahfr, 2026-11-04) : plafond de comptes neufs par adresse, suspension

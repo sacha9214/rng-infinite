@@ -11761,6 +11761,17 @@ html.perf .pkr-timer i { animation: none !important; transform: scaleX(var(--fro
 .pkr-who-free { color: var(--prose-2); border-style: dashed !important; }
 .pkr-who-free .pkr-chair { width: 1.3rem; height: 1.3rem; font-size: .7rem; }
 .pkr-seats-pick { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+/* Tables ouvertes (Sacha, 2026-11-04) : bloc du salon sur toute la largeur, curseur de la somme, liste des tables. */
+.pko { justify-items: stretch; border-color: rgba(16, 185, 129, .55); }
+.pko .btn-roll { justify-self: start; }
+.pko-amount { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; min-width: 0; }
+.pko-amount input[type=range] { flex: 1 1 10rem; min-width: 0; accent-color: #10b981; }
+.pko-amount b { min-width: 5.5rem; }
+.pko-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; min-width: 0; }
+.pko-table { display: flex; align-items: center; gap: .6rem; padding: .45rem .6rem; border: 1px solid var(--outline); border-radius: .6rem; background: var(--surface); min-width: 0; }
+.pko-names { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pko-count { flex: none; opacity: .8; }
+.pko-table .btn, .pko-table .panel-note { flex: none; margin: 0; }
 .pkr-foot-btns { width: auto; justify-content: flex-end; }
 .pkr-foot-btns .input { flex: 0 1 8rem; }
 @media (min-width: 561px) {

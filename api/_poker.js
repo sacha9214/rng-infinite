@@ -1,6 +1,6 @@
 // Tables de poker du casino (demandé par Sacha, 2026-11-03 : « in casino, add a poker table so you can play against
 // bot or against your friend to bet your money »). Texas Hold'em sans limite, avec les pièces du jeu : à deux contre le
-// bot, de 2 à 6 entre amis (Sacha, 2026-11-04).
+// bot, de 2 à 6 entre amis (Sacha, 2026-11-04), et des tables ouvertes à tous, jusqu'à 6 (Sacha, 2026-11-04).
 // Le jeu lui-même (cartes, mains, enchères, bot) est dans api/_holdem.js ; ici : les tables dans Redis, les pièces, les
 // invitations, les minuteries. Pas une fonction publique (nom en « _ ») : api/shop.js y renvoie l'action « poker ».
 //   POST /api/shop { action: 'poker', op, … }
@@ -9,8 +9,9 @@
 //     op 'create' { buyin, seats?, name? } → ouvrir une table entre amis de 2 à 6 places (invités par leur pseudo, ou
 //                                        par le code de la table)
 //     op 'invite' { name }             → inviter un (autre) ami, tant qu'il reste une place
-//     op 'join' { code }               → s'asseoir à une place libre (même cave, débitée) ; en cours de partie, on joue
-//                                        à partir de la main suivante
+//     op 'join' { code, buyin? }       → s'asseoir à une place libre (même cave, débitée ; à une table ouverte, la
+//                                        somme choisie) ; en cours de partie, on joue à partir de la main suivante
+//     op 'open' { stake, buyin }       → table ouverte : la plus remplie de ce niveau qui a une place, sinon une neuve
 //     op 'start'                       → l'hôte lance la partie (au moins 2 joueurs ; une table pleine part toute seule)
 //     op 'decline' { code }            → refuser une invitation
 //     op 'act' { move, to? }           → fold | check | call | raise (to = total misé sur ce tour) | allin
@@ -47,6 +48,14 @@ const INVITE_S = 600, TABLE_S = 86400, LAST_S = 3600, OVER_S = 120, LOG_KEPT = 1
 // et par joueur aux tables entre amis (comptées quand la partie commence, pour les deux joueurs). Le bot n'est pas limité.
 const FRIEND_ROLLS = 300, FRIEND_DAY = 2500;
 const friendDayKey = now => `pkday:${dayKey(now)}`;
+// Tables ouvertes (Sacha, 2026-11-04 : « an open table when people can join whenever they want for like 6 people max,
+// and choose how many they want to put to come in ») : 6 places, n'importe qui s'assoit avec la somme de son choix (de
+// 20 à 100 grosses blinds) et joue dès la main suivante, puis part quand il veut. Mêmes garde-fous que les tables entre
+// amis, plafond du jour commun : perdre exprès contre son autre compte y serait encore plus simple.
+const OPEN = [{ sb: 1, bb: 2 }, { sb: 5, bb: 10 }, { sb: 10, bb: 20 }].map(s => ({ ...s, min: 20 * s.bb, max: 100 * s.bb }));
+const OPEN_SEATS = 6, OPEN_TABLES = 8; // au plus 8 tables par niveau
+const OPEN_KEY = 'pkopen'; // codes des tables ouvertes en cours (set)
+const OPEN_IDLE_MS = 45000; // assis à une table ouverte mais plus sur la page depuis 45 s : encaissé avant la main suivante
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOT_NAMES = ['Robo', 'Ace Bot', 'Bluffy', 'Chipper', 'Deuce', 'Nano', 'Byte'];
 
@@ -136,7 +145,7 @@ function afterMove(t, now) {
     const r = h.res;
     if (r.w >= 0) log(t, { s: r.w, m: 'win', a: r.win[r.w], d: r.shown ? r.desc[r.w] + (r.kick ? ` · ${r.kick}` : '') : undefined });
     else r.win.forEach((v, i) => { if (v > 0) log(t, { s: i, m: 'win', a: v, d: r.shown ? r.desc[i] : undefined }); });
-    w.push(['HINCRBY', STATS_KEY, 'hands', 1], ['HINCRBY', STATS_KEY, 'rake', r.rake], ['HINCRBY', STATS_KEY, 'pots', r.pot], ['HINCRBY', STATS_KEY, t.bot ? 'botHands' : 'friendHands', 1]);
+    w.push(['HINCRBY', STATS_KEY, 'hands', 1], ['HINCRBY', STATS_KEY, 'rake', r.rake], ['HINCRBY', STATS_KEY, 'pots', r.pot], ['HINCRBY', STATS_KEY, t.bot ? 'botHands' : t.open != null ? 'openHands' : 'friendHands', 1]);
     schedule(t, now);
     if (t.status === 'play') w.push(...busts(t, now));
     return w;
@@ -151,7 +160,7 @@ function busts(t, now) {
   const w = [];
   let by = null;
   for (const i of seated(t)) if (t.seats[i].stack === 0) { by = t.seats[i].name; w.push(...cashOut(t, i, now, 'bust', true)); log(t, { s: i, m: 'out' }); free(t, i); }
-  if (seated(t).length < 2) w.push(...endMatch(t, now, 'bust', -1, by));
+  if (t.open == null && seated(t).length < 2) w.push(...endMatch(t, now, 'bust', -1, by)); // table ouverte : on attend du monde
   return w;
 }
 function botAct(t, now) {
@@ -175,20 +184,22 @@ function timeout(t, i, now) {
 function cashOut(t, i, now, reason, mine = false) {
   const seat = t.seats[i];
   if (!seat || seat.bot || seat.cashed != null) return [];
-  const cash = seat.stack, hands = seat.h != null ? seat.h : (t.hands || 0);
+  const cash = seat.stack, hands = seat.h != null ? seat.h : (t.hands || 0), buyin = seatBuyin(t, seat);
   seat.cashed = cash; seat.stack = 0; seat.why = { reason, mine };
   const others = t.seats.filter((s, k) => s && k !== i).map(s => s.name);
-  const summary = JSON.stringify({ cash, buyin: t.buyin, net: cash - t.buyin, hands, reason, mine, vs: others.length === 1 ? others[0] : others.length ? others.join(', ') : null, bot: !!t.bot, t: now });
+  const summary = JSON.stringify({ cash, buyin, net: cash - buyin, hands, reason, mine, vs: others.length === 1 ? others[0] : others.length ? others.join(', ') : null, bot: !!t.bot, t: now });
   // Le joueur garde la table 2 min : il voit la fin (dernière main, raison, encaissement) jusqu'à son retour au salon
   // (op 'ack'). Une table finie, ou quittée, n'empêche pas d'en ouvrir une autre.
   const w = [['SET', seatKey(seat.id), t.code, 'EX', OVER_S], ['SET', lastKey(seat.id), summary, 'EX', LAST_S]];
   if (!hands) return [...w, ['HINCRBY', statsKey(seat.id), 'spent', -cash]];
-  return [...w, ['HINCRBY', statsKey(seat.id), 'bonus', cash], ['HINCRBY', statsKey(seat.id), 'gPoker', hands], ['HINCRBY', statsKey(seat.id), 'gBet', t.buyin], ['HINCRBY', statsKey(seat.id), 'gWon', cash], ...Gamble.ledger(seat.id, 'poker', t.buyin, cash, hands)];
+  return [...w, ['HINCRBY', statsKey(seat.id), 'bonus', cash], ['HINCRBY', statsKey(seat.id), 'gPoker', hands], ['HINCRBY', statsKey(seat.id), 'gBet', buyin], ['HINCRBY', statsKey(seat.id), 'gWon', cash], ...Gamble.ledger(seat.id, 'poker', buyin, cash, hands)];
 }
+// Cave d'un siège : la sienne à une table ouverte (chacun choisit), sinon celle de la table (tables d'avant : pas de seat.buyin).
+const seatBuyin = (t, s) => (s && s.buyin != null ? s.buyin : t.buyin);
 // Libère un siège encaissé pendant que la table continue : le joueur la regarde encore (t.gone, jamais envoyé tel quel).
 function free(t, i) {
   const s = t.seats[i];
-  t.gone = (t.gone || []).filter(g => g.id !== s.id).concat([{ id: s.id, name: s.name, cash: s.cashed, why: s.why }]).slice(-12);
+  t.gone = (t.gone || []).filter(g => g.id !== s.id).concat([{ id: s.id, name: s.name, cash: s.cashed, why: s.why, buyin: seatBuyin(t, s) }]).slice(-12);
   t.seats[i] = null;
 }
 // Un joueur quitte une table en cours (départ ou deux minuteries) : sa main est couchée, il encaisse, sa place se
@@ -202,7 +213,8 @@ function leaveSeat(t, i, now, reason) {
   log(t, { s: i, m: reason === 'timeout' ? 'gone' : 'leave' });
   free(t, i);
   if (t.hand && !t.hand.done && t.hand.turn === i) schedule(t, now);
-  if (t.status === 'play' && seated(t).length < 2) w.push(...endMatch(t, now, reason, -1, name));
+  if (t.open != null) { if (!seated(t).length) w.push(...endMatch(t, now, 'idle')); } // table ouverte : fermée quand elle est vide
+  else if (t.status === 'play' && seated(t).length < 2) w.push(...endMatch(t, now, reason, -1, name));
   return w;
 }
 // Fin du match : la main en cours est couchée par celui qui part (who), puis tout le monde encaisse.
@@ -215,6 +227,7 @@ function endMatch(t, now, reason, who = -1, by = null) {
   if (t.hand && !t.hand.done) w.push(...runOut(t, now)); // filet : jamais une main laissée en plan avec des jetons dedans
   t.deadline = 0; t.botAt = 0; t.nextAt = 0;
   if (who >= 0) log(t, { s: who, m: reason === 'timeout' ? 'gone' : 'leave' });
+  if (t.open != null) w.push(['SREM', OPEN_KEY, t.code]);
   return [...w, ...t.seats.flatMap((s, i) => cashOut(t, i, now, reason, i === who))];
 }
 // Table abandonnée (plus personne depuis 2 min) : la main en cours se joue jusqu'au bout comme si les absents ne
@@ -244,16 +257,33 @@ function advance(t, now) {
     if (stale(t, now)) { w.push(...abandon(t, now)); break; }
     if (t.status === 'wait') break;
     const h = t.hand;
-    if (!h || h.done) { if (!h || now >= t.nextAt) { if (seated(t).length < 2) { w.push(...endMatch(t, now, 'bust')); break; } deal(t, now); continue; } break; }
+    if (!h || h.done) {
+      if (h && now < t.nextAt) break;
+      if (t.open != null) { // table ouverte : les absents laissent leur place, puis on distribue s'il reste deux joueurs
+        w.push(...idleOut(t, now));
+        if (t.status === 'over') break;
+        if (seated(t).length < 2) { if (h) { t.btn = (h.btn + 1) % t.seats.length; t.hand = null; } break; }
+      } else if (seated(t).length < 2) { w.push(...endMatch(t, now, 'bust')); break; }
+      deal(t, now); continue;
+    }
     if (t.seats[h.turn] && t.seats[h.turn].bot) { if (now >= t.botAt) { w.push(...botAct(t, now)); continue; } break; }
     if (t.deadline && now >= t.deadline) { w.push(...timeout(t, h.turn, now)); continue; }
     break;
   }
   return w;
 }
+// Table ouverte, avant de distribuer : chacun de ceux qui ne regardent plus la table depuis 45 s encaisse et part (il
+// retrouvera son résultat en revenant sur le Poker). Vide : la table ferme.
+function idleOut(t, now) {
+  const w = [];
+  for (const i of humans(t)) if (now - lastSeen(t, i) > OPEN_IDLE_MS) { w.push(...cashOut(t, i, now, 'away', true)); log(t, { s: i, m: 'away' }); free(t, i); }
+  if (!seated(t).length) w.push(...endMatch(t, now, 'idle'));
+  return w;
+}
 function due(t, now) {
   if (t.status === 'over') return false;
   if (stale(t, now)) return true;
+  if (t.status === 'play' && !t.hand && t.open != null) return seated(t).length >= 2;
   if (t.status !== 'play' || !t.hand) return false;
   if (t.hand.done) return now >= t.nextAt;
   return t.seats[t.hand.turn] && t.seats[t.hand.turn].bot ? now >= t.botAt : !!t.deadline && now >= t.deadline;
@@ -314,9 +344,10 @@ function view(t, i, now, gone = null) {
   const seats = order.map(seat);
   const me = i >= 0 ? seat(i) : null, oppIdx = order.slice(1).find(k => t.seats[k]);
   const out = {
-    code: t.code, v: t.v, bot: !!t.bot, status: t.status, buyin: t.buyin, sb: t.sb, bb: t.bb, hands: t.hands || 0, max: n,
+    code: t.code, v: t.v, bot: !!t.bot, status: t.status, buyin: gone && gone.buyin != null ? gone.buyin : i >= 0 ? seatBuyin(t, t.seats[i]) : t.buyin, sb: t.sb, bb: t.bb, hands: t.hands || 0, max: n,
+    ...(t.open != null ? { open: true } : {}),
     seats, me, opp: oppIdx != null ? seat(oppIdx) : null, timeouts: i >= 0 && t.seats[i] ? t.seats[i].to || 0 : 0,
-    host: i === 0 && !t.bot, players: seated(t).length,
+    host: i === 0 && !t.bot && t.open == null, players: seated(t).length,
     log: t.log.slice(-8).map(e => ({ m: e.m, a: e.a, d: e.d, s: rel(e.s), n: e.s === i ? undefined : e.n })),
   };
   if (t.status === 'wait') out.invited = (t.invited || []).filter(x => seatOf(t, x.id) < 0).map(x => x.name);
@@ -325,7 +356,7 @@ function view(t, i, now, gone = null) {
     const why = (mine && mine.why) || { reason: t.over ? t.over.reason : 'leave', mine: !!t.over && t.over.who === i };
     const cash = mine ? mine.cash || 0 : 0;
     out.status = 'over';
-    out.over = { reason: why.reason, mine: !!why.mine, cash, net: cash - t.buyin, table: t.status === 'play', ...(t.over && t.over.by ? { by: t.over.by } : {}) };
+    out.over = { reason: why.reason, mine: !!why.mine, cash, net: cash - out.buyin, table: t.status === 'play', ...(t.over && t.over.by ? { by: t.over.by } : {}) };
   }
   if (h) {
     const mineTurn = !h.done && h.turn === i && i >= 0;
@@ -360,7 +391,23 @@ async function lobby(id, now) {
   const invites = all.filter((x, k) => joinable(tables[k])).slice(-5).map(x => ({ code: x.code, name: x.name, buyin: x.buyin }));
   let lastMatch = null; try { lastMatch = last ? JSON.parse(last) : null; } catch (e) { /* illisible */ }
   const [used] = await redis([['HGET', friendDayKey(now), id]]);
-  return { idle: true, invites, last: lastMatch, buyins: BUYINS, seats: [MIN_SEATS, MAX_SEATS], botMax: BOT_MAX, minRolls: Gamble.MIN_ROLLS, rake: H.RAKE, coins: Shop.balance(await readStats(id)), friend: { rolls: FRIEND_ROLLS, day: FRIEND_DAY, left: Math.max(0, FRIEND_DAY - (Number(used) || 0)) } };
+  const open = { stakes: OPEN, tables: (await openTables()).map(({ code, stake, players, max, names }) => ({ code, stake, players, max, names })) };
+  return { idle: true, invites, last: lastMatch, buyins: BUYINS, seats: [MIN_SEATS, MAX_SEATS], botMax: BOT_MAX, minRolls: Gamble.MIN_ROLLS, rake: H.RAKE, coins: Shop.balance(await readStats(id)), friend: { rolls: FRIEND_ROLLS, day: FRIEND_DAY, left: Math.max(0, FRIEND_DAY - (Number(used) || 0)) }, open };
+}
+// Tables ouvertes en cours (pkopen) : niveau, joueurs assis (pseudos, comme au classement), places. Les codes de tables
+// finies ou disparues sont retirés au passage.
+async function openTables() {
+  const [codes] = await redis([['SMEMBERS', OPEN_KEY]]);
+  if (!codes || !codes.length) return [];
+  const raws = await redis(codes.map(c => ['GET', tableKey(c)])), out = [], dead = [];
+  codes.forEach((code, k) => {
+    let t = null; try { t = raws[k] && JSON.parse(raws[k]); } catch (e) { /* illisible : comme finie */ }
+    if (!t || t.status === 'over' || t.open == null) { dead.push(code); return; }
+    const names = t.seats.filter(Boolean).map(s => s.name);
+    out.push({ code, stake: t.open, players: names.length, max: t.seats.length, names, created: t.created || 0 });
+  });
+  if (dead.length) await redis([['SREM', OPEN_KEY, ...dead]]);
+  return out.sort((a, b) => a.stake - b.stake || b.players - a.players || a.created - b.created);
 }
 
 // ---------------------------------------------------------------- entrer à une table
@@ -372,7 +419,8 @@ async function newCode() {
   }
 }
 // Sous le verrou du porte-monnaie du joueur : une seule table à la fois, 30 tirages, assez de pièces.
-async function mayBuyIn(id, buyin, friend = false, now = Date.now()) {
+// kind : false (bot), 'friend' (entre amis) ou 'open' (table ouverte) ; les deux derniers ont les garde-fous des cadeaux.
+async function mayBuyIn(id, buyin, kind = false, now = Date.now()) {
   const [cur] = await redis([['GET', seatKey(id)]]);
   if (cur) {
     const [raw] = await redis([['GET', tableKey(cur)]]);
@@ -383,10 +431,11 @@ async function mayBuyIn(id, buyin, friend = false, now = Date.now()) {
   if (rolls < Gamble.MIN_ROLLS) throw refuse(422, `Gamble unlocks after ${Gamble.MIN_ROLLS} rolls (you have ${rolls})`);
   const coins = Shop.balance(st);
   if (coins < buyin) throw refuse(422, `Not enough coins: ${buyin - coins} more needed`);
-  if (friend) {
-    if (rolls < FRIEND_ROLLS) throw refuse(422, `Poker with friends unlocks after ${FRIEND_ROLLS} rolls (you have ${rolls})`);
+  if (kind) {
+    const what = kind === 'open' ? 'Open poker tables unlock' : 'Poker with friends unlocks';
+    if (rolls < FRIEND_ROLLS) throw refuse(422, `${what} after ${FRIEND_ROLLS} rolls (you have ${rolls})`);
     const wait = accountWait(st, now);
-    if (wait) throw refuse(422, `Poker with friends unlocks ${NEW_ACCOUNT_DAYS} days after your first roll (${wait} left)`);
+    if (wait) throw refuse(422, `${what} ${NEW_ACCOUNT_DAYS} days after your first roll (${wait} left)`);
     await friendRoom(id, buyin, now, 'You');
   }
 }
@@ -394,12 +443,12 @@ async function mayBuyIn(id, buyin, friend = false, now = Date.now()) {
 async function friendRoom(id, buyin, now, who) {
   const [used] = await redis([['HGET', friendDayKey(now), id]]);
   const left = Math.max(0, FRIEND_DAY - (Number(used) || 0));
-  if (buyin > left) throw refuse(422, `${who === 'You' ? 'You' : who} can only put ${left} more coins on friend tables today (${FRIEND_DAY} a day)`);
+  if (buyin > left) throw refuse(422, `${who === 'You' ? 'You' : who} can only put ${left} more coins on tables with other players today (${FRIEND_DAY} a day)`);
 }
 // Plafond du jour : compté au début de la partie pour tous les assis, puis pour chaque joueur arrivé ensuite.
 const friendDayWrites = (ids, buyin, now) => [...ids.map(id => ['HINCRBY', friendDayKey(now), id, buyin]), ['EXPIRE', friendDayKey(now), 2 * 86400]];
 const nameOf = async id => (await redis([['HGET', 'names', id]]))[0] || 'Player';
-const buyInWrites = (t, id, now, i) => [['HINCRBY', statsKey(id), 'spent', t.buyin], ['SET', seatKey(id), t.code, 'EX', TABLE_S], ['DEL', lastKey(id)], ['HSET', seenKey(t.code), i, now]];
+const buyInWrites = (t, id, now, i, buyin = t.buyin) => [['HINCRBY', statsKey(id), 'spent', buyin], ['SET', seatKey(id), t.code, 'EX', TABLE_S], ['DEL', lastKey(id)], ['HSET', seenKey(t.code), i, now]];
 // Tables entre amis : de 2 à 6 places (Sacha, 2026-11-04 : « can we be more than two at the table and play with more
 // friends? »), choisies par celui qui ouvre la table. Contre le bot : toujours 2.
 const MIN_SEATS = 2, MAX_SEATS = 6;
@@ -440,7 +489,7 @@ async function create(id, body, now) {
   const buyin = buyinOf(body.buyin);
   if (!buyin) throw refuse(400, `Buy-in: ${BUYINS.join(', ')} coins`);
   return wallet(id, async () => {
-    await mayBuyIn(id, buyin, true, now);
+    await mayBuyIn(id, buyin, 'friend', now);
     const code = await newCode();
     const t = newTable(code, buyin, now, { id, name: await nameOf(id), stack: buyin, to: 0, at: now }, false, seatsOf(body.seats));
     const inv = body.name ? await inviteWrites(t, id, body.name, now) : [];
@@ -459,6 +508,7 @@ async function invite(id, body, now) {
   return withTable(code, async () => {
     const t = await load(code), i = t ? seatOf(t, id) : -1;
     if (!t || t.bot || i < 0 || t.status === 'over' || t.seats[i].cashed != null) throw refuse(422, 'You are not at a poker table');
+    if (t.open != null) throw refuse(422, 'Anyone can join this table from the open tables list');
     if (!t.seats.some(s => !s)) throw refuse(422, 'This table is full');
     await save(t, await inviteWrites(t, id, body.name, now));
     return view(t, i, now);
@@ -483,17 +533,46 @@ async function join(id, body, now) {
     if (was >= 0 && t.seats[was].cashed == null) return view(t, was, now);
     const k = t.seats.findIndex(s => !s);
     if (t.bot || k < 0) throw refuse(422, 'This table is full');
-    await mayBuyIn(id, t.buyin, true, now);
+    const open = t.open != null, buyin = open ? openBuyin(t.open, body.buyin) : t.buyin;
+    await mayBuyIn(id, buyin, open ? 'open' : 'friend', now);
     t.gone = (t.gone || []).filter(g => g.id !== id);
-    t.seats[k] = { id, name: await nameOf(id), stack: t.buyin, to: 0, at: now, h: 0 };
+    t.seats[k] = { id, name: await nameOf(id), stack: buyin, buyin, to: 0, at: now, h: 0 };
     t.seen[k] = now;
     log(t, { s: k, m: 'join' });
-    const w = [...buyInWrites(t, id, now, k), ['HDEL', inviteKey(id), code]];
-    if (t.status === 'play') w.push(...friendDayWrites([id], t.buyin, now)); // arrivé en cours de partie : compté tout de suite
+    const w = [...buyInWrites(t, id, now, k, buyin), ['HDEL', inviteKey(id), code]];
+    if (t.status === 'play') w.push(...friendDayWrites([id], buyin, now)); // arrivé en cours de partie : compté tout de suite
     else if (!t.seats.some(s => !s)) w.push(...await begin(t, now)); // table pleine : la partie commence toute seule
+    if (open) w.push(...advance(t, now)); // deuxième joueur d'une table ouverte : la première main part tout de suite
     await save(t, w);
     return view(t, k, now);
   }));
+}
+// Somme apportée à une table ouverte : un entier entre 20 et 100 grosses blinds du niveau.
+function openBuyin(stake, v) {
+  const s = OPEN[stake], n = Number(v);
+  if (!s || !Number.isInteger(n) || n < s.min || n > s.max) throw refuse(400, `Bring between ${s ? s.min : OPEN[0].min} and ${s ? s.max : OPEN[0].max} coins`);
+  return n;
+}
+// S'asseoir à une table ouverte d'un niveau : la plus remplie qui a encore une place (la partie commence plus vite), ou
+// une table neuve si toutes sont pleines. Une table prise entre-temps : on essaie la suivante.
+async function sitOpen(id, body, now) {
+  const stake = Number(body.stake);
+  if (!OPEN[stake]) throw refuse(400, 'Pick a table');
+  const buyin = openBuyin(stake, body.buyin);
+  const mine = (await openTables()).filter(x => x.stake === stake);
+  for (const x of mine.filter(x => x.players < x.max).sort((a, b) => b.players - a.players).slice(0, 3)) {
+    try { return await join(id, { code: x.code, buyin }, now); } catch (err) { if (!/full|gone/.test(err.message)) throw err; }
+  }
+  if (mine.length >= OPEN_TABLES) throw refuse(422, 'All tables are full, try again in a moment');
+  return wallet(id, async () => {
+    await mayBuyIn(id, buyin, 'open', now);
+    const code = await newCode(), { sb, bb } = OPEN[stake];
+    const t = { code, v: 0, open: stake, bot: false, buyin: 0, sb, bb, created: now, status: 'play', hands: 0, btn: 0, hand: null, log: [], seats: Array.from({ length: OPEN_SEATS }, () => null), seen: { 0: now } };
+    t.seats[0] = { id, name: await nameOf(id), stack: buyin, buyin, to: 0, at: now, h: 0 };
+    log(t, { s: 0, m: 'join' });
+    await save(t, [...buyInWrites(t, id, now, 0, buyin), ...friendDayWrites([id], buyin, now), ['SADD', OPEN_KEY, code], queueReveal(now + CHECK_MS, { poker: code })]);
+    return view(t, 0, now);
+  });
 }
 // L'hôte lance la partie dès que deux joueurs sont assis.
 async function start(id, now) {
@@ -563,7 +642,7 @@ function stateView(t, id, now) {
   const i = seatOf(t, id);
   if (i >= 0) return view(t, i, now);
   const g = (t.gone || []).find(x => x.id === id);
-  return view(t, -1, now, g ? { cash: g.cash, why: g.why } : { cash: 0, why: { reason: 'leave', mine: true } });
+  return view(t, -1, now, g ? { cash: g.cash, why: g.why, buyin: g.buyin } : { cash: 0, why: { reason: 'leave', mine: true } });
 }
 async function state(id, now) {
   const code = await myTable(id);
@@ -600,6 +679,7 @@ async function handle(id, body, now = Date.now()) {
   if (op === 'create') return create(id, body, now);
   if (op === 'invite') return invite(id, body, now);
   if (op === 'join') return join(id, body, now);
+  if (op === 'open') return sitOpen(id, body, now);
   if (op === 'start') return start(id, now);
   if (op === 'decline') return decline(id, body);
   if (op === 'act' || op === 'next') return play(id, body, now);
@@ -607,4 +687,4 @@ async function handle(id, body, now = Date.now()) {
   throw refuse(400, 'Unknown poker action');
 }
 
-module.exports = { handle, check, invitesFor, view, advance, BUYINS, BOT_MAX, TURN_MS, STALE_MS, CHECK_MS, MIN_SEATS, MAX_SEATS, FRIEND_DAY, FRIEND_ROLLS, tableKey, seatKey, inviteKey, STATS_KEY };
+module.exports = { handle, check, invitesFor, view, advance, BUYINS, BOT_MAX, TURN_MS, STALE_MS, CHECK_MS, MIN_SEATS, MAX_SEATS, FRIEND_DAY, FRIEND_ROLLS, OPEN, OPEN_KEY, OPEN_IDLE_MS, tableKey, seatKey, inviteKey, STATS_KEY };
