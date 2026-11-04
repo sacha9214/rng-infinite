@@ -97,45 +97,77 @@ function best5(cards) {
 }
 
 // ---------------------------------------------------------------- déroulé d'une main
-// La table `t` : { sb, bb, seats: [{ stack }, { stack }], hand, btn }. Les jetons d'une main en cours sont dans
-// hand.put (misés depuis le début de la main) et hand.bet (misés sur ce tour d'enchères) ; seats[i].stack = le reste.
-// À deux, le donneur (bouton) met la petite blind et parle en premier avant le flop, en dernier après.
+// La table `t` : { sb, bb, seats: [siège | null, …], hand, btn }, de 2 à 6 sièges (tables entre amis, demandé par
+// Sacha le 2026-11-04 : « can we be more than two at the table ») ; les tables contre le bot en ont toujours 2.
+// Un siège : { stack, … } ; null = place libre. Les jetons d'une main en cours sont dans hand.put (misés depuis le début
+// de la main) et hand.bet (misés sur ce tour d'enchères) ; seats[i].stack = le reste. hand.in[i] : le siège a reçu des
+// cartes (un joueur arrivé pendant la main attend la suivante) ; hand.fold[i] : il s'est couché.
+// Le bouton tourne sur les sièges occupés ; petite blind puis grosse blind à sa gauche. À deux, le bouton met la petite
+// blind et parle en premier avant le flop, en dernier après (règle du heads-up, inchangée).
 // rnd(n) → entier dans [0, n) : crypto.randomInt sur le serveur, un générateur rapide dans la simulation.
+const seatIn = (h, i) => (h.in ? !!h.in[i] : true); // les mains d'avant le 2026-11-04 n'ont pas « in » : tout le monde
+const live = (t, i) => { const h = t.hand; return seatIn(h, i) && !(h.fold && h.fold[i]); };
+const chips = (t, i) => (t.seats[i] ? t.seats[i].stack : 0);
+// Les sièges qui suivent `from` dans le sens du jeu (sens des aiguilles d'une montre), `from` en dernier, filtrés par ok.
+function around(t, from, ok) {
+  const n = t.seats.length, out = [];
+  for (let k = 1; k <= n; k++) { const i = (from + k) % n; if (ok(i)) out.push(i); }
+  return out;
+}
 function newHand(t, rnd) {
-  const deck = Array.from({ length: 52 }, (_, i) => i);
+  const n = t.seats.length, deck = Array.from({ length: 52 }, (_, i) => i);
   for (let i = 51; i > 0; i--) { const j = rnd(i + 1); const x = deck[i]; deck[i] = deck[j]; deck[j] = x; }
-  const b = t.hand ? 1 - t.hand.btn : (t.btn || 0), o = 1 - b;
-  const h = { btn: b, deck, hole: [[], []], board: [], street: 0, bet: [0, 0], put: [0, 0], cur: 0, minr: t.bb, acted: [false, false], chk: [false, false], turn: b, done: false, res: null, last: null };
-  for (let k = 0; k < 2; k++) { h.hole[o].push(deck.pop()); h.hole[b].push(deck.pop()); }
+  const ok = i => !!t.seats[i] && t.seats[i].stack > 0;
+  const start = t.btn || 0;
+  const b = t.hand ? around(t, t.hand.btn, ok)[0] : ok(start) ? start : around(t, start, ok)[0];
+  const order = around(t, b, ok); // le premier à gauche du bouton … le bouton en dernier
+  const heads = order.length === 2, sb = heads ? b : order[0], bb = heads ? order[0] : order[1];
+  const fill = v => Array.from({ length: n }, () => v);
+  const h = { btn: b, sb, bbs: bb, deck, hole: Array.from({ length: n }, () => []), in: fill(false), fold: fill(false), board: [], street: 0, bet: fill(0), put: fill(0), cur: 0, minr: t.bb, acted: fill(false), chk: fill(false), noRaise: fill(false), turn: b, done: false, res: null, last: null };
+  for (const i of order) h.in[i] = true;
+  for (let k = 0; k < 2; k++) for (const i of order) h.hole[i].push(deck.pop());
   t.hand = h; t.btn = b;
-  post(t, b, t.sb); post(t, o, t.bb);
-  h.cur = Math.max(h.bet[0], h.bet[1]);
-  // Une blind qui met déjà quelqu'un à tapis : la main peut n'avoir plus rien à décider.
-  if (!needs(t, b)) { if (needs(t, o)) h.turn = o; else closeStreet(t); }
+  post(t, sb, t.sb); post(t, bb, t.bb);
+  h.cur = Math.max(...h.bet);
+  // Premier à parler avant le flop : à gauche de la grosse blind (à deux : le bouton). Une blind qui met déjà quelqu'un
+  // à tapis : la main peut n'avoir plus rien à décider.
+  const first = around(t, bb, i => h.in[i])[0];
+  h.turn = first;
+  if (!needs(t, first)) { const next = around(t, first, i => needs(t, i))[0]; if (next != null) h.turn = next; else closeStreet(t); }
   return h;
 }
 function post(t, i, amount) {
   const h = t.hand, a = Math.min(amount, t.seats[i].stack);
   t.seats[i].stack -= a; h.bet[i] += a; h.put[i] += a;
 }
-// Le joueur i doit-il encore parler sur ce tour ? Non s'il est à tapis, ou si l'autre est à tapis et qu'il a déjà
-// mis au moins autant que lui (il n'y a plus rien à suivre ni à relancer).
+// Le joueur i doit-il encore parler sur ce tour ? Non s'il est couché ou à tapis, ou si tous les autres encore en jeu
+// sont à tapis et qu'il a déjà mis au moins autant qu'eux (il n'y a plus rien à suivre ni à relancer).
 function needs(t, i) {
-  const h = t.hand, o = 1 - i;
-  if (!h || h.done || t.seats[i].stack === 0) return false;
-  if (t.seats[o].stack === 0 && h.bet[i] >= h.bet[o]) return false;
+  const h = t.hand;
+  if (!h || h.done || !live(t, i) || chips(t, i) === 0) return false;
+  let others = false, top = 0;
+  for (let j = 0; j < t.seats.length; j++) if (j !== i && live(t, j)) { if (chips(t, j) > 0) others = true; top = Math.max(top, h.bet[j]); }
+  if (!others && h.bet[i] >= top) return false;
   return !h.acted[i] || h.bet[i] < h.cur;
 }
 // Ce que le joueur i peut faire. Relancer « à » un montant total sur ce tour : au moins la dernière relance en plus
-// (ou tapis s'il n'a pas assez), au plus ce que l'adversaire peut encore suivre (au-delà, personne ne suivrait).
+// (ou tapis s'il n'a pas assez), au plus ce que le plus gros tapis d'en face peut encore suivre (au-delà, personne ne
+// suivrait). Après un tapis plus petit qu'une relance complète, ceux qui avaient déjà parlé peuvent seulement suivre.
 function options(t, i) {
-  const h = t.hand, o = 1 - i, st = t.seats[i].stack;
+  const h = t.hand, st = chips(t, i);
   const toCall = Math.min(h.cur - h.bet[i], st);
-  const maxTo = Math.min(h.bet[i] + st, h.bet[o] + t.seats[o].stack);
-  const canRaise = t.seats[o].stack > 0 && maxTo > h.cur && st > toCall;
+  let cover = 0, others = false;
+  for (let j = 0; j < t.seats.length; j++) if (j !== i && live(t, j)) { cover = Math.max(cover, h.bet[j] + chips(t, j)); if (chips(t, j) > 0) others = true; }
+  const maxTo = Math.min(h.bet[i] + st, cover);
+  const canRaise = others && maxTo > h.cur && st > toCall && !(h.noRaise && h.noRaise[i]);
   return { toCall, canCheck: toCall === 0, canRaise, minTo: canRaise ? Math.min(h.cur + h.minr, maxTo) : 0, maxTo: canRaise ? maxTo : 0 };
 }
 const refuse = (status, error) => Object.assign(new Error(error), { status });
+// À qui le tour après le siège i : le prochain qui doit parler, sinon le tour d'enchères est fini.
+function pass(t, i) {
+  const next = around(t, i, j => needs(t, j))[0];
+  if (next != null) t.hand.turn = next; else closeStreet(t);
+}
 // Joue un coup pour le joueur i. move : fold | check | call | raise (to = montant total sur ce tour) | allin.
 // Tout est vérifié ici : le site n'envoie qu'une intention, jamais un montant qu'on croirait sur parole.
 function act(t, i, move, to) {
@@ -157,41 +189,51 @@ function act(t, i, move, to) {
     if (!op.canRaise) throw refuse(422, 'You cannot raise now');
     if (!Number.isInteger(to) || to < op.minTo || to > op.maxTo) throw refuse(400, `Raise to between ${op.minTo} and ${op.maxTo}`);
     post(t, i, to - h.bet[i]);
-    if (to - h.cur >= h.minr) h.minr = to - h.cur; // une relance complète ; un tapis plus petit ne la change pas
+    const full = to - h.cur >= h.minr;
+    if (full) h.minr = to - h.cur; // une relance complète ; un tapis plus petit ne la change pas
     h.last = { s: i, m: h.cur === 0 ? 'bet' : 'raise', a: to, allin: t.seats[i].stack === 0 };
     h.cur = to;
-    h.acted[1 - i] = false;
+    for (let j = 0; j < t.seats.length; j++) {
+      if (j === i || !live(t, j)) continue;
+      if (h.noRaise) h.noRaise[j] = full ? false : h.noRaise[j] || h.acted[j]; // relance incomplète : pas de sur-relance
+      h.acted[j] = false;
+    }
   } else throw refuse(400, 'Unknown move');
   h.acted[i] = true;
-  const o = 1 - i;
-  if (needs(t, o)) h.turn = o;
-  else if (!needs(t, i)) closeStreet(t);
+  pass(t, i);
 }
 // Se coucher hors de son tour : seulement en quittant la table (le joueur abandonne la main en cours).
 function forfeit(t, i) {
   const h = t.hand;
-  if (!h || h.done) return;
+  if (!h || h.done || !live(t, i)) return;
   h.last = { s: i, m: 'fold' };
   fold(t, i);
 }
 function fold(t, i) {
-  const h = t.hand, w = 1 - i;
-  h.folded = i;
-  // La part de la mise du gagnant que personne n'a suivie lui revient avant le partage (sans commission dessus).
-  const extra = h.bet[w] - h.bet[i];
-  if (extra > 0) { t.seats[w].stack += extra; h.bet[w] -= extra; h.put[w] -= extra; }
-  finish(t, w, false);
-}
-// Fin d'un tour d'enchères : mise non suivie rendue (l'autre est à tapis pour moins), puis carte(s) suivante(s).
-// Si quelqu'un est à tapis, plus personne ne peut miser : le tableau sort jusqu'au bout et on abat les cartes.
-function closeStreet(t) {
   const h = t.hand;
-  if (h.bet[0] !== h.bet[1]) {
-    const hi = h.bet[0] > h.bet[1] ? 0 : 1, extra = h.bet[hi] - h.bet[1 - hi];
-    t.seats[hi].stack += extra; h.bet[hi] -= extra; h.put[hi] -= extra;
+  h.folded = i;
+  if (h.fold) h.fold[i] = true; else h.fold = h.bet.map((_, j) => j === i);
+  const left = h.bet.map((_, j) => j).filter(j => live(t, j));
+  if (left.length === 1) {
+    // Tout le monde s'est couché : la part de la mise du gagnant que personne n'a suivie lui revient avant le partage
+    // (sans commission dessus), puis il prend tout.
+    const w = left[0], other = Math.max(0, ...h.bet.filter((_, j) => j !== w && seatIn(h, j)));
+    const extra = h.bet[w] - other;
+    if (extra > 0) { t.seats[w].stack += extra; h.bet[w] -= extra; h.put[w] -= extra; }
+    return settle(t, false);
   }
-  const allIn = t.seats[0].stack === 0 || t.seats[1].stack === 0;
-  if (h.street === 3 || allIn) {
+  if (h.turn === i || !needs(t, h.turn)) pass(t, i);
+}
+// Fin d'un tour d'enchères : la plus grosse mise, pour la part que personne n'a pu suivre, revient à son auteur.
+// Si au plus un joueur a encore des jetons, plus personne ne peut miser : le tableau sort jusqu'au bout et on abat.
+function closeStreet(t) {
+  const h = t.hand, n = t.seats.length;
+  let top = -1;
+  for (let j = 0; j < n; j++) if (live(t, j) && (top < 0 || h.bet[j] > h.bet[top])) top = j; // un joueur couché ne reprend rien
+  const second = Math.max(0, ...h.bet.filter((_, j) => j !== top && seatIn(h, j)));
+  if (top >= 0 && h.bet[top] > second) { const extra = h.bet[top] - second; t.seats[top].stack += extra; h.bet[top] -= extra; h.put[top] -= extra; }
+  const withChips = h.bet.map((_, j) => j).filter(j => live(t, j) && chips(t, j) > 0);
+  if (h.street === 3 || withChips.length <= 1) {
     while (h.board.length < 5) { h.deck.pop(); for (let k = h.board.length ? 1 : 3; k > 0; k--) h.board.push(h.deck.pop()); }
     h.street = 3;
     return showdown(t);
@@ -199,28 +241,57 @@ function closeStreet(t) {
   h.street++;
   h.deck.pop(); // carte brûlée, comme au vrai casino
   for (let k = h.street === 1 ? 3 : 1; k > 0; k--) h.board.push(h.deck.pop());
-  h.bet = [0, 0]; h.cur = 0; h.minr = t.bb; h.acted = [false, false]; h.chk = [false, false];
-  h.turn = 1 - h.btn;
-  if (!needs(t, h.turn)) { if (needs(t, 1 - h.turn)) h.turn = 1 - h.turn; else closeStreet(t); }
+  const zero = () => Array.from({ length: n }, () => 0), no = () => Array.from({ length: n }, () => false);
+  h.bet = zero(); h.cur = 0; h.minr = t.bb; h.acted = no(); h.chk = no(); h.noRaise = no();
+  // Après le flop : le premier encore en jeu à gauche du bouton (à deux : celui qui n'a pas le bouton).
+  const first = around(t, h.btn, j => needs(t, j))[0];
+  if (first != null) h.turn = first; else closeStreet(t);
 }
 function showdown(t) {
-  const h = t.hand;
-  const s = [0, 1].map(i => score([...h.hole[i], ...h.board]));
-  finish(t, s[0] > s[1] ? 0 : s[1] > s[0] ? 1 : -1, true, s);
+  const h = t.hand, s = h.bet.map((_, i) => (live(t, i) ? score([...h.hole[i], ...h.board]) : -1));
+  settle(t, true, s);
 }
-// Le pot va au gagnant moins la commission ; égalité : partagé, le jeton impair à celui qui n'a pas le bouton.
-function finish(t, w, shown, s) {
-  const h = t.hand, pot = h.put[0] + h.put[1], rake = rakeOf(pot), net = pot - rake, win = [0, 0];
-  if (w >= 0) win[w] = net;
-  else { const half = Math.floor(net / 2); win[0] = win[1] = half; win[1 - h.btn] += net - 2 * half; }
-  t.seats[0].stack += win[0]; t.seats[1].stack += win[1];
+// Les pots : un pot principal, puis un pot de côté à chaque tapis d'une taille différente. Chaque pot va à la meilleure
+// main parmi ceux qui y ont mis autant que lui, moins 5 % ; égalité : partagé, les jetons impairs d'abord au premier
+// gagnant à gauche du bouton. Les jetons des joueurs couchés restent dans les pots où ils les ont mis.
+function pots(t) {
+  const h = t.hand, n = t.seats.length, out = [];
+  const liveIdx = h.put.map((_, i) => i).filter(i => live(t, i));
+  const levels = [...new Set(liveIdx.map(i => h.put[i]))].sort((a, b) => a - b);
+  let prev = 0;
+  for (const L of levels) {
+    let amount = 0;
+    for (let i = 0; i < n; i++) if (seatIn(h, i)) amount += Math.max(0, Math.min(h.put[i], L) - prev);
+    if (amount > 0) out.push({ amount, elig: liveIdx.filter(i => h.put[i] >= L) });
+    prev = L;
+  }
+  let extra = 0; for (let i = 0; i < n; i++) if (seatIn(h, i)) extra += Math.max(0, h.put[i] - prev);
+  if (extra) { if (out.length) out[out.length - 1].amount += extra; else out.push({ amount: extra, elig: liveIdx }); }
+  return out;
+}
+function settle(t, shown, s) {
+  const h = t.hand, n = t.seats.length, win = Array.from({ length: n }, () => 0);
+  const seatOrder = around(t, h.btn, () => true); // à gauche du bouton d'abord : pour les jetons impairs
+  const all = pots(t).map(p => {
+    const rake = rakeOf(p.amount), net = p.amount - rake;
+    const best = shown ? Math.max(...p.elig.map(i => s[i])) : null;
+    const winners = (shown ? p.elig.filter(i => s[i] === best) : p.elig.slice()).sort((a, b) => seatOrder.indexOf(a) - seatOrder.indexOf(b));
+    const share = Math.floor(net / winners.length);
+    winners.forEach((i, k) => { win[i] += share + (k < net - share * winners.length ? 1 : 0); });
+    return { amount: p.amount, rake, winners, elig: p.elig };
+  });
+  for (let i = 0; i < n; i++) if (win[i]) t.seats[i].stack += win[i];
+  const pot = h.put.reduce((x, v) => x + v, 0), rake = all.reduce((x, p) => x + p.rake, 0);
+  const winners = win.map((v, i) => i).filter(i => win[i] > 0);
   h.done = true; h.turn = -1;
-  h.res = { pot, rake, win, w, shown };
+  h.res = { pot, rake, win, w: winners.length === 1 ? winners[0] : -1, shown, pots: all };
   if (shown) {
-    h.res.desc = s.map(describe);
-    // Même nom de main des deux côtés (« Pair of Tens » contre « Pair of Tens ») : on dit ce qui a départagé.
-    if (w >= 0 && h.res.desc[0] === h.res.desc[1]) h.res.kick = kicker(s[w], s[1 - w]);
-    h.res.best = w >= 0 ? best5([...h.hole[w], ...h.board]) : best5([...h.hole[0], ...h.board]);
+    h.res.desc = s.map(v => (v >= 0 ? describe(v) : null));
+    const main = all[0], w0 = main.winners[0];
+    // Même nom de main que le meilleur perdant (« Pair of Tens » contre « Pair of Tens ») : on dit ce qui a départagé.
+    const losers = main.elig.filter(i => !main.winners.includes(i)).sort((a, b) => s[b] - s[a]);
+    if (main.winners.length === 1 && losers.length && h.res.desc[w0] === h.res.desc[losers[0]]) h.res.kick = kicker(s[w0], s[losers[0]]);
+    h.res.best = best5([...h.hole[w0], ...h.board]);
   }
 }
 
@@ -389,4 +460,4 @@ function decide(v, m, rng) {
 // Le coup du bot pour le siège i (jamais rien d'autre que botView).
 const botMove = (t, i, m, rng) => decide(botView(t, i), m, rng);
 
-module.exports = { P, RAKE, rakeOf, rankOf, suitOf, toClient, score, categoryOf, describe, best5, newHand, needs, options, act, forfeit, botView, botMove, decide, equity, chen, newModel, observe };
+module.exports = { P, RAKE, rakeOf, rankOf, suitOf, toClient, score, categoryOf, describe, best5, newHand, needs, options, act, forfeit, pots, around, live, botView, botMove, decide, equity, chen, newModel, observe };

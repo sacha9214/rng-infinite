@@ -1,6 +1,22 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-03 by Sacha (with Claude). Update this file at the end of every session.
+Last updated: 2026-11-04 by Claude (poker-multi branch). Update this file at the end of every session.
+
+## Poker tables with up to 6 friends (2026-11-04, branch `claude/poker-multi`)
+
+Sacha: "can we be more than two at the table and play with more friends?"
+- **Engine (`api/_holdem.js`):** N seats (2–6, `null` = free seat). Button rotates over occupied seats, SB/BB to its
+  left (heads-up keeps button = SB), action order, incomplete all-in raise does not reopen betting (`noRaise`),
+  uncalled bets returned only to a live bettor, **side pots** by contribution level (`pots()`), 5% rake per pot,
+  odd chips to the first winner left of the button, folded hands never shown. `hand.in` = dealt this hand.
+  Heads-up output is unchanged: `tools/poker-sim.mjs` gives bit-identical numbers to before the change.
+- **Tables (`api/_poker.js`):** `create { seats: 2..6 }`; `start` (host, ≥2 seated; a full table starts itself);
+  `join` also works mid-match while a seat is free (dealt from the next hand, daily friend cap counted at once).
+  Leaving / two timeouts / busting cash that player out and free the seat (`t.gone` keeps their result view);
+  the table goes on while ≥2 players remain. Any seated player can invite while a seat is free.
+- **UI:** 2-seat tables keep the old layout; 3–6 seats use an oval grid (opponents as pods around the top,
+  pots row, board, you at the bottom). Lobby has a Seats picker (default 4), waiting room lists who sat + Start.
+- **Not done:** no chat at the table; spectators who were never seated can't watch.
 
 ## Casino poker (2026-11-03, branch `claude/poker`)
 

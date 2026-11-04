@@ -735,6 +735,15 @@
     'Most spins give 0.7×. The bonus wheel pays from 1.5× to 250×.': 'La plupart des tours donnent 0,7×. La roue bonus paie de 1,5× à 250×.',
     '250× comes out about once every 2,000 spins. The list under the wheel shows every chance.': '250× sort environ une fois tous les 2 000 tours. La liste sous la roue montre chaque chance.',
     'Bets from 1 to 1,000 coins.': 'Mises de 1 à 1 000 pièces.',
+    // Poker à plusieurs (Sacha, 2026-11-04)
+    'With friends, up to 6 players can sit at one table.': 'Entre amis, jusqu\'à 6 joueurs peuvent s\'asseoir à une table.',
+    'Texas Hold\'em · against the bot or up to 5 friends': 'Texas Hold\'em · contre le bot ou jusqu\'à 5 amis', 'Play with friends': 'Jouer entre amis', 'Seats': 'Places', 'Free seat': 'Place libre', 'Several winners': 'Plusieurs gagnants', 'Invited': 'Invités',
+    'Everyone buys in the same amount. Play hands until one player has all the chips; leave whenever you like and you cash out your chips. The house keeps 5% of every pot.': 'Tout le monde paie la même cave. On joue des mains jusqu\'à ce qu\'un joueur ait tous les jetons ; pars quand tu veux et tu encaisses tes jetons. La maison garde 5 % de chaque pot.',
+    'Waiting for the host to start': 'En attente que l\'hôte lance la partie', 'Waiting for a friend to join': 'En attente d\'un ami',
+    'everyone gets their coins back': 'chacun récupère ses pièces', 'You closed the table': 'Tu as fermé la table', 'The host closed the table': 'L\'hôte a fermé la table',
+    'You won the table': 'Tu as gagné la table', 'Everyone else left': 'Tous les autres sont partis', 'The table goes on without you.': 'La table continue sans toi.',
+    'Dealer button': 'Bouton du donneur', 'SB': 'PB', 'BB': 'GB', 'all-in': 'tapis', 'next hand': 'main suivante', 'You play from the next hand.': 'Tu joues à partir de la main suivante.',
+    'Only the host can start the game': 'Seul l\'hôte peut lancer la partie', 'Wait for at least one friend to join': 'Attends qu\'au moins un ami s\'assoie', 'Already at this table': 'Déjà à cette table',
     // Poker du casino (demandé par Sacha, 2026-11-03)
     'Poker': 'Poker', 'Texas Hold\'em · 1 vs 1 · against the bot or a friend': 'Texas Hold\'em · 1 contre 1 · contre le bot ou un ami',
     'Make the best 5-card hand, or make the other player fold.': 'Fais la meilleure main de 5 cartes, ou pousse l\'autre joueur à se coucher.',
@@ -778,6 +787,10 @@
   const PKN = { Twos: 'deux', Threes: 'trois', Fours: 'quatre', Fives: 'cinq', Sixes: 'six', Sevens: 'sept', Eights: 'huit', Nines: 'neuf', Tens: 'dix', Jacks: 'valets', Queens: 'dames', Kings: 'rois', Aces: 'as' };
   const pkDe = w => (/^[aeiou]/.test(w) ? `d'${w}` : `de ${w}`);
   const P = [
+    // Poker à plusieurs (2026-11-04) : lancer, pots principal et de côté.
+    [/^Start · (\d+) players$/, m => `Lancer · ${m[1]} joueurs`], [/^(Main|Side) pot 🪙 ([\d,]+)$/, m => `${m[1] === 'Main' ? 'Pot principal' : 'Pot de côté'} 🪙 ${nb(m[2])}`],
+    [/^(Main|Side) pot 🪙 ([\d,]+) →(.*)$/, m => `${m[1] === 'Main' ? 'Pot principal' : 'Pot de côté'} 🪙 ${nb(m[2])} →${m[3].replace(/\bYou\b/g, 'Toi')}`],
+    [/^you win 🪙 ([\d,]+)$/, m => `tu gagnes 🪙 ${nb(m[1])}`],
     // Poker (2026-11-03) : noms des mains (« Two Pair, Kings and Sevens »), coups, montants.
     [/^Straight Flush, (\w+) high$/, m => `Quinte flush hauteur ${PK1[m[1]] || m[1]}`], [/^Four of a Kind, (\w+)$/, m => `Carré ${pkDe(PKN[m[1]] || m[1])}`],
     [/^Full House, (\w+) full of (\w+)$/, m => `Full aux ${PKN[m[1]] || m[1]} par les ${PKN[m[2]] || m[2]}`], [/^Flush, (\w+) high$/, m => `Couleur hauteur ${PK1[m[1]] || m[1]}`],
