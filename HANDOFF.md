@@ -2,6 +2,38 @@
 
 Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
 
+## Open poker tables (2026-11-04, branch `claude/poker-open`)
+
+Sacha: "add in poker an open table when people can join whenever they want for like 6 people max, and choose how many
+they want to put to come in".
+
+- `api/_poker.js`: `op 'open' { stake, buyin }` seats the player at the fullest table of that stake that still has a seat,
+  or opens a new one (at most 8 per stake). `op 'join' { code, buyin }` sits at a given open table.
+  Stakes are `OPEN`: 1/2, 5/10 and 10/20; each player brings 20 to 100 big blinds.
+  - Open tables are `t.open = <stake index>`, always `status: 'play'`, 6 seats, no host and no invitations. Codes live
+    in the `pkopen` set (the lobby reads it and drops dead codes). A lone player waits with `hand: null`; the next hand is
+    dealt as soon as a second player sits down.
+  - Each seat has its own `buyin`. `cashOut`, the casino ledger, `last` and `over.net` use it (`seatBuyin`, which falls
+    back to `t.buyin` for tables created before this change).
+  - Before each deal, a player who has not polled the table for 45 s (`OPEN_IDLE_MS`) is cashed out (reason `away`). The
+    table closes when its last player leaves. If nobody looks at it for 2 min, the `pending` queue settles it as before.
+  - Same limits as friend tables: 300 rolls, account 3 days old. The 2,500 coins a day (`pkday:`) are shared by friend
+    and open tables. The day-limit message now says "tables with other players".
+- `js/app.js`: an "Open tables" block at the top of the Poker lobby. It has a blinds picker, a "You bring" slider, the
+  list of tables at those blinds (player names, n/6, Join) and Sit down. At an open table, "Waiting for another player
+  to sit down…" shows while you are alone, the footer shows "you brought", and there is no invite button.
+  CSS prefix `pko-`. French strings are in `js/i18n.js`.
+- Tests (`tools/test-api.mjs`, "Tables ouvertes"):
+  - the gates and the per-seat buy-in;
+  - joining mid-hand;
+  - the away cash-out;
+  - the table closing when it is empty;
+  - coins + rake conserved;
+  - the 7th player getting a new table;
+  - abandoned tables settled by `pending`.
+- Browser check on the dev server: I played against two scripted players. I checked leave and cash-out (650 in, 610
+  out, −40), waiting alone, the hand starting when a second player joined, French, 320 px, and the light theme.
+
 ## Bot farms: network cap, suspensions, 3-day gate (2026-11-04, branch `claude/anti-bot`)
 
 Reported by jonahfr on Discord ("all the TRING names", then forge, shieis, cosmicly…). Read-only look at the live data:
