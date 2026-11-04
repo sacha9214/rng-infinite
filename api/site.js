@@ -18,7 +18,7 @@
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
 // une case d'environ 100 km) est seulement comptée dans la case du jour (ang:<jour>) ; rien ne la relie à un joueur.
 const crypto = require('node:crypto');
-const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken } = require('./_lib');
+const { redis, ownsPlayer, readStats, dayKey, cleanName, toObject, cors, send, flushDue, statsKey, SEEN_KEY, findPlayer, nameKey, actKey, ACT_TTL, historyKey, VIEWER_EMAILS_SHA256, verifyGoogleToken, banPlayers, unbanPlayers, BANNED } = require('./_lib');
 const Reports = require('./_reports');
 const Announce = require('./_announce');
 const Roadmap = require('./_roadmap');
@@ -726,7 +726,7 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['imSet', 'recoverCode', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!['imSet', 'recoverCode', 'ban', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
     if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList', 'gwList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
     // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
     if (body.action === 'imSet') {
@@ -746,6 +746,17 @@ module.exports = async (req, res) => {
       const [old, name] = await redis([['GET', `recover:id:${who}`], ['HGET', 'names', who]]);
       await redis([...(old ? [['DEL', `recover:${old}`]] : []), ['SET', `recover:${code}`, who, 'EX', 7 * 86400], ['SET', `recover:id:${who}`, code, 'EX', 7 * 86400]]);
       return send(res, 200, { code, name: name || body.name, days: 7 });
+    }
+    // Suspendre ou réintégrer un joueur (fermes de bots signalées par jonahfr, 2026-11-04) : plus aucune action, retiré
+    // des classements et de la liste « en ligne » ; rien n'est effacé (api/_lib.js, banPlayers). Le créateur ne peut pas
+    // se suspendre lui-même.
+    if (body.action === 'ban') {
+      const who = await findPlayer(String(body.name || '').slice(0, 40));
+      if (!who) return send(res, 404, { error: 'No player with this name' });
+      if (who === playerId) return send(res, 422, { error: 'You cannot suspend yourself' });
+      if (body.on === false) await unbanPlayers([who]); else await banPlayers([who]);
+      const [name, total] = await redis([['HGET', 'names', who], ['SCARD', BANNED]]);
+      return send(res, 200, { name: name || body.name, banned: body.on !== false, total: Number(total) || 0 });
     }
     // Giveaways sur le Discord (api/_giveaway.js, Sacha, 2026-11-01) : la liste, et en lancer un (créateur seulement).
     if (body.action === 'gwList' || body.action === 'gwStart') {

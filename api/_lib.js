@@ -183,6 +183,13 @@ const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 // right now. » dans le chat global et plus rien de public ne s'affichait (2026-10-30). Un script reste coupé.
 const RATE_LIMIT = 900;
 const RATE_WINDOW_MS = 60000;
+// Adresse du visiteur, posée par Caddy ; vide en local. IPv6 : comptée par /64 (audit de sécurité, 2026-11-02 : une box
+// reçoit des milliards d'adresses, changer d'adresse à chaque requête passait la limite).
+function clientIp(req) {
+  const fwd = req && req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip']);
+  const raw = fwd ? String(fwd).split(',')[0].trim() : '';
+  return raw.includes(':') ? raw.toLowerCase().split(':').slice(0, 4).join(':') : raw;
+}
 const hits = new Map();
 function limited(req) {
   // Images des photos de profil (GET ?avatar=…) : légères et mises en cache par le navigateur ; un classement en affiche
@@ -190,12 +197,9 @@ function limited(req) {
   // Seulement les vraies images (audit de sécurité, 2026-11-02 : ajouter « &avatar= » à n'importe quelle adresse
   // passait la limite).
   if (req.method === 'GET' && /^\/api\/profile\?avatar=[0-9a-f]{20}$/.test(String(req.url || ''))) return false;
-  const fwd = req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip']);
-  const raw = fwd ? String(fwd).split(',')[0].trim() : '';
-  if (!raw) return false;
-  // IPv6 : compté par /64 (audit de sécurité, 2026-11-02 : une box reçoit des milliards d'adresses, changer d'adresse à
-  // chaque requête passait la limite). Table bornée : passé 20 000 adresses, on repart de zéro au lieu de tout parcourir.
-  const ip = raw.includes(':') ? raw.toLowerCase().split(':').slice(0, 4).join(':') : raw;
+  const ip = clientIp(req);
+  if (!ip) return false;
+  // Table bornée : passé 20 000 adresses, on repart de zéro au lieu de tout parcourir.
   const now = Date.now();
   if (hits.size > 20000) hits.clear();
   let h = hits.get(ip);
@@ -238,15 +242,49 @@ function send(res, status, body) {
 // Un identifiant déjà lié à Google ou qui a des secrets d'appareil n'est jamais « créé » par le premier secret venu
 // (audit de sécurité, 2026-11-02) : un joueur créé par la connexion Google n'avait pas de secret principal, et la
 // première requête avec son identifiant et n'importe quel secret prenait le compte.
-async function claimPlayer(playerId, secret) {
+// Comptes neufs par adresse (fermes de bots, signalées par jonahfr le 2026-11-04 : 349 comptes en une demi-heure le 3,
+// puis 104 dans la même minute le 4, ~35 % des tirages du jour). Large exprès : toute une classe peut créer ses joueurs
+// derrière le Wi-Fi de l'école. Sans adresse (tests, local), pas de plafond.
+const NEW_PER_HOUR = 20, NEW_PER_DAY = 60;
+async function newPlayerRoom(req) {
+  const ip = clientIp(req);
+  if (!ip) return;
+  const t = Date.now(), hk = `newp:h:${ip}:${Math.floor(t / 3600000)}`, dk = `newp:d:${ip}:${dayKey(t)}`;
+  const [h, , d] = await redis([['INCR', hk], ['EXPIRE', hk, 3600], ['INCR', dk], ['EXPIRE', dk, 86400]]);
+  if (Number(h) > NEW_PER_HOUR || Number(d) > NEW_PER_DAY) throw suspendedErr(429, 'Too many new players from this network today. Try again later, or sign in to your player.');
+}
+
+// Cadeaux et tables de poker entre amis : 3 jours après le premier tirage (fermes de bots du 2026-11-04 : 104 comptes
+// passés en une journée au-dessus des 300 tirages demandés, prêts à tout envoyer à un seul joueur). Renvoie le temps
+// qu'il reste à attendre (« 2 days », « 5 hours »), ou '' si c'est bon. Sans « first » (joueurs d'avant ce champ) : bon.
+const NEW_ACCOUNT_DAYS = 3;
+function accountWait(st, now = Date.now()) {
+  const first = Number(st && st.first) || 0;
+  const ms = first ? first + NEW_ACCOUNT_DAYS * 86400000 - now : 0;
+  if (ms <= 0) return '';
+  const h = Math.ceil(ms / 3600000);
+  return h > 24 ? `${Math.ceil(h / 24)} days` : h === 1 ? '1 hour' : `${h} hours`;
+}
+
+// Joueurs suspendus (set « banned », par le créateur : page Owner ou tools/ban-bots.js). Rien n'est effacé : leurs
+// tirages, pièces et objets restent, mais plus aucune action ne passe. 423 et pas 403 : sur un 403, le site oublie
+// l'identifiant et en crée un neuf.
+const BANNED = 'banned';
+const suspendedErr = (status, error) => Object.assign(new Error(error), { status });
+const SUSPENDED = () => suspendedErr(423, 'This account is suspended');
+async function claimPlayer(playerId, secret, req) {
   const hash = sha256(secret);
-  const [owner, member, google, devices] = await redis([
+  const [owner, member, google, devices, banned] = await redis([
     ['GET', `player:${playerId}:secret`],
     ['SISMEMBER', `player:${playerId}:secrets`, hash],
     ['GET', `player:${playerId}:google`],
     ['SCARD', `player:${playerId}:secrets`],
+    ['SISMEMBER', BANNED, playerId],
   ]);
-  if (owner !== null || google !== null || Number(devices) > 0) return owner === hash || Number(member) === 1;
+  const mine = owner === hash || Number(member) === 1;
+  if (mine && Number(banned) === 1) throw SUSPENDED();
+  if (owner !== null || google !== null || Number(devices) > 0) return mine;
+  await newPlayerRoom(req);
   const [created, now] = await redis([['SET', `player:${playerId}:secret`, hash, 'NX'], ['GET', `player:${playerId}:secret`]]);
   if (created === 'OK') await markFresh(playerId);
   return now === hash;
@@ -299,14 +337,41 @@ async function claimName(playerId, name, opts = {}) {
 }
 
 // Vrai si ce secret appartient au joueur : secret d'origine, ou secret d'un appareil connecté avec Google.
+// Joueur suspendu : erreur 423 (« This account is suspended »), attrapée par chaque point d'entrée.
 async function ownsPlayer(playerId, secret) {
   const hash = sha256(secret);
-  const [owner, member] = await redis([
+  const [owner, member, banned] = await redis([
     ['GET', `player:${playerId}:secret`],
     ['SISMEMBER', `player:${playerId}:secrets`, hash],
+    ['SISMEMBER', BANNED, playerId],
   ]);
-  return owner === hash || Number(member) === 1;
+  const mine = owner === hash || Number(member) === 1;
+  if (mine && Number(banned) === 1) throw SUSPENDED();
+  return mine;
 }
+
+// Suspend des joueurs : set « banned », et retrait des classements, de la liste « en ligne » et des dernières activités
+// (sorted sets lb…, hlb…, coinless:lb, seen, presz). Leurs tirages, pièces et objets restent. Un joueur réintégré
+// (unbanPlayers) retrouve tout sauf ces places, qu'il regagne en jouant.
+const BAN_BOARDS = /^(h?lb[wx]?:|coinless:lb$|seen$|presz$)/;
+async function banPlayers(ids) {
+  ids = [...new Set(ids)].filter(id => /^[0-9a-f]{16}$/.test(id));
+  if (!ids.length) return 0;
+  const boards = [];
+  let cur = '0';
+  do {
+    const [[next, keys]] = await redis([['SCAN', cur, 'COUNT', 2000, 'TYPE', 'zset']]);
+    cur = String(next);
+    boards.push(...keys.filter(k => BAN_BOARDS.test(k)));
+  } while (cur !== '0');
+  for (let i = 0; i < ids.length; i += 200) {
+    const part = ids.slice(i, i + 200);
+    await redis([['SADD', BANNED, ...part], ...boards.map(k => ['ZREM', k, ...part])]);
+  }
+  return ids.length;
+}
+const unbanPlayers = ids => redis([['SREM', BANNED, ...ids]]);
+const isBanned = async id => Number((await redis([['SISMEMBER', BANNED, id]]))[0]) === 1;
 
 // Historique d'un joueur : sorted set (score = timestamp, membre = "timestamp:nombre", donc sans doublon).
 const historyKey = playerId => `hist:${playerId}`;
@@ -847,6 +912,6 @@ module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkH
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
-  ownsPlayer, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
+  ownsPlayer, NEW_ACCOUNT_DAYS, accountWait, banPlayers, unbanPlayers, isBanned, BANNED, clientIp, NEW_PER_HOUR, NEW_PER_DAY, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, COLLECTION_SETS, COLLECTION_VERSION, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
 };

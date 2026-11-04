@@ -401,7 +401,7 @@ async function tick(now = Date.now()) {
 async function handle(body, now = Date.now()) {
   const op = String(body.op || 'view'), playerId = String(body.playerId || ''), secret = String(body.secret || '');
   const valid = /^[0-9a-f]{16}$/.test(playerId) && /^[0-9a-f]{32}$/.test(secret);
-  const me = valid && (await ownsPlayer(playerId, secret)) ? playerId : null;
+  const me = valid && (await ownsPlayer(playerId, secret).catch(e => { if (e.status === 423) return false; throw e; })) ? playerId : null; // suspendu : vue publique
   const today = dayKey(now), yesterday = dayKey(now - DAY_MS);
   // Tournoi du mode difficile (which: 4) : vu seul, sans les tournois du mode normal.
   if (op === 'view' && Number(body.which) === 4) {

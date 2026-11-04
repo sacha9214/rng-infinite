@@ -1,6 +1,40 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-04 by Claude (poker-multi branch). Update this file at the end of every session.
+Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
+
+## Bot farms: network cap, suspensions, 3-day gate (2026-11-04, branch `claude/anti-bot`)
+
+Reported by jonahfr on Discord ("all the TRING names", then forge, shieis, cosmicly…). Read-only look at the live data:
+- **2026-11-03 21:05**: 10 accounts "X CID" (630 rolls each). **22:46–23:13**: ~340 accounts "CID …" and "TRING …"
+  created in bursts of ~50 per minute. The TRING accounts donated ~16k coins to the clan **CHIPER [CID]** (vault
+  104,680). realwhxx (real Google account, 13.8k rolls) made the bot "TRING Plasma" leader and promoted 6 TRING bots
+  one or two seconds apart, then TRING Plasma kicked realwhxx and 36 members.
+- **2026-11-04 01:34**: 100 accounts with random names in the same minute, ~4,500 rolls each by 19:00 UTC (≈35 % of
+  the day's rolls). No coins moved yet, but all past the 300-roll gate for gifts and friend poker.
+
+What changed:
+- `api/_lib.js`: `clientIp(req)` (shared with the rate limit), `NEW_PER_HOUR = 20` / `NEW_PER_DAY = 60` new players per
+  address (`newp:h:<ip>:<hour>`, `newp:d:<ip>:<day>`), checked in `claimPlayer` only when an id is about to be created
+  (roll, name and room pass `req`). No address (local, tests) → no cap. Error 429 "Too many new players from this network…".
+- Suspension: set `banned`. `claimPlayer` / `ownsPlayer` throw **423** "This account is suspended" for the right
+  secret (a wrong secret is still 403). 423 and not 403 because the site resets its player id on a 403 roll.
+  `banPlayers(ids)` also ZREMs them from every `lb…`, `hlb…`, `coinless:lb`, `seen`, `presz` sorted set (SCAN TYPE zset).
+  Nothing is deleted; `unbanPlayers` gives access back but not the leaderboard spots. Suspended players still read
+  the global chat and the tournament as visitors.
+- Owner page → Chat → "Suspend a player" (Suspend / Restore), API `site` action `ban { name, on }`.
+- Gifts and friend poker tables: `accountWait(stats)` → 3 days after `stats.first` (players without `first` are old).
+- Client: `blockedRoll(err)` shows the server message and stops auto-roll on 423 or the network cap, without a local roll.
+- `tools/ban-bots.js`: finds minutes with 6+ new accounts since a date, skips Google, friends, photos and `--keep`
+  names, prints the clans they donated to. Dry run by default; `--apply` suspends.
+
+**To do for Sacha after deploying** (on the VPS, same env as the other tools):
+`node tools/ban-bots.js` (dry run: 447 accounts as of 2026-11-04 19:00 UTC), then `--apply`. Look at two by hand:
+"Hehe michael jackson" (created 23:05 among 51 bots, 350 rolls, no spending) and "Venom" (01:34 like the 100 bots, but
+gambled 30,500); add `--keep "Name"` to spare one. Then decide on realwhxx and the CHIPER vault (104,680 coins, led by
+a bot): nothing was changed there.
+
+Not done: clan donations have no account-age gate (a vault only buys clan things); duel stakes are random so they
+can't funnel coins on purpose.
 
 ## Poker tables with up to 6 friends (2026-11-04, branch `claude/poker-multi`)
 

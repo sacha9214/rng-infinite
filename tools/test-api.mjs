@@ -2809,7 +2809,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const coinsOf = async who => (await call(shopApi, { url: `/api/shop?me=${who.playerId}` })).body.coins;
   const [g1, g2, g3, g4, g5, g6] = ['Gfgiver', 'Gfgetter', 'Gfnewbie', 'Gfstranger', 'Gfhelper', 'Gfextra'].map((name, i) => ({ playerId: `9${i}`.repeat(8), secret: `8${i}`.repeat(16), name }));
   for (const g of [g1, g2, g3, g4, g5, g6]) { clock += 9000; const x = await call(roll, { method: 'POST', body: g }); assert.equal(x.status, 200, g.name + JSON.stringify(x.body)); }
-  for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 400], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
+  // Premier tirage il y a 10 jours : les cadeaux attendent 3 jours après le premier tirage (fermes de bots, 2026-11-04).
+  for (const g of [g1, g2, g4, g5, g6]) run([['HSET', `stats:${g.playerId}`, 'rolls', 400, 'first', Date.now() - 10 * 86400000], ['HINCRBY', `stats:${g.playerId}`, 'bonus', 3000]]);
   run([['HINCRBY', `stats:${g3.playerId}`, 'bonus', 3000]]); // riche, mais un seul tirage
   // Amis : Gfgiver ↔ Gfgetter, Gfnewbie ↔ Gfgetter, Gfhelper ↔ Gfgetter, Gfextra ↔ Gfgetter. Gfstranger a seulement demandé.
   run([['HINCRBY', `stats:${g1.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g3.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g4.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g5.playerId}`, 'h:rolls', 10], ['HINCRBY', `stats:${g6.playerId}`, 'h:rolls', 10]]); // 10 tirages pour envoyer des demandes d'amis (audit de sécurité, 2026-11-02)
@@ -2822,6 +2823,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await fr(g1, 'list');
   assert.deepEqual([r.body.gift.min, r.body.gift.max, r.body.gift.sendDay, r.body.gift.receiveDay, r.body.gift.rolls, r.body.gift.left, r.body.gift.coins], [10, 500, 1000, 2000, 300, 1000, before1]);
   // Un cadeau : débité d'un côté, crédité de l'autre, au même solde que la boutique.
+  // Compte de moins de 3 jours : refusé, avec le temps qu'il reste (fermes de bots, 2026-11-04).
+  const oldFirst = run([['HGET', `stats:${g1.playerId}`, 'first']])[0].result;
+  run([['HSET', `stats:${g1.playerId}`, 'first', Date.now() - 86400000]]);
+  r = await give(g1, 'gfgetter', 200);
+  assert.equal(r.status, 422); assert.equal(r.body.error, 'Gifts unlock 3 days after your first roll (2 days left)');
+  run([['HSET', `stats:${g1.playerId}`, 'first', Date.now() - 3 * 86400000 + 5 * 3600000]]);
+  assert.equal((await give(g1, 'gfgetter', 200)).body.error, 'Gifts unlock 3 days after your first roll (5 hours left)');
+  run([['HSET', `stats:${g1.playerId}`, 'first', oldFirst]]);
   r = await give(g1, 'gfgetter', 200);
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.deepEqual(r.body.sent, { name: 'Gfgetter', amount: 200 });
@@ -6441,6 +6450,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   {
     // Par l'API : quatre amis à une table de 4 places.
     const P4 = ['d1', 'd2', 'd3', 'd4'].map((tag, k) => mkP(tag, `Quad${k}`, 20000, 400)), [q0, q1, q2, q3] = P4;
+    // Tables entre amis : 3 jours après le premier tirage (fermes de bots, 2026-11-04).
+    run([['HSET', `stats:${q0.playerId}`, 'first', Date.now() - 3600000]]);
+    r = await pk(q0, { op: 'create', buyin: 250, seats: 4 });
+    assert.equal(r.status, 422); assert.equal(r.body.error, 'Poker with friends unlocks 3 days after your first roll (3 days left)');
+    for (const p of P4) run([['HSET', `stats:${p.playerId}`, 'first', Date.now() - 10 * 86400000]]);
     for (const a of P4) for (const b of P4) if (a !== b) run([['SADD', `fr:${a.playerId}`, b.playerId]]);
     const ids = P4.map(p => p.playerId);
     const coins0 = await Promise.all(P4.map(coinsOf)), h0 = casino();
@@ -6449,7 +6463,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     const qcode = r.body.code;
     r = await pk(q0, { op: 'invite', name: 'Quad2' }); assert.deepEqual(r.body.invited, ['Quad1', 'Quad2']);
     r = await pk(q0, { op: 'start' }); assert.equal(r.status, 422, 'il faut au moins un ami assis');
-    r = await pk(q1, { op: 'join', code: qcode }); assert.equal(r.status, 200); assert.equal(r.body.status, 'wait', 'pas pleine : on attend l\'hôte');
+    r = await pk(q1, { op: 'join', code: qcode }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.status, 'wait', 'pas pleine : on attend l\'hôte');
     r = await pk(q2, { op: 'join', code: qcode }); assert.equal(r.body.status, 'wait'); assert.equal(r.body.players, 3);
     r = await pk(q1, { op: 'start' }); assert.equal(r.status, 403, 'seul l\'hôte lance la partie');
     assert.equal(run([['HGET', `pkday:${new Date(Date.now()).toISOString().slice(0, 10)}`, q1.playerId]])[0].result, null, 'compté au début de la partie seulement');
@@ -6540,6 +6554,63 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     // Places : de 2 à 6, rien d'autre.
     r = await pk(q3, { op: 'create', buyin: 100, seats: 9 }); assert.equal(r.body.max, 2, 'valeur hors limites : 2'); await pk(q3, { op: 'leave' });
   }
+}
+
+// ================================================================ Fermes de bots (jonahfr, 2026-11-04) : plafond de comptes neufs par adresse, suspension
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const siteApi = require(path.join(ROOT, 'api/site.js')), friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  const rollAs = (p, ip) => { db.delete(`cooldown:${p.playerId}`); return call(roll, { method: 'POST', body: p, headers: ip ? { 'x-forwarded-for': ip } : {} }); };
+  const mk = (k, name) => ({ playerId: (k.toString(16).padStart(4, '0') + 'b0') .repeat(3).slice(0, 16), secret: k.toString(16).padStart(2, '0').repeat(16).slice(0, 32), name });
+  // 1. Comptes neufs : NEW_PER_HOUR par adresse et par heure, puis 429 avec un message clair. Les joueurs déjà connus
+  // de cette adresse tirent toujours ; une autre adresse crée toujours.
+  const IP = '192.0.2.77';
+  const fresh = Array.from({ length: Lib.NEW_PER_HOUR + 1 }, (_, i) => mk(0x700 + i, `Farm${i}`));
+  for (const p of fresh.slice(0, -1)) { const x = await rollAs(p, IP); assert.equal(x.status, 200, JSON.stringify(x.body)); }
+  let r = await rollAs(fresh[fresh.length - 1], IP);
+  assert.equal(r.status, 429); assert.ok(/^Too many new players from this network/.test(r.body.error), r.body.error);
+  assert.equal(run([['GET', `player:${fresh[fresh.length - 1].playerId}:secret`]])[0].result, null, 'pas de compte créé');
+  assert.equal((await rollAs(fresh[0], IP)).status, 200, 'un joueur déjà créé tire toujours');
+  assert.equal((await rollAs(fresh[fresh.length - 1], '192.0.2.78')).status, 200, 'autre adresse : créé');
+  assert.equal((await rollAs(mk(0x7ff, 'Farmv6a'), '2001:db8:1:2:aaaa::1')).status, 200);
+  assert.equal(run([['GET', `newp:h:2001:db8:1:2:${Math.floor(Date.now() / 3600000)}`]])[0].result, '1', 'IPv6 comptée par /64');
+  // 2. Suspension par le créateur : plus de tirage (423, pas 403 : le site garderait sinon un nouvel identifiant), plus
+  // de boutique ni de cadeau ; le chat se lit encore comme un visiteur ; retiré des classements et du compteur en ligne.
+  const boss = mk(0x7a0, 'Farmboss'), bot = fresh[1];
+  assert.equal((await rollAs(boss)).status, 200);
+  run([['HSET', `stats:${boss.playerId}`, 'owner', '1']]);
+  const ban = (who, name, on) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action: 'ban', name, ...(on === false ? { on } : {}) } });
+  assert.equal((await ban(fresh[2], bot.name)).status, 403, 'créateur seulement');
+  assert.equal((await ban(boss, 'Nobody Here')).status, 404);
+  assert.equal((await ban(boss, 'Farmboss')).status, 422, 'pas soi-même');
+  const day = Lib.dayKey(Date.now());
+  assert.notEqual(run([['ZSCORE', 'lb:all', bot.playerId]])[0].result, null, 'au classement avant');
+  assert.notEqual(run([['ZSCORE', `lb:day:${day}`, bot.playerId]])[0].result, null);
+  r = await ban(boss, bot.name.toLowerCase());
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual([r.body.name, r.body.banned, r.body.total], [bot.name, true, 1]);
+  for (const k of ['lb:all', `lb:day:${day}`, `lbx:day:${day}`, 'seen']) assert.equal(run([['ZSCORE', k, bot.playerId]])[0].result, null, `retiré de ${k}`);
+  r = await rollAs(bot, IP); assert.equal(r.status, 423); assert.equal(r.body.error, 'This account is suspended');
+  assert.notEqual(run([['GET', `player:${bot.playerId}:secret`]])[0].result, null, 'rien d\'effacé');
+  r = await call(shopApi, { method: 'POST', body: { playerId: bot.playerId, secret: bot.secret, action: 'buy', id: 'x' } }); assert.equal(r.status, 423, 'boutique');
+  r = await call(friendsApi, { method: 'POST', body: { playerId: bot.playerId, secret: bot.secret, action: 'gift', name: 'Farmboss', amount: 10 } }); assert.equal(r.status, 423, 'cadeaux');
+  r = await call(friendsApi, { method: 'POST', body: { playerId: bot.playerId, secret: bot.secret, action: 'gcSend', text: 'buy coins' } }); assert.equal(r.status, 423, 'chat global');
+  r = await call(friendsApi, { method: 'POST', body: { playerId: bot.playerId, secret: bot.secret, action: 'gcList' } }); assert.equal(r.status, 200, 'lit encore le chat'); assert.equal(r.body.me, undefined, 'comme un visiteur');
+  // Un faux secret pour un compte suspendu reste un 403 (on n'apprend rien de la suspension sans le secret).
+  r = await call(roll, { method: 'POST', body: { ...bot, secret: 'e'.repeat(32) } }); assert.equal(r.status, 403);
+  // 3. Réintégré : il rejoue.
+  r = await ban(boss, bot.name, false); assert.deepEqual([r.status, r.body.banned, r.body.total], [200, false, 0]);
+  assert.equal((await rollAs(bot, IP)).status, 200, 'réintégré');
+  // 4. Plusieurs d'un coup (tools/ban-bots.js) : ids invalides ignorés, doublons comptés une fois.
+  assert.equal(await Lib.banPlayers([fresh[3].playerId, fresh[3].playerId, fresh[4].playerId, 'nope']), 2);
+  assert.equal(await Lib.isBanned(fresh[4].playerId), true);
+  await Lib.unbanPlayers([fresh[3].playerId, fresh[4].playerId]);
+  run([['HDEL', `stats:${boss.playerId}`, 'owner']]);
+  // 5. Temps restant avant cadeaux et poker entre amis.
+  const now = Date.now();
+  assert.equal(Lib.accountWait({}, now), '', 'joueur d\'avant le champ first');
+  assert.equal(Lib.accountWait({ first: now - 4 * 86400000 }, now), '');
+  assert.equal(Lib.accountWait({ first: now }, now), '3 days');
+  assert.equal(Lib.accountWait({ first: now - 3 * 86400000 + 1000 }, now), '1 hour');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

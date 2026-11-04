@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     const name = cleanName(body.name);
     if (!/^[0-9a-f]{16}$/.test(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!name) return send(res, 400, { error: 'Invalid name' });
-    if (!(await claimPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
+    if (!(await claimPlayer(playerId, secret, req))) return send(res, 403, { error: 'This player id belongs to someone else' });
     const [previous] = await redis([['HGET', 'names', playerId]]);
     const paid = !!previous && nameKey(previous) !== nameKey(name);
     if (paid) {
