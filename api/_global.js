@@ -423,7 +423,8 @@ async function handle(body) {
   let me = null, stats = {};
   if (isPlayerId(playerId) && /^[0-9a-f]{32}$/.test(secret)) {
     // Joueur pas encore connu du serveur (jamais tiré, pas de pseudo) : il lit quand même, comme un visiteur.
-    if (await ownsPlayer(playerId, secret)) { me = playerId; stats = await readStats(me); }
+    // Joueur suspendu (423) : il lit encore le chat, comme un visiteur, mais n'écrit plus.
+    if (await ownsPlayer(playerId, secret).catch(e => { if (e.status === 423 && body.action === 'gcList') return false; throw e; })) { me = playerId; stats = await readStats(me); }
     else if (body.action !== 'gcList') throw refuse(403, 'This player id belongs to someone else');
   }
   // Lecture : ouverte à tous (même sans joueur).

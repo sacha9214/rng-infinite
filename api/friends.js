@@ -7,7 +7,7 @@
 // POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
-const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey } = require('./_lib');
+const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey, accountWait, NEW_ACCOUNT_DAYS } = require('./_lib');
 const Reports = require('./_reports');
 const Global = require('./_global');
 const React = require('./_react');
@@ -63,6 +63,8 @@ async function gift(me, other, raw) {
     const st = await readStats(me);
     const rolls = Number(st.rolls) || 0, coins = Shop.balance(st);
     if (rolls < GIFT.rolls) throw refuse(422, `Gifts unlock after ${GIFT.rolls} rolls (you have ${rolls})`);
+    const wait = accountWait(st);
+    if (wait) throw refuse(422, `Gifts unlock ${NEW_ACCOUNT_DAYS} days after your first roll (${wait} left)`);
     if (coins < amount) throw refuse(422, `Not enough coins: ${amount - coins} more needed`);
     // Plafonds du jour : compteurs montés d'abord (HINCRBY est atomique), redescendus si l'un déborde. Deux amis qui
     // donnent en même temps au même joueur ne dépassent donc jamais ses 2 000.

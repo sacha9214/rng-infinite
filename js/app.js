@@ -2231,6 +2231,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-04-bots', date: 'Nov 4, 2026', en: ['🤖 Bot farms removed from the game: hundreds of fake accounts were rolling non-stop to fill the leaderboards and the online count (reported by jonahfr). New accounts are now limited per network, and gifts and friend poker tables unlock 3 days after your first roll'], fr: ['🤖 Fermes de bots retirées du jeu : des centaines de faux comptes tiraient sans arrêt pour remplir les classements et le compteur de joueurs en ligne (signalé par jonahfr). Les nouveaux comptes sont maintenant limités par réseau, et les cadeaux et les tables de poker entre amis se débloquent 3 jours après ton premier tirage'] },
     { id: '2026-11-04-poker-6', date: 'Nov 4, 2026', en: ['🃏 Poker tables with up to 6 friends! When you open a friend table, pick 2 to 6 seats, invite your friends or share the code, and press Start when you are ready (a full table starts by itself). Friends can join between hands while a seat is free. Several all-ins make side pots, so everyone only plays for what they put in'], fr: ['🃏 Des tables de poker jusqu\'à 6 amis ! En ouvrant une table entre amis, choisis de 2 à 6 places, invite tes amis ou partage le code, puis appuie sur Lancer quand vous êtes prêts (une table pleine démarre toute seule). Un ami peut s\'asseoir entre deux mains s\'il reste une place. Plusieurs tapis font des pots de côté : chacun ne joue que ce qu\'il a mis'] },
     { id: '2026-11-03-poker', date: 'Nov 3, 2026', en: ['🃏 New in the Casino: Poker! Texas Hold\'em, 1 vs 1. Play the bot right away, or invite a friend to your table (or share its code). Pick a buy-in from 100 to 5,000 coins and play until someone runs out of chips; leave whenever you like and you cash out your chips. The bot plays fair: it never sees your cards. The house keeps 5% of every pot'], fr: ['🃏 Nouveau au casino : le Poker ! Texas Hold\'em, 1 contre 1. Joue tout de suite contre le bot, ou invite un ami à ta table (ou partage son code). Choisis une cave de 100 à 5 000 pièces et jouez jusqu\'à ce que l\'un n\'ait plus de jetons ; pars quand tu veux et tu encaisses tes jetons. Le bot joue loyalement : il ne voit jamais tes cartes. La maison garde 5 % de chaque pot'] },
     { id: '2026-11-03-bugs', date: 'Nov 3, 2026', en: ['🏆 Leaderboards: the monthly Top badge is now a small 👑/🥈/🥉 next to the name (🔥 for Hard), so it no longer covers names, coins and XP (reported by Alt, infinity and qwertyuiop)', '💬 Chat: your message no longer stays in the box after sending (reported by Niall, randomguy, Jacksonw and Idkwhatnamemyself), and duel chat messages no longer squeeze into one letter per line (Idkwhatnamemyself)', '🏅 Badges tab: badges are grouped by how rare they really are, like the collection titles. Exact Natural, Exact RTX 5090 and Important Birthday (one number each) are now with the Celestial badges, and Epic Obtainer counts the same badges you see in the Epic group (reported by Thermonuclear Bomb and Trial)', '🗼 Tower: the multipliers shown before you start are now the real ones (reported by infinity)', '0️⃣ Leading zeros no longer peek out next to your number at the end of a roll (reported by randomguy)', '⏩ Skip known badges counts your Normal and Hard rolls together, so it stays unlocked in Hard mode (reported by Jacksonw)', '🔥 Hard mode: your roll count and XP no longer show the Normal mode numbers for a minute after switching, and Infinite odds show as 0.00001% instead of "0.%" (reported by jsand)', '📈 Past 100,000 rolls, your lifetime XP keeps going up after each roll (reported by kaz)', '📦 Clicking outside a case while it opens now skips to your prize instead of closing it (reported by Ben good)', '⌨️ Keyboard ASMR wallpaper: typing on your real keyboard presses the keys too, with their sound (reported by LEVIATHAN)', '🔐 Lost your player because your device was wiped? Ask the creator for a recovery code and enter it in ⚙️ Settings. Players with 300+ rolls and no password get a reminder to set one (reported by Deadshot, CMC_Nate and Naet_161)'], fr: ['🏆 Classements : le badge Top du mois devient un petit 👑/🥈/🥉 à côté du pseudo (🔥 en Hard), il ne cache plus les pseudos, les pièces et l\'XP (signalé par Alt, infinity et qwertyuiop)', '💬 Chat : ton message ne reste plus dans la zone d\'écriture après l\'envoi (signalé par Niall, randomguy, Jacksonw et Idkwhatnamemyself), et les messages du chat des duels ne s\'écrasent plus en une lettre par ligne (Idkwhatnamemyself)', '🏅 Onglet Badges : les badges sont rangés selon leur vraie rareté, comme les titres de collection. Exact Natural, Exact RTX 5090 et Important Birthday (un seul nombre chacun) passent avec les Celestial, et Conquérant Epic compte les mêmes badges que le groupe Epic (signalé par Thermonuclear Bomb et Trial)', '🗼 Tour : les multiplicateurs affichés avant de commencer sont les vrais (signalé par infinity)', '0️⃣ Les zéros de tête ne dépassent plus à côté de ton nombre à la fin d\'un tirage (signalé par randomguy)', '⏩ Passer les badges connus compte tes tirages Normal et Hard ensemble : il reste débloqué en mode difficile (signalé par Jacksonw)', '🔥 Mode difficile : ton nombre de tirages et ton XP ne montrent plus ceux du mode normal pendant une minute après le changement, et les chances d\'un Infinite s\'affichent 0,00001 % au lieu de « 0.% » (signalé par jsand)', '📈 Au-delà de 100 000 tirages, ton XP à vie continue de monter après chaque tirage (signalé par kaz)', '📦 Cliquer à côté d\'une caisse pendant son ouverture passe directement au gain au lieu de la fermer (signalé par Ben good)', '⌨️ Fond Keyboard ASMR : taper sur ton vrai clavier enfonce aussi les touches, avec leur son (signalé par LEVIATHAN)', '🔐 Joueur perdu parce que ton appareil a été effacé ? Demande un code de récupération au créateur et entre-le dans ⚙️ Réglages. Les joueurs de 300 tirages ou plus sans mot de passe reçoivent un rappel pour en choisir un (signalé par Deadshot, CMC_Nate et Naet_161)'] },
@@ -2724,6 +2725,9 @@
       if (!matchMedia('(pointer: coarse)').matches) q.focus(); // pas de clavier qui surgit sur téléphone
     });
   }
+  // Refus qui ne passeront pas en réessayant : compte suspendu (423), ou trop de joueurs neufs sur ce réseau (429 du
+  // plafond par adresse, fermes de bots du 2026-11-04). On montre le message du serveur et l'auto-roll s'arrête.
+  const blockedRoll = err => !!err && (err.status === 423 || (err.status === 429 && /^Too many new players/.test(err.message || '')));
   function stopSoloAuto() {
     SoloAuto.refused = 0;
     SoloAuto.on = false;
@@ -2816,7 +2820,7 @@
     } catch (err) {
       rollPending = false;
       if (err.status !== 429) clientEvt('bg_error'); // 429 = pause du serveur pas finie : on réessaie, rien n'est perdu
-      if (err.status === 403 || err.status === 409) { stopSoloAuto(); return; }
+      if (err.status === 403 || err.status === 409 || blockedRoll(err)) { stopSoloAuto(); if (blockedRoll(err)) toast(err.message, 6000); return; }
       scheduleSoloAuto(err.status === 429 ? 1500 : 5000); return;
     }
     rollPending = false;
@@ -2937,7 +2941,7 @@
           if (!Number.isInteger(r.n) || r.n < 0 || r.n > Engine.MAX_ROLL || (r.mode === 'hard') !== Mode.hard) throw new Error('Bad roll from the server');
           return r;
         } catch (err) {
-          if (err.status === 409 || err.status === 429 || err.status === 403 || attempt >= 2) throw err;
+          if (err.status === 409 || err.status === 429 || err.status === 403 || err.status === 423 || attempt >= 2) throw err;
           if (!attempt) toast('The server is slow to answer, trying again…');
           await new Promise(resolve => setTimeout(resolve, 600 + 900 * attempt));
         }
@@ -2953,7 +2957,7 @@
       // Pièces relues à la fin de la révélation seulement : avant, le compteur montait pendant l'animation et trahissait
       // un bon tirage avant le 2e chiffre (kingston, 2026-10-21).
     } catch (err) {
-      if (err.status === 429 && SoloAuto.on) {
+      if (err.status === 429 && SoloAuto.on && !blockedRoll(err)) {
         clientEvt('auto_429'); rollPending = false; buttons.forEach(b => { b.disabled = false; });
         // Le serveur n'accepte qu'un tirage toutes les 8 s par compte : refusé deux fois d'affilée, c'est que le même compte
         // tire déjà dans un autre onglet ou sur un autre appareil. On le dit une fois par série au lieu de réessayer en
@@ -2979,6 +2983,13 @@
         rollPending = false;
         buttons.forEach(b => { b.disabled = false; });
         askName(() => startRoll(force), '', `"${Store.player.name}" is already taken by another player. Pick a new name.`, 'Save & roll');
+        return;
+      }
+      // Compte suspendu (423) ou trop de joueurs neufs sur ce réseau : le message du serveur, sans tirage local.
+      if (blockedRoll(err)) {
+        rollPending = false;
+        buttons.forEach(b => { b.disabled = false; });
+        toast(err.message, 6000);
         return;
       }
       const wasGoogle = !!Store.player.google;
@@ -7748,7 +7759,9 @@
         + panel('Mute history', 'mutes that ended or that you lifted, newest first', hist.length ? hist.map(m => `<div class="o-report gc-mute-row"><div class="gc-mute-main"><div class="o-report-head">${who(m.name)}<span class="panel-note">by <span data-no-i18n>${esc(m.by)}</span> · ${relTime(m.t)}${m.lift ? ` · <b>lifted by <span data-no-i18n>${esc(m.lift.by)}</span></b>` : ''}</span></div>${why(m)}</div></div>`).join('') : '<div class="empty">No mute yet.</div>')
         + (d.readOnly ? '' : panel('About me', 'clear the "About me" line of a player\'s profile', '<form class="im-add bio-clear-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn">🗑️ Clear</button></form>'))
         // Code de récupération (2026-11-03) : pour un joueur qui a perdu son compte (appareil effacé, ni Google ni mot de passe).
-        + (d.readOnly ? '' : panel('Account recovery', 'a one-time code (7 days) that gives a lost player back to whoever types it in ⚙️ Settings. Only send it after checking it is really them.', '<form class="im-add recover-form"><input class="input" name="name" placeholder="Old player name" maxlength="20" autocomplete="off"><button class="btn">🔑 Create a code</button></form><p class="panel-note mono" id="recover-out" data-no-i18n></p>'));
+        + (d.readOnly ? '' : panel('Account recovery', 'a one-time code (7 days) that gives a lost player back to whoever types it in ⚙️ Settings. Only send it after checking it is really them.', '<form class="im-add recover-form"><input class="input" name="name" placeholder="Old player name" maxlength="20" autocomplete="off"><button class="btn">🔑 Create a code</button></form><p class="panel-note mono" id="recover-out" data-no-i18n></p>')
+          // Suspendre un joueur (fermes de bots signalées par jonahfr, 2026-11-04) : rien n'est effacé.
+          + panel('Suspend a player', 'for bots and cheaters: they can no longer roll, chat, gift, play or join anything, and leave the leaderboards and the online count. Nothing is deleted; Restore gives them access back (not their old leaderboard spots).', '<form class="im-add ban-form"><input class="input" name="name" placeholder="Player name" maxlength="20" autocomplete="off"><button class="btn" name="on" value="1">⛔ Suspend</button><button class="btn" name="on" value="0">↩️ Restore</button></form><p class="panel-note" id="ban-out"></p>'));
     };
     // ---- Modérateurs (Sacha, 2026-11-01), comme les Idea Managers : donner ou retirer le rôle, ce que chacun a fait
     // (silences, suppressions, signalements traités, silences que tu as levés) et leurs dernières actions, filtrables.
@@ -7782,6 +7795,14 @@
       if (rf && currentView === 'owner') {
         e.preventDefault(); const n = rf.elements.name.value.trim(); if (!n) return;
         Online.site('recoverCode', { name: n }).then(r => { const o = $('#recover-out'); if (o) o.textContent = `${r.name}: ${r.code} (${r.days} days, one use)`; }).catch(err => toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'));
+        return;
+      }
+      const bn = e.target.closest('.ban-form');
+      if (bn && currentView === 'owner') {
+        e.preventDefault(); const n = bn.elements.name.value.trim(); if (!n) return;
+        const on = !(e.submitter && e.submitter.value === '0');
+        if (on && !confirm(window.RNGI18n.t(`Suspend ${n}? They can no longer play.`))) return;
+        Online.site('ban', { name: n, on }).then(r => { const o = $('#ban-out'); if (o) o.textContent = window.RNGI18n.t(`${r.name} is ${r.banned ? 'suspended' : 'restored'} (${fmt(r.total)} suspended in total)`); bn.elements.name.value = ''; }).catch(err => toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'));
         return;
       }
       const f = e.target.closest('.gc-mod-add'); if (!f || currentView !== 'owner') return;

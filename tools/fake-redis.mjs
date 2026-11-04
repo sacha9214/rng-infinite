@@ -49,7 +49,8 @@ export function fakeRedis() {
     HVALS: k => (db.has(k) ? [...db.get(k).values()] : []),
     HKEYS: k => (db.has(k) ? [...db.get(k).keys()] : []),
     // SCAN : tout en un seul passage (curseur 0 → 0), avec MATCH en motif glob simple (*).
-    SCAN(cursor, ...opts) { const m = opts.indexOf('MATCH'), re = m >= 0 ? new RegExp(`^${opts[m + 1].replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`) : null; return ['0', [...db.keys()].filter(k => alive(k) && (!re || re.test(k)))]; },
+    // TYPE : zset = Map aux valeurs numériques (scores), hash = Map de chaînes, set = Set, string sinon.
+    SCAN(cursor, ...opts) { const m = opts.indexOf('MATCH'), re = m >= 0 ? new RegExp(`^${opts[m + 1].replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`) : null; const ty = opts.indexOf('TYPE'), want = ty >= 0 ? String(opts[ty + 1]).toLowerCase() : null; const typeOf = v => v instanceof Set ? 'set' : v instanceof Map ? ([...v.values()].every(x => typeof x === 'number') ? 'zset' : 'hash') : 'string'; return ['0', [...db.keys()].filter(k => alive(k) && (!re || re.test(k)) && (!want || typeOf(db.get(k)) === want))]; },
     HLEN: k => (db.has(k) ? db.get(k).size : 0),
     HEXISTS: (k, f) => (db.has(k) && db.get(k).has(f) ? 1 : 0),
     HINCRBY(k, f, by) { const h = hash(k), v = Number(h.get(f) || 0) + Number(by); h.set(f, String(v)); return v; },

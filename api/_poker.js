@@ -27,7 +27,7 @@
 // « poker ») ; la commission et les gains du bot y apparaissent donc tout seuls.
 'use strict';
 const crypto = require('node:crypto');
-const { redis, wallet, readStats, statsKey, queueReveal, findPlayer, cleanName, toObject, dayKey } = require('./_lib');
+const { redis, wallet, readStats, statsKey, queueReveal, findPlayer, cleanName, toObject, dayKey, accountWait, NEW_ACCOUNT_DAYS } = require('./_lib');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
 const H = require('./_holdem');
@@ -385,6 +385,8 @@ async function mayBuyIn(id, buyin, friend = false, now = Date.now()) {
   if (coins < buyin) throw refuse(422, `Not enough coins: ${buyin - coins} more needed`);
   if (friend) {
     if (rolls < FRIEND_ROLLS) throw refuse(422, `Poker with friends unlocks after ${FRIEND_ROLLS} rolls (you have ${rolls})`);
+    const wait = accountWait(st, now);
+    if (wait) throw refuse(422, `Poker with friends unlocks ${NEW_ACCOUNT_DAYS} days after your first roll (${wait} left)`);
     await friendRoom(id, buyin, now, 'You');
   }
 }

@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     if (!/^[0-9a-f]{16}$/.test(playerId) || !/^[0-9a-f]{32}$/.test(secret)) return send(res, 400, { error: 'Invalid player' });
     if (!name) return send(res, 400, { error: 'Pick a player name first' });
 
-    if (!(await claimPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
+    if (!(await claimPlayer(playerId, secret, req))) return send(res, 403, { error: 'This player id belongs to someone else' });
     // Nom vérifié avant le délai d'attente : un joueur refusé pour son nom peut retirer aussitôt avec un autre.
     if (!(await claimName(playerId, name))) return send(res, 409, { error: 'This name is already taken, pick another one' });
 
