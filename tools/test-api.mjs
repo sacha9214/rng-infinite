@@ -6346,6 +6346,200 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await pk(ga, { op: 'leave' }); await pk(ga, { op: 'ack' }); await pk(gb, { op: 'ack' });
   r = await pk(ga, { op: 'create', buyin: 100 }); assert.equal(r.status, 422, 'plus de place aujourd\'hui'); assert.match(r.body.error, /0 more coins/);
   r = await pk(ga, { op: 'bot', buyin: 1000 }); assert.equal(r.status, 200, 'le bot reste ouvert'); await pk(ga, { op: 'leave' });
+
+  // 3f. Tables entre amis de 2 à 6 places (Sacha, 2026-11-04 : « can we be more than two at the table and play with
+  // more friends? »). Moteur seul d'abord (paquet choisi), puis par l'API.
+  {
+    const T = (stacks, btn, sb = 5, bb = 10) => ({ sb, bb, btn, seats: stacks.map(s => (s == null ? null : { stack: s })), hand: null });
+    const total = t => t.seats.reduce((x, s) => x + (s ? s.stack : 0), 0);
+    // Paquet choisi : les cartes du tableau sortent par la fin (brûlée, flop, brûlée, turn, brûlée, river).
+    const rig = (t, holes, board) => {
+      const [f1, f2, f3, tu, ri] = cards(board), burn = cards('8c 6s 5c'), top = [ri, burn[2], tu, burn[1], f3, f2, f1, burn[0]];
+      const used = [...top, ...holes.flatMap(x => (x ? cards(x) : []))];
+      t.hand.deck = [...Array(52).keys()].filter(c => !used.includes(c)).concat(top);
+      holes.forEach((x, i) => { if (x) t.hand.hole[i] = cards(x); });
+    };
+    // 3 joueurs : bouton 0, petite blind 1, grosse blind 2 ; avant le flop, le bouton parle en premier ; après, la petite blind.
+    let t = T([1000, 1000, 1000], 0);
+    H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs, t.hand.turn], [0, 1, 2, 0]);
+    assert.deepEqual(t.hand.bet, [0, 5, 10]);
+    assert.throws(() => H.act(t, 1, 'call'), /Not your turn/);
+    H.act(t, 0, 'call'); H.act(t, 1, 'call'); H.act(t, 2, 'check');
+    assert.equal(t.hand.street, 1); assert.equal(t.hand.turn, 1, 'après le flop : le premier à gauche du bouton');
+    H.act(t, 1, 'check'); H.act(t, 2, 'raise', 40); H.act(t, 0, 'fold'); H.act(t, 1, 'call');
+    assert.equal(t.hand.turn, 1, 'turn : la petite blind reparle'); assert.equal(t.hand.fold[0], true);
+    H.act(t, 1, 'check'); H.act(t, 2, 'check'); H.act(t, 1, 'check'); H.act(t, 2, 'check');
+    assert.equal(t.hand.done, true); assert.equal(t.hand.res.shown, true);
+    assert.equal(t.hand.res.desc[0], null, 'la main couchée reste cachée');
+    assert.equal(t.hand.res.pot, 110); assert.equal(total(t) + t.hand.res.rake, 3000, 'rien ne se crée');
+    // Le bouton tourne sur les sièges occupés : 0 → 1 ; un siège vide (parti) ou ruiné est sauté.
+    H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs, t.hand.turn], [1, 2, 0, 1]);
+    t = T([1000, 1000, null, 1000], 1); H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs, t.hand.turn], [1, 3, 0, 1]);
+    t.hand.done = true; t.seats[3].stack = 0; t.seats[2] = { stack: 500 };
+    H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs], [2, 0, 1], 'le siège 3 (tapis vide) est sauté, le 2 (arrivé) joue');
+    assert.equal(t.hand.in[3], false); assert.deepEqual(t.hand.hole[3], []);
+    // Deux joueurs restants : retour à la règle du heads-up (le bouton met la petite blind).
+    t = T([1000, null, 1000, null], 0); H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs, t.hand.turn], [0, 0, 2, 0]);
+    // 6 joueurs : tout le monde se couche jusqu'à la grosse blind ; la part non suivie lui revient sans commission.
+    t = T([1000, 1000, 1000, 1000, 1000, 1000], 4); H.newHand(t, n => n - 1);
+    assert.deepEqual([t.hand.btn, t.hand.sb, t.hand.bbs, t.hand.turn], [4, 5, 0, 1]);
+    for (const i of [1, 2, 3, 4, 5]) H.act(t, i, 'fold');
+    assert.equal(t.hand.done, true); assert.equal(t.hand.res.pot, 10); assert.equal(t.hand.res.rake, 1);
+    assert.deepEqual(t.seats.map(s => s.stack), [1004, 1000, 1000, 1000, 1000, 995]);
+    // 6 joueurs jusqu'au bout : enchères sur chaque tour, conservation.
+    t = T([1000, 1000, 1000, 1000, 1000, 1000], 0); H.newHand(t, n => n - 1);
+    H.act(t, 3, 'raise', 30); H.act(t, 4, 'call'); H.act(t, 5, 'fold'); H.act(t, 0, 'raise', 90); H.act(t, 1, 'fold'); H.act(t, 2, 'call');
+    H.act(t, 3, 'call'); H.act(t, 4, 'fold');
+    assert.equal(t.hand.street, 1); assert.equal(t.hand.turn, 2, 'flop : la grosse blind est la première encore en jeu');
+    while (!t.hand.done) H.act(t, t.hand.turn, 'check');
+    assert.equal(t.hand.res.pot, 5 + 30 + 90 * 3); assert.equal(total(t) + t.hand.res.rake, 6000);
+    // Relance incomplète (tapis plus petit qu'une relance) : ceux qui avaient déjà parlé peuvent seulement suivre.
+    t = T([1000, 1000, 1000, 150], 0, 5, 10); H.newHand(t, n => n - 1); // bouton 0, blinds 1 et 2, 3 parle en premier
+    H.act(t, 3, 'call'); H.act(t, 0, 'raise', 100); H.act(t, 1, 'fold'); H.act(t, 2, 'fold');
+    H.act(t, 3, 'allin'); // 150 : 50 de plus, moins qu'une relance complète (90)
+    assert.equal(t.hand.turn, 0);
+    assert.equal(H.options(t, 0).canRaise, false, 'pas de sur-relance après un tapis incomplet'); assert.equal(H.options(t, 0).toCall, 50);
+    H.act(t, 0, 'call'); assert.equal(t.hand.done, true);
+    assert.equal(total(t) + t.hand.res.rake, 3150);
+
+    // Pots de côté : trois tapis de tailles différentes (100, 300, 600) et un gros tapis qui suit.
+    t = T([100, 300, 600, 1000], 3); H.newHand(t, n => n - 1); // bouton 3 : petite blind 0, grosse blind 1, le 2 parle
+    rig(t, ['As Ad', 'Ks Kd', 'Qs Qd', '4h 6d'], '2c 7d 9h Jc 3s');
+    H.act(t, 2, 'allin'); H.act(t, 3, 'call'); H.act(t, 0, 'call'); H.act(t, 1, 'call');
+    const h = t.hand;
+    assert.equal(h.done, true); assert.equal(h.board.length, 5, 'tout le monde à tapis : le tableau sort jusqu\'au bout');
+    assert.deepEqual(h.res.pots.map(p => [p.amount, p.rake, p.winners]), [[400, 20, [0]], [600, 30, [1]], [600, 30, [2]]], 'pot principal 4 × 100, pots de côté 3 × 200 et 2 × 300');
+    assert.deepEqual(h.res.win, [380, 570, 570, 0]);
+    assert.deepEqual(t.seats.map(s => s.stack), [380, 570, 570, 400]);
+    assert.equal(total(t) + h.res.rake, 2000, 'au jeton près'); assert.equal(h.res.rake, 80);
+    assert.deepEqual(h.res.desc, ['Pair of Aces', 'Pair of Kings', 'Pair of Queens', 'High Card, Jack']);
+    // Le gros tapis gagne : il prend les trois pots ; le petit tapis qui a la 2e main ne touche rien au-delà de son pot.
+    t = T([100, 300, 600, 1000], 3); H.newHand(t, n => n - 1);
+    rig(t, ['Ks Kd', '4h 6d', 'Qs Qd', 'As Ad'], '2c 7d 9h Jc 3s');
+    H.act(t, 2, 'allin'); H.act(t, 3, 'call'); H.act(t, 0, 'call'); H.act(t, 1, 'call');
+    assert.deepEqual(t.hand.res.win, [0, 0, 0, 1520]); assert.equal(total(t) + t.hand.res.rake, 2000);
+    // Pot partagé à trois : 75 → 4 de commission, 71 = 23 + 24 + 24 ; les jetons impairs d'abord à gauche du bouton.
+    t = T([1000, 1000, 1000], 0); H.newHand(t, n => n - 1);
+    rig(t, ['2h 3h', '2c 3c', '2d 3d'], 'As Ks Qs Js Ts');
+    H.act(t, 0, 'raise', 25); H.act(t, 1, 'call'); H.act(t, 2, 'call');
+    while (!t.hand.done) H.act(t, t.hand.turn, 'check');
+    assert.equal(t.hand.res.pot, 75); assert.equal(t.hand.res.rake, 4); assert.deepEqual(t.hand.res.win, [23, 24, 24]);
+    assert.equal(t.hand.res.w, -1); assert.equal(total(t) + 4, 3000);
+    // Partir pendant la main (hors de son tour) : sa main est couchée, ses jetons restent au pot, la main continue.
+    t = T([1000, 1000, 1000], 0); H.newHand(t, n => n - 1);
+    H.act(t, 0, 'raise', 40); H.forfeit(t, 2);
+    assert.equal(t.hand.done, false); assert.equal(t.hand.turn, 1);
+    H.act(t, 1, 'call'); assert.equal(t.hand.street, 1);
+    while (!t.hand.done) H.act(t, t.hand.turn, 'check');
+    assert.equal(t.hand.res.pot, 90); assert.equal(total(t) + t.hand.res.rake, 3000);
+  }
+  {
+    // Par l'API : quatre amis à une table de 4 places.
+    const P4 = ['d1', 'd2', 'd3', 'd4'].map((tag, k) => mkP(tag, `Quad${k}`, 20000, 400)), [q0, q1, q2, q3] = P4;
+    for (const a of P4) for (const b of P4) if (a !== b) run([['SADD', `fr:${a.playerId}`, b.playerId]]);
+    const ids = P4.map(p => p.playerId);
+    const coins0 = await Promise.all(P4.map(coinsOf)), h0 = casino();
+    r = await pk(q0, { op: 'create', buyin: 250, seats: 4, name: 'Quad1' });
+    assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.max, 4); assert.equal(r.body.status, 'wait'); assert.equal(r.body.host, true);
+    const qcode = r.body.code;
+    r = await pk(q0, { op: 'invite', name: 'Quad2' }); assert.deepEqual(r.body.invited, ['Quad1', 'Quad2']);
+    r = await pk(q0, { op: 'start' }); assert.equal(r.status, 422, 'il faut au moins un ami assis');
+    r = await pk(q1, { op: 'join', code: qcode }); assert.equal(r.status, 200); assert.equal(r.body.status, 'wait', 'pas pleine : on attend l\'hôte');
+    r = await pk(q2, { op: 'join', code: qcode }); assert.equal(r.body.status, 'wait'); assert.equal(r.body.players, 3);
+    r = await pk(q1, { op: 'start' }); assert.equal(r.status, 403, 'seul l\'hôte lance la partie');
+    assert.equal(run([['HGET', `pkday:${new Date(Date.now()).toISOString().slice(0, 10)}`, q1.playerId]])[0].result, null, 'compté au début de la partie seulement');
+    r = await pk(q0, { op: 'start' }); assert.equal(r.status, 200); assert.equal(r.body.status, 'play');
+    const dayKeyNow = `pkday:${new Date(Date.now()).toISOString().slice(0, 10)}`;
+    for (const p of [q0, q1, q2]) assert.equal(Number(run([['HGET', dayKeyNow, p.playerId]])[0].result), 250);
+    // Un 4e arrive pendant la main : il est assis mais attend la suivante ; son plafond du jour compte tout de suite.
+    run([['HSET', dayKeyNow, q3.playerId, 2400]]);
+    r = await pk(q3, { op: 'join', code: qcode }); assert.equal(r.status, 422, 'plafond du jour vérifié pour un retardataire'); assert.match(r.body.error, /100 more coins/);
+    run([['HDEL', dayKeyNow, q3.playerId]]);
+    let now = Date.now();
+    r = await pk(q3, { op: 'join', code: qcode }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(Number(run([['HGET', dayKeyNow, q3.playerId]])[0].result), 250);
+    assert.equal(r.body.me.out, true); assert.deepEqual(r.body.hand.mine, [], 'pas de cartes pour cette main');
+    // Ce que chacun voit : 4 sièges, lui en premier, les cartes des autres cachées, aucun identifiant.
+    const views = await Promise.all(P4.map(p => Poker.handle(p.playerId, { op: 'state' }, now)));
+    for (const [k, v] of views.entries()) {
+      assert.equal(v.seats.length, 4); assert.equal(v.seats[0].name, P4[k].name); assert.equal(v.seats[0].me, true);
+      for (const s of v.seats.slice(1)) if (s && s.cards) assert.deepEqual(s.cards, [null, null], 'cartes des autres cachées');
+      assert.ok(!ids.some(id => JSON.stringify(v).includes(id)), 'aucun identifiant');
+    }
+    // Le joueur dont c'est le tour envoie six relances à la fois, les autres aussi des coups : une seule relance passe,
+    // et les jetons sur la table restent justes (sous le verrou de la table, chaque coup voit l'état du précédent).
+    const turnIdx = views.findIndex(v => v.hand && v.hand.turn === 'me'), minTo = views[turnIdx].hand.op.minTo;
+    const acts = await Promise.all([...Array(6)].map(() => Poker.handle(P4[turnIdx].playerId, { op: 'act', move: 'raise', to: minTo }, now).then(() => 200, e => e.status)));
+    assert.equal(acts.filter(x => x === 200).length, 1, String(acts));
+    const tq = JSON.parse(run([['GET', `pk:${qcode}`]])[0].result);
+    assert.equal(tq.seats.reduce((x, s) => x + s.stack, 0) + tq.hand.put.reduce((x, v) => x + v, 0), 1000, '4 caves sur la table');
+    // On joue la main jusqu'au bout (check, sinon suivre), puis la suivante : le 4e reçoit ses cartes.
+    const stateOf = async p => Poker.handle(p.playerId, { op: 'state' }, now);
+    const playUntil = async (stop, move = v => (v.hand.op.canCheck ? 'check' : 'call'), skip = []) => {
+      for (let k = 0; k < 200; k++) {
+        const vs = await Promise.all(P4.map(stateOf));
+        if (stop(vs)) return vs;
+        const who = vs.findIndex((v, j) => !skip.includes(j) && v.status === 'play' && v.hand && !v.hand.done && v.hand.turn === 'me');
+        if (who < 0) { now += 6000; continue; }
+        await Poker.handle(P4[who].playerId, { op: 'act', move: move(vs[who], who) }, now);
+      }
+      throw new Error('partie bloquée');
+    };
+    let vs = await playUntil(v => v[0].hand.n === 2 && !v[0].hand.done);
+    assert.equal(vs[3].me.out, undefined); assert.equal(vs[3].hand.mine.length, 2, 'le retardataire joue la main suivante');
+    assert.equal(vs[0].seats.filter(s => s && s.btn).length, 1);
+    const q2Tab = () => JSON.parse(run([['GET', `pk:${qcode}`]])[0].result);
+    // Quad3 part en pleine main : sa main est couchée, ses jetons restent au pot, la table continue à trois.
+    vs = await playUntil(v => v[3].hand && !v[3].hand.done && (v[3].hand.mine || []).length === 2, undefined, [3]);
+    r = await pk(q3, { op: 'leave' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.mine, true); assert.equal(r.body.over.table, true);
+    assert.equal(q2Tab().status, 'play'); assert.equal(q2Tab().seats.filter(Boolean).length, 3);
+    // Minuterie à 3 : Quad2 ne joue plus ; deux fois 30 s sans réponse → il quitte, les deux autres continuent.
+
+    for (let k = 0; k < 400 && q2Tab().seats.some(s => s && s.name === 'Quad2'); k++) {
+      const vv = await Promise.all([q0, q1].map(stateOf));
+      const who = vv.findIndex(v => v.status === 'play' && v.hand && !v.hand.done && v.hand.turn === 'me');
+      if (who >= 0) await Poker.handle([q0, q1][who].playerId, { op: 'act', move: vv[who].hand.op.canCheck ? 'check' : 'call' }, now);
+      else now += 31000;
+      await Poker.handle(q2.playerId, { op: 'state' }, now - 1); // il regarde encore (pas abandonnée) mais ne joue pas
+    }
+    let q2v = await Poker.handle(q2.playerId, { op: 'state' }, now);
+    assert.equal(q2v.status, 'over'); assert.equal(q2v.over.reason, 'timeout'); assert.equal(q2v.over.mine, true); assert.equal(q2v.over.table, true, 'la table continue sans lui');
+    assert.ok(q2Tab().log.some(e => e.m === 'gone'));
+    const t3 = q2Tab(); assert.equal(t3.status, 'play'); assert.equal(t3.seats.filter(Boolean).length, 2);
+    // Il a vu sa fin, retour au salon ; une place est libre : on peut l'inviter à revenir.
+    r = await pk(q2, { op: 'ack' }); assert.equal(r.body.idle, true); assert.equal(r.body.last.reason, 'timeout');
+    // Le bouton reste sur un siège occupé.
+    const nBefore = q2Tab().hands;
+    vs = await playUntil(v => v[0].status === 'play' && v[0].hand && !v[0].hand.done && v[0].hand.n > nBefore);
+    const tb = q2Tab(); assert.ok(tb.seats[tb.hand.btn], 'bouton sur un siège occupé');
+    // Le dernier adversaire part : le match se termine, tout le monde a encaissé ; aucune pièce créée.
+    r = await pk(q1, { op: 'leave' });
+    r = await pk(q0, { op: 'state' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.over.reason, 'leave'); assert.equal(r.body.over.mine, false); assert.equal(r.body.over.by, 'Quad1', 'le pseudo de celui qui est parti');
+    for (const p of P4) await pk(p, { op: 'ack' });
+    const h1 = casino(), rk = (h1['b:poker'] - h0['b:poker']) - (h1['w:poker'] - h0['w:poker']);
+    const coins1 = await Promise.all(P4.map(coinsOf));
+    assert.ok(rk > 0, 'commission prise');
+    assert.equal(coins1.reduce((x, v) => x + v, 0) + rk, coins0.reduce((x, v) => x + v, 0), 'pièces des quatre + commission = avant, au jeton près');
+    // Table de 3 abandonnée en pleine main : réglée par la file pending, tout le monde encaisse.
+    const s0 = await Promise.all(P4.slice(0, 3).map(coinsOf)), h2 = casino();
+    run([['HDEL', dayKeyNow, q0.playerId, q1.playerId, q2.playerId]]);
+    r = await pk(q0, { op: 'create', buyin: 100, seats: 3 }); const c3 = r.body.code;
+    await pk(q1, { op: 'join', code: c3 }); r = await pk(q2, { op: 'join', code: c3 });
+    assert.equal(r.body.status, 'play', 'table pleine : la partie part toute seule');
+    await Lib.flushDue(Date.now() + 5 * 60000);
+    const tz = JSON.parse(run([['GET', `pk:${c3}`]])[0].result);
+    assert.equal(tz.status, 'over'); assert.equal(tz.over.reason, 'idle');
+    const h3 = casino(), rk3 = (h3['b:poker'] - h2['b:poker']) - (h3['w:poker'] - h2['w:poker']);
+    const s1 = await Promise.all(P4.slice(0, 3).map(coinsOf));
+    assert.equal(s1.reduce((x, v) => x + v, 0) + rk3, s0.reduce((x, v) => x + v, 0), 'table abandonnée : tout revient, commission comprise');
+    // Places : de 2 à 6, rien d'autre.
+    r = await pk(q3, { op: 'create', buyin: 100, seats: 9 }); assert.equal(r.body.max, 2, 'valeur hors limites : 2'); await pk(q3, { op: 'leave' });
+  }
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

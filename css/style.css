@@ -11713,3 +11713,63 @@ html.perf .pkr-timer i { animation: none !important; transform: scaleX(var(--fro
   .pkr-hole, .pkr-board { min-height: 4.4rem; gap: .4rem; }
   .pkr-felt .pc-front em { font-size: 1.6rem; }
 }
+/* Poker à plusieurs (Sacha, 2026-11-04 : jusqu'à 6 amis par table). Les adversaires en pastilles autour de l'ovale (en
+   arc : gauche, haut, droite), les pots sous eux, le tableau au centre sur toute la largeur, soi en bas. Tient à 320 px. */
+.pkr-felt.pkr-multi { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "tl t tr" "l p r" "c c c" "m m m"; gap: .35rem; align-items: start; border-radius: 3.2rem / 2.4rem; padding: .7rem .4rem .5rem; }
+.pkr-multi .pkr-potcell { grid-area: p; display: grid; place-items: center; align-self: center; min-width: 0; }
+.pkr-multi .pkr-center { grid-area: c; display: grid; justify-items: center; gap: .4rem; }
+.pkr-mine { grid-area: m; }
+.pkr-pod { position: relative; display: grid; justify-items: center; align-content: start; gap: .15rem; min-width: 0; padding: .3rem .2rem; border-radius: .8rem; background: rgba(0, 0, 0, .18); transition: box-shadow .25s, background .25s, opacity .25s; }
+/* Les zones nommées du grand siège (desc, bet, timer…) ne s'appliquent pas dans une pastille : tout s'empile. */
+.pkr-pod > * { grid-area: auto; }
+.pkr-pod.pkr-turn { background: rgba(255, 255, 255, .08); box-shadow: 0 0 0 2px rgba(250, 204, 21, .75), 0 0 14px rgba(250, 204, 21, .3); }
+.pkr-pod.pkr-folded { opacity: .55; }
+.pkr-pod.pkr-won { box-shadow: 0 0 0 2px rgba(253, 224, 71, .9), 0 0 16px rgba(253, 224, 71, .35); }
+.pkr-pod.pkr-free { place-items: center; align-content: center; min-height: 4.4rem; color: rgba(255, 255, 255, .6); font-size: .62rem; border: 1.5px dashed rgba(255, 255, 255, .25); background: transparent; }
+.pkr-chair { width: 1.5rem; height: 1.5rem; display: grid; place-items: center; border-radius: 50%; border: 1.5px dashed currentColor; font-weight: 700; }
+.pkr-pod-id { display: flex; align-items: center; justify-content: center; gap: .25rem; max-width: 100%; min-width: 0; }
+.pkr-pod-id b { font-size: .68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pkr-pod .pkr-av { --av-s: 20px; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .7); }
+.pkr-pod-row { display: flex; align-items: center; justify-content: center; gap: .2rem; flex-wrap: wrap; max-width: 100%; }
+.pkr-pod .pkr-stack { font-size: .64rem; }
+.pkr-pod .pkr-dealer { width: 1rem; height: 1rem; font-size: .52rem; }
+.pkr-pod-cards { display: flex; gap: .15rem; min-height: 2.3rem; }
+.pkr-felt .pcard.pkr-mini { width: 1.6rem; height: 2.3rem; }
+.pkr-felt .pkr-mini .pc-front em { font-size: .8rem; }
+.pkr-felt .pkr-mini .pc-front b { left: .12rem; top: .08rem; font-size: .55rem; }
+.pkr-felt .pkr-mini .pc-front b i { font-size: .48rem; }
+.pkr-felt .pkr-mini .pc-front b.low { display: none; }
+.pkr-felt .pkr-mini .pc-back { border-width: 2px; }
+.pkr-pod .pkr-desc { font-size: .56rem; padding: .05rem .3rem; }
+.pkr-pod .pkr-bet { font-size: .6rem; padding: 0 .35rem; }
+.pkr-pod-won { font: 700 .66rem var(--font-mono); color: #fde047; }
+.pkr-pod .pkr-timer { width: 80%; }
+.pkr-blind { display: inline-grid; place-items: center; height: 1rem; padding: 0 .2rem; border-radius: .3rem; background: rgba(255, 255, 255, .85); color: #111; font: 800 .5rem var(--font-sans); }
+.pkr-tag { font-size: .56rem; padding: .02rem .35rem; border-radius: 999px; background: rgba(0, 0, 0, .35); color: rgba(255, 255, 255, .85); white-space: nowrap; }
+.pkr-tag-allin { background: #b91c1c; color: #fff; }
+.pkr-pots { display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem; }
+.pkr-pots .pkr-pot { font-size: .64rem; padding: .15rem .5rem; }
+.pkr-pots-won { display: grid; gap: .05rem; font-size: .68rem; }
+.pkr-result .pkr-pots-won b { font-size: inherit; }
+.pkr-potcell .pkr-pot { white-space: nowrap; font-size: .7rem; padding: .15rem .5rem; }
+.pkr-multi .pkr-mine .pkr-seat { padding-top: .25rem; }
+/* Salle d'attente : qui est assis, les places libres. */
+.pkr-who { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; max-width: 100%; }
+.pkr-who li { display: flex; align-items: center; gap: .35rem; min-width: 0; max-width: 100%; padding: .3rem .65rem .3rem .35rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface-dim); font-size: .78rem; }
+.pkr-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 9rem; }
+.pkr-who .pkr-av { --av-s: 22px; }
+.pkr-who-free { color: var(--prose-2); border-style: dashed !important; }
+.pkr-who-free .pkr-chair { width: 1.3rem; height: 1.3rem; font-size: .7rem; }
+.pkr-seats-pick { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.pkr-foot-btns { width: auto; justify-content: flex-end; }
+.pkr-foot-btns .input { flex: 0 1 8rem; }
+@media (min-width: 561px) {
+  .pkr-felt.pkr-multi { padding: 1rem 1.2rem .7rem; gap: .5rem; }
+  .pkr-pod { padding: .45rem .35rem; }
+  .pkr-pod-id b { font-size: .78rem; }
+  .pkr-pod .pkr-av { --av-s: 26px; }
+  .pkr-pod .pkr-stack { font-size: .72rem; }
+  .pkr-felt .pcard.pkr-mini { width: 2.1rem; height: 3rem; }
+  .pkr-felt .pkr-mini .pc-front em { font-size: 1.05rem; }
+  .pkr-pod-cards { min-height: 3rem; }
+}
