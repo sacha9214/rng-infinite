@@ -1,6 +1,44 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (skins lot 1 branch). Update this file at the end of every session.
+
+## Planned skins from the 2026-11-05 triage (session "skins", branches `claude/skins-lot<N>`)
+
+Sacha asked to build every Planned idea; the 63 skin ideas are the "Session skins" list of
+`ideas-planned-2026-11-05.md` (untracked, main checkout). Each skin follows `.claude/skills/rng-skin-design`
+(brief, film with `tools/skin-preview.mjs` and `tools/reveal-film.mjs --skin <id> --crop`, critique, iterate). Each lot
+is one PR; lots are stacked (lot 2 is branched from lot 1), so merge them in order.
+
+**Lot 1 — `claude/skins-lot1`** (CSS: end of `css/style.css` and `css/premium.css`; buttons: end of `css/buttons.css`;
+scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.js`):
+- `overture` Overture 🎹 2,400 — 0casmictechthing [1fa8a0fc2680] (promised), merged with casmicgraything's music staff
+  [751598325349] and 17black's jukebox notes [450c5598ed1e]. **Sound:** `js/sound.js` `piano()`; each digit plays its
+  own note (C major, digit 0 = C4 … 9 = E5) and the rarity plays a chord (`OVERTURE_CHORDS`, Infinite = Am7). Hooked
+  in `js/app.js` (`pianoSkin`, the lock `d` field, `tier` gets `skin`), also in the shop Preview. A sound pack does
+  not replace the piano (like ASMR and Lab).
+- `cheese` Cheese 🧀 1,500 — casmicgraything [1076e573c9d1] (idea share) + casmictechthing's detailed version [bfbb45cb9910].
+- `dig` Archaeology 🦴 2,000 — casmicgraything [2b59f74fb5b6] (idea share) + Alt [4555c11ffa75].
+- `angel` Angel 🪽 7,777 and `demon` Demon 😈 6,666, Legendary (`premium`) — qwertyuiop [3c452b1058ce], prices his;
+  Demon also covers Roanono's fallen angel [2656e434fb62]. Shared wing drawing `l1Wing` / scene `l1Winged`.
+
+**Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
+- Lot 2: Deep Sea (finnnnn [0555093cf3b9], Deadshot [e1cfcd646151], YeeHao2's whale [da859b846a6d], LEVIATHAN
+  [ed2af64de7d0]; the existing 700-coin Ocean skin stays), Bubble (finnnnn [d0de2e6104d2]), Yin and Yang (kaz
+  [2a7c38aebff0], JBearr12 [959206f6ac9c]), Frutiger Aero (jia jun [e7a0b771e530], promised).
+- Lot 3: Blackout (Mace_67 [f414eccc558b], promised), Rarity mirror (Idkwhatnamemyself [fb70cca99f40], promised), then
+  the list in order: rainbow painting [7f9507fe5e51], grass [a841d12aea44], obsidian [7ac4a115abd4], horses/barn
+  [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
+  [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
+  spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
+  Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
+  [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
+  [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
+  spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
+  Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
+  lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
+  mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
+  [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
+  [773ca9b1b6e4], puzzle cube [3518354c582f].
 
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 

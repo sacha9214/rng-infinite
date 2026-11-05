@@ -11784,3 +11784,193 @@ html.perf .pkr-timer i { animation: none !important; transform: scaleX(var(--fro
   .pkr-felt .pkr-mini .pc-front em { font-size: 1.05rem; }
   .pkr-pod-cards { min-height: 3rem; }
 }
+
+/* ==================================================================== Skins du 2026-11-05, lot 1 (idées de joueurs) */
+/* ------------------------------------------------------------------ Overture (promis à 0casmictechthing, 2026-10-30 :
+   « background is a piano and as the numbers reveal musical symbols pop up » ; avec la portée de casmicgraything,
+   2026-11-05, et les notes du juke-box de 17black, 2026-10-27). Le pupitre d'un piano à queue : laque noire qui
+   reflète, une portée de cinq lignes dorées derrière les chiffres, le clavier le long du bas. Les chiffres sont en
+   feuille d'or, avec l'empattement des lettres peintes sur un piano. Pendant le tirage, les marteaux tremblent sur les
+   cordes (trémolo). Un chiffre qui se pose : le marteau se lève (l'élan), frappe, rebondit à peine et se pose (matière
+   dure : pas d'écrasement). Touche enfoncée, notes et accords : js/skinfx.js (SCENES.overture) et js/sound.js. */
+.num-card.skin-overture {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .02) 22%, transparent 23%) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(180deg, rgba(222, 184, 92, .38) 0 1px, transparent 1px .16em) 0 calc(50% - .2em) / 100% calc(.64em + 1px) no-repeat,
+    radial-gradient(ellipse 80% 70% at 30% 40%, #26262e, transparent 70%),
+    linear-gradient(180deg, #121217, #050507 70%, #000);
+  border: 2px solid #3f3f46; border-radius: .55rem; color: #f3d27a;
+  box-shadow: inset 0 0 0 1px rgba(222, 184, 92, .28), inset 0 .1em .3em rgba(255, 255, 255, .08), 0 0 16px rgba(222, 184, 92, .16), 0 10px 18px rgba(0, 0, 0, .45);
+  padding-bottom: .5em;
+}
+/* le clavier : touches d'ivoire et d'ébène (motif d'une octave : 2 noires puis 3), sous une baguette de laque */
+.num-card.skin-overture::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: .34em; pointer-events: none;
+  border-top: .045em solid #000;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .55), transparent .06em) 0 0 / 100% 100% no-repeat,
+    linear-gradient(90deg, transparent .14em, #111 .14em .26em, transparent .26em .34em, #111 .34em .46em, transparent .46em .74em, #111 .74em .86em, transparent .86em .94em, #111 .94em 1.06em, transparent 1.06em 1.14em, #111 1.14em 1.26em, transparent 1.26em) 0 0 / 1.4em 58% repeat-x,
+    repeating-linear-gradient(90deg, #f6f1e3 0 calc(.2em - 1px), #a8a29e calc(.2em - 1px) .2em) 0 0 / 100% 100%,
+    #f6f1e3;
+  box-shadow: inset 0 -.04em .05em rgba(0, 0, 0, .35);
+}
+.skin-overture .slot {
+  position: relative; font-family: 'Didot', 'Bodoni 72', 'Playfair Display', Georgia, 'Times New Roman', serif; font-weight: 700; font-variant-numeric: lining-nums;
+  color: #f3d27a; text-shadow: 0 .04em 0 #5c3d0a, 0 0 .18em rgba(243, 210, 122, .45);
+}
+.skin-overture .slot.ghost { opacity: .18; }
+.skin-overture .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Le trémolo : les marteaux rebondissent sur les cordes, vite et pas tous ensemble. */
+.skin-overture .slot.spinning { opacity: .62; color: #c9a65a; text-shadow: 0 0 .25em rgba(222, 184, 92, .5); animation: ovt-tremolo .12s ease-in-out infinite alternate; }
+.skin-overture .slot.spinning:nth-of-type(2n) { animation-duration: .09s; animation-delay: -.05s; }
+.skin-overture .slot.spinning:nth-of-type(3n) { animation-duration: .14s; }
+@keyframes ovt-tremolo { from { transform: translateY(-.06em); filter: blur(.4px); } to { transform: translateY(.04em); filter: blur(0); } }
+/* La frappe : le marteau se lève, frappe la corde (éclair d'or), rebondit à peine et se pose. */
+.skin-overture .slot.revealed { animation: ovt-strike .6s backwards; }
+@keyframes ovt-strike {
+  0% { transform: translateY(-.2em); color: #8a6a2a; text-shadow: none; animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  22% { transform: translateY(.05em); color: #fffbe8; text-shadow: 0 .04em 0 #5c3d0a, 0 0 .4em #fde68a, 0 0 .9em rgba(250, 204, 21, .7); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  42% { transform: translateY(-.035em); }
+  66% { transform: translateY(.01em); }
+  100% { transform: none; }
+}
+/* Dès Mythic (.ovt-chord, posée par la scène) : l'accord résonne, l'or des chiffres vibre une fois puis luit. */
+.num-card.skin-overture.ovt-chord .slot:not(.ghost) { animation: ovt-ring 1.4s ease-out; text-shadow: 0 .04em 0 #5c3d0a, 0 0 .22em rgba(253, 230, 138, .75); }
+@keyframes ovt-ring { 0% { transform: none; } 8% { transform: translateY(-.05em) scale(1.06); filter: brightness(1.6); } 20% { transform: translateY(.02em); } 34% { transform: translateY(-.015em); } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-overture .slot { animation: none !important; } }
+/* Cadre de duel : une salle de concert sombre, rideau de velours au loin, portée dorée ; ♪ se balance, 🎹 frappe. */
+.side-overture { --side-border: #b08d3c; --side-glow: 0 0 16px rgba(222, 184, 92, .3); --side-ink: #b08d3c;
+  --side-bg: repeating-linear-gradient(180deg, rgba(222, 184, 92, .2) 0 1px, transparent 1px 7px) 0 100% / 100% 34px no-repeat, repeating-linear-gradient(90deg, rgba(127, 29, 29, .16) 0 9px, rgba(69, 10, 10, .1) 9px 18px), radial-gradient(70% 60% at 50% 0%, rgba(253, 230, 138, .14), transparent 70%);
+  --deco-a: '♪'; --deco-b: '🎹'; }
+.side-overture::before { color: #d4af37; font-size: 1.3em; animation: ovt-sway 1.6s ease-in-out infinite; }
+.side-overture::after { animation: ovt-keys .8s steps(2) infinite; }
+@keyframes ovt-sway { 0%, 100% { transform: translateY(0) rotate(-10deg); } 50% { transform: translateY(-5px) rotate(10deg); } }
+@keyframes ovt-keys { 0%, 100% { transform: none; } 50% { transform: translateY(2px); } }
+.room-stage.many .side-overture::before, .room-stage.many .side-overture::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-overture::before, .side-overture::after { animation: none; } }
+/* ------------------------------------------------------------------ Cheese (idée de casmicgraything, 2026-11-05 :
+   « a basic skin splurged with liquid cheese » ; version détaillée de casmictechthing, même jour : « a block of cheese
+   drops out of the sky and stacks … on mythic+ the cheese melts and floods the numbers »). Une planche à fromage en
+   érable. Chaque chiffre est un bloc d'emmental (trous sur les bords, croûte plus foncée), le chiffre imprimé au fer
+   dedans. Pendant le tirage, les blocs tremblotent (pâte souple : un peu d'écrasement). Un chiffre qui se pose : le bloc
+   tombe du haut de la carte, s'écrase en touchant la planche, rebondit et se tasse. Dès Mythic, .chz-melt (posée par la
+   scène) : le fromage fond, une nappe coule du haut de la carte derrière les chiffres et les blocs deviennent brillants.
+   Miettes, râpe et meule qui tombe sur la carte : js/skinfx.js (SCENES.cheese). */
+.num-card.skin-cheese {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 25%, rgba(255, 255, 255, .25), transparent 70%),
+    repeating-linear-gradient(176deg, rgba(120, 72, 24, .1) 0 2px, transparent 2px 9px, rgba(120, 72, 24, .06) 9px 10px, transparent 10px 17px),
+    linear-gradient(180deg, #e9c48f, #d6a564 60%, #c48f4f);
+  border: 2px solid #8a5a2b; border-radius: .7rem; color: #7c4a03;
+  box-shadow: inset 0 0 0 .08em rgba(255, 236, 200, .35), inset 0 -.12em .2em rgba(92, 52, 14, .35), 0 0 14px rgba(250, 204, 21, .18), 0 10px 18px rgba(0, 0, 0, .35);
+  padding: .3em .55em .36em;
+}
+.skin-cheese .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .78em; height: 1.08em; margin: 0 .02em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; transform-origin: 50% 100%;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-size: .9em;
+  color: #8a4b00; text-shadow: 0 .03em 0 rgba(255, 246, 200, .8), 0 -.02em 0 rgba(92, 45, 0, .35);
+}
+.skin-cheese .slot::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 50' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23fff0a8'/><stop offset='.25' stop-color='%23fcd94a'/><stop offset='1' stop-color='%23eab308'/></linearGradient></defs><rect x='1.5' y='1.5' width='37' height='47' rx='5' fill='url(%23g)' stroke='%23b7791f' stroke-width='2.4'/><path d='M4 5.5Q20 3 36 5.5' stroke='%23fffbe0' stroke-width='1.6' fill='none' stroke-linecap='round' opacity='.8'/><g fill='%23d49a0b'><ellipse cx='7.5' cy='13' rx='3' ry='3.4'/><ellipse cx='33' cy='31' rx='3.4' ry='3'/><ellipse cx='8' cy='40' rx='2.2' ry='2.4'/><ellipse cx='31' cy='9.5' rx='2' ry='1.8'/><ellipse cx='20' cy='44.5' rx='2.6' ry='1.6'/><circle cx='36.5' cy='45' r='1.6'/></g><g fill='%23fff3b0' opacity='.7'><ellipse cx='7' cy='14.4' rx='2' ry='1.4'/><ellipse cx='32.6' cy='32.2' rx='2.2' ry='1.2'/></g></svg>") 50% 50% / 100% 100% no-repeat;
+  filter: drop-shadow(0 .04em .02em rgba(92, 52, 14, .45));
+}
+.skin-cheese .slot.ghost { opacity: .22; }
+.skin-cheese .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-cheese .slot.collapsed::before { display: none; }
+/* Pendant le tirage : les blocs tremblotent sur la planche, le chiffre n'est pas encore imprimé. */
+.skin-cheese .slot.spinning { opacity: 1; color: rgba(138, 75, 0, .3); text-shadow: none; animation: chz-wobble .2s ease-in-out infinite alternate; }
+.skin-cheese .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; }
+@keyframes chz-wobble { from { transform: skewX(-4deg) scale(1.02, .97); } to { transform: skewX(4deg) scale(.98, 1.02); } }
+/* La chute : le bloc tombe du haut de la carte, s'écrase sur la planche, rebondit et se tasse. */
+.skin-cheese .slot.revealed { animation: chz-drop .62s backwards; }
+@keyframes chz-drop {
+  0% { transform: translateY(-1.25em) scale(.94, 1.08); color: rgba(138, 75, 0, .3); animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  42% { transform: translateY(0) scale(1.16, .8); color: #8a4b00; animation-timing-function: cubic-bezier(.2, .9, .4, 1); }
+  62% { transform: translateY(-.1em) scale(.94, 1.07); }
+  80% { transform: translateY(0) scale(1.03, .97); }
+  100% { transform: none; }
+}
+/* Dès Mythic : le fromage fond. La nappe coule du haut de la carte (derrière les chiffres), les blocs brillent et
+   s'affaissent un peu. */
+.num-card.skin-cheese.chz-melt::before {
+  content: ''; position: absolute; z-index: 0; left: 0; right: 0; top: 0; height: 62%; pointer-events: none; transform-origin: 50% 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><defs><linearGradient id='m' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23f59e0b'/><stop offset='.6' stop-color='%23fbbf24'/><stop offset='1' stop-color='%23fde047'/></linearGradient></defs><path d='M0 0H120V14Q116 30 112 14Q108 8 103 22Q100 36 96 20Q92 10 86 16Q82 22 78 14Q72 6 66 26Q63 39 59 24Q55 10 49 14Q44 18 40 12Q35 6 30 20Q27 31 23 17Q19 8 13 14Q8 20 5 12Q2 8 0 10Z' fill='url(%23m)'/><path d='M0 4H120' stroke='%23fff7cc' stroke-width='1.6' opacity='.7'/></svg>") 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 .05em .04em rgba(146, 64, 14, .4));
+  animation: chz-flood 1.6s cubic-bezier(.3, .6, .4, 1) backwards;
+}
+@keyframes chz-flood { from { transform: scaleY(0); } 60% { transform: scaleY(1.06); } to { transform: none; } }
+.num-card.skin-cheese.chz-melt .slot:not(.ghost) { animation: chz-sag 1.6s ease-out forwards; }
+.num-card.skin-cheese.chz-melt .slot:not(.ghost)::before { filter: drop-shadow(0 0 .12em rgba(253, 224, 71, .8)) drop-shadow(0 .04em .02em rgba(92, 52, 14, .45)) saturate(1.25) brightness(1.06); border-radius: 0 0 .2em .2em; }
+@keyframes chz-sag { 0% { transform: none; } 30% { transform: scale(1.06, .92); } 100% { transform: translateY(.02em) scale(1.03, .96); } }
+@media (prefers-reduced-motion: reduce) { .skin-cheese .slot, .num-card.skin-cheese::before { animation: none !important; } }
+/* Cadre de duel : une cuisine de fromager (carreaux crème, nappe vichy en bas) ; 🧀 rebondit, 🐭 pointe le nez. */
+.side-cheese { --side-border: #d4a017; --side-glow: 0 0 16px rgba(250, 204, 21, .3); --side-ink: #b45309;
+  --side-bg: conic-gradient(rgba(220, 38, 38, .22) 0 25%, rgba(255, 255, 255, .12) 0 50%, rgba(220, 38, 38, .22) 0 75%, rgba(255, 255, 255, .12) 0) 0 100% / 14px 14px repeat-x, radial-gradient(circle, rgba(234, 179, 8, .16) 0 4px, transparent 5px) 0 0 / 26px 22px, linear-gradient(180deg, rgba(254, 240, 138, .14), rgba(217, 119, 6, .08));
+  --deco-a: '🧀'; --deco-b: '🐭'; }
+.side-cheese::before { animation: chz-hop 1.7s ease-in-out infinite; }
+.side-cheese::after { animation: chz-peek 3.2s ease-in-out infinite; }
+@keyframes chz-hop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(1px) scale(1.12, .86); } 82% { transform: translateY(-7px) scale(.94, 1.08); } 92% { transform: scale(1.04, .96); } }
+@keyframes chz-peek { 0%, 40%, 100% { transform: translateX(6px); opacity: 0; } 55%, 85% { transform: none; opacity: .75; } }
+.room-stage.many .side-cheese::before, .room-stage.many .side-cheese::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cheese::before, .side-cheese::after { animation: none; } }
+/* ------------------------------------------------------------------ Archaeology (idée de casmicgraything, 2026-11-03 :
+   « an archaeology site while every number that rolls, the bone gets dug up … on mythic + divine rolls the bones move
+   and become alive » ; même idée d'Alt, même jour : « it could be dug up to form numbers »). La coupe d'un chantier de
+   fouilles : couches de terre et de sable, cailloux, la ficelle du carroyage tendue en haut. Chaque chiffre est un os
+   fossile (ivoire veiné, relief sombre). Pendant le tirage, il est encore enterré : on ne devine que sa forme, la terre
+   bouge. Un chiffre qui se pose : le pinceau dégage la poussière (le chiffre s'éclaircit), l'os est soulevé de son
+   alvéole, bascule un peu et se repose (matière dure : pas d'écrasement). Dès Mythic, .arc-alive (posée par la scène) :
+   les os s'animent et dansent un moment. Pinceau, poussière et squelette qui court : js/skinfx.js (SCENES.dig). */
+.num-card.skin-dig {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><path d='M0 0H120V7Q100 9 84 6.5T50 7.5T22 6T0 8Z' fill='%23493222'/><path d='M0 8Q22 6 50 7.5T84 6.5T120 7V16Q104 18 86 15.5T52 17T24 15T0 17Z' fill='%23805a36'/><path d='M0 17Q24 15 52 17T86 15.5T120 16V18.4Q100 20 84 17.6T50 19T22 17.2T0 19Z' fill='%23c79f6c'/><path d='M0 19Q22 17.2 50 19T84 17.6T120 18.4V29Q98 31 80 28T46 30T20 28.4T0 30Z' fill='%23926639'/><path d='M0 30Q20 28.4 46 30T80 28T120 29V31Q96 33 78 30.4T44 32T18 30.4T0 32Z' fill='%23b88d5c'/><path d='M0 32Q18 30.4 44 32T78 30.4T120 31V40H0Z' fill='%23684528'/><g fill='%233f2a1a' opacity='.35'><circle cx='7' cy='12' r='.5'/><circle cx='19' cy='24' r='.4'/><circle cx='33' cy='11' r='.45'/><circle cx='47' cy='25' r='.5'/><circle cx='61' cy='13' r='.4'/><circle cx='74' cy='23' r='.5'/><circle cx='93' cy='12' r='.45'/><circle cx='107' cy='25' r='.5'/><circle cx='113' cy='35' r='.4'/><circle cx='27' cy='36' r='.45'/><circle cx='66' cy='35' r='.5'/><circle cx='88' cy='37' r='.4'/><circle cx='12' cy='3' r='.4'/><circle cx='58' cy='3.5' r='.45'/><circle cx='99' cy='3' r='.4'/></g><g fill='%23e8d9bd' opacity='.3'><circle cx='15' cy='14' r='.35'/><circle cx='40' cy='22' r='.3'/><circle cx='70' cy='12' r='.35'/><circle cx='101' cy='22' r='.3'/><circle cx='52' cy='37' r='.35'/></g><ellipse cx='6' cy='35' rx='2.4' ry='1.6' fill='%235c4a3a'/><ellipse cx='5.4' cy='34.4' rx='1' ry='.5' fill='%23988670'/><ellipse cx='115' cy='12' rx='2' ry='1.4' fill='%237a6a56'/><ellipse cx='114.4' cy='11.5' rx='.8' ry='.4' fill='%23a89880'/><ellipse cx='62' cy='26' rx='1.4' ry='1' fill='%235c4a3a'/></svg>") 0 0 / 100% 100% no-repeat,
+    #684528;
+  border: 2px solid #3f2a1a; border-radius: .45rem; color: #f3ead7;
+  box-shadow: inset 0 .1em .25em rgba(0, 0, 0, .45), inset 0 -.06em .12em rgba(255, 230, 190, .15), 0 0 14px rgba(180, 140, 90, .2), 0 10px 18px rgba(0, 0, 0, .4);
+}
+/* l'os : ivoire jauni vers le bas, relief sombre ; derrière lui, l'alvéole qu'on a creusée (une cuvette sombre à bord clair) */
+.skin-dig .slot {
+  position: relative; font-family: 'Arial Rounded MT Bold', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: #f3ead7; -webkit-text-stroke: .025em #3b2a1a;
+  text-shadow: 0 -.02em 0 #fffdf5, 0 .045em 0 #3b2a1a, 0 .06em .08em rgba(0, 0, 0, .55), 0 0 .2em rgba(255, 240, 210, .2);
+}
+.skin-dig .slot::after {
+  content: ''; position: absolute; z-index: -1; left: 4%; right: 4%; top: 14%; bottom: 8%; border-radius: 45% 45% 40% 40%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, rgba(30, 18, 10, .55), rgba(48, 30, 18, .38) 60%, rgba(48, 30, 18, 0) 75%);
+  box-shadow: 0 .03em 0 rgba(232, 210, 170, .25);
+}
+.skin-dig .slot.ghost::after, .skin-dig .slot.collapsed::after { display: none; }
+.skin-dig .slot.ghost { opacity: .2; }
+.skin-dig .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Encore enterré : couleur de terre, la terre glisse par petits à-coups. */
+.skin-dig .slot.spinning { opacity: 1; color: #5e4329; -webkit-text-stroke: .02em #3b2a1a; text-shadow: 0 0 .1em #3b2a1a; filter: blur(.6px); animation: dig-buried .16s steps(2) infinite; }
+.skin-dig .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes dig-buried { from { transform: translate(-.015em, .02em); } to { transform: translate(.015em, -.01em); } }
+/* Le dégagement : la poussière part (le chiffre passe de la terre à l'os), l'os sort de son alvéole et se repose. */
+.skin-dig .slot.revealed { animation: dig-up .64s backwards; }
+@keyframes dig-up {
+  0% { transform: translateY(.04em); color: #5e4329; text-shadow: 0 0 .1em #3b2a1a; filter: blur(.6px); animation-timing-function: ease-out; }
+  30% { transform: translateY(.02em); color: #cbb894; filter: none; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  52% { transform: translateY(-.13em) rotate(-4deg); color: #fffaf0; text-shadow: 0 -.02em 0 #fffdf5, 0 .14em .06em rgba(0, 0, 0, .55); }
+  72% { transform: translateY(.015em) rotate(1deg); animation-timing-function: ease-out; }
+  84% { transform: translateY(-.02em) rotate(0); }
+  100% { transform: none; }
+}
+/* Dès Mythic : les os s'animent, chacun à son rythme, puis se reposent. */
+.num-card.skin-dig.arc-alive .slot:not(.ghost) { animation: dig-alive .9s ease-in-out 3; text-shadow: 0 -.02em 0 #fffdf5, 0 .045em 0 #3b2a1a, 0 0 .3em rgba(253, 230, 138, .7); }
+.num-card.skin-dig.arc-alive .slot:nth-of-type(2n) { animation-delay: .15s; }
+.num-card.skin-dig.arc-alive .slot:nth-of-type(3n) { animation-duration: .75s; }
+@keyframes dig-alive { 0%, 100% { transform: none; } 25% { transform: rotate(-8deg); } 50% { transform: translateY(-.12em); } 75% { transform: rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { .skin-dig .slot { animation: none !important; } }
+/* Cadre de duel : un chantier de fouilles (carroyage tendu, couches de terre en bas) ; 🦴 se balance, 🪨 roule. */
+.side-dig { --side-border: #a07548; --side-glow: 0 0 14px rgba(184, 141, 92, .3); --side-ink: #8c6239;
+  --side-bg: linear-gradient(180deg, transparent 72%, rgba(140, 98, 57, .22) 72% 80%, rgba(110, 75, 44, .28) 80% 90%, rgba(74, 52, 35, .3) 90%), linear-gradient(90deg, rgba(250, 245, 230, .12) 1px, transparent 1px) 0 0 / 34px 34px, linear-gradient(0deg, rgba(250, 245, 230, .12) 1px, transparent 1px) 0 0 / 34px 34px, linear-gradient(180deg, rgba(222, 196, 150, .12), rgba(140, 98, 57, .12));
+  --deco-a: '🦴'; --deco-b: '🪨'; }
+.side-dig::before { transform-origin: 50% 80%; animation: dig-sway 2s ease-in-out infinite; }
+.side-dig::after { animation: dig-roll 3s ease-in-out infinite; }
+@keyframes dig-sway { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg) translateY(-3px); } }
+@keyframes dig-roll { 0%, 100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-8px) rotate(-90deg); } }
+.room-stage.many .side-dig::before, .room-stage.many .side-dig::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-dig::before, .side-dig::after { animation: none; } }

@@ -2231,6 +2231,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-05-skins-lot1', date: 'Nov 5, 2026', en: ['🎹 New skin: Overture (2,400 coins, idea by 0casmictechthing, with casmicgraything\'s music staff and 17black\'s floating notes). Gold digits on a grand piano: every digit plays its own piano note, notes float off the staff, and the rarity plays a chord. Mythic rolls drop instruments, Divine rolls raise a grand piano, and Infinite ends on A minor 7', '🧀 New skin: Cheese (1,500 coins, ideas by casmicgraything and casmictechthing). Blocks of Swiss cheese drop onto the board, a different cheese crowns each rarity, and Mythic rolls melt and flood the card', '🦴 New skin: Archaeology (2,000 coins, ideas by casmicgraything and Alt). A brush digs every bone digit out of the ground; on Mythic rolls the bones come alive and a raptor skeleton runs by', '🪽😈 New legendary skins: Angel (7,777 coins) and Demon (6,666 coins), ideas by qwertyuiop, with Roanono\'s fallen angel. Halos over every digit, and great rolls spread wings: white feathers for the Angel, torn black wings over a circle of runes for the Demon. Divine rolls bring three pairs'], fr: ['🎹 Nouveau skin : Overture (2 400 pièces, idée de 0casmictechthing, avec la portée de casmicgraything et les notes de 17black). Des chiffres d\'or sur un piano à queue : chaque chiffre joue sa note au piano, des notes s\'envolent de la portée et la rareté joue un accord. Les tirages Mythic font tomber des instruments, les Divine font monter un piano à queue, et Infinite finit sur un la mineur 7', '🧀 Nouveau skin : Cheese (1 500 pièces, idées de casmicgraything et casmictechthing). Des blocs d\'emmental tombent sur la planche, un fromage différent couronne chaque rareté, et les tirages Mythic fondent et inondent la carte', '🦴 Nouveau skin : Archaeology (2 000 pièces, idées de casmicgraything et Alt). Un pinceau déterre chaque chiffre en os ; sur les tirages Mythic, les os s\'animent et un squelette de raptor passe en courant', '🪽😈 Nouveaux skins légendaires : Angel (7 777 pièces) et Demon (6 666 pièces), idées de qwertyuiop, avec l\'ange déchu de Roanono. Une auréole sur chaque chiffre, et les grands tirages déploient des ailes : plumes blanches pour Angel, ailes noires arrachées sur un cercle de runes pour Demon. Les tirages Divine en déploient trois paires'] },
     { id: '2026-11-05-roll-count', date: 'Nov 5, 2026', en: ['🔢 After each roll, see how many times your number was already rolled by all players, and which roll of it you are (like "rolled 36 times before you · you\'re #37"). Roll a number nobody ever got and you\'ll know it! Counts start from every roll saved on the server. Normal mode only (idea by a friend of Sacha, also asked by Tumored and Gray)'], fr: ['🔢 Après chaque tirage, vois combien de fois ton nombre a déjà été tiré par tous les joueurs, et quel tirage de ce nombre tu es (par exemple « a été tiré 36 fois avant toi · tu es le n° 37 »). Tire un nombre que personne n\'a jamais eu et tu le sauras ! Les compteurs partent de tous les tirages gardés sur le serveur. Mode normal seulement (idée d\'un ami de Sacha, aussi demandée par Tumored et Gray)'] },
     { id: '2026-11-04-poker-open', date: 'Nov 4, 2026', en: ['🌍 Open poker tables! In Casino → Poker, pick the blinds, choose how many coins you bring (20 to 100 big blinds) and sit down with anyone, up to 6 players. Join a table that is already playing (you play from the next hand) and leave whenever you like with your chips. Open tables need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with friend tables'], fr: ['🌍 Des tables de poker ouvertes ! Dans Casino → Poker, choisis les blindes, combien de pièces tu apportes (de 20 à 100 grosses blindes) et assieds-toi avec n\'importe qui, jusqu\'à 6 joueurs. Rejoins une table déjà en jeu (tu joues dès la main suivante) et pars quand tu veux avec tes jetons. Les tables ouvertes demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec les tables entre amis'] },
     { id: '2026-11-04-bots', date: 'Nov 4, 2026', en: ['🤖 Bot farms removed from the game: hundreds of fake accounts were rolling non-stop to fill the leaderboards and the online count (reported by jonahfr). New accounts are now limited per network, and gifts and friend poker tables unlock 3 days after your first roll'], fr: ['🤖 Fermes de bots retirées du jeu : des centaines de faux comptes tiraient sans arrêt pour remplir les classements et le compteur de joueurs en ligne (signalé par jonahfr). Les nouveaux comptes sont maintenant limités par réseau, et les cadeaux et les tables de poker entre amis se débloquent 3 jours après ton premier tirage'] },
@@ -3170,10 +3171,13 @@
     // Pack de sons acheté (boutique, onglet Sounds) : il change la note des chiffres et le son de la rareté. Les skins dont
     // le son est l'identité (ASMR, Lab) gardent leurs chiffres ; le pack joue quand même la rareté.
     const pack = Store.settings.soundPack && Store.settings.soundPack !== 'classic' ? Store.settings.soundPack : undefined;
-    Sound.warm([['tier', { tier: a.tier, pack }]]);
+    // Overture (promis à 0casmictechthing, 2026-10-30) : chaque chiffre joue sa note au piano et la rareté son accord.
+    const pianoSkin = !owner && Shop.resolve(Store.settings.skin) === 'overture' ? 'overture' : undefined;
+    Sound.warm([['tier', { tier: a.tier, pack, skin: pianoSkin }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const lockSkin = owner ? '' : Shop.resolve(Store.settings.skin);
-    if (pack && lockSkin !== 'asmr' && lockSkin !== 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, pack } : { i, pack }]));
+    if (pianoSkin) Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', { i, ...(i < lead ? { soft: 1 } : i === slotCount - 1 ? { final: 1 } : {}), d: Number(padded[i]), skin: pianoSkin }]));
+    else if (pack && lockSkin !== 'asmr' && lockSkin !== 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, pack } : { i, pack }]));
     if (lockSkin === 'asmr' || lockSkin === 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, skin: lockSkin } : { i, skin: lockSkin }]));
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
     if (!ctx.replay) watchFps(1800);
@@ -3198,7 +3202,8 @@
       if (revealed === slotCount - 1) lastFrom = performance.now();
       // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
       const lk = i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i };
-      if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
+      if (pianoSkin) Object.assign(lk, { d: Number(padded[i]), skin: pianoSkin }); // Overture : la note du chiffre
+      else if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
       else if (pack) lk.pack = pack;
       sfx('lock', lk);
       if (i >= lead) breadBite(i + 1 - lead); // Bread : une bouchée par vrai chiffre (MaxABGD, 2026-11-01)
@@ -3257,7 +3262,7 @@
       { const c = $('#r-coins'); if (c) { c.hidden = false; if (!reducedMotion) c.classList.add('pop-in'); } }
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
-      sfx('tier', { tier: a.tier, pack });
+      sfx('tier', { tier: a.tier, pack, skin: pianoSkin });
       if (skinFx) skinFx.reveal(a.tier);
       wallReact(a.tier, n); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
@@ -6848,14 +6853,14 @@
         LOCKS.forEach((ms, k) => at(ms, () => {
           slots[k].textContent = digits[k]; slots[k].classList.remove('spinning'); slots[k].classList.add('revealed'); shown = k + 1;
           if (fx) fx.lock(slots[k], { last: k === 5 });
-          Sound.play('lock', { i: k, soft: 1, ...(id === 'asmr' || id === 'lab' ? { skin: id, final: k === 5 ? 1 : 0 } : {}) });
+          Sound.play('lock', { i: k, soft: 1, ...(id === 'asmr' || id === 'lab' ? { skin: id, final: k === 5 ? 1 : 0 } : id === 'overture' ? { skin: id, d: Number(digits[k]), soft: 0, final: k === 5 ? 1 : 0 } : {}) });
         }));
         at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
         at(LOCKS[5] + 600, () => {
           clearInterval(spin);
           card.classList.remove('neutral', 'charging'); card.dataset.tier = tier;
           if (fx) fx.reveal(tier);
-          Sound.play('reveal', { small: 1 });
+          if (id === 'overture') Sound.play('tier', { tier, skin: id }); else Sound.play('reveal', { small: 1 }); // Overture : l'accord de la rareté
         });
       };
       m.querySelector('#sp-again').addEventListener('click', play);
