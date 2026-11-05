@@ -606,7 +606,9 @@
   // N pour zéro, pour garder la largeur de la case) ; le chiffre arabe gravé n'apparaît qu'à la pose (lisible).
   const ROMAN = ['N', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'];
   const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph()
-    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0] : String((Math.random() * 10) | 0));
+    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0]
+    : card && card.classList.contains('skin-yinyang') ? '零一二三四五六七八九'[(Math.random() * 10) | 0] // Yin and Yang : des chiffres chinois dans la brume (kaz, 2026-10-31)
+    : String((Math.random() * 10) | 0));
   // Badges Top 1 / 5 / 10 : remis à la fin de chaque mois aux dix premiers du classement du mois, gardés pour toujours
   // (voir api/_rank.js). award = { top: 1 | 5 | 10, month: 'AAAA-MM' } ; le serveur envoie le meilleur de chacun.
   const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
@@ -2358,6 +2360,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-05-skins-lot2', date: 'Nov 5, 2026', en: ['🐋 New skin: Deep Sea (2,600 coins, ideas by finnnnn, Deadshot, YeeHao2 and LEVIATHAN). Glowing digits in the abyss while fish, turtles and squid swim by; a shark for great rolls, a whale for Mythic, the leviathan for Divine, and a 1 in 50 anchor', '🫧 New skin: Bubble (1,400 coins, idea by finnnnn). Every digit is a soap bubble that pops into the next; Mythic rolls fire a bubble gun', '☯️ New legendary skin: Yin and Yang (6,000 coins, ideas by kaz and JBearr12). Black and white swap with every digit, Chinese numerals roll in the mist, and great rolls bring two koi', '🌐 New skin: Frutiger Aero (2,200 coins, idea by jia jun). Glossy glass, a green hill, gel digits, bubbles and ribbons of light'], fr: ['🐋 Nouveau skin : Deep Sea (2 600 pièces, idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN). Des chiffres lumineux dans l\'abysse pendant que passent poissons, tortues et calmars ; un requin pour les grands tirages, une baleine pour les Mythic, le léviathan pour les Divine, et une ancre une fois sur 50', '🫧 Nouveau skin : Bubble (1 400 pièces, idée de finnnnn). Chaque chiffre est une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles', '☯️ Nouveau skin légendaire : Yin and Yang (6 000 pièces, idées de kaz et JBearr12). Le noir et le blanc s\'échangent à chaque chiffre, des chiffres chinois défilent dans la brume, et les grands tirages amènent deux carpes koï', '🌐 Nouveau skin : Frutiger Aero (2 200 pièces, idée de jia jun). Du verre brillant, une colline verte, des chiffres en gel, des bulles et des rubans de lumière'] },
     { id: '2026-11-05-features-misc', date: 'Nov 5, 2026', en: [
       '🏛️ New Hall of Fame (Leaderboard → Hall of Fame): the first player to roll each Infinite number, the first to reach 100M, 1B, 10B and 100B XP, the first to 10,000, 100,000 and 1,000,000 rolls, and the first Mythic, Celestial, Divine, Godlike and Infinite of Hard mode. Kept forever (idea by Avaneesh_17)',
       '🔄 Quest rerolls: swap a daily quest you are stuck on for another one of the same kind, 3 times a week. Your progress stays (idea by Mace_67)',

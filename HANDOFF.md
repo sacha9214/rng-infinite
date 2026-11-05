@@ -1,6 +1,6 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (delete-account branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (skins lot 2 branch, merged with main). Update this file at the end of every session.
 
 ## Delete my account (2026-11-05, branch `claude/delete-account`)
 
@@ -128,10 +128,17 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
 - `angel` Angel 🪽 7,777 and `demon` Demon 😈 6,666, Legendary (`premium`) — qwertyuiop [3c452b1058ce], prices his;
   Demon also covers Roanono's fallen angel [2656e434fb62]. Shared wing drawing `l1Wing` / scene `l1Winged`.
 
+**Lot 2 — `claude/skins-lot2`** (branched from lot 1; block "lot 2 du 2026-11-05" in `js/skinfx.js`):
+- `deepsea` Deep Sea 🐋 2,600 — finnnnn [0555093cf3b9] (idea share) + Deadshot [e1cfcd646151] (fish, sharks, turtles,
+  squid, seaweed, the 1-in-50 anchor), YeeHao2's whale [da859b846a6d], LEVIATHAN [ed2af64de7d0] (head and neck over
+  the number from Divine). The old 700-coin Ocean skin stays.
+- `bubble` Bubble 🫧 1,400 — finnnnn [d0de2e6104d2]. Shared bubble sprite `l2Bubble()` (also used by Aero).
+- `yinyang` Yin and Yang ☯️ 6,000, Legendary — kaz [2a7c38aebff0] (idea share) + JBearr12 [959206f6ac9c]. The card
+  inverts black/white at every landed digit with a CSS `:has()` rule on the count of `.slot.revealed` (works without
+  the scene); Chinese numerals while rolling come from `spinChar` in `js/app.js`.
+- `aero` Frutiger Aero 🌐 2,200 — jia jun [e7a0b771e530] (promised). Generic style, no logo.
+
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Lot 2: Deep Sea (finnnnn [0555093cf3b9], Deadshot [e1cfcd646151], YeeHao2's whale [da859b846a6d], LEVIATHAN
-  [ed2af64de7d0]; the existing 700-coin Ocean skin stays), Bubble (finnnnn [d0de2e6104d2]), Yin and Yang (kaz
-  [2a7c38aebff0], JBearr12 [959206f6ac9c]), Frutiger Aero (jia jun [e7a0b771e530], promised).
 - Lot 3: Blackout (Mace_67 [f414eccc558b], promised), Rarity mirror (Idkwhatnamemyself [fb70cca99f40], promised), then
   the list in order: rainbow painting [7f9507fe5e51], grass [a841d12aea44], obsidian [7ac4a115abd4], horses/barn
   [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
