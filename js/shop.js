@@ -344,7 +344,9 @@
     { id: 'synthwave', name: 'Synthwave', emoji: '🟣', price: 1200, desc: 'A neon grid rolling to the horizon' },
     // Idée de Me Cojoni (2026-10-20) : un fond galactique qui réagit à chaque tirage selon sa rareté (id « aether » :
     // « infinity » est déjà l'identifiant d'un skin).
-    { id: 'aether', name: 'Aether', emoji: '♾️', price: 6000, premium: true, desc: 'A galaxy around a glowing infinity sign that reacts to the rarity of every roll' },
+    // Idée d'Angelicide9 (2026-10-21, faite le 2026-11-05) : une bille de lumière parcourt le signe sans arrêt, plus vite
+    // selon la rareté du dernier tirage, et le signe brille de la couleur de cette rareté (arc-en-ciel pour Infinite).
+    { id: 'aether', name: 'Aether', emoji: '♾️', price: 6000, premium: true, desc: 'A galaxy around a glowing infinity sign: a ball of light races along it, faster the rarer your roll, and the sign glows in your roll\'s rarity colour' },
     { id: 'galaxy', name: 'Galaxy', emoji: '🌠', price: 1000, desc: 'A purple nebula with stars rushing past' },
     // Idée de JAKE (2026-10-17) : du code vert qui tombe, façon hacker.
     { id: 'hacker', name: 'Hacker', emoji: '💻', price: 900, desc: 'Green code raining down the screen' },
@@ -420,6 +422,14 @@
     { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
     // Idée de jia jun : une fête d'anniversaire.
     { id: 'party', name: 'Party', emoji: '🎈', price: 4000, premium: true, idea: 'jia jun', desc: 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti' },
+    // Fonds d'idées de joueurs (tri de Sacha, 2026-11-05), lot « ciel et espace », dessinés en direct (js/wallfx.js). Des
+    // fonds normaux (ils entrent dans la caisse de fonds) : aucun ne réagit à la rareté des tirages.
+    // Idée d'IXOLAF2 : un ciel avec des avions qui passent de temps en temps (livrées inventées, aucune compagnie).
+    { id: 'blueskies', name: 'Blue Skies', emoji: '✈️', price: 1000, idea: 'IXOLAF2', desc: 'Clouds drift across a big blue sky; now and then a jet draws a long contrail or a little plane tows a banner by' },
+    // Idée de Ggggssnoop : la Voie lactée (id « milkynight » : « milkyway » est déjà un skin).
+    { id: 'milkynight', name: 'Milky Way', emoji: '🔭', price: 1100, idea: 'Ggggssnoop', desc: 'The Milky Way arcs over dark hills and a glowing tent: twinkling stars, a shooting star now and then and a slow satellite' },
+    // Idée de Ggggssnoop (« heaven's gate ») : une porte de lumière dans le ciel, sans aucun symbole religieux.
+    { id: 'skygate', name: 'Sky Gate', emoji: '✨', price: 1200, idea: 'Ggggssnoop', desc: 'A tall gate of light stands on a sea of clouds; its doors slowly swing open and golden rays pour through' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },

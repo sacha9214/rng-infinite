@@ -993,6 +993,17 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
       assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
     }
   }
+  // Fonds d'idées de joueurs du 2026-11-05 (tri de Sacha), lot « ciel et espace » : des fonds normaux, dans la caisse, avec
+  // leur idée ; aucun identifiant de skin repris (« milkyway » est le skin, le fond est « milkynight »).
+  {
+    const sky = { blueskies: 'IXOLAF2', milkynight: 'Ggggssnoop', skygate: 'Ggggssnoop' };
+    for (const [id, idea] of Object.entries(sky)) {
+      const w = Shop.wallById.get(id);
+      assert.ok(w && w.idea === idea && !w.premium && !w.until && w.price >= 900 && w.price <= 1200, `${id} : fond normal, idée de ${idea}`);
+      assert.ok(wpool.includes(id) && !Shop.byId.has(id), `${id} : dans la caisse, pas un identifiant de skin`);
+    }
+    assert.match(Shop.wallById.get('aether').desc, /ball of light/, 'Aether : la bille lumineuse (idée d\'Angelicide9)');
+  }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
   const bpool = Shop.casePool(bcase).map(b => b.id);
