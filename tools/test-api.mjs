@@ -3386,6 +3386,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const leap = n => engine.analyze(n).earnedIds.includes('LEAP_DAY');
   assert.ok(leap(22924) && leap(22996) && leap(22900), 'Leap Day manquant');
   assert.ok(!leap(22925) && !leap(22898) && !leap(23000) && !leap(122924), 'Leap Day en trop');
+  // Thanksgiving (2026-11-26) : Turkey Roast (idée d'Idkwhatnamemyself) et Thanksgiving Dinner (idée de qwertyuiop), en vente
+  // jusqu'à la fin du 27 novembre heure du Pacifique, jamais en caisse, hors collections ; dessinés partout (CSS, scène, calques).
+  const tk = Shop.byId.get('turkey'), fe = Shop.wallById.get('feast'), END = '2026-11-28T08:00:00Z';
+  assert.deepEqual([tk.price, tk.until, tk.idea, fe.price, fe.until, fe.idea], [1126, END, 'Idkwhatnamemyself', 1126, END, 'qwertyuiop']);
+  for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'turkey' || s.id === 'feast'), `Thanksgiving pas dans ${c.id}`);
+  assert.ok(!Shop.collectible().includes('turkey') && !Shop.collectibleSets.walls().includes('feast'), 'Thanksgiving hors collections');
+  { const css = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8'), fx = fs.readFileSync(path.join(ROOT, 'js/skinfx.js'), 'utf8'), app = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+    for (const sel of ['.num-card.skin-turkey {', '.side-turkey {', '.wp-feast {', '.wall-preview.wp-feast {']) assert.ok(css.includes(sel), `${sel} manquant`);
+    assert.ok(fx.includes('SCENES.turkey = ') && app.includes('WALL_LAYERS.feast = '), 'scène et calques de Thanksgiving'); }
+  const tkBuy = (action, key, id) => call(shopApi, { method: 'POST', body: { playerId: buyer.playerId, secret: buyer.secret, action, [key]: id } });
+  for (const [action, key, id] of [['buy', 'skin', 'turkey'], ['buywall', 'wall', 'feast']]) {
+    Date.now = () => Date.parse(END) + 1000;
+    try { const r = await tkBuy(action, key, id); assert.equal(r.status, 422, `${id} n'est plus en vente`); } finally { Date.now = realNow; }
+    Date.now = () => Date.parse(END) - 60000;
+    try { const r = await tkBuy(action, key, id); assert.equal(r.status, 200, JSON.stringify(r.body)); } finally { Date.now = realNow; }
+  }
 }
 
 // ================================================================ 56. Farce du créateur en duel : faux jackpot, visible seulement chez les autres

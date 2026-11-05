@@ -1,6 +1,42 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (Thanksgiving branch). Update this file at the end of every session.
+
+## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
+
+Planned ideas from the 2026-11-05 triage: qwertyuiop (a dinner table with Thanksgiving food), Idkwhatnamemyself (a
+turkey roasted into the number), Kj13 (autumn leaves in brown, red, yellow and orange, limited until Thanksgiving
+night), R77 (dinner table, turkey feathers, the iconic turkey look).
+
+- **Turkey Roast** 🦃 skin, 1,126 coins, `idea: 'Idkwhatnamemyself'` (the 5 % share goes to that player; R77 and Kj13 are named in the
+  comment and the update log). The card is a turkey's fanned tail (`.num-card.skin-turkey::before`, an SVG of 17
+  feathers): it folds while rolling (`.charging`) and spreads out after the last digit. The digits are roasted skin:
+  raw and pale with a heat shimmer while spinning, then a squash, a hot flash to golden-brown, a glaze sweep and a puff
+  of steam on the reveal. `js/skinfx.js` `SCENES.turkey`: autumn leaves (Kj13) and steam on each digit, a shower of
+  leaves on the reveal, and from Epic a fan of turkey feathers (two fans from Mythic). The base particle count is cut
+  to 45 % and anything over the card is drawn at 40 % so the digits stay readable. Duel frame `.side-turkey` (plaid
+  tablecloth, leaves, 🦃 / 🍂 🥧), Generate button `.btn-roll.gen-turkey`. The small history cards hide the fan.
+- **Thanksgiving Dinner** 🥧 wallpaper, 1,126 coins, `idea: 'qwertyuiop'` (no 5 % share on wallpapers, as for all
+  wallpapers). `WALL_LAYERS.feast` + `.wtg-*` in `css/style.css`: two windows with autumn trees and falling leaves, a
+  table across the bottom, and the meal in two groups (`.wtg-food.a`: turkey, pumpkins, cranberry sauce, candle;
+  `.wtg-food.b`: rolls, mashed potatoes, corn, pumpkin pie, candle). On wide screens the turkey is on the right and the
+  side dishes on the left, on either side of the page content (centred, it was hidden behind it); on phones they sit
+  side by side. Candles flicker, the turkey steams. Dark theme is the evening by candlelight, light theme an afternoon.
+- **Sale dates**: both `until: '2026-11-28T08:00:00Z'` = the end of Friday November 27 in US Pacific time (Thanksgiving
+  night is over everywhere in the US). Shown as "until November 27". Never in a case, outside the collections.
+- **Limited tab**: a 🦃 THANKSGIVING banner (falling leaves, countdown "Ends after November 27") above the Christmas
+  one, hidden after the date; limited skins and wallpapers are now sorted by end date (Thanksgiving first). The
+  wallpaper note says "for the holidays only" instead of "for Christmas only". French in `js/i18n.js`.
+- Update log entry `2026-11-05-thanksgiving` (en + fr) credits all four players.
+- Tests (`tools/test-api.mjs`, section 55): prices, dates and ideas; not in any case or collection; CSS, scene and
+  layers exist; buying a minute before the end works, a second after returns 422 (skin and wallpaper).
+- Checked: skin filmed with `tools/skin-preview.mjs` and iterated (pointed feathers → broad rounded ones sized by
+  height; bead-like steam → soft wisps; base leaves cut so a Mythic doesn't bury the digits; button tips split into
+  feathers); the canvas scene filmed frame by frame (manual mode) in dark and light; shop preview in the real page;
+  wallpaper at 1400, 1024 and 375 px in both themes; banner at 320 px in French; `overflow-check` OK.
+  Frame rate: 60 fps in the app's browser pane (same as Cozy Fireplace and Snowy Village); headless Firefox (software
+  rendering) is slow for every limited wallpaper, this one included (1–4 fps vs 3–5 for Cozy Fireplace).
+- **After November 27**: nothing to do; the banner hides itself and both items leave the tab (owners keep them).
 
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 

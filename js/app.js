@@ -2231,6 +2231,8 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
+    { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
     { id: '2026-11-05-roll-count', date: 'Nov 5, 2026', en: ['🔢 After each roll, see how many times your number was already rolled by all players, and which roll of it you are (like "rolled 36 times before you · you\'re #37"). Roll a number nobody ever got and you\'ll know it! Counts start from every roll saved on the server. Normal mode only (idea by a friend of Sacha, also asked by Tumored and Gray)'], fr: ['🔢 Après chaque tirage, vois combien de fois ton nombre a déjà été tiré par tous les joueurs, et quel tirage de ce nombre tu es (par exemple « a été tiré 36 fois avant toi · tu es le n° 37 »). Tire un nombre que personne n\'a jamais eu et tu le sauras ! Les compteurs partent de tous les tirages gardés sur le serveur. Mode normal seulement (idée d\'un ami de Sacha, aussi demandée par Tumored et Gray)'] },
     { id: '2026-11-04-poker-open', date: 'Nov 4, 2026', en: ['🌍 Open poker tables! In Casino → Poker, pick the blinds, choose how many coins you bring (20 to 100 big blinds) and sit down with anyone, up to 6 players. Join a table that is already playing (you play from the next hand) and leave whenever you like with your chips. Open tables need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with friend tables'], fr: ['🌍 Des tables de poker ouvertes ! Dans Casino → Poker, choisis les blindes, combien de pièces tu apportes (de 20 à 100 grosses blindes) et assieds-toi avec n\'importe qui, jusqu\'à 6 joueurs. Rejoins une table déjà en jeu (tu joues dès la main suivante) et pars quand tu veux avec tes jetons. Les tables ouvertes demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec les tables entre amis'] },
     { id: '2026-11-04-bots', date: 'Nov 4, 2026', en: ['🤖 Bot farms removed from the game: hundreds of fake accounts were rolling non-stop to fill the leaderboards and the online count (reported by jonahfr). New accounts are now limited per network, and gifts and friend poker tables unlock 3 days after your first roll'], fr: ['🤖 Fermes de bots retirées du jeu : des centaines de faux comptes tiraient sans arrêt pour remplir les classements et le compteur de joueurs en ligne (signalé par jonahfr). Les nouveaux comptes sont maintenant limités par réseau, et les cadeaux et les tables de poker entre amis se débloquent 3 jours après ton premier tirage'] },
@@ -4429,9 +4431,10 @@
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          <div class="limited-banner tgiving" id="limited-banner-tg"><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><b>🦃 THANKSGIVING</b><span id="limited-left-tg"></span></div>
           <div class="limited-banner xmas" id="limited-banner"><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><b>🎄 CHRISTMAS EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Christmas only</span></div>
+          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for the holidays only</span></div>
           <div class="skin-grid wall-grid" id="d-limited-walls"></div>
         </div>
         </section>
@@ -4669,9 +4672,12 @@
     $('#d-premium-panel').hidden = false;
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
     const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
-    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
+    // ceux qui finissent le plus tôt d'abord (Thanksgiving avant Noël), puis par prix
+    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id))).sort((a, b) => Date.parse(a.until) - Date.parse(b.until));
     // Bannière de l'événement en cours : Noël (demandé par Sacha, 2026-11-01), en vente jusqu'au 25 décembre inclus ; avant,
     // Halloween (jusqu'au 31 octobre).
+    // Thanksgiving (2026-11-26) : sa propre bannière, au-dessus, jusqu'à la fin du 27 novembre (heure du Pacifique).
+    { const ev = Date.parse(Shop.byId.get('turkey').until), b = $('#limited-banner-tg'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left-tg').textContent = window.RNGI18n.t(`Ends after November 27 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     { const ev = Date.parse('2026-12-26T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after December 25 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
     applyOwnFilter();
@@ -6566,7 +6572,7 @@
         <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
-    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
+    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).sort((a, b) => Date.parse(a.until) - Date.parse(b.until)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
     grid.innerHTML = `
       <div class="skin-tile wall-tile${on ? '' : ' equipped'}" data-have="1">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
@@ -6624,6 +6630,9 @@
   // Cozy Fireplace (événement de Noël, 2026-11-01) : la fenêtre (vitre + deux couches de neige) et la cheminée (braises,
   // flammes, bûches, étincelles, chaussettes) ; le dessin est dans css/style.css (.wfp-*).
   WALL_LAYERS.fireplace = '<i class="wfp-win"><i class="wfp-sky"><b></b><b></b></i></i><i class="wfp-fp"><i class="wfp-ember"></i><i class="wfp-fl a"></i><i class="wfp-fl c"></i><i class="wfp-fl b"></i><i class="wfp-fl k"></i><i class="wfp-logs"></i><i class="wfp-sp s1"></i><i class="wfp-sp s2"></i><i class="wfp-sp s3"></i><i class="wfp-sp s4"></i><i class="wfp-sp s5"></i><i class="wfp-st a"></i><i class="wfp-st b"></i><i class="wfp-st c"></i></i>';
+  // Thanksgiving Dinner (Thanksgiving 2026, idée de qwertyuiop) : deux fenêtres (vitre + deux couches de feuilles), la nappe,
+  // et le repas en deux groupes (accompagnements, dinde) avec les flammes des bougies et la vapeur de la dinde ; le dessin est dans css/style.css (.wtg-*).
+  WALL_LAYERS.feast = '<i class="wtg-win l"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-win r"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-table"></i><i class="wtg-food b"><i class="wtg-fl"></i></i><i class="wtg-food a"><i class="wtg-fl"></i><i class="wtg-st s1"></i><i class="wtg-st s2"></i><i class="wtg-st s3"></i></i>';
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Comic Book, Black Hole et Rain to Rainbow (2026-10-27) : l'arc-en-ciel dure le plus longtemps, la pluie revient doucement.
   // Spinning Bread (2026-10-28) : un coup de fouet à chaque tirage, plus de tours selon la rareté (fond normal, pas légendaire).
