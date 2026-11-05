@@ -746,6 +746,12 @@
     // Tables ouvertes (Sacha, 2026-11-04)
     'Texas Hold\'em · against the bot, your friends or anyone': 'Texas Hold\'em · contre le bot, tes amis ou n\'importe qui',
     'Nobody had ever rolled': 'Personne n\'avait jamais tiré', 'before you': 'avant toi',
+    // Idées du 2026-11-05 (lot 1)
+    'most rolled': 'le plus tiré', 'Best roll message': 'Message du meilleur tirage', '“This number contains your best roll ever” after a roll.': '« Ce nombre contient ton meilleur tirage » après un tirage.',
+    'Equip what you buy': 'Équiper ce que tu achètes', 'Off: a new skin, wallpaper, button or sound is unlocked but you keep what you use now.': 'Désactivé : un nouveau skin, fond, bouton ou son est débloqué mais tu gardes ce que tu utilises.',
+    'Keep the screen on during auto-roll': 'Garder l\'écran allumé pendant le tirage auto', 'Your device won\'t go to sleep while auto-roll runs on this page. Uses more battery.': 'Ton appareil ne se met pas en veille pendant le tirage auto sur cette page. Utilise plus de batterie.',
+    'New badge': 'Nouveau badge', '✨ Auto-roll stopped on a new badge: enjoy it!': '✨ Tirage auto arrêté sur un nouveau badge : profite !',
+    'This session': 'Cette session', 'Worst rolls': 'Pires tirages', 'Rarities': 'Raretés', 'See this session\'s rolls': 'Voir les tirages de cette session',
     'Open tables': 'Tables ouvertes', 'Anyone can sit down, up to 6 players. Bring what you want, play from the next hand and leave whenever you like.': 'N\'importe qui peut s\'asseoir, jusqu\'à 6 joueurs. Apporte ce que tu veux, joue dès la main suivante et pars quand tu veux.',
     'Blinds': 'Blindes', 'You bring': 'Tu apportes', 'Coins you bring': 'Pièces que tu apportes', 'No table yet at these blinds: sit down and others can join you.': 'Pas encore de table à ces blindes : assieds-toi et les autres pourront te rejoindre.',
     'Waiting for another player to sit down': 'En attente d\'un autre joueur', 'You were away: cashed out': 'Tu étais absent : jetons encaissés', 'was away and left': 'était absent et est parti',
@@ -956,6 +962,9 @@
     [/^Not enough coins for this stake \(([\d,]+)\)$/, m => `Pas assez de pièces pour cette mise (${nb(m[1])})`],
     [/^(.+) button unlocked and equipped$/, m => `Bouton ${m[1]} débloqué et équipé`], [/^(.+) button equipped$/, m => `Bouton ${m[1]} équipé`],
     [/^(.+) unlocked and equipped$/, m => `${m[1]} débloqué et équipé`], [/^(.+) equipped$/, m => `${m[1]} équipé`],
+    // Achat sans équiper (réglage « Equip what you buy », 2026-11-05).
+    [/^(.+) sounds unlocked, not equipped$/, m => `Sons ${m[1]} débloqués, pas équipés`], [/^(.+) button unlocked, not equipped$/, m => `Bouton ${m[1]} débloqué, pas équipé`],
+    [/^(.+) unlocked, not equipped$/, m => `${m[1]} débloqué, pas équipé`], [/^(.+) unlocked and on$/, m => `${m[1]} débloqué et affiché`],
     [/^Round (\d+)…$/, m => `Manche ${m[1]}…`], [/^round (\d+)$/, m => `manche ${m[1]}`], [/^Roll round (\d+)$/, m => `Tirer la manche ${m[1]}`],
     [/^([\d,]+) \/ ([\d,]+) players$/, m => `${m[1]} / ${m[2]} joueurs`], [/^(\d+)\/(\d+) players$/, m => `${m[1]}/${m[2]} joueurs`],
     [/^(\d+) \/ (\d+) ready$/, m => `${m[1]} / ${m[2]} prêts`],
@@ -1013,6 +1022,8 @@
     [/^Needs ([\d,]+) rolls and an account 3 days old$/, m => `Il faut ${nb(m[1])} tirages et un compte de 3 jours`],
     [/^up to 🪙 ([\d,]+) a day at tables with other players \(🪙 ([\d,]+) left today\)$/, m => `jusqu'à 🪙 ${nb(m[1])} par jour aux tables avec d'autres joueurs (🪙 ${nb(m[2])} restantes aujourd'hui)`],
     [/^you brought 🪙 ([\d,]+)$/, m => `tu as apporté 🪙 ${nb(m[1])}`],
+    [/^([\d,]+) new badges? since your last visit$/, m => `${nb(m[1])} nouveau${m[1] === '1' ? '' : 'x'} badge${m[1] === '1' ? '' : 's'} depuis ta dernière visite`],
+    [/^([\d,]+) rolls?$/, m => `${nb(m[1])} tirage${m[1] === '1' ? '' : 's'}`], [/^([\d,]+) XP per roll$/, m => `${nb(m[1])} XP par tirage`],
     // Compteur par nombre (2026-11-05)
     [/^was rolled ([\d,]+) times? before you$/, m => `a été tiré ${nb(m[1])} fois avant toi`], [/^you're #([\d,]+)$/, m => `tu es le n° ${nb(m[1])}`], [/^buy-in 🪙 ([\d,]+)$/, m => `cave 🪙 ${nb(m[1])}`],
     [/^Rolls by this player (today|this week|this month|in total)$/, m => `Tirages de ce joueur ${m[1] === 'today' ? 'aujourd\'hui' : m[1] === 'this week' ? 'cette semaine' : m[1] === 'this month' ? 'ce mois-ci' : 'au total'}`],
