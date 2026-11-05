@@ -11108,6 +11108,284 @@
   };
   // ==== fin du lot 2 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 3 : Blackout, Prism, Rainbow Paint, Touch Grass (idées de joueurs planifiées) ====
+  // 💡 Blackout (promis à Mace_67, 2026-10-29) — chaque chiffre qui s'allume jette une petite flaque de lumière chaude
+  // sous lui (calque intérieur), qui grésille avec lui puis tient. Avant le dernier chiffre, des étincelles crépitent
+  // autour de sa case, comme un fil mal branché. Au dernier chiffre, une tête de lumière fait deux fois le tour du cadre
+  // et l'allume (la règle CSS garde ensuite le cadre allumé). Révélation : le cadre flashe dans la couleur de la rareté ;
+  // dès Epic, des faisceaux sortent des bords ; dès Mythic, la surtension (.bo-surge) : des arcs courent sur le cadre et
+  // des étincelles en jaillissent. Tirage raté : la coupure de courant (.bo-cut), la carte retombe dans le noir.
+  SCENES.blackout = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const pools = [], sparks = particles(), traces = timed(), flashes = timed(), beams = timed(), pending = [];
+    let t = 0, build = 0, surge = 0, cut = 0, surgeC = '#fff3d6'; // surgeC : la couleur des arcs (celle de la rareté)
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const tierColor = () => { const v = el && getComputedStyle(el).getPropertyValue('--t-accent').trim(); return v && v[0] === '#' && v.length === 7 ? v : '#fff3d6'; };
+    const spark = (x, y, n, sp = 1, c = '#fff3d6') => { for (let i = Math.round(n); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.8, 2.4) * sp; sparks.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - H * .4, g: H * 5, drag: .6, max: rnd(.25, .6), c }); } };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        surge = Math.max(0, surge - dt * .6); cut = Math.max(0, cut - dt * .5);
+        // les flaques de lumière sous les chiffres allumés : elles grésillent comme bo-on, puis tiennent
+        ci.globalCompositeOperation = 'lighter';
+        for (const p of pools) {
+          const age = t - p.t0, k = age < .3 ? (Math.sin(age * 90) > 0 ? 1 : .2) : 1, power = (1 - cut * .8) * (1 + surge * 1.4);
+          dot(ci, '#ffd98a', p.x, h * .8, p.w * .9, .22 * k * power * Math.min(1, age * 8), h * .5);
+          dot(ci, '#fff3d6', p.x, p.y, p.w * .55, .1 * k * power, h * .35);
+        }
+        ci.globalCompositeOperation = 'source-over';
+        // des étincelles crépitent autour de la dernière case (avant le dernier chiffre)
+        if (build) { const s = l1Next(env); if (s && Math.random() < dt * 22 * q) spark(s.x + rnd(-.5, .5) * s.w, s.top + rnd(s.bottom - s.top), 2, .5); }
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // la tête de lumière qui fait le tour du cadre (au dernier chiffre)
+        traces.run(dt, (tr, k) => {
+          const head = outCubic(k) * tr.laps;
+          for (let i = 18; i >= 0; i--) { const pt = along(grown(card, 1), head - i * .012), a = (1 - i / 18) * (1 - Math.max(0, k - .8) * 5); dot(co, tr.c, pt.x, pt.y, 3 + 7 * a, a * .9); if (i < 3) dot(co, '#ffffff', pt.x, pt.y, 2.5, a); }
+        });
+        // le flash du cadre à la révélation, dans la couleur de la rareté
+        flashes.run(dt, (f, k) => { const g = grown(card, 2 + k * em * .6); roundRect(co, g.x, g.y, g.w, g.h, g.r); co.globalAlpha = (1 - k) * .9; co.strokeStyle = f.c; co.lineWidth = 2 + (1 - k) * 6; co.stroke(); co.globalAlpha = 1; });
+        // les faisceaux qui sortent des bords (Epic et plus), derrière la carte
+        if (beams.n) behind(env, () => beams.run(dt, (b, k) => godrays(co, b.c, cx, cy, 10, card.w * .45, card.w * .5 + H * 2.2, b.rot + k * .4, H * .3, Math.sin(Math.PI * k) * (dark ? .35 : .22))), true);
+        // la surtension : des arcs courent sur le cadre
+        for (let n = surge > .05 ? Math.round(dt * 70 * surge + Math.random()) : 0; n > 0; n--) { const a0 = rnd(), a = along(grown(card, 2), a0), b = along(grown(card, 2), a0 + rnd(.05, .14)); bolt(co, a.x, a.y, b.x, b.y, em * .3, [surgeC, '#ffffff', surgeC], Math.min(1, surge), 1.8); }
+        sparks.step(dt);
+        sparks.each((s, k) => line(co, s.c, s.x, s.y, s.x - s.vx * .02, s.y - s.vy * .02, 1.6, 1 - k));
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const ip = bInner(env, p);
+        pools.push({ x: ip.x, y: ip.y, w: em * .7, t0: t });
+        later(.05, () => spark(p.x, p.y + em * .3, (o.last ? 6 : 3) * q, .5));
+        if (o.last) later(.3, () => traces.add({ life: .9, laps: 2, c: '#fff3d6' }));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { cut = 1; if (el) el.classList.add('bo-cut'); return; }
+        const c = tierColor(); surgeC = c;
+        flashes.add({ life: .6, c });
+        if (p >= .25) traces.add({ life: .7, laps: 1, c });
+        if (p >= .6) beams.add({ life: 2 + asc, c, rot: rnd(TAU) });
+        if (p < 1) return;
+        surge = 1 + .3 * asc; if (el) el.classList.add('bo-surge');
+        for (let i = 0; i < 8 + 4 * asc; i++) { const e = along(card, rnd()); spark(e.x, e.y, 4 * q, 1.4, pick([c, '#ffffff', '#fff3d6'])); }
+      },
+    };
+  };
+
+  // 💠 Prism (promis à Idkwhatnamemyself, 2026-10-31) — pour chaque chiffre, un rayon de lumière blanche tombe sur le
+  // haut de sa case et en ressort décomposé en éventail de six couleurs (jamais par-dessus les chiffres : tout part du
+  // bord de la carte). Avant le dernier chiffre, des points de toutes les couleurs courent sur le cadre. Révélation : la
+  // carte prend la couleur de la nouvelle rareté (règle CSS sur data-tier) dans un éclair de sa couleur, et des éclats
+  // de cristal jaillissent des bords ; dès Epic, des faisceaux arc-en-ciel tournent derrière la carte ; dès Mythic, une
+  // pluie d'éclats. Tirage raté : le cristal se fêle.
+  SCENES.prism = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const SPEC = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7'];
+    const rays = timed(), shards = particles(), rings = timed(), beams = timed(), pending = [];
+    let t = 0, build = 0, crack = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const tierCol = () => { const v = el && getComputedStyle(el).getPropertyValue('--pr-a').trim(); return v && v[0] === '#' ? v : '#e5e7eb'; };
+    const shard = (x, y, vx, vy, c, back) => shards.add({ x, y, vx, vy, g: H * 3, drag: .6, max: rnd(.8, 1.5), size: em * rnd(.08, .2), rot: rnd(TAU), spin: rnd(-9, 9), c, back });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; co.lineCap = 'round';
+        // le rayon blanc qui entre par le haut à gauche, et l'éventail qui ressort en haut à droite
+        rays.run(dt, (r, k) => {
+          const a = Math.sin(Math.PI * Math.min(1, k * 1.6)), x0 = r.x - H * 1.1, y0 = card.y - H * 1.3, hit = { x: r.x, y: card.y };
+          line(co, dark ? '#ffffff' : '#94a3b8', x0, y0, hit.x, hit.y, 2.2, a * .9);
+          SPEC.forEach((c, i) => { const ang = -1.05 + i * .09, len = H * (1.1 + .3 * k); line(co, c, hit.x, hit.y, hit.x + Math.cos(ang) * len, hit.y + Math.sin(ang) * len, 2.4, a * .85); });
+          dot(co, '#ffffff', hit.x, hit.y, em * .25, a * .8);
+        });
+        // des points de toutes les couleurs courent sur le cadre avant le dernier chiffre
+        if (build) for (let i = 0; i < 6; i++) { const pt = along(grown(card, 2), t * .6 + i / 6); dot(co, SPEC[i], pt.x, pt.y, 4, .9 * build); }
+        // les faisceaux arc-en-ciel derrière la carte (Epic et plus)
+        if (beams.n) { co.globalCompositeOperation = 'source-over'; behind(env, () => { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; beams.run(dt, (b, k) => SPEC.forEach((c, i) => godrays(co, c, cx, cy, 2, card.w * .45, card.w * .5 + H * 2.2, b.rot + k * 1.2 + i * .52, H * .22, Math.sin(Math.PI * k) * (dark ? .3 : .2)))); }, true); co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; }
+        // l'éclair de la nouvelle couleur
+        rings.run(dt, (r, k) => { const g = grown(card, 2 + k * em * .9); roundRect(co, g.x, g.y, g.w, g.h, g.r); co.globalAlpha = (1 - k) * .9; co.strokeStyle = r.c; co.lineWidth = 2 + (1 - k) * 5; co.stroke(); co.globalAlpha = 1; });
+        co.globalCompositeOperation = 'source-over';
+        // les éclats de cristal : des triangles qui tournent et accrochent la lumière
+        shards.step(dt);
+        // la pluie d'éclats (Mythic) tombe derrière la carte ; les éclats de la révélation partent des bords, devant
+        const drawShard = (s, k) => {
+          co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(s.x, s.y); co.rotate(s.rot + s.life * s.spin);
+          co.fillStyle = s.c; co.beginPath(); co.moveTo(0, -s.size); co.lineTo(s.size * .7, s.size * .6); co.lineTo(-s.size * .5, s.size * .4); co.closePath(); co.fill();
+          co.fillStyle = 'rgba(255,255,255,.7)'; co.beginPath(); co.moveTo(0, -s.size); co.lineTo(s.size * .2, 0); co.lineTo(-s.size * .5, s.size * .4); co.closePath(); co.fill();
+          co.restore();
+        };
+        if (shards.n) behind(env, () => shards.each((s, k) => { if (s.back) drawShard(s, k); }), true);
+        shards.each((s, k) => { if (!s.back) drawShard(s, k); });
+        // la fêlure du tirage raté (calque intérieur, derrière les chiffres)
+        if (crack) {
+          crack.k = Math.min(1, crack.k + dt * 4);
+          ci.strokeStyle = 'rgba(255,255,255,.75)'; ci.lineWidth = 1.4; ci.beginPath();
+          const n = Math.max(1, Math.round(crack.pts.length * crack.k));
+          crack.pts.slice(0, n).forEach(([x, y], i) => (i ? ci.lineTo(x, y) : ci.moveTo(x, y))); ci.stroke();
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        rays.add({ x: p.x, life: o.last ? .7 : .5 });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { const pts = []; let x = w * rnd(.1, .3), y = 0; while (y < h) { pts.push([x, y]); x += rnd(-1, 1) * em * .25 + em * .08; y += em * rnd(.12, .22); } pts.push([x, h]); crack = { pts, k: 0 }; return; }
+        // la couleur de la nouvelle rareté est posée par le jeu juste avant : on la lit un instant après
+        later(.03, () => {
+          const c = tierCol();
+          rings.add({ life: .7, c });
+          for (let i = burst(p, 34 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); shard(e.x, e.y, (e.x - cx) / card.w * H * rnd(2, 4), (e.y - cy) / H * H * rnd(1.5, 3) - H * .5, pick([c, c, '#ffffff', pick(SPEC)])); }
+          if (p >= .6) beams.add({ life: 2.2 + asc, rot: rnd(TAU) });
+          if (p >= 1) for (let i = Math.round((20 + 10 * asc) * q); i > 0; i--) later(rnd(0, 1.8), () => shard(cx + rnd(-1, 1) * (card.w * .6 + H * 1.5), card.y - H * rnd(.4, 1.2), rnd(-20, 20), H * rnd(.1, .4), pick([c, '#ffffff', pick(SPEC)]), true));
+        });
+      },
+    };
+  };
+
+  // 🎨 Rainbow Paint (idée de finnnnn, 2026-10-21) — un pinceau chargé de la couleur du chiffre passe sur sa case en même
+  // temps que pt-stroke (il entre à gauche, sort à droite, au-dessus des chiffres mais sous le haut de la case) et laisse
+  // des gouttes de sa couleur. Avant le dernier chiffre, la peinture fraîche coule du haut de la carte. Révélation : des
+  // éclaboussures de toutes les couleurs ; dès Epic, un arc-en-ciel se peint au-dessus de la carte, bande après bande ;
+  // dès Mythic, l'explosion de peinture : de grosses taches volent tout autour. Tirage raté : un verre d'eau se renverse
+  // et une flaque grise coule sous le nombre.
+  SCENES.paint = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const RB = ['#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#2563eb', '#7c3aed'];
+    const brushes = timed(), blobs = particles(), drips = particles(), arcs = timed(), pending = [], dripE = emitter();
+    let t = 0, build = 0, spill = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const slotColor = p => { const s = slotsA(env).reduce((a, b) => (Math.abs(b.x - p.x) < Math.abs(a.x - p.x) ? b : a), { x: Infinity, i: 0 }); return RB[s.i % 6]; };
+    const splat = (x, y, n, c, sp = 1, big = 1, front = false) => { for (let i = Math.round(n); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.6, 2.2) * sp; blobs.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - H * .6, g: H * 6, drag: 1, max: rnd(.6, 1.2), r: em * rnd(.03, .09) * big, c: c || pick(RB), front }); } };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // l'arc-en-ciel peint au-dessus de la carte (Epic et plus), bande après bande, derrière elle
+        if (arcs.n) behind(env, () => arcs.run(dt, (a, k) => {
+          const R = card.w * .55 + H * .5, fade = Math.min(1, (1 - k) * 4);
+          co.lineCap = 'round';
+          RB.forEach((c, i) => { const band = clamp(k * 4 - i * .25), r = R - i * em * .17; if (band <= 0) return; co.globalAlpha = .85 * fade; co.strokeStyle = c; co.lineWidth = em * .16; co.beginPath(); co.arc(cx, card.y + H * .9, r, Math.PI, Math.PI + Math.PI * outCubic(band)); co.stroke(); });
+          co.globalAlpha = 1;
+        }), true);
+        // la peinture fraîche coule du haut de la carte avant le dernier chiffre
+        if (build) for (let n = dripE(4 * q, dt); n > 0; n--) drips.add({ x: card.x + card.w * rnd(.05, .95), y: card.y, vx: 0, vy: H * rnd(.05, .15), g: H * .2, max: rnd(1, 1.6), r: em * rnd(.035, .06), c: pick(RB) });
+        drips.step(dt);
+        drips.each((d, k) => { const len = Math.min(d.y - card.y, em * .45); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = d.c; co.beginPath(); co.moveTo(d.x - d.r * .7, card.y); co.lineTo(d.x - d.r * .5, card.y + len); co.arc(d.x, card.y + len, d.r, Math.PI, 0, true); co.lineTo(d.x + d.r * .7, card.y); co.fill(); });
+        // le pinceau : manche de bois, virole, touffe chargée de couleur ; il traverse la case pendant pt-stroke
+        brushes.run(dt, (b, k) => {
+          const x = b.x - em * .45 + em * .9 * outCubic(Math.min(1, k * 2.2)), y = b.y - em * .28, a = Math.min(1, k * 10, (1 - k) * 5);
+          co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(-.9);
+          co.fillStyle = '#b45309'; roundRect(co, em * .12, -em * .045, em * .8, em * .09, em * .04); co.fill();
+          co.fillStyle = '#cbd5e1'; co.fillRect(0, -em * .06, em * .14, em * .12);
+          co.fillStyle = b.c; co.beginPath(); co.moveTo(0, -em * .06); co.quadraticCurveTo(-em * .26, -em * .05, -em * .3, 0); co.quadraticCurveTo(-em * .26, em * .05, 0, em * .06); co.fill();
+          co.restore();
+          if (Math.random() < dt * 25) splat(x, y + em * .1, 1, b.c, .4, 1, true); // les gouttes du pinceau, devant
+        });
+        blobs.step(dt);
+        // les éclaboussures passent derrière la carte (jamais sur les chiffres) ; seules les gouttes du pinceau sont devant
+        const blob = (b, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = b.c; co.beginPath(); co.ellipse(b.x, b.y, b.r * 1.2, b.r, Math.atan2(b.vy, b.vx), 0, TAU); co.fill(); co.fillStyle = 'rgba(255,255,255,.45)'; co.beginPath(); co.arc(b.x - b.r * .3, b.y - b.r * .3, b.r * .3, 0, TAU); co.fill(); };
+        if (blobs.n) behind(env, () => blobs.each((b, k) => { if (!b.front) blob(b, k); }), true);
+        blobs.each((b, k) => { if (b.front) blob(b, k); });
+        // le verre d'eau renversé (tirage raté) : une flaque grise qui coule du bas de la carte
+        if (spill) {
+          spill.k = Math.min(1, spill.k + dt * .8); const a = clamp(3 - (t - spill.t0)) * .7;
+          co.globalAlpha = a; co.fillStyle = dark ? '#94a3b8' : '#64748b';
+          for (let i = 0; i < 5; i++) { const x = card.x + card.w * (.2 + i * .15), len = em * (.2 + .4 * ((i * .37) % 1)) * spill.k; co.beginPath(); co.moveTo(x - em * .05, card.y + H - 2); co.lineTo(x - em * .03, card.y + H + len); co.arc(x, card.y + H + len, em * .04, Math.PI, 0, true); co.lineTo(x + em * .05, card.y + H - 2); co.fill(); }
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const c = slotColor(p);
+        brushes.add({ x: p.x, y: p.y, c, life: .55 });
+        if (o.last) later(.3, () => splat(p.x, card.y, 8 * q, c));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { spill = { k: 0, t0: t }; return; }
+        for (let i = burst(p, 30 * q, 5); i > 0; i--) { const e = along(grown(card, 3), rnd()); blobs.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(2, 4), vy: (e.y - cy) / H * H * rnd(1, 3) - H * .8, g: H * 6, drag: .8, max: rnd(.7, 1.3), r: em * rnd(.04, .1) * (1 + p), c: pick(RB) }); }
+        if (p >= .6) arcs.add({ life: 3 + asc, delay: .1 });
+        if (p >= 1) for (let i = 0; i < 4 + 2 * asc; i++) later(i * .12, () => { const e = along(grown(card, em * .3), rnd()); splat(e.x, e.y, 10 * q, pick(RB), 1.6, 2.2); });
+      },
+    };
+  };
+
+  // 🌱 Touch Grass (idée de finnnnn, 2026-10-21 : « for all the no lifes ») — chaque chiffre tondu fait jaillir des brins
+  // d'herbe coupés (au moment où gr-mow le redresse). Avant le dernier chiffre, des rafales couchent des traits de vent
+  // autour de la carte. Révélation : une gerbe de brins ; dès Rare, des pâquerettes poussent sur le haut de la carte ; dès
+  // Epic, des papillons s'envolent ; dès Mythic, une petite tondeuse traverse au-dessus de la carte dans une pluie de
+  // brins, et les fleurs éclosent tout autour. Tirage raté : un pissenlit perd ses graines dans le vent.
+  SCENES.grass = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const GR = ['#65a30d', '#84cc16', '#4d7c0f', '#a3e635'];
+    const clips = particles(), wind = particles(), flowers = [], flies = particles(), seeds = particles(), mowers = timed(), pending = [], gust = emitter();
+    let t = 0, build = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const clip = (x, y, n, sp = 1, back = false) => { for (let i = Math.round(n); i > 0; i--) clips.add({ x: x + rnd(-1, 1) * em * .25, y, vx: rnd(-1, 1) * H * 1.4 * sp, vy: -H * rnd(.8, 2) * sp, g: H * 5, drag: .8, max: rnd(.6, 1.1), len: em * rnd(.08, .16), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(GR), back }); };
+    const daisy = (x, y, s, a, c = '#ffffff') => { if (a <= .01) return; co.save(); co.globalAlpha = a; co.translate(x, y); line(co, '#4d7c0f', 0, 0, 0, s * 1.4, Math.max(1, s * .2), a); co.fillStyle = c; for (let i = 0; i < 8; i++) { co.save(); co.rotate(i * TAU / 8 + t * .2); co.beginPath(); co.ellipse(0, -s * .55, s * .2, s * .45, 0, 0, TAU); co.fill(); co.restore(); } co.fillStyle = '#facc15'; co.beginPath(); co.arc(0, 0, s * .28, 0, TAU); co.fill(); co.restore(); };
+    // la petite tondeuse vue de profil : le carter rouge, deux roues, le guidon
+    const mower = (x, y, s, dir) => { co.save(); co.translate(x, y); co.scale(dir, 1); co.fillStyle = '#dc2626'; roundRect(co, -s * .5, -s * .35, s, s * .3, s * .08); co.fill(); co.fillStyle = '#1f2937'; for (const wx of [-.32, .32]) { co.beginPath(); co.arc(s * wx, -s * .05, s * .13, 0, TAU); co.fill(); } line(co, '#374151', -s * .45, -s * .3, -s * .95, -s * 1.05, Math.max(2, s * .06), 1); line(co, '#374151', -s * 1.05, -s * 1.05, -s * .85, -s * 1.05, Math.max(2, s * .08), 1); co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // les rafales avant le dernier chiffre : des traits de vent qui filent autour de la carte
+        if (build) for (let n = gust(16 * q, dt); n > 0; n--) wind.add({ x: card.x - H * rnd(.5, 1.5), y: card.y + H * rnd(-.6, 1.1), vx: H * rnd(4, 7), vy: rnd(-10, 10), max: rnd(.4, .7), len: H * rnd(.4, .9) });
+        wind.step(dt);
+        wind.each((w2, k) => line(co, dark ? '#d9f99d' : '#4d7c0f', w2.x, w2.y, w2.x - w2.len, w2.y + Math.sin(w2.x * .05) * 3, 1.4, Math.sin(Math.PI * k) * .6));
+        // les fleurs sur le haut de la carte (Rare et plus) : elles poussent puis restent
+        for (const f of flowers) { f.k = Math.min(1, f.k + dt * 2.2); daisy(f.x, card.y - f.s * 1.3 * outCubic(f.k) + f.s * .1, f.s * outCubic(f.k), 1, f.c); }
+        // la tondeuse (Mythic) traverse au-dessus de la carte
+        mowers.run(dt, (m, k) => { const x = lerp(card.x - H * 1.6, card.x + card.w + H * 1.6, k); mower(x, card.y - em * .05 + Math.abs(Math.sin(k * 60)) * -2, H * .55, 1); if (Math.random() < dt * 40) clip(x - H * .3, card.y - H * .2, 2, .8, true); });
+        clips.step(dt);
+        // les brins de la tondeuse et de la révélation passent derrière la carte ; ceux du chiffre tondu, devant
+        const blade = (c, k) => { const a = c.rot + c.life * c.spin; line(co, c.c, c.x, c.y, c.x + Math.cos(a) * c.len, c.y + Math.sin(a) * c.len, Math.max(1.5, em * .035), Math.min(1, (1 - k) * 3)); };
+        if (clips.n) behind(env, () => clips.each((c, k) => { if (c.back) blade(c, k); }), true);
+        clips.each((c, k) => { if (!c.back) blade(c, k); });
+        flies.step(dt);
+        flies.each((f, k) => { const flap = Math.abs(Math.sin(f.life * 13 + f.ph)), x = f.x + Math.sin(f.life * 2 + f.ph) * em * .7; co.globalAlpha = Math.min(1, f.life * 3, (1 - k) * 3); co.fillStyle = f.c; for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(x + sd * em * .1 * flap, f.y, em * .12 * flap + 1, em * .09, sd * .5, 0, TAU); co.fill(); } co.fillStyle = '#1f2937'; co.fillRect(x - 1, f.y - em * .06, 2, em * .12); });
+        seeds.step(dt);
+        seeds.each((s, k) => { co.globalAlpha = Math.min(1, (1 - k) * 2); co.strokeStyle = dark ? '#f5f5f4' : '#78716c'; co.lineWidth = 1; const x = s.x + Math.sin(s.life * 3 + s.ph) * 6; co.beginPath(); co.moveTo(x, s.y); co.lineTo(x, s.y + 6); for (let i = -2; i <= 2; i++) { co.moveTo(x, s.y); co.lineTo(x + i * 2.5, s.y - 4); } co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        later(.17, () => clip(p.x, p.y - em * .2, (o.ghost ? 2 : o.last ? 14 : 7) * q));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { // un pissenlit : ses graines partent dans le vent
+          for (let i = Math.round(14 * q); i > 0; i--) seeds.add({ x: card.x + card.w * .8 + rnd(-6, 6), y: card.y - em * .3 + rnd(-6, 6), vx: H * rnd(.4, 1.2), vy: -H * rnd(.1, .5), drag: .4, max: rnd(2, 3.2), ph: rnd(TAU) });
+          return;
+        }
+        for (let i = burst(p, 40 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); clips.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(2, 4), vy: -H * rnd(1, 2.6), g: H * 5, drag: .6, max: rnd(.8, 1.4), len: em * rnd(.1, .18), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(GR), back: true }); }
+        if (p >= .42) { const n = Math.round(3 + 6 * p + 2 * asc); for (let i = 0; i < n; i++) later(i * .07, () => flowers.push({ x: card.x + card.w * (.06 + .88 * (i + .5) / n) + rnd(-3, 3), s: em * rnd(.12, .18), k: 0, c: p >= 1 && i % 3 === 1 ? '#f9a8d4' : '#ffffff' })); }
+        if (p >= .6) for (let i = Math.round((4 + 4 * p + 3 * asc) * q); i > 0; i--) flies.add({ x: cx + rnd(-1, 1) * card.w * .6, y: card.y + H * rnd(.1, .6), vx: rnd(-30, 30), vy: -H * rnd(.3, .7), max: rnd(2.4, 3.6), ph: rnd(TAU), c: pick(['#fde047', '#f9a8d4', '#93c5fd', '#fdba74']) });
+        if (p >= 1) mowers.add({ delay: .3, life: 2.6 });
+      },
+    };
+  };
+  // ==== fin du lot 3 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
