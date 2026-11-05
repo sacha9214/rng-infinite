@@ -350,6 +350,11 @@
     { id: 'cafe', name: 'Café', emoji: '☕', price: 1500, desc: 'A cup of espresso: a pitcher pours coffee to reveal every digit in milk foam, and Mythic rolls draw a rosetta', idea: '0casmictechthing' },
     { id: 'sentinel', name: 'Robot Sentinel', emoji: '🤖', price: 2400, desc: 'A little robot on Mars traces every digit with its green scanner beam; on Mythic rolls it spins for joy and starts a light show', idea: 'costoroll' },
     { id: 'jigsaw', name: 'Jigsaw', emoji: '🧩', price: 900, desc: 'Every digit is a puzzle piece that snaps into place with a click; great rolls scatter puzzle pieces everywhere', idea: 'number 1' },
+    // lot 10 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'lunar', name: 'Night Market', emoji: '🏮', price: 1777, desc: 'A Lunar New Year night market: a red lantern floats up for every digit, steam rises from the stalls, and great rolls fill the sky with lanterns and red envelopes', idea: 'number 1' },
+    { id: 'cinema', name: 'Old Cinema', emoji: '🎞️', price: 2000, desc: 'A silent movie on a big black and white screen: the film glitches to reveal every digit, and great rolls blow the projector apart into gears, springs and wires', idea: 'number 1' },
+    { id: 'plane', name: 'Plane', emoji: '✈️', price: 1400, desc: 'A little plane flies through a cloud for every digit; Mythic rolls get a loop-the-loop with colored smoke', idea: 'casmicgraything' },
+    { id: 'warp', name: 'Lightspeed', emoji: '🚀', price: 2400, desc: 'Every digit takes you faster through space; then you slow down by an alien planet full of UFOs, and Mythic rolls bring you HOME to Earth', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

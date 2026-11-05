@@ -1970,3 +1970,29 @@
   text-shadow: 0 .05em 0 rgba(255, 255, 255, .85);
   --gs: 0 .3em 0 #4a2c11, 0 .5em 1em rgba(125, 211, 252, .35); --gs-h: 0 .34em 0 #4a2c11, 0 .7em 1.3em rgba(125, 211, 252, .5); --gs-a: 0 .06em 0 #4a2c11; }
 .btn-roll.gen-jigsaw:hover { filter: brightness(1.06); }
+
+/* ==== Skins du 2026-11-05, lot 10 ==== boutons assortis */
+/* Night Market (idée de number 1) : laque rouge, filet d'or, texte doré. */
+.btn-roll.gen-lunar { border: .14em solid #f59e0b; border-radius: .6rem; color: #fde68a; font-family: 'Songti SC', 'STSong', 'Baskerville', Georgia, serif;
+  background: radial-gradient(ellipse 70% 60% at 50% 110%, rgba(251, 146, 60, .5), transparent 70%), linear-gradient(180deg, #dc2626, #991b1b);
+  text-shadow: 0 0 .2em rgba(251, 191, 36, .7), 0 .05em 0 #450a0a;
+  --gs: 0 .3em 0 #7f1d1d, 0 .5em 1em rgba(239, 68, 68, .35); --gs-h: 0 .34em 0 #7f1d1d, 0 .7em 1.3em rgba(239, 68, 68, .5); --gs-a: 0 .06em 0 #7f1d1d; }
+.btn-roll.gen-lunar:hover { filter: brightness(1.1); }
+/* Old Cinema (idée de number 1) : un intertitre de film muet, gris granuleux dans un cadre noir et or. */
+.btn-roll.gen-cinema { border: .14em solid #0c0a09; border-radius: .3rem; color: #fafaf9; font-family: 'Didot', 'Bodoni 72', 'Bodoni MT', Georgia, serif;
+  background: radial-gradient(circle, rgba(255, 255, 255, .12) 0 .5px, transparent 1px) 0 0 / 4px 4px, radial-gradient(ellipse 80% 90% at 50% 50%, #57534e, #1c1917);
+  box-shadow: inset 0 0 0 .05em #a16207; text-shadow: 0 0 .2em rgba(255, 255, 255, .35);
+  --gs: 0 .3em 0 #0c0a09, 0 .5em 1em rgba(0, 0, 0, .35); --gs-h: 0 .34em 0 #0c0a09, 0 .7em 1.3em rgba(250, 250, 249, .15); --gs-a: 0 .06em 0 #0c0a09; }
+.btn-roll.gen-cinema:hover { filter: brightness(1.15); }
+/* Plane (idée de casmicgraything) : un ciel bleu et sa traînée, texte blanc cerclé de bleu marine. */
+.btn-roll.gen-plane { border: 2px solid #0369a1; border-radius: 999px; color: #fff; -webkit-text-stroke: .03em #1e3a8a; font-family: 'Futura', 'Avenir Next', 'Century Gothic', system-ui, sans-serif;
+  background: linear-gradient(174deg, transparent 30%, rgba(255, 255, 255, .6) 31% 34%, transparent 35%), linear-gradient(180deg, #38bdf8, #bae6fd);
+  text-shadow: 0 .05em 0 #1e3a8a;
+  --gs: 0 .3em 0 #075985, 0 .5em 1em rgba(56, 189, 248, .35); --gs-h: 0 .34em 0 #075985, 0 .7em 1.3em rgba(56, 189, 248, .5); --gs-a: 0 .06em 0 #075985; }
+.btn-roll.gen-plane:hover { filter: brightness(1.06); }
+/* Lightspeed (idée de casmicgraything) : l'espace et ses étoiles étirées, texte blanc bleuté en italique. */
+.btn-roll.gen-warp { border: 2px solid #4338ca; border-radius: .5rem; color: #f0f9ff; font-style: italic; font-family: 'Avenir Next', 'Eurostile', 'DIN Alternate', system-ui, sans-serif;
+  background: linear-gradient(90deg, transparent 0 10%, rgba(165, 180, 252, .55) 10% 16%, transparent 16% 60%, rgba(165, 180, 252, .4) 60% 64%, transparent 64%) 0 14% / 100% 2px no-repeat, linear-gradient(90deg, transparent 0 30%, rgba(165, 180, 252, .5) 30% 38%, transparent 38% 78%, rgba(165, 180, 252, .5) 78% 86%, transparent 86%) 0 88% / 100% 2px no-repeat, radial-gradient(ellipse 70% 80% at 50% 50%, #1e1b4b, #02030a);
+  text-shadow: 0 0 .1em #fff, 0 0 .3em #7dd3fc;
+  --gs: 0 .3em 0 #1e1b4b, 0 .5em 1em rgba(99, 102, 241, .35); --gs-h: 0 .34em 0 #1e1b4b, 0 .7em 1.3em rgba(99, 102, 241, .55); --gs-a: 0 .06em 0 #1e1b4b; }
+.btn-roll.gen-warp:hover { filter: brightness(1.15); }

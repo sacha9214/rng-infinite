@@ -12865,6 +12865,279 @@
   };
   // ==== fin du lot 9 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 10 : Night Market, Old Cinema, Plane, Lightspeed (idées de joueurs planifiées) ====
+  // Passage du calque extérieur au calque intérieur (la carte vue de l'intérieur, bordure comprise).
+  const l10In = (env, x, y) => ({ x: x - env.card.x - (env.card.w - env.w) / 2, y: y - env.card.y - (env.card.h - env.h) / 2 });
+
+  // 🏮 Night Market (idée de number 1, 2026-10-29) — une guirlande de lanternes rouges pend au-dessus de la carte et de la
+  // vapeur monte des stands de chaque côté. Chaque chiffre posé : une lanterne s'élève de derrière sa case et s'envole.
+  // Avant le dernier chiffre, la guirlande se balance plus fort. Révélation : des lanternes s'envolent tout autour ; dès
+  // Epic, des enveloppes rouges tombent en virevoltant ; dès Mythic, des pièces d'or aussi. Tirage raté : une lanterne de
+  // la guirlande s'éteint et tombe.
+  SCENES.lunar = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const flyers = particles(), steam = particles(), envs = particles(), coins = particles(), puff = emitter(), pending = [];
+    let t = 0, build = 0, dimmed = -1, drop = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const lantern = (x, y, s, rot, a, lit = 1) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot);
+      if (lit && dark) { const g = co.createRadialGradient(0, 0, 0, 0, 0, s * 1.6); g.addColorStop(0, 'rgba(251, 146, 60, .45)'); g.addColorStop(1, 'rgba(251, 146, 60, 0)'); co.fillStyle = g; co.fillRect(-s * 1.6, -s * 1.6, s * 3.2, s * 3.2); }
+      const b = co.createRadialGradient(-s * .2, -s * .1, s * .1, 0, 0, s); b.addColorStop(0, lit ? '#fca5a5' : '#7f1d1d'); b.addColorStop(.5, lit ? '#ef4444' : '#5b1414'); b.addColorStop(1, lit ? '#991b1b' : '#3b0a0a');
+      co.fillStyle = b; co.beginPath(); co.ellipse(0, 0, s * .62, s * .5, 0, 0, TAU); co.fill();
+      co.strokeStyle = 'rgba(127, 29, 29, .7)'; co.lineWidth = 1; for (const k of [-.3, 0, .3]) { co.beginPath(); co.ellipse(0, 0, s * .62 * Math.abs(Math.cos(k * 2.6)) + .5, s * .5, 0, 0, TAU); co.stroke(); }
+      co.fillStyle = '#f59e0b'; co.fillRect(-s * .28, -s * .58, s * .56, s * .12); co.fillRect(-s * .28, s * .46, s * .56, s * .12);
+      co.strokeStyle = '#f59e0b'; co.lineWidth = Math.max(1, s * .06); co.beginPath(); co.moveTo(0, s * .58); co.lineTo(0, s * .9); co.stroke();
+      co.restore();
+    };
+    // la guirlande : 5 lanternes sur une corde tendue au-dessus de la carte
+    const garland = () => {
+      const x0 = card.x - em * .2, x1 = card.x + card.w + em * .2, y0 = card.y - em * .55, sag = em * .22, n = 5;
+      co.strokeStyle = dark ? 'rgba(254, 243, 199, .55)' : 'rgba(120, 53, 15, .6)'; co.lineWidth = 1.2; co.beginPath(); co.moveTo(x0, y0); co.quadraticCurveTo(cx, y0 + sag * 2, x1, y0); co.stroke();
+      for (let i = 0; i < n; i++) {
+        if (drop && drop.i === i) continue;
+        const u = (i + .5) / n, x = x0 + (x1 - x0) * u, y = y0 + sag * 4 * u * (1 - u), sw = Math.sin(t * (1.6 + build * 3) + i * 1.3) * (.08 + build * .18);
+        lantern(x + Math.sin(sw) * em * .2, y + em * .2, em * .3, sw, 1, i !== dimmed);
+      }
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // la vapeur des stands, de chaque côté de la carte
+        for (let n = puff(5 * q, dt); n > 0; n--) { const sd = Math.random() < .5 ? -1 : 1; steam.add({ x: cx + sd * (card.w / 2 + em * rnd(.3, 1.1)), y: card.y + H, vx: rnd(-6, 6), vy: -H * rnd(.3, .55), max: rnd(1.4, 2.2), ph: rnd(TAU) }); }
+        steam.step(dt);
+        steam.each((s, k) => { const x = s.x + Math.sin(s.life * 2 + s.ph) * em * .15, r = em * (.15 + k * .4), g = co.createRadialGradient(x, s.y, 0, x, s.y, r); g.addColorStop(0, dark ? 'rgba(254, 243, 199, .2)' : 'rgba(120, 113, 108, .18)'); g.addColorStop(1, 'rgba(254, 243, 199, 0)'); co.globalAlpha = Math.sin(Math.PI * k); co.fillStyle = g; co.fillRect(x - r, s.y - r, 2 * r, 2 * r); });
+        co.globalAlpha = 1;
+        flyers.step(dt);
+        if (flyers.n) behind(env, () => flyers.each((f, k) => lantern(f.x + Math.sin(f.life * 2 + f.ph) * em * .15, f.y, f.s, Math.sin(f.life * 2 + f.ph) * .12, Math.min(1, (1 - k) * 2.5))), true);
+        garland();
+        if (drop) { drop.vy += H * 4 * dt; drop.y += drop.vy * dt; drop.rot += dt * 2; drop.a -= dt * .7; if (drop.a <= 0) drop = null; else behind(env, () => lantern(drop.x, drop.y, em * .3, drop.rot, drop.a, 0), true); }
+        envs.step(dt);
+        if (envs.n) behind(env, () => envs.each((e, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(e.x + Math.sin(e.life * 3 + e.ph) * em * .3, e.y); co.rotate(Math.sin(e.life * 4 + e.ph) * .6); co.scale(Math.cos(e.life * 5 + e.ph), 1); co.fillStyle = '#dc2626'; co.fillRect(-em * .13, -em * .19, em * .26, em * .38); co.fillStyle = '#fbbf24'; co.beginPath(); co.arc(0, -em * .02, em * .07, 0, TAU); co.fill(); co.restore(); }), true);
+        coins.step(dt);
+        if (coins.n) behind(env, () => coins.each((c, k) => { dot(co, '#fbbf24', c.x, c.y, em * .08, Math.min(1, (1 - k) * 3), em * .08 * Math.abs(Math.cos(c.life * 6 + c.ph)) + .5); }), true);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        flyers.add({ x: p.x, y: card.y + H * .35, vx: 0, vy: -H * rnd(1, 1.3), drag: .5, max: rnd(2.2, 3), s: em * .32, ph: rnd(TAU) });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { dimmed = 2; later(.6, () => { const x0 = card.x - em * .2, x1 = card.x + card.w + em * .2; drop = { i: 2, x: x0 + (x1 - x0) * .5, y: card.y - em * .55 + em * .22 + em * .2, vy: 0, rot: 0, a: 1 }; }); return; }
+        for (let i = burst(p, 14 * q, 3); i > 0; i--) { const sd = i % 2 ? 1 : -1; flyers.add({ x: cx + sd * (card.w / 2 + em * rnd(-.2, 1.4)), y: card.y + H * rnd(.2, .9), vx: sd * rnd(0, 10), vy: -H * rnd(.6, 1.2), drag: .3, max: rnd(2.5, 3.5), s: em * rnd(.24, .38), ph: rnd(TAU) }); }
+        if (p >= .6) for (let i = Math.round((10 + 6 * asc) * q); i > 0; i--) envs.add({ x: cx + rnd(-1, 1) * (card.w / 2 + em * 1.2), y: card.y - H * rnd(.3, 1.2), vx: 0, vy: H * rnd(.35, .6), max: rnd(2, 3), ph: rnd(TAU) });
+        if (p >= 1) for (let i = Math.round((16 + 8 * asc) * q); i > 0; i--) { const e = along(grown(card, 3), rnd()); coins.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(1.5, 3), vy: -H * rnd(1, 2), g: H * 4, drag: .3, max: rnd(1, 1.6), ph: rnd(TAU) }); }
+      },
+    };
+  };
+
+  // 🎞️ Old Cinema (idée de number 1, 2026-10-29) — un projecteur à deux bobines, à gauche de la carte, l'éclaire de son
+  // faisceau (où danse la poussière) ; sur l'écran, le grain, les rayures et le scintillement d'un vieux film. Chaque
+  // chiffre posé : l'image bugue (une bande claire, un éclair) et les bobines s'emballent. Avant le dernier chiffre, le
+  // film tremble et scintille plus fort. Révélation : l'explosion demandée, des engrenages, des ressorts, des boulons et
+  // des fils qui volent derrière la carte ; dès Mythic, en plus, la pellicule se déroule tout autour de la carte. Tirage
+  // raté : la pellicule brûle, un trou brun s'ouvre au fond de l'écran.
+  SCENES.cinema = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const parts = particles(), dust = particles(), glitches = timed(), scratches = timed(), puffD = emitter(), pending = [];
+    let t = 0, build = 0, spin = 0, flash = 0, reelA = 0, burn = 0, strip = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const px = card.x - H * .75, py = cy + H * .05, s = H * .8, lens = { x: px + s * .42, y: py };
+    const projector = () => {
+      co.save(); co.translate(px, py);
+      co.fillStyle = '#44403c'; co.strokeStyle = '#d6d3d1'; co.lineWidth = 1.5;
+      for (const [rx, ry] of [[-s * .2, -s * .42], [s * .18, -s * .42]]) { co.beginPath(); co.arc(rx, ry, s * .2, 0, TAU); co.fill(); co.stroke(); co.save(); co.translate(rx, ry); co.rotate(reelA); for (let i = 0; i < 3; i++) { co.rotate(TAU / 3); co.beginPath(); co.arc(s * .1, 0, s * .045, 0, TAU); co.fillStyle = '#a8a29e'; co.fill(); } co.restore(); }
+      co.fillStyle = '#57534e'; roundRect(co, -s * .35, -s * .2, s * .7, s * .36, s * .05); co.fill(); co.stroke();
+      co.fillStyle = '#78716c'; co.fillRect(s * .32, -s * .09, s * .12, s * .18); co.fillStyle = '#fef3c7'; co.fillRect(s * .42, -s * .06, s * .03, s * .12); co.fillStyle = '#d6d3d1'; co.fillRect(-s * .3, s * .16, s * .08, s * .14); co.fillRect(s * .22, s * .16, s * .08, s * .14);
+      co.restore();
+    };
+    const gear = (x, y, r, rot, c) => { co.save(); co.translate(x, y); co.rotate(rot); co.fillStyle = c; co.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, rr = i % 2 ? r : r * 1.3; co.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } co.closePath(); co.fill(); co.fillStyle = dark ? '#0c0a09' : '#f5f5f4'; co.beginPath(); co.arc(0, 0, r * .35, 0, TAU); co.fill(); co.restore(); };
+    const spring = (x, y, r, rot, c) => { co.save(); co.translate(x, y); co.rotate(rot); co.strokeStyle = c; co.lineWidth = 1.5; co.beginPath(); for (let i = 0; i <= 8; i++) co.lineTo(-r + i * r / 4, i % 2 ? -r * .4 : r * .4); co.stroke(); co.restore(); };
+    const wire = (x, y, r, rot, c) => { co.save(); co.translate(x, y); co.rotate(rot); co.strokeStyle = c; co.lineWidth = 2; co.lineCap = 'round'; co.beginPath(); co.moveTo(-r * 1.4, 0); co.bezierCurveTo(-r * .4, -r * 1.2, r * .4, r * 1.2, r * 1.4, 0); co.stroke(); co.restore(); };
+    const film = (u0, len) => { // la pellicule déroulée autour de la carte : une bande sombre et ses perforations
+      const g = em * .5, n = 60;
+      co.lineCap = 'butt'; co.strokeStyle = '#1c1917'; co.lineWidth = em * .28; co.beginPath();
+      for (let i = 0; i <= n; i++) { const e = along(grown(card, g), u0 + len * i / n); i ? co.lineTo(e.x, e.y) : co.moveTo(e.x, e.y); } co.stroke();
+      co.fillStyle = '#e7e5e4'; for (let i = 0; i <= n * 2; i++) { const e = along(grown(card, g), u0 + len * i / (n * 2)), e2 = along(grown(card, g + em * .1), u0 + len * i / (n * 2)), e3 = along(grown(card, g - em * .1), u0 + len * i / (n * 2)); co.fillRect(e2.x - 1, e2.y - 1, 2.5, 2.5); co.fillRect(e3.x - 1, e3.y - 1, 2.5, 2.5); }
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        spin = Math.max(1, spin - dt * 3); reelA += dt * (1.5 + spin * 2 + build * 6); flash = Math.max(0, flash - dt * 3);
+        // l'écran : grain, rayures, scintillement (sous les chiffres)
+        ci.fillStyle = '#fff';
+        for (let i = Math.round((30 + build * 30) * q); i > 0; i--) { ci.globalAlpha = rnd(.05, .18); ci.fillRect(rnd(w), rnd(h), 1.2, 1.2); }
+        if (Math.random() < dt * (1.5 + build * 6)) scratches.add({ x: rnd(w * .1, w * .9), life: rnd(.08, .25) });
+        scratches.run(dt, (sc, k) => { ci.globalAlpha = .35 * (1 - k); ci.fillRect(sc.x, 0, 1, h); });
+        ci.globalAlpha = Math.max(flash * .35, Math.random() * (.04 + build * .06)); ci.fillRect(0, 0, w, h);
+        glitches.run(dt, (g, k) => { ci.globalAlpha = .45 * (1 - k); ci.fillRect(0, g.y - h * .12, w, h * .24); ci.globalAlpha = .25 * (1 - k); ci.fillRect(g.dx, g.y - h * .3, w, h * .05); });
+        if (burn) { burn = Math.min(1, burn + dt * .5); const bx = w * .72, by = h * .55, r = h * .5 * outCubic(burn); const g = ci.createRadialGradient(bx, by, 0, bx, by, r); g.addColorStop(0, 'rgba(12, 10, 9, .95)'); g.addColorStop(.6, 'rgba(120, 53, 15, .85)'); g.addColorStop(.8, 'rgba(251, 146, 60, .7)'); g.addColorStop(1, 'rgba(251, 146, 60, 0)'); ci.globalAlpha = 1; ci.fillStyle = g; ci.beginPath(); ci.arc(bx, by, r, 0, TAU); ci.fill(); }
+        ci.globalAlpha = 1;
+        // le faisceau du projecteur (derrière la carte) et sa poussière
+        behind(env, () => {
+          const a = (.18 + build * .1) * (.85 + Math.random() * .15), g = co.createLinearGradient(lens.x, 0, card.x, 0);
+          g.addColorStop(0, `rgba(255, 251, 235, ${a * 2})`); g.addColorStop(1, `rgba(255, 251, 235, ${a})`);
+          co.fillStyle = g; co.beginPath(); co.moveTo(lens.x, lens.y - s * .05); co.lineTo(card.x + em * .2, card.y - em * .1); co.lineTo(card.x + em * .2, card.y + H); co.lineTo(lens.x, lens.y + s * .05); co.closePath(); co.fill();
+          for (let n = puffD(8 * q, dt); n > 0; n--) { const u = rnd(); dust.add({ x: lens.x + (card.x - lens.x) * u, y: lens.y + rnd(-1, 1) * H * .45 * u, vx: rnd(-4, 4), vy: rnd(-4, 4), max: rnd(1, 2) }); }
+          dust.step(dt); dust.each((d, k) => dot(co, '#fffbeb', d.x, d.y, 1, Math.sin(Math.PI * k) * .8));
+          projector();
+          parts.step(dt);
+          parts.each((p, k) => { const a = Math.min(1, (1 - k) * 3), r = p.life * p.spin + p.rot; co.globalAlpha = a; if (p.kind === 0) gear(p.x, p.y, p.r, r, p.c); else if (p.kind === 1) spring(p.x, p.y, p.r, r, p.c); else if (p.kind === 2) wire(p.x, p.y, p.r, r, p.c); else dot(co, p.c, p.x, p.y, p.r * .4, a); co.globalAlpha = 1; });
+          if (strip) { strip = Math.min(1, strip + dt * .5); co.globalAlpha = strip < .85 ? 1 : (1 - strip) / .15; film(.62 - strip * .2, strip * .98); co.globalAlpha = 1; }
+        }, true);
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const i = l10In(env, p.x, p.y);
+        glitches.add({ y: i.y, dx: rnd(-w * .1, w * .1), life: .3 }); flash = .6; spin = 4;
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { burn = .01; return; }
+        flash = 1;
+        const C = ['#d6d3d1', '#a8a29e', '#ca8a04', '#e7e5e4', '#b45309'], W = ['#dc2626', '#1c1917', '#b45309'];
+        for (let i = burst(p, 26 * q, 5); i > 0; i--) { const e = along(grown(card, 3), rnd()), a = Math.atan2(e.y - cy, e.x - cx), kind = i % 4; parts.add({ x: e.x, y: e.y, vx: Math.cos(a) * H * rnd(1.2, 3), vy: Math.sin(a) * H * rnd(.8, 2) - H * .8, g: H * 4, drag: .4, max: rnd(1.1, 1.7), kind, r: em * (kind === 0 ? rnd(.1, .2) : rnd(.15, .25)), rot: rnd(TAU), spin: rnd(-6, 6), c: kind === 2 ? pick(W) : pick(C) }); }
+        if (p >= 1) { strip = .01; spin = 6; later(.4, () => { for (let i = Math.round((8 + 6 * asc) * q); i > 0; i--) { const e = along(grown(card, 3), rnd()); parts.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * 3, vy: -H * rnd(1, 2), g: H * 4, drag: .4, max: 1.4, kind: 0, r: em * rnd(.12, .2), rot: 0, spin: rnd(-8, 8), c: '#ca8a04' }); } }); }
+      },
+    };
+  };
+
+  // ✈️ Plane (idée de casmicgraything, 2026-10-29) — un petit avion à hélice vole au-dessus de la carte jusqu'au nuage
+  // du prochain chiffre, avec sa traînée ; quand le chiffre se pose, le nuage s'ouvre (des bouffées blanches derrière le
+  // chiffre). Avant le dernier chiffre, il tangue et sa traînée épaissit. Révélation : il file vers la droite ; dès Epic,
+  // il laisse des fumées de couleur ; dès Mythic, il fait une boucle de voltige autour de la carte (le chasseur de l'idée
+  // devient un avion de voltige : pas de militaire). Tirage raté : le moteur tousse, de la fumée grise, il plane et
+  // disparaît derrière la carte.
+  SCENES.plane = env => {
+    const { ci, co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const trail = [], puffs = particles(), smoke = particles(), colors = particles(), pending = [];
+    let t = 0, build = 0, x = card.x - em, y = card.y - em * .42, tx = x, mode = 0, mt = 0, ang = 0, prevX = x, prevY = y, smokeOn = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const plane = (x, y, a, s) => {
+      co.save(); co.translate(x, y); co.rotate(a);
+      co.fillStyle = '#dc2626'; co.beginPath(); co.ellipse(0, 0, s * .55, s * .13, 0, 0, TAU); co.fill(); // la carlingue
+      co.fillStyle = '#fff'; co.beginPath(); co.moveTo(-s * .1, 0); co.lineTo(s * .12, 0); co.lineTo(-s * .02, s * .42); co.lineTo(-s * .2, s * .42); co.closePath(); co.fill(); co.strokeStyle = '#1e3a8a'; co.lineWidth = 1; co.stroke(); // l'aile
+      co.fillStyle = '#fff'; co.beginPath(); co.moveTo(-s * .42, 0); co.lineTo(-s * .55, -s * .28); co.lineTo(-s * .48, -s * .28); co.lineTo(-s * .3, -s * .02); co.closePath(); co.fill(); co.stroke(); // la dérive
+      co.fillStyle = '#7dd3fc'; co.beginPath(); co.ellipse(s * .18, -s * .08, s * .1, s * .06, 0, 0, TAU); co.fill(); // le cockpit
+      co.strokeStyle = '#1e293b'; co.lineWidth = 2; const pr = Math.sin(t * 60) * s * .22; co.beginPath(); co.moveTo(s * .57, -pr); co.lineTo(s * .57, pr); co.stroke(); // l'hélice
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        prevX = x; prevY = y;
+        const yTop = card.y - em * .42;
+        if (mode === 0) { const nx = l1Next(env); if (nx) tx = nx.x; x += (tx - x) * Math.min(1, dt * 3); y = yTop + Math.sin(t * 3) * em * .05 + (build ? Math.sin(t * 9) * em * .07 : 0); }
+        else if (mode === 1) { mt += dt; x += H * 4 * dt; y = yTop - mt * H * .4; } // il file
+        else if (mode === 2) { mt += dt; const u = Math.min(1, mt / 2.6), a = -Math.PI / 2 + u * TAU * 1.0, rx = card.w / 2 + em * .9, ry = H / 2 + em * .55; x = cx + Math.cos(a) * rx; y = cy + Math.sin(a) * ry; if (u >= 1) { mode = 1; mt = 0; } } // la boucle
+        else if (mode === 3) { mt += dt; x += H * 1.2 * dt; y += H * (.1 + mt * .5) * dt; if (Math.random() < dt * 14) smoke.add({ x: x - em * .2, y, vx: -10, vy: -8, max: 1.4, r: em * rnd(.1, .2) }); } // il tousse et descend
+        const vx = x - prevX, vy = y - prevY;
+        if (Math.abs(vx) + Math.abs(vy) > .2) ang += ((mode === 2 ? Math.atan2(vy, vx) : clamp(Math.atan2(vy, Math.max(Math.abs(vx), 2)) * (vx < 0 ? -1 : 1), -.45, .45)) - ang) * Math.min(1, dt * 10);
+        const flip = mode === 0 && vx < -.3;
+        trail.push({ x: x - Math.cos(ang) * em * .3 * (flip ? -1 : 1), y: y - Math.sin(ang) * em * .3, t, c: smokeOn ? pick(['#ef4444', dark ? '#f8fafc' : '#cbd5e1', '#3b82f6']) : null });
+        while (trail.length && t - trail[0].t > (smokeOn ? 1.6 : .7 + build * .5)) trail.shift();
+        const drawTrail = () => { for (let i = 1; i < trail.length; i++) { const a = trail[i - 1], b = trail[i], k = (t - b.t) / (smokeOn ? 1.6 : .9); line(co, b.c || (dark ? '#f8fafc' : '#94a3b8'), a.x, a.y, b.x, b.y, (b.c ? 5 : 2 + build * 2) * (1 - k * .5), (b.c ? .8 : .6) * (1 - k)); } };
+        const s = em * .62;
+        if (mode === 2 || mode === 3) behind(env, () => { drawTrail(); plane(x, y, ang, s); }, true);
+        else { drawTrail(); co.save(); if (flip) { co.translate(x, y); co.scale(-1, 1); co.translate(-x, -y); } plane(x, y, flip ? -ang : ang, s); co.restore(); }
+        smoke.step(dt); smoke.each((p, k) => dot(co, '#9ca3af', p.x, p.y, p.r * (1 + k * 2), (1 - k) * .6));
+        colors.step(dt);
+        // les bouffées du nuage qui s'ouvre, derrière le chiffre
+        puffs.step(dt); puffs.each((p, k) => { ci.globalAlpha = (1 - k) * .9; ci.fillStyle = '#fff'; ci.beginPath(); ci.arc(p.x, p.y, p.r * (1 + k * 1.5), 0, TAU); ci.fill(); }); ci.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const i = l10In(env, p.x, p.y);
+        for (let n = 0; n < 7; n++) { const a = rnd(TAU); puffs.add({ x: i.x, y: i.y, vx: Math.cos(a) * H * .5, vy: Math.sin(a) * H * .3, drag: 3, max: .5, r: em * rnd(.12, .2) }); }
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        build = 0; mt = 0;
+        if (!p) { mode = 3; return; }
+        if (p >= .6) smokeOn = 1;
+        mode = p >= 1 ? 2 : 1;
+      },
+    };
+  };
+
+  // 🚀 Lightspeed (idée de casmicgraything, 2026-10-29) — on file dans l'espace : des étoiles jaillissent du centre de
+  // l'écran (derrière les chiffres) et autour de la carte, de plus en plus vite à chaque chiffre posé, avec un flash.
+  // Avant le dernier chiffre, vitesse maximale, tout bleuit. Au dernier, on freine. Révélation : une planète extraterrestre
+  // monte du bas de l'écran, et des OVNI tournent autour de la carte (plus nombreux avec la rareté) ; dès Mythic, c'est la
+  // Terre, avec une étiquette HOME!!! accrochée au coin de la carte. Tirage raté : les moteurs calent, les étoiles
+  // s'arrêtent et un voyant rouge clignote.
+  SCENES.warp = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const starsIn = [], starsOut = [], rings = timed(), ufos = [], pending = [];
+    let t = 0, build = 0, speed = .3, target = .3, locks = 0, planet = 0, earth = 0, tag = 0, stall = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const seed = (s, R) => { s.a = rnd(TAU); s.d = rnd(.02, 1) * R; s.v = rnd(.6, 1.4); return s; };
+    for (let i = 0; i < Math.round(50 * q); i++) starsIn.push(seed({}, w * .6));
+    for (let i = 0; i < Math.round(60 * q); i++) starsOut.push(seed({}, card.w));
+    const ufo = (x, y, s, a) => { co.save(); co.globalAlpha = a; co.translate(x, y); co.fillStyle = '#a7f3d0'; co.beginPath(); co.ellipse(0, -s * .15, s * .22, s * .2, 0, Math.PI, 0); co.fill(); co.fillStyle = '#94a3b8'; co.beginPath(); co.ellipse(0, 0, s * .5, s * .14, 0, 0, TAU); co.fill(); for (let i = -2; i <= 2; i++) dot(co, (Math.floor(t * 6) + i) % 2 ? '#fde047' : '#22d3ee', i * s * .18, s * .02, s * .04, 1); co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        speed += (target - speed) * Math.min(1, dt * (stall ? 6 : 2));
+        // la planète (ou la Terre), derrière les chiffres
+        if (planet) {
+          planet = Math.min(1, planet + dt * .5); const r = h * 1.3, px = w * .5, py = h * (3 - 1.15 * outCubic(planet));
+          if (earth) { const g = ci.createRadialGradient(px - r * .3, py - r * .4, r * .1, px, py, r); g.addColorStop(0, '#60a5fa'); g.addColorStop(.7, '#1d4ed8'); g.addColorStop(1, '#1e3a8a'); ci.fillStyle = g; ci.beginPath(); ci.arc(px, py, r, 0, TAU); ci.fill(); ci.fillStyle = '#16a34a'; for (const [ax, ay, ar] of [[-.45, -.75, .22], [.1, -.85, .16], [.5, -.6, .2], [-.1, -.55, .12]]) { ci.beginPath(); ci.ellipse(px + ax * r, py + ay * r, ar * r, ar * r * .55, ax, 0, TAU); ci.fill(); } ci.strokeStyle = 'rgba(147, 197, 253, .7)'; ci.lineWidth = 3; ci.beginPath(); ci.arc(px, py, r + 2, 0, TAU); ci.stroke(); }
+          else { const g = ci.createRadialGradient(px - r * .3, py - r * .4, r * .1, px, py, r); g.addColorStop(0, '#c084fc'); g.addColorStop(.6, '#7e22ce'); g.addColorStop(1, '#3b0764'); ci.fillStyle = g; ci.beginPath(); ci.arc(px, py, r, 0, TAU); ci.fill(); ci.strokeStyle = 'rgba(134, 239, 172, .55)'; ci.lineWidth = 2; for (const k of [1.25, 1.35]) { ci.beginPath(); ci.ellipse(px, py, r * k * 1.4, r * k * .25, -.08, Math.PI * 1.05, Math.PI * 1.95); ci.stroke(); } ci.fillStyle = 'rgba(134, 239, 172, .35)'; for (const [ax, ay, ar] of [[-.3, -.8, .1], [.35, -.7, .14]]) { ci.beginPath(); ci.arc(px + ax * r, py + ay * r, ar * r, 0, TAU); ci.fill(); } }
+        }
+        // les étoiles : dans l'écran (derrière les chiffres) et autour de la carte
+        const v = speed * (1 + build), blue = Math.min(1, speed / 2.5);
+        const col = `rgb(${Math.round(255 - blue * 90)}, ${Math.round(255 - blue * 40)}, 255)`;
+        ci.strokeStyle = col; ci.lineCap = 'round';
+        for (const s of starsIn) { s.d += dt * v * s.v * w * .35 * (s.d / (w * .6) + .1); if (s.d > w * .6) seed(s, w * .05); const len = Math.min(w * .25, v * s.v * 6 * (s.d / (w * .3) + .2)); const x0 = w / 2 + Math.cos(s.a) * s.d, y0 = h / 2 + Math.sin(s.a) * s.d * .5; ci.globalAlpha = Math.min(1, s.d / (w * .15)) * .55; ci.lineWidth = 1.2; ci.beginPath(); ci.moveTo(x0, y0); ci.lineTo(x0 - Math.cos(s.a) * len, y0 - Math.sin(s.a) * len * .5); ci.stroke(); }
+        ci.globalAlpha = 1;
+        behind(env, () => {
+          co.strokeStyle = dark ? col : '#4338ca'; co.lineCap = 'round';
+          for (const s of starsOut) { s.d += dt * v * s.v * card.w * .4 * (s.d / card.w + .15); if (s.d > card.w * 1.3) seed(s, card.w * .4); const len = Math.min(card.w * .3, v * s.v * 10 * (s.d / card.w + .2)); const x0 = cx + Math.cos(s.a) * s.d, y0 = cy + Math.sin(s.a) * s.d * .55; co.globalAlpha = Math.min(1, s.d / card.w) * (dark ? .9 : .6); co.lineWidth = 1.5; co.beginPath(); co.moveTo(x0, y0); co.lineTo(x0 - Math.cos(s.a) * len, y0 - Math.sin(s.a) * len * .55); co.stroke(); }
+          co.globalAlpha = 1;
+          rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .6; co.strokeStyle = '#a5b4fc'; co.lineWidth = 3 * (1 - k) + .5; co.beginPath(); co.ellipse(cx, cy, card.w * (.5 + k * .8), H * (.5 + k * 1.2), 0, 0, TAU); co.stroke(); co.globalAlpha = 1; });
+          for (const u of ufos) { u.a += dt * u.sp; const x = cx + Math.cos(u.a) * (card.w / 2 + em * u.r), y = cy + Math.sin(u.a) * (H / 2 + em * u.r * .6) - em * .1; ufo(x, y, em * .55, Math.min(1, (t - u.t0) * 2)); }
+        }, true);
+        if (tag) { tag = Math.min(1, tag + dt * 2); const tx = card.x + card.w + em * .15, ty = card.y + em * .1, sw = Math.sin(t * 2.5) * .12 * (1 - tag * .5); co.save(); co.translate(tx, ty); co.rotate(.25 + sw); co.scale(outCubic(tag), outCubic(tag)); line(co, '#a16207', -em * .2, -em * .1, 0, em * .05, 1.5, 1); co.fillStyle = '#fef9c3'; roundRect(co, 0, 0, em * 1.5, em * .45, em * .08); co.fill(); co.strokeStyle = '#a16207'; co.lineWidth = 1.2; co.stroke(); co.restore(); co.save(); co.translate(tx, ty); co.rotate(.25 + sw); co.scale(outCubic(tag), outCubic(tag)); l1Glyph(co, em * .75, em * .24, em * .3, 'HOME!!!', 0, 1, '#dc2626', null, "900 {s}px 'Arial Black', system-ui, sans-serif"); co.restore(); }
+        if (stall) { stall += dt; if (Math.floor(stall * 3) % 2 === 0) dot(co, '#ef4444', card.x + card.w + em * .25, card.y + em * .2, em * .09, 1); }
+      },
+      lock(p, o) {
+        if (o.ghost) { if (o.last) { build = 0; target = .25; } return; }
+        locks++;
+        if (o.last) { build = 0; target = .25; return; }
+        target = .5 + locks * .6;
+        rings.add({ life: .5 });
+      },
+      build() { build = 1; target = 3.6; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { target = 0; stall = .01; return; }
+        target = .12; planet = .01;
+        if (p >= 1) { earth = 1; later(.8, () => { tag = .01; }); }
+        const n = Math.round((p >= 1 ? 3 + asc : 1 + p * 4) * Math.max(.7, q));
+        for (let i = 0; i < n; i++) later(.6 + i * .25, () => ufos.push({ a: rnd(TAU), sp: rnd(.8, 1.6) * (Math.random() < .5 ? -1 : 1), r: rnd(.6, 1.3), t0: t }));
+      },
+    };
+  };
+  // ==== fin du lot 10 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

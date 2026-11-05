@@ -13662,3 +13662,146 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes jig-turn { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg) translate(4px, -4px); } }
 .room-stage.many .side-jigsaw::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-jigsaw::before { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 10 (idées de joueurs) */
+/* ------------------------------------------------------------------ Night Market (idée de number 1, 2026-10-29 : un
+   marché de nuit du Nouvel An lunaire, de la nourriture fumante, des lanternes rouges qui s'envolent pour révéler chaque
+   chiffre ; l'explosion : des lanternes et des enveloppes rouges ; 1 777 pièces). La rue la nuit : une guirlande de
+   lanternes en haut, la lueur orange des stands en bas. Les chiffres sont en or, éclairés par en dessous. Pendant le
+   tirage, ils vacillent comme une flamme. Un chiffre qui se pose : il monte doucement et s'allume (matière : la lumière
+   d'une lanterne, qui s'élève puis se stabilise). Lanternes, vapeur et enveloppes : js/skinfx.js (SCENES.lunar). */
+.num-card.skin-lunar {
+  background:
+    radial-gradient(ellipse .13em .16em at 10% 12%, #ef4444 0 70%, transparent 75%), radial-gradient(ellipse .11em .14em at 36% 7%, #dc2626 0 70%, transparent 75%),
+    radial-gradient(ellipse .13em .16em at 64% 12%, #ef4444 0 70%, transparent 75%), radial-gradient(ellipse .11em .14em at 90% 7%, #dc2626 0 70%, transparent 75%),
+    linear-gradient(176deg, transparent 8%, rgba(251, 191, 36, .45) 8.5% 9.5%, transparent 10%),
+    radial-gradient(ellipse 70% 40% at 50% 105%, rgba(251, 146, 60, .55), transparent 70%),
+    linear-gradient(180deg, #0f0a1e, #1e1b4b 50%, #3b0a0a);
+  border: .14em solid #b91c1c; border-radius: .5rem; color: #fde68a;
+  box-shadow: inset 0 0 0 .05em #f59e0b, inset 0 -.3em .6em rgba(251, 146, 60, .25), 0 0 16px rgba(239, 68, 68, .3), 0 10px 18px rgba(0, 0, 0, .4);
+}
+.skin-lunar .slot { position: relative; font-family: 'Songti SC', 'STSong', 'Baskerville', Georgia, serif; font-weight: 900;
+  color: #fde68a; text-shadow: 0 0 .05em #fff7d6, 0 0 .2em rgba(251, 191, 36, .75), 0 .05em 0 #7f1d1d; }
+.skin-lunar .slot.ghost { opacity: .2; }
+.skin-lunar .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-lunar .slot.spinning { opacity: .5; filter: blur(.6px); animation: lunar-flicker .3s ease-in-out infinite alternate; }
+.skin-lunar .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes lunar-flicker { from { opacity: .35; transform: translateY(.02em); } to { opacity: .6; transform: translateY(-.02em); } }
+.skin-lunar .slot.revealed { animation: lunar-rise .6s backwards; }
+@keyframes lunar-rise {
+  0% { transform: translateY(.4em) scale(.85); filter: brightness(2.2) blur(1px); animation-timing-function: cubic-bezier(.2, .7, .3, 1); }
+  60% { transform: translateY(-.05em) scale(1.04); filter: brightness(1.5); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-lunar .slot { animation: none !important; } }
+.side-lunar { --side-border: #dc2626; --side-glow: 0 0 16px rgba(239, 68, 68, .3); --side-ink: #dc2626;
+  --side-bg: radial-gradient(ellipse 60% 30% at 50% 100%, rgba(251, 146, 60, .22), transparent 70%), linear-gradient(180deg, rgba(30, 27, 75, .25), rgba(127, 29, 29, .18));
+  --deco-a: '🏮'; --deco-b: '🧧'; }
+.side-lunar::before { animation: lunar-sway 2.4s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes lunar-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+.room-stage.many .side-lunar::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-lunar::before { animation: none; } }
+/* ------------------------------------------------------------------ Old Cinema (idée de number 1, 2026-10-29 : un grand
+   écran noir et blanc qui bugue de temps en temps pour révéler le nombre ; l'explosion : des fils et de vieilles pièces
+   mécaniques ; 2 000 pièces). Un écran de cinéma muet entre deux rideaux de velours rouge : l'image est grise, granuleuse,
+   avec un vignettage. Les chiffres sont des intertitres : blancs, en Didot. Pendant le tirage, l'image saute (le film
+   glisse dans le projecteur). Un chiffre qui se pose : l'image bugue (un décalage horizontal et un éclair blanc) puis se
+   cale (matière : la pellicule, un à-coup puis net). Rayon du projecteur, grain, rayures et pièces mécaniques :
+   js/skinfx.js (SCENES.cinema). */
+.num-card.skin-cinema {
+  background:
+    linear-gradient(90deg, #7f1d1d, #b91c1c 2.5%, #7f1d1d 5%, #991b1b 7%, rgba(127, 29, 29, 0) 9% 91%, #991b1b 93%, #7f1d1d 95%, #b91c1c 97.5%, #7f1d1d),
+    radial-gradient(ellipse 75% 85% at 50% 50%, #57534e, #292524 70%, #0c0a09);
+  border: .16em solid #0c0a09; border-radius: .35rem; color: #fafaf9;
+  box-shadow: inset 0 0 0 .04em #a16207, inset 0 0 .8em rgba(0, 0, 0, .6), 0 0 0 .05em #a16207, 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-cinema .slot { position: relative; font-family: 'Didot', 'Bodoni 72', 'Bodoni MT', 'Playfair Display', Georgia, serif; font-weight: 700;
+  color: #fafaf9; text-shadow: 0 0 .05em #fff, 0 0 .2em rgba(255, 255, 255, .35), 0 .04em .04em rgba(0, 0, 0, .6); }
+.skin-cinema .slot.ghost { opacity: .18; }
+.skin-cinema .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-cinema .slot.spinning { opacity: .45; filter: grayscale(1) blur(.5px); animation: cine-weave .18s steps(3) infinite; }
+@keyframes cine-weave { 0% { transform: translateY(-.06em); } 50% { transform: translate(.02em, .05em); } 100% { transform: translateY(-.03em); } }
+.skin-cinema .slot.revealed { animation: cine-glitch .45s backwards; }
+@keyframes cine-glitch {
+  0% { transform: translateX(-.15em) skewX(-12deg); filter: brightness(3) blur(1px); opacity: .6; animation-timing-function: steps(2); }
+  25% { transform: translateX(.1em) skewX(8deg); filter: brightness(2); opacity: 1; }
+  45% { transform: translateX(-.04em); filter: brightness(1.3); }
+  60% { transform: none; filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cinema .slot { animation: none !important; } }
+.side-cinema { --side-border: #a16207; --side-glow: 0 0 14px rgba(250, 250, 249, .2); --side-ink: #a8a29e;
+  --side-bg: linear-gradient(90deg, rgba(153, 27, 27, .45) 0 7%, transparent 7% 93%, rgba(153, 27, 27, .45) 93%), linear-gradient(180deg, rgba(41, 37, 36, .25), rgba(12, 10, 9, .25));
+  --deco-a: '🎞️'; --deco-b: '🍿'; }
+.side-cinema::before { animation: cine-reel 2s linear infinite; }
+@keyframes cine-reel { to { transform: rotate(360deg); } }
+.room-stage.many .side-cinema::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cinema::before { animation: none; } }
+/* ------------------------------------------------------------------ Plane (idée de casmicgraything, 2026-10-29 : un avion
+   traverse un nuage et révèle un chiffre à chaque nuage ; « very simplistic skin pls »). Un ciel d'après-midi, bleu vers
+   le blanc, deux traînées de condensation. Chaque chiffre est caché dans un petit nuage blanc ; les chiffres sont en
+   blanc cerclés de bleu marine, comme sur la carlingue. Pendant le tirage, les nuages dérivent. Un chiffre qui se pose :
+   l'avion passe dans le nuage, le nuage s'ouvre et le chiffre en sort (matière : la vapeur, qui s'écarte). L'avion, les
+   bouffées de nuage et la boucle de voltige des tirages Mythic : js/skinfx.js (SCENES.plane). Le chasseur de l'idée
+   devient un avion de voltige (pas de militaire). */
+.num-card.skin-plane {
+  background:
+    linear-gradient(172deg, transparent 22%, rgba(255, 255, 255, .55) 22.5% 23.3%, transparent 24%),
+    linear-gradient(176deg, transparent 72%, rgba(255, 255, 255, .4) 72.4% 73%, transparent 73.6%),
+    linear-gradient(180deg, #38bdf8, #7dd3fc 55%, #e0f2fe);
+  border: 2px solid #0369a1; border-radius: .6rem; color: #fff;
+  box-shadow: inset 0 0 .4em rgba(255, 255, 255, .4), 0 10px 18px rgba(3, 105, 161, .3);
+}
+.skin-plane .slot { position: relative; z-index: 1; font-family: 'Futura', 'Avenir Next', 'Century Gothic', system-ui, sans-serif; font-weight: 800;
+  color: #fff; -webkit-text-stroke: .035em #1e3a8a; text-shadow: 0 .05em 0 #1e3a8a, 0 .08em .1em rgba(30, 58, 138, .3); }
+.skin-plane .slot::before { content: ''; position: absolute; inset: 8% -18%; z-index: -1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle at 30% 60%, #fff 0 28%, transparent 30%), radial-gradient(circle at 55% 40%, #fff 0 32%, transparent 34%), radial-gradient(circle at 75% 62%, #fff 0 26%, transparent 28%), radial-gradient(ellipse 60% 30% at 50% 70%, #fff 0 90%, transparent 95%);
+  opacity: 0; transition: opacity .3s, transform .3s; }
+.skin-plane .slot.spinning { color: transparent; -webkit-text-stroke: 0; text-shadow: none; }
+.skin-plane .slot.spinning::before { opacity: .95; animation: plane-drift 1.6s ease-in-out infinite alternate; }
+.skin-plane .slot.spinning:nth-of-type(2n)::before { animation-delay: -.8s; }
+@keyframes plane-drift { from { transform: translateX(-.06em); } to { transform: translateX(.06em); } }
+.skin-plane .slot.ghost { opacity: .25; }
+.skin-plane .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-plane .slot.revealed { animation: plane-out .5s backwards; }
+.skin-plane .slot.revealed::before { animation: plane-part .5s forwards; }
+@keyframes plane-out { 0% { transform: scale(.6); opacity: .3; animation-timing-function: cubic-bezier(.2, .8, .3, 1.2); } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: none; } }
+@keyframes plane-part { 0% { opacity: .95; transform: none; } 100% { opacity: 0; transform: scale(1.6, 1.2); } }
+@media (prefers-reduced-motion: reduce) { .skin-plane .slot, .skin-plane .slot::before { animation: none !important; } }
+.side-plane { --side-border: #0284c7; --side-glow: 0 0 14px rgba(56, 189, 248, .3); --side-ink: #0369a1;
+  --side-bg: linear-gradient(172deg, transparent 30%, rgba(255, 255, 255, .25) 30.5% 31.5%, transparent 32%), linear-gradient(180deg, rgba(56, 189, 248, .2), rgba(224, 242, 254, .15));
+  --deco-a: '✈️'; --deco-b: '☁️'; }
+.side-plane::before { animation: plane-fly 2.4s ease-in-out infinite; }
+@keyframes plane-fly { 0%, 100% { transform: translate(0, 0) rotate(-6deg); } 50% { transform: translate(6px, -5px) rotate(4deg); } }
+.room-stage.many .side-plane::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-plane::before { animation: none; } }
+/* ------------------------------------------------------------------ Lightspeed (idée de casmicgraything, 2026-10-29 : on
+   file dans l'espace, plus vite à chaque chiffre ; au dernier, on ralentit et une planète extraterrestre apparaît avec des
+   OVNI ; sur les tirages Mythic, c'est la Terre avec une étiquette HOME!!!). L'espace profond, bleu nuit vers le noir. Les
+   chiffres sont blanc bleuté, comme une lumière à grande vitesse. Pendant le tirage, ils sont étirés en traits. Un
+   chiffre qui se pose : il arrive de loin, étiré, et se contracte (matière : la lumière, l'élan puis l'arrêt net). Les
+   étoiles filantes, la planète, les OVNI et HOME!!! : js/skinfx.js (SCENES.warp). */
+.num-card.skin-warp {
+  background: radial-gradient(ellipse 60% 70% at 50% 50%, #1e1b4b, #0b1026 60%, #02030a);
+  border: 2px solid #312e81; border-radius: .55rem; color: #e0f2fe;
+  box-shadow: inset 0 0 .6em rgba(99, 102, 241, .35), 0 0 18px rgba(99, 102, 241, .35), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-warp .slot { position: relative; font-family: 'Avenir Next', 'Eurostile', 'DIN Alternate', system-ui, sans-serif; font-weight: 800;
+  color: #f0f9ff; text-shadow: 0 0 .03em #fff, 0 0 .1em rgba(125, 211, 252, .8), 0 0 .3em rgba(99, 102, 241, .55); }
+.skin-warp .slot.ghost { opacity: .18; }
+.skin-warp .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-warp .slot.spinning { opacity: .5; transform: scaleX(1.3); filter: blur(1px); }
+.skin-warp .slot.revealed { animation: warp-in .4s backwards; }
+@keyframes warp-in {
+  0% { transform: translateX(-.25em) scale(1.5, .6); filter: blur(2px) brightness(2); opacity: .4; animation-timing-function: cubic-bezier(.1, .9, .2, 1); }
+  55% { transform: scale(.94, 1.05); filter: brightness(1.4); opacity: 1; }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-warp .slot { animation: none !important; } .skin-warp .slot.spinning { transform: none; } }
+.side-warp { --side-border: #6366f1; --side-glow: 0 0 16px rgba(99, 102, 241, .35); --side-ink: #818cf8;
+  --side-bg: radial-gradient(circle, rgba(255, 255, 255, .55) 0 1px, transparent 1.5px) 3px 5px / 47px 41px, radial-gradient(circle, rgba(199, 210, 254, .45) 0 .7px, transparent 1.2px) 17px 23px / 31px 37px, radial-gradient(circle, rgba(255, 255, 255, .35) 0 .6px, transparent 1px) 29px 11px / 59px 23px, radial-gradient(ellipse at 50% 50%, rgba(30, 27, 75, .35), rgba(2, 3, 10, .3));
+  --deco-a: '🚀'; --deco-b: '🪐'; }
+.side-warp::before { animation: warp-zoom 1.2s ease-in infinite; }
+@keyframes warp-zoom { 0% { transform: translateX(-4px); } 80% { transform: translateX(6px); } 100% { transform: translateX(-4px); } }
+.room-stage.many .side-warp::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-warp::before { animation: none; } }

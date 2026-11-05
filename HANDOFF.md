@@ -214,8 +214,14 @@ one); `cafe` Café ☕ 1,500 — 0casmictechthing [6804dcd7e33e] (Epic: a latte-
 `sentinel` Robot Sentinel 🤖 2,400 — costoroll [055a03dcf2d5] (no weapons: the laser is a scanner beam and Mythic is a
 light show and a happy spin instead of blowing up the moon); `jigsaw` Jigsaw 🧩 900 — number 1 [2da86f4fdadb] (his price).
 
-- Next: Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
-  lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
+**Lot 10 — `claude/skins-lot10`** (block "lot 10 du 2026-11-05" in `js/skinfx.js`): `lunar` Night Market 🏮 1,777 —
+number 1 [6cb1f4688a12] (his price); `cinema` Old Cinema 🎞️ 2,000 — number 1 [dcab5d0c34cc] (his price; the B&W TV
+skin is a different idea: this one is a projector, curtains and an exploding projector); `plane` Plane ✈️ 1,400 —
+casmicgraything [2812b102f0fd] (his Mythic fighter jet became an aerobatic stunt plane doing a loop: no military);
+`warp` Lightspeed 🚀 2,400 — casmicgraything [2a72aa7dad04] (every reveal shows the alien planet and UFOs, Mythic and
+above show Earth with a HOME!!! tag).
+
+- Next: zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
   mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
   [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
   [773ca9b1b6e4], puzzle cube [3518354c582f].
