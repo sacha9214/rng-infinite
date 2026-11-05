@@ -13608,6 +13608,121 @@
   };
   // ==== fin du lot 12 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 13 : Water Balloon, Puzzle Cube (idées de joueurs planifiées, les dernières) ====
+  // 🎈 Water Balloon (idée de Niall, 2026-10-30 : « a water balloon hits and forms the numbers ») — chaque ballon éclate
+  // sur la palissade (CSS) : des gouttes jaillissent derrière la carte, des lambeaux de baudruche de sa couleur volent,
+  // et l'eau coule le long des planches derrière le chiffre. Avant le dernier chiffre, le dernier ballon ballotte plus
+  // fort (CSS) et des gouttes tombent du haut. Révélation : une gerbe d'eau ; dès Epic, d'autres ballons arrivent de
+  // chaque côté et éclatent autour de la carte ; dès Mythic, la bataille d'eau générale et un arc-en-ciel derrière la
+  // carte. Tirage raté : un dernier ballon tombe à côté et fait plouf, sans éclabousser.
+  SCENES.balloon = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const drops = particles(), shreds = particles(), drips = [], flyers = timed(), pending = [], rain = emitter();
+    const COLS = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+    let t = 0, build = 0, n = 0, bow = 0, dud = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const splash = (x, y, c, k = 1) => {
+      for (let i = Math.round(16 * q * k); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.7, 1.8) * k; drops.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - H * .5, g: H * 4, max: rnd(.6, 1), r: rnd(2, 4) }); }
+      for (let i = Math.round(4 * q * k); i > 0; i--) { const a = rnd(TAU); shreds.add({ x, y, vx: Math.cos(a) * H * 1.1, vy: Math.sin(a) * H * .8 - H * .5, g: H * 4, drag: .6, max: rnd(.6, 1), rot: rnd(TAU), spin: rnd(-10, 10), c }); }
+    };
+    const balloonAt = (x, y, s, c, rot) => { co.save(); co.translate(x, y); co.rotate(rot); co.fillStyle = c; co.beginPath(); co.ellipse(0, 0, s * .42, s * .5, 0, 0, TAU); co.fill(); co.fillStyle = 'rgba(255, 255, 255, .7)'; co.beginPath(); co.ellipse(-s * .14, -s * .18, s * .08, s * .12, -.5, 0, TAU); co.fill(); co.fillStyle = c; co.beginPath(); co.moveTo(0, s * .48); co.lineTo(s * .07, s * .58); co.lineTo(-s * .07, s * .58); co.fill(); co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // l'eau qui coule le long des planches, derrière les chiffres
+        for (const d of drips) { d.len = Math.min(d.max, d.len + dt * h * .5); d.a = Math.max(0, d.a - dt * .15); ci.fillStyle = `rgba(56, 189, 248, ${d.a * .55})`; ci.fillRect(d.x - 1.5, d.y, 3, d.len); ci.beginPath(); ci.arc(d.x, d.y + d.len, 2.4, 0, TAU); ci.fill(); }
+        for (let i = drips.length - 1; i >= 0; i--) if (drips[i].a <= 0) drips.splice(i, 1);
+        if (build) for (let k = rain(6 * q, dt); k > 0; k--) drops.add({ x: card.x + rnd(card.w), y: card.y - em * .2, vx: 0, vy: H * .5, g: H * 3, max: .5, r: rnd(1.5, 2.5) });
+        behind(env, () => {
+          if (bow) { bow = Math.min(1, bow + dt * .6); const R = card.w * .62; ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#8b5cf6'].forEach((c, i) => { co.strokeStyle = c; co.globalAlpha = .55 * bow; co.lineWidth = em * .1; co.beginPath(); co.arc(cx, card.y + H, R + i * em * .1, Math.PI, Math.PI + Math.PI * outCubic(bow)); co.stroke(); }); co.globalAlpha = 1; }
+          flyers.run(dt, (f, k) => { const x = f.x0 + (f.x1 - f.x0) * k, y = f.y0 + (f.y1 - f.y0) * k - f.peak * 4 * k * (1 - k); balloonAt(x, y, em * .5, f.c, k * 6 * f.dir); if (f.life - f.t < dt * 1.5 && !f.done) { f.done = 1; splash(f.x1, f.y1, f.c, .8); } });
+          shreds.step(dt); shreds.each((s, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(s.x, s.y); co.rotate(s.rot + s.life * s.spin); co.fillStyle = s.c; co.beginPath(); co.moveTo(-4, -2); co.lineTo(4, -3); co.lineTo(2, 3); co.lineTo(-3, 2); co.fill(); co.restore(); });
+          drops.step(dt); drops.each((d, k) => dot(co, dark ? '#7dd3fc' : '#0ea5e9', d.x, d.y, d.r, (1 - k) * .9));
+          if (dud) { dud.vy += H * 5 * dt; dud.y += dud.vy * dt; if (dud.y > card.y + H * .9) { drops.add({ x: dud.x, y: card.y + H, vx: 0, vy: -H * .3, g: H * 4, max: .3, r: 2 }); dud = null; } else balloonAt(dud.x, dud.y, em * .5, dud.c, .3); }
+        }, true);
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) { n++; return; }
+        const c = COLS[n++ % 6];
+        splash(p.x, card.y + em * .1, c);
+        drips.push({ x: p.x - card.x - (card.w - w) / 2 + rnd(-em * .15, em * .15), y: h * .62, len: 0, max: h * rnd(.25, .38), a: 1 });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { dud = { x: card.x + card.w + em * .4, y: card.y - em * .5, vy: 0, c: pick(COLS) }; return; }
+        for (let i = 0; i < 3; i++) splash(card.x + card.w * rnd(.15, .85), card.y + em * .1, pick(COLS), .7);
+        const lob = (delay, dir) => { const x1 = dir > 0 ? card.x + card.w + em * rnd(.2, 1.2) : card.x - em * rnd(.2, 1.2); flyers.add({ x0: dir > 0 ? card.x - em * 2 : card.x + card.w + em * 2, y0: cy, x1, y1: card.y + H * rnd(0, .7), peak: em * rnd(.8, 1.4), dir, c: pick(COLS), life: .55, delay }); };
+        if (p >= .6) for (let i = 0; i < 2 + Math.round(p * 2); i++) lob(.15 + i * .2, i % 2 ? 1 : -1);
+        if (p >= 1) { later(.4, () => { bow = .01; }); for (let i = 0; i < Math.round((6 + 3 * asc) * q); i++) lob(.8 + i * .16, i % 2 ? -1 : 1); }
+      },
+    };
+  };
+
+  // 🟥 Puzzle Cube (idée de Matthew, 2026-10-31, version générique) — un petit cube à facettes, vu en perspective à
+  // gauche de la carte, ses trois faces mélangées. Chaque chiffre posé : une de ses rangées fait un quart de tour (les
+  // couleurs glissent) avec un éclat. Avant le dernier chiffre, il se mélange à toute vitesse. Révélation : il se calme ;
+  // dès Epic, quelques étincelles ; dès Mythic, il se résout : chaque face prend une seule couleur, un éclair blanc et des
+  // étincelles des six couleurs. Tirage raté : il reste mélangé et un autocollant se décolle et tombe.
+  SCENES.cube = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const COLS = ['#f8fafc', '#facc15', '#ef4444', '#fb923c', '#3b82f6', '#22c55e'];
+    const faces = [0, 1, 2].map(() => Array.from({ length: 9 }, () => Math.floor(rnd(6))));
+    const sparks = particles(), flashes = timed(), pending = [], shuffle = emitter();
+    let t = 0, build = 0, solved = 0, twist = 0, peel = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const S = H * .42, ox = card.x - H * .72, oy = cy + H * .08;
+    const turn = () => { const r = Math.floor(rnd(3)), f = Math.floor(rnd(3)); for (let i = 0; i < 3; i++) faces[f][r * 3 + i] = Math.floor(rnd(6)); faces[(f + 1) % 3][r * 3 + Math.floor(rnd(3))] = Math.floor(rnd(6)); twist = 1; };
+    // les trois faces en perspective isométrique : dessus, gauche, droite
+    const draw = () => {
+      const u = [S * .87, S * .5], v = [-S * .87, S * .5], up = [0, -S];
+      const quad = (o, a, b, c) => { co.beginPath(); co.moveTo(o[0], o[1]); co.lineTo(o[0] + a[0], o[1] + a[1]); co.lineTo(o[0] + a[0] + b[0], o[1] + a[1] + b[1]); co.lineTo(o[0] + b[0], o[1] + b[1]); co.closePath(); co.fillStyle = c; co.fill(); co.strokeStyle = '#111'; co.lineWidth = 2; co.stroke(); };
+      const face = (f, origin, a, b, shade) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const o = [origin[0] + a[0] * i / 3 + b[0] * j / 3, origin[1] + a[1] * i / 3 + b[1] * j / 3]; quad(o, [a[0] / 3, a[1] / 3], [b[0] / 3, b[1] / 3], solved ? COLS[[0, 2, 4][f]] : COLS[faces[f][j * 3 + i]]); } if (shade) { co.globalAlpha = shade; quad(origin, a, b, '#000'); co.globalAlpha = 1; } };
+      co.save(); co.translate(ox, oy); co.rotate(Math.sin(twist * Math.PI) * .12 + (build ? Math.sin(t * 30) * .03 : 0));
+      face(0, [0, -S], u, v.map(x => x), 0); // dessus (losange)
+      face(1, [-S * .87, -S * .5], u, [0, S], .18); // gauche
+      face(2, [0, 0], [S * .87, -S * .5], [0, S], .32); // droite
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        twist = Math.max(0, twist - dt * 4);
+        if (build) for (let k = shuffle(14, dt); k > 0; k--) turn();
+        behind(env, () => {
+          draw();
+          flashes.run(dt, (f, k) => { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#ffffff', ox, oy - S * .3, S * (1 + k), (1 - k) * .8); co.globalCompositeOperation = 'source-over'; });
+          sparks.step(dt); sparks.each((s, k) => twinkle(co, s.c, s.x, s.y, s.size * (1 - k), 1, s.life * 4));
+          if (peel) { peel.vy += H * 4 * dt; peel.x += peel.vx * dt; peel.y += peel.vy * dt; peel.r += dt * 6; co.save(); co.translate(peel.x, peel.y); co.rotate(peel.r); co.fillStyle = peel.c; co.fillRect(-S * .14, -S * .1, S * .28, S * .2); co.restore(); if (peel.y > card.y + H * 2) peel = null; }
+        }, true);
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        turn();
+        for (let i = Math.round(3 * q); i > 0; i--) { const a = rnd(TAU); sparks.add({ x: ox + Math.cos(a) * S * .6, y: oy - S * .3 + Math.sin(a) * S * .6, vx: Math.cos(a) * H * .5, vy: Math.sin(a) * H * .5, max: .4, size: em * .1, c: pick(COLS) }); }
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { peel = { x: ox + S * .3, y: oy, vx: H * .2, vy: -H * .2, r: 0, c: pick(COLS) }; return; }
+        if (p >= .6) for (let i = burst(p, 12 * q, 3); i > 0; i--) { const a = rnd(TAU); sparks.add({ x: ox, y: oy - S * .3, vx: Math.cos(a) * H, vy: Math.sin(a) * H - H * .3, drag: 1, max: rnd(.6, 1), size: em * rnd(.1, .16), c: pick(COLS) }); }
+        if (p >= 1) later(.35, () => {
+          solved = 1; flashes.add({ life: .5 });
+          for (let i = Math.round((24 + 10 * asc) * q); i > 0; i--) { const e = along(grown(card, 3), rnd()); sparks.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * 2, vy: -H * rnd(.6, 1.4), drag: .8, max: rnd(.8, 1.3), size: em * rnd(.1, .2), c: pick(COLS) }); }
+        });
+      },
+    };
+  };
+  // ==== fin du lot 13 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

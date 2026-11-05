@@ -14150,3 +14150,85 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes ame-glint { 0%, 100% { filter: none; } 50% { filter: brightness(1.5) drop-shadow(0 0 4px #c084fc); } }
 .room-stage.many .side-amethyst::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-amethyst::before { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 13 (idées de joueurs) */
+/* ------------------------------------------------------------------ Water Balloon (idée de Niall, 2026-10-30 : « a water
+   balloon hits and forms the numbers »). Une palissade de jardin en plein soleil, planches claires. Pendant le tirage,
+   chaque case est un ballon de baudruche plein d'eau qui ballotte (une couleur par case). Un chiffre qui se pose : le
+   ballon éclate et l'eau forme le chiffre, bleu transparent avec un reflet (matière : de l'eau, un éclatement puis elle
+   se rassemble). Gouttes, coulures et bataille d'eau : js/skinfx.js (SCENES.balloon). */
+.num-card.skin-balloon {
+  background:
+    radial-gradient(ellipse 30% 40% at 90% 8%, rgba(255, 251, 235, .7), transparent 70%),
+    repeating-linear-gradient(90deg, #fde7c4 0 .9em, #e9c99b .9em calc(.9em + 2px)),
+    #f5deb3;
+  border: .12em solid #b8895a; border-radius: .5rem; color: #0369a1;
+  box-shadow: inset 0 -.3em .5em rgba(146, 64, 14, .15), 0 10px 18px rgba(0, 0, 0, .25);
+}
+.skin-balloon .slot { position: relative; z-index: 1; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900;
+  color: rgba(14, 165, 233, .92); text-shadow: 0 0 0 transparent, -.03em -.03em 0 rgba(255, 255, 255, .7), .03em .05em .02em rgba(3, 105, 161, .6), 0 .06em .1em rgba(3, 105, 161, .35); -webkit-text-stroke: .02em #0369a1; }
+.skin-balloon .slot::before { content: ''; position: absolute; left: 50%; top: 50%; width: .5em; height: .6em; transform: translate(-50%, -55%); z-index: 1; pointer-events: none; opacity: 0;
+  border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .85) 0 10%, transparent 20%), var(--wb, #f43f5e);
+  box-shadow: inset -.04em -.06em .1em rgba(0, 0, 0, .2); }
+.skin-balloon .slot::after { content: ''; position: absolute; left: 50%; top: 50%; width: .1em; height: .08em; transform: translate(-50%, .27em); z-index: 1; pointer-events: none; opacity: 0;
+  background: var(--wb, #f43f5e); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.skin-balloon .slot:nth-of-type(6n+2) { --wb: #f59e0b; } .skin-balloon .slot:nth-of-type(6n+3) { --wb: #22c55e; }
+.skin-balloon .slot:nth-of-type(6n+4) { --wb: #3b82f6; } .skin-balloon .slot:nth-of-type(6n+5) { --wb: #a855f7; } .skin-balloon .slot:nth-of-type(6n) { --wb: #ec4899; }
+.skin-balloon .slot.ghost { opacity: .25; }
+.skin-balloon .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-balloon .slot.collapsed::before, .skin-balloon .slot.collapsed::after { display: none; }
+.skin-balloon .slot.spinning { color: transparent; text-shadow: none; -webkit-text-stroke: 0; }
+.skin-balloon .slot.spinning::before, .skin-balloon .slot.spinning::after { opacity: 1; }
+.skin-balloon .slot.spinning::before { animation: wb-jiggle .45s ease-in-out infinite alternate; }
+.skin-balloon .slot.spinning:nth-of-type(2n)::before { animation-delay: -.22s; }
+@keyframes wb-jiggle { from { transform: translate(-50%, -55%) scale(1.06, .94); } to { transform: translate(-50%, -58%) scale(.95, 1.05); } }
+.skin-balloon .slot.revealed { animation: wb-form .5s backwards; }
+@keyframes wb-form {
+  0% { transform: scale(1.7, .4); filter: blur(2px); opacity: .5; animation-timing-function: cubic-bezier(.2, .8, .3, 1.2); }
+  45% { transform: scale(.9, 1.12); filter: blur(.3px); opacity: 1; }
+  70% { transform: scale(1.04, .97); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-balloon .slot, .skin-balloon .slot::before { animation: none !important; } }
+.side-balloon { --side-border: #0ea5e9; --side-glow: 0 0 14px rgba(14, 165, 233, .3); --side-ink: #0369a1;
+  --side-bg: repeating-linear-gradient(90deg, rgba(253, 231, 196, .35) 0 34px, rgba(233, 201, 155, .35) 34px 36px);
+  --deco-a: '🎈'; --deco-b: '💦'; }
+.side-balloon::before { animation: wb-bob 1.6s ease-in-out infinite; }
+@keyframes wb-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-6px) rotate(6deg); } }
+.room-stage.many .side-balloon::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-balloon::before { animation: none; } }
+/* ------------------------------------------------------------------ Puzzle Cube (idée de Matthew, 2026-10-31 : un skin
+   de cube à facettes ; générique, sans nom de marque). La carte est une face de cube en plastique noir ; chaque chiffre
+   est une vignette de couleur (blanc, jaune, rouge, orange, bleu, vert : une par case), bord arrondi, le chiffre noir
+   dessus. Pendant le tirage, les vignettes défilent de couleur en couleur, comme une rangée qu'on fait tourner. Un
+   chiffre qui se pose : sa rangée fait un quart de tour et se cale d'un clic (matière : du plastique, une rotation nette
+   puis l'arrêt). Le petit cube qui se mélange puis se résout : js/skinfx.js (SCENES.cube). */
+.num-card.skin-cube {
+  background: #111;
+  border: .14em solid #000; border-radius: .45rem; color: #111;
+  box-shadow: inset 0 0 0 .04em #333, inset .05em .05em .1em rgba(255, 255, 255, .12), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .26em .45em;
+}
+.skin-cube .slot {
+  position: relative; box-sizing: border-box; width: .92em; height: .96em; margin: 0 .09em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border-radius: .14em; background: var(--cb, #f8fafc); box-shadow: inset 0 .04em 0 rgba(255, 255, 255, .5), inset 0 -.05em 0 rgba(0, 0, 0, .18);
+  font-family: 'Arial Black', 'Helvetica Neue', system-ui, sans-serif; font-weight: 900; font-size: .7em; color: #111; text-shadow: 0 .03em 0 rgba(255, 255, 255, .45);
+}
+.skin-cube .slot:nth-of-type(6n+2) { --cb: #facc15; } .skin-cube .slot:nth-of-type(6n+3) { --cb: #ef4444; }
+.skin-cube .slot:nth-of-type(6n+4) { --cb: #fb923c; } .skin-cube .slot:nth-of-type(6n+5) { --cb: #3b82f6; } .skin-cube .slot:nth-of-type(6n) { --cb: #22c55e; }
+.skin-cube .slot.ghost { opacity: .35; }
+.skin-cube .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; box-shadow: none; }
+.skin-cube .slot.spinning { opacity: 1; color: transparent; text-shadow: none; animation: cube-cycle .6s steps(6) infinite; }
+.skin-cube .slot.spinning:nth-of-type(2n) { animation-delay: -.3s; }
+@keyframes cube-cycle { 0% { background: #f8fafc; } 17% { background: #facc15; } 33% { background: #ef4444; } 50% { background: #fb923c; } 67% { background: #3b82f6; } 83% { background: #22c55e; } 100% { background: #f8fafc; } }
+.skin-cube .slot.revealed { animation: cube-turn .4s backwards; }
+@keyframes cube-turn { 0% { transform: perspective(3em) rotateY(-90deg); filter: brightness(.6); animation-timing-function: cubic-bezier(.3, .9, .4, 1.25); } 75% { transform: perspective(3em) rotateY(8deg); filter: none; } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-cube .slot { animation: none !important; } }
+.side-cube { --side-border: #444; --side-glow: 0 0 12px rgba(0, 0, 0, .3); --side-ink: #ef4444;
+  --side-bg: linear-gradient(135deg, rgba(239, 68, 68, .12), rgba(250, 204, 21, .1) 35%, rgba(34, 197, 94, .1) 65%, rgba(59, 130, 246, .12));
+  --deco-a: '🟥'; --deco-b: '🟦'; }
+.side-cube::before { animation: cube-flip 2s steps(4) infinite; }
+@keyframes cube-flip { to { transform: rotate(360deg); } }
+.room-stage.many .side-cube::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cube::before { animation: none; } }

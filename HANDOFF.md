@@ -235,7 +235,15 @@ names or logos; the "player doing a touchdown" is the TOUCHDOWN! title and confe
 each other colored signals); `amethyst` Amethyst 💎 2,200 — JAKECisthebest [a92a400e42d6] (**no music**: the song he
 asked for is copyrighted; the rarity color comes from `--t-accent` once the card is not `.neutral`).
 
-- Next: water balloon [773ca9b1b6e4], puzzle cube [3518354c582f] (generic, no brand).
+**Lot 13 — `claude/skins-lot13`** (block "lot 13 du 2026-11-05" in `js/skinfx.js`): `balloon` Water Balloon 🎈 1,200 —
+Niall [773ca9b1b6e4]; `cube` Puzzle Cube 🟥 1,500 — Matthew [3518354c582f] (generic name and look, no brand).
+
+**The planned skin list is done** (lots 1–13, PRs #79 to #101, stacked: merge them in order). Not built as new skins:
+HSI's rock smash [5b5f29b0cc52] (it is the existing Rock Smash skin, already his idea). Adapted to the rules (noted in
+each lot above and in the PRs): no weapons (Void Reaper without a scythe, Robot Sentinel's scanner beam, Earth's
+signals instead of lasers, Tile Sweeper without mines), no military (Plane's stunt plane instead of a fighter jet), no
+brands (Gridiron, Tile Sweeper, Puzzle Cube), no copyrighted music (Amethyst). Sacha can mark all of these
+ideas Added once the PRs are merged.
 
 ## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
 

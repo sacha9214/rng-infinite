@@ -2048,3 +2048,17 @@
   text-shadow: 0 0 .2em rgba(216, 180, 254, .9), 0 .04em .05em #3b0764;
   --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(168, 85, 247, .4); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(168, 85, 247, .55); --gs-a: 0 .06em 0 #2e1065; }
 .btn-roll.gen-amethyst:hover { filter: brightness(1.12); }
+
+/* ==== Skins du 2026-11-05, lot 13 ==== boutons assortis */
+/* Water Balloon (idée de Niall) : un ballon d'eau rouge brillant, texte blanc. */
+.btn-roll.gen-balloon { border: 2px solid #be123c; border-radius: 999px; color: #fff; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(ellipse 30% 40% at 22% 28%, rgba(255, 255, 255, .65), transparent 70%), radial-gradient(circle at 85% 75%, rgba(56, 189, 248, .55) 0 .3em, transparent .32em), linear-gradient(180deg, #fb7185, #e11d48);
+  text-shadow: 0 .05em 0 #9f1239;
+  --gs: 0 .3em 0 #9f1239, 0 .5em 1em rgba(244, 63, 94, .35); --gs-h: 0 .34em 0 #9f1239, 0 .7em 1.3em rgba(244, 63, 94, .5); --gs-a: 0 .06em 0 #9f1239; }
+.btn-roll.gen-balloon:hover { filter: brightness(1.08); }
+/* Puzzle Cube (idée de Matthew) : une rangée de vignettes de couleur sur plastique noir, texte blanc cerclé de noir. */
+.btn-roll.gen-cube { border: .14em solid #000; border-radius: .4rem; color: #fff; -webkit-text-stroke: .04em #111; font-family: 'Arial Black', 'Helvetica Neue', system-ui, sans-serif;
+  background: linear-gradient(90deg, #ef4444 0 16.6%, #111 16.6% 17.4%, #facc15 17.4% 33.2%, #111 33.2% 34%, #22c55e 34% 49.8%, #111 49.8% 50.6%, #3b82f6 50.6% 66.4%, #111 66.4% 67.2%, #fb923c 67.2% 83%, #111 83% 83.8%, #f8fafc 83.8%);
+  text-shadow: 0 .06em 0 #111;
+  --gs: 0 .3em 0 #000, 0 .5em 1em rgba(0, 0, 0, .3); --gs-h: 0 .34em 0 #000, 0 .7em 1.3em rgba(0, 0, 0, .35); --gs-a: 0 .06em 0 #000; }
+.btn-roll.gen-cube:hover { filter: brightness(1.08); }

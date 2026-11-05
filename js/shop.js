@@ -365,6 +365,9 @@
     { id: 'gridiron', name: 'Gridiron', emoji: '🏈', price: 1800, desc: 'A football field with its yard lines: a ball spirals onto every digit, and Mythic rolls score a TOUCHDOWN in red, white and blue confetti', idea: 'casmicgraything' },
     { id: 'earth', name: 'Earth', emoji: '🌍', price: 2400, desc: 'The Earth spins behind your number while satellites orbit and rockets fly by; Mythic rolls launch every rocket at once', idea: 'casmicgraything' },
     { id: 'amethyst', name: 'Amethyst', emoji: '💎', price: 2200, desc: 'Your digits shine through a purple crystal; when the roll ends, the stone glows in the color of its rarity and cracks', idea: 'JAKECisthebest' },
+    // lot 13 du 2026-11-05 (idées de joueurs planifiées, les dernières)
+    { id: 'balloon', name: 'Water Balloon', emoji: '🎈', price: 1200, desc: 'Every digit is a water balloon that bursts on the fence and the water forms your number; Mythic rolls start a water fight under a rainbow', idea: 'Niall' },
+    { id: 'cube', name: 'Puzzle Cube', emoji: '🟥', price: 1500, desc: 'Every digit is a colored sticker that turns into place while a little puzzle cube twists beside the card; Mythic rolls solve it', idea: 'Matthew' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
