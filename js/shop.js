@@ -474,6 +474,17 @@
     { id: 'icecaps', name: 'Ice Caps', emoji: '🧊', price: 1000, idea: 'finnnnn', desc: 'Tall, pointy ice spires beside an icy river under snowy mountains; ice floes drift by, snow falls and the northern lights dance at night' },
     // Idée de sennybex1 : un cirque, des animaux, des fanions, à manger, un obstacle, et la caméra qui tourne.
     { id: 'circus', name: 'Circus', emoji: '🎪', price: 1100, idea: 'sennybex1', desc: 'Look up into a spinning big top: bunting, sweeping spotlights, an elephant rolling a ball, a juggling seal, a hoop and popping popcorn' },
+    // Lot « étranges » (2026-11-05). 4th Dimension est légendaire (finnnnn l'a demandé ainsi) : il réagit à la rareté des
+    // tirages, donc premium, hors caisse. Les quatre autres sont des fonds normaux.
+    // Idée de finnnnn : des formes qui se retournent dans la 4e dimension, des couleurs et des motifs qui changent.
+    { id: 'fourthdim', name: '4th Dimension', emoji: '🌀', price: 4500, premium: true, idea: 'finnnnn', desc: 'A glowing tesseract turns inside out through the fourth dimension over shifting patterns; Rare+ rolls send a wave of their colour, and Mythic+ rolls flip it inside out' },
+    // Idée de qwertyuiop : une dimension infernale, plutôt orange et rouge clair (un paysage, aucun symbole).
+    { id: 'avernus', name: 'Avernus', emoji: '🌋', price: 1100, idea: 'qwertyuiop', desc: 'A volcanic dimension under orange smoke: rivers of lava flow, embers rise, rocks float and a lava geyser erupts now and then' },
+    // Trois idées de jia jun : un pays en bonbons, un écran cassé, des liasses de billets (id « moneystacks » et
+    // « crackscreen » : « money » et « cracked » sont des skins).
+    { id: 'candyland', name: 'Candy Land', emoji: '🍭', price: 900, idea: 'jia jun', desc: 'Gumdrop hills, a chocolate river and giant spinning lollipops, with cotton candy clouds and falling sprinkles' },
+    { id: 'crackscreen', name: 'Cracked Screen', emoji: '📱', price: 800, idea: 'jia jun', desc: 'Your screen looks cracked from a corner, with glints on the broken glass and flickering dead pixels; click the background to crack it some more' },
+    { id: 'moneystacks', name: 'Stacks of Money', emoji: '💵', price: 1000, idea: 'jia jun', desc: 'Stacks of bills, piles of gold coins and gold bars in a vault, with bills fluttering down and coins sparkling' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },

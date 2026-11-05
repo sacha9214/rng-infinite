@@ -700,6 +700,8 @@
     return {
       S,
       redraw() { S.dirty = true; if (S.still) lp.draw(); },
+      // repeindre aussi le décor (après un changement que paint dessine, comme une fissure de Cracked Screen)
+      repaint() { layout(); lp.draw(); },
       alive: () => alive && fg.c.isConnected,
       stop() { alive = false; lp.stop(); mo.disconnect(); clearTimeout(rt); removeEventListener('resize', onResize); if (h.stop) h.stop(); bg.c.remove(); fg.c.remove(); },
       roll(tier, n, rank) { if (h.roll) h.roll(S, tier, n, rank); if (S.still) lp.draw(); },
@@ -1757,6 +1759,460 @@
       },
       stop() { if (roof) roof.remove(); const c = layer.querySelector(':scope > .wcalm'); if (c) c.remove(); },
       debug(S, what) { return { el: el.x }; },
+    });
+    return st;
+  };
+
+  /* ===============================================================================================================
+   * Fonds d'idées de joueurs du 2026-11-05, lot « étranges » : 4th Dimension (légendaire), Avernus, Candy Land,
+   * Cracked Screen, Stacks of Money.
+   */
+  const hslA = (h, s, l, a) => `hsla(${Math.round(((h % 360) + 360) % 360)},${s}%,${l}%,${a})`;
+  // couleur de chaque rareté (comme la bille d'Aether) ; Infinite = arc-en-ciel, décidé par chaque scène
+  const TIER_HUE = { common: [0, 0, 70], uncommon: [142, 70, 50], rare: [217, 90, 60], epic: [271, 90, 65], anomaly: [25, 95, 55], mythic: [0, 0, 100], celestial: [199, 90, 70], divine: [48, 96, 55], godlike: [0, 84, 60] };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🌀 4th Dimension (idée de finnnnn, 2026-10-27, légendaire) : « des formes qui se retournent dans différentes
+   * orientations, des couleurs qui changent bizarrement dans l'espace ou le temps, avec des motifs sur tout l'écran ».
+   * Un hypercube (tesseract) en fil de lumière tourne dans les plans de la quatrième dimension : vu en perspective, son
+   * cube intérieur passe dehors et l'extérieur rentre dedans. Un 16-cellules plus petit tourne de l'autre côté. Derrière,
+   * une trame de points dont la taille et la couleur suivent des ondes qui se croisent : les couleurs glissent dans
+   * l'espace et le temps. Réactions (fond légendaire) : à partir de Rare, une onde de la couleur de la rareté traverse la
+   * trame et les formes accélèrent ; à partir de Mythic, le tesseract se retourne entièrement (un demi-tour dans un plan
+   * de la 4e dimension) dans un éclair ; Infinite fait tout cela en arc-en-ciel.
+   */
+  SCENES.fourthdim = layer => {
+    const TES = [], TE = [], CELL = [], CE = [];
+    for (let i = 0; i < 16; i++) TES.push([i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1, i & 8 ? 1 : -1]);
+    for (let i = 0; i < 16; i++) for (let b = 0; b < 4; b++) { const j = i ^ (1 << b); if (j > i) TE.push([i, j]); }
+    for (let a = 0; a < 4; a++) for (const s of [1, -1]) { const v = [0, 0, 0, 0]; v[a] = s * 1.5; CELL.push(v); }
+    for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if ((i >> 1) !== (j >> 1)) CE.push([i, j]);
+    let G = {}, ang = [0, 0, 0, 0], boost = 0, flip = null, waves = [], hueOff = 0, tierHSL = null;
+    // rotation dans un plan (i, j) de l'espace à 4 dimensions
+    const rot = (v, i, j, a) => { const c = Math.cos(a), s = Math.sin(a), r = v.slice(); r[i] = v[i] * c - v[j] * s; r[j] = v[i] * s + v[j] * c; return r; };
+    const proj = (v, cx, cy, sc) => { const k = 1 / (3 - v[3]), x = v[0] * k, y = v[1] * k, z = v[2] * k, k2 = 1 / (3.2 - z); return [cx + x * k2 * sc, cy + y * k2 * sc, v[3]]; };
+    function shape(g, S, V, E, cx, cy, sc, extra, hue0) {
+      const D = S.dark, P = V.map(v => { let p = rot(v, 0, 3, ang[0] + extra); p = rot(p, 1, 3, ang[1]); p = rot(p, 2, 3, ang[2]); p = rot(p, 0, 1, ang[3]); return proj(p, cx, cy, sc); });
+      g.lineCap = 'round';
+      for (const pass of [0, 1]) E.forEach(([a, b], i) => {
+        const h = hue0 + i * 11 + hueOff + (P[a][2] + P[b][2]) * 40, l = D ? 62 : 45;
+        g.strokeStyle = pass ? hslA(h, 90, D ? 75 : 40, .9) : hslA(h, 90, l, D ? .16 : .14); g.lineWidth = pass ? Math.max(1, G.u * .22) : G.u * 1.1;
+        g.beginPath(); g.moveTo(P[a][0], P[a][1]); g.lineTo(P[b][0], P[b][1]); g.stroke();
+      });
+      for (const p of P) { g.fillStyle = D ? 'rgba(255,255,255,.85)' : 'rgba(30,27,75,.8)'; ell(g, p[0], p[1], G.u * .32, G.u * .32); g.fill(); }
+    }
+    const st = stage(layer, 'w4d', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        // le tesseract sur le côté droit en paysage (le site est au milieu), en bas en portrait ; le 16-cellules en face
+        G = { u, wide, a: wide ? [S.W * .84, S.H * .5, Math.min(S.W * .5, S.H * 1.1)] : [S.W * .5, S.H * .86, S.W * 1.3], b: wide ? [S.W * .13, S.H * .62, Math.min(S.W * .3, S.H * .7)] : [S.W * .5, S.H * .1, S.W * .5] };
+        G.step = Math.max(20, Math.round(Math.min(S.W, S.H) / 28));
+        calmEl(layer, S, S.dark ? '9,6,24' : '250,249,255', S.dark ? .65 : .85);
+      },
+      update(S, dt) {
+        const sp = 1 + boost;
+        ang[0] += dt * .31 * sp; ang[1] += dt * .23 * sp; ang[2] += dt * .17 * sp; ang[3] += dt * .07 * sp;
+        boost = Math.max(0, boost - dt * boost * .7 - dt * .05);
+        hueOff += dt * 18;
+        if (flip && (flip.t += dt) > 1.8) flip = null;
+        for (const w of waves) w.t += dt;
+        waves = waves.filter(w => w.t < 3);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, st0 = G.step;
+        // la trame : des carrés dont la taille et la teinte suivent trois ondes qui se croisent (et les ondes des tirages)
+        for (let y = st0 / 2; y < S.H; y += st0) for (let x = st0 / 2; x < S.W; x += st0) {
+          let v = Math.sin(x * .011 + T * .7) + Math.sin(y * .014 - T * .5) + Math.sin((x + y) * .007 + T * .3);
+          let wc = null;
+          for (const w of waves) { const d = Math.hypot(x - w.x, y - w.y) - w.t * Math.max(S.W, S.H) * .45, k = Math.exp(-d * d / 4000) * (1 - w.t / 3); if (k > .05) { v += k * 3; wc = w; } }
+          const q = 1 - .85 * quiet(S, x, y), s = st0 * (.1 + .12 * (v + 3) / 2) * (wc ? 1.4 : 1);
+          if (q < .1) continue;
+          g.fillStyle = wc && wc.hsl ? hslA(wc.hsl[0], wc.hsl[1], wc.hsl[2], (D ? .5 : .55) * q) : hslA(v * 50 + T * 20 + x * .05, 80, D ? 60 : 50, (D ? .22 : .3) * q);
+          g.fillRect(x - s / 2, y - s / 2, s, s);
+        }
+        g.save(); if (D) g.globalCompositeOperation = 'lighter';
+        const fl = flip ? Math.PI * ease(Math.min(1, flip.t / 1.4)) : 0;
+        shape(g, S, TES, TE, ...G.a, fl, 0);
+        shape(g, S, CELL, CE, ...G.b, 0, 180);
+        g.restore();
+        if (flip && flip.t < .5) { const k = 1 - flip.t / .5, [cx, cy, sc] = G.a, r = sc * .6, gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, flip.c.replace('ALPHA', (.55 * k).toFixed(3))); gr.addColorStop(1, flip.c.replace('ALPHA', '0')); g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
+      },
+      roll(S, tier, n, rank) {
+        if (!(rank >= 3)) return;
+        const hsl = tier === 'infinite' ? null : TIER_HUE[tier] || null;
+        boost = 1 + rank * .5;
+        waves.push({ x: G.a[0], y: G.a[1], t: 0, hsl });
+        if (rank >= 6) { const c = hsl ? hslA(hsl[0], hsl[1], Math.min(hsl[2], 85), 'ALPHA') : hslA(hueOff, 90, 70, 'ALPHA'); flip = { t: 0, c }; }
+      },
+      stop() { const c = layer.querySelector(':scope > .wcalm'); if (c) c.remove(); },
+      debug(S, what) { if (what === 'mythic') st.roll('mythic', 1, 6); if (what === 'rare') st.roll('rare', 1, 3); return { boost, flip: !!flip }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🌋 Avernus (idée de qwertyuiop, 2026-10-27) : « une dimension infernale, mais plus orange / rouge clair ». Un monde
+   * de volcans sous un ciel de fumée orangée : des pics d'obsidienne bordés de lumière, des rivières de lave qui coulent
+   * (des reflets qui avancent le long du lit), un lac de lave, des braises qui montent, des îlots de roche qui flottent en
+   * laissant goutter la lave, et de temps en temps un geyser de lave sur le côté. Aucun symbole religieux ni occulte :
+   * seulement le paysage. Thème clair : un ciel pêche et corail, la roche brun-rouge ; thème sombre : la nuit rouge.
+   */
+  SCENES.avernus = layer => {
+    const R = Math.random;
+    let G = {}, embers = [], blobs = [], nextGeyser = rnd(3, 5);
+    const rivers = [];
+    const st = stage(layer, 'wav', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, wide, hz: S.H * (wide ? .7 : .8) };
+        // deux rivières de lave qui descendent des volcans des côtés jusqu'au lac
+        rivers.length = 0;
+        rivers.push([[S.W * .08, G.hz - S.H * .14], [S.W * .18, G.hz + S.H * .02], [S.W * .1, S.H * .88], [S.W * .32, S.H]]);
+        rivers.push([[S.W * .9, G.hz - S.H * .16], [S.W * .78, G.hz], [S.W * .94, S.H * .86], [S.W * .7, S.H]]);
+        G.isles = wide ? [[S.W * .1, S.H * .34, u * 3.6], [S.W * .9, S.H * .3, u * 3.2], [S.W * .8, S.H * .5, u * 2.2]] : [[S.W * .1, S.H * .7, u * 2.6], [S.W * .9, S.H * .72, u * 2.6]];
+        if (!embers.length) embers = Array.from({ length: 60 }, () => ({ x: R(), y: R(), v: rnd(.03, .09), s: rnd(.6, 1.8), ph: rnd(0, 7) }));
+      },
+      paint(S, g) {
+        const D = S.dark, { W, H } = S, u = G.u, hz = G.hz, r = seeded(17);
+        calm(g, S, D ? '28,8,8' : '255,246,240', D ? .4 : .88);
+        // la chaîne de volcans du fond, un rang de pics d'obsidienne, bordés d'orange
+        const ridge = (y0, amp, seed, col, rim, n) => {
+          const rr = seeded(seed), pts = [[-20, H]];
+          for (let i = 0; i <= n; i++) { const x = i / n * (W + 40) - 20, side = Math.abs(x / W - .5) * 2; pts.push([x, y0 - amp * (.3 + rr() * .7) * (.45 + side * .9)]); pts.push([x + W / n * .5, y0 - amp * rr() * .25]); }
+          pts.push([W + 20, H]);
+          g.fillStyle = col; g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.fill();
+          g.strokeStyle = rim; g.lineWidth = Math.max(1, u * .3); g.beginPath(); pts.slice(1, -1).forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.stroke();
+        };
+        ridge(hz - u * 2, H * .22, 4, D ? '#2a0d0d' : '#b4583f', D ? 'rgba(251,146,60,.5)' : 'rgba(255,200,150,.8)', 9);
+        ridge(hz + u * 2, H * .12, 8, D ? '#1a0707' : '#8f3f2d', D ? 'rgba(251,146,60,.4)' : 'rgba(255,190,140,.7)', 13);
+        // le lac de lave et sa lueur
+        const lg = g.createLinearGradient(0, hz + u * 3, 0, H); lg.addColorStop(0, D ? '#7c1d0c' : '#e8673a'); lg.addColorStop(1, D ? '#c2410c' : '#f59e5b');
+        g.fillStyle = lg; g.fillRect(0, hz + u * 4, W, H);
+        g.fillStyle = D ? 'rgba(0,0,0,.35)' : 'rgba(120,40,20,.25)';
+        for (let i = 0; i < 30; i++) { const x = r() * W, y = hz + u * 5 + r() * (H - hz), w = u * (2 + r() * 6); ell(g, x, y, w, w * .25); g.fill(); }
+        // deux volcans sur les côtés : les rivières partent de leur cratère
+        for (const P of rivers) {
+          const [cx, cy] = P[0], w = S.W * (G.wide ? .16 : .3), b = hz + u * 4;
+          g.fillStyle = D ? '#240b0b' : '#9a4532'; g.beginPath(); g.moveTo(cx - w, b); g.lineTo(cx - u * 2.4, cy); g.lineTo(cx + u * 2.4, cy); g.lineTo(cx + w, b); g.closePath(); g.fill();
+          g.strokeStyle = D ? 'rgba(251,146,60,.45)' : 'rgba(255,200,150,.8)'; g.lineWidth = Math.max(1, u * .3); g.beginPath(); g.moveTo(cx - w, b); g.lineTo(cx - u * 2.4, cy); g.lineTo(cx + u * 2.4, cy); g.lineTo(cx + w, b); g.stroke();
+          const cg = g.createRadialGradient(cx, cy, 0, cx, cy, u * 7); cg.addColorStop(0, D ? 'rgba(253,186,116,.7)' : 'rgba(255,170,90,.7)'); cg.addColorStop(1, 'rgba(253,186,116,0)'); g.fillStyle = cg; g.fillRect(cx - u * 7, cy - u * 7, u * 14, u * 7);
+          ell(g, cx, cy, u * 2.4, u * .7); g.fillStyle = D ? '#fb923c' : '#f97316'; g.fill();
+        }
+        // les lits des rivières (la lave qui coule est dessinée par-dessus, à chaque image)
+        for (const P of rivers) { g.strokeStyle = D ? '#9a3412' : '#ea580c'; g.lineWidth = u * 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(...P[0]); g.bezierCurveTo(...P[1], ...P[2], ...P[3]); g.stroke(); }
+      },
+      update(S, dt) {
+        for (const e of embers) { e.y -= e.v * dt; e.x += Math.sin(S.T + e.ph) * dt * .004; if (e.y < -.02) { e.y = 1.02; e.x = R(); } }
+        if (S.T > nextGeyser) {
+          nextGeyser = S.T + rnd(7, 12);
+          const left = R() < .5, x = S.W * (left ? .06 : .94), y = G.hz + G.u * 4;
+          for (let i = 0; i < 26; i++) blobs.push({ x, y, vx: rnd(-.4, .4) * G.u * 10 + (left ? G.u * 3 : -G.u * 3), vy: -rnd(.6, 1) * S.H * .55, t: 0, s: rnd(.4, 1) });
+        }
+        for (const b of blobs) { b.t += dt; b.vy += S.H * .8 * dt; b.x += b.vx * dt; b.y += b.vy * dt; }
+        blobs = blobs.filter(b => b.t < 2.2 && b.y < S.H + 20);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, u = G.u;
+        // la lave qui coule : des tirets clairs qui avancent le long de chaque rivière
+        g.lineCap = 'round';
+        for (const P of rivers) for (const [w, dash, gap, sp, c] of [[u * 1.8, u * 3, u * 5, 26, D ? 'rgba(251,146,60,.85)' : 'rgba(253,186,116,.9)'], [u * .7, u * 1.5, u * 7, 40, D ? 'rgba(254,240,138,.9)' : 'rgba(255,247,200,.95)']]) {
+          g.strokeStyle = c; g.lineWidth = w; g.setLineDash([dash, gap]); g.lineDashOffset = -T * sp;
+          g.beginPath(); g.moveTo(...P[0]); g.bezierCurveTo(...P[1], ...P[2], ...P[3]); g.stroke();
+        }
+        g.setLineDash([]);
+        // les îlots de roche qui flottent, et la lave qui en goutte
+        for (const [x0, y0, s] of G.isles) {
+          const y = y0 + Math.sin(T * .6 + x0) * u * .8;
+          // un rocher déchiqueté : de petits pics dessus, un dessous en éboulis
+          const top = [[-1.5, 0], [-1.1, -.5], [-.8, -.1], [-.4, -1.1], [-.1, -.2], [.3, -.6], [.6, -.1], [1, -.8], [1.5, 0]];
+          g.fillStyle = D ? '#1f0a0a' : '#7c2d1f'; g.beginPath(); top.forEach(([a, b], i) => (i ? g.lineTo(x0 + a * s, y + b * s) : g.moveTo(x0 + a * s, y + b * s)));
+          g.lineTo(x0 + s * 1.1, y + s * .6); g.lineTo(x0 + s * .5, y + s * .9); g.lineTo(x0 + s * .2, y + s * 1.6); g.lineTo(x0 - s * .3, y + s * 1); g.lineTo(x0 - s * 1, y + s * .7); g.closePath(); g.fill();
+          g.strokeStyle = D ? 'rgba(251,146,60,.6)' : 'rgba(254,215,170,.9)'; g.lineWidth = Math.max(1, u * .2); g.beginPath(); top.forEach(([a, b], i) => (i ? g.lineTo(x0 + a * s, y + b * s) : g.moveTo(x0 + a * s, y + b * s))); g.stroke();
+          const d = (T * .7 + x0) % 1.6; if (d < 1) { g.fillStyle = D ? '#fb923c' : '#f97316'; ell(g, x0 + s * .2, y + s * 1.6 + d * u * 8, u * .3, u * .45); g.fill(); }
+        }
+        // le geyser de lave
+        for (const b of blobs) { const k = 1 - b.t / 2.2; g.fillStyle = `rgba(${D ? '253,186,116' : '249,115,22'},${k.toFixed(2)})`; ell(g, b.x, b.y, u * .6 * b.s, u * .6 * b.s); g.fill(); }
+        // les braises qui montent (plus rares derrière le texte du site)
+        for (const e of embers) {
+          const x = e.x * S.W, y = e.y * S.H, q = 1 - .85 * quiet(S, x, y), f = .5 + .5 * Math.sin(T * 6 + e.ph);
+          g.fillStyle = D ? `rgba(253,186,116,${(.8 * f * q).toFixed(2)})` : `rgba(234,88,12,${(.7 * f * q).toFixed(2)})`; ell(g, x, y, e.s, e.s); g.fill();
+        }
+      },
+      debug(S, what) { if (what === 'geyser') nextGeyser = S.T; return { blobs: blobs.length }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🍭 Candy Land (idée de jia jun, 2026-10-29) : un pays en bonbons. Des collines en gélifiés pastel, une rivière de
+   * chocolat, des sucettes géantes dont la spirale tourne doucement, des sucres d'orge plantés dans les collines, des nuages
+   * en barbe à papa qui passent, des vermicelles de toutes les couleurs qui tombent, et de temps en temps un gélifié qui
+   * saute. Thème sombre : le même pays au crépuscule (ciel violet, couleurs plus profondes, petites lumières).
+   */
+  SCENES.candyland = layer => {
+    const R = Math.random, SPR = ['#f472b6', '#60a5fa', '#facc15', '#4ade80', '#c084fc', '#fb923c'];
+    let G = {}, sprinkles = [], clouds = [], hop = null, nextHop = rnd(2, 4);
+    const col = (S, c) => (S.dark ? mixHex(c, '#2a1747', .38) : c);
+    function lolly(g, S, x, y, r, T, c1, c2, dir) {
+      g.strokeStyle = S.dark ? '#d9c8e8' : '#ffffff'; g.lineWidth = r * .16; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y + r * .8); g.lineTo(x, y + r * 3.2); g.stroke();
+      ell(g, x, y, r, r); g.fillStyle = col(S, c1); g.fill();
+      g.save(); g.beginPath(); ell(g, x, y, r, r); g.clip(); g.strokeStyle = col(S, c2); g.lineWidth = r * .22;
+      g.beginPath(); for (let a = 0; a < Math.PI * 6; a += .2) { const rr = r * a / (Math.PI * 6), aa = a * dir + T * .8 * dir; g.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } g.stroke(); g.restore();
+      g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, x - r * .35, y - r * .4, r * .25, r * .15); g.fill();
+    }
+    const st = stage(layer, 'wcl', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, wide, hz: S.H * (wide ? .72 : .8) };
+        G.lollies = wide ? [[S.W * .08, S.H * .5, u * 5, '#fde68a', '#f472b6', 1], [S.W * .22, S.H * .6, u * 3.6, '#bae6fd', '#3b82f6', -1], [S.W * .9, S.H * .46, u * 5.5, '#fbcfe8', '#a855f7', -1], [S.W * .78, S.H * .62, u * 3.4, '#bbf7d0', '#ef4444', 1]]
+          : [[S.W * .12, S.H * .7, u * 4.5, '#fde68a', '#f472b6', 1], [S.W * .88, S.H * .68, u * 5, '#fbcfe8', '#a855f7', -1]];
+        G.drops = [[S.W * .3, G.hz + u * 4, '#f472b6'], [S.W * .62, G.hz + u * 6, '#4ade80'], [S.W * .7, G.hz + u * 3, '#facc15'], [S.W * .4, G.hz + u * 8, '#60a5fa']];
+        if (!sprinkles.length) sprinkles = Array.from({ length: 50 }, () => ({ x: R(), y: R(), v: rnd(.04, .09), r: rnd(0, 6), sp: rnd(-3, 3), c: pick(SPR) }));
+        if (!clouds.length) clouds = Array.from({ length: 4 }, (_, i) => ({ x: R(), y: rnd(.05, .4), s: rnd(.7, 1.2), v: rnd(.004, .008), c: i % 2 ? '#fbcfe8' : '#ddd6fe' }));
+      },
+      paint(S, g) {
+        const D = S.dark, { W, H } = S, u = G.u, hz = G.hz;
+        if (D) starfield(g, W, hz, Math.round(W * H / 4000), 19, '255,240,255', .6);
+        calm(g, S, D ? '35,18,60' : '255,246,252', D ? .45 : .8);
+        // les collines gélifiées, sur trois rangs, avec un reflet sucré
+        const hills = [['#f9a8d4', hz - u * 2, 3.1, 0], ['#a7f3d0', hz + u * 3, 4.3, 1.4], ['#c4b5fd', hz + u * 8, 2.6, 2.9]];
+        for (const [c, y0, f, ph] of hills) {
+          g.fillStyle = col(S, c); g.beginPath(); g.moveTo(0, H);
+          for (let x = 0; x <= W + 8; x += 8) g.lineTo(x, y0 - u * 4 * Math.abs(Math.sin(x / W * f + ph)));
+          g.lineTo(W, H); g.fill();
+          g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = u * .5; g.beginPath();
+          for (let x = 0; x <= W + 8; x += 8) { const y = y0 - u * 4 * Math.abs(Math.sin(x / W * f + ph)) + u * .8; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+        }
+        // la rivière de chocolat qui serpente au milieu, avec une ride de crème
+        g.strokeStyle = col(S, '#7c4a2d'); g.lineWidth = u * 5; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(W * .5, hz + u * 2); g.bezierCurveTo(W * .7, hz + u * 8, W * .25, H * .9, W * .45, H + u * 4); g.stroke();
+        g.strokeStyle = col(S, '#a16207'); g.lineWidth = u * 1.2; g.stroke();
+        // des sucres d'orge plantés dans les collines
+        for (const [x, y, h, a] of [[W * .16, hz + u * 2, u * 9, -.1], [W * .86, hz + u * 1, u * 10, .12], [W * .55, hz + u * 7, u * 6, -.06]]) {
+          g.save(); g.translate(x, y); g.rotate(a);
+          g.lineCap = 'round'; g.lineWidth = u * 1.3; g.strokeStyle = col(S, '#ffffff');
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -h); g.arc(-u * 2, -h, u * 2, 0, Math.PI, true); g.stroke();
+          g.save(); g.setLineDash([u * .9, u * .9]); g.strokeStyle = col(S, '#ef4444'); g.stroke(); g.restore();
+          g.restore();
+        }
+      },
+      update(S, dt) {
+        for (const k of sprinkles) { k.y += k.v * dt; k.r += k.sp * dt; if (k.y > 1.02) { k.y = -.02; k.x = R(); } }
+        for (const c of clouds) { c.x += c.v * dt; if (c.x > 1.25) c.x = -.25; }
+        if (!hop && S.T > nextHop) { hop = { i: Math.floor(R() * G.drops.length), t: 0 }; }
+        if (hop && (hop.t += dt) > .9) { hop = null; nextHop = S.T + rnd(2.5, 5); }
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, u = G.u;
+        // les nuages en barbe à papa
+        for (const c of clouds) {
+          const x = c.x * S.W, y = c.y * S.H, s = u * 7 * c.s, q = 1 - .7 * quiet(S, x, y);
+          g.globalAlpha = (D ? .45 : .8) * q; g.fillStyle = col(S, c.c);
+          for (const [dx, dy, r] of [[-1, .2, .6], [-.3, -.2, .8], [.5, 0, .7], [1.1, .25, .5]]) { ell(g, x + dx * s, y + dy * s, r * s, r * s * .8); g.fill(); }
+        }
+        g.globalAlpha = 1;
+        // les sucettes qui tournent
+        for (const L of G.lollies) lolly(g, S, L[0], L[1], L[2], T, L[3], L[4], L[5]);
+        // les gélifiés (l'un saute de temps en temps : il s'écrase, bondit, retombe)
+        G.drops.forEach(([x, y, c], i) => {
+          let dy = 0, sq = 1;
+          if (hop && hop.i === i) { const t = hop.t / .9; dy = -Math.sin(t * Math.PI) * u * 5; sq = t < .12 ? 1 - t * 2 : t > .9 ? .85 : 1.08; }
+          const w = u * 2.2 / Math.sqrt(sq), h = u * 2.4 * sq;
+          g.fillStyle = col(S, c); g.beginPath(); g.moveTo(x - w, y + dy); g.quadraticCurveTo(x - w, y - h + dy, x, y - h + dy); g.quadraticCurveTo(x + w, y - h + dy, x + w, y + dy); g.closePath(); g.fill();
+          g.fillStyle = 'rgba(255,255,255,.45)'; for (const [a, b] of [[-.4, -.6], [.2, -.4], [-.1, -.2]]) { ell(g, x + a * w, y + b * h + dy, u * .18, u * .18); g.fill(); }
+        });
+        // les vermicelles qui tombent
+        for (const k of sprinkles) {
+          const x = k.x * S.W, y = k.y * S.H, q = 1 - .8 * quiet(S, x, y); if (q < .1) continue;
+          g.save(); g.translate(x, y); g.rotate(k.r); g.globalAlpha = (D ? .75 : .85) * q; g.fillStyle = k.c; rr(g, -u * .45, -u * .12, u * .9, u * .24, u * .12); g.fill(); g.restore();
+        }
+        g.globalAlpha = 1;
+      },
+      debug(S, what) { if (what === 'hop') { hop = { i: 0, t: .3 }; } return { hop: !!hop }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 📱 Cracked Screen (idée de jia jun, 2026-10-29) : « un fond d'écran cassé ». Une toile de fissures part d'un point
+   * d'impact dans un coin : des rayons brisés et des cercles de fissures entre eux, quelques éclats de verre un peu plus
+   * clairs. Un reflet glisse sur le verre de temps en temps, et deux lignes de pixels morts (vert et magenta) clignotent
+   * près de l'impact. Un clic sur le fond (jamais sur le jeu) fissure l'écran à cet endroit : la fissure se propage en
+   * quelques dixièmes de seconde (au plus 6 impacts, le plus ancien s'efface). Près du texte du site, les fissures sont plus
+   * pâles. Rien n'est cassé pour de vrai, bien sûr.
+   */
+  SCENES.crackscreen = layer => {
+    const R = Math.random;
+    let G = {}, base = null, hits = [], glint = { t: -10 }, nextGlint = rnd(2, 4); // base : la fissure du coin ; hits : celles des clics
+    // une étoile de fissures : des rayons en zigzag, et des segments en arc entre deux rayons voisins
+    function crack(x, y, size, seed) {
+      const r = seeded(seed), n = 9 + Math.floor(r() * 6), rays = [];
+      for (let i = 0; i < n; i++) {
+        const a0 = i / n * Math.PI * 2 + r() * .4, len = size * (.45 + r() * .75), pts = [[x, y]];
+        let a = a0, px = x, py = y;
+        for (let d = 0; d < len;) { const st = size * (.04 + r() * .08); d += st; a += (r() - .5) * .35; px += Math.cos(a) * st; py += Math.sin(a) * st; pts.push([px, py]); }
+        rays.push(pts);
+      }
+      const rings = [];
+      for (const k of [.12, .25, .42]) for (let i = 0; i < n; i++) {
+        if (r() < .3) continue;
+        const A = rays[i], B = rays[(i + 1) % n], ia = Math.floor(A.length * k * (1 + r() * .3)), ib = Math.floor(B.length * k * (1 + r() * .3));
+        if (A[ia] && B[ib]) rings.push([A[ia], [(A[ia][0] + B[ib][0]) / 2 + (r() - .5) * size * .03, (A[ia][1] + B[ib][1]) / 2 + (r() - .5) * size * .03], B[ib]]);
+      }
+      return { x, y, size, rays, rings, t: 0, grow: 1 };
+    }
+    // chaque trait deux fois : une ombre décalée d'un pixel, puis la fissure claire (sombre en thème clair) ; chaque
+    // segment est plus pâle s'il passe derrière le texte du site
+    function drawCrack(g, S, c, p) {
+      const D = S.dark;
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      for (const pass of [0, 1]) {
+        const rgb = pass ? (D ? '241,245,249' : '30,41,59') : (D ? '0,0,0' : '255,255,255'), a0 = pass ? (D ? .75 : .6) : (D ? .6 : .9), dy = pass ? 0 : 1;
+        g.lineWidth = pass ? 1 : 2.2;
+        for (const ray of c.rays) {
+          const m = Math.max(2, Math.ceil(ray.length * p));
+          for (let i = 1; i < m; i++) {
+            const [x0, y0] = ray[i - 1], [x1, y1] = ray[i];
+            g.strokeStyle = `rgba(${rgb},${(a0 * (1 - .75 * quiet(S, x1, y1))).toFixed(3)})`;
+            g.beginPath(); g.moveTo(x0, y0 + dy); g.lineTo(x1, y1 + dy); g.stroke();
+          }
+        }
+        if (p >= 1) for (const ring of c.rings) { g.strokeStyle = `rgba(${rgb},${(a0 * (1 - .75 * quiet(S, ...ring[1]))).toFixed(3)})`; g.beginPath(); g.moveTo(ring[0][0], ring[0][1] + dy); g.quadraticCurveTo(ring[1][0], ring[1][1] + dy, ring[2][0], ring[2][1] + dy); g.stroke(); }
+      }
+      // l'impact : un petit éclat de verre pilé
+      g.fillStyle = D ? 'rgba(241,245,249,.35)' : 'rgba(30,41,59,.25)'; ell(g, c.x, c.y, 3, 3); g.fill();
+    }
+    const onDown = e => {
+      if (e.button > 0 || !onBackground(e.target)) return;
+      const c = crack(e.clientX, e.clientY, Math.min(st.S.W, st.S.H) * rnd(.35, .5), Math.floor(R() * 1e6)); c.grow = 0;
+      hits.push(c); if (hits.length > 6) hits.shift();
+      st.S.dirty = true; if (st.S.still) { c.grow = 1; bake(); }
+    };
+    doc.addEventListener('pointerdown', onDown);
+    // les fissures finies sont peintes dans le décor (bg) ; seules celles qui se propagent sont redessinées à chaque image
+    let bake = () => {};
+    const st = stage(layer, 'wcs', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, wide };
+        base = crack(S.W * (wide ? .9 : .82), S.H * (wide ? .84 : .9), Math.max(S.W, S.H) * .8, 7);
+        calmEl(layer, S, S.dark ? '10,12,18' : '246,247,249', S.dark ? .55 : .75);
+      },
+      paint(S, g) {
+        // les éclats un peu plus clairs entre deux rayons, près de l'impact
+        const c = base, D = S.dark;
+        c.rays.forEach((A, i) => { if (i % 3) return; const B = c.rays[(i + 1) % c.rays.length], a = A[Math.floor(A.length * .3)], b = B[Math.floor(B.length * .3)]; if (!a || !b) return; g.fillStyle = D ? 'rgba(255,255,255,.035)' : 'rgba(30,41,59,.035)'; g.beginPath(); g.moveTo(c.x, c.y); g.lineTo(...a); g.lineTo(...b); g.closePath(); g.fill(); });
+        drawCrack(g, S, base, 1);
+        for (const h of hits) if (h.grow >= 1) drawCrack(g, S, h, 1);
+      },
+      update(S, dt) {
+        for (const h of hits) if (h.grow < 1) { h.grow = Math.min(1, h.grow + dt / .45); if (h.grow >= 1) bake(); }
+        if (S.T > nextGlint) { glint = { t: S.T }; nextGlint = S.T + rnd(5, 9); }
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, c = base;
+        for (const h of hits) if (h.grow < 1) drawCrack(g, S, h, easeOut(h.grow));
+        // le reflet qui glisse en diagonale sur le verre
+        const k = (T - glint.t) / 1.6;
+        if (k >= 0 && k <= 1) {
+          const x = -S.W * .3 + k * S.W * 1.6, gr = g.createLinearGradient(x - S.W * .15, 0, x + S.W * .15, S.H * .3);
+          gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.5, D ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          g.fillStyle = gr; g.fillRect(0, 0, S.W, S.H);
+        }
+        // les pixels morts : deux lignes fines qui clignotent près de l'impact
+        const on = Math.sin(T * 2.3) > -.2, f = .5 + .5 * Math.sin(T * 17);
+        if (on) { g.fillStyle = `rgba(74,222,128,${(.5 * f).toFixed(2)})`; g.fillRect(c.x - S.W * .12, 0, 1.5, S.H); g.fillStyle = `rgba(232,121,249,${(.45 * (1 - f)).toFixed(2)})`; g.fillRect(c.x - S.W * .2, c.y - S.H * .5, 1.5, S.H * .5); }
+      },
+      stop() { doc.removeEventListener('pointerdown', onDown); const el = layer.querySelector(':scope > .wcalm'); if (el) el.remove(); },
+      debug(S, what) { if (what === 'tap') { onDown({ button: 0, target: doc.body, clientX: S.W * .2, clientY: S.H * .75 }); } return { hits: hits.length }; },
+    });
+    // repeindre le décor (layout + paint) quand une fissure a fini de se propager
+    bake = () => st.repaint();
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 💵 Stacks of Money (idée de jia jun, 2026-10-29) : des liasses de billets et des tas de pièces d'or, dans une salle
+   * des coffres. Des billets tombent en voltigeant, des pièces brillent. Les billets sont inventés (vert, le signe ∞ au
+   * milieu et dans les coins) : aucune vraie monnaie, aucun visage. Thème sombre : la salle des coffres la nuit, des
+   * spots dorés ; thème clair : une salle claire couleur menthe.
+   * (id « moneystacks » : « money » est déjà un skin)
+   */
+  SCENES.moneystacks = layer => {
+    const R = Math.random;
+    let G = {}, bills = [], sparks = [], sprite = null;
+    // un billet inventé, centré en (0, 0), largeur w
+    function bill(g, S, w, shade) {
+      const h = w * .46, D = S.dark;
+      rr(g, -w / 2, -h / 2, w, h, w * .04); g.fillStyle = mixHex(D ? '#2f7d4f' : '#86d19b', '#000000', shade); g.fill();
+      rr(g, -w / 2 + w * .05, -h / 2 + h * .1, w * .9, h * .8, w * .03); g.strokeStyle = D ? 'rgba(187,247,208,.45)' : 'rgba(22,101,52,.55)'; g.lineWidth = Math.max(1, w * .015); g.stroke();
+      ell(g, 0, 0, h * .32, h * .32); g.fillStyle = D ? 'rgba(187,247,208,.3)' : 'rgba(255,255,255,.55)'; g.fill();
+      g.fillStyle = D ? 'rgba(220,252,231,.85)' : 'rgba(21,94,52,.85)'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `800 ${Math.round(h * .42)}px Inter, system-ui, sans-serif`; g.fillText('∞', 0, h * .03);
+      g.font = `800 ${Math.round(h * .2)}px Inter, system-ui, sans-serif`; g.fillText('∞', -w * .36, -h * .26); g.fillText('∞', w * .36, h * .26);
+    }
+    // une liasse vue de face : des tranches de billets empilées, et une bande de papier au milieu
+    function stack(g, S, x, base, w, n) {
+      const D = S.dark, t = w * .06;
+      for (let i = 0; i < n; i++) { const y = base - i * t, off = Math.sin(i * 2.7) * w * .02; g.fillStyle = mixHex(D ? '#2f7d4f' : '#86d19b', '#000000', .1 + (i % 2) * .08); g.fillRect(x - w / 2 + off, y - t, w, t * .92); g.fillStyle = D ? 'rgba(220,252,231,.2)' : 'rgba(255,255,255,.45)'; g.fillRect(x - w / 2 + off, y - t, w, Math.max(1, t * .15)); }
+      g.save(); g.translate(x, base - n * t - w * .23); bill(g, S, w, 0); g.restore();
+      g.fillStyle = D ? '#b08f3a' : '#f3d27a'; g.fillRect(x - w * .1, base - n * t - w * .46, w * .2, n * t + w * .46);
+    }
+    function coins(g, S, x, base, r, n) {
+      const D = S.dark;
+      for (let i = 0; i < n; i++) {
+        const row = Math.floor(Math.sqrt(i * 2)), cx = x + (i - row * (row + 1) / 2 - row / 2) * r * 1.6 + Math.sin(i) * r * .2, cy = base - row * r * .7;
+        ell(g, cx, cy + r * .12, r, r * .38); g.fillStyle = D ? '#7a5a12' : '#c08a1e'; g.fill();
+        ell(g, cx, cy, r, r * .38); g.fillStyle = D ? '#d4a52a' : '#facc15'; g.fill(); g.strokeStyle = D ? '#f6d77a' : '#fde68a'; g.lineWidth = 1; g.stroke();
+      }
+    }
+    const st = stage(layer, 'wmo', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, wide, floor: S.H * (wide ? .8 : .86) };
+        if (!bills.length) bills = Array.from({ length: 12 }, () => ({ x: R(), y: R(), v: rnd(.025, .05), ph: rnd(0, 7), sp: rnd(1.5, 3), s: rnd(.7, 1.1) }));
+        G.piles = wide ? [[S.W * .07, u * 11, 9], [S.W * .17, u * 9, 6], [S.W * .86, u * 11, 11], [S.W * .95, u * 8, 5]] : [[S.W * .12, u * 10, 6], [S.W * .88, u * 10, 7]];
+        // le billet qui tombe, peint une fois (le texte ∞ coûtait cher à redessiner à chaque image)
+        { const w = Math.round(u * 9), cv = doc.createElement('canvas'), k = 2; cv.width = w * k; cv.height = Math.ceil(w * .46) * k; const g = cv.getContext('2d'); g.scale(k, k); g.translate(w / 2, w * .23); bill(g, S, w, .05); sprite = { cv, w, h: w * .46 }; }
+        G.coins = wide ? [[S.W * .27, u * 1.6, 15], [S.W * .74, u * 1.8, 21]] : [[S.W * .3, u * 1.4, 10], [S.W * .7, u * 1.4, 10]];
+      },
+      paint(S, g) {
+        const D = S.dark, { W, H } = S, u = G.u, fl = G.floor;
+        // la salle : les spots dorés, le sol, la grande porte ronde du coffre sur le côté
+        for (const x of [W * .15, W * .85]) { const gr = g.createRadialGradient(x, 0, 0, x, 0, H * .9); gr.addColorStop(0, D ? 'rgba(250,204,21,.16)' : 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(250,204,21,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+        calm(g, S, D ? '6,20,14' : '240,250,244', D ? .45 : .8);
+        // (la porte ronde du coffre seulement sur un écran large : en portrait, elle passait derrière le texte)
+        const vx = W * .96, vy = fl - H * .28, vr = H * .22;
+        if (G.wide) { ell(g, vx, vy, vr, vr); g.fillStyle = D ? '#1f2b27' : '#cfd8d3'; g.fill(); g.strokeStyle = D ? '#3b4a44' : '#9fb0a8'; g.lineWidth = vr * .08; g.stroke(); }
+        if (G.wide) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.beginPath(); g.moveTo(vx, vy); g.lineTo(vx + Math.cos(a) * vr * .45, vy + Math.sin(a) * vr * .45); g.lineWidth = vr * .05; g.stroke(); }
+        const fg = g.createLinearGradient(0, fl, 0, H); fg.addColorStop(0, D ? '#0f1a16' : '#e3ece7'); fg.addColorStop(1, D ? '#0a120f' : '#d3dfd8');
+        g.fillStyle = fg; g.fillRect(0, fl, W, H);
+        for (const [x, r, n] of G.coins) coins(g, S, x, fl + u * 3, r, n);
+        for (const [x, w, n] of G.piles) stack(g, S, x, fl + u * 4, w, n);
+        // des lingots d'or empilés, au pied d'une liasse
+        for (const [x, y] of [[G.piles[1][0] + u * 7, fl + u * 4], [G.piles[1][0] + u * 10.5, fl + u * 4], [G.piles[1][0] + u * 8.7, fl + u * 2.3]]) {
+          g.fillStyle = D ? '#b8860b' : '#eab308'; g.beginPath(); g.moveTo(x - u * 1.8, y); g.lineTo(x + u * 1.8, y); g.lineTo(x + u * 1.3, y - u * 1.6); g.lineTo(x - u * 1.3, y - u * 1.6); g.closePath(); g.fill();
+          g.fillStyle = D ? '#f6d77a' : '#fde68a'; g.fillRect(x - u * 1.3, y - u * 1.6, u * 2.6, u * .35);
+        }
+      },
+      update(S, dt) {
+        for (const b of bills) { b.y += b.v * dt; if (b.y > 1.05) { b.y = -.05; b.x = R(); } }
+        if (R() < dt * 3) { const p = pick(G.coins); sparks.push({ x: p[0] + rnd(-1, 1) * p[1] * 3, y: G.floor + G.u * 3 - rnd(0, 3) * p[1] * .7, t: 0 }); }
+        for (const s of sparks) s.t += dt;
+        sparks = sparks.filter(s => s.t < .8);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, u = G.u;
+        // les billets qui tombent en voltigeant (on voit leur tranche quand ils se retournent) ; pâles près du texte
+        for (const b of bills) {
+          const x = b.x * S.W + Math.sin(T * .8 + b.ph) * u * 4, y = b.y * S.H, q = 1 - quiet(S, x, y) * 3; if (q < .1) continue; // aucun billet derrière le texte du site
+          g.save(); g.globalAlpha = q * (D ? .85 : .9); g.translate(x, y); g.rotate(Math.sin(T * .9 + b.ph) * .6); g.scale(Math.cos(T * b.sp + b.ph) * b.s, b.s);
+          g.drawImage(sprite.cv, -sprite.w / 2, -sprite.h / 2, sprite.w, sprite.h); g.restore();
+        }
+        // les éclats sur les pièces
+        for (const s of sparks) { const k = Math.sin(s.t / .8 * Math.PI), r0 = u * 1.2 * k; g.strokeStyle = `rgba(255,255,240,${(.95 * k).toFixed(2)})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(s.x - r0, s.y); g.lineTo(s.x + r0, s.y); g.moveTo(s.x, s.y - r0); g.lineTo(s.x, s.y + r0); g.stroke(); }
+      },
+      debug(S) { return { bills: bills.length }; },
     });
     return st;
   };

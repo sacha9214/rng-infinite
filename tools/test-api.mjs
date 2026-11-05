@@ -997,13 +997,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // leur idée ; aucun identifiant de skin repris (« milkyway » est le skin, le fond est « milkynight »).
   {
     // lot « lieux » (même jour) : World Map, Pyramids, Ice Caps, Circus
-    const sky = { blueskies: 'IXOLAF2', milkynight: 'Ggggssnoop', skygate: 'Ggggssnoop', worldmap: 'qwertyuiop', pyramids: 'whywhywaylon', icecaps: 'finnnnn', circus: 'sennybex1' };
+    // et lot « étranges » : Avernus, Candy Land, Cracked Screen, Stacks of Money (4th Dimension est légendaire, plus bas)
+    const sky = { blueskies: 'IXOLAF2', milkynight: 'Ggggssnoop', skygate: 'Ggggssnoop', worldmap: 'qwertyuiop', pyramids: 'whywhywaylon', icecaps: 'finnnnn', circus: 'sennybex1', avernus: 'qwertyuiop', candyland: 'jia jun', crackscreen: 'jia jun', moneystacks: 'jia jun' };
     for (const [id, idea] of Object.entries(sky)) {
       const w = Shop.wallById.get(id);
-      assert.ok(w && w.idea === idea && !w.premium && !w.until && w.price >= 900 && w.price <= 1200, `${id} : fond normal, idée de ${idea}`);
+      assert.ok(w && w.idea === idea && !w.premium && !w.until && w.price >= 800 && w.price <= 1200, `${id} : fond normal, idée de ${idea}`);
       assert.ok(wpool.includes(id) && !Shop.byId.has(id), `${id} : dans la caisse, pas un identifiant de skin`);
     }
     assert.match(Shop.wallById.get('aether').desc, /ball of light/, 'Aether : la bille lumineuse (idée d\'Angelicide9)');
+    const fd = Shop.wallById.get('fourthdim');
+    assert.ok(fd && fd.premium && fd.idea === 'finnnnn' && fd.price === 4500 && !wpool.includes('fourthdim'), '4th Dimension : légendaire (il réagit aux tirages), hors caisse');
   }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
