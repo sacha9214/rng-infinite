@@ -1,12 +1,13 @@
 // Feuille de route publique (idée de Phong67, 2026-10-26) : page #/roadmap, routée depuis /api/site (action roadmap).
-// Deux listes tirées de la boîte à idées : « Planned » (statut planned) et « Recently added » (statut done depuis 30 jours,
-// 50 au plus). Seulement des idées (jamais les bugs), jamais les refusées, jamais d'identifiant : le pseudo du joueur et
+// Deux listes tirées de la boîte à idées : « Planned » (statut planned, toutes : 500 au plus) et « Recently added » (statut
+// done depuis 30 jours, 50 au plus). Sacha, 2026-11-05 : avec 50 Planned au plus, le tri du jour (68 idées prévues) avait
+// caché les 84 plus anciennes, déjà promises. Seulement des idées (jamais les bugs), jamais les refusées, jamais d'identifiant : le pseudo du joueur et
 // un extrait court du texte, passé au filtre du chat global (une idée qui ne le passe pas n'est pas montrée).
 // Gardée 5 minutes en mémoire : la page est publique et la boîte compte des milliers de suggestions.
 const { redis } = require('./_lib');
 const { checkMessage } = require('./_global');
 
-const CACHE_MS = 5 * 60 * 1000, RECENT_DAYS = 30, MAX_ITEMS = 50, SNIPPET = 120, SCAN_MAX = 5000;
+const CACHE_MS = 5 * 60 * 1000, RECENT_DAYS = 30, MAX_ITEMS = 50, MAX_PLANNED = 500, SNIPPET = 120, SCAN_MAX = 5000;
 let cache = null;
 
 // Premier ~120 caractères, coupé à un espace, sur une ligne.
@@ -31,7 +32,7 @@ async function build(now) {
     const when = Number(status === 'done' ? doneAt || ownerAt || t : t) || 0;
     if (status === 'done' && when < since) continue;
     const list = status === 'planned' ? planned : recent;
-    if (list.length >= MAX_ITEMS) continue;
+    if (list.length >= (list === planned ? MAX_PLANNED : MAX_ITEMS)) continue;
     const clean = safe(text);
     if (!clean) continue;
     list.push({ name: String(name || 'Player').slice(0, 20), text: clean, t: when });

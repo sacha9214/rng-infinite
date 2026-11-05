@@ -5047,6 +5047,14 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   Roadmap.reset();
   r = await call(siteApi, { method: 'POST', body: { action: 'roadmap' } });
   assert.ok(JSON.stringify(r.body).includes('Cached idea'));
+  // Toutes les idées prévues, pas seulement les 50 plus récentes (Sacha, 2026-11-05) ; « Recently added » reste à 50.
+  for (let k = 0; k < 70; k++) seed(`ab00000000${k.toString(16).padStart(2, '0')}`, { text: `Planned idea number ${k} for the roadmap`, status: 'planned', t: now - k * 1000 });
+  for (let k = 0; k < 60; k++) seed(`ac00000000${k.toString(16).padStart(2, '0')}`, { text: `Added idea number ${k} for the roadmap`, status: 'done', doneAt: now - k * 1000 });
+  Roadmap.reset();
+  r = await call(siteApi, { method: 'POST', body: { action: 'roadmap' } });
+  assert.equal(r.body.planned.filter(x => /^Planned idea number/.test(x.text)).length, 70, 'toutes les prévues');
+  assert.ok(r.body.planned.some(x => x.text === 'A roadmap page so we can see what is coming next'), 'la plus ancienne aussi');
+  assert.equal(r.body.recent.length, 50, 'ajoutées : 50 au plus');
   // Passer une idée en Added note doneAt (une seule fois).
   const boss = { playerId: 'b8'.repeat(8), secret: 'b9'.repeat(16) };
   run([['SET', `player:${boss.playerId}:secret`, crypto.createHash('sha256').update(boss.secret).digest('hex')], ['HSET', `stats:${boss.playerId}`, 'v', '1', 'owner', '1']]);

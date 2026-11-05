@@ -2,6 +2,16 @@
 
 Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
 
+## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
+
+- Sacha asked for all new ideas to be sorted and answered. 269 ideas: 68 Planned, 7 Done, 50 Seen (skin and wallpaper
+  idea lists, details asked), 144 no / already exists. 243 replies sent with his OK, without Discord roadmap posts. The
+  work list is `ideas-triage-2026-11-05.md` and the replies are in `ideas-replies-2026-11-05.md` (both untracked, in
+  the repo folder).
+- `api/_roadmap.js`: the public Roadmap showed only the 50 newest Planned ideas, which hid 84 of the 134 after the
+  triage. It now shows every Planned idea (`MAX_PLANNED = 500`); "Recently added" stays at 50. There is a test in
+  `tools/test-api.mjs`, and I checked the page on the dev server with 134 ideas (all shown, no overflow).
+
 ## Roll counter per number (2026-11-05, branch `claude/roll-counter`)
 
 Idea from a friend of Sacha: "when someone roll a number, it tells how many people have already rolled it". Related
