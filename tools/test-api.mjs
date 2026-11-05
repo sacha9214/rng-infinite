@@ -6925,6 +6925,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.deepEqual(b.found['rolls:10000'], { id: grinder.playerId, t: T + 200 }, 'le 10 000e tirage');
     assert.equal(b.found['inf:1'].id, grinder.playerId);
     assert.equal(hof()[`inf:${N}`].id, ann.playerId, 'essai à blanc : rien écrit'); assert.ok(lines.some(x => /Essai à blanc/.test(x)));
+    // Un compte suspendu n'entre jamais au Hall of Fame (rattrapages lancés par le serveur, 2026-11-05).
+    run([['SADD', 'banned', old.playerId]]);
+    const nb = await backfill({ log: () => {} });
+    assert.notEqual((nb.found[`inf:${N}`] || {}).id, old.playerId, 'suspendu : ignoré'); assert.equal(nb.found['inf:24'], undefined);
+    run([['SREM', 'banned', old.playerId]]);
     // un vieux joueur dont l'historique commence après le palier : daté au plus tard, marqué approx
     run([['ZADD', `hist:${vet.playerId}`, T + 5, `${T + 5}:7`], ['HSET', `stats:${vet.playerId}`, 'xpLife', 3e8], ['ZADD', 'lb:xp', 3e8, vet.playerId]]);
     b = await backfill({ apply: true, log: () => {} });
