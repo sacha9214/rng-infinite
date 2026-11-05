@@ -2,6 +2,21 @@
 
 Last updated: 2026-11-05 by Claude (skins lot 3 branch, merged with main). Update this file at the end of every session.
 
+
+## Limited tab by event (2026-11-05, branch `claude/limited-by-event`)
+
+Sacha asked for the shop's Limited tab to be split by theme, with Halloween taken out for now but kept for next year.
+
+- `js/shop.js`: `EVENTS` (`halloween`, `thanksgiving`, `christmas`: `ends` and the `last` day shown) and `eventById`. Every
+  limited skin and wallpaper has `event: '<id>'`. `tools/test-api.mjs` checks that each item's `until` is its event's
+  `ends`, because the server still reads `until`.
+- `js/app.js`: `limitedEventsHTML()` builds one section per running event (`liveEvents()`, the soonest to end first),
+  each with its banner (`LIMITED_FX`: Halloween bats, Thanksgiving leaves, Christmas snow), its skins
+  (`[data-lim-skins]`) and its wallpapers (`[data-lim-walls]`). Ended events don't appear. Players who own items from a
+  past event see a note pointing to their profile Inventory, where they can still equip them.
+- **Next year**: bring Halloween back by updating `ends` in `EVENTS` and the `until` of its items (same date), plus the
+  "until November 1" wording in their descriptions and the French dictionary.
+
 ## Delete my account (2026-11-05, branch `claude/delete-account`)
 
 Sacha asked for a way for players to delete their account from Settings.

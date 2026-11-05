@@ -3684,6 +3684,10 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 /* Boutique : onglet des skins limités (bordure d'événement et compte à rebours). */
 .limited-panel { border-color: rgba(249, 115, 22, .45); box-shadow: 0 0 22px rgba(124, 58, 237, .18); }
 .limited-clock { font: 800 .68rem var(--font-mono); color: #f97316; letter-spacing: .04em; text-transform: uppercase; }
+/* Onglet Limited rangé par événement (demandé par Sacha, 2026-11-05) : un bloc par événement en cours. */
+.lim-event { display: grid; gap: .7rem; }
+.lim-event + .lim-event { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px dashed var(--outline); }
+.lim-past { margin: 1rem 0 0; text-align: center; }
 
 /* ------------------------------------------------------------------ Jack-o'-Lantern (Halloween 2026, limité) :
    les chiffres sont creusés dans la citrouille, une bougie les éclaire de l'intérieur (lueur qui vacille). */
