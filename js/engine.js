@@ -302,6 +302,9 @@
     // Miguel2 (1969, les premiers pas sur la Lune). « 13 » et « 07 » écartés par Sacha : trop de nombres changeaient de rareté.
     EULER_GAMMA_4: '5772', EULER_GAMMA_5: '57721', TAXICAB: '1729', BEE: '338', LOL: '707', MOON_LANDING: '1969',
     DEEP_VOID: '00', DEEP_VOID_THREE: '000', DEEP_VOID_FOUR: '0000', DEEP_VOID_FIVE: '00000',
+    // Pack du mode difficile (2026-11-05, badges de tools/source/hard.json : jamais en mode normal). Aussie Haüs : 67676767
+    // n'importe où ; kaz (par CococoC) : les tranches de Fibonacci de 7 à 9 chiffres (1123581, 11235813, 112358132).
+    BRAINROT_EIGHT: '67676767', FIB_CONTAINS_7: '1123581', FIB_CONTAINS_8: '11235813', FIB_CONTAINS_9: '112358132',
   };
   const EXACT = {
     NICE_EXACT: ['69'], JACKPOT_EXACT: ['777'], BOTANIST_EXACT: ['420'], DEVIL_EXACT: ['666'],
@@ -339,6 +342,9 @@
     TAU: ['6283', '62831', '628318'], GOLDEN_RATIO: ['1618', '16180', '161803'],
     DIGIT_ZERO: ['0'], DIGIT_ONE: ['1'], DIGIT_TWO: ['2'], DIGIT_THREE: ['3'], DIGIT_FOUR: ['4'],
     DIGIT_FIVE: ['5'], DIGIT_SIX: ['6'], DIGIT_SEVEN: ['7'], DIGIT_EIGHT: ['8'], DIGIT_NINE: ['9'],
+    // Pack du mode difficile (2026-11-05) : Aussie Haüs (6767676767), CrazyMiner22 (2 147 483 647 = 2³¹ − 1, le plus grand
+    // entier signé sur 32 bits), kaz par CococoC (1123581321, la tranche de Fibonacci à 10 chiffres).
+    BRAINROT_TEN: ['6767676767'], INT32_MAX: ['2147483647'], FIB_EXACT_10: ['1123581321'],
   };
   const ENDS = {
     CLEAN: '0', CENTURY: '00', MILLENNIUM: '000', EPOCH: '0000', EON: '00000',
@@ -346,6 +352,7 @@
     QUARTER_CENTURY: '25', THREE_QUARTER_CENTURY: '75',
     QUARTER_MILLENNIUM: '250', // idée de WpBejs (2026-10-24)
     THREE_QUARTER_MILLENNIUM: '750', // idée de cri cri 3 (2026-11-01) : la paire de Quarter Millennium
+    QUARTER_EPOCH: '2500', THREE_QUARTER_EPOCH: '7500', // idée de cri cri 3 (2026-11-03) : un quart et trois quarts d'Epoch
     DOUBLE_NINE: '99', TRIPLE_NINE: '999', QUAD_NINE: '9999', QUINT_NINE: '99999',
   };
   const SINGLE_DIGIT_COUNT = {
@@ -355,9 +362,16 @@
     FOURTH_POWER: 4, FIFTH_POWER: 5, SIXTH_POWER: 6, SEVENTH_POWER: 7, EIGHTH_POWER: 8, NINTH_POWER: 9,
     TENTH_POWER: 10, ELEVENTH_POWER: 11, THIRTEENTH_POWER: 13, SEVENTEENTH_POWER: 17, NINETEENTH_POWER: 19,
   };
-  const LENGTHS = { ONE_DIGIT: 1, TWO_DIGITS: 2, THREE_DIGITS: 3, FOUR_DIGITS: 4, FIVE_DIGITS: 5, SIX_DIGITS: 6 };
+  const LENGTHS = { ONE_DIGIT: 1, TWO_DIGITS: 2, THREE_DIGITS: 3, FOUR_DIGITS: 4, FIVE_DIGITS: 5, SIX_DIGITS: 6,
+    SEVEN_DIGITS: 7, EIGHT_DIGITS: 8, NINE_DIGITS: 9 }; // 7 à 9 : pack du mode difficile (2026-11-05)
   const DIVISORS = { DOZEN: 12, LUCKY_SEVEN_DIV: 7, ELEVEN: 11 };
   const STROBO = { 0: '0', 1: '1', 6: '9', 8: '8', 9: '6' };
+  // Idée de Starharvest (2026-10-28, promise) : les morceaux de 2 chiffres qui sont à eux seuls le nombre d'un badge, lus
+  // dans CONTAINS, EXACT et ENDS le 2026-11-05 (Area 51, Exact 92, Quarter-Century…), sans 00. Liste figée : un nouveau
+  // badge à 2 chiffres ne change pas la rareté de Trilogy sans qu'on le décide.
+  const TRILOGY_PIECES = new Set(['21', '24', '25', '41', '42', '47', '49', '50', '51', '55', '61', '64', '67', '69', '75', '82', '86', '92', '97', '99']);
+  // Nombres premiers de Mersenne (2^p − 1) jusqu'à 9 999 999 999 (idée de CrazyMiner22, 2026-11-03, mode difficile).
+  const MERSENNE = new Set([3, 7, 31, 127, 8191, 131071, 524287, 2147483647]);
 
   // Somme des diviseurs propres de n (n impair : seuls les diviseurs impairs comptent, on saute les pairs).
   // Par la décomposition en facteurs premiers : σ(n) = Π (p^(e+1) − 1) / (p − 1), puis σ(n) − n.
@@ -598,6 +612,21 @@
     CONSEC_PAIR_NEARBY: c => findConsecutivePairNearby(c.s) !== null,
     CONSEC_TRIPLE_CONTAINS: c => findConsecutiveRunAdjacent(c.s, 3) !== null,
     CONSEC_QUAD_CONTAINS: c => findConsecutiveRunAdjacent(c.s, 4) !== null,
+    // Idée de Starharvest (2026-10-28) : 519225 = 51 · 92 · 25, trois morceaux qui sont chacun le nombre d'un badge.
+    TRILOGY: c => c.L === 6 && TRILOGY_PIECES.has(c.s.slice(0, 2)) && TRILOGY_PIECES.has(c.s.slice(2, 4)) && TRILOGY_PIECES.has(c.s.slice(4)),
+
+    // Pack du mode difficile (2026-11-05) : ces badges ne sont que dans tools/source/hard.json, lus par tools/build-hard.mjs.
+    // CrazyMiner22 : 7 à 10 chiffres identiques collés, et Sequence 7 à 10 (aussi demandés par 0casmictechthing).
+    CONTIGUOUS_SEVENS: c => c.runs.some(([a, b]) => b - a >= 7),
+    CONTIGUOUS_EIGHTS: c => c.runs.some(([a, b]) => b - a >= 8),
+    CONTIGUOUS_NINES: c => c.runs.some(([a, b]) => b - a >= 9),
+    CONTIGUOUS_TENS: c => c.runs.some(([a, b]) => b - a >= 10),
+    SEQUENCE_7: c => findDigitRun(c.d, 7) >= 0,
+    SEQUENCE_8: c => findDigitRun(c.d, 8) >= 0,
+    SEQUENCE_9: c => findDigitRun(c.d, 9) >= 0,
+    SEQUENCE_10: c => findDigitRun(c.d, 10) >= 0,
+    MERSENNE_PRIME: c => MERSENNE.has(c.n), // CrazyMiner22 (2026-11-03)
+    PANDIGITAL: c => c.L === 10 && c.distinct === 10, // les dix chiffres, une fois chacun : impossible en mode normal
   };
   for (const [id, str] of Object.entries(CONTAINS)) CHECKS[id] = c => c.s.includes(str);
   for (const [id, list] of Object.entries(EXACT)) CHECKS[id] = c => list.includes(c.s);
@@ -719,6 +748,7 @@
     SEQUENCE_4: c => [range(findDigitRun(c.d, 4), findDigitRun(c.d, 4) + 4)],
     STRAIGHT: c => [range(findDigitRun(c.d, 5), findDigitRun(c.d, 5) + 5)],
     SEQUENCE_6: c => [range(findDigitRun(c.d, 6), findDigitRun(c.d, 6) + 6)],
+    TRILOGY: () => [[0, 1], [2, 3], [4, 5]],
     STRAIGHT_FLUSH: c => {
       for (const x of ['02468', '13579', '86420', '97531']) { const i = c.s.indexOf(x); if (i >= 0) return [range(i, i + 5)]; }
       return null;
@@ -772,6 +802,10 @@
   };
   for (const [id, str] of Object.entries(CONTAINS)) HIGHLIGHTS[id] = c => { const i = c.s.indexOf(str); return [range(i, i + str.length)]; };
   for (const id of ['LUCKY_7']) HIGHLIGHTS[id] = c => [indicesOf(c.s, '7')];
+  [7, 8, 9, 10].forEach((k, i) => {
+    HIGHLIGHTS[['CONTIGUOUS_SEVENS', 'CONTIGUOUS_EIGHTS', 'CONTIGUOUS_NINES', 'CONTIGUOUS_TENS'][i]] = c => [range(...c.runs.find(([a, b]) => b - a >= k))];
+    HIGHLIGHTS[`SEQUENCE_${k}`] = c => [range(findDigitRun(c.d, k), findDigitRun(c.d, k) + k)];
+  });
   for (const [id, str] of Object.entries(ENDS)) HIGHLIGHTS[id] = c => [range(c.L - str.length, c.L)];
   for (const [id, dg] of Object.entries(SINGLE_DIGIT_COUNT)) HIGHLIGHTS[id] = c => [indicesOf(c.s, String(dg))];
 

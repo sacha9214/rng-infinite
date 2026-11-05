@@ -776,5 +776,26 @@
     "desc": "Contains \"1969\": the year of the first steps on the Moon.",
     "emoji": "🚀",
     "score": 333334
+  },
+  {
+    "id": "QUARTER_EPOCH",
+    "label": "Quarter Epoch",
+    "desc": "Ends in \"2500\".",
+    "emoji": "🕒",
+    "score": 1000001
+  },
+  {
+    "id": "THREE_QUARTER_EPOCH",
+    "label": "Three-Quarter Epoch",
+    "desc": "Ends in \"7500\".",
+    "emoji": "🕘",
+    "score": 1000001
+  },
+  {
+    "id": "TRILOGY",
+    "label": "Trilogy",
+    "desc": "Six digits that split into three 2-digit pieces, each one a badge number on its own, like 51 · 92 · 25 (Area 51, Exact 92, Quarter-Century). Pieces that count: 21, 24, 25, 41, 42, 47, 49, 50, 51, 55, 61, 64, 67, 69, 75, 82, 86, 92, 97, 99.",
+    "emoji": "🧩",
+    "score": 12500
   }
 ]
