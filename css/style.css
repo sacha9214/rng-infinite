@@ -746,6 +746,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 }
 .coll:hover { border-color: var(--outline-strong); }
 .coll.missing { box-shadow: none; background: var(--surface-dim); }
+/* Badge trouvé depuis la dernière visite (idée de casmicgraything, 2026-11-05). */
+.coll.coll-new { border-color: var(--success); box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 35%, transparent); }
+.c-fresh { margin: 0 0 .8rem; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.c-fresh .badge-pill { cursor: pointer; }
 .coll.missing .emoji { filter: grayscale(1); opacity: .35; }
 .coll.missing .name { color: var(--prose-3); }
 .coll .top { display: flex; align-items: center; gap: .4rem; }
@@ -2746,6 +2750,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 }
 @keyframes tier-rainbow { to { background-position: 300% 0; } }
 @media (prefers-reduced-motion: reduce) { .pill[data-tier="infinite"] { animation: none; } }
+/* Petites cartes Infinite (historique, classements, profils) : un bord arc-en-ciel au lieu du rose-gris, comme la
+   pastille Infinite (idée de KMC, 2026-11-05). Les cartes avec un skin gardent le leur. */
+.num-card.sm[data-tier="infinite"]:not([class*="skin-"]) {
+  border-width: 2px; border-color: transparent;
+  background: linear-gradient(135deg, var(--t-from), var(--t-via), var(--t-to)) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(90deg, #ec4899, #a855f7, #3b82f6, #10b981, #eab308, #f97316, #ec4899) border-box;
+}
 
 /* Shop : niveaux de vitesse du tirage. */
 .speed-row { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
@@ -10748,6 +10759,12 @@ a.player-btn { text-decoration: none; color: inherit; }
 .sess-rolls, .online-now { margin: .45rem 0 0; font-size: .72rem; font-weight: 600; color: var(--prose-2); }
 .sess-rolls + .online-now { margin-top: .2rem; }
 .sess-rolls[hidden], .online-now[hidden] { display: none; }
+/* Compteur de session cliquable et sa fenêtre (idée de finnnnn, 2026-11-05). */
+.sess-rolls[data-sess] { cursor: pointer; text-decoration: underline dotted; text-underline-offset: .2em; }
+.ss-cols { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); margin: .6rem 0; }
+.ss-cols h3, .modal h3 + .pill-row { margin-top: .2rem; }
+.ss-list { list-style: none; margin: .3rem 0 0; padding: 0; display: grid; gap: .35rem; }
+.ss-list li { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 .result .sess-rolls { text-align: center; }
 /* Tirage auto sur les autres pages (kaz) : point qui pulse sur l'onglet Roll, avec le nombre de tirages faits. */
 .nav a[data-route="home"] { position: relative; }

@@ -15,6 +15,9 @@
   const rollsOf = st => num(st.rolls) + num(st['h:rolls']);
   const tierOf = (st, t) => num(st[`t:${t}`]) + num(st[`h:t:${t}`]);
   const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + tierOf(st, t), 0);
+  // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-02/03) : ses tirages et ses raretés à lui.
+  const hardRolls = st => num(st['h:rolls']);
+  const hardAtLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + num(st[`h:t:${t}`]), 0);
   // Pièces gagnées en jouant (idée de logannn, 2026-10-27) : tirages (après rendements décroissants) + victoires de duel
   // (Shop.earned) + Weekend Rush. Ni cadeaux, ni casino, ni crypto, ni pots de mise : ils ne font que déplacer des pièces,
   // et le serveur ne garde pas le détail de tous (vente de crypto, pot reçu) ; ce total-là est exact pour tous les joueurs,
@@ -73,6 +76,13 @@
     { id: 'legend', emoji: '🗿', title: 'Legend', desc: 'Make 100,000 rolls', test: st => rollsOf(st) >= 100000 }, // idée de PRISMA123 (2026-10-20)
     { id: 'unemployking', emoji: '🛋️', title: 'The King Of Unemployment', desc: 'Make 1,000,000 rolls', test: st => rollsOf(st) >= 1000000 }, // idée d'A Dude (2026-10-22)
     { id: 'unemploygod', emoji: '🛐', title: 'The God Of Unemployment', desc: 'Make 10,000,000 rolls', test: st => rollsOf(st) >= 10000000 },
+    // Idées de PRISMA123 (2026-11-03) : un titre pour un Mythic ou mieux en mode difficile (top 0,02 %, 1 sur ~5 500), et
+    // pour 5 000, 10 000, 50 000 et 100 000 tirages en mode difficile ; Liam123456 (2026-11-02) demandait un titre du mode.
+    { id: 'hardmythic', emoji: '🔥', title: 'Forged in Fire', desc: 'Roll a Mythic or better in Hard mode (top 0.02%)', test: st => hardAtLeast(st, 'mythic') >= 1 },
+    { id: 'hard5k', emoji: '🍪', title: 'Tough Cookie', desc: 'Make 5,000 rolls in Hard mode', test: st => hardRolls(st) >= 5000 },
+    { id: 'hard10k', emoji: '⛓️', title: 'Hardened', desc: 'Make 10,000 rolls in Hard mode', test: st => hardRolls(st) >= 10000 },
+    { id: 'hard50k', emoji: '⛏️', title: 'Hardcore', desc: 'Make 50,000 rolls in Hard mode', test: st => hardRolls(st) >= 50000 },
+    { id: 'hard100k', emoji: '🗻', title: 'Unbreakable', desc: 'Make 100,000 rolls in Hard mode', test: st => hardRolls(st) >= 100000 },
     { id: 'cardshark', emoji: '🃏', title: 'Card Shark', desc: 'Get 100 blackjacks in the casino', test: st => num(st.gNaturals) >= 100 }, // idée de Dylanrulez123 (2026-10-20)
     { id: 'cursed', emoji: '🪦', title: 'Cursed', desc: 'Roll a Trash number (bottom 1%)', test: st => tierOf(st, 'trash') >= 1 },
     { id: 'lucky', emoji: '🍀', title: 'Lucky', desc: 'Roll a Rare or better', test: st => atLeast(st, 'rare') >= 1 },
