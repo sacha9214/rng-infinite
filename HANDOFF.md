@@ -3,6 +3,21 @@
 Last updated: 2026-11-05 by Claude (skins lot 3 branch, merged with main). Update this file at the end of every session.
 
 
+
+## Backfills run by the server itself (2026-11-05, branch `claude/auto-backfills`)
+
+Sacha didn't want to run the backfill scripts by hand ("can't we do it another way?").
+
+- `deploy/ovh/backfills.js`, started by `deploy/ovh/api-server.js`: 2 min after the API starts, each backfill that isn't
+  done yet (`nc:ready`, `bown:ready`, `hof:ready`) runs on its own, one after the other. Each runs as a separate process
+  (`nice -n 10 node tools/backfill-*.js --apply`), so the API never blocks.
+- A Redis lock (`bfjob:<name>`, 6 h) means only one run happens even if the API restarts meanwhile. On failure the lock
+  is released, so the next start retries. Once a flag is set nothing runs again: every roll keeps those counters up to
+  date itself. The output is in `journalctl -u rng-api` (lines starting with `backfill`).
+- `tools/backfill-hof.js` now skips suspended accounts (the `banned` set). A player suspended after the Hall of Fame was
+  filled keeps their entries until someone removes them by hand.
+- The scripts can still be run by hand (dry run without `--apply`).
+
 ## Limited tab by event (2026-11-05, branch `claude/limited-by-event`)
 
 Sacha asked for the shop's Limited tab to be split by theme, with Halloween taken out for now but kept for next year.

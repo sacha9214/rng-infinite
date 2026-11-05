@@ -28,7 +28,9 @@ async function scan(match, re) {
 
 async function backfill({ apply = false, log = console.log } = {}) {
   const found = {}; // champ → { id, t, n?, approx? } : le plus ancien
-  const offer = (field, x) => { if (!found[field] || x.t < found[field].t) found[field] = x; };
+  // Comptes suspendus (fermes de bots, 2026-11-04) : jamais dans le Hall of Fame.
+  const [bannedList] = await L.redis([['SMEMBERS', L.BANNED]]), banned = new Set(bannedList || []);
+  const offer = (field, x) => { if (banned.has(x.id)) return; if (!found[field] || x.t < found[field].t) found[field] = x; };
   const INF = new Set(H.INFINITE), hard = L.hardEngine();
 
   // 1. Nombres Infinite du mode normal : historiques (tirages gardés), puis meilleur tirage de chacun (best:all).
