@@ -745,6 +745,7 @@
     'At bot and friend tables, everyone buys in the same amount. Play hands until one player has all the chips; leave whenever you like and you cash out your chips. The house keeps 5% of every pot.': 'Aux tables contre le bot et entre amis, tout le monde paie la même cave. On joue des mains jusqu\'à ce qu\'un joueur ait tous les jetons ; pars quand tu veux et tu encaisses tes jetons. La maison garde 5 % de chaque pot.',
     // Tables ouvertes (Sacha, 2026-11-04)
     'Texas Hold\'em · against the bot, your friends or anyone': 'Texas Hold\'em · contre le bot, tes amis ou n\'importe qui',
+    'Nobody had ever rolled': 'Personne n\'avait jamais tiré', 'before you': 'avant toi',
     'Open tables': 'Tables ouvertes', 'Anyone can sit down, up to 6 players. Bring what you want, play from the next hand and leave whenever you like.': 'N\'importe qui peut s\'asseoir, jusqu\'à 6 joueurs. Apporte ce que tu veux, joue dès la main suivante et pars quand tu veux.',
     'Blinds': 'Blindes', 'You bring': 'Tu apportes', 'Coins you bring': 'Pièces que tu apportes', 'No table yet at these blinds: sit down and others can join you.': 'Pas encore de table à ces blindes : assieds-toi et les autres pourront te rejoindre.',
     'Waiting for another player to sit down': 'En attente d\'un autre joueur', 'You were away: cashed out': 'Tu étais absent : jetons encaissés', 'was away and left': 'était absent et est parti',
@@ -1011,7 +1012,9 @@
     [/^Bring between ([\d,]+) and ([\d,]+) coins$/, m => `Apporte entre ${nb(m[1])} et ${nb(m[2])} pièces`],
     [/^Needs ([\d,]+) rolls and an account 3 days old$/, m => `Il faut ${nb(m[1])} tirages et un compte de 3 jours`],
     [/^up to 🪙 ([\d,]+) a day at tables with other players \(🪙 ([\d,]+) left today\)$/, m => `jusqu'à 🪙 ${nb(m[1])} par jour aux tables avec d'autres joueurs (🪙 ${nb(m[2])} restantes aujourd'hui)`],
-    [/^you brought 🪙 ([\d,]+)$/, m => `tu as apporté 🪙 ${nb(m[1])}`], [/^buy-in 🪙 ([\d,]+)$/, m => `cave 🪙 ${nb(m[1])}`],
+    [/^you brought 🪙 ([\d,]+)$/, m => `tu as apporté 🪙 ${nb(m[1])}`],
+    // Compteur par nombre (2026-11-05)
+    [/^was rolled ([\d,]+) times? before you$/, m => `a été tiré ${nb(m[1])} fois avant toi`], [/^you're #([\d,]+)$/, m => `tu es le n° ${nb(m[1])}`], [/^buy-in 🪙 ([\d,]+)$/, m => `cave 🪙 ${nb(m[1])}`],
     [/^Rolls by this player (today|this week|this month|in total)$/, m => `Tirages de ce joueur ${m[1] === 'today' ? 'aujourd\'hui' : m[1] === 'this week' ? 'cette semaine' : m[1] === 'this month' ? 'ce mois-ci' : 'au total'}`],
     [/^(\d+) \/ (\d+) found$/, m => `${m[1]} / ${m[2]} trouvés`], [/^([\d.]+)% complete$/, m => `${m[1]} % complété`],
     [/^typical: (.+) XP$/, m => `typique : ${nb(m[1])} XP`], [/^expected (\S+)$/, m => `attendu ${m[1]}`], [/^last ([\d,]+) rolls?$/, m => `${nb(m[1])} dernier${s(m[1])} tirage${s(m[1])}`],

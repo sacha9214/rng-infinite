@@ -62,6 +62,20 @@ export function fakeRedis() {
     },
     SMEMBERS: k => (db.has(k) ? [...db.get(k)] : []),
     SCARD: k => (db.has(k) ? db.get(k).size : 0),
+    // BITFIELD : entiers non signés (uN) seulement, offset « #i » (i-ième entier) ou en bits ; GET, SET, INCRBY (qui
+    // reboucle comme Redis par défaut). Rangé dans un objet à part (ni Map ni Set : SCAN TYPE le voit comme une chaîne).
+    BITFIELD(k, ...ops) {
+      const b = db.get(k) && db.get(k).bits ? db.get(k) : (db.set(k, { bits: new Map() }), db.get(k)), out = [];
+      for (let i = 0; i < ops.length;) {
+        const op = String(ops[i]).toUpperCase(), type = String(ops[i + 1]), off = String(ops[i + 2]), w = Number(type.slice(1));
+        if (type[0] !== 'u' || !w) throw new Error(`fake BITFIELD: type ${type}`);
+        const at = off[0] === '#' ? Number(off.slice(1)) * w : Number(off), max = 2 ** w, cur = b.bits.get(at) || 0;
+        if (op === 'GET') { out.push(cur); i += 3; continue; }
+        const v = op === 'SET' ? Number(ops[i + 3]) : cur + Number(ops[i + 3]);
+        b.bits.set(at, ((v % max) + max) % max); out.push(op === 'SET' ? cur : b.bits.get(at)); i += 4;
+      }
+      return out;
+    },
     SREM: (k, ...members) => members.filter(m => db.has(k) && db.get(k).delete(m)).length,
     SISMEMBER: (k, m) => (db.has(k) && db.get(k).has(m) ? 1 : 0),
     ZINCRBY(k, by, m) { const z = zset(k), v = (z.get(m) || 0) + Number(by); z.set(m, v); return String(v); },
