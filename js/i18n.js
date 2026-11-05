@@ -807,6 +807,9 @@
     'Texas Hold\'em · against the bot, your friends or anyone': 'Texas Hold\'em · contre le bot, tes amis ou n\'importe qui',
     'Nobody had ever rolled': 'Personne n\'avait jamais tiré', 'before you': 'avant toi',
     // Idées du 2026-11-05 (lot 1)
+    // Onglet Limited par événement (2026-11-05)
+    'No event right now. Come back for the next one!': 'Pas d\'événement en ce moment. Reviens pour le prochain !', 'No skin in this event.': 'Pas de skin dans cet événement.',
+    'Items from past events that you own are in your profile, under Inventory.': 'Les objets des événements passés que tu possèdes sont dans ton profil, onglet Inventaire.',
     'most rolled': 'le plus tiré', 'Best roll message': 'Message du meilleur tirage', '“This number contains your best roll ever” after a roll.': '« Ce nombre contient ton meilleur tirage » après un tirage.',
     'Equip what you buy': 'Équiper ce que tu achètes', 'Off: a new skin, wallpaper, button or sound is unlocked but you keep what you use now.': 'Désactivé : un nouveau skin, fond, bouton ou son est débloqué mais tu gardes ce que tu utilises.',
     'Keep the screen on during auto-roll': 'Garder l\'écran allumé pendant le tirage auto', 'Your device won\'t go to sleep while auto-roll runs on this page. Uses more battery.': 'Ton appareil ne se met pas en veille pendant le tirage auto sur cette page. Utilise plus de batterie.',
@@ -945,6 +948,7 @@
     [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after December 25 · (\d+) days (\d+) h left$/, m => `Se termine après le 25 décembre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after November 27 · (\d+) days (\d+) h left$/, m => `Se termine après le 27 novembre · encore ${m[1]} jours ${m[2]} h`],
+    [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^⏳ Ends in (\d+) days? (\d+) h$/, m => `⏳ Finit dans ${m[1]} jour${m[1] > 1 ? 's' : ''} ${m[2]} h`], [/^⏳ Ends in (\d+) h$/, m => `⏳ Finit dans ${m[1]} h`], [/^⏳ Ended$/, () => '⏳ Terminé'],
     [/^Signed in as (.+?)( · .+)?$/, m => `Connecté en tant que ${m[1]}${m[2] || ''}`],
     [/^bet on a rise \(long\) or a fall \(short\) with (.+) · you can never lose more than your margin$/, m => `joue la hausse (long) ou la baisse (short) en ${m[1]} · tu ne peux jamais perdre plus que ta mise`],
