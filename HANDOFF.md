@@ -38,6 +38,43 @@ night), R77 (dinner table, turkey feathers, the iconic turkey look).
   rendering) is slow for every limited wallpaper, this one included (1–4 fps vs 3–5 for Cozy Fireplace).
 - **After November 27**: nothing to do; the banner hides itself and both items leave the tab (owners keep them).
 
+## Social and chat ideas (2026-11-05, branch `claude/ideas-social-chat-55a38b`)
+
+Planned ideas of the "social-chat" group from the 2026-11-05 triage, one UPDATES entry `2026-11-05-social-chat`.
+- **Best roll next to names in the global chat** (Loliarlex1248 `65af00fabee5`, MAYO `ddc646470eb0`): `api/_global.js`
+  `bestRolls()` reads `best:all` for the authors in one HMGET; each message gets `best: { n, tier }`, shown as
+  "(999,999)" in the tier colour (`.gc-best`). Normal mode only.
+- **Hard mode rolls from Mythic in the chat** (Idkwhatnamemyself `837fc6261b3d`, Kag `1b08e800e866`): `HARD_BIG` in
+  `api/_global.js`, used by `recordHardRoll`. Same 30 s / 10 min limits as Normal (they share the 30 s gap).
+- **Report context** (jsand `d6af231d993f`): the Moderator page shows the 4 messages before and 3 after a reported one
+  ("See the messages around it"), names and text only.
+- **Moderators lift mutes** (pople `129e925537e9`): `gcUnmute` works for moderators from the Moderator page ("Muted
+  right now"), only for a mute still running, never a Forever mute and never one the owner set (`bo: 1` on the mute
+  record, and for older mutes the author's id in `gc:mutelog`). The history keeps who lifted it; the owner page never
+  shows their id.
+- **Friends**: ☆ star pins a friend at the top (Big Sexy `86b789a1f215`, key `frstar:<id>`, cleaned on remove).
+  Friends leaderboard on the Friends page (Edward `73d46f7e12d3`): you + friends by XP, today's XP, best roll or rolls
+  (`state().board`, 4 commands whatever the number of friends). The clan part of Edward's idea was not done (clans
+  already have their member list).
+- **Roadmap votes** (Trinity `7b6e1119e6eb`): ▲ on each Planned idea, "Most voted" (default) or "Newest". Name +
+  100 rolls to vote, one vote per player per idea, removable. Keys `rmv` (hash id → count), `rmv:<suggId>` (voters),
+  `rmv:by:<player>`. Ideas go out with an opaque key (sha256 of the id), never the suggestion id. "Report a bad idea"
+  from Trinity's message was not done: Planned ideas are already approved by Sacha.
+- **Emojis** (Jacksonw `cc4dca7290ca`, Deadshot `11bd0db13baf` `b3f73d2e94d5`, sennybex1 `66d54d6190d3`, Jguz01
+  `e3db68e0f4d3`): 23 more in the chat grid (faces, 🎩 👌 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴; Unicode has no knight, 🛡️ stands for it),
+  the emoji button in the clan chat, and 8 of them as clan icons (`api/_clan.js` EMOJIS).
+- **Duel chat ⋯** (Jacksonw `6dde4a6813f9`): Edit / Delete / Hide / Report behind one ⋯ button (`Room.chatMenu`).
+- **Who is winning in a duel** (Jacksonw `610aa706bbdd`): score above each card with 👑 on the single leader,
+  👑 in the scoreboard, and a "⇅ Put the leader first" link at the end of the duel subtitle for 2-player duels (setting
+  `duelOrder`; the default keeps qwertyuiop's card order). A separate button row pushed the 2nd card under the sticky
+  Roll bar at 320 px (overlap-audit), hence the link.
+- Tests: `tools/test-api.mjs` block "Idées du 2026-11-05 (session social-chat)". Browser: Playwright script on the dev
+  server at 320/360/375/390/414/1280 px, light and dark, EN and FR (friends, roadmap, moderator page, global chat, clan
+  chat, duel), `tools/audit/overflow-check.mjs` clean, `tools/audit/overlap-audit.mjs 320` same as `main` (only the old
+  Tournament tab overflow).
+- Seen, not fixed: in a duel at 320 px the Rounds panel can overflow by ~18 px when the other player's name is long
+  ("you: 880773" pushed out); it is older than this branch.
+
 ## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
 
 Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,

@@ -873,7 +873,7 @@ async function recordHardRoll(playerId, n, t) {
   if (fix.length) await redis(fix);
   if (BIG_TIERS.has(a.tier)) await pushBigRoll(playerId, n, a.tier, t, true).catch(() => {});
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a, hard: true })).catch(() => {});
-  if (['divine', 'godlike', 'infinite'].includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t, true).catch(() => {});
+  if (require('./_global').HARD_BIG.includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t, true).catch(() => {}); // Mythic ou mieux (2026-11-05)
   return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
 }
 

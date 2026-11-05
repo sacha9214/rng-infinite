@@ -1,5 +1,6 @@
 // POST /api/friends { playerId, secret, action: 'list' }                  → amis, demandes reçues et envoyées
 // POST /api/friends { playerId, secret, action, name }                    → add | accept | decline | remove | cancel
+// POST /api/friends { playerId, secret, action: 'star', name, on }        → épingle un ami en haut de la liste
 // POST /api/friends { playerId, secret, action: 'gift', name, amount }    → donne des pièces à un ami
 // POST /api/friends { playerId, secret, action: 'gifts' }                 → cadeaux reçus pas encore vus (puis vus), et messages non lus
 // POST /api/friends { playerId, secret, action: 'clan', op, … }         → clans (api/_clan.js)
@@ -7,7 +8,7 @@
 // POST /api/friends { …, action: 'messages' | 'message' (text) | 'block' | 'unblock', name } → messages entre amis
 // Amitié = réciproque : A demande, B accepte. Clés : fr:<id> (amis), frin:<id> (demandes reçues), frout:<id> (envoyées).
 // Les identifiants ne sortent jamais du serveur : tout se fait par pseudo.
-const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey, accountWait, NEW_ACCOUNT_DAYS } = require('./_lib');
+const { redis, ownsPlayer, findPlayer, cleanName, XP_LB, SEEN_KEY, cors, send, flushDue, readStats, statsKey, dayKey, bigKey, accountWait, NEW_ACCOUNT_DAYS, engine, scopes, xpKey } = require('./_lib');
 const Reports = require('./_reports');
 const Global = require('./_global');
 const React = require('./_react');
@@ -18,6 +19,8 @@ const { cleanChat, cleanImage, MAX_CHARS } = require('./_chat');
 const MAX_FRIENDS = 100, MAX_PENDING = 30;
 const isPlayerId = id => /^[0-9a-f]{16}$/.test(String(id || ''));
 const frKey = id => `fr:${id}`, inKey = id => `frin:${id}`, outKey = id => `frout:${id}`;
+// Amis en étoile (idée de Big Sexy, 2026-11-05) : frstar:<id> = les amis que j'ai épinglés en haut de ma liste.
+const starKey = id => `frstar:${id}`;
 
 // Pièces offertes entre amis (idée de joueurs). Seulement entre amis (les deux côtés de l'amitié), après les mêmes
 // 30 tirages que le casino, de 10 à 500 pièces par cadeau. Par jour (UTC) : 1 000 pièces données au plus, 2 000 reçues
@@ -160,8 +163,22 @@ function statusOf(raw, seen = 0) {
   return s === 'afk' ? 'afk' : 'online';
 }
 
+// Classement entre amis (idée d'Edward, 2026-11-05) : moi et mes amis, XP de toujours, XP du jour, meilleur tirage et
+// nombre de tirages. Cinq commandes pour tout le monde, quel que soit le nombre d'amis ; par pseudo, jamais d'identifiant.
+async function friendsBoard(id, friends, nameOf, myName) {
+  const ids = [id, ...friends], day = xpKey(scopes(Date.now())[0]);
+  const [xp, today, best, rolls] = await redis([['ZMSCORE', XP_LB, ...ids], ['ZMSCORE', day, ...ids], ['HMGET', 'best:all', ...ids], ['HMGET', 'count:all', ...ids]]);
+  const parse = x => { try { return JSON.parse(x); } catch (e) { return null; } };
+  return ids.map((pid, i) => {
+    const b = parse((best || [])[i]);
+    return { name: pid === id ? myName || 'Player' : nameOf(pid), ...(pid === id ? { me: true } : {}), xp: Number((xp || [])[i]) || 0, today: Number((today || [])[i]) || 0,
+      best: b && Number.isInteger(b.n) ? { n: b.n, tier: engine.cardTier(Number(b.s) || 0), s: Number(b.s) || 0 } : null, rolls: Number((rolls || [])[i]) || 0 };
+  });
+}
+
 async function state(id) {
-  const [friends, incoming, outgoing] = await redis([['SMEMBERS', frKey(id)], ['SMEMBERS', inKey(id)], ['SMEMBERS', outKey(id)]]);
+  const [friends, incoming, outgoing, starred, [myName]] = await redis([['SMEMBERS', frKey(id)], ['SMEMBERS', inKey(id)], ['SMEMBERS', outKey(id)], ['SMEMBERS', starKey(id)], ['HMGET', 'names', id]]);
+  const stars = new Set(starred || []);
   const all = [...new Set([...(friends || []), ...(incoming || []), ...(outgoing || [])])];
   let names = [], titles = [], extra = [], unread = [], presence = [];
   if (all.length) {
@@ -174,9 +191,10 @@ async function state(id) {
   const list = (friends || []).map((f, i) => ({
     name: nameOf(f), title: titles[all.indexOf(f)] || null,
     xp: Number(extra[i * 3] || 0), seen: Number(extra[i * 3 + 1] || 0), room: extra[i * 3 + 2] || null, unread: Number(unread[i] || 0),
-    status: statusOf(presence[i], extra[i * 3 + 1]),
-  })).sort((a, b) => (b.room ? 1 : 0) - (a.room ? 1 : 0) || RANK[b.status] - RANK[a.status] || b.seen - a.seen);
-  return { friends: list, incoming: (incoming || []).map(nameOf).sort(), outgoing: (outgoing || []).map(nameOf).sort(), max: MAX_FRIENDS, now: Date.now(), gift: await giftInfo(id) };
+    status: statusOf(presence[i], extra[i * 3 + 1]), ...(stars.has(f) ? { star: true } : {}),
+  })).sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0) || (b.room ? 1 : 0) - (a.room ? 1 : 0) || RANK[b.status] - RANK[a.status] || b.seen - a.seen);
+  const board = (friends || []).length ? await friendsBoard(id, friends, nameOf, myName) : [];
+  return { friends: list, board, incoming: (incoming || []).map(nameOf).sort(), outgoing: (outgoing || []).map(nameOf).sort(), max: MAX_FRIENDS, now: Date.now(), gift: await giftInfo(id) };
 }
 
 module.exports = async (req, res) => {
@@ -299,8 +317,15 @@ module.exports = async (req, res) => {
       const [name] = await redis([['HGET', 'names', other]]);
       return send(res, 200, { ...(await state(playerId)), sent: { name: name || 'Player', amount } });
     }
+    // Étoile (idée de Big Sexy, 2026-11-05) : seulement sur un ami ; l'autre ne le voit pas.
+    if (body.action === 'star') {
+      const [isFriend] = await redis([['SISMEMBER', frKey(playerId), other]]);
+      if (Number(isFriend) !== 1) return send(res, 404, { error: 'This player is not your friend' });
+      await redis([[body.on === false ? 'SREM' : 'SADD', starKey(playerId), other]]);
+      return send(res, 200, await state(playerId));
+    }
     if (body.action === 'remove') {
-      await redis([['SREM', frKey(playerId), other], ['SREM', frKey(other), playerId]]);
+      await redis([['SREM', frKey(playerId), other], ['SREM', frKey(other), playerId], ['SREM', starKey(playerId), other], ['SREM', starKey(other), playerId]]);
       return send(res, 200, await state(playerId));
     }
     return send(res, 400, { error: 'Unknown action' });

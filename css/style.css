@@ -907,6 +907,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .room-side { text-align: center; border: 1px solid var(--outline); border-radius: .8rem; background: var(--surface); padding: 1rem .6rem; min-width: 0; transition: box-shadow .3s ease, border-color .3s ease; }
 .room-side.won { border-color: var(--ep-outline); box-shadow: 0 0 0 3px var(--ep-outline); }
 .room-name { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .7rem; }
+/* Score de la partie au-dessus de chaque carte, 👑 pour le meneur (idée de Jacksonw, 2026-11-05) */
+.room-score { display: flex; flex-wrap: wrap; gap: 0 .3rem; justify-content: center; align-items: center; margin: -.55rem 0 .4rem; font-size: .76rem; line-height: 1.2; font-weight: 700; color: var(--prose-2); }
+.room-score > span { white-space: nowrap; }
+@media (max-width: 560px) { .room-score { font-size: .68rem; gap: .2rem; } }
+.room-score:empty { display: none; }
+.room-lead { font-size: .9rem; line-height: 1; }
+.board-row.lead { border-color: color-mix(in srgb, #f59e0b 60%, var(--outline)); }
+.room-board .board-row.lead .rank { font-size: .85rem; }
+.room-order { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--chart-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.room-order[hidden] { display: none; }
 .room-meta { display: flex; gap: .35rem; justify-content: center; align-items: center; min-height: 1.6rem; margin: .7rem 0 .4rem; }
 .room-vs { font-weight: 800; color: var(--prose-3); text-align: center; }
 .room-actions { text-align: center; margin: 1.2rem 0 .4rem; }
@@ -2243,6 +2253,25 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .friend-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
 .friend-row > .player-link { flex: 1; }
 .friend-actions { display: flex; gap: .4rem; align-items: center; }
+/* Amis en étoile (Big Sexy) et classement entre amis (Edward), 2026-11-05 */
+.fr-who { display: flex; align-items: baseline; gap: .2rem; min-width: 0; }
+.fr-who > .player-link { min-width: 0; overflow-wrap: anywhere; }
+.fr-star { flex: none; border: 0; background: none; padding: .1rem .15rem; margin-left: -.15rem; font: inherit; font-size: 1.05rem; line-height: 1; color: var(--prose-3); cursor: pointer; }
+.fr-star:hover { color: #d97706; }
+.fr-star.on { color: #d97706; }
+.dark .fr-star.on { color: #fbbf24; }
+.flb .panel-head { flex-wrap: wrap; gap: .4rem; }
+.flb-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
+.flb-tab { border: 1px solid var(--outline); border-radius: 999px; background: none; padding: .2rem .55rem; font: inherit; font-size: .74rem; font-weight: 600; color: var(--prose-2); cursor: pointer; }
+.flb-tab.on { background: var(--prose); border-color: var(--prose); color: var(--surface); }
+.flb-list { list-style: none; margin: 0; padding: 0; }
+.flb-row { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-top: 1px solid var(--outline); min-width: 0; font-size: .86rem; }
+.flb-row:first-child { border-top: 0; }
+.flb-row.gap { border-top-style: dashed; }
+.flb-row.me .flb-name { color: var(--chart-accent); }
+.flb-rank { width: 1.6rem; flex: none; text-align: center; font-family: var(--font-mono); font-size: .76rem; color: var(--prose-3); }
+.flb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.flb-val { margin-left: auto; flex: none; font-size: .8rem; }
 .add-friend { font-size: .7rem; vertical-align: middle; margin-left: .5rem; }
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
 /* Pièces offertes à un ami (2026-10-13) : fenêtre « Give coins » ; sur téléphone, le bouton ne garde que 🎁. */
@@ -2434,6 +2463,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .chat-form .input { flex: 1; min-width: 0; }
 @keyframes chat-in { from { opacity: 0; transform: translateY(4px); } }
 @media (hover: none) { .chat-hide { opacity: .7; } }
+/* Menu ⋯ d'un message du duel (idée de Jacksonw, 2026-11-05) */
+.chat-more { font-size: .9rem; letter-spacing: 0; line-height: 1; }
+.chat-more.on { opacity: 1; color: var(--prose); }
+.chat-hide + .chat-more { margin-left: 0; }
+.chat-menu { display: flex; flex-wrap: wrap; gap: .3rem; margin: .15rem 0 .25rem; }
+.chat-menu button { border: 1px solid var(--outline); border-radius: 999px; background: var(--surface); padding: .15rem .55rem; font: inherit; font-size: .72rem; font-weight: 600; color: var(--prose-2); cursor: pointer; }
+.chat-menu button:hover, .chat-menu button:focus-visible { color: var(--prose); border-color: var(--prose-3); }
 
 /* Tirage fait hors ligne : gardé dans l'historique, non compté. */
 .offline-tag { font-size: .58rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--prose-3); border: 1px dashed var(--outline-strong); border-radius: 999px; padding: .05rem .4rem; }
@@ -2549,6 +2585,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .rm-item { padding: .55rem .7rem; border-radius: .55rem; background: var(--surface); border: 1px solid var(--outline); min-width: 0; }
 .rm-text { margin: 0 0 .25rem; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
 .rm-by { font-size: .76rem; color: var(--muted, inherit); opacity: .8; }
+/* Votes sur les idées prévues (idée de Trinity, 2026-11-05) */
+.rm-panel .panel-head { flex-wrap: wrap; gap: .4rem; }
+.rm-sort { display: flex; gap: .25rem; margin-left: auto; }
+.rm-votable { display: flex; gap: .6rem; align-items: flex-start; }
+.rm-body { min-width: 0; flex: 1; }
+.rm-vote { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 2.6rem; min-height: 2.6rem; padding: .2rem .35rem; border: 1px solid var(--outline); border-radius: .5rem; background: none; color: var(--prose-2); font: inherit; font-size: .72rem; line-height: 1.1; cursor: pointer; }
+.rm-vote:hover { border-color: var(--prose-3); color: var(--prose); }
+.rm-vote.on { border-color: #ea580c; background: color-mix(in srgb, #f97316 14%, transparent); color: #c2410c; }
+.dark .rm-vote.on { color: #fdba74; }
+.rm-vote b { font-size: .8rem; }
 .idea-roadmap, .rm-about { margin: 0 0 .6rem; font-size: .86rem; }
 .idea-roadmap a, .rm-about a { font-weight: 600; }
 
@@ -6073,6 +6119,13 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .o-report.done { opacity: .5; }
 .o-report-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
 .o-report-text { margin: .35rem 0 .45rem; padding: .45rem .6rem; border-radius: .5rem; background: color-mix(in srgb, var(--outline) 35%, transparent); overflow-wrap: anywhere; }
+/* Contexte d'un signalement (idée de jsand, 2026-11-05) */
+.mod-ctx { margin: -.15rem 0 .45rem; font-size: .8rem; }
+.mod-ctx > summary { cursor: pointer; color: var(--prose-2); font-weight: 600; }
+.mod-ctx-list { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .15rem; }
+.mod-ctx-list li { padding: .2rem .45rem; border-radius: .35rem; overflow-wrap: anywhere; color: var(--prose-2); }
+.mod-ctx-list li.hit { color: var(--prose); background: color-mix(in srgb, #ef4444 14%, transparent); box-shadow: inset 3px 0 0 #ef4444; }
+.mod-ctx-time { font-family: var(--font-mono); font-size: .7rem; opacity: .7; }
 
 /* Solde en haut à droite (2026-10-19) */
 .hdr-coins { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--outline); font-size: .78rem; font-weight: 800; color: inherit; text-decoration: none; white-space: nowrap; }
@@ -9486,6 +9539,7 @@ textarea.gc-input::placeholder { white-space: nowrap; overflow: hidden; text-ove
 .gc-mute-msg { margin: .3rem 0 0; padding: .3rem .55rem; border-left: 3px solid var(--outline-mid); font-size: .8rem; color: var(--prose-2); overflow-wrap: anywhere; }
 /* Modérateurs du chat (Sacha, 2026-11-01) : 🛡️ après le pseudo, lien vers leur page dans l'en-tête, fiches sur la page Owner. */
 .gc-modtag { margin-left: .2rem; font-size: .72rem; }
+.gc-best { margin-left: .25rem; font-size: .72rem; font-weight: 700; color: var(--t-pill-text, var(--prose-2)); white-space: nowrap; } /* meilleur tirage (Loliarlex1248, MAYO) */
 .gc-modlink { flex: none; margin-left: auto; padding: .15rem .5rem; border: 1px solid var(--outline); border-radius: 999px; color: var(--prose-2); font-size: .72rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .gc-modlink:hover, .gc-modlink:focus-visible { color: var(--prose); border-color: var(--outline-strong); }
 .gc-modlink[hidden] { display: none; }

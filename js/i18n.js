@@ -649,6 +649,18 @@
     'In the 💬 chat, press ⋯ on a message to delete it or mute its writer.': 'Dans le 💬 chat, appuie sur ⋯ sur un message pour le supprimer ou rendre muet son auteur.',
     '🚩 Reported messages': '🚩 Messages signalés', '↻ Refresh': '↻ Actualiser', '✓ Nothing wrong': '✓ Rien à redire', 'Nothing to check right now. 🎉': 'Rien à vérifier pour l\'instant. 🎉',
     'My last actions': 'Mes dernières actions', 'Sacha sees these too': 'Sacha les voit aussi', 'lifted by Sacha': 'levé par Sacha', 'This page is for chat moderators.': 'Cette page est pour les modérateurs du chat.',
+    // idées du 2026-11-05 (session social-chat) : contexte des signalements (jsand), lever un silence (pople), classement et
+    // étoile entre amis (Edward, Big Sexy), votes de la feuille de route (Trinity), menu ⋯ et meneur du duel (Jacksonw)
+    '💬 See the messages around it': '💬 Voir les messages autour', '🔇 Muted right now': '🔇 Muets en ce moment', 'lift a mute that wasn\'t fair': 'lève un silence injuste',
+    'by': 'par', '🔊 Unmute': '🔊 Lever le silence', 'Only Sacha can lift this one': 'Seul Sacha peut lever celui-ci', 'Nobody is muted.': 'Personne n\'est muet.',
+    'Mute lifted': 'Silence levé', 'This player is not muted': 'Ce joueur n\'est pas muet', 'Only the owner can lift this mute': 'Seul le créateur peut lever ce silence',
+    'Made a mistake?': 'Tu t\'es trompé ?', 'Lift the mute in “Muted right now” below. Open “See the messages around it” on a report before you act: context matters.': 'Lève le silence dans « Muets en ce moment » plus bas. Ouvre « Voir les messages autour » sur un signalement avant d\'agir : le contexte compte.',
+    '🏆 Friends leaderboard': '🏆 Classement entre amis', '☀️ Today': '☀️ Aujourd\'hui', '🎯 Best roll': '🎯 Meilleur tirage', '🎲 Rolls': '🎲 Tirages', 'Sort by': 'Trier par',
+    'Unpin from the top': 'Ne plus épingler en haut', 'Pin to the top of your list': 'Épingler en haut de ta liste', 'This player is not your friend': 'Ce joueur n\'est pas ton ami',
+    'Player ideas the creator plans to make, and the ones added in the last 30 days. Vote ▲ for the ideas you want first. Got one? Send it with the 💡 button.': 'Les idées de joueurs que le créateur prévoit de faire, et celles ajoutées ces 30 derniers jours. Vote ▲ pour les idées que tu veux en premier. Tu en as une ? Envoie-la avec le bouton 💡.',
+    '▲ Most voted': '▲ Les plus votées', '🆕 Newest': '🆕 Les plus récentes', 'Remove your vote': 'Retirer ton vote', 'Vote for this idea': 'Voter pour cette idée',
+    'This idea is not planned anymore': 'Cette idée n\'est plus prévue', 'Make 100 rolls to vote for ideas': 'Fais 100 tirages pour voter pour des idées',
+    '🙈 Hide': '🙈 Masquer', 'Winning': 'En tête', '⇅ Put the leader first': '⇅ Mettre le meneur en premier', '⇅ Same order as the cards': '⇅ Même ordre que les cartes',
     'Marked as fine': 'Noté : rien à redire', 'This report was already handled': 'Ce signalement a déjà été traité', 'This report is about you': 'Ce signalement parle de toi',
     'Moderators': 'Modérateurs', 'Chat moderator': 'Modérateur du chat', 'Moderator page': 'Page des modérateurs', '🛡️ Mod': '🛡️ Modo', 'moderator': 'modérateur', 'Remove the role': 'Retirer le rôle',
     'they keep the global chat friendly: delete messages and mute players for 5 min to 24 h, always with a reason (only you can mute forever). They see the rules and the reported chat messages on their own page.': 'ils gardent le chat global sympa : ils suppriment des messages et rendent des joueurs muets de 5 min à 24 h, toujours avec une raison (toi seul peux rendre muet pour toujours). Ils voient les règles et les messages signalés sur leur propre page.',
@@ -876,6 +888,8 @@
     [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
     [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
     [/^Make (\d+) rolls to write in the chat \(you have (\d+)\)$/, m => `Fais ${m[1]} tirages pour écrire dans le chat (tu en as ${m[2]})`],
+    // page des modérateurs (2026-11-05) : « until 14:32 », « Lift the mute of X? »
+    [/^until (\d{1,2}:\d{2}(?: ?[AP]M)?)$/, m => `jusqu'à ${m[1]}`], [/^Lift the mute of (.+)\?$/, m => `Lever le silence de ${m[1]} ?`],
     [/^([\d,]+) right now$/, m => `${nb(m[1])} en ce moment`], [/^until (.+)$/, m => `jusqu'au ${m[1]}`],
     [/^Free · needs (\d+) rolls · at least (\d+) players$/, m => `Gratuit · ${m[1]} tirages requis · ${m[2]} joueurs minimum`],
     [/^Cancelled: fewer than (\d+) players signed up$/, m => `Annulé : moins de ${m[1]} joueurs inscrits`],
