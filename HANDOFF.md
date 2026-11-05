@@ -25,7 +25,11 @@ Planned ideas of the "badges-hard" group. The Hard titles from the same group sh
   6,419 down): 401 from the two epochs, 11,731 from Trilogy. Biggest moves: rare→uncommon 4,172, uncommon→rare 3,365,
   rare→epic 960, epic→rare 915, uncommon→common 775, common→rare 757, anomaly↔epic 411/355, anomaly↔mythic 200/202.
   Earlier badge batches moved 48,600 and 55,782.
-- **Rarity moves, Hard**: HARD_DIFF_PLACEHOLDER
+- **Rarity moves, Hard**: a sample of 2,000,000 numbers from 0 to 9,999,999,999 (old Hard data vs new): 0.48% change rarity
+  (9,560: 5,346 up, 4,214 down). Mostly the table reshuffling around Common (trash↔common 3,819/3,443, garbage→common
+  382, uncommon→common 384); common→epic 1,144 is mostly Pandigital (1 in ~3,000). Examples: 6767676767 Godlike→Infinite,
+  2147483647 Common→Infinite, 1123581321 Epic→Infinite, 1023456789 Mythic→Godlike. The rest of the pack is far too rare
+  to show in a sample.
 - Tests: two older tests used Hard numbers that the pack now makes huge (1234567890 is Infinite with Sequence (9) and
   Pandigital, 6767676767 is Infinite with Ultimate Brainrot); they now use 4820193755 and 1212121212.
 
