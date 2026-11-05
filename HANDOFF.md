@@ -1,6 +1,21 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (skins lot 2 branch, merged with main). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (skins lot 3 branch, merged with main). Update this file at the end of every session.
+
+
+## Limited tab by event (2026-11-05, branch `claude/limited-by-event`)
+
+Sacha asked for the shop's Limited tab to be split by theme, with Halloween taken out for now but kept for next year.
+
+- `js/shop.js`: `EVENTS` (`halloween`, `thanksgiving`, `christmas`: `ends` and the `last` day shown) and `eventById`. Every
+  limited skin and wallpaper has `event: '<id>'`. `tools/test-api.mjs` checks that each item's `until` is its event's
+  `ends`, because the server still reads `until`.
+- `js/app.js`: `limitedEventsHTML()` builds one section per running event (`liveEvents()`, the soonest to end first),
+  each with its banner (`LIMITED_FX`: Halloween bats, Thanksgiving leaves, Christmas snow), its skins
+  (`[data-lim-skins]`) and its wallpapers (`[data-lim-walls]`). Ended events don't appear. Players who own items from a
+  past event see a note pointing to their profile Inventory, where they can still equip them.
+- **Next year**: bring Halloween back by updating `ends` in `EVENTS` and the `until` of its items (same date), plus the
+  "until November 1" wording in their descriptions and the French dictionary.
 
 ## Delete my account (2026-11-05, branch `claude/delete-account`)
 
@@ -167,9 +182,19 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
   the scene); Chinese numerals while rolling come from `spinChar` in `js/app.js`.
 - `aero` Frutiger Aero 🌐 2,200 — jia jun [e7a0b771e530] (promised). Generic style, no logo.
 
+**Lot 3 — `claude/skins-lot3`** (branched from lot 2; block "lot 3 du 2026-11-05" in `js/skinfx.js`):
+- `blackout` Blackout 💡 1,700 — Mace_67 [f414eccc558b] (promised). CSS only for the main effect: the border is dark
+  while any `.slot.spinning` remains, then lit; it takes the rarity colour (`--t-accent`) once the card loses `.neutral`.
+- `prism` Prism 💠 2,600 — Idkwhatnamemyself [fb70cca99f40] (promised). Card and button take the colour of the last
+  roll's rarity: `setLastRoll` in `js/app.js` now also sets `html[data-last-tier]` (and the reveal sets it to the new
+  tier); the revealed card reads the `.result[data-tier]` section only once it is not `.neutral` (never before: it
+  would leak the rarity). Colours per tier: `--pr-a/b/c` in `css/style.css`.
+- `paint` Rainbow Paint 🎨 1,800 — finnnnn [7f9507fe5e51]. `grass` Touch Grass 🌱 1,500 — finnnnn [a841d12aea44].
+- Note for future skins: the main roll card never has its own `data-tier`; the `.result` section has it from the start
+  and `.neutral` hides it until the rarity reveal.
+
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Lot 3: Blackout (Mace_67 [f414eccc558b], promised), Rarity mirror (Idkwhatnamemyself [fb70cca99f40], promised), then
-  the list in order: rainbow painting [7f9507fe5e51], grass [a841d12aea44], obsidian [7ac4a115abd4], horses/barn
+- Next: obsidian [7ac4a115abd4], horses/barn
   [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
   [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
   spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck

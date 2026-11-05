@@ -7217,4 +7217,16 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(traces(yan.playerId).length >= yanKeys - 3, 'les clés de Yan restent');
 }
 
+// ================================================================ Onglet Limited par événement (Sacha, 2026-11-05)
+{
+  // Chaque objet limité appartient à un événement, et sa date de fin (lue par le serveur) est celle de l'événement.
+  const ids = Shop.EVENTS.map(e => e.id);
+  assert.equal(new Set(ids).size, ids.length, 'événements uniques');
+  for (const x of [...Shop.SKINS, ...Shop.WALLPAPERS].filter(x => x.until || x.event)) {
+    assert.ok(Shop.eventById.has(x.event), `${x.id} : événement connu`);
+    assert.equal(x.until, Shop.eventById.get(x.event).ends, `${x.id} : même fin que ${x.event}`);
+  }
+  assert.ok(Shop.SKINS.some(k => k.event === 'halloween'), 'Halloween gardé pour l\'an prochain');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
