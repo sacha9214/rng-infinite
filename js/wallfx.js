@@ -1247,11 +1247,17 @@
         }
         g.lineCap = 'round';
         // la traînée : plus longue quand la bille va vite
-        const tl = clamp(speed * .45, .04, .3), n = 26;
-        for (let j = 0; j < n; j++) {
-          const q = j / n, f = pos - tl * (1 - q), p = P(f), r = k * (.5 + 1.1 * q);
-          g.fillStyle = `rgba(${rgbOf(S, f, T)},${(.55 * q * q).toFixed(3)})`; ell(g, p[0], p[1], r, r); g.fill();
+        // la traînée : des traits emboîtés qui partent tous de la bille, de plus en plus longs et fins ; leurs opacités
+        // s'additionnent près de la bille et s'effacent vers l'arrière, sans aucun joint (des ronds séparés faisaient des
+        // perles à grande vitesse, des tronçons bout à bout des coutures)
+        const tl = clamp(speed * .45, .04, .3), n = 10, step = 1 / M;
+        g.globalCompositeOperation = 'source-over'; g.lineCap = 'round'; g.lineJoin = 'round';
+        for (let j = 1; j <= n; j++) {
+          const q = j / n, f0 = pos - tl * q;
+          g.strokeStyle = `rgba(${rgbOf(S, pos - tl * q * .5, T)},.13)`; g.lineWidth = k * (2.9 - 2 * q);
+          g.beginPath(); for (let f = f0; f <= pos; f += step) { const p = P(f); f === f0 ? g.moveTo(p[0], p[1]) : g.lineTo(p[0], p[1]); } g.stroke();
         }
+        g.globalCompositeOperation = D ? 'lighter' : 'source-over';
         // la bille : un halo de la couleur, un cœur blanc
         const p = P(pos), c = rgbOf(S, pos, T), R0 = k * (2 + 1.4 * flare);
         const halo = g.createRadialGradient(p[0], p[1], 0, p[0], p[1], R0 * 2.5);
