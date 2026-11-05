@@ -203,8 +203,12 @@ DandoriNinja [4d0e7ba5b3ed] [c9b3b2f47459] (the second idea was an image I could
 finnnnn [b402f6ca6d8a]; `witch` Witch 🧙 1,800 — mark [35a850f4e8ba] (he wanted it limited for Halloween, which is over:
 normal skin; Witch's Brew is the cauldron one).
 
-- Next: black-and-white TV [81a45cb40646], checkers
-  [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
+**Lot 8 — `claude/skins-lot8`** (block "lot 8 du 2026-11-05" in `js/skinfx.js`): `tv` Black & White TV 📺 1,300 — Jguz01
+[81a45cb40646]; `checkers` Checkers ⛀ 1,800 — sennybex1 [b71a59c908a7]; `iq` My IQ 🧠 1,000 — G8_floppa
+[78bc6f4f973b]; `dill` Pickle 🥒 1,200 — Dylanrulez123 [6df5ef142466] (id `dill`: `pickle` is the button's id, and the
+tests forbid a skin and a button sharing one).
+
+- Next: animals that
   spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
   Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
   lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],

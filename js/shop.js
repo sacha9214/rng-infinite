@@ -335,6 +335,16 @@
     // Idée de mark (2026-10-27) : une sorcière lance une potion sur chaque chiffre. Il la voulait limitée pour Halloween,
     // passé : skin normal. Witch's Brew (le chaudron) est un autre skin.
     { id: 'witch', name: 'Witch', emoji: '🧙', price: 1800, desc: 'A witch on her broom throws a potion at every digit and it appears in a puff of purple smoke; Mythic rolls swirl green magic around the card', idea: 'mark' },
+    // ==== Skins du 2026-11-05, lot 8 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de Jguz01 (2026-10-27) : la police et la couleur d'un téléviseur noir et blanc.
+    { id: 'tv', name: 'Black & White TV', emoji: '📺', price: 1300, desc: 'An old black and white TV: snow, a rolling picture and glowing phosphor digits; great rolls go ON AIR', idea: 'Jguz01' },
+    // Idée de sennybex1 (2026-10-30, il proposait 1 800 pièces) : un damier rouge et noir comme Chess.
+    { id: 'checkers', name: 'Checkers', emoji: '⛀', price: 1800, desc: 'Every digit is a red or black checker that jumps into place and captures a piece; Mythic rolls crown them all: KING ME!', idea: 'sennybex1' },
+    // Idée de G8_floppa (2026-10-28) : « a skin that says (my IQ) and then it shows the number ».
+    { id: 'iq', name: 'My IQ', emoji: '🧠', price: 1000, desc: 'Your number, written on a test sheet as MY IQ: the red pen circles it and grades it, and Mythic rolls get the GENIUS stamp', idea: 'G8_floppa' },
+    // Idée de Dylanrulez123 (2026-10-28) : un skin cornichon assorti au bouton Pickle. Identifiant « dill » : « pickle »
+    // est déjà l'identifiant du bouton (un skin et un bouton ne partagent jamais un identifiant).
+    { id: 'dill', name: 'Pickle', emoji: '🥒', price: 1200, desc: 'A bumpy pickle that matches the Pickle button: every digit squishes in with a splash of brine, and Mythic rolls are a BIG DILL', idea: 'Dylanrulez123' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

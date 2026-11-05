@@ -1919,3 +1919,28 @@
   text-shadow: 0 0 .06em #fff, 0 0 .3em rgba(163, 230, 53, .9);
   --gs: 0 .3em 0 #3b0764, 0 .5em 1.2em rgba(163, 230, 53, .3); --gs-h: 0 .34em 0 #3b0764, 0 .7em 1.5em rgba(163, 230, 53, .45); --gs-a: 0 .06em 0 #3b0764; }
 .btn-roll.gen-witch:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-11-05, lot 8 ==== boutons assortis */
+/* Black & White TV (idée de Jguz01) : un écran gris bombé à lignes de balayage, texte en phosphore. */
+.btn-roll.gen-tv { border: .16em solid #2b2118; border-radius: 1rem / .8rem; color: #f5f5f5; font-family: 'Courier New', monospace;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px), radial-gradient(ellipse 90% 90% at 50% 50%, #6b6b6b, #2a2a2a);
+  text-shadow: 0 0 .06em #fff, 0 0 .3em rgba(255, 255, 255, .5);
+  --gs: 0 .3em 0 #1c1610, 0 .5em 1em rgba(0, 0, 0, .35); --gs-h: 0 .34em 0 #1c1610, 0 .7em 1.3em rgba(255, 255, 255, .15); --gs-a: 0 .06em 0 #1c1610; }
+.btn-roll.gen-tv:hover { filter: brightness(1.15); }
+/* Checkers (idée de sennybex1) : un damier rouge et noir dans son cadre de bois, texte blanc. */
+.btn-roll.gen-checkers { border: .16em solid #7c4a1e; border-radius: .35rem; color: #fff; font-family: Georgia, serif;
+  background: conic-gradient(#b91c1c 0 25%, #18181b 0 50%, #b91c1c 0 75%, #18181b 0) 0 0 / 22px 22px;
+  text-shadow: 0 .06em 0 #000, 0 0 .2em rgba(0, 0, 0, .8);
+  --gs: 0 .3em 0 #4a2c11, 0 .5em 1em rgba(185, 28, 28, .3); --gs-h: 0 .34em 0 #4a2c11, 0 .7em 1.3em rgba(185, 28, 28, .45); --gs-a: 0 .06em 0 #4a2c11; }
+.btn-roll.gen-checkers:hover { filter: brightness(1.12); }
+/* My IQ (idée de G8_floppa) : une feuille de test quadrillée, marge rouge, texte au stylo bleu. */
+.btn-roll.gen-iq { border: 1px solid #d6d3d1; border-radius: .25rem; color: #1d4ed8; font-family: 'Bradley Hand', 'Chalkboard SE', 'Segoe Print', cursive;
+  background: linear-gradient(90deg, transparent .9em, rgba(239, 68, 68, .55) .9em calc(.9em + 1px), transparent calc(.9em + 1px)), repeating-linear-gradient(0deg, transparent 0 .45em, rgba(59, 130, 246, .2) .45em calc(.45em + 1px)), #fffdf7;
+  --gs: 0 .3em 0 #a8a29e, 0 .5em 1em rgba(0, 0, 0, .2); --gs-h: 0 .34em 0 #a8a29e, 0 .7em 1.3em rgba(0, 0, 0, .25); --gs-a: 0 .06em 0 #a8a29e; }
+.btn-roll.gen-iq:hover { filter: brightness(1.02); }
+/* Pickle (idée de Dylanrulez123) : le skin cornichon, assorti au bouton Pickle (vert bosselé, texte chair de cornichon). */
+.btn-roll.gen-dill { border: 2px solid #1a2e05; border-radius: 999px; color: #ecfccb; -webkit-text-stroke: .02em #1a2e05; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(circle at 15% 35%, #a3e635 0 3px, transparent 4px), radial-gradient(circle at 40% 75%, #a3e635 0 3px, transparent 4px), radial-gradient(circle at 70% 30%, #a3e635 0 3px, transparent 4px), radial-gradient(circle at 88% 70%, #a3e635 0 3px, transparent 4px), linear-gradient(180deg, rgba(255, 255, 255, .3) 0 18%, transparent 30%), linear-gradient(180deg, #65a30d, #365314);
+  text-shadow: 0 .05em 0 #1a2e05;
+  --gs: 0 .3em 0 #1a2e05, 0 .5em 1em rgba(132, 204, 22, .3); --gs-h: 0 .34em 0 #1a2e05, 0 .7em 1.3em rgba(132, 204, 22, .45); --gs-a: 0 .06em 0 #1a2e05; }
+.btn-roll.gen-dill:hover { filter: brightness(1.08); }

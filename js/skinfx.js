@@ -12464,6 +12464,194 @@
   };
   // ==== fin du lot 7 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 8 : Black & White TV, Checkers, My IQ, Pickle (idées de joueurs planifiées) ====
+  // 📺 Black & White TV (idée de Jguz01, 2026-10-27) — de la neige grésille dans l'écran pendant le tirage, et une barre
+  // plus claire remonte (la stabilité verticale). Chaque chiffre qui se cale : un trait blanc traverse l'écran. Avant le
+  // dernier chiffre, la neige s'épaissit. Révélation : l'image se stabilise ; dès Epic, l'écran clignote et une mire de
+  // gris défile derrière la carte ; dès Mythic, une antenne en oreilles de lapin pousse sur le haut et un panneau « ON
+  // AIR » s'allume. Tirage raté : « NO SIGNAL » clignote au-dessus (le nombre reste lisible).
+  SCENES.tv = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const lines = timed(), sparks = particles(), pending = [];
+    let t = 0, snow = .35, snowTo = .35, bars = 0, onAir = 0, noSig = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        snow += (snowTo - snow) * Math.min(1, dt * 3);
+        if (snow > .02) { ci.globalAlpha = snow * .35; for (let i = 0; i < 140; i++) { ci.fillStyle = Math.random() < .5 ? '#ffffff' : '#000000'; ci.fillRect(rnd(w), rnd(h), 2, 1.5); } ci.globalAlpha = 1; }
+        const by = h - ((t * .35) % 1.3) * h * 1.2; ci.fillStyle = 'rgba(255,255,255,.07)'; ci.fillRect(0, by, w, h * .18);
+        lines.run(dt, (l, k) => { ci.globalAlpha = (1 - k) * .8; ci.fillStyle = '#ffffff'; ci.fillRect(0, l.y + k * h * .3, w, 2); ci.globalAlpha = 1; });
+        if (bars) behind(env, () => { bars = Math.min(2, bars + dt); const shades = ['#f5f5f5', '#d4d4d4', '#a3a3a3', '#737373', '#525252', '#262626', '#0a0a0a']; const bw = (card.w + H * 1.6) / shades.length, x0 = cx - (card.w + H * 1.6) / 2, off = ((t * 30) % bw); shades.forEach((c, i) => { co.globalAlpha = .28 * Math.min(1, bars); co.fillStyle = c; co.fillRect(x0 + i * bw - off, card.y - H * .2, bw, H * 1.25); }); co.globalAlpha = 1; }, true);
+        if (onAir) {
+          onAir = Math.min(1, onAir + dt * 2);
+          behind(env, () => { co.strokeStyle = '#a3a3a3'; co.lineWidth = Math.max(2, em * .05); co.lineCap = 'round'; const sway = Math.sin(t * 3) * .1; co.beginPath(); co.moveTo(cx, card.y); co.lineTo(cx - Math.sin(.5 + sway) * H * .9 * onAir, card.y - Math.cos(.5 + sway) * H * .9 * onAir); co.moveTo(cx, card.y); co.lineTo(cx + Math.sin(.5 - sway) * H * .9 * onAir, card.y - Math.cos(.5 - sway) * H * .9 * onAir); co.stroke(); }, true);
+          if (Math.random() < dt * 20) { const sd = pick([-1, 1]); sparks.add({ x: cx + sd * Math.sin(.5) * H * .9, y: card.y - Math.cos(.5) * H * .9, vx: rnd(-40, 40), vy: rnd(-60, 10), g: H * 3, max: rnd(.3, .6) }); }
+          const on = Math.sin(t * 6) > -.6, x = card.x + card.w + H * .7, y = card.y + H * .3;
+          co.globalAlpha = onAir * (on ? 1 : .35); co.fillStyle = on ? '#dc2626' : '#7f1d1d'; roundRect(co, x - H * .55, y - H * .2, H * 1.1, H * .4, H * .08); co.fill(); co.globalAlpha = 1;
+          l1Glyph(co, x, y + 1, H * .22, 'ON AIR', 0, onAir * (on ? 1 : .5), '#fff', on && dark ? '#fca5a5' : null, "800 {s}px 'Arial Narrow', system-ui, sans-serif");
+        }
+        sparks.step(dt); co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; sparks.each((s, k) => dot(co, '#ffffff', s.x, s.y, 2.2, 1 - k)); co.globalCompositeOperation = 'source-over';
+        if (noSig) { noSig = Math.max(0, noSig - dt * .3); const on = Math.floor(t * 4) % 2; l1Glyph(co, cx, card.y - em * .35, em * .32, 'NO SIGNAL', 0, Math.min(1, noSig * 2) * (on ? 1 : .4), dark ? '#e5e5e5' : '#404040', null, "700 {s}px 'Courier New', monospace"); }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) snowTo = .1;
+        if (o.ghost) return;
+        lines.add({ y: bInner(env, p).y, life: .25 });
+      },
+      build() { snowTo = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        snowTo = p ? 0 : .5;
+        if (!p) { noSig = 1; return; }
+        if (p >= .6) bars = .01;
+        if (p >= 1) onAir = .01;
+      },
+    };
+  };
+
+  // ⛀ Checkers (idée de sennybex1, 2026-10-30) — chaque pion qui saute prend un pion adverse : celui-ci s'envole hors de la
+  // carte en tournant. Avant le dernier chiffre, des pions glissent sur les bords. Révélation : des confettis rouges et
+  // noirs ; dès Epic, une rafle : une suite de pions pris s'envolent ; dès Mythic, « KING ME! » : chaque pion devient une
+  // dame (.chk-king, une couronne d'or) et des couronnes tombent derrière. Tirage raté : un pion tombe de la carte.
+  SCENES.checkers = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const taken = particles(), crowns = particles(), pending = [], bubbles = timed();
+    let t = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const disc = (x, y, r, red, rot) => { co.save(); co.translate(x, y); co.scale(1, Math.cos(rot) * .5 + .5); co.fillStyle = red ? '#dc2626' : '#27272a'; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill(); co.strokeStyle = red ? '#7f1d1d' : '#000'; co.lineWidth = Math.max(1, r * .12); co.stroke(); co.strokeStyle = 'rgba(255,255,255,.3)'; co.lineWidth = 1; co.beginPath(); co.arc(0, 0, r * .62, 0, TAU); co.stroke(); co.restore(); };
+    const capture = (x, y, red, sp = 1) => taken.add({ x, y, vx: (x < cx ? -1 : 1) * H * rnd(1, 2) * sp, vy: -H * rnd(1.4, 2.4) * sp, g: H * 5, max: rnd(.9, 1.3), red, spin: rnd(6, 12) });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        crowns.step(dt);
+        if (crowns.n) behind(env, () => crowns.each((c, k) => l1Glyph(co, c.x, c.y, em * .45, '♛', c.life * c.spin, Math.min(1, (1 - k) * 3), '#facc15', dark ? '#fde047' : null, '{s}px system-ui, sans-serif')), true);
+        taken.step(dt);
+        taken.each((d, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); disc(d.x, d.y, em * .28, d.red, d.life * d.spin); });
+        bubbles.run(dt, (b, k) => l1Glyph(co, cx, card.y - em * .45 - k * em * .2, em * (.42 + .1 * Math.sin(k * 20) * (1 - k)), 'KING ME!', 0, Math.min(1, k * 8, (1 - k) * 3), '#facc15', dark ? '#fde047' : null, "900 {s}px Georgia, serif"));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        // le pion passe par-dessus un adversaire (35 % de chk-jump) : celui-ci s'envole
+        const s = b2Near(env, p), red = s ? s.i % 2 === 1 : true;
+        later(.18, () => capture(p.x - em * .3, card.y + em * .1, red, o.last ? 1.4 : 1));
+      },
+      build() {},
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        if (!p) { later(.1, () => taken.add({ x: card.x + card.w, y: card.y + H * .5, vx: H * .3, vy: 0, g: H * 4, max: 1.2, red: true, spin: 3 })); return; }
+        if (p >= .6) for (let i = 0; i < 3 + Math.round(3 * p); i++) later(i * .12, () => capture(card.x + card.w * (i % 6) / 5, card.y, i % 2, 1.2));
+        if (p < 1) return;
+        if (el) el.classList.add('chk-king');
+        bubbles.add({ life: 1.6, delay: .1 });
+        for (let i = Math.round((10 + 6 * asc) * q); i > 0; i--) later(rnd(.2, 2), () => crowns.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H * 1.4), y: card.y - H * rnd(.4, 1), vx: rnd(-15, 15), vy: H * rnd(.3, .6), g: H * 2, max: rnd(1.4, 2), spin: rnd(-3, 3) }));
+      },
+    };
+  };
+
+  // 🧠 My IQ (idée de G8_floppa, 2026-10-28) — chaque chiffre écrit reçoit une petite coche au stylo rouge au-dessus.
+  // Avant le dernier chiffre, des petits « ? » flottent autour de la carte. Révélation : le stylo rouge entoure le nombre et
+  // note une appréciation à côté (OK, B+, A, A+) ; dès Mythic, un tampon « GENIUS » s'abat près de la carte et des étoiles
+  // dorées se collent autour. Tirage raté : « Try again! » au stylo rouge.
+  SCENES.iq = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const ticks = [], marks = particles(), stars = [], pending = [];
+    let t = 0, build = 0, circle = 0, grade = '', stamp = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const RED = dark ? '#f87171' : '#dc2626', PEN = "700 {s}px 'Bradley Hand', 'Chalkboard SE', 'Segoe Print', cursive";
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        co.strokeStyle = RED; co.lineCap = 'round'; co.lineJoin = 'round';
+        for (const tk of ticks) { tk.k = Math.min(1, tk.k + dt * 6); co.lineWidth = Math.max(1.5, em * .05); co.beginPath(); const s = em * .14; co.moveTo(tk.x - s, tk.y); co.lineTo(tk.x - s * .2, tk.y + s * .7 * Math.min(1, tk.k * 2)); if (tk.k > .5) co.lineTo(tk.x - s * .2 + s * 1.4 * (tk.k - .5) * 2, tk.y + s * .7 - s * 1.6 * (tk.k - .5) * 2); co.stroke(); }
+        if (build && Math.random() < dt * 8) marks.add({ x: cx + rnd(-1, 1) * (card.w * .55 + em), y: card.y + H * rnd(-.2, .9), vx: 0, vy: -H * .3, max: rnd(.8, 1.2) });
+        marks.step(dt); marks.each((m, k) => l1Glyph(co, m.x, m.y, em * .3, '?', 0, Math.sin(Math.PI * k), dark ? '#93c5fd' : '#1d4ed8', null, PEN));
+        // le cercle au stylo rouge autour du nombre, puis l'appréciation
+        if (circle) {
+          circle = Math.min(1, circle + dt * 2.2);
+          co.lineWidth = Math.max(2, em * .06); co.beginPath();
+          for (let i = 0; i <= 60 * circle; i++) { const a = -2.6 + i / 60 * TAU * 1.08, rx = card.w * .55 + Math.sin(i * .7) * 2, ry = H * .56; const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry; i ? co.lineTo(x, y) : co.moveTo(x, y); }
+          co.stroke();
+          if (circle > .9 && grade) l1Glyph(co, card.x + card.w + em * .55, card.y - em * .15, em * (grade.length > 3 ? .38 : .55), grade, -.15, 1, RED, null, PEN);
+        }
+        if (stamp) { stamp = Math.min(1, stamp + dt * 4); const sc = 1 + (1 - outCubic(stamp)) * 1.5, x = card.x - em * .9, y = card.y + H * .2; co.save(); co.translate(x, y); co.rotate(-.25); co.scale(sc, sc); co.globalAlpha = Math.min(1, stamp * 2) * .9; co.strokeStyle = RED; co.lineWidth = 2.5; co.strokeRect(-em * .95, -em * .28, em * 1.9, em * .56); co.restore(); l1Glyph(co, x, y, em * .38 * sc, 'GENIUS', -.25, Math.min(1, stamp * 2) * .9, RED, null, "900 {s}px 'Arial Black', system-ui, sans-serif"); }
+        for (const s of stars) { s.k = Math.min(1, s.k + dt * 4); l1Glyph(co, s.x, s.y, em * .32 * (2 - outCubic(s.k)), '★', s.rot, Math.min(1, s.k * 2), '#facc15', dark ? '#fde047' : null, '{s}px system-ui, sans-serif'); }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        later(.28, () => ticks.push({ x: p.x + em * .15, y: card.y - em * .2, k: 0 }));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        circle = .01;
+        grade = !p ? 'Try again!' : p < .25 ? 'OK' : p < .42 ? 'B+' : p < .6 ? 'A' : p < 1 ? 'A+' : 'A++';
+        if (p < 1) return;
+        later(.6, () => { stamp = .01; });
+        for (let i = 0; i < 6 + 3 * asc; i++) later(.8 + i * .1, () => { const e = along(grown(card, em * .55), rnd()); stars.push({ x: e.x, y: Math.min(e.y, card.y + H), k: 0, rot: rnd(-.4, .4) }); });
+      },
+    };
+  };
+
+  // 🥒 Pickle (idée de Dylanrulez123, 2026-10-28) — chaque « squish » fait gicler des gouttes de saumure. Avant le dernier
+  // chiffre, des brins d'aneth tournoient autour. Révélation : des rondelles de cornichon jaillissent ; dès Epic, une
+  // averse de saumure ; dès Mythic, « BIG DILL » s'affiche au-dessus et des bocaux tombent derrière la carte. Tirage raté :
+  // une seule rondelle tombe, flop.
+  SCENES.dill = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const drops = particles(), slices = particles(), herbs = particles(), jars = particles(), pending = [], spin = emitter();
+    let t = 0, build = 0, big = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const slice = (x, y, r, rot, a) => { co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(rot); co.fillStyle = '#4d7c0f'; co.beginPath(); co.arc(0, 0, r, 0, TAU); co.fill(); co.fillStyle = '#d9f99d'; co.beginPath(); co.arc(0, 0, r * .78, 0, TAU); co.fill(); co.fillStyle = '#a3e635'; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; co.beginPath(); co.ellipse(Math.cos(a) * r * .38, Math.sin(a) * r * .38, r * .1, r * .16, a, 0, TAU); co.fill(); } co.restore(); };
+    const jar = (x, y, s, a) => { co.save(); co.globalAlpha = a; co.translate(x, y); co.fillStyle = 'rgba(190, 242, 100, .5)'; roundRect(co, -s * .35, -s * .4, s * .7, s * .85, s * .12); co.fill(); co.strokeStyle = '#d9f99d'; co.lineWidth = 1.5; co.stroke(); co.fillStyle = '#a16207'; co.fillRect(-s * .3, -s * .55, s * .6, s * .16); co.fillStyle = '#4d7c0f'; for (const ox of [-.15, .08]) { co.beginPath(); co.ellipse(s * ox, s * .05, s * .07, s * .28, ox, 0, TAU); co.fill(); } co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        if (build) for (let n = spin(10 * q, dt); n > 0; n--) { const a = rnd(TAU); herbs.add({ x: cx + Math.cos(a) * (card.w * .6 + em), y: card.y + H / 2 + Math.sin(a) * H * .9, vx: -Math.sin(a) * H, vy: Math.cos(a) * H * .5, drag: .5, max: rnd(.7, 1.1), rot: rnd(TAU), spin: rnd(-4, 4) }); }
+        jars.step(dt);
+        if (jars.n) behind(env, () => jars.each((j, k) => jar(j.x, j.y, em * .9, Math.min(1, (1 - k) * 3))), true);
+        herbs.step(dt);
+        herbs.each((hb, k) => { co.save(); co.globalAlpha = Math.sin(Math.PI * k); co.translate(hb.x, hb.y); co.rotate(hb.rot + hb.life * hb.spin); co.strokeStyle = '#65a30d'; co.lineWidth = 1.2; co.beginPath(); co.moveTo(0, -em * .2); co.lineTo(0, em * .2); for (let i = -2; i <= 2; i++) { co.moveTo(0, i * em * .08); co.lineTo(em * .1, i * em * .08 - em * .06); co.moveTo(0, i * em * .08); co.lineTo(-em * .1, i * em * .08 - em * .06); } co.stroke(); co.restore(); });
+        drops.step(dt);
+        co.fillStyle = dark ? '#d9f99d' : '#65a30d';
+        drops.each((d, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3) * .85; co.beginPath(); co.arc(d.x, d.y, d.r, 0, TAU); co.fill(); });
+        slices.step(dt);
+        if (slices.n) behind(env, () => slices.each((s, k) => slice(s.x, s.y, em * s.r, s.rot + s.life * s.spin, Math.min(1, (1 - k) * 3))), true); // derrière la carte : jamais sur les chiffres
+        if (big) { big = Math.min(1, big + dt * 3); const sc = .6 + .4 * outCubic(big) + .05 * Math.sin(t * 5); l1Glyph(co, cx, card.y - em * .45, em * .55 * sc, 'BIG DILL', Math.sin(t * 3) * .05, big, '#84cc16', dark ? '#bef264' : null, "900 {s}px 'Arial Black', system-ui, sans-serif"); }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        for (let i = Math.round((o.ghost ? 2 : o.last ? 10 : 5) * q); i > 0; i--) { const a = rnd(Math.PI, TAU), v = H * rnd(.8, 1.8); drops.add({ x: p.x, y: p.y - em * .3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: H * 6, max: rnd(.4, .7), r: rnd(1.5, 3) }); }
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { slices.add({ x: card.x + card.w * .8, y: card.y + H, vx: 10, vy: -H * .3, g: H * 5, max: 1, r: .2, rot: 0, spin: 4 }); return; }
+        for (let i = burst(p, 14 * q, 3); i > 0; i--) { const e = along(grown(card, 3), rnd()); slices.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(1.5, 3), vy: -H * rnd(1, 2), g: H * 5, drag: .4, max: rnd(.9, 1.4), r: rnd(.16, .26), rot: rnd(TAU), spin: rnd(-6, 6) }); }
+        if (p >= .6) for (let i = Math.round(30 * q); i > 0; i--) { const e = along(grown(card, 3), rnd()); drops.add({ x: e.x, y: e.y, vx: rnd(-1, 1) * H, vy: -H * rnd(.6, 1.6), g: H * 5, max: rnd(.6, 1), r: rnd(1.5, 3) }); }
+        if (p < 1) return;
+        later(.3, () => { big = .01; });
+        for (let i = Math.round((6 + 4 * asc) * q); i > 0; i--) later(rnd(.2, 2), () => jars.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H * 1.3), y: card.y - H * rnd(.6, 1.2), vx: rnd(-10, 10), vy: H * .3, g: H * 3, max: rnd(1.4, 1.8) }));
+      },
+    };
+  };
+  // ==== fin du lot 8 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];

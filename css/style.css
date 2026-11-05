@@ -13352,3 +13352,160 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes wch-fly { 0%, 100% { transform: translate(0, 0) rotate(-6deg); } 50% { transform: translate(14px, -6px) rotate(6deg); } }
 .room-stage.many .side-witch::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-witch::before { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 8 (idées de joueurs) */
+/* ------------------------------------------------------------------ Black & White TV (idée de Jguz01, 2026-10-27 :
+   « the same font style and color as a TV in black and white »). Un vieux téléviseur à tube : l'écran gris bombé (le
+   coin plus sombre), les lignes de balayage, le reflet de la vitre. Les chiffres sont en phosphore blanc, un peu baveux,
+   la police carrée des vieux génériques. Pendant le tirage, de la neige et des chiffres qui sautent (la stabilité
+   verticale). Un chiffre qui se pose : l'image se cale d'un coup, un éclair blanc, une ligne qui roule. Neige,
+   allumage, mire et extinction d'un tirage raté : js/skinfx.js (SCENES.tv). */
+.num-card.skin-tv {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px),
+    linear-gradient(120deg, transparent 18%, rgba(255, 255, 255, .1) 24%, transparent 32%),
+    radial-gradient(ellipse 90% 85% at 50% 50%, #6b6b6b, #3a3a3a 70%, #1c1c1c 100%);
+  border: .2em solid #2b2118; border-radius: 1.1rem / .9rem; color: #f5f5f5;
+  box-shadow: inset 0 0 .6em rgba(0, 0, 0, .75), 0 0 0 .08em #5c4a36, 0 0 0 .14em #2b2118, 0 10px 18px rgba(0, 0, 0, .5);
+}
+.skin-tv .slot { position: relative; font-family: 'Courier New', 'Courier', monospace; font-weight: 700;
+  color: #f5f5f5; text-shadow: 0 0 .05em #fff, 0 0 .2em rgba(255, 255, 255, .55), .03em 0 0 rgba(200, 200, 200, .4); filter: grayscale(1); }
+.skin-tv .slot.ghost { opacity: .2; }
+.skin-tv .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-tv .slot.spinning { opacity: .55; filter: grayscale(1) blur(.6px); animation: tv-hold .16s steps(2) infinite; }
+.skin-tv .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes tv-hold { from { transform: translateY(-.12em) skewX(4deg); } to { transform: translateY(.08em) skewX(-3deg); } }
+.skin-tv .slot.revealed { animation: tv-lock .45s backwards; }
+@keyframes tv-lock {
+  0% { transform: translateY(-.3em) scaleY(1.3); filter: grayscale(1) brightness(2.4) blur(1px); animation-timing-function: steps(3); }
+  30% { transform: translateY(.04em) scaleY(.9); filter: grayscale(1) brightness(1.6); animation-timing-function: ease-out; }
+  55% { transform: none; filter: grayscale(1); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-tv .slot { animation: none !important; } }
+.side-tv { --side-border: #5c4a36; --side-glow: 0 0 14px rgba(255, 255, 255, .15); --side-ink: #a3a3a3;
+  --side-bg: repeating-linear-gradient(0deg, rgba(0, 0, 0, .14) 0 1px, transparent 1px 3px), radial-gradient(ellipse 80% 70% at 50% 50%, rgba(163, 163, 163, .16), rgba(38, 38, 38, .2));
+  --deco-a: '📺'; --deco-b: '▮▯▮'; }
+.side-tv::before { animation: tv-flick 3s steps(1) infinite; }
+@keyframes tv-flick { 0%, 92%, 96%, 100% { opacity: .8; } 94% { opacity: .2; } }
+.room-stage.many .side-tv::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-tv::before { animation: none; } }
+/* ------------------------------------------------------------------ Checkers (idée de sennybex1, 2026-10-30 : « a checkers
+   skin like the chess one with black and red patterns … 1,800 »). Un damier rouge et noir dans un cadre de bois. Chaque
+   chiffre est imprimé en blanc sur un pion, rouge et noir en alternance (bord cannelé, reflet). Pendant le tirage, les
+   pions glissent de case en case. Un chiffre qui se pose : le pion saute (il passe par-dessus un autre, comme une prise),
+   claque sur sa case et se pose (matière dure : un rebond sec). Pions pris, dames couronnées : js/skinfx.js. */
+.num-card.skin-checkers {
+  background: conic-gradient(#b91c1c 0 25%, #18181b 0 50%, #b91c1c 0 75%, #18181b 0) 0 0 / .62em .62em;
+  border: .16em solid #7c4a1e; border-radius: .35rem; color: #fff;
+  box-shadow: inset 0 0 0 .05em #a16207, inset 0 0 .5em rgba(0, 0, 0, .55), 0 10px 18px rgba(0, 0, 0, .45);
+  padding: .3em .5em;
+}
+.skin-checkers .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .86em; height: .86em; margin: 0 .02em; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Georgia', 'Times New Roman', serif; font-weight: 700; font-size: .82em; font-variant-numeric: lining-nums;
+  color: #fff; text-shadow: 0 .04em 0 rgba(0, 0, 0, .7);
+  background: radial-gradient(circle, transparent 0 58%, rgba(255, 255, 255, .25) 60% 63%, transparent 65%), repeating-conic-gradient(from 0deg, rgba(0, 0, 0, .18) 0 6deg, transparent 6deg 12deg), radial-gradient(circle at 35% 30%, #f87171, #dc2626 45%, #991b1b);
+  box-shadow: 0 .06em 0 #450a0a, 0 .08em .08em rgba(0, 0, 0, .5);
+}
+.skin-checkers .slot:nth-of-type(2n) { background: radial-gradient(circle, transparent 0 58%, rgba(255, 255, 255, .2) 60% 63%, transparent 65%), repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .08) 0 6deg, transparent 6deg 12deg), radial-gradient(circle at 35% 30%, #52525b, #27272a 45%, #09090b); box-shadow: 0 .06em 0 #000, 0 .08em .08em rgba(0, 0, 0, .5); }
+.skin-checkers .slot.ghost { opacity: .3; }
+.skin-checkers .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; box-shadow: none; background: none; }
+.skin-checkers .slot.spinning { opacity: 1; color: rgba(255, 255, 255, .3); animation: chk-slide .24s ease-in-out infinite alternate; }
+.skin-checkers .slot.spinning:nth-of-type(2n) { animation-direction: alternate-reverse; }
+@keyframes chk-slide { from { transform: translate(-.06em, -.04em); } to { transform: translate(.06em, .04em); } }
+.skin-checkers .slot.revealed { animation: chk-jump .55s backwards; }
+@keyframes chk-jump {
+  0% { transform: translate(-.6em, 0) scale(1); color: rgba(255, 255, 255, .3); animation-timing-function: cubic-bezier(.3, .6, .5, 1); }
+  35% { transform: translate(-.3em, -.4em) scale(1.15); }
+  60% { transform: translate(0, .03em) scale(.97); color: #fff; animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  78% { transform: translateY(-.04em); }
+  100% { transform: none; }
+}
+/* Dès Mythic (.chk-king, posée par la scène) : chaque pion devient une dame (une couronne d'or au-dessus). */
+.num-card.skin-checkers.chk-king .slot:not(.ghost)::after { content: '♛'; position: absolute; top: -.62em; left: 50%; transform: translateX(-50%); font-size: .55em; color: #facc15; text-shadow: 0 0 .2em #fde047, 0 .05em 0 #78350f; animation: chk-crown .5s cubic-bezier(.3, 1.6, .5, 1) backwards; }
+@keyframes chk-crown { from { transform: translate(-50%, -.6em) scale(.3); } }
+@media (prefers-reduced-motion: reduce) { .skin-checkers .slot, .skin-checkers .slot::after { animation: none !important; } }
+.side-checkers { --side-border: #7c4a1e; --side-glow: 0 0 14px rgba(185, 28, 28, .3); --side-ink: #dc2626;
+  --side-bg: conic-gradient(rgba(185, 28, 28, .2) 0 25%, rgba(24, 24, 27, .25) 0 50%, rgba(185, 28, 28, .2) 0 75%, rgba(24, 24, 27, .25) 0) 0 0 / 28px 28px;
+  --deco-a: '⛀'; --deco-b: '⛂'; }
+.side-checkers::before { animation: chk-hop 1.4s ease-in-out infinite; }
+@keyframes chk-hop { 0%, 60%, 100% { transform: none; } 75% { transform: translate(8px, -8px); } 90% { transform: translate(16px, 0); } }
+.room-stage.many .side-checkers::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-checkers::before { animation: none; } }
+/* ------------------------------------------------------------------ My IQ (idée de G8_floppa, 2026-10-28 : « a skin that
+   says (my IQ) and then it shows the number »). Une feuille de test quadrillée, une marge rouge, « MY IQ: » écrit en
+   haut à gauche au stylo. Les chiffres sont écrits au stylo bleu. Pendant le tirage, le stylo hésite (les chiffres
+   tremblent, gommés). Un chiffre qui se pose : il est écrit d'un trait, net. La correction au stylo rouge, le tampon
+   GENIUS et le bonnet d'âne : js/skinfx.js (SCENES.iq). */
+.num-card.skin-iq {
+  background:
+    linear-gradient(90deg, transparent .9em, rgba(239, 68, 68, .55) .9em calc(.9em + 1px), transparent calc(.9em + 1px)),
+    repeating-linear-gradient(0deg, transparent 0 .3em, rgba(59, 130, 246, .2) .3em calc(.3em + 1px)),
+    linear-gradient(180deg, #fffdf7, #f7f3e8);
+  border: 1px solid #d6d3d1; border-radius: .2rem; color: #1d4ed8;
+  box-shadow: 0 .05em .1em rgba(0, 0, 0, .15), 0 10px 18px rgba(0, 0, 0, .25);
+  padding: .55em .6em .25em 1.15em;
+}
+.num-card.skin-iq::before { content: 'MY IQ:'; position: absolute; left: .45em; top: .14em; z-index: 1; pointer-events: none;
+  font-family: 'Marker Felt', 'Chalkboard SE', 'Bradley Hand', cursive; font-weight: 700; font-size: .3em; letter-spacing: .04em; color: #1e3a8a; }
+.skin-iq .slot { position: relative; font-family: 'Bradley Hand', 'Chalkboard SE', 'Segoe Print', 'Comic Neue', cursive; font-weight: 700; font-variant-numeric: lining-nums;
+  color: #1d4ed8; text-shadow: 0 0 .02em #1e3a8a; }
+.skin-iq .slot.ghost { opacity: .18; }
+.skin-iq .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-iq .slot.spinning { opacity: .35; color: #64748b; animation: iq-doubt .2s steps(2) infinite; }
+@keyframes iq-doubt { from { transform: rotate(-4deg) translateY(.02em); } to { transform: rotate(3deg) translateY(-.02em); } }
+.skin-iq .slot.revealed { animation: iq-write .5s backwards; }
+@keyframes iq-write {
+  0% { clip-path: inset(0 100% 0 0); transform: translateY(.03em); animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+  55% { clip-path: inset(0 0 0 0); transform: none; }
+  100% { clip-path: inset(-20% -20% -20% -20%); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-iq .slot { animation: none !important; } }
+.side-iq { --side-border: #93c5fd; --side-glow: 0 0 12px rgba(59, 130, 246, .2); --side-ink: #dc2626;
+  --side-bg: linear-gradient(90deg, transparent 22px, rgba(239, 68, 68, .3) 22px 23px, transparent 23px), repeating-linear-gradient(0deg, transparent 0 15px, rgba(59, 130, 246, .14) 15px 16px), linear-gradient(180deg, rgba(255, 253, 247, .08), rgba(247, 243, 232, .06));
+  --deco-a: '🧠'; --deco-b: 'A+'; }
+.side-iq::before { animation: iq-think 2s ease-in-out infinite; }
+@keyframes iq-think { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15) rotate(-6deg); } }
+.room-stage.many .side-iq::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-iq::before { animation: none; } }
+/* ------------------------------------------------------------------ Pickle (idée de Dylanrulez123, 2026-10-28 : « a
+   pickle skin to match the pickle button »). Un gros cornichon couché, assorti au bouton Pickle : vert bosselé (des
+   pustules plus claires), reflet de saumure, bouts arrondis. Les chiffres sont gravés dedans, vert pâle comme la chair
+   du cornichon, bordés de vert sombre. Pendant le tirage, il gigote (matière molle : il s'écrase et s'étire). Un chiffre
+   qui se pose : un « squish », il s'écrase et reprend sa forme, une goutte de saumure gicle. Saumure, aneth, tranches et
+   BIG DILL : js/skinfx.js (SCENES.dill). Identifiant « dill » : « pickle » est déjà le bouton. */
+.num-card.skin-dill {
+  background:
+    radial-gradient(circle at 12% 30%, #a3e635 0 .07em, transparent .08em), radial-gradient(circle at 28% 72%, #a3e635 0 .06em, transparent .07em),
+    radial-gradient(circle at 46% 22%, #a3e635 0 .05em, transparent .06em), radial-gradient(circle at 63% 78%, #a3e635 0 .07em, transparent .08em),
+    radial-gradient(circle at 80% 30%, #a3e635 0 .06em, transparent .07em), radial-gradient(circle at 92% 66%, #a3e635 0 .05em, transparent .06em),
+    linear-gradient(180deg, rgba(255, 255, 255, .35) 0 18%, transparent 30%),
+    linear-gradient(180deg, #65a30d, #4d7c0f 55%, #365314);
+  border: 2px solid #1a2e05; border-radius: 999px; color: #ecfccb;
+  box-shadow: inset 0 -.12em .2em rgba(26, 46, 5, .5), inset 0 .06em .1em rgba(255, 255, 255, .25), 0 0 14px rgba(132, 204, 22, .3), 0 10px 18px rgba(0, 0, 0, .35);
+  padding-left: 1em; padding-right: 1em;
+}
+.skin-dill .slot { position: relative; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900;
+  color: #ecfccb; -webkit-text-stroke: .025em #1a2e05; text-shadow: 0 .05em 0 #1a2e05, 0 0 .15em rgba(217, 249, 157, .5); }
+.skin-dill .slot.ghost { opacity: .22; }
+.skin-dill .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-dill .slot.spinning { opacity: .55; animation: dill-wiggle .18s ease-in-out infinite alternate; }
+.skin-dill .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes dill-wiggle { from { transform: scale(1.06, .92); } to { transform: scale(.94, 1.06); } }
+.skin-dill .slot.revealed { animation: dill-squish .55s backwards; }
+@keyframes dill-squish {
+  0% { transform: scale(1.3, .6); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); }
+  40% { transform: scale(.88, 1.14); }
+  65% { transform: scale(1.05, .96); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-dill .slot { animation: none !important; } }
+.side-dill { --side-border: #4d7c0f; --side-glow: 0 0 14px rgba(132, 204, 22, .3); --side-ink: #65a30d;
+  --side-bg: radial-gradient(circle, rgba(163, 230, 53, .25) 0 3px, transparent 4px) 0 0 / 26px 22px, linear-gradient(180deg, rgba(101, 163, 13, .14), rgba(54, 83, 20, .14));
+  --deco-a: '🥒'; --deco-b: '🫙'; }
+.side-dill::before { animation: dill-sq 1.2s ease-in-out infinite; }
+@keyframes dill-sq { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2, .8); } }
+.room-stage.many .side-dill::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-dill::before { animation: none; } }
