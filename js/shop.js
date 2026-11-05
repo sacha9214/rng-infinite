@@ -304,6 +304,16 @@
     { id: 'crates', name: 'Crate Smash', emoji: '📦', price: 1800, desc: 'Every digit hides in a wooden crate or barrel until a thrown ball smashes it open; Mythic rolls bring a barrage of colored balls', idea: 'jjcoolcid1' },
     // Idée de yukitsunodaiscool (2026-10-22) : une grue lâche des briques sur les chiffres ; dès Mythic, une démolition.
     { id: 'crane', name: 'Construction', emoji: '🏗️', price: 2000, desc: 'A crane drops every brick digit onto the site in a cloud of dust; Mythic rolls end in a big demolition', idea: 'yukitsunodaiscool' },
+    // ==== Skins du 2026-11-05, lot 5 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de KMC (2026-10-22) : « a carnival robotic horse that goes across the numbers as you roll ». Un manège.
+    { id: 'carousel', name: 'Carousel', emoji: '🎠', price: 1900, desc: 'A fairground carousel: gilded digits bob like horses on their poles, a carousel horse rides across the top, and Mythic rolls set the whole ride spinning', idea: 'KMC' },
+    // Idée de Dylanrulez123 (2026-10-23) : « a void reaper ». Une silhouette encapuchonnée du vide, sans faux (pas d'armes).
+    { id: 'reaper', name: 'Void Reaper', emoji: '💀', price: 2600, desc: 'A hooded shadow of the void watches your roll: every digit is a soul it sends down, and Mythic rolls spread its cloak while souls circle your number', idea: 'Dylanrulez123' },
+    // Idée de leo (2026-10-24) : « also cyber punk ». Néon, pluie et glitch.
+    { id: 'cyber', name: 'Cyberpunk', emoji: '🌃', price: 2200, desc: 'Glitching neon digits in a rainy city; every digit snaps in through a glitch, and great rolls light up the skyline and the neon signs', idea: 'leo' },
+    // Idées de casmicgraything (2026-10-24 : un projecteur par chiffre, les lumières qui s'affolent dès Mythic ; 2026-10-29 :
+    // une scène, un rideau rouge, un grand projecteur final, des fleurs sur Mythic, des choux et un « BOO » sur un raté).
+    { id: 'stage', name: 'Stage', emoji: '🎭', price: 2400, desc: 'The curtain opens and a spotlight lands on every digit, then on the whole number; Mythic rolls bring golden light and roses, and bad rolls get cabbages and a BOO', idea: 'casmicgraything' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

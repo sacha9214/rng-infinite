@@ -171,9 +171,13 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
   yukitsunodaiscool [f727644461a7] (Mythic: a demolition, dust and bricks).
 
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Next: carnival robot horse
-  [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
-  spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
+**Lot 5 — `claude/skins-lot5`** (block "lot 5 du 2026-11-05" in `js/skinfx.js`): `carousel` Carousel 🎠 1,900 — KMC
+[93f869da718a]; `reaper` Void Reaper 💀 2,600 — Dylanrulez123 [9d067ec79413] (no scythe: no weapons); `cyber` Cyberpunk
+🌃 2,200 — leo [a7dba4706e5d]; `stage` Stage 🎭 2,400 — casmicgraything's spotlight [abe1d36527c4] and stage
+[610304ef1cdb] merged. **Not built:** HSI's knuckle smashing a rock [5b5f29b0cc52] is the existing Rock Smash skin
+(already HSI's idea, `rocksmash`): Sacha can mark it Done.
+
+- Next: sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
   Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
   [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
   [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
