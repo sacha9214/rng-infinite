@@ -6024,6 +6024,25 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Succès communs : les tirages des deux modes comptent.
   assert.ok(Ach.unlocked({ 'h:rolls': '100' }).includes('regular'));
   assert.ok(Ach.unlocked({ 'h:t:mythic': '1' }).includes('mythic'));
+  // Badges du 2026-11-05 : Quarter Epoch et Three-Quarter Epoch (cri cri 3), Trilogy (Starharvest) en mode normal, et le
+  // pack du mode difficile (tools/source/hard.json : CrazyMiner22, Aussie Haüs, kaz par CococoC, 0casmictechthing…).
+  { const hasN = (n, id) => engine.analyze(n).earnedIds.includes(id), hasH = (n, id) => H.analyze(n).earnedIds.includes(id);
+    const HARD_IDS = require(path.join(ROOT, 'tools/source/hard.json')).map(b => b.id);
+    assert.ok(HARD_IDS.every(id => H.byId.has(id) && H.byId.get(id).hard && !engine.byId.has(id)), 'pack difficile : dans le moteur difficile seulement');
+    for (const [n, id] of [[12500, 'QUARTER_EPOCH'], [997500, 'THREE_QUARTER_EPOCH'], [519225, 'TRILOGY'], [696969, 'TRILOGY'], [999999, 'TRILOGY']]) assert.ok(hasN(n, id), `${id} sur ${n}`);
+    assert.ok(!hasN(12250, 'QUARTER_EPOCH') && !hasN(519226, 'TRILOGY') && !hasN(51922, 'TRILOGY') && !hasN(510025, 'TRILOGY'), 'pas de 00, six chiffres');
+    assert.deepEqual(engine.highlight('TRILOGY', 519225), [[0, 1], [2, 3], [4, 5]]);
+    assert.ok(hasH(1012500, 'QUARTER_EPOCH') && hasH(519225, 'TRILOGY'), 'les badges normaux existent aussi en mode difficile');
+    for (const [n, id] of [[1777777789, 'CONTIGUOUS_SEVENS'], [5555555555, 'CONTIGUOUS_TENS'], [1234567, 'SEQUENCE_7'], [9876543210, 'SEQUENCE_10'], [6767676767, 'BRAINROT_TEN'],
+      [1676767679, 'BRAINROT_EIGHT'], [2147483647, 'INT32_MAX'], [2147483647, 'MERSENNE_PRIME'], [524287, 'MERSENNE_PRIME'], [1123581321, 'FIB_EXACT_10'], [9112358132, 'FIB_CONTAINS_9'],
+      [1023456789, 'PANDIGITAL'], [1234567, 'SEVEN_DIGITS']]) assert.ok(hasH(n, id), `${id} sur ${n}`);
+    assert.ok(!hasH(1777777189, 'CONTIGUOUS_SEVENS') && !hasH(1234567890, 'SEQUENCE_10') && !hasH(524289, 'MERSENNE_PRIME') && !hasH(1123456789, 'PANDIGITAL'));
+    // Familles : seul le meilleur compte.
+    assert.ok(H.analyze(5555555555).scoringIds.includes('CONTIGUOUS_TENS') && !H.analyze(5555555555).scoringIds.includes('CONTIGUOUS_SEVENS'));
+    assert.ok(H.analyze(6767676767).scoringIds.includes('BRAINROT_TEN') && !H.analyze(6767676767).scoringIds.includes('BRAINROT_EIGHT'));
+    // Comptes exacts de tools/build-hard.mjs (PARTS), pas un prolongement de l'échantillon.
+    const ho = require(path.join(ROOT, 'data/hard-odds.json')).badges;
+    assert.deepEqual(['BRAINROT_TEN', 'INT32_MAX', 'FIB_EXACT_10', 'SEQUENCE_10', 'CONTIGUOUS_TENS', 'MERSENNE_PRIME'].map(id => ho[id]), [1, 1, 1, 1, 9, 8]); }
   // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-05) : les tirages normaux ne comptent pas.
   { const hardTitles = st => Ach.unlocked(st).filter(id => ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'].includes(id));
     assert.deepEqual(hardTitles({ rolls: '200000', 't:mythic': '5', 't:infinite': '1', 'h:t:anomaly': '3', 'h:rolls': '4999' }), [], 'rien sans tirage du mode difficile');
@@ -6862,8 +6881,8 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 1, `${id} : déjà à lui, rien`);
     await Lib.recordRoll(p2.playerId, 69, Date.now()); await tick();
     for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 2, `${id} : un 2e joueur`);
-    const h0 = own('hbown'), hids = Lib.hardEngine().analyze(1234567890).earnedIds;
-    await Lib.recordHardRoll(p1.playerId, 1234567890, Date.now()); await tick();
+    const h0 = own('hbown'), hids = Lib.hardEngine().analyze(4820193755).earnedIds; // un tirage Common : 1234567890 vaut 13 milliards d'XP depuis Sequence (9) et Pandigital (2026-11-05) et fausserait le Hall of Fame plus bas
+    await Lib.recordHardRoll(p1.playerId, 4820193755, Date.now()); await tick();
     for (const id of hids) assert.equal(own('hbown')[id] - (h0[id] || 0), 1, `difficile ${id} +1`);
     assert.deepEqual(Object.fromEntries(ids69.map(id => [id, own()[id]])), Object.fromEntries(ids69.map(id => [id, (o0[id] || 0) + 2])), 'le mode difficile ne touche pas au normal');
     Hof.clearOwnersCache();
@@ -6914,10 +6933,10 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     run([['HSET', `stats:${ann.playerId}`, 'rolls', 9999]]);
     const t3 = Date.now(); await Lib.recordRoll(ann.playerId, 123458, t3); await tick();
     assert.equal(hof()['rolls:10000'].id, ann.playerId);
-    // Mode difficile : la première de chaque grande rareté (6767676767 est Godlike).
-    await Lib.recordHardRoll(ben.playerId, 6767676767, Date.now()); await tick();
-    assert.deepEqual([hof()['h:godlike'].id, hof()['h:godlike'].n], [ben.playerId, 6767676767]);
-    assert.equal(hof()['inf:6767676767'], undefined, 'pas dans les Infinite du mode normal');
+    // Mode difficile : la première de chaque grande rareté (1212121212 est Godlike ; 6767676767 est passé Infinite avec Ultimate Brainrot, 2026-11-05).
+    await Lib.recordHardRoll(ben.playerId, 1212121212, Date.now()); await tick();
+    assert.deepEqual([hof()['h:godlike'].id, hof()['h:godlike'].n], [ben.playerId, 1212121212]);
+    assert.equal(hof()['inf:1212121212'], undefined, 'pas dans les Infinite du mode normal');
     // Rattrapage : un N plus ancien dans un historique, un 24 resté meilleur tirage (best:all), un palier d'XP et un
     // de tirages retrouvés dans l'historique (2001 : plus anciens que tout le reste du test).
     const old = { playerId: 'f4c9'.repeat(4) }, vet = { playerId: 'f4da'.repeat(4) }, grinder = { playerId: 'f4eb'.repeat(4) };
@@ -6959,7 +6978,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.deepEqual(r.body.infinite.find(x => x.n === N).first, { name: 'HofOld', t: T + 1000 });
     assert.deepEqual(r.body.xp.find(x => x.m === 1e8).first, { name: 'HofVet', t: T + 5, approx: 1 });
     assert.equal(r.body.infinite.length, 10);
-    assert.deepEqual(r.body.hard.find(x => x.tier === 'godlike'), { tier: 'godlike', first: r.body.hard.find(x => x.tier === 'godlike').first, n: 6767676767 });
+    assert.deepEqual(r.body.hard.find(x => x.tier === 'godlike'), { tier: 'godlike', first: r.body.hard.find(x => x.tier === 'godlike').first, n: 1212121212 });
     assert.equal(r.body.hard.find(x => x.tier === 'godlike').first.name, 'HofBen');
     for (const p of [ann, ben, old, vet, grinder]) assert.ok(!JSON.stringify(r.body).includes(p.playerId), 'jamais un id de joueur');
   }

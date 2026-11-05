@@ -1,0 +1,136 @@
+[
+  {
+    "id": "CONTIGUOUS_SEVENS",
+    "label": "Contiguous Sevens",
+    "desc": "Seven identical consecutive digits.",
+    "emoji": "➖➖➖➖",
+    "family": "CONTIGUOUS_RUN"
+  },
+  {
+    "id": "CONTIGUOUS_EIGHTS",
+    "label": "Contiguous Eights",
+    "desc": "Eight identical consecutive digits.",
+    "emoji": "➖➖➖➖",
+    "family": "CONTIGUOUS_RUN"
+  },
+  {
+    "id": "CONTIGUOUS_NINES",
+    "label": "Contiguous Nines",
+    "desc": "Nine identical consecutive digits.",
+    "emoji": "➖➖➖➖",
+    "family": "CONTIGUOUS_RUN"
+  },
+  {
+    "id": "CONTIGUOUS_TENS",
+    "label": "Contiguous Tens",
+    "desc": "Ten identical digits: the whole number is one digit repeated.",
+    "emoji": "➖➖➖➖",
+    "family": "CONTIGUOUS_RUN"
+  },
+  {
+    "id": "SEQUENCE_7",
+    "label": "Sequence (7)",
+    "desc": "Contains a sequence of 7 consecutive digits.",
+    "emoji": "🔢",
+    "family": "PROGRESSION"
+  },
+  {
+    "id": "SEQUENCE_8",
+    "label": "Sequence (8)",
+    "desc": "Contains a sequence of 8 consecutive digits.",
+    "emoji": "🔢",
+    "family": "PROGRESSION"
+  },
+  {
+    "id": "SEQUENCE_9",
+    "label": "Sequence (9)",
+    "desc": "Contains a sequence of 9 consecutive digits.",
+    "emoji": "🔢",
+    "family": "PROGRESSION"
+  },
+  {
+    "id": "SEQUENCE_10",
+    "label": "Sequence (10)",
+    "desc": "A sequence of 10 consecutive digits: only 9876543210 has one.",
+    "emoji": "🔢",
+    "family": "PROGRESSION"
+  },
+  {
+    "id": "BRAINROT_EIGHT",
+    "label": "Brainrot Overload",
+    "desc": "Contains \"67676767\".",
+    "emoji": "🫠",
+    "family": "SIXTY_SEVEN"
+  },
+  {
+    "id": "BRAINROT_TEN",
+    "label": "Ultimate Brainrot",
+    "desc": "Exactly \"6767676767\".",
+    "emoji": "🫠",
+    "family": "SIXTY_SEVEN"
+  },
+  {
+    "id": "INT32_MAX",
+    "label": "32-bit Limit",
+    "desc": "Exactly 2147483647 (2³¹ − 1): the biggest number a 32-bit signed integer can hold.",
+    "emoji": "💾"
+  },
+  {
+    "id": "MERSENNE_PRIME",
+    "label": "Mersenne Prime",
+    "desc": "A prime that is a power of two minus one: 3, 7, 31, 127, 8191, 131071, 524287 or 2147483647.",
+    "emoji": "🧮"
+  },
+  {
+    "id": "FIB_CONTAINS_7",
+    "label": "Fibonacci Slice (7)",
+    "desc": "Contains \"1123581\": 1, 1, 2, 3, 5, 8, 1…",
+    "emoji": "🐚",
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_CONTAINS_8",
+    "label": "Fibonacci Slice (8)",
+    "desc": "Contains \"11235813\": 1, 1, 2, 3, 5, 8, 13.",
+    "emoji": "🐚",
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_CONTAINS_9",
+    "label": "Fibonacci Slice (9)",
+    "desc": "Contains \"112358132\": 1, 1, 2, 3, 5, 8, 13, 2…",
+    "emoji": "🐚",
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "FIB_EXACT_10",
+    "label": "Fibonacci Ten",
+    "desc": "Exactly \"1123581321\": 1, 1, 2, 3, 5, 8, 13, 21.",
+    "emoji": "🐚",
+    "family": "FIB_SLICE"
+  },
+  {
+    "id": "PANDIGITAL",
+    "label": "Pandigital",
+    "desc": "Uses all ten digits, each one exactly once.",
+    "emoji": "🔟"
+  },
+  {
+    "id": "SEVEN_DIGITS",
+    "label": "Seven Digits",
+    "desc": "Has exactly seven digits.",
+    "emoji": "🌈"
+  },
+  {
+    "id": "EIGHT_DIGITS",
+    "label": "Eight Digits",
+    "desc": "Has exactly eight digits.",
+    "emoji": "🐙"
+  },
+  {
+    "id": "NINE_DIGITS",
+    "label": "Nine Digits",
+    "desc": "Has exactly nine digits.",
+    "emoji": "🐈"
+  }
+]
