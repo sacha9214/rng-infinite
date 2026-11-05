@@ -107,11 +107,20 @@
   // ---- Fond Keyboard ASMR (idée de kingston, 2026-11-01) : la touche qu'on enfonce en cliquant sur le fond. Un « thock »
   // feutré et grave (une touche épaisse sur un clavier rembourré), un peu différent selon k (0 à 5) pour ne pas sonner
   // en boucle ; big : la barre d'espace ou une grande touche, plus grave et plus longue. Le relâchement suit, plus léger.
+  // Plus croquant et plus fort (dog, 2026-11-01 : « isnt crunchy and barely makes a sound. Please make it like a wax crunch
+  // asmr » ; LEVIATHAN, 2026-11-02 : pas de son). Mesuré : l'ancien « thock » n'avait presque rien au-dessus de 1 kHz (énergie
+  // des aigus 18 dB sous le bouton Wax), inaudible sur un haut-parleur de téléphone ou de portable. Le coup grave reste,
+  // mais la touche écrase maintenant une croûte de cire (crackle, la salve de micro-cassures sèches du skin ASMR), avec le
+  // clic bref du bas de course ; le relâchement claque un peu plus haut. Normalisé, puis joué plus fort (recette wallKey).
   const keyThock = (k, big) => {
     const f = big ? 118 : 150 + k * 9, bp = big ? 520 : 640 + k * 55;
     const body = S.sum(S.osc(big ? .16 : .11, t => f - 55 * Math.exp(-t / .018), S.expo(big ? .04 : .028, .0012)), S.gain(S.shape(S.filter(S.noise(.03, 60 + k), 'bp', bp, 1.4), S.expo(.007, .0006)), .6));
-    const lift = S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 1.5, 1.6), S.expo(.004, .0005)), .25);
-    return S.sum(body, S.delayed(lift, (big ? .085 : .07) + k * .004));
+    const crunch = crackle(300 + k * 11 + big * 70, big ? 30 : 22, big ? .13 : .09);
+    const click = S.shape(S.filter(S.noise(.012, 80 + k), 'bp', 3200 + k * 260, 1.2), S.expo(.0018, .0002));
+    const lift = S.sum(S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 2.2, 1.6), S.expo(.004, .0005)), .35), S.gain(crackle(400 + k * 13 + big * 70, 6, .02), .5));
+    const x = S.sum(S.gain(body, .75), S.gain(crunch, 1.1), S.gain(click, .6), S.delayed(lift, (big ? .085 : .07) + k * .004));
+    let m = 0; for (let i = 0; i < x.length; i++) m = Math.max(m, Math.abs(x[i]));
+    return S.gain(x, m ? .95 / m : 1);
   };
   // ---- Fond Thunderstorm (idée de finnnnn, 2026-11-01) : un tonnerre lointain, « pas fort, plutôt calme ». Du bruit
   // filtré très grave qui monte doucement, roule (deux ondulations lentes) et s'éteint en trois secondes ; une bande un peu
@@ -356,7 +365,7 @@
     ping: () => [[softChime(S.note(12), .45), 0, .15, -.1, .3], [softChime(S.note(14), .6), .1, .12, .1, .35]],
     // Fond Keyboard ASMR : une touche enfoncée au clic (k : la variante, big : barre d'espace). Fond Thunderstorm : le
     // tonnerre lointain après un éclair (k : la variante, de 0 à 2), bas et un peu à gauche ou à droite.
-    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .2 : .17, ((k % 5) / 5 - .4) * .5, .06]],
+    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .32 : .3, ((k % 5) / 5 - .4) * .5, .06]],
     thunder: ({ k = 0 }) => [[rumble(k), 0, .17, (k - 1) * .35, .45]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
