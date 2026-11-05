@@ -98,6 +98,32 @@
     const tap = S.shape(S.filter(S.noise(.015, 70 + k), 'hp', 3500), S.expo(.0018, .0002));
     return S.sum(...parts, S.gain(tap, .45));
   };
+  // Piano (skin Overture, promis à 0casmictechthing, 2026-10-30) : une corde frappée. Six partiels légèrement étirés vers
+  // l'aigu (l'inharmonicité d'une vraie corde), les aigus s'éteignent plus vite que la fondamentale, et le petit choc
+  // feutré du marteau au début. vel : la force de frappe (plus de marteau et d'aigus).
+  const piano = (f, dur = 1.4, vel = 1) => {
+    const parts = [[1, 1], [2, .42 * vel], [3, .2 * vel], [4, .1], [5, .05], [6, .03]].map(([m, a]) => {
+      const fm = f * m * Math.sqrt(1 + .0004 * m * m), tau = (dur * .32) / Math.pow(m, .65);
+      return S.gain(S.osc(Math.min(dur, tau * 5 + .05), () => fm, t => Math.min(1, t / .002) * (.6 * Math.exp(-t / (tau * .25)) + .4 * Math.exp(-t / tau))), a);
+    });
+    const hammer = S.shape(S.filter(S.noise(.03, Math.round(f)), 'bp', Math.min(3800, f * 4), .8), S.expo(.005, .0004));
+    return S.gain(S.sum(...parts, S.gain(hammer, .3 * vel)), .55);
+  };
+  // La note d'un chiffre (0 à 9) : la gamme de do majeur, do4 à mi5 ; un nombre se joue comme une petite mélodie.
+  const PIANO_KEY = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+  const pianoNote = semis => 261.63 * Math.pow(2, semis / 12);
+  // Un accord égrené (les notes en demi-tons depuis do4), du grave à l'aigu, un peu plus lent pour les grands.
+  const pianoChord = (semis, level, gap = .028, dur = 2.2) => semis.map((n, k) => [piano(pianoNote(n), dur, .8 + .2 * (k / semis.length)), k * gap, level / Math.sqrt(semis.length) * 1.6, ((k / Math.max(1, semis.length - 1)) - .5) * .5, .35]);
+  // L'accord de chaque rareté (majeurs et mineurs, comme demandé) ; Infinite : la mineur 7 (la, do, mi, sol).
+  // Niveau de chaque accord, mesuré contre le son de rareté d'origine (un Common reste discret, aucune crête au-dessus
+  // de l'impact Mythic d'origine).
+  const OVERTURE_LEVEL = { common: .3, uncommon: .44, rare: .62, epic: .7, anomaly: .72, mythic: .62, celestial: .75, divine: .85, godlike: .9, infinite: .95 };
+  const OVERTURE_CHORDS = {
+    trash: [-12, -11, -10], garbage: [-12, -11, -10], landwaste: [-13, -12, -11], // une grappe grave qui sonne faux
+    common: [0, 7], uncommon: [0, 4, 7], rare: [-7, -3, 0, 5], epic: [0, 4, 7, 11], anomaly: [-8, -5, -1, 4, 7],
+    mythic: [-12, -5, 0, 4, 7, 12], celestial: [-7, 0, 4, 7, 9, 14], divine: [-10, -3, 2, 6, 9, 14, 18],
+    godlike: [-15, -8, -3, 1, 4, 9, 13, 16], infinite: [-15, -3, 0, 4, 7, 9, 12, 16, 19],
+  };
   // Thock : touche lubrifiée, un coup grave et mat (le bas de course) suivi du retour, plus discret.
   const thock = () => {
     const body = S.sum(S.osc(.12, t => 180 - 70 * Math.exp(-t / .02), S.expo(.03, .001)), S.gain(S.shape(S.filter(S.noise(.03, 7), 'bp', 700, 1.6), S.expo(.006, .0005)), .7));
@@ -107,11 +133,20 @@
   // ---- Fond Keyboard ASMR (idée de kingston, 2026-11-01) : la touche qu'on enfonce en cliquant sur le fond. Un « thock »
   // feutré et grave (une touche épaisse sur un clavier rembourré), un peu différent selon k (0 à 5) pour ne pas sonner
   // en boucle ; big : la barre d'espace ou une grande touche, plus grave et plus longue. Le relâchement suit, plus léger.
+  // Plus croquant et plus fort (dog, 2026-11-01 : « isnt crunchy and barely makes a sound. Please make it like a wax crunch
+  // asmr » ; LEVIATHAN, 2026-11-02 : pas de son). Mesuré : l'ancien « thock » n'avait presque rien au-dessus de 1 kHz (énergie
+  // des aigus 18 dB sous le bouton Wax), inaudible sur un haut-parleur de téléphone ou de portable. Le coup grave reste,
+  // mais la touche écrase maintenant une croûte de cire (crackle, la salve de micro-cassures sèches du skin ASMR), avec le
+  // clic bref du bas de course ; le relâchement claque un peu plus haut. Normalisé, puis joué plus fort (recette wallKey).
   const keyThock = (k, big) => {
     const f = big ? 118 : 150 + k * 9, bp = big ? 520 : 640 + k * 55;
     const body = S.sum(S.osc(big ? .16 : .11, t => f - 55 * Math.exp(-t / .018), S.expo(big ? .04 : .028, .0012)), S.gain(S.shape(S.filter(S.noise(.03, 60 + k), 'bp', bp, 1.4), S.expo(.007, .0006)), .6));
-    const lift = S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 1.5, 1.6), S.expo(.004, .0005)), .25);
-    return S.sum(body, S.delayed(lift, (big ? .085 : .07) + k * .004));
+    const crunch = crackle(300 + k * 11 + big * 70, big ? 30 : 22, big ? .13 : .09);
+    const click = S.shape(S.filter(S.noise(.012, 80 + k), 'bp', 3200 + k * 260, 1.2), S.expo(.0018, .0002));
+    const lift = S.sum(S.gain(S.shape(S.filter(S.noise(.02, 70 + k), 'bp', bp * 2.2, 1.6), S.expo(.004, .0005)), .35), S.gain(crackle(400 + k * 13 + big * 70, 6, .02), .5));
+    const x = S.sum(S.gain(body, .75), S.gain(crunch, 1.1), S.gain(click, .6), S.delayed(lift, (big ? .085 : .07) + k * .004));
+    let m = 0; for (let i = 0; i < x.length; i++) m = Math.max(m, Math.abs(x[i]));
+    return S.gain(x, m ? .95 / m : 1);
   };
   // ---- Fond Thunderstorm (idée de finnnnn, 2026-11-01) : un tonnerre lointain, « pas fort, plutôt calme ». Du bruit
   // filtré très grave qui monte doucement, roule (deux ondulations lentes) et s'éteint en trois secondes ; une bande un peu
@@ -356,7 +391,7 @@
     ping: () => [[softChime(S.note(12), .45), 0, .15, -.1, .3], [softChime(S.note(14), .6), .1, .12, .1, .35]],
     // Fond Keyboard ASMR : une touche enfoncée au clic (k : la variante, big : barre d'espace). Fond Thunderstorm : le
     // tonnerre lointain après un éclair (k : la variante, de 0 à 2), bas et un peu à gauche ou à droite.
-    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .2 : .17, ((k % 5) / 5 - .4) * .5, .06]],
+    wallKey: ({ k = 0, big = 0 }) => [[keyThock(k, big), 0, big ? .32 : .3, ((k % 5) / 5 - .4) * .5, .06]],
     thunder: ({ k = 0 }) => [[rumble(k), 0, .17, (k - 1) * .35, .45]],
     bubblePop: ({ k }) => [[S.osc(.07, t => (520 + k * 70) * (1 + 14 * t), S.expo(.03, .001)), 0, .3, (k % 5) / 5 - .4, .18]],
     // Le bouton Generate.
@@ -375,8 +410,10 @@
     // skin 'asmr' : la note garde sa place dans la gamme, plus douce, et la cire craque dessous (plus fort au dernier).
     // skin 'lab' : la note, plus douce, et le tube tinte contre le portoir (deux tintements au dernier, comme un « tchin »).
     // pack : le pack de sons acheté (PACKS) ; les skins ASMR et Lab gardent leur son, c'est leur identité (js/app.js).
-    lock: ({ i, soft, final, skin, pack }) => PACKS[pack] && !skin
+    lock: ({ i, d, soft, final, skin, pack }) => PACKS[pack] && !skin
       ? [[PACKS[pack].lock(i, final), 0, PACKS[pack].level * (soft ? .5 : final ? 1.15 : 1), ((i * 37) % 9) / 18 - .25, .25]]
+      : skin === 'overture'
+        ? [[piano(pianoNote(PIANO_KEY[d === undefined ? i % 10 : d]), final ? 1.8 : 1.3, final ? 1 : .85), 0, soft ? .2 : final ? .62 : .52, ((i * 37) % 9) / 18 - .25, .3]] // niveaux mesurés contre la note habituelle
       : skin === 'asmr'
       ? [[S.lock(S.note(i), .3), 0, soft ? .08 : final ? .16 : .12, 0, .25], [crackle(90 + i, final ? 46 : 30, final ? .32 : .2), 0, soft ? .32 : final ? .8 : .65, ((i * 37) % 9) / 18 - .25, .12]]
       : skin === 'lab'
@@ -392,8 +429,13 @@
       return voices;
     },
     // La rareté se révèle : d'un coup sourd pour un tirage raté à l'impact du trailer pour un Mythic.
-    tier: ({ tier, pack }) => {
+    tier: ({ tier, pack, skin }) => {
       if (PACKS[pack]) return packTier(PACKS[pack], tier, RECIPES.tier({ tier }));
+      // Overture : la rareté joue son accord au piano (un raté, une grappe qui sonne faux) ; dès Mythic, un grave dessous.
+      if (skin === 'overture' && OVERTURE_CHORDS[tier]) {
+        const p = ['mythic', 'celestial', 'divine', 'godlike', 'infinite'].indexOf(tier), ch = OVERTURE_CHORDS[tier];
+        return pianoChord(ch, OVERTURE_LEVEL[tier] || .3, p >= 0 ? .04 + .01 * p : .03, p >= 0 ? 3 : 2).concat(p >= 0 ? [[S.gain(S.boom(1.6, 90, 40), .7), .02, .3, 0, .4]] : []); // crêtes mesurées : pas plus haut que l'impact Mythic d'origine
+      }
       // Au-dessus de Mythic : le même impact, suivi d'un, deux ou trois autres et d'une gerbe de cloches de plus en plus longue.
       if (tier === 'celestial') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .7, .3, .6], ...arpeggio(.3, .8)];
       if (tier === 'divine') return [[S.impact('mythic'), 0, 1.1, 0, .5], [S.impact('gold'), .42, .75, -.3, .6], [S.impact('logo'), .9, .8, 0, .65], ...arpeggio(.3, 1.3), ...arpeggio(.22, 1.6)];

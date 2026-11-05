@@ -1,5 +1,7 @@
 // GET  /api/shop?me=<playerId>                                   → pièces, skins possédés, skin équipé
 // POST /api/shop { playerId, secret, action: 'buy' | 'equip', skin } → achète (et équipe) ou équipe un skin
+//   equip: false sur un achat (buy, buywall, buybutton, buysound) : acheté sans être équipé (réglage du joueur, idée
+//   d'infinity, 2026-11-05)
 // GET  /api/shop?owners=1                                         → combien de joueurs possèdent chaque objet (public, en cache)
 // POST /api/shop { playerId, secret, action: 'case', case }           → ouvre une caisse (skin, fond d'écran, bouton ou pack de sons, tiré par le serveur)
 // POST /api/shop { playerId, secret, action: 'button' | 'buybutton', button } → équipe ou achète un bouton de tirage
@@ -77,6 +79,8 @@ async function ownerCounts() {
 // idée (champ idea) — achat direct, et depuis le 2026-10-28 aussi quand ce skin sort d'une caisse payée (finnnnn ne
 // touchait rien sur les skins tirés dans les caisses) : 5 % de ce que l'acheteur a payé (le prix du skin, ou celui de la
 // caisse). Jamais pour soi-même, rien pour une caisse ouverte avec une clé ; un nom introuvable ne bloque rien.
+// Fonds d'écran aussi depuis le 2026-11-05 (idée de qwertyuiop : « you get 5% of wallpaper money also ») : achat direct
+// (buywall) et fond sorti d'une caisse de fonds payée, même règle.
 async function payIdea(item, buyer, paid) {
   if (!item || !item.idea || !(paid > 0)) return;
   const author = await findPlayer(item.idea).catch(() => null), cut = Math.round(paid * Shop.IDEA_SHARE);
@@ -190,7 +194,7 @@ module.exports = async (req, res) => {
           gained(box.emo ? 'emotes' : box.snd ? 'sounds' : box.btn ? 'buttons' : box.wall ? 'walls' : 'skins', won));
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
-        if (!duplicate && !box.emo && !box.snd && !box.btn && !box.wall) await payIdea(Shop.byId.get(won), playerId, price);
+        if (!duplicate && !box.emo && !box.snd && !box.btn) await payIdea((box.wall ? Shop.wallById : Shop.byId).get(won), playerId, price);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -229,8 +233,9 @@ module.exports = async (req, res) => {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], gained('walls', item.id), ...eco('out:wallpapers', item.price)]);
           await checkCollection(playerId);
+          await payIdea(item, playerId, item.price); // 5 % pour le joueur qui a eu l'idée du fond (qwertyuiop, 2026-11-05)
         }
-        await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché
+        if (body.equip !== false) await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché, sauf réglage contraire
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -251,7 +256,7 @@ module.exports = async (req, res) => {
           ]);
           await checkCollection(playerId);
         }
-        await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé
+        if (body.equip !== false) await redis([['HSET', 'btns', playerId, item.id]]); // acheté = équipé, sauf réglage contraire
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -280,7 +285,7 @@ module.exports = async (req, res) => {
             ['SADD', ownedSoundsKey(playerId), item.id], gained('sounds', item.id),
           ]);
         }
-        await redis([['HSET', 'snd', playerId, item.id]]); // acheté = en service
+        if (body.equip !== false) await redis([['HSET', 'snd', playerId, item.id]]); // acheté = en service, sauf réglage contraire
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -413,7 +418,7 @@ module.exports = async (req, res) => {
           await checkCollection(playerId);
           await payIdea(skin, playerId, skin.price); // 5 % pour le joueur qui a eu l'idée du skin
         }
-        await redis([['HSET', 'skins', playerId, skin.id]]); // acheté = équipé
+        if (body.equip !== false) await redis([['HSET', 'skins', playerId, skin.id]]); // acheté = équipé, sauf réglage contraire
         return send(res, 200, await state(playerId));
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);

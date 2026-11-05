@@ -4658,6 +4658,76 @@
     };
   });
 
+  // 🦃 Turkey Roast (Thanksgiving 2026, idées d'Idkwhatnamemyself, R77 et Kj13) — des feuilles d'automne (brunes, rouges,
+  // jaunes et orange, Kj13) : quelques-unes s'envolent de chaque chiffre qui se pose, avec une volute de vapeur (il sort
+  // du four) ; pendant le tirage, une feuille tombe de temps en temps en se balançant. À la révélation, une averse de
+  // feuilles tombe sur la carte, plus fournie selon la rareté ; dès Epic, la dinde fait la roue : une gerbe de plumes
+  // jaillit en éventail derrière la carte et redescend en planant ; dès Mythic, une deuxième gerbe, plus large.
+  Object.assign(SHAPES, {
+    // feuille d'érable : cinq lobes pointus, une nervure et la queue
+    mapleleaf(c, p, s) {
+      c.beginPath();
+      for (let i = 0; i <= 30; i++) { const a = -Math.PI / 2 + (i / 30) * TAU, r = s * (.5 + .55 * Math.pow(Math.abs(Math.cos(2.5 * (a + Math.PI / 2))), .7)); c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(60,20,5,.4)'; c.lineWidth = Math.max(.6, s * .1);
+      c.beginPath(); c.moveTo(0, s * 1.5); c.lineTo(0, -s * .8); c.moveTo(0, 0); c.lineTo(-s * .7, -s * .4); c.moveTo(0, 0); c.lineTo(s * .7, -s * .4); c.stroke();
+    },
+    // feuille de chêne : allongée, au bord ondulé
+    oakleaf(c, p, s) {
+      c.beginPath();
+      for (let i = 0; i <= 28; i++) { const a = (i / 28) * TAU, r = s * (.62 + .14 * Math.sin(a * 7)); c.lineTo(Math.cos(a) * r * .62, Math.sin(a) * r * 1.5); }
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(60,20,5,.4)'; c.lineWidth = Math.max(.6, s * .1);
+      c.beginPath(); c.moveTo(0, s * 1.8); c.lineTo(0, -s * 1.1); c.stroke();
+    },
+    // plume de dinde : châtaigne, une bande sombre et la pointe crème
+    tfeather(c, p, s) {
+      const f = k => { c.beginPath(); c.moveTo(0, s * 1.8); c.bezierCurveTo(-s * .9, s * .6, -s * .8, -s * 1.6 * k, 0, -s * 1.9 * k); c.bezierCurveTo(s * .8, -s * 1.6 * k, s * .9, s * .6, 0, s * 1.8); c.fill(); };
+      c.fillStyle = '#efe0bd'; f(1); c.fillStyle = '#24100a'; f(.86); c.fillStyle = p.c; f(.76);
+      c.strokeStyle = 'rgba(239,224,189,.5)'; c.lineWidth = Math.max(.5, s * .08); c.beginPath(); c.moveTo(0, s * 2.2); c.lineTo(0, -s * 1.4); c.stroke();
+    },
+  });
+  // (la base de feuilles avec q réduit : 200 feuilles d'un coup sur un Mythic cachaient les chiffres ; l'averse est ci-dessous)
+  const turkeyBase = pieces({ cols: ['#b91c1c', '#ea580c', '#f59e0b', '#eab308', '#92400e'], shapes: ['mapleleaf', 'mapleleaf', 'oakleaf'], size: [3.6, 5.6], g: 120, drag: 1.4, spin: 2.5, up: true, life: 1.4, glowc: '#9a3412', ring: '#fbbf24', drift: { rate: .5, from: 'around' } });
+  SCENES.turkey = custom(env => turkeyBase(Object.assign({}, env, { q: env.q * .45 })), (env, { cx, st }) => {
+    const { co, card, q, dark } = env, fall = particles(), plumes = particles(), steam = timed(), emit = emitter();
+    const LEAF = ['#b91c1c', '#dc2626', '#ea580c', '#f97316', '#f59e0b', '#eab308', '#92400e', '#78350f'], BROWN = ['#9a4b1c', '#7a3a16', '#86421b'];
+    // une feuille qui tombe en se balançant (vx suit un cosinus) et se retourne (scaleX)
+    const leaf = (x, y, o = {}) => fall.add(Object.assign({ x, y, vx: 0, vy: rnd(40, 80), g: 0, max: rnd(2.2, 3.4), size: rnd(5, 8), c: pick(LEAF), shape: Math.random() < .7 ? 'mapleleaf' : 'oakleaf', rot: rnd(TAU), sway: rnd(30, 70), f: rnd(2, 3.6), ph: rnd(TAU) }, o));
+    const fan = (n, spread, speed) => { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i / Math.max(1, n - 1) - .5) * spread + rnd(-.06, .06), v = speed * rnd(.85, 1.15); plumes.add({ x: cx + rnd(-card.w * .25, card.w * .25), y: card.y + 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 110, drag: 2.2, max: rnd(2.4, 3.2), size: rnd(7, 10), c: pick(BROWN), rot: a + Math.PI / 2, ph: rnd(TAU) }); } };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // vapeur : des volutes floues qui montent du chiffre et s'effacent (grises sur page claire, le blanc s'y perd)
+        steam.run(dt, (w, k) => dot(co, dark ? '#fff7ed' : '#a8a29e', w.x + Math.sin(k * 5 + w.ph) * 5, w.y - k * card.h * .9, w.size * (1 + k), (1 - k) * (k < .2 ? k / .2 : 1) * (dark ? .22 : .2), w.size * (1.6 + k)));
+        co.globalCompositeOperation = 'source-over';
+        // pendant le tirage, une feuille tombe parfois au-dessus de la carte
+        if (!st.revealed) for (let n = emit(1.4 * q * (.5 + st.heat), dt); n > 0; n--) leaf(rnd(card.x - 40, card.x + card.w + 40), card.y - rnd(20, 60));
+        else if (st.p >= .6 && st.since < 1.5 + 2 * st.p) for (let n = emit(16 * st.p * q, dt); n > 0; n--) leaf(rnd(card.x - 120, card.x + card.w + 120), card.y - rnd(40, 110));
+        fall.step(dt);
+        fall.each((p, k) => {
+          p.vx = p.sway * Math.cos(p.life * p.f + p.ph);
+          // devant la carte, la feuille s'efface à moitié : les chiffres restent le plus lisible
+          const over = p.x > card.x && p.x < card.x + card.w && p.y > card.y && p.y < card.y + card.h;
+          co.save(); co.translate(p.x, p.y); co.rotate(p.rot + .7 * Math.sin(p.life * p.f + p.ph)); co.scale(Math.max(.25, Math.abs(Math.cos(p.life * p.f * .6 + p.ph))), 1); co.globalAlpha = Math.min(1, k * 8, (1 - k) * 3) * (over ? .4 : 1); co.fillStyle = p.c; SHAPES[p.shape](co, p, p.size); co.restore();
+        });
+        plumes.step(dt);
+        plumes.each((p, k) => { if (p.life > .5) p.vx += Math.cos(p.life * 3 + p.ph) * 40 * dt; co.save(); co.translate(p.x, p.y); co.rotate(p.rot + (p.life > .5 ? .5 * Math.sin(p.life * 2.6 + p.ph) : 0)); co.globalAlpha = Math.min(1, (1 - k) * 2.5) * (p.x > card.x && p.x < card.x + card.w && p.y > card.y && p.y < card.y + card.h ? .4 : 1); SHAPES.tfeather(co, p, p.size); co.restore(); });
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        for (let i = 0; i < 3; i++) steam.add({ delay: .15 + i * .08, life: 1.1, x: p.x + rnd(-6, 6), y: p.y - card.h * .3, size: card.h * .08, ph: rnd(TAU) });
+        if (o.last) for (let i = 0; i < 4; i++) leaf(p.x + rnd(-30, 30), card.y - rnd(10, 40));
+      },
+      reveal(tier, p) {
+        if (!p) return;
+        for (let i = burst(p, 50 * q, 4); i > 0; i--) leaf(rnd(card.x - 60, card.x + card.w + 60), card.y - rnd(20, 120), { vy: rnd(50, 110) });
+        if (p >= .6) fan(Math.round(9 + 6 * p), 2.4, 380 + 140 * p);
+        if (p >= 1) setTimeout(() => fan(15, 3, 500), 220);
+      },
+    };
+  });
+
   // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
   // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
   // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le
@@ -10264,6 +10334,1127 @@
     };
   };
   // ==== fin du lot A du 2026-11-01 ====
+
+  // ==== Skins du 2026-11-05, lot 1 : Overture, Cheese, Archaeology, Angel, Demon (idées de joueurs planifiées) ====
+  // Petites briques communes au lot : un signe dessiné au centre (x, y), tourné, avec un halo sur fond sombre.
+  const l1Glyph = (c, x, y, s, ch, rot, a, col, glowc, font = "700 {s}px Georgia, 'Times New Roman', serif") => {
+    if (a <= .01) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot);
+    c.font = font.replace('{s}', Math.round(s)); c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (glowc) { c.shadowColor = glowc; c.shadowBlur = s * .35; }
+    c.fillStyle = col; c.fillText(ch, 0, 0); c.restore();
+  };
+  // Les cases encore visibles (ni repliées) : la dernière non posée sert aux effets de « tension ».
+  const l1Next = env => slotsA(env).find(s => !s.gone && !s.on);
+
+  // 🎹 Overture (promis à 0casmictechthing, 2026-10-30 ; portée de casmicgraything, notes de 17black) — chaque chiffre
+  // enfonce la touche du clavier qui est sous lui (calque intérieur : la touche s'assombrit, un reflet d'or) et une note
+  // s'échappe de la portée en se balançant. Avant le dernier chiffre, un trille : deux touches alternent sous lui et des
+  // petites notes frémissent au-dessus de la carte. Révélation : un glissando parcourt tout le clavier pendant qu'un
+  // arpège de notes monte de gauche à droite ; tirage raté, une seule note aigre retombe en piquant du nez. Dès Epic, la
+  // portée déborde de la carte et ondule de part et d'autre ; dès Mythic, l'accord : les chiffres vibrent (.ovt-chord) et
+  // des instruments tombent autour de la carte ; dès Divine, un piano à queue s'élève derrière elle, ses notes dansent
+  // autour. Le son (une note de piano par chiffre, l'accord de la rareté) : js/sound.js.
+  SCENES.overture = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const notes = particles(), falls = particles(), keys = timed(), waves = timed(), pending = [];
+    const GOLD = dark ? '#f3d27a' : '#a16207', GLOW = dark ? '#facc15' : null, NOTES = ['♪', '♫', '♩', '♬'];
+    const INSTR = ['🎷', '🎸', '🎺', '🎻', '🪕', '🥁'];
+    let t = 0, trill = 0, trillK = -1, piano = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    // une touche enfoncée sous x (calque intérieur) : touches blanches de .2em, comme le clavier dessiné en CSS
+    const kw = em * .2, kh = em * .34;
+    const press = (x, o = {}) => keys.add({ k: Math.floor(x / kw), life: o.life || .42, delay: o.delay || 0, gold: o.gold !== false });
+    const note = (x, y, o = {}) => notes.add({ x, y, vx: (o.dir || pick([-1, 1])) * rnd(8, 30), vy: -H * rnd(.7, 1.1) * (o.up || 1), drag: .9, max: o.max || rnd(1.3, 1.8), size: em * (o.size || rnd(.42, .58)), ch: o.ch || pick(NOTES), ph: rnd(TAU), sour: o.sour, g: o.g || 0 });
+    // le piano à queue vu de côté (Divine et plus) : couvercle relevé, caisse courbe, pieds ; x, y = milieu du clavier
+    const grand = (x, y, s, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y);
+      co.fillStyle = '#0b0b0f'; co.strokeStyle = '#d4af37'; co.lineWidth = Math.max(1, s * .025);
+      co.beginPath(); co.moveTo(-s * .55, 0); co.lineTo(s * .1, 0); co.bezierCurveTo(s * .35, 0, s * .3, -s * .22, s * .55, -s * .2); co.lineTo(s * .55, -s * .3);
+      co.bezierCurveTo(s * .2, -s * .32, s * .1, -s * .1, -s * .55, -s * .1); co.closePath(); co.fill(); co.stroke();
+      co.beginPath(); co.moveTo(-s * .5, -s * .1); co.lineTo(s * .35, -s * .62); co.lineTo(s * .5, -s * .3); co.closePath(); co.fill(); co.stroke(); // le couvercle
+      line(co, '#d4af37', -s * .2, -s * .12, s * .32, -s * .55, Math.max(1, s * .015), a); // la béquille
+      co.globalAlpha = a; co.fillStyle = '#f6f1e3'; co.fillRect(-s * .55, -s * .03, s * .3, s * .05); // les touches
+      co.fillStyle = '#0b0b0f'; for (const lx of [-.48, .02, .45]) co.fillRect(s * lx, 0, s * .04, s * .28);
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // le trille : deux touches alternent sous le dernier chiffre
+        if (trill) { const s = l1Next(env); if (s) { const ip = bInner(env, s), tk = Math.floor(t * 16); if (tk !== trillK) { trillK = tk; press(ip.x + (tk % 2) * kw, { life: .06 }); } if (Math.random() < dt * 9 * q) note(s.x + rnd(-1, 1) * s.w, card.y - H * .05, { size: rnd(.22, .32), up: .5, max: .7 }); } }
+        // les touches enfoncées : plus sombres, avec un reflet d'or qui monte de la touche
+        keys.run(dt, (k, p) => {
+          const a = 1 - p * p;
+          ci.globalAlpha = .38 * a; ci.fillStyle = '#000'; ci.fillRect(k.k * kw + 1, h - kh, kw - 2, kh);
+          if (k.gold) { ci.globalCompositeOperation = 'lighter'; dot(ci, '#facc15', (k.k + .5) * kw, h - kh, kw * 1.6, .55 * a, kh * 1.4); ci.globalCompositeOperation = 'source-over'; }
+          ci.globalAlpha = 1;
+        });
+        // la portée qui déborde (Epic et plus) : cinq lignes d'or qui ondulent de chaque côté de la carte
+        if (waves.n) behind(env, () => waves.run(dt, (wv, p) => {
+          const a = Math.sin(Math.PI * Math.min(1, p * 1.6)) * (1 - p) * (dark ? .75 : .6), gap = em * .16, y0 = card.y + H / 2 - gap * 2;
+          co.strokeStyle = GOLD; co.lineWidth = Math.max(1, em * .025);
+          for (let l = 0; l < 5; l++) {
+            co.globalAlpha = a; co.beginPath();
+            for (let x = card.x - card.w * .9 * wv.reach; x <= card.x + card.w * (1 + .9 * wv.reach); x += 6) {
+              const off = Math.abs(x - cx) / card.w, amp = em * .22 * wv.amp * Math.min(1, off) * (1 - p * .5);
+              const y = y0 + l * gap + Math.sin(x * .03 - t * 7 + l * .2) * amp;
+              x === card.x - card.w * .9 * wv.reach ? co.moveTo(x, y) : co.lineTo(x, y);
+            }
+            co.stroke();
+          }
+        }));
+        // le piano à queue (Divine et plus) et les notes qui dansent autour, derrière la carte
+        if (piano) {
+          piano.k = Math.min(1, piano.k + dt * 1.2);
+          const k = outCubic(piano.k), s = Math.max(card.w * 1.5, H * 2.6), px = cx, py = card.y + H * (1.4 - .6 * k); // derrière la carte, plus large qu'elle : le clavier, la queue et le couvercle dépassent
+          behind(env, () => {
+            if (dark) { co.globalCompositeOperation = 'lighter'; dot(co, '#facc15', px, py - s * .2, s * .8, .25 * k); co.globalCompositeOperation = 'source-over'; }
+            grand(px, py, s, k);
+            for (let i = 0; i < piano.n; i++) { const a = t * 1.3 + (i * TAU) / piano.n; l1Glyph(co, px + Math.cos(a) * s * .62, card.y + H * .5 + Math.sin(a) * H * .9 + Math.sin(t * 6 + i) * em * .1, em * .5, NOTES[i % 4], Math.sin(t * 4 + i) * .4, k, GOLD, GLOW); }
+          }, true);
+        }
+        // les instruments qui tombent (Mythic et plus), derrière la carte
+        falls.step(dt);
+        if (falls.n) behind(env, () => falls.each((f, k) => l1Glyph(co, f.x, f.y, f.size, f.ch, f.rot + f.life * f.spin, Math.min(1, (1 - k) * 4, f.life * 6), '#000', null, '{s}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif')), true); // jamais sur la rareté ni le score
+        // les notes : elles montent en se balançant ; la note aigre pique du nez et grisaille
+        notes.step(dt);
+        notes.each((n, k) => {
+          const x = n.x + Math.sin(n.life * 4 + n.ph) * em * .22, a = Math.min(1, n.life * 8, (1 - k) * 2.5);
+          l1Glyph(co, x, n.y, n.size, n.ch, n.sour ? n.life * 2.2 : Math.sin(n.life * 3 + n.ph) * .3, a, n.sour ? (dark ? '#a8a29e' : '#78716c') : GOLD, n.sour ? null : GLOW);
+        });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) trill = 0;
+        const ip = bInner(env, p);
+        press(ip.x, { gold: !o.ghost });
+        if (o.ghost) return;
+        // la note part au moment où le marteau frappe (22 % de ovt-strike)
+        later(.12, () => { note(p.x, card.y - em * .12); if (o.last) { note(p.x - em * .3, card.y - em * .15, { ch: '♫', dir: -1 }); note(p.x + em * .3, card.y - em * .15, { ch: '♬', dir: 1 }); } });
+      },
+      build() { trill = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        trill = 0;
+        if (!p) { // une note aigre : trois touches graves ensemble, la note retombe
+          for (let k = 0; k < 3; k++) press(kw * (2 + k), { life: .6, gold: false });
+          note(cx, card.y - H * .1, { ch: '♪', size: .8, up: .45, g: H * 2.2, max: 1.6, sour: true });
+          return;
+        }
+        // le glissando : toutes les touches, de gauche à droite ; l'arpège de notes monte en même temps
+        const nk = Math.ceil(w / kw), span = .35 + .25 * p;
+        for (let k = 0; k < nk; k++) press(k * kw + 1, { delay: (k / nk) * span, life: .3 });
+        const n = burst(p, 18 * q, 3);
+        for (let i = 0; i < n; i++) later((i / n) * span, () => note(card.x + card.w * (.08 + .84 * (i / Math.max(1, n - 1))), card.y - em * .12, { up: 1 + .6 * p, dir: 1 }));
+        if (p >= .6) waves.add({ life: 1.8 + asc * .4, amp: .6 + .6 * p, reach: .5 + .5 * p });
+        if (p < 1) return;
+        if (el) el.classList.add('ovt-chord');
+        waves.add({ delay: .5, life: 2.2, amp: 1.2, reach: 1 });
+        for (let i = Math.round((6 + 4 * asc) * q); i > 0; i--) falls.add({ x: cx + rnd(-1, 1) * (card.w * .5 + H * 1.6), y: card.y - H * rnd(1, 2.2), vx: rnd(-20, 20), vy: H * rnd(.2, .8), g: H * 3, max: rnd(1.6, 2.2), size: H * rnd(.4, .6), ch: pick(INSTR), rot: rnd(-.5, .5), spin: rnd(-2, 2) });
+        for (let i = Math.round((10 + 6 * asc) * q); i > 0; i--) { const e = along(grown(card, em * .3), rnd()), a = Math.atan2(e.y - card.y - H / 2, e.x - cx); notes.add({ x: e.x, y: e.y, vx: Math.cos(a) * H * rnd(1.4, 2.6), vy: Math.sin(a) * H * rnd(1, 2) - H * .5, drag: 1.4, max: rnd(1.4, 2.2), size: em * rnd(.45, .7), ch: pick(NOTES), ph: rnd(TAU) }); }
+        if (asc >= 2) piano = { k: 0, n: 6 + 2 * asc };
+      },
+    };
+  };
+
+  // 🧀 Cheese (idée de casmicgraything, 2026-11-05, et version détaillée de casmictechthing) — quand un bloc touche la
+  // planche (42 % de chz-drop), des miettes jaunes giclent de chaque côté. Avant le dernier chiffre, une râpe invisible
+  // fait tomber des copeaux au-dessus de sa case. Révélation : une meule tombe du ciel et se pose sur le haut de la carte,
+  // différente selon la rareté (comme demandé) : cheddar, gouda en croûte rouge, emmental, bleu, brie, puis dès Mythic une
+  // meule dorée qui fond, coule sur les côtés de la carte et inonde ses chiffres (.chz-melt). Tirage raté : un vieux
+  // bout de fromage moisi tombe, rebondit, et sent mauvais.
+  SCENES.cheese = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const crumbs = particles(), shreds = particles(), drips = particles(), stink = timed(), pending = [];
+    const grate = emitter();
+    const CR = ['#fde047', '#facc15', '#fef08a', '#eab308'];
+    // les fromages de la meule finale : [face, dessus, croûte, trous ou veines]
+    const KINDS = {
+      stale: { face: '#c9c27a', top: '#d8d29a', rind: '#8a8445', mold: '#6b8e23' },
+      common: { face: '#f59e0b', top: '#fbbf24', rind: '#b45309' },              // cheddar
+      uncommon: { face: '#fcd34d', top: '#fde68a', rind: '#dc2626', wax: true },  // gouda en croûte rouge
+      rare: { face: '#fde68a', top: '#fef3c7', rind: '#ca8a04', holes: true },    // emmental
+      epic: { face: '#f8fafc', top: '#ffffff', rind: '#cbd5e1', veins: '#3b82f6' }, // bleu
+      anomaly: { face: '#fef9c3', top: '#fffbeb', rind: '#f5f5f4', brie: true },  // brie
+      mythic: { face: '#fbbf24', top: '#fde047', rind: '#d97706', holes: true, gold: true },
+    };
+    let t = 0, build = false, wedge = null, melt = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const crumb = (x, y, n, sp = 1) => { for (let i = Math.round(n); i > 0; i--) crumbs.add({ x: x + rnd(-1, 1) * em * .25, y, vx: rnd(-1, 1) * H * 1.6 * sp, vy: -H * rnd(.8, 2.2) * sp, g: H * 8, drag: .3, max: rnd(.5, .9), size: em * rnd(.05, .1), rot: rnd(TAU), spin: rnd(-9, 9), c: pick(CR) }); };
+    // une meule vue de trois quarts : la face avant (avec ses trous, ses veines ou sa croûte), le dessus en pointe
+    const drawWedge = (x, y, s, k, sq) => {
+      const K = k, fw = s, fh = s * .42 * sq, sx = 1 / Math.sqrt(sq);
+      co.save(); co.translate(x, y); co.scale(sx, 1); co.lineJoin = 'round'; co.lineWidth = Math.max(1, s * .03);
+      co.beginPath(); co.moveTo(-fw / 2, -fh); co.lineTo(fw / 2, -fh); co.lineTo(-fw * .2, -fh - s * .3 * sq); co.closePath();
+      co.fillStyle = K.top; co.fill(); co.strokeStyle = K.rind; co.stroke();
+      co.beginPath(); co.rect(-fw / 2, -fh, fw, fh); co.fillStyle = K.face; co.fill(); co.stroke();
+      if (K.wax) { co.fillStyle = K.rind; co.fillRect(-fw / 2, -fh, fw * .08, fh); co.fillRect(fw * .42, -fh, fw * .08, fh); }
+      if (K.brie) { co.fillStyle = '#fafaf9'; co.fillRect(-fw / 2, -fh * .18, fw, fh * .18); co.fillRect(-fw / 2, -fh, fw, fh * .12); }
+      if (K.holes) { co.fillStyle = K.gold ? '#d97706' : '#e0b84a'; for (const [hx, hy, hr] of [[-.3, -.55, .09], [.05, -.3, .07], [.28, -.62, .06], [-.08, -.75, .05], [.36, -.25, .05]]) { co.beginPath(); co.ellipse(fw * hx, fh * hy * 1.1 - fh * .05, s * hr, s * hr * .8 * sq, 0, 0, TAU); co.fill(); } }
+      if (K.veins) { co.strokeStyle = K.veins; co.lineWidth = Math.max(1, s * .022); co.globalAlpha *= .8; for (let i = 0; i < 5; i++) { co.beginPath(); const vx = -fw * .4 + i * fw * .2; co.moveTo(vx, -fh * .2); co.quadraticCurveTo(vx + s * .08, -fh * .55, vx - s * .02, -fh * .9); co.stroke(); } }
+      if (K.mold) { co.fillStyle = K.mold; for (const [hx, hy, hr] of [[-.25, -.5, .07], [.2, -.35, .09], [.1, -.75, .05], [-.05, -1.15, .06]]) { co.beginPath(); co.arc(fw * hx, fh * hy, s * hr, 0, TAU); co.fill(); } }
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // la râpe : des copeaux fins tombent au-dessus de la case qui va se poser
+        if (build) { const s = l1Next(env); if (s) for (let n = grate(26 * q, dt); n > 0; n--) shreds.add({ x: s.x + rnd(-.5, .5) * s.w, y: card.y - H * rnd(.4, .9), vx: rnd(-12, 12), vy: H * rnd(.2, .5), g: H * 2.2, max: rnd(.5, .8), len: em * rnd(.12, .22), rot: rnd(-.6, .6), spin: rnd(-4, 4), c: pick(CR) }); }
+        shreds.step(dt);
+        shreds.each((s, k) => { const a = s.rot + s.life * s.spin; line(co, s.c, s.x - Math.cos(a) * s.len / 2, s.y - Math.sin(a) * s.len / 2, s.x + Math.cos(a) * s.len / 2, s.y + Math.sin(a) * s.len / 2, Math.max(1.5, em * .035), Math.min(1, (1 - k) * 3)); });
+        // la meule : chute, écrasement à l'atterrissage, puis elle reste posée (et fond dès Mythic)
+        if (wedge) {
+          const w = wedge;
+          w.t += dt;
+          let y, sq = 1;
+          const land = card.y + 1, fall = .42;
+          if (w.t < fall) { const p = w.t / fall; y = land - H * 2.4 * (1 - p * p); }
+          else {
+            const b = w.t - fall; y = land;
+            if (!w.landed) { w.landed = true; crumb(cx, land, (w.kind === 'stale' ? 6 : 18) * q, 1.2); if (w.melt) later(.35, () => { melt = 1; if (el) el.classList.add('chz-melt'); }); }
+            if (w.kind === 'stale') y = land - H * .28 * Math.sin(Math.PI * clamp(b / .5)); // un rebond mou, puis plus rien
+            sq = 1 - .28 * Math.exp(-b * 9) * Math.cos(b * 26);
+            if (w.melt) sq *= 1 - .45 * clamp((b - .35) / 1.6);
+          }
+          const a = Math.min(1, w.t * 8) * (w.end ? clamp((w.end - t) / .6) : 1);
+          co.globalAlpha = a;
+          if (w.melt && dark) { co.globalCompositeOperation = 'lighter'; dot(co, '#facc15', cx, land - H * .2, H * 1.2, .25 * a * clamp(w.t - fall)); co.globalCompositeOperation = 'source-over'; co.globalAlpha = a; }
+          drawWedge(cx + (w.kind === 'stale' ? card.w * .2 : 0), y, H * (w.kind === 'stale' ? .55 : .95), KINDS[w.kind], sq);
+          co.globalAlpha = 1;
+          // l'odeur du fromage moisi : trois vagues vertes qui montent
+          if (w.kind === 'stale' && w.landed) for (let i = 0; i < 3; i++) {
+            const ph = (t * .8 + i / 3) % 1, x0 = cx + card.w * .2 + (i - 1) * em * .3;
+            co.globalAlpha = Math.sin(Math.PI * ph) * .8; co.strokeStyle = dark ? '#a3e635' : '#4d7c0f'; co.lineWidth = Math.max(1.5, em * .04); co.beginPath();
+            for (let j = 0; j <= 8; j++) { const yy = land - H * .35 - ph * H * .6 - j * em * .06, xx = x0 + Math.sin(j * .9 + t * 5) * em * .08; j ? co.lineTo(xx, yy) : co.moveTo(xx, yy); }
+            co.stroke(); co.globalAlpha = 1;
+          }
+        }
+        // la fonte (Mythic et plus) : des coulures dorées descendent le long des côtés de la carte
+        if (melt) for (let n = Math.random() < dt * 5 * q ? 1 : 0; n > 0; n--) { const side = pick([-1, 1]), x = side < 0 ? card.x + rnd(.01, .07) * em * 2 : card.x + card.w - rnd(.01, .07) * em * 2; drips.add({ x, y: card.y, vx: 0, vy: H * rnd(.15, .35), g: H * .5, max: rnd(1.6, 2.4), r: em * rnd(.06, .1), stop: card.y + H + em * rnd(.05, .3) }); } // sur les bords de la carte seulement : jamais sur un chiffre
+        drips.step(dt);
+        drips.each((d, k) => {
+          const top = card.y, len = Math.min(d.y, d.stop) - top; // la coulure pend sous la carte sans descendre sur la rareté
+          co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = '#f59e0b';
+          co.beginPath(); co.moveTo(d.x - d.r * .7, top); co.lineTo(d.x - d.r * .5, top + len - d.r); co.arc(d.x, top + len, d.r, Math.PI, 0, true); co.lineTo(d.x + d.r * .7, top); co.closePath(); co.fill();
+          co.fillStyle = '#fef3c7'; co.globalAlpha *= .6; co.beginPath(); co.arc(d.x - d.r * .35, top + len - d.r * .2, d.r * .3, 0, TAU); co.fill();
+        });
+        crumbs.step(dt);
+        crumbs.each((c, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = c.c; co.translate(c.x, c.y); co.rotate(c.rot + c.life * c.spin); co.fillRect(-c.size / 2, -c.size / 2, c.size, c.size); co.restore(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = false;
+        // le bloc touche la planche à 42 % de chz-drop (0,62 s)
+        later(.26, () => crumb(p.x, p.y + em * .45, (o.ghost ? 2 : o.last ? 14 : 7) * q));
+      },
+      build() { build = true; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = false;
+        const kind = !p ? 'stale' : p >= 1 ? 'mythic' : tier in KINDS ? tier : 'common';
+        wedge = { t: 0, kind, melt: p >= 1, end: p >= 1 ? t + 5 + 2 * asc : t + 3.2 };
+        if (p >= .6) later(.42, () => crumb(cx, card.y, 24 * p * q, 1.6));
+        if (p >= 1) later(.5, () => { for (let i = Math.round((14 + 8 * asc) * q); i > 0; i--) { const e = along(grown(card, 3), rnd()); crumbs.add({ x: e.x, y: e.y, vx: (e.x - cx) * rnd(2, 4), vy: -H * rnd(1, 3), g: H * 6, drag: .4, max: rnd(.8, 1.4), size: em * rnd(.08, .16), rot: rnd(TAU), spin: rnd(-9, 9), c: pick(CR) }); } });
+      },
+    };
+  };
+
+  // 🦴 Archaeology (idée de casmicgraything, 2026-11-03, et d'Alt) — pour chaque chiffre, un pinceau d'archéologue passe
+  // deux fois sur sa case (il entre par la droite, balaie, repart) et la poussière s'envole, avec quelques gravillons.
+  // Avant le dernier chiffre, la terre s'effrite au-dessus de lui. Révélation : un nuage de poussière s'échappe des
+  // bords, plus gros avec la rareté ; dès Epic, des petits os volent ; dès Mythic, les os s'animent (.arc-alive) et un
+  // squelette de raptor traverse en courant au-dessus de la carte (deux dès Divine) ; tirage raté : rien qu'un caillou,
+  // qui roule et tombe de la carte.
+  SCENES.dig = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const dust = particles(), grit = particles(), bones = particles(), brushes = timed(), runners = timed(), pending = [];
+    const crumble = emitter();
+    const DUST = dark ? ['#c8a77e', '#a88560', '#e2cba8'] : ['#9a7650', '#7b5a38', '#b8956a'];
+    const BONE = '#f3ead7', INK = '#3b2a1a';
+    let t = 0, build = false, pebble = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const puff = (x, y, n, sp = 1) => { for (let i = Math.round(n); i > 0; i--) dust.add({ x: x + rnd(-1, 1) * em * .3, y: y + rnd(-1, 1) * em * .2, vx: rnd(-1, 1) * H * .9 * sp, vy: -H * rnd(.2, .9) * sp, g: -H * .2, drag: 1.6, max: rnd(.8, 1.4), size: em * rnd(.12, .26), c: pick(DUST) }); };
+    const gravel = (x, y, n) => { for (let i = Math.round(n); i > 0; i--) grit.add({ x, y, vx: rnd(-1, 1) * H * 1.4, vy: -H * rnd(.8, 1.8), g: H * 8, drag: .2, max: rnd(.5, .9), size: em * rnd(.04, .08), c: pick(['#5c4a3a', '#8a7a66', '#6b5a4a']) }); };
+    // un petit os : une tige et deux nœuds à chaque bout
+    const bone = (c, x, y, s, rot, a) => {
+      if (a <= .01) return;
+      c.save(); c.globalAlpha = a; c.translate(x, y); c.rotate(rot); c.fillStyle = BONE; c.strokeStyle = INK; c.lineWidth = Math.max(1, s * .12);
+      c.beginPath(); c.rect(-s * .5, -s * .12, s, s * .24); for (const [bx, by] of [[-.5, -.14], [-.5, .14], [.5, -.14], [.5, .14]]) { c.moveTo(s * bx + s * .15, s * by); c.arc(s * bx, s * by, s * .15, 0, TAU); }
+      c.stroke(); c.fill(); c.restore();
+    };
+    // le pinceau d'archéologue : manche de bois, virole de métal, poils clairs ; k de 0 à 1 sur deux balayages
+    const brush = (x, y, k) => {
+      const sweep = Math.sin(k * Math.PI * 4) * em * .16, enter = Math.min(1, k * 6, (1 - k) * 6), bx = x + em * (1.1 - .45 * enter) + sweep, by = y - em * .1; // seule la pointe frôle le chiffre
+      co.save(); co.globalAlpha = enter; co.translate(bx, by); co.rotate(-.65 + Math.sin(k * Math.PI * 4) * .12);
+      co.fillStyle = '#9a5b2b'; roundRect(co, 0, -em * .05, em * .75, em * .1, em * .04); co.fill(); // le manche
+      co.fillStyle = '#cbd5e1'; co.fillRect(-em * .12, -em * .07, em * .13, em * .14); // la virole
+      co.fillStyle = '#f5e6c8'; co.beginPath(); co.moveTo(-em * .12, -em * .07); co.lineTo(-em * .34, -em * .11); co.lineTo(-em * .34, em * .11); co.lineTo(-em * .12, em * .07); co.closePath(); co.fill(); // les poils
+      co.strokeStyle = 'rgba(120, 90, 50, .5)'; co.lineWidth = 1; for (let i = -2; i <= 2; i++) { co.beginPath(); co.moveTo(-em * .13, i * em * .025); co.lineTo(-em * .33, i * em * .04); co.stroke(); }
+      co.restore();
+    };
+    // un squelette de raptor qui court (vue de profil, tourné vers la droite) ; ph : la phase de la foulée
+    const raptor = (x, y, s, ph, a) => {
+      co.save(); co.globalAlpha = a; co.translate(x, y); co.lineCap = 'round'; co.lineJoin = 'round';
+      const bob = Math.abs(Math.sin(ph)) * s * .05;
+      co.translate(0, -bob);
+      co.strokeStyle = INK; co.lineWidth = Math.max(2.5, s * .06);
+      const path = () => {
+        co.beginPath(); co.moveTo(-s * .95, -s * .62 + Math.sin(ph * .5) * s * .05); co.quadraticCurveTo(-s * .45, -s * .5, 0, -s * .48); co.quadraticCurveTo(s * .3, -s * .5, s * .45, -s * .78); // queue, dos, cou
+        for (let i = 0; i < 4; i++) { const rx = -s * .05 + i * s * .1; co.moveTo(rx, -s * .48); co.quadraticCurveTo(rx + s * .05, -s * .3, rx - s * .02, -s * .24); } // côtes
+        for (const side of [0, Math.PI]) { const p = ph + side, kx = Math.sin(p) * s * .18, fx = Math.sin(p - .9) * s * .3, lift = Math.max(0, Math.cos(p)) * s * .1; co.moveTo(-s * .1, -s * .46); co.lineTo(-s * .05 + kx, -s * .22); co.lineTo(-s * .15 + fx, -lift); co.lineTo(-s * .02 + fx, -lift); } // pattes
+        co.moveTo(s * .32, -s * .5); co.lineTo(s * .42, -s * .4); co.lineTo(s * .38, -s * .34); // bras
+      };
+      path(); co.stroke(); co.strokeStyle = BONE; co.lineWidth = Math.max(1.2, s * .03); path(); co.stroke();
+      // le crâne : un museau allongé, l'orbite, la mâchoire qui claque
+      co.save(); co.translate(s * .45, -s * .8); co.rotate(.15);
+      co.fillStyle = BONE; co.strokeStyle = INK; co.lineWidth = Math.max(1.5, s * .03);
+      co.beginPath(); co.moveTo(-s * .06, -s * .08); co.quadraticCurveTo(s * .1, -s * .14, s * .3, -s * .02); co.lineTo(s * .02, s * .04); co.closePath(); co.fill(); co.stroke();
+      const jaw = Math.max(0, Math.sin(ph * 1.3)) * .25; co.rotate(jaw); co.beginPath(); co.moveTo(-s * .02, s * .03); co.lineTo(s * .26, s * .03); co.lineTo(s * .02, s * .1); co.closePath(); co.fill(); co.stroke(); co.rotate(-jaw);
+      co.fillStyle = INK; co.beginPath(); co.arc(s * .06, -s * .06, s * .03, 0, TAU); co.fill();
+      co.restore(); co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // la terre s'effrite au-dessus du dernier chiffre
+        if (build) { const s = l1Next(env); if (s) for (let n = crumble(14 * q, dt); n > 0; n--) grit.add({ x: s.x + rnd(-.5, .5) * s.w, y: card.y + rnd(-2, 2), vx: rnd(-10, 10), vy: -H * rnd(.1, .4), g: H * 5, max: rnd(.4, .7), size: em * rnd(.03, .06), c: pick(['#7b5534', '#a07548', '#5c4a3a']) }); }
+        // les squelettes qui courent (Mythic et plus), derrière la carte, au-dessus d'elle
+        if (runners.n) behind(env, () => runners.run(dt, (r, k) => raptor(lerp(r.x0, r.x1, k), card.y - em * .05 - r.lift, H * r.s, (t - r.t0) * 14, Math.min(1, k * 8, (1 - k) * 8))), true);
+        dust.step(dt);
+        dust.each((d, k) => dot(co, d.c, d.x, d.y, d.size * (1 + k * 1.8), Math.sin(Math.PI * Math.min(1, k * 1.4)) * (dark ? .3 : .4)));
+        brushes.run(dt, (b, k) => { brush(b.x, b.y, k); if (Math.random() < dt * 30) puff(b.x + rnd(-.3, .3) * em, b.y, 1, .6); });
+        grit.step(dt);
+        grit.each((g, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = g.c; co.fillRect(g.x - g.size / 2, g.y - g.size / 2, g.size, g.size); });
+        bones.step(dt);
+        bones.each((b, k) => bone(co, b.x, b.y, b.size, b.rot + b.life * b.spin, Math.min(1, (1 - k) * 3)));
+        // le caillou du tirage raté : il roule sur le haut de la carte puis tombe
+        if (pebble) {
+          pebble.t += dt; const p = pebble, along1 = Math.min(1, p.t / 1.1), x = card.x + card.w * (.3 + .75 * along1), fall = Math.max(0, p.t - 1.1), y = card.y - em * .12 + H * 4 * fall * fall;
+          co.globalAlpha = clamp(2.2 - p.t); co.fillStyle = '#6b5a4a'; co.save(); co.translate(x, y); co.rotate(p.t * 7); co.beginPath(); co.ellipse(0, 0, em * .13, em * .1, 0, 0, TAU); co.fill(); co.fillStyle = '#8a7a66'; co.beginPath(); co.ellipse(-em * .03, -em * .03, em * .05, em * .03, 0, 0, TAU); co.fill(); co.restore();
+          if (p.t > 2.2) pebble = null;
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = false;
+        if (o.ghost) { puff(p.x, p.y, 2 * q, .5); return; }
+        // le pinceau dégage le chiffre (les 30 premiers % de dig-up), la poussière s'envole, quelques gravillons
+        brushes.add({ x: p.x, y: p.y, life: .5 });
+        puff(p.x, p.y, (o.last ? 12 : 6) * q);
+        later(.3, () => gravel(p.x, p.y + em * .2, (o.last ? 8 : 4) * q));
+      },
+      build() { build = true; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = false;
+        if (!p) { pebble = { t: 0 }; puff(cx, card.y, 5 * q, .6); return; }
+        for (let i = burst(p, 40 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); dust.add({ x: e.x, y: e.y, vx: (e.x - cx) * rnd(.8, 2) * (.5 + p), vy: (e.y - card.y - H / 2) * rnd(1, 2) - H * .3, g: -H * .1, drag: 1.4, max: rnd(1, 1.8), size: em * rnd(.15, .32) * (1 + p * .5), c: pick(DUST) }); }
+        if (p >= .6) for (let i = Math.round((6 + 10 * p + 6 * asc) * q); i > 0; i--) { const e = along(grown(card, em * .25), rnd()); bones.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(2, 4), vy: -H * rnd(1.2, 2.6), g: H * 6, drag: .3, max: rnd(1, 1.6), size: em * rnd(.25, .4), rot: rnd(TAU), spin: rnd(-8, 8) }); } // depuis les bords : jamais par-dessus les chiffres
+        if (p < 1) return;
+        if (el) el.classList.add('arc-alive');
+        const s = .62, span = card.w * .5 + H * 2.6;
+        runners.add({ life: 2.2, x0: cx - span, x1: cx + span, s, lift: 0, t0: t });
+        if (asc >= 2) runners.add({ delay: .45, life: 2.4, x0: cx - span * 1.1, x1: cx + span * 1.1, s: s * .8, lift: em * .05, t0: t + .45 });
+      },
+    };
+  };
+
+  // Une aile de plumes (Angel, Demon) ancrée en (x, y), tournée vers side (−1 à gauche, 1 à droite). open de 0 (repliée
+  // le long du corps) à 1 (déployée vers le haut) ; s : la longueur. Le bord d'attaque est un « bras » ; les rémiges
+  // pendent derrière lui, les plus longues au bout ; les tectrices, courtes, couvrent sa base. L : les couleurs
+  // [rémiges, secondaires, tectrices, contour] ; torn : plumes inégales et arrachées (l'aile de l'ange déchu).
+  function l1Wing(c, x, y, s, side, open, L, a, torn) {
+    if (a <= .01 || s < 2) return;
+    c.save(); c.translate(x, y); c.scale(side, 1); c.globalAlpha = Math.min(1, a);
+    const arm = lerp(1.05, -.62, open), len = s * .6, ax = Math.cos(arm) * len, ay = Math.sin(arm) * len;
+    const feather = (u, f, w, col, salt) => {
+      const px = ax * u, py = ay * u, dir = arm + lerp(1.5, .35, Math.pow(u, 1.2)) * lerp(.55, 1, open);
+      const tl = torn ? .72 + .28 * Math.abs(Math.sin(salt * 12.9898)) : 1, fl = f * tl;
+      const ex = px + Math.cos(dir) * fl, ey = py + Math.sin(dir) * fl, nx = -Math.sin(dir) * w, ny = Math.cos(dir) * w;
+      c.beginPath(); c.moveTo(px, py);
+      c.quadraticCurveTo(px + (ex - px) * .5 + nx, py + (ey - py) * .5 + ny, ex, ey);
+      if (torn && salt % 3 < 1) c.lineTo(ex - Math.cos(dir) * w * 1.4 + nx * .3, ey - Math.sin(dir) * w * 1.4 + ny * .3); // une encoche
+      c.quadraticCurveTo(px + (ex - px) * .5 - nx, py + (ey - py) * .5 - ny, px, py);
+      c.fillStyle = col; c.fill(); c.stroke();
+    };
+    c.lineWidth = Math.max(.8, s * .008); c.strokeStyle = L[3]; c.lineJoin = 'round';
+    for (let i = 8; i >= 0; i--) { const u = .4 + .6 * (i / 8); feather(u, s * (.42 + .4 * Math.pow(u, 1.5)), s * .055, L[0], i + 1); }
+    for (let i = 7; i >= 0; i--) { const u = .05 + .5 * (i / 7); feather(u, s * (.3 + .12 * u), s * .05, L[1], i + 11); }
+    for (let i = 6; i >= 0; i--) { const u = .02 + .78 * (i / 6); feather(u, s * (.14 + .08 * (1 - u)), s * .045, L[2], i + 21); }
+    c.restore();
+  }
+  // Angel et Demon : la même scène, deux matières. Pendant le tirage, des grains de lumière (ou des braises) montent du
+  // bas de la carte ; chaque chiffre posé fait jaillir un anneau autour de son auréole et une plume tombe. Avant le
+  // dernier chiffre, les ailes apparaissent derrière la carte, repliées, et frémissent. Révélation : les ailes s'ouvrent
+  // d'un grand battement, d'autant plus grandes que la rareté est haute, puis planent ; dès Mythic, des rayons tournent
+  // derrière la carte et il pleut des plumes (et, pour Demon, un cercle de runes s'embrase) ; dès Divine, trois paires
+  // d'ailes, comme un séraphin. Tirage raté : une seule plume grise tombe, très lentement.
+  const l1Winged = M => env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env), WING = (!dark && M.wingLight) || M.wing; // sur page claire, des plumes plus dorées
+    const motes = particles(), feathers = particles(), rings = timed(), pending = [], rise = emitter();
+    let t = 0, wings = 0, target = 0, open = 0, openTo = 0, beat = 0, pairs = 1, glory = 0, build = 0, lit = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const plume = (x, y, o = {}) => feathers.add({ x, y, vx: rnd(-20, 20), vy: H * rnd(.15, .35) * (o.slow ? .4 : 1), g: 0, max: o.max || rnd(2.2, 3.2), size: em * rnd(.28, .42) * (o.big || 1), rot: rnd(TAU), ph: rnd(TAU), c: o.c || pick(M.plumes) });
+    const drawPlume = (f, k) => {
+      const sway = Math.sin(f.life * 2.4 + f.ph), x = f.x + sway * em * .35, rot = f.rot * .2 + sway * .7;
+      co.save(); co.globalAlpha = Math.min(1, f.life * 4, (1 - k) * 3); co.translate(x, f.y); co.rotate(rot);
+      co.fillStyle = f.c; co.strokeStyle = M.wing[3]; co.lineWidth = 1;
+      co.beginPath(); co.moveTo(0, -f.size); co.quadraticCurveTo(f.size * .32, -f.size * .2, 0, f.size); co.quadraticCurveTo(-f.size * .32, -f.size * .2, 0, -f.size); co.fill(); co.stroke();
+      co.beginPath(); co.moveTo(0, -f.size * .9); co.lineTo(0, f.size * 1.15); co.stroke();
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        wings += (target - wings) * Math.min(1, dt * 4);
+        open += (openTo - open) * Math.min(1, dt * (openTo > open ? 5 : 3));
+        beat = Math.max(0, beat - dt * 1.4);
+        lit = Math.max(0, lit - dt * 1.5);
+        // la lumière intérieure : un halo qui respire derrière les chiffres, plus fort à chaque chiffre posé
+        ci.globalCompositeOperation = 'lighter';
+        dot(ci, M.inner, w / 2, M.demon ? h * 1.05 : h * .45, w * .55, (.12 + .1 * Math.sin(t * 2.2) + .35 * lit + .2 * build + .25 * glory), M.demon ? h * .7 : h * .9);
+        ci.globalCompositeOperation = 'source-over'; ci.globalAlpha = 1;
+        // grains de lumière ou braises qui montent du bas de la carte
+        for (let n = rise((3 + 8 * build + 10 * glory) * q, dt); n > 0; n--) motes.add({ x: card.x + rnd(card.w), y: card.y + H * rnd(.7, 1.05), vx: rnd(-8, 8), vy: -H * rnd(.4, .9), drag: .2, max: rnd(1, 1.8), size: rnd(1.4, 2.8), ph: rnd(TAU) });
+        // derrière la carte : rayons (Mythic), runes (Demon, Mythic), puis les ailes
+        if (wings > .01 || glory > .01) behind(env, () => {
+          const add = dark ? 'lighter' : 'source-over';
+          if (glory > .01) {
+            co.globalCompositeOperation = add;
+            godrays(co, M.ray, cx, card.y + H * .5, 14, card.w * .4, card.w * .6 + H * 2, t * .25, H * .35, glory * (dark ? .32 : .2));
+            if (M.demon) { // le cercle de runes : deux anneaux et des signes qui tournent
+              const r = card.w * .5 + H * .7; co.globalAlpha = glory * .8; co.strokeStyle = '#ef4444'; co.lineWidth = 2;
+              co.beginPath(); co.ellipse(cx, card.y + H / 2, r, r * .45, 0, 0, TAU); co.stroke(); co.beginPath(); co.ellipse(cx, card.y + H / 2, r * .86, r * .38, 0, 0, TAU); co.stroke();
+              for (let i = 0; i < 12; i++) { const a = -t * .5 + (i * TAU) / 12; l1Glyph(co, cx + Math.cos(a) * r * .93, card.y + H / 2 + Math.sin(a) * r * .415, em * .3, 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃ'[i], 0, glory * .9, '#fca5a5', dark ? '#ef4444' : null, "700 {s}px system-ui, sans-serif"); }
+            } else { // le grand halo d'or au-dessus de la carte
+              co.globalAlpha = glory * .9; co.strokeStyle = '#fde68a'; co.lineWidth = Math.max(2, em * .08); if (dark) { co.shadowColor = '#facc15'; co.shadowBlur = em * .4; }
+              co.beginPath(); co.ellipse(cx, card.y - H * .32 + Math.sin(t * 1.6) * em * .06, card.w * .22, H * .1, 0, 0, TAU); co.stroke(); co.shadowBlur = 0;
+            }
+            co.globalCompositeOperation = 'source-over';
+          }
+          if (wings > .01) for (let pr = pairs - 1; pr >= 0; pr--) {
+            const flap = Math.sin(t * (2.2 + build * 6)) * (.06 + .1 * build) + beat * Math.sin(beat * 9) * .5, o = clamp(open + flap - pr * .15);
+            const s = H * (1.2 + .45 * open) * (1 - pr * .2) * M.size, yy = card.y + H * (.26 - pr * .3 + pr * pr * .2), dx = em * .3 + pr * em * .25; // trois paires bien séparées (Divine) : haut, milieu, bas
+            if (M.demon && dark) { co.globalCompositeOperation = 'lighter'; for (const sd of [-1, 1]) dot(co, '#b91c1c', sd < 0 ? card.x - s * .25 : card.x + card.w + s * .25, yy - s * .15 * open, s * .55, .35 * wings); co.globalCompositeOperation = 'source-over'; } // une lueur de braise derrière les ailes noires
+            l1Wing(co, card.x + dx, yy, s, -1, pr === 2 ? clamp(o * .4) : o, WING, wings * (1 - pr * .1), M.demon);
+            l1Wing(co, card.x + card.w - dx, yy, s, 1, pr === 2 ? clamp(o * .4) : o, WING, wings * (1 - pr * .1), M.demon);
+          }
+        }, true);
+        motes.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        motes.each((m, k) => dot(co, dark ? M.mote : M.moteLight, m.x + Math.sin(m.life * 3 + m.ph) * 5, m.y, m.size * (dark ? 3 : 1.6), Math.sin(Math.PI * k) * (dark ? .7 : .8)));
+        rings.run(dt, (r, k) => { co.globalAlpha = (1 - k) * .9; co.strokeStyle = dark ? M.mote : M.moteLight; co.lineWidth = Math.max(1, em * .05 * (1 - k)); co.beginPath(); co.ellipse(r.x, r.y, em * (.25 + k * .7), em * (.07 + k * .2), M.demon ? -.2 : 0, 0, TAU); co.stroke(); });
+        co.globalCompositeOperation = 'source-over';
+        feathers.step(dt);
+        feathers.each(drawPlume);
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        lit = Math.max(lit, o.ghost ? .1 : o.last ? 1 : .6);
+        if (o.ghost) return;
+        if (o.last) build = 0;
+        // l'anneau part quand l'auréole se pose (45 % de ang-halo, 34 % de dmn-halo)
+        later(M.demon ? .22 : .3, () => { rings.add({ x: p.x, y: p.y - em * .65, life: .55 }); if (Math.random() < (o.last ? 1 : .55)) plume(p.x + rnd(-1, 1) * em * .3, card.y - em * .2); });
+      },
+      build() { build = 1; target = .55; openTo = .05; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { target = 0; plume(cx, card.y - H * .4, { slow: true, max: 3.6, c: dark ? '#9ca3af' : '#6b7280', big: 1.2 }); return; }
+        target = Math.min(1, .45 + .7 * p); openTo = .45 + .55 * p; beat = 1; pairs = asc >= 2 ? 3 : 1;
+        later(.05, () => { for (let i = burst(p, 10 * q, 2); i > 0; i--) plume(cx + rnd(-1, 1) * (card.w * .5 + H * .6), card.y - H * rnd(0, .8)); });
+        if (p < 1) { later(2.6 + 2 * p, () => { target = 0; openTo = .2; }); return; }
+        if (el) el.classList.add(M.cls);
+        glory = 1;
+        for (let i = Math.round((16 + 8 * asc) * q); i > 0; i--) later(rnd(0, 2.5), () => plume(cx + rnd(-1, 1) * (card.w * .6 + H * 1.4), card.y - H * rnd(.6, 1.6)));
+      },
+    };
+  };
+  // 🪽 Angel (idée de qwertyuiop, 2026-11-01, 7 777 pièces) : ailes de plumes blanches liserées d'or, grains de lumière.
+  SCENES.angel = l1Winged({ cls: 'ang-glory', size: 1, wing: ['#fffdf5', '#ffffff', '#fef9e7', 'rgba(202, 138, 4, .55)'], wingLight: ['#fde68a', '#fef3c7', '#fffbeb', 'rgba(161, 98, 7, .85)'], plumes: ['#ffffff', '#fffbeb', '#fef3c7'], inner: '#fde68a', ray: '#fde68a', mote: '#fde68a', moteLight: '#ca8a04' });
+  // 😈 Demon (idée de qwertyuiop, 2026-11-01, 6 666 pièces ; l'ange déchu de Roanono) : ailes noires arrachées, liserées
+  // de rouge, braises, cercle de runes.
+  SCENES.demon = l1Winged({ demon: true, cls: 'dmn-wrath', size: .95, wing: ['#3a0c16', '#4a1020', '#5c1424', 'rgba(248, 113, 113, .85)'], plumes: ['#1c1420', '#111014', '#2a0f18'], inner: '#dc2626', ray: '#ef4444', mote: '#fb923c', moteLight: '#b91c1c' });
+  // ==== fin du lot 1 du 2026-11-05 ====
+
+  // ==== Skins du 2026-11-05, lot 2 : Deep Sea, Bubble, Yin and Yang, Frutiger Aero (idées de joueurs planifiées) ====
+  // 🐋 Deep Sea (finnnnn, Deadshot, YeeHao2 et LEVIATHAN) — dans la carte, la lumière de la surface ondule en haut et la
+  // neige marine tombe. Chaque chiffre posé lâche un chapelet de bulles et fait fuir un petit poisson qui sort de
+  // derrière la carte. Avant le dernier chiffre, la carte s'assombrit et deux yeux immenses s'ouvrent au fond. Pendant
+  // tout le tirage, des bêtes passent autour de la carte (poissons en banc, tortue, calmar). Révélation : un banc de
+  // poissons, puis selon la rareté une tortue, un requin (Epic), un calmar ; dès Mythic, une baleine passe derrière la
+  // carte en chantant (anneaux) et les chiffres pulsent (.dsea-deep) ; dès Divine, le léviathan dresse son cou derrière
+  // la carte et sa tête domine le nombre. Une fois sur 50 (Deadshot), une ancre descend au bout de sa chaîne.
+  SCENES.deepsea = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const snow = particles(), bubbles = particles(), swim = timed(), pending = [], snowE = emitter();
+    const BODY = dark ? '#0b3247' : '#155e75', RIM = dark ? '#22d3ee' : '#0e7490', EYE = '#a5f3fc';
+    let t = 0, gloom = 0, gloomTo = 0, wanderAt = 1.2, levi = null, anchor = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const bubble = (x, y, n, sp = 1) => { for (let i = Math.round(n); i > 0; i--) bubbles.add({ x: x + rnd(-1, 1) * em * .15, y, vx: rnd(-6, 6), vy: -H * rnd(.5, 1.1) * sp, drag: .4, max: rnd(.9, 1.6), r: em * rnd(.035, .08), ph: rnd(TAU) }); };
+    // une bête qui traverse : de x0 à x1 à la hauteur y (ses ondulations sont dans le dessin)
+    const pass = (kind, o = {}) => { const dir = o.dir || pick([-1, 1]), span = card.w / 2 + H * (o.far || 2.4); swim.add({ kind, dir, y: o.y === undefined ? card.y + H * rnd(-.5, .2) : o.y, x0: cx - dir * span, x1: cx + dir * span, life: o.life || rnd(2.6, 3.6), delay: o.delay || 0, s: H * (o.s || 1), n: o.n || 1, t0: 0 }); };
+    // ---- les bêtes, dessinées tournées vers la droite autour de (0, 0) ; s : leur taille
+    const fish = (s, ph) => {
+      const wag = Math.sin(ph * 12) * .25;
+      co.beginPath(); co.ellipse(0, 0, s * .32, s * .13, 0, 0, TAU); co.fill();
+      co.beginPath(); co.moveTo(-s * .26, 0); co.lineTo(-s * .5, -s * .14 + wag * s * .1); co.lineTo(-s * .5, s * .14 + wag * s * .1); co.closePath(); co.fill();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .2, -s * .03, s * .03, 0, TAU); co.fill(); co.restore();
+    };
+    const turtle = (s, ph) => {
+      const pad = Math.sin(ph * 4) * .5;
+      for (const [fx, fy, dir] of [[.15, -.14, -1], [.15, .14, 1], [-.2, -.12, -1], [-.2, .12, 1]]) { co.save(); co.translate(s * fx, s * fy); co.rotate(dir * (.6 + pad * (fx > 0 ? 1 : -.6))); co.beginPath(); co.ellipse(0, dir * s * .1, s * .05, s * .12, 0, 0, TAU); co.fill(); co.restore(); }
+      co.beginPath(); co.ellipse(s * .3, 0, s * .08, s * .06, 0, 0, TAU); co.fill();
+      co.beginPath(); co.ellipse(0, 0, s * .26, s * .18, 0, 0, TAU); co.fill();
+      co.save(); co.strokeStyle = RIM; co.globalAlpha *= .5; co.lineWidth = Math.max(1, s * .015); co.beginPath(); co.ellipse(0, 0, s * .17, s * .1, 0, 0, TAU); co.moveTo(-s * .26, 0); co.lineTo(s * .26, 0); co.stroke(); co.restore();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .34, -s * .02, s * .015, 0, TAU); co.fill(); co.restore();
+    };
+    const squid = (s, ph) => {
+      const pulse = .5 + .5 * Math.sin(ph * 5), sq = 1 - .15 * pulse;
+      co.beginPath(); co.moveTo(s * .38, 0); co.quadraticCurveTo(s * .2, -s * .12 * sq, -s * .02, -s * .08 * sq); co.lineTo(-s * .02, s * .08 * sq); co.quadraticCurveTo(s * .2, s * .12 * sq, s * .38, 0); co.fill();
+      co.save(); co.strokeStyle = co.fillStyle; co.lineWidth = Math.max(1.2, s * .025); co.lineCap = 'round';
+      for (let i = -3; i <= 3; i++) { co.beginPath(); co.moveTo(-s * .02, i * s * .02); for (let j = 1; j <= 6; j++) co.lineTo(-s * .02 - j * s * .06 * (1 + pulse * .3), i * s * .025 * (1 + j * .25 * (1 - pulse)) + Math.sin(ph * 8 + j + i) * s * .02); co.stroke(); }
+      co.restore();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .04, -s * .04, s * .022, 0, TAU); co.fill(); co.restore();
+    };
+    const shark = (s, ph) => {
+      const wag = Math.sin(ph * 5) * .12;
+      co.beginPath(); co.moveTo(s * .55, s * .02); co.quadraticCurveTo(s * .3, -s * .14, -s * .3, -s * .05); co.lineTo(-s * .55, -s * .2 + wag * s * .3); co.lineTo(-s * .46, 0); co.lineTo(-s * .55, s * .14 + wag * s * .3); co.lineTo(-s * .3, s * .04); co.quadraticCurveTo(s * .2, s * .12, s * .55, s * .02); co.fill();
+      co.beginPath(); co.moveTo(s * .05, -s * .09); co.lineTo(-s * .08, -s * .26); co.lineTo(-s * .12, -s * .07); co.fill(); // aileron
+      co.beginPath(); co.moveTo(s * .1, s * .06); co.lineTo(-s * .05, s * .2); co.lineTo(-s * .06, s * .06); co.fill();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .38, -s * .02, s * .015, 0, TAU); co.fill(); co.restore();
+    };
+    const whale = (s, ph) => {
+      const fl = Math.sin(ph * 1.6) * .15;
+      co.beginPath(); co.moveTo(s * .5, 0); co.bezierCurveTo(s * .5, -s * .16, s * .1, -s * .2, -s * .3, -s * .08); co.lineTo(-s * .5, -s * .02); co.bezierCurveTo(-s * .3, s * .08, s * .2, s * .16, s * .5, 0); co.fill();
+      co.save(); co.translate(-s * .48, -s * .02); co.rotate(fl); co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-s * .06, -s * .12, -s * .16, -s * .1); co.quadraticCurveTo(-s * .06, -s * .02, 0, 0); co.quadraticCurveTo(-s * .06, s * .06, -s * .16, s * .08); co.quadraticCurveTo(-s * .06, s * .02, 0, 0); co.fill(); co.restore(); // la caudale
+      co.save(); co.translate(s * .12, s * .1); co.rotate(.5 + fl); co.beginPath(); co.ellipse(0, s * .06, s * .025, s * .09, 0, 0, TAU); co.fill(); co.restore(); // la pectorale
+      co.save(); co.strokeStyle = RIM; co.globalAlpha *= .35; co.lineWidth = Math.max(1, s * .006); for (let i = 0; i < 5; i++) { co.beginPath(); co.moveTo(s * .42, s * (.04 + i * .015)); co.quadraticCurveTo(s * .2, s * (.1 + i * .015), -s * .02, s * (.07 + i * .01)); co.stroke(); } co.restore(); // les sillons
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .34, s * .02, s * .01, 0, TAU); co.fill(); co.restore();
+    };
+    const DRAW = { fish, turtle, squid, shark, whale };
+    // le léviathan (Divine et plus) : un long cou qui monte de derrière la carte, la tête penchée au-dessus du nombre
+    const leviathan = k => {
+      const rise = outCubic(k), bx = card.x + card.w + H * 1.5, by = card.y + H * 1.3, hx = card.x + card.w + H * .75, hy = card.y + H * .1 + (1 - rise) * H * 1.4, sway = Math.sin(t * 1.1) * em * .2; // la tête à droite de la carte, à sa hauteur : au-dessus, il n'y a que 45 px avant le menu
+      co.save(); co.lineCap = 'round'; co.lineJoin = 'round';
+      co.strokeStyle = BODY; co.lineWidth = H * .42; co.beginPath(); co.moveTo(bx, by); co.bezierCurveTo(bx + H * .9, by - H * .6, hx + H * 1.1 + sway, hy + H * .2, hx + sway, hy); co.stroke();
+      co.strokeStyle = RIM; co.globalAlpha = .45; co.lineWidth = 2; co.beginPath(); co.moveTo(bx + H * .2, by - H * .1); co.bezierCurveTo(bx + H * 1.05, by - H * .7, hx + H * 1.2 + sway, hy, hx + sway + H * .15, hy - H * .16); co.stroke(); co.globalAlpha = 1;
+      // les épines du dos
+      co.fillStyle = BODY; for (let i = 0; i < 6; i++) { const u = .25 + i * .12, px = lerp(bx + H * .5, hx + H * .7 + sway, u), py = lerp(by - H * .5, hy - H * .1, u); co.beginPath(); co.moveTo(px - H * .08, py - H * .14); co.lineTo(px + H * .02, py - H * .4); co.lineTo(px + H * .1, py - H * .12); co.fill(); }
+      // la tête : un crâne allongé tourné vers la gauche, la gueule entrouverte, deux yeux qui luisent
+      co.translate(hx + sway, hy); co.rotate(.12 + Math.sin(t * .9) * .05); co.fillStyle = BODY;
+      co.beginPath(); co.moveTo(H * .3, -H * .2); co.quadraticCurveTo(-H * .2, -H * .32, -H * .78, -H * .06); co.lineTo(-H * .76, H * .02); co.quadraticCurveTo(-H * .2, -H * .02, H * .3, H * .14); co.closePath(); co.fill();
+      const jaw = .12 + .08 * Math.sin(t * 2); co.save(); co.rotate(-jaw); co.beginPath(); co.moveTo(H * .25, H * .1); co.quadraticCurveTo(-H * .2, H * .12, -H * .66, H * .08); co.lineTo(-H * .6, H * .16); co.quadraticCurveTo(-H * .1, H * .26, H * .25, H * .2); co.fill();
+      co.fillStyle = '#e0f2fe'; for (let i = 0; i < 6; i++) { const tx = -H * (.58 - i * .1); co.beginPath(); co.moveTo(tx, H * .09); co.lineTo(tx + H * .025, H * .03); co.lineTo(tx + H * .05, H * .09); co.fill(); } co.restore();
+      co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#22d3ee', -H * .18, -H * .14, H * .12, .8); dot(co, '#ecfeff', -H * .18, -H * .14, H * .035, 1); co.globalCompositeOperation = 'source-over';
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        gloom += (gloomTo - gloom) * Math.min(1, dt * 3);
+        // la lumière de la surface ondule en haut de la carte ; la neige marine tombe
+        ci.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) dot(ci, '#67e8f9', w * (.5 + .45 * Math.sin(t * (.35 + i * .11) + i * 1.7)), h * .08, w * .16, (.1 + .04 * Math.sin(t * 2 + i)) * (1 - gloom), h * .35);
+        ci.globalCompositeOperation = 'source-over';
+        for (let n = snowE(6 * q, dt); n > 0; n--) snow.add({ x: rnd(w), y: -2, vx: rnd(-3, 3), vy: rnd(4, 10), max: rnd(3, 6), r: rnd(.5, 1.2), ph: rnd(TAU) });
+        snow.step(dt);
+        ci.fillStyle = '#e0f2fe'; snow.each((s, k) => { ci.globalAlpha = .45 * Math.sin(Math.PI * k); ci.beginPath(); ci.arc(s.x + Math.sin(s.life + s.ph) * 3, s.y, s.r, 0, TAU); ci.fill(); });
+        ci.globalAlpha = 1;
+        // avant le dernier chiffre : l'abysse s'assombrit et deux yeux immenses s'ouvrent au fond
+        if (gloom > .02) {
+          ci.globalAlpha = gloom * .45; ci.fillStyle = '#000814'; ci.fillRect(0, 0, w, h); ci.globalAlpha = 1;
+          const open = clamp(gloom * 1.4 - .3) * (Math.sin(t * 1.3) > .96 ? .1 : 1);
+          ci.globalCompositeOperation = 'lighter';
+          for (const ex of [.78, .9]) { dot(ci, '#22d3ee', w * ex, h * .72, h * .16, .35 * open, h * .16 * open); dot(ci, '#ecfeff', w * ex, h * .72, h * .05, .6 * open, h * .05 * open); }
+          ci.globalCompositeOperation = 'source-over';
+        }
+        // des bêtes passent de temps en temps pendant le tirage
+        if (t > wanderAt && !gloomTo) { wanderAt = t + rnd(2.2, 3.6); const k = pick(['fish', 'fish', 'turtle', 'squid']); pass(k, { s: k === 'fish' ? .5 : .8, n: k === 'fish' ? 4 : 1 }); }
+        // derrière la carte : les bêtes, le léviathan, l'ancre ; jamais sur la rareté ni le score
+        if (swim.n || levi || anchor) behind(env, () => {
+          co.fillStyle = BODY;
+          swim.run(dt, (b, k) => {
+            const x = lerp(b.x0, b.x1, k), a = Math.min(1, k * 6, (1 - k) * 6);
+            for (let i = 0; i < b.n; i++) {
+              co.save(); co.globalAlpha = a * (dark ? .95 : .8); co.fillStyle = BODY;
+              co.translate(x - b.dir * i * b.s * .45 + Math.sin(i * 2.1) * b.s * .2, b.y + Math.sin(t * 1.5 + i * 1.3) * b.s * .1 + (i % 2) * b.s * .22); co.scale(b.dir, 1);
+              if (dark) { co.shadowColor = RIM; co.shadowBlur = Math.max(2, b.s * .06); }
+              DRAW[b.kind](b.s, t + i);
+              co.restore();
+            }
+            if (b.kind === 'whale' && Math.random() < dt * 1.5) bubble(x, b.y - b.s * .1, 2); // le souffle de la baleine
+            if (b.kind === 'whale') { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; for (let r = 0; r < 3; r++) { const kk = ((t * .5 + r / 3) % 1); co.globalAlpha = (1 - kk) * .35 * a; co.strokeStyle = RIM; co.lineWidth = 1.5; co.beginPath(); co.arc(x + b.dir * b.s * .4, b.y, b.s * (.1 + kk * .5), -.6, .6); co.stroke(); } co.globalCompositeOperation = 'source-over'; } // son chant
+          });
+          if (levi) { levi.k = Math.min(1, levi.k + dt * .7); co.globalAlpha = 1; leviathan(levi.k); }
+          if (anchor) {
+            anchor.y += dt * H * .55; const ax = anchor.x, ay = anchor.y, s = H * .5;
+            co.globalAlpha = clamp((anchor.end - t) / .8); co.strokeStyle = dark ? '#475569' : '#334155'; co.lineWidth = Math.max(1.5, s * .05);
+            for (let yy = ay - s * .5; yy > -10; yy -= s * .14) { co.beginPath(); co.ellipse(ax, yy, s * .035, s * .07, 0, 0, TAU); co.stroke(); } // la chaîne
+            co.lineWidth = Math.max(2.5, s * .09); co.lineCap = 'round'; co.beginPath(); co.moveTo(ax, ay - s * .45); co.lineTo(ax, ay + s * .4); co.moveTo(ax - s * .2, ay - s * .25); co.lineTo(ax + s * .2, ay - s * .25); co.moveTo(ax - s * .35, ay + s * .1); co.quadraticCurveTo(ax - s * .3, ay + s * .45, ax, ay + s * .42); co.quadraticCurveTo(ax + s * .3, ay + s * .45, ax + s * .35, ay + s * .1); co.stroke();
+            co.beginPath(); co.arc(ax, ay - s * .52, s * .07, 0, TAU); co.stroke();
+            if (t > anchor.end) anchor = null;
+          }
+          co.globalAlpha = 1;
+        }, true);
+        bubbles.step(dt);
+        co.strokeStyle = dark ? '#a5f3fc' : '#0e7490'; co.lineWidth = 1.2;
+        bubbles.each((b, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3) * .8; co.beginPath(); co.arc(b.x + Math.sin(b.life * 6 + b.ph) * 3, b.y, b.r, 0, TAU); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) gloomTo = 0;
+        bubble(p.x, card.y + em * .1, o.ghost ? 1 : o.last ? 7 : 4);
+        if (o.ghost) return;
+        // un petit poisson effrayé file de derrière la carte, à la hauteur du chiffre
+        later(.18, () => { const dir = p.x < cx ? -1 : 1; swim.add({ kind: 'fish', dir, y: card.y - H * rnd(.15, .35), x0: p.x, x1: p.x + dir * (card.w + H * 2), life: 1.1, s: H * .4, n: 1 }); });
+      },
+      build() { gloomTo = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        gloomTo = 0; wanderAt = t + 6;
+        if (!p) { bubble(cx, card.y, 1, .5); return; }
+        pass('fish', { s: .5, n: 3 + Math.round(4 * p), y: card.y - H * .3, life: 2.6 });
+        if (p >= .42) pass('turtle', { s: .9, delay: .5, y: card.y - H * .2 });
+        if (p >= .6) pass('shark', { s: 1.4, delay: .3, y: card.y + H * .15, life: 3.4 });
+        if (p >= .8) pass('squid', { s: 1, delay: 1, y: card.y - H * .45 });
+        if (p >= 1) { if (el) el.classList.add('dsea-deep'); pass('whale', { s: 3.2, delay: .2, y: card.y + H * .5, life: 6, far: 3.6 }); }
+        if (asc >= 2) later(1.4, () => { levi = { k: 0 }; });
+        // Deadshot : « a 1 in 50 chance for an anchor to pass bye »
+        if (Math.random() < 1 / 50) later(2, () => { anchor = { x: card.x + card.w * rnd(.15, .85), y: card.y - H * 1.6, end: t + 6 }; });
+      },
+    };
+  };
+
+  // Une bulle de savon dessinée une fois (film irisé, reflet), puis posée à toutes les tailles (Bubble, Frutiger Aero).
+  let l2BubbleImg = null;
+  const l2Bubble = () => {
+    if (l2BubbleImg) return l2BubbleImg;
+    const s = document.createElement('canvas'); s.width = s.height = 96;
+    const c = s.getContext('2d'), r = 46;
+    const film = c.createRadialGradient(48, 48, r * .55, 48, 48, r);
+    film.addColorStop(0, 'rgba(255,255,255,0.04)'); film.addColorStop(.75, 'rgba(255,255,255,0.12)'); film.addColorStop(1, 'rgba(255,255,255,0.55)');
+    c.fillStyle = film; c.beginPath(); c.arc(48, 48, r, 0, TAU); c.fill();
+    const hues = ['rgba(244,114,182,.5)', 'rgba(250,204,21,.45)', 'rgba(74,222,128,.42)', 'rgba(56,189,248,.5)', 'rgba(167,139,250,.5)'];
+    c.lineWidth = 5; hues.forEach((h, i) => { c.strokeStyle = h; c.beginPath(); c.arc(48, 48, r - 3, i * TAU / 5 + .6, (i + 1) * TAU / 5 + .6); c.stroke(); });
+    c.lineWidth = 1.2; c.strokeStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(48, 48, r - .5, 0, TAU); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(32, 30, 11, 6, -.6, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.arc(64, 68, 3.5, 0, TAU); c.fill();
+    return (l2BubbleImg = s);
+  };
+  const l2DrawBubble = (c, x, y, r, a, sq = 1) => { if (a <= .01 || r < .5) return; c.globalAlpha = Math.min(1, a); c.drawImage(l2Bubble(), x - r / sq, y - r * sq, 2 * r / sq, 2 * r * sq); };
+
+  // 🫧 Bubble (idée de finnnnn, 2026-11-05) — des bulles montent doucement du bas de la carte pendant le tirage. Quand un
+  // chiffre se pose, sa vieille bulle éclate (12 % de bub-new) : une couronne de gouttelettes et un petit éclair, et la
+  // bulle neuve se gonfle. Avant le dernier chiffre, plus de bulles montent, plus vite. Révélation : une gerbe de bulles
+  // qui s'envolent (et éclatent en l'air) ; dès Mythic, le pistolet à bulles : deux jets de bulles partent des côtés de
+  // la carte pendant plusieurs secondes et remplissent la scène. Tirage raté : une seule bulle monte, éclate, et une
+  // goutte retombe.
+  SCENES.bubble = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const bubs = particles(), drops = particles(), pops = timed(), pending = [], rise = emitter(), gun = emitter();
+    let t = 0, build = 0, gunEnd = 0, gunRate = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const popAt = (x, y, r) => { pops.add({ x, y, r, life: .25 }); for (let i = Math.round(6 * q + r / 8); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.6, 1.4); drops.add({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: H * 4, drag: 1.5, max: rnd(.3, .5), r: rnd(1, 2) }); } };
+    const bub = (x, y, o = {}) => bubs.add({ x, y, vx: o.vx || rnd(-8, 8), vy: o.vy || -H * rnd(.25, .55), drag: o.drag || .2, g: o.g || 0, max: o.max || rnd(2, 3.4), r: o.r || em * rnd(.1, .28), ph: rnd(TAU), pop: o.pop === undefined ? Math.random() < .5 : o.pop });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        for (let n = rise((1.2 + 7 * build) * q, dt); n > 0; n--) bub(card.x + rnd(card.w), card.y + H * rnd(.6, 1), { vy: -H * rnd(.3, .6) * (1 + build) });
+        // le pistolet à bulles (Mythic et plus) : deux jets, à gauche et à droite, qui balaient de haut en bas
+        if (t < gunEnd) for (let n = gun(gunRate * q, dt); n > 0; n--) { const side = Math.random() < .5 ? -1 : 1, sweep = Math.sin(t * 2.2 + (side > 0 ? 1.5 : 0)) * .7 - .35, v = H * rnd(2.2, 3.6); bub(side < 0 ? card.x - em * .2 : card.x + card.w + em * .2, card.y + H * .5, { vx: side * Math.cos(sweep) * v, vy: Math.sin(sweep) * v, drag: 1.4, g: -H * .25, max: rnd(2.2, 3.6), r: em * rnd(.12, .36), pop: Math.random() < .4 }); }
+        bubs.step(dt);
+        bubs.each((b, k) => {
+          const sq = 1 + .06 * Math.sin(b.life * 7 + b.ph), x = b.x + Math.sin(b.life * 2.2 + b.ph) * em * .15;
+          // une bulle sur deux éclate avant la fin de sa vie (elle disparaît dans un petit pop) ; les autres s'effacent
+          if (b.pop && k > .8 && !b.popped) { b.popped = true; popAt(x, b.y, b.r); }
+          if (b.popped) return;
+          l2DrawBubble(co, x, b.y, b.r, Math.min(1, b.life * 5, (1 - k) * 4) * (dark ? .95 : 1), sq);
+        });
+        drops.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#6366f1';
+        drops.each((d, k) => { co.globalAlpha = (1 - k) * .85; co.beginPath(); co.arc(d.x, d.y, d.r, 0, TAU); co.fill(); });
+        pops.run(dt, (p, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#ffffff' : '#818cf8'; co.lineWidth = 1.4; for (let i = 0; i < 8; i++) { const a = i * TAU / 8, r0 = p.r * (.7 + k * .9), r1 = p.r * (1 + k * 1.3); co.beginPath(); co.moveTo(p.x + Math.cos(a) * r0, p.y + Math.sin(a) * r0); co.lineTo(p.x + Math.cos(a) * r1, p.y + Math.sin(a) * r1); co.stroke(); } });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        // l'ancienne bulle éclate à 12 % de bub-new (0,62 s), la neuve se gonfle
+        later(.07, () => popAt(p.x, p.y, em * (o.ghost ? .25 : .42)));
+        if (o.last) later(.3, () => { for (let i = Math.round(5 * q); i > 0; i--) bub(p.x + rnd(-1, 1) * em * .3, card.y, { vy: -H * rnd(.6, 1.1) }); });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { bub(cx, card.y, { r: em * .3, vy: -H * .35, max: 1.6, pop: true }); return; }
+        for (let i = burst(p, 34 * q, 4); i > 0; i--) { const e = along(grown(card, em * .2), rnd()); bub(e.x, e.y, { vx: (e.x - cx) * rnd(1, 2.4) / card.w * H, vy: -H * rnd(.6, 1.6), drag: .9, r: em * rnd(.12, .3) * (1 + .6 * p) }); }
+        if (p < 1) return;
+        gunRate = 26 + 10 * asc; gunEnd = t + 2.6 + 1.2 * asc;
+      },
+    };
+  };
+
+  // Un taiji (le cercle du yin et du yang) de rayon r, tourné de rot ; ink : la moitié sombre, paper : la claire.
+  function l2Taiji(c, x, y, r, rot, a, ink = '#0c0a09', paper = '#f5f5f4') {
+    if (a <= .01 || r < 1) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot);
+    c.fillStyle = paper; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.fillStyle = ink; c.beginPath(); c.arc(0, 0, r, -Math.PI / 2, Math.PI / 2); c.arc(0, r / 2, r / 2, Math.PI / 2, -Math.PI / 2, true); c.arc(0, -r / 2, r / 2, Math.PI / 2, -Math.PI / 2); c.closePath(); c.fill();
+    c.beginPath(); c.arc(0, -r / 2, r * .14, 0, TAU); c.fill();
+    c.fillStyle = paper; c.beginPath(); c.arc(0, r / 2, r * .14, 0, TAU); c.fill();
+    c.lineWidth = Math.max(1, r * .03); c.strokeStyle = '#78716c'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke();
+    c.restore();
+  }
+  // ☯️ Yin and Yang (idées de kaz et de JBearr12, Legendary) — à chaque chiffre posé, un grand taiji tourbillonne depuis
+  // sa case et s'efface pendant que la carte s'inverse (la règle CSS fait le changement de couleur). Pendant le tirage,
+  // une brume grise passe dans la carte ; avant le dernier chiffre, elle s'épaissit et deux petits taiji tournent autour
+  // de sa case. Révélation : des gouttes d'encre noire et blanche jaillissent des bords ; dès Epic, un anneau de taiji
+  // tourne autour de la carte ; dès Mythic, deux carpes koï, une noire et une blanche, se poursuivent autour d'elle ;
+  // dès Divine, un taiji géant tourne derrière la carte, ceint des huit trigrammes.
+  SCENES.yinyang = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const swirls = timed(), ink = particles(), pending = [];
+    let t = 0, mist = .3, mistTo = .3, build = 0, ring = 0, koi = 0, grand = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const TRI = ['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷'];
+    // une carpe koï vue de dessus, tournée vers +x : corps fuselé, nageoires, queue qui ondule
+    const carp = (x, y, ang, s, body, edge, ph) => {
+      co.save(); co.translate(x, y); co.rotate(ang); co.fillStyle = body; co.strokeStyle = edge; co.lineWidth = Math.max(1, s * .04);
+      const wag = Math.sin(ph * 6) * .35;
+      co.beginPath(); co.moveTo(-s * .45, 0); co.quadraticCurveTo(-s * .62, -s * .2 + wag * s * .1, -s * .7 + wag * s * .1, -s * .22); co.quadraticCurveTo(-s * .58, 0, -s * .7 + wag * s * .1, s * .22); co.quadraticCurveTo(-s * .62, s * .2 + wag * s * .1, -s * .45, 0); co.fill(); co.stroke(); // la queue
+      for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(s * .1, sd * s * .14, s * .1, s * .045, sd * .7, 0, TAU); co.fill(); co.stroke(); } // les nageoires
+      co.beginPath(); co.moveTo(s * .5, 0); co.bezierCurveTo(s * .45, -s * .16, -s * .2, -s * .14, -s * .46, 0); co.bezierCurveTo(-s * .2, s * .14, s * .45, s * .16, s * .5, 0); co.fill(); co.stroke(); // le corps
+      co.fillStyle = edge; for (const sd of [-1, 1]) { co.beginPath(); co.arc(s * .38, sd * s * .06, s * .025, 0, TAU); co.fill(); } // les yeux
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        mist += (mistTo - mist) * Math.min(1, dt * 2);
+        // la brume dans la carte : des voiles gris qui passent lentement
+        for (let i = 0; i < 4; i++) dot(ci, '#a8a29e', w * (.5 + .55 * Math.sin(t * (.18 + i * .07) + i * 2.1)), h * (.3 + .4 * ((i * .37) % 1)), w * .35, mist * .22, h * .3);
+        // le tourbillon qui inverse la carte, depuis la case qui vient de se poser
+        swirls.run(dt, (s, k) => l2Taiji(ci, s.x, s.y, em * (.4 + k * 2.6), s.rot + k * 5, (1 - k) * (1 - k) * .55));
+        // deux petits taiji tournent autour de la dernière case (avant le dernier chiffre)
+        if (build) { const s = l1Next(env); if (s) for (let i = 0; i < 2; i++) { const a = t * 5 + i * Math.PI; l2Taiji(co, s.x + Math.cos(a) * s.w * .75, s.y + Math.sin(a) * H * .45, em * .14, t * 8, .9 * build); } }
+        // derrière la carte : le taiji géant et ses trigrammes (Divine), l'anneau de taiji (Epic), les koï (Mythic)
+        if (grand || ring || koi) behind(env, () => {
+          if (grand) {
+            grand = Math.min(1, grand + dt * .8);
+            const r = Math.max(card.w * .85, H * 2.1) * outCubic(grand); // assez grand pour que la courbe du taiji se voie autour de la carte
+            if (dark) { co.globalCompositeOperation = 'lighter'; dot(co, '#e7e5e4', cx, cy, r * 1.5, .18 * grand); co.globalCompositeOperation = 'source-over'; }
+            l2Taiji(co, cx, cy, r, t * .4, .7 * grand, '#0c0a09', dark ? '#d6d3d1' : '#f5f5f4');
+            for (let i = 0; i < 8; i++) { const a = -t * .25 + (i * TAU) / 8; l1Glyph(co, cx + Math.cos(a) * r * 1.22, cy + Math.sin(a) * r * 1.22, em * .45, TRI[i], a + Math.PI / 2, grand, dark ? '#e7e5e4' : '#292524', null, '{s}px system-ui, sans-serif'); }
+          }
+          if (ring) {
+            const n = 10, rx = card.w * .5 + em * .9, ry = H * .5 + em * .7;
+            for (let i = 0; i < n; i++) { const a = t * .6 + (i * TAU) / n; l2Taiji(co, cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, em * .18, -t * 2 + i, ring * .9); }
+          }
+          if (koi) {
+            koi = Math.min(1, koi + dt);
+            const rx = card.w * .5 + em * 1.4, ry = H * .5 + em * .9;
+            for (let i = 0; i < 2; i++) {
+              const a = t * .9 + i * Math.PI, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry, dir = Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx);
+              co.globalAlpha = koi; carp(x, y, dir, em * 1.5, i ? '#f5f5f4' : '#0c0a09', i ? '#0c0a09' : '#d6d3d1', t + i);
+            }
+            co.globalAlpha = 1;
+          }
+        }, true);
+        // l'encre qui jaillit : noire et blanche
+        ink.step(dt);
+        ink.each((d, k) => { co.globalAlpha = Math.min(1, (1 - k) * 2.5); co.fillStyle = d.c; co.strokeStyle = d.c === '#0c0a09' ? '#a8a29e' : '#44403c'; co.lineWidth = 1; co.beginPath(); co.arc(d.x, d.y, d.r * (1 - k * .4), 0, TAU); co.fill(); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) { build = 0; mistTo = .3; }
+        const ip = bInner(env, p);
+        swirls.add({ x: ip.x, y: ip.y, rot: rnd(TAU), life: o.ghost ? .35 : .5 });
+      },
+      build() { build = 1; mistTo = .9; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; mistTo = p ? .2 : .9;
+        if (!p) return; // un tirage raté : la brume se referme sur le nombre
+        for (let i = burst(p, 30 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); ink.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(1.5, 3.5), vy: (e.y - cy) / H * H * rnd(1, 3) - H * .4, g: H * 3, drag: 1, max: rnd(.7, 1.3), r: em * rnd(.04, .1) * (1 + p), c: i % 2 ? '#0c0a09' : '#f5f5f4' }); }
+        if (p >= .6) later(.2, () => { ring = 1; });
+        if (p >= 1) later(.5, () => { koi = .01; });
+        if (asc >= 2) later(.3, () => { grand = .01; });
+      },
+    };
+  };
+
+  // 🌐 Frutiger Aero (promis à jia jun, 2026-10-23) — des bulles brillantes montent autour de la carte ; chaque chiffre
+  // posé lâche une petite gerbe de bulles et un éclat de lumière en croix. Avant le dernier chiffre, un ruban de lumière
+  // verte et bleue tourne autour de la carte. Révélation : un reflet d'objectif traverse la carte (plus de cercles avec la
+  // rareté) et les bulles s'envolent ; dès Epic, des rubans d'aurore passent derrière la carte ; dès Mythic, le grand
+  // jeu : rubans, pluie de bulles, papillons de lumière, et un reflet qui repasse sur les chiffres (.aero-shine).
+  SCENES.aero = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const bubs = particles(), sparks = timed(), flares = timed(), ribbons = timed(), flies = particles(), rise = emitter();
+    let t = 0, build = 0, rain = 0, rainEnd = 0;
+    const bub = (x, y, o = {}) => bubs.add({ x, y, vx: o.vx || rnd(-6, 6), vy: o.vy || -H * rnd(.3, .6), drag: o.drag || .2, max: o.max || rnd(2.4, 3.6), r: o.r || em * rnd(.08, .22), ph: rnd(TAU) });
+    // un ruban de lumière : une courbe épaisse et douce qui ondule autour de (cx, cy)
+    const ribbon = (cols, phase, amp, width, a) => {
+      co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; co.lineCap = 'round';
+      cols.forEach((c, i) => {
+        co.globalAlpha = a * (dark ? .45 : .35); co.strokeStyle = c; co.lineWidth = width * (1 - i * .3);
+        co.beginPath();
+        for (let k = 0; k <= 40; k++) { const u = k / 40, x = cx + (u - .5) * (card.w + H * 4.2), y = cy + Math.sin(u * 5 + phase + i * .4) * amp - (u - .5) * H * .4; k ? co.lineTo(x, y) : co.moveTo(x, y); }
+        co.stroke();
+      });
+      co.globalCompositeOperation = 'source-over';
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let n = rise((1.5 + 6 * build + rain) * q, dt); n > 0; n--) bub(card.x + rnd(-.3, 1.3) * card.w, card.y + H * rnd(.8, 1.2));
+        if (t > rainEnd) rain = 0;
+        // le ruban qui tourne avant le dernier chiffre, puis les aurores (Epic et plus), derrière la carte
+        if (build || ribbons.n) behind(env, () => {
+          if (build) ribbon(['#4ade80', '#38bdf8'], t * 4, H * .5, em * .3, build);
+          ribbons.run(dt, (r, k) => ribbon(r.cols, t * 1.6 + r.ph, H * r.amp, em * r.w, Math.sin(Math.PI * k)));
+        }, true);
+        bubs.step(dt);
+        bubs.each((b, k) => l2DrawBubble(co, b.x + Math.sin(b.life * 2 + b.ph) * em * .12, b.y, b.r, Math.min(1, b.life * 4, (1 - k) * 3)));
+        co.globalAlpha = 1;
+        // les papillons de lumière (Mythic) : deux ailes qui battent, une traînée de points
+        flies.step(dt);
+        flies.each((f, k) => {
+          const flap = Math.abs(Math.sin(f.life * 14 + f.ph)), x = f.x + Math.sin(f.life * 2 + f.ph) * em * .6, y = f.y;
+          co.globalAlpha = Math.min(1, f.life * 3, (1 - k) * 3); co.fillStyle = f.c;
+          for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(x + sd * em * .12 * flap, y, em * .14 * flap + 1, em * .1, sd * .4, 0, TAU); co.fill(); }
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, f.c, x, y, em * .4, .25); co.globalCompositeOperation = 'source-over';
+        });
+        co.globalAlpha = 1;
+        // éclats en croix (un chiffre posé) et reflets d'objectif (la révélation)
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.run(dt, (s, k) => { const a = Math.sin(Math.PI * k), r = em * s.r * (.5 + k); dot(co, '#ffffff', s.x, s.y, r * .25, a); dot(co, '#bae6fd', s.x, s.y, r, a * .45, r * .08); dot(co, '#bae6fd', s.x, s.y, r * .08, a * .45, r); });
+        flares.run(dt, (f, k) => {
+          const x = lerp(card.x - H, card.x + card.w + H, outCubic(k)), y = card.y + H * .25, a = Math.sin(Math.PI * k);
+          dot(co, '#ffffff', x, y, H * .4, a * .7); dot(co, '#e0f2fe', x, y, H * 1.6, a * .35, H * .06);
+          for (let i = 1; i <= f.n; i++) { const u = i / (f.n + 1), fx = lerp(x, 2 * cx - x, u), fy = lerp(y, 2 * cy - y, u); co.globalAlpha = a * .5; co.strokeStyle = pick(['#a5f3fc', '#bbf7d0', '#fde68a']); co.lineWidth = 1.5; co.beginPath(); co.arc(fx, fy, H * (.08 + .1 * ((i * .37) % 1)), 0, TAU); co.stroke(); }
+        });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        sparks.add({ x: p.x + em * .18, y: p.y - em * .3, r: o.last ? 1.2 : .8, life: .45, delay: .1 });
+        for (let i = Math.round((o.last ? 6 : 3) * q); i > 0; i--) bub(p.x + rnd(-1, 1) * em * .3, card.y + em * .1, { vy: -H * rnd(.5, 1), r: em * rnd(.06, .14) });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) return;
+        flares.add({ life: .9 + .3 * p, n: Math.round(2 + 5 * p) });
+        for (let i = burst(p, 26 * q, 4); i > 0; i--) { const e = along(grown(card, em * .2), rnd()); bub(e.x, e.y, { vx: (e.x - cx) / card.w * H * rnd(.8, 2), vy: -H * rnd(.6, 1.4), drag: .8, r: em * rnd(.1, .26) * (1 + .5 * p) }); }
+        if (p >= .6) ribbons.add({ life: 2.6, cols: ['#4ade80', '#a3e635'], amp: .7, w: .5, ph: 0 });
+        if (p < 1) return;
+        if (el) el.classList.add('aero-shine');
+        ribbons.add({ delay: .3, life: 3.2, cols: ['#38bdf8', '#a5f3fc'], amp: .9, w: .6, ph: 2 });
+        if (asc) ribbons.add({ delay: .6, life: 3.6, cols: ['#c084fc', '#f0abfc'], amp: 1.1, w: .5, ph: 4 });
+        rain = 14 + 6 * asc; rainEnd = t + 3 + asc;
+        for (let i = Math.round((8 + 4 * asc) * q); i > 0; i--) flies.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H), y: card.y + H * rnd(-.2, 1), vx: rnd(-20, 20), vy: -H * rnd(.2, .5), max: rnd(2.4, 3.6), ph: rnd(TAU), c: pick(['#bbf7d0', '#a5f3fc', '#fde68a', '#f0abfc']) });
+      },
+    };
+  };
+  // ==== fin du lot 2 du 2026-11-05 ====
+
+  // ==== Skins du 2026-11-05, lot 3 : Blackout, Prism, Rainbow Paint, Touch Grass (idées de joueurs planifiées) ====
+  // 💡 Blackout (promis à Mace_67, 2026-10-29) — chaque chiffre qui s'allume jette une petite flaque de lumière chaude
+  // sous lui (calque intérieur), qui grésille avec lui puis tient. Avant le dernier chiffre, des étincelles crépitent
+  // autour de sa case, comme un fil mal branché. Au dernier chiffre, une tête de lumière fait deux fois le tour du cadre
+  // et l'allume (la règle CSS garde ensuite le cadre allumé). Révélation : le cadre flashe dans la couleur de la rareté ;
+  // dès Epic, des faisceaux sortent des bords ; dès Mythic, la surtension (.bo-surge) : des arcs courent sur le cadre et
+  // des étincelles en jaillissent. Tirage raté : la coupure de courant (.bo-cut), la carte retombe dans le noir.
+  SCENES.blackout = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const pools = [], sparks = particles(), traces = timed(), flashes = timed(), beams = timed(), pending = [];
+    let t = 0, build = 0, surge = 0, cut = 0, surgeC = '#fff3d6'; // surgeC : la couleur des arcs (celle de la rareté)
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const tierColor = () => { const v = el && getComputedStyle(el).getPropertyValue('--t-accent').trim(); return v && v[0] === '#' && v.length === 7 ? v : '#fff3d6'; };
+    const spark = (x, y, n, sp = 1, c = '#fff3d6') => { for (let i = Math.round(n); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.8, 2.4) * sp; sparks.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - H * .4, g: H * 5, drag: .6, max: rnd(.25, .6), c }); } };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        surge = Math.max(0, surge - dt * .6); cut = Math.max(0, cut - dt * .5);
+        // les flaques de lumière sous les chiffres allumés : elles grésillent comme bo-on, puis tiennent
+        ci.globalCompositeOperation = 'lighter';
+        for (const p of pools) {
+          const age = t - p.t0, k = age < .3 ? (Math.sin(age * 90) > 0 ? 1 : .2) : 1, power = (1 - cut * .8) * (1 + surge * 1.4);
+          dot(ci, '#ffd98a', p.x, h * .8, p.w * .9, .22 * k * power * Math.min(1, age * 8), h * .5);
+          dot(ci, '#fff3d6', p.x, p.y, p.w * .55, .1 * k * power, h * .35);
+        }
+        ci.globalCompositeOperation = 'source-over';
+        // des étincelles crépitent autour de la dernière case (avant le dernier chiffre)
+        if (build) { const s = l1Next(env); if (s && Math.random() < dt * 22 * q) spark(s.x + rnd(-.5, .5) * s.w, s.top + rnd(s.bottom - s.top), 2, .5); }
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // la tête de lumière qui fait le tour du cadre (au dernier chiffre)
+        traces.run(dt, (tr, k) => {
+          const head = outCubic(k) * tr.laps;
+          for (let i = 18; i >= 0; i--) { const pt = along(grown(card, 1), head - i * .012), a = (1 - i / 18) * (1 - Math.max(0, k - .8) * 5); dot(co, tr.c, pt.x, pt.y, 3 + 7 * a, a * .9); if (i < 3) dot(co, '#ffffff', pt.x, pt.y, 2.5, a); }
+        });
+        // le flash du cadre à la révélation, dans la couleur de la rareté
+        flashes.run(dt, (f, k) => { const g = grown(card, 2 + k * em * .6); roundRect(co, g.x, g.y, g.w, g.h, g.r); co.globalAlpha = (1 - k) * .9; co.strokeStyle = f.c; co.lineWidth = 2 + (1 - k) * 6; co.stroke(); co.globalAlpha = 1; });
+        // les faisceaux qui sortent des bords (Epic et plus), derrière la carte
+        if (beams.n) behind(env, () => beams.run(dt, (b, k) => godrays(co, b.c, cx, cy, 10, card.w * .45, card.w * .5 + H * 2.2, b.rot + k * .4, H * .3, Math.sin(Math.PI * k) * (dark ? .35 : .22))), true);
+        // la surtension : des arcs courent sur le cadre
+        for (let n = surge > .05 ? Math.round(dt * 70 * surge + Math.random()) : 0; n > 0; n--) { const a0 = rnd(), a = along(grown(card, 2), a0), b = along(grown(card, 2), a0 + rnd(.05, .14)); bolt(co, a.x, a.y, b.x, b.y, em * .3, [surgeC, '#ffffff', surgeC], Math.min(1, surge), 1.8); }
+        sparks.step(dt);
+        sparks.each((s, k) => line(co, s.c, s.x, s.y, s.x - s.vx * .02, s.y - s.vy * .02, 1.6, 1 - k));
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const ip = bInner(env, p);
+        pools.push({ x: ip.x, y: ip.y, w: em * .7, t0: t });
+        later(.05, () => spark(p.x, p.y + em * .3, (o.last ? 6 : 3) * q, .5));
+        if (o.last) later(.3, () => traces.add({ life: .9, laps: 2, c: '#fff3d6' }));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { cut = 1; if (el) el.classList.add('bo-cut'); return; }
+        const c = tierColor(); surgeC = c;
+        flashes.add({ life: .6, c });
+        if (p >= .25) traces.add({ life: .7, laps: 1, c });
+        if (p >= .6) beams.add({ life: 2 + asc, c, rot: rnd(TAU) });
+        if (p < 1) return;
+        surge = 1 + .3 * asc; if (el) el.classList.add('bo-surge');
+        for (let i = 0; i < 8 + 4 * asc; i++) { const e = along(card, rnd()); spark(e.x, e.y, 4 * q, 1.4, pick([c, '#ffffff', '#fff3d6'])); }
+      },
+    };
+  };
+
+  // 💠 Prism (promis à Idkwhatnamemyself, 2026-10-31) — pour chaque chiffre, un rayon de lumière blanche tombe sur le
+  // haut de sa case et en ressort décomposé en éventail de six couleurs (jamais par-dessus les chiffres : tout part du
+  // bord de la carte). Avant le dernier chiffre, des points de toutes les couleurs courent sur le cadre. Révélation : la
+  // carte prend la couleur de la nouvelle rareté (règle CSS sur data-tier) dans un éclair de sa couleur, et des éclats
+  // de cristal jaillissent des bords ; dès Epic, des faisceaux arc-en-ciel tournent derrière la carte ; dès Mythic, une
+  // pluie d'éclats. Tirage raté : le cristal se fêle.
+  SCENES.prism = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const SPEC = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7'];
+    const rays = timed(), shards = particles(), rings = timed(), beams = timed(), pending = [];
+    let t = 0, build = 0, crack = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const tierCol = () => { const v = el && getComputedStyle(el).getPropertyValue('--pr-a').trim(); return v && v[0] === '#' ? v : '#e5e7eb'; };
+    const shard = (x, y, vx, vy, c, back) => shards.add({ x, y, vx, vy, g: H * 3, drag: .6, max: rnd(.8, 1.5), size: em * rnd(.08, .2), rot: rnd(TAU), spin: rnd(-9, 9), c, back });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; co.lineCap = 'round';
+        // le rayon blanc qui entre par le haut à gauche, et l'éventail qui ressort en haut à droite
+        rays.run(dt, (r, k) => {
+          const a = Math.sin(Math.PI * Math.min(1, k * 1.6)), x0 = r.x - H * 1.1, y0 = card.y - H * 1.3, hit = { x: r.x, y: card.y };
+          line(co, dark ? '#ffffff' : '#94a3b8', x0, y0, hit.x, hit.y, 2.2, a * .9);
+          SPEC.forEach((c, i) => { const ang = -1.05 + i * .09, len = H * (1.1 + .3 * k); line(co, c, hit.x, hit.y, hit.x + Math.cos(ang) * len, hit.y + Math.sin(ang) * len, 2.4, a * .85); });
+          dot(co, '#ffffff', hit.x, hit.y, em * .25, a * .8);
+        });
+        // des points de toutes les couleurs courent sur le cadre avant le dernier chiffre
+        if (build) for (let i = 0; i < 6; i++) { const pt = along(grown(card, 2), t * .6 + i / 6); dot(co, SPEC[i], pt.x, pt.y, 4, .9 * build); }
+        // les faisceaux arc-en-ciel derrière la carte (Epic et plus)
+        if (beams.n) { co.globalCompositeOperation = 'source-over'; behind(env, () => { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; beams.run(dt, (b, k) => SPEC.forEach((c, i) => godrays(co, c, cx, cy, 2, card.w * .45, card.w * .5 + H * 2.2, b.rot + k * 1.2 + i * .52, H * .22, Math.sin(Math.PI * k) * (dark ? .3 : .2)))); }, true); co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; }
+        // l'éclair de la nouvelle couleur
+        rings.run(dt, (r, k) => { const g = grown(card, 2 + k * em * .9); roundRect(co, g.x, g.y, g.w, g.h, g.r); co.globalAlpha = (1 - k) * .9; co.strokeStyle = r.c; co.lineWidth = 2 + (1 - k) * 5; co.stroke(); co.globalAlpha = 1; });
+        co.globalCompositeOperation = 'source-over';
+        // les éclats de cristal : des triangles qui tournent et accrochent la lumière
+        shards.step(dt);
+        // la pluie d'éclats (Mythic) tombe derrière la carte ; les éclats de la révélation partent des bords, devant
+        const drawShard = (s, k) => {
+          co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(s.x, s.y); co.rotate(s.rot + s.life * s.spin);
+          co.fillStyle = s.c; co.beginPath(); co.moveTo(0, -s.size); co.lineTo(s.size * .7, s.size * .6); co.lineTo(-s.size * .5, s.size * .4); co.closePath(); co.fill();
+          co.fillStyle = 'rgba(255,255,255,.7)'; co.beginPath(); co.moveTo(0, -s.size); co.lineTo(s.size * .2, 0); co.lineTo(-s.size * .5, s.size * .4); co.closePath(); co.fill();
+          co.restore();
+        };
+        if (shards.n) behind(env, () => shards.each((s, k) => { if (s.back) drawShard(s, k); }), true);
+        shards.each((s, k) => { if (!s.back) drawShard(s, k); });
+        // la fêlure du tirage raté (calque intérieur, derrière les chiffres)
+        if (crack) {
+          crack.k = Math.min(1, crack.k + dt * 4);
+          ci.strokeStyle = 'rgba(255,255,255,.75)'; ci.lineWidth = 1.4; ci.beginPath();
+          const n = Math.max(1, Math.round(crack.pts.length * crack.k));
+          crack.pts.slice(0, n).forEach(([x, y], i) => (i ? ci.lineTo(x, y) : ci.moveTo(x, y))); ci.stroke();
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        rays.add({ x: p.x, life: o.last ? .7 : .5 });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { const pts = []; let x = w * rnd(.1, .3), y = 0; while (y < h) { pts.push([x, y]); x += rnd(-1, 1) * em * .25 + em * .08; y += em * rnd(.12, .22); } pts.push([x, h]); crack = { pts, k: 0 }; return; }
+        // la couleur de la nouvelle rareté est posée par le jeu juste avant : on la lit un instant après
+        later(.03, () => {
+          const c = tierCol();
+          rings.add({ life: .7, c });
+          for (let i = burst(p, 34 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); shard(e.x, e.y, (e.x - cx) / card.w * H * rnd(2, 4), (e.y - cy) / H * H * rnd(1.5, 3) - H * .5, pick([c, c, '#ffffff', pick(SPEC)])); }
+          if (p >= .6) beams.add({ life: 2.2 + asc, rot: rnd(TAU) });
+          if (p >= 1) for (let i = Math.round((20 + 10 * asc) * q); i > 0; i--) later(rnd(0, 1.8), () => shard(cx + rnd(-1, 1) * (card.w * .6 + H * 1.5), card.y - H * rnd(.4, 1.2), rnd(-20, 20), H * rnd(.1, .4), pick([c, '#ffffff', pick(SPEC)]), true));
+        });
+      },
+    };
+  };
+
+  // 🎨 Rainbow Paint (idée de finnnnn, 2026-10-21) — un pinceau chargé de la couleur du chiffre passe sur sa case en même
+  // temps que pt-stroke (il entre à gauche, sort à droite, au-dessus des chiffres mais sous le haut de la case) et laisse
+  // des gouttes de sa couleur. Avant le dernier chiffre, la peinture fraîche coule du haut de la carte. Révélation : des
+  // éclaboussures de toutes les couleurs ; dès Epic, un arc-en-ciel se peint au-dessus de la carte, bande après bande ;
+  // dès Mythic, l'explosion de peinture : de grosses taches volent tout autour. Tirage raté : un verre d'eau se renverse
+  // et une flaque grise coule sous le nombre.
+  SCENES.paint = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const RB = ['#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#2563eb', '#7c3aed'];
+    const brushes = timed(), blobs = particles(), drips = particles(), arcs = timed(), pending = [], dripE = emitter();
+    let t = 0, build = 0, spill = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const slotColor = p => { const s = slotsA(env).reduce((a, b) => (Math.abs(b.x - p.x) < Math.abs(a.x - p.x) ? b : a), { x: Infinity, i: 0 }); return RB[s.i % 6]; };
+    const splat = (x, y, n, c, sp = 1, big = 1, front = false) => { for (let i = Math.round(n); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.6, 2.2) * sp; blobs.add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - H * .6, g: H * 6, drag: 1, max: rnd(.6, 1.2), r: em * rnd(.03, .09) * big, c: c || pick(RB), front }); } };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // l'arc-en-ciel peint au-dessus de la carte (Epic et plus), bande après bande, derrière elle
+        if (arcs.n) behind(env, () => arcs.run(dt, (a, k) => {
+          const R = card.w * .55 + H * .5, fade = Math.min(1, (1 - k) * 4);
+          co.lineCap = 'round';
+          RB.forEach((c, i) => { const band = clamp(k * 4 - i * .25), r = R - i * em * .17; if (band <= 0) return; co.globalAlpha = .85 * fade; co.strokeStyle = c; co.lineWidth = em * .16; co.beginPath(); co.arc(cx, card.y + H * .9, r, Math.PI, Math.PI + Math.PI * outCubic(band)); co.stroke(); });
+          co.globalAlpha = 1;
+        }), true);
+        // la peinture fraîche coule du haut de la carte avant le dernier chiffre
+        if (build) for (let n = dripE(4 * q, dt); n > 0; n--) drips.add({ x: card.x + card.w * rnd(.05, .95), y: card.y, vx: 0, vy: H * rnd(.05, .15), g: H * .2, max: rnd(1, 1.6), r: em * rnd(.035, .06), c: pick(RB) });
+        drips.step(dt);
+        drips.each((d, k) => { const len = Math.min(d.y - card.y, em * .45); co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = d.c; co.beginPath(); co.moveTo(d.x - d.r * .7, card.y); co.lineTo(d.x - d.r * .5, card.y + len); co.arc(d.x, card.y + len, d.r, Math.PI, 0, true); co.lineTo(d.x + d.r * .7, card.y); co.fill(); });
+        // le pinceau : manche de bois, virole, touffe chargée de couleur ; il traverse la case pendant pt-stroke
+        brushes.run(dt, (b, k) => {
+          const x = b.x - em * .45 + em * .9 * outCubic(Math.min(1, k * 2.2)), y = b.y - em * .28, a = Math.min(1, k * 10, (1 - k) * 5);
+          co.save(); co.globalAlpha = a; co.translate(x, y); co.rotate(-.9);
+          co.fillStyle = '#b45309'; roundRect(co, em * .12, -em * .045, em * .8, em * .09, em * .04); co.fill();
+          co.fillStyle = '#cbd5e1'; co.fillRect(0, -em * .06, em * .14, em * .12);
+          co.fillStyle = b.c; co.beginPath(); co.moveTo(0, -em * .06); co.quadraticCurveTo(-em * .26, -em * .05, -em * .3, 0); co.quadraticCurveTo(-em * .26, em * .05, 0, em * .06); co.fill();
+          co.restore();
+          if (Math.random() < dt * 25) splat(x, y + em * .1, 1, b.c, .4, 1, true); // les gouttes du pinceau, devant
+        });
+        blobs.step(dt);
+        // les éclaboussures passent derrière la carte (jamais sur les chiffres) ; seules les gouttes du pinceau sont devant
+        const blob = (b, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = b.c; co.beginPath(); co.ellipse(b.x, b.y, b.r * 1.2, b.r, Math.atan2(b.vy, b.vx), 0, TAU); co.fill(); co.fillStyle = 'rgba(255,255,255,.45)'; co.beginPath(); co.arc(b.x - b.r * .3, b.y - b.r * .3, b.r * .3, 0, TAU); co.fill(); };
+        if (blobs.n) behind(env, () => blobs.each((b, k) => { if (!b.front) blob(b, k); }), true);
+        blobs.each((b, k) => { if (b.front) blob(b, k); });
+        // le verre d'eau renversé (tirage raté) : une flaque grise qui coule du bas de la carte
+        if (spill) {
+          spill.k = Math.min(1, spill.k + dt * .8); const a = clamp(3 - (t - spill.t0)) * .7;
+          co.globalAlpha = a; co.fillStyle = dark ? '#94a3b8' : '#64748b';
+          for (let i = 0; i < 5; i++) { const x = card.x + card.w * (.2 + i * .15), len = em * (.2 + .4 * ((i * .37) % 1)) * spill.k; co.beginPath(); co.moveTo(x - em * .05, card.y + H - 2); co.lineTo(x - em * .03, card.y + H + len); co.arc(x, card.y + H + len, em * .04, Math.PI, 0, true); co.lineTo(x + em * .05, card.y + H - 2); co.fill(); }
+        }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const c = slotColor(p);
+        brushes.add({ x: p.x, y: p.y, c, life: .55 });
+        if (o.last) later(.3, () => splat(p.x, card.y, 8 * q, c));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { spill = { k: 0, t0: t }; return; }
+        for (let i = burst(p, 30 * q, 5); i > 0; i--) { const e = along(grown(card, 3), rnd()); blobs.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(2, 4), vy: (e.y - cy) / H * H * rnd(1, 3) - H * .8, g: H * 6, drag: .8, max: rnd(.7, 1.3), r: em * rnd(.04, .1) * (1 + p), c: pick(RB) }); }
+        if (p >= .6) arcs.add({ life: 3 + asc, delay: .1 });
+        if (p >= 1) for (let i = 0; i < 4 + 2 * asc; i++) later(i * .12, () => { const e = along(grown(card, em * .3), rnd()); splat(e.x, e.y, 10 * q, pick(RB), 1.6, 2.2); });
+      },
+    };
+  };
+
+  // 🌱 Touch Grass (idée de finnnnn, 2026-10-21 : « for all the no lifes ») — chaque chiffre tondu fait jaillir des brins
+  // d'herbe coupés (au moment où gr-mow le redresse). Avant le dernier chiffre, des rafales couchent des traits de vent
+  // autour de la carte. Révélation : une gerbe de brins ; dès Rare, des pâquerettes poussent sur le haut de la carte ; dès
+  // Epic, des papillons s'envolent ; dès Mythic, une petite tondeuse traverse au-dessus de la carte dans une pluie de
+  // brins, et les fleurs éclosent tout autour. Tirage raté : un pissenlit perd ses graines dans le vent.
+  SCENES.grass = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const GR = ['#65a30d', '#84cc16', '#4d7c0f', '#a3e635'];
+    const clips = particles(), wind = particles(), flowers = [], flies = particles(), seeds = particles(), mowers = timed(), pending = [], gust = emitter();
+    let t = 0, build = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const clip = (x, y, n, sp = 1, back = false) => { for (let i = Math.round(n); i > 0; i--) clips.add({ x: x + rnd(-1, 1) * em * .25, y, vx: rnd(-1, 1) * H * 1.4 * sp, vy: -H * rnd(.8, 2) * sp, g: H * 5, drag: .8, max: rnd(.6, 1.1), len: em * rnd(.08, .16), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(GR), back }); };
+    const daisy = (x, y, s, a, c = '#ffffff') => { if (a <= .01) return; co.save(); co.globalAlpha = a; co.translate(x, y); line(co, '#4d7c0f', 0, 0, 0, s * 1.4, Math.max(1, s * .2), a); co.fillStyle = c; for (let i = 0; i < 8; i++) { co.save(); co.rotate(i * TAU / 8 + t * .2); co.beginPath(); co.ellipse(0, -s * .55, s * .2, s * .45, 0, 0, TAU); co.fill(); co.restore(); } co.fillStyle = '#facc15'; co.beginPath(); co.arc(0, 0, s * .28, 0, TAU); co.fill(); co.restore(); };
+    // la petite tondeuse vue de profil : le carter rouge, deux roues, le guidon
+    const mower = (x, y, s, dir) => { co.save(); co.translate(x, y); co.scale(dir, 1); co.fillStyle = '#dc2626'; roundRect(co, -s * .5, -s * .35, s, s * .3, s * .08); co.fill(); co.fillStyle = '#1f2937'; for (const wx of [-.32, .32]) { co.beginPath(); co.arc(s * wx, -s * .05, s * .13, 0, TAU); co.fill(); } line(co, '#374151', -s * .45, -s * .3, -s * .95, -s * 1.05, Math.max(2, s * .06), 1); line(co, '#374151', -s * 1.05, -s * 1.05, -s * .85, -s * 1.05, Math.max(2, s * .08), 1); co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // les rafales avant le dernier chiffre : des traits de vent qui filent autour de la carte
+        if (build) for (let n = gust(16 * q, dt); n > 0; n--) wind.add({ x: card.x - H * rnd(.5, 1.5), y: card.y + H * rnd(-.6, 1.1), vx: H * rnd(4, 7), vy: rnd(-10, 10), max: rnd(.4, .7), len: H * rnd(.4, .9) });
+        wind.step(dt);
+        wind.each((w2, k) => line(co, dark ? '#d9f99d' : '#4d7c0f', w2.x, w2.y, w2.x - w2.len, w2.y + Math.sin(w2.x * .05) * 3, 1.4, Math.sin(Math.PI * k) * .6));
+        // les fleurs sur le haut de la carte (Rare et plus) : elles poussent puis restent
+        for (const f of flowers) { f.k = Math.min(1, f.k + dt * 2.2); daisy(f.x, card.y - f.s * 1.3 * outCubic(f.k) + f.s * .1, f.s * outCubic(f.k), 1, f.c); }
+        // la tondeuse (Mythic) traverse au-dessus de la carte
+        mowers.run(dt, (m, k) => { const x = lerp(card.x - H * 1.6, card.x + card.w + H * 1.6, k); mower(x, card.y - em * .05 + Math.abs(Math.sin(k * 60)) * -2, H * .55, 1); if (Math.random() < dt * 40) clip(x - H * .3, card.y - H * .2, 2, .8, true); });
+        clips.step(dt);
+        // les brins de la tondeuse et de la révélation passent derrière la carte ; ceux du chiffre tondu, devant
+        const blade = (c, k) => { const a = c.rot + c.life * c.spin; line(co, c.c, c.x, c.y, c.x + Math.cos(a) * c.len, c.y + Math.sin(a) * c.len, Math.max(1.5, em * .035), Math.min(1, (1 - k) * 3)); };
+        if (clips.n) behind(env, () => clips.each((c, k) => { if (c.back) blade(c, k); }), true);
+        clips.each((c, k) => { if (!c.back) blade(c, k); });
+        flies.step(dt);
+        flies.each((f, k) => { const flap = Math.abs(Math.sin(f.life * 13 + f.ph)), x = f.x + Math.sin(f.life * 2 + f.ph) * em * .7; co.globalAlpha = Math.min(1, f.life * 3, (1 - k) * 3); co.fillStyle = f.c; for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(x + sd * em * .1 * flap, f.y, em * .12 * flap + 1, em * .09, sd * .5, 0, TAU); co.fill(); } co.fillStyle = '#1f2937'; co.fillRect(x - 1, f.y - em * .06, 2, em * .12); });
+        seeds.step(dt);
+        seeds.each((s, k) => { co.globalAlpha = Math.min(1, (1 - k) * 2); co.strokeStyle = dark ? '#f5f5f4' : '#78716c'; co.lineWidth = 1; const x = s.x + Math.sin(s.life * 3 + s.ph) * 6; co.beginPath(); co.moveTo(x, s.y); co.lineTo(x, s.y + 6); for (let i = -2; i <= 2; i++) { co.moveTo(x, s.y); co.lineTo(x + i * 2.5, s.y - 4); } co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        later(.17, () => clip(p.x, p.y - em * .2, (o.ghost ? 2 : o.last ? 14 : 7) * q));
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { // un pissenlit : ses graines partent dans le vent
+          for (let i = Math.round(14 * q); i > 0; i--) seeds.add({ x: card.x + card.w * .8 + rnd(-6, 6), y: card.y - em * .3 + rnd(-6, 6), vx: H * rnd(.4, 1.2), vy: -H * rnd(.1, .5), drag: .4, max: rnd(2, 3.2), ph: rnd(TAU) });
+          return;
+        }
+        for (let i = burst(p, 40 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); clips.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(2, 4), vy: -H * rnd(1, 2.6), g: H * 5, drag: .6, max: rnd(.8, 1.4), len: em * rnd(.1, .18), rot: rnd(TAU), spin: rnd(-10, 10), c: pick(GR), back: true }); }
+        if (p >= .42) { const n = Math.round(3 + 6 * p + 2 * asc); for (let i = 0; i < n; i++) later(i * .07, () => flowers.push({ x: card.x + card.w * (.06 + .88 * (i + .5) / n) + rnd(-3, 3), s: em * rnd(.12, .18), k: 0, c: p >= 1 && i % 3 === 1 ? '#f9a8d4' : '#ffffff' })); }
+        if (p >= .6) for (let i = Math.round((4 + 4 * p + 3 * asc) * q); i > 0; i--) flies.add({ x: cx + rnd(-1, 1) * card.w * .6, y: card.y + H * rnd(.1, .6), vx: rnd(-30, 30), vy: -H * rnd(.3, .7), max: rnd(2.4, 3.6), ph: rnd(TAU), c: pick(['#fde047', '#f9a8d4', '#93c5fd', '#fdba74']) });
+        if (p >= 1) mowers.add({ delay: .3, life: 2.6 });
+      },
+    };
+  };
+  // ==== fin du lot 3 du 2026-11-05 ====
 
   function mount(stage, card, skin, o = {}) {
     try {

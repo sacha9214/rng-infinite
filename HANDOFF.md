@@ -1,6 +1,333 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (badges-hard branch, merged with main). Update this file at the end of every session.
+
+
+## New badges: Hard-only pack, Quarter Epochs, Trilogy (2026-11-05, branch `claude/ideas-badges-hard-741d1c`)
+
+Planned ideas of the "badges-hard" group. The Hard titles from the same group shipped separately (PR #78).
+
+- **Normal mode** (`tools/source/custom.json`, `js/engine.js`): 🕒 Quarter Epoch (ends in 2500) and 🕘 Three-Quarter
+  Epoch (ends in 7500), idea by cri cri 3; 🧩 Trilogy, a six-digit number cut into three 2-digit badge numbers
+  (`TRILOGY_PIECES`, a frozen list of 20 pieces, `00` left out), promised to Starharvest. These exist in Hard mode too,
+  like every Normal badge. Not built: an "exact 2500 / 7500" badge (one number each would jump to the top tiers).
+- **Hard-only pack** (`tools/source/hard.json`, new): 20 badges that only the Hard engine knows (`hard: true` in
+  `data/hard-meta.json`): Contiguous Sevens to Tens and Sequence (7) to (10) (CrazyMiner22, 0casmictechthing), Brainrot
+  Overload (contains 67676767) and Ultimate Brainrot (6767676767) (Aussie Haüs), 32-bit Limit (2147483647) and Mersenne
+  Prime (CrazyMiner22), Fibonacci Slice (7) to (9) and Fibonacci Ten (kaz, sent by CococoC), plus Pandigital and
+  Seven / Eight / Nine Digits (more Hard badges: Angelicide9, jsandhardmode). "Sequence 5" already exists as Straight.
+- `tools/build-hard.mjs` reads `hard.json` and **counts the pack exactly** for 8 to 10 digits (`PARTS` +
+  `exactCounts`: enumerate every number that contains a part, keep those the engine accepts), because the sample
+  cannot see 1-in-a-billion patterns. Counts are checked in `tools/test-api.mjs` (`hard-odds.json`).
+- `js/app.js`: the history search crashed on Hard-only badges (`LABELS` only has Normal labels); it now falls back to
+  the engine's label.
+- **Rarity moves, Normal** (every number 0 to 1,000,000, old table vs new): 12,123 numbers change rarity (5,704 up,
+  6,419 down): 401 from the two epochs, 11,731 from Trilogy. Biggest moves: rare→uncommon 4,172, uncommon→rare 3,365,
+  rare→epic 960, epic→rare 915, uncommon→common 775, common→rare 757, anomaly↔epic 411/355, anomaly↔mythic 200/202.
+  Earlier badge batches moved 48,600 and 55,782.
+- **Rarity moves, Hard**: HARD_DIFF_PLACEHOLDER
+- Tests: two older tests used Hard numbers that the pack now makes huge (1234567890 is Infinite with Sequence (9) and
+  Pandigital, 6767676767 is Infinite with Ultimate Brainrot); they now use 4820193755 and 1212121212.
+
+**Sacha, on the server after deploying** (nothing else is needed; the Hard build data is in the commit):
+1. `node tools/rescore-worst.js --apply` (the Normal Trash leaderboards use today's scores).
+2. Optional: ~200 Normal numbers moved anomaly→mythic. To give the Mythic+ count to players who rolled them before, a
+   one-off like `tools/migrate-badges.js` (change its `CUT` and its `migrate:` marker). Not written.
+3. Hard leaderboards and Hard history keep the XP of the roll (nothing to rescore, no tool exists). If
+   `tools/backfill-hof.js` has not been run yet, note that it judges stored Hard XP against the new table.
+
+
+## Limited tab by event (2026-11-05, branch `claude/limited-by-event`)
+
+Sacha asked for the shop's Limited tab to be split by theme, with Halloween taken out for now but kept for next year.
+
+- `js/shop.js`: `EVENTS` (`halloween`, `thanksgiving`, `christmas`: `ends` and the `last` day shown) and `eventById`. Every
+  limited skin and wallpaper has `event: '<id>'`. `tools/test-api.mjs` checks that each item's `until` is its event's
+  `ends`, because the server still reads `until`.
+- `js/app.js`: `limitedEventsHTML()` builds one section per running event (`liveEvents()`, the soonest to end first),
+  each with its banner (`LIMITED_FX`: Halloween bats, Thanksgiving leaves, Christmas snow), its skins
+  (`[data-lim-skins]`) and its wallpapers (`[data-lim-walls]`). Ended events don't appear. Players who own items from a
+  past event see a note pointing to their profile Inventory, where they can still equip them.
+- **Next year**: bring Halloween back by updating `ends` in `EVENTS` and the `until` of its items (same date), plus the
+  "until November 1" wording in their descriptions and the French dictionary.
+
+## Delete my account (2026-11-05, branch `claude/delete-account`)
+
+Sacha asked for a way for players to delete their account from Settings.
+- **UI**: ⚙️ Settings → danger zone → "Delete my account" (only for a player with a name). A second window lists what is
+  lost, says if Google or a password is linked, and enables "Delete forever" only when the exact player name is typed.
+  After success `resetDevice()` gives the device a new identity (`Store.signOut`) and removes every other local key
+  except the language, the Store key (device settings) and the anonymous visit dates.
+- **Server**: `api/_account.js`, routed from `api/auth.js` (`action: 'deleteAccount'`, no new public file). It needs
+  the secret and the exact name.
+  - **Refused**: suspended accounts (423 from `ownsPlayer`); owner and viewer accounts (`canViewOwner`, 403); a player
+    seated at a poker table, in a live duel, with a duel roll still being revealed, signed up to an unfinished
+    tournament, or in the team of a pending or running clan war (409); the leader of a clan that has other members
+    (409: pass the leadership or disband first). A leader alone in the clan: the clan is disbanded.
+  - **Deleted**: one SCAN of the whole keyspace, then: every key whose name has the id; the id as a field or member of
+    every shared hash, set or sorted set whose name has no player id (like `banPlayers`); every `name:<key>` that
+    points to the player (current name and stale old ones); `google:<sub>`, the Discord link (`discord:links`), the
+    password and the recovery code; the id in other players' `fr:`, `frin:`, `frout:`, `dmblock:`, `dmu:`, `dw:` and
+    `h2h:` keys (one-sided entries too); gifts from the player in friends' lists; daily gift caps (`o:<id>`, `i:<id>`);
+    open positions in `pos:open`; avatar tokens (`avtok`, `avpq`); clan requests; reactions (`…|<id>` fields); the
+    player's global chat, clan chat and casino feed lines; the coins and casino board caches.
+  - **Kept**: `player:<id>:secret = "deleted"` (tombstone with no data: an old device gets 403 and starts a new player;
+    without it `claimPlayer` would recreate the id), `banned`, anonymous totals, ideas (`sugg:*`), moderation logs
+    (`reports`, `avlog`, `gc:mutelog`, `gc:dellog`), and finished duel rooms, tournaments and clan wars, which expire
+    on their own (1, 14 and 30 days). The clan log keeps "<name> left", like any other departure.
+- **Tests**: the "Supprimer son compte" block at the end of `tools/test-api.mjs`. The key check scans the whole fake
+  Redis for the id after deleting (keys, fields, members, values).
+- **Inventory check** (scratch script, not committed): after the full suite, every named player was deleted (194 OK,
+  89 refused: tournament, clan leader, duel) and the fake Redis was searched for each id. Only the kept records above
+  were left (rooms, poker tables, tournaments, wars, ideas, moderation logs), plus a past giveaway's winners in
+  `gw:item` and other players' global chat messages that reply to or mention the player (`ra`/`at`, never sent to the
+  site, gone when the chat rolls past 100 messages).
+- **Cost**: one SCAN of the whole database plus a TYPE per shared key. That should take a few seconds on the VPS; it
+  has not been measured on the real data. `tools/fake-redis.mjs` gained `TYPE`.
+
+## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
+
+Planned ideas from the 2026-11-05 triage: qwertyuiop (a dinner table with Thanksgiving food), Idkwhatnamemyself (a
+turkey roasted into the number), Kj13 (autumn leaves in brown, red, yellow and orange, limited until Thanksgiving
+night), R77 (dinner table, turkey feathers, the iconic turkey look).
+
+- **Turkey Roast** 🦃 skin, 1,126 coins, `idea: 'Idkwhatnamemyself'` (the 5 % share goes to that player; R77 and Kj13 are named in the
+  comment and the update log). The card is a turkey's fanned tail (`.num-card.skin-turkey::before`, an SVG of 17
+  feathers): it folds while rolling (`.charging`) and spreads out after the last digit. The digits are roasted skin:
+  raw and pale with a heat shimmer while spinning, then a squash, a hot flash to golden-brown, a glaze sweep and a puff
+  of steam on the reveal. `js/skinfx.js` `SCENES.turkey`: autumn leaves (Kj13) and steam on each digit, a shower of
+  leaves on the reveal, and from Epic a fan of turkey feathers (two fans from Mythic). The base particle count is cut
+  to 45 % and anything over the card is drawn at 40 % so the digits stay readable. Duel frame `.side-turkey` (plaid
+  tablecloth, leaves, 🦃 / 🍂 🥧), Generate button `.btn-roll.gen-turkey`. The small history cards hide the fan.
+- **Thanksgiving Dinner** 🥧 wallpaper, 1,126 coins, `idea: 'qwertyuiop'` (no 5 % share on wallpapers, as for all
+  wallpapers). `WALL_LAYERS.feast` + `.wtg-*` in `css/style.css`: two windows with autumn trees and falling leaves, a
+  table across the bottom, and the meal in two groups (`.wtg-food.a`: turkey, pumpkins, cranberry sauce, candle;
+  `.wtg-food.b`: rolls, mashed potatoes, corn, pumpkin pie, candle). On wide screens the turkey is on the right and the
+  side dishes on the left, on either side of the page content (centred, it was hidden behind it); on phones they sit
+  side by side. Candles flicker, the turkey steams. Dark theme is the evening by candlelight, light theme an afternoon.
+- **Sale dates**: both `until: '2026-11-28T08:00:00Z'` = the end of Friday November 27 in US Pacific time (Thanksgiving
+  night is over everywhere in the US). Shown as "until November 27". Never in a case, outside the collections.
+- **Limited tab**: a 🦃 THANKSGIVING banner (falling leaves, countdown "Ends after November 27") above the Christmas
+  one, hidden after the date; limited skins and wallpapers are now sorted by end date (Thanksgiving first). The
+  wallpaper note says "for the holidays only" instead of "for Christmas only". French in `js/i18n.js`.
+- Update log entry `2026-11-05-thanksgiving` (en + fr) credits all four players.
+- Tests (`tools/test-api.mjs`, section 55): prices, dates and ideas; not in any case or collection; CSS, scene and
+  layers exist; buying a minute before the end works, a second after returns 422 (skin and wallpaper).
+- Checked: skin filmed with `tools/skin-preview.mjs` and iterated (pointed feathers → broad rounded ones sized by
+  height; bead-like steam → soft wisps; base leaves cut so a Mythic doesn't bury the digits; button tips split into
+  feathers); the canvas scene filmed frame by frame (manual mode) in dark and light; shop preview in the real page;
+  wallpaper at 1400, 1024 and 375 px in both themes; banner at 320 px in French; `overflow-check` OK.
+  Frame rate: 60 fps in the app's browser pane (same as Cozy Fireplace and Snowy Village); headless Firefox (software
+  rendering) is slow for every limited wallpaper, this one included (1–4 fps vs 3–5 for Cozy Fireplace).
+- **After November 27**: nothing to do; the banner hides itself and both items leave the tab (owners keep them).
+
+## Social and chat ideas (2026-11-05, branch `claude/ideas-social-chat-55a38b`)
+
+Planned ideas of the "social-chat" group from the 2026-11-05 triage, one UPDATES entry `2026-11-05-social-chat`.
+- **Best roll next to names in the global chat** (Loliarlex1248 `65af00fabee5`, MAYO `ddc646470eb0`): `api/_global.js`
+  `bestRolls()` reads `best:all` for the authors in one HMGET; each message gets `best: { n, tier }`, shown as
+  "(999,999)" in the tier colour (`.gc-best`). Normal mode only.
+- **Hard mode rolls from Mythic in the chat** (Idkwhatnamemyself `837fc6261b3d`, Kag `1b08e800e866`): `HARD_BIG` in
+  `api/_global.js`, used by `recordHardRoll`. Same 30 s / 10 min limits as Normal (they share the 30 s gap).
+- **Report context** (jsand `d6af231d993f`): the Moderator page shows the 4 messages before and 3 after a reported one
+  ("See the messages around it"), names and text only.
+- **Moderators lift mutes** (pople `129e925537e9`): `gcUnmute` works for moderators from the Moderator page ("Muted
+  right now"), only for a mute still running, never a Forever mute and never one the owner set (`bo: 1` on the mute
+  record, and for older mutes the author's id in `gc:mutelog`). The history keeps who lifted it; the owner page never
+  shows their id.
+- **Friends**: ☆ star pins a friend at the top (Big Sexy `86b789a1f215`, key `frstar:<id>`, cleaned on remove).
+  Friends leaderboard on the Friends page (Edward `73d46f7e12d3`): you + friends by XP, today's XP, best roll or rolls
+  (`state().board`, 4 commands whatever the number of friends). The clan part of Edward's idea was not done (clans
+  already have their member list).
+- **Roadmap votes** (Trinity `7b6e1119e6eb`): ▲ on each Planned idea, "Most voted" (default) or "Newest". Name +
+  100 rolls to vote, one vote per player per idea, removable. Keys `rmv` (hash id → count), `rmv:<suggId>` (voters),
+  `rmv:by:<player>`. Ideas go out with an opaque key (sha256 of the id), never the suggestion id. "Report a bad idea"
+  from Trinity's message was not done: Planned ideas are already approved by Sacha.
+- **Emojis** (Jacksonw `cc4dca7290ca`, Deadshot `11bd0db13baf` `b3f73d2e94d5`, sennybex1 `66d54d6190d3`, Jguz01
+  `e3db68e0f4d3`): 23 more in the chat grid (faces, 🎩 👌 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴; Unicode has no knight, 🛡️ stands for it),
+  the emoji button in the clan chat, and 8 of them as clan icons (`api/_clan.js` EMOJIS).
+- **Duel chat ⋯** (Jacksonw `6dde4a6813f9`): Edit / Delete / Hide / Report behind one ⋯ button (`Room.chatMenu`).
+- **Who is winning in a duel** (Jacksonw `610aa706bbdd`): score above each card with 👑 on the single leader,
+  👑 in the scoreboard, and a "⇅ Put the leader first" link at the end of the duel subtitle for 2-player duels (setting
+  `duelOrder`; the default keeps qwertyuiop's card order). A separate button row pushed the 2nd card under the sticky
+  Roll bar at 320 px (overlap-audit), hence the link.
+- Tests: `tools/test-api.mjs` block "Idées du 2026-11-05 (session social-chat)". Browser: Playwright script on the dev
+  server at 320/360/375/390/414/1280 px, light and dark, EN and FR (friends, roadmap, moderator page, global chat, clan
+  chat, duel), `tools/audit/overflow-check.mjs` clean, `tools/audit/overlap-audit.mjs 320` same as `main` (only the old
+  Tournament tab overflow).
+- Seen, not fixed: in a duel at 320 px the Rounds panel can overflow by ~18 px when the other player's name is long
+  ("you: 880773" pushed out); it is older than this branch.
+
+## Planned skins from the 2026-11-05 triage (session "skins", branches `claude/skins-lot<N>`)
+
+Sacha asked to build every Planned idea; the 63 skin ideas are the "Session skins" list of
+`ideas-planned-2026-11-05.md` (untracked, main checkout). Each skin follows `.claude/skills/rng-skin-design`
+(brief, film with `tools/skin-preview.mjs` and `tools/reveal-film.mjs --skin <id> --crop`, critique, iterate). Each lot
+is one PR; lots are stacked (lot 2 is branched from lot 1), so merge them in order.
+
+**Lot 1 — `claude/skins-lot1`** (CSS: end of `css/style.css` and `css/premium.css`; buttons: end of `css/buttons.css`;
+scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.js`):
+- `overture` Overture 🎹 2,400 — 0casmictechthing [1fa8a0fc2680] (promised), merged with casmicgraything's music staff
+  [751598325349] and 17black's jukebox notes [450c5598ed1e]. **Sound:** `js/sound.js` `piano()`; each digit plays its
+  own note (C major, digit 0 = C4 … 9 = E5) and the rarity plays a chord (`OVERTURE_CHORDS`, Infinite = Am7). Hooked
+  in `js/app.js` (`pianoSkin`, the lock `d` field, `tier` gets `skin`), also in the shop Preview. A sound pack does
+  not replace the piano (like ASMR and Lab).
+- `cheese` Cheese 🧀 1,500 — casmicgraything [1076e573c9d1] (idea share) + casmictechthing's detailed version [bfbb45cb9910].
+- `dig` Archaeology 🦴 2,000 — casmicgraything [2b59f74fb5b6] (idea share) + Alt [4555c11ffa75].
+- `angel` Angel 🪽 7,777 and `demon` Demon 😈 6,666, Legendary (`premium`) — qwertyuiop [3c452b1058ce], prices his;
+  Demon also covers Roanono's fallen angel [2656e434fb62]. Shared wing drawing `l1Wing` / scene `l1Winged`.
+
+**Lot 2 — `claude/skins-lot2`** (branched from lot 1; block "lot 2 du 2026-11-05" in `js/skinfx.js`):
+- `deepsea` Deep Sea 🐋 2,600 — finnnnn [0555093cf3b9] (idea share) + Deadshot [e1cfcd646151] (fish, sharks, turtles,
+  squid, seaweed, the 1-in-50 anchor), YeeHao2's whale [da859b846a6d], LEVIATHAN [ed2af64de7d0] (head and neck over
+  the number from Divine). The old 700-coin Ocean skin stays.
+- `bubble` Bubble 🫧 1,400 — finnnnn [d0de2e6104d2]. Shared bubble sprite `l2Bubble()` (also used by Aero).
+- `yinyang` Yin and Yang ☯️ 6,000, Legendary — kaz [2a7c38aebff0] (idea share) + JBearr12 [959206f6ac9c]. The card
+  inverts black/white at every landed digit with a CSS `:has()` rule on the count of `.slot.revealed` (works without
+  the scene); Chinese numerals while rolling come from `spinChar` in `js/app.js`.
+- `aero` Frutiger Aero 🌐 2,200 — jia jun [e7a0b771e530] (promised). Generic style, no logo.
+
+**Lot 3 — `claude/skins-lot3`** (branched from lot 2; block "lot 3 du 2026-11-05" in `js/skinfx.js`):
+- `blackout` Blackout 💡 1,700 — Mace_67 [f414eccc558b] (promised). CSS only for the main effect: the border is dark
+  while any `.slot.spinning` remains, then lit; it takes the rarity colour (`--t-accent`) once the card loses `.neutral`.
+- `prism` Prism 💠 2,600 — Idkwhatnamemyself [fb70cca99f40] (promised). Card and button take the colour of the last
+  roll's rarity: `setLastRoll` in `js/app.js` now also sets `html[data-last-tier]` (and the reveal sets it to the new
+  tier); the revealed card reads the `.result[data-tier]` section only once it is not `.neutral` (never before: it
+  would leak the rarity). Colours per tier: `--pr-a/b/c` in `css/style.css`.
+- `paint` Rainbow Paint 🎨 1,800 — finnnnn [7f9507fe5e51]. `grass` Touch Grass 🌱 1,500 — finnnnn [a841d12aea44].
+- Note for future skins: the main roll card never has its own `data-tier`; the `.result` section has it from the start
+  and `.neutral` hides it until the rarity reveal.
+
+**Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
+- Next: obsidian [7ac4a115abd4], horses/barn
+  [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
+  [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
+  spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
+  Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
+  [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
+  [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
+  spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
+  Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
+  lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
+  mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
+  [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
+  [773ca9b1b6e4], puzzle cube [3518354c582f].
+
+## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
+
+Six Planned ideas built, four big ones written up as proposals only (below). Credits are in the UPDATES entry
+`2026-11-05-features-misc`.
+
+- **5% share on wallpapers** (qwertyuiop, `b06fde58b160`, `bd2f68f5442e`): `api/shop.js` `payIdea` now also runs for
+  `buywall` and for a wallpaper won from a paid Wallpaper Case (same rules as skins: not for yourself, nothing for a key,
+  nothing for a duplicate). Wallpaper tiles show "💡 Idea by", and the "Your creations" text no longer says walls pay nothing.
+- **Quest rerolls** (Mace_67, `c2fe91fcbdc7`): `js/quests.js` `REROLLS_PER_WEEK = 3`. `POST /api/quests { action: 'reroll',
+  quest }` swaps one unclaimed daily quest for another quest of the same group (`crypto.randomInt`), stored as
+  `rr:<group>` in `q:<day>:<id>`; the weekly count is `rerolls` in `qw:<week>:<id>` (taken with HINCRBY first, given back
+  on refusal, so two clicks never pass 3). The group keeps its counters, so progress carries over. Rewards follow the
+  group's difficulty, so a reroll never pays more. Daily quests only, not weekly ones. UI: 🔄 button on each unfinished
+  quest (asks first), "N rerolls left this week" in the quest footer.
+- **Badge owner counter** (Tumored, `7db9506f94c0`): `recordRoll` / `recordHardRoll` now send one `SADD` per earned badge
+  (instead of one for all), so the server knows which badges are new to the player and adds `HINCRBY bown <badge> 1`
+  (`hbown` in Hard mode). Read by `GET /api/leaderboard?badges=1[&mode=hard]` (cached 1 min, numbers only), shown in the
+  badge window as "👥 N of M players". Nothing shows before `bown:ready`.
+- **Hall of Fame** (Avaneesh_17, `0375af55c59a`): `api/_hof.js`, one hash `hof`, one field per milestone set once with
+  HSETNX by the roll that reaches it: first to roll each of the 10 Infinite numbers, first to 100M / 1B / 10B / 100B
+  lifetime XP, first to 10k / 100k / 1M rolls, first Mythic / Celestial / Divine / Godlike / Infinite in Hard mode. Page
+  `#/hall`, a second tab next to Leaderboard (subnav). `GET /api/leaderboard?hof=1` sends names, never ids. The page says
+  "being filled in" until `hof:ready`. The 10 Infinite numbers are a constant in `_hof.js` (finding them takes 45 s),
+  re-checked at load; redo the list after a badge change (command in the comment).
+  - **What can't be reconstructed** (also on the page and in `tools/backfill-hof.js`): offline rolls; the oldest rolls of
+    players above 100,000 rolls (history cap), except an Infinite that stayed their best roll (`best:all` is read too);
+    the exact time of an XP or roll milestone crossed before a player's oldest saved roll (dated to that roll, shown
+    "before <date>"); and XP is recomputed at today's badge values, so an old XP milestone may be dated a bit differently
+    from what it was at the time.
+- **Keyboard ASMR** (dog `a65d5a6548e9`, Infin6 `3b90b3f8a464`, LEVIATHAN): measured the old key sound: almost nothing above
+  1 kHz (high-frequency energy −62 dB vs −44 dB for the Wax button), which is why it was inaudible on phone and laptop
+  speakers. `js/sound.js` `keyThock` now adds the ASMR wax `crackle` and a short bottom-out click; it measures like the Wax
+  button and plays ~3 dB louder, still under roll sounds. Real keys: every key, including Shift/Ctrl/Alt/Cmd, symbols and
+  F-keys (read on `e.code`, so Shift+1 and AZERTY "&" press the 1), while typing in the chat too, and the key stays
+  down while held (keyup / window blur releases it). Never in a password field. Listeners are in capture.
+- **Solar System** (deadshot44474, `aa5e1b3867f6`, `10efc2799eed`): asteroid belt (260 rocks, Kepler speeds) between Mars
+  and Jupiter, Ceres with the Occator bright spot (a bluish glow that turns with it), Pluto on an offset, tilted orbit
+  that crosses Neptune's, the comet's dust trail drawn along its real past path (the straight ion tail is now short and
+  faint and never points ahead), and the first orbit always clears the sun and its rays (in landscape Mercury's orbit
+  used to pass over the sun). I read "the sun is over the line" as that orbit; if he meant something else, ask him.
+
+**To do after deploying (Sacha, on the VPS, same env as the other tools):**
+`node tools/backfill-badge-owners.js` (dry run) then `--apply` (sets `bown:ready`), and `node tools/backfill-hof.js` then
+`--apply` (sets `hof:ready`; read the dry-run list first: bots or suspended accounts could hold a spot). Until then the
+badge counter and the Hall of Fame page show nothing.
+
+Tests: `tools/test-api.mjs` "features-misc" block (wallpaper share incl. case/key/self/duplicate, rerolls incl. the 3/week
+cap and all-done with swapped quests, badge owners normal + hard + backfill, Hall of Fame live + backfill + approx +
+no ids). Browser (dev server on 8132): rerolled a quest, Hall of Fame at 320–1280 px light/dark FR/EN, badge window in
+French, keyboard key events (held keys, Shift+1, Ctrl+C, AZERTY, password field), Solar System filmed headless dark
+1280 px and light 390 px. `tools/audit/overflow-check.mjs` and `overlap-audit.mjs` now include `#/hall`.
+
+### Proposals only (not built, for Sacha to decide)
+
+- **Season pass** (PRISMA123, `4b0ec58e1959`, "on the list for later"). Free only: no paid track (coins are only earned in
+  the game). A 30-day season, 50 tiers; tier XP comes from what players already do (daily quests 1 tier-point each, the
+  all-done bonus 2, weekly quests 3, rolls 1 point per 100), so it rewards regular play, not luck. Rewards: a few small
+  coin drops (≤ 15% of what a regular player earns from quests in a month, checked against the economy page), case keys,
+  and 2–3 season-only cosmetics (a title, a button, a wallpaper) that are never sold. Data: `sp:<season>:<id>` hash
+  (points, claimed tiers), the season list in `js/events.js`. Needs: a new home card, owner page tool to create a
+  season. About 1–2 days of work.
+- **Community quests** (jjcoolcid1, `93faee78788f`). Sacha sets a goal from the owner page ("the whole game rolls 2M times
+  this week", "1,000 Mythic+ rolls"); one global counter `cq:<id>` (INCR in `recordRoll`, like the weekly event); a
+  progress bar on the home page. When it's reached, every player who contributed at least N (e.g. 50 rolls, `cq:<id>:p`
+  sorted set) claims the reward: coins or a cosmetic. Rewards must stay small (it's free coins for everyone) and luck
+  never changes. About 1 day.
+- **Craps and blackjack lobbies** (JBearr12, `f017e780fb7f`). Craps: pass / don't pass / field bets only at first
+  (house edge 1.41% / 1.36% / 2.78%, decided on the server with `crypto.randomInt`), new tab in `api/_gamble.js`, must
+  pass `casino-sim` and `house-audit` before shipping (don't-pass needs the bar-12 rule to keep the edge). Blackjack
+  lobbies: up to 5 players at one table against the same dealer, each playing their own hand, 20 s per turn, built on
+  the open-table code of `api/_poker.js` (seats, idle cash-out, `pending` settlement). Same edge as solo blackjack.
+  Craps ~1 day, lobbies ~2 days.
+- **"also cyber punk"** (leo, `a7dba4706e5d`). No other context; it reads as a follow-up to a skin request, and it sits in
+  the skins group's list, so the skins session should own it. Note: "Cyberpunk" is also a game's name, so name it
+  something like "Neon City" (rainy neon streets, holographic digits). We already have the Synthwave and Cyber Void
+  wallpapers, so a wallpaper alone would be a near-duplicate.
+
+## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
+
+Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,
+the rest are features. They ship in batches, one PR each; the full list is in `ideas-triage-2026-11-05.md`.
+
+- **Settings** (`openSettings`):
+  - `autoEquip`: buying sends `equip: false` and `api/shop.js` skips the HSET. Applies to skins, wallpapers,
+    buttons and sounds.
+  - `bestNote`: hides "contains your best roll".
+  - `wakeLock`: Screen Wake Lock while auto-roll runs (`syncWake`, re-requested every 2 s and when the tab
+    becomes visible again).
+- **Auto-roll "stop on New badge"** (`newbadge` in `STOP_OK`): `autoStops(a, fresh)` is told whether the roll
+  gave a badge never owned. This works on all three paths: reveal, background tab and other page.
+- **Session window**: tap "🔥 N rolls this session" to open `openSessionModal`. It shows the last N rolls of this
+  mode: best 5, worst 3 when there are more than 5 rolls, and rarities.
+- **Badges page**: badges found since the last visit get a NEW tag and are listed at the top
+  (`badgesSeen` / `hbadgesSeen` settings). They stay marked for one minute across re-renders.
+- **Profile "most rolled"**: `api/profile.js` keeps `reps` (the top 20 numbers rolled 2+ times) in the cached
+  totals and updates them incrementally. Numbers that repeat for the first time only show up at the next full
+  recompute (6 h at most).
+- **Leaderboard lifetime XP**: always 4 significant digits (`compact4`).
+- **Small Infinite cards** without a skin: rainbow border.
+- **Pitfall**: the dev server caches the version stamp at start. Re-stamping while it runs makes the page reload in a
+  loop (the Updater). Restart the dev server after `tools/stamp.mjs`.
+
+## Hard mode titles (2026-11-05, branch `claude/hard-titles`)
+
+Planned ideas from the 2026-11-05 triage: PRISMA123 (`2a0ce3902f9f` a title for a Mythic or better in Hard mode,
+`e3e0cb767c33` titles for 5k / 10k / 50k / 100k Hard rolls) and Liam123456 (`e3bd823a458c` "Hard mode title").
+- `js/achievements.js`: `hardmythic` 🔥 Forged in Fire (any `h:t:<tier>` from Mythic up, Hard Mythic = top 0.02%),
+  `hard5k` 🍪 Tough Cookie, `hard10k` ⛓️ Hardened, `hard50k` ⛏️ Hardcore, `hard100k` 🗻 Unbreakable (`h:rolls` only).
+  Normal rolls never count for them (the older roll and rarity titles still count both modes, as before).
+- No server change: the stats `h:rolls` and `h:t:<tier>` already exist, so players who already qualify see the titles
+  unlocked as soon as the new `js/achievements.js` is deployed.
+- French in `js/i18n.js`, UPDATES entry `2026-11-05-hard-titles`. Test in `tools/test-api.mjs` (Hard mode block).
+- Checked on the dev server (port 8133): the five titles show locked in Me → Badges, in English and French, and the
+  update shows in the news.
+- Not answered to players yet (Sacha does it).
 
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 

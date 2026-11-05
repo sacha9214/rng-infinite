@@ -997,6 +997,19 @@
   text-shadow: 0 2px 0 #450a0a, 0 0 3px #450a0a, 0 0 .4em rgba(69, 10, 10, .9);
   --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(220, 38, 38, .3); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.4em rgba(253, 243, 216, .35); --gs-a: 0 .06em 0 #14532d; }
 .btn-roll.gen-sweater:hover { filter: brightness(1.08); }
+/* Turkey Roast (Thanksgiving 2026) : la queue de la dinde en éventail derrière le texte (plumes châtaigne, pointes
+   crème), le centre plus sombre ; texte doré comme la peau rôtie. Au survol, la queue s'ouvre un peu plus. */
+.btn-roll.gen-turkey { border: 2px solid #3a1505; border-radius: .6em; color: #ffd88a;
+  background:
+    radial-gradient(ellipse 48% 70% at 50% 75%, rgba(28, 12, 5, .92), rgba(28, 12, 5, .55) 60%, transparent 85%),
+    /* les séparations des plumes par-dessus la bande crème : elle devient une rangée de pointes */
+    repeating-conic-gradient(from -90deg at 50% 135%, rgba(28, 12, 5, .95) 0 1.2deg, transparent 1.2deg 8deg),
+    radial-gradient(ellipse 58% 150% at 50% 135%, transparent 78%, #efe0bd 79% 85%, #24100a 86% 90%, transparent 91%),
+    repeating-conic-gradient(from -90deg at 50% 135%, #86421b 0 7deg, #3d1a09 7deg 8deg, #6f3314 8deg 15deg, #3d1a09 15deg 16deg),
+    #2b140a;
+  text-shadow: 0 2px 0 #3a1505, 0 0 3px #3a1505, 0 0 .5em rgba(251, 146, 60, .6);
+  --gs: 0 .3em 0 #3a1505, 0 .5em 1em rgba(234, 88, 12, .3); --gs-h: 0 .34em 0 #3a1505, 0 .7em 1.4em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #3a1505; }
+.btn-roll.gen-turkey:hover { filter: brightness(1.1) saturate(1.1); }
 /* Money (idées de JBearr12 et finnnnn, 2026-10-25) : un billet vert pâle à double cadre, texte doré. */
 .btn-roll.gen-money { border: 2px solid #2f5d3a; border-radius: .35em; color: #fde68a;
   background: repeating-radial-gradient(ellipse 60% 90% at 50% 50%, transparent 0 4px, rgba(47, 93, 58, .12) 4px 5px), linear-gradient(180deg, #4d7c57, #2f5d3a);
@@ -1707,3 +1720,97 @@
   outline: 2px dashed rgba(255, 255, 255, .75); outline-offset: -6px; text-shadow: 0 1px 0 #fce7f3;
   --gs: 0 .3em 0 #5b21b6, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #5b21b6, 0 .7em 1.3em rgba(167, 139, 250, .5); --gs-a: 0 .06em 0 #5b21b6; }
 .btn-roll.gen-cat:hover { filter: brightness(1.05); }
+
+/* ==== Skins du 2026-11-05, lot 1 ==== boutons assortis */
+/* Overture (promis à 0casmictechthing) : la laque noire d'un piano, un filet d'or, un rang de touches d'ivoire en bas. */
+.btn-roll.gen-overture { border: 2px solid #b08d3c; border-radius: .55rem; color: #f3d27a;
+  font-family: 'Didot', 'Bodoni 72', Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: .04em;
+  background: linear-gradient(90deg, transparent 0 calc(100% - 1px), #a8a29e 0) 0 100% / 12px .32em repeat-x, linear-gradient(#f6f1e3, #f6f1e3) 0 100% / 100% .32em no-repeat, linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 30%), linear-gradient(180deg, #1c1c22, #050507);
+  text-shadow: 0 .05em 0 #5c3d0a, 0 0 .3em rgba(243, 210, 122, .45);
+  --gs: 0 .3em 0 #27272a, 0 .5em 1em rgba(222, 184, 92, .25); --gs-h: 0 .34em 0 #27272a, 0 .7em 1.3em rgba(222, 184, 92, .4); --gs-a: 0 .06em 0 #27272a; }
+.btn-roll.gen-overture:hover { filter: brightness(1.12); }
+/* Cheese (idée de casmicgraything et casmictechthing) : un bloc d'emmental, ses trous, son texte imprimé au fer. */
+.btn-roll.gen-cheese { border: 2px solid #b7791f; border-radius: .7rem; color: #7c3f00;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: radial-gradient(ellipse 9px 8px at 12% 30%, #d49a0b 0 70%, transparent 75%), radial-gradient(ellipse 7px 6px at 88% 70%, #d49a0b 0 70%, transparent 75%), radial-gradient(circle 4px at 70% 20%, #d49a0b 0 70%, transparent 80%), radial-gradient(circle 5px at 30% 82%, #d49a0b 0 70%, transparent 80%), linear-gradient(180deg, #fff0a8, #fcd94a 30%, #eab308);
+  text-shadow: 0 .05em 0 rgba(255, 246, 200, .8);
+  --gs: 0 .3em 0 #a16207, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #a16207, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #a16207; }
+.btn-roll.gen-cheese:hover { filter: brightness(1.05) saturate(1.1); }
+/* Archaeology (idée de casmicgraything et Alt) : une plaque de terre en couches, texte en os. */
+.btn-roll.gen-dig { border: 2px solid #3f2a1a; border-radius: .45rem; color: #f3ead7;
+  font-family: 'Arial Rounded MT Bold', 'Arial Black', system-ui, sans-serif; -webkit-text-stroke: .02em #3b2a1a;
+  background: radial-gradient(circle at 14% 70%, #5c4a3a 0 3px, transparent 4px), radial-gradient(circle at 84% 34%, #8a7a66 0 2px, transparent 3px), linear-gradient(178deg, #4a3423 0 22%, #7b5534 22% 50%, #a07548 50% 54%, #8c6239 54% 80%, #6e4b2c 80%);
+  text-shadow: 0 .06em 0 #3b2a1a;
+  --gs: 0 .3em 0 #2a1a0e, 0 .5em 1em rgba(184, 141, 92, .3); --gs-h: 0 .34em 0 #2a1a0e, 0 .7em 1.3em rgba(184, 141, 92, .45); --gs-a: 0 .06em 0 #2a1a0e; }
+.btn-roll.gen-dig:hover { filter: brightness(1.1); }
+/* Angel (idée de qwertyuiop) : un ciel de crépuscule, une auréole d'or au-dessus du texte en lumière blanche. */
+.btn-roll.gen-angel { border: 2px solid #e9c46a; border-radius: 999px; color: #fff;
+  background: radial-gradient(ellipse 18% 16% at 50% 14%, transparent 55%, #fde68a 60% 75%, transparent 80%), radial-gradient(ellipse 60% 80% at 50% 60%, rgba(253, 230, 138, .45), transparent 70%), linear-gradient(180deg, #1b2452, #34478f 70%, #6e7fc4);
+  text-shadow: 0 0 .05em #fff, 0 .04em .02em #8a6512, 0 0 .3em rgba(253, 230, 138, .9);
+  --gs: 0 .3em 0 #b08d3c, 0 .5em 1.2em rgba(253, 230, 138, .45); --gs-h: 0 .34em 0 #b08d3c, 0 .7em 1.5em rgba(253, 230, 138, .6); --gs-a: 0 .06em 0 #b08d3c; }
+.btn-roll.gen-angel:hover { filter: brightness(1.1); }
+/* Demon (idée de qwertyuiop, avec l'ange déchu de Roanono) : obsidienne fendue de braise, texte marqué au fer rouge. */
+.btn-roll.gen-demon { border: 2px solid #7f1d1d; border-radius: .55rem; color: #ff4d5e;
+  background: linear-gradient(115deg, transparent 20%, rgba(220, 38, 38, .55) 21%, transparent 22.5%, transparent 70%, rgba(220, 38, 38, .45) 71%, transparent 72.5%), radial-gradient(ellipse 70% 60% at 50% 120%, rgba(220, 38, 38, .55), transparent 70%), linear-gradient(160deg, #1a0b10, #0b0507);
+  text-shadow: 0 0 .04em #ffe4e6, 0 .05em .02em #000, 0 0 .3em rgba(244, 63, 94, .9);
+  --gs: 0 .3em 0 #450a0a, 0 .5em 1.2em rgba(220, 38, 38, .45); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.5em rgba(220, 38, 38, .6); --gs-a: 0 .06em 0 #450a0a; }
+.btn-roll.gen-demon:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-11-05, lot 2 ==== boutons assortis */
+/* Deep Sea (idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN) : l'abysse bleu nuit, la lumière de la surface, un texte bioluminescent. */
+.btn-roll.gen-deepsea { border: 2px solid #0e4a63; border-radius: .7rem; color: #d9fdff;
+  background: radial-gradient(circle, rgba(207, 250, 254, .5) 0 1px, transparent 1.6px) 0 0 / 17px 13px, radial-gradient(ellipse 30% 60% at 30% -20%, rgba(165, 243, 252, .35), transparent 70%), radial-gradient(ellipse 30% 60% at 75% -20%, rgba(165, 243, 252, .25), transparent 70%), linear-gradient(180deg, #0c4a6e, #041a2e 70%, #020c18);
+  text-shadow: 0 0 .06em #fff, 0 0 .25em #22d3ee, 0 0 .5em rgba(34, 211, 238, .6);
+  --gs: 0 .3em 0 #011524, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #011524, 0 .7em 1.3em rgba(34, 211, 238, .45); --gs-a: 0 .06em 0 #011524; }
+.btn-roll.gen-deepsea:hover { filter: brightness(1.15); }
+/* Bubble (idée de finnnnn) : une grosse bulle de savon pastel, film irisé, reflet en haut à gauche. */
+.btn-roll.gen-bubble { border: 2px solid rgba(255, 255, 255, .85); border-radius: 999px; color: #312e81;
+  background: radial-gradient(ellipse 12% 30% at 14% 28%, rgba(255, 255, 255, .95), transparent 70%), linear-gradient(100deg, rgba(244, 114, 182, .35), rgba(250, 204, 21, .3) 30%, rgba(74, 222, 128, .3) 55%, rgba(56, 189, 248, .35) 80%, rgba(167, 139, 250, .4)), linear-gradient(160deg, #c7e9ff, #e4d9ff 55%, #ffd9ef);
+  text-shadow: 0 .05em 0 rgba(255, 255, 255, .9);
+  --gs: 0 .3em 0 #a5b4fc, 0 .5em 1em rgba(165, 180, 252, .4); --gs-h: 0 .34em 0 #a5b4fc, 0 .7em 1.3em rgba(165, 180, 252, .55); --gs-a: 0 .06em 0 #a5b4fc; }
+.btn-roll.gen-bubble:hover { filter: brightness(1.04) saturate(1.15); }
+/* Yin and Yang (idées de kaz et JBearr12) : l'encre noire, un taiji de papier à chaque bout, le texte blanc (jamais du
+   blanc sur blanc : le texte ne passe pas sur la moitié claire). */
+.btn-roll.gen-yinyang { border: 2px solid #a8a29e; border-radius: .6rem; color: #fafaf9;
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%230c0a09' stroke='%23d6d3d1' stroke-width='5'/><path d='M50 3A47 47 0 0 1 50 97A23.5 23.5 0 0 1 50 50A23.5 23.5 0 0 0 50 3Z' fill='%23f5f5f4'/><circle cx='50' cy='26.5' r='7' fill='%230c0a09'/><circle cx='50' cy='73.5' r='7' fill='%23f5f5f4'/></svg>") .55em 50% / .8em .8em no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%230c0a09' stroke='%23d6d3d1' stroke-width='5'/><path d='M50 3A47 47 0 0 1 50 97A23.5 23.5 0 0 1 50 50A23.5 23.5 0 0 0 50 3Z' fill='%23f5f5f4'/><circle cx='50' cy='26.5' r='7' fill='%230c0a09'/><circle cx='50' cy='73.5' r='7' fill='%23f5f5f4'/></svg>") calc(100% - .55em) 50% / .8em .8em no-repeat, radial-gradient(ellipse 60% 80% at 50% 50%, rgba(120, 113, 108, .35), transparent 70%), #0c0a09;
+  text-shadow: 0 0 .15em rgba(214, 211, 209, .45);
+  --gs: 0 .3em 0 #44403c, 0 .5em 1em rgba(214, 211, 209, .3); --gs-h: 0 .34em 0 #44403c, 0 .7em 1.3em rgba(214, 211, 209, .45); --gs-a: 0 .06em 0 #44403c; }
+.btn-roll.gen-yinyang:hover { filter: contrast(1.1); }
+/* Frutiger Aero (promis à jia jun) : du verre bleu brillant, la colline verte, le grand reflet blanc. */
+.btn-roll.gen-aero { border: 2px solid #38bdf8; border-radius: 999px; color: #fff; -webkit-text-stroke: .02em #0369a1;
+  font-family: 'Segoe UI', 'Frutiger', 'Myriad Pro', 'Helvetica Neue', system-ui, sans-serif;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .75), rgba(255, 255, 255, .2) 48%, transparent 49%), radial-gradient(ellipse 60% 40% at 25% 120%, #52c234 0 60%, transparent 62%), radial-gradient(ellipse 70% 45% at 85% 125%, #3fae2a 0 60%, transparent 62%), linear-gradient(180deg, #2ea7e8, #6fd0f7 60%, #c4f1ff);
+  text-shadow: 0 .05em 0 #075985, 0 .08em .12em rgba(3, 105, 161, .5);
+  --gs: 0 .3em 0 #0369a1, 0 .5em 1em rgba(56, 189, 248, .4); --gs-h: 0 .34em 0 #0369a1, 0 .7em 1.3em rgba(56, 189, 248, .55); --gs-a: 0 .06em 0 #0369a1; }
+.btn-roll.gen-aero:hover { filter: brightness(1.06) saturate(1.1); }
+
+/* ==== Skins du 2026-11-05, lot 3 ==== boutons assortis */
+/* Blackout (promis à Mace_67) : noir mat, le texte allumé d'une lumière chaude, un liseré qui luit. */
+.btn-roll.gen-blackout { border: 2px solid #f5ecd6; border-radius: .55rem; color: #fff8e7;
+  font-family: 'DIN Alternate', 'Bahnschrift', 'Arial Narrow', 'Helvetica Neue', system-ui, sans-serif;
+  background: radial-gradient(ellipse 70% 80% at 50% 60%, #0b0b0c, #020202 70%);
+  text-shadow: 0 0 .06em #fff, 0 0 .3em rgba(255, 236, 190, .8), 0 0 .7em rgba(255, 214, 140, .4);
+  --gs: 0 .3em 0 #1c1c1c, 0 0 1.2em rgba(255, 236, 190, .35); --gs-h: 0 .34em 0 #1c1c1c, 0 0 1.6em rgba(255, 236, 190, .55); --gs-a: 0 .06em 0 #1c1c1c; }
+.btn-roll.gen-blackout:hover { filter: brightness(1.15); }
+/* Prism (promis à Idkwhatnamemyself) : un cristal taillé à la couleur de la rareté du dernier tirage (--pr-*). */
+.btn-roll.gen-prism { border: 2px solid var(--pr-b); border-radius: .7rem; color: #fff; -webkit-text-stroke: .02em var(--pr-c);
+  background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, .5) 25%, transparent 27%, transparent 64%, rgba(255, 255, 255, .3) 65%, transparent 67%), conic-gradient(from 20deg, var(--pr-b), var(--pr-a) 12%, var(--pr-c) 24%, var(--pr-a) 37%, var(--pr-b) 50%, var(--pr-a) 62%, var(--pr-c) 75%, var(--pr-a) 88%, var(--pr-b));
+  text-shadow: 0 .05em 0 var(--pr-c);
+  --gs: 0 .3em 0 var(--pr-c), 0 .5em 1.2em color-mix(in srgb, var(--pr-a) 45%, transparent); --gs-h: 0 .34em 0 var(--pr-c), 0 .7em 1.5em color-mix(in srgb, var(--pr-a) 60%, transparent); --gs-a: 0 .06em 0 var(--pr-c);
+  transition: border-color .4s, filter .2s; }
+.btn-roll.gen-prism:hover { filter: brightness(1.1) saturate(1.1); }
+/* Rainbow Paint (idée de finnnnn) : une toile en lin, un coup de pinceau arc-en-ciel derrière le texte. */
+.btn-roll.gen-paint { border: .16em solid #a0703c; border-radius: .3rem; color: #1f2937;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: linear-gradient(90deg, #e11d48, #ea580c, #ca8a04, #16a34a, #2563eb, #7c3aed) 50% 82% / 78% .3em no-repeat, repeating-linear-gradient(0deg, rgba(120, 100, 70, .07) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(120, 100, 70, .07) 0 1px, transparent 1px 3px), #f5efe2;
+  text-shadow: 0 .04em 0 rgba(255, 255, 255, .8);
+  --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(234, 88, 12, .25); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.3em rgba(234, 88, 12, .4); --gs-a: 0 .06em 0 #6b4423; }
+.btn-roll.gen-paint:hover { filter: saturate(1.2); }
+/* Touch Grass (idée de finnnnn) : une pelouse tondue à bandes, le texte tondu dedans. */
+.btn-roll.gen-grass { border: 2px solid #2f5e1a; border-radius: .6rem; color: #e7fbb0;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: repeating-linear-gradient(92deg, rgba(20, 83, 45, .25) 0 1px, transparent 1px 3px), repeating-linear-gradient(115deg, rgba(255, 255, 255, .08) 0 14px, rgba(0, 0, 0, .08) 14px 28px), linear-gradient(180deg, #4d9a2c, #2f6a1b);
+  text-shadow: 0 -.04em 0 #1f4d12, 0 .05em .06em rgba(20, 50, 10, .5);
+  --gs: 0 .3em 0 #1f4d12, 0 .5em 1em rgba(132, 204, 22, .3); --gs-h: 0 .34em 0 #1f4d12, 0 .7em 1.3em rgba(132, 204, 22, .45); --gs-a: 0 .06em 0 #1f4d12; }
+.btn-roll.gen-grass:hover { filter: brightness(1.08); }

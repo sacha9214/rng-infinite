@@ -97,6 +97,9 @@
   // Signale au serveur un cas anormal (compteur anonyme, une fois par nom et par visite) : voir api/site.js « evt ».
   const seenEvt = new Set();
   const clientEvt = name => { if (seenEvt.has(name)) return; seenEvt.add(name); try { Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'evt', name }) }).catch(() => {}); } catch (e) { /* rien */ } };
+  // Achats qui équipent d'eux-mêmes ; « Equip what you buy » sur off les laisse seulement débloqués (api/shop.js).
+  const BUY_ACTIONS = new Set(['buy', 'buywall', 'buybutton', 'buysound']);
+  const autoEquip = () => Store.settings.autoEquip !== 'off';
   const Online = {
     // Un seul essai sur une base. Vers un autre domaine, le corps part en text/plain et sans en-tête ajouté : le
     // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
@@ -170,6 +173,13 @@
     leaderboard(period, span, mode = Mode.name) {
       return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
+    // Hall of Fame (idée d'Avaneesh_17) et propriétaires de chaque badge (idée de Tumored), 2026-11-05.
+    hof() {
+      return this.request('/api/leaderboard?hof=1');
+    },
+    badgeOwners(mode = Mode.name) {
+      return this.request(`/api/leaderboard?badges=1${mode === 'hard' ? '&mode=hard' : ''}`);
+    },
     profile(name, lite, mode = Mode.name) {
       return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}${lite ? '&lite=1' : ''}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
@@ -184,7 +194,9 @@
     },
     shopAction(action, skin, extra = {}) {
       const p = Store.player;
-      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra }) });
+      // Réglage « Equip what you buy » (idée d'infinity, 2026-11-05) : sur off, un achat ne remplace pas ce qui est équipé.
+      const keep = BUY_ACTIONS.has(action) && !autoEquip() ? { equip: false } : {};
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra, ...keep }) });
     },
     liveRooms() {
       return this.request('/api/room?live=1');
@@ -469,7 +481,12 @@
   const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
   // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
   // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
-  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+  // Skin Prism (promis à Idkwhatnamemyself, 2026-10-31) : la carte et le bouton prennent la couleur de la rareté du dernier
+  // tirage, lue sur html[data-last-tier] (css/style.css). Sur l'écran de tirage, c'est celle du tirage d'avant, jusqu'à la révélation.
+  const setLastRoll = roll => {
+    document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+    try { if (roll) document.documentElement.dataset.lastTier = analysis(roll[0]).tier; else delete document.documentElement.dataset.lastTier; } catch (e) { /* moteur pas encore prêt */ }
+  };
   Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
   // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
   // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
@@ -594,7 +611,9 @@
   // N pour zéro, pour garder la largeur de la case) ; le chiffre arabe gravé n'apparaît qu'à la pose (lisible).
   const ROMAN = ['N', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'];
   const spinChar = card => (card && card.classList.contains('skin-matrix') ? MatrixRain.glyph()
-    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0] : String((Math.random() * 10) | 0));
+    : card && card.classList.contains('skin-greek') ? ROMAN[(Math.random() * 10) | 0]
+    : card && card.classList.contains('skin-yinyang') ? '零一二三四五六七八九'[(Math.random() * 10) | 0] // Yin and Yang : des chiffres chinois dans la brume (kaz, 2026-10-31)
+    : String((Math.random() * 10) | 0));
   // Badges Top 1 / 5 / 10 : remis à la fin de chaque mois aux dix premiers du classement du mois, gardés pour toujours
   // (voir api/_rank.js). award = { top: 1 | 5 | 10, month: 'AAAA-MM' } ; le serveur envoie le meilleur de chacun.
   const TOP_MARKS = { 1: ['👑', 'Top 1', 'gold'], 5: ['🥈', 'Top 5', 'silver'], 10: ['🥉', 'Top 10', 'bronze'] };
@@ -1276,6 +1295,19 @@
     });
   }
 
+  // Nombre de joueurs qui possèdent chaque badge (idée de Tumored, 2026-10-31) : une seule demande pour tous les badges,
+  // gardée 2 minutes par mode. null tant que le serveur ne l'affiche pas (rattrapage pas encore fait) ou hors ligne.
+  const badgeOwnersCache = {};
+  async function badgeOwnersOf(id) {
+    const mode = Mode.name, c = badgeOwnersCache[mode];
+    let data = c && Date.now() - c.at < 120000 ? c.data : null;
+    if (!data) {
+      try { data = await Online.badgeOwners(mode); } catch (err) { return null; }
+      badgeOwnersCache[mode] = { at: Date.now(), data };
+    }
+    return data && data.ready ? { n: data.counts[id] || 0, players: data.players } : null;
+  }
+
   function openBadgeModal(id) {
     const b = Engine.byId.get(id);
     if (!b) return;
@@ -1299,6 +1331,7 @@
       </div>
       <div class="kv"><span class="k">Odds</span><span class="v">${oneIn(odds)} · ${pctStr(odds)}</span></div>
       <div class="kv"><span class="k">You earned it</span><span class="v">${e ? plural(e.count, 'time') : 'Not yet'}</span></div>
+      <div class="kv" id="bm-owners" hidden><span class="k">Players who own it</span><span class="v"></span></div>
       ${e ? `<div class="kv"><span class="k">First found</span><span class="v"><a href="javascript:void 0" data-roll="${e.first}">${Store.rolls[e.first][0]}</a> · ${relTime(Store.rolls[e.first][2])}</span></div>` : ''}
       ${family.length > 1 ? `
         <div class="kv"><span class="k">Family</span><span class="v" style="font-family:var(--font-sans);font-weight:500;text-align:right;line-height:1.7">
@@ -1309,6 +1342,13 @@
       ${holders.length ? `<div class="eyebrow" style="margin:1.1rem 0 .6rem">Your rolls with this badge${e.count > holders.length ? ` (latest ${holders.length})` : ''}</div>
         <div class="pill-row" style="justify-content:flex-start">${holders.map(i => `<button class="num-card sm" data-tier="${Engine.cardTier(Store.rolls[i][1])}" data-roll="${i}">${Store.rolls[i][0]}</button>`).join('')}</div>` : ''}
     `, m => {
+      // Propriétaires du badge (idée de Tumored, 2026-10-31) : comptés par le serveur, la ligne reste cachée sans réponse.
+      badgeOwnersOf(id).then(o => {
+        const row = m.querySelector('#bm-owners');
+        if (!o || !row || !row.isConnected) return;
+        row.querySelector('.v').textContent = o.n ? `👥 ${fmt(o.n)} of ${plural(o.players, 'player')}` : '👥 Nobody yet';
+        row.hidden = false;
+      });
       const b2 = m.querySelector('#bm-full');
       if (b2) b2.addEventListener('click', () => {
         const set = new Set(Store.settings.fullBadges || []);
@@ -1370,6 +1410,9 @@
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${skipRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(skipRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
       <div class="field"><label>Show XP to next rarity</label>${seg('tierLine', ['on', 'off'], s.tierLine === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">The “↑ XP short of / ↓ XP above” line under the XP after a roll.</span></div>
+      <div class="field"><label>Best roll message</label>${seg('bestNote', ['on', 'off'], s.bestNote === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">“This number contains your best roll ever” after a roll.</span></div>
+      <div class="field"><label>Equip what you buy</label>${seg('autoEquip', ['on', 'off'], s.autoEquip === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">Off: a new skin, wallpaper, button or sound is unlocked but you keep what you use now.</span></div>
+      <div class="field"><label>Keep the screen on during auto-roll</label>${seg('wakeLock', ['on', 'off'], s.wakeLock === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Your device won't go to sleep while auto-roll runs on this page. Uses more battery.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
@@ -1381,6 +1424,7 @@
         <button class="btn" id="set-export">Export history</button>
         <button class="btn" id="set-import">Import</button>
         <button class="btn danger" id="set-clear">Clear history</button>
+        ${Store.player.name ? '<button class="btn danger" id="set-delete" type="button">Delete my account</button>' : ''}
         <input type="file" id="set-file" accept="application/json,.json" hidden>
       </div>
       <div class="actions"><button class="btn" id="set-done">Done</button></div>
@@ -1478,7 +1522,82 @@
         toast('History cleared');
         route();
       });
+      const delBtn = m.querySelector('#set-delete');
+      if (delBtn) delBtn.addEventListener('click', openDeleteAccount);
     });
+  }
+
+  // Supprimer son compte (demandé par Sacha, 2026-11-05) : le joueur retape son pseudo exact, le serveur efface tout ce
+  // qui est à lui (api/_account.js), puis cet appareil repart comme à la première visite (nouveau joueur, rien en local).
+  // Les réglages de l'appareil (thème, langue, son) restent : ils ne disent rien du joueur.
+  function openDeleteAccount() {
+    const p = Store.player;
+    if (!p.name) return;
+    openModal(`
+      <h2>Delete your account?</h2>
+      <p class="acct-del-warn">This deletes your player from the server forever. It can't be undone: not even the creator can bring it back.</p>
+      <p class="acct-del-lose">You lose:</p>
+      <ul class="acct-del-list">
+        <li>Every roll and your history, in Normal and Hard mode</li>
+        <li>Your coins, skins, wallpapers and everything you bought</li>
+        <li>Your badges, titles, quests and achievements</li>
+        <li>Your friends, your messages and your clan</li>
+        <li>Your places on every leaderboard</li>
+        <li>Your player name: anyone can take it after</li>
+      </ul>
+      ${p.google ? '<p class="panel-note acct-del-link">Your Google account is unlinked from this player. Signing in with it again starts a new player.</p>' : ''}
+      <p class="panel-note acct-del-link" id="acct-del-pw" hidden>Your password stops working.</p>
+      <div class="field">
+        <label for="acct-del-name">Type your player name to confirm</label>
+        <input class="input" id="acct-del-name" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(p.name)}">
+        <p class="field-error" id="acct-del-error" hidden></p>
+      </div>
+      <div class="actions"><button class="btn" id="acct-del-cancel" type="button">Cancel</button><button class="btn danger acct-del-go" id="acct-del-go" type="button" disabled>Delete forever</button></div>
+    `, m => {
+      const input = m.querySelector('#acct-del-name'), go = m.querySelector('#acct-del-go'), error = m.querySelector('#acct-del-error');
+      // Mot de passe : seul le serveur le sait (même requête que les réglages).
+      Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => {
+        const note = m.querySelector('#acct-del-pw');
+        if (r.has && note) note.hidden = false;
+      }).catch(() => {});
+      input.addEventListener('input', () => { go.disabled = input.value.trim() !== p.name; error.hidden = true; });
+      m.querySelector('#acct-del-cancel').addEventListener('click', openSettings);
+      go.addEventListener('click', async () => {
+        if (input.value.trim() !== p.name) return;
+        go.disabled = true; input.disabled = true;
+        go.textContent = window.RNGI18n.t('Deleting…');
+        try {
+          await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'deleteAccount', playerId: p.id, secret: p.secret, name: input.value.trim() }) });
+        } catch (err) {
+          go.textContent = window.RNGI18n.t('Delete forever');
+          input.disabled = false; go.disabled = input.value.trim() !== p.name;
+          error.textContent = window.RNGI18n.t(err.status && err.status < 500 && err.message ? err.message : 'Could not delete your account, try again');
+          error.hidden = false;
+          return;
+        }
+        resetDevice();
+        closeModal();
+        toast('Your account is deleted. This device starts again as a new player.', 6000);
+        location.hash = '#/';
+        route();
+      });
+      input.focus();
+    });
+  }
+  // Après la suppression : nouvel identifiant, plus aucun tirage ni solde ici (Store.signOut), et plus rien d'autre du
+  // joueur dans le stockage de l'appareil (messages vus, historique déjà relu, choix du keno…). Restent : les réglages
+  // (dans la clé du Store, réécrite par signOut), la langue, et les dates de visite (statistiques anonymes du site).
+  function resetDevice() {
+    if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+    Store.signOut();
+    Collection.built = false;
+    HdrCoins.set(0); // l'ancien solde restait affiché (caché tant que le nouveau joueur n'a pas de pseudo)
+    const keep = new Set(['rnginf.v1', 'rnginf.hard', 'rng-lang', 'rng-first-visit', 'rng-last-visit', 'rng-first-src']);
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      keys.filter(k => k && !keep.has(k)).forEach(k => localStorage.removeItem(k));
+    } catch (e) { /* stockage bloqué : rien d'autre à effacer */ }
   }
 
   // « About me » dans les réglages (idée de Niall, 2026-10-27) : une ligne de 80 caractères montrée sur le profil. Le
@@ -1739,13 +1858,15 @@
         </div>
         ${state.quests.map(q => {
           const done = q.progress >= q.target;
+          // Relance (idée de Mace_67, 2026-11-03) : sur une quête pas finie, tant qu'il reste des relances cette semaine.
+          const reroll = !done && !q.claimed && state.rerolls && state.rerolls.left > 0 ? `<button type="button" class="q-reroll" data-reroll="${esc(q.id)}" title="Swap this quest for another one" aria-label="Swap this quest for another one">🔄</button>` : '';
           return `
           <div class="quest${q.claimed ? ' done' : ''}">
             <span class="quest-emoji">${q.emoji}</span>
             <span class="quest-text"><b>${esc(q.text)}</b>
               <span class="quest-bar"><span style="width:${Math.min(100, (q.progress / q.target) * 100)}%"></span></span>
               <span class="panel-note">${q.target >= 1000 ? `${compact(q.progress)} / ${compact(q.target)}` : `${q.progress} / ${q.target}`}</span></span>
-            ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
+            ${reroll}${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
           </div>`;
         }).join('')}
         ${state.questStreak ? (() => { const qs = state.questStreak, claimed = state.quests.filter(q => q.claimed).length; return `
@@ -1757,7 +1878,7 @@
         </div>`; })() : ''}
         ${state.weekly ? weeklyQuestsHTML(state.weekly) : ''}
         ${state.chest ? questChestHTML(state.chest) : ''}
-        <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
+        <p class="panel-note quests-foot">New quests in ${resetIn}${state.rerolls ? ` · 🔄 ${plural(state.rerolls.left, 'reroll')} left this week` : ''} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     // Sur grand écran, l'événement de la semaine passe sous la cagnotte (moins de choses empilées dans les quêtes).
     { const side = $('#event-side'), ev = slot.querySelector('.event-quest');
@@ -1765,6 +1886,19 @@
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.tab = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
+      // Relance d'une quête (idée de Mace_67, 2026-11-03) : demandée une fois (elles sont comptées), le serveur tire la nouvelle.
+      const rr = e.target.closest('[data-reroll]');
+      if (rr) {
+        if (rr.disabled || !confirm(window.RNGI18n.t(`Swap this quest for another one? ${plural(state.rerolls.left, 'reroll')} left this week.`))) return;
+        rr.disabled = true;
+        try {
+          const next = await Online.questAction('reroll', rr.dataset.reroll), q = next.quests.find(x => x.id === next.swapped.to);
+          toast(`🔄 New quest: ${q ? q.text : 'swapped'}`, 3000);
+          Sound.play('lock', { i: 3 });
+          loadQuests(slot, next);
+        } catch (err) { rr.disabled = false; toast([400, 422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event], [data-wquest], [data-chest]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -2232,6 +2366,30 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-11-05-badges-hard', date: 'Nov 5, 2026', en: ['🧩 New badges: 🕒 Quarter Epoch and 🕘 Three-Quarter Epoch (ends in 2500 or 7500, idea by cri cri 3), and 🧩 Trilogy, six digits that split into three 2-digit badge numbers like 51 · 92 · 25 (idea by Starharvest). Some numbers change rarity with them; the rolls you already made keep their value', '🔥 A badge pack for Hard mode only: Contiguous Sevens to Tens and Sequence (7) to (10) (ideas by CrazyMiner22 and 0casmictechthing), 🫠 Brainrot Overload (contains 67676767) and Ultimate Brainrot (exactly 6767676767, ideas by Aussie Haüs), 💾 32-bit Limit (2147483647) and 🧮 Mersenne Prime (ideas by CrazyMiner22), 🐚 Fibonacci Slices (7) to (10) (idea by kaz, sent by CococoC), plus 🔟 Pandigital and Seven, Eight and Nine Digits (more Hard badges, asked by Angelicide9 and jsandhardmode)'], fr: ['🧩 Nouveaux badges : 🕒 Quarter Epoch et 🕘 Three-Quarter Epoch (finit par 2500 ou 7500, idée de cri cri 3), et 🧩 Trilogy, six chiffres qui se coupent en trois nombres de badges à 2 chiffres, comme 51 · 92 · 25 (idée de Starharvest). Certains nombres changent de rareté avec eux ; les tirages que tu as déjà faits gardent leur valeur', '🔥 Un pack de badges rien que pour le mode difficile : Contiguous Sevens à Tens et Sequence (7) à (10) (idées de CrazyMiner22 et 0casmictechthing), 🫠 Brainrot Overload (contient 67676767) et Ultimate Brainrot (exactement 6767676767, idées d\'Aussie Haüs), 💾 32-bit Limit (2147483647) et 🧮 Mersenne Prime (idées de CrazyMiner22), 🐚 Fibonacci Slices (7) à (10) (idée de kaz, envoyée par CococoC), et 🔟 Pandigital et Seven, Eight et Nine Digits (plus de badges du mode difficile, demandés par Angelicide9 et jsandhardmode)'] },
+    { id: '2026-11-05-skins-lot3', date: 'Nov 5, 2026', en: ['💡 New skin: Blackout (1,700 coins, idea by Mace_67). Pitch black: every digit flickers on in the dark, then the border lights up in your rarity color', '💠 New skin: Prism (2,600 coins, idea by Idkwhatnamemyself). A crystal card and button in the color of your last roll\'s rarity, turning to the new one when it lands', '🎨 New skin: Rainbow Paint (1,800 coins, idea by finnnnn). Oil paint on canvas, one rainbow color per digit, brushed on stroke by stroke', '🌱 New skin: Touch Grass (1,500 coins, idea by finnnnn). Digits mowed into a fresh lawn, with daisies, butterflies and a little lawn mower on great rolls'], fr: ['💡 Nouveau skin : Blackout (1 700 pièces, idée de Mace_67). Le noir complet : chaque chiffre s\'allume dans le noir en grésillant, puis le cadre s\'allume dans la couleur de ta rareté', '💠 Nouveau skin : Prism (2 600 pièces, idée d\'Idkwhatnamemyself). Une carte et un bouton en cristal à la couleur de la rareté de ton dernier tirage, qui prennent la nouvelle quand elle sort', '🎨 Nouveau skin : Rainbow Paint (1 800 pièces, idée de finnnnn). De la peinture à l\'huile sur une toile, une couleur de l\'arc-en-ciel par chiffre, posée coup de pinceau par coup de pinceau', '🌱 Nouveau skin : Touch Grass (1 500 pièces, idée de finnnnn). Des chiffres tondus dans une pelouse fraîche, avec des pâquerettes, des papillons et une petite tondeuse sur les grands tirages'] },
+    { id: '2026-11-05-skins-lot2', date: 'Nov 5, 2026', en: ['🐋 New skin: Deep Sea (2,600 coins, ideas by finnnnn, Deadshot, YeeHao2 and LEVIATHAN). Glowing digits in the abyss while fish, turtles and squid swim by; a shark for great rolls, a whale for Mythic, the leviathan for Divine, and a 1 in 50 anchor', '🫧 New skin: Bubble (1,400 coins, idea by finnnnn). Every digit is a soap bubble that pops into the next; Mythic rolls fire a bubble gun', '☯️ New legendary skin: Yin and Yang (6,000 coins, ideas by kaz and JBearr12). Black and white swap with every digit, Chinese numerals roll in the mist, and great rolls bring two koi', '🌐 New skin: Frutiger Aero (2,200 coins, idea by jia jun). Glossy glass, a green hill, gel digits, bubbles and ribbons of light'], fr: ['🐋 Nouveau skin : Deep Sea (2 600 pièces, idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN). Des chiffres lumineux dans l\'abysse pendant que passent poissons, tortues et calmars ; un requin pour les grands tirages, une baleine pour les Mythic, le léviathan pour les Divine, et une ancre une fois sur 50', '🫧 Nouveau skin : Bubble (1 400 pièces, idée de finnnnn). Chaque chiffre est une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles', '☯️ Nouveau skin légendaire : Yin and Yang (6 000 pièces, idées de kaz et JBearr12). Le noir et le blanc s\'échangent à chaque chiffre, des chiffres chinois défilent dans la brume, et les grands tirages amènent deux carpes koï', '🌐 Nouveau skin : Frutiger Aero (2 200 pièces, idée de jia jun). Du verre brillant, une colline verte, des chiffres en gel, des bulles et des rubans de lumière'] },
+    { id: '2026-11-05-features-misc', date: 'Nov 5, 2026', en: [
+      '🏛️ New Hall of Fame (Leaderboard → Hall of Fame): the first player to roll each Infinite number, the first to reach 100M, 1B, 10B and 100B XP, the first to 10,000, 100,000 and 1,000,000 rolls, and the first Mythic, Celestial, Divine, Godlike and Infinite of Hard mode. Kept forever (idea by Avaneesh_17)',
+      '🔄 Quest rerolls: swap a daily quest you are stuck on for another one of the same kind, 3 times a week. Your progress stays (idea by Mace_67)',
+      '👥 Every badge now shows how many players own it: open a badge to see it (idea by Tumored)',
+      '💡 Wallpaper creators now get 5% too, like skin creators: when someone buys a wallpaper born from your idea, or gets it from a paid Wallpaper Case (idea by qwertyuiop)',
+      '⌨️ Keyboard ASMR is much crunchier and louder, and it now presses every key you type on your real keyboard (Shift, Ctrl, symbols too), holding it down while you hold it (ideas by dog and Infin6, reported by LEVIATHAN)',
+      '🪐 Solar System: the asteroid belt with Ceres and its bright spot, Pluto on its tilted orbit, a comet trail that follows the comet, and no orbit crossing the sun anymore (ideas by deadshot44474)'],
+    fr: [
+      '🏛️ Nouveau Panthéon (Classement → Panthéon) : le premier joueur à tirer chaque nombre Infinite, le premier à 100 M, 1 G, 10 G et 100 G d\'XP, le premier à 10 000, 100 000 et 1 000 000 de tirages, et les premiers Mythic, Celestial, Divine, Godlike et Infinite du mode difficile. Gardés pour toujours (idée d\'Avaneesh_17)',
+      '🔄 Échange de quêtes : remplace une quête du jour qui te bloque par une autre du même genre, 3 fois par semaine. Ta progression est gardée (idée de Mace_67)',
+      '👥 Chaque badge montre maintenant combien de joueurs l\'ont : ouvre un badge pour le voir (idée de Tumored)',
+      '💡 Les créateurs de fonds d\'écran touchent aussi 5 %, comme ceux des skins : quand quelqu\'un achète un fond né de ton idée, ou l\'obtient dans une caisse de fonds payée (idée de qwertyuiop)',
+      '⌨️ Le clavier ASMR craque beaucoup plus et plus fort, et il enfonce maintenant chaque touche que tu tapes sur ton vrai clavier (Maj, Ctrl et les symboles aussi), tenue tant que tu la tiens (idées de dog et Infin6, signalé par LEVIATHAN)',
+      '🪐 Système solaire : la ceinture d\'astéroïdes avec Cérès et sa tache claire, Pluton sur son orbite penchée, une queue de comète qui suit la comète, et plus aucune orbite qui passe sur le soleil (idées de deadshot44474)'] },
+    { id: '2026-11-05-limited-events', date: 'Nov 5, 2026', en: ['🛍️ The shop\'s Limited tab is now sorted by event: Thanksgiving and Christmas each have their own section with their skins and wallpapers. Halloween is over and leaves the shop until next year (if you bought its items, they\'re still in your profile\'s Inventory)'], fr: ['🛍️ L\'onglet Limités de la boutique est maintenant rangé par événement : Thanksgiving et Noël ont chacun leur partie avec leurs skins et leurs fonds. Halloween est fini et quitte la boutique jusqu\'à l\'an prochain (si tu as acheté ses objets, ils sont toujours dans l\'inventaire de ton profil)'] },
+    { id: '2026-11-05-delete-account', date: 'Nov 5, 2026', en: ['🗑️ You can now delete your account: ⚙️ Settings → Delete my account. Type your player name to confirm, and everything is erased from the server for good (rolls, coins, skins, friends, clan, leaderboards). Your name becomes free again and this device starts over as a new player'], fr: ['🗑️ Tu peux maintenant supprimer ton compte : ⚙️ Réglages → Supprimer mon compte. Tape ton pseudo pour confirmer, et tout est effacé du serveur pour de bon (tirages, pièces, skins, amis, clan, classements). Ton pseudo redevient libre et cet appareil repart avec un nouveau joueur'] },
+    // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
+    { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
+    { id: '2026-11-05-social-chat', date: 'Nov 5, 2026', en: ['💬 Global chat: your best roll shows next to your name, like "(999,999)" (ideas by Loliarlex1248 and MAYO), and Mythic or better rolls in Hard mode are announced too (Idkwhatnamemyself and Kag)', '😀 More emojis: 🥹 😒 😤 🥺 and other faces (idea by Jacksonw), 🎩 (Deadshot), 👌 (Jguz01), 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴 (sennybex1). The emoji button now works in your clan chat too (Deadshot), and the new ones are clan icons as well', '🏆 Friends leaderboard: you and your friends ranked by XP, today\'s XP, best roll or rolls, on the Friends page (idea by Edward). Tap ☆ to pin a friend at the top of your list (Big Sexy)', '▲ Vote for the planned ideas you want first on the Roadmap, and sort them by most voted (idea by Trinity)', '⚔️ Duels: the score shows above each card with a 👑 on whoever is winning, and you can put the leader first in the scoreboard (idea by Jacksonw). Edit, delete, hide and report are now behind ⋯ in the duel chat, so messages stay on one line (Jacksonw)', '🛡️ Chat moderators see the messages around a reported one (idea by jsand) and can lift a mute that wasn\'t fair (pople)'], fr: ['💬 Chat global : ton meilleur tirage s\'affiche à côté de ton pseudo, comme « (999 999) » (idées de Loliarlex1248 et MAYO), et les tirages Mythic ou mieux du mode difficile sont annoncés aussi (Idkwhatnamemyself et Kag)', '😀 Plus d\'emojis : 🥹 😒 😤 🥺 et d\'autres visages (idée de Jacksonw), 🎩 (Deadshot), 👌 (Jguz01), 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴 (sennybex1). Le bouton emoji marche aussi dans le chat de ton clan (Deadshot), et les nouveaux servent aussi d\'icônes de clan', '🏆 Classement entre amis : toi et tes amis classés par XP, XP du jour, meilleur tirage ou tirages, sur la page Amis (idée d\'Edward). Touche ☆ pour épingler un ami en haut de ta liste (Big Sexy)', '▲ Vote pour les idées prévues que tu veux en premier sur la feuille de route, et trie-les par votes (idée de Trinity)', '⚔️ Duels : le score s\'affiche au-dessus de chaque carte avec une 👑 sur celui qui mène, et tu peux mettre le meneur en premier dans le tableau (idée de Jacksonw). Modifier, supprimer, masquer et signaler sont maintenant derrière ⋯ dans le chat du duel, pour que les messages tiennent sur une ligne (Jacksonw)', '🛡️ Les modérateurs du chat voient les messages autour d\'un message signalé (idée de jsand) et peuvent lever un silence injuste (pople)'] },
+    { id: '2026-11-05-skins-lot1', date: 'Nov 5, 2026', en: ['🎹 New skin: Overture (2,400 coins, idea by 0casmictechthing, with casmicgraything\'s music staff and 17black\'s floating notes). Gold digits on a grand piano: every digit plays its own piano note, notes float off the staff, and the rarity plays a chord. Mythic rolls drop instruments, Divine rolls raise a grand piano, and Infinite ends on A minor 7', '🧀 New skin: Cheese (1,500 coins, ideas by casmicgraything and casmictechthing). Blocks of Swiss cheese drop onto the board, a different cheese crowns each rarity, and Mythic rolls melt and flood the card', '🦴 New skin: Archaeology (2,000 coins, ideas by casmicgraything and Alt). A brush digs every bone digit out of the ground; on Mythic rolls the bones come alive and a raptor skeleton runs by', '🪽😈 New legendary skins: Angel (7,777 coins) and Demon (6,666 coins), ideas by qwertyuiop, with Roanono\'s fallen angel. Halos over every digit, and great rolls spread wings: white feathers for the Angel, torn black wings over a circle of runes for the Demon. Divine rolls bring three pairs'], fr: ['🎹 Nouveau skin : Overture (2 400 pièces, idée de 0casmictechthing, avec la portée de casmicgraything et les notes de 17black). Des chiffres d\'or sur un piano à queue : chaque chiffre joue sa note au piano, des notes s\'envolent de la portée et la rareté joue un accord. Les tirages Mythic font tomber des instruments, les Divine font monter un piano à queue, et Infinite finit sur un la mineur 7', '🧀 Nouveau skin : Cheese (1 500 pièces, idées de casmicgraything et casmictechthing). Des blocs d\'emmental tombent sur la planche, un fromage différent couronne chaque rareté, et les tirages Mythic fondent et inondent la carte', '🦴 Nouveau skin : Archaeology (2 000 pièces, idées de casmicgraything et Alt). Un pinceau déterre chaque chiffre en os ; sur les tirages Mythic, les os s\'animent et un squelette de raptor passe en courant', '🪽😈 Nouveaux skins légendaires : Angel (7 777 pièces) et Demon (6 666 pièces), idées de qwertyuiop, avec l\'ange déchu de Roanono. Une auréole sur chaque chiffre, et les grands tirages déploient des ailes : plumes blanches pour Angel, ailes noires arrachées sur un cercle de runes pour Demon. Les tirages Divine en déploient trois paires'] },
+    { id: '2026-11-05-hard-titles', date: 'Nov 5, 2026', en: ['🔥 5 new Hard mode titles: 🔥 Forged in Fire for a Mythic or better in Hard mode (idea by PRISMA123), and 🍪 Tough Cookie, ⛓️ Hardened, ⛏️ Hardcore and 🗻 Unbreakable for 5,000, 10,000, 50,000 and 100,000 Hard mode rolls (ideas by PRISMA123 and Liam123456). Only your Hard mode rolls count for them'], fr: ['🔥 5 nouveaux titres du mode difficile : 🔥 Forgé dans le feu pour un Mythic ou mieux en mode difficile (idée de PRISMA123), et 🍪 Dur à cuire, ⛓️ Endurci, ⛏️ Hardcore et 🗻 Incassable pour 5 000, 10 000, 50 000 et 100 000 tirages en mode difficile (idées de PRISMA123 et Liam123456). Seuls tes tirages du mode difficile comptent'] },
+    { id: '2026-11-05-ideas-1', date: 'Nov 5, 2026', en: ['⚙️ New settings: stop equipping what you buy (idea by infinity), hide the "contains your best roll" message (CococoC), and keep the screen on during auto-roll (Jacksonw)', '🎯 Auto-roll can now stop on a new badge (idea by Daiquan)', '🔥 Tap "rolls this session" to see the session\'s best rolls, worst rolls and rarities (idea by finnnnn)', '✨ The Badges page marks the badges you found since your last visit (idea by casmicgraything)', '🔁 Profiles show the number a player rolled the most (idea by Gray)', '🔢 Leaderboards show lifetime XP with 4 digits, like 1.956B (idea by jsand)', '🌈 Infinite rolls get a rainbow border in history and leaderboards (idea by KMC)'], fr: ['⚙️ Nouveaux réglages : ne plus équiper ce que tu achètes (idée d\'infinity), masquer le message « contient ton meilleur tirage » (CococoC), et garder l\'écran allumé pendant le tirage auto (Jacksonw)', '🎯 Le tirage auto peut s\'arrêter sur un nouveau badge (idée de Daiquan)', '🔥 Touche « tirages cette session » pour voir les meilleurs et pires tirages et les raretés de la session (idée de finnnnn)', '✨ La page Badges marque les badges trouvés depuis ta dernière visite (idée de casmicgraything)', '🔁 Les profils montrent le nombre le plus tiré par un joueur (idée de Gray)', '🔢 Les classements affichent l\'XP à vie avec 4 chiffres, comme 1.956B (idée de jsand)', '🌈 Les tirages Infinite ont un bord arc-en-ciel dans l\'historique et les classements (idée de KMC)'] },
     { id: '2026-11-05-roll-count', date: 'Nov 5, 2026', en: ['🔢 After each roll, see how many times your number was already rolled by all players, and which roll of it you are (like "rolled 36 times before you · you\'re #37"). Roll a number nobody ever got and you\'ll know it! Counts start from every roll saved on the server. Normal mode only (idea by a friend of Sacha, also asked by Tumored and Gray)'], fr: ['🔢 Après chaque tirage, vois combien de fois ton nombre a déjà été tiré par tous les joueurs, et quel tirage de ce nombre tu es (par exemple « a été tiré 36 fois avant toi · tu es le n° 37 »). Tire un nombre que personne n\'a jamais eu et tu le sauras ! Les compteurs partent de tous les tirages gardés sur le serveur. Mode normal seulement (idée d\'un ami de Sacha, aussi demandée par Tumored et Gray)'] },
     { id: '2026-11-04-poker-open', date: 'Nov 4, 2026', en: ['🌍 Open poker tables! In Casino → Poker, pick the blinds, choose how many coins you bring (20 to 100 big blinds) and sit down with anyone, up to 6 players. Join a table that is already playing (you play from the next hand) and leave whenever you like with your chips. Open tables need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with friend tables'], fr: ['🌍 Des tables de poker ouvertes ! Dans Casino → Poker, choisis les blindes, combien de pièces tu apportes (de 20 à 100 grosses blindes) et assieds-toi avec n\'importe qui, jusqu\'à 6 joueurs. Rejoins une table déjà en jeu (tu joues dès la main suivante) et pars quand tu veux avec tes jetons. Les tables ouvertes demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec les tables entre amis'] },
     { id: '2026-11-04-bots', date: 'Nov 4, 2026', en: ['🤖 Bot farms removed from the game: hundreds of fake accounts were rolling non-stop to fill the leaderboards and the online count (reported by jonahfr). New accounts are now limited per network, and gifts and friend poker tables unlock 3 days after your first roll'], fr: ['🤖 Fermes de bots retirées du jeu : des centaines de faux comptes tiraient sans arrêt pour remplir les classements et le compteur de joueurs en ligne (signalé par jonahfr). Les nouveaux comptes sont maintenant limités par réseau, et les cadeaux et les tables de poker entre amis se débloquent 3 jours après ton premier tirage'] },
@@ -2661,7 +2819,27 @@
     bump() { const n = this.n + 1; this.mem = n; try { sessionStorage.setItem('rngSessRolls', String(n)); } catch (e) { /* stockage bloqué : en mémoire */ } const el = $('#sess-rolls'); if (el) { el.textContent = sessRollsText(n); el.hidden = false; } },
   };
   const sessRollsText = n => `🔥 ${plural(n, 'roll')} this session`;
-  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
+  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls" data-sess role="button" tabindex="0" title="See this session's rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
+  // Détail de la session (idée de finnnnn, 2026-11-05) : les derniers tirages de ce mode, autant que le compteur de session
+  // (ceux d'un autre mode n'y sont pas), avec meilleurs, pires, raretés et XP.
+  function openSessionModal() {
+    const k = Math.min(SessionRolls.n, Store.rolls.length);
+    if (!k) return;
+    const from = Store.rolls.length - k, rows = Store.rolls.slice(from).map((r, j) => ({ i: from + j, n: r[0], xp: r[1], a: analysis(r[0]) }));
+    const xp = rows.reduce((x, r) => x + r.xp, 0), byXp = rows.slice().sort((x, y) => y.xp - x.xp);
+    const line = r => `<li><a href="javascript:void 0" data-roll="${r.i}"><span class="num-card sm" data-tier="${r.a.tier}">${r.a.str}</span></a>${tierPill(r.a.tier)}<b class="mono">${fmt(r.xp)} XP</b></li>`;
+    const tiers = Engine.TIER_ORDER.slice().reverse().map(t => [t, rows.filter(r => r.a.tier === t).length]).filter(([, c]) => c);
+    openModal(`
+      <h2>🔥 This session</h2>
+      <p class="panel-note">${plural(k, 'roll')} · ${fmt(xp)} XP · ${fmt(Math.round(xp / k))} XP per roll</p>
+      <div class="ss-cols">
+        <div><h3>Best rolls</h3><ul class="ss-list">${byXp.slice(0, 5).map(line).join('')}</ul></div>
+        ${k > 5 ? `<div><h3>Worst rolls</h3><ul class="ss-list">${byXp.slice(Math.max(5, k - 3)).reverse().map(line).join('')}</ul></div>` : ''}
+      </div>
+      <h3>Rarities</h3>
+      <div class="pill-row">${tiers.map(([t, c]) => `${tierPill(t)} <span class="mono">×${fmt(c)}</span>`).join(' ')}</div>
+      <div class="actions"><button class="btn" id="ss-close">Close</button></div>`, m => m.querySelector('#ss-close').addEventListener('click', closeModal));
+  }
   const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
@@ -2670,7 +2848,8 @@
   // Mauvais tirage (idée de CococoC, 2026-10-20) : s'arrête sur Trash ou pire ; « never » ne s'arrête jamais
   // (Angelicide9) ; un seuil d'XP libre « xp:<n> » se tape à la main (WpBejs).
   const AUTO_LOW = ['trash', 'garbage', 'landwaste'];
-  const STOP_OK = v => AUTO_STOPS.includes(v) || v === 'never' || AUTO_LOW.map(t => `low:${t}`).includes(v) || /^xp:[1-9]\d{0,9}$/.test(v);
+  // Nouveau badge (idée de Daiquan, 2026-11-05) : s'arrête sur le premier tirage qui donne un badge jamais eu.
+  const STOP_OK = v => AUTO_STOPS.includes(v) || v === 'never' || v === 'newbadge' || AUTO_LOW.map(t => `low:${t}`).includes(v) || /^xp:[1-9]\d{0,9}$/.test(v);
   // Badges qui arrêtent aussi le tirage auto (idée de CococoC, 2026-10-28) : 5 au plus, choisis dans une petite fenêtre
   // avec recherche, gardés sur l'appareil (Store.settings.autoBadges). En plus du choix « stop on » : le tirage s'arrête
   // sur la rareté / l'XP / le mauvais tirage choisi OU sur un de ces badges (même avec « Never stop »), jamais sur un
@@ -2678,19 +2857,20 @@
   const AUTO_BADGES_MAX = 5;
   const autoBadges = () => (Array.isArray(Store.settings.autoBadges) ? Store.settings.autoBadges.filter(id => Engine.byId.has(id)).slice(0, AUTO_BADGES_MAX) : []);
   const autoBadgeHit = a => autoBadges().find(id => a.earnedIds.includes(id)) || null;
-  // Le tirage arrête-t-il l'auto-roll ?
-  const autoStops = a => {
+  // Le tirage arrête-t-il l'auto-roll ? fresh : il donne au moins un badge jamais eu.
+  const autoStops = (a, fresh = false) => {
     if (autoBadgeHit(a)) return true;
     const st = autoStop();
     if (st === 'never') return false;
+    if (st === 'newbadge') return fresh;
     if (st.startsWith('xp:')) return a.total >= Number(st.slice(3));
     if (st.startsWith('low:')) return TIER_RANK[a.tier] <= TIER_RANK[st.slice(4)];
     return TIER_RANK[a.tier] >= TIER_RANK[st];
   };
-  const stopToast = a => { const hit = autoBadgeHit(a), b = hit && Engine.byId.get(hit); if (b) return `🎯 Auto-roll stopped on ${b.emoji} ${b.label}: enjoy it!`; const st = autoStop(); return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
+  const stopToast = a => { const hit = autoBadgeHit(a), b = hit && Engine.byId.get(hit); if (b) return `🎯 Auto-roll stopped on ${b.emoji} ${b.label}: enjoy it!`; const st = autoStop(); if (st === 'newbadge') return '✨ Auto-roll stopped on a new badge: enjoy it!'; return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
   const autoStop = () => (STOP_OK(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
   const kfmt = x => (x >= 1e6 ? `${x / 1e6}M` : `${x / 1e3}K`);
-  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label>${autoBadgesBtnHTML()}</span>`;
+  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="newbadge"${autoStop() === 'newbadge' ? ' selected' : ''}>New badge</option><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label>${autoBadgesBtnHTML()}</span>`;
   const autoBadgesBtnHTML = () => { const k = autoBadges().length; return `<button type="button" class="solo-badges${k ? ' on' : ''}" id="solo-badges" title="Also stop auto-roll on badges you pick">🎯 <span>${k ? plural(k, 'badge') : 'Badges'}</span></button>`; };
   // Fenêtre de choix des badges : recherche, 5 au plus, enregistré à chaque clic (le tirage auto attend tant qu'elle est ouverte).
   function openAutoBadges() {
@@ -2739,6 +2919,19 @@
     if (box) box.checked = false;
     paintAutoBadge();
   }
+  // Écran allumé pendant l'auto-roll (idée de Jacksonw, 2026-11-05) : Screen Wake Lock, demandé tant que l'auto-roll
+  // tourne et que le réglage est sur on. Le navigateur le lâche tout seul quand l'onglet est caché : redemandé au retour.
+  const Wake = { lock: null, busy: false };
+  async function syncWake() {
+    const want = SoloAuto.on && Store.settings.wakeLock === 'on' && !document.hidden && 'wakeLock' in navigator;
+    if (want && !Wake.lock && !Wake.busy) {
+      Wake.busy = true;
+      try { Wake.lock = await navigator.wakeLock.request('screen'); Wake.lock.addEventListener('release', () => { Wake.lock = null; }); } catch (e) { /* refusé (batterie faible, page pas au premier plan) */ }
+      Wake.busy = false;
+    } else if (!want && Wake.lock) { const l = Wake.lock; Wake.lock = null; l.release().catch(() => {}); }
+  }
+  setInterval(syncWake, 2000);
+  document.addEventListener('visibilitychange', syncWake);
   function bindSoloAuto() {
     const box = $('#solo-auto');
     if (!box) return;
@@ -2828,25 +3021,25 @@
     }
     rollPending = false;
     Collection.ensure();
-    const n = online.n, a = analysis(n);
+    const n = online.n, a = analysis(n), fresh = a.earnedIds.some(id => !Collection.badges.has(id));
     HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     SessionRolls.bump();
     // Page visible (autre page du site) : succès et quêtes comme un tirage normal.
     if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
-    if (noteBgRoll(n, a, online.t)) return;
+    if (noteBgRoll(n, a, online.t, fresh)) return;
     // Revenu sur l'écran de tirage pendant que ce tirage partait : il est montré dans le résumé, la suite reprend là.
     if (onRollPage() && !document.hidden) { flushAway(); scheduleSoloAuto(SOLO_PAUSE); return; }
     scheduleSoloAuto(1800);
   }
   // Compte un tirage fait sans révélation (onglet caché ou autre page) ; true si le tirage auto s'arrête dessus.
-  function noteBgRoll(n, a, t) {
+  function noteBgRoll(n, a, t, fresh = false) {
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
     if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t };
     if (document.hidden) document.title = `(${BgRolls.count}) ${BgRolls.title}`;
-    if (autoStops(a)) {
+    if (autoStops(a, fresh)) {
       stopSoloAuto(); BgRolls.stopped = { n, a, t };
       awaySave();
       if (document.hidden) document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
@@ -3048,13 +3241,13 @@
     const auto = SoloAuto.on && !!online && !AUTO_HALT.includes(currentView);
     if (SoloAuto.on && !auto) stopSoloAuto();
     Collection.ensure();
-    const a = analysis(n);
+    const a = analysis(n), fresh = a.earnedIds.some(id => !Collection.badges.has(id));
     Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
     SessionRolls.bump();
     if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
-    if (auto) { if (!noteBgRoll(n, a, online.t)) scheduleSoloAuto(SOLO_PAUSE); return; }
+    if (auto) { if (!noteBgRoll(n, a, online.t, fresh)) scheduleSoloAuto(SOLO_PAUSE); return; }
     const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
     toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
   }
@@ -3069,7 +3262,8 @@
       notes.push(`<p class="new-note">✨ ${plural(list.length, 'new badge')}: ${list.slice(0, 4).map(b => `${b.emoji} ${esc(b.label)}`).join(', ')}${list.length > 4 ? '…' : ''}</p>`);
     }
     // Le nombre contient ton meilleur tirage d'avant (idée de spookiedookie, 2026-10-21) : un clin d'œil, sans XP.
-    if (!ctx.replay && ctx.index > 0) {
+    // Réglage « Best roll message » (idée de CococoC, 2026-11-05) : ces deux messages peuvent être coupés.
+    if (!ctx.replay && ctx.index > 0 && Store.settings.bestNote !== 'off') {
       let best = null;
       for (let i = 0; i < ctx.index; i++) { const r = Store.rolls[i]; if (!r[3] && (!best || r[1] > best[1])) best = r; }
       if (best && best[0] !== Number(a.str) && a.str.includes(String(best[0]))) notes.push(`<p class="new-note">👑 This number contains your best roll ever, <b class="mono">${esc(String(best[0]))}</b>!</p>`);
@@ -3171,10 +3365,13 @@
     // Pack de sons acheté (boutique, onglet Sounds) : il change la note des chiffres et le son de la rareté. Les skins dont
     // le son est l'identité (ASMR, Lab) gardent leurs chiffres ; le pack joue quand même la rareté.
     const pack = Store.settings.soundPack && Store.settings.soundPack !== 'classic' ? Store.settings.soundPack : undefined;
-    Sound.warm([['tier', { tier: a.tier, pack }]]);
+    // Overture (promis à 0casmictechthing, 2026-10-30) : chaque chiffre joue sa note au piano et la rareté son accord.
+    const pianoSkin = !owner && Shop.resolve(Store.settings.skin) === 'overture' ? 'overture' : undefined;
+    Sound.warm([['tier', { tier: a.tier, pack, skin: pianoSkin }]]);
     // La scène du skin : particules et lumière dans la carte et autour, calées sur les mêmes instants.
     const lockSkin = owner ? '' : Shop.resolve(Store.settings.skin);
-    if (pack && lockSkin !== 'asmr' && lockSkin !== 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, pack } : { i, pack }]));
+    if (pianoSkin) Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', { i, ...(i < lead ? { soft: 1 } : i === slotCount - 1 ? { final: 1 } : {}), d: Number(padded[i]), skin: pianoSkin }]));
+    else if (pack && lockSkin !== 'asmr' && lockSkin !== 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, pack } : { i, pack }]));
     if (lockSkin === 'asmr' || lockSkin === 'lab') Sound.warm(Array.from({ length: slotCount }, (_, i) => ['lock', i === slotCount - 1 ? { i, final: 1, skin: lockSkin } : { i, skin: lockSkin }]));
     const skinFx = SkinFX.mount($('#card-stage'), card, owner ? '' : Shop.resolve(Store.settings.skin), { owner });
     if (!ctx.replay) watchFps(1800);
@@ -3199,7 +3396,8 @@
       if (revealed === slotCount - 1) lastFrom = performance.now();
       // Une note par chiffre, en montant la gamme ; plus discrète pour un zéro de tête, plus appuyée pour le dernier.
       const lk = i < lead ? { i, soft: 1 } : i === slotCount - 1 ? { i, final: 1 } : { i };
-      if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
+      if (pianoSkin) Object.assign(lk, { d: Number(padded[i]), skin: pianoSkin }); // Overture : la note du chiffre
+      else if (lockSkin === 'asmr' || lockSkin === 'lab') lk.skin = lockSkin; // la cire craque / le tube tinte sous chaque chiffre (js/sound.js)
       else if (pack) lk.pack = pack;
       sfx('lock', lk);
       if (i >= lead) breadBite(i + 1 - lead); // Bread : une bouchée par vrai chiffre (MaxABGD, 2026-11-01)
@@ -3258,8 +3456,9 @@
       { const c = $('#r-coins'); if (c) { c.hidden = false; if (!reducedMotion) c.classList.add('pop-in'); } }
       FX.celebrate(a.tier, card);
       shockwave(card, a.tier);
-      sfx('tier', { tier: a.tier, pack });
+      sfx('tier', { tier: a.tier, pack, skin: pianoSkin });
       if (skinFx) skinFx.reveal(a.tier);
+      document.documentElement.dataset.lastTier = a.tier; // Prism : le bouton prend la nouvelle rareté
       wallReact(a.tier, n); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
@@ -3286,7 +3485,7 @@
       // Premier Divine ou mieux du mode normal : le mode difficile s'ouvre, annoncé une fois la révélation finie.
       if (ctx.online && !ctx.replay && !Mode.hard && ['divine', 'godlike', 'infinite'].includes(a.tier)) setHardOpen(true);
       if (SoloAuto.on && !ctx.replay) {
-        if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
+        if (autoStops(a, !!(ctx.newIds && ctx.newIds.size))) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
         // ni son XP, surtout quand la page avait été ralentie et que la révélation se jouait d'un coup ; finnnnn, 2026-10-18).
         else scheduleSoloAuto(late ? 3000 : 1800);
@@ -3742,10 +3941,24 @@
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>
+          <div id="c-fresh"></div>
           ${collectionHTML(Collection.badges.size, collState)}
         </div>
       </div>`;
-    mountCollection(localCollection(), collState);
+    // Badges trouvés depuis la dernière visite de cette page (idée de casmicgraything, 2026-11-05) : marqués NEW une fois,
+    // listés en haut de la collection. Gardés sur l'appareil, par mode ; la première visite ne marque rien.
+    const src = localCollection(), seenKey = Mode.hard ? 'hbadgesSeen' : 'badgesSeen', had = Store.settings[seenKey];
+    const owned = Engine.badges.filter(b => src.get(b.id)).map(b => b.id);
+    // La page se redessine (synchronisation de l'historique…) : les badges NEW de cette visite restent marqués une minute.
+    const kept = collState.freshAt && Date.now() - collState.freshAt < 60000 && collState.freshMode === Mode.hard ? collState.fresh : new Set();
+    collState.fresh = new Set([...kept, ...(Array.isArray(had) ? owned.filter(id => !had.includes(id)) : [])]);
+    collState.freshAt = Date.now(); collState.freshMode = Mode.hard;
+    Store.setSetting(seenKey, owned);
+    if (collState.fresh.size) {
+      const list = [...collState.fresh].map(id => Engine.byId.get(id)).sort((x, y) => y.score - x.score);
+      $('#c-fresh').innerHTML = `<p class="c-fresh">✨ ${plural(list.length, 'new badge')} since your last visit: ${list.map(b => `<span class="badge-pill" data-tier="${collTier(b)}" data-badge="${b.id}">${b.emoji} ${esc(b.label)}</span>`).join(' ')}</p>`;
+    }
+    mountCollection(src, collState);
     loadMyAchievements();
     // Vérificateur d'XP (idée d'un joueur, 2026-10-16) : n'importe quel nombre, calculé ici comme un tirage, mais affiché
     // exprès autrement qu'un tirage (cadre pointillé, « SIMULATION », pas de skin) : une capture ne peut pas passer pour un vrai.
@@ -3837,16 +4050,16 @@
       return `
         <div class="tier-block">
           <h3>${tierPill(tier)} <span class="muted mono">${foundInTier}/${all.length}</span></h3>
-          <div class="badge-grid">${list.map(b => collTileHTML(b, src.get(b.id))).join('')}</div>
+          <div class="badge-grid">${list.map(b => collTileHTML(b, src.get(b.id), state.fresh && state.fresh.has(b.id))).join('')}</div>
         </div>`;
     }).join('');
     $('#c-body').innerHTML = blocks || '<div class="empty">No badge matches.</div>';
   }
 
-  function collTileHTML(b, e) {
+  function collTileHTML(b, e, fresh = false) {
     return `
-      <button class="coll${e ? '' : ' missing'}"${e ? ` data-tier="${collTier(b)}"` : ''} data-badge="${b.id}">
-        <span class="top"><span class="emoji">${b.emoji}</span><span class="name">${esc(b.label)}</span><span class="ep-pill">${compact(b.score)}</span></span>
+      <button class="coll${e ? '' : ' missing'}${fresh ? ' coll-new' : ''}"${e ? ` data-tier="${collTier(b)}"` : ''} data-badge="${b.id}">
+        <span class="top"><span class="emoji">${b.emoji}</span><span class="name">${esc(b.label)}</span>${fresh ? '<span class="new-tag">NEW</span>' : ''}<span class="ep-pill">${compact(b.score)}</span></span>
         <span class="desc">${esc(b.desc)}</span>
         <span class="foot">${e
           ? `<span class="count">×${fmt(e.count)}</span><span>first: <span class="mono">${e.first}</span></span>`
@@ -3950,7 +4163,7 @@
           <div class="pf-stat"><span>All-time rank</span><b>${p.rank ? '#' + fmt(p.rank) : '–'}</b></div>
           <div class="pf-stat"><span>Badges</span><b>${found}<small>/${total}</small></b></div>
         </div>
-        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
+        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.most ? ` · 🔁 most rolled <a href="javascript:void 0" class="mono" data-number="${p.most.n}" data-no-i18n>${esc(analysis(p.most.n).str)}</a> ×${fmt(p.most.c)}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
       </section>
       <div class="lb-tabs pf-tabs" role="tablist" style="grid-template-columns:repeat(${TABS.length},1fr)">${TABS.map(([id, icon, label]) => `<button role="tab" data-ptab="${id}" class="${id === tab ? 'on' : ''}"><i aria-hidden="true">${icon}</i> ${label}</button>`).join('')}</div>
       <div class="pf-pane" data-pane="overview">
@@ -4358,6 +4571,25 @@
   // Filtre des listes de la boutique (idée d'Applepi, 2026-10-28) : tout, ce qu'on a, ce qu'on n'a pas encore. Chaque
   // tuile porte data-have (1 : possédé, ou gratuit) ; les onglets sans liste d'objets (caisses, vitesse, prestige) n'ont pas de filtre.
   const SHOP_OWN = [['all', 'All'], ['owned', 'Owned only'], ['not', 'Not owned yet']];
+  // Onglet Limited rangé par événement (demandé par Sacha, 2026-11-05) : un bloc par événement en cours (Shop.EVENTS),
+  // le plus proche de la fin en premier, avec sa bannière, ses skins et ses fonds. Un événement fini n'y est plus du tout
+  // (ses objets restent dans l'inventaire de ceux qui les ont, et dans js/shop.js pour l'an prochain).
+  const LIMITED_FX = { halloween: ['', '🦇'], thanksgiving: ['tgiving', '🍂', '🍁'], christmas: ['xmas', '❄️'] };
+  const liveEvents = (now = Date.now()) => Shop.EVENTS.filter(ev => now < Date.parse(ev.ends)).sort((a, b) => Date.parse(a.ends) - Date.parse(b.ends));
+  const limitedEventsHTML = () => {
+    const evs = liveEvents();
+    if (!evs.length) return '<div class="empty">No event right now. Come back for the next one!</div>';
+    return evs.map(ev => {
+      const [cls, a, b = a] = LIMITED_FX[ev.id] || ['', '✨'];
+      const flakes = [a, b, a, b, a].map(x => `<i aria-hidden="true">${x}</i>`).join('');
+      const walls = Shop.WALLPAPERS.some(w => w.event === ev.id);
+      return `<section class="lim-event" data-event="${ev.id}">
+            <div class="limited-banner${cls ? ` ${cls}` : ''}">${flakes}<b>${ev.emoji} ${esc(ev.name.toUpperCase())}</b><span data-ev-left="${ev.id}"></span></div>
+            <div class="skin-grid" data-lim-skins="${ev.id}"><div class="empty">Loading…</div></div>
+            ${walls ? `<div class="skin-grid wall-grid" data-lim-walls="${ev.id}"></div>` : ''}
+          </section>`;
+    }).join('') + '<p class="panel-note lim-past" id="lim-past" hidden>Items from past events that you own are in your profile, under Inventory.</p>';
+  };
   const SHOP_OWN_TABS = ['limited', 'skins', 'buttons', 'emotes', 'sounds', 'walls'];
   // Recherche dans la boutique (idée de Deadshot, 2026-11-01) : par nom, description ou auteur de l'idée, dans la langue
   // affichée ; gardée tant que la page reste ouverte (pas sur l'appareil).
@@ -4399,8 +4631,9 @@
     app.querySelectorAll('.own-count[data-own-key]').forEach(el => { const n = counts[el.dataset.ownKey] || 0; el.textContent = n ? `👥 ${ownersLabel(n)}` : el.closest('#shop-mine') ? '👥 0 owners' : ''; });
   }
   // Vue du créateur (2026-10-28) : le joueur dont le pseudo est dans le champ idea d'objets du catalogue voit ses
-  // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins seulement : les
-  // fonds d'écran, boutons, émotes et sons ne versent pas de part). Repliée par défaut : une ligne en haut de la boutique.
+  // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins, et fonds d'écran depuis
+  // le 2026-11-05, idée de qwertyuiop ; boutons, émotes et sons ne versent pas de part). Repliée par défaut : une ligne en
+  // haut de la boutique.
   const nameKey = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   function drawCreations(state) {
     const box = $('#shop-mine');
@@ -4412,7 +4645,7 @@
     box.innerHTML = `
       <summary class="panel-head"><h3 class="panel-title">💡 Your creations</h3><span class="panel-note">items born from your ideas</span></summary>
       <div class="mine-list">${mine.map(([kind, x]) => `<div class="mine-row"><b>${x.emoji} <span data-no-i18n>${esc(x.name)}</span></b><span class="panel-note">${kind === 'skins' ? 'Skin' : 'Wallpaper'}</span><span class="own-count" data-own-key="${kind}:${x.id}">…</span></div>`).join('')}</div>
-      <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins, in the shop or for a case that gives one. Wallpapers do not pay a share.</span></p>`;
+      <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins and wallpapers, in the shop or for a case that gives one.</span></p>`;
     paintOwners();
   }
 
@@ -4430,11 +4663,8 @@
         <div class="shop-own" id="shop-own"><input class="input shop-search" id="shop-q" type="search" placeholder="Search the shop…" aria-label="Search the shop" autocomplete="off" value="${esc(shopQuery)}"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
-          <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
-          <div class="limited-banner xmas" id="limited-banner"><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><b>🎄 CHRISTMAS EVENT</b><span id="limited-left"></span></div>
-          <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Christmas only</span></div>
-          <div class="skin-grid wall-grid" id="d-limited-walls"></div>
+          <div class="panel-head"><h3 class="panel-title">Limited</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          ${limitedEventsHTML()}
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="cases" hidden>
@@ -4670,16 +4900,21 @@
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
-    const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
-    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
-    // Bannière de l'événement en cours : Noël (demandé par Sacha, 2026-11-01), en vente jusqu'au 25 décembre inclus ; avant,
-    // Halloween (jusqu'au 31 octobre).
-    { const ev = Date.parse('2026-12-26T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after December 25 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
-    limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
+    const left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
+    // Un bloc par événement en cours : ses skins, puis le temps qu'il reste sur sa bannière.
+    const limGrids = [...app.querySelectorAll('[data-lim-skins]')];
+    for (const g of limGrids) {
+      const ev = Shop.eventById.get(g.dataset.limSkins), items = Shop.SKINS.filter(k => k.event === ev.id);
+      g.innerHTML = items.length ? items.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No skin in this event.</div>';
+      const ms = Date.parse(ev.ends) - Date.now(), lab = app.querySelector(`[data-ev-left="${ev.id}"]`);
+      if (lab) lab.textContent = window.RNGI18n.t(`Ends after ${ev.last} · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`);
+    }
+    // Objets d'événements finis que le joueur possède : un mot pour dire où les retrouver.
+    { const past = [...Shop.SKINS, ...Shop.WALLPAPERS].some(x => x.event && Date.now() >= Date.parse(x.until) && ((state.owned || []).includes(x.id) || (state.walls || []).includes(x.id))); const note = $('#lim-past'); if (note) note.hidden = !past; }
     applyOwnFilter();
     paintOwners();
     Owners.load().then(() => { if (currentView === 'shop') paintOwners(); }).catch(() => {});
-    grid.onclick = premium.onclick = limited.onclick = async e => {
+    grid.onclick = premium.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
       if (e.target.closest('[data-case-go]')) { $('#shop-tabs [data-shop-tab="cases"]').click(); window.scrollTo(0, 0); return; }
@@ -4691,13 +4926,14 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buy' : 'equip', skin.id);
-        toast(buy ? `${skin.emoji} ${skin.name} unlocked and equipped` : `${skin.emoji} ${skin.name} equipped`);
+        toast(buy ? `${skin.emoji} ${skin.name} ${autoEquip() ? 'unlocked and equipped' : 'unlocked, not equipped'}` : `${skin.emoji} ${skin.name} equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
         toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
       }
     };
+    limGrids.forEach(g => { g.onclick = grid.onclick; }); // mêmes boutons (aperçu, acheter, équiper) dans chaque événement
   }
 
   // ---------------------------------------------------------------- Gamble : roulette et blackjack, avec les pièces du jeu
@@ -6556,7 +6792,7 @@
   // Fonds d'écran (2026-10-16) : un aperçu animé par fond, acheter (il s'affiche aussitôt) ou choisir, et revenir au fond
   // d'origine.
   function drawWalls(state) {
-    const grid = $('#d-walls'), limitedGrid = $('#d-limited-walls');
+    const grid = $('#d-walls'), limitedGrids = [...app.querySelectorAll('[data-lim-walls]')];
     if (!grid) return;
     const owned = state.walls || [], on = state.wall || null;
     // Fonds limités (Halloween, puis Noël) : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui
@@ -6565,10 +6801,11 @@
     const wallTile = w => `
       <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}" data-have="${owned.includes(w.id) ? 1 : 0}">
         <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
-        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${ownTag('walls', w.id)}</div>
+        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${w.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(w.idea)}" data-no-i18n>${esc(w.idea)}</a></span>` : ''}${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
-    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
+    // Fonds de chaque événement en cours, dans son bloc de l'onglet Limited (demandé par Sacha, 2026-11-05).
+    for (const g of limitedGrids) g.innerHTML = Shop.WALLPAPERS.filter(w => w.event === g.dataset.limWalls && onSale(w)).map(wallTile).join('');
     grid.innerHTML = `
       <div class="skin-tile wall-tile${on ? '' : ' equipped'}" data-have="1">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
@@ -6589,11 +6826,11 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buywall' : 'wall', undefined, { wall: id });
-        toast(id === 'none' ? 'Back to the original background' : buy ? `${item.emoji} ${item.name} unlocked and on` : `${item.emoji} ${item.name} on`);
+        toast(id === 'none' ? 'Back to the original background' : buy ? `${item.emoji} ${item.name} ${autoEquip() ? 'unlocked and on' : 'unlocked, not equipped'}` : `${item.emoji} ${item.name} on`);
         drawShop(next);
       } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
     };
-    if (limitedGrid) limitedGrid.onclick = grid.onclick;
+    limitedGrids.forEach(g => { g.onclick = grid.onclick; });
   }
   // Aperçu d'un fond : il passe derrière tout le site, le contenu s'efface pour le montrer en plein écran, et une barre
   // en bas permet de l'acheter (ou de le mettre) ou de fermer. Rien n'est enregistré ; Échap ou Fermer remet le vrai fond.
@@ -6617,7 +6854,7 @@
     bar.onclick = e => {
       if (e.target.closest('[data-wall-close]')) { end(); return; }
       const act = e.target.closest('[data-wall-buy],[data-wall]');
-      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
+      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], [data-lim-walls] [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
   // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).
@@ -6626,6 +6863,9 @@
   // Cozy Fireplace (événement de Noël, 2026-11-01) : la fenêtre (vitre + deux couches de neige) et la cheminée (braises,
   // flammes, bûches, étincelles, chaussettes) ; le dessin est dans css/style.css (.wfp-*).
   WALL_LAYERS.fireplace = '<i class="wfp-win"><i class="wfp-sky"><b></b><b></b></i></i><i class="wfp-fp"><i class="wfp-ember"></i><i class="wfp-fl a"></i><i class="wfp-fl c"></i><i class="wfp-fl b"></i><i class="wfp-fl k"></i><i class="wfp-logs"></i><i class="wfp-sp s1"></i><i class="wfp-sp s2"></i><i class="wfp-sp s3"></i><i class="wfp-sp s4"></i><i class="wfp-sp s5"></i><i class="wfp-st a"></i><i class="wfp-st b"></i><i class="wfp-st c"></i></i>';
+  // Thanksgiving Dinner (Thanksgiving 2026, idée de qwertyuiop) : deux fenêtres (vitre + deux couches de feuilles), la nappe,
+  // et le repas en deux groupes (accompagnements, dinde) avec les flammes des bougies et la vapeur de la dinde ; le dessin est dans css/style.css (.wtg-*).
+  WALL_LAYERS.feast = '<i class="wtg-win l"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-win r"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-table"></i><i class="wtg-food b"><i class="wtg-fl"></i></i><i class="wtg-food a"><i class="wtg-fl"></i><i class="wtg-st s1"></i><i class="wtg-st s2"></i><i class="wtg-st s3"></i></i>';
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Comic Book, Black Hole et Rain to Rainbow (2026-10-27) : l'arc-en-ciel dure le plus longtemps, la pluie revient doucement.
   // Spinning Bread (2026-10-28) : un coup de fouet à chaque tirage, plus de tours selon la rareté (fond normal, pas légendaire).
@@ -6804,7 +7044,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buysound' : 'sound', undefined, { sound: item.id });
-        if (buy) toast(`${item.name} sounds unlocked: they play on your next roll`);
+        if (buy) toast(autoEquip() ? `${item.name} sounds unlocked: they play on your next roll` : `${item.name} sounds unlocked, not equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -6850,14 +7090,14 @@
         LOCKS.forEach((ms, k) => at(ms, () => {
           slots[k].textContent = digits[k]; slots[k].classList.remove('spinning'); slots[k].classList.add('revealed'); shown = k + 1;
           if (fx) fx.lock(slots[k], { last: k === 5 });
-          Sound.play('lock', { i: k, soft: 1, ...(id === 'asmr' || id === 'lab' ? { skin: id, final: k === 5 ? 1 : 0 } : {}) });
+          Sound.play('lock', { i: k, soft: 1, ...(id === 'asmr' || id === 'lab' ? { skin: id, final: k === 5 ? 1 : 0 } : id === 'overture' ? { skin: id, d: Number(digits[k]), soft: 0, final: k === 5 ? 1 : 0 } : {}) });
         }));
         at(LOCKS[5] - Sound.LEAD, () => { if (fx) fx.build(Sound.LEAD); });
         at(LOCKS[5] + 600, () => {
           clearInterval(spin);
           card.classList.remove('neutral', 'charging'); card.dataset.tier = tier;
           if (fx) fx.reveal(tier);
-          Sound.play('reveal', { small: 1 });
+          if (id === 'overture') Sound.play('tier', { tier, skin: id }); else Sound.play('reveal', { small: 1 }); // Overture : l'accord de la rareté
         });
       };
       m.querySelector('#sp-again').addEventListener('click', play);
@@ -6903,7 +7143,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buybutton' : 'button', undefined, { button: id });
-        toast(id === Shop.MATCH ? 'Your button now follows your skin' : buy ? `${item.emoji} ${item.name} button unlocked and equipped` : `${item.emoji} ${item.name} button equipped`);
+        toast(id === Shop.MATCH ? 'Your button now follows your skin' : buy ? `${item.emoji} ${item.name} button ${autoEquip() ? 'unlocked and equipped' : 'unlocked, not equipped'}` : `${item.emoji} ${item.name} button equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -7194,11 +7434,13 @@
           <li><b>Not every message needs a mute.</b> A small mistake? Just delete it.</li>
           <li><b>Always pick the right reason</b> when you delete or mute, and add details when they help Sacha understand.</li>
           <li>You can't mute the owner or another moderator. Only Sacha can mute forever.</li>
+          <li><b>Made a mistake?</b> Lift the mute in “Muted right now” below. Open “See the messages around it” on a report before you act: context matters.</li>
         </ol>
         <p class="panel-note">In the 💬 chat, press ⋯ on a message to delete it or mute its writer.</p>
       </div>
       <div id="mod-body"><div class="empty">Loading…</div></div></div>`;
     const box = $('#mod-body'); let data = null, muting = null, mkind = 'mute';
+    const ctxOpen = new Set(); // contexte ouvert (idée de jsand) : reste ouvert quand la page se redessine
     const WHY = Object.fromEntries(GChat.MUTE_WHY), DUR = Object.fromEntries(GChat.MUTE_DUR);
     const draw = () => {
       if (!data || !box.isConnected) return;
@@ -7206,10 +7448,13 @@
           ${data.reports.length ? data.reports.map(r => `<div class="o-report mod-rep" data-id="${esc(r.id)}" data-msg="${esc(r.msgId)}">
             <div class="o-report-head">${`<a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>`}${r.count > 1 ? ` <span class="o-chip warn">reported ${r.count} times</span>` : ''}${r.against > r.count ? ` <span class="panel-note">${fmt(r.against)} reports about this player</span>` : ''}<span class="panel-note">${relTime(r.msgT)}</span></div>
             <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
+            ${r.around && r.around.length > 1 ? `<details class="mod-ctx"${ctxOpen.has(r.id) ? ' open' : ''}><summary>💬 See the messages around it</summary><ol class="mod-ctx-list">${r.around.map(c => `<li class="${c.hit ? 'hit' : ''}"><span class="mod-ctx-time">${new Date(c.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> <b data-no-i18n>${esc(c.name)}</b><span aria-hidden="true">:</span> <span data-no-i18n>${esc(c.text)}</span></li>`).join('')}</ol></details>` : ''}
             <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete…</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
             ${muting === r.id ? GChat.muteHTML({ owner: false }, mkind) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
+        <div class="panel"><div class="panel-head"><h3 class="panel-title">🔇 Muted right now</h3><span class="panel-note">lift a mute that wasn't fair</span></div>
+          ${(data.mutes || []).length ? data.mutes.map(m => `<div class="o-report mod-mute"><div class="o-report-head"><a class="player-link" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="panel-note">${m.until < 0 ? 'Forever' : `until ${new Date(m.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</span><span class="panel-note">${WHY[m.why] || 'No reason given'}</span><span class="panel-note">by <b data-no-i18n>${esc(m.by || 'Moderator')}</b></span></div>${m.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(m.text)}”</p>` : ''}<div class="o-moves">${m.canLift ? `<button class="btn ghost small" data-mod-unmute="${esc(m.name)}">🔊 Unmute</button>` : '<span class="panel-note">Only Sacha can lift this one</span>'}</div></div>`).join('') : '<div class="empty">Nobody is muted.</div>'}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">My last actions</h3><span class="panel-note">Sacha sees these too</span></div>
-          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ' · <b>lifted by Sacha</b>' : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : a.kind === 'unmute' ? '🔊' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : a.kind === 'unmute' ? 'Mute lifted' : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift === true ? 'Sacha' : a.lift)}</span></b>` : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
     };
     const load = (action = 'gcModPage', extra) => Online.global(action, extra).then(d => { data = d; draw(); }).catch(err => {
       if (!data) box.innerHTML = `<div class="empty">${err.status === 403 ? 'This page is for chat moderators.' : 'Unavailable right now.'}</div>`;
@@ -7217,8 +7462,12 @@
       throw err;
     });
     load().catch(() => {});
+    box.addEventListener('toggle', e => { const c = e.target.closest('.mod-rep'); if (c && e.target.matches('.mod-ctx')) { if (e.target.open) ctxOpen.add(c.dataset.id); else ctxOpen.delete(c.dataset.id); } }, true);
     box.addEventListener('click', e => {
       if (e.target.closest('[data-mod-reload]')) { load().catch(() => {}); return; }
+      // Lever un silence (idée de pople, 2026-11-05) : le serveur refuse les silences pour toujours et ceux du créateur.
+      const un = e.target.closest('[data-mod-unmute]');
+      if (un) { if (confirm(window.RNGI18n ? window.RNGI18n.t(`Lift the mute of ${un.dataset.modUnmute}?`) : `Lift the mute of ${un.dataset.modUnmute}?`)) { un.disabled = true; load('gcUnmute', { name: un.dataset.modUnmute }).then(() => toast('Mute lifted')).catch(() => { un.disabled = false; }); } return; }
       const card = e.target.closest('.mod-rep'); if (!card) return;
       const t = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
       if (e.target.closest('[data-mod-ok]')) { load('gcReportOk', { id: card.dataset.id }).then(() => toast('Marked as fine')).catch(() => {}); return; }
@@ -8149,15 +8398,34 @@
       </div>`;
     $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
     $('#f-body').addEventListener('click', e => {
+      const by = e.target.closest('[data-flb]'); // classement entre amis : XP, aujourd'hui, meilleur tirage, tirages
+      if (by) { friendsBoardBy = by.dataset.flb; if (friendsState) drawFriends(friendsState); return; }
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
       if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
       if (btn.dataset.fr === 'gift') { openGift(btn.dataset.name); return; }
       if (btn.dataset.fr === 'chat') { openChat(btn.dataset.name); return; }
+      if (btn.dataset.fr === 'star') { friendAction('star', btn.dataset.name, { on: btn.getAttribute('aria-pressed') !== 'true' }); return; } // Big Sexy, 2026-11-05
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();
     checkGifts();
+  }
+  // Classement entre amis (idée d'Edward, 2026-11-05) : toi et tes amis, trié par la mesure choisie ; les 10 premiers,
+  // et ta ligne en plus si tu n'y es pas.
+  let friendsBoardBy = 'xp';
+  const FLB = [['xp', '⭐ XP'], ['today', '☀️ Today'], ['best', '🎯 Best roll'], ['rolls', '🎲 Rolls']];
+  function friendsBoardHTML(board) {
+    if (!board || board.length < 2) return '';
+    const by = FLB.some(([k]) => k === friendsBoardBy) ? friendsBoardBy : 'xp';
+    const val = e => (by === 'best' ? (e.best ? e.best.s : -1) : e[by]);
+    const sorted = [...board].sort((a, b) => val(b) - val(a) || b.xp - a.xp);
+    const meAt = sorted.findIndex(e => e.me), rows = sorted.slice(0, 10).map((e, i) => [e, i]);
+    if (meAt >= 10) rows.push([sorted[meAt], meAt]);
+    const cell = e => (by === 'best' ? (e.best ? `<span class="num-card sm" data-tier="${esc(e.best.tier)}">${String(e.best.n).padStart(6, '0')}</span>` : '<span class="panel-note">–</span>')
+      : by === 'rolls' ? `<span class="mono">${fmt(e.rolls)}</span>` : `<span class="mono">${compactXp(e[by])}</span>`);
+    return `<div class="panel stats-sep flb"><div class="panel-head"><h3 class="panel-title">🏆 Friends leaderboard</h3><span class="flb-tabs" role="group" aria-label="Sort by">${FLB.map(([k, l]) => `<button type="button" class="flb-tab${k === by ? ' on' : ''}" data-flb="${k}" aria-pressed="${k === by}">${l}</button>`).join('')}</span></div>
+      <ol class="flb-list">${rows.map(([e, i]) => `<li class="flb-row${e.me ? ' me' : ''}${i === 9 && meAt > 10 ? ' gap' : ''}"><span class="flb-rank">${i < 3 && val(e) > 0 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>${Avatars.html(e.name, 'av-xs')}<a class="player-link flb-name" href="${profileHref(e.name)}">${esc(e.name)}</a>${e.me ? '<span class="muted">(you)</span>' : ''}<span class="flb-val">${cell(e)}</span></li>`).join('')}</ol></div>`;
   }
   // Pièces offertes à un ami (api/friends.js, action « gift ») : le serveur vérifie tout (amitié, 30 tirages, 10 à 500
   // pièces, 1 000 données et 2 000 reçues par jour, solde). La fenêtre affiche ce qu'il reste à donner aujourd'hui.
@@ -8375,11 +8643,11 @@
       Sound.play('lock', { i: 5 });
     }
   }
-  async function friendAction(action, name) {
-    if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
+  async function friendAction(action, name, extra) {
+    if (!Store.player.name) { askName(() => friendAction(action, name, extra)); return; }
     if (!name) { toast('Enter a player name'); return; }
     try {
-      const state = await Online.friends(action, name);
+      const state = await Online.friends(action, name, extra);
       if (state.note) toast(state.note);
       if (action === 'add' && $('#f-name')) $('#f-name').value = '';
       drawFriends(state);
@@ -8409,11 +8677,12 @@
         ${state.friends.length ? state.friends.map(f => `
           <div class="friend-row">
             <span class="live-dot fr-${f.room ? 'duel' : f.status || 'offline'}${f.room ? ' on' : ''}" title="${f.room ? 'In a duel' : f.status === 'online' ? 'Online' : f.status === 'afk' ? 'AFK' : 'Offline'}"></span>
-            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
+            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><span class="fr-who"><button class="fr-star${f.star ? ' on' : ''}" type="button" data-fr="star" data-name="${esc(f.name)}" aria-pressed="${!!f.star}" title="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}" aria-label="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}">${f.star ? '★' : '☆'}</button><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a></span>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.status === 'online' ? '<b class="fr-st online">Online</b>' : f.status === 'afk' ? '<b class="fr-st afk">AFK</b>' : `Offline · ${f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}`}</span></span>
             <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
+      ${friendsBoardHTML(state.board)}
       ${state.outgoing.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Requests sent</h3></div>
           ${state.outgoing.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('cancel', n, 'Cancel')}</span></div>`).join('')}
@@ -8623,12 +8892,12 @@
     if (!list || !d) return;
     const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
     const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
-    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}`; // un message modifié (ou une réaction) redessine aussi
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}:${Room.chatMenu || ''}`; // un message modifié (ou une réaction) redessine aussi
     if (sig !== Room.chatSig) {
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
+        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : `<button class="chat-hide chat-more${Room.chatMenu === c.t ? ' on' : ''}" data-chat-menu="${c.t}" aria-label="Message options" title="Options" aria-expanded="${Room.chatMenu === c.t}">⋯</button>`}</div>${Room.chatMenu === c.t && !c.bot ? `<div class="chat-menu">${c.me ? `<button type="button" data-chat-edit="${c.t}" data-text="${esc(c.m)}">✏️ Edit</button><button type="button" data-chat-unsay="${c.t}">🗑️ Delete</button>` : `<button type="button" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">🙈 Hide</button><button type="button" data-chat-report="${c.t}" title="Report this message to the creator of the game">🚩 Report</button>`}</div>` : ''}${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -8675,6 +8944,22 @@
   const roundLength = r => (REVEAL.digitStart + Array.from({ length: 5 }, (_, i) => digitDelay(i, 6)).reduce((x, y) => x + y, 0) + 1500) * ((r && r.pace) || 1);
   const serverNow = () => Date.now() + Room.offset;
 
+  // Qui mène (idée de Jacksonw, 2026-11-05 : « je croyais avoir perdu, l'autre était en premier tout le temps ») : un
+  // seul meneur après au moins une manche révélée, sinon personne (égalité).
+  function leaderOf(wins, totals) {
+    const d = Room.data;
+    if (!Room.shown) return -1;
+    const key = i => (d.mode === 'xp' ? [totals[i], 0] : [wins[i], totals[i]]);
+    const order = d.players.map((p, i) => i).sort((x, y) => key(y)[0] - key(x)[0] || key(y)[1] - key(x)[1]);
+    if (order.length < 2) return order[0];
+    const [a, b] = [key(order[0]), key(order[1])];
+    return a[0] === b[0] && a[1] === b[1] ? -1 : order[0];
+  }
+  // Score de la partie au-dessus de la carte de chacun (Jacksonw) : XP, ou manches gagnées puis XP.
+  function sideScoreHTML(j, wins, totals, lead) {
+    const d = Room.data;
+    return `${lead === j ? '<span class="room-lead" title="Winning">👑</span>' : ''}${d.mode === 'xp' ? `<span class="mono">${compact(totals[j])} XP</span>` : `<span class="mono">${wins[j]} / ${d.target}</span><span class="mono">· ${compact(totals[j])} XP</span>`}`;
+  }
   // Score affiché : seulement les manches déjà révélées à l'écran.
   function shownScore() {
     const d = Room.data, count = d.players.length;
@@ -8777,7 +9062,7 @@
       Room.chatSig = ''; // salon reconstruit (un joueur arrive) : la liste du chat est neuve, il faut la redessiner
       body.innerHTML = `
       <div class="room-layout"><div class="room-main">
-        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
+        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)} <button class="room-order" id="room-order" type="button" aria-pressed="false" hidden></button></p>
         <div class="room-board" id="room-board"></div>
         <div class="room-arena">
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
@@ -8845,6 +9130,7 @@
         if (!confirm(window.RNGI18n ? window.RNGI18n.t(Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.') : (Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.'))) return;
         Room.auto = false; roomSend('quit', quit);
       });
+      $('#room-order').addEventListener('click', () => { Store.setSetting('duelOrder', Store.settings.duelOrder === 'lead' ? 'seat' : 'lead'); drawRoom(); });
       $('#room-board').addEventListener('click', e => {
         const k = e.target.closest('[data-kick]'); if (!k) return;
         e.preventDefault();
@@ -8852,6 +9138,10 @@
         roomSend('kick', k, { who: k.dataset.kick });
       });
       $('#room-chat').addEventListener('click', e => {
+        // Modifier, supprimer, masquer et signaler derrière ⋯ (idée de Jacksonw, 2026-11-05 : les boutons prenaient 3 lignes).
+        const more = e.target.closest('[data-chat-menu]');
+        if (more) { const t = Number(more.dataset.chatMenu); Room.chatMenu = Room.chatMenu === t ? null : t; Room.chatSig = ''; drawChat(Room.data); return; }
+        if (e.target.closest('.chat-menu')) Room.chatMenu = null; // une action choisie referme le menu
         const rep = e.target.closest('[data-chat-report]');
         if (rep) { reportMessage(rep, () => Online.roomAction('report', Room.code, { t: Number(rep.dataset.chatReport) })); return; }
         const ed = e.target.closest('[data-chat-edit]');
@@ -8902,7 +9192,11 @@
     const ranked = d.players.map((p, i) => i).sort((x, y) => (d.mode === 'xp' ? totals[y] - totals[x] : wins[y] - wins[x] || totals[y] - totals[x]));
     // À deux, les cases du score restent dans l'ordre des cartes (signalé par qwertyuiop, 2026-10-30) : triées par
     // classement, elles passaient au-dessus de la carte de l'adversaire dès qu'il menait. Le rang reste affiché.
-    const order = d.players.length === 2 ? [0, 1] : ranked;
+    // Au choix, le meneur d'abord (idée de Jacksonw, 2026-11-05) : bouton ⇅ sous le tableau, gardé dans les réglages.
+    const leadFirst = Store.settings.duelOrder === 'lead';
+    const order = d.players.length === 2 && !leadFirst ? [0, 1] : ranked, lead = leaderOf(wins, totals);
+    d.players.forEach((p, j) => { const el = $(`#rsc-${j}`); if (el) setHTML(el, sideScoreHTML(j, wins, totals, lead)); });
+    { const ob = $('#room-order'); if (ob) { ob.hidden = d.players.length !== 2; ob.setAttribute('aria-pressed', String(leadFirst)); ob.textContent = leadFirst ? '⇅ Same order as the cards' : '⇅ Put the leader first'; } }
     setHTML($('#room-board'), order.map(i => {
       const p = d.players[i], k = ranked.indexOf(i);
       const metric = d.mode === 'xp'
@@ -8913,7 +9207,7 @@
       // Sorti, ou bouton ✕ de l'hôte pour exclure un joueur pendant la partie (pas dans un duel avec mise).
       const out = p.out ? `<span class="out-chip">${p.out === 'kicked' ? '✕ removed' : '🚪 left'}</span>` : '';
       const kick = me && me.host && !p.me && !p.out && d.status === 'playing' && !d.stake ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
-      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top, true)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}${lead === i ? ' lead' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${lead === i ? '👑' : k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top, true)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -9041,6 +9335,7 @@
   // Scène : une carte par joueur. Sans manche : "??????" ; sinon la manche révélée, avec son gagnant.
   function stageHTML(r, spinning = false) {
     const d = Room.data;
+    const score = (() => { const x = shownScore(); return { ...x, lead: leaderOf(x.wins, x.totals) }; })();
     const sides = d.players.map((p, j) => {
       const a = r && !spinning && r.n[j] != null ? analysis(r.n[j]) : null; // arrivé en cours de partie : pas de nombre pour les manches d'avant
       const won = a && r.winner === j;
@@ -9050,6 +9345,7 @@
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
           <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${p.clan ? ` [${esc(p.clan.tag)}]` : ''}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
+          <div class="room-score" id="rsc-${j}">${score ? sideScoreHTML(j, score.wins, score.totals, score.lead) : ''}</div>
           ${card}
           <div class="room-meta" id="rm-${j}">${a ? `${tierPill(a.tier)}<span class="ep-pill">${fmt(a.total)} XP</span>` : ''}</div>
           <div class="pill-row" id="rb-${j}">${a ? duelBadgesHTML(a, r.n[j]) : ''}</div>
@@ -9311,8 +9607,15 @@
     if (!document.hidden) lbTimer = setTimeout(() => { if (currentView === 'leaderboard') drawLeaderboard(); }, 60000);
   }
 
-  // XP à vie : des milliards possibles, affichés en abrégé (le détail au survol).
-  const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact(v) : fmt(v)} XP</span>`;
+  // XP à vie : des milliards possibles, affichés en abrégé (le détail au survol). Toujours 4 chiffres significatifs, tronqués
+  // comme compact (idée de jsand, 2026-11-05) : 1.956B, 10.63B, 392.5B, au lieu de 2B, 10.6B, 392.5B.
+  const compact4 = v => {
+    const n = Number(v) || 0, abs = Math.abs(n), unit = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']].find(([u]) => abs >= u);
+    if (!unit) return fmt(Math.trunc(n));
+    const x = n / unit[0], dec = Math.max(0, 4 - String(Math.trunc(Math.abs(x))).length);
+    return `${(Math.trunc(x * 10 ** dec + 1e-9) / 10 ** dec).toFixed(dec)}${unit[1]}`;
+  };
+  const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact4(v) : fmt(v)} XP</span>`;
   function lbRowHTML(e) {
     // Classement des pièces : pas de tirage à montrer, juste le solde.
     // Événement de la semaine : nombre de tirages du thème, ✓ quand l'objectif est atteint.
@@ -9366,16 +9669,61 @@
     app.innerHTML = `
       <div class="page rm-page">
         <h1 class="page-title">🗺️ Roadmap</h1>
-        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.</p>
+        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Vote ▲ for the ideas you want first. Got one? Send it with the 💡 button.</p>
         <div id="rm-body"><div class="empty">Loading…</div></div>
       </div>`;
-    const item = x => `<li class="rm-item"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></li>`;
-    const section = (title, note, list, empty) => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
-    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'roadmap' }) }).then(d => {
-      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box) return;
-      box.innerHTML = section('🛠️ Planned', `${fmt(d.planned.length)} ideas`, d.planned, 'Nothing planned right now.')
-        + section('✅ Recently added', 'last 30 days', d.recent, 'Nothing added in the last 30 days.');
-    }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+    // Votes (idée de Trinity, 2026-11-05) : ▲ sur une idée prévue (pseudo et 100 tirages, vérifié par le serveur), et un
+    // tri « Most voted » (par défaut) ou « Newest » ; le créateur voit ainsi ce que les joueurs attendent le plus.
+    let data = null, sort = 'votes';
+    const voteBtn = x => { const n = (data.votes || {})[x.key] || 0, on = (data.mine || []).includes(x.key); return `<button type="button" class="rm-vote${on ? ' on' : ''}" data-rm-vote="${esc(x.key)}" aria-pressed="${on}" title="${on ? 'Remove your vote' : 'Vote for this idea'}"><span aria-hidden="true">▲</span><b class="mono">${fmt(n)}</b></button>`; };
+    const item = x => `<li class="rm-item${x.key ? ' rm-votable' : ''}">${x.key ? voteBtn(x) : ''}<div class="rm-body"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></div></li>`;
+    const section = (title, note, list, empty, tools = '') => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span>${tools}</div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    const draw = () => {
+      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box || !data) return;
+      const v = x => (data.votes || {})[x.key] || 0;
+      const planned = sort === 'votes' ? [...data.planned].sort((a, b) => v(b) - v(a) || b.t - a.t) : [...data.planned].sort((a, b) => b.t - a.t);
+      const tools = `<span class="rm-sort" role="group" aria-label="Sort">${[['votes', '▲ Most voted'], ['new', '🆕 Newest']].map(([k, l]) => `<button type="button" class="flb-tab${sort === k ? ' on' : ''}" data-rm-sort="${k}" aria-pressed="${sort === k}">${l}</button>`).join('')}</span>`;
+      box.innerHTML = section('🛠️ Planned', `${fmt(data.planned.length)} ideas`, planned, 'Nothing planned right now.', tools)
+        + section('✅ Recently added', 'last 30 days', data.recent, 'Nothing added in the last 30 days.');
+    };
+    Online.site('roadmap').then(d => { data = d; draw(); }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+    $('#rm-body').addEventListener('click', async e => {
+      const so = e.target.closest('[data-rm-sort]'); if (so) { sort = so.dataset.rmSort; draw(); return; }
+      const b = e.target.closest('[data-rm-vote]'); if (!b || !data) return;
+      if (!Store.player.name) { askName(() => renderRoadmap()); return; }
+      b.disabled = true;
+      try { data = await Online.site('rmVote', { key: b.dataset.rmVote, on: b.getAttribute('aria-pressed') !== 'true' }); draw(); }
+      catch (err) { b.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
+  }
+
+  // Hall of Fame (idée d'Avaneesh_17, 2026-11-02 : « the first person to roll each of the infinite numbers and the first to
+  // reach 1 billion xp ») : les premiers joueurs à atteindre les grands paliers, gardés pour toujours (api/_hof.js). Onglet
+  // à côté du classement. Un palier retrouvé par le rattrapage sans date exacte s'affiche « before <date> ».
+  function renderHall() {
+    currentView = 'hall';
+    app.innerHTML = `
+      <div class="page hof-page">
+        <h1 class="page-title">🏛️ Hall of Fame</h1>
+        <p class="panel-note hof-intro">The first players to reach the biggest milestones of the game, kept here forever.</p>
+        <div id="hof-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    const day = t => new Date(t).toLocaleDateString(window.RNGI18n && window.RNGI18n.lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const who = f => f
+      ? `<span class="hof-who"><a class="player-link" href="${profileHref(f.name)}" data-no-i18n>${esc(f.name)}</a>${f.t ? ` · ${f.approx ? '<span>before</span> ' : ''}<span data-no-i18n>${day(f.t)}</span>` : ''}</span>`
+      : '<span class="hof-who hof-open">Nobody yet</span>';
+    const row = (what, f) => `<li class="hof-item${f ? '' : ' open'}">${what}${who(f)}</li>`;
+    const section = (title, note, items) => `<div class="panel hof-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div><ul class="hof-list">${items.join('')}</ul></div>`;
+    Online.hof().then(d => {
+      const box = $('#hof-body'); if (currentView !== 'hall' || !box) return;
+      if (!d.ready) { box.innerHTML = '<div class="panel"><div class="empty">The Hall of Fame is being filled in from the game\'s history. Come back soon!</div></div>'; return; }
+      const claimed = d.infinite.filter(x => x.first).length;
+      box.innerHTML = section('♾️ First to roll each Infinite number', `${claimed} / ${d.infinite.length} rolled`, d.infinite.map(x => row(`<span class="num-card sm hof-num" data-tier="infinite" data-no-i18n>${String(x.n).padStart(6, '0')}</span>`, x.first)))
+        + section('⭐ Lifetime XP', 'first to reach', d.xp.map(x => row(`<b class="hof-what mono" data-no-i18n>${compact(x.m)} XP</b>`, x.first)))
+        + section('🎲 Rolls', 'first to reach', d.rolls.map(x => row(`<b class="hof-what mono"><span data-no-i18n>${fmt(x.m)}</span> rolls</b>`, x.first)))
+        + section('🔥 Hard mode', 'first roll of each rarity', d.hard.map(x => row(`<span class="hof-what">${tierPill(x.tier)}${x.n !== null ? ` <span class="num-card sm hof-num" data-tier="${x.tier}" data-no-i18n>${String(x.n).padStart(10, '0')}</span>` : ''}</span>`, x.first)))
+        + '<p class="panel-note hof-foot">Milestones from before November 5, 2026 were found in the saved roll history: rolls made offline, and the oldest rolls of players with more than 100,000 rolls, are not in it.</p>';
+    }).catch(() => { const box = $('#hof-body'); if (box && currentView === 'hall') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
   }
 
   function renderAbout() {
@@ -9652,6 +10000,7 @@
   // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
   const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
   const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
+  let clanEmojis = () => {};
   let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false, clanChatLast = null;
   Rx.on('clan', { send: async (t, emoji) => drawClanChat(await Online.clan('react', { t: Number(t), emoji })), redraw: () => { if (clanChatLast) drawClanChat(clanChatLast); } });
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
@@ -9670,6 +10019,7 @@
     app.querySelector('.cl-tabs').addEventListener('click', e => { const b = e.target.closest('[data-cltab]'); if (!b) return; clanTab = b.dataset.cltab; drawClanTab(); });
     $('#cl-body').addEventListener('click', onClanClick);
     $('#cl-body').addEventListener('submit', onClanSubmit);
+    clanEmojis = wireEmojis($('#cl-body'), () => $('#cl-text')); // emojis dans le chat du clan (idée de Deadshot, 2026-11-05)
     if (!Store.player.name) { $('#cl-body').innerHTML = '<div class="empty">Roll once and pick a player name to join a clan.</div>'; return; }
     drawClanTab();
     stopClan();
@@ -9778,7 +10128,7 @@
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">💬 Clan chat</h3></div>
         <div class="dm-list cl-chat" id="cl-chat" aria-live="polite"><div class="empty">Loading…</div></div>
-        <form class="dm-form cl-chatform" id="cl-say"><input class="input" id="cl-text" maxlength="140" placeholder="Message to your clan…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>
+        ${emoGridHTML()}<form class="dm-form cl-chatform" id="cl-say">${EMO_BTN}<input class="input" id="cl-text" maxlength="140" placeholder="Message to your clan…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">👥 Members</h3><span class="panel-note" data-no-i18n>${c.members.length}/${c.slots}</span></div>
@@ -9937,7 +10287,7 @@
     if (f.id === 'cl-say') {
       const input = $('#cl-text'); if (!input.value.trim()) return;
       btn.disabled = true;
-      try { drawClanChat(await Online.clan('say', { text: input.value })); input.value = ''; const l = $('#cl-chat'); if (l) l.scrollTop = l.scrollHeight; }
+      try { drawClanChat(await Online.clan('say', { text: input.value })); input.value = ''; clanEmojis(false); const l = $('#cl-chat'); if (l) l.scrollTop = l.scrollHeight; }
       catch (err) { clanErr(err); }
       btn.disabled = false; input.focus();
       return;
@@ -9961,8 +10311,9 @@
   // « now it's like hard to know where stuff are » : 7 entrées toujours écrites (Roll, Shop, Battle, Leaderboard, Casino,
   // Social, Me) au lieu de 8 icônes muettes sous 1110 px. Les routes ne changent pas (#/shop, #/clan, #/player/Nom… marchent
   // toujours) : chaque route appartient à une section, et les sections à plusieurs pages ont une rangée d'onglets (#subnav).
-  const SECTION_OF = { '': 'home', shop: 'shop', duel: 'battle', tournament: 'battle', room: 'battle', leaderboard: 'leaderboard', gamble: 'casino', friends: 'social', clan: 'social', me: 'me', badges: 'me', stats: 'me', history: 'me' };
+  const SECTION_OF = { '': 'home', shop: 'shop', duel: 'battle', tournament: 'battle', room: 'battle', leaderboard: 'leaderboard', hall: 'leaderboard', gamble: 'casino', friends: 'social', clan: 'social', me: 'me', badges: 'me', stats: 'me', history: 'me' };
   const SUBNAV = {
+    leaderboard: [['leaderboard', '🏆', 'Leaderboard'], ['hall', '🏛️', 'Hall of Fame']], // Hall of Fame (idée d'Avaneesh_17, 2026-11-05)
     battle: [['duel', '⚔️', 'Duels'], ['tournament', '🏆', 'Tournaments']],
     social: [['friends', '👥', 'Friends'], ['clan', '🏯', 'Clan'], ['chat', '💬', 'Global chat']],
     me: [['me', '👤', 'Profile'], ['badges', '🏅', 'Badges'], ['stats', '📊', 'Stats'], ['history', '🕘', 'History']],
@@ -9977,7 +10328,7 @@
       : `<a class="subnav-tab${k === key ? ' active' : ''}" href="#/${k}"${k === key ? ' aria-current="page"' : ''}><i aria-hidden="true">${emoji}</i><span>${label}</span></a>`).join('') : '';
   }
 
-  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, mod: renderMod, roadmap: renderRoadmap };
+  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, mod: renderMod, roadmap: renderRoadmap, hall: renderHall };
 
   function route() {
     Avatars.load();
@@ -10166,7 +10517,7 @@
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time, rxCan) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}" ${Rx.attrs('gc', m.id)}>
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${m.best ? `<span class="gc-best mono" data-tier="${esc(m.best.tier)}" title="Best roll">(${fmt(m.best.n)})</span>` : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${Rx.row('gc', m.id, rx[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
@@ -10252,7 +10603,10 @@
     // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
     // Pain (Deadshot, G8_floppa, 2026-10-28) : tout le monde écrit « bread » dans le chat, donc 🍞 🥖 🥐 en tête.
     // 🍳 juste après le pain (idée de MattyFaux-Lucky, 2026-11-01).
-    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐',
+      // pack du 2026-11-05 : visages (Jacksonw : « big eyes and water », « annoyed »), 🎩 (Deadshot), 👌 (Jguz01),
+      // taco, baleine, brocoli, chevalier, roi, fromage, vache, cheval (sennybex1)
+      '🥹', '🥺', '😒', '😤', '😳', '🤪', '😬', '🤗', '😇', '😏', '🤓', '🤡', '💀', '🎩', '👌', '🌮', '🐳', '🥦', '🛡️', '🤴', '🧀', '🐄', '🐴'],
     toggleEmoji(on = !this.emojiOpen) {
       this.emojiOpen = on;
       const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');
@@ -10365,6 +10719,7 @@
     // Aperçu d'un skin demandé hors de la grille du Shop (fenêtre de la cagnotte) ; la grille a son propre écouteur.
     { const pv = e.target.closest('[data-skin-preview]'); if (pv && !pv.closest('.skin-grid')) { e.preventDefault(); previewSkin(pv.dataset.skinPreview); return; } }
     if (e.target.closest('[data-news]')) { e.preventDefault(); openNews(); return; }
+    if (e.target.closest('[data-sess]')) { e.preventDefault(); openSessionModal(); return; }
     if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
@@ -10376,6 +10731,7 @@
     if (roll) { e.preventDefault(); openRollModal(Number(roll.dataset.roll)); }
   });
 
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-sess]')) { e.preventDefault(); e.stopPropagation(); openSessionModal(); } }, true);
   document.addEventListener('keydown', e => {
     const modalOpen = !!$('#modal-root').firstChild;
     if (e.key === 'Escape' && modalOpen) { closeModal(); return; }
