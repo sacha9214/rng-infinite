@@ -4658,6 +4658,76 @@
     };
   });
 
+  // 🦃 Turkey Roast (Thanksgiving 2026, idées d'Idkwhatnamemyself, R77 et Kj13) — des feuilles d'automne (brunes, rouges,
+  // jaunes et orange, Kj13) : quelques-unes s'envolent de chaque chiffre qui se pose, avec une volute de vapeur (il sort
+  // du four) ; pendant le tirage, une feuille tombe de temps en temps en se balançant. À la révélation, une averse de
+  // feuilles tombe sur la carte, plus fournie selon la rareté ; dès Epic, la dinde fait la roue : une gerbe de plumes
+  // jaillit en éventail derrière la carte et redescend en planant ; dès Mythic, une deuxième gerbe, plus large.
+  Object.assign(SHAPES, {
+    // feuille d'érable : cinq lobes pointus, une nervure et la queue
+    mapleleaf(c, p, s) {
+      c.beginPath();
+      for (let i = 0; i <= 30; i++) { const a = -Math.PI / 2 + (i / 30) * TAU, r = s * (.5 + .55 * Math.pow(Math.abs(Math.cos(2.5 * (a + Math.PI / 2))), .7)); c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(60,20,5,.4)'; c.lineWidth = Math.max(.6, s * .1);
+      c.beginPath(); c.moveTo(0, s * 1.5); c.lineTo(0, -s * .8); c.moveTo(0, 0); c.lineTo(-s * .7, -s * .4); c.moveTo(0, 0); c.lineTo(s * .7, -s * .4); c.stroke();
+    },
+    // feuille de chêne : allongée, au bord ondulé
+    oakleaf(c, p, s) {
+      c.beginPath();
+      for (let i = 0; i <= 28; i++) { const a = (i / 28) * TAU, r = s * (.62 + .14 * Math.sin(a * 7)); c.lineTo(Math.cos(a) * r * .62, Math.sin(a) * r * 1.5); }
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(60,20,5,.4)'; c.lineWidth = Math.max(.6, s * .1);
+      c.beginPath(); c.moveTo(0, s * 1.8); c.lineTo(0, -s * 1.1); c.stroke();
+    },
+    // plume de dinde : châtaigne, une bande sombre et la pointe crème
+    tfeather(c, p, s) {
+      const f = k => { c.beginPath(); c.moveTo(0, s * 1.8); c.bezierCurveTo(-s * .9, s * .6, -s * .8, -s * 1.6 * k, 0, -s * 1.9 * k); c.bezierCurveTo(s * .8, -s * 1.6 * k, s * .9, s * .6, 0, s * 1.8); c.fill(); };
+      c.fillStyle = '#efe0bd'; f(1); c.fillStyle = '#24100a'; f(.86); c.fillStyle = p.c; f(.76);
+      c.strokeStyle = 'rgba(239,224,189,.5)'; c.lineWidth = Math.max(.5, s * .08); c.beginPath(); c.moveTo(0, s * 2.2); c.lineTo(0, -s * 1.4); c.stroke();
+    },
+  });
+  // (la base de feuilles avec q réduit : 200 feuilles d'un coup sur un Mythic cachaient les chiffres ; l'averse est ci-dessous)
+  const turkeyBase = pieces({ cols: ['#b91c1c', '#ea580c', '#f59e0b', '#eab308', '#92400e'], shapes: ['mapleleaf', 'mapleleaf', 'oakleaf'], size: [3.6, 5.6], g: 120, drag: 1.4, spin: 2.5, up: true, life: 1.4, glowc: '#9a3412', ring: '#fbbf24', drift: { rate: .5, from: 'around' } });
+  SCENES.turkey = custom(env => turkeyBase(Object.assign({}, env, { q: env.q * .45 })), (env, { cx, st }) => {
+    const { co, card, q, dark } = env, fall = particles(), plumes = particles(), steam = timed(), emit = emitter();
+    const LEAF = ['#b91c1c', '#dc2626', '#ea580c', '#f97316', '#f59e0b', '#eab308', '#92400e', '#78350f'], BROWN = ['#9a4b1c', '#7a3a16', '#86421b'];
+    // une feuille qui tombe en se balançant (vx suit un cosinus) et se retourne (scaleX)
+    const leaf = (x, y, o = {}) => fall.add(Object.assign({ x, y, vx: 0, vy: rnd(40, 80), g: 0, max: rnd(2.2, 3.4), size: rnd(5, 8), c: pick(LEAF), shape: Math.random() < .7 ? 'mapleleaf' : 'oakleaf', rot: rnd(TAU), sway: rnd(30, 70), f: rnd(2, 3.6), ph: rnd(TAU) }, o));
+    const fan = (n, spread, speed) => { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i / Math.max(1, n - 1) - .5) * spread + rnd(-.06, .06), v = speed * rnd(.85, 1.15); plumes.add({ x: cx + rnd(-card.w * .25, card.w * .25), y: card.y + 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 110, drag: 2.2, max: rnd(2.4, 3.2), size: rnd(7, 10), c: pick(BROWN), rot: a + Math.PI / 2, ph: rnd(TAU) }); } };
+    return {
+      frame(t, dt) {
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        // vapeur : des volutes floues qui montent du chiffre et s'effacent (grises sur page claire, le blanc s'y perd)
+        steam.run(dt, (w, k) => dot(co, dark ? '#fff7ed' : '#a8a29e', w.x + Math.sin(k * 5 + w.ph) * 5, w.y - k * card.h * .9, w.size * (1 + k), (1 - k) * (k < .2 ? k / .2 : 1) * (dark ? .22 : .2), w.size * (1.6 + k)));
+        co.globalCompositeOperation = 'source-over';
+        // pendant le tirage, une feuille tombe parfois au-dessus de la carte
+        if (!st.revealed) for (let n = emit(1.4 * q * (.5 + st.heat), dt); n > 0; n--) leaf(rnd(card.x - 40, card.x + card.w + 40), card.y - rnd(20, 60));
+        else if (st.p >= .6 && st.since < 1.5 + 2 * st.p) for (let n = emit(16 * st.p * q, dt); n > 0; n--) leaf(rnd(card.x - 120, card.x + card.w + 120), card.y - rnd(40, 110));
+        fall.step(dt);
+        fall.each((p, k) => {
+          p.vx = p.sway * Math.cos(p.life * p.f + p.ph);
+          // devant la carte, la feuille s'efface à moitié : les chiffres restent le plus lisible
+          const over = p.x > card.x && p.x < card.x + card.w && p.y > card.y && p.y < card.y + card.h;
+          co.save(); co.translate(p.x, p.y); co.rotate(p.rot + .7 * Math.sin(p.life * p.f + p.ph)); co.scale(Math.max(.25, Math.abs(Math.cos(p.life * p.f * .6 + p.ph))), 1); co.globalAlpha = Math.min(1, k * 8, (1 - k) * 3) * (over ? .4 : 1); co.fillStyle = p.c; SHAPES[p.shape](co, p, p.size); co.restore();
+        });
+        plumes.step(dt);
+        plumes.each((p, k) => { if (p.life > .5) p.vx += Math.cos(p.life * 3 + p.ph) * 40 * dt; co.save(); co.translate(p.x, p.y); co.rotate(p.rot + (p.life > .5 ? .5 * Math.sin(p.life * 2.6 + p.ph) : 0)); co.globalAlpha = Math.min(1, (1 - k) * 2.5) * (p.x > card.x && p.x < card.x + card.w && p.y > card.y && p.y < card.y + card.h ? .4 : 1); SHAPES.tfeather(co, p, p.size); co.restore(); });
+      },
+      lock(p, o) {
+        if (o.ghost) return;
+        for (let i = 0; i < 3; i++) steam.add({ delay: .15 + i * .08, life: 1.1, x: p.x + rnd(-6, 6), y: p.y - card.h * .3, size: card.h * .08, ph: rnd(TAU) });
+        if (o.last) for (let i = 0; i < 4; i++) leaf(p.x + rnd(-30, 30), card.y - rnd(10, 40));
+      },
+      reveal(tier, p) {
+        if (!p) return;
+        for (let i = burst(p, 50 * q, 4); i > 0; i--) leaf(rnd(card.x - 60, card.x + card.w + 60), card.y - rnd(20, 120), { vy: rnd(50, 110) });
+        if (p >= .6) fan(Math.round(9 + 6 * p), 2.4, 380 + 140 * p);
+        if (p >= 1) setTimeout(() => fan(15, 3, 500), 220);
+      },
+    };
+  });
+
   // 🌭 Hot Dog (2026-10-26, idée de finnnnn) — chaque chiffre qui se pose trace derrière lui un zigzag de sauce sur la
   // saucisse (ketchup, puis moutarde, un sur deux, comme les chiffres), et des gouttes giclent. À la révélation, de la
   // vapeur monte du pain, plus haute avec la rareté ; dès Mythic, deux longs filets (ketchup et moutarde) habillent le

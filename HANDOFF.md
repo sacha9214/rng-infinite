@@ -1,6 +1,113 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (skins lot 3 branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (skins lot 3 branch, merged with main). Update this file at the end of every session.
+
+## Delete my account (2026-11-05, branch `claude/delete-account`)
+
+Sacha asked for a way for players to delete their account from Settings.
+- **UI**: ⚙️ Settings → danger zone → "Delete my account" (only for a player with a name). A second window lists what is
+  lost, says if Google or a password is linked, and enables "Delete forever" only when the exact player name is typed.
+  After success `resetDevice()` gives the device a new identity (`Store.signOut`) and removes every other local key
+  except the language, the Store key (device settings) and the anonymous visit dates.
+- **Server**: `api/_account.js`, routed from `api/auth.js` (`action: 'deleteAccount'`, no new public file). It needs
+  the secret and the exact name.
+  - **Refused**: suspended accounts (423 from `ownsPlayer`); owner and viewer accounts (`canViewOwner`, 403); a player
+    seated at a poker table, in a live duel, with a duel roll still being revealed, signed up to an unfinished
+    tournament, or in the team of a pending or running clan war (409); the leader of a clan that has other members
+    (409: pass the leadership or disband first). A leader alone in the clan: the clan is disbanded.
+  - **Deleted**: one SCAN of the whole keyspace, then: every key whose name has the id; the id as a field or member of
+    every shared hash, set or sorted set whose name has no player id (like `banPlayers`); every `name:<key>` that
+    points to the player (current name and stale old ones); `google:<sub>`, the Discord link (`discord:links`), the
+    password and the recovery code; the id in other players' `fr:`, `frin:`, `frout:`, `dmblock:`, `dmu:`, `dw:` and
+    `h2h:` keys (one-sided entries too); gifts from the player in friends' lists; daily gift caps (`o:<id>`, `i:<id>`);
+    open positions in `pos:open`; avatar tokens (`avtok`, `avpq`); clan requests; reactions (`…|<id>` fields); the
+    player's global chat, clan chat and casino feed lines; the coins and casino board caches.
+  - **Kept**: `player:<id>:secret = "deleted"` (tombstone with no data: an old device gets 403 and starts a new player;
+    without it `claimPlayer` would recreate the id), `banned`, anonymous totals, ideas (`sugg:*`), moderation logs
+    (`reports`, `avlog`, `gc:mutelog`, `gc:dellog`), and finished duel rooms, tournaments and clan wars, which expire
+    on their own (1, 14 and 30 days). The clan log keeps "<name> left", like any other departure.
+- **Tests**: the "Supprimer son compte" block at the end of `tools/test-api.mjs`. The key check scans the whole fake
+  Redis for the id after deleting (keys, fields, members, values).
+- **Inventory check** (scratch script, not committed): after the full suite, every named player was deleted (194 OK,
+  89 refused: tournament, clan leader, duel) and the fake Redis was searched for each id. Only the kept records above
+  were left (rooms, poker tables, tournaments, wars, ideas, moderation logs), plus a past giveaway's winners in
+  `gw:item` and other players' global chat messages that reply to or mention the player (`ra`/`at`, never sent to the
+  site, gone when the chat rolls past 100 messages).
+- **Cost**: one SCAN of the whole database plus a TYPE per shared key. That should take a few seconds on the VPS; it
+  has not been measured on the real data. `tools/fake-redis.mjs` gained `TYPE`.
+
+## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
+
+Planned ideas from the 2026-11-05 triage: qwertyuiop (a dinner table with Thanksgiving food), Idkwhatnamemyself (a
+turkey roasted into the number), Kj13 (autumn leaves in brown, red, yellow and orange, limited until Thanksgiving
+night), R77 (dinner table, turkey feathers, the iconic turkey look).
+
+- **Turkey Roast** 🦃 skin, 1,126 coins, `idea: 'Idkwhatnamemyself'` (the 5 % share goes to that player; R77 and Kj13 are named in the
+  comment and the update log). The card is a turkey's fanned tail (`.num-card.skin-turkey::before`, an SVG of 17
+  feathers): it folds while rolling (`.charging`) and spreads out after the last digit. The digits are roasted skin:
+  raw and pale with a heat shimmer while spinning, then a squash, a hot flash to golden-brown, a glaze sweep and a puff
+  of steam on the reveal. `js/skinfx.js` `SCENES.turkey`: autumn leaves (Kj13) and steam on each digit, a shower of
+  leaves on the reveal, and from Epic a fan of turkey feathers (two fans from Mythic). The base particle count is cut
+  to 45 % and anything over the card is drawn at 40 % so the digits stay readable. Duel frame `.side-turkey` (plaid
+  tablecloth, leaves, 🦃 / 🍂 🥧), Generate button `.btn-roll.gen-turkey`. The small history cards hide the fan.
+- **Thanksgiving Dinner** 🥧 wallpaper, 1,126 coins, `idea: 'qwertyuiop'` (no 5 % share on wallpapers, as for all
+  wallpapers). `WALL_LAYERS.feast` + `.wtg-*` in `css/style.css`: two windows with autumn trees and falling leaves, a
+  table across the bottom, and the meal in two groups (`.wtg-food.a`: turkey, pumpkins, cranberry sauce, candle;
+  `.wtg-food.b`: rolls, mashed potatoes, corn, pumpkin pie, candle). On wide screens the turkey is on the right and the
+  side dishes on the left, on either side of the page content (centred, it was hidden behind it); on phones they sit
+  side by side. Candles flicker, the turkey steams. Dark theme is the evening by candlelight, light theme an afternoon.
+- **Sale dates**: both `until: '2026-11-28T08:00:00Z'` = the end of Friday November 27 in US Pacific time (Thanksgiving
+  night is over everywhere in the US). Shown as "until November 27". Never in a case, outside the collections.
+- **Limited tab**: a 🦃 THANKSGIVING banner (falling leaves, countdown "Ends after November 27") above the Christmas
+  one, hidden after the date; limited skins and wallpapers are now sorted by end date (Thanksgiving first). The
+  wallpaper note says "for the holidays only" instead of "for Christmas only". French in `js/i18n.js`.
+- Update log entry `2026-11-05-thanksgiving` (en + fr) credits all four players.
+- Tests (`tools/test-api.mjs`, section 55): prices, dates and ideas; not in any case or collection; CSS, scene and
+  layers exist; buying a minute before the end works, a second after returns 422 (skin and wallpaper).
+- Checked: skin filmed with `tools/skin-preview.mjs` and iterated (pointed feathers → broad rounded ones sized by
+  height; bead-like steam → soft wisps; base leaves cut so a Mythic doesn't bury the digits; button tips split into
+  feathers); the canvas scene filmed frame by frame (manual mode) in dark and light; shop preview in the real page;
+  wallpaper at 1400, 1024 and 375 px in both themes; banner at 320 px in French; `overflow-check` OK.
+  Frame rate: 60 fps in the app's browser pane (same as Cozy Fireplace and Snowy Village); headless Firefox (software
+  rendering) is slow for every limited wallpaper, this one included (1–4 fps vs 3–5 for Cozy Fireplace).
+- **After November 27**: nothing to do; the banner hides itself and both items leave the tab (owners keep them).
+
+## Social and chat ideas (2026-11-05, branch `claude/ideas-social-chat-55a38b`)
+
+Planned ideas of the "social-chat" group from the 2026-11-05 triage, one UPDATES entry `2026-11-05-social-chat`.
+- **Best roll next to names in the global chat** (Loliarlex1248 `65af00fabee5`, MAYO `ddc646470eb0`): `api/_global.js`
+  `bestRolls()` reads `best:all` for the authors in one HMGET; each message gets `best: { n, tier }`, shown as
+  "(999,999)" in the tier colour (`.gc-best`). Normal mode only.
+- **Hard mode rolls from Mythic in the chat** (Idkwhatnamemyself `837fc6261b3d`, Kag `1b08e800e866`): `HARD_BIG` in
+  `api/_global.js`, used by `recordHardRoll`. Same 30 s / 10 min limits as Normal (they share the 30 s gap).
+- **Report context** (jsand `d6af231d993f`): the Moderator page shows the 4 messages before and 3 after a reported one
+  ("See the messages around it"), names and text only.
+- **Moderators lift mutes** (pople `129e925537e9`): `gcUnmute` works for moderators from the Moderator page ("Muted
+  right now"), only for a mute still running, never a Forever mute and never one the owner set (`bo: 1` on the mute
+  record, and for older mutes the author's id in `gc:mutelog`). The history keeps who lifted it; the owner page never
+  shows their id.
+- **Friends**: ☆ star pins a friend at the top (Big Sexy `86b789a1f215`, key `frstar:<id>`, cleaned on remove).
+  Friends leaderboard on the Friends page (Edward `73d46f7e12d3`): you + friends by XP, today's XP, best roll or rolls
+  (`state().board`, 4 commands whatever the number of friends). The clan part of Edward's idea was not done (clans
+  already have their member list).
+- **Roadmap votes** (Trinity `7b6e1119e6eb`): ▲ on each Planned idea, "Most voted" (default) or "Newest". Name +
+  100 rolls to vote, one vote per player per idea, removable. Keys `rmv` (hash id → count), `rmv:<suggId>` (voters),
+  `rmv:by:<player>`. Ideas go out with an opaque key (sha256 of the id), never the suggestion id. "Report a bad idea"
+  from Trinity's message was not done: Planned ideas are already approved by Sacha.
+- **Emojis** (Jacksonw `cc4dca7290ca`, Deadshot `11bd0db13baf` `b3f73d2e94d5`, sennybex1 `66d54d6190d3`, Jguz01
+  `e3db68e0f4d3`): 23 more in the chat grid (faces, 🎩 👌 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴; Unicode has no knight, 🛡️ stands for it),
+  the emoji button in the clan chat, and 8 of them as clan icons (`api/_clan.js` EMOJIS).
+- **Duel chat ⋯** (Jacksonw `6dde4a6813f9`): Edit / Delete / Hide / Report behind one ⋯ button (`Room.chatMenu`).
+- **Who is winning in a duel** (Jacksonw `610aa706bbdd`): score above each card with 👑 on the single leader,
+  👑 in the scoreboard, and a "⇅ Put the leader first" link at the end of the duel subtitle for 2-player duels (setting
+  `duelOrder`; the default keeps qwertyuiop's card order). A separate button row pushed the 2nd card under the sticky
+  Roll bar at 320 px (overlap-audit), hence the link.
+- Tests: `tools/test-api.mjs` block "Idées du 2026-11-05 (session social-chat)". Browser: Playwright script on the dev
+  server at 320/360/375/390/414/1280 px, light and dark, EN and FR (friends, roadmap, moderator page, global chat, clan
+  chat, duel), `tools/audit/overflow-check.mjs` clean, `tools/audit/overlap-audit.mjs 320` same as `main` (only the old
+  Tournament tab overflow).
+- Seen, not fixed: in a duel at 320 px the Rounds panel can overflow by ~18 px when the other player's name is long
+  ("you: 880773" pushed out); it is older than this branch.
 
 ## Planned skins from the 2026-11-05 triage (session "skins", branches `claude/skins-lot<N>`)
 
