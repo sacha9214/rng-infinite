@@ -65,8 +65,14 @@ The "Session wallpapers" list of `ideas-planned-2026-11-05.md` (14 ideas, 13 wal
   1,100), Pyramids (`pyramids`, whywhywaylon, 1,000; the stone-tablet skin from the same idea is the skins session's),
   Ice Caps (`icecaps`, finnnnn, 1,000), Circus (`circus`, sennybex1, 1,100). On desktop the middle of the scene sits
   behind the site's panels, so the animals, caravan and props stay in the side margins.
-- **Remaining** (next PR): 4th Dimension (finnnnn, legendary), Avernus (qwertyuiop), Candy Land, Cracked Screen and
-  Stacks of Money (jia jun).
+- **Done, PR 3 (`claude/walls-odd`, stacked on PR 2)**: 4th Dimension (`fourthdim`, finnnnn, **legendary** 4,500: Rare+
+  rolls send a wave of their colour, Mythic+ rolls flip the tesseract inside out), Avernus (`avernus`, qwertyuiop, 1,100,
+  volcanoes and lava, no religious symbol), Candy Land (`candyland`, 900), Cracked Screen (`crackscreen`, 800; clicking
+  the background adds a crack, checked that Generate still rolls and does not crack) and Stacks of Money
+  (`moneystacks`, 1,000; invented ∞ bills, no real currency), all three by jia jun.
+- **All 14 ideas of the list are built.** Nothing remains on this list. Merge order: #85, then the World Map PR, then
+  this one; each is already merged with `main` as of 2026-11-05 evening.
+- `stage()` gained `repaint()` (redraws the painted decor, used by Cracked Screen) and `S.ms` (draw time).
 - **Readability**: `calm()` paints a soft veil of the sky colour behind the part of the site where text sits on the
   background, and `quiet()` thins details there. `node tools/wall-preview.mjs <id>[:event,…]` (dev server on 8136 or
   `RNG_BASE`) films a wallpaper and measures the contrast of that text against the worst 5 % of pixels behind it,
