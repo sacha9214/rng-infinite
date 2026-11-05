@@ -1389,6 +1389,7 @@
         <button class="btn" id="set-export">Export history</button>
         <button class="btn" id="set-import">Import</button>
         <button class="btn danger" id="set-clear">Clear history</button>
+        ${Store.player.name ? '<button class="btn danger" id="set-delete" type="button">Delete my account</button>' : ''}
         <input type="file" id="set-file" accept="application/json,.json" hidden>
       </div>
       <div class="actions"><button class="btn" id="set-done">Done</button></div>
@@ -1486,7 +1487,82 @@
         toast('History cleared');
         route();
       });
+      const delBtn = m.querySelector('#set-delete');
+      if (delBtn) delBtn.addEventListener('click', openDeleteAccount);
     });
+  }
+
+  // Supprimer son compte (demandé par Sacha, 2026-11-05) : le joueur retape son pseudo exact, le serveur efface tout ce
+  // qui est à lui (api/_account.js), puis cet appareil repart comme à la première visite (nouveau joueur, rien en local).
+  // Les réglages de l'appareil (thème, langue, son) restent : ils ne disent rien du joueur.
+  function openDeleteAccount() {
+    const p = Store.player;
+    if (!p.name) return;
+    openModal(`
+      <h2>Delete your account?</h2>
+      <p class="acct-del-warn">This deletes your player from the server forever. It can't be undone: not even the creator can bring it back.</p>
+      <p class="acct-del-lose">You lose:</p>
+      <ul class="acct-del-list">
+        <li>Every roll and your history, in Normal and Hard mode</li>
+        <li>Your coins, skins, wallpapers and everything you bought</li>
+        <li>Your badges, titles, quests and achievements</li>
+        <li>Your friends, your messages and your clan</li>
+        <li>Your places on every leaderboard</li>
+        <li>Your player name: anyone can take it after</li>
+      </ul>
+      ${p.google ? '<p class="panel-note acct-del-link">Your Google account is unlinked from this player. Signing in with it again starts a new player.</p>' : ''}
+      <p class="panel-note acct-del-link" id="acct-del-pw" hidden>Your password stops working.</p>
+      <div class="field">
+        <label for="acct-del-name">Type your player name to confirm</label>
+        <input class="input" id="acct-del-name" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(p.name)}">
+        <p class="field-error" id="acct-del-error" hidden></p>
+      </div>
+      <div class="actions"><button class="btn" id="acct-del-cancel" type="button">Cancel</button><button class="btn danger acct-del-go" id="acct-del-go" type="button" disabled>Delete forever</button></div>
+    `, m => {
+      const input = m.querySelector('#acct-del-name'), go = m.querySelector('#acct-del-go'), error = m.querySelector('#acct-del-error');
+      // Mot de passe : seul le serveur le sait (même requête que les réglages).
+      Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'passwordState', playerId: p.id, secret: p.secret }) }).then(r => {
+        const note = m.querySelector('#acct-del-pw');
+        if (r.has && note) note.hidden = false;
+      }).catch(() => {});
+      input.addEventListener('input', () => { go.disabled = input.value.trim() !== p.name; error.hidden = true; });
+      m.querySelector('#acct-del-cancel').addEventListener('click', openSettings);
+      go.addEventListener('click', async () => {
+        if (input.value.trim() !== p.name) return;
+        go.disabled = true; input.disabled = true;
+        go.textContent = window.RNGI18n.t('Deleting…');
+        try {
+          await Online.request('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'deleteAccount', playerId: p.id, secret: p.secret, name: input.value.trim() }) });
+        } catch (err) {
+          go.textContent = window.RNGI18n.t('Delete forever');
+          input.disabled = false; go.disabled = input.value.trim() !== p.name;
+          error.textContent = window.RNGI18n.t(err.status && err.status < 500 && err.message ? err.message : 'Could not delete your account, try again');
+          error.hidden = false;
+          return;
+        }
+        resetDevice();
+        closeModal();
+        toast('Your account is deleted. This device starts again as a new player.', 6000);
+        location.hash = '#/';
+        route();
+      });
+      input.focus();
+    });
+  }
+  // Après la suppression : nouvel identifiant, plus aucun tirage ni solde ici (Store.signOut), et plus rien d'autre du
+  // joueur dans le stockage de l'appareil (messages vus, historique déjà relu, choix du keno…). Restent : les réglages
+  // (dans la clé du Store, réécrite par signOut), la langue, et les dates de visite (statistiques anonymes du site).
+  function resetDevice() {
+    if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+    Store.signOut();
+    Collection.built = false;
+    HdrCoins.set(0); // l'ancien solde restait affiché (caché tant que le nouveau joueur n'a pas de pseudo)
+    const keep = new Set(['rnginf.v1', 'rnginf.hard', 'rng-lang', 'rng-first-visit', 'rng-last-visit', 'rng-first-src']);
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      keys.filter(k => k && !keep.has(k)).forEach(k => localStorage.removeItem(k));
+    } catch (e) { /* stockage bloqué : rien d'autre à effacer */ }
   }
 
   // « About me » dans les réglages (idée de Niall, 2026-10-27) : une ligne de 80 caractères montrée sur le profil. Le
@@ -2239,6 +2315,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-05-delete-account', date: 'Nov 5, 2026', en: ['🗑️ You can now delete your account: ⚙️ Settings → Delete my account. Type your player name to confirm, and everything is erased from the server for good (rolls, coins, skins, friends, clan, leaderboards). Your name becomes free again and this device starts over as a new player'], fr: ['🗑️ Tu peux maintenant supprimer ton compte : ⚙️ Réglages → Supprimer mon compte. Tape ton pseudo pour confirmer, et tout est effacé du serveur pour de bon (tirages, pièces, skins, amis, clan, classements). Ton pseudo redevient libre et cet appareil repart avec un nouveau joueur'] },
     { id: '2026-11-05-hard-titles', date: 'Nov 5, 2026', en: ['🔥 5 new Hard mode titles: 🔥 Forged in Fire for a Mythic or better in Hard mode (idea by PRISMA123), and 🍪 Tough Cookie, ⛓️ Hardened, ⛏️ Hardcore and 🗻 Unbreakable for 5,000, 10,000, 50,000 and 100,000 Hard mode rolls (ideas by PRISMA123 and Liam123456). Only your Hard mode rolls count for them'], fr: ['🔥 5 nouveaux titres du mode difficile : 🔥 Forgé dans le feu pour un Mythic ou mieux en mode difficile (idée de PRISMA123), et 🍪 Dur à cuire, ⛓️ Endurci, ⛏️ Hardcore et 🗻 Incassable pour 5 000, 10 000, 50 000 et 100 000 tirages en mode difficile (idées de PRISMA123 et Liam123456). Seuls tes tirages du mode difficile comptent'] },
     { id: '2026-11-05-ideas-1', date: 'Nov 5, 2026', en: ['⚙️ New settings: stop equipping what you buy (idea by infinity), hide the "contains your best roll" message (CococoC), and keep the screen on during auto-roll (Jacksonw)', '🎯 Auto-roll can now stop on a new badge (idea by Daiquan)', '🔥 Tap "rolls this session" to see the session\'s best rolls, worst rolls and rarities (idea by finnnnn)', '✨ The Badges page marks the badges you found since your last visit (idea by casmicgraything)', '🔁 Profiles show the number a player rolled the most (idea by Gray)', '🔢 Leaderboards show lifetime XP with 4 digits, like 1.956B (idea by jsand)', '🌈 Infinite rolls get a rainbow border in history and leaderboards (idea by KMC)'], fr: ['⚙️ Nouveaux réglages : ne plus équiper ce que tu achètes (idée d\'infinity), masquer le message « contient ton meilleur tirage » (CococoC), et garder l\'écran allumé pendant le tirage auto (Jacksonw)', '🎯 Le tirage auto peut s\'arrêter sur un nouveau badge (idée de Daiquan)', '🔥 Touche « tirages cette session » pour voir les meilleurs et pires tirages et les raretés de la session (idée de finnnnn)', '✨ La page Badges marque les badges trouvés depuis ta dernière visite (idée de casmicgraything)', '🔁 Les profils montrent le nombre le plus tiré par un joueur (idée de Gray)', '🔢 Les classements affichent l\'XP à vie avec 4 chiffres, comme 1.956B (idée de jsand)', '🌈 Les tirages Infinite ont un bord arc-en-ciel dans l\'historique et les classements (idée de KMC)'] },
     { id: '2026-11-05-roll-count', date: 'Nov 5, 2026', en: ['🔢 After each roll, see how many times your number was already rolled by all players, and which roll of it you are (like "rolled 36 times before you · you\'re #37"). Roll a number nobody ever got and you\'ll know it! Counts start from every roll saved on the server. Normal mode only (idea by a friend of Sacha, also asked by Tumored and Gray)'], fr: ['🔢 Après chaque tirage, vois combien de fois ton nombre a déjà été tiré par tous les joueurs, et quel tirage de ce nombre tu es (par exemple « a été tiré 36 fois avant toi · tu es le n° 37 »). Tire un nombre que personne n\'a jamais eu et tu le sauras ! Les compteurs partent de tous les tirages gardés sur le serveur. Mode normal seulement (idée d\'un ami de Sacha, aussi demandée par Tumored et Gray)'] },
