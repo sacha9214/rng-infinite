@@ -38,6 +38,7 @@ Planned ideas of the "social-chat" group from the 2026-11-05 triage, one UPDATES
   Tournament tab overflow).
 - Seen, not fixed: in a duel at 320 px the Rounds panel can overflow by ~18 px when the other player's name is long
   ("you: 880773" pushed out); it is older than this branch.
+
 ## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
 
 Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,
