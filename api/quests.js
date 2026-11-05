@@ -4,7 +4,9 @@
 // Tout se lit sur les compteurs tenus par le serveur (q:<jour>:<id>) : rien ne se crédite depuis le site.
 // POST /api/quests { playerId, secret, action: 'wclaim', quest } → réclame une quête de la semaine terminée
 // POST /api/quests { playerId, secret, action: 'chest' }          → ouvre les coffres de quêtes prêts
-const { eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, weekKey, weekQuestKey, WEEK_QUEST_TTL, toObject, cors, send, flushDue } = require('./_lib');
+// POST /api/quests { playerId, secret, action: 'reroll', quest }  → remplace une quête du jour (3 relances par semaine)
+const crypto = require('node:crypto');
+const { QUEST_TTL, eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, weekKey, weekQuestKey, WEEK_QUEST_TTL, toObject, cors, send, flushDue } = require('./_lib');
 const Quests = require('../js/quests.js');
 const Shop = require('../js/shop.js');
 const Events = require('../js/events.js');
@@ -53,10 +55,12 @@ async function state(id, now = Date.now()) {
     day,
     resetAt: Date.parse(`${day}T00:00:00Z`) + 86400000,
     coins: Shop.balance(stats),
-    quests: Quests.ofDay(day).map(q => ({
+    quests: Quests.ofDay(day, counters).map(q => ({
       id: q.id, emoji: q.emoji, text: q.text, target: q.target, reward: q.reward + Events.rushBonus(q.reward, now),
       progress: Quests.progress(q, counters), claimed: counters[`claimed:${q.id}`] === '1',
     })),
+    // Relances de quête (idée de Mace_67, 2026-11-03) : combien il en reste cette semaine.
+    rerolls: { left: Quests.rerollsLeft(wcounters), max: Quests.REROLLS_PER_WEEK },
     daily: { claimed: claimedToday, streak, reward: Quests.dailyReward(claimedToday ? streak : streak + 1), next: Quests.dailyReward((claimedToday ? streak : streak + 1) + 1) },
     level: (() => {
       const L = Quests.levelOf(stats.xpLife), paid = stats.lvlPaid === undefined ? L : Number(stats.lvlPaid) || 0;
@@ -105,9 +109,9 @@ module.exports = async (req, res) => {
     const day = dayKey(Date.now());
 
     if (body.action === 'claim') {
-      const quest = Quests.ofDay(day).find(q => q.id === String(body.quest || ''));
-      if (!quest) return send(res, 400, { error: 'This quest is not available today' });
       const [flat] = await redis([['HGETALL', questKey(day, playerId)]]);
+      const quest = Quests.ofDay(day, toObject(flat)).find(q => q.id === String(body.quest || ''));
+      if (!quest) return send(res, 400, { error: 'This quest is not available today' });
       if (Quests.progress(quest, toObject(flat)) < quest.target) return send(res, 422, { error: 'Quest not finished yet' });
       // Une seule fois : le marqueur du jour sert de verrou.
       const [first] = await redis([['HSETNX', questKey(day, playerId), `claimed:${quest.id}`, 1]]);
@@ -118,7 +122,7 @@ module.exports = async (req, res) => {
       const [after] = await redis([['HGETALL', questKey(day, playerId)]]);
       const c = toObject(after);
       let allDone = null;
-      if (Quests.ofDay(day).every(q => c[`claimed:${q.id}`] === '1')) {
+      if (Quests.ofDay(day, c).every(q => c[`claimed:${q.id}`] === '1')) {
         const [firstAll] = await redis([['HSETNX', questKey(day, playerId), 'allDone', 1]]);
         if (Number(firstAll) === 1) {
           const st = await readStats(playerId);
@@ -133,6 +137,28 @@ module.exports = async (req, res) => {
         }
       }
       return send(res, 200, { ...(await state(playerId)), gained: reward + (allDone ? allDone.bonus : 0), allDone });
+    }
+
+    // Relance d'une quête du jour (idée de Mace_67, 2026-11-03) : une quête pas encore réclamée est remplacée par une autre
+    // du même groupe, au hasard (crypto) ; 3 par semaine ISO. Le compteur est pris avant le tirage (HINCRBY, rendu si
+    // c'est refusé) : deux clics simultanés ne dépassent jamais 3.
+    if (body.action === 'reroll') {
+      const [lock] = await redis([['SET', `qrr:${playerId}`, '1', 'NX', 'PX', 5000]]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Already rerolling' });
+      try {
+        const qk = questKey(day, playerId), [flat] = await redis([['HGETALL', qk]]), c = toObject(flat);
+        const quest = Quests.ofDay(day, c).find(q => q.id === String(body.quest || ''));
+        if (!quest) return send(res, 400, { error: 'This quest is not available today' });
+        if (c[`claimed:${quest.id}`] === '1') return send(res, 422, { error: 'This quest is already claimed' });
+        const wk = weekQuestKey(weekKey(Date.now()), playerId);
+        const [used] = await redis([['HINCRBY', wk, 'rerolls', 1], ['EXPIRE', wk, WEEK_QUEST_TTL]]);
+        if (Number(used) > Quests.REROLLS_PER_WEEK) { await redis([['HINCRBY', wk, 'rerolls', -1]]); return send(res, 422, { error: 'No rerolls left this week' }); }
+        const options = Quests.swapsFor(quest).filter(q => c[`claimed:${q.id}`] !== '1');
+        if (!options.length) { await redis([['HINCRBY', wk, 'rerolls', -1]]); return send(res, 422, { error: 'No other quest to swap in' }); }
+        const next = options[crypto.randomInt(0, options.length)];
+        await redis([['HSET', qk, `rr:${quest.group}`, next.id], ['EXPIRE', qk, QUEST_TTL]]);
+        return send(res, 200, { ...(await state(playerId)), swapped: { from: quest.id, to: next.id } });
+      } finally { await redis([['DEL', `qrr:${playerId}`]]); }
     }
 
     // Quête de la semaine (idée de Tumored, 2026-10-27) : une fois par quête et par semaine, le marqueur sert de verrou.

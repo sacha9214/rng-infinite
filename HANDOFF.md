@@ -154,6 +154,83 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
   [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
   [773ca9b1b6e4], puzzle cube [3518354c582f].
 
+## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
+
+Six Planned ideas built, four big ones written up as proposals only (below). Credits are in the UPDATES entry
+`2026-11-05-features-misc`.
+
+- **5% share on wallpapers** (qwertyuiop, `b06fde58b160`, `bd2f68f5442e`): `api/shop.js` `payIdea` now also runs for
+  `buywall` and for a wallpaper won from a paid Wallpaper Case (same rules as skins: not for yourself, nothing for a key,
+  nothing for a duplicate). Wallpaper tiles show "💡 Idea by", and the "Your creations" text no longer says walls pay nothing.
+- **Quest rerolls** (Mace_67, `c2fe91fcbdc7`): `js/quests.js` `REROLLS_PER_WEEK = 3`. `POST /api/quests { action: 'reroll',
+  quest }` swaps one unclaimed daily quest for another quest of the same group (`crypto.randomInt`), stored as
+  `rr:<group>` in `q:<day>:<id>`; the weekly count is `rerolls` in `qw:<week>:<id>` (taken with HINCRBY first, given back
+  on refusal, so two clicks never pass 3). The group keeps its counters, so progress carries over. Rewards follow the
+  group's difficulty, so a reroll never pays more. Daily quests only, not weekly ones. UI: 🔄 button on each unfinished
+  quest (asks first), "N rerolls left this week" in the quest footer.
+- **Badge owner counter** (Tumored, `7db9506f94c0`): `recordRoll` / `recordHardRoll` now send one `SADD` per earned badge
+  (instead of one for all), so the server knows which badges are new to the player and adds `HINCRBY bown <badge> 1`
+  (`hbown` in Hard mode). Read by `GET /api/leaderboard?badges=1[&mode=hard]` (cached 1 min, numbers only), shown in the
+  badge window as "👥 N of M players". Nothing shows before `bown:ready`.
+- **Hall of Fame** (Avaneesh_17, `0375af55c59a`): `api/_hof.js`, one hash `hof`, one field per milestone set once with
+  HSETNX by the roll that reaches it: first to roll each of the 10 Infinite numbers, first to 100M / 1B / 10B / 100B
+  lifetime XP, first to 10k / 100k / 1M rolls, first Mythic / Celestial / Divine / Godlike / Infinite in Hard mode. Page
+  `#/hall`, a second tab next to Leaderboard (subnav). `GET /api/leaderboard?hof=1` sends names, never ids. The page says
+  "being filled in" until `hof:ready`. The 10 Infinite numbers are a constant in `_hof.js` (finding them takes 45 s),
+  re-checked at load; redo the list after a badge change (command in the comment).
+  - **What can't be reconstructed** (also on the page and in `tools/backfill-hof.js`): offline rolls; the oldest rolls of
+    players above 100,000 rolls (history cap), except an Infinite that stayed their best roll (`best:all` is read too);
+    the exact time of an XP or roll milestone crossed before a player's oldest saved roll (dated to that roll, shown
+    "before <date>"); and XP is recomputed at today's badge values, so an old XP milestone may be dated a bit differently
+    from what it was at the time.
+- **Keyboard ASMR** (dog `a65d5a6548e9`, Infin6 `3b90b3f8a464`, LEVIATHAN): measured the old key sound: almost nothing above
+  1 kHz (high-frequency energy −62 dB vs −44 dB for the Wax button), which is why it was inaudible on phone and laptop
+  speakers. `js/sound.js` `keyThock` now adds the ASMR wax `crackle` and a short bottom-out click; it measures like the Wax
+  button and plays ~3 dB louder, still under roll sounds. Real keys: every key, including Shift/Ctrl/Alt/Cmd, symbols and
+  F-keys (read on `e.code`, so Shift+1 and AZERTY "&" press the 1), while typing in the chat too, and the key stays
+  down while held (keyup / window blur releases it). Never in a password field. Listeners are in capture.
+- **Solar System** (deadshot44474, `aa5e1b3867f6`, `10efc2799eed`): asteroid belt (260 rocks, Kepler speeds) between Mars
+  and Jupiter, Ceres with the Occator bright spot (a bluish glow that turns with it), Pluto on an offset, tilted orbit
+  that crosses Neptune's, the comet's dust trail drawn along its real past path (the straight ion tail is now short and
+  faint and never points ahead), and the first orbit always clears the sun and its rays (in landscape Mercury's orbit
+  used to pass over the sun). I read "the sun is over the line" as that orbit; if he meant something else, ask him.
+
+**To do after deploying (Sacha, on the VPS, same env as the other tools):**
+`node tools/backfill-badge-owners.js` (dry run) then `--apply` (sets `bown:ready`), and `node tools/backfill-hof.js` then
+`--apply` (sets `hof:ready`; read the dry-run list first: bots or suspended accounts could hold a spot). Until then the
+badge counter and the Hall of Fame page show nothing.
+
+Tests: `tools/test-api.mjs` "features-misc" block (wallpaper share incl. case/key/self/duplicate, rerolls incl. the 3/week
+cap and all-done with swapped quests, badge owners normal + hard + backfill, Hall of Fame live + backfill + approx +
+no ids). Browser (dev server on 8132): rerolled a quest, Hall of Fame at 320–1280 px light/dark FR/EN, badge window in
+French, keyboard key events (held keys, Shift+1, Ctrl+C, AZERTY, password field), Solar System filmed headless dark
+1280 px and light 390 px. `tools/audit/overflow-check.mjs` and `overlap-audit.mjs` now include `#/hall`.
+
+### Proposals only (not built, for Sacha to decide)
+
+- **Season pass** (PRISMA123, `4b0ec58e1959`, "on the list for later"). Free only: no paid track (coins are only earned in
+  the game). A 30-day season, 50 tiers; tier XP comes from what players already do (daily quests 1 tier-point each, the
+  all-done bonus 2, weekly quests 3, rolls 1 point per 100), so it rewards regular play, not luck. Rewards: a few small
+  coin drops (≤ 15% of what a regular player earns from quests in a month, checked against the economy page), case keys,
+  and 2–3 season-only cosmetics (a title, a button, a wallpaper) that are never sold. Data: `sp:<season>:<id>` hash
+  (points, claimed tiers), the season list in `js/events.js`. Needs: a new home card, owner page tool to create a
+  season. About 1–2 days of work.
+- **Community quests** (jjcoolcid1, `93faee78788f`). Sacha sets a goal from the owner page ("the whole game rolls 2M times
+  this week", "1,000 Mythic+ rolls"); one global counter `cq:<id>` (INCR in `recordRoll`, like the weekly event); a
+  progress bar on the home page. When it's reached, every player who contributed at least N (e.g. 50 rolls, `cq:<id>:p`
+  sorted set) claims the reward: coins or a cosmetic. Rewards must stay small (it's free coins for everyone) and luck
+  never changes. About 1 day.
+- **Craps and blackjack lobbies** (JBearr12, `f017e780fb7f`). Craps: pass / don't pass / field bets only at first
+  (house edge 1.41% / 1.36% / 2.78%, decided on the server with `crypto.randomInt`), new tab in `api/_gamble.js`, must
+  pass `casino-sim` and `house-audit` before shipping (don't-pass needs the bar-12 rule to keep the edge). Blackjack
+  lobbies: up to 5 players at one table against the same dealer, each playing their own hand, 20 s per turn, built on
+  the open-table code of `api/_poker.js` (seats, idle cash-out, `pending` settlement). Same edge as solo blackjack.
+  Craps ~1 day, lobbies ~2 days.
+- **"also cyber punk"** (leo, `a7dba4706e5d`). No other context; it reads as a follow-up to a skin request, and it sits in
+  the skins group's list, so the skins session should own it. Note: "Cyberpunk" is also a game's name, so name it
+  something like "Neon City" (rainy neon streets, holographic digits). We already have the Synthwave and Cyber Void
+  wallpapers, so a wallpaper alone would be a near-duplicate.
+
 ## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
 
 Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,
