@@ -294,6 +294,16 @@
     { id: 'paint', name: 'Rainbow Paint', emoji: '🎨', price: 1800, desc: 'Thick oil paint on a canvas, one rainbow color per digit, each brushed on with a stroke; great rolls paint a rainbow over the card', idea: 'finnnnn' },
     // Idée de finnnnn (2026-10-21) : « make a grass skin for all the no lifes ». Des chiffres tondus dans une pelouse.
     { id: 'grass', name: 'Touch Grass', emoji: '🌱', price: 1500, desc: 'Digits mowed into a fresh striped lawn; clippings fly, daisies pop up on good rolls, and Mythic rolls bring butterflies and a little lawn mower. Go outside after', idea: 'finnnnn' },
+    // ==== Skins du 2026-11-05, lot 4 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de finnnnn (2026-10-22) : « make an obsidian skin or something really strong ». Du verre volcanique taillé.
+    { id: 'obsidian', name: 'Obsidian', emoji: '🖤', price: 2200, desc: 'Polished volcanic glass: every digit is knapped out of the black stone with a sharp crack, and Mythic rolls split it with violet energy', idea: 'finnnnn' },
+    // Idée de R77 (2026-10-22) : une écurie, de la paille partout, le rouge et le brun d'une grange.
+    { id: 'stable', name: 'Horse Stable', emoji: '🐴', price: 1900, desc: 'A red barn door with hay everywhere: every digit lands with a clop and a horseshoe, horses poke their heads over the door on good rolls, and Mythic rolls bring a gallop', idea: 'R77' },
+    // Idée de jjcoolcid1 (2026-10-22) : des billes lancées contre des caisses ou des tonneaux qui éclatent et montrent le
+    // chiffre (sa propre version, sans oiseaux : la règle des marques).
+    { id: 'crates', name: 'Crate Smash', emoji: '📦', price: 1800, desc: 'Every digit hides in a wooden crate or barrel until a thrown ball smashes it open; Mythic rolls bring a barrage of colored balls', idea: 'jjcoolcid1' },
+    // Idée de yukitsunodaiscool (2026-10-22) : une grue lâche des briques sur les chiffres ; dès Mythic, une démolition.
+    { id: 'crane', name: 'Construction', emoji: '🏗️', price: 2000, desc: 'A crane drops every brick digit onto the site in a cloud of dust; Mythic rolls end in a big demolition', idea: 'yukitsunodaiscool' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

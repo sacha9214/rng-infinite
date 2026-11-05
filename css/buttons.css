@@ -1814,3 +1814,29 @@
   text-shadow: 0 -.04em 0 #1f4d12, 0 .05em .06em rgba(20, 50, 10, .5);
   --gs: 0 .3em 0 #1f4d12, 0 .5em 1em rgba(132, 204, 22, .3); --gs-h: 0 .34em 0 #1f4d12, 0 .7em 1.3em rgba(132, 204, 22, .45); --gs-a: 0 .06em 0 #1f4d12; }
 .btn-roll.gen-grass:hover { filter: brightness(1.08); }
+
+/* ==== Skins du 2026-11-05, lot 4 ==== boutons assortis */
+/* Obsidian (idée de finnnnn) : verre volcanique poli, reflet oblique, texte aux arêtes claires. */
+.btn-roll.gen-obsidian { border: 2px solid #4c4370; border-radius: .45rem; color: #e9e4ff; -webkit-text-stroke: .015em #f5f3ff;
+  background: linear-gradient(118deg, transparent 28%, rgba(255, 255, 255, .18) 36%, transparent 42%), radial-gradient(ellipse 50% 80% at 20% 30%, rgba(139, 92, 246, .3), transparent 70%), linear-gradient(160deg, #15121e, #050407);
+  text-shadow: 0 .05em 0 #0a0810, 0 0 .3em rgba(139, 92, 246, .55);
+  --gs: 0 .3em 0 #1c1726, 0 .5em 1.2em rgba(139, 92, 246, .35); --gs-h: 0 .34em 0 #1c1726, 0 .7em 1.5em rgba(139, 92, 246, .5); --gs-a: 0 .06em 0 #1c1726; }
+.btn-roll.gen-obsidian:hover { filter: brightness(1.2); }
+/* Horse Stable (idée de R77) : une porte de grange rouge, cadre blanc, paille en bas. */
+.btn-roll.gen-stable { border: .16em solid #f5efe0; border-radius: .25rem; color: #fbf7ee; font-family: 'Rockwell', 'Clarendon', 'Roboto Slab', Georgia, serif;
+  background: linear-gradient(0deg, #e8c46a 0 .25em, transparent .25em), repeating-linear-gradient(90deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 14px), linear-gradient(180deg, #b3261e, #8f1d17);
+  text-shadow: 0 .05em 0 #5c1a12;
+  --gs: 0 .3em 0 #5c3b1e, 0 .5em 1em rgba(179, 38, 30, .3); --gs-h: 0 .34em 0 #5c3b1e, 0 .7em 1.3em rgba(179, 38, 30, .45); --gs-a: 0 .06em 0 #5c3b1e; }
+.btn-roll.gen-stable:hover { filter: brightness(1.08); }
+/* Crate Smash (idée de jjcoolcid1) : une caisse en bois cerclée, texte au pochoir jaune. */
+.btn-roll.gen-crates { border: 2px solid #4a2e17; border-radius: .3rem; color: #facc15; font-family: 'Stencil', 'Impact', 'Arial Black', system-ui, sans-serif;
+  background: linear-gradient(to top right, transparent calc(50% - 3px), rgba(107, 68, 35, .6) calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)), repeating-linear-gradient(0deg, rgba(0, 0, 0, .15) 0 1px, transparent 1px 12px), linear-gradient(180deg, #c58745, #a0602d);
+  text-shadow: 0 .05em 0 #000, 0 0 .03em #000, 0 0 .03em #000;
+  --gs: 0 .3em 0 #4a2e17, 0 .5em 1em rgba(250, 204, 21, .2); --gs-h: 0 .34em 0 #4a2e17, 0 .7em 1.3em rgba(250, 204, 21, .35); --gs-a: 0 .06em 0 #4a2e17; }
+.btn-roll.gen-crates:hover { filter: brightness(1.08); }
+/* Construction (idée de yukitsunodaiscool) : un panneau de chantier jaune et noir, texte brique. */
+.btn-roll.gen-crane { border: 2px solid #111827; border-radius: .3rem; color: #b91c1c; -webkit-text-stroke: .02em #f5f5f4; font-family: 'Arial Black', system-ui, sans-serif;
+  background: repeating-linear-gradient(-45deg, #facc15 0 10px, #111827 10px 20px) 0 0 / 100% .3em no-repeat, repeating-linear-gradient(-45deg, #facc15 0 10px, #111827 10px 20px) 0 100% / 100% .3em no-repeat, linear-gradient(180deg, #d6d3d1, #a8a29e);
+  text-shadow: 0 .05em 0 #57130f;
+  --gs: 0 .3em 0 #44403c, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #44403c, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #44403c; }
+.btn-roll.gen-crane:hover { filter: brightness(1.06); }

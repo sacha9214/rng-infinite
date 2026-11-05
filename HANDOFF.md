@@ -149,9 +149,14 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
 - Note for future skins: the main roll card never has its own `data-tier`; the `.result` section has it from the start
   and `.neutral` hides it until the rarity reveal.
 
+**Lot 4 — `claude/skins-lot4`** (branched from lot 3; block "lot 4 du 2026-11-05" in `js/skinfx.js`):
+- `obsidian` Obsidian 🖤 2,200 — finnnnn [7ac4a115abd4]. `stable` Horse Stable 🐴 1,900 — R77 [988dcd01c381] (a
+  Farm wallpaper with a barn already exists; this one is about horses). `crates` Crate Smash 📦 1,800 — jjcoolcid1
+  [4bf26afedcb9] (balls thrown at crates and barrels; no birds, no slingshot). `crane` Construction 🏗️ 2,000 —
+  yukitsunodaiscool [f727644461a7] (Mythic: a demolition, dust and bricks).
+
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Next: obsidian [7ac4a115abd4], horses/barn
-  [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
+- Next: carnival robot horse
   [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
   spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
   Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]

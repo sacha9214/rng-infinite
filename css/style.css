@@ -12692,3 +12692,195 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes gr-flutter { 0%, 100% { transform: translate(0, 0) scaleX(1); } 25% { transform: translate(-6px, -5px) scaleX(.6); } 50% { transform: translate(-12px, 0) scaleX(1); } 75% { transform: translate(-6px, 4px) scaleX(.6); } }
 .room-stage.many .side-grass::before, .room-stage.many .side-grass::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-grass::before, .side-grass::after { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 4 (idées de joueurs) */
+/* ------------------------------------------------------------------ Obsidian (idée de finnnnn, 2026-10-22 : « make an
+   obsidian skin or something really strong »). Du verre volcanique : un noir profond et poli où glisse un reflet, avec
+   l'irisation violette et verte de l'obsidienne, des éclats en coquille sur les bords. Les chiffres sont taillés dans le
+   bloc : leurs arêtes polies attrapent la lumière (gris lavande clair, arête blanche), le creux reste sombre. Pendant
+   le tirage, seuls des reflets glissent sur la pierre. Un chiffre qui se pose : un coup de taille sec (matière très
+   dure : un éclair blanc, la carte encaisse, aucun rebond mou). Éclats, fêlures et choc : js/skinfx.js (SCENES.obsidian). */
+.num-card.skin-obsidian {
+  background:
+    linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, .16) 36%, transparent 41%),
+    repeating-radial-gradient(circle at 0 100%, transparent 0 .12em, rgba(196, 181, 253, .12) .12em calc(.12em + 1px)) 0 100% / 1.1em 1.1em no-repeat,
+    repeating-radial-gradient(circle at 100% 0, transparent 0 .1em, rgba(196, 181, 253, .1) .1em calc(.1em + 1px)) 100% 0 / .9em .9em no-repeat,
+    radial-gradient(ellipse 50% 70% at 18% 30%, rgba(139, 92, 246, .22), transparent 70%), radial-gradient(ellipse 45% 60% at 85% 75%, rgba(20, 184, 166, .16), transparent 70%),
+    radial-gradient(circle at 4% 12%, rgba(255, 255, 255, .1) 0 .2em, transparent .21em), radial-gradient(circle at 97% 88%, rgba(255, 255, 255, .08) 0 .25em, transparent .26em),
+    linear-gradient(160deg, #15121e, #050407 55%, #0c0a12);
+  border: 2px solid #2e2840; border-radius: .45rem; color: #e9e4ff;
+  box-shadow: inset 0 0 0 1px rgba(196, 181, 253, .18), inset 0 .1em .2em rgba(255, 255, 255, .08), 0 0 0 3px rgba(46, 40, 64, .6), 0 0 18px rgba(139, 92, 246, .28), 0 12px 20px rgba(0, 0, 0, .6);
+}
+.skin-obsidian .slot {
+  position: relative; font-family: 'Copperplate', 'Avenir Next Condensed', 'Arial Narrow', 'Helvetica Neue', system-ui, sans-serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #d9d2f5; -webkit-text-stroke: .02em #f5f3ff;
+  text-shadow: 0 -.03em 0 rgba(255, 255, 255, .7), 0 .05em 0 #0a0810, 0 .07em .08em rgba(0, 0, 0, .8), 0 0 .3em rgba(139, 92, 246, .45);
+}
+.skin-obsidian .slot.ghost { opacity: .18; }
+.skin-obsidian .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : on ne voit que des reflets qui glissent sur la pierre noire. */
+.skin-obsidian .slot.spinning { opacity: .5; color: #2a2438; -webkit-text-stroke: .02em #5b5280; text-shadow: none; animation: obs-glint .3s linear infinite; }
+.skin-obsidian .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes obs-glint { 0% { filter: brightness(.8); } 50% { filter: brightness(1.6); } 100% { filter: brightness(.8); } }
+/* Le coup de taille : éclair blanc, le bloc encaisse d'un coup sec, se fige. */
+.skin-obsidian .slot.revealed { animation: obs-knap .5s backwards; }
+@keyframes obs-knap {
+  0% { transform: scale(1.18); color: #ffffff; filter: brightness(2.4) drop-shadow(0 0 .2em #c4b5fd); animation-timing-function: cubic-bezier(.7, 0, .9, .3); }
+  18% { transform: scale(.94); filter: brightness(1.5); animation-timing-function: linear; }
+  26% { transform: translateX(-.03em) scale(.97); }
+  34% { transform: translateX(.025em); }
+  42% { transform: none; filter: none; }
+  100% { transform: none; }
+}
+/* Dès Mythic (.obs-split, posée par la scène) : des veines violettes s'allument dans les chiffres. */
+.num-card.skin-obsidian.obs-split .slot:not(.ghost) { animation: obs-vein 2s ease-in-out infinite alternate; }
+@keyframes obs-vein { from { text-shadow: 0 -.03em 0 rgba(255, 255, 255, .7), 0 .05em 0 #0a0810, 0 0 .3em rgba(139, 92, 246, .45); } to { text-shadow: 0 -.03em 0 rgba(255, 255, 255, .9), 0 .05em 0 #0a0810, 0 0 .5em rgba(167, 139, 250, .95), 0 0 1em rgba(45, 212, 191, .45); } }
+@media (prefers-reduced-motion: reduce) { .skin-obsidian .slot { animation: none !important; } }
+.side-obsidian { --side-border: #4c4370; --side-glow: 0 0 18px rgba(139, 92, 246, .35); --side-ink: #8b5cf6; --side-ink-glow: 0 0 8px rgba(167, 139, 250, .6);
+  --side-bg: linear-gradient(118deg, transparent 35%, rgba(255, 255, 255, .06) 40%, transparent 45%), radial-gradient(ellipse 50% 60% at 20% 30%, rgba(139, 92, 246, .14), transparent 70%), radial-gradient(ellipse 45% 50% at 80% 80%, rgba(20, 184, 166, .1), transparent 70%), linear-gradient(160deg, rgba(21, 18, 30, .35), rgba(5, 4, 7, .3));
+  --deco-a: '◆'; --deco-b: '◇ ◆'; }
+.side-obsidian::before { animation: obs-shine 2.6s ease-in-out infinite; }
+@keyframes obs-shine { 0%, 100% { opacity: .5; transform: rotate(0); } 50% { opacity: 1; transform: rotate(45deg) scale(1.15); } }
+.room-stage.many .side-obsidian::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-obsidian::before { animation: none; } }
+/* ------------------------------------------------------------------ Horse Stable (idée de R77, 2026-10-22 : « a horse
+   stable, with hay everywhere and that classic red and brown barn theme »). La porte d'une écurie : planches rouge
+   grange, croisillon en X d'un rouge plus sombre (blanc, il se mêlait aux chiffres) dans le cadre blanc, de la paille en bas. Les chiffres sont peints en blanc comme les
+   numéros de box, avec une ombre brune. Pendant le tirage, la paille vole devant (les chiffres tressautent). Un chiffre
+   qui se pose : un coup de sabot, il tombe d'un cran, claque et rebondit une fois (bois et fer : un rebond sec).
+   Fers à cheval, paille, chevaux qui passent la tête et galop : js/skinfx.js (SCENES.stable). */
+.num-card.skin-stable {
+  background:
+    linear-gradient(to top right, transparent calc(50% - .06em), rgba(92, 20, 14, .55) calc(50% - .06em) calc(50% + .06em), transparent calc(50% + .06em)),
+    linear-gradient(to bottom right, transparent calc(50% - .06em), rgba(92, 20, 14, .55) calc(50% - .06em) calc(50% + .06em), transparent calc(50% + .06em)),
+    linear-gradient(0deg, #e8c46a 0 .16em, #c99a3c .16em .2em, transparent .2em),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px .5em),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .04) 0 .25em, rgba(0, 0, 0, .04) .25em .5em),
+    linear-gradient(180deg, #b3261e, #8f1d17);
+  border: .14em solid #f5efe0; border-radius: .2rem; color: #fbf7ee;
+  box-shadow: inset 0 0 0 1px #6b1410, inset 0 .1em .2em rgba(0, 0, 0, .25), 0 0 0 2px #5c3b1e, 0 10px 18px rgba(0, 0, 0, .4);
+}
+.skin-stable .slot {
+  position: relative; z-index: 1; font-family: 'Rockwell', 'Clarendon', 'Roboto Slab', Georgia, serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #fbf7ee; text-shadow: 0 .04em 0 #5c1a12, 0 .06em .06em rgba(40, 15, 5, .55);
+}
+.skin-stable .slot.ghost { opacity: .2; }
+.skin-stable .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-stable .slot.spinning { opacity: .6; color: #f3d9a4; text-shadow: none; animation: stb-trot .18s steps(2) infinite; }
+.skin-stable .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes stb-trot { from { transform: translateY(-.04em); } to { transform: translateY(.03em); } }
+/* Le coup de sabot : le chiffre descend d'un cran, claque, rebondit une fois. */
+.skin-stable .slot.revealed { animation: stb-clop .5s backwards; }
+@keyframes stb-clop {
+  0% { transform: translateY(-.35em); color: #f3d9a4; animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  35% { transform: translateY(.04em) scale(1.05, .95); color: #ffffff; animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  55% { transform: translateY(-.08em); }
+  75% { transform: translateY(.01em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-stable .slot { animation: none !important; } }
+.side-stable { --side-border: #b3261e; --side-glow: 0 0 16px rgba(232, 196, 106, .3); --side-ink: #b3261e;
+  --side-bg: linear-gradient(0deg, rgba(232, 196, 106, .35) 0 12px, transparent 12px), repeating-linear-gradient(90deg, rgba(179, 38, 30, .14) 0 22px, rgba(143, 29, 23, .1) 22px 24px), linear-gradient(180deg, rgba(179, 38, 30, .08), rgba(232, 196, 106, .1));
+  --deco-a: '🐴'; --deco-b: '🌾'; }
+.side-stable::before { transform-origin: 50% 90%; animation: stb-nod 1.8s ease-in-out infinite; }
+.side-stable::after { transform-origin: 50% 100%; animation: stb-sway 2.4s ease-in-out infinite; }
+@keyframes stb-nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-12deg) translateY(2px); } 50% { transform: rotate(4deg); } }
+@keyframes stb-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.room-stage.many .side-stable::before, .room-stage.many .side-stable::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-stable::before, .side-stable::after { animation: none; } }
+/* ------------------------------------------------------------------ Crate Smash (idée de jjcoolcid1, 2026-10-22 : « a
+   metal ball or different color balls that launch at the crate or barrel and break it showing what number it would
+   be »). Une remise : mur de briques sombres, sol en planches. Pendant le tirage, chaque chiffre est caché dans une
+   caisse en bois (un sur deux : un tonneau cerclé de fer) qui tremble. Un chiffre qui se pose : une bille la frappe, la
+   caisse vole en éclats et le chiffre peint au pochoir jaune apparaît derrière, d'un coup sec. Hors tirage (classement,
+   boutique), le chiffre s'affiche sans caisse. Billes, éclats et barrage final : js/skinfx.js (SCENES.crates). Pas de
+   lance-pierre ni d'oiseaux (règle des marques) : des billes lancées. */
+.num-card.skin-crates {
+  background:
+    linear-gradient(0deg, #6b4423 0 .22em, #4a2e17 .22em .25em, transparent .25em),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .35) 0 1px, transparent 1px .28em),
+    repeating-linear-gradient(90deg, transparent 0 .54em, rgba(0, 0, 0, .3) .54em calc(.54em + 1px)) 0 0 / 100% .56em,
+    repeating-linear-gradient(90deg, transparent 0 .27em, rgba(0, 0, 0, .3) .27em calc(.27em + 1px), transparent calc(.27em + 1px) .54em) 0 .28em / 100% .56em,
+    linear-gradient(180deg, #3f2a24, #2b1d19);
+  border: 2px solid #1c1210; border-radius: .4rem; color: #facc15;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .55), 0 0 14px rgba(250, 204, 21, .15), 0 10px 18px rgba(0, 0, 0, .45);
+  padding-bottom: .4em;
+}
+.skin-crates .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .74em; height: 1.04em; margin: 0 .03em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Stencil', 'Impact', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: #facc15; text-shadow: 0 .04em 0 #000, 0 0 .02em #000, 0 0 .2em rgba(250, 204, 21, .35);
+}
+/* la caisse (ou le tonneau, une case sur deux) : seulement pendant le tirage, puis elle éclate */
+.skin-crates .slot::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 52' preserveAspectRatio='none'><rect x='1.5' y='1.5' width='37' height='49' rx='2' fill='%23b7793a' stroke='%234a2e17' stroke-width='3'/><g stroke='%238a5526' stroke-width='1.2'><path d='M2 13H38M2 26H38M2 39H38'/></g><path d='M4 4L36 48M36 4L4 48' stroke='%236b4423' stroke-width='4'/><rect x='1.5' y='1.5' width='37' height='49' rx='2' fill='none' stroke='%23d79a55' stroke-width='1' opacity='.6'/></svg>") 50% 50% / 100% 100% no-repeat;
+  filter: drop-shadow(0 .04em .02em rgba(0, 0, 0, .6));
+}
+.skin-crates .slot:nth-of-type(2n)::before {
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 52' preserveAspectRatio='none'><path d='M6 2Q20 -1 34 2Q40 26 34 50Q20 53 6 50Q0 26 6 2Z' fill='%23a0602d' stroke='%234a2e17' stroke-width='2.5'/><g stroke='%23784219' stroke-width='1'><path d='M12 2Q9 26 12 50M20 1V51M28 2Q31 26 28 50'/></g><g fill='none' stroke='%23525252' stroke-width='3'><path d='M4 12Q20 15 36 12M3 40Q20 43 37 40'/></g></svg>");
+}
+.skin-crates .slot.spinning::before { opacity: 1; animation: cr-jiggle .2s steps(2) infinite; }
+@keyframes cr-jiggle { from { transform: rotate(-2deg) translateY(-.01em); } to { transform: rotate(2deg) translateY(.01em); } }
+.skin-crates .slot.revealed::before { animation: cr-break .5s ease-out backwards; }
+@keyframes cr-break { 0% { opacity: 1; transform: none; } 12% { opacity: 1; transform: scale(1.08) rotate(-4deg); } 26% { opacity: 0; transform: scale(1.4) rotate(10deg); } 100% { opacity: 0; } }
+.skin-crates .slot.ghost { opacity: .22; }
+.skin-crates .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-crates .slot.collapsed::before { display: none; }
+.skin-crates .slot.spinning { opacity: 1; color: transparent; text-shadow: none; }
+.skin-crates .slot.revealed { animation: cr-show .5s backwards; }
+@keyframes cr-show { 0%, 14% { transform: scale(.6); color: transparent; text-shadow: none; } 30% { transform: scale(1.15); color: #fff7c2; } 48% { transform: scale(.96); } 66% { transform: scale(1.02); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-crates .slot, .skin-crates .slot::before { animation: none !important; } }
+.side-crates { --side-border: #6b4423; --side-glow: 0 0 16px rgba(250, 204, 21, .2); --side-ink: #b7793a;
+  --side-bg: linear-gradient(0deg, rgba(107, 68, 35, .35) 0 14px, transparent 14px), repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 12px), linear-gradient(180deg, rgba(63, 42, 36, .25), rgba(43, 29, 25, .25));
+  --deco-a: '📦'; --deco-b: '🛢️'; }
+.side-crates::before { animation: cr-wobble 1.6s ease-in-out infinite; }
+@keyframes cr-wobble { 0%, 70%, 100% { transform: none; } 78% { transform: rotate(-8deg); } 86% { transform: rotate(6deg); } 94% { transform: rotate(-3deg); } }
+.room-stage.many .side-crates::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-crates::before { animation: none; } }
+/* ------------------------------------------------------------------ Construction (idée de yukitsunodaiscool, 2026-10-22 :
+   « a construction site skin where a crane drops bricks on the numbers when a mythic or higher is rolled it explodes »).
+   Un chantier : une palissade de béton, un liseré jaune et noir. Les chiffres sont en briques rouges jointoyées de
+   blanc. Pendant le tirage, ils pendent au crochet et se balancent. Un chiffre qui se pose : la grue le lâche, il tombe,
+   claque au sol (matière dure : choc sec et poussière) et se tasse. Grue, crochet, poussière et démolition (dès
+   Mythic, une explosion de chantier contrôlée : poussière et briques, sans armes) : js/skinfx.js (SCENES.crane). */
+.num-card.skin-crane {
+  background:
+    repeating-linear-gradient(-45deg, #facc15 0 .18em, #111827 .18em .36em) 0 100% / 100% .16em no-repeat,
+    repeating-linear-gradient(-45deg, #facc15 0 .18em, #111827 .18em .36em) 0 0 / 100% .12em no-repeat,
+    radial-gradient(circle at 20% 40%, rgba(255, 255, 255, .05) 0 .05em, transparent .06em) 0 0 / .5em .5em,
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(0, 0, 0, .12) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(180deg, #a8a29e, #8a847f 60%, #78716c);
+  border: 2px solid #44403c; border-radius: .3rem; color: #b91c1c;
+  box-shadow: inset 0 .08em .2em rgba(255, 255, 255, .2), inset 0 -.1em .2em rgba(0, 0, 0, .25), 0 0 14px rgba(250, 204, 21, .2), 0 10px 18px rgba(0, 0, 0, .4);
+  padding-top: .38em; padding-bottom: .38em;
+}
+.skin-crane .slot {
+  position: relative; font-family: 'Arial Black', 'Helvetica Neue', system-ui, sans-serif; font-weight: 900; font-variant-numeric: normal;
+  color: #b91c1c; -webkit-text-stroke: .03em #f5f5f4;
+  text-shadow: 0 .05em 0 #57130f, 0 .07em .06em rgba(0, 0, 0, .45);
+}
+.skin-crane .slot.ghost { opacity: .2; }
+.skin-crane .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Au crochet : le chiffre pend et se balance, un peu au-dessus de sa place. */
+.skin-crane .slot.spinning { opacity: .6; color: #7f1d1d; transform-origin: 50% -60%; animation: crn-swing .5s ease-in-out infinite alternate; }
+.skin-crane .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes crn-swing { from { transform: translateY(-.12em) rotate(-5deg); } to { transform: translateY(-.12em) rotate(5deg); } }
+/* La grue lâche : il tombe, claque au sol, se tasse (choc sec). */
+.skin-crane .slot.revealed { animation: crn-drop .55s backwards; }
+@keyframes crn-drop {
+  0% { transform: translateY(-.7em); animation-timing-function: cubic-bezier(.55, 0, .95, .45); }
+  38% { transform: translateY(.03em) scale(1.04, .95); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  52% { transform: translateY(-.05em); }
+  68% { transform: translateY(0); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-crane .slot { animation: none !important; } }
+.side-crane { --side-border: #facc15; --side-glow: 0 0 16px rgba(250, 204, 21, .3); --side-ink: #ca8a04;
+  --side-bg: repeating-linear-gradient(-45deg, rgba(250, 204, 21, .5) 0 8px, rgba(17, 24, 39, .5) 8px 16px) 0 100% / 100% 8px no-repeat, linear-gradient(180deg, rgba(168, 162, 158, .2), rgba(120, 113, 108, .18));
+  --deco-a: '🏗️'; --deco-b: '🧱'; }
+.side-crane::after { animation: crn-brick 1.8s ease-in infinite; }
+@keyframes crn-brick { 0% { transform: translateY(-14px); opacity: 0; } 40% { opacity: .8; } 60% { transform: translateY(0); } 70% { transform: translateY(-3px); } 80%, 100% { transform: none; } }
+.room-stage.many .side-crane::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-crane::after { animation: none; } }
