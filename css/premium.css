@@ -971,3 +971,72 @@
 @keyframes dmn-fall { 0% { transform: translateY(-6px) rotate(-20deg); } 50% { transform: translateY(2px) rotate(15deg); } 100% { transform: translateY(-6px) rotate(-20deg); } }
 .room-stage.many .side-demon::before, .room-stage.many .side-demon::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-demon::before, .side-demon::after { animation: none; } }
+
+/* ==================================================================== ☯️ Yin and Yang (lot 2 du 2026-11-05)
+   Idée de kaz (2026-10-31, Legendary) : « a fully black skin while the numbers are white, and every number the colors
+   invert … The numbers are chinese text and they are rolling until they become a number; they are slightly foggy.
+   Background: floating yin yang circles foggy and transparent » ; et de JBearr12 (2026-11-01 : « the colors switch every
+   time … make a yin and yang background »). L'encre et le papier : la carte est noire, les chiffres blancs ; à chaque
+   chiffre posé, toute la carte s'inverse (papier blanc, chiffres noirs), puis revient, et ainsi de suite (règle :has()
+   sur le nombre de cases posées, elle marche aussi sans la scène). Des cercles du yin et du yang flottent dans la brume
+   derrière. Pendant le tirage, les chiffres sont des chiffres chinois flous qui défilent (spinChar dans js/app.js) ; un
+   chiffre qui se pose sort de la brume d'un coup de pinceau. Le tourbillon qui inverse la carte, les carpes koï et le
+   grand taiji : js/skinfx.js (SCENES.yinyang). */
+.num-card.skin-yinyang {
+  background: radial-gradient(ellipse 60% 50% at 20% 90%, rgba(168, 162, 158, .18), transparent 70%), radial-gradient(ellipse 50% 45% at 85% 15%, rgba(168, 162, 158, .14), transparent 70%);
+  background-color: #0c0a09; color: #fafaf9;
+  border: 2px solid #78716c; border-radius: .6rem;
+  box-shadow: inset 0 0 0 1px rgba(250, 250, 249, .18), inset 0 0 .8em rgba(120, 113, 108, .35), 0 0 0 3px rgba(120, 113, 108, .25), 0 0 20px rgba(214, 211, 209, .25), 0 10px 20px rgba(0, 0, 0, .45);
+  transition: background-color .32s ease, color .32s ease, border-color .32s ease;
+}
+/* les cercles du yin et du yang qui flottent dans la brume (sur ::before : la carte garde ses propres animations) */
+.num-card.skin-yinyang::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23a8a29e' fill-opacity='.16'/><path d='M50 2A48 48 0 0 1 50 98A24 24 0 0 1 50 50A24 24 0 0 0 50 2Z' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='26' r='7' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='74' r='7' fill='%23a8a29e' fill-opacity='.2'/></svg>") 18% 34% / 1.1em 1.1em no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23a8a29e' fill-opacity='.16'/><path d='M50 2A48 48 0 0 1 50 98A24 24 0 0 1 50 50A24 24 0 0 0 50 2Z' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='26' r='7' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='74' r='7' fill='%23a8a29e' fill-opacity='.2'/></svg>") 80% 70% / .8em .8em no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23a8a29e' fill-opacity='.16'/><path d='M50 2A48 48 0 0 1 50 98A24 24 0 0 1 50 50A24 24 0 0 0 50 2Z' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='26' r='7' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='74' r='7' fill='%23a8a29e' fill-opacity='.2'/></svg>") 56% 20% / .6em .6em no-repeat;
+  filter: blur(.6px); animation: yy-drift 14s ease-in-out infinite alternate;
+}
+@keyframes yy-drift { from { background-position: 14% 40%, 84% 64%, 52% 16%; } to { background-position: 24% 26%, 74% 80%, 62% 30%; } }
+/* un nombre impair de chiffres posés : le papier blanc et l'encre noire */
+.num-card.skin-yinyang:has(> .slot:nth-of-type(1).revealed):not(:has(> .slot:nth-of-type(2).revealed)),
+.num-card.skin-yinyang:has(> .slot:nth-of-type(3).revealed):not(:has(> .slot:nth-of-type(4).revealed)),
+.num-card.skin-yinyang:has(> .slot:nth-of-type(5).revealed):not(:has(> .slot:nth-of-type(6).revealed)),
+.num-card.skin-yinyang:has(> .slot:nth-of-type(7).revealed):not(:has(> .slot:nth-of-type(8).revealed)),
+.num-card.skin-yinyang:has(> .slot:nth-of-type(9).revealed):not(:has(> .slot:nth-of-type(10).revealed)) {
+  background-color: #f5f5f4; color: #0c0a09; border-color: #a8a29e;
+}
+.skin-yinyang .slot {
+  position: relative; color: inherit; font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif; font-weight: 700; font-variant-numeric: lining-nums;
+  text-shadow: 0 0 .12em rgba(168, 162, 158, .6); transition: color .32s ease;
+}
+.num-card.skin-yinyang:has(> .slot:nth-of-type(1).revealed):not(:has(> .slot:nth-of-type(2).revealed)) .slot,
+.num-card.skin-yinyang:has(> .slot:nth-of-type(3).revealed):not(:has(> .slot:nth-of-type(4).revealed)) .slot,
+.num-card.skin-yinyang:has(> .slot:nth-of-type(5).revealed):not(:has(> .slot:nth-of-type(6).revealed)) .slot,
+.num-card.skin-yinyang:has(> .slot:nth-of-type(7).revealed):not(:has(> .slot:nth-of-type(8).revealed)) .slot,
+.num-card.skin-yinyang:has(> .slot:nth-of-type(9).revealed):not(:has(> .slot:nth-of-type(10).revealed)) .slot {
+  text-shadow: 0 0 .12em rgba(120, 113, 108, .45);
+}
+.skin-yinyang .slot.ghost { opacity: .18; }
+.skin-yinyang .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+/* Pendant le tirage : des chiffres chinois (零 一 二 …) défilent dans la brume. */
+.skin-yinyang .slot.spinning { opacity: .7; color: inherit; font-family: 'Songti SC', 'STSong', 'SimSun', 'Noto Serif CJK SC', serif; font-size: .82em; filter: blur(1.1px); animation: yy-mist .4s ease-in-out infinite alternate; }
+.skin-yinyang .slot.spinning:nth-of-type(2n) { animation-delay: -.2s; }
+@keyframes yy-mist { from { transform: translateY(-.05em); filter: blur(1.4px); } to { transform: translateY(.04em); filter: blur(.7px); } }
+/* Le coup de pinceau : flou et trop grand, le chiffre sort de la brume, se resserre et se pose. */
+.skin-yinyang .slot.revealed { animation: yy-ink .62s backwards; }
+@keyframes yy-ink {
+  0% { transform: scale(1.3) rotate(-6deg); filter: blur(5px); letter-spacing: .1em; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  40% { transform: scale(.95) rotate(1deg); filter: blur(0); }
+  64% { transform: scale(1.02); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .num-card.skin-yinyang::before, .skin-yinyang .slot { animation: none !important; } }
+.room-stage.many .num-card.skin-yinyang::before { animation: none; }
+/* Cadre de duel : moitié encre, moitié papier, deux cercles du yin et du yang ; ☯️ tourne lentement. */
+.side-yinyang { --side-border: #a8a29e; --side-glow: 0 0 18px rgba(214, 211, 209, .35); --side-ink: #78716c;
+  --side-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23a8a29e' fill-opacity='.16'/><path d='M50 2A48 48 0 0 1 50 98A24 24 0 0 1 50 50A24 24 0 0 0 50 2Z' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='26' r='7' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='74' r='7' fill='%23a8a29e' fill-opacity='.2'/></svg>") 85% 20% / 46px 46px no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23a8a29e' fill-opacity='.16'/><path d='M50 2A48 48 0 0 1 50 98A24 24 0 0 1 50 50A24 24 0 0 0 50 2Z' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='26' r='7' fill='%2378716c' fill-opacity='.22'/><circle cx='50' cy='74' r='7' fill='%23a8a29e' fill-opacity='.2'/></svg>") 12% 80% / 34px 34px no-repeat, linear-gradient(100deg, rgba(12, 10, 9, .28) 0 50%, rgba(250, 250, 249, .14) 50%);
+  --deco-a: '☯'; --deco-b: '☯'; }
+.side-yinyang::before { font-size: 1.4em; animation: yy-turn 6s linear infinite; }
+.side-yinyang::after { animation: yy-turn 9s linear infinite reverse; }
+@keyframes yy-turn { to { transform: rotate(360deg); } }
+.room-stage.many .side-yinyang::before, .room-stage.many .side-yinyang::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-yinyang::before, .side-yinyang::after { animation: none; } }

@@ -1,6 +1,7 @@
 // GET /api/leaderboard?period=day|week|month|all|xp|coins|worst|event|rolls|median&span=day|week|month|all&me=<playerId>
 // Top 100 des meilleurs tirages de la période, la place du joueur s'il est plus loin, et le nombre de tirages du jour.
 // period=xp : classement à l'XP à vie (somme de tous les tirages) ; chaque ligne montre aussi le meilleur tirage.
+// GET /api/leaderboard?hof=1 : Hall of Fame ; ?badges=1[&mode=hard] : nombre de joueurs qui possèdent chaque badge.
 const { hardPeriods, hardKey, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, worstKeys, breathe, redis, engine, scopes, dayKey, historyKey, XP_LB, ROLLS_LB, WORST_LB, WORST_BEST, lifetimeTotals, statsKey, cors, send, flushDue, rollSet, xpKey, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct } = require('./_lib');
 
 const LIMIT = 100;
@@ -249,6 +250,9 @@ module.exports = async (req, res) => {
     const period = ['day', 'week', 'month', 'all', 'xp', 'coins', 'worst', 'event', 'rolls', 'median'].includes(params.get('period')) ? params.get('period') : 'day';
     const me = /^[0-9a-f]{16}$/.test(params.get('me') || '') ? params.get('me') : '';
     const hard = params.get('mode') === 'hard';
+    // Hall of Fame (idée d'Avaneesh_17) et propriétaires de chaque badge (idée de Tumored) : api/_hof.js.
+    if (params.get('hof') === '1') return send(res, 200, await require('./_hof').view());
+    if (params.get('badges') === '1') return send(res, 200, await require('./_hof').badgeOwners(hard));
     if (period === 'coins') return send(res, 200, await coinsBoard(me)); // pièces : communes aux deux modes
     // Ni événement de la semaine ni médiane en mode difficile : un classement vide, sans erreur.
     if (hard && (period === 'event' || period === 'median')) return send(res, 200, { period, mode: 'hard', entries: [], mine: null, players: 0, rolls: 0, rollsToday: 0 });

@@ -482,6 +482,11 @@ const TOP_TIERS = ['celestial', 'divine', 'godlike', 'infinite'];
 const GODLIKE_VERSION = '1';
 const statsKey = id => `stats:${id}`;
 const badgesKey = id => `badges:${id}`;
+// Nombre de joueurs qui possèdent chaque badge (idée de Tumored, 2026-10-31 : « give every badge an owner counter ») :
+// un seul hash, champ = id du badge, +1 quand un tirage apporte à un joueur un badge qu'il n'avait pas (SADD répond 1).
+// Mode difficile à part (hbown). Jamais qui : seulement des nombres. Rattrapage : tools/backfill-badge-owners.js.
+const BADGE_OWNERS = 'bown';
+const newBadgeWrites = (key, ids, out, at) => (at < 0 ? [] : ids.filter((b, i) => Number(out[at + i]) === 1).map(b => ['HINCRBY', key, b, 1]));
 const toObject = flat => {
   const o = {};
   for (let i = 0; i < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1];
@@ -717,8 +722,9 @@ async function recordRoll(playerId, n, t) {
   // nombre passerait pour « jamais tiré »).
   const countAt = writes.length;
   writes.push(['BITFIELD', NUM_COUNT_KEY, 'INCRBY', 'u32', `#${n}`, 1], ['SET', NUM_COUNT_SINCE, t, 'NX'], ['EXISTS', NUM_COUNT_READY]);
-  const badgeAt = a.earnedIds.length ? writes.length : -1; // SADD répond le nombre de badges jamais vus (titres de collection)
-  if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
+  // Un SADD par badge : chacun répond 1 si le joueur ne l'avait pas (titres de collection, compteur de propriétaires).
+  const badgeAt = a.earnedIds.length ? writes.length : -1;
+  for (const b of a.earnedIds) writes.push(['SADD', badgesKey(playerId), b]);
   if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
   // coins : ce que ce tirage rapporte, Weekend Rush compris (affiché sous l'XP, idée de jaxoncool43, 2026-10-24).
   let coins = 0;
@@ -772,7 +778,9 @@ async function recordRoll(playerId, n, t) {
   let stats = { ...toObject(out[out.length - 4]), badges: Number(out[out.length - 3]) };
 
   // Meilleur tirage, "meilleur du jour" et nouveau joueur : écrits après coup, seulement s'ils changent.
-  const fix = [];
+  const fix = newBadgeWrites(BADGE_OWNERS, a.earnedIds, out, badgeAt);
+  const freshBadges = fix.length;
+  fix.push(...require('./_hof').rollWrites({ playerId, n, t, tier: a.tier, s, stats })); // Hall of Fame (idée d'Avaneesh_17)
   if (s > Number(stats.best || 0)) { fix.push(['HSET', statsKey(playerId), 'best', s]); stats.best = s; }
   if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', statsKey(playerId), 'dayTop', 1]); stats.dayTop = 1; }
   if (!stats.v && Number(out[out.length - 2]) <= 1) { fix.push(['HSET', statsKey(playerId), 'v', STATS_VERSION]); stats.v = STATS_VERSION; }
@@ -793,7 +801,7 @@ async function recordRoll(playerId, n, t) {
   if (!stats.v) stats = await rebuildStats(playerId); // ancien joueur : reconstruites une fois depuis l'historique
   else stats = await splitTopTiers(playerId, stats);
   // Relu seulement si un badge neuf peut compléter une rareté pas encore obtenue.
-  const mayComplete = badgeAt >= 0 && Number(out[badgeAt]) > 0 && a.earnedIds.some(id => COLLECTION_TIER.has(id) && !Number(stats[`col:${COLLECTION_TIER.get(id)}`]));
+  const mayComplete = freshBadges > 0 && a.earnedIds.some(id => COLLECTION_TIER.has(id) && !Number(stats[`col:${COLLECTION_TIER.get(id)}`]));
   if (stats.colv !== COLLECTION_VERSION || mayComplete) stats = await syncCollections(playerId, stats);
   withUniq(stats, uniq);
   // Nouveau record Mythic ou mieux d'un joueur qui a lié son Discord : son rôle de rareté suit (api/_discord_link.js).
@@ -841,7 +849,8 @@ async function recordHardRoll(playerId, n, t) {
     ['HINCRBY', wk, 'rolls', 1], ...(WEEK_QUEST_TIERS.has(a.tier) ? [['HINCRBY', wk, `t:${a.tier}`, 1]] : []), ['EXPIRE', wk, WEEK_QUEST_TTL],
     ['ZADD', SEEN_KEY, t, playerId], ['HINCRBY', actKey(dayKey(t)), playerId, 1], ['EXPIRE', actKey(dayKey(t)), ACT_TTL], ['HSETNX', sk, 'first', t],
   ];
-  if (a.earnedIds.length) writes.push(['SADD', hardBadgesKey(playerId), ...a.earnedIds]);
+  const badgeAt = a.earnedIds.length ? writes.length : -1; // un SADD par badge, comme en mode normal (compteur hbown)
+  for (const b of a.earnedIds) writes.push(['SADD', hardBadgesKey(playerId), b]);
   if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, normalTierMin(a.tier), t)); // le minimum normal de sa rareté
   let coins = 0;
   const Shop = require('../js/shop.js'), rate = Shop.rollRate(dayRoll);
@@ -867,7 +876,8 @@ async function recordHardRoll(playerId, n, t) {
   const out = await redis(writes);
   const dayRank = out[out.length - 1] === null ? null : Number(out[out.length - 1]) + 1;
   const stats = { ...toObject(out[out.length - 4]), badges: Number(out[out.length - 3]), hbadges: Number(out[out.length - 2]) };
-  const fix = [];
+  const fix = newBadgeWrites(hardKey(BADGE_OWNERS), a.earnedIds, out, badgeAt);
+  fix.push(...require('./_hof').rollWrites({ playerId, n, t, tier: a.tier, s, stats, hard: true })); // Hall of Fame (Avaneesh_17)
   if (s > Number(stats['h:best'] || 0)) { fix.push(['HSET', sk, 'h:best', s]); stats['h:best'] = String(s); }
   if (dayRank === 1 && !Number(stats.dayTop)) { fix.push(['HSET', sk, 'dayTop', 1]); stats.dayTop = 1; } // Daily King, commun
   if (fix.length) await redis(fix);
@@ -917,7 +927,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll,
+module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll, BADGE_OWNERS, badgesKey,
   bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,

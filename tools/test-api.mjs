@@ -990,7 +990,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
       if (item.until && Date.now() >= Date.parse(item.until)) { assert.equal(r.status, 422, 'Zombie Moon n\'est plus en vente'); continue; }
       assert.equal(r.status, 200, JSON.stringify(r.body));
       assert.equal(r.body.wall, id, 'acheté = affiché');
-      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
+      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (la part de l'idée est créée en plus)`);
     }
   }
   // Fonds d'idées de joueurs du 2026-11-05 (tri de Sacha), lot « ciel et espace » : des fonds normaux, dans la caisse, avec
@@ -6773,6 +6773,189 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(typeof r.body.seen, 'number'); assert.equal(ncGet(r.body.n), r.body.seen + 1);
 }
 
+// ================================================================ features-misc (idées du 2026-11-05)
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js')), Shop = require(path.join(ROOT, 'js/shop.js')), Q = require(path.join(ROOT, 'js/quests.js'));
+  const Hof = require(path.join(ROOT, 'api/_hof.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), qApi = require(path.join(ROOT, 'api/quests.js'));
+  const tick = () => new Promise(res => setTimeout(res, 3));
+  const hget = (k, f) => run([['HGET', k, f]])[0].result;
+  const make = async (hex, name) => { const p = { playerId: hex.repeat(16 / hex.length), secret: hex.repeat(32 / hex.length), name }; db.delete(`cooldown:${p.playerId}`); const r = await call(roll, { method: 'POST', body: p }); assert.equal(r.status, 200, JSON.stringify(r.body)); return p; };
+
+  // 1. Part de 5 % sur les fonds d'écran (idée de qwertyuiop, 2026-11-01) : achat direct et caisse de fonds payée ; rien
+  //    pour soi-même, rien pour une caisse ouverte avec une clé, et l'acheteur paie le prix normal.
+  { const author = await make('f1a1', 'WallAuthor'), buyer = await make('f1b2', 'WallBuyer');
+    run([['HINCRBY', `stats:${buyer.playerId}`, 'bonus', 20000], ['HINCRBY', `stats:${author.playerId}`, 'bonus', 20000]]);
+    const forest = Shop.wallById.get('forest'), stars = Shop.wallById.get('stars'), was = [forest.idea, stars.idea], draw = Shop.drawCase;
+    forest.idea = 'wallauthor'; stars.idea = 'WallAuthor'; // retrouvé à la casse près
+    const roy = () => Number(hget(`stats:${author.playerId}`, 'royalty')) || 0;
+    const post = async (who, body) => { await new Promise(res => setTimeout(res, 20)); return call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, ...body } }); };
+    try {
+      const c0 = (await call(shopApi, { url: `/api/shop?me=${buyer.playerId}` })).body.coins;
+      let r = await post(buyer, { action: 'buywall', wall: 'forest' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(roy(), Math.round(forest.price * Shop.IDEA_SHARE), '5 % du prix du fond');
+      assert.equal(r.body.coins, c0 - forest.price, 'l\'acheteur paie le prix normal');
+      r = await post(buyer, { action: 'buywall', wall: 'forest' }); assert.equal(roy(), 25, 'déjà possédé : rien de plus');
+      r = await post(author, { action: 'buywall', wall: 'forest' }); assert.equal(r.status, 200); assert.equal(roy(), 25, 'rien pour soi-même');
+      const box = Shop.caseById.get('wallpaper');
+      Shop.drawCase = () => 'stars';
+      r = await post(buyer, { action: 'case', case: 'wallpaper' }); assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'stars', false], JSON.stringify(r.body));
+      assert.equal(roy(), 25 + Math.round(box.price * Shop.IDEA_SHARE), '5 % du prix de la caisse de fonds');
+      r = await post(buyer, { action: 'case', case: 'wallpaper' }); assert.equal(r.body.duplicate, true); assert.equal(roy(), 55, 'rien pour un doublon');
+      run([['HINCRBY', `stats:${author.playerId}`, 'key:premium', 1]]);
+      r = await post(author, { action: 'case', case: 'wallpaper', free: 'premium' }); assert.equal(r.status, 200); assert.equal(roy(), 55, 'clé : rien');
+    } finally { Shop.drawCase = draw; [forest.idea, stars.idea] = was; }
+  }
+
+  // 2. Relance de quête (idée de Mace_67, 2026-11-03) : 3 par semaine, une quête pas réclamée remplacée par une autre du
+  //    même groupe, la progression du groupe gardée, et les réclamations suivent la nouvelle quête.
+  { const mace = await make('f2c3', 'Maceish'), qPost = (action, extra = {}) => call(qApi, { method: 'POST', body: { playerId: mace.playerId, secret: mace.secret, action, ...extra } });
+    const day = Lib.dayKey(Date.now()), qk = `q:${day}:${mace.playerId}`;
+    let r = await call(qApi, { url: `/api/quests?me=${mace.playerId}` });
+    assert.deepEqual(r.body.rerolls, { left: 3, max: 3 });
+    const duel = r.body.quests.find(q => Q.byId.get(q.id).group === 'duel');
+    run([['HSET', qk, 'duels', 1]]);
+    r = await qPost('reroll', { quest: duel.id }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.swapped.from, duel.id); assert.notEqual(r.body.swapped.to, duel.id);
+    assert.equal(Q.byId.get(r.body.swapped.to).group, 'duel', 'même groupe');
+    assert.equal(r.body.rerolls.left, 2);
+    const now1 = r.body.quests.find(q => q.id === r.body.swapped.to);
+    assert.ok(now1 && !r.body.quests.some(q => q.id === duel.id), 'la quête est remplacée pour ce joueur seulement');
+    assert.equal(now1.progress, Math.min(now1.target, Q.byId.get(now1.id).value({ duels: 1, duelWins: 0 })), 'la progression du groupe est gardée');
+    const other = await make('f2d4', 'NotMace');
+    assert.deepEqual((await call(qApi, { url: `/api/quests?me=${other.playerId}` })).body.quests.map(q => q.id), Q.ofDay(day).map(q => q.id), 'les autres gardent les quêtes du jour');
+    assert.equal((await qPost('reroll', { quest: duel.id })).status, 400, 'l\'ancienne quête n\'est plus la sienne');
+    assert.equal((await qPost('claim', { quest: duel.id })).status, 400, 'ni à réclamer');
+    // La nouvelle se réclame, puis ne se relance plus.
+    run([['HSET', qk, 'duels', 3, 'duelWins', 1]]);
+    r = await qPost('claim', { quest: now1.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, now1.reward);
+    r = await qPost('reroll', { quest: now1.id }); assert.equal(r.status, 422); assert.match(r.body.error, /already claimed/);
+    // 3 au plus par semaine (le compteur rendu après un refus) ; le tout-fini compte les quêtes relancées.
+    r = await call(qApi, { url: `/api/quests?me=${mace.playerId}` }); assert.equal(r.body.rerolls.left, 2, 'un refus ne coûte rien');
+    const rolls = r.body.quests.find(q => Q.byId.get(q.id).group === 'rolls');
+    r = await qPost('reroll', { quest: rolls.id }); assert.equal(r.status, 200);
+    const cas = r.body.quests.find(q => Q.byId.get(q.id).group === 'casino');
+    r = await qPost('reroll', { quest: cas.id }); assert.equal(r.status, 200); assert.equal(r.body.rerolls.left, 0);
+    const xpq = r.body.quests.find(q => Q.byId.get(q.id).group === 'xp');
+    r = await qPost('reroll', { quest: xpq.id }); assert.equal(r.status, 422); assert.equal(r.body.error, 'No rerolls left this week');
+    assert.equal(hget(`qw:${Lib.weekKey(Date.now())}:${mace.playerId}`, 'rerolls'), '3', 'le compteur ne dépasse jamais 3');
+    run([['HSET', qk, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'casino', 15, 'casinoBet', 500]]);
+    let last;
+    for (const q of (await call(qApi, { url: `/api/quests?me=${mace.playerId}` })).body.quests.filter(q => !q.claimed)) { last = await qPost('claim', { quest: q.id }); assert.equal(last.status, 200, JSON.stringify(last.body)); }
+    assert.ok(last.body.allDone, 'toutes les quêtes du joueur, relancées comprises, font le tout-fini');
+    assert.equal((await call(qApi, { method: 'POST', body: { playerId: mace.playerId, secret: '0'.repeat(32), action: 'reroll', quest: xpq.id } })).status, 403);
+  }
+
+  // 3. Propriétaires de chaque badge (idée de Tumored, 2026-10-31) : +1 la première fois qu'un joueur obtient un badge,
+  //    rien ensuite ; mode difficile à part ; rien d'affiché avant le rattrapage ; seulement des nombres.
+  { const own = (k = 'bown') => { const o = {}, flat = run([['HGETALL', k]])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = Number(flat[i + 1]); return o; };
+    const p1 = { playerId: 'f3e5'.repeat(4) }, p2 = { playerId: 'f3f6'.repeat(4) };
+    const ids69 = engine.analyze(69).earnedIds; assert.ok(ids69.length >= 1);
+    const o0 = own();
+    await Lib.recordRoll(p1.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 1, `${id} +1`);
+    await Lib.recordRoll(p1.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 1, `${id} : déjà à lui, rien`);
+    await Lib.recordRoll(p2.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 2, `${id} : un 2e joueur`);
+    const h0 = own('hbown'), hids = Lib.hardEngine().analyze(1234567890).earnedIds;
+    await Lib.recordHardRoll(p1.playerId, 1234567890, Date.now()); await tick();
+    for (const id of hids) assert.equal(own('hbown')[id] - (h0[id] || 0), 1, `difficile ${id} +1`);
+    assert.deepEqual(Object.fromEntries(ids69.map(id => [id, own()[id]])), Object.fromEntries(ids69.map(id => [id, (o0[id] || 0) + 2])), 'le mode difficile ne touche pas au normal');
+    Hof.clearOwnersCache();
+    let r = await call(leaderboard, { url: '/api/leaderboard?badges=1' });
+    assert.deepEqual([r.status, r.body], [200, { ready: false }], 'rien avant le rattrapage');
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-badge-owners.js'));
+    run([['HSET', 'bown', ids69[0], 99999]]);
+    const counts = await backfill({ log: () => {} });
+    assert.equal(own()[ids69[0]], 99999, 'essai à blanc : rien écrit'); assert.equal(run([['GET', 'bown:ready']])[0].result, null);
+    const holders = (prefix, id) => [...db.keys()].filter(k => new RegExp(`^${prefix}:[0-9a-f]{16}$`).test(k) && run([['SISMEMBER', k, id]])[0].result == 1).length;
+    for (const id of ids69) assert.equal(counts.normal[id], holders('badges', id), id);
+    for (const id of hids) assert.equal(counts.difficile[id], holders('hbadges', id), `difficile ${id}`);
+    await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(own(), counts.normal, '--apply remplace bown'); assert.deepEqual(own('hbown'), counts.difficile, 'et hbown');
+    Hof.clearOwnersCache();
+    r = await call(leaderboard, { url: '/api/leaderboard?badges=1' });
+    assert.equal(r.body.ready, true); assert.equal(r.body.counts[ids69[0]], counts.normal[ids69[0]]); assert.ok(r.body.players >= 2);
+    assert.ok(Object.values(r.body.counts).every(n => Number.isInteger(n) && n > 0) && !JSON.stringify(r.body).includes(p1.playerId), 'seulement des nombres');
+    r = await call(leaderboard, { url: '/api/leaderboard?badges=1&mode=hard' });
+    assert.equal(r.body.counts[hids[0]], counts.difficile[hids[0]]);
+  }
+
+  // 4. Hall of Fame (idée d'Avaneesh_17, 2026-11-02) : premier à tirer chaque Infinite, paliers d'XP et de tirages,
+  //    premières grandes raretés du mode difficile ; le premier garde sa place ; rattrapage depuis les historiques.
+  { const hof = () => { const o = {}, flat = run([['HGETALL', 'hof']])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = JSON.parse(flat[i + 1]); return o; };
+    assert.deepEqual(Hof.INFINITE, [0, 1, 2, 4, 5, 7, 24, 666666, 777777, 1000000], 'les 10 nombres Infinite d\'aujourd\'hui');
+    Hof.clearCache();
+    let r = await call(leaderboard, { url: '/api/leaderboard?hof=1' });
+    assert.deepEqual(r.body, { ready: false }, 'page fermée avant le rattrapage');
+    const ann = { playerId: 'f4a7'.repeat(4) }, ben = { playerId: 'f4b8'.repeat(4) };
+    const [N, N2] = Hof.INFINITE.filter(n => n !== 1 && n !== 24 && !hof()[`inf:${n}`]); // d'autres tests ont déjà tiré certains Infinite ; 1 et 24 servent au rattrapage
+    assert.ok(N2 !== undefined, 'au moins deux nombres Infinite jamais tirés dans le test');
+    run([['HSET', 'names', ann.playerId, 'HofAnn', ben.playerId, 'HofBen']]);
+    const t1 = Date.now();
+    await Lib.recordRoll(ann.playerId, N, t1); await tick();
+    assert.deepEqual(hof()[`inf:${N}`], { id: ann.playerId, t: t1, n: N });
+    await Lib.recordRoll(ben.playerId, N, Date.now()); await tick();
+    assert.equal(hof()[`inf:${N}`].id, ann.playerId, 'le premier garde sa place');
+    assert.equal(hof()[`inf:${N2}`], undefined);
+    // XP à vie : posé par le tirage qui franchit le palier, pas par les suivants.
+    run([['HSET', `stats:${ben.playerId}`, 'xpLife', 1e9 - 5]]);
+    const t2 = Date.now(); await Lib.recordRoll(ben.playerId, 123456, t2); await tick();
+    assert.deepEqual(hof()['xp:1000000000'], { id: ben.playerId, t: t2 });
+    await Lib.recordRoll(ann.playerId, 123456, Date.now()); await tick();
+    run([['HSET', `stats:${ann.playerId}`, 'xpLife', 2e9]]); await Lib.recordRoll(ann.playerId, 123457, Date.now()); await tick();
+    assert.equal(hof()['xp:1000000000'].id, ben.playerId, 'déjà au-dessus : rien');
+    // Tirages : le 10 000e.
+    run([['HSET', `stats:${ann.playerId}`, 'rolls', 9999]]);
+    const t3 = Date.now(); await Lib.recordRoll(ann.playerId, 123458, t3); await tick();
+    assert.equal(hof()['rolls:10000'].id, ann.playerId);
+    // Mode difficile : la première de chaque grande rareté (6767676767 est Godlike).
+    await Lib.recordHardRoll(ben.playerId, 6767676767, Date.now()); await tick();
+    assert.deepEqual([hof()['h:godlike'].id, hof()['h:godlike'].n], [ben.playerId, 6767676767]);
+    assert.equal(hof()['inf:6767676767'], undefined, 'pas dans les Infinite du mode normal');
+    // Rattrapage : un N plus ancien dans un historique, un 24 resté meilleur tirage (best:all), un palier d'XP et un
+    // de tirages retrouvés dans l'historique (2001 : plus anciens que tout le reste du test).
+    const old = { playerId: 'f4c9'.repeat(4) }, vet = { playerId: 'f4da'.repeat(4) }, grinder = { playerId: 'f4eb'.repeat(4) };
+    const T = Date.UTC(2001, 0, 1), sc = n => engine.scoreOf(n);
+    run([['HSET', 'names', old.playerId, 'HofOld', vet.playerId, 'HofVet', grinder.playerId, 'HofGrinder'],
+      ['ZADD', `hist:${old.playerId}`, T + 1000, `${T + 1000}:${N}`, T + 2000, `${T + 2000}:${N}`],
+      ['HSET', 'best:all', old.playerId, JSON.stringify({ n: 24, s: sc(24), t: T + 500 })],
+      // vet : 3 tirages ; l'XP passe 100 M au 3e (XP d'aujourd'hui = 100 M − 1 + XP du 3e)
+      ['ZADD', `hist:${vet.playerId}`, T + 10, `${T + 10}:111111`, T + 20, `${T + 20}:222222`, T + 30, `${T + 30}:333333`],
+      ['HSET', `stats:${vet.playerId}`, 'xpLife', 1e8 - 1 + sc(333333)], ['ZADD', 'lb:xp', 1e8 - 1 + sc(333333), vet.playerId],
+      // grinder : 10 001 tirages, l'historique n'en garde que 3 (le 9 999e, le 10 000e, le 10 001e)
+      ['ZADD', `hist:${grinder.playerId}`, T + 100, `${T + 100}:1`, T + 200, `${T + 200}:12`, T + 300, `${T + 300}:13`],
+      ['HSET', `stats:${grinder.playerId}`, 'rolls', 10001], ['ZADD', 'lb:rolls', 10001, grinder.playerId]]);
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-hof.js'));
+    const lines = [];
+    let b = await backfill({ log: x => lines.push(x) });
+    assert.deepEqual(b.found[`inf:${N}`], { id: old.playerId, t: T + 1000, n: N }, 'le plus ancien de l\'historique');
+    assert.deepEqual(b.found['inf:24'], { id: old.playerId, t: T + 500, n: 24 }, 'retrouvé par le meilleur tirage');
+    assert.deepEqual(b.found['xp:100000000'], { id: vet.playerId, t: T + 30 }, 'palier d\'XP daté au tirage qui l\'a franchi');
+    assert.deepEqual(b.found['rolls:10000'], { id: grinder.playerId, t: T + 200 }, 'le 10 000e tirage');
+    assert.equal(b.found['inf:1'].id, grinder.playerId);
+    assert.equal(hof()[`inf:${N}`].id, ann.playerId, 'essai à blanc : rien écrit'); assert.ok(lines.some(x => /Essai à blanc/.test(x)));
+    // un vieux joueur dont l'historique commence après le palier : daté au plus tard, marqué approx
+    run([['ZADD', `hist:${vet.playerId}`, T + 5, `${T + 5}:7`], ['HSET', `stats:${vet.playerId}`, 'xpLife', 3e8], ['ZADD', 'lb:xp', 3e8, vet.playerId]]);
+    b = await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(b.found['xp:100000000'], { id: vet.playerId, t: T + 5, approx: 1 }, 'franchi avant le plus vieux tirage gardé');
+    assert.equal(hof()[`inf:${N}`].id, old.playerId, 'remplacé par le plus ancien');
+    assert.equal(hof()['h:godlike'].id, ben.playerId, 'un palier posé en direct sans plus ancien est gardé');
+    // ann a 2 G d'XP mais peu de tirages gardés : elle a passé 1 G avant son plus vieux tirage, plus tôt que ben (en direct)
+    assert.deepEqual([hof()['xp:1000000000'].id, hof()['xp:1000000000'].approx], [ann.playerId, 1]);
+    Hof.clearCache();
+    r = await call(leaderboard, { url: '/api/leaderboard?hof=1' });
+    assert.equal(r.body.ready, true);
+    assert.deepEqual(r.body.infinite.find(x => x.n === N).first, { name: 'HofOld', t: T + 1000 });
+    assert.deepEqual(r.body.xp.find(x => x.m === 1e8).first, { name: 'HofVet', t: T + 5, approx: 1 });
+    assert.equal(r.body.infinite.length, 10);
+    assert.deepEqual(r.body.hard.find(x => x.tier === 'godlike'), { tier: 'godlike', first: r.body.hard.find(x => x.tier === 'godlike').first, n: 6767676767 });
+    assert.equal(r.body.hard.find(x => x.tier === 'godlike').first.name, 'HofBen');
+    for (const p of [ann, ben, old, vet, grinder]) assert.ok(!JSON.stringify(r.body).includes(p.playerId), 'jamais un id de joueur');
+  }
+}
+
 // Idées du 2026-11-05 (session social-chat) : meilleur tirage dans le chat (Loliarlex1248, MAYO), annonces Mythic+ en
 // difficile (Idkwhatnamemyself, Kag), contexte des signalements (jsand), silences levés par un modérateur (pople), étoile
 // et classement entre amis (Big Sexy, Edward), votes de la feuille de route (Trinity).
@@ -6910,6 +7093,124 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const lone = mkI(4, 'AllDifferent');
   run([['ZADD', `hist:${lone.playerId}`, t0, `${t0}:1`, t0 + 1000, `${t0 + 1000}:2`]]);
   r = await call(profile, { url: '/api/profile?name=AllDifferent' }); assert.equal(r.body.most, null, 'aucun nombre tiré deux fois');
+}
+
+// ================================================================ Supprimer son compte (demandé par Sacha, 2026-11-05)
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), shopApi = require(path.join(ROOT, 'api/shop.js')), roomApi = require(path.join(ROOT, 'api/room.js'));
+  const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+  const mkD = (k, nm, coins = 20000, rolls = 400) => { const id = `de${k}0`.repeat(4), secret = `de${k}f`.repeat(8); run([['SET', `player:${id}:secret`, sha(secret)], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, 'bonus', coins, 'first', 1], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+  const del = (p, extra = {}) => call(auth, { method: 'POST', body: { action: 'deleteAccount', playerId: p.playerId, secret: p.secret, name: p.name, ...extra } });
+  const fr = (p, action, extra = {}) => call(friendsApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action, ...extra } });
+  const clan = (p, op, extra = {}) => fr(p, 'clan', { op, ...extra });
+  const wait = () => new Promise(r => setTimeout(r, 3));
+  // Partout où l'identifiant apparaît encore : nom de clé, champ ou valeur de hash, membre de set ou de sorted set,
+  // élément de liste, valeur texte.
+  const traces = id => {
+    const out = [];
+    for (const [k, v] of db) {
+      if (k.includes(id)) out.push(k);
+      else if (v instanceof Map) { for (const [f, x] of v) if (String(f).includes(id) || String(x).includes(id)) out.push(`${k} → ${f}`); }
+      else if (v instanceof Set) { for (const m of v) if (String(m).includes(id)) out.push(`${k} ∋ ${m}`); }
+      else if (Array.isArray(v)) { if (v.some(x => String(x).includes(id))) out.push(`${k} []`); }
+      else if (typeof v === 'string' && v.includes(id)) out.push(`${k} = ${v}`);
+    }
+    return out;
+  };
+
+  const zed = mkD(1, 'DelZed'), yan = mkD(2, 'DelYan'), xia = mkD(3, 'DelXia'), wes = mkD(4, 'DelWes');
+  // Zed joue : tirages (classements, historique, badges, nums…), amis, cadeau, message privé, demande, clan, chat.
+  for (let i = 0; i < 3; i++) { db.delete(`cooldown:${zed.playerId}`); r = await call(roll, { method: 'POST', body: zed }); assert.equal(r.status, 200, JSON.stringify(r.body)); await wait(); }
+  r = await fr(zed, 'add', { name: 'DelYan' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(yan, 'accept', { name: 'DelZed' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(zed, 'add', { name: 'DelWes' }); assert.equal(r.status, 200, 'demande en attente chez Wes');
+  r = await fr(zed, 'gift', { name: 'DelYan', amount: 100 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(zed, 'message', { name: 'DelYan', text: 'hello there' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(yan, 'gift', { name: 'DelZed', amount: 50 }); assert.equal(r.status, 200, 'cadeau reçu, pas encore vu');
+  run([['HSET', `h2h:${zed.playerId}`, `w:${wes.playerId}`, '2'], ['HSET', `h2h:${wes.playerId}`, `l:${zed.playerId}`, '2'],
+    ['SADD', `skins:${zed.playerId}`, 'neon'], ['HSET', 'skins', zed.playerId, 'neon'], ['HSET', 'titles', zed.playerId, 'x'], ['HSET', 'bio', zed.playerId, 'hi'],
+    ['ZADD', `hhist:${zed.playerId}`, '1', '1:5'], ['HSET', 'avpub', zed.playerId, 'tokzed'], ['HSET', 'avtok', 'tokzed', zed.playerId], ['SET', `av:${zed.playerId}`, JSON.stringify({ tok: 'tokzed' })],
+    ['SET', `player:${zed.playerId}:pw`, 's1$x$y'], ['SET', `player:${zed.playerId}:google`, 'g-zed'], ['SET', 'google:g-zed', zed.playerId],
+    ['RPUSH', 'gc:msgs', JSON.stringify({ id: 'abcdefabcdef', a: zed.playerId, n: 'DelZed', x: 'yo', t: 1 }), JSON.stringify({ id: 'abcdefabcde0', a: yan.playerId, n: 'DelYan', x: 'hey', t: 2 })],
+    ['RPUSH', 'casino:feed', JSON.stringify({ id: zed.playerId, g: 'slots', n: 5, t: 1 })], ['SADD', `dmblock:${wes.playerId}`, zed.playerId], ['HSET', 'rx:gc', `abcdefabcde0|${zed.playerId}`, '1', `abcdefabcde0|${yan.playerId}`, '2'],
+    // Traces moins nettes : amitié à sens unique, lien Discord, position ouverte, ancien nom resté réservé, victoires du jour.
+    ['SADD', `fr:${xia.playerId}`, zed.playerId], ['HSET', 'discord:links', 'd-zed', zed.playerId], ['HSET', `pos:${zed.playerId}`, 'p1', '{}'], ['ZADD', 'pos:open', '1', `${zed.playerId}:p1`],
+    ['SET', 'name:oldzedname', zed.playerId], ['HSET', `dw:2026-11-05:${wes.playerId}`, zed.playerId, '1', 'total', '1']]);
+  // Clan : Xia le crée, Zed y entre comme simple membre (demande acceptée) et écrit dans le chat du clan.
+  r = await clan(xia, 'create', { clanName: 'Deleters', tag: 'DEL', emoji: '🛡️' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(zed, 'request', { tag: 'DEL' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(xia, 'accept', { name: 'DelZed' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(zed, 'say', { text: 'hi clan' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const yanKeys = traces(yan.playerId).length;
+
+  // 1. Refus : mauvais secret, mauvais pseudo (casse comprise), pseudo vide, compte suspendu, compte du créateur.
+  r = await del({ ...zed, secret: '0'.repeat(32) }); assert.equal(r.status, 403);
+  r = await del(zed, { name: 'delzed' }); assert.equal(r.status, 422); assert.match(r.body.error, /exactly/);
+  r = await del(zed, { name: '' }); assert.equal(r.status, 422);
+  r = await del({ ...yan, playerId: zed.playerId }); assert.equal(r.status, 403, 'le secret d\'un autre joueur');
+  assert.equal(run([['HGET', 'names', zed.playerId]])[0].result, 'DelZed', 'rien n\'a été effacé');
+  const ban = mkD(5, 'DelBanned'); run([['SADD', 'banned', ban.playerId]]);
+  r = await del(ban); assert.equal(r.status, 423, 'suspendu : rien ne passe, la suspension reste');
+  const own = mkD(6, 'DelOwner'); run([['HSET', `stats:${own.playerId}`, 'owner', 1]]);
+  r = await del(own); assert.equal(r.status, 403); assert.equal(run([['HGET', 'names', own.playerId]])[0].result, 'DelOwner');
+
+  // 2. Assis à une table de poker : refusé tant qu'il n'est pas parti ; après le départ, permis.
+  const pkr = mkD(7, 'DelPoker');
+  r = await call(shopApi, { method: 'POST', body: { playerId: pkr.playerId, secret: pkr.secret, action: 'poker', op: 'bot', buyin: 500 } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await del(pkr); assert.equal(r.status, 409); assert.match(r.body.error, /poker/);
+  assert.ok(run([['GET', `player:${pkr.playerId}:secret`]])[0].result !== 'deleted');
+  r = await call(shopApi, { method: 'POST', body: { playerId: pkr.playerId, secret: pkr.secret, action: 'poker', op: 'leave' } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await del(pkr); assert.equal(r.status, 200, JSON.stringify(r.body));
+  // Dans un duel pas fini : refusé.
+  const dly = mkD(8, 'DelDuel');
+  r = await call(roomApi, { method: 'POST', body: { playerId: dly.playerId, secret: dly.secret, name: 'DelDuel', action: 'create', size: 2 } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  run([['SET', `inroom:${dly.playerId}`, r.body.code, 'EX', 45]]);
+  r = await del(dly); assert.equal(r.status, 409); assert.match(r.body.error, /duel/);
+  // Inscrit à un tournoi pas fini (celui de demain : ceux d'aujourd'hui ont pu être joués plus haut) : refusé.
+  const tny = mkD(9, 'DelTourney'), tid = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  run([['ZADD', `tn:${tid}:in`, Date.now(), tny.playerId]]);
+  r = await del(tny); assert.equal(r.status, 409); assert.match(r.body.error, /tournament/);
+
+  // 3. Chef d'un clan avec d'autres membres : refusé (il passe la main ou dissout d'abord).
+  r = await del(xia); assert.equal(r.status, 409); assert.match(r.body.error, /pass the leadership/);
+  // Seul dans son clan : le clan est dissous avec le compte.
+  const solo = mkD('a', 'DelSolo');
+  r = await clan(solo, 'create', { clanName: 'Lonely Ones', tag: 'SOLO', emoji: '🛡️' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const soloCid = run([['HGET', 'clanof', solo.playerId]])[0].result;
+  r = await del(solo); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['EXISTS', `clan:${soloCid}`]])[0].result, 0, 'clan dissous');
+  assert.equal(run([['GET', 'clantagk:SOLO']])[0].result, null, 'tag libéré');
+
+  // 4. Zed supprime son compte.
+  r = await del(zed); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.deleted, true);
+  // Plus rien de lui, sauf la pierre tombale (aucune donnée) et ce qui est gardé exprès : ses idées, la modération.
+  const left = traces(zed.playerId).filter(x => x !== `player:${zed.playerId}:secret`);
+  assert.deepEqual(left, [], `restes : ${left.join(' | ')}`);
+  assert.equal(run([['GET', `player:${zed.playerId}:secret`]])[0].result, 'deleted');
+  assert.equal(run([['GET', 'google:g-zed']])[0].result, null, 'Google délié');
+  assert.equal(run([['HGET', 'rx:gc', `abcdefabcde0|${yan.playerId}`]])[0].result, '2', 'la réaction de Yan reste');
+  // Son ancien appareil : 403 (le site repart avec un joueur neuf), y compris en tirant ; le compte ne renaît pas.
+  db.delete(`cooldown:${zed.playerId}`);
+  r = await call(roll, { method: 'POST', body: zed }); assert.equal(r.status, 403);
+  r = await del(zed); assert.equal(r.status, 403);
+  assert.deepEqual(traces(zed.playerId), [`player:${zed.playerId}:secret`]);
+  // Le pseudo est libre : un autre joueur le prend.
+  const zed2 = { playerId: 'de2e'.repeat(4), secret: 'de2ef'.repeat(8).slice(0, 32), name: 'DelZed' };
+  r = await call(roll, { method: 'POST', body: zed2 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['HGET', 'names', zed2.playerId]])[0].result, 'DelZed');
+  // Ses amis ne le voient plus (amis, demandes), et ses traces chez eux sont parties.
+  r = await fr(yan, 'list'); assert.equal(r.status, 200);
+  assert.deepEqual(r.body.friends || [], []);
+  r = await fr(wes, 'list'); assert.deepEqual(r.body.incoming || [], [], 'la demande à Wes a disparu');
+  // Classements : plus là (le Zed qui vient de tirer est le nouveau joueur, 1 tirage).
+  for (const period of ['day', 'week', 'month', 'all']) {
+    r = await call(leaderboard, { url: `/api/leaderboard?period=${period}` });
+    assert.ok((r.body.entries || []).filter(e => e.name === 'DelZed').every(e => e.rolls === undefined || e.rolls <= 1), period);
+  }
+  assert.equal(run([['ZSCORE', 'lb:xp', zed.playerId]])[0].result, null);
+  // Son clan existe toujours sans lui ; Yan n'a rien perdu d'autre que lui (ses propres clés sont là).
+  r = await clan(xia, 'view'); assert.equal(r.status, 200); assert.deepEqual(r.body.clan.members.map(m => m.name), ['DelXia'], 'plus membre (le journal du clan garde « Zed left », comme pour un départ)');
+  assert.ok(traces(yan.playerId).length >= yanKeys - 3, 'les clés de Yan restent');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

@@ -209,6 +209,26 @@
     'Google sign-in could not load': 'La connexion Google n\'a pas pu se charger', 'Google sign-in failed, try again': 'Connexion Google échouée, réessaie', 'Google sign-in is unavailable right now.': 'Connexion Google indisponible pour le moment.',
     'Signed out: your history is saved in your Google account': 'Déconnecté : ton historique est gardé dans ton compte Google', 'Could not reach your account, try signing out again': 'Compte injoignable, réessaie de te déconnecter',
     'Roll animation': 'Animation du tirage', 'original': 'originale', 'normal': 'normale', 'Your data': 'Tes données', 'Export history': 'Exporter l\'historique', 'Import': 'Importer', 'Clear history': 'Effacer l\'historique',
+    // Supprimer son compte (demandé par Sacha, 2026-11-05)
+    'Delete my account': 'Supprimer mon compte', 'Delete your account?': 'Supprimer ton compte ?',
+    "This deletes your player from the server forever. It can't be undone: not even the creator can bring it back.": 'Ton joueur est effacé du serveur pour toujours. Impossible de revenir en arrière : même le créateur ne pourra pas le récupérer.',
+    'You lose:': 'Tu perds :', 'Every roll and your history, in Normal and Hard mode': 'Tous tes tirages et ton historique, en mode normal et difficile',
+    'Your coins, skins, wallpapers and everything you bought': 'Tes pièces, tes skins, tes fonds d\'écran et tout ce que tu as acheté',
+    'Your badges, titles, quests and achievements': 'Tes badges, titres, quêtes et succès', 'Your friends, your messages and your clan': 'Tes amis, tes messages et ton clan',
+    'Your places on every leaderboard': 'Tes places dans tous les classements', 'Your player name: anyone can take it after': 'Ton pseudo : n\'importe qui pourra le prendre ensuite',
+    'Your Google account is unlinked from this player. Signing in with it again starts a new player.': 'Ton compte Google est détaché de ce joueur. Te reconnecter avec lui crée un nouveau joueur.',
+    'Your password stops working.': 'Ton mot de passe ne marchera plus.', 'Type your player name to confirm': 'Tape ton pseudo pour confirmer',
+    'Delete forever': 'Supprimer pour toujours', 'Deleting…': 'Suppression…', 'Could not delete your account, try again': 'Impossible de supprimer ton compte, réessaie',
+    'Your account is deleted. This device starts again as a new player.': 'Ton compte est supprimé. Cet appareil repart avec un nouveau joueur.',
+    'Type your player name exactly as it is shown': 'Tape ton pseudo exactement comme il est écrit',
+    'This player has no name yet: nothing to delete on the server': 'Ce joueur n\'a pas encore de pseudo : rien à supprimer sur le serveur',
+    'This account cannot be deleted from here': 'Ce compte ne peut pas être supprimé ici',
+    'Leave your poker table first, then try again': 'Quitte d\'abord ta table de poker, puis réessaie',
+    'Leave your duel first, then try again in a minute': 'Quitte d\'abord ton duel, puis réessaie dans une minute',
+    'Your last duel roll is still being revealed: try again in a minute': 'Ton dernier tirage de duel est encore en train d\'être révélé : réessaie dans une minute',
+    'You are in a tournament: try again when it is over': 'Tu participes à un tournoi : réessaie quand il sera fini',
+    'You are in a clan war: try again when it is over': 'Tu es dans une guerre de clans : réessaie quand elle sera finie',
+    'You lead a clan: pass the leadership to someone first, or disband it': 'Tu es chef d\'un clan : passe d\'abord la main à quelqu\'un, ou dissous-le',
     'History cleared': 'Historique effacé', 'History is already empty.': 'L\'historique est déjà vide.', 'That file is not a valid RNG∞ export.': 'Ce fichier n\'est pas un export RNG∞ valide.', 'My profile': 'Mon profil', 'Privacy policy': 'Confidentialité', 'Done': 'OK',
     // dons
     '☕ Buy me a coffee': '☕ Offre-moi un café', 'Donate with PayPal': 'Donner avec PayPal', 'Select and copy the address': 'Sélectionne et copie l\'adresse',
@@ -308,9 +328,9 @@
     'Spinning Bread': 'Pain qui tourne', 'A gloriously low-quality loaf of bread spins in the middle of the screen, with tiny breads in orbit; rolls make it spin faster': 'Une miche de pain en glorieuse basse qualité tourne au milieu de l\'écran, avec de petits pains en orbite ; les tirages la font tourner plus vite',
     // six fonds de joueurs (2026-11-01)
     'Farm': 'Ferme', 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping': 'Une ferme au soleil et sa grange rouge : les vaches broutent, les moutons et les poules se promènent et un tracteur passe ; les tirages Epic+ font chanter le coq, les Mythic+ font battre des ailes à toutes les poules',
-    'Keyboard ASMR': 'Clavier ASMR', 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll': 'Un clavier pastel tout doux dont les touches s\'enfoncent toutes seules ; clique sur le fond pour en presser une avec un « thock » feutré, et il tape chaque nombre que tu tires',
+    'Keyboard ASMR': 'Clavier ASMR', 'A cozy pastel keyboard whose keys press down by themselves; type on your keyboard or click the background and its keys crunch down with you, and it types every number you roll': 'Un clavier pastel tout doux dont les touches s\'enfoncent toutes seules ; tape sur ton clavier ou clique sur le fond et ses touches craquent avec toi, et il tape chaque nombre que tu tires',
     'Thunderstorm': 'Orage', 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder': 'De la pluie sous des nuages lourds, un éclair doux au loin toutes les dix secondes environ et un grondement de tonnerre bas et lointain',
-    'Solar System': 'Système solaire', 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past': 'Huit planètes tournent autour du soleil sur des orbites lumineuses, et de temps en temps une comète passe',
+    'Solar System': 'Système solaire', 'Eight planets, Pluto and the asteroid belt with Ceres circle the sun on glowing orbits, and now and then a comet sweeps past': 'Huit planètes, Pluton et la ceinture d\'astéroïdes avec Cérès tournent autour du soleil sur des orbites lumineuses, et de temps en temps une comète passe',
     'Meteor Shower': 'Pluie d\'étoiles filantes', 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+': 'Des étoiles filantes traversent la nuit au-dessus des collines ; les tirages Rare+ déclenchent une pluie d\'étoiles filantes, plus fournie selon la rareté, avec des bolides sur les Mythic+',
     'Party': 'Fête', 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti': 'Des ballons montent entre les guirlandes, les serpentins et les confettis ; les bons tirages font éclater un ballon, et les Mythic+ en éclatent plusieurs sous une pluie de confettis',
     // Fonds du 2026-11-05, lot « ciel et espace » (Blue Skies, Milky Way, Sky Gate) et la bille d'Aether
@@ -405,6 +425,11 @@
     'Every digit is a fossil bone dug out of the layers of a dig site with a brush; on Mythic rolls the bones come alive and a raptor skeleton runs by': 'Chaque chiffre est un os fossile dégagé au pinceau dans les couches d\'un chantier de fouilles ; sur les tirages Mythic, les os s\'animent et un squelette de raptor passe en courant',
     'Digits of pure light, each under its own golden halo; great rolls spread a pair of feathered wings, and Divine rolls bring three': 'Des chiffres de lumière pure, chacun sous son auréole d\'or ; les grands tirages déploient une paire d\'ailes de plumes, et les tirages Divine en déploient trois',
     'A fallen angel: digits branded in red on cracked obsidian under broken halos; great rolls unfold torn black wings over a burning circle of runes': 'Un ange déchu : des chiffres marqués au fer rouge sur de l\'obsidienne fendue, sous des auréoles brisées ; les grands tirages déploient des ailes noires arrachées au-dessus d\'un cercle de runes en feu',
+    // skins du 2026-11-05, lot 2 (idées de finnnnn, Deadshot, YeeHao2, LEVIATHAN, kaz, JBearr12 et jia jun)
+    'Glowing digits in the dark abyss while fish, turtles and squid swim by; great rolls bring a shark, Mythic rolls a whale, Divine rolls the leviathan, and once in a while an anchor drifts down': 'Des chiffres lumineux dans l\'abysse pendant que passent poissons, tortues et calmars ; les grands tirages amènent un requin, les Mythic une baleine, les Divine le léviathan, et de temps en temps une ancre descend',
+    'Every digit floats in a soap bubble that pops into the next one; Mythic rolls fire a bubble gun everywhere': 'Chaque chiffre flotte dans une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles',
+    'Black and white that swap with every digit; Chinese numerals roll in the mist, and great rolls bring a black and a white koi circling your number': 'Le noir et le blanc s\'échangent à chaque chiffre ; des chiffres chinois défilent dans la brume, et les grands tirages amènent une carpe koï noire et une blanche qui tournent autour de ton nombre',
+    'Glossy blue glass over a green hill: gel digits pop like drops, bubbles float up, and Mythic rolls bring ribbons of light and glowing butterflies': 'Du verre bleu brillant sur une colline verte : des chiffres en gel jaillissent comme des gouttes, des bulles montent, et les tirages Mythic amènent des rubans de lumière et des papillons lumineux',
     // skins du 2026-11-01, lot B2 (idées de xenon, Dylanrulez123, casmicgraything, tmanrex, sennybex1 et jia jun)
     'Every digit is a slice of bread that pops out of a chrome toaster with the number toasted in; Mythic rolls pop out golden toast': 'Chaque chiffre est une tranche de pain qui jaillit d\'un grille-pain chromé, le nombre grillé dessus ; les tirages Mythic font sauter des toasts dorés',
     'Every digit is a numbered pool ball: the cue strikes, the ball rolls in and clicks into place, and Mythic rolls end with a trick shot off every cushion': 'Chaque chiffre est une boule de billard numérotée : la queue frappe, la boule roule et se cale à sa place, et les tirages Mythic finissent par un coup de maître sur toutes les bandes',
@@ -530,7 +555,7 @@
     'Light swirls into a dark core, faster when you press': 'La lumière tourbillonne dans un cœur noir, plus vite quand tu appuies',
     'Show': 'Afficher', 'Owned only': 'Possédés', 'Not owned yet': 'Pas encore possédés', 'You don\'t own any of these yet': 'Tu n\'en as encore aucun', 'You already own all of these': 'Tu les as déjà tous',
     '💡 Your creations': '💡 Tes créations', 'items born from your ideas': 'les objets nés de tes idées', 'Wallpaper': 'Fond d\'écran', 'No share received yet.': 'Aucune part reçue pour l\'instant.',
-    'You get 5% of what players pay for your skins, in the shop or for a case that gives one. Wallpapers do not pay a share.': 'Tu reçois 5 % de ce que les joueurs paient pour tes skins, dans la boutique ou pour une caisse qui en donne un. Les fonds d\'écran ne rapportent pas de part.',
+    'You get 5% of what players pay for your skins and wallpapers, in the shop or for a case that gives one.': 'Tu reçois 5 % de ce que les joueurs paient pour tes skins et tes fonds d\'écran, dans la boutique ou pour une caisse qui en donne un.',
     'A bumpy green pickle that squishes when pressed': 'Un cornichon vert tout bosselé qui s\'écrase quand on appuie', 'Boings, honks, quacks and slide whistles': 'Des boings, des klaxons, des coin-coin et des sifflets à coulisse', 'Soft taps, tiny clicks and gentle chimes': 'Des tapotements doux, de petits clics et des carillons tout légers',
     'Every digit is engraved in a brilliant-cut diamond on black velvet: the facets flicker as it turns and each stone locks in with a tink and a star glint': 'Chaque chiffre est gravé dans un diamant taille brillant posé sur du velours noir : les facettes scintillent quand il tourne et chaque pierre se sertit avec un « tink » et un éclat en étoile',
     'Start': 'Démarrer', 'Drop': 'Lâcher', 'Pick a tile': 'Choisis une case', 'Finish your game first': 'Termine d\'abord ta partie', 'No game in progress': 'Aucune partie en cours', 'Open a tile first': 'Ouvre d\'abord une case', 'Pick a closed tile': 'Choisis une case fermée', 'Between 1 and 24 mines': 'Entre 1 et 24 mines',
@@ -687,6 +712,17 @@
     '🗺️ Roadmap': '🗺️ Feuille de route', 'Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.': 'Les idées de joueurs que le créateur prévoit de faire, et celles ajoutées ces 30 derniers jours. Tu en as une ? Envoie-la avec le bouton 💡.',
     '🛠️ Planned': '🛠️ Prévues', '✅ Recently added': '✅ Ajoutées récemment', 'last 30 days': '30 derniers jours', 'Nothing planned right now.': 'Rien de prévu pour l\'instant.',
     'Nothing added in the last 30 days.': 'Rien d\'ajouté ces 30 derniers jours.', 'idea by': 'idée de',
+    // idées du 2026-11-05 (groupe features-misc) : relance de quête (Mace_67), propriétaires des badges (Tumored),
+    // Hall of Fame (Avaneesh_17)
+    'Swap this quest for another one': 'Échanger cette quête contre une autre', 'Already rerolling': 'Échange déjà en cours',
+    'No rerolls left this week': 'Plus d\'échange possible cette semaine', 'This quest is already claimed': 'Cette quête est déjà récupérée',
+    'No other quest to swap in': 'Aucune autre quête à proposer',
+    'Players who own it': 'Joueurs qui l\'ont', 'Nobody yet': 'Personne pour l\'instant',
+    'Hall of Fame': 'Panthéon', 'The first players to reach the biggest milestones of the game, kept here forever.': 'Les premiers joueurs à atteindre les plus grands paliers du jeu, gardés ici pour toujours.',
+    'The Hall of Fame is being filled in from the game\'s history. Come back soon!': 'Le Panthéon se remplit à partir de l\'historique du jeu. Reviens bientôt !',
+    'First to roll each Infinite number': 'Premier à tirer chaque nombre Infinite', 'first to reach': 'premier à l\'atteindre',
+    'first roll of each rarity': 'premier tirage de chaque rareté', 'before': 'avant le',
+    'Milestones from before November 5, 2026 were found in the saved roll history: rolls made offline, and the oldest rolls of players with more than 100,000 rolls, are not in it.': 'Les paliers d\'avant le 5 novembre 2026 ont été retrouvés dans l\'historique des tirages gardés : les tirages faits hors ligne, et les plus anciens tirages des joueurs à plus de 100 000 tirages, n\'y sont pas.',
     '🗺️ See the roadmap: planned and recently added ideas': '🗺️ Voir la feuille de route : idées prévues et ajoutées récemment',
     '🗺️ Roadmap: the player ideas that are planned and the ones recently added': '🗺️ Feuille de route : les idées de joueurs prévues et celles ajoutées récemment',
     'Deleted': 'Supprimée', 'Published (not on Discord: no channel set up)': 'Publiée (pas sur Discord : aucun salon configuré)',
@@ -1115,6 +1151,12 @@
     [/^(\d) digits?$/, m => `${m[1]} chiffre${s(m[1])}`], [/^expected ≈ ([\d,.]+)$/, m => `attendu ≈ ${nb(m[1]).replace('.', ',')}`],
     // Wheel (idée de How yz got sticky et de Gray, 2026-11-01)
     [/^(★ Bonus wheel · )?([\d.]+)× · you get ([\d,]+) coins?(?: \(−([\d,]+)\))?$/, m => `${m[1] ? '★ Roue bonus · ' : ''}${m[2].replace('.', ',')}× · tu reçois ${nb(m[3])} pièce${s(m[3])}${m[4] ? ` (−${nb(m[4])})` : ''}`],
+    // relance de quête (Mace_67), propriétaires des badges (Tumored) et Hall of Fame (Avaneesh_17), 2026-11-05
+    [/^Swap this quest for another one\? ([\d,]+) rerolls? left this week\.$/, m => `Échanger cette quête contre une autre ? Encore ${nb(m[1])} échange${s(m[1])} cette semaine.`],
+    [/^([\d,]+) rerolls? left this week$/, m => `${nb(m[1])} échange${s(m[1])} de quête restant${s(m[1])} cette semaine`],
+    [/^New quest: (.+)$/, m => `Nouvelle quête : ${one(m[1])}`],
+    [/^([\d,]+) of ([\d,]+) players?$/, m => `${nb(m[1])} sur ${nb(m[2])} joueur${s(m[2])}`],
+    [/^(\d+) \/ (\d+) rolled$/, m => `${m[1]} / ${m[2]} tirés`],
   ];
 
   // ---------------------------------------------------------------- traduction d'un texte

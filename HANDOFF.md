@@ -1,6 +1,40 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (planned ideas sessions). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (skins lot 2 branch, merged with main). Update this file at the end of every session.
+
+## Delete my account (2026-11-05, branch `claude/delete-account`)
+
+Sacha asked for a way for players to delete their account from Settings.
+- **UI**: ⚙️ Settings → danger zone → "Delete my account" (only for a player with a name). A second window lists what is
+  lost, says if Google or a password is linked, and enables "Delete forever" only when the exact player name is typed.
+  After success `resetDevice()` gives the device a new identity (`Store.signOut`) and removes every other local key
+  except the language, the Store key (device settings) and the anonymous visit dates.
+- **Server**: `api/_account.js`, routed from `api/auth.js` (`action: 'deleteAccount'`, no new public file). It needs
+  the secret and the exact name.
+  - **Refused**: suspended accounts (423 from `ownsPlayer`); owner and viewer accounts (`canViewOwner`, 403); a player
+    seated at a poker table, in a live duel, with a duel roll still being revealed, signed up to an unfinished
+    tournament, or in the team of a pending or running clan war (409); the leader of a clan that has other members
+    (409: pass the leadership or disband first). A leader alone in the clan: the clan is disbanded.
+  - **Deleted**: one SCAN of the whole keyspace, then: every key whose name has the id; the id as a field or member of
+    every shared hash, set or sorted set whose name has no player id (like `banPlayers`); every `name:<key>` that
+    points to the player (current name and stale old ones); `google:<sub>`, the Discord link (`discord:links`), the
+    password and the recovery code; the id in other players' `fr:`, `frin:`, `frout:`, `dmblock:`, `dmu:`, `dw:` and
+    `h2h:` keys (one-sided entries too); gifts from the player in friends' lists; daily gift caps (`o:<id>`, `i:<id>`);
+    open positions in `pos:open`; avatar tokens (`avtok`, `avpq`); clan requests; reactions (`…|<id>` fields); the
+    player's global chat, clan chat and casino feed lines; the coins and casino board caches.
+  - **Kept**: `player:<id>:secret = "deleted"` (tombstone with no data: an old device gets 403 and starts a new player;
+    without it `claimPlayer` would recreate the id), `banned`, anonymous totals, ideas (`sugg:*`), moderation logs
+    (`reports`, `avlog`, `gc:mutelog`, `gc:dellog`), and finished duel rooms, tournaments and clan wars, which expire
+    on their own (1, 14 and 30 days). The clan log keeps "<name> left", like any other departure.
+- **Tests**: the "Supprimer son compte" block at the end of `tools/test-api.mjs`. The key check scans the whole fake
+  Redis for the id after deleting (keys, fields, members, values).
+- **Inventory check** (scratch script, not committed): after the full suite, every named player was deleted (194 OK,
+  89 refused: tournament, clan leader, duel) and the fake Redis was searched for each id. Only the kept records above
+  were left (rooms, poker tables, tournaments, wars, ideas, moderation logs), plus a past giveaway's winners in
+  `gw:item` and other players' global chat messages that reply to or mention the player (`ra`/`at`, never sent to the
+  site, gone when the chat rolls past 100 messages).
+- **Cost**: one SCAN of the whole database plus a TYPE per shared key. That should take a few seconds on the VPS; it
+  has not been measured on the real data. `tools/fake-redis.mjs` gained `TYPE`.
 
 ## Planned wallpapers from the 2026-11-05 triage (branches `claude/walls-sky`, then stacked PRs)
 
@@ -119,10 +153,17 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
 - `angel` Angel 🪽 7,777 and `demon` Demon 😈 6,666, Legendary (`premium`) — qwertyuiop [3c452b1058ce], prices his;
   Demon also covers Roanono's fallen angel [2656e434fb62]. Shared wing drawing `l1Wing` / scene `l1Winged`.
 
+**Lot 2 — `claude/skins-lot2`** (branched from lot 1; block "lot 2 du 2026-11-05" in `js/skinfx.js`):
+- `deepsea` Deep Sea 🐋 2,600 — finnnnn [0555093cf3b9] (idea share) + Deadshot [e1cfcd646151] (fish, sharks, turtles,
+  squid, seaweed, the 1-in-50 anchor), YeeHao2's whale [da859b846a6d], LEVIATHAN [ed2af64de7d0] (head and neck over
+  the number from Divine). The old 700-coin Ocean skin stays.
+- `bubble` Bubble 🫧 1,400 — finnnnn [d0de2e6104d2]. Shared bubble sprite `l2Bubble()` (also used by Aero).
+- `yinyang` Yin and Yang ☯️ 6,000, Legendary — kaz [2a7c38aebff0] (idea share) + JBearr12 [959206f6ac9c]. The card
+  inverts black/white at every landed digit with a CSS `:has()` rule on the count of `.slot.revealed` (works without
+  the scene); Chinese numerals while rolling come from `spinChar` in `js/app.js`.
+- `aero` Frutiger Aero 🌐 2,200 — jia jun [e7a0b771e530] (promised). Generic style, no logo.
+
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Lot 2: Deep Sea (finnnnn [0555093cf3b9], Deadshot [e1cfcd646151], YeeHao2's whale [da859b846a6d], LEVIATHAN
-  [ed2af64de7d0]; the existing 700-coin Ocean skin stays), Bubble (finnnnn [d0de2e6104d2]), Yin and Yang (kaz
-  [2a7c38aebff0], JBearr12 [959206f6ac9c]), Frutiger Aero (jia jun [e7a0b771e530], promised).
 - Lot 3: Blackout (Mace_67 [f414eccc558b], promised), Rarity mirror (Idkwhatnamemyself [fb70cca99f40], promised), then
   the list in order: rainbow painting [7f9507fe5e51], grass [a841d12aea44], obsidian [7ac4a115abd4], horses/barn
   [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
@@ -137,6 +178,83 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
   mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
   [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
   [773ca9b1b6e4], puzzle cube [3518354c582f].
+
+## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
+
+Six Planned ideas built, four big ones written up as proposals only (below). Credits are in the UPDATES entry
+`2026-11-05-features-misc`.
+
+- **5% share on wallpapers** (qwertyuiop, `b06fde58b160`, `bd2f68f5442e`): `api/shop.js` `payIdea` now also runs for
+  `buywall` and for a wallpaper won from a paid Wallpaper Case (same rules as skins: not for yourself, nothing for a key,
+  nothing for a duplicate). Wallpaper tiles show "💡 Idea by", and the "Your creations" text no longer says walls pay nothing.
+- **Quest rerolls** (Mace_67, `c2fe91fcbdc7`): `js/quests.js` `REROLLS_PER_WEEK = 3`. `POST /api/quests { action: 'reroll',
+  quest }` swaps one unclaimed daily quest for another quest of the same group (`crypto.randomInt`), stored as
+  `rr:<group>` in `q:<day>:<id>`; the weekly count is `rerolls` in `qw:<week>:<id>` (taken with HINCRBY first, given back
+  on refusal, so two clicks never pass 3). The group keeps its counters, so progress carries over. Rewards follow the
+  group's difficulty, so a reroll never pays more. Daily quests only, not weekly ones. UI: 🔄 button on each unfinished
+  quest (asks first), "N rerolls left this week" in the quest footer.
+- **Badge owner counter** (Tumored, `7db9506f94c0`): `recordRoll` / `recordHardRoll` now send one `SADD` per earned badge
+  (instead of one for all), so the server knows which badges are new to the player and adds `HINCRBY bown <badge> 1`
+  (`hbown` in Hard mode). Read by `GET /api/leaderboard?badges=1[&mode=hard]` (cached 1 min, numbers only), shown in the
+  badge window as "👥 N of M players". Nothing shows before `bown:ready`.
+- **Hall of Fame** (Avaneesh_17, `0375af55c59a`): `api/_hof.js`, one hash `hof`, one field per milestone set once with
+  HSETNX by the roll that reaches it: first to roll each of the 10 Infinite numbers, first to 100M / 1B / 10B / 100B
+  lifetime XP, first to 10k / 100k / 1M rolls, first Mythic / Celestial / Divine / Godlike / Infinite in Hard mode. Page
+  `#/hall`, a second tab next to Leaderboard (subnav). `GET /api/leaderboard?hof=1` sends names, never ids. The page says
+  "being filled in" until `hof:ready`. The 10 Infinite numbers are a constant in `_hof.js` (finding them takes 45 s),
+  re-checked at load; redo the list after a badge change (command in the comment).
+  - **What can't be reconstructed** (also on the page and in `tools/backfill-hof.js`): offline rolls; the oldest rolls of
+    players above 100,000 rolls (history cap), except an Infinite that stayed their best roll (`best:all` is read too);
+    the exact time of an XP or roll milestone crossed before a player's oldest saved roll (dated to that roll, shown
+    "before <date>"); and XP is recomputed at today's badge values, so an old XP milestone may be dated a bit differently
+    from what it was at the time.
+- **Keyboard ASMR** (dog `a65d5a6548e9`, Infin6 `3b90b3f8a464`, LEVIATHAN): measured the old key sound: almost nothing above
+  1 kHz (high-frequency energy −62 dB vs −44 dB for the Wax button), which is why it was inaudible on phone and laptop
+  speakers. `js/sound.js` `keyThock` now adds the ASMR wax `crackle` and a short bottom-out click; it measures like the Wax
+  button and plays ~3 dB louder, still under roll sounds. Real keys: every key, including Shift/Ctrl/Alt/Cmd, symbols and
+  F-keys (read on `e.code`, so Shift+1 and AZERTY "&" press the 1), while typing in the chat too, and the key stays
+  down while held (keyup / window blur releases it). Never in a password field. Listeners are in capture.
+- **Solar System** (deadshot44474, `aa5e1b3867f6`, `10efc2799eed`): asteroid belt (260 rocks, Kepler speeds) between Mars
+  and Jupiter, Ceres with the Occator bright spot (a bluish glow that turns with it), Pluto on an offset, tilted orbit
+  that crosses Neptune's, the comet's dust trail drawn along its real past path (the straight ion tail is now short and
+  faint and never points ahead), and the first orbit always clears the sun and its rays (in landscape Mercury's orbit
+  used to pass over the sun). I read "the sun is over the line" as that orbit; if he meant something else, ask him.
+
+**To do after deploying (Sacha, on the VPS, same env as the other tools):**
+`node tools/backfill-badge-owners.js` (dry run) then `--apply` (sets `bown:ready`), and `node tools/backfill-hof.js` then
+`--apply` (sets `hof:ready`; read the dry-run list first: bots or suspended accounts could hold a spot). Until then the
+badge counter and the Hall of Fame page show nothing.
+
+Tests: `tools/test-api.mjs` "features-misc" block (wallpaper share incl. case/key/self/duplicate, rerolls incl. the 3/week
+cap and all-done with swapped quests, badge owners normal + hard + backfill, Hall of Fame live + backfill + approx +
+no ids). Browser (dev server on 8132): rerolled a quest, Hall of Fame at 320–1280 px light/dark FR/EN, badge window in
+French, keyboard key events (held keys, Shift+1, Ctrl+C, AZERTY, password field), Solar System filmed headless dark
+1280 px and light 390 px. `tools/audit/overflow-check.mjs` and `overlap-audit.mjs` now include `#/hall`.
+
+### Proposals only (not built, for Sacha to decide)
+
+- **Season pass** (PRISMA123, `4b0ec58e1959`, "on the list for later"). Free only: no paid track (coins are only earned in
+  the game). A 30-day season, 50 tiers; tier XP comes from what players already do (daily quests 1 tier-point each, the
+  all-done bonus 2, weekly quests 3, rolls 1 point per 100), so it rewards regular play, not luck. Rewards: a few small
+  coin drops (≤ 15% of what a regular player earns from quests in a month, checked against the economy page), case keys,
+  and 2–3 season-only cosmetics (a title, a button, a wallpaper) that are never sold. Data: `sp:<season>:<id>` hash
+  (points, claimed tiers), the season list in `js/events.js`. Needs: a new home card, owner page tool to create a
+  season. About 1–2 days of work.
+- **Community quests** (jjcoolcid1, `93faee78788f`). Sacha sets a goal from the owner page ("the whole game rolls 2M times
+  this week", "1,000 Mythic+ rolls"); one global counter `cq:<id>` (INCR in `recordRoll`, like the weekly event); a
+  progress bar on the home page. When it's reached, every player who contributed at least N (e.g. 50 rolls, `cq:<id>:p`
+  sorted set) claims the reward: coins or a cosmetic. Rewards must stay small (it's free coins for everyone) and luck
+  never changes. About 1 day.
+- **Craps and blackjack lobbies** (JBearr12, `f017e780fb7f`). Craps: pass / don't pass / field bets only at first
+  (house edge 1.41% / 1.36% / 2.78%, decided on the server with `crypto.randomInt`), new tab in `api/_gamble.js`, must
+  pass `casino-sim` and `house-audit` before shipping (don't-pass needs the bar-12 rule to keep the edge). Blackjack
+  lobbies: up to 5 players at one table against the same dealer, each playing their own hand, 20 s per turn, built on
+  the open-table code of `api/_poker.js` (seats, idle cash-out, `pending` settlement). Same edge as solo blackjack.
+  Craps ~1 day, lobbies ~2 days.
+- **"also cyber punk"** (leo, `a7dba4706e5d`). No other context; it reads as a follow-up to a skin request, and it sits in
+  the skins group's list, so the skins session should own it. Note: "Cyberpunk" is also a game's name, so name it
+  something like "Neon City" (rainy neon streets, holographic digits). We already have the Synthwave and Cyber Void
+  wallpapers, so a wallpaper alone would be a near-duplicate.
 
 ## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
 

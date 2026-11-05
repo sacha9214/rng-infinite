@@ -1755,3 +1755,32 @@
   text-shadow: 0 0 .04em #ffe4e6, 0 .05em .02em #000, 0 0 .3em rgba(244, 63, 94, .9);
   --gs: 0 .3em 0 #450a0a, 0 .5em 1.2em rgba(220, 38, 38, .45); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.5em rgba(220, 38, 38, .6); --gs-a: 0 .06em 0 #450a0a; }
 .btn-roll.gen-demon:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-11-05, lot 2 ==== boutons assortis */
+/* Deep Sea (idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN) : l'abysse bleu nuit, la lumière de la surface, un texte bioluminescent. */
+.btn-roll.gen-deepsea { border: 2px solid #0e4a63; border-radius: .7rem; color: #d9fdff;
+  background: radial-gradient(circle, rgba(207, 250, 254, .5) 0 1px, transparent 1.6px) 0 0 / 17px 13px, radial-gradient(ellipse 30% 60% at 30% -20%, rgba(165, 243, 252, .35), transparent 70%), radial-gradient(ellipse 30% 60% at 75% -20%, rgba(165, 243, 252, .25), transparent 70%), linear-gradient(180deg, #0c4a6e, #041a2e 70%, #020c18);
+  text-shadow: 0 0 .06em #fff, 0 0 .25em #22d3ee, 0 0 .5em rgba(34, 211, 238, .6);
+  --gs: 0 .3em 0 #011524, 0 .5em 1em rgba(34, 211, 238, .3); --gs-h: 0 .34em 0 #011524, 0 .7em 1.3em rgba(34, 211, 238, .45); --gs-a: 0 .06em 0 #011524; }
+.btn-roll.gen-deepsea:hover { filter: brightness(1.15); }
+/* Bubble (idée de finnnnn) : une grosse bulle de savon pastel, film irisé, reflet en haut à gauche. */
+.btn-roll.gen-bubble { border: 2px solid rgba(255, 255, 255, .85); border-radius: 999px; color: #312e81;
+  background: radial-gradient(ellipse 12% 30% at 14% 28%, rgba(255, 255, 255, .95), transparent 70%), linear-gradient(100deg, rgba(244, 114, 182, .35), rgba(250, 204, 21, .3) 30%, rgba(74, 222, 128, .3) 55%, rgba(56, 189, 248, .35) 80%, rgba(167, 139, 250, .4)), linear-gradient(160deg, #c7e9ff, #e4d9ff 55%, #ffd9ef);
+  text-shadow: 0 .05em 0 rgba(255, 255, 255, .9);
+  --gs: 0 .3em 0 #a5b4fc, 0 .5em 1em rgba(165, 180, 252, .4); --gs-h: 0 .34em 0 #a5b4fc, 0 .7em 1.3em rgba(165, 180, 252, .55); --gs-a: 0 .06em 0 #a5b4fc; }
+.btn-roll.gen-bubble:hover { filter: brightness(1.04) saturate(1.15); }
+/* Yin and Yang (idées de kaz et JBearr12) : l'encre noire, un taiji de papier à chaque bout, le texte blanc (jamais du
+   blanc sur blanc : le texte ne passe pas sur la moitié claire). */
+.btn-roll.gen-yinyang { border: 2px solid #a8a29e; border-radius: .6rem; color: #fafaf9;
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%230c0a09' stroke='%23d6d3d1' stroke-width='5'/><path d='M50 3A47 47 0 0 1 50 97A23.5 23.5 0 0 1 50 50A23.5 23.5 0 0 0 50 3Z' fill='%23f5f5f4'/><circle cx='50' cy='26.5' r='7' fill='%230c0a09'/><circle cx='50' cy='73.5' r='7' fill='%23f5f5f4'/></svg>") .55em 50% / .8em .8em no-repeat, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%230c0a09' stroke='%23d6d3d1' stroke-width='5'/><path d='M50 3A47 47 0 0 1 50 97A23.5 23.5 0 0 1 50 50A23.5 23.5 0 0 0 50 3Z' fill='%23f5f5f4'/><circle cx='50' cy='26.5' r='7' fill='%230c0a09'/><circle cx='50' cy='73.5' r='7' fill='%23f5f5f4'/></svg>") calc(100% - .55em) 50% / .8em .8em no-repeat, radial-gradient(ellipse 60% 80% at 50% 50%, rgba(120, 113, 108, .35), transparent 70%), #0c0a09;
+  text-shadow: 0 0 .15em rgba(214, 211, 209, .45);
+  --gs: 0 .3em 0 #44403c, 0 .5em 1em rgba(214, 211, 209, .3); --gs-h: 0 .34em 0 #44403c, 0 .7em 1.3em rgba(214, 211, 209, .45); --gs-a: 0 .06em 0 #44403c; }
+.btn-roll.gen-yinyang:hover { filter: contrast(1.1); }
+/* Frutiger Aero (promis à jia jun) : du verre bleu brillant, la colline verte, le grand reflet blanc. */
+.btn-roll.gen-aero { border: 2px solid #38bdf8; border-radius: 999px; color: #fff; -webkit-text-stroke: .02em #0369a1;
+  font-family: 'Segoe UI', 'Frutiger', 'Myriad Pro', 'Helvetica Neue', system-ui, sans-serif;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .75), rgba(255, 255, 255, .2) 48%, transparent 49%), radial-gradient(ellipse 60% 40% at 25% 120%, #52c234 0 60%, transparent 62%), radial-gradient(ellipse 70% 45% at 85% 125%, #3fae2a 0 60%, transparent 62%), linear-gradient(180deg, #2ea7e8, #6fd0f7 60%, #c4f1ff);
+  text-shadow: 0 .05em 0 #075985, 0 .08em .12em rgba(3, 105, 161, .5);
+  --gs: 0 .3em 0 #0369a1, 0 .5em 1em rgba(56, 189, 248, .4); --gs-h: 0 .34em 0 #0369a1, 0 .7em 1.3em rgba(56, 189, 248, .55); --gs-a: 0 .06em 0 #0369a1; }
+.btn-roll.gen-aero:hover { filter: brightness(1.06) saturate(1.1); }

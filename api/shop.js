@@ -79,6 +79,8 @@ async function ownerCounts() {
 // idée (champ idea) — achat direct, et depuis le 2026-10-28 aussi quand ce skin sort d'une caisse payée (finnnnn ne
 // touchait rien sur les skins tirés dans les caisses) : 5 % de ce que l'acheteur a payé (le prix du skin, ou celui de la
 // caisse). Jamais pour soi-même, rien pour une caisse ouverte avec une clé ; un nom introuvable ne bloque rien.
+// Fonds d'écran aussi depuis le 2026-11-05 (idée de qwertyuiop : « you get 5% of wallpaper money also ») : achat direct
+// (buywall) et fond sorti d'une caisse de fonds payée, même règle.
 async function payIdea(item, buyer, paid) {
   if (!item || !item.idea || !(paid > 0)) return;
   const author = await findPlayer(item.idea).catch(() => null), cut = Math.round(paid * Shop.IDEA_SHARE);
@@ -192,7 +194,7 @@ module.exports = async (req, res) => {
           gained(box.emo ? 'emotes' : box.snd ? 'sounds' : box.btn ? 'buttons' : box.wall ? 'walls' : 'skins', won));
         await redis(writes);
         if (!duplicate) await checkCollection(playerId);
-        if (!duplicate && !box.emo && !box.snd && !box.btn && !box.wall) await payIdea(Shop.byId.get(won), playerId, price);
+        if (!duplicate && !box.emo && !box.snd && !box.btn) await payIdea((box.wall ? Shop.wallById : Shop.byId).get(won), playerId, price);
         return send(res, 200, { ...(await state(playerId)), won, duplicate, refund });
       } finally {
         await redis([['DEL', `shop:${playerId}`]]);
@@ -231,6 +233,7 @@ module.exports = async (req, res) => {
           if (st.coins < item.price) return send(res, 422, { error: `Not enough coins: ${item.price - st.coins} more needed` });
           await redis([['HINCRBY', statsKey(playerId), 'spent', item.price], ['SADD', ownedWallsKey(playerId), item.id], gained('walls', item.id), ...eco('out:wallpapers', item.price)]);
           await checkCollection(playerId);
+          await payIdea(item, playerId, item.price); // 5 % pour le joueur qui a eu l'idée du fond (qwertyuiop, 2026-11-05)
         }
         if (body.equip !== false) await redis([['HSET', 'wall', playerId, item.id]]); // acheté = affiché, sauf réglage contraire
         return send(res, 200, await state(playerId));
