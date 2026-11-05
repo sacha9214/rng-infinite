@@ -462,6 +462,10 @@
     'This code has expired': 'Ce code a expiré', 'Redeemed the Halloween 2026 code': 'A utilisé le code d\'Halloween 2026', 'Helps sort the ideas box': 'Aide à trier la boîte à idées',
     'Limited': 'Limités', 'Limited skins': 'Skins limités', 'for a short time only · once bought, yours forever': 'pour peu de temps · une fois acheté, il est à toi pour toujours', 'No limited skin right now. Come back for the next event!': 'Aucun skin limité pour l\'instant. Reviens au prochain événement !',
     'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26': 'Six cadeaux secoués sous le sapin s\'ouvrent pour révéler tes chiffres, entre deux sapins et une guirlande qui clignote · jusqu\'au 26 décembre',
+    // Thanksgiving (2026-11-26) : le skin Turkey Roast, le fond Thanksgiving Dinner et la bannière de l'onglet Limités
+    'Turkey Roast': 'Dinde rôtie', 'Your digits roast golden-brown in front of a turkey\'s fanned tail, with autumn leaves falling; rare rolls throw feathers everywhere · until November 27': 'Tes chiffres dorent au four devant la queue en éventail d\'une dinde, sous les feuilles d\'automne ; les tirages rares font voler des plumes partout · jusqu\'au 27 novembre',
+    'Thanksgiving Dinner': 'Repas de Thanksgiving', 'A table set for Thanksgiving: a roast turkey, pie, corn and candles, with autumn leaves falling outside the windows · until November 27': 'Une table de Thanksgiving : une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles d\'automne qui tombent derrière les fenêtres · jusqu\'au 27 novembre',
+    '🦃 THANKSGIVING': '🦃 THANKSGIVING', 'animated backgrounds · for the holidays only': 'des fonds animés · seulement pour les fêtes',
     // Événement de Noël (2026-11-01) : le skin Gingerbread et le fond Cozy Fireplace
     'Gingerbread': 'Pain d\'épices', 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26': 'Chaque chiffre est un biscuit en pain d\'épices : des emporte-pièces s\'enfoncent dans la pâte pendant le tirage, puis la glace est pochée avec une étincelle de sucre · jusqu\'au 26 décembre',
     'Cozy Fireplace': 'Coin du feu', 'A crackling fire, stockings on the mantel and snow at the window · until December 26': 'Un feu qui crépite, des chaussettes sur la cheminée et la neige à la fenêtre · jusqu\'au 26 décembre',
@@ -651,6 +655,18 @@
     'In the 💬 chat, press ⋯ on a message to delete it or mute its writer.': 'Dans le 💬 chat, appuie sur ⋯ sur un message pour le supprimer ou rendre muet son auteur.',
     '🚩 Reported messages': '🚩 Messages signalés', '↻ Refresh': '↻ Actualiser', '✓ Nothing wrong': '✓ Rien à redire', 'Nothing to check right now. 🎉': 'Rien à vérifier pour l\'instant. 🎉',
     'My last actions': 'Mes dernières actions', 'Sacha sees these too': 'Sacha les voit aussi', 'lifted by Sacha': 'levé par Sacha', 'This page is for chat moderators.': 'Cette page est pour les modérateurs du chat.',
+    // idées du 2026-11-05 (session social-chat) : contexte des signalements (jsand), lever un silence (pople), classement et
+    // étoile entre amis (Edward, Big Sexy), votes de la feuille de route (Trinity), menu ⋯ et meneur du duel (Jacksonw)
+    '💬 See the messages around it': '💬 Voir les messages autour', '🔇 Muted right now': '🔇 Muets en ce moment', 'lift a mute that wasn\'t fair': 'lève un silence injuste',
+    'by': 'par', '🔊 Unmute': '🔊 Lever le silence', 'Only Sacha can lift this one': 'Seul Sacha peut lever celui-ci', 'Nobody is muted.': 'Personne n\'est muet.',
+    'Mute lifted': 'Silence levé', 'This player is not muted': 'Ce joueur n\'est pas muet', 'Only the owner can lift this mute': 'Seul le créateur peut lever ce silence',
+    'Made a mistake?': 'Tu t\'es trompé ?', 'Lift the mute in “Muted right now” below. Open “See the messages around it” on a report before you act: context matters.': 'Lève le silence dans « Muets en ce moment » plus bas. Ouvre « Voir les messages autour » sur un signalement avant d\'agir : le contexte compte.',
+    '🏆 Friends leaderboard': '🏆 Classement entre amis', '☀️ Today': '☀️ Aujourd\'hui', '🎯 Best roll': '🎯 Meilleur tirage', '🎲 Rolls': '🎲 Tirages', 'Sort by': 'Trier par',
+    'Unpin from the top': 'Ne plus épingler en haut', 'Pin to the top of your list': 'Épingler en haut de ta liste', 'This player is not your friend': 'Ce joueur n\'est pas ton ami',
+    'Player ideas the creator plans to make, and the ones added in the last 30 days. Vote ▲ for the ideas you want first. Got one? Send it with the 💡 button.': 'Les idées de joueurs que le créateur prévoit de faire, et celles ajoutées ces 30 derniers jours. Vote ▲ pour les idées que tu veux en premier. Tu en as une ? Envoie-la avec le bouton 💡.',
+    '▲ Most voted': '▲ Les plus votées', '🆕 Newest': '🆕 Les plus récentes', 'Remove your vote': 'Retirer ton vote', 'Vote for this idea': 'Voter pour cette idée',
+    'This idea is not planned anymore': 'Cette idée n\'est plus prévue', 'Make 100 rolls to vote for ideas': 'Fais 100 tirages pour voter pour des idées',
+    '🙈 Hide': '🙈 Masquer', 'Winning': 'En tête', '⇅ Put the leader first': '⇅ Mettre le meneur en premier', '⇅ Same order as the cards': '⇅ Même ordre que les cartes',
     'Marked as fine': 'Noté : rien à redire', 'This report was already handled': 'Ce signalement a déjà été traité', 'This report is about you': 'Ce signalement parle de toi',
     'Moderators': 'Modérateurs', 'Chat moderator': 'Modérateur du chat', 'Moderator page': 'Page des modérateurs', '🛡️ Mod': '🛡️ Modo', 'moderator': 'modérateur', 'Remove the role': 'Retirer le rôle',
     'they keep the global chat friendly: delete messages and mute players for 5 min to 24 h, always with a reason (only you can mute forever). They see the rules and the reported chat messages on their own page.': 'ils gardent le chat global sympa : ils suppriment des messages et rendent des joueurs muets de 5 min à 24 h, toujours avec une raison (toi seul peux rendre muet pour toujours). Ils voient les règles et les messages signalés sur leur propre page.',
@@ -878,6 +894,8 @@
     [/^To write here, link a Google account \(⚙️ Settings\) and make (\d+) rolls\.$/, m => `Pour écrire ici, associe un compte Google (⚙️ Réglages) et fais ${m[1]} tirages.`],
     [/^To write here, make (\d+) rolls \(you have ([\d,]+)\)\.$/, m => `Pour écrire ici, fais ${m[1]} tirages (tu en as ${nb(m[2])}).`],
     [/^Make (\d+) rolls to write in the chat \(you have (\d+)\)$/, m => `Fais ${m[1]} tirages pour écrire dans le chat (tu en as ${m[2]})`],
+    // page des modérateurs (2026-11-05) : « until 14:32 », « Lift the mute of X? »
+    [/^until (\d{1,2}:\d{2}(?: ?[AP]M)?)$/, m => `jusqu'à ${m[1]}`], [/^Lift the mute of (.+)\?$/, m => `Lever le silence de ${m[1]} ?`],
     [/^([\d,]+) right now$/, m => `${nb(m[1])} en ce moment`], [/^until (.+)$/, m => `jusqu'au ${m[1]}`],
     [/^Free · needs (\d+) rolls · at least (\d+) players$/, m => `Gratuit · ${m[1]} tirages requis · ${m[2]} joueurs minimum`],
     [/^Cancelled: fewer than (\d+) players signed up$/, m => `Annulé : moins de ${m[1]} joueurs inscrits`],
@@ -890,6 +908,7 @@
     [/^([\d,]+) rounds?$/, m => `${m[1]} manche${s(m[1])}`],
     [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after December 25 · (\d+) days (\d+) h left$/, m => `Se termine après le 25 décembre · encore ${m[1]} jours ${m[2]} h`],
+    [/^Ends after November 27 · (\d+) days (\d+) h left$/, m => `Se termine après le 27 novembre · encore ${m[1]} jours ${m[2]} h`],
     [/^⏳ Ends in (\d+) days? (\d+) h$/, m => `⏳ Finit dans ${m[1]} jour${m[1] > 1 ? 's' : ''} ${m[2]} h`], [/^⏳ Ends in (\d+) h$/, m => `⏳ Finit dans ${m[1]} h`], [/^⏳ Ended$/, () => '⏳ Terminé'],
     [/^Signed in as (.+?)( · .+)?$/, m => `Connecté en tant que ${m[1]}${m[2] || ''}`],
     [/^bet on a rise \(long\) or a fall \(short\) with (.+) · you can never lose more than your margin$/, m => `joue la hausse (long) ou la baisse (short) en ${m[1]} · tu ne peux jamais perdre plus que ta mise`],

@@ -2239,6 +2239,9 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
+    { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
+    { id: '2026-11-05-social-chat', date: 'Nov 5, 2026', en: ['💬 Global chat: your best roll shows next to your name, like "(999,999)" (ideas by Loliarlex1248 and MAYO), and Mythic or better rolls in Hard mode are announced too (Idkwhatnamemyself and Kag)', '😀 More emojis: 🥹 😒 😤 🥺 and other faces (idea by Jacksonw), 🎩 (Deadshot), 👌 (Jguz01), 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴 (sennybex1). The emoji button now works in your clan chat too (Deadshot), and the new ones are clan icons as well', '🏆 Friends leaderboard: you and your friends ranked by XP, today\'s XP, best roll or rolls, on the Friends page (idea by Edward). Tap ☆ to pin a friend at the top of your list (Big Sexy)', '▲ Vote for the planned ideas you want first on the Roadmap, and sort them by most voted (idea by Trinity)', '⚔️ Duels: the score shows above each card with a 👑 on whoever is winning, and you can put the leader first in the scoreboard (idea by Jacksonw). Edit, delete, hide and report are now behind ⋯ in the duel chat, so messages stay on one line (Jacksonw)', '🛡️ Chat moderators see the messages around a reported one (idea by jsand) and can lift a mute that wasn\'t fair (pople)'], fr: ['💬 Chat global : ton meilleur tirage s\'affiche à côté de ton pseudo, comme « (999 999) » (idées de Loliarlex1248 et MAYO), et les tirages Mythic ou mieux du mode difficile sont annoncés aussi (Idkwhatnamemyself et Kag)', '😀 Plus d\'emojis : 🥹 😒 😤 🥺 et d\'autres visages (idée de Jacksonw), 🎩 (Deadshot), 👌 (Jguz01), 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴 (sennybex1). Le bouton emoji marche aussi dans le chat de ton clan (Deadshot), et les nouveaux servent aussi d\'icônes de clan', '🏆 Classement entre amis : toi et tes amis classés par XP, XP du jour, meilleur tirage ou tirages, sur la page Amis (idée d\'Edward). Touche ☆ pour épingler un ami en haut de ta liste (Big Sexy)', '▲ Vote pour les idées prévues que tu veux en premier sur la feuille de route, et trie-les par votes (idée de Trinity)', '⚔️ Duels : le score s\'affiche au-dessus de chaque carte avec une 👑 sur celui qui mène, et tu peux mettre le meneur en premier dans le tableau (idée de Jacksonw). Modifier, supprimer, masquer et signaler sont maintenant derrière ⋯ dans le chat du duel, pour que les messages tiennent sur une ligne (Jacksonw)', '🛡️ Les modérateurs du chat voient les messages autour d\'un message signalé (idée de jsand) et peuvent lever un silence injuste (pople)'] },
     { id: '2026-11-05-skins-lot1', date: 'Nov 5, 2026', en: ['🎹 New skin: Overture (2,400 coins, idea by 0casmictechthing, with casmicgraything\'s music staff and 17black\'s floating notes). Gold digits on a grand piano: every digit plays its own piano note, notes float off the staff, and the rarity plays a chord. Mythic rolls drop instruments, Divine rolls raise a grand piano, and Infinite ends on A minor 7', '🧀 New skin: Cheese (1,500 coins, ideas by casmicgraything and casmictechthing). Blocks of Swiss cheese drop onto the board, a different cheese crowns each rarity, and Mythic rolls melt and flood the card', '🦴 New skin: Archaeology (2,000 coins, ideas by casmicgraything and Alt). A brush digs every bone digit out of the ground; on Mythic rolls the bones come alive and a raptor skeleton runs by', '🪽😈 New legendary skins: Angel (7,777 coins) and Demon (6,666 coins), ideas by qwertyuiop, with Roanono\'s fallen angel. Halos over every digit, and great rolls spread wings: white feathers for the Angel, torn black wings over a circle of runes for the Demon. Divine rolls bring three pairs'], fr: ['🎹 Nouveau skin : Overture (2 400 pièces, idée de 0casmictechthing, avec la portée de casmicgraything et les notes de 17black). Des chiffres d\'or sur un piano à queue : chaque chiffre joue sa note au piano, des notes s\'envolent de la portée et la rareté joue un accord. Les tirages Mythic font tomber des instruments, les Divine font monter un piano à queue, et Infinite finit sur un la mineur 7', '🧀 Nouveau skin : Cheese (1 500 pièces, idées de casmicgraything et casmictechthing). Des blocs d\'emmental tombent sur la planche, un fromage différent couronne chaque rareté, et les tirages Mythic fondent et inondent la carte', '🦴 Nouveau skin : Archaeology (2 000 pièces, idées de casmicgraything et Alt). Un pinceau déterre chaque chiffre en os ; sur les tirages Mythic, les os s\'animent et un squelette de raptor passe en courant', '🪽😈 Nouveaux skins légendaires : Angel (7 777 pièces) et Demon (6 666 pièces), idées de qwertyuiop, avec l\'ange déchu de Roanono. Une auréole sur chaque chiffre, et les grands tirages déploient des ailes : plumes blanches pour Angel, ailes noires arrachées sur un cercle de runes pour Demon. Les tirages Divine en déploient trois paires'] },
     { id: '2026-11-05-hard-titles', date: 'Nov 5, 2026', en: ['🔥 5 new Hard mode titles: 🔥 Forged in Fire for a Mythic or better in Hard mode (idea by PRISMA123), and 🍪 Tough Cookie, ⛓️ Hardened, ⛏️ Hardcore and 🗻 Unbreakable for 5,000, 10,000, 50,000 and 100,000 Hard mode rolls (ideas by PRISMA123 and Liam123456). Only your Hard mode rolls count for them'], fr: ['🔥 5 nouveaux titres du mode difficile : 🔥 Forgé dans le feu pour un Mythic ou mieux en mode difficile (idée de PRISMA123), et 🍪 Dur à cuire, ⛓️ Endurci, ⛏️ Hardcore et 🗻 Incassable pour 5 000, 10 000, 50 000 et 100 000 tirages en mode difficile (idées de PRISMA123 et Liam123456). Seuls tes tirages du mode difficile comptent'] },
     { id: '2026-11-05-ideas-1', date: 'Nov 5, 2026', en: ['⚙️ New settings: stop equipping what you buy (idea by infinity), hide the "contains your best roll" message (CococoC), and keep the screen on during auto-roll (Jacksonw)', '🎯 Auto-roll can now stop on a new badge (idea by Daiquan)', '🔥 Tap "rolls this session" to see the session\'s best rolls, worst rolls and rarities (idea by finnnnn)', '✨ The Badges page marks the badges you found since your last visit (idea by casmicgraything)', '🔁 Profiles show the number a player rolled the most (idea by Gray)', '🔢 Leaderboards show lifetime XP with 4 digits, like 1.956B (idea by jsand)', '🌈 Infinite rolls get a rainbow border in history and leaderboards (idea by KMC)'], fr: ['⚙️ Nouveaux réglages : ne plus équiper ce que tu achètes (idée d\'infinity), masquer le message « contient ton meilleur tirage » (CococoC), et garder l\'écran allumé pendant le tirage auto (Jacksonw)', '🎯 Le tirage auto peut s\'arrêter sur un nouveau badge (idée de Daiquan)', '🔥 Touche « tirages cette session » pour voir les meilleurs et pires tirages et les raretés de la session (idée de finnnnn)', '✨ La page Badges marque les badges trouvés depuis ta dernière visite (idée de casmicgraything)', '🔁 Les profils montrent le nombre le plus tiré par un joueur (idée de Gray)', '🔢 Les classements affichent l\'XP à vie avec 4 chiffres, comme 1.956B (idée de jsand)', '🌈 Les tirages Infinite ont un bord arc-en-ciel dans l\'historique et les classements (idée de KMC)'] },
@@ -4494,9 +4497,10 @@
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
           <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          <div class="limited-banner tgiving" id="limited-banner-tg"><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><b>🦃 THANKSGIVING</b><span id="limited-left-tg"></span></div>
           <div class="limited-banner xmas" id="limited-banner"><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><b>🎄 CHRISTMAS EVENT</b><span id="limited-left"></span></div>
           <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for Christmas only</span></div>
+          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for the holidays only</span></div>
           <div class="skin-grid wall-grid" id="d-limited-walls"></div>
         </div>
         </section>
@@ -4734,9 +4738,12 @@
     $('#d-premium-panel').hidden = false;
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
     const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
-    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id)));
+    // ceux qui finissent le plus tôt d'abord (Thanksgiving avant Noël), puis par prix
+    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id))).sort((a, b) => Date.parse(a.until) - Date.parse(b.until));
     // Bannière de l'événement en cours : Noël (demandé par Sacha, 2026-11-01), en vente jusqu'au 25 décembre inclus ; avant,
     // Halloween (jusqu'au 31 octobre).
+    // Thanksgiving (2026-11-26) : sa propre bannière, au-dessus, jusqu'à la fin du 27 novembre (heure du Pacifique).
+    { const ev = Date.parse(Shop.byId.get('turkey').until), b = $('#limited-banner-tg'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left-tg').textContent = window.RNGI18n.t(`Ends after November 27 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     { const ev = Date.parse('2026-12-26T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after December 25 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
     limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
     applyOwnFilter();
@@ -6631,7 +6638,7 @@
         <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
-    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
+    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).sort((a, b) => Date.parse(a.until) - Date.parse(b.until)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
     grid.innerHTML = `
       <div class="skin-tile wall-tile${on ? '' : ' equipped'}" data-have="1">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
@@ -6689,6 +6696,9 @@
   // Cozy Fireplace (événement de Noël, 2026-11-01) : la fenêtre (vitre + deux couches de neige) et la cheminée (braises,
   // flammes, bûches, étincelles, chaussettes) ; le dessin est dans css/style.css (.wfp-*).
   WALL_LAYERS.fireplace = '<i class="wfp-win"><i class="wfp-sky"><b></b><b></b></i></i><i class="wfp-fp"><i class="wfp-ember"></i><i class="wfp-fl a"></i><i class="wfp-fl c"></i><i class="wfp-fl b"></i><i class="wfp-fl k"></i><i class="wfp-logs"></i><i class="wfp-sp s1"></i><i class="wfp-sp s2"></i><i class="wfp-sp s3"></i><i class="wfp-sp s4"></i><i class="wfp-sp s5"></i><i class="wfp-st a"></i><i class="wfp-st b"></i><i class="wfp-st c"></i></i>';
+  // Thanksgiving Dinner (Thanksgiving 2026, idée de qwertyuiop) : deux fenêtres (vitre + deux couches de feuilles), la nappe,
+  // et le repas en deux groupes (accompagnements, dinde) avec les flammes des bougies et la vapeur de la dinde ; le dessin est dans css/style.css (.wtg-*).
+  WALL_LAYERS.feast = '<i class="wtg-win l"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-win r"><i class="wtg-sky"><b></b><b></b></i></i><i class="wtg-table"></i><i class="wtg-food b"><i class="wtg-fl"></i></i><i class="wtg-food a"><i class="wtg-fl"></i><i class="wtg-st s1"></i><i class="wtg-st s2"></i><i class="wtg-st s3"></i></i>';
   // Fonds qui réagissent aux tirages (data-react) et combien de temps la réaction dure (ms).
   // Comic Book, Black Hole et Rain to Rainbow (2026-10-27) : l'arc-en-ciel dure le plus longtemps, la pluie revient doucement.
   // Spinning Bread (2026-10-28) : un coup de fouet à chaque tirage, plus de tours selon la rareté (fond normal, pas légendaire).
@@ -7257,11 +7267,13 @@
           <li><b>Not every message needs a mute.</b> A small mistake? Just delete it.</li>
           <li><b>Always pick the right reason</b> when you delete or mute, and add details when they help Sacha understand.</li>
           <li>You can't mute the owner or another moderator. Only Sacha can mute forever.</li>
+          <li><b>Made a mistake?</b> Lift the mute in “Muted right now” below. Open “See the messages around it” on a report before you act: context matters.</li>
         </ol>
         <p class="panel-note">In the 💬 chat, press ⋯ on a message to delete it or mute its writer.</p>
       </div>
       <div id="mod-body"><div class="empty">Loading…</div></div></div>`;
     const box = $('#mod-body'); let data = null, muting = null, mkind = 'mute';
+    const ctxOpen = new Set(); // contexte ouvert (idée de jsand) : reste ouvert quand la page se redessine
     const WHY = Object.fromEntries(GChat.MUTE_WHY), DUR = Object.fromEntries(GChat.MUTE_DUR);
     const draw = () => {
       if (!data || !box.isConnected) return;
@@ -7269,10 +7281,13 @@
           ${data.reports.length ? data.reports.map(r => `<div class="o-report mod-rep" data-id="${esc(r.id)}" data-msg="${esc(r.msgId)}">
             <div class="o-report-head">${`<a class="player-link" href="${profileHref(r.name)}" data-no-i18n>${esc(r.name)}</a>`}${r.count > 1 ? ` <span class="o-chip warn">reported ${r.count} times</span>` : ''}${r.against > r.count ? ` <span class="panel-note">${fmt(r.against)} reports about this player</span>` : ''}<span class="panel-note">${relTime(r.msgT)}</span></div>
             <p class="o-report-text" data-no-i18n>${esc(r.text)}</p>
+            ${r.around && r.around.length > 1 ? `<details class="mod-ctx"${ctxOpen.has(r.id) ? ' open' : ''}><summary>💬 See the messages around it</summary><ol class="mod-ctx-list">${r.around.map(c => `<li class="${c.hit ? 'hit' : ''}"><span class="mod-ctx-time">${new Date(c.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> <b data-no-i18n>${esc(c.name)}</b><span aria-hidden="true">:</span> <span data-no-i18n>${esc(c.text)}</span></li>`).join('')}</ol></details>` : ''}
             <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete…</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
             ${muting === r.id ? GChat.muteHTML({ owner: false }, mkind) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
+        <div class="panel"><div class="panel-head"><h3 class="panel-title">🔇 Muted right now</h3><span class="panel-note">lift a mute that wasn't fair</span></div>
+          ${(data.mutes || []).length ? data.mutes.map(m => `<div class="o-report mod-mute"><div class="o-report-head"><a class="player-link" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="panel-note">${m.until < 0 ? 'Forever' : `until ${new Date(m.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</span><span class="panel-note">${WHY[m.why] || 'No reason given'}</span><span class="panel-note">by <b data-no-i18n>${esc(m.by || 'Moderator')}</b></span></div>${m.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(m.text)}”</p>` : ''}<div class="o-moves">${m.canLift ? `<button class="btn ghost small" data-mod-unmute="${esc(m.name)}">🔊 Unmute</button>` : '<span class="panel-note">Only Sacha can lift this one</span>'}</div></div>`).join('') : '<div class="empty">Nobody is muted.</div>'}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">My last actions</h3><span class="panel-note">Sacha sees these too</span></div>
-          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ' · <b>lifted by Sacha</b>' : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
+          ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : a.kind === 'unmute' ? '🔊' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : a.kind === 'unmute' ? 'Mute lifted' : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift === true ? 'Sacha' : a.lift)}</span></b>` : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
     };
     const load = (action = 'gcModPage', extra) => Online.global(action, extra).then(d => { data = d; draw(); }).catch(err => {
       if (!data) box.innerHTML = `<div class="empty">${err.status === 403 ? 'This page is for chat moderators.' : 'Unavailable right now.'}</div>`;
@@ -7280,8 +7295,12 @@
       throw err;
     });
     load().catch(() => {});
+    box.addEventListener('toggle', e => { const c = e.target.closest('.mod-rep'); if (c && e.target.matches('.mod-ctx')) { if (e.target.open) ctxOpen.add(c.dataset.id); else ctxOpen.delete(c.dataset.id); } }, true);
     box.addEventListener('click', e => {
       if (e.target.closest('[data-mod-reload]')) { load().catch(() => {}); return; }
+      // Lever un silence (idée de pople, 2026-11-05) : le serveur refuse les silences pour toujours et ceux du créateur.
+      const un = e.target.closest('[data-mod-unmute]');
+      if (un) { if (confirm(window.RNGI18n ? window.RNGI18n.t(`Lift the mute of ${un.dataset.modUnmute}?`) : `Lift the mute of ${un.dataset.modUnmute}?`)) { un.disabled = true; load('gcUnmute', { name: un.dataset.modUnmute }).then(() => toast('Mute lifted')).catch(() => { un.disabled = false; }); } return; }
       const card = e.target.closest('.mod-rep'); if (!card) return;
       const t = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
       if (e.target.closest('[data-mod-ok]')) { load('gcReportOk', { id: card.dataset.id }).then(() => toast('Marked as fine')).catch(() => {}); return; }
@@ -8212,15 +8231,34 @@
       </div>`;
     $('#f-add').addEventListener('submit', e => { e.preventDefault(); friendAction('add', $('#f-name').value.trim()); });
     $('#f-body').addEventListener('click', e => {
+      const by = e.target.closest('[data-flb]'); // classement entre amis : XP, aujourd'hui, meilleur tirage, tirages
+      if (by) { friendsBoardBy = by.dataset.flb; if (friendsState) drawFriends(friendsState); return; }
       const btn = e.target.closest('[data-fr]');
       if (!btn) return;
       if (btn.dataset.fr === 'remove' && !confirm(window.RNGI18n.t(`Remove ${btn.dataset.name} from your friends?`))) return;
       if (btn.dataset.fr === 'gift') { openGift(btn.dataset.name); return; }
       if (btn.dataset.fr === 'chat') { openChat(btn.dataset.name); return; }
+      if (btn.dataset.fr === 'star') { friendAction('star', btn.dataset.name, { on: btn.getAttribute('aria-pressed') !== 'true' }); return; } // Big Sexy, 2026-11-05
       friendAction(btn.dataset.fr, btn.dataset.name);
     });
     drawFriends();
     checkGifts();
+  }
+  // Classement entre amis (idée d'Edward, 2026-11-05) : toi et tes amis, trié par la mesure choisie ; les 10 premiers,
+  // et ta ligne en plus si tu n'y es pas.
+  let friendsBoardBy = 'xp';
+  const FLB = [['xp', '⭐ XP'], ['today', '☀️ Today'], ['best', '🎯 Best roll'], ['rolls', '🎲 Rolls']];
+  function friendsBoardHTML(board) {
+    if (!board || board.length < 2) return '';
+    const by = FLB.some(([k]) => k === friendsBoardBy) ? friendsBoardBy : 'xp';
+    const val = e => (by === 'best' ? (e.best ? e.best.s : -1) : e[by]);
+    const sorted = [...board].sort((a, b) => val(b) - val(a) || b.xp - a.xp);
+    const meAt = sorted.findIndex(e => e.me), rows = sorted.slice(0, 10).map((e, i) => [e, i]);
+    if (meAt >= 10) rows.push([sorted[meAt], meAt]);
+    const cell = e => (by === 'best' ? (e.best ? `<span class="num-card sm" data-tier="${esc(e.best.tier)}">${String(e.best.n).padStart(6, '0')}</span>` : '<span class="panel-note">–</span>')
+      : by === 'rolls' ? `<span class="mono">${fmt(e.rolls)}</span>` : `<span class="mono">${compactXp(e[by])}</span>`);
+    return `<div class="panel stats-sep flb"><div class="panel-head"><h3 class="panel-title">🏆 Friends leaderboard</h3><span class="flb-tabs" role="group" aria-label="Sort by">${FLB.map(([k, l]) => `<button type="button" class="flb-tab${k === by ? ' on' : ''}" data-flb="${k}" aria-pressed="${k === by}">${l}</button>`).join('')}</span></div>
+      <ol class="flb-list">${rows.map(([e, i]) => `<li class="flb-row${e.me ? ' me' : ''}${i === 9 && meAt > 10 ? ' gap' : ''}"><span class="flb-rank">${i < 3 && val(e) > 0 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>${Avatars.html(e.name, 'av-xs')}<a class="player-link flb-name" href="${profileHref(e.name)}">${esc(e.name)}</a>${e.me ? '<span class="muted">(you)</span>' : ''}<span class="flb-val">${cell(e)}</span></li>`).join('')}</ol></div>`;
   }
   // Pièces offertes à un ami (api/friends.js, action « gift ») : le serveur vérifie tout (amitié, 30 tirages, 10 à 500
   // pièces, 1 000 données et 2 000 reçues par jour, solde). La fenêtre affiche ce qu'il reste à donner aujourd'hui.
@@ -8438,11 +8476,11 @@
       Sound.play('lock', { i: 5 });
     }
   }
-  async function friendAction(action, name) {
-    if (!Store.player.name) { askName(() => friendAction(action, name)); return; }
+  async function friendAction(action, name, extra) {
+    if (!Store.player.name) { askName(() => friendAction(action, name, extra)); return; }
     if (!name) { toast('Enter a player name'); return; }
     try {
-      const state = await Online.friends(action, name);
+      const state = await Online.friends(action, name, extra);
       if (state.note) toast(state.note);
       if (action === 'add' && $('#f-name')) $('#f-name').value = '';
       drawFriends(state);
@@ -8472,11 +8510,12 @@
         ${state.friends.length ? state.friends.map(f => `
           <div class="friend-row">
             <span class="live-dot fr-${f.room ? 'duel' : f.status || 'offline'}${f.room ? ' on' : ''}" title="${f.room ? 'In a duel' : f.status === 'online' ? 'Online' : f.status === 'afk' ? 'AFK' : 'Offline'}"></span>
-            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
+            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><span class="fr-who"><button class="fr-star${f.star ? ' on' : ''}" type="button" data-fr="star" data-name="${esc(f.name)}" aria-pressed="${!!f.star}" title="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}" aria-label="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}">${f.star ? '★' : '☆'}</button><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a></span>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.status === 'online' ? '<b class="fr-st online">Online</b>' : f.status === 'afk' ? '<b class="fr-st afk">AFK</b>' : `Offline · ${f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}`}</span></span>
             <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
+      ${friendsBoardHTML(state.board)}
       ${state.outgoing.length ? `
         <div class="panel stats-sep"><div class="panel-head"><h3 class="panel-title">Requests sent</h3></div>
           ${state.outgoing.map(n => `<div class="friend-row"><a class="player-link" href="${profileHref(n)}">${esc(n)}</a><span class="friend-actions">${btn('cancel', n, 'Cancel')}</span></div>`).join('')}
@@ -8686,12 +8725,12 @@
     if (!list || !d) return;
     const me = d.players.find(p => p.me), muted = new Set(Store.settings.chatMuted || []);
     const chat = d.chat || [], shown = chat.filter(c => c.me || !muted.has(c.name));
-    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}`; // un message modifié (ou une réaction) redessine aussi
+    const sig = `${shown.length}:${shown.length ? shown[shown.length - 1].t : 0}:${muted.size}:${me ? 1 : 0}:${shown.filter(c => c.edited).map(c => `${c.t}.${c.m}`).join('|')}:${JSON.stringify(shown.map(c => c.rx || 0))}:${Rx.open}:${Room.chatMenu || ''}`; // un message modifié (ou une réaction) redessine aussi
     if (sig !== Room.chatSig) {
       Room.chatSig = sig;
       const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
       list.innerHTML = shown.length ? shown.map(c => `
-        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : c.me ? `<button class="chat-hide chat-report" data-chat-edit="${c.t}" data-text="${esc(c.m)}" title="Edit this message">Edit</button><button class="chat-hide chat-report" data-chat-unsay="${c.t}" title="Delete this message">Delete</button>` : `<button class="chat-hide" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">Hide</button><button class="chat-hide chat-report" data-chat-report="${c.t}" title="Report this message to the creator of the game">Report</button>`}</div>${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
+        <div class="chat-item" ${Rx.attrs('duel', c.t)}><div class="chat-msg${c.me ? ' mine' : ''}"><b class="chat-name" data-no-i18n>${c.bot ? '🤖 ' : ''}${esc(c.name)}</b><span class="chat-text" data-no-i18n>${esc(c.m)}</span>${c.edited ? '<i class="chat-edited">(edited)</i>' : ''}${me ? Rx.addBtn('duel', c.t, 'chat-hide') : ''}${c.bot ? '' : `<button class="chat-hide chat-more${Room.chatMenu === c.t ? ' on' : ''}" data-chat-menu="${c.t}" aria-label="Message options" title="Options" aria-expanded="${Room.chatMenu === c.t}">⋯</button>`}</div>${Room.chatMenu === c.t && !c.bot ? `<div class="chat-menu">${c.me ? `<button type="button" data-chat-edit="${c.t}" data-text="${esc(c.m)}">✏️ Edit</button><button type="button" data-chat-unsay="${c.t}">🗑️ Delete</button>` : `<button type="button" data-chat-hide="${esc(c.name)}" title="Hide this player's messages">🙈 Hide</button><button type="button" data-chat-report="${c.t}" title="Report this message to the creator of the game">🚩 Report</button>`}</div>` : ''}${Rx.row('duel', c.t, c.rx, !!me)}</div>`).join('')
         : '<div class="empty">No message yet. Say hi!</div>';
       if (atBottom) list.scrollTop = list.scrollHeight;
       const hidden = d.players.filter(p => !p.me && muted.has(p.name)).length;
@@ -8738,6 +8777,22 @@
   const roundLength = r => (REVEAL.digitStart + Array.from({ length: 5 }, (_, i) => digitDelay(i, 6)).reduce((x, y) => x + y, 0) + 1500) * ((r && r.pace) || 1);
   const serverNow = () => Date.now() + Room.offset;
 
+  // Qui mène (idée de Jacksonw, 2026-11-05 : « je croyais avoir perdu, l'autre était en premier tout le temps ») : un
+  // seul meneur après au moins une manche révélée, sinon personne (égalité).
+  function leaderOf(wins, totals) {
+    const d = Room.data;
+    if (!Room.shown) return -1;
+    const key = i => (d.mode === 'xp' ? [totals[i], 0] : [wins[i], totals[i]]);
+    const order = d.players.map((p, i) => i).sort((x, y) => key(y)[0] - key(x)[0] || key(y)[1] - key(x)[1]);
+    if (order.length < 2) return order[0];
+    const [a, b] = [key(order[0]), key(order[1])];
+    return a[0] === b[0] && a[1] === b[1] ? -1 : order[0];
+  }
+  // Score de la partie au-dessus de la carte de chacun (Jacksonw) : XP, ou manches gagnées puis XP.
+  function sideScoreHTML(j, wins, totals, lead) {
+    const d = Room.data;
+    return `${lead === j ? '<span class="room-lead" title="Winning">👑</span>' : ''}${d.mode === 'xp' ? `<span class="mono">${compact(totals[j])} XP</span>` : `<span class="mono">${wins[j]} / ${d.target}</span><span class="mono">· ${compact(totals[j])} XP</span>`}`;
+  }
   // Score affiché : seulement les manches déjà révélées à l'écran.
   function shownScore() {
     const d = Room.data, count = d.players.length;
@@ -8840,7 +8895,7 @@
       Room.chatSig = ''; // salon reconstruit (un joueur arrive) : la liste du chat est neuve, il faut la redessiner
       body.innerHTML = `
       <div class="room-layout"><div class="room-main">
-        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
+        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)} <button class="room-order" id="room-order" type="button" aria-pressed="false" hidden></button></p>
         <div class="room-board" id="room-board"></div>
         <div class="room-arena">
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
@@ -8908,6 +8963,7 @@
         if (!confirm(window.RNGI18n ? window.RNGI18n.t(Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.') : (Room.data.stake ? 'Leave this duel? You lose your bet and cannot come back.' : 'Leave this duel? You cannot come back.'))) return;
         Room.auto = false; roomSend('quit', quit);
       });
+      $('#room-order').addEventListener('click', () => { Store.setSetting('duelOrder', Store.settings.duelOrder === 'lead' ? 'seat' : 'lead'); drawRoom(); });
       $('#room-board').addEventListener('click', e => {
         const k = e.target.closest('[data-kick]'); if (!k) return;
         e.preventDefault();
@@ -8915,6 +8971,10 @@
         roomSend('kick', k, { who: k.dataset.kick });
       });
       $('#room-chat').addEventListener('click', e => {
+        // Modifier, supprimer, masquer et signaler derrière ⋯ (idée de Jacksonw, 2026-11-05 : les boutons prenaient 3 lignes).
+        const more = e.target.closest('[data-chat-menu]');
+        if (more) { const t = Number(more.dataset.chatMenu); Room.chatMenu = Room.chatMenu === t ? null : t; Room.chatSig = ''; drawChat(Room.data); return; }
+        if (e.target.closest('.chat-menu')) Room.chatMenu = null; // une action choisie referme le menu
         const rep = e.target.closest('[data-chat-report]');
         if (rep) { reportMessage(rep, () => Online.roomAction('report', Room.code, { t: Number(rep.dataset.chatReport) })); return; }
         const ed = e.target.closest('[data-chat-edit]');
@@ -8965,7 +9025,11 @@
     const ranked = d.players.map((p, i) => i).sort((x, y) => (d.mode === 'xp' ? totals[y] - totals[x] : wins[y] - wins[x] || totals[y] - totals[x]));
     // À deux, les cases du score restent dans l'ordre des cartes (signalé par qwertyuiop, 2026-10-30) : triées par
     // classement, elles passaient au-dessus de la carte de l'adversaire dès qu'il menait. Le rang reste affiché.
-    const order = d.players.length === 2 ? [0, 1] : ranked;
+    // Au choix, le meneur d'abord (idée de Jacksonw, 2026-11-05) : bouton ⇅ sous le tableau, gardé dans les réglages.
+    const leadFirst = Store.settings.duelOrder === 'lead';
+    const order = d.players.length === 2 && !leadFirst ? [0, 1] : ranked, lead = leaderOf(wins, totals);
+    d.players.forEach((p, j) => { const el = $(`#rsc-${j}`); if (el) setHTML(el, sideScoreHTML(j, wins, totals, lead)); });
+    { const ob = $('#room-order'); if (ob) { ob.hidden = d.players.length !== 2; ob.setAttribute('aria-pressed', String(leadFirst)); ob.textContent = leadFirst ? '⇅ Same order as the cards' : '⇅ Put the leader first'; } }
     setHTML($('#room-board'), order.map(i => {
       const p = d.players[i], k = ranked.indexOf(i);
       const metric = d.mode === 'xp'
@@ -8976,7 +9040,7 @@
       // Sorti, ou bouton ✕ de l'hôte pour exclure un joueur pendant la partie (pas dans un duel avec mise).
       const out = p.out ? `<span class="out-chip">${p.out === 'kicked' ? '✕ removed' : '🚪 left'}</span>` : '';
       const kick = me && me.host && !p.me && !p.out && d.status === 'playing' && !d.stake ? `<button class="seat-kick" type="button" data-kick="${esc(p.name)}" title="Remove from the duel" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
-      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top, true)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
+      return `<div class="board-row${p.me ? ' me' : ''}${p.out ? ' out' : ''}${lead === i ? ' lead' : ''}" data-pi="${i}">${out}${kick}<span class="rank">${lead === i ? '👑' : k + 1}</span><span class="board-who">${who}${clanTagHTML(p.clan)}${titleHTML(p.title)}${topHTML(p.top, true)}${p.me ? '<span class="muted">(you)</span>' : ''}</span>${ready}<span class="board-metric">${metric}</span></div>`;
     }).join(''));
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
@@ -9104,6 +9168,7 @@
   // Scène : une carte par joueur. Sans manche : "??????" ; sinon la manche révélée, avec son gagnant.
   function stageHTML(r, spinning = false) {
     const d = Room.data;
+    const score = (() => { const x = shownScore(); return { ...x, lead: leaderOf(x.wins, x.totals) }; })();
     const sides = d.players.map((p, j) => {
       const a = r && !spinning && r.n[j] != null ? analysis(r.n[j]) : null; // arrivé en cours de partie : pas de nombre pour les manches d'avant
       const won = a && r.winner === j;
@@ -9113,6 +9178,7 @@
       return `
         <div class="room-side${won ? ' won' : ''}${p.me ? ' me' : ''}${skinClass(p.skin).replace('skin-', 'side-')}" id="rs-${j}">${Shop.resolve(p.skin) === 'fire' ? '<span class="side-embers" aria-hidden="true"></span>' : ''}
           <div class="room-name">${won ? '🏆 ' : ''}${p.bot ? '🤖 ' : ''}${esc(p.name)}${p.clan ? ` [${esc(p.clan.tag)}]` : ''}${titleEmoji(p.title)}${topEmoji(p.top)}</div>
+          <div class="room-score" id="rsc-${j}">${score ? sideScoreHTML(j, score.wins, score.totals, score.lead) : ''}</div>
           ${card}
           <div class="room-meta" id="rm-${j}">${a ? `${tierPill(a.tier)}<span class="ep-pill">${fmt(a.total)} XP</span>` : ''}</div>
           <div class="pill-row" id="rb-${j}">${a ? duelBadgesHTML(a, r.n[j]) : ''}</div>
@@ -9436,16 +9502,32 @@
     app.innerHTML = `
       <div class="page rm-page">
         <h1 class="page-title">🗺️ Roadmap</h1>
-        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Got one? Send it with the 💡 button.</p>
+        <p class="panel-note rm-intro">Player ideas the creator plans to make, and the ones added in the last 30 days. Vote ▲ for the ideas you want first. Got one? Send it with the 💡 button.</p>
         <div id="rm-body"><div class="empty">Loading…</div></div>
       </div>`;
-    const item = x => `<li class="rm-item"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></li>`;
-    const section = (title, note, list, empty) => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
-    Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'roadmap' }) }).then(d => {
-      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box) return;
-      box.innerHTML = section('🛠️ Planned', `${fmt(d.planned.length)} ideas`, d.planned, 'Nothing planned right now.')
-        + section('✅ Recently added', 'last 30 days', d.recent, 'Nothing added in the last 30 days.');
-    }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+    // Votes (idée de Trinity, 2026-11-05) : ▲ sur une idée prévue (pseudo et 100 tirages, vérifié par le serveur), et un
+    // tri « Most voted » (par défaut) ou « Newest » ; le créateur voit ainsi ce que les joueurs attendent le plus.
+    let data = null, sort = 'votes';
+    const voteBtn = x => { const n = (data.votes || {})[x.key] || 0, on = (data.mine || []).includes(x.key); return `<button type="button" class="rm-vote${on ? ' on' : ''}" data-rm-vote="${esc(x.key)}" aria-pressed="${on}" title="${on ? 'Remove your vote' : 'Vote for this idea'}"><span aria-hidden="true">▲</span><b class="mono">${fmt(n)}</b></button>`; };
+    const item = x => `<li class="rm-item${x.key ? ' rm-votable' : ''}">${x.key ? voteBtn(x) : ''}<div class="rm-body"><p class="rm-text" data-no-i18n>${esc(x.text)}</p><span class="rm-by">idea by <a class="player-link" href="${profileHref(x.name)}" data-no-i18n>${esc(x.name)}</a>${x.t ? ` · ${relTime(x.t)}` : ''}</span></div></li>`;
+    const section = (title, note, list, empty, tools = '') => `<div class="panel rm-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span>${tools}</div>${list.length ? `<ul class="rm-list">${list.map(item).join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    const draw = () => {
+      const box = $('#rm-body'); if (currentView !== 'roadmap' || !box || !data) return;
+      const v = x => (data.votes || {})[x.key] || 0;
+      const planned = sort === 'votes' ? [...data.planned].sort((a, b) => v(b) - v(a) || b.t - a.t) : [...data.planned].sort((a, b) => b.t - a.t);
+      const tools = `<span class="rm-sort" role="group" aria-label="Sort">${[['votes', '▲ Most voted'], ['new', '🆕 Newest']].map(([k, l]) => `<button type="button" class="flb-tab${sort === k ? ' on' : ''}" data-rm-sort="${k}" aria-pressed="${sort === k}">${l}</button>`).join('')}</span>`;
+      box.innerHTML = section('🛠️ Planned', `${fmt(data.planned.length)} ideas`, planned, 'Nothing planned right now.', tools)
+        + section('✅ Recently added', 'last 30 days', data.recent, 'Nothing added in the last 30 days.');
+    };
+    Online.site('roadmap').then(d => { data = d; draw(); }).catch(() => { const box = $('#rm-body'); if (box && currentView === 'roadmap') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+    $('#rm-body').addEventListener('click', async e => {
+      const so = e.target.closest('[data-rm-sort]'); if (so) { sort = so.dataset.rmSort; draw(); return; }
+      const b = e.target.closest('[data-rm-vote]'); if (!b || !data) return;
+      if (!Store.player.name) { askName(() => renderRoadmap()); return; }
+      b.disabled = true;
+      try { data = await Online.site('rmVote', { key: b.dataset.rmVote, on: b.getAttribute('aria-pressed') !== 'true' }); draw(); }
+      catch (err) { b.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); }
+    });
   }
 
   function renderAbout() {
@@ -9722,6 +9804,7 @@
   // Co-chef (idée de Yentizx et JAKECisthebest, 2026-10-27) : entre le chef et les officiers (api/_clan.js).
   const CL_ROLE = { leader: '👑 Leader', coleader: '🌟 Co-leader', officer: '⭐ Officer', member: 'Member' };
   const CL_RANK = { member: 1, officer: 2, coleader: 3, leader: 4 };
+  let clanEmojis = () => {};
   let clanTimer = 0, clanTab = 'mine', clanState = null, clanChatSig = '', clanWarSig = '', clanBusy = false, clanChatLast = null;
   Rx.on('clan', { send: async (t, emoji) => drawClanChat(await Online.clan('react', { t: Number(t), emoji })), redraw: () => { if (clanChatLast) drawClanChat(clanChatLast); } });
   function stopClan() { clearInterval(clanTimer); clanTimer = 0; }
@@ -9740,6 +9823,7 @@
     app.querySelector('.cl-tabs').addEventListener('click', e => { const b = e.target.closest('[data-cltab]'); if (!b) return; clanTab = b.dataset.cltab; drawClanTab(); });
     $('#cl-body').addEventListener('click', onClanClick);
     $('#cl-body').addEventListener('submit', onClanSubmit);
+    clanEmojis = wireEmojis($('#cl-body'), () => $('#cl-text')); // emojis dans le chat du clan (idée de Deadshot, 2026-11-05)
     if (!Store.player.name) { $('#cl-body').innerHTML = '<div class="empty">Roll once and pick a player name to join a clan.</div>'; return; }
     drawClanTab();
     stopClan();
@@ -9848,7 +9932,7 @@
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">💬 Clan chat</h3></div>
         <div class="dm-list cl-chat" id="cl-chat" aria-live="polite"><div class="empty">Loading…</div></div>
-        <form class="dm-form cl-chatform" id="cl-say"><input class="input" id="cl-text" maxlength="140" placeholder="Message to your clan…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>
+        ${emoGridHTML()}<form class="dm-form cl-chatform" id="cl-say">${EMO_BTN}<input class="input" id="cl-text" maxlength="140" placeholder="Message to your clan…" autocomplete="off" aria-label="Message"><button class="btn-roll small">Send</button></form>
       </div>
       <div class="panel">
         <div class="panel-head"><h3 class="panel-title">👥 Members</h3><span class="panel-note" data-no-i18n>${c.members.length}/${c.slots}</span></div>
@@ -10007,7 +10091,7 @@
     if (f.id === 'cl-say') {
       const input = $('#cl-text'); if (!input.value.trim()) return;
       btn.disabled = true;
-      try { drawClanChat(await Online.clan('say', { text: input.value })); input.value = ''; const l = $('#cl-chat'); if (l) l.scrollTop = l.scrollHeight; }
+      try { drawClanChat(await Online.clan('say', { text: input.value })); input.value = ''; clanEmojis(false); const l = $('#cl-chat'); if (l) l.scrollTop = l.scrollHeight; }
       catch (err) { clanErr(err); }
       btn.disabled = false; input.focus();
       return;
@@ -10236,7 +10320,7 @@
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time, rxCan) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}" ${Rx.attrs('gc', m.id)}>
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${m.best ? `<span class="gc-best mono" data-tier="${esc(m.best.tier)}" title="Best roll">(${fmt(m.best.n)})</span>` : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${Rx.row('gc', m.id, rx[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';
@@ -10322,7 +10406,10 @@
     // l'endroit du curseur. Le serveur compte les caractères et garde les emojis tels quels (api/_global.js normalize).
     // Pain (Deadshot, G8_floppa, 2026-10-28) : tout le monde écrit « bread » dans le chat, donc 🍞 🥖 🥐 en tête.
     // 🍳 juste après le pain (idée de MattyFaux-Lucky, 2026-11-01).
-    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐'],
+    EMOJIS: ['🍞', '🥖', '🥐', '🍳', '😀', '😂', '🤣', '😊', '😍', '😎', '🤩', '🥳', '😅', '😭', '😱', '😡', '🤔', '🙄', '😴', '🤯', '👍', '👎', '👏', '🙌', '🙏', '💪', '👋', '🤞', '❤️', '💔', '🔥', '✨', '⭐', '🌟', '🎉', '🎊', '🏆', '🥇', '🎲', '🍀', '💎', '👑', '🚀', '💯', '✅', '❌', '👀', '😈', '👻', '🎃', '🍕', '🐐',
+      // pack du 2026-11-05 : visages (Jacksonw : « big eyes and water », « annoyed »), 🎩 (Deadshot), 👌 (Jguz01),
+      // taco, baleine, brocoli, chevalier, roi, fromage, vache, cheval (sennybex1)
+      '🥹', '🥺', '😒', '😤', '😳', '🤪', '😬', '🤗', '😇', '😏', '🤓', '🤡', '💀', '🎩', '👌', '🌮', '🐳', '🥦', '🛡️', '🤴', '🧀', '🐄', '🐴'],
     toggleEmoji(on = !this.emojiOpen) {
       this.emojiOpen = on;
       const grid = this.el.querySelector('.gc-emojis'), btn = this.el.querySelector('.gc-emo-btn');

@@ -907,6 +907,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .room-side { text-align: center; border: 1px solid var(--outline); border-radius: .8rem; background: var(--surface); padding: 1rem .6rem; min-width: 0; transition: box-shadow .3s ease, border-color .3s ease; }
 .room-side.won { border-color: var(--ep-outline); box-shadow: 0 0 0 3px var(--ep-outline); }
 .room-name { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .7rem; }
+/* Score de la partie au-dessus de chaque carte, 👑 pour le meneur (idée de Jacksonw, 2026-11-05) */
+.room-score { display: flex; flex-wrap: wrap; gap: 0 .3rem; justify-content: center; align-items: center; margin: -.55rem 0 .4rem; font-size: .76rem; line-height: 1.2; font-weight: 700; color: var(--prose-2); }
+.room-score > span { white-space: nowrap; }
+@media (max-width: 560px) { .room-score { font-size: .68rem; gap: .2rem; } }
+.room-score:empty { display: none; }
+.room-lead { font-size: .9rem; line-height: 1; }
+.board-row.lead { border-color: color-mix(in srgb, #f59e0b 60%, var(--outline)); }
+.room-board .board-row.lead .rank { font-size: .85rem; }
+.room-order { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--chart-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.room-order[hidden] { display: none; }
 .room-meta { display: flex; gap: .35rem; justify-content: center; align-items: center; min-height: 1.6rem; margin: .7rem 0 .4rem; }
 .room-vs { font-weight: 800; color: var(--prose-3); text-align: center; }
 .room-actions { text-align: center; margin: 1.2rem 0 .4rem; }
@@ -2243,6 +2253,25 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .friend-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
 .friend-row > .player-link { flex: 1; }
 .friend-actions { display: flex; gap: .4rem; align-items: center; }
+/* Amis en étoile (Big Sexy) et classement entre amis (Edward), 2026-11-05 */
+.fr-who { display: flex; align-items: baseline; gap: .2rem; min-width: 0; }
+.fr-who > .player-link { min-width: 0; overflow-wrap: anywhere; }
+.fr-star { flex: none; border: 0; background: none; padding: .1rem .15rem; margin-left: -.15rem; font: inherit; font-size: 1.05rem; line-height: 1; color: var(--prose-3); cursor: pointer; }
+.fr-star:hover { color: #d97706; }
+.fr-star.on { color: #d97706; }
+.dark .fr-star.on { color: #fbbf24; }
+.flb .panel-head { flex-wrap: wrap; gap: .4rem; }
+.flb-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
+.flb-tab { border: 1px solid var(--outline); border-radius: 999px; background: none; padding: .2rem .55rem; font: inherit; font-size: .74rem; font-weight: 600; color: var(--prose-2); cursor: pointer; }
+.flb-tab.on { background: var(--prose); border-color: var(--prose); color: var(--surface); }
+.flb-list { list-style: none; margin: 0; padding: 0; }
+.flb-row { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-top: 1px solid var(--outline); min-width: 0; font-size: .86rem; }
+.flb-row:first-child { border-top: 0; }
+.flb-row.gap { border-top-style: dashed; }
+.flb-row.me .flb-name { color: var(--chart-accent); }
+.flb-rank { width: 1.6rem; flex: none; text-align: center; font-family: var(--font-mono); font-size: .76rem; color: var(--prose-3); }
+.flb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.flb-val { margin-left: auto; flex: none; font-size: .8rem; }
 .add-friend { font-size: .7rem; vertical-align: middle; margin-left: .5rem; }
 .friend-actions a, .friend-row a.btn-roll { text-decoration: none; }
 /* Pièces offertes à un ami (2026-10-13) : fenêtre « Give coins » ; sur téléphone, le bouton ne garde que 🎁. */
@@ -2434,6 +2463,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .chat-form .input { flex: 1; min-width: 0; }
 @keyframes chat-in { from { opacity: 0; transform: translateY(4px); } }
 @media (hover: none) { .chat-hide { opacity: .7; } }
+/* Menu ⋯ d'un message du duel (idée de Jacksonw, 2026-11-05) */
+.chat-more { font-size: .9rem; letter-spacing: 0; line-height: 1; }
+.chat-more.on { opacity: 1; color: var(--prose); }
+.chat-hide + .chat-more { margin-left: 0; }
+.chat-menu { display: flex; flex-wrap: wrap; gap: .3rem; margin: .15rem 0 .25rem; }
+.chat-menu button { border: 1px solid var(--outline); border-radius: 999px; background: var(--surface); padding: .15rem .55rem; font: inherit; font-size: .72rem; font-weight: 600; color: var(--prose-2); cursor: pointer; }
+.chat-menu button:hover, .chat-menu button:focus-visible { color: var(--prose); border-color: var(--prose-3); }
 
 /* Tirage fait hors ligne : gardé dans l'historique, non compté. */
 .offline-tag { font-size: .58rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--prose-3); border: 1px dashed var(--outline-strong); border-radius: 999px; padding: .05rem .4rem; }
@@ -2549,6 +2585,16 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .rm-item { padding: .55rem .7rem; border-radius: .55rem; background: var(--surface); border: 1px solid var(--outline); min-width: 0; }
 .rm-text { margin: 0 0 .25rem; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
 .rm-by { font-size: .76rem; color: var(--muted, inherit); opacity: .8; }
+/* Votes sur les idées prévues (idée de Trinity, 2026-11-05) */
+.rm-panel .panel-head { flex-wrap: wrap; gap: .4rem; }
+.rm-sort { display: flex; gap: .25rem; margin-left: auto; }
+.rm-votable { display: flex; gap: .6rem; align-items: flex-start; }
+.rm-body { min-width: 0; flex: 1; }
+.rm-vote { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 2.6rem; min-height: 2.6rem; padding: .2rem .35rem; border: 1px solid var(--outline); border-radius: .5rem; background: none; color: var(--prose-2); font: inherit; font-size: .72rem; line-height: 1.1; cursor: pointer; }
+.rm-vote:hover { border-color: var(--prose-3); color: var(--prose); }
+.rm-vote.on { border-color: #ea580c; background: color-mix(in srgb, #f97316 14%, transparent); color: #c2410c; }
+.dark .rm-vote.on { color: #fdba74; }
+.rm-vote b { font-size: .8rem; }
 .idea-roadmap, .rm-about { margin: 0 0 .6rem; font-size: .86rem; }
 .idea-roadmap a, .rm-about a { font-weight: 600; }
 
@@ -3702,6 +3748,16 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .limited-banner.xmas i:nth-of-type(3) { left: 48%; top: -1.2rem; font-size: 1rem; animation-duration: 8s; animation-delay: -6s; }
 .limited-banner.xmas i:nth-of-type(4) { left: 69%; font-size: .7rem; animation-duration: 10s; animation-delay: -1.5s; }
 .limited-banner.xmas i:nth-of-type(5) { left: 90%; font-size: .9rem; animation-duration: 7.5s; animation-delay: -4.5s; }
+/* Thanksgiving (2026-11-26) : au-dessus de celle de Noël, un soir d'automne (brun, rouille, or), des feuilles qui tombent. */
+.limited-banner.tgiving { border-color: rgba(251, 191, 36, .55); box-shadow: 0 0 26px rgba(234, 88, 12, .3);
+  background: radial-gradient(ellipse 55% 130% at 100% 100%, rgba(234, 179, 8, .45), transparent 70%), radial-gradient(ellipse 45% 140% at 0% 100%, rgba(185, 28, 28, .55), transparent 72%), linear-gradient(160deg, #2b1309, #5a2410 60%, #7c2d12); }
+.limited-banner.tgiving b { text-shadow: 0 0 12px rgba(251, 146, 60, .85), 0 2px 0 rgba(69, 26, 3, .7); }
+.limited-banner.tgiving span { color: #fde68a; }
+.limited-banner.tgiving i { top: -1.2rem; left: 10%; font-size: .85rem; opacity: .85; animation: banner-snow 8s linear infinite; }
+.limited-banner.tgiving i:nth-of-type(2) { left: 30%; font-size: .7rem; animation-duration: 10s; animation-delay: -3.5s; }
+.limited-banner.tgiving i:nth-of-type(3) { left: 52%; font-size: 1rem; animation-duration: 9s; animation-delay: -6s; }
+.limited-banner.tgiving i:nth-of-type(4) { left: 72%; font-size: .75rem; animation-duration: 11s; animation-delay: -1.5s; }
+.limited-banner.tgiving i:nth-of-type(5) { left: 91%; font-size: .9rem; animation-duration: 8.5s; animation-delay: -5s; }
 @keyframes banner-snow { from { transform: translate(0, 0) rotate(0); } 50% { transform: translate(10px, 3rem) rotate(120deg); } to { transform: translate(-6px, 6.5rem) rotate(240deg); } }
 
 /* Duel : sur un grand écran, le chat passe en colonne à droite, toujours visible pendant la partie. */
@@ -5325,6 +5381,124 @@ html:not(.dark) #wallpaper .wsl-sleigh b { filter: brightness(.8) saturate(1.6);
 html.perf #wallpaper.wp-sleighnight .wsl-sleigh, html.perf #wallpaper.wp-sleighnight .wsl-sleigh *, html.perf #wallpaper.wp-sleighnight .wsl-sleigh ::before, html.perf .wp-sleighnight::before { animation: none !important; }
 html.perf #wallpaper .wsl-sleigh { opacity: 1; left: calc(var(--mx) - min(34vw, 250px)); transform: translate3d(0, 1vh, 0) rotate(-2deg); }
 
+/* 🥧 Thanksgiving Dinner (Thanksgiving 2026, fond limité) : idée de qwertyuiop (« un dîner de Thanksgiving, la nourriture
+   sur une table », 2026-11-01), avec les feuilles d'automne de Kj13 (brunes, rouges, jaunes et orange). Une salle à manger :
+   en bas de l'écran, la table mise sur toute la largeur (nappe crème, chemin de table à carreaux orange), et dessus, au
+   milieu, la dinde rôtie sur son plat (pilons à papillotes, canneberges), la tarte à la citrouille, le maïs, la purée,
+   la corbeille de petits pains, la sauce aux canneberges, deux petits potirons et deux bougies. La vapeur monte de la
+   dinde, les bougies vacillent. En haut, deux fenêtres aux rideaux rouille : des arbres d'automne, et des feuilles qui
+   tombent. Le milieu de l'écran reste un mur calme (c'est là qu'est l'interface). Thème sombre : le soir, aux bougies,
+   un ciel de crépuscule ; thème clair : l'après-midi, un mur crème. Calques du vrai fond (app.js, WALL_LAYERS.feast) :
+   .wtg-win (les fenêtres), .wtg-table (la nappe), .wtg-food (le repas, ses flammes et sa vapeur, en % de sa taille). */
+.wp-feast {
+  /* --F : la hauteur du repas, --W la largeur de chacun de ses deux groupes, --T : la nappe */
+  --F: min(26vh, 22vw, 290px); --T: calc(var(--F) * .42); --W: calc(var(--F) * 56 / 30);
+  --wtg-a: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 560 300'><defs><radialGradient id='tk' cx='.38' cy='.3' r='.75'><stop offset='0' stop-color='%23f7c26a'/><stop offset='.45' stop-color='%23d4862f'/><stop offset='.85' stop-color='%239c4a17'/><stop offset='1' stop-color='%236e300c'/></radialGradient><radialGradient id='dr' cx='.35' cy='.3' r='.8'><stop offset='0' stop-color='%23f0b45a'/><stop offset='.6' stop-color='%23c1702a'/><stop offset='1' stop-color='%237a3610'/></radialGradient><linearGradient id='pl' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ffffff'/><stop offset='1' stop-color='%23cfd6dc'/></linearGradient><linearGradient id='cd' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%23e9dcc4'/><stop offset='.4' stop-color='%23fbf5e9'/><stop offset='1' stop-color='%23d8c7a8'/></linearGradient><linearGradient id='br' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%238a6420'/><stop offset='.45' stop-color='%23e2b54e'/><stop offset='1' stop-color='%237a5418'/></linearGradient><radialGradient id='pu' cx='.4' cy='.35' r='.7'><stop offset='0' stop-color='%23fdba74'/><stop offset='.6' stop-color='%23ea580c'/><stop offset='1' stop-color='%239a3412'/></radialGradient><radialGradient id='rl' cx='.4' cy='.3' r='.8'><stop offset='0' stop-color='%23f3c47a'/><stop offset='.7' stop-color='%23c47a2c'/><stop offset='1' stop-color='%238a4a15'/></radialGradient><pattern id='kn' width='7' height='6' patternUnits='userSpaceOnUse'><rect width='7' height='6' fill='%23d9a514'/><rect x='.6' y='.6' width='5.6' height='4.6' rx='2' fill='%23fcd34d'/></pattern><pattern id='wv' width='12' height='8' patternUnits='userSpaceOnUse'><rect width='12' height='8' fill='%239a6a2e'/><path d='M0 4Q3 0 6 4T12 4' stroke='%236b4518' stroke-width='2' fill='none'/></pattern></defs><g fill='%23000' opacity='.22'><ellipse cx='270' cy='276' rx='178' ry='14'/></g><g id='cn' transform='translate(460 0)'><ellipse cx='55' cy='276' rx='26' ry='6' fill='url(%23br)'/><path d='M47 276L50 232H60L63 276Z' fill='url(%23br)'/><ellipse cx='55' cy='232' rx='15' ry='4.5' fill='url(%23br)'/><rect x='47' y='104' width='16' height='128' rx='3' fill='url(%23cd)'/><path d='M47 112Q50 126 49 140' stroke='%23fbf5e9' stroke-width='3' fill='none' opacity='.7'/><path d='M55 104V96' stroke='%233b2414' stroke-width='2'/></g><g transform='translate(-250 0)'><g transform='translate(385 214)'><ellipse rx='34' ry='24' fill='url(%23pu)'/><path d='M-12 -22Q-18 0 -12 22M12 -22Q18 0 12 22M0 -24V24' stroke='%239a3412' stroke-width='2.2' fill='none' opacity='.55'/><path d='M0 -22Q2 -34 8 -36' stroke='%234d5b1e' stroke-width='5' fill='none' stroke-linecap='round'/></g><g transform='translate(662 218) scale(.8)'><ellipse rx='34' ry='24' fill='url(%23pu)'/><path d='M-12 -22Q-18 0 -12 22M12 -22Q18 0 12 22M0 -24V24' stroke='%239a3412' stroke-width='2.2' fill='none' opacity='.55'/><path d='M0 -22Q-2 -34 -8 -36' stroke='%234d5b1e' stroke-width='5' fill='none' stroke-linecap='round'/></g><g transform='translate(700 236) scale(.55)'><ellipse rx='30' ry='26' fill='%23fef3c7'/><path d='M-10 -24Q-14 0 -10 24M10 -24Q14 0 10 24' stroke='%23d6b77a' stroke-width='2.5' fill='none'/><path d='M0 -24V-36' stroke='%234d5b1e' stroke-width='6' stroke-linecap='round'/></g><ellipse cx='520' cy='262' rx='168' ry='24' fill='url(%23pl)'/><ellipse cx='520' cy='258' rx='148' ry='17' fill='%23eef2f5'/><ellipse cx='520' cy='262' rx='168' ry='24' fill='none' stroke='%23a9b4bd' stroke-width='2'/><g fill='%234d7c0f'><ellipse cx='400' cy='254' rx='14' ry='5' transform='rotate(-20 400 254)'/><ellipse cx='420' cy='260' rx='12' ry='4.5' transform='rotate(15 420 260)'/><ellipse cx='634' cy='256' rx='14' ry='5' transform='rotate(20 634 256)'/><ellipse cx='612' cy='262' rx='12' ry='4.5' transform='rotate(-15 612 262)'/></g><g fill='%23b91c1c'><circle cx='410' cy='250' r='4.5'/><circle cx='430' cy='256' r='4'/><circle cx='622' cy='252' r='4.5'/><circle cx='604' cy='258' r='4'/><circle cx='440' cy='262' r='3.5'/><circle cx='596' cy='264' r='3.5'/></g><g fill='%23ffffff' opacity='.7'><circle cx='409' cy='248.6' r='1.4'/><circle cx='621' cy='250.6' r='1.4'/></g><ellipse cx='442' cy='236' rx='30' ry='18' fill='url(%23dr)' transform='rotate(-18 442 236)'/><ellipse cx='598' cy='236' rx='30' ry='18' fill='url(%23dr)' transform='rotate(18 598 236)'/><ellipse cx='520' cy='200' rx='112' ry='62' fill='url(%23tk)'/><path d='M452 168Q520 140 590 168' stroke='%23ffe0a3' stroke-width='7' fill='none' stroke-linecap='round' opacity='.55'/><path d='M478 158Q500 150 520 150' stroke='%23fff4d6' stroke-width='5' fill='none' stroke-linecap='round' opacity='.7'/><path d='M520 142Q514 200 520 258' stroke='%238a3f12' stroke-width='2' fill='none' opacity='.35'/><g transform='translate(440 214) rotate(-38)'><path d='M-28 0Q-30 -26 0 -30Q30 -26 28 0Q24 24 0 30Q-24 24 -28 0Z' fill='url(%23dr)'/><rect x='-6' y='-58' width='12' height='32' rx='5' fill='%23f1e3c8'/><path d='M-12 -58L-8 -74L-3 -60L2 -76L6 -60L11 -74L13 -58Z' fill='%23ffffff' stroke='%23d6d3cc' stroke-width='1.2'/><path d='M-12 -59H13' stroke='%23d6d3cc' stroke-width='2'/><path d='M-14 -6Q-12 -20 2 -22' stroke='%23ffe0a3' stroke-width='4' fill='none' stroke-linecap='round' opacity='.6'/></g><g transform='translate(600 214) rotate(38)'><path d='M-28 0Q-30 -26 0 -30Q30 -26 28 0Q24 24 0 30Q-24 24 -28 0Z' fill='url(%23dr)'/><rect x='-6' y='-58' width='12' height='32' rx='5' fill='%23f1e3c8'/><path d='M-12 -58L-8 -74L-3 -60L2 -76L6 -60L11 -74L13 -58Z' fill='%23ffffff' stroke='%23d6d3cc' stroke-width='1.2'/><path d='M-12 -59H13' stroke='%23d6d3cc' stroke-width='2'/><path d='M-10 -14Q-2 -24 10 -20' stroke='%23ffe0a3' stroke-width='4' fill='none' stroke-linecap='round' opacity='.6'/></g></g><g transform='translate(-250 0)'><g><path d='M652 272Q654 292 690 292Q726 292 728 272Z' fill='%23e7ecef'/><ellipse cx='690' cy='272' rx='38' ry='8' fill='%23f7f9fb'/><ellipse cx='690' cy='272' rx='31' ry='6' fill='%239f1239'/><path d='M670 271Q690 266 708 270' stroke='%23fb7185' stroke-width='2' fill='none' opacity='.7'/><circle cx='680' cy='272' r='2.6' fill='%23e11d48'/><circle cx='698' cy='273' r='2.4' fill='%23e11d48'/></g></g></svg>");
+  --wtg-b: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 560 300'><defs><radialGradient id='tk' cx='.38' cy='.3' r='.75'><stop offset='0' stop-color='%23f7c26a'/><stop offset='.45' stop-color='%23d4862f'/><stop offset='.85' stop-color='%239c4a17'/><stop offset='1' stop-color='%236e300c'/></radialGradient><radialGradient id='dr' cx='.35' cy='.3' r='.8'><stop offset='0' stop-color='%23f0b45a'/><stop offset='.6' stop-color='%23c1702a'/><stop offset='1' stop-color='%237a3610'/></radialGradient><linearGradient id='pl' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ffffff'/><stop offset='1' stop-color='%23cfd6dc'/></linearGradient><linearGradient id='cd' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%23e9dcc4'/><stop offset='.4' stop-color='%23fbf5e9'/><stop offset='1' stop-color='%23d8c7a8'/></linearGradient><linearGradient id='br' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%238a6420'/><stop offset='.45' stop-color='%23e2b54e'/><stop offset='1' stop-color='%237a5418'/></linearGradient><radialGradient id='pu' cx='.4' cy='.35' r='.7'><stop offset='0' stop-color='%23fdba74'/><stop offset='.6' stop-color='%23ea580c'/><stop offset='1' stop-color='%239a3412'/></radialGradient><radialGradient id='rl' cx='.4' cy='.3' r='.8'><stop offset='0' stop-color='%23f3c47a'/><stop offset='.7' stop-color='%23c47a2c'/><stop offset='1' stop-color='%238a4a15'/></radialGradient><pattern id='kn' width='7' height='6' patternUnits='userSpaceOnUse'><rect width='7' height='6' fill='%23d9a514'/><rect x='.6' y='.6' width='5.6' height='4.6' rx='2' fill='%23fcd34d'/></pattern><pattern id='wv' width='12' height='8' patternUnits='userSpaceOnUse'><rect width='12' height='8' fill='%239a6a2e'/><path d='M0 4Q3 0 6 4T12 4' stroke='%236b4518' stroke-width='2' fill='none'/></pattern></defs><g fill='%23000' opacity='.22'><ellipse cx='470' cy='276' rx='80' ry='10'/><ellipse cx='250' cy='276' rx='60' ry='9'/><ellipse cx='145' cy='274' rx='66' ry='9'/></g><g><ellipse cx='55' cy='276' rx='26' ry='6' fill='url(%23br)'/><path d='M47 276L50 232H60L63 276Z' fill='url(%23br)'/><ellipse cx='55' cy='232' rx='15' ry='4.5' fill='url(%23br)'/><rect x='47' y='104' width='16' height='128' rx='3' fill='url(%23cd)'/><path d='M47 112Q50 126 49 140' stroke='%23fbf5e9' stroke-width='3' fill='none' opacity='.7'/><path d='M55 104V96' stroke='%233b2414' stroke-width='2'/></g><g><path d='M86 244H204L194 272Q145 282 96 272Z' fill='url(%23wv)'/><ellipse cx='145' cy='244' rx='59' ry='10' fill='%237a5222'/><ellipse cx='118' cy='238' rx='24' ry='15' fill='url(%23rl)'/><ellipse cx='170' cy='238' rx='24' ry='15' fill='url(%23rl)'/><ellipse cx='144' cy='230' rx='25' ry='16' fill='url(%23rl)'/><path d='M134 224Q144 220 154 224M108 232Q116 228 124 232M160 232Q168 228 176 232' stroke='%23fde7b5' stroke-width='2.5' fill='none' stroke-linecap='round' opacity='.8'/><path d='M86 244H204' stroke='%235e3d14' stroke-width='3'/></g><g><path d='M198 236Q200 278 250 279Q300 278 302 236Z' fill='%23e7ecef'/><path d='M198 236Q200 278 250 279Q300 278 302 236Z' fill='%239fb3c0' opacity='.35'/><path d='M206 246Q250 258 294 246' stroke='%237c93a5' stroke-width='3' fill='none' opacity='.6'/><ellipse cx='250' cy='236' rx='52' ry='10' fill='%23f7f9fb'/><path d='M208 236Q212 206 236 204Q246 192 262 200Q288 202 292 236Z' fill='%23f6eedb'/><path d='M226 214Q244 208 256 214M240 224Q258 218 274 226' stroke='%23e2d4b4' stroke-width='2.5' fill='none' stroke-linecap='round'/><path d='M238 196L256 192L262 202L244 206Z' fill='%23fde047'/><path d='M238 196L256 192L258 196L241 200Z' fill='%23fef9c3'/></g><g transform='translate(-320 0)'><g><ellipse cx='790' cy='266' rx='80' ry='13' fill='url(%23pl)'/><ellipse cx='790' cy='266' rx='80' ry='13' fill='none' stroke='%23a9b4bd' stroke-width='1.5'/><path d='M718 256Q718 268 790 270Q862 268 862 256L858 242H722Z' fill='%23c7843d'/><ellipse cx='790' cy='242' rx='68' ry='13' fill='%23d77a2c'/><path d='M790 242L858 240Q858 252 838 252Z' fill='%23b86a2a'/><path d='M722 242Q724 234 734 232M846 232Q856 234 858 242' stroke='%23e8b06a' stroke-width='6' fill='none' stroke-linecap='round'/><ellipse cx='790' cy='242' rx='68' ry='13' fill='none' stroke='%23e8b06a' stroke-width='6'/><path d='M776 236Q780 222 792 224Q804 222 806 236Q792 242 776 236Z' fill='%23fffbeb'/><path d='M784 226Q790 218 796 226' stroke='%23ffffff' stroke-width='3' fill='none' stroke-linecap='round'/><path d='M742 240Q760 234 776 238' stroke='%23f2a85c' stroke-width='2.5' fill='none' opacity='.7'/></g></g><g><ellipse cx='345' cy='282' rx='58' ry='10' fill='url(%23pl)'/><ellipse cx='345' cy='282' rx='58' ry='10' fill='none' stroke='%23a9b4bd' stroke-width='1.5'/><g transform='rotate(-8 340 272)'><ellipse cx='340' cy='272' rx='40' ry='11' fill='url(%23kn)'/><path d='M296 272Q304 260 318 266Q306 274 296 272ZM296 272Q306 284 320 278' fill='%23b5a46a'/></g><g transform='rotate(6 352 278)'><ellipse cx='352' cy='278' rx='38' ry='10' fill='url(%23kn)'/><path d='M392 278Q384 266 370 272Q382 280 392 278ZM392 278Q382 290 368 284' fill='%23a3925a'/></g><path d='M330 264Q345 260 360 266' stroke='%23fef9c3' stroke-width='2.5' fill='none' opacity='.8'/></g></svg>");
+  --wtg-flame: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 40'><defs><radialGradient id='g' cx='.5' cy='.7' r='.6'><stop offset='0' stop-color='%23fffbe6'/><stop offset='.35' stop-color='%23ffd24a'/><stop offset='.75' stop-color='%23ff8a1c'/><stop offset='1' stop-color='%23e8370e' stop-opacity='0'/></radialGradient></defs><path d='M10 2C14 12 18 20 18 28C18 35 14 39 10 39C6 39 2 35 2 28C2 20 6 12 10 2Z' fill='url(%23g)'/></svg>");
+  background:
+    /* le papier peint : un petit motif de feuilles et des rayures, très discrets */
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g fill='%23f5c08a' opacity='.05'><path d='M32 18l2 4 4-2-1 5 4 1-4 2 1 4-4-2-2 4-2-4-4 2 1-4-4-2 4-1-1-5 4 2z'/><path d='M0 50c3 4 3 8 0 12c-3-4-3-8 0-12zM64 50c3 4 3 8 0 12c-3-4-3-8 0-12z'/></g></svg>"),
+    repeating-linear-gradient(90deg, rgba(255, 210, 160, .025) 0 2px, transparent 2px 32px),
+    linear-gradient(180deg, #1a0f0b 0%, #26150e 55%, #33190f 100%);
+}
+html:not(.dark) .wp-feast {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g fill='%239a3412' opacity='.07'><path d='M32 18l2 4 4-2-1 5 4 1-4 2 1 4-4-2-2 4-2-4-4 2 1-4-4-2 4-1-1-5 4 2z'/><path d='M0 50c3 4 3 8 0 12c-3-4-3-8 0-12zM64 50c3 4 3 8 0 12c-3-4-3-8 0-12z'/></g></svg>"),
+    repeating-linear-gradient(90deg, rgba(150, 90, 40, .04) 0 2px, transparent 2px 32px),
+    linear-gradient(180deg, #f7eedf 0%, #f1e2c9 60%, #e9d3b2 100%);
+}
+/* la lueur des bougies sur la pièce : fixe, ce sont les flammes qui vacillent */
+.wp-feast::before { left: 0; right: 0; bottom: 0; height: 70%;
+  background: radial-gradient(ellipse min(70vw, 900px) 80% at 50% 100%, rgba(255, 150, 60, .2), rgba(255, 120, 40, .06) 55%, transparent 78%); }
+html:not(.dark) .wp-feast::before { background: radial-gradient(ellipse min(70vw, 900px) 80% at 50% 100%, rgba(255, 170, 80, .16), transparent 75%); }
+
+/* Les fenêtres : la vue (.wtg-sky : ciel, arbres d'automne, deux couches de feuilles qui tombent) sous le cadre et les
+   rideaux (::after). Les feuilles sont une tuile haute comme la vitre qui descend d'une vitre entière : la boucle ne se voit pas. */
+#wallpaper .wtg-win { position: absolute; top: max(13vh, 7rem); width: min(14vw, 210px); aspect-ratio: 140 / 170; }
+#wallpaper .wtg-win.l { left: 4vw; }
+#wallpaper .wtg-win.r { right: 4vw; }
+/* téléphone : plus petites, sous le menu (deux rangées), à côté du « ?????? » */
+@media (orientation: portrait) { #wallpaper .wtg-win { top: max(15vh, 7rem); width: min(22vw, 150px); } #wallpaper .wtg-win.l { left: 2vw; } #wallpaper .wtg-win.r { right: 2vw; } }
+#wallpaper .wtg-win::after { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 170'><rect x='22' y='18' width='96' height='132' fill='none' stroke='%23d8ccb8' stroke-width='1'/><path fill-rule='evenodd' d='M14 10H126V156H14ZM22 18V150H118V18Z' fill='%23e9dfcf'/><rect x='68' y='18' width='4' height='132' fill='%23e9dfcf'/><rect x='22' y='82' width='96' height='4' fill='%23e9dfcf'/><rect x='8' y='154' width='124' height='8' rx='2' fill='%23d9ccb6'/><rect x='8' y='160' width='124' height='3' fill='%23000' opacity='.15'/><path d='M0 2H34Q30 50 36 92Q22 94 18 100Q12 150 0 166Z' fill='%239a3412'/><path d='M6 2Q10 60 4 160M18 2Q22 50 20 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M140 2H106Q110 50 104 92Q118 94 122 100Q128 150 140 166Z' fill='%239a3412'/><path d='M134 2Q130 60 136 160M122 2Q118 50 120 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M14 94Q24 90 36 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><path d='M104 94Q116 90 126 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><rect x='0' y='0' width='140' height='5' rx='2.5' fill='%235b3a22'/><circle cx='3' cy='2.5' r='4' fill='%235b3a22'/><circle cx='137' cy='2.5' r='4' fill='%235b3a22'/></svg>") 0 0 / 100% 100% no-repeat; }
+html.dark #wallpaper .wtg-win::after { filter: brightness(.6) saturate(.9); }
+#wallpaper .wtg-sky { position: absolute; left: 15.71%; top: 10.59%; width: 68.57%; height: 77.65%; overflow: hidden;
+  background: linear-gradient(180deg, #1e1b4b, #5b21b6 45%, #c2410c 85%, #f59e0b); }
+html:not(.dark) #wallpaper .wtg-sky { background: linear-gradient(180deg, #93c5fd, #dbeafe 60%, #fde68a); }
+#wallpaper .wtg-sky::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 41%; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 60' preserveAspectRatio='none'><path d='M0 44Q30 36 60 42T96 40V60H0Z' fill='%237c6a3a'/><g><rect x='16' y='30' width='3' height='16' fill='%234a2c18'/><circle cx='17' cy='24' r='13' fill='%23ea580c'/><circle cx='10' cy='28' r='8' fill='%23c2410c'/><circle cx='24' cy='20' r='8' fill='%23f59e0b'/></g><g><rect x='56' y='26' width='3.5' height='20' fill='%234a2c18'/><circle cx='58' cy='18' r='15' fill='%23b91c1c'/><circle cx='66' cy='24' r='9' fill='%23dc2626'/><circle cx='50' cy='14' r='8' fill='%23ea580c'/></g><g><rect x='82' y='34' width='2.5' height='12' fill='%234a2c18'/><circle cx='83' cy='28' r='10' fill='%23eab308'/><circle cx='88' cy='32' r='6' fill='%23ca8a04'/></g><g><rect x='36' y='36' width='2' height='10' fill='%234a2c18'/><circle cx='37' cy='32' r='7' fill='%2392400e'/></g><path d='M0 52Q48 46 96 52V60H0Z' fill='%235f4f2a'/></svg>") 0 0 / 100% 100% no-repeat; }
+html.dark #wallpaper .wtg-sky::before { filter: brightness(.7) saturate(.85); }
+#wallpaper .wtg-sky b { position: absolute; left: -6%; right: -6%; top: -100%; height: 200%; will-change: transform;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><path id='m' d='M0 -4L1 -2L3 -3L2.4 -.6L4 0L2.4 1L3 3L1 2L0 4L-1 2L-3 3L-2.4 1L-4 0L-2.4 -.6L-3 -3L-1 -2Z'/><path id='o' d='M0 -3.6C2.4 -2 2.4 2 0 3.6C-2.4 2 -2.4 -2 0 -3.6Z'/></defs><use href='%23m' transform='translate(12 10) rotate(20)' fill='%23dc2626'/><use href='%23o' transform='translate(40 26) rotate(-40)' fill='%23f59e0b'/><use href='%23m' transform='translate(72 8) rotate(50)' fill='%23ea580c'/><use href='%23o' transform='translate(88 44) rotate(70)' fill='%2392400e'/><use href='%23m' transform='translate(24 56) rotate(-25)' fill='%23eab308'/><use href='%23o' transform='translate(58 66) rotate(10)' fill='%23b91c1c'/><use href='%23m' transform='translate(84 86) rotate(35)' fill='%23f97316'/><use href='%23o' transform='translate(8 88) rotate(-60)' fill='%23ca8a04'/></svg>") 0 0 / 100% 50%; animation: wtg-fall 15s linear infinite; }
+#wallpaper .wtg-sky b + b { background-size: 150% 50%; background-position: 30% 25%; animation-duration: 9s; animation-delay: -4s; }
+#wallpaper .wtg-win.r .wtg-sky b { animation-delay: -7s; }
+#wallpaper .wtg-win.r .wtg-sky b + b { animation-delay: -2s; }
+/* une seule animation par couche : les feuilles descendent en se balançant */
+@keyframes wtg-fall { 0% { transform: translate3d(0, 0, 0); } 25% { transform: translate3d(4%, 12.5%, 0); } 50% { transform: translate3d(0, 25%, 0); } 75% { transform: translate3d(-4%, 37.5%, 0); } 100% { transform: translate3d(0, 50%, 0); } }
+
+/* La table : la nappe sur toute la largeur (le dessus, le chemin de table à carreaux, le pan qui tombe et son ourlet) */
+#wallpaper .wtg-table { position: absolute; left: 0; right: 0; bottom: 0; height: var(--T);
+  background:
+    /* l'ombre sous le bord de la table, puis les plis du pan de nappe */
+    linear-gradient(180deg, rgba(0, 0, 0, .28), transparent 30%) 0 100% / 100% 42% no-repeat,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .1) 0 1.5vw, transparent 1.5vw 4vw, rgba(255, 255, 255, .08) 4vw 5vw, transparent 5vw 7vw) 0 100% / 100% 42% no-repeat,
+    /* l'ourlet à carreaux en bas du pan */
+    repeating-linear-gradient(90deg, rgba(120, 40, 10, .45) 0 7px, transparent 7px 14px) 0 100% / 100% 14% no-repeat,
+    linear-gradient(#c2410c, #c2410c) 0 100% / 100% 14% no-repeat,
+    linear-gradient(180deg, #e7d8bd, #d9c5a3) 0 100% / 100% 42% no-repeat,
+    /* le chemin de table, à carreaux orange et brun, sur le dessus */
+    repeating-linear-gradient(90deg, rgba(90, 30, 8, .35) 0 8px, transparent 8px 20px) 0 30% / 100% 26% no-repeat,
+    repeating-linear-gradient(0deg, rgba(255, 220, 180, .2) 0 4px, transparent 4px 10px) 0 30% / 100% 26% no-repeat,
+    linear-gradient(#b4410f, #9a3412) 0 30% / 100% 26% no-repeat,
+    /* le dessus de la nappe, plus clair au fond */
+    linear-gradient(180deg, #f6eddc, #ece0c8);
+  box-shadow: 0 -2px 0 rgba(255, 255, 255, .15); }
+html.dark #wallpaper .wtg-table::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 140% at 50% 0, rgba(40, 20, 10, .15), rgba(20, 10, 5, .55) 80%); }
+/* Le repas, en deux groupes : sur un écran large, la dinde à droite et les accompagnements à gauche, de part et d'autre
+   de l'interface (au milieu, la dinde était cachée derrière elle) ; sur téléphone, côte à côte au milieu. Ce qui vit
+   dessus (flammes, vapeur) est placé en % de la taille de son groupe. */
+#wallpaper .wtg-food { position: absolute; bottom: calc(var(--T) * .3); width: var(--W); height: var(--F); background: var(--img) center / 100% 100% no-repeat; }
+#wallpaper .wtg-food.a { right: 3vw; --img: var(--wtg-a); }
+#wallpaper .wtg-food.b { left: 3vw; --img: var(--wtg-b); }
+@media (orientation: portrait) { .wp-feast { --F: min(17vh, 26vw); } #wallpaper .wtg-food.a { right: auto; left: 50%; } #wallpaper .wtg-food.b { left: auto; right: 50%; } }
+#wallpaper .wtg-food i { position: absolute; }
+/* les flammes des deux bougies, qui vacillent chacune à son rythme */
+#wallpaper .wtg-fl { bottom: 66%; width: 4.6%; height: 12%; transform-origin: 50% 90%; background: var(--wtg-flame) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 .4vh rgba(255, 170, 60, .9)); animation: wtg-flicker var(--t) ease-in-out var(--d) infinite; will-change: transform; }
+#wallpaper .wtg-food.b .wtg-fl { left: 7.5%; --t: 1.3s; --d: -.4s; }
+#wallpaper .wtg-food.a .wtg-fl { left: 89.6%; --t: 1.1s; --d: -.9s; }
+@keyframes wtg-flicker { 0%, 100% { transform: scale(1, 1) skewX(0); } 30% { transform: scale(.9, 1.08) skewX(-4deg); } 55% { transform: scale(1.06, .92) skewX(3deg); } 80% { transform: scale(.96, 1.04) skewX(-2deg); } }
+/* la vapeur de la dinde : trois volutes floues qui montent, s'élargissent et s'effacent */
+#wallpaper .wtg-st { bottom: 52%; width: 6%; height: 30%; opacity: 0; transform-origin: 50% 100%;
+  background: radial-gradient(ellipse 45% 30% at 50% 82%, rgba(255, 250, 240, .55), transparent 70%), radial-gradient(ellipse 35% 22% at 42% 45%, rgba(255, 250, 240, .4), transparent 70%);
+  animation: wtg-steam var(--t) ease-out var(--d) infinite; will-change: transform, opacity; }
+html:not(.dark) #wallpaper .wtg-st { background: radial-gradient(ellipse 45% 30% at 50% 82%, rgba(255, 255, 255, .85), transparent 70%), radial-gradient(ellipse 35% 22% at 42% 45%, rgba(255, 255, 255, .7), transparent 70%); }
+#wallpaper .wtg-st.s1 { left: 39.8%; --t: 3.4s; --d: -.6s; }
+#wallpaper .wtg-st.s2 { left: 45.2%; --t: 4s; --d: -2.2s; }
+#wallpaper .wtg-st.s3 { left: 50.9%; --t: 3.7s; --d: -1.4s; }
+@keyframes wtg-steam { 0% { opacity: 0; transform: translate3d(0, 20%, 0) scale(.6, .5); } 25% { opacity: 1; } 70% { opacity: .5; } 100% { opacity: 0; transform: translate3d(30%, -45%, 0) scale(1.6, 1.2) skewX(-10deg); } }
+
+/* L'aperçu de la boutique (sans les calques) : les deux fenêtres, la nappe et le repas réduits dans la vignette. */
+.wall-preview.wp-feast { background:
+    var(--wtg-a) 96% calc(100% - .5rem) / auto 60% no-repeat, var(--wtg-b) 4% calc(100% - .5rem) / auto 60% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 170'><rect x='22' y='18' width='96' height='132' fill='none' stroke='%23d8ccb8' stroke-width='1'/><defs><linearGradient id='sk' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%231e1b4b'/><stop offset='0.45' stop-color='%235b21b6'/><stop offset='0.85' stop-color='%23c2410c'/><stop offset='1' stop-color='%23f59e0b'/></linearGradient></defs><rect x='22' y='18' width='96' height='132' fill='url(%23sk)'/><svg x='22' y='96' width='96' height='54' viewBox='0 0 96 60' preserveAspectRatio='none' opacity='.75'><path d='M0 44Q30 36 60 42T96 40V60H0Z' fill='%237c6a3a'/><g><rect x='16' y='30' width='3' height='16' fill='%234a2c18'/><circle cx='17' cy='24' r='13' fill='%23ea580c'/><circle cx='10' cy='28' r='8' fill='%23c2410c'/><circle cx='24' cy='20' r='8' fill='%23f59e0b'/></g><g><rect x='56' y='26' width='3.5' height='20' fill='%234a2c18'/><circle cx='58' cy='18' r='15' fill='%23b91c1c'/><circle cx='66' cy='24' r='9' fill='%23dc2626'/><circle cx='50' cy='14' r='8' fill='%23ea580c'/></g><g><rect x='82' y='34' width='2.5' height='12' fill='%234a2c18'/><circle cx='83' cy='28' r='10' fill='%23eab308'/><circle cx='88' cy='32' r='6' fill='%23ca8a04'/></g><g><rect x='36' y='36' width='2' height='10' fill='%234a2c18'/><circle cx='37' cy='32' r='7' fill='%2392400e'/></g><path d='M0 52Q48 46 96 52V60H0Z' fill='%235f4f2a'/></svg><path fill-rule='evenodd' d='M14 10H126V156H14ZM22 18V150H118V18Z' fill='%23e9dfcf'/><rect x='68' y='18' width='4' height='132' fill='%23e9dfcf'/><rect x='22' y='82' width='96' height='4' fill='%23e9dfcf'/><rect x='8' y='154' width='124' height='8' rx='2' fill='%23d9ccb6'/><rect x='8' y='160' width='124' height='3' fill='%23000' opacity='.15'/><path d='M0 2H34Q30 50 36 92Q22 94 18 100Q12 150 0 166Z' fill='%239a3412'/><path d='M6 2Q10 60 4 160M18 2Q22 50 20 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M140 2H106Q110 50 104 92Q118 94 122 100Q128 150 140 166Z' fill='%239a3412'/><path d='M134 2Q130 60 136 160M122 2Q118 50 120 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M14 94Q24 90 36 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><path d='M104 94Q116 90 126 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><rect x='0' y='0' width='140' height='5' rx='2.5' fill='%235b3a22'/><circle cx='3' cy='2.5' r='4' fill='%235b3a22'/><circle cx='137' cy='2.5' r='4' fill='%235b3a22'/></svg>") 50% 14% / auto 56% no-repeat,
+    linear-gradient(#c2410c, #c2410c) 0 100% / 100% 3px no-repeat,
+    linear-gradient(180deg, #8f7d62, #6e5d45) 0 100% / 100% .5rem no-repeat,
+    linear-gradient(#9a3412, #9a3412) 0 calc(100% - .7rem) / 100% .35rem no-repeat,
+    linear-gradient(180deg, #a8987c, #c4b391) 0 100% / 100% 1.4rem no-repeat,
+    linear-gradient(180deg, #1a0f0b, #33190f); }
+html:not(.dark) .wall-preview.wp-feast { background:
+    var(--wtg-a) 96% calc(100% - .5rem) / auto 60% no-repeat, var(--wtg-b) 4% calc(100% - .5rem) / auto 60% no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 170'><rect x='22' y='18' width='96' height='132' fill='none' stroke='%23d8ccb8' stroke-width='1'/><defs><linearGradient id='sk' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%2393c5fd'/><stop offset='0.6' stop-color='%23dbeafe'/><stop offset='1' stop-color='%23fde68a'/></linearGradient></defs><rect x='22' y='18' width='96' height='132' fill='url(%23sk)'/><svg x='22' y='96' width='96' height='54' viewBox='0 0 96 60' preserveAspectRatio='none'><path d='M0 44Q30 36 60 42T96 40V60H0Z' fill='%237c6a3a'/><g><rect x='16' y='30' width='3' height='16' fill='%234a2c18'/><circle cx='17' cy='24' r='13' fill='%23ea580c'/><circle cx='10' cy='28' r='8' fill='%23c2410c'/><circle cx='24' cy='20' r='8' fill='%23f59e0b'/></g><g><rect x='56' y='26' width='3.5' height='20' fill='%234a2c18'/><circle cx='58' cy='18' r='15' fill='%23b91c1c'/><circle cx='66' cy='24' r='9' fill='%23dc2626'/><circle cx='50' cy='14' r='8' fill='%23ea580c'/></g><g><rect x='82' y='34' width='2.5' height='12' fill='%234a2c18'/><circle cx='83' cy='28' r='10' fill='%23eab308'/><circle cx='88' cy='32' r='6' fill='%23ca8a04'/></g><g><rect x='36' y='36' width='2' height='10' fill='%234a2c18'/><circle cx='37' cy='32' r='7' fill='%2392400e'/></g><path d='M0 52Q48 46 96 52V60H0Z' fill='%235f4f2a'/></svg><path fill-rule='evenodd' d='M14 10H126V156H14ZM22 18V150H118V18Z' fill='%23e9dfcf'/><rect x='68' y='18' width='4' height='132' fill='%23e9dfcf'/><rect x='22' y='82' width='96' height='4' fill='%23e9dfcf'/><rect x='8' y='154' width='124' height='8' rx='2' fill='%23d9ccb6'/><rect x='8' y='160' width='124' height='3' fill='%23000' opacity='.15'/><path d='M0 2H34Q30 50 36 92Q22 94 18 100Q12 150 0 166Z' fill='%239a3412'/><path d='M6 2Q10 60 4 160M18 2Q22 50 20 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M140 2H106Q110 50 104 92Q118 94 122 100Q128 150 140 166Z' fill='%239a3412'/><path d='M134 2Q130 60 136 160M122 2Q118 50 120 96' stroke='%237c2d12' stroke-width='3' fill='none' opacity='.6'/><path d='M14 94Q24 90 36 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><path d='M104 94Q116 90 126 94' stroke='%23eab308' stroke-width='4' fill='none' stroke-linecap='round'/><rect x='0' y='0' width='140' height='5' rx='2.5' fill='%235b3a22'/><circle cx='3' cy='2.5' r='4' fill='%235b3a22'/><circle cx='137' cy='2.5' r='4' fill='%235b3a22'/></svg>") 50% 14% / auto 56% no-repeat,
+    linear-gradient(#c2410c, #c2410c) 0 100% / 100% 3px no-repeat,
+    linear-gradient(180deg, #e7d8bd, #d9c5a3) 0 100% / 100% .5rem no-repeat,
+    linear-gradient(#b4410f, #b4410f) 0 calc(100% - .7rem) / 100% .35rem no-repeat,
+    linear-gradient(180deg, #f6eddc, #ece0c8) 0 100% / 100% 1.4rem no-repeat,
+    linear-gradient(180deg, #f7eedf, #e9d3b2); }
+.wall-preview.wp-feast::before { inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 100%, rgba(255, 150, 60, .22), transparent 75%); }
+@media (prefers-reduced-motion: reduce) { #wallpaper.wp-feast :is(i, b) { animation: none !important; } #wallpaper .wtg-st { opacity: .45; } }
+html.perf #wallpaper.wp-feast :is(i, b) { animation: none !important; }
+html.perf #wallpaper .wtg-st { opacity: .45; }
+
 /* 💧 Condensation, fond légendaire (idée d'AnnJoe, 2026-10-28) : une vitre embuée devant une ville floue sous la pluie,
    la nuit (thème sombre) ou un jour gris (thème clair). Le décor derrière la vitre est ici (des halos de lumière déjà
    flous : aucun filtre de flou à calculer) ; la buée, la micro-buée et les gouttes sont trois canevas posés par
@@ -5945,6 +6119,13 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .o-report.done { opacity: .5; }
 .o-report-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
 .o-report-text { margin: .35rem 0 .45rem; padding: .45rem .6rem; border-radius: .5rem; background: color-mix(in srgb, var(--outline) 35%, transparent); overflow-wrap: anywhere; }
+/* Contexte d'un signalement (idée de jsand, 2026-11-05) */
+.mod-ctx { margin: -.15rem 0 .45rem; font-size: .8rem; }
+.mod-ctx > summary { cursor: pointer; color: var(--prose-2); font-weight: 600; }
+.mod-ctx-list { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .15rem; }
+.mod-ctx-list li { padding: .2rem .45rem; border-radius: .35rem; overflow-wrap: anywhere; color: var(--prose-2); }
+.mod-ctx-list li.hit { color: var(--prose); background: color-mix(in srgb, #ef4444 14%, transparent); box-shadow: inset 3px 0 0 #ef4444; }
+.mod-ctx-time { font-family: var(--font-mono); font-size: .7rem; opacity: .7; }
 
 /* Solde en haut à droite (2026-10-19) */
 .hdr-coins { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--outline); font-size: .78rem; font-weight: 800; color: inherit; text-decoration: none; white-space: nowrap; }
@@ -7733,6 +7914,105 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 .room-stage.many .side-sweater::before, .room-stage.many .side-sweater::after, .room-stage.many .num-card.skin-sweater::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-sweater::before, .side-sweater::after { animation: none; } }
 
+/* ------------------------------------------------------------------ Turkey Roast (Thanksgiving 2026, limité) : idée
+   d'Idkwhatnamemyself (« une dinde qui se fait rôtir dans le nombre », 2026-11-01), avec celles de R77 (« les plumes, le
+   look de dinde », 2026-11-04) et de Kj13 (feuilles d'automne brunes, rouges, jaunes et orange, 2026-11-03).
+   La carte est la queue d'une dinde en éventail : quinze plumes châtaigne aux pointes crème, barrées de sombre, assombries
+   au centre pour que les chiffres restent le plus lisible. Les chiffres sont de la peau de dinde rôtie : glaçage doré
+   brillant, bords croustillants plus foncés, un reflet beurré. Pendant le tirage, la queue se replie et les chiffres
+   sont crus (pâles, rosés) et grésillent dans la chaleur du four ; il se pose : il se tasse encore cru, un coup de
+   chaleur le dore d'un coup (« ding »), un reflet de glaçage le traverse, un nuage de vapeur s'élève, il se pose. Après le
+   dernier chiffre, la queue se déploie derrière le nombre. Feuilles d'automne et plumes : js/skinfx.js (SCENES.turkey). */
+.num-card.skin-turkey {
+  background:
+    /* la chaleur du four, en bas */
+    radial-gradient(ellipse 70% 60% at 50% 115%, rgba(234, 88, 12, .32), transparent 70%),
+    linear-gradient(180deg, #2b140a, #1c0c05);
+  border: 2px solid #9a3412; border-radius: .8rem;
+  box-shadow: inset 0 0 0 1px rgba(239, 224, 189, .22), inset 0 -.2em .6em rgba(0, 0, 0, .45), 0 0 16px rgba(234, 88, 12, .25), 0 10px 18px rgba(0, 0, 0, .4);
+}
+/* la queue en éventail (::before est libre sur la carte) ; repliée pendant le tirage, déployée à la fin */
+.num-card.skin-turkey::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; transform-origin: 50% 100%;
+  background:
+    /* l'ombre au centre, derrière les chiffres : la plume reste en dessous de 40 % du contraste des chiffres */
+    radial-gradient(ellipse 52% 58% at 50% 62%, rgba(24, 10, 4, .86), rgba(24, 10, 4, .62) 55%, rgba(24, 10, 4, .18) 82%, transparent),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 100' ><g transform='translate(150 110) rotate(-86.0)'><path d='M0 0C-4.2 -43.6 -17 -87.3 -16.1 -122.2C-15.3 -149.9 15.3 -149.9 16.1 -122.2C17 -87.3 4.2 -43.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -40.6 -16.6 -81.2 -15.8 -113.7C-14.9 -139.4 14.9 -139.4 15.8 -113.7C16.6 -81.2 4.1 -40.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -38.4 -16.1 -76.8 -15.3 -107.6C-14.5 -131.9 14.5 -131.9 15.3 -107.6C16.1 -76.8 4.0 -38.4 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -90.2Q0 -94.2 9.3 -90.2M-9.3 -69.8Q0 -73.8 9.3 -69.8M-9.3 -49.4Q0 -53.4 9.3 -49.4' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -21.8 -13.6 -43.6 -12.9 -61.1C-12.2 -74.9 12.2 -74.9 12.9 -61.1C13.6 -43.6 3.4 -21.8 0 0Z' fill='%234a210d'/><path d='M0 -4V-133.9' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(86.0)'><path d='M0 0C-4.2 -43.6 -17 -87.3 -16.1 -122.2C-15.3 -149.9 15.3 -149.9 16.1 -122.2C17 -87.3 4.2 -43.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -40.6 -16.6 -81.2 -15.8 -113.7C-14.9 -139.4 14.9 -139.4 15.8 -113.7C16.6 -81.2 4.1 -40.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -38.4 -16.1 -76.8 -15.3 -107.6C-14.5 -131.9 14.5 -131.9 15.3 -107.6C16.1 -76.8 4.0 -38.4 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -90.2Q0 -94.2 9.3 -90.2M-9.3 -69.8Q0 -73.8 9.3 -69.8M-9.3 -49.4Q0 -53.4 9.3 -49.4' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -21.8 -13.6 -43.6 -12.9 -61.1C-12.2 -74.9 12.2 -74.9 12.9 -61.1C13.6 -43.6 3.4 -21.8 0 0Z' fill='%234a210d'/><path d='M0 -4V-133.9' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-75.3)'><path d='M0 0C-4.2 -42.1 -17 -84.3 -16.1 -118.0C-15.3 -144.7 15.3 -144.7 16.1 -118.0C17 -84.3 4.2 -42.1 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -39.2 -16.6 -78.4 -15.8 -109.7C-14.9 -134.6 14.9 -134.6 15.8 -109.7C16.6 -78.4 4.1 -39.2 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -37.1 -16.1 -74.2 -15.3 -103.8C-14.5 -127.3 14.5 -127.3 15.3 -103.8C16.1 -74.2 4.0 -37.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -87.1Q0 -91.1 9.3 -87.1M-9.3 -67.4Q0 -71.4 9.3 -67.4M-9.3 -47.7Q0 -51.7 9.3 -47.7' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -21.0 -13.6 -42.1 -12.9 -59.0C-12.2 -72.3 12.2 -72.3 12.9 -59.0C13.6 -42.1 3.4 -21.0 0 0Z' fill='%233d1a09'/><path d='M0 -4V-129.3' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(75.3)'><path d='M0 0C-4.2 -42.1 -17 -84.3 -16.1 -118.0C-15.3 -144.7 15.3 -144.7 16.1 -118.0C17 -84.3 4.2 -42.1 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -39.2 -16.6 -78.4 -15.8 -109.7C-14.9 -134.6 14.9 -134.6 15.8 -109.7C16.6 -78.4 4.1 -39.2 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -37.1 -16.1 -74.2 -15.3 -103.8C-14.5 -127.3 14.5 -127.3 15.3 -103.8C16.1 -74.2 4.0 -37.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -87.1Q0 -91.1 9.3 -87.1M-9.3 -67.4Q0 -71.4 9.3 -67.4M-9.3 -47.7Q0 -51.7 9.3 -47.7' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -21.0 -13.6 -42.1 -12.9 -59.0C-12.2 -72.3 12.2 -72.3 12.9 -59.0C13.6 -42.1 3.4 -21.0 0 0Z' fill='%233d1a09'/><path d='M0 -4V-129.3' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-64.5)'><path d='M0 0C-4.2 -39.5 -17 -79.1 -16.1 -110.7C-15.3 -135.8 15.3 -135.8 16.1 -110.7C17 -79.1 4.2 -39.5 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -36.7 -16.6 -73.5 -15.8 -103.0C-14.9 -126.3 14.9 -126.3 15.8 -103.0C16.6 -73.5 4.1 -36.7 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -34.8 -16.1 -69.6 -15.3 -97.4C-14.5 -119.5 14.5 -119.5 15.3 -97.4C16.1 -69.6 4.0 -34.8 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -81.7Q0 -85.7 9.3 -81.7M-9.3 -63.2Q0 -67.2 9.3 -63.2M-9.3 -44.8Q0 -48.8 9.3 -44.8' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -19.7 -13.6 -39.5 -12.9 -55.3C-12.2 -67.9 12.2 -67.9 12.9 -55.3C13.6 -39.5 3.4 -19.7 0 0Z' fill='%234a210d'/><path d='M0 -4V-121.3' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(64.5)'><path d='M0 0C-4.2 -39.5 -17 -79.1 -16.1 -110.7C-15.3 -135.8 15.3 -135.8 16.1 -110.7C17 -79.1 4.2 -39.5 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -36.7 -16.6 -73.5 -15.8 -103.0C-14.9 -126.3 14.9 -126.3 15.8 -103.0C16.6 -73.5 4.1 -36.7 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -34.8 -16.1 -69.6 -15.3 -97.4C-14.5 -119.5 14.5 -119.5 15.3 -97.4C16.1 -69.6 4.0 -34.8 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -81.7Q0 -85.7 9.3 -81.7M-9.3 -63.2Q0 -67.2 9.3 -63.2M-9.3 -44.8Q0 -48.8 9.3 -44.8' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -19.7 -13.6 -39.5 -12.9 -55.3C-12.2 -67.9 12.2 -67.9 12.9 -55.3C13.6 -39.5 3.4 -19.7 0 0Z' fill='%234a210d'/><path d='M0 -4V-121.3' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-53.8)'><path d='M0 0C-4.2 -36.6 -17 -73.3 -16.1 -102.6C-15.3 -125.9 15.3 -125.9 16.1 -102.6C17 -73.3 4.2 -36.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -34.1 -16.6 -68.2 -15.8 -95.4C-14.9 -117.0 14.9 -117.0 15.8 -95.4C16.6 -68.2 4.1 -34.1 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -32.2 -16.1 -64.5 -15.3 -90.3C-14.5 -110.8 14.5 -110.8 15.3 -90.3C16.1 -64.5 4.0 -32.2 0 0Z' fill='%237a3a16'/><path d='M-9.3 -75.7Q0 -79.7 9.3 -75.7M-9.3 -58.6Q0 -62.6 9.3 -58.6M-9.3 -41.5Q0 -45.5 9.3 -41.5' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -18.3 -13.6 -36.6 -12.9 -51.3C-12.2 -62.9 12.2 -62.9 12.9 -51.3C13.6 -36.6 3.4 -18.3 0 0Z' fill='%233d1a09'/><path d='M0 -4V-112.5' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(53.8)'><path d='M0 0C-4.2 -36.6 -17 -73.3 -16.1 -102.6C-15.3 -125.9 15.3 -125.9 16.1 -102.6C17 -73.3 4.2 -36.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -34.1 -16.6 -68.2 -15.8 -95.4C-14.9 -117.0 14.9 -117.0 15.8 -95.4C16.6 -68.2 4.1 -34.1 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -32.2 -16.1 -64.5 -15.3 -90.3C-14.5 -110.8 14.5 -110.8 15.3 -90.3C16.1 -64.5 4.0 -32.2 0 0Z' fill='%237a3a16'/><path d='M-9.3 -75.7Q0 -79.7 9.3 -75.7M-9.3 -58.6Q0 -62.6 9.3 -58.6M-9.3 -41.5Q0 -45.5 9.3 -41.5' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -18.3 -13.6 -36.6 -12.9 -51.3C-12.2 -62.9 12.2 -62.9 12.9 -51.3C13.6 -36.6 3.4 -18.3 0 0Z' fill='%233d1a09'/><path d='M0 -4V-112.5' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-43.0)'><path d='M0 0C-4.2 -34.0 -17 -68.1 -16.1 -95.4C-15.3 -116.9 15.3 -116.9 16.1 -95.4C17 -68.1 4.2 -34.0 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -31.6 -16.6 -63.3 -15.8 -88.7C-14.9 -108.8 14.9 -108.8 15.8 -88.7C16.6 -63.3 4.1 -31.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -29.9 -16.1 -59.9 -15.3 -83.9C-14.5 -102.9 14.5 -102.9 15.3 -83.9C16.1 -59.9 4.0 -29.9 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -70.4Q0 -74.4 9.3 -70.4M-9.3 -54.5Q0 -58.5 9.3 -54.5M-9.3 -38.6Q0 -42.6 9.3 -38.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -17.0 -13.6 -34.0 -12.9 -47.7C-12.2 -58.4 12.2 -58.4 12.9 -47.7C13.6 -34.0 3.4 -17.0 0 0Z' fill='%234a210d'/><path d='M0 -4V-104.5' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(43.0)'><path d='M0 0C-4.2 -34.0 -17 -68.1 -16.1 -95.4C-15.3 -116.9 15.3 -116.9 16.1 -95.4C17 -68.1 4.2 -34.0 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -31.6 -16.6 -63.3 -15.8 -88.7C-14.9 -108.8 14.9 -108.8 15.8 -88.7C16.6 -63.3 4.1 -31.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -29.9 -16.1 -59.9 -15.3 -83.9C-14.5 -102.9 14.5 -102.9 15.3 -83.9C16.1 -59.9 4.0 -29.9 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -70.4Q0 -74.4 9.3 -70.4M-9.3 -54.5Q0 -58.5 9.3 -54.5M-9.3 -38.6Q0 -42.6 9.3 -38.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -17.0 -13.6 -34.0 -12.9 -47.7C-12.2 -58.4 12.2 -58.4 12.9 -47.7C13.6 -34.0 3.4 -17.0 0 0Z' fill='%234a210d'/><path d='M0 -4V-104.5' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-32.3)'><path d='M0 0C-4.2 -32.0 -17 -64.0 -16.1 -89.6C-15.3 -109.9 15.3 -109.9 16.1 -89.6C17 -64.0 4.2 -32.0 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -29.7 -16.6 -59.5 -15.8 -83.3C-14.9 -102.2 14.9 -102.2 15.8 -83.3C16.6 -59.5 4.1 -29.7 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -28.1 -16.1 -56.3 -15.3 -78.8C-14.5 -96.7 14.5 -96.7 15.3 -78.8C16.1 -56.3 4.0 -28.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -66.1Q0 -70.1 9.3 -66.1M-9.3 -51.2Q0 -55.2 9.3 -51.2M-9.3 -36.2Q0 -40.2 9.3 -36.2' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -16.0 -13.6 -32.0 -12.9 -44.8C-12.2 -54.9 12.2 -54.9 12.9 -44.8C13.6 -32.0 3.4 -16.0 0 0Z' fill='%233d1a09'/><path d='M0 -4V-98.2' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(32.3)'><path d='M0 0C-4.2 -32.0 -17 -64.0 -16.1 -89.6C-15.3 -109.9 15.3 -109.9 16.1 -89.6C17 -64.0 4.2 -32.0 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -29.7 -16.6 -59.5 -15.8 -83.3C-14.9 -102.2 14.9 -102.2 15.8 -83.3C16.6 -59.5 4.1 -29.7 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -28.1 -16.1 -56.3 -15.3 -78.8C-14.5 -96.7 14.5 -96.7 15.3 -78.8C16.1 -56.3 4.0 -28.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -66.1Q0 -70.1 9.3 -66.1M-9.3 -51.2Q0 -55.2 9.3 -51.2M-9.3 -36.2Q0 -40.2 9.3 -36.2' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -16.0 -13.6 -32.0 -12.9 -44.8C-12.2 -54.9 12.2 -54.9 12.9 -44.8C13.6 -32.0 3.4 -16.0 0 0Z' fill='%233d1a09'/><path d='M0 -4V-98.2' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-21.5)'><path d='M0 0C-4.2 -30.5 -17 -61.0 -16.1 -85.5C-15.3 -104.8 15.3 -104.8 16.1 -85.5C17 -61.0 4.2 -30.5 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -28.4 -16.6 -56.8 -15.8 -79.5C-14.9 -97.5 14.9 -97.5 15.8 -79.5C16.6 -56.8 4.1 -28.4 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -26.8 -16.1 -53.7 -15.3 -75.2C-14.5 -92.2 14.5 -92.2 15.3 -75.2C16.1 -53.7 4.0 -26.8 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -63.1Q0 -67.1 9.3 -63.1M-9.3 -48.8Q0 -52.8 9.3 -48.8M-9.3 -34.6Q0 -38.6 9.3 -34.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -15.2 -13.6 -30.5 -12.9 -42.7C-12.2 -52.4 12.2 -52.4 12.9 -42.7C13.6 -30.5 3.4 -15.2 0 0Z' fill='%234a210d'/><path d='M0 -4V-93.7' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(21.5)'><path d='M0 0C-4.2 -30.5 -17 -61.0 -16.1 -85.5C-15.3 -104.8 15.3 -104.8 16.1 -85.5C17 -61.0 4.2 -30.5 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -28.4 -16.6 -56.8 -15.8 -79.5C-14.9 -97.5 14.9 -97.5 15.8 -79.5C16.6 -56.8 4.1 -28.4 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -26.8 -16.1 -53.7 -15.3 -75.2C-14.5 -92.2 14.5 -92.2 15.3 -75.2C16.1 -53.7 4.0 -26.8 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -63.1Q0 -67.1 9.3 -63.1M-9.3 -48.8Q0 -52.8 9.3 -48.8M-9.3 -34.6Q0 -38.6 9.3 -34.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -15.2 -13.6 -30.5 -12.9 -42.7C-12.2 -52.4 12.2 -52.4 12.9 -42.7C13.6 -30.5 3.4 -15.2 0 0Z' fill='%234a210d'/><path d='M0 -4V-93.7' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(-10.8)'><path d='M0 0C-4.2 -29.6 -17 -59.3 -16.1 -83.1C-15.3 -101.9 15.3 -101.9 16.1 -83.1C17 -59.3 4.2 -29.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -27.6 -16.6 -55.2 -15.8 -77.2C-14.9 -94.7 14.9 -94.7 15.8 -77.2C16.6 -55.2 4.1 -27.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -26.1 -16.1 -52.2 -15.3 -73.1C-14.5 -89.6 14.5 -89.6 15.3 -73.1C16.1 -52.2 4.0 -26.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -61.3Q0 -65.3 9.3 -61.3M-9.3 -47.4Q0 -51.4 9.3 -47.4M-9.3 -33.6Q0 -37.6 9.3 -33.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -14.8 -13.6 -29.6 -12.9 -41.5C-12.2 -50.9 12.2 -50.9 12.9 -41.5C13.6 -29.6 3.4 -14.8 0 0Z' fill='%233d1a09'/><path d='M0 -4V-91.0' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(10.8)'><path d='M0 0C-4.2 -29.6 -17 -59.3 -16.1 -83.1C-15.3 -101.9 15.3 -101.9 16.1 -83.1C17 -59.3 4.2 -29.6 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -27.6 -16.6 -55.2 -15.8 -77.2C-14.9 -94.7 14.9 -94.7 15.8 -77.2C16.6 -55.2 4.1 -27.6 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -26.1 -16.1 -52.2 -15.3 -73.1C-14.5 -89.6 14.5 -89.6 15.3 -73.1C16.1 -52.2 4.0 -26.1 0 0Z' fill='%237a3a16'/><path d='M-9.3 -61.3Q0 -65.3 9.3 -61.3M-9.3 -47.4Q0 -51.4 9.3 -47.4M-9.3 -33.6Q0 -37.6 9.3 -33.6' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -14.8 -13.6 -29.6 -12.9 -41.5C-12.2 -50.9 12.2 -50.9 12.9 -41.5C13.6 -29.6 3.4 -14.8 0 0Z' fill='%233d1a09'/><path d='M0 -4V-91.0' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g><g transform='translate(150 110) rotate(0.0)'><path d='M0 0C-4.2 -29.4 -17 -58.8 -16.1 -82.3C-15.3 -100.9 15.3 -100.9 16.1 -82.3C17 -58.8 4.2 -29.4 0 0Z' fill='%23efe0bd' stroke='%231c0a03' stroke-opacity='.6' stroke-width='1.3'/><path d='M0 0C-4.1 -27.3 -16.6 -54.6 -15.8 -76.5C-14.9 -93.8 14.9 -93.8 15.8 -76.5C16.6 -54.6 4.1 -27.3 0 0Z' fill='%2324100a'/><path d='M0 0C-4.0 -25.8 -16.1 -51.7 -15.3 -72.4C-14.5 -88.8 14.5 -88.8 15.3 -72.4C16.1 -51.7 4.0 -25.8 0 0Z' fill='%239a4b1c'/><path d='M-9.3 -60.7Q0 -64.7 9.3 -60.7M-9.3 -47.0Q0 -51.0 9.3 -47.0M-9.3 -33.3Q0 -37.3 9.3 -33.3' stroke='%232a1206' stroke-opacity='.55' stroke-width='2.4' fill='none'/><path d='M0 0C-3.4 -14.7 -13.6 -29.4 -12.9 -41.1C-12.2 -50.4 12.2 -50.4 12.9 -41.1C13.6 -29.4 3.4 -14.7 0 0Z' fill='%234a210d'/><path d='M0 -4V-90.2' stroke='%23efe0bd' stroke-opacity='.3' stroke-width='1'/></g></svg>") 50% 100% / auto 100% no-repeat;
+  transition: transform .6s cubic-bezier(.3, 1.55, .5, 1) .04s, opacity .3s; }
+.num-card.skin-turkey.charging::before { transform: scale(.38, .8); opacity: .75; transition: transform .22s ease-in, opacity .22s; }
+.skin-turkey .slot {
+  position: relative; z-index: 1; color: transparent;
+  background:
+    /* le reflet de glaçage qui traverse à la révélation (au repos, hors du chiffre) */
+    linear-gradient(105deg, transparent 42%, rgba(255, 250, 230, .95) 50%, transparent 58%) 0 0 / 300% 100% no-repeat,
+    /* le reflet beurré, en haut à gauche */
+    radial-gradient(ellipse 30% 16% at 34% 24%, rgba(255, 248, 220, .9), rgba(255, 236, 180, .35) 55%, transparent 75%) 0 0 / 100% 100% no-repeat,
+    /* la peau croustillante : petits grains plus foncés */
+    radial-gradient(circle, rgba(92, 36, 6, .4) 0 .01em, transparent .02em) 0 0 / .13em .1em,
+    radial-gradient(circle, rgba(120, 50, 10, .3) 0 .014em, transparent .026em) .05em .04em / .17em .15em,
+    linear-gradient(180deg, #ffd88a 0%, #f2a845 32%, #cf6d1e 66%, #8f3d10 100%);
+  -webkit-background-clip: text; background-clip: text;
+  /* le bord rôti foncé tout autour, puis l'ombre sur la carte et une lueur chaude */
+  filter: drop-shadow(.035em 0 0 #3a1505) drop-shadow(-.035em 0 0 #3a1505) drop-shadow(0 .035em 0 #3a1505) drop-shadow(0 -.035em 0 #3a1505)
+    drop-shadow(0 .05em .04em rgba(0, 0, 0, .55)) drop-shadow(0 0 .1em rgba(251, 146, 60, .35));
+}
+.skin-turkey .slot.ghost { opacity: .22; }
+.num-card.sm.skin-turkey .slot { filter: drop-shadow(0 .06em 0 #3a1505) drop-shadow(0 0 .06em #3a1505); }
+/* en petit (historique, listes) : pas de plumes, elles mangeaient les chiffres */
+.num-card.sm.skin-turkey::before { display: none; }
+.skin-turkey .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-turkey .slot::before { content: ''; position: absolute; pointer-events: none; opacity: 0; }
+.skin-turkey .slot.collapsed::before { display: none; }
+/* Pendant le tirage : cru, pâle et rosé, il grésille (chaleur qui ondule) avec la lueur orange du four en dessous. */
+.skin-turkey .slot.spinning {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(176, 96, 74, .35) 0 .012em, transparent .024em) 0 0 / .09em .11em, linear-gradient(180deg, #fde8d6, #f2c7aa 60%, #dfa687);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(.03em 0 0 #a2603f) drop-shadow(-.03em 0 0 #a2603f) drop-shadow(0 .03em 0 #a2603f) drop-shadow(0 -.03em 0 #a2603f) drop-shadow(0 .1em .08em rgba(255, 120, 30, .6));
+  animation: tk-sizzle .17s ease-in-out infinite alternate;
+}
+.skin-turkey .slot.spinning:nth-child(2n) { animation-delay: -.09s; }
+.skin-turkey .slot.spinning:nth-child(3n) { animation-duration: .21s; }
+@keyframes tk-sizzle { from { transform: none; } to { transform: translateY(-.03em) skewX(-3deg) scale(1.02, .97); } }
+/* Il se pose : élan (il se tasse, encore cru), coup de chaleur qui le dore et le grandit, reflet de glaçage, il se pose.
+   Pas d'opacité dans l'animation (les zéros de tête restent pâles) ; remplissage backwards seulement. */
+.skin-turkey .slot.revealed { animation: tk-roast .7s backwards; }
+@keyframes tk-roast {
+  0% { transform: none; background-position: 100% 0, 0 0, 0 0, .05em .04em, 0 0; animation-timing-function: ease-in;
+    filter: saturate(.25) brightness(1.5) drop-shadow(.03em 0 0 #a2603f) drop-shadow(-.03em 0 0 #a2603f) drop-shadow(0 .03em 0 #a2603f) drop-shadow(0 -.03em 0 #a2603f) drop-shadow(0 .05em .04em rgba(0, 0, 0, .3)) drop-shadow(0 0 .1em rgba(251, 146, 60, .2)); }
+  13% { transform: scale(.9, .93) translateY(.03em); animation-timing-function: cubic-bezier(.3, 1.6, .5, 1);
+    filter: saturate(.3) brightness(1.45) drop-shadow(.03em 0 0 #a2603f) drop-shadow(-.03em 0 0 #a2603f) drop-shadow(0 .03em 0 #a2603f) drop-shadow(0 -.03em 0 #a2603f) drop-shadow(0 .05em .04em rgba(0, 0, 0, .3)) drop-shadow(0 .08em .1em rgba(255, 120, 30, .6)); }
+  27% { transform: scale(1.14) translateY(-.05em); background-position: 100% 0, 0 0, 0 0, .05em .04em, 0 0;
+    filter: saturate(1.35) brightness(1.5) drop-shadow(.035em 0 0 #5a2008) drop-shadow(-.035em 0 0 #5a2008) drop-shadow(0 .035em 0 #5a2008) drop-shadow(0 -.035em 0 #5a2008) drop-shadow(0 .05em .04em rgba(0, 0, 0, .5)) drop-shadow(0 0 .22em rgba(255, 170, 60, .95)); }
+  44% { transform: scale(.97, 1.03); }
+  64% { transform: scale(1.02, .99); background-position: 0 0, 0 0, 0 0, .05em .04em, 0 0; }
+  82% { transform: scale(.995, 1.005); }
+  100% { transform: none; background-position: 0 0, 0 0, 0 0, .05em .04em, 0 0;
+    filter: drop-shadow(.035em 0 0 #3a1505) drop-shadow(-.035em 0 0 #3a1505) drop-shadow(0 .035em 0 #3a1505) drop-shadow(0 -.035em 0 #3a1505) drop-shadow(0 .05em .04em rgba(0, 0, 0, .55)) drop-shadow(0 0 .1em rgba(251, 146, 60, .35)); }
+}
+/* le nuage de vapeur qui monte du chiffre tout juste rôti */
+.skin-turkey .slot.revealed::before { left: -.05em; right: -.05em; top: -.35em; height: .6em;
+  /* trois volutes floues, plus hautes que larges (des points nets faisaient une rangée de perles) */
+  background: radial-gradient(ellipse .07em .16em at 32% 72%, rgba(255, 247, 237, .5), transparent), radial-gradient(ellipse .08em .2em at 64% 55%, rgba(255, 247, 237, .42), transparent), radial-gradient(ellipse .06em .14em at 46% 28%, rgba(255, 247, 237, .3), transparent);
+  filter: blur(.03em); animation: tk-steam .7s ease-out backwards; }
+@keyframes tk-steam { 0%, 22% { opacity: 0; transform: translateY(.2em) scale(.7, .6); } 42% { opacity: .9; } 100% { opacity: 0; transform: translateY(-.28em) skewX(-8deg) scale(1.3, 1.4); } }
+@media (prefers-reduced-motion: reduce) { .skin-turkey .slot, .skin-turkey .slot::before { animation: none; } .num-card.skin-turkey::before { transition: none; } }
+/* Cadre de duel : une table de fête (nappe à carreaux orange et brun en bas), des feuilles d'automne éparpillées en haut ;
+   🦃 se dandine, 🍂 🥧 se balancent. */
+.side-turkey { --side-border: #c2410c; --side-glow: 0 0 16px rgba(234, 88, 12, .3), inset 0 0 0 2px rgba(254, 215, 170, .35); --side-ink: #c2410c;
+  --side-bg:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 70'><defs><path id='m' d='M0 -9L2 -4L6 -6L5 -1L9 0L5 2L6 6L2 4L0 9L-2 4L-6 6L-5 2L-9 0L-5 -1L-6 -6L-2 -4Z'/><path id='o' d='M0 -8C5 -5 5 4 0 8C-5 4 -5 -5 0 -8Z'/></defs><g opacity='.38'><use href='%23m' transform='translate(14 12) rotate(20)' fill='%23dc2626'/><use href='%23o' transform='translate(44 26) rotate(-40)' fill='%23f59e0b'/><use href='%23m' transform='translate(74 10) rotate(-15) scale(.8)' fill='%23ea580c'/><use href='%23o' transform='translate(100 30) rotate(60)' fill='%2392400e'/><use href='%23m' transform='translate(30 50) rotate(45) scale(.7)' fill='%23eab308'/><use href='%23o' transform='translate(88 56) rotate(10) scale(.8)' fill='%23b91c1c'/></g></svg>") 0 0 / 120px 70px repeat-x,
+    repeating-linear-gradient(90deg, rgba(154, 52, 18, .3) 0 8px, transparent 8px 16px) 0 100% / 100% 30% no-repeat,
+    repeating-linear-gradient(0deg, rgba(154, 52, 18, .3) 0 8px, transparent 8px 16px) 0 100% / 100% 30% no-repeat,
+    linear-gradient(rgba(251, 146, 60, .22), rgba(251, 146, 60, .22)) 0 100% / 100% 30% no-repeat,
+    linear-gradient(180deg, rgba(180, 83, 9, .12), rgba(120, 53, 15, .06));
+  --deco-a: '🦃'; --deco-b: '🍂 🥧'; }
+.side-turkey::before { animation: tk-strut 1.8s ease-in-out infinite; }
+.side-turkey::after { animation: tk-sway 3s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes tk-strut { 0%, 100% { transform: translateX(0) rotate(-4deg); } 25% { transform: translateX(2px) translateY(-1px) rotate(3deg); } 50% { transform: translateX(4px) rotate(-4deg); } 75% { transform: translateX(2px) translateY(-1px) rotate(3deg); } }
+@keyframes tk-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.room-stage.many .side-turkey::before, .room-stage.many .side-turkey::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-turkey::before, .side-turkey::after { animation: none; } }
+
 /* ------------------------------------------------------------------ Money (idées de JBearr12 et finnnnn, 2026-10-25) :
    un billet de 100 générique (aucune vraie monnaie, aucun portrait : un sceau étoilé et « 100 » dans des médaillons),
    papier vert pâle, guilloches, double cadre ; les chiffres sont de la dorure à chaud. Pendant le tirage ils défilent
@@ -9259,6 +9539,7 @@ textarea.gc-input::placeholder { white-space: nowrap; overflow: hidden; text-ove
 .gc-mute-msg { margin: .3rem 0 0; padding: .3rem .55rem; border-left: 3px solid var(--outline-mid); font-size: .8rem; color: var(--prose-2); overflow-wrap: anywhere; }
 /* Modérateurs du chat (Sacha, 2026-11-01) : 🛡️ après le pseudo, lien vers leur page dans l'en-tête, fiches sur la page Owner. */
 .gc-modtag { margin-left: .2rem; font-size: .72rem; }
+.gc-best { margin-left: .25rem; font-size: .72rem; font-weight: 700; color: var(--t-pill-text, var(--prose-2)); white-space: nowrap; } /* meilleur tirage (Loliarlex1248, MAYO) */
 .gc-modlink { flex: none; margin-left: auto; padding: .15rem .5rem; border: 1px solid var(--outline); border-radius: 999px; color: var(--prose-2); font-size: .72rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .gc-modlink:hover, .gc-modlink:focus-visible { color: var(--prose); border-color: var(--outline-strong); }
 .gc-modlink[hidden] { display: none; }
