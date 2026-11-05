@@ -138,4 +138,8 @@ setInterval(() => { migrateRolls().catch(err => console.error('migrateRolls:', e
 // Discord : nouveautés publiées au démarrage, podium du jour à minuit UTC (api/_discord_tasks.js).
 require(path.join(ROOT, 'api/_discord_tasks.js')).start();
 
+// Rattrapages pas encore faits (compteur par nombre, propriétaires de badges, Hall of Fame) : lancés tout seuls, en fond,
+// dans un processus à part, 2 min après le démarrage (deploy/ovh/backfills.js).
+require(path.join(__dirname, 'backfills.js')).start(require(path.join(ROOT, 'api/_lib.js')).redis).catch(err => console.error('backfills:', err.message));
+
 server.listen(PORT, HOST, () => console.log(`RNG∞ API ${version || '(dev)'} : http://${HOST}:${PORT}`));
