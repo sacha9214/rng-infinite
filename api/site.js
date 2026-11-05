@@ -12,7 +12,9 @@
 //                               au joueur le skin et le titre Supporter ; fundSet { goal, url } règle l'objectif et le lien
 //   announcements               (sans compte) les 20 dernières annonces du créateur (api/_announce.js)
 //   annAdd { title, text, important, discord } · annDelete { id }   (Owner) publie ou retire une annonce
-//   roadmap                     (sans compte) idées prévues et ajoutées depuis 30 jours (api/_roadmap.js, 5 min de cache)
+//   roadmap                     (sans compte) idées prévues et ajoutées depuis 30 jours (api/_roadmap.js, 5 min de cache) ;
+//                               avec playerId/secret, ses votes en plus (mine)
+//   rmVote { key, on }          vote pour une idée prévue, ou le retire (on: false)
 //   insights                    (Owner) carte des visites, heures d'activité, casino par jeu, joueurs et économie
 // Fréquentation : uniquement des compteurs agrégés par jour (an:<jour>), sans identifiant, sans adresse IP, sans cookie.
 // Carte : la position approximative d'une visite (donnée par l'hébergeur d'après l'adresse, arrondie au degré, soit
@@ -616,7 +618,12 @@ module.exports = async (req, res) => {
     // Annonces du créateur (idée de jaxoncool43, 2026-10-26) : publiques, sans joueur.
     if (body.action === 'announcements') return send(res, 200, { list: await Announce.list() });
     // Feuille de route publique (idée de Phong67, 2026-10-26).
-    if (body.action === 'roadmap') return send(res, 200, await Roadmap.roadmap());
+    // Avec un joueur : ses votes en plus (idée de Trinity, 2026-11-05) ; un joueur inconnu ou suspendu lit comme un visiteur.
+    if (body.action === 'roadmap') {
+      const pid = String(body.playerId || ''), sec = String(body.secret || '');
+      const me = isPlayerId(pid) && /^[0-9a-f]{32}$/.test(sec) && (await ownsPlayer(pid, sec).catch(() => false)) ? pid : null;
+      return send(res, 200, await Roadmap.roadmap(Date.now(), me));
+    }
     await flushDue();
     const playerId = String(body.playerId || '');
     const secret = String(body.secret || '');
@@ -624,6 +631,8 @@ module.exports = async (req, res) => {
     if (!(await ownsPlayer(playerId, secret))) return send(res, 403, { error: 'This player id belongs to someone else' });
     const stats = await readStats(playerId);
     const isOwner = Number(stats.owner) >= 1;
+    // Voter pour une idée prévue de la feuille de route (idée de Trinity, 2026-11-05) : on = true / false.
+    if (body.action === 'rmVote') return send(res, 200, await Roadmap.vote(playerId, stats, body.key, body.on !== false));
     // Invité : il voit tout ce que voit le créateur sur sa page, sans pouvoir rien modifier.
     // Idea Manager (demandé par Sacha, 2026-10-23) : donne un avis motivé sur les idées, rien d'autre (stats.ideaManager).
     const isIM = !isOwner && stats.ideaManager === '1';
