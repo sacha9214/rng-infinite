@@ -10716,6 +10716,398 @@
   SCENES.demon = l1Winged({ demon: true, cls: 'dmn-wrath', size: .95, wing: ['#3a0c16', '#4a1020', '#5c1424', 'rgba(248, 113, 113, .85)'], plumes: ['#1c1420', '#111014', '#2a0f18'], inner: '#dc2626', ray: '#ef4444', mote: '#fb923c', moteLight: '#b91c1c' });
   // ==== fin du lot 1 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 2 : Deep Sea, Bubble, Yin and Yang, Frutiger Aero (idées de joueurs planifiées) ====
+  // 🐋 Deep Sea (finnnnn, Deadshot, YeeHao2 et LEVIATHAN) — dans la carte, la lumière de la surface ondule en haut et la
+  // neige marine tombe. Chaque chiffre posé lâche un chapelet de bulles et fait fuir un petit poisson qui sort de
+  // derrière la carte. Avant le dernier chiffre, la carte s'assombrit et deux yeux immenses s'ouvrent au fond. Pendant
+  // tout le tirage, des bêtes passent autour de la carte (poissons en banc, tortue, calmar). Révélation : un banc de
+  // poissons, puis selon la rareté une tortue, un requin (Epic), un calmar ; dès Mythic, une baleine passe derrière la
+  // carte en chantant (anneaux) et les chiffres pulsent (.dsea-deep) ; dès Divine, le léviathan dresse son cou derrière
+  // la carte et sa tête domine le nombre. Une fois sur 50 (Deadshot), une ancre descend au bout de sa chaîne.
+  SCENES.deepsea = env => {
+    const { ci, co, w, h, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const snow = particles(), bubbles = particles(), swim = timed(), pending = [], snowE = emitter();
+    const BODY = dark ? '#0b3247' : '#155e75', RIM = dark ? '#22d3ee' : '#0e7490', EYE = '#a5f3fc';
+    let t = 0, gloom = 0, gloomTo = 0, wanderAt = 1.2, levi = null, anchor = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const bubble = (x, y, n, sp = 1) => { for (let i = Math.round(n); i > 0; i--) bubbles.add({ x: x + rnd(-1, 1) * em * .15, y, vx: rnd(-6, 6), vy: -H * rnd(.5, 1.1) * sp, drag: .4, max: rnd(.9, 1.6), r: em * rnd(.035, .08), ph: rnd(TAU) }); };
+    // une bête qui traverse : de x0 à x1 à la hauteur y (ses ondulations sont dans le dessin)
+    const pass = (kind, o = {}) => { const dir = o.dir || pick([-1, 1]), span = card.w / 2 + H * (o.far || 2.4); swim.add({ kind, dir, y: o.y === undefined ? card.y + H * rnd(-.5, .2) : o.y, x0: cx - dir * span, x1: cx + dir * span, life: o.life || rnd(2.6, 3.6), delay: o.delay || 0, s: H * (o.s || 1), n: o.n || 1, t0: 0 }); };
+    // ---- les bêtes, dessinées tournées vers la droite autour de (0, 0) ; s : leur taille
+    const fish = (s, ph) => {
+      const wag = Math.sin(ph * 12) * .25;
+      co.beginPath(); co.ellipse(0, 0, s * .32, s * .13, 0, 0, TAU); co.fill();
+      co.beginPath(); co.moveTo(-s * .26, 0); co.lineTo(-s * .5, -s * .14 + wag * s * .1); co.lineTo(-s * .5, s * .14 + wag * s * .1); co.closePath(); co.fill();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .2, -s * .03, s * .03, 0, TAU); co.fill(); co.restore();
+    };
+    const turtle = (s, ph) => {
+      const pad = Math.sin(ph * 4) * .5;
+      for (const [fx, fy, dir] of [[.15, -.14, -1], [.15, .14, 1], [-.2, -.12, -1], [-.2, .12, 1]]) { co.save(); co.translate(s * fx, s * fy); co.rotate(dir * (.6 + pad * (fx > 0 ? 1 : -.6))); co.beginPath(); co.ellipse(0, dir * s * .1, s * .05, s * .12, 0, 0, TAU); co.fill(); co.restore(); }
+      co.beginPath(); co.ellipse(s * .3, 0, s * .08, s * .06, 0, 0, TAU); co.fill();
+      co.beginPath(); co.ellipse(0, 0, s * .26, s * .18, 0, 0, TAU); co.fill();
+      co.save(); co.strokeStyle = RIM; co.globalAlpha *= .5; co.lineWidth = Math.max(1, s * .015); co.beginPath(); co.ellipse(0, 0, s * .17, s * .1, 0, 0, TAU); co.moveTo(-s * .26, 0); co.lineTo(s * .26, 0); co.stroke(); co.restore();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .34, -s * .02, s * .015, 0, TAU); co.fill(); co.restore();
+    };
+    const squid = (s, ph) => {
+      const pulse = .5 + .5 * Math.sin(ph * 5), sq = 1 - .15 * pulse;
+      co.beginPath(); co.moveTo(s * .38, 0); co.quadraticCurveTo(s * .2, -s * .12 * sq, -s * .02, -s * .08 * sq); co.lineTo(-s * .02, s * .08 * sq); co.quadraticCurveTo(s * .2, s * .12 * sq, s * .38, 0); co.fill();
+      co.save(); co.strokeStyle = co.fillStyle; co.lineWidth = Math.max(1.2, s * .025); co.lineCap = 'round';
+      for (let i = -3; i <= 3; i++) { co.beginPath(); co.moveTo(-s * .02, i * s * .02); for (let j = 1; j <= 6; j++) co.lineTo(-s * .02 - j * s * .06 * (1 + pulse * .3), i * s * .025 * (1 + j * .25 * (1 - pulse)) + Math.sin(ph * 8 + j + i) * s * .02); co.stroke(); }
+      co.restore();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .04, -s * .04, s * .022, 0, TAU); co.fill(); co.restore();
+    };
+    const shark = (s, ph) => {
+      const wag = Math.sin(ph * 5) * .12;
+      co.beginPath(); co.moveTo(s * .55, s * .02); co.quadraticCurveTo(s * .3, -s * .14, -s * .3, -s * .05); co.lineTo(-s * .55, -s * .2 + wag * s * .3); co.lineTo(-s * .46, 0); co.lineTo(-s * .55, s * .14 + wag * s * .3); co.lineTo(-s * .3, s * .04); co.quadraticCurveTo(s * .2, s * .12, s * .55, s * .02); co.fill();
+      co.beginPath(); co.moveTo(s * .05, -s * .09); co.lineTo(-s * .08, -s * .26); co.lineTo(-s * .12, -s * .07); co.fill(); // aileron
+      co.beginPath(); co.moveTo(s * .1, s * .06); co.lineTo(-s * .05, s * .2); co.lineTo(-s * .06, s * .06); co.fill();
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .38, -s * .02, s * .015, 0, TAU); co.fill(); co.restore();
+    };
+    const whale = (s, ph) => {
+      const fl = Math.sin(ph * 1.6) * .15;
+      co.beginPath(); co.moveTo(s * .5, 0); co.bezierCurveTo(s * .5, -s * .16, s * .1, -s * .2, -s * .3, -s * .08); co.lineTo(-s * .5, -s * .02); co.bezierCurveTo(-s * .3, s * .08, s * .2, s * .16, s * .5, 0); co.fill();
+      co.save(); co.translate(-s * .48, -s * .02); co.rotate(fl); co.beginPath(); co.moveTo(0, 0); co.quadraticCurveTo(-s * .06, -s * .12, -s * .16, -s * .1); co.quadraticCurveTo(-s * .06, -s * .02, 0, 0); co.quadraticCurveTo(-s * .06, s * .06, -s * .16, s * .08); co.quadraticCurveTo(-s * .06, s * .02, 0, 0); co.fill(); co.restore(); // la caudale
+      co.save(); co.translate(s * .12, s * .1); co.rotate(.5 + fl); co.beginPath(); co.ellipse(0, s * .06, s * .025, s * .09, 0, 0, TAU); co.fill(); co.restore(); // la pectorale
+      co.save(); co.strokeStyle = RIM; co.globalAlpha *= .35; co.lineWidth = Math.max(1, s * .006); for (let i = 0; i < 5; i++) { co.beginPath(); co.moveTo(s * .42, s * (.04 + i * .015)); co.quadraticCurveTo(s * .2, s * (.1 + i * .015), -s * .02, s * (.07 + i * .01)); co.stroke(); } co.restore(); // les sillons
+      co.save(); co.fillStyle = EYE; co.beginPath(); co.arc(s * .34, s * .02, s * .01, 0, TAU); co.fill(); co.restore();
+    };
+    const DRAW = { fish, turtle, squid, shark, whale };
+    // le léviathan (Divine et plus) : un long cou qui monte de derrière la carte, la tête penchée au-dessus du nombre
+    const leviathan = k => {
+      const rise = outCubic(k), bx = card.x + card.w + H * 1.5, by = card.y + H * 1.3, hx = card.x + card.w + H * .75, hy = card.y + H * .1 + (1 - rise) * H * 1.4, sway = Math.sin(t * 1.1) * em * .2; // la tête à droite de la carte, à sa hauteur : au-dessus, il n'y a que 45 px avant le menu
+      co.save(); co.lineCap = 'round'; co.lineJoin = 'round';
+      co.strokeStyle = BODY; co.lineWidth = H * .42; co.beginPath(); co.moveTo(bx, by); co.bezierCurveTo(bx + H * .9, by - H * .6, hx + H * 1.1 + sway, hy + H * .2, hx + sway, hy); co.stroke();
+      co.strokeStyle = RIM; co.globalAlpha = .45; co.lineWidth = 2; co.beginPath(); co.moveTo(bx + H * .2, by - H * .1); co.bezierCurveTo(bx + H * 1.05, by - H * .7, hx + H * 1.2 + sway, hy, hx + sway + H * .15, hy - H * .16); co.stroke(); co.globalAlpha = 1;
+      // les épines du dos
+      co.fillStyle = BODY; for (let i = 0; i < 6; i++) { const u = .25 + i * .12, px = lerp(bx + H * .5, hx + H * .7 + sway, u), py = lerp(by - H * .5, hy - H * .1, u); co.beginPath(); co.moveTo(px - H * .08, py - H * .14); co.lineTo(px + H * .02, py - H * .4); co.lineTo(px + H * .1, py - H * .12); co.fill(); }
+      // la tête : un crâne allongé tourné vers la gauche, la gueule entrouverte, deux yeux qui luisent
+      co.translate(hx + sway, hy); co.rotate(.12 + Math.sin(t * .9) * .05); co.fillStyle = BODY;
+      co.beginPath(); co.moveTo(H * .3, -H * .2); co.quadraticCurveTo(-H * .2, -H * .32, -H * .78, -H * .06); co.lineTo(-H * .76, H * .02); co.quadraticCurveTo(-H * .2, -H * .02, H * .3, H * .14); co.closePath(); co.fill();
+      const jaw = .12 + .08 * Math.sin(t * 2); co.save(); co.rotate(-jaw); co.beginPath(); co.moveTo(H * .25, H * .1); co.quadraticCurveTo(-H * .2, H * .12, -H * .66, H * .08); co.lineTo(-H * .6, H * .16); co.quadraticCurveTo(-H * .1, H * .26, H * .25, H * .2); co.fill();
+      co.fillStyle = '#e0f2fe'; for (let i = 0; i < 6; i++) { const tx = -H * (.58 - i * .1); co.beginPath(); co.moveTo(tx, H * .09); co.lineTo(tx + H * .025, H * .03); co.lineTo(tx + H * .05, H * .09); co.fill(); } co.restore();
+      co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#22d3ee', -H * .18, -H * .14, H * .12, .8); dot(co, '#ecfeff', -H * .18, -H * .14, H * .035, 1); co.globalCompositeOperation = 'source-over';
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        gloom += (gloomTo - gloom) * Math.min(1, dt * 3);
+        // la lumière de la surface ondule en haut de la carte ; la neige marine tombe
+        ci.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) dot(ci, '#67e8f9', w * (.5 + .45 * Math.sin(t * (.35 + i * .11) + i * 1.7)), h * .08, w * .16, (.1 + .04 * Math.sin(t * 2 + i)) * (1 - gloom), h * .35);
+        ci.globalCompositeOperation = 'source-over';
+        for (let n = snowE(6 * q, dt); n > 0; n--) snow.add({ x: rnd(w), y: -2, vx: rnd(-3, 3), vy: rnd(4, 10), max: rnd(3, 6), r: rnd(.5, 1.2), ph: rnd(TAU) });
+        snow.step(dt);
+        ci.fillStyle = '#e0f2fe'; snow.each((s, k) => { ci.globalAlpha = .45 * Math.sin(Math.PI * k); ci.beginPath(); ci.arc(s.x + Math.sin(s.life + s.ph) * 3, s.y, s.r, 0, TAU); ci.fill(); });
+        ci.globalAlpha = 1;
+        // avant le dernier chiffre : l'abysse s'assombrit et deux yeux immenses s'ouvrent au fond
+        if (gloom > .02) {
+          ci.globalAlpha = gloom * .45; ci.fillStyle = '#000814'; ci.fillRect(0, 0, w, h); ci.globalAlpha = 1;
+          const open = clamp(gloom * 1.4 - .3) * (Math.sin(t * 1.3) > .96 ? .1 : 1);
+          ci.globalCompositeOperation = 'lighter';
+          for (const ex of [.78, .9]) { dot(ci, '#22d3ee', w * ex, h * .72, h * .16, .35 * open, h * .16 * open); dot(ci, '#ecfeff', w * ex, h * .72, h * .05, .6 * open, h * .05 * open); }
+          ci.globalCompositeOperation = 'source-over';
+        }
+        // des bêtes passent de temps en temps pendant le tirage
+        if (t > wanderAt && !gloomTo) { wanderAt = t + rnd(2.2, 3.6); const k = pick(['fish', 'fish', 'turtle', 'squid']); pass(k, { s: k === 'fish' ? .5 : .8, n: k === 'fish' ? 4 : 1 }); }
+        // derrière la carte : les bêtes, le léviathan, l'ancre ; jamais sur la rareté ni le score
+        if (swim.n || levi || anchor) behind(env, () => {
+          co.fillStyle = BODY;
+          swim.run(dt, (b, k) => {
+            const x = lerp(b.x0, b.x1, k), a = Math.min(1, k * 6, (1 - k) * 6);
+            for (let i = 0; i < b.n; i++) {
+              co.save(); co.globalAlpha = a * (dark ? .95 : .8); co.fillStyle = BODY;
+              co.translate(x - b.dir * i * b.s * .45 + Math.sin(i * 2.1) * b.s * .2, b.y + Math.sin(t * 1.5 + i * 1.3) * b.s * .1 + (i % 2) * b.s * .22); co.scale(b.dir, 1);
+              if (dark) { co.shadowColor = RIM; co.shadowBlur = Math.max(2, b.s * .06); }
+              DRAW[b.kind](b.s, t + i);
+              co.restore();
+            }
+            if (b.kind === 'whale' && Math.random() < dt * 1.5) bubble(x, b.y - b.s * .1, 2); // le souffle de la baleine
+            if (b.kind === 'whale') { co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; for (let r = 0; r < 3; r++) { const kk = ((t * .5 + r / 3) % 1); co.globalAlpha = (1 - kk) * .35 * a; co.strokeStyle = RIM; co.lineWidth = 1.5; co.beginPath(); co.arc(x + b.dir * b.s * .4, b.y, b.s * (.1 + kk * .5), -.6, .6); co.stroke(); } co.globalCompositeOperation = 'source-over'; } // son chant
+          });
+          if (levi) { levi.k = Math.min(1, levi.k + dt * .7); co.globalAlpha = 1; leviathan(levi.k); }
+          if (anchor) {
+            anchor.y += dt * H * .55; const ax = anchor.x, ay = anchor.y, s = H * .5;
+            co.globalAlpha = clamp((anchor.end - t) / .8); co.strokeStyle = dark ? '#475569' : '#334155'; co.lineWidth = Math.max(1.5, s * .05);
+            for (let yy = ay - s * .5; yy > -10; yy -= s * .14) { co.beginPath(); co.ellipse(ax, yy, s * .035, s * .07, 0, 0, TAU); co.stroke(); } // la chaîne
+            co.lineWidth = Math.max(2.5, s * .09); co.lineCap = 'round'; co.beginPath(); co.moveTo(ax, ay - s * .45); co.lineTo(ax, ay + s * .4); co.moveTo(ax - s * .2, ay - s * .25); co.lineTo(ax + s * .2, ay - s * .25); co.moveTo(ax - s * .35, ay + s * .1); co.quadraticCurveTo(ax - s * .3, ay + s * .45, ax, ay + s * .42); co.quadraticCurveTo(ax + s * .3, ay + s * .45, ax + s * .35, ay + s * .1); co.stroke();
+            co.beginPath(); co.arc(ax, ay - s * .52, s * .07, 0, TAU); co.stroke();
+            if (t > anchor.end) anchor = null;
+          }
+          co.globalAlpha = 1;
+        }, true);
+        bubbles.step(dt);
+        co.strokeStyle = dark ? '#a5f3fc' : '#0e7490'; co.lineWidth = 1.2;
+        bubbles.each((b, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3) * .8; co.beginPath(); co.arc(b.x + Math.sin(b.life * 6 + b.ph) * 3, b.y, b.r, 0, TAU); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) gloomTo = 0;
+        bubble(p.x, card.y + em * .1, o.ghost ? 1 : o.last ? 7 : 4);
+        if (o.ghost) return;
+        // un petit poisson effrayé file de derrière la carte, à la hauteur du chiffre
+        later(.18, () => { const dir = p.x < cx ? -1 : 1; swim.add({ kind: 'fish', dir, y: card.y - H * rnd(.15, .35), x0: p.x, x1: p.x + dir * (card.w + H * 2), life: 1.1, s: H * .4, n: 1 }); });
+      },
+      build() { gloomTo = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        gloomTo = 0; wanderAt = t + 6;
+        if (!p) { bubble(cx, card.y, 1, .5); return; }
+        pass('fish', { s: .5, n: 3 + Math.round(4 * p), y: card.y - H * .3, life: 2.6 });
+        if (p >= .42) pass('turtle', { s: .9, delay: .5, y: card.y - H * .2 });
+        if (p >= .6) pass('shark', { s: 1.4, delay: .3, y: card.y + H * .15, life: 3.4 });
+        if (p >= .8) pass('squid', { s: 1, delay: 1, y: card.y - H * .45 });
+        if (p >= 1) { if (el) el.classList.add('dsea-deep'); pass('whale', { s: 3.2, delay: .2, y: card.y + H * .5, life: 6, far: 3.6 }); }
+        if (asc >= 2) later(1.4, () => { levi = { k: 0 }; });
+        // Deadshot : « a 1 in 50 chance for an anchor to pass bye »
+        if (Math.random() < 1 / 50) later(2, () => { anchor = { x: card.x + card.w * rnd(.15, .85), y: card.y - H * 1.6, end: t + 6 }; });
+      },
+    };
+  };
+
+  // Une bulle de savon dessinée une fois (film irisé, reflet), puis posée à toutes les tailles (Bubble, Frutiger Aero).
+  let l2BubbleImg = null;
+  const l2Bubble = () => {
+    if (l2BubbleImg) return l2BubbleImg;
+    const s = document.createElement('canvas'); s.width = s.height = 96;
+    const c = s.getContext('2d'), r = 46;
+    const film = c.createRadialGradient(48, 48, r * .55, 48, 48, r);
+    film.addColorStop(0, 'rgba(255,255,255,0.04)'); film.addColorStop(.75, 'rgba(255,255,255,0.12)'); film.addColorStop(1, 'rgba(255,255,255,0.55)');
+    c.fillStyle = film; c.beginPath(); c.arc(48, 48, r, 0, TAU); c.fill();
+    const hues = ['rgba(244,114,182,.5)', 'rgba(250,204,21,.45)', 'rgba(74,222,128,.42)', 'rgba(56,189,248,.5)', 'rgba(167,139,250,.5)'];
+    c.lineWidth = 5; hues.forEach((h, i) => { c.strokeStyle = h; c.beginPath(); c.arc(48, 48, r - 3, i * TAU / 5 + .6, (i + 1) * TAU / 5 + .6); c.stroke(); });
+    c.lineWidth = 1.2; c.strokeStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(48, 48, r - .5, 0, TAU); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(32, 30, 11, 6, -.6, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.arc(64, 68, 3.5, 0, TAU); c.fill();
+    return (l2BubbleImg = s);
+  };
+  const l2DrawBubble = (c, x, y, r, a, sq = 1) => { if (a <= .01 || r < .5) return; c.globalAlpha = Math.min(1, a); c.drawImage(l2Bubble(), x - r / sq, y - r * sq, 2 * r / sq, 2 * r * sq); };
+
+  // 🫧 Bubble (idée de finnnnn, 2026-11-05) — des bulles montent doucement du bas de la carte pendant le tirage. Quand un
+  // chiffre se pose, sa vieille bulle éclate (12 % de bub-new) : une couronne de gouttelettes et un petit éclair, et la
+  // bulle neuve se gonfle. Avant le dernier chiffre, plus de bulles montent, plus vite. Révélation : une gerbe de bulles
+  // qui s'envolent (et éclatent en l'air) ; dès Mythic, le pistolet à bulles : deux jets de bulles partent des côtés de
+  // la carte pendant plusieurs secondes et remplissent la scène. Tirage raté : une seule bulle monte, éclate, et une
+  // goutte retombe.
+  SCENES.bubble = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, em = emOf(env);
+    const bubs = particles(), drops = particles(), pops = timed(), pending = [], rise = emitter(), gun = emitter();
+    let t = 0, build = 0, gunEnd = 0, gunRate = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const popAt = (x, y, r) => { pops.add({ x, y, r, life: .25 }); for (let i = Math.round(6 * q + r / 8); i > 0; i--) { const a = rnd(TAU), v = H * rnd(.6, 1.4); drops.add({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: H * 4, drag: 1.5, max: rnd(.3, .5), r: rnd(1, 2) }); } };
+    const bub = (x, y, o = {}) => bubs.add({ x, y, vx: o.vx || rnd(-8, 8), vy: o.vy || -H * rnd(.25, .55), drag: o.drag || .2, g: o.g || 0, max: o.max || rnd(2, 3.4), r: o.r || em * rnd(.1, .28), ph: rnd(TAU), pop: o.pop === undefined ? Math.random() < .5 : o.pop });
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        for (let n = rise((1.2 + 7 * build) * q, dt); n > 0; n--) bub(card.x + rnd(card.w), card.y + H * rnd(.6, 1), { vy: -H * rnd(.3, .6) * (1 + build) });
+        // le pistolet à bulles (Mythic et plus) : deux jets, à gauche et à droite, qui balaient de haut en bas
+        if (t < gunEnd) for (let n = gun(gunRate * q, dt); n > 0; n--) { const side = Math.random() < .5 ? -1 : 1, sweep = Math.sin(t * 2.2 + (side > 0 ? 1.5 : 0)) * .7 - .35, v = H * rnd(2.2, 3.6); bub(side < 0 ? card.x - em * .2 : card.x + card.w + em * .2, card.y + H * .5, { vx: side * Math.cos(sweep) * v, vy: Math.sin(sweep) * v, drag: 1.4, g: -H * .25, max: rnd(2.2, 3.6), r: em * rnd(.12, .36), pop: Math.random() < .4 }); }
+        bubs.step(dt);
+        bubs.each((b, k) => {
+          const sq = 1 + .06 * Math.sin(b.life * 7 + b.ph), x = b.x + Math.sin(b.life * 2.2 + b.ph) * em * .15;
+          // une bulle sur deux éclate avant la fin de sa vie (elle disparaît dans un petit pop) ; les autres s'effacent
+          if (b.pop && k > .8 && !b.popped) { b.popped = true; popAt(x, b.y, b.r); }
+          if (b.popped) return;
+          l2DrawBubble(co, x, b.y, b.r, Math.min(1, b.life * 5, (1 - k) * 4) * (dark ? .95 : 1), sq);
+        });
+        drops.step(dt);
+        co.fillStyle = dark ? '#e0f2fe' : '#6366f1';
+        drops.each((d, k) => { co.globalAlpha = (1 - k) * .85; co.beginPath(); co.arc(d.x, d.y, d.r, 0, TAU); co.fill(); });
+        pops.run(dt, (p, k) => { co.globalAlpha = (1 - k) * .8; co.strokeStyle = dark ? '#ffffff' : '#818cf8'; co.lineWidth = 1.4; for (let i = 0; i < 8; i++) { const a = i * TAU / 8, r0 = p.r * (.7 + k * .9), r1 = p.r * (1 + k * 1.3); co.beginPath(); co.moveTo(p.x + Math.cos(a) * r0, p.y + Math.sin(a) * r0); co.lineTo(p.x + Math.cos(a) * r1, p.y + Math.sin(a) * r1); co.stroke(); } });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        // l'ancienne bulle éclate à 12 % de bub-new (0,62 s), la neuve se gonfle
+        later(.07, () => popAt(p.x, p.y, em * (o.ghost ? .25 : .42)));
+        if (o.last) later(.3, () => { for (let i = Math.round(5 * q); i > 0; i--) bub(p.x + rnd(-1, 1) * em * .3, card.y, { vy: -H * rnd(.6, 1.1) }); });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { bub(cx, card.y, { r: em * .3, vy: -H * .35, max: 1.6, pop: true }); return; }
+        for (let i = burst(p, 34 * q, 4); i > 0; i--) { const e = along(grown(card, em * .2), rnd()); bub(e.x, e.y, { vx: (e.x - cx) * rnd(1, 2.4) / card.w * H, vy: -H * rnd(.6, 1.6), drag: .9, r: em * rnd(.12, .3) * (1 + .6 * p) }); }
+        if (p < 1) return;
+        gunRate = 26 + 10 * asc; gunEnd = t + 2.6 + 1.2 * asc;
+      },
+    };
+  };
+
+  // Un taiji (le cercle du yin et du yang) de rayon r, tourné de rot ; ink : la moitié sombre, paper : la claire.
+  function l2Taiji(c, x, y, r, rot, a, ink = '#0c0a09', paper = '#f5f5f4') {
+    if (a <= .01 || r < 1) return;
+    c.save(); c.globalAlpha = Math.min(1, a); c.translate(x, y); c.rotate(rot);
+    c.fillStyle = paper; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.fillStyle = ink; c.beginPath(); c.arc(0, 0, r, -Math.PI / 2, Math.PI / 2); c.arc(0, r / 2, r / 2, Math.PI / 2, -Math.PI / 2, true); c.arc(0, -r / 2, r / 2, Math.PI / 2, -Math.PI / 2); c.closePath(); c.fill();
+    c.beginPath(); c.arc(0, -r / 2, r * .14, 0, TAU); c.fill();
+    c.fillStyle = paper; c.beginPath(); c.arc(0, r / 2, r * .14, 0, TAU); c.fill();
+    c.lineWidth = Math.max(1, r * .03); c.strokeStyle = '#78716c'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke();
+    c.restore();
+  }
+  // ☯️ Yin and Yang (idées de kaz et de JBearr12, Legendary) — à chaque chiffre posé, un grand taiji tourbillonne depuis
+  // sa case et s'efface pendant que la carte s'inverse (la règle CSS fait le changement de couleur). Pendant le tirage,
+  // une brume grise passe dans la carte ; avant le dernier chiffre, elle s'épaissit et deux petits taiji tournent autour
+  // de sa case. Révélation : des gouttes d'encre noire et blanche jaillissent des bords ; dès Epic, un anneau de taiji
+  // tourne autour de la carte ; dès Mythic, deux carpes koï, une noire et une blanche, se poursuivent autour d'elle ;
+  // dès Divine, un taiji géant tourne derrière la carte, ceint des huit trigrammes.
+  SCENES.yinyang = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const swirls = timed(), ink = particles(), pending = [];
+    let t = 0, mist = .3, mistTo = .3, build = 0, ring = 0, koi = 0, grand = 0;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const TRI = ['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷'];
+    // une carpe koï vue de dessus, tournée vers +x : corps fuselé, nageoires, queue qui ondule
+    const carp = (x, y, ang, s, body, edge, ph) => {
+      co.save(); co.translate(x, y); co.rotate(ang); co.fillStyle = body; co.strokeStyle = edge; co.lineWidth = Math.max(1, s * .04);
+      const wag = Math.sin(ph * 6) * .35;
+      co.beginPath(); co.moveTo(-s * .45, 0); co.quadraticCurveTo(-s * .62, -s * .2 + wag * s * .1, -s * .7 + wag * s * .1, -s * .22); co.quadraticCurveTo(-s * .58, 0, -s * .7 + wag * s * .1, s * .22); co.quadraticCurveTo(-s * .62, s * .2 + wag * s * .1, -s * .45, 0); co.fill(); co.stroke(); // la queue
+      for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(s * .1, sd * s * .14, s * .1, s * .045, sd * .7, 0, TAU); co.fill(); co.stroke(); } // les nageoires
+      co.beginPath(); co.moveTo(s * .5, 0); co.bezierCurveTo(s * .45, -s * .16, -s * .2, -s * .14, -s * .46, 0); co.bezierCurveTo(-s * .2, s * .14, s * .45, s * .16, s * .5, 0); co.fill(); co.stroke(); // le corps
+      co.fillStyle = edge; for (const sd of [-1, 1]) { co.beginPath(); co.arc(s * .38, sd * s * .06, s * .025, 0, TAU); co.fill(); } // les yeux
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        mist += (mistTo - mist) * Math.min(1, dt * 2);
+        // la brume dans la carte : des voiles gris qui passent lentement
+        for (let i = 0; i < 4; i++) dot(ci, '#a8a29e', w * (.5 + .55 * Math.sin(t * (.18 + i * .07) + i * 2.1)), h * (.3 + .4 * ((i * .37) % 1)), w * .35, mist * .22, h * .3);
+        // le tourbillon qui inverse la carte, depuis la case qui vient de se poser
+        swirls.run(dt, (s, k) => l2Taiji(ci, s.x, s.y, em * (.4 + k * 2.6), s.rot + k * 5, (1 - k) * (1 - k) * .55));
+        // deux petits taiji tournent autour de la dernière case (avant le dernier chiffre)
+        if (build) { const s = l1Next(env); if (s) for (let i = 0; i < 2; i++) { const a = t * 5 + i * Math.PI; l2Taiji(co, s.x + Math.cos(a) * s.w * .75, s.y + Math.sin(a) * H * .45, em * .14, t * 8, .9 * build); } }
+        // derrière la carte : le taiji géant et ses trigrammes (Divine), l'anneau de taiji (Epic), les koï (Mythic)
+        if (grand || ring || koi) behind(env, () => {
+          if (grand) {
+            grand = Math.min(1, grand + dt * .8);
+            const r = Math.max(card.w * .85, H * 2.1) * outCubic(grand); // assez grand pour que la courbe du taiji se voie autour de la carte
+            if (dark) { co.globalCompositeOperation = 'lighter'; dot(co, '#e7e5e4', cx, cy, r * 1.5, .18 * grand); co.globalCompositeOperation = 'source-over'; }
+            l2Taiji(co, cx, cy, r, t * .4, .7 * grand, '#0c0a09', dark ? '#d6d3d1' : '#f5f5f4');
+            for (let i = 0; i < 8; i++) { const a = -t * .25 + (i * TAU) / 8; l1Glyph(co, cx + Math.cos(a) * r * 1.22, cy + Math.sin(a) * r * 1.22, em * .45, TRI[i], a + Math.PI / 2, grand, dark ? '#e7e5e4' : '#292524', null, '{s}px system-ui, sans-serif'); }
+          }
+          if (ring) {
+            const n = 10, rx = card.w * .5 + em * .9, ry = H * .5 + em * .7;
+            for (let i = 0; i < n; i++) { const a = t * .6 + (i * TAU) / n; l2Taiji(co, cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, em * .18, -t * 2 + i, ring * .9); }
+          }
+          if (koi) {
+            koi = Math.min(1, koi + dt);
+            const rx = card.w * .5 + em * 1.4, ry = H * .5 + em * .9;
+            for (let i = 0; i < 2; i++) {
+              const a = t * .9 + i * Math.PI, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry, dir = Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx);
+              co.globalAlpha = koi; carp(x, y, dir, em * 1.5, i ? '#f5f5f4' : '#0c0a09', i ? '#0c0a09' : '#d6d3d1', t + i);
+            }
+            co.globalAlpha = 1;
+          }
+        }, true);
+        // l'encre qui jaillit : noire et blanche
+        ink.step(dt);
+        ink.each((d, k) => { co.globalAlpha = Math.min(1, (1 - k) * 2.5); co.fillStyle = d.c; co.strokeStyle = d.c === '#0c0a09' ? '#a8a29e' : '#44403c'; co.lineWidth = 1; co.beginPath(); co.arc(d.x, d.y, d.r * (1 - k * .4), 0, TAU); co.fill(); co.stroke(); });
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) { build = 0; mistTo = .3; }
+        const ip = bInner(env, p);
+        swirls.add({ x: ip.x, y: ip.y, rot: rnd(TAU), life: o.ghost ? .35 : .5 });
+      },
+      build() { build = 1; mistTo = .9; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; mistTo = p ? .2 : .9;
+        if (!p) return; // un tirage raté : la brume se referme sur le nombre
+        for (let i = burst(p, 30 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()); ink.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(1.5, 3.5), vy: (e.y - cy) / H * H * rnd(1, 3) - H * .4, g: H * 3, drag: 1, max: rnd(.7, 1.3), r: em * rnd(.04, .1) * (1 + p), c: i % 2 ? '#0c0a09' : '#f5f5f4' }); }
+        if (p >= .6) later(.2, () => { ring = 1; });
+        if (p >= 1) later(.5, () => { koi = .01; });
+        if (asc >= 2) later(.3, () => { grand = .01; });
+      },
+    };
+  };
+
+  // 🌐 Frutiger Aero (promis à jia jun, 2026-10-23) — des bulles brillantes montent autour de la carte ; chaque chiffre
+  // posé lâche une petite gerbe de bulles et un éclat de lumière en croix. Avant le dernier chiffre, un ruban de lumière
+  // verte et bleue tourne autour de la carte. Révélation : un reflet d'objectif traverse la carte (plus de cercles avec la
+  // rareté) et les bulles s'envolent ; dès Epic, des rubans d'aurore passent derrière la carte ; dès Mythic, le grand
+  // jeu : rubans, pluie de bulles, papillons de lumière, et un reflet qui repasse sur les chiffres (.aero-shine).
+  SCENES.aero = env => {
+    const { co, card, q, dark, el } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const bubs = particles(), sparks = timed(), flares = timed(), ribbons = timed(), flies = particles(), rise = emitter();
+    let t = 0, build = 0, rain = 0, rainEnd = 0;
+    const bub = (x, y, o = {}) => bubs.add({ x, y, vx: o.vx || rnd(-6, 6), vy: o.vy || -H * rnd(.3, .6), drag: o.drag || .2, max: o.max || rnd(2.4, 3.6), r: o.r || em * rnd(.08, .22), ph: rnd(TAU) });
+    // un ruban de lumière : une courbe épaisse et douce qui ondule autour de (cx, cy)
+    const ribbon = (cols, phase, amp, width, a) => {
+      co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; co.lineCap = 'round';
+      cols.forEach((c, i) => {
+        co.globalAlpha = a * (dark ? .45 : .35); co.strokeStyle = c; co.lineWidth = width * (1 - i * .3);
+        co.beginPath();
+        for (let k = 0; k <= 40; k++) { const u = k / 40, x = cx + (u - .5) * (card.w + H * 4.2), y = cy + Math.sin(u * 5 + phase + i * .4) * amp - (u - .5) * H * .4; k ? co.lineTo(x, y) : co.moveTo(x, y); }
+        co.stroke();
+      });
+      co.globalCompositeOperation = 'source-over';
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let n = rise((1.5 + 6 * build + rain) * q, dt); n > 0; n--) bub(card.x + rnd(-.3, 1.3) * card.w, card.y + H * rnd(.8, 1.2));
+        if (t > rainEnd) rain = 0;
+        // le ruban qui tourne avant le dernier chiffre, puis les aurores (Epic et plus), derrière la carte
+        if (build || ribbons.n) behind(env, () => {
+          if (build) ribbon(['#4ade80', '#38bdf8'], t * 4, H * .5, em * .3, build);
+          ribbons.run(dt, (r, k) => ribbon(r.cols, t * 1.6 + r.ph, H * r.amp, em * r.w, Math.sin(Math.PI * k)));
+        }, true);
+        bubs.step(dt);
+        bubs.each((b, k) => l2DrawBubble(co, b.x + Math.sin(b.life * 2 + b.ph) * em * .12, b.y, b.r, Math.min(1, b.life * 4, (1 - k) * 3)));
+        co.globalAlpha = 1;
+        // les papillons de lumière (Mythic) : deux ailes qui battent, une traînée de points
+        flies.step(dt);
+        flies.each((f, k) => {
+          const flap = Math.abs(Math.sin(f.life * 14 + f.ph)), x = f.x + Math.sin(f.life * 2 + f.ph) * em * .6, y = f.y;
+          co.globalAlpha = Math.min(1, f.life * 3, (1 - k) * 3); co.fillStyle = f.c;
+          for (const sd of [-1, 1]) { co.beginPath(); co.ellipse(x + sd * em * .12 * flap, y, em * .14 * flap + 1, em * .1, sd * .4, 0, TAU); co.fill(); }
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, f.c, x, y, em * .4, .25); co.globalCompositeOperation = 'source-over';
+        });
+        co.globalAlpha = 1;
+        // éclats en croix (un chiffre posé) et reflets d'objectif (la révélation)
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.run(dt, (s, k) => { const a = Math.sin(Math.PI * k), r = em * s.r * (.5 + k); dot(co, '#ffffff', s.x, s.y, r * .25, a); dot(co, '#bae6fd', s.x, s.y, r, a * .45, r * .08); dot(co, '#bae6fd', s.x, s.y, r * .08, a * .45, r); });
+        flares.run(dt, (f, k) => {
+          const x = lerp(card.x - H, card.x + card.w + H, outCubic(k)), y = card.y + H * .25, a = Math.sin(Math.PI * k);
+          dot(co, '#ffffff', x, y, H * .4, a * .7); dot(co, '#e0f2fe', x, y, H * 1.6, a * .35, H * .06);
+          for (let i = 1; i <= f.n; i++) { const u = i / (f.n + 1), fx = lerp(x, 2 * cx - x, u), fy = lerp(y, 2 * cy - y, u); co.globalAlpha = a * .5; co.strokeStyle = pick(['#a5f3fc', '#bbf7d0', '#fde68a']); co.lineWidth = 1.5; co.beginPath(); co.arc(fx, fy, H * (.08 + .1 * ((i * .37) % 1)), 0, TAU); co.stroke(); }
+        });
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        sparks.add({ x: p.x + em * .18, y: p.y - em * .3, r: o.last ? 1.2 : .8, life: .45, delay: .1 });
+        for (let i = Math.round((o.last ? 6 : 3) * q); i > 0; i--) bub(p.x + rnd(-1, 1) * em * .3, card.y + em * .1, { vy: -H * rnd(.5, 1), r: em * rnd(.06, .14) });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) return;
+        flares.add({ life: .9 + .3 * p, n: Math.round(2 + 5 * p) });
+        for (let i = burst(p, 26 * q, 4); i > 0; i--) { const e = along(grown(card, em * .2), rnd()); bub(e.x, e.y, { vx: (e.x - cx) / card.w * H * rnd(.8, 2), vy: -H * rnd(.6, 1.4), drag: .8, r: em * rnd(.1, .26) * (1 + .5 * p) }); }
+        if (p >= .6) ribbons.add({ life: 2.6, cols: ['#4ade80', '#a3e635'], amp: .7, w: .5, ph: 0 });
+        if (p < 1) return;
+        if (el) el.classList.add('aero-shine');
+        ribbons.add({ delay: .3, life: 3.2, cols: ['#38bdf8', '#a5f3fc'], amp: .9, w: .6, ph: 2 });
+        if (asc) ribbons.add({ delay: .6, life: 3.6, cols: ['#c084fc', '#f0abfc'], amp: 1.1, w: .5, ph: 4 });
+        rain = 14 + 6 * asc; rainEnd = t + 3 + asc;
+        for (let i = Math.round((8 + 4 * asc) * q); i > 0; i--) flies.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H), y: card.y + H * rnd(-.2, 1), vx: rnd(-20, 20), vy: -H * rnd(.2, .5), max: rnd(2.4, 3.6), ph: rnd(TAU), c: pick(['#bbf7d0', '#a5f3fc', '#fde68a', '#f0abfc']) });
+      },
+    };
+  };
+  // ==== fin du lot 2 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
