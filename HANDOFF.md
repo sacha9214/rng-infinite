@@ -192,8 +192,12 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
 [610304ef1cdb] merged. **Not built:** HSI's knuckle smashing a rock [5b5f29b0cc52] is the existing Rock Smash skin
 (already HSI's idea, `rocksmash`): Sacha can mark it Done.
 
-- Next: sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
-  Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
+**Lot 6 — `claude/skins-lot6`** (block "lot 6 du 2026-11-05" in `js/skinfx.js`): `sticky` Sticky Notes 🗒️ 1,200 —
+finnnnn [990feb185db6]; `souvenir` Souvenir Coin 🪙 1,500 — finnnnn [9112be331011]; `ducksing` Duck Singularity 🦆 7,000,
+Legendary — Gray alt [96c078cbf980] (the reveal plays the existing `quack` sound from the scene); `centipede` Centipede
+🐛 1,600 — finnnnn [5ff030cbb940].
+
+- Next: pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
   [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
   [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
   spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],

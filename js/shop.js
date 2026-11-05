@@ -314,6 +314,16 @@
     // Idées de casmicgraything (2026-10-24 : un projecteur par chiffre, les lumières qui s'affolent dès Mythic ; 2026-10-29 :
     // une scène, un rideau rouge, un grand projecteur final, des fleurs sur Mythic, des choux et un « BOO » sur un raté).
     { id: 'stage', name: 'Stage', emoji: '🎭', price: 2400, desc: 'The curtain opens and a spotlight lands on every digit, then on the whole number; Mythic rolls bring golden light and roses, and bad rolls get cabbages and a BOO', idea: 'casmicgraything' },
+    // ==== Skins du 2026-11-05, lot 6 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de finnnnn (2026-10-24) : des notes autocollantes qui se plaquent sur chaque chiffre.
+    { id: 'sticky', name: 'Sticky Notes', emoji: '🗒️', price: 1200, desc: 'Every digit is scribbled on a sticky note that slaps onto a cork board and gets pinned; great rolls cover the wall in notes', idea: 'finnnnn' },
+    // Idée de finnnnn (2026-10-25) : une pièce souvenir aplatie, ovale, avec un animal.
+    { id: 'souvenir', name: 'Souvenir Coin', emoji: '🪙', price: 1500, desc: 'A pressed souvenir penny: every digit is stamped into the copper oval by the crank press, and a golden dolphin jumps on Mythic rolls', idea: 'finnnnn' },
+    // Idée de Gray alt (2026-10-26, il proposait 7 000 pièces) : un canard en caoutchouc doré dans un trou noir miniature ;
+    // l'espace se courbe et, à la fin, le canard fait coin-coin et la réalité bugue. Legendary.
+    { id: 'ducksing', name: 'Duck Singularity', emoji: '🦆', price: 7000, desc: 'A golden rubber duck orbits a tiny black hole that bends your digits; when the number lands the duck quacks and reality glitches', premium: true, idea: 'Gray alt' },
+    // Idée de finnnnn (2026-10-26) : chaque anneau du mille-pattes rampe jusqu'à son chiffre.
+    { id: 'centipede', name: 'Centipede', emoji: '🐛', price: 1600, desc: 'Every digit is a body segment that crawls into place while the centipede\'s head leads the way; on Mythic rolls a giant one wraps around the card', idea: 'finnnnn' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

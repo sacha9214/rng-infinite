@@ -1867,3 +1867,29 @@
   text-shadow: 0 .05em 0 #451a03, 0 0 .3em rgba(253, 230, 138, .6);
   --gs: 0 .3em 0 #78350f, 0 .5em 1.2em rgba(250, 204, 21, .25); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.5em rgba(250, 204, 21, .4); --gs-a: 0 .06em 0 #78350f; }
 .btn-roll.gen-stage:hover { filter: brightness(1.12); }
+
+/* ==== Skins du 2026-11-05, lot 6 ==== boutons assortis */
+/* Sticky Notes (idée de finnnnn) : une grande note jaune de travers, coin replié, texte au feutre. */
+.btn-roll.gen-sticky { border: 0; border-radius: .1rem; color: #1e293b; font-family: 'Marker Felt', 'Chalkboard SE', 'Bradley Hand', cursive;
+  background: linear-gradient(135deg, transparent 0 88%, rgba(0, 0, 0, .15) 88% 92%, transparent 92%), linear-gradient(180deg, #facc15 0 14%, #fde047 14%);
+  transform: rotate(-1deg);
+  --gs: 0 .3em 0 #ca8a04, 0 .5em 1em rgba(0, 0, 0, .25); --gs-h: 0 .34em 0 #ca8a04, 0 .7em 1.3em rgba(0, 0, 0, .3); --gs-a: 0 .06em 0 #ca8a04; }
+.btn-roll.gen-sticky:hover { filter: brightness(1.04); }
+/* Souvenir Coin (idée de finnnnn) : l'ovale de cuivre poli, texte frappé en relief. */
+.btn-roll.gen-souvenir { border: 2px solid #7c3a17; border-radius: 50% / 50%; color: #5c220a; font-family: 'Rockwell', 'Times New Roman', serif;
+  background: radial-gradient(ellipse 60% 50% at 35% 30%, rgba(255, 237, 213, .55), transparent 70%), linear-gradient(160deg, #e3a06a, #c2703d 45%, #a4552a 70%, #d08a55);
+  text-shadow: 0 .04em 0 rgba(255, 237, 213, .75), 0 -.03em 0 #3a1404;
+  --gs: 0 .3em 0 #7c3a17, 0 .5em 1em rgba(234, 140, 80, .3); --gs-h: 0 .34em 0 #7c3a17, 0 .7em 1.3em rgba(234, 140, 80, .45); --gs-a: 0 .06em 0 #7c3a17; }
+.btn-roll.gen-souvenir:hover { filter: brightness(1.08); }
+/* Duck Singularity (idée de Gray alt) : le disque d'accrétion doré autour d'un trou noir, texte or. */
+.btn-roll.gen-ducksing { border: 2px solid #ca8a04; border-radius: .7rem; color: #fde68a; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(ellipse 14% 40% at 50% 50%, #000 0 60%, transparent 100%), repeating-conic-gradient(from 0deg at 50% 50%, rgba(251, 191, 36, .4) 0 6deg, rgba(234, 88, 12, .2) 6deg 14deg, transparent 14deg 22deg), radial-gradient(ellipse 70% 80% at 50% 50%, #3b1d06, #0a0603);
+  text-shadow: 0 0 .05em #fffbeb, 0 .05em 0 #78350f, 0 0 .3em rgba(251, 191, 36, .8);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1.2em rgba(251, 191, 36, .4); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.5em rgba(251, 191, 36, .55); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-ducksing:hover { filter: brightness(1.12); }
+/* Centipede (idée de finnnnn) : les anneaux vernis d'un mille-pattes en rang, texte crème. */
+.btn-roll.gen-centipede { border: 2px solid #431407; border-radius: 999px; color: #fef3c7; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(ellipse 14px 70% at 50% 50%, rgba(254, 215, 170, .25) 0 30%, transparent 32%) 0 0 / 28px 100%, repeating-linear-gradient(90deg, #9a3412 0 26px, #431407 26px 28px), #9a3412;
+  text-shadow: 0 .05em 0 #431407, 0 0 .1em #431407;
+  --gs: 0 .3em 0 #431407, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #431407, 0 .7em 1.3em rgba(180, 83, 9, .45); --gs-a: 0 .06em 0 #431407; }
+.btn-roll.gen-centipede:hover { filter: brightness(1.1); }

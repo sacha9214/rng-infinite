@@ -13053,3 +13053,147 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes stg-toss { 0% { transform: translate(6px, -10px) rotate(-30deg); opacity: 0; } 30% { opacity: .9; } 60% { transform: none; } 100% { transform: none; opacity: .9; } }
 .room-stage.many .side-stage::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-stage::after { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 6 (idées de joueurs) */
+/* ------------------------------------------------------------------ Sticky Notes (idée de finnnnn, 2026-10-24 : « a
+   sticky note skin where the sticks come into the numbers and sticks there then goes away for the next number »). Un
+   tableau en liège. Chaque chiffre est écrit au feutre sur une note autocollante (jaune, rose, bleue, verte, orange), un
+   peu de travers, coin du bas qui se décolle. Pendant le tirage, les notes frémissent comme sous un courant d'air. Un
+   chiffre qui se pose : la note arrive en tournant, se plaque d'un coup (le papier s'aplatit) et se cale de travers.
+   Notes qui volent, punaises et mur de notes : js/skinfx.js (SCENES.sticky). */
+.num-card.skin-sticky {
+  background:
+    radial-gradient(circle, rgba(120, 70, 30, .35) 0 1px, transparent 1.5px) 0 0 / 7px 7px,
+    radial-gradient(circle, rgba(255, 220, 170, .25) 0 1px, transparent 1.5px) 3px 4px / 9px 9px,
+    linear-gradient(180deg, #c99a64, #b5824d);
+  border: .14em solid #8a5a2b; border-radius: .3rem; color: #1e293b;
+  box-shadow: inset 0 0 .4em rgba(70, 40, 15, .4), 0 10px 18px rgba(0, 0, 0, .35);
+  padding: .3em .55em;
+}
+.skin-sticky .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .84em; height: .9em; margin: 0 .03em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Marker Felt', 'Chalkboard SE', 'Bradley Hand', 'Segoe Print', cursive; font-weight: 700; font-size: .86em; font-variant-numeric: normal;
+  color: #1e293b; --nt: #fde047; --nt2: #facc15; transform: rotate(-3deg);
+}
+.skin-sticky .slot:nth-of-type(5n + 2) { --nt: #f9a8d4; --nt2: #f472b6; transform: rotate(2.5deg); }
+.skin-sticky .slot:nth-of-type(5n + 3) { --nt: #93c5fd; --nt2: #60a5fa; transform: rotate(-1.5deg); }
+.skin-sticky .slot:nth-of-type(5n + 4) { --nt: #86efac; --nt2: #4ade80; transform: rotate(3deg); }
+.skin-sticky .slot:nth-of-type(5n) { --nt: #fdba74; --nt2: #fb923c; transform: rotate(-2deg); }
+.skin-sticky .slot::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(135deg, transparent 0 82%, rgba(0, 0, 0, .12) 82% 86%, transparent 86%), linear-gradient(180deg, var(--nt2) 0 14%, var(--nt) 14%);
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 86% 100%, 0 100%);
+  box-shadow: 0 .04em .06em rgba(0, 0, 0, .35);
+  filter: drop-shadow(0 .04em .03em rgba(60, 30, 10, .45));
+}
+.skin-sticky .slot.ghost { opacity: .3; }
+.skin-sticky .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-sticky .slot.collapsed::before { display: none; }
+.skin-sticky .slot.spinning { opacity: 1; color: rgba(30, 41, 59, .3); animation: stk-flutter .22s ease-in-out infinite alternate; }
+.skin-sticky .slot.spinning:nth-of-type(2n) { animation-delay: -.11s; }
+@keyframes stk-flutter { from { transform: rotate(-4deg) skewY(-2deg); } to { transform: rotate(3deg) skewY(2deg) scale(1.02); } }
+/* La note arrive en tournant, se plaque (le papier s'aplatit), se cale de travers (sa rotation de repos). */
+.skin-sticky .slot.revealed { animation: stk-slap .55s backwards; }
+@keyframes stk-slap {
+  0% { transform: translate(-.3em, -.4em) rotate(-30deg) scale(1.3); color: rgba(30, 41, 59, .3); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  40% { transform: rotate(4deg) scale(.92, 1.06); color: #1e293b; animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  65% { transform: rotate(-4deg) scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) { .skin-sticky .slot { animation: none !important; } }
+.side-sticky { --side-border: #a16207; --side-glow: 0 0 14px rgba(250, 204, 21, .25); --side-ink: #ca8a04;
+  --side-bg: linear-gradient(-6deg, transparent 70%, rgba(253, 224, 71, .3) 70% 88%, transparent 88%) 8% 85% / 60px 60px no-repeat, linear-gradient(4deg, transparent 70%, rgba(249, 168, 212, .3) 70% 88%, transparent 88%) 92% 20% / 56px 56px no-repeat, radial-gradient(circle, rgba(120, 70, 30, .2) 0 1px, transparent 1.5px) 0 0 / 7px 7px, linear-gradient(180deg, rgba(201, 154, 100, .2), rgba(181, 130, 77, .2));
+  --deco-a: '📌'; --deco-b: '🗒️'; }
+.side-sticky::after { transform-origin: 0 0; animation: stk-peel 2.4s ease-in-out infinite; }
+@keyframes stk-peel { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
+.room-stage.many .side-sticky::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-sticky::after { animation: none; } }
+/* ------------------------------------------------------------------ Souvenir Coin (idée de finnnnn, 2026-10-25 : « like a
+   souvenir coin where those are kinda like ovals and maybe like an animal »). Une pièce souvenir aplatie au laminoir :
+   un ovale de cuivre poli, étiré, un animal en relief (un dauphin) estompé au fond, une frise de points sur le bord. Les
+   chiffres sont frappés en relief dans le cuivre (arête claire en haut, ombre en bas). Pendant le tirage, la pièce passe
+   sous les rouleaux : les chiffres sont étirés en largeur, flous. Un chiffre qui se pose : coup de presse, il s'écrase,
+   reprend sa forme et brille (métal : choc sec, pas de rebond mou). Manivelle, éclats et pluie de pièces :
+   js/skinfx.js (SCENES.souvenir). */
+.num-card.skin-souvenir {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 50' preserveAspectRatio='none'><path d='M20 30C30 18 46 14 60 18C66 12 72 10 76 12C72 15 70 18 72 21C82 24 92 30 98 36C90 34 82 33 76 34C68 38 52 40 40 37C32 40 24 40 18 38C22 36 22 33 20 30Z' fill='%23000' opacity='.08'/><path d='M20 30C30 18 46 14 60 18C66 12 72 10 76 12' stroke='%23fff' stroke-width='.8' fill='none' opacity='.18'/></svg>") 50% 50% / 100% 100% no-repeat,
+    radial-gradient(ellipse 48% 44% at 50% 50%, transparent 92%, rgba(120, 53, 15, .45) 93% 96%, transparent 97%),
+    radial-gradient(ellipse 60% 50% at 35% 30%, rgba(255, 237, 213, .55), transparent 70%),
+    linear-gradient(160deg, #e3a06a, #c2703d 45%, #a4552a 70%, #d08a55);
+  border: 2px solid #7c3a17; border-radius: 50% / 50%; color: #7c2d12;
+  box-shadow: inset 0 .06em .1em rgba(255, 237, 213, .6), inset 0 -.1em .2em rgba(80, 30, 10, .45), 0 0 14px rgba(234, 140, 80, .3), 0 10px 18px rgba(0, 0, 0, .4);
+  padding-left: 1.1em; padding-right: 1.1em;
+}
+.skin-souvenir .slot { position: relative; font-family: 'Rockwell', 'Clarendon', 'Times New Roman', serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #5c220a; text-shadow: 0 .035em 0 rgba(255, 237, 213, .75), 0 -.03em 0 #3a1404, 0 0 .02em #3a1404; } /* frappé en creux : plus sombre que le cuivre, arête claire en bas */
+.skin-souvenir .slot.ghost { opacity: .22; }
+.skin-souvenir .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-souvenir .slot.spinning { opacity: .65; filter: blur(.5px); animation: svn-roll .14s linear infinite alternate; }
+@keyframes svn-roll { from { transform: scaleX(1.3) scaleY(.85); } to { transform: scaleX(1.1) scaleY(.95); } }
+.skin-souvenir .slot.revealed { animation: svn-press .45s backwards; }
+@keyframes svn-press {
+  0% { transform: scaleX(1.35) scaleY(.7); filter: brightness(.8); animation-timing-function: cubic-bezier(.7, 0, .9, .3); }
+  22% { transform: scale(.94, 1.04); filter: brightness(1.7); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  40% { transform: none; filter: brightness(1.15); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-souvenir .slot { animation: none !important; } }
+.side-souvenir { --side-border: #c2703d; --side-glow: 0 0 16px rgba(234, 140, 80, .3); --side-ink: #c2703d;
+  --side-bg: radial-gradient(ellipse 22px 14px at 12% 82%, rgba(194, 112, 61, .45) 0 70%, transparent 74%), radial-gradient(ellipse 18px 11px at 88% 18%, rgba(194, 112, 61, .4) 0 70%, transparent 74%), linear-gradient(160deg, rgba(227, 160, 106, .14), rgba(164, 85, 42, .12));
+  --deco-a: '🪙'; --deco-b: '🐬'; }
+.side-souvenir::before { animation: svn-flip 2.2s ease-in-out infinite; }
+.side-souvenir::after { animation: svn-jump 2.6s ease-in-out infinite; }
+@keyframes svn-flip { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+@keyframes svn-jump { 0%, 60%, 100% { transform: none; } 75% { transform: translateY(-10px) rotate(-25deg); } 90% { transform: translateY(0) rotate(10deg); } }
+.room-stage.many .side-souvenir::before, .room-stage.many .side-souvenir::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-souvenir::before, .side-souvenir::after { animation: none; } }
+/* ------------------------------------------------------------------ Centipede (idée de finnnnn, 2026-10-26 : « a centipede
+   skin where it's like each part of its body crawls up to the numbers »). Un tapis de feuilles mortes. Chaque chiffre est
+   un anneau du corps d'un mille-pattes : une plaque brun-rouge vernie, deux pattes de chaque côté. Pendant le tirage, les
+   anneaux ondulent en vague et les pattes s'agitent. Un chiffre qui se pose : son anneau arrive en rampant depuis la
+   gauche, pattes en mouvement, et s'accroche au précédent (matière souple : il se tasse un peu). La tête qui avance, et
+   dès Mythic le mille-pattes qui fait le tour de la carte : js/skinfx.js (SCENES.centipede). */
+.num-card.skin-centipede {
+  background:
+    radial-gradient(ellipse .5em .3em at 12% 80%, rgba(161, 98, 7, .45) 0 70%, transparent 72%), radial-gradient(ellipse .4em .25em at 86% 25%, rgba(180, 83, 9, .4) 0 70%, transparent 72%),
+    radial-gradient(ellipse .35em .2em at 60% 90%, rgba(120, 53, 15, .45) 0 70%, transparent 72%), radial-gradient(ellipse .3em .18em at 30% 15%, rgba(202, 138, 4, .35) 0 70%, transparent 72%),
+    linear-gradient(180deg, #4a3a22, #3b2d1a 70%, #2f2414);
+  border: 2px solid #2a1f10; border-radius: .6rem; color: #fef3c7;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .45), 0 0 14px rgba(180, 83, 9, .25), 0 10px 18px rgba(0, 0, 0, .4);
+  padding: .3em .5em;
+}
+.skin-centipede .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: 1em; height: 1.05em; margin: 0 -.06em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif; font-weight: 900; font-size: .7em; font-variant-numeric: normal;
+  color: #fef3c7; text-shadow: 0 .04em 0 #431407, 0 0 .1em rgba(67, 20, 7, .8);
+}
+/* l'anneau : une plaque vernie et ses quatre pattes (deux en haut, deux en bas) */
+.skin-centipede .slot::before {
+  content: ''; position: absolute; inset: -.12em -.02em; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 46'><g stroke='%23431407' stroke-width='3.4' stroke-linecap='round' fill='none'><path d='M12 9L7 1M28 9L33 1M12 37L7 45M28 37L33 45'/></g><ellipse cx='20' cy='23' rx='18' ry='15' fill='%23c2410c' stroke='%23431407' stroke-width='2'/><ellipse cx='20' cy='19' rx='13' ry='8' fill='%23ea580c'/><ellipse cx='15' cy='15' rx='5' ry='2.5' fill='%23fed7aa' opacity='.7'/></svg>") 50% 50% / 100% 100% no-repeat;
+}
+.skin-centipede .slot.ghost { opacity: .25; }
+.skin-centipede .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-centipede .slot.collapsed::before { display: none; }
+.skin-centipede .slot.spinning { opacity: 1; color: rgba(254, 243, 199, .3); text-shadow: none; animation: cnt-wave .3s ease-in-out infinite alternate; }
+.skin-centipede .slot.spinning:nth-of-type(2n) { animation-delay: -.1s; } .skin-centipede .slot.spinning:nth-of-type(3n) { animation-delay: -.2s; }
+@keyframes cnt-wave { from { transform: translateY(-.06em) rotate(-4deg); } to { transform: translateY(.06em) rotate(4deg); } }
+.skin-centipede .slot.revealed { animation: cnt-crawl .6s backwards; }
+@keyframes cnt-crawl {
+  0% { transform: translateX(-.6em) rotate(-10deg); color: rgba(254, 243, 199, .3); animation-timing-function: cubic-bezier(.3, .7, .4, 1); }
+  20% { transform: translateX(-.4em) translateY(-.05em) rotate(6deg); }
+  40% { transform: translateX(-.18em) translateY(.04em) rotate(-5deg); }
+  62% { transform: translateX(.03em) scale(1.06, .94); color: #fef3c7; }
+  80% { transform: scale(.98, 1.02); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-centipede .slot { animation: none !important; } }
+.side-centipede { --side-border: #9a3412; --side-glow: 0 0 14px rgba(180, 83, 9, .3); --side-ink: #b45309;
+  --side-bg: radial-gradient(ellipse 14px 8px at 15% 85%, rgba(161, 98, 7, .35) 0 70%, transparent 72%), radial-gradient(ellipse 12px 7px at 85% 20%, rgba(180, 83, 9, .3) 0 70%, transparent 72%), linear-gradient(180deg, rgba(74, 58, 34, .25), rgba(47, 36, 20, .25));
+  --deco-a: '🐛'; --deco-b: '🍂'; }
+.side-centipede::before { animation: cnt-inch 2s ease-in-out infinite; }
+@keyframes cnt-inch { 0%, 100% { transform: translateX(0) scaleX(1); } 50% { transform: translateX(10px) scaleX(.85); } }
+.room-stage.many .side-centipede::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-centipede::before { animation: none; } }
