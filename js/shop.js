@@ -67,28 +67,28 @@
     { id: 'bakery', name: 'Bakery', emoji: '🥐', price: 1000, desc: 'Fresh bread and cookies' },
     // Halloween (idée de Deadshot, 2026-10-14) : en vente seulement jusqu'au 1er novembre (until), 666 pièces ; gardé
     // pour toujours par ceux qui l'ont acheté. Jamais dans une caisse.
-    { id: 'pumpkin', name: "Jack-o'-Lantern", emoji: '🎃', price: 1031, desc: 'Digits carved in a pumpkin, lit by a flickering candle · until November 1', until: '2026-11-01T00:00:00Z' },
-    { id: 'brew', name: "Witch's Brew", emoji: '🧪', price: 1313, desc: 'A bubbling green potion in a witch cauldron · until November 1', until: '2026-11-01T00:00:00Z' },
-    { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z' },
+    { id: 'pumpkin', name: "Jack-o'-Lantern", emoji: '🎃', price: 1031, desc: 'Digits carved in a pumpkin, lit by a flickering candle · until November 1', until: '2026-11-01T00:00:00Z', event: 'halloween' },
+    { id: 'brew', name: "Witch's Brew", emoji: '🧪', price: 1313, desc: 'A bubbling green potion in a witch cauldron · until November 1', until: '2026-11-01T00:00:00Z', event: 'halloween' },
+    { id: 'haunted', name: 'Haunted', emoji: '👻', price: 666, desc: 'A haunted house, ghostly digits, a graveyard full of ghosts · until November 1', until: '2026-11-01T00:00:00Z', event: 'halloween' },
     // Idée de Deadshot (2026-10-16) : des maisons du quartier, les portes s'ouvrent sur des bonbons en forme de chiffres ;
     // derrière les zéros de tête, la porte s'ouvre sur une maison vide.
-    { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', idea: 'Deadshot' },
+    { id: 'trickortreat', name: 'Trick or Treat', emoji: '🍬', price: 1100, desc: 'Doors open on number-shaped candy; zeros are empty houses · until November 1', until: '2026-11-01T00:00:00Z', event: 'halloween', idea: 'Deadshot' },
     // Noël (idées de JBearr12 et Angelicide9, 2026-10-25) : Legendary limité, en vente jusqu'au 26 décembre (until).
-    { id: 'christmas', name: 'Christmas Morning', emoji: '🎄', price: 2512, desc: 'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26', until: '2026-12-26T00:00:00Z', idea: 'JBearr12' },
+    { id: 'christmas', name: 'Christmas Morning', emoji: '🎄', price: 2512, desc: 'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas', idea: 'JBearr12' },
     // Noël (événement de Noël, 2026-11-01) : une boule à neige, limitée comme Christmas Morning (jusqu'au 26 décembre,
     // jamais dans une caisse). Les chiffres sont figés dans l'eau sous le verre ; plus la rareté est haute, plus il y a
     // de paillettes dans la neige (js/skinfx.js).
-    { id: 'snowglobe', name: 'Snow Globe', emoji: '🔮', price: 1225, idea: 'Gray alt', desc: 'Digits frozen in a glass snow globe: shake it to roll, watch the snow settle; rarer rolls stir up more glitter · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'snowglobe', name: 'Snow Globe', emoji: '🔮', price: 1225, idea: 'Gray alt', desc: 'Digits frozen in a glass snow globe: shake it to roll, watch the snow settle; rarer rolls stir up more glitter · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Noël (événement de Noël, 2026-11-01) : des biscuits en pain d'épices, glace royale pochée à la révélation ; limité,
     // jamais dans une caisse (until), gardé pour toujours par ceux qui l'ont acheté.
-    { id: 'gingerbread', name: 'Gingerbread', emoji: '🍪', price: 1100, desc: 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'gingerbread', name: 'Gingerbread', emoji: '🍪', price: 1100, desc: 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Noël (événement de Noël, 2026-11-01) : un pull de Noël tricoté, chiffres en laine crème ; limité jusqu'au 26 décembre.
-    { id: 'sweater', name: 'Ugly Sweater', emoji: '🧶', price: 999, desc: 'Your digits get knitted row by row in cream wool on a festive red sweater with snowflakes, trees and a pom-pom; rare rolls get sequins and tinsel · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'sweater', name: 'Ugly Sweater', emoji: '🧶', price: 999, desc: 'Your digits get knitted row by row in cream wool on a festive red sweater with snowflakes, trees and a pom-pom; rare rolls get sequins and tinsel · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Thanksgiving (2026-11-26) : idée d'Idkwhatnamemyself (« une dinde qui se fait rôtir dans le nombre », 2026-11-01, à qui
     // revient la part de 5 %), avec R77 (les plumes, le look de dinde) et Kj13 (feuilles d'automne, limité jusqu'au soir de
     // Thanksgiving). Limité, jamais dans une caisse, jusqu'à la fin du 27 novembre heure du Pacifique (28 novembre 8 h UTC) :
     // le jeudi soir de Thanksgiving est passé partout aux États-Unis. 1 126 pièces (11/26).
-    { id: 'turkey', name: 'Turkey Roast', emoji: '🦃', price: 1126, idea: 'Idkwhatnamemyself', desc: 'Your digits roast golden-brown in front of a turkey\'s fanned tail, with autumn leaves falling; rare rolls throw feathers everywhere · until November 27', until: '2026-11-28T08:00:00Z' },
+    { id: 'turkey', name: 'Turkey Roast', emoji: '🦃', price: 1126, idea: 'Idkwhatnamemyself', desc: 'Your digits roast golden-brown in front of a turkey\'s fanned tail, with autumn leaves falling; rare rolls throw feathers everywhere · until November 27', until: '2026-11-28T08:00:00Z', event: 'thanksgiving' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -282,6 +282,18 @@
     // Promis à jia jun (2026-10-23) : « Frutiger aero skin ». Le style générique des bureaux des années 2000 (ciel, herbe,
     // verre brillant, bulles), sans aucun logo.
     { id: 'aero', name: 'Frutiger Aero', emoji: '🌐', price: 2200, desc: 'Glossy blue glass over a green hill: gel digits pop like drops, bubbles float up, and Mythic rolls bring ribbons of light and glowing butterflies', idea: 'jia jun' },
+    // ==== Skins du 2026-11-05, lot 3 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Promis à Mace_67 (2026-10-29) : les chiffres s'allument un à un dans le noir, puis le cadre s'allume quand le nombre
+    // est complet (il prend la couleur de la rareté quand elle sort).
+    { id: 'blackout', name: 'Blackout', emoji: '💡', price: 1700, desc: 'Pitch black: every digit flickers on like a light in the dark, then the border lights up in your rarity color; a bad roll cuts the power', idea: 'Mace_67' },
+    // Promis à Idkwhatnamemyself (2026-10-31) : « a skin where ur button and roll skin matches … whatever rarity u got from
+    // ur last ». Un cristal (et son bouton) à la couleur de la rareté du dernier tirage (html[data-last-tier], js/app.js).
+    { id: 'prism', name: 'Prism', emoji: '💠', price: 2600, desc: 'A cut crystal in the color of your last roll\'s rarity, button included; every digit splits the light into a rainbow, and the crystal turns to your new rarity when it lands', idea: 'Idkwhatnamemyself' },
+    // Idée de finnnnn (2026-10-21) : « make a painting skin with the rainbow colors ». De la peinture à l'huile sur une
+    // toile, un chiffre par couleur de l'arc-en-ciel (Graffiti, lui, est une bombe sur un mur).
+    { id: 'paint', name: 'Rainbow Paint', emoji: '🎨', price: 1800, desc: 'Thick oil paint on a canvas, one rainbow color per digit, each brushed on with a stroke; great rolls paint a rainbow over the card', idea: 'finnnnn' },
+    // Idée de finnnnn (2026-10-21) : « make a grass skin for all the no lifes ». Des chiffres tondus dans une pelouse.
+    { id: 'grass', name: 'Touch Grass', emoji: '🌱', price: 1500, desc: 'Digits mowed into a fresh striped lawn; clippings fly, daisies pop up on good rolls, and Mythic rolls bring butterflies and a little lawn mower. Go outside after', idea: 'finnnnn' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -466,28 +478,38 @@
     // Idée de Ggggssnoop (« heaven's gate ») : une porte de lumière dans le ciel, sans aucun symbole religieux.
     { id: 'skygate', name: 'Sky Gate', emoji: '✨', price: 1200, idea: 'Ggggssnoop', desc: 'A tall gate of light stands on a sea of clouds; its doors slowly swing open and golden rays pour through' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
-    { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
-    { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
+    { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z', event: 'halloween' },
+    { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z', event: 'halloween' },
     // Idée de 17black (un fond « limité », 2026-10-28) : des zombies rigolos qui rampent et traînent les pieds sous la
     // pleine lune. Limité comme les autres fonds d'Halloween (onglet Limités, hors caisse). Prévu jusqu'au 2 novembre,
     // retiré le 1er novembre avec tout Halloween pour laisser la place à Noël (demandé par Sacha, 2026-11-01). 1 031 pièces.
-    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
+    { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z', event: 'halloween' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un petit village sous la neige, fenêtres allumées et cheminées qui
     // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
     // d'IXOLAF2 (idée de 3 joueurs), crédité ; part de 5 % comme pour les skins depuis le 2026-11-05 (idée de qwertyuiop).
-    { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un salon, une cheminée qui crépite en bas de l'écran, des chaussettes
     // sur le manteau et la neige derrière la fenêtre. Limité (onglet Limités, hors caisse) jusqu'au 26 décembre.
-    { id: 'fireplace', name: 'Cozy Fireplace', emoji: '🔥', price: 1224, desc: 'A crackling fire, stockings on the mantel and snow at the window · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'fireplace', name: 'Cozy Fireplace', emoji: '🔥', price: 1224, desc: 'A crackling fire, stockings on the mantel and snow at the window · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un traîneau tiré par des rennes traverse le ciel étoilé toutes les
     // ~20 s. Limité comme les fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 26 décembre.
-    { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z' },
+    { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z', event: 'christmas' },
     // Fond de Thanksgiving (2026-11-26) : idée de qwertyuiop (« un dîner de Thanksgiving, la nourriture sur une table »,
     // 2026-11-01), avec les feuilles d'automne de Kj13 derrière les fenêtres. Limité (onglet Limités, hors caisse), jusqu'à
     // la même date que le skin Turkey Roast. Comme pour tous les fonds, pas de part de 5 %.
-    { id: 'feast', name: 'Thanksgiving Dinner', emoji: '🥧', price: 1126, idea: 'qwertyuiop', desc: 'A table set for Thanksgiving: a roast turkey, pie, corn and candles, with autumn leaves falling outside the windows · until November 27', until: '2026-11-28T08:00:00Z' },
+    { id: 'feast', name: 'Thanksgiving Dinner', emoji: '🥧', price: 1126, idea: 'qwertyuiop', desc: 'A table set for Thanksgiving: a roast turkey, pie, corn and candles, with autumn leaves falling outside the windows · until November 27', until: '2026-11-28T08:00:00Z', event: 'thanksgiving' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
+  // Événements limités (demandé par Sacha, 2026-11-05) : l'onglet Limited est rangé par événement, un bloc par événement en
+  // cours (sa bannière, ses skins, ses fonds). Un événement fini sort de la boutique, mais ses objets restent ici et chez
+  // ceux qui les ont (inventaire du profil). L'an prochain : changer `ends` ici ET le `until` de ses objets (même date,
+  // vérifiée par tools/test-api.mjs ; le serveur lit `until`), et les dates écrites dans leurs descriptions.
+  const EVENTS = [
+    { id: 'halloween', name: 'Halloween', emoji: '🎃', ends: '2026-11-01T00:00:00Z', last: 'October 31' },
+    { id: 'thanksgiving', name: 'Thanksgiving', emoji: '🦃', ends: '2026-11-28T08:00:00Z', last: 'November 27' },
+    { id: 'christmas', name: 'Christmas event', emoji: '🎄', ends: '2026-12-26T00:00:00Z', last: 'December 25' },
+  ];
+  const eventById = new Map(EVENTS.map(e => [e.id, e]));
   const caseOnly = c => (c.wall || c.btn || c.snd || c.emo ? [] : SKINS.filter(s => s.caseOnly === c.id));
   // Ce qu'une caisse donne : un skin, ou un fond d'écran pour la caisse de fonds (des identifiants existent dans les deux
   // listes, comme galaxy ou sakura : toujours passer par la caisse), ou un bouton pour la caisse de boutons.
@@ -692,7 +714,7 @@
   // La caisse de boutons (moins chère que la Premium) s'ouvre aussi avec une clé Premium (2026-10-27), la caisse de sons
   // aussi (2026-10-28).
   const KEY_OPENS = { starter: ['starter'], premium: ['premium', 'starter', 'wallpaper', 'buttons', 'sounds', 'emotes'] }; // + émotes (2026-11-01)
-  const api = { ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, AVATAR_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, HARD_COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
+  const api = { EVENTS, eventById, ROLL_TIERS, ROLL_FULL, rollRate, rollPayAt, rollPay, RENAME_PRICE, AVATAR_PRICE, PRESTIGE, prestigeById, IDEA_SHARE, KEY_OPENS, collectible, collectibleSets, WALLPAPERS, wallById, COLLAB_LIVE, FISHER, SUPPORTER, FUND_GOAL, GOOGLE_BONUS, SPEED, speedLevel, speedFactor, COINS, HARD_COINS, DUEL_WIN_COINS, SKINS, OWNER, byId, resolve, earned, balance, rankedWins, CASES, caseById, casePool, caseOdds, caseItem, caseRarity, WALL_RARITIES, BTN_RARITIES, SND_RARITIES, EMO_RARITIES, drawCase, DUPLICATE_REFUND, duplicateRefund, STAKES, RARITIES, rarityOf, BUTTONS, buttonById, MATCH, buttonLook, SOUNDS, soundById, soundPack, BASE_EMOTES, EMOTES, emoteById };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGShop = api;
 })(typeof window !== 'undefined' ? window : globalThis);
