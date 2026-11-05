@@ -850,3 +850,124 @@
 @keyframes obs-shine { 0%, 100% { transform: scale(.8) rotate(0); opacity: .5; } 50% { transform: scale(1.2) rotate(20deg); opacity: 1; } }
 .room-stage.many .side-observer::before, .room-stage.many .side-observer::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-observer::before, .side-observer::after { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 1 : Angel et Demon
+   La paire demandée par qwertyuiop (2026-11-01 : « a legendary angel and demon skin where the angel skin costs 7,777
+   and the demon skin costs 6,666 ») ; Demon reprend aussi l'ange déchu de Roanono (2026-11-03 : « ange démoniaque /
+   déchu … lumière sombre »). Les deux partagent leurs ailes, dessinées par js/skinfx.js (SCENES.angel, SCENES.demon). */
+/* ------------------------------------------------------------------ 🪽 Angel : de la lumière. Un ciel de crépuscule bleu
+   nuit, un rayonnement doré derrière les chiffres, des nuages éclairés par en dessous. Chaque chiffre est en lumière
+   blanche, bordée d'or, et porte son auréole. Pendant le tirage, les chiffres scintillent et les auréoles tournent sur
+   elles-mêmes. Un chiffre qui se pose : l'auréole descend et se pose, le chiffre se condense d'un éclat aveuglant, un
+   léger dépassement et il se pose (une lumière : pas d'écrasement, un atterrissage doux). */
+.num-card.skin-angel {
+  background:
+    radial-gradient(ellipse 22% 30% at 15% 104%, rgba(255, 247, 222, .85), transparent 70%), radial-gradient(ellipse 26% 32% at 40% 108%, rgba(255, 250, 235, .8), transparent 70%),
+    radial-gradient(ellipse 24% 30% at 68% 106%, rgba(255, 247, 222, .8), transparent 70%), radial-gradient(ellipse 22% 28% at 92% 104%, rgba(255, 250, 235, .75), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 50% 50%, rgba(253, 230, 138, .45), rgba(253, 230, 138, .08) 60%, transparent 75%),
+    repeating-conic-gradient(from 0deg at 50% 120%, rgba(255, 255, 255, .06) 0 4deg, transparent 4deg 12deg),
+    linear-gradient(180deg, #1b2452, #34478f 60%, #6e7fc4);
+  border: 2px solid #e9c46a; border-radius: 1rem; color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35), inset 0 0 1.2em rgba(253, 230, 138, .25), 0 0 0 3px rgba(233, 196, 106, .25), 0 0 26px rgba(253, 230, 138, .45), 0 10px 20px rgba(15, 23, 60, .45);
+  padding-top: .5em;
+}
+.skin-angel .slot {
+  position: relative; color: #ffffff; font-weight: 700; font-family: 'Optima', 'Candara', 'Palatino Linotype', Palatino, Georgia, serif; font-variant-numeric: lining-nums;
+  text-shadow: 0 0 .04em #fff, 0 .03em .02em #8a6512, 0 0 .2em rgba(253, 230, 138, .95), 0 0 .55em rgba(253, 224, 71, .5);
+}
+/* l'auréole : un anneau d'or vu de biais au-dessus du chiffre */
+.skin-angel .slot::before {
+  content: ''; position: absolute; left: 50%; top: -.2em; width: .5em; height: .13em; margin-left: -.25em; border-radius: 50%; pointer-events: none;
+  border: .045em solid #fde68a; box-shadow: 0 0 .12em #facc15, inset 0 0 .06em #facc15;
+}
+.skin-angel .slot.ghost { opacity: .18; }
+.skin-angel .slot.ghost::before { display: none; }
+.skin-angel .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-angel .slot.collapsed::before { display: none; }
+.skin-angel .slot.spinning { opacity: .6; color: #e0e7ff; text-shadow: 0 0 .3em rgba(253, 230, 138, .8); animation: ang-shimmer .3s ease-in-out infinite alternate; }
+.skin-angel .slot.spinning::before { opacity: .55; animation: ang-turn .5s linear infinite; }
+.skin-angel .slot.spinning:nth-of-type(2n), .skin-angel .slot.spinning:nth-of-type(2n)::before { animation-delay: -.15s; }
+@keyframes ang-shimmer { from { filter: blur(1.2px) brightness(1.3); transform: translateY(-.03em); } to { filter: blur(.3px) brightness(.9); transform: translateY(.03em); } }
+@keyframes ang-turn { from { transform: scaleX(1); } 50% { transform: scaleX(.15); } to { transform: scaleX(1); } }
+.skin-angel .slot.revealed { animation: ang-form .7s backwards; }
+.skin-angel .slot.revealed::before { animation: ang-halo .7s backwards; }
+@keyframes ang-form {
+  0% { transform: translateY(-.1em) scale(1.14); filter: blur(4px) brightness(2.6); animation-timing-function: cubic-bezier(.3, .7, .4, 1); }
+  38% { transform: translateY(.02em) scale(.97); filter: blur(0) brightness(1.9); }
+  62% { transform: translateY(-.015em) scale(1.02); filter: brightness(1.2); }
+  100% { transform: none; filter: none; }
+}
+@keyframes ang-halo { 0% { transform: translateY(-.35em) scale(1.6); opacity: 0; } 45% { transform: translateY(.03em) scale(.92); opacity: 1; } 70% { transform: translateY(-.01em) scale(1.04); } 100% { transform: none; } }
+/* Dès Mythic (.ang-glory, posée par la scène) : les auréoles s'embrasent. */
+.num-card.skin-angel.ang-glory .slot:not(.ghost)::before { animation: ang-blaze 2.4s ease-in-out infinite alternate; }
+@keyframes ang-blaze { from { box-shadow: 0 0 .12em #facc15, inset 0 0 .06em #facc15; } to { box-shadow: 0 0 .3em #fde047, 0 0 .6em rgba(253, 224, 71, .6), inset 0 0 .08em #fff; } }
+@media (prefers-reduced-motion: reduce) { .skin-angel .slot, .skin-angel .slot::before { animation: none !important; } }
+.side-angel { --side-border: #e9c46a; --side-glow: 0 0 20px rgba(253, 230, 138, .45); --side-ink: #ca8a04; --side-ink-glow: 0 0 8px rgba(253, 224, 71, .7);
+  --side-bg: radial-gradient(ellipse 30% 22% at 20% 100%, rgba(255, 255, 255, .3), transparent 70%), radial-gradient(ellipse 34% 24% at 75% 102%, rgba(255, 255, 255, .28), transparent 70%), repeating-conic-gradient(from 0deg at 50% -10%, rgba(253, 230, 138, .1) 0 5deg, transparent 5deg 15deg), linear-gradient(180deg, rgba(110, 127, 196, .18), rgba(253, 230, 138, .1));
+  --deco-a: '🪽'; --deco-b: '✨'; }
+.side-angel::before { transform-origin: 80% 70%; animation: ang-flap 1.4s ease-in-out infinite; }
+.side-angel::after { animation: ang-twinkle 1.8s ease-in-out infinite; }
+@keyframes ang-flap { 0%, 100% { transform: rotate(0) translateY(0); } 50% { transform: rotate(-16deg) translateY(-4px); } }
+@keyframes ang-twinkle { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: .9; transform: scale(1.15); } }
+.room-stage.many .side-angel::before, .room-stage.many .side-angel::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-angel::before, .side-angel::after { animation: none; } }
+
+/* ------------------------------------------------------------------ 😈 Demon : la lumière sombre de l'ange déchu. De
+   l'obsidienne fendue, des fissures où rougeoie la braise, une lueur pourpre qui monte du bas. Chaque chiffre est
+   marqué au fer rouge (cœur clair, rouge sang, liseré noir) et porte une auréole brisée, de travers. Pendant le tirage,
+   les chiffres tressaillent comme des flammes noires. Un chiffre qui se pose : noir et trop grand, il est marqué d'un
+   éclair, la carte encaisse le choc (secousse sèche, matière dure) et il se met à rougeoyer. */
+.num-card.skin-demon {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><g fill='none' stroke='%23dc2626' stroke-linecap='round' stroke-linejoin='round'><path d='M0 30L14 26L20 31L33 24L41 27' stroke-width='.9' opacity='.75'/><path d='M120 8L104 13L99 9L86 15' stroke-width='.8' opacity='.7'/><path d='M62 40L66 33L61 28L68 22' stroke-width='.7' opacity='.6'/><path d='M14 26L12 18L16 12' stroke-width='.5' opacity='.5'/><path d='M104 13L108 22L103 30L109 38' stroke-width='.6' opacity='.55'/></g></svg>") 0 0 / 100% 100% no-repeat,
+    radial-gradient(ellipse 70% 55% at 50% 115%, rgba(220, 38, 38, .55), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 50% 45%, rgba(127, 29, 29, .35), transparent 75%),
+    linear-gradient(160deg, #1a0b10, #0b0507 55%, #160609);
+  border: 2px solid #7f1d1d; border-radius: .55rem; color: #fb7185;
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .25), inset 0 -.2em .5em rgba(220, 38, 38, .25), 0 0 0 3px rgba(127, 29, 29, .35), 0 0 24px rgba(220, 38, 38, .45), 0 10px 20px rgba(0, 0, 0, .55);
+  padding-top: .5em;
+}
+.skin-demon .slot {
+  position: relative; font-weight: 700; color: #ff4d5e; font-family: 'Copperplate', 'Trajan Pro', 'Cinzel', 'Palatino Linotype', Georgia, serif; font-variant-numeric: lining-nums;
+  text-shadow: 0 0 .03em #ffe4e6, 0 .04em .02em #000, 0 0 .18em rgba(244, 63, 94, .9), 0 0 .5em rgba(220, 38, 38, .55);
+}
+/* l'auréole brisée : un anneau rouge sombre ouvert sur le côté, de travers */
+.skin-demon .slot::before {
+  content: ''; position: absolute; left: 50%; top: -.2em; width: .48em; height: .13em; margin-left: -.24em; border-radius: 50%; pointer-events: none;
+  border: .04em solid #ef4444; border-right-color: transparent; border-bottom-color: #7f1d1d; transform: rotate(-12deg);
+  box-shadow: 0 0 .1em rgba(239, 68, 68, .8);
+}
+.skin-demon .slot.ghost { opacity: .18; }
+.skin-demon .slot.ghost::before { display: none; }
+.skin-demon .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-demon .slot.collapsed::before { display: none; }
+.skin-demon .slot.spinning { opacity: .7; color: #3f0a12; text-shadow: 0 0 .12em #dc2626, 0 0 .3em rgba(220, 38, 38, .6); animation: dmn-flicker .18s steps(3) infinite; }
+.skin-demon .slot.spinning::before { opacity: .5; animation: dmn-sputter .4s steps(2) infinite; }
+.skin-demon .slot.spinning:nth-of-type(2n) { animation-delay: -.09s; }
+@keyframes dmn-flicker { 0% { transform: translate(-.02em, 0) skewX(-3deg); } 50% { transform: translate(.02em, -.02em) skewX(2deg); filter: brightness(1.6); } 100% { transform: translate(0, .02em); } }
+@keyframes dmn-sputter { from { opacity: .7; } to { opacity: .2; } }
+.skin-demon .slot.revealed { animation: dmn-brand .64s backwards; }
+.skin-demon .slot.revealed::before { animation: dmn-halo .64s backwards; }
+@keyframes dmn-brand {
+  0% { transform: scale(1.3); color: #000; text-shadow: 0 0 .1em #7f1d1d; animation-timing-function: cubic-bezier(.7, 0, .9, .3); }
+  20% { transform: scale(.94); color: #fff1f2; text-shadow: 0 0 .1em #fff, 0 0 .4em #f97316, 0 0 .9em #dc2626; animation-timing-function: linear; }
+  28% { transform: translateX(-.035em) scale(.97); }
+  36% { transform: translateX(.03em); }
+  44% { transform: translateX(-.015em); color: #ff8a95; }
+  56% { transform: none; }
+  100% { transform: none; }
+}
+@keyframes dmn-halo { 0%, 20% { transform: translateY(-.25em) rotate(30deg); opacity: 0; } 34% { transform: translateY(.03em) rotate(-18deg); opacity: 1; } 52% { transform: rotate(-8deg); } 100% { transform: rotate(-12deg); } }
+/* Dès Mythic (.dmn-wrath, posée par la scène) : les chiffres battent comme une braise. */
+.num-card.skin-demon.dmn-wrath .slot:not(.ghost) { animation: dmn-ember 1.8s ease-in-out infinite alternate; }
+@keyframes dmn-ember { from { text-shadow: 0 0 .03em #ffe4e6, 0 .04em .02em #000, 0 0 .18em rgba(244, 63, 94, .9), 0 0 .5em rgba(220, 38, 38, .55); } to { text-shadow: 0 0 .05em #fff, 0 .04em .02em #000, 0 0 .3em #fb7185, 0 0 .9em rgba(249, 115, 22, .7); } }
+@media (prefers-reduced-motion: reduce) { .skin-demon .slot, .skin-demon .slot::before { animation: none !important; } }
+.side-demon { --side-border: #991b1b; --side-glow: 0 0 20px rgba(220, 38, 38, .45); --side-ink: #dc2626; --side-ink-glow: 0 0 8px rgba(239, 68, 68, .7);
+  --side-bg: radial-gradient(circle, rgba(249, 115, 22, .5) 0 1.2px, transparent 2px) 0 0 / 23px 31px, radial-gradient(ellipse 80% 40% at 50% 110%, rgba(220, 38, 38, .3), transparent 70%), linear-gradient(180deg, rgba(26, 11, 16, .3), rgba(127, 29, 29, .2));
+  --deco-a: '😈'; --deco-b: '🪶'; }
+.side-demon::before { animation: dmn-glare 2.2s ease-in-out infinite; }
+.side-demon::after { animation: dmn-fall 2.6s ease-in-out infinite; }
+@keyframes dmn-glare { 0%, 100% { filter: none; transform: none; } 50% { filter: drop-shadow(0 0 4px #ef4444); transform: scale(1.1); } }
+@keyframes dmn-fall { 0% { transform: translateY(-6px) rotate(-20deg); } 50% { transform: translateY(2px) rotate(15deg); } 100% { transform: translateY(-6px) rotate(-20deg); } }
+.room-stage.many .side-demon::before, .room-stage.many .side-demon::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-demon::before, .side-demon::after { animation: none; } }

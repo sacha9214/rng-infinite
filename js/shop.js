@@ -84,6 +84,11 @@
     { id: 'gingerbread', name: 'Gingerbread', emoji: '🍪', price: 1100, desc: 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26', until: '2026-12-26T00:00:00Z' },
     // Noël (événement de Noël, 2026-11-01) : un pull de Noël tricoté, chiffres en laine crème ; limité jusqu'au 26 décembre.
     { id: 'sweater', name: 'Ugly Sweater', emoji: '🧶', price: 999, desc: 'Your digits get knitted row by row in cream wool on a festive red sweater with snowflakes, trees and a pom-pom; rare rolls get sequins and tinsel · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Thanksgiving (2026-11-26) : idée d'Idkwhatnamemyself (« une dinde qui se fait rôtir dans le nombre », 2026-11-01, à qui
+    // revient la part de 5 %), avec R77 (les plumes, le look de dinde) et Kj13 (feuilles d'automne, limité jusqu'au soir de
+    // Thanksgiving). Limité, jamais dans une caisse, jusqu'à la fin du 27 novembre heure du Pacifique (28 novembre 8 h UTC) :
+    // le jeudi soir de Thanksgiving est passé partout aux États-Unis. 1 126 pièces (11/26).
+    { id: 'turkey', name: 'Turkey Roast', emoji: '🦃', price: 1126, idea: 'Idkwhatnamemyself', desc: 'Your digits roast golden-brown in front of a turkey\'s fanned tail, with autumn leaves falling; rare rolls throw feathers everywhere · until November 27', until: '2026-11-28T08:00:00Z' },
     // Idée d'un joueur (2026-10-14) : un skin pas cher, que de la mayonnaise et des flacons qui en giclent.
     { id: 'mayo', name: 'Mayo', emoji: '🥫', price: 250, desc: 'Squeeze bottles, piped mayonnaise, splat' },
     // Idée de Gunnar (2026-10-16) : les cousins du Mayo.
@@ -247,6 +252,22 @@
     // Idée de baby boy (2026-11-01, autre compte : Daddy finger) : un pack chat ; un chat sort chaque chiffre d'une pelote
     // de laine. Le pack de sons Meow va avec (SOUNDS) ; il le voulait à 15 000 pièces, vendu au prix normal des packs.
     { id: 'cat', name: 'Cat', emoji: '🐱', price: 1800, desc: 'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts', idea: 'baby boy' },
+    // ==== Skins du 2026-11-05, lot 1 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Promis à 0casmictechthing (2026-10-30) : « Overture background is a piano and as the numbers reveal musical symbols
+    // pop up mythic+ hits minor/major chords Infinite is Am7 chord ». Fusionné avec la portée de casmicgraything
+    // (2026-11-05) et le juke-box de 17black (2026-10-27, des notes qui passent). Chaque chiffre joue sa note au piano
+    // (js/sound.js), la rareté joue un accord.
+    { id: 'overture', name: 'Overture', emoji: '🎹', price: 2400, desc: 'Gold-leaf digits on a grand piano: every digit plays its own note and a music note floats off the staff; great rolls end on a full chord, and Infinite on A minor 7', idea: '0casmictechthing' },
+    // Idée de casmicgraything (2026-11-05, la première : du fromage fondu partout) et version détaillée de casmictechthing
+    // (le même jour : des blocs qui tombent du ciel et s'empilent, une meule différente selon la rareté, tout fond dès Mythic).
+    { id: 'cheese', name: 'Cheese', emoji: '🧀', price: 1500, desc: 'Every digit is a block of Swiss cheese that drops onto the board and squishes; a different cheese crowns each rarity, and Mythic rolls melt and flood the card', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-11-03) : un chantier de fouilles, chaque chiffre est un os qu'on déterre ; dès Mythic les
+    // os s'animent. Même idée d'Alt le même jour (des chiffres qu'on déterre). Identifiant « dig ».
+    { id: 'dig', name: 'Archaeology', emoji: '🦴', price: 2000, desc: 'Every digit is a fossil bone dug out of the layers of a dig site with a brush; on Mythic rolls the bones come alive and a raptor skeleton runs by', idea: 'casmicgraything' },
+    // Idée de qwertyuiop (2026-11-01) : « a legendary angel and demon skin where the angel skin costs 7,777 and the demon skin
+    // costs 6,666 » ; Demon est aussi l'ange déchu de Roanono (2026-11-03, « lumière sombre »). Legendary (premium).
+    { id: 'angel', name: 'Angel', emoji: '🪽', price: 7777, desc: 'Digits of pure light, each under its own golden halo; great rolls spread a pair of feathered wings, and Divine rolls bring three', premium: true, idea: 'qwertyuiop' },
+    { id: 'demon', name: 'Demon', emoji: '😈', price: 6666, desc: 'A fallen angel: digits branded in red on cracked obsidian under broken halos; great rolls unfold torn black wings over a burning circle of runes', premium: true, idea: 'qwertyuiop' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -437,6 +458,10 @@
     // Fond de Noël (événement de Noël, 2026-11-01) : un traîneau tiré par des rennes traverse le ciel étoilé toutes les
     // ~20 s. Limité comme les fonds d'Halloween (onglet Limités, hors caisse), jusqu'au 26 décembre.
     { id: 'sleighnight', name: 'Sleigh Ride', emoji: '🛷', price: 1031, desc: 'A sleigh pulled by reindeer crosses a starry winter sky · until December 26', until: '2026-12-26T00:00:00Z' },
+    // Fond de Thanksgiving (2026-11-26) : idée de qwertyuiop (« un dîner de Thanksgiving, la nourriture sur une table »,
+    // 2026-11-01), avec les feuilles d'automne de Kj13 derrière les fenêtres. Limité (onglet Limités, hors caisse), jusqu'à
+    // la même date que le skin Turkey Roast. Comme pour tous les fonds, pas de part de 5 %.
+    { id: 'feast', name: 'Thanksgiving Dinner', emoji: '🥧', price: 1126, idea: 'qwertyuiop', desc: 'A table set for Thanksgiving: a roast turkey, pie, corn and candles, with autumn leaves falling outside the windows · until November 27', until: '2026-11-28T08:00:00Z' },
   ];
   const wallById = new Map(WALLPAPERS.map(w => [w.id, w]));
   const caseOnly = c => (c.wall || c.btn || c.snd || c.emo ? [] : SKINS.filter(s => s.caseOnly === c.id));

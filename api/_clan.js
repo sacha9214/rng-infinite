@@ -52,7 +52,8 @@ const slotPrice = slots => SLOT_PRICES[(slots - SLOTS_BASE) / SLOT_STEP];
 const BANNERS = ['slate', 'red', 'orange', 'gold', 'green', 'teal', 'blue', 'purple', 'pink', 'black'];
 const TAG_COLORS = ['plain', 'red', 'orange', 'gold', 'green', 'teal', 'blue', 'purple', 'pink', 'rainbow'];
 const BANNER_PRICE = 2000, TAGC_PRICE = 3000, RAINBOW_PRICE = 15000;
-const EMOJIS = ['🛡️', '⚔️', '🐉', '🦁', '🐺', '🦅', '🔥', '❄️', '⚡', '🌙', '⭐', '💎', '👑', '🎲', '🍀', '🌊', '🌋', '🚀', '👾', '🤖', '🐸', '🦈', '🍕', '🎯'];
+const EMOJIS = ['🛡️', '⚔️', '🐉', '🦁', '🐺', '🦅', '🔥', '❄️', '⚡', '🌙', '⭐', '💎', '👑', '🎲', '🍀', '🌊', '🌋', '🚀', '👾', '🤖', '🐸', '🦈', '🍕', '🎯',
+  '🎩', '🌮', '🐳', '🥦', '🤴', '🧀', '🐄', '🐴']; // idée de sennybex1 (2026-11-05) : « I need to make a clan! »
 const DONATE = { min: 10, max: 10000, perHour: 10 };
 const CHAT_KEEP = 100, CHAT_TTL = 7 * 86400, CHAT_PER_MIN = 20, CHAT_PER_DAY = 400, EDIT_MS = 10 * 60000;
 const LOG_KEEP = 50, INVITE_TTL = 7 * 86400, MAX_REQUESTS = 30, MAX_INVITES = 20;
@@ -190,6 +191,27 @@ async function disband(c, t = Date.now()) {
     ['DEL', `clanname:${nameKey(c.name)}`], ['DEL', `clantagk:${c.tag}`], ['SREM', 'clans', c.cid], ['ZREM', xpKey(weekKey(t)), c.cid],
     ...eco('out:clans', c.vault, t), // le coffre restant disparaît avec le clan
   ]);
+}
+
+// Suppression du compte (api/_account.js, demandé par Sacha, 2026-11-05) : mêmes règles que « Leave ». Le chef d'un clan
+// qui a d'autres membres doit d'abord passer la main ou dissoudre (on ne choisit pas un nouveau chef à sa place) ; seul,
+// son clan est dissous. Refusé aussi s'il est dans l'équipe d'une guerre en attente ou en cours. dry : vérifie seulement.
+async function leaveOnDelete(me, now = Date.now(), dry = false) {
+  const c = await myClan(me);
+  if (!c) return null;
+  if (c.war) {
+    const w = await loadWar(c.war);
+    if (w && (w.st === 'pending' || w.st === 'running') && [...w.ta, ...w.tb].includes(me)) throw refuse(409, 'You are in a clan war: try again when it is over');
+  }
+  const alone = Object.keys(c.members).length === 1;
+  if (c.members[me] === 'leader' && !alone) throw refuse(409, 'You lead a clan: pass the leadership to someone first, or disband it');
+  if (dry) return null;
+  if (c.members[me] === 'leader') { await locked(`clanlock:${c.cid}`, () => disband(c, now)); return 'disbanded'; }
+  await locked(`clanlock:${c.cid}`, () => removeMember(c, me, 'leave'));
+  const [raw] = await redis([['LRANGE', chatKey(c.cid), 0, -1]]);
+  const mine = (raw || []).filter(x => (parse(x) || {}).s === me);
+  if (mine.length) await redis(mine.map(x => ['LREM', chatKey(c.cid), 1, x]));
+  return 'left';
 }
 
 // ---------------------------------------------------------------- coffre et améliorations
@@ -777,4 +799,4 @@ const rollWrites = (cid, playerId, s, t) => {
   return [['ZINCRBY', xpKey(week), s, cid], ['EXPIRE', xpKey(week), WEEK_TTL], ['HINCRBY', xpmKey(week, cid), playerId, s], ['EXPIRE', xpmKey(week, cid), WEEK_TTL]];
 };
 
-module.exports = { handle, PERMS, tagsOf, rollWrites, settleWeek, advanceWar, payWar, loadWar, warWinner, board, CREATE_COST, SLOT_PRICES, WAR, DONATE, EDIT_MS, _reset: () => { settledWeek = ''; } };
+module.exports = { handle, leaveOnDelete, PERMS, tagsOf, rollWrites, settleWeek, advanceWar, payWar, loadWar, warWinner, board, CREATE_COST, SLOT_PRICES, WAR, DONATE, EDIT_MS, _reset: () => { settledWeek = ''; } };
