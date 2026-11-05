@@ -5993,6 +5993,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Succès communs : les tirages des deux modes comptent.
   assert.ok(Ach.unlocked({ 'h:rolls': '100' }).includes('regular'));
   assert.ok(Ach.unlocked({ 'h:t:mythic': '1' }).includes('mythic'));
+  // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-05) : les tirages normaux ne comptent pas.
+  { const hardTitles = st => Ach.unlocked(st).filter(id => ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'].includes(id));
+    assert.deepEqual(hardTitles({ rolls: '200000', 't:mythic': '5', 't:infinite': '1', 'h:t:anomaly': '3', 'h:rolls': '4999' }), [], 'rien sans tirage du mode difficile');
+    assert.deepEqual(hardTitles({ 'h:t:mythic': '1', 'h:rolls': '5000' }), ['hardmythic', 'hard5k']);
+    assert.deepEqual(hardTitles({ 'h:t:godlike': '1', 'h:rolls': '100000' }), ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'], 'Godlike compte pour Mythic ou mieux');
+    assert.deepEqual(hardTitles({ 'h:rolls': '49999' }), ['hard5k', 'hard10k']); }
   // Classements du mode difficile : à part.
   r = await call(leaderboard, { url: `/api/leaderboard?period=day&mode=hard&me=${hk.playerId}` });
   assert.equal(r.body.mode, 'hard'); assert.equal(r.body.entries.length, 1); assert.equal(r.body.entries[0].name, 'Hardy'); assert.ok(r.body.entries[0].n >= 0);

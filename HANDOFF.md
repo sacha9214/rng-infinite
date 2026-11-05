@@ -27,6 +27,20 @@ the rest are features. They ship in batches, one PR each; the full list is in `i
 - **Pitfall**: the dev server caches the version stamp at start. Re-stamping while it runs makes the page reload in a
   loop (the Updater). Restart the dev server after `tools/stamp.mjs`.
 
+## Hard mode titles (2026-11-05, branch `claude/hard-titles`)
+
+Planned ideas from the 2026-11-05 triage: PRISMA123 (`2a0ce3902f9f` a title for a Mythic or better in Hard mode,
+`e3e0cb767c33` titles for 5k / 10k / 50k / 100k Hard rolls) and Liam123456 (`e3bd823a458c` "Hard mode title").
+- `js/achievements.js`: `hardmythic` 🔥 Forged in Fire (any `h:t:<tier>` from Mythic up, Hard Mythic = top 0.02%),
+  `hard5k` 🍪 Tough Cookie, `hard10k` ⛓️ Hardened, `hard50k` ⛏️ Hardcore, `hard100k` 🗻 Unbreakable (`h:rolls` only).
+  Normal rolls never count for them (the older roll and rarity titles still count both modes, as before).
+- No server change: the stats `h:rolls` and `h:t:<tier>` already exist, so players who already qualify see the titles
+  unlocked as soon as the new `js/achievements.js` is deployed.
+- French in `js/i18n.js`, UPDATES entry `2026-11-05-hard-titles`. Test in `tools/test-api.mjs` (Hard mode block).
+- Checked on the dev server (port 8133): the five titles show locked in Me → Badges, in English and French, and the
+  update shows in the news.
+- Not answered to players yet (Sacha does it).
+
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 
 - Sacha asked for all new ideas to be sorted and answered. 269 ideas: 68 Planned, 7 Done, 50 Seen (skin and wallpaper
