@@ -221,8 +221,14 @@ casmicgraything [2812b102f0fd] (his Mythic fighter jet became an aerobatic stunt
 `warp` Lightspeed 🚀 2,400 — casmicgraything [2a72aa7dad04] (every reveal shows the alien planet and UFOs, Mythic and
 above show Earth with a HOME!!! tag).
 
-- Next: zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
-  mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
+**Lot 11 — `claude/skins-lot11`** (block "lot 11 du 2026-11-05" in `js/skinfx.js`): `zodiac` Zodiac ♈ 2,200 —
+casmicgraything [44322bde56ff] (two signs per digit, by slot: the six digits show the twelve signs); `chronos` Chronos 🕰️
+2,600 — casmicgraything [2cd4d69c8b28]; `sweeper` Tile Sweeper 🚩 1,300 — costoroll [2b9e53745d67] (generic name, no
+brand; **no mines**: on Mythic the other tiles burst open into flags and numbers instead of turning into mines);
+`mimic` Mimic 🪙 2,000 — costoroll [c6da83a9d7bb] (new `coins` sound in `js/sound.js` for the rattling chests; the
+Mythic "all chests turn into mimics" is CSS, read from the section's `data-tier` once the card is not `.neutral`).
+
+- Next: fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
   [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
   [773ca9b1b6e4], puzzle cube [3518354c582f].
 

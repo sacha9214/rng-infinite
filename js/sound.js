@@ -386,6 +386,9 @@
     // Une bulle du fond Bulles ASMR éclate (idée de kingston) : un « pop » court qui monte, k : la variante (0 à 5).
     // Duck Race : un canard choisi, le départ et le vainqueur (k : la hauteur).
     quack: ({ k = 0 } = {}) => [[quack(k), 0, .3, 0, .12]],
+    // Skin Mimic (idée de costoroll, 2026-10-30 : les coffres tremblent « avec un bruit de pièces ») : trois petites pièces
+    // qui s'entrechoquent, k : la variante (la hauteur change d'un coffre à l'autre).
+    coins: ({ k = 0 } = {}) => [0, 1, 2].map(i => [S.bell(2300 + ((k + i * 3) % 5) * 240, .16, .4), i * .05 + (i ? .012 * ((k + i) % 3) : 0), .06, (i - 1) * .3, .05]),
     // Un ami t'écrit (idée de Sean, 2026-11-01) : « ding-ding » feutré, deux carillons doux qui montent (si5 puis mi6),
     // bas et courts, pour prévenir sans faire sursauter.
     ping: () => [[softChime(S.note(12), .45), 0, .15, -.1, .3], [softChime(S.note(14), .6), .1, .12, .1, .35]],

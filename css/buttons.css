@@ -1996,3 +1996,29 @@
   text-shadow: 0 0 .1em #fff, 0 0 .3em #7dd3fc;
   --gs: 0 .3em 0 #1e1b4b, 0 .5em 1em rgba(99, 102, 241, .35); --gs-h: 0 .34em 0 #1e1b4b, 0 .7em 1.3em rgba(99, 102, 241, .55); --gs-a: 0 .06em 0 #1e1b4b; }
 .btn-roll.gen-warp:hover { filter: brightness(1.15); }
+
+/* ==== Skins du 2026-11-05, lot 11 ==== boutons assortis */
+/* Zodiac (idée de casmicgraything) : le ciel violet et ses étoiles, texte blanc d'étoile. */
+.btn-roll.gen-zodiac { border: .12em solid #a78bfa; border-radius: .6rem; color: #f5f3ff; font-family: 'Optima', 'Candara', 'Trajan Pro', Georgia, serif;
+  background: radial-gradient(circle, rgba(255, 255, 255, .7) 0 .8px, transparent 1.3px) 5px 7px / 37px 29px, radial-gradient(ellipse 60% 80% at 30% 40%, rgba(124, 58, 237, .45), transparent 70%), linear-gradient(180deg, #1e1b4b, #0f0a2e);
+  text-shadow: 0 0 .2em rgba(196, 181, 253, .9);
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(167, 139, 250, .5); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-zodiac:hover { filter: brightness(1.15); }
+/* Chronos (idée de casmicgraything) : la galaxie dans un cadre de laiton, texte doré en Didot. */
+.btn-roll.gen-chronos { border: .14em solid #a16207; border-radius: .55rem; color: #fde68a; font-family: 'Didot', 'Bodoni 72', 'Bodoni MT', Georgia, serif;
+  background: radial-gradient(ellipse 45% 70% at 20% 30%, rgba(147, 51, 234, .55), transparent 70%), radial-gradient(ellipse 50% 70% at 82% 70%, rgba(37, 99, 235, .45), transparent 70%), #0c0a1f;
+  box-shadow: inset 0 0 0 .04em #fbbf24; text-shadow: 0 .05em 0 #451a03, 0 0 .2em rgba(251, 191, 36, .6);
+  --gs: 0 .3em 0 #451a03, 0 .5em 1em rgba(147, 51, 234, .35); --gs-h: 0 .34em 0 #451a03, 0 .7em 1.3em rgba(147, 51, 234, .5); --gs-a: 0 .06em 0 #451a03; }
+.btn-roll.gen-chronos:hover { filter: brightness(1.15); }
+/* Tile Sweeper (idée de costoroll) : une case grise en relief des vieux jeux, texte bleu. */
+.btn-roll.gen-sweeper { border: .14em solid; border-color: #fff #7b7b7b #7b7b7b #fff; border-radius: 0; color: #1d4ed8; font-family: 'Arial Black', 'Helvetica Neue', system-ui, sans-serif;
+  background: #c0c0c0; text-shadow: none;
+  --gs: 0 .3em 0 #4b4b4b, 0 .5em 1em rgba(0, 0, 0, .25); --gs-h: 0 .34em 0 #4b4b4b, 0 .7em 1.3em rgba(0, 0, 0, .3); --gs-a: 0 .06em 0 #4b4b4b; }
+.btn-roll.gen-sweeper:hover { filter: brightness(1.05); }
+.btn-roll.gen-sweeper:active { border-color: #7b7b7b #fff #fff #7b7b7b; }
+/* Mimic (idée de costoroll) : le coffre au trésor, bois cerclé d'or et serrure, texte or vif. */
+.btn-roll.gen-mimic { border: .14em solid #451a03; border-radius: .7rem .7rem .3rem .3rem; color: #fde047; font-family: Georgia, 'Times New Roman', serif;
+  background: linear-gradient(90deg, transparent 8%, #fbbf24 8% 11%, transparent 11% 89%, #fbbf24 89% 92%, transparent 92%), linear-gradient(180deg, #a16207 0 8%, #92400e 8% 46%, #fbbf24 46% 50%, #7c4a2a 50%);
+  text-shadow: 0 0 .15em #f59e0b, 0 .06em 0 #451a03;
+  --gs: 0 .3em 0 #3f220e, 0 .5em 1em rgba(251, 191, 36, .3); --gs-h: 0 .34em 0 #3f220e, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #3f220e; }
+.btn-roll.gen-mimic:hover { filter: brightness(1.1); }

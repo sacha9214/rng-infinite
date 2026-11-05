@@ -355,6 +355,11 @@
     { id: 'cinema', name: 'Old Cinema', emoji: '🎞️', price: 2000, desc: 'A silent movie on a big black and white screen: the film glitches to reveal every digit, and great rolls blow the projector apart into gears, springs and wires', idea: 'number 1' },
     { id: 'plane', name: 'Plane', emoji: '✈️', price: 1400, desc: 'A little plane flies through a cloud for every digit; Mythic rolls get a loop-the-loop with colored smoke', idea: 'casmicgraything' },
     { id: 'warp', name: 'Lightspeed', emoji: '🚀', price: 2400, desc: 'Every digit takes you faster through space; then you slow down by an alien planet full of UFOs, and Mythic rolls bring you HOME to Earth', idea: 'casmicgraything' },
+    // lot 11 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'zodiac', name: 'Zodiac', emoji: '♈', price: 2200, desc: 'Every digit raises two zodiac signs in the colors of their elements, all twelve by the end; Mythic rolls spin a glowing horoscope wheel', idea: 'casmicgraything' },
+    { id: 'chronos', name: 'Chronos', emoji: '🕰️', price: 2600, desc: 'Clocks orbit a cosmic galaxy and every digit sits on a spinning dial; then a great eye of numerals opens behind your number, and Mythic rolls turn back time', idea: 'casmicgraything' },
+    { id: 'sweeper', name: 'Tile Sweeper', emoji: '🚩', price: 1300, desc: 'A retro tile board: every digit is a tile that clicks open while the little face watches; Mythic rolls clear the whole board', idea: 'costoroll' },
+    { id: 'mimic', name: 'Mimic', emoji: '🪙', price: 2000, desc: 'Six treasure chests rattle on a pirate deck at dusk and open on gold digits; the last one has teeth, and on Mythic rolls they are all mimics', idea: 'costoroll' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
