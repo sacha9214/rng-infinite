@@ -3397,6 +3397,22 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   const leap = n => engine.analyze(n).earnedIds.includes('LEAP_DAY');
   assert.ok(leap(22924) && leap(22996) && leap(22900), 'Leap Day manquant');
   assert.ok(!leap(22925) && !leap(22898) && !leap(23000) && !leap(122924), 'Leap Day en trop');
+  // Thanksgiving (2026-11-26) : Turkey Roast (idée d'Idkwhatnamemyself) et Thanksgiving Dinner (idée de qwertyuiop), en vente
+  // jusqu'à la fin du 27 novembre heure du Pacifique, jamais en caisse, hors collections ; dessinés partout (CSS, scène, calques).
+  const tk = Shop.byId.get('turkey'), fe = Shop.wallById.get('feast'), END = '2026-11-28T08:00:00Z';
+  assert.deepEqual([tk.price, tk.until, tk.idea, fe.price, fe.until, fe.idea], [1126, END, 'Idkwhatnamemyself', 1126, END, 'qwertyuiop']);
+  for (const c of Shop.CASES) assert.ok(!Shop.casePool(c).some(s => s.id === 'turkey' || s.id === 'feast'), `Thanksgiving pas dans ${c.id}`);
+  assert.ok(!Shop.collectible().includes('turkey') && !Shop.collectibleSets.walls().includes('feast'), 'Thanksgiving hors collections');
+  { const css = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8'), fx = fs.readFileSync(path.join(ROOT, 'js/skinfx.js'), 'utf8'), app = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+    for (const sel of ['.num-card.skin-turkey {', '.side-turkey {', '.wp-feast {', '.wall-preview.wp-feast {']) assert.ok(css.includes(sel), `${sel} manquant`);
+    assert.ok(fx.includes('SCENES.turkey = ') && app.includes('WALL_LAYERS.feast = '), 'scène et calques de Thanksgiving'); }
+  const tkBuy = (action, key, id) => call(shopApi, { method: 'POST', body: { playerId: buyer.playerId, secret: buyer.secret, action, [key]: id } });
+  for (const [action, key, id] of [['buy', 'skin', 'turkey'], ['buywall', 'wall', 'feast']]) {
+    Date.now = () => Date.parse(END) + 1000;
+    try { const r = await tkBuy(action, key, id); assert.equal(r.status, 422, `${id} n'est plus en vente`); } finally { Date.now = realNow; }
+    Date.now = () => Date.parse(END) - 60000;
+    try { const r = await tkBuy(action, key, id); assert.equal(r.status, 200, JSON.stringify(r.body)); } finally { Date.now = realNow; }
+  }
 }
 
 // ================================================================ 56. Farce du créateur en duel : faux jackpot, visible seulement chez les autres
@@ -4575,7 +4591,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await gc(boss, 'gcModSet', { name: 'Modo' }); assert.equal(r.status, 200); assert.deepEqual(r.body.mods, ['Modo']);
   r = await gc(modo, 'gcList'); assert.equal(r.body.me.mod, true);
   assert.equal((await gc(modo, 'gcModSet', { name: 'Kiddo' })).status, 403, 'un modérateur ne nomme personne');
-  assert.equal((await gc(modo, 'gcUnmute', { name: 'Kiddo' })).status, 403);
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'Kiddo' })).status, 404, 'un modérateur ne lève qu\'un silence en cours (pople, 2026-11-05)');
   // Supprimer le message d'un autre demande une raison (Sacha, 2026-11-01).
   assert.equal((await gc(modo, 'gcDelete', { id: palMsg.id })).status, 400, 'suppression sans raison');
   assert.equal((await gc(modo, 'gcDelete', { id: palMsg.id, why: 'other' })).status, 400, 'other sans note');
@@ -6004,6 +6020,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Succès communs : les tirages des deux modes comptent.
   assert.ok(Ach.unlocked({ 'h:rolls': '100' }).includes('regular'));
   assert.ok(Ach.unlocked({ 'h:t:mythic': '1' }).includes('mythic'));
+  // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-05) : les tirages normaux ne comptent pas.
+  { const hardTitles = st => Ach.unlocked(st).filter(id => ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'].includes(id));
+    assert.deepEqual(hardTitles({ rolls: '200000', 't:mythic': '5', 't:infinite': '1', 'h:t:anomaly': '3', 'h:rolls': '4999' }), [], 'rien sans tirage du mode difficile');
+    assert.deepEqual(hardTitles({ 'h:t:mythic': '1', 'h:rolls': '5000' }), ['hardmythic', 'hard5k']);
+    assert.deepEqual(hardTitles({ 'h:t:godlike': '1', 'h:rolls': '100000' }), ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'], 'Godlike compte pour Mythic ou mieux');
+    assert.deepEqual(hardTitles({ 'h:rolls': '49999' }), ['hard5k', 'hard10k']); }
   // Classements du mode difficile : à part.
   r = await call(leaderboard, { url: `/api/leaderboard?period=day&mode=hard&me=${hk.playerId}` });
   assert.equal(r.body.mode, 'hard'); assert.equal(r.body.entries.length, 1); assert.equal(r.body.entries[0].name, 'Hardy'); assert.ok(r.body.entries[0].n >= 0);
@@ -6749,6 +6771,117 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   db.delete(`cooldown:${p.playerId}`);
   r = await call(roll, { method: 'POST', body: p });
   assert.equal(typeof r.body.seen, 'number'); assert.equal(ncGet(r.body.n), r.body.seen + 1);
+}
+
+// Idées du 2026-11-05 (session social-chat) : meilleur tirage dans le chat (Loliarlex1248, MAYO), annonces Mythic+ en
+// difficile (Idkwhatnamemyself, Kag), contexte des signalements (jsand), silences levés par un modérateur (pople), étoile
+// et classement entre amis (Big Sexy, Edward), votes de la feuille de route (Trinity).
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), siteApi = require(path.join(ROOT, 'api/site.js'));
+  const Global = require(path.join(ROOT, 'api/_global.js')), Roadmap = require(path.join(ROOT, 'api/_roadmap.js')), Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const mk = (tag, name, { rolls = 150, extra = [] } = {}) => { const id = `50c1a1${tag}`.padEnd(16, '0'), secret = (tag + 'e').repeat(16).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, ...extra], ['HSET', 'names', id, name], ['SET', `name:${name.toLowerCase()}`, id]]); return { playerId: id, secret, name }; };
+  const gc = (who, action, extra = {}) => call(friendsApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const fr = (who, action, name, extra = {}) => call(friendsApi, { method: 'POST', body: { action, playerId: who.playerId, secret: who.secret, ...(name ? { name } : {}), ...extra } });
+  const site = (who, action, extra = {}) => call(siteApi, { method: 'POST', body: { action, ...(who ? { playerId: who.playerId, secret: who.secret } : {}), ...extra } });
+  const free = who => run([['DEL', `gc:rl:${who.playerId}`]]);
+  const wait = () => new Promise(res => setTimeout(res, 3));
+  const boss = mk('d1', 'SocBoss', { extra: ['owner', '1'] }), modo = mk('d2', 'SocModo', { extra: ['gcMod', '1'] }), ann = mk('d3', 'SocAnn'), ben = mk('d4', 'SocBen'), cal = mk('d5', 'SocCal', { rolls: 20 });
+  run([['SADD', 'gc:mods', modo.playerId]]);
+  const leak = (body, ...who) => who.forEach(w => assert.ok(!JSON.stringify(body).includes(w.playerId), `aucun identifiant (${w.name})`));
+
+  // 1. Meilleur tirage après le pseudo (best:all, mode normal) ; rien pour qui n'a pas de meilleur tirage.
+  const s999 = engine.scoreOf(999999);
+  run([['HSET', 'best:all', ann.playerId, JSON.stringify({ n: 999999, s: s999, t: Date.now() })]]);
+  free(ann); let r = await gc(ann, 'gcSend', { text: 'look at my best' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  free(ben); await wait(); r = await gc(ben, 'gcSend', { text: 'nice one' });
+  r = await gc(null, 'gcList');
+  const mAnn = r.body.msgs.findLast(m => m.name === 'SocAnn'), mBen = r.body.msgs.findLast(m => m.name === 'SocBen');
+  assert.deepEqual(mAnn.best, { n: 999999, tier: engine.cardTier(s999) }); assert.equal(mBen.best, undefined, 'pas de meilleur tirage : rien');
+  leak(r.body, ann, ben);
+
+  // 2. Mode difficile : annoncé dès Mythic ; le mode normal reste à Divine.
+  run([['DEL', 'gc:sysq', 'gc:sysrl', `gc:sysp:${ann.playerId}`, `gc:sysp:${ben.playerId}`]]);
+  assert.equal(await Global.queueBigRoll(ann.playerId, 123, 'mythic', Date.now()), false, 'Mythic normal : pas annoncé');
+  assert.equal(await Global.queueBigRoll(ann.playerId, 1234567890, 'mythic', Date.now(), true), true, 'Mythic difficile : annoncé');
+  assert.equal(await Global.queueBigRoll(ben.playerId, 1234567891, 'anomaly', Date.now(), true), false, 'Anomaly difficile : non');
+  const q = run([['ZRANGE', 'gc:sysq', '0', '-1']])[0].result; assert.equal(q.length, 1); assert.equal(JSON.parse(q[0]).h, 1);
+  run([['DEL', 'gc:sysq', 'gc:sysrl', `gc:sysp:${ann.playerId}`]]);
+
+  // 3. Contexte d'un signalement : les messages avant et après, le signalé marqué, ni identifiant ni auteur du signalement.
+  const said = [];
+  for (const [who, text] of [[ann, 'ctx one'], [ben, 'ctx two'], [ann, 'ctx three bad'], [ben, 'ctx four'], [ann, 'ctx five']]) { free(who); await wait(); said.push((await gc(who, 'gcSend', { text })).body.msgs.at(-1)); }
+  await gc(ben, 'gcReport', { id: said[2].id });
+  r = await gc(modo, 'gcModPage'); assert.equal(r.status, 200);
+  const rep = r.body.reports.find(x => x.text === 'ctx three bad');
+  const ctx = rep.around.map(c => c.text), hit = rep.around.find(c => c.hit);
+  assert.equal(hit.text, 'ctx three bad'); assert.ok(['ctx one', 'ctx two', 'ctx four', 'ctx five'].every(t => ctx.includes(t)), JSON.stringify(ctx));
+  assert.ok(ctx.indexOf('ctx two') < ctx.indexOf('ctx three bad') && ctx.indexOf('ctx four') > ctx.indexOf('ctx three bad'), 'dans l\'ordre');
+  assert.ok(rep.around.length <= 8); leak(r.body, ann, ben, modo);
+
+  // 4. Lever un silence : un modérateur lève un silence en cours ; pas « pour toujours », pas celui du créateur.
+  r = await gc(modo, 'gcMute', { id: said[4].id, dur: '1h', why: 'spam' }); assert.equal(r.status, 200);
+  r = await gc(modo, 'gcModPage'); const mu = r.body.mutes.find(x => x.name === 'SocAnn');
+  assert.ok(mu && mu.canLift && mu.by === 'SocModo' && mu.why === 'spam'); leak(r.body, ann);
+  assert.equal((await gc(ben, 'gcUnmute', { name: 'SocAnn' })).status, 403, 'un joueur ne lève rien');
+  r = await gc(modo, 'gcUnmute', { name: 'SocAnn' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(!r.body.mutes.some(x => x.name === 'SocAnn')); assert.equal(run([['GET', `gc:mute:${ann.playerId}`]])[0].result, null);
+  assert.ok(r.body.mine.some(a => a.kind === 'unmute' && a.name === 'SocAnn'), 'dans « mes dernières actions »'); assert.ok(r.body.mine.some(a => a.kind === 'mute' && a.lift === 'SocModo'));
+  free(ann); assert.equal((await gc(ann, 'gcSend', { text: 'thanks mod' })).status, 200);
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 404, 'plus muet');
+  let last = (await gc(null, 'gcList')).body.msgs.at(-1);
+  await gc(boss, 'gcMute', { id: last.id, dur: '1h', why: 'rude' });
+  r = await gc(modo, 'gcModPage'); assert.equal(r.body.mutes.find(x => x.name === 'SocAnn').canLift, false, 'posé par le créateur');
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 403);
+  { const rec = JSON.parse(run([['HGET', 'gc:mutes', ann.playerId]])[0].result); delete rec.bo; run([['HSET', 'gc:mutes', ann.playerId, JSON.stringify(rec)]]); } // silence d'avant la marque bo
+  r = await gc(modo, 'gcModPage'); assert.equal(r.body.mutes.find(x => x.name === 'SocAnn').canLift, false, 'ancien silence du créateur, lu dans l\'historique');
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 403);
+  await gc(boss, 'gcUnmute', { name: 'SocAnn' });
+  free(ann); await gc(ann, 'gcSend', { text: 'again' }); last = (await gc(null, 'gcList')).body.msgs.at(-1);
+  await gc(boss, 'gcMute', { id: last.id, dur: 'perm', why: 'rude' });
+  run([['HSET', 'gc:mutes', ann.playerId, JSON.stringify({ ...JSON.parse(run([['HGET', 'gc:mutes', ann.playerId]])[0].result), bo: undefined })]]); // même sans la marque du créateur
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 403, 'pour toujours : le créateur seul');
+  r = await gc(boss, 'gcUnmute', { name: 'SocAnn' }); assert.equal(r.status, 200);
+  assert.ok(r.body.history.some(x => x.name === 'SocAnn' && x.lift && x.lift.by === 'SocModo'), 'le créateur voit qui a levé'); leak(r.body, modo, ann);
+
+  // 5. Amis : étoile (en haut de la liste) et classement entre amis.
+  const dee = mk('d6', 'SocDee'), eve = mk('d7', 'SocEve');
+  run([['SADD', `fr:${ann.playerId}`, ben.playerId, dee.playerId, eve.playerId], ['SADD', `fr:${ben.playerId}`, ann.playerId], ['SADD', `fr:${dee.playerId}`, ann.playerId], ['SADD', `fr:${eve.playerId}`, ann.playerId],
+    ['ZADD', 'lb:xp', '5000', ann.playerId, '9000', ben.playerId, '100', dee.playerId], ['HSET', 'count:all', ann.playerId, '40', ben.playerId, '70', dee.playerId, '3'],
+    ['HSET', 'best:all', ben.playerId, JSON.stringify({ n: 123456, s: engine.scoreOf(123456), t: 1 })]]);
+  r = await fr(ann, 'list'); assert.equal(r.status, 200);
+  const board = r.body.board;
+  assert.deepEqual(board.map(e => e.name).sort(), ['SocAnn', 'SocBen', 'SocDee', 'SocEve']);
+  const meRow = board.find(e => e.me); assert.equal(meRow.name, 'SocAnn'); assert.equal(meRow.xp, 5000); assert.equal(meRow.rolls, 40); assert.equal(meRow.best.n, 999999);
+  const benRow = board.find(e => e.name === 'SocBen'); assert.deepEqual([benRow.xp, benRow.rolls, benRow.best.n, benRow.me], [9000, 70, 123456, undefined]);
+  assert.deepEqual(board.find(e => e.name === 'SocEve'), { name: 'SocEve', xp: 0, today: 0, best: null, rolls: 0 }); leak(r.body, ann, ben, dee, eve);
+  r = await fr(ann, 'star', 'SocEve'); assert.equal(r.status, 200); assert.equal(r.body.friends[0].name, 'SocEve'); assert.equal(r.body.friends[0].star, true);
+  assert.equal(r.body.friends.filter(f => f.star).length, 1);
+  assert.equal((await fr(ben, 'list')).body.friends[0].star, undefined, 'l\'étoile est à moi seul');
+  assert.equal((await fr(ann, 'star', 'SocCal')).status, 404, 'pas un ami');
+  r = await fr(ann, 'star', 'SocEve', { on: false }); assert.ok(!r.body.friends.some(f => f.star));
+  await fr(ann, 'star', 'SocDee'); r = await fr(ann, 'remove', 'SocDee');
+  assert.equal(run([['SISMEMBER', `frstar:${ann.playerId}`, dee.playerId]])[0].result, 0, 'retiré des amis : plus d\'étoile');
+  assert.deepEqual((await fr(cal, 'list')).body.board, [], 'sans ami : pas de classement');
+
+  // 6. Votes de la feuille de route : clé opaque, 100 tirages, un vote par joueur, retirable ; visiteurs : les nombres.
+  const now = Date.now();
+  run([['HSET', 'sugg:ff00000000a1', 't', now - 1000, 'pid', boss.playerId, 'name', 'Trinity', 'text', 'Upvote ideas on the roadmap', 'status', 'planned', 'kind', 'idea'], ['ZADD', 'sugg:all', now - 1000, 'ff00000000a1']]);
+  Roadmap.reset();
+  r = await site(null, 'roadmap'); const idea = r.body.planned.find(x => x.text === 'Upvote ideas on the roadmap');
+  assert.ok(/^[0-9a-f]{12}$/.test(idea.key) && idea.key !== 'ff00000000a1'); assert.ok(!JSON.stringify(r.body).includes('ff00000000a1'), 'jamais l\'id de l\'idée');
+  assert.deepEqual([r.body.mine, r.body.canVote, r.body.votes[idea.key]], [[], false, undefined]);
+  assert.equal((await site(cal, 'rmVote', { key: idea.key })).status, 403, '100 tirages');
+  assert.equal((await site(ann, 'rmVote', { key: 'ffffffffffff' })).status, 404);
+  r = await site(ann, 'rmVote', { key: idea.key }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.votes[idea.key], 1); assert.deepEqual(r.body.mine, [idea.key]);
+  run([['DEL', `rmv:rl:${ann.playerId}`]]); r = await site(ann, 'rmVote', { key: idea.key }); assert.equal(r.body.votes[idea.key], 1, 'un seul vote par joueur');
+  r = await site(ann, 'rmVote', { key: idea.key }); assert.equal(r.status, 429, 'pas plus de 2 par seconde');
+  r = await site(ben, 'rmVote', { key: idea.key }); assert.equal(r.body.votes[idea.key], 2);
+  r = await site(ann, 'roadmap'); assert.deepEqual([r.body.mine, r.body.canVote, r.body.votes[idea.key]], [[idea.key], true, 2]);
+  run([['DEL', `rmv:rl:${ann.playerId}`]]); r = await site(ann, 'rmVote', { key: idea.key, on: false }); assert.equal(r.body.votes[idea.key], 1); assert.deepEqual(r.body.mine, []);
+  r = await site(null, 'roadmap'); assert.equal(r.body.votes[idea.key], 1); leak(r.body, ann, ben);
+  run([['HSET', 'sugg:ff00000000a1', 'status', 'done']]); Roadmap.reset(); run([['DEL', `rmv:rl:${ben.playerId}`]]);
+  assert.equal((await site(ben, 'rmVote', { key: idea.key })).status, 404, 'plus prévue : plus de vote');
+  Roadmap.reset();
 }
 
 // ================================================================ Idées du 2026-11-05 (lot 1)
