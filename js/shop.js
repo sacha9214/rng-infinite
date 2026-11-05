@@ -411,11 +411,11 @@
     // Idée de HSI : une ferme par une journée ensoleillée, des animaux et une grange rouge au fond.
     { id: 'farm', name: 'Farm', emoji: '🐄', price: 4500, premium: true, idea: 'HSI', desc: 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping' },
     // Idée de kingston : un fond clavier, thème ASMR (le « thock » au clic ne sonne que si le son est activé).
-    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll' },
+    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; type on your keyboard or click the background and its keys crunch down with you, and it types every number you roll' },
     // Idée de finnnnn, assorti au skin Storm : un ou deux éclairs toutes les 10 s environ, un tonnerre doux, rien de fort.
     { id: 'thunderstorm', name: 'Thunderstorm', emoji: '⛈️', price: 1000, idea: 'finnnnn', desc: 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder' },
     // Idée de finnnnn : des astres qui tournent les uns autour des autres, comme le système solaire.
-    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past' },
+    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets, Pluto and the asteroid belt with Ceres circle the sun on glowing orbits, and now and then a comet sweeps past' },
     // Idée de Ggggssnoop, assorti au skin Meteor : une pluie d'étoiles filantes.
     { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
     // Idée de jia jun : une fête d'anniversaire.
@@ -429,7 +429,7 @@
     { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un petit village sous la neige, fenêtres allumées et cheminées qui
     // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
-    // d'IXOLAF2 (idée de 3 joueurs), crédité ; comme pour tous les fonds, pas de part de 5 % (seuls les skins en donnent).
+    // d'IXOLAF2 (idée de 3 joueurs), crédité ; part de 5 % comme pour les skins depuis le 2026-11-05 (idée de qwertyuiop).
     { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un salon, une cheminée qui crépite en bas de l'écran, des chaussettes
     // sur le manteau et la neige derrière la fenêtre. Limité (onglet Limités, hors caisse) jusqu'au 26 décembre.

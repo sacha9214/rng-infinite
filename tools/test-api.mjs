@@ -990,7 +990,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
       if (item.until && Date.now() >= Date.parse(item.until)) { assert.equal(r.status, 422, 'Zombie Moon n\'est plus en vente'); continue; }
       assert.equal(r.status, 200, JSON.stringify(r.body));
       assert.equal(r.body.wall, id, 'acheté = affiché');
-      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
+      assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (la part de l'idée est créée en plus)`);
     }
   }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
@@ -6738,6 +6738,189 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   db.delete(`cooldown:${p.playerId}`);
   r = await call(roll, { method: 'POST', body: p });
   assert.equal(typeof r.body.seen, 'number'); assert.equal(ncGet(r.body.n), r.body.seen + 1);
+}
+
+// ================================================================ features-misc (idées du 2026-11-05)
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js')), Shop = require(path.join(ROOT, 'js/shop.js')), Q = require(path.join(ROOT, 'js/quests.js'));
+  const Hof = require(path.join(ROOT, 'api/_hof.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), qApi = require(path.join(ROOT, 'api/quests.js'));
+  const tick = () => new Promise(res => setTimeout(res, 3));
+  const hget = (k, f) => run([['HGET', k, f]])[0].result;
+  const make = async (hex, name) => { const p = { playerId: hex.repeat(16 / hex.length), secret: hex.repeat(32 / hex.length), name }; db.delete(`cooldown:${p.playerId}`); const r = await call(roll, { method: 'POST', body: p }); assert.equal(r.status, 200, JSON.stringify(r.body)); return p; };
+
+  // 1. Part de 5 % sur les fonds d'écran (idée de qwertyuiop, 2026-11-01) : achat direct et caisse de fonds payée ; rien
+  //    pour soi-même, rien pour une caisse ouverte avec une clé, et l'acheteur paie le prix normal.
+  { const author = await make('f1a1', 'WallAuthor'), buyer = await make('f1b2', 'WallBuyer');
+    run([['HINCRBY', `stats:${buyer.playerId}`, 'bonus', 20000], ['HINCRBY', `stats:${author.playerId}`, 'bonus', 20000]]);
+    const forest = Shop.wallById.get('forest'), stars = Shop.wallById.get('stars'), was = [forest.idea, stars.idea], draw = Shop.drawCase;
+    forest.idea = 'wallauthor'; stars.idea = 'WallAuthor'; // retrouvé à la casse près
+    const roy = () => Number(hget(`stats:${author.playerId}`, 'royalty')) || 0;
+    const post = async (who, body) => { await new Promise(res => setTimeout(res, 20)); return call(shopApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, ...body } }); };
+    try {
+      const c0 = (await call(shopApi, { url: `/api/shop?me=${buyer.playerId}` })).body.coins;
+      let r = await post(buyer, { action: 'buywall', wall: 'forest' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(roy(), Math.round(forest.price * Shop.IDEA_SHARE), '5 % du prix du fond');
+      assert.equal(r.body.coins, c0 - forest.price, 'l\'acheteur paie le prix normal');
+      r = await post(buyer, { action: 'buywall', wall: 'forest' }); assert.equal(roy(), 25, 'déjà possédé : rien de plus');
+      r = await post(author, { action: 'buywall', wall: 'forest' }); assert.equal(r.status, 200); assert.equal(roy(), 25, 'rien pour soi-même');
+      const box = Shop.caseById.get('wallpaper');
+      Shop.drawCase = () => 'stars';
+      r = await post(buyer, { action: 'case', case: 'wallpaper' }); assert.deepEqual([r.status, r.body.won, r.body.duplicate], [200, 'stars', false], JSON.stringify(r.body));
+      assert.equal(roy(), 25 + Math.round(box.price * Shop.IDEA_SHARE), '5 % du prix de la caisse de fonds');
+      r = await post(buyer, { action: 'case', case: 'wallpaper' }); assert.equal(r.body.duplicate, true); assert.equal(roy(), 55, 'rien pour un doublon');
+      run([['HINCRBY', `stats:${author.playerId}`, 'key:premium', 1]]);
+      r = await post(author, { action: 'case', case: 'wallpaper', free: 'premium' }); assert.equal(r.status, 200); assert.equal(roy(), 55, 'clé : rien');
+    } finally { Shop.drawCase = draw; [forest.idea, stars.idea] = was; }
+  }
+
+  // 2. Relance de quête (idée de Mace_67, 2026-11-03) : 3 par semaine, une quête pas réclamée remplacée par une autre du
+  //    même groupe, la progression du groupe gardée, et les réclamations suivent la nouvelle quête.
+  { const mace = await make('f2c3', 'Maceish'), qPost = (action, extra = {}) => call(qApi, { method: 'POST', body: { playerId: mace.playerId, secret: mace.secret, action, ...extra } });
+    const day = Lib.dayKey(Date.now()), qk = `q:${day}:${mace.playerId}`;
+    let r = await call(qApi, { url: `/api/quests?me=${mace.playerId}` });
+    assert.deepEqual(r.body.rerolls, { left: 3, max: 3 });
+    const duel = r.body.quests.find(q => Q.byId.get(q.id).group === 'duel');
+    run([['HSET', qk, 'duels', 1]]);
+    r = await qPost('reroll', { quest: duel.id }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.swapped.from, duel.id); assert.notEqual(r.body.swapped.to, duel.id);
+    assert.equal(Q.byId.get(r.body.swapped.to).group, 'duel', 'même groupe');
+    assert.equal(r.body.rerolls.left, 2);
+    const now1 = r.body.quests.find(q => q.id === r.body.swapped.to);
+    assert.ok(now1 && !r.body.quests.some(q => q.id === duel.id), 'la quête est remplacée pour ce joueur seulement');
+    assert.equal(now1.progress, Math.min(now1.target, Q.byId.get(now1.id).value({ duels: 1, duelWins: 0 })), 'la progression du groupe est gardée');
+    const other = await make('f2d4', 'NotMace');
+    assert.deepEqual((await call(qApi, { url: `/api/quests?me=${other.playerId}` })).body.quests.map(q => q.id), Q.ofDay(day).map(q => q.id), 'les autres gardent les quêtes du jour');
+    assert.equal((await qPost('reroll', { quest: duel.id })).status, 400, 'l\'ancienne quête n\'est plus la sienne');
+    assert.equal((await qPost('claim', { quest: duel.id })).status, 400, 'ni à réclamer');
+    // La nouvelle se réclame, puis ne se relance plus.
+    run([['HSET', qk, 'duels', 3, 'duelWins', 1]]);
+    r = await qPost('claim', { quest: now1.id }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.gained, now1.reward);
+    r = await qPost('reroll', { quest: now1.id }); assert.equal(r.status, 422); assert.match(r.body.error, /already claimed/);
+    // 3 au plus par semaine (le compteur rendu après un refus) ; le tout-fini compte les quêtes relancées.
+    r = await call(qApi, { url: `/api/quests?me=${mace.playerId}` }); assert.equal(r.body.rerolls.left, 2, 'un refus ne coûte rien');
+    const rolls = r.body.quests.find(q => Q.byId.get(q.id).group === 'rolls');
+    r = await qPost('reroll', { quest: rolls.id }); assert.equal(r.status, 200);
+    const cas = r.body.quests.find(q => Q.byId.get(q.id).group === 'casino');
+    r = await qPost('reroll', { quest: cas.id }); assert.equal(r.status, 200); assert.equal(r.body.rerolls.left, 0);
+    const xpq = r.body.quests.find(q => Q.byId.get(q.id).group === 'xp');
+    r = await qPost('reroll', { quest: xpq.id }); assert.equal(r.status, 422); assert.equal(r.body.error, 'No rerolls left this week');
+    assert.equal(hget(`qw:${Lib.weekKey(Date.now())}:${mace.playerId}`, 'rerolls'), '3', 'le compteur ne dépasse jamais 3');
+    run([['HSET', qk, 'rolls', 60, 'xp', 1000000, 't:uncommon', 8, 't:rare', 3, 't:epic', 1, 'casino', 15, 'casinoBet', 500]]);
+    let last;
+    for (const q of (await call(qApi, { url: `/api/quests?me=${mace.playerId}` })).body.quests.filter(q => !q.claimed)) { last = await qPost('claim', { quest: q.id }); assert.equal(last.status, 200, JSON.stringify(last.body)); }
+    assert.ok(last.body.allDone, 'toutes les quêtes du joueur, relancées comprises, font le tout-fini');
+    assert.equal((await call(qApi, { method: 'POST', body: { playerId: mace.playerId, secret: '0'.repeat(32), action: 'reroll', quest: xpq.id } })).status, 403);
+  }
+
+  // 3. Propriétaires de chaque badge (idée de Tumored, 2026-10-31) : +1 la première fois qu'un joueur obtient un badge,
+  //    rien ensuite ; mode difficile à part ; rien d'affiché avant le rattrapage ; seulement des nombres.
+  { const own = (k = 'bown') => { const o = {}, flat = run([['HGETALL', k]])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = Number(flat[i + 1]); return o; };
+    const p1 = { playerId: 'f3e5'.repeat(4) }, p2 = { playerId: 'f3f6'.repeat(4) };
+    const ids69 = engine.analyze(69).earnedIds; assert.ok(ids69.length >= 1);
+    const o0 = own();
+    await Lib.recordRoll(p1.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 1, `${id} +1`);
+    await Lib.recordRoll(p1.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 1, `${id} : déjà à lui, rien`);
+    await Lib.recordRoll(p2.playerId, 69, Date.now()); await tick();
+    for (const id of ids69) assert.equal(own()[id] - (o0[id] || 0), 2, `${id} : un 2e joueur`);
+    const h0 = own('hbown'), hids = Lib.hardEngine().analyze(1234567890).earnedIds;
+    await Lib.recordHardRoll(p1.playerId, 1234567890, Date.now()); await tick();
+    for (const id of hids) assert.equal(own('hbown')[id] - (h0[id] || 0), 1, `difficile ${id} +1`);
+    assert.deepEqual(Object.fromEntries(ids69.map(id => [id, own()[id]])), Object.fromEntries(ids69.map(id => [id, (o0[id] || 0) + 2])), 'le mode difficile ne touche pas au normal');
+    Hof.clearOwnersCache();
+    let r = await call(leaderboard, { url: '/api/leaderboard?badges=1' });
+    assert.deepEqual([r.status, r.body], [200, { ready: false }], 'rien avant le rattrapage');
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-badge-owners.js'));
+    run([['HSET', 'bown', ids69[0], 99999]]);
+    const counts = await backfill({ log: () => {} });
+    assert.equal(own()[ids69[0]], 99999, 'essai à blanc : rien écrit'); assert.equal(run([['GET', 'bown:ready']])[0].result, null);
+    const holders = (prefix, id) => [...db.keys()].filter(k => new RegExp(`^${prefix}:[0-9a-f]{16}$`).test(k) && run([['SISMEMBER', k, id]])[0].result == 1).length;
+    for (const id of ids69) assert.equal(counts.normal[id], holders('badges', id), id);
+    for (const id of hids) assert.equal(counts.difficile[id], holders('hbadges', id), `difficile ${id}`);
+    await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(own(), counts.normal, '--apply remplace bown'); assert.deepEqual(own('hbown'), counts.difficile, 'et hbown');
+    Hof.clearOwnersCache();
+    r = await call(leaderboard, { url: '/api/leaderboard?badges=1' });
+    assert.equal(r.body.ready, true); assert.equal(r.body.counts[ids69[0]], counts.normal[ids69[0]]); assert.ok(r.body.players >= 2);
+    assert.ok(Object.values(r.body.counts).every(n => Number.isInteger(n) && n > 0) && !JSON.stringify(r.body).includes(p1.playerId), 'seulement des nombres');
+    r = await call(leaderboard, { url: '/api/leaderboard?badges=1&mode=hard' });
+    assert.equal(r.body.counts[hids[0]], counts.difficile[hids[0]]);
+  }
+
+  // 4. Hall of Fame (idée d'Avaneesh_17, 2026-11-02) : premier à tirer chaque Infinite, paliers d'XP et de tirages,
+  //    premières grandes raretés du mode difficile ; le premier garde sa place ; rattrapage depuis les historiques.
+  { const hof = () => { const o = {}, flat = run([['HGETALL', 'hof']])[0].result || []; for (let i = 0; i < flat.length; i += 2) o[flat[i]] = JSON.parse(flat[i + 1]); return o; };
+    assert.deepEqual(Hof.INFINITE, [0, 1, 2, 4, 5, 7, 24, 666666, 777777, 1000000], 'les 10 nombres Infinite d\'aujourd\'hui');
+    Hof.clearCache();
+    let r = await call(leaderboard, { url: '/api/leaderboard?hof=1' });
+    assert.deepEqual(r.body, { ready: false }, 'page fermée avant le rattrapage');
+    const ann = { playerId: 'f4a7'.repeat(4) }, ben = { playerId: 'f4b8'.repeat(4) };
+    const [N, N2] = Hof.INFINITE.filter(n => n !== 1 && n !== 24 && !hof()[`inf:${n}`]); // d'autres tests ont déjà tiré certains Infinite ; 1 et 24 servent au rattrapage
+    assert.ok(N2 !== undefined, 'au moins deux nombres Infinite jamais tirés dans le test');
+    run([['HSET', 'names', ann.playerId, 'HofAnn', ben.playerId, 'HofBen']]);
+    const t1 = Date.now();
+    await Lib.recordRoll(ann.playerId, N, t1); await tick();
+    assert.deepEqual(hof()[`inf:${N}`], { id: ann.playerId, t: t1, n: N });
+    await Lib.recordRoll(ben.playerId, N, Date.now()); await tick();
+    assert.equal(hof()[`inf:${N}`].id, ann.playerId, 'le premier garde sa place');
+    assert.equal(hof()[`inf:${N2}`], undefined);
+    // XP à vie : posé par le tirage qui franchit le palier, pas par les suivants.
+    run([['HSET', `stats:${ben.playerId}`, 'xpLife', 1e9 - 5]]);
+    const t2 = Date.now(); await Lib.recordRoll(ben.playerId, 123456, t2); await tick();
+    assert.deepEqual(hof()['xp:1000000000'], { id: ben.playerId, t: t2 });
+    await Lib.recordRoll(ann.playerId, 123456, Date.now()); await tick();
+    run([['HSET', `stats:${ann.playerId}`, 'xpLife', 2e9]]); await Lib.recordRoll(ann.playerId, 123457, Date.now()); await tick();
+    assert.equal(hof()['xp:1000000000'].id, ben.playerId, 'déjà au-dessus : rien');
+    // Tirages : le 10 000e.
+    run([['HSET', `stats:${ann.playerId}`, 'rolls', 9999]]);
+    const t3 = Date.now(); await Lib.recordRoll(ann.playerId, 123458, t3); await tick();
+    assert.equal(hof()['rolls:10000'].id, ann.playerId);
+    // Mode difficile : la première de chaque grande rareté (6767676767 est Godlike).
+    await Lib.recordHardRoll(ben.playerId, 6767676767, Date.now()); await tick();
+    assert.deepEqual([hof()['h:godlike'].id, hof()['h:godlike'].n], [ben.playerId, 6767676767]);
+    assert.equal(hof()['inf:6767676767'], undefined, 'pas dans les Infinite du mode normal');
+    // Rattrapage : un N plus ancien dans un historique, un 24 resté meilleur tirage (best:all), un palier d'XP et un
+    // de tirages retrouvés dans l'historique (2001 : plus anciens que tout le reste du test).
+    const old = { playerId: 'f4c9'.repeat(4) }, vet = { playerId: 'f4da'.repeat(4) }, grinder = { playerId: 'f4eb'.repeat(4) };
+    const T = Date.UTC(2001, 0, 1), sc = n => engine.scoreOf(n);
+    run([['HSET', 'names', old.playerId, 'HofOld', vet.playerId, 'HofVet', grinder.playerId, 'HofGrinder'],
+      ['ZADD', `hist:${old.playerId}`, T + 1000, `${T + 1000}:${N}`, T + 2000, `${T + 2000}:${N}`],
+      ['HSET', 'best:all', old.playerId, JSON.stringify({ n: 24, s: sc(24), t: T + 500 })],
+      // vet : 3 tirages ; l'XP passe 100 M au 3e (XP d'aujourd'hui = 100 M − 1 + XP du 3e)
+      ['ZADD', `hist:${vet.playerId}`, T + 10, `${T + 10}:111111`, T + 20, `${T + 20}:222222`, T + 30, `${T + 30}:333333`],
+      ['HSET', `stats:${vet.playerId}`, 'xpLife', 1e8 - 1 + sc(333333)], ['ZADD', 'lb:xp', 1e8 - 1 + sc(333333), vet.playerId],
+      // grinder : 10 001 tirages, l'historique n'en garde que 3 (le 9 999e, le 10 000e, le 10 001e)
+      ['ZADD', `hist:${grinder.playerId}`, T + 100, `${T + 100}:1`, T + 200, `${T + 200}:12`, T + 300, `${T + 300}:13`],
+      ['HSET', `stats:${grinder.playerId}`, 'rolls', 10001], ['ZADD', 'lb:rolls', 10001, grinder.playerId]]);
+    const { backfill } = require(path.join(ROOT, 'tools/backfill-hof.js'));
+    const lines = [];
+    let b = await backfill({ log: x => lines.push(x) });
+    assert.deepEqual(b.found[`inf:${N}`], { id: old.playerId, t: T + 1000, n: N }, 'le plus ancien de l\'historique');
+    assert.deepEqual(b.found['inf:24'], { id: old.playerId, t: T + 500, n: 24 }, 'retrouvé par le meilleur tirage');
+    assert.deepEqual(b.found['xp:100000000'], { id: vet.playerId, t: T + 30 }, 'palier d\'XP daté au tirage qui l\'a franchi');
+    assert.deepEqual(b.found['rolls:10000'], { id: grinder.playerId, t: T + 200 }, 'le 10 000e tirage');
+    assert.equal(b.found['inf:1'].id, grinder.playerId);
+    assert.equal(hof()[`inf:${N}`].id, ann.playerId, 'essai à blanc : rien écrit'); assert.ok(lines.some(x => /Essai à blanc/.test(x)));
+    // un vieux joueur dont l'historique commence après le palier : daté au plus tard, marqué approx
+    run([['ZADD', `hist:${vet.playerId}`, T + 5, `${T + 5}:7`], ['HSET', `stats:${vet.playerId}`, 'xpLife', 3e8], ['ZADD', 'lb:xp', 3e8, vet.playerId]]);
+    b = await backfill({ apply: true, log: () => {} });
+    assert.deepEqual(b.found['xp:100000000'], { id: vet.playerId, t: T + 5, approx: 1 }, 'franchi avant le plus vieux tirage gardé');
+    assert.equal(hof()[`inf:${N}`].id, old.playerId, 'remplacé par le plus ancien');
+    assert.equal(hof()['h:godlike'].id, ben.playerId, 'un palier posé en direct sans plus ancien est gardé');
+    // ann a 2 G d'XP mais peu de tirages gardés : elle a passé 1 G avant son plus vieux tirage, plus tôt que ben (en direct)
+    assert.deepEqual([hof()['xp:1000000000'].id, hof()['xp:1000000000'].approx], [ann.playerId, 1]);
+    Hof.clearCache();
+    r = await call(leaderboard, { url: '/api/leaderboard?hof=1' });
+    assert.equal(r.body.ready, true);
+    assert.deepEqual(r.body.infinite.find(x => x.n === N).first, { name: 'HofOld', t: T + 1000 });
+    assert.deepEqual(r.body.xp.find(x => x.m === 1e8).first, { name: 'HofVet', t: T + 5, approx: 1 });
+    assert.equal(r.body.infinite.length, 10);
+    assert.deepEqual(r.body.hard.find(x => x.tier === 'godlike'), { tier: 'godlike', first: r.body.hard.find(x => x.tier === 'godlike').first, n: 6767676767 });
+    assert.equal(r.body.hard.find(x => x.tier === 'godlike').first.name, 'HofBen');
+    for (const p of [ann, ben, old, vet, grinder]) assert.ok(!JSON.stringify(r.body).includes(p.playerId), 'jamais un id de joueur');
+  }
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
