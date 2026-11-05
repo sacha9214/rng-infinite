@@ -481,7 +481,12 @@
   const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
   // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
   // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
-  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+  // Skin Prism (promis à Idkwhatnamemyself, 2026-10-31) : la carte et le bouton prennent la couleur de la rareté du dernier
+  // tirage, lue sur html[data-last-tier] (css/style.css). Sur l'écran de tirage, c'est celle du tirage d'avant, jusqu'à la révélation.
+  const setLastRoll = roll => {
+    document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+    try { if (roll) document.documentElement.dataset.lastTier = analysis(roll[0]).tier; else delete document.documentElement.dataset.lastTier; } catch (e) { /* moteur pas encore prêt */ }
+  };
   Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
   // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
   // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
@@ -2360,6 +2365,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-05-skins-lot3', date: 'Nov 5, 2026', en: ['💡 New skin: Blackout (1,700 coins, idea by Mace_67). Pitch black: every digit flickers on in the dark, then the border lights up in your rarity color', '💠 New skin: Prism (2,600 coins, idea by Idkwhatnamemyself). A crystal card and button in the color of your last roll\'s rarity, turning to the new one when it lands', '🎨 New skin: Rainbow Paint (1,800 coins, idea by finnnnn). Oil paint on canvas, one rainbow color per digit, brushed on stroke by stroke', '🌱 New skin: Touch Grass (1,500 coins, idea by finnnnn). Digits mowed into a fresh lawn, with daisies, butterflies and a little lawn mower on great rolls'], fr: ['💡 Nouveau skin : Blackout (1 700 pièces, idée de Mace_67). Le noir complet : chaque chiffre s\'allume dans le noir en grésillant, puis le cadre s\'allume dans la couleur de ta rareté', '💠 Nouveau skin : Prism (2 600 pièces, idée d\'Idkwhatnamemyself). Une carte et un bouton en cristal à la couleur de la rareté de ton dernier tirage, qui prennent la nouvelle quand elle sort', '🎨 Nouveau skin : Rainbow Paint (1 800 pièces, idée de finnnnn). De la peinture à l\'huile sur une toile, une couleur de l\'arc-en-ciel par chiffre, posée coup de pinceau par coup de pinceau', '🌱 Nouveau skin : Touch Grass (1 500 pièces, idée de finnnnn). Des chiffres tondus dans une pelouse fraîche, avec des pâquerettes, des papillons et une petite tondeuse sur les grands tirages'] },
     { id: '2026-11-05-skins-lot2', date: 'Nov 5, 2026', en: ['🐋 New skin: Deep Sea (2,600 coins, ideas by finnnnn, Deadshot, YeeHao2 and LEVIATHAN). Glowing digits in the abyss while fish, turtles and squid swim by; a shark for great rolls, a whale for Mythic, the leviathan for Divine, and a 1 in 50 anchor', '🫧 New skin: Bubble (1,400 coins, idea by finnnnn). Every digit is a soap bubble that pops into the next; Mythic rolls fire a bubble gun', '☯️ New legendary skin: Yin and Yang (6,000 coins, ideas by kaz and JBearr12). Black and white swap with every digit, Chinese numerals roll in the mist, and great rolls bring two koi', '🌐 New skin: Frutiger Aero (2,200 coins, idea by jia jun). Glossy glass, a green hill, gel digits, bubbles and ribbons of light'], fr: ['🐋 Nouveau skin : Deep Sea (2 600 pièces, idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN). Des chiffres lumineux dans l\'abysse pendant que passent poissons, tortues et calmars ; un requin pour les grands tirages, une baleine pour les Mythic, le léviathan pour les Divine, et une ancre une fois sur 50', '🫧 Nouveau skin : Bubble (1 400 pièces, idée de finnnnn). Chaque chiffre est une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles', '☯️ Nouveau skin légendaire : Yin and Yang (6 000 pièces, idées de kaz et JBearr12). Le noir et le blanc s\'échangent à chaque chiffre, des chiffres chinois défilent dans la brume, et les grands tirages amènent deux carpes koï', '🌐 Nouveau skin : Frutiger Aero (2 200 pièces, idée de jia jun). Du verre brillant, une colline verte, des chiffres en gel, des bulles et des rubans de lumière'] },
     { id: '2026-11-05-features-misc', date: 'Nov 5, 2026', en: [
       '🏛️ New Hall of Fame (Leaderboard → Hall of Fame): the first player to roll each Infinite number, the first to reach 100M, 1B, 10B and 100B XP, the first to 10,000, 100,000 and 1,000,000 rolls, and the first Mythic, Celestial, Divine, Godlike and Infinite of Hard mode. Kept forever (idea by Avaneesh_17)',
@@ -3451,6 +3457,7 @@
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier, pack, skin: pianoSkin });
       if (skinFx) skinFx.reveal(a.tier);
+      document.documentElement.dataset.lastTier = a.tier; // Prism : le bouton prend la nouvelle rareté
       wallReact(a.tier, n); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');

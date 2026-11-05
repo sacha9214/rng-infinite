@@ -1784,3 +1784,33 @@
   text-shadow: 0 .05em 0 #075985, 0 .08em .12em rgba(3, 105, 161, .5);
   --gs: 0 .3em 0 #0369a1, 0 .5em 1em rgba(56, 189, 248, .4); --gs-h: 0 .34em 0 #0369a1, 0 .7em 1.3em rgba(56, 189, 248, .55); --gs-a: 0 .06em 0 #0369a1; }
 .btn-roll.gen-aero:hover { filter: brightness(1.06) saturate(1.1); }
+
+/* ==== Skins du 2026-11-05, lot 3 ==== boutons assortis */
+/* Blackout (promis à Mace_67) : noir mat, le texte allumé d'une lumière chaude, un liseré qui luit. */
+.btn-roll.gen-blackout { border: 2px solid #f5ecd6; border-radius: .55rem; color: #fff8e7;
+  font-family: 'DIN Alternate', 'Bahnschrift', 'Arial Narrow', 'Helvetica Neue', system-ui, sans-serif;
+  background: radial-gradient(ellipse 70% 80% at 50% 60%, #0b0b0c, #020202 70%);
+  text-shadow: 0 0 .06em #fff, 0 0 .3em rgba(255, 236, 190, .8), 0 0 .7em rgba(255, 214, 140, .4);
+  --gs: 0 .3em 0 #1c1c1c, 0 0 1.2em rgba(255, 236, 190, .35); --gs-h: 0 .34em 0 #1c1c1c, 0 0 1.6em rgba(255, 236, 190, .55); --gs-a: 0 .06em 0 #1c1c1c; }
+.btn-roll.gen-blackout:hover { filter: brightness(1.15); }
+/* Prism (promis à Idkwhatnamemyself) : un cristal taillé à la couleur de la rareté du dernier tirage (--pr-*). */
+.btn-roll.gen-prism { border: 2px solid var(--pr-b); border-radius: .7rem; color: #fff; -webkit-text-stroke: .02em var(--pr-c);
+  background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, .5) 25%, transparent 27%, transparent 64%, rgba(255, 255, 255, .3) 65%, transparent 67%), conic-gradient(from 20deg, var(--pr-b), var(--pr-a) 12%, var(--pr-c) 24%, var(--pr-a) 37%, var(--pr-b) 50%, var(--pr-a) 62%, var(--pr-c) 75%, var(--pr-a) 88%, var(--pr-b));
+  text-shadow: 0 .05em 0 var(--pr-c);
+  --gs: 0 .3em 0 var(--pr-c), 0 .5em 1.2em color-mix(in srgb, var(--pr-a) 45%, transparent); --gs-h: 0 .34em 0 var(--pr-c), 0 .7em 1.5em color-mix(in srgb, var(--pr-a) 60%, transparent); --gs-a: 0 .06em 0 var(--pr-c);
+  transition: border-color .4s, filter .2s; }
+.btn-roll.gen-prism:hover { filter: brightness(1.1) saturate(1.1); }
+/* Rainbow Paint (idée de finnnnn) : une toile en lin, un coup de pinceau arc-en-ciel derrière le texte. */
+.btn-roll.gen-paint { border: .16em solid #a0703c; border-radius: .3rem; color: #1f2937;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: linear-gradient(90deg, #e11d48, #ea580c, #ca8a04, #16a34a, #2563eb, #7c3aed) 50% 82% / 78% .3em no-repeat, repeating-linear-gradient(0deg, rgba(120, 100, 70, .07) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(120, 100, 70, .07) 0 1px, transparent 1px 3px), #f5efe2;
+  text-shadow: 0 .04em 0 rgba(255, 255, 255, .8);
+  --gs: 0 .3em 0 #6b4423, 0 .5em 1em rgba(234, 88, 12, .25); --gs-h: 0 .34em 0 #6b4423, 0 .7em 1.3em rgba(234, 88, 12, .4); --gs-a: 0 .06em 0 #6b4423; }
+.btn-roll.gen-paint:hover { filter: saturate(1.2); }
+/* Touch Grass (idée de finnnnn) : une pelouse tondue à bandes, le texte tondu dedans. */
+.btn-roll.gen-grass { border: 2px solid #2f5e1a; border-radius: .6rem; color: #e7fbb0;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: repeating-linear-gradient(92deg, rgba(20, 83, 45, .25) 0 1px, transparent 1px 3px), repeating-linear-gradient(115deg, rgba(255, 255, 255, .08) 0 14px, rgba(0, 0, 0, .08) 14px 28px), linear-gradient(180deg, #4d9a2c, #2f6a1b);
+  text-shadow: 0 -.04em 0 #1f4d12, 0 .05em .06em rgba(20, 50, 10, .5);
+  --gs: 0 .3em 0 #1f4d12, 0 .5em 1em rgba(132, 204, 22, .3); --gs-h: 0 .34em 0 #1f4d12, 0 .7em 1.3em rgba(132, 204, 22, .45); --gs-a: 0 .06em 0 #1f4d12; }
+.btn-roll.gen-grass:hover { filter: brightness(1.08); }

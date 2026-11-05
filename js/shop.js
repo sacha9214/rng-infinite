@@ -282,6 +282,18 @@
     // Promis à jia jun (2026-10-23) : « Frutiger aero skin ». Le style générique des bureaux des années 2000 (ciel, herbe,
     // verre brillant, bulles), sans aucun logo.
     { id: 'aero', name: 'Frutiger Aero', emoji: '🌐', price: 2200, desc: 'Glossy blue glass over a green hill: gel digits pop like drops, bubbles float up, and Mythic rolls bring ribbons of light and glowing butterflies', idea: 'jia jun' },
+    // ==== Skins du 2026-11-05, lot 3 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Promis à Mace_67 (2026-10-29) : les chiffres s'allument un à un dans le noir, puis le cadre s'allume quand le nombre
+    // est complet (il prend la couleur de la rareté quand elle sort).
+    { id: 'blackout', name: 'Blackout', emoji: '💡', price: 1700, desc: 'Pitch black: every digit flickers on like a light in the dark, then the border lights up in your rarity color; a bad roll cuts the power', idea: 'Mace_67' },
+    // Promis à Idkwhatnamemyself (2026-10-31) : « a skin where ur button and roll skin matches … whatever rarity u got from
+    // ur last ». Un cristal (et son bouton) à la couleur de la rareté du dernier tirage (html[data-last-tier], js/app.js).
+    { id: 'prism', name: 'Prism', emoji: '💠', price: 2600, desc: 'A cut crystal in the color of your last roll\'s rarity, button included; every digit splits the light into a rainbow, and the crystal turns to your new rarity when it lands', idea: 'Idkwhatnamemyself' },
+    // Idée de finnnnn (2026-10-21) : « make a painting skin with the rainbow colors ». De la peinture à l'huile sur une
+    // toile, un chiffre par couleur de l'arc-en-ciel (Graffiti, lui, est une bombe sur un mur).
+    { id: 'paint', name: 'Rainbow Paint', emoji: '🎨', price: 1800, desc: 'Thick oil paint on a canvas, one rainbow color per digit, each brushed on with a stroke; great rolls paint a rainbow over the card', idea: 'finnnnn' },
+    // Idée de finnnnn (2026-10-21) : « make a grass skin for all the no lifes ». Des chiffres tondus dans une pelouse.
+    { id: 'grass', name: 'Touch Grass', emoji: '🌱', price: 1500, desc: 'Digits mowed into a fresh striped lawn; clippings fly, daisies pop up on good rolls, and Mythic rolls bring butterflies and a little lawn mower. Go outside after', idea: 'finnnnn' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
