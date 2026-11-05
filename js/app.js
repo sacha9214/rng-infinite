@@ -481,7 +481,12 @@
   const breadBite = n => document.querySelectorAll(ROLL_BUTTONS).forEach(b => { if (n > 0) b.dataset.bites = Math.min(6, n); else delete b.dataset.bites; });
   // Bouton Last Roll (idée de G8_floppa, 2026-11-01) : l'écran LCD lit --last-roll, une chaîne CSS posée sur la racine.
   // Sur l'écran de tirage, c'est le nombre d'avant celui qu'on regarde ; ailleurs, le dernier tiré.
-  const setLastRoll = roll => document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+  // Skin Prism (promis à Idkwhatnamemyself, 2026-10-31) : la carte et le bouton prennent la couleur de la rareté du dernier
+  // tirage, lue sur html[data-last-tier] (css/style.css). Sur l'écran de tirage, c'est celle du tirage d'avant, jusqu'à la révélation.
+  const setLastRoll = roll => {
+    document.documentElement.style.setProperty('--last-roll', roll ? `"${Mode.pad(roll[0])}"` : `"${'-'.repeat(Mode.digits())}"`);
+    try { if (roll) document.documentElement.dataset.lastTier = analysis(roll[0]).tier; else delete document.documentElement.dataset.lastTier; } catch (e) { /* moteur pas encore prêt */ }
+  };
   Store.onChange(() => { if (currentView !== 'result') setLastRoll(Store.rolls[Store.rolls.length - 1]); }); // historique synchronisé plus tard
   // Bouton Bubble Wrap (idée de Jguz01, 2026-11-01) : chaque appui fait éclater une bulle encore pleine, au hasard
   // (--bN à 0, css/buttons.css), avec son petit éclair ; quand les 16 ont éclaté, une feuille neuve. Le son du tirage
@@ -2362,6 +2367,7 @@
   const UPDATES = [
     { id: '2026-11-05-walls-places', date: 'Nov 5, 2026', en: ['🗺️ New wallpaper World Map (1,100 coins): the seven continents in glowing dots slowly scroll by like a turning globe, with twinkling city lights and flights arcing between them (idea by qwertyuiop, also asked by Jguz01 and ichi)', '🏜️ New wallpaper Pyramids (1,000 coins): the three great pyramids and the sphinx at golden hour, or under the moon in dark mode; a camel caravan crosses the dunes and a falcon circles (idea by whywhywaylon)', '🧊 New wallpaper Ice Caps (1,000 coins): tall, pointy ice spires beside an icy river under snowy mountains, with drifting ice floes, falling snow and the northern lights at night. It goes with the Ice skin and button (idea by finnnnn)', '🎪 New wallpaper Circus (1,100 coins): look up into a slowly spinning big top, with bunting and sweeping spotlights; in the ring an elephant rolls a ball through a hoop, a seal juggles and popcorn pops (idea by sennybex1)'], fr: ['🗺️ Nouveau fond Carte du monde (1 100 pièces) : les sept continents en points lumineux défilent lentement comme un globe qui tourne, avec les lumières des villes et des vols qui tracent des arcs (idée de qwertyuiop, aussi demandée par Jguz01 et ichi)', '🏜️ Nouveau fond Pyramides (1 000 pièces) : les trois grandes pyramides et le sphinx à l\'heure dorée, ou sous la lune en mode sombre ; une caravane de chameaux traverse les dunes et un faucon tourne dans le ciel (idée de whywhywaylon)', '🧊 Nouveau fond Pics de glace (1 000 pièces) : de grands pics de glace pointus au bord d\'une rivière glacée, sous des montagnes enneigées, avec des plaques de glace, de la neige et l\'aurore boréale la nuit. Il va avec le skin et le bouton Ice (idée de finnnnn)', '🎪 Nouveau fond Cirque (1 100 pièces) : lève les yeux sous un grand chapiteau qui tourne doucement, avec des fanions et des projecteurs ; sur la piste, un éléphant fait rouler un ballon à travers un cerceau, une otarie jongle et du pop-corn saute (idée de sennybex1)'] },
     { id: '2026-11-05-walls-sky', date: 'Nov 5, 2026', en: ['✈️ New wallpaper Blue Skies (1,000 coins): clouds drift across a big blue sky (a starry night in dark mode), and now and then a jet draws a long contrail or a little plane tows a banner by (idea by IXOLAF2)', '🔭 New wallpaper Milky Way (1,100 coins): the Milky Way arcs over dark hills and a glowing tent, with shooting stars and a slow satellite; in light mode it is a printed star map (idea by Ggggssnoop)', '✨ New wallpaper Sky Gate (1,200 coins): a tall gate of light on a sea of clouds; its doors slowly swing open and golden rays pour through (idea by Ggggssnoop)', '♾️ Aether wallpaper: a ball of light now races along the infinity sign all the time, faster the rarer your last roll, and the sign glows in that rarity\'s colour: grey, green, blue, purple, orange, white, light blue, yellow, red, and rainbow for Infinite (idea by Angelicide9)'], fr: ['✈️ Nouveau fond Grand ciel bleu (1 000 pièces) : des nuages passent dans un grand ciel bleu (une nuit étoilée en mode sombre), et de temps en temps un avion de ligne trace une longue traînée ou un petit avion passe avec une banderole (idée d\'IXOLAF2)', '🔭 Nouveau fond Voie lactée (1 100 pièces) : la Voie lactée au-dessus des collines sombres et d\'une tente éclairée, avec des étoiles filantes et un satellite qui passe lentement ; en mode clair, c\'est une carte du ciel imprimée (idée de Ggggssnoop)', '✨ Nouveau fond Porte du ciel (1 200 pièces) : une grande porte de lumière sur une mer de nuages ; ses battants s\'ouvrent lentement et des rayons dorés passent au travers (idée de Ggggssnoop)', '♾️ Fond Aether : une bille de lumière parcourt maintenant le signe infini sans arrêt, plus vite selon la rareté de ton dernier tirage, et le signe brille de la couleur de cette rareté : gris, vert, bleu, violet, orange, blanc, bleu clair, jaune, rouge, et arc-en-ciel pour Infinite (idée d\'Angelicide9)'] },
+    { id: '2026-11-05-skins-lot3', date: 'Nov 5, 2026', en: ['💡 New skin: Blackout (1,700 coins, idea by Mace_67). Pitch black: every digit flickers on in the dark, then the border lights up in your rarity color', '💠 New skin: Prism (2,600 coins, idea by Idkwhatnamemyself). A crystal card and button in the color of your last roll\'s rarity, turning to the new one when it lands', '🎨 New skin: Rainbow Paint (1,800 coins, idea by finnnnn). Oil paint on canvas, one rainbow color per digit, brushed on stroke by stroke', '🌱 New skin: Touch Grass (1,500 coins, idea by finnnnn). Digits mowed into a fresh lawn, with daisies, butterflies and a little lawn mower on great rolls'], fr: ['💡 Nouveau skin : Blackout (1 700 pièces, idée de Mace_67). Le noir complet : chaque chiffre s\'allume dans le noir en grésillant, puis le cadre s\'allume dans la couleur de ta rareté', '💠 Nouveau skin : Prism (2 600 pièces, idée d\'Idkwhatnamemyself). Une carte et un bouton en cristal à la couleur de la rareté de ton dernier tirage, qui prennent la nouvelle quand elle sort', '🎨 Nouveau skin : Rainbow Paint (1 800 pièces, idée de finnnnn). De la peinture à l\'huile sur une toile, une couleur de l\'arc-en-ciel par chiffre, posée coup de pinceau par coup de pinceau', '🌱 Nouveau skin : Touch Grass (1 500 pièces, idée de finnnnn). Des chiffres tondus dans une pelouse fraîche, avec des pâquerettes, des papillons et une petite tondeuse sur les grands tirages'] },
     { id: '2026-11-05-skins-lot2', date: 'Nov 5, 2026', en: ['🐋 New skin: Deep Sea (2,600 coins, ideas by finnnnn, Deadshot, YeeHao2 and LEVIATHAN). Glowing digits in the abyss while fish, turtles and squid swim by; a shark for great rolls, a whale for Mythic, the leviathan for Divine, and a 1 in 50 anchor', '🫧 New skin: Bubble (1,400 coins, idea by finnnnn). Every digit is a soap bubble that pops into the next; Mythic rolls fire a bubble gun', '☯️ New legendary skin: Yin and Yang (6,000 coins, ideas by kaz and JBearr12). Black and white swap with every digit, Chinese numerals roll in the mist, and great rolls bring two koi', '🌐 New skin: Frutiger Aero (2,200 coins, idea by jia jun). Glossy glass, a green hill, gel digits, bubbles and ribbons of light'], fr: ['🐋 Nouveau skin : Deep Sea (2 600 pièces, idées de finnnnn, Deadshot, YeeHao2 et LEVIATHAN). Des chiffres lumineux dans l\'abysse pendant que passent poissons, tortues et calmars ; un requin pour les grands tirages, une baleine pour les Mythic, le léviathan pour les Divine, et une ancre une fois sur 50', '🫧 Nouveau skin : Bubble (1 400 pièces, idée de finnnnn). Chaque chiffre est une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles', '☯️ Nouveau skin légendaire : Yin and Yang (6 000 pièces, idées de kaz et JBearr12). Le noir et le blanc s\'échangent à chaque chiffre, des chiffres chinois défilent dans la brume, et les grands tirages amènent deux carpes koï', '🌐 Nouveau skin : Frutiger Aero (2 200 pièces, idée de jia jun). Du verre brillant, une colline verte, des chiffres en gel, des bulles et des rubans de lumière'] },
     { id: '2026-11-05-features-misc', date: 'Nov 5, 2026', en: [
       '🏛️ New Hall of Fame (Leaderboard → Hall of Fame): the first player to roll each Infinite number, the first to reach 100M, 1B, 10B and 100B XP, the first to 10,000, 100,000 and 1,000,000 rolls, and the first Mythic, Celestial, Divine, Godlike and Infinite of Hard mode. Kept forever (idea by Avaneesh_17)',
@@ -2377,6 +2383,7 @@
       '💡 Les créateurs de fonds d\'écran touchent aussi 5 %, comme ceux des skins : quand quelqu\'un achète un fond né de ton idée, ou l\'obtient dans une caisse de fonds payée (idée de qwertyuiop)',
       '⌨️ Le clavier ASMR craque beaucoup plus et plus fort, et il enfonce maintenant chaque touche que tu tapes sur ton vrai clavier (Maj, Ctrl et les symboles aussi), tenue tant que tu la tiens (idées de dog et Infin6, signalé par LEVIATHAN)',
       '🪐 Système solaire : la ceinture d\'astéroïdes avec Cérès et sa tache claire, Pluton sur son orbite penchée, une queue de comète qui suit la comète, et plus aucune orbite qui passe sur le soleil (idées de deadshot44474)'] },
+    { id: '2026-11-05-limited-events', date: 'Nov 5, 2026', en: ['🛍️ The shop\'s Limited tab is now sorted by event: Thanksgiving and Christmas each have their own section with their skins and wallpapers. Halloween is over and leaves the shop until next year (if you bought its items, they\'re still in your profile\'s Inventory)'], fr: ['🛍️ L\'onglet Limités de la boutique est maintenant rangé par événement : Thanksgiving et Noël ont chacun leur partie avec leurs skins et leurs fonds. Halloween est fini et quitte la boutique jusqu\'à l\'an prochain (si tu as acheté ses objets, ils sont toujours dans l\'inventaire de ton profil)'] },
     { id: '2026-11-05-delete-account', date: 'Nov 5, 2026', en: ['🗑️ You can now delete your account: ⚙️ Settings → Delete my account. Type your player name to confirm, and everything is erased from the server for good (rolls, coins, skins, friends, clan, leaderboards). Your name becomes free again and this device starts over as a new player'], fr: ['🗑️ Tu peux maintenant supprimer ton compte : ⚙️ Réglages → Supprimer mon compte. Tape ton pseudo pour confirmer, et tout est effacé du serveur pour de bon (tirages, pièces, skins, amis, clan, classements). Ton pseudo redevient libre et cet appareil repart avec un nouveau joueur'] },
     // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
     { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
@@ -3452,6 +3459,7 @@
       shockwave(card, a.tier);
       sfx('tier', { tier: a.tier, pack, skin: pianoSkin });
       if (skinFx) skinFx.reveal(a.tier);
+      document.documentElement.dataset.lastTier = a.tier; // Prism : le bouton prend la nouvelle rareté
       wallReact(a.tier, n); // même en retard : le fond réagit quand même (un onglet caché est filtré dans wallReact)
       if (TIER_RANK[a.tier] >= TIER_RANK.epic) $('#card-stage').classList.add('lit'); // rayons derrière la carte
       show($('#r-actions'), 'fade-in');
@@ -4563,6 +4571,25 @@
   // Filtre des listes de la boutique (idée d'Applepi, 2026-10-28) : tout, ce qu'on a, ce qu'on n'a pas encore. Chaque
   // tuile porte data-have (1 : possédé, ou gratuit) ; les onglets sans liste d'objets (caisses, vitesse, prestige) n'ont pas de filtre.
   const SHOP_OWN = [['all', 'All'], ['owned', 'Owned only'], ['not', 'Not owned yet']];
+  // Onglet Limited rangé par événement (demandé par Sacha, 2026-11-05) : un bloc par événement en cours (Shop.EVENTS),
+  // le plus proche de la fin en premier, avec sa bannière, ses skins et ses fonds. Un événement fini n'y est plus du tout
+  // (ses objets restent dans l'inventaire de ceux qui les ont, et dans js/shop.js pour l'an prochain).
+  const LIMITED_FX = { halloween: ['', '🦇'], thanksgiving: ['tgiving', '🍂', '🍁'], christmas: ['xmas', '❄️'] };
+  const liveEvents = (now = Date.now()) => Shop.EVENTS.filter(ev => now < Date.parse(ev.ends)).sort((a, b) => Date.parse(a.ends) - Date.parse(b.ends));
+  const limitedEventsHTML = () => {
+    const evs = liveEvents();
+    if (!evs.length) return '<div class="empty">No event right now. Come back for the next one!</div>';
+    return evs.map(ev => {
+      const [cls, a, b = a] = LIMITED_FX[ev.id] || ['', '✨'];
+      const flakes = [a, b, a, b, a].map(x => `<i aria-hidden="true">${x}</i>`).join('');
+      const walls = Shop.WALLPAPERS.some(w => w.event === ev.id);
+      return `<section class="lim-event" data-event="${ev.id}">
+            <div class="limited-banner${cls ? ` ${cls}` : ''}">${flakes}<b>${ev.emoji} ${esc(ev.name.toUpperCase())}</b><span data-ev-left="${ev.id}"></span></div>
+            <div class="skin-grid" data-lim-skins="${ev.id}"><div class="empty">Loading…</div></div>
+            ${walls ? `<div class="skin-grid wall-grid" data-lim-walls="${ev.id}"></div>` : ''}
+          </section>`;
+    }).join('') + '<p class="panel-note lim-past" id="lim-past" hidden>Items from past events that you own are in your profile, under Inventory.</p>';
+  };
   const SHOP_OWN_TABS = ['limited', 'skins', 'buttons', 'emotes', 'sounds', 'walls'];
   // Recherche dans la boutique (idée de Deadshot, 2026-11-01) : par nom, description ou auteur de l'idée, dans la langue
   // affichée ; gardée tant que la page reste ouverte (pas sur l'appareil).
@@ -4636,12 +4663,8 @@
         <div class="shop-own" id="shop-own"><input class="input shop-search" id="shop-q" type="search" placeholder="Search the shop…" aria-label="Search the shop" autocomplete="off" value="${esc(shopQuery)}"><span class="panel-note">Show</span><div class="seg" role="group" aria-label="Show">${SHOP_OWN.map(([v, label]) => `<button type="button" data-own="${v}">${label}</button>`).join('')}</div></div>
         <section class="shop-pane" data-shop-pane="limited" hidden>
         <div class="panel limited-panel">
-          <div class="panel-head"><h3 class="panel-title">Limited skins</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
-          <div class="limited-banner tgiving" id="limited-banner-tg"><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><i aria-hidden="true">🍁</i><i aria-hidden="true">🍂</i><b>🦃 THANKSGIVING</b><span id="limited-left-tg"></span></div>
-          <div class="limited-banner xmas" id="limited-banner"><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><i aria-hidden="true">❄️</i><b>🎄 CHRISTMAS EVENT</b><span id="limited-left"></span></div>
-          <div class="skin-grid" id="d-limited"><div class="empty">Loading…</div></div>
-          <div class="panel-head" style="margin-top:1rem"><h3 class="panel-title">Limited wallpapers</h3><span class="panel-note">animated backgrounds · for the holidays only</span></div>
-          <div class="skin-grid wall-grid" id="d-limited-walls"></div>
+          <div class="panel-head"><h3 class="panel-title">Limited</h3><span class="panel-note">for a short time only · once bought, yours forever</span></div>
+          ${limitedEventsHTML()}
         </div>
         </section>
         <section class="shop-pane" data-shop-pane="cases" hidden>
@@ -4877,19 +4900,21 @@
     premium.innerHTML = Shop.SKINS.filter(k => k.premium).map(tile).join('');
     $('#d-premium-panel').hidden = false;
     // Skins limités : leur propre onglet, avec le temps qu'il reste ; un skin terminé n'y reste que chez ceux qui l'ont.
-    const limited = $('#d-limited'), left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
-    // ceux qui finissent le plus tôt d'abord (Thanksgiving avant Noël), puis par prix
-    const lim = Shop.SKINS.filter(k => k.until && (Date.now() < Date.parse(k.until) || state.owned.includes(k.id))).sort((a, b) => Date.parse(a.until) - Date.parse(b.until));
-    // Bannière de l'événement en cours : Noël (demandé par Sacha, 2026-11-01), en vente jusqu'au 25 décembre inclus ; avant,
-    // Halloween (jusqu'au 31 octobre).
-    // Thanksgiving (2026-11-26) : sa propre bannière, au-dessus, jusqu'à la fin du 27 novembre (heure du Pacifique).
-    { const ev = Date.parse(Shop.byId.get('turkey').until), b = $('#limited-banner-tg'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left-tg').textContent = window.RNGI18n.t(`Ends after November 27 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
-    { const ev = Date.parse('2026-12-26T00:00:00Z'), b = $('#limited-banner'); if (b) { if (Date.now() >= ev) b.hidden = true; else { const ms = ev - Date.now(); $('#limited-left').textContent = window.RNGI18n.t(`Ends after December 25 · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`); } } }
-    limited.innerHTML = lim.length ? lim.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No limited skin right now. Come back for the next event!</div>';
+    const left = k => { const ms = Date.parse(k.until) - Date.now(); if (ms <= 0) return 'Ended'; const d = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24; return d ? `Ends in ${d} day${d > 1 ? 's' : ''} ${hh} h` : `Ends in ${hh} h`; };
+    // Un bloc par événement en cours : ses skins, puis le temps qu'il reste sur sa bannière.
+    const limGrids = [...app.querySelectorAll('[data-lim-skins]')];
+    for (const g of limGrids) {
+      const ev = Shop.eventById.get(g.dataset.limSkins), items = Shop.SKINS.filter(k => k.event === ev.id);
+      g.innerHTML = items.length ? items.map(k => tile(k).replace('<div class="skin-name">', `<div class="limited-clock">⏳ ${left(k)}</div><div class="skin-name">`)).join('') : '<div class="empty">No skin in this event.</div>';
+      const ms = Date.parse(ev.ends) - Date.now(), lab = app.querySelector(`[data-ev-left="${ev.id}"]`);
+      if (lab) lab.textContent = window.RNGI18n.t(`Ends after ${ev.last} · ${Math.floor(ms / 864e5)} days ${Math.floor(ms / 36e5) % 24} h left`);
+    }
+    // Objets d'événements finis que le joueur possède : un mot pour dire où les retrouver.
+    { const past = [...Shop.SKINS, ...Shop.WALLPAPERS].some(x => x.event && Date.now() >= Date.parse(x.until) && ((state.owned || []).includes(x.id) || (state.walls || []).includes(x.id))); const note = $('#lim-past'); if (note) note.hidden = !past; }
     applyOwnFilter();
     paintOwners();
     Owners.load().then(() => { if (currentView === 'shop') paintOwners(); }).catch(() => {});
-    grid.onclick = premium.onclick = limited.onclick = async e => {
+    grid.onclick = premium.onclick = async e => {
       const preview = e.target.closest('[data-skin-preview]');
       if (preview) { previewSkin(preview.dataset.skinPreview); return; }
       if (e.target.closest('[data-case-go]')) { $('#shop-tabs [data-shop-tab="cases"]').click(); window.scrollTo(0, 0); return; }
@@ -4908,6 +4933,7 @@
         toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again');
       }
     };
+    limGrids.forEach(g => { g.onclick = grid.onclick; }); // mêmes boutons (aperçu, acheter, équiper) dans chaque événement
   }
 
   // ---------------------------------------------------------------- Gamble : roulette et blackjack, avec les pièces du jeu
@@ -6766,7 +6792,7 @@
   // Fonds d'écran (2026-10-16) : un aperçu animé par fond, acheter (il s'affiche aussitôt) ou choisir, et revenir au fond
   // d'origine.
   function drawWalls(state) {
-    const grid = $('#d-walls'), limitedGrid = $('#d-limited-walls');
+    const grid = $('#d-walls'), limitedGrids = [...app.querySelectorAll('[data-lim-walls]')];
     if (!grid) return;
     const owned = state.walls || [], on = state.wall || null;
     // Fonds limités (Halloween, puis Noël) : dans l'onglet Limités tant qu'ils sont en vente ; ensuite seulement chez ceux qui
@@ -6778,7 +6804,8 @@
         <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${w.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(w.idea)}" data-no-i18n>${esc(w.idea)}</a></span>` : ''}${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
-    if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).sort((a, b) => Date.parse(a.until) - Date.parse(b.until)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
+    // Fonds de chaque événement en cours, dans son bloc de l'onglet Limited (demandé par Sacha, 2026-11-05).
+    for (const g of limitedGrids) g.innerHTML = Shop.WALLPAPERS.filter(w => w.event === g.dataset.limWalls && onSale(w)).map(wallTile).join('');
     grid.innerHTML = `
       <div class="skin-tile wall-tile${on ? '' : ' equipped'}" data-have="1">
         <div class="wall-preview wp-none" aria-hidden="true"></div>
@@ -6803,7 +6830,7 @@
         drawShop(next);
       } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
     };
-    if (limitedGrid) limitedGrid.onclick = grid.onclick;
+    limitedGrids.forEach(g => { g.onclick = grid.onclick; });
   }
   // Aperçu d'un fond : il passe derrière tout le site, le contenu s'efface pour le montrer en plein écran, et une barre
   // en bas permet de l'acheter (ou de le mettre) ou de fermer. Rien n'est enregistré ; Échap ou Fermer remet le vrai fond.
@@ -6827,7 +6854,7 @@
     bar.onclick = e => {
       if (e.target.closest('[data-wall-close]')) { end(); return; }
       const act = e.target.closest('[data-wall-buy],[data-wall]');
-      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-limited-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
+      if (act) { end(); document.querySelector(`#d-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], #d-premium-walls [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"], [data-lim-walls] [${act.hasAttribute('data-wall-buy') ? 'data-wall-buy' : 'data-wall'}="${id}"]`)?.click(); }
     };
   }
   // Calques en plus des ::before / ::after, seulement sur le vrai fond (pas dans les aperçus de la boutique).

@@ -435,6 +435,11 @@
     'Every digit floats in a soap bubble that pops into the next one; Mythic rolls fire a bubble gun everywhere': 'Chaque chiffre flotte dans une bulle de savon qui éclate pour laisser place au suivant ; les tirages Mythic sortent le pistolet à bulles',
     'Black and white that swap with every digit; Chinese numerals roll in the mist, and great rolls bring a black and a white koi circling your number': 'Le noir et le blanc s\'échangent à chaque chiffre ; des chiffres chinois défilent dans la brume, et les grands tirages amènent une carpe koï noire et une blanche qui tournent autour de ton nombre',
     'Glossy blue glass over a green hill: gel digits pop like drops, bubbles float up, and Mythic rolls bring ribbons of light and glowing butterflies': 'Du verre bleu brillant sur une colline verte : des chiffres en gel jaillissent comme des gouttes, des bulles montent, et les tirages Mythic amènent des rubans de lumière et des papillons lumineux',
+    // skins du 2026-11-05, lot 3 (idées de Mace_67, Idkwhatnamemyself et finnnnn)
+    'Pitch black: every digit flickers on like a light in the dark, then the border lights up in your rarity color; a bad roll cuts the power': 'Le noir complet : chaque chiffre s\'allume en grésillant comme une lampe dans le noir, puis le cadre s\'allume dans la couleur de ta rareté ; un mauvais tirage coupe le courant',
+    'A cut crystal in the color of your last roll\'s rarity, button included; every digit splits the light into a rainbow, and the crystal turns to your new rarity when it lands': 'Un cristal taillé à la couleur de la rareté de ton dernier tirage, bouton compris ; chaque chiffre décompose la lumière en arc-en-ciel, et le cristal prend ta nouvelle rareté quand elle sort',
+    'Thick oil paint on a canvas, one rainbow color per digit, each brushed on with a stroke; great rolls paint a rainbow over the card': 'De la peinture à l\'huile épaisse sur une toile, une couleur de l\'arc-en-ciel par chiffre, chacun posé d\'un coup de pinceau ; les grands tirages peignent un arc-en-ciel au-dessus de la carte',
+    'Digits mowed into a fresh striped lawn; clippings fly, daisies pop up on good rolls, and Mythic rolls bring butterflies and a little lawn mower. Go outside after': 'Des chiffres tondus dans une pelouse fraîche à bandes ; les brins volent, des pâquerettes poussent sur les bons tirages, et les tirages Mythic amènent des papillons et une petite tondeuse. Ensuite, va dehors',
     // skins du 2026-11-01, lot B2 (idées de xenon, Dylanrulez123, casmicgraything, tmanrex, sennybex1 et jia jun)
     'Every digit is a slice of bread that pops out of a chrome toaster with the number toasted in; Mythic rolls pop out golden toast': 'Chaque chiffre est une tranche de pain qui jaillit d\'un grille-pain chromé, le nombre grillé dessus ; les tirages Mythic font sauter des toasts dorés',
     'Every digit is a numbered pool ball: the cue strikes, the ball rolls in and clicks into place, and Mythic rolls end with a trick shot off every cushion': 'Chaque chiffre est une boule de billard numérotée : la queue frappe, la boule roule et se cale à sa place, et les tirages Mythic finissent par un coup de maître sur toutes les bandes',
@@ -817,6 +822,9 @@
     'Texas Hold\'em · against the bot, your friends or anyone': 'Texas Hold\'em · contre le bot, tes amis ou n\'importe qui',
     'Nobody had ever rolled': 'Personne n\'avait jamais tiré', 'before you': 'avant toi',
     // Idées du 2026-11-05 (lot 1)
+    // Onglet Limited par événement (2026-11-05)
+    'No event right now. Come back for the next one!': 'Pas d\'événement en ce moment. Reviens pour le prochain !', 'No skin in this event.': 'Pas de skin dans cet événement.',
+    'Items from past events that you own are in your profile, under Inventory.': 'Les objets des événements passés que tu possèdes sont dans ton profil, onglet Inventaire.',
     'most rolled': 'le plus tiré', 'Best roll message': 'Message du meilleur tirage', '“This number contains your best roll ever” after a roll.': '« Ce nombre contient ton meilleur tirage » après un tirage.',
     'Equip what you buy': 'Équiper ce que tu achètes', 'Off: a new skin, wallpaper, button or sound is unlocked but you keep what you use now.': 'Désactivé : un nouveau skin, fond, bouton ou son est débloqué mais tu gardes ce que tu utilises.',
     'Keep the screen on during auto-roll': 'Garder l\'écran allumé pendant le tirage auto', 'Your device won\'t go to sleep while auto-roll runs on this page. Uses more battery.': 'Ton appareil ne se met pas en veille pendant le tirage auto sur cette page. Utilise plus de batterie.',
@@ -955,6 +963,7 @@
     [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after December 25 · (\d+) days (\d+) h left$/, m => `Se termine après le 25 décembre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after November 27 · (\d+) days (\d+) h left$/, m => `Se termine après le 27 novembre · encore ${m[1]} jours ${m[2]} h`],
+    [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^⏳ Ends in (\d+) days? (\d+) h$/, m => `⏳ Finit dans ${m[1]} jour${m[1] > 1 ? 's' : ''} ${m[2]} h`], [/^⏳ Ends in (\d+) h$/, m => `⏳ Finit dans ${m[1]} h`], [/^⏳ Ended$/, () => '⏳ Terminé'],
     [/^Signed in as (.+?)( · .+)?$/, m => `Connecté en tant que ${m[1]}${m[2] || ''}`],
     [/^bet on a rise \(long\) or a fall \(short\) with (.+) · you can never lose more than your margin$/, m => `joue la hausse (long) ou la baisse (short) en ${m[1]} · tu ne peux jamais perdre plus que ta mise`],
