@@ -46,17 +46,21 @@ The "Session wallpapers" list of `ideas-planned-2026-11-05.md` (14 ideas, 13 wal
   the Aether change (Angelicide9): a ball of light always runs along the sign, faster the rarer the last roll, and the
   sign glows in the rarity colour (rainbow for Infinite). Mythic and Godlike colours of Aether's CSS wave now match
   (white, red).
-- **Remaining** (next PRs): World Map (qwertyuiop, Jguz01, ichi), Pyramids of Giza (whywhywaylon), Ice Caps
-  (finnnnn), Circus (sennybex1), 4th Dimension (finnnnn, legendary), Avernus (qwertyuiop), Candy Land, Cracked Screen
-  and Stacks of Money (jia jun).
+- **Done, PR 2 (`claude/walls-places`, stacked on PR 1)**: World Map (`worldmap`, qwertyuiop, also Jguz01 and ichi,
+  1,100), Pyramids (`pyramids`, whywhywaylon, 1,000; the stone-tablet skin from the same idea is the skins session's),
+  Ice Caps (`icecaps`, finnnnn, 1,000), Circus (`circus`, sennybex1, 1,100). On desktop the middle of the scene sits
+  behind the site's panels, so the animals, caravan and props stay in the side margins.
+- **Remaining** (next PR): 4th Dimension (finnnnn, legendary), Avernus (qwertyuiop), Candy Land, Cracked Screen and
+  Stacks of Money (jia jun).
 - **Readability**: `calm()` paints a soft veil of the sky colour behind the part of the site where text sits on the
   background, and `quiet()` thins details there. `node tools/wall-preview.mjs <id>[:event,…]` (dev server on 8136 or
   `RNG_BASE`) films a wallpaper and measures the contrast of that text against the worst 5 % of pixels behind it,
   compared with the plain site. It flags a drop below 3:1 that is also 20 % worse than without the wallpaper.
 - **Speed**: the same tool prints the average draw time of one frame (`S.ms`, added to `stage()`). Headless Firefox
   draws without a GPU: Thunderstorm takes ~24 ms and Party ~13 ms there, so the bar is 16 ms. The new scenes take
-  0.4 ms (Milky Way, Aether) to ~6 ms (Blue Skies, Sky Gate). Sky Gate's rays are two canvases that the browser only
-  rotates and fades.
+  0.4 ms (Milky Way, Aether) to ~6 ms (Blue Skies, Sky Gate, World Map). Sky Gate's rays and the Circus roof are
+  canvases that the browser only rotates and fades. On scenes whose whole decor moves, the text-zone veil is a CSS
+  element (`calmEl`) instead of a gradient repainted every frame.
 - **Known, not changed**: Aether's CSS layers alone run at ~5 fps in headless Firefox (it was already the case before
   the ball). Worth a look on a real low-end phone. In light mode the old sign behind "stop on" is slightly under the
   bar (1.9 vs 2.4 without wallpaper).
