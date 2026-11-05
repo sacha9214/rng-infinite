@@ -107,3 +107,9 @@
 - Was: lines that legitimately appear in both blocks (`};`, `}`, `  background:`, `100% { … }`) were dropped from theirs: js/skinfx.js no longer parsed and css/style.css lost 9 closing braces; test-api still said OK because it never loads skinfx or CSS.
 - Check: resolve add/add conflicts with `git merge-file -p --union ours base theirs` per file (never dedupe against ours), then diff the result against both parents for lines that edit a base line (union keeps both versions of an edited line: pick one by hand). Gate the commit: `node --check` every js file and count `{`/`}` in every touched CSS file, chained with `&&` so a failure stops the commit.
 - Seen: 1
+
+### Looping over "skin number" pairs in a shell command (zsh on Sacha's Mac)
+- Did: 2026-11-05, filmed seven skins with `for run in "overture 104" "cheese 444464"; do set -- $run; node tools/reveal-film.mjs --skin $1 --n $2 …; done` and started critiquing the sheets.
+- Was: zsh does not split an unquoted `$run`: `$1` was "overture 104" and `$2` empty, so every film used an unknown skin and the number 0 (names like `dark-angel 104-rarity.png`). Several minutes of films were thrown away.
+- Check: in zsh, split pairs with `${run%%:*}` / `${run##*:}` (or `IFS=: read a b <<< "$run"`), and read the first output file name before looking at any sheet: it must start with the number and contain the skin id.
+- Seen: 1

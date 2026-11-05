@@ -2111,7 +2111,7 @@
     ];
     const keys = [];
     ROWS.forEach((row, r) => { let x = 0; for (const it of row) { const [label, w, kind] = Array.isArray(it) ? it : [it, 1, 'n']; keys.push({ r, x, w, label, kind, i: keys.length, t0: -9, hold: .07, p: 0, glow: 0, hue: 0 }); x += w; } });
-    const byLabel = l => keys.find(k => k.label === l);
+    const byLabel = l => keys.find(k => k.label === l), rightOf = l => keys.filter(k => k.label === l).pop();
     const letters = keys.filter(k => /^[A-Z]$/.test(k.label)), space = keys.find(k => k.w > 6), back = byLabel('⌫'), enter = byLabel('Enter');
     const PAL = {
       light: { case: '#efe9f5', case2: '#ddd3ea', edge: 'rgba(255,255,255,.8)', plate: '#b3a8c6', shadow: 'rgba(90,70,120,.28)', glowA: .22, ink: 'source-over',
@@ -2171,18 +2171,36 @@
     };
     doc.addEventListener('pointerdown', onDown);
     // Les vraies touches aussi (LEVIATHAN, 2026-11-02 : « pas de son quand on appuie sur les touches ») : la touche
-    // correspondante s'enfonce avec son « thock ». Jamais pendant qu'on écrit (chat, champ de texte, raccourcis Ctrl/Cmd).
-    const KEYMAP = { ' ': space, Backspace: back, Enter: enter, Escape: byLabel('Esc'), Tab: byLabel('Tab'), Delete: byLabel('Del'), CapsLock: byLabel('Caps'), Shift: byLabel('Shift'), Control: byLabel('Ctrl'), Alt: byLabel('Alt'), ArrowUp: byLabel('↑'), ArrowDown: byLabel('↓'), ArrowLeft: byLabel('←'), ArrowRight: byLabel('→'), PageUp: byLabel('PgUp'), PageDown: byLabel('PgDn'), End: byLabel('End') };
-    const onKey = e => {
-      if (e.repeat || e.metaKey || e.ctrlKey || !layer.classList.contains('wp-keyboard')) return;
-      const t = e.target;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const key = KEYMAP[e.key] || (e.key && e.key.length === 1 ? byLabel(e.key.toUpperCase()) : null);
-      if (!key) return;
-      press(key, true);
-      if (st.S.still) { key.p = 1; st.redraw(); setTimeout(() => { key.p = 0; active.delete(key); st.redraw(); }, 150); }
+    // correspondante s'enfonce avec son « thock ». Toutes les touches (Infin6, 2026-11-02 : « press any keys you press, not
+    // just when you click ») : même en écrivant dans le chat, avec Ctrl/Cmd, Maj et les symboles (lus sur la position de
+    // la touche, e.code : Maj+1 enfonce le 1, et un clavier AZERTY aussi), et la touche reste enfoncée tant qu'on la tient.
+    // Jamais dans un champ de mot de passe : le fond montrerait les lettres tapées.
+    const KEYMAP = { ' ': space, Backspace: back, Enter: enter, Escape: byLabel('Esc'), Tab: byLabel('Tab'), Delete: byLabel('Del'), Insert: byLabel('Del'), CapsLock: byLabel('Caps'), ArrowUp: byLabel('↑'), ArrowDown: byLabel('↓'), ArrowLeft: byLabel('←'), ArrowRight: byLabel('→'), PageUp: byLabel('PgUp'), PageDown: byLabel('PgDn'), Home: byLabel('PgUp'), End: byLabel('End') };
+    const CODEMAP = { ShiftLeft: byLabel('Shift'), ShiftRight: rightOf('Shift'), ControlLeft: byLabel('Ctrl'), ControlRight: rightOf('Ctrl'), AltLeft: byLabel('Alt'), AltRight: rightOf('Alt'), MetaLeft: byLabel('Fn'), MetaRight: rightOf('Fn'), Backquote: byLabel('Esc'),
+      Minus: byLabel('-'), Equal: byLabel('='), BracketLeft: byLabel('['), BracketRight: byLabel(']'), Backslash: byLabel('\\'), Semicolon: byLabel(';'), Quote: byLabel('\''), Comma: byLabel(','), Period: byLabel('.'), Slash: byLabel('/'), NumpadEnter: enter };
+    const keyOf = e => {
+      const c = e.code || '', d = /^(?:Digit|Numpad)(\d)$/.exec(c) || /^F(\d{1,2})$/.exec(c); // F1…F12 : la rangée des chiffres (couche Fn d'un clavier compact)
+      if (/^[a-z]$/i.test(e.key || '')) return byLabel(e.key.toUpperCase()); // une lettre : celle qu'on a tapée (QWERTY ou AZERTY)
+      return KEYMAP[e.key] || CODEMAP[c] || (d ? byLabel(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='][Number(d[1])]) : null) || (/^Key([A-Z])$/.test(c) ? byLabel(c.slice(3)) : null);
     };
-    doc.addEventListener('keydown', onKey);
+    const held = new Map(); // code de la touche physique → touche dessinée, tant qu'elle est tenue
+    const release = key => { if (!key || !key.down) return; key.down = false; key.hold = Math.max(.02, st.S.T - key.t0 - .045); if (st.S.still) { key.p = 0; active.delete(key); st.redraw(); } else st.S.dirty = true; };
+    const onKey = e => {
+      if (e.repeat || !layer.classList.contains('wp-keyboard')) return;
+      const t = e.target;
+      if (t && t.tagName === 'INPUT' && t.type === 'password') return;
+      const key = keyOf(e);
+      if (!key) return;
+      held.set(e.code || e.key, key);
+      press(key, true); key.down = true;
+      if (st.S.still) { key.p = 1; st.redraw(); }
+    };
+    const onKeyUp = e => { const k = e.code || e.key, key = held.get(k); held.delete(k); release(key); };
+    const releaseAll = () => { for (const key of held.values()) release(key); held.clear(); };
+    // en capture : une touche que le jeu arrête en route (Espace sur le bouton de tirage…) s'enfonce quand même ici
+    doc.addEventListener('keydown', onKey, true);
+    doc.addEventListener('keyup', onKeyUp, true);
+    root.addEventListener('blur', releaseAll);
     const st = stage(layer, 'wkb', {
       lazy: true,
       layout(S) {
@@ -2213,10 +2231,11 @@
         if (!queue.length && S.T > nextBurst) burst(S);
         while (queue.length && queue[0].at <= S.T) press(queue.shift().key, false);
         for (const key of active) {
+          if (key.down) key.hold = Math.max(key.hold, S.T - key.t0 - .045); // tenue : reste en bas jusqu'au relâchement
           const t = S.T - key.t0, up = (t - .045 - key.hold) / .17;
           key.p = t < .045 ? easeOut(t / .045) : up < 0 ? 1 : up < 1 ? 1 - easeOut(up) - .14 * Math.sin(up * Math.PI) : 0;
           key.glow = Math.exp(-t / .45);
-          if (t > 1.8) { key.p = 0; key.glow = 0; active.delete(key); }
+          if (t > 1.8 + key.hold && !key.down) { key.p = 0; key.glow = 0; active.delete(key); }
         }
         S.dirty = active.size > 0 || was;
         was = active.size > 0;
@@ -2247,8 +2266,8 @@
         queue.push({ key: enter, at: t + .12 });
         nextBurst = t + 2.2;
       },
-      stop() { doc.removeEventListener('pointerdown', onDown); doc.removeEventListener('keydown', onKey); },
-      debug(S, what) { if (what === 'type') { burst(S); } if (what && what.at) { const key = keyAt(what.at[0], what.at[1]); if (key) press(key, true); return key && key.label; } return { active: active.size }; },
+      stop() { doc.removeEventListener('pointerdown', onDown); doc.removeEventListener('keydown', onKey, true); doc.removeEventListener('keyup', onKeyUp, true); root.removeEventListener('blur', releaseAll); },
+      debug(S, what) { if (what === 'type') { burst(S); } if (what && what.at) { const key = keyAt(what.at[0], what.at[1]); if (key) press(key, true); return key && key.label; } return { active: active.size, keys: [...active].map(k => k.label + (k.down ? '↓' : '')) }; },
     });
     return st;
   };
@@ -2408,6 +2427,11 @@
    * une comète qui passe près du soleil, sa queue toujours à l'opposé de lui. Le soleil est sous le milieu de l'écran,
    * derrière les cartes du jeu, jamais derrière le nombre. Thème sombre : l'espace profond. Thème clair : une carte du
    * ciel ancienne sur papier, orbites en pointillés à l'encre (.wp-solarsystem en CSS).
+   * Retouches de deadshot44474 (2026-11-05) : la ceinture d'astéroïdes entre Mars et Jupiter, Cérès dedans avec sa tache
+   * claire (le cratère Occator, une lueur bleutée qui passe avec sa rotation), Pluton sur son orbite excentrique et
+   * inclinée (elle mord sur celle de Neptune, comme la vraie), la queue de la comète qui suit sa trajectoire au lieu de
+   * pointer droit à l'opposé du soleil (« it looks weird »), et plus aucune orbite qui passe sur le soleil (« the sun is
+   * over the line » : en paysage, l'orbite de Mercure était plus basse que le rayon du soleil).
    */
   SCENES.solarsystem = layer => {
     const PL = [
@@ -2415,10 +2439,46 @@
       { r: .95, c: ['#f0a07a', '#963c25'] }, { r: 2.8, c: ['#eed6b3', '#956743'], bands: 1 }, { r: 2.3, c: ['#f2e2b4', '#a2864f'], ring: 1 },
       { r: 1.7, c: ['#c2f0f3', '#4b97a2'] }, { r: 1.65, c: ['#8aa6f3', '#283d98'] },
     ].map(p => Object.assign(p, { th: rnd(0, Math.PI * 2) }));
+    // Pluton : orbite plus grande, décalée (excentrique) et penchée ; Cérès et ~260 cailloux dans la ceinture.
+    const PLUTO = { r: .75, c: ['#eadbc6', '#8b7461'], th: rnd(0, Math.PI * 2), tilt: .2 };
+    const CERES = { r: .7, th: rnd(0, Math.PI * 2), spin: rnd(0, Math.PI * 2) };
+    const BELT = Array.from({ length: 260 }, () => ({ f: Math.random(), th: rnd(0, Math.PI * 2), z: Math.pow(Math.random(), 2.2), tone: Math.random() }));
     let G = {}, comet = null, nextComet = rnd(6, 10);
     const tw = twinklers(26, 1);
     const INK = '#3b4a6b';
     const pos = (p, th) => ({ x: G.cx + p.a * Math.cos(th), y: G.cy + p.a * G.e * Math.sin(th), k: 1 + .1 * Math.sin(th) });
+    // Pluton : l'ellipse décalée de off le long de son grand axe, puis penchée de tilt autour du soleil
+    const plutoPos = th => {
+      const lx = PLUTO.a * Math.cos(th) + PLUTO.off, ly = PLUTO.a * G.e * 1.1 * Math.sin(th), c = Math.cos(PLUTO.tilt), sn = Math.sin(PLUTO.tilt);
+      return { x: G.cx + lx * c - ly * sn, y: G.cy + lx * sn + ly * c, k: 1 + .1 * Math.sin(th) };
+    };
+    // Cérès : une petite sphère grise ; la tache d'Occator tourne avec elle (visible sur la face avant), et luit en sombre.
+    function ceres(g, S, P) {
+      const r = Math.max(2.2, CERES.r * G.u * P.k), dx = G.cx - P.x, dy = G.cy - P.y, d = Math.hypot(dx, dy) || 1;
+      const gr = g.createRadialGradient(P.x + dx / d * r * .45, P.y + dy / d * r * .45, r * .1, P.x, P.y, r * 1.05);
+      gr.addColorStop(0, S.dark ? '#c9c4bc' : '#d6d1c9'); gr.addColorStop(1, S.dark ? '#3c3934' : '#7d776f');
+      ell(g, P.x, P.y, r, r); g.fillStyle = gr; g.fill();
+      if (!S.dark) { g.strokeStyle = INK; g.lineWidth = 1; g.stroke(); }
+      const a = CERES.spin + S.T * .7, face = Math.cos(a);
+      if (face > -.2) {
+        const sx = P.x + Math.sin(a) * r * .55, sy = P.y - r * .18, sr = Math.max(.9, r * .2) * (.6 + .4 * Math.max(0, face)), lit = clamp(face + .2, 0, 1);
+        if (S.dark) {
+          const hg = g.createRadialGradient(sx, sy, 0, sx, sy, sr * 4.5);
+          hg.addColorStop(0, `rgba(170,225,255,${(.75 * lit).toFixed(3)})`); hg.addColorStop(1, 'rgba(170,225,255,0)');
+          g.globalCompositeOperation = 'lighter'; g.fillStyle = hg; g.fillRect(sx - sr * 4.5, sy - sr * 4.5, sr * 9, sr * 9); g.globalCompositeOperation = 'source-over';
+        }
+        ell(g, sx, sy, sr, sr * .8); g.fillStyle = S.dark ? `rgba(235,250,255,${lit.toFixed(3)})` : `rgba(56,152,214,${(.9 * lit).toFixed(3)})`; g.fill();
+      }
+    }
+    // la ceinture : des cailloux qui tournent à la vitesse de leur distance (Kepler, comme les planètes)
+    function belt(g, S) {
+      const dk = S.dark;
+      for (const b of BELT) {
+        const a = G.b0 + (G.b1 - G.b0) * b.f, x = G.cx + a * Math.cos(b.th), y = G.cy + a * G.e * Math.sin(b.th), s = Math.max(.8, G.u * (.1 + .22 * b.z)) * (1 + .1 * Math.sin(b.th));
+        g.fillStyle = dk ? `rgba(${b.tone < .5 ? '214,204,186' : '170,160,150'},${(.45 + .4 * b.z).toFixed(2)})` : `rgba(59,74,107,${(.35 + .4 * b.z).toFixed(2)})`;
+        g.fillRect(x - s / 2, y - s / 2, s, s);
+      }
+    }
     function planet(g, S, p, P) {
       const r = Math.max(2, p.r * G.u * P.k), dx = G.cx - P.x, dy = G.cy - P.y, d = Math.hypot(dx, dy) || 1, lx = dx / d, ly = dy / d;
       if (p.ring) { g.strokeStyle = S.dark ? 'rgba(232,214,166,.7)' : 'rgba(162,134,79,.8)'; g.lineWidth = r * .32; ell(g, P.x, P.y, r * 2.1, r * .62, -.18); g.save(); g.beginPath(); g.rect(P.x - r * 3, P.y - r * 2, r * 6, r * 2); g.clip(); ell(g, P.x, P.y, r * 2.1, r * .62, -.18); g.stroke(); g.restore(); }
@@ -2462,26 +2522,42 @@
       const off = Math.min(S.W, S.H) * rnd(.18, .32) * side;
       comet = { p0, p1: [G.cx + (G.cx - mx) * .2 + nx / nl * off, G.cy + (G.cy - my) * .2 + ny / nl * off], p2, t: 0, dur: rnd(11, 15) };
     }
+    // Queue (deadshot44474, 2026-11-05 : « the trail doesn't follow it ») : elle pointait droit à l'opposé du soleil, donc
+    // devant la comète quand elle repartait. Maintenant la queue de poussière reprend le chemin parcouru (les positions
+    // d'il y a un instant), à peine poussée à l'opposé du soleil, et la queue d'ions reste toujours derrière.
+    const cometAt = (c, q) => { const w = 1 - q; return [w * w * c.p0[0] + 2 * w * q * c.p1[0] + q * q * c.p2[0], w * w * c.p0[1] + 2 * w * q * c.p1[1] + q * q * c.p2[1]]; };
     function drawComet(g, S) {
       const c = comet, q = c.t / c.dur, w = 1 - q;
-      const x = w * w * c.p0[0] + 2 * w * q * c.p1[0] + q * q * c.p2[0], y = w * w * c.p0[1] + 2 * w * q * c.p1[1] + q * q * c.p2[1];
-      const dx = x - G.cx, dy = y - G.cy, d = Math.hypot(dx, dy) || 1, tx = dx / d, ty = dy / d, px = -ty, py = tx;
+      const [x, y] = cometAt(c, q);
+      const dx = x - G.cx, dy = y - G.cy, d = Math.hypot(dx, dy) || 1, tx = dx / d, ty = dy / d;
       const near = clamp(1 - d / (Math.min(S.W, S.H) * .7), 0, 1), L = G.u * (9 + 22 * near), u = G.u;
-      // la queue de poussière : un panache de taches de plus en plus larges et pâles, qui s'incurve vers l'arrière de la
-      // trajectoire (elle ne pointe pas tout à fait à l'opposé du soleil, contrairement à la queue d'ions)
       let vx = 2 * w * (c.p1[0] - c.p0[0]) + 2 * q * (c.p2[0] - c.p1[0]), vy = 2 * w * (c.p1[1] - c.p0[1]) + 2 * q * (c.p2[1] - c.p1[1]);
       const vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl;
+      const back = (.09 + .07 * near) * (11 / c.dur); // longueur de la queue, en part du trajet (~1 à 1,8 s de chemin)
+      // la traînée : un trait le long du chemin parcouru, épais et clair près de la tête, qui s'affine et s'efface (en
+      // mélange normal : en « lighter », chaque jointure des segments brillait deux fois, on voyait des perles)
+      g.lineCap = 'round';
+      let px0 = x, py0 = y;
+      for (let i = 1; i <= 24; i++) {
+        const f = i / 24, [bx, by] = cometAt(c, Math.max(0, q - back * f)), push = L * f * f * .22, nx = bx + tx * push, ny = by + ty * push;
+        g.strokeStyle = S.dark ? `rgba(255,240,205,${(.55 * (1 - f)).toFixed(3)})` : `rgba(59,74,107,${(.5 * (1 - f)).toFixed(3)})`;
+        g.lineWidth = Math.max(.8, u * (1.1 - .9 * f)); g.beginPath(); g.moveTo(px0, py0); g.lineTo(nx, ny); g.stroke();
+        px0 = nx; py0 = ny;
+      }
       g.globalCompositeOperation = S.dark ? 'lighter' : 'source-over';
       for (let i = 1; i <= 16; i++) {
-        const f = i / 16, bend = f * f * .55, ox = x + (tx - vx * bend) * L * f, oy = y + (ty - vy * bend) * L * f, rad = u * (.4 + 2.6 * f);
+        const f = i / 16, [bx, by] = cometAt(c, Math.max(0, q - back * f)), push = L * f * f * .22;
+        const ox = bx + tx * push, oy = by + ty * push, rad = u * (.4 + 2.6 * f);
         const gr = g.createRadialGradient(ox, oy, 0, ox, oy, rad), a = .2 * (1 - f) * (1 - f);
         gr.addColorStop(0, S.dark ? `rgba(255,244,214,${a.toFixed(3)})` : `rgba(59,74,107,${(a * .9).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,244,214,0)');
         g.fillStyle = gr; g.fillRect(ox - rad, oy - rad, rad * 2, rad * 2);
       }
       g.globalCompositeOperation = 'source-over';
-      const ion = g.createLinearGradient(x, y, x + tx * L * 1.3, y + ty * L * 1.3);
-      ion.addColorStop(0, S.dark ? 'rgba(147,197,253,.6)' : 'rgba(59,130,246,.45)'); ion.addColorStop(1, 'rgba(147,197,253,0)');
-      g.strokeStyle = ion; g.lineWidth = Math.max(1, u * .25); g.beginPath(); g.moveTo(x, y); g.lineTo(x + tx * L * 1.3, y + ty * L * 1.3); g.stroke();
+      // queue d'ions : surtout derrière (−vitesse), un peu à l'opposé du soleil ; jamais devant
+      let ix = -vx * .65 + tx * .35, iy = -vy * .65 + ty * .35; const il = Math.hypot(ix, iy) || 1; ix /= il; iy /= il;
+      const ion = g.createLinearGradient(x, y, x + ix * L * .8, y + iy * L * .8);
+      ion.addColorStop(0, S.dark ? 'rgba(147,197,253,.32)' : 'rgba(59,130,246,.25)'); ion.addColorStop(1, 'rgba(147,197,253,0)');
+      g.strokeStyle = ion; g.lineWidth = Math.max(1, u * .18); g.beginPath(); g.moveTo(x, y); g.lineTo(x + ix * L * .8, y + iy * L * .8); g.stroke();
       const hg = g.createRadialGradient(x, y, 0, x, y, u * 1.6);
       hg.addColorStop(0, S.dark ? 'rgba(255,255,255,.95)' : 'rgba(59,74,107,.9)'); hg.addColorStop(.3, S.dark ? 'rgba(191,219,254,.45)' : 'rgba(59,130,246,.3)'); hg.addColorStop(1, 'rgba(191,219,254,0)');
       g.fillStyle = hg; g.fillRect(x - u * 1.6, y - u * 1.6, u * 3.2, u * 3.2);
@@ -2493,8 +2569,15 @@
         // cartes en portrait
         G = { cx: S.W / 2, cy: S.H * (portrait ? .79 : .7), u: clamp(Math.min(S.W, S.H) / 100, 4.2, 11), e: clamp(S.H / S.W * .3, .3, .62) };
         G.sun = G.u * 3.4;
-        const a0 = G.sun * 2.3, a1 = Math.max(S.W * (portrait ? .62 : .47), a0 * 4);
+        // la première orbite passe toujours au-dessus et au-dessous du soleil et de ses rayons, jamais dessus (vue de biais,
+        // son petit rayon est a0 × e)
+        const a0 = Math.max(G.sun * 2.3, G.sun * 1.95 / G.e), a1 = Math.max(S.W * (portrait ? .62 : .45), a0 * 3.2);
         PL.forEach((p, i) => { p.a = a0 + (a1 - a0) * Math.pow(i / 7, 1.12); p.P = Math.min(420, 24 * Math.pow(p.a / a0, 1.5)); });
+        // ceinture entre Mars (3) et Jupiter (4) ; Cérès au milieu ; Pluton un peu au-delà de Neptune, décalée
+        G.b0 = PL[3].a + (PL[4].a - PL[3].a) * .28; G.b1 = PL[3].a + (PL[4].a - PL[3].a) * .66;
+        CERES.a = (G.b0 + G.b1) / 2; CERES.P = 24 * Math.pow(CERES.a / a0, 1.5);
+        for (const b of BELT) b.P = 24 * Math.pow((G.b0 + (G.b1 - G.b0) * b.f) / a0, 1.5);
+        PLUTO.a = PL[7].a * 1.04; PLUTO.off = PLUTO.a * .2; PLUTO.P = 520;
       },
       paint(S, g) {
         starfield(g, S.W, S.H, Math.round(S.W * S.H / 2600), 31, S.dark ? '255,255,255' : '59,74,107', S.dark ? .75 : .3);
@@ -2507,6 +2590,10 @@
             g.setLineDash([3, 5]); ell(g, G.cx, G.cy, p.a, p.a * G.e); g.strokeStyle = 'rgba(59,74,107,.38)'; g.lineWidth = 1; g.stroke(); g.setLineDash([]);
           }
         }
+        // l'orbite de Pluton, plus discrète (pointillés fins dans les deux thèmes), et le voile de poussière de la ceinture
+        g.save(); g.setLineDash([2, 6]); ell(g, G.cx + PLUTO.off * Math.cos(PLUTO.tilt), G.cy + PLUTO.off * Math.sin(PLUTO.tilt), PLUTO.a, PLUTO.a * G.e * 1.1, PLUTO.tilt);
+        g.strokeStyle = S.dark ? 'rgba(200,190,230,.22)' : 'rgba(59,74,107,.3)'; g.lineWidth = 1; g.stroke(); g.restore();
+        ell(g, G.cx, G.cy, (G.b0 + G.b1) / 2, (G.b0 + G.b1) / 2 * G.e); g.strokeStyle = S.dark ? 'rgba(214,204,186,.06)' : 'rgba(59,74,107,.07)'; g.lineWidth = Math.max(4, (G.b1 - G.b0) * .8 * G.e); g.stroke();
         if (S.dark) {
           const halo = g.createRadialGradient(G.cx, G.cy, 0, G.cx, G.cy, G.sun * 14);
           halo.addColorStop(0, 'rgba(255,190,100,.16)'); halo.addColorStop(1, 'rgba(255,190,100,0)');
@@ -2515,15 +2602,19 @@
       },
       update(S, dt) {
         for (const p of PL) p.th += dt * Math.PI * 2 / p.P;
+        for (const b of BELT) b.th += dt * Math.PI * 2 / b.P;
+        CERES.th += dt * Math.PI * 2 / CERES.P; PLUTO.th += dt * Math.PI * 2 / PLUTO.P;
         if (!comet && S.T > nextComet) newComet(S);
         if (comet && (comet.t += dt) > comet.dur) { comet = null; nextComet = S.T + rnd(28, 50); }
       },
       draw(S, g) {
         if (S.dark) twinkle(g, tw, S.W, S.H, '255,255,255', .9, S.T);
-        const list = PL.map(p => ({ p, P: pos(p, p.th) })).sort((a, b) => a.P.y - b.P.y);
-        for (const o of list) if (o.P.y < G.cy) planet(g, S, o.p, o.P);
+        belt(g, S);
+        const list = PL.map(p => ({ p, P: pos(p, p.th) })).concat([{ p: PLUTO, P: plutoPos(PLUTO.th) }, { p: CERES, P: pos(CERES, CERES.th), ceres: 1 }]).sort((a, b) => a.P.y - b.P.y);
+        const body = o => (o.ceres ? ceres(g, S, o.P) : planet(g, S, o.p, o.P));
+        for (const o of list) if (o.P.y < G.cy) body(o);
         sun(g, S);
-        for (const o of list) if (o.P.y >= G.cy) planet(g, S, o.p, o.P);
+        for (const o of list) if (o.P.y >= G.cy) body(o);
         if (comet) drawComet(g, S);
       },
       debug(S, what) { if (what === 'comet') { newComet(S); comet.t = comet.dur * .45; } return { T: S.T, comet: !!comet }; },

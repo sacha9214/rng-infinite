@@ -856,6 +856,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .field label { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--prose-2); }
 .modal .actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; margin-top: .6rem; }
 .modal .danger-zone { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--outline); display: flex; flex-wrap: wrap; gap: .5rem; }
+/* Supprimer son compte (demandé par Sacha, 2026-11-05) : la fenêtre de confirmation. */
+.acct-del-warn { margin: 0 0 .7rem; padding: .6rem .75rem; border-radius: 10px; border: 1px solid color-mix(in oklch, var(--danger) 45%, transparent); background: color-mix(in oklch, var(--danger) 9%, transparent); color: var(--prose); font-size: .86rem; line-height: 1.45; }
+.acct-del-lose { margin: 0 0 .3rem; font-size: .78rem; font-weight: 700; color: var(--prose-2); }
+.acct-del-list { margin: 0 0 .8rem; padding-left: 1.15rem; font-size: .84rem; line-height: 1.5; color: var(--prose); }
+.acct-del-link { margin: 0 0 .7rem; }
+.modal .btn.acct-del-go:not(:disabled) { background: var(--danger); border-color: var(--danger); color: #fff; }
+.modal .btn.acct-del-go:disabled { opacity: .45; cursor: not-allowed; }
 .toast {
   position: fixed;
   left: 50%;
@@ -2232,6 +2239,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .quest-state { font-size: .72rem; font-weight: 700; color: var(--success); white-space: nowrap; }
 .quests-foot { margin: .5rem 0 0; text-align: center; }
 .quest .btn-roll.small { white-space: nowrap; }
+/* Relance d'une quête du jour (idée de Mace_67, 2026-11-03) : un petit bouton rond avant la récompense. */
+.q-reroll { flex: none; width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface-raised); font-size: .9rem; line-height: 1; cursor: pointer; padding: 0; transition: transform .2s var(--ease-out), border-color .2s; }
+.q-reroll:hover, .q-reroll:focus-visible { border-color: var(--outline-strong); transform: rotate(90deg); }
+.q-reroll:disabled { opacity: .5; cursor: default; transform: none; }
 
 .case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .8rem; }
 .case-tile { display: flex; flex-direction: column; align-items: center; gap: .45rem; padding: 1rem .8rem; border: 1px solid var(--outline); border-radius: .8rem; background: var(--surface-dim); text-align: center; }
@@ -2597,6 +2608,18 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .rm-vote b { font-size: .8rem; }
 .idea-roadmap, .rm-about { margin: 0 0 .6rem; font-size: .86rem; }
 .idea-roadmap a, .rm-about a { font-weight: 600; }
+/* Hall of Fame #/hall (idée d'Avaneesh_17, 2026-11-05) : les premiers à atteindre chaque grand palier */
+.hof-intro { margin: -.4rem 0 1rem; }
+.hof-panel { margin-bottom: 1rem; }
+.hof-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: .55rem; }
+.hof-item { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .55rem .7rem; border-radius: .55rem; background: var(--surface); border: 1px solid var(--outline); min-width: 0; }
+.hof-item.open { opacity: .6; border-style: dashed; }
+.hof-what { display: inline-flex; align-items: center; gap: .4rem; flex-wrap: wrap; font-size: .92rem; }
+.hof-num { flex: none; }
+.hof-who { font-size: .8rem; min-width: 0; overflow-wrap: anywhere; }
+.hof-who .player-link { font-weight: 700; }
+.hof-open { color: var(--muted, inherit); font-style: italic; }
+.hof-foot { margin: .2rem 0 0; font-size: .76rem; }
 
 /* ------------------------------------------------------------------ Casino : onglets des jeux, mise, Crash, Mines, Plinko */
 .g-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin: .4rem 0 .8rem; }
@@ -12334,3 +12357,182 @@ html.perf .pkr-timer i { animation: none !important; transform: scaleX(var(--fro
 @keyframes dig-roll { 0%, 100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-8px) rotate(-90deg); } }
 .room-stage.many .side-dig::before, .room-stage.many .side-dig::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-dig::before, .side-dig::after { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 2 (idées de joueurs) */
+/* ------------------------------------------------------------------ Deep Sea (idées de finnnnn, 2026-10-21 : « a deep
+   ocean type of skin like maybe the bloop or a big mouth » ; Deadshot, 2026-11-02 : poissons, requins, tortues, calmars,
+   algues en bas et une ancre une fois sur 50 ; YeeHao2, 2026-10-27 : une baleine ; LEVIATHAN, 2026-10-29 : un léviathan
+   qui avale les chiffres puis domine le nombre). L'abysse : une eau bleu nuit où la lumière de la surface danse en
+   haut, la neige marine qui tombe, des laminaires noires le long du bas. Les chiffres sont bioluminescents (cyan pâle,
+   halo). Pendant le tirage, ils ondulent comme vus à travers l'eau, éteints. Un chiffre qui se pose : il s'allume d'une
+   lueur vive qui enfle (comme une méduse), puis se calme. Les bêtes qui passent : js/skinfx.js (SCENES.deepsea). */
+.num-card.skin-deepsea {
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40' preserveAspectRatio='none'><g fill='%23010b12' stroke='%230e7490' stroke-width='.35' stroke-opacity='.7'><path d='M4 40C3 34 6 31 4 26C3 22 6 19 5 15C7 19 6 23 8 27C9 32 7 35 8 40Z'/><path d='M12 40C13 36 10 33 12 29C13 26 11 24 12 21C14 24 15 27 14 31C13 34 15 37 15 40Z'/><path d='M101 40C100 35 103 32 101 27C100 23 103 21 102 17C104 21 104 25 105 28C106 33 104 36 105 40Z'/><path d='M110 40C111 36 108 33 110 30C111 27 109 25 110 23C112 25 113 28 112 31C111 34 113 37 113 40Z'/><path d='M116 40C115 37 118 35 116 32C118 34 119 37 119 40Z'/></g><g fill='%23cffafe' opacity='.75'><circle cx='20' cy='9' r='.45'/><circle cx='46' cy='31' r='.4'/><circle cx='80' cy='18' r='.4'/><circle cx='12' cy='22' r='.35'/><circle cx='37' cy='22' r='.3'/><circle cx='55' cy='13' r='.35'/><circle cx='71' cy='30' r='.3'/><circle cx='88' cy='8' r='.35'/><circle cx='96' cy='26' r='.3'/><circle cx='28' cy='33' r='.3'/><circle cx='64' cy='5' r='.3'/></g></svg>") 0 0 / 100% 100% no-repeat,
+    linear-gradient(180deg, rgba(4, 26, 46, 0) 30%, rgba(2, 12, 24, .7) 100%),
+    linear-gradient(104deg, transparent 12%, rgba(165, 243, 252, .16) 15%, transparent 21%, transparent 38%, rgba(165, 243, 252, .12) 41%, transparent 46%, transparent 62%, rgba(165, 243, 252, .14) 65%, transparent 71%, transparent 84%, rgba(165, 243, 252, .1) 87%, transparent 92%),
+    radial-gradient(ellipse 22% 30% at 22% -6%, rgba(186, 246, 255, .4), transparent 70%), radial-gradient(ellipse 16% 26% at 58% -8%, rgba(186, 246, 255, .32), transparent 70%), radial-gradient(ellipse 18% 28% at 84% -6%, rgba(186, 246, 255, .3), transparent 70%),
+    linear-gradient(180deg, #0f6f93 0%, #0a4a6e 35%, #062c47 70%, #031726 100%);
+  border: 2px solid #0e4a63; border-radius: .7rem; color: #cffafe;
+  box-shadow: inset 0 0 .6em rgba(2, 12, 24, .8), inset 0 .1em .2em rgba(165, 243, 252, .15), 0 0 18px rgba(34, 211, 238, .25), 0 10px 20px rgba(0, 0, 0, .5);
+}
+.skin-deepsea .slot {
+  position: relative; font-family: 'Avenir Next', 'Segoe UI', 'Trebuchet MS', system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: #d9fdff; text-shadow: 0 0 .05em #fff, 0 0 .16em #22d3ee, 0 0 .45em rgba(34, 211, 238, .55), 0 .04em .02em #011524;
+}
+.skin-deepsea .slot.ghost { opacity: .2; }
+.skin-deepsea .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-deepsea .slot.spinning { opacity: .55; color: #0e7490; text-shadow: 0 0 .2em rgba(14, 116, 144, .8); filter: blur(.8px); animation: dsea-waver .5s ease-in-out infinite; }
+.skin-deepsea .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+.skin-deepsea .slot.spinning:nth-of-type(3n) { animation-delay: -.12s; }
+@keyframes dsea-waver { 0%, 100% { transform: translateY(-.04em) skewX(-6deg); } 50% { transform: translateY(.04em) skewX(6deg); } }
+/* La lueur : éteint et un peu enfoncé dans l'eau, il s'allume d'un coup (halo qui enfle), puis se calme. */
+.skin-deepsea .slot.revealed { animation: dsea-bloom .7s backwards; }
+@keyframes dsea-bloom {
+  0% { transform: translateY(.08em) scale(.9); color: #0e4a63; text-shadow: none; animation-timing-function: cubic-bezier(.3, .6, .4, 1); }
+  26% { transform: translateY(-.02em) scale(1.12); color: #ffffff; text-shadow: 0 0 .1em #fff, 0 0 .35em #67e8f9, 0 0 .9em rgba(34, 211, 238, .9); animation-timing-function: cubic-bezier(.3, 1.3, .5, 1); }
+  50% { transform: scale(.97); }
+  72% { transform: scale(1.015); }
+  100% { transform: none; }
+}
+/* Dès Mythic (.dsea-deep, posée par la scène) : les chiffres pulsent lentement, comme des méduses. */
+.num-card.skin-deepsea.dsea-deep .slot:not(.ghost) { animation: dsea-pulse 2.2s ease-in-out infinite alternate; }
+.num-card.skin-deepsea.dsea-deep .slot:nth-of-type(2n) { animation-delay: -.7s; }
+@keyframes dsea-pulse { from { text-shadow: 0 0 .05em #fff, 0 0 .16em #22d3ee, 0 0 .45em rgba(34, 211, 238, .55), 0 .04em .02em #011524; } to { text-shadow: 0 0 .08em #fff, 0 0 .3em #a5f3fc, 0 0 .8em rgba(103, 232, 249, .8), 0 .04em .02em #011524; } }
+@media (prefers-reduced-motion: reduce) { .skin-deepsea .slot { animation: none !important; } }
+.side-deepsea { --side-border: #0e7490; --side-glow: 0 0 18px rgba(34, 211, 238, .35); --side-ink: #0891b2; --side-ink-glow: 0 0 8px rgba(34, 211, 238, .6);
+  --side-bg: radial-gradient(circle, rgba(207, 250, 254, .35) 0 1px, transparent 1.6px) 0 0 / 19px 23px, radial-gradient(ellipse 50% 30% at 50% -5%, rgba(165, 243, 252, .22), transparent 70%), linear-gradient(180deg, rgba(12, 74, 110, .3), rgba(2, 12, 24, .35));
+  --deco-a: '🐟'; --deco-b: '🐙'; }
+.side-deepsea::before { animation: dsea-swim 4s ease-in-out infinite; }
+.side-deepsea::after { animation: dsea-bob 2.6s ease-in-out infinite; }
+@keyframes dsea-swim { 0%, 100% { transform: translateX(0) scaleX(-1); } 45% { transform: translateX(26px) scaleX(-1); } 50% { transform: translateX(26px) scaleX(1); } 95% { transform: translateX(0) scaleX(1); } }
+@keyframes dsea-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-6px) rotate(6deg); } }
+.room-stage.many .side-deepsea::before, .room-stage.many .side-deepsea::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-deepsea::before, .side-deepsea::after { animation: none; } }
+/* ------------------------------------------------------------------ Bubble (idée de finnnnn, 2026-11-05 : « a bubble skin
+   and when the number has to go away it pops into the next number and when a mythic+ comes up it shoots bubbles like a
+   bubble gun everywhere »). Un ciel pastel où flottent des bulles floues. Chaque chiffre est dans une bulle de savon :
+   film irisé sur le bord, reflet de fenêtre en haut à gauche, chiffre indigo bien net au centre. Pendant le tirage, les
+   bulles tremblotent (une matière molle : elles s'écrasent et s'étirent). Un chiffre qui se pose : la bulle éclate
+   (elle gonfle et disparaît d'un coup) et une bulle neuve se gonfle aussitôt avec le bon chiffre, dépasse et se calme.
+   Gouttelettes et pistolet à bulles (dès Mythic) : js/skinfx.js (SCENES.bubble). */
+.num-card.skin-bubble {
+  background:
+    radial-gradient(circle at 10% 30%, rgba(255, 255, 255, .5) 0 .18em, rgba(255, 255, 255, 0) .3em), radial-gradient(circle at 92% 70%, rgba(255, 255, 255, .45) 0 .14em, rgba(255, 255, 255, 0) .26em),
+    radial-gradient(circle at 70% 12%, rgba(255, 255, 255, .35) 0 .08em, rgba(255, 255, 255, 0) .16em),
+    linear-gradient(160deg, #c7e9ff 0%, #e4d9ff 55%, #ffd9ef 100%);
+  border: 2px solid #a5b4fc; border-radius: 1.4rem; color: #312e81;
+  box-shadow: inset 0 .08em .2em rgba(255, 255, 255, .8), inset 0 -.1em .3em rgba(129, 140, 248, .25), 0 0 16px rgba(165, 180, 252, .35), 0 10px 18px rgba(30, 27, 75, .25);
+  padding: .3em .55em;
+}
+.skin-bubble .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .92em; height: .92em; margin: 0 .01em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; font-size: .86em; font-variant-numeric: normal;
+  color: #312e81; text-shadow: 0 .03em 0 rgba(255, 255, 255, .9), 0 0 .15em rgba(255, 255, 255, .8);
+}
+/* la bulle : un film irisé sur le bord (rose, jaune, vert, bleu), transparente au centre, un reflet en haut à gauche */
+.skin-bubble .slot::before {
+  content: ''; position: absolute; inset: -.04em; z-index: -1; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(ellipse 22% 14% at 32% 24%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 100%),
+    radial-gradient(circle at 70% 76%, rgba(255, 255, 255, .5) 0 4%, rgba(255, 255, 255, 0) 9%),
+    radial-gradient(circle, rgba(255, 255, 255, .12) 0 58%, rgba(255, 255, 255, 0) 70%),
+    conic-gradient(from 200deg, rgba(236, 72, 153, .85), rgba(234, 179, 8, .75), rgba(34, 197, 94, .7), rgba(14, 165, 233, .85), rgba(139, 92, 246, .85), rgba(236, 72, 153, .85));
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 66%, rgba(0, 0, 0, .55) 80%, #000 96%, transparent 100%); mask: radial-gradient(circle closest-side, transparent 0 66%, rgba(0, 0, 0, .55) 80%, #000 96%, transparent 100%);
+  box-shadow: inset 0 0 .06em rgba(255, 255, 255, .9);
+}
+.skin-bubble .slot::after {
+  content: ''; position: absolute; inset: -.04em; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse 24% 15% at 32% 24%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0)), radial-gradient(circle at 70% 76%, rgba(255, 255, 255, .7) 0 5%, rgba(255, 255, 255, 0) 9%), radial-gradient(circle closest-side, rgba(224, 242, 254, .3) 0 80%, rgba(224, 242, 254, 0) 100%);
+  border: 1.5px solid rgba(255, 255, 255, .85); box-shadow: 0 .03em .08em rgba(99, 102, 241, .35), inset 0 0 .08em rgba(255, 255, 255, .8);
+}
+.skin-bubble .slot.ghost { opacity: .25; }
+.skin-bubble .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-bubble .slot.collapsed::before, .skin-bubble .slot.collapsed::after { display: none; }
+/* Pendant le tirage : les bulles tremblotent et dansent un peu ; le chiffre flotte, flou, au fond. */
+.skin-bubble .slot.spinning { opacity: 1; color: rgba(49, 46, 129, .35); text-shadow: none; animation: bub-wobble .34s ease-in-out infinite alternate; }
+.skin-bubble .slot.spinning:nth-of-type(2n) { animation-delay: -.17s; animation-duration: .3s; }
+@keyframes bub-wobble { from { transform: translateY(-.05em) scale(1.05, .95); } to { transform: translateY(.04em) scale(.96, 1.04); } }
+/* L'éclat : la bulle se gonfle un peu trop et disparaît (pop), une bulle neuve se gonfle avec le chiffre, dépasse, se
+   calme. Le film irisé (::before) et le reflet (::after) suivent la bulle. */
+.skin-bubble .slot.revealed { animation: bub-new .62s backwards; }
+.skin-bubble .slot.revealed::before, .skin-bubble .slot.revealed::after { animation: bub-pop .62s backwards; }
+@keyframes bub-new {
+  0%, 16% { transform: scale(.2); color: rgba(49, 46, 129, 0); animation-timing-function: cubic-bezier(.3, 1.5, .5, 1); }
+  52% { transform: scale(1.14, 1.06); color: #312e81; }
+  70% { transform: scale(.95, 1.03); }
+  86% { transform: scale(1.02, .99); }
+  100% { transform: none; }
+}
+@keyframes bub-pop {
+  0% { transform: scale(1); opacity: 1; animation-timing-function: ease-in; }
+  10% { transform: scale(1.22); opacity: 1; }
+  12%, 16% { transform: scale(.2); opacity: 0; animation-timing-function: cubic-bezier(.3, 1.5, .5, 1); }
+  52% { transform: scale(1.14, 1.06); opacity: 1; }
+  70% { transform: scale(.95, 1.03); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-bubble .slot, .skin-bubble .slot::before, .skin-bubble .slot::after { animation: none !important; } }
+/* Cadre de duel : un ciel pastel plein de bulles ; 🫧 monte, 🧼 se dandine. */
+.side-bubble { --side-border: #a5b4fc; --side-glow: 0 0 16px rgba(165, 180, 252, .4); --side-ink: #6366f1;
+  --side-bg: radial-gradient(circle, transparent 0 7px, rgba(165, 180, 252, .4) 8px 9px, transparent 10px) 0 0 / 46px 52px, radial-gradient(circle, transparent 0 4px, rgba(244, 114, 182, .35) 5px 6px, transparent 7px) 20px 26px / 46px 52px, linear-gradient(160deg, rgba(199, 233, 255, .2), rgba(255, 217, 239, .16));
+  --deco-a: '🫧'; --deco-b: '🧼'; }
+.side-bubble::before { animation: bub-rise 2.4s ease-in-out infinite; }
+.side-bubble::after { animation: bub-wiggle 1.6s ease-in-out infinite; }
+@keyframes bub-rise { 0% { transform: translateY(6px); opacity: 0; } 30% { opacity: .8; } 100% { transform: translateY(-10px) translateX(4px); opacity: 0; } }
+@keyframes bub-wiggle { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg) scale(1.08); } }
+.room-stage.many .side-bubble::before, .room-stage.many .side-bubble::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-bubble::before, .side-bubble::after { animation: none; } }
+/* ------------------------------------------------------------------ Frutiger Aero (promis à jia jun, 2026-10-23 :
+   « Frutiger aero skin »). Le style des bureaux d'ordinateur des années 2000 : un ciel bleu lumineux, une colline d'herbe
+   bien verte, du verre brillant avec un grand reflet blanc sur la moitié du haut, un cadre aqua. Les chiffres sont en gel
+   blanc bordé de bleu, avec un éclat. Pendant le tirage, ils flottent comme sous l'eau. Un chiffre qui se pose : il
+   jaillit comme une goutte (un rebond mou, matière gel), un éclat balaie son reflet. Bulles, rubans de lumière et
+   reflet d'objectif : js/skinfx.js (SCENES.aero). Le nom du style est générique (aucune marque copiée). */
+.num-card.skin-aero {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .7) 0%, rgba(255, 255, 255, .22) 46%, transparent 47%),
+    radial-gradient(ellipse 50% 22% at 28% 100%, rgba(255, 255, 255, .35), transparent 70%),
+    radial-gradient(ellipse 75% 55% at 28% 128%, #52c234 0 60%, transparent 61%), radial-gradient(ellipse 85% 60% at 88% 138%, #3fae2a 0 60%, transparent 61%),
+    radial-gradient(ellipse 75% 52% at 28% 122%, #a3e635 0 60%, transparent 62%),
+    radial-gradient(circle at 82% 20%, rgba(255, 255, 255, .9) 0 .12em, rgba(255, 255, 255, 0) .5em),
+    linear-gradient(180deg, #2ea7e8 0%, #6fd0f7 55%, #c4f1ff 100%);
+  border: 2px solid #38bdf8; border-radius: 1rem; color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), inset 0 -.15em .3em rgba(14, 116, 144, .25), 0 0 0 3px rgba(125, 211, 252, .35), 0 0 20px rgba(56, 189, 248, .45), 0 10px 18px rgba(3, 105, 161, .35);
+}
+.skin-aero .slot {
+  position: relative; font-family: 'Segoe UI', 'Frutiger', 'Myriad Pro', 'Helvetica Neue', system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: #ffffff; -webkit-text-stroke: .03em #0369a1;
+  text-shadow: 0 .04em 0 #075985, 0 .07em .1em rgba(3, 105, 161, .55), 0 0 .2em rgba(255, 255, 255, .6);
+}
+.skin-aero .slot.ghost { opacity: .22; }
+.skin-aero .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-aero .slot.spinning { opacity: .7; color: #e0f2fe; -webkit-text-stroke: .02em #0ea5e9; filter: blur(.7px); animation: aero-float .5s ease-in-out infinite alternate; }
+.skin-aero .slot.spinning:nth-of-type(2n) { animation-delay: -.25s; }
+@keyframes aero-float { from { transform: translateY(-.05em) rotate(-2deg); } to { transform: translateY(.05em) rotate(2deg); } }
+/* La goutte : elle jaillit, s'étire, retombe en s'écrasant (gel), un éclat blanc passe. */
+.skin-aero .slot.revealed { animation: aero-drop .62s backwards; }
+@keyframes aero-drop {
+  0% { transform: translateY(.2em) scale(.6, 1.3); filter: brightness(1.8) drop-shadow(0 0 .2em #fff); animation-timing-function: cubic-bezier(.2, .9, .3, 1.2); }
+  34% { transform: translateY(-.08em) scale(1.12, .9); filter: brightness(1.4) drop-shadow(0 0 .15em #e0f2fe); }
+  56% { transform: translateY(.02em) scale(.95, 1.05); filter: none; }
+  76% { transform: scale(1.02, .98); }
+  100% { transform: none; }
+}
+/* Dès Mythic (.aero-shine, posée par la scène) : un reflet passe sur les chiffres à intervalles. */
+.num-card.skin-aero.aero-shine .slot:not(.ghost) { animation: aero-gleam 2.6s ease-in-out infinite; }
+.num-card.skin-aero.aero-shine .slot:nth-of-type(2) { animation-delay: .12s; } .num-card.skin-aero.aero-shine .slot:nth-of-type(3) { animation-delay: .24s; }
+.num-card.skin-aero.aero-shine .slot:nth-of-type(4) { animation-delay: .36s; } .num-card.skin-aero.aero-shine .slot:nth-of-type(5) { animation-delay: .48s; }
+.num-card.skin-aero.aero-shine .slot:nth-of-type(6) { animation-delay: .6s; }
+@keyframes aero-gleam { 0%, 70%, 100% { filter: none; } 80% { filter: brightness(1.5) drop-shadow(0 0 .15em #fff); } }
+@media (prefers-reduced-motion: reduce) { .skin-aero .slot { animation: none !important; } }
+.side-aero { --side-border: #38bdf8; --side-glow: 0 0 20px rgba(56, 189, 248, .45); --side-ink: #0284c7;
+  --side-bg: linear-gradient(180deg, rgba(255, 255, 255, .25), transparent 45%), radial-gradient(ellipse 70% 30% at 30% 110%, rgba(82, 194, 52, .45) 0 60%, transparent 61%), radial-gradient(ellipse 80% 34% at 85% 116%, rgba(63, 174, 42, .4) 0 60%, transparent 61%), linear-gradient(180deg, rgba(46, 167, 232, .28), rgba(196, 241, 255, .2));
+  --deco-a: '🫧'; --deco-b: '🐠'; }
+.side-aero::before { animation: aero-bob 2.2s ease-in-out infinite; }
+.side-aero::after { animation: aero-swim 3.4s ease-in-out infinite; }
+@keyframes aero-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) scale(1.06); } }
+@keyframes aero-swim { 0%, 100% { transform: translateX(0) rotate(-4deg); } 50% { transform: translateX(-10px) rotate(4deg); } }
+.room-stage.many .side-aero::before, .room-stage.many .side-aero::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-aero::before, .side-aero::after { animation: none; } }

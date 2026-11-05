@@ -268,6 +268,20 @@
     // costs 6,666 » ; Demon est aussi l'ange déchu de Roanono (2026-11-03, « lumière sombre »). Legendary (premium).
     { id: 'angel', name: 'Angel', emoji: '🪽', price: 7777, desc: 'Digits of pure light, each under its own golden halo; great rolls spread a pair of feathered wings, and Divine rolls bring three', premium: true, idea: 'qwertyuiop' },
     { id: 'demon', name: 'Demon', emoji: '😈', price: 6666, desc: 'A fallen angel: digits branded in red on cracked obsidian under broken halos; great rolls unfold torn black wings over a burning circle of runes', premium: true, idea: 'qwertyuiop' },
+    // ==== Skins du 2026-11-05, lot 2 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de finnnnn (2026-10-21) : un océan profond ; fusionnée avec Deadshot (2026-11-02 : poissons, requins, tortues,
+    // calmars, algues, une ancre une fois sur 50), YeeHao2 (2026-10-27 : une baleine) et LEVIATHAN (2026-10-29 : un
+    // léviathan qui domine le nombre). Le skin Ocean (700 pièces) reste tel quel.
+    { id: 'deepsea', name: 'Deep Sea', emoji: '🐋', price: 2600, desc: 'Glowing digits in the dark abyss while fish, turtles and squid swim by; great rolls bring a shark, Mythic rolls a whale, Divine rolls the leviathan, and once in a while an anchor drifts down', idea: 'finnnnn' },
+    // Idée de finnnnn (2026-11-05) : chaque chiffre est une bulle qui éclate pour laisser place au suivant ; dès Mythic, un
+    // pistolet à bulles en lance partout.
+    { id: 'bubble', name: 'Bubble', emoji: '🫧', price: 1400, desc: 'Every digit floats in a soap bubble that pops into the next one; Mythic rolls fire a bubble gun everywhere', idea: 'finnnnn' },
+    // Idée de kaz (2026-10-31, Legendary) : noir et blanc, les couleurs s'inversent à chaque chiffre, des chiffres chinois
+    // dans la brume pendant le tirage, des cercles du yin et du yang au fond ; même idée de JBearr12 (2026-11-01).
+    { id: 'yinyang', name: 'Yin and Yang', emoji: '☯️', price: 6000, desc: 'Black and white that swap with every digit; Chinese numerals roll in the mist, and great rolls bring a black and a white koi circling your number', premium: true, idea: 'kaz' },
+    // Promis à jia jun (2026-10-23) : « Frutiger aero skin ». Le style générique des bureaux des années 2000 (ciel, herbe,
+    // verre brillant, bulles), sans aucun logo.
+    { id: 'aero', name: 'Frutiger Aero', emoji: '🌐', price: 2200, desc: 'Glossy blue glass over a green hill: gel digits pop like drops, bubbles float up, and Mythic rolls bring ribbons of light and glowing butterflies', idea: 'jia jun' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
@@ -434,11 +448,11 @@
     // Idée de HSI : une ferme par une journée ensoleillée, des animaux et une grange rouge au fond.
     { id: 'farm', name: 'Farm', emoji: '🐄', price: 4500, premium: true, idea: 'HSI', desc: 'A sunny farm with a red barn: cows graze, sheep and chickens wander and a tractor rolls by; Epic+ rolls make the rooster crow, Mythic+ rolls set every chicken flapping' },
     // Idée de kingston : un fond clavier, thème ASMR (le « thock » au clic ne sonne que si le son est activé).
-    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; click the background to press one with a soft thock, and it types every number you roll' },
+    { id: 'keyboard', name: 'Keyboard ASMR', emoji: '⌨️', price: 1000, idea: 'kingston', desc: 'A cozy pastel keyboard whose keys press down by themselves; type on your keyboard or click the background and its keys crunch down with you, and it types every number you roll' },
     // Idée de finnnnn, assorti au skin Storm : un ou deux éclairs toutes les 10 s environ, un tonnerre doux, rien de fort.
     { id: 'thunderstorm', name: 'Thunderstorm', emoji: '⛈️', price: 1000, idea: 'finnnnn', desc: 'Rain under heavy clouds, a soft lightning strike far away every ten seconds or so and a low, distant rumble of thunder' },
     // Idée de finnnnn : des astres qui tournent les uns autour des autres, comme le système solaire.
-    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets circle the sun on glowing orbits, and now and then a comet sweeps past' },
+    { id: 'solarsystem', name: 'Solar System', emoji: '🪐', price: 1100, idea: 'finnnnn', desc: 'Eight planets, Pluto and the asteroid belt with Ceres circle the sun on glowing orbits, and now and then a comet sweeps past' },
     // Idée de Ggggssnoop, assorti au skin Meteor : une pluie d'étoiles filantes.
     { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
     // Idée de jia jun : une fête d'anniversaire.
@@ -469,7 +483,7 @@
     { id: 'zombiemoon', name: 'Zombie Moon', emoji: '🧟', price: 1031, idea: '17black', desc: 'Goofy zombies shamble and crawl across a misty graveyard under a full moon · Halloween 2026', until: '2026-11-01T00:00:00Z' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un petit village sous la neige, fenêtres allumées et cheminées qui
     // fument. Limité (onglet Limités, hors caisse), jusqu'au 26 décembre comme les skins de Noël. Proche du « Snowy Cabin »
-    // d'IXOLAF2 (idée de 3 joueurs), crédité ; comme pour tous les fonds, pas de part de 5 % (seuls les skins en donnent).
+    // d'IXOLAF2 (idée de 3 joueurs), crédité ; part de 5 % comme pour les skins depuis le 2026-11-05 (idée de qwertyuiop).
     { id: 'snowvillage', name: 'Snowy Village', emoji: '🏘️', price: 777, idea: 'IXOLAF2', desc: 'Cozy houses with glowing windows under falling snow · until December 26', until: '2026-12-26T00:00:00Z' },
     // Fond de Noël (événement de Noël, 2026-11-01) : un salon, une cheminée qui crépite en bas de l'écran, des chaussettes
     // sur le manteau et la neige derrière la fenêtre. Limité (onglet Limités, hors caisse) jusqu'au 26 décembre.

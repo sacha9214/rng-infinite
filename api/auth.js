@@ -3,6 +3,7 @@
 // POST /api/auth  { action: 'passwordLogin', name, password }             → se connecter avec pseudo + mot de passe
 // POST /api/auth  { action: 'passwordState', playerId, secret }          → a-t-il déjà un mot de passe ?
 // POST /api/auth  { action: 'recoverLogin', code }                        → reprendre son joueur avec un code du créateur
+// POST /api/auth  { action: 'deleteAccount', playerId, secret, name }    → supprimer son compte (api/_account.js)
 // Connexion Google : relie le compte Google à un joueur et donne à cet appareil un secret pour tirer sous ce joueur.
 // Le même compte Google retrouve donc son joueur (et ses places au classement) sur n'importe quel appareil.
 const crypto = require('node:crypto');
@@ -70,6 +71,10 @@ module.exports = async (req, res) => {
     const early = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     if (['setPassword', 'passwordLogin', 'passwordState', 'recoverLogin'].includes(early.action)) {
       try { const [status, out] = await passwords(req, early); return send(res, status, out); } catch (err) { return send(res, err.status || 500, { error: err.message }); }
+    }
+    // Supprimer son compte (api/_account.js, demandé par Sacha, 2026-11-05).
+    if (early.action === 'deleteAccount') {
+      try { return send(res, 200, await require('./_account').deleteAccount(early)); } catch (err) { return send(res, err.status || 500, { error: err.message }); }
     }
   }
   if (!config.googleClientId) return send(res, 503, { error: 'Google sign-in is not configured' });
