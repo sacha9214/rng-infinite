@@ -13509,3 +13509,156 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes dill-sq { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2, .8); } }
 .room-stage.many .side-dill::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-dill::before { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 9 (idées de joueurs) */
+/* ------------------------------------------------------------------ Menagerie (idée de kingston, 2026-10-28 : « a skin
+   where the longer you are on the more animals spawn on the map »). Une petite carte vue de haut : un pré, un chemin de
+   terre, une mare, deux arbres. Les chiffres sont posés sur la carte comme des panneaux de bois (bois clair, bord
+   sombre). Pendant le tirage, ils tressautent. Un chiffre qui se pose : il est planté d'un coup (matière bois : un choc
+   sec). Les animaux qui arrivent, de plus en plus nombreux à mesure que la session dure : js/skinfx.js. */
+.num-card.skin-menagerie {
+  background:
+    radial-gradient(ellipse .5em .28em at 97% 92%, #60a5fa 0 60%, #3b82f6 62% 70%, transparent 72%),
+    radial-gradient(circle at 3% 12%, #166534 0 .16em, transparent .17em), radial-gradient(circle at 7% 22%, #15803d 0 .12em, transparent .13em),
+    linear-gradient(170deg, transparent 52%, #d6b98c 53% 60%, transparent 61%),
+    radial-gradient(circle, rgba(255, 255, 255, .12) 0 1px, transparent 1.5px) 0 0 / 9px 9px,
+    linear-gradient(180deg, #86efac, #4ade80 70%, #22c55e);
+  border: .14em solid #78350f; border-radius: .5rem; color: #fef3c7;
+  box-shadow: inset 0 0 .3em rgba(20, 83, 45, .4), 0 10px 18px rgba(0, 0, 0, .3);
+}
+.skin-menagerie .slot { position: relative; font-family: 'Rockwell', 'Clarendon', Georgia, serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #fff7e6; -webkit-text-stroke: .03em #5c3a1e; text-shadow: 0 .05em 0 #5c3a1e, 0 .07em .05em rgba(0, 0, 0, .3); }
+.skin-menagerie .slot.ghost { opacity: .22; }
+.skin-menagerie .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-menagerie .slot.spinning { opacity: .55; animation: mng-twitch .2s steps(2) infinite; }
+@keyframes mng-twitch { from { transform: translateY(-.03em) rotate(-2deg); } to { transform: translateY(.03em) rotate(2deg); } }
+.skin-menagerie .slot.revealed { animation: mng-plant .45s backwards; }
+@keyframes mng-plant { 0% { transform: translateY(-.25em); animation-timing-function: cubic-bezier(.6, 0, .9, .4); } 45% { transform: translateY(.03em) scaleY(.94); } 70% { transform: translateY(-.02em); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-menagerie .slot { animation: none !important; } }
+.side-menagerie { --side-border: #4ade80; --side-glow: 0 0 14px rgba(74, 222, 128, .3); --side-ink: #15803d;
+  --side-bg: radial-gradient(circle, rgba(255, 255, 255, .1) 0 1px, transparent 1.5px) 0 0 / 12px 12px, linear-gradient(180deg, rgba(134, 239, 172, .2), rgba(34, 197, 94, .16));
+  --deco-a: '🐇'; --deco-b: '🦆'; }
+.side-menagerie::before { animation: mng-hop .9s ease-in-out infinite; }
+.side-menagerie::after { animation: mng-waddle 1.4s ease-in-out infinite; }
+@keyframes mng-hop { 0%, 100% { transform: none; } 50% { transform: translateY(-7px); } }
+@keyframes mng-waddle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg) translateX(-4px); } }
+.room-stage.many .side-menagerie::before, .room-stage.many .side-menagerie::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-menagerie::before, .side-menagerie::after { animation: none; } }
+/* ------------------------------------------------------------------ Café (idée de 0casmictechthing, 2026-10-29 : « a
+   pitcher above the numbers pouring coffee to reveal each number, a rosetta drips down for mythic or above »). Une tasse
+   d'espresso vue de haut : la crème brun-roux, plus claire au centre, des bulles fines. Les chiffres sont dessinés en
+   mousse de lait (blanc crème, bord légèrement fondu dans le café). Pendant le tirage, le café tourne : les chiffres sont
+   des tourbillons pâles. Un chiffre qui se pose : le pichet verse, la mousse s'étale et se fige (matière liquide : elle
+   s'étale puis se resserre). Le pichet, la vapeur et la rosette : js/skinfx.js (SCENES.cafe). */
+.num-card.skin-cafe {
+  background:
+    radial-gradient(circle, rgba(255, 237, 213, .14) 0 1px, transparent 1.5px) 0 0 / 7px 6px, radial-gradient(circle, rgba(255, 237, 213, .1) 0 .6px, transparent 1px) 3px 2px / 5px 4px,
+    radial-gradient(ellipse 70% 80% at 50% 50%, #c08552, #9c5f33 45%, #6b3a1c 75%, #3d1f0e);
+  border: .2em solid #f5f5f4; border-radius: 1.2rem; color: #fffaf0;
+  box-shadow: inset 0 0 0 .05em #e7e5e4, inset 0 .1em .4em rgba(0, 0, 0, .45), 0 0 0 .08em #d6d3d1, 0 10px 18px rgba(0, 0, 0, .35);
+}
+.skin-cafe .slot { position: relative; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900;
+  color: #fffaf0; text-shadow: 0 0 .06em #fef3c7, 0 0 .14em rgba(255, 237, 213, .7), 0 .04em .05em rgba(61, 31, 14, .55); }
+.skin-cafe .slot.ghost { opacity: .2; }
+.skin-cafe .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-cafe .slot.spinning { opacity: .4; color: #f5e1c8; filter: blur(1px); animation: cafe-swirl .4s linear infinite; }
+@keyframes cafe-swirl { from { transform: rotate(-10deg) scale(.95); } 50% { transform: rotate(10deg) scale(1.05); } to { transform: rotate(-10deg) scale(.95); } }
+.skin-cafe .slot.revealed { animation: cafe-pour .6s backwards; }
+@keyframes cafe-pour {
+  0% { transform: scale(.3, .3); filter: blur(2px); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  45% { transform: scale(1.15, .92); filter: blur(.4px); }
+  70% { transform: scale(.97, 1.03); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-cafe .slot { animation: none !important; } }
+.side-cafe { --side-border: #a8a29e; --side-glow: 0 0 14px rgba(192, 133, 82, .3); --side-ink: #9c5f33;
+  --side-bg: radial-gradient(ellipse 20px 20px at 90% 82%, rgba(156, 95, 51, .4) 0 60%, rgba(245, 245, 244, .4) 62% 70%, transparent 72%), linear-gradient(180deg, rgba(254, 243, 199, .1), rgba(156, 95, 51, .12));
+  --deco-a: '☕'; --deco-b: '♨'; }
+.side-cafe::after { animation: cafe-steam 2s ease-in-out infinite; }
+@keyframes cafe-steam { 0%, 100% { transform: translateY(0); opacity: .4; } 50% { transform: translateY(-6px); opacity: .9; } }
+.room-stage.many .side-cafe::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-cafe::after { animation: none; } }
+/* ------------------------------------------------------------------ Robot Sentinel (idée de costoroll, 2026-10-29 : un robot
+   debout sur le sol de Mars, la lune au fond, qui trace chaque chiffre au laser vert ; dès Mythic, il fait exploser la
+   lune et tourne sur lui-même. Pas d'armes : son rayon est un scanner qui grave les chiffres, et dès Mythic il lance un
+   feu d'artifice de lumière au lieu de détruire la lune). Le ciel rouille de Mars, des cailloux, une petite lune pâle.
+   Les chiffres sont gravés en vert lumineux, comme au laser. Pendant le tirage, ils ne sont qu'une grille de balayage.
+   Un chiffre qui se pose : le rayon le trace, il s'allume d'un coup (matière lumière : un éclat, pas de rebond).
+   Le robot, son rayon et le spectacle de lumière : js/skinfx.js (SCENES.sentinel). */
+.num-card.skin-sentinel {
+  background:
+    radial-gradient(circle at 97% 12%, #fde4cf 0 .11em, rgba(253, 228, 207, .3) .14em, transparent .24em),
+    linear-gradient(0deg, #7c2d12 0 22%, #9a3412 22% 24%, transparent 24%),
+    radial-gradient(ellipse .25em .1em at 18% 86%, #451a03 0 60%, transparent 62%), radial-gradient(ellipse .2em .08em at 70% 90%, #451a03 0 60%, transparent 62%),
+    linear-gradient(180deg, #431407, #9a3412 70%, #c2410c);
+  border: 2px solid #451a03; border-radius: .5rem; color: #86efac;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .45), 0 0 16px rgba(74, 222, 128, .25), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-sentinel .slot { position: relative; font-family: 'Orbitron', 'Eurostile', 'Bank Gothic', 'DIN Alternate', 'Arial Narrow', system-ui, sans-serif; font-weight: 800;
+  color: #bbf7d0; text-shadow: 0 0 .04em #fff, 0 0 .18em #22c55e, 0 0 .45em rgba(34, 197, 94, .6); }
+.skin-sentinel .slot.ghost { opacity: .18; }
+.skin-sentinel .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-sentinel .slot.spinning { opacity: .5; color: transparent; text-shadow: none; background: repeating-linear-gradient(0deg, rgba(74, 222, 128, .5) 0 1px, transparent 1px 4px); animation: snt-scan .3s linear infinite; }
+@keyframes snt-scan { from { background-position: 0 0; } to { background-position: 0 8px; } }
+.skin-sentinel .slot.revealed { animation: snt-trace .5s backwards; }
+@keyframes snt-trace {
+  0% { clip-path: inset(0 0 100% 0); filter: brightness(2.2); animation-timing-function: linear; }
+  45% { clip-path: inset(0 0 0 0); filter: brightness(1.8); }
+  60% { filter: brightness(.7); }
+  100% { clip-path: inset(-20%); filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-sentinel .slot { animation: none !important; } }
+.side-sentinel { --side-border: #9a3412; --side-glow: 0 0 16px rgba(74, 222, 128, .25); --side-ink: #22c55e;
+  --side-bg: radial-gradient(circle at 85% 20%, rgba(253, 228, 207, .35) 0 10px, transparent 12px), linear-gradient(0deg, rgba(124, 45, 18, .35) 0 18%, transparent 18%), linear-gradient(180deg, rgba(67, 20, 7, .25), rgba(194, 65, 12, .2));
+  --deco-a: '🤖'; --deco-b: '🌕'; }
+.side-sentinel::before { animation: snt-spin 2.4s ease-in-out infinite; }
+@keyframes snt-spin { 0%, 70%, 100% { transform: none; } 85% { transform: scaleX(-1); } }
+.room-stage.many .side-sentinel::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-sentinel::before { animation: none; } }
+/* ------------------------------------------------------------------ Jigsaw (idée de number 1, 2026-10-29 : « a puzzle one
+   where each puzzle piece snaps in place to reveal the number … the explosion will just scatter puzzle pieces everywhere »,
+   900 pièces). Un puzzle presque fini sur une table : une image de ciel et de collines. Chaque chiffre est imprimé sur sa
+   pièce (tenons et mortaises, contour clair). Pendant le tirage, les pièces flottent à côté de leur place, de travers. Un
+   chiffre qui se pose : la pièce glisse, se tourne et s'emboîte d'un clic (carton : un petit choc sec). Pièces qui volent
+   et image complète : js/skinfx.js (SCENES.jigsaw). */
+.num-card.skin-jigsaw {
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 110%, #22c55e 0 60%, transparent 61%), radial-gradient(ellipse 70% 45% at 85% 115%, #16a34a 0 60%, transparent 61%),
+    radial-gradient(circle at 80% 25%, #fde68a 0 .22em, transparent .26em),
+    linear-gradient(180deg, #7dd3fc, #bae6fd 60%, #e0f2fe);
+  border: .12em solid #78350f; border-radius: .3rem; color: #1e3a8a;
+  box-shadow: inset 0 0 0 .05em #d6b98c, 0 10px 18px rgba(0, 0, 0, .3);
+  padding: .3em .55em;
+}
+.skin-jigsaw .slot {
+  position: relative; z-index: 1; box-sizing: border-box; width: .8em; height: .9em; margin: 0 .01em;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900; font-size: .84em;
+  color: #1e3a8a; text-shadow: 0 .03em 0 rgba(255, 255, 255, .8);
+}
+.skin-jigsaw .slot::before {
+  content: ''; position: absolute; inset: -.08em; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 56'><path d='M6 8H18C17 4 20 1 25 1S33 4 32 8H44V22C48 21 50 24 50 28S48 35 44 34V48H32C33 52 30 55 25 55S17 52 18 48H6V34C2 35 0 32 0 28S2 21 6 22Z' fill='%23fefce8' fill-opacity='.85' stroke='%23a16207' stroke-width='1.6'/></svg>") 50% 50% / 100% 100% no-repeat;
+  filter: drop-shadow(0 .03em .02em rgba(0, 0, 0, .3));
+}
+.skin-jigsaw .slot.ghost { opacity: .3; }
+.skin-jigsaw .slot.collapsed { width: 0; height: 0; margin: 0; padding: 0; }
+.skin-jigsaw .slot.collapsed::before { display: none; }
+.skin-jigsaw .slot.spinning { opacity: 1; color: rgba(30, 58, 138, .3); animation: jig-float .4s ease-in-out infinite alternate; }
+.skin-jigsaw .slot.spinning:nth-of-type(2n) { animation-direction: alternate-reverse; }
+@keyframes jig-float { from { transform: translate(-.08em, -.1em) rotate(-12deg); } to { transform: translate(.06em, -.06em) rotate(8deg); } }
+.skin-jigsaw .slot.revealed { animation: jig-snap .5s backwards; }
+@keyframes jig-snap {
+  0% { transform: translate(.2em, -.3em) rotate(25deg) scale(1.1); color: rgba(30, 58, 138, .3); animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
+  55% { transform: translate(0, .02em) rotate(-2deg) scale(.97); color: #1e3a8a; }
+  72% { transform: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-jigsaw .slot { animation: none !important; } }
+.side-jigsaw { --side-border: #a16207; --side-glow: 0 0 14px rgba(125, 211, 252, .3); --side-ink: #0284c7;
+  --side-bg: linear-gradient(180deg, rgba(125, 211, 252, .18), rgba(34, 197, 94, .14));
+  --deco-a: '🧩'; --deco-b: '🧩'; }
+.side-jigsaw::before { animation: jig-turn 2s ease-in-out infinite; }
+@keyframes jig-turn { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg) translate(4px, -4px); } }
+.room-stage.many .side-jigsaw::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-jigsaw::before { animation: none; } }

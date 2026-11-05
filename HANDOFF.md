@@ -208,9 +208,13 @@ normal skin; Witch's Brew is the cauldron one).
 [78bc6f4f973b]; `dill` Pickle 🥒 1,200 — Dylanrulez123 [6df5ef142466] (id `dill`: `pickle` is the button's id, and the
 tests forbid a skin and a button sharing one).
 
-- Next: animals that
-  spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
-  Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
+**Lot 9 — `claude/skins-lot9`** (block "lot 9 du 2026-11-05" in `js/skinfx.js`): `menagerie` Menagerie 🐇 1,600 —
+kingston [4aa8530580c8] (2 animals at page load, one more every 40 s of the session, up to 24; each landed digit adds
+one); `cafe` Café ☕ 1,500 — 0casmictechthing [6804dcd7e33e] (Epic: a latte-art heart; Mythic and above: the rosetta);
+`sentinel` Robot Sentinel 🤖 2,400 — costoroll [055a03dcf2d5] (no weapons: the laser is a scanner beam and Mythic is a
+light show and a happy spin instead of blowing up the moon); `jigsaw` Jigsaw 🧩 900 — number 1 [2da86f4fdadb] (his price).
+
+- Next: Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
   lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
   mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
   [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon

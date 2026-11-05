@@ -345,6 +345,11 @@
     // Idée de Dylanrulez123 (2026-10-28) : un skin cornichon assorti au bouton Pickle. Identifiant « dill » : « pickle »
     // est déjà l'identifiant du bouton (un skin et un bouton ne partagent jamais un identifiant).
     { id: 'dill', name: 'Pickle', emoji: '🥒', price: 1200, desc: 'A bumpy pickle that matches the Pickle button: every digit squishes in with a splash of brine, and Mythic rolls are a BIG DILL', idea: 'Dylanrulez123' },
+    // lot 9 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'menagerie', name: 'Menagerie', emoji: '🐇', price: 1600, desc: 'A little map where animals wander around your number; the longer you play, the more of them come, and every digit brings a new one', idea: 'kingston' },
+    { id: 'cafe', name: 'Café', emoji: '☕', price: 1500, desc: 'A cup of espresso: a pitcher pours coffee to reveal every digit in milk foam, and Mythic rolls draw a rosetta', idea: '0casmictechthing' },
+    { id: 'sentinel', name: 'Robot Sentinel', emoji: '🤖', price: 2400, desc: 'A little robot on Mars traces every digit with its green scanner beam; on Mythic rolls it spins for joy and starts a light show', idea: 'costoroll' },
+    { id: 'jigsaw', name: 'Jigsaw', emoji: '🧩', price: 900, desc: 'Every digit is a puzzle piece that snaps into place with a click; great rolls scatter puzzle pieces everywhere', idea: 'number 1' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
