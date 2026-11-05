@@ -723,6 +723,16 @@
     gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(.6, `rgba(${rgb},${(a * .75).toFixed(3)})`); gr.addColorStop(1, `rgba(${rgb},0)`);
     g.fillStyle = gr; g.fillRect(-rx, -rx, rx * 2, rx * 2); g.restore();
   }
+  // La même zone calme, en élément CSS posé par-dessus les canevas : pour les fonds dont tout le décor bouge (repeindre ce
+  // grand dégradé à chaque image coûtait plus que le reste du dessin). Retirée par stop() de la scène.
+  // k agrandit la zone (pour un décor très chargé, comme la carte du monde).
+  function calmEl(layer, S, rgb, a, k = 1) {
+    const portrait = S.H > S.W, cx = S.W / 2, cy = S.H * (portrait ? .38 : .32), rx = Math.max(S.W * (portrait ? .62 : .4), 280) * k, ry = S.H * (portrait ? .42 : .36) * k;
+    let el = layer.querySelector(':scope > .wcalm');
+    if (!el) { el = doc.createElement('i'); el.className = 'wcalm'; layer.appendChild(el); }
+    el.style.cssText = `left:${(cx - rx).toFixed(0)}px;top:${(cy - ry).toFixed(0)}px;width:${(rx * 2).toFixed(0)}px;height:${(ry * 2).toFixed(0)}px;background:radial-gradient(closest-side,rgba(${rgb},${a}),rgba(${rgb},${(a * .75).toFixed(3)}) 60%,rgba(${rgb},0))`;
+    return el;
+  }
   // 0 hors de la zone du texte (celle de calm), jusqu'à 1 en son centre : pour y semer moins de détails
   function quiet(S, x, y) {
     const portrait = S.H > S.W, rx = Math.max(S.W * (portrait ? .62 : .4), 280), ry = S.H * (portrait ? .42 : .36);
@@ -1275,6 +1285,478 @@
         if (S.still) speed = target;
       },
       debug(S, what) { return { tier, speed: Math.round(1 / speed * 100) / 100, pos: Math.round(pos * 1000) / 1000 }; },
+    });
+    return st;
+  };
+
+  /* ===============================================================================================================
+   * Fonds d'idées de joueurs du 2026-11-05, lot « lieux » : World Map, Pyramids, Ice Caps, Circus.
+   */
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🗺️ World Map (idée de qwertyuiop, 2026-10-29, aussi demandée par Jguz01 « les 7 continents » et ichi « un fond
+   * monde ») : le monde en points, comme une carte lumineuse. Les sept continents sont des polygones grossiers
+   * (longitude, latitude) passés dans une grille de points une fois pour toutes ; la carte défile lentement vers la gauche
+   * et boucle, comme un globe qui tourne. Les lumières des grandes villes scintillent et, de temps en temps, un vol trace un
+   * arc d'une ville à l'autre. Thème sombre : la nuit, des points cyan sur un océan bleu nuit ; thème clair : une carte
+   * marine pâle, des points vert sauge, et une rose des vents.
+   */
+  const WORLD = [
+    // Amérique du Nord, Groenland, Amérique du Sud
+    [[-168, 66], [-162, 70], [-140, 70], [-125, 72], [-95, 72], [-80, 73], [-62, 66], [-55, 52], [-66, 45], [-76, 38], [-81, 31], [-80, 25], [-84, 30], [-90, 29], [-97, 26], [-97, 21], [-90, 21], [-87, 15], [-83, 9], [-78, 8], [-80, 7], [-86, 12], [-92, 15], [-105, 20], [-110, 24], [-115, 31], [-118, 34], [-124, 40], [-124, 48], [-133, 56], [-148, 60], [-158, 57], [-165, 61]],
+    [[-55, 60], [-44, 60], [-20, 70], [-20, 80], [-40, 83], [-60, 82], [-70, 77], [-58, 70]],
+    [[-80, 8], [-72, 12], [-62, 11], [-50, 1], [-35, -5], [-38, -13], [-48, -25], [-58, -35], [-65, -41], [-68, -52], [-74, -53], [-73, -40], [-71, -30], [-70, -18], [-76, -14], [-81, -5], [-80, 1]],
+    // Europe et Asie (un seul bloc), Afrique, Madagascar
+    [[-10, 36], [-9, 43], [-2, 44], [-5, 48], [2, 51], [8, 54], [10, 57], [5, 62], [14, 68], [25, 71], [40, 68], [60, 70], [70, 73], [80, 73], [100, 77], [115, 74], [140, 72], [160, 70], [180, 68], [180, 65], [170, 60], [160, 58], [156, 51], [142, 47], [140, 40], [130, 42], [127, 35], [121, 31], [120, 24], [110, 20], [106, 10], [100, 13], [100, 3], [104, 1], [98, 8], [92, 22], [80, 15], [77, 8], [72, 20], [66, 25], [57, 25], [56, 27], [50, 30], [48, 29], [51, 24], [56, 26], [59, 22], [52, 16], [43, 12], [39, 20], [34, 28], [32, 31], [35, 36], [27, 37], [24, 40], [20, 40], [18, 40], [15, 38], [12, 44], [8, 44], [3, 43], [-1, 37], [-6, 36]],
+    [[-17, 15], [-17, 21], [-13, 28], [-9, 32], [-5, 36], [10, 37], [11, 33], [20, 31], [32, 31], [34, 28], [43, 12], [51, 12], [42, -1], [40, -10], [35, -24], [32, -29], [27, -34], [19, -35], [16, -29], [12, -17], [13, -6], [9, -1], [9, 4], [4, 6], [-8, 4], [-13, 8]],
+    [[44, -25], [47, -25], [50, -15], [49, -12], [44, -17]],
+    // Océanie, Antarctique, et quelques îles qu'on reconnaît
+    [[114, -22], [122, -18], [130, -12], [137, -12], [142, -11], [146, -19], [153, -26], [150, -37], [140, -38], [132, -32], [115, -35]],
+    [[-180, -72], [-120, -73], [-60, -64], [-57, -63], [-60, -70], [0, -70], [60, -67], [120, -66], [180, -70], [180, -90], [-180, -90]],
+    [[-6, 50], [2, 51], [-2, 58], [-6, 58]], [[130, 31], [141, 36], [142, 45], [139, 40]], [[95, 5], [106, -6], [115, -8], [119, -5], [117, 6], [109, 2], [100, 0]],
+    [[131, -1], [150, -6], [147, -10], [138, -8]], [[172, -41], [178, -38], [174, -46], [167, -46]], [[-24, 64], [-14, 64], [-15, 66], [-23, 66]],
+  ];
+  // de grandes villes (longitude, latitude) : leurs lumières et les vols
+  const CITIES = [[-74, 41], [-118, 34], [-87, 42], [-99, 19], [-46, -23], [-58, -35], [-77, -12], [-0, 51], [2, 49], [13, 52], [37, 56], [28, 41], [31, 30], [3, 6], [36, -1], [18, -34], [55, 25], [72, 19], [77, 29], [88, 22], [100, 14], [104, 1], [116, 40], [121, 31], [114, 22], [127, 37], [139, 36], [151, -34], [145, -38], [174, -37], [-123, 49], [-80, 26], [-3, 40], [12, 42], [30, 50], [44, 33], [67, 25]];
+  function inPoly(x, y, P) {
+    let c = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c;
+    return c;
+  }
+  SCENES.worldmap = layer => {
+    let G = {}, map = null, flights = [], nextFlight = rnd(1, 2.5), off = 0;
+    const lit = CITIES.map(c => ({ c, ph: rnd(0, 7), sp: rnd(.8, 1.8) }));
+    // longitude, latitude → point de la carte (avant défilement) ; la carte va de 84° N à 84° S
+    const xy = (lon, lat) => [(lon + 180) / 360 * G.mw, (84 - lat) / 168 * G.mh];
+    function paintMap(S) {
+      const cv = doc.createElement('canvas'); cv.width = Math.ceil(G.mw); cv.height = Math.ceil(G.mh);
+      const g = cv.getContext('2d'), D = S.dark, step = 1.5, d = G.mw / 360 * step;
+      // le quadrillage (méridiens et parallèles tous les 30°)
+      g.strokeStyle = D ? 'rgba(103,232,249,.07)' : 'rgba(30,64,90,.09)'; g.lineWidth = 1;
+      for (let lon = -180; lon < 180; lon += 30) { const [x] = xy(lon, 0); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, G.mh); g.stroke(); }
+      for (let lat = -60; lat <= 60; lat += 30) { const [, y] = xy(0, lat); g.beginPath(); g.moveTo(0, y); g.lineTo(G.mw, y); g.stroke(); }
+      const r = seeded(5);
+      for (let lat = 84 - step / 2; lat > -84; lat -= step) for (let lon = -180 + step / 2; lon < 180; lon += step) {
+        if (!WORLD.some(P => inPoly(lon, lat, P))) continue;
+        const [x, y] = xy(lon, lat), k = r(), rad = d * (.26 + k * .1);
+        g.fillStyle = D ? `rgba(94,234,212,${(.38 + .3 * k).toFixed(2)})` : `rgba(74,122,92,${(.38 + .25 * k).toFixed(2)})`;
+        ell(g, x, y, rad, rad); g.fill();
+      }
+      return cv;
+    }
+    // un vol : un arc (courbe de Bézier relevée vers le pôle) d'une ville à une autre, assez loin
+    function newFlight() {
+      let a, b; do { a = pick(CITIES); b = pick(CITIES); } while (a === b || Math.abs(a[0] - b[0]) < 25 || Math.abs(a[0] - b[0]) > 150);
+      flights.push({ a, b, t: 0, dur: rnd(5, 8) });
+    }
+    const st = stage(layer, 'wwm', {
+      layout(S) {
+        const portrait = S.H > S.W;
+        G = { mh: S.H * (portrait ? .62 : .94), u: clamp(Math.min(S.W, S.H) / 100, 3.6, 11) };
+        G.mw = G.mh * 360 / 168; G.my = (S.H - G.mh) * (portrait ? .62 : .5);
+        // la carte doit couvrir l'écran en largeur pour boucler sans trou
+        if (G.mw < S.W) { G.mw = S.W; G.mh = G.mw * 168 / 360; G.my = (S.H - G.mh) / 2; }
+        map = paintMap(S);
+        calmEl(layer, S, S.dark ? '4,13,26' : '249,252,252', S.dark ? .6 : .9, 1.3);
+      },
+      paint(S, g) {
+        if (S.dark) {
+          const gl = g.createRadialGradient(S.W / 2, S.H / 2, 0, S.W / 2, S.H / 2, Math.max(S.W, S.H) * .7);
+          gl.addColorStop(0, 'rgba(14,116,144,.14)'); gl.addColorStop(1, 'rgba(14,116,144,0)'); g.fillStyle = gl; g.fillRect(0, 0, S.W, S.H);
+        } else {
+          // une rose des vents, en bas à droite
+          const cx = S.W * .9, cy = S.H * .86, R0 = G.u * 6;
+          g.save(); g.translate(cx, cy); g.strokeStyle = 'rgba(30,64,90,.35)'; g.fillStyle = 'rgba(30,64,90,.28)'; g.lineWidth = 1;
+          ell(g, 0, 0, R0, R0); g.stroke(); ell(g, 0, 0, R0 * .8, R0 * .8); g.stroke();
+          for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, L = i % 2 ? R0 * .6 : R0 * 1.1; g.beginPath(); g.moveTo(Math.cos(a) * L, Math.sin(a) * L); g.lineTo(Math.cos(a + .25) * R0 * .18, Math.sin(a + .25) * R0 * .18); g.lineTo(Math.cos(a - .25) * R0 * .18, Math.sin(a - .25) * R0 * .18); g.closePath(); g.fill(); }
+          g.font = `700 ${Math.round(R0 * .35)}px Inter, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText('N', 0, -R0 * 1.2);
+          g.restore();
+        }
+      },
+      update(S, dt) {
+        off = (off + dt * G.mw / 240) % G.mw; // un tour du monde en 4 minutes
+        if (S.T > nextFlight && flights.length < 3) { newFlight(); nextFlight = S.T + rnd(2.5, 5); }
+        for (const f of flights) f.t += dt;
+        flights = flights.filter(f => f.t < f.dur + 1.5);
+      },
+      draw(S, g) {
+        const D = S.dark, x0 = -off;
+        for (let x = x0; x < S.W; x += G.mw) g.drawImage(map, x, G.my);
+        // (le voile calme derrière le texte est un élément CSS par-dessus : calmEl)
+        const at = (lon, lat) => { const [x, y] = xy(lon, lat); let X = x - off; while (X < -G.mw * .5) X += G.mw; return [X, y + G.my]; };
+        for (const c of lit) {
+          const [x, y] = at(c.c[0], c.c[1]); if (x < -10 || x > S.W + 10) continue;
+          const k = .55 + .45 * Math.sin(S.T * c.sp + c.ph), q = 1 - .7 * quiet(S, x, y), R0 = G.u * .9 * (.7 + .3 * k);
+          const gr = g.createRadialGradient(x, y, 0, x, y, R0 * 2.5);
+          gr.addColorStop(0, D ? `rgba(253,224,71,${(.85 * k * q).toFixed(3)})` : `rgba(217,119,6,${(.7 * k * q).toFixed(3)})`); gr.addColorStop(1, 'rgba(253,224,71,0)');
+          g.fillStyle = gr; g.fillRect(x - R0 * 2.5, y - R0 * 2.5, R0 * 5, R0 * 5);
+        }
+        g.lineCap = 'round';
+        for (const f of flights) {
+          let [ax, ay] = at(f.a[0], f.a[1]), [bx, by] = at(f.b[0], f.b[1]);
+          if (Math.abs(bx - ax) > G.mw / 2) bx += bx < ax ? G.mw : -G.mw; // le plus court, par-dessus le bord de la carte
+          const cx = (ax + bx) / 2, cy = Math.min(ay, by) - Math.abs(bx - ax) * .28, q = clamp(f.t / f.dur, 0, 1), fade = clamp(1 - (f.t - f.dur) / 1.5, 0, 1);
+          const B = t => [(1 - t) * (1 - t) * ax + 2 * t * (1 - t) * cx + t * t * bx, (1 - t) * (1 - t) * ay + 2 * t * (1 - t) * cy + t * t * by];
+          g.strokeStyle = D ? `rgba(165,243,252,${(.45 * fade).toFixed(3)})` : `rgba(30,64,90,${(.45 * fade).toFixed(3)})`; g.lineWidth = 1.3;
+          g.setLineDash([4, 5]); g.beginPath(); for (let i = 0; i <= 30; i++) { const [x, y] = B(q * i / 30); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.setLineDash([]);
+          if (q < 1) { const [x, y] = B(q); g.fillStyle = D ? '#ecfeff' : '#1e3a5a'; ell(g, x, y, G.u * .35, G.u * .35); g.fill(); }
+        }
+      },
+      stop() { const c = layer.querySelector(':scope > .wcalm'); if (c) c.remove(); },
+      debug(S, what) { if (what === 'flight') { newFlight(); flights[flights.length - 1].t = 2.5; } return { flights: flights.length, off }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🏜️ Pyramids (idée de whywhywaylon, 2026-10-29) : « un fond des pyramides de Gizeh ». Le désert à l'heure dorée :
+   * les trois grandes pyramides en perspective (la grande à gauche, la plus petite à droite) et un petit sphinx, des dunes
+   * sur plusieurs plans, le soleil bas derrière. Une caravane de chameaux traverse les dunes très lentement, du sable
+   * file au ras du sol et un faucon tourne dans le ciel. Thème sombre : la nuit, la lune, les étoiles, les pyramides
+   * gris-bleu sous la lune et une lanterne qui se balance au cou du premier chameau.
+   * (le skin « tablette de pierre » de la même idée est pour la session des skins)
+   */
+  SCENES.pyramids = layer => {
+    const R = Math.random;
+    let G = {}, caravan = null, wisps = [], hawk = { a: 0 };
+    // une pyramide vue de trois quarts : la face au soleil claire, l'autre à l'ombre, des assises en lignes fines
+    function pyramid(g, S, x, base, w, h, P) {
+      const apex = [x + w * .08, base - h], L = [x - w / 2, base], M = [x + w * .2, base + h * .02], Rr = [x + w / 2, base - h * .02];
+      g.fillStyle = P.lit; g.beginPath(); g.moveTo(...apex); g.lineTo(...L); g.lineTo(...M); g.closePath(); g.fill();
+      g.fillStyle = P.shade; g.beginPath(); g.moveTo(...apex); g.lineTo(...M); g.lineTo(...Rr); g.closePath(); g.fill();
+      g.strokeStyle = P.course; g.lineWidth = 1;
+      for (let k = 1; k < 14; k++) {
+        const t = k / 14, y = apex[1] + (base - apex[1]) * t;
+        g.beginPath(); g.moveTo(apex[0] + (L[0] - apex[0]) * t, y); g.lineTo(apex[0] + (M[0] - apex[0]) * t, apex[1] + (M[1] - apex[1]) * t); g.lineTo(apex[0] + (Rr[0] - apex[0]) * t, apex[1] + (Rr[1] - apex[1]) * t); g.stroke();
+      }
+    }
+    function dune(g, S, y0, amp, freq, ph, col) {
+      g.fillStyle = col; g.beginPath(); g.moveTo(0, S.H);
+      for (let x = 0; x <= S.W + 8; x += 8) g.lineTo(x, y0 - amp * (Math.sin(x / S.W * freq + ph) * .6 + Math.sin(x / S.W * freq * 2.3 + ph * 2) * .4));
+      g.lineTo(S.W, S.H); g.fill();
+    }
+    const duneY = (S, x) => G.d1 - G.u * 2 * (Math.sin(x / S.W * 3 + 1) * .6 + Math.sin(x / S.W * 6.9 + 2) * .4);
+    // un chameau de profil (vers la droite) : corps, bosse, long cou, pattes qui marchent
+    function camel(g, s, T, ph, col, lantern) {
+      const step = Math.sin(T * 3.2 + ph), bob = Math.abs(Math.cos(T * 3.2 + ph)) * s * .04;
+      g.save(); g.translate(0, -bob); g.fillStyle = col; g.strokeStyle = col; g.lineCap = 'round';
+      g.lineWidth = s * .09;
+      for (const [x, k] of [[-.32, 1], [-.22, -1], [.2, -1], [.3, 1]]) { const sw = step * k * .12; g.beginPath(); g.moveTo(s * x, -s * .55); g.lineTo(s * (x + sw), -s * .02 + bob); g.stroke(); }
+      ell(g, 0, -s * .68, s * .44, s * .2); g.fill();
+      ell(g, -s * .05, -s * .86, s * .2, s * .17); g.fill();
+      g.lineWidth = s * .12; g.beginPath(); g.moveTo(s * .38, -s * .72); g.quadraticCurveTo(s * .62, -s * .8, s * .6, -s * 1.12); g.stroke();
+      ell(g, s * .67, -s * 1.13, s * .12, s * .07); g.fill();
+      g.lineWidth = s * .04; g.beginPath(); g.moveTo(-s * .43, -s * .7); g.quadraticCurveTo(-s * .52, -s * .55, -s * .48, -s * .45); g.stroke();
+      if (lantern) {
+        const sw = Math.sin(T * 2.4 + ph) * .3, lx = s * .55 + Math.sin(sw) * s * .14, ly = -s * .86 + Math.cos(sw) * s * .14;
+        g.lineWidth = 1; g.strokeStyle = col; g.beginPath(); g.moveTo(s * .55, -s * .86); g.lineTo(lx, ly); g.stroke();
+        const gr = g.createRadialGradient(lx, ly, 0, lx, ly, s * .5); gr.addColorStop(0, 'rgba(253,186,116,.55)'); gr.addColorStop(1, 'rgba(253,186,116,0)');
+        g.fillStyle = gr; g.fillRect(lx - s * .5, ly - s * .5, s, s); g.fillStyle = '#fed7aa'; ell(g, lx, ly, s * .05, s * .06); g.fill();
+      }
+      g.restore();
+    }
+    const st = stage(layer, 'wpy', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1;
+        // en portrait, le texte du site descend jusqu'à ~75 % de la hauteur : l'horizon et les pyramides plus bas
+        G = { u: clamp(Math.min(S.W, S.H) / 100, 3.6, 11), hz: S.H * (wide ? .74 : .86), wide };
+        G.d1 = S.H * (wide ? .86 : .92);
+        G.pyr = wide
+          ? [[S.W * .14, S.H * .38], [S.W * .3, S.H * .26], [S.W * .86, S.H * .2]]
+          : [[S.W * .14, S.H * .13], [S.W * .78, S.H * .1], [S.W * .94, S.H * .07]];
+        if (!wisps.length) wisps = Array.from({ length: 14 }, () => ({ x: R(), y: R(), v: rnd(.03, .07), l: rnd(.05, .14), ph: rnd(0, 7) }));
+        S.fgTop = Math.round(S.H * .08);
+      },
+      paint(S, g) {
+        const D = S.dark, { W, H, hz } = { W: S.W, H: S.H, hz: G.hz };
+        if (D) { starfield(g, W, hz, Math.round(W * H / 2400), 13, '255,255,255', .8); }
+        // le soleil (ou la lune) bas, derrière la grande pyramide du milieu
+        const sx = G.wide ? W * .42 : W * .4, sy = hz - G.u * 9, sr = G.u * (D ? 3 : 5);
+        const halo = g.createRadialGradient(sx, sy, sr * .5, sx, sy, sr * 9);
+        halo.addColorStop(0, D ? 'rgba(226,232,240,.2)' : 'rgba(255,214,140,.7)'); halo.addColorStop(1, D ? 'rgba(226,232,240,0)' : 'rgba(255,214,140,0)');
+        g.fillStyle = halo; g.fillRect(sx - sr * 9, sy - sr * 9, sr * 18, sr * 18);
+        ell(g, sx, sy, sr, sr); g.fillStyle = D ? '#e2e8f0' : '#fff1c7'; g.fill();
+        calm(g, S, D ? '12,16,38' : '253,240,218', D ? .4 : .7);
+        // dunes du fond, pyramides, dune du milieu, sphinx
+        dune(g, S, hz, G.u * 1.2, 4, 0, D ? '#2a2d4a' : '#e9c48e');
+        const P = D ? { lit: '#5b6385', shade: '#363b5a', course: 'rgba(20,24,44,.35)' } : { lit: '#e8b56a', shade: '#b77b3f', course: 'rgba(120,70,30,.22)' };
+        for (const [x, h] of G.pyr) pyramid(g, S, x, hz + G.u * .6, h * 1.55, h, P);
+        dune(g, S, hz + G.u * 4, G.u * 1.6, 3, 2, D ? '#24273f' : '#e1b57a');
+        // le sphinx : un corps allongé et une tête, en silhouette, devant la pyramide de droite
+        const fx = G.wide ? W * .7 : W * .45, fy = hz + G.u * 4.5, fs = G.u * 2.2;
+        g.fillStyle = D ? '#30344f' : '#c99a5c';
+        g.beginPath(); g.moveTo(fx - fs * 3, fy); g.lineTo(fx - fs * 2.8, fy - fs * .9); g.lineTo(fx + fs * .6, fy - fs * 1.1); g.lineTo(fx + fs * .9, fy - fs * 2.2); g.lineTo(fx + fs * 1.6, fy - fs * 2.3); g.lineTo(fx + fs * 1.8, fy - fs * 1.4); g.lineTo(fx + fs * 2.4, fy - fs * .5); g.lineTo(fx + fs * 2.6, fy); g.closePath(); g.fill();
+        dune(g, S, G.d1, G.u * 2, 3, 1, D ? '#1d1f33' : '#d9a965');
+        dune(g, S, S.H * .97, G.u * 1.5, 2, 4, D ? '#17192a' : '#cf9b56');
+      },
+      update(S, dt) {
+        if (!caravan) caravan = { x: -G.u * 30, v: G.u * 1.6 };
+        caravan.x += caravan.v * dt; if (caravan.x > S.W + G.u * 30) caravan.x = -G.u * 30;
+        for (const w of wisps) { w.x += w.v * dt; if (w.x > 1.2) { w.x = -.2; w.y = R(); } }
+        hawk.a += dt * .35;
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, col = D ? '#0e1020' : '#6b4423';
+        // le faucon : de grands cercles lents à droite, ailes qui battent rarement
+        const hx = S.W * (G.wide ? .8 : .7) + Math.cos(hawk.a) * G.u * 9, hy = S.H * .26 + Math.sin(hawk.a) * G.u * 3, flap = Math.sin(T * 9) * (Math.sin(T * .7) > .6 ? 1 : .15);
+        g.strokeStyle = D ? 'rgba(203,213,225,.55)' : 'rgba(87,56,30,.7)'; g.lineWidth = Math.max(1.2, G.u * .22); g.lineCap = 'round';
+        g.beginPath(); g.moveTo(hx - G.u * 1.6, hy - G.u * flap * .6); g.quadraticCurveTo(hx - G.u * .7, hy - G.u * .5, hx, hy); g.quadraticCurveTo(hx + G.u * .7, hy - G.u * .5, hx + G.u * 1.6, hy - G.u * flap * .6); g.stroke();
+        // la caravane, sur la crête de la dune du premier plan
+        if (caravan) for (let i = 0; i < 4; i++) {
+          const x = caravan.x - i * G.u * 6.5; if (x < -G.u * 6 || x > S.W + G.u * 6) continue;
+          g.save(); g.translate(x, duneY(S, x) + G.u * .3); camel(g, G.u * (i ? 4.2 : 4.6), T, i * 1.3, col, D && i === 0); g.restore();
+          if (i === 1) { g.save(); g.translate(x - G.u * 3.2, duneY(S, x - G.u * 3.2) + G.u * .3); const b = Math.abs(Math.sin(T * 3.4)) * G.u * .2; g.fillStyle = col; ell(g, 0, -G.u * 2.6 - b, G.u * .45, G.u * .45); g.fill(); g.fillRect(-G.u * .4, -G.u * 2.2 - b, G.u * .8, G.u * 1.6); g.lineWidth = G.u * .3; g.strokeStyle = col; g.beginPath(); g.moveTo(-G.u * .2, -G.u * .6 - b); g.lineTo(-G.u * .2 + Math.sin(T * 3.4) * G.u * .5, 0); g.moveTo(G.u * .2, -G.u * .6 - b); g.lineTo(G.u * .2 - Math.sin(T * 3.4) * G.u * .5, 0); g.stroke(); g.restore(); }
+        }
+        // le sable qui file au ras des dunes
+        g.lineWidth = 1;
+        for (const w of wisps) {
+          const x = w.x * S.W, y = G.hz + (S.H - G.hz) * (.2 + .7 * w.y) + Math.sin(T + w.ph) * G.u * .3, L = w.l * S.W;
+          const gr = g.createLinearGradient(x - L, 0, x, 0); gr.addColorStop(0, 'rgba(255,240,210,0)'); gr.addColorStop(1, D ? 'rgba(148,163,184,.22)' : 'rgba(255,244,220,.55)');
+          g.strokeStyle = gr; g.beginPath(); g.moveTo(x - L, y + G.u * .3); g.quadraticCurveTo(x - L / 2, y - G.u * .4, x, y); g.stroke();
+        }
+      },
+      debug(S, what) { if (what === 'caravan') { caravan = caravan || { v: G.u * 1.6 }; caravan.x = S.W * .55; } return { x: caravan && caravan.x }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🧊 Ice Caps (idée de finnnnn, 2026-10-24), assorti au bouton et au skin Ice : « des pics de glace hauts et pointus, ou
+   * une rivière gelée avec des montagnes enneigées ». Les deux : des montagnes enneigées au fond, de grands pics de glace
+   * bleue à facettes sur les côtés, et une rivière d'eau froide au milieu où dérivent des plaques de glace. La neige tombe,
+   * des reflets brillent sur les facettes de temps en temps. Thème sombre : la nuit polaire et une aurore verte qui ondule
+   * en haut ; thème clair : un ciel bleu glacé, la glace presque blanche.
+   */
+  SCENES.icecaps = layer => {
+    const R = Math.random;
+    let G = {}, floes = [], flakes = [], glints = [], spires = [];
+    function spire(g, S, s) {
+      const D = S.dark, { x, base, w, h, lean } = s, tip = [x + lean * w, base - h];
+      const faces = [[[x - w / 2, base], tip, [x - w * .1, base]], [[x - w * .1, base], tip, [x + w * .2, base]], [[x + w * .2, base], tip, [x + w / 2, base]]];
+      const cols = D ? ['#1e3a5f', '#2d5a86', '#16304f'] : ['#cfeefc', '#f5fcff', '#9fd8f2'];
+      faces.forEach((f, i) => { g.fillStyle = cols[i]; g.beginPath(); g.moveTo(...f[0]); g.lineTo(...f[1]); g.lineTo(...f[2]); g.closePath(); g.fill(); });
+      // une arête claire et de la neige sur la base
+      g.strokeStyle = D ? 'rgba(165,243,252,.45)' : 'rgba(255,255,255,.95)'; g.lineWidth = Math.max(1, w * .02);
+      g.beginPath(); g.moveTo(...tip); g.lineTo(x - w * .1, base); g.stroke();
+      g.fillStyle = D ? '#5b6b88' : '#ffffff'; ell(g, x, base, w * .62, w * .1); g.fill();
+    }
+    const st = stage(layer, 'wic', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, hz: S.H * (wide ? .7 : .78), wide };
+        G.river = [S.W * (wide ? .36 : .25), S.W * (wide ? .64 : .75)];
+        const H = S.H, W = S.W, r = seeded(9);
+        spires = [];
+        // de grands pics sur les côtés (jamais derrière le texte du site), plus petits vers le milieu
+        for (const side of [-1, 1]) for (let i = 0; i < (wide ? 4 : 2); i++) {
+          const k = i / (wide ? 4 : 2), x = side < 0 ? W * (.03 + k * .3) : W * (.97 - k * .3);
+          spires.push({ x, base: H * (wide ? .9 : .95) + r() * u * 3, w: u * (7 + r() * 5) * (1 - k * .4), h: H * (wide ? .42 : .3) * (1 - k * .5) * (.75 + r() * .35), lean: (r() - .5) * .3 });
+        }
+        spires.sort((a, b) => a.base - b.base);
+        if (!floes.length) floes = Array.from({ length: 7 }, (_, i) => ({ y: i / 7, x: R(), s: rnd(.6, 1.2), ph: rnd(0, 7) }));
+        if (!flakes.length) flakes = Array.from({ length: 70 }, () => ({ x: R(), y: R(), v: rnd(.03, .08), r: rnd(.6, 1.8), ph: rnd(0, 7) }));
+      },
+      paint(S, g) {
+        const D = S.dark, { W, H } = S, u = G.u, hz = G.hz;
+        if (D) starfield(g, W, hz, Math.round(W * H / 3000), 29, '255,255,255', .75);
+        // les montagnes enneigées au fond, en deux rangs
+        // une chaîne : de larges sommets, des cols entre eux, et un capuchon de neige qui suit les deux pentes
+        const range = (y0, amp, seed, col, snow, shade) => {
+          const r = seeded(seed), pts = [];
+          for (let x = -u * 10; x <= W + u * 20; x += u * (16 + r() * 14)) pts.push([x, y0 - amp * (.5 + r() * .5)]);
+          const vals = pts.slice(0, -1).map((p, i) => [(p[0] + pts[i + 1][0]) / 2 + (r() - .5) * u * 4, y0 - amp * r() * .2]);
+          g.fillStyle = col; g.beginPath(); g.moveTo(pts[0][0], H); pts.forEach((p, i) => { g.lineTo(p[0], p[1]); if (vals[i]) g.lineTo(...vals[i]); }); g.lineTo(pts[pts.length - 1][0], H); g.fill();
+          pts.forEach((p, i) => {
+            const L = vals[i - 1] || [p[0] - u * 12, y0], Rv = vals[i] || [p[0] + u * 12, y0], k = .32, lx = p[0] + (L[0] - p[0]) * k, ly = p[1] + (L[1] - p[1]) * k, rx = p[0] + (Rv[0] - p[0]) * k, ry = p[1] + (Rv[1] - p[1]) * k;
+            // le versant à l'ombre (à droite), puis la neige, dentelée en bas
+            g.fillStyle = shade; g.beginPath(); g.moveTo(...p); g.lineTo(...Rv); g.lineTo(p[0] + (Rv[0] - p[0]) * .25, y0 + amp * .05); g.closePath(); g.fill();
+            g.fillStyle = snow; g.beginPath(); g.moveTo(...p); g.lineTo(lx, ly);
+            for (let j = 1; j < 4; j++) { const t = j / 4; g.lineTo(lx + (rx - lx) * t, ly + (ry - ly) * t + (j % 2 ? u * 1.2 : -u * .2)); }
+            g.lineTo(rx, ry); g.closePath(); g.fill();
+          });
+        };
+        range(hz - u * 1, H * (G.wide ? .2 : .1), 3, D ? '#1b2a44' : '#c9dcec', D ? '#8aa0bf' : '#ffffff', D ? 'rgba(8,15,32,.35)' : 'rgba(120,150,180,.18)');
+        range(hz + u * 1.5, H * .1, 7, D ? '#14223a' : '#b2cbe0', D ? '#a7b8cf' : '#f4fbff', D ? 'rgba(8,15,32,.4)' : 'rgba(120,150,180,.2)');
+        calm(g, S, D ? '8,15,32' : '236,247,253', D ? .45 : .85);
+        // la neige des rives et la rivière (l'eau sombre et froide, en perspective)
+        g.fillStyle = D ? '#3a4a66' : '#f8fcff'; g.fillRect(0, hz + u * 2, W, H);
+        const [a, b] = G.river, mid = (a + b) / 2;
+        const wg = g.createLinearGradient(0, hz, 0, H); wg.addColorStop(0, D ? '#0b2540' : '#5fb2d9'); wg.addColorStop(1, D ? '#123a5c' : '#2f86b8');
+        g.fillStyle = wg; g.beginPath(); g.moveTo(mid - u * 2, hz + u * 2); g.lineTo(mid + u * 2, hz + u * 2); g.bezierCurveTo(b - u * 4, H * .82, b + u * 6, H * .9, b + u * 8, H); g.lineTo(a - u * 8, H); g.bezierCurveTo(a - u * 6, H * .9, a + u * 4, H * .82, mid - u * 2, hz + u * 2); g.fill();
+        for (const s of spires) spire(g, S, s);
+      },
+      update(S, dt) {
+        for (const f of floes) { f.y += dt * .022; if (f.y > 1) { f.y = 0; f.x = R(); } }
+        for (const k of flakes) { k.y += k.v * dt; if (k.y > 1.02) { k.y = -.02; k.x = R(); } }
+        if (R() < dt * .8 && spires.length) { const s = pick(spires); glints.push({ x: s.x + s.lean * s.w * .6, y: s.base - s.h * rnd(.3, .7), t: 0 }); }
+        for (const q of glints) q.t += dt;
+        glints = glints.filter(q => q.t < .9);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, u = G.u, hz = G.hz, [a, b] = G.river, mid = (a + b) / 2;
+        // l'aurore (sombre seulement) : deux rideaux verts qui ondulent, sur les côtés hauts de l'écran
+        if (D) {
+          g.save(); g.globalCompositeOperation = 'lighter';
+          for (const [x0, x1, c] of [[0, S.W * .4, '52,211,153'], [S.W * .6, S.W, '45,212,191']]) {
+            for (let x = x0; x < x1; x += 6) {
+              const y = S.H * (.12 + .05 * Math.sin(x / 90 + T * .4) + .03 * Math.sin(x / 37 - T * .7)), h = S.H * (.16 + .06 * Math.sin(x / 50 + T * .5));
+              // jamais derrière le texte du site, et des bouts de rideau fondus (pas de bord vertical)
+              const q = (1 - quiet(S, x, y + h * .7)) * Math.sin(Math.PI * (x - x0) / (x1 - x0)); if (q < .02) continue;
+              const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, `rgba(${c},0)`); gr.addColorStop(.7, `rgba(${c},${(.14 * q).toFixed(3)})`); gr.addColorStop(1, `rgba(${c},0)`);
+              g.fillStyle = gr; g.fillRect(x, y, 6, h);
+            }
+          }
+          g.restore();
+        }
+        // les plaques de glace qui descendent la rivière (plus grandes près de nous), et un reflet qui ondule
+        for (const f of floes) {
+          const p = f.y, y = hz + u * 2 + (S.H - hz - u * 2) * p * p, half = (u * 2 + ((b - a) / 2 + u * 8) * p * p), x = mid + (f.x - .5) * half * 1.4;
+          const s = u * f.s * (.6 + 4 * p * p), bob = Math.sin(T * 1.3 + f.ph) * s * .05;
+          g.fillStyle = D ? '#a9bfd6' : '#ffffff'; g.beginPath(); g.moveTo(x - s, y + bob); g.lineTo(x - s * .4, y - s * .3 + bob); g.lineTo(x + s * .7, y - s * .25 + bob); g.lineTo(x + s, y + s * .05 + bob); g.lineTo(x + s * .2, y + s * .3 + bob); g.closePath(); g.fill();
+          g.fillStyle = D ? 'rgba(14,30,52,.6)' : 'rgba(47,134,184,.35)'; g.fillRect(x - s * .8, y + s * .3 + bob, s * 1.6, Math.max(1, s * .08));
+        }
+        g.strokeStyle = D ? 'rgba(165,243,252,.18)' : 'rgba(255,255,255,.5)'; g.lineWidth = 1;
+        for (let i = 0; i < 5; i++) { const p = (i + .5) / 5, y = hz + u * 2 + (S.H - hz) * p * p, half = u * 2 + ((b - a) / 2) * p * p; g.beginPath(); g.moveTo(mid - half * .6 + Math.sin(T + i) * u, y); g.lineTo(mid + half * .2 + Math.sin(T + i) * u, y); g.stroke(); }
+        // les reflets : une petite étoile qui s'allume sur une facette
+        for (const q of glints) { const k = Math.sin(q.t / .9 * Math.PI), s = u * 1.4 * k; g.strokeStyle = `rgba(255,255,255,${(.9 * k).toFixed(2)})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(q.x - s, q.y); g.lineTo(q.x + s, q.y); g.moveTo(q.x, q.y - s); g.lineTo(q.x, q.y + s); g.stroke(); }
+        // la neige
+        for (const k of flakes) {
+          const x = (k.x + Math.sin(T * .6 + k.ph) * .01) * S.W, y = k.y * S.H, q = 1 - .6 * quiet(S, x, y);
+          g.fillStyle = D ? `rgba(255,255,255,${(.75 * q).toFixed(2)})` : `rgba(148,184,214,${(.8 * q).toFixed(2)})`; ell(g, x, y, k.r, k.r); g.fill();
+        }
+      },
+      debug(S, what) { if (what === 'glint') for (const s of spires) glints.push({ x: s.x + s.lean * s.w * .6, y: s.base - s.h * .5, t: .4 }); return { spires: spires.length }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
+   * 🎪 Circus (idée de sennybex1, 2026-10-28) : « un fond de cirque, avec des animaux, des drapeaux, à manger et à boire,
+   * des obstacles, et un effet de rotation qui change la caméra ». On lève les yeux sous le grand chapiteau : les bandes
+   * rouges et crème du toit convergent vers le mât, au-dessus du site, et tournent très lentement (la caméra qui tourne).
+   * Des guirlandes de fanions, deux projecteurs qui balaient la piste. En bas, la piste : un éléphant fait rouler un
+   * ballon, une otarie jongle, un cerceau à franchir (l'obstacle), un cornet de pop-corn qui saute et un gobelet de soda
+   * sur le rebord. Thème sombre : le chapiteau le soir (rouge sombre, ampoules) ; thème clair : en plein jour (rouge vif et
+   * crème, pâles en haut pour le texte).
+   */
+  SCENES.circus = layer => {
+    const R = Math.random;
+    let G = {}, pops = [], el = { x: .2, dir: 1 }, seal = { t: 0 }, roof = null;
+    const FLAGS = ['#ef4444', '#facc15', '#3b82f6', '#22c55e', '#f97316', '#a855f7'];
+    const st = stage(layer, 'wci', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        G = { u, wide, cx: S.W / 2, cy: -S.H * .12, ringY: S.H * (wide ? .9 : .93), ringRx: S.W * (wide ? .46 : .6), ringRy: S.H * .07 };
+        G.ringTop = G.ringY - G.ringRy;
+        // le toit tourne : peint une fois dans son propre canevas (à demi-résolution), sous le décor, que le navigateur fait
+        // seulement tourner (transform : aucun nouveau dessin)
+        const Rr = Math.hypot(Math.max(G.cx, S.W - G.cx), S.H - G.cy) + 4, half = Math.ceil(Rr * .5);
+        if (roof) roof.remove();
+        const cv = roof = doc.createElement('canvas');
+        cv.width = cv.height = half * 2; cv.className = 'wci-roof';
+        cv.style.cssText = `left:${G.cx - Rr}px;top:${G.cy - Rr}px;width:${Rr * 2}px;height:${Rr * 2}px`;
+        layer.insertBefore(cv, layer.querySelector('.wci-bg'));
+        const g = cv.getContext('2d'), n = 24; g.scale(.5, .5);
+        const c1 = S.dark ? '#5a1620' : '#f6c9c4', c2 = S.dark ? '#2a0c14' : '#fff4e6';
+        for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? c1 : c2; g.beginPath(); g.moveTo(Rr, Rr); g.arc(Rr, Rr, Rr, i / n * Math.PI * 2, (i + 1) / n * Math.PI * 2); g.closePath(); g.fill(); }
+        // les coutures et l'ombre qui monte vers le mât
+        const sh = g.createRadialGradient(Rr, Rr, 0, Rr, Rr, Rr); sh.addColorStop(0, S.dark ? 'rgba(0,0,0,.55)' : 'rgba(120,40,40,.18)'); sh.addColorStop(.35, 'rgba(0,0,0,0)'); g.fillStyle = sh; g.fillRect(0, 0, Rr * 2, Rr * 2);
+        G.Rr = Rr;
+        calmEl(layer, S, S.dark ? '24,6,10' : '255,248,240', S.dark ? .6 : .82);
+      },
+      paint(S, g) {
+        // la piste : le sable, le rebord rouge à étoiles dorées
+        const D = S.dark, { cx, ringY, ringRx, ringRy, u } = G;
+        g.fillStyle = D ? '#3b2a1a' : '#e9cf9e'; ell(g, cx, ringY + ringRy * .25, ringRx, ringRy * 1.4); g.fill();
+        g.strokeStyle = D ? '#7f1d1d' : '#dc2626'; g.lineWidth = u * 1.6; ell(g, cx, ringY, ringRx, ringRy); g.stroke();
+        g.fillStyle = D ? '#f5c66a' : '#facc15';
+        for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, x = cx + Math.cos(a) * ringRx, y = ringY + Math.sin(a) * ringRy; if (Math.sin(a) < -.2) continue; ell(g, x, y, u * .3, u * .3); g.fill(); }
+      },
+      update(S, dt) {
+        // l'éléphant va et vient sur la gauche de la piste et passe dans le cerceau (sur ordinateur, le milieu de la piste
+        // est caché par les panneaux du site)
+        el.x += el.dir * dt * .022; if (el.x > .3) el.dir = -1; if (el.x < .03) el.dir = 1;
+        seal.t += dt;
+        if (R() < dt * 1.5) pops.push({ x: rnd(-.3, .3), vy: -rnd(60, 110), y: 0, vx: rnd(-20, 20), t: 0 });
+        for (const p of pops) { p.t += dt; p.vy += 220 * dt; p.y += p.vy * dt; p.x += p.vx * dt / 100; }
+        pops = pops.filter(p => p.t < 1.4);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, { cx, cy, u } = G;
+        // le toit qui tourne (lentement : un tour en 3 minutes), puis un voile calme derrière le texte
+        if (roof) roof.style.transform = `rotate(${(T * 2).toFixed(2)}deg)`;
+        // deux guirlandes de fanions, qui se balancent un peu
+        for (const [y0, sag, ph] of [[S.H * .1, S.H * .07, 0], [S.H * .2, S.H * .05, 2]]) {
+          const P = t => [t * S.W, y0 + 4 * (sag + Math.sin(T * .8 + ph) * u * .3) * t * (1 - t)];
+          g.strokeStyle = D ? 'rgba(254,243,199,.35)' : 'rgba(120,53,15,.4)'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i <= 30; i++) { const [x, y] = P(i / 30); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+          const n = Math.round(S.W / (u * 4));
+          for (let i = 1; i < n; i++) {
+            const [x, y] = P(i / n), q = 1 - .75 * quiet(S, x, y);
+            g.globalAlpha = (D ? .75 : .9) * q; g.fillStyle = FLAGS[(i + ph) % FLAGS.length];
+            g.beginPath(); g.moveTo(x - u * .9, y); g.lineTo(x + u * .9, y); g.lineTo(x + Math.sin(T * 2 + i) * u * .15, y + u * 1.7); g.closePath(); g.fill();
+          }
+          g.globalAlpha = 1;
+        }
+        // les projecteurs : deux cônes de lumière qui balaient la piste depuis les coins hauts
+        g.save(); g.globalCompositeOperation = D ? 'lighter' : 'source-over';
+        for (const [x0, ph] of [[S.W * .02, 0], [S.W * .98, 2.2]]) {
+          const tx = cx + Math.sin(T * .35 + ph) * G.ringRx * .7, ty = G.ringY, a = Math.atan2(ty - 0, tx - x0), L = Math.hypot(tx - x0, ty), w = .07;
+          const gr = g.createLinearGradient(x0, 0, tx, ty); gr.addColorStop(0, D ? 'rgba(254,243,199,0)' : 'rgba(255,240,200,0)'); gr.addColorStop(1, D ? 'rgba(254,243,199,.18)' : 'rgba(255,236,170,.4)');
+          g.fillStyle = gr; g.beginPath(); g.moveTo(x0, 0); g.arc(x0, 0, L, a - w, a + w); g.closePath(); g.fill();
+          ell(g, tx, ty, G.ringRx * .16, G.ringRy * .5); g.fillStyle = D ? 'rgba(254,243,199,.16)' : 'rgba(255,248,220,.6)'; g.fill();
+        }
+        g.restore();
+        const ink = D ? '#1a0b10' : '#3b2a2a';
+        // le cerceau (l'obstacle), à gauche de la piste, sur le chemin de l'éléphant
+        const hx = cx - G.ringRx * .78, hy = G.ringTop - u * 6;
+        g.strokeStyle = D ? '#f59e0b' : '#f97316'; g.lineWidth = u * .5; ell(g, hx, hy, u * 3.4, u * 5.5); g.stroke();
+        g.strokeStyle = ink; g.lineWidth = u * .35; g.beginPath(); g.moveTo(hx, hy + u * 5.5); g.lineTo(hx, G.ringTop + u * .5); g.stroke();
+        // l'éléphant qui fait rouler son ballon (il marche dessus, le ballon tourne)
+        const ex = cx - G.ringRx + G.ringRx * 2 * el.x, br = u * 3, by = G.ringTop - br, rot = ex / br;
+        g.save(); g.translate(ex, by); g.rotate(rot);
+        for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? (D ? '#1e40af' : '#3b82f6') : (D ? '#b91c1c' : '#ef4444'); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, br, i * Math.PI / 2, (i + 1) * Math.PI / 2); g.closePath(); g.fill(); }
+        g.fillStyle = D ? '#facc15' : '#fde047'; ell(g, 0, 0, br * .25, br * .25); g.fill();
+        g.restore();
+        {
+          const s = u * 5, bob = Math.sin(T * 4) * u * .15;
+          g.save(); g.translate(ex, by - br - bob); g.scale(el.dir, 1);
+          g.fillStyle = D ? '#64748b' : '#94a3b8';
+          ell(g, 0, -s * .45, s * .55, s * .38); g.fill();
+          for (const [x, k] of [[-.3, 1], [.25, -1]]) { g.fillRect(s * x - s * .09, -s * .2, s * .18, s * .22 + Math.sin(T * 4) * k * s * .03); }
+          ell(g, s * .5, -s * .65, s * .28, s * .26); g.fill();
+          g.fillStyle = D ? '#475569' : '#7c8ea5'; ell(g, s * .38, -s * .65, s * .16, s * .22); g.fill();
+          g.strokeStyle = D ? '#64748b' : '#94a3b8'; g.lineWidth = s * .1; g.lineCap = 'round'; g.beginPath(); g.moveTo(s * .72, -s * .6); g.quadraticCurveTo(s * .9, -s * .3, s * (.8 + Math.sin(T * 2) * .08), -s * .15); g.stroke();
+          g.fillStyle = ink; ell(g, s * .58, -s * .72, s * .03, s * .03); g.fill();
+          g.fillStyle = FLAGS[0]; g.beginPath(); g.moveTo(s * .4, -s * .9); g.lineTo(s * .55, -s * 1.15); g.lineTo(s * .62, -s * .88); g.closePath(); g.fill();
+          g.restore();
+        }
+        // l'otarie qui jongle : assise à droite, le ballon monte et redescend sur son nez
+        {
+          const sx = cx + G.ringRx * .92, sy = G.ringTop, s = u * 4.2, j = Math.abs(Math.sin(seal.t * 2.4)), nose = [sx - s * .32, sy - s * 1.25];
+          g.fillStyle = D ? '#334155' : '#475569';
+          g.beginPath(); g.moveTo(sx + s * .4, sy); g.quadraticCurveTo(sx + s * .45, sy - s * .7, sx - s * .1, sy - s * 1.05); g.quadraticCurveTo(sx - s * .4, sy - s * 1.3, nose[0], nose[1] + s * .05); g.quadraticCurveTo(sx - s * .1, sy - s * .8, sx - s * .2, sy); g.closePath(); g.fill();
+          ell(g, sx - s * .25, sy - s * .05, s * .22, s * .07); g.fill();
+          g.fillStyle = ink; ell(g, sx - s * .15, sy - s * 1.12, s * .03, s * .03); g.fill();
+          const bx = nose[0], byy = nose[1] - s * .22 - j * s * 1.1, bs = s * .2;
+          g.save(); g.translate(bx, byy); g.rotate(seal.t * 5);
+          for (let i = 0; i < 3; i++) { g.fillStyle = [FLAGS[1], FLAGS[2], FLAGS[0]][i]; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, bs, i * Math.PI * 2 / 3, (i + 1) * Math.PI * 2 / 3); g.closePath(); g.fill(); }
+          g.restore();
+        }
+        // le pop-corn qui saute de son cornet, et le gobelet de soda, sur le rebord à gauche
+        {
+          const px = cx + G.ringRx * .68, py = G.ringTop + u * .5, s = u * 2.2;
+          g.fillStyle = '#fffbeb'; for (const p of pops) { ell(g, px + p.x * s * 3, py - s * 1.5 + p.y, u * .32, u * .28); g.fill(); }
+          g.fillStyle = '#fef3c7'; for (let i = 0; i < 5; i++) { ell(g, px + (i - 2) * s * .22, py - s * 1.45 - (i % 2) * s * .15, s * .2, s * .17); g.fill(); }
+          g.fillStyle = '#dc2626'; g.beginPath(); g.moveTo(px - s * .55, py - s * 1.4); g.lineTo(px + s * .55, py - s * 1.4); g.lineTo(px + s * .38, py); g.lineTo(px - s * .38, py); g.closePath(); g.fill();
+          g.fillStyle = '#fff'; for (const k of [-.18, .18]) g.fillRect(px + k * s - s * .06, py - s * 1.4, s * .12, s * 1.4);
+          const dx = px + s * 1.4;
+          g.fillStyle = D ? '#1d4ed8' : '#3b82f6'; g.beginPath(); g.moveTo(dx - s * .4, py - s * 1.2); g.lineTo(dx + s * .4, py - s * 1.2); g.lineTo(dx + s * .3, py); g.lineTo(dx - s * .3, py); g.closePath(); g.fill();
+          g.fillStyle = '#fff'; g.fillRect(dx - s * .44, py - s * 1.3, s * .88, s * .12);
+          g.strokeStyle = '#f472b6'; g.lineWidth = s * .08; g.beginPath(); g.moveTo(dx + s * .05, py - s * 1.3); g.lineTo(dx + s * .25, py - s * 1.9); g.stroke();
+        }
+      },
+      stop() { if (roof) roof.remove(); const c = layer.querySelector(':scope > .wcalm'); if (c) c.remove(); },
+      debug(S, what) { return { el: el.x }; },
     });
     return st;
   };

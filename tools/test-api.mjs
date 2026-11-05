@@ -993,10 +993,11 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
       assert.equal(await coinsOf(wally), c0 - item.price, `${id} : le prix exact, rien de plus (pas de part pour l'idée d'un fond)`);
     }
   }
-  // Fonds d'idées de joueurs du 2026-11-05 (tri de Sacha), lot « ciel et espace » : des fonds normaux, dans la caisse, avec
+  // Fonds d'idées de joueurs du 2026-11-05 (tri de Sacha), lots « ciel et espace » et « lieux » : des fonds normaux, dans la caisse, avec
   // leur idée ; aucun identifiant de skin repris (« milkyway » est le skin, le fond est « milkynight »).
   {
-    const sky = { blueskies: 'IXOLAF2', milkynight: 'Ggggssnoop', skygate: 'Ggggssnoop' };
+    // lot « lieux » (même jour) : World Map, Pyramids, Ice Caps, Circus
+    const sky = { blueskies: 'IXOLAF2', milkynight: 'Ggggssnoop', skygate: 'Ggggssnoop', worldmap: 'qwertyuiop', pyramids: 'whywhywaylon', icecaps: 'finnnnn', circus: 'sennybex1' };
     for (const [id, idea] of Object.entries(sky)) {
       const w = Shop.wallById.get(id);
       assert.ok(w && w.idea === idea && !w.premium && !w.until && w.price >= 900 && w.price <= 1200, `${id} : fond normal, idée de ${idea}`);

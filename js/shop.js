@@ -451,6 +451,15 @@
     { id: 'milkynight', name: 'Milky Way', emoji: '🔭', price: 1100, idea: 'Ggggssnoop', desc: 'The Milky Way arcs over dark hills and a glowing tent: twinkling stars, a shooting star now and then and a slow satellite' },
     // Idée de Ggggssnoop (« heaven's gate ») : une porte de lumière dans le ciel, sans aucun symbole religieux.
     { id: 'skygate', name: 'Sky Gate', emoji: '✨', price: 1200, idea: 'Ggggssnoop', desc: 'A tall gate of light stands on a sea of clouds; its doors slowly swing open and golden rays pour through' },
+    // Lot « lieux » (2026-11-05), toujours des fonds normaux.
+    // Idée de qwertyuiop, aussi demandée par Jguz01 (« les 7 continents ») et ichi (« un fond monde »).
+    { id: 'worldmap', name: 'World Map', emoji: '🗺️', price: 1100, idea: 'qwertyuiop', desc: 'The seven continents in glowing dots slowly scroll by like a turning globe, with twinkling city lights and flights arcing between them' },
+    // Idée de whywhywaylon : les pyramides de Gizeh.
+    { id: 'pyramids', name: 'Pyramids', emoji: '🏜️', price: 1000, idea: 'whywhywaylon', desc: 'The three great pyramids and the sphinx at golden hour; a camel caravan crosses the dunes as sand drifts and a falcon circles' },
+    // Idée de finnnnn, assortie au bouton et au skin Ice : des pics de glace et une rivière gelée sous des montagnes enneigées.
+    { id: 'icecaps', name: 'Ice Caps', emoji: '🧊', price: 1000, idea: 'finnnnn', desc: 'Tall, pointy ice spires beside an icy river under snowy mountains; ice floes drift by, snow falls and the northern lights dance at night' },
+    // Idée de sennybex1 : un cirque, des animaux, des fanions, à manger, un obstacle, et la caméra qui tourne.
+    { id: 'circus', name: 'Circus', emoji: '🎪', price: 1100, idea: 'sennybex1', desc: 'Look up into a spinning big top: bunting, sweeping spotlights, an elephant rolling a ball, a juggling seal, a hoop and popping popcorn' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z' },
