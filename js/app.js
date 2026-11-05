@@ -173,6 +173,13 @@
     leaderboard(period, span, mode = Mode.name) {
       return this.request(`/api/leaderboard?period=${period}${span ? `&span=${span}` : ''}&me=${Store.player.id}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
+    // Hall of Fame (idée d'Avaneesh_17) et propriétaires de chaque badge (idée de Tumored), 2026-11-05.
+    hof() {
+      return this.request('/api/leaderboard?hof=1');
+    },
+    badgeOwners(mode = Mode.name) {
+      return this.request(`/api/leaderboard?badges=1${mode === 'hard' ? '&mode=hard' : ''}`);
+    },
     profile(name, lite, mode = Mode.name) {
       return this.request(`/api/profile?name=${encodeURIComponent(name)}&me=${Store.player.id}${lite ? '&lite=1' : ''}${mode === 'hard' ? '&mode=hard' : ''}`);
     },
@@ -1281,6 +1288,19 @@
     });
   }
 
+  // Nombre de joueurs qui possèdent chaque badge (idée de Tumored, 2026-10-31) : une seule demande pour tous les badges,
+  // gardée 2 minutes par mode. null tant que le serveur ne l'affiche pas (rattrapage pas encore fait) ou hors ligne.
+  const badgeOwnersCache = {};
+  async function badgeOwnersOf(id) {
+    const mode = Mode.name, c = badgeOwnersCache[mode];
+    let data = c && Date.now() - c.at < 120000 ? c.data : null;
+    if (!data) {
+      try { data = await Online.badgeOwners(mode); } catch (err) { return null; }
+      badgeOwnersCache[mode] = { at: Date.now(), data };
+    }
+    return data && data.ready ? { n: data.counts[id] || 0, players: data.players } : null;
+  }
+
   function openBadgeModal(id) {
     const b = Engine.byId.get(id);
     if (!b) return;
@@ -1304,6 +1324,7 @@
       </div>
       <div class="kv"><span class="k">Odds</span><span class="v">${oneIn(odds)} · ${pctStr(odds)}</span></div>
       <div class="kv"><span class="k">You earned it</span><span class="v">${e ? plural(e.count, 'time') : 'Not yet'}</span></div>
+      <div class="kv" id="bm-owners" hidden><span class="k">Players who own it</span><span class="v"></span></div>
       ${e ? `<div class="kv"><span class="k">First found</span><span class="v"><a href="javascript:void 0" data-roll="${e.first}">${Store.rolls[e.first][0]}</a> · ${relTime(Store.rolls[e.first][2])}</span></div>` : ''}
       ${family.length > 1 ? `
         <div class="kv"><span class="k">Family</span><span class="v" style="font-family:var(--font-sans);font-weight:500;text-align:right;line-height:1.7">
@@ -1314,6 +1335,13 @@
       ${holders.length ? `<div class="eyebrow" style="margin:1.1rem 0 .6rem">Your rolls with this badge${e.count > holders.length ? ` (latest ${holders.length})` : ''}</div>
         <div class="pill-row" style="justify-content:flex-start">${holders.map(i => `<button class="num-card sm" data-tier="${Engine.cardTier(Store.rolls[i][1])}" data-roll="${i}">${Store.rolls[i][0]}</button>`).join('')}</div>` : ''}
     `, m => {
+      // Propriétaires du badge (idée de Tumored, 2026-10-31) : comptés par le serveur, la ligne reste cachée sans réponse.
+      badgeOwnersOf(id).then(o => {
+        const row = m.querySelector('#bm-owners');
+        if (!o || !row || !row.isConnected) return;
+        row.querySelector('.v').textContent = o.n ? `👥 ${fmt(o.n)} of ${plural(o.players, 'player')}` : '👥 Nobody yet';
+        row.hidden = false;
+      });
       const b2 = m.querySelector('#bm-full');
       if (b2) b2.addEventListener('click', () => {
         const set = new Set(Store.settings.fullBadges || []);
@@ -1823,13 +1851,15 @@
         </div>
         ${state.quests.map(q => {
           const done = q.progress >= q.target;
+          // Relance (idée de Mace_67, 2026-11-03) : sur une quête pas finie, tant qu'il reste des relances cette semaine.
+          const reroll = !done && !q.claimed && state.rerolls && state.rerolls.left > 0 ? `<button type="button" class="q-reroll" data-reroll="${esc(q.id)}" title="Swap this quest for another one" aria-label="Swap this quest for another one">🔄</button>` : '';
           return `
           <div class="quest${q.claimed ? ' done' : ''}">
             <span class="quest-emoji">${q.emoji}</span>
             <span class="quest-text"><b>${esc(q.text)}</b>
               <span class="quest-bar"><span style="width:${Math.min(100, (q.progress / q.target) * 100)}%"></span></span>
               <span class="panel-note">${q.target >= 1000 ? `${compact(q.progress)} / ${compact(q.target)}` : `${q.progress} / ${q.target}`}</span></span>
-            ${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
+            ${reroll}${q.claimed ? '<span class="quest-state">✓ Claimed</span>' : done ? `<button class="btn-roll small" data-quest="${q.id}">+${q.reward} 🪙</button>` : `<span class="quest-reward mono">${q.reward} 🪙</span>`}
           </div>`;
         }).join('')}
         ${state.questStreak ? (() => { const qs = state.questStreak, claimed = state.quests.filter(q => q.claimed).length; return `
@@ -1841,7 +1871,7 @@
         </div>`; })() : ''}
         ${state.weekly ? weeklyQuestsHTML(state.weekly) : ''}
         ${state.chest ? questChestHTML(state.chest) : ''}
-        <p class="panel-note quests-foot">New quests in ${resetIn} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
+        <p class="panel-note quests-foot">New quests in ${resetIn}${state.rerolls ? ` · 🔄 ${plural(state.rerolls.left, 'reroll')} left this week` : ''} · coins buy skins and cases in the <a href="#/shop">Shop</a></p>
       </div>`;
     // Sur grand écran, l'événement de la semaine passe sous la cagnotte (moins de choses empilées dans les quêtes).
     { const side = $('#event-side'), ev = slot.querySelector('.event-quest');
@@ -1849,6 +1879,19 @@
     slot.onclick = async e => {
       if (!e.target.closest('[data-level]') && e.target.closest('[data-level-road]')) { openLevelRoad(state.level); return; }
       if (e.target.closest('[data-event-lb]')) { lbState.period = 'event'; lbState.tab = 'event'; lbState.scroll = true; return; } // le lien mène au classement, sur l'onglet Event, liste à l'écran
+      // Relance d'une quête (idée de Mace_67, 2026-11-03) : demandée une fois (elles sont comptées), le serveur tire la nouvelle.
+      const rr = e.target.closest('[data-reroll]');
+      if (rr) {
+        if (rr.disabled || !confirm(window.RNGI18n.t(`Swap this quest for another one? ${plural(state.rerolls.left, 'reroll')} left this week.`))) return;
+        rr.disabled = true;
+        try {
+          const next = await Online.questAction('reroll', rr.dataset.reroll), q = next.quests.find(x => x.id === next.swapped.to);
+          toast(`🔄 New quest: ${q ? q.text : 'swapped'}`, 3000);
+          Sound.play('lock', { i: 3 });
+          loadQuests(slot, next);
+        } catch (err) { rr.disabled = false; toast([400, 422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
+        return;
+      }
       const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event], [data-wquest], [data-chest]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -2315,6 +2358,20 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-05-features-misc', date: 'Nov 5, 2026', en: [
+      '🏛️ New Hall of Fame (Leaderboard → Hall of Fame): the first player to roll each Infinite number, the first to reach 100M, 1B, 10B and 100B XP, the first to 10,000, 100,000 and 1,000,000 rolls, and the first Mythic, Celestial, Divine, Godlike and Infinite of Hard mode. Kept forever (idea by Avaneesh_17)',
+      '🔄 Quest rerolls: swap a daily quest you are stuck on for another one of the same kind, 3 times a week. Your progress stays (idea by Mace_67)',
+      '👥 Every badge now shows how many players own it: open a badge to see it (idea by Tumored)',
+      '💡 Wallpaper creators now get 5% too, like skin creators: when someone buys a wallpaper born from your idea, or gets it from a paid Wallpaper Case (idea by qwertyuiop)',
+      '⌨️ Keyboard ASMR is much crunchier and louder, and it now presses every key you type on your real keyboard (Shift, Ctrl, symbols too), holding it down while you hold it (ideas by dog and Infin6, reported by LEVIATHAN)',
+      '🪐 Solar System: the asteroid belt with Ceres and its bright spot, Pluto on its tilted orbit, a comet trail that follows the comet, and no orbit crossing the sun anymore (ideas by deadshot44474)'],
+    fr: [
+      '🏛️ Nouveau Panthéon (Classement → Panthéon) : le premier joueur à tirer chaque nombre Infinite, le premier à 100 M, 1 G, 10 G et 100 G d\'XP, le premier à 10 000, 100 000 et 1 000 000 de tirages, et les premiers Mythic, Celestial, Divine, Godlike et Infinite du mode difficile. Gardés pour toujours (idée d\'Avaneesh_17)',
+      '🔄 Échange de quêtes : remplace une quête du jour qui te bloque par une autre du même genre, 3 fois par semaine. Ta progression est gardée (idée de Mace_67)',
+      '👥 Chaque badge montre maintenant combien de joueurs l\'ont : ouvre un badge pour le voir (idée de Tumored)',
+      '💡 Les créateurs de fonds d\'écran touchent aussi 5 %, comme ceux des skins : quand quelqu\'un achète un fond né de ton idée, ou l\'obtient dans une caisse de fonds payée (idée de qwertyuiop)',
+      '⌨️ Le clavier ASMR craque beaucoup plus et plus fort, et il enfonce maintenant chaque touche que tu tapes sur ton vrai clavier (Maj, Ctrl et les symboles aussi), tenue tant que tu la tiens (idées de dog et Infin6, signalé par LEVIATHAN)',
+      '🪐 Système solaire : la ceinture d\'astéroïdes avec Cérès et sa tache claire, Pluton sur son orbite penchée, une queue de comète qui suit la comète, et plus aucune orbite qui passe sur le soleil (idées de deadshot44474)'] },
     { id: '2026-11-05-delete-account', date: 'Nov 5, 2026', en: ['🗑️ You can now delete your account: ⚙️ Settings → Delete my account. Type your player name to confirm, and everything is erased from the server for good (rolls, coins, skins, friends, clan, leaderboards). Your name becomes free again and this device starts over as a new player'], fr: ['🗑️ Tu peux maintenant supprimer ton compte : ⚙️ Réglages → Supprimer mon compte. Tape ton pseudo pour confirmer, et tout est effacé du serveur pour de bon (tirages, pièces, skins, amis, clan, classements). Ton pseudo redevient libre et cet appareil repart avec un nouveau joueur'] },
     // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
     { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
@@ -4542,8 +4599,9 @@
     app.querySelectorAll('.own-count[data-own-key]').forEach(el => { const n = counts[el.dataset.ownKey] || 0; el.textContent = n ? `👥 ${ownersLabel(n)}` : el.closest('#shop-mine') ? '👥 0 owners' : ''; });
   }
   // Vue du créateur (2026-10-28) : le joueur dont le pseudo est dans le champ idea d'objets du catalogue voit ses
-  // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins seulement : les
-  // fonds d'écran, boutons, émotes et sons ne versent pas de part). Repliée par défaut : une ligne en haut de la boutique.
+  // créations, combien de joueurs les ont, et les pièces que sa part de 5 % lui a rapportées (skins, et fonds d'écran depuis
+  // le 2026-11-05, idée de qwertyuiop ; boutons, émotes et sons ne versent pas de part). Repliée par défaut : une ligne en
+  // haut de la boutique.
   const nameKey = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   function drawCreations(state) {
     const box = $('#shop-mine');
@@ -4555,7 +4613,7 @@
     box.innerHTML = `
       <summary class="panel-head"><h3 class="panel-title">💡 Your creations</h3><span class="panel-note">items born from your ideas</span></summary>
       <div class="mine-list">${mine.map(([kind, x]) => `<div class="mine-row"><b>${x.emoji} <span data-no-i18n>${esc(x.name)}</span></b><span class="panel-note">${kind === 'skins' ? 'Skin' : 'Wallpaper'}</span><span class="own-count" data-own-key="${kind}:${x.id}">…</span></div>`).join('')}</div>
-      <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins, in the shop or for a case that gives one. Wallpapers do not pay a share.</span></p>`;
+      <p class="panel-note mine-note"><span>${state.royalty ? `Your 5% share has earned you 🪙 ${fmt(state.royalty)} so far.` : 'No share received yet.'}</span> <span>You get 5% of what players pay for your skins and wallpapers, in the shop or for a case that gives one.</span></p>`;
     paintOwners();
   }
 
@@ -6712,7 +6770,7 @@
     const wallTile = w => `
       <div class="skin-tile wall-tile${on === w.id ? ' equipped' : ''}${w.premium ? ' premium' : ''}" data-have="${owned.includes(w.id) ? 1 : 0}">
         <div class="wall-preview wp wp-${w.id}" aria-hidden="true"></div>
-        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${ownTag('walls', w.id)}</div>
+        <div class="skin-name"><b>${w.emoji} ${esc(w.name)}</b><span>${esc(w.desc)}</span>${w.idea ? `<span class="skin-idea" title="This player gets 5% of every purchase">💡 Idea by <a href="${profileHref(w.idea)}" data-no-i18n>${esc(w.idea)}</a></span>` : ''}${ownTag('walls', w.id)}</div>
         <div class="skin-actions"><button class="btn ghost" data-wall-try="${w.id}" title="Preview">▶ Preview</button>${on === w.id ? '<span class="skin-state">Equipped</span>' : owned.includes(w.id) ? `<button class="btn" data-wall="${w.id}">Use</button>` : `<button class="btn${state.coins >= w.price ? '' : ' disabled'}" data-wall-buy="${w.id}">🪙 ${fmt(w.price)}</button>`}</div>
       </div>`;
     if (limitedGrid) limitedGrid.innerHTML = Shop.WALLPAPERS.filter(w => w.until && onSale(w)).sort((a, b) => Date.parse(a.until) - Date.parse(b.until)).map(wallTile).join('') || '<div class="empty">No limited wallpaper right now.</div>';
@@ -9607,6 +9665,35 @@
     });
   }
 
+  // Hall of Fame (idée d'Avaneesh_17, 2026-11-02 : « the first person to roll each of the infinite numbers and the first to
+  // reach 1 billion xp ») : les premiers joueurs à atteindre les grands paliers, gardés pour toujours (api/_hof.js). Onglet
+  // à côté du classement. Un palier retrouvé par le rattrapage sans date exacte s'affiche « before <date> ».
+  function renderHall() {
+    currentView = 'hall';
+    app.innerHTML = `
+      <div class="page hof-page">
+        <h1 class="page-title">🏛️ Hall of Fame</h1>
+        <p class="panel-note hof-intro">The first players to reach the biggest milestones of the game, kept here forever.</p>
+        <div id="hof-body"><div class="empty">Loading…</div></div>
+      </div>`;
+    const day = t => new Date(t).toLocaleDateString(window.RNGI18n && window.RNGI18n.lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const who = f => f
+      ? `<span class="hof-who"><a class="player-link" href="${profileHref(f.name)}" data-no-i18n>${esc(f.name)}</a>${f.t ? ` · ${f.approx ? '<span>before</span> ' : ''}<span data-no-i18n>${day(f.t)}</span>` : ''}</span>`
+      : '<span class="hof-who hof-open">Nobody yet</span>';
+    const row = (what, f) => `<li class="hof-item${f ? '' : ' open'}">${what}${who(f)}</li>`;
+    const section = (title, note, items) => `<div class="panel hof-panel"><div class="panel-head"><h3 class="panel-title">${title}</h3><span class="panel-note">${note}</span></div><ul class="hof-list">${items.join('')}</ul></div>`;
+    Online.hof().then(d => {
+      const box = $('#hof-body'); if (currentView !== 'hall' || !box) return;
+      if (!d.ready) { box.innerHTML = '<div class="panel"><div class="empty">The Hall of Fame is being filled in from the game\'s history. Come back soon!</div></div>'; return; }
+      const claimed = d.infinite.filter(x => x.first).length;
+      box.innerHTML = section('♾️ First to roll each Infinite number', `${claimed} / ${d.infinite.length} rolled`, d.infinite.map(x => row(`<span class="num-card sm hof-num" data-tier="infinite" data-no-i18n>${String(x.n).padStart(6, '0')}</span>`, x.first)))
+        + section('⭐ Lifetime XP', 'first to reach', d.xp.map(x => row(`<b class="hof-what mono" data-no-i18n>${compact(x.m)} XP</b>`, x.first)))
+        + section('🎲 Rolls', 'first to reach', d.rolls.map(x => row(`<b class="hof-what mono"><span data-no-i18n>${fmt(x.m)}</span> rolls</b>`, x.first)))
+        + section('🔥 Hard mode', 'first roll of each rarity', d.hard.map(x => row(`<span class="hof-what">${tierPill(x.tier)}${x.n !== null ? ` <span class="num-card sm hof-num" data-tier="${x.tier}" data-no-i18n>${String(x.n).padStart(10, '0')}</span>` : ''}</span>`, x.first)))
+        + '<p class="panel-note hof-foot">Milestones from before November 5, 2026 were found in the saved roll history: rolls made offline, and the oldest rolls of players with more than 100,000 rolls, are not in it.</p>';
+    }).catch(() => { const box = $('#hof-body'); if (box && currentView === 'hall') box.innerHTML = '<div class="empty">Unavailable right now.</div>'; });
+  }
+
   function renderAbout() {
     currentView = 'about';
     const cardRows = [['landwaste', 'the worst score (73 numbers)'], ['garbage', 'bottom 0.05% (471 numbers)'], ['trash', 'bottom 1%'], ['common', 'bottom 50%'], ['uncommon', 'top 50–25%'], ['rare', 'top 25–10%'], ['epic', 'top 10–5%'], ['anomaly', 'top 5–1%'], ['mythic', 'top 1–0.1%'], ['celestial', 'top 0.1–0.01% (900 numbers)'], ['divine', 'top 0.01–0.005% (about 50 numbers)'], ['godlike', 'top 0.005–0.001% (40 numbers)'], ['infinite', 'top 0.001% (about 10 numbers)']];
@@ -10192,8 +10279,9 @@
   // « now it's like hard to know where stuff are » : 7 entrées toujours écrites (Roll, Shop, Battle, Leaderboard, Casino,
   // Social, Me) au lieu de 8 icônes muettes sous 1110 px. Les routes ne changent pas (#/shop, #/clan, #/player/Nom… marchent
   // toujours) : chaque route appartient à une section, et les sections à plusieurs pages ont une rangée d'onglets (#subnav).
-  const SECTION_OF = { '': 'home', shop: 'shop', duel: 'battle', tournament: 'battle', room: 'battle', leaderboard: 'leaderboard', gamble: 'casino', friends: 'social', clan: 'social', me: 'me', badges: 'me', stats: 'me', history: 'me' };
+  const SECTION_OF = { '': 'home', shop: 'shop', duel: 'battle', tournament: 'battle', room: 'battle', leaderboard: 'leaderboard', hall: 'leaderboard', gamble: 'casino', friends: 'social', clan: 'social', me: 'me', badges: 'me', stats: 'me', history: 'me' };
   const SUBNAV = {
+    leaderboard: [['leaderboard', '🏆', 'Leaderboard'], ['hall', '🏛️', 'Hall of Fame']], // Hall of Fame (idée d'Avaneesh_17, 2026-11-05)
     battle: [['duel', '⚔️', 'Duels'], ['tournament', '🏆', 'Tournaments']],
     social: [['friends', '👥', 'Friends'], ['clan', '🏯', 'Clan'], ['chat', '💬', 'Global chat']],
     me: [['me', '👤', 'Profile'], ['badges', '🏅', 'Badges'], ['stats', '📊', 'Stats'], ['history', '🕘', 'History']],
@@ -10208,7 +10296,7 @@
       : `<a class="subnav-tab${k === key ? ' active' : ''}" href="#/${k}"${k === key ? ' aria-current="page"' : ''}><i aria-hidden="true">${emoji}</i><span>${label}</span></a>`).join('') : '';
   }
 
-  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, mod: renderMod, roadmap: renderRoadmap };
+  const ROUTES = { me: renderMe, clan: renderClan, '': renderHome, gamble: renderGamble, history: renderHistory, stats: renderStats, badges: renderBadges, leaderboard: renderLeaderboard, about: renderAbout, duel: renderDuelHub, tournament: renderTournament, shop: renderShop, friends: renderFriends, owner: renderOwner, ideas: renderIdeas, mod: renderMod, roadmap: renderRoadmap, hall: renderHall };
 
   function route() {
     Avatars.load();
