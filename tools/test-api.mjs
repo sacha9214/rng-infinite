@@ -6901,4 +6901,122 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   r = await call(profile, { url: '/api/profile?name=AllDifferent' }); assert.equal(r.body.most, null, 'aucun nombre tiré deux fois');
 }
 
+// ================================================================ Supprimer son compte (demandé par Sacha, 2026-11-05)
+{
+  const friendsApi = require(path.join(ROOT, 'api/friends.js')), shopApi = require(path.join(ROOT, 'api/shop.js')), roomApi = require(path.join(ROOT, 'api/room.js'));
+  const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+  const mkD = (k, nm, coins = 20000, rolls = 400) => { const id = `de${k}0`.repeat(4), secret = `de${k}f`.repeat(8); run([['SET', `player:${id}:secret`, sha(secret)], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, 'bonus', coins, 'first', 1], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+  const del = (p, extra = {}) => call(auth, { method: 'POST', body: { action: 'deleteAccount', playerId: p.playerId, secret: p.secret, name: p.name, ...extra } });
+  const fr = (p, action, extra = {}) => call(friendsApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action, ...extra } });
+  const clan = (p, op, extra = {}) => fr(p, 'clan', { op, ...extra });
+  const wait = () => new Promise(r => setTimeout(r, 3));
+  // Partout où l'identifiant apparaît encore : nom de clé, champ ou valeur de hash, membre de set ou de sorted set,
+  // élément de liste, valeur texte.
+  const traces = id => {
+    const out = [];
+    for (const [k, v] of db) {
+      if (k.includes(id)) out.push(k);
+      else if (v instanceof Map) { for (const [f, x] of v) if (String(f).includes(id) || String(x).includes(id)) out.push(`${k} → ${f}`); }
+      else if (v instanceof Set) { for (const m of v) if (String(m).includes(id)) out.push(`${k} ∋ ${m}`); }
+      else if (Array.isArray(v)) { if (v.some(x => String(x).includes(id))) out.push(`${k} []`); }
+      else if (typeof v === 'string' && v.includes(id)) out.push(`${k} = ${v}`);
+    }
+    return out;
+  };
+
+  const zed = mkD(1, 'DelZed'), yan = mkD(2, 'DelYan'), xia = mkD(3, 'DelXia'), wes = mkD(4, 'DelWes');
+  // Zed joue : tirages (classements, historique, badges, nums…), amis, cadeau, message privé, demande, clan, chat.
+  for (let i = 0; i < 3; i++) { db.delete(`cooldown:${zed.playerId}`); r = await call(roll, { method: 'POST', body: zed }); assert.equal(r.status, 200, JSON.stringify(r.body)); await wait(); }
+  r = await fr(zed, 'add', { name: 'DelYan' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(yan, 'accept', { name: 'DelZed' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(zed, 'add', { name: 'DelWes' }); assert.equal(r.status, 200, 'demande en attente chez Wes');
+  r = await fr(zed, 'gift', { name: 'DelYan', amount: 100 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(zed, 'message', { name: 'DelYan', text: 'hello there' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await fr(yan, 'gift', { name: 'DelZed', amount: 50 }); assert.equal(r.status, 200, 'cadeau reçu, pas encore vu');
+  run([['HSET', `h2h:${zed.playerId}`, `w:${wes.playerId}`, '2'], ['HSET', `h2h:${wes.playerId}`, `l:${zed.playerId}`, '2'],
+    ['SADD', `skins:${zed.playerId}`, 'neon'], ['HSET', 'skins', zed.playerId, 'neon'], ['HSET', 'titles', zed.playerId, 'x'], ['HSET', 'bio', zed.playerId, 'hi'],
+    ['ZADD', `hhist:${zed.playerId}`, '1', '1:5'], ['HSET', 'avpub', zed.playerId, 'tokzed'], ['HSET', 'avtok', 'tokzed', zed.playerId], ['SET', `av:${zed.playerId}`, JSON.stringify({ tok: 'tokzed' })],
+    ['SET', `player:${zed.playerId}:pw`, 's1$x$y'], ['SET', `player:${zed.playerId}:google`, 'g-zed'], ['SET', 'google:g-zed', zed.playerId],
+    ['RPUSH', 'gc:msgs', JSON.stringify({ id: 'abcdefabcdef', a: zed.playerId, n: 'DelZed', x: 'yo', t: 1 }), JSON.stringify({ id: 'abcdefabcde0', a: yan.playerId, n: 'DelYan', x: 'hey', t: 2 })],
+    ['RPUSH', 'casino:feed', JSON.stringify({ id: zed.playerId, g: 'slots', n: 5, t: 1 })], ['SADD', `dmblock:${wes.playerId}`, zed.playerId], ['HSET', 'rx:gc', `abcdefabcde0|${zed.playerId}`, '1', `abcdefabcde0|${yan.playerId}`, '2'],
+    // Traces moins nettes : amitié à sens unique, lien Discord, position ouverte, ancien nom resté réservé, victoires du jour.
+    ['SADD', `fr:${xia.playerId}`, zed.playerId], ['HSET', 'discord:links', 'd-zed', zed.playerId], ['HSET', `pos:${zed.playerId}`, 'p1', '{}'], ['ZADD', 'pos:open', '1', `${zed.playerId}:p1`],
+    ['SET', 'name:oldzedname', zed.playerId], ['HSET', `dw:2026-11-05:${wes.playerId}`, zed.playerId, '1', 'total', '1']]);
+  // Clan : Xia le crée, Zed y entre comme simple membre (demande acceptée) et écrit dans le chat du clan.
+  r = await clan(xia, 'create', { clanName: 'Deleters', tag: 'DEL', emoji: '🛡️' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(zed, 'request', { tag: 'DEL' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(xia, 'accept', { name: 'DelZed' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await clan(zed, 'say', { text: 'hi clan' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const yanKeys = traces(yan.playerId).length;
+
+  // 1. Refus : mauvais secret, mauvais pseudo (casse comprise), pseudo vide, compte suspendu, compte du créateur.
+  r = await del({ ...zed, secret: '0'.repeat(32) }); assert.equal(r.status, 403);
+  r = await del(zed, { name: 'delzed' }); assert.equal(r.status, 422); assert.match(r.body.error, /exactly/);
+  r = await del(zed, { name: '' }); assert.equal(r.status, 422);
+  r = await del({ ...yan, playerId: zed.playerId }); assert.equal(r.status, 403, 'le secret d\'un autre joueur');
+  assert.equal(run([['HGET', 'names', zed.playerId]])[0].result, 'DelZed', 'rien n\'a été effacé');
+  const ban = mkD(5, 'DelBanned'); run([['SADD', 'banned', ban.playerId]]);
+  r = await del(ban); assert.equal(r.status, 423, 'suspendu : rien ne passe, la suspension reste');
+  const own = mkD(6, 'DelOwner'); run([['HSET', `stats:${own.playerId}`, 'owner', 1]]);
+  r = await del(own); assert.equal(r.status, 403); assert.equal(run([['HGET', 'names', own.playerId]])[0].result, 'DelOwner');
+
+  // 2. Assis à une table de poker : refusé tant qu'il n'est pas parti ; après le départ, permis.
+  const pkr = mkD(7, 'DelPoker');
+  r = await call(shopApi, { method: 'POST', body: { playerId: pkr.playerId, secret: pkr.secret, action: 'poker', op: 'bot', buyin: 500 } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await del(pkr); assert.equal(r.status, 409); assert.match(r.body.error, /poker/);
+  assert.ok(run([['GET', `player:${pkr.playerId}:secret`]])[0].result !== 'deleted');
+  r = await call(shopApi, { method: 'POST', body: { playerId: pkr.playerId, secret: pkr.secret, action: 'poker', op: 'leave' } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await del(pkr); assert.equal(r.status, 200, JSON.stringify(r.body));
+  // Dans un duel pas fini : refusé.
+  const dly = mkD(8, 'DelDuel');
+  r = await call(roomApi, { method: 'POST', body: { playerId: dly.playerId, secret: dly.secret, name: 'DelDuel', action: 'create', size: 2 } }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  run([['SET', `inroom:${dly.playerId}`, r.body.code, 'EX', 45]]);
+  r = await del(dly); assert.equal(r.status, 409); assert.match(r.body.error, /duel/);
+  // Inscrit à un tournoi pas fini (celui de demain : ceux d'aujourd'hui ont pu être joués plus haut) : refusé.
+  const tny = mkD(9, 'DelTourney'), tid = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  run([['ZADD', `tn:${tid}:in`, Date.now(), tny.playerId]]);
+  r = await del(tny); assert.equal(r.status, 409); assert.match(r.body.error, /tournament/);
+
+  // 3. Chef d'un clan avec d'autres membres : refusé (il passe la main ou dissout d'abord).
+  r = await del(xia); assert.equal(r.status, 409); assert.match(r.body.error, /pass the leadership/);
+  // Seul dans son clan : le clan est dissous avec le compte.
+  const solo = mkD('a', 'DelSolo');
+  r = await clan(solo, 'create', { clanName: 'Lonely Ones', tag: 'SOLO', emoji: '🛡️' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const soloCid = run([['HGET', 'clanof', solo.playerId]])[0].result;
+  r = await del(solo); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['EXISTS', `clan:${soloCid}`]])[0].result, 0, 'clan dissous');
+  assert.equal(run([['GET', 'clantagk:SOLO']])[0].result, null, 'tag libéré');
+
+  // 4. Zed supprime son compte.
+  r = await del(zed); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.deleted, true);
+  // Plus rien de lui, sauf la pierre tombale (aucune donnée) et ce qui est gardé exprès : ses idées, la modération.
+  const left = traces(zed.playerId).filter(x => x !== `player:${zed.playerId}:secret`);
+  assert.deepEqual(left, [], `restes : ${left.join(' | ')}`);
+  assert.equal(run([['GET', `player:${zed.playerId}:secret`]])[0].result, 'deleted');
+  assert.equal(run([['GET', 'google:g-zed']])[0].result, null, 'Google délié');
+  assert.equal(run([['HGET', 'rx:gc', `abcdefabcde0|${yan.playerId}`]])[0].result, '2', 'la réaction de Yan reste');
+  // Son ancien appareil : 403 (le site repart avec un joueur neuf), y compris en tirant ; le compte ne renaît pas.
+  db.delete(`cooldown:${zed.playerId}`);
+  r = await call(roll, { method: 'POST', body: zed }); assert.equal(r.status, 403);
+  r = await del(zed); assert.equal(r.status, 403);
+  assert.deepEqual(traces(zed.playerId), [`player:${zed.playerId}:secret`]);
+  // Le pseudo est libre : un autre joueur le prend.
+  const zed2 = { playerId: 'de2e'.repeat(4), secret: 'de2ef'.repeat(8).slice(0, 32), name: 'DelZed' };
+  r = await call(roll, { method: 'POST', body: zed2 }); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(run([['HGET', 'names', zed2.playerId]])[0].result, 'DelZed');
+  // Ses amis ne le voient plus (amis, demandes), et ses traces chez eux sont parties.
+  r = await fr(yan, 'list'); assert.equal(r.status, 200);
+  assert.deepEqual(r.body.friends || [], []);
+  r = await fr(wes, 'list'); assert.deepEqual(r.body.incoming || [], [], 'la demande à Wes a disparu');
+  // Classements : plus là (le Zed qui vient de tirer est le nouveau joueur, 1 tirage).
+  for (const period of ['day', 'week', 'month', 'all']) {
+    r = await call(leaderboard, { url: `/api/leaderboard?period=${period}` });
+    assert.ok((r.body.entries || []).filter(e => e.name === 'DelZed').every(e => e.rolls === undefined || e.rolls <= 1), period);
+  }
+  assert.equal(run([['ZSCORE', 'lb:xp', zed.playerId]])[0].result, null);
+  // Son clan existe toujours sans lui ; Yan n'a rien perdu d'autre que lui (ses propres clés sont là).
+  r = await clan(xia, 'view'); assert.equal(r.status, 200); assert.deepEqual(r.body.clan.members.map(m => m.name), ['DelXia'], 'plus membre (le journal du clan garde « Zed left », comme pour un départ)');
+  assert.ok(traces(yan.playerId).length >= yanKeys - 3, 'les clés de Yan restent');
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

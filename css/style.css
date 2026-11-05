@@ -856,6 +856,13 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .field label { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--prose-2); }
 .modal .actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; margin-top: .6rem; }
 .modal .danger-zone { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--outline); display: flex; flex-wrap: wrap; gap: .5rem; }
+/* Supprimer son compte (demandé par Sacha, 2026-11-05) : la fenêtre de confirmation. */
+.acct-del-warn { margin: 0 0 .7rem; padding: .6rem .75rem; border-radius: 10px; border: 1px solid color-mix(in oklch, var(--danger) 45%, transparent); background: color-mix(in oklch, var(--danger) 9%, transparent); color: var(--prose); font-size: .86rem; line-height: 1.45; }
+.acct-del-lose { margin: 0 0 .3rem; font-size: .78rem; font-weight: 700; color: var(--prose-2); }
+.acct-del-list { margin: 0 0 .8rem; padding-left: 1.15rem; font-size: .84rem; line-height: 1.5; color: var(--prose); }
+.acct-del-link { margin: 0 0 .7rem; }
+.modal .btn.acct-del-go:not(:disabled) { background: var(--danger); border-color: var(--danger); color: #fff; }
+.modal .btn.acct-del-go:disabled { opacity: .45; cursor: not-allowed; }
 .toast {
   position: fixed;
   left: 50%;

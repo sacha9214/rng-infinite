@@ -1,6 +1,40 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (planned ideas sessions). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (delete-account branch). Update this file at the end of every session.
+
+## Delete my account (2026-11-05, branch `claude/delete-account`)
+
+Sacha asked for a way for players to delete their account from Settings.
+- **UI**: ⚙️ Settings → danger zone → "Delete my account" (only for a player with a name). A second window lists what is
+  lost, says if Google or a password is linked, and enables "Delete forever" only when the exact player name is typed.
+  After success `resetDevice()` gives the device a new identity (`Store.signOut`) and removes every other local key
+  except the language, the Store key (device settings) and the anonymous visit dates.
+- **Server**: `api/_account.js`, routed from `api/auth.js` (`action: 'deleteAccount'`, no new public file). It needs
+  the secret and the exact name.
+  - **Refused**: suspended accounts (423 from `ownsPlayer`); owner and viewer accounts (`canViewOwner`, 403); a player
+    seated at a poker table, in a live duel, with a duel roll still being revealed, signed up to an unfinished
+    tournament, or in the team of a pending or running clan war (409); the leader of a clan that has other members
+    (409: pass the leadership or disband first). A leader alone in the clan: the clan is disbanded.
+  - **Deleted**: one SCAN of the whole keyspace, then: every key whose name has the id; the id as a field or member of
+    every shared hash, set or sorted set whose name has no player id (like `banPlayers`); every `name:<key>` that
+    points to the player (current name and stale old ones); `google:<sub>`, the Discord link (`discord:links`), the
+    password and the recovery code; the id in other players' `fr:`, `frin:`, `frout:`, `dmblock:`, `dmu:`, `dw:` and
+    `h2h:` keys (one-sided entries too); gifts from the player in friends' lists; daily gift caps (`o:<id>`, `i:<id>`);
+    open positions in `pos:open`; avatar tokens (`avtok`, `avpq`); clan requests; reactions (`…|<id>` fields); the
+    player's global chat, clan chat and casino feed lines; the coins and casino board caches.
+  - **Kept**: `player:<id>:secret = "deleted"` (tombstone with no data: an old device gets 403 and starts a new player;
+    without it `claimPlayer` would recreate the id), `banned`, anonymous totals, ideas (`sugg:*`), moderation logs
+    (`reports`, `avlog`, `gc:mutelog`, `gc:dellog`), and finished duel rooms, tournaments and clan wars, which expire
+    on their own (1, 14 and 30 days). The clan log keeps "<name> left", like any other departure.
+- **Tests**: the "Supprimer son compte" block at the end of `tools/test-api.mjs`. The key check scans the whole fake
+  Redis for the id after deleting (keys, fields, members, values).
+- **Inventory check** (scratch script, not committed): after the full suite, every named player was deleted (194 OK,
+  89 refused: tournament, clan leader, duel) and the fake Redis was searched for each id. Only the kept records above
+  were left (rooms, poker tables, tournaments, wars, ideas, moderation logs), plus a past giveaway's winners in
+  `gw:item` and other players' global chat messages that reply to or mention the player (`ra`/`at`, never sent to the
+  site, gone when the chat rolls past 100 messages).
+- **Cost**: one SCAN of the whole database plus a TYPE per shared key. That should take a few seconds on the VPS; it
+  has not been measured on the real data. `tools/fake-redis.mjs` gained `TYPE`.
 
 ## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
 
