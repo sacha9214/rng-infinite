@@ -6009,6 +6009,12 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // Succès communs : les tirages des deux modes comptent.
   assert.ok(Ach.unlocked({ 'h:rolls': '100' }).includes('regular'));
   assert.ok(Ach.unlocked({ 'h:t:mythic': '1' }).includes('mythic'));
+  // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-05) : les tirages normaux ne comptent pas.
+  { const hardTitles = st => Ach.unlocked(st).filter(id => ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'].includes(id));
+    assert.deepEqual(hardTitles({ rolls: '200000', 't:mythic': '5', 't:infinite': '1', 'h:t:anomaly': '3', 'h:rolls': '4999' }), [], 'rien sans tirage du mode difficile');
+    assert.deepEqual(hardTitles({ 'h:t:mythic': '1', 'h:rolls': '5000' }), ['hardmythic', 'hard5k']);
+    assert.deepEqual(hardTitles({ 'h:t:godlike': '1', 'h:rolls': '100000' }), ['hardmythic', 'hard5k', 'hard10k', 'hard50k', 'hard100k'], 'Godlike compte pour Mythic ou mieux');
+    assert.deepEqual(hardTitles({ 'h:rolls': '49999' }), ['hard5k', 'hard10k']); }
   // Classements du mode difficile : à part.
   r = await call(leaderboard, { url: `/api/leaderboard?period=day&mode=hard&me=${hk.playerId}` });
   assert.equal(r.body.mode, 'hard'); assert.equal(r.body.entries.length, 1); assert.equal(r.body.entries[0].name, 'Hardy'); assert.ok(r.body.entries[0].n >= 0);
@@ -6754,6 +6760,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   db.delete(`cooldown:${p.playerId}`);
   r = await call(roll, { method: 'POST', body: p });
   assert.equal(typeof r.body.seen, 'number'); assert.equal(ncGet(r.body.n), r.body.seen + 1);
+}
+
+// ================================================================ Idées du 2026-11-05 (lot 1)
+{
+  const mkI = (k, nm) => { const id = `0e3${k}`.repeat(4), secret = `0e3${k}f`.repeat(8).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', 400, 'bonus', 50000], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+  // 1. « Equip what you buy » sur off (idée d'infinity) : l'achat débloque sans remplacer ce qui est équipé.
+  const eq = mkI(1, 'EquipKeeper');
+  const shop = extra => call(shopApi, { method: 'POST', body: { playerId: eq.playerId, secret: eq.secret, ...extra } });
+  run([['HSET', 'skins', eq.playerId, 'classic'], ['HSET', 'wall', eq.playerId, 'none'], ['HSET', 'btns', eq.playerId, 'x'], ['HSET', 'snd', eq.playerId, 'y']]);
+  let r = await shop({ action: 'buy', skin: 'neon', equip: false });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.ok(r.body.owned.includes('neon')); assert.equal(run([['HGET', 'skins', eq.playerId]])[0].result, 'classic', 'skin acheté, pas équipé');
+  r = await shop({ action: 'buywall', wall: 'forest', equip: false }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(run([['HGET', 'wall', eq.playerId]])[0].result, 'none');
+  r = await shop({ action: 'buybutton', button: 'cardboard', equip: false }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(run([['HGET', 'btns', eq.playerId]])[0].result, 'x');
+  r = await shop({ action: 'buysound', sound: 'arcade', equip: false }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(run([['HGET', 'snd', eq.playerId]])[0].result, 'y');
+  // Sans le champ : comme avant, acheté = équipé.
+  const eq2 = mkI(2, 'EquipNow');
+  r = await call(shopApi, { method: 'POST', body: { playerId: eq2.playerId, secret: eq2.secret, action: 'buy', skin: 'neon' } });
+  assert.equal(r.status, 200); assert.equal(run([['HGET', 'skins', eq2.playerId]])[0].result, 'neon');
+  // 2. Nombre le plus tiré sur le profil (idée de Gray) : 2 fois ou plus seulement.
+  // Tirages à 10 min d'écart : le même nombre à moins d'une minute compte comme un doublon d'envoi (rollSet).
+  const pr = mkI(3, 'MostRolled'), t0 = Date.now() - 10 * 3600000;
+  const nums = [123456, 777, 123456, 42, 123456, 777, 5];
+  run([['ZADD', `hist:${pr.playerId}`, ...nums.flatMap((n, i) => [t0 + i * 600000, `${t0 + i * 600000}:${n}`])]]);
+  r = await call(profile, { url: '/api/profile?name=MostRolled' });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.deepEqual(r.body.most, { n: 123456, c: 3 });
+  const lone = mkI(4, 'AllDifferent');
+  run([['ZADD', `hist:${lone.playerId}`, t0, `${t0}:1`, t0 + 1000, `${t0 + 1000}:2`]]);
+  r = await call(profile, { url: '/api/profile?name=AllDifferent' }); assert.equal(r.body.most, null, 'aucun nombre tiré deux fois');
 }
 
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

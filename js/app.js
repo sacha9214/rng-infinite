@@ -97,6 +97,9 @@
   // Signale au serveur un cas anormal (compteur anonyme, une fois par nom et par visite) : voir api/site.js « evt ».
   const seenEvt = new Set();
   const clientEvt = name => { if (seenEvt.has(name)) return; seenEvt.add(name); try { Online.request('/api/site', { method: 'POST', body: JSON.stringify({ action: 'evt', name }) }).catch(() => {}); } catch (e) { /* rien */ } };
+  // Achats qui équipent d'eux-mêmes ; « Equip what you buy » sur off les laisse seulement débloqués (api/shop.js).
+  const BUY_ACTIONS = new Set(['buy', 'buywall', 'buybutton', 'buysound']);
+  const autoEquip = () => Store.settings.autoEquip !== 'off';
   const Online = {
     // Un seul essai sur une base. Vers un autre domaine, le corps part en text/plain et sans en-tête ajouté : le
     // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
@@ -184,7 +187,9 @@
     },
     shopAction(action, skin, extra = {}) {
       const p = Store.player;
-      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra }) });
+      // Réglage « Equip what you buy » (idée d'infinity, 2026-11-05) : sur off, un achat ne remplace pas ce qui est équipé.
+      const keep = BUY_ACTIONS.has(action) && !autoEquip() ? { equip: false } : {};
+      return this.request('/api/shop', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, action, skin, ...extra, ...keep }) });
     },
     liveRooms() {
       return this.request('/api/room?live=1');
@@ -1370,6 +1375,9 @@
       <div class="field"><label>Roll animation</label>${seg('speed', ['dramatic', 'normal'], SPEEDS[s.speed] ? s.speed : 'normal', SPEED_LABELS)}</div>
       <div class="field"><label>Skip known badges</label>${skipRolls() >= SKIP_BADGES_AT ? seg('skipBadges', ['on', 'off'], s.skipBadges === 'on' ? 'on' : 'off') : `<span class="panel-note">🔒 Unlocks at ${fmt(SKIP_BADGES_AT)} rolls (you have ${fmt(skipRolls())})</span>`}<span class="panel-note" style="display:block;margin-top:.25rem">Badges you already own appear at once. New badges always get their full reveal. To keep a badge's full reveal anyway, open the badge and pick “Always shown in full”.</span></div>
       <div class="field"><label>Show XP to next rarity</label>${seg('tierLine', ['on', 'off'], s.tierLine === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">The “↑ XP short of / ↓ XP above” line under the XP after a roll.</span></div>
+      <div class="field"><label>Best roll message</label>${seg('bestNote', ['on', 'off'], s.bestNote === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">“This number contains your best roll ever” after a roll.</span></div>
+      <div class="field"><label>Equip what you buy</label>${seg('autoEquip', ['on', 'off'], s.autoEquip === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">Off: a new skin, wallpaper, button or sound is unlocked but you keep what you use now.</span></div>
+      <div class="field"><label>Keep the screen on during auto-roll</label>${seg('wakeLock', ['on', 'off'], s.wakeLock === 'on' ? 'on' : 'off')}<span class="panel-note" style="display:block;margin-top:.25rem">Your device won't go to sleep while auto-roll runs on this page. Uses more battery.</span></div>
       <div class="field"><label>Roll key</label><button class="btn" id="set-rollkey" type="button"><kbd>${esc(keyName())}</kbd> · change</button></div>
       <div class="field"><label>Sound</label>${seg('sound', ['on', 'off'], soundOn() ? 'on' : 'off')}</div>
       <div class="field"><label>Music</label>${seg('music', ['on', 'off'], Store.settings.music === 'off' ? 'off' : 'on')}<span class="panel-note" style="display:block;margin-top:.25rem">🎵 “Distant Odds” by Phong67</span></div>
@@ -2233,6 +2241,8 @@
   const UPDATES = [
     // Thanksgiving (2026-11-26) : idées d'Idkwhatnamemyself (skin), qwertyuiop (fond), R77 et Kj13.
     { id: '2026-11-05-thanksgiving', date: 'Nov 5, 2026', en: ['🦃 Thanksgiving is in the shop\'s Limited tab until November 27: the Turkey Roast skin (idea by Idkwhatnamemyself, with R77 and Kj13): your digits roast golden-brown in front of a turkey\'s fanned tail, autumn leaves fall, and rare rolls throw feathers everywhere', '🥧 And the Thanksgiving Dinner wallpaper (idea by qwertyuiop, with Kj13\'s autumn leaves): a table with a roast turkey, pie, corn and candles, leaves falling outside the windows'], fr: ['🦃 Thanksgiving est dans l\'onglet Limités de la boutique jusqu\'au 27 novembre : le skin Dinde rôtie (idée d\'Idkwhatnamemyself, avec R77 et Kj13) : tes chiffres dorent au four devant la queue en éventail d\'une dinde, des feuilles d\'automne tombent et les tirages rares font voler des plumes partout', '🥧 Et le fond Repas de Thanksgiving (idée de qwertyuiop, avec les feuilles d\'automne de Kj13) : une table avec une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles qui tombent derrière les fenêtres'] },
+    { id: '2026-11-05-hard-titles', date: 'Nov 5, 2026', en: ['🔥 5 new Hard mode titles: 🔥 Forged in Fire for a Mythic or better in Hard mode (idea by PRISMA123), and 🍪 Tough Cookie, ⛓️ Hardened, ⛏️ Hardcore and 🗻 Unbreakable for 5,000, 10,000, 50,000 and 100,000 Hard mode rolls (ideas by PRISMA123 and Liam123456). Only your Hard mode rolls count for them'], fr: ['🔥 5 nouveaux titres du mode difficile : 🔥 Forgé dans le feu pour un Mythic ou mieux en mode difficile (idée de PRISMA123), et 🍪 Dur à cuire, ⛓️ Endurci, ⛏️ Hardcore et 🗻 Incassable pour 5 000, 10 000, 50 000 et 100 000 tirages en mode difficile (idées de PRISMA123 et Liam123456). Seuls tes tirages du mode difficile comptent'] },
+    { id: '2026-11-05-ideas-1', date: 'Nov 5, 2026', en: ['⚙️ New settings: stop equipping what you buy (idea by infinity), hide the "contains your best roll" message (CococoC), and keep the screen on during auto-roll (Jacksonw)', '🎯 Auto-roll can now stop on a new badge (idea by Daiquan)', '🔥 Tap "rolls this session" to see the session\'s best rolls, worst rolls and rarities (idea by finnnnn)', '✨ The Badges page marks the badges you found since your last visit (idea by casmicgraything)', '🔁 Profiles show the number a player rolled the most (idea by Gray)', '🔢 Leaderboards show lifetime XP with 4 digits, like 1.956B (idea by jsand)', '🌈 Infinite rolls get a rainbow border in history and leaderboards (idea by KMC)'], fr: ['⚙️ Nouveaux réglages : ne plus équiper ce que tu achètes (idée d\'infinity), masquer le message « contient ton meilleur tirage » (CococoC), et garder l\'écran allumé pendant le tirage auto (Jacksonw)', '🎯 Le tirage auto peut s\'arrêter sur un nouveau badge (idée de Daiquan)', '🔥 Touche « tirages cette session » pour voir les meilleurs et pires tirages et les raretés de la session (idée de finnnnn)', '✨ La page Badges marque les badges trouvés depuis ta dernière visite (idée de casmicgraything)', '🔁 Les profils montrent le nombre le plus tiré par un joueur (idée de Gray)', '🔢 Les classements affichent l\'XP à vie avec 4 chiffres, comme 1.956B (idée de jsand)', '🌈 Les tirages Infinite ont un bord arc-en-ciel dans l\'historique et les classements (idée de KMC)'] },
     { id: '2026-11-05-roll-count', date: 'Nov 5, 2026', en: ['🔢 After each roll, see how many times your number was already rolled by all players, and which roll of it you are (like "rolled 36 times before you · you\'re #37"). Roll a number nobody ever got and you\'ll know it! Counts start from every roll saved on the server. Normal mode only (idea by a friend of Sacha, also asked by Tumored and Gray)'], fr: ['🔢 Après chaque tirage, vois combien de fois ton nombre a déjà été tiré par tous les joueurs, et quel tirage de ce nombre tu es (par exemple « a été tiré 36 fois avant toi · tu es le n° 37 »). Tire un nombre que personne n\'a jamais eu et tu le sauras ! Les compteurs partent de tous les tirages gardés sur le serveur. Mode normal seulement (idée d\'un ami de Sacha, aussi demandée par Tumored et Gray)'] },
     { id: '2026-11-04-poker-open', date: 'Nov 4, 2026', en: ['🌍 Open poker tables! In Casino → Poker, pick the blinds, choose how many coins you bring (20 to 100 big blinds) and sit down with anyone, up to 6 players. Join a table that is already playing (you play from the next hand) and leave whenever you like with your chips. Open tables need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with friend tables'], fr: ['🌍 Des tables de poker ouvertes ! Dans Casino → Poker, choisis les blindes, combien de pièces tu apportes (de 20 à 100 grosses blindes) et assieds-toi avec n\'importe qui, jusqu\'à 6 joueurs. Rejoins une table déjà en jeu (tu joues dès la main suivante) et pars quand tu veux avec tes jetons. Les tables ouvertes demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec les tables entre amis'] },
     { id: '2026-11-04-bots', date: 'Nov 4, 2026', en: ['🤖 Bot farms removed from the game: hundreds of fake accounts were rolling non-stop to fill the leaderboards and the online count (reported by jonahfr). New accounts are now limited per network, and gifts and friend poker tables unlock 3 days after your first roll'], fr: ['🤖 Fermes de bots retirées du jeu : des centaines de faux comptes tiraient sans arrêt pour remplir les classements et le compteur de joueurs en ligne (signalé par jonahfr). Les nouveaux comptes sont maintenant limités par réseau, et les cadeaux et les tables de poker entre amis se débloquent 3 jours après ton premier tirage'] },
@@ -2662,7 +2672,27 @@
     bump() { const n = this.n + 1; this.mem = n; try { sessionStorage.setItem('rngSessRolls', String(n)); } catch (e) { /* stockage bloqué : en mémoire */ } const el = $('#sess-rolls'); if (el) { el.textContent = sessRollsText(n); el.hidden = false; } },
   };
   const sessRollsText = n => `🔥 ${plural(n, 'roll')} this session`;
-  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
+  const sessRollsHTML = () => { const n = SessionRolls.n; return `<p class="sess-rolls" id="sess-rolls" data-sess role="button" tabindex="0" title="See this session's rolls"${n ? '' : ' hidden'}>${n ? sessRollsText(n) : ''}</p>`; };
+  // Détail de la session (idée de finnnnn, 2026-11-05) : les derniers tirages de ce mode, autant que le compteur de session
+  // (ceux d'un autre mode n'y sont pas), avec meilleurs, pires, raretés et XP.
+  function openSessionModal() {
+    const k = Math.min(SessionRolls.n, Store.rolls.length);
+    if (!k) return;
+    const from = Store.rolls.length - k, rows = Store.rolls.slice(from).map((r, j) => ({ i: from + j, n: r[0], xp: r[1], a: analysis(r[0]) }));
+    const xp = rows.reduce((x, r) => x + r.xp, 0), byXp = rows.slice().sort((x, y) => y.xp - x.xp);
+    const line = r => `<li><a href="javascript:void 0" data-roll="${r.i}"><span class="num-card sm" data-tier="${r.a.tier}">${r.a.str}</span></a>${tierPill(r.a.tier)}<b class="mono">${fmt(r.xp)} XP</b></li>`;
+    const tiers = Engine.TIER_ORDER.slice().reverse().map(t => [t, rows.filter(r => r.a.tier === t).length]).filter(([, c]) => c);
+    openModal(`
+      <h2>🔥 This session</h2>
+      <p class="panel-note">${plural(k, 'roll')} · ${fmt(xp)} XP · ${fmt(Math.round(xp / k))} XP per roll</p>
+      <div class="ss-cols">
+        <div><h3>Best rolls</h3><ul class="ss-list">${byXp.slice(0, 5).map(line).join('')}</ul></div>
+        ${k > 5 ? `<div><h3>Worst rolls</h3><ul class="ss-list">${byXp.slice(Math.max(5, k - 3)).reverse().map(line).join('')}</ul></div>` : ''}
+      </div>
+      <h3>Rarities</h3>
+      <div class="pill-row">${tiers.map(([t, c]) => `${tierPill(t)} <span class="mono">×${fmt(c)}</span>`).join(' ')}</div>
+      <div class="actions"><button class="btn" id="ss-close">Close</button></div>`, m => m.querySelector('#ss-close').addEventListener('click', closeModal));
+  }
   const SOLO_PAUSE = 1800; // ms minimum entre la fin d'une révélation visible et le tirage auto suivant
   // Rareté à laquelle le tirage auto s'arrête (choisie par le joueur, Mythic par défaut).
   const AUTO_STOPS = ['rare', 'epic', 'anomaly', 'mythic', 'celestial', 'divine', 'godlike', 'infinite'];
@@ -2671,7 +2701,8 @@
   // Mauvais tirage (idée de CococoC, 2026-10-20) : s'arrête sur Trash ou pire ; « never » ne s'arrête jamais
   // (Angelicide9) ; un seuil d'XP libre « xp:<n> » se tape à la main (WpBejs).
   const AUTO_LOW = ['trash', 'garbage', 'landwaste'];
-  const STOP_OK = v => AUTO_STOPS.includes(v) || v === 'never' || AUTO_LOW.map(t => `low:${t}`).includes(v) || /^xp:[1-9]\d{0,9}$/.test(v);
+  // Nouveau badge (idée de Daiquan, 2026-11-05) : s'arrête sur le premier tirage qui donne un badge jamais eu.
+  const STOP_OK = v => AUTO_STOPS.includes(v) || v === 'never' || v === 'newbadge' || AUTO_LOW.map(t => `low:${t}`).includes(v) || /^xp:[1-9]\d{0,9}$/.test(v);
   // Badges qui arrêtent aussi le tirage auto (idée de CococoC, 2026-10-28) : 5 au plus, choisis dans une petite fenêtre
   // avec recherche, gardés sur l'appareil (Store.settings.autoBadges). En plus du choix « stop on » : le tirage s'arrête
   // sur la rareté / l'XP / le mauvais tirage choisi OU sur un de ces badges (même avec « Never stop »), jamais sur un
@@ -2679,19 +2710,20 @@
   const AUTO_BADGES_MAX = 5;
   const autoBadges = () => (Array.isArray(Store.settings.autoBadges) ? Store.settings.autoBadges.filter(id => Engine.byId.has(id)).slice(0, AUTO_BADGES_MAX) : []);
   const autoBadgeHit = a => autoBadges().find(id => a.earnedIds.includes(id)) || null;
-  // Le tirage arrête-t-il l'auto-roll ?
-  const autoStops = a => {
+  // Le tirage arrête-t-il l'auto-roll ? fresh : il donne au moins un badge jamais eu.
+  const autoStops = (a, fresh = false) => {
     if (autoBadgeHit(a)) return true;
     const st = autoStop();
     if (st === 'never') return false;
+    if (st === 'newbadge') return fresh;
     if (st.startsWith('xp:')) return a.total >= Number(st.slice(3));
     if (st.startsWith('low:')) return TIER_RANK[a.tier] <= TIER_RANK[st.slice(4)];
     return TIER_RANK[a.tier] >= TIER_RANK[st];
   };
-  const stopToast = a => { const hit = autoBadgeHit(a), b = hit && Engine.byId.get(hit); if (b) return `🎯 Auto-roll stopped on ${b.emoji} ${b.label}: enjoy it!`; const st = autoStop(); return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
+  const stopToast = a => { const hit = autoBadgeHit(a), b = hit && Engine.byId.get(hit); if (b) return `🎯 Auto-roll stopped on ${b.emoji} ${b.label}: enjoy it!`; const st = autoStop(); if (st === 'newbadge') return '✨ Auto-roll stopped on a new badge: enjoy it!'; return st.startsWith('xp:') ? `✨ Auto-roll stopped on ${fmt(a.total)} XP: enjoy it!` : st.startsWith('low:') ? `🗑️ Auto-roll stopped on ${cap(a.tier)}: what a roll!` : `✨ Auto-roll stopped on ${cap(a.tier)}: enjoy it!`; };
   const autoStop = () => (STOP_OK(Store.settings.autoStop) ? Store.settings.autoStop : 'mythic');
   const kfmt = x => (x >= 1e6 ? `${x / 1e6}M` : `${x / 1e3}K`);
-  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label>${autoBadgesBtnHTML()}</span>`;
+  const soloAutoHTML = () => `<span class="solo-auto-box"><label class="room-auto solo-auto" title="Rolls again by itself after each reveal, until the rarity you chose"><input type="checkbox" id="solo-auto"${SoloAuto.on ? ' checked' : ''}><i aria-hidden="true"></i><span>Auto-roll</span></label><label class="solo-stop"><span>stop on</span><select id="solo-stop" aria-label="Rarity that stops auto-roll"><optgroup label="Rarity">${AUTO_STOPS.map(t => `<option value="${t}"${t === autoStop() ? ' selected' : ''} data-no-i18n>${cap(t)}${t === 'infinite' ? '' : '+'}</option>`).join('')}</optgroup><optgroup label="XP">${AUTO_XP.map(x => `<option value="xp:${x}"${`xp:${x}` === autoStop() ? ' selected' : ''} data-no-i18n>${kfmt(x)} XP+</option>`).join('')}${autoStop().startsWith('xp:') && !AUTO_XP.includes(Number(autoStop().slice(3))) ? `<option value="${autoStop()}" selected data-no-i18n>${fmt(Number(autoStop().slice(3)))} XP+</option>` : ''}<option value="xp:custom">Custom XP…</option></optgroup><optgroup label="Bad roll">${AUTO_LOW.map(t => `<option value="low:${t}"${`low:${t}` === autoStop() ? ' selected' : ''}>${cap(t)}${t === 'landwaste' ? '' : ' or worse'}</option>`).join('')}</optgroup><option value="newbadge"${autoStop() === 'newbadge' ? ' selected' : ''}>New badge</option><option value="never"${autoStop() === 'never' ? ' selected' : ''}>Never stop</option></select></label>${autoBadgesBtnHTML()}</span>`;
   const autoBadgesBtnHTML = () => { const k = autoBadges().length; return `<button type="button" class="solo-badges${k ? ' on' : ''}" id="solo-badges" title="Also stop auto-roll on badges you pick">🎯 <span>${k ? plural(k, 'badge') : 'Badges'}</span></button>`; };
   // Fenêtre de choix des badges : recherche, 5 au plus, enregistré à chaque clic (le tirage auto attend tant qu'elle est ouverte).
   function openAutoBadges() {
@@ -2740,6 +2772,19 @@
     if (box) box.checked = false;
     paintAutoBadge();
   }
+  // Écran allumé pendant l'auto-roll (idée de Jacksonw, 2026-11-05) : Screen Wake Lock, demandé tant que l'auto-roll
+  // tourne et que le réglage est sur on. Le navigateur le lâche tout seul quand l'onglet est caché : redemandé au retour.
+  const Wake = { lock: null, busy: false };
+  async function syncWake() {
+    const want = SoloAuto.on && Store.settings.wakeLock === 'on' && !document.hidden && 'wakeLock' in navigator;
+    if (want && !Wake.lock && !Wake.busy) {
+      Wake.busy = true;
+      try { Wake.lock = await navigator.wakeLock.request('screen'); Wake.lock.addEventListener('release', () => { Wake.lock = null; }); } catch (e) { /* refusé (batterie faible, page pas au premier plan) */ }
+      Wake.busy = false;
+    } else if (!want && Wake.lock) { const l = Wake.lock; Wake.lock = null; l.release().catch(() => {}); }
+  }
+  setInterval(syncWake, 2000);
+  document.addEventListener('visibilitychange', syncWake);
   function bindSoloAuto() {
     const box = $('#solo-auto');
     if (!box) return;
@@ -2829,25 +2874,25 @@
     }
     rollPending = false;
     Collection.ensure();
-    const n = online.n, a = analysis(n);
+    const n = online.n, a = analysis(n), fresh = a.earnedIds.some(id => !Collection.badges.has(id));
     HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     SessionRolls.bump();
     // Page visible (autre page du site) : succès et quêtes comme un tirage normal.
     if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
-    if (noteBgRoll(n, a, online.t)) return;
+    if (noteBgRoll(n, a, online.t, fresh)) return;
     // Revenu sur l'écran de tirage pendant que ce tirage partait : il est montré dans le résumé, la suite reprend là.
     if (onRollPage() && !document.hidden) { flushAway(); scheduleSoloAuto(SOLO_PAUSE); return; }
     scheduleSoloAuto(1800);
   }
   // Compte un tirage fait sans révélation (onglet caché ou autre page) ; true si le tirage auto s'arrête dessus.
-  function noteBgRoll(n, a, t) {
+  function noteBgRoll(n, a, t, fresh = false) {
     if (!BgRolls.count) BgRolls.title = document.title;
     BgRolls.count++;
     if (!BgRolls.best || a.total > BgRolls.best.a.total) BgRolls.best = { n, a, t };
     if (document.hidden) document.title = `(${BgRolls.count}) ${BgRolls.title}`;
-    if (autoStops(a)) {
+    if (autoStops(a, fresh)) {
       stopSoloAuto(); BgRolls.stopped = { n, a, t };
       awaySave();
       if (document.hidden) document.title = `✨ ${cap(a.tier)}! ${BgRolls.title}`;
@@ -3049,13 +3094,13 @@
     const auto = SoloAuto.on && !!online && !AUTO_HALT.includes(currentView);
     if (SoloAuto.on && !auto) stopSoloAuto();
     Collection.ensure();
-    const a = analysis(n);
+    const a = analysis(n), fresh = a.earnedIds.some(id => !Collection.badges.has(id));
     Store.addRoll(n, a.total, online ? online.t : Date.now(), !online);
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
     SessionRolls.bump();
     if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
-    if (auto) { if (!noteBgRoll(n, a, online.t)) scheduleSoloAuto(SOLO_PAUSE); return; }
+    if (auto) { if (!noteBgRoll(n, a, online.t, fresh)) scheduleSoloAuto(SOLO_PAUSE); return; }
     const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
     toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
   }
@@ -3070,7 +3115,8 @@
       notes.push(`<p class="new-note">✨ ${plural(list.length, 'new badge')}: ${list.slice(0, 4).map(b => `${b.emoji} ${esc(b.label)}`).join(', ')}${list.length > 4 ? '…' : ''}</p>`);
     }
     // Le nombre contient ton meilleur tirage d'avant (idée de spookiedookie, 2026-10-21) : un clin d'œil, sans XP.
-    if (!ctx.replay && ctx.index > 0) {
+    // Réglage « Best roll message » (idée de CococoC, 2026-11-05) : ces deux messages peuvent être coupés.
+    if (!ctx.replay && ctx.index > 0 && Store.settings.bestNote !== 'off') {
       let best = null;
       for (let i = 0; i < ctx.index; i++) { const r = Store.rolls[i]; if (!r[3] && (!best || r[1] > best[1])) best = r; }
       if (best && best[0] !== Number(a.str) && a.str.includes(String(best[0]))) notes.push(`<p class="new-note">👑 This number contains your best roll ever, <b class="mono">${esc(String(best[0]))}</b>!</p>`);
@@ -3287,7 +3333,7 @@
       // Premier Divine ou mieux du mode normal : le mode difficile s'ouvre, annoncé une fois la révélation finie.
       if (ctx.online && !ctx.replay && !Mode.hard && ['divine', 'godlike', 'infinite'].includes(a.tier)) setHardOpen(true);
       if (SoloAuto.on && !ctx.replay) {
-        if (autoStops(a)) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
+        if (autoStops(a, !!(ctx.newIds && ctx.newIds.size))) { stopSoloAuto(); toast(stopToast(a), 5000, 'achv'); }
         // Le résultat reste lisible au moins 1,8 s (0,9 s avant : un tirage pouvait défiler sans qu'on voie ses badges
         // ni son XP, surtout quand la page avait été ralentie et que la révélation se jouait d'un coup ; finnnnn, 2026-10-18).
         else scheduleSoloAuto(late ? 3000 : 1800);
@@ -3742,10 +3788,24 @@
         <div id="b-ach"><div class="panel"><div class="empty">${Store.player.name ? 'Loading your achievements…' : 'Roll once to start unlocking achievements and titles.'}</div></div></div>
         <div class="panel">
           <div class="panel-head"><h3 class="panel-title">Badge collection</h3></div>
+          <div id="c-fresh"></div>
           ${collectionHTML(Collection.badges.size, collState)}
         </div>
       </div>`;
-    mountCollection(localCollection(), collState);
+    // Badges trouvés depuis la dernière visite de cette page (idée de casmicgraything, 2026-11-05) : marqués NEW une fois,
+    // listés en haut de la collection. Gardés sur l'appareil, par mode ; la première visite ne marque rien.
+    const src = localCollection(), seenKey = Mode.hard ? 'hbadgesSeen' : 'badgesSeen', had = Store.settings[seenKey];
+    const owned = Engine.badges.filter(b => src.get(b.id)).map(b => b.id);
+    // La page se redessine (synchronisation de l'historique…) : les badges NEW de cette visite restent marqués une minute.
+    const kept = collState.freshAt && Date.now() - collState.freshAt < 60000 && collState.freshMode === Mode.hard ? collState.fresh : new Set();
+    collState.fresh = new Set([...kept, ...(Array.isArray(had) ? owned.filter(id => !had.includes(id)) : [])]);
+    collState.freshAt = Date.now(); collState.freshMode = Mode.hard;
+    Store.setSetting(seenKey, owned);
+    if (collState.fresh.size) {
+      const list = [...collState.fresh].map(id => Engine.byId.get(id)).sort((x, y) => y.score - x.score);
+      $('#c-fresh').innerHTML = `<p class="c-fresh">✨ ${plural(list.length, 'new badge')} since your last visit: ${list.map(b => `<span class="badge-pill" data-tier="${collTier(b)}" data-badge="${b.id}">${b.emoji} ${esc(b.label)}</span>`).join(' ')}</p>`;
+    }
+    mountCollection(src, collState);
     loadMyAchievements();
     // Vérificateur d'XP (idée d'un joueur, 2026-10-16) : n'importe quel nombre, calculé ici comme un tirage, mais affiché
     // exprès autrement qu'un tirage (cadre pointillé, « SIMULATION », pas de skin) : une capture ne peut pas passer pour un vrai.
@@ -3837,16 +3897,16 @@
       return `
         <div class="tier-block">
           <h3>${tierPill(tier)} <span class="muted mono">${foundInTier}/${all.length}</span></h3>
-          <div class="badge-grid">${list.map(b => collTileHTML(b, src.get(b.id))).join('')}</div>
+          <div class="badge-grid">${list.map(b => collTileHTML(b, src.get(b.id), state.fresh && state.fresh.has(b.id))).join('')}</div>
         </div>`;
     }).join('');
     $('#c-body').innerHTML = blocks || '<div class="empty">No badge matches.</div>';
   }
 
-  function collTileHTML(b, e) {
+  function collTileHTML(b, e, fresh = false) {
     return `
-      <button class="coll${e ? '' : ' missing'}"${e ? ` data-tier="${collTier(b)}"` : ''} data-badge="${b.id}">
-        <span class="top"><span class="emoji">${b.emoji}</span><span class="name">${esc(b.label)}</span><span class="ep-pill">${compact(b.score)}</span></span>
+      <button class="coll${e ? '' : ' missing'}${fresh ? ' coll-new' : ''}"${e ? ` data-tier="${collTier(b)}"` : ''} data-badge="${b.id}">
+        <span class="top"><span class="emoji">${b.emoji}</span><span class="name">${esc(b.label)}</span>${fresh ? '<span class="new-tag">NEW</span>' : ''}<span class="ep-pill">${compact(b.score)}</span></span>
         <span class="desc">${esc(b.desc)}</span>
         <span class="foot">${e
           ? `<span class="count">×${fmt(e.count)}</span><span>first: <span class="mono">${e.first}</span></span>`
@@ -3950,7 +4010,7 @@
           <div class="pf-stat"><span>All-time rank</span><b>${p.rank ? '#' + fmt(p.rank) : '–'}</b></div>
           <div class="pf-stat"><span>Badges</span><b>${found}<small>/${total}</small></b></div>
         </div>
-        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
+        <div class="pf-more">🎲 ${plural(p.rolls, 'roll')}${p.rolls ? ` · ${fmt(p.lifetime / p.rolls)} XP per roll` : ''}${me && p.spent ? ` · 🪙 ${fmt(p.spent)} coins spent${p.cases ? ` (${plural(p.cases, 'case')} opened)` : ''}` : ''}${p.uniq ? ` · 🔢 ${plural(p.uniq, 'different number')}` : ''}${p.most ? ` · 🔁 most rolled <a href="javascript:void 0" class="mono" data-number="${p.most.n}" data-no-i18n>${esc(analysis(p.most.n).str)}</a> ×${fmt(p.most.c)}` : ''}${p.questBest ? ` · 🔥 best quest streak ${plural(p.questBest, 'day')}` : ''}${d.played ? ` · ⚔️ ${fmt(d.won)} / ${fmt(d.played)} duels won` : ''}${p.clanMvp ? ` · 🎖️ Clan MVP ×${fmt(p.clanMvp)}` : ''}</div>
       </section>
       <div class="lb-tabs pf-tabs" role="tablist" style="grid-template-columns:repeat(${TABS.length},1fr)">${TABS.map(([id, icon, label]) => `<button role="tab" data-ptab="${id}" class="${id === tab ? 'on' : ''}"><i aria-hidden="true">${icon}</i> ${label}</button>`).join('')}</div>
       <div class="pf-pane" data-pane="overview">
@@ -4695,7 +4755,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buy' : 'equip', skin.id);
-        toast(buy ? `${skin.emoji} ${skin.name} unlocked and equipped` : `${skin.emoji} ${skin.name} equipped`);
+        toast(buy ? `${skin.emoji} ${skin.name} ${autoEquip() ? 'unlocked and equipped' : 'unlocked, not equipped'}` : `${skin.emoji} ${skin.name} equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -6593,7 +6653,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buywall' : 'wall', undefined, { wall: id });
-        toast(id === 'none' ? 'Back to the original background' : buy ? `${item.emoji} ${item.name} unlocked and on` : `${item.emoji} ${item.name} on`);
+        toast(id === 'none' ? 'Back to the original background' : buy ? `${item.emoji} ${item.name} ${autoEquip() ? 'unlocked and on' : 'unlocked, not equipped'}` : `${item.emoji} ${item.name} on`);
         drawShop(next);
       } catch (err) { btn.disabled = false; toast(err.status === 422 ? err.message : 'Shop unavailable right now, try again'); }
     };
@@ -6811,7 +6871,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buysound' : 'sound', undefined, { sound: item.id });
-        if (buy) toast(`${item.name} sounds unlocked: they play on your next roll`);
+        if (buy) toast(autoEquip() ? `${item.name} sounds unlocked: they play on your next roll` : `${item.name} sounds unlocked, not equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -6910,7 +6970,7 @@
       btn.disabled = true;
       try {
         const next = await Online.shopAction(buy ? 'buybutton' : 'button', undefined, { button: id });
-        toast(id === Shop.MATCH ? 'Your button now follows your skin' : buy ? `${item.emoji} ${item.name} button unlocked and equipped` : `${item.emoji} ${item.name} button equipped`);
+        toast(id === Shop.MATCH ? 'Your button now follows your skin' : buy ? `${item.emoji} ${item.name} button ${autoEquip() ? 'unlocked and equipped' : 'unlocked, not equipped'}` : `${item.emoji} ${item.name} button equipped`);
         drawShop(next);
       } catch (err) {
         btn.disabled = false;
@@ -9318,8 +9378,15 @@
     if (!document.hidden) lbTimer = setTimeout(() => { if (currentView === 'leaderboard') drawLeaderboard(); }, 60000);
   }
 
-  // XP à vie : des milliards possibles, affichés en abrégé (le détail au survol).
-  const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact(v) : fmt(v)} XP</span>`;
+  // XP à vie : des milliards possibles, affichés en abrégé (le détail au survol). Toujours 4 chiffres significatifs, tronqués
+  // comme compact (idée de jsand, 2026-11-05) : 1.956B, 10.63B, 392.5B, au lieu de 2B, 10.6B, 392.5B.
+  const compact4 = v => {
+    const n = Number(v) || 0, abs = Math.abs(n), unit = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']].find(([u]) => abs >= u);
+    if (!unit) return fmt(Math.trunc(n));
+    const x = n / unit[0], dec = Math.max(0, 4 - String(Math.trunc(Math.abs(x))).length);
+    return `${(Math.trunc(x * 10 ** dec + 1e-9) / 10 ** dec).toFixed(dec)}${unit[1]}`;
+  };
+  const compactXp = v => `<span title="${fmt(v)} XP">${v >= 1e6 ? compact4(v) : fmt(v)} XP</span>`;
   function lbRowHTML(e) {
     // Classement des pièces : pas de tirage à montrer, juste le solde.
     // Événement de la semaine : nombre de tirages du thème, ✓ quand l'objectif est atteint.
@@ -10372,6 +10439,7 @@
     // Aperçu d'un skin demandé hors de la grille du Shop (fenêtre de la cagnotte) ; la grille a son propre écouteur.
     { const pv = e.target.closest('[data-skin-preview]'); if (pv && !pv.closest('.skin-grid')) { e.preventDefault(); previewSkin(pv.dataset.skinPreview); return; } }
     if (e.target.closest('[data-news]')) { e.preventDefault(); openNews(); return; }
+    if (e.target.closest('[data-sess]')) { e.preventDefault(); openSessionModal(); return; }
     if (e.target.closest('[data-intro]')) { e.preventDefault(); openIntro(); return; }
     const badge = e.target.closest('[data-badge]');
     if (badge) { e.preventDefault(); openBadgeModal(badge.dataset.badge); return; }
@@ -10383,6 +10451,7 @@
     if (roll) { e.preventDefault(); openRollModal(Number(roll.dataset.roll)); }
   });
 
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-sess]')) { e.preventDefault(); e.stopPropagation(); openSessionModal(); } }, true);
   document.addEventListener('keydown', e => {
     const modalOpen = !!$('#modal-root').firstChild;
     if (e.key === 'Escape' && modalOpen) { closeModal(); return; }
