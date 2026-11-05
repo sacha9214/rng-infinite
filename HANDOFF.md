@@ -1,6 +1,31 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (Thanksgiving branch). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (wallpapers branch). Update this file at the end of every session.
+
+## Planned wallpapers from the 2026-11-05 triage (branches `claude/walls-sky`, then stacked PRs)
+
+The "Session wallpapers" list of `ideas-planned-2026-11-05.md` (14 ideas, 13 wallpapers). Every scene is drawn live in
+`js/wallfx.js` on the shared `stage()`, with a CSS sky (`.wp-<id>`) and SVG shop previews in light and dark.
+
+- **Done, PR 1 (`claude/walls-sky`)**: Blue Skies (`blueskies`, IXOLAF2, 1,000), Milky Way (`milkynight`, Ggggssnoop,
+  1,100; `milkyway` is a skin id), Sky Gate (`skygate`, Ggggssnoop's "heaven's gate", 1,200, no religious symbol), and
+  the Aether change (Angelicide9): a ball of light always runs along the sign, faster the rarer the last roll, and the
+  sign glows in the rarity colour (rainbow for Infinite). Mythic and Godlike colours of Aether's CSS wave now match
+  (white, red).
+- **Remaining** (next PRs): World Map (qwertyuiop, Jguz01, ichi), Pyramids of Giza (whywhywaylon), Ice Caps
+  (finnnnn), Circus (sennybex1), 4th Dimension (finnnnn, legendary), Avernus (qwertyuiop), Candy Land, Cracked Screen
+  and Stacks of Money (jia jun).
+- **Readability**: `calm()` paints a soft veil of the sky colour behind the part of the site where text sits on the
+  background, and `quiet()` thins details there. `node tools/wall-preview.mjs <id>[:event,…]` (dev server on 8136 or
+  `RNG_BASE`) films a wallpaper and measures the contrast of that text against the worst 5 % of pixels behind it,
+  compared with the plain site. It flags a drop below 3:1 that is also 20 % worse than without the wallpaper.
+- **Speed**: the same tool prints the average draw time of one frame (`S.ms`, added to `stage()`). Headless Firefox
+  draws without a GPU: Thunderstorm takes ~24 ms and Party ~13 ms there, so the bar is 16 ms. The new scenes take
+  0.4 ms (Milky Way, Aether) to ~6 ms (Blue Skies, Sky Gate). Sky Gate's rays are two canvases that the browser only
+  rotates and fades.
+- **Known, not changed**: Aether's CSS layers alone run at ~5 fps in headless Firefox (it was already the case before
+  the ball). Worth a look on a real low-end phone. In light mode the old sign behind "stop on" is slightly under the
+  bar (1.9 vs 2.4 without wallpaper).
 
 ## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
 
