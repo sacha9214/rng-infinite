@@ -40,13 +40,23 @@
     for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
     return h >>> 0;
   }
-  // Les 5 quêtes d'un jour "AAAA-MM-JJ".
-  function ofDay(day) {
+  // Les 5 quêtes d'un jour "AAAA-MM-JJ". counters : les compteurs du jour d'un joueur ; une quête relancée y est notée
+  // rr:<groupe> = la quête qui la remplace (toujours du même groupe), sinon c'est celle de tout le monde.
+  function ofDay(day, counters) {
     return GROUPS.map(g => {
-      const list = POOL.filter(q => q.group === g);
-      return list[hash(`${day}:${g}`) % list.length];
+      const list = POOL.filter(q => q.group === g), swap = counters && byId.get(counters[`rr:${g}`]);
+      return swap && swap.group === g ? swap : list[hash(`${day}:${g}`) % list.length];
     });
   }
+  // Relance de quête (idée de Mace_67, 2026-11-03 : « 3 rerolls every week bc some times the win duel against a player is
+  // hard to accomplish ») : 3 relances par semaine ISO (compteur « rerolls » des compteurs de la semaine, qw:<semaine>:<id>).
+  // Une relance remplace une quête du jour pas encore réclamée par une autre du même groupe, tirée au hasard par le serveur.
+  // Le groupe garde son compteur du jour (tirages, XP, duels…) : la progression déjà faite compte pour la nouvelle quête.
+  // Les récompenses suivent la difficulté du groupe : relancer ne rapporte pas plus, ça évite seulement une quête bloquante.
+  const REROLLS_PER_WEEK = 3;
+  const rerollsLeft = wcounters => Math.max(0, REROLLS_PER_WEEK - num(wcounters && wcounters.rerolls));
+  // Les quêtes qui peuvent remplacer `quest` : les autres du groupe.
+  const swapsFor = quest => POOL.filter(q => q.group === quest.group && q.id !== quest.id);
   const progress = (quest, counters) => Math.min(quest.target, quest.value(counters || {}));
 
   // Bonus quotidien : 20 pièces le 1er jour, +10 par jour de série, plafonné à 80 (7 jours et plus).
@@ -107,7 +117,7 @@
   // Coffres prêts à ouvrir : ceux d'après les déjà ouverts dont le palier est atteint.
   const chestsReady = (days, opened) => CHESTS.slice(Math.max(0, num(opened))).filter(c => num(days) >= c.at);
 
-  const api = { WEEK_POOL, ofWeek, CHESTS, chestsReady, POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
+  const api = { REROLLS_PER_WEEK, rerollsLeft, swapsFor, WEEK_POOL, ofWeek, CHESTS, chestsReady, POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGQuests = api;
 })(typeof window !== 'undefined' ? window : globalThis);
