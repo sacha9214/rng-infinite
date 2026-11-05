@@ -36,6 +36,117 @@ Sacha asked for a way for players to delete their account from Settings.
 - **Cost**: one SCAN of the whole database plus a TYPE per shared key. That should take a few seconds on the VPS; it
   has not been measured on the real data. `tools/fake-redis.mjs` gained `TYPE`.
 
+## Thanksgiving: Turkey Roast skin and Thanksgiving Dinner wallpaper (2026-11-05, branch `claude/ideas-thanksgiving-e7c7c1`)
+
+Planned ideas from the 2026-11-05 triage: qwertyuiop (a dinner table with Thanksgiving food), Idkwhatnamemyself (a
+turkey roasted into the number), Kj13 (autumn leaves in brown, red, yellow and orange, limited until Thanksgiving
+night), R77 (dinner table, turkey feathers, the iconic turkey look).
+
+- **Turkey Roast** 🦃 skin, 1,126 coins, `idea: 'Idkwhatnamemyself'` (the 5 % share goes to that player; R77 and Kj13 are named in the
+  comment and the update log). The card is a turkey's fanned tail (`.num-card.skin-turkey::before`, an SVG of 17
+  feathers): it folds while rolling (`.charging`) and spreads out after the last digit. The digits are roasted skin:
+  raw and pale with a heat shimmer while spinning, then a squash, a hot flash to golden-brown, a glaze sweep and a puff
+  of steam on the reveal. `js/skinfx.js` `SCENES.turkey`: autumn leaves (Kj13) and steam on each digit, a shower of
+  leaves on the reveal, and from Epic a fan of turkey feathers (two fans from Mythic). The base particle count is cut
+  to 45 % and anything over the card is drawn at 40 % so the digits stay readable. Duel frame `.side-turkey` (plaid
+  tablecloth, leaves, 🦃 / 🍂 🥧), Generate button `.btn-roll.gen-turkey`. The small history cards hide the fan.
+- **Thanksgiving Dinner** 🥧 wallpaper, 1,126 coins, `idea: 'qwertyuiop'` (no 5 % share on wallpapers, as for all
+  wallpapers). `WALL_LAYERS.feast` + `.wtg-*` in `css/style.css`: two windows with autumn trees and falling leaves, a
+  table across the bottom, and the meal in two groups (`.wtg-food.a`: turkey, pumpkins, cranberry sauce, candle;
+  `.wtg-food.b`: rolls, mashed potatoes, corn, pumpkin pie, candle). On wide screens the turkey is on the right and the
+  side dishes on the left, on either side of the page content (centred, it was hidden behind it); on phones they sit
+  side by side. Candles flicker, the turkey steams. Dark theme is the evening by candlelight, light theme an afternoon.
+- **Sale dates**: both `until: '2026-11-28T08:00:00Z'` = the end of Friday November 27 in US Pacific time (Thanksgiving
+  night is over everywhere in the US). Shown as "until November 27". Never in a case, outside the collections.
+- **Limited tab**: a 🦃 THANKSGIVING banner (falling leaves, countdown "Ends after November 27") above the Christmas
+  one, hidden after the date; limited skins and wallpapers are now sorted by end date (Thanksgiving first). The
+  wallpaper note says "for the holidays only" instead of "for Christmas only". French in `js/i18n.js`.
+- Update log entry `2026-11-05-thanksgiving` (en + fr) credits all four players.
+- Tests (`tools/test-api.mjs`, section 55): prices, dates and ideas; not in any case or collection; CSS, scene and
+  layers exist; buying a minute before the end works, a second after returns 422 (skin and wallpaper).
+- Checked: skin filmed with `tools/skin-preview.mjs` and iterated (pointed feathers → broad rounded ones sized by
+  height; bead-like steam → soft wisps; base leaves cut so a Mythic doesn't bury the digits; button tips split into
+  feathers); the canvas scene filmed frame by frame (manual mode) in dark and light; shop preview in the real page;
+  wallpaper at 1400, 1024 and 375 px in both themes; banner at 320 px in French; `overflow-check` OK.
+  Frame rate: 60 fps in the app's browser pane (same as Cozy Fireplace and Snowy Village); headless Firefox (software
+  rendering) is slow for every limited wallpaper, this one included (1–4 fps vs 3–5 for Cozy Fireplace).
+- **After November 27**: nothing to do; the banner hides itself and both items leave the tab (owners keep them).
+
+## Social and chat ideas (2026-11-05, branch `claude/ideas-social-chat-55a38b`)
+
+Planned ideas of the "social-chat" group from the 2026-11-05 triage, one UPDATES entry `2026-11-05-social-chat`.
+- **Best roll next to names in the global chat** (Loliarlex1248 `65af00fabee5`, MAYO `ddc646470eb0`): `api/_global.js`
+  `bestRolls()` reads `best:all` for the authors in one HMGET; each message gets `best: { n, tier }`, shown as
+  "(999,999)" in the tier colour (`.gc-best`). Normal mode only.
+- **Hard mode rolls from Mythic in the chat** (Idkwhatnamemyself `837fc6261b3d`, Kag `1b08e800e866`): `HARD_BIG` in
+  `api/_global.js`, used by `recordHardRoll`. Same 30 s / 10 min limits as Normal (they share the 30 s gap).
+- **Report context** (jsand `d6af231d993f`): the Moderator page shows the 4 messages before and 3 after a reported one
+  ("See the messages around it"), names and text only.
+- **Moderators lift mutes** (pople `129e925537e9`): `gcUnmute` works for moderators from the Moderator page ("Muted
+  right now"), only for a mute still running, never a Forever mute and never one the owner set (`bo: 1` on the mute
+  record, and for older mutes the author's id in `gc:mutelog`). The history keeps who lifted it; the owner page never
+  shows their id.
+- **Friends**: ☆ star pins a friend at the top (Big Sexy `86b789a1f215`, key `frstar:<id>`, cleaned on remove).
+  Friends leaderboard on the Friends page (Edward `73d46f7e12d3`): you + friends by XP, today's XP, best roll or rolls
+  (`state().board`, 4 commands whatever the number of friends). The clan part of Edward's idea was not done (clans
+  already have their member list).
+- **Roadmap votes** (Trinity `7b6e1119e6eb`): ▲ on each Planned idea, "Most voted" (default) or "Newest". Name +
+  100 rolls to vote, one vote per player per idea, removable. Keys `rmv` (hash id → count), `rmv:<suggId>` (voters),
+  `rmv:by:<player>`. Ideas go out with an opaque key (sha256 of the id), never the suggestion id. "Report a bad idea"
+  from Trinity's message was not done: Planned ideas are already approved by Sacha.
+- **Emojis** (Jacksonw `cc4dca7290ca`, Deadshot `11bd0db13baf` `b3f73d2e94d5`, sennybex1 `66d54d6190d3`, Jguz01
+  `e3db68e0f4d3`): 23 more in the chat grid (faces, 🎩 👌 🌮 🐳 🥦 🛡️ 🤴 🧀 🐄 🐴; Unicode has no knight, 🛡️ stands for it),
+  the emoji button in the clan chat, and 8 of them as clan icons (`api/_clan.js` EMOJIS).
+- **Duel chat ⋯** (Jacksonw `6dde4a6813f9`): Edit / Delete / Hide / Report behind one ⋯ button (`Room.chatMenu`).
+- **Who is winning in a duel** (Jacksonw `610aa706bbdd`): score above each card with 👑 on the single leader,
+  👑 in the scoreboard, and a "⇅ Put the leader first" link at the end of the duel subtitle for 2-player duels (setting
+  `duelOrder`; the default keeps qwertyuiop's card order). A separate button row pushed the 2nd card under the sticky
+  Roll bar at 320 px (overlap-audit), hence the link.
+- Tests: `tools/test-api.mjs` block "Idées du 2026-11-05 (session social-chat)". Browser: Playwright script on the dev
+  server at 320/360/375/390/414/1280 px, light and dark, EN and FR (friends, roadmap, moderator page, global chat, clan
+  chat, duel), `tools/audit/overflow-check.mjs` clean, `tools/audit/overlap-audit.mjs 320` same as `main` (only the old
+  Tournament tab overflow).
+- Seen, not fixed: in a duel at 320 px the Rounds panel can overflow by ~18 px when the other player's name is long
+  ("you: 880773" pushed out); it is older than this branch.
+
+## Planned skins from the 2026-11-05 triage (session "skins", branches `claude/skins-lot<N>`)
+
+Sacha asked to build every Planned idea; the 63 skin ideas are the "Session skins" list of
+`ideas-planned-2026-11-05.md` (untracked, main checkout). Each skin follows `.claude/skills/rng-skin-design`
+(brief, film with `tools/skin-preview.mjs` and `tools/reveal-film.mjs --skin <id> --crop`, critique, iterate). Each lot
+is one PR; lots are stacked (lot 2 is branched from lot 1), so merge them in order.
+
+**Lot 1 — `claude/skins-lot1`** (CSS: end of `css/style.css` and `css/premium.css`; buttons: end of `css/buttons.css`;
+scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.js`):
+- `overture` Overture 🎹 2,400 — 0casmictechthing [1fa8a0fc2680] (promised), merged with casmicgraything's music staff
+  [751598325349] and 17black's jukebox notes [450c5598ed1e]. **Sound:** `js/sound.js` `piano()`; each digit plays its
+  own note (C major, digit 0 = C4 … 9 = E5) and the rarity plays a chord (`OVERTURE_CHORDS`, Infinite = Am7). Hooked
+  in `js/app.js` (`pianoSkin`, the lock `d` field, `tier` gets `skin`), also in the shop Preview. A sound pack does
+  not replace the piano (like ASMR and Lab).
+- `cheese` Cheese 🧀 1,500 — casmicgraything [1076e573c9d1] (idea share) + casmictechthing's detailed version [bfbb45cb9910].
+- `dig` Archaeology 🦴 2,000 — casmicgraything [2b59f74fb5b6] (idea share) + Alt [4555c11ffa75].
+- `angel` Angel 🪽 7,777 and `demon` Demon 😈 6,666, Legendary (`premium`) — qwertyuiop [3c452b1058ce], prices his;
+  Demon also covers Roanono's fallen angel [2656e434fb62]. Shared wing drawing `l1Wing` / scene `l1Winged`.
+
+**Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
+- Lot 2: Deep Sea (finnnnn [0555093cf3b9], Deadshot [e1cfcd646151], YeeHao2's whale [da859b846a6d], LEVIATHAN
+  [ed2af64de7d0]; the existing 700-coin Ocean skin stays), Bubble (finnnnn [d0de2e6104d2]), Yin and Yang (kaz
+  [2a7c38aebff0], JBearr12 [959206f6ac9c]), Frutiger Aero (jia jun [e7a0b771e530], promised).
+- Lot 3: Blackout (Mace_67 [f414eccc558b], promised), Rarity mirror (Idkwhatnamemyself [fb70cca99f40], promised), then
+  the list in order: rainbow painting [7f9507fe5e51], grass [a841d12aea44], obsidian [7ac4a115abd4], horses/barn
+  [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
+  [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
+  spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
+  Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
+  [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
+  [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
+  spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
+  Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
+  lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
+  mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
+  [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
+  [773ca9b1b6e4], puzzle cube [3518354c582f].
+
 ## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
 
 Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,

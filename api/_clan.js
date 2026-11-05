@@ -52,7 +52,8 @@ const slotPrice = slots => SLOT_PRICES[(slots - SLOTS_BASE) / SLOT_STEP];
 const BANNERS = ['slate', 'red', 'orange', 'gold', 'green', 'teal', 'blue', 'purple', 'pink', 'black'];
 const TAG_COLORS = ['plain', 'red', 'orange', 'gold', 'green', 'teal', 'blue', 'purple', 'pink', 'rainbow'];
 const BANNER_PRICE = 2000, TAGC_PRICE = 3000, RAINBOW_PRICE = 15000;
-const EMOJIS = ['🛡️', '⚔️', '🐉', '🦁', '🐺', '🦅', '🔥', '❄️', '⚡', '🌙', '⭐', '💎', '👑', '🎲', '🍀', '🌊', '🌋', '🚀', '👾', '🤖', '🐸', '🦈', '🍕', '🎯'];
+const EMOJIS = ['🛡️', '⚔️', '🐉', '🦁', '🐺', '🦅', '🔥', '❄️', '⚡', '🌙', '⭐', '💎', '👑', '🎲', '🍀', '🌊', '🌋', '🚀', '👾', '🤖', '🐸', '🦈', '🍕', '🎯',
+  '🎩', '🌮', '🐳', '🥦', '🤴', '🧀', '🐄', '🐴']; // idée de sennybex1 (2026-11-05) : « I need to make a clan! »
 const DONATE = { min: 10, max: 10000, perHour: 10 };
 const CHAT_KEEP = 100, CHAT_TTL = 7 * 86400, CHAT_PER_MIN = 20, CHAT_PER_DAY = 400, EDIT_MS = 10 * 60000;
 const LOG_KEEP = 50, INVITE_TTL = 7 * 86400, MAX_REQUESTS = 30, MAX_INVITES = 20;
