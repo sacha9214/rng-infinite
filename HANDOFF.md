@@ -228,9 +228,14 @@ brand; **no mines**: on Mythic the other tiles burst open into flags and numbers
 `mimic` Mimic 🪙 2,000 — costoroll [c6da83a9d7bb] (new `coins` sound in `js/sound.js` for the rattling chests; the
 Mythic "all chests turn into mimics" is CSS, read from the section's `data-tier` once the card is not `.neutral`).
 
-- Next: fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
-  [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
-  [773ca9b1b6e4], puzzle cube [3518354c582f].
+**Lot 12 — `claude/skins-lot12`** (block "lot 12 du 2026-11-05" in `js/skinfx.js`): `egg` Fried Egg 🍳 900 — Gray alt
+[5a933aa2e82f] (his price); `gridiron` Gridiron 🏈 1,800 — casmicgraything [1bf863024c74] (generic: no league or team
+names or logos; the "player doing a touchdown" is the TOUCHDOWN! title and confetti from both goalposts); `earth` Earth
+🌍 2,400 — casmicgraything [9df2cb94ab37] (**no laser battle**: on Mythic every rocket launches and the satellites send
+each other colored signals); `amethyst` Amethyst 💎 2,200 — JAKECisthebest [a92a400e42d6] (**no music**: the song he
+asked for is copyrighted; the rarity color comes from `--t-accent` once the card is not `.neutral`).
+
+- Next: water balloon [773ca9b1b6e4], puzzle cube [3518354c582f] (generic, no brand).
 
 ## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
 

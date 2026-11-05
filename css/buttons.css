@@ -2022,3 +2022,29 @@
   text-shadow: 0 0 .15em #f59e0b, 0 .06em 0 #451a03;
   --gs: 0 .3em 0 #3f220e, 0 .5em 1em rgba(251, 191, 36, .3); --gs-h: 0 .34em 0 #3f220e, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #3f220e; }
 .btn-roll.gen-mimic:hover { filter: brightness(1.1); }
+
+/* ==== Skins du 2026-11-05, lot 12 ==== boutons assortis */
+/* Fried Egg (idée de Gray alt) : un blanc d'œuf sur la poêle et son jaune, texte orange brûlé. */
+.btn-roll.gen-egg { border: .16em solid #27272a; border-radius: 999px; color: #9a3412; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(circle at 82% 50%, #fcd34d 0 .55em, #f59e0b .7em, transparent .74em), radial-gradient(ellipse 60% 75% at 60% 50%, #fffdf7 0 85%, transparent 88%), #3f3f46;
+  text-shadow: 0 .04em 0 rgba(255, 237, 213, .8);
+  --gs: 0 .3em 0 #18181b, 0 .5em 1em rgba(0, 0, 0, .3); --gs-h: 0 .34em 0 #18181b, 0 .7em 1.3em rgba(251, 191, 36, .3); --gs-a: 0 .06em 0 #18181b; }
+.btn-roll.gen-egg:hover { filter: brightness(1.06); }
+/* Gridiron (idée de casmicgraything) : le gazon rayé et ses lignes blanches, texte en lettres de maillot. */
+.btn-roll.gen-gridiron { border: .14em solid #fff; border-radius: .3rem; color: #fff; -webkit-text-stroke: .03em #14532d; font-family: 'Impact', 'Haettenschweiler', 'Arial Black', system-ui, sans-serif; letter-spacing: .06em;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .55) 0 2px, transparent 2px 1.4em), repeating-linear-gradient(90deg, #15803d 0 1.4em, #16a34a 1.4em 2.8em);
+  box-shadow: 0 0 0 .05em #14532d; text-shadow: 0 .06em 0 #14532d;
+  --gs: 0 .3em 0 #14532d, 0 .5em 1em rgba(22, 163, 74, .3); --gs-h: 0 .34em 0 #14532d, 0 .7em 1.3em rgba(22, 163, 74, .45); --gs-a: 0 .06em 0 #14532d; }
+.btn-roll.gen-gridiron:hover { filter: brightness(1.08); }
+/* Earth (idée de casmicgraything) : l'espace et la Terre qui se lève sur le côté, texte blanc. */
+.btn-roll.gen-earth { border: 2px solid #1e3a8a; border-radius: .6rem; color: #fff; -webkit-text-stroke: .02em #0b1229; font-family: 'Avenir Next', 'Futura', 'Century Gothic', system-ui, sans-serif;
+  background: radial-gradient(circle at 90% 120%, #16a34a 0 .45em, transparent .46em), radial-gradient(circle at 92% 125%, #2563eb 0 1.4em, rgba(96, 165, 250, .4) 1.5em, transparent 1.7em), radial-gradient(circle, rgba(255, 255, 255, .7) 0 .7px, transparent 1.2px) 6px 4px / 29px 31px, linear-gradient(180deg, #020617, #0b1229);
+  text-shadow: 0 0 .2em rgba(147, 197, 253, .7);
+  --gs: 0 .3em 0 #020617, 0 .5em 1em rgba(59, 130, 246, .3); --gs-h: 0 .34em 0 #020617, 0 .7em 1.3em rgba(59, 130, 246, .45); --gs-a: 0 .06em 0 #020617; }
+.btn-roll.gen-earth:hover { filter: brightness(1.15); }
+/* Amethyst (idée de JAKECisthebest) : le cristal violet à facettes, texte lilas lumineux. */
+.btn-roll.gen-amethyst { border: .14em solid #3b0764; border-radius: .9rem .5rem 1.1rem .6rem; color: #f3e8ff; font-family: 'Optima', 'Candara', Georgia, serif;
+  background: linear-gradient(115deg, rgba(255, 255, 255, .2) 0 18%, transparent 18% 40%, rgba(255, 255, 255, .1) 40% 52%, transparent 52%), conic-gradient(from 200deg at 38% 58%, #4c1d95, #7e22ce 12%, #a855f7 22%, #6b21a8 34%, #c084fc 46%, #581c87 58%, #9333ea 70%, #3b0764 84%, #4c1d95);
+  text-shadow: 0 0 .2em rgba(216, 180, 254, .9), 0 .04em .05em #3b0764;
+  --gs: 0 .3em 0 #2e1065, 0 .5em 1em rgba(168, 85, 247, .4); --gs-h: 0 .34em 0 #2e1065, 0 .7em 1.3em rgba(168, 85, 247, .55); --gs-a: 0 .06em 0 #2e1065; }
+.btn-roll.gen-amethyst:hover { filter: brightness(1.12); }

@@ -360,6 +360,11 @@
     { id: 'chronos', name: 'Chronos', emoji: '🕰️', price: 2600, desc: 'Clocks orbit a cosmic galaxy and every digit sits on a spinning dial; then a great eye of numerals opens behind your number, and Mythic rolls turn back time', idea: 'casmicgraything' },
     { id: 'sweeper', name: 'Tile Sweeper', emoji: '🚩', price: 1300, desc: 'A retro tile board: every digit is a tile that clicks open while the little face watches; Mythic rolls clear the whole board', idea: 'costoroll' },
     { id: 'mimic', name: 'Mimic', emoji: '🪙', price: 2000, desc: 'Six treasure chests rattle on a pirate deck at dusk and open on gold digits; the last one has teeth, and on Mythic rolls they are all mimics', idea: 'costoroll' },
+    // lot 12 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'egg', name: 'Fried Egg', emoji: '🍳', price: 900, desc: 'Every digit is an egg that cracks into a sizzling pan and lands in the yolk; then the pan explodes into golden sparks', idea: 'Gray alt' },
+    { id: 'gridiron', name: 'Gridiron', emoji: '🏈', price: 1800, desc: 'A football field with its yard lines: a ball spirals onto every digit, and Mythic rolls score a TOUCHDOWN in red, white and blue confetti', idea: 'casmicgraything' },
+    { id: 'earth', name: 'Earth', emoji: '🌍', price: 2400, desc: 'The Earth spins behind your number while satellites orbit and rockets fly by; Mythic rolls launch every rocket at once', idea: 'casmicgraything' },
+    { id: 'amethyst', name: 'Amethyst', emoji: '💎', price: 2200, desc: 'Your digits shine through a purple crystal; when the roll ends, the stone glows in the color of its rarity and cracks', idea: 'JAKECisthebest' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
