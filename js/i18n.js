@@ -456,6 +456,10 @@
     'This code has expired': 'Ce code a expiré', 'Redeemed the Halloween 2026 code': 'A utilisé le code d\'Halloween 2026', 'Helps sort the ideas box': 'Aide à trier la boîte à idées',
     'Limited': 'Limités', 'Limited skins': 'Skins limités', 'for a short time only · once bought, yours forever': 'pour peu de temps · une fois acheté, il est à toi pour toujours', 'No limited skin right now. Come back for the next event!': 'Aucun skin limité pour l\'instant. Reviens au prochain événement !',
     'Six presents shaken under the tree pop open to reveal your digits, between two trees and twinkling lights · until December 26': 'Six cadeaux secoués sous le sapin s\'ouvrent pour révéler tes chiffres, entre deux sapins et une guirlande qui clignote · jusqu\'au 26 décembre',
+    // Thanksgiving (2026-11-26) : le skin Turkey Roast, le fond Thanksgiving Dinner et la bannière de l'onglet Limités
+    'Turkey Roast': 'Dinde rôtie', 'Your digits roast golden-brown in front of a turkey\'s fanned tail, with autumn leaves falling; rare rolls throw feathers everywhere · until November 27': 'Tes chiffres dorent au four devant la queue en éventail d\'une dinde, sous les feuilles d\'automne ; les tirages rares font voler des plumes partout · jusqu\'au 27 novembre',
+    'Thanksgiving Dinner': 'Repas de Thanksgiving', 'A table set for Thanksgiving: a roast turkey, pie, corn and candles, with autumn leaves falling outside the windows · until November 27': 'Une table de Thanksgiving : une dinde rôtie, une tarte, du maïs et des bougies, et des feuilles d\'automne qui tombent derrière les fenêtres · jusqu\'au 27 novembre',
+    '🦃 THANKSGIVING': '🦃 THANKSGIVING', 'animated backgrounds · for the holidays only': 'des fonds animés · seulement pour les fêtes',
     // Événement de Noël (2026-11-01) : le skin Gingerbread et le fond Cozy Fireplace
     'Gingerbread': 'Pain d\'épices', 'Every digit is a gingerbread cookie: cutters press the dough while you roll, then the icing is piped on with a sparkle of sugar · until December 26': 'Chaque chiffre est un biscuit en pain d\'épices : des emporte-pièces s\'enfoncent dans la pâte pendant le tirage, puis la glace est pochée avec une étincelle de sucre · jusqu\'au 26 décembre',
     'Cozy Fireplace': 'Coin du feu', 'A crackling fire, stockings on the mantel and snow at the window · until December 26': 'Un feu qui crépite, des chaussettes sur la cheminée et la neige à la fenêtre · jusqu\'au 26 décembre',
@@ -898,6 +902,7 @@
     [/^([\d,]+) rounds?$/, m => `${m[1]} manche${s(m[1])}`],
     [/^Ends after October 31 · (\d+) days (\d+) h left$/, m => `Se termine après le 31 octobre · encore ${m[1]} jours ${m[2]} h`],
     [/^Ends after December 25 · (\d+) days (\d+) h left$/, m => `Se termine après le 25 décembre · encore ${m[1]} jours ${m[2]} h`],
+    [/^Ends after November 27 · (\d+) days (\d+) h left$/, m => `Se termine après le 27 novembre · encore ${m[1]} jours ${m[2]} h`],
     [/^⏳ Ends in (\d+) days? (\d+) h$/, m => `⏳ Finit dans ${m[1]} jour${m[1] > 1 ? 's' : ''} ${m[2]} h`], [/^⏳ Ends in (\d+) h$/, m => `⏳ Finit dans ${m[1]} h`], [/^⏳ Ended$/, () => '⏳ Terminé'],
     [/^Signed in as (.+?)( · .+)?$/, m => `Connecté en tant que ${m[1]}${m[2] || ''}`],
     [/^bet on a rise \(long\) or a fall \(short\) with (.+) · you can never lose more than your margin$/, m => `joue la hausse (long) ou la baisse (short) en ${m[1]} · tu ne peux jamais perdre plus que ta mise`],
