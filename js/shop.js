@@ -252,6 +252,22 @@
     // Idée de baby boy (2026-11-01, autre compte : Daddy finger) : un pack chat ; un chat sort chaque chiffre d'une pelote
     // de laine. Le pack de sons Meow va avec (SOUNDS) ; il le voulait à 15 000 pièces, vendu au prix normal des packs.
     { id: 'cat', name: 'Cat', emoji: '🐱', price: 1800, desc: 'A cat bats every digit out of a ball of yarn on a cosy cushion; Mythic rolls end with a happy MEOW and a shower of hearts', idea: 'baby boy' },
+    // ==== Skins du 2026-11-05, lot 1 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Promis à 0casmictechthing (2026-10-30) : « Overture background is a piano and as the numbers reveal musical symbols
+    // pop up mythic+ hits minor/major chords Infinite is Am7 chord ». Fusionné avec la portée de casmicgraything
+    // (2026-11-05) et le juke-box de 17black (2026-10-27, des notes qui passent). Chaque chiffre joue sa note au piano
+    // (js/sound.js), la rareté joue un accord.
+    { id: 'overture', name: 'Overture', emoji: '🎹', price: 2400, desc: 'Gold-leaf digits on a grand piano: every digit plays its own note and a music note floats off the staff; great rolls end on a full chord, and Infinite on A minor 7', idea: '0casmictechthing' },
+    // Idée de casmicgraything (2026-11-05, la première : du fromage fondu partout) et version détaillée de casmictechthing
+    // (le même jour : des blocs qui tombent du ciel et s'empilent, une meule différente selon la rareté, tout fond dès Mythic).
+    { id: 'cheese', name: 'Cheese', emoji: '🧀', price: 1500, desc: 'Every digit is a block of Swiss cheese that drops onto the board and squishes; a different cheese crowns each rarity, and Mythic rolls melt and flood the card', idea: 'casmicgraything' },
+    // Idée de casmicgraything (2026-11-03) : un chantier de fouilles, chaque chiffre est un os qu'on déterre ; dès Mythic les
+    // os s'animent. Même idée d'Alt le même jour (des chiffres qu'on déterre). Identifiant « dig ».
+    { id: 'dig', name: 'Archaeology', emoji: '🦴', price: 2000, desc: 'Every digit is a fossil bone dug out of the layers of a dig site with a brush; on Mythic rolls the bones come alive and a raptor skeleton runs by', idea: 'casmicgraything' },
+    // Idée de qwertyuiop (2026-11-01) : « a legendary angel and demon skin where the angel skin costs 7,777 and the demon skin
+    // costs 6,666 » ; Demon est aussi l'ange déchu de Roanono (2026-11-03, « lumière sombre »). Legendary (premium).
+    { id: 'angel', name: 'Angel', emoji: '🪽', price: 7777, desc: 'Digits of pure light, each under its own golden halo; great rolls spread a pair of feathered wings, and Divine rolls bring three', premium: true, idea: 'qwertyuiop' },
+    { id: 'demon', name: 'Demon', emoji: '😈', price: 6666, desc: 'A fallen angel: digits branded in red on cracked obsidian under broken halos; great rolls unfold torn black wings over a burning circle of runes', premium: true, idea: 'qwertyuiop' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.
