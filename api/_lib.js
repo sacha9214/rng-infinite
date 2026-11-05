@@ -376,6 +376,7 @@ const isBanned = async id => Number((await redis([['SISMEMBER', BANNED, id]]))[0
 // Historique d'un joueur : sorted set (score = timestamp, membre = "timestamp:nombre", donc sans doublon).
 const historyKey = playerId => `hist:${playerId}`;
 const HISTORY_CAP = 100000;
+const NUM_COUNT_KEY = 'nc', NUM_COUNT_SINCE = 'nc:since', NUM_COUNT_READY = 'nc:ready'; // tirages de chaque nombre (mode normal), voir recordRoll
 const XP_LB = 'lb:xp';
 // Classement « Most rolls » (idée de CrazyMiner22 et WpBejs, 2026-10-27) : id → nombre de tirages à vie (stats.rolls),
 // un membre par joueur comme lb:xp. Incrémenté à chaque tirage ; les anciens joueurs y sont versés par migrateRolls
@@ -709,6 +710,13 @@ async function recordRoll(playerId, n, t) {
     ['EXPIRE', actKey(dayKey(t)), ACT_TTL],
     ['HSETNX', statsKey(playerId), 'first', t],
   ];
+  // Compteur par nombre (idée d'un ami de Sacha, 2026-11-05 : « when someone roll a number, it tells how many people have
+  // already rolled it ») : nc = un entier de 32 bits par nombre (BITFIELD, 4 Mo pour 0 à 1 000 000), +1 à chaque tirage
+  // normal ; la réponse donne le nouveau total. nc:since : heure du premier tirage compté (tools/backfill-number-counts.js
+  // ajoute les tirages plus anciens des historiques, puis pose nc:ready : avant, le total n'est pas envoyé, sinon chaque
+  // nombre passerait pour « jamais tiré »).
+  const countAt = writes.length;
+  writes.push(['BITFIELD', NUM_COUNT_KEY, 'INCRBY', 'u32', `#${n}`, 1], ['SET', NUM_COUNT_SINCE, t, 'NX'], ['EXISTS', NUM_COUNT_READY]);
   const badgeAt = a.earnedIds.length ? writes.length : -1; // SADD répond le nombre de badges jamais vus (titres de collection)
   if (a.earnedIds.length) writes.push(['SADD', badgesKey(playerId), ...a.earnedIds]);
   if (clanId) writes.push(...require('./_clan').rollWrites(clanId, playerId, s, t));
@@ -757,6 +765,8 @@ async function recordRoll(playerId, n, t) {
   writes.push(['HGETALL', statsKey(playerId)], ['SCARD', badgesKey(playerId)], ['ZCARD', historyKey(playerId)]);
   writes.push(['ZREVRANK', periods[0].lb, playerId]);
   const out = await redis(writes);
+  // Tirages de ce nombre avant celui-ci, tous joueurs ; undefined tant que le rattrapage n'a pas été fait.
+  const seen = Number(out[countAt + 2]) ? Math.max(0, (Number([].concat(out[countAt])[0]) || 1) - 1) : undefined;
   if (BIG_TIERS.has(a.tier)) await pushBigRoll(playerId, n, a.tier, t).catch(() => {}); // une alerte ratée ne bloque pas le tirage
   const dayRank = out[out.length - 1] === null ? null : Number(out[out.length - 1]) + 1;
   let stats = { ...toObject(out[out.length - 4]), badges: Number(out[out.length - 3]) };
@@ -792,7 +802,7 @@ async function recordRoll(playerId, n, t) {
   if (Discord.ANNOUNCED.includes(a.tier)) redis([['HGET', 'names', playerId]]).then(([name]) => Discord.announceRoll({ name, n, a })).catch(() => {});
   // Divine ou mieux : annoncé dans le chat global par le serveur, un peu plus tard (idée de R77, 2026-10-27 ; api/_global.js).
   if (['divine', 'godlike', 'infinite'].includes(a.tier)) await require('./_global').queueBigRoll(playerId, n, a.tier, t).catch(() => {});
-  return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, achievements: Achievements.unlocked(stats) };
+  return { s, coins, rate, dayRoll, bestToday: improved.some(p => p.period === 'day'), dayRank, seen, achievements: Achievements.unlocked(stats) };
 }
 
 // Tirage du mode difficile (Sacha, 2026-11-02). Séparés du mode normal : historique, badges, meilleur tirage, compteurs de
@@ -912,6 +922,6 @@ module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkH
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
   engine, redis, dayKey, weekKey, scopes, cleanName, sha256, cors, send, verifyGoogleToken,
-  ownsPlayer, NEW_ACCOUNT_DAYS, accountWait, banPlayers, unbanPlayers, isBanned, BANNED, clientIp, NEW_PER_HOUR, NEW_PER_DAY, historyKey, HISTORY_CAP, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
+  ownsPlayer, NEW_ACCOUNT_DAYS, accountWait, banPlayers, unbanPlayers, isBanned, BANNED, clientIp, NEW_PER_HOUR, NEW_PER_DAY, historyKey, HISTORY_CAP, NUM_COUNT_KEY, NUM_COUNT_SINCE, NUM_COUNT_READY, claimPlayer, claimName, nameKey, rollSet, findPlayer, recordRoll,
   Achievements, statsKey, readStats, toObject, COLLECTION_SETS, COLLECTION_VERSION, OWNER_EMAIL_SHA256, VIEWER_EMAILS_SHA256, canViewOwner, markFresh,
 };

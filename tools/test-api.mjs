@@ -6695,4 +6695,41 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(Lib.accountWait({ first: now - 3 * 86400000 + 1000 }, now), '1 hour');
 }
 
+// ================================================================ Compteur par nombre (idée d'un ami de Sacha, 2026-11-05)
+{
+  const Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const { backfill } = require(path.join(ROOT, 'tools/backfill-number-counts.js'));
+  const ncGet = n => run([['BITFIELD', 'nc', 'GET', 'u32', `#${n}`]])[0].result[0];
+  const p = { playerId: '0e20'.repeat(4), secret: '0e2f'.repeat(8), name: 'Counter' };
+  // 1. Avant le rattrapage : chaque tirage est compté, mais le total n'est pas envoyé (tout passerait pour « jamais tiré »).
+  db.delete(`cooldown:${p.playerId}`);
+  let r = await call(roll, { method: 'POST', body: p });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.seen, undefined, 'rien avant nc:ready');
+  assert.ok(ncGet(r.body.n) >= 1, 'compté quand même');
+  const since = Number(run([['GET', 'nc:since']])[0].result);
+  assert.ok(since > 0 && since <= r.body.t, 'nc:since = premier tirage compté');
+  // 2. Historiques : 737373 trois fois avant nc:since (deux joueurs), une fois après (déjà compté en direct : ignoré).
+  const old = { playerId: '0e21'.repeat(4) };
+  run([['ZADD', `hist:${old.playerId}`, since - 5000, `${since - 5000}:737373`, since - 4000, `${since - 4000}:737373`, since + 10, `${since + 10}:737373`],
+    ['ZADD', `hist:${p.playerId}`, since - 3000, `${since - 3000}:737373`], ['ZADD', `hhist:${old.playerId}`, since - 2000, `${since - 2000}:737373`]]);
+  const lines = [];
+  let b = await backfill({ log: x => lines.push(x) });
+  assert.equal(b.counts[737373], 3, 'avant nc:ready seulement, mode difficile exclu'); assert.ok(lines.some(x => /Essai à blanc/.test(x)));
+  assert.equal(ncGet(737373), 0, 'essai à blanc : rien écrit'); assert.equal(run([['GET', 'nc:ready']])[0].result, null);
+  const before = ncGet(b.top);
+  b = await backfill({ apply: true, log: () => {} });
+  assert.equal(ncGet(737373), 3); assert.equal(ncGet(b.top), before + b.counts[b.top], 'ajouté aux tirages déjà comptés');
+  assert.ok(run([['GET', 'nc:ready']])[0].result);
+  assert.equal(await backfill({ apply: true, log: () => {} }), null, 'une seule fois');
+  assert.equal(ncGet(737373), 3);
+  // 3. Ensuite, chaque tirage dit combien de fois son nombre est déjà sorti, et le compteur avance.
+  let x = await Lib.recordRoll(p.playerId, 737373, Date.now()); assert.equal(x.seen, 3);
+  await new Promise(res => setTimeout(res, 3));
+  x = await Lib.recordRoll(old.playerId, 737373, Date.now()); assert.equal(x.seen, 4, 'tous joueurs confondus');
+  x = await Lib.recordRoll(p.playerId, 737374, Date.now() + 3); assert.equal(x.seen, 0, 'jamais tiré');
+  db.delete(`cooldown:${p.playerId}`);
+  r = await call(roll, { method: 'POST', body: p });
+  assert.equal(typeof r.body.seen, 'number'); assert.equal(ncGet(r.body.n), r.body.seen + 1);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);

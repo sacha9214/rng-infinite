@@ -43,9 +43,10 @@ module.exports = async (req, res) => {
 
     const n = hard ? crypto.randomInt(0, HARD_MAX + 1) : crypto.randomInt(0, 1000001);
     const t = Date.now();
-    const { s, coins, rate, dayRoll, bestToday, dayRank, achievements } = await (hard ? recordHardRoll : recordRoll)(playerId, n, t);
+    const { s, coins, rate, dayRoll, bestToday, dayRank, seen, achievements } = await (hard ? recordHardRoll : recordRoll)(playerId, n, t);
     // rate / dayRoll : taux des pièces de tirage du moment (rendements décroissants), affiché discrètement sous les pièces.
-    const result = { n, s, t, coins, rate, dayRoll, bestToday, dayRank, achievements, ...(hard ? { mode: 'hard' } : {}) };
+    // seen : combien de fois ce nombre a été tiré avant (mode normal seulement : 10 milliards de nombres en difficile).
+    const result = { n, s, t, coins, rate, dayRoll, bestToday, dayRank, achievements, ...(hard ? { mode: 'hard' } : seen != null ? { seen } : {}) };
     if (linked && !hadBonus) { const bonus = await grantGoogleBonus(playerId); if (bonus) result.googleBonus = bonus; }
     if (nonce) await redis([['SET', nonceKey(playerId, nonce), JSON.stringify(result), 'EX', NONCE_TTL_S]]);
     return send(res, 200, result);

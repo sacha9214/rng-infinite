@@ -2,6 +2,30 @@
 
 Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
 
+## Roll counter per number (2026-11-05, branch `claude/roll-counter`)
+
+Idea from a friend of Sacha: "when someone roll a number, it tells how many people have already rolled it". Related
+player ideas: Tumored (a serial number for Infinite rolls) and Gray (the most rolled number).
+
+- `api/_lib.js` `recordRoll`: `BITFIELD nc INCRBY u32 #<n> 1` on every Normal roll, duel rolls included. That is one
+  32-bit counter per number, 4 MB for 0 to 1,000,000; I checked it on a real Redis. `nc:since` = time of the first
+  counted roll.
+  - The roll response gets `seen` (rolls of that number before this one, all players), but **only once `nc:ready`
+    exists**. Before that, every number would look "never rolled".
+  - Not in Hard mode: there are 10 billion numbers.
+- `tools/backfill-number-counts.js`: adds the rolls saved in `hist:<id>` before `nc:since`, so nothing is counted twice,
+  then sets `nc:ready`. It is a dry run by default, `--apply` writes, and it refuses to run twice. On 2026-11-05 the
+  server had about 9.9 million saved rolls in 3,408 histories. Older rolls of players above 100,000 rolls and offline
+  rolls are not there.
+- **To do after deploying (Sacha, on the VPS):**
+  `cd ~/rng-infinite && RNG_REDIS_URL=http://127.0.0.1:7379 RNG_REDIS_TOKEN="$(cat /etc/rng-relay/token)" node tools/backfill-number-counts.js`,
+  then the same command with `--apply`. Until then nothing shows on the site.
+- `js/app.js` `notesHTML`: under the reveal, "🔢 X was rolled N times before you · you're #N+1", or "🌟 Nobody had ever
+  rolled X before you!". French is in `js/i18n.js`.
+- Tests: `tools/test-api.mjs` "Compteur par nombre" (nothing sent before the backfill; dry run; apply; only once;
+  counts across players), `BITFIELD` added to `tools/fake-redis.mjs`. Checked in the browser on the dev server
+  (both messages, English and French).
+
 ## Open poker tables (2026-11-04, branch `claude/poker-open`)
 
 Sacha: "add in poker an open table when people can join whenever they want for like 6 people max, and choose how many
