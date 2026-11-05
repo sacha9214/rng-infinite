@@ -79,6 +79,45 @@ French, keyboard key events (held keys, Shift+1, Ctrl+C, AZERTY, password field)
   something like "Neon City" (rainy neon streets, holographic digits). We already have the Synthwave and Cyber Void
   wallpapers, so a wallpaper alone would be a near-duplicate.
 
+## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
+
+Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,
+the rest are features. They ship in batches, one PR each; the full list is in `ideas-triage-2026-11-05.md`.
+
+- **Settings** (`openSettings`):
+  - `autoEquip`: buying sends `equip: false` and `api/shop.js` skips the HSET. Applies to skins, wallpapers,
+    buttons and sounds.
+  - `bestNote`: hides "contains your best roll".
+  - `wakeLock`: Screen Wake Lock while auto-roll runs (`syncWake`, re-requested every 2 s and when the tab
+    becomes visible again).
+- **Auto-roll "stop on New badge"** (`newbadge` in `STOP_OK`): `autoStops(a, fresh)` is told whether the roll
+  gave a badge never owned. This works on all three paths: reveal, background tab and other page.
+- **Session window**: tap "🔥 N rolls this session" to open `openSessionModal`. It shows the last N rolls of this
+  mode: best 5, worst 3 when there are more than 5 rolls, and rarities.
+- **Badges page**: badges found since the last visit get a NEW tag and are listed at the top
+  (`badgesSeen` / `hbadgesSeen` settings). They stay marked for one minute across re-renders.
+- **Profile "most rolled"**: `api/profile.js` keeps `reps` (the top 20 numbers rolled 2+ times) in the cached
+  totals and updates them incrementally. Numbers that repeat for the first time only show up at the next full
+  recompute (6 h at most).
+- **Leaderboard lifetime XP**: always 4 significant digits (`compact4`).
+- **Small Infinite cards** without a skin: rainbow border.
+- **Pitfall**: the dev server caches the version stamp at start. Re-stamping while it runs makes the page reload in a
+  loop (the Updater). Restart the dev server after `tools/stamp.mjs`.
+
+## Hard mode titles (2026-11-05, branch `claude/hard-titles`)
+
+Planned ideas from the 2026-11-05 triage: PRISMA123 (`2a0ce3902f9f` a title for a Mythic or better in Hard mode,
+`e3e0cb767c33` titles for 5k / 10k / 50k / 100k Hard rolls) and Liam123456 (`e3bd823a458c` "Hard mode title").
+- `js/achievements.js`: `hardmythic` 🔥 Forged in Fire (any `h:t:<tier>` from Mythic up, Hard Mythic = top 0.02%),
+  `hard5k` 🍪 Tough Cookie, `hard10k` ⛓️ Hardened, `hard50k` ⛏️ Hardcore, `hard100k` 🗻 Unbreakable (`h:rolls` only).
+  Normal rolls never count for them (the older roll and rarity titles still count both modes, as before).
+- No server change: the stats `h:rolls` and `h:t:<tier>` already exist, so players who already qualify see the titles
+  unlocked as soon as the new `js/achievements.js` is deployed.
+- French in `js/i18n.js`, UPDATES entry `2026-11-05-hard-titles`. Test in `tools/test-api.mjs` (Hard mode block).
+- Checked on the dev server (port 8133): the five titles show locked in Me → Badges, in English and French, and the
+  update shows in the news.
+- Not answered to players yet (Sacha does it).
+
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 
 - Sacha asked for all new ideas to be sorted and answered. 269 ideas: 68 Planned, 7 Done, 50 Seen (skin and wallpaper
