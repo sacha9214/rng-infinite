@@ -204,6 +204,13 @@ module.exports = async (req, res) => {
     const best = [...(prev ? prev.best : []), ...scored].sort((x, y) => y.s - x.s || x.t - y.t).slice(0, BEST_LIMIT);
     // Les 10 pires tirages (idée d'Angelicide9, 2026-10-17), le plus mauvais en premier.
     const worst = [...(prev ? prev.worst : []), ...scored].sort((x, y) => x.s - y.s || x.t - y.t).slice(0, 10);
+    // Nombre le plus tiré (idée de Gray, 2026-11-05) : au calcul complet, les 20 nombres sortis le plus souvent (2 fois
+    // ou plus) ; ensuite seuls ceux-là avancent avec les nouveaux tirages (un nombre qui se répète pour la première fois
+    // attend le prochain calcul complet, 6 h au plus). Totaux d'avant ce champ : inconnu jusqu'au calcul complet.
+    let reps = null;
+    if (!prev) { const m = new Map(); for (const [, n] of rolls) m.set(n, (m.get(n) || 0) + 1); reps = [...m].filter(([, c]) => c >= 2); }
+    else if (Array.isArray(prev.reps)) { const m = new Map(prev.reps); for (const [, n] of rolls) if (m.has(n)) m.set(n, m.get(n) + 1); reps = [...m]; }
+    if (reps) reps = reps.sort((a, b) => b[1] - a[1] || a[0] - b[0]).slice(0, 20);
     const count = (prev ? prev.count : 0) + rolls.length;
     const since = prev ? prev.since : rolls.length ? rolls[0][0] : null;
     // Heure du dernier tirage LU (doublons écartés compris) : sinon ils étaient relus et comptés à la visite suivante.
@@ -213,7 +220,7 @@ module.exports = async (req, res) => {
     const uniqFull = prev ? (prev.uniq ?? null) : stats.dv === '1' ? null : new Set(rolls.map(([, n]) => n)).size;
     if (count) {
       AGG.delete(id); // remis en dernier : les profils les moins vus sortent de la mémoire en premier
-      const agg = { v: SCORE_V, at: prev ? prev.at : Date.now(), padded, pad, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull };
+      const agg = { v: SCORE_V, at: prev ? prev.at : Date.now(), padded, pad, size: Number(histSize) || 0, count, since, lastT, lifetime, percentileSum, badges, tiers, best, worst, uniq: uniqFull, reps };
       AGG.set(id, agg);
       if (AGG.size > 300) AGG.delete(AGG.keys().next().value);
       // Gardé dans Redis seulement pour les gros historiques (ceux qui coûtent à recalculer), jusqu'au recalcul complet.
@@ -259,6 +266,7 @@ module.exports = async (req, res) => {
       duels,
       questBest: Number(stats.qsBest) || 0,
       uniq: uniqueOf(stats, numsCount, uniqFull), // nombres différents tirés (idée de jsand, 2026-10-27)
+      most: reps && reps.length ? { n: reps[0][0], c: reps[0][1] } : null, // nombre le plus tiré (2 fois ou plus)
       clanMvp: Number(stats.clanMvp) || 0, // semaines où il a été le MVP du clan n°1 (idée de PRISMA123, 2026-10-27)
       spent: Number(stats.spent) || 0, cases: Number(stats.cases) || 0, // pièces dépensées et caisses ouvertes (idée de PRISMA123, 2026-10-20)
       level: require('../js/quests.js').levelOf(stats.xpLife), // niveau du joueur (XP à vie) // meilleure série de jours avec toutes les quêtes finies

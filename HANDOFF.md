@@ -2,6 +2,31 @@
 
 Last updated: 2026-11-04 by Claude (anti-bot branch). Update this file at the end of every session.
 
+## Planned ideas, batch 1: small settings and display (2026-11-05, branch `claude/ideas-batch-1`)
+
+Sacha: "let's do all of the idea that are planned". There are 132 Planned ideas: about 70 are skins and wallpapers,
+the rest are features. They ship in batches, one PR each; the full list is in `ideas-triage-2026-11-05.md`.
+
+- **Settings** (`openSettings`):
+  - `autoEquip`: buying sends `equip: false` and `api/shop.js` skips the HSET. Applies to skins, wallpapers,
+    buttons and sounds.
+  - `bestNote`: hides "contains your best roll".
+  - `wakeLock`: Screen Wake Lock while auto-roll runs (`syncWake`, re-requested every 2 s and when the tab
+    becomes visible again).
+- **Auto-roll "stop on New badge"** (`newbadge` in `STOP_OK`): `autoStops(a, fresh)` is told whether the roll
+  gave a badge never owned. This works on all three paths: reveal, background tab and other page.
+- **Session window**: tap "🔥 N rolls this session" to open `openSessionModal`. It shows the last N rolls of this
+  mode: best 5, worst 3 when there are more than 5 rolls, and rarities.
+- **Badges page**: badges found since the last visit get a NEW tag and are listed at the top
+  (`badgesSeen` / `hbadgesSeen` settings). They stay marked for one minute across re-renders.
+- **Profile "most rolled"**: `api/profile.js` keeps `reps` (the top 20 numbers rolled 2+ times) in the cached
+  totals and updates them incrementally. Numbers that repeat for the first time only show up at the next full
+  recompute (6 h at most).
+- **Leaderboard lifetime XP**: always 4 significant digits (`compact4`).
+- **Small Infinite cards** without a skin: rainbow border.
+- **Pitfall**: the dev server caches the version stamp at start. Re-stamping while it runs makes the page reload in a
+  loop (the Updater). Restart the dev server after `tools/stamp.mjs`.
+
 ## Ideas triage and full Roadmap (2026-11-05, branch `claude/roadmap-all`)
 
 - Sacha asked for all new ideas to be sorted and answered. 269 ideas: 68 Planned, 7 Done, 50 Seen (skin and wallpaper
