@@ -1893,3 +1893,29 @@
   text-shadow: 0 .05em 0 #431407, 0 0 .1em #431407;
   --gs: 0 .3em 0 #431407, 0 .5em 1em rgba(180, 83, 9, .3); --gs-h: 0 .34em 0 #431407, 0 .7em 1.3em rgba(180, 83, 9, .45); --gs-a: 0 .06em 0 #431407; }
 .btn-roll.gen-centipede:hover { filter: brightness(1.1); }
+
+/* ==== Skins du 2026-11-05, lot 7 ==== boutons assortis */
+/* Pencil (idée d'IXOLAF2) : un crayon jaune à pans, gomme rose à gauche, texte à la feuille d'or. */
+.btn-roll.gen-pencil { border: 2px solid #78350f; border-radius: .4rem; color: #92400e; font-family: 'Futura', 'Avenir Next', 'Trebuchet MS', system-ui, sans-serif;
+  background: linear-gradient(90deg, #f9a8d4 0 .8em, #9ca3af .8em .95em, #e5e7eb .95em 1.1em, transparent 1.1em), linear-gradient(180deg, #fde047 0 30%, #facc15 30% 34%, #eab308 34% 66%, #ca8a04 66% 70%, #a16207 70%);
+  text-shadow: 0 .04em 0 rgba(255, 255, 255, .6);
+  --gs: 0 .3em 0 #78350f, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #78350f, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #78350f; }
+.btn-roll.gen-pencil:hover { filter: brightness(1.05); }
+/* Pomeranians (idée de DandoriNinja) : un pré pastel, des empreintes, texte caramel moelleux. */
+.btn-roll.gen-pom { border: 2px solid #65a30d; border-radius: 999px; color: #d97706; -webkit-text-stroke: .02em #fffbeb; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  background: radial-gradient(circle at 10% 30%, rgba(120, 80, 40, .2) 0 4px, transparent 5px), radial-gradient(circle at 90% 70%, rgba(120, 80, 40, .2) 0 4px, transparent 5px), linear-gradient(180deg, #d9f99d, #a3e635);
+  text-shadow: 0 .05em 0 #92400e;
+  --gs: 0 .3em 0 #4d7c0f, 0 .5em 1em rgba(251, 191, 36, .3); --gs-h: 0 .34em 0 #4d7c0f, 0 .7em 1.3em rgba(251, 191, 36, .45); --gs-a: 0 .06em 0 #4d7c0f; }
+.btn-roll.gen-pom:hover { filter: brightness(1.05); }
+/* Atom (idée de finnnnn) : le tableau bleu nuit quadrillé, une orbite, texte noyau rouge. */
+.btn-roll.gen-atom { border: 2px solid #3b82f6; border-radius: .6rem; color: #ef4444; -webkit-text-stroke: .02em #fecaca; font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  background: radial-gradient(ellipse 46% 40% at 50% 50%, transparent 92%, rgba(147, 197, 253, .5) 94% 97%, transparent 99%), linear-gradient(90deg, rgba(147, 197, 253, .08) 1px, transparent 1px) 0 0 / 10px 10px, radial-gradient(ellipse 70% 90% at 50% 50%, #1e3a8a, #0b1430);
+  text-shadow: 0 0 .3em rgba(96, 165, 250, .9);
+  --gs: 0 .3em 0 #1e3a8a, 0 .5em 1.2em rgba(59, 130, 246, .35); --gs-h: 0 .34em 0 #1e3a8a, 0 .7em 1.5em rgba(59, 130, 246, .5); --gs-a: 0 .06em 0 #1e3a8a; }
+.btn-roll.gen-atom:hover { filter: brightness(1.15); }
+/* Witch (idée de mark) : la nuit violette, la pleine lune, texte en lumière de potion. */
+.btn-roll.gen-witch { border: 2px solid #7e22ce; border-radius: .6rem; color: #d9f99d; font-family: 'Papyrus', 'Luminari', 'Copperplate', Georgia, serif;
+  background: radial-gradient(circle at 88% 30%, #fef9c3 0 .35em, rgba(254, 249, 195, .2) .4em, transparent .6em), linear-gradient(180deg, #2e1065, #6b21a8);
+  text-shadow: 0 0 .06em #fff, 0 0 .3em rgba(163, 230, 53, .9);
+  --gs: 0 .3em 0 #3b0764, 0 .5em 1.2em rgba(163, 230, 53, .3); --gs-h: 0 .34em 0 #3b0764, 0 .7em 1.5em rgba(163, 230, 53, .45); --gs-a: 0 .06em 0 #3b0764; }
+.btn-roll.gen-witch:hover { filter: brightness(1.15); }

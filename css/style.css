@@ -13197,3 +13197,158 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes cnt-inch { 0%, 100% { transform: translateX(0) scaleX(1); } 50% { transform: translateX(10px) scaleX(.85); } }
 .room-stage.many .side-centipede::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-centipede::before { animation: none; } }
+
+/* ==================================================================== Skins du 2026-11-05, lot 7 (idées de joueurs) */
+/* ------------------------------------------------------------------ Pencil (idée d'IXOLAF2, 2026-10-26 : « a sideways
+   pencil, and the numbers carved on it »). Un crayon couché : le corps jaune à pans (trois facettes, l'arête claire), la
+   virole de métal et la gomme rose à gauche, le bois taillé et la mine à droite. Les chiffres sont frappés dans la
+   peinture à la feuille d'or, comme la marque sur un vrai crayon. Pendant le tirage, le crayon roule : les facettes
+   défilent et les chiffres passent d'un pan à l'autre. Un chiffre qui se pose : la presse le frappe à chaud (éclat
+   doré, coup sec). Copeaux de taille-crayon, mine qui casse et gribouillis : js/skinfx.js (SCENES.pencil). */
+.num-card.skin-pencil {
+  background:
+    linear-gradient(90deg, #f9a8d4 0 .5em, #9ca3af .5em .58em, #e5e7eb .58em .66em, #9ca3af .66em .74em, #d1d5db .74em .82em, transparent .82em) 0 0 / calc(100% - .8em) 100% no-repeat,
+    linear-gradient(180deg, #fde047 0 30%, #facc15 30% 34%, #eab308 34% 66%, #ca8a04 66% 70%, #a16207 70%) 0 0 / calc(100% - .8em) 100% no-repeat,
+    linear-gradient(90deg, transparent calc(100% - .3em), #374151 calc(100% - .3em)),
+    linear-gradient(180deg, #f5d0a1, #deb887 50%, #c69c6d);
+  border: 2px solid #78350f; border-radius: .4em 0 0 .4em; color: #2b1a05;
+  box-shadow: inset 0 .08em 0 rgba(255, 255, 255, .5), inset 0 -.08em .1em rgba(120, 53, 15, .4);
+  padding-left: 1.05em; padding-right: 1.2em;
+  /* la pointe taillée : la carte elle-même prend la forme du crayon (rien ne dépasse de sa boîte, même à 320 px) */
+  clip-path: polygon(0 0, calc(100% - .8em) 0, 100% 50%, calc(100% - .8em) 100%, 0 100%);
+}
+.skin-pencil .slot { position: relative; font-family: 'Futura', 'Avenir Next', 'Trebuchet MS', system-ui, sans-serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #2b1a05; text-shadow: 0 .035em 0 rgba(255, 236, 150, .85), 0 0 .02em #fde68a; } /* feuille sombre, arête dorée : lisible sur le jaune */
+.skin-pencil .slot.ghost { opacity: .22; }
+.skin-pencil .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-pencil .slot.spinning { opacity: .6; animation: pcl-roll .2s linear infinite; }
+@keyframes pcl-roll { from { transform: translateY(-.12em) scaleY(.75); } 50% { transform: none; } to { transform: translateY(.12em) scaleY(.75); } } /* la carte laisse dépasser la mine (overflow visible) : petit débattement */
+.skin-pencil .slot.revealed { animation: pcl-foil .45s backwards; }
+@keyframes pcl-foil {
+  0% { transform: scale(1.12); color: #fffbeb; text-shadow: 0 0 .3em #fde047, 0 0 .6em #facc15; animation-timing-function: cubic-bezier(.7, 0, .9, .3); }
+  25% { transform: scale(.97); color: #ffe27a; }
+  45% { transform: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-pencil .slot { animation: none !important; } }
+.side-pencil { --side-border: #ca8a04; --side-glow: 0 0 14px rgba(250, 204, 21, .3); --side-ink: #a16207;
+  --side-bg: repeating-linear-gradient(0deg, rgba(59, 130, 246, .14) 0 1px, transparent 1px 18px), linear-gradient(90deg, transparent 22px, rgba(239, 68, 68, .25) 22px 23px, transparent 23px), linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
+  --deco-a: '✏️'; --deco-b: '📐'; }
+.side-pencil::before { animation: pcl-write 1.6s ease-in-out infinite; }
+@keyframes pcl-write { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(6px, 2px) rotate(-6deg); } 50% { transform: translate(12px, 0) rotate(0); } 75% { transform: translate(6px, -2px) rotate(6deg); } }
+.room-stage.many .side-pencil::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-pencil::before { animation: none; } }
+/* ------------------------------------------------------------------ Pomeranians (idées de DandoriNinja, 2026-10-27 :
+   « Pomeranian Overload : 19 teacup pomeranians … a frisbee is thrown to that number and all 19 of them come and grab
+   the frisbee … at the end all 19 of them cutely jump up and down (effects: bones and tennis balls) » ; sa seconde idée
+   était une image que je n'ai pas pu voir). Un pré de parc, pastel, des empreintes de pattes. Les chiffres sont ronds et
+   moelleux, caramel bordé de crème. Pendant le tirage, ils remuent comme une queue. Un chiffre qui se pose : il est
+   attrapé au vol comme le frisbee (un petit saut, un rebond joyeux : matière douce). Les 19 chiens, le frisbee, les os et
+   les balles : js/skinfx.js (SCENES.pom). */
+.num-card.skin-pom {
+  background:
+    radial-gradient(circle at 12% 28%, rgba(120, 80, 40, .18) 0 .05em, transparent .055em), radial-gradient(circle at 15% 22%, rgba(120, 80, 40, .18) 0 .03em, transparent .035em),
+    radial-gradient(circle at 88% 72%, rgba(120, 80, 40, .18) 0 .05em, transparent .055em), radial-gradient(circle at 91% 66%, rgba(120, 80, 40, .18) 0 .03em, transparent .035em),
+    radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255, 255, 255, .45), transparent 70%),
+    linear-gradient(180deg, #d9f99d, #bef264 60%, #a3e635);
+  border: 2px solid #65a30d; border-radius: 1rem; color: #b45309;
+  box-shadow: inset 0 .08em .2em rgba(255, 255, 255, .6), 0 0 16px rgba(251, 191, 36, .25), 0 10px 18px rgba(0, 0, 0, .3);
+}
+.skin-pom .slot { position: relative; font-family: 'Arial Rounded MT Bold', 'Varela Round', 'Trebuchet MS', system-ui, sans-serif; font-weight: 900;
+  color: #d97706; -webkit-text-stroke: .025em #fffbeb; text-shadow: 0 .05em 0 #92400e, 0 .07em .05em rgba(0, 0, 0, .25); }
+.skin-pom .slot.ghost { opacity: .22; }
+.skin-pom .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-pom .slot.spinning { opacity: .6; transform-origin: 50% 90%; animation: pom-wag .16s ease-in-out infinite alternate; }
+.skin-pom .slot.spinning:nth-of-type(2n) { animation-delay: -.08s; }
+@keyframes pom-wag { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+.skin-pom .slot.revealed { animation: pom-catch .6s backwards; }
+@keyframes pom-catch {
+  0% { transform: translateY(.2em) scale(.85, 1.1); animation-timing-function: cubic-bezier(.2, .9, .3, 1.2); }
+  35% { transform: translateY(-.18em) scale(1.08, .94); }
+  58% { transform: translateY(.03em) scale(.96, 1.05); }
+  78% { transform: translateY(-.03em); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-pom .slot { animation: none !important; } }
+.side-pom { --side-border: #84cc16; --side-glow: 0 0 16px rgba(251, 191, 36, .3); --side-ink: #b45309;
+  --side-bg: radial-gradient(circle at 20% 30%, rgba(120, 80, 40, .18) 0 3px, transparent 4px) 0 0 / 40px 40px, linear-gradient(180deg, rgba(217, 249, 157, .2), rgba(163, 230, 53, .16));
+  --deco-a: '🐶'; --deco-b: '🎾'; }
+.side-pom::before { animation: pom-hop .6s ease-in-out infinite alternate; }
+.side-pom::after { animation: pom-bounce 1s ease-in infinite; }
+@keyframes pom-hop { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+@keyframes pom-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.room-stage.many .side-pom::before, .room-stage.many .side-pom::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-pom::before, .side-pom::after { animation: none; } }
+/* ------------------------------------------------------------------ Atom (idée de finnnnn, 2026-10-27 : « an atom skin
+   where red circles and lines form the numbers with an electron cloud »). Un tableau de physique bleu nuit, quadrillé.
+   Chaque chiffre est un noyau rouge (contour clair, des billes rouges sur le tracé) dans un nuage d'électrons bleuté.
+   Pendant le tirage, les chiffres ne sont qu'un nuage qui tremble (on ne sait pas où est l'électron). Un chiffre qui se
+   pose : il se condense d'un point lumineux (fusion), dépasse et se fige. Les électrons en orbite autour de chaque
+   chiffre et le grand modèle d'atome : js/skinfx.js (SCENES.atom). */
+.num-card.skin-atom {
+  background:
+    linear-gradient(90deg, rgba(147, 197, 253, .08) 1px, transparent 1px) 0 0 / .4em .4em,
+    linear-gradient(0deg, rgba(147, 197, 253, .08) 1px, transparent 1px) 0 0 / .4em .4em,
+    radial-gradient(ellipse 60% 70% at 50% 50%, #1e3a8a, #0b1430 75%);
+  border: 2px solid #3b82f6; border-radius: .6rem; color: #f87171;
+  box-shadow: inset 0 0 .6em rgba(0, 0, 0, .5), 0 0 0 1px rgba(147, 197, 253, .3), 0 0 18px rgba(59, 130, 246, .35), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-atom .slot { position: relative; font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-weight: 900;
+  color: #ef4444; -webkit-text-stroke: .03em #fecaca;
+  text-shadow: 0 0 .3em rgba(96, 165, 250, .9), 0 0 .6em rgba(59, 130, 246, .5), 0 .04em 0 #7f1d1d; }
+.skin-atom .slot.ghost { opacity: .18; }
+.skin-atom .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-atom .slot.spinning { opacity: .55; color: #93c5fd; -webkit-text-stroke: 0; filter: blur(1.4px); animation: atm-cloud .12s steps(3) infinite; }
+@keyframes atm-cloud { 0% { transform: translate(.03em, -.03em); } 50% { transform: translate(-.04em, .02em); } 100% { transform: translate(.02em, .04em); } }
+.skin-atom .slot.revealed { animation: atm-fuse .55s backwards; }
+@keyframes atm-fuse {
+  0% { transform: scale(.15); filter: brightness(3) blur(1px); animation-timing-function: cubic-bezier(.2, .9, .3, 1.3); }
+  40% { transform: scale(1.14); filter: brightness(1.6); }
+  65% { transform: scale(.97); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-atom .slot { animation: none !important; } }
+.side-atom { --side-border: #3b82f6; --side-glow: 0 0 18px rgba(59, 130, 246, .35); --side-ink: #60a5fa; --side-ink-glow: 0 0 8px rgba(96, 165, 250, .7);
+  --side-bg: linear-gradient(90deg, rgba(147, 197, 253, .07) 1px, transparent 1px) 0 0 / 20px 20px, linear-gradient(0deg, rgba(147, 197, 253, .07) 1px, transparent 1px) 0 0 / 20px 20px, radial-gradient(ellipse 60% 60% at 50% 50%, rgba(30, 58, 138, .3), rgba(11, 20, 48, .25));
+  --deco-a: '⚛️'; --deco-b: '⚛'; }
+.side-atom::before { animation: atm-spin 3s linear infinite; }
+@keyframes atm-spin { to { transform: rotate(360deg); } }
+.room-stage.many .side-atom::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-atom::before { animation: none; } }
+/* ------------------------------------------------------------------ Witch (idée de mark, 2026-10-27 : « when it rolls the
+   witch throws a potion to the number and it spawns » ; il le voulait en skin limité d'Halloween, Halloween est passé :
+   c'est un skin normal). Une nuit violette sous la pleine lune, des étoiles. Les chiffres sont en lumière de potion,
+   vert acide avec un halo. Pendant le tirage, ils bouillonnent (des bulles qui gonflent). Un chiffre qui se pose : la
+   fiole éclate sur sa case, un nuage de fumée violette, et le chiffre apparaît dedans (une matière magique : il gonfle,
+   puis se calme). La sorcière sur son balai, les fioles et la fumée : js/skinfx.js (SCENES.witch). Witch's Brew (le
+   chaudron) est un autre skin. */
+.num-card.skin-witch {
+  background:
+    radial-gradient(circle at 97% 10%, #fef9c3 0 .16em, rgba(254, 249, 195, .25) .2em, transparent .34em),
+    radial-gradient(circle at 12% 30%, #fff 0 .02em, transparent .03em), radial-gradient(circle at 30% 70%, #fff 0 .015em, transparent .025em), radial-gradient(circle at 62% 18%, #fff 0 .02em, transparent .03em),
+    linear-gradient(180deg, #2e1065, #4c1d95 60%, #6b21a8);
+  border: 2px solid #7e22ce; border-radius: .6rem; color: #bef264;
+  box-shadow: inset 0 0 .5em rgba(0, 0, 0, .4), 0 0 18px rgba(163, 230, 53, .3), 0 10px 18px rgba(0, 0, 0, .45);
+}
+.skin-witch .slot { position: relative; font-family: 'Papyrus', 'Luminari', 'Copperplate', Georgia, serif; font-weight: 800; font-variant-numeric: lining-nums;
+  color: #d9f99d; text-shadow: 0 0 .05em #fff, 0 0 .25em rgba(163, 230, 53, .9), 0 .04em 0 #1a2e05; }
+.skin-witch .slot.ghost { opacity: .18; }
+.skin-witch .slot.collapsed { width: 0; height: 0; margin: 0; box-shadow: none; background: none; }
+.skin-witch .slot.spinning { opacity: .55; color: #84cc16; animation: wch-bubble .3s ease-in-out infinite alternate; }
+.skin-witch .slot.spinning:nth-of-type(2n) { animation-delay: -.15s; }
+@keyframes wch-bubble { from { transform: scale(.94, 1.06); filter: blur(.6px); } to { transform: scale(1.06, .94); filter: blur(0); } }
+.skin-witch .slot.revealed { animation: wch-spawn .6s backwards; }
+@keyframes wch-spawn {
+  0%, 12% { transform: scale(.2); filter: blur(3px) brightness(2); color: #f0abfc; animation-timing-function: cubic-bezier(.2, .9, .3, 1.3); }
+  45% { transform: scale(1.15); filter: blur(0) brightness(1.4); color: #ecfccb; }
+  70% { transform: scale(.97); filter: none; }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .skin-witch .slot { animation: none !important; } }
+.side-witch { --side-border: #7e22ce; --side-glow: 0 0 18px rgba(163, 230, 53, .3); --side-ink: #a3e635;
+  --side-bg: radial-gradient(circle at 85% 18%, rgba(254, 249, 195, .5) 0 12px, transparent 14px), radial-gradient(circle, rgba(255, 255, 255, .5) 0 1px, transparent 1.6px) 0 0 / 31px 27px, linear-gradient(180deg, rgba(46, 16, 101, .3), rgba(107, 33, 168, .25));
+  --deco-a: '🧙'; --deco-b: '🧪'; }
+.side-witch::before { animation: wch-fly 3s ease-in-out infinite; }
+@keyframes wch-fly { 0%, 100% { transform: translate(0, 0) rotate(-6deg); } 50% { transform: translate(14px, -6px) rotate(6deg); } }
+.room-stage.many .side-witch::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .side-witch::before { animation: none; } }

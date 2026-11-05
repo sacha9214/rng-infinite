@@ -324,6 +324,17 @@
     { id: 'ducksing', name: 'Duck Singularity', emoji: '🦆', price: 7000, desc: 'A golden rubber duck orbits a tiny black hole that bends your digits; when the number lands the duck quacks and reality glitches', premium: true, idea: 'Gray alt' },
     // Idée de finnnnn (2026-10-26) : chaque anneau du mille-pattes rampe jusqu'à son chiffre.
     { id: 'centipede', name: 'Centipede', emoji: '🐛', price: 1600, desc: 'Every digit is a body segment that crawls into place while the centipede\'s head leads the way; on Mythic rolls a giant one wraps around the card', idea: 'finnnnn' },
+    // ==== Skins du 2026-11-05, lot 7 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée d'IXOLAF2 (2026-10-26) : un crayon couché, les chiffres gravés dessus.
+    { id: 'pencil', name: 'Pencil', emoji: '✏️', price: 1200, desc: 'A yellow pencil lying sideways with every digit stamped in gold foil; shavings fly from the sharpener, and great rolls get scribbled around', idea: 'IXOLAF2' },
+    // Idées de DandoriNinja (2026-10-27) : « Pomeranian Overload », 19 poméraniens nains, un frisbee par chiffre, ils
+    // sautent de joie à la fin, avec des os et des balles de tennis.
+    { id: 'pom', name: 'Pomeranians', emoji: '🐶', price: 2000, desc: 'Nineteen teacup Pomeranians chase a frisbee to every digit, then all jump for joy among bones and tennis balls', idea: 'DandoriNinja' },
+    // Idée de finnnnn (2026-10-27) : des chiffres rouges et un nuage d'électrons.
+    { id: 'atom', name: 'Atom', emoji: '⚛️', price: 2000, desc: 'Every digit is a red nucleus with electrons orbiting it; great rolls wrap the card in a giant atom and Mythic rolls start a chain reaction', idea: 'finnnnn' },
+    // Idée de mark (2026-10-27) : une sorcière lance une potion sur chaque chiffre. Il la voulait limitée pour Halloween,
+    // passé : skin normal. Witch's Brew (le chaudron) est un autre skin.
+    { id: 'witch', name: 'Witch', emoji: '🧙', price: 1800, desc: 'A witch on her broom throws a potion at every digit and it appears in a puff of purple smoke; Mythic rolls swirl green magic around the card', idea: 'mark' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

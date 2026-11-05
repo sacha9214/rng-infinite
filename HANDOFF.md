@@ -197,8 +197,13 @@ finnnnn [990feb185db6]; `souvenir` Souvenir Coin 🪙 1,500 — finnnnn [9112be3
 Legendary — Gray alt [96c078cbf980] (the reveal plays the existing `quack` sound from the scene); `centipede` Centipede
 🐛 1,600 — finnnnn [5ff030cbb940].
 
-- Next: pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
-  [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
+**Lot 7 — `claude/skins-lot7`** (block "lot 7 du 2026-11-05" in `js/skinfx.js`): `pencil` Pencil ✏️ 1,200 — IXOLAF2
+[dcce6323beca] (the card is clipped into a pencil shape, nothing leaves its box); `pom` Pomeranians 🐶 2,000 —
+DandoriNinja [4d0e7ba5b3ed] [c9b3b2f47459] (the second idea was an image I could not see); `atom` Atom ⚛️ 2,000 —
+finnnnn [b402f6ca6d8a]; `witch` Witch 🧙 1,800 — mark [35a850f4e8ba] (he wanted it limited for Halloween, which is over:
+normal skin; Witch's Brew is the cauldron one).
+
+- Next: black-and-white TV [81a45cb40646], checkers
   [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
   spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
   Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],

@@ -12205,6 +12205,265 @@
   };
   // ==== fin du lot 6 du 2026-11-05 ====
 
+  // ==== Skins du 2026-11-05, lot 7 : Pencil, Pomeranians, Atom, Witch (idées de joueurs planifiées) ====
+  // ✏️ Pencil (idée d'IXOLAF2, 2026-10-26) — chaque chiffre frappé à la feuille d'or lâche des paillettes, et le
+  // taille-crayon fait voler un copeau en boucle depuis la mine (à droite). Avant le dernier chiffre, de la poussière de
+  // mine. Révélation : des copeaux ; dès Epic, la mine trace un gribouillis autour de la carte ; dès Mythic, des étoiles
+  // dessinées au crayon s'ajoutent tout autour. Tirage raté : la mine casse et tombe.
+  SCENES.pencil = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const curls = particles(), dust = particles(), glints = particles(), doodles = [], pending = [];
+    let t = 0, build = 0, scribble = 0, snap = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const tipX = card.x + card.w - em * .1, tipY = cy; // la pointe du crayon : le bout droit de la carte
+    const GR = dark ? '#d1d5db' : '#374151';
+    const curl = (x, y, n, sp = 1) => { for (let i = Math.round(n); i > 0; i--) curls.add({ x, y, vx: rnd(-.2, 1) * H * 1.5 * sp, vy: -H * rnd(.6, 1.6) * sp, g: H * 4, drag: .8, max: rnd(.7, 1.2), r: em * rnd(.08, .14), rot: rnd(TAU), spin: rnd(-8, 8) }); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        if (build && Math.random() < dt * 25) dust.add({ x: tipX, y: tipY, vx: rnd(-10, 30), vy: rnd(-20, 20), drag: 1.5, max: rnd(.5, .9), s: rnd(1, 2.5) });
+        // le gribouillis de mine autour de la carte (Epic) et les étoiles dessinées (Mythic)
+        if (scribble) {
+          scribble = Math.min(2, scribble + dt * 1.2);
+          co.strokeStyle = GR; co.lineWidth = 1.6; co.globalAlpha = .85; co.beginPath();
+          const n = Math.floor(160 * Math.min(1, scribble));
+          for (let i = 0; i <= n; i++) { const u = i / 160 * 1.2, pt = along(grown(card, em * (.28 + .1 * Math.sin(i * .9))), u); i ? co.lineTo(pt.x + Math.sin(i * 2.3) * 2, pt.y + Math.cos(i * 1.7) * 2) : co.moveTo(pt.x, pt.y); }
+          co.stroke(); co.globalAlpha = 1;
+        }
+        for (const d of doodles) { d.k = Math.min(1, d.k + dt * 3); co.strokeStyle = GR; co.lineWidth = 1.5; co.beginPath(); const pts = 5, r = d.r; for (let i = 0; i <= Math.round(pts * 2 * d.k); i++) { const a = -Math.PI / 2 + i * Math.PI / pts, rr = i % 2 ? r * .45 : r; i ? co.lineTo(d.x + Math.cos(a) * rr, d.y + Math.sin(a) * rr) : co.moveTo(d.x + Math.cos(a) * rr, d.y + Math.sin(a) * rr); } co.stroke(); }
+        dust.step(dt); co.fillStyle = GR; dust.each((d, k) => { co.globalAlpha = (1 - k) * .7; co.fillRect(d.x, d.y, d.s, d.s); });
+        curls.step(dt);
+        curls.each((c, k) => { co.save(); co.globalAlpha = Math.min(1, (1 - k) * 3); co.translate(c.x, c.y); co.rotate(c.rot + c.life * c.spin); co.lineWidth = Math.max(2, c.r * .5); co.strokeStyle = '#deb887'; co.beginPath(); co.arc(0, 0, c.r, 0, Math.PI * 1.5); co.stroke(); co.strokeStyle = '#facc15'; co.lineWidth = Math.max(1, c.r * .18); co.beginPath(); co.arc(0, 0, c.r * 1.12, 0, Math.PI * 1.5); co.stroke(); co.restore(); });
+        glints.step(dt);
+        glints.each((g, k) => twinkle(co, '#fde047', g.x, g.y, g.size * Math.sin(Math.PI * k), 1, k * 3));
+        if (snap) { snap.t += dt; const k = snap.t; co.globalAlpha = clamp(2 - k); co.fillStyle = '#374151'; co.save(); co.translate(tipX + k * H * .3, tipY + k * k * H * 2); co.rotate(k * 6); co.beginPath(); co.moveTo(-em * .1, -em * .08); co.lineTo(em * .12, 0); co.lineTo(-em * .1, em * .08); co.closePath(); co.fill(); co.restore(); co.globalAlpha = 1; if (k > 2) snap = null; }
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        later(.02, () => { for (let i = Math.round(5 * q); i > 0; i--) glints.add({ x: p.x + rnd(-1, 1) * em * .3, y: p.y + rnd(-1, 1) * em * .35, vx: 0, vy: -rnd(5, 20), max: rnd(.3, .6), size: em * rnd(.1, .18) }); });
+        curl(tipX - em * .2, tipY, o.last ? 4 : 1);
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { snap = { t: 0 }; return; }
+        curl(tipX - em * .2, tipY, burst(p, 10 * q, 3), 1.4);
+        if (p >= .6) scribble = .01;
+        if (p >= 1) for (let i = 0; i < 6 + 3 * asc; i++) later(.4 + i * .12, () => { const e = along(grown(card, em * rnd(.8, 1.4)), rnd()); doodles.push({ x: e.x, y: Math.min(e.y, card.y + H), r: em * rnd(.15, .28), k: 0 }); });
+      },
+    };
+  };
+
+  // 🐶 Pomeranians (idées de DandoriNinja, 2026-10-27) — dix-neuf poméraniens nains attendent autour de la carte (sur le
+  // haut et les côtés). Pour chaque chiffre, un frisbee arrive et se pose au-dessus de sa case : les chiens du haut se
+  // précipitent vers lui en remuant la queue. Avant le dernier chiffre, ils trépignent. Révélation : les dix-neuf sautent
+  // de joie, et des os et des balles de tennis volent (les effets demandés) ; dès Mythic, des cœurs et une pluie de balles.
+  // Tirage raté : ils se couchent et s'endorment (zzz).
+  SCENES.pom = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const toys = particles(), hearts = particles(), frisbees = timed(), pending = [];
+    let t = 0, build = 0, joy = 0, sleep = 0, chaseX = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const FUR = ['#f59e0b', '#fbbf24', '#fde68a', '#d97706', '#f59e0b'];
+    // les 19 chiens : 9 sur le haut, 5 à gauche, 5 à droite
+    const dogs = [];
+    for (let i = 0; i < 9; i++) dogs.push({ hx: card.x + card.w * (.06 + .88 * i / 8), hy: card.y - em * .12, top: true, c: FUR[i % 5], ph: i * 1.3, x: 0 });
+    for (let i = 0; i < 5; i++) dogs.push({ hx: card.x - em * (.35 + .32 * (i % 2)), hy: card.y + H * (.1 + .2 * i), c: FUR[(i + 2) % 5], ph: i * 2.1, x: 0 });
+    for (let i = 0; i < 5; i++) dogs.push({ hx: card.x + card.w + em * (.35 + .32 * (i % 2)), hy: card.y + H * (.1 + .2 * i), c: FUR[(i + 4) % 5], ph: i * 1.7, x: 0 });
+    dogs.forEach(d => { d.x = d.hx; });
+    // un poméranien : une boule de poils (des touffes en rond), le museau crème, les oreilles pointues, la queue en plumet
+    const pom = (x, y, s, c, ph, lying) => {
+      co.save(); co.translate(x, y); if (lying) co.scale(1.2, .7);
+      co.fillStyle = c; co.beginPath(); co.arc(s * .55, -s * .15 + Math.sin(ph * 8) * s * .05, s * .32, 0, TAU); co.fill(); // la queue
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; co.beginPath(); co.arc(Math.cos(a) * s * .38, Math.sin(a) * s * .38, s * .2, 0, TAU); co.fill(); }
+      co.beginPath(); co.arc(0, 0, s * .42, 0, TAU); co.fill();
+      co.beginPath(); co.moveTo(-s * .3, -s * .25); co.lineTo(-s * .2, -s * .62); co.lineTo(-s * .05, -s * .32); co.moveTo(s * .05, -s * .32); co.lineTo(s * .2, -s * .62); co.lineTo(s * .3, -s * .25); co.fill(); // les oreilles
+      co.fillStyle = '#fff7ed'; co.beginPath(); co.ellipse(0, s * .12, s * .2, s * .14, 0, 0, TAU); co.fill(); // le museau
+      co.fillStyle = '#1f2937'; if (lying) { co.fillRect(-s * .18, -s * .06, s * .12, 1.5); co.fillRect(s * .06, -s * .06, s * .12, 1.5); } else { co.beginPath(); co.arc(-s * .13, -s * .05, s * .05, 0, TAU); co.arc(s * .13, -s * .05, s * .05, 0, TAU); co.fill(); }
+      co.beginPath(); co.arc(0, s * .07, s * .045, 0, TAU); co.fill(); // la truffe
+      if (!lying) { co.fillStyle = '#f472b6'; co.beginPath(); co.ellipse(0, s * .24, s * .05, s * .06, 0, 0, Math.PI); co.fill(); } // la langue
+      co.restore();
+    };
+    const tennis = (x, y, r) => { co.fillStyle = '#d9f99d'; co.beginPath(); co.arc(x, y, r, 0, TAU); co.fill(); co.strokeStyle = '#fff'; co.lineWidth = Math.max(1, r * .2); co.beginPath(); co.arc(x - r * .9, y, r * .8, -.9, .9); co.moveTo(x + r * 1.7, y); co.arc(x + r * .9, y, r * .8, Math.PI - .9, Math.PI + .9); co.stroke(); };
+    const bone = (x, y, s, rot) => { co.save(); co.translate(x, y); co.rotate(rot); co.fillStyle = '#fffbeb'; co.strokeStyle = '#a16207'; co.lineWidth = 1; co.beginPath(); co.rect(-s * .5, -s * .12, s, s * .24); for (const [bx, by] of [[-.5, -.14], [-.5, .14], [.5, -.14], [.5, .14]]) { co.moveTo(s * bx + s * .15, s * by); co.arc(s * bx, s * by, s * .15, 0, TAU); } co.fill(); co.stroke(); co.restore(); };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        joy = Math.max(0, joy - dt * .25);
+        const s = em * .42;
+        behind(env, () => {
+          for (const d of dogs) {
+            const target = d.top && chaseX !== null ? lerp(d.hx, chaseX, .55) : d.hx;
+            d.x += (target - d.x) * Math.min(1, dt * 5);
+            const hop = sleep ? 0 : joy > .01 ? Math.abs(Math.sin(t * 9 + d.ph)) * em * .4 * Math.min(1, joy) : build ? Math.abs(Math.sin(t * 16 + d.ph)) * em * .08 : 0;
+            pom(d.x, d.hy - hop, s, d.c, t + d.ph, sleep);
+          }
+          frisbees.run(dt, (f, k) => { const x = lerp(card.x - H * 1.5, f.x, outCubic(k)), y = lerp(card.y - H * .2, card.y - em * .55, k) - Math.sin(Math.PI * k) * em * .4; co.fillStyle = '#ef4444'; co.beginPath(); co.ellipse(x, y, em * .26, em * .08, -.15, 0, TAU); co.fill(); co.fillStyle = '#fca5a5'; co.beginPath(); co.ellipse(x - em * .05, y - em * .02, em * .12, em * .03, -.15, 0, TAU); co.fill(); });
+        }, true);
+        if (sleep) for (let i = 0; i < 3; i++) { const k = (t * .5 + i / 3) % 1; l1Glyph(co, cx + card.w * .3 + k * em * .6, card.y - em * .3 - k * em * .8, em * (.2 + .2 * k), 'z', 0, Math.sin(Math.PI * k), dark ? '#e0e7ff' : '#6366f1', null, "800 {s}px system-ui, sans-serif"); }
+        toys.step(dt);
+        toys.each((o, k) => { co.globalAlpha = Math.min(1, (1 - k) * 3); if (o.kind) tennis(o.x, o.y, em * .1); else bone(o.x, o.y, em * .32, o.rot + o.life * o.spin); });
+        hearts.step(dt);
+        hearts.each((h2, k) => l1Glyph(co, h2.x, h2.y, em * .3, '♥', Math.sin(h2.life * 4) * .3, Math.min(1, (1 - k) * 3), '#f472b6', dark ? '#f9a8d4' : null, '{s}px system-ui, sans-serif'));
+        co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        frisbees.add({ x: p.x, life: .35 });
+        chaseX = p.x; later(.8, () => { if (chaseX === p.x) chaseX = null; });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0; chaseX = null;
+        if (!p) { sleep = 1; return; }
+        joy = 1.5 + p * 2;
+        for (let i = burst(p, 18 * q, 4); i > 0; i--) { const e = along(grown(card, em * .4), rnd()); toys.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H * rnd(1.5, 3), vy: -H * rnd(1, 2.2), g: H * 5, drag: .4, max: rnd(.9, 1.5), kind: i % 2, rot: rnd(TAU), spin: rnd(-8, 8) }); }
+        if (p >= 1) for (let i = Math.round((14 + 6 * asc) * q); i > 0; i--) later(rnd(0, 2), () => { hearts.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H), y: card.y + H * rnd(-.2, .4), vx: rnd(-10, 10), vy: -H * rnd(.3, .6), max: rnd(1.2, 1.8) }); toys.add({ x: cx + rnd(-1, 1) * (card.w * .6 + H * 1.3), y: card.y - H * rnd(.5, 1), vx: rnd(-15, 15), vy: H * .2, g: H * 4, max: 1.4, kind: 1, rot: 0, spin: 0 }); });
+      },
+    };
+  };
+
+  // ⚛️ Atom (idée de finnnnn, 2026-10-27) — chaque chiffre posé devient un noyau : deux électrons se mettent à orbiter
+  // autour de lui sur des ellipses penchées (dans la carte, derrière le chiffre), avec un éclair de fusion. Avant le
+  // dernier chiffre, le nuage d'électrons s'agite autour de sa case. Révélation : des photons jaillissent ; dès Epic, trois
+  // grandes orbites entourent la carte ; dès Mythic, une réaction en chaîne : les orbites s'emballent et se multiplient.
+  // Tirage raté : un électron s'échappe (un « − » qui file).
+  SCENES.atom = env => {
+    const { ci, co, w, h, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const nuclei = [], flashes = timed(), photons = particles(), pending = [];
+    let t = 0, build = 0, big = 0, chain = 0, lost = null;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    const E = dark ? '#7dd3fc' : '#2563eb';
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        // les orbites de chaque chiffre (calque intérieur, derrière les chiffres)
+        ci.lineWidth = 1;
+        for (const n of nuclei) {
+          n.k = Math.min(1, n.k + dt * 3);
+          for (let j = 0; j < 2; j++) {
+            const tilt = j ? .9 : -.9, rx = em * .42 * n.k, ry = em * .15 * n.k, a = t * (3 + j) + n.ph + j * 2;
+            ci.save(); ci.translate(n.x, n.y); ci.rotate(tilt); ci.globalAlpha = .45 * n.k; ci.strokeStyle = '#93c5fd'; ci.beginPath(); ci.ellipse(0, 0, rx, ry, 0, 0, TAU); ci.stroke();
+            ci.globalCompositeOperation = 'lighter'; dot(ci, '#7dd3fc', Math.cos(a) * rx, Math.sin(a) * ry, 4, n.k); ci.globalCompositeOperation = 'source-over'; ci.restore();
+          }
+        }
+        ci.globalAlpha = 1;
+        if (build) { const s = l1Next(env); if (s) for (let i = 0; i < 6; i++) { const ip = bInner(env, s); ci.globalCompositeOperation = 'lighter'; dot(ci, '#93c5fd', ip.x + rnd(-1, 1) * em * .3, ip.y + rnd(-1, 1) * em * .35, 3, .6); ci.globalCompositeOperation = 'source-over'; } }
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        flashes.run(dt, (f, k) => { dot(co, '#ffffff', f.x, f.y, em * (.15 + .5 * k), (1 - k) * .9); dot(co, '#fca5a5', f.x, f.y, em * (.3 + .9 * k), (1 - k) * .4); });
+        // les grandes orbites (Epic) et la réaction en chaîne (Mythic), derrière la carte
+        if (big) behind(env, () => {
+          big = Math.min(1, big + dt * 1.5);
+          const n = 3 + Math.round(chain * 3);
+          for (let i = 0; i < n; i++) {
+            const tilt = -1 + i * 2 / Math.max(1, n - 1), rx = (card.w * .5 + H * .9) * big, ry = H * .45 * big, a = t * (1.5 + chain * 2 + i * .3) + i;
+            co.save(); co.translate(cx, cy); co.rotate(tilt * .5); co.globalAlpha = .55; co.strokeStyle = E; co.lineWidth = 1.5; co.beginPath(); co.ellipse(0, 0, rx, ry, 0, 0, TAU); co.stroke();
+            dot(co, E, Math.cos(a) * rx, Math.sin(a) * ry, 7, 1); dot(co, '#ffffff', Math.cos(a) * rx, Math.sin(a) * ry, 2.5, 1); co.restore();
+          }
+        }, true);
+        photons.step(dt);
+        photons.each((p, k) => line(co, pick(['#fde047', '#fca5a5', '#7dd3fc']), p.x, p.y, p.x - p.vx * .03, p.y - p.vy * .03, 1.8, 1 - k));
+        if (lost) { lost.t += dt; const k = lost.t; dot(co, E, lost.x + k * H * 2, lost.y - k * H * .6, 6, clamp(1.6 - k)); l1Glyph(co, lost.x + k * H * 2, lost.y - k * H * .6 - em * .25, em * .3, '−', 0, clamp(1.6 - k), E, null, '700 {s}px system-ui, sans-serif'); if (k > 1.6) lost = null; }
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        const ip = bInner(env, p);
+        nuclei.push({ x: ip.x, y: ip.y, k: 0, ph: rnd(TAU) });
+        flashes.add({ x: p.x, y: p.y, life: .35 });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0;
+        build = 0;
+        if (!p) { lost = { t: 0, x: card.x + card.w, y: card.y }; return; }
+        for (let i = burst(p, 30 * q, 6); i > 0; i--) { const e = along(grown(card, 2), rnd()), a = Math.atan2(e.y - cy, e.x - cx); photons.add({ x: e.x, y: e.y, vx: Math.cos(a) * H * rnd(2, 4), vy: Math.sin(a) * H * rnd(2, 4), max: rnd(.3, .6) }); }
+        if (p >= .6) big = .01;
+        if (p >= 1) { chain = 1; for (let i = 0; i < 4; i++) later(i * .2, () => flashes.add({ x: cx + rnd(-.4, .4) * card.w, y: cy, life: .5 })); }
+      },
+    };
+  };
+
+  // 🧙 Witch (idée de mark, 2026-10-27) — une sorcière sur son balai vole au-dessus de la carte (derrière son bord) jusqu'à la
+  // case qui va se poser et y lance une fiole : la fiole décrit une courbe, éclate en fumée violette et en étincelles
+  // vertes au moment où le chiffre apparaît. Avant le dernier chiffre, elle tourne en rond en ricanant (des étincelles
+  // derrière son balai). Révélation : un nuage de fumée et des étoiles ; dès Epic, des chauves-souris s'envolent ; dès
+  // Mythic, une spirale de magie verte monte autour de la carte. Tirage raté : la fiole fait pschitt (petit nuage gris).
+  SCENES.witch = env => {
+    const { co, card, q, dark } = env;
+    const H = card.h, cx = card.x + card.w / 2, cy = card.y + H / 2, em = emOf(env);
+    const vials = timed(), smoke = particles(), sparks = particles(), bats = particles(), pending = [];
+    let t = 0, build = 0, spiral = 0, wx = card.x - H * .8;
+    const later = (dt, fn) => pending.push({ at: t + dt, fn });
+    // à gauche de la carte, devant la pleine lune (au-dessus de la carte, il n'y a que 45 px : elle s'y perdait)
+    const mx = card.x - H * .8, my = cy - H * .1; let wy = my;
+    const witch = (x, y, s, dir) => {
+      co.save(); co.translate(x, y); co.scale(dir, 1); co.rotate(Math.sin(t * 3) * .06);
+      co.shadowColor = '#a3e635'; co.shadowBlur = s * .12; // un liseré vert : la silhouette se détache même sur une page sombre
+      co.strokeStyle = '#78350f'; co.lineWidth = Math.max(2, s * .07); co.lineCap = 'round'; co.beginPath(); co.moveTo(-s * .7, s * .15); co.lineTo(s * .55, -s * .02); co.stroke(); // le manche
+      co.fillStyle = '#a16207'; co.beginPath(); co.moveTo(-s * .65, s * .13); co.lineTo(-s * 1.05, -s * .05); co.lineTo(-s * 1.1, s * .2); co.lineTo(-s * 1.0, s * .38); co.closePath(); co.fill(); // les brindilles
+      co.fillStyle = '#1e1b2e'; co.beginPath(); co.moveTo(-s * .3, s * .12); co.quadraticCurveTo(-s * .2, -s * .45, s * .05, -s * .4); co.lineTo(s * .2, s * .05); co.quadraticCurveTo(s * .0, s * .35, -s * .3, s * .12); co.fill(); // la cape
+      co.fillStyle = '#86efac'; co.beginPath(); co.arc(s * .1, -s * .52, s * .13, 0, TAU); co.fill(); // la tête
+      co.fillStyle = '#1e1b2e'; co.beginPath(); co.ellipse(s * .08, -s * .62, s * .3, s * .05, -.15, 0, TAU); co.fill(); co.beginPath(); co.moveTo(-s * .08, -s * .64); co.lineTo(s * .02, -s * 1.08); co.lineTo(s * .24, -s * .66); co.fill(); // le chapeau
+      co.fillStyle = '#a855f7'; co.fillRect(-s * .04, -s * .7, s * .26, s * .04); // le ruban
+      co.restore();
+    };
+    return {
+      frame(tt, dt) {
+        t = tt;
+        for (let i = pending.length - 1; i >= 0; i--) if (t >= pending[i].at) { const f = pending[i].fn; pending.splice(i, 1); f(); }
+        wx = mx + (build ? Math.cos(t * 4) * H * .25 : Math.sin(t * 1.3) * H * .06); wy = my + (build ? Math.sin(t * 4) * H * .15 : Math.sin(t * 2.4) * H * .06);
+        behind(env, () => {
+          co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#fef9c3', mx, my - H * .1, H * 1.1, dark ? .35 : .25); co.globalCompositeOperation = 'source-over';
+          co.fillStyle = dark ? '#fef3c7' : '#fde68a'; co.globalAlpha = .9; co.beginPath(); co.arc(mx, my - H * .1, H * .5, 0, TAU); co.fill(); co.globalAlpha = 1; // la pleine lune
+          witch(wx, wy, em * 1.05, 1);
+          bats.step(dt); bats.each((b, k) => { const fl = Math.sin(b.life * 20) * .5 + .5; co.globalAlpha = Math.min(1, (1 - k) * 3); co.fillStyle = '#1e1b2e'; co.beginPath(); co.moveTo(b.x, b.y); co.quadraticCurveTo(b.x - em * .15, b.y - em * .12 * fl, b.x - em * .28, b.y); co.quadraticCurveTo(b.x - em * .15, b.y + em * .02, b.x, b.y + em * .04); co.quadraticCurveTo(b.x + em * .15, b.y + em * .02, b.x + em * .28, b.y); co.quadraticCurveTo(b.x + em * .15, b.y - em * .12 * fl, b.x, b.y); co.fill(); }); co.globalAlpha = 1;
+        }, true);
+        if (build && Math.random() < dt * 25) sparks.add({ x: wx - em * 1, y: wy + em * .15, vx: rnd(-20, 20), vy: rnd(-10, 30), max: rnd(.4, .7), c: pick(['#a3e635', '#e879f9']) });
+        // la fiole lancée : une courbe de la sorcière jusqu'à la case
+        vials.run(dt, (v, k) => { const x = lerp(v.x0, v.x, k), y = lerp(v.y0, v.y, k) - Math.sin(Math.PI * k) * em * .5; co.save(); co.translate(x, y); co.rotate(k * 10); co.fillStyle = '#a3e635'; co.beginPath(); co.arc(0, em * .04, em * .09, 0, TAU); co.fill(); co.fillStyle = '#e5e7eb'; co.fillRect(-em * .03, -em * .1, em * .06, em * .08); co.restore(); });
+        if (spiral) { spiral = Math.min(3, spiral + dt); for (let i = 0; i < 16; i++) { const u = ((t * .4 + i / 16) % 1), a = u * TAU * 2, r = card.w * .5 + H * .5; co.globalCompositeOperation = dark ? 'lighter' : 'source-over'; dot(co, '#a3e635', cx + Math.cos(a) * r, card.y + H - u * H * 2.2, 5, Math.sin(Math.PI * u) * Math.min(1, spiral)); } co.globalCompositeOperation = 'source-over'; }
+        smoke.step(dt);
+        smoke.each((s, k) => dot(co, s.c, s.x, s.y, s.size * (1 + k * 1.5), Math.sin(Math.PI * k) * (dark ? .55 : .45)));
+        sparks.step(dt);
+        co.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+        sparks.each((s, k) => dot(co, s.c, s.x, s.y, 2.5, 1 - k));
+        co.globalCompositeOperation = 'source-over'; co.globalAlpha = 1;
+      },
+      lock(p, o) {
+        if (o.last) build = 0;
+        if (o.ghost) return;
+        vials.add({ x0: wx + em * .4, y0: wy - em * .2, x: p.x, y: p.y - em * .2, life: .08 });
+        later(.08, () => {
+          for (let i = Math.round((o.last ? 8 : 4) * q); i > 0; i--) smoke.add({ x: p.x + rnd(-1, 1) * em * .2, y: p.y - em * .35, vx: rnd(-1, 1) * H * .5, vy: -H * rnd(.2, .6), drag: 1.5, max: rnd(.6, 1), size: em * rnd(.15, .25), c: pick(['#a855f7', '#c084fc', '#7e22ce']) });
+          for (let i = Math.round(6 * q); i > 0; i--) { const a = rnd(TAU); sparks.add({ x: p.x, y: p.y - em * .3, vx: Math.cos(a) * H * 1.5, vy: Math.sin(a) * H * 1.5, drag: 1, max: rnd(.3, .6), c: pick(['#a3e635', '#d9f99d']) }); }
+        });
+      },
+      build() { build = 1; },
+      reveal(tier) {
+        const p = POWER[tier] || 0, asc = ASCEND[tier] || 0;
+        build = 0;
+        if (!p) { for (let i = 0; i < 4; i++) smoke.add({ x: cx + rnd(-.3, .3) * card.w, y: card.y, vx: rnd(-10, 10), vy: -H * .3, drag: 1, max: 1.2, size: em * .2, c: '#9ca3af' }); return; }
+        for (let i = burst(p, 16 * q, 4); i > 0; i--) { const e = along(grown(card, 3), rnd()); smoke.add({ x: e.x, y: e.y, vx: (e.x - cx) / card.w * H, vy: -H * rnd(.3, .7), drag: 1.2, max: rnd(1, 1.6), size: em * rnd(.2, .35), c: pick(['#a855f7', '#c084fc', '#86efac']) }); }
+        if (p >= .6) for (let i = Math.round((6 + 4 * asc) * q); i > 0; i--) bats.add({ x: cx + rnd(-.4, .4) * card.w, y: card.y, vx: rnd(-1, 1) * H * 1.5, vy: -H * rnd(.6, 1.2), max: rnd(1.4, 2) });
+        if (p >= 1) spiral = .01;
+      },
+    };
+  };
+  // ==== fin du lot 7 du 2026-11-05 ====
+
   function mount(stage, card, skin, o = {}) {
     try {
       const make = SCENES[skin];
