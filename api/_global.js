@@ -365,13 +365,14 @@ async function mute(byId, m, dur, why, rawNote, owner) {
 // toujours ni un silence posé par le créateur, et seulement un silence en cours.
 async function unmute(who, byId, owner = true) {
   const [rec, log, byName, live] = await redis([['HGET', MUTES, who], ['LRANGE', MUTELOG, 0, -1], ['HGET', 'names', byId], ['GET', `gc:mute:${who}`]]);
+  const k = (parse(rec) || {}).k, entry = k && (log || []).find(x => (parse(x) || {}).k === k);
   if (!owner) {
-    const r = parse(rec);
+    const r = parse(rec), by = (parse(entry) || {}).bi; // silences d'avant la marque bo : l'auteur dans l'historique
     if (!live || !r) throw refuse(404, 'This player is not muted');
-    if (Number(live) < 0 || r.until < 0 || r.bo) throw refuse(403, 'Only the owner can lift this mute');
+    const [byOwner] = by ? await redis([['HGET', statsKey(by), 'owner']]) : [null];
+    if (Number(live) < 0 || r.until < 0 || r.bo || Number(byOwner) >= 1) throw refuse(403, 'Only the owner can lift this mute');
   }
   await redis([['DEL', `gc:mute:${who}`], ['HDEL', MUTES, who]]);
-  const k = (parse(rec) || {}).k, entry = k && (log || []).find(x => (parse(x) || {}).k === k);
   if (!entry) return;
   const [ins] = await redis([['LINSERT', MUTELOG, 'BEFORE', entry, JSON.stringify({ ...parse(entry), lift: { by: byName || (owner ? 'Owner' : 'Moderator'), bi: byId, t: Date.now() } })]]);
   if (Number(ins) > 0) await redis([['LREM', MUTELOG, 1, entry]]);
@@ -436,7 +437,9 @@ async function modPage(me) {
   const flat = mutesFlat || [], rows = [], now = Date.now();
   for (let i = 0; i < flat.length; i += 2) { const r = parse(flat[i + 1]); if (r && (r.until < 0 || r.until > now)) rows.push({ id: flat[i], ...r }); }
   const names = rows.length ? (await redis([['HMGET', 'names', ...rows.map(r => r.id)]]))[0] || [] : [];
-  const mutes = rows.map((r, i) => ({ name: names[i] || r.n || 'Player', until: r.until, by: r.by, t: r.t, d: r.d || null, why: r.why || null, text: r.x || null, canLift: r.until > 0 && !r.bo }))
+  const byOf = new Map(log.filter(e => e.k).map(e => [e.k, e.bi])), bys = [...new Set(rows.map(r => byOf.get(r.k)).filter(Boolean))];
+  const ownerBy = new Set(bys.length ? (await redis(bys.map(b => ['HGET', statsKey(b), 'owner']))).map((o, i) => (Number(o) >= 1 ? bys[i] : null)).filter(Boolean) : []);
+  const mutes = rows.map((r, i) => ({ name: names[i] || r.n || 'Player', until: r.until, by: r.by, t: r.t, d: r.d || null, why: r.why || null, text: r.x || null, canLift: r.until > 0 && !r.bo && !ownerBy.has(byOf.get(r.k)) }))
     .sort((a, b) => b.t - a.t);
   return { reports, mine, mutes };
 }

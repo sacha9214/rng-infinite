@@ -6799,6 +6799,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   await gc(boss, 'gcMute', { id: last.id, dur: '1h', why: 'rude' });
   r = await gc(modo, 'gcModPage'); assert.equal(r.body.mutes.find(x => x.name === 'SocAnn').canLift, false, 'posé par le créateur');
   assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 403);
+  { const rec = JSON.parse(run([['HGET', 'gc:mutes', ann.playerId]])[0].result); delete rec.bo; run([['HSET', 'gc:mutes', ann.playerId, JSON.stringify(rec)]]); } // silence d'avant la marque bo
+  r = await gc(modo, 'gcModPage'); assert.equal(r.body.mutes.find(x => x.name === 'SocAnn').canLift, false, 'ancien silence du créateur, lu dans l\'historique');
+  assert.equal((await gc(modo, 'gcUnmute', { name: 'SocAnn' })).status, 403);
   await gc(boss, 'gcUnmute', { name: 'SocAnn' });
   free(ann); await gc(ann, 'gcSend', { text: 'again' }); last = (await gc(null, 'gcList')).body.msgs.at(-1);
   await gc(boss, 'gcMute', { id: last.id, dur: 'perm', why: 'rude' });

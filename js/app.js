@@ -7211,7 +7211,7 @@
             <div class="o-moves"><button class="btn ghost small" data-mod-ok>✓ Nothing wrong</button><button class="btn ghost small" data-mod-del>🗑️ Delete…</button><button class="btn ghost small" data-mod-mute>🔇 Mute…</button></div>
             ${muting === r.id ? GChat.muteHTML({ owner: false }, mkind) : ''}</div>`).join('') : '<div class="empty">Nothing to check right now. 🎉</div>'}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">🔇 Muted right now</h3><span class="panel-note">lift a mute that wasn't fair</span></div>
-          ${(data.mutes || []).length ? data.mutes.map(m => `<div class="o-report mod-mute"><div class="o-report-head"><a class="player-link" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="panel-note">${m.until < 0 ? 'Forever' : `until ${new Date(m.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`} · ${WHY[m.why] || 'No reason given'}</span><span class="panel-note">by <b data-no-i18n>${esc(m.by || 'Moderator')}</b></span></div>${m.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(m.text)}”</p>` : ''}<div class="o-moves">${m.canLift ? `<button class="btn ghost small" data-mod-unmute="${esc(m.name)}">🔊 Unmute</button>` : '<span class="panel-note">Only Sacha can lift this one</span>'}</div></div>`).join('') : '<div class="empty">Nobody is muted.</div>'}</div>
+          ${(data.mutes || []).length ? data.mutes.map(m => `<div class="o-report mod-mute"><div class="o-report-head"><a class="player-link" href="${profileHref(m.name)}" data-no-i18n>${esc(m.name)}</a><span class="panel-note">${m.until < 0 ? 'Forever' : `until ${new Date(m.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</span><span class="panel-note">${WHY[m.why] || 'No reason given'}</span><span class="panel-note">by <b data-no-i18n>${esc(m.by || 'Moderator')}</b></span></div>${m.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(m.text)}”</p>` : ''}<div class="o-moves">${m.canLift ? `<button class="btn ghost small" data-mod-unmute="${esc(m.name)}">🔊 Unmute</button>` : '<span class="panel-note">Only Sacha can lift this one</span>'}</div></div>`).join('') : '<div class="empty">Nobody is muted.</div>'}</div>
         <div class="panel"><div class="panel-head"><h3 class="panel-title">My last actions</h3><span class="panel-note">Sacha sees these too</span></div>
           ${data.mine.length ? data.mine.map(a => `<div class="o-report"><div class="o-report-head">${a.kind === 'mute' ? '🔇' : a.kind === 'unmute' ? '🔊' : '🗑️'} <b data-no-i18n>${esc(a.name)}</b><span class="panel-note">${a.kind === 'mute' ? `${DUR[a.d] || ''} · ${WHY[a.why] || 'No reason given'}` : a.kind === 'unmute' ? 'Mute lifted' : `Message deleted · ${WHY[a.why] || 'No reason given'}`} · ${relTime(a.t)}${a.lift ? ` · <b>lifted by <span data-no-i18n>${esc(a.lift === true ? 'Sacha' : a.lift)}</span></b>` : ''}</span></div>${a.text ? `<p class="gc-mute-msg" data-no-i18n>“${esc(a.text)}”</p>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</div>`;
     };
@@ -8436,9 +8436,9 @@
         ${state.friends.length ? state.friends.map(f => `
           <div class="friend-row">
             <span class="live-dot fr-${f.room ? 'duel' : f.status || 'offline'}${f.room ? ' on' : ''}" title="${f.room ? 'In a duel' : f.status === 'online' ? 'Online' : f.status === 'afk' ? 'AFK' : 'Offline'}"></span>
-            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a>${titleHTML(f.title)}
+            ${Avatars.html(f.name, 'av-sm')}<span class="friend-info"><span class="fr-who"><button class="fr-star${f.star ? ' on' : ''}" type="button" data-fr="star" data-name="${esc(f.name)}" aria-pressed="${!!f.star}" title="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}" aria-label="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}">${f.star ? '★' : '☆'}</button><a class="player-link" href="${profileHref(f.name)}">${esc(f.name)}</a></span>${titleHTML(f.title)}
               <span class="panel-note">${compact(f.xp)} lifetime XP · ${f.room ? 'in a duel right now' : f.status === 'online' ? '<b class="fr-st online">Online</b>' : f.status === 'afk' ? '<b class="fr-st afk">AFK</b>' : `Offline · ${f.seen ? `last roll ${relTime(f.seen)}` : 'no roll yet'}`}</span></span>
-            <span class="friend-actions"><button class="btn ghost fr-star${f.star ? ' on' : ''}" data-fr="star" data-name="${esc(f.name)}" aria-pressed="${!!f.star}" title="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}" aria-label="${f.star ? 'Unpin from the top' : 'Pin to the top of your list'}">${f.star ? '★' : '☆'}</button>${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
+            <span class="friend-actions">${f.room ? `<a class="btn-roll small" href="${roomHref(f.room)}">Join / watch</a>` : ''}<button class="btn fr-chat" data-fr="chat" data-name="${esc(f.name)}" title="Messages">💬${f.unread ? `<b class="fr-unread">${f.unread > 9 ? '9+' : f.unread}</b>` : ''}</button>${state.gift ? `<button class="btn" data-fr="gift" data-name="${esc(f.name)}" title="Give coins">🎁 <span class="gift-label">Give coins</span></button>` : ''}${btn('remove', f.name, '✕', 'btn ghost')}</span>
           </div>`).join('') : '<div class="empty">No friends yet. Add one by name above, or from a player profile.</div>'}
       </div>
       ${friendsBoardHTML(state.board)}
@@ -8717,7 +8717,7 @@
   // Score de la partie au-dessus de la carte de chacun (Jacksonw) : XP, ou manches gagnées puis XP.
   function sideScoreHTML(j, wins, totals, lead) {
     const d = Room.data;
-    return `${lead === j ? '<span class="room-lead" title="Winning">👑</span>' : ''}<span class="mono">${d.mode === 'xp' ? `${compact(totals[j])} XP` : `${wins[j]} / ${d.target} · ${compact(totals[j])} XP`}</span>`;
+    return `${lead === j ? '<span class="room-lead" title="Winning">👑</span>' : ''}${d.mode === 'xp' ? `<span class="mono">${compact(totals[j])} XP</span>` : `<span class="mono">${wins[j]} / ${d.target}</span><span class="mono">· ${compact(totals[j])} XP</span>`}`;
   }
   // Score affiché : seulement les manches déjà révélées à l'écran.
   function shownScore() {
@@ -8821,9 +8821,8 @@
       Room.chatSig = ''; // salon reconstruit (un joueur arrive) : la liste du chat est neuve, il faut la redessiner
       body.innerHTML = `
       <div class="room-layout"><div class="room-main">
-        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)}</p>
+        <p class="panel-note profile-sub">${d.players.length} players · ${goalText(d)} · each round goes to the highest roll · ${d.bots ? 'with bots: your rolls count, but not duel wins or rivalries' : 'duel rolls count on the leaderboard'}${stakeText(d)} <button class="room-order" id="room-order" type="button" aria-pressed="false" hidden></button></p>
         <div class="room-board" id="room-board"></div>
-        <button class="btn ghost small room-order" id="room-order" type="button" aria-pressed="false" hidden></button>
         <div class="room-arena">
           <div class="room-stage${d.players.length > 2 ? ' many' : ''}" id="room-stage"></div>
           <div class="react-layer" id="react-layer" aria-hidden="true"></div>
@@ -8956,7 +8955,7 @@
     const leadFirst = Store.settings.duelOrder === 'lead';
     const order = d.players.length === 2 && !leadFirst ? [0, 1] : ranked, lead = leaderOf(wins, totals);
     d.players.forEach((p, j) => { const el = $(`#rsc-${j}`); if (el) setHTML(el, sideScoreHTML(j, wins, totals, lead)); });
-    { const ob = $('#room-order'); if (ob) { ob.hidden = d.players.length !== 2; ob.setAttribute('aria-pressed', String(leadFirst)); ob.textContent = leadFirst ? '⇅ Leader first' : '⇅ Same order as the cards'; } }
+    { const ob = $('#room-order'); if (ob) { ob.hidden = d.players.length !== 2; ob.setAttribute('aria-pressed', String(leadFirst)); ob.textContent = leadFirst ? '⇅ Same order as the cards' : '⇅ Put the leader first'; } }
     setHTML($('#room-board'), order.map(i => {
       const p = d.players[i], k = ranked.indexOf(i);
       const metric = d.mode === 'xp'

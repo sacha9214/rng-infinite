@@ -904,12 +904,14 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .room-side.won { border-color: var(--ep-outline); box-shadow: 0 0 0 3px var(--ep-outline); }
 .room-name { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .7rem; }
 /* Score de la partie au-dessus de chaque carte, 👑 pour le meneur (idée de Jacksonw, 2026-11-05) */
-.room-score { display: flex; gap: .3rem; justify-content: center; align-items: center; min-height: 1.2rem; margin: -.45rem 0 .55rem; font-size: .76rem; font-weight: 700; color: var(--prose-2); }
+.room-score { display: flex; flex-wrap: wrap; gap: 0 .3rem; justify-content: center; align-items: center; margin: -.55rem 0 .4rem; font-size: .76rem; line-height: 1.2; font-weight: 700; color: var(--prose-2); }
+.room-score > span { white-space: nowrap; }
+@media (max-width: 560px) { .room-score { font-size: .68rem; gap: .2rem; } }
 .room-score:empty { display: none; }
 .room-lead { font-size: .9rem; line-height: 1; }
 .board-row.lead { border-color: color-mix(in srgb, #f59e0b 60%, var(--outline)); }
 .room-board .board-row.lead .rank { font-size: .85rem; }
-.room-order { display: block; margin: -.4rem 0 .7rem auto; font-size: .74rem; }
+.room-order { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--chart-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 .room-order[hidden] { display: none; }
 .room-meta { display: flex; gap: .35rem; justify-content: center; align-items: center; min-height: 1.6rem; margin: .7rem 0 .4rem; }
 .room-vs { font-weight: 800; color: var(--prose-3); text-align: center; }
@@ -2248,7 +2250,10 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .friend-row > .player-link { flex: 1; }
 .friend-actions { display: flex; gap: .4rem; align-items: center; }
 /* Amis en étoile (Big Sexy) et classement entre amis (Edward), 2026-11-05 */
-.fr-star { padding-inline: .5rem; font-size: 1rem; line-height: 1; color: var(--prose-3); }
+.fr-who { display: flex; align-items: baseline; gap: .2rem; min-width: 0; }
+.fr-who > .player-link { min-width: 0; overflow-wrap: anywhere; }
+.fr-star { flex: none; border: 0; background: none; padding: .1rem .15rem; margin-left: -.15rem; font: inherit; font-size: 1.05rem; line-height: 1; color: var(--prose-3); cursor: pointer; }
+.fr-star:hover { color: #d97706; }
 .fr-star.on { color: #d97706; }
 .dark .fr-star.on { color: #fbbf24; }
 .flb .panel-head { flex-wrap: wrap; gap: .4rem; }
