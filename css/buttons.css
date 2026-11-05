@@ -1720,3 +1720,38 @@
   outline: 2px dashed rgba(255, 255, 255, .75); outline-offset: -6px; text-shadow: 0 1px 0 #fce7f3;
   --gs: 0 .3em 0 #5b21b6, 0 .5em 1em rgba(167, 139, 250, .35); --gs-h: 0 .34em 0 #5b21b6, 0 .7em 1.3em rgba(167, 139, 250, .5); --gs-a: 0 .06em 0 #5b21b6; }
 .btn-roll.gen-cat:hover { filter: brightness(1.05); }
+
+/* ==== Skins du 2026-11-05, lot 1 ==== boutons assortis */
+/* Overture (promis à 0casmictechthing) : la laque noire d'un piano, un filet d'or, un rang de touches d'ivoire en bas. */
+.btn-roll.gen-overture { border: 2px solid #b08d3c; border-radius: .55rem; color: #f3d27a;
+  font-family: 'Didot', 'Bodoni 72', Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: .04em;
+  background: linear-gradient(90deg, transparent 0 calc(100% - 1px), #a8a29e 0) 0 100% / 12px .32em repeat-x, linear-gradient(#f6f1e3, #f6f1e3) 0 100% / 100% .32em no-repeat, linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 30%), linear-gradient(180deg, #1c1c22, #050507);
+  text-shadow: 0 .05em 0 #5c3d0a, 0 0 .3em rgba(243, 210, 122, .45);
+  --gs: 0 .3em 0 #27272a, 0 .5em 1em rgba(222, 184, 92, .25); --gs-h: 0 .34em 0 #27272a, 0 .7em 1.3em rgba(222, 184, 92, .4); --gs-a: 0 .06em 0 #27272a; }
+.btn-roll.gen-overture:hover { filter: brightness(1.12); }
+/* Cheese (idée de casmicgraything et casmictechthing) : un bloc d'emmental, ses trous, son texte imprimé au fer. */
+.btn-roll.gen-cheese { border: 2px solid #b7791f; border-radius: .7rem; color: #7c3f00;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  background: radial-gradient(ellipse 9px 8px at 12% 30%, #d49a0b 0 70%, transparent 75%), radial-gradient(ellipse 7px 6px at 88% 70%, #d49a0b 0 70%, transparent 75%), radial-gradient(circle 4px at 70% 20%, #d49a0b 0 70%, transparent 80%), radial-gradient(circle 5px at 30% 82%, #d49a0b 0 70%, transparent 80%), linear-gradient(180deg, #fff0a8, #fcd94a 30%, #eab308);
+  text-shadow: 0 .05em 0 rgba(255, 246, 200, .8);
+  --gs: 0 .3em 0 #a16207, 0 .5em 1em rgba(250, 204, 21, .3); --gs-h: 0 .34em 0 #a16207, 0 .7em 1.3em rgba(250, 204, 21, .45); --gs-a: 0 .06em 0 #a16207; }
+.btn-roll.gen-cheese:hover { filter: brightness(1.05) saturate(1.1); }
+/* Archaeology (idée de casmicgraything et Alt) : une plaque de terre en couches, texte en os. */
+.btn-roll.gen-dig { border: 2px solid #3f2a1a; border-radius: .45rem; color: #f3ead7;
+  font-family: 'Arial Rounded MT Bold', 'Arial Black', system-ui, sans-serif; -webkit-text-stroke: .02em #3b2a1a;
+  background: radial-gradient(circle at 14% 70%, #5c4a3a 0 3px, transparent 4px), radial-gradient(circle at 84% 34%, #8a7a66 0 2px, transparent 3px), linear-gradient(178deg, #4a3423 0 22%, #7b5534 22% 50%, #a07548 50% 54%, #8c6239 54% 80%, #6e4b2c 80%);
+  text-shadow: 0 .06em 0 #3b2a1a;
+  --gs: 0 .3em 0 #2a1a0e, 0 .5em 1em rgba(184, 141, 92, .3); --gs-h: 0 .34em 0 #2a1a0e, 0 .7em 1.3em rgba(184, 141, 92, .45); --gs-a: 0 .06em 0 #2a1a0e; }
+.btn-roll.gen-dig:hover { filter: brightness(1.1); }
+/* Angel (idée de qwertyuiop) : un ciel de crépuscule, une auréole d'or au-dessus du texte en lumière blanche. */
+.btn-roll.gen-angel { border: 2px solid #e9c46a; border-radius: 999px; color: #fff;
+  background: radial-gradient(ellipse 18% 16% at 50% 14%, transparent 55%, #fde68a 60% 75%, transparent 80%), radial-gradient(ellipse 60% 80% at 50% 60%, rgba(253, 230, 138, .45), transparent 70%), linear-gradient(180deg, #1b2452, #34478f 70%, #6e7fc4);
+  text-shadow: 0 0 .05em #fff, 0 .04em .02em #8a6512, 0 0 .3em rgba(253, 230, 138, .9);
+  --gs: 0 .3em 0 #b08d3c, 0 .5em 1.2em rgba(253, 230, 138, .45); --gs-h: 0 .34em 0 #b08d3c, 0 .7em 1.5em rgba(253, 230, 138, .6); --gs-a: 0 .06em 0 #b08d3c; }
+.btn-roll.gen-angel:hover { filter: brightness(1.1); }
+/* Demon (idée de qwertyuiop, avec l'ange déchu de Roanono) : obsidienne fendue de braise, texte marqué au fer rouge. */
+.btn-roll.gen-demon { border: 2px solid #7f1d1d; border-radius: .55rem; color: #ff4d5e;
+  background: linear-gradient(115deg, transparent 20%, rgba(220, 38, 38, .55) 21%, transparent 22.5%, transparent 70%, rgba(220, 38, 38, .45) 71%, transparent 72.5%), radial-gradient(ellipse 70% 60% at 50% 120%, rgba(220, 38, 38, .55), transparent 70%), linear-gradient(160deg, #1a0b10, #0b0507);
+  text-shadow: 0 0 .04em #ffe4e6, 0 .05em .02em #000, 0 0 .3em rgba(244, 63, 94, .9);
+  --gs: 0 .3em 0 #450a0a, 0 .5em 1.2em rgba(220, 38, 38, .45); --gs-h: 0 .34em 0 #450a0a, 0 .7em 1.5em rgba(220, 38, 38, .6); --gs-a: 0 .06em 0 #450a0a; }
+.btn-roll.gen-demon:hover { filter: brightness(1.15); }
