@@ -294,6 +294,80 @@
     { id: 'paint', name: 'Rainbow Paint', emoji: '🎨', price: 1800, desc: 'Thick oil paint on a canvas, one rainbow color per digit, each brushed on with a stroke; great rolls paint a rainbow over the card', idea: 'finnnnn' },
     // Idée de finnnnn (2026-10-21) : « make a grass skin for all the no lifes ». Des chiffres tondus dans une pelouse.
     { id: 'grass', name: 'Touch Grass', emoji: '🌱', price: 1500, desc: 'Digits mowed into a fresh striped lawn; clippings fly, daisies pop up on good rolls, and Mythic rolls bring butterflies and a little lawn mower. Go outside after', idea: 'finnnnn' },
+    // ==== Skins du 2026-11-05, lot 4 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de finnnnn (2026-10-22) : « make an obsidian skin or something really strong ». Du verre volcanique taillé.
+    { id: 'obsidian', name: 'Obsidian', emoji: '🖤', price: 2200, desc: 'Polished volcanic glass: every digit is knapped out of the black stone with a sharp crack, and Mythic rolls split it with violet energy', idea: 'finnnnn' },
+    // Idée de R77 (2026-10-22) : une écurie, de la paille partout, le rouge et le brun d'une grange.
+    { id: 'stable', name: 'Horse Stable', emoji: '🐴', price: 1900, desc: 'A red barn door with hay everywhere: every digit lands with a clop and a horseshoe, horses poke their heads over the door on good rolls, and Mythic rolls bring a gallop', idea: 'R77' },
+    // Idée de jjcoolcid1 (2026-10-22) : des billes lancées contre des caisses ou des tonneaux qui éclatent et montrent le
+    // chiffre (sa propre version, sans oiseaux : la règle des marques).
+    { id: 'crates', name: 'Crate Smash', emoji: '📦', price: 1800, desc: 'Every digit hides in a wooden crate or barrel until a thrown ball smashes it open; Mythic rolls bring a barrage of colored balls', idea: 'jjcoolcid1' },
+    // Idée de yukitsunodaiscool (2026-10-22) : une grue lâche des briques sur les chiffres ; dès Mythic, une démolition.
+    { id: 'crane', name: 'Construction', emoji: '🏗️', price: 2000, desc: 'A crane drops every brick digit onto the site in a cloud of dust; Mythic rolls end in a big demolition', idea: 'yukitsunodaiscool' },
+    // ==== Skins du 2026-11-05, lot 5 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de KMC (2026-10-22) : « a carnival robotic horse that goes across the numbers as you roll ». Un manège.
+    { id: 'carousel', name: 'Carousel', emoji: '🎠', price: 1900, desc: 'A fairground carousel: gilded digits bob like horses on their poles, a carousel horse rides across the top, and Mythic rolls set the whole ride spinning', idea: 'KMC' },
+    // Idée de Dylanrulez123 (2026-10-23) : « a void reaper ». Une silhouette encapuchonnée du vide, sans faux (pas d'armes).
+    { id: 'reaper', name: 'Void Reaper', emoji: '💀', price: 2600, desc: 'A hooded shadow of the void watches your roll: every digit is a soul it sends down, and Mythic rolls spread its cloak while souls circle your number', idea: 'Dylanrulez123' },
+    // Idée de leo (2026-10-24) : « also cyber punk ». Néon, pluie et glitch.
+    { id: 'cyber', name: 'Cyberpunk', emoji: '🌃', price: 2200, desc: 'Glitching neon digits in a rainy city; every digit snaps in through a glitch, and great rolls light up the skyline and the neon signs', idea: 'leo' },
+    // Idées de casmicgraything (2026-10-24 : un projecteur par chiffre, les lumières qui s'affolent dès Mythic ; 2026-10-29 :
+    // une scène, un rideau rouge, un grand projecteur final, des fleurs sur Mythic, des choux et un « BOO » sur un raté).
+    { id: 'stage', name: 'Stage', emoji: '🎭', price: 2400, desc: 'The curtain opens and a spotlight lands on every digit, then on the whole number; Mythic rolls bring golden light and roses, and bad rolls get cabbages and a BOO', idea: 'casmicgraything' },
+    // ==== Skins du 2026-11-05, lot 6 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de finnnnn (2026-10-24) : des notes autocollantes qui se plaquent sur chaque chiffre.
+    { id: 'sticky', name: 'Sticky Notes', emoji: '🗒️', price: 1200, desc: 'Every digit is scribbled on a sticky note that slaps onto a cork board and gets pinned; great rolls cover the wall in notes', idea: 'finnnnn' },
+    // Idée de finnnnn (2026-10-25) : une pièce souvenir aplatie, ovale, avec un animal.
+    { id: 'souvenir', name: 'Souvenir Coin', emoji: '🪙', price: 1500, desc: 'A pressed souvenir penny: every digit is stamped into the copper oval by the crank press, and a golden dolphin jumps on Mythic rolls', idea: 'finnnnn' },
+    // Idée de Gray alt (2026-10-26, il proposait 7 000 pièces) : un canard en caoutchouc doré dans un trou noir miniature ;
+    // l'espace se courbe et, à la fin, le canard fait coin-coin et la réalité bugue. Legendary.
+    { id: 'ducksing', name: 'Duck Singularity', emoji: '🦆', price: 7000, desc: 'A golden rubber duck orbits a tiny black hole that bends your digits; when the number lands the duck quacks and reality glitches', premium: true, idea: 'Gray alt' },
+    // Idée de finnnnn (2026-10-26) : chaque anneau du mille-pattes rampe jusqu'à son chiffre.
+    { id: 'centipede', name: 'Centipede', emoji: '🐛', price: 1600, desc: 'Every digit is a body segment that crawls into place while the centipede\'s head leads the way; on Mythic rolls a giant one wraps around the card', idea: 'finnnnn' },
+    // ==== Skins du 2026-11-05, lot 7 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée d'IXOLAF2 (2026-10-26) : un crayon couché, les chiffres gravés dessus.
+    { id: 'pencil', name: 'Pencil', emoji: '✏️', price: 1200, desc: 'A yellow pencil lying sideways with every digit stamped in gold foil; shavings fly from the sharpener, and great rolls get scribbled around', idea: 'IXOLAF2' },
+    // Idées de DandoriNinja (2026-10-27) : « Pomeranian Overload », 19 poméraniens nains, un frisbee par chiffre, ils
+    // sautent de joie à la fin, avec des os et des balles de tennis.
+    { id: 'pom', name: 'Pomeranians', emoji: '🐶', price: 2000, desc: 'Nineteen teacup Pomeranians chase a frisbee to every digit, then all jump for joy among bones and tennis balls', idea: 'DandoriNinja' },
+    // Idée de finnnnn (2026-10-27) : des chiffres rouges et un nuage d'électrons.
+    { id: 'atom', name: 'Atom', emoji: '⚛️', price: 2000, desc: 'Every digit is a red nucleus with electrons orbiting it; great rolls wrap the card in a giant atom and Mythic rolls start a chain reaction', idea: 'finnnnn' },
+    // Idée de mark (2026-10-27) : une sorcière lance une potion sur chaque chiffre. Il la voulait limitée pour Halloween,
+    // passé : skin normal. Witch's Brew (le chaudron) est un autre skin.
+    { id: 'witch', name: 'Witch', emoji: '🧙', price: 1800, desc: 'A witch on her broom throws a potion at every digit and it appears in a puff of purple smoke; Mythic rolls swirl green magic around the card', idea: 'mark' },
+    // ==== Skins du 2026-11-05, lot 8 (idées de joueurs planifiées par Sacha ; scènes dans js/skinfx.js) ====
+    // Idée de Jguz01 (2026-10-27) : la police et la couleur d'un téléviseur noir et blanc.
+    { id: 'tv', name: 'Black & White TV', emoji: '📺', price: 1300, desc: 'An old black and white TV: snow, a rolling picture and glowing phosphor digits; great rolls go ON AIR', idea: 'Jguz01' },
+    // Idée de sennybex1 (2026-10-30, il proposait 1 800 pièces) : un damier rouge et noir comme Chess.
+    { id: 'checkers', name: 'Checkers', emoji: '⛀', price: 1800, desc: 'Every digit is a red or black checker that jumps into place and captures a piece; Mythic rolls crown them all: KING ME!', idea: 'sennybex1' },
+    // Idée de G8_floppa (2026-10-28) : « a skin that says (my IQ) and then it shows the number ».
+    { id: 'iq', name: 'My IQ', emoji: '🧠', price: 1000, desc: 'Your number, written on a test sheet as MY IQ: the red pen circles it and grades it, and Mythic rolls get the GENIUS stamp', idea: 'G8_floppa' },
+    // Idée de Dylanrulez123 (2026-10-28) : un skin cornichon assorti au bouton Pickle. Identifiant « dill » : « pickle »
+    // est déjà l'identifiant du bouton (un skin et un bouton ne partagent jamais un identifiant).
+    { id: 'dill', name: 'Pickle', emoji: '🥒', price: 1200, desc: 'A bumpy pickle that matches the Pickle button: every digit squishes in with a splash of brine, and Mythic rolls are a BIG DILL', idea: 'Dylanrulez123' },
+    // lot 9 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'menagerie', name: 'Menagerie', emoji: '🐇', price: 1600, desc: 'A little map where animals wander around your number; the longer you play, the more of them come, and every digit brings a new one', idea: 'kingston' },
+    { id: 'cafe', name: 'Café', emoji: '☕', price: 1500, desc: 'A cup of espresso: a pitcher pours coffee to reveal every digit in milk foam, and Mythic rolls draw a rosetta', idea: '0casmictechthing' },
+    { id: 'sentinel', name: 'Robot Sentinel', emoji: '🤖', price: 2400, desc: 'A little robot on Mars traces every digit with its green scanner beam; on Mythic rolls it spins for joy and starts a light show', idea: 'costoroll' },
+    { id: 'jigsaw', name: 'Jigsaw', emoji: '🧩', price: 900, desc: 'Every digit is a puzzle piece that snaps into place with a click; great rolls scatter puzzle pieces everywhere', idea: 'number 1' },
+    // lot 10 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'lunar', name: 'Night Market', emoji: '🏮', price: 1777, desc: 'A Lunar New Year night market: a red lantern floats up for every digit, steam rises from the stalls, and great rolls fill the sky with lanterns and red envelopes', idea: 'number 1' },
+    { id: 'cinema', name: 'Old Cinema', emoji: '🎞️', price: 2000, desc: 'A silent movie on a big black and white screen: the film glitches to reveal every digit, and great rolls blow the projector apart into gears, springs and wires', idea: 'number 1' },
+    { id: 'plane', name: 'Plane', emoji: '✈️', price: 1400, desc: 'A little plane flies through a cloud for every digit; Mythic rolls get a loop-the-loop with colored smoke', idea: 'casmicgraything' },
+    { id: 'warp', name: 'Lightspeed', emoji: '🚀', price: 2400, desc: 'Every digit takes you faster through space; then you slow down by an alien planet full of UFOs, and Mythic rolls bring you HOME to Earth', idea: 'casmicgraything' },
+    // lot 11 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'zodiac', name: 'Zodiac', emoji: '♈', price: 2200, desc: 'Every digit raises two zodiac signs in the colors of their elements, all twelve by the end; Mythic rolls spin a glowing horoscope wheel', idea: 'casmicgraything' },
+    { id: 'chronos', name: 'Chronos', emoji: '🕰️', price: 2600, desc: 'Clocks orbit a cosmic galaxy and every digit sits on a spinning dial; then a great eye of numerals opens behind your number, and Mythic rolls turn back time', idea: 'casmicgraything' },
+    { id: 'sweeper', name: 'Tile Sweeper', emoji: '🚩', price: 1300, desc: 'A retro tile board: every digit is a tile that clicks open while the little face watches; Mythic rolls clear the whole board', idea: 'costoroll' },
+    { id: 'mimic', name: 'Mimic', emoji: '🪙', price: 2000, desc: 'Six treasure chests rattle on a pirate deck at dusk and open on gold digits; the last one has teeth, and on Mythic rolls they are all mimics', idea: 'costoroll' },
+    // lot 12 du 2026-11-05 (idées de joueurs planifiées)
+    { id: 'egg', name: 'Fried Egg', emoji: '🍳', price: 900, desc: 'Every digit is an egg that cracks into a sizzling pan and lands in the yolk; then the pan explodes into golden sparks', idea: 'Gray alt' },
+    { id: 'gridiron', name: 'Gridiron', emoji: '🏈', price: 1800, desc: 'A football field with its yard lines: a ball spirals onto every digit, and Mythic rolls score a TOUCHDOWN in red, white and blue confetti', idea: 'casmicgraything' },
+    { id: 'earth', name: 'Earth', emoji: '🌍', price: 2400, desc: 'The Earth spins behind your number while satellites orbit and rockets fly by; Mythic rolls launch every rocket at once', idea: 'casmicgraything' },
+    { id: 'amethyst', name: 'Amethyst', emoji: '💎', price: 2200, desc: 'Your digits shine through a purple crystal; when the roll ends, the stone glows in the color of its rarity and cracks', idea: 'JAKECisthebest' },
+    // lot 13 du 2026-11-05 (idées de joueurs planifiées, les dernières)
+    { id: 'balloon', name: 'Water Balloon', emoji: '🎈', price: 1200, desc: 'Every digit is a water balloon that bursts on the fence and the water forms your number; Mythic rolls start a water fight under a rainbow', idea: 'Niall' },
+    { id: 'cube', name: 'Puzzle Cube', emoji: '🟥', price: 1500, desc: 'Every digit is a colored sticker that turns into place while a little puzzle cube twists beside the card; Mythic rolls solve it', idea: 'Matthew' },
     // Infinity : jamais vendu, seulement tiré dans la caisse Premium (caseOnly : identifiant de la caisse), à une chance
     // fixe (chance : 0,5 %) au lieu du poids 1 / prix. Son prix ne sert qu'au rangement et à sa rareté (Legendary) ;
     // premium : signature animée, rangé avec les skins légendaires, jamais porté par un bot.

@@ -179,20 +179,71 @@ scenes: block "lot 1 du 2026-11-05" just before `function mount(` in `js/skinfx.
 - Note for future skins: the main roll card never has its own `data-tier`; the `.result` section has it from the start
   and `.neutral` hides it until the rarity reveal.
 
+**Lot 4 — `claude/skins-lot4`** (branched from lot 3; block "lot 4 du 2026-11-05" in `js/skinfx.js`):
+- `obsidian` Obsidian 🖤 2,200 — finnnnn [7ac4a115abd4]. `stable` Horse Stable 🐴 1,900 — R77 [988dcd01c381] (a
+  Farm wallpaper with a barn already exists; this one is about horses). `crates` Crate Smash 📦 1,800 — jjcoolcid1
+  [4bf26afedcb9] (balls thrown at crates and barrels; no birds, no slingshot). `crane` Construction 🏗️ 2,000 —
+  yukitsunodaiscool [f727644461a7] (Mythic: a demolition, dust and bricks).
+
 **Still to build** (in this order; ids in `ideas-planned-2026-11-05.md`):
-- Next: obsidian [7ac4a115abd4], horses/barn
-  [988dcd01c381], ball and crates [4bf26afedcb9], construction crane [f727644461a7], carnival robot horse
-  [93f869da718a], knuckle smashing a rock [5b5f29b0cc52], void reaper [9d067ec79413], cyberpunk [a7dba4706e5d],
-  spotlight [abe1d36527c4] + stage [610304ef1cdb], sticky notes [990feb185db6], souvenir coin [9112be331011], Duck
-  Singularity [96c078cbf980], centipede [5ff030cbb940], pencil [dcce6323beca], Pomeranians [4d0e7ba5b3ed]
-  [c9b3b2f47459], atom [b402f6ca6d8a], witch potion [35a850f4e8ba], black-and-white TV [81a45cb40646], checkers
-  [b71a59c908a7] (Chess exists: board in red/black), "my IQ" [78bc6f4f973b], pickle [6df5ef142466], animals that
-  spawn [4aa8530580c8], cafe [6804dcd7e33e], robot sentinel on Mars [055a03dcf2d5], puzzle pieces [2da86f4fdadb],
-  Lunar New Year night market [6cb1f4688a12], old cinema [dcab5d0c34cc], plane through clouds [2812b102f0fd],
-  lightspeed [2a72aa7dad04], zodiac [44322bde56ff], Chronos [2cd4d69c8b28], minesweeper-style tiles [2b9e53745d67],
-  mimic chests [c6da83a9d7bb], fried egg [5a933aa2e82f], American football [1bf863024c74], Earth with rockets
-  [9df2cb94ab37] (no laser battle: no weapons), amethyst [a92a400e42d6] (no copyrighted music), water balloon
-  [773ca9b1b6e4], puzzle cube [3518354c582f].
+**Lot 5 — `claude/skins-lot5`** (block "lot 5 du 2026-11-05" in `js/skinfx.js`): `carousel` Carousel 🎠 1,900 — KMC
+[93f869da718a]; `reaper` Void Reaper 💀 2,600 — Dylanrulez123 [9d067ec79413] (no scythe: no weapons); `cyber` Cyberpunk
+🌃 2,200 — leo [a7dba4706e5d]; `stage` Stage 🎭 2,400 — casmicgraything's spotlight [abe1d36527c4] and stage
+[610304ef1cdb] merged. **Not built:** HSI's knuckle smashing a rock [5b5f29b0cc52] is the existing Rock Smash skin
+(already HSI's idea, `rocksmash`): Sacha can mark it Done.
+
+**Lot 6 — `claude/skins-lot6`** (block "lot 6 du 2026-11-05" in `js/skinfx.js`): `sticky` Sticky Notes 🗒️ 1,200 —
+finnnnn [990feb185db6]; `souvenir` Souvenir Coin 🪙 1,500 — finnnnn [9112be331011]; `ducksing` Duck Singularity 🦆 7,000,
+Legendary — Gray alt [96c078cbf980] (the reveal plays the existing `quack` sound from the scene); `centipede` Centipede
+🐛 1,600 — finnnnn [5ff030cbb940].
+
+**Lot 7 — `claude/skins-lot7`** (block "lot 7 du 2026-11-05" in `js/skinfx.js`): `pencil` Pencil ✏️ 1,200 — IXOLAF2
+[dcce6323beca] (the card is clipped into a pencil shape, nothing leaves its box); `pom` Pomeranians 🐶 2,000 —
+DandoriNinja [4d0e7ba5b3ed] [c9b3b2f47459] (the second idea was an image I could not see); `atom` Atom ⚛️ 2,000 —
+finnnnn [b402f6ca6d8a]; `witch` Witch 🧙 1,800 — mark [35a850f4e8ba] (he wanted it limited for Halloween, which is over:
+normal skin; Witch's Brew is the cauldron one).
+
+**Lot 8 — `claude/skins-lot8`** (block "lot 8 du 2026-11-05" in `js/skinfx.js`): `tv` Black & White TV 📺 1,300 — Jguz01
+[81a45cb40646]; `checkers` Checkers ⛀ 1,800 — sennybex1 [b71a59c908a7]; `iq` My IQ 🧠 1,000 — G8_floppa
+[78bc6f4f973b]; `dill` Pickle 🥒 1,200 — Dylanrulez123 [6df5ef142466] (id `dill`: `pickle` is the button's id, and the
+tests forbid a skin and a button sharing one).
+
+**Lot 9 — `claude/skins-lot9`** (block "lot 9 du 2026-11-05" in `js/skinfx.js`): `menagerie` Menagerie 🐇 1,600 —
+kingston [4aa8530580c8] (2 animals at page load, one more every 40 s of the session, up to 24; each landed digit adds
+one); `cafe` Café ☕ 1,500 — 0casmictechthing [6804dcd7e33e] (Epic: a latte-art heart; Mythic and above: the rosetta);
+`sentinel` Robot Sentinel 🤖 2,400 — costoroll [055a03dcf2d5] (no weapons: the laser is a scanner beam and Mythic is a
+light show and a happy spin instead of blowing up the moon); `jigsaw` Jigsaw 🧩 900 — number 1 [2da86f4fdadb] (his price).
+
+**Lot 10 — `claude/skins-lot10`** (block "lot 10 du 2026-11-05" in `js/skinfx.js`): `lunar` Night Market 🏮 1,777 —
+number 1 [6cb1f4688a12] (his price); `cinema` Old Cinema 🎞️ 2,000 — number 1 [dcab5d0c34cc] (his price; the B&W TV
+skin is a different idea: this one is a projector, curtains and an exploding projector); `plane` Plane ✈️ 1,400 —
+casmicgraything [2812b102f0fd] (his Mythic fighter jet became an aerobatic stunt plane doing a loop: no military);
+`warp` Lightspeed 🚀 2,400 — casmicgraything [2a72aa7dad04] (every reveal shows the alien planet and UFOs, Mythic and
+above show Earth with a HOME!!! tag).
+
+**Lot 11 — `claude/skins-lot11`** (block "lot 11 du 2026-11-05" in `js/skinfx.js`): `zodiac` Zodiac ♈ 2,200 —
+casmicgraything [44322bde56ff] (two signs per digit, by slot: the six digits show the twelve signs); `chronos` Chronos 🕰️
+2,600 — casmicgraything [2cd4d69c8b28]; `sweeper` Tile Sweeper 🚩 1,300 — costoroll [2b9e53745d67] (generic name, no
+brand; **no mines**: on Mythic the other tiles burst open into flags and numbers instead of turning into mines);
+`mimic` Mimic 🪙 2,000 — costoroll [c6da83a9d7bb] (new `coins` sound in `js/sound.js` for the rattling chests; the
+Mythic "all chests turn into mimics" is CSS, read from the section's `data-tier` once the card is not `.neutral`).
+
+**Lot 12 — `claude/skins-lot12`** (block "lot 12 du 2026-11-05" in `js/skinfx.js`): `egg` Fried Egg 🍳 900 — Gray alt
+[5a933aa2e82f] (his price); `gridiron` Gridiron 🏈 1,800 — casmicgraything [1bf863024c74] (generic: no league or team
+names or logos; the "player doing a touchdown" is the TOUCHDOWN! title and confetti from both goalposts); `earth` Earth
+🌍 2,400 — casmicgraything [9df2cb94ab37] (**no laser battle**: on Mythic every rocket launches and the satellites send
+each other colored signals); `amethyst` Amethyst 💎 2,200 — JAKECisthebest [a92a400e42d6] (**no music**: the song he
+asked for is copyrighted; the rarity color comes from `--t-accent` once the card is not `.neutral`).
+
+**Lot 13 — `claude/skins-lot13`** (block "lot 13 du 2026-11-05" in `js/skinfx.js`): `balloon` Water Balloon 🎈 1,200 —
+Niall [773ca9b1b6e4]; `cube` Puzzle Cube 🟥 1,500 — Matthew [3518354c582f] (generic name and look, no brand).
+
+**The planned skin list is done** (lots 1–13, PRs #79 to #101, stacked: merge them in order). Not built as new skins:
+HSI's rock smash [5b5f29b0cc52] (it is the existing Rock Smash skin, already his idea). Adapted to the rules (noted in
+each lot above and in the PRs): no weapons (Void Reaper without a scythe, Robot Sentinel's scanner beam, Earth's
+signals instead of lasers, Tile Sweeper without mines), no military (Plane's stunt plane instead of a fighter jet), no
+brands (Gridiron, Tile Sweeper, Puzzle Cube), no copyrighted music (Amethyst). Sacha can mark all of these
+ideas Added once the PRs are merged.
 
 ## Player ideas, features-misc group (2026-11-05, branch `claude/ideas-features-misc-2b38b0`)
 
