@@ -1851,6 +1851,140 @@
   };
 
   /* ---------------------------------------------------------------------------------------------------------------
+   * ☯️ Yin and Yang (idée de MAYO, 2026-11-06, légendaire) : « le symbole qui tourne et les couleurs qui se mélangent ;
+   * un fond légendaire qui irait avec l'animation Yin and Yang » (le skin de kaz), d'après son image : un grand taiji
+   * lumineux dans une fumée noire et blanche qui tourbillonne. Le taiji tourne lentement sur le côté (en bas en portrait),
+   * des bras de fumée en spirale partent de son bord, et des volutes noires et blanches tournent autour en changeant de
+   * couleur selon leur côté du symbole : le blanc se mêle au noir. Sombre : de la fumée lumineuse dans la nuit ; clair :
+   * de l'encre sur du papier. Réactions (fond légendaire) : à partir de Rare, un anneau de la couleur de la rareté part
+   * du symbole et la fumée accélère ; à partir de Mythic, le noir et le blanc s'échangent dans un demi-tour (comme le
+   * skin) ; Infinite fait tout cela en arc-en-ciel.
+   */
+  SCENES.taiji = layer => {
+    const R = Math.random, TAU = Math.PI * 2;
+    let G = {}, smoke = [], rot = 0, boost = 0, puff = 0, inv = false, swap = null, rings = [], spr = null;
+    // une volute de fumée : un disque flou peint une fois, blanc ou noir
+    const blob = rgb => { const c = doc.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), gr = g.createRadialGradient(48, 48, 0, 48, 48, 48); gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(.45, `rgba(${rgb},.55)`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, 96, 96); return c; };
+    const WHITE = blob('255,255,255'), BLACK = blob('0,0,0');
+    // le taiji peint une fois (et sa version inversée), avec son halo et de la fumée dans chaque moitié
+    function taiji(r, D, flip) {
+      const pad = r * .45, n = Math.ceil((r + pad) * 2), c = doc.createElement('canvas'); c.width = c.height = n;
+      const g = c.getContext('2d'), o = n / 2, W = flip ? '#060607' : '#f4f4f5', K = flip ? '#f4f4f5' : '#060607', rs = seeded(flip ? 31 : 13);
+      const halo = g.createRadialGradient(o, o, r * .9, o, o, r + pad); halo.addColorStop(0, D ? 'rgba(255,255,255,.55)' : 'rgba(10,10,12,.35)'); halo.addColorStop(.25, D ? 'rgba(226,232,240,.18)' : 'rgba(10,10,12,.12)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = halo; g.fillRect(0, 0, n, n);
+      // le disque clair, puis la moitié sombre par-dessus (à droite, sa tête en haut)
+      ell(g, o, o, r, r); g.fillStyle = W; g.fill();
+      const yin = () => { g.beginPath(); g.arc(o, o, r, -Math.PI / 2, Math.PI / 2); g.arc(o, o + r / 2, r / 2, Math.PI / 2, -Math.PI / 2, true); g.arc(o, o - r / 2, r / 2, Math.PI / 2, -Math.PI / 2); g.closePath(); };
+      yin(); g.fillStyle = K; g.fill();
+      // de la fumée dans chaque moitié : des voiles de l'autre couleur, très légers, pour que ce ne soit pas un aplat
+      g.save(); ell(g, o, o, r, r); g.clip();
+      for (let i = 0; i < 26; i++) { const a = rs() * TAU, d = rs() * r, x = o + Math.cos(a) * d, y = o + Math.sin(a) * d, s = r * (.25 + rs() * .45); g.globalAlpha = .1 + rs() * .1; g.drawImage(x > o === !flip ? WHITE : BLACK, x - s, y - s, s * 2, s * 2); }
+      g.restore(); g.globalAlpha = 1;
+      // les deux points, et le bord lumineux (sombre) ou à l'encre (clair)
+      ell(g, o, o - r / 2, r * .14, r * .14); g.fillStyle = W; g.fill();
+      ell(g, o, o + r / 2, r * .14, r * .14); g.fillStyle = K; g.fill();
+      g.strokeStyle = D ? 'rgba(255,255,255,.9)' : 'rgba(10,10,12,.85)'; g.lineWidth = Math.max(1.5, r * .018); ell(g, o, o, r, r); g.stroke();
+      return c;
+    }
+    // un bras de fumée en spirale qui part du bord du taiji : un ruban qui s'affine et ondule
+    function arm(g, S, i, white, lag) {
+      const { cx, cy, r, ex } = G, base = (i + lag * .5) / G.arms * TAU + rot * .55 - lag * .35, L = [], Rr = [], N = 30, len = 2.6 + (i % 3) * .5 - lag * .6;
+      for (let k = 0; k <= N; k++) {
+        const q = k / N, th = q * len, d = r * (1.02 + th * .72 + Math.sin(th * 2.6 + S.T * .9 + i * 1.7) * .07), a = base + th * 1.2 + th * th * .16;
+        const x = cx + Math.cos(a) * d * ex, y = cy + Math.sin(a) * d, wdt = r * (.3 - lag * .12) * Math.sin(Math.PI * Math.min(1, q * 1.3 + .04)) * (1 - q * .7);
+        const nx = -Math.sin(a), ny = Math.cos(a);
+        L.push([x + nx * wdt, y + ny * wdt]); Rr.push([x - nx * wdt, y - ny * wdt]);
+      }
+      const D = S.dark, f = lag ? .5 : 1;
+      // une couleur qui s'efface vers la zone du texte du site (même centre que calm) : le texte gris reste lisible ; les
+      // dégradés sont gardés jusqu'au prochain layout (en créer 30 par image coûtait cher)
+      const fade = (rgb, a) => { const key = rgb + a; if (G.fades.has(key)) return G.fades.get(key); const portrait = S.H > S.W, x = S.W / 2, y = S.H * (portrait ? .38 : .32), rad = Math.max(S.W * (portrait ? .62 : .4), 280) * 1.15, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${rgb},${(a * .04).toFixed(3)})`); gr.addColorStop(.6, `rgba(${rgb},${(a * .3).toFixed(3)})`); gr.addColorStop(1, `rgba(${rgb},${a.toFixed(3)})`); G.fades.set(key, gr); return gr; };
+      g.beginPath(); L.forEach((p, k) => (k ? g.lineTo(...p) : g.moveTo(...p))); for (let k = Rr.length - 1; k >= 0; k--) g.lineTo(...Rr[k]); g.closePath();
+      g.fillStyle = white ? (D ? fade('241,245,249', .2 * f) : `rgba(255,255,255,${.7 * f})`) : (D ? `rgba(0,0,0,${.75 * f})` : fade('12,12,14', .2 * f));
+      g.fill();
+      // le bord éclairé, d'un seul côté : c'est lui qui fait la flamme
+      g.beginPath(); L.forEach((p, k) => (k ? g.lineTo(...p) : g.moveTo(...p)));
+      g.strokeStyle = D ? fade('255,255,255', (white ? .55 : .4) * f) : fade('12,12,14', (white ? .3 : .45) * f);
+      g.lineWidth = Math.max(1, r * .012); g.stroke();
+    }
+    const st = stage(layer, 'wyy', {
+      layout(S) {
+        const wide = S.W > S.H * 1.1, u = clamp(Math.min(S.W, S.H) / 100, 3.6, 11);
+        // le taiji à droite en paysage (le site est au milieu), en bas en portrait
+        G = wide ? { u, wide, cx: S.W * .8, cy: S.H * .56, r: Math.min(S.W * .15, S.H * .3), ex: 1.35, arms: 8 } : { u, wide, cx: S.W * .5, cy: S.H * .9, r: Math.min(S.W * .4, S.H * .17), ex: 1.1, arms: 6 };
+        spr = [taiji(G.r, S.dark, false), taiji(G.r, S.dark, true)]; G.fades = new Map();
+        const n = Math.round(clamp(S.W * S.H / 16000, 40, 75));
+        if (smoke.length !== n) smoke = Array.from({ length: n }, () => ({ a: R() * TAU, r0: 1.1 + Math.pow(R(), .8) * 4.2, ph: R() * TAU, sz: rnd(.35, .8), v: rnd(.7, 1.3), front: R() < .3 }));
+        calmEl(layer, S, S.dark ? '5,5,7' : '246,246,244', S.dark ? .62 : .94);
+      },
+      paint(S, g) {
+        if (S.dark) starfield(g, S.W, S.H, Math.round(S.W * S.H / 5000), 23, '226,232,240', .55);
+        else { const r = seeded(29); for (let i = 0; i < S.W * S.H / 6000; i++) { g.fillStyle = `rgba(20,20,24,${(.05 + r() * .08).toFixed(3)})`; ell(g, r() * S.W, r() * S.H, .5 + r(), .5 + r()); g.fill(); } }
+      },
+      update(S, dt) {
+        const sp = 1 + boost;
+        rot += dt * .28 * sp;
+        for (const p of smoke) p.a += dt * (.05 + .22 / p.r0) * p.v * sp;
+        boost = Math.max(0, boost - dt * boost * .6 - dt * .04);
+        puff = Math.max(0, puff - dt * .7);
+        if (swap && (swap.t += dt) > 1.4) { inv = !inv; swap = null; }
+        for (const w of rings) w.t += dt;
+        rings = rings.filter(w => w.t < 2.6);
+      },
+      draw(S, g) {
+        const D = S.dark, T = S.T, { cx, cy, r, ex } = G;
+        // les volutes : leur couleur dépend du côté du symbole où elles passent, elle change en tournant (le mélange)
+        const vol = front => {
+          const k0 = g.getTransform().a;
+          for (const p of smoke) {
+            if (p.front !== front) continue;
+            const d = r * (p.r0 + Math.sin(T * .17 + p.ph) * .3 + puff * .8), x = cx + Math.cos(p.a) * d * ex, y = cy + Math.sin(p.a) * d;
+            const s = r * p.sz * (.4 + p.r0 * .1) * (1 + puff * .3), q = 1 - .85 * quiet(S, x, y);
+            if (q < .08 || x < -s * 2 || x > S.W + s * 2 || y < -s || y > S.H + s) continue;
+            const wv = .5 + .5 * Math.sin(p.a - rot * .55 + p.ph * .4 + (inv ? Math.PI : 0));
+            const a = (front ? .5 : 1) * q * (D ? .3 : .22), tang = Math.atan2(Math.cos(p.a), -Math.sin(p.a) * ex);
+            g.setTransform(k0, 0, 0, k0, x * k0, y * k0); g.rotate(tang); g.scale(2.4, .7);
+            // une seule image quand la volute est presque toute blanche ou toute noire (ce sont de grandes images)
+            const aw = a * (D ? wv : wv * .5), ak = a * (1 - wv) * (D ? 1.4 : .7);
+            if (aw > .012) { g.globalAlpha = aw; g.drawImage(WHITE, -s, -s, s * 2, s * 2); }
+            if (ak > .012) { g.globalAlpha = ak; g.drawImage(BLACK, -s, -s, s * 2, s * 2); }
+          }
+          g.setTransform(k0, 0, 0, k0, 0, 0); g.globalAlpha = 1;
+        };
+        vol(false);
+        // les bras en spirale, blancs et noirs à tour de rôle (inversés après un échange)
+        for (const lag of [1, 0]) for (let i = 0; i < G.arms; i++) arm(g, S, i, (i % 2 === 0) !== inv, lag);
+        // le taiji : il tourne, et l'échange (Mythic+) le fait passer à sa version inversée dans un demi-tour
+        const k = swap ? ease(Math.min(1, swap.t / 1.2)) : 0, ang = rot + k * Math.PI, n = spr[0].width;
+        g.save(); g.translate(cx, cy); g.rotate(ang);
+        g.globalAlpha = 1 - k; g.drawImage(spr[inv ? 1 : 0], -n / 2, -n / 2);
+        if (k) { g.globalAlpha = k; g.drawImage(spr[inv ? 0 : 1], -n / 2, -n / 2); }
+        g.restore(); g.globalAlpha = 1;
+        vol(true);
+        // les anneaux des tirages (Rare+), de la couleur de la rareté ; Infinite en arc-en-ciel
+        for (const w of rings) {
+          const q = w.t / 2.6, rad = r * (1.05 + easeOut(q) * 3.2), a = (1 - q) * (1 - q);
+          g.lineWidth = r * (.1 - q * .07);
+          g.strokeStyle = w.hsl ? hslA(w.hsl[0], w.hsl[1], D ? Math.max(w.hsl[2], 60) : Math.min(w.hsl[2], 50), a * .85) : hslA(T * 120 + q * 200, 90, D ? 65 : 50, a * .85);
+          g.beginPath(); g.ellipse(cx, cy, rad * ex, rad, 0, 0, TAU); g.stroke();
+        }
+        // l'éclair de l'échange
+        if (swap && swap.t < .5) { const f = 1 - swap.t / .5, rad = r * 1.6, gr = g.createRadialGradient(cx, cy, 0, cx, cy, rad); gr.addColorStop(0, swap.c.replace('ALPHA', (.6 * f).toFixed(3))); gr.addColorStop(1, swap.c.replace('ALPHA', '0')); g.fillStyle = gr; g.fillRect(cx - rad, cy - rad, rad * 2, rad * 2); }
+      },
+      roll(S, tier, n, rank) {
+        if (!(rank >= 3)) return;
+        const hsl = tier === 'infinite' ? null : TIER_HUE[tier] || null;
+        boost = 1 + rank * .45; puff = Math.min(1, .3 + rank * .08);
+        rings.push({ t: 0, hsl });
+        if (rank >= 6 && !swap) swap = { t: 0, c: hsl ? hslA(hsl[0], hsl[1], Math.min(hsl[2], 85), 'ALPHA') : hslA(S.T * 120, 90, 75, 'ALPHA') };
+      },
+      stop() { const c = layer.querySelector(':scope > .wcalm'); if (c) c.remove(); },
+      debug(S, what) { if (what === 'mythic') st.roll('mythic', 1, 6); if (what === 'rare') st.roll('rare', 1, 3); if (what === 'infinite') st.roll('infinite', 1, 10); return { boost, inv, swap: !!swap }; },
+    });
+    return st;
+  };
+
+  /* ---------------------------------------------------------------------------------------------------------------
    * 🌋 Avernus (idée de qwertyuiop, 2026-10-27) : « une dimension infernale, mais plus orange / rouge clair ». Un monde
    * de volcans sous un ciel de fumée orangée : des pics d'obsidienne bordés de lumière, des rivières de lave qui coulent
    * (des reflets qui avancent le long du lit), un lac de lave, des braises qui montent, des îlots de roche qui flottent en

@@ -1,6 +1,18 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-06 by Claude (branch `claude/casino-chess`, merged with main after the bug reports sweep). Update this file at the end of every session.
+Last updated: 2026-11-06 by Claude (branch `claude/yinyang-wallpaper`). Update this file at the end of every session.
+
+## Yin and Yang wallpaper (2026-11-06, branch `claude/yinyang-wallpaper`)
+
+Sacha asked to add MAYO's idea `18232af08b12` (Nov 6, with a reference picture): a legendary background that goes with the
+Yin and Yang skin, "the symbol spinning and the colors mixing". Built as wallpaper `taiji` (the id `yinyang` is the skin),
+5,000 coins, `premium` (legendary, out of the wallpaper case, like 4th Dimension), `idea: 'MAYO'`. Scene `SCENES.taiji`
+in `js/wallfx.js`: the yin-yang turns on the right (bottom on phones), flame-like smoke arms with a lit edge spiral out of
+it, and black/white smoke streaks change colour depending on their side of the symbol. Rare+ rolls send a ring of the
+tier colour, Mythic+ swap black and white in a half-turn. Arms fade near the site text (the light theme's
+"Watch the trailer" contrast was borderline). `tools/wall-preview.mjs taiji:rare,mythic,infinite` passes (61 fps,
+~7–9 ms per frame in headless Firefox; 4th Dimension is ~3.5 ms). Not done: replying to MAYO and marking the idea done
+(needs Sacha's OK, then after the deploy).
 
 
 ## Casino chess (2026-11-06, branch `claude/casino-chess`)

@@ -564,6 +564,10 @@
     // tirages, donc premium, hors caisse. Les quatre autres sont des fonds normaux.
     // Idée de finnnnn : des formes qui se retournent dans la 4e dimension, des couleurs et des motifs qui changent.
     { id: 'fourthdim', name: '4th Dimension', emoji: '🌀', price: 4500, premium: true, idea: 'finnnnn', desc: 'A glowing tesseract turns inside out through the fourth dimension over shifting patterns; Rare+ rolls send a wave of their colour, and Mythic+ rolls flip it inside out' },
+    // Idée de MAYO (2026-11-06) : un fond légendaire assorti au skin Yin and Yang, d'après son image (le taiji qui tourne,
+    // le noir et le blanc qui se mélangent). Légendaire : il réagit aux tirages, donc premium, hors caisse. Id « taiji » :
+    // « yinyang » est l'identifiant du skin.
+    { id: 'taiji', name: 'Yin and Yang', emoji: '☯️', price: 5000, premium: true, idea: 'MAYO', desc: 'A glowing yin and yang turns slowly while black and white smoke swirls and mixes around it; Rare+ rolls send a ring of their colour, and Mythic+ rolls swap black and white' },
     // Idée de qwertyuiop : une dimension infernale, plutôt orange et rouge clair (un paysage, aucun symbole).
     { id: 'avernus', name: 'Avernus', emoji: '🌋', price: 1100, idea: 'qwertyuiop', desc: 'A volcanic dimension under orange smoke: rivers of lava flow, embers rise, rocks float and a lava geyser erupts now and then' },
     // Trois idées de jia jun : un pays en bonbons, un écran cassé, des liasses de billets (id « moneystacks » et
