@@ -4977,6 +4977,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await call(roll, { method: 'POST', body: { ...rn, name: 'Free Rename' } })).status, 200);
   assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'Renamer Two', 'un tirage ne renomme pas gratuitement');
   assert.equal(run([['GET', 'name:freerename']])[0].result, null, 'et ne réserve pas le nom');
+  // Créateur renommé (casmictechthing, 2026-11-05) : son ancien pseudo crédité reste à lui (ideaby), même si un autre le
+  // reprend ; sa vue « Your creations » le garde (state.ideaNames), sans jamais montrer d'id.
+  { const item = Shop.byId.get('hotdog'), was = item.idea, Lib = require(path.join(ROOT, 'api/_lib.js'));
+    item.idea = 'Renamer Two';
+    try {
+      run([['HINCRBY', `stats:${rn.playerId}`, 'bonus', 5000]]);
+      x = await setN('Renamer Three'); assert.equal(x.status, 200, JSON.stringify(x.body));
+      assert.equal(run([['HGET', 'ideaby', 'renamertwo']])[0].result, rn.playerId, 'pseudo crédité figé au changement');
+      const th = { playerId: 'd8'.repeat(8), secret: 'd9'.repeat(16) };
+      x = await call(nameApi2, { method: 'POST', body: { ...th, name: 'Renamer Two' } }); assert.equal(x.status, 200, 'un autre reprend l\'ancien pseudo');
+      assert.equal(await Lib.ideaAuthor('Renamer Two'), rn.playerId, 'la part reste au vrai créateur');
+      const st = (await call(shopApi, { url: `/api/shop?me=${rn.playerId}` })).body;
+      assert.ok(st.ideaNames.includes('renamertwo') && !JSON.stringify(st.ideaNames).includes(rn.playerId), 'ses créations, sans id');
+      assert.ok(!(await call(shopApi, { url: `/api/shop?me=${th.playerId}` })).body.ideaNames.includes('renamertwo'), 'pas pour celui qui a repris le pseudo');
+      const { backfill } = require(path.join(ROOT, 'tools/backfill-idea-authors.js'));
+      const before = run([['HGET', 'ideaby', 'renamertwo']])[0].result;
+      await backfill({ apply: true, log: () => {} });
+      assert.equal(run([['HGET', 'ideaby', 'renamertwo']])[0].result, before, 'le rattrapage ne remplace rien');
+      assert.ok(run([['GET', 'ideaby:ready']])[0].result, 'rattrapage marqué fait');
+    } finally { item.idea = was; }
+  }
 
   // 4. Prestige : stock limité, un par joueur, titre débloqué et équipé, eco out:prestige.
   const pr = { playerId: 'd6'.repeat(8), secret: 'd7'.repeat(16) };
@@ -7286,7 +7307,7 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   // 2. Bot d'entraînement : toujours un coup légal ; voit le mat en un, à tous les niveaux.
   const scholar = C.parse('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
   for (const lvl of [1, 2, 3]) assert.equal(C.uci(C.bestMove(scholar, lvl)), 'h5f7', `niveau ${lvl} : Dxf7#`);
-  assert.ok(C.moves(C.parse(C.START)).some(m => C.uci(m) === C.uci(C.bestMove(C.parse(C.START), 1))));
+  for (let k = 0; k < 20; k++) { const pick = C.uci(C.bestMove(C.parse(C.START), 1)); assert.ok(C.moves(C.parse(C.START)).some(m => C.uci(m) === pick), `coup légal (${pick})`); }
 
   // 3. Parties entre joueurs, par l'API (routage par api/shop.js).
   const mkP = (tag, nm, coins = 20000, rolls = 400) => { const id = tag.repeat(8), secret = (tag + 'f').repeat(11).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, 'bonus', coins], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };

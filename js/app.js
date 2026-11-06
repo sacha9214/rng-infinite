@@ -92,7 +92,15 @@
     set(n) { const el = document.getElementById('hdr-coins'); if (!el) return; el.hidden = !Store.player.name; el.querySelector('b').textContent = innerWidth <= 520 && n >= 10000 ? compact(n) : fmt(n); el.title = `${fmt(n)} coins`; },
     // Après un tirage (pièces gagnées) : une seule relecture, un peu après le dernier.
     soon(ms = 2500) { clearTimeout(this.timer); this.timer = setTimeout(() => this.refresh(), ms); },
-    refresh() { if (Store.player.name && !document.hidden) Online.shop().catch(() => {}); },
+    // Fond choisi dans un autre onglet ou sur un autre appareil (tayo, 2026-11-04) : rien ne le transmettait, il ne
+    // changeait qu'au rechargement. Cette relecture du solde (après un tirage, quand l'onglet revient) le reprend.
+    refresh() {
+      if (!Store.player.name || document.hidden) return;
+      Online.shop().then(st => {
+        if ((st.wall || '') === (Store.settings.wall || '') || document.documentElement.classList.contains('wall-trying')) return;
+        Store.setSetting('wall', st.wall || ''); paintWallpaper();
+      }).catch(() => {});
+    },
   };
   // Signale au serveur un cas anormal (compteur anonyme, une fois par nom et par visite) : voir api/site.js « evt ».
   const seenEvt = new Set();
@@ -105,10 +113,12 @@
     // navigateur n'envoie alors pas de requête de contrôle avant chaque appel (deux fois moins d'allers-retours).
     async attempt(base, pathname, options) {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 6000);
+      // timeout : 6 s par défaut ; plus pour l'historique complet (voir history).
+      const { timeout = 6000, ...rest } = options;
+      const timer = setTimeout(() => ctrl.abort(), timeout);
       try {
-        const headers = API_PLAIN && base === API_BASE ? (options.body ? { 'Content-Type': 'text/plain' } : {}) : { 'Content-Type': 'application/json' };
-        const res = await fetch(base + pathname, { ...options, signal: ctrl.signal, headers });
+        const headers = API_PLAIN && base === API_BASE ? (rest.body ? { 'Content-Type': 'text/plain' } : {}) : { 'Content-Type': 'application/json' };
+        const res = await fetch(base + pathname, { ...rest, signal: ctrl.signal, headers });
         // Le serveur est en train de redémarrer : la requête n'a pas été traitée, on peut la rejouer ailleurs.
         if (base && base === API_BASE && (res.status === 502 || res.status === 503)) throw Object.assign(new Error(`HTTP ${res.status}`), { unreached: true });
         // Corps lu en entier : coupé par le délai (AbortError) ou illisible, une réponse « 200 » n'est pas une réponse.
@@ -116,7 +126,7 @@
         const raw = await res.text();
         let body = {};
         try { body = raw ? JSON.parse(raw) : {}; } catch (e) { if (res.ok) throw new Error('Bad response from the server'); }
-        if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status, ...(body.locked ? { locked: true } : {}) });
+        if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status, ...(body.locked ? { locked: true } : {}), ...(Number.isFinite(body.wait) ? { wait: body.wait } : {}) });
         return body;
       } catch (err) {
         // Échec réseau (TypeError) : rien n'est arrivé au serveur. Un délai dépassé, lui, a pu être traité.
@@ -250,9 +260,11 @@
       return this.request('/api/name', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, name, src: (() => { try { return localStorage.getItem('rng-first-src') || ''; } catch (e) { return ''; } })() }) });
     },
     // Sans "add" : renvoie tout l'historique du compte (ou, avec since, les tirages faits après). Avec "add" : y verse ces tirages.
+    // Historique complet : jusqu'à 100 000 tirages (près de 2 Mo) ; 6 s ne suffisaient pas sur un réseau lent, la lecture
+    // était coupée sans rien dire et l'appareil restait à 0 tirage à chaque connexion (CrazyMiner22, 2026-11-05).
     history(add, fetchAll = true, since) {
       const p = Store.player;
-      return this.request('/api/history', { method: 'POST', body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll, ...(since ? { since } : {}), ...(Mode.hard ? { mode: 'hard' } : {}) }) });
+      return this.request('/api/history', { method: 'POST', timeout: !add && fetchAll && !since ? 45000 : 6000, body: JSON.stringify({ playerId: p.id, secret: p.secret, add, fetch: fetchAll, ...(since ? { since } : {}), ...(Mode.hard ? { mode: 'hard' } : {}) }) });
     },
   };
 
@@ -2152,7 +2164,7 @@
       Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
       if (data.name) Store.setPlayerName(data.name);
       closeModal();
-      const restored = await syncHistory().catch(() => 0);
+      const restored = await syncHistory().catch(retrySync);
       if (data.bonus) { toast(`🪙 +${data.bonus} coins for linking your Google account`, 5000, 'achv'); Sound.play('lock', { i: 5 }); if (Store.settings.coins != null) Store.setSetting('coins', Store.settings.coins + data.bonus); }
       else toast(`Signed in as ${data.email || 'your Google account'}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`);
       const next = afterGoogle;
@@ -2172,19 +2184,24 @@
   // compté que cet appareil connaît (since) ; l'historique entier (jusqu'à 100 000 tirages) une fois par jour et par
   // joueur, et à chaque connexion (nouvel identifiant : pas encore de date).
   const FULL_SYNC_MS = 86400000;
-  const fullKey = () => `histFull:${Store.player.id}${Mode.hard ? ":hard" : ""}`;
+  // Connexion dont l'historique n'a pas pu être lu (réseau lent) : on le dit et on réessaie, au lieu d'un compte qui
+  // semble vide (CrazyMiner22, 2026-11-05).
+  const retrySync = () => { toast('Your rolls are still loading, they will appear in a moment', 5000); setTimeout(() => syncHistory().catch(() => {}), 5000); return 0; };
+  const fullKey = (id = Store.player.id) => `histFull:${id}${Mode.hard ? ":hard" : ""}`;
   let syncing = null;
   function syncHistory() {
     if (!Store.player.google && !Store.player.name) return Promise.resolve(0);
     if (!syncing) {
+      // Joueur fixé au départ : s'il change pendant la lecture (connexion), ce n'est pas son historique complet.
+      const id = Store.player.id;
       syncing = (async () => {
         try {
-          let lastFull = 0; try { lastFull = Number(localStorage.getItem(fullKey())) || 0; } catch (e) { lastFull = 0; }
+          let lastFull = 0; try { lastFull = Number(localStorage.getItem(fullKey(id))) || 0; } catch (e) { lastFull = 0; }
           let since = 0;
           if (Date.now() - lastFull < FULL_SYNC_MS) for (let i = Store.rolls.length - 1; i >= 0; i--) if (!Store.rolls[i][3]) { since = Store.rolls[i][2]; break; }
           const mode = Mode.name;
           const server = await Online.history(undefined, true, since || undefined);
-          if (Mode.name !== mode) return 0; // mode changé pendant la lecture : ces tirages sont ceux de l'autre mode
+          if (Mode.name !== mode || Store.player.id !== id) return 0; // mode ou joueur changé pendant la lecture
           const part = !!(since && server.since === since); // un ancien serveur renvoie tout : traité comme une lecture complète
           const onServer = Store.rollSet(server.rolls);
           // Lecture partielle : on ne juge que les tirages nettement plus récents (une minute de marge, voir rollSet).
@@ -2193,7 +2210,7 @@
           const localOnly = Store.rolls.filter(r => r[2] > after && !r[3] && !onServer.has(r[0], r[2])).map(r => [r[0], r[2]]);
           const added = Store.mergeRolls(server.rolls, n => Engine.scoreOf(n));
           if (mode !== 'hard') for (let i = 0; i < localOnly.length; i += 2000) await Online.history(localOnly.slice(i, i + 2000), false);
-          if (!part) try { localStorage.setItem(fullKey(), String(Date.now())); } catch (e) { /* stockage bloqué : tout relire la prochaine fois */ }
+          if (!part) try { localStorage.setItem(fullKey(id), String(Date.now())); } catch (e) { /* stockage bloqué : tout relire la prochaine fois */ }
           // L'XP affiché ne compte que les tirages présents sur le compte : c'est le même total qu'au classement.
           const marked = Store.markOffline(onServer, undefined, undefined, after);
           if (added || marked) {
@@ -2329,7 +2346,7 @@
       Collection.built = false; // autre joueur : l'historique de l'appareil a pu être vidé (Store.setIdentity)
       Store.setPlayerName(data.name);
       closeModal();
-      const restored = await syncHistory().catch(() => 0);
+      const restored = await syncHistory().catch(retrySync);
       toast(`Signed in as ${data.name}${restored ? ` · ${plural(restored, 'roll')} restored` : ''}`, 3500, 'achv');
       route();
     } catch (err) { btn.disabled = false; toast([401, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
@@ -2375,6 +2392,25 @@
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
     { id: '2026-11-06-chess', date: 'Nov 6, 2026', en: ['♟️ New in the Casino: Chess (idea by Sacha)! Practice against the bot at 3 levels, for free. Or challenge a friend, post an open challenge, or share a game code, and bet 50 to 1,000 coins: the winner takes both bets, minus 5% for the house, and a draw gives the bets back. Clocks of 3+2, 5+3 or 10+0, draw offers, and friendly games without coins. Bets need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with poker'], fr: ['♟️ Nouveau au casino : les Échecs (idée de Sacha) ! Entraîne-toi gratuitement contre le bot, à 3 niveaux. Ou défie un ami, publie un défi ouvert à tous, ou partage un code de partie, et mise de 50 à 1 000 pièces : le gagnant prend les deux mises, moins 5 % pour la maison, et une nulle rend les mises. Pendules 3+2, 5+3 ou 10+0, propositions de nulle, et parties amicales sans pièces. Les mises demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec le poker'] },
+    { id: '2026-11-06-bugs', date: 'Nov 6, 2026', en: [
+      '💬 Chat: your message is cleared as soon as you press Send, so it no longer stays in the box (reported by Tumored)',
+      '🧭 The menu stays clickable during a roll, auto-roll too: open the Shop or the Casino any time, your roll is saved and shown in a message (reported by KMC and Stepa)',
+      '🤖 Auto-roll no longer says your account is rolling on another device when you come back from another page, and a Roll click during the short pause between two rolls now waits instead of doing nothing (reported by GamblrGod)',
+      '🖼️ Your wallpaper reacts to rolls made while you are on another page, and a wallpaper picked in another tab shows up without a refresh (reported by shadow2 and tayo)',
+      '🔐 Signing in on a new device with a big history: your rolls now finish loading on slow networks instead of showing 1 roll (reported by CrazyMiner22)',
+      '💡 Creators who change their name keep their items in "Your creations" and keep getting their 5% share (reported by casmictechthing)',
+      '⚔️ Duels: a player who left is no longer waited for, players who join mid-game no longer show negative points, and "Duel unavailable" now says the real reason (reported by 123, Jacksonw, Jguz01 and IXOLAF2)',
+      '♟️ The Chess skin\'s checkmate is no longer cut off at the top (reported by casmicgraything), Hard mode history shows the full rarity next to 10-digit numbers (Kag), and case keys always say which key they use (casmicgraything)',
+    ], fr: [
+      '💬 Chat : ton message est effacé dès que tu appuies sur Send, il ne reste plus dans la zone d\'écriture (signalé par Tumored)',
+      '🧭 Le menu reste cliquable pendant un tirage, auto compris : ouvre la Boutique ou le Casino quand tu veux, ton tirage est enregistré et affiché dans un message (signalé par KMC et Stepa)',
+      '🤖 Le tirage auto ne dit plus que ton compte tire sur un autre appareil quand tu reviens d\'une autre page, et un clic sur Roll pendant la courte pause entre deux tirages attend au lieu de ne rien faire (signalé par GamblrGod)',
+      '🖼️ Ton fond réagit aux tirages faits pendant que tu es sur une autre page, et un fond choisi dans un autre onglet apparaît sans recharger (signalé par shadow2 et tayo)',
+      '🔐 Connexion sur un nouvel appareil avec un gros historique : tes tirages finissent de se charger sur un réseau lent au lieu d\'afficher 1 tirage (signalé par CrazyMiner22)',
+      '💡 Les créateurs qui changent de pseudo gardent leurs objets dans « Your creations » et continuent de toucher leurs 5 % (signalé par casmictechthing)',
+      '⚔️ Duels : un joueur parti n\'est plus attendu, ceux qui arrivent en cours de partie n\'ont plus de points négatifs, et « Duel unavailable » donne maintenant la vraie raison (signalé par 123, Jacksonw, Jguz01 et IXOLAF2)',
+      '♟️ L\'échec et mat du skin Chess n\'est plus coupé en haut (signalé par casmicgraything), l\'historique du mode difficile montre toute la rareté à côté des nombres à 10 chiffres (Kag), et les clés de caisse disent toujours quelle clé elles utilisent (casmicgraything)',
+    ] },
     { id: '2026-11-05-skins-lot13', date: 'Nov 5, 2026', en: ['🎈 New skin: Water Balloon (1,200 coins, idea by Niall). Every digit is a water balloon that bursts and the water forms your number; a water fight on Mythic rolls', '🟥 New skin: Puzzle Cube (1,500 coins, idea by Matthew). Every digit turns into place like a cube face, and Mythic rolls solve the little cube'], fr: ['🎈 Nouveau skin : Water Balloon (1 200 pièces, idée de Niall). Chaque chiffre est un ballon d\'eau qui éclate et l\'eau forme ton nombre ; une bataille d\'eau sur les tirages Mythic', '🟥 Nouveau skin : Puzzle Cube (1 500 pièces, idée de Matthew). Chaque chiffre tourne jusqu\'à sa place comme la face d\'un cube, et les tirages Mythic résolvent le petit cube'] },
     { id: '2026-11-05-skins-lot12', date: 'Nov 5, 2026', en: ['🍳 New skin: Fried Egg (900 coins, idea by Gray alt). Every digit lands in an egg yolk in a sizzling pan, then golden sparks', '🏈 New skin: Gridiron (1,800 coins, idea by casmicgraything). A ball spirals onto every digit, and Mythic rolls score a TOUCHDOWN', '🌍 New skin: Earth (2,400 coins, idea by casmicgraything). The Earth spins behind your number among satellites, and Mythic rolls launch every rocket', '💎 New skin: Amethyst (2,200 coins, idea by JAKECisthebest). Digits shine through a purple crystal that glows in your rarity color and cracks'], fr: ['🍳 Nouveau skin : Fried Egg (900 pièces, idée de Gray alt). Chaque chiffre tombe dans un jaune d\'œuf dans une poêle qui grésille, puis des étincelles dorées', '🏈 Nouveau skin : Gridiron (1 800 pièces, idée de casmicgraything). Un ballon tombe en spirale sur chaque chiffre, et les tirages Mythic marquent un TOUCHDOWN', '🌍 Nouveau skin : Earth (2 400 pièces, idée de casmicgraything). La Terre tourne derrière ton nombre au milieu des satellites, et les tirages Mythic font décoller toutes les fusées', '💎 Nouveau skin : Amethyst (2 200 pièces, idée de JAKECisthebest). Les chiffres brillent à travers un cristal violet qui prend la couleur de ta rareté et se fend'] },
     { id: '2026-11-05-skins-lot11', date: 'Nov 5, 2026', en: ['♈ New skin: Zodiac (2,200 coins, idea by casmicgraything). Two zodiac signs per digit in their element colors, and a spinning horoscope wheel on Mythic rolls', '🕰️ New skin: Chronos (2,600 coins, idea by casmicgraything). Orbiting clocks, a dial under every digit, and an eye of numerals that opens behind your number', '🚩 New skin: Tile Sweeper (1,300 coins, idea by costoroll). Every digit is a tile that clicks open, and Mythic rolls clear the whole board', '🪙 New skin: Mimic (2,000 coins, idea by costoroll). Six treasure chests on a pirate deck; the last one bites, and on Mythic rolls they all do'], fr: ['♈ Nouveau skin : Zodiac (2 200 pièces, idée de casmicgraything). Deux signes du zodiaque par chiffre aux couleurs de leur élément, et une roue d\'horoscope sur les tirages Mythic', '🕰️ Nouveau skin : Chronos (2 600 pièces, idée de casmicgraything). Des horloges en orbite, un cadran sous chaque chiffre, et un œil de chiffres romains qui s\'ouvre derrière ton nombre', '🚩 Nouveau skin : Tile Sweeper (1 300 pièces, idée de costoroll). Chaque chiffre est une case qui s\'ouvre d\'un clic, et les tirages Mythic ouvrent tout le plateau', '🪙 Nouveau skin : Mimic (2 000 pièces, idée de costoroll). Six coffres au trésor sur un bateau pirate ; le dernier mord, et sur les tirages Mythic ils mordent tous'] },
@@ -3007,11 +3043,18 @@
     try { await send(); btn.textContent = window.RNGI18n ? window.RNGI18n.t('Reported') : 'Reported'; toast('Thanks, the message was reported', 2500, 'achv'); }
     catch (err) { btn.disabled = false; toast([404, 422, 429].includes(err.status) ? err.message : 'Unavailable right now, try again'); }
   }
+  // Pause du serveur entre deux tirages d'un compte (8 s × vitesse, api/roll.js), suivie ici (GamblrGod, 2026-11-04) :
+  // les tirages auto faits depuis une autre page repartaient après 1,8 s et se faisaient refuser ; revenu sur l'écran de
+  // tirage, deux refus d'affilée affichaient « already rolling on another device » avec un seul onglet, et un clic sur
+  // Roll pendant cette pause était perdu.
+  const RollGate = { at: 0 };
+  const rollWait = () => Math.max(0, RollGate.at + Math.round(8000 * Shop.speedFactor(Store.settings.speedLv)) + 150 - Date.now());
   function scheduleSoloAuto(delay) {
     BgTimer.clear(SoloAuto.timer);
     SoloAuto.timer = BgTimer.set(() => {
       if (!SoloAuto.on) return;
       if (AUTO_HALT.includes(currentView)) { stopSoloAuto(); return; }
+      { const gate = rollWait(); if (gate > 50) { scheduleSoloAuto(gate); return; } }
       // Onglet caché (demandé par Sacha, 2026-10-19) ou autre page du site (idée de kaz, 2026-11-01) : on continue sans
       // animation, voir bgSoloRoll ; une fenêtre ouverte sur une autre page n'arrête rien.
       if (document.hidden || !onRollPage()) { bgSoloRoll(); return; }
@@ -3040,17 +3083,19 @@
       rollPending = false;
       if (err.status !== 429) clientEvt('bg_error'); // 429 = pause du serveur pas finie : on réessaie, rien n'est perdu
       if (err.status === 403 || err.status === 409 || blockedRoll(err)) { stopSoloAuto(); if (blockedRoll(err)) toast(err.message, 6000); return; }
-      scheduleSoloAuto(err.status === 429 ? 1500 : 5000); return;
+      scheduleSoloAuto(err.status === 429 ? (err.wait || 1500) + 100 : 5000); return;
     }
     rollPending = false;
+    RollGate.at = Date.now();
     Collection.ensure();
     const n = online.n, a = analysis(n), fresh = a.earnedIds.some(id => !Collection.badges.has(id));
     HdrCoins.soon();
     Store.addRoll(n, a.total, online.t, false);
     Collection.add(Store.rolls[Store.rolls.length - 1], Store.rolls.length - 1);
     SessionRolls.bump();
-    // Page visible (autre page du site) : succès et quêtes comme un tirage normal.
-    if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
+    // Page visible (autre page du site) : succès et quêtes comme un tirage normal, et le fond réagit aussi au tirage
+    // (Aether, Infinity… ; shadow2, 2026-11-05 : rien ne bougeait pendant le tirage auto depuis une autre page).
+    if (!document.hidden) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); wallReact(a.tier, n); }
     if (noteBgRoll(n, a, online.t, fresh)) return;
     // Revenu sur l'écran de tirage pendant que ce tirage partait : il est montré dans le résumé, la suite reprend là.
     if (onRollPage() && !document.hidden) { flushAway(); scheduleSoloAuto(SOLO_PAUSE); return; }
@@ -3149,6 +3194,8 @@
     rollPending = true;
     const buttons = Array.from(document.querySelectorAll('#roll-btn, #r-again'));
     buttons.forEach(b => { b.disabled = true; });
+    // Pause du serveur pas finie (voir RollGate) : le clic attend la fin au lieu d'être refusé.
+    { const gate = rollWait(); if (gate) await new Promise(r => setTimeout(r, gate)); }
     let n, online = null;
     // Le serveur ne répond pas (réseau, délai dépassé) : on redemande deux fois le même tirage avant de renoncer.
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
@@ -3160,7 +3207,9 @@
           if (!Number.isInteger(r.n) || r.n < 0 || r.n > Engine.MAX_ROLL || (r.mode === 'hard') !== Mode.hard) throw new Error('Bad roll from the server');
           return r;
         } catch (err) {
-          if (err.status === 409 || err.status === 429 || err.status === 403 || err.status === 423 || attempt >= 2) throw err;
+          // 429 sur une nouvelle demande du même tirage : le premier essai est peut-être encore en cours sur le serveur, qui
+          // renverra ce tirage (nonce) une fois enregistré ; on réessaie au lieu de le perdre.
+          if (err.status === 409 || (err.status === 429 && !attempt) || err.status === 403 || err.status === 423 || attempt >= 2) throw err;
           if (!attempt) toast('The server is slow to answer, trying again…');
           await new Promise(resolve => setTimeout(resolve, 600 + 900 * attempt));
         }
@@ -3172,6 +3221,7 @@
     try {
       online = await asked;
       n = online.n;
+      RollGate.at = Date.now();
       SoloAuto.refused = 0;
       // Pièces relues à la fin de la révélation seulement : avant, le compteur montait pendant l'animation et trahissait
       // un bon tirage avant le 2e chiffre (kingston, 2026-10-21).
@@ -3182,8 +3232,9 @@
         // tire déjà dans un autre onglet ou sur un autre appareil. On le dit une fois par série au lieu de réessayer en
         // silence (« it presses the button but no number », MereTera ; « attend avant de démarrer », Sean ; tablettes
         // du lycée, LeSombre ; 2026-10-30).
-        if (++SoloAuto.refused === 2) toast('Auto-roll is waiting: your account is already rolling in another tab or on another device', 5000);
-        scheduleSoloAuto(1500); return; }
+        // Refus seulement compté quand la pause de ce compte vue d'ici était finie : c'est alors un autre onglet ou appareil.
+        if (!rollWait() && ++SoloAuto.refused === 2) toast('Auto-roll is waiting: your account is already rolling in another tab or on another device', 5000);
+        scheduleSoloAuto((err.wait || 1500) + 100); return; }
       // Réseau ou serveur qui hoquette (pas de réponse, 5xx) : l'auto-roll reste allumé et réessaie dans 5 s, au lieu de
       // s'éteindre et de laisser le joueur croire à un plantage (signalé par un joueur le 2026-10-16).
       if (SoloAuto.on && (!err.status || err.status >= 500)) {
@@ -3269,7 +3320,7 @@
     const index = Store.rolls.length - 1;
     Collection.add(Store.rolls[index], index);
     SessionRolls.bump();
-    if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); }
+    if (online) { noteAchievements(online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); HdrCoins.soon(300); wallReact(a.tier, n); }
     if (auto) { if (!noteBgRoll(n, a, online.t, fresh)) scheduleSoloAuto(SOLO_PAUSE); return; }
     const big = TIER_RANK[a.tier] >= TIER_RANK.mythic;
     toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, big ? 12000 : 5000, big ? 'achv' : '', () => openRollModal(index));
@@ -3405,8 +3456,10 @@
       if (revealed < slotCount) Sound.tick(revealed === slotCount - 1 ? { last: Math.min(8, 1 + Math.floor((8 * (performance.now() - lastFrom)) / lastWait)) } : {});
     }, 55);
     requestAnimationFrame(() => vignette.classList.add('on'));
-    // Menu verrouillé pendant la révélation : on ne peut pas aller voir le résultat ailleurs avant la fin.
+    // Pendant la révélation, seul le choix du mode attend la fin (body.locked). Le menu reste libre (KMC, Stepa,
+    // 2026-11-06) : avec le tirage auto, il était grisé 18 s sur 20 ; partir pendant la révélation passe par leave().
     document.body.classList.add('locked');
+    let rated = false; // la rareté est révélée (succès, quêtes et fond déjà notés)
 
     // 1. Chiffres de gauche à droite, chacun un peu plus lent que le précédent.
     const revealDigit = i => () => {
@@ -3468,6 +3521,7 @@
       // Menu rendu tout de suite (2026-10-30, « I can't roll » de GamblrGod, menus morts sur Chromebook) : si un effet de
       // skin, de fond ou de son plante plus bas, la page ne doit pas rester verrouillée jusqu'au tirage suivant.
       document.body.classList.remove('locked');
+      rated = true;
       card.classList.remove('neutral');
       card.removeAttribute('title');
       if (!reducedMotion) card.classList.add(TIER_RANK[a.tier] >= TIER_RANK.anomaly ? 'shake' : 'reveal-pulse');
@@ -3528,6 +3582,18 @@
       get finished() { return finished; },
       get canReroll() { return canReroll; },
       cancel() { timers.forEach(clearTimeout); clearInterval(spin); finished = true; document.body.classList.remove('locked'); Sound.stop(); if (skinFx) skinFx.stop(); },
+      // Parti sur une autre page pendant la révélation (KMC, Stepa, 2026-11-06) : le tirage est déjà enregistré ; on fait
+      // sans animation ce que la fin aurait fait, comme pour un tirage fait depuis une autre page (bgSoloRoll).
+      leave() {
+        if (finished) return;
+        this.cancel();
+        if (ctx.replay || !ctx.online) return;
+        if (!rated) { wallReact(a.tier, n); noteAchievements(ctx.online.achievements); QuestWatch.bump(questDelta(a.total, a.tier)); }
+        HdrCoins.soon(300);
+        if (!Mode.hard && ['divine', 'godlike', 'infinite'].includes(a.tier)) setHardOpen(true);
+        if (SoloAuto.on) { if (!noteBgRoll(n, a, ctx.online.t, !!(ctx.newIds && ctx.newIds.size))) scheduleSoloAuto(1800); } // compte, et arrêt sur la rareté
+        else if (!rated) toast(`🎲 Roll saved: ${a.str} (${cap(a.tier)}, ${fmt(a.total)} XP) · tap to see it`, 5000, '', () => openRollModal(ctx.index));
+      },
     };
   }
 
@@ -3669,7 +3735,7 @@
     const a = analysis(x.n);
     const reps = (Collection.seen.get(x.n) || []).length;
     return `
-      <div class="row" data-roll="${x.i}">
+      <div class="row${a.str.length > 7 ? ' long' : ''}" data-roll="${x.i}">
         <span class="idx">#${fmt(x.i + 1)}</span>
         <span><span class="num-card sm" data-tier="${x.tier}">${a.str}</span></span>
         <span class="mid">${tierPill(x.tier)}<span class="emojis">${a.groups.slice(0, 4).map(g => g.badge.emoji).join(' ')}</span>${reps > 1 ? `<span class="muted" style="font-size:.66rem" title="Rolled ${reps} times">×${reps}</span>` : ''}${x.off ? '<span class="offline-tag" title="Rolled while the server was unreachable: not counted on the leaderboard or in your lifetime XP">offline</span>' : ''}</span>
@@ -4661,8 +4727,9 @@
   function drawCreations(state) {
     const box = $('#shop-mine');
     if (!box) return;
-    const me = nameKey(Store.player.name);
-    const mine = me ? [...Shop.SKINS.filter(k => k.idea).map(k => ['skins', k]), ...Shop.WALLPAPERS.filter(w => w.idea).map(w => ['walls', w])].filter(([, x]) => nameKey(x.idea) === me) : [];
+    // Aussi les objets crédités à un ancien pseudo de ce joueur (state.ideaNames, casmictechthing, 2026-11-05).
+    const me = nameKey(Store.player.name), mineKeys = new Set([me, ...(state.ideaNames || [])].filter(Boolean));
+    const mine = [...Shop.SKINS.filter(k => k.idea).map(k => ['skins', k]), ...Shop.WALLPAPERS.filter(w => w.idea).map(w => ['walls', w])].filter(([, x]) => mineKeys.has(nameKey(x.idea)));
     box.hidden = !mine.length;
     if (!mine.length) return;
     box.innerHTML = `
@@ -4855,7 +4922,9 @@
       const id = b.dataset.caseFree, keys = state.keys || {};
       const k = [id, ...Object.keys(Shop.KEY_OPENS).filter(x => x !== id)].find(x => (Shop.KEY_OPENS[x] || []).includes(id) && keys[x] > 0);
       b.hidden = !k; b.dataset.key = k || '';
-      if (k) b.textContent = k === id ? `🔑 Open free (${keys[k]})` : `🔑 Use a ${Shop.caseById.get(k).name.replace(' Case', '')} key (${keys[k]})`;
+      // Toujours le nom de la clé utilisée : « Open free » sur la caisse Premium laissait croire à une clé de plus
+      // (casmicgraything, 2026-11-04).
+      if (k) b.textContent = `🔑 Use a ${Shop.caseById.get(k).name.replace(' Case', '')} key (${keys[k]})`;
     });
     if (cases) cases.onclick = e => {
       const free = e.target.closest('[data-case-free]');
@@ -9020,7 +9089,12 @@
   function roomError(err, retry) {
     if (err.status === 409) { askName(retry, '', `"${Store.player.name}" is already taken by another player. Pick a new name.`); return; }
     // 400 / 403 (pas de pseudo, exclu par l'hôte…) : la vraie raison, pas « Duel unavailable » (dylanbuckleyisjewish, 2026-10-30).
-    toast(err.status === 404 ? 'No duel with this code' : [400, 403, 422].includes(err.status) ? err.message : 'Duel unavailable right now, try again');
+    // « Duel unavailable » cachait tout le reste : trop de requêtes depuis le même réseau (429), compte suspendu (423),
+    // serveur trop lent à répondre, ou une erreur de la page. Le joueur voit maintenant la vraie raison, et les deux
+    // derniers cas sont comptés pour qu'on les voie (Jguz01 et IXOLAF2, 2026-11-04).
+    if (!err.status) clientEvt(err.name === 'AbortError' ? 'room_timeout' : 'room_js');
+    toast(err.status === 404 ? 'No duel with this code' : [400, 403, 422, 423, 429].includes(err.status) ? err.message
+      : err.name === 'AbortError' ? 'The server is slow to answer, try again' : 'Duel unavailable right now, try again');
   }
 
   // bots : nombre de bots pour une partie immédiate contre eux (0 = partie normale, on attend les joueurs).
@@ -9288,7 +9362,9 @@
     const d = Room.data, count = d.players.length;
     const wins = Array(count).fill(0), totals = Array(count).fill(0);
     d.rounds.slice(0, Room.shown).forEach(r => {
-      r.s.forEach((v, i) => { totals[i] += v; });
+      // Pas de nombre (arrivé en cours de partie, ou sorti) : -1 côté serveur, jamais compté, comme score() dans
+      // api/room.js. Additionné ici, un joueur arrivé après 13 manches affichait -13 (Jacksonw, 2026-11-01).
+      r.s.forEach((v, i) => { if (v > 0) totals[i] += v; });
       if (r.winner !== null) wins[r.winner]++;
     });
     return { wins, totals };
@@ -9535,7 +9611,9 @@
 
     const finished = d.status === 'done' && Room.shown === d.rounds.length && !Room.anim;
     { const q = $('#room-quit'); if (q) q.hidden = d.status !== 'playing'; }
-    const people = d.players.filter(p => !p.bot); // les bots sont toujours prêts : on ne compte que les humains
+    // Les bots sont toujours prêts : on ne compte que les humains. Un joueur sorti (🚪 left, ✕ removed) ne tire plus :
+    // le serveur ne l'attend pas, la page non plus (« Waiting for Sacha » après son départ, signalé par 123, 2026-11-04).
+    const people = d.players.filter(p => !p.bot && !p.out);
     const readyCount = people.filter(p => p.ready).length;
     const countdown = d.autoAt ? ` · starts by itself in ${Math.max(0, Math.ceil((d.autoAt - serverNow()) / 1000))} s` : '';
     let cta, hint = '';
@@ -9707,7 +9785,10 @@
     const d = Room.data, r = d.rounds[i];
     const stage = $('#room-stage');
     if (!stage) return;
-    const sides = r.n.map((n, j) => ({ n, s: r.s[j], a: analysis(n) }));
+    // Pas de nombre sur cette manche (arrivé après, ou sorti) : sa carte reste en « ? », sans rareté ni XP. analysis(null)
+    // donnait « 00null », un Anomaly et -1 XP (2026-11-06).
+    const none = r.n.map(n => n == null);
+    const sides = r.n.map((n, j) => ({ n, s: r.s[j], a: analysis(none[j] ? 0 : n) }));
     // 🎭 Farce du créateur : sur cette manche, la carte de la cible tourne et se pose, chiffre par chiffre et chez tout le
     // monde, sur le nombre choisi (rareté, XP, badges, confettis), puis reprend le vrai tirage avant l'annonce du gagnant.
     const real = sides.slice(), pk = d.prank && d.prank.round === i && d.players[d.prank.i] ? d.prank : null, faked = pk ? pk.i : -1;
@@ -9724,7 +9805,7 @@
     // ouvert sur History ne peut pas le montrer avant. Le serveur fait de même (queueReveal dans api/room.js).
     const mine = d.players.findIndex(p => p.me);
     const keepMine = () => {
-      if (mine < 0 || !real[mine] || Store.rolls.some(x => x[0] === real[mine].n && x[2] === r.t)) return;
+      if (mine < 0 || !real[mine] || none[mine] || Store.rolls.some(x => x[0] === real[mine].n && x[2] === r.t)) return;
       Collection.ensure();
       Store.addRoll(real[mine].n, real[mine].s, r.t);
       QuestWatch.bump(questDelta(real[mine].s, real[mine].a.tier));
@@ -9746,12 +9827,12 @@
     clearRoomFx();
     const roomFx = Room.fx = d.players.map((p, j) => {
       const skin = Shop.resolve(p.skin);
-      if (late || !cards[j] || !cards[j].offsetParent || (sides.length > FX_CARDS && !p.me)) return null;
+      if (late || none[j] || !cards[j] || !cards[j].offsetParent || (sides.length > FX_CARDS && !p.me)) return null;
       const o = { q: sides.length <= 2 ? 1 : .6 };
       return skin === 'owner' ? SkinFX.mount(cards[j].offsetParent, cards[j], '', { ...o, owner: true }) : SkinFX.mount(cards[j].offsetParent, cards[j], skin, o);
     });
     const spin = setInterval(() => {
-      slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = spinChar(cards[j]); });
+      slots.forEach((list, j) => { for (let k = revealed; k < slotCount; k++) list[k].textContent = none[j] ? '?' : spinChar(cards[j]); });
       if (!late && revealed < slotCount) Sound.tick({ soft: 1 });
     }, 55);
     const at = (ms, fn) => timers.push(setTimeout(fn, Math.max(0, r.revealAt - Room.offset + ms - Date.now())));
@@ -9760,6 +9841,7 @@
       if (k) clock += digitDelay(k - 1, slotCount) * pace * digitK;
       at(clock, () => {
         slots.forEach((list, j) => {
+          if (none[j]) return;
           list[k].textContent = padded[j][k];
           list[k].classList.remove('spinning');
           list[k].classList.add('revealed');
@@ -9778,6 +9860,7 @@
       sfx('reveal', size);
       roomFx.forEach((fx, j) => { if (fx) fx.reveal(sides[j].a.tier); });
       sides.forEach((x, j) => {
+        if (none[j]) { $(`#rm-${j}`).innerHTML = '<span class="muted">—</span>'; return; }
         cards[j].classList.remove('neutral', 'charging');
         cards[j].dataset.tier = x.a.tier;
         $(`#rm-${j}`).innerHTML = `${tierPill(x.a.tier)}<span class="ep-pill">0 XP</span>`;
@@ -10655,7 +10738,7 @@
 
   function route() {
     Avatars.load();
-    if (session && !session.finished) session.cancel();
+    if (session && !session.finished) session.leave();
     FX.clear();
     clearTimeout(lbTimer);
     stopRoom();
@@ -10814,14 +10897,17 @@
     },
     last() { return this.msgs.length ? this.msgs[this.msgs.length - 1].t : 0; },
     list() { return this.el.querySelector('.gc-list'); },
+    // Ce que le pied du chat affiche : il n'est redessiné que si ça change. Avant, chaque tirage (me.rolls) recréait le
+    // champ et le bouton Send, et un appui en cours sur Send se perdait, le texte restait (Tumored, 2026-11-06).
+    footKey(me) { return JSON.stringify(me && me.can ? ['can', genClass()] : me && [me.reason, me.mutedUntil, me.muteWhy, me.need, me.rolls]); },
     apply(d) {
-      const before = JSON.stringify(this.me);
+      const before = this.footKey(this.me);
       this.rev = d.rev; this.del = d.del; this.max = d.max || 200; if (d.editMs) this.editMs = d.editMs;
       { const on = this.el && this.el.querySelector('.gc-online'); if (on) { on.hidden = !Number.isInteger(d.online); if (!on.hidden) on.textContent = `🟢 ${fmt(d.online)} online`; } } // Thermonuclear Bomb, 2026-11-01
       if (this.open) { this.seen(d.rev); this.seenAt(d.me); this.dot(false); }
       if (d.me) this.me = d.me;
       { const ml = this.el && this.el.querySelector('.gc-modlink'); if (ml) ml.hidden = !(this.me && this.me.mod); } // page des Modérateurs (Sacha, 2026-11-01)
-      if (JSON.stringify(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
+      if (this.footKey(this.me) !== before || !this.el.querySelector('.gc-foot').childElementCount) this.drawFoot();
       if (JSON.stringify(d.pin || null) !== JSON.stringify(this.pin)) { this.pin = d.pin || null; this.drawPin(); }
       // Réactions (Sacha, 2026-11-02) : envoyées seulement quand elles ont changé (rxrev).
       const rxNew = d.rx && JSON.stringify(d.rx) !== JSON.stringify(this.rx);
@@ -10970,16 +11056,17 @@
       const input = this.el.querySelector('.gc-input'); if (!input || this.busy) return;
       const text = input.value.trim(); if (!text) return;
       this.busy = true; const btn = this.el.querySelector('.gc-send'); btn.disabled = true;
+      // Le message restait dans la zone d'écriture (Niall, randomguy, Jacksonw, Idkwhatnamemyself, 2026-11 ; encore
+      // Tumored, 2026-11-06) : le champ n'était vidé qu'au retour du serveur, et seulement s'il contenait encore
+      // exactement ce texte. Il est vidé dès l'envoi ; ce qui est tapé pendant l'envoi est le message suivant.
+      input.value = ''; this.fit(input);
       try {
         const d = await Online.global('gcSend', { text, since: this.last(), del: this.del, ...(this.reply ? { replyTo: this.reply.id } : {}) });
-        // Le message restait dans la zone d'écriture (Niall, randomguy, Jacksonw, Idkwhatnamemyself, 2026-11) : une
-        // actualisation du chat pendant l'envoi redessine le pied (drawFoot) avec un nouveau champ qui reprend le brouillon,
-        // et seul l'ancien champ, déjà retiré de la page, était vidé. On vide le champ affiché, s'il contient encore ce texte.
         this.apply(d);
-        const cur = this.el.querySelector('.gc-input') || input;
-        if (cur.value.trim() === text) { cur.value = ''; this.fit(cur); }
         this.list().scrollTop = this.list().scrollHeight; this.setReply(null); this.toggleEmoji(false);
       } catch (err) {
+        // pas envoyé : le texte revient, sauf si le joueur a déjà écrit autre chose
+        const cur = this.el.querySelector('.gc-input'); if (cur && !cur.value.trim()) { cur.value = text; this.fit(cur); }
         toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again', 4500); if (err.status === 403) this.poll();
         if (err.status === 404 && this.reply) this.setReply(null); // l'original vient d'être supprimé : le message reste à envoyer
       }

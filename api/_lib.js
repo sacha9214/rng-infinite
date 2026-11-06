@@ -331,6 +331,8 @@ async function claimName(playerId, name, opts = {}) {
     const oldKey = `name:${nameKey(previous)}`;
     const [oldOwner] = await redis([['GET', oldKey]]);
     if (oldOwner === playerId) writes.push(['DEL', oldKey]);
+    // L'ancien pseudo est crédité sur des objets : il reste à ce joueur pour sa part (voir ideaAuthor).
+    if (oldOwner === playerId && ideaNames().has(nameKey(previous))) writes.push(['HSETNX', IDEA_BY, nameKey(previous), playerId]);
   }
   await redis(writes);
   return true;
@@ -458,6 +460,20 @@ function rollSet() {
     },
   };
 }
+
+// Créateur d'un objet né d'une idée (champ idea de js/shop.js, un pseudo) : figé sur l'id du joueur dans le hash
+// ideaby (clé du pseudo → id) la première fois qu'il est trouvé, et au moment où il change de pseudo. Un créateur
+// renommé ne touchait plus sa part de 5 %, et celui qui reprenait son ancien pseudo la touchait à sa place
+// (casmictechthing, 2026-11-05). Les ids ne sont jamais envoyés aux joueurs (js/shop.js est public).
+const IDEA_BY = 'ideaby';
+async function ideaAuthor(idea) {
+  const key = nameKey(idea), [frozen] = await redis([['HGET', IDEA_BY, key]]);
+  if (frozen) return frozen;
+  const id = await findPlayer(idea);
+  if (id) await redis([['HSETNX', IDEA_BY, key, id]]);
+  return id;
+}
+const ideaNames = () => { const Shop = require('../js/shop.js'); return new Set([...Shop.SKINS, ...Shop.WALLPAPERS].filter(x => x.idea).map(x => nameKey(x.idea))); };
 
 // Nom → id. Les joueurs qui n'ont pas tiré depuis l'arrivée des noms uniques n'ont que le hash "names".
 async function findPlayer(name) {
@@ -929,7 +945,7 @@ async function flushDue(now = Date.now()) {
   }
 }
 
-module.exports = { wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll, BADGE_OWNERS, badgesKey,
+module.exports = { ideaAuthor, ideaNames, IDEA_BY, wallet, wallets, normalTierMin, HARD_LOCKED, hardOpen, checkHardOpen, hardEngine, engineOf, isHard, hardKey, HARD_MAX, hardPeriods, H_XP_LB, H_ROLLS_LB, H_WORST_LB, H_WORST_BEST, hardHistoryKey, hardBadgesKey, recordHardRoll, BADGE_OWNERS, badgesKey,
   bigKey, BIG_TIERS, LOBBY_CHECK_MS, lobbyCheck, eco, worstKeys, breathe, breather, WORST_LB, WORST_BEST,
   xpKey, XP_TTL, MED_LB, MED_MIN, medKey, medBucket, medHist, medPct, scoreAtPct,
   grantGoogleBonus, queueReveal, flushDue, PENDING_KEY, XP_LB, ROLLS_LB, weekQuestKey, WEEK_QUEST_TTL, lifetimeXp, lifetimeTotals, questKey, QUEST_TTL, SEEN_KEY, actKey, ACT_TTL, settleWager,
