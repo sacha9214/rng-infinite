@@ -1007,6 +1007,9 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
     assert.match(Shop.wallById.get('aether').desc, /ball of light/, 'Aether : la bille lumineuse (idée d\'Angelicide9)');
     const fd = Shop.wallById.get('fourthdim');
     assert.ok(fd && fd.premium && fd.idea === 'finnnnn' && fd.price === 4500 && !wpool.includes('fourthdim'), '4th Dimension : légendaire (il réagit aux tirages), hors caisse');
+    // Yin and Yang (idée de MAYO, 2026-11-06) : légendaire comme 4th Dimension ; l'id « taiji » ne doit pas être celui du skin
+    const yy = Shop.wallById.get('taiji');
+    assert.ok(yy && yy.premium && yy.idea === 'MAYO' && yy.price === 5000 && !wpool.includes('taiji') && Shop.byId.get('yinyang') && !Shop.byId.has('taiji'), 'Yin and Yang : fond légendaire, hors caisse, à côté du skin yinyang');
   }
   // Caisse de boutons (idée de shadow2, 2026-10-27) : un bouton vendu à part (BUTTONS) qui rejoint btns:<id>.
   const bcase = Shop.caseById.get('buttons');
