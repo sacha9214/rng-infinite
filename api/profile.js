@@ -2,7 +2,7 @@
 // Profil public d'un joueur, ouvert depuis le classement : ses meilleurs tirages et sa collection de badges.
 // Calculé à partir de son historique (hist:<id>), comme ses propres pages History et Badges ; le classement,
 // lui, ne compte que les tirages faits par le serveur. Ni l'identifiant ni la liste complète des tirages ne sortent d'ici.
-const { hardEngine, hardHistoryKey, hardBadgesKey, H_XP_LB, statsKey, breathe, breather, engine, redis, cleanName, findPlayer, historyKey, HISTORY_CAP, XP_LB, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
+const { hardEngine, hardHistoryKey, hardBadgesKey, H_XP_LB, statsKey, breathe, breather, engine, redis, cleanName, findPlayer, IDEA_BY, nameKey, historyKey, HISTORY_CAP, XP_LB, rollSet, readStats, Achievements, cors, send, flushDue } = require('./_lib');
 const Shop = require('../js/shop.js');
 // Totaux des profils déjà calculés (voir plus bas), par identifiant de joueur.
 const AGG = new Map();
@@ -78,7 +78,8 @@ module.exports = async (req, res) => {
     const lite = params.get('lite') === '1';
     const [meName] = lite && me ? await redis([['HGET', 'names', me]]) : [null];
     if (!name && !meName) return send(res, 400, { error: 'Missing player name' });
-    const id = meName ? me : await findPlayer(name);
+    // Ancien pseudo d'un créateur renommé (lien « Idea by » d'un objet) : son profil d'aujourd'hui (2026-11-06).
+    const id = meName ? me : (await findPlayer(name)) || (await redis([['HGET', IDEA_BY, nameKey(name)]]))[0];
     if (!id) return send(res, 404, { error: 'No player with this name' });
     // ?lite=1 (onglet Badges : mes succès et mon titre) : sans l'historique, qui peut prendre plusieurs secondes à
     // calculer pour un gros joueur ; le site abandonne au bout de 6 s (« Achievements unavailable », 2026-10-25).

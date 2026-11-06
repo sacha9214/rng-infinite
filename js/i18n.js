@@ -288,7 +288,7 @@
     '5 · Play for coins?': '5 · Jouer pour des pièces ?', 'Play for coins?': 'Jouer pour des pièces ?', 'optional': 'facultatif', 'No stake': 'Sans mise', 'Just for fun: nobody pays anything.': 'Juste pour le fun : personne ne paie rien.',
     '⚔️ Create the duel': '⚔️ Créer le duel', 'against bots': 'contre des bots', 'public': 'publique', 'private': 'privée', 'Less': 'Moins', 'More': 'Plus',
     'Against bots your rolls count as usual, but not duel wins, rivalries or duel achievements.': 'Contre des bots, tes tirages comptent comme d\'habitude, mais pas les victoires de duel, les rivalités ni les succès de duel.',
-    'Enter the 5-character duel code': 'Entre le code du duel (5 caractères)', 'No duel with this code': 'Aucun duel avec ce code', 'Duel unavailable right now, try again': 'Duel indisponible pour le moment, réessaie',
+    'Enter the 5-character duel code': 'Entre le code du duel (5 caractères)', 'No duel with this code': 'Aucun duel avec ce code', 'Duel unavailable right now, try again': 'Duel indisponible pour le moment, réessaie', 'The server is slow to answer, try again': 'Le serveur tarde à répondre, réessaie', 'Your rolls are still loading, they will appear in a moment': 'Tes tirages sont encore en chargement, ils vont apparaître dans un instant',
     // duel : salle
     '← Duel': '← Duel', 'Live duel': 'Duel en direct', 'each round goes to the highest roll': 'chaque manche va au plus gros tirage', 'duel rolls count on the leaderboard': 'les tirages de duel comptent au classement',
     'with bots: your rolls count, but not duel wins or rivalries': 'avec des bots : tes tirages comptent, mais pas les victoires ni les rivalités', 'Share invite': 'Partager l\'invitation', 'Duel invite': 'Invitation au duel',
@@ -1049,6 +1049,7 @@
     [/^⭐ Level ([\d,]+)$/, m => `⭐ Niveau ${m[1]}`],
     [/^Your level goes up with your lifetime XP \((.+) XP\)\. Every level gives coins, every 5 levels a 📦 Starter Case key, every 25 levels a 🎁 Premium Case key\.( You have rewards to claim on the home page!)?$/, m => `Ton niveau monte avec ton XP à vie (${m[1]} XP). Chaque niveau donne des pièces, tous les 5 niveaux une clé 📦 de Caisse Starter, tous les 25 une clé 🎁 de Caisse Premium.${m[2] ? ' Tu as des récompenses à réclamer sur l\'accueil !' : ''}`],
     [/^🔑 Open free \(([\d,]+)\)$/, m => `🔑 Ouvrir gratuitement (${m[1]})`],
+    [/^🔑 Use a (.+) key \(([\d,]+)\)$/, m => `🔑 Utiliser une clé ${m[1]} (${m[2]})`],
     [/^(.+) \/ (.+) XP · next level: \+([\d,]+) 🪙(?: and a (.) key)?$/, m => `${m[1]} / ${m[2]} XP · niveau suivant : +${m[3]} 🪙${m[4] ? ` et une clé ${m[4]}` : ''}`],
     [/^⭐ Level ([\d,]+)! \+([\d,]+) coins(?: and ([\d,]+) case keys? \(Shop, Cases tab\))?$/, m => `⭐ Niveau ${m[1]} ! +${m[2]} pièces${m[3] ? ` et ${m[3]} clé${s(m[3])} de caisse (Boutique, onglet Caisses)` : ''}`],
     [/^Quest streak: ([\d,]+) days?$/, m => `Série de quêtes : ${m[1]} jour${s(m[1])}`],

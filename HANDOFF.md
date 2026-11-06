@@ -1,6 +1,49 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (badges-hard branch, merged with main). Update this file at the end of every session.
+Last updated: 2026-11-06 by Claude (bug reports sweep, branch `claude/bug-reports-1106`). Update this file at the end of every session.
+
+## Bug reports sweep (2026-11-06, branch `claude/bug-reports-1106`)
+
+79 open bug reports were read. 29 were already fixed (Oct 30 / Nov 3 sweeps): marked done with a reply and the Bug
+Hunter point, sent on Sacha's OK. Fixed in this branch (each comment names the reporter):
+
+- **Chat text stays after Send** (Tumored, again after the Nov 3 fix): `GChat.apply` redrew the footer (new textarea
+  and Send button) on every roll because `me.rolls` changed, so a Send press could be lost. The footer now redraws
+  only when what it shows changes (`GChat.footKey`), and `send()` clears the box at once (text restored on failure if
+  the box is still empty).
+- **Menu greyed out during a roll** (KMC, Stepa): `body.locked` disabled the whole top bar until the rarity step
+  (18 s out of 20 with auto-roll). Now only the Normal/Hard switch waits. Leaving mid-reveal calls `session.leave()`
+  (route), which does what the end of the reveal would have done: wallpaper, achievements, quests, coins, Hard
+  unlock, and for auto-roll `noteBgRoll` + next roll; otherwise a "Roll saved" toast.
+- **False "already rolling on another device"** (GamblrGod): background auto-rolls retried after 1.8 s inside the
+  server's 8 s cooldown and got 429s. `RollGate` tracks the cooldown on the client (`rollWait()`), the server's 429
+  now returns `wait` (PTTL), refusals only count when the client thought the gate was open, a Roll click during the
+  pause waits, and a 429 on a nonce retry is retried (the server returns the stored roll).
+- **Wallpaper doesn't react** (shadow2): `wallReact` now also runs for background rolls (`bgSoloRoll`, `keepRollAway`).
+  **Wallpaper only after refresh** (tayo, not reproduced; likely two tabs): `HdrCoins.refresh` applies the server's
+  wallpaper when it differs.
+- **New device shows 1 roll** (CrazyMiner22): the full history download (up to 100k rolls, ~2 MB) was aborted by the
+  6 s request timeout and the error swallowed. `Online.attempt` takes a `timeout`; full history reads get 45 s; sign-in
+  shows "Your rolls are still loading…" and retries; `syncHistory` pins the player id so a sign-in during a sync can't
+  mark the new id as fully synced.
+- **Creator credit lost on rename** (casmictechthing): credit was the `idea:` name string. New hash `ideaby` (name key →
+  player id), frozen by `ideaAuthor` (api/_lib.js) on first payout and on rename (`claimName`); `payIdea` uses it, the
+  shop state returns `ideaNames` (name keys only, never ids) for "Your creations", and a profile looked up by an old
+  credited name opens the creator. One-off fill `tools/backfill-idea-authors.js` (job `idea-authors` in
+  `deploy/ovh/backfills.js`, flag `ideaby:ready`, runs by itself after deploy): the dry run on prod mapped 57 names,
+  including 0casmictechthing → casmictechthing, baby boy and BIGBOIJONER69 (Jguz01) whose owners renamed.
+- **Duels**: a player who left was still awaited in "Waiting for…" (123); `-1` (no number for a round) was added to
+  totals, giving -13 for a late joiner (Jacksonw); a missing number rendered "00null" + Anomaly; "Duel unavailable"
+  hid 429/423/timeouts/page errors (Jguz01, IXOLAF2; on 11-04/05 `max:room` reached 44 s and `r429:room` 1,141), now the
+  real reason shows and timeouts/page errors are counted (`room_timeout`, `room_js` client events).
+- **Visual**: Chess skin gets top margin on the roll page like Workshop (casmicgraything); Hard history rows widen the
+  number column (`.row.long`, Kag); the Premium case key button says "Use a Premium key" instead of "Open free"
+  (casmicgraything).
+
+Not bugs / need Sacha (answers not sent): Farm wallpaper credit is right (HSI's idea 2026-10-29, qwertyuiop's
+2026-10-30); Stepa's "daddy finger" account needs a recovery code; JUAN SEBASTIAN wrong sound pack, colt −9 coins,
+Edward skipped roll, Thermonuclear Bomb 💡 tab, Phong254 Celestial/Rare, PRISMA123 profile, Kag 4 vs 3 Godlikes need
+more details; ~15 "not a bug" answers from the Nov 3 sweep are still unsent.
 
 
 ## New badges: Hard-only pack, Quarter Epochs, Trilogy (2026-11-05, branch `claude/ideas-badges-hard-741d1c`)
