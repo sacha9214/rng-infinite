@@ -14332,3 +14332,55 @@ html[data-last-tier="infinite"], .num-card[data-tier="infinite"], [data-tier="in
 @keyframes cube-flip { to { transform: rotate(360deg); } }
 .room-stage.many .side-cube::before { animation: none; }
 @media (prefers-reduced-motion: reduce) { .side-cube::before { animation: none; } }
+
+/* ---------------------------------------------------------------- Échecs du casino (demandé par Sacha, 2026-11-06)
+   Plateau carré qui tient dans 320 px : 8 colonnes égales, pièces en glyphes Unicode (forme texte, jamais emoji),
+   blanches cerclées de noir, noires à reflet clair. Couleurs du bois en clair comme en sombre. */
+.ch-lobby .ch-open { display: grid; gap: .45rem; min-width: 0; }
+.ch-lobby .ch-open h4 { margin: 0; font-size: .95rem; }
+.ch-lobby .ch-open .panel-note, .ch-record { margin: 0; }
+.ch-record b { font-weight: 700; }
+.ch-game { display: grid; gap: .5rem; justify-items: center; min-width: 0; }
+.ch-game > * { width: 100%; max-width: 460px; min-width: 0; }
+.ch-player { display: flex; align-items: center; gap: .45rem; padding: .35rem .6rem; border-radius: .6rem; border: 1px solid var(--outline); background: var(--surface-dim); min-width: 0; }
+.ch-player b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ch-player.ch-turnon { border-color: rgba(245, 158, 11, .8); box-shadow: 0 0 0 1px rgba(245, 158, 11, .35); }
+.ch-dot { flex: none; width: .8rem; height: .8rem; border-radius: 50%; border: 1px solid #555; }
+.ch-dot-w { background: #fff; } .ch-dot-b { background: #1b1b1b; }
+.ch-clock { margin-left: auto; flex: none; font-size: 1.05rem; font-weight: 700; padding: .1rem .5rem; border-radius: .4rem; background: var(--surface); color: var(--prose); font-variant-numeric: tabular-nums; }
+.ch-clock.on { background: #1f2937; color: #fff; }
+.ch-clock.on.low { background: #b91c1c; }
+.ch-wrap { position: relative; }
+.ch-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); width: 100%; aspect-ratio: 1; border-radius: .4rem; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.ch-sq { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; padding: 0; border: 0; border-radius: 0; margin: 0; cursor: default; font-size: clamp(1.25rem, 8.6vw, 2.75rem); line-height: 1; color: inherit; -webkit-tap-highlight-color: transparent; }
+.ch-live .ch-sq { cursor: pointer; }
+.ch-l { background: #f0d9b5; } .ch-d { background: #b58863; }
+.dark .ch-l { background: #dcc49c; } .dark .ch-d { background: #a07651; }
+.ch-sq.ch-last { box-shadow: inset 0 0 0 100vmax rgba(255, 214, 10, .38); }
+.ch-sq.ch-sel { box-shadow: inset 0 0 0 100vmax rgba(34, 197, 94, .45); }
+.ch-sq.ch-chk { background-image: radial-gradient(circle, rgba(239, 68, 68, .95) 0%, rgba(239, 68, 68, .55) 45%, transparent 72%); }
+.ch-sq.ch-to::after { content: ''; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 83, 45, .45); pointer-events: none; }
+.ch-sq.ch-cap::after { content: ''; position: absolute; inset: 4%; border-radius: 50%; border: .3em solid rgba(20, 83, 45, .45); pointer-events: none; font-size: 10px; }
+.ch-pc { position: relative; z-index: 1; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif; font-variant-emoji: text; pointer-events: none; }
+.ch-pc.ch-w { color: #fff; text-shadow: 1px 0 0 #222, -1px 0 0 #222, 0 1px 0 #222, 0 -1px 0 #222, 1px 1px 0 #222, -1px -1px 0 #222, 1px -1px 0 #222, -1px 1px 0 #222, 0 2px 3px rgba(0, 0, 0, .35); }
+.ch-pc.ch-b { color: #1b1b1b; text-shadow: 0 0 1px rgba(255, 255, 255, .55), 0 2px 3px rgba(0, 0, 0, .3); }
+.ch-sq i { position: absolute; font-style: normal; font-size: clamp(.5rem, 2.2vw, .65rem); font-weight: 700; line-height: 1; pointer-events: none; }
+.ch-sq .ch-rk { top: 3px; left: 3px; } .ch-sq .ch-fl { bottom: 2px; right: 3px; }
+.ch-l i { color: #b58863; } .ch-d i { color: #f0d9b5; }
+.ch-promo { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); z-index: 3; display: flex; gap: .3rem; padding: .45rem; border-radius: .8rem; background: var(--surface); border: 1px solid var(--outline); box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+.ch-promo button { display: grid; place-items: center; width: 3.1rem; height: 3.1rem; padding: 0; border-radius: .5rem; border: 1px solid var(--outline); background: #f0d9b5; font-size: 2.3rem; cursor: pointer; }
+.ch-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .3rem .5rem; text-align: center; font-weight: 600; min-height: 1.6rem; }
+.ch-status.ch-over { display: grid; gap: .2rem; padding: .5rem; border-radius: .7rem; border: 1px solid var(--outline); background: var(--surface-dim); }
+.ch-status.ch-over > b:first-child { font-size: 1.15rem; }
+.ch-status.ch-over span { font-weight: 400; color: var(--prose); }
+.ch-check { color: #dc2626; }
+.ch-actions { justify-content: center; flex-wrap: wrap; }
+.ch-moves { list-style: none; margin: 0; padding: .4rem .6rem; display: flex; flex-wrap: wrap; gap: .15rem .8rem; max-height: 5.2rem; overflow-y: auto; font-size: .82rem; border-radius: .6rem; background: var(--surface-dim); }
+.ch-moves .ch-n { opacity: .55; }
+.ch-stakes { margin: 0; text-align: center; }
+.ch-offer { width: 100%; }
+@media (max-width: 420px) { .ch-promo button { width: 2.6rem; height: 2.6rem; font-size: 1.9rem; } }
+/* Mises et pendules du salon : « Amicale » en français élargit la rangée ; sur petit écran elle passe à la ligne. */
+.ch-lobby .seg { flex-wrap: wrap; max-width: 100%; }
+.ch-lobby .pkr-row .btn { max-width: 100%; }
+@media (max-width: 420px) { .ch-lobby .seg button { padding: .45rem .5rem; } }

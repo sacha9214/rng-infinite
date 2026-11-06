@@ -1,6 +1,45 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-06 by Claude (bug reports sweep, branch `claude/bug-reports-1106`). Update this file at the end of every session.
+Last updated: 2026-11-06 by Claude (branch `claude/casino-chess`, merged with main after the bug reports sweep). Update this file at the end of every session.
+
+
+## Casino chess (2026-11-06, branch `claude/casino-chess`)
+
+Sacha asked: "can you add a chess game in the casino where we can bet our money with bot or against player?". He agreed
+to this design on 2026-11-06 before it was built:
+
+- **Against the bot: practice only, no coins.** Anyone could copy moves from a free online chess engine and beat any bot
+  we can run, so any payout above the stake would be a coin farm (`house-audit` could never pass). The bot runs in the
+  browser (`Chess.bestMove` in `js/chess.js`): alpha-beta with piece-square tables, Easy (depth 1 + noise), Medium
+  (depth 2), Hard (~0.8 s of search). Take back and resign are allowed. The server has no bot action at all
+  (`house-audit` checks that `op: 'bot'` is refused).
+- **Against a player: server-held bets.** Stakes 0 (friendly), 50, 100, 250, 500, 1,000. The winner gets both stakes
+  minus 5% (`RAKE`); draw, cancelled challenge or game cancelled before both first moves: everyone gets their stake
+  back. Same guards as friend poker for bets (300 rolls, account 3 days old) and **the same daily cap**: chess stakes
+  are added to poker's `pkday:<day>` hash (2,500 coins a day across both). Friendly games only need the casino's 30 rolls.
+- **Finding a game**: challenge a friend (invite, alert in the friends poll like poker invites), an open challenge listed
+  in everyone's lobby (`cgopen`), or a private game code. A challenge is removed (stake back) if not accepted in 10 min,
+  or if its author stops polling for 45 s.
+- **Clocks** on the server: 3+2, 5+3, 10+0 (Fischer increment). The first move of each side has 30 s and uses no clock
+  time; no first move → game cancelled. A flag fall is detected on the next request or by the `pending` queue
+  (`{ chess: code }`, checked every minute). Time out against a lone king or king + one minor piece = draw.
+- **Rules**: `js/chess.js` is shared (UMD, `window.RNGChess` / `module.exports`): legal moves (castling, en passant,
+  promotion), SAN, checkmate, stalemate, 50 moves, threefold repetition, insufficient material. Perft is checked in
+  `tools/test-api.mjs` (start position, Kiwipete, positions 3 and 5).
+- **Server**: `api/_chess.js`, routed from `api/shop.js` (`action: 'chess'`, no new public file). Keys: `cg:<code>`
+  (game JSON, 1 day), `cgl:<code>` (lock), `cgs:<code>` (last poll per side), `cgp:<id>` (my game), `cginv:<id>`
+  (invites), `cgopen`, `cgstats` (owner totals: games, paid, friendly, pot, rake, `r:<reason>`). Player stats: `chW`,
+  `chL`, `chD` (all games), `gChess` (paid games, counted as casino rounds), `gBet`/`gWon`, and `Gamble.ledger(…,
+  'chess', …)` so the house page, casino leaderboard, quests and owner page see paid games. Friendly games stay out of
+  all casino counters. Account deletion is refused while a challenge or game is live.
+- **UI**: Casino → ♟️ Chess (`ch-` CSS classes; lobby reuses the poker lobby classes). Tap a piece, then a square; legal
+  squares are shown; promotion picker; clocks tick locally from the server's numbers; the move is drawn at once and the
+  server confirms. Pieces are Unicode glyphs forced to text presentation (no emoji pieces on phones).
+- **Tests**: "Échecs du casino" block at the end of `tools/test-api.mjs` (rules, bot, invites, payout, draw, abort,
+  first-move timeout, flag fall, double accept race, abandoned challenge, shared daily cap). `tools/audit/overlap-audit.mjs`
+  now also opens the chess lobby and a bot game.
+- **Not built (later if wanted)**: ratings, spectators, in-game chat, rematch button, the owner page does not show
+  `cgstats` yet.
 
 ## Bug reports sweep (2026-11-06, branch `claude/bug-reports-1106`)
 

@@ -70,6 +70,7 @@ async function busy(me, keys, now) {
     const s = t && t.status !== 'over' && (t.seats || []).find(x => x && x.id === me);
     if (s && s.cashed == null) throw refuse(409, 'Leave your poker table first, then try again');
   }
+  if (await require('./_chess').live(me)) throw refuse(409, 'Finish your chess game first, then try again');
   if (room) {
     const [h] = await redis([['HMGET', `room:${room}`, 'ended', 'settled']]);
     if (h && h[0] !== '1' && !h[1]) throw refuse(409, 'Leave your duel first, then try again in a minute');

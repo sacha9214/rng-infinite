@@ -1395,6 +1395,15 @@
     const x = fresh[fresh.length - 1];
     toast(`🃏 ${x.name} invites you to play poker · tap to join`, 7000, 'achv', () => { Gamble.tab = 'poker'; if (currentView === 'gamble') renderGamble(); else location.hash = '#/gamble'; });
   }
+  // Défi d'échecs d'un ami (api/_chess.js, 2026-11-06), lu avec la relève des cadeaux, comme les invitations au poker.
+  const chessSeen = new Set();
+  function announceChess(list) {
+    const fresh = list.filter(x => !chessSeen.has(x.code));
+    fresh.forEach(x => chessSeen.add(x.code));
+    if (!fresh.length || (currentView === 'gamble' && Gamble.tab === 'chess' && !(Gamble.ch && Gamble.ch.view === 'bot'))) return; // pendant une partie contre le bot, le salon n'est pas à l'écran
+    const x = fresh[fresh.length - 1];
+    toast(`♟️ ${x.name} challenges you to chess · tap to answer`, 7000, 'achv', () => { Gamble.tab = 'chess'; if (currentView === 'gamble') renderGamble(); else location.hash = '#/gamble'; });
+  }
   function announceBigRolls(rows) {
     if (!rows.length || Store.settings.friendAlerts === 'off') return;
     rows.forEach((r, i) => {
@@ -2382,6 +2391,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-06-chess', date: 'Nov 6, 2026', en: ['♟️ New in the Casino: Chess (idea by Sacha)! Practice against the bot at 3 levels, for free. Or challenge a friend, post an open challenge, or share a game code, and bet 50 to 1,000 coins: the winner takes both bets, minus 5% for the house, and a draw gives the bets back. Clocks of 3+2, 5+3 or 10+0, draw offers, and friendly games without coins. Bets need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with poker'], fr: ['♟️ Nouveau au casino : les Échecs (idée de Sacha) ! Entraîne-toi gratuitement contre le bot, à 3 niveaux. Ou défie un ami, publie un défi ouvert à tous, ou partage un code de partie, et mise de 50 à 1 000 pièces : le gagnant prend les deux mises, moins 5 % pour la maison, et une nulle rend les mises. Pendules 3+2, 5+3 ou 10+0, propositions de nulle, et parties amicales sans pièces. Les mises demandent 300 tirages et un compte de 3 jours, et partagent la limite de 2 500 pièces par jour avec le poker'] },
     { id: '2026-11-06-bugs', date: 'Nov 6, 2026', en: [
       '💬 Chat: your message is cleared as soon as you press Send, so it no longer stays in the box (reported by Tumored)',
       '🧭 The menu stays clickable during a roll, auto-roll too: open the Shop or the Casino any time, your roll is saved and shown in a message (reported by KMC and Stepa)',
@@ -5099,7 +5109,7 @@
   // depuis l'ouverture) et les dernières manches.
   // Relu toutes les 20 s tant que la page est affichée. Ma propre manche n'y apparaît qu'après 7 s : le bandeau ne doit
   // pas annoncer le résultat avant la fin de l'animation (roue, bille, cartes).
-  const GAME_ICONS = { poker: '🃏', crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
+  const GAME_ICONS = { chess: '♟️', poker: '🃏', crash: '🚀', mines: '💣', tower: '🗼', keno: '🎱', dice: '🎲', teddy: '🧸', duck: '🦆', wheel: '🌀', plinko: '🔻', roulette: '🎡', bj: '🃏', slots: '🎰', flip: '🪙' };
   let houseTimer = 0;
   async function drawHouse() {
     clearTimeout(houseTimer);
@@ -5153,7 +5163,7 @@
   }
   // Onglets des jeux du casino, dans l'ordre choisi par le joueur (idée de jia jun, 2026-10-24 : flèches ou glisser-
   // déposer en mode « Reorder », gardé dans Store.settings.casinoOrder). Un jeu ajouté plus tard se range à la fin.
-  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['poker', '🃏', 'Poker'], ['btc', '📈', 'Crypto']];
+  const G_TABS = [['crash', '🚀', 'Crash'], ['flip', '🪙', 'Coin flip'], ['mines', '💣', 'Mines'], ['tower', '🗼', 'Tower'], ['keno', '🎱', 'Keno'], ['dice', '🎲', 'Dice'], ['teddy', '🧸', 'Teddy Roulette'], ['duck', '🦆', 'Duck Race'], ['wheel', '🌀', 'Wheel'], ['plinko', '🔻', 'Plinko'], ['slots', '🎰', 'Slots'], ['roulette', '🎡', 'Roulette'], ['bj', '🃏', 'Blackjack'], ['poker', '🃏', 'Poker'], ['chess', '♟️', 'Chess'], ['btc', '📈', 'Crypto']];
   // « How to play » (idée d'Ann joe, 2026-10-27) : un petit « ? » à côté du nom de chaque jeu ouvre ses règles, écrites
   // pour des enfants : le but, comment jouer, ce que ça paie, les mises. Une phrase par entrée : chacune a sa traduction
   // exacte dans js/i18n.js. Les chiffres sont ceux du serveur (api/_gamble.js, api/_btc.js, api/_lever.js).
@@ -5174,6 +5184,8 @@
     bj: { goal: 'Get closer to 21 than the dealer, without going over.', how: ['Cards 2 to 10 count their number, J Q K count 10, an Ace counts 1 or 11.', 'Hit to take a card, Stand to stop, Double to double your bet for one last card.', 'The dealer draws until 17 or more.'], pays: ['Win: 2×. Tie: your bet comes back.', 'Blackjack (21 with your first two cards): 2.5×.', 'Lucky bonuses: 7-7-7, or 21 with 5 cards or more.'], bets: BETS_STD },
     // Poker (demandé par Sacha, 2026-11-03) : chiffres d'api/_poker.js et api/_holdem.js.
     poker: { goal: 'Make the best 5-card hand, or make the other player fold.', how: ['You get 2 cards only you can see. 5 shared cards come in the middle: 3, then 1, then 1.', 'Each round: Check, Bet or Raise, Call, or Fold (give up the hand).', 'At the end, the best 5 cards out of your 2 and the 5 shared ones win the pot.', 'Play the bot right away, or invite a friend: you each have 30 seconds to play.', 'With friends, up to 6 players can sit at one table.', 'Open tables: anyone can sit down, up to 6 players, bringing 20 to 100 big blinds.'], pays: ['The winner of each hand takes the pot, minus 5% for the house.', 'Leave whenever you like: you cash out the chips in front of you.', 'Hands from best to worst: royal flush, straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card.'], bets: 'Buy-ins from 100 to 5,000 coins, blinds 1% and 2% of the buy-in.' },
+    // Échecs (demandé par Sacha, 2026-11-06) : chiffres d'api/_chess.js.
+    chess: { goal: 'Checkmate the other king: attack it so it has no way to escape.', how: ['Tap one of your pieces, then one of the highlighted squares.', 'Practice with the bot at 3 levels: free, no coins.', 'Or challenge a friend, post an open challenge, or share a game code.', 'Each player has a clock: 3+2 means 3 minutes, plus 2 seconds after each move. If your clock runs out, you lose.', 'You can offer a draw, or resign.'], pays: ['Both players put in the same bet. The winner gets both bets, minus 5% for the house.', 'A draw, or a game cancelled before both players moved, gives everyone their bet back.', 'Friendly games are free: no coins to win or lose.'], bets: 'Bets from 50 to 1,000 coins against players. Bets need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with poker.' },
     btc: { goal: 'Buy crypto with coins and sell it when the price goes up.', how: ['The price is the real market price, live: 1 coin = 1 $.', 'Buy, wait, then sell: if the price went up, you get more coins back.', 'Leverage: bet on a rise (long) or a fall (short) with 2×, 3× or 5×.'], pays: ['Buying and selling each cost 1%.', 'With leverage, you can never lose more than your margin.'], bets: 'Trades from 10 to 50,000 coins. Game coins only: this is not real crypto.' },
   };
   function openHowTo(id) {
@@ -5346,6 +5358,10 @@
           <div class="panel g-game" data-game="poker">
             <div class="panel-head"><h3 class="panel-title">Poker</h3><span class="panel-note">Texas Hold'em · against the bot, your friends or anyone</span></div>
             <div id="pkr-body"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="panel g-game" data-game="chess">
+            <div class="panel-head"><h3 class="panel-title">Chess</h3><span class="panel-note">practice with the bot, or bet against a player</span></div>
+            <div id="ch-body"><div class="empty">Loading…</div></div>
           </div>
           <div class="panel g-game" data-game="btc">
             <div class="panel-head"><h3 class="panel-title">Crypto</h3><span class="panel-note">the real price, live · 1 coin = 1 $</span></div>
@@ -5803,6 +5819,299 @@
       if (op === 'leave' || op === 'next' || op === 'start') return pkrSend({ op }, b);
       if (['fold', 'check', 'call', 'raise'].includes(op)) return pkrSend({ op: 'act', move: op, ...(op === 'raise' ? { to: PKR.raise || (PKR.st.hand.op && PKR.st.hand.op.minTo) } : {}) }, b);
     });
+    // ---- échecs (demandé par Sacha, 2026-11-06) : contre le bot pour s'entraîner (sans pièces, tout se passe dans le
+    // navigateur avec js/chess.js), ou contre un joueur avec une mise (api/_chess.js : le serveur vérifie chaque coup,
+    // tient les pendules et paie). La page sonde la partie tant que l'onglet Échecs est ouvert.
+    const Chess = window.RNGChess;
+    const CH = Gamble.ch || (Gamble.ch = { stake: 0, tc: '5+3', level: 2, side: 'w', st: null, sig: '', timer: 0, tick: 0, busy: false, sel: -1, promo: null, at: 0, bot: null, view: 'lobby', friends: null, friendsAt: 0, seen: '' });
+    const chBody = $('#ch-body');
+    const CH_GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+    const CH_NAME = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
+    const chT = x => (window.RNGI18n ? window.RNGI18n.t(x) : x);
+    const chK = n => (n >= 1000 ? `${n / 1000}K` : String(n));
+    const chGlyph = (p, extra = '') => `<span class="ch-pc ch-${Chess.colorOf(p)}${extra}" aria-hidden="true">${CH_GLYPH[p.toLowerCase()]}︎</span>`;
+    const chClock = ms => { ms = Math.max(0, ms); if (ms < 10000) return (Math.floor(ms / 100) / 10).toFixed(1); const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+    // La partie à l'écran, bot ou joueur, sous une seule forme : position, mon camp, dernier coup, coups notés, fin.
+    function chGame() {
+      if (CH.view === 'bot' && CH.bot) {
+        const b = CH.bot;
+        return { kind: 'bot', s: b.s, me: b.me, last: b.ucis[b.ucis.length - 1] || null, sans: b.sans, over: b.over, mine: !b.over && b.s.turn === b.me && !b.thinking, names: { [b.me]: Store.player.name || 'You', [b.me === 'w' ? 'b' : 'w']: `Bot · ${chT(['Easy', 'Medium', 'Hard'][b.level - 1])}` } };
+      }
+      const st = CH.st;
+      if (!st || st.idle || st.status === 'wait' || !st.fen) return null;
+      const s = Chess.parse(st.fen), me = st.me || 'w';
+      return { kind: 'pvp', s, me, last: st.last, sans: st.moves || [], over: st.status === 'over' ? st.result : null, mine: st.status === 'play' && st.turn === me && !CH.busy, names: { w: st.players.w.name, b: st.players.b.name }, st };
+    }
+    function chBoardHTML(g) {
+      const { s, me, last } = g, legal = g.mine ? Chess.moves(s) : [];
+      const from = CH.sel, targets = new Map(legal.filter(m => m.from === from).map(m => [m.to, m]));
+      const lf = last ? Chess.sqOf(last.slice(0, 2)) : -1, lt = last ? Chess.sqOf(last.slice(2, 4)) : -1;
+      const chk = Chess.inCheck(s) ? s.b.indexOf(s.turn === 'w' ? 'K' : 'k') : -1;
+      const rows = me === 'w' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7], cols = me === 'w' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
+      let out = '';
+      rows.forEach((r, y) => cols.forEach((f, x) => {
+        const i = r * 8 + f, p = s.b[i], t = targets.get(i);
+        const cls = ['ch-sq', (r + f) % 2 ? 'ch-l' : 'ch-d', i === lf || i === lt ? 'ch-last' : '', i === from ? 'ch-sel' : '', t ? (t.x ? 'ch-cap' : 'ch-to') : '', i === chk ? 'ch-chk' : ''].filter(Boolean).join(' ');
+        const label = `${Chess.sqName(i)}${p ? ` ${Chess.colorOf(p) === 'w' ? 'white' : 'black'} ${CH_NAME[p.toLowerCase()]}` : ''}`;
+        out += `<button class="${cls}" data-sq="${i}" aria-label="${label}" data-no-i18n>${p ? chGlyph(p) : ''}${x === 0 ? `<i class="ch-rk">${r + 1}</i>` : ''}${y === 7 ? `<i class="ch-fl">${'abcdefgh'[f]}</i>` : ''}</button>`;
+      }));
+      const promo = CH.promo ? `<div class="ch-promo" role="dialog" aria-label="Promote to">${['q', 'r', 'b', 'n'].map(k => `<button data-ch="promo" data-v="${k}" aria-label="${CH_NAME[k]}">${chGlyph(me === 'w' ? k.toUpperCase() : k)}</button>`).join('')}</div>` : '';
+      return `<div class="ch-board${g.mine ? ' ch-live' : ''}">${out}</div>${promo}`;
+    }
+    // Pendule affichée : celle du serveur, moins le temps écoulé depuis sa réponse pour le camp au trait.
+    const chLeft = (st, c) => (st.running && st.status === 'play' && st.turn === c ? st.clock[c] - (Date.now() - CH.at) : st.clock[c]);
+    function chSide(g, c, top) {
+      const st = g.st, name = g.names[c];
+      const clock = st ? `<span class="ch-clock mono${st.status === 'play' && st.turn === c ? ' on' : ''}${chLeft(st, c) < 20000 ? ' low' : ''}" data-c="${c}">${chClock(chLeft(st, c))}</span>` : '';
+      const away = st && top && st.away ? '<span class="pkr-away">away</span>' : '';
+      const turn = !g.over && g.s.turn === c ? ' ch-turnon' : '';
+      return `<div class="ch-player ${top ? 'ch-top' : 'ch-bottom'}${turn}"><span class="ch-dot ch-dot-${c}" aria-hidden="true"></span><b data-no-i18n>${esc(name)}</b>${away}${clock}</div>`;
+    }
+    const CH_WHY = { mate: 'by checkmate', resign: 'by resignation', time: 'on time', timedraw: 'Time ran out, but no pieces left that could checkmate', stalemate: 'Stalemate: no legal move, but not in check', material: 'Not enough pieces left to checkmate', fifty: '50 moves without a capture or a pawn move', repetition: 'The same position came up three times', agreed: 'Draw agreed', long: 'The game was too long', abort: 'Game cancelled before it really started: everyone gets their bet back', nostart: 'Game cancelled: the first move was not played in 30 seconds. Bets are back', cancel: 'Challenge cancelled', expired: 'Nobody accepted in 10 minutes: your bet is back', gone: 'Challenge removed because you left the page: your bet is back', quit: 'You resigned' };
+    function chStatusHTML(g) {
+      if (g.over) {
+        const o = g.over, abort = o.abort || o.reason === 'abort';
+        const head = abort ? 'Game cancelled' : o.winner == null ? '🤝 It\'s a draw' : (g.kind === 'bot' ? o.winner === g.me : o.winner === 'me') ? '🏆 You win!' : 'You lose';
+        const why = CH_WHY[o.reason] || '';
+        const pay = g.kind === 'pvp' && g.st.stake && !abort ? `<b class="mono ${o.pay > g.st.stake ? 'pkr-up' : o.pay ? '' : 'pkr-down'}">${o.pay > g.st.stake ? `+🪙 ${fmt(o.pay - g.st.stake)}` : o.pay ? `🪙 ${fmt(o.pay)} back` : `−🪙 ${fmt(g.st.stake)}`}</b>` : '';
+        return `<div class="ch-status ch-over"><b>${head}</b>${why ? `<span>${why}</span>` : ''}${pay}</div>`;
+      }
+      const st = g.st;
+      if (st && st.first != null) return `<div class="ch-status"><span>${g.mine ? 'Your first move' : 'Waiting for the first move'}</span><span class="mono" data-no-i18n><span data-first>${Math.ceil(st.first / 1000)}</span> s</span></div>`;
+      const check = Chess.inCheck(g.s) ? '<b class="ch-check">Check!</b>' : '';
+      if (g.kind === 'bot' && CH.bot.thinking) return `<div class="ch-status">${check}<span>The bot is thinking…</span></div>`;
+      return `<div class="ch-status">${check}<span>${g.mine ? 'Your move' : g.kind === 'pvp' && CH.busy ? 'Sending…' : 'Their move'}</span></div>`;
+    }
+    function chMovesHTML(sans) {
+      if (!sans.length) return '';
+      let out = '';
+      for (let k = 0; k < sans.length; k += 2) out += `<li><span class="ch-n">${k / 2 + 1}.</span> ${esc(sans[k])}${sans[k + 1] ? ` ${esc(sans[k + 1])}` : ''}</li>`;
+      return `<ol class="ch-moves mono" data-no-i18n aria-label="Moves">${out}</ol>`;
+    }
+    function chGameHTML(g) {
+      const opp = g.me === 'w' ? 'b' : 'w', st = g.st;
+      const offer = st && st.status === 'play' && st.offer === 'opp' ? `<div class="pkr-invite ch-offer"><span>🤝 <b data-no-i18n>${esc(g.names[opp])}</b> offers a draw</span><span class="pkr-row"><button class="btn-roll small" data-ch="draw">Accept draw</button><button class="btn ghost" data-ch="nodraw">Decline</button></span></div>` : '';
+      let actions;
+      if (g.kind === 'bot') actions = g.over ? '<button class="btn-roll small" data-ch="again">Play again</button><button class="btn ghost" data-ch="lobby">Back</button>' : `<button class="btn" data-ch="undo"${CH.bot.ucis.length < 1 || CH.bot.thinking ? ' disabled' : ''}>↶ Take back</button><button class="btn ghost" data-ch="resign">Resign</button>`;
+      else if (g.over) actions = '<button class="btn-roll small" data-ch="ack">Back to the lobby</button>';
+      else actions = `${st.moves.length >= 2 ? `<button class="btn" data-ch="draw"${st.offer === 'me' ? ' disabled' : ''}>${st.offer === 'me' ? 'Draw offered' : '🤝 Offer a draw'}</button>` : ''}<button class="btn ghost" data-ch="resign">${st.moves.length >= 2 ? '🏳️ Resign' : 'Cancel the game'}</button>`;
+      const stake = st ? `<p class="panel-note ch-stakes">${st.stake ? `<span>Bet 🪙 ${fmt(st.stake)} each</span> · <span>winner gets 🪙 ${fmt(st.win)}</span>` : '<span>Friendly game</span> · <span>no coins</span>'} · <span data-no-i18n>${esc(st.tc)}</span></p>` : '<p class="panel-note ch-stakes">Practice · no coins</p>';
+      return `<div class="ch-game">
+        ${offer}
+        ${chSide(g, opp, true)}
+        <div class="ch-wrap">${chBoardHTML(g)}</div>
+        ${chSide(g, g.me, false)}
+        ${chStatusHTML(g)}
+        <div class="pkr-row ch-actions">${actions}</div>
+        ${chMovesHTML(g.sans)}
+        ${stake}
+      </div>`;
+    }
+    const chInvitable = () => CH.friends || [];
+    function chLobbyHTML(st) {
+      const seg = (op, list, cur, label, fmtv = v => v) => `<div class="pkr-seats-pick"><span class="eyebrow">${label}</span><div class="seg" role="group" aria-label="${label}">${list.map(v => `<button data-ch="${op}" data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}"${op === 'stake' && v ? ' data-no-i18n' : ''}>${fmtv(v)}</button>`).join('')}</div></div>`;
+      const friends = chInvitable(), rec = st.record || { w: 0, l: 0, d: 0 };
+      const cost = CH.stake ? ` · 🪙 ${fmt(CH.stake)}` : '';
+      const open = (st.open || []).map(x => `<li class="pko-table"><span class="pko-names"><b data-no-i18n>${esc(x.name)}</b></span><span class="mono pko-count" data-no-i18n>${x.stake ? `🪙 ${fmt(x.stake)}` : '🤝'} · ${esc(x.tc)}</span>${x.mine ? '<span class="panel-note">Yours</span>' : `<button class="btn small" data-ch="join" data-code="${esc(x.code)}">Accept</button>`}</li>`).join('');
+      return `<div class="pkr-lobby ch-lobby">
+        ${(st.invites || []).map(x => `<div class="pkr-invite"><span>♟️ <b data-no-i18n>${esc(x.name)}</b> challenges you to chess</span><span class="mono" data-no-i18n>${x.stake ? `🪙 ${fmt(x.stake)}` : '🤝'} · ${esc(x.tc)}</span><span class="pkr-row"><button class="btn-roll small" data-ch="join" data-code="${esc(x.code)}">Accept</button><button class="btn ghost" data-ch="decline" data-code="${esc(x.code)}">Decline</button></span></div>`).join('')}
+        <div class="pkr-modes">
+          <div class="pkr-mode"><h4>🤖 Practice with the bot</h4><p class="panel-note">Free: no coins to win or lose.</p>
+            ${seg('level', [1, 2, 3], CH.level, 'Level', v => ['Easy', 'Medium', 'Hard'][v - 1])}
+            ${seg('side', ['w', 'b', 'r'], CH.side, 'Play as', v => ({ w: 'White', b: 'Black', r: 'Random' }[v]))}
+            <button class="btn-roll small" data-ch="bot">Play the bot</button>
+          </div>
+          <div class="pkr-mode"><h4>👥 Play a player</h4>
+            ${seg('stake', st.stakes || [0, 50, 100, 250, 500, 1000], CH.stake, 'Bet', v => (v ? chK(v) : 'Friendly'))}
+            ${seg('tc', st.clocks || ['3+2', '5+3', '10+0'], CH.tc, 'Clock')}
+            ${friends.length ? `<div class="pkr-row"><select class="input" id="ch-friend" aria-label="Friend">${friends.map(f => `<option value="${esc(f.name)}" data-no-i18n>${f.status === 'online' ? '🟢 ' : ''}${esc(f.name)}</option>`).join('')}</select><button class="btn" data-ch="create" data-with="1">Challenge${cost}</button></div>` : '<p class="panel-note">Add friends in Social to challenge them, or share a game code.</p>'}
+            <button class="btn" data-ch="create" data-open="1">Open challenge${cost}</button>
+            <button class="btn ghost" data-ch="create">Private game with a code</button>
+            <form class="pkr-row" id="ch-join"><input class="input mono" id="ch-code" maxlength="6" placeholder="Game code" autocomplete="off" spellcheck="false" aria-label="Game code"><button class="btn" type="submit">Join</button></form>
+          </div>
+        </div>
+        <div class="ch-open"><h4>Open challenges</h4>${open ? `<ul class="pko-list">${open}</ul>` : '<p class="panel-note">No open challenge right now. Post one!</p>'}</div>
+        <p class="panel-note pkr-rules">Against a player, both put in the same bet. The winner gets both bets, minus 5% for the house. A draw gives everyone their bet back. Bets need 300 rolls and an account 3 days old, and share the 2,500 coins a day limit with poker. Friendly games are always free.</p>
+        <p class="panel-note ch-record"><span>Left today for bets:</span> <b class="mono" data-no-i18n>🪙 ${fmt((st.bets && st.bets.left) || 0)}</b> · <span>Your record:</span> <b class="mono" data-no-i18n>${rec.w}</b> <span>won</span>, <b class="mono" data-no-i18n>${rec.l}</b> <span>lost</span>, <b class="mono" data-no-i18n>${rec.d}</b> <span>drawn</span></p>
+      </div>`;
+    }
+    // Défi qui n'a jamais commencé (retiré, expiré, auteur parti) : la raison, puis retour au salon.
+    const chGoneHTML = st => `<div class="pkr-wait"><p>${CH_WHY[(st.result && st.result.reason) || 'cancel'] || ''}</p><button class="btn-roll small" data-ch="ack">Back to the lobby</button></div>`;
+    function chWaitHTML(st) {
+      return `<div class="pkr-wait">
+        <span class="eyebrow">Game code</span><b class="pkr-code" data-no-i18n>${esc(st.code)}</b>
+        <button class="btn" data-ch="copy">📋 Copy code</button>
+        <p>${st.invited ? `Waiting for <b data-no-i18n>${esc(st.invited)}</b> to accept…` : st.open ? 'Waiting for someone to accept your open challenge…' : 'Send the code to a friend: they join with it.'}</p>
+        <p class="panel-note"><span data-no-i18n>${st.stake ? `🪙 ${fmt(st.stake)}` : '🤝'} · ${esc(st.tc)}</span> · <span>stay on this page, or the challenge is removed</span></p>
+        <button class="btn ghost" data-ch="cancel">${st.stake ? `Cancel · get 🪙 ${fmt(st.stake)} back` : 'Cancel'}</button>
+      </div>`;
+    }
+    function chDraw(force) {
+      if (currentView !== 'gamble' || !chBody.isConnected) return;
+      const g = chGame(), st = CH.st;
+      const sig = CH.view === 'bot' ? `bot${CH.bot ? CH.bot.ucis.join() + CH.bot.thinking + JSON.stringify(CH.bot.over) : ''}` : JSON.stringify(st, (k, v) => (k === 'clock' || k === 'first' || k === 'expires' || k === 'coins' ? undefined : v));
+      const full = sig + CH.sel + JSON.stringify(CH.promo) + CH.busy + CH.stake + CH.tc + CH.level + CH.side + (CH.friends ? CH.friends.length : 0);
+      if (!force && full === CH.sig) { chTick(); return; }
+      CH.sig = full;
+      const keep = document.activeElement && document.activeElement.id === 'ch-code' ? document.activeElement.value : null;
+      chBody.innerHTML = g ? chGameHTML(g) : !st ? '<div class="empty">Loading…</div>' : st.idle ? chLobbyHTML(st) : st.status === 'wait' ? chWaitHTML(st) : chGoneHTML(st);
+      if (keep != null && $('#ch-code')) { $('#ch-code').value = keep; $('#ch-code').focus(); }
+      const list = chBody.querySelector('.ch-moves'); if (list) list.scrollTop = list.scrollHeight;
+      if (g) chSounds(g);
+      chTick();
+    }
+    // Un son par coup nouveau (une prise sonne plus fort), et la fête quand on gagne.
+    function chSounds(g) {
+      const key = `${g.kind}:${g.sans.length}:${g.over ? g.over.reason : ''}`;
+      if (key === CH.seen) return;
+      const prev = CH.seen; CH.seen = key;
+      if (!prev || prev.split(':')[0] !== g.kind) return;
+      const last = g.sans[g.sans.length - 1] || '';
+      if (g.over && !(g.over.abort || g.over.reason === 'abort')) {
+        const won = g.kind === 'bot' ? g.over.winner === g.me : g.over.winner === 'me';
+        if (won) { Sound.play('reveal', { small: 1 }); FX.celebrate(g.kind === 'pvp' && g.st.stake ? 'epic' : 'uncommon', chBody.querySelector('.ch-wrap')); } else Sound.play('lock', { i: 1, soft: 1 });
+      } else if (last.includes('x')) Sound.play('lock', { i: 2, soft: 1 }); else if (last) Sound.tick({ soft: 1 });
+    }
+    // Pendules et compte à rebours du premier coup, redessinés seuls 5 fois par seconde.
+    function chTick() {
+      clearInterval(CH.tick);
+      const st = CH.st;
+      if (CH.view === 'bot' || !st || st.idle || st.status !== 'play') return;
+      const paint = () => {
+        if (!chBody.isConnected) { clearInterval(CH.tick); return; }
+        chBody.querySelectorAll('.ch-clock[data-c]').forEach(el => { const ms = chLeft(st, el.dataset.c); el.textContent = chClock(ms); el.classList.toggle('low', ms < 20000); });
+        const f = chBody.querySelector('[data-first]'); if (f && st.first != null) f.textContent = Math.max(0, Math.ceil((st.first - (Date.now() - CH.at)) / 1000));
+      };
+      paint(); CH.tick = setInterval(paint, 200);
+    }
+    // Sondage : 1 s pendant une partie, 2,5 s en attendant un adversaire, 5 s au salon ou onglet caché.
+    const chDelay = st => (document.hidden ? 5000 : !st || st.idle ? 5000 : st.status === 'wait' ? 2500 : st.status === 'play' ? 1000 : 5000);
+    const chPoll = () => { clearTimeout(CH.timer); CH.timer = setTimeout(chLoad, chDelay(CH.view === 'bot' ? null : CH.st)); };
+    async function chLoad() {
+      clearTimeout(CH.timer);
+      if (currentView !== 'gamble' || Gamble.tab !== 'chess' || !chBody.isConnected || !Store.player.name) return;
+      if (!CH.busy) {
+        try {
+          const st = await gamble('chess', { op: 'state' });
+          if (!CH.busy) { CH.st = st; CH.at = Date.now(); if (!st.idle && CH.view === 'bot' && st.status !== 'over') CH.view = 'pvp'; else if (CH.view !== 'bot') CH.view = st.idle ? 'lobby' : 'pvp'; if (CH.view !== 'bot') chDraw(); }
+        } catch (err) { /* hors ligne : on réessaie au prochain tour */ }
+      }
+      chPoll();
+    }
+    const chFriends = async () => {
+      if (CH.friends && Date.now() - CH.friendsAt < 60000) return;
+      try { const d = await Online.friends('list'); CH.friends = d.friends || []; CH.friendsAt = Date.now(); if (CH.view === 'lobby') chDraw(true); } catch (err) { /* sans la liste : le code reste possible */ }
+    };
+    Gamble.chStart = () => {
+      if (!Chess) { chBody.innerHTML = '<div class="empty">Unavailable right now, try again</div>'; return; }
+      if (!Store.player.name) { CH.view = 'lobby'; chBody.innerHTML = '<div class="empty">Roll once to start earning coins.</div>'; return; }
+      chDraw(true); chFriends(); chLoad();
+    };
+    Gamble.chStop = () => { clearTimeout(CH.timer); clearInterval(CH.tick); };
+    async function chSend(extra, btn, show = false) {
+      if (CH.busy) return;
+      CH.busy = true; if (btn) btn.disabled = true;
+      if (show) chDraw(true); // coup joué : affiché tout de suite, le serveur confirme
+      try {
+        const st = await gamble('chess', extra);
+        CH.busy = false; CH.st = st; CH.at = Date.now(); CH.sel = -1; CH.promo = null;
+        CH.view = st.idle ? 'lobby' : 'pvp';
+        if (['create', 'join', 'cancel'].includes(extra.op) || st.status === 'over') Online.shop().then(s => showCoins(s.coins)).catch(() => {});
+        chDraw(true);
+      } catch (err) { CH.busy = false; CH.sel = -1; CH.promo = null; if (err.status && err.status < 500 && err.status !== 429) toast(err.message); else fail(err); chDraw(true); chLoad(); return; }
+      chPoll();
+    }
+    // ---- partie d'entraînement contre le bot (rien ne part au serveur)
+    function chBotStart() {
+      const me = CH.side === 'r' ? (Math.random() < .5 ? 'w' : 'b') : CH.side, s = Chess.parse(Chess.START);
+      CH.bot = { s, me, level: CH.level, keys: [Chess.posKey(s)], sans: [], ucis: [], over: null, thinking: false, id: Date.now() };
+      CH.view = 'bot'; CH.sel = -1; CH.promo = null; CH.seen = '';
+      chDraw(true);
+      if (me === 'b') chBotThink();
+    }
+    function chBotPlay(m) {
+      const b = CH.bot;
+      b.sans.push(Chess.san(b.s, m)); b.ucis.push(Chess.uci(m)); b.s = Chess.apply(b.s, m); b.keys.push(Chess.posKey(b.s));
+      const end = Chess.status(b.s, b.keys);
+      if (end.over) b.over = { winner: end.winner, reason: end.reason };
+    }
+    function chBotThink() {
+      const b = CH.bot, id = b.id, len = b.ucis.length;
+      b.thinking = true; chDraw();
+      // Laisse la page dessiner le coup du joueur avant que le bot calcule (jusqu'à ~1 s au niveau Hard).
+      setTimeout(() => {
+        if (CH.bot !== b || b.id !== id || b.ucis.length !== len || b.over) return;
+        const m = Chess.bestMove(b.s, b.level, Math.random, b.keys);
+        b.thinking = false;
+        if (m) chBotPlay(m);
+        if (CH.view === 'bot') chDraw();
+      }, 350);
+    }
+    function chBotUndo() {
+      const b = CH.bot;
+      if (!b || b.thinking || !b.ucis.length) return;
+      let list = b.ucis.slice(0, -1);
+      if (list.length % 2 !== (b.me === 'w' ? 0 : 1)) list = list.slice(0, -1); // revenir à un moment où c'est à moi de jouer
+      const r = Chess.replay(list);
+      b.s = r.s; b.keys = r.keys; b.sans = r.sans; b.ucis = list; b.over = null; b.id = Date.now(); CH.sel = -1;
+      chDraw(true);
+      if (b.s.turn !== b.me) chBotThink();
+    }
+    // Un coup du joueur (bot ou adversaire réel). Contre un joueur, on l'affiche tout de suite et le serveur tranche.
+    function chMove(m) {
+      const g = chGame();
+      if (!g || !g.mine) return;
+      CH.sel = -1; CH.promo = null;
+      if (g.kind === 'bot') { chBotPlay(m); chDraw(); if (!CH.bot.over) chBotThink(); return; }
+      const st = CH.st, n = Chess.apply(g.s, m);
+      CH.st = { ...st, fen: Chess.fen(n), last: Chess.uci(m), turn: n.turn, moves: [...st.moves, Chess.san(g.s, m)], clock: { ...st.clock, [g.me]: chLeft(st, g.me) }, running: false };
+      chSend({ op: 'move', m: Chess.uci(m) }, null, true);
+    }
+    chBody.addEventListener('submit', e => { if (e.target.id !== 'ch-join') return; e.preventDefault(); const code = $('#ch-code').value.trim(); if (!code) { toast('Enter a game code'); return; } chSend({ op: 'join', code }); });
+    chBody.addEventListener('click', e => {
+      const sq = e.target.closest('[data-sq]');
+      if (sq) {
+        const g = chGame();
+        if (!g || !g.mine || CH.promo) return;
+        const i = Number(sq.dataset.sq), legal = Chess.moves(g.s);
+        const hits = CH.sel >= 0 ? legal.filter(m => m.from === CH.sel && m.to === i) : [];
+        if (hits.length > 1) { CH.promo = { from: CH.sel, to: i }; chDraw(); return; } // promotion : choisir la pièce
+        if (hits.length === 1) { chMove(hits[0]); return; }
+        CH.sel = legal.some(m => m.from === i) && i !== CH.sel ? i : -1;
+        chDraw();
+        return;
+      }
+      const b = e.target.closest('[data-ch]');
+      if (!b || CH.busy) return;
+      const op = b.dataset.ch;
+      if (op === 'level') { CH.level = Number(b.dataset.v); chDraw(true); return; }
+      if (op === 'side') { CH.side = b.dataset.v; chDraw(true); return; }
+      if (op === 'stake') { CH.stake = Number(b.dataset.v); chDraw(true); return; }
+      if (op === 'tc') { CH.tc = b.dataset.v; chDraw(true); return; }
+      if (op === 'promo') { const g = chGame(), p = CH.promo, m = g && p && Chess.moves(g.s).find(x => x.from === p.from && x.to === p.to && x.promo === b.dataset.v); if (m) chMove(m); return; }
+      if (op === 'bot' || op === 'again') { chBotStart(); return; }
+      if (op === 'undo') { chBotUndo(); return; }
+      if (op === 'lobby') { CH.view = CH.st && !CH.st.idle ? 'pvp' : 'lobby'; CH.bot = null; chDraw(true); chLoad(); return; }
+      if (op === 'copy') { navigator.clipboard.writeText(CH.st.code).then(() => toast('Code copied'), () => toast(CH.st.code)); return; }
+      if (op === 'resign') {
+        if (CH.view === 'bot') { if (CH.bot && !CH.bot.over && confirm(chT('Resign this game?'))) { CH.bot.over = { winner: CH.bot.me === 'w' ? 'b' : 'w', reason: 'quit' }; CH.bot.thinking = false; CH.bot.id = Date.now(); chDraw(); } return; }
+        const started = CH.st && CH.st.moves && CH.st.moves.length >= 2;
+        if (!confirm(chT(started ? (CH.st.stake ? 'Resign? You lose your bet.' : 'Resign this game?') : 'Cancel the game? Everyone gets their bet back.'))) return;
+        return chSend({ op: 'resign' }, b);
+      }
+      if (op === 'create') {
+        const sel = $('#ch-friend');
+        if (CH.stake && !confirm(`${chT('Bet')} 🪙 ${fmt(CH.stake)}?`)) return;
+        return chSend({ op: 'create', stake: CH.stake, tc: CH.tc, ...(b.dataset.with && sel ? { name: sel.value } : {}), ...(b.dataset.open ? { open: true } : {}) }, b);
+      }
+      if (op === 'join') {
+        const x = [...((CH.st && CH.st.invites) || []), ...((CH.st && CH.st.open) || [])].find(v => v.code === b.dataset.code);
+        if (x && x.stake && !confirm(`${chT('Bet')} 🪙 ${fmt(x.stake)}?`)) return;
+        return chSend({ op: 'join', code: b.dataset.code }, b);
+      }
+      if (op === 'decline') return chSend({ op: 'decline', code: b.dataset.code }, b);
+      if (['cancel', 'draw', 'nodraw', 'ack'].includes(op)) return chSend({ op }, b);
+    });
     // ---- bitcoin : vrai prix (api/_btc.js), relu toutes les 20 s tant que l'onglet est ouvert
     const btcFmt = sats => (sats / 1e8).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
     // Graphique en bougies, façon TradingView : bougies vertes / rouges, volume en bas, moyennes mobiles 20 et 50,
@@ -6028,10 +6337,11 @@
       // la mise remonte à 10.
       $('#g-chips').dataset.game = id;
       if (id !== 'plinko' && id !== 'wheel' && Gamble.chip < 10) $('#g-chips .gchip[data-chip="10"]').click();
-      const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc' || id === 'poker'; // le poker a ses caves
+      const bet = document.querySelector('.g-bet'); if (bet) bet.hidden = id === 'btc' || id === 'poker' || id === 'chess'; // le poker a ses caves, les échecs leurs mises
       if (id === 'btc') { drawBtc(true); liveStart(); } else { clearTimeout(Gamble.btcTimer); liveStop(); }
       Gamble.tab = id;
       if (id === 'poker') Gamble.pkrStart(); else Gamble.pkrStop();
+      if (id === 'chess') Gamble.chStart(); else Gamble.chStop();
       Gamble.tab = id; document.querySelectorAll('.g-tab').forEach(b => b.classList.toggle('on', b.dataset.gameTab === id)); document.querySelectorAll('.g-game').forEach(g => { g.hidden = g.dataset.game !== id; }); };
     // Mode « Reorder » : chaque onglet a ses flèches ◀ ▶ (au doigt comme à la souris) et se glisse-dépose sur ordinateur.
     let editing = false, dragId = null;
@@ -7701,7 +8011,7 @@
     };
     const who = name => `<a class="player-link" href="${profileHref(name)}" data-no-i18n>${esc(name)}</a>`;
     const ago = n => (n === 0 ? 'today' : `${n}d ago`);
-    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip', poker: '🃏 Poker' };
+    const GAME_NAMES = { crash: '🚀 Crash', mines: '💣 Mines', tower: '🗼 Tower', keno: '🎱 Keno', dice: '🎲 Dice', teddy: '🧸 Teddy Roulette', duck: '🦆 Duck Race', wheel: '🌀 Wheel', plinko: '🔻 Plinko', slots: '🎰 Slots', roulette: '🎡 Roulette', bj: '🃏 Blackjack', flip: '🪙 Coin flip', poker: '🃏 Poker', chess: '♟️ Chess' };
     const flag = c => (/^[A-Z]{2}$/.test(c) && c !== 'ZZ' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) : '🌐');
 
     // ---- ce qui attend une action du créateur (rempli quand la cagnotte et la boîte à idées ont répondu)
@@ -8565,7 +8875,7 @@
     // Nouveau message pendant qu'on joue ailleurs : un petit message en bas, qui ouvre les amis (idée de
     // JAKECisthebest, 2026-10-20). Relu toutes les 60 s au lieu de 3 min.
     set(n) { if (n > this.count && this.seenOnce && currentView !== 'friends' && !$('.dm-list')) { toast(`💬 ${n - this.count === 1 ? 'New message from a friend' : `${n - this.count} new messages from friends`} · open Friends`, 4500); dmPing(); } this.seenOnce = true; this.count = n; const link = document.querySelector('.nav a[data-route="friends"], a[data-route="friends"]'); if (link) link.classList.toggle('has-msg', n > 0); },
-    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.poker) announcePoker(r.poker); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
+    watch() { if (this.timer || !Store.player.name) return; const tick = () => { if (Store.player.name) Online.friends('gifts', undefined, { presence: presenceState(), ...bigAlertSince() }).then(r => { this.set(r.messages || 0); if (r.big) announceBigRolls(r.big); if (r.poker) announcePoker(r.poker); if (r.chess) announceChess(r.chess); if (r.gifts && r.gifts.length && (currentView === 'friends' || r.gifts.some(g => g.kind === 'top'))) announceGifts(r); }).catch(() => {}); }; this.timer = setInterval(tick, 60000); setTimeout(tick, 4000); },
   };
   // Réduit une image choisie par le joueur en JPEG de 190 000 caractères au plus (capture d'un bug, image entre amis).
   const shrinkImage = (file, max = 190000) => new Promise((done, fail) => {

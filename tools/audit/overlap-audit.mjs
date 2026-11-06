@@ -25,7 +25,9 @@ for (const locale of ['fr-FR', 'en-US']) {
   const pages = [['#/', null], ['#/duel', null], [room, null], ['#/leaderboard', null], ['#/leaderboard', '[data-tab="coins"]'], ['#/badges', null], ['#/stats', null], ['#/history', null], ['#/shop', null], ['#/friends', null], ['#/clan', null], ['#/me', null], ['#/tournament', null], ['#/about', null], ['#/hall', null],
     ['#/gamble', '[data-game-tab="crash"]'], ['#/gamble', '[data-game-tab="mines"]'], ['#/gamble', '[data-game-tab="plinko"]'], ['#/gamble', '[data-game-tab="roulette"]'], ['#/gamble', '[data-game-tab="bj"]'], ['#/gamble', '[data-game-tab="wheel"]'],
     // Poker (2026-11-03) : le salon, puis la table contre le bot (le 3e élément s'assoit si on ne l'est pas encore).
-    ['#/gamble', '[data-game-tab="poker"]'], ['#/gamble', '[data-game-tab="poker"]', '[data-pkr="bot"]']];
+    ['#/gamble', '[data-game-tab="poker"]'], ['#/gamble', '[data-game-tab="poker"]', '[data-pkr="bot"]'],
+    // Échecs (2026-11-06) : le salon, puis une partie d'entraînement contre le bot.
+    ['#/gamble', '[data-game-tab="chess"]'], ['#/gamble', '[data-game-tab="chess"]', '[data-ch="bot"]']];
   for (const w of widths.length ? widths : [320, 360, 390, 414, 600, 768, 1024, 1180, 1280, 1440, 1920]) {
     await p.setViewportSize({ width: Math.floor(w), height: HEIGHTS[w] || (w < 700 ? 780 : 900) });
     for (const [hash, click, then] of pages) {

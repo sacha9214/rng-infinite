@@ -113,6 +113,13 @@ for (const [name, T] of [['Plinko', G.PLINKO], ['Plinko High risk', G.PLINKO_HIG
   add('Blackjack · assurance', 3 * 4 / 13, 'aucune', 'payée 2 contre 1');
   const S = G.SIDE; add('Blackjack · Match', (3 / 52 * S.rank + 1 / 52 * S.suited) * (1 + (S.pair - 1) * 4 / 52), 'aucune');
 }
+// Échecs (2026-11-06) : contre le bot, jamais de mise (entraînement dans le navigateur ; le serveur n'a aucune action
+// « bot »). Entre joueurs, même celui qui gagne toutes ses parties ne récupère que 95 % du pot : la maison en garde 5 %.
+{
+  const Ch = require('../api/_chess.js'), p = Ch.potPay(100);
+  add('Échecs entre joueurs', p.win / p.pot, 'gagner toutes ses parties', 'contre le bot : aucune mise');
+  await Ch.handle('0'.repeat(16), { op: 'bot', stake: 100 }).then(() => fail.push('Échecs : une partie contre le bot avec mise existe'), () => {});
+}
 console.table(rows);
 if (fail.length) { console.error('\n✗ Le casino perd sur :', fail.join(' ; ')); process.exit(1); }
 console.log('\nOK : le casino gagne à tous les jeux, même contre la meilleure stratégie.');

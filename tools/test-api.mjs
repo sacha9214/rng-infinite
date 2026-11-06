@@ -7274,4 +7274,168 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.ok(Shop.SKINS.some(k => k.event === 'halloween'), 'Halloween gardé pour l\'an prochain');
 }
 
+// ================================================================ Échecs du casino (Sacha, 2026-11-06)
+{
+  const C = require(path.join(ROOT, 'js/chess.js'));
+  const ChessApi = require(path.join(ROOT, 'api/_chess.js'));
+  const Lib = require(path.join(ROOT, 'api/_lib.js'));
+  const Shop = require(path.join(ROOT, 'js/shop.js'));
+  const shopApi = require(path.join(ROOT, 'api/shop.js')), friendsApi = require(path.join(ROOT, 'api/friends.js'));
+  // 1. Règles : nombres de positions connus (perft), coups spéciaux, fins de partie.
+  assert.equal(C.perft(C.parse(C.START), 3), 8902);
+  assert.equal(C.perft(C.parse('r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'), 2), 2039, 'Kiwipete : roques, prises en passant, promotions');
+  assert.equal(C.perft(C.parse('8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1'), 3), 2812);
+  assert.equal(C.perft(C.parse('rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8'), 2), 1486);
+  assert.equal(C.fen(C.parse(C.START)), C.START);
+  let g = C.replay(['e2e4', 'a7a6', 'e4e5', 'd7d5', 'e5d6']);
+  assert.deepEqual(g.sans, ['e4', 'a6', 'e5', 'd5', 'exd6'], 'prise en passant'); assert.equal(g.s.b[C.sqOf('d5')], '', 'le pion pris disparaît');
+  g = C.replay(['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4', 'g8f6', 'e1g1']);
+  assert.equal(g.sans[6], 'O-O'); assert.equal(g.s.b[C.sqOf('f1')], 'R'); assert.equal(g.s.castle, 'kq');
+  assert.equal(C.find(C.parse('4k3/P7/8/8/8/8/8/4K3 w - - 0 1'), 'a7a8'), null, 'promotion : la pièce est obligatoire');
+  assert.equal(C.san(C.parse('4k3/P7/8/8/8/8/8/4K3 w - - 0 1'), C.find(C.parse('4k3/P7/8/8/8/8/8/4K3 w - - 0 1'), 'a7a8q')), 'a8=Q+');
+  assert.equal(C.find(C.parse('4k3/8/8/8/8/8/8/R3K2r w Q - 0 1'), 'e1c1'), null, 'pas de roque sous échec');
+  g = C.replay(['f2f3', 'e7e5', 'g2g4', 'd8h4']);
+  assert.deepEqual(C.status(g.s, g.keys), { over: true, winner: 'b', reason: 'mate' }); assert.equal(g.sans[3], 'Qh4#');
+  assert.equal(C.status(C.parse('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1')).reason, 'stalemate');
+  assert.equal(C.status(C.parse('8/8/4k3/8/8/2B5/4K3/8 w - - 0 1')).reason, 'material');
+  assert.equal(C.status(C.parse('8/8/4k3/8/8/2B5/4K3/8 w - - 100 80')).reason, 'material');
+  assert.equal(C.status(C.parse('8/8/4k3/8/8/2R5/4K3/8 w - - 100 80')).reason, 'fifty');
+  g = C.replay(['g1f3', 'g8f6', 'f3g1', 'f6g8', 'g1f3', 'g8f6', 'f3g1', 'f6g8']);
+  assert.equal(C.status(g.s, g.keys).reason, 'repetition', 'triple répétition');
+  assert.equal(C.canMate(C.parse('8/8/4k3/8/8/2N5/4K3/8 w - - 0 1').b, 'w'), false, 'cavalier seul contre roi seul : nulle au temps');
+  assert.equal(C.canMate(C.parse('8/8/4k3/8/8/2Q5/4K3/8 w - - 0 1').b, 'w'), true);
+  // 2. Bot d'entraînement : toujours un coup légal ; voit le mat en un, à tous les niveaux.
+  const scholar = C.parse('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
+  for (const lvl of [1, 2, 3]) assert.equal(C.uci(C.bestMove(scholar, lvl)), 'h5f7', `niveau ${lvl} : Dxf7#`);
+  for (let k = 0; k < 20; k++) { const pick = C.uci(C.bestMove(C.parse(C.START), 1)); assert.ok(C.moves(C.parse(C.START)).some(m => C.uci(m) === pick), `coup légal (${pick})`); }
+
+  // 3. Parties entre joueurs, par l'API (routage par api/shop.js).
+  const mkP = (tag, nm, coins = 20000, rolls = 400) => { const id = tag.repeat(8), secret = (tag + 'f').repeat(11).slice(0, 32); run([['SET', `player:${id}:secret`, crypto.createHash('sha256').update(secret).digest('hex')], ['HSET', `stats:${id}`, 'v', '1', 'rolls', rolls, 'bonus', coins], ['HSET', 'names', id, nm], ['SET', `name:${nm.toLowerCase()}`, id]]); return { playerId: id, secret, name: nm }; };
+  const coinsOf = async p => Shop.balance(await Lib.readStats(p.playerId));
+  const ch = (p, extra) => call(shopApi, { method: 'POST', body: { playerId: p.playerId, secret: p.secret, action: 'chess', ...extra } });
+  const casino = () => { const f = run([['HGETALL', 'casino']])[0].result || []; const o = {}; for (let i = 0; i < f.length; i += 2) o[f[i]] = Number(f[i + 1]); return o; };
+  const noIds = (body, ...ps) => ps.forEach(p => assert.ok(!JSON.stringify(body).includes(p.playerId), 'aucun identifiant de joueur'));
+  const sleep = ms => new Promise(res => setTimeout(res, ms));
+  const A = mkP('0c', 'ChessAnn'), B = mkP('1c', 'ChessBob'), E = mkP('2c', 'ChessEve'), K = mkP('9c', 'ChessKid', 20000, 150);
+  run([['SADD', `fr:${A.playerId}`, B.playerId], ['SADD', `fr:${B.playerId}`, A.playerId]]);
+  let r = await ch(A, { op: 'state' });
+  assert.equal(r.status, 200); assert.equal(r.body.idle, true); assert.deepEqual(r.body.stakes, [0, 50, 100, 250, 500, 1000]); assert.deepEqual(r.body.clocks, ['3+2', '5+3', '10+0']);
+  r = await ch(A, { op: 'create', stake: 750, tc: '5+3' }); assert.equal(r.status, 400, 'mise hors liste');
+  r = await ch(A, { op: 'create', stake: 50, tc: '1+0' }); assert.equal(r.status, 400, 'pendule hors liste');
+  r = await ch(A, { op: 'create', stake: 50, tc: '5+3', name: 'ChessEve' }); assert.equal(r.status, 403, 'seulement ses amis');
+  r = await ch(K, { op: 'create', stake: 100, tc: '5+3', open: true }); assert.equal(r.status, 422); assert.match(r.body.error, /after 300 rolls/);
+  // Partie amicale ouverte : visible dans le salon des autres, sans identifiant ; retirée par son auteur.
+  r = await ch(K, { op: 'create', stake: 0, tc: '10+0', open: true }); assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.status, 'wait');
+  r = await ch(K, { op: 'create', stake: 0, tc: '10+0', open: true }); assert.equal(r.status, 422, 'un défi à la fois');
+  r = await ch(E, { op: 'state' }); assert.ok(r.body.open.some(x => x.name === 'ChessKid' && x.stake === 0 && x.tc === '10+0')); noIds(r.body, K);
+  r = await ch(K, { op: 'cancel' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.result.reason, 'cancel');
+  r = await ch(K, { op: 'ack' }); assert.equal(r.body.idle, true);
+  r = await ch(E, { op: 'state' }); assert.ok(!r.body.open.some(x => x.name === 'ChessKid'), 'défi retiré de la liste');
+
+  // 3a. Défi à un ami avec mise : invitation, alerte, acceptation, mat du berger inversé, paiement.
+  const a0 = await coinsOf(A), b0 = await coinsOf(B), h0 = casino(), day = `pkday:${Lib.dayKey(Date.now())}`;
+  const dayA0 = Number(run([['HGET', day, A.playerId]])[0].result || 0);
+  r = await ch(A, { op: 'create', stake: 500, tc: '5+3', name: 'ChessBob' });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.invited, 'ChessBob'); assert.equal(r.body.win, 950);
+  const code = r.body.code;
+  assert.equal(await coinsOf(A), a0 - 500, 'mise débitée à la création');
+  r = await ch(B, { op: 'state' }); assert.deepEqual(r.body.invites, [{ code, name: 'ChessAnn', stake: 500, tc: '5+3' }]); noIds(r.body, A);
+  r = await call(friendsApi, { method: 'POST', body: { playerId: B.playerId, secret: B.secret, action: 'gifts' } });
+  assert.deepEqual(r.body.chess, [{ code, name: 'ChessAnn', stake: 500 }], 'alerte de défi dans la relève');
+  r = await ch(A, { op: 'join', code }); assert.equal(r.status, 422, 'pas son propre défi');
+  r = await ch(B, { op: 'join', code });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.status, 'play'); noIds(r.body, A, B);
+  assert.equal(await coinsOf(B), b0 - 500);
+  assert.equal(Number(run([['HGET', day, A.playerId]])[0].result) - dayA0, 500, 'plafond du jour partagé avec le poker');
+  const white = r.body.me === 'w' ? B : A, black = white === A ? B : A;
+  r = await ch(black, { op: 'move', m: 'e7e5' }); assert.equal(r.status, 422); assert.equal(r.body.error, 'Not your turn');
+  r = await ch(white, { op: 'move', m: 'e2e5' }); assert.equal(r.status, 422); assert.equal(r.body.error, 'Illegal move');
+  for (const [p, m] of [[white, 'f2f3'], [black, 'e7e5'], [white, 'g2g4']]) { r = await ch(p, { op: 'move', m }); assert.equal(r.status, 200, JSON.stringify(r.body)); await sleep(3); }
+  // Deux fois le même coup en même temps : un seul passe.
+  const both = await Promise.all([ch(black, { op: 'move', m: 'd8h4' }), ch(black, { op: 'move', m: 'd8h4' })]);
+  assert.equal(both.filter(x => x.status === 200).length, 1, JSON.stringify(both.map(x => x.body)));
+  r = await ch(white, { op: 'state' });
+  assert.equal(r.body.status, 'over'); assert.deepEqual(r.body.result, { reason: 'mate', abort: false, winner: 'opp', by: black.name, pay: 0 }); assert.deepEqual(r.body.moves, ['f3', 'e5', 'g4', 'Qh4#']);
+  r = await ch(black, { op: 'state' }); assert.equal(r.body.result.winner, 'me'); assert.equal(r.body.result.pay, 950);
+  assert.equal(await coinsOf(black), (black === A ? a0 : b0) + 450, 'gagnant : 2 mises moins 5 %');
+  assert.equal(await coinsOf(white), (white === A ? a0 : b0) - 500);
+  const h1 = casino();
+  assert.equal(h1['b:chess'] - (h0['b:chess'] || 0), 1000); assert.equal(h1['w:chess'] - (h0['w:chess'] || 0), 950, 'comptes du casino : la maison garde 50');
+  assert.equal(run([['HGET', `stats:${black.playerId}`, 'chW']])[0].result, '1'); assert.equal(run([['HGET', `stats:${white.playerId}`, 'gChess']])[0].result, '1');
+  r = await ch(black, { op: 'move', m: 'a7a6' }); assert.equal(r.status, 422, 'partie finie');
+  for (const p of [A, B]) { r = await ch(p, { op: 'ack' }); assert.equal(r.body.idle, true); assert.equal(r.body.record.w + r.body.record.l, 1); }
+
+  // 3b. Nulle proposée puis acceptée : chacun récupère sa mise ; la casino compte la partie (mise = gain).
+  const a1 = await coinsOf(A), b1 = await coinsOf(B);
+  r = await ch(A, { op: 'create', stake: 100, tc: '3+2', name: 'ChessBob' }); const code2 = r.body.code;
+  r = await ch(B, { op: 'join', code: code2 }); const w2 = r.body.me === 'w' ? B : A, b2 = w2 === A ? B : A;
+  r = await ch(w2, { op: 'draw' }); assert.equal(r.status, 422, 'pas de nulle avant le premier coup');
+  await ch(w2, { op: 'move', m: 'e2e4' }); await sleep(3); await ch(b2, { op: 'move', m: 'e7e5' });
+  r = await ch(w2, { op: 'draw' }); assert.equal(r.body.offer, 'me');
+  r = await ch(b2, { op: 'state' }); assert.equal(r.body.offer, 'opp');
+  r = await ch(b2, { op: 'draw' }); assert.equal(r.body.status, 'over'); assert.equal(r.body.result.reason, 'agreed'); assert.equal(r.body.result.winner, null); assert.equal(r.body.result.pay, 100);
+  assert.equal(await coinsOf(A), a1); assert.equal(await coinsOf(B), b1);
+  await ch(A, { op: 'ack' }); await ch(B, { op: 'ack' });
+
+  // 3c. Abandon avant le 2e coup : partie annulée, rien au casino ; premier coup jamais joué : annulée aussi.
+  const h2 = casino();
+  r = await ch(A, { op: 'create', stake: 100, tc: '10+0', name: 'ChessBob' }); const code3 = r.body.code;
+  r = await ch(B, { op: 'join', code: code3 });
+  r = await ch(A, { op: 'resign' }); assert.equal(r.body.result.reason, 'abort'); assert.equal(r.body.result.abort, true);
+  assert.equal(await coinsOf(A), a1); assert.equal(await coinsOf(B), b1); assert.equal(casino()['b:chess'], h2['b:chess'], 'annulée : hors des comptes');
+  await ch(A, { op: 'ack' }); await ch(B, { op: 'ack' });
+  let now = Date.now();
+  let st = await ChessApi.handle(A.playerId, { op: 'create', stake: 100, tc: '10+0', name: 'ChessBob' }, now);
+  st = await ChessApi.handle(B.playerId, { op: 'join', code: st.code }, now);
+  const code4 = st.code;
+  await Lib.flushDue(now + ChessApi.FIRST_MS + 61000);
+  r = await ch(B, { op: 'state' }); assert.equal(r.body.result.reason, 'nostart', 'premier coup pas joué en 30 s');
+  assert.equal(await coinsOf(A), a1); assert.equal(await coinsOf(B), b1);
+  await ch(A, { op: 'ack' }); await ch(B, { op: 'ack' });
+
+  // 3d. Pendule : 3+2, le blanc ne joue plus son 2e coup ; le drapeau tombe, le noir gagne.
+  now = Date.now();
+  st = await ChessApi.handle(A.playerId, { op: 'create', stake: 50, tc: '3+2', name: 'ChessBob' }, now);
+  st = await ChessApi.handle(B.playerId, { op: 'join', code: st.code }, now);
+  const W = st.me === 'w' ? B : A, Bk = W === A ? B : A;
+  st = await ChessApi.handle(W.playerId, { op: 'move', m: 'd2d4' }, now + 5000);
+  st = await ChessApi.handle(Bk.playerId, { op: 'move', m: 'd7d5' }, now + 9000);
+  assert.equal(st.clock.w, 180000, 'les deux premiers coups ne prennent pas de temps'); assert.equal(st.running, true);
+  st = await ChessApi.handle(W.playerId, { op: 'state' }, now + 9000 + 100000);
+  assert.equal(st.status, 'play'); assert.ok(Math.abs(st.clock.w - 80000) < 5);
+  await assert.rejects(ChessApi.handle(Bk.playerId, { op: 'move', m: 'e7e5' }, now + 9000 + 100000), /Not your turn/);
+  st = await ChessApi.handle(W.playerId, { op: 'move', m: 'c2c4' }, now + 9000 + 181000);
+  assert.equal(st.status, 'over', 'coup joué après la chute du drapeau : refusé'); assert.equal(st.result.reason, 'time'); assert.equal(st.result.winner, 'opp');
+  assert.equal(await coinsOf(Bk), (Bk === A ? a1 : b1) + 45); assert.equal(await coinsOf(W), (W === A ? a1 : b1) - 50);
+  await ch(A, { op: 'ack' }); await ch(B, { op: 'ack' });
+
+  // 3e. Deux joueurs acceptent le même défi ouvert : un seul joue, l'autre ne paie rien.
+  const e0 = await coinsOf(E), b3 = await coinsOf(B);
+  r = await ch(A, { op: 'create', stake: 50, tc: '5+3', open: true }); const code5 = r.body.code;
+  const joins = await Promise.all([ch(B, { op: 'join', code: code5 }), ch(E, { op: 'join', code: code5 })]);
+  assert.equal(joins.filter(x => x.status === 200).length, 1, JSON.stringify(joins.map(x => x.body)));
+  const lost = joins[0].status === 200 ? E : B;
+  assert.equal(await coinsOf(lost), lost === E ? e0 : b3, 'celui qui arrive trop tard ne paie rien');
+  r = await ch(A, { op: 'resign' }); assert.equal(r.body.result.abort, true);
+  for (const p of [A, B, E]) await ch(p, { op: 'ack' });
+
+  // 3f. Défi oublié (son auteur a quitté la page) : retiré par la file pending, mise rendue.
+  const a5 = await coinsOf(A);
+  now = Date.now();
+  st = await ChessApi.handle(A.playerId, { op: 'create', stake: 250, tc: '5+3', open: true }, now);
+  assert.equal(await coinsOf(A), a5 - 250);
+  await Lib.flushDue(now + 120000);
+  r = await ch(A, { op: 'state' }); assert.equal(r.body.result.reason, 'gone');
+  assert.equal(await coinsOf(A), a5, 'mise rendue');
+  await ch(A, { op: 'ack' });
+
+  // 3g. Plafond du jour commun avec le poker : plus de place, plus de mise (la partie amicale reste possible).
+  run([['HSET', day, E.playerId, 2480]]);
+  r = await ch(E, { op: 'create', stake: 50, tc: '5+3', open: true }); assert.equal(r.status, 422); assert.match(r.body.error, /20 more coins against other players today/);
+  r = await ch(E, { op: 'create', stake: 0, tc: '5+3', open: true }); assert.equal(r.status, 200);
+  assert.equal(await ChessApi.live(E.playerId), true, 'défi en cours (suppression de compte refusée)');
+  await ch(E, { op: 'cancel' }); await ch(E, { op: 'ack' });
+  assert.equal(await ChessApi.live(E.playerId), false);
+}
+
 console.log(`OK —${calls} allers-retours Redis simulés, tirages ${aliceFirst.n} (${aliceFirst.s} XP) et ${bobFirst.n} (${bobFirst.s} XP)`);
