@@ -38,8 +38,9 @@ module.exports = async (req, res) => {
     // 2026-10-11) ? Il le reçoit alors à son prochain tirage, sans avoir à se reconnecter.
     const [level, linked, hadBonus, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ['GET', `player:${playerId}:google`], ['HGET', statsKey(playerId), 'googleBonus'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
     if (again) return send(res, 200, { ...JSON.parse(again), again: true });
-    const [cooldown] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX']]);
-    if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish' });
+    const [cooldown, left] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX'], ['PTTL', `cooldown:${playerId}`]]);
+    // wait : combien attendre, pour que le site reparte pile à la fin de la pause (GamblrGod, 2026-11-04).
+    if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish', wait: Math.max(0, Number(left) || 0) });
 
     const n = hard ? crypto.randomInt(0, HARD_MAX + 1) : crypto.randomInt(0, 1000001);
     const t = Date.now();

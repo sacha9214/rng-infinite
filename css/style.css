@@ -500,8 +500,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .float-up { animation: floatup 1.8s ease-out both; }
 @keyframes floatup { 0% { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 .badge-group { display: flex; flex-direction: column; gap: .35rem; }
-body.locked .topbar a, body.locked .topbar button { pointer-events: none; opacity: .45; }
-body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper le son reste possible pendant un tirage */
+/* Menu libre pendant un tirage (KMC, Stepa, 2026-11-06) : avec le tirage auto, il était grisé 18 s sur 20 et un clic sur
+   Shop ne faisait rien. Seul le choix du mode attend la fin de la révélation. */
+body.locked #mode-switch button { pointer-events: none; opacity: .45; }
 @media (prefers-reduced-motion: reduce) {
   .num-card.charging, .num-card.reveal-pulse, .pop-in, .float-up { animation: none; }
   .vignette { transition: none; }
@@ -673,8 +674,12 @@ body.locked .topbar .sound-btn { pointer-events: auto; opacity: 1; } /* couper l
 .row .emojis { font-size: .85rem; letter-spacing: .08em; white-space: nowrap; }
 .row .right { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
 .row .when { font-size: .66rem; color: var(--prose-3); white-space: nowrap; }
+/* Nombres du mode difficile (10 chiffres) : la carte débordait sur la colonne suivante et cachait la rareté
+   (Kag, 2026-11-04). La colonne prend la largeur du nombre. */
+.row.long { grid-template-columns: 3.2rem max-content 1fr auto; }
 @media (max-width: 560px) {
   .row { grid-template-columns: 2.4rem 5.2rem 1fr; }
+  .row.long { grid-template-columns: 2.4rem max-content 1fr; }
   .row .right { grid-column: 2 / 4; flex-direction: row; justify-content: space-between; align-items: center; }
 }
 .empty { text-align: center; padding: 3rem 1rem; color: var(--prose-3); }
@@ -7580,9 +7585,10 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
 /* Wheelie : le cycliste roule au-dessus de la carte ; sur l'écran de tirage, la carte est collée sous la barre du haut et
    il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place.
    Même chose pour les lutins d'Elves' Workshop : leurs têtes et leurs bonnets dépassent d'une hauteur de carte, la barre
-   du haut leur coupait la tête (« the elves got beheaded », costoroll, 2026-10-27). */
-#card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop { margin-top: 3.6rem; }
-@media (max-width: 560px) { #card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop { margin-top: 3rem; } }
+   du haut leur coupait la tête (« the elves got beheaded », costoroll, 2026-10-27). Et pour Chess : la pièce et le
+   « Checkmate! » de la célébration montent au-dessus de la carte (casmicgraything, 2026-11-05). */
+#card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess { margin-top: 3.6rem; }
+@media (max-width: 560px) { #card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess { margin-top: 3rem; } }
 
 .prank-bar[hidden] { display: none; }
 

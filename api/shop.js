@@ -10,7 +10,7 @@
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // POST /api/shop { playerId, secret, action: 'poker', op, … }         → tables de poker du casino (api/_poker.js)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
-const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue, findPlayer } = require('./_lib');
+const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue, findPlayer, ideaAuthor, IDEA_BY, ideaNames, nameKey } = require('./_lib');
 const crypto = require('node:crypto');
 const Shop = require('../js/shop.js');
 const Gamble = require('./_gamble');
@@ -83,7 +83,8 @@ async function ownerCounts() {
 // (buywall) et fond sorti d'une caisse de fonds payée, même règle.
 async function payIdea(item, buyer, paid) {
   if (!item || !item.idea || !(paid > 0)) return;
-  const author = await findPlayer(item.idea).catch(() => null), cut = Math.round(paid * Shop.IDEA_SHARE);
+  // Créateur figé sur son id (ideaAuthor) : sa part le suit s'il change de pseudo (casmictechthing, 2026-11-05).
+  const author = await ideaAuthor(item.idea).catch(() => null), cut = Math.round(paid * Shop.IDEA_SHARE);
   if (author && author !== buyer && cut > 0) await redis([['HINCRBY', statsKey(author), 'bonus', cut], ['HINCRBY', statsKey(author), 'royalty', cut], ...eco('in:royalty', cut)]);
 }
 const ownedWallsKey = id => `walls:${id}`; // fonds d'écran achetés ; le hash "wall" retient celui affiché
@@ -113,7 +114,11 @@ async function state(id) {
   // Bouton de tirage : "match" (il suit le skin équipé) tant que le choix enregistré n'est pas un bouton possédé —
   // celui d'un skin possédé, ou un bouton acheté à part.
   const mineToo = button && (Shop.byId.has(button) ? skins.includes(button) : buttons.includes(button));
+  // Pseudos crédités figés sur ce joueur (ideaby) : ses créations restent à lui après un changement de pseudo
+  // (casmictechthing, 2026-11-05). Seulement des pseudos, jamais d'id.
+  const credited = [...ideaNames()], frozen = credited.length ? (await redis([['HMGET', IDEA_BY, ...credited]]))[0] || [] : [];
   return {
+    ideaNames: credited.filter((k, i) => frozen[i] === id),
     coins: Shop.balance(stats),
     earned: Shop.earned(stats),
     royalty: Math.max(0, Number(stats.royalty) || 0), // pièces reçues comme créateur (part de 5 %), pour sa vue « Your creations »

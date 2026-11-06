@@ -4977,6 +4977,27 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal((await call(roll, { method: 'POST', body: { ...rn, name: 'Free Rename' } })).status, 200);
   assert.equal(run([['HGET', 'names', rn.playerId]])[0].result, 'Renamer Two', 'un tirage ne renomme pas gratuitement');
   assert.equal(run([['GET', 'name:freerename']])[0].result, null, 'et ne réserve pas le nom');
+  // Créateur renommé (casmictechthing, 2026-11-05) : son ancien pseudo crédité reste à lui (ideaby), même si un autre le
+  // reprend ; sa vue « Your creations » le garde (state.ideaNames), sans jamais montrer d'id.
+  { const item = Shop.byId.get('hotdog'), was = item.idea, Lib = require(path.join(ROOT, 'api/_lib.js'));
+    item.idea = 'Renamer Two';
+    try {
+      run([['HINCRBY', `stats:${rn.playerId}`, 'bonus', 5000]]);
+      x = await setN('Renamer Three'); assert.equal(x.status, 200, JSON.stringify(x.body));
+      assert.equal(run([['HGET', 'ideaby', 'renamertwo']])[0].result, rn.playerId, 'pseudo crédité figé au changement');
+      const th = { playerId: 'd8'.repeat(8), secret: 'd9'.repeat(16) };
+      x = await call(nameApi2, { method: 'POST', body: { ...th, name: 'Renamer Two' } }); assert.equal(x.status, 200, 'un autre reprend l\'ancien pseudo');
+      assert.equal(await Lib.ideaAuthor('Renamer Two'), rn.playerId, 'la part reste au vrai créateur');
+      const st = (await call(shopApi, { url: `/api/shop?me=${rn.playerId}` })).body;
+      assert.ok(st.ideaNames.includes('renamertwo') && !JSON.stringify(st.ideaNames).includes(rn.playerId), 'ses créations, sans id');
+      assert.ok(!(await call(shopApi, { url: `/api/shop?me=${th.playerId}` })).body.ideaNames.includes('renamertwo'), 'pas pour celui qui a repris le pseudo');
+      const { backfill } = require(path.join(ROOT, 'tools/backfill-idea-authors.js'));
+      const before = run([['HGET', 'ideaby', 'renamertwo']])[0].result;
+      await backfill({ apply: true, log: () => {} });
+      assert.equal(run([['HGET', 'ideaby', 'renamertwo']])[0].result, before, 'le rattrapage ne remplace rien');
+      assert.ok(run([['GET', 'ideaby:ready']])[0].result, 'rattrapage marqué fait');
+    } finally { item.idea = was; }
+  }
 
   // 4. Prestige : stock limité, un par joueur, titre débloqué et équipé, eco out:prestige.
   const pr = { playerId: 'd6'.repeat(8), secret: 'd7'.repeat(16) };

@@ -41,7 +41,7 @@ function siteVersion() {
   versionCache = { at: Date.now(), app };
   return app;
 }
-const CLIENT_EVENTS = ['offline_roll', 'reveal_cut', 'storage_full', 'id_reset', 'bg_error', 'auto_429'];
+const CLIENT_EVENTS = ['offline_roll', 'reveal_cut', 'storage_full', 'id_reset', 'bg_error', 'auto_429', 'room_timeout', 'room_js'];
 const suggKey = id => `sugg:${id}`, byPlayer = id => `sugg:by:${id}`;
 // Texte libre : on retire les caractères de contrôle et on borne la longueur ; l'affichage l'échappe côté site.
 // Coupé AVANT les expressions régulières (audit de sécurité, 2026-11-02) : « [ \t]+\n » sur 250 000 espaces prenait

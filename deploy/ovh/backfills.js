@@ -16,6 +16,7 @@ const JOBS = [
   { name: 'number-counts', ready: 'nc:ready', script: 'tools/backfill-number-counts.js' },
   { name: 'badge-owners', ready: 'bown:ready', script: 'tools/backfill-badge-owners.js' },
   { name: 'hof', ready: 'hof:ready', script: 'tools/backfill-hof.js' },
+  { name: 'idea-authors', ready: 'ideaby:ready', script: 'tools/backfill-idea-authors.js' }, // créateurs renommés (2026-11-06)
 ];
 const LOCK_S = 6 * 3600;
 
