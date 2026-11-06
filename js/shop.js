@@ -465,7 +465,9 @@
     { id: 'synthwave', name: 'Synthwave', emoji: '🟣', price: 1200, desc: 'A neon grid rolling to the horizon' },
     // Idée de Me Cojoni (2026-10-20) : un fond galactique qui réagit à chaque tirage selon sa rareté (id « aether » :
     // « infinity » est déjà l'identifiant d'un skin).
-    { id: 'aether', name: 'Aether', emoji: '♾️', price: 6000, premium: true, desc: 'A galaxy around a glowing infinity sign that reacts to the rarity of every roll' },
+    // Idée d'Angelicide9 (2026-10-21, faite le 2026-11-05) : une bille de lumière parcourt le signe sans arrêt, plus vite
+    // selon la rareté du dernier tirage, et le signe brille de la couleur de cette rareté (arc-en-ciel pour Infinite).
+    { id: 'aether', name: 'Aether', emoji: '♾️', price: 6000, premium: true, desc: 'A galaxy around a glowing infinity sign: a ball of light races along it, faster the rarer your roll, and the sign glows in your roll\'s rarity colour' },
     { id: 'galaxy', name: 'Galaxy', emoji: '🌠', price: 1000, desc: 'A purple nebula with stars rushing past' },
     // Idée de JAKE (2026-10-17) : du code vert qui tombe, façon hacker.
     { id: 'hacker', name: 'Hacker', emoji: '💻', price: 900, desc: 'Green code raining down the screen' },
@@ -541,6 +543,34 @@
     { id: 'meteorshower', name: 'Meteor Shower', emoji: '☄️', price: 4000, premium: true, idea: 'Ggggssnoop', desc: 'Shooting stars streak over the hills at night; Rare+ rolls bring a meteor shower, bigger the rarer the roll, with fireballs on Mythic+' },
     // Idée de jia jun : une fête d'anniversaire.
     { id: 'party', name: 'Party', emoji: '🎈', price: 4000, premium: true, idea: 'jia jun', desc: 'Balloons float up past bunting, streamers and confetti; good rolls pop a balloon, and Mythic+ rolls pop a bunch in a shower of confetti' },
+    // Fonds d'idées de joueurs (tri de Sacha, 2026-11-05), lot « ciel et espace », dessinés en direct (js/wallfx.js). Des
+    // fonds normaux (ils entrent dans la caisse de fonds) : aucun ne réagit à la rareté des tirages.
+    // Idée d'IXOLAF2 : un ciel avec des avions qui passent de temps en temps (livrées inventées, aucune compagnie).
+    { id: 'blueskies', name: 'Blue Skies', emoji: '✈️', price: 1000, idea: 'IXOLAF2', desc: 'Clouds drift across a big blue sky; now and then a jet draws a long contrail or a little plane tows a banner by' },
+    // Idée de Ggggssnoop : la Voie lactée (id « milkynight » : « milkyway » est déjà un skin).
+    { id: 'milkynight', name: 'Milky Way', emoji: '🔭', price: 1100, idea: 'Ggggssnoop', desc: 'The Milky Way arcs over dark hills and a glowing tent: twinkling stars, a shooting star now and then and a slow satellite' },
+    // Idée de Ggggssnoop (« heaven's gate ») : une porte de lumière dans le ciel, sans aucun symbole religieux.
+    { id: 'skygate', name: 'Sky Gate', emoji: '✨', price: 1200, idea: 'Ggggssnoop', desc: 'A tall gate of light stands on a sea of clouds; its doors slowly swing open and golden rays pour through' },
+    // Lot « lieux » (2026-11-05), toujours des fonds normaux.
+    // Idée de qwertyuiop, aussi demandée par Jguz01 (« les 7 continents ») et ichi (« un fond monde »).
+    { id: 'worldmap', name: 'World Map', emoji: '🗺️', price: 1100, idea: 'qwertyuiop', desc: 'The seven continents in glowing dots slowly scroll by like a turning globe, with twinkling city lights and flights arcing between them' },
+    // Idée de whywhywaylon : les pyramides de Gizeh.
+    { id: 'pyramids', name: 'Pyramids', emoji: '🏜️', price: 1000, idea: 'whywhywaylon', desc: 'The three great pyramids and the sphinx at golden hour; a camel caravan crosses the dunes as sand drifts and a falcon circles' },
+    // Idée de finnnnn, assortie au bouton et au skin Ice : des pics de glace et une rivière gelée sous des montagnes enneigées.
+    { id: 'icecaps', name: 'Ice Caps', emoji: '🧊', price: 1000, idea: 'finnnnn', desc: 'Tall, pointy ice spires beside an icy river under snowy mountains; ice floes drift by, snow falls and the northern lights dance at night' },
+    // Idée de sennybex1 : un cirque, des animaux, des fanions, à manger, un obstacle, et la caméra qui tourne.
+    { id: 'circus', name: 'Circus', emoji: '🎪', price: 1100, idea: 'sennybex1', desc: 'Look up into a spinning big top: bunting, sweeping spotlights, an elephant rolling a ball, a juggling seal, a hoop and popping popcorn' },
+    // Lot « étranges » (2026-11-05). 4th Dimension est légendaire (finnnnn l'a demandé ainsi) : il réagit à la rareté des
+    // tirages, donc premium, hors caisse. Les quatre autres sont des fonds normaux.
+    // Idée de finnnnn : des formes qui se retournent dans la 4e dimension, des couleurs et des motifs qui changent.
+    { id: 'fourthdim', name: '4th Dimension', emoji: '🌀', price: 4500, premium: true, idea: 'finnnnn', desc: 'A glowing tesseract turns inside out through the fourth dimension over shifting patterns; Rare+ rolls send a wave of their colour, and Mythic+ rolls flip it inside out' },
+    // Idée de qwertyuiop : une dimension infernale, plutôt orange et rouge clair (un paysage, aucun symbole).
+    { id: 'avernus', name: 'Avernus', emoji: '🌋', price: 1100, idea: 'qwertyuiop', desc: 'A volcanic dimension under orange smoke: rivers of lava flow, embers rise, rocks float and a lava geyser erupts now and then' },
+    // Trois idées de jia jun : un pays en bonbons, un écran cassé, des liasses de billets (id « moneystacks » et
+    // « crackscreen » : « money » et « cracked » sont des skins).
+    { id: 'candyland', name: 'Candy Land', emoji: '🍭', price: 900, idea: 'jia jun', desc: 'Gumdrop hills, a chocolate river and giant spinning lollipops, with cotton candy clouds and falling sprinkles' },
+    { id: 'crackscreen', name: 'Cracked Screen', emoji: '📱', price: 800, idea: 'jia jun', desc: 'Your screen looks cracked from a corner, with glints on the broken glass and flickering dead pixels; click the background to crack it some more' },
+    { id: 'moneystacks', name: 'Stacks of Money', emoji: '💵', price: 1000, idea: 'jia jun', desc: 'Stacks of bills, piles of gold coins and gold bars in a vault, with bills fluttering down and coins sparkling' },
     // Fonds d'Halloween (idée de Deadshot, 2026-10-16) : dans l'onglet Limités, en vente jusqu'au 1er novembre.
     { id: 'graveyard', name: 'Moonlit Graveyard', emoji: '🪦', price: 666, desc: 'Tombstones under a full moon, bats flying across', until: '2026-11-01T00:00:00Z', event: 'halloween' },
     { id: 'pumpkins', name: 'Pumpkin Patch', emoji: '🎃', price: 777, desc: 'Glowing jack-o\'-lanterns in a foggy field', until: '2026-11-01T00:00:00Z', event: 'halloween' },
