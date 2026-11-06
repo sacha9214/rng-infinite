@@ -736,8 +736,8 @@ module.exports = async (req, res) => {
     }
 
     // ------------------------------------------------------------ réservé au créateur du site
-    if (!['imSet', 'recoverCode', 'ban', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
-    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList', 'gwList'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
+    if (!['imSet', 'recoverCode', 'ban', 'inbox', 'shot', 'mark', 'delete', 'stats', 'insights', 'fund', 'fundAdd', 'fundSet', 'fundAssign', 'reports', 'reportDone', 'annAdd', 'annDelete', 'annList', 'gwList', 'gwStart', 'bots', 'botBan'].includes(body.action)) return send(res, 400, { error: 'Unknown action' });
+    if (!(['inbox', 'shot', 'stats', 'insights', 'fund', 'reports', 'annList', 'gwList', 'bots'].includes(body.action) ? canSee || (isIM && body.action === 'shot') : isOwner)) return send(res, 403, { error: 'Owner only' });
     // Donner ou retirer le rôle d'Idea Manager, par pseudo (créateur seulement).
     if (body.action === 'imSet') {
       const who = await findPlayer(String(body.name || '').slice(0, 40));
@@ -767,6 +767,14 @@ module.exports = async (req, res) => {
       if (body.on === false) await unbanPlayers([who]); else await banPlayers([who]);
       const [name, total] = await redis([['HGET', 'names', who], ['SCARD', BANNED]]);
       return send(res, 200, { name: name || body.name, banned: body.on !== false, total: Number(total) || 0 });
+    }
+    // Bot watch (api/_botwatch.js, Sacha, 2026-11-06) : rafales d'inscriptions, gros tireurs sans rien d'humain, tirages
+    // refusés ; et suspendre une rafale entière (créateur seulement, comptes avec Google, amis ou photo gardés).
+    if (body.action === 'bots' || body.action === 'botBan') {
+      const Bots = require('./_botwatch');
+      let done = null;
+      if (body.action === 'botBan') { try { done = await Bots.suspendBurst(body.at); } catch (e) { return send(res, e.status || 500, { error: e.status ? e.message : 'Unavailable right now' }); } }
+      return send(res, 200, { ...(await Bots.report()), ...(done ? { done } : {}), readOnly: !isOwner });
     }
     // Giveaways sur le Discord (api/_giveaway.js, Sacha, 2026-11-01) : la liste, et en lancer un (créateur seulement).
     if (body.action === 'gwList' || body.action === 'gwStart') {

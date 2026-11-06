@@ -1,6 +1,25 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-06 by Claude (branch `claude/yinyang-wallpaper`). Update this file at the end of every session.
+Last updated: 2026-11-06 by Claude (branch `claude/owner-bot-watch`). Update this file at the end of every session.
+
+## Owner page: Bot watch tab and mouse-friendly tabs (2026-11-06, branch `claude/owner-bot-watch`)
+
+Sacha asked whether players were botting or the game was really growing (read-only check on production: real growth,
+mostly Google search; the Nov 3–4 farm of 468 burst accounts fell from 31% of rolls on Nov 4 to 1% on Nov 6; refused
+"too fast" rolls dropped ~7× after the RollGate fix), then asked for a section to spot botting, and reported that the
+owner tabs could not be scrolled with a PC mouse.
+
+- **Bot watch** tab (`api/_botwatch.js`, actions `bots` (owner + viewer) and `botBan` (owner) in `api/site.js`):
+  sign-up bursts (6+ first rolls in the same minute, last 7 days), heavy rollers (5,000+ rolls today) or burst accounts
+  with no Google, friend or photo, share of today's rolls from burst accounts, and refused rolls per roll
+  (`health:<day>` `r429:roll` / `rolls:day`; above 1 means scripts). "Suspend N" on a burst recomputes the group on
+  the server and keeps Google / friends / photo accounts (same rules as `tools/ban-bots.js`); each suspect has a
+  Suspend button (existing `ban` action). Badge + Overview to-do chip when a burst in the last 24 h is still open.
+  No player id is sent to the page. Owner-only, so no UPDATES entry.
+- **Tabs with a mouse**: `.o-tabs` (and `.pf-tabs` in a narrow window) scrolled sideways with a hidden scrollbar;
+  a trackpad can swipe, a mouse wheel cannot. With `(hover: hover) and (pointer: fine)` they now wrap onto two rows;
+  touch screens still swipe.
+- The 468 Nov 3–4 farm accounts are still not suspended: the new tab shows them with a Suspend button per burst.
 
 ## Yin and Yang wallpaper (2026-11-06, branch `claude/yinyang-wallpaper`)
 

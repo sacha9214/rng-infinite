@@ -3097,6 +3097,16 @@ body.locked #mode-switch button { pointer-events: none; opacity: .45; }
 /* ---------------------------------------------------------------- page Owner : onglets, graphiques, cohortes */
 .o-tabs { position: sticky; top: .4rem; z-index: 5; display: flex; gap: .35rem; margin: 0 0 1rem; padding: .35rem; border: 1px solid var(--outline); border-radius: .85rem; background: var(--surface); overflow-x: auto; scrollbar-width: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
 .o-tabs::-webkit-scrollbar { display: none; }
+/* Souris (signalé par Sacha, 2026-11-06) : la barre se faisait défiler au doigt ou au pavé tactile du Mac, mais la molette
+   d'une souris ne fait défiler que de haut en bas, et la barre de défilement est cachée : sur PC, les derniers onglets
+   (Avatars, Chat…) étaient hors d'atteinte. Avec un pointeur précis, les onglets passent à la ligne au lieu de défiler. */
+@media (hover: hover) and (pointer: fine) { .o-tabs { flex-wrap: wrap; overflow-x: visible; } }
+/* 🤖 Bot watch (2026-11-06) : rafales d'inscriptions et comptes à regarder */
+.o-tr.o-bt { grid-template-columns: 6.6rem repeat(3, minmax(3.4rem, .6fr)) minmax(8rem, 2.4fr) 7.5rem; min-width: 36rem; align-items: center; }
+.o-tr.o-st { grid-template-columns: minmax(7rem, 1.4fr) repeat(2, minmax(3.6rem, .7fr)) 3.6rem minmax(4.2rem, .7fr) minmax(4.6rem, .8fr) 9.5rem; min-width: 40rem; align-items: center; }
+.o-tr.o-bt span, .o-tr.o-st span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o-bot-names { font-family: var(--font-sans); color: var(--prose-2); text-align: left; }
+.o-tr.o-bt > span:nth-child(5) { text-align: left; }
 .o-tabs button { position: relative; flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .55rem .8rem; border: 0; border-radius: .6rem; background: none; color: var(--prose-2); font: 800 .76rem var(--font-sans); letter-spacing: .02em; cursor: pointer; white-space: nowrap; }
 .o-tabs button i { font-style: normal; font-size: 1rem; line-height: 1; filter: grayscale(.6); }
 .o-tabs button:hover { color: var(--prose); background: var(--surface-raised); }
@@ -6006,6 +6016,7 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
   .pf-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
   .pf-tabs button { flex: 0 0 auto; padding-left: .8rem; padding-right: .8rem; white-space: nowrap; }
 }
+@media (max-width: 760px) and (hover: hover) and (pointer: fine) { .pf-tabs { flex-wrap: wrap; overflow-x: visible; } }
 .pf-best .num-card { font-size: 2.7rem; padding: .35em .55em; }
 @media (max-width: 760px) { .pf-best .num-card { font-size: 2.2rem; } }
 

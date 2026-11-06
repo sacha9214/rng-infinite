@@ -7805,7 +7805,7 @@
   // ---------------------------------------------------------------- page du créateur : tableau de bord en onglets
   // Le serveur ne répond qu'au compte Owner : pour tout autre joueur, cette page reste vide.
   // Page Owner refaite le 2026-10-18 : 7 onglets (Joueurs = rétention + stats, Économie = pièces + boutique + casino + crypto).
-  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['mods', '🛡️', 'Moderators'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['giveaway', '🎁', 'Giveaways'], ['fund', '💶', 'Fund']];
+  const OWNER_TABS = [['overview', '📊', 'Overview'], ['players', '👥', 'Players'], ['traffic', '🌍', 'Traffic'], ['economy', '🪙', 'Economy'], ['server', '🖥️', 'Server'], ['bots', '🤖', 'Bot watch'], ['inbox', '💡', 'Inbox'], ['ideas', '🧑‍⚖️', 'Idea Managers'], ['mods', '🛡️', 'Moderators'], ['reports', '🚩', 'Reports'], ['avatars', '🖼️', 'Avatars'], ['chat', '💬', 'Chat'], ['announce', '📣', 'Announce'], ['giveaway', '🎁', 'Giveaways'], ['fund', '💶', 'Fund']];
   // ---------------------------------------------------------------- Idea Managers (demandé par Sacha, 2026-10-23)
   // Des joueurs choisis trient les idées : un avis (Yes / No / Discuss / Already exists) et une justification obligatoire.
   // Le créateur voit leurs avis dans sa boîte et décide seul ; eux ne voient que les idées à trier, rien d'autre.
@@ -8025,6 +8025,7 @@
       if (todo.decide) items.push(`<button class="o-chip" data-go-tab="inbox" data-go-itab="seen">🤔 ${todo.decide} suggestion${todo.decide === 1 ? '' : 's'} to decide</button>`);
       if (todo.reports) items.push(`<button class="o-chip warn" data-go-tab="reports">🚩 ${todo.reports} reported message${todo.reports === 1 ? '' : 's'}</button>`);
       if (todo.server) items.push(`<button class="o-chip warn" data-go-tab="server">🖥️ ${todo.server}</button>`);
+      if (todo.bots) items.push(`<button class="o-chip warn" data-go-tab="bots">🤖 ${todo.bots} sign-up burst${todo.bots === 1 ? '' : 's'} to check</button>`);
       if (todo.tips) items.push(`<button class="o-chip warn" data-go-tab="fund">💶 ${todo.tips} tip${todo.tips === 1 ? '' : 's'} waiting for a player</button>`);
       box.innerHTML = items.length ? items.join('') : todo.ideas === null && todo.tips === null ? '' : '<span class="o-chip">✅ Nothing waiting for you</span>';
     };
@@ -8370,6 +8371,56 @@
         d.reports.length ? [...open, ...d.reports.filter(r => r.done)].map(row).join('') : '<div class="empty">No report yet.</div>');
     };
     Online.site('reports').then(drawReports).catch(err => { if (pane('reports')) pane('reports').innerHTML = denied(err); });
+    // ---- Bot watch (demandé par Sacha, 2026-11-06 ; api/_botwatch.js) : les rafales d'inscriptions, les gros tireurs sans
+    // rien d'humain autour (ni Google, ni ami, ni photo) et les tirages refusés parce que trop rapides. Signes à regarder,
+    // pas des preuves : rien n'est suspendu sans un clic du créateur.
+    const utcMin = t => new Date(t).toISOString().slice(5, 16).replace('T', ' ');
+    const drawBots = d => {
+      const box = pane('bots'); if (currentView !== 'owner' || !box) return;
+      badge('bots', d.totals.recent);
+      todo.bots = d.totals.recent; drawTodo();
+      const t0 = d.days[0], y = d.days[1] || t0;
+      const share = x => (x.counted ? `${Math.round((100 * x.fromBursts) / x.counted)}%` : '–');
+      const ratio = x => (x.rolls && x.refused ? (x.refused / x.rolls).toFixed(2) : '–');
+      const reading = [];
+      reading.push(d.totals.recent ? `⚠️ <b>${d.totals.recent}</b> sign-up burst${d.totals.recent === 1 ? '' : 's'} in the last 24 hours. Look at the names: a school class can sign up together, bot farms use made-up names in series.` : '✅ No sign-up burst in the last 24 hours.');
+      if (t0.counted && t0.fromBursts / t0.counted > .1) reading.push(`⚠️ Accounts from bursts made <b>${share(t0)}</b> of today's rolls.`);
+      if (t0.rolls && t0.refused / t0.rolls > 1) reading.push(`⚠️ <b>${ratio(t0)}</b> refused rolls for every roll today: something sends rolls faster than the game allows (a script, or an old page).`);
+      else if (t0.refused) reading.push(`✅ ${ratio(t0)} refused rolls for every roll today (the game waits for the cooldown since Nov 6; above 1 would mean scripts).`);
+      reading.push(d.suspects.length ? `<b>${d.suspects.length}</b> account${d.suspects.length === 1 ? '' : 's'} below rolled a lot today with no Google, no friend and no photo. Auto-roll left open does the same, so check before suspending.` : '✅ No heavy roller without Google, friends or a photo today.');
+      const burstRows = d.bursts.map(b => [utcMin(b.at), fmt(b.count), fmt(b.active), fmt(b.suspended),
+        `<span class="o-bot-names" data-no-i18n>${b.names.map(esc).join(', ')}${b.count > b.names.length ? '…' : ''}</span>`,
+        b.suspendable && !d.readOnly ? `<button class="btn ghost small" data-bot-ban="${b.at}" data-n="${b.suspendable}">Suspend ${b.suspendable}</button>` : b.suspendable ? fmt(b.suspendable) : '✓']);
+      const susRows = d.suspects.map(x => [who(x.name), fmt(x.today), fmt(x.total), x.first ? utcMin(x.first).slice(0, 5) : '–', fmt(x.casino), x.seen ? relTime(x.seen) : '–', `${x.burst ? '<span class="o-chip warn">burst</span> ' : ''}${d.readOnly ? '' : `<button class="btn ghost small" data-bot-one="${esc(x.name)}">Suspend</button>`}`]);
+      box.innerHTML = `
+        <div class="tiles">
+          ${tile('Sign-up bursts, 24 h', fmt(d.totals.recent), `${d.rules.burstMin}+ new players in the same minute`)}
+          ${tile('Burst accounts still playing', fmt(d.totals.open), `${fmt(d.totals.burstAccounts)} in bursts over ${d.rules.days} days · ${fmt(d.totals.suspended)} suspended in total`)}
+          ${tile('Rolls from burst accounts', share(t0), `today · ${share(y)} yesterday`)}
+          ${tile('Refused rolls per roll', ratio(t0), `today · ${ratio(y)} yesterday · above 1 means scripts`)}
+        </div>
+        <div class="stats-sep">${panel('What the numbers say', '', `<ul class="o-read">${reading.map(x => `<li>${x}</li>`).join('')}</ul>`)}</div>
+        <div class="stats-sep">${panel('Sign-up bursts', `last ${d.rules.days} days · UTC · Suspend keeps accounts with Google, friends or a photo`, burstRows.length ? table(['When', 'Accounts', 'Rolling today', 'Suspended', 'Names', ''], burstRows, 'o-bt') : '<div class="empty">No burst. 🎉</div>')}</div>
+        <div class="stats-sep">${panel('Accounts to look at today', `${fmt(d.rules.heavy)}+ rolls today, or from a burst, with no Google, no friend and no photo`, susRows.length ? table(['Player', 'Today', 'Total', 'Joined', 'Casino bets', 'Seen', ''], susRows, 'o-st') : '<div class="empty">Nobody. 🎉</div>')}
+</div>
+        <div class="stats-sep">${panel('Day by day', 'UTC · today is still filling up', table(['Day', 'New players', 'In bursts', 'Rolls', 'From bursts', 'Refused per roll'], d.days.map(x => [x.day.slice(5), fmt(x.fresh), fmt(x.burst), compact(x.rolls), share(x), ratio(x)])))}</div>`;
+    };
+    const loadBots = (action = 'bots', extra) => Online.site(action, extra).then(d => { drawBots(d); return d; });
+    loadBots().catch(err => { if (pane('bots')) pane('bots').innerHTML = denied(err); });
+    pane('bots').addEventListener('click', e => {
+      const one = e.target.closest('[data-bot-one]');
+      if (one && currentView === 'owner') {
+        const n = one.dataset.botOne;
+        if (!confirm(window.RNGI18n.t(`Suspend ${n}? They can no longer play.`))) return;
+        one.disabled = true;
+        Online.site('ban', { name: n, on: true }).then(r => { toast(window.RNGI18n.t(`${r.name} is suspended (${fmt(r.total)} suspended in total)`)); return loadBots(); }).catch(err => { one.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); });
+        return;
+      }
+      const b = e.target.closest('[data-bot-ban]'); if (!b || currentView !== 'owner') return;
+      if (!confirm(window.RNGI18n.t(`Suspend ${b.dataset.n} accounts from this burst? They can no longer play (nothing is deleted).`))) return;
+      b.disabled = true;
+      loadBots('botBan', { at: Number(b.dataset.botBan) }).then(d => toast(window.RNGI18n.t(`${d.done.suspended} accounts suspended, ${d.done.kept} kept`))).catch(err => { b.disabled = false; toast(err.status && err.status < 500 ? err.message : 'Unavailable right now, try again'); });
+    });
     // « About me » signalé ou trouvé (idée de Niall, 2026-10-27) : le créateur l'efface, par pseudo (onglets Reports et Chat).
     const clearBio = name => {
       if (!confirm(window.RNGI18n ? window.RNGI18n.t(`Clear the About me of ${name}?`) : `Clear the About me of ${name}?`)) return Promise.resolve(false);

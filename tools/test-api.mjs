@@ -6774,6 +6774,34 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.equal(await Lib.banPlayers([fresh[3].playerId, fresh[3].playerId, fresh[4].playerId, 'nope']), 2);
   assert.equal(await Lib.isBanned(fresh[4].playerId), true);
   await Lib.unbanPlayers([fresh[3].playerId, fresh[4].playerId]);
+  // 4 bis. Bot watch (api/_botwatch.js, 2026-11-06) : une rafale de 7 comptes dans la même minute (l'un lié à Google, gardé),
+  // un gros tireur sans Google ni ami ; lecture réservée au créateur, aucun identifiant dans la réponse ; suspendre la rafale.
+  {
+    const at = Math.floor((Date.now() - 3 * 3600000) / 60000) * 60000, today = Lib.dayKey(Date.now());
+    const farm = Array.from({ length: 7 }, (_, i) => ({ id: (0xb070 + i).toString(16).padStart(4, '0').repeat(4), name: `Burst${i}` }));
+    const heavy = { id: 'b07f'.repeat(4), name: 'Afkheavy' };
+    run([...farm.flatMap((f, i) => [['HSET', 'names', f.id, f.name], ['HSET', `stats:${f.id}`, 'first', at + i * 1000, 'rolls', 400], ['HSET', `act:${today}`, f.id, 120]]),
+      ['SET', `player:${farm[0].id}:google`, 'g'], ['HSET', 'names', heavy.id, heavy.name], ['HSET', `stats:${heavy.id}`, 'first', Date.now() - 5 * 86400000, 'rolls', 90000], ['HSET', `act:${today}`, heavy.id, 6500]]);
+    const bots = (who, action = 'bots', extra = {}) => call(siteApi, { method: 'POST', body: { playerId: who.playerId, secret: who.secret, action, ...extra } });
+    assert.equal((await bots(fresh[2])).status, 403, 'Bot watch : créateur seulement');
+    let w = await bots(boss);
+    assert.equal(w.status, 200, JSON.stringify(w.body));
+    const b = w.body.bursts.find(x => x.at === at);
+    assert.ok(b && b.count === 7 && b.active === 7 && b.suspendable === 6 && b.suspended === 0, `la rafale : ${JSON.stringify(b)}`);
+    assert.ok(w.body.suspects.some(x => x.name === 'Afkheavy' && x.today === 6500), 'le gros tireur sans rien d\'humain');
+    assert.ok(!w.body.suspects.some(x => x.name === 'Burst0'), 'le compte Google de la rafale n\'est pas suspect');
+    assert.ok(w.body.days.length === 7 && w.body.days[0].day === today, 'sept jours, aujourd\'hui d\'abord');
+    assert.ok(![...farm, heavy].some(f => JSON.stringify(w.body).includes(f.id)), 'aucun identifiant envoyé');
+    assert.equal((await bots(fresh[2], 'botBan', { at })).status, 403, 'suspendre : créateur seulement');
+    assert.equal((await bots(boss, 'botBan', { at: at + 1 })).status, 404, 'pas une minute');
+    assert.equal((await bots(boss, 'botBan', { at: at - 60000 })).status, 404, 'pas de rafale à cette minute');
+    w = await bots(boss, 'botBan', { at });
+    assert.equal(w.status, 200, JSON.stringify(w.body)); assert.deepEqual(w.body.done, { suspended: 6, kept: 1 });
+    assert.equal(await Lib.isBanned(farm[1].id), true); assert.equal(await Lib.isBanned(farm[0].id), false, 'Google : gardé');
+    assert.ok(w.body.bursts.find(x => x.at === at).suspendable === 0, 'plus rien à suspendre dans cette rafale');
+    await Lib.unbanPlayers(farm.map(f => f.id));
+    run([['HDEL', 'names', ...farm.map(f => f.id), heavy.id], ['HDEL', `act:${today}`, ...farm.map(f => f.id), heavy.id]]);
+  }
   run([['HDEL', `stats:${boss.playerId}`, 'owner']]);
   // 5. Temps restant avant cadeaux et poker entre amis.
   const now = Date.now();
