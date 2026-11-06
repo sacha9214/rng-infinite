@@ -687,4 +687,4 @@ async function handle(id, body, now = Date.now()) {
   throw refuse(400, 'Unknown poker action');
 }
 
-module.exports = { handle, check, invitesFor, view, advance, BUYINS, BOT_MAX, TURN_MS, STALE_MS, CHECK_MS, MIN_SEATS, MAX_SEATS, FRIEND_DAY, FRIEND_ROLLS, OPEN, OPEN_KEY, OPEN_IDLE_MS, tableKey, seatKey, inviteKey, STATS_KEY };
+module.exports = { handle, check, invitesFor, view, advance, friendDayKey, BUYINS, BOT_MAX, TURN_MS, STALE_MS, CHECK_MS, MIN_SEATS, MAX_SEATS, FRIEND_DAY, FRIEND_ROLLS, OPEN, OPEN_KEY, OPEN_IDLE_MS, tableKey, seatKey, inviteKey, STATS_KEY };

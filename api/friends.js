@@ -223,7 +223,8 @@ module.exports = async (req, res) => {
       const big = body.bigSince != null ? await bigRolls(playerId, Number(body.bigSince) || 0) : undefined;
       // Invitations à une table de poker (api/_poker.js, 2026-11-03) : pseudo de l'ami et code de la table, rien d'autre.
       const poker = await require('./_poker').invitesFor(playerId);
-      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0), ...(big ? { big } : {}), ...(poker.length ? { poker } : {}) });
+      const chess = await require('./_chess').invitesFor(playerId); // défis d'échecs d'un ami (api/_chess.js, 2026-11-06)
+      return send(res, 200, { gifts, coins: gifts.length ? Shop.balance(await readStats(playerId)) : null, messages: (counts || []).reduce((x, v) => x + (Number(v) || 0), 0), ...(big ? { big } : {}), ...(poker.length ? { poker } : {}), ...(chess.length ? { chess } : {}) });
     }
 
     const other = await findPlayer(cleanName(body.name));

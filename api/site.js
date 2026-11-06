@@ -303,8 +303,9 @@ function retention(now, ids, names, stats, linked, act) {
 // Tout est agrégé ici, à la demande : la carte (pays et cases sur 30 jours, cases du jour), les heures d'activité, le
 // casino (par jeu, par jour, plus gros joueurs) et l'état des joueurs (activité, ancienneté en tirages, économie).
 // poker (2026-11-03) : une « manche » = une main ; mise = cave, gain = tapis encaissé (api/_poker.js).
-const GAMES = ['crash', 'mines', 'tower', 'keno', 'dice', 'teddy', 'duck', 'wheel', 'plinko', 'slots', 'roulette', 'bj', 'flip', 'poker'];
-const COUNTERS = { crash: 'gCrash', mines: 'gMines', tower: 'gTower', keno: 'gKeno', dice: 'gDice', teddy: 'gTeddy', duck: 'gDuck', wheel: 'gWheel', plinko: 'gPlinko', slots: 'gSlots', roulette: 'gSpins', bj: 'gHands', flip: 'gFlips', poker: 'gPoker' };
+// chess (2026-11-06) : une manche = une partie avec mise (api/_chess.js) ; mise = la mise, gain = ce qui est rendu.
+const GAMES = ['crash', 'mines', 'tower', 'keno', 'dice', 'teddy', 'duck', 'wheel', 'plinko', 'slots', 'roulette', 'bj', 'flip', 'poker', 'chess'];
+const COUNTERS = { crash: 'gCrash', mines: 'gMines', tower: 'gTower', keno: 'gKeno', dice: 'gDice', teddy: 'gTeddy', duck: 'gDuck', wheel: 'gWheel', plinko: 'gPlinko', slots: 'gSlots', roulette: 'gSpins', bj: 'gHands', flip: 'gFlips', poker: 'gPoker', chess: 'gChess' };
 const num = v => Number(v) || 0;
 // Nouveautés (crypto, levier, cadeaux, codes, messages) : ce qui s'ajoute aux sommes faites sur les fiches.
 async function featureStats(feat, now) {

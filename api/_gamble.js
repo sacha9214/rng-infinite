@@ -65,8 +65,9 @@ async function house() {
 // Classement du casino, depuis toujours : plus gros gagnants (net = gagné − misé), plus gros perdants, plus gros
 // parieurs (total misé). Calculé depuis les compteurs de chaque joueur (gBet, gWon, manches par jeu) et gardé une
 // minute : la page peut le demander souvent sans relire toutes les fiches à chaque fois.
-// gPoker : mains de poker jouées (api/_poker.js, 2026-11-03), comptées comme des manches.
-const BOARD_KEY = 'casino:board', BOARD_TTL_S = 60, BOARD_TOP = 10, ROUND_FIELDS = [...PLAYED, 'gSlots', 'gPoker'];
+// gPoker : mains de poker jouées (api/_poker.js, 2026-11-03), comptées comme des manches ; gChess : parties d'échecs
+// avec mise (api/_chess.js, 2026-11-06).
+const BOARD_KEY = 'casino:board', BOARD_TTL_S = 60, BOARD_TOP = 10, ROUND_FIELDS = [...PLAYED, 'gSlots', 'gPoker', 'gChess'];
 async function board(me) {
   const [raw] = await redis([['GET', BOARD_KEY]]);
   let data = null;

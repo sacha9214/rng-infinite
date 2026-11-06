@@ -921,6 +921,8 @@ async function flushDue(now = Date.now()) {
       if (entry.lobby) await lobbyCheck(entry.lobby, now);
       // Table de poker (api/_poker.js) : abandonnée depuis 2 min, réglée et encaissée ; sinon revue dans une minute.
       if (entry.poker) await require('./_poker').check(entry.poker, now);
+      // Partie d'échecs (api/_chess.js) : drapeau tombé, premier coup pas joué ou défi oublié ; sinon revue dans une minute.
+      if (entry.chess) await require('./_chess').check(entry.chess, now);
     }
   } catch (err) {
     console.error('flushDue', err); // la requête en cours passe quand même ; la prochaine réessaiera

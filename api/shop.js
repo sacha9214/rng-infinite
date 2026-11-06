@@ -9,6 +9,7 @@
 // POST /api/shop { playerId, secret, action: 'buyemote', emote }      → achète une émote spéciale (réactions en duel)
 // POST /api/shop { playerId, secret, action: 'redeem', code }         → utilise un code cadeau (une fois par joueur)
 // POST /api/shop { playerId, secret, action: 'poker', op, … }         → tables de poker du casino (api/_poker.js)
+// POST /api/shop { playerId, secret, action: 'chess', op, … }         → échecs entre joueurs (api/_chess.js)
 // Pièces = gains lus sur les stats tenues par le serveur, moins le champ "spent" : rien ne se crédite depuis le site.
 const { eco, redis, ownsPlayer, readStats, statsKey, cors, send, flushDue, findPlayer } = require('./_lib');
 const crypto = require('node:crypto');
@@ -294,6 +295,8 @@ module.exports = async (req, res) => {
     // Poker (demandé par Sacha, 2026-11-03) : api/_poker.js prend lui-même ses verrous (celui de la table pour chaque
     // coup, celui du porte-monnaie pour la cave) ; il ne passe donc pas sous le verrou des autres jeux ci-dessous.
     if (body.action === 'poker') return send(res, 200, await Poker.handle(playerId, body));
+    // Échecs (demandé par Sacha, 2026-11-06) : api/_chess.js, mêmes verrous que le poker (partie, puis porte-monnaie).
+    if (body.action === 'chess') return send(res, 200, await require('./_chess').handle(playerId, body));
     // Section Gamble (api/_gamble.js) : un coup à la fois par joueur, sous le même verrou que les achats.
     const GAMES = { roulette: Gamble.roulette, bj: Gamble.blackjack, plinko: Gamble.plinko, mines: Gamble.mines, tower: Gamble.tower, keno: Gamble.keno, dice: Gamble.dice, teddy: Gamble.teddy, duck: Gamble.duck, wheel: Gamble.wheel, crash: Gamble.crash, flip: Gamble.coinflip, slots: Gamble.slots, btc: Btc.trade, lever: Lever.act };
     if (GAMES[body.action]) {
