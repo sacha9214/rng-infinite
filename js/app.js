@@ -8395,7 +8395,7 @@
       box.innerHTML = `
         <div class="tiles">
           ${tile('Sign-up bursts, 24 h', fmt(d.totals.recent), `${d.rules.burstMin}+ new players in the same minute`)}
-          ${tile('Burst accounts still playing', fmt(d.totals.open), `${fmt(d.totals.burstAccounts)} in bursts over ${d.rules.days} days · ${fmt(d.totals.suspended)} suspended in total`)}
+          ${tile('Burst accounts not suspended', fmt(d.totals.open), `${fmt(d.bursts.reduce((n, b) => n + b.active, 0))} rolled today · ${fmt(d.totals.burstAccounts)} in bursts over ${d.rules.days} days · ${fmt(d.totals.suspended)} suspended in total`)}
           ${tile('Rolls from burst accounts', share(t0), `today · ${share(y)} yesterday`)}
           ${tile('Refused rolls per roll', ratio(t0), `today · ${ratio(y)} yesterday · above 1 means scripts`)}
         </div>
