@@ -14,6 +14,9 @@
 //   2. Totaux d'XP avec ces valeurs → table des percentiles (par paliers de 0,25 % d'XP), raretés et cotes.
 // Écrit data/hard-meta.json, data/hard-percentiles.json, data/hard-odds.json (serveur) et js/hard-data.js (site,
 // chargé seulement quand un joueur passe en mode difficile).
+// Pack du mode difficile (2026-11-05) : les badges de tools/source/hard.json s'ajoutent à ceux du mode normal, ici
+// seulement (tools/build.mjs ne les lit pas : aucune rareté du mode normal ne bouge). Ceux qui sont trop rares pour
+// l'échantillon de 8 à 10 chiffres sont comptés exactement (voir PARTS).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,6 +39,44 @@ const sizeOf = L => (L === 1 ? 10 : 9 * 10 ** (L - 1));
 const lowOf = L => (L === 1 ? 0 : 10 ** (L - 1));
 const bucketOf = t => Math.floor(Math.log1p(t) * K);
 const keyOf = b => Math.ceil(Math.expm1(b / K));
+
+// Badges du pack difficile trop rares pour l'échantillon (de 1 nombre à quelques dizaines de milliers sur des milliards) :
+// on énumère tous les nombres de 8 à 10 chiffres qui contiennent un de leurs motifs, et on garde ceux que le moteur
+// valide. Le compte est exact, au lieu d'un prolongement depuis 6 et 7 chiffres (impossible : ces badges n'y existent pas).
+const runOf = k => [...'0123456789'].map(d => d.repeat(k));
+const seqOf = k => {
+  const out = [];
+  for (let a = 0; a + k <= 10; a++) { let up = '', down = ''; for (let i = 0; i < k; i++) { up += a + i; down += 9 - a - i; } out.push(up, down); }
+  return out;
+};
+const PARTS = {
+  CONTIGUOUS_SEVENS: runOf(7), CONTIGUOUS_EIGHTS: runOf(8), CONTIGUOUS_NINES: runOf(9), CONTIGUOUS_TENS: runOf(10),
+  SEQUENCE_7: seqOf(7), SEQUENCE_8: seqOf(8), SEQUENCE_9: seqOf(9), SEQUENCE_10: seqOf(10),
+  BRAINROT_EIGHT: ['67676767'], BRAINROT_TEN: ['6767676767'], INT32_MAX: ['2147483647'],
+  MERSENNE_PRIME: ['2147483647'], // le seul premier de Mersenne de 8 à 10 chiffres (2³¹ − 1) ; les autres sont sous 10⁷
+  FIB_CONTAINS_7: ['1123581'], FIB_CONTAINS_8: ['11235813'], FIB_CONTAINS_9: ['112358132'], FIB_EXACT_10: ['1123581321'],
+};
+// { L: nombres de L chiffres qui obtiennent le badge } pour L = 8 à 10.
+function exactCounts(engine, id, parts) {
+  const out = {};
+  for (let L = EXACT_MAX_L + 1; L <= 10; L++) {
+    const found = new Set();
+    for (const part of parts) {
+      if (part.length > L) continue;
+      const free = L - part.length;
+      for (let at = 0; at <= free; at++) {
+        for (let f = 0; f < 10 ** free; f++) {
+          const fill = free ? String(f).padStart(free, '0') : '', s = fill.slice(0, at) + part + fill.slice(at); // sans place libre : String(0) ferait un chiffre de trop
+          if (s[0] !== '0') found.add(Number(s));
+        }
+      }
+    }
+    let k = 0;
+    for (const n of found) { let hit = false; engine.scoreOf(n, b => { if (b.id === id) hit = true; }); if (hit) k++; }
+    out[L] = k;
+  }
+  return out;
+}
 
 // Générateur pseudo-aléatoire à graine (sfc32) : le même échantillon à chaque construction.
 function sfc32(a, b, c, d) {
@@ -133,8 +174,18 @@ function runPass(pass, meta, onResult) {
 }
 
 async function main() {
-  const META = require(path.join(ROOT, 'data/badge-meta.json'));
-  console.log(`Mode difficile : ${META.length} badges, ${os.cpus().length} cœurs`);
+  const NORMAL_META = require(path.join(ROOT, 'data/badge-meta.json'));
+  const HARD_ONLY = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/source/hard.json'), 'utf8'));
+  for (const b of HARD_ONLY) if (NORMAL_META.some(x => x.id === b.id)) throw new Error(`Badge du mode difficile déjà en mode normal : ${b.id}`);
+  const META = [...NORMAL_META, ...HARD_ONLY.map(b => ({ id: b.id, label: b.label, desc: b.desc, emoji: b.emoji, score: 1, family: b.family || null, hard: true }))];
+  console.log(`Mode difficile : ${META.length} badges (${HARD_ONLY.length} du mode difficile seulement), ${os.cpus().length} cœurs`);
+  const exact = {};
+  { const engine = createEngine(META, null);
+    for (const [id, parts] of Object.entries(PARTS)) {
+      if (!engine.byId.has(id)) throw new Error(`PARTS : badge inconnu ${id}`);
+      exact[id] = exactCounts(engine, id, parts);
+    }
+    console.log('  comptes exacts (8, 9, 10 chiffres) :', Object.entries(exact).map(([id, c]) => `${id} ${c[8]}/${c[9]}/${c[10]}`).join(' · ')); }
 
   // ---- passe 1 : fréquences
   const nB = META.length, byL = {}, seenL = {};
@@ -148,6 +199,7 @@ async function main() {
     for (let L = 1; L <= 10; L++) {
       const hits = (byL[L] || [])[i] || 0;
       if (L <= EXACT_MAX_L) { total += hits; continue; }
+      if (exact[b.id]) { total += exact[b.id][L]; continue; }
       const sampled = hits * sizeOf(L) / seenL[L];
       if (hits >= MIN_HITS) { total += sampled; continue; }
       // Trop rare pour l'échantillon : prolongé depuis les longueurs exactes (croissance de 6 à 7 chiffres, au plus × 10).

@@ -1,6 +1,44 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-05 by Claude (skins lot 3 branch, merged with main). Update this file at the end of every session.
+Last updated: 2026-11-05 by Claude (badges-hard branch, merged with main). Update this file at the end of every session.
+
+
+## New badges: Hard-only pack, Quarter Epochs, Trilogy (2026-11-05, branch `claude/ideas-badges-hard-741d1c`)
+
+Planned ideas of the "badges-hard" group. The Hard titles from the same group shipped separately (PR #78).
+
+- **Normal mode** (`tools/source/custom.json`, `js/engine.js`): 🕒 Quarter Epoch (ends in 2500) and 🕘 Three-Quarter
+  Epoch (ends in 7500), idea by cri cri 3; 🧩 Trilogy, a six-digit number cut into three 2-digit badge numbers
+  (`TRILOGY_PIECES`, a frozen list of 20 pieces, `00` left out), promised to Starharvest. These exist in Hard mode too,
+  like every Normal badge. Not built: an "exact 2500 / 7500" badge (one number each would jump to the top tiers).
+- **Hard-only pack** (`tools/source/hard.json`, new): 20 badges that only the Hard engine knows (`hard: true` in
+  `data/hard-meta.json`): Contiguous Sevens to Tens and Sequence (7) to (10) (CrazyMiner22, 0casmictechthing), Brainrot
+  Overload (contains 67676767) and Ultimate Brainrot (6767676767) (Aussie Haüs), 32-bit Limit (2147483647) and Mersenne
+  Prime (CrazyMiner22), Fibonacci Slice (7) to (9) and Fibonacci Ten (kaz, sent by CococoC), plus Pandigital and
+  Seven / Eight / Nine Digits (more Hard badges: Angelicide9, jsandhardmode). "Sequence 5" already exists as Straight.
+- `tools/build-hard.mjs` reads `hard.json` and **counts the pack exactly** for 8 to 10 digits (`PARTS` +
+  `exactCounts`: enumerate every number that contains a part, keep those the engine accepts), because the sample
+  cannot see 1-in-a-billion patterns. Counts are checked in `tools/test-api.mjs` (`hard-odds.json`).
+- `js/app.js`: the history search crashed on Hard-only badges (`LABELS` only has Normal labels); it now falls back to
+  the engine's label.
+- **Rarity moves, Normal** (every number 0 to 1,000,000, old table vs new): 12,123 numbers change rarity (5,704 up,
+  6,419 down): 401 from the two epochs, 11,731 from Trilogy. Biggest moves: rare→uncommon 4,172, uncommon→rare 3,365,
+  rare→epic 960, epic→rare 915, uncommon→common 775, common→rare 757, anomaly↔epic 411/355, anomaly↔mythic 200/202.
+  Earlier badge batches moved 48,600 and 55,782.
+- **Rarity moves, Hard**: a sample of 2,000,000 numbers from 0 to 9,999,999,999 (old Hard data vs new): 0.48% change rarity
+  (9,560: 5,346 up, 4,214 down). Mostly the table reshuffling around Common (trash↔common 3,819/3,443, garbage→common
+  382, uncommon→common 384); common→epic 1,144 is mostly Pandigital (1 in ~3,000). Examples: 6767676767 Godlike→Infinite,
+  2147483647 Common→Infinite, 1123581321 Epic→Infinite, 1023456789 Mythic→Godlike. The rest of the pack is far too rare
+  to show in a sample.
+- Tests: two older tests used Hard numbers that the pack now makes huge (1234567890 is Infinite with Sequence (9) and
+  Pandigital, 6767676767 is Infinite with Ultimate Brainrot); they now use 4820193755 and 1212121212.
+
+**Sacha, on the server after deploying** (nothing else is needed; the Hard build data is in the commit):
+1. `node tools/rescore-worst.js --apply` (the Normal Trash leaderboards use today's scores).
+2. Optional: ~200 Normal numbers moved anomaly→mythic. To give the Mythic+ count to players who rolled them before, a
+   one-off like `tools/migrate-badges.js` (change its `CUT` and its `migrate:` marker). Not written.
+3. Hard leaderboards and Hard history keep the XP of the roll (nothing to rescore, no tool exists). If
+   `tools/backfill-hof.js` has not been run yet, note that it judges stored Hard XP against the new table.
 
 
 
