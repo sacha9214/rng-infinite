@@ -36,8 +36,10 @@ module.exports = async (req, res) => {
     // les deux modes : passer de l'un à l'autre ne fait jamais tirer plus vite.
     // Dans la même lecture : ce joueur a-t-il un compte Google sans avoir reçu son bonus (comptes associés avant le
     // 2026-10-11) ? Il le reçoit alors à son prochain tirage, sans avoir à se reconnecter.
-    const [level, linked, hadBonus, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ['GET', `player:${playerId}:google`], ['HGET', statsKey(playerId), 'googleBonus'], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
+    const [level, linked, hadBonus, held, again] = await redis([['HGET', statsKey(playerId), 'speedLv'], ['GET', `player:${playerId}:google`], ['HGET', statsKey(playerId), 'googleBonus'], ['PTTL', `hold:${playerId}`], ...(nonce ? [['GET', nonceKey(playerId, nonce)]] : [])]);
     if (again) return send(res, 200, { ...JSON.parse(again), again: true });
+    // Un duel où ce joueur est prêt attend son délai (hold:<id>, api/room.js) : la manche passe avant le tirage solo.
+    if (Number(held) > 0) return send(res, 429, { error: 'Your duel round is about to start', wait: Number(held) });
     const [cooldown, left] = await redis([['SET', `cooldown:${playerId}`, '1', 'PX', Math.round(COOLDOWN_MS * Shop.speedFactor(level)), 'NX'], ['PTTL', `cooldown:${playerId}`]]);
     // wait : combien attendre, pour que le site reparte pile à la fin de la pause (GamblrGod, 2026-11-04).
     if (cooldown !== 'OK') return send(res, 429, { error: 'Too fast, wait for the reveal to finish', wait: Math.max(0, Number(left) || 0) });

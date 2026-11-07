@@ -80,6 +80,7 @@ export function fakeRedis() {
     },
     SREM: (k, ...members) => members.filter(m => db.has(k) && db.get(k).delete(m)).length,
     SISMEMBER: (k, m) => (db.has(k) && db.get(k).has(m) ? 1 : 0),
+    SMISMEMBER: (k, ...ms) => ms.map(m => (db.has(k) && (db.get(k).has(m) || db.get(k).has(String(m)) || db.get(k).has(Number(m))) ? 1 : 0)),
     ZINCRBY(k, by, m) { const z = zset(k), v = (z.get(m) || 0) + Number(by); z.set(m, v); return String(v); },
     ZADD(k, ...pairs) {
       const z = zset(k);

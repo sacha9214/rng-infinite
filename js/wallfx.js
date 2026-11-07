@@ -14,7 +14,8 @@
 (function (root) {
   'use strict';
   const doc = root.document;
-  const still = () => doc.documentElement.classList.contains('perf') || root.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // motion-ok : le joueur a choisi « Off » au mode performance, ce qui l'emporte sur le système (js/app.js, setMotionOk).
+  const still = () => doc.documentElement.classList.contains('perf') || (!doc.documentElement.classList.contains('motion-ok') && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const dark = () => doc.documentElement.classList.contains('dark');
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];

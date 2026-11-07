@@ -47,6 +47,8 @@ const GAP_MS = 8000; // écart minimal entre deux manches, comme le délai entre
 // gains ne changent pas. À plusieurs humains, le rythme commun reste (pace absent = 1).
 const paceOf = r => Number(r && r.pace) || 1;
 const AUTO_MS = 15000; // la manche part toute seule 15 s après le premier joueur prêt
+const HOLD_MS = 12000; // hold:<id> : marge au-delà du délai en cours, le temps qu'un sondage de la salle passe
+const DRAW_LOCK_MS = 60000; // verrou du tirage d'une manche
 const ABANDON_MS = 30000; // plus aucun joueur sur la page depuis 30 s : la partie s'arrête (sans gagnant ni stats)
 const TTL = 86400; // une salle est gardée un jour après sa dernière action
 // Emotes (images img/emotes/<id>.png : la mascotte dé qui rit, pleure, s'énerve, fait le cool, est choquée, joue au roi).
@@ -232,15 +234,32 @@ async function advance(room, now = Date.now()) {
   const solo = hasBots(room) && humans(room).length === 1 ? humans(room)[0] : null;
   const ttls = await redis([...readyHumans.map(p => ['PTTL', `cooldown:${p.id}`]), ...(solo ? [['HGET', statsKey(solo.id), 'speedLv']] : [])]);
   const pace = solo ? Shop.speedFactor(ttls.pop()) : 1;
-  if (ttls.some(ms => Number(ms) > 0)) return room;
-  const [lock] = await redis([['SET', `${roomKey(room.code)}:draw:${k}`, '1', 'NX', 'EX', TTL]]);
+  // Priorité au duel (« Duel wont work », Liamlong, 2026-11-06 : « 2 / 2 ready » et rien) : un joueur prêt qui tire en
+  // solo ailleurs reprenait le délai ~150 ms après sa fin, et la manche ne trouvait jamais de trou. hold:<id> fait
+  // patienter ses tirages solo (api/roll.js) le temps que la salle prenne le délai ; effacé quand la manche part.
+  if (ttls.some(ms => Number(ms) > 0)) {
+    await redis(readyHumans.map((p, i) => [p, Number(ttls[i])]).filter(([, ms]) => ms > 0).map(([p, ms]) => ['SET', `hold:${p.id}`, room.code, 'PX', ms + HOLD_MS]));
+    return room;
+  }
+  // Verrou de 60 s, plus un jour : une requête morte entre lui et le RPUSH (redémarrage du serveur, erreur Redis)
+  // gelait la manche pour la journée.
+  const drawKey = `${roomKey(room.code)}:draw:${k}`;
+  const [lock] = await redis([['SET', drawKey, '1', 'NX', 'PX', DRAW_LOCK_MS]]);
   if (lock !== 'OK') return (await load(room.code)) || room;
+  try { return await drawRound(room, k, now, readyHumans, pace, drawKey); } catch (e) {
+    await redis([['DEL', drawKey]]).catch(() => {});
+    throw e;
+  }
+}
+
+async function drawRound(room, k, now, readyHumans, pace, drawKey) {
   // Délai pris pour de bon (SET NX), pas seulement lu (audit de sécurité, 2026-11-02 : vingt duels contre des bots lancés
   // ensemble voyaient tous le délai libre et tiraient tous, 8 fois plus vite que permis). Pris ailleurs entre-temps : la
   // manche attend, et la salle relâche ce qu'elle avait pris.
   const got = await redis(readyHumans.map(p => ['SET', `cooldown:${p.id}`, '1', 'PX', Math.round(GAP_MS * pace), 'NX']));
   if (got.some(x => x !== 'OK')) {
-    await redis([['DEL', `${roomKey(room.code)}:draw:${k}`], ...readyHumans.filter((p, i) => got[i] === 'OK').map(p => ['DEL', `cooldown:${p.id}`])]);
+    await redis([['DEL', drawKey], ...readyHumans.filter((p, i) => got[i] === 'OK').map(p => ['DEL', `cooldown:${p.id}`]),
+      ...readyHumans.filter((p, i) => got[i] !== 'OK').map(p => ['SET', `hold:${p.id}`, room.code, 'PX', GAP_MS + HOLD_MS])]);
     return room;
   }
   const top = room.h.hard === '1' ? HARD_MAX + 1 : 1000001;
@@ -255,6 +274,7 @@ async function advance(room, now = Date.now()) {
     ...[roomKey(room.code), playersKey(room.code), roundsKey(room.code)].map(key => ['EXPIRE', key, TTL]),
     // Pas de tirage normal en parallèle pendant la manche.
     ...humans(room).map(p => ['SET', `cooldown:${p.id}`, '1', 'PX', Math.round(GAP_MS * pace)]),
+    ...readyHumans.map(p => ['DEL', `hold:${p.id}`]),
     ...touchLive(room, now),
     ...botReactions(room, round),
     ...(score(room).done ? [['ZREM', LIVE_KEY, room.code]] : []), // partie finie : sort de Live now tout de suite

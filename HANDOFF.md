@@ -1,6 +1,55 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-06 by Claude (branch `claude/owner-bot-watch`). Update this file at the end of every session.
+Last updated: 2026-11-07 by Claude (branch `claude/update-nov7`). Update this file at the end of every session.
+
+## Inbox sweep update (2026-11-07, branch `claude/update-nov7`)
+
+Sacha: "look at all of the new suggestions and bugs and let's go for another update". 193 open items (152 ideas, 41
+bugs) were read, screenshots included. Replies for all of them are drafted and **not sent** (scratchpad plan, waiting
+for Sacha's OK after the deploy).
+
+- **Duels** (`api/room.js`, `api/roll.js`):
+  - "2 / 2 ready" and nothing (Liamlong). A ready player who was also rolling solo kept retaking the shared 8 s
+    cooldown about 150 ms after it ended, so the round never found a free slot. Now the waiting room sets
+    `hold:<id>` (cooldown left + 12 s) and `api/roll.js` answers 429 "Your duel round is about to start" while it
+    exists. The hold is deleted when the round is drawn.
+  - The draw lock `room:<code>:draw:<k>` was `EX` one day, so a request that died mid-draw froze the round for a day.
+    It is now `PX` 60 s, and an exception in the new `drawRound` deletes the lock.
+  - Leaving a duel page never removed the player, but nothing led back (Liconc). `route()` now keeps
+    `DuelAway.code` for 10 minutes: a toast, and a "Back to your duel" card at the top of the Duel tab.
+- **Rolls**: `RollGate` uses `performance.now()`, so a system clock going backwards can no longer grey out Roll
+  forever. This is a lead for the stuck "??? XP" rolls (Mike hawk, Idkwhatnamemyself), which did not reproduce. A new
+  client event `js_error` (once per visit, in `clientevt:<day>`) will show whether page exceptions happen.
+- **Performance mode "Off" beats the OS reduce-motion setting** (Fwm, pople: Windows "Animation effects" off).
+  - `setMotionOk` in `js/app.js` removes the 347 `@media (prefers-reduced-motion: reduce)` rules from the stylesheets
+    at runtime and restores them in order when the player picks On.
+  - `html.motion-ok` tells `js/wallfx.js` and `js/skinfx.js`.
+  - With no choice, the game follows the OS, and Settings shows a note saying so.
+  - Changing the setting remounts JS wallpapers.
+  - Checked in Firefox with `reducedMotion: 'reduce'`: 347 → 0 → 347 rules.
+- **Hard mode**:
+  - The roll path now reads `SCARD nums:<id>`, so the "different numbers" titles no longer come back as new on reload
+    (123).
+  - "Different numbers rolled" is counted out of `Engine.MAX_ROLL + 1` (jsandhardmode).
+- **New**:
+  - Titles Infinite Collector / Infinity Hoarder / Every Infinity (3, 5, all 10 different Infinites; idea by jsand).
+    `stats.infs` is `SMISMEMBER nums:<id>` over `Achievements.INFINITES` (`0 1 2 4 5 7 24 666666 777777 1000000`,
+    checked against the engine by test-api). It is added in `readStats`, both roll paths and `withUniq`. Any new path
+    that computes achievements must include it, or titles re-announce.
+  - Friends "👤 View profile" (Paul).
+  - Rarity filter in the auto-roll badge menu (poruzu).
+  - Sound volume Normal/Loud (Kag): a compressor in `js/sound.js` with ×2.4 gain when Loud; transparent in Normal.
+  - Clan join requests link to profiles (123).
+  - `with:` co-credits on shop items, display only; the 5% stays with `idea` (Deep Sea: Deadshot, YeeHao2, LEVIATHAN).
+- **Small fixes**:
+  - Case odds open in a scrolling window (`openCaseOdds`; the Premium tooltip was 141 lines tall).
+  - The Orbital Cannon satellite sits at `card.y - H * .6`, with top margin on the roll page.
+  - The badge window uses `collTier` like the collection (Exact RTX 5090 showed Rare under Celestial).
+  - The chat filter now blocks the word Vince reported on 11-01. He had been told it was blocked; it wasn't.
+- **Not changed**:
+  - Chess white pieces ("...."): not reproduced; the likely cause is an emoji font for ♟. Asking for a screenshot.
+  - The "click Shop and back" skip (Trinity) never beats the server cooldown.
+  - The profile-photo "too big" reports need the exact message.
 
 ## Owner page: Bot watch tab and mouse-friendly tabs (2026-11-06, branch `claude/owner-bot-watch`)
 

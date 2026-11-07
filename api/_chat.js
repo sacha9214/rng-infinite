@@ -8,7 +8,7 @@ const MAX_CHARS = 140;
 // « Scunthorpe »), après avoir ramené les variantes à la même forme : « f.u.c.k », « fuuuck », « fvck », « sh1t ».
 const BLOCKED = new Set(`
 fuck fucker fucking fuckin fucked fck fuk fuq motherfucker mofo shit shitty bullshit bitch bitches bastard asshole
-dick dickhead cock cocksucker pussy cunt twat wanker whore slut hoe cum jizz porn porno nude nudes boobs tits
+dick dickhead cock cocksucker pussy cunt twat wanker whore slut hoe cum jizz porn porno nude nudes boobs tits dildo dildos
 nigger nigga negro faggot fag fags dyke tranny retard retarded spic chink kike paki coon kys rape rapist
 nazi hitler
 merde merdeux putain pute putes salope salopes salaud salop connard connards connasse enculer encule
