@@ -5,6 +5,7 @@
 // POST /api/quests { playerId, secret, action: 'wclaim', quest } → réclame une quête de la semaine terminée
 // POST /api/quests { playerId, secret, action: 'chest' }          → ouvre les coffres de quêtes prêts
 // POST /api/quests { playerId, secret, action: 'reroll', quest }  → remplace une quête du jour (3 relances par semaine)
+// POST /api/quests { playerId, secret, action: 'rebirth' }        → renaissance (une étoile de plus, prestige seul)
 const crypto = require('node:crypto');
 const { QUEST_TTL, eco, redis, ownsPlayer, readStats, statsKey, questKey, dayKey, weekKey, weekQuestKey, WEEK_QUEST_TTL, toObject, cors, send, flushDue } = require('./_lib');
 const Quests = require('../js/quests.js');
@@ -72,6 +73,7 @@ async function state(id, now = Date.now()) {
       const due = pending.length + (catchup && (catchup.coins || catchup.keys.length) ? 1 : 0);
       return { level: L, xp: Number(stats.xpLife) || 0, from: Quests.xpForLevel(L), to: Quests.xpForLevel(L + 1), pending: due, coins, keys, next: Quests.levelReward(L + 1), catchup: catchup && (catchup.coins || catchup.keys.length) ? catchup : null, start };
     })(),
+    rebirth: Quests.rebirthOf(stats), // renaissance (JUAN SEBASTIAN, 2026-11-07) : prestige seul, js/quests.js
     // Quêtes de la semaine (idée de Tumored, 2026-10-27) : 3, changées le lundi 00:00 UTC.
     weekly: {
       week, resetAt: weekEnd(now),
@@ -195,6 +197,20 @@ module.exports = async (req, res) => {
         await redis(writes);
         return send(res, 200, { ...(await state(playerId)), gained: lv.coins, keys: lv.keys, levels: lv.pending });
       } finally { await redis([['DEL', `lvlclaim:${playerId}`]]); }
+    }
+    // Renaissance (idée de JUAN SEBASTIAN, 2026-11-07) : une étoile de plus, la barre repart de l'XP à vie du moment.
+    // Rien d'autre ne change (ni niveau, ni pièces, ni vitesse). rb:all (id → étoiles) sert au chat et aux classements,
+    // qui montrent l'étoile à côté du pseudo sans relire chaque fiche.
+    if (body.action === 'rebirth') {
+      const [lock] = await redis([['SET', `rbclaim:${playerId}`, '1', 'NX', 'PX', 5000]]);
+      if (lock !== 'OK') return send(res, 429, { error: 'Already rebirthing' });
+      try {
+        const st = await readStats(playerId), rb = Quests.rebirthOf(st);
+        if (!rb.ready) return send(res, 422, { error: rb.count >= rb.max ? 'You already have every rebirth' : 'Not enough XP for a rebirth yet' });
+        const n = rb.count + 1;
+        await redis([['HSET', statsKey(playerId), 'rb', n, 'rbAt', Number(st.xpLife) || 0, 'rbT', Date.now()], ['HSET', 'rb:all', playerId, n]]);
+        return send(res, 200, { ...(await state(playerId)), reborn: n });
+      } finally { await redis([['DEL', `rbclaim:${playerId}`]]); }
     }
     // Récompense de l'événement de la semaine : une fois, objectif atteint (compté par le serveur à chaque tirage).
     if (body.action === 'event') {

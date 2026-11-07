@@ -3228,6 +3228,21 @@ button.o-chip { cursor: pointer; }
 .hero .solo-auto { margin: .2rem auto .4rem; }
 .solo-auto-row { display: flex; justify-content: center; margin-top: -.2rem; }
 /* Badges Top 1 / 5 / 10 du classement du mois */
+/* Étoile de renaissance (idée de JUAN SEBASTIAN, 2026-11-07, js/app.js rbHTML) : une étoile découpée (mask) dans une
+   matière qui change à chaque renaissance ; le nombre à côté à partir de 2. Lisible en clair et en sombre (contour). */
+.rb-mark { --rb: linear-gradient(135deg, #f3c08a, #b5651d 55%, #7c3f12); --rb-c: #9a5418; display: inline-flex; align-items: center; gap: .12em; margin-left: .3em; vertical-align: -.12em; font: 800 .72em/1 var(--font-mono, ui-monospace, monospace); color: var(--rb-c); white-space: nowrap; }
+.rb-star { display: inline-block; width: 1.35em; height: 1.35em; background: var(--rb); background-size: 200% 200%; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.6l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.4 5.6 21l1.5-7.1L1.7 9l7.2-.8z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.6l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.4 5.6 21l1.5-7.1L1.7 9l7.2-.8z'/%3E%3C/svg%3E") center / contain no-repeat; filter: drop-shadow(0 0 .5px rgba(0, 0, 0, .55)); }
+.rb-mark.rb-2 { --rb: linear-gradient(135deg, #ffffff, #b8c2d0 50%, #6b7686); --rb-c: #5f6b7c; }
+.rb-mark.rb-3 { --rb: linear-gradient(135deg, #fff3b0, #f5b301 50%, #a86b00); --rb-c: #a86b00; }
+.rb-mark.rb-4 { --rb: linear-gradient(135deg, #f5d0fe, #c026d3 50%, #6b21a8); --rb-c: #a21caf; }
+.rb-mark.rb-5 { --rb: linear-gradient(135deg, #67e8f9, #a78bfa, #f472b6, #fde047, #67e8f9); --rb-c: #7c3aed; }
+.rb-mark.rb-5 .rb-star { animation: rb-shine 4s linear infinite; filter: drop-shadow(0 0 .5px rgba(0, 0, 0, .55)) drop-shadow(0 0 .25em rgba(167, 139, 250, .8)); }
+@keyframes rb-shine { to { background-position: 200% 200%; } }
+.dark .rb-mark { --rb-c: #e7b27e; } .dark .rb-mark.rb-2 { --rb-c: #d4dbe6; } .dark .rb-mark.rb-3 { --rb-c: #fcd34d; }
+.dark .rb-mark.rb-4 { --rb-c: #f0abfc; } .dark .rb-mark.rb-5 { --rb-c: #c4b5fd; }
+.rb-mark.big { font-size: .62em; margin-left: .4em; vertical-align: .15em; }
+.rb-mark.big .rb-star { width: 1.5em; height: 1.5em; }
+html.perf .rb-mark.rb-5 .rb-star { animation: none; }
 .top-mark { display: inline-flex; align-items: center; gap: .2rem; margin-left: .35rem; padding: .05rem .45rem; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .02em; white-space: nowrap; vertical-align: middle; border: 1px solid transparent; }
 .top-mark.gold { color: #7a4b00; background: linear-gradient(120deg, #fde68a, #f59e0b, #fde68a); border-color: #d97706; box-shadow: 0 0 10px rgba(245, 158, 11, .45); }
 .top-mark.silver { color: #374151; background: linear-gradient(120deg, #f3f4f6, #cbd5e1, #f3f4f6); border-color: #94a3b8; }
@@ -3928,6 +3943,31 @@ a[data-route="friends"].has-msg::after { content: ''; position: absolute; top: .
 .quest.level .quest-emoji { filter: drop-shadow(0 0 .3em rgba(250, 204, 21, .6)); }
 .case-free[hidden] { display: none; }
 .case-free { margin-top: .35rem; }
+
+/* Renaissance (idée de JUAN SEBASTIAN, 2026-11-07) : la carte des quêtes, la fenêtre et la cérémonie. */
+.quest.rebirth .quest-emoji .rb-mark { margin: 0; font-size: 1.5rem; }
+.quest.rebirth .quest-emoji.rb-ghost { opacity: .45; filter: grayscale(.6); }
+.quest.rebirth .quest-bar > span { background: linear-gradient(90deg, #f59e0b, #f43f5e, #a855f7); }
+.quest.rebirth.ready { border-color: rgba(244, 63, 94, .65); box-shadow: 0 0 0 1px rgba(244, 63, 94, .25), 0 0 18px rgba(244, 63, 94, .18); }
+.rb-modal { text-align: center; }
+.rb-preview { font-size: 2.6rem; line-height: 1; margin: .2rem 0 .4rem; }
+.rb-preview .rb-mark { margin: 0; }
+.rb-list { margin: .8rem auto 1rem; padding: 0; max-width: 26rem; list-style: none; text-align: left; display: grid; gap: .45rem; font-size: .82rem; color: var(--prose); }
+.rb-list .rb-mark { margin: 0 .4em 0 0; }
+.rb-born { --rb: linear-gradient(135deg, #f3c08a, #b5651d 55%, #7c3f12); position: relative; width: 9rem; height: 9rem; margin: .4rem auto .6rem; display: grid; place-items: center; }
+.rb-born.rb-2 { --rb: linear-gradient(135deg, #ffffff, #b8c2d0 50%, #6b7686); }
+.rb-born.rb-3 { --rb: linear-gradient(135deg, #fff3b0, #f5b301 50%, #a86b00); }
+.rb-born.rb-4 { --rb: linear-gradient(135deg, #f5d0fe, #c026d3 50%, #6b21a8); }
+.rb-born.rb-5 { --rb: linear-gradient(135deg, #67e8f9, #a78bfa, #f472b6, #fde047, #67e8f9); }
+.rb-born .rb-star { position: relative; z-index: 1; width: 7rem; height: 7rem; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .6)) drop-shadow(0 0 14px rgba(250, 204, 21, .45)); animation: rb-born 1.1s cubic-bezier(.2, .9, .25, 1.25) both, rb-shine 4s linear 1.1s infinite; }
+.rb-rays { position: absolute; inset: -1.5rem; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(250, 204, 21, .32) 0 6deg, transparent 6deg 22deg); -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%); mask: radial-gradient(circle, #000 25%, transparent 70%); animation: rb-rays-in .9s ease-out .45s both, rb-rays-turn 14s linear .45s infinite; }
+.rb-born-title { animation: rb-rise .5s ease-out .8s both; }
+.rb-born-note { animation: rb-rise .5s ease-out 1s both; }
+/* Anticipation (petite et tournée à l'envers), éclat (dépasse), repos. */
+@keyframes rb-born { 0% { transform: scale(.15) rotate(-160deg); opacity: 0; } 35% { transform: scale(.35) rotate(-200deg); opacity: 1; } 75% { transform: scale(1.18) rotate(12deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes rb-rays-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes rb-rays-turn { to { transform: rotate(360deg); } }
+@keyframes rb-rise { from { opacity: 0; transform: translateY(.5rem); } to { opacity: 1; transform: none; } }
 
 /* Route des récompenses de niveau. */
 .quest.level { cursor: pointer; }

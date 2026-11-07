@@ -146,10 +146,11 @@ const mentionWrites = (ids, t) => ids.map(id => ['SET', atKey(id), String(t), 'E
 // ---------------------------------------------------------------- lecture
 const EDIT_MS = 5 * 60000; // modifier son message : 5 minutes (idée de daddy finger, 2026-10-26)
 // Message du serveur (grand tirage) : pas d'auteur, pas de texte libre ; le site écrit la phrase (et la traduit).
-const view = (m, me, quote, tags, mods, bests) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr, ...(m.h ? { hard: true } : {}) } : {
+const view = (m, me, quote, tags, mods, bests, stars) => (m.sys ? { id: m.id, t: m.t, sys: m.sys, name: m.n || 'Player', n: m.v, tier: m.tr, ...(m.h ? { hard: true } : {}) } : {
   id: m.id, t: m.t, name: m.n || 'Player', title: m.ti || null, text: m.x, ...(tags && tags.get(m.a) ? { clan: tags.get(m.a) } : {}),
   ...(mods && mods.has(m.a) ? { mod: true } : {}), // 🛡️ Modérateur du chat (Sacha, 2026-11-01)
   ...(bests && bests.get(m.a) ? { best: bests.get(m.a) } : {}), // meilleur tirage (Loliarlex1248 et MAYO, 2026-11-05)
+  ...(stars && stars.get(m.a) ? { rb: stars.get(m.a) } : {}), // étoiles de renaissance (JUAN SEBASTIAN, 2026-11-07)
   ...(me && m.a === me ? { mine: true } : {}), ...(m.an && m.an.length ? { at: m.an } : {}),
   ...(me && ((Array.isArray(m.at) && m.at.includes(me)) || m.ra === me) ? { toMe: true } : {}), ...(m.e ? { edited: true } : {}),
   ...(m.r && quote ? { re: quote(m.r) } : {}) });
@@ -168,6 +169,13 @@ async function bestRolls(msgs) {
   if (!ids.length) return new Map();
   const [raw] = await redis([['HMGET', 'best:all', ...ids]]);
   return new Map(ids.map((id, i) => { const e = parse((raw || [])[i]); return [id, e && Number.isInteger(e.n) ? { n: e.n, tier: engine.cardTier(Number(e.s) || 0) } : null]; }).filter(([, b]) => b));
+}
+// Étoiles de renaissance des auteurs (rb:all, écrit par api/quests.js) : une seule commande.
+async function rebirthStars(msgs) {
+  const ids = [...new Set(msgs.filter(m => !m.sys && isPlayerId(m.a)).map(m => m.a))];
+  if (!ids.length) return new Map();
+  const [raw] = await redis([['HMGET', 'rb:all', ...ids]]);
+  return new Map(ids.map((id, i) => [id, Number((raw || [])[i]) || 0]).filter(([, n]) => n > 0));
 }
 async function readAll() { const [raw] = await redis([['LRANGE', KEY, 0, -1]]); return (raw || []).map(parse).filter(Boolean); }
 // Réactions emoji (api/_react.js) : { id du message: [{ e, n, mine, who }] } pour les messages encore là.
@@ -268,9 +276,9 @@ async function list(body, me, stats, again = false) {
   const full = !since || seenDel !== out.del;
   const rx = wantRx || (full && body.rxrev != null) ? await rxOf(all, me) : null;
   if (same) return { ...out, same: true, rx };
-  const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all), tags = await clanTags(msgs), bests = await bestRolls(msgs);
+  const msgs = full ? all : all.filter(m => m.t > since), quote = await quoter(msgs, all), tags = await clanTags(msgs), bests = await bestRolls(msgs), stars = await rebirthStars(msgs);
   const [modIds] = await redis([['SMEMBERS', MODS]]), mods = new Set(modIds || []);
-  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags, mods, bests)), ...(rx ? { rx } : {}) };
+  return { ...out, full, msgs: msgs.map(m => view(m, me, quote, tags, mods, bests, stars)), ...(rx ? { rx } : {}) };
 }
 
 // ---------------------------------------------------------------- écriture

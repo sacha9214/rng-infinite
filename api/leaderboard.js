@@ -25,6 +25,14 @@ const MIGRATION = '7:' + require('node:crypto').createHash('sha256')
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../data/badge-meta.json')))
   .update(require('node:fs').readFileSync(require('node:path').join(__dirname, '../js/engine.js'))).digest('hex').slice(0, 12);
 
+// Étoiles de renaissance à côté du pseudo (idée de JUAN SEBASTIAN, 2026-11-07) : rb:all, écrit par api/quests.js.
+// Renvoie une fonction id → { rb } (ou rien), à étaler dans chaque ligne.
+async function rebirthStars(ids) {
+  const [raw] = ids.length ? await redis([['HMGET', 'rb:all', ...ids]]) : [[]];
+  const m = new Map(ids.map((id, i) => [id, Number((raw || [])[i]) || 0]));
+  return id => (m.get(id) ? { rb: m.get(id) } : {});
+}
+
 // Remplissage unique pour les joueurs d'avant ces compteurs (2026-09-23), par lots, en quelques secondes au plus :
 // lb:xp (XP à vie) et count:all (tirages à vie). Les tirages suivants les incrémentent dans recordRoll ;
 // recalculer depuis l'historique donne les mêmes totaux. count:all ne descend jamais.
@@ -137,11 +145,11 @@ async function rollsBoard(me, hard = false) {
   const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const outside = me && myRank !== null && Number(myRank) >= LIMIT;
   const wanted = outside ? [...rows, [me, Number(myCount)]] : rows;
-  const marks = await bestAwards(wanted.map(x => x[0]));
+  const marks = await bestAwards(wanted.map(x => x[0])), starOf = await rebirthStars(wanted.map(x => x[0]));
   const [names, titles, xps] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', XLB, ...wanted.map(x => x[0])]]) : [[], [], []];
   const clans = await tagsOf(wanted.map(x => x[0]));
   // count : tirages à vie ; xp : XP à vie (affichée en petit, pour l'XP moyenne par tirage).
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], xp: Number(xps && xps[i]) || 0, me: x[0] === me });
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, ...starOf(x[0]), clan: clans[i] || null, count: x[1], xp: Number(xps && xps[i]) || 0, me: x[0] === me });
   return { period: 'rolls', entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null, players: Number(players) || 0, rolls: Number(total) || 0, rollsToday: 0 };
 }
 
@@ -155,10 +163,10 @@ async function medianBoard(me) {
   const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const outside = me && myRank !== null && Number(myRank) >= LIMIT;
   const wanted = outside ? [...rows, [me, Number(myPct)]] : rows;
-  const marks = await bestAwards(wanted.map(x => x[0]));
+  const marks = await bestAwards(wanted.map(x => x[0])), starOf = await rebirthStars(wanted.map(x => x[0]));
   const [names, titles, counts] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])], ['ZMSCORE', ROLLS_LB, ...wanted.map(x => x[0])]]) : [[], [], []];
   const clans = await tagsOf(wanted.map(x => x[0]));
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, med: scoreAtPct(x[1]), pct: Math.round(x[1] * 10) / 10, count: Number(counts && counts[i]) || 0, me: x[0] === me });
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, ...starOf(x[0]), clan: clans[i] || null, med: scoreAtPct(x[1]), pct: Math.round(x[1] * 10) / 10, count: Number(counts && counts[i]) || 0, me: x[0] === me });
   const mineHist = me && myRank === null ? medHist(myHist) : null;
   return {
     period: 'median', entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null,
@@ -187,10 +195,10 @@ async function coinsBoard(me) {
   }
   const all = JSON.parse(cached), top = all.slice(0, LIMIT), myIndex = me ? all.findIndex(x => x[0] === me) : -1;
   const wanted = myIndex >= LIMIT ? [...top, all[myIndex]] : top;
-  const marks = await bestAwards(wanted.map(x => x[0]));
+  const marks = await bestAwards(wanted.map(x => x[0])), starOf = await rebirthStars(wanted.map(x => x[0]));
   const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
   const clans = await tagsOf(wanted.map(x => x[0]));
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, coins: x[1], rolls: x[2], me: x[0] === me });
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, ...starOf(x[0]), clan: clans[i] || null, coins: x[1], rolls: x[2], me: x[0] === me });
   return { period: 'coins', entries: top.map((x, i) => entry(x, i, i + 1)), mine: myIndex >= LIMIT ? entry(all[myIndex], top.length, myIndex + 1) : null, players: all.length, rolls: 0, rollsToday: 0 };
 }
 
@@ -202,10 +210,10 @@ async function eventBoard(me) {
   const rows = []; for (let i = 0; i < (flat || []).length; i += 2) rows.push([flat[i], Number(flat[i + 1])]);
   const outside = me && myRank !== null && Number(myRank) >= LIMIT;
   const wanted = outside ? [...rows, [me, Number(myScore)]] : rows;
-  const marks = await bestAwards(wanted.map(x => x[0]));
+  const marks = await bestAwards(wanted.map(x => x[0])), starOf = await rebirthStars(wanted.map(x => x[0]));
   const [names, titles] = wanted.length ? await redis([['HMGET', 'names', ...wanted.map(x => x[0])], ['HMGET', 'titles', ...wanted.map(x => x[0])]]) : [[], []];
   const clans = await tagsOf(wanted.map(x => x[0]));
-  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, clan: clans[i] || null, count: x[1], done: x[1] >= ev.goal, me: x[0] === me });
+  const entry = (x, i, rank) => ({ rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(x[0]) || null, ...starOf(x[0]), clan: clans[i] || null, count: x[1], done: x[1] >= ev.goal, me: x[0] === me });
   return {
     period: 'event', event: { id: ev.id, emoji: ev.emoji, title: ev.title, desc: ev.desc, goal: ev.goal, reward: ev.reward, end: ev.end },
     entries: rows.map((x, i) => entry(x, i, i + 1)), mine: outside ? entry(wanted[rows.length], rows.length, Number(myRank) + 1) : null,
@@ -290,7 +298,7 @@ module.exports = async (req, res) => {
     const meOutsideTop = me && myRank !== null && Number(myRank) >= LIMIT;
     const wanted = meOutsideTop ? [...ids, me] : ids;
     // Badges Top 1 / 5 / 10 gagnés les mois passés (le meilleur de chacun), sur tous les onglets.
-    const marks = await bestAwards(wanted, t);
+    const marks = await bestAwards(wanted, t), starOf = await rebirthStars(wanted);
 
     let details = [], names = [], counts = [], titles = [];
     const clans = await tagsOf(wanted); // tag de clan à côté du nom (api/_clan.js)
@@ -314,7 +322,7 @@ module.exports = async (req, res) => {
       if (!details[i]) return null;
       const d = JSON.parse(details[i]);
       const s = period === 'xp' ? (id in xpOf ? xpOf[id] : Number(myXp)) : d.s;
-      return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, clan: clans[i] || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
+      return { rank, name: names[i] || 'Player', title: titles[i] || null, top: marks.get(id) || null, ...starOf(id), clan: clans[i] || null, n: d.n, s, t: d.t, rolls: Number(counts[i] || 0), me: id === me };
     };
     // Places partagées (signalé par R77, 2026-10-30) : deux joueurs au même score ont la même place (1, 1, 3), au lieu
     // d'un ordre décidé par Redis sur l'identifiant du joueur. Place = 1 + nombre de joueurs strictement meilleurs.

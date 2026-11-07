@@ -80,6 +80,19 @@
   const xpForLevel = L => L * L * LEVEL_XP;
   // 10 × L pièces (25 × L le premier jour : trop généreux, environ 30 % de pièces en plus de celles des tirages).
   const levelReward = L => ({ coins: 10 * L, key: L % 25 === 0 ? 'premium' : L % 5 === 0 ? 'starter' : null });
+  // Renaissance (idée de JUAN SEBASTIAN, 2026-10-27 et 2026-11-07 : « après 1 milliard d'XP, débloquer les renaissances,
+  // 5 au plus »). Seulement pour le prestige (Sacha, 2026-11-07 : pas de vitesse ni de pièces, la chance et les gains ne
+  // changent jamais) : une étoile ⭐ à côté du pseudo, des titres, rien d'autre. Rien n'est remis à zéro ni repris :
+  // niveau, XP, pièces et récompenses de niveau restent ; seule la barre de la renaissance repart de 0.
+  // REBIRTHS[n] = XP à gagner depuis la renaissance précédente (stats.rbAt = XP à vie au moment de la dernière) pour la
+  // suivante. La première compte l'XP à vie depuis 0 ; les suivantes, seulement l'XP gagnée après (pas de rafale
+  // d'étoiles d'un coup pour les plus gros joueurs : le but reste devant eux).
+  const REBIRTHS = [1e9, 1.5e9, 2.5e9, 4e9, 6e9];
+  const rebirthOf = st => {
+    const count = Math.min(REBIRTHS.length, Math.max(0, Math.floor(num(st.rb)))), max = count >= REBIRTHS.length;
+    const need = max ? 0 : REBIRTHS[count], gained = Math.max(0, num(st.xpLife) - (count ? num(st.rbAt) : 0));
+    return { count, max: REBIRTHS.length, need, gained: max ? 0 : Math.min(gained, need), ready: !max && gained >= need };
+  };
   // Rattrapage, une seule fois, pour les joueurs arrivés avec un niveau (stats.lvlPaid posé à leur niveau d'alors) :
   // les clés de ces niveaux (au plus 4 Starter et 1 Premium) et leurs pièces, plafonnées à 1 000.
   const CATCHUP = { coins: 1000, starter: 4, premium: 1 };
@@ -117,7 +130,7 @@
   // Coffres prêts à ouvrir : ceux d'après les déjà ouverts dont le palier est atteint.
   const chestsReady = (days, opened) => CHESTS.slice(Math.max(0, num(opened))).filter(c => num(days) >= c.at);
 
-  const api = { REROLLS_PER_WEEK, rerollsLeft, swapsFor, WEEK_POOL, ofWeek, CHESTS, chestsReady, POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
+  const api = { REBIRTHS, rebirthOf, REROLLS_PER_WEEK, rerollsLeft, swapsFor, WEEK_POOL, ofWeek, CHESTS, chestsReady, POOL, byId, ofDay, progress, dailyReward, nextStreak, dayBefore, STREAK_CAP, allDoneReward, QUEST_STREAK_CAP, levelOf, xpForLevel, levelReward, LEVEL_XP, catchUp, CATCHUP };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGQuests = api;
 })(typeof window !== 'undefined' ? window : globalThis);
