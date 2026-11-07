@@ -14,6 +14,8 @@
   // dans les stats (h:rolls, h:t:<rareté>, h:best). Badges, collections, doublons et nombres différents restent au mode normal.
   const rollsOf = st => num(st.rolls) + num(st['h:rolls']);
   const tierOf = (st, t) => num(st[`t:${t}`]) + num(st[`h:t:${t}`]);
+  // Les 10 nombres Infinite du mode normal (les raretés ne changent jamais ; tools/test-api.mjs vérifie la liste).
+  const INFINITES = [0, 1, 2, 4, 5, 7, 24, 666666, 777777, 1000000];
   const atLeast = (st, tier) => TIERS.slice(TIERS.indexOf(tier)).reduce((x, t) => x + tierOf(st, t), 0);
   // Titres du mode difficile seul (idées de PRISMA123 et Liam123456, 2026-11-02/03) : ses tirages et ses raretés à lui.
   const hardRolls = st => num(st['h:rolls']);
@@ -166,6 +168,11 @@
     { id: 'uniq100k', emoji: '🌌', title: 'One Tenth of Everything', desc: 'Roll 100,000 different numbers (10% of them all)', test: st => num(st.uniq) >= 100000 },
     // Idée de casmictechthing (2026-11-01) : tous les nombres, de 0 à 1 000 000 (~14,4 millions de tirages en moyenne).
     { id: 'uniqall', emoji: '💯', title: '100%', desc: 'Roll all 1,000,001 different numbers', test: st => num(st.uniq) >= 1000001 },
+    // Infinites différents (idée de jsand, 2026-11-05 : « 3, 5, or all 10 », un Infinite déjà tiré ne compte pas deux
+    // fois) : stats.infs = combien de nombres de INFINITES sont dans nums:<id> (api/_lib.js, withUniq). Mode normal seul.
+    { id: 'inf3', emoji: '♾️', title: 'Infinite Collector', desc: 'Roll 3 different Infinite numbers', test: st => num(st.infs) >= 3 },
+    { id: 'inf5', emoji: '🌀', title: 'Infinity Hoarder', desc: 'Roll 5 different Infinite numbers', test: st => num(st.infs) >= 5 },
+    { id: 'infall', emoji: '🌠', title: 'Every Infinity', desc: 'Roll all 10 Infinite numbers', test: st => num(st.infs) >= INFINITES.length },
     { id: 'streak30', emoji: '🔥', title: 'On Fire', desc: 'Claim the daily bonus 30 days in a row', test: st => bestStreak(st) >= 30 },
     { id: 'streak100', emoji: '☄️', title: 'Unstoppable', desc: 'Claim the daily bonus 100 days in a row', test: st => bestStreak(st) >= 100 },
     { id: 'streak365', emoji: '🗓️', title: 'Whole Year', desc: 'Claim the daily bonus 365 days in a row', test: st => bestStreak(st) >= 365 },
@@ -187,7 +194,7 @@
   // Identifiants des succès débloqués, dans l'ordre de la liste.
   const unlocked = stats => LIST.filter(a => a.test(stats || {})).map(a => a.id);
 
-  const api = { LIST, byId, unlocked, COLLECT, collectionSets, completeCollections, coinsEarned, LEVEL_TITLES, SPECTRUM };
+  const api = { LIST, byId, unlocked, COLLECT, collectionSets, completeCollections, coinsEarned, LEVEL_TITLES, SPECTRUM, INFINITES };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.RNGAchievements = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -33,6 +33,8 @@
     'Roll 100,000 different numbers (10% of them all)': 'Tire 100 000 nombres différents (10 % de tous)',
     'Number Spotter': 'Dénicheur de nombres', 'Explorer': 'Explorateur', 'Cartographer': 'Cartographe', 'Pathfinder': 'Éclaireur',
     'Globetrotter': 'Globe-trotteur', 'Number Atlas': 'Atlas des nombres', 'One Tenth of Everything': 'Un dixième de tout',
+    'Infinite Collector': 'Collectionneur d\'Infinis', 'Infinity Hoarder': 'Amasseur d\'infini', 'Every Infinity': 'Tous les infinis',
+    'Roll 3 different Infinite numbers': 'Tire 3 nombres Infinite différents', 'Roll 5 different Infinite numbers': 'Tire 5 nombres Infinite différents', 'Roll all 10 Infinite numbers': 'Tire les 10 nombres Infinite',
     // titres du 2026-11-01 : niveaux (shadow2 Jr), Generous (PRISMA123), 100% (casmictechthing), séries (lnbBUChuoi_vn),
     // Full Spectrum (Pube puller) ; Odd Week (JBearr12). « Level 10 »… passe par la règle /^Level …$/ plus bas.
     'Reach level 10': 'Atteins le niveau 10', 'Reach level 25': 'Atteins le niveau 25', 'Reach level 50': 'Atteins le niveau 50',
@@ -265,7 +267,7 @@
     // profil
     '← Leaderboard': '← Classement', 'Profile unavailable right now.': 'Profil indisponible pour le moment.', 'No rolls yet': 'Aucun tirage', 'All-time rank': 'Rang depuis toujours', 'best single roll': 'meilleur tirage',
     'Best rolls': 'Meilleurs tirages', 'Duels': 'Duels', 'Duels won': 'Duels gagnés', 'Duel win rate': 'Taux de victoire', 'no duel between you yet': 'aucun duel entre vous', 'you lead': 'tu mènes', 'You': 'Toi',
-    '👥 Add friend': '👥 Ajouter en ami', 'Add friend': 'Ajouter en ami',
+    '👥 Add friend': '👥 Ajouter en ami', 'Add friend': 'Ajouter en ami', '👤 View profile': '👤 Voir le profil', 'Back to your duel': 'Retour à ton duel', 'it goes on without you while you\'re away': 'il continue sans toi pendant ton absence', '⚔️ Your duel round is about to start: go back to it': '⚔️ La manche de ton duel va commencer : retournes-y', 'Your device asks for less motion, so animations are reduced. Choose Off to show them anyway.': 'Ton appareil demande moins de mouvement, donc les animations sont réduites. Choisis Off pour les voir quand même.', 'Sound volume': 'Volume du son', 'Loud': 'Fort', 'Loud: for quiet speakers (idea by Kag)': 'Fort : pour les haut-parleurs faibles (idée de Kag)',
     // amis
     'Add players by name to follow their progress and jump into their duels.': 'Ajoute des joueurs par leur pseudo pour suivre leur progression et rejoindre leurs duels.', 'Friend requests': 'Demandes d\'ami', 'Your friends': 'Tes amis',
     'Requests sent': 'Demandes envoyées', 'Accept': 'Accepter', 'Decline': 'Refuser', 'Cancel': 'Annuler', 'Join / watch': 'Rejoindre / regarder', 'in a duel right now': 'en duel en ce moment', 'no roll yet': 'aucun tirage',
@@ -1235,6 +1237,7 @@
     [/^Suspend (\d+) accounts from this burst\? They can no longer play \(nothing is deleted\)\.$/, m => `Suspendre ${m[1]} comptes de cette rafale ? Ils ne pourront plus jouer (rien n'est effacé).`],
     [/^(\d+) accounts suspended, (\d+) kept$/, m => `${m[1]} comptes suspendus, ${m[2]} gardés`],
     [/^Suspend (\d+)$/, m => `Suspendre ${m[1]}`],
+    [/^⚔️ Your duel (\w+) is still going · tap to go back$/, m => `⚔️ Ton duel ${m[1]} continue · touche pour y retourner`],
     [/^(\d+) sign-up bursts? to check$/, m => `${m[1]} rafale${m[1] === '1' ? '' : 's'} d'inscriptions à vérifier`],
     [/^Suspend (.+)\? They can no longer play\.$/, m => `Suspendre ${m[1]} ? Il ne pourra plus jouer.`],
     [/^(.+) is (suspended|restored) \(([\d,]+) suspended in total\)$/, m => `${m[1]} est ${m[2] === 'suspended' ? 'suspendu' : 'réintégré'} (${nb(m[3])} suspendus en tout)`],

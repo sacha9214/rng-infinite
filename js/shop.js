@@ -272,7 +272,7 @@
     // Idée de finnnnn (2026-10-21) : un océan profond ; fusionnée avec Deadshot (2026-11-02 : poissons, requins, tortues,
     // calmars, algues, une ancre une fois sur 50), YeeHao2 (2026-10-27 : une baleine) et LEVIATHAN (2026-10-29 : un
     // léviathan qui domine le nombre). Le skin Ocean (700 pièces) reste tel quel.
-    { id: 'deepsea', name: 'Deep Sea', emoji: '🐋', price: 2600, desc: 'Glowing digits in the dark abyss while fish, turtles and squid swim by; great rolls bring a shark, Mythic rolls a whale, Divine rolls the leviathan, and once in a while an anchor drifts down', idea: 'finnnnn' },
+    { id: 'deepsea', name: 'Deep Sea', emoji: '🐋', price: 2600, desc: 'Glowing digits in the dark abyss while fish, turtles and squid swim by; great rolls bring a shark, Mythic rolls a whale, Divine rolls the leviathan, and once in a while an anchor drifts down', idea: 'finnnnn', with: ['Deadshot', 'YeeHao2', 'LEVIATHAN'] },
     // Idée de finnnnn (2026-11-05) : chaque chiffre est une bulle qui éclate pour laisser place au suivant ; dès Mythic, un
     // pistolet à bulles en lance partout.
     { id: 'bubble', name: 'Bubble', emoji: '🫧', price: 1400, desc: 'Every digit floats in a soap bubble that pops into the next one; Mythic rolls fire a bubble gun everywhere', idea: 'finnnnn' },

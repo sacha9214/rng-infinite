@@ -910,6 +910,10 @@ body.locked #mode-switch button { pointer-events: none; opacity: .45; }
 .duel-entry-row { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
 .duel-join { display: flex; gap: .4rem; }
 .duel-join .input { width: 6.5rem; text-align: center; text-transform: uppercase; letter-spacing: .2em; }
+/* Formulaire des amis : pseudo, Add friend et View profile (idée de Paul, 2026-11-05). Le pseudo prend la ligne
+   quand les boutons ne tiennent pas à côté, et garde sa casse (ce n'est pas un code de duel). */
+#f-add { flex-wrap: wrap; }
+#f-add .input { flex: 1 1 11rem; width: auto; text-align: left; text-transform: none; letter-spacing: normal; }
 .room-code-box { text-align: center; border: 1px solid var(--outline); border-radius: .8rem; background: var(--surface); padding: 1.6rem 1rem; max-width: 26rem; margin: 0 auto; }
 .room-code { font-size: 3rem; font-weight: 700; letter-spacing: .25em; margin: .3rem 0 .6rem; padding-left: .25em; }
 .room-wait { text-align: center; color: var(--prose-3); margin: 1rem 0; animation: wait-pulse 1.6s ease-in-out infinite; }
@@ -2254,6 +2258,13 @@ body.locked #mode-switch button { pointer-events: none; opacity: .45; }
 .case-box { font-size: 2.6rem; line-height: 1; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .35)); transition: transform .25s var(--ease-snap); }
 .case-tile:hover .case-box { transform: translateY(-4px) rotate(-6deg) scale(1.06); }
 .case-odds { font-size: .7rem; color: var(--prose-3); cursor: help; text-decoration: underline dotted; }
+.duel-away { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .6rem; margin-bottom: .8rem; color: var(--prose); text-decoration: none; border-color: rgba(245, 158, 11, .7); }
+.duel-away:hover { border-color: rgb(245, 158, 11); }
+.duel-away .panel-note { flex-basis: 100%; }
+.case-odds-btn { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+.case-odds-list { columns: 2 13rem; column-gap: 1.2rem; margin: .6rem 0 0; padding: 0; list-style: none; font-size: .78rem; line-height: 1.5; color: var(--prose); }
+.case-odds-list li { break-inside: avoid; }
+.case-odds-list b { color: var(--prose-3); font-weight: 600; }
 .case-reel { position: relative; overflow: hidden; margin: 1rem 0; padding: .6rem 0; border: 1px solid var(--outline); border-radius: .7rem; background: var(--surface-dim);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
 .case-strip { display: flex; gap: .5rem; width: max-content; will-change: transform; }
@@ -3289,6 +3300,10 @@ html.perf .rays, html.perf .vignette, html.perf .skin-fx-in, html.perf .skin-fx-
 .solo-badges.on { border-color: #818cf8; color: var(--prose); background: color-mix(in srgb, #818cf8 14%, var(--surface)); }
 .solo-badges:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 .ab-search { width: 100%; margin-top: .3rem; }
+.ab-tiers { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .45rem; }
+.ab-tier { padding: .15rem .45rem; border: 1px solid var(--outline); border-radius: 999px; background: var(--surface); color: var(--prose); font: 600 .72rem var(--font-sans); cursor: pointer; }
+.ab-tier .pill { pointer-events: none; }
+.ab-tier[aria-pressed="true"] { border-color: var(--prose); box-shadow: 0 0 0 1px var(--prose); }
 .ab-count { margin: .45rem 0 .3rem; }
 .ab-list { display: flex; flex-direction: column; gap: .25rem; max-height: min(50vh, 22rem); overflow-y: auto; overscroll-behavior: contain; padding-right: .15rem; }
 .ab-row { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 2.4rem; padding: .35rem .55rem; border: 1px solid var(--outline); border-radius: .5rem; background: var(--surface); color: var(--prose); font: 600 .82rem var(--font-sans); text-align: left; cursor: pointer; }
@@ -7611,9 +7626,10 @@ html.wall-trying #toast, html.wall-trying .toast { opacity: 0 !important; visibi
    il passait dessous, invisible (jia jun, 2026-10-22). On lui laisse la place.
    Même chose pour les lutins d'Elves' Workshop : leurs têtes et leurs bonnets dépassent d'une hauteur de carte, la barre
    du haut leur coupait la tête (« the elves got beheaded », costoroll, 2026-10-27). Et pour Chess : la pièce et le
-   « Checkmate! » de la célébration montent au-dessus de la carte (casmicgraything, 2026-11-05). */
-#card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess { margin-top: 3.6rem; }
-@media (max-width: 560px) { #card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess { margin-top: 3rem; } }
+   « Checkmate! » de la célébration montent au-dessus de la carte (casmicgraything, 2026-11-05). Et pour Orbital Cannon :
+   le satellite tire d'au-dessus de la carte et restait sous la barre du haut (LEVIATHAN, 2026-11-06). */
+#card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess, #card-stage .num-card.skin-orbital { margin-top: 3.6rem; }
+@media (max-width: 560px) { #card-stage .num-card.skin-wheelie, #card-stage .num-card.skin-workshop, #card-stage .num-card.skin-chess, #card-stage .num-card.skin-orbital { margin-top: 3rem; } }
 
 .prank-bar[hidden] { display: none; }
 

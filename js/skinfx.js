@@ -4223,7 +4223,8 @@
 
   // ---------------------------------------------------------------- montage sur une carte
   // Mouvement réduit du système, ou mode performance du jeu (classe perf sur <html>) : pas de scène.
-  const reduced = () => !!((root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || (root.document && root.document.documentElement.classList.contains('perf')));
+  // motion-ok : « Off » choisi exprès au mode performance l'emporte sur le système (js/app.js, setMotionOk).
+  const reduced = () => !!((root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches && !(root.document && root.document.documentElement.classList.contains('motion-ok'))) || (root.document && root.document.documentElement.classList.contains('perf')));
   // 💗 Supporter — un cœur qui bat. La ligne de pouls court dans la carte et accélère à chaque chiffre posé ; chaque
   // chiffre est un battement (double onde corail, quelques cœurs qui s'envolent) ; avant le dernier le pouls s'emballe ;
   // la révélation est une grande onde autour de la carte et une envolée de cœurs. Tirage raté : la ligne devient plate.
@@ -6624,7 +6625,7 @@
     const H = card.h, cx = card.x + card.w / 2, cy = card.y + card.h / 2;
     const beams = timed(), reticles = timed(), finale = timed(), shock = timed(), burns = timed(), words = timed(), sparks = particles(), motes = particles(), emit = emitter();
     const COL = { trash: '#a16207', common: '#cbd5e1', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', anomaly: '#fb923c', mythic: '#f43f5e', celestial: '#67e8f9', divine: '#fde047', godlike: '#ffffff', infinite: null };
-    const sat = { x: cx, tx: cx, y: Math.max(26, card.y - H * 1.3) };
+    const sat = { x: cx, tx: cx, y: card.y - H * .6 }; // juste au-dessus de la carte : 1,3 carte plus haut, il sortait de l'écran (LEVIATHAN, 2026-11-06)
     let charge = 0, chargeTo = 0, lockOn = 0, lockTo = 0, now = 0;
     const add = dark ? 'lighter' : 'source-over';
     const hue = t => RAINBOW[Math.floor(t * 6) % RAINBOW.length]; // Infinite : le rayon passe par toutes les couleurs

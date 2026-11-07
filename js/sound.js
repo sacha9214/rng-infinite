@@ -509,7 +509,16 @@
   }
 
   // ---------------------------------------------------------------- lecture
-  let ctx = null, out = null, send = null, turn = 0;
+  let ctx = null, out = null, send = null, turn = 0, comp = null, loud = false;
+  // Volume « Loud » (demandé par Kag, 2026-11-06 : « mon volume est à 100 % mais ça sonne comme 30 % d'une autre app »).
+  // Le mixage culmine à −1 dB sans limiteur : pour monter, on remonte le gain de LOUD fois et un compresseur rabat les
+  // crêtes sous 0 dB. En Normal, son seuil est à 0 dB : rien ne l'atteint, le son est celui d'avant.
+  const LOUD = 2.4;
+  const applyLoud = () => {
+    if (!out || !comp) return;
+    out.gain.value = LEVEL * (loud ? LOUD : 1);
+    comp.threshold.value = loud ? -14 : 0; comp.knee.value = loud ? 8 : 0; comp.ratio.value = loud ? 12 : 1;
+  };
   const live = new Set(); // ce qui sonne, ou va sonner
 
   function boot() {
@@ -519,7 +528,10 @@
       try { ctx = new AC({ sampleRate: RATE, latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); }
       out = ctx.createGain();
       out.gain.value = LEVEL;
-      out.connect(ctx.destination);
+      comp = ctx.createDynamicsCompressor();
+      comp.attack.value = .003; comp.release.value = .2;
+      out.connect(comp); comp.connect(ctx.destination);
+      applyLoud();
       // Le ConvolverNode exige une réponse au débit de la sortie : si le navigateur a imposé le sien, on la recalcule à ce débit.
       const same = ctx.sampleRate === RATE, rate = ctx.sampleRate;
       const sides = same ? impulse48 || (impulse48 = impulseOf(S)) : impulseOf(root.RNGSynth.create(rate));
@@ -610,6 +622,7 @@
 
   root.Sound = {
     play, stop, unlock, enable, warm,
+    setLoud(on) { loud = !!on; applyLoud(); },
     // Douze cliquetis différents tournent, pour ne pas sonner comme une mitraillette.
     tick(o = {}) { play('tick', Object.assign({ k: o.last ? 0 : turn++ % 12 }, o)); },
     badge(i, of) { play('badge', { step: Math.round((i * 3) / Math.max(1, of - 1)), last: i === of - 1 }); },

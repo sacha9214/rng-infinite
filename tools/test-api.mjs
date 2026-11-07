@@ -712,9 +712,15 @@ const roomA = (await roomPost(ivy, 'create', { size: 2, bots: 1 })).body.code;
 const roomB = (await roomPost(ivy, 'create', { size: 2, bots: 1 })).body.code;
 assert.equal((await roomPost(ivy, 'ready', { code: roomA })).body.rounds.length, 1);
 assert.equal((await roomPost(ivy, 'ready', { code: roomB })).body.rounds.length, 0, 'deuxième partie en même temps : on attend');
-assert.equal((await call(roll, { method: 'POST', body: ivy })).status, 429, 'tirage normal pendant ce temps : refusé');
+// Priorité au duel (« Duel wont work », Liamlong, 2026-11-06) : la salle qui attend réserve le prochain délai (hold:<id>),
+// les tirages solo patientent au lieu de le reprendre, et la réserve s'efface quand la manche part.
+assert.equal(run([['GET', `hold:${ivy.playerId}`]])[0].result, roomB);
+r = await call(roll, { method: 'POST', body: ivy });
+assert.deepEqual([r.status, /duel/.test(r.body.error), r.body.wait > 8000], [429, true, true], 'tirage normal pendant ce temps : refusé, la manche passe avant');
 r = await later(8100, () => roomGet(roomB, ivy));
 assert.equal(r.body.rounds.length, 1, '8 s plus tard, la manche part');
+assert.equal(run([['GET', `hold:${ivy.playerId}`]])[0].result, null, 'réserve effacée');
+{ const ms = Number(run([['PTTL', `room:${roomB}:draw:0`]])[0].result); assert.ok(ms > 0 && ms <= 60000, `verrou de tirage court : ${ms}`); }
 
 // Noms : alphabet latin, chiffres, espaces et _ . - ' ; pas de sosie en cyrillique.
 const { cleanName } = require(path.join(ROOT, 'api/_lib.js'));
@@ -5546,6 +5552,26 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   done = await lib.recordRoll(u.playerId, 654321, Date.now());
   assert.ok(done.achievements.includes('uniq100'), 'le 100e nombre différent débloque le titre');
   st = await lib.readStats(u.playerId); assert.equal(st.uniq, 100); assert.equal(run([['HGET', `stats:${u.playerId}`, 'uniq']])[0].result, null, 'jamais écrit dans stats');
+  // 3 bis. Infinites différents (idée de jsand, 2026-11-05) : la liste figée est bien celle des Infinite du moteur, un
+  // Infinite déjà tiré ne compte pas deux fois, et un tirage difficile renvoie les mêmes succès qu'un profil (sinon
+  // Explorer, Cartographer… revenaient comme neufs au rechargement : rapporté par 123, 2026-11-07).
+  { const infs = []; for (let n = 0; n <= 1000000; n++) if (engine.analyze(n).tier === 'infinite') infs.push(n);
+    assert.deepEqual(infs, Ach.INFINITES, 'les 10 Infinite'); }
+  const ic = mk(3, 'Infcollect', ['dv', '1']);
+  run([['SADD', `nums:${ic.playerId}`, '0', '1', '123456']]);
+  st = await lib.readStats(ic.playerId); assert.equal(st.infs, 2); assert.ok(!Ach.unlocked(st).includes('inf3'));
+  done = await lib.recordRoll(ic.playerId, 1, Date.now()); assert.ok(!done.achievements.includes('inf3'), 'un Infinite déjà tiré ne compte pas');
+  await new Promise(res => setTimeout(res, 3));
+  done = await lib.recordRoll(ic.playerId, 777777, Date.now()); assert.ok(done.achievements.includes('inf3'), 'le 3e Infinite différent');
+  assert.equal((await lib.readStats(ic.playerId)).infs, 3);
+  run([['SADD', `nums:${ic.playerId}`, ...Ach.INFINITES.map(String)]]);
+  assert.ok((await lib.readStats(ic.playerId)).infs === 10 && Ach.unlocked(await lib.readStats(ic.playerId)).includes('infall'));
+  run([['HSET', `stats:${u.playerId}`, 't:divine', '1']]); // mode difficile ouvert
+  await new Promise(res => setTimeout(res, 3));
+  done = await lib.recordHardRoll(u.playerId, 5823917461, Date.now() - 40 * 86400000); // il y a 40 jours : hors des classements du jour testés plus bas
+  assert.deepEqual(done.achievements.filter(x => x.startsWith('uniq')), Ach.unlocked(await lib.readStats(u.playerId)).filter(x => x.startsWith('uniq')), 'tirage difficile : mêmes succès « nombres différents »');
+  assert.ok(done.achievements.includes('uniq100'));
+  for (const [k, v] of db) if (k.startsWith('h') && v instanceof Map) v.delete(u.playerId); // hors des classements difficiles testés plus bas
   let r = await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq100' } });
   assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.title, 'uniq100');
   assert.equal((await call(titleApi, { method: 'POST', body: { playerId: u.playerId, secret: u.secret, title: 'uniq500' } })).status, 422, 'pas encore 500');
