@@ -271,6 +271,7 @@ module.exports = async (req, res) => {
       clanMvp: Number(stats.clanMvp) || 0, // semaines où il a été le MVP du clan n°1 (idée de PRISMA123, 2026-10-27)
       spent: Number(stats.spent) || 0, cases: Number(stats.cases) || 0, // pièces dépensées et caisses ouvertes (idée de PRISMA123, 2026-10-20)
       level: require('../js/quests.js').levelOf(stats.xpLife), // niveau du joueur (XP à vie) // meilleure série de jours avec toutes les quêtes finies
+      rb: Math.min(5, Number(stats.rb) || 0), // étoiles de renaissance (idée de JUAN SEBASTIAN, 2026-11-07)
     });
   } catch (err) {
     return send(res, err.status || 500, { error: err.message });

@@ -1,6 +1,36 @@
 # Handoff — RNG∞
 
-Last updated: 2026-11-07 by Claude (branch `claude/update-nov7`). Update this file at the end of every session.
+Last updated: 2026-11-07 by Claude (branch `claude/rebirth`). Update this file at the end of every session.
+
+## Rebirth (2026-11-07, branch `claude/rebirth`, not deployed)
+
+Idea by JUAN SEBASTIAN: rebirths after 1B XP, 5 at most, with "Angel" and "Guardian Angel" titles. His version gave
+roll speed and coins; it was declined for that. Sacha: "if you think it's a great feature, work on it the best way
+possible". Built as **prestige only**: no speed, no coins, nothing reset or taken back.
+
+- **Rules** (`js/quests.js` `REBIRTHS = [1e9, 1.5e9, 2.5e9, 4e9, 6e9]`, `rebirthOf(stats)`, shared with the server):
+  - The first rebirth needs 1B lifetime XP.
+  - Each next one needs that much XP earned after the previous one (`stats.rbAt` = lifetime XP at the last rebirth),
+    so big players can't collect 5 stars at once. That is 15B XP in total.
+  - Levels, `lvlPaid`, coins and keys are untouched (test-api checks it).
+- **Server**: `api/quests.js`.
+  - Its state now includes `rebirth`, and the new action `rebirth` takes the lock `rbclaim:<id>` and writes
+    `rb`, `rbAt` and `rbT` in `stats:<id>`, plus `rb:all` (id → stars).
+  - `rb:all` feeds the chat (`api/_global.js` `rebirthStars`) and the 5 leaderboard builders (`api/leaderboard.js`
+    `rebirthStars`, `...starOf(id)` on every row). `api/profile.js` sends `rb`.
+- **Titles** (`js/achievements.js`): reborn1 🪽 Angel, reborn3 🔥 Phoenix, reborn5 😇 Guardian Angel. They read
+  `stats.rb`, which is in the stats hash everywhere.
+- **UI** (`js/app.js`):
+  - `rbHTML(n)` is a masked star whose material changes with each rebirth (bronze, silver, gold, amethyst, then an
+    animated celestial gradient), with the number from 2 on. It sits after the name in the chat, leaderboards and
+    profile header.
+  - `rebirthCardHTML` is a card under the Level card in the quests panel, shown from 100M XP, with a faded preview
+    of the next star.
+  - `openRebirth` is the explanation window. `rebirthCeremony` animates the star (anticipation, burst, settle) under
+    turning rays, then plays a sound and confetti.
+  - CSS prefix `rb-`. French in `js/i18n.js` (patterns for the variable texts, `RB_FR` for the materials).
+- **On launch**: 91 players are already past 1B lifetime XP (read-only count, 2026-11-07), so they can rebirth on day
+  one. JUAN has not been told yet.
 
 ## Inbox sweep update (2026-11-07, branch `claude/update-nov7`)
 

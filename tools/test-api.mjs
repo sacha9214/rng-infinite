@@ -3637,6 +3637,33 @@ assert.equal((await roomGet(pair)).body.status, 'abandoned');
   assert.deepEqual([Q.levelReward(25).key, Q.levelReward(20).key, Q.levelReward(21).key], ['premium', 'starter', null]);
   // Elite Case : dans la boutique, que des skins de 1 500 à 5 000.
   assert.ok(Shop.casePool(Shop.caseById.get('elite')).every(k => k.price >= 1500 && k.price <= 5000));
+  // 61 bis. Renaissance (idée de JUAN SEBASTIAN, 2026-11-07) : prestige seul. 1 milliard d'XP à vie pour la première, puis
+  // l'XP gagnée depuis la précédente ; rien d'autre ne bouge (niveau payé, pièces, clés) ; 5 au plus.
+  const RbAch = require(path.join(ROOT, 'js/achievements.js'));
+  const rbStats = id => { const f = run([['HGETALL', `stats:${id}`]])[0].result || [], o = {}; for (let k = 0; k < f.length; k += 2) o[f[k]] = f[k + 1]; return o; };
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', 999999999], ['HDEL', `stats:${p.playerId}`, 'rb', 'rbAt', 'rbT'], ['HDEL', 'rb:all', p.playerId]]);
+  r = await qGet2(); assert.deepEqual([r.body.rebirth.count, r.body.rebirth.ready, r.body.rebirth.need], [0, false, 1e9]);
+  assert.equal((await qPost2('rebirth')).status, 422, 'pas encore 1 milliard');
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', 1.2e9]]);
+  const before = run([['HMGET', `stats:${p.playerId}`, 'lvlPaid', 'bonus', 'key:starter', 'key:premium', 'xpLife']])[0].result;
+  r = await qPost2('rebirth'); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.reborn, r.body.rebirth.count, r.body.rebirth.gained, r.body.rebirth.need, r.body.rebirth.ready], [1, 1, 0, 1.5e9, false], 'la barre repart de 0');
+  assert.deepEqual(run([['HMGET', `stats:${p.playerId}`, 'lvlPaid', 'bonus', 'key:starter', 'key:premium', 'xpLife']])[0].result, before, 'rien d\'autre ne change');
+  assert.equal(run([['HGET', 'rb:all', p.playerId]])[0].result, '1');
+  assert.equal((await qPost2('rebirth')).status, 422, 'une seule à la fois');
+  assert.ok(RbAch.unlocked(rbStats(p.playerId)).includes('reborn1') && !RbAch.unlocked(rbStats(p.playerId)).includes('reborn3'), 'titre Angel');
+  run([['HSET', `stats:${p.playerId}`, 'xpLife', 1.2e9 + 1.5e9]]);
+  r = await qPost2('rebirth'); assert.equal(r.body.reborn, 2, 'XP gagnée depuis la précédente');
+  run([['HSET', `stats:${p.playerId}`, 'rb', 5, 'rbAt', 1, 'xpLife', 1e11]]);
+  r = await qGet2(); assert.deepEqual([r.body.rebirth.count, r.body.rebirth.ready], [5, false]);
+  assert.match((await qPost2('rebirth')).body.error, /every rebirth/, '5 au plus');
+  assert.ok(RbAch.unlocked(rbStats(p.playerId)).includes('reborn5'));
+  // L'étoile à côté du pseudo : profil et classements (rb:all).
+  run([['HSET', 'rb:all', p.playerId, 5]]);
+  r = await call(require(path.join(ROOT, 'api/profile.js')), { url: `/api/profile?name=${encodeURIComponent(p.name)}` }); assert.equal(r.body.rb, 5);
+  r = await call(require(path.join(ROOT, 'api/leaderboard.js')), { url: `/api/leaderboard?period=xp&me=${p.playerId}` });
+  { const mine = (r.body.entries || []).find(e => e.me) || r.body.me; assert.ok(mine && mine.rb === 5, JSON.stringify(mine)); assert.ok((r.body.entries || []).filter(e => !e.me).every(e => !e.rb), 'les autres sans étoile'); }
+  run([['HDEL', `stats:${p.playerId}`, 'rb', 'rbAt', 'rbT'], ['HDEL', 'rb:all', p.playerId], ['HSET', `stats:${p.playerId}`, 'xpLife', 1.2e9]]);
 }
 
 // Godlike (2026-10-16) : un ancien tirage Godlike, compté en Divine avant la nouvelle rareté, passe en Godlike à la

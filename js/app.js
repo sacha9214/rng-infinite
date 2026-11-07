@@ -670,6 +670,16 @@
     if (compact) return `<span class="top-mark ${m[2]}${hard ? ' hard' : ''} compact" title="${esc(tip)}" aria-label="${esc(tip)}" data-no-i18n>${m[0]}${hard ? '🔥' : ''}</span>`;
     return `<span class="top-mark ${m[2]}${hard ? ' hard' : ''}" title="${esc(tip)}" data-no-i18n>${m[0]} ${m[1]} · ${esc(when)} · ${mode}</span>`;
   };
+  // Étoile de renaissance à côté du pseudo (idée de JUAN SEBASTIAN, 2026-11-07 ; js/quests.js REBIRTHS) : une étoile dont
+  // la matière change à chaque renaissance (bronze, argent, or, améthyste, puis céleste animée), et le nombre à partir de 2.
+  // big : en tête du profil, toujours avec le nombre.
+  const RB_NAMES = ['', 'Bronze', 'Silver', 'Gold', 'Amethyst', 'Celestial'];
+  const rbHTML = (n, big = false) => {
+    n = Math.min(5, Math.floor(Number(n) || 0));
+    if (n < 1) return '';
+    const tip = `Rebirth ${n} of 5 (${RB_NAMES[n]} star)`;
+    return `<span class="rb-mark rb-${n}${big ? ' big' : ''}" title="${tip}" aria-label="${tip}"><i class="rb-star" aria-hidden="true"></i>${n > 1 || big ? `<b>${n}</b>` : ''}</span>`;
+  };
   // Pièces versées avec le badge (mêmes montants que REWARDS dans api/_rank.js).
   const TOP_COINS = { 1: 1000, 5: 500, 10: 250 };
   const topEmoji = award => (award && TOP_MARKS[award.top] ? ` ${TOP_MARKS[award.top][0]}` : '');
@@ -1898,6 +1908,7 @@
             <span class="level-road-link">🛣️ See all rewards</span></span>
           ${lv.pending ? `<button class="btn-roll small" data-level>+${fmt(lv.coins)} 🪙${lv.keys.length ? ` ${lv.keys.map(k => KEY[k]).join('')}` : ''}</button>` : ''}
         </div>`; })() : ''}
+        ${rebirthCardHTML(state)}
         <div class="quest daily${d.claimed ? ' done' : ''}">
           <span class="quest-emoji">🔥</span>
           <span class="quest-text"><b>Daily bonus</b><span class="panel-note">${d.streak ? `${plural(d.streak, 'day')} streak` : 'Start a streak'}${d.claimed ? ` · tomorrow: ${d.next} coins` : ''}</span></span>
@@ -1946,6 +1957,7 @@
         } catch (err) { rr.disabled = false; toast([400, 422, 429].includes(err.status) ? err.message : 'Quests unavailable right now, try again'); }
         return;
       }
+      if (e.target.closest('[data-rebirth]')) { openRebirth(state.rebirth, slot); return; }
       const btn = e.target.closest('[data-quest], [data-daily], [data-level], [data-event], [data-wquest], [data-chest]');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -2024,6 +2036,64 @@
 
   // Route des récompenses de niveau (2026-10-16) : du niveau d'avant jusqu'au prochain palier de 25, chaque niveau avec
   // ses pièces et sa clé de caisse ; les niveaux à clé ressortent, ceux déjà payés sont cochés.
+  // ---------------------------------------------------------------- renaissance (idée de JUAN SEBASTIAN, 2026-11-07)
+  // Prestige seul (Sacha : pas de vitesse ni de pièces) : la barre compte l'XP depuis la dernière renaissance
+  // (js/quests.js REBIRTHS : 1 milliard d'XP à vie pour la première, puis 1,5, 2,5, 4 et 6 milliards de plus) ; une fois
+  // pleine, le joueur renaît : une étoile de plus à côté de son pseudo, des titres (Angel, Phoenix, Guardian Angel), et la
+  // barre repart. Niveau, XP, pièces et récompenses de niveau ne bougent pas. Montrée dès 100 millions d'XP.
+  const RB_TITLES = { 1: ['🪽', 'Angel'], 3: ['🔥', 'Phoenix'], 5: ['😇', 'Guardian Angel'] };
+  function rebirthCardHTML(state) {
+    const rb = state.rebirth;
+    if (!rb || (!rb.count && !(state.level && state.level.xp >= 1e8))) return '';
+    const max = rb.count >= rb.max, pct = max ? 100 : Math.min(100, (rb.gained / Math.max(1, rb.need)) * 100);
+    return `<div class="quest rebirth${rb.ready ? ' ready' : ''}${max ? ' done' : ''}">
+      <span class="quest-emoji${max || rb.ready ? '' : ' rb-ghost'}">${rbHTML(Math.min(rb.max, rb.count + 1))}</span>
+      <span class="quest-text"><b>${max ? 'Rebirth · all 5 stars' : `Rebirth ${rb.count + 1} of ${rb.max}`}</b>
+        <span class="quest-bar"><span style="width:${pct}%"></span></span>
+        <span class="panel-note">${max ? 'You reached the last rebirth. Guardian Angel!' : rb.ready ? 'Ready! A new star, and you keep everything.' : `${compact(rb.gained)} / ${compact(rb.need)} XP ${rb.count ? 'since your last rebirth' : 'in total'}`}</span></span>
+      ${rb.ready ? '<button class="btn-roll small" type="button" data-rebirth>Rebirth</button>' : ''}
+    </div>`;
+  }
+  function openRebirth(rb, slot) {
+    if (!rb || !rb.ready) return;
+    const n = rb.count + 1, t = RB_TITLES[n], after = Quests.REBIRTHS[n];
+    openModal(`
+      <div class="rb-modal">
+        <div class="rb-preview">${rbHTML(n, true)}</div>
+        <h2>Rebirth ${n} of ${rb.max}</h2>
+        <ul class="rb-list">
+          <li>✅ You keep everything: level, XP, coins, skins, titles and history.</li>
+          <li>${rbHTML(n)}<span>Your ${RB_NAMES[n].toLowerCase()} star shows next to your name in the chat, the leaderboards and on your profile.</span></li>
+          ${t ? `<li>${t[0]} New title: ${t[1]}</li>` : ''}
+          <li>${after ? `🔁 The rebirth bar starts again: the next star needs ${compact(after)} XP.` : '🔁 This is the last rebirth.'}</li>
+          <li>🍀 Your luck, speed and coins stay exactly the same.</li>
+        </ul>
+        <div class="actions"><button class="btn" type="button" data-rb-no>Not now</button><button class="btn-roll small" type="button" data-rb-go>🔥 Rebirth</button></div>
+      </div>`, m => {
+      m.querySelector('[data-rb-no]').addEventListener('click', closeModal);
+      m.querySelector('[data-rb-go]').addEventListener('click', async e => {
+        const go = e.currentTarget; go.disabled = true;
+        try {
+          const next = await Online.questAction('rebirth');
+          rebirthCeremony(m, next.reborn || n);
+          if (slot && slot.isConnected) loadQuests(slot, next);
+        } catch (err) { go.disabled = false; toast([422, 429].includes(err.status) ? err.message : 'Rebirth unavailable right now, try again'); }
+      });
+    });
+  }
+  // La cérémonie : l'étoile naît (anticipation, éclat, repos), les rayons tournent derrière, puis le titre.
+  function rebirthCeremony(m, n) {
+    const t = RB_TITLES[n], box = m.querySelector('.rb-modal');
+    if (!box) return;
+    box.innerHTML = `
+      <div class="rb-born rb-${n}" aria-hidden="true"><span class="rb-rays"></span><i class="rb-star"></i></div>
+      <h2 class="rb-born-title"><span>Reborn!</span>${rbHTML(n)}</h2>
+      <p class="panel-note rb-born-note">${t ? `${t[0]} New title: ${t[1]}. Equip it from your profile.` : `Your ${RB_NAMES[n].toLowerCase()} star now shows next to your name.`}</p>
+      <div class="actions"><button class="btn-roll small" type="button" data-rb-done>Awesome!</button></div>`;
+    box.querySelector('[data-rb-done]').addEventListener('click', closeModal);
+    Sound.play('riser');
+    setTimeout(() => { Sound.play('tier', { tier: n >= 5 ? 'infinite' : n >= 3 ? 'divine' : 'mythic' }); if (box.isConnected) FX.celebrate(n >= 5 ? 'godlike' : n >= 3 ? 'divine' : 'mythic', box.querySelector('.rb-born')); }, reducedMotion ? 0 : 650);
+  }
   function openLevelRoad(lv) {
     if (!lv) return;
     const KEY = { starter: ['📦', 'Starter Case key'], premium: ['🎁', 'Premium Case key'] };
@@ -2417,6 +2487,7 @@
   // Journal des mises à jour : un rond en bas à gauche, au-dessus du lien GitHub, avec une pastille tant que la
   // dernière entrée n'a pas été lue sur cet appareil. Les textes sont écrits dans les deux langues (pas traduits au vol).
   const UPDATES = [
+    { id: '2026-11-07-rebirth', date: 'Nov 7, 2026', en: ['🔥 Rebirth (idea by JUAN SEBASTIAN)! At 1 billion lifetime XP, a Rebirth card appears with your quests. Rebirth to get a star next to your name in the chat, the leaderboards and on your profile: bronze, silver, gold, amethyst, then a shining celestial star. Each new star needs more XP earned after the last one (1.5B, 2.5B, 4B, then 6B), up to 5. You keep everything (level, XP, coins, skins), and your luck, speed and coins never change. New titles: 🪽 Angel, 🔥 Phoenix and 😇 Guardian Angel'], fr: ['🔥 La Renaissance (idée de JUAN SEBASTIAN) ! À 1 milliard d\'XP à vie, une carte Renaissance apparaît avec tes quêtes. Renais pour gagner une étoile à côté de ton pseudo dans le chat, les classements et sur ton profil : bronze, argent, or, améthyste, puis une étoile céleste qui brille. Chaque nouvelle étoile demande plus d\'XP gagnée après la précédente (1,5 Md, 2,5 Md, 4 Md, puis 6 Md), jusqu\'à 5. Tu gardes tout (niveau, XP, pièces, skins), et ta chance, ta vitesse et tes pièces ne changent jamais. Nouveaux titres : 🪽 Angel, 🔥 Phénix et 😇 Ange gardien'] },
     { id: '2026-11-07-update', date: 'Nov 7, 2026', en: [
       '♾️ 3 new titles: Infinite Collector, Infinity Hoarder and Every Infinity, for rolling 3, 5 and all 10 different Infinite numbers (idea by jsand)',
       '👤 Friends: type a name and tap View profile to see anyone\'s profile without a friend request (idea by Paul)',
@@ -4298,7 +4369,7 @@
     $('#p-body').innerHTML = `
       <section class="pf-hero">
         <div class="pf-id">
-          <div class="pf-name">${Avatars.html(p.name, 'av-lg')}<span>${esc(p.name)}${me ? ' <span class="muted">(you)</span>' : ''}</span></div>
+          <div class="pf-name">${Avatars.html(p.name, 'av-lg')}<span>${esc(p.name)}${rbHTML(p.rb, true)}${me ? ' <span class="muted">(you)</span>' : ''}</span></div>
           <div class="pf-tags">${p.clan ? `<a class="cl-ptag" href="#/clan" title="Clan">${esc(p.clan.emoji || '🛡️')} <span data-no-i18n>${esc(p.clan.name)}</span> ${clanTagHTML(p.clan)}</a>` : ''}${titleHTML(p.title)}${(p.tops || []).map(topHTML).join('')}${p.discord ? `<span class="pf-discord" title="Discord linked">💬 ${esc(p.discord)}</span>` : ''}</div>
           ${p.bio || me ? `<p class="pf-bio">${p.bio ? `<span data-no-i18n>${esc(p.bio)}</span>` : '<span class="muted">No "About me" yet.</span>'}${me ? ' <button type="button" class="pf-bio-edit" id="p-bio-edit">✏️ Edit</button>' : ''}</p>` : ''}
           <div class="pf-since">${p.rolls ? `Playing since ${day(p.since)} · last roll ${relTime(p.last)}` : 'No rolls yet'}</div>
@@ -10159,7 +10230,7 @@
     if (lbState.period === 'event') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${rbHTML(e.rb)}${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-rolls">${e.done ? '✓ goal reached' : ''}</span>
         <span class="lb-coins mono">🎯 ${fmt(e.count)}</span>
       </div>`;
@@ -10167,7 +10238,7 @@
     if (lbState.period === 'rolls') return `
       <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${rbHTML(e.rb)}${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono" title="Rolls">${fmt(e.count)}</span>
         <span class="lb-rolls" title="Lifetime XP">${compactXp(e.xp)}</span>
       </div>`;
@@ -10175,14 +10246,14 @@
     if (lbState.period === 'median') return `
       <div class="lb-row lb-row-rolls${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${rbHTML(e.rb)}${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono" title="Median roll">${fmt(e.med)} XP</span>
         <span class="lb-rolls">${plural(e.count, 'roll')}</span>
       </div>`;
     if (lbState.period === 'coins') return `
       <div class="lb-row${e.me ? ' me' : ''}">
         <span class="lb-rank">${{ 1: '🥇', 2: '🥈', 3: '🥉' }[e.rank] || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${rbHTML(e.rb)}${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-coins mono">🪙 ${fmt(e.coins)}</span>
         <span class="lb-rolls">${plural(e.rolls, 'roll')}</span>
       </div>`;
@@ -10192,7 +10263,7 @@
     return `
       <div class="lb-row${e.me ? ' me' : ''}" data-number="${e.n}" data-caption="${esc(`#${e.rank} · ${e.name} · ${relTime(e.t)}`)}">
         <span class="lb-rank">${medal || '#' + e.rank}</span>
-        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
+        <span class="lb-who">${Avatars.html(e.name, 'av-sm')}<a class="lb-name" href="${profileHref(e.name)}" title="See ${esc(e.name)}'s profile">${esc(e.name)}${e.me ? ' <span class="muted">(you)</span>' : ''}</a>${rbHTML(e.rb)}${clanTagHTML(e.clan)}${titleHTML(e.title)}${topHTML(e.top, true)}</span>
         <span class="lb-rolls mono" title="Rolls by this player ${{ day: 'today', week: 'this week', month: 'this month', all: 'in total', xp: 'in total', worst: 'in total' }[xpSpan || lbState.period]}">${e.rolls ? plural(e.rolls, 'roll') : '–'}</span>
         <span class="num-card sm" data-tier="${a.tier}"${xp ? ` title="${xpSpan ? 'Best roll of the period' : 'Best roll'}"` : ''}>${a.str}</span>
         <span class="lb-ep mono${xp ? ' lifetime' : ''}"${xp ? ` title="${xpSpan ? { day: 'XP today', week: 'XP this week', month: 'XP this month' }[xpSpan] : 'Lifetime XP'}"` : ''}>${xp ? compactXp(e.s) : `${fmt(e.s)} XP`}</span>
@@ -11066,7 +11137,7 @@
       // étaient trop espacés) ; l'heure et les boutons flottent à droite, le texte coule dessous sur toute la largeur.
       // Tag du clan de l'auteur (idée de R77, 2026-11-01), envoyé par le serveur (api/_global.js clanTags).
       box.innerHTML = this.msgs.length ? this.msgs.map(m => m.sys ? this.sysHTML(m, me, time, rxCan) : `<div class="gc-msg${m.mine ? ' gc-mine' : ''}${m.toMe ? ' gc-tome' : ''}" data-id="${esc(m.id)}" ${Rx.attrs('gc', m.id)}>
-          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${m.best ? `<span class="gc-best mono" data-tier="${esc(m.best.tier)}" title="Best roll">(${fmt(m.best.n)})</span>` : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
+          ${m.re ? this.quoteHTML(m.re) : ''}<p class="gc-line"><span class="gc-side"><time class="gc-time" datetime="${new Date(m.t).toISOString()}" title="${esc(fullDate(m.t))}">${time(m.t)}</time><span class="gc-tools">${rxCan ? Rx.addBtn('gc', m.id, 'gc-more') : ''}${me.can ? '<button class="gc-more" data-gc="reply" aria-label="Reply" title="Reply">↩</button>' : ''}${signed || me.mod ? `<button class="gc-more" data-gc-menu aria-label="Message options" title="Options">⋯</button>` : ''}</span></span><span class="gc-who">${Avatars.html(m.name, 'av-xs')}<a class="player-link gc-name" href="${profileHref(m.name)}">${esc(m.name)}</a>${rbHTML(m.rb)}${m.mod ? '<span class="gc-modtag" title="Chat moderator" aria-label="Chat moderator">🛡️</span>' : ''}${m.best ? `<span class="gc-best mono" data-tier="${esc(m.best.tier)}" title="Best roll">(${fmt(m.best.n)})</span>` : ''}${clanTagHTML(m.clan)}${titleHTML(m.title)}<span class="gc-colon" aria-hidden="true">:</span></span> <span class="gc-text" data-no-i18n>${this.textHTML(m)}</span>${m.edited ? ' <span class="gc-edited">edited</span>' : ''}</p>
           ${Rx.row('gc', m.id, rx[m.id], rxCan)}
           ${this.menu === m.id ? `<div class="gc-actions">${!m.mine && signed ? '<button data-gc="report">🚩 Report</button>' : ''}${m.mine && Date.now() - m.t < (this.editMs || 300000) ? '<button data-gc="edit">✏️ Edit</button>' : ''}${me.mod || m.mine ? (m.mine ? '<button data-gc="delete">🗑️ Delete</button>' : '<button data-gc="delform">🗑️ Delete…</button><button data-gc="muteform">🔇 Mute…</button>') : ''}${this.pinBtn(m, me)}</div>${this.muting === m.id ? this.muteHTML(me, this.muteKind) : ''}` : ''}
         </div>`).join('') : '<div class="empty">No message yet. Say hi! 👋</div>';

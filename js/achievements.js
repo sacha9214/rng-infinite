@@ -173,6 +173,11 @@
     { id: 'inf3', emoji: '♾️', title: 'Infinite Collector', desc: 'Roll 3 different Infinite numbers', test: st => num(st.infs) >= 3 },
     { id: 'inf5', emoji: '🌀', title: 'Infinity Hoarder', desc: 'Roll 5 different Infinite numbers', test: st => num(st.infs) >= 5 },
     { id: 'infall', emoji: '🌠', title: 'Every Infinity', desc: 'Roll all 10 Infinite numbers', test: st => num(st.infs) >= INFINITES.length },
+    // Renaissance (idée de JUAN SEBASTIAN, 2026-11-07 : un succès « ange » pour la première, « l'ange gardien » au bout) :
+    // stats.rb = nombre de renaissances (js/quests.js REBIRTHS, api/quests.js action « rebirth »).
+    { id: 'reborn1', emoji: '🪽', title: 'Angel', desc: 'Rebirth for the first time (1 billion lifetime XP)', test: st => num(st.rb) >= 1 },
+    { id: 'reborn3', emoji: '🔥', title: 'Phoenix', desc: 'Rebirth 3 times', test: st => num(st.rb) >= 3 },
+    { id: 'reborn5', emoji: '😇', title: 'Guardian Angel', desc: 'Reach the 5th and last rebirth', test: st => num(st.rb) >= 5 },
     { id: 'streak30', emoji: '🔥', title: 'On Fire', desc: 'Claim the daily bonus 30 days in a row', test: st => bestStreak(st) >= 30 },
     { id: 'streak100', emoji: '☄️', title: 'Unstoppable', desc: 'Claim the daily bonus 100 days in a row', test: st => bestStreak(st) >= 100 },
     { id: 'streak365', emoji: '🗓️', title: 'Whole Year', desc: 'Claim the daily bonus 365 days in a row', test: st => bestStreak(st) >= 365 },
